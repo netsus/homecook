@@ -107,7 +107,7 @@ try {
   }
 
   if (options.command === "apply" && options.execute) {
-    const result = executeProductionReleaseControls({
+    const result = await executeProductionReleaseControls({
       appId: options.appId,
       confirmation: options.confirm,
       privateKeyFile: options.appPrivateKeyFile,

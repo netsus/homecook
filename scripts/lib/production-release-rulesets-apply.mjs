@@ -23,6 +23,7 @@ import {
 import {
   productionReleaseRulesetConflictsWithCanonicalTarget,
 } from "./production-release-ruleset-patterns.mjs";
+import { verifyGitHubAppIdentity } from "./github-app-identity.mjs";
 
 export const C2_CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
 export const C2_CANONICAL_REPOSITORY = "netsus/homecook";
@@ -692,7 +693,7 @@ function writeFullActualStateSnapshot(snapshotDir, state) {
   });
 }
 
-export function executeProductionReleaseControls({
+export async function executeProductionReleaseControls({
   appId,
   confirmation,
   privateKeyFile,
@@ -711,6 +712,18 @@ export function executeProductionReleaseControls({
   const desired = readDesiredState(rootDir, appId);
   const privateKey = readValidatedPrivateKey(privateKeyFile);
   const head = validateGitCheckout(rootDir);
+  let appIdentity;
+  try {
+    appIdentity = await verifyGitHubAppIdentity({
+      appId: C2_RELEASE_APP_ID,
+      privateKey,
+    });
+  } catch {
+    fail("GitHub App identity preflight failed.");
+  }
+  if (appIdentity.id !== C2_RELEASE_APP_ID) {
+    fail("GitHub App identity does not match the approved App ID.");
+  }
   const repositoryReadback = ghApi(`/repos/${C2_CANONICAL_REPOSITORY}`);
   if (
     repositoryReadback?.full_name !== C2_CANONICAL_REPOSITORY

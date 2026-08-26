@@ -222,6 +222,8 @@ C2 admin-visible snapshot은 다음 파일을 모두 포함해야 한다.
 
 명시적 C2 admin apply는 clean exact `origin/master` checkout에서만 실행한다. 기본 `apply`는 계속 dry-run이고, 실제 변경은 exact confirmation·canonical repo·ADMIN 권한·resolved desired state·create-only absolute snapshot·0600 이하의 nonempty valid RSA private-key file gate가 모두 통과할 때만 허용한다. CLI는 first mutation 직전 canonical GitHub `refs/heads/master`를 exact local HEAD와 비교하고, snapshot 전후 full actual state에도 같은 remote master 검증을 포함한다. private key는 `O_NOFOLLOW` 단일 open으로 얻은 FD에서 fstat/mode/read/RSA parse를 끝내고, 같은 in-memory Buffer만 secret stdin에 사용한다. mutation 뒤 path를 다시 열지 않으며 JSON/log/snapshot에는 경로나 값이 남지 않는다.
 
+같은 in-memory RSA Buffer로 `iss=4724458`, `alg=RS256`, 안전한 iat skew와 10분 이하 expiry의 short-lived GitHub App JWT를 만들고, TLS가 고정된 `https://api.github.com/app`에 직접 GET한다. API version, User-Agent, timeout을 고정하고 response `id=4724458` readback 전에는 mutation하지 않는다. JWT/private key는 argv, child env, result JSON, log, snapshot에 남기지 않는다.
+
 ```bash
 C2_ACTUAL_DIR="$(mktemp -d)"
 rmdir "$C2_ACTUAL_DIR"

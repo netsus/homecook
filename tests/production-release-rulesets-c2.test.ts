@@ -221,6 +221,49 @@ else if (command.endsWith("status --porcelain")) process.stdout.write(process.en
 else { process.stderr.write("unexpected fake git invocation: " + command + "\n"); process.exit(1); }
 `;
 
+const FAKE_FETCH_PRELOAD = String.raw`import fs from "node:fs";
+import { verify } from "node:crypto";
+globalThis.fetch = async (url, options = {}) => {
+  const statePath = process.env.HOMECOOK_C2_MOCK_STATE;
+  const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  const authorization = options.headers?.Authorization ?? options.headers?.authorization;
+  const jwt = typeof authorization === "string" ? authorization.replace(/^Bearer\s+/u, "") : "";
+  const parts = jwt.split(".");
+  let header = {};
+  let payload = {};
+  let signatureValid = false;
+  try {
+    header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    signatureValid = verify(
+      "RSA-SHA256",
+      Buffer.from(parts[0] + "." + parts[1]),
+      state.expected_app_public_key,
+      Buffer.from(parts[2], "base64url"),
+    );
+  } catch {}
+  state.identity_calls ??= [];
+  state.identity_calls.push({
+    alg: header.alg,
+    exp: payload.exp,
+    iat: payload.iat,
+    iss: payload.iss,
+    method: options.method ?? "GET",
+    signature_valid: signatureValid,
+    url: String(url),
+  });
+  fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+  const ok = signatureValid && state.identity_force_failure !== true;
+  return {
+    ok,
+    status: ok ? 200 : 401,
+    async json() {
+      return ok ? { id: state.identity_response_id ?? 4724458, slug: "homecook-release-attestation" } : {};
+    },
+  };
+};
+`;
+
 function tempDirectory(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
   temporaryDirectories.push(directory);
@@ -263,8 +306,14 @@ function runExecute({
   mkdirSync(binDir);
   writeFileSync(join(binDir, "gh"), FAKE_GH, { mode: 0o755 });
   writeFileSync(join(binDir, "git"), FAKE_GIT, { mode: 0o755 });
+  const fetchPreloadPath = join(harnessDir, "fetch-preload.mjs");
+  writeFileSync(fetchPreloadPath, FAKE_FETCH_PRELOAD, { mode: 0o600 });
   writeFileSync(privateKeyPath, privateKeyPem, { mode: 0o600 });
-  writeFileSync(statePath, JSON.stringify({ ...state, calls: [] }, null, 2));
+  writeFileSync(statePath, JSON.stringify({
+    ...state,
+    calls: [],
+    expected_app_public_key: EPHEMERAL_RSA_KEY_PAIR.publicKey,
+  }, null, 2));
   const result = spawnSync(
     process.execPath,
     [
@@ -292,6 +341,7 @@ function runExecute({
         HOMECOOK_C2_MOCK_STATE: statePath,
         HOMECOOK_C2_PRIVATE_KEY_PATH: privateKeyPath,
         HOMECOOK_C2_ROOT: repoRoot,
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${fetchPreloadPath}`.trim(),
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
         ...env,
       },
@@ -307,6 +357,15 @@ function runExecute({
       environment: Record<string, unknown> | null;
       policies: Array<Record<string, unknown>>;
       effective_inventory_reads?: number;
+      identity_calls?: Array<{
+        alg?: string;
+        exp?: number;
+        iat?: number;
+        iss?: number;
+        method?: string;
+        signature_valid?: boolean;
+        url?: string;
+      }>;
       remote_ref_reads?: number;
       ruleset_inventory_reads?: number;
       rulesets: Array<Record<string, unknown>>;
@@ -486,7 +545,7 @@ describe("production release C2 apply", () => {
     expect(rerun.status).toBe(1);
     expect(output).toMatch(/0600/iu);
     expect(output).not.toContain(run.privateKeyPath);
-  });
+  }, 15_000);
 
   it("uses the single validated RSA buffer after the key path is replaced", () => {
     const run = runExecute({
@@ -498,7 +557,7 @@ describe("production release C2 apply", () => {
     );
     expect(run.state.private_key_replaced).toBe(true);
     expect(privateKeyCall?.stdin_bytes).toBe(EPHEMERAL_RSA_PRIVATE_KEY_BYTES);
-  });
+  }, 15_000);
 
   it.each([
     ["empty", ""],
@@ -518,6 +577,56 @@ describe("production release C2 apply", () => {
     }
     expect(run.combined).not.toContain(run.privateKeyPath);
     expect(run.state.calls).toEqual([]);
+  });
+
+  it("verifies the correct RSA key against the pinned GitHub App identity", () => {
+    const run = runExecute();
+    expect(run.result.status, run.combined).toBe(0);
+    expect(run.state.identity_calls).toHaveLength(1);
+    expect(run.state.identity_calls?.[0]).toMatchObject({
+      alg: "RS256",
+      iss: 4724458,
+      method: "GET",
+      signature_valid: true,
+      url: "https://api.github.com/app",
+    });
+    const call = run.state.identity_calls?.[0];
+    expect((call?.exp ?? 0) - (call?.iat ?? 0)).toBeLessThanOrEqual(600);
+    expect(JSON.stringify(run.state.identity_calls)).not.toContain("Bearer");
+    expect(run.combined).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\./u);
+    const snapshotText = readdirSync(run.snapshotDir)
+      .map((name) => readFileSync(join(run.snapshotDir, name), "utf8"))
+      .join("\n");
+    expect(snapshotText).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\./u);
+  });
+
+  it("rejects a wrong but valid RSA key before mutation", () => {
+    const wrongKey = generateKeyPairSync("rsa", {
+      modulusLength: 1024,
+      privateKeyEncoding: { format: "pem", type: "pkcs8" },
+      publicKeyEncoding: { format: "pem", type: "spki" },
+    }).privateKey;
+    const run = runExecute({ privateKeyPem: wrongKey });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.combined).not.toContain(wrongKey);
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
+  it.each([
+    ["authentication failure", { identity_force_failure: true }],
+    ["wrong App id", { identity_response_id: 999 }],
+  ])("rejects GitHub App identity %s before mutation", (_label, identityState) => {
+    const run = runExecute({ state: initialState(identityState) });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
   });
 
   it("refuses duplicate canonical rulesets and unknown overlapping rulesets", () => {
