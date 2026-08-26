@@ -213,8 +213,10 @@ C2 admin-visible snapshot은 다음 파일을 모두 포함해야 한다.
 - `production-release-approval-environment.json`: `can_admins_bypass: false`, exact `wait_timer: 0`, required reviewer, prevent-self-review, custom branch policy readback
 - `production-release-approval-deployment-branch-policies.json`: pagination을 닫은 exact `[{"type":"branch","name":"master"}]`; tag/wildcard/extra policy 금지
 - `production-release-approval-environment-secrets.json`: pagination을 닫은 exact secret-name inventory `HOMECOOK_RELEASE_ATTESTATION_APP_ID`, `HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY`; legacy `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN` 또는 extra secret 금지
+- `production-release-repository-rulesets.json`: `includes_parents: false`, `scope: repository`, repository mutation target의 full detail inventory
+- `production-release-effective-rulesets.json`: `includes_parents: true`, `scope: effective`, organization/parent inheritance까지 포함한 full detail inventory
 
-명시적 C2 admin apply는 clean exact `origin/master` checkout에서만 실행한다. 기본 `apply`는 계속 dry-run이고, 실제 변경은 exact confirmation·canonical repo·ADMIN 권한·resolved desired state·create-only absolute snapshot·0600 이하의 nonempty valid RSA private-key file gate가 모두 통과할 때만 허용한다. CLI는 first mutation 직전과 snapshot write 직전에 canonical GitHub `refs/heads/master` REST readback을 다시 받아 exact local HEAD와 비교한다. private key는 CLI 인수의 파일 경로로만 지정되고 secret 등록 시 stdin으로 전달되며, JSON/log/snapshot에는 경로나 값이 남지 않는다.
+명시적 C2 admin apply는 clean exact `origin/master` checkout에서만 실행한다. 기본 `apply`는 계속 dry-run이고, 실제 변경은 exact confirmation·canonical repo·ADMIN 권한·resolved desired state·create-only absolute snapshot·0600 이하의 nonempty valid RSA private-key file gate가 모두 통과할 때만 허용한다. CLI는 first mutation 직전 canonical GitHub `refs/heads/master`를 exact local HEAD와 비교하고, snapshot 전후 full actual state에도 같은 remote master 검증을 포함한다. private key는 `O_NOFOLLOW` 단일 open으로 얻은 FD에서 fstat/mode/read/RSA parse를 끝내고, 같은 in-memory Buffer만 secret stdin에 사용한다. mutation 뒤 path를 다시 열지 않으며 JSON/log/snapshot에는 경로나 값이 남지 않는다.
 
 ```bash
 C2_ACTUAL_DIR="$(mktemp -d)"
@@ -232,9 +234,11 @@ jq -e '.activation_blocked == false and .actual_state == "matched"' \
   "$C2_RESULT_FILE" > /dev/null
 ```
 
-CLI는 exact-name ruleset 3개만 POST/PUT하고, 모르는 ruleset은 삭제하지 않는다. canonical ref와 충돌하는 unknown ruleset, canonical name 중복, extra environment branch/tag policy, extra environment secret 이름은 mutation 전에 차단하며 mutation 뒤 full ruleset inventory를 다시 읽어 concurrent duplicate/unknown drift도 차단한다. 두 exact environment secret은 매 execute마다 stdin으로 다시 upsert한다. REST API/secret/readback/snapshot 실패 뒤에는 자동 삭제·완화·rollback하지 않고 `partial_state: true`로 종료하므로, operator는 생성된 설정을 read-only로 확인한 뒤 같은 명령을 새 create-only snapshot 경로로 재실행한다.
+CLI는 exact-name ruleset 3개만 POST/PUT하고, 모르는 ruleset은 삭제하지 않는다. repository mutation inventory는 `includes_parents=false`, effective safety inventory는 `includes_parents=true`로 분리한다. canonical ref와 충돌하거나 canonical 이름을 재사용하는 organization/parent ruleset, repository canonical name 중복, extra environment branch/tag policy, extra environment secret 이름은 fail closed한다. 두 exact environment secret은 매 execute마다 stdin으로 다시 upsert한다. CLI는 environment/policies/secrets/repository/effective rulesets/remote master를 하나의 full actual state로 읽어 snapshot을 저장하고, 저장 직후 전체를 다시 읽어 semantic equality와 master 불변을 증명한다. REST API/secret/readback/snapshot 실패 뒤에는 자동 삭제·완화·rollback하지 않고 `partial_state: true`로 종료한다.
 
 Environment PUT에는 GitHub REST가 문서화하지 않은 `can_admins_bypass`를 보내지 않는다. 다른 environment 필드를 create/update한 뒤 readback의 `can_admins_bypass`가 누락되거나 `true`이면 CLI는 `manual_action_required: true`로 fail closed한다. 이때 repository **Settings → Environments → production-release-approval**에서 **Allow administrators to bypass**를 끄고, 기존 snapshot 경로를 재사용하지 말고 새 create-only 경로로 같은 apply를 다시 실행한다. `can_admins_bypass: false` REST readback 전에는 matched snapshot이나 activation을 주장하지 않는다.
+
+Environment wait timer의 effective 값은 REST `protection_rules`에 wait-timer rule이 0개면 `0`, 1개면 그 rule의 값이다. 2개 이상은 invalid/mismatch다. 따라서 PUT `wait_timer: 0` 뒤 GitHub가 wait-timer rule을 생략해도 exact desired state로 수렴하지만 nonzero 또는 duplicate rule은 activation blocker다.
 
 아래 명령은 apply 결과를 독립적으로 다시 수집해야 할 때 사용하는 수동 admin snapshot 예시다. runtime workflow나 tag App token으로 실행하지 않는다.
 
@@ -255,6 +259,21 @@ gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
         ;;
     esac
   done
+for includes_parents in false true; do
+  scope="repository"
+  test "$includes_parents" = "false" || scope="effective"
+  inventory_jsonl="$C2_ACTUAL_DIR/production-release-$scope-rulesets.jsonl"
+  gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+    "repos/netsus/homecook/rulesets?includes_parents=$includes_parents&per_page=100" \
+    --paginate --jq '.[].id' |
+    while read -r rule_id; do
+      gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+        "repos/netsus/homecook/rulesets/$rule_id" >> "$inventory_jsonl"
+    done
+  jq -s --arg scope "$scope" --argjson includes_parents "$includes_parents" \
+    '{scope: $scope, includes_parents: $includes_parents, rulesets: .}' \
+    "$inventory_jsonl" > "$C2_ACTUAL_DIR/production-release-$scope-rulesets.json"
+done
 gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
   repos/netsus/homecook/environments/production-release-approval \
   > "$C2_ACTUAL_DIR/production-release-approval-environment.json"

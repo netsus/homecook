@@ -440,7 +440,6 @@ describe("production release rulesets desired state", () => {
           custom_branch_policies: true,
         },
         protection_rules: [
-          { type: "wait_timer", wait_timer: 0 },
           {
             type: "required_reviewers",
             prevent_self_review: true,
@@ -526,17 +525,19 @@ describe("production release rulesets desired state", () => {
     }
     writeFileSync(approvalReadbackPath, JSON.stringify(matchedApprovalReadback, null, 2));
 
-    for (const invalidWaitTimer of [undefined, 10]) {
+    for (const invalidWaitTimerRules of [
+      [{ type: "wait_timer", wait_timer: 10 }],
+      [
+        { type: "wait_timer", wait_timer: 0 },
+        { type: "wait_timer", wait_timer: 0 },
+      ],
+    ]) {
       const invalidApprovalReadback = structuredClone(matchedApprovalReadback);
       invalidApprovalReadback.protection_rules = (
         invalidApprovalReadback.protection_rules as Array<Record<string, unknown>>
       ).filter((rule) => rule.type !== "wait_timer");
-      if (invalidWaitTimer !== undefined) {
-        (invalidApprovalReadback.protection_rules as Array<Record<string, unknown>>).unshift({
-          type: "wait_timer",
-          wait_timer: invalidWaitTimer,
-        });
-      }
+      (invalidApprovalReadback.protection_rules as Array<Record<string, unknown>>)
+        .unshift(...invalidWaitTimerRules);
       writeFileSync(approvalReadbackPath, JSON.stringify(invalidApprovalReadback, null, 2));
       const verifyWaitTimer = spawnSync(
         process.execPath,

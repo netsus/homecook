@@ -28,6 +28,9 @@ const EPHEMERAL_RSA_KEY_PAIR = generateKeyPairSync("rsa", {
   privateKeyEncoding: { format: "pem", type: "pkcs8" },
   publicKeyEncoding: { format: "pem", type: "spki" },
 });
+const EPHEMERAL_RSA_PRIVATE_KEY_BYTES = Buffer.byteLength(
+  EPHEMERAL_RSA_KEY_PAIR.privateKey,
+);
 
 function approvedEnvironmentReadback(overrides: Record<string, unknown> = {}) {
   return {
@@ -58,6 +61,38 @@ const option = (name) => {
   return index === -1 ? null : args[index + 1];
 };
 const save = () => fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+const markMutation = () => {
+  if (state.replace_private_key_after_mutation && !state.private_key_replaced) {
+    fs.writeFileSync(process.env.HOMECOOK_C2_PRIVATE_KEY_PATH, "replaced");
+    state.private_key_replaced = true;
+  }
+};
+const asRestRuleset = (id, payload) => ({
+  id,
+  node_id: "RRS_" + id,
+  name: payload.name,
+  target: payload.target,
+  source_type: "Repository",
+  source: "netsus/homecook",
+  enforcement: payload.enforcement,
+  bypass_actors: payload.bypass_actors,
+  conditions: payload.conditions,
+  rules: payload.rules.map((rule) => rule.type === "required_status_checks"
+    ? {
+        parameters: {
+          ...rule.parameters,
+          required_status_checks: [...rule.parameters.required_status_checks]
+            .reverse()
+            .map(({ context, integration_id }) => ({ integration_id, context })),
+        },
+        type: rule.type,
+      }
+    : rule),
+  created_at: "2026-08-26T00:00:00Z",
+  updated_at: "2026-08-26T00:00:00Z",
+  current_user_can_bypass: "never",
+  _links: { html: "https://example.invalid/rulesets/" + id },
+});
 const reply = (value) => {
   process.stdout.write(JSON.stringify(value));
   save();
@@ -92,27 +127,44 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
   const sha = sequence[Math.min(state.remote_ref_reads - 1, sequence.length - 1)];
   reply({ ref: "refs/heads/master", object: { sha, type: "commit" } });
 } else if (endpoint.startsWith("/repos/netsus/homecook/rulesets?")) {
-  state.ruleset_inventory_reads = (state.ruleset_inventory_reads ?? 0) + 1;
-  if (state.ruleset_inventory_reads === 2 && state.ruleset_race && !state.ruleset_race_inserted) {
+  const effective = endpoint.includes("includes_parents=true");
+  if (effective) {
+    state.effective_inventory_reads = (state.effective_inventory_reads ?? 0) + 1;
+    if (state.effective_inventory_reads === 2 && state.effective_state_race && !state.effective_state_race_inserted) {
+      state.effective_rulesets = [...(state.effective_rulesets ?? state.rulesets), state.effective_state_race];
+      state.effective_state_race_inserted = true;
+    }
+  } else {
+    state.ruleset_inventory_reads = (state.ruleset_inventory_reads ?? 0) + 1;
+  }
+  if (!effective && state.ruleset_inventory_reads === 2 && state.ruleset_race && !state.ruleset_race_inserted) {
     state.rulesets.push(state.ruleset_race);
     state.ruleset_race_inserted = true;
   }
-  reply([state.rulesets.map(({ id, name, target, enforcement }) => ({ id, name, target, enforcement }))]);
+  const inventory = effective ? (state.effective_rulesets ?? state.rulesets) : state.rulesets;
+  reply([inventory.map(({ id, name, target, enforcement, source, source_type }) => ({
+    id, name, target, enforcement, source, source_type,
+  }))]);
 } else if (/\/rulesets\/[0-9]+$/.test(endpoint) && method === "GET") {
   const id = Number(endpoint.split("/").at(-1));
-  const ruleset = state.rulesets.find((entry) => entry.id === id);
+  const ruleset = [
+    ...state.rulesets,
+    ...(state.effective_rulesets ?? []),
+  ].find((entry) => entry.id === id);
   if (!ruleset) fail("HTTP 404: ruleset missing");
   reply(ruleset);
 } else if (endpoint === "/repos/netsus/homecook/rulesets" && method === "POST") {
   const id = state.next_id++;
-  const ruleset = { id, ...payload };
+  const ruleset = asRestRuleset(id, payload);
   state.rulesets.push(ruleset);
+  markMutation();
   reply(ruleset);
 } else if (/\/rulesets\/[0-9]+$/.test(endpoint) && method === "PUT") {
   const id = Number(endpoint.split("/").at(-1));
   const index = state.rulesets.findIndex((entry) => entry.id === id);
   if (index === -1) fail("HTTP 404: ruleset missing");
-  state.rulesets[index] = { id, ...payload };
+  state.rulesets[index] = asRestRuleset(id, payload);
+  markMutation();
   reply(state.rulesets[index]);
 } else if (endpoint === "/repos/netsus/homecook/environments/production-release-approval" && method === "GET") {
   if (!state.environment) fail("HTTP 404: environment missing");
@@ -124,7 +176,7 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
     can_admins_bypass: state.omit_admin_bypass ? undefined : currentAdminBypass,
     deployment_branch_policy: payload.deployment_branch_policy,
     protection_rules: [
-      { type: "wait_timer", wait_timer: payload.wait_timer },
+      ...(payload.wait_timer === 0 ? [] : [{ type: "wait_timer", wait_timer: payload.wait_timer }]),
       {
         type: "required_reviewers",
         prevent_self_review: payload.prevent_self_review,
@@ -136,12 +188,14 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
       { type: "branch_policy" },
     ],
   };
+  markMutation();
   reply(state.environment);
 } else if (endpoint.includes("/deployment-branch-policies?") && method === "GET") {
   reply([{ branch_policies: state.policies }]);
 } else if (endpoint.endsWith("/deployment-branch-policies") && method === "POST") {
   const policy = { id: 9001, ...payload };
   state.policies.push(policy);
+  markMutation();
   reply(policy);
 } else if (endpoint.includes("/secrets?") && method === "GET") {
   reply([{ secrets: state.secrets }]);
@@ -231,6 +285,7 @@ function runExecute({
       env: {
         ...process.env,
         HOMECOOK_C2_MOCK_STATE: statePath,
+        HOMECOOK_C2_PRIVATE_KEY_PATH: privateKeyPath,
         HOMECOOK_C2_ROOT: repoRoot,
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
         ...env,
@@ -246,10 +301,12 @@ function runExecute({
       calls: Array<{ args?: string[]; key: string; payload?: Record<string, unknown>; stdin_bytes?: number }>;
       environment: Record<string, unknown> | null;
       policies: Array<Record<string, unknown>>;
+      effective_inventory_reads?: number;
       remote_ref_reads?: number;
       ruleset_inventory_reads?: number;
       rulesets: Array<Record<string, unknown>>;
       secrets: Array<{ name: string }>;
+      private_key_replaced?: boolean;
     },
   };
 }
@@ -412,6 +469,18 @@ describe("production release C2 apply", () => {
     expect(output).not.toContain(run.privateKeyPath);
   });
 
+  it("uses the single validated RSA buffer after the key path is replaced", () => {
+    const run = runExecute({
+      state: initialState({ replace_private_key_after_mutation: true }),
+    });
+    expect(run.result.status, run.combined).toBe(0);
+    const privateKeyCall = run.state.calls.find(
+      (call) => call.key === "SECRET HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
+    );
+    expect(run.state.private_key_replaced).toBe(true);
+    expect(privateKeyCall?.stdin_bytes).toBe(EPHEMERAL_RSA_PRIVATE_KEY_BYTES);
+  });
+
   it.each([
     ["empty", ""],
     ["malformed", "not-a-private-key"],
@@ -562,7 +631,13 @@ describe("production release C2 apply", () => {
     const environmentPut = run.state.calls.find((call) =>
       call.key === "PUT /repos/netsus/homecook/environments/production-release-approval");
     expect(environmentPut?.payload).not.toHaveProperty("can_admins_bypass");
-  });
+
+    const rerun = runExecute({ state: run.state });
+    expect(rerun.result.status, rerun.combined).toBe(0);
+    expect(rerun.state.calls.some((call) =>
+      call.key === "PUT /repos/netsus/homecook/environments/production-release-approval"))
+      .toBe(false);
+  }, 15_000);
 
   it("fails closed with partial-state reporting on an API failure and never rolls back", () => {
     const failureKey = "POST /repos/netsus/homecook/rulesets";
@@ -577,11 +652,15 @@ describe("production release C2 apply", () => {
     ["missing", null],
     ["enabled", approvedEnvironmentReadback({ can_admins_bypass: true })],
   ])("fails closed with manual action when admin bypass is %s", (_label, environment) => {
-    const run = runExecute({ state: initialState({ environment }) });
+    const run = runExecute({ state: initialState({ environment, policies: [] }) });
     expect(run.result.status).toBe(1);
     expect(run.combined).toContain('"partial_state": true');
     expect(run.combined).toContain('"manual_action_required": true');
     expect(run.combined).toMatch(/admin bypass/iu);
+    expect(run.state.calls.filter((call) => call.key.startsWith("SECRET "))).toEqual([]);
+    expect(run.state.calls.some((call) =>
+      call.key.endsWith("/deployment-branch-policies") && call.key.startsWith("POST ")))
+      .toBe(false);
     expect(run.state.calls.some((call) => call.key.startsWith("DELETE "))).toBe(false);
   });
 
@@ -650,6 +729,70 @@ describe("production release C2 apply", () => {
       call.key === "PUT /repos/netsus/homecook/rulesets/102")).toBe(true);
   });
 
+  it("fails closed on an overlapping parent effective ruleset", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const parentRuleset = {
+      id: 999,
+      name: "organization-prod-policy",
+      target: "tag",
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+      rules: [{ type: "creation" }],
+      bypass_actors: [],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [...repositoryRulesets, parentRuleset],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/parent|effective/iu);
+  });
+
+  it("fails closed when effective inventory omits canonical repository rulesets", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/effective/iu);
+  });
+
+  it("detects full actual-state drift after snapshot storage", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const drift = {
+      id: 998,
+      name: "late-prod-policy",
+      target: "tag",
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+      rules: [{ type: "creation" }],
+      bypass_actors: [],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: repositoryRulesets,
+        effective_state_race: drift,
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.state.effective_inventory_reads).toBe(2);
+    expect(existsSync(join(run.snapshotDir, "production-release-effective-rulesets.json")))
+      .toBe(true);
+  });
+
   it("applies exact state, captures a validator-matched snapshot, and reruns idempotently", () => {
     const first = runExecute();
     expect(first.result.status, first.combined).toBe(0);
@@ -676,8 +819,9 @@ describe("production release C2 apply", () => {
       "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
       "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
     ]);
-    expect(first.state.remote_ref_reads).toBe(2);
-    expect(first.state.ruleset_inventory_reads).toBe(2);
+    expect(first.state.remote_ref_reads).toBe(3);
+    expect(first.state.ruleset_inventory_reads).toBe(3);
+    expect(first.state.effective_inventory_reads).toBe(2);
     const remoteReadIndexes = first.state.calls
       .map((call, index) => ({ call, index }))
       .filter(({ call }) =>
@@ -687,9 +831,9 @@ describe("production release C2 apply", () => {
       call.key.startsWith("POST ")
       || call.key.startsWith("PUT ")
       || call.key.startsWith("SECRET "));
-    expect(remoteReadIndexes).toHaveLength(2);
+    expect(remoteReadIndexes).toHaveLength(3);
     expect(remoteReadIndexes[0] + 1).toBe(firstMutationIndex);
-    expect(remoteReadIndexes[1]).toBe(first.state.calls.length - 1);
+    expect(remoteReadIndexes[2]).toBe(first.state.calls.length - 1);
     const snapshotFiles = [
       "production-release-master.json",
       "production-release-tag-creation.json",
@@ -697,6 +841,8 @@ describe("production release C2 apply", () => {
       "production-release-approval-environment.json",
       "production-release-approval-deployment-branch-policies.json",
       "production-release-approval-environment-secrets.json",
+      "production-release-repository-rulesets.json",
+      "production-release-effective-rulesets.json",
     ];
     expect(snapshotFiles.every((name) => existsSync(join(first.snapshotDir, name)))).toBe(true);
     const snapshotBundle = snapshotFiles

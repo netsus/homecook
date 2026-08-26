@@ -26,6 +26,25 @@ const EXPECTED_APPROVAL_ENVIRONMENT_SECRET_NAMES = [
   "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
   "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
 ];
+const RULESET_SAFETY_KEYS = [
+  "bypass_actors",
+  "conditions",
+  "enforcement",
+  "name",
+  "rules",
+  "target",
+];
+const RULESET_IGNORED_SERVER_KEYS = [
+  "_links",
+  "created_at",
+  "current_user_can_bypass",
+  "id",
+  "node_id",
+  "schema",
+  "source",
+  "source_type",
+  "updated_at",
+];
 
 const EXPECTED_RULESET_FILES = [
   {
@@ -90,6 +109,13 @@ function requireBoolean(value, label) {
   return value;
 }
 
+function rejectUnknownKeys(value, allowedKeys, label) {
+  const unknownKeys = Object.keys(value).filter((key) => !allowedKeys.includes(key));
+  if (unknownKeys.length > 0) {
+    throw new Error(`${label} contains unsupported keys: ${unknownKeys.sort().join(", ")}.`);
+  }
+}
+
 function canonicalizeJson(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalizeJson);
@@ -121,16 +147,48 @@ function normalizeRefName(refName, label) {
   };
 }
 
+function normalizeConditions(conditions, label) {
+  const value = requireObject(conditions, label);
+  rejectUnknownKeys(value, ["ref_name"], label);
+  return {
+    ref_name: normalizeRefName(value.ref_name, `${label}.ref_name`),
+  };
+}
+
+function normalizeRequiredStatusChecks(value, label) {
+  return requireArray(value, label)
+    .map((entry, index) => {
+      const check = requireObject(entry, `${label}[${index}]`);
+      rejectUnknownKeys(check, ["context", "integration_id"], `${label}[${index}]`);
+      return {
+        context: requireNonEmptyString(check.context, `${label}[${index}].context`),
+        integration_id: check.integration_id ?? null,
+      };
+    })
+    .sort((left, right) => {
+      const leftKey = `${left.context}:${left.integration_id ?? "null"}`;
+      const rightKey = `${right.context}:${right.integration_id ?? "null"}`;
+      return leftKey.localeCompare(rightKey);
+    });
+}
+
 function normalizeRules(rules, label) {
   return requireArray(rules, label)
     .map((rule, index) => {
       const value = requireObject(rule, `${label}[${index}]`);
+      rejectUnknownKeys(value, ["parameters", "type"], `${label}[${index}]`);
       const type = requireNonEmptyString(value.type, `${label}[${index}].type`);
       const parameters = value.parameters === undefined
         ? null
         : canonicalizeJson(
           requireObject(value.parameters, `${label}[${index}].parameters`),
         );
+      if (type === "required_status_checks") {
+        parameters.required_status_checks = normalizeRequiredStatusChecks(
+          parameters.required_status_checks,
+          `${label}[${index}].parameters.required_status_checks`,
+        );
+      }
       return canonicalizeJson({
         ...value,
         parameters,
@@ -183,6 +241,11 @@ function normalizeBypassActors(bypassActors, label) {
 
 function normalizeRuleset({ filePath, requireSchema = true, rootDir, ruleset }) {
   const value = requireObject(ruleset, filePath);
+  rejectUnknownKeys(
+    value,
+    [...RULESET_SAFETY_KEYS, ...RULESET_IGNORED_SERVER_KEYS],
+    filePath,
+  );
   if (!requireSchema && value.bypass_actors === undefined) {
     throw new Error(
       `${filePath}.bypass_actors is required in the C2 admin-visible snapshot; `
@@ -198,16 +261,10 @@ function normalizeRuleset({ filePath, requireSchema = true, rootDir, ruleset }) 
     (rule) => rule.type === "required_status_checks",
   );
   const requiredStatusChecks = requiredStatusChecksRule?.parameters?.required_status_checks;
-  const conditions = canonicalizeJson(
-    requireObject(value.conditions, `${filePath}.conditions`),
-  );
-  conditions.ref_name = normalizeRefName(
-    value.conditions?.ref_name,
-    `${filePath}.conditions.ref_name`,
-  );
+  const conditions = normalizeConditions(value.conditions, `${filePath}.conditions`);
 
   return {
-    conditions: canonicalizeJson(conditions),
+    conditions,
     enforcement: requireNonEmptyString(value.enforcement, `${filePath}.enforcement`),
     name: requireNonEmptyString(value.name, `${filePath}.name`),
     required_status_contexts: requiredStatusChecks === undefined
@@ -586,7 +643,11 @@ function loadActualApprovalEnvironment(actualDir, desired) {
     repository: "netsus/homecook",
     required_reviewers: actualReviewers,
     source_ref: "refs/heads/master",
-    wait_timer: waitTimerRules.length === 1 ? waitTimerRules[0]?.wait_timer : null,
+    wait_timer: waitTimerRules.length === 0
+      ? 0
+      : waitTimerRules.length === 1
+        ? waitTimerRules[0]?.wait_timer
+        : null,
   };
   const mismatches = [];
   if (actual.can_admins_bypass !== false) {
@@ -622,48 +683,47 @@ function loadActualApprovalEnvironment(actualDir, desired) {
   };
 }
 
+function rulesetComparisonProjection(value) {
+  return {
+    conditions: value.conditions,
+    enforcement: value.enforcement,
+    name: value.name,
+    required_status_contexts: value.required_status_contexts,
+    rules: value.rules,
+    target: value.target,
+    bypass_actors: value.bypass_actors.map((actor) => ({
+      actor_id: actor.actor_id,
+      actor_type: actor.actor_type,
+      bypass_mode: actor.bypass_mode,
+    })),
+  };
+}
+
 function sameRuleset(left, right) {
-  return JSON.stringify({
-    conditions: left.conditions,
-    enforcement: left.enforcement,
-    name: left.name,
-    required_status_contexts: left.required_status_contexts,
-    rules: left.rules,
-    target: left.target,
-    bypass_actors: left.bypass_actors.map((actor) => ({
-      actor_id: actor.actor_id,
-      actor_type: actor.actor_type,
-      bypass_mode: actor.bypass_mode,
-    })),
-  }) === JSON.stringify({
-    conditions: right.conditions,
-    enforcement: right.enforcement,
-    name: right.name,
-    required_status_contexts: right.required_status_contexts,
-    rules: right.rules,
-    target: right.target,
-    bypass_actors: right.bypass_actors.map((actor) => ({
-      actor_id: actor.actor_id,
-      actor_type: actor.actor_type,
-      bypass_mode: actor.bypass_mode,
-    })),
+  return JSON.stringify(rulesetComparisonProjection(left))
+    === JSON.stringify(rulesetComparisonProjection(right));
+}
+
+export function normalizeProductionReleaseRulesetForComparison(value, label = "production release ruleset") {
+  const normalized = normalizeRuleset({
+    filePath: label,
+    requireSchema: false,
+    rootDir: process.cwd(),
+    ruleset: value,
   });
+  return rulesetComparisonProjection(normalized);
 }
 
 export function productionReleaseRulesetsSemanticallyEqual(left, right) {
-  const normalizedLeft = normalizeRuleset({
-    filePath: "actual production release ruleset",
-    requireSchema: false,
-    rootDir: process.cwd(),
-    ruleset: left,
-  });
-  const normalizedRight = normalizeRuleset({
-    filePath: "desired production release ruleset",
-    requireSchema: false,
-    rootDir: process.cwd(),
-    ruleset: right,
-  });
-  return sameRuleset(normalizedLeft, normalizedRight);
+  const normalizedLeft = normalizeProductionReleaseRulesetForComparison(
+    left,
+    "actual production release ruleset",
+  );
+  const normalizedRight = normalizeProductionReleaseRulesetForComparison(
+    right,
+    "desired production release ruleset",
+  );
+  return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight);
 }
 
 export function getProductionReleaseRulesetPlan({
