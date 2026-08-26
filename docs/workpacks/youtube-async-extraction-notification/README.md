@@ -70,7 +70,7 @@
 | --- | --- | --- |
 | `33-youtube-i031-direct-extraction` | merged | [x] |
 | 공식 contract PR `#1343` merge `25e10a7805f5bf171d4c1fbd94a573560b715786` | merged | [x] |
-| 공식 tuple `1.7.33 / 1.5.37 / 1.3.35 / 1.3.35 / 1.2.40` | current | [x] |
+| 공식 tuple `1.7.34 / 1.5.38 / 1.3.36 / 1.3.36 / 1.2.41` | current; progress field additive successor | [x] |
 | 최종 동결 계획 SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines, review task `019ffb44-5614-7af3-86a9-4ebd50977123` | independent PASS / Findings 없음 | [x] |
 | Phase 1.5 local-only repair PR #1350, exact head `a625aefa7baab63f183a9d46e6f12d607d4e017f`, merge `c4045705ef72c76f7e7258d10c460f56b6847dd7` | independent PASS / Findings 없음, merged | [x] |
 
@@ -83,7 +83,7 @@
 - enqueue request는 exact union `{ "youtube_url": string } | { "retry_job_id": uuid }`다. unknown field, 두 branch 동시 전달, empty branch는 `422 VALIDATION_ERROR`다.
 - retry는 owner terminal `failed|expired`와 `can_retry=true`만 허용한다. 이전 job에서는 `youtube_video_id`만 복사하고 이전 row를 바꾸지 않으며, retry 시점의 current complete policy snapshot으로 새 fingerprint/job을 만든다.
 - enqueue 성공은 exact `202` data `{ job_id, status, deduplicated, submitted_at }`다. active duplicate 또는 유효 succeeded draft는 기존 job을 `deduplicated=true`로 반환할 수 있다.
-- status exact data는 `{ job_id, status, submitted_at, started_at, completed_at, result, error, can_retry }`다.
+- status exact data는 `{ job_id, status, submitted_at, started_at, completed_at, result, error, can_retry, progress }`다. 이 선행 workpack이 구현한 기존 8개 key 의미는 유지하고 successor contract의 nullable `progress` key만 additive한다.
 - status/list succeeded result는 exact `{ extraction_id, review_path, recipe_id, recipe_path }`다. draft와 consumed destination의 null/non-null 의미를 공식 API 그대로 유지한다.
 - session-read exact data는 `{ status, draft, recipe_id, recipe_path }`다. 본인 consumed session과 `consumed-after-TTL`은 `200`; 본인 unconsumed draft TTL 만료만 `410 EXTRACTION_EXPIRED`; 타인/없는 session은 동일 `404 EXTRACTION_NOT_FOUND`다.
 - list item exact field set은 `job_id, status, submitted_at, completed_at, video_title_snapshot, thumbnail_url, delivery_key, delivered_at, seen_at, result, error, can_retry`다. cursor order는 `(completed_at DESC, job_id DESC)`다.
@@ -151,11 +151,11 @@
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.33.md` §0-YT-ASYNC
-- `docs/화면정의서-v1.5.37.md` §0-YT-ASYNC
-- `docs/유저flow맵-v1.3.35.md` §0-YT-ASYNC
-- `docs/db설계-v1.3.35.md` §0-YT-ASYNC
-- `docs/api문서-v1.2.40.md` §0-YT-ASYNC
+- `docs/요구사항기준선-v1.7.34.md` §0-YT-ASYNC
+- `docs/화면정의서-v1.5.38.md` §0-YT-ASYNC
+- `docs/유저flow맵-v1.3.36.md` §0-YT-ASYNC
+- `docs/db설계-v1.3.36.md` §0-YT-ASYNC
+- `docs/api문서-v1.2.41.md` §0-YT-ASYNC
 - `docs/engineering/supabase-local-only-operations.md`
 - `docs/workpacks/33-youtube-i031-direct-extraction/README.md`
 - 최종 동결 계획: `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`, SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines

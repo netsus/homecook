@@ -13,7 +13,7 @@ F0와 #1~#13에서 병합된 계정 세대, 제품 검색·재료 연결, 개인
 ## In Scope
 
 - 화면: 기존 `ACCOUNT_QUARANTINE`, `HOME`, `RECIPE_DETAIL`, `MANUAL_RECIPE_CREATE`, `PLANNER_WEEK`, `COOK_MODE`, `LEFTOVERS`, `MEAL_LOG`의 exact-head 검증만 수행한다.
-- API: 공식 `docs/api문서-v1.2.40.md`의 F0/#1~#13 기존 endpoint와 `{ success, data, error }` 계약을 그대로 검증한다.
+- API: 공식 `docs/api문서-v1.2.41.md`의 F0/#1~#13 기존 endpoint와 `{ success, data, error }` 계약을 그대로 검증한다.
 - 상태 전이: 기존 account generation, personal recipe/snapshot, v1/v2 cooking, batch ledger, meal-log event, legacy rollback 상태를 변경 없이 재검증한다.
 - DB 영향: Stage 2 기본 경로는 pinned isolated local replay와 controlled full-local read-only/checksum verification이다.
 - Schema Change: 없음. 이 slice는 migration과 runtime repair를 소유하지 않는다.
@@ -169,11 +169,11 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.33.md`
-- `docs/화면정의서-v1.5.37.md`
-- `docs/유저flow맵-v1.3.35.md`
-- `docs/db설계-v1.3.35.md`
-- `docs/api문서-v1.2.40.md`
+- `docs/요구사항기준선-v1.7.34.md`
+- `docs/화면정의서-v1.5.38.md`
+- `docs/유저flow맵-v1.3.36.md`
+- `docs/db설계-v1.3.36.md`
+- `docs/api문서-v1.2.41.md`
 - `docs/engineering/supabase-local-only-operations.md`
 - `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`
 - approved plan: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines

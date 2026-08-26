@@ -35,11 +35,11 @@ function markdownTableCellsAfter(text: string, heading: string) {
 }
 
 const officialTuple = [
-  "docs/요구사항기준선-v1.7.33.md",
-  "docs/화면정의서-v1.5.37.md",
-  "docs/유저flow맵-v1.3.35.md",
-  "docs/db설계-v1.3.35.md",
-  "docs/api문서-v1.2.40.md",
+  "docs/요구사항기준선-v1.7.34.md",
+  "docs/화면정의서-v1.5.38.md",
+  "docs/유저flow맵-v1.3.36.md",
+  "docs/db설계-v1.3.36.md",
+  "docs/api문서-v1.2.41.md",
 ];
 
 function getCurrentEndpointHeading(apiDoc: string) {
@@ -91,11 +91,11 @@ describe("YouTube background extraction contract evolution", () => {
       expect(read(relativePath)).toContain("2026-08-12 contract-evolution");
     }
 
-    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.33");
-    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.37");
-    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.35");
-    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.35");
-    expect(read(officialTuple[4])).toContain("# API\\_설계\\_v1.2.40");
+    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.34");
+    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.38");
+    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.36");
+    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.36");
+    expect(read(officialTuple[4])).toContain("# API\\_설계\\_v1.2.41");
   });
 
   it("records approval, public impact, exclusions, and rejected alternatives", () => {
@@ -176,11 +176,11 @@ describe("YouTube background extraction contract evolution", () => {
     );
     const dbRows = markdownTableBodyRowsAfter(
       read(officialTuple[3]),
-      "# 17. 전체 테이블 목록 (74개)",
+      "# 17. 전체 테이블 목록 (75개)",
     );
 
     expect(apiRows).toHaveLength(108);
-    expect(dbRows).toHaveLength(74);
+    expect(dbRows).toHaveLength(75);
   });
 
   it("locks retry enqueue as an exact union and exposes one exact retry action projection", () => {
@@ -468,7 +468,7 @@ describe("YouTube background extraction contract evolution", () => {
       expect(db).toContain(token);
     }
 
-    expect(db).toContain("전체 테이블 목록 (74개)");
+    expect(db).toContain("전체 테이블 목록 (75개)");
   });
 
   it("uses the existing user session as the sole enqueue caller authority", () => {

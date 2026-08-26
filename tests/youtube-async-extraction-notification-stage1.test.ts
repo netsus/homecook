@@ -179,7 +179,7 @@ describe("YouTube async extraction Stage 1 contract", () => {
   });
 
   it("rebaselines the backend evidence to the merged local-only repair contract", () => {
-    const currentOfficialTuple = ["1.7.33", "1.5.37", "1.3.35", "1.3.35", "1.2.40"];
+    const currentOfficialTuple = ["1.7.34", "1.5.38", "1.3.36", "1.3.36", "1.2.41"];
     for (const document of [readme, acceptance]) {
       for (const version of currentOfficialTuple) expect(document).toContain(version);
     }

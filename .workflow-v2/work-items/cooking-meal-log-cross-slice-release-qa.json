@@ -35,11 +35,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.33.md",
-      "docs/화면정의서-v1.5.37.md",
-      "docs/유저flow맵-v1.3.35.md",
-      "docs/db설계-v1.3.35.md",
-      "docs/api문서-v1.2.40.md"
+      "docs/요구사항기준선-v1.7.34.md",
+      "docs/화면정의서-v1.5.38.md",
+      "docs/유저flow맵-v1.3.36.md",
+      "docs/db설계-v1.3.36.md",
+      "docs/api문서-v1.2.41.md"
     ],
     "governing_docs": [
       "AGENTS.md",
