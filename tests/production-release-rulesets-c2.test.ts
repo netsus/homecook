@@ -6,7 +6,9 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -29,6 +31,8 @@ const VERSION_HEADER = "X-GitHub-Api-Version: 2026-03-10";
 const COMPLETION_FILE = "production-release-snapshot-completion.json";
 const temporaryDirectories: string[] = [];
 let immutableFixtureRoot = "";
+let trustedToolFixtureRoot = "";
+let SAFE_NODE_PATH = "";
 const IMMUTABLE_FIXTURE_PATHS = [
   "scripts/bootstrap-production-release-rulesets.mjs",
   "scripts/manage-production-release-rulesets.mjs",
@@ -72,7 +76,7 @@ function approvedEnvironmentReadback(overrides: Record<string, unknown> = {}) {
   };
 }
 
-const FAKE_GH = String.raw`#!${process.execPath}
+const FAKE_GH = String.raw`#!__HOMECOOK_C2_SAFE_NODE__
 const fs = require("node:fs");
 const statePath = process.env.HOMECOOK_C2_MOCK_STATE;
 const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
@@ -238,7 +242,7 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
 }
 `;
 
-const FAKE_GIT = String.raw`#!${process.execPath}
+const FAKE_GIT = String.raw`#!__HOMECOOK_C2_SAFE_NODE__
 const fs = require("node:fs");
 const { spawnSync } = require("node:child_process");
 const { createHash } = require("node:crypto");
@@ -391,6 +395,27 @@ function tempDirectory(prefix: string) {
   return directory;
 }
 
+function createTrustedNodeFixture() {
+  trustedToolFixtureRoot = mkdtempSync(join(tmpdir(), "homecook-c2-tools-"));
+  chmodSync(trustedToolFixtureRoot, 0o700);
+  const sourceNode = realpathSync(process.execPath);
+  const targetNode = join(trustedToolFixtureRoot, "node");
+  copyFileSync(sourceNode, targetNode);
+  chmodSync(targetNode, 0o755);
+  const rootStat = statSync(trustedToolFixtureRoot);
+  const nodeStat = statSync(targetNode);
+  if (
+    (rootStat.mode & 0o777) !== 0o700
+    || !nodeStat.isFile()
+    || (nodeStat.mode & 0o111) === 0
+    || (nodeStat.mode & 0o022) !== 0
+    || (typeof process.getuid === "function" && nodeStat.uid !== process.getuid())
+  ) {
+    throw new Error("Unable to create a private safe Node test fixture.");
+  }
+  SAFE_NODE_PATH = realpathSync(targetNode);
+}
+
 function createImmutableFixture() {
   immutableFixtureRoot = mkdtempSync(join(tmpdir(), "homecook-c2-immutable-source-"));
   for (const path of IMMUTABLE_FIXTURE_PATHS) {
@@ -470,8 +495,16 @@ function runExecute({
   const privateKeyPath = join(harnessDir, "must-not-leak-private-key-path.pem");
   const statePath = join(harnessDir, "state.json");
   mkdirSync(binDir);
-  writeFileSync(join(binDir, "gh"), FAKE_GH, { mode: 0o755 });
-  writeFileSync(join(binDir, "git"), FAKE_GIT, { mode: 0o755 });
+  writeFileSync(
+    join(binDir, "gh"),
+    FAKE_GH.replace("__HOMECOOK_C2_SAFE_NODE__", SAFE_NODE_PATH),
+    { mode: 0o755 },
+  );
+  writeFileSync(
+    join(binDir, "git"),
+    FAKE_GIT.replace("__HOMECOOK_C2_SAFE_NODE__", SAFE_NODE_PATH),
+    { mode: 0o755 },
+  );
   const fetchPreloadPath = join(harnessDir, "fetch-preload.mjs");
   writeFileSync(fetchPreloadPath, FAKE_FETCH_PRELOAD, { mode: 0o600 });
   writeFileSync(privateKeyPath, privateKeyPem, { mode: privateKeyMode });
@@ -502,7 +535,7 @@ function runExecute({
   );
   if (bootstrap.status !== 0) throw new Error("Unable to read immutable bootstrap fixture.");
   const result = spawnSync(
-    process.execPath,
+    SAFE_NODE_PATH,
     [
       "--input-type=module",
       "-",
@@ -604,12 +637,16 @@ function runIndependentVerify(actualDir: string) {
 }
 
 beforeAll(() => {
+  createTrustedNodeFixture();
   createImmutableFixture();
 });
 
 afterAll(() => {
   if (immutableFixtureRoot) {
     rmSync(immutableFixtureRoot, { force: true, recursive: true });
+  }
+  if (trustedToolFixtureRoot) {
+    rmSync(trustedToolFixtureRoot, { force: true, recursive: true });
   }
 });
 
@@ -1935,6 +1972,61 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       label: "unsafe test tool",
     })).toThrow(/safe mode/iu);
   });
+
+  it("rejects an unsafe runner Node and executes through a private safe Node fixture", () => {
+    const originalNode = realpathSync(process.execPath);
+    expect(SAFE_NODE_PATH).not.toBe(originalNode);
+    const toolRootStat = statSync(trustedToolFixtureRoot);
+    const safeNodeStat = statSync(SAFE_NODE_PATH);
+    expect(toolRootStat.mode & 0o777).toBe(0o700);
+    expect(safeNodeStat.isFile()).toBe(true);
+    expect(safeNodeStat.mode & 0o022).toBe(0);
+    expect(safeNodeStat.mode & 0o111).not.toBe(0);
+    if (typeof process.getuid === "function") {
+      expect(safeNodeStat.uid).toBe(process.getuid());
+    }
+
+    const originalNodeStat = statSync(originalNode);
+    let unsafeNodePath = originalNode;
+    if ((originalNodeStat.mode & 0o022) === 0) {
+      unsafeNodePath = join(tempDirectory("homecook-c2-unsafe-node-"), "node");
+      copyFileSync(originalNode, unsafeNodePath);
+      chmodSync(unsafeNodePath, 0o775);
+    }
+    const sourceHead = spawnSync(
+      "/usr/bin/git",
+      ["-C", immutableFixtureRoot, "rev-parse", "HEAD"],
+      { encoding: "utf8" },
+    ).stdout.trim();
+    const bootstrap = spawnSync(
+      "/usr/bin/git",
+      [
+        "-C",
+        immutableFixtureRoot,
+        "show",
+        "HEAD:scripts/bootstrap-production-release-rulesets.mjs",
+      ],
+    );
+    const rejected = spawnSync(
+      unsafeNodePath,
+      [
+        "--input-type=module",
+        "-",
+        "--source-repo",
+        immutableFixtureRoot,
+        "--expected-head",
+        sourceHead,
+        "apply",
+        "--execute",
+      ],
+      { encoding: "utf8", input: bootstrap.stdout },
+    );
+    expect(rejected.status).toBe(1);
+    expect(`${rejected.stdout}\n${rejected.stderr}`).toMatch(/safe mode/iu);
+
+    const accepted = runExecute();
+    expect(accepted.result.status, accepted.combined).toBe(0);
+  }, 20_000);
 
   it("documents pinned REST headers and manual admin-bypass action", () => {
     const runbook = readFileSync(
