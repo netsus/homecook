@@ -17,6 +17,8 @@ function parseArgs(argv) {
     repository: null,
     rootDir: process.cwd(),
     signerWorkflow: null,
+    signerDigest: null,
+    sourceRef: null,
     subjectManifestPath: null,
     trustedRootPath: null,
   };
@@ -45,6 +47,10 @@ function parseArgs(argv) {
       options.rootDir = value;
     } else if (token === "--signer-workflow") {
       options.signerWorkflow = value;
+    } else if (token === "--signer-digest") {
+      options.signerDigest = value;
+    } else if (token === "--source-ref") {
+      options.sourceRef = value;
     } else if (token === "--subject-manifest") {
       options.subjectManifestPath = value;
     } else if (token === "--trusted-root") {
@@ -78,6 +84,8 @@ try {
     repository: options.repository,
     rootDir: options.rootDir,
     signerWorkflow: options.signerWorkflow,
+    signerDigest: options.signerDigest,
+    sourceRef: options.sourceRef,
     subjectManifestPath: options.subjectManifestPath,
     trustedRootPath: options.trustedRootPath,
   });

@@ -9,11 +9,17 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { normalizeExpectedReleaseContexts } from "./production-release-approval-policy.mjs";
+import {
+  CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+  CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+  CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+  GITHUB_ACTIONS_APP_INTEGRATION_ID,
+  normalizeExpectedReleaseContexts,
+  validateProductionReleaseTag,
+} from "./production-release-approval-policy.mjs";
 
 export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v1";
 
-const LOCAL_MAC_PRODUCTION_TAG_PATTERN = /^prod-\d{8}\.\d+$/u;
 const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const MUTATION_COMMANDS = new Set(["prepare-env", "install", "restart", "uninstall"]);
@@ -400,10 +406,10 @@ export function validateLocalMacProductionReleaseManifest({
     );
   }
 
-  const releaseTag = requireNonEmptyString(manifest.release_tag, "manifest.release_tag");
-  if (!LOCAL_MAC_PRODUCTION_TAG_PATTERN.test(releaseTag)) {
-    throw new Error("Release manifest release_tag must match prod-YYYYMMDD.N.");
-  }
+  const releaseTag = validateProductionReleaseTag(
+    manifest.release_tag,
+    "Release manifest release_tag",
+  );
 
   const releaseManifestPath = requireAbsolutePath(
     manifest.release_manifest_path,
@@ -414,6 +420,25 @@ export function validateLocalMacProductionReleaseManifest({
   }
 
   const releaseSha = requireReleaseSha(manifest.release_sha, "manifest.release_sha");
+  const signerDigest = requireReleaseSha(
+    manifest.signer_digest,
+    "manifest.signer_digest",
+  );
+  if (signerDigest !== releaseSha) {
+    throw new Error("manifest.signer_digest must equal manifest.release_sha exactly.");
+  }
+  if (manifest.repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
+    throw new Error(`manifest.repository must be ${CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY}.`);
+  }
+  if (manifest.source_ref !== CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF) {
+    throw new Error(`manifest.source_ref must be ${CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF}.`);
+  }
+  if (manifest.signer_workflow !== CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW) {
+    throw new Error(`manifest.signer_workflow must be ${CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW}.`);
+  }
+  if (manifest.expected_release_integration_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID) {
+    throw new Error(`manifest.expected_release_integration_id must be ${GITHUB_ACTIONS_APP_INTEGRATION_ID}.`);
+  }
   const releaseTree = requireReleaseSha(manifest.release_tree, "manifest.release_tree");
   const masterShaAtApproval = requireReleaseSha(
     manifest.master_sha_at_approval,
@@ -474,6 +499,11 @@ export function validateLocalMacProductionReleaseManifest({
 
   const normalizedManifest = {
     schema,
+    repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+    signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+    signer_digest: signerDigest,
+    expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
     promotion_id: requireNonEmptyString(manifest.promotion_id, "manifest.promotion_id"),
     release_tag: releaseTag,
     release_manifest_path: releaseManifestPath,

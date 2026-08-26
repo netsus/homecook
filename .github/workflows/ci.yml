@@ -9,48 +9,9 @@ on:
       - main
       - master
       - develop
-    paths:
-      - "app/**"
-      - "components/**"
-      - "infra/hybrid-supabase/**"
-      - "lib/**"
-      - "stores/**"
-      - "supabase/**"
-      - "tests/**"
-      - "scripts/**"
-      - "types/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/rulesets/**"
-      - ".github/workflows/production-release-attestation.yml"
-      - "playwright.config.ts"
-      - "lighthouserc.js"
-      - "tsconfig*.json"
-      - "next.config.*"
-      - ".github/workflows/ci.yml"
   pull_request:
-    paths:
-      - "app/**"
-      - "components/**"
-      - "infra/hybrid-supabase/**"
-      - "lib/**"
-      - "stores/**"
-      - "supabase/**"
-      - "tests/**"
-      - "scripts/**"
-      - "types/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/rulesets/**"
-      - ".github/workflows/production-release-attestation.yml"
-      - "playwright.config.ts"
-      - "lighthouserc.js"
-      - "tsconfig*.json"
-      - "next.config.*"
-      - ".github/workflows/ci.yml"
 
 jobs:
-
   quality:
     runs-on: ubuntu-latest
     steps:

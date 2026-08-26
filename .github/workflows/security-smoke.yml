@@ -2,59 +2,11 @@ name: Security Smoke
 
 on:
   pull_request:
-    paths:
-      - "app/api/**"
-      - "app/auth/**"
-      - "app/globals.css"
-      - "app/layout.tsx"
-      - "app/login/**"
-      - "app/page.tsx"
-      - "app/planner/**"
-      - "app/recipe/**"
-      - "components/**"
-      - "lib/*.ts"
-      - "lib/api/**"
-      - "lib/auth/**"
-      - "lib/mock/**"
-      - "lib/server/**"
-      - "lib/supabase/**"
-      - "stores/**"
-      - "supabase/**"
-      - "tests/e2e/helpers/**"
-      - "tests/e2e/qa-security.spec.ts"
-      - "playwright.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/security-smoke.yml"
   push:
     branches:
       - main
       - master
       - develop
-    paths:
-      - "app/api/**"
-      - "app/auth/**"
-      - "app/globals.css"
-      - "app/layout.tsx"
-      - "app/login/**"
-      - "app/page.tsx"
-      - "app/planner/**"
-      - "app/recipe/**"
-      - "components/**"
-      - "lib/*.ts"
-      - "lib/api/**"
-      - "lib/auth/**"
-      - "lib/mock/**"
-      - "lib/server/**"
-      - "lib/supabase/**"
-      - "stores/**"
-      - "supabase/**"
-      - "tests/e2e/helpers/**"
-      - "tests/e2e/qa-security.spec.ts"
-      - "playwright.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/security-smoke.yml"
 
 permissions:
   contents: read

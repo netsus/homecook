@@ -6,6 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
+  CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+  CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+  CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+  GITHUB_ACTIONS_APP_INTEGRATION_ID,
+  GITHUB_CLI_TRUSTED_ROOT_SHA256,
   createGitHubProductionReleaseAttestationVerifier,
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
@@ -15,6 +20,27 @@ import {
 } from "./helpers/local-mac-production-release-fixtures";
 
 const temporaryDirectories: string[] = [];
+const EXPECTED_RELEASE_CONTEXTS = [
+  "build",
+  "changes",
+  "dependency-audit",
+  "policy",
+  "quality",
+  "security-function-authorization",
+  "security-smoke",
+  "snyk",
+];
+
+function createTrustedCheckRuns(checkSuiteId = 200) {
+  return EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
+    app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+    check_suite: { id: checkSuiteId },
+    completed_at: `2026-08-26T09:00:${String(index).padStart(2, "0")}Z`,
+    conclusion: "success",
+    name,
+    status: "completed",
+  }));
+}
 
 function createTempDirectory(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
@@ -32,12 +58,12 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
-  it("rejects zero, missing, failed, pending, and ambiguous expected release contexts while still accepting status-only evidence", () => {
+  it("accepts expected contexts only from the trusted GitHub Actions App and never from commit statuses", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.1",
       releaseTree: "b".repeat(40),
-      repository: "shj/homecook",
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
     };
 
     expect(() =>
@@ -48,122 +74,100 @@ describe("GitHub production release attestation verification", () => {
       }),
     ).toThrow(/expected|context|status/iu);
 
-    const successOnlyStatuses = [
-      { context: "build", state: "success", updated_at: "2026-08-26T09:00:00Z" },
-      { context: "changes", state: "success", updated_at: "2026-08-26T09:00:01Z" },
-      { context: "policy", state: "success", updated_at: "2026-08-26T09:00:02Z" },
-      { context: "quality", state: "success", updated_at: "2026-08-26T09:00:03Z" },
-      { context: "security-function-authorization", state: "success", updated_at: "2026-08-26T09:00:04Z" },
-      { context: "security-smoke", state: "success", updated_at: "2026-08-26T09:00:05Z" },
-      { context: "template-check", state: "success", updated_at: "2026-08-26T09:00:06Z" },
-    ];
+    const spoofedStatuses = EXPECTED_RELEASE_CONTEXTS.map((context, index) => ({
+      context,
+      state: "success",
+      updated_at: `2026-08-26T09:01:${String(index).padStart(2, "0")}Z`,
+    }));
+    expect(() =>
+      buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [],
+        commitStatuses: spoofedStatuses,
+      }),
+    ).toThrow(/missing|trusted|GitHub Actions|context/iu);
+
+    expect(() =>
+      buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: createTrustedCheckRuns().map((entry) => ({
+          ...entry,
+          app: { id: 99999 },
+        })),
+      }),
+    ).toThrow(/trusted|integration|GitHub Actions|app/iu);
 
     expect(
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
-        checkRuns: [],
-        commitStatuses: successOnlyStatuses,
+        checkRuns: createTrustedCheckRuns(),
       }).subject.expected_release_contexts,
-    ).toEqual([
-      "build",
-      "changes",
-      "policy",
-      "quality",
-      "security-function-authorization",
-      "security-smoke",
-      "template-check",
-    ]);
+    ).toEqual(EXPECTED_RELEASE_CONTEXTS);
+  });
 
-    expect(() =>
+  it("excludes only the explicitly supplied current workflow suite and blocks every other non-terminal check or latest bad status", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.1",
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    };
+    const currentSuiteId = 777;
+    const currentSuitePending = {
+      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      check_suite: { id: currentSuiteId },
+      name: "approve-and-tag",
+      status: "in_progress",
+      started_at: "2026-08-26T09:02:00Z",
+    };
+
+    expect(
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
-        checkRuns: [],
-        commitStatuses: successOnlyStatuses.slice(1),
-      }),
-    ).toThrow(/missing|expected|context/iu);
-
-    expect(() =>
-      buildGitHubProductionReleaseAttestationArtifacts({
-        ...releaseInput,
-        checkRuns: [],
-        commitStatuses: successOnlyStatuses.map((entry) =>
-          entry.context === "quality"
-            ? { ...entry, state: "failure" }
-            : entry),
-      }),
-    ).toThrow(/failed|bad|terminal/iu);
-
-    expect(() =>
-      buildGitHubProductionReleaseAttestationArtifacts({
-        ...releaseInput,
-        checkRuns: [],
-        commitStatuses: successOnlyStatuses.map((entry) =>
-          entry.context === "quality"
-            ? { ...entry, state: "pending" }
-            : entry),
-      }),
-    ).toThrow(/pending|bad|terminal/iu);
+        checkRuns: [...createTrustedCheckRuns(), currentSuitePending],
+        excludedCheckSuiteId: currentSuiteId,
+      }).subject.required_check_summary,
+    ).toMatchObject({ total: EXPECTED_RELEASE_CONTEXTS.length });
 
     expect(() =>
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
         checkRuns: [
+          ...createTrustedCheckRuns(),
+          currentSuitePending,
           {
-            workflow_name: "optional",
-            name: "unexpected-pending-check",
+            app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+            check_suite: { id: 778 },
+            name: "other-pending-check",
             status: "in_progress",
-            started_at: "2026-08-26T09:01:00Z",
+            started_at: "2026-08-26T09:03:00Z",
           },
         ],
-        commitStatuses: successOnlyStatuses,
+        excludedCheckSuiteId: currentSuiteId,
       }),
     ).toThrow(/pending|terminal/iu);
 
     expect(() =>
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
-        checkRuns: [
-          {
-            workflow_name: "quality",
-            name: "quality",
-            status: "completed",
-            conclusion: "failure",
-            completed_at: "2026-08-26T09:00:02Z",
-          },
-          {
-            workflow_name: "quality",
-            name: "quality",
-            status: "completed",
-            conclusion: "success",
-            completed_at: "2026-08-26T09:00:04Z",
-          },
+        checkRuns: createTrustedCheckRuns(),
+        commitStatuses: [
+          { context: "legacy-ci", state: "success", updated_at: "2026-08-26T09:00:00Z" },
+          { context: "legacy-ci", state: "error", updated_at: "2026-08-26T09:04:00Z" },
         ],
-        commitStatuses: successOnlyStatuses.filter((entry) => entry.context !== "quality"),
       }),
-    ).toThrow(/rerun|terminal/iu);
+    ).toThrow(/status|failed|error|terminal/iu);
 
     expect(() =>
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
-        checkRuns: [
-          {
-            workflow_name: "quality",
-            name: "quality",
-            status: "completed",
-            conclusion: "success",
-            completed_at: "2026-08-26T09:00:03Z",
-          },
-          {
-            workflow_name: "quality",
-            name: "quality",
-            status: "completed",
-            conclusion: "failure",
-            completed_at: "2026-08-26T09:00:04Z",
-          },
+        checkRuns: createTrustedCheckRuns(),
+        commitStatuses: [
+          { context: "legacy-ci", state: "error", updated_at: "2026-08-26T09:00:00Z" },
+          { context: "legacy-ci", state: "success", updated_at: "2026-08-26T09:04:00Z" },
         ],
-        commitStatuses: successOnlyStatuses.filter((entry) => entry.context !== "quality"),
       }),
-    ).toThrow(/failed|bad|ambiguous|terminal/iu);
+    ).not.toThrow();
   });
 
   it("fails closed unless offline bundle, trusted root, and subject manifest are supplied explicitly", () => {
@@ -180,7 +184,7 @@ describe("GitHub production release attestation verification", () => {
         gitEvidence,
         manifest,
         manifestDigest: "d".repeat(64),
-        repository: "shj/homecook",
+        repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
         rootDir: process.cwd(),
       }),
     ).toThrow(/bundle|trusted root|subject manifest|offline/iu);
@@ -202,19 +206,15 @@ describe("GitHub production release attestation verification", () => {
 
     writeFileSync(subjectManifestPath, JSON.stringify({
       schema: "homecook.github.production-release-manifest.v1",
-      repository: "shj/homecook",
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+      signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+      signer_digest: manifest.release_sha,
+      expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
       release_tag: manifest.release_tag,
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
-      expected_release_contexts: [
-        "build",
-        "changes",
-        "policy",
-        "quality",
-        "security-function-authorization",
-        "security-smoke",
-        "template-check",
-      ],
+      expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
       required_check_summary: manifest.required_check_summary,
     }, null, 2));
     writeFileSync(bundlePath, "{}\n");
@@ -223,8 +223,8 @@ describe("GitHub production release attestation verification", () => {
     const invocations: string[][] = [];
     const verifier = createGitHubProductionReleaseAttestationVerifier({
       bundlePath,
-      repository: "shj/homecook",
-      signerWorkflow: "shj/homecook/.github/workflows/production-release-attestation.yml",
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      signerWorkflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
       subjectManifestPath,
       trustedRootPath,
       runGh: ((_: string, args?: readonly string[]) => {
@@ -235,22 +235,18 @@ describe("GitHub production release attestation verification", () => {
             verificationResult: {
               statement: {
                 predicateType:
-                  "https://github.com/shj/homecook/attestations/production-release/v1",
+                  "https://github.com/netsus/homecook/attestations/production-release/v1",
                 predicate: {
                   schema: "homecook.github.production-release-predicate.v1",
-                  repository: "shj/homecook",
+                  repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+                  source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+                  signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+                  signer_digest: manifest.release_sha,
+                  expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
                   release_tag: manifest.release_tag,
                   release_sha: manifest.release_sha,
                   release_tree: manifest.release_tree,
-                  expected_release_contexts: [
-                    "build",
-                    "changes",
-                    "policy",
-                    "quality",
-                    "security-function-authorization",
-                    "security-smoke",
-                    "template-check",
-                  ],
+                  expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
                   required_check_summary: manifest.required_check_summary,
                   subject_manifest_sha256: "a".repeat(64),
                 },
@@ -267,7 +263,9 @@ describe("GitHub production release attestation verification", () => {
           }]),
         };
       }) as typeof import("node:child_process").spawnSync,
-      sha256File: () => "a".repeat(64),
+      sha256File: (path) => path === trustedRootPath
+        ? GITHUB_CLI_TRUSTED_ROOT_SHA256
+        : "a".repeat(64),
     });
 
     expect(
@@ -289,21 +287,50 @@ describe("GitHub production release attestation verification", () => {
         "verify",
         subjectManifestPath,
         "--repo",
-        "shj/homecook",
+        CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
         "--bundle",
         bundlePath,
         "--custom-trusted-root",
         trustedRootPath,
         "--signer-workflow",
-        "shj/homecook/.github/workflows/production-release-attestation.yml",
-        "--predicate-type",
-        "https://github.com/shj/homecook/attestations/production-release/v1",
-        "--source-digest",
+        CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+        "--source-ref",
+        CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+        "--signer-digest",
         manifest.release_sha,
+        "--predicate-type",
+        "https://github.com/netsus/homecook/attestations/production-release/v1",
         "--format",
         "json",
       ],
     ]);
+
+    for (const identityOverride of [
+      { repository: "attacker/fork" },
+      { signerWorkflow: "attacker/fork/.github/workflows/release.yml" },
+      { sourceRef: "refs/heads/feature/evil" },
+      { signerDigest: "f".repeat(40) },
+    ]) {
+      expect(() =>
+        verifyGitHubProductionReleaseAttestation({
+          bundlePath,
+          gitEvidence,
+          manifest,
+          repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+          rootDir,
+          signerWorkflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+          subjectManifestPath,
+          trustedRootPath,
+          runGh: (() => {
+            throw new Error("gh must not run for relaxed identity");
+          }) as typeof import("node:child_process").spawnSync,
+          sha256File: (path) => path === trustedRootPath
+            ? GITHUB_CLI_TRUSTED_ROOT_SHA256
+            : "a".repeat(64),
+          ...identityOverride,
+        }),
+      ).toThrow(/canonical|release SHA|signerDigest/iu);
+    }
 
     writeFileSync(subjectManifestPath, JSON.stringify({
       ...JSON.parse(readFileSync(subjectManifestPath, "utf8")),
@@ -318,5 +345,25 @@ describe("GitHub production release attestation verification", () => {
         rootDir,
       }),
     ).toThrow(/repository/iu);
+
+    let ghCalls = 0;
+    expect(() =>
+      verifyGitHubProductionReleaseAttestation({
+        bundlePath,
+        gitEvidence,
+        manifest,
+        repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+        rootDir,
+        signerWorkflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
+        subjectManifestPath,
+        trustedRootPath,
+        runGh: (() => {
+          ghCalls += 1;
+          throw new Error("gh must not run");
+        }) as typeof import("node:child_process").spawnSync,
+        sha256File: () => "0".repeat(64),
+      }),
+    ).toThrow(/trusted root|digest|sha256/iu);
+    expect(ghCalls).toBe(0);
   });
 });

@@ -11,6 +11,7 @@ function parseArgs(argv) {
   const options = {
     checkRunsPath: null,
     commitStatusesPath: null,
+    excludedCheckSuiteId: null,
     expectedContexts: null,
     predicateOutputPath: null,
     releaseSha: null,
@@ -34,6 +35,8 @@ function parseArgs(argv) {
       options.checkRunsPath = value;
     } else if (token === "--commit-statuses-json") {
       options.commitStatusesPath = value;
+    } else if (token === "--excluded-check-suite-id") {
+      options.excludedCheckSuiteId = value;
     } else if (token === "--expected-contexts") {
       options.expectedContexts = value;
     } else if (token === "--predicate-output") {
@@ -82,6 +85,7 @@ try {
   const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
     checkRuns,
     commitStatuses,
+    excludedCheckSuiteId: options.excludedCheckSuiteId,
     expectedContexts,
     predicateOutputPath: options.predicateOutputPath,
     releaseSha: options.releaseSha,

@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,6 +14,7 @@ import {
   validateLocalMacProductionMutationAuthority,
   validateLocalMacProductionReleaseManifest,
 } from "../scripts/lib/local-mac-production-release.mjs";
+import { validateProductionReleaseTag } from "../scripts/lib/production-release-approval-policy.mjs";
 
 const temporaryDirectories: string[] = [];
 const VERIFIED_ATTESTATION = () => ({ source: "test-attestation", verified: true });
@@ -27,6 +28,11 @@ function createTempDirectory(prefix: string) {
 function createManifest(overrides: Record<string, unknown> = {}) {
   return {
     schema: "homecook.local-mac-production-release.v1",
+    repository: "netsus/homecook",
+    source_ref: "refs/heads/master",
+    signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    signer_digest: "a".repeat(40),
+    expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
     release_manifest_path: "/Users/tester/.homecook/releases/manifests/prod-20260825.1.json",
@@ -47,11 +53,12 @@ function createManifest(overrides: Record<string, unknown> = {}) {
     expected_release_contexts: [
       "build",
       "changes",
+      "dependency-audit",
       "policy",
       "quality",
       "security-function-authorization",
       "security-smoke",
-      "template-check",
+      "snyk",
     ],
     attestation_digest: "d".repeat(64),
     app_launch_agent_enabled: true,
@@ -81,6 +88,38 @@ afterEach(() => {
 });
 
 describe("local Mac production release manifest", () => {
+  it("uses one strict shared prod tag validator and exposes expected contexts in the closed JSON schema", () => {
+    expect(validateProductionReleaseTag("prod-20260826.1")).toBe("prod-20260826.1");
+    for (const invalidTag of [
+      "xprod-20260826.1",
+      "prod-20260826.1-extra",
+      "prod-20260826x1",
+      "prod-20260826.",
+      "prod-20260826.01/evil",
+    ]) {
+      expect(() => validateProductionReleaseTag(invalidTag)).toThrow(/prod-|release tag|format/iu);
+    }
+
+    const schema = JSON.parse(readFileSync(
+      new URL("../scripts/schemas/local-mac-production-release.schema.json", import.meta.url),
+      "utf8",
+    ));
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toContain("expected_release_contexts");
+    expect(schema.properties.expected_release_contexts).toMatchObject({
+      type: "array",
+      minItems: 8,
+      maxItems: 8,
+      uniqueItems: true,
+    });
+    expect(schema.properties.repository).toEqual({ const: "netsus/homecook" });
+    expect(schema.properties.source_ref).toEqual({ const: "refs/heads/master" });
+    expect(schema.properties.signer_workflow).toEqual({
+      const: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    });
+    expect(schema.properties.expected_release_integration_id).toEqual({ const: 15368 });
+  });
+
   it("resolves the approved release SHA from origin/master instead of the local checkout head", () => {
     const invocations: string[][] = [];
     const releaseSha = "a".repeat(40);

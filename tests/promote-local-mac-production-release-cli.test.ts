@@ -48,6 +48,11 @@ function createFixtureRepo({
   const manifestPath = join(rootDir, "release.json");
   writeFileSync(manifestPath, JSON.stringify({
     schema: "homecook.local-mac-production-release.v1",
+    repository: "netsus/homecook",
+    source_ref: "refs/heads/master",
+    signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    signer_digest: releaseSha,
+    expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
     release_manifest_path: manifestPath,
@@ -63,11 +68,12 @@ function createFixtureRepo({
     expected_release_contexts: [
       "build",
       "changes",
+      "dependency-audit",
       "policy",
       "quality",
       "security-function-authorization",
       "security-smoke",
-      "template-check",
+      "snyk",
     ],
     required_check_summary: {
       total: 12,

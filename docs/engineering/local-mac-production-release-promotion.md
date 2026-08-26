@@ -22,6 +22,8 @@ release 승격은 항상 exact SHA, annotated `prod-*` tag, release manifest, at
 
 release identity는 다음을 함께 만족해야 한다.
 
+GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/master`, signer workflow `netsus/homecook/.github/workflows/production-release-attestation.yml`, signer digest `release_sha`로 고정한다. CLI 인수는 이 identity를 바꿀 수 없다. offline `gh attestation verify`는 release-tagged code에 pin된 custom trusted-root SHA-256 `65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c`와 먼저 일치해야 한다.
+
 | field | meaning |
 | --- | --- |
 | `master_sha_at_approval` | 승인 시점의 `origin/master` exact full SHA |
@@ -122,6 +124,11 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 필수 필드는 다음과 같다.
 
 - `schema`
+- `repository` (`netsus/homecook`)
+- `source_ref` (`refs/heads/master`)
+- `signer_workflow` (`netsus/homecook/.github/workflows/production-release-attestation.yml`)
+- `signer_digest` (`release_sha`와 exact match)
+- `expected_release_integration_id` (`15368`)
 - `promotion_id`
 - `release_tag`
 - `release_manifest_path`
@@ -190,6 +197,16 @@ PR merge만으로 ruleset activation을 주장하지 않는다.
 C1 validator는 `.github/rulesets/*.json` desired-state와 optional local actual snapshot만 읽는다.
 즉, `pnpm release:github:rulesets:verify`는 actual snapshot이 없으면 `activation_blocked: true`로 fail-closed pending 상태를 기록하지만, network나 admin token 없이도 desired-state drift를 검증할 수 있다.
 C2에서만 GitHub REST readback snapshot을 받아 `--actual-dir <path>` 비교로 `actual_state: matched`를 닫는다.
+
+C1 activation_blocked는 exact Integration actor와 environment reviewer가 확정될 때까지 유지한다. 현재 placeholder actor `0`을 실제 actor로 해석하거나 C2 activation으로 주장하지 않는다.
+
+C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
+
+- `production-release-master`의 공통 required context는 `build`, `changes`, `dependency-audit`, `policy`, `quality`, `security-function-authorization`, `security-smoke`, `snyk`이며 모두 GitHub Actions App integration id `15368`에 묶인다.
+- `production-release-tags`의 단일 `Integration` bypass actor id는 `HOMECOOK_RELEASE_ATTESTATION_APP_ID`와 같아야 한다.
+- environment `production-release-approval`은 required reviewer와 prevent-self-review를 갖고 deployment branch/tag source는 master-only여야 한다. environment 및 deployment branch policy REST readback을 evidence에 포함한다.
+- environment secrets는 `HOMECOOK_RELEASE_ATTESTATION_APP_ID`, `HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY` 두 개뿐이며 workflow는 `actions/create-github-app-token`으로 short-lived token을 만든다. 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
+- workflow 승인 뒤 `github.ref`, `github.workflow_ref`, exact `origin/master`, tree, rulesets, 전체 check-runs와 `/statuses` 모든 page를 다시 읽고 preflight subject/predicate/ruleset evidence와 비교한다. tag push 직전에도 `origin/master`를 다시 확인한다.
 
 attestation workflow artifact baseline은 다음 세 가지다.
 

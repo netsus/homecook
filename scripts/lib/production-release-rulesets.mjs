@@ -1,12 +1,22 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import {
+  GITHUB_ACTIONS_APP_INTEGRATION_ID,
   UNRESOLVED_RELEASE_TAG_INTEGRATION_ACTOR_ID,
   normalizeExpectedReleaseContexts,
 } from "./production-release-approval-policy.mjs";
 
 export const PRODUCTION_RELEASE_RULESET_SCHEMA =
   "homecook.github.repository-ruleset.v1";
+export const PRODUCTION_RELEASE_APPROVAL_ENVIRONMENT_SCHEMA =
+  "homecook.github.production-release-approval-environment.v1";
+
+const APPROVAL_ENVIRONMENT_FILE =
+  ".github/rulesets/production-release-approval-environment.json";
+const APPROVAL_ENVIRONMENT_ACTUAL_FILE =
+  "production-release-approval-environment.json";
+const APPROVAL_BRANCH_POLICIES_ACTUAL_FILE =
+  "production-release-approval-deployment-branch-policies.json";
 
 const EXPECTED_RULESET_FILES = [
   {
@@ -55,6 +65,20 @@ function requireArray(value, label) {
 function requireObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label} must be an object.`);
+  }
+  return value;
+}
+
+function requireBoolean(value, label) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${label} must be a boolean.`);
+  }
+  return value;
+}
+
+function requirePositiveOrUnresolvedInteger(value, label) {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${label} must be an integer >= 0.`);
   }
   return value;
 }
@@ -201,6 +225,20 @@ function validateRulesetFile({ filePath, requiredRuleTypes, rootDir, target }) {
       normalized.required_status_contexts,
       `${filePath}.required_status_contexts`,
     );
+    const requiredStatusChecksRule = normalized.rules.find(
+      (rule) => rule.type === "required_status_checks",
+    );
+    const requiredStatusChecks = requireArray(
+      requiredStatusChecksRule?.parameters?.required_status_checks,
+      `${filePath}.rules.required_status_checks`,
+    );
+    for (const [index, check] of requiredStatusChecks.entries()) {
+      if (check?.integration_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID) {
+        throw new Error(
+          `${filePath}.rules.required_status_checks[${index}].integration_id must be ${GITHUB_ACTIONS_APP_INTEGRATION_ID}.`,
+        );
+      }
+    }
   }
 
   return normalized;
@@ -232,6 +270,150 @@ function loadActualRuleset(actualDir, expectedFilePath) {
       rootDir: actualDir,
       ruleset: readJson(actualFilePath, "Production release actual ruleset"),
     }),
+    present: true,
+  };
+}
+
+function validateApprovalEnvironment(rootDir) {
+  const absolutePath = resolve(rootDir, APPROVAL_ENVIRONMENT_FILE);
+  if (!existsSync(absolutePath)) {
+    throw new Error(`Required approval environment policy is missing: ${APPROVAL_ENVIRONMENT_FILE}`);
+  }
+  const value = requireObject(
+    readJson(absolutePath, "Production release approval environment policy"),
+    APPROVAL_ENVIRONMENT_FILE,
+  );
+  if (value.schema !== PRODUCTION_RELEASE_APPROVAL_ENVIRONMENT_SCHEMA) {
+    throw new Error(
+      `${APPROVAL_ENVIRONMENT_FILE} schema must be ${PRODUCTION_RELEASE_APPROVAL_ENVIRONMENT_SCHEMA}.`,
+    );
+  }
+  if (value.name !== "production-release-approval") {
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} name must be production-release-approval.`);
+  }
+  if (value.repository !== "netsus/homecook" || value.source_ref !== "refs/heads/master") {
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must pin netsus/homecook refs/heads/master.`);
+  }
+  const deploymentBranchPolicy = requireObject(
+    value.deployment_branch_policy,
+    `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policy`,
+  );
+  const reviewers = requireArray(
+    value.required_reviewers,
+    `${APPROVAL_ENVIRONMENT_FILE}.required_reviewers`,
+  ).map((reviewer, index) => {
+    const entry = requireObject(
+      reviewer,
+      `${APPROVAL_ENVIRONMENT_FILE}.required_reviewers[${index}]`,
+    );
+    const actorType = requireNonEmptyString(
+      entry.actor_type,
+      `${APPROVAL_ENVIRONMENT_FILE}.required_reviewers[${index}].actor_type`,
+    );
+    if (!["User", "Team", "Unresolved"].includes(actorType)) {
+      throw new Error(`${APPROVAL_ENVIRONMENT_FILE} reviewer actor_type must be User, Team, or Unresolved.`);
+    }
+    return {
+      actor_id: requirePositiveOrUnresolvedInteger(
+        entry.actor_id,
+        `${APPROVAL_ENVIRONMENT_FILE}.required_reviewers[${index}].actor_id`,
+      ),
+      actor_type: actorType,
+    };
+  });
+  if (reviewers.length !== 1) {
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must define exactly one required reviewer.`);
+  }
+  if (
+    (reviewers[0].actor_id === 0) !== (reviewers[0].actor_type === "Unresolved")
+  ) {
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} unresolved reviewer id and type must change together.`);
+  }
+  const branches = requireArray(
+    value.master_only_branches,
+    `${APPROVAL_ENVIRONMENT_FILE}.master_only_branches`,
+  );
+  if (JSON.stringify(branches) !== JSON.stringify(["master"])) {
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must be master-only.`);
+  }
+  const normalized = {
+    deployment_branch_policy: {
+      custom_branch_policies: requireBoolean(
+        deploymentBranchPolicy.custom_branch_policies,
+        `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policy.custom_branch_policies`,
+      ),
+      protected_branches: requireBoolean(
+        deploymentBranchPolicy.protected_branches,
+        `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policy.protected_branches`,
+      ),
+    },
+    master_only_branches: branches,
+    name: value.name,
+    prevent_self_review: requireBoolean(
+      value.prevent_self_review,
+      `${APPROVAL_ENVIRONMENT_FILE}.prevent_self_review`,
+    ),
+    repository: value.repository,
+    required_reviewers: reviewers,
+    source_ref: value.source_ref,
+  };
+  if (
+    normalized.prevent_self_review !== true
+    || normalized.deployment_branch_policy.custom_branch_policies !== true
+    || normalized.deployment_branch_policy.protected_branches !== false
+  ) {
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must require self-review prevention and custom master-only policy.`);
+  }
+  return normalized;
+}
+
+function loadActualApprovalEnvironment(actualDir, desired) {
+  if (!actualDir) {
+    return { matched: false, present: false };
+  }
+  const environmentPath = resolve(actualDir, APPROVAL_ENVIRONMENT_ACTUAL_FILE);
+  const branchPoliciesPath = resolve(actualDir, APPROVAL_BRANCH_POLICIES_ACTUAL_FILE);
+  if (!existsSync(environmentPath) || !existsSync(branchPoliciesPath)) {
+    return { matched: false, present: false };
+  }
+  const environment = requireObject(
+    readJson(environmentPath, "Production release approval environment readback"),
+    environmentPath,
+  );
+  const branchPolicies = requireObject(
+    readJson(branchPoliciesPath, "Production release approval branch policy readback"),
+    branchPoliciesPath,
+  );
+  const reviewerRule = requireArray(
+    environment.protection_rules,
+    `${environmentPath}.protection_rules`,
+  ).filter((rule) => rule?.type === "required_reviewers");
+  const actualReviewers = reviewerRule.length === 1
+    ? requireArray(reviewerRule[0].reviewers, `${environmentPath}.reviewers`).map((entry) => ({
+      actor_id: entry?.reviewer?.id,
+      actor_type: entry?.type,
+    }))
+    : [];
+  const actualBranches = requireArray(
+    branchPolicies.branch_policies,
+    `${branchPoliciesPath}.branch_policies`,
+  ).filter((entry) => entry?.type === "branch").map((entry) => entry?.name);
+  const actual = {
+    deployment_branch_policy: {
+      custom_branch_policies:
+        environment.deployment_branch_policy?.custom_branch_policies,
+      protected_branches:
+        environment.deployment_branch_policy?.protected_branches,
+    },
+    master_only_branches: actualBranches,
+    name: environment.name,
+    prevent_self_review: reviewerRule[0]?.prevent_self_review,
+    repository: "netsus/homecook",
+    required_reviewers: actualReviewers,
+    source_ref: "refs/heads/master",
+  };
+  return {
+    matched: JSON.stringify(actual) === JSON.stringify(desired),
     present: true,
   };
 }
@@ -279,6 +461,7 @@ export function getProductionReleaseRulesetPlan({
   let activationBlocked = false;
   let actualState = "matched";
   let unresolvedActor = false;
+  const activationBlockers = [];
 
   const rulesets = EXPECTED_RULESET_FILES.map((entry) => {
     const desired = validateRulesetFile({
@@ -292,11 +475,13 @@ export function getProductionReleaseRulesetPlan({
 
     if (!actual.present) {
       activationBlocked = true;
+      activationBlockers.push(`missing_ruleset_readback:${desired.name}`);
       if (actualState === "matched") {
         actualState = "missing";
       }
     } else if (!matched) {
       activationBlocked = true;
+      activationBlockers.push(`ruleset_mismatch:${desired.name}`);
       if (actualState === "matched") {
         actualState = "mismatch";
       }
@@ -319,12 +504,48 @@ export function getProductionReleaseRulesetPlan({
   if (unresolvedActor) {
     activationBlocked = true;
     actualState = "unresolved_actor";
+    activationBlockers.push("unresolved_release_tag_integration_actor");
+  }
+
+  const approvalEnvironment = validateApprovalEnvironment(rootDir);
+  const actualApprovalEnvironment = loadActualApprovalEnvironment(
+    actualDir,
+    approvalEnvironment,
+  );
+  const unresolvedApprovalReviewer = approvalEnvironment.required_reviewers.some(
+    (reviewer) => reviewer.actor_id === 0,
+  );
+  if (unresolvedApprovalReviewer) {
+    activationBlocked = true;
+    activationBlockers.push("unresolved_approval_environment_reviewer");
+    if (actualState === "matched") {
+      actualState = "unresolved_approval_environment";
+    }
+  }
+  if (!actualApprovalEnvironment.present) {
+    activationBlocked = true;
+    activationBlockers.push("missing_approval_environment_readback");
+    if (actualState === "matched") {
+      actualState = "missing_approval_environment";
+    }
+  } else if (!actualApprovalEnvironment.matched) {
+    activationBlocked = true;
+    activationBlockers.push("approval_environment_mismatch");
+    if (actualState === "matched") {
+      actualState = "approval_environment_mismatch";
+    }
   }
 
   return {
     activation_blocked: activationBlocked,
+    activation_blockers: [...new Set(activationBlockers)].sort(),
     actual_dir: actualDir ? resolve(actualDir) : null,
     actual_state: activationBlocked ? actualState : "matched",
+    approval_environment: {
+      actual_present: actualApprovalEnvironment.present,
+      matched: actualApprovalEnvironment.matched,
+      name: approvalEnvironment.name,
+    },
     rulesets,
     workflow: {
       filePath: ".github/workflows/production-release-attestation.yml",

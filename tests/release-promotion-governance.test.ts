@@ -43,6 +43,12 @@ describe("release promotion governance docs", () => {
     expect(releaseRunbook).toContain("migration compatibility gate");
     expect(releaseRunbook).toContain("자동 rollback");
     expect(releaseRunbook).toContain("forward-fix");
+    expect(releaseRunbook).toContain("production-release-approval");
+    expect(releaseRunbook).toContain("master-only");
+    expect(releaseRunbook).toContain("C1 activation_blocked");
+    expect(releaseRunbook).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_ID");
+    expect(releaseRunbook).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY");
+    expect(releaseRunbook).toContain("65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c");
 
     expect(gitWorkflow).toContain("`master` merge는 통합 evidence다. production deployment approval은 아니다.");
     expect(gitWorkflow).toContain("prod-*");

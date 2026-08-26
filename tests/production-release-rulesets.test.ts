@@ -12,12 +12,14 @@ const temporaryDirectories: string[] = [];
 const EXPECTED_RELEASE_CONTEXTS = [
   "build",
   "changes",
+  "dependency-audit",
   "policy",
   "quality",
   "security-function-authorization",
   "security-smoke",
-  "template-check",
+  "snyk",
 ];
+const GITHUB_ACTIONS_APP_INTEGRATION_ID = 15368;
 
 function read(filePath: string) {
   return readFileSync(isAbsolute(filePath) ? filePath : join(repoRoot, filePath), "utf8");
@@ -65,6 +67,14 @@ describe("production release rulesets desired state", () => {
       rules?: Array<{ parameters?: Record<string, unknown>; type?: string }>;
       target?: string;
     };
+    const approvalEnvironment = JSON.parse(
+      read(".github/rulesets/production-release-approval-environment.json"),
+    ) as {
+      deployment_branch_policy?: Record<string, boolean>;
+      master_only_branches?: string[];
+      prevent_self_review?: boolean;
+      required_reviewers?: Array<{ actor_id?: number; actor_type?: string }>;
+    };
 
     expect(branchRuleset.name).toBe("production-release-master");
     expect(branchRuleset.target).toBe("branch");
@@ -89,6 +99,11 @@ describe("production release rulesets desired state", () => {
         (entry) => entry.context,
       ),
     ).toEqual(EXPECTED_RELEASE_CONTEXTS);
+    expect(
+      requiredStatusChecksRule?.parameters?.required_status_checks?.map(
+        (entry) => entry.integration_id,
+      ),
+    ).toEqual(EXPECTED_RELEASE_CONTEXTS.map(() => GITHUB_ACTIONS_APP_INTEGRATION_ID));
 
     expect(tagRuleset.name).toBe("production-release-tags");
     expect(tagRuleset.target).toBe("tag");
@@ -129,6 +144,15 @@ describe("production release rulesets desired state", () => {
         bypass_mode: "always",
       },
     ]);
+    expect(approvalEnvironment).toMatchObject({
+      deployment_branch_policy: {
+        custom_branch_policies: true,
+        protected_branches: false,
+      },
+      master_only_branches: ["master"],
+      prevent_self_review: true,
+      required_reviewers: [{ actor_id: 0, actor_type: "Unresolved" }],
+    });
   });
 
   it("ships a read-only ruleset planner/verifier with optional actual-state comparison and a dry-run apply surface", () => {
@@ -169,7 +193,7 @@ describe("production release rulesets desired state", () => {
               do_not_enforce_on_create: false,
               required_status_checks: EXPECTED_RELEASE_CONTEXTS.map((context) => ({
                 context,
-                integration_id: null,
+                integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
               })),
             },
           },
@@ -204,6 +228,8 @@ describe("production release rulesets desired state", () => {
     expect(verify.stdout).toContain("production-release-tags");
     expect(verify.stdout).toContain("\"activation_blocked\": true");
     expect(verify.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
+    expect(verify.stdout).toContain("unresolved_approval_environment_reviewer");
+    expect(verify.stdout).toContain("missing_approval_environment_readback");
 
     const verifyWithActual = spawnSync(
       process.execPath,
@@ -255,6 +281,24 @@ describe("production release rulesets desired state", () => {
       }, null, 2),
     );
     writeFileSync(
+      join(rulesetsDir, "production-release-approval-environment.json"),
+      JSON.stringify({
+        schema: "homecook.github.production-release-approval-environment.v1",
+        name: "production-release-approval",
+        repository: "netsus/homecook",
+        source_ref: "refs/heads/master",
+        prevent_self_review: true,
+        deployment_branch_policy: {
+          protected_branches: false,
+          custom_branch_policies: true,
+        },
+        master_only_branches: ["master"],
+        required_reviewers: [
+          { actor_id: 24680, actor_type: "User" },
+        ],
+      }, null, 2),
+    );
+    writeFileSync(
       join(workflowsDir, "production-release-attestation.yml"),
       read(".github/workflows/production-release-attestation.yml"),
     );
@@ -281,6 +325,34 @@ describe("production release rulesets desired state", () => {
             actor_type: "Integration",
             bypass_mode: "always",
           },
+        ],
+      }, null, 2),
+    );
+    writeFileSync(
+      join(resolvedActualDir, "production-release-approval-environment.json"),
+      JSON.stringify({
+        name: "production-release-approval",
+        deployment_branch_policy: {
+          protected_branches: false,
+          custom_branch_policies: true,
+        },
+        protection_rules: [
+          {
+            type: "required_reviewers",
+            prevent_self_review: true,
+            reviewers: [
+              { type: "User", reviewer: { id: 24680 } },
+            ],
+          },
+          { type: "branch_policy" },
+        ],
+      }, null, 2),
+    );
+    writeFileSync(
+      join(resolvedActualDir, "production-release-approval-deployment-branch-policies.json"),
+      JSON.stringify({
+        branch_policies: [
+          { name: "master", type: "branch" },
         ],
       }, null, 2),
     );
@@ -334,24 +406,69 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("artifact-metadata: write");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain("contents: read");
-    expect(workflow).toContain("contents: write");
+    expect(workflow.match(/approve-and-tag:[\s\S]*?permissions:[\s\S]*?contents: read/u)).not.toBeNull();
     expect(workflow).toContain("environment: production-release-approval");
-    expect(workflow).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN");
+    expect(workflow).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_ID");
+    expect(workflow).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY");
+    expect(workflow).not.toContain("HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN");
+    expect(workflow).toContain("actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349");
     expect(workflow).toContain("refs/remotes/origin/master^{commit}");
     expect(workflow).toContain("prod-YYYYMMDD.N");
     expect(workflow).toContain("required_check_summary");
-    expect(workflow).toContain("commits/\"$RELEASE_SHA\"/status");
+    expect(workflow).toContain("commits/\"$RELEASE_SHA\"/statuses");
+    expect(workflow).toMatch(/statuses[\s\S]*?--paginate/u);
+    expect(workflow).toContain("actions/runs/${{ github.run_id }}");
+    expect(workflow).toContain("--excluded-check-suite-id");
     expect(workflow).toContain("subject-path:");
     expect(workflow).toContain("predicate-path:");
-    expect(workflow).toContain("gh api repos/${{ github.repository }}/rulesets");
+    expect(workflow).toContain("gh api repos/netsus/homecook/rulesets");
     expect(workflow).toContain("git tag -a");
-    expect(workflow).toContain("x-access-token:$HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN@github.com/${{ github.repository }}.git");
+    expect(workflow).toContain("x-access-token:${{ steps.app-token.outputs.token }}@github.com/netsus/homecook.git");
     expect(workflow).toContain("refs/tags/\"$RELEASE_TAG\"");
-    expect(workflow).toContain("actions/attest@v4");
+    expect(workflow).toContain("actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6");
     expect(workflow).toContain("custom predicate");
     expect(workflow).toContain("terminal check summary");
     for (const context of EXPECTED_RELEASE_CONTEXTS) {
       expect(workflow).toContain(context);
     }
+
+    const mutableActionReferences = workflow.match(/uses:\s+[^\s]+@(?![0-9a-f]{40}(?:\s|$))[^\s]+/gu) ?? [];
+    expect(mutableActionReferences).toEqual([]);
+    for (const pinnedAction of [
+      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+      "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+      "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349",
+    ]) {
+      expect(workflow).toContain(pinnedAction);
+    }
+
+    expect(workflow).toContain('test "${{ github.repository }}" = "netsus/homecook"');
+    expect(workflow).toContain('test "${{ github.ref }}" = "refs/heads/master"');
+    expect(workflow).toContain('test "${{ github.workflow_ref }}" = "netsus/homecook/.github/workflows/production-release-attestation.yml@refs/heads/master"');
+    expect(workflow).toContain("Re-fetch and rebuild approval evidence after environment approval");
+    expect(workflow).toContain("Compare approval evidence to preflight evidence");
+    expect(workflow).toContain("Recheck origin/master immediately before protected tag push");
+  });
+
+  it("runs every shared release context for every pull request and every master push", () => {
+    const ci = read(".github/workflows/ci.yml");
+    const qa = read(".github/workflows/playwright.yml");
+    const policy = read(".github/workflows/policy.yml");
+    const securityReview = read(".github/workflows/security-review.yml");
+    const securitySmoke = read(".github/workflows/security-smoke.yml");
+
+    expect(ci).toMatch(/push:[\s\S]*?- master[\s\S]*?pull_request:/u);
+    expect(ci).not.toMatch(/pull_request:[\s\S]*?paths:/u);
+    expect(ci).not.toMatch(/push:[\s\S]*?paths:/u);
+    expect(qa).toContain("changes:");
+    expect(policy).toContain("policy:");
+    expect(securityReview).toMatch(/pull_request:/u);
+    expect(securityReview).not.toContain("paths-ignore:");
+    expect(securityReview).toContain("dependency-audit:");
+    expect(securityReview).toContain("snyk:");
+    expect(securitySmoke).not.toMatch(/pull_request:[\s\S]*?paths:/u);
+    expect(securitySmoke).not.toMatch(/push:[\s\S]*?paths:/u);
   });
 });

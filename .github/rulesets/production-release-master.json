@@ -34,31 +34,35 @@
         "required_status_checks": [
           {
             "context": "build",
-            "integration_id": null
+            "integration_id": 15368
           },
           {
             "context": "changes",
-            "integration_id": null
+            "integration_id": 15368
+          },
+          {
+            "context": "dependency-audit",
+            "integration_id": 15368
           },
           {
             "context": "policy",
-            "integration_id": null
+            "integration_id": 15368
           },
           {
             "context": "quality",
-            "integration_id": null
+            "integration_id": 15368
           },
           {
             "context": "security-function-authorization",
-            "integration_id": null
+            "integration_id": 15368
           },
           {
             "context": "security-smoke",
-            "integration_id": null
+            "integration_id": 15368
           },
           {
-            "context": "template-check",
-            "integration_id": null
+            "context": "snyk",
+            "integration_id": 15368
           }
         ]
       }

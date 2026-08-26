@@ -1,0 +1,18 @@
+{
+  "schema": "homecook.github.production-release-approval-environment.v1",
+  "name": "production-release-approval",
+  "repository": "netsus/homecook",
+  "source_ref": "refs/heads/master",
+  "prevent_self_review": true,
+  "deployment_branch_policy": {
+    "protected_branches": false,
+    "custom_branch_policies": true
+  },
+  "master_only_branches": ["master"],
+  "required_reviewers": [
+    {
+      "actor_id": 0,
+      "actor_type": "Unresolved"
+    }
+  ]
+}
