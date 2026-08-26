@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -675,10 +676,12 @@ describe("production release C2 apply", () => {
   it.each([
     ["missing", null],
     ["enabled", approvedEnvironmentReadback({ can_admins_bypass: true })],
-  ])("fails closed with manual action when admin bypass is %s", (_label, environment) => {
+  ])("fails closed with manual action when admin bypass is %s", (label, environment) => {
     const run = runExecute({ state: initialState({ environment, policies: [] }) });
     expect(run.result.status).toBe(1);
-    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toContain(
+      label === "enabled" ? '"partial_state": false' : '"partial_state": true',
+    );
     expect(run.combined).toContain('"manual_action_required": true');
     expect(run.combined).toMatch(/admin bypass/iu);
     expect(run.state.calls.filter((call) => call.key.startsWith("SECRET "))).toEqual([]);
@@ -686,6 +689,12 @@ describe("production release C2 apply", () => {
       call.key.endsWith("/deployment-branch-policies") && call.key.startsWith("POST ")))
       .toBe(false);
     expect(run.state.calls.some((call) => call.key.startsWith("DELETE "))).toBe(false);
+    if (label === "enabled") {
+      expect(run.state.calls.some((call) =>
+        call.key.startsWith("POST ")
+        || call.key.startsWith("PUT ")
+        || call.key.startsWith("SECRET "))).toBe(false);
+    }
   });
 
   it("fails closed when remote master drifts after mutation and before snapshot", () => {
@@ -795,6 +804,10 @@ describe("production release C2 apply", () => {
         actor_id: 42,
         actor_type: "Team",
         bypass_mode: "exempt",
+      }, {
+        actor_id: 99,
+        actor_type: "OrganizationAdmin",
+        bypass_mode: "always",
       }],
     }],
     ["organization repository_id", {
@@ -825,7 +838,7 @@ describe("production release C2 apply", () => {
         repository_name: { include: ["homecook"], exclude: [], protected: false },
       },
       bypass_actors: [
-        { actor_id: null, actor_type: "EnterpriseOwner", bypass_mode: "exempt" },
+        { actor_id: 99, actor_type: "EnterpriseOwner", bypass_mode: "exempt" },
         { actor_id: null, actor_type: "EnterpriseRole", bypass_mode: "always" },
       ],
     }],
@@ -905,60 +918,105 @@ describe("production release C2 apply", () => {
       || call.key.startsWith("SECRET "))).toBe(false);
   });
 
-  it.each([
-    ["Team without ID", "branch", {
-      actor_id: null,
-      actor_type: "Team",
-      bypass_mode: "always",
-    }],
-    ["DeployKey with ID", "branch", {
-      actor_id: 9,
-      actor_type: "DeployKey",
-      bypass_mode: "always",
-    }],
-    ["Team pull_request on tag", "tag", {
-      actor_id: 42,
-      actor_type: "Team",
-      bypass_mode: "pull_request",
-    }],
-    ["DeployKey pull_request", "branch", {
-      actor_id: null,
-      actor_type: "DeployKey",
-      bypass_mode: "pull_request",
-    }],
-    ["EnterpriseOwner with ID", "branch", {
-      actor_id: 1,
-      actor_type: "EnterpriseOwner",
-      bypass_mode: "always",
-    }],
-    ["OrganizationAdmin with ID", "branch", {
-      actor_id: 1,
-      actor_type: "OrganizationAdmin",
-      bypass_mode: "always",
-    }],
-    ["EnterpriseRole with zero ID", "branch", {
-      actor_id: 0,
-      actor_type: "EnterpriseRole",
-      bypass_mode: "always",
-    }],
-    ["EnterpriseRole with negative ID", "branch", {
-      actor_id: -1,
-      actor_type: "EnterpriseRole",
-      bypass_mode: "always",
-    }],
-  ])("rejects inherited bypass actor %s before mutation", (_label, target, bypassActor) => {
+  it("rejects unknown nested ref_name field before mutation", () => {
     const repositoryRulesets = resolvedRulesets();
-    const invalidBypass = {
-      id: 992,
-      name: "invalid-bypass-policy",
-      target,
+    const invalidRef = {
+      id: 991,
+      name: "invalid-ref-policy",
+      target: "branch",
       source_type: "Organization",
       source: "netsus",
       enforcement: "active",
       conditions: {
-        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        ref_name: {
+          include: ["refs/heads/release/*"],
+          exclude: ["refs/heads/master"],
+          unsupported: true,
+        },
         repository_name: { include: ["homecook"], exclude: [] },
       },
+      rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [...repositoryRulesets, invalidRef],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
+  it.each([
+    ["Team without ID", "Organization", "branch", {
+      actor_id: null,
+      actor_type: "Team",
+      bypass_mode: "always",
+    }],
+    ["DeployKey with ID", "Organization", "branch", {
+      actor_id: 9,
+      actor_type: "DeployKey",
+      bypass_mode: "always",
+    }],
+    ["Team pull_request on tag", "Organization", "tag", {
+      actor_id: 42,
+      actor_type: "Team",
+      bypass_mode: "pull_request",
+    }],
+    ["DeployKey pull_request", "Organization", "branch", {
+      actor_id: null,
+      actor_type: "DeployKey",
+      bypass_mode: "pull_request",
+    }],
+    ["Organization EnterpriseOwner", "Organization", "branch", {
+      actor_id: null,
+      actor_type: "EnterpriseOwner",
+      bypass_mode: "always",
+    }],
+    ["Organization EnterpriseRole", "Organization", "branch", {
+      actor_id: null,
+      actor_type: "EnterpriseRole",
+      bypass_mode: "always",
+    }],
+    ["EnterpriseRole with zero ID", "Enterprise", "branch", {
+      actor_id: 0,
+      actor_type: "EnterpriseRole",
+      bypass_mode: "always",
+    }],
+    ["EnterpriseRole with negative ID", "Enterprise", "branch", {
+      actor_id: -1,
+      actor_type: "EnterpriseRole",
+      bypass_mode: "always",
+    }],
+  ])("rejects inherited bypass actor %s before mutation", (
+    _label,
+    sourceType,
+    target,
+    bypassActor,
+  ) => {
+    const repositoryRulesets = resolvedRulesets();
+    const conditions = sourceType === "Enterprise"
+      ? {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        organization_name: { include: ["netsus"], exclude: [] },
+        repository_name: { include: ["homecook"], exclude: [] },
+      }
+      : {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        repository_name: { include: ["homecook"], exclude: [] },
+      };
+    const invalidBypass = {
+      id: 992,
+      name: "invalid-bypass-policy",
+      target,
+      source_type: sourceType,
+      source: sourceType === "Enterprise" ? "netsus-enterprise" : "netsus",
+      enforcement: "active",
+      conditions,
       bypass_actors: [bypassActor],
       rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
     };
@@ -1040,8 +1098,30 @@ describe("production release C2 apply", () => {
       }),
     });
     expect(run.result.status).toBe(1);
-    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toContain('"partial_state": false');
     expect(run.combined).toMatch(/effective/iu);
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
+  it("fails before mutation when canonical repository/effective IDs disagree", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const effectiveRulesets = repositoryRulesets.map((ruleset, index) =>
+      index === 0 ? { ...ruleset, id: ruleset.id + 1000 } : ruleset);
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: effectiveRulesets,
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
   });
 
   it("detects full actual-state drift after snapshot storage", () => {
@@ -1210,5 +1290,41 @@ describe("production release C2 apply", () => {
     expect(applySource).toContain("productionReleaseRulesetConflictsWithCanonicalTarget");
     expect(applySource).not.toContain("function globMatches(");
     expect(applySource).not.toContain("function conflictsWithCanonicalTarget(");
+  });
+
+  it.each([
+    ["repository policy without ref", {
+      target: "repository",
+      conditions: { repository_name: { include: ["homecook"], exclude: [] } },
+    }, false],
+    ["push rule without ref", {
+      target: "push",
+      conditions: { repository_name: { include: ["homecook"], exclude: [] } },
+    }, false],
+    ["all branches with master excluded", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["~ALL"], exclude: ["refs/heads/master"] },
+      },
+    }, false],
+    ["actual master overlap", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["refs/heads/master"], exclude: [] },
+      },
+    }, true],
+    ["ambiguous branch pattern", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["refs/heads/[invalid"], exclude: [] },
+      },
+    }, true],
+  ])("matches canonical target for %s", async (_label, ruleset, expected) => {
+    const patternModule = await import(pathToFileURL(
+      join(repoRoot, "scripts/lib/production-release-ruleset-patterns.mjs"),
+    ).href);
+    expect(
+      patternModule.productionReleaseRulesetConflictsWithCanonicalTarget(ruleset),
+    ).toBe(expected);
   });
 });

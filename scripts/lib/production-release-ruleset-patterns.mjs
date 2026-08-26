@@ -45,10 +45,10 @@ function tokenMatches(token, character) {
 }
 
 function globMatches(pattern, value) {
-  if (typeof pattern !== "string") return true;
+  if (typeof pattern !== "string") return null;
   if (pattern === "~ALL") return true;
   const tokens = parseGlobTokens(pattern);
-  if (!tokens) return true;
+  if (!tokens) return null;
   const memo = new Map();
   const canMatch = (tokenIndex, valueIndex) => {
     const key = `${tokenIndex}:${valueIndex}`;
@@ -139,15 +139,35 @@ function overlapsProductionTagPattern(pattern) {
   return globCanMatchPrefix(pattern, "refs/tags/prod-");
 }
 
+function excludesAllProductionTags(pattern) {
+  return ["~ALL", "refs/tags/**", "refs/tags/*", "refs/tags/prod-*"].includes(pattern);
+}
+
 export function productionReleaseRulesetConflictsWithCanonicalTarget(ruleset) {
-  const include = ruleset?.conditions?.ref_name?.include;
-  if (!Array.isArray(include) || include.length === 0) return true;
+  if (["push", "repository"].includes(ruleset?.target)) return false;
+  if (!ruleset || !["branch", "tag"].includes(ruleset.target)) return true;
+  const refName = ruleset?.conditions?.ref_name;
+  const include = refName?.include;
+  const exclude = refName?.exclude;
+  if (
+    !Array.isArray(include)
+    || include.length === 0
+    || !Array.isArray(exclude)
+  ) return true;
   if (ruleset.target === "branch") {
-    return include.some((entry) =>
-      entry === "~DEFAULT_BRANCH" || globMatches(entry, "refs/heads/master"));
+    const includeMatches = include.map((entry) =>
+      entry === "~DEFAULT_BRANCH" ? true : globMatches(entry, "refs/heads/master"));
+    const excludeMatches = exclude.map((entry) =>
+      entry === "~DEFAULT_BRANCH" ? true : globMatches(entry, "refs/heads/master"));
+    if (includeMatches.includes(null) || excludeMatches.includes(null)) return true;
+    return includeMatches.includes(true) && !excludeMatches.includes(true);
   }
-  if (ruleset.target === "tag") {
-    return include.some(overlapsProductionTagPattern);
+  if (include.some((entry) => typeof entry !== "string" || !parseGlobTokens(entry))) {
+    return true;
   }
-  return true;
+  if (exclude.some((entry) => typeof entry !== "string" || !parseGlobTokens(entry))) {
+    return true;
+  }
+  return include.some(overlapsProductionTagPattern)
+    && !exclude.some(excludesAllProductionTags);
 }

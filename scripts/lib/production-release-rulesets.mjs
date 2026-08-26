@@ -147,6 +147,7 @@ function requirePositiveOrUnresolvedInteger(value, label) {
 
 function normalizeRefName(refName, label) {
   const value = requireObject(refName, label);
+  rejectUnknownKeys(value, ["exclude", "include"], label);
   return {
     include: requireArray(value.include, `${label}.include`).map((entry, index) =>
       requireNonEmptyString(entry, `${label}.include[${index}]`)),
@@ -411,17 +412,20 @@ function normalizeBypassActors(bypassActors, label) {
     });
 }
 
-function normalizeInheritedBypassActors(bypassActors, label, target) {
-  const actorTypes = [
+function normalizeInheritedBypassActors(bypassActors, label, sourceType, target) {
+  const repositoryActorTypes = [
     "DeployKey",
-    "EnterpriseOwner",
-    "EnterpriseRole",
     "Integration",
     "OrganizationAdmin",
     "RepositoryRole",
     "Team",
     "User",
   ];
+  const actorTypes = sourceType === "Enterprise"
+    ? [...repositoryActorTypes, "EnterpriseOwner", "EnterpriseRole"]
+    : sourceType === "Organization"
+      ? repositoryActorTypes
+      : [];
   return requireArray(bypassActors ?? [], label)
     .map((actor, index) => {
       const value = requireObject(actor, `${label}[${index}]`);
@@ -458,12 +462,6 @@ function normalizeInheritedBypassActors(bypassActors, label, target) {
         throw new Error(`${label}[${index}].actor_id must be null for DeployKey.`);
       }
       if (
-        ["EnterpriseOwner", "OrganizationAdmin"].includes(actorType)
-        && actorId !== null
-      ) {
-        throw new Error(`${label}[${index}].actor_id must be null for ${actorType}.`);
-      }
-      if (
         actorType === "EnterpriseRole"
         && actorId !== null
         && actorId <= 0
@@ -477,7 +475,9 @@ function normalizeInheritedBypassActors(bypassActors, label, target) {
         throw new Error(`${label}[${index}].bypass_mode pull_request is not applicable.`);
       }
       return {
-        actor_id: actorId,
+        actor_id: ["EnterpriseOwner", "OrganizationAdmin"].includes(actorType)
+          ? null
+          : actorId,
         actor_type: actorType,
         bypass_mode: bypassMode,
       };
@@ -1122,6 +1122,7 @@ export function normalizeInheritedProductionReleaseRulesetForInventory(
     bypass_actors: normalizeInheritedBypassActors(
       value.bypass_actors ?? [],
       `${label}.bypass_actors`,
+      value.source_type,
       value.target,
     ),
     conditions: normalizeInheritedConditions(

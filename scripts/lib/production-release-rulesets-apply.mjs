@@ -513,6 +513,42 @@ function validateRulesetActualState(
   }
 }
 
+function validatePreflightRulesetConsistency(
+  repositoryRulesets,
+  effectiveRulesets,
+  desired,
+) {
+  inventoryComparisonProjection(repositoryRulesets);
+  inventoryComparisonProjection(effectiveRulesets);
+  for (const desiredRuleset of desired.rulesets) {
+    const repositoryEntries = repositoryRulesets.summaries.filter(
+      (entry) => entry.name === desiredRuleset.name,
+    );
+    const effectiveEntries = effectiveRulesets.summaries.filter(
+      (entry) => entry.name === desiredRuleset.name,
+    );
+    if (repositoryEntries.length === 0 && effectiveEntries.length === 0) {
+      continue;
+    }
+    if (repositoryEntries.length !== 1 || effectiveEntries.length !== 1) {
+      fail(`Preflight repository/effective canonical inventory mismatch: ${desiredRuleset.name}.`);
+    }
+    const repositoryDetail = repositoryRulesets.details.get(repositoryEntries[0].id);
+    const effectiveDetail = effectiveRulesets.details.get(effectiveEntries[0].id);
+    if (
+      repositoryEntries[0].id !== effectiveEntries[0].id
+      || effectiveDetail?.source_type !== "Repository"
+      || effectiveDetail?.source !== C2_CANONICAL_REPOSITORY
+      || !productionReleaseRulesetsSemanticallyEqual(
+        repositoryDetail,
+        effectiveDetail,
+      )
+    ) {
+      fail(`Preflight repository/effective canonical identity mismatch: ${desiredRuleset.name}.`);
+    }
+  }
+}
+
 function validateFullActualState(state, desired, { partialState = true } = {}) {
   requireAdminBypassDisabled(state.environment, { partialState });
   if (!environmentMatches(state.environment)) {
@@ -671,12 +707,19 @@ export function executeProductionReleaseControls({
   const preflightEffectiveInventory = readRulesetInventory({
     includeParents: true,
   });
-  inventoryComparisonProjection(preflightEffectiveInventory);
+  validatePreflightRulesetConsistency(
+    preflightInventory,
+    preflightEffectiveInventory,
+    desired,
+  );
 
   let environment = ghApi(
     `/repos/${C2_CANONICAL_REPOSITORY}/environments/${ENVIRONMENT_NAME}`,
     { allowNotFound: true },
   );
+  if (environment) {
+    requireAdminBypassDisabled(environment);
+  }
   let policies = [];
   let secrets = [];
   if (environment) {
