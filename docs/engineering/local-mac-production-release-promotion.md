@@ -207,7 +207,7 @@ C2 admin-visible snapshot은 다음 파일을 모두 포함해야 한다.
 
 - `production-release-master.json`: `refs/heads/master`만 pin하고 `bypass_actors`를 명시한 ruleset detail
 - `production-release-tag-creation.json`: `refs/tags/prod-*`의 creation rule과 단일 resolved `Integration` actor만 명시한 ruleset detail
-- `production-release-tag-immutability.json`: 같은 tag pattern의 deletion / non-fast-forward rule과 빈 `bypass_actors`를 명시한 ruleset detail
+- `production-release-tag-immutability.json`: 같은 tag pattern의 update / deletion / non-fast-forward rule과 빈 `bypass_actors`를 명시한 ruleset detail
 - `production-release-approval-environment.json`: `can_admins_bypass: false`, required reviewer, prevent-self-review, custom branch policy readback
 - `production-release-approval-deployment-branch-policies.json`: pagination을 닫은 exact `[{"type":"branch","name":"master"}]`; tag/wildcard/extra policy 금지
 - `production-release-approval-environment-secrets.json`: pagination을 닫은 exact secret-name inventory `HOMECOOK_RELEASE_ATTESTATION_APP_ID`, `HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY`; legacy `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN` 또는 extra secret 금지
@@ -248,7 +248,7 @@ C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 - `snyk`는 trusted `push` / `schedule` / `workflow_dispatch`에서만 실행하는 optional additional started check다. pull request에서는 secret-free `dependency-audit`만 실행하며 `SNYK_TOKEN`은 pinned Snyk action step에만 주입한다. `SNYK_TOKEN`이 없다는 사실이 required release context 성공으로 대체되거나 `dependency-audit`를 우회할 수 없다.
 - required context 이름은 모든 PR/master SHA에서 항상 생성한다. lightweight scope job은 항상 시작하고, required job은 `if: always()`로 시작한다. scope가 실패하거나 취소되면 첫 gate가 실패하며, scope가 성공하고 관련 출력이 `false`일 때만 explicit `N/A` 성공을 보고하고 heavy step을 건너뛴다. workflow-level `paths`는 required-check deadlock 때문에 사용하지 않는다.
 - `production-release-tag-creation`의 단일 `Integration` bypass actor id는 `HOMECOOK_RELEASE_ATTESTATION_APP_ID`와 같아야 한다. 이 ruleset에는 creation 외 rule을 두지 않는다.
-- `production-release-tag-immutability`는 deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. 따라서 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 update/delete할 수 없다.
+- `production-release-tag-immutability`는 update / deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. `update`가 fast-forward tag 이동까지 막으므로 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 이동하거나 삭제할 수 없다.
 - environment `production-release-approval`은 `can_admins_bypass: false`, required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다. admin bypass readback 누락 또는 `true`는 activation blocker다.
 - environment secrets는 App ID와 private key 두 개뿐이다. workflow는 `actions/create-github-app-token`으로 short-lived token을 만들고 tag App token은 `contents:write`만 요청한다. Administration permission과 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
 - workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 제외된 현재 attestation suite 외에는 older failed run 뒤 successful rerun을 포함해 시작된 check 하나라도 failed/cancelled/pending/queued면 fail-closed한다.

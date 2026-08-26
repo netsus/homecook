@@ -337,43 +337,56 @@ function resolveChangedFiles(eventName, event) {
       .filter(Boolean);
   }
 
-  if (eventName === "pull_request" && event.pull_request) {
+  if (eventName === "pull_request") {
+    if (!event.pull_request) {
+      throw new Error("pull_request event is missing the required pull_request refs.");
+    }
     const baseSha = event.pull_request.base?.sha;
     const headSha = event.pull_request.head?.sha;
     const baseRef = event.pull_request.base?.ref;
+    let attemptedGitResolution = false;
 
     if (baseSha && headSha) {
+      attemptedGitResolution = true;
       const files = runGit(["diff", "--name-only", `${baseSha}...${headSha}`]);
-      if (files) {
+      if (files !== null) {
         return files;
       }
     }
 
     if (baseRef) {
+      attemptedGitResolution = true;
       const files = runGit(["diff", "--name-only", `origin/${baseRef}...HEAD`]);
-      if (files) {
+      if (files !== null) {
         return files;
       }
     }
+
+    if (!attemptedGitResolution) {
+      throw new Error("pull_request event is missing required base/head SHA or base ref data.");
+    }
+    throw new Error("Unable to resolve pull_request changed files: all git diff attempts failed.");
   }
 
   if (eventName === "push") {
     const before = event.before;
     const after = event.after;
+    if (!after || /^0+$/.test(after)) {
+      throw new Error("push event is missing a usable required after SHA.");
+    }
 
     if (before && after && !/^0+$/.test(before)) {
       const files = runGit(["diff", "--name-only", `${before}...${after}`]);
-      if (files) {
+      if (files !== null) {
         return files;
       }
     }
 
-    if (after) {
-      const files = runGit(["diff-tree", "--no-commit-id", "--name-only", "-r", after]);
-      if (files) {
-        return files;
-      }
+    const files = runGit(["diff-tree", "--no-commit-id", "--name-only", "-r", after]);
+    if (files !== null) {
+      return files;
     }
+    throw new Error("Unable to resolve push changed files: all git diff attempts failed.");
   }
 
   return [];

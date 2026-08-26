@@ -47,9 +47,9 @@ const EXPECTED_RULESET_FILES = [
   },
   {
     bypassPolicy: "none",
-    exactRuleTypes: ["deletion", "non_fast_forward"],
+    exactRuleTypes: ["deletion", "non_fast_forward", "update"],
     filePath: ".github/rulesets/production-release-tag-immutability.json",
-    requiredRuleTypes: ["deletion", "non_fast_forward"],
+    requiredRuleTypes: ["deletion", "non_fast_forward", "update"],
     target: "tag",
   },
 ];

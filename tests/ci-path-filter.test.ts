@@ -1,9 +1,56 @@
-import { describe, expect, it } from "vitest";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   evaluateCiPathFilters,
   matchesPathPattern,
 } from "../scripts/ci-path-filter.mjs";
+
+const temporaryDirectories: string[] = [];
+
+function runPathFilterCli({
+  event,
+  eventName,
+  gitExitCode,
+}: {
+  event: Record<string, unknown>;
+  eventName: string;
+  gitExitCode: number;
+}) {
+  const directory = mkdtempSync(join(tmpdir(), "homecook-ci-path-filter-"));
+  temporaryDirectories.push(directory);
+  const eventPath = join(directory, "event.json");
+  const gitPath = join(directory, "git");
+  writeFileSync(eventPath, JSON.stringify(event));
+  writeFileSync(gitPath, `#!/bin/sh\nexit ${gitExitCode}\n`);
+  chmodSync(gitPath, 0o755);
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    GITHUB_EVENT_NAME: eventName,
+    GITHUB_EVENT_PATH: eventPath,
+    PATH: `${directory}:${process.env.PATH ?? ""}`,
+  };
+  delete env.CI_CHANGED_FILES;
+
+  return spawnSync(process.execPath, ["scripts/ci-path-filter.mjs"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env,
+  });
+}
+
+afterEach(() => {
+  while (temporaryDirectories.length > 0) {
+    const directory = temporaryDirectories.pop();
+    if (directory) {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  }
+});
 
 describe("ci path filter", () => {
   it("matches repository-style glob patterns", () => {
@@ -219,6 +266,71 @@ describe("ci path filter", () => {
           `${eventName}:${changedFile}`,
         ).toBe(true);
       }
+    },
+  );
+
+  it.each([
+    {
+      eventName: "pull_request",
+      event: {
+        pull_request: {
+          base: { ref: "master", sha: "a".repeat(40) },
+          head: { sha: "b".repeat(40) },
+        },
+      },
+    },
+    {
+      eventName: "push",
+      event: { before: "a".repeat(40), after: "b".repeat(40) },
+    },
+  ])("fails closed when $eventName git diff resolution fails", ({ event, eventName }) => {
+    const result = runPathFilterCli({ event, eventName, gitExitCode: 1 });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/changed files|git|resolve|diff/iu);
+  });
+
+  it.each(["pull_request", "push"])(
+    "fails closed when %s event refs are unavailable",
+    (eventName) => {
+      const event = eventName === "pull_request" ? { pull_request: {} } : {};
+      const result = runPathFilterCli({ event, eventName, gitExitCode: 0 });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toMatch(/event|ref|sha|changed files/iu);
+    },
+  );
+
+  it.each([
+    {
+      eventName: "pull_request",
+      event: {
+        pull_request: {
+          base: { ref: "master", sha: "a".repeat(40) },
+          head: { sha: "b".repeat(40) },
+        },
+      },
+    },
+    {
+      eventName: "push",
+      event: { before: "a".repeat(40), after: "b".repeat(40) },
+    },
+  ])("accepts a genuine empty diff on $eventName", ({ event, eventName }) => {
+    const result = runPathFilterCli({ event, eventName, gitExitCode: 0 });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("ci-path-filter changed files: (none)");
+    expect(result.stdout).toContain("code=false");
+  });
+
+  it.each(["schedule", "workflow_dispatch"])(
+    "keeps %s as a full run without git diff resolution",
+    (eventName) => {
+      const result = runPathFilterCli({ event: {}, eventName, gitExitCode: 1 });
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("code=true");
+      expect(result.stdout).toContain("dependency_audit=true");
     },
   );
 });

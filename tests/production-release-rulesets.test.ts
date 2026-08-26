@@ -75,6 +75,7 @@ describe("production release rulesets desired state", () => {
     expect(immutabilityRuleset.rules).toEqual([
       { type: "deletion" },
       { type: "non_fast_forward" },
+      { type: "update" },
     ]);
     expect(immutabilityRuleset.bypass_actors).toEqual([]);
   });
@@ -176,6 +177,7 @@ describe("production release rulesets desired state", () => {
     expect(tagImmutabilityRuleset.rules).toEqual([
       { type: "deletion" },
       { type: "non_fast_forward" },
+      { type: "update" },
     ]);
 
     for (const ruleset of [branchRuleset, tagCreationRuleset, tagImmutabilityRuleset]) {
@@ -286,7 +288,11 @@ describe("production release rulesets desired state", () => {
         target: "tag",
         enforcement: "active",
         conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
-        rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
+        rules: [
+          { type: "deletion" },
+          { type: "non_fast_forward" },
+          { type: "update" },
+        ],
         bypass_actors: [],
       }, null, 2),
     );
@@ -412,7 +418,11 @@ describe("production release rulesets desired state", () => {
         target: "tag",
         enforcement: "active",
         conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
-        rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
+        rules: [
+          { type: "deletion" },
+          { type: "non_fast_forward" },
+          { type: "update" },
+        ],
         bypass_actors: [],
       }, null, 2),
     );
