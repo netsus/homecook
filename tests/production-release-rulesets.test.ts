@@ -565,6 +565,30 @@ describe("production release rulesets desired state", () => {
       "production-release-repository-rulesets.json",
       "production-release-effective-rulesets.json",
     ];
+    for (const args of [
+      ["init", "-q"],
+      ["config", "user.email", "ruleset-test@example.invalid"],
+      ["config", "user.name", "Ruleset Test"],
+      ["add", "."],
+      ["commit", "-qm", "fixture"],
+    ]) {
+      expect(spawnSync("git", ["-C", resolvedRootDir, ...args]).status).toBe(0);
+    }
+    const fixtureHead = spawnSync("git", ["-C", resolvedRootDir, "rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).stdout.trim();
+    const fixtureTree = spawnSync(
+      "git",
+      ["-C", resolvedRootDir, "rev-parse", `${fixtureHead}^{tree}`],
+      { encoding: "utf8" },
+    ).stdout.trim();
+    const desiredPolicyPaths = [
+      ".github/rulesets/production-release-master.json",
+      ".github/rulesets/production-release-tag-creation.json",
+      ".github/rulesets/production-release-tag-immutability.json",
+      ".github/rulesets/production-release-approval-environment.json",
+      ".github/workflows/production-release-attestation.yml",
+    ];
     writeFileSync(
       join(resolvedActualDir, "production-release-snapshot-completion.json"),
       JSON.stringify({
@@ -572,8 +596,15 @@ describe("production release rulesets desired state", () => {
         version: 1,
         status: "verified",
         repository: "netsus/homecook",
-        head: "a".repeat(40),
-        remote_master: "a".repeat(40),
+        head: fixtureHead,
+        head_tree: fixtureTree,
+        remote_master: fixtureHead,
+        desired_policy_blobs: Object.fromEntries(desiredPolicyPaths.map((path) => [
+          path,
+          spawnSync("git", ["-C", resolvedRootDir, "rev-parse", `${fixtureHead}:${path}`], {
+            encoding: "utf8",
+          }).stdout.trim(),
+        ])),
         app_id: 4724458,
         reviewer: { actor_id: 57648890, actor_type: "User" },
         files: completionFiles.map((name) => ({
@@ -1198,7 +1229,9 @@ describe("production release rulesets desired state", () => {
     expect(runbook).toContain("production-release-tag-creation.json");
     expect(runbook).toContain("production-release-tag-immutability.json");
     expect(runbook).toContain("can_admins_bypass: false");
-    expect(runbook).toContain('--actual-dir "$C2_ACTUAL_DIR"');
+    expect(runbook).toContain("pnpm release:github:rulesets:apply --");
+    expect(runbook).toContain("authoritative C2 evidence");
+    expect(runbook).toContain("operator는 completion marker를 수동 작성하지 않는다");
     expect(runbook).toContain('.activation_blocked == false and .actual_state == "matched"');
     expect(runbook).toContain("runtime workflow는 GitHub Administration API를 호출하지 않는다");
     expect(runbook).toContain("tag App token은 `contents:write`만 요청한다");

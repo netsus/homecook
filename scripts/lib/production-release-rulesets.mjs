@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
@@ -38,6 +39,13 @@ const SNAPSHOT_REQUIRED_FILES = [
   APPROVAL_ENVIRONMENT_SECRETS_ACTUAL_FILE,
   REPOSITORY_RULESETS_ACTUAL_FILE,
   EFFECTIVE_RULESETS_ACTUAL_FILE,
+];
+const SNAPSHOT_POLICY_PATHS = [
+  ".github/rulesets/production-release-master.json",
+  ".github/rulesets/production-release-tag-creation.json",
+  ".github/rulesets/production-release-tag-immutability.json",
+  ".github/rulesets/production-release-approval-environment.json",
+  ".github/workflows/production-release-attestation.yml",
 ];
 const EXPECTED_APPROVAL_BRANCH_POLICIES = [
   { name: "master", type: "branch" },
@@ -840,7 +848,30 @@ function validateRulesetInventoryConsistency(actualDir, desiredRulesets) {
   }
 }
 
-function validateSnapshotCompletion(actualDir) {
+function readHeadPolicyBinding(rootDir) {
+  const expressions = [
+    "HEAD",
+    "HEAD^{tree}",
+    ...SNAPSHOT_POLICY_PATHS.map((path) => `HEAD:${path}`),
+  ];
+  const result = spawnSync("git", ["-C", rootDir, "rev-parse", ...expressions], {
+    encoding: "utf8",
+  });
+  const values = result.stdout?.trim().split("\n") ?? [];
+  if (result.status !== 0 || values.length !== expressions.length) {
+    throw new Error("Git completion binding read failed.");
+  }
+  const [head, tree, ...objectIds] = values;
+  return {
+    desiredPolicyBlobs: Object.fromEntries(
+      SNAPSHOT_POLICY_PATHS.map((path, index) => [path, objectIds[index]]),
+    ),
+    head,
+    tree,
+  };
+}
+
+function validateSnapshotCompletion(actualDir, rootDir) {
   if (!actualDir) return ["missing_snapshot_completion_manifest"];
   const completionPath = resolve(actualDir, SNAPSHOT_COMPLETION_FILE);
   if (!existsSync(completionPath)) return ["missing_snapshot_completion_manifest"];
@@ -849,6 +880,12 @@ function validateSnapshotCompletion(actualDir) {
     completion = readJson(completionPath, "snapshot completion manifest");
   } catch {
     return ["snapshot_completion_manifest_mismatch"];
+  }
+  let headBinding;
+  try {
+    headBinding = readHeadPolicyBinding(rootDir);
+  } catch {
+    return ["snapshot_completion_source_binding_mismatch"];
   }
   if (
     completion.schema !== "homecook.github.production-release-snapshot-completion.v1"
@@ -860,6 +897,16 @@ function validateSnapshotCompletion(actualDir) {
     || completion.reviewer?.actor_type !== "User"
     || completion.head !== completion.remote_master
     || !/^[0-9a-f]{40}$/u.test(completion.head ?? "")
+    || !/^[0-9a-f]{40,64}$/u.test(completion.head_tree ?? "")
+    || JSON.stringify(Object.keys(completion.desired_policy_blobs ?? {}))
+      !== JSON.stringify(SNAPSHOT_POLICY_PATHS)
+    || Object.values(completion.desired_policy_blobs ?? {}).some(
+      (objectId) => !/^[0-9a-f]{40,64}$/u.test(objectId),
+    )
+    || completion.head !== headBinding.head
+    || completion.head_tree !== headBinding.tree
+    || JSON.stringify(completion.desired_policy_blobs)
+      !== JSON.stringify(headBinding.desiredPolicyBlobs)
     || !Array.isArray(completion.files)
     || JSON.stringify(completion.files.map((entry) => entry?.name))
       !== JSON.stringify(SNAPSHOT_REQUIRED_FILES)
@@ -1394,7 +1441,7 @@ export function getProductionReleaseRulesetPlan({
       scope: "effective",
     }),
     ...validateRulesetInventoryConsistency(actualDir, desiredRulesets),
-    ...(requireCompletionManifest ? validateSnapshotCompletion(actualDir) : []),
+    ...(requireCompletionManifest ? validateSnapshotCompletion(actualDir, rootDir) : []),
   ];
   if (inventoryBlockers.length > 0) {
     activationBlocked = true;

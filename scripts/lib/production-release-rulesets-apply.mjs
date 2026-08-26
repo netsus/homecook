@@ -24,6 +24,7 @@ import {
   productionReleaseRulesetConflictsWithCanonicalTarget,
 } from "./production-release-ruleset-patterns.mjs";
 import { verifyGitHubAppIdentity } from "./github-app-identity.mjs";
+import { verifyExactTrackedWorktree } from "./exact-git-worktree.mjs";
 
 export const C2_CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
 export const C2_CANONICAL_REPOSITORY = "netsus/homecook";
@@ -709,7 +710,7 @@ function writeFullActualStateSnapshot(snapshotDir, state) {
   });
 }
 
-function writeSnapshotCompletion(snapshotDir, head) {
+function writeSnapshotCompletion(snapshotDir, head, trackedState) {
   const files = COMPLETION_REQUIRED_FILES.map((name) => ({
     name,
     sha256: createHash("sha256")
@@ -718,8 +719,16 @@ function writeSnapshotCompletion(snapshotDir, head) {
   }));
   writeSnapshot(snapshotDir, COMPLETION_FILE, {
     app_id: C2_RELEASE_APP_ID,
+    desired_policy_blobs: Object.fromEntries([
+      ".github/rulesets/production-release-master.json",
+      ".github/rulesets/production-release-tag-creation.json",
+      ".github/rulesets/production-release-tag-immutability.json",
+      ".github/rulesets/production-release-approval-environment.json",
+      ".github/workflows/production-release-attestation.yml",
+    ].map((path) => [path, trackedState.blobs[path]])),
     files,
     head,
+    head_tree: trackedState.tree,
     remote_master: head,
     repository: C2_CANONICAL_REPOSITORY,
     reviewer: {
@@ -748,9 +757,15 @@ export async function executeProductionReleaseControls({
   if (repository !== C2_CANONICAL_REPOSITORY) {
     fail(`C2 execution is pinned to canonical repository ${C2_CANONICAL_REPOSITORY}.`);
   }
+  const head = validateGitCheckout(rootDir);
+  let trackedState;
+  try {
+    trackedState = verifyExactTrackedWorktree(rootDir, head);
+  } catch {
+    fail("Tracked worktree bytes or modes do not match exact HEAD.");
+  }
   const desired = readDesiredState(rootDir, appId);
   const privateKey = readValidatedPrivateKey(privateKeyFile);
-  const head = validateGitCheckout(rootDir);
   let appIdentity;
   try {
     appIdentity = await verifyGitHubAppIdentity({
@@ -824,6 +839,15 @@ export async function executeProductionReleaseControls({
   }
 
   validateSnapshotDirectory(snapshotDir);
+  try {
+    const mutationTrackedState = verifyExactTrackedWorktree(rootDir, head);
+    if (mutationTrackedState.tree !== trackedState.tree) {
+      fail("Tracked HEAD tree changed before mutation.");
+    }
+  } catch (error) {
+    if (error instanceof ProductionReleaseApplyError) throw error;
+    fail("Tracked worktree bytes or modes changed before mutation.");
+  }
   requireCanonicalRemoteMaster(head);
 
   const operations = [];
@@ -914,7 +938,7 @@ export async function executeProductionReleaseControls({
   if (verification.activation_blocked || verification.actual_state !== "matched") {
     fail("C2 snapshot verification failed closed after apply.", { partialState: true });
   }
-  writeSnapshotCompletion(snapshotDir, head);
+  writeSnapshotCompletion(snapshotDir, head, trackedState);
   verification = getProductionReleaseRulesetPlan({ actualDir: snapshotDir, rootDir });
   if (verification.activation_blocked || verification.actual_state !== "matched") {
     fail("C2 completion manifest verification failed closed.", { partialState: true });

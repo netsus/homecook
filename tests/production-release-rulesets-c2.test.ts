@@ -20,7 +20,10 @@ import { afterEach, describe, expect, it } from "vitest";
 const repoRoot = process.cwd();
 const RULESET_SCRIPT = join(repoRoot, "scripts", "manage-production-release-rulesets.mjs");
 const CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
-const EXPECTED_HEAD = "e806916d42a1aab2749d6a9f239cf5043b300250";
+const EXPECTED_HEAD = spawnSync("git", ["rev-parse", "HEAD"], {
+  cwd: repoRoot,
+  encoding: "utf8",
+}).stdout.trim();
 const ACCEPT_HEADER = "Accept: application/vnd.github+json";
 const VERSION_HEADER = "X-GitHub-Api-Version: 2026-03-10";
 const COMPLETION_FILE = "production-release-snapshot-completion.json";
@@ -219,6 +222,9 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
 `;
 
 const FAKE_GIT = String.raw`#!/usr/bin/env node
+const fs = require("node:fs");
+const { spawnSync } = require("node:child_process");
+const { createHash } = require("node:crypto");
 const args = process.argv.slice(2);
 const command = args.join(" ");
 if (command.endsWith("rev-parse --show-toplevel")) process.stdout.write(process.env.HOMECOOK_C2_ROOT + "\n");
@@ -227,6 +233,78 @@ else if (command.endsWith("rev-parse origin/master")) process.stdout.write((proc
 else if (command.endsWith("rev-parse --abbrev-ref HEAD")) process.stdout.write((process.env.HOMECOOK_C2_BRANCH ?? "master") + "\n");
 else if (command.endsWith("config --get remote.origin.url")) process.stdout.write((process.env.HOMECOOK_C2_ORIGIN_URL ?? "git@github.com:netsus/homecook.git") + "\n");
 else if (command.endsWith("status --porcelain")) process.stdout.write(process.env.HOMECOOK_C2_DIRTY === "true" ? " M dirty\n" : "");
+else if (command.endsWith("rev-parse --show-object-format")) process.stdout.write("sha1\n");
+else if (command.includes("rev-parse HEAD HEAD^{tree}")) {
+  const expressions = args.slice(args.indexOf("rev-parse") + 1);
+  const tree = spawnSync("/usr/bin/git", ["-C", process.env.HOMECOOK_C2_REAL_REPO_ROOT, "rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).stdout.trim();
+  const values = expressions.map((expression) => {
+    if (expression === "HEAD") return process.env.HOMECOOK_C2_HEAD ?? "${EXPECTED_HEAD}";
+    if (expression === "HEAD^{tree}") return tree;
+    const path = expression.slice(expression.indexOf(":") + 1);
+    const absolutePath = process.env.HOMECOOK_C2_REAL_REPO_ROOT + "/" + path;
+    const stat = fs.lstatSync(absolutePath);
+    const bytes = stat.isSymbolicLink()
+      ? Buffer.from(fs.readlinkSync(absolutePath))
+      : fs.readFileSync(absolutePath);
+    return createHash("sha1")
+      .update("blob " + bytes.length + "\0")
+      .update(bytes)
+      .digest("hex");
+  });
+  process.stdout.write(values.join("\n") + "\n");
+}
+else if (command.includes("rev-parse") && args.at(-1)?.includes(":")) {
+  const path = args.at(-1).slice(args.at(-1).indexOf(":") + 1);
+  const absolutePath = process.env.HOMECOOK_C2_REAL_REPO_ROOT + "/" + path;
+  const stat = fs.lstatSync(absolutePath);
+  const bytes = stat.isSymbolicLink()
+    ? Buffer.from(fs.readlinkSync(absolutePath))
+    : fs.readFileSync(absolutePath);
+  process.stdout.write(createHash("sha1")
+    .update("blob " + bytes.length + "\0")
+    .update(bytes)
+    .digest("hex") + "\n");
+}
+else if (command.includes("rev-parse") && command.endsWith("^{tree}")) {
+  const result = spawnSync("/usr/bin/git", ["-C", process.env.HOMECOOK_C2_REAL_REPO_ROOT, "rev-parse", "HEAD^{tree}"]);
+  process.stdout.write(result.stdout);
+}
+else if (command.includes("ls-tree -rz --full-tree")) {
+  if (process.env.HOMECOOK_C2_ROOT !== process.env.HOMECOOK_C2_REAL_REPO_ROOT) process.exit(0);
+  const result = spawnSync("/usr/bin/git", ["-C", process.env.HOMECOOK_C2_REAL_REPO_ROOT, "ls-tree", "-rz", "--full-tree", "HEAD"]);
+  const state = JSON.parse(fs.readFileSync(process.env.HOMECOOK_C2_MOCK_STATE, "utf8"));
+  let listing = result.stdout.toString("utf8");
+  const fixturePaths = new Set([
+    ".github/rulesets/production-release-master.json",
+    ".github/rulesets/production-release-tag-creation.json",
+    ".github/rulesets/production-release-tag-immutability.json",
+    ".github/rulesets/production-release-approval-environment.json",
+    ".github/workflows/production-release-attestation.yml",
+    "scripts/lib/production-release-rulesets.mjs",
+  ]);
+  listing = listing.split("\0").filter((record) => {
+    if (!record) return false;
+    return fixturePaths.has(record.slice(record.indexOf("\t") + 1));
+  }).map((record) => {
+    if (!record) return record;
+    const match = record.match(/^([0-9]{6}) (blob|commit) ([0-9a-f]+)\t([\s\S]+)$/u);
+    if (!match || match[2] === "commit") return record;
+    const path = match[4];
+    if (state.hidden_worktree_mismatch_path === path) {
+      return record.replace(/ [0-9a-f]{40}\t/u, " " + "0".repeat(40) + "\t");
+    }
+    const absolutePath = process.env.HOMECOOK_C2_REAL_REPO_ROOT + "/" + path;
+    const bytes = match[1] === "120000"
+      ? Buffer.from(fs.readlinkSync(absolutePath))
+      : fs.readFileSync(absolutePath);
+    const objectId = createHash("sha1")
+      .update("blob " + bytes.length + "\0")
+      .update(bytes)
+      .digest("hex");
+    return record.replace(/ [0-9a-f]{40}\t/u, " " + objectId + "\t");
+  }).join("\0") + "\0";
+  process.stdout.write(listing);
+}
 else { process.stderr.write("unexpected fake git invocation: " + command + "\n"); process.exit(1); }
 `;
 
@@ -350,6 +428,7 @@ function runExecute({
         HOMECOOK_C2_MOCK_STATE: statePath,
         HOMECOOK_C2_COMPLETION_FILE: COMPLETION_FILE,
         HOMECOOK_C2_PRIVATE_KEY_PATH: privateKeyPath,
+        HOMECOOK_C2_REAL_REPO_ROOT: repoRoot,
         HOMECOOK_C2_SNAPSHOT_DIR: snapshotDir,
         HOMECOOK_C2_ROOT: repoRoot,
         NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${fetchPreloadPath}`.trim(),
@@ -414,7 +493,7 @@ afterEach(() => {
   }
 });
 
-describe("production release C2 apply", () => {
+describe("production release C2 apply", { timeout: 10_000 }, () => {
   it("commits the approved Integration and User actor IDs", () => {
     const tagCreation = JSON.parse(
       readFileSync(join(repoRoot, ".github/rulesets/production-release-tag-creation.json"), "utf8"),
@@ -475,6 +554,72 @@ describe("production release C2 apply", () => {
     expect(run.result.status).toBe(1);
     expect(run.combined).toMatch(message);
     expect(run.state.calls).toEqual([]);
+  });
+
+  it.each([
+    ["hidden desired ruleset edit", ".github/rulesets/production-release-tag-creation.json"],
+    ["hidden imported script edit", "scripts/lib/production-release-rulesets.mjs"],
+  ])("rejects %s before network or mutation", (_label, hiddenPath) => {
+    const run = runExecute({
+      state: initialState({ hidden_worktree_mismatch_path: hiddenPath }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.identity_calls).toBeUndefined();
+    expect(run.state.calls).toEqual([]);
+  });
+
+  it.each([
+    ["--assume-unchanged", ".github/rulesets/production-release-master.json"],
+    ["--skip-worktree", "scripts/lib/production-release-rulesets.mjs"],
+  ])("detects a real hidden %s worktree edit", (flag, hiddenPath) => {
+    const rootDir = tempDirectory("homecook-c2-hidden-index-");
+    const absolutePath = join(rootDir, hiddenPath);
+    mkdirSync(join(absolutePath, ".."), { recursive: true });
+    const original = readFileSync(join(repoRoot, hiddenPath), "utf8");
+    writeFileSync(absolutePath, original);
+    for (const args of [
+      ["init", "-q"],
+      ["config", "user.email", "c2-test@example.invalid"],
+      ["config", "user.name", "C2 Test"],
+      ["add", hiddenPath],
+      ["commit", "-qm", "fixture"],
+      ["update-index", flag, hiddenPath],
+    ]) {
+      expect(spawnSync("git", ["-C", rootDir, ...args]).status).toBe(0);
+    }
+    if (hiddenPath.endsWith("production-release-master.json")) {
+      const weakened = JSON.parse(original);
+      const pullRequest = weakened.rules.find((rule: { type?: string }) =>
+        rule.type === "pull_request");
+      pullRequest.parameters.required_approving_review_count = 0;
+      pullRequest.parameters.require_last_push_approval = false;
+      writeFileSync(absolutePath, JSON.stringify(weakened, null, 2));
+    } else {
+      writeFileSync(absolutePath, `${original}\n// hidden imported policy change\n`);
+    }
+    expect(spawnSync("git", ["-C", rootDir, "status", "--porcelain"], {
+      encoding: "utf8",
+    }).stdout).toBe("");
+
+    const moduleUrl = pathToFileURL(
+      join(repoRoot, "scripts/lib/exact-git-worktree.mjs"),
+    ).href;
+    const verification = spawnSync(process.execPath, [
+      "--input-type=module",
+      "--eval",
+      `import { verifyExactTrackedWorktree } from ${JSON.stringify(moduleUrl)};
+       verifyExactTrackedWorktree(process.argv[1], "HEAD");`,
+      rootDir,
+    ], { encoding: "utf8" });
+
+    expect(verification.status).toBe(1);
+    expect(`${verification.stdout}\n${verification.stderr}`)
+      .not.toContain("hidden imported policy change");
+    const clearFlag = flag === "--assume-unchanged"
+      ? "--no-assume-unchanged"
+      : "--no-skip-worktree";
+    expect(spawnSync("git", ["-C", rootDir, "update-index", clearFlag, hiddenPath]).status).toBe(0);
   });
 
   it("rejects a stale local tracking ref when the canonical remote master differs", () => {
@@ -1060,7 +1205,7 @@ describe("production release C2 apply", () => {
       }),
     });
     expect(run.result.status, run.combined).toBe(0);
-  });
+  }, 10_000);
 
   it("rejects ambiguous inherited condition union before mutation", () => {
     const repositoryRulesets = resolvedRulesets();
@@ -1458,6 +1603,18 @@ describe("production release C2 apply", () => {
       app_id: 4724458,
       reviewer: { actor_id: 57648890, actor_type: "User" },
     });
+    expect(completion.head).toBe(EXPECTED_HEAD);
+    expect(completion.head_tree).toBe(
+      spawnSync("git", ["rev-parse", "HEAD^{tree}"], { cwd: repoRoot, encoding: "utf8" })
+        .stdout.trim(),
+    );
+    expect(Object.keys(completion.desired_policy_blobs)).toEqual([
+      ".github/rulesets/production-release-master.json",
+      ".github/rulesets/production-release-tag-creation.json",
+      ".github/rulesets/production-release-tag-immutability.json",
+      ".github/rulesets/production-release-approval-environment.json",
+      ".github/workflows/production-release-attestation.yml",
+    ]);
     expect(completion.files).toHaveLength(snapshotFiles.length);
     const snapshotBundle = snapshotFiles
       .map((name) => readFileSync(join(first.snapshotDir, name), "utf8"))
@@ -1475,6 +1632,16 @@ describe("production release C2 apply", () => {
   it("blocks independent verification after snapshot tampering", () => {
     const run = runExecute();
     expect(run.result.status, run.combined).toBe(0);
+    const completionPath = join(run.snapshotDir, COMPLETION_FILE);
+    const completionSource = readFileSync(completionPath, "utf8");
+    const completion = JSON.parse(completionSource);
+    completion.desired_policy_blobs[".github/rulesets/production-release-master.json"] =
+      "0".repeat(40);
+    writeFileSync(completionPath, JSON.stringify(completion, null, 2));
+    const sourceBinding = runIndependentVerify(run.snapshotDir);
+    expect(sourceBinding.status, sourceBinding.stderr).toBe(0);
+    expect(sourceBinding.stdout).toContain("snapshot_completion_manifest_mismatch");
+    writeFileSync(completionPath, completionSource);
     const target = join(run.snapshotDir, "production-release-master.json");
     writeFileSync(target, `${readFileSync(target, "utf8")} `);
     const independent = runIndependentVerify(run.snapshotDir);
@@ -1535,6 +1702,11 @@ describe("production release C2 apply", () => {
     expect(runbook).toContain(VERSION_HEADER);
     expect(runbook).toContain("Allow administrators to bypass");
     expect(runbook).toContain("manual_action_required");
+    expect(runbook).toContain("production-release-snapshot-completion.json");
+    expect(runbook).toContain("authoritative C2 evidence");
+    expect(runbook).toContain("operator는 completion marker를 수동 작성하지 않는다");
+    expect(runbook).not.toContain("deployment-branch-policies.jsonl");
+    expect(runbook).not.toContain('"$C2_ACTUAL_DIR/verify.json"');
   });
 
   it("uses the shared canonical-target matcher without an apply-local duplicate", () => {
@@ -1639,7 +1811,7 @@ describe("production release C2 apply", () => {
     });
     expect(run.result.status, run.combined).toBe(0);
     expect(run.result.stdout).toContain('"actual_state": "matched"');
-  });
+  }, 10_000);
 
   it("rejects unknown conditions on a repository-origin push rule", () => {
     const repositoryRulesets = resolvedRulesets();
