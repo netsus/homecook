@@ -16,6 +16,7 @@ function parseArgs(argv) {
     predicateOutputPath: null,
     releaseSha: null,
     releaseTag: null,
+    releaseTagObjectSha: null,
     releaseTree: null,
     repository: null,
     subjectOutputPath: null,
@@ -45,6 +46,8 @@ function parseArgs(argv) {
       options.releaseSha = value;
     } else if (token === "--release-tag") {
       options.releaseTag = value;
+    } else if (token === "--release-tag-object-sha") {
+      options.releaseTagObjectSha = value;
     } else if (token === "--release-tree") {
       options.releaseTree = value;
     } else if (token === "--repository") {
@@ -90,6 +93,7 @@ try {
     predicateOutputPath: options.predicateOutputPath,
     releaseSha: options.releaseSha,
     releaseTag: options.releaseTag,
+    releaseTagObjectSha: options.releaseTagObjectSha,
     releaseTree: options.releaseTree,
     repository: options.repository,
     subjectOutputPath: options.subjectOutputPath,

@@ -21,6 +21,7 @@ export function createLocalMacProductionReleaseManifest(
     expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
+    release_tag_object_sha: "e".repeat(40),
     release_manifest_path: manifestPath,
     release_sha: "a".repeat(40),
     release_tree: "b".repeat(40),

@@ -36,6 +36,7 @@ function createManifest(overrides: Record<string, unknown> = {}) {
     expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
+    release_tag_object_sha: "e".repeat(40),
     release_manifest_path: "/Users/tester/.homecook/releases/manifests/prod-20260825.1.json",
     release_sha: "a".repeat(40),
     release_tree: "b".repeat(40),
@@ -106,6 +107,11 @@ describe("local Mac production release manifest", () => {
     ));
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).toContain("expected_release_contexts");
+    expect(schema.required).toContain("release_tag_object_sha");
+    expect(schema.properties.release_tag_object_sha).toEqual({
+      type: "string",
+      pattern: "^[0-9a-f]{40}$",
+    });
     expect(schema.properties.expected_release_contexts).toMatchObject({
       type: "array",
       minItems: 7,
@@ -261,6 +267,30 @@ describe("local Mac production release manifest", () => {
         readGitEvidence: () => createGitEvidence(),
       }),
     ).toThrow(/pending|bad|rerun|check summary/iu);
+  });
+
+  it("binds the manifest to the exact annotated release tag object", () => {
+    expect(
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          release_manifest_path: "/tmp/release.json",
+          release_tag_object_sha: "e".repeat(40),
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }).release_tag_object_sha,
+    ).toBe("e".repeat(40));
+
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          release_manifest_path: "/tmp/release.json",
+          release_tag_object_sha: "e".repeat(40),
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence({ releaseTagObjectSha: "f".repeat(40) }),
+      }),
+    ).toThrow(/tag object|release_tag_object_sha/iu);
   });
 
   it("requires a nonempty expected release context set in the manifest", () => {

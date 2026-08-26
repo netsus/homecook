@@ -181,7 +181,7 @@ function normalizeBucket(entry) {
   if (["success"].includes(conclusion)) {
     return "success";
   }
-  if (conclusion === "skipped") {
+  if (["skipped", "neutral"].includes(conclusion)) {
     return "intended_skip";
   }
   if (conclusion === "cancelled") {
@@ -291,6 +291,14 @@ export function normalizeGitHubProductionReleaseCheckSummary({
         `Production release expected context must use trusted GitHub Actions App integration ${GITHUB_ACTIONS_APP_INTEGRATION_ID}: ${expectedContext}.`,
       );
     }
+    const latestTimestamp = Math.max(...entries.map((entry) => entry.timestamp));
+    const latestEntries = entries.filter((entry) => entry.timestamp === latestTimestamp);
+    const latestBuckets = new Set(latestEntries.map((entry) => entry.bucket));
+    if (latestBuckets.size !== 1 || !latestBuckets.has("success")) {
+      throw new Error(
+        `Production release latest trusted expected context must be exactly success: ${expectedContext}.`,
+      );
+    }
   }
 
   for (const [context, entries] of statusesByContext) {
@@ -332,6 +340,7 @@ export function normalizeGitHubProductionReleaseCheckSummary({
  *   predicateOutputPath?: string | null,
  *   releaseSha: string,
  *   releaseTag: string,
+ *   releaseTagObjectSha: string,
  *   releaseTree: string,
  *   repository: string,
  *   subjectOutputPath?: string | null,
@@ -345,6 +354,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   predicateOutputPath = null,
   releaseSha,
   releaseTag,
+  releaseTagObjectSha,
   releaseTree,
   repository,
   subjectOutputPath = null,
@@ -362,6 +372,10 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     signer_digest: normalizedReleaseSha,
     expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
     release_tag: validateProductionReleaseTag(releaseTag, "releaseTag"),
+    release_tag_object_sha: requireSha1(
+      releaseTagObjectSha,
+      "releaseTagObjectSha",
+    ),
     release_sha: normalizedReleaseSha,
     release_tree: requireSha1(releaseTree, "releaseTree"),
     expected_release_contexts: normalizeExpectedReleaseContexts(
@@ -395,6 +409,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     signer_digest: subject.signer_digest,
     expected_release_integration_id: subject.expected_release_integration_id,
     release_tag: subject.release_tag,
+    release_tag_object_sha: subject.release_tag_object_sha,
     release_sha: subject.release_sha,
     release_tree: subject.release_tree,
     expected_release_contexts: subject.expected_release_contexts,
@@ -445,6 +460,22 @@ function validateSubjectDocument({
   }
   if (requireNonEmptyString(document.release_tag, "subject.release_tag") !== requireNonEmptyString(manifest.release_tag, "manifest.release_tag")) {
     throw new Error("Production release subject manifest tag does not match the release manifest.");
+  }
+  const subjectTagObjectSha = requireSha1(
+    document.release_tag_object_sha,
+    "subject.release_tag_object_sha",
+  );
+  if (
+    subjectTagObjectSha
+    !== requireSha1(manifest.release_tag_object_sha, "manifest.release_tag_object_sha")
+  ) {
+    throw new Error("Production release subject tag object SHA does not match the release manifest.");
+  }
+  if (
+    subjectTagObjectSha
+    !== requireSha1(gitEvidence.releaseTagObjectSha, "gitEvidence.releaseTagObjectSha")
+  ) {
+    throw new Error("Production release subject tag object SHA does not match current git evidence.");
   }
   if (requireSha1(document.release_sha, "subject.release_sha") !== requireSha1(manifest.release_sha, "manifest.release_sha")) {
     throw new Error("Production release subject manifest SHA does not match the release manifest.");
@@ -513,6 +544,12 @@ function validatePredicateDocument({
   }
   if (requireNonEmptyString(predicate.release_tag, "predicate.release_tag") !== requireNonEmptyString(manifest.release_tag, "manifest.release_tag")) {
     throw new Error("Production release attestation predicate tag does not match the release manifest.");
+  }
+  if (
+    requireSha1(predicate.release_tag_object_sha, "predicate.release_tag_object_sha")
+    !== requireSha1(manifest.release_tag_object_sha, "manifest.release_tag_object_sha")
+  ) {
+    throw new Error("Production release predicate tag object SHA does not match the release manifest.");
   }
   if (requireSha1(predicate.release_sha, "predicate.release_sha") !== requireSha1(manifest.release_sha, "manifest.release_sha")) {
     throw new Error("Production release attestation predicate SHA does not match the release manifest.");

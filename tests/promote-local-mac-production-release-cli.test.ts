@@ -44,6 +44,10 @@ function createFixtureRepo({
     runGit(rootDir, ["update-ref", "refs/remotes/origin/master", releaseSha]);
   }
   runGit(rootDir, ["tag", "-a", "prod-20260825.1", "-m", "fixture release tag"]);
+  const releaseTagObjectSha = runGit(rootDir, [
+    "rev-parse",
+    "refs/tags/prod-20260825.1^{tag}",
+  ]);
 
   const manifestPath = join(rootDir, "release.json");
   writeFileSync(manifestPath, JSON.stringify({
@@ -55,6 +59,7 @@ function createFixtureRepo({
     expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
+    release_tag_object_sha: releaseTagObjectSha,
     release_manifest_path: manifestPath,
     release_sha: releaseSha,
     release_tree: releaseTree,

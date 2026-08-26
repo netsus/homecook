@@ -13,6 +13,7 @@
     "expected_release_integration_id",
     "promotion_id",
     "release_tag",
+    "release_tag_object_sha",
     "release_manifest_path",
     "release_sha",
     "release_tree",
@@ -57,6 +58,10 @@
     "release_tag": {
       "type": "string",
       "pattern": "^prod-\\d{8}\\.\\d+$"
+    },
+    "release_tag_object_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
     },
     "release_manifest_path": {
       "type": "string",

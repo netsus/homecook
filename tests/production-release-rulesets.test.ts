@@ -643,9 +643,9 @@ describe("production release rulesets desired state", () => {
     expect(workflow).not.toContain("gh api repos/netsus/homecook/rulesets");
     expect(workflow).not.toContain("gh api repos/netsus/homecook/environments/");
     expect(workflow).toContain("Validate resolved committed desired state without admin readback");
-    expect(workflow).toContain("git tag -a");
+    expect(workflow).toContain("git mktag");
     expect(workflow).toContain("x-access-token:${{ steps.app-token.outputs.token }}@github.com/netsus/homecook.git");
-    expect(workflow).toContain("refs/tags/\"$RELEASE_TAG\"");
+    expect(workflow).toContain('"refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"');
     expect(workflow.match(/x-access-token:\$\{\{ steps\.app-token\.outputs\.token \}\}/gu)).toHaveLength(1);
     expect(workflow).toContain("actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6");
     expect(workflow).toContain("custom predicate");
@@ -674,6 +674,24 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("Re-fetch and rebuild approval evidence after environment approval");
     expect(workflow).toContain("Compare approval evidence to preflight evidence");
     expect(workflow).toContain("Recheck origin/master immediately before protected tag push");
+    expect(workflow).toContain("release_tag_object_sha");
+    expect(workflow).toContain("production-release-tag-object.raw");
+    expect(workflow).toContain("git/ref/tags/$RELEASE_TAG");
+    expect(workflow).toContain('.object.type == "tag"');
+    expect(workflow).toContain("remote tag object SHA");
+
+    const pushIndex = workflow.indexOf("git push");
+    const existingTagRaceIndex = workflow.indexOf("release_tag already exists");
+    const readbackIndex = workflow.indexOf("Read back exact remote annotated tag object");
+    const attestIndex = workflow.indexOf("actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6");
+    expect(pushIndex).toBeGreaterThan(-1);
+    expect(existingTagRaceIndex).toBeGreaterThan(-1);
+    expect(existingTagRaceIndex).toBeLessThan(pushIndex);
+    expect(workflow).toContain("git push --porcelain");
+    expect(workflow).toContain("[new tag]");
+    expect(workflow).toContain("protected tag creation race detected");
+    expect(readbackIndex).toBeGreaterThan(pushIndex);
+    expect(attestIndex).toBeGreaterThan(readbackIndex);
   });
 
   it("runs every shared release context for every pull request and every master push", () => {
@@ -831,5 +849,8 @@ describe("production release rulesets desired state", () => {
     expect(runbook).toContain("runtime workflow는 GitHub Administration API를 호출하지 않는다");
     expect(runbook).toContain("tag App token은 `contents:write`만 요청한다");
     expect(runbook).toContain("optional additional started check다");
+    expect(runbook).toContain("attestation이 없는 상태");
+    expect(runbook).toContain("production deployment authority가 아니며");
+    expect(runbook).toContain("다음 `prod-YYYYMMDD.N`");
   });
 });

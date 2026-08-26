@@ -51,6 +51,7 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "expected_release_integration_id",
   "promotion_id",
   "release_tag",
+  "release_tag_object_sha",
   "release_manifest_path",
   "release_sha",
   "release_tree",
@@ -455,6 +456,10 @@ export function validateLocalMacProductionReleaseManifest({
     manifest.release_tag,
     "Release manifest release_tag",
   );
+  const releaseTagObjectSha = requireReleaseSha(
+    manifest.release_tag_object_sha,
+    "manifest.release_tag_object_sha",
+  );
 
   const releaseManifestPath = requireAbsolutePath(
     manifest.release_manifest_path,
@@ -533,6 +538,11 @@ export function validateLocalMacProductionReleaseManifest({
       "Release manifest tag commit mismatch: release_sha must equal the annotated release tag commit exactly.",
     );
   }
+  if (normalizedGitEvidence.releaseTagObjectSha !== releaseTagObjectSha) {
+    throw new Error(
+      "Release manifest tag object mismatch: release_tag_object_sha must equal the annotated release tag object exactly.",
+    );
+  }
   if (normalizedGitEvidence.releaseTreeSha !== releaseTree) {
     throw new Error("Release manifest tree mismatch: release_tree must equal the tagged release tree.");
   }
@@ -551,6 +561,7 @@ export function validateLocalMacProductionReleaseManifest({
     expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
     promotion_id: requireNonEmptyString(manifest.promotion_id, "manifest.promotion_id"),
     release_tag: releaseTag,
+    release_tag_object_sha: releaseTagObjectSha,
     release_manifest_path: releaseManifestPath,
     release_sha: releaseSha,
     release_tree: releaseTree,

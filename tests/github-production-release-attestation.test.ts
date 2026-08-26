@@ -29,6 +29,7 @@ const EXPECTED_RELEASE_CONTEXTS = [
   "security-function-authorization",
   "security-smoke",
 ];
+const RELEASE_TAG_OBJECT_SHA = "e".repeat(40);
 
 function createTrustedCheckRuns(checkSuiteId = 200) {
   return EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
@@ -61,6 +62,7 @@ describe("GitHub production release attestation verification", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.1",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
       releaseTree: "b".repeat(40),
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
     };
@@ -104,10 +106,92 @@ describe("GitHub production release attestation verification", () => {
     ).toEqual(EXPECTED_RELEASE_CONTEXTS);
   });
 
+  it("requires the latest trusted result for every expected context to be exactly success", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.1",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    };
+    const checks = createTrustedCheckRuns();
+    const quality = checks.find((entry) => entry.name === "quality");
+
+    expect(() =>
+      buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [
+          ...checks,
+          {
+            ...quality,
+            completed_at: "2026-08-26T10:00:00Z",
+            conclusion: "skipped",
+          },
+        ],
+      }),
+    ).toThrow(/quality|expected context|latest|success/iu);
+
+    expect(() =>
+      buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [
+          ...checks,
+          {
+            ...quality,
+            completed_at: "2026-08-26T08:00:00Z",
+            conclusion: "skipped",
+          },
+        ],
+      }),
+    ).not.toThrow();
+
+    expect(
+      buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [
+          ...checks,
+          {
+            app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+            check_suite: { id: 999 },
+            completed_at: "2026-08-26T10:01:00Z",
+            conclusion: "neutral",
+            name: "optional-security-advisory",
+            status: "completed",
+          },
+        ],
+      }).subject.required_check_summary,
+    ).toMatchObject({ intended_skip: 1 });
+  });
+
+  it("binds subject and predicate to the exact annotated release tag object SHA", () => {
+    const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns: createTrustedCheckRuns(),
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.1",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    });
+
+    expect(artifacts.subject.release_tag_object_sha).toBe(RELEASE_TAG_OBJECT_SHA);
+    expect(artifacts.predicate.release_tag_object_sha).toBe(RELEASE_TAG_OBJECT_SHA);
+    expect(() =>
+      buildGitHubProductionReleaseAttestationArtifacts({
+        checkRuns: createTrustedCheckRuns(),
+        releaseSha: "a".repeat(40),
+        releaseTag: "prod-20260826.1",
+        releaseTagObjectSha: "not-a-tag-object-sha",
+        releaseTree: "b".repeat(40),
+        repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      }),
+    ).toThrow(/tag object|40-character|SHA/iu);
+  });
+
   it("excludes only the explicitly supplied current workflow suite and blocks every other non-terminal check or latest bad status", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.1",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
       releaseTree: "b".repeat(40),
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
     };
@@ -173,6 +257,7 @@ describe("GitHub production release attestation verification", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.1",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
       releaseTree: "b".repeat(40),
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
     };
@@ -236,6 +321,7 @@ describe("GitHub production release attestation verification", () => {
       signer_digest: manifest.release_sha,
       expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
       release_tag: manifest.release_tag,
+      release_tag_object_sha: manifest.release_tag_object_sha,
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
       expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
@@ -245,6 +331,7 @@ describe("GitHub production release attestation verification", () => {
     writeFileSync(trustedRootPath, "{}\n");
 
     const invocations: string[][] = [];
+    let attestedPredicateTagObjectSha = manifest.release_tag_object_sha;
     const verifier = createGitHubProductionReleaseAttestationVerifier({
       bundlePath,
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
@@ -268,6 +355,7 @@ describe("GitHub production release attestation verification", () => {
                   signer_digest: manifest.release_sha,
                   expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
                   release_tag: manifest.release_tag,
+                  release_tag_object_sha: attestedPredicateTagObjectSha,
                   release_sha: manifest.release_sha,
                   release_tree: manifest.release_tree,
                   expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
@@ -328,6 +416,34 @@ describe("GitHub production release attestation verification", () => {
         "json",
       ],
     ]);
+
+    const originalSubject = JSON.parse(readFileSync(subjectManifestPath, "utf8"));
+    writeFileSync(subjectManifestPath, JSON.stringify({
+      ...originalSubject,
+      release_tag_object_sha: "f".repeat(40),
+    }, null, 2));
+    expect(() =>
+      verifier({
+        gitEvidence,
+        manifest,
+        manifestDigest: "d".repeat(64),
+        manifestPath,
+        rootDir,
+      }),
+    ).toThrow(/tag object|release_tag_object_sha/iu);
+    writeFileSync(subjectManifestPath, JSON.stringify(originalSubject, null, 2));
+
+    attestedPredicateTagObjectSha = "f".repeat(40);
+    expect(() =>
+      verifier({
+        gitEvidence,
+        manifest,
+        manifestDigest: "d".repeat(64),
+        manifestPath,
+        rootDir,
+      }),
+    ).toThrow(/tag object|release_tag_object_sha/iu);
+    attestedPredicateTagObjectSha = manifest.release_tag_object_sha;
 
     for (const identityOverride of [
       { repository: "attacker/fork" },
