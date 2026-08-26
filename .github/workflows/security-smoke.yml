@@ -2,59 +2,11 @@ name: Security Smoke
 
 on:
   pull_request:
-    paths:
-      - "app/api/**"
-      - "app/auth/**"
-      - "app/globals.css"
-      - "app/layout.tsx"
-      - "app/login/**"
-      - "app/page.tsx"
-      - "app/planner/**"
-      - "app/recipe/**"
-      - "components/**"
-      - "lib/*.ts"
-      - "lib/api/**"
-      - "lib/auth/**"
-      - "lib/mock/**"
-      - "lib/server/**"
-      - "lib/supabase/**"
-      - "stores/**"
-      - "supabase/**"
-      - "tests/e2e/helpers/**"
-      - "tests/e2e/qa-security.spec.ts"
-      - "playwright.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/security-smoke.yml"
   push:
     branches:
       - main
       - master
       - develop
-    paths:
-      - "app/api/**"
-      - "app/auth/**"
-      - "app/globals.css"
-      - "app/layout.tsx"
-      - "app/login/**"
-      - "app/page.tsx"
-      - "app/planner/**"
-      - "app/recipe/**"
-      - "components/**"
-      - "lib/*.ts"
-      - "lib/api/**"
-      - "lib/auth/**"
-      - "lib/mock/**"
-      - "lib/server/**"
-      - "lib/supabase/**"
-      - "stores/**"
-      - "supabase/**"
-      - "tests/e2e/helpers/**"
-      - "tests/e2e/qa-security.spec.ts"
-      - "playwright.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/security-smoke.yml"
 
 permissions:
   contents: read
@@ -66,35 +18,67 @@ env:
   NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
 jobs:
-  security-smoke:
+  scope:
     runs-on: ubuntu-latest
+    outputs:
+      security_smoke: ${{ steps.filter.outputs.security_smoke }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve security smoke path filters
+        id: filter
+        run: node scripts/ci-path-filter.mjs
+
+  security-smoke:
+    needs: scope
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail closed when scope resolution failed
+        if: needs.scope.result != 'success'
+        run: |
+          echo "Security smoke scope resolution did not succeed." >&2
+          exit 1
+
+      - name: Report not applicable
+        if: needs.scope.result == 'success' && needs.scope.outputs.security_smoke != 'true'
+        run: echo "N/A - no security-smoke paths changed."
+
+      - name: Checkout
+        if: needs.scope.outputs.security_smoke == 'true'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        if: needs.scope.outputs.security_smoke == 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 10.32.1
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        if: needs.scope.outputs.security_smoke == 'true'
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
+        if: needs.scope.outputs.security_smoke == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
+        if: needs.scope.outputs.security_smoke == 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Run auth and session security smoke suite
+        if: needs.scope.outputs.security_smoke == 'true'
         run: pnpm test:e2e:security
 
       - name: Upload security smoke report
-        if: failure()
-        uses: actions/upload-artifact@v7
+        if: needs.scope.outputs.security_smoke == 'true' && failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-security-report
           path: |

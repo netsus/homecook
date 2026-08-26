@@ -22,14 +22,17 @@ release 승격은 항상 exact SHA, annotated `prod-*` tag, release manifest, at
 
 release identity는 다음을 함께 만족해야 한다.
 
+GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/master`, signer workflow `netsus/homecook/.github/workflows/production-release-attestation.yml`, signer digest `release_sha`로 고정한다. CLI 인수는 이 identity를 바꿀 수 없다. offline `gh attestation verify`는 release-tagged code에 pin된 custom trusted-root SHA-256 `65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c`와 먼저 일치해야 한다.
+
 | field | meaning |
 | --- | --- |
 | `master_sha_at_approval` | 승인 시점의 `origin/master` exact full SHA |
 | `release_sha` | 실제 승격 대상 exact full SHA |
 | `release_tag` | `prod-YYYYMMDD.N` 형식의 annotated tag |
+| `release_tag_object_sha` | remote readback으로 확인한 immutable annotated tag object의 exact SHA |
 | `release_tree` | tag가 가리키는 tree SHA |
 | `release_manifest_path` | 비밀이 없는 release manifest 경로 |
-| `attestation_digest` | GitHub attestation digest |
+| `attestation_digest` | GitHub attestation으로 검증되는 subject manifest SHA-256 |
 | `promotion_id` | 단일 승격 시도 식별자 |
 | `expected_running_release_sha` | 승격 후 실제 돌아야 하는 SHA |
 
@@ -122,8 +125,14 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 필수 필드는 다음과 같다.
 
 - `schema`
+- `repository` (`netsus/homecook`)
+- `source_ref` (`refs/heads/master`)
+- `signer_workflow` (`netsus/homecook/.github/workflows/production-release-attestation.yml`)
+- `signer_digest` (`release_sha`와 exact match)
+- `expected_release_integration_id` (`15368`)
 - `promotion_id`
 - `release_tag`
+- `release_tag_object_sha`
 - `release_manifest_path`
 - `release_sha`
 - `release_tree`
@@ -134,6 +143,7 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `build_id`
 - `backup_readiness_evidence`
 - `previous_release_sha`
+- `expected_release_contexts`
 - `required_check_summary`
 - `attestation_digest`
 - `app_launch_agent_enabled`
@@ -185,6 +195,79 @@ Stage C는 두 단계로 분리한다.
 
 `master`와 `prod-*`는 force update / delete가 막혀야 하고, tag creation은 restricted actor만 가능해야 한다.
 PR merge만으로 ruleset activation을 주장하지 않는다.
+
+C1 validator는 `.github/rulesets/*.json` desired-state와 optional local actual snapshot만 읽는다.
+즉, `pnpm release:github:rulesets:verify`는 actual snapshot이 없으면 `activation_blocked: true`로 fail-closed pending 상태를 기록하지만, network나 admin token 없이도 desired-state drift를 검증할 수 있다.
+C2에서만 GitHub REST readback snapshot을 받아 `--actual-dir <path>` 비교로 `actual_state: matched`를 닫는다.
+
+C1 activation_blocked는 exact Integration actor와 environment reviewer가 확정되고 environment `can_admins_bypass: false` readback이 확인될 때까지 유지한다. 현재 placeholder actor `0`을 실제 actor로 해석하거나 C2 activation으로 주장하지 않는다. `can_admins_bypass`가 누락되거나 `true`이면 fail-closed blocker다.
+
+C2 admin readback snapshot은 runtime release workflow와 분리된 별도 evidence다.
+C2 operator만 별도 admin credential로 snapshot을 만들고 local verifier gate를 통과시킨 뒤 activation할 수 있다. runtime workflow는 GitHub Administration API를 호출하지 않는다. `GITHUB_TOKEN`은 `actions:read`, `checks:read`, `statuses:read`, `contents:read`로 exact ref/SHA/tree와 전체 started checks만 검증한다. runtime은 C2 actual settings를 self-administer하거나 self-readback했다고 주장하지 않는다.
+
+C2 admin-visible snapshot은 다음 파일을 모두 포함해야 한다.
+
+- `production-release-master.json`: `refs/heads/master`만 pin하고 `bypass_actors`를 명시한 ruleset detail
+- `production-release-tag-creation.json`: `refs/tags/prod-*`의 creation rule과 단일 resolved `Integration` actor만 명시한 ruleset detail
+- `production-release-tag-immutability.json`: 같은 tag pattern의 update / deletion / non-fast-forward rule과 빈 `bypass_actors`를 명시한 ruleset detail
+- `production-release-approval-environment.json`: `can_admins_bypass: false`, required reviewer, prevent-self-review, custom branch policy readback
+- `production-release-approval-deployment-branch-policies.json`: pagination을 닫은 exact `[{"type":"branch","name":"master"}]`; tag/wildcard/extra policy 금지
+- `production-release-approval-environment-secrets.json`: pagination을 닫은 exact secret-name inventory `HOMECOOK_RELEASE_ATTESTATION_APP_ID`, `HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY`; legacy `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN` 또는 extra secret 금지
+
+명시적 C2 admin 작업의 snapshot 예시는 다음과 같다. 이 명령은 runtime workflow나 tag App token으로 실행하지 않는다.
+
+```bash
+C2_ACTUAL_DIR="$(mktemp -d)"
+
+gh api repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
+  while read -r rule_id; do
+    rule_name="$(gh api "repos/netsus/homecook/rulesets/$rule_id" --jq '.name')"
+    case "$rule_name" in
+      production-release-master|production-release-tag-creation|production-release-tag-immutability)
+        gh api "repos/netsus/homecook/rulesets/$rule_id" > "$C2_ACTUAL_DIR/$rule_name.json"
+        ;;
+    esac
+  done
+gh api repos/netsus/homecook/environments/production-release-approval \
+  > "$C2_ACTUAL_DIR/production-release-approval-environment.json"
+gh api "repos/netsus/homecook/environments/production-release-approval/deployment-branch-policies?per_page=100" \
+  --paginate --jq '.branch_policies[]' > "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl"
+jq -s '{branch_policies: .}' "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl" \
+  > "$C2_ACTUAL_DIR/production-release-approval-deployment-branch-policies.json"
+gh api "repos/netsus/homecook/environments/production-release-approval/secrets?per_page=100" \
+  --paginate --jq '.secrets[]' > "$C2_ACTUAL_DIR/environment-secrets.jsonl"
+jq -s '{secrets: .}' "$C2_ACTUAL_DIR/environment-secrets.jsonl" \
+  > "$C2_ACTUAL_DIR/production-release-approval-environment-secrets.json"
+node scripts/manage-production-release-rulesets.mjs verify --json \
+  --actual-dir "$C2_ACTUAL_DIR" > "$C2_ACTUAL_DIR/verify.json"
+jq -e '.activation_blocked == false and .actual_state == "matched"' \
+  "$C2_ACTUAL_DIR/verify.json" > /dev/null
+```
+
+C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
+
+- `production-release-master`의 공통 required context는 `build`, `changes`, `dependency-audit`, `policy`, `quality`, `security-function-authorization`, `security-smoke`이며 모두 GitHub Actions App integration id `15368`에 묶인다. `dependency-audit`는 secret 없이 실행되는 security floor다.
+- `snyk`는 trusted `push` / `schedule` / `workflow_dispatch`에서만 실행하는 optional additional started check다. pull request에서는 secret-free `dependency-audit`만 실행하며 `SNYK_TOKEN`은 pinned Snyk action step에만 주입한다. `SNYK_TOKEN`이 없다는 사실이 required release context 성공으로 대체되거나 `dependency-audit`를 우회할 수 없다.
+- required context 이름은 모든 PR/master SHA에서 항상 생성한다. lightweight scope job은 항상 시작하고, required job은 `if: always()`로 시작한다. scope가 실패하거나 취소되면 첫 gate가 실패하며, scope가 성공하고 관련 출력이 `false`일 때만 explicit `N/A` 성공을 보고하고 heavy step을 건너뛴다. workflow-level `paths`는 required-check deadlock 때문에 사용하지 않는다.
+- `production-release-tag-creation`의 단일 `Integration` bypass actor id는 `HOMECOOK_RELEASE_ATTESTATION_APP_ID`와 같아야 한다. 이 ruleset에는 creation 외 rule을 두지 않는다.
+- `production-release-tag-immutability`는 update / deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. `update`가 fast-forward tag 이동까지 막으므로 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 이동하거나 삭제할 수 없다.
+- environment `production-release-approval`은 `can_admins_bypass: false`, required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다. admin bypass readback 누락 또는 `true`는 activation blocker다.
+- environment secrets는 App ID와 private key 두 개뿐이다. workflow는 `actions/create-github-app-token`으로 short-lived token을 만들고 tag App token은 `contents:write`만 요청한다. Administration permission과 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
+- workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있다.
+- `self-referential suite exception`은 canonical `production-release-attestation.yml`의 exact `workflow_dispatch` event와 exact release SHA에 속한 현재/이전 retry `check_suite_id`에만 적용한다. workflow-specific Actions REST를 full pagination으로 읽고 path, workflow id, event, head SHA를 모두 검증한 nonempty unique positive ID 목록만 제외한다. pre/post approval 목록은 evidence JSON으로 업로드하며 exact equality가 깨지면 concurrent drift로 실패한다. 목록 밖의 external bad/pending/rerun, failed, cancelled, queued check는 항상 0이어야 하며 그대로 fail-closed한다.
+- workflow 승인 뒤 `github.ref`, `github.workflow_ref`, exact `origin/master`, tree, 전체 check-runs와 `/statuses` 모든 page를 다시 읽고 preflight subject/predicate evidence와 비교한다. tag push 직전에도 `origin/master`를 다시 확인한다. deterministic raw annotated tag object를 App token으로 먼저 push한 뒤 GitHub ref API가 exact `release_tag_object_sha`와 object type `tag`를 반환해야만 `actions/attest`를 실행한다. remote readback 전 attestation은 금지한다.
+
+attestation workflow artifact baseline은 다음 세 가지다.
+
+- `production-release-subject.json`
+- `production-release-predicate.json`
+- `production-release-tag-object.raw`와 exact SHA
+- `release-workflow-suite-ids.json`
+- `actions/attest@v4`가 만든 JSON bundle
+
+server-side verifier는 위 subject manifest SHA-256, repository, tag, `release_tag_object_sha`, release SHA, tree, normalized terminal check summary를 함께 다시 확인한다.
+
+remote tag push/readback 뒤 attestation 생성이 실패하면 해당 immutable tag는 attestation이 없는 상태로 남는다. 이 tag는 production deployment authority가 아니며 승격에 사용할 수 없다. immutability ruleset 때문에 삭제·이동하지 않고, 재시도는 반드시 다음 `prod-YYYYMMDD.N` 번호를 사용한다.
 
 ## Legacy local-first commands
 

@@ -46,7 +46,7 @@ Claude는 더 이상 사용하지 않는다.
 - 서버 Mac release promotion governance는 `docs-governance`로 분류한다. `AGENTS.md`, `docs/engineering/current-mac-production-plan.md`, `docs/engineering/local-mac-production-release-promotion.md`, handoff template, release-policy tests가 그 범위에 포함된다.
 - `required_checks`는 이 문서가 단일 소스다. 다른 문서는 change type을 가정하지 않고 이 문서를 참조한다.
 - `required_checks`는 로컬/PR 준비 단계의 최소 검증 세트다. merge gate는 별도로 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 확인한다.
-- GitHub Actions는 변경 범위에 따라 무거운 job만 자동 실행한다. policy/PR governance는 기본 유지하고, code CI·frontend QA·security smoke·qa eval은 관련 파일 변경이 있을 때만 뜨는 것을 기본값으로 본다.
+- GitHub Actions workflow는 required-check deadlock을 막기 위해 PR/protected-branch event에서 항상 시작한다. lightweight scope job이 `scripts/ci-path-filter.mjs`로 변경 범위를 판정하고, 무거운 `quality`, `build`, `security-function-authorization`, `security-smoke`, `dependency-audit` job은 job-level `if`로 실행 또는 intended skip을 보고한다. 이 required context workflow에 workflow-level `paths`/`paths-ignore`를 두지 않는다. policy/PR governance는 항상 실행하고, frontend QA·qa eval은 각 문서의 관련 범위 규칙을 따른다.
 - Frontend QA는 `scripts/ci-path-filter.mjs`의 job-level path filter를 따른다. 일반 디자인 PR은 core smoke/a11y/visual만 blocker로 두고, 전체 slice regression과 전체 visual/a11y는 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
 - Slice regression의 device matrix 강도는 `docs/engineering/playwright-e2e.md`가 정한다. Ready for Review/protected branch push는 CI matrix, `full-ci`/nightly/manual은 complete matrix를 사용한다.
 - Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로 변경이 없으면 PR 본문 Performance 섹션에 `N/A: 성능 관련 경로 변경 없음`처럼 근거를 남긴다.

@@ -6,8 +6,14 @@
   "additionalProperties": false,
   "required": [
     "schema",
+    "repository",
+    "source_ref",
+    "signer_workflow",
+    "signer_digest",
+    "expected_release_integration_id",
     "promotion_id",
     "release_tag",
+    "release_tag_object_sha",
     "release_manifest_path",
     "release_sha",
     "release_tree",
@@ -18,6 +24,7 @@
     "build_id",
     "backup_readiness_evidence",
     "previous_release_sha",
+    "expected_release_contexts",
     "required_check_summary",
     "attestation_digest",
     "app_launch_agent_enabled",
@@ -28,6 +35,22 @@
     "schema": {
       "const": "homecook.local-mac-production-release.v1"
     },
+    "repository": {
+      "const": "netsus/homecook"
+    },
+    "source_ref": {
+      "const": "refs/heads/master"
+    },
+    "signer_workflow": {
+      "const": "netsus/homecook/.github/workflows/production-release-attestation.yml"
+    },
+    "signer_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "expected_release_integration_id": {
+      "const": 15368
+    },
     "promotion_id": {
       "type": "string",
       "minLength": 1
@@ -35,6 +58,10 @@
     "release_tag": {
       "type": "string",
       "pattern": "^prod-\\d{8}\\.\\d+$"
+    },
+    "release_tag_object_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
     },
     "release_manifest_path": {
       "type": "string",
@@ -76,8 +103,37 @@
       "type": "string",
       "pattern": "^[0-9a-f]{40}$"
     },
+    "expected_release_contexts": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "prefixItems": [
+        { "const": "build" },
+        { "const": "changes" },
+        { "const": "dependency-audit" },
+        { "const": "policy" },
+        { "const": "quality" },
+        { "const": "security-function-authorization" },
+        { "const": "security-smoke" }
+      ],
+      "items": false
+    },
     "required_check_summary": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "success", "intended_skip"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "success": { "type": "integer", "minimum": 0 },
+        "intended_skip": { "type": "integer", "minimum": 0 },
+        "bad": { "const": 0 },
+        "cancelled": { "const": 0 },
+        "failed": { "const": 0 },
+        "pending": { "const": 0 },
+        "queued": { "const": 0 },
+        "rerun": { "const": 0 }
+      }
     },
     "attestation_digest": {
       "type": "string",

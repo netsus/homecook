@@ -44,12 +44,22 @@ function createFixtureRepo({
     runGit(rootDir, ["update-ref", "refs/remotes/origin/master", releaseSha]);
   }
   runGit(rootDir, ["tag", "-a", "prod-20260825.1", "-m", "fixture release tag"]);
+  const releaseTagObjectSha = runGit(rootDir, [
+    "rev-parse",
+    "refs/tags/prod-20260825.1^{tag}",
+  ]);
 
   const manifestPath = join(rootDir, "release.json");
   writeFileSync(manifestPath, JSON.stringify({
     schema: "homecook.local-mac-production-release.v1",
+    repository: "netsus/homecook",
+    source_ref: "refs/heads/master",
+    signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    signer_digest: releaseSha,
+    expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
+    release_tag_object_sha: releaseTagObjectSha,
     release_manifest_path: manifestPath,
     release_sha: releaseSha,
     release_tree: releaseTree,
@@ -60,6 +70,15 @@ function createFixtureRepo({
     build_id: "build-20260825-01",
     backup_readiness_evidence: "backup-20260825-01",
     previous_release_sha: "c".repeat(40),
+    expected_release_contexts: [
+      "build",
+      "changes",
+      "dependency-audit",
+      "policy",
+      "quality",
+      "security-function-authorization",
+      "security-smoke",
+    ],
     required_check_summary: {
       total: 12,
       success: 10,

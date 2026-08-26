@@ -1,6 +1,7 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -14,6 +15,7 @@ import {
   validateLocalMacProductionMutationAuthority,
   validateLocalMacProductionReleaseManifest,
 } from "../scripts/lib/local-mac-production-release.mjs";
+import { validateProductionReleaseTag } from "../scripts/lib/production-release-approval-policy.mjs";
 
 const temporaryDirectories: string[] = [];
 const VERIFIED_ATTESTATION = () => ({ source: "test-attestation", verified: true });
@@ -27,8 +29,14 @@ function createTempDirectory(prefix: string) {
 function createManifest(overrides: Record<string, unknown> = {}) {
   return {
     schema: "homecook.local-mac-production-release.v1",
+    repository: "netsus/homecook",
+    source_ref: "refs/heads/master",
+    signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    signer_digest: "a".repeat(40),
+    expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
+    release_tag_object_sha: "e".repeat(40),
     release_manifest_path: "/Users/tester/.homecook/releases/manifests/prod-20260825.1.json",
     release_sha: "a".repeat(40),
     release_tree: "b".repeat(40),
@@ -44,6 +52,15 @@ function createManifest(overrides: Record<string, unknown> = {}) {
       success: 10,
       intended_skip: 2,
     },
+    expected_release_contexts: [
+      "build",
+      "changes",
+      "dependency-audit",
+      "policy",
+      "quality",
+      "security-function-authorization",
+      "security-smoke",
+    ],
     attestation_digest: "d".repeat(64),
     app_launch_agent_enabled: true,
     full_local_launch_agent_enabled: true,
@@ -72,6 +89,68 @@ afterEach(() => {
 });
 
 describe("local Mac production release manifest", () => {
+  it("uses one strict shared prod tag validator and validates the closed release schema", () => {
+    expect(validateProductionReleaseTag("prod-20260826.1")).toBe("prod-20260826.1");
+    for (const invalidTag of [
+      "xprod-20260826.1",
+      "prod-20260826.1-extra",
+      "prod-20260826x1",
+      "prod-20260826.",
+      "prod-20260826.01/evil",
+    ]) {
+      expect(() => validateProductionReleaseTag(invalidTag)).toThrow(/prod-|release tag|format/iu);
+    }
+
+    const schema = JSON.parse(readFileSync(
+      new URL("../scripts/schemas/local-mac-production-release.schema.json", import.meta.url),
+      "utf8",
+    ));
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toContain("expected_release_contexts");
+    expect(schema.required).toContain("release_tag_object_sha");
+    expect(schema.properties.release_tag_object_sha).toEqual({
+      type: "string",
+      pattern: "^[0-9a-f]{40}$",
+    });
+    expect(schema.properties.expected_release_contexts).toMatchObject({
+      type: "array",
+      minItems: 7,
+      maxItems: 7,
+      uniqueItems: true,
+    });
+    expect(schema.properties.repository).toEqual({ const: "netsus/homecook" });
+    expect(schema.properties.source_ref).toEqual({ const: "refs/heads/master" });
+    expect(schema.properties.signer_workflow).toEqual({
+      const: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    });
+    expect(schema.properties.expected_release_integration_id).toEqual({ const: 15368 });
+
+    const require = createRequire(import.meta.url);
+    const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
+    const Ajv = require(require.resolve("ajv", { paths: [eslintPackage] }));
+    const validateSummary = new Ajv({ allErrors: true }).compile(
+      schema.properties.required_check_summary,
+    );
+    expect(validateSummary({
+      total: 7,
+      success: 5,
+      intended_skip: 2,
+      bad: 0,
+      cancelled: 0,
+      failed: 0,
+      pending: 0,
+      queued: 0,
+      rerun: 0,
+    })).toBe(true);
+    for (const invalidSummary of [
+      { total: -1, success: 0, intended_skip: 0 },
+      { total: 7, success: 7, intended_skip: 0, failed: 1 },
+      { total: 7, success: 7, intended_skip: 0, unexpected: 0 },
+    ]) {
+      expect(validateSummary(invalidSummary), JSON.stringify(validateSummary.errors)).toBe(false);
+    }
+  });
+
   it("resolves the approved release SHA from origin/master instead of the local checkout head", () => {
     const invocations: string[][] = [];
     const releaseSha = "a".repeat(40);
@@ -190,6 +269,43 @@ describe("local Mac production release manifest", () => {
     ).toThrow(/pending|bad|rerun|check summary/iu);
   });
 
+  it("binds the manifest to the exact annotated release tag object", () => {
+    expect(
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          release_manifest_path: "/tmp/release.json",
+          release_tag_object_sha: "e".repeat(40),
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }).release_tag_object_sha,
+    ).toBe("e".repeat(40));
+
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          release_manifest_path: "/tmp/release.json",
+          release_tag_object_sha: "e".repeat(40),
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence({ releaseTagObjectSha: "f".repeat(40) }),
+      }),
+    ).toThrow(/tag object|release_tag_object_sha/iu);
+  });
+
+  it("requires a nonempty expected release context set in the manifest", () => {
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          expected_release_contexts: [],
+          release_manifest_path: "/tmp/release.json",
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }),
+    ).toThrow(/expected release context|context set|non-empty/iu);
+  });
+
   it("rejects missing launch-agent enablement fields instead of silently defaulting them", () => {
     expect(() =>
       validateLocalMacProductionReleaseManifest({
@@ -201,6 +317,47 @@ describe("local Mac production release manifest", () => {
         readGitEvidence: () => createGitEvidence(),
       }),
     ).toThrow(/app_launch_agent_enabled/iu);
+  });
+
+  it("rejects unknown top-level manifest fields before they can carry credentials", () => {
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          credentials: { token: "must-not-be-accepted" },
+          release_manifest_path: "/tmp/release.json",
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }),
+    ).toThrow(/unknown|allowed|unexpected|credentials/iu);
+  });
+
+  it("rejects unknown required-check summary fields", () => {
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          release_manifest_path: "/tmp/release.json",
+          required_check_summary: {
+            total: 12,
+            success: 10,
+            intended_skip: 2,
+            secret: "must-not-be-accepted",
+          },
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }),
+    ).toThrow(/unknown|allowed|unexpected|secret/iu);
+  });
+
+  it("still accepts an approved tagged release after origin/master advances later", () => {
+    expect(
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({ release_manifest_path: "/tmp/release.json" }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence({ originMasterSha: "f".repeat(40) }),
+      }).release_sha,
+    ).toBe("a".repeat(40));
   });
 });
 

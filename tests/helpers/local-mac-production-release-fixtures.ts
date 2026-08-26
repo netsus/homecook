@@ -14,8 +14,14 @@ export function createLocalMacProductionReleaseManifest(
 ) {
   return {
     schema: "homecook.local-mac-production-release.v1",
+    repository: "netsus/homecook",
+    source_ref: "refs/heads/master",
+    signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    signer_digest: "a".repeat(40),
+    expected_release_integration_id: 15368,
     promotion_id: "promo-20260825-01",
     release_tag: "prod-20260825.1",
+    release_tag_object_sha: "e".repeat(40),
     release_manifest_path: manifestPath,
     release_sha: "a".repeat(40),
     release_tree: "b".repeat(40),
@@ -26,6 +32,15 @@ export function createLocalMacProductionReleaseManifest(
     build_id: "build-20260825-01",
     backup_readiness_evidence: "backup-20260825-01",
     previous_release_sha: "c".repeat(40),
+    expected_release_contexts: [
+      "build",
+      "changes",
+      "dependency-audit",
+      "policy",
+      "quality",
+      "security-function-authorization",
+      "security-smoke",
+    ],
     required_check_summary: {
       total: 12,
       success: 10,
