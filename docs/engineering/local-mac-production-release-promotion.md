@@ -200,7 +200,7 @@ C1 validator는 `.github/rulesets/*.json` desired-state와 optional local actual
 즉, `pnpm release:github:rulesets:verify`는 actual snapshot이 없으면 `activation_blocked: true`로 fail-closed pending 상태를 기록하지만, network나 admin token 없이도 desired-state drift를 검증할 수 있다.
 C2에서만 GitHub REST readback snapshot을 받아 `--actual-dir <path>` 비교로 `actual_state: matched`를 닫는다.
 
-C1 activation_blocked는 exact Integration actor와 environment reviewer가 확정되고 environment `can_admins_bypass: false` readback이 확인될 때까지 유지한다. 현재 placeholder actor `0`을 실제 actor로 해석하거나 C2 activation으로 주장하지 않는다. `can_admins_bypass`가 누락되거나 `true`이면 fail-closed blocker다.
+C1 activation_blocked는 actual readback이 없으면 계속 `true`다. desired state의 exact Integration actor는 GitHub App ID `4724458`, environment reviewer는 `User` ID `57648890`으로 확정하지만, resolved desired state만으로 activation을 주장하지 않는다. environment `can_admins_bypass`가 누락되거나 `true`이면 fail-closed blocker다.
 
 C2 admin readback snapshot은 runtime release workflow와 분리된 별도 evidence다.
 C2 operator만 별도 admin credential로 snapshot을 만들고 local verifier gate를 통과시킨 뒤 activation할 수 있다. runtime workflow는 GitHub Administration API를 호출하지 않는다. `GITHUB_TOKEN`은 `actions:read`, `checks:read`, `statuses:read`, `contents:read`로 exact ref/SHA/tree와 전체 started checks만 검증한다. runtime은 C2 actual settings를 self-administer하거나 self-readback했다고 주장하지 않는다.
@@ -210,39 +210,63 @@ C2 admin-visible snapshot은 다음 파일을 모두 포함해야 한다.
 - `production-release-master.json`: `refs/heads/master`만 pin하고 `bypass_actors`를 명시한 ruleset detail
 - `production-release-tag-creation.json`: `refs/tags/prod-*`의 creation rule과 단일 resolved `Integration` actor만 명시한 ruleset detail
 - `production-release-tag-immutability.json`: 같은 tag pattern의 update / deletion / non-fast-forward rule과 빈 `bypass_actors`를 명시한 ruleset detail
-- `production-release-approval-environment.json`: `can_admins_bypass: false`, required reviewer, prevent-self-review, custom branch policy readback
+- `production-release-approval-environment.json`: `can_admins_bypass: false`, exact `wait_timer: 0`, required reviewer, prevent-self-review, custom branch policy readback
 - `production-release-approval-deployment-branch-policies.json`: pagination을 닫은 exact `[{"type":"branch","name":"master"}]`; tag/wildcard/extra policy 금지
 - `production-release-approval-environment-secrets.json`: pagination을 닫은 exact secret-name inventory `HOMECOOK_RELEASE_ATTESTATION_APP_ID`, `HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY`; legacy `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN` 또는 extra secret 금지
+- `production-release-repository-rulesets.json`: `includes_parents: false`, `scope: repository`, repository mutation target의 full detail inventory
+- `production-release-effective-rulesets.json`: `includes_parents: true`, `scope: effective`, organization/parent inheritance까지 포함한 full detail inventory
+- `production-release-snapshot-completion.json`: 모든 required snapshot 파일의 ordered SHA-256 inventory, exact head/remote master, canonical repository, App/reviewer identity를 묶은 final `status: verified` marker
 
-명시적 C2 admin 작업의 snapshot 예시는 다음과 같다. 이 명령은 runtime workflow나 tag App token으로 실행하지 않는다.
+독립 `verify --actual-dir`도 위 repository/effective inventory 두 파일을 필수 evidence로 읽는다. 파일 누락, scope/includes_parents 불일치, summary-only entry, duplicate ID/name, canonical ruleset 누락/중복/mismatch, unknown canonical-ref overlap, inherited parent conflict 중 하나라도 있으면 `activation_blocked: true`이며 기존 individual ruleset 3개만으로 matched를 주장하지 않는다.
+
+completion marker는 snapshot 저장 뒤 full actual state 재독, semantic equality, remote master 불변, marker 없는 preliminary verifier가 모두 성공한 뒤에만 `wx`, mode `0600`으로 생성한다. 독립 verifier는 marker 누락, identity/head 불일치, required file 순서/목록 불일치, SHA-256 mismatch를 모두 차단한다. 실패한 attempt의 기존 snapshot 파일은 삭제하지 않지만 marker가 없으므로 activation evidence가 아니다.
+
+C2 execute의 trust boundary는 worktree 파일이나 package script가 아니다. operator는 먼저 exact `C2_HEAD`를 `/usr/bin/git`으로 고정하고 `/usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs`로 immutable blob을 stdout에 얻는다. Node는 PATH에서 찾지 않고 operator가 realpath까지 확인한 absolute regular executable `C2_NODE`만 사용하며, symlink·non-executable·group/world-writable mode를 사전에 거부한다. bootstrap도 `process.execPath`의 absolute realpath, regular executable, safe mode를 다시 검증한 뒤 child를 시작한다. bootstrap은 `/usr/bin/git archive`로 같은 exact head의 C2 구현과 desired policy blobs만 private mode-0700 temp root에 materialize하고, object format에 맞는 blob ID·symlink·executable mode를 전부 재검증한 뒤 그 code root에서만 execute entry를 시작한다. worktree의 direct `apply --execute`는 local implementation import 전에 authoritative 명령을 출력하고 거부한다. temp root는 child 종료 뒤 삭제하며 private key 값은 archive, argv, env, log에 복사하지 않는다.
+
+source repository Git root와 immutable code root는 분리한다. desired-state JSON과 C2 module은 immutable archive에서만 읽고, source repository worktree는 Git HEAD/origin/master·remote master·hidden drift 확인에만 사용한다. 방어 심층화로 HEAD tree의 모든 tracked blob을 열거하고 worktree bytes, symlink target, executable mode를 Git object ID와 직접 비교해 desired-state parsing 전과 first mutation 직전에 다시 닫는다. completion marker는 archive를 만든 exact HEAD tree와 desired policy blob IDs를 함께 묶는다.
+
+모든 inventory full-detail entry는 `source`와 `source_type`을 명시한다. repository-origin entry는 source가 exact `netsus/homecook`, source_type이 `Repository`이고 `bypass_actors`까지 읽혀야 한다. parent-origin에서만 unreadable `bypass_actors` omission과 official `exempt` bypass mode를 허용한다. Organization inherited conditions는 `repository_name | repository_id | repository_property` 중 정확히 하나를 허용한다. Enterprise inherited conditions는 `organization_name | organization_id | organization_property` 중 하나와 `repository_name | repository_property` 중 하나를 조합하며 enterprise `repository_id`는 허용하지 않는다. 현재 [GitHub Organization Rules REST endpoint](https://docs.github.com/en/rest/orgs/rules?apiVersion=2026-03-10)의 actor enum은 `Integration | OrganizationAdmin | RepositoryRole | Team | DeployKey | User`만 허용한다. `EnterpriseOwner`/`EnterpriseRole`은 [Enterprise Rules endpoint](https://docs.github.com/en/enterprise-cloud@latest/rest/enterprise-admin/rules?apiVersion=2026-03-10)에서만 허용하고 Organization/Repository source에서는 fail closed한다. Integration/RepositoryRole/Team/User는 positive ID, DeployKey는 null ID, EnterpriseRole ID는 optional positive다. OrganizationAdmin/EnterpriseOwner ID는 해당 source의 공식 schema에서 ignored이므로 null 또는 integer를 입력받되 stable comparison에서는 null로 materialize한다. `pull_request` bypass는 branch-only이며 DeployKey에는 금지한다. ambiguous union/unknown nested field는 fail closed한다. C2 execute는 first mutation 전에 existing environment admin bypass, `includes_parents=true` effective inventory, repository↔effective canonical ID/source/detail consistency를 닫는다. repository/push target은 ref_name omission 자체로 branch/tag release conflict가 아니며 branch/tag matcher는 include/exclude를 함께 평가한다.
+
+명시적 C2 admin apply는 clean exact `origin/master` checkout에서만 실행한다. 기본 `apply`는 계속 dry-run이고, 실제 변경은 exact confirmation·canonical repo·ADMIN 권한·resolved desired state·create-only absolute snapshot·0600 이하의 nonempty valid RSA private-key file gate가 모두 통과할 때만 허용한다. CLI는 first mutation 직전 canonical GitHub `refs/heads/master`를 exact local HEAD와 비교하고, snapshot 전후 full actual state에도 같은 remote master 검증을 포함한다. private key는 `O_NOFOLLOW` 단일 open으로 얻은 FD에서 fstat/mode/read/RSA parse를 끝내고, 같은 in-memory Buffer만 secret stdin에 사용한다. mutation 뒤 path를 다시 열지 않으며 JSON/log/snapshot에는 경로나 값이 남지 않는다.
+
+같은 in-memory RSA Buffer로 `iss=4724458`, `alg=RS256`, 안전한 iat skew와 10분 이하 expiry의 short-lived GitHub App JWT를 만들고, TLS가 고정된 `https://api.github.com/app`에 직접 GET한다. API version, User-Agent, timeout을 고정하고 response `id=4724458` readback 전에는 mutation하지 않는다. JWT/private key는 argv, child env, result JSON, log, snapshot에 남기지 않는다.
 
 ```bash
 C2_ACTUAL_DIR="$(mktemp -d)"
-
-gh api repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
-  while read -r rule_id; do
-    rule_name="$(gh api "repos/netsus/homecook/rulesets/$rule_id" --jq '.name')"
-    case "$rule_name" in
-      production-release-master|production-release-tag-creation|production-release-tag-immutability)
-        gh api "repos/netsus/homecook/rulesets/$rule_id" > "$C2_ACTUAL_DIR/$rule_name.json"
-        ;;
-    esac
-  done
-gh api repos/netsus/homecook/environments/production-release-approval \
-  > "$C2_ACTUAL_DIR/production-release-approval-environment.json"
-gh api "repos/netsus/homecook/environments/production-release-approval/deployment-branch-policies?per_page=100" \
-  --paginate --jq '.branch_policies[]' > "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl"
-jq -s '{branch_policies: .}' "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl" \
-  > "$C2_ACTUAL_DIR/production-release-approval-deployment-branch-policies.json"
-gh api "repos/netsus/homecook/environments/production-release-approval/secrets?per_page=100" \
-  --paginate --jq '.secrets[]' > "$C2_ACTUAL_DIR/environment-secrets.jsonl"
-jq -s '{secrets: .}' "$C2_ACTUAL_DIR/environment-secrets.jsonl" \
-  > "$C2_ACTUAL_DIR/production-release-approval-environment-secrets.json"
-node scripts/manage-production-release-rulesets.mjs verify --json \
-  --actual-dir "$C2_ACTUAL_DIR" > "$C2_ACTUAL_DIR/verify.json"
+rmdir "$C2_ACTUAL_DIR"
+C2_RESULT_FILE="${C2_ACTUAL_DIR}.result.json"
+C2_NODE="/absolute/realpath/to/trusted/node"
+case "$C2_NODE" in /*) ;; *) exit 1 ;; esac
+test -f "$C2_NODE" && test ! -L "$C2_NODE" && test -x "$C2_NODE"
+C2_NODE_MODE="$(/usr/bin/stat -f '%Lp' "$C2_NODE")"
+case "$C2_NODE_MODE" in *[2367][0-7]|*[0-7][2367]) exit 1 ;; esac
+C2_HEAD="$(/usr/bin/git rev-parse HEAD)"
+/usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs | \
+  /usr/bin/env -u NODE_OPTIONS "$C2_NODE" --input-type=module - \
+  --source-repo "$(/usr/bin/git rev-parse --show-toplevel)" \
+  --expected-head "$C2_HEAD" \
+  apply --execute \
+  --confirm APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS \
+  --repo netsus/homecook \
+  --snapshot-dir "$C2_ACTUAL_DIR" \
+  --app-id 4724458 \
+  --app-private-key-file /absolute/path/to/homecook-release-attestation.private-key.pem \
+  --json > "$C2_RESULT_FILE"
 jq -e '.activation_blocked == false and .actual_state == "matched"' \
-  "$C2_ACTUAL_DIR/verify.json" > /dev/null
+  "$C2_RESULT_FILE" > /dev/null
 ```
+
+CLI는 exact-name ruleset 3개만 POST/PUT하고, 모르는 ruleset은 삭제하지 않는다. repository mutation inventory는 `includes_parents=false`, effective safety inventory는 `includes_parents=true`로 분리한다. canonical ref와 충돌하거나 canonical 이름을 재사용하는 organization/parent ruleset, repository canonical name 중복, extra environment branch/tag policy, extra environment secret 이름은 fail closed한다. 두 exact environment secret은 매 execute마다 stdin으로 다시 upsert한다. CLI는 environment/policies/secrets/repository/effective rulesets/remote master를 하나의 full actual state로 읽어 snapshot을 저장하고, 저장 직후 전체를 다시 읽어 semantic equality와 master 불변을 증명한다. REST API/secret/readback/snapshot 실패 뒤에는 자동 삭제·완화·rollback하지 않고 `partial_state: true`로 종료한다.
+
+CLI의 모든 `gh api` REST 호출은 `--hostname github.com`, `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2026-03-10`을 고정한다. environment secret target도 `github.com/netsus/homecook`으로 고정한다.
+
+production tool은 PATH에서 탐색하지 않는다. Git/tar는 supported macOS의 `/usr/bin/git`, `/usr/bin/tar`만 허용하고 realpath target이 각각 `/usr/bin/git`, `/usr/bin/bsdtar` 또는 `/usr/bin/tar`인지 확인한다. `gh`는 `/opt/homebrew/bin/gh`, `/usr/local/bin/gh`, `/usr/bin/gh` 순서의 absolute candidate만 확인하며 Homebrew Cellar 또는 동일 system path로 realpath한 regular executable만 사용한다. 모든 executable은 execute bit가 있고 group/world write bit가 없어야 하며, 조건을 만족하는 `gh`가 없으면 private key를 읽거나 network/mutation을 시작하기 전에 fail closed한다.
+
+Environment PUT에는 GitHub REST가 문서화하지 않은 `can_admins_bypass`를 보내지 않는다. 다른 environment 필드를 create/update한 뒤 readback의 `can_admins_bypass`가 누락되거나 `true`이면 CLI는 `manual_action_required: true`로 fail closed한다. 이때 repository **Settings → Environments → production-release-approval**에서 **Allow administrators to bypass**를 끄고, 기존 snapshot 경로를 재사용하지 말고 새 create-only 경로로 같은 apply를 다시 실행한다. `can_admins_bypass: false` REST readback 전에는 matched snapshot이나 activation을 주장하지 않는다.
+
+Environment wait timer의 effective 값은 REST `protection_rules`에 wait-timer rule이 0개면 `0`, 1개면 그 rule의 값이다. 2개 이상은 invalid/mismatch다. 따라서 PUT `wait_timer: 0` 뒤 GitHub가 wait-timer rule을 생략해도 exact desired state로 수렴하지만 nonzero 또는 duplicate rule은 activation blocker다.
+
+Raw `gh api` readback은 troubleshooting에만 사용할 수 있다. 그 출력은 apply가 마지막에 만드는 `production-release-snapshot-completion.json`과 결합할 수 없으므로 C2 evidence directory에 저장하거나 `verify --actual-dir`에 넘기지 않는다. operator는 completion marker를 수동 작성하지 않는다. authoritative C2 evidence는 위 immutable `git show ... | node - ... apply --execute` 명령이 새 create-only snapshot directory에 생성한 결과만 인정한다.
 
 C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -69,7 +70,7 @@ describe("production release rulesets desired state", () => {
     expect(creationRuleset.name).toBe("production-release-tag-creation");
     expect(creationRuleset.rules).toEqual([{ type: "creation" }]);
     expect(creationRuleset.bypass_actors).toEqual([
-      { actor_id: 0, actor_type: "Integration", bypass_mode: "always" },
+      { actor_id: 4724458, actor_type: "Integration", bypass_mode: "always" },
     ]);
     expect(immutabilityRuleset.name).toBe("production-release-tag-immutability");
     expect(immutabilityRuleset.rules).toEqual([
@@ -83,9 +84,10 @@ describe("production release rulesets desired state", () => {
   it("pins environment administrator bypass off in desired state and readback", () => {
     const desired = JSON.parse(
       read(".github/rulesets/production-release-approval-environment.json"),
-    ) as { can_admins_bypass?: boolean };
+    ) as { can_admins_bypass?: boolean; wait_timer?: number };
 
     expect(desired.can_admins_bypass).toBe(false);
+    expect(desired.wait_timer).toBe(0);
   });
 
   it("stores desired branch and prod-tag protections in official REST ruleset shapes", () => {
@@ -134,6 +136,7 @@ describe("production release rulesets desired state", () => {
       can_admins_bypass?: boolean;
       prevent_self_review?: boolean;
       required_reviewers?: Array<{ actor_id?: number; actor_type?: string }>;
+      wait_timer?: number;
     };
 
     expect(branchRuleset.name).toBe("production-release-master");
@@ -199,7 +202,7 @@ describe("production release rulesets desired state", () => {
     }
     expect(tagCreationRuleset.bypass_actors).toEqual([
       {
-        actor_id: 0,
+        actor_id: 4724458,
         actor_type: "Integration",
         bypass_mode: "always",
       },
@@ -218,7 +221,8 @@ describe("production release rulesets desired state", () => {
       ],
       master_only_branches: ["master"],
       prevent_self_review: true,
-      required_reviewers: [{ actor_id: 0, actor_type: "Unresolved" }],
+      required_reviewers: [{ actor_id: 57648890, actor_type: "User" }],
+      wait_timer: 0,
     });
   });
 
@@ -307,8 +311,8 @@ describe("production release rulesets desired state", () => {
     expect(verify.stdout).toContain("production-release-tag-creation");
     expect(verify.stdout).toContain("production-release-tag-immutability");
     expect(verify.stdout).toContain("\"activation_blocked\": true");
-    expect(verify.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
-    expect(verify.stdout).toContain("unresolved_approval_environment_reviewer");
+    expect(verify.stdout).toContain("\"actual_state\": \"missing\"");
+    expect(verify.stdout).not.toContain("unresolved_approval_environment_reviewer");
     expect(verify.stdout).toContain("missing_approval_environment_readback");
 
     const verifyWithActual = spawnSync(
@@ -321,7 +325,7 @@ describe("production release rulesets desired state", () => {
     );
     expect(verifyWithActual.status, verifyWithActual.stderr).toBe(0);
     expect(verifyWithActual.stdout).toContain("\"activation_blocked\": true");
-    expect(verifyWithActual.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
+    expect(verifyWithActual.stdout).toContain("\"actual_state\": \"mismatch\"");
 
     const resolvedRootDir = createTempDirectory("homecook-rulesets-desired-");
     const resolvedActualDir = createTempDirectory("homecook-rulesets-actual-resolved-");
@@ -349,7 +353,7 @@ describe("production release rulesets desired state", () => {
         rules: [{ type: "creation" }],
         bypass_actors: [
           {
-            actor_id: 12345,
+            actor_id: 4724458,
             actor_type: "Integration",
             bypass_mode: "always",
           },
@@ -368,6 +372,7 @@ describe("production release rulesets desired state", () => {
         repository: "netsus/homecook",
         source_ref: "refs/heads/master",
         can_admins_bypass: false,
+        wait_timer: 0,
         prevent_self_review: true,
         deployment_branch_policy: {
           protected_branches: false,
@@ -380,7 +385,7 @@ describe("production release rulesets desired state", () => {
         ],
         master_only_branches: ["master"],
         required_reviewers: [
-          { actor_id: 24680, actor_type: "User" },
+          { actor_id: 57648890, actor_type: "User" },
         ],
       }, null, 2),
     );
@@ -403,7 +408,7 @@ describe("production release rulesets desired state", () => {
         rules: [{ type: "creation" }],
         bypass_actors: [
           {
-            actor_id: 12345,
+            actor_id: 4724458,
             actor_type: "Integration",
             bypass_mode: "always",
           },
@@ -440,7 +445,7 @@ describe("production release rulesets desired state", () => {
             type: "required_reviewers",
             prevent_self_review: true,
             reviewers: [
-              { type: "User", reviewer: { id: 24680 } },
+              { type: "User", reviewer: { id: 57648890 } },
             ],
           },
           { type: "branch_policy" },
@@ -464,6 +469,152 @@ describe("production release rulesets desired state", () => {
         ],
       }, null, 2),
     );
+    const repositoryInventoryPath = join(
+      resolvedActualDir,
+      "production-release-repository-rulesets.json",
+    );
+    const effectiveInventoryPath = join(
+      resolvedActualDir,
+      "production-release-effective-rulesets.json",
+    );
+    const repositoryInventory = {
+      scope: "repository",
+      includes_parents: false,
+      rulesets: [
+        "production-release-master",
+        "production-release-tag-creation",
+        "production-release-tag-immutability",
+      ].map((name) => ({
+        ...JSON.parse(read(join(resolvedActualDir, `${name}.json`))),
+        source: "netsus/homecook",
+        source_type: "Repository",
+      })),
+    };
+    const inheritedOrganizationRuleset = {
+      id: 999,
+      name: "organization-release-branch-policy",
+      target: "branch",
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: {
+        ref_name: {
+          include: ["refs/heads/release/*"],
+          exclude: ["refs/heads/master"],
+        },
+        repository_name: { include: ["homecook"], exclude: [], protected: true },
+      },
+      bypass_actors: [{ actor_id: 42, actor_type: "Team", bypass_mode: "exempt" }],
+      rules: [{
+        type: "pull_request",
+        parameters: { required_approving_review_count: 1 },
+      }],
+    };
+    const inheritedEnterpriseRuleset = {
+      id: 996,
+      name: "enterprise-release-property-policy",
+      target: "branch",
+      source_type: "Enterprise",
+      source: "netsus-enterprise",
+      enforcement: "active",
+      conditions: {
+        ref_name: {
+          include: ["refs/heads/release/*"],
+          exclude: ["refs/heads/master"],
+        },
+        organization_property: {
+          include: [{ name: "region", property_values: ["kr"] }],
+          exclude: [],
+        },
+        repository_property: {
+          include: [{
+            name: "visibility",
+            property_values: ["private"],
+            source: "system",
+          }],
+          exclude: [],
+        },
+      },
+      bypass_actors: [
+        { actor_id: null, actor_type: "EnterpriseOwner", bypass_mode: "exempt" },
+        { actor_id: null, actor_type: "EnterpriseRole", bypass_mode: "always" },
+      ],
+      rules: [{
+        type: "pull_request",
+        parameters: { required_approving_review_count: 1 },
+      }],
+    };
+    const effectiveInventory = {
+      scope: "effective",
+      includes_parents: true,
+      rulesets: [
+        ...repositoryInventory.rulesets,
+        inheritedOrganizationRuleset,
+        inheritedEnterpriseRuleset,
+      ],
+    };
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+    writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
+    const completionFiles = [
+      "production-release-master.json",
+      "production-release-tag-creation.json",
+      "production-release-tag-immutability.json",
+      "production-release-approval-environment.json",
+      "production-release-approval-deployment-branch-policies.json",
+      "production-release-approval-environment-secrets.json",
+      "production-release-repository-rulesets.json",
+      "production-release-effective-rulesets.json",
+    ];
+    for (const args of [
+      ["init", "-q"],
+      ["config", "user.email", "ruleset-test@example.invalid"],
+      ["config", "user.name", "Ruleset Test"],
+      ["add", "."],
+      ["commit", "-qm", "fixture"],
+    ]) {
+      expect(spawnSync("git", ["-C", resolvedRootDir, ...args]).status).toBe(0);
+    }
+    const fixtureHead = spawnSync("git", ["-C", resolvedRootDir, "rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).stdout.trim();
+    const fixtureTree = spawnSync(
+      "git",
+      ["-C", resolvedRootDir, "rev-parse", `${fixtureHead}^{tree}`],
+      { encoding: "utf8" },
+    ).stdout.trim();
+    const desiredPolicyPaths = [
+      ".github/rulesets/production-release-master.json",
+      ".github/rulesets/production-release-tag-creation.json",
+      ".github/rulesets/production-release-tag-immutability.json",
+      ".github/rulesets/production-release-approval-environment.json",
+      ".github/workflows/production-release-attestation.yml",
+    ];
+    writeFileSync(
+      join(resolvedActualDir, "production-release-snapshot-completion.json"),
+      JSON.stringify({
+        schema: "homecook.github.production-release-snapshot-completion.v1",
+        version: 1,
+        status: "verified",
+        repository: "netsus/homecook",
+        head: fixtureHead,
+        head_tree: fixtureTree,
+        remote_master: fixtureHead,
+        desired_policy_blobs: Object.fromEntries(desiredPolicyPaths.map((path) => [
+          path,
+          spawnSync("git", ["-C", resolvedRootDir, "rev-parse", `${fixtureHead}:${path}`], {
+            encoding: "utf8",
+          }).stdout.trim(),
+        ])),
+        app_id: 4724458,
+        reviewer: { actor_id: 57648890, actor_type: "User" },
+        files: completionFiles.map((name) => ({
+          name,
+          sha256: createHash("sha256")
+            .update(readFileSync(join(resolvedActualDir, name)))
+            .digest("hex"),
+        })),
+      }, null, 2),
+    );
     const verifyResolved = spawnSync(
       process.execPath,
       [
@@ -483,6 +634,194 @@ describe("production release rulesets desired state", () => {
     expect(verifyResolved.status, verifyResolved.stderr).toBe(0);
     expect(verifyResolved.stdout).toContain("\"activation_blocked\": false");
     expect(verifyResolved.stdout).toContain("\"actual_state\": \"matched\"");
+
+    const verifyResolvedSnapshot = () => spawnSync(
+      process.execPath,
+      [
+        RULESET_SCRIPT,
+        "verify",
+        "--json",
+        "--root-dir",
+        resolvedRootDir,
+        "--actual-dir",
+        resolvedActualDir,
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    for (const [inventoryPath, blocker] of [
+      [repositoryInventoryPath, "missing_repository_ruleset_inventory_readback"],
+      [effectiveInventoryPath, "missing_effective_ruleset_inventory_readback"],
+    ]) {
+      const contents = read(inventoryPath);
+      rmSync(inventoryPath);
+      const verifyMissingInventory = verifyResolvedSnapshot();
+      expect(verifyMissingInventory.status, verifyMissingInventory.stderr).toBe(0);
+      expect(verifyMissingInventory.stdout).toContain("\"activation_blocked\": true");
+      expect(verifyMissingInventory.stdout).toContain(blocker);
+      writeFileSync(inventoryPath, contents);
+    }
+
+    writeFileSync(repositoryInventoryPath, JSON.stringify({
+      ...repositoryInventory,
+      rulesets: [...repositoryInventory.rulesets, repositoryInventory.rulesets[0]],
+    }, null, 2));
+    const verifyDuplicateRepository = verifyResolvedSnapshot();
+    expect(verifyDuplicateRepository.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyDuplicateRepository.stdout).toContain(
+      "repository_ruleset_inventory_canonical_duplicate",
+    );
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+
+    writeFileSync(repositoryInventoryPath, JSON.stringify({
+      ...repositoryInventory,
+      rulesets: repositoryInventory.rulesets.map((ruleset, index) =>
+        index === 0
+          ? { id: ruleset.id, name: ruleset.name, target: ruleset.target }
+          : ruleset),
+    }, null, 2));
+    const verifyRepositorySummaryOnly = verifyResolvedSnapshot();
+    expect(verifyRepositorySummaryOnly.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyRepositorySummaryOnly.stdout).toContain(
+      "repository_ruleset_inventory_full_detail_missing",
+    );
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+
+    writeFileSync(repositoryInventoryPath, JSON.stringify({
+      ...repositoryInventory,
+      rulesets: [
+        ...repositoryInventory.rulesets,
+        {
+          id: 998,
+          name: "unknown-prod-overlap",
+          target: "tag",
+          source: "netsus/homecook",
+          source_type: "Repository",
+          enforcement: "active",
+          conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+          rules: [{ type: "creation" }],
+          bypass_actors: [],
+        },
+      ],
+    }, null, 2));
+    const verifyRepositoryOverlap = verifyResolvedSnapshot();
+    expect(verifyRepositoryOverlap.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyRepositoryOverlap.stdout).toContain(
+      "repository_ruleset_inventory_unknown_overlap",
+    );
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: effectiveInventory.rulesets.filter(
+        (ruleset) => ruleset.name !== "production-release-tag-immutability",
+      ),
+    }, null, 2));
+    const verifyMissingEffectiveCanonical = verifyResolvedSnapshot();
+    expect(verifyMissingEffectiveCanonical.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyMissingEffectiveCanonical.stdout).toContain(
+      "effective_ruleset_inventory_canonical_missing",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: effectiveInventory.rulesets.map((ruleset) =>
+        ruleset.name === "production-release-master"
+          ? { ...ruleset, id: 9999 }
+          : ruleset),
+    }, null, 2));
+    const verifyCrossInventoryId = verifyResolvedSnapshot();
+    expect(verifyCrossInventoryId.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyCrossInventoryId.stdout).toContain(
+      "ruleset_inventory_consistency_mismatch",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [
+        ...effectiveInventory.rulesets,
+        {
+          ...inheritedOrganizationRuleset,
+          id: 997,
+          name: "organization-prod-overlap",
+          target: "tag",
+          conditions: {
+            ...inheritedOrganizationRuleset.conditions,
+            ref_name: { include: ["refs/tags/prod-*"], exclude: [] },
+          },
+        },
+      ],
+    }, null, 2));
+    const verifyInheritedConflict = verifyResolvedSnapshot();
+    expect(verifyInheritedConflict.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyInheritedConflict.stdout).toContain(
+      "effective_ruleset_inventory_parent_conflict",
+    );
+    writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
+
+    const { source: _omittedSource, ...missingSourceInherited } = structuredClone(
+      inheritedOrganizationRuleset,
+    );
+    expect(_omittedSource).toBe("netsus");
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [...repositoryInventory.rulesets, missingSourceInherited],
+    }, null, 2));
+    const verifyMissingEffectiveSource = verifyResolvedSnapshot();
+    expect(verifyMissingEffectiveSource.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyMissingEffectiveSource.stdout).toContain(
+      "effective_ruleset_inventory_source_missing",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [
+        ...effectiveInventory.rulesets,
+        {
+          id: 995,
+          name: "repository-release-policy",
+          target: "branch",
+          source_type: "Repository",
+          source: "netsus/homecook",
+          enforcement: "active",
+          conditions: {
+            ref_name: {
+              include: ["refs/heads/release/*"],
+              exclude: ["refs/heads/master"],
+            },
+          },
+          rules: [{
+            type: "pull_request",
+            parameters: { required_approving_review_count: 1 },
+          }],
+        },
+      ],
+    }, null, 2));
+    const verifyPartialRepositoryEffective = verifyResolvedSnapshot();
+    expect(verifyPartialRepositoryEffective.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyPartialRepositoryEffective.stdout).toContain(
+      "effective_ruleset_inventory_full_detail_missing",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [
+        ...repositoryInventory.rulesets,
+        {
+          ...inheritedOrganizationRuleset,
+          id: 994,
+          conditions: {
+            ...inheritedOrganizationRuleset.conditions,
+            repository_id: { repository_ids: [123456789] },
+          },
+        },
+      ],
+    }, null, 2));
+    const verifyAmbiguousInherited = verifyResolvedSnapshot();
+    expect(verifyAmbiguousInherited.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyAmbiguousInherited.stdout).toContain(
+      "effective_ruleset_inventory_schema_mismatch",
+    );
+    writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
 
     const approvalReadbackPath = join(
       resolvedActualDir,
@@ -517,6 +856,41 @@ describe("production release rulesets desired state", () => {
       expect(verifyAdminBypass.stdout).toContain("\"activation_blocked\": true");
       expect(verifyAdminBypass.stdout).toContain(
         "approval_environment_admin_bypass_mismatch",
+      );
+    }
+    writeFileSync(approvalReadbackPath, JSON.stringify(matchedApprovalReadback, null, 2));
+
+    for (const invalidWaitTimerRules of [
+      [{ type: "wait_timer", wait_timer: 10 }],
+      [
+        { type: "wait_timer", wait_timer: 0 },
+        { type: "wait_timer", wait_timer: 0 },
+      ],
+    ]) {
+      const invalidApprovalReadback = structuredClone(matchedApprovalReadback);
+      invalidApprovalReadback.protection_rules = (
+        invalidApprovalReadback.protection_rules as Array<Record<string, unknown>>
+      ).filter((rule) => rule.type !== "wait_timer");
+      (invalidApprovalReadback.protection_rules as Array<Record<string, unknown>>)
+        .unshift(...invalidWaitTimerRules);
+      writeFileSync(approvalReadbackPath, JSON.stringify(invalidApprovalReadback, null, 2));
+      const verifyWaitTimer = spawnSync(
+        process.execPath,
+        [
+          RULESET_SCRIPT,
+          "verify",
+          "--json",
+          "--root-dir",
+          resolvedRootDir,
+          "--actual-dir",
+          resolvedActualDir,
+        ],
+        { cwd: repoRoot, encoding: "utf8" },
+      );
+      expect(verifyWaitTimer.status, verifyWaitTimer.stderr).toBe(0);
+      expect(verifyWaitTimer.stdout).toContain("\"activation_blocked\": true");
+      expect(verifyWaitTimer.stdout).toContain(
+        "approval_environment_wait_timer_mismatch",
       );
     }
     writeFileSync(approvalReadbackPath, JSON.stringify(matchedApprovalReadback, null, 2));
@@ -605,8 +979,50 @@ describe("production release rulesets desired state", () => {
       },
     );
     expect(blocked.status).toBe(1);
-    expect(blocked.stderr).toContain("C2");
-    expect(blocked.stderr).toContain("explicit operator-approved");
+    expect(blocked.stderr).toContain("Authoritative immutable C2 execution is required");
+    expect(blocked.stderr).toContain(
+      '/usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs',
+    );
+    expect(existsSync(join(repoRoot, "scripts/bootstrap-production-release-rulesets.mjs")))
+      .toBe(true);
+    const entrySource = read("scripts/manage-production-release-rulesets.mjs");
+    expect(entrySource).not.toMatch(/^import .*production-release/um);
+
+    const hostileRoot = createTempDirectory("homecook-c2-direct-hostile-");
+    const hostileScripts = join(hostileRoot, "scripts");
+    const hostileLib = join(hostileScripts, "lib");
+    const markerPath = join(hostileRoot, "worktree-module-executed");
+    mkdirSync(hostileLib, { recursive: true });
+    writeFileSync(join(hostileScripts, "manage-production-release-rulesets.mjs"), entrySource);
+    for (const name of [
+      "production-release-rulesets.mjs",
+      "production-release-rulesets-apply.mjs",
+    ]) {
+      writeFileSync(
+        join(hostileLib, name),
+        `import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(markerPath)}, "executed");`,
+      );
+    }
+    const hostileDirect = spawnSync(
+      process.execPath,
+      [join(hostileScripts, "manage-production-release-rulesets.mjs"), "apply", "--execute"],
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_C2_IMMUTABLE_CODE_ROOT: hostileRoot,
+          HOMECOOK_C2_IMMUTABLE_HEAD: spawnSync(
+            "/usr/bin/git",
+            ["-C", repoRoot, "rev-parse", "HEAD"],
+            { encoding: "utf8" },
+          ).stdout.trim(),
+          HOMECOOK_C2_SOURCE_REPO_ROOT: repoRoot,
+        },
+      },
+    );
+    expect(hostileDirect.status).toBe(1);
+    expect(hostileDirect.stderr).toContain("Authoritative immutable C2 execution is required");
+    expect(existsSync(markerPath)).toBe(false);
   });
 
   it("keeps the attestation workflow least-privilege and approval-gated", () => {
@@ -855,7 +1271,14 @@ describe("production release rulesets desired state", () => {
     expect(runbook).toContain("production-release-tag-creation.json");
     expect(runbook).toContain("production-release-tag-immutability.json");
     expect(runbook).toContain("can_admins_bypass: false");
-    expect(runbook).toContain('--actual-dir "$C2_ACTUAL_DIR"');
+    expect(runbook).toContain(
+      '/usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs',
+    );
+    expect(runbook).toContain('--source-repo "$(/usr/bin/git rev-parse --show-toplevel)"');
+    expect(runbook).toContain('--expected-head "$C2_HEAD"');
+    expect(runbook).not.toContain("pnpm release:github:rulesets:apply -- \\\n+  --execute");
+    expect(runbook).toContain("authoritative C2 evidence");
+    expect(runbook).toContain("operator는 completion marker를 수동 작성하지 않는다");
     expect(runbook).toContain('.activation_blocked == false and .actual_state == "matched"');
     expect(runbook).toContain("runtime workflow는 GitHub Administration API를 호출하지 않는다");
     expect(runbook).toContain("tag App token은 `contents:write`만 요청한다");
