@@ -433,9 +433,9 @@ function normalizeInheritedBypassActors(bypassActors, label, sourceType, target)
     "Team",
     "User",
   ];
-  const actorTypes = sourceType === "Enterprise"
+  const actorTypes = ["Enterprise", "Organization"].includes(sourceType)
     ? [...repositoryActorTypes, "EnterpriseOwner", "EnterpriseRole"]
-    : sourceType === "Organization"
+    : sourceType === "Repository"
       ? repositoryActorTypes
       : [];
   return requireArray(bypassActors ?? [], label)
@@ -1254,7 +1254,7 @@ export function normalizeRepositoryProductionReleaseRulesetForInventory(
     bypass_actors: normalizeInheritedBypassActors(
       value.bypass_actors,
       `${label}.bypass_actors`,
-      "Organization",
+      "Repository",
       target,
     ),
     conditions,

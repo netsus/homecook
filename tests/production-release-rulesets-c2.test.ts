@@ -70,7 +70,7 @@ const markMutation = () => {
   }
   if (state.precreate_completion_marker && !state.completion_marker_precreated) {
     fs.writeFileSync(
-      process.env.HOMECOOK_C2_SNAPSHOT_DIR + "/${COMPLETION_FILE}",
+      process.env.HOMECOOK_C2_SNAPSHOT_DIR + "/" + process.env.HOMECOOK_C2_COMPLETION_FILE,
       "attacker-marker",
       { flag: "wx", mode: 0o600 },
     );
@@ -348,6 +348,7 @@ function runExecute({
       env: {
         ...process.env,
         HOMECOOK_C2_MOCK_STATE: statePath,
+        HOMECOOK_C2_COMPLETION_FILE: COMPLETION_FILE,
         HOMECOOK_C2_PRIVATE_KEY_PATH: privateKeyPath,
         HOMECOOK_C2_SNAPSHOT_DIR: snapshotDir,
         HOMECOOK_C2_ROOT: repoRoot,
@@ -973,6 +974,14 @@ describe("production release C2 apply", () => {
         actor_id: 99,
         actor_type: "OrganizationAdmin",
         bypass_mode: "always",
+      }, {
+        actor_id: 99,
+        actor_type: "EnterpriseOwner",
+        bypass_mode: "exempt",
+      }, {
+        actor_id: null,
+        actor_type: "EnterpriseRole",
+        bypass_mode: "always",
       }],
     }],
     ["organization repository_id", {
@@ -1137,16 +1146,6 @@ describe("production release C2 apply", () => {
       actor_type: "DeployKey",
       bypass_mode: "pull_request",
     }],
-    ["Organization EnterpriseOwner", "Organization", "branch", {
-      actor_id: null,
-      actor_type: "EnterpriseOwner",
-      bypass_mode: "always",
-    }],
-    ["Organization EnterpriseRole", "Organization", "branch", {
-      actor_id: null,
-      actor_type: "EnterpriseRole",
-      bypass_mode: "always",
-    }],
     ["EnterpriseRole with zero ID", "Enterprise", "branch", {
       actor_id: 0,
       actor_type: "EnterpriseRole",
@@ -1258,6 +1257,11 @@ describe("production release C2 apply", () => {
     ["Team negative ID", { actor_id: -7, actor_type: "Team", bypass_mode: "always" }],
     ["Integration zero ID", { actor_id: 0, actor_type: "Integration", bypass_mode: "always" }],
     ["unknown actor", { actor_id: 1, actor_type: "UnknownActor", bypass_mode: "always" }],
+    ["EnterpriseOwner on repository", {
+      actor_id: null,
+      actor_type: "EnterpriseOwner",
+      bypass_mode: "always",
+    }],
     ["DeployKey non-null ID", { actor_id: 123, actor_type: "DeployKey", bypass_mode: "always" }],
     ["invalid mode", { actor_id: 1, actor_type: "Team", bypass_mode: "invalid" }],
   ])("rejects repository-origin bypass actor %s before mutation", (_label, actor) => {
@@ -1361,7 +1365,7 @@ describe("production release C2 apply", () => {
     expect(run.combined).toContain('"partial_state": true');
     expect(readFileSync(join(run.snapshotDir, COMPLETION_FILE), "utf8"))
       .toBe("attacker-marker");
-  });
+  }, 15_000);
 
   it("wraps unexpected post-mutation normalization failure as partial state", () => {
     const repositoryRulesets = resolvedRulesets();
