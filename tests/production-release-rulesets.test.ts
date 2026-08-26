@@ -483,7 +483,11 @@ describe("production release rulesets desired state", () => {
         "production-release-master",
         "production-release-tag-creation",
         "production-release-tag-immutability",
-      ].map((name) => JSON.parse(read(join(resolvedActualDir, `${name}.json`)))),
+      ].map((name) => ({
+        ...JSON.parse(read(join(resolvedActualDir, `${name}.json`))),
+        source: "netsus/homecook",
+        source_type: "Repository",
+      })),
     };
     const inheritedOrganizationRuleset = {
       id: 999,
@@ -497,13 +501,43 @@ describe("production release rulesets desired state", () => {
           include: ["refs/heads/release/*"],
           exclude: ["refs/heads/master"],
         },
-        repository_name: { include: ["homecook"], exclude: [] },
-        repository_id: { repository_ids: [123456789] },
+        repository_name: { include: ["homecook"], exclude: [], protected: true },
+      },
+      bypass_actors: [{ actor_id: 42, actor_type: "Team", bypass_mode: "exempt" }],
+      rules: [{
+        type: "pull_request",
+        parameters: { required_approving_review_count: 1 },
+      }],
+    };
+    const inheritedEnterpriseRuleset = {
+      id: 996,
+      name: "enterprise-release-property-policy",
+      target: "branch",
+      source_type: "Enterprise",
+      source: "netsus-enterprise",
+      enforcement: "active",
+      conditions: {
+        ref_name: {
+          include: ["refs/heads/release/*"],
+          exclude: ["refs/heads/master"],
+        },
+        organization_property: {
+          include: [{ name: "region", property_values: ["kr"] }],
+          exclude: [],
+        },
         repository_property: {
-          include: [{ name: "visibility", property_values: ["private"] }],
+          include: [{
+            name: "visibility",
+            property_values: ["private"],
+            source: "system",
+          }],
           exclude: [],
         },
       },
+      bypass_actors: [
+        { actor_id: null, actor_type: "EnterpriseOwner", bypass_mode: "exempt" },
+        { actor_id: null, actor_type: "EnterpriseRole", bypass_mode: "always" },
+      ],
       rules: [{
         type: "pull_request",
         parameters: { required_approving_review_count: 1 },
@@ -512,7 +546,11 @@ describe("production release rulesets desired state", () => {
     const effectiveInventory = {
       scope: "effective",
       includes_parents: true,
-      rulesets: [...repositoryInventory.rulesets, inheritedOrganizationRuleset],
+      rulesets: [
+        ...repositoryInventory.rulesets,
+        inheritedOrganizationRuleset,
+        inheritedEnterpriseRuleset,
+      ],
     };
     writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
     writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
@@ -595,6 +633,8 @@ describe("production release rulesets desired state", () => {
           id: 998,
           name: "unknown-prod-overlap",
           target: "tag",
+          source: "netsus/homecook",
+          source_type: "Repository",
           enforcement: "active",
           conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
           rules: [{ type: "creation" }],
@@ -641,6 +681,71 @@ describe("production release rulesets desired state", () => {
     expect(verifyInheritedConflict.stdout).toContain("\"activation_blocked\": true");
     expect(verifyInheritedConflict.stdout).toContain(
       "effective_ruleset_inventory_parent_conflict",
+    );
+    writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
+
+    const { source: _omittedSource, ...missingSourceInherited } = structuredClone(
+      inheritedOrganizationRuleset,
+    );
+    expect(_omittedSource).toBe("netsus");
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [...repositoryInventory.rulesets, missingSourceInherited],
+    }, null, 2));
+    const verifyMissingEffectiveSource = verifyResolvedSnapshot();
+    expect(verifyMissingEffectiveSource.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyMissingEffectiveSource.stdout).toContain(
+      "effective_ruleset_inventory_source_missing",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [
+        ...effectiveInventory.rulesets,
+        {
+          id: 995,
+          name: "repository-release-policy",
+          target: "branch",
+          source_type: "Repository",
+          source: "netsus/homecook",
+          enforcement: "active",
+          conditions: {
+            ref_name: {
+              include: ["refs/heads/release/*"],
+              exclude: ["refs/heads/master"],
+            },
+          },
+          rules: [{
+            type: "pull_request",
+            parameters: { required_approving_review_count: 1 },
+          }],
+        },
+      ],
+    }, null, 2));
+    const verifyPartialRepositoryEffective = verifyResolvedSnapshot();
+    expect(verifyPartialRepositoryEffective.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyPartialRepositoryEffective.stdout).toContain(
+      "effective_ruleset_inventory_full_detail_missing",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [
+        ...repositoryInventory.rulesets,
+        {
+          ...inheritedOrganizationRuleset,
+          id: 994,
+          conditions: {
+            ...inheritedOrganizationRuleset.conditions,
+            repository_id: { repository_ids: [123456789] },
+          },
+        },
+      ],
+    }, null, 2));
+    const verifyAmbiguousInherited = verifyResolvedSnapshot();
+    expect(verifyAmbiguousInherited.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyAmbiguousInherited.stdout).toContain(
+      "effective_ruleset_inventory_schema_mismatch",
     );
     writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
 

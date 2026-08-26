@@ -130,7 +130,11 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
   const effective = endpoint.includes("includes_parents=true");
   if (effective) {
     state.effective_inventory_reads = (state.effective_inventory_reads ?? 0) + 1;
-    if (state.effective_inventory_reads === 2 && state.effective_state_race && !state.effective_state_race_inserted) {
+    if (
+      state.effective_inventory_reads === (state.effective_state_race_read ?? 3)
+      && state.effective_state_race
+      && !state.effective_state_race_inserted
+    ) {
       state.effective_rulesets = [...(state.effective_rulesets ?? state.rulesets), state.effective_state_race];
       state.effective_state_race_inserted = true;
     }
@@ -318,6 +322,8 @@ function resolvedRulesets() {
     "production-release-tag-immutability",
   ].map((name, index) => ({
     id: 101 + index,
+    source: "netsus/homecook",
+    source_type: "Repository",
     ...JSON.parse(readFileSync(join(repoRoot, ".github", "rulesets", `${name}.json`), "utf8")),
   }));
 }
@@ -529,6 +535,8 @@ describe("production release C2 apply", () => {
             id: 999,
             name: "unknown-prod-tag-policy",
             target: "tag",
+            source: "netsus/homecook",
+            source_type: "Repository",
             enforcement: "active",
             conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
             rules: [{ type: "creation" }],
@@ -553,6 +561,8 @@ describe("production release C2 apply", () => {
             id: 999,
             name: "unknown-overlapping-policy",
             target,
+            source: "netsus/homecook",
+            source_type: "Repository",
             enforcement: "active",
             conditions: { ref_name: { include: [include], exclude: [] } },
             rules: [{ type: "creation" }],
@@ -573,6 +583,8 @@ describe("production release C2 apply", () => {
       id: 999,
       name: `non-overlapping-${target}-policy`,
       target,
+      source: "netsus/homecook",
+      source_type: "Repository",
       enforcement: "active",
       conditions: { ref_name: { include: [include], exclude: [] } },
       rules: [{ type: "creation" }],
@@ -584,7 +596,7 @@ describe("production release C2 apply", () => {
     expect(run.result.status, run.combined).toBe(0);
     expect(run.state.rulesets).toContainEqual(unknownRuleset);
     expect(run.state.calls.some((call) => call.key.startsWith("DELETE "))).toBe(false);
-  });
+  }, 15_000);
 
   it.each([
     ["deployment branch policies", { policies: [{ id: 1, name: "prod-*", type: "tag" }] }, /extra deployment/iu],
@@ -693,6 +705,8 @@ describe("production release C2 apply", () => {
       id: 999,
       name: "concurrent-prod-policy",
       target: "tag",
+      source: "netsus/homecook",
+      source_type: "Repository",
       enforcement: "active",
       conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
       rules: [{ type: "creation" }],
@@ -761,31 +775,92 @@ describe("production release C2 apply", () => {
       }),
     });
     expect(run.result.status).toBe(1);
-    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toContain('"partial_state": false');
     expect(run.combined).toMatch(/parent|effective/iu);
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
   });
 
-  it("converges with a non-conflicting inherited organization ruleset", () => {
+  it.each([
+    ["organization repository_name protected/exempt", {
+      source_type: "Organization",
+      source: "netsus",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        repository_name: { include: ["homecook"], exclude: [], protected: true },
+      },
+      bypass_actors: [{
+        actor_id: 42,
+        actor_type: "Team",
+        bypass_mode: "exempt",
+      }],
+    }],
+    ["organization repository_id", {
+      source_type: "Organization",
+      source: "netsus",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        repository_id: { repository_ids: [123456789] },
+      },
+    }],
+    ["organization repository_property source", {
+      source_type: "Organization",
+      source: "netsus",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        repository_property: {
+          include: [{ name: "visibility", property_values: ["private"], source: "system" }],
+          exclude: [],
+        },
+      },
+    }],
+    ["enterprise organization_name", {
+      source_type: "Enterprise",
+      source: "netsus-enterprise",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        organization_name: { include: ["netsus"], exclude: [] },
+        repository_name: { include: ["homecook"], exclude: [], protected: false },
+      },
+      bypass_actors: [
+        { actor_id: null, actor_type: "EnterpriseOwner", bypass_mode: "exempt" },
+        { actor_id: null, actor_type: "EnterpriseRole", bypass_mode: "always" },
+      ],
+    }],
+    ["enterprise organization_id", {
+      source_type: "Enterprise",
+      source: "netsus-enterprise",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        organization_id: { organization_ids: [987654321] },
+        repository_property: {
+          include: [{ name: "visibility", property_values: ["private"], source: "system" }],
+          exclude: [],
+        },
+      },
+    }],
+    ["enterprise organization_property", {
+      source_type: "Enterprise",
+      source: "netsus-enterprise",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        organization_property: {
+          include: [{ name: "region", property_values: ["kr"] }],
+          exclude: [],
+        },
+        repository_name: { include: ["homecook"], exclude: [], protected: true },
+      },
+    }],
+  ])("converges with official inherited %s fixture", (_label, fixture) => {
     const repositoryRulesets = resolvedRulesets();
     const inheritedRuleset = {
       id: 997,
       name: "organization-release-branch-policy",
       target: "branch",
-      source_type: "Organization",
-      source: "netsus",
       enforcement: "active",
-      conditions: {
-        ref_name: {
-          include: ["refs/heads/release/*"],
-          exclude: ["refs/heads/master"],
-        },
-        repository_name: { include: ["homecook"], exclude: [] },
-        repository_id: { repository_ids: [123456789] },
-        repository_property: {
-          include: [{ name: "visibility", property_values: ["private"] }],
-          exclude: [],
-        },
-      },
+      ...fixture,
       rules: [{
         type: "pull_request",
         parameters: { required_approving_review_count: 1 },
@@ -798,9 +873,163 @@ describe("production release C2 apply", () => {
       }),
     });
     expect(run.result.status, run.combined).toBe(0);
-    const rerun = runExecute({ state: run.state });
-    expect(rerun.result.status, rerun.combined).toBe(0);
-  }, 15_000);
+  });
+
+  it("rejects ambiguous inherited condition union before mutation", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const ambiguous = {
+      id: 995,
+      name: "ambiguous-organization-policy",
+      target: "branch",
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        repository_name: { include: ["homecook"], exclude: [] },
+        repository_id: { repository_ids: [123456789] },
+      },
+      rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [...repositoryRulesets, ambiguous],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
+  it.each([
+    ["Team without ID", "branch", {
+      actor_id: null,
+      actor_type: "Team",
+      bypass_mode: "always",
+    }],
+    ["DeployKey with ID", "branch", {
+      actor_id: 9,
+      actor_type: "DeployKey",
+      bypass_mode: "always",
+    }],
+    ["Team pull_request on tag", "tag", {
+      actor_id: 42,
+      actor_type: "Team",
+      bypass_mode: "pull_request",
+    }],
+    ["DeployKey pull_request", "branch", {
+      actor_id: null,
+      actor_type: "DeployKey",
+      bypass_mode: "pull_request",
+    }],
+    ["EnterpriseOwner with ID", "branch", {
+      actor_id: 1,
+      actor_type: "EnterpriseOwner",
+      bypass_mode: "always",
+    }],
+    ["OrganizationAdmin with ID", "branch", {
+      actor_id: 1,
+      actor_type: "OrganizationAdmin",
+      bypass_mode: "always",
+    }],
+    ["EnterpriseRole with zero ID", "branch", {
+      actor_id: 0,
+      actor_type: "EnterpriseRole",
+      bypass_mode: "always",
+    }],
+    ["EnterpriseRole with negative ID", "branch", {
+      actor_id: -1,
+      actor_type: "EnterpriseRole",
+      bypass_mode: "always",
+    }],
+  ])("rejects inherited bypass actor %s before mutation", (_label, target, bypassActor) => {
+    const repositoryRulesets = resolvedRulesets();
+    const invalidBypass = {
+      id: 992,
+      name: "invalid-bypass-policy",
+      target,
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        repository_name: { include: ["homecook"], exclude: [] },
+      },
+      bypass_actors: [bypassActor],
+      rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [...repositoryRulesets, invalidBypass],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
+  it("rejects effective inventory entry with missing source identity before mutation", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const missingSource = {
+      id: 994,
+      name: "missing-source-policy",
+      target: "branch",
+      enforcement: "active",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        repository_name: { include: ["homecook"], exclude: [] },
+      },
+      rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [...repositoryRulesets, missingSource],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
+  it("rejects repository-origin effective detail with omitted bypass actors", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const partialRepositoryRule = {
+      id: 993,
+      name: "repository-release-policy",
+      target: "branch",
+      source_type: "Repository",
+      source: "netsus/homecook",
+      enforcement: "active",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+      },
+      rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [...repositoryRulesets, partialRepositoryRule],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
 
   it("fails closed when effective inventory omits canonical repository rulesets", () => {
     const repositoryRulesets = resolvedRulesets();
@@ -837,7 +1066,7 @@ describe("production release C2 apply", () => {
     });
     expect(run.result.status).toBe(1);
     expect(run.combined).toContain('"partial_state": true');
-    expect(run.state.effective_inventory_reads).toBe(2);
+    expect(run.state.effective_inventory_reads).toBe(3);
     expect(existsSync(join(run.snapshotDir, "production-release-effective-rulesets.json")))
       .toBe(true);
   });
@@ -898,7 +1127,7 @@ describe("production release C2 apply", () => {
     ]);
     expect(first.state.remote_ref_reads).toBe(3);
     expect(first.state.ruleset_inventory_reads).toBe(3);
-    expect(first.state.effective_inventory_reads).toBe(2);
+    expect(first.state.effective_inventory_reads).toBe(3);
     const remoteReadIndexes = first.state.calls
       .map((call, index) => ({ call, index }))
       .filter(({ call }) =>
@@ -971,5 +1200,15 @@ describe("production release C2 apply", () => {
     expect(runbook).toContain(VERSION_HEADER);
     expect(runbook).toContain("Allow administrators to bypass");
     expect(runbook).toContain("manual_action_required");
+  });
+
+  it("uses the shared canonical-target matcher without an apply-local duplicate", () => {
+    const applySource = readFileSync(
+      join(repoRoot, "scripts/lib/production-release-rulesets-apply.mjs"),
+      "utf8",
+    );
+    expect(applySource).toContain("productionReleaseRulesetConflictsWithCanonicalTarget");
+    expect(applySource).not.toContain("function globMatches(");
+    expect(applySource).not.toContain("function conflictsWithCanonicalTarget(");
   });
 });

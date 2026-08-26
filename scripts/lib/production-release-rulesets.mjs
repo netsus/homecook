@@ -215,94 +215,157 @@ function normalizeStringArray(value, label) {
     .sort();
 }
 
-function normalizeInheritedConditions(conditions, label) {
-  const value = requireObject(conditions, label);
+function normalizeNameSelector(value, label, { allowProtected = false } = {}) {
+  const selector = requireObject(value, label);
   rejectUnknownKeys(
-    value,
-    ["ref_name", "repository_id", "repository_name", "repository_property"],
+    selector,
+    allowProtected ? ["exclude", "include", "protected"] : ["exclude", "include"],
     label,
   );
+  const normalized = {
+    exclude: normalizeStringArray(selector.exclude ?? [], `${label}.exclude`),
+    include: normalizeStringArray(selector.include ?? [], `${label}.include`),
+  };
+  if (allowProtected && selector.protected !== undefined) {
+    normalized.protected = requireBoolean(selector.protected, `${label}.protected`);
+  }
+  return normalized;
+}
+
+function normalizeIdSelector(value, field, label) {
+  const selector = requireObject(value, label);
+  rejectUnknownKeys(selector, [field], label);
+  return {
+    [field]: requireArray(selector[field], `${label}.${field}`)
+      .map((id, index) => {
+        if (!Number.isInteger(id) || id <= 0) {
+          throw new Error(`${label}.${field}[${index}] must be positive.`);
+        }
+        return id;
+      })
+      .sort((left, right) => left - right),
+  };
+}
+
+function normalizePropertySelector(value, label, { allowSource = false } = {}) {
+  const selector = requireObject(value, label);
+  rejectUnknownKeys(selector, ["exclude", "include"], label);
+  const normalizeProperties = (properties, propertyLabel) =>
+    requireArray(properties, propertyLabel)
+      .map((entry, index) => {
+        const property = requireObject(entry, `${propertyLabel}[${index}]`);
+        rejectUnknownKeys(
+          property,
+          allowSource ? ["name", "property_values", "source"] : ["name", "property_values"],
+          `${propertyLabel}[${index}]`,
+        );
+        const normalized = {
+          name: requireNonEmptyString(property.name, `${propertyLabel}[${index}].name`),
+          property_values: normalizeStringArray(
+            property.property_values,
+            `${propertyLabel}[${index}].property_values`,
+          ),
+        };
+        if (allowSource) {
+          const source = property.source ?? "custom";
+          if (!["custom", "system"].includes(source)) {
+            throw new Error(`${propertyLabel}[${index}].source must be custom or system.`);
+          }
+          normalized.source = source;
+        }
+        return normalized;
+      })
+      .sort((left, right) => left.name.localeCompare(right.name));
+  return {
+    exclude: normalizeProperties(selector.exclude ?? [], `${label}.exclude`),
+    include: normalizeProperties(selector.include ?? [], `${label}.include`),
+  };
+}
+
+function normalizeInheritedConditions(conditions, label, sourceType, target) {
+  const value = requireObject(conditions, label);
+  const organizationRepositorySelectors = [
+    "repository_id",
+    "repository_name",
+    "repository_property",
+  ];
+  const enterpriseRepositorySelectors = ["repository_name", "repository_property"];
+  const organizationSelectors = ["organization_id", "organization_name", "organization_property"];
+  const repositorySelectors = sourceType === "Enterprise"
+    ? enterpriseRepositorySelectors
+    : organizationRepositorySelectors;
+  const allowed = sourceType === "Enterprise"
+    ? ["ref_name", ...organizationSelectors, ...repositorySelectors]
+    : sourceType === "Organization"
+      ? ["ref_name", ...repositorySelectors]
+      : [];
+  if (allowed.length === 0) {
+    throw new Error(`${label} source_type must be Organization or Enterprise.`);
+  }
+  rejectUnknownKeys(value, allowed, label);
+  const presentRepositorySelectors = repositorySelectors.filter(
+    (key) => value[key] !== undefined,
+  );
+  const presentOrganizationSelectors = organizationSelectors.filter(
+    (key) => value[key] !== undefined,
+  );
+  if (presentRepositorySelectors.length !== 1) {
+    throw new Error(`${label} must contain exactly one repository selector.`);
+  }
+  if (
+    (sourceType === "Enterprise" && presentOrganizationSelectors.length !== 1)
+    || (sourceType === "Organization" && presentOrganizationSelectors.length !== 0)
+  ) {
+    throw new Error(`${label} contains an invalid organization selector union.`);
+  }
+  if (["branch", "tag"].includes(target) && value.ref_name === undefined) {
+    throw new Error(`${label}.ref_name is required for branch and tag rulesets.`);
+  }
+
   const normalized = {};
   if (value.ref_name !== undefined) {
     normalized.ref_name = normalizeRefName(value.ref_name, `${label}.ref_name`);
   }
-  if (value.repository_name !== undefined) {
-    const repositoryName = requireObject(
+  const repositorySelector = presentRepositorySelectors[0];
+  if (repositorySelector === "repository_name") {
+    normalized.repository_name = normalizeNameSelector(
       value.repository_name,
       `${label}.repository_name`,
+      { allowProtected: true },
     );
-    rejectUnknownKeys(
-      repositoryName,
-      ["exclude", "include"],
-      `${label}.repository_name`,
+  } else if (repositorySelector === "repository_id") {
+    normalized.repository_id = normalizeIdSelector(
+      value.repository_id,
+      "repository_ids",
+      `${label}.repository_id`,
     );
-    normalized.repository_name = {
-      exclude: normalizeStringArray(
-        repositoryName.exclude ?? [],
-        `${label}.repository_name.exclude`,
-      ),
-      include: normalizeStringArray(
-        repositoryName.include ?? [],
-        `${label}.repository_name.include`,
-      ),
-    };
-  }
-  if (value.repository_id !== undefined) {
-    const repositoryId = requireObject(value.repository_id, `${label}.repository_id`);
-    rejectUnknownKeys(repositoryId, ["repository_ids"], `${label}.repository_id`);
-    normalized.repository_id = {
-      repository_ids: requireArray(
-        repositoryId.repository_ids,
-        `${label}.repository_id.repository_ids`,
-      ).map((id, index) => {
-        if (!Number.isInteger(id) || id <= 0) {
-          throw new Error(`${label}.repository_id.repository_ids[${index}] must be positive.`);
-        }
-        return id;
-      }).sort((left, right) => left - right),
-    };
-  }
-  if (value.repository_property !== undefined) {
-    const repositoryProperty = requireObject(
+  } else {
+    normalized.repository_property = normalizePropertySelector(
       value.repository_property,
       `${label}.repository_property`,
+      { allowSource: true },
     );
-    rejectUnknownKeys(
-      repositoryProperty,
-      ["exclude", "include"],
-      `${label}.repository_property`,
-    );
-    const normalizeProperties = (properties, propertyLabel) =>
-      requireArray(properties, propertyLabel)
-        .map((entry, index) => {
-          const property = requireObject(entry, `${propertyLabel}[${index}]`);
-          rejectUnknownKeys(
-            property,
-            ["name", "property_values"],
-            `${propertyLabel}[${index}]`,
-          );
-          return {
-            name: requireNonEmptyString(
-              property.name,
-              `${propertyLabel}[${index}].name`,
-            ),
-            property_values: normalizeStringArray(
-              property.property_values,
-              `${propertyLabel}[${index}].property_values`,
-            ),
-          };
-        })
-        .sort((left, right) => left.name.localeCompare(right.name));
-    normalized.repository_property = {
-      exclude: normalizeProperties(
-        repositoryProperty.exclude ?? [],
-        `${label}.repository_property.exclude`,
-      ),
-      include: normalizeProperties(
-        repositoryProperty.include ?? [],
-        `${label}.repository_property.include`,
-      ),
-    };
+  }
+
+  if (sourceType === "Enterprise") {
+    const organizationSelector = presentOrganizationSelectors[0];
+    if (organizationSelector === "organization_name") {
+      normalized.organization_name = normalizeNameSelector(
+        value.organization_name,
+        `${label}.organization_name`,
+      );
+    } else if (organizationSelector === "organization_id") {
+      normalized.organization_id = normalizeIdSelector(
+        value.organization_id,
+        "organization_ids",
+        `${label}.organization_id`,
+      );
+    } else {
+      normalized.organization_property = normalizePropertySelector(
+        value.organization_property,
+        `${label}.organization_property`,
+      );
+    }
   }
   return canonicalizeJson(normalized);
 }
@@ -339,6 +402,84 @@ function normalizeBypassActors(bypassActors, label) {
         bypass_mode: bypassMode,
         unresolved: actorType === "Integration"
           && actorId === UNRESOLVED_RELEASE_TAG_INTEGRATION_ACTOR_ID,
+      };
+    })
+    .sort((left, right) => {
+      const leftKey = `${left.actor_type}:${left.actor_id ?? "null"}:${left.bypass_mode}`;
+      const rightKey = `${right.actor_type}:${right.actor_id ?? "null"}:${right.bypass_mode}`;
+      return leftKey.localeCompare(rightKey);
+    });
+}
+
+function normalizeInheritedBypassActors(bypassActors, label, target) {
+  const actorTypes = [
+    "DeployKey",
+    "EnterpriseOwner",
+    "EnterpriseRole",
+    "Integration",
+    "OrganizationAdmin",
+    "RepositoryRole",
+    "Team",
+    "User",
+  ];
+  return requireArray(bypassActors ?? [], label)
+    .map((actor, index) => {
+      const value = requireObject(actor, `${label}[${index}]`);
+      rejectUnknownKeys(
+        value,
+        ["actor_id", "actor_type", "bypass_mode"],
+        `${label}[${index}]`,
+      );
+      const actorType = requireNonEmptyString(
+        value.actor_type,
+        `${label}[${index}].actor_type`,
+      );
+      if (!actorTypes.includes(actorType)) {
+        throw new Error(`${label}[${index}].actor_type is unsupported.`);
+      }
+      const bypassMode = value.bypass_mode ?? "always";
+      if (!["always", "exempt", "pull_request"].includes(bypassMode)) {
+        throw new Error(`${label}[${index}].bypass_mode is unsupported.`);
+      }
+      const actorId = value.actor_id ?? null;
+      if (actorId !== null && !Number.isInteger(actorId)) {
+        throw new Error(`${label}[${index}].actor_id must be an integer or null.`);
+      }
+      const requiresActorId = [
+        "Integration",
+        "RepositoryRole",
+        "Team",
+        "User",
+      ].includes(actorType);
+      if (requiresActorId && (!Number.isInteger(actorId) || actorId <= 0)) {
+        throw new Error(`${label}[${index}].actor_id must be a positive integer.`);
+      }
+      if (actorType === "DeployKey" && actorId !== null) {
+        throw new Error(`${label}[${index}].actor_id must be null for DeployKey.`);
+      }
+      if (
+        ["EnterpriseOwner", "OrganizationAdmin"].includes(actorType)
+        && actorId !== null
+      ) {
+        throw new Error(`${label}[${index}].actor_id must be null for ${actorType}.`);
+      }
+      if (
+        actorType === "EnterpriseRole"
+        && actorId !== null
+        && actorId <= 0
+      ) {
+        throw new Error(`${label}[${index}].actor_id must be positive when supplied.`);
+      }
+      if (
+        bypassMode === "pull_request"
+        && (target !== "branch" || actorType === "DeployKey")
+      ) {
+        throw new Error(`${label}[${index}].bypass_mode pull_request is not applicable.`);
+      }
+      return {
+        actor_id: actorId,
+        actor_type: actorType,
+        bypass_mode: bypassMode,
       };
     })
     .sort((left, right) => {
@@ -574,9 +715,17 @@ function validateRulesetInventory({
       || typeof ruleset.enforcement !== "string"
       || !ruleset.conditions
       || !Array.isArray(ruleset.rules)
-      || (scope === "repository" && !Array.isArray(ruleset.bypass_actors))
     ) {
       blockers.push(`${scope}_ruleset_inventory_full_detail_missing`);
+      continue;
+    }
+    if (
+      typeof ruleset.source_type !== "string"
+      || ruleset.source_type.length === 0
+      || typeof ruleset.source !== "string"
+      || ruleset.source.length === 0
+    ) {
+      blockers.push(`${scope}_ruleset_inventory_source_missing`);
       continue;
     }
     if (ids.has(ruleset.id)) {
@@ -584,8 +733,8 @@ function validateRulesetInventory({
     }
     ids.add(ruleset.id);
 
-    const sourceType = ruleset.source_type ?? "Repository";
-    const source = ruleset.source ?? CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY;
+    const sourceType = ruleset.source_type;
+    const source = ruleset.source;
     const identity = `${sourceType}:${source}:${ruleset.name}`;
     if (identities.has(identity)) {
       blockers.push(`${scope}_ruleset_inventory_duplicate`);
@@ -593,6 +742,10 @@ function validateRulesetInventory({
     identities.add(identity);
     const parent = sourceType !== "Repository"
       || source !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY;
+    if (!parent && !Array.isArray(ruleset.bypass_actors)) {
+      blockers.push(`${scope}_ruleset_inventory_full_detail_missing`);
+      continue;
+    }
     const canonical = canonicalEntries.has(ruleset.name);
     if (scope === "effective" && parent) {
       if (
@@ -619,9 +772,9 @@ function validateRulesetInventory({
         blockers.push(`${scope}_ruleset_inventory_unknown_overlap`);
       }
       try {
-        normalizeInheritedProductionReleaseRulesetForInventory(ruleset, label);
+        normalizeProductionReleaseRulesetForComparison(ruleset, label);
       } catch {
-        blockers.push(`${scope}_ruleset_inventory_schema_mismatch`);
+        blockers.push(`${scope}_ruleset_inventory_full_detail_missing`);
       }
     }
   }
@@ -966,13 +1119,17 @@ export function normalizeInheritedProductionReleaseRulesetForInventory(
     label,
   );
   return canonicalizeJson({
-    bypass_actors: normalizeBypassActors(value.bypass_actors ?? [], `${label}.bypass_actors`)
-      .map((actor) => ({
-        actor_id: actor.actor_id,
-        actor_type: actor.actor_type,
-        bypass_mode: actor.bypass_mode,
-      })),
-    conditions: normalizeInheritedConditions(value.conditions, `${label}.conditions`),
+    bypass_actors: normalizeInheritedBypassActors(
+      value.bypass_actors ?? [],
+      `${label}.bypass_actors`,
+      value.target,
+    ),
+    conditions: normalizeInheritedConditions(
+      value.conditions,
+      `${label}.conditions`,
+      value.source_type,
+      value.target,
+    ),
     enforcement: requireNonEmptyString(value.enforcement, `${label}.enforcement`),
     name: requireNonEmptyString(value.name, `${label}.name`),
     rules: normalizeRules(value.rules, `${label}.rules`),

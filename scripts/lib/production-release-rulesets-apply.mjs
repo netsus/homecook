@@ -18,6 +18,9 @@ import {
   normalizeProductionReleaseRulesetForComparison,
   productionReleaseRulesetsSemanticallyEqual,
 } from "./production-release-rulesets.mjs";
+import {
+  productionReleaseRulesetConflictsWithCanonicalTarget,
+} from "./production-release-ruleset-patterns.mjs";
 
 export const C2_CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
 export const C2_CANONICAL_REPOSITORY = "netsus/homecook";
@@ -269,160 +272,6 @@ function rulesetMatches(actual, desired) {
   }
 }
 
-function globMatches(pattern, value) {
-  if (typeof pattern !== "string") return true;
-  if (pattern === "~ALL") return true;
-  const tokens = parseGlobTokens(pattern);
-  if (!tokens) return true;
-  const memo = new Map();
-  const canMatch = (tokenIndex, valueIndex) => {
-    const key = `${tokenIndex}:${valueIndex}`;
-    if (memo.has(key)) return memo.get(key);
-    if (valueIndex === value.length) {
-      const matched = tokens.slice(tokenIndex).every(
-        (token) => token.type === "star" || token.type === "double-star",
-      );
-      memo.set(key, matched);
-      return matched;
-    }
-    if (tokenIndex === tokens.length) {
-      memo.set(key, false);
-      return false;
-    }
-    const token = tokens[tokenIndex];
-    let matched;
-    if (token.type === "star" || token.type === "double-star") {
-      const mayConsume = token.type === "double-star" || value[valueIndex] !== "/";
-      matched = canMatch(tokenIndex + 1, valueIndex)
-        || (mayConsume && canMatch(tokenIndex, valueIndex + 1));
-    } else {
-      matched = tokenMatches(token, value[valueIndex])
-        && canMatch(tokenIndex + 1, valueIndex + 1);
-    }
-    memo.set(key, matched);
-    return matched;
-  };
-  return canMatch(0, 0);
-}
-
-function parseGlobTokens(pattern) {
-  const tokens = [];
-  for (let index = 0; index < pattern.length; index += 1) {
-    const character = pattern[index];
-    if (character === "*") {
-      const doubleStar = pattern[index + 1] === "*";
-      tokens.push({ type: doubleStar ? "double-star" : "star" });
-      if (doubleStar) index += 1;
-    } else if (character === "?") {
-      tokens.push({ type: "any" });
-    } else if (character === "[") {
-      const closeIndex = pattern.indexOf("]", index + 1);
-      if (closeIndex === -1 || closeIndex === index + 1) return null;
-      tokens.push({ content: pattern.slice(index + 1, closeIndex), type: "class" });
-      index = closeIndex;
-    } else {
-      tokens.push({ character, type: "literal" });
-    }
-  }
-  return tokens;
-}
-
-function classMatches(content, character) {
-  const negated = content[0] === "!" || content[0] === "^";
-  const body = negated ? content.slice(1) : content;
-  let matched = false;
-  for (let index = 0; index < body.length; index += 1) {
-    if (body[index + 1] === "-" && body[index + 2] !== undefined) {
-      matched ||= character >= body[index] && character <= body[index + 2];
-      index += 2;
-    } else {
-      matched ||= character === body[index];
-    }
-  }
-  return negated ? !matched : matched;
-}
-
-function tokenMatches(token, character) {
-  if (token.type === "literal") return token.character === character;
-  if (token.type === "any") return character !== "/";
-  if (token.type === "class") {
-    return character !== "/" && classMatches(token.content, character);
-  }
-  return false;
-}
-
-function classCanMatchWithoutSlash(content) {
-  if (content[0] === "!" || content[0] === "^") return true;
-  for (let index = 0; index < content.length; index += 1) {
-    if (content[index + 1] === "-" && content[index + 2] !== undefined) {
-      if (content[index] !== "/" || content[index + 2] !== "/") return true;
-      index += 2;
-    } else if (content[index] !== "/") {
-      return true;
-    }
-  }
-  return false;
-}
-
-function remainingGlobCanMatchWithoutSlash(tokens, startIndex) {
-  return tokens.slice(startIndex).every((token) => {
-    if (token.type === "star" || token.type === "double-star") return true;
-    if (token.type === "literal") return token.character !== "/";
-    if (token.type === "any") return true;
-    return classCanMatchWithoutSlash(token.content);
-  });
-}
-
-function globCanMatchPrefix(pattern, prefix) {
-  const tokens = parseGlobTokens(pattern);
-  if (!tokens) return true;
-  const memo = new Map();
-  const canMatch = (tokenIndex, prefixIndex) => {
-    const key = `${tokenIndex}:${prefixIndex}`;
-    if (memo.has(key)) return memo.get(key);
-    if (prefixIndex === prefix.length) {
-      const matched = remainingGlobCanMatchWithoutSlash(tokens, tokenIndex);
-      memo.set(key, matched);
-      return matched;
-    }
-    if (tokenIndex === tokens.length) {
-      memo.set(key, false);
-      return false;
-    }
-    const token = tokens[tokenIndex];
-    let matched;
-    if (token.type === "star" || token.type === "double-star") {
-      const mayConsume = token.type === "double-star" || prefix[prefixIndex] !== "/";
-      matched = canMatch(tokenIndex + 1, prefixIndex)
-        || (mayConsume && canMatch(tokenIndex, prefixIndex + 1));
-    } else {
-      matched = tokenMatches(token, prefix[prefixIndex])
-        && canMatch(tokenIndex + 1, prefixIndex + 1);
-    }
-    memo.set(key, matched);
-    return matched;
-  };
-  return canMatch(0, 0);
-}
-
-function overlapsProductionTagPattern(pattern) {
-  if (typeof pattern !== "string" || pattern === "~ALL") return true;
-  return globCanMatchPrefix(pattern, "refs/tags/prod-");
-}
-
-function conflictsWithCanonicalTarget(ruleset) {
-  const include = ruleset?.conditions?.ref_name?.include;
-  if (!Array.isArray(include) || include.length === 0) return true;
-  if (ruleset.target === "branch") {
-    return include.some((entry) =>
-      entry === "~DEFAULT_BRANCH" || globMatches(entry, "refs/heads/master"));
-  }
-  if (ruleset.target === "tag") {
-    return include.some(overlapsProductionTagPattern);
-  }
-  return true;
-}
-
 function readRulesetInventory({ includeParents = false, partialState = false } = {}) {
   const summaries = flattenArrayPages(
     ghPaginated(
@@ -448,16 +297,37 @@ function readRulesetInventory({ includeParents = false, partialState = false } =
       partialState,
     });
     details.set(summary.id, detail);
-    const sourceType = detail?.source_type ?? summary?.source_type ?? "Repository";
-    const source = detail?.source ?? summary?.source ?? C2_CANONICAL_REPOSITORY;
+    const sourceType = detail?.source_type ?? summary?.source_type;
+    const source = detail?.source ?? summary?.source;
+    if (
+      typeof sourceType !== "string"
+      || sourceType.length === 0
+      || typeof source !== "string"
+      || source.length === 0
+    ) {
+      fail(`Ruleset source identity is missing: ${detail?.name ?? "unnamed"}.`, {
+        partialState,
+      });
+    }
     const parentRuleset = sourceType !== "Repository" || source !== C2_CANONICAL_REPOSITORY;
+    if (!includeParents && parentRuleset) {
+      fail(`Repository ruleset source identity mismatch: ${detail?.name ?? "unnamed"}.`, {
+        partialState,
+      });
+    }
     if (includeParents && parentRuleset) {
-      if (RULESET_NAMES.includes(detail?.name) || conflictsWithCanonicalTarget(detail)) {
+      if (
+        RULESET_NAMES.includes(detail?.name)
+        || productionReleaseRulesetConflictsWithCanonicalTarget(detail)
+      ) {
         fail(`Refusing conflicting parent effective ruleset: ${detail?.name ?? "unnamed"}.`, {
           partialState,
         });
       }
-    } else if (!RULESET_NAMES.includes(detail?.name) && conflictsWithCanonicalTarget(detail)) {
+    } else if (
+      !RULESET_NAMES.includes(detail?.name)
+      && productionReleaseRulesetConflictsWithCanonicalTarget(detail)
+    ) {
       fail(`Refusing unknown conflicting ruleset target: ${detail?.name ?? "unnamed"}.`, {
         partialState,
       });
@@ -599,6 +469,50 @@ function readFullActualState(expectedHead, { partialState = true } = {}) {
   };
 }
 
+function validateRulesetActualState(
+  repositoryRulesets,
+  effectiveRulesets,
+  desired,
+  { partialState = true } = {},
+) {
+  inventoryComparisonProjection(repositoryRulesets);
+  inventoryComparisonProjection(effectiveRulesets);
+  for (const desiredRuleset of desired.rulesets) {
+    const summaries = repositoryRulesets.summaries.filter(
+      (entry) => entry.name === desiredRuleset.name,
+    );
+    if (summaries.length !== 1) {
+      fail(`Ruleset readback is not unique: ${desiredRuleset.name}.`, {
+        partialState,
+      });
+    }
+    const readback = repositoryRulesets.details.get(summaries[0].id);
+    if (!rulesetMatches(readback, desiredRuleset)) {
+      fail(`Ruleset readback mismatch: ${desiredRuleset.name}.`, { partialState });
+    }
+    const effectiveSummaries = effectiveRulesets.summaries.filter(
+      (entry) => entry.name === desiredRuleset.name,
+    );
+    if (effectiveSummaries.length !== 1) {
+      fail(`Effective ruleset readback is not unique: ${desiredRuleset.name}.`, {
+        partialState,
+      });
+    }
+    const effectiveReadback = effectiveRulesets.details.get(
+      effectiveSummaries[0].id,
+    );
+    if (
+      effectiveReadback?.source_type !== "Repository"
+      || effectiveReadback?.source !== C2_CANONICAL_REPOSITORY
+      || !rulesetMatches(effectiveReadback, desiredRuleset)
+    ) {
+      fail(`Effective ruleset readback mismatch: ${desiredRuleset.name}.`, {
+        partialState,
+      });
+    }
+  }
+}
+
 function validateFullActualState(state, desired, { partialState = true } = {}) {
   requireAdminBypassDisabled(state.environment, { partialState });
   if (!environmentMatches(state.environment)) {
@@ -620,54 +534,28 @@ function validateFullActualState(state, desired, { partialState = true } = {}) {
       partialState,
     });
   }
-  for (const desiredRuleset of desired.rulesets) {
-    const summaries = state.repositoryRulesets.summaries.filter(
-      (entry) => entry.name === desiredRuleset.name,
-    );
-    if (summaries.length !== 1) {
-      fail(`Ruleset readback is not unique: ${desiredRuleset.name}.`, {
-        partialState,
-      });
-    }
-    const readback = state.repositoryRulesets.details.get(summaries[0].id);
-    if (!rulesetMatches(readback, desiredRuleset)) {
-      fail(`Ruleset readback mismatch: ${desiredRuleset.name}.`, { partialState });
-    }
-    const effectiveSummaries = state.effectiveRulesets.summaries.filter(
-      (entry) => entry.name === desiredRuleset.name,
-    );
-    if (effectiveSummaries.length !== 1) {
-      fail(`Effective ruleset readback is not unique: ${desiredRuleset.name}.`, {
-        partialState,
-      });
-    }
-    const effectiveReadback = state.effectiveRulesets.details.get(
-      effectiveSummaries[0].id,
-    );
-    const effectiveSourceType = effectiveReadback?.source_type
-      ?? effectiveSummaries[0].source_type
-      ?? "Repository";
-    const effectiveSource = effectiveReadback?.source
-      ?? effectiveSummaries[0].source
-      ?? C2_CANONICAL_REPOSITORY;
-    if (
-      effectiveSourceType !== "Repository"
-      || effectiveSource !== C2_CANONICAL_REPOSITORY
-      || !rulesetMatches(effectiveReadback, desiredRuleset)
-    ) {
-      fail(`Effective ruleset readback mismatch: ${desiredRuleset.name}.`, {
-        partialState,
-      });
-    }
-  }
+  validateRulesetActualState(
+    state.repositoryRulesets,
+    state.effectiveRulesets,
+    desired,
+    { partialState },
+  );
 }
 
 function inventoryComparisonProjection(inventory) {
   return inventory.summaries
     .map((summary) => {
       const detail = inventory.details.get(summary.id);
-      const source = detail?.source ?? summary.source ?? C2_CANONICAL_REPOSITORY;
-      const sourceType = detail?.source_type ?? summary.source_type ?? "Repository";
+      const source = detail?.source ?? summary.source;
+      const sourceType = detail?.source_type ?? summary.source_type;
+      if (
+        typeof source !== "string"
+        || source.length === 0
+        || typeof sourceType !== "string"
+        || sourceType.length === 0
+      ) {
+        throw new Error(`Ruleset source identity is missing: ${detail?.name ?? "unnamed"}.`);
+      }
       const parent = sourceType !== "Repository" || source !== C2_CANONICAL_REPOSITORY;
       return {
         id: detail?.id ?? summary.id,
@@ -780,6 +668,10 @@ export function executeProductionReleaseControls({
   }
 
   const preflightInventory = readRulesetInventory();
+  const preflightEffectiveInventory = readRulesetInventory({
+    includeParents: true,
+  });
+  inventoryComparisonProjection(preflightEffectiveInventory);
 
   let environment = ghApi(
     `/repos/${C2_CANONICAL_REPOSITORY}/environments/${ENVIRONMENT_NAME}`,
