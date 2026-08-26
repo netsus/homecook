@@ -1,5 +1,4 @@
 import {
-  chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -15,12 +14,12 @@ import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 const repoRoot = process.cwd();
 const RULESET_SCRIPT = join(repoRoot, "scripts", "manage-production-release-rulesets.mjs");
 const CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
-const EXPECTED_HEAD = spawnSync("git", ["rev-parse", "HEAD"], {
+let EXPECTED_HEAD = spawnSync("git", ["rev-parse", "HEAD"], {
   cwd: repoRoot,
   encoding: "utf8",
 }).stdout.trim();
@@ -28,6 +27,22 @@ const ACCEPT_HEADER = "Accept: application/vnd.github+json";
 const VERSION_HEADER = "X-GitHub-Api-Version: 2026-03-10";
 const COMPLETION_FILE = "production-release-snapshot-completion.json";
 const temporaryDirectories: string[] = [];
+let immutableFixtureRoot = "";
+const IMMUTABLE_FIXTURE_PATHS = [
+  "scripts/bootstrap-production-release-rulesets.mjs",
+  "scripts/manage-production-release-rulesets.mjs",
+  "scripts/lib/exact-git-worktree.mjs",
+  "scripts/lib/github-app-identity.mjs",
+  "scripts/lib/production-release-approval-policy.mjs",
+  "scripts/lib/production-release-ruleset-patterns.mjs",
+  "scripts/lib/production-release-rulesets-apply.mjs",
+  "scripts/lib/production-release-rulesets.mjs",
+  ".github/rulesets/production-release-master.json",
+  ".github/rulesets/production-release-tag-creation.json",
+  ".github/rulesets/production-release-tag-immutability.json",
+  ".github/rulesets/production-release-approval-environment.json",
+  ".github/workflows/production-release-attestation.yml",
+];
 const EPHEMERAL_RSA_KEY_PAIR = generateKeyPairSync("rsa", {
   modulusLength: 1024,
   privateKeyEncoding: { format: "pem", type: "pkcs8" },
@@ -228,8 +243,8 @@ const { createHash } = require("node:crypto");
 const args = process.argv.slice(2);
 const command = args.join(" ");
 if (command.endsWith("rev-parse --show-toplevel")) process.stdout.write(process.env.HOMECOOK_C2_ROOT + "\n");
-else if (command.endsWith("rev-parse HEAD")) process.stdout.write((process.env.HOMECOOK_C2_HEAD ?? "${EXPECTED_HEAD}") + "\n");
-else if (command.endsWith("rev-parse origin/master")) process.stdout.write((process.env.HOMECOOK_C2_ORIGIN_MASTER ?? "${EXPECTED_HEAD}") + "\n");
+else if (command.endsWith("rev-parse HEAD")) process.stdout.write((process.env.HOMECOOK_C2_HEAD ?? process.env.HOMECOOK_C2_EXPECTED_HEAD) + "\n");
+else if (command.endsWith("rev-parse origin/master")) process.stdout.write((process.env.HOMECOOK_C2_ORIGIN_MASTER ?? process.env.HOMECOOK_C2_EXPECTED_HEAD) + "\n");
 else if (command.endsWith("rev-parse --abbrev-ref HEAD")) process.stdout.write((process.env.HOMECOOK_C2_BRANCH ?? "master") + "\n");
 else if (command.endsWith("config --get remote.origin.url")) process.stdout.write((process.env.HOMECOOK_C2_ORIGIN_URL ?? "git@github.com:netsus/homecook.git") + "\n");
 else if (command.endsWith("status --porcelain")) process.stdout.write(process.env.HOMECOOK_C2_DIRTY === "true" ? " M dirty\n" : "");
@@ -238,7 +253,7 @@ else if (command.includes("rev-parse HEAD HEAD^{tree}")) {
   const expressions = args.slice(args.indexOf("rev-parse") + 1);
   const tree = spawnSync("/usr/bin/git", ["-C", process.env.HOMECOOK_C2_REAL_REPO_ROOT, "rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).stdout.trim();
   const values = expressions.map((expression) => {
-    if (expression === "HEAD") return process.env.HOMECOOK_C2_HEAD ?? "${EXPECTED_HEAD}";
+    if (expression === "HEAD") return process.env.HOMECOOK_C2_HEAD ?? process.env.HOMECOOK_C2_EXPECTED_HEAD;
     if (expression === "HEAD^{tree}") return tree;
     const path = expression.slice(expression.indexOf(":") + 1);
     const absolutePath = process.env.HOMECOOK_C2_REAL_REPO_ROOT + "/" + path;
@@ -267,6 +282,16 @@ else if (command.includes("rev-parse") && args.at(-1)?.includes(":")) {
 }
 else if (command.includes("rev-parse") && command.endsWith("^{tree}")) {
   const result = spawnSync("/usr/bin/git", ["-C", process.env.HOMECOOK_C2_REAL_REPO_ROOT, "rev-parse", "HEAD^{tree}"]);
+  const state = JSON.parse(fs.readFileSync(process.env.HOMECOOK_C2_MOCK_STATE, "utf8"));
+  state.source_tree_reads = (state.source_tree_reads ?? 0) + 1;
+  if (state.desired_worktree_race && state.source_tree_reads === 2) {
+    fs.writeFileSync(
+      process.env.HOMECOOK_C2_REAL_REPO_ROOT + "/" + state.desired_worktree_race_path,
+      state.desired_worktree_weakened,
+    );
+    state.desired_worktree_race_active = true;
+  }
+  fs.writeFileSync(process.env.HOMECOOK_C2_MOCK_STATE, JSON.stringify(state, null, 2));
   process.stdout.write(result.stdout);
 }
 else if (command.includes("ls-tree -rz --full-tree")) {
@@ -313,6 +338,13 @@ import { verify } from "node:crypto";
 globalThis.fetch = async (url, options = {}) => {
   const statePath = process.env.HOMECOOK_C2_MOCK_STATE;
   const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  if (state.desired_worktree_race_active) {
+    fs.writeFileSync(
+      process.env.HOMECOOK_C2_REAL_REPO_ROOT + "/" + state.desired_worktree_race_path,
+      state.desired_worktree_original,
+    );
+    state.desired_worktree_race_active = false;
+  }
   const authorization = options.headers?.Authorization ?? options.headers?.authorization;
   const jwt = typeof authorization === "string" ? authorization.replace(/^Bearer\s+/u, "") : "";
   const parts = jwt.split(".");
@@ -357,6 +389,33 @@ function tempDirectory(prefix: string) {
   return directory;
 }
 
+function createImmutableFixture() {
+  immutableFixtureRoot = mkdtempSync(join(tmpdir(), "homecook-c2-immutable-source-"));
+  for (const path of IMMUTABLE_FIXTURE_PATHS) {
+    const target = join(immutableFixtureRoot, path);
+    mkdirSync(join(target, ".."), { recursive: true });
+    copyFileSync(join(repoRoot, path), target);
+  }
+  for (const args of [
+    ["init", "-q", "-b", "master"],
+    ["config", "user.email", "c2-immutable@example.invalid"],
+    ["config", "user.name", "C2 Immutable"],
+    ["remote", "add", "origin", "git@github.com:netsus/homecook.git"],
+    ["add", "."],
+    ["commit", "-qm", "immutable C2 fixture"],
+  ]) {
+    const result = spawnSync("/usr/bin/git", ["-C", immutableFixtureRoot, ...args], {
+      encoding: "utf8",
+    });
+    if (result.status !== 0) throw new Error(result.stderr);
+  }
+  EXPECTED_HEAD = spawnSync(
+    "/usr/bin/git",
+    ["-C", immutableFixtureRoot, "rev-parse", "HEAD"],
+    { encoding: "utf8" },
+  ).stdout.trim();
+}
+
 function initialState(overrides: Record<string, unknown> = {}) {
   return {
     admin: true,
@@ -377,12 +436,16 @@ function initialState(overrides: Record<string, unknown> = {}) {
 function runExecute({
   args = [],
   env = {},
+  privateKeyMode = 0o600,
   privateKeyPem = EPHEMERAL_RSA_KEY_PAIR.privateKey,
+  sourceRepoRoot = immutableFixtureRoot,
   state = initialState(),
 }: {
   args?: string[];
   env?: Record<string, string>;
+  privateKeyMode?: number;
   privateKeyPem?: string | Buffer;
+  sourceRepoRoot?: string;
   state?: Record<string, unknown>;
 } = {}) {
   const harnessDir = tempDirectory("homecook-c2-harness-");
@@ -395,16 +458,42 @@ function runExecute({
   writeFileSync(join(binDir, "git"), FAKE_GIT, { mode: 0o755 });
   const fetchPreloadPath = join(harnessDir, "fetch-preload.mjs");
   writeFileSync(fetchPreloadPath, FAKE_FETCH_PRELOAD, { mode: 0o600 });
-  writeFileSync(privateKeyPath, privateKeyPem, { mode: 0o600 });
+  writeFileSync(privateKeyPath, privateKeyPem, { mode: privateKeyMode });
+  const sourceHead = spawnSync(
+    "/usr/bin/git",
+    ["-C", sourceRepoRoot, "rev-parse", "HEAD"],
+    { encoding: "utf8" },
+  ).stdout.trim();
+  if (
+    JSON.stringify(state.remote_master_shas)
+    === JSON.stringify([EXPECTED_HEAD, EXPECTED_HEAD])
+  ) {
+    state.remote_master_shas = [sourceHead, sourceHead];
+  }
   writeFileSync(statePath, JSON.stringify({
     ...state,
     calls: [],
     expected_app_public_key: EPHEMERAL_RSA_KEY_PAIR.publicKey,
   }, null, 2));
+  const bootstrap = spawnSync(
+    "/usr/bin/git",
+    [
+      "-C",
+      sourceRepoRoot,
+      "show",
+      "HEAD:scripts/bootstrap-production-release-rulesets.mjs",
+    ],
+  );
+  if (bootstrap.status !== 0) throw new Error("Unable to read immutable bootstrap fixture.");
   const result = spawnSync(
     process.execPath,
     [
-      RULESET_SCRIPT,
+      "--input-type=module",
+      "-",
+      "--source-repo",
+      sourceRepoRoot,
+      "--expected-head",
+      sourceHead,
       "apply",
       "--execute",
       "--confirm",
@@ -423,14 +512,16 @@ function runExecute({
     {
       cwd: repoRoot,
       encoding: "utf8",
+      input: bootstrap.stdout,
       env: {
         ...process.env,
         HOMECOOK_C2_MOCK_STATE: statePath,
         HOMECOOK_C2_COMPLETION_FILE: COMPLETION_FILE,
         HOMECOOK_C2_PRIVATE_KEY_PATH: privateKeyPath,
-        HOMECOOK_C2_REAL_REPO_ROOT: repoRoot,
+        HOMECOOK_C2_EXPECTED_HEAD: sourceHead,
+        HOMECOOK_C2_REAL_REPO_ROOT: sourceRepoRoot,
         HOMECOOK_C2_SNAPSHOT_DIR: snapshotDir,
-        HOMECOOK_C2_ROOT: repoRoot,
+        HOMECOOK_C2_ROOT: sourceRepoRoot,
         NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${fetchPreloadPath}`.trim(),
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
         ...env,
@@ -481,10 +572,28 @@ function resolvedRulesets() {
 function runIndependentVerify(actualDir: string) {
   return spawnSync(
     process.execPath,
-    [RULESET_SCRIPT, "verify", "--json", "--actual-dir", actualDir],
+    [
+      RULESET_SCRIPT,
+      "verify",
+      "--json",
+      "--root-dir",
+      immutableFixtureRoot,
+      "--actual-dir",
+      actualDir,
+    ],
     { cwd: repoRoot, encoding: "utf8" },
   );
 }
+
+beforeAll(() => {
+  createImmutableFixture();
+});
+
+afterAll(() => {
+  if (immutableFixtureRoot) {
+    rmSync(immutableFixtureRoot, { force: true, recursive: true });
+  }
+});
 
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
@@ -569,6 +678,67 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     expect(run.state.calls).toEqual([]);
   });
 
+  it("never executes a hidden worktree module top-level marker", () => {
+    const hiddenPath = "scripts/lib/production-release-rulesets.mjs";
+    const absolutePath = join(immutableFixtureRoot, hiddenPath);
+    const original = readFileSync(absolutePath, "utf8");
+    const markerPath = join(tempDirectory("homecook-c2-marker-"), "executed");
+    const markerSource = `import { writeFileSync as writeHiddenMarker } from "node:fs";\nwriteHiddenMarker(process.env.HOMECOOK_C2_TOP_LEVEL_MARKER, "executed");\n`;
+    expect(spawnSync(
+      "/usr/bin/git",
+      ["-C", immutableFixtureRoot, "update-index", "--assume-unchanged", hiddenPath],
+    ).status).toBe(0);
+    writeFileSync(absolutePath, `${markerSource}${original}`);
+    try {
+      const run = runExecute({
+        env: { HOMECOOK_C2_TOP_LEVEL_MARKER: markerPath },
+        state: initialState({ hidden_worktree_mismatch_path: hiddenPath }),
+      });
+      expect(run.result.status).toBe(1);
+      expect(run.combined).toContain('"partial_state": false');
+      expect(run.state.calls).toEqual([]);
+      expect(existsSync(markerPath)).toBe(false);
+    } finally {
+      writeFileSync(absolutePath, original);
+      expect(spawnSync(
+        "/usr/bin/git",
+        ["-C", immutableFixtureRoot, "update-index", "--no-assume-unchanged", hiddenPath],
+      ).status).toBe(0);
+    }
+  });
+
+  it("uses immutable HEAD desired state during a restored worktree race", () => {
+    const desiredPath = ".github/rulesets/production-release-master.json";
+    const absolutePath = join(immutableFixtureRoot, desiredPath);
+    const original = readFileSync(absolutePath, "utf8");
+    const weakened = JSON.parse(original);
+    const weakenedPullRequest = weakened.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    weakenedPullRequest.parameters.required_approving_review_count = 0;
+    weakenedPullRequest.parameters.require_last_push_approval = false;
+    const run = runExecute({
+      state: initialState({
+        desired_worktree_original: original,
+        desired_worktree_race: true,
+        desired_worktree_race_path: desiredPath,
+        desired_worktree_weakened: JSON.stringify(weakened, null, 2),
+      }),
+    });
+    expect(run.result.status, run.combined).toBe(0);
+    const masterWrite = run.state.calls.find((call) =>
+      call.key === "POST /repos/netsus/homecook/rulesets"
+      && call.payload?.name === "production-release-master");
+    const appliedPullRequest = (masterWrite?.payload?.rules as Array<{
+      parameters?: Record<string, unknown>;
+      type?: string;
+    }>).find((rule) => rule.type === "pull_request");
+    expect(appliedPullRequest?.parameters).toMatchObject({
+      require_last_push_approval: true,
+      required_approving_review_count: 1,
+    });
+    expect(readFileSync(absolutePath, "utf8")).toBe(original);
+  }, 15_000);
+
   it.each([
     ["--assume-unchanged", ".github/rulesets/production-release-master.json"],
     ["--skip-worktree", "scripts/lib/production-release-rulesets.mjs"],
@@ -636,21 +806,11 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
 
   it("rejects unresolved desired actors before GitHub access", () => {
     const rootDir = tempDirectory("homecook-c2-unresolved-");
+    expect(spawnSync(
+      "/usr/bin/git",
+      ["clone", "-q", immutableFixtureRoot, rootDir],
+    ).status).toBe(0);
     const rulesetDir = join(rootDir, ".github", "rulesets");
-    const workflowDir = join(rootDir, ".github", "workflows");
-    mkdirSync(rulesetDir, { recursive: true });
-    mkdirSync(workflowDir, { recursive: true });
-    for (const name of [
-      "production-release-master",
-      "production-release-tag-creation",
-      "production-release-tag-immutability",
-      "production-release-approval-environment",
-    ]) {
-      copyFileSync(
-        join(repoRoot, ".github", "rulesets", `${name}.json`),
-        join(rulesetDir, `${name}.json`),
-      );
-    }
     const tagPath = join(rulesetDir, "production-release-tag-creation.json");
     const tag = JSON.parse(readFileSync(tagPath, "utf8"));
     tag.bypass_actors[0].actor_id = 0;
@@ -659,14 +819,33 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     const environment = JSON.parse(readFileSync(environmentPath, "utf8"));
     environment.required_reviewers = [{ actor_id: 0, actor_type: "Unresolved" }];
     writeFileSync(environmentPath, JSON.stringify(environment, null, 2));
-    copyFileSync(
-      join(repoRoot, ".github/workflows/production-release-attestation.yml"),
-      join(workflowDir, "production-release-attestation.yml"),
-    );
+    expect(spawnSync(
+      "/usr/bin/git",
+      ["-C", rootDir, "add", ".github/rulesets"],
+    ).status).toBe(0);
+    expect(spawnSync(
+      "/usr/bin/git",
+      ["-C", rootDir, "commit", "-qm", "unresolved actors"],
+      {
+        env: {
+          ...process.env,
+          GIT_AUTHOR_EMAIL: "c2-unresolved@example.invalid",
+          GIT_AUTHOR_NAME: "C2 Unresolved",
+          GIT_COMMITTER_EMAIL: "c2-unresolved@example.invalid",
+          GIT_COMMITTER_NAME: "C2 Unresolved",
+        },
+      },
+    ).status).toBe(0);
 
     const run = runExecute({
-      args: ["--root-dir", rootDir],
-      env: { HOMECOOK_C2_ROOT: rootDir },
+      sourceRepoRoot: rootDir,
+      state: initialState({
+        remote_master_shas: [
+          spawnSync("/usr/bin/git", ["-C", rootDir, "rev-parse", "HEAD"], {
+            encoding: "utf8",
+          }).stdout.trim(),
+        ],
+      }),
     });
     expect(run.result.status).toBe(1);
     expect(run.combined).toMatch(/resolved desired state/iu);
@@ -712,39 +891,9 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
   });
 
   it("rejects overly broad private-key permissions and never prints its path", () => {
-    const run = runExecute();
-    chmodSync(run.privateKeyPath, 0o644);
-    const rerun = spawnSync(
-      process.execPath,
-      [
-        RULESET_SCRIPT,
-        "apply",
-        "--execute",
-        "--confirm",
-        CONFIRMATION,
-        "--repo",
-        "netsus/homecook",
-        "--snapshot-dir",
-        `${run.snapshotDir}-permissions`,
-        "--app-id",
-        "4724458",
-        "--app-private-key-file",
-        run.privateKeyPath,
-        "--json",
-      ],
-      {
-        cwd: repoRoot,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          HOMECOOK_C2_MOCK_STATE: join(run.privateKeyPath, "..", "state.json"),
-          HOMECOOK_C2_ROOT: repoRoot,
-          PATH: `${join(run.privateKeyPath, "..", "bin")}:${process.env.PATH ?? ""}`,
-        },
-      },
-    );
-    const output = `${rerun.stdout}\n${rerun.stderr}`;
-    expect(rerun.status).toBe(1);
+    const run = runExecute({ privateKeyMode: 0o644 });
+    const output = run.combined;
+    expect(run.result.status).toBe(1);
     expect(output).toMatch(/0600/iu);
     expect(output).not.toContain(run.privateKeyPath);
   }, 15_000);
@@ -782,6 +931,9 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
   });
 
   it("verifies the correct RSA key against the pinned GitHub App identity", () => {
+    const bootstrapDirectoriesBefore = new Set(
+      readdirSync(tmpdir()).filter((name) => name.startsWith("homecook-c2-immutable-")),
+    );
     const run = runExecute();
     expect(run.result.status, run.combined).toBe(0);
     expect(run.state.identity_calls).toHaveLength(1);
@@ -800,6 +952,10 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       .map((name) => readFileSync(join(run.snapshotDir, name), "utf8"))
       .join("\n");
     expect(snapshotText).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\./u);
+    const leakedBootstrapDirectories = readdirSync(tmpdir()).filter((name) =>
+      name.startsWith("homecook-c2-immutable-")
+      && !bootstrapDirectoriesBefore.has(name));
+    expect(leakedBootstrapDirectories).toEqual([]);
   });
 
   it("rejects a wrong but valid RSA key before mutation", () => {
@@ -1605,8 +1761,10 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     });
     expect(completion.head).toBe(EXPECTED_HEAD);
     expect(completion.head_tree).toBe(
-      spawnSync("git", ["rev-parse", "HEAD^{tree}"], { cwd: repoRoot, encoding: "utf8" })
-        .stdout.trim(),
+      spawnSync("/usr/bin/git", ["rev-parse", "HEAD^{tree}"], {
+        cwd: immutableFixtureRoot,
+        encoding: "utf8",
+      }).stdout.trim(),
     );
     expect(Object.keys(completion.desired_policy_blobs)).toEqual([
       ".github/rulesets/production-release-master.json",

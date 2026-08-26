@@ -979,8 +979,50 @@ describe("production release rulesets desired state", () => {
       },
     );
     expect(blocked.status).toBe(1);
-    expect(blocked.stderr).toContain("APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS");
-    expect(blocked.stderr).toContain("exactly");
+    expect(blocked.stderr).toContain("Authoritative immutable C2 execution is required");
+    expect(blocked.stderr).toContain(
+      '/usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs',
+    );
+    expect(existsSync(join(repoRoot, "scripts/bootstrap-production-release-rulesets.mjs")))
+      .toBe(true);
+    const entrySource = read("scripts/manage-production-release-rulesets.mjs");
+    expect(entrySource).not.toMatch(/^import .*production-release/um);
+
+    const hostileRoot = createTempDirectory("homecook-c2-direct-hostile-");
+    const hostileScripts = join(hostileRoot, "scripts");
+    const hostileLib = join(hostileScripts, "lib");
+    const markerPath = join(hostileRoot, "worktree-module-executed");
+    mkdirSync(hostileLib, { recursive: true });
+    writeFileSync(join(hostileScripts, "manage-production-release-rulesets.mjs"), entrySource);
+    for (const name of [
+      "production-release-rulesets.mjs",
+      "production-release-rulesets-apply.mjs",
+    ]) {
+      writeFileSync(
+        join(hostileLib, name),
+        `import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(markerPath)}, "executed");`,
+      );
+    }
+    const hostileDirect = spawnSync(
+      process.execPath,
+      [join(hostileScripts, "manage-production-release-rulesets.mjs"), "apply", "--execute"],
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_C2_IMMUTABLE_CODE_ROOT: hostileRoot,
+          HOMECOOK_C2_IMMUTABLE_HEAD: spawnSync(
+            "/usr/bin/git",
+            ["-C", repoRoot, "rev-parse", "HEAD"],
+            { encoding: "utf8" },
+          ).stdout.trim(),
+          HOMECOOK_C2_SOURCE_REPO_ROOT: repoRoot,
+        },
+      },
+    );
+    expect(hostileDirect.status).toBe(1);
+    expect(hostileDirect.stderr).toContain("Authoritative immutable C2 execution is required");
+    expect(existsSync(markerPath)).toBe(false);
   });
 
   it("keeps the attestation workflow least-privilege and approval-gated", () => {
@@ -1229,7 +1271,12 @@ describe("production release rulesets desired state", () => {
     expect(runbook).toContain("production-release-tag-creation.json");
     expect(runbook).toContain("production-release-tag-immutability.json");
     expect(runbook).toContain("can_admins_bypass: false");
-    expect(runbook).toContain("pnpm release:github:rulesets:apply --");
+    expect(runbook).toContain(
+      '/usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs',
+    );
+    expect(runbook).toContain('--source-repo "$(/usr/bin/git rev-parse --show-toplevel)"');
+    expect(runbook).toContain('--expected-head "$C2_HEAD"');
+    expect(runbook).not.toContain("pnpm release:github:rulesets:apply -- \\\n+  --execute");
     expect(runbook).toContain("authoritative C2 evidence");
     expect(runbook).toContain("operator는 completion marker를 수동 작성하지 않는다");
     expect(runbook).toContain('.activation_blocked == false and .actual_state == "matched"');

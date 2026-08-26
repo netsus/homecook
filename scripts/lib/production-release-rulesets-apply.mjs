@@ -6,6 +6,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   writeFileSync,
 } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
@@ -106,7 +107,10 @@ function runGit(rootDir, args) {
 }
 
 function validateGitCheckout(rootDir) {
-  if (resolve(runGit(rootDir, ["rev-parse", "--show-toplevel"])) !== resolve(rootDir)) {
+  if (
+    realpathSync(resolve(runGit(rootDir, ["rev-parse", "--show-toplevel"])))
+    !== realpathSync(resolve(rootDir))
+  ) {
     fail("--root-dir must be the exact Git checkout root.");
   }
   const originUrl = runGit(rootDir, ["config", "--get", "remote.origin.url"]);
@@ -744,25 +748,39 @@ function writeSnapshotCompletion(snapshotDir, head, trackedState) {
 export async function executeProductionReleaseControls({
   appId,
   confirmation,
+  expectedSourceHead = null,
   privateKeyFile,
   repository,
   rootDir = process.cwd(),
+  gitRootDir = rootDir,
   snapshotDir,
 }) {
   let mutationStarted = false;
   try {
+  if (
+    !/^[0-9a-f]{40,64}$/u.test(expectedSourceHead ?? "")
+    || realpathSync(resolve(rootDir)) === realpathSync(resolve(gitRootDir))
+  ) {
+    fail("C2 execution requires separate immutable code and source Git roots.");
+  }
   if (confirmation !== C2_CONFIRMATION) {
     fail(`--confirm must equal ${C2_CONFIRMATION} exactly.`);
   }
   if (repository !== C2_CANONICAL_REPOSITORY) {
     fail(`C2 execution is pinned to canonical repository ${C2_CANONICAL_REPOSITORY}.`);
   }
-  const head = validateGitCheckout(rootDir);
+  const head = validateGitCheckout(gitRootDir);
+  if (expectedSourceHead && head !== expectedSourceHead) {
+    fail("Immutable C2 code HEAD does not match the source repository HEAD.");
+  }
   let trackedState;
   try {
-    trackedState = verifyExactTrackedWorktree(rootDir, head);
+    trackedState = verifyExactTrackedWorktree(gitRootDir, head);
   } catch {
     fail("Tracked worktree bytes or modes do not match exact HEAD.");
+  }
+  if (runGit(gitRootDir, ["rev-parse", `${head}^{tree}`]) !== trackedState.tree) {
+    fail("Source repository HEAD tree changed before desired-state parsing.");
   }
   const desired = readDesiredState(rootDir, appId);
   const privateKey = readValidatedPrivateKey(privateKeyFile);
@@ -840,7 +858,7 @@ export async function executeProductionReleaseControls({
 
   validateSnapshotDirectory(snapshotDir);
   try {
-    const mutationTrackedState = verifyExactTrackedWorktree(rootDir, head);
+    const mutationTrackedState = verifyExactTrackedWorktree(gitRootDir, head);
     if (mutationTrackedState.tree !== trackedState.tree) {
       fail("Tracked HEAD tree changed before mutation.");
     }
@@ -927,6 +945,7 @@ export async function executeProductionReleaseControls({
   try {
     verification = getProductionReleaseRulesetPlan({
       actualDir: snapshotDir,
+      gitRootDir,
       requireCompletionManifest: false,
       rootDir,
     });
@@ -939,7 +958,11 @@ export async function executeProductionReleaseControls({
     fail("C2 snapshot verification failed closed after apply.", { partialState: true });
   }
   writeSnapshotCompletion(snapshotDir, head, trackedState);
-  verification = getProductionReleaseRulesetPlan({ actualDir: snapshotDir, rootDir });
+  verification = getProductionReleaseRulesetPlan({
+    actualDir: snapshotDir,
+    gitRootDir,
+    rootDir,
+  });
   if (verification.activation_blocked || verification.actual_state !== "matched") {
     fail("C2 completion manifest verification failed closed.", { partialState: true });
   }

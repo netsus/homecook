@@ -1365,6 +1365,7 @@ export function getProductionReleaseRulesetPlan({
   actualDir = null,
   requireCompletionManifest = true,
   rootDir = process.cwd(),
+  gitRootDir = rootDir,
 } = {}) {
   const workflowPath = resolve(
     rootDir,
@@ -1441,7 +1442,7 @@ export function getProductionReleaseRulesetPlan({
       scope: "effective",
     }),
     ...validateRulesetInventoryConsistency(actualDir, desiredRulesets),
-    ...(requireCompletionManifest ? validateSnapshotCompletion(actualDir, rootDir) : []),
+    ...(requireCompletionManifest ? validateSnapshotCompletion(actualDir, gitRootDir) : []),
   ];
   if (inventoryBlockers.length > 0) {
     activationBlocked = true;
