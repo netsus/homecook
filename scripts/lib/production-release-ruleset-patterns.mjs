@@ -166,7 +166,7 @@ export function productionReleaseRulesetConflictsWithCanonicalTarget(ruleset) {
     const includeMatches = include.map((entry) =>
       entry === "~DEFAULT_BRANCH" ? true : globMatches(entry, "refs/heads/master"));
     const excludeMatches = exclude.map((entry) =>
-      entry === "~DEFAULT_BRANCH" ? true : globMatches(entry, "refs/heads/master"));
+      entry === "~DEFAULT_BRANCH" ? null : globMatches(entry, "refs/heads/master"));
     if (includeMatches.includes(null) || excludeMatches.includes(null)) return true;
     return includeMatches.includes(true) && !excludeMatches.includes(true);
   }

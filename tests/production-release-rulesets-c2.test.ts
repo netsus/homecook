@@ -1359,6 +1359,12 @@ describe("production release C2 apply", () => {
         ref_name: { include: ["~ALL"], exclude: ["refs/heads/master"] },
       },
     }, false],
+    ["all branches with only default branch excluded", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["~ALL"], exclude: ["~DEFAULT_BRANCH"] },
+      },
+    }, true],
     ["actual master overlap", {
       target: "branch",
       conditions: {
