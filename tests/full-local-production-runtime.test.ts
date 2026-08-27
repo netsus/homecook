@@ -113,7 +113,8 @@ describe("full-local production runtime static contract", () => {
     const after = [
       container("pre-running", "auth", true),
       container("pre-stopped", "storage", true),
-      container("new-postgres", "postgres", true),
+      container("new-postgrest-probe", "postgrest-probe", true),
+      container("new-future-service", "future-service", true),
       container("foreign", "postgres", true, "other-project"),
     ];
 
@@ -121,10 +122,37 @@ describe("full-local production runtime static contract", () => {
       after,
       before,
       composeProject: "homecook-full-local-isolated",
+      expectedServices: [
+        "auth",
+        "future-service",
+        "postgrest-probe",
+        "storage",
+      ],
     })).toEqual({
-      removeIds: ["new-postgres"],
-      stopIds: ["new-postgres", "pre-stopped"],
+      removeIds: ["new-future-service", "new-postgrest-probe"],
+      stopIds: ["new-future-service", "new-postgrest-probe", "pre-stopped"],
     });
+  });
+
+  it("parses the authoritative pinned Compose service set including postgrest-probe", () => {
+    const actualCompose = readFileSync(
+      join(process.cwd(), "infra/full-local-supabase/docker-compose.production.yml"),
+      "utf8",
+    );
+    const declaredServices = [...actualCompose.matchAll(/^  ([a-z0-9-]+):$/gmu)]
+      .map((match) => match[1]);
+    const parsed = fullLocalRuntime.parseFullLocalComposeServiceNames(
+      `${declaredServices.join("\n")}\n`,
+    );
+
+    expect(parsed).toContain("postgrest-probe");
+    expect(parsed).toEqual(expect.arrayContaining([
+      "postgres",
+      "auth",
+      "postgrest",
+      "postgrest-probe",
+      "storage",
+    ]));
   });
 
   it("binds enabled OAuth secret files to Keychain values without exposing payloads", () => {

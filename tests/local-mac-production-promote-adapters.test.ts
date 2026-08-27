@@ -302,16 +302,13 @@ describe("local Mac production promote adapters", () => {
       promoted_at: "2026-08-24T09:00:00.000Z",
       source_manifest_sha256: "9".repeat(64),
     };
-    expect(promoteAdapters.resolveFullLocalCurrentRestartContract(
+    expect(() => promoteAdapters.resolveFullLocalCurrentRestartContract(
       sealedV1Descriptor,
-    )).toEqual({
-      includeReleaseIdentity: true,
-      legacyContract: "abac967-full-local-start-v1",
-      runtimeCommand: "start",
-    });
+    )).toThrow(/markerless|legacy|unsupported|restart capability/iu);
     expect(promoteAdapters.resolveFullLocalCurrentRestartContract({
       release_sha: CURRENT_IDENTITY.release_sha,
       restart_capability: "full-local-resume-current-v1",
+      full_local_config_sha256: "1".repeat(64),
     })).toEqual({
       includeReleaseIdentity: false,
       legacyContract: null,

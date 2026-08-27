@@ -260,7 +260,12 @@ describe("connected local Mac production promotion", () => {
     const fullLocalConfig = readFileSync(
       join(process.cwd(), "infra/full-local-supabase/.env.production.example"),
       "utf8",
-    ).replaceAll("/Users/REPLACE_ME", homeDir);
+    )
+      .replaceAll("/Users/REPLACE_ME", homeDir)
+      .replace(
+        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=false",
+        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=true",
+      );
     writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
     const fullLocalSecrets = generateFullLocalSecretBundle();
     const fullLocalOauthSecrets = Object.fromEntries(
@@ -276,6 +281,9 @@ describe("connected local Mac production promotion", () => {
         mode: 0o600,
         },
       );
+    }
+    for (const [name, value] of Object.entries(fullLocalOauthSecrets)) {
+      writeFileSync(join(fullLocalSecretDir, name), value, { mode: 0o600 });
     }
     writeFileSync(getLocalMacProductionPaths(homeDir).plistPath, renderLocalMacProductionPlist({ homeDir, nodeBin, rootDir: currentRoot }), { mode: 0o644 });
     writeFileSync(getFullLocalLaunchAgentPaths(homeDir).plistPath, renderFullLocalLaunchAgentPlist({ configPath: fullConfig, homeDir, includeReleaseIdentity: false, nodeBin, rootDir: currentRoot, runtimeCommand: "start" }), { mode: 0o600 });
@@ -390,30 +398,13 @@ describe("connected local Mac production promotion", () => {
     expect(first.promoted).toBe(true);
     expect(firstDescriptor.release_sha).toBe("a".repeat(40));
     expect(firstDescriptor.restart_capability).toBe("full-local-resume-current-v1");
+    expect(firstDescriptor.full_local_config_sha256).toBe(digest(fullLocalConfig));
     expect(firstDescriptor.worker_artifact_sha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(JSON.stringify(firstDescriptor)).not.toMatch(/credential_path|secret_root|config_path|policy_path/u);
-    const baseAbacDescriptor = { ...firstDescriptor };
-    delete baseAbacDescriptor.restart_capability;
-    writeFileSync(state.currentDescriptorPath, JSON.stringify(baseAbacDescriptor, null, 2), {
-      mode: 0o600,
-    });
-    writeFileSync(
-      getFullLocalLaunchAgentPaths(homeDir).plistPath,
-      renderFullLocalLaunchAgentPlist({
-        configPath: fullConfig,
-        homeDir,
-        includeReleaseIdentity: true,
-        nodeBin,
-        releaseIdentityPath: join(baseAbacDescriptor.execution_app_root, "prepare.json"),
-        rootDir: baseAbacDescriptor.execution_app_root,
-        runtimeCommand: "start",
-      }),
-      { mode: 0o600 },
-    );
     const second = await runPromotion(2, "a".repeat(40));
     expect(second.promoted).toBe(true);
-    expect(JSON.parse(readFileSync(state.previousDescriptorPath, "utf8"))).toEqual(baseAbacDescriptor);
-    expect(JSON.parse(readFileSync(state.currentDescriptorPath, "utf8"))).toMatchObject({ release_sha: "f".repeat(40), promotion_id: "promotion-2", restart_capability: "full-local-resume-current-v1" });
+    expect(JSON.parse(readFileSync(state.previousDescriptorPath, "utf8"))).toEqual(firstDescriptor);
+    expect(JSON.parse(readFileSync(state.currentDescriptorPath, "utf8"))).toMatchObject({ release_sha: "f".repeat(40), promotion_id: "promotion-2", restart_capability: "full-local-resume-current-v1", full_local_config_sha256: digest(fullLocalConfig) });
     expect(calls.findIndex((call) => call.includes(" start "))).toBeLessThan(calls.findIndex((call) => call.includes("bootstrap") && call.includes("com.homecook.production")));
 
     expect(existsSync(state.lockPath)).toBe(false);
@@ -429,7 +420,9 @@ const bundle = args[args.indexOf("--bundle") + 1];
 process.stdout.write(fs.readFileSync(bundle, "utf8"));
 `, { mode: 0o700 });
     const fakeSecurityPath = join(binDir, "security");
+    const resumeSecurityMarker = join(repoRoot, "resume-security-calls.log");
     writeFileSync(fakeSecurityPath, `#!/usr/bin/env node
+require("node:fs").appendFileSync(${JSON.stringify(resumeSecurityMarker)}, process.argv.slice(2).join(" ") + "\\n");
 const values = ${JSON.stringify({ ...fullLocalSecrets, ...fullLocalOauthSecrets })};
 const args = process.argv.slice(2);
 const account = args[args.indexOf("-a") + 1] || "";
@@ -443,7 +436,7 @@ else {
     const fakeDockerPath = join(binDir, "docker");
     const resumeFaultModePath = join(repoRoot, "resume-fault-mode");
     const dockerStartedPath = join(repoRoot, "resume-docker-started");
-    const services = ["auth", "auth-proxy", "api-gateway", "postgres", "postgrest", "realtime", "storage"];
+    const services = ["auth", "auth-proxy", "api-gateway", "postgres", "postgrest", "postgrest-probe", "storage"];
     const composeModel = {
       services: {
         auth: {},
@@ -451,7 +444,7 @@ else {
         "api-gateway": { ports: [{ host_ip: "127.0.0.1", published: "54481", target: 54481 }] },
         postgres: {},
         postgrest: {},
-        realtime: {},
+        "postgrest-probe": {},
         storage: {},
       },
     };
@@ -464,7 +457,7 @@ const faultPath = ${JSON.stringify(resumeFaultModePath)};
 const preRunning = ["pre-running-0", "pre-running-1", "pre-running-2", "pre-running-3", "pre-running-4"];
 const services = ${JSON.stringify(services)};
 const ids = () => fs.existsSync(startedPath)
-  ? [...preRunning, "pre-stopped", "new-container"]
+  ? [...preRunning, "pre-stopped", "new-postgrest-probe"]
   : [...preRunning, "pre-stopped"];
 const container = (id, index) => ({
   Id: id,
@@ -480,7 +473,8 @@ const container = (id, index) => ({
   } },
   State: { Running: id !== "pre-stopped" || fs.existsSync(startedPath) },
 });
-if (args.includes("config") && args.includes("--format")) process.stdout.write(${JSON.stringify(JSON.stringify(composeModel))});
+if (args.includes("config") && args.includes("--services")) process.stdout.write(services.join("\\n") + "\\n");
+else if (args.includes("config") && args.includes("--format")) process.stdout.write(${JSON.stringify(JSON.stringify(composeModel))});
 else if (args.includes("up") && args.includes("-d")) {
   fs.writeFileSync(startedPath, "started");
   const fault = fs.existsSync(faultPath) ? fs.readFileSync(faultPath, "utf8") : "";
@@ -498,6 +492,8 @@ else if (args.includes("up") && args.includes("-d")) {
     fs.writeFileSync(${JSON.stringify(join(fullLocalSecretDir, "postgres_password"))}, "post-start-secret-drift");
   } else if (fault === "oauth-secret") {
     fs.writeFileSync(${JSON.stringify(join(fullLocalSecretDir, "google_client_secret"))}, "post-start-oauth-secret-drift");
+  } else if (fault === "config") {
+    fs.appendFileSync(${JSON.stringify(fullConfig)}, "# post-start-config-drift\\n");
   } else if (fault === "attestation") {
     const path = ${JSON.stringify(join(dirname(currentDescriptor.execution_app_root), "authority/attestation-subject.json"))};
     fs.chmodSync(path, 0o600);
@@ -516,7 +512,7 @@ else if (args[0] === "container" && args[1] === "inspect") {
   process.stdout.write(JSON.stringify(args.slice(2).map((id, index) => container(id, index))));
 }
 else if (args[0] === "stop" && fs.existsSync(faultPath) && fs.readFileSync(faultPath, "utf8") === "cleanup-failure") process.exit(42);
-else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPath, { force: true });
+else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(startedPath, { force: true });
 `, { mode: 0o700 });
     for (const path of [fakeGhPath, fakeSecurityPath, fakeDockerPath]) chmodSync(path, 0o700);
 
@@ -560,6 +556,19 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     });
     expect(readFileSync(resumeMarker, "utf8")).toContain("up -d");
     const markerAfterSuccess = readFileSync(resumeMarker);
+    const securityAfterSuccess = readFileSync(resumeSecurityMarker);
+    writeFileSync(
+      fullConfig,
+      fullLocalConfig.replace(
+        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=true",
+        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=false",
+      ),
+      { mode: 0o600 },
+    );
+    expect(invokeResume().status).toBe(1);
+    expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
+    expect(readFileSync(resumeSecurityMarker)).toEqual(securityAfterSuccess);
+    writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
 
     const snapshotRoot = dirname(currentDescriptor.execution_app_root);
     const authorityRoot = join(snapshotRoot, "authority");
@@ -634,9 +643,18 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
         chmodSync(attestationSubjectPath, 0o600);
         writeFileSync(attestationSubjectPath, attestationSubjectBytes, { mode: 0o600 });
         chmodSync(attestationSubjectPath, 0o400);
+      } else if (fault === "config") {
+        writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
       }
     };
-    for (const fault of ["identity", "descriptor", "snapshot", "secret", "attestation"]) {
+    for (const fault of [
+      "identity",
+      "descriptor",
+      "snapshot",
+      "secret",
+      "attestation",
+      "config",
+    ]) {
       rmSync(dockerStartedPath, { force: true });
       writeFileSync(resumeFaultModePath, fault, { mode: 0o600 });
       const logOffset = existsSync(resumeMarker) ? readFileSync(resumeMarker, "utf8").length : 0;
@@ -644,9 +662,9 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       expect(faultResult.status).toBe(1);
       expect(faultResult.stderr).toContain("Failure evidence:");
       const cleanupLog = readFileSync(resumeMarker, "utf8").slice(logOffset);
-      expect(cleanupLog).toMatch(/stop.*new-container/iu);
+      expect(cleanupLog).toMatch(/stop.*new-postgrest-probe/iu);
       expect(cleanupLog).toMatch(/stop.*pre-stopped/iu);
-      expect(cleanupLog).toMatch(/rm.*new-container/iu);
+      expect(cleanupLog).toMatch(/rm.*new-postgrest-probe/iu);
       expect(cleanupLog).not.toMatch(/^(?:volume|(?:stop|rm)\b.*pre-running)/imu);
       restoreFaultTarget(fault);
       rmSync(resumeFaultModePath, { force: true });
@@ -670,33 +688,18 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     rmSync(recoveryRequiredPath);
     rmSync(dockerStartedPath, { force: true });
 
-    writeFileSync(
-      fullConfig,
-      fullLocalConfig.replace(
-        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=false",
-        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=true",
-      ),
-      { mode: 0o600 },
-    );
-    for (const [name, value] of Object.entries(fullLocalOauthSecrets)) {
-      writeFileSync(join(fullLocalSecretDir, name), value, { mode: 0o600 });
-    }
     writeFileSync(resumeFaultModePath, "oauth-secret", { mode: 0o600 });
     const oauthLogOffset = readFileSync(resumeMarker, "utf8").length;
     const oauthFaultResult = invokeResume();
     expect(oauthFaultResult.status).toBe(1);
     expect(oauthFaultResult.stderr).toContain("Failure evidence:");
     const oauthCleanupLog = readFileSync(resumeMarker, "utf8").slice(oauthLogOffset);
-    expect(oauthCleanupLog).toMatch(/stop.*new-container/iu);
-    expect(oauthCleanupLog).toMatch(/rm.*new-container/iu);
+    expect(oauthCleanupLog).toMatch(/stop.*new-postgrest-probe/iu);
+    expect(oauthCleanupLog).toMatch(/rm.*new-postgrest-probe/iu);
     expect(oauthCleanupLog).not.toMatch(/^(?:volume|(?:stop|rm)\b.*pre-running)/imu);
     expect(JSON.stringify({ currentDescriptor, oauthCleanupLog })).not.toContain(
       String(fullLocalOauthSecrets.google_client_secret),
     );
-    writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
-    for (const name of FULL_LOCAL_OAUTH_SECRET_NAMES) {
-      rmSync(join(fullLocalSecretDir, name), { force: true });
-    }
     rmSync(resumeFaultModePath, { force: true });
     rmSync(dockerStartedPath, { force: true });
     const failureEvidenceRoot = join(state.releaseRoot, "resume-failures");
