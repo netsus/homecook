@@ -377,7 +377,7 @@ describe("local Mac production release manifest", () => {
 });
 
 describe("local Mac production promotion lock", () => {
-  it("removes only its own partial lock directory when metadata persistence fails", () => {
+  it("preserves a corrupt partial lock for manual recovery when metadata persistence fails", () => {
     const homeDir = createTempDirectory("homecook-release-lock-cleanup-home-");
     const manifestPath = join(homeDir, "release.json");
     const manifest = createManifest({ release_manifest_path: manifestPath });
@@ -403,7 +403,11 @@ describe("local Mac production promotion lock", () => {
       manifestPath: null,
       currentBootSessionId: "boot-session-a",
     });
-    expect(status.lock.locked).toBe(false);
+    expect(status.lock).toMatchObject({
+      corrupt: true,
+      locked: true,
+      manual_recovery_required: true,
+    });
   });
 
   it("allows only one writer and reports stale lock candidates without auto-deleting them", () => {

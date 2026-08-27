@@ -255,21 +255,37 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(result.stderr).not.toContain("currently blocked");
   });
 
-  it("keeps promote and verify blocked fail-closed", () => {
-    for (const command of ["promote", "verify"]) {
-      const result = spawnSync(
-        process.execPath,
-        [SCRIPT_PATH, command],
-        {
-          cwd: process.cwd(),
-          encoding: "utf8",
-        },
-      );
+  it("enables promote argument validation while keeping verify blocked fail-closed", () => {
+    const promote = spawnSync(
+      process.execPath,
+      [SCRIPT_PATH, "promote"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+    expect(promote.status).toBe(1);
+    expect(promote.stderr).toContain("promote requires --release-manifest");
+    expect(promote.stderr).not.toContain("currently blocked");
 
-      expect(result.status).toBe(1);
-      expect(result.stderr).toContain(command);
-      expect(result.stderr).toContain("blocked");
-      expect(result.stderr).toContain("plan/prepare/status");
-    }
+    const verify = spawnSync(
+      process.execPath,
+      [SCRIPT_PATH, "verify"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+    expect(verify.status).toBe(1);
+    expect(verify.stderr).toContain("verify");
+    expect(verify.stderr).toContain("blocked");
+  });
+
+  it("checks real full-local state and binds worker preflight to the promoted release SHA", () => {
+    const source = readFileSync(SCRIPT_PATH, "utf8");
+
+    expect(source).toContain('fullLocalStatus.state === "running"');
+    expect(source).not.toContain("fullLocalStatus.running === true");
+    expect(source).toMatch(/preflight\.release_sha\s*!==\s*manifest\.release_sha/u);
   });
 });
