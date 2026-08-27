@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdtempSync,
@@ -656,7 +658,6 @@ describe("local Mac production release prepare", () => {
     const result = prepareLocalMacProductionRelease({
       homeDir: fixture.homeDir,
       manifestPath: fixture.manifestPath,
-      randomId: () => "11111111-1111-4111-8111-111111111111",
       readGitEvidence: () => createGitEvidence(),
       rootDir: fixture.rootDir,
       runCommand,
@@ -700,22 +701,22 @@ describe("local Mac production release prepare", () => {
     expect(readdirSync(fixture.paths.releaseRoot)).not.toContain(expect.stringMatching(/^\.prepare-/u));
   });
 
-  it("removes only its own staging directory when build fails and leaves production state untouched", () => {
+  it("keeps a failed build reservation partial without a completion marker or production-state changes", () => {
     const fixture = createPrepareFixture();
     const { runCommand } = createPrepareCommandRunner({ failCommand: "pnpm mac-production:build" });
 
     expect(() => prepareLocalMacProductionRelease({
       homeDir: fixture.homeDir,
       manifestPath: fixture.manifestPath,
-      randomId: () => "22222222-2222-4222-8222-222222222222",
       readGitEvidence: () => createGitEvidence(),
       rootDir: fixture.rootDir,
       runCommand,
       verifyAttestation: VERIFIED_ATTESTATION,
     })).toThrow(/pnpm mac-production:build|fixture command failed/iu);
 
-    expect(existsSync(join(fixture.paths.releaseRoot, fixture.manifest.release_tag))).toBe(false);
-    expect(readdirSync(fixture.paths.releaseRoot)).toEqual(["current.json", "previous.json"]);
+    const reservedPath = join(fixture.paths.releaseRoot, fixture.manifest.release_tag);
+    expect(lstatSync(reservedPath).isDirectory()).toBe(true);
+    expect(existsSync(join(reservedPath, "prepare.json"))).toBe(false);
     expect(readFileSync(fixture.paths.lockMetadataPath, "utf8")).toBe("lock-before\n");
   });
 
@@ -726,13 +727,17 @@ describe("local Mac production release prepare", () => {
     expect(() => prepareLocalMacProductionRelease({
       homeDir: fixture.homeDir,
       manifestPath: fixture.manifestPath,
-      randomId: () => "33333333-3333-4333-8333-333333333333",
       readGitEvidence: () => createGitEvidence(),
       rootDir: fixture.rootDir,
       runCommand,
       verifyAttestation: VERIFIED_ATTESTATION,
     })).toThrow(/checkout|release SHA|exact/iu);
     expect(invocations.some(({ command }) => command === "pnpm")).toBe(false);
+    expect(existsSync(join(
+      fixture.paths.releaseRoot,
+      fixture.manifest.release_tag,
+      "prepare.json",
+    ))).toBe(false);
   });
 
   it("fails closed when install or build changes tracked release source", () => {
@@ -742,13 +747,14 @@ describe("local Mac production release prepare", () => {
     expect(() => prepareLocalMacProductionRelease({
       homeDir: fixture.homeDir,
       manifestPath: fixture.manifestPath,
-      randomId: () => "44444444-4444-4444-8444-444444444444",
       readGitEvidence: () => createGitEvidence(),
       rootDir: fixture.rootDir,
       runCommand,
       verifyAttestation: VERIFIED_ATTESTATION,
     })).toThrow(/clean tracked source|tracked source|dirty/iu);
-    expect(existsSync(join(fixture.paths.releaseRoot, fixture.manifest.release_tag))).toBe(false);
+    const reservedPath = join(fixture.paths.releaseRoot, fixture.manifest.release_tag);
+    expect(lstatSync(reservedPath).isDirectory()).toBe(true);
+    expect(existsSync(join(reservedPath, "prepare.json"))).toBe(false);
   });
 
   it("rejects symlink release roots, partial prepare reuse, and a same-tag directory for another SHA", () => {
@@ -771,6 +777,7 @@ describe("local Mac production release prepare", () => {
     const partialFixture = createPrepareFixture();
     const partialPath = join(partialFixture.paths.releaseRoot, partialFixture.manifest.release_tag);
     mkdirSync(partialPath, { mode: 0o700 });
+    writeFileSync(join(partialPath, "reservation-owner.txt"), "another prepare\n");
     expect(() => prepareLocalMacProductionRelease({
       homeDir: partialFixture.homeDir,
       manifestPath: partialFixture.manifestPath,
@@ -779,6 +786,8 @@ describe("local Mac production release prepare", () => {
       runCommand: createPrepareCommandRunner().runCommand,
       verifyAttestation: VERIFIED_ATTESTATION,
     })).toThrow(/partial|reuse|already exists/iu);
+    expect(readFileSync(join(partialPath, "reservation-owner.txt"), "utf8"))
+      .toBe("another prepare\n");
 
     const conflictFixture = createPrepareFixture();
     const conflictPath = join(conflictFixture.paths.releaseRoot, conflictFixture.manifest.release_tag);
@@ -817,5 +826,116 @@ describe("local Mac production release prepare", () => {
 
     expect(invocations).toEqual([]);
     expect(readdirSync(fixture.paths.releaseRoot)).toEqual(["current.json", "previous.json"]);
+  });
+
+  it("stores the exact manifest bytes that were validated even when the source path is replaced afterward", () => {
+    const fixture = createPrepareFixture();
+    const originalBytes = readFileSync(fixture.manifestPath);
+    const originalDigest = createHash("sha256").update(originalBytes).digest("hex");
+    const replacementManifest = createManifest({
+      approved_by_task_id: "replacement-task",
+      build_id: "replacement-build",
+      release_manifest_path: fixture.manifestPath,
+    });
+    const { runCommand } = createPrepareCommandRunner();
+
+    const result = prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: (input) => {
+        expect(input.manifestDigest).toBe(originalDigest);
+        writeFileSync(fixture.manifestPath, JSON.stringify(replacementManifest, null, 2));
+        return VERIFIED_ATTESTATION();
+      },
+    });
+
+    expect(readFileSync(join(result.release_dir, "release-manifest.json")))
+      .toEqual(originalBytes);
+    expect(JSON.parse(readFileSync(result.prepare_descriptor_path, "utf8")))
+      .toMatchObject({
+        build_id: fixture.manifest.build_id,
+        source_manifest_sha256: originalDigest,
+      });
+  });
+
+  it.each([
+    ["Homecook state directory", (paths: ReturnType<typeof getLocalMacProductionReleasePaths>) =>
+      join(paths.releaseRoot, "..")],
+    ["release root", (paths: ReturnType<typeof getLocalMacProductionReleasePaths>) =>
+      paths.releaseRoot],
+  ])("rejects a group/world-writable %s before running commands", (_, selectPath) => {
+    const fixture = createPrepareFixture();
+    chmodSync(selectPath(fixture.paths), 0o777);
+    const { invocations, runCommand } = createPrepareCommandRunner();
+
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/group|world|writable|mode/iu);
+    expect(invocations).toEqual([]);
+  });
+
+  it("rejects release state directories not owned by the current user", () => {
+    const fixture = createPrepareFixture();
+    const currentUid = process.getuid?.();
+    if (!Number.isInteger(currentUid)) throw new Error("fixture requires a POSIX uid");
+    const { invocations, runCommand } = createPrepareCommandRunner();
+    const options = {
+      getCurrentUid: () => Number(currentUid) + 1,
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    } as Parameters<typeof prepareLocalMacProductionRelease>[0] & {
+      getCurrentUid: () => number,
+    };
+
+    expect(() => prepareLocalMacProductionRelease(options)).toThrow(/owner|uid|current user/iu);
+    expect(invocations).toEqual([]);
+  });
+
+  it("never replaces an empty destination won by a competing prepare reservation", () => {
+    const fixture = createPrepareFixture();
+    const destinationPath = join(
+      realpathSync(fixture.paths.releaseRoot),
+      fixture.manifest.release_tag,
+    );
+    const { invocations, runCommand } = createPrepareCommandRunner();
+    const mkdir = ((path: string, options?: Parameters<typeof mkdirSync>[1]) => {
+      if (realpathSync(join(destinationPath, "..")) === realpathSync(fixture.paths.releaseRoot)
+        && path === destinationPath) {
+        mkdirSync(path, options);
+        const error = Object.assign(new Error("competing reservation won"), { code: "EEXIST" });
+        throw error;
+      }
+      return mkdirSync(path, options);
+    }) as typeof mkdirSync;
+    const options = {
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      mkdir,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    } as Parameters<typeof prepareLocalMacProductionRelease>[0] & {
+      mkdir: typeof mkdirSync,
+    };
+
+    expect(() => prepareLocalMacProductionRelease(options))
+      .toThrow(/reservation|already exists|competing/iu);
+    expect(lstatSync(destinationPath).isDirectory()).toBe(true);
+    expect(readdirSync(destinationPath)).toEqual([]);
+    expect(existsSync(join(destinationPath, "prepare.json"))).toBe(false);
+    expect(invocations).toEqual([]);
   });
 });

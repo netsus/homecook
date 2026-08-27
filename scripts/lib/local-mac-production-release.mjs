@@ -1,14 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
+  closeSync,
   constants as fsConstants,
-  copyFileSync,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   realpathSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -162,6 +163,12 @@ function sha256File(path) {
     .digest("hex");
 }
 
+function sha256Bytes(bytes) {
+  return createHash("sha256")
+    .update(bytes)
+    .digest("hex");
+}
+
 function lstatIfExists(path) {
   try {
     return lstatSync(path);
@@ -208,15 +215,71 @@ function assertSafeRegularFile(path, label) {
   }
 }
 
-function ensureSafePrivateDirectory(path, parentPath, label) {
+function readSafeRegularFileBytes(path, label) {
+  assertSafeRegularFile(path, label);
+  let fileDescriptor;
+  try {
+    fileDescriptor = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const stat = fstatSync(fileDescriptor);
+    if (!stat.isFile()) {
+      throw new Error(`${label} must remain a regular file while being read.`);
+    }
+    return readFileSync(fileDescriptor);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith(`${label} must remain`)) {
+      throw error;
+    }
+    throw new Error(`${label} could not be opened as a regular non-symlink file.`);
+  } finally {
+    if (fileDescriptor !== undefined) {
+      closeSync(fileDescriptor);
+    }
+  }
+}
+
+function requireCurrentUserUid(getCurrentUid) {
+  const currentUid = getCurrentUid();
+  if (!Number.isInteger(currentUid) || currentUid < 0) {
+    throw new Error("Current user uid is unavailable; release preparation is blocked.");
+  }
+  return currentUid;
+}
+
+function assertPrivateDirectory(path, label, currentUid) {
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    throw new Error(`${label} must remain a regular directory.`);
+  }
+  if (stat.uid !== currentUid) {
+    throw new Error(`${label} must be owned by the current user uid ${currentUid}.`);
+  }
+  if ((modeBits(stat.mode) & 0o022) !== 0) {
+    throw new Error(`${label} must not be group/world writable.`);
+  }
+}
+
+function ensureSafePrivateDirectory(path, parentPath, label, { currentUid, mkdir }) {
   const existing = lstatIfExists(path);
   if (!existing) {
-    mkdirSync(path, { mode: 0o700 });
+    mkdir(path, { mode: 0o700 });
   }
   const realParentPath = assertSafeDirectory(parentPath, `${label} parent`);
   const realPath = assertSafeDirectory(path, label);
   assertPathInside(realParentPath, realPath, label);
+  assertPrivateDirectory(path, label, currentUid);
   return realPath;
+}
+
+function reserveReleaseDestination({ destinationPath, currentUid, mkdir }) {
+  try {
+    mkdir(destinationPath, { mode: 0o700 });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "EEXIST") {
+      throw new Error("Prepared release destination reservation is already held.");
+    }
+    throw error;
+  }
+  assertPrivateDirectory(destinationPath, "Prepared release destination", currentUid);
 }
 
 function runPrepareCommand({
@@ -592,6 +655,7 @@ function requireTrustedAttestationVerification({
 /**
  * @param {{
  *   manifest: Record<string, unknown>,
+ *   manifestDigest?: string | null,
  *   manifestPath?: string | null,
  *   readGitEvidence?: (input: {
  *     manifestPath?: string | null,
@@ -611,6 +675,7 @@ function requireTrustedAttestationVerification({
  */
 export function validateLocalMacProductionReleaseManifest({
   manifest,
+  manifestDigest = null,
   manifestPath,
   readGitEvidence = readLocalMacProductionGitReleaseEvidence,
   requireAttestation = false,
@@ -786,11 +851,16 @@ export function validateLocalMacProductionReleaseManifest({
   };
 
   normalizedManifest.git_evidence = normalizedGitEvidence;
+  const normalizedManifestDigest = requireAttestation
+    ? (manifestDigest === null
+      ? (normalizedManifestPath ? sha256File(normalizedManifestPath) : null)
+      : requireDigest(manifestDigest, "manifestDigest"))
+    : null;
   normalizedManifest.attestation = requireAttestation
     ? requireTrustedAttestationVerification({
       gitEvidence: normalizedGitEvidence,
       manifest: normalizedManifest,
-      manifestDigest: normalizedManifestPath ? sha256File(normalizedManifestPath) : null,
+      manifestDigest: normalizedManifestDigest,
       manifestPath: normalizedManifestPath,
       rootDir: normalizedRootDir,
       verifyAttestation,
@@ -836,10 +906,11 @@ const LOCAL_MAC_PRODUCTION_PREPARE_COMMANDS = [
  * changing current/previous descriptors, LaunchAgents, Docker, or runtime state.
  *
  * @param {{
+ *   getCurrentUid?: () => number | undefined,
  *   homeDir?: string,
  *   manifestPath: string,
+ *   mkdir?: typeof mkdirSync,
  *   now?: Date | string | number,
- *   randomId?: () => string,
  *   readGitEvidence?: typeof readLocalMacProductionGitReleaseEvidence,
  *   rootDir?: string,
  *   runCommand?: typeof spawnSync,
@@ -847,10 +918,11 @@ const LOCAL_MAC_PRODUCTION_PREPARE_COMMANDS = [
  * }} [options]
  */
 export function prepareLocalMacProductionRelease({
+  getCurrentUid = () => process.getuid?.(),
   homeDir = process.env.HOME ?? "",
   manifestPath,
+  mkdir = mkdirSync,
   now = new Date(),
-  randomId = randomUUID,
   readGitEvidence = readLocalMacProductionGitReleaseEvidence,
   rootDir = process.cwd(),
   runCommand = spawnSync,
@@ -861,9 +933,17 @@ export function prepareLocalMacProductionRelease({
   const normalizedManifestPath = requireAbsolutePath(manifestPath, "releaseManifestPath");
   const realHomeDir = assertSafeDirectory(normalizedHomeDir, "homeDir");
   const realRootDir = assertSafeDirectory(normalizedRootDir, "rootDir");
-  assertSafeRegularFile(normalizedManifestPath, "Release manifest");
+  const manifestBytes = readSafeRegularFileBytes(normalizedManifestPath, "Release manifest");
+  const manifestDigest = sha256Bytes(manifestBytes);
+  let manifestInput;
+  try {
+    manifestInput = JSON.parse(manifestBytes.toString("utf8"));
+  } catch {
+    throw new Error(`Release manifest is unreadable or invalid: ${normalizedManifestPath}`);
+  }
   const manifest = validateLocalMacProductionReleaseManifest({
-    manifest: readJsonFile(normalizedManifestPath, "Release manifest"),
+    manifest: manifestInput,
+    manifestDigest,
     manifestPath: normalizedManifestPath,
     readGitEvidence,
     requireAttestation: true,
@@ -871,13 +951,18 @@ export function prepareLocalMacProductionRelease({
     verifyAttestation,
   });
 
+  const currentUid = requireCurrentUserUid(getCurrentUid);
   const paths = getLocalMacProductionReleasePaths(realHomeDir);
   const homecookRoot = dirname(paths.releaseRoot);
-  ensureSafePrivateDirectory(homecookRoot, realHomeDir, "Homecook state directory");
+  ensureSafePrivateDirectory(homecookRoot, realHomeDir, "Homecook state directory", {
+    currentUid,
+    mkdir,
+  });
   const realReleaseRoot = ensureSafePrivateDirectory(
     paths.releaseRoot,
     homecookRoot,
     "Local Mac production release root",
+    { currentUid, mkdir },
   );
   const destinationPath = join(realReleaseRoot, manifest.release_tag);
   assertPathInside(realReleaseRoot, destinationPath, "Prepared release destination");
@@ -885,19 +970,9 @@ export function prepareLocalMacProductionRelease({
     destinationPath,
     releaseSha: manifest.release_sha,
   });
+  reserveReleaseDestination({ destinationPath, currentUid, mkdir });
 
-  const attemptId = requireNonEmptyString(randomId(), "prepare attempt id");
-  if (!/^[0-9A-Za-z-]+$/u.test(attemptId)) {
-    throw new Error("prepare attempt id contains unsafe path characters.");
-  }
-  const stagingPath = join(realReleaseRoot, `.prepare-${manifest.release_tag}-${attemptId}`);
-  assertPathInside(realReleaseRoot, stagingPath, "Prepared release staging directory");
-  if (lstatIfExists(stagingPath)) {
-    throw new Error("Prepared release staging directory already exists; attempt reuse is blocked.");
-  }
-  mkdirSync(stagingPath, { mode: 0o700 });
-
-  try {
+  {
     runPrepareCommand({
       args: [
         "clone",
@@ -905,7 +980,7 @@ export function prepareLocalMacProductionRelease({
         "--no-hardlinks",
         "--no-local",
         realRootDir,
-        stagingPath,
+        destinationPath,
       ],
       command: "git",
       cwd: realReleaseRoot,
@@ -915,14 +990,14 @@ export function prepareLocalMacProductionRelease({
     runPrepareCommand({
       args: ["checkout", "--detach", manifest.release_sha],
       command: "git",
-      cwd: stagingPath,
+      cwd: destinationPath,
       label: "Exact detached release checkout",
       runCommand,
     });
 
     const checkedOutSha = readPrepareGitValue({
       args: ["rev-parse", "HEAD"],
-      cwd: stagingPath,
+      cwd: destinationPath,
       label: "Prepared release checkout SHA",
       runCommand,
     });
@@ -931,35 +1006,35 @@ export function prepareLocalMacProductionRelease({
     }
     const checkedOutTree = readPrepareGitValue({
       args: ["rev-parse", "HEAD^{tree}"],
-      cwd: stagingPath,
+      cwd: destinationPath,
       label: "Prepared release checkout tree",
       runCommand,
     });
     if (checkedOutTree !== manifest.release_tree) {
       throw new Error("Prepared release checkout tree does not equal the exact approved release tree.");
     }
-    assertDetachedPrepareCheckout({ checkoutDir: stagingPath, runCommand });
-    assertCleanTrackedPrepareCheckout({ checkoutDir: stagingPath, runCommand });
-    assertTrackedSymlinksStayInsideCheckout({ checkoutDir: stagingPath, runCommand });
+    assertDetachedPrepareCheckout({ checkoutDir: destinationPath, runCommand });
+    assertCleanTrackedPrepareCheckout({ checkoutDir: destinationPath, runCommand });
+    assertTrackedSymlinksStayInsideCheckout({ checkoutDir: destinationPath, runCommand });
 
     for (const command of LOCAL_MAC_PRODUCTION_PREPARE_COMMANDS) {
       runPrepareCommand({
         ...command,
-        cwd: stagingPath,
+        cwd: destinationPath,
         runCommand,
       });
     }
 
-    assertCleanTrackedPrepareCheckout({ checkoutDir: stagingPath, runCommand });
+    assertCleanTrackedPrepareCheckout({ checkoutDir: destinationPath, runCommand });
     const finalSha = readPrepareGitValue({
       args: ["rev-parse", "HEAD"],
-      cwd: stagingPath,
+      cwd: destinationPath,
       label: "Final prepared release checkout SHA",
       runCommand,
     });
     const finalTree = readPrepareGitValue({
       args: ["rev-parse", "HEAD^{tree}"],
-      cwd: stagingPath,
+      cwd: destinationPath,
       label: "Final prepared release checkout tree",
       runCommand,
     });
@@ -981,28 +1056,22 @@ export function prepareLocalMacProductionRelease({
       release_tree: manifest.release_tree,
       build_id: manifest.build_id,
       source_manifest_path: manifest.release_manifest_path,
-      source_manifest_sha256: sha256File(normalizedManifestPath),
+      source_manifest_sha256: manifestDigest,
       attestation_source: manifest.attestation.source,
       validation_commands: LOCAL_MAC_PRODUCTION_PREPARE_COMMANDS.map(
         ({ command, args }) => ({ command, args: [...args] }),
       ),
     };
-    copyFileSync(
-      normalizedManifestPath,
-      join(stagingPath, "release-manifest.json"),
-      fsConstants.COPYFILE_EXCL,
+    writeFileSync(
+      join(destinationPath, "release-manifest.json"),
+      manifestBytes,
+      { flag: "wx", mode: 0o600 },
     );
     writeFileSync(
-      join(stagingPath, "prepare.json"),
+      join(destinationPath, "prepare.json"),
       JSON.stringify(descriptor, null, 2),
       { encoding: "utf8", flag: "wx", mode: 0o600 },
     );
-
-    assertReleaseDestinationAvailable({
-      destinationPath,
-      releaseSha: manifest.release_sha,
-    });
-    renameSync(stagingPath, destinationPath);
 
     return {
       current_head_sha: manifest.git_evidence.originMasterSha,
@@ -1011,11 +1080,6 @@ export function prepareLocalMacProductionRelease({
       prepared: true,
       release_dir: destinationPath,
     };
-  } catch (error) {
-    if (lstatIfExists(stagingPath)) {
-      rmSync(stagingPath, { force: true, recursive: true });
-    }
-    throw error;
   }
 }
 
