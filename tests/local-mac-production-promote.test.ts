@@ -834,6 +834,77 @@ describe("local Mac production promote", () => {
     expect(existsSync(fixture.paths.lockPath)).toBe(true);
   });
 
+  it("rewrites an absolute internal symlink so original candidate mutation cannot affect execution", async () => {
+    const fixture = createFixture();
+    const sourceTarget = join(fixture.releaseDir, "runtime-target.txt");
+    const sourceLink = join(fixture.releaseDir, "runtime-link.txt");
+    writeFileSync(sourceTarget, "sealed-original\n", { mode: 0o600 });
+    symlinkSync(sourceTarget, sourceLink);
+    const installBundle = vi.fn(async ({ executionSnapshot }) => {
+      const snapshotLink = join(executionSnapshot.appRoot, "runtime-link.txt");
+      expect(realpathSync(snapshotLink).startsWith(`${executionSnapshot.appRoot}/`)).toBe(true);
+      expect(readFileSync(snapshotLink, "utf8")).toBe("sealed-original\n");
+      return { installed: true };
+    });
+
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      afterLockedPreflight: () => {
+        writeFileSync(sourceTarget, "mutated-original\n");
+      },
+      installBundle,
+    })).resolves.toMatchObject({ promoted: true });
+  });
+
+  it("rejects an execution symlink whose resolved target escapes the candidate root", async () => {
+    const fixture = createFixture();
+    const external = join(createTempDirectory("homecook-snapshot-link-external-"), "outside.txt");
+    writeFileSync(external, "outside\n", { mode: 0o600 });
+    symlinkSync(external, join(fixture.releaseDir, "outside-link.txt"));
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/symlink.*target|escape|outside|contain/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+  });
+
+  it("keeps a relative internal symlink contained inside the sealed snapshot", async () => {
+    const fixture = createFixture();
+    writeFileSync(join(fixture.releaseDir, "relative-target.txt"), "relative\n", { mode: 0o600 });
+    symlinkSync("relative-target.txt", join(fixture.releaseDir, "relative-link.txt"));
+    const installBundle = vi.fn(async ({ executionSnapshot }) => {
+      const snapshotLink = join(executionSnapshot.appRoot, "relative-link.txt");
+      expect(realpathSync(snapshotLink).startsWith(`${executionSnapshot.appRoot}/`)).toBe(true);
+      expect(readFileSync(snapshotLink, "utf8")).toBe("relative\n");
+      return { installed: true };
+    });
+
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      installBundle,
+    })).resolves.toMatchObject({ promoted: true });
+  });
+
+  it("blocks when a regular execution source mutates during copy", async () => {
+    const fixture = createFixture();
+    const buildIdPath = join(fixture.releaseDir, ".next", "BUILD_ID");
+    const options = {
+      ...promoteOptions(fixture),
+      executionCopyHook: ({ phase, source }: { phase: string; source: string }) => {
+        if (phase === "after_file_copy" && realpathSync(source) === realpathSync(buildIdPath)) {
+          chmodSync(source, 0o600);
+          writeFileSync(source, "copy-raced-build\n");
+        }
+      },
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0] & {
+      executionCopyHook: (input: { phase: string; source: string }) => void;
+    };
+
+    await expect(promoteLocalMacProductionRelease(options))
+      .rejects.toThrow(/execution source|copy|digest|drift|mutat/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
+
   it("updates previous/current only after the whole bundle is ready at one exact identity", async () => {
     const fixture = createFixture();
     const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
