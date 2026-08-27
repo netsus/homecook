@@ -25,6 +25,7 @@ import {
 } from "./full-local-launch-agent.mjs";
 import {
   FULL_LOCAL_RESUME_CURRENT_CAPABILITY,
+  LOCAL_MAC_PRODUCTION_ONE_TIME_PREDECESSOR_ADOPTION,
   getLocalMacProductionReleasePaths,
   readLocalMacProductionPreparedReleaseIdentity,
   readLocalMacProductionRuntimeIdentity,
@@ -43,7 +44,9 @@ import {
   YOUTUBE_EXTRACTION_WORKER_INSTALL_CONFIRMATION,
 } from "./youtube-extraction-worker-ops.mjs";
 import {
+  readYoutubeExtractionWorkerArtifact,
   sha256File,
+  stableStringify,
   verifyYoutubeExtractionWorkerArtifact,
 } from "./youtube-extraction-worker-artifact.mjs";
 import {
@@ -420,6 +423,200 @@ async function readI031PreflightDefault(
   };
 }
 
+async function readOneTimePredecessorRuntimeBundleDefault({
+  commandRunner = spawnSync,
+  context,
+  options,
+}) {
+  const adoption = context.predecessorAdoption;
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+  if (!adoption?.runtime_paths) {
+    throw new Error("One-time predecessor runtime path authority is missing.");
+  }
+  const expected = LOCAL_MAC_PRODUCTION_ONE_TIME_PREDECESSOR_ADOPTION.components;
+  const appRoot = realpathSync(adoption.runtime_paths.app_root);
+  const fullLocalRoot = realpathSync(adoption.runtime_paths.full_local_root);
+  const workerRoot = realpathSync(adoption.runtime_paths.worker_root);
+  const workerManifestPath = realpathSync(adoption.runtime_paths.worker_manifest);
+  if (
+    appRoot !== adoption.runtime_paths.app_root
+    || fullLocalRoot !== adoption.runtime_paths.full_local_root
+    || workerRoot !== adoption.runtime_paths.worker_root
+    || workerManifestPath !== adoption.runtime_paths.worker_manifest
+  ) {
+    throw new Error("One-time predecessor runtime path resolved through a symlink.");
+  }
+
+  const appPlist = assertCanonicalLocalMacProductionPlist({
+    actualPath: getLocalMacProductionPaths(options.homeDir).plistPath,
+    currentUid,
+    expectedContent: renderLocalMacProductionPlist({
+      homeDir: options.homeDir,
+      nodeBin: options.nodeBin,
+      rootDir: appRoot,
+    }),
+    expectedMode: 0o644,
+    label: "One-time predecessor app plist",
+    trustedRoot: options.homeDir,
+  });
+  if (realpathSync(appPlist.workingDirectory) !== appRoot) {
+    throw new Error("One-time predecessor app plist working directory drifted.");
+  }
+  const appGit = readExactAdoptionGitIdentity({
+    commandRunner,
+    expected: expected.app,
+    rootDir: appRoot,
+  });
+  const appStatus = readLocalMacProductionStatus({ spawn: commandRunner });
+  if (!appStatus.running || !Number.isInteger(appStatus.pid)) {
+    throw new Error("One-time predecessor app runtime is not running.");
+  }
+  if (readProcessCwd({ pid: appStatus.pid, spawn: commandRunner }) !== appRoot) {
+    throw new Error("One-time predecessor app runtime cwd drifted.");
+  }
+
+  const fullLocalPlist = assertCanonicalLocalMacProductionPlist({
+    actualPath: getFullLocalLaunchAgentPaths(options.homeDir).plistPath,
+    currentUid,
+    expectedContent: renderFullLocalLaunchAgentPlist({
+      configPath: adoption.runtime_paths.full_local_config,
+      homeDir: options.homeDir,
+      includeReleaseIdentity: false,
+      nodeBin: options.nodeBin,
+      rootDir: fullLocalRoot,
+      runtimeCommand: expected.full_local.runtime_command,
+    }),
+    expectedMode: 0o600,
+    label: "One-time predecessor full-local plist",
+    trustedRoot: options.homeDir,
+  });
+  if (realpathSync(fullLocalPlist.workingDirectory) !== fullLocalRoot) {
+    throw new Error("One-time predecessor full-local plist working directory drifted.");
+  }
+  const fullLocalGit = readExactAdoptionGitIdentity({
+    commandRunner,
+    expected: expected.full_local,
+    rootDir: fullLocalRoot,
+  });
+  const fullLocalWorkload = readExactAdoptionFullLocalWorkload({
+    commandRunner,
+    currentUid,
+  });
+
+  const workerPlist = readPlistSnapshot(
+    getYoutubeExtractionWorkerPaths(options.homeDir).plistPath,
+    {
+      currentUid,
+      expectedMode: 0o600,
+      label: "One-time predecessor YouTube worker plist",
+      trustedRoot: options.homeDir,
+    },
+  );
+  const currentWorkerPaths = {
+    appDescriptorPath: argumentValue(workerPlist.args, "--app-descriptor"),
+    configPath: argumentValue(workerPlist.args, "--config"),
+    workerArtifactPath: argumentValue(workerPlist.args, "--manifest"),
+    currentPolicyPath: argumentValue(workerPlist.args, "--policy"),
+    credentialPath: argumentValue(workerPlist.args, "--credential"),
+    expectedSchemaPath: argumentValue(workerPlist.args, "--expected-schema"),
+    secretRoot: argumentValue(workerPlist.args, "--secret-root"),
+  };
+  if (Object.values(currentWorkerPaths).some((value) => !value)) {
+    throw new Error("One-time predecessor worker plist runtime paths are incomplete.");
+  }
+  if (
+    realpathSync(workerPlist.workingDirectory) !== workerRoot
+    || realpathSync(currentWorkerPaths.workerArtifactPath) !== workerManifestPath
+  ) {
+    throw new Error("One-time predecessor worker artifact or manifest path drifted.");
+  }
+  const expectedWorkerFlags = [
+    "--app-descriptor",
+    "--config",
+    "--credential",
+    "--expected-schema",
+    "--manifest",
+    "--policy",
+    "--secret-root",
+  ];
+  const observedWorkerFlags = workerPlist.args.filter((argument) =>
+    argument.startsWith("--")).sort();
+  if (
+    workerPlist.args[0] !== "/usr/bin/env"
+    || workerPlist.args[1] !== "-i"
+    || workerPlist.args[2] !== `HOME=${options.homeDir}`
+    || workerPlist.args[4] !== options.nodeBin
+    || workerPlist.args[5] !== resolve(workerRoot, "scripts/youtube-extraction-worker-runner.mjs")
+    || workerPlist.args[6] !== "run"
+    || JSON.stringify(observedWorkerFlags) !== JSON.stringify(expectedWorkerFlags)
+  ) {
+    throw new Error("One-time predecessor worker plist command drifted.");
+  }
+  assertReadOnlyArtifactRoot(workerRoot);
+  const workerArtifact = verifyExactAdoptionWorkerArtifact(
+    workerManifestPath,
+    expected.youtube_worker,
+  );
+  const currentWorkerPreflight = evaluateYoutubeExtractionWorkerPreflight(
+    loadYoutubeExtractionWorkerRuntimeInputs({
+      ...currentWorkerPaths,
+      expectedSchemaPath: null,
+    }),
+  );
+  if (
+    !currentWorkerPreflight.ready
+    || currentWorkerPreflight.release_sha !== expected.youtube_worker.release_sha
+  ) {
+    throw new Error("One-time predecessor worker runtime preflight drifted.");
+  }
+  const serviceTarget = buildYoutubeExtractionWorkerServiceTarget({ userId: currentUid });
+  const workerRaw = commandRunner("/bin/launchctl", ["print", serviceTarget], {
+    encoding: "utf8",
+  });
+  const workerStatus = parseLaunchctlPrintStatus({
+    serviceTarget,
+    status: workerRaw.status,
+    stderr: workerRaw.stderr,
+    stdout: workerRaw.stdout,
+  });
+  if (
+    !workerStatus.loaded
+    || !["running", "waiting"].includes(workerStatus.state)
+    || !Number.isInteger(workerStatus.pid)
+    || readProcessCwd({ pid: workerStatus.pid, spawn: commandRunner }) !== workerRoot
+  ) {
+    throw new Error("One-time predecessor worker runtime drifted.");
+  }
+
+  return {
+    stable_key: sha256Text(JSON.stringify({
+      app_pid: appStatus.pid,
+      app_plist: appPlist.digest,
+      full_local_plist: fullLocalPlist.digest,
+      full_local_workload: fullLocalWorkload.workload_digest,
+      worker_pid: workerStatus.pid,
+      worker_plist: workerPlist.digest,
+      worker_artifact: workerArtifact.artifact_sha256,
+      worker_preflight: currentWorkerPreflight.checks,
+    })),
+    predecessor_adoption_contract: adoption.contract,
+    app: { ...appGit, ready: true, pid: appStatus.pid },
+    full_local: {
+      ...fullLocalGit,
+      ready: true,
+      runtime_command: expected.full_local.runtime_command,
+      service_count: fullLocalWorkload.service_count,
+    },
+    youtube_worker: {
+      release_sha: workerArtifact.release_sha,
+      artifact_sha256: workerArtifact.artifact_sha256,
+      ready: true,
+      pid: workerStatus.pid,
+    },
+  };
+}
+
 function requireFunction(value, label) {
   if (typeof value !== "function") {
     throw new Error(`${label} dependency is not configured.`);
@@ -439,6 +636,215 @@ function assertExactIdentity(component, state, expected) {
   ) {
     throw new Error(`Current ${component} runtime identity drifted from the current descriptor.`);
   }
+}
+
+function assertOneTimePredecessorRuntimeIdentity(current, adoption) {
+  const expected = LOCAL_MAC_PRODUCTION_ONE_TIME_PREDECESSOR_ADOPTION;
+  if (
+    adoption?.schema !== expected.schema
+    || adoption.contract !== expected.contract
+    || adoption.predecessor_release_sha !== expected.predecessor_release_sha
+    || current?.predecessor_adoption_contract !== expected.contract
+  ) {
+    throw new Error("One-time predecessor adoption contract drifted.");
+  }
+  for (const component of ["app", "full_local", "youtube_worker"]) {
+    const observed = current?.[component];
+    const componentExpected = expected.components[component];
+    if (!observed || observed.ready !== true) {
+      throw new Error(`One-time predecessor ${component} runtime is not ready.`);
+    }
+    for (const [field, value] of Object.entries(componentExpected)) {
+      if (observed[field] !== value || adoption.components?.[component]?.[field] !== value) {
+        throw new Error(`One-time predecessor ${component}.${field} drifted.`);
+      }
+    }
+  }
+}
+
+function readExactAdoptionGitIdentity({ commandRunner, expected, rootDir }) {
+  const realRoot = realpathSync(rootDir);
+  const runGit = (args, label) => {
+    const result = commandRunner("/usr/bin/git", args, {
+      cwd: realRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (result.status !== 0) throw new Error(`One-time predecessor ${label} failed.`);
+    return String(result.stdout ?? "").trim();
+  };
+  const releaseSha = runGit(["rev-parse", "HEAD"], "release SHA read");
+  const releaseTree = runGit(["rev-parse", "HEAD^{tree}"], "release tree read");
+  const trackedStatus = runGit(
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    "source status read",
+  );
+  const symbolicRef = commandRunner("/usr/bin/git", ["symbolic-ref", "-q", "HEAD"], {
+    cwd: realRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const buildIdPath = resolve(realRoot, ".next", "BUILD_ID");
+  const buildIdStat = lstatSync(buildIdPath);
+  const currentUid = process.getuid?.();
+  if (
+    buildIdStat.isSymbolicLink()
+    || !buildIdStat.isFile()
+    || (Number.isInteger(currentUid) && buildIdStat.uid !== currentUid)
+    || (modeBits(buildIdStat.mode) & 0o022) !== 0
+  ) {
+    throw new Error("One-time predecessor build ID authority is unsafe.");
+  }
+  const buildId = readFileSync(buildIdPath, "utf8").trim();
+  if (
+    realRoot !== rootDir
+    || trackedStatus.length !== 0
+    || symbolicRef.status !== 1
+    || releaseSha !== expected.release_sha
+    || releaseTree !== expected.release_tree
+    || buildId !== expected.build_id
+  ) {
+    throw new Error("One-time predecessor checkout identity drifted.");
+  }
+  return { release_sha: releaseSha, release_tree: releaseTree, build_id: buildId };
+}
+
+function readExactAdoptionFullLocalWorkload({ commandRunner, currentUid }) {
+  const project = "homecook-full-local-isolated";
+  const expectedServices = [
+    "api-gateway",
+    "auth",
+    "auth-proxy",
+    "postgres",
+    "postgrest",
+    "postgrest-probe",
+    "storage",
+  ];
+  const launchctl = commandRunner(
+    "/bin/launchctl",
+    ["print", `gui/${currentUid}/com.homecook.full-local.production`],
+    { encoding: "utf8" },
+  );
+  const launchctlText = String(launchctl.stdout ?? "");
+  if (
+    launchctl.status !== 0
+    || !/^\s*state = not running$/mu.test(launchctlText)
+    || !/^\s*last exit code = 0$/mu.test(launchctlText)
+  ) {
+    throw new Error("One-time predecessor full-local LaunchAgent state drifted.");
+  }
+  const listed = commandRunner("docker", [
+    "container",
+    "ls",
+    "--filter",
+    `label=com.docker.compose.project=${project}`,
+    "--quiet",
+  ], { encoding: "utf8" });
+  const containerIds = String(listed.stdout ?? "").trim().split(/\r?\n/u).filter(Boolean);
+  if (listed.status !== 0 || containerIds.length !== expectedServices.length) {
+    throw new Error("One-time predecessor full-local container inventory drifted.");
+  }
+  const inspected = commandRunner(
+    "docker",
+    ["container", "inspect", ...containerIds],
+    { encoding: "utf8" },
+  );
+  let containers;
+  try {
+    containers = JSON.parse(String(inspected.stdout ?? ""));
+  } catch {
+    throw new Error("One-time predecessor full-local container inspection was invalid.");
+  }
+  if (inspected.status !== 0 || !Array.isArray(containers)) {
+    throw new Error("One-time predecessor full-local container inspection failed.");
+  }
+  const observedServices = containers.map((container) =>
+    container?.Config?.Labels?.["com.docker.compose.service"] ?? "").sort();
+  if (JSON.stringify(observedServices) !== JSON.stringify(expectedServices)) {
+    throw new Error("One-time predecessor full-local service set drifted.");
+  }
+  const identityLabels = [
+    "homecook.release.sha",
+    "homecook.release.tree",
+    "homecook.release.build-id",
+    "homecook.release.promotion-id",
+  ];
+  if (containers.some((container) =>
+    container?.Config?.Labels?.["com.docker.compose.project"] !== project
+    || container?.State?.Running !== true
+    || (container?.State?.Health && container.State.Health.Status !== "healthy")
+    || identityLabels.some((label) => {
+      const value = container?.Config?.Labels?.[label];
+      return value !== undefined && value !== null && value !== "";
+    }))) {
+    throw new Error("One-time predecessor full-local workload drifted.");
+  }
+  return {
+    service_count: containers.length,
+    services: observedServices,
+    workload_digest: sha256Text(JSON.stringify(containers.map((container) => ({
+      health: container?.State?.Health?.Status ?? null,
+      id: container?.Id,
+      running: container?.State?.Running,
+      service: container?.Config?.Labels?.["com.docker.compose.service"],
+    })).sort((left, right) => left.service.localeCompare(right.service)))),
+  };
+}
+
+function verifyExactAdoptionWorkerArtifact(manifestPath, expected) {
+  const artifact = readYoutubeExtractionWorkerArtifact(manifestPath);
+  const { artifact_sha256: artifactSha256, ...baseManifest } = artifact;
+  if (
+    artifact.version !== 1
+    || artifact.release_sha !== expected.release_sha
+    || artifactSha256 !== expected.artifact_sha256
+    || artifactSha256 !== sha256Text(stableStringify(baseManifest))
+    || !Array.isArray(artifact.files)
+    || artifact.files.length === 0
+  ) {
+    throw new Error("One-time predecessor worker artifact identity drifted.");
+  }
+  const artifactRoot = dirname(manifestPath);
+  const declaredPaths = [];
+  const seenPaths = new Set();
+  for (const file of artifact.files) {
+    if (
+      !file
+      || typeof file.path !== "string"
+      || file.path.startsWith("/")
+      || file.path.split("/").includes("..")
+      || !/^[a-f0-9]{64}$/u.test(file.sha256 ?? "")
+      || seenPaths.has(file.path)
+    ) {
+      throw new Error("One-time predecessor worker artifact inventory is invalid.");
+    }
+    const target = resolve(artifactRoot, file.path);
+    const stat = lstatSync(target);
+    if (
+      stat.isSymbolicLink()
+      || !stat.isFile()
+      || relative(artifactRoot, target) !== file.path
+      || sha256File(target) !== file.sha256
+    ) {
+      throw new Error(`One-time predecessor worker artifact file drifted: ${file.path}`);
+    }
+    seenPaths.add(file.path);
+    declaredPaths.push(file.path);
+  }
+  const materializedPaths = [];
+  const visit = (path) => {
+    for (const name of readdirSync(path)) {
+      const target = resolve(path, name);
+      const stat = lstatSync(target);
+      if (stat.isDirectory()) visit(target);
+      else if (target !== manifestPath) materializedPaths.push(relative(artifactRoot, target));
+    }
+  };
+  visit(artifactRoot);
+  if (JSON.stringify(materializedPaths.sort()) !== JSON.stringify(declaredPaths.sort())) {
+    throw new Error("One-time predecessor worker artifact inventory drifted.");
+  }
+  return artifact;
 }
 
 const WORKER_PATH_AUTHORITY_FIELDS = Object.freeze([
@@ -492,6 +898,8 @@ function buildDefaultDependencies(
       if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
       return readCanonicalFullLocalConfigEvidence({ currentUid, options });
     },
+    readOneTimePredecessorRuntimeBundle: (input) =>
+      readOneTimePredecessorRuntimeBundleDefault({ ...input, commandRunner }),
     validateMutationTargets: ({ options }) => {
       const currentUid = process.getuid?.();
       if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
@@ -1040,6 +1448,10 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
     resolvedDependencies.readCurrentRuntimeBundle,
     "readCurrentRuntimeBundle",
   );
+  const readOneTimePredecessorRuntimeBundle = requireFunction(
+    resolvedDependencies.readOneTimePredecessorRuntimeBundle,
+    "readOneTimePredecessorRuntimeBundle",
+  );
   const installFullLocal = requireFunction(resolvedDependencies.installFullLocal, "installFullLocal");
   const startFullLocal = requireFunction(resolvedDependencies.startFullLocal, "startFullLocal");
   const confirmFullLocalCandidate = requireFunction(
@@ -1082,12 +1494,18 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
         throw new Error("Worker release preflight does not match the exact promoted release.");
       }
       const workerPathAuthority = assertWorkerPathAuthority(worker);
-      const current = await readCurrentRuntimeBundle({ context, options });
+      const current = context.predecessorAdoption
+        ? await readOneTimePredecessorRuntimeBundle({ context, options })
+        : await readCurrentRuntimeBundle({ context, options });
       if (!current || typeof current.stable_key !== "string" || current.stable_key.length === 0) {
         throw new Error("Current runtime bundle preflight did not produce stable evidence.");
       }
-      for (const component of ["app", "full_local", "youtube_worker"]) {
-        assertExactIdentity(component, current[component], context.currentDescriptor);
+      if (context.predecessorAdoption) {
+        assertOneTimePredecessorRuntimeIdentity(current, context.predecessorAdoption);
+      } else {
+        for (const component of ["app", "full_local", "youtube_worker"]) {
+          assertExactIdentity(component, current[component], context.currentDescriptor);
+        }
       }
       const stableKey = sha256Text(JSON.stringify({
         current: current.stable_key,
