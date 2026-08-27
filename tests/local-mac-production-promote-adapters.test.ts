@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   realpathSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -22,7 +23,15 @@ import * as promoteAdapters from "../scripts/lib/local-mac-production-promote-ad
 import { renderLocalMacProductionPlist } from "../scripts/lib/local-mac-production.mjs";
 import { renderFullLocalLaunchAgentPlist } from "../scripts/lib/full-local-launch-agent.mjs";
 import {
+  buildYoutubeExtractionAppDescriptor,
+  buildYoutubeExtractionCurrentPolicy,
+  materializeYoutubeExtractionWorkerArtifact,
+  YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+} from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
+import {
+  buildYoutubeExtractionWorkerCredentialState,
   renderYoutubeExtractionWorkerPlist,
+  writeCredentialMetadata,
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
@@ -51,9 +60,19 @@ const temporaryDirectories: string[] = [];
 
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
-    rmSync(temporaryDirectories.pop()!, { recursive: true, force: true });
+    const directory = temporaryDirectories.pop()!;
+    makeTemporaryTreeRemovable(directory);
+    rmSync(directory, { recursive: true, force: true });
   }
 });
+
+function makeTemporaryTreeRemovable(path: string) {
+  if (!existsSync(path)) return;
+  for (const entry of readdirSync(path, { withFileTypes: true })) {
+    if (entry.isDirectory()) makeTemporaryTreeRemovable(join(path, entry.name));
+  }
+  chmodSync(path, 0o700);
+}
 
 function createOptions(overrides: Record<string, unknown> = {}) {
   return {
@@ -194,6 +213,87 @@ function createContext(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function createDefaultWorkerPreflightFixture() {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "homecook-default-worker-preflight-")));
+  temporaryDirectories.push(root);
+  const homeDir = join(root, "home");
+  const secretRoot = join(root, "worker-secrets");
+  const releaseDir = join(root, "app-candidate");
+  const artifactRoot = join(root, "worker-artifact");
+  mkdirSync(homeDir, { mode: 0o700 });
+  mkdirSync(secretRoot, { mode: 0o700 });
+  mkdirSync(releaseDir, { mode: 0o700 });
+
+  const snapshotDigest = "e".repeat(64);
+  const materialized = materializeYoutubeExtractionWorkerArtifact({
+    rootDir: process.cwd(),
+    outputDir: artifactRoot,
+    releaseSha: RELEASE_IDENTITY.release_sha,
+    releaseTree: RELEASE_IDENTITY.release_tree,
+    buildId: RELEASE_IDENTITY.build_id,
+    promotionId: RELEASE_IDENTITY.promotion_id,
+    schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+    allowedSnapshotDigest: snapshotDigest,
+  });
+  const appDescriptorPath = join(root, "app-descriptor.json");
+  const policyPath = join(root, "policy.json");
+  const tokenPath = join(secretRoot, "worker.jwt");
+  const credentialPath = join(secretRoot, "credential.json");
+  const providerSecretPath = join(secretRoot, "provider.env");
+  const configPath = join(secretRoot, "worker.env");
+  writeFileSync(tokenPath, "worker-token\n", { mode: 0o600 });
+  writeFileSync(providerSecretPath, "YOUTUBE_API_KEY=test-key\n", { mode: 0o600 });
+  writeFileSync(
+    configPath,
+    `HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=${providerSecretPath}\n`,
+    { mode: 0o600 },
+  );
+  writeFileSync(appDescriptorPath, JSON.stringify(buildYoutubeExtractionAppDescriptor({
+    releaseSha: RELEASE_IDENTITY.release_sha,
+    schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+    expectedPolicyVersion: 1,
+    expectedPolicySnapshotDigest: snapshotDigest,
+    artifactSha256: materialized.manifest.artifact_sha256,
+    expectedSchemaSha256: materialized.manifest.expected_schema_sha256,
+  })), { mode: 0o600 });
+  writeFileSync(policyPath, JSON.stringify(buildYoutubeExtractionCurrentPolicy({
+    policySnapshotDigest: snapshotDigest,
+    enabled: true,
+  })), { mode: 0o600 });
+  writeCredentialMetadata(
+    credentialPath,
+    buildYoutubeExtractionWorkerCredentialState({
+      tokenFile: tokenPath,
+      generation: 1,
+      jtiHash: "f".repeat(64),
+      expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      releaseSha: RELEASE_IDENTITY.release_sha,
+      schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+      allowedSnapshotDigest: snapshotDigest,
+      secretRoot,
+    }),
+    { secretRoot },
+  );
+
+  return {
+    context: createContext({ homeDir, releaseDir }),
+    options: createOptions({
+      homeDir,
+      workerAppDescriptorPath: appDescriptorPath,
+      workerConfigPath: configPath,
+      workerCredentialPath: credentialPath,
+      workerExpectedSchemaPath: join(
+        artifactRoot,
+        "scripts/manifests/youtube-extraction-expected-schema.json",
+      ),
+      workerManifestPath: materialized.manifest_path,
+      workerPolicyPath: policyPath,
+      workerSecretRoot: secretRoot,
+    }),
+    policyPath,
+  };
+}
+
 describe("local Mac production promote adapters", () => {
   it("provides an importable adapter composition module", () => {
     expect(existsSync(join(
@@ -235,6 +335,29 @@ describe("local Mac production promote adapters", () => {
     );
   });
 
+  it("runs the default worker release preflight from the explicit candidate authority paths", async () => {
+    const fixture = createDefaultWorkerPreflightFixture();
+    const readCurrentRuntimeBundle = vi.fn(async () => ({
+      stable_key: "current-runtime-stable",
+      app: { ...CURRENT_IDENTITY, ready: true },
+      full_local: { ...CURRENT_IDENTITY, ready: true },
+      youtube_worker: { ...CURRENT_IDENTITY, ready: true },
+    }));
+    const adapters = createLocalMacProductionPromoteAdapters(fixture.options, {
+      validateMutationTargets: vi.fn(),
+      readCurrentRuntimeBundle,
+      i031PreflightVerifier: vi.fn(async () => ({
+        codexCliVersion: "0.144.0-alpha.4",
+      })),
+    });
+
+    const preflight = await adapters.preflightBundle(fixture.context);
+
+    expect(preflight.worker.preflight.ready).toBe(true);
+    expect(preflight.worker.policyPath).toBe(realpathSync(fixture.policyPath));
+    expect(readCurrentRuntimeBundle).toHaveBeenCalledOnce();
+  });
+
   it("installs the worker from its separately attested artifact root", async () => {
     const { calls, dependencies } = createDependencies();
     const adapters = createLocalMacProductionPromoteAdapters(createOptions(), dependencies);
@@ -245,7 +368,7 @@ describe("local Mac production promote adapters", () => {
 
     expect(dependencies.installFullLocal).toHaveBeenCalledWith(expect.objectContaining({
       rootDir: context.releaseDir,
-      runtimeCommand: "status",
+      runtimeCommand: "start",
     }));
     expect(dependencies.installApp).toHaveBeenCalledWith(expect.objectContaining({
       rootDir: context.releaseDir,

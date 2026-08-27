@@ -259,7 +259,7 @@ function readFullLocalWorkloadDefault({
       nodeBin: options.nodeBin,
       releaseIdentityPath: resolve(context.releaseDir, "prepare.json"),
       rootDir: context.releaseDir,
-      runtimeCommand: allowLegacyBootstrap ? "start" : "status",
+      runtimeCommand: "start",
       includeReleaseIdentity: !allowLegacyBootstrap,
     }),
     expectedMode: 0o600,
@@ -458,6 +458,10 @@ function buildDefaultDependencies(
         expectedUserId: userId,
         secretRoot: options.workerSecretRoot,
       });
+      const artifactRoot = assertReadOnlyArtifactRoot(dirname(options.workerManifestPath));
+      if (artifactRoot === realpathSync(context.releaseDir)) {
+        throw new Error("Worker artifact root must remain separate from the app release candidate.");
+      }
       const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
         appDescriptorPath: options.workerAppDescriptorPath,
         workerArtifactPath: options.workerManifestPath,
@@ -467,10 +471,6 @@ function buildDefaultDependencies(
         secretRoot: options.workerSecretRoot,
       });
       const preflight = evaluateYoutubeExtractionWorkerPreflight(inputs);
-      const artifactRoot = assertReadOnlyArtifactRoot(dirname(options.workerManifestPath));
-      if (artifactRoot === realpathSync(context.releaseDir)) {
-        throw new Error("Worker artifact root must remain separate from the app release candidate.");
-      }
       const i031Preflight = await readI031PreflightDefault(
         options,
         userId,
@@ -528,11 +528,7 @@ function buildDefaultDependencies(
           nodeBin: options.nodeBin,
           releaseIdentityPath: resolve(currentReleaseDir, "prepare.json"),
           rootDir: currentReleaseDir,
-          runtimeCommand:
-            context.currentDescriptor.release_sha
-            === "e02f02a87d1d955dc598728e7029a745a650a5c3"
-              ? "start"
-              : "status",
+          runtimeCommand: "start",
         }),
         expectedMode: 0o600,
         label: "Current full-local plist",
@@ -1018,7 +1014,7 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
         homeDir: context.homeDir,
         mutationAuthority: context.mutationAuthority,
         nodeBin: options.nodeBin,
-        runtimeCommand: "status",
+        runtimeCommand: "start",
         rootDir: context.releaseDir,
       });
       verifySealedExecutionContext(context);
