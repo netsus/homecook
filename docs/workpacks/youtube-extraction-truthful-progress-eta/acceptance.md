@@ -10,15 +10,15 @@
 ## Happy Path
 
 - [ ] 기존 background accepted 화면이 실제 stage 기반 segmented progress를 표시한다 <!-- omo:id=accept-happy-stage-progress;stage=4;scope=frontend;review=5,6 -->
-- [ ] API success data가 exact 9-key shape와 nullable `progress` key를 유지한다 <!-- omo:id=accept-api-envelope-progress;stage=2;scope=backend;review=3,6 -->
+- [x] API success data가 exact 9-key shape와 nullable `progress` key를 유지한다 <!-- omo:id=accept-api-envelope-progress;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 `progress` exact field set까지 일치한다 <!-- omo:id=accept-progress-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
-- [ ] `confirmed_percent`가 시간만으로 증가하지 않고 stage floor만 사용한다 <!-- omo:id=accept-stage-floor-only;stage=2;scope=backend;review=3,6 -->
+- [x] `confirmed_percent`가 시간만으로 증가하지 않고 stage floor만 사용한다 <!-- omo:id=accept-stage-floor-only;stage=2;scope=backend;review=3,6 -->
 - [ ] active confirmed floor는 최대 90이고 active UI는 95를 넘지 않는다. `succeeded일 때만 100`이다. <!-- omo:id=accept-active-max95-success100;stage=4;scope=frontend;review=5,6 -->
 - [x] 같은 attempt에서 stage 역행이 없고 새 attempt에서만 `source_fetch`로 reset된다 <!-- omo:id=accept-attempt-reset-only;stage=2;scope=backend;review=3,6 -->
-- [ ] retry backoff queued 동안 이전 attempt snapshot이 public progress에 남지 않는다 <!-- omo:id=accept-queued-hides-old-attempt;stage=2;scope=backend;review=3,6 -->
+- [x] retry backoff queued 동안 이전 attempt snapshot이 public progress에 남지 않는다 <!-- omo:id=accept-queued-hides-old-attempt;stage=2;scope=backend;review=3,6 -->
 - [x] terminal/legacy active no-snapshot은 `progress=null`이다 <!-- omo:id=accept-terminal-null-progress;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
@@ -43,7 +43,7 @@
 ## Data Setup / Preconditions
 
 - [ ] fixture baseline이 queued/source_fetch/video_download/frame_extraction/model_analysis/finalizing/delayed/retry/null cases를 모두 포함한다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] numeric ETA promotion fixture가 isolated/golden 20, successful telemetry 50, bucket별 10, holdout coverage 80% gate를 검증한다 <!-- omo:id=accept-eta-promotion-gate;stage=2;scope=backend;review=3,6 -->
+- [x] numeric ETA promotion fixture가 isolated/golden 20, successful telemetry 50, bucket별 10, holdout coverage 80% gate를 검증한다 <!-- omo:id=accept-eta-promotion-gate;stage=2;scope=backend;review=3,6 -->
 - [x] real DB smoke가 additive migration, exact RPC, stale write 0, direct access 0을 검증할 수 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
 - [x] Supabase Cloud/linked/remote target은 N/A/forbidden이고 operational full-local destructive reset 0을 유지한다 <!-- omo:id=accept-remote-forbidden-full-local-zero;stage=2;scope=shared;review=3,6 -->
 
@@ -62,7 +62,7 @@
 ### Vitest
 
 - [x] progress contract/status projection/unit boundary가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
-- [ ] stage floor, null semantics, delayed, retry reset, stale write 0 regression이 단위 테스트로 고정된다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] stage floor, null semantics, delayed, retry reset, stale write 0 regression이 단위 테스트로 고정된다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
 
