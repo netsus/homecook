@@ -549,6 +549,25 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     });
   });
 
+  it("binds worker artifact v2 to the complete release identity", () => {
+    const manifest = buildYoutubeExtractionWorkerArtifactManifest({
+      rootDir: process.cwd(),
+      releaseSha: "a".repeat(40),
+      releaseTree: "b".repeat(40),
+      buildId: "build-worker-v2",
+      promotionId: "promotion-worker-v2",
+      allowedSnapshotDigest: "c".repeat(64),
+    });
+
+    expect(manifest).toMatchObject({
+      version: 2,
+      release_sha: "a".repeat(40),
+      release_tree: "b".repeat(40),
+      build_id: "build-worker-v2",
+      promotion_id: "promotion-worker-v2",
+    });
+  });
+
   it("rejects duplicate and incomplete expected-schema authority inventories", () => {
     const privateDir = createTempDir("yta-expected-schema-invalid-");
     const schemaPath = join(privateDir, "expected-schema.json");

@@ -145,6 +145,85 @@ export function summarizeFullLocalRuntimeStates(states) {
   });
 }
 
+/**
+ * @param {{release_sha:string, release_tree:string, build_id:string, promotion_id:string}} identity
+ */
+export function buildFullLocalReleaseContainerLabels(identity) {
+  return {
+    "homecook.release.sha": identity.release_sha,
+    "homecook.release.tree": identity.release_tree,
+    "homecook.release.build-id": identity.build_id,
+    "homecook.release.promotion-id": identity.promotion_id,
+  };
+}
+
+/**
+ * @param {Array<Record<string, any>>} containers
+ * @param {{expected?: {release_sha:string, release_tree:string, build_id:string, promotion_id:string} | null, allowLegacyBootstrap?: boolean}} [options]
+ */
+export function readFullLocalReleaseIdentityFromContainers(
+  containers,
+  { expected = null, allowLegacyBootstrap = false } = {},
+) {
+  if (!Array.isArray(containers) || containers.length !== 7) {
+    throw new Error("Full-local release identity requires exactly seven containers.");
+  }
+  const labelNames = [
+    "homecook.release.sha",
+    "homecook.release.tree",
+    "homecook.release.build-id",
+    "homecook.release.promotion-id",
+  ];
+  const presentCount = containers.reduce((count, container) =>
+    count + labelNames.filter((name) =>
+      typeof container?.Config?.Labels?.[name] === "string").length, 0);
+  if (presentCount === 0) {
+    if (
+      allowLegacyBootstrap
+      && expected?.release_sha === "e02f02a87d1d955dc598728e7029a745a650a5c3"
+    ) {
+      return Object.freeze({
+        ...expected,
+        legacy_bootstrap: true,
+        legacy_bootstrap_contract: "e02f-full-local-v1",
+      });
+    }
+    throw new Error("Unlabeled full-local workload is not an approved legacy bootstrap.");
+  }
+  if (presentCount !== containers.length * labelNames.length) {
+    throw new Error("Full-local containers report partial release labels.");
+  }
+  const identities = containers.map((container, index) => {
+    const labels = container?.Config?.Labels;
+    const identity = {
+      release_sha: labels?.["homecook.release.sha"],
+      release_tree: labels?.["homecook.release.tree"],
+      build_id: labels?.["homecook.release.build-id"],
+      promotion_id: labels?.["homecook.release.promotion-id"],
+    };
+    if (
+      !/^[0-9a-f]{40}$/u.test(identity.release_sha ?? "")
+      || !/^[0-9a-f]{40}$/u.test(identity.release_tree ?? "")
+      || typeof identity.build_id !== "string"
+      || identity.build_id.length === 0
+      || typeof identity.promotion_id !== "string"
+      || identity.promotion_id.length === 0
+    ) {
+      throw new Error(`Full-local container ${index} release labels are missing or invalid.`);
+    }
+    return identity;
+  });
+  const [identity] = identities;
+  if (identities.some((candidate) =>
+    JSON.stringify(candidate) !== JSON.stringify(identity))) {
+    throw new Error("Full-local containers report mixed release identities.");
+  }
+  if (expected && JSON.stringify(identity) !== JSON.stringify(expected)) {
+    throw new Error("Full-local Docker release identity mismatch.");
+  }
+  return Object.freeze(identity);
+}
+
 const FULL_LOCAL_WRITER_SERVICES = Object.freeze([
   "api-gateway",
   "auth",

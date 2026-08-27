@@ -99,8 +99,27 @@ immutable checkout과 build readiness 단계다.
 - promotion lock을 획득한다.
 - running release가 preflight 동안 바뀌지 않았는지 재확인한다.
 - exact checkout root와 manifest digest를 재검증한다.
+- validated candidate와 별도 worker artifact를 promotion lock 보유 중 create-only
+  `content-addressed sealed execution snapshot`으로 복제한다. app/full-local/worker의
+  executable 및 plist WorkingDirectory는 이후 원본 candidate가 아니라 이 snapshot만 사용한다.
+- snapshot은 inode, normalized content digest, owner/mode를 각 spawn/install 직전과
+  readiness 이후, descriptor commit 직전에 다시 검증한다.
+- execution tree digest는 contained symlink의 dereferenced bytes와 executable metadata를
+  포함한다. 외부 target은 거부하고, 내부 absolute symlink는 snapshot 내부의 equivalent
+  relative target으로 다시 작성한 뒤 모든 final realpath containment를 재검증한다.
+- snapshot은 실패 시 자동 삭제하지 않는다. lock, snapshot evidence, partial install state를
+  manual recovery 근거로 함께 보존한다. 성공한 snapshot도 running release의 immutable root이므로
+  자동 정리하지 않으며 별도 승인된 lifecycle 작업만 제거할 수 있다.
 - app/full-local/worker LaunchAgent를 같은 release bundle로 설치한다.
 - current release descriptor를 readiness 이후에만 갱신한다.
+
+위 snapshot은 same-user 공격자가 writable prepared candidate를 잠깐 바꿨다가 복원하는
+TOCTOU를 실행 바이트에서 분리하기 위한 cooperative hardening이다. 같은 사용자의 OS 권한 자체를
+제거하지는 않으므로 snapshot 변조가 보이면 자동 복구하지 않고 promotion을 중단한다.
+running descriptor는 non-secret artifact root/manifest와 content digest/identity만 기록하며
+credential/config/policy 경로를 저장하지 않는다. 해당 경로는 매 promotion마다 canonical trusted
+home/config resolver 또는 explicit operator input으로 다시 해석하고, descriptor에는 SHA-256만 비교
+근거로 남긴다.
 
 ### 4. verify
 

@@ -39,6 +39,15 @@ function parseArgs(argv) {
       case "--release-sha":
         options.releaseSha = ensureReleaseSha(value);
         break;
+      case "--release-tree":
+        options.releaseTree = ensureReleaseSha(value);
+        break;
+      case "--build-id":
+        options.buildId = ensureNonEmptyString(value, "buildId");
+        break;
+      case "--promotion-id":
+        options.promotionId = ensureNonEmptyString(value, "promotionId");
+        break;
       case "--schema-identity":
         options.schemaIdentity = ensureNonEmptyString(value, "schemaIdentity");
         break;
@@ -74,8 +83,11 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.command !== "build") {
     throw new Error(
-      "Usage: node scripts/youtube-extraction-worker-artifact.mjs build --release-sha <40-hex> --allowed-snapshot-digest <64-hex> [--schema-identity <id>] [--artifact-dir <absolute new dir>] [--output <absolute .json path>] [--app-descriptor-output <absolute .json path>] [--json]",
+      "Usage: node scripts/youtube-extraction-worker-artifact.mjs build --release-sha <40-hex> --release-tree <40-hex> --build-id <id> --promotion-id <id> --allowed-snapshot-digest <64-hex> [--schema-identity <id>] [--artifact-dir <absolute new dir>] [--output <absolute .json path>] [--app-descriptor-output <absolute .json path>] [--json]",
     );
+  }
+  if (!options.releaseTree || !options.buildId || !options.promotionId) {
+    throw new Error("build requires --release-tree, --build-id, and --promotion-id.");
   }
 
   const materialized = options.artifactDir
@@ -83,6 +95,9 @@ function main() {
       rootDir: options.rootDir,
       outputDir: options.artifactDir,
       releaseSha: options.releaseSha,
+      releaseTree: options.releaseTree,
+      buildId: options.buildId,
+      promotionId: options.promotionId,
       schemaIdentity: options.schemaIdentity,
       allowedSnapshotDigest: options.allowedSnapshotDigest,
       policyVersion: options.policyVersion,
@@ -92,6 +107,9 @@ function main() {
     ?? buildYoutubeExtractionWorkerArtifactManifest({
       rootDir: options.rootDir,
       releaseSha: options.releaseSha,
+      releaseTree: options.releaseTree,
+      buildId: options.buildId,
+      promotionId: options.promotionId,
       schemaIdentity: options.schemaIdentity,
       allowedSnapshotDigest: options.allowedSnapshotDigest,
       policyVersion: options.policyVersion,

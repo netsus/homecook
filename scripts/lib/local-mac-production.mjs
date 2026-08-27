@@ -2,6 +2,7 @@ import { spawn as spawnChild, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   rmSync,
@@ -667,13 +668,48 @@ export function verifyLocalMacProductionPrerequisites({
 }
 
 function runLaunchctl(args, spawn) {
-  const result = spawn("launchctl", args, { encoding: "utf8" });
+  const result = spawn("/bin/launchctl", args, { encoding: "utf8" });
   if (result.status !== 0) {
     const details = `${result.stderr ?? ""}\n${result.stdout ?? ""}`.trim();
     throw new Error(details || `launchctl ${args.join(" ")} failed.`);
   }
 
   return result;
+}
+
+function assertSafeExistingPlistTarget(path, expectedMode, currentUid, label) {
+  try {
+    const parent = lstatSync(dirname(path));
+    if (parent.isSymbolicLink() || !parent.isDirectory()) {
+      throw new Error(`${label} parent must be a regular directory.`);
+    }
+    if (parent.uid !== currentUid || (parent.mode & 0o022) !== 0) {
+      throw new Error(`${label} parent owner or mode is unsafe.`);
+    }
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
+      throw error;
+    }
+  }
+  let stat;
+  try {
+    stat = lstatSync(path);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return;
+    throw error;
+  }
+  if (stat.isSymbolicLink()) {
+    throw new Error(`${label} must not be a symlink.`);
+  }
+  if (!stat.isFile()) {
+    throw new Error(`${label} must be a regular file.`);
+  }
+  if (stat.uid !== currentUid) {
+    throw new Error(`${label} must be owned by the current user.`);
+  }
+  if ((stat.mode & 0o777) !== expectedMode) {
+    throw new Error(`${label} must use mode 0${expectedMode.toString(8)}.`);
+  }
 }
 
 /**
@@ -734,6 +770,12 @@ export function installLocalMacProductionLaunchAgent({
   });
 
   const paths = getLocalMacProductionPaths(homeDir);
+  assertSafeExistingPlistTarget(
+    paths.plistPath,
+    0o644,
+    uid,
+    "Local Mac production plist target",
+  );
   const plist = renderLocalMacProductionPlist({
     rootDir: normalizedRootDir,
     homeDir,
@@ -747,7 +789,7 @@ export function installLocalMacProductionLaunchAgent({
   writeFileSync(paths.plistPath, plist, { mode: 0o644 });
   chmodSync(paths.plistPath, 0o644);
 
-  spawn("launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
+  spawn("/bin/launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
     encoding: "utf8",
   });
   runLaunchctl(["bootstrap", `gui/${uid}`, paths.plistPath], spawn);
@@ -774,7 +816,7 @@ export function readLocalMacProductionStatus({
   }
 
   const serviceTarget = `gui/${uid}/${LOCAL_MAC_PRODUCTION_LABEL}`;
-  const result = spawn("launchctl", ["print", serviceTarget], {
+  const result = spawn("/bin/launchctl", ["print", serviceTarget], {
     encoding: "utf8",
   });
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
@@ -958,7 +1000,7 @@ export function uninstallLocalMacProductionLaunchAgent({
   }
 
   const paths = getLocalMacProductionPaths(homeDir);
-  const result = spawn("launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
+  const result = spawn("/bin/launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
     encoding: "utf8",
   });
   if (result.status !== 0 && existsSync(paths.plistPath)) {

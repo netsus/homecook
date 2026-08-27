@@ -1,6 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -658,8 +665,40 @@ describe("local Mac production launch agent", () => {
     expect(runtimeStatusChecks.join("\n")).not.toContain("supabase@2.110.0");
     expect(runtimeStatusChecks.join("\n")).not.toContain("corepack");
     expect(runtimeStatusChecks.join("\n")).not.toContain(" start");
-    expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
-    expect(spawnCalls).toContain("launchctl kickstart -k gui/501/com.homecook.production");
+    expect(spawnCalls).toContain(`/bin/launchctl bootstrap gui/501 ${result.plistPath}`);
+    expect(spawnCalls).toContain("/bin/launchctl kickstart -k gui/501/com.homecook.production");
+    expect(spawnCalls.some((call) => call.startsWith("launchctl "))).toBe(false);
+  });
+
+  it("rejects an existing plist symlink before writing or launchctl mutation", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-symlink-root-"));
+    const homeDir = mkdtempSync(join(tmpdir(), "homecook-production-symlink-home-"));
+    tempDirs.push(rootDir, homeDir);
+    const mutationAuthority = createMutationAuthority({ command: "install", homeDir, rootDir });
+    const launchAgentsDir = join(homeDir, "Library", "LaunchAgents");
+    const plistPath = join(launchAgentsDir, "com.homecook.production.plist");
+    const externalPath = join(homeDir, "unrelated.txt");
+    mkdirSync(launchAgentsDir, { recursive: true });
+    writeFileSync(externalPath, "do-not-overwrite\n");
+    symlinkSync(externalPath, plistPath);
+    const spawnCalls: string[] = [];
+
+    expect(() => installLocalMacProductionLaunchAgent({
+      mutationAuthority,
+      rootDir,
+      homeDir,
+      nodeBin: process.execPath,
+      platform: "darwin",
+      getuid: () => process.getuid?.() ?? 501,
+      spawn: ((command: string, args: readonly string[]) => {
+        spawnCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      }) as typeof import("node:child_process").spawnSync,
+      verifyRuntimeStatus: () => undefined,
+      verifyPrerequisites: () => undefined,
+    })).toThrow(/plist|symlink|symbolic/iu);
+    expect(readFileSync(externalPath, "utf8")).toBe("do-not-overwrite\n");
+    expect(spawnCalls).toEqual([]);
   });
 
   it("fails installation preflight when the full-local runtime is unhealthy", () => {
@@ -811,7 +850,8 @@ describe("local Mac production launch agent", () => {
     });
 
     expect(result.changed).toBe(true);
-    expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
+    expect(spawnCalls).toContain(`/bin/launchctl bootstrap gui/501 ${result.plistPath}`);
+    expect(spawnCalls.some((call) => call.startsWith("launchctl "))).toBe(false);
   });
 });
 

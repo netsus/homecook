@@ -6,6 +6,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -134,6 +135,8 @@ describe("full-local launch agent helpers", () => {
         "start",
         "--config",
         configPath,
+        "--release-identity",
+        `${rootDir}/prepare.json`,
       ]);
 
       expect(plist).toContain(`<string>${DEFAULT_FULL_LOCAL_LAUNCH_AGENT_LABEL}</string>`);
@@ -160,6 +163,8 @@ describe("full-local launch agent helpers", () => {
       expect(plist).not.toContain("FULL_LOCAL_SITE_URL=https://app.mumeok.kr");
       expect(plist).not.toContain(AMBIENT_SECRET);
       expect(plist).not.toContain("<key>FULL_LOCAL_TEST_SECRET</key>");
+      expect(plist).not.toContain("--lock-token");
+      expect(plist).not.toContain("--release-manifest");
     } finally {
       delete process.env.FULL_LOCAL_TEST_SECRET;
     }
@@ -183,6 +188,8 @@ describe("full-local launch agent helpers", () => {
       "start",
       "--config",
       "/Users/tester/homecook/infra/full-local-supabase/.env.production.local",
+      "--release-identity",
+      "/Users/tester/homecook/prepare.json",
     ]);
     expect(plist).toContain(`<string>PATH=${EXPECTED_USRBIN_NODE_SANITIZED_PATH}</string>`);
     expect(plist).not.toContain(
@@ -339,6 +346,8 @@ describe("full-local launch agent install and uninstall", () => {
       "start",
       "--config",
       configPath,
+      "--release-identity",
+      `${rootDir}/prepare.json`,
     ]);
     expect(plist).toContain(configPath);
     expect(plist).toContain("<string>/usr/bin/env</string>");
@@ -353,6 +362,40 @@ describe("full-local launch agent install and uninstall", () => {
       `/bin/launchctl bootstrap gui/501 ${paths.plistPath}`,
       `/bin/launchctl kickstart -k gui/501/${DEFAULT_FULL_LOCAL_LAUNCH_AGENT_LABEL}`,
     ]);
+  });
+
+  it("rejects an existing plist symlink before writing or launchctl mutation", () => {
+    const rootDir = createTempDirectory("full-local-launch-agent-symlink-root-");
+    const homeDir = createTempDirectory("full-local-launch-agent-symlink-home-");
+    const mutationAuthority = createMutationAuthority({ command: "install", homeDir, rootDir });
+    const configPath = join(rootDir, "infra/full-local-supabase/.env.production.local");
+    mkdirSync(join(rootDir, "infra/full-local-supabase"), { recursive: true });
+    mkdirSync(join(rootDir, "scripts"), { recursive: true });
+    writeFileSync(join(rootDir, "scripts/full-local-production-runtime.mjs"), "", "utf8");
+    writeFileSync(configPath, "FULL_LOCAL_SITE_URL=https://app.mumeok.kr\n", { mode: 0o600 });
+    chmodSync(configPath, 0o600);
+    const paths = getFullLocalLaunchAgentPaths(homeDir);
+    mkdirSync(join(homeDir, "Library", "LaunchAgents"), { recursive: true });
+    const externalPath = join(homeDir, "unrelated.txt");
+    writeFileSync(externalPath, "do-not-overwrite\n");
+    symlinkSync(externalPath, paths.plistPath);
+    const launchctlCalls: string[] = [];
+
+    expect(() => installFullLocalLaunchAgent({
+      mutationAuthority,
+      configPath,
+      getuid: () => process.getuid?.() ?? 501,
+      homeDir,
+      nodeBin: process.execPath,
+      platform: "darwin",
+      rootDir,
+      spawn: (command, args) => {
+        launchctlCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    })).toThrow(/plist|symlink|symbolic/iu);
+    expect(readFileSync(externalPath, "utf8")).toBe("do-not-overwrite\n");
+    expect(launchctlCalls).toEqual([]);
   });
 
   it("blocks direct helper mutations before launchctl when no validated authority is provided", () => {

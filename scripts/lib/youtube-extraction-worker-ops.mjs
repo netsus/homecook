@@ -49,7 +49,7 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE = 0o600;
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_ROOT_MODE = 0o700;
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_LOG_DIR_NAME = "Homecook";
 const EXACT_I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
-const YOUTUBE_EXTRACTION_WORKER_INSTALL_CONFIRMATION =
+export const YOUTUBE_EXTRACTION_WORKER_INSTALL_CONFIRMATION =
   "LOCAL_FULL_PRODUCTION_WORKER_INSTALL";
 
 const WORKER_CONFIG_ALLOWLIST = new Set([
@@ -994,6 +994,9 @@ export function evaluateYoutubeExtractionWorkerPreflight({
     blockers,
     checks,
     release_sha: workerArtifact.release_sha,
+    release_tree: workerArtifact.release_tree,
+    build_id: workerArtifact.build_id,
+    promotion_id: workerArtifact.promotion_id,
     schema_identity: workerArtifact.schema_identity,
     allowed_snapshot_digest: workerArtifact.allowed_snapshot_digest,
   };
