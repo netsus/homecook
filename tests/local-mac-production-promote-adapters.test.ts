@@ -846,6 +846,58 @@ process.exit(42);
     ]));
   });
 
+  it("preflights the exact descriptorless split predecessor without collapsing identities", async () => {
+    const predecessorAdoption = {
+      schema: "homecook.local-mac-production-one-time-adoption.v1",
+      contract: "prod-20260828.1-precanonical-split-v1",
+      predecessor_release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+      components: {
+        app: {
+          release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+          release_tree: "255f3c23a38593aade4b1f4bc3e2941030c9fe90",
+          build_id: "aKwKCpoAEwSrD6066XEwu",
+        },
+        full_local: {
+          release_sha: "36e7aecfe429875f2dc12f3effc020ab1296a818",
+          release_tree: "abfc8fae339a5d1c0dfaf261171164680e9c79c3",
+          build_id: "8t5KKzb2z0Q3VO4SnnLOh",
+          runtime_command: "start",
+        },
+        youtube_worker: {
+          release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+          artifact_sha256: "e228d46c1074ec499b709803bab4cc8dc8e2add30655fa1648dab564423e2c01",
+        },
+      },
+    };
+    const oneTimeRuntime = vi.fn(async () => ({
+      stable_key: "exact-precanonical-split-runtime",
+      predecessor_adoption_contract: predecessorAdoption.contract,
+      app: { ...predecessorAdoption.components.app, ready: true },
+      full_local: { ...predecessorAdoption.components.full_local, ready: true },
+      youtube_worker: { ...predecessorAdoption.components.youtube_worker, ready: true },
+    }));
+    const { dependencies } = createDependencies({
+      readOneTimePredecessorRuntimeBundle: oneTimeRuntime,
+    });
+    const adapters = createLocalMacProductionPromoteAdapters(createOptions(), dependencies);
+    const context = createContext({
+      currentDescriptor: null,
+      currentReleaseDir: null,
+      predecessorAdoption,
+    });
+
+    const preflight = await adapters.preflightBundle(context);
+
+    expect(preflight.current).toMatchObject({
+      predecessor_adoption_contract: "prod-20260828.1-precanonical-split-v1",
+      app: predecessorAdoption.components.app,
+      full_local: predecessorAdoption.components.full_local,
+      youtube_worker: predecessorAdoption.components.youtube_worker,
+    });
+    expect(oneTimeRuntime).toHaveBeenCalledWith({ context, options: expect.any(Object) });
+    expect(dependencies.readCurrentRuntimeBundle).not.toHaveBeenCalled();
+  });
+
   it("blocks current runtime drift before any install helper runs", async () => {
     const { dependencies } = createDependencies({
       readCurrentRuntimeBundle: vi.fn(async () => ({
