@@ -6,6 +6,7 @@ import {
   constants as fsConstants,
   existsSync,
   fstatSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -13,6 +14,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import {
@@ -238,7 +240,7 @@ function assertSafeRegularFile(path, label) {
   }
 }
 
-function readSafeRegularFileBytes(path, label) {
+function readSafeRegularFileSnapshot(path, label) {
   assertSafeRegularFile(path, label);
   let fileDescriptor;
   try {
@@ -247,7 +249,13 @@ function readSafeRegularFileBytes(path, label) {
     if (!stat.isFile()) {
       throw new Error(`${label} must remain a regular file while being read.`);
     }
-    return readFileSync(fileDescriptor);
+    return {
+      bytes: readFileSync(fileDescriptor),
+      dev: stat.dev,
+      ino: stat.ino,
+      mode: modeBits(stat.mode),
+      uid: stat.uid,
+    };
   } catch (error) {
     if (error instanceof Error && error.message.startsWith(`${label} must remain`)) {
       throw error;
@@ -260,6 +268,10 @@ function readSafeRegularFileBytes(path, label) {
   }
 }
 
+function readSafeRegularFileBytes(path, label) {
+  return readSafeRegularFileSnapshot(path, label).bytes;
+}
+
 function assertPrivateRegularFile(path, label, currentUid) {
   assertSafeRegularFile(path, label);
   const stat = lstatSync(path);
@@ -268,6 +280,42 @@ function assertPrivateRegularFile(path, label, currentUid) {
   }
   if (modeBits(stat.mode) !== 0o600) {
     throw new Error(`${label} must use mode 0600.`);
+  }
+}
+
+function assertOwnedSafeRegularFile(path, label, currentUid) {
+  assertSafeRegularFile(path, label);
+  const stat = lstatSync(path);
+  if (stat.uid !== currentUid) {
+    throw new Error(`${label} must be owned by the current user uid ${currentUid}.`);
+  }
+  if ((modeBits(stat.mode) & 0o022) !== 0) {
+    throw new Error(`${label} must not be group/world writable.`);
+  }
+}
+
+function assertNoUnexpectedUntrackedRuntimeFiles({ checkoutDir, runCommand }) {
+  const output = runPrepareCommand({
+    args: ["ls-files", "--others", "--exclude-standard", "-z"],
+    command: "git",
+    cwd: checkoutDir,
+    label: "Runtime release untracked-file inventory",
+    runCommand,
+  });
+  const allowedExact = new Set([
+    "prepare.json",
+    "release-manifest.json",
+    ".env.production.local",
+    "infra/full-local-supabase/.env.production.local",
+  ]);
+  const unexpected = output.split("\0").filter(Boolean).filter((path) =>
+    !allowedExact.has(path)
+    && !path.startsWith(".next/")
+    && !path.startsWith("node_modules/"));
+  if (unexpected.length > 0) {
+    throw new Error(
+      `Runtime release contains unexpected untracked source: ${unexpected.sort().join(", ")}.`,
+    );
   }
 }
 
@@ -559,6 +607,80 @@ function readGitRevParse({
     throw new Error(`${label} could not be resolved from git.`);
   }
   return value;
+}
+
+/**
+ * @param {{
+ *   component?: string,
+ *   getCurrentUid?: () => number | undefined,
+ *   releaseDir: string,
+ *   runCommand?: typeof spawnSync,
+ * }} options
+ */
+export function readLocalMacProductionPreparedReleaseIdentity({
+  component = "prepared_release",
+  getCurrentUid = () => process.getuid?.(),
+  releaseDir,
+  runCommand = spawnSync,
+} = {}) {
+  const normalizedComponent = requireNonEmptyString(component, "component");
+  const runtimeDirectory = assertSafeDirectory(
+    requireAbsolutePath(releaseDir, "releaseDir"),
+    `${normalizedComponent} release directory`,
+  );
+  assertCleanTrackedPrepareCheckout({ checkoutDir: runtimeDirectory, runCommand });
+  assertNoUnexpectedUntrackedRuntimeFiles({ checkoutDir: runtimeDirectory, runCommand });
+
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  const markerPath = join(runtimeDirectory, "prepare.json");
+  const buildDirectory = join(runtimeDirectory, ".next");
+  const buildIdPath = join(buildDirectory, "BUILD_ID");
+  assertPrivateRegularFile(markerPath, `${normalizedComponent} release marker`, currentUid);
+  const realBuildDirectory = assertSafeDirectory(
+    buildDirectory,
+    `${normalizedComponent} build directory`,
+  );
+  assertPathInside(runtimeDirectory, realBuildDirectory, `${normalizedComponent} build directory`);
+  assertSafeRegularFile(buildIdPath, `${normalizedComponent} build ID`);
+  assertPathInside(
+    runtimeDirectory,
+    realpathSync(buildIdPath),
+    `${normalizedComponent} build ID`,
+  );
+
+  const marker = normalizePrepareDescriptor(
+    readJsonFile(markerPath, `${normalizedComponent} release marker`),
+  );
+  const releaseSha = readPrepareGitValue({
+    args: ["rev-parse", "HEAD"],
+    cwd: runtimeDirectory,
+    label: `${normalizedComponent} release SHA`,
+    runCommand,
+  });
+  const releaseTree = readPrepareGitValue({
+    args: ["rev-parse", "HEAD^{tree}"],
+    cwd: runtimeDirectory,
+    label: `${normalizedComponent} release tree`,
+    runCommand,
+  });
+  const buildId = readSafeRegularFileBytes(
+    buildIdPath,
+    `${normalizedComponent} build ID`,
+  ).toString("utf8").trim();
+  if (
+    releaseSha !== marker.release_sha
+    || releaseTree !== marker.release_tree
+    || buildId !== marker.build_id
+  ) {
+    throw new Error(`${normalizedComponent} release identity drifted from its prepare marker.`);
+  }
+  return {
+    component: normalizedComponent,
+    ready: true,
+    release_sha: releaseSha,
+    release_tree: releaseTree,
+    build_id: buildId,
+  };
 }
 
 /**
@@ -1193,75 +1315,64 @@ export function readLocalMacProductionRuntimeIdentity({
   if (runtimeDirectory !== expectedDirectory) {
     throw new Error(`${normalizedComponent} runtime cwd does not match the exact prepared release.`);
   }
-
-  const currentUid = requireCurrentUserUid(getCurrentUid);
-  const markerPath = join(runtimeDirectory, "prepare.json");
-  const buildDirectory = join(runtimeDirectory, ".next");
-  const buildIdPath = join(buildDirectory, "BUILD_ID");
-  assertPrivateRegularFile(markerPath, `${normalizedComponent} runtime release marker`, currentUid);
-  const realBuildDirectory = assertSafeDirectory(
-    buildDirectory,
-    `${normalizedComponent} runtime build directory`,
-  );
-  assertPathInside(runtimeDirectory, realBuildDirectory, `${normalizedComponent} runtime build directory`);
-  assertSafeRegularFile(buildIdPath, `${normalizedComponent} runtime build ID`);
-  assertPathInside(
-    runtimeDirectory,
-    realpathSync(buildIdPath),
-    `${normalizedComponent} runtime build ID`,
-  );
-
-  const marker = normalizePrepareDescriptor(
-    readJsonFile(markerPath, `${normalizedComponent} runtime release marker`),
-  );
-  const releaseSha = readPrepareGitValue({
-    args: ["rev-parse", "HEAD"],
-    cwd: runtimeDirectory,
-    label: `${normalizedComponent} runtime release SHA`,
-    runCommand,
-  });
-  const releaseTree = readPrepareGitValue({
-    args: ["rev-parse", "HEAD^{tree}"],
-    cwd: runtimeDirectory,
-    label: `${normalizedComponent} runtime release tree`,
-    runCommand,
-  });
-  const buildId = readSafeRegularFileBytes(
-    buildIdPath,
-    `${normalizedComponent} runtime build ID`,
-  ).toString("utf8").trim();
-  if (
-    releaseSha !== marker.release_sha
-    || releaseTree !== marker.release_tree
-    || buildId !== marker.build_id
-  ) {
-    throw new Error(`${normalizedComponent} runtime release identity drifted from its prepare marker.`);
-  }
-
   return {
-    component: normalizedComponent,
-    ready: true,
+    ...readLocalMacProductionPreparedReleaseIdentity({
+      component: normalizedComponent,
+      getCurrentUid,
+      releaseDir: runtimeDirectory,
+      runCommand,
+    }),
     pid,
-    release_sha: releaseSha,
-    release_tree: releaseTree,
-    build_id: buildId,
   };
 }
 
-function readRunningDescriptorSnapshot({ currentUid, path }) {
-  assertPrivateRegularFile(path, "Current running release descriptor", currentUid);
-  const bytes = readSafeRegularFileBytes(path, "Current running release descriptor");
+function readRunningDescriptorSnapshot({
+  currentUid,
+  label = "Current running release descriptor",
+  path,
+}) {
+  assertPrivateRegularFile(path, label, currentUid);
+  const snapshot = readSafeRegularFileSnapshot(path, label);
+  if (snapshot.uid !== currentUid || snapshot.mode !== 0o600) {
+    throw new Error(`${label} owner or mode changed while being read.`);
+  }
+  const bytes = snapshot.bytes;
   let input;
   try {
     input = JSON.parse(bytes.toString("utf8"));
   } catch {
-    throw new Error(`Current running release descriptor is unreadable or invalid: ${path}`);
+    throw new Error(`${label} is unreadable or invalid: ${path}`);
   }
   return {
     bytes,
     digest: sha256Bytes(bytes),
-    descriptor: normalizeRunningReleaseDescriptor(input),
+    descriptor: normalizeRunningReleaseDescriptor(input, label),
+    dev: snapshot.dev,
+    ino: snapshot.ino,
   };
+}
+
+function readOptionalRunningDescriptorSnapshot({ currentUid, label, path }) {
+  if (!lstatIfExists(path)) {
+    return { exists: false };
+  }
+  return {
+    exists: true,
+    ...readRunningDescriptorSnapshot({ currentUid, label, path }),
+    label,
+  };
+}
+
+function sameDescriptorSnapshot(left, right) {
+  if (left.exists !== right.exists) return false;
+  if (!left.exists) return true;
+  return left.digest === right.digest && left.dev === right.dev && left.ino === right.ino;
+}
+
+function assertDescriptorSnapshotStable({ actual, expected, label }) {
+  if (!sameDescriptorSnapshot(actual, expected)) {
+    throw new Error(`${label} changed concurrently during promotion.`);
+  }
 }
 
 function normalizePrepareDescriptor(value) {
@@ -1455,6 +1566,7 @@ function releaseCompletedPromotionLock({ homeDir, lockToken }) {
  * Failures after lock acquisition intentionally retain the lock and partial state.
  */
 export async function promoteLocalMacProductionRelease({
+  descriptorFault = (phase) => void phase,
   getCurrentUid = () => process.getuid?.(),
   homeDir = process.env.HOME ?? "",
   installBundle,
@@ -1462,6 +1574,7 @@ export async function promoteLocalMacProductionRelease({
   manifestPath,
   mkdir = mkdirSync,
   now = new Date(),
+  preflightBundle,
   readGitEvidence = readLocalMacProductionGitReleaseEvidence,
   readinessProbe,
   rootDir = process.cwd(),
@@ -1475,6 +1588,9 @@ export async function promoteLocalMacProductionRelease({
   if (typeof readinessProbe !== "function") {
     throw new Error("Production release bundle readiness probe is not configured.");
   }
+  if (typeof preflightBundle !== "function") {
+    throw new Error("Production release bundle preflight is not configured.");
+  }
 
   const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
   const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
@@ -1482,7 +1598,7 @@ export async function promoteLocalMacProductionRelease({
   const realHomeDir = assertSafeDirectory(normalizedHomeDir, "homeDir");
   const realRootDir = assertSafeDirectory(normalizedRootDir, "rootDir");
   const currentUid = requireCurrentUserUid(getCurrentUid);
-  assertPrivateRegularFile(normalizedManifestPath, "Release manifest", currentUid);
+  assertOwnedSafeRegularFile(normalizedManifestPath, "Release manifest", currentUid);
   const manifestBytes = readSafeRegularFileBytes(normalizedManifestPath, "Release manifest");
   let manifestInput;
   try {
@@ -1527,10 +1643,32 @@ export async function promoteLocalMacProductionRelease({
     currentUid,
     path: paths.currentDescriptorPath,
   });
+  const initialPrevious = readOptionalRunningDescriptorSnapshot({
+    currentUid,
+    label: "Previous running release descriptor",
+    path: paths.previousDescriptorPath,
+  });
   if (initialRunning.descriptor.release_sha !== manifest.previous_release_sha) {
     throw new Error(
       "Current running release descriptor drift: release_sha does not equal manifest.previous_release_sha.",
     );
+  }
+  const currentReleaseDir = join(paths.releaseRoot, initialRunning.descriptor.release_tag);
+  const preflightContext = {
+    currentDescriptor: initialRunning.descriptor,
+    currentReleaseDir,
+    homeDir: realHomeDir,
+    manifest,
+    releaseDir: initialCandidate.releaseDir,
+    rootDir: realRootDir,
+  };
+  const initialRuntimePreflight = await preflightBundle(preflightContext);
+  if (
+    !initialRuntimePreflight
+    || typeof initialRuntimePreflight.stable_key !== "string"
+    || initialRuntimePreflight.stable_key.length === 0
+  ) {
+    throw new Error("Production release bundle preflight returned invalid stable evidence.");
   }
   ensureSafePrivateDirectory(
     paths.lockRoot,
@@ -1555,9 +1693,22 @@ export async function promoteLocalMacProductionRelease({
     currentUid,
     path: paths.currentDescriptorPath,
   });
-  if (stableRunning.digest !== initialRunning.digest) {
+  if (
+    stableRunning.digest !== initialRunning.digest
+    || stableRunning.dev !== initialRunning.dev
+    || stableRunning.ino !== initialRunning.ino
+  ) {
     throw new Error("Current running release descriptor changed during promotion preflight.");
   }
+  assertDescriptorSnapshotStable({
+    actual: readOptionalRunningDescriptorSnapshot({
+      currentUid,
+      label: "Previous running release descriptor",
+      path: paths.previousDescriptorPath,
+    }),
+    expected: initialPrevious,
+    label: "Previous running release descriptor",
+  });
   const currentManifestBytes = readSafeRegularFileBytes(
     normalizedManifestPath,
     "Release manifest",
@@ -1579,6 +1730,16 @@ export async function promoteLocalMacProductionRelease({
   if (lockedCandidate.manifestDigest !== initialCandidate.manifestDigest) {
     throw new Error("Prepared release candidate digest changed after lock acquisition.");
   }
+  const lockedRuntimePreflight = await preflightBundle({
+    ...preflightContext,
+    releaseDir: lockedCandidate.releaseDir,
+  });
+  if (
+    !lockedRuntimePreflight
+    || lockedRuntimePreflight.stable_key !== initialRuntimePreflight.stable_key
+  ) {
+    throw new Error("Production runtime bundle changed between initial and locked preflight.");
+  }
 
   const mutationAuthority = validateLocalMacProductionMutationAuthority({
     command: "install",
@@ -1594,6 +1755,7 @@ export async function promoteLocalMacProductionRelease({
     lockToken: lock.lockToken,
     manifest,
     mutationAuthority,
+    preflight: lockedRuntimePreflight,
     releaseDir: lockedCandidate.releaseDir,
     rootDir: realRootDir,
   });
@@ -1602,6 +1764,7 @@ export async function promoteLocalMacProductionRelease({
     installation,
     manifest,
     mutationAuthority,
+    preflight: lockedRuntimePreflight,
     releaseDir: lockedCandidate.releaseDir,
     rootDir: realRootDir,
   }), manifest);
@@ -1610,9 +1773,23 @@ export async function promoteLocalMacProductionRelease({
     currentUid,
     path: paths.currentDescriptorPath,
   });
-  if (finalRunning.digest !== initialRunning.digest) {
+  if (
+    finalRunning.digest !== initialRunning.digest
+    || finalRunning.dev !== initialRunning.dev
+    || finalRunning.ino !== initialRunning.ino
+  ) {
     throw new Error("Current running release descriptor drifted during install/readiness; concurrent write blocked.");
   }
+  const finalPrevious = readOptionalRunningDescriptorSnapshot({
+    currentUid,
+    label: "Previous running release descriptor",
+    path: paths.previousDescriptorPath,
+  });
+  assertDescriptorSnapshotStable({
+    actual: finalPrevious,
+    expected: initialPrevious,
+    label: "Previous running release descriptor",
+  });
   const promotedAt = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
   if (Number.isNaN(Date.parse(promotedAt))) {
     throw new Error("promotion timestamp is invalid.");
@@ -1629,57 +1806,156 @@ export async function promoteLocalMacProductionRelease({
   });
   const previousBytes = Buffer.from(`${JSON.stringify(initialRunning.descriptor, null, 2)}\n`);
   const currentBytes = Buffer.from(`${JSON.stringify(currentDescriptor, null, 2)}\n`);
-  const existingPrevious = lstatIfExists(paths.previousDescriptorPath);
-  let existingPreviousBytes = null;
-  if (existingPrevious) {
-    assertPrivateRegularFile(
-      paths.previousDescriptorPath,
-      "Previous running release descriptor",
-      currentUid,
-    );
-    existingPreviousBytes = readSafeRegularFileBytes(
-      paths.previousDescriptorPath,
-      "Previous running release descriptor",
-    );
-  }
-  const transactionPath = join(lock.lockPath, "descriptor-transaction.json");
+  const transactionRoot = join(lock.lockPath, "descriptor-transaction");
+  mkdir(transactionRoot, { mode: 0o700 });
+  const transactionPath = join(transactionRoot, "journal.json");
   writeFileSync(transactionPath, JSON.stringify({
     schema: "homecook.local-mac-production-descriptor-transaction.v1",
     status: "prepared",
     expected_current_sha256: initialRunning.digest,
+    expected_previous_sha256: initialPrevious.exists ? initialPrevious.digest : null,
     previous_sha256: sha256Bytes(previousBytes),
     current_sha256: sha256Bytes(currentBytes),
   }, null, 2), { encoding: "utf8", flag: "wx", mode: 0o600 });
+  const stagedRoot = join(transactionRoot, "staged");
+  mkdir(stagedRoot, { mode: 0o700 });
+  const stagedPreviousPath = join(stagedRoot, "previous.json");
+  const stagedCurrentPath = join(stagedRoot, "current.json");
+  const oldPreviousPath = join(transactionRoot, "old-previous.json");
+  const oldCurrentPath = join(transactionRoot, "old-current.json");
+  let currentReserved = false;
+  let previousReserved = false;
+  let currentPublished = false;
+  let previousPublished = false;
 
-  const restorePreviousDescriptor = () => {
-    if (existingPreviousBytes === null) {
-      rmSync(paths.previousDescriptorPath, { force: true });
-      return;
+  const sameInode = (leftPath, rightPath) => {
+    const left = lstatIfExists(leftPath);
+    const right = lstatIfExists(rightPath);
+    return Boolean(left && right && left.dev === right.dev && left.ino === right.ino);
+  };
+  const removePublishedLink = (path, stagedPath) => {
+    if (!lstatIfExists(path)) return;
+    if (!sameInode(path, stagedPath)) {
+      throw new Error(`Descriptor rollback refused to remove a competing writer at ${path}.`);
     }
-    writeDescriptorAtomically(paths.previousDescriptorPath, existingPreviousBytes);
+    unlinkSync(path);
+  };
+  const restoreReservedLink = (path, oldPath, wasReserved) => {
+    if (!wasReserved) return;
+    if (lstatIfExists(path)) {
+      throw new Error(`Descriptor rollback found a competing writer at ${path}.`);
+    }
+    linkSync(oldPath, path);
   };
 
-  writeDescriptorAtomically(paths.previousDescriptorPath, previousBytes);
   try {
-    const commitRunning = readRunningDescriptorSnapshot({
+    writeDescriptorAtomically(stagedPreviousPath, previousBytes);
+    writeDescriptorAtomically(stagedCurrentPath, currentBytes);
+    const commitRunning = readRunningDescriptorSnapshot({ currentUid, path: paths.currentDescriptorPath });
+    if (
+      commitRunning.digest !== initialRunning.digest
+      || commitRunning.dev !== initialRunning.dev
+      || commitRunning.ino !== initialRunning.ino
+    ) {
+      throw new Error(
+        "Current running release descriptor changed at descriptor commit boundary.",
+      );
+    }
+    assertDescriptorSnapshotStable({
+      actual: readOptionalRunningDescriptorSnapshot({
+        currentUid,
+        label: "Previous running release descriptor",
+        path: paths.previousDescriptorPath,
+      }),
+      expected: initialPrevious,
+      label: "Previous running release descriptor",
+    });
+
+    renameSync(paths.currentDescriptorPath, oldCurrentPath);
+    currentReserved = true;
+    const reservedCurrent = readRunningDescriptorSnapshot({
+      currentUid,
+      label: "Reserved current running release descriptor",
+      path: oldCurrentPath,
+    });
+    if (
+      reservedCurrent.digest !== initialRunning.digest
+      || reservedCurrent.dev !== initialRunning.dev
+      || reservedCurrent.ino !== initialRunning.ino
+    ) {
+      throw new Error("Current running release descriptor changed while being reserved.");
+    }
+
+    if (initialPrevious.exists) {
+      renameSync(paths.previousDescriptorPath, oldPreviousPath);
+      previousReserved = true;
+      const reservedPrevious = readRunningDescriptorSnapshot({
+        currentUid,
+        label: "Reserved previous running release descriptor",
+        path: oldPreviousPath,
+      });
+      if (
+        reservedPrevious.digest !== initialPrevious.digest
+        || reservedPrevious.dev !== initialPrevious.dev
+        || reservedPrevious.ino !== initialPrevious.ino
+      ) {
+        throw new Error("Previous running release descriptor changed while being reserved.");
+      }
+    } else if (lstatIfExists(paths.previousDescriptorPath)) {
+      throw new Error("Previous running release descriptor appeared at commit boundary.");
+    }
+
+    linkSync(stagedPreviousPath, paths.previousDescriptorPath);
+    previousPublished = true;
+    descriptorFault("after_previous_publish");
+    descriptorFault("before_current_publish");
+    linkSync(stagedCurrentPath, paths.currentDescriptorPath);
+    currentPublished = true;
+    descriptorFault("after_current_publish");
+
+    const publishedCurrent = readRunningDescriptorSnapshot({
       currentUid,
       path: paths.currentDescriptorPath,
     });
-    if (commitRunning.digest !== initialRunning.digest) {
-      throw new Error(
-        "Current running release descriptor changed during descriptor commit; concurrent write blocked.",
-      );
+    const publishedPrevious = readRunningDescriptorSnapshot({
+      currentUid,
+      label: "Previous running release descriptor",
+      path: paths.previousDescriptorPath,
+    });
+    if (
+      publishedCurrent.digest !== sha256Bytes(currentBytes)
+      || publishedPrevious.digest !== sha256Bytes(previousBytes)
+    ) {
+      throw new Error("Published release descriptor transaction did not match staged bytes.");
     }
-    writeDescriptorAtomically(paths.currentDescriptorPath, currentBytes);
   } catch (error) {
+    const rollbackErrors = [];
     try {
-      restorePreviousDescriptor();
+      if (currentPublished) removePublishedLink(paths.currentDescriptorPath, stagedCurrentPath);
     } catch (rollbackError) {
+      rollbackErrors.push(rollbackError);
+    }
+    try {
+      if (previousPublished) removePublishedLink(paths.previousDescriptorPath, stagedPreviousPath);
+    } catch (rollbackError) {
+      rollbackErrors.push(rollbackError);
+    }
+    try {
+      restoreReservedLink(paths.previousDescriptorPath, oldPreviousPath, previousReserved);
+    } catch (rollbackError) {
+      rollbackErrors.push(rollbackError);
+    }
+    try {
+      restoreReservedLink(paths.currentDescriptorPath, oldCurrentPath, currentReserved);
+    } catch (rollbackError) {
+      rollbackErrors.push(rollbackError);
+    }
+    if (rollbackErrors.length > 0) {
       const original = error instanceof Error ? error.message : String(error);
-      const rollback = rollbackError instanceof Error
-        ? rollbackError.message
-        : String(rollbackError);
-      throw new Error(`${original}. Previous descriptor restoration failed: ${rollback}`);
+      const rollback = rollbackErrors
+        .map((failure) => failure instanceof Error ? failure.message : String(failure))
+        .join("; ");
+      throw new Error(`${original}. Descriptor transaction recovery failed: ${rollback}`);
     }
     throw error;
   }

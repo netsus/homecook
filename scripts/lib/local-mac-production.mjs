@@ -2,6 +2,7 @@ import { spawn as spawnChild, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   rmSync,
@@ -676,6 +677,41 @@ function runLaunchctl(args, spawn) {
   return result;
 }
 
+function assertSafeExistingPlistTarget(path, expectedMode, currentUid, label) {
+  try {
+    const parent = lstatSync(dirname(path));
+    if (parent.isSymbolicLink() || !parent.isDirectory()) {
+      throw new Error(`${label} parent must be a regular directory.`);
+    }
+    if (parent.uid !== currentUid || (parent.mode & 0o022) !== 0) {
+      throw new Error(`${label} parent owner or mode is unsafe.`);
+    }
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
+      throw error;
+    }
+  }
+  let stat;
+  try {
+    stat = lstatSync(path);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return;
+    throw error;
+  }
+  if (stat.isSymbolicLink()) {
+    throw new Error(`${label} must not be a symlink.`);
+  }
+  if (!stat.isFile()) {
+    throw new Error(`${label} must be a regular file.`);
+  }
+  if (stat.uid !== currentUid) {
+    throw new Error(`${label} must be owned by the current user.`);
+  }
+  if ((stat.mode & 0o777) !== expectedMode) {
+    throw new Error(`${label} must use mode 0${expectedMode.toString(8)}.`);
+  }
+}
+
 /**
  * @param {{
  *   mutationAuthority?: object,
@@ -734,6 +770,12 @@ export function installLocalMacProductionLaunchAgent({
   });
 
   const paths = getLocalMacProductionPaths(homeDir);
+  assertSafeExistingPlistTarget(
+    paths.plistPath,
+    0o644,
+    uid,
+    "Local Mac production plist target",
+  );
   const plist = renderLocalMacProductionPlist({
     rootDir: normalizedRootDir,
     homeDir,

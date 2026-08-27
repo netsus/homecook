@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   rmSync,
@@ -117,6 +118,39 @@ function runLaunchctl(args, spawn) {
     throw new Error(details || `${LAUNCHCTL_BIN} ${args.join(" ")} failed.`);
   }
   return result;
+}
+
+function assertSafeExistingPlistTarget(path, currentUid) {
+  try {
+    const parent = lstatSync(dirname(path));
+    if (parent.isSymbolicLink() || !parent.isDirectory()) {
+      throw new Error("Full-local plist target parent must be a regular directory.");
+    }
+    if (parent.uid !== currentUid || (parent.mode & 0o022) !== 0) {
+      throw new Error("Full-local plist target parent owner or mode is unsafe.");
+    }
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
+      throw error;
+    }
+  }
+  let stat;
+  try {
+    stat = lstatSync(path);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return;
+    throw error;
+  }
+  if (stat.isSymbolicLink()) {
+    throw new Error("Full-local plist target must not be a symlink.");
+  }
+  if (!stat.isFile()) {
+    throw new Error("Full-local plist target must be a regular file.");
+  }
+  if (stat.uid !== currentUid) {
+    throw new Error("Full-local plist target must be owned by the current user.");
+  }
+  requireMode(stat.mode, 0o600, "Full-local plist target");
 }
 
 /**
@@ -404,6 +438,7 @@ export function installFullLocalLaunchAgent({
   );
 
   const paths = getFullLocalLaunchAgentPaths(homeDir);
+  assertSafeExistingPlistTarget(paths.plistPath, uid);
   const plist = renderFullLocalLaunchAgentPlist({
     configPath: normalizedConfigPath,
     homeDir,
