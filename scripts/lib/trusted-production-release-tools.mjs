@@ -13,6 +13,13 @@ const GH_CANDIDATES = [
   "/usr/local/bin/gh",
   "/usr/bin/gh",
 ];
+const GH_ALLOWED_REALPATHS = [
+  "/opt/homebrew/bin/gh",
+  "/opt/homebrew/Cellar/gh/",
+  "/usr/local/bin/gh",
+  "/usr/local/Cellar/gh/",
+  "/usr/bin/gh",
+];
 
 function realpathAllowed(realpath, allowedRealpaths) {
   return allowedRealpaths.some((allowed) =>
@@ -21,7 +28,7 @@ function realpathAllowed(realpath, allowedRealpaths) {
 
 export function verifyTrustedExecutable(
   candidate,
-  { allowedRealpaths, label },
+  { allowedRealpaths, currentUid = process.getuid?.(), label },
 ) {
   if (!isAbsolute(candidate)) throw new Error(`${label} path must be absolute.`);
   let realpath;
@@ -35,6 +42,7 @@ export function verifyTrustedExecutable(
   }
   if (
     !stat.isFile()
+    || ![0, currentUid].includes(stat.uid)
     || (stat.mode & 0o111) === 0
     || (stat.mode & 0o022) !== 0
     || !realpathAllowed(realpath, allowedRealpaths)
@@ -69,15 +77,24 @@ export function resolveTrustedTarExecutable() {
   });
 }
 
-export function resolveTrustedGhExecutable() {
-  return resolveFirst(GH_CANDIDATES, {
-    allowedRealpaths: [
-      "/opt/homebrew/bin/gh",
-      "/opt/homebrew/Cellar/gh/",
-      "/usr/local/bin/gh",
-      "/usr/local/Cellar/gh/",
-      "/usr/bin/gh",
-    ],
+/**
+ * @param {{
+ *   allowedRealpaths?: string[],
+ *   candidates?: string[],
+ *   currentUid?: number,
+ *   pathEnvironment?: string,
+ * }} [options]
+ */
+export function resolveTrustedGhExecutable({
+  allowedRealpaths = GH_ALLOWED_REALPATHS,
+  candidates = GH_CANDIDATES,
+  currentUid = process.getuid?.(),
+  pathEnvironment = undefined,
+} = {}) {
+  void pathEnvironment;
+  return resolveFirst(candidates, {
+    allowedRealpaths,
+    currentUid,
     label: "GitHub CLI",
   });
 }

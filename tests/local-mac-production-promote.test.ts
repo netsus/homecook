@@ -144,6 +144,7 @@ function createFixture() {
   const runCommand = runCommandMock as unknown as typeof import("node:child_process").spawnSync;
   const installBundle = vi.fn(async () => ({ installed: true }));
   const preflightBundle = vi.fn(async () => ({
+    full_local_config_sha256: "1".repeat(64),
     stable_key: "runtime-stable",
     worker: {
       artifactRoot: workerRoot,
@@ -160,6 +161,7 @@ function createFixture() {
       credentialSha256: "4".repeat(64),
       expectedSchemaSha256: "3".repeat(64),
       policySha256: "2".repeat(64),
+      fullLocalConfigSha256: "1".repeat(64),
     },
   }));
   const readinessProbe = vi.fn(async () => createReadyBundle(manifest));
@@ -171,6 +173,7 @@ function createFixture() {
     credentialSha256: "4".repeat(64),
     expectedSchemaSha256: sha256(readFileSync(workerExpectedSchemaPath)),
     policySha256: "2".repeat(64),
+    fullLocalConfigSha256: "1".repeat(64),
   }));
 
   return {
@@ -369,6 +372,7 @@ describe("local Mac production promote", () => {
         ),
       });
       return {
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "bridge-stable",
         worker: {
           artifactRoot: fixture.workerRoot,
@@ -385,6 +389,7 @@ describe("local Mac production promote", () => {
           credentialSha256: "4".repeat(64),
           expectedSchemaSha256: "3".repeat(64),
           policySha256: "2".repeat(64),
+          fullLocalConfigSha256: "1".repeat(64),
         },
       };
     });
@@ -607,6 +612,7 @@ describe("local Mac production promote", () => {
     const fixture = createFixture();
     fixture.preflightBundle
       .mockResolvedValueOnce({
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-a",
         worker: {
           artifactRoot: "/private/worker",
@@ -623,9 +629,11 @@ describe("local Mac production promote", () => {
           credentialSha256: "4".repeat(64),
           expectedSchemaSha256: "3".repeat(64),
           policySha256: "2".repeat(64),
+          fullLocalConfigSha256: "1".repeat(64),
         },
       })
       .mockResolvedValueOnce({
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-b",
         worker: {
           artifactRoot: "/private/worker",
@@ -642,6 +650,7 @@ describe("local Mac production promote", () => {
           credentialSha256: "4".repeat(64),
           expectedSchemaSha256: "3".repeat(64),
           policySha256: "2".repeat(64),
+          fullLocalConfigSha256: "1".repeat(64),
         },
       });
 
@@ -1054,6 +1063,7 @@ describe("local Mac production promote", () => {
       build_id: fixture.manifest.build_id,
       promotion_id: fixture.manifest.promotion_id,
       restart_capability: "full-local-resume-current-v1",
+      full_local_config_sha256: "1".repeat(64),
       source_manifest_sha256: sha256(fixture.manifestBytes),
       worker_artifact_sha256: "7".repeat(64),
       worker_app_descriptor_sha256: sha256(readFileSync(fixture.workerAppDescriptorPath)),

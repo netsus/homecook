@@ -112,6 +112,7 @@ const RUNNING_DESCRIPTOR_ALLOWED_FIELDS = new Set([
   "build_id",
   "promotion_id",
   "restart_capability",
+  "full_local_config_sha256",
   "promoted_at",
   "source_manifest_sha256",
   "execution_app_root",
@@ -1766,6 +1767,20 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
   ) {
     throw new Error(`${label}.restart_capability is unsupported.`);
   }
+  const fullLocalConfigAuthority = value.full_local_config_sha256 === undefined
+    ? {}
+    : {
+        full_local_config_sha256: requireDigest(
+          value.full_local_config_sha256,
+          `${label}.full_local_config_sha256`,
+        ),
+      };
+  if (
+    restartCapability.restart_capability === FULL_LOCAL_RESUME_CURRENT_CAPABILITY
+    && fullLocalConfigAuthority.full_local_config_sha256 === undefined
+  ) {
+    throw new Error(`${label}.full_local_config_sha256 is required for resume-current.`);
+  }
   return {
     schema: RUNNING_DESCRIPTOR_SCHEMA,
     release_tag: validateProductionReleaseTag(value.release_tag, `${label}.release_tag`),
@@ -1779,6 +1794,7 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
       `${label}.source_manifest_sha256`,
     ),
     ...restartCapability,
+    ...fullLocalConfigAuthority,
     ...workerPathAuthority,
   };
 }
@@ -2680,6 +2696,10 @@ export async function promoteLocalMacProductionRelease({
     ...(currentRuntimeBridge
       ? {}
       : { restart_capability: FULL_LOCAL_RESUME_CURRENT_CAPABILITY }),
+    full_local_config_sha256: requireDigest(
+      finalWorker.fullLocalConfigSha256,
+      "Final full-local config SHA-256",
+    ),
     promoted_at: promotedAt,
     source_manifest_sha256: manifestDigest,
     execution_app_root: executionSnapshot.appRoot,

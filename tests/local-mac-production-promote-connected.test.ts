@@ -40,6 +40,8 @@ import {
   FULL_LOCAL_SECRET_NAMES,
   generateFullLocalSecretBundle,
 } from "../scripts/lib/full-local-production-runtime.mjs";
+import { resumeCurrentRelease } from "../scripts/full-local-production-runtime.mjs";
+import { resolveTrustedGhExecutable } from "../scripts/lib/trusted-production-release-tools.mjs";
 import { FULL_LOCAL_OAUTH_SECRET_NAMES } from "../scripts/lib/full-local-oauth-providers.mjs";
 import {
   buildYoutubeExtractionAppDescriptor,
@@ -270,12 +272,18 @@ describe("connected local Mac production promotion", () => {
     mkdirSync(launchAgents, { recursive: true, mode: 0o700 });
     chmodSync(join(homeDir, "Library"), 0o700);
     const fullConfig = join(homeDir, ".homecook/config/full-local-production.env");
+    const legacyFullConfig = join(
+      fullLocalRoot,
+      "infra/full-local-supabase/.env.production.local",
+    );
     mkdirSync(dirname(fullConfig), { recursive: true, mode: 0o700 });
+    mkdirSync(dirname(legacyFullConfig), { recursive: true, mode: 0o700 });
     const fullLocalConfig = readFileSync(
       join(process.cwd(), "infra/full-local-supabase/.env.production.example"),
       "utf8",
     ).replaceAll("/Users/REPLACE_ME", homeDir);
     writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
+    writeFileSync(legacyFullConfig, fullLocalConfig, { mode: 0o600 });
     const fullLocalSecrets = generateFullLocalSecretBundle();
     const fullLocalSecretDir = join(homeDir, ".homecook/secrets/full-local-supabase");
     mkdirSync(fullLocalSecretDir, { recursive: true, mode: 0o700 });
@@ -286,7 +294,6 @@ describe("connected local Mac production promotion", () => {
         { mode: 0o600 },
       );
     }
-
     writeFileSync(
       getLocalMacProductionPaths(homeDir).plistPath,
       renderLocalMacProductionPlist({ homeDir, nodeBin, rootDir: currentRoot }),
@@ -295,7 +302,7 @@ describe("connected local Mac production promotion", () => {
     writeFileSync(
       getFullLocalLaunchAgentPaths(homeDir).plistPath,
       renderFullLocalLaunchAgentPlist({
-        configPath: fullConfig,
+        configPath: legacyFullConfig,
         homeDir,
         includeReleaseIdentity: true,
         nodeBin,
@@ -540,7 +547,12 @@ describe("connected local Mac production promotion", () => {
     const fullLocalConfig = readFileSync(
       join(process.cwd(), "infra/full-local-supabase/.env.production.example"),
       "utf8",
-    ).replaceAll("/Users/REPLACE_ME", homeDir);
+    )
+      .replaceAll("/Users/REPLACE_ME", homeDir)
+      .replace(
+        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=false",
+        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=true",
+      );
     writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
     const fullLocalSecrets = generateFullLocalSecretBundle();
     const fullLocalOauthSecrets = Object.fromEntries(
@@ -556,6 +568,9 @@ describe("connected local Mac production promotion", () => {
         mode: 0o600,
         },
       );
+    }
+    for (const [name, value] of Object.entries(fullLocalOauthSecrets)) {
+      writeFileSync(join(fullLocalSecretDir, name), value, { mode: 0o600 });
     }
     writeFileSync(getLocalMacProductionPaths(homeDir).plistPath, renderLocalMacProductionPlist({ homeDir, nodeBin, rootDir: currentRoot }), { mode: 0o644 });
     writeFileSync(getFullLocalLaunchAgentPaths(homeDir).plistPath, renderFullLocalLaunchAgentPlist({ configPath: fullConfig, homeDir, includeReleaseIdentity: false, nodeBin, rootDir: currentRoot, runtimeCommand: "start" }), { mode: 0o600 });
@@ -760,7 +775,8 @@ const container = (id, index) => ({
   } },
   State: { Running: id !== "pre-stopped" || fs.existsSync(startedPath) },
 });
-if (args.includes("config") && args.includes("--format")) process.stdout.write(${JSON.stringify(JSON.stringify(composeModel))});
+if (args.includes("config") && args.includes("--services")) process.stdout.write(services.join("\\n") + "\\n");
+else if (args.includes("config") && args.includes("--format")) process.stdout.write(${JSON.stringify(JSON.stringify(composeModel))});
 else if (args.includes("up") && args.includes("-d")) {
   fs.writeFileSync(startedPath, "started");
   const fault = fs.existsSync(faultPath) ? fs.readFileSync(faultPath, "utf8") : "";
@@ -822,11 +838,41 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       fullConfig,
     ]);
     expect(programArguments.join(" ")).not.toMatch(/lock-token|release-manifest/iu);
-    const invokeResume = () => spawnSync(programArguments[0], programArguments.slice(1), {
-      cwd: workingDirectory,
-      encoding: "utf8",
-    });
-    const resumed = invokeResume();
+    expect(workingDirectory).toBe(currentDescriptor.execution_app_root);
+    const hostileBinDir = join(repoRoot, "hostile-bin");
+    mkdirSync(hostileBinDir, { mode: 0o700 });
+    writeFileSync(join(hostileBinDir, "gh"), "#!/bin/sh\nexit 91\n", { mode: 0o700 });
+    const resumeArgs = programArguments.slice(programArguments.indexOf("resume-current") + 1);
+    const invokeResume = async () => {
+      const previousHome = process.env.HOME;
+      const previousPath = process.env.PATH;
+      process.env.HOME = homeDir;
+      process.env.PATH = `${hostileBinDir}:${binDir}:/usr/bin:/bin:/usr/sbin:/sbin`;
+      try {
+        const result = await resumeCurrentRelease(resumeArgs, {
+          resolveGhExecutable: () => resolveTrustedGhExecutable({
+            allowedRealpaths: [realpathSync(fakeGhPath)],
+            candidates: [fakeGhPath],
+            currentUid: process.getuid?.(),
+            pathEnvironment: process.env.PATH,
+          }),
+          runtimeRoot: currentDescriptor.execution_app_root,
+        });
+        return { status: 0, stdout: JSON.stringify(result), stderr: "" };
+      } catch (error) {
+        return {
+          status: 1,
+          stdout: "",
+          stderr: error instanceof Error ? error.message : String(error),
+        };
+      } finally {
+        if (previousHome === undefined) delete process.env.HOME;
+        else process.env.HOME = previousHome;
+        if (previousPath === undefined) delete process.env.PATH;
+        else process.env.PATH = previousPath;
+      }
+    };
+    const resumed = await invokeResume();
     expect(resumed.status, resumed.stderr).toBe(0);
     expect(JSON.parse(resumed.stdout)).toMatchObject({
       resumed_current: true,
@@ -857,7 +903,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       mode: 0o600,
     });
     chmodSync(snapshotEvidencePath, 0o400);
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     chmodSync(policyPath, 0o600);
     writeFileSync(policyPath, policyBytes, { mode: 0o600 });
@@ -870,7 +916,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       ...currentDescriptor,
       promotion_id: "tampered-promotion",
     }, null, 2), { mode: 0o600 });
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     writeFileSync(state.currentDescriptorPath, currentDescriptorBytes, { mode: 0o600 });
 
@@ -879,7 +925,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     chmodSync(preparePath, 0o600);
     writeFileSync(preparePath, `${prepareBytes.toString("utf8")} `, { mode: 0o600 });
     chmodSync(preparePath, 0o400);
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     chmodSync(preparePath, 0o600);
     writeFileSync(preparePath, prepareBytes, { mode: 0o600 });
@@ -888,7 +934,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     writeFileSync(state.currentDescriptorPath, JSON.stringify(firstDescriptor, null, 2), {
       mode: 0o600,
     });
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     writeFileSync(state.currentDescriptorPath, currentDescriptorBytes, { mode: 0o600 });
     expect(readFileSync(state.currentDescriptorPath)).toEqual(currentDescriptorBytes);
@@ -920,7 +966,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       rmSync(dockerStartedPath, { force: true });
       writeFileSync(resumeFaultModePath, fault, { mode: 0o600 });
       const logOffset = existsSync(resumeMarker) ? readFileSync(resumeMarker, "utf8").length : 0;
-      const faultResult = invokeResume();
+      const faultResult = await invokeResume();
       expect(faultResult.status).toBe(1);
       expect(faultResult.stderr).toContain("Failure evidence:");
       const cleanupLog = readFileSync(resumeMarker, "utf8").slice(logOffset);
@@ -934,7 +980,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     }
 
     writeFileSync(resumeFaultModePath, "cleanup-failure", { mode: 0o600 });
-    const cleanupFailure = invokeResume();
+    const cleanupFailure = await invokeResume();
     expect(cleanupFailure.status).toBe(1);
     const recoveryRequiredPath = join(
       state.releaseRoot,
@@ -943,27 +989,16 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     expect(existsSync(recoveryRequiredPath)).toBe(true);
     rmSync(resumeFaultModePath, { force: true });
     const retryLogOffset = readFileSync(resumeMarker, "utf8").length;
-    const blockedRetry = invokeResume();
+    const blockedRetry = await invokeResume();
     expect(blockedRetry.status).toBe(1);
     expect(blockedRetry.stderr).toMatch(/manual recovery|recovery required/iu);
     expect(readFileSync(resumeMarker, "utf8").slice(retryLogOffset)).toBe("");
     rmSync(recoveryRequiredPath);
     rmSync(dockerStartedPath, { force: true });
 
-    writeFileSync(
-      fullConfig,
-      fullLocalConfig.replace(
-        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=false",
-        "FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS=true",
-      ),
-      { mode: 0o600 },
-    );
-    for (const [name, value] of Object.entries(fullLocalOauthSecrets)) {
-      writeFileSync(join(fullLocalSecretDir, name), value, { mode: 0o600 });
-    }
     writeFileSync(resumeFaultModePath, "oauth-secret", { mode: 0o600 });
     const oauthLogOffset = readFileSync(resumeMarker, "utf8").length;
-    const oauthFaultResult = invokeResume();
+    const oauthFaultResult = await invokeResume();
     expect(oauthFaultResult.status).toBe(1);
     expect(oauthFaultResult.stderr).toContain("Failure evidence:");
     const oauthCleanupLog = readFileSync(resumeMarker, "utf8").slice(oauthLogOffset);
@@ -973,10 +1008,6 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     expect(JSON.stringify({ currentDescriptor, oauthCleanupLog })).not.toContain(
       String(fullLocalOauthSecrets.google_client_secret),
     );
-    writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
-    for (const name of FULL_LOCAL_OAUTH_SECRET_NAMES) {
-      rmSync(join(fullLocalSecretDir, name), { force: true });
-    }
     rmSync(resumeFaultModePath, { force: true });
     rmSync(dockerStartedPath, { force: true });
     const failureEvidenceRoot = join(state.releaseRoot, "resume-failures");

@@ -94,6 +94,28 @@ function assertSafeAncestors(trustedRoot, targetPath, currentUid, label) {
   }
 }
 
+function readCanonicalFullLocalConfigEvidence({ currentUid, options }) {
+  const canonicalPath = getFullLocalResumeConfigPath(options.homeDir);
+  if (resolve(options.fullLocalConfigPath) !== canonicalPath) {
+    throw new Error("Full-local config must use the fixed canonical resume path.");
+  }
+  assertSafeAncestors(options.homeDir, canonicalPath, currentUid, "Full-local config");
+  const stat = lstatSync(canonicalPath);
+  if (
+    stat.isSymbolicLink()
+    || !stat.isFile()
+    || stat.uid !== currentUid
+    || modeBits(stat.mode) !== 0o600
+    || realpathSync(canonicalPath) !== canonicalPath
+  ) {
+    throw new Error("Full-local config owner, mode, or path is unsafe.");
+  }
+  return Object.freeze({
+    digest: sha256File(canonicalPath),
+    path: canonicalPath,
+  });
+}
+
 function readPlistSnapshot(path, { currentUid, expectedMode, label, trustedRoot }) {
   if (trustedRoot) assertSafeAncestors(trustedRoot, path, currentUid, label);
   if (!existsSync(path)) {
@@ -587,12 +609,15 @@ function buildDefaultDependencies(
   platform = process.platform,
 ) {
   return {
+    readFullLocalConfigEvidence: ({ options }) => {
+      const currentUid = process.getuid?.();
+      if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+      return readCanonicalFullLocalConfigEvidence({ currentUid, options });
+    },
     validateMutationTargets: ({ options }) => {
       const currentUid = process.getuid?.();
       if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
-      if (resolve(options.fullLocalConfigPath) !== getFullLocalResumeConfigPath(options.homeDir)) {
-        throw new Error("Full-local config must use the fixed canonical resume path.");
-      }
+      readCanonicalFullLocalConfigEvidence({ currentUid, options });
       readPlistSnapshot(getLocalMacProductionPaths(options.homeDir).plistPath, {
         currentUid,
         expectedMode: 0o644,
@@ -616,6 +641,10 @@ function buildDefaultDependencies(
     readWorkerReleasePreflight: async ({ context, options }) => {
       const userId = process.getuid?.();
       if (!Number.isInteger(userId)) throw new Error("Current user uid is unavailable.");
+      const fullLocalConfig = readCanonicalFullLocalConfigEvidence({
+        currentUid: userId,
+        options,
+      });
       validateYoutubeExtractionWorkerSecretRoot(options.workerSecretRoot, {
         expectedUserId: userId,
       });
@@ -656,6 +685,7 @@ function buildDefaultDependencies(
         credentialSha256: sha256File(options.workerCredentialPath),
         expectedSchemaSha256: sha256File(options.workerExpectedSchemaPath),
         policySha256: sha256File(options.workerPolicyPath),
+        fullLocalConfigSha256: fullLocalConfig.digest,
         resumeAuthority: {
           bundlePath: resolve(options.bundlePath),
           subjectManifestPath: resolve(options.subjectManifestPath),
@@ -722,11 +752,17 @@ function buildDefaultDependencies(
       ) {
         throw new Error("Current full-local root drifted from the first canonical adoption bridge.");
       }
+      const currentFullLocalConfigPath = currentRuntimeBridge
+        ? resolve(
+            currentRuntimeBridge.full_local_root,
+            "infra/full-local-supabase/.env.production.local",
+          )
+        : options.fullLocalConfigPath;
       const fullLocalPlist = assertCanonicalLocalMacProductionPlist({
         actualPath: fullLocalPlistPath,
         currentUid,
         expectedContent: renderFullLocalLaunchAgentPlist({
-          configPath: options.fullLocalConfigPath,
+          configPath: currentFullLocalConfigPath,
           currentDescriptorPath: getLocalMacProductionReleasePaths(options.homeDir)
             .currentDescriptorPath,
           homeDir: options.homeDir,
@@ -758,7 +794,7 @@ function buildDefaultDependencies(
       const currentFullLocalConfig = argumentValue(fullLocalPlist.args, "--config");
       if (
         !currentFullLocalConfig
-        || realpathSync(currentFullLocalConfig) !== realpathSync(options.fullLocalConfigPath)
+        || realpathSync(currentFullLocalConfig) !== realpathSync(currentFullLocalConfigPath)
       ) {
         throw new Error("Current full-local plist config path drifted.");
       }
@@ -780,7 +816,10 @@ function buildDefaultDependencies(
           releaseDir: fullLocalRuntimeRoot,
           releaseIdentityPath: resolve(currentReleaseDir, "prepare.json"),
         },
-        options,
+        options: {
+          ...options,
+          fullLocalConfigPath: currentFullLocalConfigPath,
+        },
         commandRunner,
         allowLegacyBootstrap:
           !currentRuntimeBridge
@@ -1195,6 +1234,10 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
     resolvedDependencies.readWorkerReleasePreflight,
     "readWorkerReleasePreflight",
   );
+  const readFullLocalConfigEvidence = requireFunction(
+    resolvedDependencies.readFullLocalConfigEvidence,
+    "readFullLocalConfigEvidence",
+  );
   const readCurrentRuntimeBundle = requireFunction(
     resolvedDependencies.readCurrentRuntimeBundle,
     "readCurrentRuntimeBundle",
@@ -1257,12 +1300,14 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       }
       const stableKey = sha256Text(JSON.stringify({
         current: current.stable_key,
+        full_local_config_sha256: worker.fullLocalConfigSha256,
         worker_path_authority: workerPathAuthority,
         worker_artifact_sha256: worker.inputs?.workerArtifact?.artifact_sha256 ?? null,
         worker_preflight: worker.preflight,
         i031_preflight: worker.i031Preflight,
       }));
       return {
+        full_local_config_sha256: worker.fullLocalConfigSha256,
         stable_key: stableKey,
         current,
         worker,
@@ -1358,12 +1403,20 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
 
     finalWorkerProbe: async ({ preflight, ...context }) => {
       verifySealedExecutionContext(context);
-      return readWorkerRuntimeIdentity({
+      const worker = await readWorkerRuntimeIdentity({
         context,
         options,
         preflight,
         requirePolicyEnabled: true,
       });
+      const fullLocalConfig = readFullLocalConfigEvidence({ context, options, preflight });
+      if (fullLocalConfig.digest !== preflight.full_local_config_sha256) {
+        throw new Error("Final full-local config digest drifted after installation.");
+      }
+      return {
+        ...worker,
+        fullLocalConfigSha256: fullLocalConfig.digest,
+      };
     },
   };
 }

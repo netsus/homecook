@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -127,6 +127,7 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
         credentialSha256: "4".repeat(64),
         expectedSchemaSha256: "3".repeat(64),
         policySha256: "2".repeat(64),
+        fullLocalConfigSha256: "1".repeat(64),
         i031Preflight: { ready: true },
         preflight: {
           ready: true,
@@ -145,6 +146,10 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
         youtube_worker: { ...CURRENT_IDENTITY, ready: true },
       };
     }),
+    readFullLocalConfigEvidence: vi.fn(() => ({
+      digest: "1".repeat(64),
+      path: "/private/full-local.env",
+    })),
     installFullLocal: vi.fn(() => {
       calls.push("install-full-local");
       return { changed: true };
@@ -253,6 +258,9 @@ function createDefaultWorkerPreflightFixture() {
   const credentialPath = join(secretRoot, "credential.json");
   const providerSecretPath = join(secretRoot, "provider.env");
   const configPath = join(secretRoot, "worker.env");
+  const fullLocalConfigPath = join(homeDir, ".homecook/config/full-local-production.env");
+  mkdirSync(dirname(fullLocalConfigPath), { recursive: true, mode: 0o700 });
+  writeFileSync(fullLocalConfigPath, "FULL_LOCAL_CONFIG=fixture\n", { mode: 0o600 });
   writeFileSync(tokenPath, "worker-token\n", { mode: 0o600 });
   writeFileSync(providerSecretPath, "YOUTUBE_API_KEY=test-key\n", { mode: 0o600 });
   writeFileSync(
@@ -290,6 +298,7 @@ function createDefaultWorkerPreflightFixture() {
   return {
     context: createContext({ homeDir, releaseDir }),
     options: createOptions({
+      fullLocalConfigPath,
       homeDir,
       workerAppDescriptorPath: appDescriptorPath,
       workerConfigPath: configPath,

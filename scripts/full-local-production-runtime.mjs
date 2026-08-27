@@ -29,6 +29,7 @@ import {
   materializeFullLocalSecrets,
   materializeFullLocalRuntimeSecrets,
   parseFullLocalProductCatalogSqlOutput,
+  parseFullLocalComposeServiceNames,
   readFullLocalReleaseIdentityFromContainers,
   renderFullLocalProductionConfigTemplate,
   summarizeFullLocalRuntimeStates,
@@ -98,9 +99,9 @@ import {
 } from "./lib/local-mac-production-release.mjs";
 import {
   createGitHubProductionReleaseAttestationVerifier,
-  resolveTrustedGitHubCliExecutable,
 } from "./lib/github-production-release-attestation.mjs";
 import { getFullLocalResumeConfigPath } from "./lib/full-local-launch-agent.mjs";
+import { resolveTrustedGhExecutable } from "./lib/trusted-production-release-tools.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const INFRA = join(ROOT, "infra/full-local-supabase");
@@ -640,17 +641,28 @@ function storeKeychainSecret(directory, service, account, secret) {
 function composeArgs(runtime, ...args) {
   return [
     "compose",
+    "--env-file",
+    runtime.configPath,
     "--project-name",
     runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
     "-f",
-    COMPOSE_FILE,
-    ...(runtime.oauth?.enabled ? ["-f", OAUTH_COMPOSE_FILE] : []),
+    runtime.composeFile ?? COMPOSE_FILE,
+    ...(runtime.oauth?.enabled
+      ? ["-f", runtime.oauthComposeFile ?? OAUTH_COMPOSE_FILE]
+      : []),
     ...args,
   ];
 }
 
+function composeServiceNames(runtime) {
+  return parseFullLocalComposeServiceNames(
+    compose(runtime, ["config", "--services"]),
+  );
+}
+
 function compose(runtime, args) {
   return run("docker", composeArgs(runtime, ...args), {
+    cwd: runtime.rootDir ?? ROOT,
     env: runtime.env,
     failure: "Full-local Docker Compose operation failed.",
   });
@@ -658,6 +670,7 @@ function compose(runtime, args) {
 
 function composeWithInput(runtime, args, input) {
   return run("docker", composeArgs(runtime, ...args), {
+    cwd: runtime.rootDir ?? ROOT,
     env: runtime.env,
     failure: "Full-local Docker Compose database operation failed.",
     input,
@@ -737,12 +750,24 @@ function baseRuntime(args, { requireSecrets = true } = {}) {
   };
 }
 
-function validateRuntime(args, { materializeSecrets, releaseIdentity = null }) {
+function validateRuntime(
+  args,
+  { materializeSecrets, releaseIdentity = null, runtimeRoot = ROOT },
+) {
   const runtime = baseRuntime(args);
+  const normalizedRuntimeRoot = realpathSync(resolve(runtimeRoot));
+  const composeFile = resolve(
+    normalizedRuntimeRoot,
+    "infra/full-local-supabase/docker-compose.production.yml",
+  );
+  const oauthComposeFile = resolve(
+    normalizedRuntimeRoot,
+    "infra/full-local-supabase/docker-compose.oauth.production.yml",
+  );
   const expectedReleaseIdentity = releaseIdentity ?? readExpectedFullLocalReleaseIdentity(args);
   const allowLegacyBootstrap = hasFlag(args, "--allow-legacy-release-bootstrap");
   const secretDirectory = validateExternalSecretDirectory({
-    repositoryRoot: ROOT,
+    repositoryRoot: normalizedRuntimeRoot,
     secretDirectory: runtime.config.FULL_LOCAL_SECRET_DIR,
   });
   const oauth = validateFullLocalOAuthConfig({
@@ -775,8 +800,12 @@ function validateRuntime(args, { materializeSecrets, releaseIdentity = null }) {
   delete env.DOCKER_DEFAULT_PLATFORM;
   const composed = run(
     "docker",
-    composeArgs({ ...runtime, oauth }, "config", "--format", "json"),
-    { env, failure: "Full-local Compose configuration is invalid." },
+    composeArgs({ ...runtime, composeFile, oauth, oauthComposeFile }, "config", "--format", "json"),
+    {
+      cwd: normalizedRuntimeRoot,
+      env,
+      failure: "Full-local Compose configuration is invalid.",
+    },
   );
   assertFullLocalComposeModel(JSON.parse(composed));
   assertNoSecretLeakage({
@@ -785,10 +814,13 @@ function validateRuntime(args, { materializeSecrets, releaseIdentity = null }) {
   });
   return Object.freeze({
     ...runtime,
+    composeFile,
     allowLegacyBootstrap,
     env,
     oauth,
+    oauthComposeFile,
     releaseIdentity: expectedReleaseIdentity,
+    rootDir: normalizedRuntimeRoot,
     validation,
   });
 }
@@ -801,8 +833,16 @@ function validateReadOnlyRuntime(args) {
   return validateRuntime(args, { materializeSecrets: false });
 }
 
-function validateReadOnlyRuntimeForReleaseIdentity(args, releaseIdentity) {
-  return validateRuntime(args, { materializeSecrets: false, releaseIdentity });
+function validateReadOnlyRuntimeForReleaseIdentity(
+  args,
+  releaseIdentity,
+  runtimeRoot = ROOT,
+) {
+  return validateRuntime(args, {
+    materializeSecrets: false,
+    releaseIdentity,
+    runtimeRoot,
+  });
 }
 
 function bootstrapSecrets(args) {
@@ -886,13 +926,14 @@ function runtimeStatus(runtime) {
   return summarizeFullLocalRuntimeStates(states);
 }
 
-function observedFullLocalReleaseIdentity(runtime) {
+function observedFullLocalReleaseIdentity(runtime, expectedServices = composeServiceNames(runtime)) {
   if (!runtime.releaseIdentity) return null;
   return readFullLocalReleaseIdentityFromContainers(
     composeContainers(runtime),
     {
       allowLegacyBootstrap: runtime.allowLegacyBootstrap,
       expected: runtime.releaseIdentity,
+      expectedServices,
     },
   );
 }
@@ -2225,6 +2266,21 @@ function assertResumeCurrentSafeFile(path, { expectedMode, label }) {
   }
 }
 
+function readFullLocalResumeConfigEvidence(path) {
+  assertResumeCurrentSafeFile(path, {
+    expectedMode: 0o600,
+    label: "Full-local resume config",
+  });
+  const bytes = readFileSync(path);
+  const stat = lstatSync(path);
+  return Object.freeze({
+    dev: stat.dev,
+    digest: createHash("sha256").update(bytes).digest("hex"),
+    ino: stat.ino,
+    path,
+  });
+}
+
 function assertResumeCurrentSafeAncestors(homeDir, targetPath, label) {
   const root = resolve(homeDir);
   const parent = dirname(resolve(targetPath));
@@ -2346,12 +2402,13 @@ function preserveFullLocalResumeFailureEvidence({
   return path;
 }
 
-function cleanupFullLocalResumeAttempt({ before, runtime }) {
+function cleanupFullLocalResumeAttempt({ before, expectedServices, runtime }) {
   const after = dockerResourceInventory("container", { all: true });
   const selected = selectFullLocalResumeCleanupContainers({
     after,
     before,
     composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+    expectedServices,
   });
   const failures = [];
   for (const containerId of selected.stopIds) {
@@ -2382,7 +2439,13 @@ function cleanupFullLocalResumeAttempt({ before, runtime }) {
   });
 }
 
-async function resumeCurrentRelease(args) {
+export async function resumeCurrentRelease(
+  args,
+  {
+    resolveGhExecutable = resolveTrustedGhExecutable,
+    runtimeRoot = ROOT,
+  } = {},
+) {
   assertResumeCurrentArguments(args);
   const homeDir = resolve(process.env.HOME ?? homedir());
   assertNoFullLocalResumeRecoveryRequired(homeDir);
@@ -2397,11 +2460,9 @@ async function resumeCurrentRelease(args) {
     expectedMode: 0o600,
     label: "Full-local resume config",
   });
-  const authorityRoot = resolve(ROOT, "..", "authority");
-  const ghExecutable = resolveTrustedGitHubCliExecutable({
-    currentUid: process.getuid?.(),
-    nodeExecutablePath: process.argv0,
-  });
+  const normalizedRuntimeRoot = realpathSync(resolve(runtimeRoot));
+  const authorityRoot = resolve(normalizedRuntimeRoot, "..", "authority");
+  const ghExecutable = resolveGhExecutable();
   const ghExecutableSha256 = createHash("sha256")
     .update(readFileSync(ghExecutable))
     .digest("hex");
@@ -2414,13 +2475,15 @@ async function resumeCurrentRelease(args) {
     subjectManifestPath: resolve(authorityRoot, "attestation-subject.json"),
     trustedRootPath: resolve(authorityRoot, "attestation-trusted-root.jsonl"),
     runGh: (command, commandArgs, commandOptions) => {
-      const currentExecutable = resolveTrustedGitHubCliExecutable({
-        approvedSha256: ghExecutableSha256,
-        currentUid: process.getuid?.(),
-        nodeExecutablePath: process.argv0,
-      });
+      const currentExecutable = resolveGhExecutable();
       if (command !== currentExecutable) {
         fail("Trusted GitHub CLI executable changed during resume-current.");
+      }
+      const currentDigest = createHash("sha256")
+        .update(readFileSync(currentExecutable))
+        .digest("hex");
+      if (currentDigest !== ghExecutableSha256) {
+        fail("Trusted GitHub CLI digest changed during resume-current.");
       }
       return spawnSync(command, commandArgs, commandOptions);
     },
@@ -2428,17 +2491,25 @@ async function resumeCurrentRelease(args) {
   const readAuthority = () => validateLocalMacProductionCurrentResumeAuthority({
       currentDescriptorPath,
       homeDir,
-      rootDir: ROOT,
+      rootDir: normalizedRuntimeRoot,
       verifyAttestation,
     });
   const authority = readAuthority();
+  const configEvidence = readFullLocalResumeConfigEvidence(requestedConfigPath);
+  if (configEvidence.digest !== authority.descriptor.full_local_config_sha256) {
+    fail("Full-local resume config digest does not match current.json.");
+  }
   const expectedIdentity = {
     release_sha: authority.descriptor.release_sha,
     release_tree: authority.descriptor.release_tree,
     build_id: authority.descriptor.build_id,
     promotion_id: authority.descriptor.promotion_id,
   };
-  const runtime = validateReadOnlyRuntimeForReleaseIdentity(args, expectedIdentity);
+  const runtime = validateReadOnlyRuntimeForReleaseIdentity(
+    args,
+    expectedIdentity,
+    normalizedRuntimeRoot,
+  );
   const canonicalSecretDirectory = resolve(
     homeDir,
     ".homecook",
@@ -2464,13 +2535,22 @@ async function resumeCurrentRelease(args) {
     assertExistingFullLocalRuntimeSecrets(runtime),
     "Full-local runtime secrets",
   );
+  assertResumeEvidenceStable(
+    configEvidence,
+    readFullLocalResumeConfigEvidence(requestedConfigPath),
+    "Full-local resume config",
+  );
+  const expectedComposeServices = composeServiceNames(runtime);
   const containersBeforeResume = dockerResourceInventory("container", { all: true });
   let mutationAttempted = false;
   try {
     mutationAttempted = true;
     compose(runtime, ["up", "-d"]);
     const status = await waitForRuntimeHealthy(runtime);
-    const releaseIdentity = observedFullLocalReleaseIdentity(runtime);
+    const releaseIdentity = observedFullLocalReleaseIdentity(
+      runtime,
+      expectedComposeServices,
+    );
     if (JSON.stringify(releaseIdentity) !== JSON.stringify(expectedIdentity)) {
       fail("resume-current Docker workload identity does not match current.json.");
     }
@@ -2484,6 +2564,11 @@ async function resumeCurrentRelease(args) {
       assertExistingFullLocalRuntimeSecrets(runtime),
       "Full-local runtime secrets",
     );
+    assertResumeEvidenceStable(
+      configEvidence,
+      readFullLocalResumeConfigEvidence(requestedConfigPath),
+      "Full-local resume config",
+    );
     return {
       ...status,
       release_identity: releaseIdentity,
@@ -2496,6 +2581,7 @@ async function resumeCurrentRelease(args) {
     try {
       cleanup = cleanupFullLocalResumeAttempt({
         before: containersBeforeResume,
+        expectedServices: expectedComposeServices,
         runtime,
       });
     } catch (cleanupError) {

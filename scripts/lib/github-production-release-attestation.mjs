@@ -2,12 +2,10 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
-  lstatSync,
   readFileSync,
-  realpathSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
@@ -36,33 +34,6 @@ export const GITHUB_CLI_TRUSTED_ROOT_SHA256 =
 
 const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
-
-export function resolveTrustedGitHubCliExecutable({
-  approvedSha256 = null,
-  currentUid = process.getuid?.(),
-  nodeExecutablePath = process.argv0,
-  pathEnvironment = process.env.PATH,
-} = {}) {
-  void pathEnvironment;
-  const candidate = resolve(dirname(resolve(nodeExecutablePath)), "gh");
-  const executable = realpathSync(candidate);
-  const stat = lstatSync(executable);
-  if (
-    stat.isSymbolicLink()
-    || !stat.isFile()
-    || ![0, currentUid].includes(stat.uid)
-    || (stat.mode & 0o022) !== 0
-  ) {
-    throw new Error("Trusted GitHub CLI owner, mode, or type is unsafe.");
-  }
-  if (approvedSha256 !== null) {
-    const expected = requireSha256(approvedSha256, "approved GitHub CLI SHA-256");
-    if (defaultSha256File(executable) !== expected) {
-      throw new Error("Trusted GitHub CLI digest does not match the approved policy.");
-    }
-  }
-  return executable;
-}
 
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {

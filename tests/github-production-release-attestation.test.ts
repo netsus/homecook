@@ -6,6 +6,7 @@ import {
   realpathSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,9 +22,9 @@ import {
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
   GITHUB_CLI_TRUSTED_ROOT_SHA256,
   createGitHubProductionReleaseAttestationVerifier,
-  resolveTrustedGitHubCliExecutable,
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
+import { resolveTrustedGhExecutable } from "../scripts/lib/trusted-production-release-tools.mjs";
 import {
   createLocalMacProductionGitEvidence,
   createLocalMacProductionReleaseManifest,
@@ -68,31 +69,40 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
-  it("resolves only the absolute validated GitHub CLI beside the pinned Node executable", () => {
+  it("resolves only an explicitly allowlisted absolute GitHub CLI and rejects escapes", () => {
     const root = createTempDirectory("trusted-gh-");
     const trustedBin = join(root, "trusted-bin");
     const hostileBin = join(root, "hostile-bin");
     mkdirSync(trustedBin, { mode: 0o700 });
     mkdirSync(hostileBin, { mode: 0o700 });
-    const nodePath = join(trustedBin, "node");
     const trustedGh = join(trustedBin, "gh");
     const hostileGh = join(hostileBin, "gh");
-    writeFileSync(nodePath, "node", { mode: 0o700 });
     writeFileSync(trustedGh, "trusted", { mode: 0o700 });
     writeFileSync(hostileGh, "hostile", { mode: 0o700 });
 
-    expect(resolveTrustedGitHubCliExecutable({
+    expect(resolveTrustedGhExecutable({
+      allowedRealpaths: [realpathSync(trustedGh)],
+      candidates: [trustedGh],
       currentUid: statSync(root).uid,
-      nodeExecutablePath: nodePath,
       pathEnvironment: hostileBin,
     })).toBe(realpathSync(trustedGh));
 
     chmodSync(trustedGh, 0o722);
-    expect(() => resolveTrustedGitHubCliExecutable({
+    expect(() => resolveTrustedGhExecutable({
+      allowedRealpaths: [realpathSync(trustedGh)],
+      candidates: [trustedGh],
       currentUid: statSync(root).uid,
-      nodeExecutablePath: nodePath,
       pathEnvironment: hostileBin,
     })).toThrow(/GitHub CLI|mode|unsafe/iu);
+    chmodSync(trustedGh, 0o700);
+    const escapedGh = join(trustedBin, "gh-escape");
+    symlinkSync(hostileGh, escapedGh);
+    expect(() => resolveTrustedGhExecutable({
+      allowedRealpaths: [realpathSync(trustedGh)],
+      candidates: [escapedGh],
+      currentUid: statSync(root).uid,
+      pathEnvironment: hostileBin,
+    })).toThrow(/GitHub CLI|realpath|trusted|unavailable/iu);
   });
 
   it("accepts expected contexts only from the trusted GitHub Actions App and never from commit statuses", () => {

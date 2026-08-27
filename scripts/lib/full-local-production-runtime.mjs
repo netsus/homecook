@@ -163,10 +163,24 @@ export function buildFullLocalReleaseContainerLabels(identity) {
  */
 export function readFullLocalReleaseIdentityFromContainers(
   containers,
-  { expected = null, allowLegacyBootstrap = false } = {},
+  { expected = null, expectedServices = null, allowLegacyBootstrap = false } = {},
 ) {
-  if (!Array.isArray(containers) || containers.length !== 7) {
-    throw new Error("Full-local release identity requires exactly seven containers.");
+  const serviceSet = expectedServices === null ? null : new Set(expectedServices);
+  const expectedContainerCount = serviceSet?.size ?? 7;
+  if (!Array.isArray(containers) || containers.length !== expectedContainerCount) {
+    throw new Error(
+      `Full-local release identity requires exactly ${expectedContainerCount} containers.`,
+    );
+  }
+  if (serviceSet) {
+    const observedServices = containers.map((container) =>
+      container?.Config?.Labels?.["com.docker.compose.service"]);
+    if (
+      observedServices.some((service) => !serviceSet.has(service))
+      || new Set(observedServices).size !== serviceSet.size
+    ) {
+      throw new Error("Full-local containers do not match the authoritative Compose service set.");
+    }
   }
   const labelNames = [
     "homecook.release.sha",
@@ -255,26 +269,36 @@ export function selectNewlyStartedFullLocalWriterServices({
     afterServices.has(service) && !beforeServices.has(service));
 }
 
-const FULL_LOCAL_RESUME_SERVICES = new Set([
-  "api-gateway",
-  "auth",
-  "auth-proxy",
-  "postgres",
-  "postgrest",
-  "realtime",
-  "storage",
-]);
+export function parseFullLocalComposeServiceNames(output) {
+  const services = String(output)
+    .split(/\r?\n/u)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (
+    services.length === 0
+    || services.some((service) => !/^[a-z0-9][a-z0-9-]*$/u.test(service))
+    || new Set(services).size !== services.length
+  ) {
+    throw new Error("Full-local Compose service inventory is invalid.");
+  }
+  return Object.freeze([...services].sort());
+}
 
 export function selectFullLocalResumeCleanupContainers({
   after,
   before,
   composeProject,
+  expectedServices,
 }) {
+  const expectedServiceSet = new Set(expectedServices);
+  if (expectedServiceSet.size === 0) {
+    throw new Error("Full-local resume cleanup requires authoritative Compose services.");
+  }
   const scoped = (containers) => containers.filter((container) =>
     typeof container?.Id === "string"
     && container.Id.length > 0
     && container?.Config?.Labels?.["com.docker.compose.project"] === composeProject
-    && FULL_LOCAL_RESUME_SERVICES.has(
+    && expectedServiceSet.has(
       container?.Config?.Labels?.["com.docker.compose.service"],
     ));
   const beforeById = new Map(scoped(before).map((container) => [container.Id, container]));
