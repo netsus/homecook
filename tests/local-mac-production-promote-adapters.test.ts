@@ -686,23 +686,23 @@ process.exit(42);
     promoteAdapters.buildCanonicalCurrentYoutubeWorkerPlist({
       currentDescriptor,
       options,
+      verifyWorkerArtifact: vi.fn(() => ({ artifact_sha256: "7".repeat(64) })),
       digestFile: vi.fn((path: string) => ({
-        ["/private/current-worker-authority/artifact.json"]: "7".repeat(64),
-        ["/private/current-worker-authority/authority/app-descriptor.json"]: "6".repeat(64),
+        ["/private/authority/app-descriptor.json"]: "6".repeat(64),
         [String(options.workerConfigPath)]: "5".repeat(64),
         [String(options.workerCredentialPath)]: "4".repeat(64),
-        ["/private/current-worker-authority/authority/expected-schema.json"]: "3".repeat(64),
-        ["/private/current-worker-authority/authority/policy.json"]: "2".repeat(64),
+        ["/private/authority/expected-schema.json"]: "3".repeat(64),
+        ["/private/authority/policy.json"]: "2".repeat(64),
       })[path] ?? "0".repeat(64)),
       renderWorkerPlist: renderWorkerPlist as unknown as typeof renderYoutubeExtractionWorkerPlist,
     });
 
     expect(renderWorkerPlist).toHaveBeenCalledWith(expect.objectContaining({
-      appDescriptorPath: "/private/current-worker-authority/authority/app-descriptor.json",
+      appDescriptorPath: "/private/authority/app-descriptor.json",
       configPath: options.workerConfigPath,
       credentialPath: options.workerCredentialPath,
-      currentPolicyPath: "/private/current-worker-authority/authority/policy.json",
-      expectedSchemaPath: "/private/current-worker-authority/authority/expected-schema.json",
+      currentPolicyPath: "/private/authority/policy.json",
+      expectedSchemaPath: "/private/authority/expected-schema.json",
       secretRoot: options.workerSecretRoot,
       manifestPath: currentDescriptor.worker_manifest_path,
       rootDir: currentDescriptor.worker_artifact_root,
