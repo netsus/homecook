@@ -281,6 +281,16 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
+      "signature": "public.report_youtube_extraction_progress(uuid, text, bigint, bigint, integer, text, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
       "signature": "public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)",
       "control_class": "application-controlled",
       "effect": "mutation",

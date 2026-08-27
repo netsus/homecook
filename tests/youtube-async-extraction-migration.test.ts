@@ -11,6 +11,8 @@ const adminDailyQuotaExceptionPath =
   "supabase/migrations/20260826010000_youtube_extraction_admin_daily_quota_exception.sql";
 const adminAclNormalizationPath =
   "supabase/migrations/20260826020000_youtube_extraction_admin_acl_normalization.sql";
+const truthfulProgressPath =
+  "supabase/migrations/20260827010000_youtube_extraction_truthful_progress.sql";
 const previousCatalogFingerprint =
   "b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1";
 const currentCatalogFingerprint =
@@ -21,6 +23,8 @@ const adminDailyQuotaCatalogFingerprint =
   "2b0dc95c374e140443e0f46a35ea16bcc6653f0857b7f986ae457eab01c44ff3";
 const adminAclNormalizedCatalogFingerprint =
   "1f452cdfb35031c2f9be5f8162f11878f443834d5d42265b64e77dceddc129e3";
+const truthfulProgressCatalogFingerprint =
+  "06e3d277cbf5ae9199c21866567b141698385fa25c0429289c3b53002ca51e13";
 
 describe("YTASYNC-DB/SEC migration contract", () => {
   it("re-attests the catalog after the internal scope function changes", () => {
@@ -47,7 +51,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "utf8",
     )) as { catalog_fingerprint?: unknown };
     expect(expectedSchema.catalog_fingerprint).toBe(
-      adminAclNormalizedCatalogFingerprint,
+      truthfulProgressCatalogFingerprint,
     );
 
     const validator = readFileSync(
@@ -135,7 +139,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "utf8",
     )) as { catalog_fingerprint?: unknown; tables?: unknown[] };
     expect(expectedSchema.catalog_fingerprint).toBe(
-      adminAclNormalizedCatalogFingerprint,
+      truthfulProgressCatalogFingerprint,
     );
     expect(expectedSchema.tables).toContain("public.admin_members");
 
@@ -153,6 +157,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "supabase/migrations/20260527030000_admin_foundation.sql",
     );
     expect(postgresHarness).toContain(adminDailyQuotaExceptionPath);
+    expect(postgresHarness).toContain(truthfulProgressPath);
   });
 
   it("normalizes restored app-role admin ACLs while excluding trusted service-role version noise", () => {

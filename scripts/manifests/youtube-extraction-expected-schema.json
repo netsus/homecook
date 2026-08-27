@@ -1,8 +1,8 @@
 {
   "schema": "homecook.youtube-extraction-expected-schema",
   "version": 1,
-  "schema_identity": "youtube-extraction-worker-schema-v1",
-  "catalog_fingerprint": "1f452cdfb35031c2f9be5f8162f11878f443834d5d42265b64e77dceddc129e3",
+  "schema_identity": "youtube-extraction-worker-schema-v2",
+  "catalog_fingerprint": "06e3d277cbf5ae9199c21866567b141698385fa25c0429289c3b53002ca51e13",
   "catalog_fingerprint_algorithm": "sha256:youtube-extraction-live-catalog-v1",
   "catalog_fingerprint_components": [
     "tables",
@@ -28,6 +28,7 @@
   ],
   "tables": [
     "private.youtube_extraction_current_policy",
+    "private.youtube_extraction_progress_stage_events",
     "private.youtube_extraction_worker_credentials",
     "public.admin_members",
     "public.cooking_methods",
@@ -87,6 +88,7 @@
     "public.read_youtube_extraction_worker_catalog(uuid,text,bigint)",
     "public.record_youtube_extraction_worker_event(uuid,text,bigint,bigint,text,jsonb)",
     "public.release_youtube_extractor_permit(text,bigint)",
+    "public.report_youtube_extraction_progress(uuid,text,bigint,bigint,integer,text,integer)",
     "public.requeue_youtube_extraction_job_without_attempt(uuid,text,bigint,integer,integer)",
     "public.reserve_youtube_extraction_worker_quota(uuid,text,bigint,bigint,text,integer)",
     "public.resolve_youtube_extraction_job_draft(uuid,text,bigint,bigint,text,jsonb)",

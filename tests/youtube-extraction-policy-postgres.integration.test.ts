@@ -40,7 +40,7 @@ const workerId = "worker-alpha";
 const managerIssuer = "https://worker.mumeok.kr";
 const audience = "youtube-extraction";
 const workerReleaseSha = "1111111111111111111111111111111111111111";
-const workerSchemaIdentity = "youtube-extraction-worker-schema-v1";
+const workerSchemaIdentity = "youtube-extraction-worker-schema-v2";
 const workerJtiHash = "a".repeat(64);
 const nextWorkerJtiHash = "b".repeat(64);
 
@@ -310,7 +310,7 @@ function resetRuntimeState() {
         current_jti_hash = repeat('0', 64),
         expires_at = now(),
         release_sha = 'bootstrap-disabled',
-        schema_identity = 'youtube-extraction-worker-schema-v1',
+        schema_identity = '${workerSchemaIdentity}',
         allowed_snapshot_digest = repeat('0', 64),
         updated_at = now()
     where credential_name = 'primary';
@@ -406,6 +406,54 @@ function insertJob({
   `);
 }
 
+function readProgressProjection(jobId: string, userId = ownerA) {
+  return runAsJson("authenticated", authenticatedClaims(userId), `
+    select public.read_youtube_extraction_job_projection(
+      '${jobId}'::uuid
+    )::text;
+  `);
+}
+
+function reportProgress(
+  snapshotDigest: string,
+  {
+    jobId,
+    leaseGeneration = 7,
+    permitGeneration = 11,
+    attempt,
+    stage,
+    duration,
+  }: {
+    jobId: string;
+    leaseGeneration?: number;
+    permitGeneration?: number;
+    attempt: number;
+    stage: "source_fetch" | "video_download" | "frame_extraction" | "model_analysis" | "finalizing";
+    duration?: number | null;
+  },
+) {
+  return runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+    select public.report_youtube_extraction_progress(
+      '${jobId}'::uuid,
+      '${workerId}',
+      ${leaseGeneration},
+      ${permitGeneration},
+      ${attempt},
+      '${stage}',
+      ${duration === null || duration === undefined ? "null" : duration}
+    )::text;
+  `);
+}
+
+function countProgressEvents(jobId: string, attempt?: number) {
+  return Number(psql(`
+    select count(*)
+    from private.youtube_extraction_progress_stage_events
+    where job_id = '${jobId}'::uuid
+    ${attempt === undefined ? "" : `and attempt = ${attempt}`};
+  `));
+}
+
 describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integration", () => {
   beforeAll(() => {
     psql(`
@@ -450,6 +498,478 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       enabled: false,
     });
     expect(policySnapshotDigest()).toBe(YOUTUBE_ASYNC_POLICY.snapshotDigest);
+  });
+
+  it("adds the truthful progress schema objects, five job columns, and schema-v2 credential identity", () => {
+    const result = parseJson(psql(`
+      select json_build_object(
+        'schema_identity', (
+          select schema_identity
+          from private.youtube_extraction_worker_credentials
+          where credential_name = 'primary'
+        ),
+        'event_table', to_regclass('private.youtube_extraction_progress_stage_events') is not null,
+        'report_rpc', exists(
+          select 1
+          from pg_catalog.pg_proc
+          where proname = 'report_youtube_extraction_progress'
+            and pronamespace = 'public'::regnamespace
+        ),
+        'progress_column_count', (
+          select count(*)
+          from information_schema.columns
+          where table_schema = 'public'
+            and table_name = 'youtube_extraction_jobs'
+            and column_name in (
+              'progress_attempt',
+              'progress_stage',
+              'progress_stage_started_at',
+              'progress_updated_at',
+              'video_duration_seconds'
+            )
+        )
+      )::text;
+    `));
+
+    expect(result).toEqual({
+      schema_identity: "youtube-extraction-worker-schema-v2",
+      event_table: true,
+      report_rpc: true,
+      progress_column_count: 5,
+    });
+  });
+
+  it("projects the initial queued snapshot from the new progress columns", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const enqueued = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.enqueue_youtube_extraction_job(
+        'queuedProgress01',
+        ${YOUTUBE_ASYNC_POLICY.policyVersion},
+        '${snapshotDigest}',
+        '${YOUTUBE_ASYNC_POLICY.fingerprintKeyVersion}',
+        repeat('a', 64),
+        null,
+        null,
+        'background_notify'
+      )::text;
+    `);
+    const jobId = String(enqueued.job_id);
+
+    const projection = readProgressProjection(jobId);
+
+    expect(projection).toMatchObject({
+      id: jobId,
+      progress: {
+        attempt: 0,
+        stage: "queued",
+        video_duration_seconds: null,
+      },
+    });
+  });
+
+  it("keeps historical failed rows with null progress", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000101",
+      userId: ownerA,
+      videoId: "histProg01",
+      fingerprint: "b".repeat(64),
+      status: "failed",
+      attemptCount: 1,
+      completedAtSql: "now() - interval '1 minute'",
+    });
+
+    const projection = readProgressProjection("80000000-0000-4000-8000-000000000101");
+
+    expect(projection).toMatchObject({
+      id: "80000000-0000-4000-8000-000000000101",
+      status: "failed",
+      progress: null,
+    });
+  });
+
+  it("treats duplicate same-stage progress reports as idempotent without mutating timestamps or rows", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000102",
+      userId: ownerA,
+      videoId: "progressRpc01",
+      fingerprint: "b".repeat(64),
+      status: "processing",
+      attemptCount: 1,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+    `);
+
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000102",
+      attempt: 1,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(true);
+
+    const before = parseJson(psql(`
+      select json_build_object(
+        'stage_started_at', progress_stage_started_at,
+        'updated_at', progress_updated_at,
+        'job_updated_at', updated_at,
+        'event_count', (
+          select count(*)
+          from private.youtube_extraction_progress_stage_events
+          where job_id = '80000000-0000-4000-8000-000000000102'::uuid
+            and attempt = 1
+            and stage = 'source_fetch'
+        )
+      )::text
+      from public.youtube_extraction_jobs
+      where id = '80000000-0000-4000-8000-000000000102'::uuid;
+    `));
+
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000102",
+      attempt: 1,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(true);
+
+    const after = parseJson(psql(`
+      select json_build_object(
+        'stage_started_at', progress_stage_started_at,
+        'updated_at', progress_updated_at,
+        'job_updated_at', updated_at,
+        'event_count', (
+          select count(*)
+          from private.youtube_extraction_progress_stage_events
+          where job_id = '80000000-0000-4000-8000-000000000102'::uuid
+            and attempt = 1
+            and stage = 'source_fetch'
+        )
+      )::text
+      from public.youtube_extraction_jobs
+      where id = '80000000-0000-4000-8000-000000000102'::uuid;
+    `));
+
+    expect(after).toEqual(before);
+  });
+
+  it("rejects retrograde progress in the same attempt without writing a new event", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000103",
+      userId: ownerA,
+      videoId: "retro01",
+      fingerprint: "c".repeat(64),
+      status: "processing",
+      attemptCount: 1,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+    `);
+
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000103",
+      attempt: 1,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(true);
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000103",
+      attempt: 1,
+      stage: "video_download",
+      duration: 120,
+    })).toBe(true);
+
+    const before = countProgressEvents("80000000-0000-4000-8000-000000000103", 1);
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000103",
+      attempt: 1,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(false);
+    expect(countProgressEvents("80000000-0000-4000-8000-000000000103", 1)).toBe(before);
+  });
+
+  it("returns false for stale lease generations without writing progress rows", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000104",
+      userId: ownerA,
+      videoId: "progressStaleLease01",
+      fingerprint: "d".repeat(64),
+      status: "processing",
+      attemptCount: 1,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+    `);
+
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000104",
+      leaseGeneration: 8,
+      attempt: 1,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(false);
+    expect(countProgressEvents("80000000-0000-4000-8000-000000000104")).toBe(0);
+    expect(readProgressProjection("80000000-0000-4000-8000-000000000104").progress).toBeNull();
+  });
+
+  it("returns false for stale permit generations without writing progress rows", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000105",
+      userId: ownerA,
+      videoId: "stalePerm01",
+      fingerprint: "e".repeat(64),
+      status: "processing",
+      attemptCount: 1,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+    `);
+
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000105",
+      permitGeneration: 12,
+      attempt: 1,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(false);
+    expect(countProgressEvents("80000000-0000-4000-8000-000000000105")).toBe(0);
+  });
+
+  it("rejects terminal jobs without changing progress", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000106",
+      userId: ownerA,
+      videoId: "term01",
+      fingerprint: "f".repeat(64),
+      status: "failed",
+      attemptCount: 1,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+      completedAtSql: "now() - interval '1 minute'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+    `);
+
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000106",
+      attempt: 1,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(false);
+    expect(countProgressEvents("80000000-0000-4000-8000-000000000106")).toBe(0);
+  });
+
+  it("accepts a new attempt only when it restarts from source_fetch", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000107",
+      userId: ownerA,
+      videoId: "attemptR01",
+      fingerprint: "1".repeat(64),
+      status: "processing",
+      attemptCount: 2,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+      update public.youtube_extraction_jobs
+      set progress_attempt = 1,
+          progress_stage = 'finalizing',
+          progress_stage_started_at = now() - interval '2 minutes',
+          progress_updated_at = now() - interval '2 minutes'
+      where id = '80000000-0000-4000-8000-000000000107'::uuid;
+      insert into private.youtube_extraction_progress_stage_events (
+        job_id, attempt, stage, entered_at
+      ) values (
+        '80000000-0000-4000-8000-000000000107'::uuid, 1, 'finalizing', now() - interval '2 minutes'
+      );
+    `);
+
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000107",
+      attempt: 2,
+      stage: "video_download",
+      duration: 120,
+    })).toBe(false);
+    expect(reportProgress(snapshotDigest, {
+      jobId: "80000000-0000-4000-8000-000000000107",
+      attempt: 2,
+      stage: "source_fetch",
+      duration: 120,
+    })).toBe(true);
+    expect(readProgressProjection("80000000-0000-4000-8000-000000000107").progress).toMatchObject({
+      attempt: 2,
+      stage: "source_fetch",
+      video_duration_seconds: 120,
+    });
+  });
+
+  it("rejects invalid video duration values and preserves zero writes", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000108",
+      userId: ownerA,
+      videoId: "badDur01",
+      fingerprint: "2".repeat(64),
+      status: "processing",
+      attemptCount: 1,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+    `);
+
+    expectSqlFailure(`
+      begin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims = ${sqlJson(workerClaims(snapshotDigest))};
+      select public.report_youtube_extraction_progress(
+        '80000000-0000-4000-8000-000000000108'::uuid,
+        '${workerId}',
+        7,
+        11,
+        1,
+        'source_fetch',
+        0
+      );
+      rollback;
+    `, /VALIDATION_ERROR|22023/);
+
+    expect(countProgressEvents("80000000-0000-4000-8000-000000000108")).toBe(0);
+    expect(readProgressProjection("80000000-0000-4000-8000-000000000108").progress).toBeNull();
+  });
+
+  it("caps durable stage history at the exact five forward stages per attempt", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000109",
+      userId: ownerA,
+      videoId: "progressFiveStages01",
+      fingerprint: "3".repeat(64),
+      status: "processing",
+      attemptCount: 1,
+      leaseOwner: workerId,
+      leaseGeneration: 7,
+      leaseExpiresAtSql: "now() + interval '5 minutes'",
+    });
+    psql(`
+      update public.youtube_extractor_permits
+      set owner_id = '${workerId}',
+          permit_generation = 11,
+          heartbeat_at = now(),
+          expires_at = now() + interval '5 minutes';
+    `);
+
+    for (const [stage, duration] of [
+      ["source_fetch", 120],
+      ["video_download", 120],
+      ["frame_extraction", 120],
+      ["model_analysis", 120],
+      ["finalizing", 120],
+    ] as const) {
+      expect(reportProgress(snapshotDigest, {
+        jobId: "80000000-0000-4000-8000-000000000109",
+        attempt: 1,
+        stage,
+        duration,
+      })).toBe(true);
+    }
+
+    expect(countProgressEvents("80000000-0000-4000-8000-000000000109", 1)).toBe(5);
+  });
+
+  it("removes direct private progress-table privileges from browser and worker-facing API roles", () => {
+    const actual = parseJson(psql(`
+      select json_build_object(
+        'unsafe_privilege_count', (
+          select count(*)
+          from unnest(array[
+            'anon',
+            'authenticated',
+            'service_role',
+            'youtube_extraction_worker'
+          ]) as role_name
+          where has_table_privilege(
+            role_name,
+            'private.youtube_extraction_progress_stage_events',
+            'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+          )
+        )
+      )::text;
+    `));
+
+    expect(actual).toEqual({ unsafe_privilege_count: 0 });
   });
 
   it("replays the additive migration without duplicate-object failures", () => {
@@ -531,6 +1051,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           from pg_catalog.pg_tables
           where format('%I.%I', schemaname, tablename) in (
             'private.youtube_extraction_current_policy',
+            'private.youtube_extraction_progress_stage_events',
             'private.youtube_extraction_worker_credentials',
             'public.admin_members',
             'public.cooking_methods',
@@ -600,6 +1121,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
               'mark_youtube_extraction_jobs_seen',
               'read_youtube_extraction_enqueue_readiness',
               'read_youtube_extraction_job_projection',
+              'report_youtube_extraction_progress',
               'read_youtube_extraction_session_projection',
               'read_youtube_extraction_worker_catalog',
               'record_youtube_extraction_worker_event',

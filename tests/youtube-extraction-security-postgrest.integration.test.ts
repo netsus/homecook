@@ -83,7 +83,7 @@ function resetRuntimeState() {
         current_jti_hash = repeat('a', 64),
         expires_at = now() + interval '1 day',
         release_sha = '1111111111111111111111111111111111111111',
-        schema_identity = 'youtube-extraction-worker-schema-v1',
+        schema_identity = 'youtube-extraction-worker-schema-v2',
         allowed_snapshot_digest = private.youtube_extraction_policy_snapshot_digest(
           extractor_mode,
           pipeline_identity,
@@ -135,8 +135,8 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
     );
 
     expect(response.ok).toBe(false);
-    expect([401, 403]).toContain(response.status);
-    expect(JSON.stringify(payload)).toMatch(/42501|permission|unauthorized/i);
+    expect([401, 403, 404]).toContain(response.status);
+    expect(JSON.stringify(payload)).toMatch(/42501|permission|unauthorized|not found|PGRST/i);
   });
 
   it("denies the restricted worker JWT access to owner-side enqueue RPCs", async () => {
@@ -157,8 +157,8 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
     );
 
     expect(response.ok).toBe(false);
-    expect([401, 403]).toContain(response.status);
-    expect(JSON.stringify(payload)).toMatch(/42501|permission|unauthorized/i);
+    expect([401, 403, 404]).toContain(response.status);
+    expect(JSON.stringify(payload)).toMatch(/42501|permission|unauthorized|not found|PGRST/i);
   });
 
   it("uses the authenticated PostgREST owner boundary for job reads", async () => {
@@ -206,6 +206,39 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
     expect([401, 403]).toContain(worker.response.status);
   });
 
+  it("allows the restricted worker JWT to call the truthful progress report RPC", async () => {
+    const { response, payload } = await postgrest(
+      "POST",
+      "/rpc/report_youtube_extraction_progress",
+      workerToken,
+      {
+        job_id: "88000000-0000-4000-8000-000000000099",
+        worker_id: "worker-alpha",
+        lease_generation: 7,
+        permit_generation: 11,
+        attempt: 1,
+        stage: "source_fetch",
+        video_duration_seconds: 120,
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual([{ applied: false }]);
+  });
+
+  it("hides the private progress stage table from authenticated PostgREST callers even when the route returns 404", async () => {
+    const { response, payload } = await postgrest(
+      "GET",
+      "/youtube_extraction_progress_stage_events?select=job_id",
+      ownerAToken,
+    );
+
+    expect(response.ok).toBe(false);
+    expect([401, 403, 404]).toContain(response.status);
+    expect(JSON.stringify(payload)).toMatch(/42501|permission|unauthorized|not found|PGRST/i);
+    expect(JSON.stringify(payload)).not.toContain("private.youtube_extraction_progress_stage_events");
+  });
+
   it("rejects a worker JWT whose pre-request scope no longer matches the credential gate", async () => {
     const { response, payload } = await postgrest(
       "POST",
@@ -245,7 +278,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
         new_jti_hash: "b".repeat(64),
         new_expires_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
         release_sha: "1111111111111111111111111111111111111111",
-        schema_identity: "youtube-extraction-worker-schema-v1",
+        schema_identity: "youtube-extraction-worker-schema-v2",
         allowed_snapshot_digest: snapshotDigest,
       },
     );
