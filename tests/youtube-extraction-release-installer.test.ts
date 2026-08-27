@@ -1624,7 +1624,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
             result_affecting_options: {},
           },
           claim_youtube_extractor_permit: { claimed: true, permit_generation: 3 },
-          start_youtube_extraction_attempt: { applied: true },
+          start_youtube_extraction_attempt: { started: true, attempt_count: 1 },
           heartbeat_youtube_extraction_job: { updated: true },
           heartbeat_youtube_extractor_permit: { updated: true },
           read_youtube_extraction_worker_catalog: {
@@ -1640,6 +1640,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
           record_youtube_extraction_worker_event: { applied: true, recorded: true },
           resolve_youtube_extraction_worker_methods: { applied: true, methods: [] },
           update_youtube_extraction_job_title: { applied: true, updated: true },
+          report_youtube_extraction_progress: [{ applied: true }],
           resolve_youtube_extraction_job_draft: { title: "artifact recipe title" },
           finalize_youtube_extraction_job: { finalized: true },
           release_youtube_extractor_permit: { released: true },
