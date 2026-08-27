@@ -54,6 +54,7 @@ SCREEN_OCR_DEFAULT_CANDIDATE_LIMIT = 48
 SCREEN_OCR_DEFAULT_CHANGE_THRESHOLD = 0.08
 SCREEN_OCR_DEFAULT_MIN_GAP_SEC = 0.4
 STORYBOARD_RETRY_DELAYS_SECONDS = (1.0, 2.0)
+PROGRESS_PREFIX = "__HOMECOOK_PROGRESS__"
 PERMANENT_DOWNLOAD_PHRASES = (
     ("this video is unavailable", "video_unavailable"),
     ("video is unavailable", "video_unavailable"),
@@ -135,8 +136,27 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
+def emit_progress(stage: str, video_duration_seconds: int | None = None) -> None:
+    payload = {"stage": stage, "videoDurationSeconds": video_duration_seconds}
+    print(
+        f"{PROGRESS_PREFIX}{json.dumps(payload, ensure_ascii=False, separators=(',', ':'))}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 def monotonic_ms() -> float:
     return time.perf_counter() * 1000.0
+
+
+def bounded_video_duration_seconds(video_path: Path | None) -> int | None:
+    if video_path is None:
+        return None
+    try:
+        duration = math.ceil(probe_duration_seconds(video_path))
+    except Exception:
+        return None
+    return duration if 1 <= duration <= 86400 else None
 
 
 def file_sha256(file_path: Path) -> str:
@@ -176,6 +196,10 @@ def prepare_source(args: argparse.Namespace) -> dict:
                 **cached,
                 "sourceVideoCacheHit": True,
                 "sourcePrepareMs": None,
+                "videoDurationSeconds": (
+                    cached.get("videoDurationSeconds")
+                    or bounded_video_duration_seconds(cached_path)
+                ),
             }
 
     started = monotonic_ms()
@@ -195,6 +219,7 @@ def prepare_source(args: argparse.Namespace) -> dict:
         "sourceVideoCacheHit": False,
         "sourcePrepareMs": source_prepare_ms,
         "artifactSourcePrepareMs": source_prepare_ms,
+        "videoDurationSeconds": bounded_video_duration_seconds(video_path),
     }
     metadata_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
@@ -372,7 +397,9 @@ def run_managed(args: argparse.Namespace) -> None:
     if args.cache_root is None:
         fail("managed frame extraction에는 --cache-root가 필요합니다.")
     request_key = args.request_key or uuid.uuid4().hex
+    emit_progress("video_download")
     source_result = prepare_managed_source(args, request_key)
+    emit_progress("frame_extraction", source_result.get("videoDurationSeconds"))
     source_fingerprint = source_result["sourceFingerprint"]
     frame_key = managed_frame_key(args, source_fingerprint)
     frame_dir = (
@@ -1654,8 +1681,10 @@ def main() -> None:
     cv2 = load_cv2()
     (args.out_dir / "frames").mkdir(parents=True, exist_ok=True)
     source_prepare_started = monotonic_ms()
+    emit_progress("video_download")
     video_path = download_video(args.source, args.out_dir, args.video_format)
     source_prepare_ms = round(monotonic_ms() - source_prepare_started, 3)
+    emit_progress("frame_extraction", bounded_video_duration_seconds(video_path))
 
     if video_path is None:
         storyboard_max_frames = args.storyboard_max_frames if args.storyboard_max_frames is not None else args.max_frames

@@ -128,7 +128,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs는 독립 Findings 0과 master merge를 완료했다. Stage 2 backend가 feature/be-youtube-extraction-truthful-progress-eta에서 in_progress다. Phase A/B는 RED 증거 뒤 additive DB/RPC/schema-v2 구현, 실제 isolated PostgreSQL/PostgREST 78/78, targeted 130/130, typecheck/lint, 독립 code/security Findings 0을 확보했다. Evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage2-phase-ab-db.md. Worker IPC, ETA/API, frontend, 최종 closeout은 아직 pending이다. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0, release-promoter와 production rollout Manual Only를 유지한다.",
+  "notes": "Stage 1 docs는 독립 Findings 0과 master merge를 완료했고 Phase A/B DB/RPC/schema-v2도 master에 병합됐다. Stage 2 backend는 feature/be-youtube-extraction-truthful-progress-eta에서 in_progress다. Phase C는 RED 6건 뒤 actual source/video/frame/model/finalizing 경계, exact fenced report, non-blocking ordered IPC, 단일 최대 2초 pre-finalize flush, progress soft-fail/heartbeat fatal 분리를 구현했다. Targeted 151/151, product 2809/175 skip, build/security E2E, 독립 security Findings 0을 확보했다. Evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage2-phase-c-worker.md. ETA/API, frontend, 최종 closeout은 pending이다. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0, release-promoter와 production rollout Manual Only를 유지한다.",
   "out_of_scope": [
     "new public endpoint, status, error, WebSocket or SSE",
     "notification list active progress payload change",
