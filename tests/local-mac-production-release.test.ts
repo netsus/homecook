@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { createRequire } from "node:module";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -699,6 +699,27 @@ describe("local Mac production release prepare", () => {
       ),
     )).toBe(false);
     expect(readdirSync(fixture.paths.releaseRoot)).not.toContain(expect.stringMatching(/^\.prepare-/u));
+  });
+
+  it("accepts cwd-relative home, repository, and manifest paths before applying filesystem safety checks", () => {
+    const fixture = createPrepareFixture();
+    const { runCommand } = createPrepareCommandRunner();
+
+    const result = prepareLocalMacProductionRelease({
+      homeDir: relative(process.cwd(), fixture.homeDir),
+      manifestPath: relative(process.cwd(), fixture.manifestPath),
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: relative(process.cwd(), fixture.rootDir),
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    });
+
+    expect(result.release_dir).toBe(realpathSync(join(
+      fixture.paths.releaseRoot,
+      fixture.manifest.release_tag,
+    )));
+    expect(JSON.parse(readFileSync(result.prepare_descriptor_path, "utf8")))
+      .toMatchObject({ status: "prepared", release_sha: fixture.manifest.release_sha });
   });
 
   it("keeps a failed build reservation partial without a completion marker or production-state changes", () => {

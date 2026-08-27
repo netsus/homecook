@@ -97,11 +97,7 @@ function requireNonEmptyString(value, label) {
 }
 
 function requireAbsolutePath(value, label) {
-  const normalized = requireNonEmptyString(value, label);
-  if (!isAbsolute(normalized)) {
-    throw new Error(`${label} must be an absolute path.`);
-  }
-  return resolve(normalized);
+  return resolve(requireNonEmptyString(value, label));
 }
 
 function requireReleaseSha(value, label) {
