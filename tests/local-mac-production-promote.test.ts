@@ -977,6 +977,7 @@ describe("local Mac production promote", () => {
       release_tree: fixture.manifest.release_tree,
       build_id: fixture.manifest.build_id,
       promotion_id: fixture.manifest.promotion_id,
+      restart_capability: "full-local-resume-current-v1",
       source_manifest_sha256: sha256(fixture.manifestBytes),
       worker_artifact_sha256: "7".repeat(64),
       worker_app_descriptor_sha256: sha256(readFileSync(fixture.workerAppDescriptorPath)),

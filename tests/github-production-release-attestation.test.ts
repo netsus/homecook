@@ -1,4 +1,12 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -12,6 +20,7 @@ import {
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
   GITHUB_CLI_TRUSTED_ROOT_SHA256,
   createGitHubProductionReleaseAttestationVerifier,
+  resolveTrustedGitHubCliExecutable,
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import {
@@ -58,6 +67,33 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
+  it("resolves only the absolute validated GitHub CLI beside the pinned Node executable", () => {
+    const root = createTempDirectory("trusted-gh-");
+    const trustedBin = join(root, "trusted-bin");
+    const hostileBin = join(root, "hostile-bin");
+    mkdirSync(trustedBin, { mode: 0o700 });
+    mkdirSync(hostileBin, { mode: 0o700 });
+    const nodePath = join(trustedBin, "node");
+    const trustedGh = join(trustedBin, "gh");
+    const hostileGh = join(hostileBin, "gh");
+    writeFileSync(nodePath, "node", { mode: 0o700 });
+    writeFileSync(trustedGh, "trusted", { mode: 0o700 });
+    writeFileSync(hostileGh, "hostile", { mode: 0o700 });
+
+    expect(resolveTrustedGitHubCliExecutable({
+      currentUid: statSync(root).uid,
+      nodeExecutablePath: nodePath,
+      pathEnvironment: hostileBin,
+    })).toBe(trustedGh);
+
+    chmodSync(trustedGh, 0o722);
+    expect(() => resolveTrustedGitHubCliExecutable({
+      currentUid: statSync(root).uid,
+      nodeExecutablePath: nodePath,
+      pathEnvironment: hostileBin,
+    })).toThrow(/GitHub CLI|mode|unsafe/iu);
+  });
+
   it("accepts expected contexts only from the trusted GitHub Actions App and never from commit statuses", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
@@ -368,14 +404,17 @@ describe("GitHub production release attestation verification", () => {
     writeFileSync(trustedRootPath, "{}\n");
 
     const invocations: string[][] = [];
+    const invokedCommands: string[] = [];
     let attestedPredicateTagObjectSha = manifest.release_tag_object_sha;
     const verifier = createGitHubProductionReleaseAttestationVerifier({
       bundlePath,
+      ghExecutable: "/opt/homebrew/bin/gh",
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
       signerWorkflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
       subjectManifestPath,
       trustedRootPath,
-      runGh: ((_: string, args?: readonly string[]) => {
+      runGh: ((command: string, args?: readonly string[]) => {
+        invokedCommands.push(command);
         invocations.push([...(args ?? [])]);
         return {
           status: 0,
@@ -429,6 +468,7 @@ describe("GitHub production release attestation verification", () => {
       source: "github-attestation-offline",
       verified: true,
     });
+    expect(invokedCommands).toEqual(["/opt/homebrew/bin/gh"]);
 
     expect(invocations).toEqual([
       [

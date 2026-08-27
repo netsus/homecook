@@ -295,6 +295,28 @@ function createDefaultWorkerPreflightFixture() {
 }
 
 describe("local Mac production promote adapters", () => {
+  it("distinguishes exact abac v1 start plists from resume-capable descriptors", () => {
+    expect(promoteAdapters.resolveFullLocalCurrentRestartContract({
+      release_sha: CURRENT_IDENTITY.release_sha,
+    })).toEqual({
+      includeReleaseIdentity: true,
+      legacyContract: "abac967-full-local-start-v1",
+      runtimeCommand: "start",
+    });
+    expect(promoteAdapters.resolveFullLocalCurrentRestartContract({
+      release_sha: CURRENT_IDENTITY.release_sha,
+      restart_capability: "full-local-resume-current-v1",
+    })).toEqual({
+      includeReleaseIdentity: false,
+      legacyContract: null,
+      runtimeCommand: "resume-current",
+    });
+    expect(() => promoteAdapters.resolveFullLocalCurrentRestartContract({
+      release_sha: CURRENT_IDENTITY.release_sha,
+      restart_capability: "unknown",
+    })).toThrow(/restart capability|unknown|unsupported/iu);
+  });
+
   it("provides an importable adapter composition module", () => {
     expect(existsSync(join(
       process.cwd(),
