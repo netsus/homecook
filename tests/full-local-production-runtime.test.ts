@@ -40,6 +40,7 @@ import {
   validateFullLocalSecretFiles,
   validateLoopbackS3Endpoint,
 } from "../scripts/lib/full-local-production-runtime.mjs";
+import * as fullLocalRuntime from "../scripts/lib/full-local-production-runtime.mjs";
 import { FULL_LOCAL_OAUTH_SECRET_NAMES } from "../scripts/lib/full-local-oauth-providers.mjs";
 
 function validConfig(overrides: Record<string, string> = {}) {
@@ -1011,6 +1012,90 @@ describe("full-local secret delivery", () => {
 });
 
 describe("full-local runtime readiness", () => {
+  const releaseIdentity = {
+    release_sha: "a".repeat(40),
+    release_tree: "b".repeat(40),
+    build_id: "build-release-a",
+    promotion_id: "promotion-a",
+  };
+  const releaseContainers = (identity = releaseIdentity) =>
+    Array.from({ length: 7 }, (_, index) => ({
+      Id: `container-${index}`,
+      Config: {
+        Labels: {
+          "com.docker.compose.project": "homecook-full-local-isolated",
+          "com.docker.compose.service": `service-${index}`,
+          ...fullLocalRuntime.buildFullLocalReleaseContainerLabels(identity),
+        },
+      },
+      State: { Running: true },
+    }));
+
+  it("exposes Docker-observed release identity helpers", () => {
+    expect(fullLocalRuntime).toHaveProperty(
+      "buildFullLocalReleaseContainerLabels",
+      expect.any(Function),
+    );
+    expect(fullLocalRuntime).toHaveProperty(
+      "readFullLocalReleaseIdentityFromContainers",
+      expect.any(Function),
+    );
+  });
+
+  it("reads one exact release identity from all seven Docker containers", () => {
+    expect(fullLocalRuntime.readFullLocalReleaseIdentityFromContainers(
+      releaseContainers(),
+      { expected: releaseIdentity },
+    )).toEqual(releaseIdentity);
+  });
+
+  it("rejects a healthy old workload instead of labeling it as the candidate", () => {
+    const oldIdentity = {
+      release_sha: "c".repeat(40),
+      release_tree: "d".repeat(40),
+      build_id: "build-old",
+      promotion_id: "promotion-old",
+    };
+    expect(() => fullLocalRuntime.readFullLocalReleaseIdentityFromContainers(
+      releaseContainers(oldIdentity),
+      { expected: releaseIdentity },
+    )).toThrow(/release|identity|mismatch|old/iu);
+  });
+
+  it.each(["missing", "mixed"])("rejects %s Docker release labels", (variant) => {
+    const containers = releaseContainers();
+    if (variant === "missing") {
+      Reflect.deleteProperty(containers[3].Config.Labels, "homecook.release.sha");
+    } else {
+      containers[4].Config.Labels["homecook.release.build-id"] = "different-build";
+    }
+    expect(() => fullLocalRuntime.readFullLocalReleaseIdentityFromContainers(
+      containers,
+      { expected: releaseIdentity },
+    )).toThrow(/label|release|identity|missing|mixed|mismatch/iu);
+  });
+
+  it("injects and reads internal release labels through compose and status", () => {
+    const compose = readFileSync(
+      join(process.cwd(), "infra/full-local-supabase/docker-compose.production.yml"),
+      "utf8",
+    );
+    const runtimeCli = readFileSync(
+      join(process.cwd(), "scripts/full-local-production-runtime.mjs"),
+      "utf8",
+    );
+    for (const label of [
+      "homecook.release.sha",
+      "homecook.release.tree",
+      "homecook.release.build-id",
+      "homecook.release.promotion-id",
+    ]) {
+      expect(compose).toContain(label);
+    }
+    expect(runtimeCli).toContain('optionValue(args, "--release-identity")');
+    expect(runtimeCli).toContain("readFullLocalReleaseIdentityFromContainers");
+  });
+
   const healthyState = { Health: { Status: "healthy" }, Status: "running" };
 
   it("requires all seven containers to be running and healthy", () => {

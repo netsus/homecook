@@ -1,11 +1,22 @@
-import { existsSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createLocalMacProductionPromoteAdapters,
 } from "../scripts/lib/local-mac-production-promote-adapters.mjs";
+import * as promoteAdapters from "../scripts/lib/local-mac-production-promote-adapters.mjs";
+import {
+  renderYoutubeExtractionWorkerPlist,
+} from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 
 const RELEASE_IDENTITY = Object.freeze({
   release_sha: "a".repeat(40),
@@ -16,6 +27,13 @@ const CURRENT_IDENTITY = Object.freeze({
   release_sha: "c".repeat(40),
   release_tree: "d".repeat(40),
   build_id: "build-current",
+});
+const temporaryDirectories: string[] = [];
+
+afterEach(() => {
+  while (temporaryDirectories.length > 0) {
+    rmSync(temporaryDirectories.pop()!, { recursive: true, force: true });
+  }
 });
 
 function createOptions(overrides: Record<string, unknown> = {}) {
@@ -114,6 +132,14 @@ describe("local Mac production promote adapters", () => {
       process.cwd(),
       "scripts/lib/local-mac-production-promote-adapters.mjs",
     ))).toBe(true);
+    expect(promoteAdapters).toHaveProperty(
+      "assertCanonicalLocalMacProductionPlist",
+      expect.any(Function),
+    );
+    expect(promoteAdapters).toHaveProperty(
+      "buildCanonicalCurrentYoutubeWorkerPlist",
+      expect.any(Function),
+    );
   });
 
   it("uses one-shot full-local Docker workload health without requiring a starter PID", async () => {
@@ -201,5 +227,63 @@ describe("local Mac production promote adapters", () => {
       .rejects.toThrow(/plist|symlink/iu);
     expect(dependencies.readCurrentRuntimeBundle).not.toHaveBeenCalled();
     expect(dependencies.installApp).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["app", 0o644, "node app-start", "node altered-app-start"],
+    ["full-local", 0o600, "/releases/current", "/releases/other"],
+    ["worker", 0o600, "com.homecook.youtube-extraction-worker", "com.homecook.other-worker"],
+  ])("rejects stable but altered %s plist semantics", (component, mode, canonical, altered) => {
+    const directory = mkdtempSync(join(tmpdir(), `homecook-${component}-plist-`));
+    temporaryDirectories.push(directory);
+    const path = join(directory, `${component}.plist`);
+    const serviceLabel = component === "worker"
+      ? canonical
+      : component === "full-local"
+        ? "com.homecook.full-local.production"
+        : "com.homecook.production";
+    const workingDirectory = component === "full-local" ? canonical : "/releases/current";
+    const programArgument = component === "app" ? canonical : `node ${component}-start`;
+    const expectedContent = `<plist><dict>
+<key>Label</key><string>${serviceLabel}</string>
+<key>WorkingDirectory</key><string>${workingDirectory}</string>
+<key>ProgramArguments</key><array><string>${programArgument}</string></array>
+</dict></plist>\n`;
+    writeFileSync(path, expectedContent.replace(canonical, altered), { mode });
+    chmodSync(path, mode);
+
+    expect(() => promoteAdapters.assertCanonicalLocalMacProductionPlist({
+      actualPath: path,
+      currentUid: process.getuid?.() ?? 0,
+      expectedContent,
+      expectedMode: mode,
+      label: `${component} plist`,
+    })).toThrow(/canonical|plist|drift|content|semantic/iu);
+  });
+
+  it("builds current worker canonical plist from authority options, not actual drifted args", () => {
+    const renderWorkerPlist = vi.fn((input: Record<string, unknown>) => JSON.stringify(input));
+    const options = createOptions();
+
+    promoteAdapters.buildCanonicalCurrentYoutubeWorkerPlist({
+      artifactRoot: "/private/current-worker-artifact",
+      manifestPath: "/private/current-worker-artifact/artifact.json",
+      options,
+      renderWorkerPlist: renderWorkerPlist as unknown as typeof renderYoutubeExtractionWorkerPlist,
+    });
+
+    expect(renderWorkerPlist).toHaveBeenCalledWith(expect.objectContaining({
+      appDescriptorPath: options.workerAppDescriptorPath,
+      configPath: options.workerConfigPath,
+      credentialPath: options.workerCredentialPath,
+      currentPolicyPath: options.workerPolicyPath,
+      expectedSchemaPath: options.workerExpectedSchemaPath,
+      secretRoot: options.workerSecretRoot,
+      manifestPath: "/private/current-worker-artifact/artifact.json",
+      rootDir: "/private/current-worker-artifact",
+    }));
+    expect(renderWorkerPlist).not.toHaveBeenCalledWith(expect.objectContaining({
+      configPath: "/drifted/config.env",
+    }));
   });
 });

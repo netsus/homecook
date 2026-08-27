@@ -135,6 +135,8 @@ describe("full-local launch agent helpers", () => {
         "start",
         "--config",
         configPath,
+        "--release-identity",
+        `${rootDir}/prepare.json`,
       ]);
 
       expect(plist).toContain(`<string>${DEFAULT_FULL_LOCAL_LAUNCH_AGENT_LABEL}</string>`);
@@ -184,6 +186,8 @@ describe("full-local launch agent helpers", () => {
       "start",
       "--config",
       "/Users/tester/homecook/infra/full-local-supabase/.env.production.local",
+      "--release-identity",
+      "/Users/tester/homecook/prepare.json",
     ]);
     expect(plist).toContain(`<string>PATH=${EXPECTED_USRBIN_NODE_SANITIZED_PATH}</string>`);
     expect(plist).not.toContain(
@@ -340,6 +344,8 @@ describe("full-local launch agent install and uninstall", () => {
       "start",
       "--config",
       configPath,
+      "--release-identity",
+      `${rootDir}/prepare.json`,
     ]);
     expect(plist).toContain(configPath);
     expect(plist).toContain("<string>/usr/bin/env</string>");
