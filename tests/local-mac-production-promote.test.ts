@@ -82,12 +82,13 @@ function createReadyBundle(manifest: Record<string, unknown>, overrides: Record<
   };
 }
 
-function createFixture() {
+function createFixture(manifestOverrides: Record<string, unknown> = {}) {
   const homeDir = createTempDirectory("homecook-promote-home-");
   const rootDir = createTempDirectory("homecook-promote-root-");
   const manifestPath = join(rootDir, "release.json");
   const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
     previous_release_sha: PREVIOUS_RELEASE_SHA,
+    ...manifestOverrides,
   });
   const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
   writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
@@ -203,6 +204,9 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
     readGitEvidence: () => createLocalMacProductionGitEvidence({
       releaseSha: String(fixture.manifest.release_sha),
       releaseTree: String(fixture.manifest.release_tree),
+      overrides: {
+        releaseTagObjectSha: String(fixture.manifest.release_tag_object_sha),
+      },
     }),
     verifyAttestation: VERIFIED_ATTESTATION,
     installBundle: fixture.installBundle,
@@ -992,6 +996,112 @@ describe("local Mac production promote", () => {
     expect(fixture.preflightBundle).toHaveBeenCalledTimes(2);
     expect(fixture.readinessProbe).toHaveBeenCalledTimes(1);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
+  });
+
+  it("adopts only the exact descriptorless pre-canonical split predecessor", async () => {
+    const fixture = createFixture({
+      signer_digest: "abac967556aff325207f9adf54f4dcbd07e7a492",
+      release_tag: "prod-20260828.1",
+      release_tag_object_sha: "93a7e84e3d502c8c91b5a0484bf079f59ffba456",
+      release_sha: "abac967556aff325207f9adf54f4dcbd07e7a492",
+      release_tree: "b31e7ddc6435d36ce1df15ce32ae68efe1aa9347",
+      master_sha_at_approval: "abac967556aff325207f9adf54f4dcbd07e7a492",
+      previous_release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+      attestation_digest: "a090e1cdd4db337120aad9ed54eea8edaecc38f566663a1b302a42ca7a5b5fca",
+    });
+    rmSync(fixture.paths.currentDescriptorPath);
+
+    const result = await promoteLocalMacProductionRelease(promoteOptions(fixture));
+
+    expect(result).toMatchObject({
+      promoted: true,
+      predecessor_adoption: {
+        contract: "prod-20260828.1-precanonical-split-v1",
+        predecessor_release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+        components: {
+          app: {
+            release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+            release_tree: "255f3c23a38593aade4b1f4bc3e2941030c9fe90",
+            build_id: "aKwKCpoAEwSrD6066XEwu",
+          },
+          full_local: {
+            release_sha: "36e7aecfe429875f2dc12f3effc020ab1296a818",
+            release_tree: "abfc8fae339a5d1c0dfaf261171164680e9c79c3",
+            build_id: "8t5KKzb2z0Q3VO4SnnLOh",
+            runtime_command: "start",
+          },
+          youtube_worker: {
+            release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+            artifact_sha256: "e228d46c1074ec499b709803bab4cc8dc8e2add30655fa1648dab564423e2c01",
+          },
+        },
+      },
+    });
+    expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+    expect(JSON.parse(readFileSync(fixture.paths.currentDescriptorPath, "utf8")))
+      .toMatchObject({
+        release_tag: "prod-20260828.1",
+        release_sha: "abac967556aff325207f9adf54f4dcbd07e7a492",
+      });
+  });
+
+  it("keeps descriptorless adoption fail-closed for every other target identity", async () => {
+    const fixture = createFixture({
+      previous_release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+    });
+    rmSync(fixture.paths.currentDescriptorPath);
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/current.*descriptor|one-time|adoption|pre-canonical/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+  });
+
+  it("blocks a descriptor that appears during locked one-time adoption preflight", async () => {
+    const fixture = createFixture({
+      signer_digest: "abac967556aff325207f9adf54f4dcbd07e7a492",
+      release_tag: "prod-20260828.1",
+      release_tag_object_sha: "93a7e84e3d502c8c91b5a0484bf079f59ffba456",
+      release_sha: "abac967556aff325207f9adf54f4dcbd07e7a492",
+      release_tree: "b31e7ddc6435d36ce1df15ce32ae68efe1aa9347",
+      master_sha_at_approval: "abac967556aff325207f9adf54f4dcbd07e7a492",
+      previous_release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+      attestation_digest: "a090e1cdd4db337120aad9ed54eea8edaecc38f566663a1b302a42ca7a5b5fca",
+    });
+    rmSync(fixture.paths.currentDescriptorPath);
+    const originalPreflight = fixture.preflightBundle.getMockImplementation();
+    if (!originalPreflight) throw new Error("Fixture preflight implementation is missing.");
+    fixture.preflightBundle.mockImplementationOnce(originalPreflight);
+    fixture.preflightBundle.mockImplementationOnce(async () => {
+      writeFileSync(
+        fixture.paths.currentDescriptorPath,
+        JSON.stringify(createRunningDescriptor(), null, 2),
+        { mode: 0o600 },
+      );
+      return {
+        stable_key: "runtime-stable",
+        worker: {
+          artifactRoot: fixture.workerRoot,
+          manifestPath: fixture.workerManifestPath,
+          appDescriptorPath: fixture.workerAppDescriptorPath,
+          configPath: "/private/worker/worker.env",
+          credentialPath: "/private/worker/credential.json",
+          expectedSchemaPath: fixture.workerExpectedSchemaPath,
+          policyPath: fixture.workerPolicyPath,
+          secretRoot: "/private/worker/secrets",
+          artifactSha256: "7".repeat(64),
+          appDescriptorSha256: "6".repeat(64),
+          configSha256: "5".repeat(64),
+          credentialSha256: "4".repeat(64),
+          expectedSchemaSha256: "3".repeat(64),
+          policySha256: "2".repeat(64),
+        },
+      };
+    });
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/descriptor.*changed|concurrent/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 });
 

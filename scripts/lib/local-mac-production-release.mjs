@@ -40,6 +40,36 @@ import { verifyYoutubeExtractionWorkerArtifact } from "./youtube-extraction-work
 
 export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v1";
 
+export const LOCAL_MAC_PRODUCTION_ONE_TIME_PREDECESSOR_ADOPTION = Object.freeze({
+  schema: "homecook.local-mac-production-one-time-adoption.v1",
+  contract: "prod-20260828.1-precanonical-split-v1",
+  target: Object.freeze({
+    release_tag: "prod-20260828.1",
+    release_tag_object_sha: "93a7e84e3d502c8c91b5a0484bf079f59ffba456",
+    release_sha: "abac967556aff325207f9adf54f4dcbd07e7a492",
+    release_tree: "b31e7ddc6435d36ce1df15ce32ae68efe1aa9347",
+    attestation_digest: "a090e1cdd4db337120aad9ed54eea8edaecc38f566663a1b302a42ca7a5b5fca",
+  }),
+  predecessor_release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+  components: Object.freeze({
+    app: Object.freeze({
+      release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+      release_tree: "255f3c23a38593aade4b1f4bc3e2941030c9fe90",
+      build_id: "aKwKCpoAEwSrD6066XEwu",
+    }),
+    full_local: Object.freeze({
+      release_sha: "36e7aecfe429875f2dc12f3effc020ab1296a818",
+      release_tree: "abfc8fae339a5d1c0dfaf261171164680e9c79c3",
+      build_id: "8t5KKzb2z0Q3VO4SnnLOh",
+      runtime_command: "start",
+    }),
+    youtube_worker: Object.freeze({
+      release_sha: "3bdd814da8f9849805185d1b3be5a6ee703133a0",
+      artifact_sha256: "e228d46c1074ec499b709803bab4cc8dc8e2add30655fa1648dab564423e2c01",
+    }),
+  }),
+});
+
 const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const MUTATION_COMMANDS = new Set(["prepare-env", "install", "restart", "uninstall"]);
@@ -1879,6 +1909,47 @@ function assertDescriptorSnapshotStable({ actual, expected, label }) {
   }
 }
 
+function resolveOneTimePredecessorAdoption({ manifest, homeDir }) {
+  const contract = LOCAL_MAC_PRODUCTION_ONE_TIME_PREDECESSOR_ADOPTION;
+  for (const [field, expected] of Object.entries(contract.target)) {
+    if (manifest[field] !== expected) {
+      throw new Error(
+        `Current descriptor is missing and one-time predecessor adoption requires exact ${field}.`,
+      );
+    }
+  }
+  if (manifest.previous_release_sha !== contract.predecessor_release_sha) {
+    throw new Error(
+      "Current descriptor is missing and one-time predecessor adoption requires the exact manifest.previous_release_sha.",
+    );
+  }
+  return Object.freeze({
+    schema: contract.schema,
+    contract: contract.contract,
+    predecessor_release_sha: contract.predecessor_release_sha,
+    components: contract.components,
+    runtime_paths: Object.freeze({
+      app_root: resolve(homeDir, "01_vibe_coding/homecook-production-current"),
+      full_local_config: resolve(
+        homeDir,
+        "01_vibe_coding/homecook-session-refresh-storm-deploy-v9/infra/full-local-supabase/.env.production.local",
+      ),
+      full_local_root: resolve(
+        homeDir,
+        "01_vibe_coding/homecook-session-refresh-storm-deploy-v9",
+      ),
+      worker_manifest: resolve(
+        homeDir,
+        ".homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/artifact.json",
+      ),
+      worker_root: resolve(
+        homeDir,
+        ".homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1",
+      ),
+    }),
+  });
+}
+
 function normalizePrepareDescriptor(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Prepared release marker must be a JSON object.");
@@ -2405,8 +2476,9 @@ export async function promoteLocalMacProductionRelease({
     releaseRoot: paths.releaseRoot,
     runCommand,
   });
-  const initialRunning = readRunningDescriptorSnapshot({
+  const initialRunning = readOptionalRunningDescriptorSnapshot({
     currentUid,
+    label: "Current running release descriptor",
     path: paths.currentDescriptorPath,
   });
   const initialPrevious = readOptionalRunningDescriptorSnapshot({
@@ -2414,18 +2486,33 @@ export async function promoteLocalMacProductionRelease({
     label: "Previous running release descriptor",
     path: paths.previousDescriptorPath,
   });
-  if (initialRunning.descriptor.release_sha !== manifest.previous_release_sha) {
+  let predecessorAdoption = null;
+  if (!initialRunning.exists) {
+    if (initialPrevious.exists) {
+      throw new Error(
+        "Current descriptor is missing while previous.json exists; one-time adoption is blocked.",
+      );
+    }
+    predecessorAdoption = resolveOneTimePredecessorAdoption({
+      homeDir: realHomeDir,
+      manifest,
+    });
+  } else if (initialRunning.descriptor.release_sha !== manifest.previous_release_sha) {
     throw new Error(
       "Current running release descriptor drift: release_sha does not equal manifest.previous_release_sha.",
     );
   }
-  const currentReleaseDir = initialRunning.descriptor.execution_app_root
-    ?? join(paths.releaseRoot, initialRunning.descriptor.release_tag);
+  const predecessorDescriptor = initialRunning.exists ? initialRunning.descriptor : null;
+  const currentReleaseDir = predecessorAdoption
+    ? predecessorAdoption.runtime_paths.app_root
+    : predecessorDescriptor.execution_app_root
+      ?? join(paths.releaseRoot, predecessorDescriptor.release_tag);
   const preflightContext = {
-    currentDescriptor: initialRunning.descriptor,
+    currentDescriptor: predecessorDescriptor,
     currentReleaseDir,
     homeDir: realHomeDir,
     manifest,
+    predecessorAdoption,
     releaseDir: initialCandidate.releaseDir,
     rootDir: realRootDir,
   };
@@ -2456,17 +2543,16 @@ export async function promoteLocalMacProductionRelease({
     verifyAttestation,
   });
 
-  const stableRunning = readRunningDescriptorSnapshot({
+  const stableRunning = readOptionalRunningDescriptorSnapshot({
     currentUid,
+    label: "Current running release descriptor",
     path: paths.currentDescriptorPath,
   });
-  if (
-    stableRunning.digest !== initialRunning.digest
-    || stableRunning.dev !== initialRunning.dev
-    || stableRunning.ino !== initialRunning.ino
-  ) {
-    throw new Error("Current running release descriptor changed during promotion preflight.");
-  }
+  assertDescriptorSnapshotStable({
+    actual: stableRunning,
+    expected: initialRunning,
+    label: "Current running release descriptor",
+  });
   assertDescriptorSnapshotStable({
     actual: readOptionalRunningDescriptorSnapshot({
       currentUid,
@@ -2507,6 +2593,24 @@ export async function promoteLocalMacProductionRelease({
   ) {
     throw new Error("Production runtime bundle changed between initial and locked preflight.");
   }
+  assertDescriptorSnapshotStable({
+    actual: readOptionalRunningDescriptorSnapshot({
+      currentUid,
+      label: "Current running release descriptor",
+      path: paths.currentDescriptorPath,
+    }),
+    expected: initialRunning,
+    label: "Current running release descriptor",
+  });
+  assertDescriptorSnapshotStable({
+    actual: readOptionalRunningDescriptorSnapshot({
+      currentUid,
+      label: "Previous running release descriptor",
+      path: paths.previousDescriptorPath,
+    }),
+    expected: initialPrevious,
+    label: "Previous running release descriptor",
+  });
 
   const executionSnapshot = createLocalMacProductionExecutionSnapshot({
     copyEntryHook: executionCopyHook,
@@ -2569,17 +2673,16 @@ export async function promoteLocalMacProductionRelease({
   }), manifest);
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
 
-  const finalRunning = readRunningDescriptorSnapshot({
+  const finalRunning = readOptionalRunningDescriptorSnapshot({
     currentUid,
+    label: "Current running release descriptor",
     path: paths.currentDescriptorPath,
   });
-  if (
-    finalRunning.digest !== initialRunning.digest
-    || finalRunning.dev !== initialRunning.dev
-    || finalRunning.ino !== initialRunning.ino
-  ) {
-    throw new Error("Current running release descriptor drifted during install/readiness; concurrent write blocked.");
-  }
+  assertDescriptorSnapshotStable({
+    actual: finalRunning,
+    expected: initialRunning,
+    label: "Current running release descriptor",
+  });
   const finalPrevious = readOptionalRunningDescriptorSnapshot({
     currentUid,
     label: "Previous running release descriptor",
@@ -2632,7 +2735,9 @@ export async function promoteLocalMacProductionRelease({
     worker_expected_schema_sha256: finalWorker.expectedSchemaSha256,
     worker_policy_sha256: finalWorker.policySha256,
   });
-  const previousBytes = Buffer.from(`${JSON.stringify(initialRunning.descriptor, null, 2)}\n`);
+  const previousBytes = initialRunning.exists
+    ? Buffer.from(`${JSON.stringify(initialRunning.descriptor, null, 2)}\n`)
+    : null;
   const currentBytes = Buffer.from(`${JSON.stringify(currentDescriptor, null, 2)}\n`);
   const transactionRoot = join(lock.lockPath, "descriptor-transaction");
   mkdir(transactionRoot, { mode: 0o700 });
@@ -2640,9 +2745,9 @@ export async function promoteLocalMacProductionRelease({
   writeFileSync(transactionPath, JSON.stringify({
     schema: "homecook.local-mac-production-descriptor-transaction.v1",
     status: "prepared",
-    expected_current_sha256: initialRunning.digest,
+    expected_current_sha256: initialRunning.exists ? initialRunning.digest : null,
     expected_previous_sha256: initialPrevious.exists ? initialPrevious.digest : null,
-    previous_sha256: sha256Bytes(previousBytes),
+    previous_sha256: previousBytes ? sha256Bytes(previousBytes) : null,
     current_sha256: sha256Bytes(currentBytes),
   }, null, 2), { encoding: "utf8", flag: "wx", mode: 0o600 });
   const stagedRoot = join(transactionRoot, "staged");
@@ -2677,18 +2782,18 @@ export async function promoteLocalMacProductionRelease({
   };
 
   try {
-    writeDescriptorAtomically(stagedPreviousPath, previousBytes);
+    if (previousBytes) writeDescriptorAtomically(stagedPreviousPath, previousBytes);
     writeDescriptorAtomically(stagedCurrentPath, currentBytes);
-    const commitRunning = readRunningDescriptorSnapshot({ currentUid, path: paths.currentDescriptorPath });
-    if (
-      commitRunning.digest !== initialRunning.digest
-      || commitRunning.dev !== initialRunning.dev
-      || commitRunning.ino !== initialRunning.ino
-    ) {
-      throw new Error(
-        "Current running release descriptor changed at descriptor commit boundary.",
-      );
-    }
+    const commitRunning = readOptionalRunningDescriptorSnapshot({
+      currentUid,
+      label: "Current running release descriptor",
+      path: paths.currentDescriptorPath,
+    });
+    assertDescriptorSnapshotStable({
+      actual: commitRunning,
+      expected: initialRunning,
+      label: "Current running release descriptor",
+    });
     assertDescriptorSnapshotStable({
       actual: readOptionalRunningDescriptorSnapshot({
         currentUid,
@@ -2699,19 +2804,23 @@ export async function promoteLocalMacProductionRelease({
       label: "Previous running release descriptor",
     });
 
-    renameSync(paths.currentDescriptorPath, oldCurrentPath);
-    currentReserved = true;
-    const reservedCurrent = readRunningDescriptorSnapshot({
-      currentUid,
-      label: "Reserved current running release descriptor",
-      path: oldCurrentPath,
-    });
-    if (
-      reservedCurrent.digest !== initialRunning.digest
-      || reservedCurrent.dev !== initialRunning.dev
-      || reservedCurrent.ino !== initialRunning.ino
-    ) {
-      throw new Error("Current running release descriptor changed while being reserved.");
+    if (initialRunning.exists) {
+      renameSync(paths.currentDescriptorPath, oldCurrentPath);
+      currentReserved = true;
+      const reservedCurrent = readRunningDescriptorSnapshot({
+        currentUid,
+        label: "Reserved current running release descriptor",
+        path: oldCurrentPath,
+      });
+      if (
+        reservedCurrent.digest !== initialRunning.digest
+        || reservedCurrent.dev !== initialRunning.dev
+        || reservedCurrent.ino !== initialRunning.ino
+      ) {
+        throw new Error("Current running release descriptor changed while being reserved.");
+      }
+    } else if (lstatIfExists(paths.currentDescriptorPath)) {
+      throw new Error("Current running release descriptor appeared at commit boundary.");
     }
 
     if (initialPrevious.exists) {
@@ -2733,9 +2842,11 @@ export async function promoteLocalMacProductionRelease({
       throw new Error("Previous running release descriptor appeared at commit boundary.");
     }
 
-    linkSync(stagedPreviousPath, paths.previousDescriptorPath);
-    previousPublished = true;
-    descriptorFault("after_previous_publish");
+    if (previousBytes) {
+      linkSync(stagedPreviousPath, paths.previousDescriptorPath);
+      previousPublished = true;
+      descriptorFault("after_previous_publish");
+    }
     descriptorFault("before_current_publish");
     linkSync(stagedCurrentPath, paths.currentDescriptorPath);
     currentPublished = true;
@@ -2745,14 +2856,16 @@ export async function promoteLocalMacProductionRelease({
       currentUid,
       path: paths.currentDescriptorPath,
     });
-    const publishedPrevious = readRunningDescriptorSnapshot({
+    const publishedPrevious = readOptionalRunningDescriptorSnapshot({
       currentUid,
       label: "Previous running release descriptor",
       path: paths.previousDescriptorPath,
     });
     if (
       publishedCurrent.digest !== sha256Bytes(currentBytes)
-      || publishedPrevious.digest !== sha256Bytes(previousBytes)
+      || (previousBytes
+        ? !publishedPrevious.exists || publishedPrevious.digest !== sha256Bytes(previousBytes)
+        : publishedPrevious.exists)
     ) {
       throw new Error("Published release descriptor transaction did not match staged bytes.");
     }
@@ -2793,6 +2906,14 @@ export async function promoteLocalMacProductionRelease({
     current_head_sha: manifest.git_evidence.originMasterSha,
     installation,
     manifest,
+    ...(predecessorAdoption ? {
+      predecessor_adoption: {
+        schema: predecessorAdoption.schema,
+        contract: predecessorAdoption.contract,
+        predecessor_release_sha: predecessorAdoption.predecessor_release_sha,
+        components: predecessorAdoption.components,
+      },
+    } : {}),
     promoted: true,
     readiness,
     release_dir: executionSnapshot.appRoot,
