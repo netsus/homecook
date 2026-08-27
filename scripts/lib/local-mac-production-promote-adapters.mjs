@@ -149,17 +149,24 @@ export function buildCanonicalCurrentYoutubeWorkerPlist({
   digestFile = sha256File,
   options,
   renderWorkerPlist = renderYoutubeExtractionWorkerPlist,
+  verifyWorkerArtifact = verifyYoutubeExtractionWorkerArtifact,
 }) {
   const artifactRoot = currentDescriptor?.worker_artifact_root;
   const manifestPath = currentDescriptor?.worker_manifest_path;
   if (typeof artifactRoot !== "string" || typeof manifestPath !== "string") {
     throw new Error("Current descriptor is missing worker artifact path authority.");
   }
-  const appDescriptorPath = resolve(artifactRoot, "authority", "app-descriptor.json");
-  const expectedSchemaPath = resolve(artifactRoot, "authority", "expected-schema.json");
-  const policyPath = resolve(artifactRoot, "authority", "policy.json");
+  const authorityRoot = resolve(dirname(artifactRoot), "authority");
+  const appDescriptorPath = resolve(authorityRoot, "app-descriptor.json");
+  const expectedSchemaPath = resolve(authorityRoot, "expected-schema.json");
+  const policyPath = resolve(authorityRoot, "policy.json");
+  if (
+    verifyWorkerArtifact(manifestPath).artifact_sha256
+    !== currentDescriptor.worker_artifact_sha256
+  ) {
+    throw new Error("Current worker artifact digest drifted.");
+  }
   for (const [path, expectedDigest, label] of [
-    [manifestPath, currentDescriptor.worker_artifact_sha256, "artifact"],
     [appDescriptorPath, currentDescriptor.worker_app_descriptor_sha256, "app descriptor"],
     [options.workerConfigPath, currentDescriptor.worker_config_sha256, "config"],
     [options.workerCredentialPath, currentDescriptor.worker_credential_sha256, "credential"],
@@ -262,6 +269,7 @@ function readFullLocalWorkloadDefault({
   const expectedIdentity = readLocalMacProductionPreparedReleaseIdentity({
     component: "full_local",
     releaseDir: context.releaseDir,
+    runCommand: commandRunner,
   });
   const releaseIdentityPath = resolve(context.releaseDir, "prepare.json");
   const runtimeRoot = allowLegacyBootstrap ? context.rootDir : context.releaseDir;
@@ -452,7 +460,7 @@ function buildDefaultDependencies(
       const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
         appDescriptorPath: options.workerAppDescriptorPath,
         workerArtifactPath: options.workerManifestPath,
-        currentPolicyPath: resolve(workerArtifactRoot, "authority", "policy.json"),
+        currentPolicyPath: options.workerPolicyPath,
         credentialPath: options.workerCredentialPath,
         expectedSchemaPath: options.workerExpectedSchemaPath,
         secretRoot: options.workerSecretRoot,
@@ -622,12 +630,13 @@ function buildDefaultDependencies(
         expectedSchemaPath: argumentValue(workerPlist.args, "--expected-schema"),
         secretRoot: argumentValue(workerPlist.args, "--secret-root"),
       } : {
-        appDescriptorPath: resolve(workerArtifactRoot, "authority", "app-descriptor.json"),
+        appDescriptorPath: resolve(dirname(workerArtifactRoot), "authority", "app-descriptor.json"),
+        configPath: argumentValue(workerPlist.args, "--config"),
         workerArtifactPath: workerManifestPath,
-        currentPolicyPath: resolve(workerArtifactRoot, "authority", "policy.json"),
-        credentialPath: options.workerCredentialPath,
-        expectedSchemaPath: resolve(workerArtifactRoot, "authority", "expected-schema.json"),
-        secretRoot: options.workerSecretRoot,
+        currentPolicyPath: resolve(dirname(workerArtifactRoot), "authority", "policy.json"),
+        credentialPath: argumentValue(workerPlist.args, "--credential"),
+        expectedSchemaPath: resolve(dirname(workerArtifactRoot), "authority", "expected-schema.json"),
+        secretRoot: argumentValue(workerPlist.args, "--secret-root"),
       };
       if (Object.values(currentWorkerPaths).some((value) => !value)) {
         throw new Error("Current worker plist runtime paths are incomplete.");
@@ -647,7 +656,12 @@ function buildDefaultDependencies(
         })
         : buildCanonicalCurrentYoutubeWorkerPlist({
           currentDescriptor: context.currentDescriptor,
-          options,
+          options: {
+            ...options,
+            workerConfigPath: currentWorkerPaths.configPath,
+            workerCredentialPath: currentWorkerPaths.credentialPath,
+            workerSecretRoot: currentWorkerPaths.secretRoot,
+          },
         });
       assertCanonicalLocalMacProductionPlist({
         actualPath: workerPlist.path,

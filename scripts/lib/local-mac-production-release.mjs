@@ -401,16 +401,20 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
   }
   const appStat = lstatSync(snapshot.appRoot);
   const workerStat = lstatSync(snapshot.workerRoot);
+  const authorityStat = lstatSync(snapshot.authorityRoot);
   if (
     appStat.dev !== snapshot.appDev
     || appStat.ino !== snapshot.appIno
     || workerStat.dev !== snapshot.workerDev
     || workerStat.ino !== snapshot.workerIno
+    || authorityStat.dev !== snapshot.authorityDev
+    || authorityStat.ino !== snapshot.authorityIno
   ) {
     throw new Error("Sealed execution snapshot component inode drifted.");
   }
   assertSealedExecutionTree(snapshot.appRoot, snapshot.uid);
   assertSealedExecutionTree(snapshot.workerRoot, snapshot.uid);
+  assertSealedExecutionTree(snapshot.authorityRoot, snapshot.uid);
   const metadataStat = lstatSync(snapshot.metadataPath);
   if (
     !metadataStat.isFile()
@@ -423,7 +427,12 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
   }
   const appDigest = digestExecutionTree(snapshot.appRoot);
   const workerDigest = digestExecutionTree(snapshot.workerRoot);
-  if (appDigest !== snapshot.appDigest || workerDigest !== snapshot.workerDigest) {
+  const authorityDigest = digestExecutionTree(snapshot.authorityRoot);
+  if (
+    appDigest !== snapshot.appDigest
+    || workerDigest !== snapshot.workerDigest
+    || authorityDigest !== snapshot.authorityDigest
+  ) {
     throw new Error("Sealed execution snapshot content digest drifted.");
   }
   return snapshot;
@@ -480,8 +489,8 @@ export function createLocalMacProductionExecutionSnapshot({
     ) {
       throw new Error("Copied execution bytes do not match the pre-copy source digest.");
     }
-    const authorityRoot = join(workerRoot, "authority");
-    if (!existsSync(authorityRoot)) mkdirSync(authorityRoot, { mode: 0o700 });
+    const authorityRoot = join(snapshotRoot, "authority");
+    mkdirSync(authorityRoot, { mode: 0o700 });
     const appDescriptorPath = copySnapshotAuthorityFile(
       worker.appDescriptorPath,
       join(authorityRoot, "app-descriptor.json"),
@@ -517,8 +526,10 @@ export function createLocalMacProductionExecutionSnapshot({
     }
     sealExecutionTree(appRoot);
     sealExecutionTree(workerRoot);
+    sealExecutionTree(authorityRoot);
     const appDigest = digestExecutionTree(appRoot);
     const workerDigest = digestExecutionTree(workerRoot);
+    const authorityDigest = digestExecutionTree(authorityRoot);
     const metadataPath = join(snapshotRoot, "evidence.json");
     writeFileSync(metadataPath, JSON.stringify({
       schema: EXECUTION_SNAPSHOT_SCHEMA,
@@ -528,23 +539,27 @@ export function createLocalMacProductionExecutionSnapshot({
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
       worker_digest: workerDigest,
+      authority_digest: authorityDigest,
     }, null, 2), { flag: "wx", mode: 0o600 });
     chmodSync(metadataPath, 0o400);
     chmodSync(snapshotRoot, 0o500);
     const stat = lstatSync(snapshotRoot);
     const appStat = lstatSync(appRoot);
     const workerStat = lstatSync(workerRoot);
+    const authorityStat = lstatSync(authorityRoot);
     return verifyLocalMacProductionExecutionSnapshot({
       schema: EXECUTION_SNAPSHOT_SCHEMA,
       root: snapshotRoot,
       appRoot,
       workerRoot,
+      authorityRoot,
       manifestPath,
       appDescriptorPath,
       expectedSchemaPath,
       policyPath,
       appDigest,
       workerDigest,
+      authorityDigest,
       digest: identityDigest,
       dev: stat.dev,
       ino: stat.ino,
@@ -553,6 +568,8 @@ export function createLocalMacProductionExecutionSnapshot({
       appIno: appStat.ino,
       workerDev: workerStat.dev,
       workerIno: workerStat.ino,
+      authorityDev: authorityStat.dev,
+      authorityIno: authorityStat.ino,
       metadataPath,
       metadataDigest: sha256Bytes(readFileSync(metadataPath)),
     });
@@ -1002,7 +1019,11 @@ export function readLocalMacProductionPreparedReleaseIdentity({
   const markerPath = join(runtimeDirectory, "prepare.json");
   const buildDirectory = join(runtimeDirectory, ".next");
   const buildIdPath = join(buildDirectory, "BUILD_ID");
-  assertPrivateRegularFile(markerPath, `${normalizedComponent} release marker`, currentUid);
+  assertOwnedSafeRegularFile(markerPath, `${normalizedComponent} release marker`, currentUid);
+  const markerMode = modeBits(lstatSync(markerPath).mode);
+  if (![0o400, 0o600].includes(markerMode)) {
+    throw new Error(`${normalizedComponent} release marker must use mode 0400 or 0600.`);
+  }
   const realBuildDirectory = assertSafeDirectory(
     buildDirectory,
     `${normalizedComponent} build directory`,
