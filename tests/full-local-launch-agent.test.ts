@@ -170,6 +170,39 @@ describe("full-local launch agent helpers", () => {
     }
   });
 
+  it("renders the durable current-release resume contract without promotion authority", () => {
+    const rootDir = "/Users/tester/.homecook/releases/execution-snapshots/abc/app";
+    const homeDir = "/Users/tester";
+    const configPath = "/Users/tester/.homecook/config/full-local-production.env";
+    const currentDescriptorPath = "/Users/tester/.homecook/releases/current.json";
+
+    const plist = renderFullLocalLaunchAgentPlist({
+      configPath,
+      currentDescriptorPath,
+      homeDir,
+      nodeBin: "/opt/homebrew/bin/node",
+      rootDir,
+      runtimeCommand: "resume-current",
+    });
+
+    expectProgramArgumentsOrder(plist, [
+      "/usr/bin/env",
+      "-i",
+      `HOME=${homeDir}`,
+      `PATH=${EXPECTED_SANITIZED_PATH}`,
+      "/opt/homebrew/bin/node",
+      `${rootDir}/scripts/full-local-production-runtime.mjs`,
+      "resume-current",
+      "--current-descriptor",
+      currentDescriptorPath,
+      "--config",
+      configPath,
+    ]);
+    expect(plist).not.toContain("--release-identity");
+    expect(plist).not.toContain("--release-manifest");
+    expect(plist).not.toContain("--lock-token");
+  });
+
   it("deduplicates the sanitized launch agent PATH when node already lives in a default bin dir", () => {
     const plist = renderFullLocalLaunchAgentPlist({
       configPath: "/Users/tester/homecook/infra/full-local-supabase/.env.production.local",
