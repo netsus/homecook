@@ -994,6 +994,9 @@ export function evaluateYoutubeExtractionWorkerPreflight({
     blockers,
     checks,
     release_sha: workerArtifact.release_sha,
+    release_tree: workerArtifact.release_tree,
+    build_id: workerArtifact.build_id,
+    promotion_id: workerArtifact.promotion_id,
     schema_identity: workerArtifact.schema_identity,
     allowed_snapshot_digest: workerArtifact.allowed_snapshot_digest,
   };

@@ -107,8 +107,27 @@ const RUNNING_DESCRIPTOR_ALLOWED_FIELDS = new Set([
   "promotion_id",
   "promoted_at",
   "source_manifest_sha256",
+  "worker_artifact_root",
+  "worker_manifest_path",
+  "worker_app_descriptor_path",
+  "worker_config_path",
+  "worker_credential_path",
+  "worker_expected_schema_path",
+  "worker_policy_path",
+  "worker_secret_root",
 ]);
 const RUNNING_DESCRIPTOR_SCHEMA = "homecook.local-mac-production-running-release.v1";
+const LEGACY_BOOTSTRAP_RELEASE_SHA = "e02f02a87d1d955dc598728e7029a745a650a5c3";
+const RUNNING_DESCRIPTOR_WORKER_PATH_FIELDS = Object.freeze([
+  "worker_artifact_root",
+  "worker_manifest_path",
+  "worker_app_descriptor_path",
+  "worker_config_path",
+  "worker_credential_path",
+  "worker_expected_schema_path",
+  "worker_policy_path",
+  "worker_secret_root",
+]);
 
 function requireExactAllowedKeys(value, allowedKeys, label) {
   const unknownKeys = Object.keys(value).filter((key) => !allowedKeys.has(key));
@@ -1252,10 +1271,24 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
   if (Number.isNaN(Date.parse(promotedAt))) {
     throw new Error(`${label}.promoted_at must be a valid ISO timestamp.`);
   }
+  const releaseSha = requireReleaseSha(value.release_sha, `${label}.release_sha`);
+  const workerPathFields = RUNNING_DESCRIPTOR_WORKER_PATH_FIELDS.filter(
+    (field) => value[field] !== undefined,
+  );
+  if (
+    workerPathFields.length !== RUNNING_DESCRIPTOR_WORKER_PATH_FIELDS.length
+    && !(workerPathFields.length === 0 && releaseSha === LEGACY_BOOTSTRAP_RELEASE_SHA)
+  ) {
+    throw new Error(`${label} worker path authority must be complete.`);
+  }
+  const workerPathAuthority = Object.fromEntries(workerPathFields.map((field) => [
+    field,
+    requireAbsolutePath(value[field], `${label}.${field}`),
+  ]));
   return {
     schema: RUNNING_DESCRIPTOR_SCHEMA,
     release_tag: validateProductionReleaseTag(value.release_tag, `${label}.release_tag`),
-    release_sha: requireReleaseSha(value.release_sha, `${label}.release_sha`),
+    release_sha: releaseSha,
     release_tree: requireReleaseSha(value.release_tree, `${label}.release_tree`),
     build_id: requireNonEmptyString(value.build_id, `${label}.build_id`),
     promotion_id: requireNonEmptyString(value.promotion_id, `${label}.promotion_id`),
@@ -1264,6 +1297,7 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
       value.source_manifest_sha256,
       `${label}.source_manifest_sha256`,
     ),
+    ...workerPathAuthority,
   };
 }
 
@@ -1530,6 +1564,7 @@ function validateReadyReleaseBundle(bundle, manifest) {
       state.release_sha !== manifest.release_sha
       || state.release_tree !== manifest.release_tree
       || state.build_id !== manifest.build_id
+      || state.promotion_id !== manifest.promotion_id
     ) {
       throw new Error(`Production release bundle ${component} identity does not match the exact release.`);
     }
@@ -1804,6 +1839,14 @@ export async function promoteLocalMacProductionRelease({
     promotion_id: manifest.promotion_id,
     promoted_at: promotedAt,
     source_manifest_sha256: manifestDigest,
+    worker_artifact_root: lockedRuntimePreflight.worker.artifactRoot,
+    worker_manifest_path: lockedRuntimePreflight.worker.manifestPath,
+    worker_app_descriptor_path: lockedRuntimePreflight.worker.appDescriptorPath,
+    worker_config_path: lockedRuntimePreflight.worker.configPath,
+    worker_credential_path: lockedRuntimePreflight.worker.credentialPath,
+    worker_expected_schema_path: lockedRuntimePreflight.worker.expectedSchemaPath,
+    worker_policy_path: lockedRuntimePreflight.worker.policyPath,
+    worker_secret_root: lockedRuntimePreflight.worker.secretRoot,
   });
   const previousBytes = Buffer.from(`${JSON.stringify(initialRunning.descriptor, null, 2)}\n`);
   const currentBytes = Buffer.from(`${JSON.stringify(currentDescriptor, null, 2)}\n`);

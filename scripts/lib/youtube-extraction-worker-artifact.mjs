@@ -361,6 +361,9 @@ function makeArtifactWritableForCleanup(directory) {
  *   rootDir?: string,
  *   outputDir: string,
  *   releaseSha: string,
+ *   releaseTree?: string,
+ *   buildId?: string,
+ *   promotionId?: string,
  *   schemaIdentity?: string,
  *   allowedSnapshotDigest: string,
  *   policyVersion?: number,
@@ -370,6 +373,9 @@ export function materializeYoutubeExtractionWorkerArtifact({
   rootDir = process.cwd(),
   outputDir,
   releaseSha,
+  releaseTree = releaseSha,
+  buildId = `worker-${releaseSha}`,
+  promotionId = `worker-${releaseSha}`,
   schemaIdentity = YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
   allowedSnapshotDigest,
   policyVersion = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION,
@@ -388,6 +394,9 @@ export function materializeYoutubeExtractionWorkerArtifact({
     const manifest = buildYoutubeExtractionWorkerArtifactManifest({
       rootDir: normalizedRoot,
       releaseSha,
+      releaseTree,
+      buildId,
+      promotionId,
       schemaIdentity,
       allowedSnapshotDigest,
       policyVersion,
@@ -421,6 +430,9 @@ export function materializeYoutubeExtractionWorkerArtifact({
  * @param {{
  *   rootDir?: string,
  *   releaseSha: string,
+ *   releaseTree?: string,
+ *   buildId?: string,
+ *   promotionId?: string,
  *   schemaIdentity?: string,
  *   allowedSnapshotDigest: string,
  *   policyVersion?: number,
@@ -432,6 +444,9 @@ export function materializeYoutubeExtractionWorkerArtifact({
 export function buildYoutubeExtractionWorkerArtifactManifest({
   rootDir = process.cwd(),
   releaseSha,
+  releaseTree = releaseSha,
+  buildId = `worker-${releaseSha}`,
+  promotionId = `worker-${releaseSha}`,
   schemaIdentity = YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
   allowedSnapshotDigest,
   policyVersion = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION,
@@ -442,6 +457,9 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
   assertWorkerTimingContract(workerTiming);
   const normalizedRootDir = ensureAbsolutePath(rootDir, "rootDir");
   const normalizedReleaseSha = ensureReleaseSha(releaseSha);
+  const normalizedReleaseTree = ensureReleaseSha(releaseTree);
+  const normalizedBuildId = ensureNonEmptyString(buildId, "buildId");
+  const normalizedPromotionId = ensureNonEmptyString(promotionId, "promotionId");
   const normalizedSchemaIdentity = ensureNonEmptyString(
     schemaIdentity,
     "schemaIdentity",
@@ -471,9 +489,12 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
   ));
   const baseManifest = {
     schema: YOUTUBE_EXTRACTION_WORKER_ARTIFACT_SCHEMA,
-    version: 1,
+    version: 2,
     deterministic: true,
     release_sha: normalizedReleaseSha,
+    release_tree: normalizedReleaseTree,
+    build_id: normalizedBuildId,
+    promotion_id: normalizedPromotionId,
     schema_identity: normalizedSchemaIdentity,
     launchd_label: YOUTUBE_EXTRACTION_WORKER_LABEL,
     policy_schema_identity: YOUTUBE_EXTRACTION_POLICY_SNAPSHOT_SCHEMA_IDENTITY,
@@ -767,9 +788,25 @@ function readMaterializedArtifactFileInventory(artifactRoot, manifestPath) {
   return files.sort();
 }
 
-export function verifyYoutubeExtractionWorkerArtifact(path) {
+export function verifyYoutubeExtractionWorkerArtifact(
+  path,
+  { allowLegacyReleaseSha = null } = {},
+) {
   const normalizedPath = ensureRegularFile(path, "worker artifact manifest");
   const value = readYoutubeExtractionWorkerArtifact(normalizedPath);
+  const legacyAllowed = value.version === 1
+    && value.release_sha === allowLegacyReleaseSha;
+  if (
+    !legacyAllowed
+    && (value.version !== 2
+    || !/^[0-9a-f]{40}$/u.test(value.release_tree ?? "")
+    || typeof value.build_id !== "string"
+    || value.build_id.length === 0
+    || typeof value.promotion_id !== "string"
+    || value.promotion_id.length === 0)
+  ) {
+    throw new Error("worker artifact release identity is incomplete.");
+  }
   const { artifact_sha256: artifactSha, ...baseManifest } = value;
   if (artifactSha !== sha256Text(stableStringify(baseManifest))) {
     throw new Error("worker artifact manifest digest is invalid.");

@@ -159,14 +159,39 @@ export function buildFullLocalReleaseContainerLabels(identity) {
 
 /**
  * @param {Array<Record<string, any>>} containers
- * @param {{expected?: {release_sha:string, release_tree:string, build_id:string, promotion_id:string} | null}} [options]
+ * @param {{expected?: {release_sha:string, release_tree:string, build_id:string, promotion_id:string} | null, allowLegacyBootstrap?: boolean}} [options]
  */
 export function readFullLocalReleaseIdentityFromContainers(
   containers,
-  { expected = null } = {},
+  { expected = null, allowLegacyBootstrap = false } = {},
 ) {
   if (!Array.isArray(containers) || containers.length !== 7) {
     throw new Error("Full-local release identity requires exactly seven containers.");
+  }
+  const labelNames = [
+    "homecook.release.sha",
+    "homecook.release.tree",
+    "homecook.release.build-id",
+    "homecook.release.promotion-id",
+  ];
+  const presentCount = containers.reduce((count, container) =>
+    count + labelNames.filter((name) =>
+      typeof container?.Config?.Labels?.[name] === "string").length, 0);
+  if (presentCount === 0) {
+    if (
+      allowLegacyBootstrap
+      && expected?.release_sha === "e02f02a87d1d955dc598728e7029a745a650a5c3"
+    ) {
+      return Object.freeze({
+        ...expected,
+        legacy_bootstrap: true,
+        legacy_bootstrap_contract: "e02f-full-local-v1",
+      });
+    }
+    throw new Error("Unlabeled full-local workload is not an approved legacy bootstrap.");
+  }
+  if (presentCount !== containers.length * labelNames.length) {
+    throw new Error("Full-local containers report partial release labels.");
   }
   const identities = containers.map((container, index) => {
     const labels = container?.Config?.Labels;

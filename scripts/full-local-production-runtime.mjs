@@ -720,9 +720,10 @@ function baseRuntime(args, { requireSecrets = true } = {}) {
   };
 }
 
-function validateAndMaterialize(args) {
+function validateRuntime(args, { materializeSecrets }) {
   const runtime = baseRuntime(args);
   const releaseIdentity = readExpectedFullLocalReleaseIdentity(args);
+  const allowLegacyBootstrap = hasFlag(args, "--allow-legacy-release-bootstrap");
   const secretDirectory = validateExternalSecretDirectory({
     repositoryRoot: ROOT,
     secretDirectory: runtime.config.FULL_LOCAL_SECRET_DIR,
@@ -731,11 +732,13 @@ function validateAndMaterialize(args) {
     config: runtime.config,
     secrets: runtime.oauthSecrets,
   });
-  materializeFullLocalRuntimeSecrets({
-    coreSecrets: runtime.secrets,
-    oauthSecrets: oauth.enabled ? runtime.oauthSecrets : {},
-    targetDirectory: secretDirectory,
-  });
+  if (materializeSecrets) {
+    materializeFullLocalRuntimeSecrets({
+      coreSecrets: runtime.secrets,
+      oauthSecrets: oauth.enabled ? runtime.oauthSecrets : {},
+      targetDirectory: secretDirectory,
+    });
+  }
   const validation = validateFullLocalProductionConfig({
     config: runtime.config,
     configFileMode: statSync(runtime.configPath).mode,
@@ -763,7 +766,22 @@ function validateAndMaterialize(args) {
     artifacts: [composed, readFileSync(runtime.configPath, "utf8")],
     secrets: [...Object.values(runtime.secrets), ...Object.values(runtime.oauthSecrets)],
   });
-  return Object.freeze({ ...runtime, env, oauth, releaseIdentity, validation });
+  return Object.freeze({
+    ...runtime,
+    allowLegacyBootstrap,
+    env,
+    oauth,
+    releaseIdentity,
+    validation,
+  });
+}
+
+function validateAndMaterialize(args) {
+  return validateRuntime(args, { materializeSecrets: true });
+}
+
+function validateReadOnlyRuntime(args) {
+  return validateRuntime(args, { materializeSecrets: false });
 }
 
 function bootstrapSecrets(args) {
@@ -851,7 +869,10 @@ function observedFullLocalReleaseIdentity(runtime) {
   if (!runtime.releaseIdentity) return null;
   return readFullLocalReleaseIdentityFromContainers(
     composeContainers(runtime),
-    { expected: runtime.releaseIdentity },
+    {
+      allowLegacyBootstrap: runtime.allowLegacyBootstrap,
+      expected: runtime.releaseIdentity,
+    },
   );
 }
 
@@ -2255,7 +2276,7 @@ async function main() {
       break;
     }
     case "status": {
-      const runtime = validateAndMaterialize(args);
+      const runtime = validateReadOnlyRuntime(args);
       const resources = liveFullLocalProductionResources(runtime);
       const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
       const status = runtimeStatus(runtime);
