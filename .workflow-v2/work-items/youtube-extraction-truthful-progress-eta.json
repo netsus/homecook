@@ -1,0 +1,142 @@
+{
+  "id": "youtube-extraction-truthful-progress-eta",
+  "title": "YouTube truthful progress and gated ETA range",
+  "summary": "기존 YT_IMPORT background extraction의 경과시간 기반 진행 표시를 worker 단계 기반 truthful progress와 promotion-gated ETA range로 교체한다. 새 public endpoint 없이 기존 5초 polling과 retry/notification 계약을 유지한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자에게 실제 worker 단계 기반 진행 상태만 보여 주고, 숫자 ETA는 근거가 충분할 때만 범위형으로 제공한다. 기존 retry, redirect, notification, sync_wait, local-only boundary를 그대로 유지한다.",
+  "owners": {
+    "claude": "retired compatibility field only; this Stage 1/docs task stays Codex-owned",
+    "codex": "independent Stage 1 author, internal 1.5 reviewer, Stage 2 backend, Stage 3 review, Stage 4 frontend, Stage 5 lightweight design review, Stage 6 closeout; no self-approval",
+    "workers": []
+  },
+  "dependencies": [
+    "youtube-async-extraction-notification merged via PR #1362",
+    "official tuple 1.7.34 / 1.5.38 / 1.3.36 / 1.3.36 / 1.2.41",
+    "approved plan /Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-extraction-truthful-progress-eta-plan-20260826.md SHA-256 e3bf440a3708b50e2430f1f2fda770fbe2a1f30bdaf3eb79fb6237affd5bbe60, 609 lines",
+    "current official contract already locks nullable progress, max90/max95/success100, max5 stage events, hidden numeric ETA before promotion, no new endpoint/WebSocket/SSE/ML/dependency",
+    "this Stage 1 docs workpack independently approved and merged before Stage 2"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.34.md",
+      "docs/화면정의서-v1.5.38.md",
+      "docs/유저flow맵-v1.3.36.md",
+      "docs/db설계-v1.3.36.md",
+      "docs/api문서-v1.2.41.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/youtube-extraction-truthful-progress-eta/README.md",
+      "docs/workpacks/youtube-extraction-truthful-progress-eta/acceptance.md",
+      "docs/workpacks/youtube-extraction-truthful-progress-eta/automation-spec.json",
+      "docs/workpacks/youtube-async-extraction-notification/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/supabase-local-only-operations.md",
+      "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-extraction-truthful-progress-eta-plan-20260826.md#sha256-e3bf440a3708b50e2430f1f2fda770fbe2a1f30bdaf3eb79fb6237affd5bbe60-lines-609"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "isolated-local-single-public-url-canary-after-same-sha-preflight"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "node scripts/validate-automation-spec.mjs --slice youtube-extraction-truthful-progress-eta",
+      "pnpm validate:omo-bookkeeping",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-extraction-truthful-progress-eta' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
+      "pnpm exec vitest run tests/youtube-extraction-truthful-progress-eta-stage1.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "node scripts/validate-automation-spec.mjs --slice youtube-extraction-truthful-progress-eta",
+      "pnpm validate:omo-bookkeeping",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-extraction-truthful-progress-eta' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
+      "pnpm exec vitest run tests/youtube-extraction-truthful-progress-eta-stage1.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts"
+    ],
+    "stage1_current_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "node scripts/validate-automation-spec.mjs --slice youtube-extraction-truthful-progress-eta",
+      "pnpm validate:omo-bookkeeping",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-extraction-truthful-progress-eta' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
+      "pnpm exec vitest run tests/youtube-extraction-truthful-progress-eta-stage1.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts"
+    ],
+    "stage2_post_merge_preflight": [
+      "BRANCH_NAME=feature/be-youtube-extraction-truthful-progress-eta pnpm validate:workpack -- --slice youtube-extraction-truthful-progress-eta"
+    ],
+    "full_lifecycle_checks": [
+      "BRANCH_NAME=feature/be-youtube-extraction-truthful-progress-eta pnpm validate:workpack -- --slice youtube-extraction-truthful-progress-eta",
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm exec vitest run tests/youtube-background-extraction-contract.test.ts",
+      "pnpm exec playwright test tests/e2e/youtube-async-extraction-notification.spec.ts --project desktop-chrome --project mobile-chrome --grep \"progress|retry|result confirmation\"",
+      "pnpm validate:closeout-sync -- --slice youtube-extraction-truthful-progress-eta"
+    ],
+    "evaluator_commands": [
+      "independent Codex internal 1.5 contract and checklist review on exact Stage 1 head",
+      "independent Codex Stage 3 backend review on exact backend head",
+      "independent Codex Stage 5 low-risk design review on exact frontend head",
+      "independent Codex Stage 6 closeout and current-head checks review"
+    ],
+    "artifact_assertions": [
+      "official-tuple-1-7-34-1-5-38-1-3-36-1-3-36-1-2-41-locked",
+      "merged-predecessor-youtube-async-dependency-only",
+      "stage-floors-queued0-source10-video25-frame45-model65-finalizing90",
+      "active-max90-ui-max95-success100",
+      "hidden-numeric-eta-before-promotion",
+      "progress-null-exact-semantics",
+      "private-stage-events-max5-and-stale-write-zero",
+      "progress-failure-nonfatal",
+      "youtube-extraction-worker-schema-v2-same-release-attestation",
+      "truthful-source-video-ready-frame-boundary",
+      "non-blocking-progress-ipc-bounded-finalize-flush",
+      "eta-promotion-20-50-bucket10-coverage80",
+      "no-new-endpoint-websocket-sse-ml-dependency",
+      "remote-forbidden-full-local-untouched",
+      "release-promoter-and-production-rollout-manual-only",
+      "new-evidence-root-no-predecessor-rewrite"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "APPROVE / Findings 0 by /root/stage1_internal_review and Security Findings 0 by /root/stage1_progress_security_exact at authored commit fa75808b4a697ea6415d000fff3d82e1f379a672",
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs branch opened for the existing-screen low-risk progress/ETA change only. Internal 1.5 evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage1-internal1-5-review.md; authored commit fa75808b4a697ea6415d000fff3d82e1f379a672; APPROVE / Findings 0 and Security Findings 0. The current official tuple already locks nullable progress, max90/max95/success100, hidden numeric ETA before promotion, max5 private stage events, stale write 0, progress failure nonfatal, and no new endpoint/WebSocket/SSE/ML/dependency. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0을 유지한다. release-promoter and production rollout remain Manual Only.",
+  "out_of_scope": [
+    "new public endpoint, status, error, WebSocket or SSE",
+    "notification list active progress payload change",
+    "ML or request-time aggregate ETA predictor",
+    "new npm/pnpm dependency",
+    "production migration apply, release-promoter execution, production rollout execution",
+    "Supabase Cloud/linked/remote target usage",
+    "operational full-local destructive reset"
+  ],
+  "open_questions": []
+}

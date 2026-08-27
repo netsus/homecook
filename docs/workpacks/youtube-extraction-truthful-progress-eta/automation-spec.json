@@ -1,0 +1,100 @@
+{
+  "slice_id": "youtube-extraction-truthful-progress-eta",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/extraction-jobs",
+      "GET /api/v1/recipes/youtube/extraction-jobs/{job_id}",
+      "GET /api/v1/recipes/youtube/extractions/{extraction_id}",
+      "POST /api/v1/recipes/youtube/extract"
+    ],
+    "invariants": [
+      "no-new-public-endpoint",
+      "nullable-progress-key-additive-only",
+      "confirmed-percent-stage-floor-only",
+      "active-confirmed-max90-ui-max95-success100",
+      "attempt-reset-source-fetch-only",
+      "private-stage-events-max5-per-attempt",
+      "stale-progress-write-zero",
+      "progress-write-nonfatal",
+      "numeric-eta-hidden-before-promotion",
+      "notification-list-progress-unchanged",
+      "remote-forbidden-full-local-untouched"
+    ],
+    "verify_commands": [
+      "BRANCH_NAME=feature/be-youtube-extraction-truthful-progress-eta pnpm validate:workpack -- --slice youtube-extraction-truthful-progress-eta",
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-extraction-truthful-progress-eta-stage1.test.ts",
+      "tests/youtube-background-extraction-contract.test.ts",
+      "tests/omo-automation-spec.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipes/new/youtube",
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "eta-pending",
+      "delayed",
+      "retry"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "low-risk-skip-rationale",
+      "browser-progress-regression",
+      "eta-copy-regression",
+      "320-390-desktop-screenshots"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "YT_IMPORT_BACKGROUND"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "browser-progress-regression",
+        "eta-copy-regression",
+        "320-390-desktop-screenshots"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "isolated-local-single-public-url-canary-after-same-sha-preflight"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "progress-contract-drift",
+    "stage-event-cap-overflow",
+    "stale-progress-write-not-zero",
+    "remote-target-used",
+    "predecessor-evidence-reused"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "Low-risk UI change applies only to the existing YT_IMPORT_BACKGROUND progress surface. release-promoter and production rollout remain Manual Only."
+}
