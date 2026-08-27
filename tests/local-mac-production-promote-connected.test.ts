@@ -60,6 +60,10 @@ import {
 
 const roots: string[] = [];
 const E02 = "e02f02a87d1d955dc598728e7029a745a650a5c3";
+const FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA =
+  "3bdd814da8f9849805185d1b3be5a6ee703133a0";
+const FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA =
+  "36e7aecfe429875f2dc12f3effc020ab1296a818";
 
 function temp(prefix: string) {
   const path = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
@@ -228,6 +232,282 @@ afterEach(() => {
 });
 
 describe("connected local Mac production promotion", () => {
+  it("adopts the exact split predecessor once when current and previous descriptors are absent", async () => {
+    const homeDir = temp("homecook-bridge-home-");
+    const repoRoot = temp("homecook-bridge-repo-");
+    const fullLocalRoot = join(homeDir, "01_vibe_coding/homecook-session-refresh-storm-deploy-v9");
+    mkdirSync(fullLocalRoot, { recursive: true, mode: 0o700 });
+    const binDir = join(repoRoot, "bin");
+    mkdirSync(binDir, { mode: 0o700 });
+    const nodeBin = join(binDir, "node");
+    symlinkSync(process.execPath, nodeBin);
+    const state = getLocalMacProductionReleasePaths(homeDir);
+    mkdirSync(state.releaseRoot, { recursive: true, mode: 0o700 });
+    chmodSync(join(state.releaseRoot, ".."), 0o700);
+
+    const predecessorIdentity = {
+      release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      release_tree: "d".repeat(40),
+      build_id: "bridge-build",
+      promotion_id: "bridge-promotion",
+    };
+    const currentRoot = join(homeDir, "01_vibe_coding/homecook-production-current");
+    mkdirSync(currentRoot, { recursive: true, mode: 0o700 });
+    writePrepare(currentRoot, {
+      release_manifest_path: join(repoRoot, "bridge-legacy.json"),
+      release_tag: "prod-20260827.1",
+      ...predecessorIdentity,
+    }, Buffer.from("{}"));
+    const currentWorker = workerFixture(
+      join(
+        homeDir,
+        ".homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1",
+      ),
+      predecessorIdentity,
+    );
+
+    const launchAgents = join(homeDir, "Library/LaunchAgents");
+    mkdirSync(launchAgents, { recursive: true, mode: 0o700 });
+    chmodSync(join(homeDir, "Library"), 0o700);
+    const fullConfig = join(homeDir, ".homecook/config/full-local-production.env");
+    mkdirSync(dirname(fullConfig), { recursive: true, mode: 0o700 });
+    const fullLocalConfig = readFileSync(
+      join(process.cwd(), "infra/full-local-supabase/.env.production.example"),
+      "utf8",
+    ).replaceAll("/Users/REPLACE_ME", homeDir);
+    writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
+    const fullLocalSecrets = generateFullLocalSecretBundle();
+    const fullLocalSecretDir = join(homeDir, ".homecook/secrets/full-local-supabase");
+    mkdirSync(fullLocalSecretDir, { recursive: true, mode: 0o700 });
+    for (const name of FULL_LOCAL_SECRET_NAMES) {
+      writeFileSync(
+        join(fullLocalSecretDir, name),
+        String(fullLocalSecrets[name as keyof typeof fullLocalSecrets]),
+        { mode: 0o600 },
+      );
+    }
+
+    writeFileSync(
+      getLocalMacProductionPaths(homeDir).plistPath,
+      renderLocalMacProductionPlist({ homeDir, nodeBin, rootDir: currentRoot }),
+      { mode: 0o644 },
+    );
+    writeFileSync(
+      getFullLocalLaunchAgentPaths(homeDir).plistPath,
+      renderFullLocalLaunchAgentPlist({
+        configPath: fullConfig,
+        homeDir,
+        includeReleaseIdentity: true,
+        nodeBin,
+        releaseIdentityPath: join(currentRoot, "prepare.json"),
+        rootDir: fullLocalRoot,
+        runtimeCommand: "start",
+      }),
+      { mode: 0o600 },
+    );
+    writeFileSync(
+      getYoutubeExtractionWorkerPaths(homeDir).plistPath,
+      renderYoutubeExtractionWorkerPlist({
+        ...currentWorker,
+        currentPolicyPath: currentWorker.policyPath,
+        homeDir,
+        nodeBin,
+        rootDir: currentWorker.artifactRoot,
+      }),
+      { mode: 0o600 },
+    );
+
+    let activeIdentity = predecessorIdentity;
+    let appRoot = currentRoot;
+    let workerRoot = currentWorker.artifactRoot;
+    let appPid = 110;
+    let workerPid = 210;
+    const commandRunner = ((command: string, args: readonly string[] = [], options: Record<string, unknown> = {}) => {
+      if (command === "git") {
+        const cwd = String(options.cwd ?? "");
+        const joined = args.join(" ");
+        if (cwd === fullLocalRoot && joined === "rev-parse HEAD") {
+          return { status: 0, stdout: `${FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA}\n`, stderr: "" };
+        }
+        if (cwd === fullLocalRoot && joined === "rev-parse HEAD^{tree}") {
+          return { status: 0, stdout: `${"e".repeat(40)}\n`, stderr: "" };
+        }
+        const marker = existsSync(join(cwd, "prepare.json"))
+          ? JSON.parse(readFileSync(join(cwd, "prepare.json"), "utf8"))
+          : activeIdentity;
+        if (joined === "rev-parse HEAD") return { status: 0, stdout: `${marker.release_sha}\n`, stderr: "" };
+        if (joined === "rev-parse HEAD^{tree}") return { status: 0, stdout: `${marker.release_tree}\n`, stderr: "" };
+        if (joined === "symbolic-ref -q HEAD") return { status: 1, stdout: "", stderr: "" };
+        if (joined.startsWith("status ") || joined.startsWith("ls-files ")) {
+          return { status: 0, stdout: "", stderr: "" };
+        }
+      }
+      if (command === "/usr/sbin/lsof") {
+        const pid = Number(args[2]);
+        return { status: 0, stdout: `p${pid}\nfcwd\nn${pid === appPid ? appRoot : workerRoot}\n`, stderr: "" };
+      }
+      if (command === "/bin/launchctl") {
+        const joined = args.join(" ");
+        if (args[0] === "print") {
+          const worker = joined.includes("youtube-extraction-worker");
+          const pid = worker ? workerPid : appPid;
+          return { status: 0, stdout: `state = running\npid = ${pid}\n`, stderr: "" };
+        }
+        if (joined.includes("youtube-extraction-worker")) {
+          const plist = readFileSync(getYoutubeExtractionWorkerPaths(homeDir).plistPath, "utf8");
+          workerRoot = plist.match(/<key>WorkingDirectory<\/key>\s*<string>([^<]+)/u)?.[1] ?? workerRoot;
+          workerPid += 1;
+        } else if (joined.includes("com.homecook.production")) {
+          const plist = readFileSync(getLocalMacProductionPaths(homeDir).plistPath, "utf8");
+          appRoot = plist.match(/<key>WorkingDirectory<\/key>\s*<string>([^<]+)/u)?.[1] ?? appRoot;
+          appPid += 1;
+        }
+        return { status: 0, stdout: "", stderr: "" };
+      }
+      if (command === nodeBin) {
+        const scriptPath = String(args[0] ?? "");
+        const subcommand = String(args[1] ?? "");
+        if (scriptPath.endsWith("full-local-production-runtime.mjs")) {
+          const identityPath = args.includes("--release-identity")
+            ? String(args[args.indexOf("--release-identity") + 1])
+            : null;
+          const releaseIdentity = identityPath
+            ? JSON.parse(readFileSync(identityPath, "utf8"))
+            : activeIdentity;
+          if (subcommand === "start") {
+            activeIdentity = releaseIdentity;
+            return { status: 0, stdout: JSON.stringify({ release_identity: releaseIdentity }), stderr: "" };
+          }
+          if (subcommand === "status") {
+            return {
+              status: 0,
+              stdout: JSON.stringify({
+                healthy: true,
+                authorization_contract_status: "PASS",
+                product_catalog_status: "PASS",
+                release_identity: releaseIdentity,
+              }),
+              stderr: "",
+            };
+          }
+        }
+        if (subcommand === "status") {
+          return {
+            status: 0,
+            stdout: JSON.stringify({
+              healthy: true,
+              authorization_contract_status: "PASS",
+              product_catalog_status: "PASS",
+              release_identity: activeIdentity,
+            }),
+            stderr: "",
+          };
+        }
+      }
+      return { status: 0, stdout: "", stderr: "" };
+    }) as typeof spawnSync;
+
+    const identity = {
+      release_sha: "a".repeat(40),
+      release_tree: "b".repeat(40),
+      build_id: "build-1",
+      promotion_id: "promotion-1",
+    };
+    const manifestPath = join(repoRoot, "release-bridge.json");
+    const subjectManifestPath = join(repoRoot, "subject-bridge.json");
+    const bundlePath = join(repoRoot, "bundle-bridge.jsonl");
+    const releaseTag = "prod-20260828.1";
+    const releaseTagObjectSha = "2".repeat(40);
+    const checkRuns = [
+      "build", "changes", "dependency-audit", "policy", "quality",
+      "security-function-authorization", "security-smoke",
+    ].map((name, checkIndex) => ({
+      app: { id: 15368 },
+      check_suite: { id: 900 + checkIndex },
+      completed_at: `2026-08-28T09:00:${String(checkIndex).padStart(2, "0")}Z`,
+      conclusion: "success",
+      name,
+      status: "completed",
+    }));
+    const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns,
+      releaseSha: identity.release_sha,
+      releaseTag,
+      releaseTagObjectSha,
+      releaseTree: identity.release_tree,
+      repository: "netsus/homecook",
+      subjectOutputPath: subjectManifestPath,
+    });
+    const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
+      ...identity,
+      attestation_digest: artifacts.subject_manifest_sha256,
+      previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      release_tag: releaseTag,
+      release_tag_object_sha: releaseTagObjectSha,
+      required_check_summary: artifacts.subject.required_check_summary,
+      signer_digest: identity.release_sha,
+      master_sha_at_approval: identity.release_sha,
+    });
+    const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
+    writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
+    writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
+      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+      predicate: artifacts.predicate,
+      subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
+    } } }])}\n`, { mode: 0o600 });
+    const candidateRoot = join(state.releaseRoot, String(manifest.release_tag));
+    mkdirSync(candidateRoot, { mode: 0o700 });
+    writePrepare(candidateRoot, manifest, manifestBytes, { executableRuntime: true });
+    const worker = workerFixture(temp("homecook-bridge-worker-next-"), identity);
+    const adapters = createLocalMacProductionPromoteAdapters({
+      confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      bundlePath,
+      subjectManifestPath,
+      trustedRootPath: join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"),
+      fullLocalConfigPath: fullConfig,
+      homeDir,
+      nodeBin,
+      workerConfigPath: worker.configPath,
+      workerManifestPath: worker.manifestPath,
+      workerCredentialPath: worker.credentialPath,
+      workerAppDescriptorPath: worker.appDescriptorPath,
+      workerPolicyPath: worker.policyPath,
+      workerExpectedSchemaPath: worker.expectedSchemaPath,
+      workerSecretRoot: worker.secretRoot,
+    }, {
+      commandRunner,
+      i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })),
+      appReadinessWaiter: vi.fn(async () => undefined),
+      platform: "darwin",
+    });
+
+    const promoted = await promoteLocalMacProductionRelease({
+      ...adapters,
+      homeDir,
+      lockToken: "11111111-1111-4111-8111-111111111111",
+      manifestPath,
+      readGitEvidence: () => createLocalMacProductionGitEvidence({
+        releaseSha: identity.release_sha,
+        releaseTree: identity.release_tree,
+        overrides: { releaseTagObjectSha: manifest.release_tag_object_sha },
+      }),
+      rootDir: repoRoot,
+      runCommand: commandRunner,
+      verifyAttestation: () => ({ verified: true, source: "fixture" }),
+    } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0]);
+
+    expect(promoted.promoted).toBe(true);
+    expect(existsSync(state.previousDescriptorPath)).toBe(false);
+    expect(JSON.parse(readFileSync(state.currentDescriptorPath, "utf8"))).toMatchObject({
+      release_sha: identity.release_sha,
+      promotion_id: identity.promotion_id,
+    });
+    expect(JSON.parse(readFileSync(state.currentDescriptorPath, "utf8")).restart_capability)
+      .toBeUndefined();
+    expect(readFileSync(getFullLocalLaunchAgentPaths(homeDir).plistPath, "utf8"))
+      .toContain("<string>start</string>");
+  }, 120_000);
+
   it("promotes exact e02 legacy state and then consumes the v2 descriptor on the next promotion", async () => {
     const homeDir = temp("homecook-connected-home-");
     const repoRoot = temp("homecook-connected-repo-");

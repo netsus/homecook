@@ -56,6 +56,18 @@ const CURRENT_IDENTITY = Object.freeze({
   build_id: "build-current",
   promotion_id: "promotion-current",
 });
+const FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA =
+  "3bdd814da8f9849805185d1b3be5a6ee703133a0";
+const FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA =
+  "36e7aecfe429875f2dc12f3effc020ab1296a818";
+const FIRST_CANONICAL_ADOPTION_APP_ROOT =
+  "/Users/tester/01_vibe_coding/homecook-production-current";
+const FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT =
+  "/Users/tester/01_vibe_coding/homecook-session-refresh-storm-deploy-v9";
+const FIRST_CANONICAL_ADOPTION_WORKER_ROOT =
+  "/Users/tester/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/artifact";
+const FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST =
+  "/Users/tester/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/artifact/artifact.json";
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -418,6 +430,146 @@ describe("local Mac production promote adapters", () => {
       calls.indexOf("install-app"),
     );
     expect(context.verifyExecutionSnapshot).toHaveBeenCalledTimes(5);
+  });
+
+  it("fails closed when the first canonical adoption bridge sees an unexpected full-local source SHA", async () => {
+    const { dependencies } = createDependencies({
+      readCurrentRuntimeBundle: vi.fn(async () => ({
+        stable_key: "bridge-runtime-stable",
+        app: { ...CURRENT_IDENTITY, release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA, ready: true },
+        full_local: {
+          ...CURRENT_IDENTITY,
+          authorization_contract_status: "PASS",
+          healthy: true,
+          product_catalog_status: "PASS",
+          ready: true,
+          release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+          runtime_present: true,
+        },
+        youtube_worker: {
+          ...CURRENT_IDENTITY,
+          release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+          ready: true,
+        },
+        bridge: {
+          app_release_dir: FIRST_CANONICAL_ADOPTION_APP_ROOT,
+          full_local_root: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT,
+          full_local_source_sha: "0".repeat(40),
+          mode: "first-canonical-adoption-v1",
+          worker_artifact_root: FIRST_CANONICAL_ADOPTION_WORKER_ROOT,
+          worker_manifest_path: FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST,
+        },
+      })),
+    });
+    const adapters = createLocalMacProductionPromoteAdapters(createOptions(), dependencies);
+    const context = createContext({
+      currentDescriptor: null,
+      currentReleaseDir: null,
+      currentRuntimeBridge: {
+        full_local_source_sha: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
+        mode: "first-canonical-adoption-v1",
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      },
+    });
+
+    await expect(adapters.preflightBundle(context))
+      .rejects.toThrow(/full-local.*source.*sha|first canonical adoption|bridge/iu);
+  });
+
+  it("fails closed when the first canonical adoption bridge sees an unexpected app root", async () => {
+    const { dependencies } = createDependencies({
+      readCurrentRuntimeBundle: vi.fn(async () => ({
+        stable_key: "bridge-runtime-stable",
+        app: { ...CURRENT_IDENTITY, release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA, ready: true },
+        full_local: {
+          ...CURRENT_IDENTITY,
+          authorization_contract_status: "PASS",
+          healthy: true,
+          product_catalog_status: "PASS",
+          ready: true,
+          release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+          runtime_present: true,
+        },
+        youtube_worker: {
+          ...CURRENT_IDENTITY,
+          release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+          ready: true,
+        },
+        bridge: {
+          app_release_dir: "/Users/tester/01_vibe_coding/wrong-app-root",
+          full_local_root: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT,
+          full_local_source_sha: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
+          mode: "first-canonical-adoption-v1",
+          worker_artifact_root: FIRST_CANONICAL_ADOPTION_WORKER_ROOT,
+          worker_manifest_path: FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST,
+        },
+      })),
+    });
+    const adapters = createLocalMacProductionPromoteAdapters(createOptions(), dependencies);
+    const context = createContext({
+      currentDescriptor: null,
+      currentReleaseDir: null,
+      currentRuntimeBridge: {
+        app_release_dir: FIRST_CANONICAL_ADOPTION_APP_ROOT,
+        full_local_root: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT,
+        full_local_source_sha: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
+        mode: "first-canonical-adoption-v1",
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+        worker_artifact_root: FIRST_CANONICAL_ADOPTION_WORKER_ROOT,
+        worker_manifest_path: FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST,
+      },
+    });
+
+    await expect(adapters.preflightBundle(context))
+      .rejects.toThrow(/app.*root|first canonical adoption|bridge/iu);
+  });
+
+  it("fails closed when the first canonical adoption bridge sees a wrong worker root or manifest despite matching SHA", async () => {
+    const { dependencies } = createDependencies({
+      readCurrentRuntimeBundle: vi.fn(async () => ({
+        stable_key: "bridge-runtime-stable",
+        app: { ...CURRENT_IDENTITY, release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA, ready: true },
+        full_local: {
+          ...CURRENT_IDENTITY,
+          authorization_contract_status: "PASS",
+          healthy: true,
+          product_catalog_status: "PASS",
+          ready: true,
+          release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+          runtime_present: true,
+        },
+        youtube_worker: {
+          ...CURRENT_IDENTITY,
+          release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+          ready: true,
+        },
+        bridge: {
+          app_release_dir: FIRST_CANONICAL_ADOPTION_APP_ROOT,
+          full_local_root: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT,
+          full_local_source_sha: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
+          mode: "first-canonical-adoption-v1",
+          worker_artifact_root: "/Users/tester/.homecook/youtube-extraction-releases/wrong-root",
+          worker_manifest_path: "/Users/tester/.homecook/youtube-extraction-releases/wrong-root/worker-artifact.json",
+        },
+      })),
+    });
+    const adapters = createLocalMacProductionPromoteAdapters(createOptions(), dependencies);
+    const context = createContext({
+      currentDescriptor: null,
+      currentReleaseDir: null,
+      currentRuntimeBridge: {
+        app_release_dir: FIRST_CANONICAL_ADOPTION_APP_ROOT,
+        full_local_root: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT,
+        full_local_source_sha: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
+        mode: "first-canonical-adoption-v1",
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+        worker_artifact_root: FIRST_CANONICAL_ADOPTION_WORKER_ROOT,
+        worker_manifest_path: FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST,
+      },
+    });
+
+    await expect(adapters.preflightBundle(context))
+      .rejects.toThrow(/worker.*root|worker.*manifest|path authority|bridge/iu);
   });
 
   it("blocks all bundle mutation when sealed snapshot verification fails", async () => {

@@ -24,7 +24,11 @@ import {
   renderFullLocalLaunchAgentPlist,
 } from "./full-local-launch-agent.mjs";
 import {
+  FIRST_CANONICAL_ADOPTION_BRIDGE_MODE,
+  FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
+  FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
   FULL_LOCAL_RESUME_CURRENT_CAPABILITY,
+  getFirstCanonicalAdoptionPathAuthority,
   getLocalMacProductionReleasePaths,
   readLocalMacProductionPreparedReleaseIdentity,
   readLocalMacProductionRuntimeIdentity,
@@ -245,6 +249,89 @@ function sanitizedPath(nodeBin) {
   ])].join(":");
 }
 
+function readGitRuntimeValue(commandRunner, cwd, args, label) {
+  const result = commandRunner("git", args, {
+    cwd,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) {
+    throw new Error(`${label} could not be resolved.`);
+  }
+  const value = String(result.stdout ?? "").trim();
+  if (!/^[0-9a-f]{40}$/u.test(value)) {
+    throw new Error(`${label} must be an exact SHA.`);
+  }
+  return value;
+}
+
+function resolveFirstCanonicalAdoptionBridge(bridge, homeDir) {
+  if (!bridge) return null;
+  const expected = getFirstCanonicalAdoptionPathAuthority(homeDir);
+  if (
+    bridge.mode !== FIRST_CANONICAL_ADOPTION_BRIDGE_MODE
+    || bridge.previous_release_sha !== FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA
+    || bridge.full_local_source_sha !== FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA
+    || bridge.app_release_dir !== expected.app_release_dir
+    || bridge.full_local_root !== expected.full_local_root
+    || bridge.worker_artifact_root !== expected.worker_artifact_root
+    || bridge.worker_manifest_path !== expected.worker_manifest_path
+  ) {
+    throw new Error("First canonical adoption bridge metadata is invalid.");
+  }
+  return Object.freeze({ ...expected });
+}
+
+function firstCanonicalAdoptionRestartContract() {
+  return Object.freeze({
+    includeReleaseIdentity: true,
+    legacyContract: "first-canonical-adoption-start-v1",
+    runtimeCommand: "start",
+  });
+}
+
+function assertFirstCanonicalAdoptionCurrentBundle(current, bridge) {
+  if (!current || typeof current.stable_key !== "string" || current.stable_key.length === 0) {
+    throw new Error("First canonical adoption runtime bundle did not produce stable evidence.");
+  }
+  const metadata = current.bridge;
+  if (
+    !metadata
+    || metadata.mode !== FIRST_CANONICAL_ADOPTION_BRIDGE_MODE
+    || metadata.app_release_dir !== bridge.app_release_dir
+    || metadata.full_local_root !== bridge.full_local_root
+    || metadata.full_local_source_sha !== bridge.full_local_source_sha
+    || metadata.worker_artifact_root !== bridge.worker_artifact_root
+    || metadata.worker_manifest_path !== bridge.worker_manifest_path
+    || typeof metadata.app_release_dir !== "string"
+    || metadata.app_release_dir.length === 0
+    || typeof metadata.full_local_root !== "string"
+    || metadata.full_local_root.length === 0
+  ) {
+    throw new Error("First canonical adoption bridge evidence is incomplete.");
+  }
+  if (
+    current.app?.ready !== true
+    || current.full_local?.ready !== true
+    || current.youtube_worker?.ready !== true
+  ) {
+    throw new Error("First canonical adoption runtime bundle is not ready.");
+  }
+  for (const component of ["app", "full_local", "youtube_worker"]) {
+    if (current[component]?.release_sha !== bridge.previous_release_sha) {
+      throw new Error(`First canonical adoption ${component} predecessor SHA drifted.`);
+    }
+  }
+  if (
+    current.full_local.runtime_present !== true
+    || current.full_local.healthy !== true
+    || current.full_local.authorization_contract_status !== "PASS"
+    || current.full_local.product_catalog_status !== "PASS"
+  ) {
+    throw new Error("First canonical adoption full-local health evidence is incomplete.");
+  }
+}
+
 export function resolveFullLocalCurrentRestartContract(currentDescriptor) {
   if (
     currentDescriptor?.release_sha
@@ -321,6 +408,9 @@ function readFullLocalWorkloadDefault({
     includeReleaseIdentity: false,
     runtimeCommand: "resume-current",
   };
+  const releaseIdentityPath = context.releaseIdentityPath
+    ? resolve(context.releaseIdentityPath)
+    : resolve(context.releaseDir, "prepare.json");
   if (checkPlist) assertCanonicalLocalMacProductionPlist({
     actualPath: getFullLocalLaunchAgentPaths(context.homeDir).plistPath,
     currentUid,
@@ -330,7 +420,7 @@ function readFullLocalWorkloadDefault({
         .currentDescriptorPath,
       homeDir: context.homeDir,
       nodeBin: options.nodeBin,
-      releaseIdentityPath: resolve(context.releaseDir, "prepare.json"),
+      releaseIdentityPath,
       rootDir: context.releaseDir,
       runtimeCommand: expectedRestartContract.runtimeCommand,
       includeReleaseIdentity: expectedRestartContract.includeReleaseIdentity,
@@ -341,10 +431,9 @@ function readFullLocalWorkloadDefault({
   });
   const expectedIdentity = readLocalMacProductionPreparedReleaseIdentity({
     component: "full_local",
-    releaseDir: context.releaseDir,
+    releaseDir: dirname(releaseIdentityPath),
     runCommand: commandRunner,
   });
-  const releaseIdentityPath = resolve(context.releaseDir, "prepare.json");
   const runtimeRoot = allowLegacyBootstrap ? context.rootDir : context.releaseDir;
   const runtimeArgs = [
       resolve(runtimeRoot, "scripts", "full-local-production-runtime.mjs"),
@@ -582,8 +671,26 @@ function buildDefaultDependencies(
     readCurrentRuntimeBundle: async ({ context, options }) => {
       const currentUid = process.getuid?.();
       if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
-      const currentReleaseDir = realpathSync(context.currentReleaseDir);
       const appPlistPath = getLocalMacProductionPaths(options.homeDir).plistPath;
+      const currentRuntimeBridge = resolveFirstCanonicalAdoptionBridge(
+        context.currentRuntimeBridge ?? null,
+        options.homeDir,
+      );
+      const rawAppPlist = readPlistSnapshot(appPlistPath, {
+        currentUid,
+        expectedMode: 0o644,
+        label: "Current app plist",
+        trustedRoot: options.homeDir,
+      });
+      const currentReleaseDir = currentRuntimeBridge
+        ? currentRuntimeBridge.app_release_dir
+        : realpathSync(context.currentReleaseDir);
+      if (
+        currentRuntimeBridge
+        && realpathSync(rawAppPlist.workingDirectory) !== currentRuntimeBridge.app_release_dir
+      ) {
+        throw new Error("Current app root drifted from the first canonical adoption bridge.");
+      }
       const appPlist = assertCanonicalLocalMacProductionPlist({
         actualPath: appPlistPath,
         currentUid,
@@ -597,9 +704,24 @@ function buildDefaultDependencies(
         trustedRoot: options.homeDir,
       });
       const fullLocalPlistPath = getFullLocalLaunchAgentPaths(options.homeDir).plistPath;
-      const fullLocalRestartContract = resolveFullLocalCurrentRestartContract(
-        context.currentDescriptor,
-      );
+      const fullLocalRestartContract = currentRuntimeBridge
+        ? firstCanonicalAdoptionRestartContract()
+        : resolveFullLocalCurrentRestartContract(context.currentDescriptor);
+      const rawFullLocalPlist = readPlistSnapshot(fullLocalPlistPath, {
+        currentUid,
+        expectedMode: 0o600,
+        label: "Current full-local plist",
+        trustedRoot: options.homeDir,
+      });
+      const fullLocalRuntimeRoot = currentRuntimeBridge
+        ? currentRuntimeBridge.full_local_root
+        : currentReleaseDir;
+      if (
+        currentRuntimeBridge
+        && realpathSync(rawFullLocalPlist.workingDirectory) !== currentRuntimeBridge.full_local_root
+      ) {
+        throw new Error("Current full-local root drifted from the first canonical adoption bridge.");
+      }
       const fullLocalPlist = assertCanonicalLocalMacProductionPlist({
         actualPath: fullLocalPlistPath,
         currentUid,
@@ -611,7 +733,7 @@ function buildDefaultDependencies(
           includeReleaseIdentity: fullLocalRestartContract.includeReleaseIdentity,
           nodeBin: options.nodeBin,
           releaseIdentityPath: resolve(currentReleaseDir, "prepare.json"),
-          rootDir: currentReleaseDir,
+          rootDir: fullLocalRuntimeRoot,
           runtimeCommand: fullLocalRestartContract.runtimeCommand,
         }),
         expectedMode: 0o600,
@@ -629,7 +751,7 @@ function buildDefaultDependencies(
       );
       if (
         realpathSync(appPlist.workingDirectory) !== currentReleaseDir
-        || realpathSync(fullLocalPlist.workingDirectory) !== currentReleaseDir
+        || realpathSync(fullLocalPlist.workingDirectory) !== fullLocalRuntimeRoot
       ) {
         throw new Error("Current app/full-local plist working directory drifted.");
       }
@@ -652,29 +774,61 @@ function buildDefaultDependencies(
         runCommand: commandRunner,
       });
       const fullLocal = readFullLocalWorkloadDefault({
-        context: { ...context, homeDir: options.homeDir, releaseDir: currentReleaseDir },
+        context: {
+          ...context,
+          homeDir: options.homeDir,
+          releaseDir: fullLocalRuntimeRoot,
+          releaseIdentityPath: resolve(currentReleaseDir, "prepare.json"),
+        },
         options,
         commandRunner,
         allowLegacyBootstrap:
-          context.currentDescriptor.release_sha
-          === "e02f02a87d1d955dc598728e7029a745a650a5c3",
+          !currentRuntimeBridge
+          && context.currentDescriptor.release_sha
+            === "e02f02a87d1d955dc598728e7029a745a650a5c3",
         restartContract: fullLocalRestartContract,
       });
+      if (
+        currentRuntimeBridge
+        && readGitRuntimeValue(
+          commandRunner,
+          fullLocalRuntimeRoot,
+          ["rev-parse", "HEAD"],
+          "Current full-local source SHA",
+        ) !== currentRuntimeBridge.full_local_source_sha
+      ) {
+        throw new Error("Current full-local source SHA drifted from the first canonical adoption bridge.");
+      }
 
       const actualWorkerManifestPath = argumentValue(workerPlist.args, "--manifest");
       if (!actualWorkerManifestPath) {
         throw new Error("Current worker plist manifest path is missing.");
       }
-      const legacyBootstrap = context.currentDescriptor.release_sha
-        === "e02f02a87d1d955dc598728e7029a745a650a5c3";
+      const legacyBootstrap = !currentRuntimeBridge
+        && context.currentDescriptor.release_sha
+          === "e02f02a87d1d955dc598728e7029a745a650a5c3";
       const workerManifestPath = legacyBootstrap
         ? actualWorkerManifestPath
-        : context.currentDescriptor.worker_manifest_path;
+        : (currentRuntimeBridge
+          ? currentRuntimeBridge.worker_manifest_path
+          : context.currentDescriptor.worker_manifest_path);
       const workerArtifactRoot = legacyBootstrap
         ? realpathSync(dirname(actualWorkerManifestPath))
-        : context.currentDescriptor.worker_artifact_root;
+        : (currentRuntimeBridge
+          ? currentRuntimeBridge.worker_artifact_root
+          : context.currentDescriptor.worker_artifact_root);
       if (typeof workerManifestPath !== "string" || typeof workerArtifactRoot !== "string") {
         throw new Error("Current descriptor is missing worker artifact path authority.");
+      }
+      if (
+        currentRuntimeBridge
+        && (
+          realpathSync(actualWorkerManifestPath) !== currentRuntimeBridge.worker_manifest_path
+          || realpathSync(dirname(actualWorkerManifestPath))
+            !== currentRuntimeBridge.worker_artifact_root
+        )
+      ) {
+        throw new Error("Current worker root or manifest drifted from the first canonical adoption bridge.");
       }
       assertReadOnlyArtifactRoot(workerArtifactRoot);
       if (realpathSync(workerPlist.workingDirectory) !== workerArtifactRoot) {
@@ -701,29 +855,33 @@ function buildDefaultDependencies(
         throw new Error("Current worker runtime artifact root drifted.");
       }
       const workerArtifact = verifyYoutubeExtractionWorkerArtifact(workerManifestPath, {
-        allowLegacyReleaseSha: legacyBootstrap ? context.currentDescriptor.release_sha : null,
+        allowLegacyReleaseSha: legacyBootstrap || currentRuntimeBridge
+          ? (currentRuntimeBridge?.previous_release_sha ?? context.currentDescriptor.release_sha)
+          : null,
       });
-      const currentWorkerPaths = legacyBootstrap ? {
-        appDescriptorPath: argumentValue(workerPlist.args, "--app-descriptor"),
-        configPath: argumentValue(workerPlist.args, "--config"),
-        workerArtifactPath: workerManifestPath,
-        currentPolicyPath: argumentValue(workerPlist.args, "--policy"),
-        credentialPath: argumentValue(workerPlist.args, "--credential"),
-        expectedSchemaPath: argumentValue(workerPlist.args, "--expected-schema"),
-        secretRoot: argumentValue(workerPlist.args, "--secret-root"),
-      } : {
-        appDescriptorPath: resolve(dirname(workerArtifactRoot), "authority", "app-descriptor.json"),
-        configPath: argumentValue(workerPlist.args, "--config"),
-        workerArtifactPath: workerManifestPath,
-        currentPolicyPath: resolve(dirname(workerArtifactRoot), "authority", "policy.json"),
-        credentialPath: argumentValue(workerPlist.args, "--credential"),
-        expectedSchemaPath: resolve(dirname(workerArtifactRoot), "authority", "expected-schema.json"),
-        secretRoot: argumentValue(workerPlist.args, "--secret-root"),
-      };
+      const currentWorkerPaths = legacyBootstrap || currentRuntimeBridge
+        ? {
+          appDescriptorPath: argumentValue(workerPlist.args, "--app-descriptor"),
+          configPath: argumentValue(workerPlist.args, "--config"),
+          workerArtifactPath: workerManifestPath,
+          currentPolicyPath: argumentValue(workerPlist.args, "--policy"),
+          credentialPath: argumentValue(workerPlist.args, "--credential"),
+          expectedSchemaPath: argumentValue(workerPlist.args, "--expected-schema"),
+          secretRoot: argumentValue(workerPlist.args, "--secret-root"),
+        }
+        : {
+          appDescriptorPath: resolve(dirname(workerArtifactRoot), "authority", "app-descriptor.json"),
+          configPath: argumentValue(workerPlist.args, "--config"),
+          workerArtifactPath: workerManifestPath,
+          currentPolicyPath: resolve(dirname(workerArtifactRoot), "authority", "policy.json"),
+          credentialPath: argumentValue(workerPlist.args, "--credential"),
+          expectedSchemaPath: resolve(dirname(workerArtifactRoot), "authority", "expected-schema.json"),
+          secretRoot: argumentValue(workerPlist.args, "--secret-root"),
+        };
       if (Object.values(currentWorkerPaths).some((value) => !value)) {
         throw new Error("Current worker plist runtime paths are incomplete.");
       }
-      const canonicalWorkerPlist = legacyBootstrap
+      const canonicalWorkerPlist = legacyBootstrap || currentRuntimeBridge
         ? renderYoutubeExtractionWorkerPlist({
           appDescriptorPath: currentWorkerPaths.appDescriptorPath,
           configPath: currentWorkerPaths.configPath,
@@ -767,9 +925,11 @@ function buildDefaultDependencies(
         : evaluateYoutubeExtractionWorkerPreflight(
           loadYoutubeExtractionWorkerRuntimeInputs(currentWorkerPaths),
         );
+      const expectedCurrentReleaseSha = currentRuntimeBridge?.previous_release_sha
+        ?? context.currentDescriptor.release_sha;
       if (
         !currentWorkerPreflight.ready
-        || currentWorkerPreflight.release_sha !== context.currentDescriptor.release_sha
+        || currentWorkerPreflight.release_sha !== expectedCurrentReleaseSha
       ) {
         throw new Error("Current worker runtime preflight drifted.");
       }
@@ -777,13 +937,13 @@ function buildDefaultDependencies(
         release_sha: workerArtifact.release_sha,
         release_tree: legacyBootstrap
           ? context.currentDescriptor.release_tree
-          : workerArtifact.release_tree,
+          : currentWorkerPreflight.release_tree,
         build_id: legacyBootstrap
           ? context.currentDescriptor.build_id
-          : workerArtifact.build_id,
+          : currentWorkerPreflight.build_id,
         promotion_id: legacyBootstrap
           ? context.currentDescriptor.promotion_id
-          : workerArtifact.promotion_id,
+          : currentWorkerPreflight.promotion_id,
         pid: workerStatus.pid,
         ready: true,
         ...(legacyBootstrap ? { legacy_bootstrap: true } : {}),
@@ -795,6 +955,8 @@ function buildDefaultDependencies(
         app_pid: appStatus.pid,
         app_plist: appPlist.digest,
         full_local_plist: fullLocalPlist.digest,
+        full_local_runtime_root: fullLocalRuntimeRoot,
+        full_local_source_sha: currentRuntimeBridge?.full_local_source_sha ?? null,
         full_local_workload: fullLocal.workload_digest,
         worker_pid: workerStatus.pid,
         worker_plist: workerPlist.digest,
@@ -804,6 +966,16 @@ function buildDefaultDependencies(
       return {
         stable_key: stableKey,
         app,
+        ...(currentRuntimeBridge ? {
+          bridge: {
+            app_release_dir: currentReleaseDir,
+            full_local_root: fullLocalRuntimeRoot,
+            full_local_source_sha: currentRuntimeBridge.full_local_source_sha,
+            mode: currentRuntimeBridge.mode,
+            worker_artifact_root: workerArtifactRoot,
+            worker_manifest_path: workerManifestPath,
+          },
+        } : {}),
         full_local: fullLocal,
         youtube_worker: youtubeWorker,
       };
@@ -1073,8 +1245,15 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       if (!current || typeof current.stable_key !== "string" || current.stable_key.length === 0) {
         throw new Error("Current runtime bundle preflight did not produce stable evidence.");
       }
-      for (const component of ["app", "full_local", "youtube_worker"]) {
-        assertExactIdentity(component, current[component], context.currentDescriptor);
+      if (context.currentRuntimeBridge) {
+        assertFirstCanonicalAdoptionCurrentBundle(
+          current,
+          resolveFirstCanonicalAdoptionBridge(context.currentRuntimeBridge, options.homeDir),
+        );
+      } else {
+        for (const component of ["app", "full_local", "youtube_worker"]) {
+          assertExactIdentity(component, current[component], context.currentDescriptor);
+        }
       }
       const stableKey = sha256Text(JSON.stringify({
         current: current.stable_key,
@@ -1098,6 +1277,7 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       const confirmedFullLocal = await confirmFullLocalCandidate({ context, options, preflight });
       assertExactIdentity("full_local", confirmedFullLocal, context.manifest);
       verifySealedExecutionContext(context);
+      const useFirstCanonicalAdoptionContract = Boolean(context.currentRuntimeBridge);
       const fullLocal = installFullLocal({
         configPath: options.fullLocalConfigPath,
         currentDescriptorPath: getLocalMacProductionReleasePaths(context.homeDir)
@@ -1105,8 +1285,12 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
         homeDir: context.homeDir,
         mutationAuthority: context.mutationAuthority,
         nodeBin: options.nodeBin,
-        runtimeCommand: "resume-current",
+        releaseIdentityPath: resolve(context.releaseDir, "prepare.json"),
+        runtimeCommand: useFirstCanonicalAdoptionContract ? "start" : "resume-current",
         rootDir: context.releaseDir,
+        ...(useFirstCanonicalAdoptionContract ? {} : {
+          releaseIdentityPath: undefined,
+        }),
       });
       verifySealedExecutionContext(context);
       const app = installApp({
@@ -1139,7 +1323,14 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       verifySealedExecutionContext(context);
       const app = await readAppRuntimeIdentity({ context, options, preflight });
       verifySealedExecutionContext(context);
-      const fullLocal = await readFullLocalWorkloadIdentity({ context, options, preflight });
+      const fullLocal = await readFullLocalWorkloadIdentity({
+        context,
+        options,
+        preflight,
+        restartContract: context.currentRuntimeBridge
+          ? firstCanonicalAdoptionRestartContract()
+          : null,
+      });
       verifySealedExecutionContext(context);
       const worker = await readWorkerRuntimeIdentity({
         context,
