@@ -1,6 +1,20 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { createRequire } from "node:module";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -10,6 +24,7 @@ import {
   getLocalMacProductionReleasePaths,
   getLocalMacProductionReleaseStatus,
   isLocalMacProductionMutationCommand,
+  prepareLocalMacProductionRelease,
   readLocalMacProductionGitReleaseEvidence,
   readLocalMacProductionRepoHeadSha,
   validateLocalMacProductionMutationAuthority,
@@ -560,5 +575,388 @@ describe("local Mac production mutation authority", () => {
         readGitEvidence: () => createGitEvidence(),
       }),
     ).toThrow(/attestation|trusted/i);
+  });
+});
+
+describe("local Mac production release prepare", () => {
+  function createPrepareFixture() {
+    const homeDir = createTempDirectory("homecook-release-prepare-home-");
+    const rootDir = createTempDirectory("homecook-release-prepare-root-");
+    const manifestPath = join(rootDir, "release.json");
+    const manifest = createManifest({ release_manifest_path: manifestPath });
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
+    const paths = getLocalMacProductionReleasePaths(homeDir);
+    mkdirSync(paths.releaseRoot, { recursive: true, mode: 0o700 });
+    mkdirSync(paths.lockPath, { recursive: true, mode: 0o700 });
+    writeFileSync(paths.currentDescriptorPath, "current-before\n");
+    writeFileSync(paths.previousDescriptorPath, "previous-before\n");
+    writeFileSync(paths.lockMetadataPath, "lock-before\n", { mode: 0o600 });
+
+    return { homeDir, manifest, manifestPath, paths, rootDir };
+  }
+
+  function createPrepareCommandRunner({
+    dirtyAfterBuild = false,
+    failCommand = null,
+    headSha = "a".repeat(40),
+  }: {
+    dirtyAfterBuild?: boolean,
+    failCommand?: string | null,
+    headSha?: string,
+  } = {}) {
+    const invocations: Array<{ command: string, args: string[], cwd: string | undefined }> = [];
+    let buildCompleted = false;
+
+    const runCommand = ((command: string, args: readonly string[] = [], options?: { cwd?: string }) => {
+      const normalizedArgs = [...args];
+      invocations.push({ command, args: normalizedArgs, cwd: options?.cwd });
+      const commandKey = `${command} ${normalizedArgs.join(" ")}`;
+
+      if (command === "git" && normalizedArgs[0] === "clone") {
+        const checkoutDir = normalizedArgs.at(-1);
+        if (!checkoutDir) throw new Error("missing fixture checkout directory");
+        mkdirSync(join(checkoutDir, ".git"), { recursive: true });
+        writeFileSync(join(checkoutDir, "README.md"), "fixture release\n");
+      }
+
+      if (failCommand && commandKey === failCommand) {
+        return { status: 1, stdout: "", stderr: "fixture command failed" };
+      }
+      if (command === "git" && normalizedArgs.join(" ") === "rev-parse HEAD") {
+        return { status: 0, stdout: `${headSha}\n`, stderr: "" };
+      }
+      if (command === "git" && normalizedArgs.join(" ") === "rev-parse HEAD^{tree}") {
+        return { status: 0, stdout: `${"b".repeat(40)}\n`, stderr: "" };
+      }
+      if (command === "git" && normalizedArgs.join(" ") === "symbolic-ref -q HEAD") {
+        return { status: 1, stdout: "", stderr: "" };
+      }
+      if (command === "git" && normalizedArgs.join(" ") === "status --porcelain=v1 --untracked-files=no") {
+        return {
+          status: 0,
+          stdout: dirtyAfterBuild && buildCompleted ? " M package.json\n" : "",
+          stderr: "",
+        };
+      }
+      if (command === "git" && normalizedArgs.join(" ") === "ls-files -s -z") {
+        return { status: 0, stdout: "", stderr: "" };
+      }
+      if (command === "pnpm" && normalizedArgs.join(" ") === "mac-production:build") {
+        buildCompleted = true;
+      }
+      return { status: 0, stdout: "", stderr: "" };
+    }) as typeof import("node:child_process").spawnSync;
+
+    return { invocations, runCommand };
+  }
+
+  it("creates a complete immutable release directory from an exact detached checkout without touching production state", () => {
+    const fixture = createPrepareFixture();
+    const { invocations, runCommand } = createPrepareCommandRunner();
+
+    const result = prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    });
+
+    expect(result).toMatchObject({
+      prepared: true,
+      manifest: {
+        release_sha: fixture.manifest.release_sha,
+        release_tag: fixture.manifest.release_tag,
+      },
+    });
+    expect(result.release_dir).toBe(realpathSync(join(
+      fixture.paths.releaseRoot,
+      fixture.manifest.release_tag,
+    )));
+    expect(JSON.parse(readFileSync(result.prepare_descriptor_path, "utf8"))).toMatchObject({
+      status: "prepared",
+      release_sha: fixture.manifest.release_sha,
+      release_tree: fixture.manifest.release_tree,
+      release_tag: fixture.manifest.release_tag,
+    });
+    expect(readFileSync(fixture.paths.currentDescriptorPath, "utf8")).toBe("current-before\n");
+    expect(readFileSync(fixture.paths.previousDescriptorPath, "utf8")).toBe("previous-before\n");
+    expect(readFileSync(fixture.paths.lockMetadataPath, "utf8")).toBe("lock-before\n");
+    expect(invocations.map(({ command, args }) => [command, args])).toEqual(expect.arrayContaining([
+      ["git", ["clone", "--no-checkout", "--no-hardlinks", "--no-local", realpathSync(fixture.rootDir), expect.any(String)]],
+      ["git", ["checkout", "--detach", fixture.manifest.release_sha]],
+      ["pnpm", ["install", "--frozen-lockfile", "--offline", "--package-import-method=copy"]],
+      ["pnpm", ["mac-production:build"]],
+      ["pnpm", ["verify:security-functions:release"]],
+      ["pnpm", ["verify:local-supabase-runtime:isolated"]],
+    ]));
+    expect(invocations.some(({ command, args }) =>
+      command.includes("launchctl")
+      || args.some((argument) =>
+        /mac-production:install|restart|uninstall|full-local-production:start|release:production:promote/u.test(argument),
+      ),
+    )).toBe(false);
+    expect(readdirSync(fixture.paths.releaseRoot)).not.toContain(expect.stringMatching(/^\.prepare-/u));
+  });
+
+  it("accepts cwd-relative home, repository, and manifest paths before applying filesystem safety checks", () => {
+    const fixture = createPrepareFixture();
+    const { runCommand } = createPrepareCommandRunner();
+
+    const result = prepareLocalMacProductionRelease({
+      homeDir: relative(process.cwd(), fixture.homeDir),
+      manifestPath: relative(process.cwd(), fixture.manifestPath),
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: relative(process.cwd(), fixture.rootDir),
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    });
+
+    expect(result.release_dir).toBe(realpathSync(join(
+      fixture.paths.releaseRoot,
+      fixture.manifest.release_tag,
+    )));
+    expect(JSON.parse(readFileSync(result.prepare_descriptor_path, "utf8")))
+      .toMatchObject({ status: "prepared", release_sha: fixture.manifest.release_sha });
+  });
+
+  it("keeps a failed build reservation partial without a completion marker or production-state changes", () => {
+    const fixture = createPrepareFixture();
+    const { runCommand } = createPrepareCommandRunner({ failCommand: "pnpm mac-production:build" });
+
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/pnpm mac-production:build|fixture command failed/iu);
+
+    const reservedPath = join(fixture.paths.releaseRoot, fixture.manifest.release_tag);
+    expect(lstatSync(reservedPath).isDirectory()).toBe(true);
+    expect(existsSync(join(reservedPath, "prepare.json"))).toBe(false);
+    expect(readFileSync(fixture.paths.lockMetadataPath, "utf8")).toBe("lock-before\n");
+  });
+
+  it("fails closed before validation commands when the detached checkout SHA is not exact", () => {
+    const fixture = createPrepareFixture();
+    const { invocations, runCommand } = createPrepareCommandRunner({ headSha: "f".repeat(40) });
+
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/checkout|release SHA|exact/iu);
+    expect(invocations.some(({ command }) => command === "pnpm")).toBe(false);
+    expect(existsSync(join(
+      fixture.paths.releaseRoot,
+      fixture.manifest.release_tag,
+      "prepare.json",
+    ))).toBe(false);
+  });
+
+  it("fails closed when install or build changes tracked release source", () => {
+    const fixture = createPrepareFixture();
+    const { runCommand } = createPrepareCommandRunner({ dirtyAfterBuild: true });
+
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/clean tracked source|tracked source|dirty/iu);
+    const reservedPath = join(fixture.paths.releaseRoot, fixture.manifest.release_tag);
+    expect(lstatSync(reservedPath).isDirectory()).toBe(true);
+    expect(existsSync(join(reservedPath, "prepare.json"))).toBe(false);
+  });
+
+  it("rejects symlink release roots, partial prepare reuse, and a same-tag directory for another SHA", () => {
+    const symlinkFixture = createPrepareFixture();
+    const externalRoot = createTempDirectory("homecook-release-prepare-external-");
+    rmSync(symlinkFixture.paths.releaseRoot, { recursive: true, force: true });
+    symlinkSync(externalRoot, symlinkFixture.paths.releaseRoot);
+    const { runCommand } = createPrepareCommandRunner();
+
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: symlinkFixture.homeDir,
+      manifestPath: symlinkFixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: symlinkFixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/symlink|symbolic link/iu);
+    expect(readdirSync(externalRoot)).toEqual([]);
+
+    const partialFixture = createPrepareFixture();
+    const partialPath = join(partialFixture.paths.releaseRoot, partialFixture.manifest.release_tag);
+    mkdirSync(partialPath, { mode: 0o700 });
+    writeFileSync(join(partialPath, "reservation-owner.txt"), "another prepare\n");
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: partialFixture.homeDir,
+      manifestPath: partialFixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: partialFixture.rootDir,
+      runCommand: createPrepareCommandRunner().runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/partial|reuse|already exists/iu);
+    expect(readFileSync(join(partialPath, "reservation-owner.txt"), "utf8"))
+      .toBe("another prepare\n");
+
+    const conflictFixture = createPrepareFixture();
+    const conflictPath = join(conflictFixture.paths.releaseRoot, conflictFixture.manifest.release_tag);
+    mkdirSync(conflictPath, { mode: 0o700 });
+    writeFileSync(join(conflictPath, "prepare.json"), JSON.stringify({
+      status: "prepared",
+      release_sha: "f".repeat(40),
+    }));
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: conflictFixture.homeDir,
+      manifestPath: conflictFixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: conflictFixture.rootDir,
+      runCommand: createPrepareCommandRunner().runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/different SHA|collision|conflict/iu);
+    expect(lstatSync(conflictPath).isDirectory()).toBe(true);
+  });
+
+  it("rejects a symlink release manifest before creating a staging directory", () => {
+    const fixture = createPrepareFixture();
+    const realManifestPath = join(fixture.rootDir, "release-real.json");
+    writeFileSync(realManifestPath, readFileSync(fixture.manifestPath));
+    unlinkSync(fixture.manifestPath);
+    symlinkSync(realManifestPath, fixture.manifestPath);
+    const { invocations, runCommand } = createPrepareCommandRunner();
+
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/manifest.*symlink|symlink.*manifest/iu);
+
+    expect(invocations).toEqual([]);
+    expect(readdirSync(fixture.paths.releaseRoot)).toEqual(["current.json", "previous.json"]);
+  });
+
+  it("stores the exact manifest bytes that were validated even when the source path is replaced afterward", () => {
+    const fixture = createPrepareFixture();
+    const originalBytes = readFileSync(fixture.manifestPath);
+    const originalDigest = createHash("sha256").update(originalBytes).digest("hex");
+    const replacementManifest = createManifest({
+      approved_by_task_id: "replacement-task",
+      build_id: "replacement-build",
+      release_manifest_path: fixture.manifestPath,
+    });
+    const { runCommand } = createPrepareCommandRunner();
+
+    const result = prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: (input) => {
+        expect(input.manifestDigest).toBe(originalDigest);
+        writeFileSync(fixture.manifestPath, JSON.stringify(replacementManifest, null, 2));
+        return VERIFIED_ATTESTATION();
+      },
+    });
+
+    expect(readFileSync(join(result.release_dir, "release-manifest.json")))
+      .toEqual(originalBytes);
+    expect(JSON.parse(readFileSync(result.prepare_descriptor_path, "utf8")))
+      .toMatchObject({
+        build_id: fixture.manifest.build_id,
+        source_manifest_sha256: originalDigest,
+      });
+  });
+
+  it.each([
+    ["Homecook state directory", (paths: ReturnType<typeof getLocalMacProductionReleasePaths>) =>
+      join(paths.releaseRoot, "..")],
+    ["release root", (paths: ReturnType<typeof getLocalMacProductionReleasePaths>) =>
+      paths.releaseRoot],
+  ])("rejects a group/world-writable %s before running commands", (_, selectPath) => {
+    const fixture = createPrepareFixture();
+    chmodSync(selectPath(fixture.paths), 0o777);
+    const { invocations, runCommand } = createPrepareCommandRunner();
+
+    expect(() => prepareLocalMacProductionRelease({
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    })).toThrow(/group|world|writable|mode/iu);
+    expect(invocations).toEqual([]);
+  });
+
+  it("rejects release state directories not owned by the current user", () => {
+    const fixture = createPrepareFixture();
+    const currentUid = process.getuid?.();
+    if (!Number.isInteger(currentUid)) throw new Error("fixture requires a POSIX uid");
+    const { invocations, runCommand } = createPrepareCommandRunner();
+    const options = {
+      getCurrentUid: () => Number(currentUid) + 1,
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    } as Parameters<typeof prepareLocalMacProductionRelease>[0] & {
+      getCurrentUid: () => number,
+    };
+
+    expect(() => prepareLocalMacProductionRelease(options)).toThrow(/owner|uid|current user/iu);
+    expect(invocations).toEqual([]);
+  });
+
+  it("never replaces an empty destination won by a competing prepare reservation", () => {
+    const fixture = createPrepareFixture();
+    const destinationPath = join(
+      realpathSync(fixture.paths.releaseRoot),
+      fixture.manifest.release_tag,
+    );
+    const { invocations, runCommand } = createPrepareCommandRunner();
+    const mkdir = ((path: string, options?: Parameters<typeof mkdirSync>[1]) => {
+      if (realpathSync(join(destinationPath, "..")) === realpathSync(fixture.paths.releaseRoot)
+        && path === destinationPath) {
+        mkdirSync(path, options);
+        const error = Object.assign(new Error("competing reservation won"), { code: "EEXIST" });
+        throw error;
+      }
+      return mkdirSync(path, options);
+    }) as typeof mkdirSync;
+    const options = {
+      homeDir: fixture.homeDir,
+      manifestPath: fixture.manifestPath,
+      mkdir,
+      readGitEvidence: () => createGitEvidence(),
+      rootDir: fixture.rootDir,
+      runCommand,
+      verifyAttestation: VERIFIED_ATTESTATION,
+    } as Parameters<typeof prepareLocalMacProductionRelease>[0] & {
+      mkdir: typeof mkdirSync,
+    };
+
+    expect(() => prepareLocalMacProductionRelease(options))
+      .toThrow(/reservation|already exists|competing/iu);
+    expect(lstatSync(destinationPath).isDirectory()).toBe(true);
+    expect(readdirSync(destinationPath)).toEqual([]);
+    expect(existsSync(join(destinationPath, "prepare.json"))).toBe(false);
+    expect(invocations).toEqual([]);
   });
 });
