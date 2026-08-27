@@ -38,7 +38,7 @@ describe("YouTube truthful progress ETA Stage 1 contract", () => {
       ]),
     );
     expect(read("docs/workpacks/README.md")).toMatch(
-      /\| `youtube-extraction-truthful-progress-eta` \| docs \|/u,
+      /\| `youtube-extraction-truthful-progress-eta` \| in-progress \|/u,
     );
   });
 

@@ -30,6 +30,10 @@ Worker IPC, ETA/API public shape, frontend, release promotion, production rollou
   - `7 files passed`, `130 tests passed`
 - `node scripts/validate-security-function-authorization.mjs --contract-only`
   - YouTube authorization manifest `36` functions valid
+- `pnpm verify:security-functions:isolated`
+  - fresh PostgreSQL 17.6 기반 전체 migration start/reset replay 통과
+  - live authorization inventory `216` functions valid
+  - PostgreSQL authorization integration과 Data API negative smoke 통과
 - `pnpm typecheck`
   - pass
 - `pnpm lint`
@@ -48,5 +52,5 @@ Worker IPC, ETA/API public shape, frontend, release promotion, production rollou
 - Supabase Cloud/linked/remote 사용 0
 - operational full-local destructive reset 0
 - production migration/apply/rollout 0
-- PostgreSQL 17 compatibility와 current-head CI는 PR gate에서 확인한다.
+- current-head CI와 필수 외부 승인은 PR gate에서 확인한다.
 - Phase C worker IPC, Phase D ETA/API, Phase E frontend는 pending이다.

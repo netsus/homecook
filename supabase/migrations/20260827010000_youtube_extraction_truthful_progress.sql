@@ -1,5 +1,22 @@
 begin;
 
+do $temporary_role_membership$
+begin
+  if current_setting('server_version_num')::integer >= 160000 then
+    execute format(
+      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I with inherit false, set true granted by %I',
+      current_user,
+      current_user
+    );
+  else
+    execute format(
+      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I',
+      current_user
+    );
+  end if;
+end;
+$temporary_role_membership$;
+
 alter table public.youtube_extraction_jobs
   add column if not exists progress_attempt integer,
   add column if not exists progress_stage text,
@@ -103,8 +120,12 @@ create table if not exists private.youtube_extraction_progress_stage_events (
     )
 );
 
+grant create on schema private to youtube_extraction_worker_rpc_owner;
+
 alter table private.youtube_extraction_progress_stage_events
   owner to youtube_extraction_worker_rpc_owner;
+
+revoke create on schema private from youtube_extraction_worker_rpc_owner;
 
 revoke all privileges on private.youtube_extraction_progress_stage_events
   from public, anon, authenticated, service_role,
@@ -297,11 +318,11 @@ begin
 end;
 $function$;
 
+grant create on schema public to youtube_extraction_worker_rpc_owner;
+
 alter function public.report_youtube_extraction_progress(
   uuid, text, bigint, bigint, integer, text, integer
 ) owner to youtube_extraction_worker_rpc_owner;
-
-grant create on schema public to youtube_extraction_worker_rpc_owner;
 
 set local role youtube_extraction_worker_rpc_owner;
 
@@ -525,5 +546,22 @@ begin
   end if;
 end;
 $membership$;
+
+do $temporary_role_membership$
+begin
+  if current_setting('server_version_num')::integer >= 160000 then
+    execute format(
+      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner from %I granted by %I',
+      current_user,
+      current_user
+    );
+  else
+    execute format(
+      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner from %I',
+      current_user
+    );
+  end if;
+end;
+$temporary_role_membership$;
 
 commit;
