@@ -139,20 +139,25 @@ describe("full-local production runtime static contract", () => {
       join(process.cwd(), "infra/full-local-supabase/docker-compose.production.yml"),
       "utf8",
     );
-    const declaredServices = [...actualCompose.matchAll(/^  ([a-z0-9-]+):$/gmu)]
+    const serviceSection = actualCompose.slice(
+      actualCompose.indexOf("services:"),
+      actualCompose.indexOf("\nnetworks:"),
+    );
+    const declaredServices = [...serviceSection.matchAll(/^  ([a-z0-9-]+):$/gmu)]
       .map((match) => match[1]);
     const parsed = fullLocalRuntime.parseFullLocalComposeServiceNames(
       `${declaredServices.join("\n")}\n`,
     );
 
-    expect(parsed).toContain("postgrest-probe");
-    expect(parsed).toEqual(expect.arrayContaining([
-      "postgres",
+    expect(parsed).toEqual([
+      "api-gateway",
       "auth",
+      "auth-proxy",
+      "postgres",
       "postgrest",
       "postgrest-probe",
       "storage",
-    ]));
+    ]);
   });
 
   it("binds enabled OAuth secret files to Keychain values without exposing payloads", () => {

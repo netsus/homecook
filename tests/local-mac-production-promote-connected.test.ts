@@ -40,6 +40,8 @@ import {
   FULL_LOCAL_SECRET_NAMES,
   generateFullLocalSecretBundle,
 } from "../scripts/lib/full-local-production-runtime.mjs";
+import { resumeCurrentRelease } from "../scripts/full-local-production-runtime.mjs";
+import { resolveTrustedGhExecutable } from "../scripts/lib/trusted-production-release-tools.mjs";
 import { FULL_LOCAL_OAUTH_SECRET_NAMES } from "../scripts/lib/full-local-oauth-providers.mjs";
 import {
   buildYoutubeExtractionAppDescriptor,
@@ -436,7 +438,7 @@ else {
     const fakeDockerPath = join(binDir, "docker");
     const resumeFaultModePath = join(repoRoot, "resume-fault-mode");
     const dockerStartedPath = join(repoRoot, "resume-docker-started");
-    const services = ["auth", "auth-proxy", "api-gateway", "postgres", "postgrest", "postgrest-probe", "storage"];
+    const services = ["auth", "auth-proxy", "api-gateway", "postgres", "postgrest", "storage", "postgrest-probe"];
     const composeModel = {
       services: {
         auth: {},
@@ -538,11 +540,41 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
       fullConfig,
     ]);
     expect(programArguments.join(" ")).not.toMatch(/lock-token|release-manifest/iu);
-    const invokeResume = () => spawnSync(programArguments[0], programArguments.slice(1), {
-      cwd: workingDirectory,
-      encoding: "utf8",
-    });
-    const resumed = invokeResume();
+    expect(workingDirectory).toBe(currentDescriptor.execution_app_root);
+    const hostileBinDir = join(repoRoot, "hostile-bin");
+    mkdirSync(hostileBinDir, { mode: 0o700 });
+    writeFileSync(join(hostileBinDir, "gh"), "#!/bin/sh\nexit 91\n", { mode: 0o700 });
+    const resumeArgs = programArguments.slice(programArguments.indexOf("resume-current") + 1);
+    const invokeResume = async () => {
+      const previousHome = process.env.HOME;
+      const previousPath = process.env.PATH;
+      process.env.HOME = homeDir;
+      process.env.PATH = `${hostileBinDir}:${binDir}:/usr/bin:/bin:/usr/sbin:/sbin`;
+      try {
+        const result = await resumeCurrentRelease(resumeArgs, {
+          resolveGhExecutable: () => resolveTrustedGhExecutable({
+            allowedRealpaths: [realpathSync(fakeGhPath)],
+            candidates: [fakeGhPath],
+            currentUid: process.getuid?.(),
+            pathEnvironment: process.env.PATH,
+          }),
+          runtimeRoot: currentDescriptor.execution_app_root,
+        });
+        return { status: 0, stdout: JSON.stringify(result), stderr: "" };
+      } catch (error) {
+        return {
+          status: 1,
+          stdout: "",
+          stderr: error instanceof Error ? error.message : String(error),
+        };
+      } finally {
+        if (previousHome === undefined) delete process.env.HOME;
+        else process.env.HOME = previousHome;
+        if (previousPath === undefined) delete process.env.PATH;
+        else process.env.PATH = previousPath;
+      }
+    };
+    const resumed = await invokeResume();
     expect(resumed.status, resumed.stderr).toBe(0);
     expect(JSON.parse(resumed.stdout)).toMatchObject({
       resumed_current: true,
@@ -555,6 +587,9 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
       status: "PASS",
     });
     expect(readFileSync(resumeMarker, "utf8")).toContain("up -d");
+    expect(readFileSync(resumeMarker, "utf8")).toMatch(
+      new RegExp(`--env-file ${fullConfig.replaceAll("/", "\\/")}.*config --services`, "u"),
+    );
     const markerAfterSuccess = readFileSync(resumeMarker);
     const securityAfterSuccess = readFileSync(resumeSecurityMarker);
     writeFileSync(
@@ -565,7 +600,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
       ),
       { mode: 0o600 },
     );
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     expect(readFileSync(resumeSecurityMarker)).toEqual(securityAfterSuccess);
     writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
@@ -586,7 +621,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
       mode: 0o600,
     });
     chmodSync(snapshotEvidencePath, 0o400);
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     chmodSync(policyPath, 0o600);
     writeFileSync(policyPath, policyBytes, { mode: 0o600 });
@@ -599,7 +634,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
       ...currentDescriptor,
       promotion_id: "tampered-promotion",
     }, null, 2), { mode: 0o600 });
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     writeFileSync(state.currentDescriptorPath, currentDescriptorBytes, { mode: 0o600 });
 
@@ -608,7 +643,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
     chmodSync(preparePath, 0o600);
     writeFileSync(preparePath, `${prepareBytes.toString("utf8")} `, { mode: 0o600 });
     chmodSync(preparePath, 0o400);
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     chmodSync(preparePath, 0o600);
     writeFileSync(preparePath, prepareBytes, { mode: 0o600 });
@@ -617,7 +652,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
     writeFileSync(state.currentDescriptorPath, JSON.stringify(firstDescriptor, null, 2), {
       mode: 0o600,
     });
-    expect(invokeResume().status).toBe(1);
+    expect((await invokeResume()).status).toBe(1);
     expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
     writeFileSync(state.currentDescriptorPath, currentDescriptorBytes, { mode: 0o600 });
     expect(readFileSync(state.currentDescriptorPath)).toEqual(currentDescriptorBytes);
@@ -658,7 +693,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
       rmSync(dockerStartedPath, { force: true });
       writeFileSync(resumeFaultModePath, fault, { mode: 0o600 });
       const logOffset = existsSync(resumeMarker) ? readFileSync(resumeMarker, "utf8").length : 0;
-      const faultResult = invokeResume();
+      const faultResult = await invokeResume();
       expect(faultResult.status).toBe(1);
       expect(faultResult.stderr).toContain("Failure evidence:");
       const cleanupLog = readFileSync(resumeMarker, "utf8").slice(logOffset);
@@ -672,7 +707,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
     }
 
     writeFileSync(resumeFaultModePath, "cleanup-failure", { mode: 0o600 });
-    const cleanupFailure = invokeResume();
+    const cleanupFailure = await invokeResume();
     expect(cleanupFailure.status).toBe(1);
     const recoveryRequiredPath = join(
       state.releaseRoot,
@@ -681,7 +716,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
     expect(existsSync(recoveryRequiredPath)).toBe(true);
     rmSync(resumeFaultModePath, { force: true });
     const retryLogOffset = readFileSync(resumeMarker, "utf8").length;
-    const blockedRetry = invokeResume();
+    const blockedRetry = await invokeResume();
     expect(blockedRetry.status).toBe(1);
     expect(blockedRetry.stderr).toMatch(/manual recovery|recovery required/iu);
     expect(readFileSync(resumeMarker, "utf8").slice(retryLogOffset)).toBe("");
@@ -690,7 +725,7 @@ else if (args[0] === "rm" && args.includes("new-postgrest-probe")) fs.rmSync(sta
 
     writeFileSync(resumeFaultModePath, "oauth-secret", { mode: 0o600 });
     const oauthLogOffset = readFileSync(resumeMarker, "utf8").length;
-    const oauthFaultResult = invokeResume();
+    const oauthFaultResult = await invokeResume();
     expect(oauthFaultResult.status).toBe(1);
     expect(oauthFaultResult.stderr).toContain("Failure evidence:");
     const oauthCleanupLog = readFileSync(resumeMarker, "utf8").slice(oauthLogOffset);

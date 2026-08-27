@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
-  it("resolves only the absolute validated GitHub CLI beside the pinned Node executable", () => {
+  it("resolves only an explicitly allowlisted absolute GitHub CLI and rejects escapes", () => {
     const root = createTempDirectory("trusted-gh-");
     const trustedBin = join(root, "trusted-bin");
     const hostileBin = join(root, "hostile-bin");

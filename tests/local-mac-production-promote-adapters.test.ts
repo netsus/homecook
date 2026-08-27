@@ -97,6 +97,7 @@ function createOptions(overrides: Record<string, unknown> = {}) {
 function createDependencies(overrides: Record<string, unknown> = {}) {
   const calls: string[] = [];
   const dependencies = {
+    readFullLocalConfigEvidence: vi.fn(() => ({ digest: "1".repeat(64) })),
     validateMutationTargets: vi.fn(() => calls.push("validate-targets")),
     readWorkerReleasePreflight: vi.fn(async () => {
       calls.push("worker-preflight");
@@ -115,6 +116,7 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
         credentialSha256: "4".repeat(64),
         expectedSchemaSha256: "3".repeat(64),
         policySha256: "2".repeat(64),
+        fullLocalConfigSha256: "1".repeat(64),
         i031Preflight: { ready: true },
         preflight: {
           ready: true,
@@ -192,6 +194,8 @@ function createContext(overrides: Record<string, unknown> = {}) {
       release_tag: "prod-20260824.1",
       execution_app_root: "/private/current-execution/app",
       execution_snapshot_digest: "8".repeat(64),
+      restart_capability: "full-local-resume-current-v1",
+      full_local_config_sha256: "1".repeat(64),
       worker_artifact_root: "/private/current-worker-authority",
       worker_manifest_path: "/private/current-worker-authority/artifact.json",
       worker_artifact_sha256: "7".repeat(64),
@@ -221,6 +225,12 @@ function createDefaultWorkerPreflightFixture() {
   const releaseDir = join(root, "app-candidate");
   const artifactRoot = join(root, "worker-artifact");
   mkdirSync(homeDir, { mode: 0o700 });
+  const fullLocalConfigPath = join(
+    homeDir,
+    ".homecook/config/full-local-production.env",
+  );
+  mkdirSync(join(homeDir, ".homecook/config"), { recursive: true, mode: 0o700 });
+  writeFileSync(fullLocalConfigPath, "FULL_LOCAL_CONFIG=fixture\n", { mode: 0o600 });
   mkdirSync(secretRoot, { mode: 0o700 });
   mkdirSync(releaseDir, { mode: 0o700 });
 
@@ -278,6 +288,7 @@ function createDefaultWorkerPreflightFixture() {
   return {
     context: createContext({ homeDir, releaseDir }),
     options: createOptions({
+      fullLocalConfigPath,
       homeDir,
       workerAppDescriptorPath: appDescriptorPath,
       workerConfigPath: configPath,
@@ -295,13 +306,15 @@ function createDefaultWorkerPreflightFixture() {
 }
 
 describe("local Mac production promote adapters", () => {
-  it("distinguishes exact abac v1 start plists from resume-capable descriptors", () => {
-    const sealedV1Descriptor = {
+  it("rejects markerless non-E02 descriptors and accepts resume-capable descriptors", () => {
+    const sealedV1Descriptor: Record<string, unknown> = {
       ...createContext().currentDescriptor,
       schema: "homecook.local-mac-production-running-release.v1",
       promoted_at: "2026-08-24T09:00:00.000Z",
       source_manifest_sha256: "9".repeat(64),
     };
+    delete sealedV1Descriptor.restart_capability;
+    delete sealedV1Descriptor.full_local_config_sha256;
     expect(() => promoteAdapters.resolveFullLocalCurrentRestartContract(
       sealedV1Descriptor,
     )).toThrow(/markerless|legacy|unsupported|restart capability/iu);

@@ -50,6 +50,8 @@ function createRunningDescriptor(overrides: Record<string, unknown> = {}) {
     release_tree: PREVIOUS_RELEASE_TREE,
     build_id: "build-previous",
     promotion_id: "promo-previous",
+    restart_capability: "full-local-resume-current-v1",
+    full_local_config_sha256: "1".repeat(64),
     promoted_at: "2026-08-24T09:00:00.000Z",
     source_manifest_sha256: "9".repeat(64),
     execution_app_root: "/private/current-execution/app",
@@ -238,6 +240,21 @@ afterEach(() => {
 });
 
 describe("local Mac production promote", () => {
+  it("rejects an arbitrary non-E02 markerless running descriptor", async () => {
+    const fixture = createFixture();
+    const markerless: Record<string, unknown> = createRunningDescriptor();
+    delete markerless.restart_capability;
+    delete markerless.full_local_config_sha256;
+    writeFileSync(fixture.paths.currentDescriptorPath, JSON.stringify(markerless, null, 2), {
+      mode: 0o600,
+    });
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/non-E02|restart capability|markerless/iu);
+    expect(fixture.preflightBundle).not.toHaveBeenCalled();
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+  });
+
   it("exposes a runtime-owned release identity probe", () => {
     expect(localRelease).toHaveProperty(
       "readLocalMacProductionRuntimeIdentity",
@@ -533,6 +550,7 @@ describe("local Mac production promote", () => {
     const fixture = createFixture();
     fixture.preflightBundle
       .mockResolvedValueOnce({
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-a",
         worker: {
           artifactRoot: "/private/worker",
@@ -552,6 +570,7 @@ describe("local Mac production promote", () => {
         },
       })
       .mockResolvedValueOnce({
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-b",
         worker: {
           artifactRoot: "/private/worker",
