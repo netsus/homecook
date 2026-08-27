@@ -117,6 +117,7 @@ function createFixture() {
   });
   const runCommand = runCommandMock as unknown as typeof import("node:child_process").spawnSync;
   const installBundle = vi.fn(async () => ({ installed: true }));
+  const preflightBundle = vi.fn(async () => ({ stable_key: "runtime-stable" }));
   const readinessProbe = vi.fn(async () => createReadyBundle(manifest));
 
   return {
@@ -127,6 +128,7 @@ function createFixture() {
     manifestBytes,
     manifestPath,
     paths,
+    preflightBundle,
     readinessProbe,
     releaseDir,
     rootDir,
@@ -147,6 +149,7 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
     }),
     verifyAttestation: VERIFIED_ATTESTATION,
     installBundle: fixture.installBundle,
+    preflightBundle: fixture.preflightBundle,
     readinessProbe: fixture.readinessProbe,
     lockToken: "88888888-8888-4888-8888-888888888888" as const,
     now: new Date("2026-08-25T11:00:00.000Z"),
@@ -164,6 +167,10 @@ describe("local Mac production promote", () => {
   it("exposes a runtime-owned release identity probe", () => {
     expect(localRelease).toHaveProperty(
       "readLocalMacProductionRuntimeIdentity",
+      expect.any(Function),
+    );
+    expect(localRelease).toHaveProperty(
+      "readLocalMacProductionPreparedReleaseIdentity",
       expect.any(Function),
     );
   });
@@ -212,6 +219,33 @@ describe("local Mac production promote", () => {
     })).toThrow(/cwd|runtime|exact|release/iu);
   });
 
+  it.each([
+    ["dirty tracked source", "status --porcelain=v1 --untracked-files=no", " M scripts/start-production.mjs\n"],
+    ["unexpected untracked runtime source", "ls-files --others --exclude-standard -z", "runtime-injection.mjs\0"],
+  ])("rejects runtime identity with %s", (_label, failingCommand, stdout) => {
+    const fixture = createFixture();
+    const runCommand = vi.fn((command: string, args: readonly string[] = []) => {
+      if (command === "/usr/sbin/lsof") {
+        return {
+          status: 0,
+          stdout: `p4242\nfcwd\nn${realpathSync(fixture.releaseDir)}\n`,
+          stderr: "",
+        };
+      }
+      if (args.join(" ") === failingCommand) {
+        return { status: 0, stdout, stderr: "" };
+      }
+      return createFixtureCommandResult(fixture, command, args);
+    }) as unknown as typeof import("node:child_process").spawnSync;
+
+    expect(() => localRelease.readLocalMacProductionRuntimeIdentity({
+      component: "app",
+      expectedReleaseDir: fixture.releaseDir,
+      pid: 4242,
+      runCommand,
+    })).toThrow(/dirty|tracked|untracked|runtime|source/iu);
+  });
+
   it("rejects a missing completed prepare candidate before acquiring a lock or installing", async () => {
     const fixture = createFixture();
     rmSync(fixture.releaseDir, { recursive: true, force: true });
@@ -230,6 +264,24 @@ describe("local Mac production promote", () => {
       .rejects.toThrow(/prepare.*marker|partial|prepare\.json/iu);
     expect(existsSync(fixture.releaseDir)).toBe(true);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
+  });
+
+  it("accepts an owner-controlled mode 0644 release manifest prepared by the existing flow", async () => {
+    const fixture = createFixture();
+    chmodSync(fixture.manifestPath, 0o644);
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .resolves.toMatchObject({ promoted: true });
+  });
+
+  it("rejects a group-writable release manifest before lock or mutation", async () => {
+    const fixture = createFixture();
+    chmodSync(fixture.manifestPath, 0o664);
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/manifest.*writable|mode|unsafe/iu);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -370,6 +422,28 @@ describe("local Mac production promote", () => {
     expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
   });
 
+  it("blocks a current runtime preflight failure before any install helper", async () => {
+    const fixture = createFixture();
+    fixture.preflightBundle.mockRejectedValueOnce(new Error("current runtime drift"));
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/current runtime drift/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+  });
+
+  it("rejects runtime evidence drift between initial and locked preflight", async () => {
+    const fixture = createFixture();
+    fixture.preflightBundle
+      .mockResolvedValueOnce({ stable_key: "runtime-a" })
+      .mockResolvedValueOnce({ stable_key: "runtime-b" });
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/runtime|preflight|stable|drift|changed/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
+
   it.each(["app", "full_local", "youtube_worker"])(
     "preserves manual recovery evidence when %s readiness fails",
     async (component) => {
@@ -418,6 +492,69 @@ describe("local Mac production promote", () => {
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
       .rejects.toThrow(/descriptor.*drift|concurrent|race|changed/iu);
+    expect(readFileSync(fixture.paths.currentDescriptorPath, "utf8")).toBe(competing);
+    expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
+
+  it("rejects a previous descriptor that appears after the initial preflight", async () => {
+    const fixture = createFixture();
+    fixture.readinessProbe.mockImplementationOnce(async () => {
+      writeFileSync(
+        fixture.paths.previousDescriptorPath,
+        JSON.stringify(createRunningDescriptor({ promotion_id: "competing-previous" }), null, 2),
+        { mode: 0o600 },
+      );
+      return createReadyBundle(fixture.manifest);
+    });
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/previous.*descriptor|concurrent|race|changed/iu);
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
+
+  it.each(["after_previous_publish", "after_current_publish"])(
+    "restores both descriptors when a post-write fault occurs at %s",
+    async (faultPhase) => {
+      const fixture = createFixture();
+      const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
+      const options = {
+        ...promoteOptions(fixture),
+        descriptorFault: (phase: string) => {
+          if (phase === faultPhase) throw new Error(`fixture ${faultPhase}`);
+        },
+      } as Parameters<typeof promoteLocalMacProductionRelease>[0] & {
+        descriptorFault: (phase: string) => void;
+      };
+
+      await expect(promoteLocalMacProductionRelease(options))
+        .rejects.toThrow(new RegExp(faultPhase, "u"));
+      expect(readFileSync(fixture.paths.currentDescriptorPath)).toEqual(currentBefore);
+      expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+      expect(existsSync(fixture.paths.lockPath)).toBe(true);
+    },
+  );
+
+  it("never overwrites a competing current descriptor at the final publish boundary", async () => {
+    const fixture = createFixture();
+    const competing = JSON.stringify(
+      createRunningDescriptor({ promotion_id: "final-boundary-writer" }),
+      null,
+      2,
+    );
+    const options = {
+      ...promoteOptions(fixture),
+      descriptorFault: (phase: string) => {
+        if (phase === "before_current_publish") {
+          writeFileSync(fixture.paths.currentDescriptorPath, competing, { mode: 0o600 });
+        }
+      },
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0] & {
+      descriptorFault: (phase: string) => void;
+    };
+
+    await expect(promoteLocalMacProductionRelease(options))
+      .rejects.toThrow(/current|publish|exists|concurrent|race/iu);
     expect(readFileSync(fixture.paths.currentDescriptorPath, "utf8")).toBe(competing);
     expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
     expect(existsSync(fixture.paths.lockPath)).toBe(true);
@@ -511,6 +648,7 @@ describe("local Mac production promote", () => {
       source_manifest_sha256: sha256(fixture.manifestBytes),
     });
     expect(fixture.installBundle).toHaveBeenCalledTimes(1);
+    expect(fixture.preflightBundle).toHaveBeenCalledTimes(2);
     expect(fixture.readinessProbe).toHaveBeenCalledTimes(1);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
   });
@@ -530,6 +668,9 @@ function createFixtureCommandResult(
   }
   if (joined === "symbolic-ref -q HEAD") return { status: 1, stdout: "", stderr: "" };
   if (joined === "status --porcelain=v1 --untracked-files=no") {
+    return { status: 0, stdout: "", stderr: "" };
+  }
+  if (joined === "ls-files --others --exclude-standard -z") {
     return { status: 0, stdout: "", stderr: "" };
   }
   if (joined === "ls-files -s -z") return { status: 0, stdout: "", stderr: "" };

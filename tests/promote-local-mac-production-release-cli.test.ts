@@ -281,11 +281,4 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(verify.stderr).toContain("blocked");
   });
 
-  it("checks real full-local state and binds worker preflight to the promoted release SHA", () => {
-    const source = readFileSync(SCRIPT_PATH, "utf8");
-
-    expect(source).toContain('fullLocalStatus.state === "running"');
-    expect(source).not.toContain("fullLocalStatus.running === true");
-    expect(source).toMatch(/preflight\.release_sha\s*!==\s*manifest\.release_sha/u);
-  });
 });
