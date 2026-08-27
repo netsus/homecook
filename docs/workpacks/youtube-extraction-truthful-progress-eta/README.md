@@ -217,8 +217,8 @@
 - [ ] job status exact 9-key success data와 nullable `progress` key 구현 <!-- omo:id=delivery-progress-status-contract;stage=2;scope=backend;review=3,6 -->
 - [ ] `progress` exact 8-key field set과 terminal null semantics 구현 <!-- omo:id=delivery-progress-null-semantics;stage=2;scope=backend;review=3,6 -->
 - [ ] stage floor `0/10/25/45/65/90`, active max 95, success 100 규칙 구현 <!-- omo:id=delivery-progress-stage-floors;stage=2;scope=backend;review=3,6 -->
-- [ ] private stage event가 `queued` 제외 attempt당 최대 5행을 지킴 <!-- omo:id=delivery-stage-event-cap;stage=2;scope=backend;review=3,6 -->
-- [ ] stale job/worker/lease/permit/attempt update `applied=false`, write 0 보장 <!-- omo:id=delivery-stale-write-zero;stage=2;scope=backend;review=3,6 -->
+- [x] private stage event가 `queued` 제외 attempt당 최대 5행을 지킴 <!-- omo:id=delivery-stage-event-cap;stage=2;scope=backend;review=3,6 -->
+- [x] stale job/worker/lease/permit/attempt update `applied=false`, write 0 보장 <!-- omo:id=delivery-stale-write-zero;stage=2;scope=backend;review=3,6 -->
 - [ ] progress 기록 실패가 extraction/finalize를 failed로 바꾸지 않음 <!-- omo:id=delivery-progress-nonfatal;stage=2;scope=backend;review=3,6 -->
 - [ ] numeric ETA promotion gate 전 hidden, 근거 부족 시 `예상 시간 계산 중` 유지 <!-- omo:id=delivery-eta-hidden-before-promotion;stage=2;scope=backend;review=3,6 -->
 - [ ] delayed active job이 numeric ETA 없이 delayed copy만 표시 <!-- omo:id=delivery-delayed-copy;stage=4;scope=frontend;review=5,6 -->
@@ -226,4 +226,4 @@
 - [ ] `YT_IMPORT_BACKGROUND`의 segmented progress/copy regression을 새 evidence root에 고정 <!-- omo:id=delivery-low-risk-evidence-root;stage=4;scope=frontend;review=5,6 -->
 - [ ] `loading / empty / error / read-only / unauthorized` 상태를 회귀시키지 않음 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] Stage 4 320/390/desktop screenshot과 browser flow evidence 확보 <!-- omo:id=delivery-320-390-desktop-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] product PR이 production mutation 0을 유지하고 `release-promoter`/rollout/first-30 관찰을 Manual Only로 분리 <!-- omo:id=delivery-manual-rollout-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] product PR이 production mutation 0을 유지하고 `release-promoter`/rollout/first-30 관찰을 Manual Only로 분리 <!-- omo:id=delivery-manual-rollout-boundary;stage=2;scope=shared;review=3,6 -->
