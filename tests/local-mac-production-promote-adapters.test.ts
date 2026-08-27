@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -22,6 +24,16 @@ import { renderFullLocalLaunchAgentPlist } from "../scripts/lib/full-local-launc
 import {
   renderYoutubeExtractionWorkerPlist,
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
+import {
+  buildGitHubProductionReleaseAttestationArtifacts,
+  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+} from "../scripts/lib/github-production-release-attestation.mjs";
+import { acquireLocalMacProductionPromotionLock } from "../scripts/lib/local-mac-production-release.mjs";
+import {
+  createLocalMacProductionGitEvidence,
+  createLocalMacProductionReleaseManifest,
+  VERIFIED_ATTESTATION,
+} from "./helpers/local-mac-production-release-fixtures";
 
 const RELEASE_IDENTITY = Object.freeze({
   release_sha: "a".repeat(40),
@@ -324,6 +336,149 @@ describe("local Mac production promote adapters", () => {
     const childArgs = commandRunner.mock.calls[0]?.[1] as string[];
     expect(childArgs).toContain("--lock-token");
     expect(JSON.stringify(childArgs)).not.toContain("LaunchAgents");
+  });
+
+  it("runs the real default child through offline authority before the fake Docker boundary", async () => {
+    const fixtureRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-child-authority-")));
+    temporaryDirectories.push(fixtureRoot);
+    const homeDir = join(fixtureRoot, "home");
+    const candidateRoot = join(fixtureRoot, "candidate");
+    const binDir = join(fixtureRoot, "bin");
+    mkdirSync(homeDir, { mode: 0o700 });
+    mkdirSync(candidateRoot, { mode: 0o700 });
+    mkdirSync(binDir, { mode: 0o700 });
+    symlinkSync(join(process.cwd(), "scripts"), join(candidateRoot, "scripts"));
+    symlinkSync(process.execPath, join(binDir, "node"));
+
+    const manifestPath = join(fixtureRoot, "release.json");
+    const subjectPath = join(fixtureRoot, "subject.json");
+    const bundlePath = join(fixtureRoot, "bundle.jsonl");
+    const trustedRootPath = join(
+      process.cwd(),
+      "tests/fixtures/github-attestation-trusted-root.jsonl",
+    );
+    const checkRuns = [
+      "build", "changes", "dependency-audit", "policy", "quality",
+      "security-function-authorization", "security-smoke",
+      "extra-a", "extra-b", "extra-c", "extra-d", "extra-e",
+    ].map((name, index) => ({
+      app: { id: 15368 },
+      check_suite: { id: 900 + index },
+      completed_at: `2026-08-25T09:00:${String(index).padStart(2, "0")}Z`,
+      conclusion: index >= 10 ? "skipped" : "success",
+      name,
+      status: "completed",
+    }));
+    const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns,
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260825.1",
+      releaseTagObjectSha: "e".repeat(40),
+      releaseTree: "b".repeat(40),
+      repository: "netsus/homecook",
+      subjectOutputPath: subjectPath,
+    });
+    const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
+      attestation_digest: artifacts.subject_manifest_sha256,
+      required_check_summary: artifacts.subject.required_check_summary,
+    });
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), { mode: 0o600 });
+    writeFileSync(bundlePath, "{}\n", { mode: 0o600 });
+    const ghPayload = [{ verificationResult: { statement: {
+      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+      predicate: artifacts.predicate,
+      subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
+    } } }];
+    const markerPath = join(fixtureRoot, "docker-invoked");
+    const fakeGhPath = join(binDir, "gh");
+    writeFileSync(fakeGhPath, `#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(`${JSON.stringify(ghPayload)}\n`)});\n`, { mode: 0o700 });
+    const fakeGitPath = join(binDir, "git");
+    writeFileSync(fakeGitPath, `#!/usr/bin/env node
+const arg = process.argv.slice(2).join(" ");
+if (arg.includes("origin/master") || arg.includes("^{commit}")) process.stdout.write("${"a".repeat(40)}\\n");
+else if (arg.includes("^{tree}")) process.stdout.write("${"b".repeat(40)}\\n");
+else if (arg.includes("^{tag}")) process.stdout.write("${"e".repeat(40)}\\n");
+else process.exit(1);
+`, { mode: 0o700 });
+    const fakeSecurityPath = join(binDir, "security");
+    writeFileSync(fakeSecurityPath, `#!/usr/bin/env node
+const args = process.argv.slice(2);
+const account = args[args.indexOf("-a") + 1] || "";
+if (account.endsWith("__count")) process.stdout.write("1\\n");
+else if (account === "jwt_keys__000") process.stdout.write(JSON.stringify({keys:[{d:"private-key-material",kid:"local-es256"}]}) + "\\n");
+else if (account === "jwt_jwks__000") process.stdout.write(JSON.stringify({keys:[{kid:"local-es256",kty:"EC"}]}) + "\\n");
+else process.stdout.write(account + "-unique-secret-value-at-least-32-bytes\\n");
+`, { mode: 0o700 });
+    const fakeDockerPath = join(binDir, "docker");
+    writeFileSync(fakeDockerPath, `#!/usr/bin/env node
+require("node:fs").writeFileSync(${JSON.stringify(markerPath)}, process.argv.slice(2).join(" "));
+process.exit(42);
+`, { mode: 0o700 });
+    for (const path of [fakeGhPath, fakeGitPath, fakeSecurityPath, fakeDockerPath]) {
+      chmodSync(path, 0o700);
+    }
+
+    const configPath = join(fixtureRoot, "full-local.env");
+    const config = readFileSync(
+      join(process.cwd(), "infra/full-local-supabase/.env.production.example"),
+      "utf8",
+    ).replaceAll("/Users/REPLACE_ME", homeDir);
+    writeFileSync(configPath, config, { mode: 0o600 });
+    chmodSync(configPath, 0o600);
+    writeFileSync(join(candidateRoot, "prepare.json"), JSON.stringify({
+      schema: "homecook.local-mac-production-prepare.v1",
+      status: "prepared",
+      prepared_at: "2026-08-25T10:00:00.000Z",
+      promotion_id: manifest.promotion_id,
+      release_tag: manifest.release_tag,
+      release_sha: manifest.release_sha,
+      release_tree: manifest.release_tree,
+      build_id: manifest.build_id,
+      source_manifest_path: manifest.release_manifest_path,
+      source_manifest_sha256: createHash("sha256").update(readFileSync(manifestPath)).digest("hex"),
+      attestation_source: "fixture",
+      validation_commands: [],
+    }), { mode: 0o600 });
+    const lockToken = "99999999-9999-4999-8999-999999999999";
+    acquireLocalMacProductionPromotionLock({
+      homeDir,
+      manifest,
+      manifestPath,
+      lockToken,
+      readGitEvidence: () => createLocalMacProductionGitEvidence(),
+      verifyAttestation: VERIFIED_ATTESTATION,
+    });
+
+    const created = createDependencies();
+    const dependencies = { ...created.dependencies };
+    Reflect.deleteProperty(dependencies, "startFullLocal");
+    const options = createOptions({
+      bundlePath,
+      fullLocalConfigPath: configPath,
+      homeDir,
+      nodeBin: join(binDir, "node"),
+      subjectManifestPath: subjectPath,
+      trustedRootPath,
+    });
+    const adapters = createLocalMacProductionPromoteAdapters(options, dependencies);
+    const context = createContext({
+      homeDir,
+      lockToken,
+      manifest: {
+        ...manifest,
+        build_id: RELEASE_IDENTITY.build_id,
+        promotion_id: RELEASE_IDENTITY.promotion_id,
+      },
+      releaseDir: candidateRoot,
+      rootDir: process.cwd(),
+    });
+    const preflight = await adapters.preflightBundle(context);
+
+    await expect(adapters.installBundle({ ...context, preflight }))
+      .rejects.toThrow(/full-local synchronous start failed/iu);
+    expect(readFileSync(markerPath, "utf8")).toContain("compose");
+    expect(dependencies.installApp).not.toHaveBeenCalled();
+    expect(dependencies.installWorker).not.toHaveBeenCalled();
   });
 
   it("migrates the exact e02f legacy runtime to a labeled candidate under the locked installer", async () => {
