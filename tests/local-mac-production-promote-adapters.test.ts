@@ -46,9 +46,12 @@ afterEach(() => {
 function createOptions(overrides: Record<string, unknown> = {}) {
   return {
     confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+    bundlePath: "/private/attestation/bundle.jsonl",
     fullLocalConfigPath: "/private/full-local.env",
     homeDir: "/Users/tester",
     nodeBin: "/usr/bin/node",
+    subjectManifestPath: "/private/attestation/subject.json",
+    trustedRootPath: "/private/attestation/trusted-root.jsonl",
     workerAppDescriptorPath: "/private/worker/app.json",
     workerConfigPath: "/private/worker/worker.env",
     workerCredentialPath: "/private/worker/credential.json",
@@ -75,6 +78,12 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
         expectedSchemaPath: "/private/worker/schema.json",
         policyPath: "/private/worker/policy.json",
         secretRoot: "/private/worker/secrets",
+        artifactSha256: "7".repeat(64),
+        appDescriptorSha256: "6".repeat(64),
+        configSha256: "5".repeat(64),
+        credentialSha256: "4".repeat(64),
+        expectedSchemaSha256: "3".repeat(64),
+        policySha256: "2".repeat(64),
         i031Preflight: { ready: true },
         preflight: {
           ready: true,
@@ -145,23 +154,28 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
 }
 
 function createContext(overrides: Record<string, unknown> = {}) {
+  const executionSnapshot = { schema: "fixture-snapshot", appRoot: "/sealed/app" };
   return {
     currentDescriptor: {
       ...CURRENT_IDENTITY,
       release_tag: "prod-20260824.1",
+      execution_app_root: "/private/current-execution/app",
+      execution_snapshot_digest: "8".repeat(64),
       worker_artifact_root: "/private/current-worker-authority",
       worker_manifest_path: "/private/current-worker-authority/artifact.json",
-      worker_app_descriptor_path: "/private/current-worker-authority/app.json",
-      worker_config_path: "/private/current-worker-authority/worker.env",
-      worker_credential_path: "/private/current-worker-authority/credential.json",
-      worker_expected_schema_path: "/private/current-worker-authority/schema.json",
-      worker_policy_path: "/private/current-worker-authority/policy.json",
-      worker_secret_root: "/private/current-worker-authority/secrets",
+      worker_artifact_sha256: "7".repeat(64),
+      worker_app_descriptor_sha256: "6".repeat(64),
+      worker_config_sha256: "5".repeat(64),
+      worker_credential_sha256: "4".repeat(64),
+      worker_expected_schema_sha256: "3".repeat(64),
+      worker_policy_sha256: "2".repeat(64),
     },
     currentReleaseDir: "/Users/tester/.homecook/releases/prod-20260824.1",
     homeDir: "/Users/tester",
     manifest: { ...RELEASE_IDENTITY },
     mutationAuthority: { required: true },
+    executionSnapshot,
+    verifyExecutionSnapshot: vi.fn(() => executionSnapshot),
     releaseDir: "/Users/tester/.homecook/releases/prod-20260825.1",
     rootDir: "/repo",
     ...overrides,
@@ -200,6 +214,13 @@ describe("local Mac production promote adapters", () => {
     });
     expect(calls).toContain("ready-full-local-workload");
     expect(calls).not.toContain("read-full-local-starter-pid");
+    expect(dependencies.readWorkerRuntimeIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ requirePolicyEnabled: false }),
+    );
+    await adapters.finalWorkerProbe({ ...context, preflight });
+    expect(dependencies.readWorkerRuntimeIdentity).toHaveBeenLastCalledWith(
+      expect.objectContaining({ requirePolicyEnabled: true }),
+    );
   });
 
   it("installs the worker from its separately attested artifact root", async () => {
@@ -229,6 +250,24 @@ describe("local Mac production promote adapters", () => {
     expect(calls.indexOf("confirm-full-local-candidate")).toBeLessThan(
       calls.indexOf("install-app"),
     );
+    expect(context.verifyExecutionSnapshot).toHaveBeenCalledTimes(5);
+  });
+
+  it("blocks all bundle mutation when sealed snapshot verification fails", async () => {
+    const { dependencies } = createDependencies();
+    const adapters = createLocalMacProductionPromoteAdapters(createOptions(), dependencies);
+    const context = createContext({
+      verifyExecutionSnapshot: vi.fn(() => {
+        throw new Error("sealed snapshot digest drift");
+      }),
+    });
+    const preflight = await adapters.preflightBundle(context);
+
+    await expect(adapters.installBundle({ ...context, preflight }))
+      .rejects.toThrow(/sealed snapshot|digest|drift/iu);
+    expect(dependencies.startFullLocal).not.toHaveBeenCalled();
+    expect(dependencies.installApp).not.toHaveBeenCalled();
+    expect(dependencies.installWorker).not.toHaveBeenCalled();
   });
 
   it("stops before app or worker mutation when synchronous full-local start fails", async () => {
@@ -246,6 +285,45 @@ describe("local Mac production promote adapters", () => {
     expect(dependencies.installFullLocal).not.toHaveBeenCalled();
     expect(dependencies.installApp).not.toHaveBeenCalled();
     expect(dependencies.installWorker).not.toHaveBeenCalled();
+  });
+
+  it("uses the default full-local child with the complete offline attestation authority", async () => {
+    const created = createDependencies();
+    const lowLevelDependencies = { ...created.dependencies };
+    Reflect.deleteProperty(lowLevelDependencies, "startFullLocal");
+    const commandRunner = vi.fn((
+      command: string,
+      args: readonly string[],
+      options?: Record<string, unknown>,
+    ) => {
+      void command;
+      void args;
+      void options;
+      return { status: 0, stdout: "", stderr: "" };
+    });
+    const adapters = createLocalMacProductionPromoteAdapters(createOptions(), {
+      ...lowLevelDependencies,
+      commandRunner,
+    });
+    const context = createContext();
+    const preflight = await adapters.preflightBundle(context);
+
+    await adapters.installBundle({ ...context, preflight });
+
+    expect(commandRunner).toHaveBeenCalledWith(
+      "/usr/bin/node",
+      expect.arrayContaining([
+        "start",
+        "--bundle", "/private/attestation/bundle.jsonl",
+        "--subject-manifest", "/private/attestation/subject.json",
+        "--trusted-root", "/private/attestation/trusted-root.jsonl",
+        "--authority-root", "/repo",
+      ]),
+      expect.objectContaining({ cwd: context.releaseDir }),
+    );
+    const childArgs = commandRunner.mock.calls[0]?.[1] as string[];
+    expect(childArgs).toContain("--lock-token");
+    expect(JSON.stringify(childArgs)).not.toContain("LaunchAgents");
   });
 
   it("migrates the exact e02f legacy runtime to a labeled candidate under the locked installer", async () => {
@@ -453,22 +531,33 @@ describe("local Mac production promote adapters", () => {
     promoteAdapters.buildCanonicalCurrentYoutubeWorkerPlist({
       currentDescriptor,
       options,
+      digestFile: vi.fn((path: string) => ({
+        ["/private/current-worker-authority/artifact.json"]: "7".repeat(64),
+        ["/private/current-worker-authority/authority/app-descriptor.json"]: "6".repeat(64),
+        [String(options.workerConfigPath)]: "5".repeat(64),
+        [String(options.workerCredentialPath)]: "4".repeat(64),
+        ["/private/current-worker-authority/authority/expected-schema.json"]: "3".repeat(64),
+        [String(options.workerPolicyPath)]: "2".repeat(64),
+      })[path] ?? "0".repeat(64)),
       renderWorkerPlist: renderWorkerPlist as unknown as typeof renderYoutubeExtractionWorkerPlist,
     });
 
     expect(renderWorkerPlist).toHaveBeenCalledWith(expect.objectContaining({
-      appDescriptorPath: currentDescriptor.worker_app_descriptor_path,
-      configPath: currentDescriptor.worker_config_path,
-      credentialPath: currentDescriptor.worker_credential_path,
-      currentPolicyPath: currentDescriptor.worker_policy_path,
-      expectedSchemaPath: currentDescriptor.worker_expected_schema_path,
-      secretRoot: currentDescriptor.worker_secret_root,
+      appDescriptorPath: "/private/current-worker-authority/authority/app-descriptor.json",
+      configPath: options.workerConfigPath,
+      credentialPath: options.workerCredentialPath,
+      currentPolicyPath: options.workerPolicyPath,
+      expectedSchemaPath: "/private/current-worker-authority/authority/expected-schema.json",
+      secretRoot: options.workerSecretRoot,
       manifestPath: currentDescriptor.worker_manifest_path,
       rootDir: currentDescriptor.worker_artifact_root,
     }));
     expect(renderWorkerPlist).not.toHaveBeenCalledWith(expect.objectContaining({
       rootDir: "/private/current-worker-artifact",
     }));
+    expect(JSON.stringify(currentDescriptor)).not.toMatch(
+      /credential_path|secret_root|config_path|policy_path/u,
+    );
   });
 
   it.each(["library-symlink", "launchagents-writable"])(

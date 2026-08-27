@@ -59,6 +59,9 @@ describe("release promotion governance docs", () => {
     expect(releaseRunbook).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_ID");
     expect(releaseRunbook).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY");
     expect(releaseRunbook).toContain("65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c");
+    expect(releaseRunbook).toContain("content-addressed sealed execution snapshot");
+    expect(releaseRunbook).toContain("snapshot은 실패 시 자동 삭제하지 않는다");
+    expect(releaseRunbook).toContain("credential/config/policy 경로를 저장하지 않는다");
 
     expect(gitWorkflow).toContain("`master` merge는 통합 evidence다. production deployment approval은 아니다.");
     expect(gitWorkflow).toContain("prod-*");

@@ -665,8 +665,9 @@ describe("local Mac production launch agent", () => {
     expect(runtimeStatusChecks.join("\n")).not.toContain("supabase@2.110.0");
     expect(runtimeStatusChecks.join("\n")).not.toContain("corepack");
     expect(runtimeStatusChecks.join("\n")).not.toContain(" start");
-    expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
-    expect(spawnCalls).toContain("launchctl kickstart -k gui/501/com.homecook.production");
+    expect(spawnCalls).toContain(`/bin/launchctl bootstrap gui/501 ${result.plistPath}`);
+    expect(spawnCalls).toContain("/bin/launchctl kickstart -k gui/501/com.homecook.production");
+    expect(spawnCalls.some((call) => call.startsWith("launchctl "))).toBe(false);
   });
 
   it("rejects an existing plist symlink before writing or launchctl mutation", () => {
@@ -849,7 +850,8 @@ describe("local Mac production launch agent", () => {
     });
 
     expect(result.changed).toBe(true);
-    expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
+    expect(spawnCalls).toContain(`/bin/launchctl bootstrap gui/501 ${result.plistPath}`);
+    expect(spawnCalls.some((call) => call.startsWith("launchctl "))).toBe(false);
   });
 });
 

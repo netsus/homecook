@@ -2,9 +2,11 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -50,14 +52,16 @@ function createRunningDescriptor(overrides: Record<string, unknown> = {}) {
     promotion_id: "promo-previous",
     promoted_at: "2026-08-24T09:00:00.000Z",
     source_manifest_sha256: "9".repeat(64),
+    execution_app_root: "/private/current-execution/app",
+    execution_snapshot_digest: "8".repeat(64),
     worker_artifact_root: "/private/current-worker",
     worker_manifest_path: "/private/current-worker/artifact.json",
-    worker_app_descriptor_path: "/private/current-worker/app.json",
-    worker_config_path: "/private/current-worker/worker.env",
-    worker_credential_path: "/private/current-worker/credential.json",
-    worker_expected_schema_path: "/private/current-worker/schema.json",
-    worker_policy_path: "/private/current-worker/policy.json",
-    worker_secret_root: "/private/current-worker/secrets",
+    worker_artifact_sha256: "7".repeat(64),
+    worker_app_descriptor_sha256: "6".repeat(64),
+    worker_config_sha256: "5".repeat(64),
+    worker_credential_sha256: "4".repeat(64),
+    worker_expected_schema_sha256: "3".repeat(64),
+    worker_policy_sha256: "2".repeat(64),
     ...overrides,
   };
 }
@@ -119,6 +123,16 @@ function createFixture() {
     validation_commands: [],
   }, null, 2), { mode: 0o600 });
 
+  const workerRoot = createTempDirectory("homecook-promote-worker-");
+  const workerAuthorityRoot = join(workerRoot, "authority");
+  mkdirSync(workerAuthorityRoot, { mode: 0o700 });
+  const workerManifestPath = join(workerRoot, "artifact.json");
+  const workerAppDescriptorPath = join(workerAuthorityRoot, "app-descriptor.json");
+  const workerExpectedSchemaPath = join(workerAuthorityRoot, "expected-schema.json");
+  writeFileSync(workerManifestPath, "worker-artifact\n", { mode: 0o600 });
+  writeFileSync(workerAppDescriptorPath, "worker-app\n", { mode: 0o600 });
+  writeFileSync(workerExpectedSchemaPath, "worker-schema\n", { mode: 0o600 });
+
   const commandInvocations: Array<{ command: string, args: string[] }> = [];
   const runCommandMock = vi.fn((command: string, args: readonly string[] = []) => {
     commandInvocations.push({ command, args: [...args] });
@@ -129,20 +143,36 @@ function createFixture() {
   const preflightBundle = vi.fn(async () => ({
     stable_key: "runtime-stable",
     worker: {
-      artifactRoot: "/private/worker",
-      manifestPath: "/private/worker/worker-artifact.json",
-      appDescriptorPath: "/private/worker/app.json",
+      artifactRoot: workerRoot,
+      manifestPath: workerManifestPath,
+      appDescriptorPath: workerAppDescriptorPath,
       configPath: "/private/worker/worker.env",
       credentialPath: "/private/worker/credential.json",
-      expectedSchemaPath: "/private/worker/schema.json",
+      expectedSchemaPath: workerExpectedSchemaPath,
       policyPath: "/private/worker/policy.json",
       secretRoot: "/private/worker/secrets",
+      artifactSha256: "7".repeat(64),
+      appDescriptorSha256: "6".repeat(64),
+      configSha256: "5".repeat(64),
+      credentialSha256: "4".repeat(64),
+      expectedSchemaSha256: "3".repeat(64),
+      policySha256: "2".repeat(64),
     },
   }));
   const readinessProbe = vi.fn(async () => createReadyBundle(manifest));
+  const finalWorkerProbe = vi.fn(async () => ({
+    ...createReadyBundle(manifest).youtube_worker,
+    artifactSha256: "7".repeat(64),
+    appDescriptorSha256: sha256(readFileSync(workerAppDescriptorPath)),
+    configSha256: "5".repeat(64),
+    credentialSha256: "4".repeat(64),
+    expectedSchemaSha256: sha256(readFileSync(workerExpectedSchemaPath)),
+    policySha256: "2".repeat(64),
+  }));
 
   return {
     commandInvocations,
+    finalWorkerProbe,
     homeDir,
     installBundle,
     manifest,
@@ -155,6 +185,10 @@ function createFixture() {
     rootDir,
     runCommand,
     runCommandMock,
+    workerAppDescriptorPath,
+    workerExpectedSchemaPath,
+    workerManifestPath,
+    workerRoot,
   };
 }
 
@@ -170,6 +204,7 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
     }),
     verifyAttestation: VERIFIED_ATTESTATION,
     installBundle: fixture.installBundle,
+    finalWorkerProbe: fixture.finalWorkerProbe,
     preflightBundle: fixture.preflightBundle,
     readinessProbe: fixture.readinessProbe,
     lockToken: "88888888-8888-4888-8888-888888888888" as const,
@@ -180,7 +215,21 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
     const directory = temporaryDirectories.pop();
-    if (directory) rmSync(directory, { recursive: true, force: true });
+    if (directory) {
+      const makeWritable = (path: string) => {
+        if (!existsSync(path)) return;
+        const stat = lstatSync(path);
+        if (stat.isSymbolicLink()) return;
+        if (stat.isDirectory()) {
+          chmodSync(path, 0o700);
+          for (const name of readdirSync(path)) makeWritable(join(path, name));
+        } else {
+          chmodSync(path, 0o600);
+        }
+      };
+      makeWritable(directory);
+      rmSync(directory, { recursive: true, force: true });
+    }
   }
 });
 
@@ -436,12 +485,12 @@ describe("local Mac production promote", () => {
     const partialDescriptor = createRunningDescriptor();
     for (const field of [
       "worker_manifest_path",
-      "worker_app_descriptor_path",
-      "worker_config_path",
-      "worker_credential_path",
-      "worker_expected_schema_path",
-      "worker_policy_path",
-      "worker_secret_root",
+      "worker_artifact_sha256",
+      "worker_app_descriptor_sha256",
+      "worker_config_sha256",
+      "worker_credential_sha256",
+      "worker_expected_schema_sha256",
+      "worker_policy_sha256",
     ]) delete partialDescriptor[field as keyof typeof partialDescriptor];
     writeFileSync(
       fixture.paths.currentDescriptorPath,
@@ -490,6 +539,12 @@ describe("local Mac production promote", () => {
           expectedSchemaPath: "/private/worker/schema.json",
           policyPath: "/private/worker/policy.json",
           secretRoot: "/private/worker/secrets",
+          artifactSha256: "7".repeat(64),
+          appDescriptorSha256: "6".repeat(64),
+          configSha256: "5".repeat(64),
+          credentialSha256: "4".repeat(64),
+          expectedSchemaSha256: "3".repeat(64),
+          policySha256: "2".repeat(64),
         },
       })
       .mockResolvedValueOnce({
@@ -503,6 +558,12 @@ describe("local Mac production promote", () => {
           expectedSchemaPath: "/private/worker/schema.json",
           policyPath: "/private/worker/policy.json",
           secretRoot: "/private/worker/secrets",
+          artifactSha256: "7".repeat(64),
+          appDescriptorSha256: "6".repeat(64),
+          configSha256: "5".repeat(64),
+          credentialSha256: "4".repeat(64),
+          expectedSchemaSha256: "3".repeat(64),
+          policySha256: "2".repeat(64),
         },
       });
 
@@ -531,6 +592,21 @@ describe("local Mac production promote", () => {
       expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
     },
   );
+
+  it("runs the complete worker probe immediately before descriptor commit", async () => {
+    const fixture = createFixture();
+    const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
+    fixture.finalWorkerProbe.mockRejectedValueOnce(
+      new Error("final worker policy/config/credential drift"),
+    );
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/final worker|policy|credential|drift/iu);
+    expect(fixture.finalWorkerProbe).toHaveBeenCalledTimes(1);
+    expect(readFileSync(fixture.paths.currentDescriptorPath)).toEqual(currentBefore);
+    expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
 
   it("rejects promotion_id-only drift after locked validation", async () => {
     const fixture = createFixture();
@@ -698,6 +774,66 @@ describe("local Mac production promote", () => {
     expect(existsSync(fixture.paths.lockPath)).toBe(true);
   });
 
+  it("executes only the sealed snapshot when the prepared candidate mutates after locked preflight", async () => {
+    const fixture = createFixture();
+    const originalBuild = readFileSync(join(fixture.releaseDir, ".next", "BUILD_ID"));
+    const options = {
+      ...promoteOptions(fixture),
+      afterLockedPreflight: ({ executionSnapshot }: {
+        executionSnapshot: { appRoot: string };
+      }) => {
+        writeFileSync(join(fixture.releaseDir, ".next", "BUILD_ID"), "mutated-then-restored\n");
+        writeFileSync(join(fixture.releaseDir, ".next", "BUILD_ID"), originalBuild);
+        expect(executionSnapshot.appRoot).not.toBe(realpathSync(fixture.releaseDir));
+      },
+      installBundle: vi.fn(async ({ releaseDir, executionSnapshot }) => {
+        expect(releaseDir).toBe(executionSnapshot.appRoot);
+        expect(readFileSync(join(releaseDir, ".next", "BUILD_ID"))).toEqual(originalBuild);
+        return { installed: true };
+      }),
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0] & {
+      afterLockedPreflight: (input: { executionSnapshot: { appRoot: string } }) => void;
+    };
+
+    await expect(promoteLocalMacProductionRelease(options)).resolves.toMatchObject({
+      promoted: true,
+      release_dir: expect.stringContaining("execution-snapshots"),
+    });
+  });
+
+  it("blocks before installation when the sealed execution snapshot mutates", async () => {
+    const fixture = createFixture();
+    const options = {
+      ...promoteOptions(fixture),
+      afterLockedPreflight: ({ executionSnapshot }: {
+        executionSnapshot: { appRoot: string };
+      }) => {
+        chmodSync(join(executionSnapshot.appRoot, ".next", "BUILD_ID"), 0o600);
+        writeFileSync(join(executionSnapshot.appRoot, ".next", "BUILD_ID"), "tampered\n");
+      },
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0] & {
+      afterLockedPreflight: (input: { executionSnapshot: { appRoot: string } }) => void;
+    };
+
+    await expect(promoteLocalMacProductionRelease(options))
+      .rejects.toThrow(/sealed|execution snapshot|digest|drift/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
+
+  it("rejects a symlink execution-snapshot ancestor before copying candidate bytes", async () => {
+    const fixture = createFixture();
+    const external = createTempDirectory("homecook-execution-snapshot-external-");
+    const executionRoot = join(fixture.paths.releaseRoot, "execution-snapshots");
+    symlinkSync(external, executionRoot);
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/execution.*snapshot|symlink|symbolic|ancestor/iu);
+    expect(readdirSync(external)).toEqual([]);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
+
   it("updates previous/current only after the whole bundle is ready at one exact identity", async () => {
     const fixture = createFixture();
     const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
@@ -711,7 +847,7 @@ describe("local Mac production promote", () => {
 
     expect(result).toMatchObject({
       promoted: true,
-      release_dir: realpathSync(fixture.releaseDir),
+      release_dir: expect.stringContaining("execution-snapshots"),
       manifest: {
         release_sha: fixture.manifest.release_sha,
         release_tree: fixture.manifest.release_tree,
@@ -728,15 +864,15 @@ describe("local Mac production promote", () => {
       build_id: fixture.manifest.build_id,
       promotion_id: fixture.manifest.promotion_id,
       source_manifest_sha256: sha256(fixture.manifestBytes),
-      worker_artifact_root: "/private/worker",
-      worker_manifest_path: "/private/worker/worker-artifact.json",
-      worker_app_descriptor_path: "/private/worker/app.json",
-      worker_config_path: "/private/worker/worker.env",
-      worker_credential_path: "/private/worker/credential.json",
-      worker_expected_schema_path: "/private/worker/schema.json",
-      worker_policy_path: "/private/worker/policy.json",
-      worker_secret_root: "/private/worker/secrets",
+      worker_artifact_sha256: "7".repeat(64),
+      worker_app_descriptor_sha256: sha256(readFileSync(fixture.workerAppDescriptorPath)),
+      worker_config_sha256: "5".repeat(64),
+      worker_credential_sha256: "4".repeat(64),
+      worker_expected_schema_sha256: sha256(readFileSync(fixture.workerExpectedSchemaPath)),
+      worker_policy_sha256: "2".repeat(64),
     });
+    const currentDescriptorText = readFileSync(fixture.paths.currentDescriptorPath, "utf8");
+    expect(currentDescriptorText).not.toMatch(/credential_path|secret_root|config_path|policy_path/u);
     expect(fixture.installBundle).toHaveBeenCalledTimes(1);
     expect(fixture.preflightBundle).toHaveBeenCalledTimes(2);
     expect(fixture.readinessProbe).toHaveBeenCalledTimes(1);
