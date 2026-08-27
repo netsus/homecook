@@ -93,6 +93,7 @@ import {
   validateFullLocalOAuthConfig,
 } from "./lib/full-local-oauth-providers.mjs";
 import { validateLocalMacProductionMutationAuthority } from "./lib/local-mac-production-release.mjs";
+import { createGitHubProductionReleaseAttestationVerifier } from "./lib/github-production-release-attestation.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const INFRA = join(ROOT, "infra/full-local-supabase");
@@ -311,13 +312,22 @@ function validateFullLocalProductionMutationAuthority(command, args) {
     return;
   }
 
+  const verifyAttestation = createGitHubProductionReleaseAttestationVerifier({
+    bundlePath: optionValue(args, "--bundle"),
+    repository: "netsus/homecook",
+    signerWorkflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    sourceRef: "refs/heads/master",
+    subjectManifestPath: optionValue(args, "--subject-manifest"),
+    trustedRootPath: optionValue(args, "--trusted-root"),
+  });
   validateLocalMacProductionMutationAuthority({
     command: "install",
     commandLabel: command,
     homeDir: process.env.HOME ?? homedir(),
     lockToken: optionValue(args, "--lock-token"),
     releaseManifestPath: optionValue(args, "--release-manifest"),
-    rootDir: ROOT,
+    rootDir: optionValue(args, "--authority-root") ?? ROOT,
+    verifyAttestation,
   });
 }
 

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   closeSync,
+  copyFileSync,
   constants as fsConstants,
   existsSync,
   fstatSync,
@@ -11,9 +12,12 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readdirSync,
+  readlinkSync,
   realpathSync,
   renameSync,
   rmSync,
+  symlinkSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -43,6 +47,7 @@ const LOCAL_MAC_PRODUCTION_MUTATION_AUTHORITY_BRAND = Symbol(
 );
 const LOCK_DIRECTORY_MODE = 0o700;
 const LOCK_METADATA_MODE = 0o600;
+const EXECUTION_SNAPSHOT_SCHEMA = "homecook.local-mac-production-execution-snapshot.v1";
 const ZERO_ONLY_CHECK_FIELDS = [
   "bad",
   "cancelled",
@@ -107,26 +112,30 @@ const RUNNING_DESCRIPTOR_ALLOWED_FIELDS = new Set([
   "promotion_id",
   "promoted_at",
   "source_manifest_sha256",
+  "execution_app_root",
+  "execution_snapshot_digest",
   "worker_artifact_root",
   "worker_manifest_path",
-  "worker_app_descriptor_path",
-  "worker_config_path",
-  "worker_credential_path",
-  "worker_expected_schema_path",
-  "worker_policy_path",
-  "worker_secret_root",
+  "worker_artifact_sha256",
+  "worker_app_descriptor_sha256",
+  "worker_config_sha256",
+  "worker_credential_sha256",
+  "worker_expected_schema_sha256",
+  "worker_policy_sha256",
 ]);
 const RUNNING_DESCRIPTOR_SCHEMA = "homecook.local-mac-production-running-release.v1";
 const LEGACY_BOOTSTRAP_RELEASE_SHA = "e02f02a87d1d955dc598728e7029a745a650a5c3";
 const RUNNING_DESCRIPTOR_WORKER_PATH_FIELDS = Object.freeze([
+  "execution_app_root",
+  "execution_snapshot_digest",
   "worker_artifact_root",
   "worker_manifest_path",
-  "worker_app_descriptor_path",
-  "worker_config_path",
-  "worker_credential_path",
-  "worker_expected_schema_path",
-  "worker_policy_path",
-  "worker_secret_root",
+  "worker_artifact_sha256",
+  "worker_app_descriptor_sha256",
+  "worker_config_sha256",
+  "worker_credential_sha256",
+  "worker_expected_schema_sha256",
+  "worker_policy_sha256",
 ]);
 
 function requireExactAllowedKeys(value, allowedKeys, label) {
@@ -211,6 +220,256 @@ function sha256Bytes(bytes) {
   return createHash("sha256")
     .update(bytes)
     .digest("hex");
+}
+
+function digestExecutionTree(rootPath) {
+  const root = realpathSync(rootPath);
+  const hash = createHash("sha256");
+  const visit = (path, relativePath) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      hash.update(`link\0${relativePath}\0${readlinkSync(path)}\0`);
+      return;
+    }
+    if (stat.isDirectory()) {
+      hash.update(`dir\0${relativePath}\0`);
+      for (const name of readdirSync(path).sort()) {
+        if (relativePath === "" && name === ".git") continue;
+        visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+      }
+      return;
+    }
+    if (!stat.isFile()) throw new Error("Execution snapshot contains an unsupported entry.");
+    hash.update(`file\0${relativePath}\0${(stat.mode & 0o111) === 0 ? "data" : "exec"}\0`);
+    hash.update(readFileSync(path));
+    hash.update("\0");
+  };
+  visit(root, "");
+  return hash.digest("hex");
+}
+
+function copyExecutionTree(sourcePath, destinationPath) {
+  const sourceRoot = realpathSync(sourcePath);
+  const copyEntry = (source, destination) => {
+    const stat = lstatSync(source);
+    if (stat.isSymbolicLink()) {
+      const target = realpathSync(source);
+      assertPathInside(sourceRoot, target, "Execution snapshot symlink target");
+      symlinkSync(readlinkSync(source), destination);
+      return;
+    }
+    if (stat.isDirectory()) {
+      mkdirSync(destination, { mode: 0o700 });
+      for (const name of readdirSync(source).sort()) {
+        copyEntry(join(source, name), join(destination, name));
+      }
+      return;
+    }
+    if (!stat.isFile()) throw new Error("Execution source contains an unsupported entry.");
+    copyFileSync(source, destination, fsConstants.COPYFILE_EXCL);
+    chmodSync(destination, (stat.mode & 0o111) === 0 ? 0o400 : 0o500);
+  };
+  copyEntry(sourceRoot, destinationPath);
+}
+
+function copySnapshotAuthorityFile(sourcePath, destinationPath) {
+  const source = realpathSync(sourcePath);
+  if (existsSync(destinationPath)) {
+    if (sha256Bytes(readFileSync(destinationPath)) !== sha256Bytes(readFileSync(source))) {
+      throw new Error("Execution snapshot authority file collision.");
+    }
+    return destinationPath;
+  }
+  copyFileSync(source, destinationPath, fsConstants.COPYFILE_EXCL);
+  chmodSync(destinationPath, 0o400);
+  return destinationPath;
+}
+
+function sealExecutionTree(rootPath) {
+  const visit = (path) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) return;
+    if (stat.isDirectory()) {
+      for (const name of readdirSync(path)) visit(join(path, name));
+      chmodSync(path, 0o500);
+      return;
+    }
+    if (!stat.isFile()) throw new Error("Execution snapshot contains an unsupported entry.");
+    chmodSync(path, (stat.mode & 0o111) === 0 ? 0o400 : 0o500);
+  };
+  visit(rootPath);
+}
+
+function assertSealedExecutionTree(rootPath, expectedUid) {
+  const visit = (path) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) return;
+    if (stat.uid !== expectedUid || (modeBits(stat.mode) & 0o222) !== 0) {
+      throw new Error("Sealed execution snapshot owner or mode drifted.");
+    }
+    if (stat.isDirectory()) {
+      for (const name of readdirSync(path)) visit(join(path, name));
+    } else if (!stat.isFile()) {
+      throw new Error("Sealed execution snapshot contains an unsupported entry.");
+    }
+  };
+  visit(rootPath);
+}
+
+export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
+  if (!snapshot || snapshot.schema !== EXECUTION_SNAPSHOT_SCHEMA) {
+    throw new Error("Sealed execution snapshot evidence is missing.");
+  }
+  const stat = lstatSync(snapshot.root);
+  if (
+    stat.isSymbolicLink()
+    || !stat.isDirectory()
+    || stat.dev !== snapshot.dev
+    || stat.ino !== snapshot.ino
+    || stat.uid !== snapshot.uid
+    || (modeBits(stat.mode) & 0o222) !== 0
+  ) {
+    throw new Error("Sealed execution snapshot inode or mode drifted.");
+  }
+  const appStat = lstatSync(snapshot.appRoot);
+  const workerStat = lstatSync(snapshot.workerRoot);
+  if (
+    appStat.dev !== snapshot.appDev
+    || appStat.ino !== snapshot.appIno
+    || workerStat.dev !== snapshot.workerDev
+    || workerStat.ino !== snapshot.workerIno
+  ) {
+    throw new Error("Sealed execution snapshot component inode drifted.");
+  }
+  assertSealedExecutionTree(snapshot.appRoot, snapshot.uid);
+  assertSealedExecutionTree(snapshot.workerRoot, snapshot.uid);
+  const metadataStat = lstatSync(snapshot.metadataPath);
+  if (
+    !metadataStat.isFile()
+    || metadataStat.isSymbolicLink()
+    || metadataStat.uid !== snapshot.uid
+    || modeBits(metadataStat.mode) !== 0o400
+    || sha256Bytes(readFileSync(snapshot.metadataPath)) !== snapshot.metadataDigest
+  ) {
+    throw new Error("Sealed execution snapshot evidence drifted.");
+  }
+  const appDigest = digestExecutionTree(snapshot.appRoot);
+  const workerDigest = digestExecutionTree(snapshot.workerRoot);
+  if (appDigest !== snapshot.appDigest || workerDigest !== snapshot.workerDigest) {
+    throw new Error("Sealed execution snapshot content digest drifted.");
+  }
+  return snapshot;
+}
+
+export function createLocalMacProductionExecutionSnapshot({
+  manifest,
+  preparedReleaseDir,
+  releaseRoot,
+  worker,
+}) {
+  const appSourceDigest = digestExecutionTree(preparedReleaseDir);
+  const workerSourceDigest = digestExecutionTree(worker.artifactRoot);
+  const appDescriptorSourceDigest = sha256Bytes(readFileSync(worker.appDescriptorPath));
+  const expectedSchemaSourceDigest = sha256Bytes(readFileSync(worker.expectedSchemaPath));
+  const identityDigest = sha256Bytes(Buffer.from(JSON.stringify({
+    app: appSourceDigest,
+    app_descriptor: appDescriptorSourceDigest,
+    build_id: manifest.build_id,
+    promotion_id: manifest.promotion_id,
+    release_sha: manifest.release_sha,
+    release_tree: manifest.release_tree,
+    expected_schema: expectedSchemaSourceDigest,
+    worker: workerSourceDigest,
+  })));
+  const executionRoot = join(releaseRoot, "execution-snapshots");
+  if (!existsSync(executionRoot)) {
+    mkdirSync(executionRoot, { mode: 0o700 });
+  } else {
+    const executionRootStat = lstatSync(executionRoot);
+    const currentUid = process.getuid?.();
+    if (
+      executionRootStat.isSymbolicLink()
+      || !executionRootStat.isDirectory()
+      || modeBits(executionRootStat.mode) !== 0o700
+      || (Number.isInteger(currentUid) && executionRootStat.uid !== currentUid)
+    ) {
+      throw new Error("Execution snapshot root owner, mode, or symlink state is unsafe.");
+    }
+  }
+  const snapshotRoot = join(executionRoot, identityDigest);
+  mkdirSync(snapshotRoot, { mode: 0o700 });
+  const appRoot = join(snapshotRoot, "app");
+  const workerRoot = join(snapshotRoot, "worker");
+  try {
+    copyExecutionTree(preparedReleaseDir, appRoot);
+    copyExecutionTree(worker.artifactRoot, workerRoot);
+    const authorityRoot = join(workerRoot, "authority");
+    if (!existsSync(authorityRoot)) mkdirSync(authorityRoot, { mode: 0o700 });
+    const appDescriptorPath = copySnapshotAuthorityFile(
+      worker.appDescriptorPath,
+      join(authorityRoot, "app-descriptor.json"),
+    );
+    const expectedSchemaPath = copySnapshotAuthorityFile(
+      worker.expectedSchemaPath,
+      join(authorityRoot, "expected-schema.json"),
+    );
+    const manifestRelative = relative(
+      realpathSync(worker.artifactRoot),
+      realpathSync(worker.manifestPath),
+    );
+    if (manifestRelative.startsWith("..") || isAbsolute(manifestRelative)) {
+      throw new Error("Worker manifest escapes its artifact root.");
+    }
+    const manifestPath = resolve(workerRoot, manifestRelative);
+    if (digestExecutionTree(preparedReleaseDir) !== appSourceDigest
+      || digestExecutionTree(worker.artifactRoot) !== workerSourceDigest
+      || sha256Bytes(readFileSync(worker.appDescriptorPath)) !== appDescriptorSourceDigest
+      || sha256Bytes(readFileSync(worker.expectedSchemaPath)) !== expectedSchemaSourceDigest) {
+      throw new Error("Execution source drifted while the sealed snapshot was created.");
+    }
+    sealExecutionTree(appRoot);
+    sealExecutionTree(workerRoot);
+    const appDigest = digestExecutionTree(appRoot);
+    const workerDigest = digestExecutionTree(workerRoot);
+    const metadataPath = join(snapshotRoot, "evidence.json");
+    writeFileSync(metadataPath, JSON.stringify({
+      schema: EXECUTION_SNAPSHOT_SCHEMA,
+      app_digest: appDigest,
+      execution_snapshot_digest: identityDigest,
+      promotion_id: manifest.promotion_id,
+      release_sha: manifest.release_sha,
+      release_tree: manifest.release_tree,
+      worker_digest: workerDigest,
+    }, null, 2), { flag: "wx", mode: 0o600 });
+    chmodSync(metadataPath, 0o400);
+    chmodSync(snapshotRoot, 0o500);
+    const stat = lstatSync(snapshotRoot);
+    const appStat = lstatSync(appRoot);
+    const workerStat = lstatSync(workerRoot);
+    return verifyLocalMacProductionExecutionSnapshot({
+      schema: EXECUTION_SNAPSHOT_SCHEMA,
+      root: snapshotRoot,
+      appRoot,
+      workerRoot,
+      manifestPath,
+      appDescriptorPath,
+      expectedSchemaPath,
+      appDigest,
+      workerDigest,
+      digest: identityDigest,
+      dev: stat.dev,
+      ino: stat.ino,
+      uid: stat.uid,
+      appDev: appStat.dev,
+      appIno: appStat.ino,
+      workerDev: workerStat.dev,
+      workerIno: workerStat.ino,
+      metadataPath,
+      metadataDigest: sha256Bytes(readFileSync(metadataPath)),
+    });
+  } catch (error) {
+    throw error;
+  }
 }
 
 function lstatIfExists(path) {
@@ -1283,7 +1542,9 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
   }
   const workerPathAuthority = Object.fromEntries(workerPathFields.map((field) => [
     field,
-    requireAbsolutePath(value[field], `${label}.${field}`),
+    field.endsWith("_sha256") || field === "execution_snapshot_digest"
+      ? requireDigest(value[field], `${label}.${field}`)
+      : requireAbsolutePath(value[field], `${label}.${field}`),
   ]));
   return {
     schema: RUNNING_DESCRIPTOR_SCHEMA,
@@ -1602,7 +1863,9 @@ function releaseCompletedPromotionLock({ homeDir, lockToken }) {
  * Failures after lock acquisition intentionally retain the lock and partial state.
  */
 export async function promoteLocalMacProductionRelease({
+  afterLockedPreflight = (input) => void input,
   descriptorFault = (phase) => void phase,
+  finalWorkerProbe,
   getCurrentUid = () => process.getuid?.(),
   homeDir = process.env.HOME ?? "",
   installBundle,
@@ -1626,6 +1889,9 @@ export async function promoteLocalMacProductionRelease({
   }
   if (typeof preflightBundle !== "function") {
     throw new Error("Production release bundle preflight is not configured.");
+  }
+  if (typeof finalWorkerProbe !== "function") {
+    throw new Error("Final production worker probe is not configured.");
   }
 
   const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
@@ -1689,7 +1955,8 @@ export async function promoteLocalMacProductionRelease({
       "Current running release descriptor drift: release_sha does not equal manifest.previous_release_sha.",
     );
   }
-  const currentReleaseDir = join(paths.releaseRoot, initialRunning.descriptor.release_tag);
+  const currentReleaseDir = initialRunning.descriptor.execution_app_root
+    ?? join(paths.releaseRoot, initialRunning.descriptor.release_tag);
   const preflightContext = {
     currentDescriptor: initialRunning.descriptor,
     currentReleaseDir,
@@ -1777,6 +2044,30 @@ export async function promoteLocalMacProductionRelease({
     throw new Error("Production runtime bundle changed between initial and locked preflight.");
   }
 
+  const executionSnapshot = createLocalMacProductionExecutionSnapshot({
+    manifest,
+    preparedReleaseDir: lockedCandidate.releaseDir,
+    releaseRoot: paths.releaseRoot,
+    worker: lockedRuntimePreflight.worker,
+  });
+  const sealedRuntimePreflight = {
+    ...lockedRuntimePreflight,
+    worker: {
+      ...lockedRuntimePreflight.worker,
+      artifactRoot: executionSnapshot.workerRoot,
+      manifestPath: executionSnapshot.manifestPath,
+      appDescriptorPath: executionSnapshot.appDescriptorPath,
+      expectedSchemaPath: executionSnapshot.expectedSchemaPath,
+      appDescriptorSha256: sha256Bytes(readFileSync(executionSnapshot.appDescriptorPath)),
+      expectedSchemaSha256: sha256Bytes(readFileSync(executionSnapshot.expectedSchemaPath)),
+    },
+  };
+  afterLockedPreflight({
+    executionSnapshot,
+    preparedReleaseDir: lockedCandidate.releaseDir,
+  });
+  verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
+
   const mutationAuthority = validateLocalMacProductionMutationAuthority({
     command: "install",
     homeDir: realHomeDir,
@@ -1787,23 +2078,29 @@ export async function promoteLocalMacProductionRelease({
     verifyAttestation,
   });
   const installation = await installBundle({
+    executionSnapshot,
     homeDir: realHomeDir,
     lockToken: lock.lockToken,
     manifest,
     mutationAuthority,
-    preflight: lockedRuntimePreflight,
-    releaseDir: lockedCandidate.releaseDir,
+    preflight: sealedRuntimePreflight,
+    releaseDir: executionSnapshot.appRoot,
     rootDir: realRootDir,
+    verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
   });
-  const readiness = validateReadyReleaseBundle(await readinessProbe({
+  verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
+  let readiness = validateReadyReleaseBundle(await readinessProbe({
+    executionSnapshot,
     homeDir: realHomeDir,
     installation,
     manifest,
     mutationAuthority,
-    preflight: lockedRuntimePreflight,
-    releaseDir: lockedCandidate.releaseDir,
+    preflight: sealedRuntimePreflight,
+    releaseDir: executionSnapshot.appRoot,
     rootDir: realRootDir,
+    verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
   }), manifest);
+  verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
 
   const finalRunning = readRunningDescriptorSnapshot({
     currentUid,
@@ -1826,6 +2123,23 @@ export async function promoteLocalMacProductionRelease({
     expected: initialPrevious,
     label: "Previous running release descriptor",
   });
+  verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
+  const finalWorker = await finalWorkerProbe({
+    executionSnapshot,
+    homeDir: realHomeDir,
+    installation,
+    manifest,
+    mutationAuthority,
+    preflight: sealedRuntimePreflight,
+    releaseDir: executionSnapshot.appRoot,
+    rootDir: realRootDir,
+    verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
+  });
+  readiness = validateReadyReleaseBundle({
+    ...readiness,
+    youtube_worker: finalWorker,
+  }, manifest);
+  verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
   const promotedAt = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
   if (Number.isNaN(Date.parse(promotedAt))) {
     throw new Error("promotion timestamp is invalid.");
@@ -1839,14 +2153,16 @@ export async function promoteLocalMacProductionRelease({
     promotion_id: manifest.promotion_id,
     promoted_at: promotedAt,
     source_manifest_sha256: manifestDigest,
-    worker_artifact_root: lockedRuntimePreflight.worker.artifactRoot,
-    worker_manifest_path: lockedRuntimePreflight.worker.manifestPath,
-    worker_app_descriptor_path: lockedRuntimePreflight.worker.appDescriptorPath,
-    worker_config_path: lockedRuntimePreflight.worker.configPath,
-    worker_credential_path: lockedRuntimePreflight.worker.credentialPath,
-    worker_expected_schema_path: lockedRuntimePreflight.worker.expectedSchemaPath,
-    worker_policy_path: lockedRuntimePreflight.worker.policyPath,
-    worker_secret_root: lockedRuntimePreflight.worker.secretRoot,
+    execution_app_root: executionSnapshot.appRoot,
+    execution_snapshot_digest: executionSnapshot.digest,
+    worker_artifact_root: sealedRuntimePreflight.worker.artifactRoot,
+    worker_manifest_path: sealedRuntimePreflight.worker.manifestPath,
+    worker_artifact_sha256: finalWorker.artifactSha256,
+    worker_app_descriptor_sha256: finalWorker.appDescriptorSha256,
+    worker_config_sha256: finalWorker.configSha256,
+    worker_credential_sha256: finalWorker.credentialSha256,
+    worker_expected_schema_sha256: finalWorker.expectedSchemaSha256,
+    worker_policy_sha256: finalWorker.policySha256,
   });
   const previousBytes = Buffer.from(`${JSON.stringify(initialRunning.descriptor, null, 2)}\n`);
   const currentBytes = Buffer.from(`${JSON.stringify(currentDescriptor, null, 2)}\n`);
@@ -2011,7 +2327,7 @@ export async function promoteLocalMacProductionRelease({
     manifest,
     promoted: true,
     readiness,
-    release_dir: lockedCandidate.releaseDir,
+    release_dir: executionSnapshot.appRoot,
   };
 }
 

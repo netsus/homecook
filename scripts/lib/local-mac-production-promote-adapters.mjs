@@ -39,6 +39,7 @@ import {
   YOUTUBE_EXTRACTION_WORKER_INSTALL_CONFIRMATION,
 } from "./youtube-extraction-worker-ops.mjs";
 import {
+  sha256File,
   verifyYoutubeExtractionWorkerArtifact,
 } from "./youtube-extraction-worker-artifact.mjs";
 import {
@@ -145,6 +146,7 @@ export function assertCanonicalLocalMacProductionPlist({
 
 export function buildCanonicalCurrentYoutubeWorkerPlist({
   currentDescriptor,
+  digestFile = sha256File,
   options,
   renderWorkerPlist = renderYoutubeExtractionWorkerPlist,
 }) {
@@ -153,17 +155,31 @@ export function buildCanonicalCurrentYoutubeWorkerPlist({
   if (typeof artifactRoot !== "string" || typeof manifestPath !== "string") {
     throw new Error("Current descriptor is missing worker artifact path authority.");
   }
+  const appDescriptorPath = resolve(artifactRoot, "authority", "app-descriptor.json");
+  const expectedSchemaPath = resolve(artifactRoot, "authority", "expected-schema.json");
+  for (const [path, expectedDigest, label] of [
+    [manifestPath, currentDescriptor.worker_artifact_sha256, "artifact"],
+    [appDescriptorPath, currentDescriptor.worker_app_descriptor_sha256, "app descriptor"],
+    [options.workerConfigPath, currentDescriptor.worker_config_sha256, "config"],
+    [options.workerCredentialPath, currentDescriptor.worker_credential_sha256, "credential"],
+    [expectedSchemaPath, currentDescriptor.worker_expected_schema_sha256, "schema"],
+    [options.workerPolicyPath, currentDescriptor.worker_policy_sha256, "policy"],
+  ]) {
+    if (typeof expectedDigest !== "string" || digestFile(path) !== expectedDigest) {
+      throw new Error(`Current worker ${label} digest drifted.`);
+    }
+  }
   return renderWorkerPlist({
-    appDescriptorPath: currentDescriptor.worker_app_descriptor_path,
-    configPath: currentDescriptor.worker_config_path,
-    credentialPath: currentDescriptor.worker_credential_path,
-    currentPolicyPath: currentDescriptor.worker_policy_path,
-    expectedSchemaPath: currentDescriptor.worker_expected_schema_path,
+    appDescriptorPath,
+    configPath: options.workerConfigPath,
+    credentialPath: options.workerCredentialPath,
+    currentPolicyPath: options.workerPolicyPath,
+    expectedSchemaPath,
     homeDir: options.homeDir,
     manifestPath,
     nodeBin: options.nodeBin,
     rootDir: artifactRoot,
-    secretRoot: currentDescriptor.worker_secret_root,
+    secretRoot: options.workerSecretRoot,
   });
 }
 
@@ -358,6 +374,12 @@ const WORKER_PATH_AUTHORITY_FIELDS = Object.freeze([
   "expectedSchemaPath",
   "policyPath",
   "secretRoot",
+  "artifactSha256",
+  "appDescriptorSha256",
+  "configSha256",
+  "credentialSha256",
+  "expectedSchemaSha256",
+  "policySha256",
 ]);
 
 function assertWorkerPathAuthority(worker) {
@@ -372,7 +394,17 @@ function assertWorkerPathAuthority(worker) {
   ]));
 }
 
-function buildDefaultDependencies() {
+function verifySealedExecutionContext(context) {
+  if (
+    typeof context?.verifyExecutionSnapshot !== "function"
+    || !context.executionSnapshot
+  ) {
+    throw new Error("Sealed execution snapshot verifier is not configured.");
+  }
+  return context.verifyExecutionSnapshot(context.executionSnapshot);
+}
+
+function buildDefaultDependencies(commandRunner = spawnSync) {
   return {
     validateMutationTargets: ({ options }) => {
       const currentUid = process.getuid?.();
@@ -430,6 +462,12 @@ function buildDefaultDependencies() {
         expectedSchemaPath: realpathSync(options.workerExpectedSchemaPath),
         policyPath: realpathSync(options.workerPolicyPath),
         secretRoot: realpathSync(options.workerSecretRoot),
+        artifactSha256: inputs.workerArtifact.artifact_sha256,
+        appDescriptorSha256: sha256File(options.workerAppDescriptorPath),
+        configSha256: sha256File(options.workerConfigPath),
+        credentialSha256: sha256File(options.workerCredentialPath),
+        expectedSchemaSha256: sha256File(options.workerExpectedSchemaPath),
+        policySha256: sha256File(options.workerPolicyPath),
         i031Preflight,
         inputs,
         preflight,
@@ -559,13 +597,20 @@ function buildDefaultDependencies() {
       const workerArtifact = verifyYoutubeExtractionWorkerArtifact(workerManifestPath, {
         allowLegacyReleaseSha: legacyBootstrap ? context.currentDescriptor.release_sha : null,
       });
-      const currentWorkerPaths = {
+      const currentWorkerPaths = legacyBootstrap ? {
         appDescriptorPath: argumentValue(workerPlist.args, "--app-descriptor"),
         workerArtifactPath: workerManifestPath,
         currentPolicyPath: argumentValue(workerPlist.args, "--policy"),
         credentialPath: argumentValue(workerPlist.args, "--credential"),
         expectedSchemaPath: argumentValue(workerPlist.args, "--expected-schema"),
         secretRoot: argumentValue(workerPlist.args, "--secret-root"),
+      } : {
+        appDescriptorPath: resolve(workerArtifactRoot, "authority", "app-descriptor.json"),
+        workerArtifactPath: workerManifestPath,
+        currentPolicyPath: options.workerPolicyPath,
+        credentialPath: options.workerCredentialPath,
+        expectedSchemaPath: resolve(workerArtifactRoot, "authority", "expected-schema.json"),
+        secretRoot: options.workerSecretRoot,
       };
       if (Object.values(currentWorkerPaths).some((value) => !value)) {
         throw new Error("Current worker plist runtime paths are incomplete.");
@@ -652,7 +697,7 @@ function buildDefaultDependencies() {
     },
 
     startFullLocal: ({ context, options }) => {
-      const result = spawnSync(options.nodeBin, [
+      const result = commandRunner(options.nodeBin, [
         resolve(context.releaseDir, "scripts", "full-local-production-runtime.mjs"),
         "start",
         "--config",
@@ -663,6 +708,14 @@ function buildDefaultDependencies() {
         context.manifest.release_manifest_path,
         "--lock-token",
         context.lockToken,
+        "--bundle",
+        options.bundlePath,
+        "--subject-manifest",
+        options.subjectManifestPath,
+        "--trusted-root",
+        options.trustedRootPath,
+        "--authority-root",
+        context.rootDir,
       ], {
         cwd: context.releaseDir,
         encoding: "utf8",
@@ -715,19 +768,24 @@ function buildDefaultDependencies() {
 
     readFullLocalWorkloadIdentity: readFullLocalWorkloadDefault,
 
-    readWorkerRuntimeIdentity: async ({ context, options, preflight }) => {
+    readWorkerRuntimeIdentity: async ({
+      context,
+      options,
+      preflight,
+      requirePolicyEnabled = false,
+    }) => {
       const userId = preflight.worker.userId;
       assertCanonicalLocalMacProductionPlist({
         actualPath: getYoutubeExtractionWorkerPaths(context.homeDir).plistPath,
         currentUid: userId,
         expectedContent: renderYoutubeExtractionWorkerPlist({
-          appDescriptorPath: options.workerAppDescriptorPath,
+          appDescriptorPath: preflight.worker.appDescriptorPath,
           configPath: options.workerConfigPath,
           credentialPath: options.workerCredentialPath,
           currentPolicyPath: options.workerPolicyPath,
-          expectedSchemaPath: options.workerExpectedSchemaPath,
+          expectedSchemaPath: preflight.worker.expectedSchemaPath,
           homeDir: context.homeDir,
-          manifestPath: options.workerManifestPath,
+          manifestPath: preflight.worker.manifestPath,
           nodeBin: options.nodeBin,
           rootDir: preflight.worker.artifactRoot,
           secretRoot: options.workerSecretRoot,
@@ -754,7 +812,39 @@ function buildDefaultDependencies() {
       if (readProcessCwd({ pid: status.pid }) !== preflight.worker.artifactRoot) {
         throw new Error("Promoted worker runtime artifact root drifted.");
       }
-      const artifact = verifyYoutubeExtractionWorkerArtifact(options.workerManifestPath);
+      const finalInputs = loadYoutubeExtractionWorkerRuntimeInputs({
+        appDescriptorPath: preflight.worker.appDescriptorPath,
+        workerArtifactPath: preflight.worker.manifestPath,
+        currentPolicyPath: options.workerPolicyPath,
+        credentialPath: options.workerCredentialPath,
+        expectedSchemaPath: preflight.worker.expectedSchemaPath,
+        secretRoot: options.workerSecretRoot,
+      });
+      const finalPreflight = evaluateYoutubeExtractionWorkerPreflight({
+        ...finalInputs,
+        requirePolicyEnabled,
+      });
+      if (!finalPreflight.ready) {
+        throw new Error("Final worker release preflight failed closed.");
+      }
+      const finalDigests = {
+        artifactSha256: finalInputs.workerArtifact.artifact_sha256,
+        appDescriptorSha256: sha256File(preflight.worker.appDescriptorPath),
+        configSha256: sha256File(options.workerConfigPath),
+        credentialSha256: sha256File(options.workerCredentialPath),
+        expectedSchemaSha256: sha256File(preflight.worker.expectedSchemaPath),
+        policySha256: sha256File(options.workerPolicyPath),
+      };
+      for (const [field, digest] of Object.entries(finalDigests)) {
+        if (preflight.worker[field] !== digest) {
+          throw new Error(`Final worker ${field} drifted after installation.`);
+        }
+      }
+      const finalI031Preflight = await readI031PreflightDefault(options, userId);
+      if (finalI031Preflight.ready !== true) {
+        throw new Error("Final worker i031 preflight failed.");
+      }
+      const artifact = verifyYoutubeExtractionWorkerArtifact(preflight.worker.manifestPath);
       return {
         release_sha: artifact.release_sha,
         release_tree: artifact.release_tree,
@@ -762,15 +852,19 @@ function buildDefaultDependencies() {
         promotion_id: artifact.promotion_id,
         pid: status.pid,
         ready: true,
+        final_preflight: finalPreflight,
+        i031_preflight: finalI031Preflight,
+        ...finalDigests,
       };
     },
   };
 }
 
 export function createLocalMacProductionPromoteAdapters(options, dependencies = {}) {
+  const { commandRunner = spawnSync, ...dependencyOverrides } = dependencies;
   const resolvedDependencies = {
-    ...buildDefaultDependencies(),
-    ...dependencies,
+    ...buildDefaultDependencies(commandRunner),
+    ...dependencyOverrides,
   };
   const validateMutationTargets = requireFunction(
     resolvedDependencies.validateMutationTargets,
@@ -849,9 +943,12 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
 
     installBundle: async ({ preflight, ...context }) => {
       assertWorkerPathAuthority(preflight?.worker);
+      verifySealedExecutionContext(context);
       startFullLocal({ context, options, preflight });
+      verifySealedExecutionContext(context);
       const confirmedFullLocal = await confirmFullLocalCandidate({ context, options, preflight });
       assertExactIdentity("full_local", confirmedFullLocal, context.manifest);
+      verifySealedExecutionContext(context);
       const fullLocal = installFullLocal({
         configPath: options.fullLocalConfigPath,
         homeDir: context.homeDir,
@@ -860,22 +957,24 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
         runtimeCommand: "status",
         rootDir: context.releaseDir,
       });
+      verifySealedExecutionContext(context);
       const app = installApp({
         homeDir: context.homeDir,
         mutationAuthority: context.mutationAuthority,
         nodeBin: options.nodeBin,
         rootDir: context.releaseDir,
       });
+      verifySealedExecutionContext(context);
       const worker = installWorker({
-        appDescriptorPath: options.workerAppDescriptorPath,
+        appDescriptorPath: preflight.worker.appDescriptorPath,
         configPath: options.workerConfigPath,
         confirmation: options.confirmation,
         credentialPath: options.workerCredentialPath,
         currentPolicyPath: options.workerPolicyPath,
-        expectedSchemaPath: options.workerExpectedSchemaPath,
+        expectedSchemaPath: preflight.worker.expectedSchemaPath,
         homeDir: context.homeDir,
         i031Preflight: preflight.worker.i031Preflight,
-        manifestPath: options.workerManifestPath,
+        manifestPath: preflight.worker.manifestPath,
         mutationAuthority: context.mutationAuthority,
         nodeBin: options.nodeBin,
         rootDir: preflight.worker.artifactRoot,
@@ -886,9 +985,17 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
     },
 
     readinessProbe: async ({ preflight, ...context }) => {
+      verifySealedExecutionContext(context);
       const app = await readAppRuntimeIdentity({ context, options, preflight });
+      verifySealedExecutionContext(context);
       const fullLocal = await readFullLocalWorkloadIdentity({ context, options, preflight });
-      const worker = await readWorkerRuntimeIdentity({ context, options, preflight });
+      verifySealedExecutionContext(context);
+      const worker = await readWorkerRuntimeIdentity({
+        context,
+        options,
+        preflight,
+        requirePolicyEnabled: false,
+      });
       if (
         fullLocal.runtime_present !== true
         || fullLocal.healthy !== true
@@ -905,6 +1012,16 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
         assertExactIdentity(component, state, context.manifest);
       }
       return { app, full_local: fullLocal, youtube_worker: worker };
+    },
+
+    finalWorkerProbe: async ({ preflight, ...context }) => {
+      verifySealedExecutionContext(context);
+      return readWorkerRuntimeIdentity({
+        context,
+        options,
+        preflight,
+        requirePolicyEnabled: true,
+      });
     },
   };
 }

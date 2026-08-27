@@ -668,7 +668,7 @@ export function verifyLocalMacProductionPrerequisites({
 }
 
 function runLaunchctl(args, spawn) {
-  const result = spawn("launchctl", args, { encoding: "utf8" });
+  const result = spawn("/bin/launchctl", args, { encoding: "utf8" });
   if (result.status !== 0) {
     const details = `${result.stderr ?? ""}\n${result.stdout ?? ""}`.trim();
     throw new Error(details || `launchctl ${args.join(" ")} failed.`);
@@ -789,7 +789,7 @@ export function installLocalMacProductionLaunchAgent({
   writeFileSync(paths.plistPath, plist, { mode: 0o644 });
   chmodSync(paths.plistPath, 0o644);
 
-  spawn("launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
+  spawn("/bin/launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
     encoding: "utf8",
   });
   runLaunchctl(["bootstrap", `gui/${uid}`, paths.plistPath], spawn);
@@ -816,7 +816,7 @@ export function readLocalMacProductionStatus({
   }
 
   const serviceTarget = `gui/${uid}/${LOCAL_MAC_PRODUCTION_LABEL}`;
-  const result = spawn("launchctl", ["print", serviceTarget], {
+  const result = spawn("/bin/launchctl", ["print", serviceTarget], {
     encoding: "utf8",
   });
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
@@ -1000,7 +1000,7 @@ export function uninstallLocalMacProductionLaunchAgent({
   }
 
   const paths = getLocalMacProductionPaths(homeDir);
-  const result = spawn("launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
+  const result = spawn("/bin/launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
     encoding: "utf8",
   });
   if (result.status !== 0 && existsSync(paths.plistPath)) {
