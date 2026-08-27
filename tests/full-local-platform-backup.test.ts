@@ -51,6 +51,23 @@ afterEach(() => {
 });
 
 describe("full-local platform backup boundary", () => {
+  it("counts only canonical auth and storage catalog relations", async () => {
+    const backupModule = await import(
+      "@/scripts/lib/full-local-platform-backup.mjs"
+    ) as Record<string, unknown>;
+    const countCatalog = backupModule.countPlatformServiceSchemaCatalog as
+      | ((rawCatalog: string) => number)
+      | undefined;
+
+    expect(countCatalog).toBeTypeOf("function");
+    expect(countCatalog?.(JSON.stringify([
+      { schema_name: "auth", relation_name: "users" },
+      { schema_name: "storage", relation_name: "objects" },
+    ]))).toBe(2);
+    expect(() => countCatalog?.("{}"))
+      .toThrow(/schema catalog/iu);
+  });
+
   it("keeps the Supabase CLI local dump adapter isolated-fixture only", () => {
     const commands = buildPlatformDumpCommands("/tmp/homecook-platform-backup");
 
@@ -464,6 +481,25 @@ describe("full-local platform backup boundary", () => {
     expect(runtimeCli).toContain("platformBackupAuthenticationPath(manifestPath)");
     expect(backupCli).toContain("verifyPlatformBackupAuthentication");
     expect(backupCli).toContain("platformBackupAuthenticationPath(restoreManifestPath)");
+  });
+
+  it("recognizes the authenticated off-Mac copy command before Keychain access", () => {
+    const root = mkdtempSync(join(tmpdir(), "homecook-off-mac-copy-command-"));
+    temporaryDirectories.push(root);
+    const result = spawnSync(process.execPath, [
+      "scripts/full-local-platform-backup.mjs",
+      "copy-off-mac",
+      "--confirm-off-mac-copy",
+      "OFF_MAC_COPY_VERIFIED",
+      "--archive",
+      join(root, "missing.tar.gz.enc"),
+      "--output",
+      join(root, "copy.tar.gz.enc"),
+    ], { cwd: process.cwd(), encoding: "utf8" });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/--archive.*existing file/iu);
+    expect(result.stderr).not.toMatch(/Unknown command|Keychain/iu);
   });
 
   it("rejects a symbolic-link readiness archive before config, Keychain, or digest access", () => {

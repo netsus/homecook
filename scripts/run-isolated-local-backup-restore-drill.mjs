@@ -18,7 +18,10 @@ import {
   buildDockerStorageVolumeCaptureInvocation,
   buildDockerStorageVolumeRestoreInvocation,
   buildPlatformBackupAuthentication,
+  buildPlatformServiceSchemaCatalogSql,
   createEncryptedPlatformBackup,
+  countPlatformServiceSchemaCatalog,
+  digestPlatformServiceSchemaCatalog,
   PINNED_SUPABASE_CLI_VERSION,
   platformBackupAuthenticationPath,
   listStoragePayloadPaths,
@@ -35,11 +38,11 @@ import {
   verifyIsolatedKeychainRegistration,
 } from "./lib/full-local-backup-key-recovery.mjs";
 import { fullLocalBackupMetadataSha256 } from "./lib/full-local-backup-readiness.mjs";
+import { fullLocalImageRefsForPlatform } from "./lib/full-local-production-runtime.mjs";
 import {
   buildRestoreManifestPayload,
   buildRestoredSemanticManifestSummary,
-  fullLocalImageRefsForPlatform,
-} from "./lib/full-local-production-runtime.mjs";
+} from "./full-local-production-runtime.mjs";
 import {
   makePostgresRoleDumpIdempotent,
   selectFullLocalProductionResources,
@@ -251,15 +254,15 @@ function storageRows(container) {
 function fixtureDatabaseProvenance(resources) {
   const catalog = database(
     resources.postgresContainerId,
-    "select nspname from pg_namespace order by nspname;",
+    buildPlatformServiceSchemaCatalogSql(),
     "Isolated schema catalog provenance failed",
   );
   const identity = database(
     resources.postgresContainerId,
-    "select current_database(), current_setting('server_version_num'), count(*) from pg_namespace;",
+    "select current_database(), current_setting('server_version_num');",
     "Isolated database identity provenance failed",
   ).trim().split("|");
-  if (identity.length !== 3 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
+  if (identity.length !== 2 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
     throw new Error("Isolated database identity provenance is invalid");
   }
   return {
@@ -269,8 +272,8 @@ function fixtureDatabaseProvenance(resources) {
     database: identity[0],
     image: resources.postgresImage,
     postgres_volume: resources.postgresVolumeName,
-    schema_catalog_sha256: createHash("sha256").update(catalog, "utf8").digest("hex"),
-    schema_count: Number(identity[2]),
+    schema_catalog_sha256: digestPlatformServiceSchemaCatalog(catalog.trim()),
+    schema_count: countPlatformServiceSchemaCatalog(catalog.trim()),
     server_version_num: identity[1],
   };
 }
@@ -364,21 +367,21 @@ function seedBootstrapSchemaCollision(container) {
 function databaseMetadata(container) {
   const catalog = database(
     container,
-    "select nspname from pg_namespace order by nspname;",
+    buildPlatformServiceSchemaCatalogSql(),
     "Isolated restored schema catalog verification failed",
   );
   const identity = database(
     container,
-    "select current_database(), current_setting('server_version_num'), count(*) from pg_namespace;",
+    "select current_database(), current_setting('server_version_num');",
     "Isolated restored database identity verification failed",
   ).trim().split("|");
-  if (identity.length !== 3 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
+  if (identity.length !== 2 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
     throw new Error("Isolated restored database identity is invalid");
   }
   return Object.freeze({
     database: identity[0],
-    schema_catalog_sha256: createHash("sha256").update(catalog, "utf8").digest("hex"),
-    schema_count: Number(identity[2]),
+    schema_catalog_sha256: digestPlatformServiceSchemaCatalog(catalog.trim()),
+    schema_count: countPlatformServiceSchemaCatalog(catalog.trim()),
     server_version_num: identity[1],
   });
 }
@@ -943,8 +946,8 @@ async function executeDrill() {
       const recoveryManifest = signFullLocalBackupKeyRecoveryEvidence({
         evidence: {
           archive_device_id: externalArchiveOptions.archive_device_id,
-          archive_sha256: restoreManifest.archive_sha256,
-          clean_restore_verified: restoreManifest.clean_restore_verified,
+          archive_sha256: restoreManifest.source_archive_sha256,
+          clean_restore_verified: restoreManifest.fresh_target_attested,
           created_at: new Date().toISOString(),
           escrow_device_id: externalArchiveOptions.replacement_device_id,
           escrow_envelope_path: externalArchiveOptions.escrow_envelope,
@@ -955,7 +958,7 @@ async function executeDrill() {
             recoveryContext.keychain_receipt.key_sha256
               === createHash("sha256").update(restoreKey).digest("hex"),
           keychain_registration: recoveryContext.keychain_receipt,
-          restored_metadata_sha256: restoreManifest.metadata_sha256,
+          restored_metadata_sha256: fullLocalBackupMetadataSha256(authenticatedMetadata),
           restore_manifest_path: restoreArtifact.path,
           restore_manifest_sha256: createHash("sha256")
             .update(restoreArtifact.bytes)
