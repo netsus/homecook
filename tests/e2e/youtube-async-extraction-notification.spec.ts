@@ -16,6 +16,10 @@ const EVIDENCE_ROOT = path.resolve(
 );
 const IMPORT_EVIDENCE = path.join(EVIDENCE_ROOT, "YT_IMPORT_BACKGROUND");
 const SHELL_EVIDENCE = path.join(EVIDENCE_ROOT, "APP_SHELL_YOUTUBE_NOTIFICATIONS");
+const TRUTHFUL_PROGRESS_EVIDENCE = path.resolve(
+  process.cwd(),
+  "ui/designs/evidence/youtube-extraction-truthful-progress-eta/YT_IMPORT_BACKGROUND",
+);
 const YOUTUBE_URL = "https://www.youtube.com/watch?v=abcdefghijk";
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
 const RETRY_JOB_ID = "44444444-4444-4444-8444-444444444444";
@@ -31,6 +35,9 @@ type ImportMode =
   | "offline"
   | "policy-changed"
   | "planner-success"
+  | "progress-delayed"
+  | "progress-pending"
+  | "progress-range"
   | "review"
   | "submitting";
 
@@ -300,14 +307,49 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
   await page.route(`**/api/v1/recipes/youtube/extraction-jobs/${JOB_ID}`, async (route) => {
     const retryableFailure = mode === "accepted-retry";
     const plannerSuccess = mode === "planner-success";
+    const progressMode = mode.startsWith("progress-");
+    const progress = mode === "progress-pending"
+      ? {
+          attempt: 1,
+          stage: "model_analysis",
+          confirmed_percent: 65,
+          updated_at: "2026-08-27T10:00:00.000Z",
+          remaining_seconds_low: null,
+          remaining_seconds_high: null,
+          estimate_confidence: null,
+          delayed: false,
+        }
+      : mode === "progress-delayed"
+        ? {
+            attempt: 1,
+            stage: "finalizing",
+            confirmed_percent: 90,
+            updated_at: "2026-08-27T10:01:00.000Z",
+            remaining_seconds_low: null,
+            remaining_seconds_high: null,
+            estimate_confidence: null,
+            delayed: true,
+          }
+        : mode === "progress-range"
+          ? {
+              attempt: 2,
+              stage: "source_fetch",
+              confirmed_percent: 10,
+              updated_at: "2026-08-27T10:02:00.000Z",
+              remaining_seconds_low: 120,
+              remaining_seconds_high: 240,
+              estimate_confidence: "medium",
+              delayed: false,
+            }
+          : null;
     await route.fulfill({
       json: {
         success: true,
         data: {
           job_id: JOB_ID,
-          status: retryableFailure ? "failed" : plannerSuccess ? "succeeded" : "queued",
+          status: retryableFailure ? "failed" : plannerSuccess ? "succeeded" : progressMode ? "processing" : "queued",
           submitted_at: submittedAt,
-          started_at: retryableFailure || plannerSuccess ? "2026-08-14T01:00:01.000Z" : null,
+          started_at: retryableFailure || plannerSuccess || progressMode ? "2026-08-14T01:00:01.000Z" : null,
           completed_at: retryableFailure || plannerSuccess ? "2026-08-14T01:03:00.000Z" : null,
           result: plannerSuccess ? {
             extraction_id: EXTRACTION_ID,
@@ -321,6 +363,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
             retryable: true,
           } : null,
           can_retry: retryableFailure,
+          progress,
         },
         error: null,
       },
@@ -339,6 +382,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
           result: null,
           error: null,
           can_retry: false,
+          progress: null,
         },
         error: null,
       },
@@ -457,6 +501,7 @@ function rectanglesAreDisjoint(
 test.beforeAll(async () => {
   await mkdir(IMPORT_EVIDENCE, { recursive: true });
   await mkdir(SHELL_EVIDENCE, { recursive: true });
+  await mkdir(TRUTHFUL_PROGRESS_EVIDENCE, { recursive: true });
 });
 
 test("import initial and submitting states are visually explicit", async ({ page }, testInfo) => {
@@ -706,6 +751,70 @@ test("async enqueue is immediately escapable and visually stable at 390", async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await leave.click();
   await expect(page).toHaveURL(/\/$/u);
+});
+
+test("truthful progress restores the confirmed stage without inventing an ETA", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openImport(page, "progress-pending", 390, 844, "standalone");
+
+  const progressbar = page.getByRole("progressbar", {
+    name: "유튜브 레시피 추출 진행 상태",
+  });
+  await expect(progressbar).toHaveAttribute("aria-valuenow", "65");
+  await expect(progressbar).toHaveAttribute("aria-valuetext", /장면에서 레시피를 분석하는 중/u);
+  await expect(page.getByText("예상 시간 계산 중")).toBeVisible();
+  await expect(page.getByText("예상 소요 시간 약 1~3분")).toHaveCount(0);
+  const reducedMotionTargets = [
+    page.locator("[data-youtube-extraction-accepted] svg"),
+    page.locator("[data-youtube-progress-segment='레시피 분석']"),
+    page.getByRole("status").locator("span").first(),
+  ];
+  for (const target of reducedMotionTargets) {
+    await expect(target).toHaveCSS("animation-name", "none");
+  }
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(TRUTHFUL_PROGRESS_EVIDENCE, "mobile-390-model-analysis.png"),
+    true,
+  );
+
+  await page.reload();
+  await expect(progressbar).toHaveAttribute("aria-valuenow", "65");
+  await expect(page.getByText("예상 시간 계산 중")).toBeVisible();
+});
+
+test("delayed progress remains readable and escapable at 320", async ({ page }, testInfo) => {
+  await openImport(page, "progress-delayed", 320, 844, "standalone");
+
+  await expect(page.locator("[data-youtube-progress-current-label]")).toHaveText("결과 정리");
+  await expect(page.getByText("예상보다 오래 걸리고 있어요. 추출은 계속 진행 중이에요.")).toBeVisible();
+  await expect(page.getByText(/약 \d+~\d+분 남음/u)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "나가기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "작업 보기" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(TRUTHFUL_PROGRESS_EVIDENCE, "mobile-320-delayed.png"),
+    true,
+  );
+});
+
+test("promoted range and retry attempt remain compact on desktop", async ({ page }, testInfo) => {
+  await openImport(page, "progress-range", 1280, 800, "standalone");
+
+  await expect(page.getByText("다시 분석 중 (2/3)")).toBeVisible();
+  await expect(page.getByText("약 2~4분 남음")).toBeVisible();
+  await expect(page.getByRole("progressbar", {
+    name: "유튜브 레시피 추출 진행 상태",
+  })).toHaveAttribute("aria-valuenow", "10");
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(TRUTHFUL_PROGRESS_EVIDENCE, "desktop-1280-source-fetch-retry.png"),
+    true,
+  );
 });
 
 test("accepted actions remain reachable at 320 and 200% in a keyboard-reduced safe area", async ({ page }, testInfo) => {
