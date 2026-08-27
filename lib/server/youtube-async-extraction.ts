@@ -1,6 +1,12 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { buildCanonicalYoutubeUrl, normalizeYoutubeUrl } from "@/lib/youtube-url";
+import {
+  YOUTUBE_EXTRACTION_ETA_V1,
+  projectYoutubeExtractionProgress,
+  type YoutubeExtractionEtaModel,
+  type YoutubeExtractionProgressSnapshot,
+} from "@/lib/server/youtube-extraction-progress";
 
 type RuntimeEnv = Readonly<Record<string, string | undefined>>;
 
@@ -215,6 +221,7 @@ export interface YoutubeExtractionJobProjectionRow {
   started_at: string | null;
   completed_at: string | null;
   error_code: string | null;
+  progress?: YoutubeExtractionProgressSnapshot | null;
   extraction_session?: ExtractionSessionProjectionRow | null;
   [key: string]: unknown;
 }
@@ -222,6 +229,7 @@ export interface YoutubeExtractionJobProjectionRow {
 export function projectYoutubeExtractionJob(
   row: YoutubeExtractionJobProjectionRow,
   now = new Date(),
+  etaModel: YoutubeExtractionEtaModel = YOUTUBE_EXTRACTION_ETA_V1,
 ) {
   const session = row.extraction_session ?? null;
   const consumed = row.status === "succeeded"
@@ -265,6 +273,12 @@ export function projectYoutubeExtractionJob(
     result,
     error,
     can_retry: error?.retryable === true,
+    progress: projectYoutubeExtractionProgress({
+      status,
+      snapshot: row.progress ?? null,
+      now,
+      etaModel,
+    }),
   };
 }
 

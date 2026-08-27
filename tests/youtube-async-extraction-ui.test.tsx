@@ -107,6 +107,7 @@ describe("YT_IMPORT async extraction", () => {
         result: null,
         error: null,
         can_retry: false,
+        progress: null,
       },
       error: null,
     });
@@ -185,6 +186,7 @@ describe("YT_IMPORT async extraction", () => {
         result: null,
         error: null,
         can_retry: false,
+        progress: null,
       },
       error: null,
     });
@@ -217,6 +219,7 @@ describe("YT_IMPORT async extraction", () => {
         result: null,
         error: null,
         can_retry: false,
+        progress: null,
       },
       error: null,
     });
@@ -248,6 +251,7 @@ describe("YT_IMPORT async extraction", () => {
         result: null,
         error: null,
         can_retry: false,
+        progress: null,
       },
       error: null,
     });
@@ -496,6 +500,7 @@ describe("YT_IMPORT async extraction", () => {
         },
         error: null,
         can_retry: false,
+        progress: null,
       },
       error: null,
     });
@@ -536,6 +541,7 @@ describe("YT_IMPORT async extraction", () => {
         },
         error: null,
         can_retry: false,
+        progress: null,
       },
       error: null,
     });
@@ -603,6 +609,7 @@ describe("YT_IMPORT async extraction", () => {
           retryable: true,
         },
         can_retry: true,
+        progress: null,
       },
       error: null,
     });
@@ -640,6 +647,7 @@ describe("YT_IMPORT async extraction", () => {
           retryable: true,
         },
         can_retry: true,
+        progress: null,
       },
       error: null,
     });
@@ -697,6 +705,7 @@ describe("YT_IMPORT async extraction", () => {
           result: null,
           error: null,
           can_retry: false,
+          progress: null,
         },
         error: null,
       }));
@@ -718,6 +727,7 @@ describe("YT_IMPORT async extraction", () => {
           retryable: true,
         },
         can_retry: true,
+        progress: null,
       },
       error: null,
     }));
@@ -768,6 +778,7 @@ describe("YT_IMPORT async extraction", () => {
         result: null,
         error: { code: "QUOTA_EXCEEDED", message: quotaMessage, retryable: true },
         can_retry: true,
+        progress: null,
       },
       error: null,
     });

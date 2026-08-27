@@ -133,6 +133,7 @@ describe("YTASYNC-CONTRACT/API", () => {
       },
       error: null,
       can_retry: false,
+      progress: null,
     });
   });
 
@@ -387,6 +388,57 @@ describe("YTASYNC-API route handlers", () => {
     expect((await response.json()).error).toMatchObject({
       code: "JOB_NOT_FOUND",
       fields: [],
+    });
+  });
+
+  it("returns the exact nine-key status data with stage-only progress before ETA promotion", async () => {
+    const { handlers } = buildHandlers({
+      readJob: vi.fn(async () => ({
+        id: "11111111-1111-4111-8111-111111111111",
+        youtube_video_id: "abc123DEF45",
+        status: "processing",
+        created_at: "2026-08-27T00:00:00.000Z",
+        started_at: "2026-08-27T00:00:01.000Z",
+        completed_at: null,
+        error_code: null,
+        progress: {
+          attempt: 1,
+          stage: "frame_extraction",
+          stage_started_at: "2026-08-27T00:00:10.000Z",
+          updated_at: "2026-08-27T00:00:20.000Z",
+          video_duration_seconds: 90,
+        },
+      })),
+      now: vi.fn(() => new Date("2026-08-27T00:00:30.000Z")),
+    });
+
+    const response = await handlers.status(
+      new Request("http://localhost"),
+      "11111111-1111-4111-8111-111111111111",
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(Object.keys(body.data).sort()).toEqual([
+      "can_retry",
+      "completed_at",
+      "error",
+      "job_id",
+      "progress",
+      "result",
+      "started_at",
+      "status",
+      "submitted_at",
+    ]);
+    expect(body.data.progress).toEqual({
+      attempt: 1,
+      stage: "frame_extraction",
+      confirmed_percent: 45,
+      updated_at: "2026-08-27T00:00:20.000Z",
+      remaining_seconds_low: null,
+      remaining_seconds_high: null,
+      estimate_confidence: null,
+      delayed: false,
     });
   });
 
