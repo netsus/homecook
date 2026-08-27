@@ -804,17 +804,18 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     const desiredPath = ".github/rulesets/production-release-master.json";
     const absolutePath = join(immutableFixtureRoot, desiredPath);
     const original = readFileSync(absolutePath, "utf8");
-    const weakened = JSON.parse(original);
-    const weakenedPullRequest = weakened.rules.find((rule: { type?: string }) =>
+    const drifted = JSON.parse(original);
+    const driftedPullRequest = drifted.rules.find((rule: { type?: string }) =>
       rule.type === "pull_request");
-    weakenedPullRequest.parameters.required_approving_review_count = 0;
-    weakenedPullRequest.parameters.require_last_push_approval = false;
+    driftedPullRequest.parameters.dismiss_stale_reviews_on_push = true;
+    driftedPullRequest.parameters.required_approving_review_count = 1;
+    driftedPullRequest.parameters.require_last_push_approval = true;
     const run = runExecute({
       state: initialState({
         desired_worktree_original: original,
         desired_worktree_race: true,
         desired_worktree_race_path: desiredPath,
-        desired_worktree_weakened: JSON.stringify(weakened, null, 2),
+        desired_worktree_weakened: JSON.stringify(drifted, null, 2),
       }),
     });
     expect(run.result.status, run.combined).toBe(0);
@@ -826,8 +827,9 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       type?: string;
     }>).find((rule) => rule.type === "pull_request");
     expect(appliedPullRequest?.parameters).toMatchObject({
-      require_last_push_approval: true,
-      required_approving_review_count: 1,
+      dismiss_stale_reviews_on_push: false,
+      require_last_push_approval: false,
+      required_approving_review_count: 0,
     });
     expect(readFileSync(absolutePath, "utf8")).toBe(original);
   }, 15_000);
@@ -1814,11 +1816,11 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     const firstPullRequest = firstMaster.rules.find((rule) => rule.type === "pull_request");
     expect(firstPullRequest?.parameters).toMatchObject({
       allowed_merge_methods: ["merge", "squash", "rebase"],
-      dismiss_stale_reviews_on_push: true,
+      dismiss_stale_reviews_on_push: false,
       require_code_owner_review: false,
       require_extra_approval_for_unattributed_changes: true,
-      require_last_push_approval: true,
-      required_approving_review_count: 1,
+      require_last_push_approval: false,
+      required_approving_review_count: 0,
       required_review_thread_resolution: true,
       required_reviewers: [],
     });
@@ -1831,10 +1833,10 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     }>).find((rule) => rule.type === "pull_request");
     expect(createdPullRequest?.parameters).toEqual({
       allowed_merge_methods: ["merge", "squash", "rebase"],
-      dismiss_stale_reviews_on_push: true,
+      dismiss_stale_reviews_on_push: false,
       require_code_owner_review: false,
-      require_last_push_approval: true,
-      required_approving_review_count: 1,
+      require_last_push_approval: false,
+      required_approving_review_count: 0,
       required_review_thread_resolution: true,
       required_reviewers: [],
     });
@@ -1916,7 +1918,7 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       .toHaveLength(2);
   }, 15_000);
 
-  it("repairs a drifted ruleset with writable PUT fields and reruns idempotently", () => {
+  it("repairs mandatory routine review drift to zero approvals and reruns idempotently", () => {
     const existingRulesets = resolvedRulesets();
     const existingMaster = existingRulesets.find(
       (entry) => entry.name === "production-release-master",
@@ -1924,7 +1926,9 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     const existingPullRequest = existingMaster.rules.find(
       (rule) => rule.type === "pull_request",
     );
-    existingPullRequest!.parameters!.required_approving_review_count = 0;
+    existingPullRequest!.parameters!.dismiss_stale_reviews_on_push = true;
+    existingPullRequest!.parameters!.require_last_push_approval = true;
+    existingPullRequest!.parameters!.required_approving_review_count = 1;
 
     const repaired = runExecute({
       state: initialState({ rulesets: existingRulesets }),
@@ -1938,10 +1942,10 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     }>).find((rule) => rule.type === "pull_request");
     expect(updatedPullRequest?.parameters).toEqual({
       allowed_merge_methods: ["merge", "squash", "rebase"],
-      dismiss_stale_reviews_on_push: true,
+      dismiss_stale_reviews_on_push: false,
       require_code_owner_review: false,
-      require_last_push_approval: true,
-      required_approving_review_count: 1,
+      require_last_push_approval: false,
+      required_approving_review_count: 0,
       required_review_thread_resolution: true,
       required_reviewers: [],
     });
@@ -1953,7 +1957,9 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     expect(repairedMaster.rules.find((rule) => rule.type === "pull_request")?.parameters)
       .toMatchObject({
         require_extra_approval_for_unattributed_changes: true,
-        required_approving_review_count: 1,
+        dismiss_stale_reviews_on_push: false,
+        require_last_push_approval: false,
+        required_approving_review_count: 0,
       });
 
     const rerun = runExecute({ state: repaired.state });
@@ -1991,10 +1997,10 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     }>).find((rule) => rule.type === "pull_request");
     expect(updatedPullRequest?.parameters).toEqual({
       allowed_merge_methods: ["merge", "squash", "rebase"],
-      dismiss_stale_reviews_on_push: true,
+      dismiss_stale_reviews_on_push: false,
       require_code_owner_review: false,
-      require_last_push_approval: true,
-      required_approving_review_count: 1,
+      require_last_push_approval: false,
+      required_approving_review_count: 0,
       required_review_thread_resolution: true,
       required_reviewers: [],
     });
@@ -2123,6 +2129,8 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
 
   it.each([
     ["stronger approval count", { required_approving_review_count: 2 }],
+    ["last-push approval", { require_last_push_approval: true }],
+    ["stale-review dismissal", { dismiss_stale_reviews_on_push: true }],
     ["different merge methods", { allowed_merge_methods: ["squash"] }],
   ])("fails exact readback for %s", (_label, materializedOverride) => {
     const run = runExecute({
