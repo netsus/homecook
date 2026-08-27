@@ -124,14 +124,15 @@ function createFixture() {
   }, null, 2), { mode: 0o600 });
 
   const workerRoot = createTempDirectory("homecook-promote-worker-");
-  const workerAuthorityRoot = join(workerRoot, "authority");
-  mkdirSync(workerAuthorityRoot, { mode: 0o700 });
+  const workerAuthorityRoot = createTempDirectory("homecook-promote-worker-authority-");
   const workerManifestPath = join(workerRoot, "artifact.json");
   const workerAppDescriptorPath = join(workerAuthorityRoot, "app-descriptor.json");
   const workerExpectedSchemaPath = join(workerAuthorityRoot, "expected-schema.json");
+  const workerPolicyPath = join(workerAuthorityRoot, "policy.json");
   writeFileSync(workerManifestPath, "worker-artifact\n", { mode: 0o600 });
   writeFileSync(workerAppDescriptorPath, "worker-app\n", { mode: 0o600 });
   writeFileSync(workerExpectedSchemaPath, "worker-schema\n", { mode: 0o600 });
+  writeFileSync(workerPolicyPath, "worker-policy\n", { mode: 0o600 });
 
   const commandInvocations: Array<{ command: string, args: string[] }> = [];
   const runCommandMock = vi.fn((command: string, args: readonly string[] = []) => {
@@ -149,7 +150,7 @@ function createFixture() {
       configPath: "/private/worker/worker.env",
       credentialPath: "/private/worker/credential.json",
       expectedSchemaPath: workerExpectedSchemaPath,
-      policyPath: "/private/worker/policy.json",
+      policyPath: workerPolicyPath,
       secretRoot: "/private/worker/secrets",
       artifactSha256: "7".repeat(64),
       appDescriptorSha256: "6".repeat(64),
@@ -188,6 +189,7 @@ function createFixture() {
     workerAppDescriptorPath,
     workerExpectedSchemaPath,
     workerManifestPath,
+    workerPolicyPath,
     workerRoot,
   };
 }
@@ -907,6 +909,43 @@ describe("local Mac production promote", () => {
       .rejects.toThrow(/execution source|copy|digest|drift|mutat/iu);
     expect(fixture.installBundle).not.toHaveBeenCalled();
     expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
+
+  it.each([
+    ["app descriptor", "workerAppDescriptorPath"],
+    ["expected schema", "workerExpectedSchemaPath"],
+    ["policy", "workerPolicyPath"],
+  ])("blocks an A→B→A copy race for worker %s authority", async (_label, field) => {
+    const fixture = createFixture();
+    const sourcePath = fixture[field as keyof typeof fixture] as string;
+    const original = readFileSync(sourcePath);
+    const options = {
+      ...promoteOptions(fixture),
+      executionCopyHook: ({ phase, source }: { phase: string; source: string }) => {
+        if (realpathSync(source) !== realpathSync(sourcePath)) return;
+        chmodSync(source, 0o600);
+        if (phase === "after_authority_precheck") writeFileSync(source, "raced-B\n");
+        if (phase === "after_authority_copy") writeFileSync(source, original);
+      },
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0] & {
+      executionCopyHook: (input: { phase: string; source: string }) => void;
+    };
+
+    await expect(promoteLocalMacProductionRelease(options))
+      .rejects.toThrow(/authority|copied|digest|drift|race/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(readFileSync(sourcePath)).toEqual(original);
+  });
+
+  it("rejects a candidate symlink that targets contained .git metadata", async () => {
+    const fixture = createFixture();
+    const gitTarget = join(fixture.releaseDir, ".git", "metadata.txt");
+    writeFileSync(gitTarget, "git-metadata\n", { mode: 0o600 });
+    symlinkSync(gitTarget, join(fixture.releaseDir, "git-link.txt"));
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/symlink.*git|git metadata|\.git/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
   it("updates previous/current only after the whole bundle is ready at one exact identity", async () => {

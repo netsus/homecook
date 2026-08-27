@@ -692,7 +692,7 @@ process.exit(42);
         [String(options.workerConfigPath)]: "5".repeat(64),
         [String(options.workerCredentialPath)]: "4".repeat(64),
         ["/private/current-worker-authority/authority/expected-schema.json"]: "3".repeat(64),
-        [String(options.workerPolicyPath)]: "2".repeat(64),
+        ["/private/current-worker-authority/authority/policy.json"]: "2".repeat(64),
       })[path] ?? "0".repeat(64)),
       renderWorkerPlist: renderWorkerPlist as unknown as typeof renderYoutubeExtractionWorkerPlist,
     });
@@ -701,7 +701,7 @@ process.exit(42);
       appDescriptorPath: "/private/current-worker-authority/authority/app-descriptor.json",
       configPath: options.workerConfigPath,
       credentialPath: options.workerCredentialPath,
-      currentPolicyPath: options.workerPolicyPath,
+      currentPolicyPath: "/private/current-worker-authority/authority/policy.json",
       expectedSchemaPath: "/private/current-worker-authority/authority/expected-schema.json",
       secretRoot: options.workerSecretRoot,
       manifestPath: currentDescriptor.worker_manifest_path,
