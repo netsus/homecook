@@ -1,4 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -164,6 +171,55 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(planResult.stdout).toContain(`release_sha: ${fixture.releaseSha}`);
   });
 
+  it("preserves relative path compatibility for plan and status CLI inputs", () => {
+    const fixture = createFixtureRepo();
+    mkdirSync(join(fixture.rootDir, "fixture-home"), { mode: 0o700 });
+    const manifest = JSON.parse(readFileSync(fixture.manifestPath, "utf8"));
+    manifest.release_manifest_path = join(realpathSync(fixture.rootDir), "release.json");
+    writeFileSync(fixture.manifestPath, JSON.stringify(manifest, null, 2));
+
+    const statusResult = spawnSync(
+      process.execPath,
+      [
+        SCRIPT_PATH,
+        "status",
+        "--root-dir",
+        ".",
+        "--home-dir",
+        "./fixture-home",
+      ],
+      {
+        cwd: fixture.rootDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(statusResult.status, statusResult.stderr).toBe(0);
+    expect(statusResult.stdout).toContain(`current_head_sha: ${fixture.releaseSha}`);
+
+    const planResult = spawnSync(
+      process.execPath,
+      [
+        SCRIPT_PATH,
+        "plan",
+        "--root-dir",
+        ".",
+        "--home-dir",
+        "./fixture-home",
+        "--release-manifest",
+        "./release.json",
+      ],
+      {
+        cwd: fixture.rootDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(planResult.status, planResult.stderr).toBe(0);
+    expect(planResult.stdout).toContain("release_tag: prod-20260825.1");
+    expect(planResult.stdout).toContain(`release_sha: ${fixture.releaseSha}`);
+  });
+
   it("fails closed for status when the target repo cannot resolve exact origin/master", () => {
     const fixture = createFixtureRepo({ includeOriginMaster: false });
 
@@ -184,8 +240,23 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(result.stderr).toContain("could not be resolved");
   });
 
-  it("fails closed for prepare/promote/verify until the release-promoter mutation phase is implemented", () => {
-    for (const command of ["prepare", "promote", "verify"]) {
+  it("requires the manifest and offline attestation inputs for prepare instead of blanket-blocking it", () => {
+    const result = spawnSync(
+      process.execPath,
+      [SCRIPT_PATH, "prepare"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("prepare requires --release-manifest");
+    expect(result.stderr).not.toContain("currently blocked");
+  });
+
+  it("keeps promote and verify blocked fail-closed", () => {
+    for (const command of ["promote", "verify"]) {
       const result = spawnSync(
         process.execPath,
         [SCRIPT_PATH, command],
@@ -198,7 +269,7 @@ describe("promote-local-mac-production-release CLI", () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(command);
       expect(result.stderr).toContain("blocked");
-      expect(result.stderr).toContain("plan/status");
+      expect(result.stderr).toContain("plan/prepare/status");
     }
   });
 });
