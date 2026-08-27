@@ -20,6 +20,7 @@ import workerTiming from
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 const DEFAULT_EXTRACTION_TIMEOUT_MS = 20 * 60 * 1000;
+const DEFAULT_PROGRESS_FLUSH_TIMEOUT_MS = 2_000;
 export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = workerTiming.lease_seconds;
 export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS =
   workerTiming.heartbeat_interval_seconds * 1000;
@@ -58,6 +59,19 @@ const CACHE_OPERATIONS = new Set([
 ]);
 const EVENT_KINDS = new Set(["transcript", "llm", "visual"]);
 const QUOTA_PROVIDERS = new Set(["external_transcript_api", "gemini"]);
+const PROGRESS_STAGES = new Set([
+  "source_fetch",
+  "video_download",
+  "frame_extraction",
+  "model_analysis",
+  "finalizing",
+]);
+const CHILD_PROGRESS_STAGES = new Set([
+  "source_fetch",
+  "video_download",
+  "frame_extraction",
+  "model_analysis",
+]);
 const RETRYABLE_RUNTIME_CODES = new Set([
   "NETWORK_ERROR",
   "RATE_LIMITED",
@@ -223,14 +237,52 @@ function providerVideoTitle(runtimeResult) {
   return normalized.length > 0 && normalized.length <= 160 ? normalized : null;
 }
 
-function createFencedWorkerRpcClient({ rpc, claim, workerId, permitGeneration }) {
+function createFencedWorkerRpcClient({
+  rpc,
+  claim,
+  workerId,
+  permitGeneration,
+  attempt,
+}) {
   const fence = {
     job_id: claim.job_id,
     worker_id: workerId,
     lease_generation: claim.lease_generation,
   };
   const writeFence = { ...fence, permit_generation: permitGeneration };
+  let progressChain = Promise.resolve();
   return {
+    reportProgress(stage, videoDurationSeconds = null) {
+      if (
+        !PROGRESS_STAGES.has(stage)
+        || (
+          videoDurationSeconds !== null
+          && (!Number.isInteger(videoDurationSeconds)
+            || videoDurationSeconds < 1
+            || videoDurationSeconds > 86_400)
+        )
+      ) {
+        return Promise.resolve(false);
+      }
+      const operation = progressChain.then(async () => {
+        try {
+          const row = resultRow(await rpc("report_youtube_extraction_progress", {
+            ...writeFence,
+            attempt,
+            stage,
+            video_duration_seconds: videoDurationSeconds,
+          }), "report extraction progress");
+          return row?.applied === true;
+        } catch {
+          return false;
+        }
+      });
+      progressChain = operation.then(() => undefined, () => undefined);
+      return operation;
+    },
+    flushProgress(timeoutMs = DEFAULT_PROGRESS_FLUSH_TIMEOUT_MS) {
+      return settleWithin(progressChain.then(() => true), timeoutMs);
+    },
     async readCatalog() {
       const catalog = resultRow(await rpc("read_youtube_extraction_worker_catalog", fence),
         "read worker catalog");
@@ -393,6 +445,21 @@ function abortableDelay(milliseconds, signal) {
   });
 }
 
+async function settleWithin(promise, timeoutMs) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(false), timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * @param {{
  *   dataApiUrl: string,
@@ -464,6 +531,7 @@ export function createRestrictedPostgrestRpcClient({
  *   }): Promise<unknown> },
  *   heartbeatIntervalMs?: number,
  *   leaseSeconds?: number,
+ *   progressFlushTimeoutMs?: number,
  * }} options
  */
 export function createYoutubeExtractionWorkerRuntime({
@@ -473,6 +541,7 @@ export function createYoutubeExtractionWorkerRuntime({
   extractor,
   heartbeatIntervalMs = YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS,
   leaseSeconds = YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
+  progressFlushTimeoutMs = DEFAULT_PROGRESS_FLUSH_TIMEOUT_MS,
 } = {}) {
   const normalizedWorkerId = requiredString(workerId, "workerId");
   const digest = requiredString(allowedSnapshotDigest, "allowedSnapshotDigest");
@@ -485,6 +554,7 @@ export function createYoutubeExtractionWorkerRuntime({
   }
   positiveInteger(heartbeatIntervalMs, "heartbeatIntervalMs");
   positiveInteger(leaseSeconds, "leaseSeconds");
+  positiveInteger(progressFlushTimeoutMs, "progressFlushTimeoutMs");
 
   return {
     async runOnce({ signal: shutdownSignal = new AbortController().signal } = {}) {
@@ -558,13 +628,20 @@ export function createYoutubeExtractionWorkerRuntime({
       };
 
       try {
-        const started = successBoolean(await rpc("start_youtube_extraction_attempt", {
+        const started = resultRow(await rpc("start_youtube_extraction_attempt", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
           permit_generation: permitGeneration,
         }), "start attempt");
-        if (!started) return "stale-fence";
+        if (
+          started?.started !== true
+          || !Number.isInteger(started.attempt_count)
+          || started.attempt_count < 1
+        ) {
+          return "stale-fence";
+        }
+        const attempt = started.attempt_count;
 
         await heartbeat();
         heartbeatTimer = setInterval(() => {
@@ -580,6 +657,7 @@ export function createYoutubeExtractionWorkerRuntime({
           claim,
           workerId: normalizedWorkerId,
           permitGeneration,
+          attempt,
         });
         const catalog = await workerRpcClient.readCatalog();
 
@@ -644,6 +722,8 @@ export function createYoutubeExtractionWorkerRuntime({
           await workerRpcClient.updateTitle(title);
         }
 
+        workerRpcClient.reportProgress("finalizing");
+        await workerRpcClient.flushProgress(progressFlushTimeoutMs).catch(() => false);
         const resolved = resultRow(await rpc("resolve_youtube_extraction_job_draft", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
@@ -757,6 +837,27 @@ function validateChildRpcRequest(message) {
   return { ...request, payload };
 }
 
+function validateChildProgressMessage(message, previousSequence) {
+  const progress = record(message);
+  if (
+    progress?.type !== "homecook-worker-progress"
+    || !Number.isInteger(progress.sequence)
+    || progress.sequence <= previousSequence
+    || !CHILD_PROGRESS_STAGES.has(progress.stage)
+    || (
+      progress.videoDurationSeconds !== null
+      && progress.videoDurationSeconds !== undefined
+      && (!Number.isInteger(progress.videoDurationSeconds)
+        || progress.videoDurationSeconds < 1
+        || progress.videoDurationSeconds > 86_400)
+    )
+    || Buffer.byteLength(JSON.stringify(progress), "utf8") > 512
+  ) {
+    throw new Error("invalid progress message");
+  }
+  return progress;
+}
+
 async function dispatchChildRpcRequest(workerRpcClient, request) {
   switch (request.operation) {
     case "cache":
@@ -787,7 +888,30 @@ async function dispatchChildRpcRequest(workerRpcClient, request) {
 function attachChildRpcBridge(child, workerRpcClient) {
   let bridgeFailure = null;
   let chain = Promise.resolve();
+  let progressFailures = 0;
+  let progressSequence = 0;
   const onMessage = (message) => {
+    if (message?.type === "homecook-worker-progress") {
+      let progress;
+      try {
+        progress = validateChildProgressMessage(message, progressSequence);
+        progressSequence = progress.sequence;
+      } catch {
+        progressFailures += 1;
+        return;
+      }
+      Promise.resolve(workerRpcClient.reportProgress(
+        progress.stage,
+        progress.videoDurationSeconds ?? null,
+      ))
+        .then((applied) => {
+          if (applied !== true) progressFailures += 1;
+        })
+        .catch(() => {
+          progressFailures += 1;
+        });
+      return;
+    }
     chain = chain.then(async () => {
       let request;
       try {
@@ -823,7 +947,7 @@ function attachChildRpcBridge(child, workerRpcClient) {
   return {
     async settle() {
       await chain;
-      return bridgeFailure;
+      return { bridgeFailure, progressFailureCount: progressFailures };
     },
     close() {
       child.off("message", onMessage);
@@ -940,7 +1064,7 @@ export function createStandaloneYoutubeI031Extractor({
           child.once("close", async (code) => {
             clearTimeout(timeout);
             signal.removeEventListener("abort", onAbort);
-            const bridgeFailure = await childRpcBridge.settle();
+            const { bridgeFailure } = await childRpcBridge.settle();
             if (bridgeFailure) {
               reject(bridgeFailure);
               return;

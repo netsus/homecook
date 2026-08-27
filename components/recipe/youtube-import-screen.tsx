@@ -66,7 +66,10 @@ import type {
   YoutubeRecipeExtractData,
   YoutubeQuantityConfirmationStatus,
 } from "@/types/recipe";
-import type { YoutubeExtractionJobData } from "@/types/youtube-extraction";
+import type {
+  YoutubeExtractionJobData,
+  YoutubeExtractionProgressStage,
+} from "@/types/youtube-extraction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -797,6 +800,122 @@ interface BackgroundAcceptedStepProps {
   videoTitle: string;
 }
 
+const ACCEPTED_PROGRESS_STAGE_ORDER = [
+  "queued",
+  "source_fetch",
+  "video_download",
+  "frame_extraction",
+  "model_analysis",
+  "finalizing",
+] as const satisfies readonly YoutubeExtractionProgressStage[];
+
+const ACCEPTED_PROGRESS_COPY: Record<YoutubeExtractionProgressStage, {
+  current: string;
+  short: string;
+}> = {
+  queued: {
+    current: "작업 대기 중",
+    short: "대기",
+  },
+  source_fetch: {
+    current: "영상 정보와 자막 확인 중",
+    short: "정보 확인",
+  },
+  video_download: {
+    current: "분석할 영상을 준비하는 중",
+    short: "영상 준비",
+  },
+  frame_extraction: {
+    current: "주요 장면을 찾는 중",
+    short: "장면 찾기",
+  },
+  model_analysis: {
+    current: "장면에서 레시피를 분석하는 중",
+    short: "레시피 분석",
+  },
+  finalizing: {
+    current: "추출 결과를 정리하는 중",
+    short: "결과 정리",
+  },
+};
+
+type AcceptedProgressSegmentState = "done" | "active" | "pending" | "indeterminate";
+
+function formatAcceptedEtaRange(lowSeconds: number, highSeconds: number) {
+  const lowMinutes = Math.max(1, Math.floor(lowSeconds / 60));
+  const highMinutes = Math.max(lowMinutes, Math.ceil(highSeconds / 60));
+  return `약 ${lowMinutes}~${highMinutes}분 남음`;
+}
+
+function getAcceptedEtaCopy(progress: YoutubeExtractionJobData["progress"]) {
+  if (!progress) return "예상 시간 계산 중";
+  if (progress.delayed) {
+    return "예상보다 오래 걸리고 있어요. 추출은 계속 진행 중이에요.";
+  }
+  if (
+    typeof progress.remaining_seconds_low === "number"
+    && typeof progress.remaining_seconds_high === "number"
+    && progress.estimate_confidence
+  ) {
+    return formatAcceptedEtaRange(
+      progress.remaining_seconds_low,
+      progress.remaining_seconds_high,
+    );
+  }
+  return "예상 시간 계산 중";
+}
+
+function getAcceptedProgressPresentation(job: YoutubeExtractionJobData | null) {
+  const progress = job?.progress ?? null;
+  const etaCopy = getAcceptedEtaCopy(progress);
+
+  if (!job || job.status === "queued") {
+    const current = ACCEPTED_PROGRESS_COPY.queued;
+    return {
+      currentCopy: current.current,
+      currentShortLabel: current.short,
+      attemptCopy: null,
+      etaCopy,
+      ariaValueNow: 0,
+      ariaValueText: `${current.current} · ${etaCopy}`,
+      segments: ACCEPTED_PROGRESS_STAGE_ORDER.map((stage) => ({
+        label: ACCEPTED_PROGRESS_COPY[stage].short,
+        state: stage === "queued" ? "active" : "pending",
+      } satisfies { label: string; state: AcceptedProgressSegmentState })),
+    };
+  }
+
+  if (job.status === "processing" && progress) {
+    const current = ACCEPTED_PROGRESS_COPY[progress.stage];
+    const activeIndex = ACCEPTED_PROGRESS_STAGE_ORDER.indexOf(progress.stage);
+    return {
+      currentCopy: current.current,
+      currentShortLabel: current.short,
+      attemptCopy: progress.attempt > 1 ? `다시 분석 중 (${progress.attempt}/3)` : null,
+      etaCopy,
+      ariaValueNow: Math.min(progress.confirmed_percent, 95),
+      ariaValueText: `${current.current} · ${etaCopy}`,
+      segments: ACCEPTED_PROGRESS_STAGE_ORDER.map((stage, index) => ({
+        label: ACCEPTED_PROGRESS_COPY[stage].short,
+        state: index < activeIndex ? "done" : index === activeIndex ? "active" : "pending",
+      } satisfies { label: string; state: AcceptedProgressSegmentState })),
+    };
+  }
+
+  return {
+    currentCopy: "진행 상황 확인 중",
+    currentShortLabel: "진행 확인",
+    attemptCopy: null,
+    etaCopy,
+    ariaValueNow: null,
+    ariaValueText: `진행 상황 확인 중 · ${etaCopy}`,
+    segments: ACCEPTED_PROGRESS_STAGE_ORDER.map((stage) => ({
+      label: ACCEPTED_PROGRESS_COPY[stage].short,
+      state: "indeterminate",
+    } satisfies { label: string; state: AcceptedProgressSegmentState })),
+  };
+}
+
 function getAcceptedRetryLabel(job: YoutubeExtractionJobData) {
   if (job.error?.code === "QUOTA_EXCEEDED") return "나중에 다시 시도";
   if (job.error?.code === "EXTRACTION_EXPIRED") return "다시 추출";
@@ -822,17 +941,11 @@ function BackgroundAcceptedStep({
   videoTitle,
 }: BackgroundAcceptedStepProps) {
   const failed = job?.status === "failed" || job?.status === "expired";
-  const processing = job?.status === "processing";
   const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
   const elapsedLabel = elapsedSeconds < 60
     ? `${elapsedSeconds}초 경과`
     : `${Math.floor(elapsedSeconds / 60)}분 ${String(elapsedSeconds % 60).padStart(2, "0")}초 경과`;
-  const progressLabel = processing ? "영상 분석 중" : "접수됨 · 분석 대기 중";
-  const progressStages = [
-    { label: "접수됨", state: processing ? "done" : "active" },
-    { label: "분석 중", state: processing ? "active" : "pending" },
-    { label: "결과 준비", state: "pending" },
-  ] as const;
+  const progressPresentation = getAcceptedProgressPresentation(job);
   return (
     <div aria-live={failed ? "assertive" : undefined} className="px-4 py-8" data-youtube-extraction-accepted>
       <div className="mx-auto flex max-w-lg flex-col items-center text-center">
@@ -866,48 +979,54 @@ function BackgroundAcceptedStep({
         {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
         {!failed ? (
           <div className="mt-6 w-full rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4 text-left">
-            <div className="flex items-center gap-3" role="status">
+            <div className="flex items-center gap-3" role="status" aria-live="polite">
               <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand)] motion-safe:animate-pulse" />
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                {processing ? "영상에서 레시피를 분석하고 있어요" : "작업을 준비하고 있어요"}
-              </p>
+              <div className="min-w-0">
+                {progressPresentation.attemptCopy ? (
+                  <p className="text-xs font-semibold text-[var(--brand-deep)]">
+                    {progressPresentation.attemptCopy}
+                  </p>
+                ) : null}
+                <p className="break-keep text-sm font-semibold text-[var(--foreground)]" data-youtube-progress-current-copy>
+                  {progressPresentation.currentCopy}
+                </p>
+              </div>
             </div>
             <div
               aria-label="유튜브 레시피 추출 진행 상태"
-              aria-valuetext={progressLabel}
-              className="mt-4 grid h-2 grid-cols-3 gap-1"
+              aria-valuemax={progressPresentation.ariaValueNow !== null ? 100 : undefined}
+              aria-valuemin={progressPresentation.ariaValueNow !== null ? 0 : undefined}
+              aria-valuenow={progressPresentation.ariaValueNow ?? undefined}
+              aria-valuetext={progressPresentation.ariaValueText}
+              className="mt-4 grid h-2 grid-cols-6 gap-1"
               role="progressbar"
             >
-              {progressStages.map((stage) => (
+              {progressPresentation.segments.map((stage) => (
                 <span
+                  data-youtube-progress-segment={stage.label}
                   className={[
                     "rounded-full",
                     stage.state === "done"
                       ? "bg-[var(--brand)]"
                       : stage.state === "active"
                         ? "bg-[var(--brand)] motion-safe:animate-pulse"
+                        : stage.state === "indeterminate"
+                          ? "bg-[var(--line-strong)] motion-safe:animate-pulse"
                         : "bg-[var(--line-strong)]",
                   ].join(" ")}
                   key={stage.label}
-                />
-              ))}
-            </div>
-            <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs text-[var(--text-3)]" aria-hidden="true">
-              {progressStages.map((stage) => (
-                <span className={stage.state === "active" ? "font-semibold text-[var(--foreground)]" : ""} key={stage.label}>
-                  {stage.label}
+                >
+                  <span className="sr-only">{stage.label}</span>
                 </span>
               ))}
             </div>
-            <div className="mt-4 flex flex-col gap-1 text-xs text-[var(--text-2)] sm:flex-row sm:items-center sm:justify-between">
+            <p className="mt-2 text-xs font-semibold text-[var(--foreground)]" data-youtube-progress-current-label>
+              {progressPresentation.currentShortLabel}
+            </p>
+            <div aria-live="off" className="mt-4 flex flex-col gap-1 text-xs text-[var(--text-2)] sm:flex-row sm:items-center sm:justify-between">
               <span aria-live="off">{elapsedLabel}</span>
-              <span>예상 소요 시간 약 1~3분</span>
+              <span>{progressPresentation.etaCopy}</span>
             </div>
-            {elapsedSeconds >= 180 ? (
-              <p className="mt-3 break-keep text-xs text-[var(--text-3)]">
-                영상 길이나 자막 상태에 따라 조금 더 걸릴 수 있어요.
-              </p>
-            ) : null}
           </div>
         ) : null}
         <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">

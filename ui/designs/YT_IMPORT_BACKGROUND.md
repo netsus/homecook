@@ -1,5 +1,24 @@
 # YT_IMPORT_BACKGROUND — Stage 1 Design Decision Record
 
+## 2026-08-28 Truthful Progress Follow-up
+
+`youtube-extraction-truthful-progress-eta`는 이 화면의 기존 접수 카드 안에서만 진행 표시를 교체하는 low-risk 후속 변경이다. 기존 URL 입력, `나가기` primary CTA, `작업 보기` secondary CTA, 5초 polling, terminal 이동 구조는 유지한다.
+
+- 기존 3칸 상태와 고정 `약 1~3분` 문구를 실제 worker 단계 6칸으로 교체한다.
+- 시각적으로는 6개 compact segment와 현재 단계의 짧은 이름 하나만 보여 320px 과밀을 피한다.
+- 현재 단계 설명은 공식 화면정의서 v1.5.38의 문구를 사용한다.
+- ETA 근거가 없으면 `예상 시간 계산 중`, promotion된 범위가 있으면 `약 2~4분 남음`, upper 초과면 delayed 안내만 표시한다.
+- `progress=null`인 legacy processing 상태에서는 확인되지 않은 퍼센트를 만들지 않고 indeterminate 상태를 사용한다.
+- stage 상태만 polite live region으로 알리고, 경과시간과 ETA 갱신은 `aria-live=off`를 유지한다.
+- `motion-safe` animation만 사용해 reduced-motion 환경에서는 현재 segment가 정적으로 남는다.
+
+Evidence:
+
+- before current-state capture: `test-results/youtube-async-extraction-n-7a458--and-visually-stable-at-390-desktop-chrome/evidence-mobile-390-accepted.png`
+- after 390: `ui/designs/evidence/youtube-extraction-truthful-progress-eta/YT_IMPORT_BACKGROUND/mobile-390-model-analysis.png`
+- after 320: `ui/designs/evidence/youtube-extraction-truthful-progress-eta/YT_IMPORT_BACKGROUND/mobile-320-delayed.png`
+- after desktop: `ui/designs/evidence/youtube-extraction-truthful-progress-eta/YT_IMPORT_BACKGROUND/desktop-1280-source-fetch-retry.png`
+
 ## Decision
 
 기존 `YT_IMPORT`의 URL 입력·검수 visual language는 유지하고, 동기 대기 화면을 background 접수 확인 상태로 바꾼다. 사용자는 `가져오기` primary CTA로 작업을 접수한 뒤 기본 CTA인 `나가기`로 이전 화면/HOME에 돌아가거나 보조 CTA `작업 보기`로 진행 상황을 확인할 수 있다. 이 문서는 design-generator 산출물이자 Stage 4 구현 계약이며, 구현 완료나 design authority PASS를 뜻하지 않는다.
