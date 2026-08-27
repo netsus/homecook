@@ -1075,6 +1075,35 @@ describe("full-local runtime readiness", () => {
     )).toThrow(/label|release|identity|missing|mixed|mismatch/iu);
   });
 
+  it("allows only the exact e02f unlabeled first-transition workload", () => {
+    const legacyIdentity = {
+      ...releaseIdentity,
+      release_sha: "e02f02a87d1d955dc598728e7029a745a650a5c3",
+    };
+    const containers = releaseContainers(legacyIdentity);
+    for (const container of containers) {
+      for (const label of [
+        "homecook.release.sha",
+        "homecook.release.tree",
+        "homecook.release.build-id",
+        "homecook.release.promotion-id",
+      ]) Reflect.deleteProperty(container.Config.Labels, label);
+    }
+    expect(fullLocalRuntime.readFullLocalReleaseIdentityFromContainers(containers, {
+      allowLegacyBootstrap: true,
+      expected: legacyIdentity,
+    })).toEqual({
+      ...legacyIdentity,
+      legacy_bootstrap: true,
+      legacy_bootstrap_contract: "e02f-full-local-v1",
+    });
+
+    expect(() => fullLocalRuntime.readFullLocalReleaseIdentityFromContainers(containers, {
+      allowLegacyBootstrap: true,
+      expected: releaseIdentity,
+    })).toThrow(/legacy|bootstrap|release|identity/iu);
+  });
+
   it("injects and reads internal release labels through compose and status", () => {
     const compose = readFileSync(
       join(process.cwd(), "infra/full-local-supabase/docker-compose.production.yml"),
@@ -1094,6 +1123,16 @@ describe("full-local runtime readiness", () => {
     }
     expect(runtimeCli).toContain('optionValue(args, "--release-identity")');
     expect(runtimeCli).toContain("readFullLocalReleaseIdentityFromContainers");
+  });
+
+  it("keeps status preflight read-only and reserves secret materialization for mutations", () => {
+    const runtimeCli = readFileSync(
+      join(process.cwd(), "scripts/full-local-production-runtime.mjs"),
+      "utf8",
+    );
+    expect(runtimeCli).toMatch(/case "status": \{\s+const runtime = validateReadOnlyRuntime\(args\)/u);
+    expect(runtimeCli).toContain("function validateReadOnlyRuntime(args)");
+    expect(runtimeCli).toContain("function validateAndMaterialize(args)");
   });
 
   const healthyState = { Health: { Status: "healthy" }, Status: "running" };

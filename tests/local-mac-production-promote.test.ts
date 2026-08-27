@@ -50,6 +50,14 @@ function createRunningDescriptor(overrides: Record<string, unknown> = {}) {
     promotion_id: "promo-previous",
     promoted_at: "2026-08-24T09:00:00.000Z",
     source_manifest_sha256: "9".repeat(64),
+    worker_artifact_root: "/private/current-worker",
+    worker_manifest_path: "/private/current-worker/artifact.json",
+    worker_app_descriptor_path: "/private/current-worker/app.json",
+    worker_config_path: "/private/current-worker/worker.env",
+    worker_credential_path: "/private/current-worker/credential.json",
+    worker_expected_schema_path: "/private/current-worker/schema.json",
+    worker_policy_path: "/private/current-worker/policy.json",
+    worker_secret_root: "/private/current-worker/secrets",
     ...overrides,
   };
 }
@@ -60,6 +68,7 @@ function createReadyBundle(manifest: Record<string, unknown>, overrides: Record<
     release_sha: manifest.release_sha,
     release_tree: manifest.release_tree,
     build_id: manifest.build_id,
+    promotion_id: manifest.promotion_id,
   };
   return {
     app: { ...identity },
@@ -117,7 +126,19 @@ function createFixture() {
   });
   const runCommand = runCommandMock as unknown as typeof import("node:child_process").spawnSync;
   const installBundle = vi.fn(async () => ({ installed: true }));
-  const preflightBundle = vi.fn(async () => ({ stable_key: "runtime-stable" }));
+  const preflightBundle = vi.fn(async () => ({
+    stable_key: "runtime-stable",
+    worker: {
+      artifactRoot: "/private/worker",
+      manifestPath: "/private/worker/worker-artifact.json",
+      appDescriptorPath: "/private/worker/app.json",
+      configPath: "/private/worker/worker.env",
+      credentialPath: "/private/worker/credential.json",
+      expectedSchemaPath: "/private/worker/schema.json",
+      policyPath: "/private/worker/policy.json",
+      secretRoot: "/private/worker/secrets",
+    },
+  }));
   const readinessProbe = vi.fn(async () => createReadyBundle(manifest));
 
   return {
@@ -410,6 +431,29 @@ describe("local Mac production promote", () => {
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
+  it("rejects a partial worker path authority in a non-legacy running descriptor", async () => {
+    const fixture = createFixture();
+    const partialDescriptor = createRunningDescriptor();
+    for (const field of [
+      "worker_manifest_path",
+      "worker_app_descriptor_path",
+      "worker_config_path",
+      "worker_credential_path",
+      "worker_expected_schema_path",
+      "worker_policy_path",
+      "worker_secret_root",
+    ]) delete partialDescriptor[field as keyof typeof partialDescriptor];
+    writeFileSync(
+      fixture.paths.currentDescriptorPath,
+      JSON.stringify(partialDescriptor, null, 2),
+      { mode: 0o600 },
+    );
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/worker.*path|descriptor|partial|authority/iu);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+  });
+
   it("preserves the lock and unchanged descriptors when the installer fails", async () => {
     const fixture = createFixture();
     const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
@@ -435,8 +479,32 @@ describe("local Mac production promote", () => {
   it("rejects runtime evidence drift between initial and locked preflight", async () => {
     const fixture = createFixture();
     fixture.preflightBundle
-      .mockResolvedValueOnce({ stable_key: "runtime-a" })
-      .mockResolvedValueOnce({ stable_key: "runtime-b" });
+      .mockResolvedValueOnce({
+        stable_key: "runtime-a",
+        worker: {
+          artifactRoot: "/private/worker",
+          manifestPath: "/private/worker/worker-artifact.json",
+          appDescriptorPath: "/private/worker/app.json",
+          configPath: "/private/worker/worker.env",
+          credentialPath: "/private/worker/credential.json",
+          expectedSchemaPath: "/private/worker/schema.json",
+          policyPath: "/private/worker/policy.json",
+          secretRoot: "/private/worker/secrets",
+        },
+      })
+      .mockResolvedValueOnce({
+        stable_key: "runtime-b",
+        worker: {
+          artifactRoot: "/private/worker",
+          manifestPath: "/private/worker/worker-artifact.json",
+          appDescriptorPath: "/private/worker/app.json",
+          configPath: "/private/worker/worker.env",
+          credentialPath: "/private/worker/credential.json",
+          expectedSchemaPath: "/private/worker/schema.json",
+          policyPath: "/private/worker/policy.json",
+          secretRoot: "/private/worker/secrets",
+        },
+      });
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
       .rejects.toThrow(/runtime|preflight|stable|drift|changed/iu);
@@ -463,6 +531,20 @@ describe("local Mac production promote", () => {
       expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
     },
   );
+
+  it("rejects promotion_id-only drift after locked validation", async () => {
+    const fixture = createFixture();
+    fixture.readinessProbe.mockResolvedValueOnce(createReadyBundle(fixture.manifest, {
+      full_local: {
+        ...createReadyBundle(fixture.manifest).full_local,
+        promotion_id: "different-promotion",
+      },
+    }));
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/promotion|identity|bundle/iu);
+    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+  });
 
   it.each(["app", "full_local", "youtube_worker"])(
     "rejects %s identity drift even when readiness reports ready",
@@ -646,6 +728,14 @@ describe("local Mac production promote", () => {
       build_id: fixture.manifest.build_id,
       promotion_id: fixture.manifest.promotion_id,
       source_manifest_sha256: sha256(fixture.manifestBytes),
+      worker_artifact_root: "/private/worker",
+      worker_manifest_path: "/private/worker/worker-artifact.json",
+      worker_app_descriptor_path: "/private/worker/app.json",
+      worker_config_path: "/private/worker/worker.env",
+      worker_credential_path: "/private/worker/credential.json",
+      worker_expected_schema_path: "/private/worker/schema.json",
+      worker_policy_path: "/private/worker/policy.json",
+      worker_secret_root: "/private/worker/secrets",
     });
     expect(fixture.installBundle).toHaveBeenCalledTimes(1);
     expect(fixture.preflightBundle).toHaveBeenCalledTimes(2);

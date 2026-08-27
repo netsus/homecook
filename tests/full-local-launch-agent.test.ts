@@ -163,6 +163,8 @@ describe("full-local launch agent helpers", () => {
       expect(plist).not.toContain("FULL_LOCAL_SITE_URL=https://app.mumeok.kr");
       expect(plist).not.toContain(AMBIENT_SECRET);
       expect(plist).not.toContain("<key>FULL_LOCAL_TEST_SECRET</key>");
+      expect(plist).not.toContain("--lock-token");
+      expect(plist).not.toContain("--release-manifest");
     } finally {
       delete process.env.FULL_LOCAL_TEST_SECRET;
     }

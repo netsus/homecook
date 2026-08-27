@@ -613,12 +613,14 @@ function runExecute({
         HOMECOOK_C2_ROOT: sourceRepoRoot,
         NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${fetchPreloadPath}`.trim(),
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
+        TMPDIR: harnessDir,
         ...env,
       },
     },
   );
   return {
     combined: `${result.stdout}\n${result.stderr}`,
+    harnessDir,
     privateKeyPath,
     result,
     snapshotDir,
@@ -1026,9 +1028,6 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
   });
 
   it("verifies the correct RSA key against the pinned GitHub App identity", () => {
-    const bootstrapDirectoriesBefore = new Set(
-      readdirSync(tmpdir()).filter((name) => name.startsWith("homecook-c2-immutable-")),
-    );
     const run = runExecute();
     expect(run.result.status, run.combined).toBe(0);
     expect(run.state.identity_calls).toHaveLength(1);
@@ -1047,9 +1046,8 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       .map((name) => readFileSync(join(run.snapshotDir, name), "utf8"))
       .join("\n");
     expect(snapshotText).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\./u);
-    const leakedBootstrapDirectories = readdirSync(tmpdir()).filter((name) =>
-      name.startsWith("homecook-c2-immutable-")
-      && !bootstrapDirectoriesBefore.has(name));
+    const leakedBootstrapDirectories = readdirSync(run.harnessDir).filter((name) =>
+      name.startsWith("homecook-c2-immutable-"));
     expect(leakedBootstrapDirectories).toEqual([]);
   });
 
