@@ -17,6 +17,8 @@ release 승격은 항상 exact SHA, annotated `prod-*` tag, release manifest, at
 - development checkout에서의 direct `/bin/launchctl`, plist write, checkout mutation은 drift로 취급한다.
 - docs와 validator는 cooperative boundary를 강제할 수는 있지만, same-user direct shell access 자체를 OS 수준으로 막았다고 과장하지 않는다.
 - `master` merge는 다음 release 후보를 준비할 뿐, deployment approval을 자동으로 만들지 않는다.
+- 일반 development PR의 `master` 통합에는 mandatory human approval을 요구하지 않는다. PR-only flow, required status checks, review-thread resolution은 계속 필수다.
+- human approval은 actual production release environment/tag promotion 단계에서만 요구한다. `production-release-approval`의 exact human reviewer와 admin bypass 차단은 그대로 유지한다.
 
 ## Release identity
 
@@ -195,6 +197,8 @@ Stage C는 두 단계로 분리한다.
 
 `master`와 `prod-*`는 force update / delete가 막혀야 하고, tag creation은 restricted actor만 가능해야 한다.
 PR merge만으로 ruleset activation을 주장하지 않는다.
+
+`production-release-master`의 routine attributed PR 정책은 `required_approving_review_count=0`, `require_last_push_approval=false`, `dismiss_stale_reviews_on_push=false`다. 이는 일반 Codex development PR을 human approval 없이 required CI로 통합하기 위한 계약이다. `require_extra_approval_for_unattributed_changes=true`는 별개의 readback-only unattributed Copilot 전용 설정으로 유지한다. GitHub의 현재 규칙상 base approval count가 0이면 이 설정도 실제 추가 승인을 만들지 않으므로 attributed Codex PR과 unattributed Copilot PR 모두 routine approval 때문에 차단되지 않는다. 즉, 현재는 향후 base approval 정책이 바뀌는 경우를 위한 보존된 안전 의도이며, 작성자 attribution이 있는 Codex PR의 routine approval count를 1로 되돌리는 설정이 아니다. broad bypass actor도 추가하지 않는다. 이 readback-only 필드가 누락되거나 `false`이면 C2는 기존처럼 UI 수동 복구를 요구하고 fail closed한다.
 
 C1 validator는 `.github/rulesets/*.json` desired-state와 optional local actual snapshot만 읽는다.
 즉, `pnpm release:github:rulesets:verify`는 actual snapshot이 없으면 `activation_blocked: true`로 fail-closed pending 상태를 기록하지만, network나 admin token 없이도 desired-state drift를 검증할 수 있다.

@@ -77,6 +77,13 @@ const RULESET_IGNORED_SERVER_KEYS = [
 
 const EXPECTED_RULESET_FILES = [
   {
+    bypassPolicy: "none",
+    exactRuleTypes: [
+      "deletion",
+      "non_fast_forward",
+      "pull_request",
+      "required_status_checks",
+    ],
     filePath: ".github/rulesets/production-release-master.json",
     requiredRuleTypes: [
       "deletion",
@@ -803,6 +810,14 @@ function validateRulesetFile({
     const requiredStatusChecksRule = normalized.rules.find(
       (rule) => rule.type === "required_status_checks",
     );
+    if (
+      requiredStatusChecksRule?.parameters?.strict_required_status_checks_policy !== true
+      || requiredStatusChecksRule?.parameters?.do_not_enforce_on_create !== false
+    ) {
+      throw new Error(
+        `${filePath}.rules.required_status_checks must keep strict policy enabled and enforce on create.`,
+      );
+    }
     const requiredStatusChecks = requireArray(
       requiredStatusChecksRule?.parameters?.required_status_checks,
       `${filePath}.rules.required_status_checks`,
@@ -813,6 +828,28 @@ function validateRulesetFile({
           `${filePath}.rules.required_status_checks[${index}].integration_id must be ${GITHUB_ACTIONS_APP_INTEGRATION_ID}.`,
         );
       }
+    }
+    const pullRequestRules = normalized.rules.filter(
+      (rule) => rule.type === "pull_request",
+    );
+    const expectedPullRequestParameters = canonicalizeJson({
+      allowed_merge_methods: ["merge", "rebase", "squash"],
+      dismiss_stale_reviews_on_push: false,
+      require_code_owner_review: false,
+      require_extra_approval_for_unattributed_changes: true,
+      require_last_push_approval: false,
+      required_approving_review_count: 0,
+      required_review_thread_resolution: true,
+      required_reviewers: [],
+    });
+    if (
+      pullRequestRules.length !== 1
+      || JSON.stringify(pullRequestRules[0].parameters)
+        !== JSON.stringify(expectedPullRequestParameters)
+    ) {
+      throw new Error(
+        `${filePath}.rules.pull_request must require PR-only integration, zero routine approvals, review-thread resolution, and the unattributed Copilot setting.`,
+      );
     }
   }
 

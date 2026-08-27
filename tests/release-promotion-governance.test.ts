@@ -44,6 +44,16 @@ describe("release promotion governance docs", () => {
     expect(releaseRunbook).toContain("자동 rollback");
     expect(releaseRunbook).toContain("forward-fix");
     expect(releaseRunbook).toContain("production-release-approval");
+    expect(releaseRunbook).toContain(
+      "일반 development PR의 `master` 통합에는 mandatory human approval을 요구하지 않는다.",
+    );
+    expect(releaseRunbook).toContain(
+      "human approval은 actual production release environment/tag promotion 단계에서만 요구한다.",
+    );
+    expect(releaseRunbook).toContain("unattributed Copilot");
+    expect(releaseRunbook).toContain(
+      "base approval count가 0이면 이 설정도 실제 추가 승인을 만들지 않으므로",
+    );
     expect(releaseRunbook).toContain("master-only");
     expect(releaseRunbook).toContain("C1 activation_blocked");
     expect(releaseRunbook).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_ID");
