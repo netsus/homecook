@@ -1101,6 +1101,7 @@ describe("local Mac production promote", () => {
         { mode: 0o600 },
       );
       return {
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-stable",
         worker: {
           artifactRoot: fixture.workerRoot,
