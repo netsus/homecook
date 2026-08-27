@@ -11,7 +11,10 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-import { assertLocalMacProductionMutationAuthority } from "./local-mac-production-release.mjs";
+import {
+  assertLocalMacProductionMutationAuthority,
+  getLocalMacProductionReleasePaths,
+} from "./local-mac-production-release.mjs";
 
 export const DEFAULT_FULL_LOCAL_LAUNCH_AGENT_LABEL = "com.homecook.full-local.production";
 const LAUNCHCTL_BIN = "/bin/launchctl";
@@ -262,13 +265,23 @@ export function getFullLocalLaunchAgentPaths(homeDir = process.env.HOME ?? "") {
   };
 }
 
+export function getFullLocalResumeConfigPath(homeDir = process.env.HOME ?? "") {
+  return resolve(
+    requireAbsolutePath(homeDir, "homeDir"),
+    ".homecook",
+    "config",
+    "full-local-production.env",
+  );
+}
+
 /**
  * @param {{
  *   configPath: string,
  *   homeDir?: string,
  *   nodeBin?: string,
+ *   currentDescriptorPath?: string,
  *   releaseIdentityPath?: string,
- *   runtimeCommand?: "start" | "status",
+ *   runtimeCommand?: "resume-current" | "start" | "status",
  *   includeReleaseIdentity?: boolean,
  *   rootDir?: string,
  * }} options
@@ -277,6 +290,7 @@ export function renderFullLocalLaunchAgentPlist({
   configPath,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
+  currentDescriptorPath,
   releaseIdentityPath,
   runtimeCommand = "start",
   includeReleaseIdentity = true,
@@ -285,14 +299,25 @@ export function renderFullLocalLaunchAgentPlist({
   const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
   const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
   const normalizedNodeBin = requireAbsolutePath(nodeBin, "nodeBin");
+  const normalizedCurrentDescriptorPath = requireAbsolutePath(
+    currentDescriptorPath
+      ?? getLocalMacProductionReleasePaths(normalizedHomeDir).currentDescriptorPath,
+    "currentDescriptorPath",
+  );
   const normalizedReleaseIdentityPath = requireAbsolutePath(
     releaseIdentityPath ?? resolve(normalizedRootDir, "prepare.json"),
     "releaseIdentityPath",
   );
-  if (!new Set(["start", "status"]).has(runtimeCommand)) {
-    throw new Error("runtimeCommand must be start or status.");
+  if (!new Set(["resume-current", "start", "status"]).has(runtimeCommand)) {
+    throw new Error("runtimeCommand must be resume-current, start, or status.");
   }
   const normalizedConfigPath = requireAbsolutePath(configPath, "configPath");
+  if (
+    runtimeCommand === "resume-current"
+    && normalizedConfigPath !== getFullLocalResumeConfigPath(normalizedHomeDir)
+  ) {
+    throw new Error("resume-current requires the fixed canonical full-local config path.");
+  }
   const sanitizedPath = buildSanitizedLaunchAgentPath(normalizedNodeBin);
   const paths = getFullLocalLaunchAgentPaths(normalizedHomeDir);
 
@@ -313,11 +338,13 @@ export function renderFullLocalLaunchAgentPlist({
     <string>${escapeXml(normalizedNodeBin)}</string>
     <string>${escapeXml(resolve(normalizedRootDir, "scripts", "full-local-production-runtime.mjs"))}</string>
     <string>${runtimeCommand}</string>
-    <string>--config</string>
+${runtimeCommand === "resume-current" ? `    <string>--current-descriptor</string>
+    <string>${escapeXml(normalizedCurrentDescriptorPath)}</string>
+` : ""}    <string>--config</string>
     <string>${escapeXml(normalizedConfigPath)}</string>
-${includeReleaseIdentity ? `    <string>--release-identity</string>
-    <string>${escapeXml(normalizedReleaseIdentityPath)}</string>` : ""}
-  </array>
+${includeReleaseIdentity && runtimeCommand !== "resume-current" ? `    <string>--release-identity</string>
+    <string>${escapeXml(normalizedReleaseIdentityPath)}</string>
+` : ""}  </array>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
@@ -424,8 +451,9 @@ export function extractFullLocalConfigPathFromPlist(plist) {
  *   homeDir?: string,
  *   nodeBin?: string,
  *   platform?: string,
+ *   currentDescriptorPath?: string,
  *   releaseIdentityPath?: string,
- *   runtimeCommand?: "start" | "status",
+ *   runtimeCommand?: "resume-current" | "start" | "status",
  *   rootDir?: string,
  *   spawn?: LaunchctlSpawn,
  * }} options
@@ -437,6 +465,7 @@ export function installFullLocalLaunchAgent({
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   platform = process.platform,
+  currentDescriptorPath,
   releaseIdentityPath,
   runtimeCommand = "start",
   rootDir = process.cwd(),
@@ -462,6 +491,7 @@ export function installFullLocalLaunchAgent({
     configPath: normalizedConfigPath,
     homeDir,
     nodeBin: normalizedNodeBin,
+    currentDescriptorPath,
     releaseIdentityPath: releaseIdentityPath ?? resolve(normalizedRootDir, "prepare.json"),
     runtimeCommand,
     rootDir: normalizedRootDir,

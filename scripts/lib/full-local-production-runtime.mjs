@@ -163,10 +163,24 @@ export function buildFullLocalReleaseContainerLabels(identity) {
  */
 export function readFullLocalReleaseIdentityFromContainers(
   containers,
-  { expected = null, allowLegacyBootstrap = false } = {},
+  { expected = null, expectedServices = null, allowLegacyBootstrap = false } = {},
 ) {
-  if (!Array.isArray(containers) || containers.length !== 7) {
-    throw new Error("Full-local release identity requires exactly seven containers.");
+  const serviceSet = expectedServices === null ? null : new Set(expectedServices);
+  const expectedContainerCount = serviceSet?.size ?? 7;
+  if (!Array.isArray(containers) || containers.length !== expectedContainerCount) {
+    throw new Error(
+      `Full-local release identity requires exactly ${expectedContainerCount} containers.`,
+    );
+  }
+  if (serviceSet) {
+    const observedServices = containers.map((container) =>
+      container?.Config?.Labels?.["com.docker.compose.service"]);
+    if (
+      observedServices.some((service) => !serviceSet.has(service))
+      || new Set(observedServices).size !== serviceSet.size
+    ) {
+      throw new Error("Full-local containers do not match the authoritative Compose service set.");
+    }
   }
   const labelNames = [
     "homecook.release.sha",
@@ -253,6 +267,112 @@ export function selectNewlyStartedFullLocalWriterServices({
   const afterServices = runningWriterServices(after, composeProject);
   return FULL_LOCAL_WRITER_SERVICES.filter((service) =>
     afterServices.has(service) && !beforeServices.has(service));
+}
+
+export function parseFullLocalComposeServiceNames(output) {
+  const services = String(output)
+    .split(/\r?\n/u)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (
+    services.length === 0
+    || services.some((service) => !/^[a-z0-9][a-z0-9-]*$/u.test(service))
+    || new Set(services).size !== services.length
+  ) {
+    throw new Error("Full-local Compose service inventory is invalid.");
+  }
+  return Object.freeze([...services].sort());
+}
+
+export function selectFullLocalResumeCleanupContainers({
+  after,
+  before,
+  composeProject,
+  expectedServices,
+}) {
+  const expectedServiceSet = new Set(expectedServices);
+  if (expectedServiceSet.size === 0) {
+    throw new Error("Full-local resume cleanup requires authoritative Compose services.");
+  }
+  const scoped = (containers) => containers.filter((container) =>
+    typeof container?.Id === "string"
+    && container.Id.length > 0
+    && container?.Config?.Labels?.["com.docker.compose.project"] === composeProject
+    && expectedServiceSet.has(
+      container?.Config?.Labels?.["com.docker.compose.service"],
+    ));
+  const beforeById = new Map(scoped(before).map((container) => [container.Id, container]));
+  const afterScoped = scoped(after);
+  const removeIds = afterScoped
+    .filter((container) => !beforeById.has(container.Id))
+    .map((container) => container.Id)
+    .sort();
+  const stopIds = afterScoped
+    .filter((container) => {
+      const previous = beforeById.get(container.Id);
+      return !previous || (
+        previous.State?.Running !== true
+        && container.State?.Running === true
+      );
+    })
+    .map((container) => container.Id)
+    .sort();
+  return Object.freeze({
+    removeIds: Object.freeze(removeIds),
+    stopIds: Object.freeze(stopIds),
+  });
+}
+
+export function collectFullLocalResumeSecretEvidence({
+  coreSecrets,
+  directory,
+  expectedUid,
+  oauthEnabled = false,
+  oauthSecrets = {},
+}) {
+  const normalizedDirectory = resolve(directory);
+  const directoryStat = lstatSync(normalizedDirectory);
+  if (
+    directoryStat.isSymbolicLink()
+    || !directoryStat.isDirectory()
+    || directoryStat.uid !== expectedUid
+    || (directoryStat.mode & 0o777) !== 0o700
+  ) {
+    throw new Error("Full-local resume secret directory owner, mode, or type is unsafe.");
+  }
+  const expected = {
+    ...Object.fromEntries(FULL_LOCAL_SECRET_NAMES.map((name) => [name, coreSecrets?.[name]])),
+    ...(oauthEnabled ? oauthSecrets : {}),
+  };
+  const expectedNames = Object.keys(expected).sort();
+  const actualNames = readdirSync(normalizedDirectory).sort();
+  if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
+    throw new Error("Full-local resume secret files are missing or unexpected.");
+  }
+  const evidence = expectedNames.map((name) => {
+    const path = join(normalizedDirectory, name);
+    const stat = lstatSync(path);
+    if (
+      stat.isSymbolicLink()
+      || !stat.isFile()
+      || stat.uid !== expectedUid
+      || (stat.mode & 0o777) !== 0o600
+    ) {
+      throw new Error(`Full-local resume secret ${name} owner, mode, or type is unsafe.`);
+    }
+    const bytes = readFileSync(path);
+    if (bytes.toString("utf8") !== expected[name]) {
+      throw new Error(`Full-local resume secret ${name} does not match Keychain authority.`);
+    }
+    return Object.freeze({
+      dev: stat.dev,
+      digest: createHash("sha256").update(bytes).digest("hex"),
+      ino: stat.ino,
+      name,
+      path,
+    });
+  });
+  return Object.freeze(evidence);
 }
 
 function requiredValue(record, name) {

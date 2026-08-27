@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -15,10 +15,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { createClient } from "@supabase/supabase-js";
 
 import {
   FULL_LOCAL_SECRET_NAMES,
@@ -26,14 +24,17 @@ import {
   assertNoSecretLeakage,
   assertSecretRotationAllowed,
   buildFullLocalProductCatalogSql,
+  collectFullLocalResumeSecretEvidence,
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
   materializeFullLocalRuntimeSecrets,
   parseFullLocalProductCatalogSqlOutput,
+  parseFullLocalComposeServiceNames,
   readFullLocalReleaseIdentityFromContainers,
   renderFullLocalProductionConfigTemplate,
   summarizeFullLocalRuntimeStates,
   selectNewlyStartedFullLocalWriterServices,
+  selectFullLocalResumeCleanupContainers,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
@@ -92,8 +93,15 @@ import {
   upsertNaverCustomProvider,
   validateFullLocalOAuthConfig,
 } from "./lib/full-local-oauth-providers.mjs";
-import { validateLocalMacProductionMutationAuthority } from "./lib/local-mac-production-release.mjs";
-import { createGitHubProductionReleaseAttestationVerifier } from "./lib/github-production-release-attestation.mjs";
+import {
+  validateLocalMacProductionCurrentResumeAuthority,
+  validateLocalMacProductionMutationAuthority,
+} from "./lib/local-mac-production-release.mjs";
+import {
+  createGitHubProductionReleaseAttestationVerifier,
+} from "./lib/github-production-release-attestation.mjs";
+import { getFullLocalResumeConfigPath } from "./lib/full-local-launch-agent.mjs";
+import { resolveTrustedGhExecutable } from "./lib/trusted-production-release-tools.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const INFRA = join(ROOT, "infra/full-local-supabase");
@@ -633,17 +641,28 @@ function storeKeychainSecret(directory, service, account, secret) {
 function composeArgs(runtime, ...args) {
   return [
     "compose",
+    "--env-file",
+    runtime.configPath,
     "--project-name",
     runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
     "-f",
-    COMPOSE_FILE,
-    ...(runtime.oauth?.enabled ? ["-f", OAUTH_COMPOSE_FILE] : []),
+    runtime.composeFile ?? COMPOSE_FILE,
+    ...(runtime.oauth?.enabled
+      ? ["-f", runtime.oauthComposeFile ?? OAUTH_COMPOSE_FILE]
+      : []),
     ...args,
   ];
 }
 
+function composeServiceNames(runtime) {
+  return parseFullLocalComposeServiceNames(
+    compose(runtime, ["config", "--services"]),
+  );
+}
+
 function compose(runtime, args) {
   return run("docker", composeArgs(runtime, ...args), {
+    cwd: runtime.rootDir ?? ROOT,
     env: runtime.env,
     failure: "Full-local Docker Compose operation failed.",
   });
@@ -651,6 +670,7 @@ function compose(runtime, args) {
 
 function composeWithInput(runtime, args, input) {
   return run("docker", composeArgs(runtime, ...args), {
+    cwd: runtime.rootDir ?? ROOT,
     env: runtime.env,
     failure: "Full-local Docker Compose database operation failed.",
     input,
@@ -730,12 +750,24 @@ function baseRuntime(args, { requireSecrets = true } = {}) {
   };
 }
 
-function validateRuntime(args, { materializeSecrets }) {
+function validateRuntime(
+  args,
+  { materializeSecrets, releaseIdentity = null, runtimeRoot = ROOT },
+) {
   const runtime = baseRuntime(args);
-  const releaseIdentity = readExpectedFullLocalReleaseIdentity(args);
+  const normalizedRuntimeRoot = realpathSync(resolve(runtimeRoot));
+  const composeFile = resolve(
+    normalizedRuntimeRoot,
+    "infra/full-local-supabase/docker-compose.production.yml",
+  );
+  const oauthComposeFile = resolve(
+    normalizedRuntimeRoot,
+    "infra/full-local-supabase/docker-compose.oauth.production.yml",
+  );
+  const expectedReleaseIdentity = releaseIdentity ?? readExpectedFullLocalReleaseIdentity(args);
   const allowLegacyBootstrap = hasFlag(args, "--allow-legacy-release-bootstrap");
   const secretDirectory = validateExternalSecretDirectory({
-    repositoryRoot: ROOT,
+    repositoryRoot: normalizedRuntimeRoot,
     secretDirectory: runtime.config.FULL_LOCAL_SECRET_DIR,
   });
   const oauth = validateFullLocalOAuthConfig({
@@ -758,18 +790,22 @@ function validateRuntime(args, { materializeSecrets }) {
   const env = {
     ...process.env,
     ...runtime.config,
-    ...(releaseIdentity ? {
-      FULL_LOCAL_RELEASE_SHA: releaseIdentity.release_sha,
-      FULL_LOCAL_RELEASE_TREE: releaseIdentity.release_tree,
-      FULL_LOCAL_RELEASE_BUILD_ID: releaseIdentity.build_id,
-      FULL_LOCAL_RELEASE_PROMOTION_ID: releaseIdentity.promotion_id,
+    ...(expectedReleaseIdentity ? {
+      FULL_LOCAL_RELEASE_SHA: expectedReleaseIdentity.release_sha,
+      FULL_LOCAL_RELEASE_TREE: expectedReleaseIdentity.release_tree,
+      FULL_LOCAL_RELEASE_BUILD_ID: expectedReleaseIdentity.build_id,
+      FULL_LOCAL_RELEASE_PROMOTION_ID: expectedReleaseIdentity.promotion_id,
     } : {}),
   };
   delete env.DOCKER_DEFAULT_PLATFORM;
   const composed = run(
     "docker",
-    composeArgs({ ...runtime, oauth }, "config", "--format", "json"),
-    { env, failure: "Full-local Compose configuration is invalid." },
+    composeArgs({ ...runtime, composeFile, oauth, oauthComposeFile }, "config", "--format", "json"),
+    {
+      cwd: normalizedRuntimeRoot,
+      env,
+      failure: "Full-local Compose configuration is invalid.",
+    },
   );
   assertFullLocalComposeModel(JSON.parse(composed));
   assertNoSecretLeakage({
@@ -778,10 +814,13 @@ function validateRuntime(args, { materializeSecrets }) {
   });
   return Object.freeze({
     ...runtime,
+    composeFile,
     allowLegacyBootstrap,
     env,
     oauth,
-    releaseIdentity,
+    oauthComposeFile,
+    releaseIdentity: expectedReleaseIdentity,
+    rootDir: normalizedRuntimeRoot,
     validation,
   });
 }
@@ -792,6 +831,18 @@ function validateAndMaterialize(args) {
 
 function validateReadOnlyRuntime(args) {
   return validateRuntime(args, { materializeSecrets: false });
+}
+
+function validateReadOnlyRuntimeForReleaseIdentity(
+  args,
+  releaseIdentity,
+  runtimeRoot = ROOT,
+) {
+  return validateRuntime(args, {
+    materializeSecrets: false,
+    releaseIdentity,
+    runtimeRoot,
+  });
 }
 
 function bootstrapSecrets(args) {
@@ -875,13 +926,14 @@ function runtimeStatus(runtime) {
   return summarizeFullLocalRuntimeStates(states);
 }
 
-function observedFullLocalReleaseIdentity(runtime) {
+function observedFullLocalReleaseIdentity(runtime, expectedServices = composeServiceNames(runtime)) {
   if (!runtime.releaseIdentity) return null;
   return readFullLocalReleaseIdentityFromContainers(
     composeContainers(runtime),
     {
       allowLegacyBootstrap: runtime.allowLegacyBootstrap,
       expected: runtime.releaseIdentity,
+      expectedServices,
     },
   );
 }
@@ -2108,7 +2160,8 @@ function compareRestoreManifests(args) {
   return result;
 }
 
-function createLocalSupabaseAdmin(runtime) {
+async function createLocalSupabaseAdmin(runtime) {
+  const { createClient } = await import("@supabase/supabase-js");
   return createClient(
     runtime.config.FULL_LOCAL_INTERNAL_GATEWAY_URL,
     runtime.secrets.service_role_key,
@@ -2134,7 +2187,7 @@ async function provisionOAuthProviders(args) {
     fail("Full-local runtime must be healthy before OAuth provisioning.");
   }
   const naver = await upsertNaverCustomProvider({
-    admin: createLocalSupabaseAdmin(runtime),
+    admin: await createLocalSupabaseAdmin(runtime),
     clientId: runtime.oauthSecrets.naver_client_id,
     clientSecret: runtime.oauthSecrets.naver_client_secret,
     siteUrl: runtime.config.FULL_LOCAL_SITE_URL,
@@ -2163,7 +2216,7 @@ async function verifyOAuthProviders(args) {
   if (settings?.external?.google !== true || settings?.external?.kakao !== true) {
     fail("Google and Kakao are not both enabled in local Auth settings.");
   }
-  const naver = await createLocalSupabaseAdmin(runtime).getProvider("custom:naver");
+  const naver = await (await createLocalSupabaseAdmin(runtime)).getProvider("custom:naver");
   if (naver.error || naver.data?.enabled !== true) {
     fail("custom:naver is missing or disabled in local Auth.");
   }
@@ -2186,10 +2239,379 @@ function runtimeCatalogPayload(gate) {
   };
 }
 
+function assertResumeCurrentArguments(args) {
+  const allowed = new Set(["--config", "--current-descriptor"]);
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index];
+    const value = args[index + 1];
+    if (!allowed.has(flag) || !value || value.startsWith("--")) {
+      fail("resume-current accepts only --current-descriptor and --config.");
+    }
+  }
+  if (args.length !== 4 || new Set(args.filter((_, index) => index % 2 === 0)).size !== 2) {
+    fail("resume-current requires exactly one --current-descriptor and one --config.");
+  }
+}
+
+function assertResumeCurrentSafeFile(path, { expectedMode, label }) {
+  const stat = lstatSync(path);
+  const currentUid = process.getuid?.();
+  if (
+    stat.isSymbolicLink()
+    || !stat.isFile()
+    || (Number.isInteger(currentUid) && stat.uid !== currentUid)
+    || (stat.mode & 0o777) !== expectedMode
+  ) {
+    fail(`${label} owner, mode, or type is unsafe.`);
+  }
+}
+
+function readFullLocalResumeConfigEvidence(path) {
+  assertResumeCurrentSafeFile(path, {
+    expectedMode: 0o600,
+    label: "Full-local resume config",
+  });
+  const bytes = readFileSync(path);
+  const stat = lstatSync(path);
+  return Object.freeze({
+    dev: stat.dev,
+    digest: createHash("sha256").update(bytes).digest("hex"),
+    ino: stat.ino,
+    path,
+  });
+}
+
+function assertResumeCurrentSafeAncestors(homeDir, targetPath, label) {
+  const root = resolve(homeDir);
+  const parent = dirname(resolve(targetPath));
+  const relativeParent = relative(root, parent);
+  if (relativeParent.startsWith("..") || relativeParent.startsWith(sep)) {
+    fail(`${label} escapes the trusted home directory.`);
+  }
+  const currentUid = process.getuid?.();
+  let cursor = root;
+  for (const segment of relativeParent.split(sep).filter(Boolean)) {
+    cursor = resolve(cursor, segment);
+    const stat = lstatSync(cursor);
+    if (
+      stat.isSymbolicLink()
+      || !stat.isDirectory()
+      || (Number.isInteger(currentUid) && stat.uid !== currentUid)
+      || (stat.mode & 0o022) !== 0
+    ) {
+      fail(`${label} ancestor owner, mode, or type is unsafe.`);
+    }
+  }
+}
+
+function assertExistingFullLocalRuntimeSecrets(runtime) {
+  const directory = realpathSync(runtime.config.FULL_LOCAL_SECRET_DIR);
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid)) fail("Current user uid is unavailable.");
+  return collectFullLocalResumeSecretEvidence({
+    coreSecrets: runtime.secrets,
+    directory,
+    expectedUid: currentUid,
+    oauthEnabled: runtime.oauth.enabled,
+    oauthSecrets: runtime.oauthSecrets,
+  });
+}
+
+function assertResumeEvidenceStable(expected, actual, label) {
+  if (JSON.stringify(expected) !== JSON.stringify(actual)) {
+    fail(`${label} changed while resume-current was running.`);
+  }
+}
+
+function sanitizedResumeFailure(error, runtime) {
+  let message = error instanceof Error ? error.message : String(error);
+  for (const secret of [
+    ...Object.values(runtime?.secrets ?? {}),
+    ...Object.values(runtime?.oauthSecrets ?? {}),
+  ]) {
+    if (typeof secret === "string" && secret.length > 0) {
+      message = message.replaceAll(secret, "[redacted]");
+    }
+  }
+  return message.slice(0, 1_000);
+}
+
+function assertNoFullLocalResumeRecoveryRequired(homeDir) {
+  const path = resolve(
+    homeDir,
+    ".homecook",
+    "releases",
+    "resume-failures",
+    "recovery-required.json",
+  );
+  let stat;
+  try {
+    stat = lstatSync(path);
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return;
+    throw error;
+  }
+  const currentUid = process.getuid?.();
+  if (
+    stat.isSymbolicLink()
+    || !stat.isFile()
+    || (Number.isInteger(currentUid) && stat.uid !== currentUid)
+    || (stat.mode & 0o777) !== 0o600
+  ) {
+    fail("Full-local resume recovery-required evidence is unsafe.");
+  }
+  fail(`Full-local resume manual recovery required: ${path}`);
+}
+
+function preserveFullLocalResumeFailureEvidence({
+  cleanup,
+  error,
+  homeDir,
+  runtime,
+}) {
+  const root = resolve(homeDir, ".homecook", "releases", "resume-failures");
+  const currentUid = process.getuid?.();
+  if (!existsSync(root)) {
+    mkdirSync(root, { mode: 0o700 });
+  }
+  const stat = lstatSync(root);
+  if (
+    stat.isSymbolicLink()
+    || !stat.isDirectory()
+    || (Number.isInteger(currentUid) && stat.uid !== currentUid)
+    || (stat.mode & 0o777) !== 0o700
+  ) {
+    fail("Full-local resume failure evidence directory is unsafe.");
+  }
+  const path = join(root, `${Date.now()}-${randomUUID()}.json`);
+  writeFileSync(path, `${JSON.stringify({
+    schema: "homecook.full-local-resume-failure.v1",
+    cleanup,
+    failure: sanitizedResumeFailure(error, runtime),
+  }, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+  if (cleanup.cleanup_failures.length > 0) {
+    const recoveryRequiredPath = join(root, "recovery-required.json");
+    if (!existsSync(recoveryRequiredPath)) {
+      writeFileSync(recoveryRequiredPath, `${JSON.stringify({
+        schema: "homecook.full-local-resume-recovery-required.v1",
+        failure_evidence_path: path,
+        cleanup_failure_count: cleanup.cleanup_failures.length,
+      }, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    }
+  }
+  return path;
+}
+
+function cleanupFullLocalResumeAttempt({ before, expectedServices, runtime }) {
+  const after = dockerResourceInventory("container", { all: true });
+  const selected = selectFullLocalResumeCleanupContainers({
+    after,
+    before,
+    composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+    expectedServices,
+  });
+  const failures = [];
+  for (const containerId of selected.stopIds) {
+    try {
+      run("docker", ["stop", containerId], {
+        env: runtime.env,
+        failure: "Full-local resume attempt container stop failed.",
+      });
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  for (const containerId of selected.removeIds) {
+    try {
+      run("docker", ["rm", containerId], {
+        env: runtime.env,
+        failure: "Full-local resume attempt container removal failed.",
+      });
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  return Object.freeze({
+    cleanup_failures: Object.freeze(failures),
+    removed_container_ids: selected.removeIds,
+    stopped_container_ids: selected.stopIds,
+    volumes_removed: false,
+  });
+}
+
+export async function resumeCurrentRelease(
+  args,
+  {
+    resolveGhExecutable = resolveTrustedGhExecutable,
+    runtimeRoot = ROOT,
+  } = {},
+) {
+  assertResumeCurrentArguments(args);
+  const homeDir = resolve(process.env.HOME ?? homedir());
+  assertNoFullLocalResumeRecoveryRequired(homeDir);
+  const currentDescriptorPath = resolve(optionValue(args, "--current-descriptor"));
+  const canonicalConfigPath = getFullLocalResumeConfigPath(homeDir);
+  const requestedConfigPath = resolve(optionValue(args, "--config"));
+  if (requestedConfigPath !== canonicalConfigPath) {
+    fail("resume-current requires the fixed canonical full-local config path.");
+  }
+  assertResumeCurrentSafeAncestors(homeDir, requestedConfigPath, "Full-local resume config");
+  assertResumeCurrentSafeFile(requestedConfigPath, {
+    expectedMode: 0o600,
+    label: "Full-local resume config",
+  });
+  const normalizedRuntimeRoot = realpathSync(resolve(runtimeRoot));
+  const authorityRoot = resolve(normalizedRuntimeRoot, "..", "authority");
+  const ghExecutable = resolveGhExecutable();
+  const ghExecutableSha256 = createHash("sha256")
+    .update(readFileSync(ghExecutable))
+    .digest("hex");
+  const verifyAttestation = createGitHubProductionReleaseAttestationVerifier({
+    bundlePath: resolve(authorityRoot, "attestation-bundle.jsonl"),
+    ghExecutable,
+    repository: "netsus/homecook",
+    signerWorkflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
+    sourceRef: "refs/heads/master",
+    subjectManifestPath: resolve(authorityRoot, "attestation-subject.json"),
+    trustedRootPath: resolve(authorityRoot, "attestation-trusted-root.jsonl"),
+    runGh: (command, commandArgs, commandOptions) => {
+      const currentExecutable = resolveGhExecutable();
+      if (command !== currentExecutable) {
+        fail("Trusted GitHub CLI executable changed during resume-current.");
+      }
+      const currentDigest = createHash("sha256")
+        .update(readFileSync(currentExecutable))
+        .digest("hex");
+      if (currentDigest !== ghExecutableSha256) {
+        fail("Trusted GitHub CLI digest changed during resume-current.");
+      }
+      return spawnSync(command, commandArgs, commandOptions);
+    },
+  });
+  const readAuthority = () => validateLocalMacProductionCurrentResumeAuthority({
+      currentDescriptorPath,
+      homeDir,
+      rootDir: normalizedRuntimeRoot,
+      verifyAttestation,
+    });
+  const authority = readAuthority();
+  const configEvidence = readFullLocalResumeConfigEvidence(requestedConfigPath);
+  if (configEvidence.digest !== authority.descriptor.full_local_config_sha256) {
+    fail("Full-local resume config digest does not match current.json.");
+  }
+  const expectedIdentity = {
+    release_sha: authority.descriptor.release_sha,
+    release_tree: authority.descriptor.release_tree,
+    build_id: authority.descriptor.build_id,
+    promotion_id: authority.descriptor.promotion_id,
+  };
+  const runtime = validateReadOnlyRuntimeForReleaseIdentity(
+    args,
+    expectedIdentity,
+    normalizedRuntimeRoot,
+  );
+  const canonicalSecretDirectory = resolve(
+    homeDir,
+    ".homecook",
+    "secrets",
+    "full-local-supabase",
+  );
+  if (realpathSync(runtime.config.FULL_LOCAL_SECRET_DIR) !== canonicalSecretDirectory) {
+    fail("resume-current requires the fixed canonical full-local secret directory.");
+  }
+  assertResumeCurrentSafeAncestors(
+    homeDir,
+    join(canonicalSecretDirectory, "placeholder"),
+    "Full-local runtime secret directory",
+  );
+  const secretEvidence = assertExistingFullLocalRuntimeSecrets(runtime);
+  assertResumeEvidenceStable(
+    authority.descriptorSnapshot,
+    readAuthority().descriptorSnapshot,
+    "Current release descriptor",
+  );
+  assertResumeEvidenceStable(
+    secretEvidence,
+    assertExistingFullLocalRuntimeSecrets(runtime),
+    "Full-local runtime secrets",
+  );
+  assertResumeEvidenceStable(
+    configEvidence,
+    readFullLocalResumeConfigEvidence(requestedConfigPath),
+    "Full-local resume config",
+  );
+  const expectedComposeServices = composeServiceNames(runtime);
+  const containersBeforeResume = dockerResourceInventory("container", { all: true });
+  let mutationAttempted = false;
+  try {
+    mutationAttempted = true;
+    compose(runtime, ["up", "-d"]);
+    const status = await waitForRuntimeHealthy(runtime);
+    const releaseIdentity = observedFullLocalReleaseIdentity(
+      runtime,
+      expectedComposeServices,
+    );
+    if (JSON.stringify(releaseIdentity) !== JSON.stringify(expectedIdentity)) {
+      fail("resume-current Docker workload identity does not match current.json.");
+    }
+    assertResumeEvidenceStable(
+      authority.descriptorSnapshot,
+      readAuthority().descriptorSnapshot,
+      "Current release descriptor",
+    );
+    assertResumeEvidenceStable(
+      secretEvidence,
+      assertExistingFullLocalRuntimeSecrets(runtime),
+      "Full-local runtime secrets",
+    );
+    assertResumeEvidenceStable(
+      configEvidence,
+      readFullLocalResumeConfigEvidence(requestedConfigPath),
+      "Full-local resume config",
+    );
+    return {
+      ...status,
+      release_identity: releaseIdentity,
+      resumed_current: true,
+      status: "PASS",
+    };
+  } catch (error) {
+    if (!mutationAttempted) throw error;
+    let cleanup;
+    try {
+      cleanup = cleanupFullLocalResumeAttempt({
+        before: containersBeforeResume,
+        expectedServices: expectedComposeServices,
+        runtime,
+      });
+    } catch (cleanupError) {
+      cleanup = Object.freeze({
+        cleanup_failures: Object.freeze([
+          cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+        ]),
+        removed_container_ids: Object.freeze([]),
+        stopped_container_ids: Object.freeze([]),
+        volumes_removed: false,
+      });
+    }
+    const evidencePath = preserveFullLocalResumeFailureEvidence({
+      cleanup,
+      error,
+      homeDir,
+      runtime,
+    });
+    const message = sanitizedResumeFailure(error, runtime);
+    throw new Error(`${message} Failure evidence: ${evidencePath}`);
+  }
+}
+
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   validateFullLocalProductionMutationAuthority(command, args);
   switch (command) {
+    case "resume-current":
+      print(await resumeCurrentRelease(args));
+      break;
     case "init-config":
       print({ config: initializeConfig(args), status: "PASS" });
       break;

@@ -129,16 +129,27 @@ from scoped_relations;
 `;
 }
 
-export function digestPlatformServiceSchemaCatalog(rawCatalog) {
+function parsePlatformServiceSchemaCatalog(rawCatalog) {
   if (typeof rawCatalog !== "string" || rawCatalog.trim().length === 0) {
     throw new Error("Platform service schema catalog is invalid");
   }
-  let parsed;
   try {
-    parsed = JSON.parse(rawCatalog);
+    const parsed = JSON.parse(rawCatalog);
+    if (!Array.isArray(parsed)) {
+      throw new Error("Platform service schema catalog is invalid");
+    }
+    return parsed;
   } catch {
     throw new Error("Platform service schema catalog is invalid");
   }
+}
+
+export function countPlatformServiceSchemaCatalog(rawCatalog) {
+  return parsePlatformServiceSchemaCatalog(rawCatalog).length;
+}
+
+export function digestPlatformServiceSchemaCatalog(rawCatalog) {
+  const parsed = parsePlatformServiceSchemaCatalog(rawCatalog);
   return createHash("sha256").update(stableJson(parsed)).digest("hex");
 }
 

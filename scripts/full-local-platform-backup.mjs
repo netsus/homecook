@@ -28,6 +28,7 @@ import {
   buildPinnedSupabaseCliInvocation,
   createFailSafeConsistentCutController,
   createEncryptedPlatformBackup,
+  countPlatformServiceSchemaCatalog,
   PINNED_SUPABASE_CLI_VERSION,
   PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   PLATFORM_BACKUP_KEYCHAIN_SERVICE,
@@ -292,6 +293,78 @@ function sha256File(path) {
   const digest = /^([0-9a-f]{64})\s/u.exec(output)?.[1];
   if (!digest) fail("Backup readiness archive digest is invalid.");
   return digest;
+}
+
+async function copyAuthenticatedOffMacBackup(args) {
+  if (optionValue(args, "--confirm-off-mac-copy") !== "OFF_MAC_COPY_VERIFIED") {
+    fail("copy-off-mac requires --confirm-off-mac-copy OFF_MAC_COPY_VERIFIED.");
+  }
+  const archive = existingMode600Path(args, "--archive");
+  const output = requiredAbsolutePath(args, "--output");
+  const outputAuthenticationPath = platformBackupAuthenticationPath(output);
+  if (!output.endsWith(".tar.gz.enc")) {
+    fail("--output must end with .tar.gz.enc.");
+  }
+  if (existsSync(output) || existsSync(outputAuthenticationPath)) {
+    fail("Authenticated off-Mac copy output already exists.");
+  }
+  assertPrivateArtifactParent(archive);
+  assertPrivateArtifactParent(output);
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(output),
+  });
+  if (statSync(archive).dev === statSync(dirname(output)).dev) {
+    fail("Authenticated off-Mac copy must use a distinct filesystem device.");
+  }
+
+  const backupKey = loadBackupKey();
+  const metadata = await withVerifiedPlatformBackup({
+    archive,
+    backupKey,
+    consume: ({ metadata: verified }) => verified,
+  });
+  const archiveBytes = readFileSync(archive);
+  try {
+    writeFileSync(output, archiveBytes, { flag: "wx", mode: 0o600 });
+    chmodSync(output, 0o600);
+    const authentication = buildPlatformBackupAuthentication({
+      archive: output,
+      archiveBytes,
+      backupKey,
+    });
+    writeFileSync(
+      outputAuthenticationPath,
+      `${JSON.stringify(authentication, null, 2)}\n`,
+      { encoding: "utf8", flag: "wx", mode: 0o600 },
+    );
+    chmodSync(outputAuthenticationPath, 0o600);
+    verifyPlatformBackupAuthentication({
+      archive: output,
+      archiveBytes,
+      authentication,
+      backupKey,
+    });
+    const copiedMetadata = await withVerifiedPlatformBackup({
+      archive: output,
+      backupKey,
+      consume: ({ metadata: verified }) => verified,
+    });
+    if (JSON.stringify(copiedMetadata) !== JSON.stringify(metadata)) {
+      fail("Authenticated off-Mac copy metadata does not match the source backup.");
+    }
+    return {
+      archive,
+      archive_sha256: sha256File(archive),
+      off_mac_copy: output,
+      off_mac_copy_authentication: outputAuthenticationPath,
+      off_mac_copy_sha256: sha256File(output),
+    };
+  } catch (error) {
+    rmSync(outputAuthenticationPath, { force: true });
+    rmSync(output, { force: true });
+    throw error;
+  }
 }
 
 async function recordBackupReadiness(args) {
@@ -563,9 +636,9 @@ function readProductionDatabaseProvenance(resources, config, containers) {
     "--dbname",
     "postgres",
     "--command",
-    "select current_database(), current_setting('server_version_num'), count(*) from pg_namespace;",
+    "select current_database(), current_setting('server_version_num');",
   ], { failure: "Production database identity provenance failed." }).trim().split("|");
-  if (identity.length !== 3 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
+  if (identity.length !== 2 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
     fail("Production database identity provenance is invalid.");
   }
   return Object.freeze({
@@ -577,7 +650,7 @@ function readProductionDatabaseProvenance(resources, config, containers) {
     image: resources.postgresImage,
     postgres_volume: resources.postgresVolumeName,
     schema_catalog_sha256: digestPlatformServiceSchemaCatalog(catalog.trim()),
-    schema_count: Number(identity[2]),
+    schema_count: countPlatformServiceSchemaCatalog(catalog.trim()),
     server_version_num: identity[1],
     storage_image: serviceImages.storage,
   });
@@ -646,6 +719,9 @@ async function main() {
       }
       break;
     }
+    case "copy-off-mac":
+      print({ ...await copyAuthenticatedOffMacBackup(args), status: "PASS" });
+      break;
     case "inventory": {
       const staging = mkdtempSync(join(tmpdir(), "homecook-platform-inventory-"));
       chmodSync(staging, 0o700);

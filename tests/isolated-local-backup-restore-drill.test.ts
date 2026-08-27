@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync } from "node:crypto";
 import {
   chmodSync,
@@ -205,6 +206,47 @@ describe("isolated local Supabase backup and restore drill", () => {
     expect(cli).toContain("--recovery-issuer-private-key");
     expect(cli).toContain("--restore-manifest");
     expect(cli).toContain("--recovery-manifest");
+  });
+
+  it("reaches the execute guard instead of crashing during module import", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["scripts/run-isolated-local-backup-restore-drill.mjs"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Use --execute to run the isolated fixture drill.");
+    expect(result.stderr).not.toContain("SyntaxError");
+  });
+
+  it("does not resolve platform-specific Docker images before the execute guard", () => {
+    const cli = readFileSync("scripts/run-isolated-local-backup-restore-drill.mjs", "utf8");
+
+    expect(cli).not.toContain(
+      "const POSTGRES_IMAGE = fullLocalImageRefsForPlatform(PLATFORM).postgres;",
+    );
+    expect(cli).toContain("function postgresImage()");
+  });
+
+  it("uses the production service schema catalog contract for restored archives", () => {
+    const cli = readFileSync("scripts/run-isolated-local-backup-restore-drill.mjs", "utf8");
+
+    expect(cli).toContain("buildPlatformServiceSchemaCatalogSql");
+    expect(cli).toContain("digestPlatformServiceSchemaCatalog");
+  });
+
+  it("binds external recovery evidence to the restored archive and authenticated metadata", () => {
+    const cli = readFileSync("scripts/run-isolated-local-backup-restore-drill.mjs", "utf8");
+
+    expect(cli).toContain("archive_sha256: restoreManifest.source_archive_sha256");
+    expect(cli).toContain("clean_restore_verified: restoreManifest.fresh_target_attested");
+    expect(cli).toContain(
+      "restored_metadata_sha256: fullLocalBackupMetadataSha256(authenticatedMetadata)",
+    );
   });
 
   it("rejects external archive inputs not owned by the current user", () => {

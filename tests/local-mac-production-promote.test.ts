@@ -31,6 +31,8 @@ import {
 const temporaryDirectories: string[] = [];
 const PREVIOUS_RELEASE_SHA = "c".repeat(40);
 const PREVIOUS_RELEASE_TREE = "f".repeat(40);
+const FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA =
+  "3bdd814da8f9849805185d1b3be5a6ee703133a0";
 
 function createTempDirectory(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
@@ -142,6 +144,7 @@ function createFixture() {
   const runCommand = runCommandMock as unknown as typeof import("node:child_process").spawnSync;
   const installBundle = vi.fn(async () => ({ installed: true }));
   const preflightBundle = vi.fn(async () => ({
+    full_local_config_sha256: "1".repeat(64),
     stable_key: "runtime-stable",
     worker: {
       artifactRoot: workerRoot,
@@ -158,6 +161,7 @@ function createFixture() {
       credentialSha256: "4".repeat(64),
       expectedSchemaSha256: "3".repeat(64),
       policySha256: "2".repeat(64),
+      fullLocalConfigSha256: "1".repeat(64),
     },
   }));
   const readinessProbe = vi.fn(async () => createReadyBundle(manifest));
@@ -169,6 +173,7 @@ function createFixture() {
     credentialSha256: "4".repeat(64),
     expectedSchemaSha256: sha256(readFileSync(workerExpectedSchemaPath)),
     policySha256: "2".repeat(64),
+    fullLocalConfigSha256: "1".repeat(64),
   }));
 
   return {
@@ -326,6 +331,82 @@ describe("local Mac production promote", () => {
       .rejects.toThrow(/prepared release|candidate|does not exist/iu);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
     expect(fixture.installBundle).not.toHaveBeenCalled();
+  });
+
+  it("publishes only current.json for the exact first canonical adoption bridge", async () => {
+    const fixture = createFixture();
+    fixture.manifest = createLocalMacProductionReleaseManifest(fixture.manifestPath, {
+      previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+    });
+    fixture.manifestBytes = Buffer.from(JSON.stringify(fixture.manifest, null, 2));
+    writeFileSync(fixture.manifestPath, fixture.manifestBytes, { mode: 0o600 });
+    writeFileSync(join(fixture.releaseDir, "release-manifest.json"), fixture.manifestBytes, {
+      mode: 0o600,
+    });
+    const preparePath = join(fixture.releaseDir, "prepare.json");
+    const prepare = JSON.parse(readFileSync(preparePath, "utf8"));
+    writeFileSync(preparePath, JSON.stringify({
+      ...prepare,
+      source_manifest_sha256: sha256(fixture.manifestBytes),
+    }, null, 2), { mode: 0o600 });
+    rmSync(fixture.paths.currentDescriptorPath, { force: true });
+    fixture.preflightBundle.mockImplementation(async (...args: unknown[]) => {
+      const context = args[0] as {
+        currentDescriptor: null,
+        currentRuntimeBridge: Record<string, string>,
+      };
+      expect(context.currentDescriptor).toBeNull();
+      expect(context.currentRuntimeBridge).toMatchObject({
+        app_release_dir: expect.stringContaining("/01_vibe_coding/homecook-production-current"),
+        full_local_source_sha: "36e7aecfe429875f2dc12f3effc020ab1296a818",
+        full_local_root: expect.stringContaining(
+          "/01_vibe_coding/homecook-session-refresh-storm-deploy-v9",
+        ),
+        mode: "first-canonical-adoption-v1",
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+        worker_artifact_root: expect.stringContaining(
+          "/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1",
+        ),
+        worker_manifest_path: expect.stringContaining(
+          "/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/",
+        ),
+      });
+      return {
+        full_local_config_sha256: "1".repeat(64),
+        stable_key: "bridge-stable",
+        worker: {
+          artifactRoot: fixture.workerRoot,
+          manifestPath: fixture.workerManifestPath,
+          appDescriptorPath: fixture.workerAppDescriptorPath,
+          configPath: "/private/worker/worker.env",
+          credentialPath: "/private/worker/credential.json",
+          expectedSchemaPath: fixture.workerExpectedSchemaPath,
+          policyPath: fixture.workerPolicyPath,
+          secretRoot: "/private/worker/secrets",
+          artifactSha256: "7".repeat(64),
+          appDescriptorSha256: "6".repeat(64),
+          configSha256: "5".repeat(64),
+          credentialSha256: "4".repeat(64),
+          expectedSchemaSha256: "3".repeat(64),
+          policySha256: "2".repeat(64),
+          fullLocalConfigSha256: "1".repeat(64),
+        },
+      };
+    });
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .resolves.toMatchObject({ promoted: true });
+    expect(existsSync(fixture.paths.currentDescriptorPath)).toBe(true);
+    expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+  });
+
+  it("fails closed when current.json is absent for any non-bridge predecessor SHA", async () => {
+    const fixture = createFixture();
+    rmSync(fixture.paths.currentDescriptorPath, { force: true });
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/current.*descriptor|first canonical adoption|previous_release_sha|bridge/iu);
+    expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
   });
 
   it("rejects a partial candidate without a completed prepare marker and preserves it", async () => {
@@ -531,6 +612,7 @@ describe("local Mac production promote", () => {
     const fixture = createFixture();
     fixture.preflightBundle
       .mockResolvedValueOnce({
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-a",
         worker: {
           artifactRoot: "/private/worker",
@@ -547,9 +629,11 @@ describe("local Mac production promote", () => {
           credentialSha256: "4".repeat(64),
           expectedSchemaSha256: "3".repeat(64),
           policySha256: "2".repeat(64),
+          fullLocalConfigSha256: "1".repeat(64),
         },
       })
       .mockResolvedValueOnce({
+        full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-b",
         worker: {
           artifactRoot: "/private/worker",
@@ -566,6 +650,7 @@ describe("local Mac production promote", () => {
           credentialSha256: "4".repeat(64),
           expectedSchemaSha256: "3".repeat(64),
           policySha256: "2".repeat(64),
+          fullLocalConfigSha256: "1".repeat(64),
         },
       });
 
@@ -977,6 +1062,8 @@ describe("local Mac production promote", () => {
       release_tree: fixture.manifest.release_tree,
       build_id: fixture.manifest.build_id,
       promotion_id: fixture.manifest.promotion_id,
+      restart_capability: "full-local-resume-current-v1",
+      full_local_config_sha256: "1".repeat(64),
       source_manifest_sha256: sha256(fixture.manifestBytes),
       worker_artifact_sha256: "7".repeat(64),
       worker_app_descriptor_sha256: sha256(readFileSync(fixture.workerAppDescriptorPath)),

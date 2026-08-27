@@ -91,6 +91,147 @@ function validSecrets() {
 }
 
 describe("full-local production runtime static contract", () => {
+  it("selects only attempt-created or attempt-started compose containers for cleanup", () => {
+    const container = (
+      id: string,
+      service: string,
+      running: boolean,
+      project = "homecook-full-local-isolated",
+    ) => ({
+      Id: id,
+      Config: { Labels: {
+        "com.docker.compose.project": project,
+        "com.docker.compose.service": service,
+      } },
+      State: { Running: running },
+    });
+    const before = [
+      container("pre-running", "auth", true),
+      container("pre-stopped", "storage", false),
+      container("foreign", "postgres", false, "other-project"),
+    ];
+    const after = [
+      container("pre-running", "auth", true),
+      container("pre-stopped", "storage", true),
+      container("new-postgrest-probe", "postgrest-probe", true),
+      container("new-future-service", "future-service", true),
+      container("foreign", "postgres", true, "other-project"),
+    ];
+
+    expect(fullLocalRuntime.selectFullLocalResumeCleanupContainers({
+      after,
+      before,
+      composeProject: "homecook-full-local-isolated",
+      expectedServices: [
+        "auth",
+        "future-service",
+        "postgrest-probe",
+        "storage",
+      ],
+    })).toEqual({
+      removeIds: ["new-future-service", "new-postgrest-probe"],
+      stopIds: ["new-future-service", "new-postgrest-probe", "pre-stopped"],
+    });
+  });
+
+  it("parses the authoritative pinned Compose service set including postgrest-probe", () => {
+    const actualCompose = readFileSync(
+      join(process.cwd(), "infra/full-local-supabase/docker-compose.production.yml"),
+      "utf8",
+    );
+    const serviceSection = actualCompose.slice(
+      actualCompose.indexOf("services:"),
+      actualCompose.indexOf("\nnetworks:"),
+    );
+    const declaredServices = [...serviceSection.matchAll(/^  ([a-z0-9-]+):$/gmu)]
+      .map((match) => match[1]);
+    const parsed = fullLocalRuntime.parseFullLocalComposeServiceNames(
+      `${declaredServices.join("\n")}\n`,
+    );
+
+    expect(parsed).toEqual([
+      "api-gateway",
+      "auth",
+      "auth-proxy",
+      "postgres",
+      "postgrest",
+      "postgrest-probe",
+      "storage",
+    ]);
+  });
+
+  it("binds enabled OAuth secret files to Keychain values without exposing payloads", () => {
+    const root = mkdtempSync(join(tmpdir(), "full-local-resume-oauth-"));
+    const coreSecrets = validSecrets();
+    const oauthSecrets = Object.fromEntries(FULL_LOCAL_OAUTH_SECRET_NAMES.map((name, index) => [
+      name,
+      `${name}-private-${index}`,
+    ]));
+    try {
+      chmodSync(root, 0o700);
+      for (const [name, value] of Object.entries({ ...coreSecrets, ...oauthSecrets })) {
+        writeFileSync(join(root, name), value, { mode: 0o600 });
+      }
+      const evidence = fullLocalRuntime.collectFullLocalResumeSecretEvidence({
+        coreSecrets,
+        directory: root,
+        expectedUid: statSync(root).uid,
+        oauthEnabled: true,
+        oauthSecrets,
+      });
+      expect(evidence).toHaveLength(
+        FULL_LOCAL_SECRET_NAMES.length + FULL_LOCAL_OAUTH_SECRET_NAMES.length,
+      );
+      expect(JSON.stringify(evidence)).not.toContain("private-");
+
+      writeFileSync(join(root, "google_client_secret"), "stale-value", { mode: 0o600 });
+      expect(() => fullLocalRuntime.collectFullLocalResumeSecretEvidence({
+        coreSecrets,
+        directory: root,
+        expectedUid: statSync(root).uid,
+        oauthEnabled: true,
+        oauthSecrets,
+      })).toThrow(/OAuth|secret|Keychain|mismatch/iu);
+      writeFileSync(join(root, "google_client_secret"), oauthSecrets.google_client_secret, {
+        mode: 0o600,
+      });
+      chmodSync(join(root, "google_client_secret"), 0o644);
+      expect(() => fullLocalRuntime.collectFullLocalResumeSecretEvidence({
+        coreSecrets,
+        directory: root,
+        expectedUid: statSync(root).uid,
+        oauthEnabled: true,
+        oauthSecrets,
+      })).toThrow(/mode|unsafe/iu);
+      chmodSync(join(root, "google_client_secret"), 0o600);
+      expect(() => fullLocalRuntime.collectFullLocalResumeSecretEvidence({
+        coreSecrets,
+        directory: root,
+        expectedUid: statSync(root).uid + 1,
+        oauthEnabled: true,
+        oauthSecrets,
+      })).toThrow(/owner|unsafe/iu);
+      rmSync(join(root, "google_client_secret"));
+      expect(() => fullLocalRuntime.collectFullLocalResumeSecretEvidence({
+        coreSecrets,
+        directory: root,
+        expectedUid: statSync(root).uid,
+        oauthEnabled: true,
+        oauthSecrets,
+      })).toThrow(/missing|unexpected/iu);
+      symlinkSync(join(root, "kakao_client_secret"), join(root, "google_client_secret"));
+      expect(() => fullLocalRuntime.collectFullLocalResumeSecretEvidence({
+        coreSecrets,
+        directory: root,
+        expectedUid: statSync(root).uid,
+        oauthEnabled: true,
+        oauthSecrets,
+      })).toThrow(/symlink|unsafe/iu);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("replaces every user-home placeholder in generated production config", () => {
     const template = [
       "FULL_LOCAL_SECRET_DIR=/Users/REPLACE_ME/.homecook/secrets",
