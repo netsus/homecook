@@ -680,6 +680,7 @@ export function readLocalMacProductionPreparedReleaseIdentity({
     release_sha: releaseSha,
     release_tree: releaseTree,
     build_id: buildId,
+    promotion_id: marker.promotion_id,
   };
 }
 

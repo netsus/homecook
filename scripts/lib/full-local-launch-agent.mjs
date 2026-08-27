@@ -267,6 +267,7 @@ export function getFullLocalLaunchAgentPaths(homeDir = process.env.HOME ?? "") {
  *   configPath: string,
  *   homeDir?: string,
  *   nodeBin?: string,
+ *   releaseIdentityPath?: string,
  *   rootDir?: string,
  * }} options
  */
@@ -274,11 +275,16 @@ export function renderFullLocalLaunchAgentPlist({
   configPath,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
+  releaseIdentityPath,
   rootDir = process.cwd(),
 } = {}) {
   const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
   const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
   const normalizedNodeBin = requireAbsolutePath(nodeBin, "nodeBin");
+  const normalizedReleaseIdentityPath = requireAbsolutePath(
+    releaseIdentityPath ?? resolve(normalizedRootDir, "prepare.json"),
+    "releaseIdentityPath",
+  );
   const normalizedConfigPath = requireAbsolutePath(configPath, "configPath");
   const sanitizedPath = buildSanitizedLaunchAgentPath(normalizedNodeBin);
   const paths = getFullLocalLaunchAgentPaths(normalizedHomeDir);
@@ -302,6 +308,8 @@ export function renderFullLocalLaunchAgentPlist({
     <string>start</string>
     <string>--config</string>
     <string>${escapeXml(normalizedConfigPath)}</string>
+    <string>--release-identity</string>
+    <string>${escapeXml(normalizedReleaseIdentityPath)}</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
@@ -409,6 +417,7 @@ export function extractFullLocalConfigPathFromPlist(plist) {
  *   homeDir?: string,
  *   nodeBin?: string,
  *   platform?: string,
+ *   releaseIdentityPath?: string,
  *   rootDir?: string,
  *   spawn?: LaunchctlSpawn,
  * }} options
@@ -420,6 +429,7 @@ export function installFullLocalLaunchAgent({
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   platform = process.platform,
+  releaseIdentityPath,
   rootDir = process.cwd(),
   spawn = spawnSync,
 } = {}) {
@@ -443,6 +453,7 @@ export function installFullLocalLaunchAgent({
     configPath: normalizedConfigPath,
     homeDir,
     nodeBin: normalizedNodeBin,
+    releaseIdentityPath: releaseIdentityPath ?? resolve(normalizedRootDir, "prepare.json"),
     rootDir: normalizedRootDir,
   });
 

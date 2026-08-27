@@ -13,11 +13,13 @@ import {
   getLocalMacProductionPaths,
   installLocalMacProductionLaunchAgent,
   readLocalMacProductionStatus,
+  renderLocalMacProductionPlist,
   waitForLocalMacProductionReady,
 } from "./local-mac-production.mjs";
 import {
   getFullLocalLaunchAgentPaths,
   installFullLocalLaunchAgent,
+  renderFullLocalLaunchAgentPlist,
 } from "./full-local-launch-agent.mjs";
 import {
   readLocalMacProductionPreparedReleaseIdentity,
@@ -30,6 +32,7 @@ import {
   installYoutubeExtractionWorkerLaunchAgent,
   loadYoutubeExtractionWorkerRuntimeInputs,
   parseLaunchctlPrintStatus,
+  renderYoutubeExtractionWorkerPlist,
   validateYoutubeExtractionWorkerConfigPath,
   validateYoutubeExtractionWorkerSecretFile,
   validateYoutubeExtractionWorkerSecretRoot,
@@ -94,8 +97,43 @@ function readPlistSnapshot(path, { currentUid, expectedMode, label }) {
     args,
     digest: sha256Text(bytes),
     path,
+    text,
     workingDirectory,
   };
+}
+
+export function assertCanonicalLocalMacProductionPlist({
+  actualPath,
+  currentUid,
+  expectedContent,
+  expectedMode,
+  label,
+}) {
+  const snapshot = readPlistSnapshot(actualPath, { currentUid, expectedMode, label });
+  if (snapshot.text !== expectedContent) {
+    throw new Error(`${label} content drifted from the canonical renderer.`);
+  }
+  return snapshot;
+}
+
+export function buildCanonicalCurrentYoutubeWorkerPlist({
+  artifactRoot,
+  manifestPath,
+  options,
+  renderWorkerPlist = renderYoutubeExtractionWorkerPlist,
+}) {
+  return renderWorkerPlist({
+    appDescriptorPath: options.workerAppDescriptorPath,
+    configPath: options.workerConfigPath,
+    credentialPath: options.workerCredentialPath,
+    currentPolicyPath: options.workerPolicyPath,
+    expectedSchemaPath: options.workerExpectedSchemaPath,
+    homeDir: options.homeDir,
+    manifestPath,
+    nodeBin: options.nodeBin,
+    rootDir: artifactRoot,
+    secretRoot: options.workerSecretRoot,
+  });
 }
 
 function argumentValue(args, flag) {
@@ -149,10 +187,26 @@ function sanitizedPath(nodeBin) {
 }
 
 function readFullLocalWorkloadDefault({ context, options }) {
-  const identity = readLocalMacProductionPreparedReleaseIdentity({
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+  assertCanonicalLocalMacProductionPlist({
+    actualPath: getFullLocalLaunchAgentPaths(context.homeDir).plistPath,
+    currentUid,
+    expectedContent: renderFullLocalLaunchAgentPlist({
+      configPath: options.fullLocalConfigPath,
+      homeDir: context.homeDir,
+      nodeBin: options.nodeBin,
+      releaseIdentityPath: resolve(context.releaseDir, "prepare.json"),
+      rootDir: context.releaseDir,
+    }),
+    expectedMode: 0o600,
+    label: "Full-local plist",
+  });
+  const expectedIdentity = readLocalMacProductionPreparedReleaseIdentity({
     component: "full_local",
     releaseDir: context.releaseDir,
   });
+  const releaseIdentityPath = resolve(context.releaseDir, "prepare.json");
   const result = spawnSync(
     options.nodeBin,
     [
@@ -160,6 +214,8 @@ function readFullLocalWorkloadDefault({ context, options }) {
       "status",
       "--config",
       options.fullLocalConfigPath,
+      "--release-identity",
+      releaseIdentityPath,
     ],
     {
       cwd: context.releaseDir,
@@ -180,8 +236,18 @@ function readFullLocalWorkloadDefault({ context, options }) {
   } catch {
     throw new Error("Full-local Docker workload status was invalid.");
   }
+  const observedIdentity = status.release_identity;
+  if (
+    !observedIdentity
+    || observedIdentity.release_sha !== expectedIdentity.release_sha
+    || observedIdentity.release_tree !== expectedIdentity.release_tree
+    || observedIdentity.build_id !== expectedIdentity.build_id
+    || observedIdentity.promotion_id !== expectedIdentity.promotion_id
+  ) {
+    throw new Error("Full-local Docker workload release identity mismatch.");
+  }
   return {
-    ...identity,
+    ...observedIdentity,
     ready:
       status.healthy === true
       && status.authorization_contract_status === "PASS"
@@ -293,15 +359,32 @@ function buildDefaultDependencies() {
       const currentUid = process.getuid?.();
       if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
       const currentReleaseDir = realpathSync(context.currentReleaseDir);
-      const appPlist = readPlistSnapshot(getLocalMacProductionPaths(options.homeDir).plistPath, {
+      const appPlistPath = getLocalMacProductionPaths(options.homeDir).plistPath;
+      const appPlist = assertCanonicalLocalMacProductionPlist({
+        actualPath: appPlistPath,
         currentUid,
+        expectedContent: renderLocalMacProductionPlist({
+          homeDir: options.homeDir,
+          nodeBin: options.nodeBin,
+          rootDir: currentReleaseDir,
+        }),
         expectedMode: 0o644,
         label: "Current app plist",
       });
-      const fullLocalPlist = readPlistSnapshot(
-        getFullLocalLaunchAgentPaths(options.homeDir).plistPath,
-        { currentUid, expectedMode: 0o600, label: "Current full-local plist" },
-      );
+      const fullLocalPlistPath = getFullLocalLaunchAgentPaths(options.homeDir).plistPath;
+      const fullLocalPlist = assertCanonicalLocalMacProductionPlist({
+        actualPath: fullLocalPlistPath,
+        currentUid,
+        expectedContent: renderFullLocalLaunchAgentPlist({
+          configPath: options.fullLocalConfigPath,
+          homeDir: options.homeDir,
+          nodeBin: options.nodeBin,
+          releaseIdentityPath: resolve(currentReleaseDir, "prepare.json"),
+          rootDir: currentReleaseDir,
+        }),
+        expectedMode: 0o600,
+        label: "Current full-local plist",
+      });
       const workerPlist = readPlistSnapshot(
         getYoutubeExtractionWorkerPaths(options.homeDir).plistPath,
         { currentUid, expectedMode: 0o600, label: "Current YouTube worker plist" },
@@ -373,6 +456,18 @@ function buildDefaultDependencies() {
       if (Object.values(currentWorkerPaths).some((value) => !value)) {
         throw new Error("Current worker plist runtime paths are incomplete.");
       }
+      const canonicalWorkerPlist = buildCanonicalCurrentYoutubeWorkerPlist({
+        artifactRoot: workerArtifactRoot,
+        manifestPath: workerManifestPath,
+        options,
+      });
+      assertCanonicalLocalMacProductionPlist({
+        actualPath: workerPlist.path,
+        currentUid,
+        expectedContent: canonicalWorkerPlist,
+        expectedMode: 0o600,
+        label: "Current YouTube worker plist",
+      });
       const currentWorkerInputs = loadYoutubeExtractionWorkerRuntimeInputs(currentWorkerPaths);
       const currentWorkerPreflight = evaluateYoutubeExtractionWorkerPreflight(
         currentWorkerInputs,
@@ -416,7 +511,20 @@ function buildDefaultDependencies() {
       spawn: spawnSync,
     }),
 
-    readAppRuntimeIdentity: async ({ context }) => {
+    readAppRuntimeIdentity: async ({ context, options }) => {
+      const currentUid = process.getuid?.();
+      if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+      assertCanonicalLocalMacProductionPlist({
+        actualPath: getLocalMacProductionPaths(context.homeDir).plistPath,
+        currentUid,
+        expectedContent: renderLocalMacProductionPlist({
+          homeDir: context.homeDir,
+          nodeBin: options.nodeBin,
+          rootDir: context.releaseDir,
+        }),
+        expectedMode: 0o644,
+        label: "Promoted app plist",
+      });
       const status = readLocalMacProductionStatus({ spawn: spawnSync });
       if (!status.running || !Number.isInteger(status.pid)) {
         throw new Error("Promoted app runtime is not running.");
@@ -433,6 +541,24 @@ function buildDefaultDependencies() {
 
     readWorkerRuntimeIdentity: async ({ context, options, preflight }) => {
       const userId = preflight.worker.userId;
+      assertCanonicalLocalMacProductionPlist({
+        actualPath: getYoutubeExtractionWorkerPaths(context.homeDir).plistPath,
+        currentUid: userId,
+        expectedContent: renderYoutubeExtractionWorkerPlist({
+          appDescriptorPath: options.workerAppDescriptorPath,
+          configPath: options.workerConfigPath,
+          credentialPath: options.workerCredentialPath,
+          currentPolicyPath: options.workerPolicyPath,
+          expectedSchemaPath: options.workerExpectedSchemaPath,
+          homeDir: context.homeDir,
+          manifestPath: options.workerManifestPath,
+          nodeBin: options.nodeBin,
+          rootDir: preflight.worker.artifactRoot,
+          secretRoot: options.workerSecretRoot,
+        }),
+        expectedMode: 0o600,
+        label: "Promoted YouTube worker plist",
+      });
       const serviceTarget = buildYoutubeExtractionWorkerServiceTarget({ userId });
       const raw = spawnSync("/bin/launchctl", ["print", serviceTarget], { encoding: "utf8" });
       const status = parseLaunchctlPrintStatus({
@@ -582,6 +708,13 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
         || fullLocal.product_catalog_status !== "PASS"
       ) {
         throw new Error("Full-local Docker workload readiness failed.");
+      }
+      for (const [component, state] of [
+        ["app", app],
+        ["full_local", fullLocal],
+        ["youtube_worker", worker],
+      ]) {
+        assertExactIdentity(component, state, context.manifest);
       }
       return { app, full_local: fullLocal, youtube_worker: worker };
     },

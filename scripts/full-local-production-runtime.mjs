@@ -30,6 +30,7 @@ import {
   materializeFullLocalSecrets,
   materializeFullLocalRuntimeSecrets,
   parseFullLocalProductCatalogSqlOutput,
+  readFullLocalReleaseIdentityFromContainers,
   renderFullLocalProductionConfigTemplate,
   summarizeFullLocalRuntimeStates,
   selectNewlyStartedFullLocalWriterServices,
@@ -362,6 +363,43 @@ function configPath(args) {
   return resolve(optionValue(args, "--config") ?? DEFAULT_CONFIG);
 }
 
+function readExpectedFullLocalReleaseIdentity(args) {
+  const value = optionValue(args, "--release-identity");
+  if (value === null) return null;
+  const path = resolve(value);
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink() || !stat.isFile()) {
+    fail("Full-local release identity must be a regular non-symlink file.");
+  }
+  if ((stat.mode & 0o022) !== 0) {
+    fail("Full-local release identity must not be group/world writable.");
+  }
+  let descriptor;
+  try {
+    descriptor = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    fail("Full-local release identity is invalid.");
+  }
+  if (
+    descriptor?.schema !== "homecook.local-mac-production-prepare.v1"
+    || descriptor.status !== "prepared"
+    || !/^[0-9a-f]{40}$/u.test(descriptor.release_sha ?? "")
+    || !/^[0-9a-f]{40}$/u.test(descriptor.release_tree ?? "")
+    || typeof descriptor.build_id !== "string"
+    || descriptor.build_id.length === 0
+    || typeof descriptor.promotion_id !== "string"
+    || descriptor.promotion_id.length === 0
+  ) {
+    fail("Full-local release identity descriptor is incomplete.");
+  }
+  return Object.freeze({
+    release_sha: descriptor.release_sha,
+    release_tree: descriptor.release_tree,
+    build_id: descriptor.build_id,
+    promotion_id: descriptor.promotion_id,
+  });
+}
+
 function keychainValue(service, account) {
   return run(
     "security",
@@ -616,6 +654,20 @@ function composeContainerIds(runtime) {
     .filter(Boolean);
 }
 
+function composeContainers(runtime) {
+  const ids = composeContainerIds(runtime);
+  if (ids.length === 0) return [];
+  const output = run("docker", ["container", "inspect", ...ids], {
+    env: runtime.env,
+    failure: "Full-local Docker container identity inspection failed.",
+  });
+  const containers = JSON.parse(output || "[]");
+  if (!Array.isArray(containers) || containers.length !== ids.length) {
+    fail("Full-local Docker container identity inspection was incomplete.");
+  }
+  return containers;
+}
+
 function initializeConfig(args) {
   const target = configPath(args);
   if (existsSync(target) && !hasFlag(args, "--replace")) {
@@ -670,6 +722,7 @@ function baseRuntime(args, { requireSecrets = true } = {}) {
 
 function validateAndMaterialize(args) {
   const runtime = baseRuntime(args);
+  const releaseIdentity = readExpectedFullLocalReleaseIdentity(args);
   const secretDirectory = validateExternalSecretDirectory({
     repositoryRoot: ROOT,
     secretDirectory: runtime.config.FULL_LOCAL_SECRET_DIR,
@@ -689,7 +742,16 @@ function validateAndMaterialize(args) {
     secretDirectoryMode: statSync(secretDirectory).mode,
     secrets: runtime.secrets,
   });
-  const env = { ...process.env, ...runtime.config };
+  const env = {
+    ...process.env,
+    ...runtime.config,
+    ...(releaseIdentity ? {
+      FULL_LOCAL_RELEASE_SHA: releaseIdentity.release_sha,
+      FULL_LOCAL_RELEASE_TREE: releaseIdentity.release_tree,
+      FULL_LOCAL_RELEASE_BUILD_ID: releaseIdentity.build_id,
+      FULL_LOCAL_RELEASE_PROMOTION_ID: releaseIdentity.promotion_id,
+    } : {}),
+  };
   delete env.DOCKER_DEFAULT_PLATFORM;
   const composed = run(
     "docker",
@@ -701,7 +763,7 @@ function validateAndMaterialize(args) {
     artifacts: [composed, readFileSync(runtime.configPath, "utf8")],
     secrets: [...Object.values(runtime.secrets), ...Object.values(runtime.oauthSecrets)],
   });
-  return Object.freeze({ ...runtime, env, oauth, validation });
+  return Object.freeze({ ...runtime, env, oauth, releaseIdentity, validation });
 }
 
 function bootstrapSecrets(args) {
@@ -783,6 +845,14 @@ function runtimeStatus(runtime) {
     { env: runtime.env },
   )));
   return summarizeFullLocalRuntimeStates(states);
+}
+
+function observedFullLocalReleaseIdentity(runtime) {
+  if (!runtime.releaseIdentity) return null;
+  return readFullLocalReleaseIdentityFromContainers(
+    composeContainers(runtime),
+    { expected: runtime.releaseIdentity },
+  );
 }
 
 function postgresContainerId(runtime) {
@@ -2159,6 +2229,7 @@ async function main() {
       try {
         compose(runtime, ["up", "-d"]);
         const status = await waitForRuntimeHealthy(runtime);
+        const releaseIdentity = observedFullLocalReleaseIdentity(runtime);
         const resources = liveFullLocalProductionResources(runtime);
         const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
         const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
@@ -2167,6 +2238,7 @@ async function main() {
           ...status,
           ...runtimeCatalogPayload(gate),
           backup_readiness: backupReadiness,
+          release_identity: releaseIdentity,
           status: "PASS",
         });
       } catch (error) {
@@ -2200,6 +2272,7 @@ async function main() {
         break;
       }
       const containerId = postgresContainerId(runtime);
+      const releaseIdentity = observedFullLocalReleaseIdentity(runtime);
       const productCatalogGate = collectFullLocalProductCatalog(containerId);
       const authorizationContractGate = collectFullLocalAuthorizationContract(containerId);
       const gatePayload = runtimeAuthorizationContractPayload({
@@ -2209,6 +2282,7 @@ async function main() {
       print({
         ...status,
         backup_readiness: backupReadiness,
+        release_identity: releaseIdentity,
         ...gatePayload,
       });
       if (gatePayload.authorization_contract_status !== "PASS"
