@@ -1,0 +1,47 @@
+{
+  "captured_at": "2026-08-27T15:15:11Z",
+  "evidence_scope": "youtube-extraction-truthful-progress-eta Phase E frontend",
+  "implementation_base": "678fd19e3722c0f3ab88b41d0320f20822e73016",
+  "implementation_head": "e33c8cf65b396e3cab7b456206b308c5fb042c7d",
+  "implementation_tree": "2723b737c583cd5a5b32cd5afbba66bebda2f1d2",
+  "capture_source_head": "e33c8cf65b396e3cab7b456206b308c5fb042c7d",
+  "capture_source_tree": "2723b737c583cd5a5b32cd5afbba66bebda2f1d2",
+  "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
+  "base_url": "http://127.0.0.1:3119",
+  "remote_supabase_access_count": 0,
+  "operational_local_supabase_mutation_count": 0,
+  "operational_app_3100_use_count": 0,
+  "captures": [
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-model-analysis.png",
+      "sha256": "10f6e694ab0224a57c048829eeee56701d8e93572b0bd1bf740a71c616a1296d",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "model-analysis-confirmed-65-eta-pending-reload-restored"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-320-delayed.png",
+      "sha256": "501f7ac846b0d2a49b6184cfeeb1dcb6227812da2562447eb233520e92ddafe9",
+      "viewport": { "width": 320, "height": 844 },
+      "state": "finalizing-confirmed-90-delayed-copy-actions-visible"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/desktop-1280-source-fetch-retry.png",
+      "sha256": "e5f04a188545a4be34aafde97cb82f67d447f9cb9773aaf67bd42c6ac836d3c5",
+      "viewport": { "width": 1280, "height": 800 },
+      "state": "source-fetch-confirmed-10-attempt-2-promoted-range"
+    }
+  ],
+  "verification": {
+    "tdd_red": "Legacy UI failed the new browser assertion because the progressbar had no server-confirmed aria-valuenow and still exposed the fixed one-to-three-minute estimate.",
+    "focused_vitest": "27 YT_IMPORT async UI tests passed; combined ETA, API client, and UI suite passed 38 tests.",
+    "playwright": "3 deterministic scenarios passed on desktop-chrome and 9 cross-project executions passed across desktop-chrome, mobile-chrome, and mobile-ios-small; reduced-motion computed animation-name is none for the spinner, current segment, and status dot.",
+    "reload": "The 390 scenario reloads the page and restores the same confirmed 65 percent model-analysis snapshot from the existing status endpoint.",
+    "lint_typecheck": "pnpm lint and pnpm typecheck passed.",
+    "design_review": "Independent low-risk screenshot review returned Findings 0."
+  },
+  "limitations": [
+    "This is local mock-API browser evidence and does not replace the same-SHA production worker canary.",
+    "Physical-device screen reader and virtual-keyboard validation remain part of later manual release validation.",
+    "Numeric ETA is demonstrated only with an injected promoted fixture; the first production model intentionally keeps numeric ETA hidden until evidence gates pass."
+  ]
+}

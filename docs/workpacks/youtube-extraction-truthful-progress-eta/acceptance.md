@@ -9,26 +9,26 @@
 
 ## Happy Path
 
-- [ ] 기존 background accepted 화면이 실제 stage 기반 segmented progress를 표시한다 <!-- omo:id=accept-happy-stage-progress;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 background accepted 화면이 실제 stage 기반 segmented progress를 표시한다 <!-- omo:id=accept-happy-stage-progress;stage=4;scope=frontend;review=5,6 -->
 - [x] API success data가 exact 9-key shape와 nullable `progress` key를 유지한다 <!-- omo:id=accept-api-envelope-progress;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 `progress` exact field set까지 일치한다 <!-- omo:id=accept-progress-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 `progress` exact field set까지 일치한다 <!-- omo:id=accept-progress-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
 - [x] `confirmed_percent`가 시간만으로 증가하지 않고 stage floor만 사용한다 <!-- omo:id=accept-stage-floor-only;stage=2;scope=backend;review=3,6 -->
-- [ ] active confirmed floor는 최대 90이고 active UI는 95를 넘지 않는다. `succeeded일 때만 100`이다. <!-- omo:id=accept-active-max95-success100;stage=4;scope=frontend;review=5,6 -->
+- [x] active confirmed floor는 최대 90이고 active UI는 95를 넘지 않는다. `succeeded일 때만 100`이다. <!-- omo:id=accept-active-max95-success100;stage=4;scope=frontend;review=5,6 -->
 - [x] 같은 attempt에서 stage 역행이 없고 새 attempt에서만 `source_fetch`로 reset된다 <!-- omo:id=accept-attempt-reset-only;stage=2;scope=backend;review=3,6 -->
 - [x] retry backoff queued 동안 이전 attempt snapshot이 public progress에 남지 않는다 <!-- omo:id=accept-queued-hides-old-attempt;stage=2;scope=backend;review=3,6 -->
 - [x] terminal/legacy active no-snapshot은 `progress=null`이다 <!-- omo:id=accept-terminal-null-progress;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
-- [ ] promotion gate 전 numeric ETA를 숨기고 `예상 시간 계산 중`을 표시한다 <!-- omo:id=accept-eta-hidden-before-promotion;stage=4;scope=frontend;review=5,6 -->
-- [ ] delayed active job은 numeric ETA 없이 delayed copy만 표시한다 <!-- omo:id=accept-delayed-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] promotion gate 전 numeric ETA를 숨기고 `예상 시간 계산 중`을 표시한다 <!-- omo:id=accept-eta-hidden-before-promotion;stage=4;scope=frontend;review=5,6 -->
+- [x] delayed active job은 numeric ETA 없이 delayed copy만 표시한다 <!-- omo:id=accept-delayed-copy;stage=4;scope=frontend;review=5,6 -->
 - [x] progress 기록 실패가 extraction/finalize 결과를 failed로 바꾸지 않는다 <!-- omo:id=accept-progress-nonfatal;stage=2;scope=backend;review=3,6 -->
 - [x] progress IPC는 non-blocking ordered queue이고 finalize 전 최대 2초 bounded flush만 하며 기존 30초 timeout을 stage마다 기다리지 않는다 <!-- omo:id=accept-progress-ipc-bounded;stage=2;scope=backend;review=3,6 -->
 - [x] heartbeat/permit fence loss는 계속 fatal이고 progress report soft-fail과 섞이지 않는다 <!-- omo:id=accept-heartbeat-fence-fatal;stage=2;scope=backend;review=3,6 -->
-- [ ] unauthorized, retry, terminal redirect의 기존 흐름을 회귀시키지 않는다 <!-- omo:id=accept-auth-retry-redirect-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized, retry, terminal redirect의 기존 흐름을 회귀시키지 않는다 <!-- omo:id=accept-auth-retry-redirect-preserved;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -42,7 +42,7 @@
 
 ## Data Setup / Preconditions
 
-- [ ] fixture baseline이 queued/source_fetch/video_download/frame_extraction/model_analysis/finalizing/delayed/retry/null cases를 모두 포함한다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] fixture baseline이 queued/source_fetch/video_download/frame_extraction/model_analysis/finalizing/delayed/retry/null cases를 모두 포함한다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
 - [x] numeric ETA promotion fixture가 isolated/golden 20, successful telemetry 50, bucket별 10, holdout coverage 80% gate를 검증한다 <!-- omo:id=accept-eta-promotion-gate;stage=2;scope=backend;review=3,6 -->
 - [x] real DB smoke가 additive migration, exact RPC, stale write 0, direct access 0을 검증할 수 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
 - [x] Supabase Cloud/linked/remote target은 N/A/forbidden이고 operational full-local destructive reset 0을 유지한다 <!-- omo:id=accept-remote-forbidden-full-local-zero;stage=2;scope=shared;review=3,6 -->
@@ -66,9 +66,9 @@
 
 ### Playwright
 
-- [ ] background progress flow, reload, retry, delayed copy가 브라우저 테스트로 고정된다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320/390/desktop screenshot과 browser flow evidence가 같은 새 evidence root에 묶인다 <!-- omo:id=accept-playwright-evidence-root;stage=4;scope=frontend;review=5,6 -->
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분된다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] background progress flow, reload, retry, delayed copy가 브라우저 테스트로 고정된다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 320/390/desktop screenshot과 browser flow evidence가 같은 새 evidence root에 묶인다 <!-- omo:id=accept-playwright-evidence-root;stage=4;scope=frontend;review=5,6 -->
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분된다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 
