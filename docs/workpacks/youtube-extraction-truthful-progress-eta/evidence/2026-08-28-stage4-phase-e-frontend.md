@@ -32,6 +32,14 @@ Clean-head frontend gate evidence:
 - Visual regression: 22 passed / 23 skipped after the intentional YouTube accepted-state baseline refresh
 - Security E2E: 12/12 passed
 
+Exploratory QA:
+
+- Checklist coverage: 31/31
+- Required devices: desktop-chrome / mobile-chrome / mobile-ios-small
+- Findings: 0
+- QA eval: 100/100, PASS
+- Artifacts: `ui/designs/evidence/youtube-extraction-truthful-progress-eta/exploratory-qa/`
+
 ## Contract evidence
 
 - Six server stages are rendered as compact segments.

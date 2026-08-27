@@ -38,7 +38,8 @@
     "reload": "The 390 scenario reloads the page and restores the same confirmed 65 percent model-analysis snapshot from the existing status endpoint.",
     "lint_typecheck": "pnpm lint and pnpm typecheck passed.",
     "design_review": "Independent low-risk screenshot review returned Findings 0.",
-    "full_frontend_gate": "Clean-head product 2809 passed/175 skipped, production build passed, Lighthouse 6 reports passed, regression 981 passed/189 skipped, accessibility 18 passed/15 skipped, visual 22 passed/23 skipped after the intentional accepted-state baseline refresh, and security 12 passed."
+    "full_frontend_gate": "Clean-head product 2809 passed/175 skipped, production build passed, Lighthouse 6 reports passed, regression 981 passed/189 skipped, accessibility 18 passed/15 skipped, visual 22 passed/23 skipped after the intentional accepted-state baseline refresh, and security 12 passed.",
+    "exploratory_qa": "31/31 checklist items covered across desktop-chrome, mobile-chrome, and mobile-ios-small; Findings 0; coverage-sensitive qa eval 100/100 PASS. Artifacts: exploratory-qa/exploratory-checklist.json, exploratory-report.json, eval-result.json."
   },
   "limitations": [
     "This is local mock-API browser evidence and does not replace the same-SHA production worker canary.",
