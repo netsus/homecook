@@ -43,7 +43,7 @@ export const YOUTUBE_EXTRACTION_WORKER_HEALTH_SCHEMA =
 export const YOUTUBE_EXTRACTION_EXPECTED_SCHEMA =
   "homecook.youtube-extraction-expected-schema";
 export const YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY =
-  "youtube-extraction-worker-schema-v1";
+  "youtube-extraction-worker-schema-v2";
 export const YOUTUBE_EXTRACTION_POLICY_SNAPSHOT_SCHEMA_IDENTITY =
   "youtube-extraction-policy-snapshot-v1";
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION = 1;

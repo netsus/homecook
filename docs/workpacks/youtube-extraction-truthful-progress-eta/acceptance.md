@@ -17,9 +17,9 @@
 
 - [ ] `confirmed_percent`가 시간만으로 증가하지 않고 stage floor만 사용한다 <!-- omo:id=accept-stage-floor-only;stage=2;scope=backend;review=3,6 -->
 - [ ] active confirmed floor는 최대 90이고 active UI는 95를 넘지 않는다. `succeeded일 때만 100`이다. <!-- omo:id=accept-active-max95-success100;stage=4;scope=frontend;review=5,6 -->
-- [ ] 같은 attempt에서 stage 역행이 없고 새 attempt에서만 `source_fetch`로 reset된다 <!-- omo:id=accept-attempt-reset-only;stage=2;scope=backend;review=3,6 -->
+- [x] 같은 attempt에서 stage 역행이 없고 새 attempt에서만 `source_fetch`로 reset된다 <!-- omo:id=accept-attempt-reset-only;stage=2;scope=backend;review=3,6 -->
 - [ ] retry backoff queued 동안 이전 attempt snapshot이 public progress에 남지 않는다 <!-- omo:id=accept-queued-hides-old-attempt;stage=2;scope=backend;review=3,6 -->
-- [ ] terminal/legacy active no-snapshot은 `progress=null`이다 <!-- omo:id=accept-terminal-null-progress;stage=2;scope=backend;review=3,6 -->
+- [x] terminal/legacy active no-snapshot은 `progress=null`이다 <!-- omo:id=accept-terminal-null-progress;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
@@ -32,11 +32,11 @@
 
 ## Data Integrity
 
-- [ ] private stage event는 `queued`를 제외한 stage 진입만 attempt당 최대 5행이다 <!-- omo:id=accept-stage-event-max5;stage=2;scope=backend;review=3,6 -->
-- [ ] stale job/worker/lease/permit/attempt update는 `applied=false`, write 0이다 <!-- omo:id=accept-stale-write-zero;stage=2;scope=backend;review=3,6 -->
-- [ ] browser/anon/authenticated/service_role direct progress table access는 0이다 <!-- omo:id=accept-private-progress-access-zero;stage=2;scope=backend;review=3,6 -->
-- [ ] raw URL/video ID/title/transcript/frame/prompt/provider payload/user UUID를 progress event에 중복 저장하지 않는다 <!-- omo:id=accept-progress-pii-zero;stage=2;scope=backend;review=3,6 -->
-- [ ] `video_duration_seconds`는 `1..86400`만 허용하고 `report_youtube_extraction_progress`는 exact `TABLE(applied boolean)`을 반환한다 <!-- omo:id=accept-progress-rpc-shape;stage=2;scope=backend;review=3,6 -->
+- [x] private stage event는 `queued`를 제외한 stage 진입만 attempt당 최대 5행이다 <!-- omo:id=accept-stage-event-max5;stage=2;scope=backend;review=3,6 -->
+- [x] stale job/worker/lease/permit/attempt update는 `applied=false`, write 0이다 <!-- omo:id=accept-stale-write-zero;stage=2;scope=backend;review=3,6 -->
+- [x] browser/anon/authenticated/service_role direct progress table access는 0이다 <!-- omo:id=accept-private-progress-access-zero;stage=2;scope=backend;review=3,6 -->
+- [x] raw URL/video ID/title/transcript/frame/prompt/provider payload/user UUID를 progress event에 중복 저장하지 않는다 <!-- omo:id=accept-progress-pii-zero;stage=2;scope=backend;review=3,6 -->
+- [x] `video_duration_seconds`는 `1..86400`만 허용하고 `report_youtube_extraction_progress`는 exact `TABLE(applied boolean)`을 반환한다 <!-- omo:id=accept-progress-rpc-shape;stage=2;scope=backend;review=3,6 -->
 - [ ] actual source video 준비 완료 뒤에만 `frame_extraction`을 보고하도록 bundled `codex-vision-client.mjs`와 `extract-video-frames.py` 경계가 연결된다 <!-- omo:id=accept-truthful-frame-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] schema identity가 `youtube-extraction-worker-schema-v2`로 승격되고 app/worker/credential/schema attestation이 같은 release에 묶인다 <!-- omo:id=accept-schema-v2-attestation;stage=2;scope=shared;review=3,6 -->
 
@@ -44,8 +44,8 @@
 
 - [ ] fixture baseline이 queued/source_fetch/video_download/frame_extraction/model_analysis/finalizing/delayed/retry/null cases를 모두 포함한다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
 - [ ] numeric ETA promotion fixture가 isolated/golden 20, successful telemetry 50, bucket별 10, holdout coverage 80% gate를 검증한다 <!-- omo:id=accept-eta-promotion-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] real DB smoke가 additive migration, exact RPC, stale write 0, direct access 0을 검증할 수 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] Supabase Cloud/linked/remote target은 N/A/forbidden이고 operational full-local destructive reset 0을 유지한다 <!-- omo:id=accept-remote-forbidden-full-local-zero;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke가 additive migration, exact RPC, stale write 0, direct access 0을 검증할 수 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] Supabase Cloud/linked/remote target은 N/A/forbidden이고 operational full-local destructive reset 0을 유지한다 <!-- omo:id=accept-remote-forbidden-full-local-zero;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -61,7 +61,7 @@
 
 ### Vitest
 
-- [ ] progress contract/status projection/unit boundary가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
+- [x] progress contract/status projection/unit boundary가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
 - [ ] stage floor, null semantics, delayed, retry reset, stale write 0 regression이 단위 테스트로 고정된다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright

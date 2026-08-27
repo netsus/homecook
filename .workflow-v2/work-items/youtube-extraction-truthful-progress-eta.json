@@ -119,16 +119,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "codex_approved",
-    "verification_status": "passed",
-    "evaluation_status": "passed",
-    "evaluation_round": 1,
-    "last_evaluator_result": "APPROVE / Findings 0 by /root/stage1_internal_review and Security Findings 0 by /root/stage1_progress_security_exact at authored commit fa75808b4a697ea6415d000fff3d82e1f379a672",
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs branch opened for the existing-screen low-risk progress/ETA change only. Internal 1.5 evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage1-internal1-5-review.md; authored commit fa75808b4a697ea6415d000fff3d82e1f379a672; APPROVE / Findings 0 and Security Findings 0. The current official tuple already locks nullable progress, max90/max95/success100, hidden numeric ETA before promotion, max5 private stage events, stale write 0, progress failure nonfatal, and no new endpoint/WebSocket/SSE/ML/dependency. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0을 유지한다. release-promoter and production rollout remain Manual Only.",
+  "notes": "Stage 1 docs는 독립 Findings 0과 master merge를 완료했다. Stage 2 backend가 feature/be-youtube-extraction-truthful-progress-eta에서 in_progress다. Phase A/B는 RED 증거 뒤 additive DB/RPC/schema-v2 구현, 실제 isolated PostgreSQL/PostgREST 78/78, targeted 130/130, typecheck/lint, 독립 code/security Findings 0을 확보했다. Evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage2-phase-ab-db.md. Worker IPC, ETA/API, frontend, 최종 closeout은 아직 pending이다. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0, release-promoter와 production rollout Manual Only를 유지한다.",
   "out_of_scope": [
     "new public endpoint, status, error, WebSocket or SSE",
     "notification list active progress payload change",
