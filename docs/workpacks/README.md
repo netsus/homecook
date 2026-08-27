@@ -196,7 +196,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `32-youtube-visual-quantity-enrichment` | in-progress | YouTube 공개 텍스트 추출 이후 화면 속 수량 텍스트 기반 보강, quantity review fields, register confirmation contract, visual cache/events |
 | `33-youtube-i031-direct-extraction` | merged | 기존 YT_IMPORT에서 exact cv-goal-i031-ocr selector/final 추출을 localhost strict mode로 직접 실행하고 기존 재료 표준명 검수 흐름에 연결 |
 | `youtube-async-extraction-notification` | merged | request-independent worker, durable 알림·재진입, 검수/등록, non-manual implementation과 독립 Stage 6 검토를 완료하고 PR #1362로 병합. production 설치·rollout·physical-device 확인은 기존 Manual Only 경계 유지 |
-| `youtube-extraction-truthful-progress-eta` | in-progress | 실제 stage floor + gated ETA range 구현 진행 중. Stage 1 문서와 Phase A/B DB/RPC/schema-v2를 완료했고 worker IPC, ETA/API, frontend, closeout은 pending |
+| `youtube-extraction-truthful-progress-eta` | in-progress | 실제 stage floor + gated ETA range 구현 진행 중. Stage 1, Phase A/B DB/RPC/schema-v2, Phase C worker IPC, Phase D ETA/API를 병합했고 Phase E frontend 구현·브라우저 evidence는 완료, 최종 closeout은 pending |
 | `admin-foundation` | merged | 런칭 초기 운영용 최소 내부 관리 기반. /admin 읽기 전용 shell, 사용자 조회, 운영 이벤트/감사 로그 조회. admin_members 기반 접근 제어, service-role fail-closed, PII 최소화 |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제/순서 변경), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
 | `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |

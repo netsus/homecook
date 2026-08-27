@@ -13,6 +13,7 @@ import {
   YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT,
   YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
 } from "@/lib/youtube-extraction-client-state";
+import type { YoutubeExtractionProgress } from "@/types/youtube-extraction";
 
 const routerReplace = vi.fn();
 
@@ -39,6 +40,22 @@ vi.mock("@/lib/api/youtube-import", () => ({
 
 const youtubeUrl = "https://www.youtube.com/watch?v=abcdefghijk";
 const encodedYoutubeUrl = encodeURIComponent(youtubeUrl);
+
+function buildProgress(
+  overrides: Partial<YoutubeExtractionProgress> = {},
+): YoutubeExtractionProgress {
+  return {
+    attempt: 1,
+    stage: "source_fetch",
+    confirmed_percent: 10,
+    updated_at: "2026-08-27T10:00:00.000Z",
+    remaining_seconds_low: null,
+    remaining_seconds_high: null,
+    estimate_confidence: null,
+    delayed: false,
+    ...overrides,
+  };
+}
 
 function renderImport(props: {
   columnId?: string;
@@ -139,7 +156,7 @@ describe("YT_IMPORT async extraction", () => {
     expect(syncApi.extractYoutubeRecipe).not.toHaveBeenCalled();
   });
 
-  it("shows honest queued progress, elapsed time and an estimated range after enqueue", async () => {
+  it("shows six-stage queued fallback progress without inventing an ETA after enqueue", async () => {
     const submittedAt = new Date().toISOString();
     vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
       success: true,
@@ -154,13 +171,17 @@ describe("YT_IMPORT async extraction", () => {
 
     const rendered = renderImport({ initialYoutubeUrl: youtubeUrl });
 
-    expect(await screen.findByText("작업을 준비하고 있어요")).toBeTruthy();
-    expect(screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" })
-      .getAttribute("aria-valuetext")).toBe("접수됨 · 분석 대기 중");
+    expect(await screen.findByText("작업 대기 중")).toBeTruthy();
+    const progressbar = screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("0");
+    expect(progressbar.getAttribute("aria-valuetext")).toBe("작업 대기 중 · 예상 시간 계산 중");
+    expect(rendered.container.querySelectorAll("[data-youtube-progress-segment]")).toHaveLength(6);
     expect(screen.getByText(/\d+초 경과/u).getAttribute("aria-live")).toBe("off");
     expect(rendered.container.querySelector("[data-youtube-extraction-accepted]")
       ?.getAttribute("aria-live")).toBeNull();
-    expect(screen.getByText("예상 소요 시간 약 1~3분")).toBeTruthy();
+    expect(screen.getByText("예상 시간 계산 중")).toBeTruthy();
+    expect(screen.queryByText("예상 소요 시간 약 1~3분")).toBeNull();
+    expect(rendered.container.querySelector("[data-youtube-progress-current-label]")?.textContent).toBe("대기");
   });
 
   it("uses the server submission time for a deduplicated active job", async () => {
@@ -229,7 +250,140 @@ describe("YT_IMPORT async extraction", () => {
     expect(await screen.findByText(/7초 경과/u)).toBeTruthy();
   });
 
-  it("updates the progress copy when the worker starts processing", async () => {
+  it("restores the confirmed progress stage and pending ETA without inventing time", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "processing",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: null,
+        result: null,
+        error: null,
+        can_retry: false,
+        progress: buildProgress({
+          stage: "model_analysis",
+          confirmed_percent: 65,
+        }),
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText("장면에서 레시피를 분석하는 중")).toBeTruthy();
+    const progressbar = screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("65");
+    expect(progressbar.getAttribute("aria-valuetext")).toBe("장면에서 레시피를 분석하는 중 · 예상 시간 계산 중");
+    expect(document.querySelector("[data-youtube-progress-current-label]")?.textContent).toBe("레시피 분석");
+    expect(screen.getByText("예상 시간 계산 중")).toBeTruthy();
+    expect(screen.queryByText(/약 \d+~\d+분 남음/u)).toBeNull();
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 1_100));
+    });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("65");
+  });
+
+  it("shows the promoted ETA range and retry attempt from server progress", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "processing",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: null,
+        result: null,
+        error: null,
+        can_retry: false,
+        progress: buildProgress({
+          attempt: 2,
+          stage: "source_fetch",
+          confirmed_percent: 10,
+          remaining_seconds_low: 120,
+          remaining_seconds_high: 240,
+          estimate_confidence: "medium",
+        }),
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText("다시 분석 중 (2/3)")).toBeTruthy();
+    expect(screen.getByText("영상 정보와 자막 확인 중")).toBeTruthy();
+    expect(document.querySelector("[data-youtube-progress-current-label]")?.textContent).toBe("정보 확인");
+    expect(screen.getByText("약 2~4분 남음")).toBeTruthy();
+    const progressbar = screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("10");
+    expect(progressbar.getAttribute("aria-valuetext")).toBe("영상 정보와 자막 확인 중 · 약 2~4분 남음");
+  });
+
+  it("shows delayed copy and hides promoted ETA when the job overruns", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "processing",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: null,
+        result: null,
+        error: null,
+        can_retry: false,
+        progress: buildProgress({
+          stage: "finalizing",
+          confirmed_percent: 90,
+          delayed: true,
+        }),
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText("추출 결과를 정리하는 중")).toBeTruthy();
+    expect(document.querySelector("[data-youtube-progress-current-label]")?.textContent).toBe("결과 정리");
+    expect(screen.getByText("예상보다 오래 걸리고 있어요. 추출은 계속 진행 중이에요.")).toBeTruthy();
+    expect(screen.queryByText(/약 \d+~\d+분 남음/u)).toBeNull();
+    const progressbar = screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" });
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("90");
+    expect(progressbar.getAttribute("aria-valuetext")).toBe("추출 결과를 정리하는 중 · 예상보다 오래 걸리고 있어요. 추출은 계속 진행 중이에요.");
+  });
+
+  it("falls back to generic processing copy when the server has no progress snapshot yet", async () => {
     vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
       success: true,
       data: {
@@ -258,9 +412,10 @@ describe("YT_IMPORT async extraction", () => {
 
     renderImport({ initialYoutubeUrl: youtubeUrl });
 
-    expect(await screen.findByText("영상에서 레시피를 분석하고 있어요")).toBeTruthy();
-    expect(screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" })
-      .getAttribute("aria-valuetext")).toBe("영상 분석 중");
+    expect(await screen.findByText("진행 상황 확인 중")).toBeTruthy();
+    const progressbar = screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" });
+    expect(progressbar.hasAttribute("aria-valuenow")).toBe(false);
+    expect(progressbar.getAttribute("aria-valuetext")).toBe("진행 상황 확인 중 · 예상 시간 계산 중");
   });
 
   it("keeps the standalone public importer out of planner context and returns home", async () => {

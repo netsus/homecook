@@ -119,16 +119,16 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 2,
+    "last_evaluator_result": "PASS — exact e33c8cf65b396e3cab7b456206b308c5fb042c7d diff and lightweight screenshot review Findings 0 after reduced-motion regression repair",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs는 독립 Findings 0과 master merge를 완료했고 Phase A/B DB/RPC/schema-v2와 Phase C truthful worker progress도 master에 병합됐다. Stage 2 backend는 feature/be-youtube-extraction-truthful-progress-eta에서 in_progress다. Phase D는 duration bucket unknown/<=60/61..300/>300, promotion 20/50/bucket10/coverage80, conservative range/delayed/null estimator, exact status 9-key와 progress 8-key projection, shared types/client 연결을 TDD로 구현했다. 운영 ETA v1 evidence는 0이어서 numeric ETA는 계속 hidden이다. Targeted 95/95, product 2809/175 skip, build/security E2E, 독립 code/security Findings 0을 확보했다. Evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage2-phase-d-eta-api.md. Frontend와 최종 closeout은 pending이다. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0, release-promoter와 production rollout Manual Only를 유지한다.",
+  "notes": "Stage 1 docs는 독립 Findings 0으로 master에 병합됐고 Phase A/B DB/RPC/schema-v2, Phase C truthful worker progress, Phase D ETA/API도 master에 병합됐다. Phase E는 feature/fe-youtube-extraction-truthful-progress-eta에서 actual 6-stage progress, ETA pending/range/delayed, retry attempt, nullable progress fallback을 TDD로 구현했고 320/390/desktop screenshot, reload, reduced-motion browser evidence, clean-head full frontend constituent gates와 독립 design/exact-diff Findings 0을 확보해 ready_for_review다. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0, release-promoter와 production rollout Manual Only를 유지한다.",
   "out_of_scope": [
     "new public endpoint, status, error, WebSocket or SSE",
     "notification list active progress payload change",

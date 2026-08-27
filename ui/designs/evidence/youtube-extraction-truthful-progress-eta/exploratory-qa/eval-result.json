@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "mode": "coverage-sensitive",
+  "generatedAt": "2026-08-27T16:22:49.736Z",
+  "checklistPath": ".artifacts/qa/youtube-extraction-truthful-progress-eta/2026-08-27T16-20-06-899Z/exploratory-checklist.json",
+  "reportPath": ".artifacts/qa/youtube-extraction-truthful-progress-eta/2026-08-27T16-20-06-899Z/exploratory-report.json",
+  "validationErrors": [],
+  "score": {
+    "total": 100,
+    "breakdown": {
+      "coverageRate": 1,
+      "blockedRate": 0,
+      "deviceCoverage": 1,
+      "findingQualityRate": 1,
+      "severityRate": 1,
+      "summaryRate": 1
+    },
+    "pass": true,
+    "thresholds": {
+      "minTotal": 85
+    }
+  }
+}
