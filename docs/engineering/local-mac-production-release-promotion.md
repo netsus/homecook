@@ -121,43 +121,6 @@ credential/config/policy 경로를 저장하지 않는다. 해당 경로는 매 
 home/config resolver 또는 explicit operator input으로 다시 해석하고, descriptor에는 SHA-256만 비교
 근거로 남긴다.
 
-### prod-20260828.1 최초 canonical promotion 전용 adoption bridge
-
-`current.json`과 `previous.json`이 모두 없는 pre-canonical 서버 상태에서는 아래 exact tuple만
-`prod-20260828.1-precanonical-split-v1` 계약으로 한 번 채택할 수 있다. 이 bridge는 일반 bootstrap
-옵션이 아니며 다른 tag, SHA, 경로, artifact digest에는 사용할 수 없다.
-
-- target은 annotated tag `prod-20260828.1`, tag object
-  `93a7e84e3d502c8c91b5a0484bf079f59ffba456`, release SHA
-  `abac967556aff325207f9adf54f4dcbd07e7a492`, tree
-  `b31e7ddc6435d36ce1df15ce32ae68efe1aa9347`, attestation subject SHA-256
-  `a090e1cdd4db337120aad9ed54eea8edaecc38f566663a1b302a42ca7a5b5fca`와 모두 exact match해야 한다.
-- `manifest.previous_release_sha`의 단일 predecessor authority는 현재 app과 worker가 함께 가리키는
-  `3bdd814da8f9849805185d1b3be5a6ee703133a0`이다. full-local을 같은 SHA라고 표현하지 않는다.
-- app은 `~/01_vibe_coding/homecook-production-current`의 plist working directory, live process cwd,
-  detached clean source, SHA `3bdd814da8f9849805185d1b3be5a6ee703133a0`, tree
-  `255f3c23a38593aade4b1f4bc3e2941030c9fe90`, build ID
-  `aKwKCpoAEwSrD6066XEwu`를 모두 확인한다.
-- full-local은 `~/01_vibe_coding/homecook-session-refresh-storm-deploy-v9`의 plist working directory와
-  exact `start` command/config, detached clean source, SHA
-  `36e7aecfe429875f2dc12f3effc020ab1296a818`, tree
-  `abfc8fae339a5d1c0dfaf261171164680e9c79c3`, build ID
-  `8t5KKzb2z0Q3VO4SnnLOh`, 성공 종료된 loaded LaunchAgent와 exact 7-service Docker inventory를
-  확인한다. 모든 container는 running이고 정의된 health check는 healthy여야 한다. 기존 workload에
-  nonempty release identity label이 나타나면 현재 관측 상태와 다르므로 fail closed한다.
-- worker는
-  `~/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1`
-  working directory와 exact `artifact.json` manifest, release SHA
-  `3bdd814da8f9849805185d1b3be5a6ee703133a0`, artifact SHA-256
-  `e228d46c1074ec499b709803bab4cc8dc8e2add30655fa1648dab564423e2c01`, live process cwd와 runtime
-  preflight를 확인한다.
-- 채택한 split predecessor는 rollback 가능한 canonical bundle이라고 과장하지 않는다. promotion
-  성공 시 허위 `previous.json`을 만들지 않고, readiness를 통과한 `prod-20260828.1`만 새
-  `current.json`으로 게시한다. 이후 `current.json`이 존재하므로 이 bridge는 다시 진입할 수 없다.
-
-위 항목 중 하나라도 다르거나 preflight 중 descriptor가 나타나면 install/descriptor commit을
-중단한다. operator가 임의 descriptor를 먼저 작성하거나 범용 adoption flag로 우회하는 경로는 없다.
-
 ### 4. verify
 
 post-deploy evidence 단계다.
