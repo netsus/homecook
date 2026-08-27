@@ -15,6 +15,27 @@ export type YoutubeExtractionFailureCode =
   | "EXTRACTION_FAILED"
   | "EXTRACTION_EXPIRED";
 
+export type YoutubeExtractionProgressStage =
+  | "queued"
+  | "source_fetch"
+  | "video_download"
+  | "frame_extraction"
+  | "model_analysis"
+  | "finalizing";
+
+export type YoutubeExtractionEstimateConfidence = "low" | "medium";
+
+export interface YoutubeExtractionProgress {
+  attempt: number;
+  stage: YoutubeExtractionProgressStage;
+  confirmed_percent: 0 | 10 | 25 | 45 | 65 | 90;
+  updated_at: string;
+  remaining_seconds_low: number | null;
+  remaining_seconds_high: number | null;
+  estimate_confidence: YoutubeExtractionEstimateConfidence | null;
+  delayed: boolean;
+}
+
 export type YoutubeExtractionEnqueueBody =
   | { youtube_url: string }
   | { retry_job_id: string };
@@ -48,6 +69,7 @@ export interface YoutubeExtractionJobData {
   result: YoutubeExtractionResult | null;
   error: YoutubeExtractionFailure | null;
   can_retry: boolean;
+  progress: YoutubeExtractionProgress | null;
 }
 
 export interface YoutubeExtractionSessionData {
