@@ -37,7 +37,8 @@
     "playwright": "3 deterministic scenarios passed on desktop-chrome and 9 cross-project executions passed across desktop-chrome, mobile-chrome, and mobile-ios-small; reduced-motion computed animation-name is none for the spinner, current segment, and status dot.",
     "reload": "The 390 scenario reloads the page and restores the same confirmed 65 percent model-analysis snapshot from the existing status endpoint.",
     "lint_typecheck": "pnpm lint and pnpm typecheck passed.",
-    "design_review": "Independent low-risk screenshot review returned Findings 0."
+    "design_review": "Independent low-risk screenshot review returned Findings 0.",
+    "full_frontend_gate": "Clean-head product 2809 passed/175 skipped, production build passed, Lighthouse 6 reports passed, regression 981 passed/189 skipped, accessibility 18 passed/15 skipped, visual 22 passed/23 skipped after the intentional accepted-state baseline refresh, and security 12 passed."
   },
   "limitations": [
     "This is local mock-API browser evidence and does not replace the same-SHA production worker canary.",

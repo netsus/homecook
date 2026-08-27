@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-24T19:41:12Z",
+  "updated_at": "2026-08-27T15:54:31Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2391,9 +2391,9 @@
       "preset": "vertical-slice-strict",
       "branch": "fix/recipe-snapshot-stage4-consumer-revalidation",
       "pr_path": "https://github.com/netsus/homecook/pull/1267",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2845,10 +2845,10 @@
         "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-extraction-truthful-progress-eta' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
         "pnpm exec vitest run tests/youtube-extraction-truthful-progress-eta-stage1.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts"
       ],
-      "notes": "Stage 1과 Phase A/B, C, D는 master merge 완료. Phase E는 실제 6단계 segmented progress, ETA pending/range/delayed, retry attempt, progress-null indeterminate fallback을 TDD로 구현했다. 320/390/desktop evidence와 reload, reduced-motion browser regression을 확보했고 독립 lightweight design 및 exact diff review Findings 0이다. 전체 frontend gate와 최종 closeout은 진행 중이며 remote/production mutation 0, rollout Manual Only를 유지한다.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Stage 1과 Phase A/B, C, D는 master merge 완료. Phase E는 실제 6단계 segmented progress, ETA pending/range/delayed, retry attempt, progress-null indeterminate fallback을 TDD로 구현했다. 320/390/desktop evidence와 reload, reduced-motion browser regression, clean-head product 2809/build/Lighthouse/regression 981/a11y 18/visual 22/security 12를 확보했고 독립 lightweight design 및 exact diff review Findings 0이다. remote/production mutation 0, rollout Manual Only를 유지한다.",
+      "evaluation_status": "passed",
+      "evaluation_round": 2,
+      "last_evaluator_result": "PASS — first exact diff review found one low reduced-motion coverage gap; repaired and exact e33c8cf65b396e3cab7b456206b308c5fb042c7d re-review plus lightweight design review both returned Findings 0",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }

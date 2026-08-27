@@ -22,6 +22,16 @@ GREEN:
 - `pnpm lint`: passed
 - `pnpm typecheck`: passed
 
+Clean-head frontend gate evidence:
+
+- Product Vitest: 2,809 passed / 175 skipped
+- Next.js production build: passed
+- Lighthouse CI: 6/6 reports processed with all assertions passed
+- Slice Playwright regression: 981 passed / 189 skipped
+- Accessibility: 18 passed / 15 skipped
+- Visual regression: 22 passed / 23 skipped after the intentional YouTube accepted-state baseline refresh
+- Security E2E: 12/12 passed
+
 ## Contract evidence
 
 - Six server stages are rendered as compact segments.
@@ -41,6 +51,7 @@ GREEN:
 - `ui/designs/evidence/youtube-extraction-truthful-progress-eta/YT_IMPORT_BACKGROUND/mobile-320-delayed.png`
 - `ui/designs/evidence/youtube-extraction-truthful-progress-eta/YT_IMPORT_BACKGROUND/desktop-1280-source-fetch-retry.png`
 - Manifest: `ui/designs/evidence/youtube-extraction-truthful-progress-eta/manifest.json`
+- Updated visual baseline: `tests/e2e/qa-visual.spec.ts-snapshots/qa-youtube-import-accepted-desktop-chrome-darwin.png`
 
 The 390 scenario also performs a real page reload against deterministic route fixtures and restores the same stage snapshot. The 320 scenario verifies no page-level horizontal overflow and keeps both accepted-state actions usable.
 
