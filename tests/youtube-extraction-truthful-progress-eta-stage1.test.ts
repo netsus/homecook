@@ -122,7 +122,7 @@ describe("YouTube truthful progress ETA Stage 1 contract", () => {
     expect(readme).toContain(postMergePreflight);
   });
 
-  it("projects the post-Stage-1 implementation lifecycle while keeping manual-only follow-ups explicit", () => {
+  it("projects the verified Phase E lifecycle while keeping manual-only follow-ups explicit", () => {
     expect(automation.execution_mode).toBe("autonomous");
     expect(workItem.workflow.execution_mode).toBe("autonomous");
     expect(automation.external_smokes).toEqual([
@@ -132,19 +132,19 @@ describe("YouTube truthful progress ETA Stage 1 contract", () => {
       automation.external_smokes,
     );
     expect(workItem.status).toMatchObject({
-      lifecycle: "in_progress",
-      approval_state: "not_started",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
+      lifecycle: "ready_for_review",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 2,
       blocked_reason_code: null,
     });
     expect(status).toMatchObject({
-      lifecycle: "in_progress",
-      approval_state: "not_started",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
+      lifecycle: "ready_for_review",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 2,
       blocked_reason_code: null,
     });
 
@@ -190,11 +190,11 @@ describe("YouTube truthful progress ETA Stage 1 contract", () => {
       `docs/workpacks/${sliceId}/evidence/2026-08-27-stage1-internal1-5-review.md`;
 
     expect(workItem.status).toMatchObject({
-      lifecycle: "in_progress",
-      approval_state: "not_started",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
+      lifecycle: "ready_for_review",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 2,
     });
     expect(status).toMatchObject(workItem.status);
     expect(workItem.notes).toContain("Stage 1 docs는 독립 Findings 0");

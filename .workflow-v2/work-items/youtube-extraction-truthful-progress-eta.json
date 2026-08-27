@@ -128,7 +128,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1과 Phase A/B DB/RPC/schema-v2, Phase C truthful worker progress, Phase D ETA/API는 master에 병합됐다. Phase E는 feature/fe-youtube-extraction-truthful-progress-eta에서 actual 6-stage progress, ETA pending/range/delayed, retry attempt, nullable progress fallback을 TDD로 구현했고 320/390/desktop screenshot, reload, reduced-motion browser evidence, clean-head full frontend constituent gates와 독립 design/exact-diff Findings 0을 확보해 ready_for_review다. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0, release-promoter와 production rollout Manual Only를 유지한다.",
+  "notes": "Stage 1 docs는 독립 Findings 0으로 master에 병합됐고 Phase A/B DB/RPC/schema-v2, Phase C truthful worker progress, Phase D ETA/API도 master에 병합됐다. Phase E는 feature/fe-youtube-extraction-truthful-progress-eta에서 actual 6-stage progress, ETA pending/range/delayed, retry attempt, nullable progress fallback을 TDD로 구현했고 320/390/desktop screenshot, reload, reduced-motion browser evidence, clean-head full frontend constituent gates와 독립 design/exact-diff Findings 0을 확보해 ready_for_review다. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0, release-promoter와 production rollout Manual Only를 유지한다.",
   "out_of_scope": [
     "new public endpoint, status, error, WebSocket or SSE",
     "notification list active progress payload change",

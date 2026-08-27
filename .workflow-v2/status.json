@@ -2391,9 +2391,9 @@
       "preset": "vertical-slice-strict",
       "branch": "fix/recipe-snapshot-stage4-consumer-revalidation",
       "pr_path": "https://github.com/netsus/homecook/pull/1267",
-      "lifecycle": "ready_for_review",
-      "approval_state": "codex_approved",
-      "verification_status": "passed",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2834,9 +2834,9 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-youtube-extraction-truthful-progress-eta",
       "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2848,7 +2848,7 @@
       "notes": "Stage 1과 Phase A/B, C, D는 master merge 완료. Phase E는 실제 6단계 segmented progress, ETA pending/range/delayed, retry attempt, progress-null indeterminate fallback을 TDD로 구현했다. 320/390/desktop evidence와 reload, reduced-motion browser regression, clean-head product 2809/build/Lighthouse/regression 981/a11y 18/visual 22/security 12를 확보했고 독립 lightweight design 및 exact diff review Findings 0이다. remote/production mutation 0, rollout Manual Only를 유지한다.",
       "evaluation_status": "passed",
       "evaluation_round": 2,
-      "last_evaluator_result": "PASS — first exact diff review found one low reduced-motion coverage gap; repaired and exact e33c8cf65b396e3cab7b456206b308c5fb042c7d re-review plus lightweight design review both returned Findings 0",
+      "last_evaluator_result": "PASS — exact e33c8cf65b396e3cab7b456206b308c5fb042c7d diff and lightweight screenshot review Findings 0 after reduced-motion regression repair",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }
