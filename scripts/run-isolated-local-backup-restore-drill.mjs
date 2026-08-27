@@ -63,11 +63,14 @@ import {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PLATFORM = process.arch === "arm64" ? "linux/arm64" : "linux/amd64";
-const POSTGRES_IMAGE = fullLocalImageRefsForPlatform(PLATFORM).postgres;
 const FIXTURE_PASSWORD = "isolated-production-compatible-fixture-only";
 const EXTERNAL_ARCHIVE_USAGE =
   "--external-archive <abs> --escrow-envelope <abs> --recovery-credential-file <abs> "
   + "--recovery-issuer-private-key <abs> --restore-manifest <abs> --recovery-manifest <abs>";
+
+function postgresImage() {
+  return fullLocalImageRefsForPlatform(PLATFORM).postgres;
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -141,7 +144,7 @@ function startPostgresFixture({ container, composeProject, postgresVolume }) {
     "POSTGRES_DB=postgres",
     "--volume",
     `${postgresVolume}:/var/lib/postgresql/data`,
-    POSTGRES_IMAGE,
+    postgresImage(),
   ], { failure: "Isolated production-compatible PostgreSQL start failed" });
   for (let attempt = 0; attempt < 240; attempt += 1) {
     const state = JSON.parse(run("docker", ["inspect", container]))[0]?.State;
@@ -158,7 +161,7 @@ function resourceConfig(plan, restore = false) {
   const project = restore ? plan.restore_project_id : plan.project_id;
   return {
     FULL_LOCAL_COMPOSE_PROJECT_NAME: project,
-    FULL_LOCAL_POSTGRES_IMAGE: POSTGRES_IMAGE,
+    FULL_LOCAL_POSTGRES_IMAGE: postgresImage(),
     FULL_LOCAL_POSTGRES_VOLUME_NAME: restore
       ? plan.restore_postgres_volume
       : plan.source_postgres_volume,

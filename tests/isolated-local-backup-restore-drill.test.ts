@@ -223,6 +223,15 @@ describe("isolated local Supabase backup and restore drill", () => {
     expect(result.stderr).not.toContain("SyntaxError");
   });
 
+  it("does not resolve platform-specific Docker images before the execute guard", () => {
+    const cli = readFileSync("scripts/run-isolated-local-backup-restore-drill.mjs", "utf8");
+
+    expect(cli).not.toContain(
+      "const POSTGRES_IMAGE = fullLocalImageRefsForPlatform(PLATFORM).postgres;",
+    );
+    expect(cli).toContain("function postgresImage()");
+  });
+
   it("uses the production service schema catalog contract for restored archives", () => {
     const cli = readFileSync("scripts/run-isolated-local-backup-restore-drill.mjs", "utf8");
 
