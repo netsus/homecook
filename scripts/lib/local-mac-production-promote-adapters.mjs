@@ -422,6 +422,7 @@ function buildDefaultDependencies(
   commandRunner = spawnSync,
   i031PreflightVerifier = verifyStandaloneYoutubeI031Preflight,
   appReadinessWaiter = waitForLocalMacProductionReady,
+  platform = process.platform,
 ) {
   return {
     validateMutationTargets: ({ options }) => {
@@ -770,10 +771,12 @@ function buildDefaultDependencies(
       }),
     installFullLocal: (input) => installFullLocalLaunchAgent({
       ...input,
+      platform,
       spawn: commandRunner,
     }),
     installApp: (input) => installLocalMacProductionLaunchAgent({
       ...input,
+      platform,
       spawn: commandRunner,
     }),
     installWorker: (input) => installYoutubeExtractionWorkerLaunchAgent({
@@ -915,6 +918,7 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
     commandRunner = spawnSync,
     i031PreflightVerifier = verifyStandaloneYoutubeI031Preflight,
     appReadinessWaiter = waitForLocalMacProductionReady,
+    platform = process.platform,
     ...dependencyOverrides
   } = dependencies;
   const resolvedDependencies = {
@@ -922,6 +926,7 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       commandRunner,
       i031PreflightVerifier,
       appReadinessWaiter,
+      platform,
     ),
     ...dependencyOverrides,
   };
