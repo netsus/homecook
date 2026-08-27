@@ -157,13 +157,14 @@ export function buildCanonicalCurrentYoutubeWorkerPlist({
   }
   const appDescriptorPath = resolve(artifactRoot, "authority", "app-descriptor.json");
   const expectedSchemaPath = resolve(artifactRoot, "authority", "expected-schema.json");
+  const policyPath = resolve(artifactRoot, "authority", "policy.json");
   for (const [path, expectedDigest, label] of [
     [manifestPath, currentDescriptor.worker_artifact_sha256, "artifact"],
     [appDescriptorPath, currentDescriptor.worker_app_descriptor_sha256, "app descriptor"],
     [options.workerConfigPath, currentDescriptor.worker_config_sha256, "config"],
     [options.workerCredentialPath, currentDescriptor.worker_credential_sha256, "credential"],
     [expectedSchemaPath, currentDescriptor.worker_expected_schema_sha256, "schema"],
-    [options.workerPolicyPath, currentDescriptor.worker_policy_sha256, "policy"],
+    [policyPath, currentDescriptor.worker_policy_sha256, "policy"],
   ]) {
     if (typeof expectedDigest !== "string" || digestFile(path) !== expectedDigest) {
       throw new Error(`Current worker ${label} digest drifted.`);
@@ -173,7 +174,7 @@ export function buildCanonicalCurrentYoutubeWorkerPlist({
     appDescriptorPath,
     configPath: options.workerConfigPath,
     credentialPath: options.workerCredentialPath,
-    currentPolicyPath: options.workerPolicyPath,
+    currentPolicyPath: policyPath,
     expectedSchemaPath,
     homeDir: options.homeDir,
     manifestPath,
@@ -451,7 +452,7 @@ function buildDefaultDependencies(
       const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
         appDescriptorPath: options.workerAppDescriptorPath,
         workerArtifactPath: options.workerManifestPath,
-        currentPolicyPath: options.workerPolicyPath,
+        currentPolicyPath: resolve(workerArtifactRoot, "authority", "policy.json"),
         credentialPath: options.workerCredentialPath,
         expectedSchemaPath: options.workerExpectedSchemaPath,
         secretRoot: options.workerSecretRoot,
@@ -623,7 +624,7 @@ function buildDefaultDependencies(
       } : {
         appDescriptorPath: resolve(workerArtifactRoot, "authority", "app-descriptor.json"),
         workerArtifactPath: workerManifestPath,
-        currentPolicyPath: options.workerPolicyPath,
+        currentPolicyPath: resolve(workerArtifactRoot, "authority", "policy.json"),
         credentialPath: options.workerCredentialPath,
         expectedSchemaPath: resolve(workerArtifactRoot, "authority", "expected-schema.json"),
         secretRoot: options.workerSecretRoot,
@@ -813,7 +814,7 @@ function buildDefaultDependencies(
           appDescriptorPath: preflight.worker.appDescriptorPath,
           configPath: options.workerConfigPath,
           credentialPath: options.workerCredentialPath,
-          currentPolicyPath: options.workerPolicyPath,
+          currentPolicyPath: preflight.worker.policyPath,
           expectedSchemaPath: preflight.worker.expectedSchemaPath,
           homeDir: context.homeDir,
           manifestPath: preflight.worker.manifestPath,
@@ -846,7 +847,7 @@ function buildDefaultDependencies(
       const finalInputs = loadYoutubeExtractionWorkerRuntimeInputs({
         appDescriptorPath: preflight.worker.appDescriptorPath,
         workerArtifactPath: preflight.worker.manifestPath,
-        currentPolicyPath: options.workerPolicyPath,
+        currentPolicyPath: preflight.worker.policyPath,
         credentialPath: options.workerCredentialPath,
         expectedSchemaPath: preflight.worker.expectedSchemaPath,
         secretRoot: options.workerSecretRoot,
@@ -864,7 +865,7 @@ function buildDefaultDependencies(
         configSha256: sha256File(options.workerConfigPath),
         credentialSha256: sha256File(options.workerCredentialPath),
         expectedSchemaSha256: sha256File(preflight.worker.expectedSchemaPath),
-        policySha256: sha256File(options.workerPolicyPath),
+        policySha256: sha256File(preflight.worker.policyPath),
       };
       for (const [field, digest] of Object.entries(finalDigests)) {
         if (preflight.worker[field] !== digest) {
@@ -1014,7 +1015,7 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
         configPath: options.workerConfigPath,
         confirmation: options.confirmation,
         credentialPath: options.workerCredentialPath,
-        currentPolicyPath: options.workerPolicyPath,
+        currentPolicyPath: preflight.worker.policyPath,
         expectedSchemaPath: preflight.worker.expectedSchemaPath,
         homeDir: context.homeDir,
         i031Preflight: preflight.worker.i031Preflight,

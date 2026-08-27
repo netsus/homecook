@@ -321,16 +321,35 @@ function copyExecutionTree(sourcePath, destinationPath, { copyEntryHook = () => 
   assertExecutionSymlinksContained(destinationPath);
 }
 
-function copySnapshotAuthorityFile(sourcePath, destinationPath) {
+function copySnapshotAuthorityFile(
+  sourcePath,
+  destinationPath,
+  expectedDigest,
+  copyEntryHook,
+) {
   const source = realpathSync(sourcePath);
+  const sourceStat = lstatSync(sourcePath);
+  if (sourceStat.isSymbolicLink() || !sourceStat.isFile()) {
+    throw new Error("Snapshot authority source must be a regular non-symlink file.");
+  }
+  copyEntryHook({
+    destination: destinationPath,
+    phase: "after_authority_precheck",
+    source,
+  });
   if (existsSync(destinationPath)) {
-    if (sha256Bytes(readFileSync(destinationPath)) !== sha256Bytes(readFileSync(source))) {
+    if (sha256Bytes(readFileSync(destinationPath)) !== expectedDigest) {
       throw new Error("Execution snapshot authority file collision.");
     }
+    copyEntryHook({ destination: destinationPath, phase: "after_authority_copy", source });
     return destinationPath;
   }
   copyFileSync(source, destinationPath, fsConstants.COPYFILE_EXCL);
   chmodSync(destinationPath, 0o400);
+  copyEntryHook({ destination: destinationPath, phase: "after_authority_copy", source });
+  if (sha256Bytes(readFileSync(destinationPath)) !== expectedDigest) {
+    throw new Error("Copied snapshot authority file digest drifted.");
+  }
   return destinationPath;
 }
 
@@ -421,6 +440,7 @@ export function createLocalMacProductionExecutionSnapshot({
   const workerSourceDigest = digestExecutionTree(worker.artifactRoot);
   const appDescriptorSourceDigest = sha256Bytes(readFileSync(worker.appDescriptorPath));
   const expectedSchemaSourceDigest = sha256Bytes(readFileSync(worker.expectedSchemaPath));
+  const policySourceDigest = sha256Bytes(readFileSync(worker.policyPath));
   const identityDigest = sha256Bytes(Buffer.from(JSON.stringify({
     app: appSourceDigest,
     app_descriptor: appDescriptorSourceDigest,
@@ -429,6 +449,7 @@ export function createLocalMacProductionExecutionSnapshot({
     release_sha: manifest.release_sha,
     release_tree: manifest.release_tree,
     expected_schema: expectedSchemaSourceDigest,
+    policy: policySourceDigest,
     worker: workerSourceDigest,
   })));
   const executionRoot = join(releaseRoot, "execution-snapshots");
@@ -464,10 +485,20 @@ export function createLocalMacProductionExecutionSnapshot({
     const appDescriptorPath = copySnapshotAuthorityFile(
       worker.appDescriptorPath,
       join(authorityRoot, "app-descriptor.json"),
+      appDescriptorSourceDigest,
+      copyEntryHook,
     );
     const expectedSchemaPath = copySnapshotAuthorityFile(
       worker.expectedSchemaPath,
       join(authorityRoot, "expected-schema.json"),
+      expectedSchemaSourceDigest,
+      copyEntryHook,
+    );
+    const policyPath = copySnapshotAuthorityFile(
+      worker.policyPath,
+      join(authorityRoot, "policy.json"),
+      policySourceDigest,
+      copyEntryHook,
     );
     const manifestRelative = relative(
       realpathSync(worker.artifactRoot),
@@ -480,7 +511,8 @@ export function createLocalMacProductionExecutionSnapshot({
     if (digestExecutionTree(preparedReleaseDir) !== appSourceDigest
       || digestExecutionTree(worker.artifactRoot) !== workerSourceDigest
       || sha256Bytes(readFileSync(worker.appDescriptorPath)) !== appDescriptorSourceDigest
-      || sha256Bytes(readFileSync(worker.expectedSchemaPath)) !== expectedSchemaSourceDigest) {
+      || sha256Bytes(readFileSync(worker.expectedSchemaPath)) !== expectedSchemaSourceDigest
+      || sha256Bytes(readFileSync(worker.policyPath)) !== policySourceDigest) {
       throw new Error("Execution source drifted while the sealed snapshot was created.");
     }
     sealExecutionTree(appRoot);
@@ -510,6 +542,7 @@ export function createLocalMacProductionExecutionSnapshot({
       manifestPath,
       appDescriptorPath,
       expectedSchemaPath,
+      policyPath,
       appDigest,
       workerDigest,
       digest: identityDigest,
@@ -2116,8 +2149,10 @@ export async function promoteLocalMacProductionRelease({
       manifestPath: executionSnapshot.manifestPath,
       appDescriptorPath: executionSnapshot.appDescriptorPath,
       expectedSchemaPath: executionSnapshot.expectedSchemaPath,
+      policyPath: executionSnapshot.policyPath,
       appDescriptorSha256: sha256Bytes(readFileSync(executionSnapshot.appDescriptorPath)),
       expectedSchemaSha256: sha256Bytes(readFileSync(executionSnapshot.expectedSchemaPath)),
+      policySha256: sha256Bytes(readFileSync(executionSnapshot.policyPath)),
     },
   };
   afterLockedPreflight({
