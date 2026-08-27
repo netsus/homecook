@@ -514,7 +514,7 @@ export async function loadYoutubeExtractionEnqueueReadiness(
       || expectedSchemaRecord.schema !== "homecook.youtube-extraction-expected-schema"
       || expectedSchemaRecord.version !== 1
       || workerManifest.schema !== "homecook.youtube-extraction-worker-artifact"
-      || workerManifest.version !== 1
+      || workerManifest.version !== 2
       || workerManifest.deterministic !== true
       || row.ready !== true
       || descriptor.release_sha !== row.release_sha
