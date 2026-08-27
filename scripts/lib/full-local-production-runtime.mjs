@@ -255,6 +255,102 @@ export function selectNewlyStartedFullLocalWriterServices({
     afterServices.has(service) && !beforeServices.has(service));
 }
 
+const FULL_LOCAL_RESUME_SERVICES = new Set([
+  "api-gateway",
+  "auth",
+  "auth-proxy",
+  "postgres",
+  "postgrest",
+  "realtime",
+  "storage",
+]);
+
+export function selectFullLocalResumeCleanupContainers({
+  after,
+  before,
+  composeProject,
+}) {
+  const scoped = (containers) => containers.filter((container) =>
+    typeof container?.Id === "string"
+    && container.Id.length > 0
+    && container?.Config?.Labels?.["com.docker.compose.project"] === composeProject
+    && FULL_LOCAL_RESUME_SERVICES.has(
+      container?.Config?.Labels?.["com.docker.compose.service"],
+    ));
+  const beforeById = new Map(scoped(before).map((container) => [container.Id, container]));
+  const afterScoped = scoped(after);
+  const removeIds = afterScoped
+    .filter((container) => !beforeById.has(container.Id))
+    .map((container) => container.Id)
+    .sort();
+  const stopIds = afterScoped
+    .filter((container) => {
+      const previous = beforeById.get(container.Id);
+      return !previous || (
+        previous.State?.Running !== true
+        && container.State?.Running === true
+      );
+    })
+    .map((container) => container.Id)
+    .sort();
+  return Object.freeze({
+    removeIds: Object.freeze(removeIds),
+    stopIds: Object.freeze(stopIds),
+  });
+}
+
+export function collectFullLocalResumeSecretEvidence({
+  coreSecrets,
+  directory,
+  expectedUid,
+  oauthEnabled = false,
+  oauthSecrets = {},
+}) {
+  const normalizedDirectory = resolve(directory);
+  const directoryStat = lstatSync(normalizedDirectory);
+  if (
+    directoryStat.isSymbolicLink()
+    || !directoryStat.isDirectory()
+    || directoryStat.uid !== expectedUid
+    || (directoryStat.mode & 0o777) !== 0o700
+  ) {
+    throw new Error("Full-local resume secret directory owner, mode, or type is unsafe.");
+  }
+  const expected = {
+    ...Object.fromEntries(FULL_LOCAL_SECRET_NAMES.map((name) => [name, coreSecrets?.[name]])),
+    ...(oauthEnabled ? oauthSecrets : {}),
+  };
+  const expectedNames = Object.keys(expected).sort();
+  const actualNames = readdirSync(normalizedDirectory).sort();
+  if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
+    throw new Error("Full-local resume secret files are missing or unexpected.");
+  }
+  const evidence = expectedNames.map((name) => {
+    const path = join(normalizedDirectory, name);
+    const stat = lstatSync(path);
+    if (
+      stat.isSymbolicLink()
+      || !stat.isFile()
+      || stat.uid !== expectedUid
+      || (stat.mode & 0o777) !== 0o600
+    ) {
+      throw new Error(`Full-local resume secret ${name} owner, mode, or type is unsafe.`);
+    }
+    const bytes = readFileSync(path);
+    if (bytes.toString("utf8") !== expected[name]) {
+      throw new Error(`Full-local resume secret ${name} does not match Keychain authority.`);
+    }
+    return Object.freeze({
+      dev: stat.dev,
+      digest: createHash("sha256").update(bytes).digest("hex"),
+      ino: stat.ino,
+      name,
+      path,
+    });
+  });
+  return Object.freeze(evidence);
+}
+
 function requiredValue(record, name) {
   const value = record?.[name];
   if (typeof value !== "string" || value.trim().length === 0) {

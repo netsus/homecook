@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -24,6 +24,7 @@ import {
   assertNoSecretLeakage,
   assertSecretRotationAllowed,
   buildFullLocalProductCatalogSql,
+  collectFullLocalResumeSecretEvidence,
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
   materializeFullLocalRuntimeSecrets,
@@ -32,6 +33,7 @@ import {
   renderFullLocalProductionConfigTemplate,
   summarizeFullLocalRuntimeStates,
   selectNewlyStartedFullLocalWriterServices,
+  selectFullLocalResumeCleanupContainers,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
@@ -94,7 +96,10 @@ import {
   validateLocalMacProductionCurrentResumeAuthority,
   validateLocalMacProductionMutationAuthority,
 } from "./lib/local-mac-production-release.mjs";
-import { createGitHubProductionReleaseAttestationVerifier } from "./lib/github-production-release-attestation.mjs";
+import {
+  createGitHubProductionReleaseAttestationVerifier,
+  resolveTrustedGitHubCliExecutable,
+} from "./lib/github-production-release-attestation.mjs";
 import { getFullLocalResumeConfigPath } from "./lib/full-local-launch-agent.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -2245,26 +2250,15 @@ function assertResumeCurrentSafeAncestors(homeDir, targetPath, label) {
 
 function assertExistingFullLocalRuntimeSecrets(runtime) {
   const directory = realpathSync(runtime.config.FULL_LOCAL_SECRET_DIR);
-  const evidence = [];
-  for (const name of FULL_LOCAL_SECRET_NAMES) {
-    const path = join(directory, name);
-    assertResumeCurrentSafeFile(path, {
-      expectedMode: 0o600,
-      label: `Full-local runtime secret ${name}`,
-    });
-    const bytes = readFileSync(path);
-    if (bytes.toString("utf8") !== runtime.secrets[name]) {
-      fail(`Full-local runtime secret ${name} does not match canonical Keychain authority.`);
-    }
-    const stat = lstatSync(path);
-    evidence.push(Object.freeze({
-      dev: stat.dev,
-      digest: createHash("sha256").update(bytes).digest("hex"),
-      ino: stat.ino,
-      path,
-    }));
-  }
-  return Object.freeze(evidence);
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid)) fail("Current user uid is unavailable.");
+  return collectFullLocalResumeSecretEvidence({
+    coreSecrets: runtime.secrets,
+    directory,
+    expectedUid: currentUid,
+    oauthEnabled: runtime.oauth.enabled,
+    oauthSecrets: runtime.oauthSecrets,
+  });
 }
 
 function assertResumeEvidenceStable(expected, actual, label) {
@@ -2273,9 +2267,125 @@ function assertResumeEvidenceStable(expected, actual, label) {
   }
 }
 
+function sanitizedResumeFailure(error, runtime) {
+  let message = error instanceof Error ? error.message : String(error);
+  for (const secret of [
+    ...Object.values(runtime?.secrets ?? {}),
+    ...Object.values(runtime?.oauthSecrets ?? {}),
+  ]) {
+    if (typeof secret === "string" && secret.length > 0) {
+      message = message.replaceAll(secret, "[redacted]");
+    }
+  }
+  return message.slice(0, 1_000);
+}
+
+function assertNoFullLocalResumeRecoveryRequired(homeDir) {
+  const path = resolve(
+    homeDir,
+    ".homecook",
+    "releases",
+    "resume-failures",
+    "recovery-required.json",
+  );
+  let stat;
+  try {
+    stat = lstatSync(path);
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return;
+    throw error;
+  }
+  const currentUid = process.getuid?.();
+  if (
+    stat.isSymbolicLink()
+    || !stat.isFile()
+    || (Number.isInteger(currentUid) && stat.uid !== currentUid)
+    || (stat.mode & 0o777) !== 0o600
+  ) {
+    fail("Full-local resume recovery-required evidence is unsafe.");
+  }
+  fail(`Full-local resume manual recovery required: ${path}`);
+}
+
+function preserveFullLocalResumeFailureEvidence({
+  cleanup,
+  error,
+  homeDir,
+  runtime,
+}) {
+  const root = resolve(homeDir, ".homecook", "releases", "resume-failures");
+  const currentUid = process.getuid?.();
+  if (!existsSync(root)) {
+    mkdirSync(root, { mode: 0o700 });
+  }
+  const stat = lstatSync(root);
+  if (
+    stat.isSymbolicLink()
+    || !stat.isDirectory()
+    || (Number.isInteger(currentUid) && stat.uid !== currentUid)
+    || (stat.mode & 0o777) !== 0o700
+  ) {
+    fail("Full-local resume failure evidence directory is unsafe.");
+  }
+  const path = join(root, `${Date.now()}-${randomUUID()}.json`);
+  writeFileSync(path, `${JSON.stringify({
+    schema: "homecook.full-local-resume-failure.v1",
+    cleanup,
+    failure: sanitizedResumeFailure(error, runtime),
+  }, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+  if (cleanup.cleanup_failures.length > 0) {
+    const recoveryRequiredPath = join(root, "recovery-required.json");
+    if (!existsSync(recoveryRequiredPath)) {
+      writeFileSync(recoveryRequiredPath, `${JSON.stringify({
+        schema: "homecook.full-local-resume-recovery-required.v1",
+        failure_evidence_path: path,
+        cleanup_failure_count: cleanup.cleanup_failures.length,
+      }, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    }
+  }
+  return path;
+}
+
+function cleanupFullLocalResumeAttempt({ before, runtime }) {
+  const after = dockerResourceInventory("container", { all: true });
+  const selected = selectFullLocalResumeCleanupContainers({
+    after,
+    before,
+    composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+  });
+  const failures = [];
+  for (const containerId of selected.stopIds) {
+    try {
+      run("docker", ["stop", containerId], {
+        env: runtime.env,
+        failure: "Full-local resume attempt container stop failed.",
+      });
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  for (const containerId of selected.removeIds) {
+    try {
+      run("docker", ["rm", containerId], {
+        env: runtime.env,
+        failure: "Full-local resume attempt container removal failed.",
+      });
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  return Object.freeze({
+    cleanup_failures: Object.freeze(failures),
+    removed_container_ids: selected.removeIds,
+    stopped_container_ids: selected.stopIds,
+    volumes_removed: false,
+  });
+}
+
 async function resumeCurrentRelease(args) {
   assertResumeCurrentArguments(args);
   const homeDir = resolve(process.env.HOME ?? homedir());
+  assertNoFullLocalResumeRecoveryRequired(homeDir);
   const currentDescriptorPath = resolve(optionValue(args, "--current-descriptor"));
   const canonicalConfigPath = getFullLocalResumeConfigPath(homeDir);
   const requestedConfigPath = resolve(optionValue(args, "--config"));
@@ -2288,13 +2398,32 @@ async function resumeCurrentRelease(args) {
     label: "Full-local resume config",
   });
   const authorityRoot = resolve(ROOT, "..", "authority");
+  const ghExecutable = resolveTrustedGitHubCliExecutable({
+    currentUid: process.getuid?.(),
+    nodeExecutablePath: process.argv0,
+  });
+  const ghExecutableSha256 = createHash("sha256")
+    .update(readFileSync(ghExecutable))
+    .digest("hex");
   const verifyAttestation = createGitHubProductionReleaseAttestationVerifier({
     bundlePath: resolve(authorityRoot, "attestation-bundle.jsonl"),
+    ghExecutable,
     repository: "netsus/homecook",
     signerWorkflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
     sourceRef: "refs/heads/master",
     subjectManifestPath: resolve(authorityRoot, "attestation-subject.json"),
     trustedRootPath: resolve(authorityRoot, "attestation-trusted-root.jsonl"),
+    runGh: (command, commandArgs, commandOptions) => {
+      const currentExecutable = resolveTrustedGitHubCliExecutable({
+        approvedSha256: ghExecutableSha256,
+        currentUid: process.getuid?.(),
+        nodeExecutablePath: process.argv0,
+      });
+      if (command !== currentExecutable) {
+        fail("Trusted GitHub CLI executable changed during resume-current.");
+      }
+      return spawnSync(command, commandArgs, commandOptions);
+    },
   });
   const readAuthority = () => validateLocalMacProductionCurrentResumeAuthority({
       currentDescriptorPath,
@@ -2335,28 +2464,59 @@ async function resumeCurrentRelease(args) {
     assertExistingFullLocalRuntimeSecrets(runtime),
     "Full-local runtime secrets",
   );
-  compose(runtime, ["up", "-d"]);
-  const status = await waitForRuntimeHealthy(runtime);
-  const releaseIdentity = observedFullLocalReleaseIdentity(runtime);
-  if (JSON.stringify(releaseIdentity) !== JSON.stringify(expectedIdentity)) {
-    fail("resume-current Docker workload identity does not match current.json.");
+  const containersBeforeResume = dockerResourceInventory("container", { all: true });
+  let mutationAttempted = false;
+  try {
+    mutationAttempted = true;
+    compose(runtime, ["up", "-d"]);
+    const status = await waitForRuntimeHealthy(runtime);
+    const releaseIdentity = observedFullLocalReleaseIdentity(runtime);
+    if (JSON.stringify(releaseIdentity) !== JSON.stringify(expectedIdentity)) {
+      fail("resume-current Docker workload identity does not match current.json.");
+    }
+    assertResumeEvidenceStable(
+      authority.descriptorSnapshot,
+      readAuthority().descriptorSnapshot,
+      "Current release descriptor",
+    );
+    assertResumeEvidenceStable(
+      secretEvidence,
+      assertExistingFullLocalRuntimeSecrets(runtime),
+      "Full-local runtime secrets",
+    );
+    return {
+      ...status,
+      release_identity: releaseIdentity,
+      resumed_current: true,
+      status: "PASS",
+    };
+  } catch (error) {
+    if (!mutationAttempted) throw error;
+    let cleanup;
+    try {
+      cleanup = cleanupFullLocalResumeAttempt({
+        before: containersBeforeResume,
+        runtime,
+      });
+    } catch (cleanupError) {
+      cleanup = Object.freeze({
+        cleanup_failures: Object.freeze([
+          cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+        ]),
+        removed_container_ids: Object.freeze([]),
+        stopped_container_ids: Object.freeze([]),
+        volumes_removed: false,
+      });
+    }
+    const evidencePath = preserveFullLocalResumeFailureEvidence({
+      cleanup,
+      error,
+      homeDir,
+      runtime,
+    });
+    const message = sanitizedResumeFailure(error, runtime);
+    throw new Error(`${message} Failure evidence: ${evidencePath}`);
   }
-  assertResumeEvidenceStable(
-    authority.descriptorSnapshot,
-    readAuthority().descriptorSnapshot,
-    "Current release descriptor",
-  );
-  assertResumeEvidenceStable(
-    secretEvidence,
-    assertExistingFullLocalRuntimeSecrets(runtime),
-    "Full-local runtime secrets",
-  );
-  return {
-    ...status,
-    release_identity: releaseIdentity,
-    resumed_current: true,
-    status: "PASS",
-  };
 }
 
 async function main() {

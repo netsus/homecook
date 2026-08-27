@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -84,7 +85,7 @@ describe("GitHub production release attestation verification", () => {
       currentUid: statSync(root).uid,
       nodeExecutablePath: nodePath,
       pathEnvironment: hostileBin,
-    })).toBe(trustedGh);
+    })).toBe(realpathSync(trustedGh));
 
     chmodSync(trustedGh, 0o722);
     expect(() => resolveTrustedGitHubCliExecutable({

@@ -36,6 +36,7 @@ import {
   normalizeExpectedReleaseContexts,
   validateProductionReleaseTag,
 } from "./production-release-approval-policy.mjs";
+import { verifyYoutubeExtractionWorkerArtifact } from "./youtube-extraction-worker-artifact.mjs";
 
 export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v1";
 
@@ -110,6 +111,7 @@ const RUNNING_DESCRIPTOR_ALLOWED_FIELDS = new Set([
   "release_tree",
   "build_id",
   "promotion_id",
+  "restart_capability",
   "promoted_at",
   "source_manifest_sha256",
   "execution_app_root",
@@ -124,6 +126,7 @@ const RUNNING_DESCRIPTOR_ALLOWED_FIELDS = new Set([
   "worker_policy_sha256",
 ]);
 const RUNNING_DESCRIPTOR_SCHEMA = "homecook.local-mac-production-running-release.v1";
+export const FULL_LOCAL_RESUME_CURRENT_CAPABILITY = "full-local-resume-current-v1";
 const LEGACY_BOOTSTRAP_RELEASE_SHA = "e02f02a87d1d955dc598728e7029a745a650a5c3";
 const RUNNING_DESCRIPTOR_WORKER_PATH_FIELDS = Object.freeze([
   "execution_app_root",
@@ -1736,6 +1739,20 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
       ? requireDigest(value[field], `${label}.${field}`)
       : requireAbsolutePath(value[field], `${label}.${field}`),
   ]));
+  const restartCapability = value.restart_capability === undefined
+    ? {}
+    : {
+        restart_capability: requireNonEmptyString(
+          value.restart_capability,
+          `${label}.restart_capability`,
+        ),
+      };
+  if (
+    restartCapability.restart_capability !== undefined
+    && restartCapability.restart_capability !== FULL_LOCAL_RESUME_CURRENT_CAPABILITY
+  ) {
+    throw new Error(`${label}.restart_capability is unsupported.`);
+  }
   return {
     schema: RUNNING_DESCRIPTOR_SCHEMA,
     release_tag: validateProductionReleaseTag(value.release_tag, `${label}.release_tag`),
@@ -1748,6 +1765,7 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
       value.source_manifest_sha256,
       `${label}.source_manifest_sha256`,
     ),
+    ...restartCapability,
     ...workerPathAuthority,
   };
 }
@@ -1939,6 +1957,9 @@ export function validateLocalMacProductionCurrentResumeAuthority({
   if (!descriptor.execution_app_root || !descriptor.execution_snapshot_digest) {
     throw new Error("resume-current requires a sealed v2 running descriptor.");
   }
+  if (descriptor.restart_capability !== FULL_LOCAL_RESUME_CURRENT_CAPABILITY) {
+    throw new Error("resume-current descriptor lacks the exact restart capability.");
+  }
   const snapshotRoot = dirname(descriptor.execution_app_root);
   const expectedSnapshotRoot = resolve(
     paths.releaseRoot,
@@ -2041,9 +2062,51 @@ export function validateLocalMacProductionCurrentResumeAuthority({
       throw new Error(`resume-current ${label} authority is unsafe.`);
     }
   }
+  if (
+    realpathSync(descriptor.worker_artifact_root) !== workerRoot
+    || !descriptor.worker_manifest_path
+  ) {
+    throw new Error("resume-current worker artifact authority escapes the sealed snapshot.");
+  }
+  const workerManifestPath = realpathSync(descriptor.worker_manifest_path);
+  assertPathInside(workerRoot, workerManifestPath, "resume-current worker manifest");
+  const workerArtifact = verifyYoutubeExtractionWorkerArtifact(workerManifestPath);
+  const actualAuthorityDigests = {
+    appDescriptor: sha256Bytes(readFileSync(authorityFiles.appDescriptorPath)),
+    expectedSchema: sha256Bytes(readFileSync(authorityFiles.expectedSchemaPath)),
+    policy: sha256Bytes(readFileSync(authorityFiles.policyPath)),
+  };
+  for (const [actual, expected, label] of [
+    [
+      actualAuthorityDigests.appDescriptor,
+      descriptor.worker_app_descriptor_sha256,
+      "app descriptor",
+    ],
+    [
+      actualAuthorityDigests.expectedSchema,
+      descriptor.worker_expected_schema_sha256,
+      "expected schema",
+    ],
+    [actualAuthorityDigests.policy, descriptor.worker_policy_sha256, "policy"],
+    [workerArtifact.artifact_sha256, descriptor.worker_artifact_sha256, "worker artifact"],
+  ]) {
+    if (actual !== expected) {
+      throw new Error(`resume-current sealed ${label} digest drifted.`);
+    }
+  }
+  for (const [field, expected] of [
+    ["release_sha", descriptor.release_sha],
+    ["release_tree", descriptor.release_tree],
+    ["build_id", descriptor.build_id],
+    ["promotion_id", descriptor.promotion_id],
+  ]) {
+    if (workerArtifact[field] !== expected) {
+      throw new Error(`resume-current worker artifact ${field} identity drifted.`);
+    }
+  }
   const expectedIdentityDigest = sha256Bytes(Buffer.from(JSON.stringify({
     app: snapshot.appDigest,
-    app_descriptor: descriptor.worker_app_descriptor_sha256,
+    app_descriptor: actualAuthorityDigests.appDescriptor,
     attestation_bundle: sha256Bytes(readFileSync(authorityFiles.bundlePath)),
     attestation_subject: sha256Bytes(readFileSync(authorityFiles.subjectManifestPath)),
     attestation_trusted_root: sha256Bytes(readFileSync(authorityFiles.trustedRootPath)),
@@ -2052,8 +2115,8 @@ export function validateLocalMacProductionCurrentResumeAuthority({
     promotion_id: descriptor.promotion_id,
     release_sha: descriptor.release_sha,
     release_tree: descriptor.release_tree,
-    expected_schema: descriptor.worker_expected_schema_sha256,
-    policy: descriptor.worker_policy_sha256,
+    expected_schema: actualAuthorityDigests.expectedSchema,
+    policy: actualAuthorityDigests.policy,
     worker: snapshot.workerDigest,
   })));
   if (expectedIdentityDigest !== descriptor.execution_snapshot_digest) {
@@ -2555,6 +2618,7 @@ export async function promoteLocalMacProductionRelease({
     release_tree: manifest.release_tree,
     build_id: manifest.build_id,
     promotion_id: manifest.promotion_id,
+    restart_capability: FULL_LOCAL_RESUME_CURRENT_CAPABILITY,
     promoted_at: promotedAt,
     source_manifest_sha256: manifestDigest,
     execution_app_root: executionSnapshot.appRoot,

@@ -123,6 +123,11 @@ function writePrepare(
       join(root, "infra/full-local-supabase"),
       { recursive: true },
     );
+    mkdirSync(join(root, "lib/server"), { recursive: true, mode: 0o700 });
+    cpSync(
+      join(process.cwd(), "lib/server/youtube-extraction-worker-timing.json"),
+      join(root, "lib/server/youtube-extraction-worker-timing.json"),
+    );
   }
   for (const file of [
     "scripts/start-local-mac-production.mjs",
@@ -464,9 +469,9 @@ const ids = () => fs.existsSync(startedPath)
 const container = (id, index) => ({
   Id: id,
   Config: { Labels: {
-    "com.docker.compose.project": "homecook-full-local-production",
+    "com.docker.compose.project": "homecook-full-local-isolated",
     "com.docker.compose.service": services[index] || "storage",
-    "homecook.release.sha": fs.existsSync(faultPath) && fs.readFileSync(faultPath, "utf8") === "identity"
+    "homecook.release.sha": fs.existsSync(faultPath) && ["identity", "cleanup-failure"].includes(fs.readFileSync(faultPath, "utf8"))
       ? ${JSON.stringify("0".repeat(40))}
       : ${JSON.stringify(currentDescriptor.release_sha)},
     "homecook.release.tree": ${JSON.stringify(currentDescriptor.release_tree)},
@@ -506,9 +511,11 @@ else if (args[0] === "inspect" && args.includes("--format")) {
   const running = id !== "pre-stopped" || fs.existsSync(startedPath);
   process.stdout.write(JSON.stringify({ Status: running ? "running" : "exited", Health: running ? { Status: "healthy" } : undefined }) + "\\n");
 }
+else if (args[0] === "container" && args[1] === "ls") process.stdout.write(ids().join("\\n") + "\\n");
 else if (args[0] === "container" && args[1] === "inspect") {
   process.stdout.write(JSON.stringify(args.slice(2).map((id, index) => container(id, index))));
 }
+else if (args[0] === "stop" && fs.existsSync(faultPath) && fs.readFileSync(faultPath, "utf8") === "cleanup-failure") process.exit(42);
 else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPath, { force: true });
 `, { mode: 0o700 });
     for (const path of [fakeGhPath, fakeSecurityPath, fakeDockerPath]) chmodSync(path, 0o700);
@@ -633,16 +640,35 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       rmSync(dockerStartedPath, { force: true });
       writeFileSync(resumeFaultModePath, fault, { mode: 0o600 });
       const logOffset = existsSync(resumeMarker) ? readFileSync(resumeMarker, "utf8").length : 0;
-      expect(invokeResume().status).toBe(1);
+      const faultResult = invokeResume();
+      expect(faultResult.status).toBe(1);
+      expect(faultResult.stderr).toContain("Failure evidence:");
       const cleanupLog = readFileSync(resumeMarker, "utf8").slice(logOffset);
       expect(cleanupLog).toMatch(/stop.*new-container/iu);
       expect(cleanupLog).toMatch(/stop.*pre-stopped/iu);
       expect(cleanupLog).toMatch(/rm.*new-container/iu);
-      expect(cleanupLog).not.toMatch(/volume|(?:stop|rm).*pre-running/iu);
+      expect(cleanupLog).not.toMatch(/^(?:volume|(?:stop|rm)\b.*pre-running)/imu);
       restoreFaultTarget(fault);
       rmSync(resumeFaultModePath, { force: true });
       rmSync(dockerStartedPath, { force: true });
     }
+
+    writeFileSync(resumeFaultModePath, "cleanup-failure", { mode: 0o600 });
+    const cleanupFailure = invokeResume();
+    expect(cleanupFailure.status).toBe(1);
+    const recoveryRequiredPath = join(
+      state.releaseRoot,
+      "resume-failures/recovery-required.json",
+    );
+    expect(existsSync(recoveryRequiredPath)).toBe(true);
+    rmSync(resumeFaultModePath, { force: true });
+    const retryLogOffset = readFileSync(resumeMarker, "utf8").length;
+    const blockedRetry = invokeResume();
+    expect(blockedRetry.status).toBe(1);
+    expect(blockedRetry.stderr).toMatch(/manual recovery|recovery required/iu);
+    expect(readFileSync(resumeMarker, "utf8").slice(retryLogOffset)).toBe("");
+    rmSync(recoveryRequiredPath);
+    rmSync(dockerStartedPath, { force: true });
 
     writeFileSync(
       fullConfig,
@@ -657,11 +683,13 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     }
     writeFileSync(resumeFaultModePath, "oauth-secret", { mode: 0o600 });
     const oauthLogOffset = readFileSync(resumeMarker, "utf8").length;
-    expect(invokeResume().status).toBe(1);
+    const oauthFaultResult = invokeResume();
+    expect(oauthFaultResult.status).toBe(1);
+    expect(oauthFaultResult.stderr).toContain("Failure evidence:");
     const oauthCleanupLog = readFileSync(resumeMarker, "utf8").slice(oauthLogOffset);
     expect(oauthCleanupLog).toMatch(/stop.*new-container/iu);
     expect(oauthCleanupLog).toMatch(/rm.*new-container/iu);
-    expect(oauthCleanupLog).not.toMatch(/volume|(?:stop|rm).*pre-running/iu);
+    expect(oauthCleanupLog).not.toMatch(/^(?:volume|(?:stop|rm)\b.*pre-running)/imu);
     expect(JSON.stringify({ currentDescriptor, oauthCleanupLog })).not.toContain(
       String(fullLocalOauthSecrets.google_client_secret),
     );
@@ -671,5 +699,15 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     }
     rmSync(resumeFaultModePath, { force: true });
     rmSync(dockerStartedPath, { force: true });
+    const failureEvidenceRoot = join(state.releaseRoot, "resume-failures");
+    const failureEvidence = readdirSync(failureEvidenceRoot)
+      .filter((name) => name !== "recovery-required.json")
+      .map((name) => readFileSync(join(failureEvidenceRoot, name), "utf8"));
+    expect(failureEvidence.length).toBeGreaterThanOrEqual(6);
+    expect(failureEvidence.every((value) =>
+      JSON.parse(value).cleanup.volumes_removed === false)).toBe(true);
+    expect(failureEvidence.join("\n")).not.toContain(
+      String(fullLocalOauthSecrets.google_client_secret),
+    );
   }, 120_000);
 });

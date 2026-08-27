@@ -7,7 +7,7 @@ import {
   readdirSync,
   realpathSync,
 } from "node:fs";
-import { dirname, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 import {
   getLocalMacProductionPaths,
@@ -24,6 +24,7 @@ import {
   renderFullLocalLaunchAgentPlist,
 } from "./full-local-launch-agent.mjs";
 import {
+  FULL_LOCAL_RESUME_CURRENT_CAPABILITY,
   getLocalMacProductionReleasePaths,
   readLocalMacProductionPreparedReleaseIdentity,
   readLocalMacProductionRuntimeIdentity,
@@ -244,15 +245,82 @@ function sanitizedPath(nodeBin) {
   ])].join(":");
 }
 
+export function resolveFullLocalCurrentRestartContract(currentDescriptor) {
+  if (
+    currentDescriptor?.release_sha
+    === "e02f02a87d1d955dc598728e7029a745a650a5c3"
+  ) {
+    return Object.freeze({
+      includeReleaseIdentity: false,
+      legacyContract: "e02f-full-local-v1",
+      runtimeCommand: "start",
+    });
+  }
+  if (currentDescriptor?.restart_capability === undefined) {
+    const digestFields = [
+      "execution_snapshot_digest",
+      "source_manifest_sha256",
+      "worker_artifact_sha256",
+      "worker_app_descriptor_sha256",
+      "worker_config_sha256",
+      "worker_credential_sha256",
+      "worker_expected_schema_sha256",
+      "worker_policy_sha256",
+    ];
+    const pathFields = [
+      "execution_app_root",
+      "worker_artifact_root",
+      "worker_manifest_path",
+    ];
+    if (
+      currentDescriptor?.schema !== "homecook.local-mac-production-running-release.v1"
+      || typeof currentDescriptor.release_tag !== "string"
+      || !currentDescriptor.release_tag.startsWith("prod-")
+      || !/^[0-9a-f]{40}$/u.test(currentDescriptor.release_sha ?? "")
+      || !/^[0-9a-f]{40}$/u.test(currentDescriptor.release_tree ?? "")
+      || typeof currentDescriptor.build_id !== "string"
+      || currentDescriptor.build_id.length === 0
+      || typeof currentDescriptor.promotion_id !== "string"
+      || currentDescriptor.promotion_id.length === 0
+      || Number.isNaN(Date.parse(currentDescriptor.promoted_at ?? ""))
+      || digestFields.some((field) =>
+        !/^[0-9a-f]{64}$/u.test(currentDescriptor[field] ?? ""))
+      || pathFields.some((field) =>
+        typeof currentDescriptor[field] !== "string"
+        || !isAbsolute(currentDescriptor[field]))
+    ) {
+      throw new Error("Legacy full-local sealed v1 descriptor is incomplete.");
+    }
+    return Object.freeze({
+      includeReleaseIdentity: true,
+      legacyContract: "abac967-full-local-start-v1",
+      runtimeCommand: "start",
+    });
+  }
+  if (currentDescriptor.restart_capability !== FULL_LOCAL_RESUME_CURRENT_CAPABILITY) {
+    throw new Error("Current full-local restart capability is unsupported.");
+  }
+  return Object.freeze({
+    includeReleaseIdentity: false,
+    legacyContract: null,
+    runtimeCommand: "resume-current",
+  });
+}
+
 function readFullLocalWorkloadDefault({
   context,
   options,
   checkPlist = true,
   allowLegacyBootstrap = false,
+  restartContract = null,
   commandRunner = spawnSync,
 }) {
   const currentUid = process.getuid?.();
   if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+  const expectedRestartContract = restartContract ?? {
+    includeReleaseIdentity: false,
+    runtimeCommand: "resume-current",
+  };
   if (checkPlist) assertCanonicalLocalMacProductionPlist({
     actualPath: getFullLocalLaunchAgentPaths(context.homeDir).plistPath,
     currentUid,
@@ -264,8 +332,8 @@ function readFullLocalWorkloadDefault({
       nodeBin: options.nodeBin,
       releaseIdentityPath: resolve(context.releaseDir, "prepare.json"),
       rootDir: context.releaseDir,
-      runtimeCommand: allowLegacyBootstrap ? "start" : "resume-current",
-      includeReleaseIdentity: !allowLegacyBootstrap,
+      runtimeCommand: expectedRestartContract.runtimeCommand,
+      includeReleaseIdentity: expectedRestartContract.includeReleaseIdentity,
     }),
     expectedMode: 0o600,
     label: "Full-local plist",
@@ -529,6 +597,9 @@ function buildDefaultDependencies(
         trustedRoot: options.homeDir,
       });
       const fullLocalPlistPath = getFullLocalLaunchAgentPaths(options.homeDir).plistPath;
+      const fullLocalRestartContract = resolveFullLocalCurrentRestartContract(
+        context.currentDescriptor,
+      );
       const fullLocalPlist = assertCanonicalLocalMacProductionPlist({
         actualPath: fullLocalPlistPath,
         currentUid,
@@ -537,14 +608,11 @@ function buildDefaultDependencies(
           currentDescriptorPath: getLocalMacProductionReleasePaths(options.homeDir)
             .currentDescriptorPath,
           homeDir: options.homeDir,
-          includeReleaseIdentity: false,
+          includeReleaseIdentity: fullLocalRestartContract.includeReleaseIdentity,
           nodeBin: options.nodeBin,
           releaseIdentityPath: resolve(currentReleaseDir, "prepare.json"),
           rootDir: currentReleaseDir,
-          runtimeCommand: context.currentDescriptor.release_sha
-            === "e02f02a87d1d955dc598728e7029a745a650a5c3"
-            ? "start"
-            : "resume-current",
+          runtimeCommand: fullLocalRestartContract.runtimeCommand,
         }),
         expectedMode: 0o600,
         label: "Current full-local plist",
@@ -590,6 +658,7 @@ function buildDefaultDependencies(
         allowLegacyBootstrap:
           context.currentDescriptor.release_sha
           === "e02f02a87d1d955dc598728e7029a745a650a5c3",
+        restartContract: fullLocalRestartContract,
       });
 
       const actualWorkerManifestPath = argumentValue(workerPlist.args, "--manifest");

@@ -179,6 +179,13 @@ describe("full-local production runtime static contract", () => {
         oauthSecrets,
       })).toThrow(/owner|unsafe/iu);
       rmSync(join(root, "google_client_secret"));
+      expect(() => fullLocalRuntime.collectFullLocalResumeSecretEvidence({
+        coreSecrets,
+        directory: root,
+        expectedUid: statSync(root).uid,
+        oauthEnabled: true,
+        oauthSecrets,
+      })).toThrow(/missing|unexpected/iu);
       symlinkSync(join(root, "kakao_client_secret"), join(root, "google_client_secret"));
       expect(() => fullLocalRuntime.collectFullLocalResumeSecretEvidence({
         coreSecrets,
