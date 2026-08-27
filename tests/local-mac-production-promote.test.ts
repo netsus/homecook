@@ -847,13 +847,15 @@ describe("local Mac production promote", () => {
       return { installed: true };
     });
 
-    await expect(promoteLocalMacProductionRelease({
+    const options = {
       ...promoteOptions(fixture),
       afterLockedPreflight: () => {
         writeFileSync(sourceTarget, "mutated-original\n");
       },
       installBundle,
-    })).resolves.toMatchObject({ promoted: true });
+    } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
+    await expect(promoteLocalMacProductionRelease(options))
+      .resolves.toMatchObject({ promoted: true });
   });
 
   it("rejects an execution symlink whose resolved target escapes the candidate root", async () => {
@@ -878,10 +880,12 @@ describe("local Mac production promote", () => {
       return { installed: true };
     });
 
-    await expect(promoteLocalMacProductionRelease({
+    const options = {
       ...promoteOptions(fixture),
       installBundle,
-    })).resolves.toMatchObject({ promoted: true });
+    } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
+    await expect(promoteLocalMacProductionRelease(options))
+      .resolves.toMatchObject({ promoted: true });
   });
 
   it("blocks when a regular execution source mutates during copy", async () => {

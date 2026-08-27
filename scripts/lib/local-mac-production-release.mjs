@@ -13,7 +13,6 @@ import {
   openSync,
   readFileSync,
   readdirSync,
-  readlinkSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -27,6 +26,7 @@ import {
   join,
   relative,
   resolve,
+  sep,
 } from "node:path";
 import {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
@@ -225,10 +225,35 @@ function sha256Bytes(bytes) {
 function digestExecutionTree(rootPath) {
   const root = realpathSync(rootPath);
   const hash = createHash("sha256");
+  const digestDereferencedTarget = (path, seen = new Set()) => {
+    const realPath = realpathSync(path);
+    if (seen.has(realPath)) throw new Error("Execution symlink cycle is not allowed.");
+    const nextSeen = new Set(seen).add(realPath);
+    const stat = lstatSync(realPath);
+    if (stat.isDirectory()) {
+      hash.update("target-dir\0");
+      for (const name of readdirSync(realPath).sort()) {
+        hash.update(`target-name\0${name}\0`);
+        digestDereferencedTarget(join(realPath, name), nextSeen);
+      }
+      return;
+    }
+    if (!stat.isFile()) throw new Error("Execution symlink target must be regular.");
+    hash.update(`target-file\0${(stat.mode & 0o111) === 0 ? "data" : "exec"}\0`);
+    hash.update(readFileSync(realPath));
+    hash.update("\0");
+  };
   const visit = (path, relativePath) => {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink()) {
-      hash.update(`link\0${relativePath}\0${readlinkSync(path)}\0`);
+      const target = realpathSync(path);
+      assertPathInside(root, target, "Execution symlink target");
+      const targetRelative = relative(root, target);
+      if (targetRelative === ".git" || targetRelative.startsWith(`.git${sep}`)) {
+        throw new Error("Execution symlink target must not enter Git metadata.");
+      }
+      hash.update(`link\0${relativePath}\0${targetRelative}\0`);
+      digestDereferencedTarget(target);
       return;
     }
     if (stat.isDirectory()) {
@@ -248,14 +273,36 @@ function digestExecutionTree(rootPath) {
   return hash.digest("hex");
 }
 
-function copyExecutionTree(sourcePath, destinationPath) {
+function assertExecutionSymlinksContained(rootPath) {
+  const root = realpathSync(rootPath);
+  const visit = (path) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      assertPathInside(root, realpathSync(path), "Sealed execution symlink target");
+      return;
+    }
+    if (stat.isDirectory()) {
+      for (const name of readdirSync(path)) visit(join(path, name));
+    }
+  };
+  visit(root);
+}
+
+function copyExecutionTree(sourcePath, destinationPath, { copyEntryHook = () => undefined } = {}) {
   const sourceRoot = realpathSync(sourcePath);
+  const destinationRoot = resolve(destinationPath);
   const copyEntry = (source, destination) => {
     const stat = lstatSync(source);
     if (stat.isSymbolicLink()) {
       const target = realpathSync(source);
       assertPathInside(sourceRoot, target, "Execution snapshot symlink target");
-      symlinkSync(readlinkSync(source), destination);
+      const targetRelative = relative(sourceRoot, target);
+      if (targetRelative === ".git" || targetRelative.startsWith(`.git${sep}`)) {
+        throw new Error("Execution snapshot symlink target must not enter Git metadata.");
+      }
+      const destinationTarget = resolve(destinationRoot, targetRelative);
+      symlinkSync(relative(dirname(destination), destinationTarget) || ".", destination);
+      copyEntryHook({ destination, phase: "after_symlink_copy", source });
       return;
     }
     if (stat.isDirectory()) {
@@ -268,8 +315,10 @@ function copyExecutionTree(sourcePath, destinationPath) {
     if (!stat.isFile()) throw new Error("Execution source contains an unsupported entry.");
     copyFileSync(source, destination, fsConstants.COPYFILE_EXCL);
     chmodSync(destination, (stat.mode & 0o111) === 0 ? 0o400 : 0o500);
+    copyEntryHook({ destination, phase: "after_file_copy", source });
   };
   copyEntry(sourceRoot, destinationPath);
+  assertExecutionSymlinksContained(destinationPath);
 }
 
 function copySnapshotAuthorityFile(sourcePath, destinationPath) {
@@ -362,6 +411,7 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
 }
 
 export function createLocalMacProductionExecutionSnapshot({
+  copyEntryHook = () => undefined,
   manifest,
   preparedReleaseDir,
   releaseRoot,
@@ -401,8 +451,14 @@ export function createLocalMacProductionExecutionSnapshot({
   const appRoot = join(snapshotRoot, "app");
   const workerRoot = join(snapshotRoot, "worker");
   try {
-    copyExecutionTree(preparedReleaseDir, appRoot);
-    copyExecutionTree(worker.artifactRoot, workerRoot);
+    copyExecutionTree(preparedReleaseDir, appRoot, { copyEntryHook });
+    copyExecutionTree(worker.artifactRoot, workerRoot, { copyEntryHook });
+    if (
+      digestExecutionTree(appRoot) !== appSourceDigest
+      || digestExecutionTree(workerRoot) !== workerSourceDigest
+    ) {
+      throw new Error("Copied execution bytes do not match the pre-copy source digest.");
+    }
     const authorityRoot = join(workerRoot, "authority");
     if (!existsSync(authorityRoot)) mkdirSync(authorityRoot, { mode: 0o700 });
     const appDescriptorPath = copySnapshotAuthorityFile(
@@ -1865,6 +1921,7 @@ function releaseCompletedPromotionLock({ homeDir, lockToken }) {
 export async function promoteLocalMacProductionRelease({
   afterLockedPreflight = (input) => void input,
   descriptorFault = (phase) => void phase,
+  executionCopyHook = (input) => void input,
   finalWorkerProbe,
   getCurrentUid = () => process.getuid?.(),
   homeDir = process.env.HOME ?? "",
@@ -2045,6 +2102,7 @@ export async function promoteLocalMacProductionRelease({
   }
 
   const executionSnapshot = createLocalMacProductionExecutionSnapshot({
+    copyEntryHook: executionCopyHook,
     manifest,
     preparedReleaseDir: lockedCandidate.releaseDir,
     releaseRoot: paths.releaseRoot,

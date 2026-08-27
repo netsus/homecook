@@ -238,6 +238,7 @@ function readFullLocalWorkloadDefault({
   options,
   checkPlist = true,
   allowLegacyBootstrap = false,
+  commandRunner = spawnSync,
 }) {
   const currentUid = process.getuid?.();
   if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
@@ -272,7 +273,7 @@ function readFullLocalWorkloadDefault({
       releaseIdentityPath,
   ];
   if (allowLegacyBootstrap) runtimeArgs.push("--allow-legacy-release-bootstrap");
-  const result = spawnSync(
+  const result = commandRunner(
     options.nodeBin,
     runtimeArgs,
     {
@@ -318,7 +319,11 @@ function readFullLocalWorkloadDefault({
   };
 }
 
-async function readI031PreflightDefault(options, userId) {
+async function readI031PreflightDefault(
+  options,
+  userId,
+  preflightVerifier = verifyStandaloneYoutubeI031Preflight,
+) {
   const configPath = validateYoutubeExtractionWorkerConfigPath(options.workerConfigPath, {
     expectedUserId: userId,
     secretRoot: options.workerSecretRoot,
@@ -329,7 +334,7 @@ async function readI031PreflightDefault(options, userId) {
     { expectedUserId: userId, secretRoot: options.workerSecretRoot },
   );
   const providerEnvironment = await readWorkerProviderEnvironment(providerSecretPath);
-  const result = await verifyStandaloneYoutubeI031Preflight({
+  const result = await preflightVerifier({
     workerEnv: sanitizeYoutubeExtractionChildEnvironment(
       { ...process.env, ...providerEnvironment },
       { HOME: options.homeDir },
@@ -404,7 +409,11 @@ function verifySealedExecutionContext(context) {
   return context.verifyExecutionSnapshot(context.executionSnapshot);
 }
 
-function buildDefaultDependencies(commandRunner = spawnSync) {
+function buildDefaultDependencies(
+  commandRunner = spawnSync,
+  i031PreflightVerifier = verifyStandaloneYoutubeI031Preflight,
+  appReadinessWaiter = waitForLocalMacProductionReady,
+) {
   return {
     validateMutationTargets: ({ options }) => {
       const currentUid = process.getuid?.();
@@ -452,7 +461,11 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
       if (artifactRoot === realpathSync(context.releaseDir)) {
         throw new Error("Worker artifact root must remain separate from the app release candidate.");
       }
-      const i031Preflight = await readI031PreflightDefault(options, userId);
+      const i031Preflight = await readI031PreflightDefault(
+        options,
+        userId,
+        i031PreflightVerifier,
+      );
       return {
         artifactRoot,
         manifestPath: realpathSync(options.workerManifestPath),
@@ -538,7 +551,7 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
         throw new Error("Current full-local plist config path drifted.");
       }
 
-      const appStatus = readLocalMacProductionStatus({ spawn: spawnSync });
+      const appStatus = readLocalMacProductionStatus({ spawn: commandRunner });
       if (!appStatus.running || !Number.isInteger(appStatus.pid)) {
         throw new Error("Current app runtime is not running.");
       }
@@ -546,10 +559,12 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
         component: "app",
         expectedReleaseDir: currentReleaseDir,
         pid: appStatus.pid,
+        runCommand: commandRunner,
       });
       const fullLocal = readFullLocalWorkloadDefault({
         context: { ...context, homeDir: options.homeDir, releaseDir: currentReleaseDir },
         options,
+        commandRunner,
         allowLegacyBootstrap:
           context.currentDescriptor.release_sha
           === "e02f02a87d1d955dc598728e7029a745a650a5c3",
@@ -575,7 +590,7 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
         throw new Error("Current worker plist artifact root drifted.");
       }
       const serviceTarget = buildYoutubeExtractionWorkerServiceTarget({ userId: currentUid });
-      const workerRaw = spawnSync("/bin/launchctl", ["print", serviceTarget], {
+      const workerRaw = commandRunner("/bin/launchctl", ["print", serviceTarget], {
         encoding: "utf8",
       });
       const workerStatus = parseLaunchctlPrintStatus({
@@ -591,7 +606,7 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
       ) {
         throw new Error("Current worker runtime is not running.");
       }
-      if (readProcessCwd({ pid: workerStatus.pid }) !== workerArtifactRoot) {
+      if (readProcessCwd({ pid: workerStatus.pid, spawn: commandRunner }) !== workerArtifactRoot) {
         throw new Error("Current worker runtime artifact root drifted.");
       }
       const workerArtifact = verifyYoutubeExtractionWorkerArtifact(workerManifestPath, {
@@ -599,6 +614,7 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
       });
       const currentWorkerPaths = legacyBootstrap ? {
         appDescriptorPath: argumentValue(workerPlist.args, "--app-descriptor"),
+        configPath: argumentValue(workerPlist.args, "--config"),
         workerArtifactPath: workerManifestPath,
         currentPolicyPath: argumentValue(workerPlist.args, "--policy"),
         credentialPath: argumentValue(workerPlist.args, "--credential"),
@@ -618,15 +634,15 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
       const canonicalWorkerPlist = legacyBootstrap
         ? renderYoutubeExtractionWorkerPlist({
           appDescriptorPath: currentWorkerPaths.appDescriptorPath,
-          configPath: options.workerConfigPath,
-          credentialPath: options.workerCredentialPath,
-          currentPolicyPath: options.workerPolicyPath,
-          expectedSchemaPath: options.workerExpectedSchemaPath,
+          configPath: currentWorkerPaths.configPath,
+          credentialPath: currentWorkerPaths.credentialPath,
+          currentPolicyPath: currentWorkerPaths.currentPolicyPath,
+          expectedSchemaPath: currentWorkerPaths.expectedSchemaPath,
           homeDir: options.homeDir,
           manifestPath: workerManifestPath,
           nodeBin: options.nodeBin,
           rootDir: workerArtifactRoot,
-          secretRoot: options.workerSecretRoot,
+          secretRoot: currentWorkerPaths.secretRoot,
         })
         : buildCanonicalCurrentYoutubeWorkerPlist({
           currentDescriptor: context.currentDescriptor,
@@ -731,12 +747,23 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
       return { started: true };
     },
     confirmFullLocalCandidate: ({ context, options }) =>
-      readFullLocalWorkloadDefault({ context, options, checkPlist: false }),
-    installFullLocal: installFullLocalLaunchAgent,
-    installApp: installLocalMacProductionLaunchAgent,
+      readFullLocalWorkloadDefault({
+        context,
+        options,
+        checkPlist: false,
+        commandRunner,
+      }),
+    installFullLocal: (input) => installFullLocalLaunchAgent({
+      ...input,
+      spawn: commandRunner,
+    }),
+    installApp: (input) => installLocalMacProductionLaunchAgent({
+      ...input,
+      spawn: commandRunner,
+    }),
     installWorker: (input) => installYoutubeExtractionWorkerLaunchAgent({
       ...input,
-      spawn: spawnSync,
+      spawn: commandRunner,
     }),
 
     readAppRuntimeIdentity: async ({ context, options }) => {
@@ -754,19 +781,23 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
         label: "Promoted app plist",
         trustedRoot: context.homeDir,
       });
-      const status = readLocalMacProductionStatus({ spawn: spawnSync });
+      const status = readLocalMacProductionStatus({ spawn: commandRunner });
       if (!status.running || !Number.isInteger(status.pid)) {
         throw new Error("Promoted app runtime is not running.");
       }
-      await waitForLocalMacProductionReady();
+      await appReadinessWaiter();
       return readLocalMacProductionRuntimeIdentity({
         component: "app",
         expectedReleaseDir: context.releaseDir,
         pid: status.pid,
+        runCommand: commandRunner,
       });
     },
 
-    readFullLocalWorkloadIdentity: readFullLocalWorkloadDefault,
+    readFullLocalWorkloadIdentity: (input) => readFullLocalWorkloadDefault({
+      ...input,
+      commandRunner,
+    }),
 
     readWorkerRuntimeIdentity: async ({
       context,
@@ -795,7 +826,7 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
         trustedRoot: context.homeDir,
       });
       const serviceTarget = buildYoutubeExtractionWorkerServiceTarget({ userId });
-      const raw = spawnSync("/bin/launchctl", ["print", serviceTarget], { encoding: "utf8" });
+      const raw = commandRunner("/bin/launchctl", ["print", serviceTarget], { encoding: "utf8" });
       const status = parseLaunchctlPrintStatus({
         serviceTarget,
         status: raw.status,
@@ -809,7 +840,7 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
       ) {
         throw new Error("Promoted worker runtime is not running.");
       }
-      if (readProcessCwd({ pid: status.pid }) !== preflight.worker.artifactRoot) {
+      if (readProcessCwd({ pid: status.pid, spawn: commandRunner }) !== preflight.worker.artifactRoot) {
         throw new Error("Promoted worker runtime artifact root drifted.");
       }
       const finalInputs = loadYoutubeExtractionWorkerRuntimeInputs({
@@ -840,7 +871,11 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
           throw new Error(`Final worker ${field} drifted after installation.`);
         }
       }
-      const finalI031Preflight = await readI031PreflightDefault(options, userId);
+      const finalI031Preflight = await readI031PreflightDefault(
+        options,
+        userId,
+        i031PreflightVerifier,
+      );
       if (finalI031Preflight.ready !== true) {
         throw new Error("Final worker i031 preflight failed.");
       }
@@ -861,9 +896,18 @@ function buildDefaultDependencies(commandRunner = spawnSync) {
 }
 
 export function createLocalMacProductionPromoteAdapters(options, dependencies = {}) {
-  const { commandRunner = spawnSync, ...dependencyOverrides } = dependencies;
+  const {
+    commandRunner = spawnSync,
+    i031PreflightVerifier = verifyStandaloneYoutubeI031Preflight,
+    appReadinessWaiter = waitForLocalMacProductionReady,
+    ...dependencyOverrides
+  } = dependencies;
   const resolvedDependencies = {
-    ...buildDefaultDependencies(commandRunner),
+    ...buildDefaultDependencies(
+      commandRunner,
+      i031PreflightVerifier,
+      appReadinessWaiter,
+    ),
     ...dependencyOverrides,
   };
   const validateMutationTargets = requireFunction(

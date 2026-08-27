@@ -104,6 +104,9 @@ immutable checkout과 build readiness 단계다.
   executable 및 plist WorkingDirectory는 이후 원본 candidate가 아니라 이 snapshot만 사용한다.
 - snapshot은 inode, normalized content digest, owner/mode를 각 spawn/install 직전과
   readiness 이후, descriptor commit 직전에 다시 검증한다.
+- execution tree digest는 contained symlink의 dereferenced bytes와 executable metadata를
+  포함한다. 외부 target은 거부하고, 내부 absolute symlink는 snapshot 내부의 equivalent
+  relative target으로 다시 작성한 뒤 모든 final realpath containment를 재검증한다.
 - snapshot은 실패 시 자동 삭제하지 않는다. lock, snapshot evidence, partial install state를
   manual recovery 근거로 함께 보존한다. 성공한 snapshot도 running release의 immutable root이므로
   자동 정리하지 않으며 별도 승인된 lifecycle 작업만 제거할 수 있다.
