@@ -296,9 +296,15 @@ function createDefaultWorkerPreflightFixture() {
 
 describe("local Mac production promote adapters", () => {
   it("distinguishes exact abac v1 start plists from resume-capable descriptors", () => {
-    expect(promoteAdapters.resolveFullLocalCurrentRestartContract({
-      release_sha: CURRENT_IDENTITY.release_sha,
-    })).toEqual({
+    const sealedV1Descriptor = {
+      ...createContext().currentDescriptor,
+      schema: "homecook.local-mac-production-running-release.v1",
+      promoted_at: "2026-08-24T09:00:00.000Z",
+      source_manifest_sha256: "9".repeat(64),
+    };
+    expect(promoteAdapters.resolveFullLocalCurrentRestartContract(
+      sealedV1Descriptor,
+    )).toEqual({
       includeReleaseIdentity: true,
       legacyContract: "abac967-full-local-start-v1",
       runtimeCommand: "start",
@@ -315,6 +321,9 @@ describe("local Mac production promote adapters", () => {
       release_sha: CURRENT_IDENTITY.release_sha,
       restart_capability: "unknown",
     })).toThrow(/restart capability|unknown|unsupported/iu);
+    expect(() => promoteAdapters.resolveFullLocalCurrentRestartContract({
+      release_sha: CURRENT_IDENTITY.release_sha,
+    })).toThrow(/sealed|legacy|descriptor|incomplete/iu);
   });
 
   it("provides an importable adapter composition module", () => {
