@@ -74,6 +74,7 @@ const activeJob = {
   result: null,
   error: null,
   can_retry: false,
+  progress: null,
 };
 
 function renderCenter() {
@@ -757,6 +758,7 @@ describe("YouTube extraction notification center", () => {
         result: successItem.result,
         error: null,
         can_retry: false,
+        progress: null,
       },
       error: null,
     });

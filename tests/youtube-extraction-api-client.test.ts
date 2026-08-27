@@ -97,6 +97,42 @@ describe("YouTube async extraction API client", () => {
     }));
   });
 
+  it("preserves the additive progress object from the status response", async () => {
+    fetchMock.mockResolvedValue(response({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "processing",
+        submitted_at: "2026-08-27T00:00:00.000Z",
+        started_at: "2026-08-27T00:00:01.000Z",
+        completed_at: null,
+        result: null,
+        error: null,
+        can_retry: false,
+        progress: {
+          attempt: 1,
+          stage: "model_analysis",
+          confirmed_percent: 65,
+          updated_at: "2026-08-27T00:00:30.000Z",
+          remaining_seconds_low: null,
+          remaining_seconds_high: null,
+          estimate_confidence: null,
+          delayed: false,
+        },
+      },
+      error: null,
+    }));
+
+    const result = await fetchYoutubeExtractionJob(
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    expect(result.data?.progress).toMatchObject({
+      stage: "model_analysis",
+      confirmed_percent: 65,
+    });
+  });
+
   it("preserves official API errors and normalizes offline failures", async () => {
     fetchMock
       .mockResolvedValueOnce(response({

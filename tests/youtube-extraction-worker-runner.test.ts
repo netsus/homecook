@@ -332,7 +332,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
           },
         },
         claim_youtube_extractor_permit: { claimed: true, permit_generation: 9 },
-        start_youtube_extraction_attempt: { started: true },
+        start_youtube_extraction_attempt: { started: true, attempt_count: 1 },
         read_youtube_extraction_worker_catalog: {
           applied: true,
           ingredients: [],
@@ -396,6 +396,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       "record_youtube_extraction_worker_event",
       "resolve_youtube_extraction_worker_methods",
       "update_youtube_extraction_job_title",
+      "report_youtube_extraction_progress",
       "resolve_youtube_extraction_job_draft",
       "heartbeat_youtube_extraction_job",
       "heartbeat_youtube_extractor_permit",
@@ -435,6 +436,199 @@ describe("YTASYNC-WORKER standalone runner", () => {
       expect(args, `${name} must use the frozen five-minute lease`)
         .toMatchObject({ lease_seconds: 300 });
     }
+  });
+
+  it("reports truthful stages with exact fences and keeps progress failures nonfatal", async () => {
+    const digest = "4".repeat(64);
+    const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    const rpc = vi.fn(async (name: string, args: Record<string, unknown> = {}) => {
+      calls.push({ name, args });
+      if (name === "claim_youtube_extraction_job") {
+        return { data: {
+          job_id: "41414141-4141-4141-8141-414141414141",
+          youtube_video_id: "abc123DEF45",
+          lease_generation: 12,
+          attempt_count: 0,
+          policy_snapshot_digest: digest,
+          result_affecting_options: {},
+        }, error: null };
+      }
+      if (name === "claim_youtube_extractor_permit") {
+        return { data: { claimed: true, permit_generation: 19 }, error: null };
+      }
+      if (name === "start_youtube_extraction_attempt") {
+        return { data: { started: true, attempt_count: 1 }, error: null };
+      }
+      if (name === "report_youtube_extraction_progress") {
+        if (args.stage === "video_download") {
+          return { data: null, error: { code: "DB_UNAVAILABLE" } };
+        }
+        return { data: [{ applied: true }], error: null };
+      }
+      if (name === "read_youtube_extraction_worker_catalog") {
+        return { data: { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }, error: null };
+      }
+      if (name === "resolve_youtube_extraction_job_draft") {
+        return { data: { title: "진행률 테스트" }, error: null };
+      }
+      if (name === "finalize_youtube_extraction_job") {
+        return { data: { finalized: true }, error: null };
+      }
+      return { data: { applied: true, updated: true, released: true }, error: null };
+    });
+    const extractor = { extract: vi.fn(async ({ workerRpcClient }) => {
+      await workerRpcClient.reportProgress("source_fetch");
+      await workerRpcClient.reportProgress("video_download");
+      await workerRpcClient.reportProgress("frame_extraction", 120);
+      await workerRpcClient.reportProgress("model_analysis", 120);
+      return {
+        identity: { pipeline: "i031" },
+        recipe: { title: "진행률 테스트", ingredients: [], steps: [] },
+        meta: { modelCallCount: 2 },
+        workerDataPersisted: true,
+      };
+    }) };
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-progress",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor,
+    });
+
+    await expect(runtime.runOnce()).resolves.toBe("succeeded");
+    const reports = calls.filter(({ name }) => name === "report_youtube_extraction_progress");
+    expect(reports.map(({ args }) => args.stage)).toEqual([
+      "source_fetch",
+      "video_download",
+      "frame_extraction",
+      "model_analysis",
+      "finalizing",
+    ]);
+    for (const { args } of reports) {
+      expect(args).toMatchObject({
+        job_id: "41414141-4141-4141-8141-414141414141",
+        worker_id: "worker-progress",
+        lease_generation: 12,
+        permit_generation: 19,
+        attempt: 1,
+      });
+    }
+    expect(reports.at(2)?.args.video_duration_seconds).toBe(120);
+    expect(calls.findIndex(({ name, args }) => (
+      name === "report_youtube_extraction_progress" && args.stage === "finalizing"
+    ))).toBeLessThan(calls.findIndex(({ name }) => name === "finalize_youtube_extraction_job"));
+  });
+
+  it("bridges ordered child progress messages without making progress failures fatal", async () => {
+    const root = mkdtempSync(join(tmpdir(), "yta-child-progress-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    const workerPath = join(bundle, "worker.mjs");
+    writeFileSync(workerPath, `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      process.send({ type: "homecook-worker-progress", sequence: 0, stage: "queued", videoDurationSeconds: 0 });
+      process.send({ type: "homecook-worker-progress", sequence: 1, stage: "source_fetch", videoDurationSeconds: null });
+      process.send({ type: "homecook-worker-progress", sequence: 2, stage: "video_download", videoDurationSeconds: null });
+      process.send({ type: "homecook-worker-progress", sequence: 3, stage: "frame_extraction", videoDurationSeconds: 90 });
+      await writeFile(args.result, JSON.stringify({
+        identity: { pipeline: "i031" },
+        recipe: { title: "progress bridge", ingredients: [], steps: [] },
+        meta: { modelCallCount: 2 },
+        workerDataPersisted: true
+      }));
+      process.disconnect();
+    `);
+    chmodSync(workerPath, 0o555);
+    const stages: string[] = [];
+    const workerRpcClient = {
+      reportProgress: vi.fn(async (stage: string) => {
+        stages.push(stage);
+        if (stage === "video_download") throw new Error("progress unavailable");
+        return { applied: true };
+      }),
+      updateTitle: vi.fn(),
+      recordEvent: vi.fn(),
+    };
+    const extractor = createStandaloneYoutubeI031Extractor({
+      artifactRoot: root,
+      workerEnv: { NODE_ENV: "test" },
+      verifyPreflight: vi.fn(async () => ({
+        codexBin: "/opt/homebrew/bin/codex",
+        codexCliVersion: "0.144.0-alpha.4",
+      })),
+    });
+
+    await expect(extractor.extract({
+      videoId: "abc123DEF45",
+      signal: new AbortController().signal,
+      claimedJob: {
+        jobId: "42424242-4242-4242-8242-424242424242",
+        videoId: "abc123DEF45",
+        workerId: "worker-progress-bridge",
+        leaseGeneration: 2,
+      },
+      workerRpcClient,
+    })).resolves.toMatchObject({ recipe: { title: "progress bridge" } });
+    expect(stages).toEqual(["source_fetch", "video_download", "frame_extraction"]);
+  });
+
+  it("bounds the ordered progress queue before finalize without waiting for the RPC timeout", async () => {
+    const digest = "5".repeat(64);
+    const rpc = vi.fn(async (name: string): Promise<{ data: unknown; error: unknown }> => {
+      if (name === "claim_youtube_extraction_job") {
+        return { data: {
+          job_id: "43434343-4343-4343-8343-434343434343",
+          youtube_video_id: "abc123DEF45",
+          lease_generation: 3,
+          attempt_count: 0,
+          policy_snapshot_digest: digest,
+          result_affecting_options: {},
+        }, error: null };
+      }
+      if (name === "claim_youtube_extractor_permit") {
+        return { data: { claimed: true, permit_generation: 7 }, error: null };
+      }
+      if (name === "start_youtube_extraction_attempt") {
+        return { data: { started: true, attempt_count: 1 }, error: null };
+      }
+      if (name === "report_youtube_extraction_progress") {
+        return new Promise<{ data: unknown; error: unknown }>(() => {});
+      }
+      if (name === "read_youtube_extraction_worker_catalog") {
+        return { data: { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }, error: null };
+      }
+      if (name === "resolve_youtube_extraction_job_draft") {
+        return { data: { title: "bounded flush" }, error: null };
+      }
+      if (name === "finalize_youtube_extraction_job") {
+        return { data: { finalized: true }, error: null };
+      }
+      return { data: { applied: true, updated: true, released: true }, error: null };
+    });
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-progress-timeout",
+      allowedSnapshotDigest: digest,
+      rpc,
+      progressFlushTimeoutMs: 25,
+      extractor: { extract: vi.fn(async ({ workerRpcClient }) => {
+        workerRpcClient.reportProgress("model_analysis", 60);
+        return {
+          identity: { pipeline: "i031" },
+          recipe: { title: "bounded flush", ingredients: [], steps: [] },
+          meta: { modelCallCount: 2 },
+          workerDataPersisted: true,
+        };
+      }) },
+    });
+    const startedAt = Date.now();
+
+    await expect(runtime.runOnce()).resolves.toBe("succeeded");
+    expect(Date.now() - startedAt).toBeLessThan(500);
   });
 
   it("requeues without starting an attempt when permit claim returns claimed false with a generation", async () => {
@@ -510,6 +704,8 @@ describe("YTASYNC-WORKER standalone runner", () => {
           }
         : name === "claim_youtube_extractor_permit"
           ? { claimed: true, permit_generation: 1 }
+          : name === "start_youtube_extraction_attempt"
+            ? { started: true, attempt_count: 1 }
           : name === "read_youtube_extraction_worker_catalog"
             ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
             : name === "record_youtube_extraction_worker_event"
@@ -771,6 +967,8 @@ describe("YTASYNC-WORKER standalone runner", () => {
             }
           : name === "claim_youtube_extractor_permit"
             ? { claimed: true, permit_generation: 2 }
+            : name === "start_youtube_extraction_attempt"
+              ? { started: true, attempt_count: 1 }
             : name === "read_youtube_extraction_worker_catalog"
               ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
               : { applied: true, updated: true, released: true },
@@ -843,6 +1041,8 @@ describe("YTASYNC-WORKER standalone runner", () => {
           }
         : name === "claim_youtube_extractor_permit"
           ? { claimed: true, permit_generation: 3 }
+          : name === "start_youtube_extraction_attempt"
+            ? { started: true, attempt_count: 1 }
           : name === "read_youtube_extraction_worker_catalog"
             ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
             : name === "access_youtube_extraction_worker_cache"
@@ -894,6 +1094,9 @@ describe("YTASYNC-WORKER standalone runner", () => {
       }
       if (name === "claim_youtube_extractor_permit") {
         return { data: { claimed: true, permit_generation: 18 }, error: null };
+      }
+      if (name === "start_youtube_extraction_attempt") {
+        return { data: { started: true, attempt_count: 1 }, error: null };
       }
       if (name === "fail_or_retry_youtube_extraction_job") return failureResponse;
       return { data: { applied: true, updated: true, released: true }, error: null };
@@ -989,7 +1192,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
         : name === "claim_youtube_extractor_permit"
           ? { claimed: true, permit_generation: 11 }
           : name === "start_youtube_extraction_attempt"
-            ? { applied: true }
+            ? { started: true, attempt_count: 1 }
             : name === "heartbeat_youtube_extraction_job"
               ? { updated: false }
               : name === "heartbeat_youtube_extractor_permit"
