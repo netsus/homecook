@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   closeSync,
   constants as fsConstants,
   existsSync,
@@ -10,6 +11,7 @@ import {
   openSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -80,6 +82,31 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "full_local_launch_agent_enabled",
   "youtube_worker_launch_agent_enabled",
 ]);
+const PREPARE_DESCRIPTOR_ALLOWED_FIELDS = new Set([
+  "schema",
+  "status",
+  "prepared_at",
+  "promotion_id",
+  "release_tag",
+  "release_sha",
+  "release_tree",
+  "build_id",
+  "source_manifest_path",
+  "source_manifest_sha256",
+  "attestation_source",
+  "validation_commands",
+]);
+const RUNNING_DESCRIPTOR_ALLOWED_FIELDS = new Set([
+  "schema",
+  "release_tag",
+  "release_sha",
+  "release_tree",
+  "build_id",
+  "promotion_id",
+  "promoted_at",
+  "source_manifest_sha256",
+]);
+const RUNNING_DESCRIPTOR_SCHEMA = "homecook.local-mac-production-running-release.v1";
 
 function requireExactAllowedKeys(value, allowedKeys, label) {
   const unknownKeys = Object.keys(value).filter((key) => !allowedKeys.has(key));
@@ -230,6 +257,17 @@ function readSafeRegularFileBytes(path, label) {
     if (fileDescriptor !== undefined) {
       closeSync(fileDescriptor);
     }
+  }
+}
+
+function assertPrivateRegularFile(path, label, currentUid) {
+  assertSafeRegularFile(path, label);
+  const stat = lstatSync(path);
+  if (stat.uid !== currentUid) {
+    throw new Error(`${label} must be owned by the current user uid ${currentUid}.`);
+  }
+  if (modeBits(stat.mode) !== 0o600) {
+    throw new Error(`${label} must use mode 0600.`);
   }
 }
 
@@ -1079,6 +1117,584 @@ export function prepareLocalMacProductionRelease({
   }
 }
 
+function normalizeRunningReleaseDescriptor(value, label = "Current running release descriptor") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a JSON object.`);
+  }
+  requireExactAllowedKeys(value, RUNNING_DESCRIPTOR_ALLOWED_FIELDS, label);
+  if (value.schema !== RUNNING_DESCRIPTOR_SCHEMA) {
+    throw new Error(`${label} schema must be ${RUNNING_DESCRIPTOR_SCHEMA}.`);
+  }
+  const promotedAt = requireNonEmptyString(value.promoted_at, `${label}.promoted_at`);
+  if (Number.isNaN(Date.parse(promotedAt))) {
+    throw new Error(`${label}.promoted_at must be a valid ISO timestamp.`);
+  }
+  return {
+    schema: RUNNING_DESCRIPTOR_SCHEMA,
+    release_tag: validateProductionReleaseTag(value.release_tag, `${label}.release_tag`),
+    release_sha: requireReleaseSha(value.release_sha, `${label}.release_sha`),
+    release_tree: requireReleaseSha(value.release_tree, `${label}.release_tree`),
+    build_id: requireNonEmptyString(value.build_id, `${label}.build_id`),
+    promotion_id: requireNonEmptyString(value.promotion_id, `${label}.promotion_id`),
+    promoted_at: promotedAt,
+    source_manifest_sha256: requireDigest(
+      value.source_manifest_sha256,
+      `${label}.source_manifest_sha256`,
+    ),
+  };
+}
+
+/**
+ * @param {{
+ *   component: string,
+ *   expectedReleaseDir: string,
+ *   getCurrentUid?: () => number | undefined,
+ *   pid: number,
+ *   runCommand?: typeof spawnSync,
+ * }} options
+ */
+export function readLocalMacProductionRuntimeIdentity({
+  component,
+  expectedReleaseDir,
+  getCurrentUid = () => process.getuid?.(),
+  pid,
+  runCommand = spawnSync,
+} = {}) {
+  const normalizedComponent = requireNonEmptyString(component, "component");
+  if (!Number.isInteger(pid) || pid < 1) {
+    throw new Error(`${normalizedComponent} runtime pid must be a positive integer.`);
+  }
+  const expectedDirectory = assertSafeDirectory(
+    requireAbsolutePath(expectedReleaseDir, "expectedReleaseDir"),
+    `${normalizedComponent} expected release directory`,
+  );
+  const result = runCommand(
+    "/usr/sbin/lsof",
+    ["-a", "-p", String(pid), "-d", "cwd", "-Fn"],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(`${normalizedComponent} runtime cwd could not be resolved.`);
+  }
+  const cwdClaims = String(result.stdout ?? "")
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith("n") && line.length > 1)
+    .map((line) => line.slice(1));
+  if (cwdClaims.length !== 1) {
+    throw new Error(`${normalizedComponent} runtime cwd evidence must contain exactly one path.`);
+  }
+  const runtimeDirectory = assertSafeDirectory(
+    cwdClaims[0],
+    `${normalizedComponent} runtime cwd`,
+  );
+  if (runtimeDirectory !== expectedDirectory) {
+    throw new Error(`${normalizedComponent} runtime cwd does not match the exact prepared release.`);
+  }
+
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  const markerPath = join(runtimeDirectory, "prepare.json");
+  const buildDirectory = join(runtimeDirectory, ".next");
+  const buildIdPath = join(buildDirectory, "BUILD_ID");
+  assertPrivateRegularFile(markerPath, `${normalizedComponent} runtime release marker`, currentUid);
+  const realBuildDirectory = assertSafeDirectory(
+    buildDirectory,
+    `${normalizedComponent} runtime build directory`,
+  );
+  assertPathInside(runtimeDirectory, realBuildDirectory, `${normalizedComponent} runtime build directory`);
+  assertSafeRegularFile(buildIdPath, `${normalizedComponent} runtime build ID`);
+  assertPathInside(
+    runtimeDirectory,
+    realpathSync(buildIdPath),
+    `${normalizedComponent} runtime build ID`,
+  );
+
+  const marker = normalizePrepareDescriptor(
+    readJsonFile(markerPath, `${normalizedComponent} runtime release marker`),
+  );
+  const releaseSha = readPrepareGitValue({
+    args: ["rev-parse", "HEAD"],
+    cwd: runtimeDirectory,
+    label: `${normalizedComponent} runtime release SHA`,
+    runCommand,
+  });
+  const releaseTree = readPrepareGitValue({
+    args: ["rev-parse", "HEAD^{tree}"],
+    cwd: runtimeDirectory,
+    label: `${normalizedComponent} runtime release tree`,
+    runCommand,
+  });
+  const buildId = readSafeRegularFileBytes(
+    buildIdPath,
+    `${normalizedComponent} runtime build ID`,
+  ).toString("utf8").trim();
+  if (
+    releaseSha !== marker.release_sha
+    || releaseTree !== marker.release_tree
+    || buildId !== marker.build_id
+  ) {
+    throw new Error(`${normalizedComponent} runtime release identity drifted from its prepare marker.`);
+  }
+
+  return {
+    component: normalizedComponent,
+    ready: true,
+    pid,
+    release_sha: releaseSha,
+    release_tree: releaseTree,
+    build_id: buildId,
+  };
+}
+
+function readRunningDescriptorSnapshot({ currentUid, path }) {
+  assertPrivateRegularFile(path, "Current running release descriptor", currentUid);
+  const bytes = readSafeRegularFileBytes(path, "Current running release descriptor");
+  let input;
+  try {
+    input = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error(`Current running release descriptor is unreadable or invalid: ${path}`);
+  }
+  return {
+    bytes,
+    digest: sha256Bytes(bytes),
+    descriptor: normalizeRunningReleaseDescriptor(input),
+  };
+}
+
+function normalizePrepareDescriptor(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Prepared release marker must be a JSON object.");
+  }
+  requireExactAllowedKeys(value, PREPARE_DESCRIPTOR_ALLOWED_FIELDS, "Prepared release marker");
+  if (value.schema !== "homecook.local-mac-production-prepare.v1") {
+    throw new Error("Prepared release marker schema is invalid.");
+  }
+  if (value.status !== "prepared") {
+    throw new Error("Prepared release marker status must be prepared.");
+  }
+  const preparedAt = requireNonEmptyString(value.prepared_at, "prepare.prepared_at");
+  if (Number.isNaN(Date.parse(preparedAt))) {
+    throw new Error("prepare.prepared_at must be a valid ISO timestamp.");
+  }
+  if (!Array.isArray(value.validation_commands)) {
+    throw new Error("prepare.validation_commands must be an array.");
+  }
+  return {
+    schema: value.schema,
+    status: value.status,
+    prepared_at: preparedAt,
+    promotion_id: requireNonEmptyString(value.promotion_id, "prepare.promotion_id"),
+    release_tag: validateProductionReleaseTag(value.release_tag, "prepare.release_tag"),
+    release_sha: requireReleaseSha(value.release_sha, "prepare.release_sha"),
+    release_tree: requireReleaseSha(value.release_tree, "prepare.release_tree"),
+    build_id: requireNonEmptyString(value.build_id, "prepare.build_id"),
+    source_manifest_path: requireAbsolutePath(
+      value.source_manifest_path,
+      "prepare.source_manifest_path",
+    ),
+    source_manifest_sha256: requireDigest(
+      value.source_manifest_sha256,
+      "prepare.source_manifest_sha256",
+    ),
+    attestation_source: requireNonEmptyString(
+      value.attestation_source,
+      "prepare.attestation_source",
+    ),
+    validation_commands: value.validation_commands,
+  };
+}
+
+function validatePreparedReleaseCandidate({
+  currentUid,
+  manifest,
+  manifestBytes,
+  releaseDir,
+  releaseRoot,
+  runCommand,
+}) {
+  const realReleaseRoot = assertSafeDirectory(releaseRoot, "Local Mac production release root");
+  const realReleaseDir = assertSafeDirectory(releaseDir, "Prepared release candidate");
+  assertPathInside(realReleaseRoot, realReleaseDir, "Prepared release candidate");
+  assertPrivateDirectory(releaseDir, "Prepared release candidate", currentUid);
+
+  const candidateManifestPath = join(realReleaseDir, "release-manifest.json");
+  const prepareDescriptorPath = join(realReleaseDir, "prepare.json");
+  const buildIdPath = join(realReleaseDir, ".next", "BUILD_ID");
+  assertPrivateRegularFile(candidateManifestPath, "Prepared release manifest", currentUid);
+  assertPrivateRegularFile(prepareDescriptorPath, "Prepared release marker", currentUid);
+  const realBuildDirectory = assertSafeDirectory(
+    dirname(buildIdPath),
+    "Prepared release build directory",
+  );
+  assertPathInside(realReleaseDir, realBuildDirectory, "Prepared release build directory");
+  assertSafeRegularFile(buildIdPath, "Prepared release build ID");
+  assertPathInside(
+    realReleaseDir,
+    realpathSync(buildIdPath),
+    "Prepared release build ID",
+  );
+
+  const candidateManifestBytes = readSafeRegularFileBytes(
+    candidateManifestPath,
+    "Prepared release manifest",
+  );
+  const expectedManifestDigest = sha256Bytes(manifestBytes);
+  if (
+    candidateManifestBytes.length !== manifestBytes.length
+    || !candidateManifestBytes.equals(manifestBytes)
+  ) {
+    throw new Error("Prepared release manifest bytes or digest do not match the validated manifest.");
+  }
+
+  const prepareDescriptor = normalizePrepareDescriptor(
+    readJsonFile(prepareDescriptorPath, "Prepared release marker"),
+  );
+  const exactFields = [
+    ["promotion_id", manifest.promotion_id],
+    ["release_tag", manifest.release_tag],
+    ["release_sha", manifest.release_sha],
+    ["release_tree", manifest.release_tree],
+    ["build_id", manifest.build_id],
+    ["source_manifest_path", manifest.release_manifest_path],
+    ["source_manifest_sha256", expectedManifestDigest],
+  ];
+  for (const [field, expected] of exactFields) {
+    if (prepareDescriptor[field] !== expected) {
+      throw new Error(`Prepared release ${field} does not match the exact release identity.`);
+    }
+  }
+
+  const checkedOutSha = readPrepareGitValue({
+    args: ["rev-parse", "HEAD"],
+    cwd: realReleaseDir,
+    label: "Prepared release candidate SHA",
+    runCommand,
+  });
+  if (checkedOutSha !== manifest.release_sha) {
+    throw new Error("Prepared release candidate SHA drifted from the exact release SHA.");
+  }
+  const checkedOutTree = readPrepareGitValue({
+    args: ["rev-parse", "HEAD^{tree}"],
+    cwd: realReleaseDir,
+    label: "Prepared release candidate tree",
+    runCommand,
+  });
+  if (checkedOutTree !== manifest.release_tree) {
+    throw new Error("Prepared release candidate tree drifted from the exact release tree.");
+  }
+  assertDetachedPrepareCheckout({ checkoutDir: realReleaseDir, runCommand });
+  assertCleanTrackedPrepareCheckout({ checkoutDir: realReleaseDir, runCommand });
+  assertTrackedSymlinksStayInsideCheckout({ checkoutDir: realReleaseDir, runCommand });
+  const buildId = readSafeRegularFileBytes(buildIdPath, "Prepared release build ID")
+    .toString("utf8")
+    .trim();
+  if (buildId !== manifest.build_id) {
+    throw new Error("Prepared release build ID drifted from the exact release build ID.");
+  }
+
+  return {
+    manifestDigest: expectedManifestDigest,
+    prepareDescriptor,
+    releaseDir: realReleaseDir,
+  };
+}
+
+function validateReadyReleaseBundle(bundle, manifest) {
+  if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
+    throw new Error("Production release bundle readiness result is invalid.");
+  }
+  for (const component of ["app", "full_local", "youtube_worker"]) {
+    const state = bundle[component];
+    if (!state || typeof state !== "object" || Array.isArray(state)) {
+      throw new Error(`Production release bundle ${component} readiness is missing.`);
+    }
+    if (state.ready !== true) {
+      throw new Error(`Production release bundle ${component} readiness failed.`);
+    }
+    if (
+      state.release_sha !== manifest.release_sha
+      || state.release_tree !== manifest.release_tree
+      || state.build_id !== manifest.build_id
+    ) {
+      throw new Error(`Production release bundle ${component} identity does not match the exact release.`);
+    }
+  }
+  return bundle;
+}
+
+function writeDescriptorFileAtomically(path, bytes) {
+  const stagingPath = `${path}.staging-${randomUUID()}`;
+  try {
+    writeFileSync(stagingPath, bytes, { flag: "wx", mode: 0o600 });
+    chmodSync(stagingPath, 0o600);
+    renameSync(stagingPath, path);
+    chmodSync(path, 0o600);
+  } finally {
+    rmSync(stagingPath, { force: true });
+  }
+}
+
+function releaseCompletedPromotionLock({ homeDir, lockToken }) {
+  const paths = getLocalMacProductionReleasePaths(homeDir);
+  const lockState = readLockRecord({ homeDir });
+  if (
+    lockState.corrupt
+    || !lockState.lockRecord
+    || lockState.lockRecord.lock_token !== lockToken
+  ) {
+    throw new Error("Completed production promotion lock cannot be safely released.");
+  }
+  rmSync(paths.lockPath, { recursive: true, force: false });
+}
+
+/**
+ * Promotes one completed immutable candidate as the app/full-local/worker bundle.
+ * Failures after lock acquisition intentionally retain the lock and partial state.
+ */
+export async function promoteLocalMacProductionRelease({
+  getCurrentUid = () => process.getuid?.(),
+  homeDir = process.env.HOME ?? "",
+  installBundle,
+  lockToken = randomUUID(),
+  manifestPath,
+  mkdir = mkdirSync,
+  now = new Date(),
+  readGitEvidence = readLocalMacProductionGitReleaseEvidence,
+  readinessProbe,
+  rootDir = process.cwd(),
+  runCommand = spawnSync,
+  verifyAttestation,
+  writeDescriptorAtomically = writeDescriptorFileAtomically,
+} = {}) {
+  if (typeof installBundle !== "function") {
+    throw new Error("Production release bundle installer is not configured.");
+  }
+  if (typeof readinessProbe !== "function") {
+    throw new Error("Production release bundle readiness probe is not configured.");
+  }
+
+  const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
+  const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
+  const normalizedManifestPath = requireAbsolutePath(manifestPath, "releaseManifestPath");
+  const realHomeDir = assertSafeDirectory(normalizedHomeDir, "homeDir");
+  const realRootDir = assertSafeDirectory(normalizedRootDir, "rootDir");
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  assertPrivateRegularFile(normalizedManifestPath, "Release manifest", currentUid);
+  const manifestBytes = readSafeRegularFileBytes(normalizedManifestPath, "Release manifest");
+  let manifestInput;
+  try {
+    manifestInput = JSON.parse(manifestBytes.toString("utf8"));
+  } catch {
+    throw new Error(`Release manifest is unreadable or invalid: ${normalizedManifestPath}`);
+  }
+  const manifestDigest = sha256Bytes(manifestBytes);
+  const manifest = validateLocalMacProductionReleaseManifest({
+    manifest: manifestInput,
+    manifestDigest,
+    manifestPath: normalizedManifestPath,
+    readGitEvidence,
+    requireAttestation: true,
+    rootDir: realRootDir,
+    verifyAttestation,
+  });
+  if (
+    !manifest.app_launch_agent_enabled
+    || !manifest.full_local_launch_agent_enabled
+    || !manifest.youtube_worker_launch_agent_enabled
+  ) {
+    throw new Error(
+      "Production promotion requires app, full-local, and YouTube worker enabled as one bundle.",
+    );
+  }
+
+  const paths = getLocalMacProductionReleasePaths(realHomeDir);
+  const homecookRoot = dirname(paths.releaseRoot);
+  assertPrivateDirectory(homecookRoot, "Homecook state directory", currentUid);
+  assertPrivateDirectory(paths.releaseRoot, "Local Mac production release root", currentUid);
+  const releaseDir = join(paths.releaseRoot, manifest.release_tag);
+  const initialCandidate = validatePreparedReleaseCandidate({
+    currentUid,
+    manifest,
+    manifestBytes,
+    releaseDir,
+    releaseRoot: paths.releaseRoot,
+    runCommand,
+  });
+  const initialRunning = readRunningDescriptorSnapshot({
+    currentUid,
+    path: paths.currentDescriptorPath,
+  });
+  if (initialRunning.descriptor.release_sha !== manifest.previous_release_sha) {
+    throw new Error(
+      "Current running release descriptor drift: release_sha does not equal manifest.previous_release_sha.",
+    );
+  }
+  ensureSafePrivateDirectory(
+    paths.lockRoot,
+    homecookRoot,
+    "Production promotion lock root",
+    { currentUid, mkdir },
+  );
+
+  const lock = acquireLocalMacProductionPromotionLock({
+    homeDir: realHomeDir,
+    manifest: manifestInput,
+    manifestPath: normalizedManifestPath,
+    lockToken,
+    mkdir,
+    now,
+    readGitEvidence,
+    rootDir: realRootDir,
+    verifyAttestation,
+  });
+
+  const stableRunning = readRunningDescriptorSnapshot({
+    currentUid,
+    path: paths.currentDescriptorPath,
+  });
+  if (stableRunning.digest !== initialRunning.digest) {
+    throw new Error("Current running release descriptor changed during promotion preflight.");
+  }
+  const currentManifestBytes = readSafeRegularFileBytes(
+    normalizedManifestPath,
+    "Release manifest",
+  );
+  if (
+    currentManifestBytes.length !== manifestBytes.length
+    || !currentManifestBytes.equals(manifestBytes)
+  ) {
+    throw new Error("Release manifest changed after promotion lock acquisition.");
+  }
+  const lockedCandidate = validatePreparedReleaseCandidate({
+    currentUid,
+    manifest,
+    manifestBytes,
+    releaseDir,
+    releaseRoot: paths.releaseRoot,
+    runCommand,
+  });
+  if (lockedCandidate.manifestDigest !== initialCandidate.manifestDigest) {
+    throw new Error("Prepared release candidate digest changed after lock acquisition.");
+  }
+
+  const mutationAuthority = validateLocalMacProductionMutationAuthority({
+    command: "install",
+    homeDir: realHomeDir,
+    releaseManifestPath: normalizedManifestPath,
+    lockToken: lock.lockToken,
+    readGitEvidence,
+    rootDir: realRootDir,
+    verifyAttestation,
+  });
+  const installation = await installBundle({
+    homeDir: realHomeDir,
+    lockToken: lock.lockToken,
+    manifest,
+    mutationAuthority,
+    releaseDir: lockedCandidate.releaseDir,
+    rootDir: realRootDir,
+  });
+  const readiness = validateReadyReleaseBundle(await readinessProbe({
+    homeDir: realHomeDir,
+    installation,
+    manifest,
+    mutationAuthority,
+    releaseDir: lockedCandidate.releaseDir,
+    rootDir: realRootDir,
+  }), manifest);
+
+  const finalRunning = readRunningDescriptorSnapshot({
+    currentUid,
+    path: paths.currentDescriptorPath,
+  });
+  if (finalRunning.digest !== initialRunning.digest) {
+    throw new Error("Current running release descriptor drifted during install/readiness; concurrent write blocked.");
+  }
+  const promotedAt = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
+  if (Number.isNaN(Date.parse(promotedAt))) {
+    throw new Error("promotion timestamp is invalid.");
+  }
+  const currentDescriptor = normalizeRunningReleaseDescriptor({
+    schema: RUNNING_DESCRIPTOR_SCHEMA,
+    release_tag: manifest.release_tag,
+    release_sha: manifest.release_sha,
+    release_tree: manifest.release_tree,
+    build_id: manifest.build_id,
+    promotion_id: manifest.promotion_id,
+    promoted_at: promotedAt,
+    source_manifest_sha256: manifestDigest,
+  });
+  const previousBytes = Buffer.from(`${JSON.stringify(initialRunning.descriptor, null, 2)}\n`);
+  const currentBytes = Buffer.from(`${JSON.stringify(currentDescriptor, null, 2)}\n`);
+  const existingPrevious = lstatIfExists(paths.previousDescriptorPath);
+  let existingPreviousBytes = null;
+  if (existingPrevious) {
+    assertPrivateRegularFile(
+      paths.previousDescriptorPath,
+      "Previous running release descriptor",
+      currentUid,
+    );
+    existingPreviousBytes = readSafeRegularFileBytes(
+      paths.previousDescriptorPath,
+      "Previous running release descriptor",
+    );
+  }
+  const transactionPath = join(lock.lockPath, "descriptor-transaction.json");
+  writeFileSync(transactionPath, JSON.stringify({
+    schema: "homecook.local-mac-production-descriptor-transaction.v1",
+    status: "prepared",
+    expected_current_sha256: initialRunning.digest,
+    previous_sha256: sha256Bytes(previousBytes),
+    current_sha256: sha256Bytes(currentBytes),
+  }, null, 2), { encoding: "utf8", flag: "wx", mode: 0o600 });
+
+  const restorePreviousDescriptor = () => {
+    if (existingPreviousBytes === null) {
+      rmSync(paths.previousDescriptorPath, { force: true });
+      return;
+    }
+    writeDescriptorAtomically(paths.previousDescriptorPath, existingPreviousBytes);
+  };
+
+  writeDescriptorAtomically(paths.previousDescriptorPath, previousBytes);
+  try {
+    const commitRunning = readRunningDescriptorSnapshot({
+      currentUid,
+      path: paths.currentDescriptorPath,
+    });
+    if (commitRunning.digest !== initialRunning.digest) {
+      throw new Error(
+        "Current running release descriptor changed during descriptor commit; concurrent write blocked.",
+      );
+    }
+    writeDescriptorAtomically(paths.currentDescriptorPath, currentBytes);
+  } catch (error) {
+    try {
+      restorePreviousDescriptor();
+    } catch (rollbackError) {
+      const original = error instanceof Error ? error.message : String(error);
+      const rollback = rollbackError instanceof Error
+        ? rollbackError.message
+        : String(rollbackError);
+      throw new Error(`${original}. Previous descriptor restoration failed: ${rollback}`);
+    }
+    throw error;
+  }
+  releaseCompletedPromotionLock({ homeDir: realHomeDir, lockToken: lock.lockToken });
+
+  return {
+    current_head_sha: manifest.git_evidence.originMasterSha,
+    installation,
+    manifest,
+    promoted: true,
+    readiness,
+    release_dir: lockedCandidate.releaseDir,
+  };
+}
+
 function brandLocalMacProductionMutationAuthority(payload) {
   return Object.defineProperty(payload, LOCAL_MAC_PRODUCTION_MUTATION_AUTHORITY_BRAND, {
     configurable: false,
@@ -1180,7 +1796,6 @@ export function acquireLocalMacProductionPromotionLock({
       { encoding: "utf8", flag: "wx", mode: LOCK_METADATA_MODE },
     );
   } catch (error) {
-    rmSync(paths.lockPath, { force: true, recursive: true });
     throw error;
   }
 
