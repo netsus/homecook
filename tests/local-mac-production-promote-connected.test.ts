@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -10,6 +11,7 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -30,6 +32,14 @@ import {
   getFullLocalLaunchAgentPaths,
   renderFullLocalLaunchAgentPlist,
 } from "../scripts/lib/full-local-launch-agent.mjs";
+import {
+  buildGitHubProductionReleaseAttestationArtifacts,
+  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+} from "../scripts/lib/github-production-release-attestation.mjs";
+import {
+  FULL_LOCAL_SECRET_NAMES,
+  generateFullLocalSecretBundle,
+} from "../scripts/lib/full-local-production-runtime.mjs";
 import {
   buildYoutubeExtractionAppDescriptor,
   buildYoutubeExtractionCurrentPolicy,
@@ -78,9 +88,22 @@ function digest(bytes: Buffer | string) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function writePrepare(root: string, manifest: Record<string, unknown>, manifestBytes: Buffer) {
+function writePrepare(
+  root: string,
+  manifest: Record<string, unknown>,
+  manifestBytes: Buffer,
+  { executableRuntime = false } = {},
+) {
   mkdirSync(join(root, ".git"), { recursive: true, mode: 0o700 });
   mkdirSync(join(root, ".next"), { recursive: true, mode: 0o700 });
+  if (executableRuntime) {
+    cpSync(join(process.cwd(), "scripts"), join(root, "scripts"), { recursive: true });
+    cpSync(
+      join(process.cwd(), "infra/full-local-supabase"),
+      join(root, "infra/full-local-supabase"),
+      { recursive: true },
+    );
+  }
   for (const file of [
     "scripts/start-local-mac-production.mjs",
     "scripts/start-production.mjs",
@@ -89,6 +112,7 @@ function writePrepare(root: string, manifest: Record<string, unknown>, manifestB
     "infra/full-local-supabase/.env.production.local",
   ]) {
     const path = join(root, file);
+    if (executableRuntime && existsSync(path)) continue;
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     writeFileSync(path, "// fixture\n", { mode: 0o600 });
   }
@@ -182,6 +206,10 @@ describe("connected local Mac production promotion", () => {
   it("promotes exact e02 legacy state and then consumes the v2 descriptor on the next promotion", async () => {
     const homeDir = temp("homecook-connected-home-");
     const repoRoot = temp("homecook-connected-repo-");
+    const binDir = join(repoRoot, "bin");
+    mkdirSync(binDir, { mode: 0o700 });
+    const nodeBin = join(binDir, "node");
+    symlinkSync(process.execPath, nodeBin);
     const state = getLocalMacProductionReleasePaths(homeDir);
     mkdirSync(state.releaseRoot, { recursive: true, mode: 0o700 });
     chmodSync(join(state.releaseRoot, ".."), 0o700);
@@ -202,11 +230,28 @@ describe("connected local Mac production promotion", () => {
     const launchAgents = join(homeDir, "Library/LaunchAgents");
     mkdirSync(launchAgents, { recursive: true, mode: 0o700 });
     chmodSync(join(homeDir, "Library"), 0o700);
-    const fullConfig = join(homeDir, "full-local.env");
-    writeFileSync(fullConfig, "fixture\n", { mode: 0o600 });
-    writeFileSync(getLocalMacProductionPaths(homeDir).plistPath, renderLocalMacProductionPlist({ homeDir, nodeBin: process.execPath, rootDir: currentRoot }), { mode: 0o644 });
-    writeFileSync(getFullLocalLaunchAgentPaths(homeDir).plistPath, renderFullLocalLaunchAgentPlist({ configPath: fullConfig, homeDir, includeReleaseIdentity: false, nodeBin: process.execPath, rootDir: currentRoot, runtimeCommand: "start" }), { mode: 0o600 });
-    writeFileSync(getYoutubeExtractionWorkerPaths(homeDir).plistPath, renderYoutubeExtractionWorkerPlist({ ...legacyWorker, homeDir, nodeBin: process.execPath, rootDir: legacyWorker.artifactRoot, currentPolicyPath: legacyWorker.policyPath }), { mode: 0o600 });
+    const fullConfig = join(homeDir, ".homecook/config/full-local-production.env");
+    mkdirSync(dirname(fullConfig), { recursive: true, mode: 0o700 });
+    const fullLocalConfig = readFileSync(
+      join(process.cwd(), "infra/full-local-supabase/.env.production.example"),
+      "utf8",
+    ).replaceAll("/Users/REPLACE_ME", homeDir);
+    writeFileSync(fullConfig, fullLocalConfig, { mode: 0o600 });
+    const fullLocalSecrets = generateFullLocalSecretBundle();
+    const fullLocalSecretDir = join(homeDir, ".homecook/secrets/full-local-supabase");
+    mkdirSync(fullLocalSecretDir, { recursive: true, mode: 0o700 });
+    for (const name of FULL_LOCAL_SECRET_NAMES) {
+      writeFileSync(
+        join(fullLocalSecretDir, name),
+        String(fullLocalSecrets[name as keyof typeof fullLocalSecrets]),
+        {
+        mode: 0o600,
+        },
+      );
+    }
+    writeFileSync(getLocalMacProductionPaths(homeDir).plistPath, renderLocalMacProductionPlist({ homeDir, nodeBin, rootDir: currentRoot }), { mode: 0o644 });
+    writeFileSync(getFullLocalLaunchAgentPaths(homeDir).plistPath, renderFullLocalLaunchAgentPlist({ configPath: fullConfig, homeDir, includeReleaseIdentity: false, nodeBin, rootDir: currentRoot, runtimeCommand: "start" }), { mode: 0o600 });
+    writeFileSync(getYoutubeExtractionWorkerPaths(homeDir).plistPath, renderYoutubeExtractionWorkerPlist({ ...legacyWorker, homeDir, nodeBin, rootDir: legacyWorker.artifactRoot, currentPolicyPath: legacyWorker.policyPath }), { mode: 0o600 });
 
     let activeIdentity = legacyIdentity;
     let appRoot = currentRoot;
@@ -247,7 +292,7 @@ describe("connected local Mac production promotion", () => {
         }
         return { status: 0, stdout: "", stderr: "" };
       }
-      if (command === process.execPath) {
+      if (command === nodeBin) {
         const subcommand = args[1];
         if (subcommand === "start") {
           const identityPath = args[args.indexOf("--release-identity") + 1];
@@ -262,14 +307,52 @@ describe("connected local Mac production promotion", () => {
     const runPromotion = async (index: number, previousSha: string) => {
       const identity = { release_sha: index === 1 ? "a".repeat(40) : "f".repeat(40), release_tree: index === 1 ? "b".repeat(40) : "e".repeat(40), build_id: `build-${index}`, promotion_id: `promotion-${index}` };
       const manifestPath = join(repoRoot, `release-${index}.json`);
-      const manifest = createLocalMacProductionReleaseManifest(manifestPath, { ...identity, previous_release_sha: previousSha, release_tag: `prod-2026082${index}.1`, release_tag_object_sha: index === 1 ? "2".repeat(40) : "3".repeat(40), signer_digest: identity.release_sha, master_sha_at_approval: identity.release_sha });
+      const subjectManifestPath = join(repoRoot, `subject-${index}.json`);
+      const bundlePath = join(repoRoot, `bundle-${index}.jsonl`);
+      const releaseTag = `prod-2026082${index}.1`;
+      const releaseTagObjectSha = index === 1 ? "2".repeat(40) : "3".repeat(40);
+      const checkRuns = [
+        "build", "changes", "dependency-audit", "policy", "quality",
+        "security-function-authorization", "security-smoke",
+      ].map((name, checkIndex) => ({
+        app: { id: 15368 },
+        check_suite: { id: 800 + checkIndex },
+        completed_at: `2026-08-25T09:00:${String(checkIndex).padStart(2, "0")}Z`,
+        conclusion: "success",
+        name,
+        status: "completed",
+      }));
+      const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+        checkRuns,
+        releaseSha: identity.release_sha,
+        releaseTag,
+        releaseTagObjectSha,
+        releaseTree: identity.release_tree,
+        repository: "netsus/homecook",
+        subjectOutputPath: subjectManifestPath,
+      });
+      const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
+        ...identity,
+        attestation_digest: artifacts.subject_manifest_sha256,
+        previous_release_sha: previousSha,
+        release_tag: releaseTag,
+        release_tag_object_sha: releaseTagObjectSha,
+        required_check_summary: artifacts.subject.required_check_summary,
+        signer_digest: identity.release_sha,
+        master_sha_at_approval: identity.release_sha,
+      });
       const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
       writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
+      writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
+        predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+        predicate: artifacts.predicate,
+        subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
+      } } }])}\n`, { mode: 0o600 });
       const candidateRoot = join(state.releaseRoot, String(manifest.release_tag));
       mkdirSync(candidateRoot, { mode: 0o700 });
-      writePrepare(candidateRoot, manifest, manifestBytes);
+      writePrepare(candidateRoot, manifest, manifestBytes, { executableRuntime: true });
       const worker = workerFixture(temp(`homecook-connected-worker-v2-${index}-`), identity);
-      const adapters = createLocalMacProductionPromoteAdapters({ confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL", bundlePath: join(repoRoot, "bundle"), subjectManifestPath: join(repoRoot, "subject"), trustedRootPath: join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"), fullLocalConfigPath: fullConfig, homeDir, nodeBin: process.execPath, workerConfigPath: worker.configPath, workerManifestPath: worker.manifestPath, workerCredentialPath: worker.credentialPath, workerAppDescriptorPath: worker.appDescriptorPath, workerPolicyPath: worker.policyPath, workerExpectedSchemaPath: worker.expectedSchemaPath, workerSecretRoot: worker.secretRoot }, { commandRunner, i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })), appReadinessWaiter: vi.fn(async () => undefined), platform: "darwin" });
+      const adapters = createLocalMacProductionPromoteAdapters({ confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL", bundlePath, subjectManifestPath, trustedRootPath: join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"), fullLocalConfigPath: fullConfig, homeDir, nodeBin, workerConfigPath: worker.configPath, workerManifestPath: worker.manifestPath, workerCredentialPath: worker.credentialPath, workerAppDescriptorPath: worker.appDescriptorPath, workerPolicyPath: worker.policyPath, workerExpectedSchemaPath: worker.expectedSchemaPath, workerSecretRoot: worker.secretRoot }, { commandRunner, i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })), appReadinessWaiter: vi.fn(async () => undefined), platform: "darwin" });
       const promoteOptions = { ...adapters, homeDir, manifestPath, rootDir: repoRoot, runCommand: commandRunner, readGitEvidence: () => createLocalMacProductionGitEvidence({ releaseSha: identity.release_sha, releaseTree: identity.release_tree, overrides: { releaseTagObjectSha: manifest.release_tag_object_sha } }), verifyAttestation: () => ({ verified: true, source: "fixture" }), lockToken: `${index}${index}${index}${index}${index}${index}${index}${index}-1111-4111-8111-111111111111` } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
       return promoteLocalMacProductionRelease(promoteOptions);
     };
@@ -285,5 +368,133 @@ describe("connected local Mac production promotion", () => {
     expect(JSON.parse(readFileSync(state.previousDescriptorPath, "utf8"))).toEqual(firstDescriptor);
     expect(JSON.parse(readFileSync(state.currentDescriptorPath, "utf8"))).toMatchObject({ release_sha: "f".repeat(40), promotion_id: "promotion-2" });
     expect(calls.findIndex((call) => call.includes(" start "))).toBeLessThan(calls.findIndex((call) => call.includes("bootstrap") && call.includes("com.homecook.production")));
+
+    expect(existsSync(state.lockPath)).toBe(false);
+    const currentDescriptorBytes = readFileSync(state.currentDescriptorPath);
+    const previousDescriptorBytes = readFileSync(state.previousDescriptorPath);
+    const currentDescriptor = JSON.parse(currentDescriptorBytes.toString("utf8"));
+    const resumeMarker = join(repoRoot, "resume-docker-calls.log");
+    const fakeGhPath = join(binDir, "gh");
+    writeFileSync(fakeGhPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+const bundle = args[args.indexOf("--bundle") + 1];
+process.stdout.write(fs.readFileSync(bundle, "utf8"));
+`, { mode: 0o700 });
+    const fakeSecurityPath = join(binDir, "security");
+    writeFileSync(fakeSecurityPath, `#!/usr/bin/env node
+const values = ${JSON.stringify(fullLocalSecrets)};
+const args = process.argv.slice(2);
+const account = args[args.indexOf("-a") + 1] || "";
+if (account.endsWith("__count")) process.stdout.write("1\\n");
+else {
+  const name = account.replace(/__000$/, "");
+  if (!(name in values)) process.exit(44);
+  process.stdout.write(String(values[name]) + "\\n");
+}
+`, { mode: 0o700 });
+    const fakeDockerPath = join(binDir, "docker");
+    const services = ["auth", "auth-proxy", "api-gateway", "postgres", "postgrest", "realtime", "storage"];
+    const composeModel = {
+      services: {
+        auth: {},
+        "auth-proxy": { ports: [{ host_ip: "127.0.0.1", published: "54482", target: 8080 }] },
+        "api-gateway": { ports: [{ host_ip: "127.0.0.1", published: "54481", target: 54481 }] },
+        postgres: {},
+        postgrest: {},
+        realtime: {},
+        storage: {},
+      },
+    };
+    const observedContainers = services.map((service) => ({
+      Config: { Labels: {
+        "com.docker.compose.project": "homecook-full-local-production",
+        "com.docker.compose.service": service,
+        "homecook.release.sha": currentDescriptor.release_sha,
+        "homecook.release.tree": currentDescriptor.release_tree,
+        "homecook.release.build-id": currentDescriptor.build_id,
+        "homecook.release.promotion-id": currentDescriptor.promotion_id,
+      } },
+      State: { Running: true },
+    }));
+    writeFileSync(fakeDockerPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(resumeMarker)}, args.join(" ") + "\\n");
+if (args.includes("config") && args.includes("--format")) process.stdout.write(${JSON.stringify(JSON.stringify(composeModel))});
+else if (args.includes("ps") && args.includes("--quiet")) process.stdout.write(${JSON.stringify(services.map((_, index) => `container-${index}`).join("\n") + "\n")});
+else if (args[0] === "inspect" && args.includes("--format")) process.stdout.write(JSON.stringify({ Status: "running", Health: { Status: "healthy" } }) + "\\n");
+else if (args[0] === "container" && args[1] === "inspect") process.stdout.write(${JSON.stringify(JSON.stringify(observedContainers))});
+`, { mode: 0o700 });
+    for (const path of [fakeGhPath, fakeSecurityPath, fakeDockerPath]) chmodSync(path, 0o700);
+
+    const plist = readFileSync(getFullLocalLaunchAgentPaths(homeDir).plistPath, "utf8");
+    const workingDirectory = plist.match(
+      /<key>WorkingDirectory<\/key>\s*<string>([^<]+)<\/string>/u,
+    )?.[1];
+    const programArguments = [
+      ...(plist.match(/<key>ProgramArguments<\/key>\s*<array>([\s\S]*?)<\/array>/u)?.[1]
+        ?.matchAll(/<string>([^<]*)<\/string>/gu) ?? []),
+    ].map((match) => match[1]);
+    expect(programArguments).toEqual([
+      "/usr/bin/env",
+      "-i",
+      `HOME=${homeDir}`,
+      expect.stringContaining(`PATH=${binDir}`),
+      nodeBin,
+      join(currentDescriptor.execution_app_root, "scripts/full-local-production-runtime.mjs"),
+      "resume-current",
+      "--current-descriptor",
+      state.currentDescriptorPath,
+      "--config",
+      fullConfig,
+    ]);
+    expect(programArguments.join(" ")).not.toMatch(/lock-token|release-manifest/iu);
+    const invokeResume = () => spawnSync(programArguments[0], programArguments.slice(1), {
+      cwd: workingDirectory,
+      encoding: "utf8",
+    });
+    const resumed = invokeResume();
+    expect(resumed.status, resumed.stderr).toBe(0);
+    expect(JSON.parse(resumed.stdout)).toMatchObject({
+      resumed_current: true,
+      release_identity: {
+        release_sha: currentDescriptor.release_sha,
+        release_tree: currentDescriptor.release_tree,
+        build_id: currentDescriptor.build_id,
+        promotion_id: currentDescriptor.promotion_id,
+      },
+      status: "PASS",
+    });
+    expect(readFileSync(resumeMarker, "utf8")).toContain("up -d");
+    const markerAfterSuccess = readFileSync(resumeMarker);
+
+    writeFileSync(state.currentDescriptorPath, JSON.stringify({
+      ...currentDescriptor,
+      promotion_id: "tampered-promotion",
+    }, null, 2), { mode: 0o600 });
+    expect(invokeResume().status).toBe(1);
+    expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
+    writeFileSync(state.currentDescriptorPath, currentDescriptorBytes, { mode: 0o600 });
+
+    const preparePath = join(currentDescriptor.execution_app_root, "prepare.json");
+    const prepareBytes = readFileSync(preparePath);
+    chmodSync(preparePath, 0o600);
+    writeFileSync(preparePath, `${prepareBytes.toString("utf8")} `, { mode: 0o600 });
+    chmodSync(preparePath, 0o400);
+    expect(invokeResume().status).toBe(1);
+    expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
+    chmodSync(preparePath, 0o600);
+    writeFileSync(preparePath, prepareBytes, { mode: 0o600 });
+    chmodSync(preparePath, 0o400);
+
+    writeFileSync(state.currentDescriptorPath, JSON.stringify(firstDescriptor, null, 2), {
+      mode: 0o600,
+    });
+    expect(invokeResume().status).toBe(1);
+    expect(readFileSync(resumeMarker)).toEqual(markerAfterSuccess);
+    writeFileSync(state.currentDescriptorPath, currentDescriptorBytes, { mode: 0o600 });
+    expect(readFileSync(state.currentDescriptorPath)).toEqual(currentDescriptorBytes);
+    expect(readFileSync(state.previousDescriptorPath)).toEqual(previousDescriptorBytes);
   }, 120_000);
 });

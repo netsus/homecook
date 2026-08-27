@@ -14,14 +14,17 @@ import {
   installLocalMacProductionLaunchAgent,
   readLocalMacProductionStatus,
   renderLocalMacProductionPlist,
+  verifyFullLocalProductionRuntimeStatus,
   waitForLocalMacProductionReady,
 } from "./local-mac-production.mjs";
 import {
   getFullLocalLaunchAgentPaths,
+  getFullLocalResumeConfigPath,
   installFullLocalLaunchAgent,
   renderFullLocalLaunchAgentPlist,
 } from "./full-local-launch-agent.mjs";
 import {
+  getLocalMacProductionReleasePaths,
   readLocalMacProductionPreparedReleaseIdentity,
   readLocalMacProductionRuntimeIdentity,
 } from "./local-mac-production-release.mjs";
@@ -255,11 +258,13 @@ function readFullLocalWorkloadDefault({
     currentUid,
     expectedContent: renderFullLocalLaunchAgentPlist({
       configPath: options.fullLocalConfigPath,
+      currentDescriptorPath: getLocalMacProductionReleasePaths(context.homeDir)
+        .currentDescriptorPath,
       homeDir: context.homeDir,
       nodeBin: options.nodeBin,
       releaseIdentityPath: resolve(context.releaseDir, "prepare.json"),
       rootDir: context.releaseDir,
-      runtimeCommand: "start",
+      runtimeCommand: allowLegacyBootstrap ? "start" : "resume-current",
       includeReleaseIdentity: !allowLegacyBootstrap,
     }),
     expectedMode: 0o600,
@@ -428,6 +433,9 @@ function buildDefaultDependencies(
     validateMutationTargets: ({ options }) => {
       const currentUid = process.getuid?.();
       if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+      if (resolve(options.fullLocalConfigPath) !== getFullLocalResumeConfigPath(options.homeDir)) {
+        throw new Error("Full-local config must use the fixed canonical resume path.");
+      }
       readPlistSnapshot(getLocalMacProductionPaths(options.homeDir).plistPath, {
         currentUid,
         expectedMode: 0o644,
@@ -491,6 +499,11 @@ function buildDefaultDependencies(
         credentialSha256: sha256File(options.workerCredentialPath),
         expectedSchemaSha256: sha256File(options.workerExpectedSchemaPath),
         policySha256: sha256File(options.workerPolicyPath),
+        resumeAuthority: {
+          bundlePath: resolve(options.bundlePath),
+          subjectManifestPath: resolve(options.subjectManifestPath),
+          trustedRootPath: resolve(options.trustedRootPath),
+        },
         i031Preflight,
         inputs,
         preflight,
@@ -521,14 +534,17 @@ function buildDefaultDependencies(
         currentUid,
         expectedContent: renderFullLocalLaunchAgentPlist({
           configPath: options.fullLocalConfigPath,
+          currentDescriptorPath: getLocalMacProductionReleasePaths(options.homeDir)
+            .currentDescriptorPath,
           homeDir: options.homeDir,
-          includeReleaseIdentity:
-            context.currentDescriptor.release_sha
-            !== "e02f02a87d1d955dc598728e7029a745a650a5c3",
+          includeReleaseIdentity: false,
           nodeBin: options.nodeBin,
           releaseIdentityPath: resolve(currentReleaseDir, "prepare.json"),
           rootDir: currentReleaseDir,
-          runtimeCommand: "start",
+          runtimeCommand: context.currentDescriptor.release_sha
+            === "e02f02a87d1d955dc598728e7029a745a650a5c3"
+            ? "start"
+            : "resume-current",
         }),
         expectedMode: 0o600,
         label: "Current full-local plist",
@@ -774,6 +790,10 @@ function buildDefaultDependencies(
       ...input,
       platform,
       spawn: commandRunner,
+      verifyRuntimeStatus: (statusInput) => verifyFullLocalProductionRuntimeStatus({
+        ...statusInput,
+        runCommand: commandRunner,
+      }),
     }),
     installWorker: (input) => installYoutubeExtractionWorkerLaunchAgent({
       ...input,
@@ -1011,10 +1031,12 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       verifySealedExecutionContext(context);
       const fullLocal = installFullLocal({
         configPath: options.fullLocalConfigPath,
+        currentDescriptorPath: getLocalMacProductionReleasePaths(context.homeDir)
+          .currentDescriptorPath,
         homeDir: context.homeDir,
         mutationAuthority: context.mutationAuthority,
         nodeBin: options.nodeBin,
-        runtimeCommand: "start",
+        runtimeCommand: "resume-current",
         rootDir: context.releaseDir,
       });
       verifySealedExecutionContext(context);

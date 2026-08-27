@@ -353,6 +353,12 @@ function copySnapshotAuthorityFile(
   return destinationPath;
 }
 
+function writeSnapshotAuthorityBytes(destinationPath, bytes) {
+  writeFileSync(destinationPath, bytes, { flag: "wx", mode: 0o400 });
+  chmodSync(destinationPath, 0o400);
+  return destinationPath;
+}
+
 function sealExecutionTree(rootPath) {
   const visit = (path) => {
     const stat = lstatSync(path);
@@ -415,6 +421,9 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
   assertSealedExecutionTree(snapshot.appRoot, snapshot.uid);
   assertSealedExecutionTree(snapshot.workerRoot, snapshot.uid);
   assertSealedExecutionTree(snapshot.authorityRoot, snapshot.uid);
+  assertExecutionSymlinksContained(snapshot.appRoot);
+  assertExecutionSymlinksContained(snapshot.workerRoot);
+  assertExecutionSymlinksContained(snapshot.authorityRoot);
   const metadataStat = lstatSync(snapshot.metadataPath);
   if (
     !metadataStat.isFile()
@@ -450,10 +459,40 @@ export function createLocalMacProductionExecutionSnapshot({
   const appDescriptorSourceDigest = sha256Bytes(readFileSync(worker.appDescriptorPath));
   const expectedSchemaSourceDigest = sha256Bytes(readFileSync(worker.expectedSchemaPath));
   const policySourceDigest = sha256Bytes(readFileSync(worker.policyPath));
+  const resumeAuthority = worker.resumeAuthority ?? null;
+  const resumeAuthorityFields = resumeAuthority
+    ? ["bundlePath", "subjectManifestPath", "trustedRootPath"]
+    : [];
+  if (
+    resumeAuthority
+    && resumeAuthorityFields.some((field) =>
+      typeof resumeAuthority[field] !== "string" || resumeAuthority[field].length === 0)
+  ) {
+    throw new Error("Persistent full-local resume attestation authority is incomplete.");
+  }
+  const attestationBundleSourceDigest = resumeAuthority
+    ? sha256Bytes(readFileSync(resumeAuthority.bundlePath))
+    : null;
+  const attestationSubjectSourceDigest = resumeAuthority
+    ? sha256Bytes(readFileSync(resumeAuthority.subjectManifestPath))
+    : null;
+  const attestationTrustedRootSourceDigest = resumeAuthority
+    ? sha256Bytes(readFileSync(resumeAuthority.trustedRootPath))
+    : null;
+  const gitEvidenceBytes = resumeAuthority
+    ? Buffer.from(`${JSON.stringify(manifest.git_evidence, null, 2)}\n`)
+    : null;
+  const gitEvidenceDigest = gitEvidenceBytes ? sha256Bytes(gitEvidenceBytes) : null;
   const identityDigest = sha256Bytes(Buffer.from(JSON.stringify({
     app: appSourceDigest,
     app_descriptor: appDescriptorSourceDigest,
+    ...(resumeAuthority ? {
+      attestation_bundle: attestationBundleSourceDigest,
+      attestation_subject: attestationSubjectSourceDigest,
+      attestation_trusted_root: attestationTrustedRootSourceDigest,
+    } : {}),
     build_id: manifest.build_id,
+    ...(resumeAuthority ? { git_evidence: gitEvidenceDigest } : {}),
     promotion_id: manifest.promotion_id,
     release_sha: manifest.release_sha,
     release_tree: manifest.release_tree,
@@ -509,6 +548,36 @@ export function createLocalMacProductionExecutionSnapshot({
       policySourceDigest,
       copyEntryHook,
     );
+    const attestationBundlePath = resumeAuthority
+      ? copySnapshotAuthorityFile(
+        resumeAuthority.bundlePath,
+        join(authorityRoot, "attestation-bundle.jsonl"),
+        attestationBundleSourceDigest,
+        copyEntryHook,
+      )
+      : null;
+    const attestationSubjectPath = resumeAuthority
+      ? copySnapshotAuthorityFile(
+        resumeAuthority.subjectManifestPath,
+        join(authorityRoot, "attestation-subject.json"),
+        attestationSubjectSourceDigest,
+        copyEntryHook,
+      )
+      : null;
+    const attestationTrustedRootPath = resumeAuthority
+      ? copySnapshotAuthorityFile(
+        resumeAuthority.trustedRootPath,
+        join(authorityRoot, "attestation-trusted-root.jsonl"),
+        attestationTrustedRootSourceDigest,
+        copyEntryHook,
+      )
+      : null;
+    const gitEvidencePath = resumeAuthority
+      ? writeSnapshotAuthorityBytes(
+        join(authorityRoot, "git-evidence.json"),
+        gitEvidenceBytes,
+      )
+      : null;
     const manifestRelative = relative(
       realpathSync(worker.artifactRoot),
       realpathSync(worker.manifestPath),
@@ -521,7 +590,14 @@ export function createLocalMacProductionExecutionSnapshot({
       || digestExecutionTree(worker.artifactRoot) !== workerSourceDigest
       || sha256Bytes(readFileSync(worker.appDescriptorPath)) !== appDescriptorSourceDigest
       || sha256Bytes(readFileSync(worker.expectedSchemaPath)) !== expectedSchemaSourceDigest
-      || sha256Bytes(readFileSync(worker.policyPath)) !== policySourceDigest) {
+      || sha256Bytes(readFileSync(worker.policyPath)) !== policySourceDigest
+      || (resumeAuthority && (
+        sha256Bytes(readFileSync(resumeAuthority.bundlePath)) !== attestationBundleSourceDigest
+        || sha256Bytes(readFileSync(resumeAuthority.subjectManifestPath))
+          !== attestationSubjectSourceDigest
+        || sha256Bytes(readFileSync(resumeAuthority.trustedRootPath))
+          !== attestationTrustedRootSourceDigest
+      ))) {
       throw new Error("Execution source drifted while the sealed snapshot was created.");
     }
     sealExecutionTree(appRoot);
@@ -557,6 +633,10 @@ export function createLocalMacProductionExecutionSnapshot({
       appDescriptorPath,
       expectedSchemaPath,
       policyPath,
+      attestationBundlePath,
+      attestationSubjectPath,
+      attestationTrustedRootPath,
+      gitEvidencePath,
       appDigest,
       workerDigest,
       authorityDigest,
@@ -1822,6 +1902,216 @@ function normalizePrepareDescriptor(value) {
     ),
     validation_commands: value.validation_commands,
   };
+}
+
+export function validateLocalMacProductionCurrentResumeAuthority({
+  currentDescriptorPath,
+  getCurrentUid = () => process.getuid?.(),
+  homeDir = process.env.HOME ?? "",
+  rootDir = process.cwd(),
+  verifyAttestation,
+} = {}) {
+  const realHomeDir = assertSafeDirectory(
+    requireAbsolutePath(homeDir, "homeDir"),
+    "homeDir",
+  );
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  const paths = getLocalMacProductionReleasePaths(realHomeDir);
+  assertPrivateDirectory(dirname(paths.releaseRoot), "Homecook state directory", currentUid);
+  assertPrivateDirectory(paths.releaseRoot, "Local Mac production release root", currentUid);
+  assertPrivateDirectory(
+    resolve(paths.releaseRoot, "execution-snapshots"),
+    "Local Mac production execution snapshot root",
+    currentUid,
+  );
+  const normalizedDescriptorPath = requireAbsolutePath(
+    currentDescriptorPath,
+    "currentDescriptorPath",
+  );
+  if (normalizedDescriptorPath !== paths.currentDescriptorPath) {
+    throw new Error("resume-current accepts only the canonical current descriptor path.");
+  }
+  const running = readRunningDescriptorSnapshot({
+    currentUid,
+    path: normalizedDescriptorPath,
+  });
+  const descriptor = running.descriptor;
+  if (!descriptor.execution_app_root || !descriptor.execution_snapshot_digest) {
+    throw new Error("resume-current requires a sealed v2 running descriptor.");
+  }
+  const snapshotRoot = dirname(descriptor.execution_app_root);
+  const expectedSnapshotRoot = resolve(
+    paths.releaseRoot,
+    "execution-snapshots",
+    descriptor.execution_snapshot_digest,
+  );
+  if (
+    realpathSync(snapshotRoot) !== expectedSnapshotRoot
+    || realpathSync(descriptor.execution_app_root) !== resolve(expectedSnapshotRoot, "app")
+    || realpathSync(rootDir) !== realpathSync(descriptor.execution_app_root)
+  ) {
+    throw new Error("resume-current execution root is not the exact descriptor-owned snapshot.");
+  }
+  const appRoot = resolve(snapshotRoot, "app");
+  const workerRoot = resolve(snapshotRoot, "worker");
+  const authorityRoot = resolve(snapshotRoot, "authority");
+  const metadataPath = resolve(snapshotRoot, "evidence.json");
+  const evidenceStat = lstatSync(metadataPath);
+  if (
+    evidenceStat.isSymbolicLink()
+    || !evidenceStat.isFile()
+    || evidenceStat.uid !== currentUid
+    || modeBits(evidenceStat.mode) !== 0o400
+  ) {
+    throw new Error("resume-current snapshot evidence owner, mode, or type is unsafe.");
+  }
+  const evidenceBytes = readFileSync(metadataPath);
+  let evidence;
+  try {
+    evidence = JSON.parse(evidenceBytes.toString("utf8"));
+  } catch {
+    throw new Error("resume-current snapshot evidence is invalid.");
+  }
+  requireExactAllowedKeys(evidence, new Set([
+    "schema",
+    "app_digest",
+    "execution_snapshot_digest",
+    "promotion_id",
+    "release_sha",
+    "release_tree",
+    "worker_digest",
+    "authority_digest",
+  ]), "resume-current snapshot evidence");
+  for (const [field, expected] of [
+    ["execution_snapshot_digest", descriptor.execution_snapshot_digest],
+    ["promotion_id", descriptor.promotion_id],
+    ["release_sha", descriptor.release_sha],
+    ["release_tree", descriptor.release_tree],
+  ]) {
+    if (evidence[field] !== expected) {
+      throw new Error(`resume-current snapshot ${field} drifted.`);
+    }
+  }
+  const snapshotStat = lstatSync(snapshotRoot);
+  const appStat = lstatSync(appRoot);
+  const workerStat = lstatSync(workerRoot);
+  const authorityStat = lstatSync(authorityRoot);
+  const snapshot = verifyLocalMacProductionExecutionSnapshot({
+    schema: EXECUTION_SNAPSHOT_SCHEMA,
+    root: snapshotRoot,
+    appRoot,
+    workerRoot,
+    authorityRoot,
+    metadataPath,
+    metadataDigest: sha256Bytes(evidenceBytes),
+    appDigest: requireDigest(evidence.app_digest, "resume-current app digest"),
+    workerDigest: requireDigest(evidence.worker_digest, "resume-current worker digest"),
+    authorityDigest: requireDigest(
+      evidence.authority_digest,
+      "resume-current authority digest",
+    ),
+    digest: descriptor.execution_snapshot_digest,
+    dev: snapshotStat.dev,
+    ino: snapshotStat.ino,
+    uid: currentUid,
+    appDev: appStat.dev,
+    appIno: appStat.ino,
+    workerDev: workerStat.dev,
+    workerIno: workerStat.ino,
+    authorityDev: authorityStat.dev,
+    authorityIno: authorityStat.ino,
+  });
+  const authorityFiles = {
+    appDescriptorPath: resolve(authorityRoot, "app-descriptor.json"),
+    expectedSchemaPath: resolve(authorityRoot, "expected-schema.json"),
+    policyPath: resolve(authorityRoot, "policy.json"),
+    bundlePath: resolve(authorityRoot, "attestation-bundle.jsonl"),
+    subjectManifestPath: resolve(authorityRoot, "attestation-subject.json"),
+    trustedRootPath: resolve(authorityRoot, "attestation-trusted-root.jsonl"),
+    gitEvidencePath: resolve(authorityRoot, "git-evidence.json"),
+  };
+  for (const [label, path] of Object.entries(authorityFiles)) {
+    const stat = lstatSync(path);
+    if (
+      stat.isSymbolicLink()
+      || !stat.isFile()
+      || stat.uid !== currentUid
+      || modeBits(stat.mode) !== 0o400
+    ) {
+      throw new Error(`resume-current ${label} authority is unsafe.`);
+    }
+  }
+  const expectedIdentityDigest = sha256Bytes(Buffer.from(JSON.stringify({
+    app: snapshot.appDigest,
+    app_descriptor: descriptor.worker_app_descriptor_sha256,
+    attestation_bundle: sha256Bytes(readFileSync(authorityFiles.bundlePath)),
+    attestation_subject: sha256Bytes(readFileSync(authorityFiles.subjectManifestPath)),
+    attestation_trusted_root: sha256Bytes(readFileSync(authorityFiles.trustedRootPath)),
+    build_id: descriptor.build_id,
+    git_evidence: sha256Bytes(readFileSync(authorityFiles.gitEvidencePath)),
+    promotion_id: descriptor.promotion_id,
+    release_sha: descriptor.release_sha,
+    release_tree: descriptor.release_tree,
+    expected_schema: descriptor.worker_expected_schema_sha256,
+    policy: descriptor.worker_policy_sha256,
+    worker: snapshot.workerDigest,
+  })));
+  if (expectedIdentityDigest !== descriptor.execution_snapshot_digest) {
+    throw new Error("resume-current sealed snapshot identity digest drifted.");
+  }
+  const manifestPath = resolve(appRoot, "release-manifest.json");
+  const manifestBytes = readSafeRegularFileBytes(
+    manifestPath,
+    "resume-current release manifest",
+  );
+  const manifestDigest = sha256Bytes(manifestBytes);
+  if (manifestDigest !== descriptor.source_manifest_sha256) {
+    throw new Error("resume-current release manifest digest drifted.");
+  }
+  let manifestInput;
+  let gitEvidence;
+  try {
+    manifestInput = JSON.parse(manifestBytes.toString("utf8"));
+    gitEvidence = JSON.parse(readFileSync(authorityFiles.gitEvidencePath, "utf8"));
+  } catch {
+    throw new Error("resume-current release authority JSON is invalid.");
+  }
+  const manifest = validateLocalMacProductionReleaseManifest({
+    manifest: manifestInput,
+    manifestDigest,
+    readGitEvidence: () => gitEvidence,
+    requireAttestation: true,
+    rootDir: appRoot,
+    verifyAttestation,
+  });
+  const prepare = normalizePrepareDescriptor(
+    readJsonFile(resolve(appRoot, "prepare.json"), "resume-current prepare marker"),
+  );
+  for (const [field, expected] of [
+    ["release_tag", descriptor.release_tag],
+    ["release_sha", descriptor.release_sha],
+    ["release_tree", descriptor.release_tree],
+    ["build_id", descriptor.build_id],
+    ["promotion_id", descriptor.promotion_id],
+  ]) {
+    if (manifest[field] !== expected || prepare[field] !== expected) {
+      throw new Error(`resume-current exact ${field} identity mismatch.`);
+    }
+  }
+  if (prepare.source_manifest_sha256 !== descriptor.source_manifest_sha256) {
+    throw new Error("resume-current exact source_manifest_sha256 identity mismatch.");
+  }
+  return Object.freeze({
+    descriptor,
+    descriptorSnapshot: Object.freeze({
+      dev: running.dev,
+      digest: running.digest,
+      ino: running.ino,
+    }),
+    manifest,
+    snapshot,
+    ...authorityFiles,
+  });
 }
 
 function validatePreparedReleaseCandidate({

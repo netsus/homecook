@@ -367,8 +367,9 @@ describe("local Mac production promote adapters", () => {
     await adapters.installBundle({ ...context, preflight });
 
     expect(dependencies.installFullLocal).toHaveBeenCalledWith(expect.objectContaining({
+      currentDescriptorPath: "/Users/tester/.homecook/releases/current.json",
       rootDir: context.releaseDir,
-      runtimeCommand: "start",
+      runtimeCommand: "resume-current",
     }));
     expect(dependencies.installApp).toHaveBeenCalledWith(expect.objectContaining({
       rootDir: context.releaseDir,
