@@ -25,9 +25,9 @@
 
 - [ ] promotion gate 전 numeric ETA를 숨기고 `예상 시간 계산 중`을 표시한다 <!-- omo:id=accept-eta-hidden-before-promotion;stage=4;scope=frontend;review=5,6 -->
 - [ ] delayed active job은 numeric ETA 없이 delayed copy만 표시한다 <!-- omo:id=accept-delayed-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] progress 기록 실패가 extraction/finalize 결과를 failed로 바꾸지 않는다 <!-- omo:id=accept-progress-nonfatal;stage=2;scope=backend;review=3,6 -->
-- [ ] progress IPC는 non-blocking ordered queue이고 finalize 전 최대 2초 bounded flush만 하며 기존 30초 timeout을 stage마다 기다리지 않는다 <!-- omo:id=accept-progress-ipc-bounded;stage=2;scope=backend;review=3,6 -->
-- [ ] heartbeat/permit fence loss는 계속 fatal이고 progress report soft-fail과 섞이지 않는다 <!-- omo:id=accept-heartbeat-fence-fatal;stage=2;scope=backend;review=3,6 -->
+- [x] progress 기록 실패가 extraction/finalize 결과를 failed로 바꾸지 않는다 <!-- omo:id=accept-progress-nonfatal;stage=2;scope=backend;review=3,6 -->
+- [x] progress IPC는 non-blocking ordered queue이고 finalize 전 최대 2초 bounded flush만 하며 기존 30초 timeout을 stage마다 기다리지 않는다 <!-- omo:id=accept-progress-ipc-bounded;stage=2;scope=backend;review=3,6 -->
+- [x] heartbeat/permit fence loss는 계속 fatal이고 progress report soft-fail과 섞이지 않는다 <!-- omo:id=accept-heartbeat-fence-fatal;stage=2;scope=backend;review=3,6 -->
 - [ ] unauthorized, retry, terminal redirect의 기존 흐름을 회귀시키지 않는다 <!-- omo:id=accept-auth-retry-redirect-preserved;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
@@ -37,8 +37,8 @@
 - [x] browser/anon/authenticated/service_role direct progress table access는 0이다 <!-- omo:id=accept-private-progress-access-zero;stage=2;scope=backend;review=3,6 -->
 - [x] raw URL/video ID/title/transcript/frame/prompt/provider payload/user UUID를 progress event에 중복 저장하지 않는다 <!-- omo:id=accept-progress-pii-zero;stage=2;scope=backend;review=3,6 -->
 - [x] `video_duration_seconds`는 `1..86400`만 허용하고 `report_youtube_extraction_progress`는 exact `TABLE(applied boolean)`을 반환한다 <!-- omo:id=accept-progress-rpc-shape;stage=2;scope=backend;review=3,6 -->
-- [ ] actual source video 준비 완료 뒤에만 `frame_extraction`을 보고하도록 bundled `codex-vision-client.mjs`와 `extract-video-frames.py` 경계가 연결된다 <!-- omo:id=accept-truthful-frame-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] schema identity가 `youtube-extraction-worker-schema-v2`로 승격되고 app/worker/credential/schema attestation이 같은 release에 묶인다 <!-- omo:id=accept-schema-v2-attestation;stage=2;scope=shared;review=3,6 -->
+- [x] actual source video 준비 완료 뒤에만 `frame_extraction`을 보고하도록 bundled `codex-vision-client.mjs`와 `extract-video-frames.py` 경계가 연결된다 <!-- omo:id=accept-truthful-frame-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] schema identity가 `youtube-extraction-worker-schema-v2`로 승격되고 app/worker/credential/schema attestation이 같은 release에 묶인다 <!-- omo:id=accept-schema-v2-attestation;stage=2;scope=shared;review=3,6 -->
 
 ## Data Setup / Preconditions
 
