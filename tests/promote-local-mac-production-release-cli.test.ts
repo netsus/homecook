@@ -184,8 +184,23 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(result.stderr).toContain("could not be resolved");
   });
 
-  it("fails closed for prepare/promote/verify until the release-promoter mutation phase is implemented", () => {
-    for (const command of ["prepare", "promote", "verify"]) {
+  it("requires the manifest and offline attestation inputs for prepare instead of blanket-blocking it", () => {
+    const result = spawnSync(
+      process.execPath,
+      [SCRIPT_PATH, "prepare"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("prepare requires --release-manifest");
+    expect(result.stderr).not.toContain("currently blocked");
+  });
+
+  it("keeps promote and verify blocked fail-closed", () => {
+    for (const command of ["promote", "verify"]) {
       const result = spawnSync(
         process.execPath,
         [SCRIPT_PATH, command],
@@ -198,7 +213,7 @@ describe("promote-local-mac-production-release CLI", () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(command);
       expect(result.stderr).toContain("blocked");
-      expect(result.stderr).toContain("plan/status");
+      expect(result.stderr).toContain("plan/prepare/status");
     }
   });
 });
