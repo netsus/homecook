@@ -800,6 +800,36 @@ function assertNoUnexpectedUntrackedRuntimeFiles({ checkoutDir, runCommand }) {
   }
 }
 
+const LOCAL_MAC_PRODUCTION_RUNTIME_ENV_PATHS = Object.freeze([
+  ".env.production.local",
+  "infra/full-local-supabase/.env.production.local",
+]);
+
+function materializeRuntimeEnvironmentFiles({ sourceRoot, checkoutDir, currentUid, mkdir }) {
+  const sources = LOCAL_MAC_PRODUCTION_RUNTIME_ENV_PATHS.map((relativePath) => ({
+    relativePath,
+    sourcePath: resolve(sourceRoot, relativePath),
+  }));
+  const existingCount = sources.filter(({ sourcePath }) => existsSync(sourcePath)).length;
+  if (existingCount === 0) return;
+  if (existingCount !== sources.length) {
+    throw new Error("Local Mac production runtime environment source is incomplete.");
+  }
+  for (const { relativePath, sourcePath } of sources) {
+    assertPrivateRegularFile(sourcePath, `Runtime environment source ${relativePath}`, currentUid);
+    const destinationPath = resolve(checkoutDir, relativePath);
+    assertPathInside(checkoutDir, destinationPath, `Runtime environment destination ${relativePath}`);
+    mkdir(dirname(destinationPath), { recursive: true, mode: 0o700 });
+    copyFileSync(sourcePath, destinationPath, fsConstants.COPYFILE_EXCL);
+    chmodSync(destinationPath, 0o600);
+    assertPrivateRegularFile(
+      destinationPath,
+      `Prepared runtime environment ${relativePath}`,
+      currentUid,
+    );
+  }
+}
+
 function requireCurrentUserUid(getCurrentUid) {
   const currentUid = getCurrentUid();
   if (!Number.isInteger(currentUid) || currentUid < 0) {
@@ -1660,6 +1690,12 @@ export function prepareLocalMacProductionRelease({
     assertDetachedPrepareCheckout({ checkoutDir: destinationPath, runCommand });
     assertCleanTrackedPrepareCheckout({ checkoutDir: destinationPath, runCommand });
     assertTrackedSymlinksStayInsideCheckout({ checkoutDir: destinationPath, runCommand });
+    materializeRuntimeEnvironmentFiles({
+      sourceRoot: realRootDir,
+      checkoutDir: destinationPath,
+      currentUid,
+      mkdir,
+    });
 
     for (const command of LOCAL_MAC_PRODUCTION_PREPARE_COMMANDS) {
       runPrepareCommand({
