@@ -165,10 +165,15 @@ function writePrepare(
   }, null, 2), { mode: 0o600 });
 }
 
-function workerFixture(root: string, identity: Record<string, string>, legacy = false) {
-  const artifactRoot = join(root, "artifact");
-  const secretRoot = join(root, "secrets");
-  mkdirSync(secretRoot, { recursive: true, mode: 0o700 });
+function workerFixture(
+  root: string,
+  identity: Record<string, string>,
+  legacy = false,
+  artifactAtRoot = false,
+) {
+  const artifactRoot = artifactAtRoot ? root : join(root, "artifact");
+  const secretRoot = artifactAtRoot ? `${root}-secrets` : join(root, "secrets");
+  if (!artifactAtRoot) mkdirSync(secretRoot, { recursive: true, mode: 0o700 });
   const allowed = "9".repeat(64);
   const materialized = materializeYoutubeExtractionWorkerArtifact({
     rootDir: process.cwd(),
@@ -179,6 +184,7 @@ function workerFixture(root: string, identity: Record<string, string>, legacy = 
     promotionId: identity.promotion_id,
     allowedSnapshotDigest: allowed,
   });
+  if (artifactAtRoot) mkdirSync(secretRoot, { recursive: true, mode: 0o700 });
   let artifact = materialized.manifest;
   if (legacy) {
     makeWritable(artifactRoot);
@@ -193,14 +199,15 @@ function workerFixture(root: string, identity: Record<string, string>, legacy = 
     seal(artifactRoot);
   }
   const expectedSchemaPath = join(artifactRoot, "scripts/manifests/youtube-extraction-expected-schema.json");
-  const appDescriptorPath = join(root, "app.json");
+  const authorityRoot = artifactAtRoot ? secretRoot : root;
+  const appDescriptorPath = join(authorityRoot, "app.json");
   writeFileSync(appDescriptorPath, JSON.stringify(buildYoutubeExtractionAppDescriptor({
     releaseSha: identity.release_sha,
     expectedPolicySnapshotDigest: allowed,
     artifactSha256: artifact.artifact_sha256,
     expectedSchemaSha256: artifact.expected_schema_sha256,
   })), { mode: 0o600 });
-  const policyPath = join(root, "policy.json");
+  const policyPath = join(authorityRoot, "policy.json");
   writeFileSync(policyPath, JSON.stringify(buildYoutubeExtractionCurrentPolicy({
     policySnapshotDigest: allowed,
     enabled: true,
@@ -265,6 +272,8 @@ describe("connected local Mac production promotion", () => {
         ".homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1",
       ),
       predecessorIdentity,
+      false,
+      true,
     );
 
     const launchAgents = join(homeDir, "Library/LaunchAgents");
