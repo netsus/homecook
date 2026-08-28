@@ -609,12 +609,21 @@ describe("local Mac production release prepare", () => {
     failCommand?: string | null,
     headSha?: string,
   } = {}) {
-    const invocations: Array<{ command: string, args: string[], cwd: string | undefined }> = [];
+    const invocations: Array<{
+      command: string,
+      args: string[],
+      cwd: string | undefined,
+      env?: NodeJS.ProcessEnv,
+    }> = [];
     let buildCompleted = false;
 
-    const runCommand = ((command: string, args: readonly string[] = [], options?: { cwd?: string }) => {
+    const runCommand = ((
+      command: string,
+      args: readonly string[] = [],
+      options?: { cwd?: string, env?: NodeJS.ProcessEnv },
+    ) => {
       const normalizedArgs = [...args];
-      invocations.push({ command, args: normalizedArgs, cwd: options?.cwd });
+      invocations.push({ command, args: normalizedArgs, cwd: options?.cwd, env: options?.env });
       const commandKey = `${command} ${normalizedArgs.join(" ")}`;
 
       if (command === "git" && normalizedArgs[0] === "clone") {
@@ -696,6 +705,9 @@ describe("local Mac production release prepare", () => {
       ["pnpm", ["verify:security-functions:release"]],
       ["pnpm", ["verify:local-supabase-runtime:isolated"]],
     ]));
+    expect(invocations.find(({ command, args }) =>
+      command === "pnpm" && args.join(" ") === "mac-production:build")?.env
+      ?.HOMECOOK_RELEASE_BUILD_ID).toBe(fixture.manifest.build_id);
     expect(invocations.some(({ command, args }) =>
       command.includes("launchctl")
       || args.some((argument) =>
