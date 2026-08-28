@@ -3,7 +3,7 @@
   "$id": "homecook.local-mac-production-rehearsal-inventory.v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "canonicalization", "repository", "captured_at", "surface_allowlist_version", "probe_identity", "tool_identities", "production_db_connection_count", "mutation_attempt_count", "redacted_field_count", "surfaces", "surface_digest", "inventory_digest"],
+  "required": ["schema", "canonicalization", "repository", "captured_at", "surface_allowlist_version", "probe_identity", "tool_identities", "probe_statuses", "production_db_connection_count", "mutation_attempt_count", "redacted_field_count", "surfaces", "surface_digest", "inventory_digest"],
   "properties": {
     "schema": { "const": "homecook.local-mac-production-rehearsal-inventory.v1" },
     "canonicalization": { "const": "RFC8785-JCS+SHA256" },
@@ -12,6 +12,7 @@
     "surface_allowlist_version": { "const": "homecook-production-surface-v1" },
     "probe_identity": { "$ref": "#/definitions/tool" },
     "tool_identities": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/namedTool" } },
+    "probe_statuses": { "$ref": "#/definitions/probeStatuses" },
     "production_db_connection_count": { "const": 0 },
     "mutation_attempt_count": { "const": 0 },
     "redacted_field_count": { "type": "integer", "minimum": 0 },
@@ -24,7 +25,7 @@
     "hex40": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
     "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "nullableHex64": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
-    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
     "identityInteger": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }] },
     "tool": {
       "type": "object",
@@ -37,7 +38,7 @@
         "inode": { "$ref": "#/definitions/identityInteger" },
         "mode": { "type": "integer", "minimum": 0 },
         "ctime": { "$ref": "#/definitions/timestamp" },
-        "size": { "type": "integer", "minimum": 0 },
+        "size": { "$ref": "#/definitions/identityInteger" },
         "sha256": { "$ref": "#/definitions/hex64" }
       }
     },
@@ -53,7 +54,7 @@
         "inode": { "$ref": "#/definitions/identityInteger" },
         "mode": { "type": "integer", "minimum": 0 },
         "ctime": { "$ref": "#/definitions/timestamp" },
-        "size": { "type": "integer", "minimum": 0 },
+        "size": { "$ref": "#/definitions/identityInteger" },
         "sha256": { "$ref": "#/definitions/hex64" }
       }
     },
@@ -68,7 +69,7 @@
         "inode": { "$ref": "#/definitions/identityInteger" },
         "owner_uid": { "type": "integer", "minimum": 0 },
         "mode": { "type": "integer", "minimum": 0 },
-        "size": { "type": "integer", "minimum": 0 },
+        "size": { "$ref": "#/definitions/identityInteger" },
         "mtime": { "$ref": "#/definitions/timestamp" },
         "sha256": { "$ref": "#/definitions/hex64" }
       }
@@ -101,22 +102,25 @@
     },
     "container": {
       "type": "object", "additionalProperties": false,
-      "required": ["id", "name", "project", "service", "image_digest", "state", "generation_digest"],
+      "required": ["id", "name", "project", "service", "image_digest", "image_id", "labels_digest", "mounts_digest", "state", "generation_digest"],
       "properties": {
         "id": { "$ref": "#/definitions/nonempty" }, "name": { "$ref": "#/definitions/nonempty" },
-        "project": { "type": "string" }, "service": { "type": "string" }, "image_digest": { "$ref": "#/definitions/nonempty" },
+        "project": { "$ref": "#/definitions/nonempty" }, "service": { "$ref": "#/definitions/nonempty" },
+        "image_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "image_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "labels_digest": { "$ref": "#/definitions/hex64" }, "mounts_digest": { "$ref": "#/definitions/hex64" },
         "state": { "$ref": "#/definitions/nonempty" }, "generation_digest": { "$ref": "#/definitions/hex64" }
       }
     },
     "network": {
       "type": "object", "additionalProperties": false,
-      "required": ["id", "name", "project", "generation_digest"],
-      "properties": { "id": { "$ref": "#/definitions/nonempty" }, "name": { "$ref": "#/definitions/nonempty" }, "project": { "type": "string" }, "generation_digest": { "$ref": "#/definitions/hex64" } }
+      "required": ["id", "name", "project", "labels_digest", "generation_digest"],
+      "properties": { "id": { "$ref": "#/definitions/nonempty" }, "name": { "$ref": "#/definitions/nonempty" }, "project": { "$ref": "#/definitions/nonempty" }, "labels_digest": { "$ref": "#/definitions/hex64" }, "generation_digest": { "$ref": "#/definitions/hex64" } }
     },
     "volume": {
       "type": "object", "additionalProperties": false,
-      "required": ["name", "project", "service", "generation_digest"],
-      "properties": { "name": { "$ref": "#/definitions/nonempty" }, "project": { "type": "string" }, "service": { "type": "string" }, "generation_digest": { "$ref": "#/definitions/hex64" } }
+      "required": ["name", "project", "service", "labels_digest", "generation_digest"],
+      "properties": { "name": { "$ref": "#/definitions/nonempty" }, "project": { "$ref": "#/definitions/nonempty" }, "service": { "$ref": "#/definitions/nonempty" }, "labels_digest": { "$ref": "#/definitions/hex64" }, "generation_digest": { "$ref": "#/definitions/hex64" } }
     },
     "port": {
       "type": "object", "additionalProperties": false,
@@ -125,17 +129,33 @@
     },
     "config": {
       "type": "object", "additionalProperties": false,
-      "required": ["identity", "sha256"],
-      "properties": { "identity": { "$ref": "#/definitions/nonempty" }, "sha256": { "$ref": "#/definitions/hex64" } }
+      "required": ["identity", "exists", "sha256"],
+      "properties": { "identity": { "$ref": "#/definitions/nonempty" }, "exists": { "type": "boolean" }, "sha256": { "$ref": "#/definitions/hex64" } }
     },
     "migration": {
       "type": "object", "additionalProperties": false,
-      "required": ["approved", "marker_digest", "global_ledger_digest", "catalog_head"],
-      "properties": { "approved": { "type": "boolean" }, "marker_digest": { "$ref": "#/definitions/nullableHex64" }, "global_ledger_digest": { "$ref": "#/definitions/nullableHex64" }, "catalog_head": { "type": ["string", "null"], "minLength": 1 } }
+      "required": ["approved", "marker_digest", "global_ledger_digest", "migration_head", "catalog_head"],
+      "properties": { "approved": { "type": "boolean" }, "marker_digest": { "$ref": "#/definitions/nullableHex64" }, "global_ledger_digest": { "$ref": "#/definitions/nullableHex64" }, "migration_head": { "type": ["string", "null"], "minLength": 1 }, "catalog_head": { "type": ["string", "null"], "minLength": 1 } }
+    },
+    "probeStatus": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "reason_code", "evidence_count"],
+      "properties": { "status": { "enum": ["success", "failed", "skipped"] }, "reason_code": { "type": ["string", "null"], "minLength": 1 }, "evidence_count": { "type": "integer", "minimum": 0 } }
+    },
+    "probeStatuses": {
+      "type": "object", "additionalProperties": false,
+      "required": ["release_artifacts", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "tool_identities"],
+      "properties": { "release_artifacts": { "$ref": "#/definitions/probeStatus" }, "workloads": { "$ref": "#/definitions/probeStatus" }, "launchd": { "$ref": "#/definitions/probeStatus" }, "docker": { "$ref": "#/definitions/probeStatus" }, "port_listeners": { "$ref": "#/definitions/probeStatus" }, "opaque_configs": { "$ref": "#/definitions/probeStatus" }, "migration": { "$ref": "#/definitions/probeStatus" }, "tool_identities": { "$ref": "#/definitions/probeStatus" } }
+    },
+    "preparedIdentity": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["attested", "status", "release_sha", "release_tree", "build_id", "sealed_bundle_digest", "descriptor_digest"],
+      "properties": { "attested": { "const": true }, "status": { "const": "prepared" }, "release_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }, "release_tree": { "type": "string", "pattern": "^[0-9a-f]{40}$" }, "build_id": { "$ref": "#/definitions/nonempty" }, "sealed_bundle_digest": { "$ref": "#/definitions/hex64" }, "descriptor_digest": { "$ref": "#/definitions/hex64" } }
     },
     "surfaces": {
       "type": "object", "additionalProperties": false,
-      "required": ["release_artifacts", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration"],
+      "required": ["release_artifacts", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "prepared_identity"],
       "properties": {
         "release_artifacts": { "type": "array", "items": { "$ref": "#/definitions/artifact" } },
         "workloads": { "type": "array", "items": { "$ref": "#/definitions/workload" } },
@@ -146,7 +166,8 @@
         },
         "port_listeners": { "type": "array", "items": { "$ref": "#/definitions/port" } },
         "opaque_configs": { "type": "array", "items": { "$ref": "#/definitions/config" } },
-        "migration": { "$ref": "#/definitions/migration" }
+        "migration": { "$ref": "#/definitions/migration" },
+        "prepared_identity": { "$ref": "#/definitions/preparedIdentity" }
       }
     }
   }

@@ -1,6 +1,6 @@
 # Homecook 서버 Mac release rehearsal 계약
 
-상태: **canonical / implementation split 1 in review**
+상태: **canonical / implementation split 1 repair in review**
 변경 유형: `docs-governance`
 production mutation: **금지 (`false`)**
 제품 계약 영향: **N/A** — 공식 제품 5종, public API, DB schema 계약을 바꾸지 않는다.
@@ -94,6 +94,8 @@ pnpm release:rehearsal:inventory -- --json
 - production app/full-local/worker identity, pointer/descriptor/lock, Docker resource, port, LaunchAgent, migration marker를 read-only로 수집한다.
 - secret contents, raw env, provider payload, DB row data를 출력하지 않는다.
 - inventory probe 자체의 tool identity와 production pre-digest를 기록한다.
+- 각 required probe는 `success|failed|skipped`, non-secret reason code, evidence count를 기록한다. 실패를 빈 성공 array로 축약하지 않는다.
+- pointer/descriptors/workloads, LaunchAgent plist+print, Docker image/mount/full-label digest, listener, opaque config, migration marker/ledger/catalog 중 required evidence가 없으면 inventory는 수집될 수 있어도 classification은 `unknown`이다.
 - inconsistent state는 분류만 하고 자동 복구하지 않는다.
 
 ### R1. candidate build and seal
@@ -191,6 +193,9 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 규칙:
 
 - production surface를 create, chmod, touch, rename, delete, restart, stop, load, unload, migrate, connect-write 하지 않는다.
+- directory/snapshot/lock digest는 immediate child 이름만 사용하지 않는다. contained tree를 bounded recursive traversal하며 file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶는다. path escape, cycle, entry/depth/byte limit 초과는 fail closed한다.
+- identity-sensitive `lstat`/`fstat`는 `{ bigint: true }`로 수집하고 decimal string으로 canonicalize한다. Number 변환 뒤의 inode/device/size를 identity 근거로 사용하지 않는다.
+- receipt/inventory JSON file은 fatal UTF-8 decoding을 통과하고 canonicalized UTF-8 bytes가 원본 file bytes와 exact equality여야 한다.
 - secret/env contents는 receipt, log, manifest에 포함하지 않는다. digest는 프로세스 내부에서만 계산하고 값은 redacted identity와 SHA-256으로만 남긴다.
 - DB는 credential을 사용해 row를 읽는 대신 canonical config/DB container/volume/migration identity의 read-only evidence만 사용한다. 별도 approved probe가 없다면 production DB 접속 0이 기본값이다.
 - pre/post snapshot 사이 production의 외부 drift가 감지되어도 rehearsal이 원인을 자동 판정하거나 복구하지 않는다. receipt를 폐기하고 mixed-state classify로 전환한다.
@@ -277,19 +282,19 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 | `cleanup_evidence_digests` | 같은 positional order의 exact 2 digest; 각 member cleanup completed/residue 0 |
 | `production_guard_digests` | 같은 positional order의 exact 2 digest; 각 member pre/post equal 및 mutation 0 |
 | `completed_at` | 두 member `completed_at` 중 더 늦은 UTC RFC3339 instant |
-| `valid_until` | exact `completed_at + 24h`; 더 긴 값, timezone ambiguity, missing expiry 금지 |
+| `valid_until` | 두 member 각각의 `completed_at + 24h` 중 더 이른 instant; 더 긴 값, timezone ambiguity, missing expiry 금지 |
 | `status` | exact `repeatable` |
 | `issuer_task_id` | 감사 metadata only; production authority 또는 trusted issuer가 아님 |
 | `repeatability_receipt_digest` | `repeatability_receipt_digest 제외` 전체 object의 JCS bytes SHA-256 |
 
-각 member digest를 먼저 재계산한 뒤 `member_receipt_digests`의 length, uniqueness, bytewise ascending order와 aligned array 위치를 검증한다. missing field, expiry 누락/연장, member order 오류, 동일 run/resource ID, bundle/tool/image/migration/canary mismatch는 repeatability receipt 발급을 차단한다.
+각 member digest를 먼저 재계산한 뒤 `member_receipt_digests`의 length, uniqueness, bytewise ascending order와 aligned array 위치를 검증한다. 두 member의 completion interval은 24시간 이하여야 하고, 발급·검증 시점에 두 member 모두 각자의 24시간 expiry 이전이어야 한다. missing field, stale member, expiry 누락/연장, member order 오류, 동일 run/resource ID, bundle/tool/image/migration/canary mismatch는 repeatability receipt 발급을 차단한다.
 
 ### Trusted production authority chain
 
 - local run/repeatability receipt의 `issuer_task_id`, local file owner, local self digest 또는 임의 local self-signature는 production authority가 아니다. 같은 사용자에게 다시 쓰기 가능한 local key/signature를 trusted issuer로 취급하지 않는다.
 - GitHub `production-release-approval` workflow는 두 member receipt와 repeatability receipt를 다시 canonicalize/hash/validate한 뒤 exact SHA/tree/`sealed_bundle_digest`/`repeatability_receipt_digest`/`valid_until`을 production manifest, subject, predicate와 annotated tag message에 묶는다.
 - server verifier는 pinned GitHub attestation trusted root를 먼저 검증한 뒤 manifest/subject/predicate/tag remote readback과 local sealed bytes/repeatability receipt를 exact 비교한다. GitHub attestation 밖의 local claim은 비교 입력일 뿐 trust anchor가 아니다.
-- receipt artifact는 감사 기록으로 만료 뒤에도 immutable 보존하지만 production authority는 `valid_until` 이전 final pre-mutation check에서만 유효하다.
+- receipt artifact는 감사 기록으로 만료 뒤에도 immutable 보존하지만 production authority는 strict `now < valid_until`인 final pre-mutation check에서만 유효하다. equality는 expired다.
 - receipt 내용 변경, member 재정렬, re-sign, rebuild, dependency/image/migration 변화, production pre/post drift 또는 cleanup residue는 기존 authority를 재사용하지 않고 두 isolated run부터 새 rehearsal을 요구한다.
 - expiry가 promotion 도중 다가오면 첫 production mutation 전에 중단한다. 이미 mutation을 시작한 뒤의 임의 자동 rollback 근거로 expiry를 사용하지 않는다.
 
@@ -320,8 +325,8 @@ pnpm release:rehearsal:classify -- --inventory <absolute-read-only-inventory> --
 
 분류 입력은 read-only inventory뿐이다. 최소 상태 vocabulary:
 
-- `coherent_running`: app/full-local/worker/pointer/descriptor/migration이 한 release identity로 일치
-- `coherent_prepared`: running과 분리된 attested+prepared candidate가 있고 promotion되지 않음
+- `coherent_running`: exact app/full_local/worker component set, pointer/descriptor digest alignment, required probe success, LaunchAgent/Docker/listener/config completeness, approved migration global ledger와 catalog head가 한 release identity로 일치
+- `coherent_prepared`: running identity와 다른 exact attested prepared identity가 구체 evidence로 있고 promotion되지 않음. 단순 prepared descriptor self-claim만으로 판정 금지
 - `mixed_running`: running app/worker/full-local/DB authority가 서로 다른 release identity
 - `partial_failed_install`: Docker/process 일부만 healthy이고 LaunchAgent/descriptor/readiness가 실패
 - `orphaned_lock_or_descriptor`: active authority 없이 recovered/stale lock 또는 descriptor만 존재
@@ -335,7 +340,7 @@ classification output은 `promotion_safe: boolean`, finding ID, evidence path di
 - 자동 복구, stale lock 삭제, descriptor 생성, volume/container 삭제, LaunchAgent restart/uninstall, DB migration, rollback은 금지한다.
 - 실제 recovery는 별도 사용자 승인과 `release-promoter` 또는 더 좁은 recovery authority를 가진 새 Codex task에서 수행한다.
 
-Phase A facts는 적어도 `mixed_running + partial_failed_install + orphaned_lock_or_descriptor + migration_authority_incomplete`로 분류해야 한다. 이는 `.17` promotion 승인이나 실제 recovery plan 확정이 아니다.
+Phase A facts는 적어도 `mixed_running + partial_failed_install + orphaned_lock_or_descriptor + migration_authority_incomplete + unknown`으로 분류해야 한다. required completeness가 닫히지 않은 `unknown`은 다른 구체 finding과 함께 남을 수 있다. 이는 `.17` promotion 승인이나 실제 recovery plan 확정이 아니다.
 
 ## Threat model
 

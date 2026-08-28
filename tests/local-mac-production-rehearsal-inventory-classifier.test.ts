@@ -1,11 +1,13 @@
 import {
   chmodSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,6 +22,7 @@ import {
   createLocalProductionInventoryAdapters,
   createProductionSurfaceSnapshot,
   readCanonicalInventoryFile,
+  validateProductionInventory,
 } from "../scripts/lib/local-mac-production-rehearsal-inventory.mjs";
 import {
   classifyProductionInventory,
@@ -64,25 +67,39 @@ function createAdapters({ mixed = false } = {}) {
         { kind: "release_root", exists: true, device: 1, inode: 10, owner_uid: process.getuid!(), mode: 0o700, size: 0, mtime: "2026-08-29T08:00:00.000Z", sha256: SHA_A, raw_env: "DATABASE_PASSWORD=secret" },
         { kind: "current_descriptor", exists: !mixed, device: 1, inode: 11, owner_uid: process.getuid!(), mode: 0o600, size: 10, mtime: "2026-08-29T08:00:00.000Z", sha256: SHA_B },
         { kind: `recovered_lock:${SHA_C}`, exists: mixed, device: 1, inode: 12, owner_uid: process.getuid!(), mode: 0o700, size: 0, mtime: "2026-08-29T08:00:00.000Z", sha256: SHA_C },
+        ...["com.homecook.production", "com.homecook.full-local-production", "com.homecook.youtube-extraction-worker"].map((label, offset) => ({
+          kind: `launch_agent_plist:${label}`,
+          exists: true,
+          device: 1,
+          inode: 20 + offset,
+          owner_uid: process.getuid!(),
+          mode: 0o600,
+          size: 100,
+          mtime: "2026-08-29T08:00:00.000Z",
+          sha256: SHA_A,
+        })),
       ]),
       readWorkloads: vi.fn(async () => [
-        { component: "app", release_sha: RELEASE_A, release_tree: RELEASE_A, build_id: "build-a", sealed_bundle_digest: SHA_A, health: "running", descriptor_digest: SHA_A, provider_payload: "secret-provider-json" },
+        { component: "app", release_sha: RELEASE_A, release_tree: RELEASE_A, build_id: "build-a", sealed_bundle_digest: SHA_A, health: "running", descriptor_digest: SHA_B, provider_payload: "secret-provider-json" },
         { component: "full_local", release_sha: mixed ? RELEASE_B : RELEASE_A, release_tree: mixed ? RELEASE_B : RELEASE_A, build_id: mixed ? "build-b" : "build-a", sealed_bundle_digest: mixed ? SHA_B : SHA_A, health: mixed ? "partial" : "running", descriptor_digest: SHA_B },
-        { component: "worker", release_sha: RELEASE_A, release_tree: RELEASE_A, build_id: "build-a", sealed_bundle_digest: SHA_A, health: "running", descriptor_digest: SHA_C },
+        { component: "worker", release_sha: RELEASE_A, release_tree: RELEASE_A, build_id: "build-a", sealed_bundle_digest: SHA_A, health: "running", descriptor_digest: SHA_B },
       ]),
       readLaunchd: vi.fn(async () => [
         { label: "com.homecook.production", loaded: true, state: mixed ? "scheduled" : "running", pid: mixed ? null : 101, projection_digest: SHA_A, environment: { TOKEN: "secret" } },
+        { label: "com.homecook.full-local-production", loaded: true, state: "running", pid: 102, projection_digest: SHA_B },
+        { label: "com.homecook.youtube-extraction-worker", loaded: true, state: "running", pid: 103, projection_digest: SHA_C },
       ]),
       readDocker: vi.fn(async () => ({
-        containers: [{ id: "container-db", name: "homecook-db", project: "homecook", service: "postgres", image_digest: `sha256:${SHA_A}`, state: "running", generation_digest: SHA_A, config_env: ["POSTGRES_PASSWORD=secret"] }],
-        networks: [{ id: "network-main", name: "homecook-network", project: "homecook", generation_digest: SHA_B }],
-        volumes: [{ name: "homecook-db", project: "homecook", service: "postgres", generation_digest: SHA_C }],
+        containers: [{ id: "container-db", name: "homecook-db", project: "homecook", service: "postgres", image_digest: `sha256:${SHA_A}`, image_id: `sha256:${SHA_B}`, labels_digest: SHA_A, mounts_digest: SHA_B, state: "running", generation_digest: SHA_A, config_env: ["POSTGRES_PASSWORD=secret"] }],
+        networks: [{ id: "network-main", name: "homecook-network", project: "homecook", labels_digest: SHA_B, generation_digest: SHA_B }],
+        volumes: [{ name: "homecook-db", project: "homecook", service: "postgres", labels_digest: SHA_C, generation_digest: SHA_C }],
       })),
       readPortListeners: vi.fn(async () => [
         { port: 3100, pid: 101, process_name: "node", listener_digest: SHA_A, command_line: "node --token secret" },
       ]),
       readOpaqueConfigIdentities: vi.fn(async () => [
-        { identity: "production-env", sha256: SHA_A, secret_contents: "secret" },
+        { identity: "production-env", exists: true, sha256: SHA_A, secret_contents: "secret" },
+        { identity: "full-local-config", exists: true, sha256: SHA_B },
       ]),
       readToolIdentities: vi.fn(async () => [
         { name: "launchctl", ...probeIdentity(), provider_token: "secret" },
@@ -92,6 +109,7 @@ function createAdapters({ mixed = false } = {}) {
         approved: true,
         marker_digest: SHA_A,
         global_ledger_digest: mixed ? null : SHA_B,
+        migration_head: "20260829000100_release",
         catalog_head: "20260829000100_release",
         raw_rows: [{ password: "secret" }],
       })),
@@ -154,6 +172,7 @@ describe("read-only production inventory", () => {
       approved: false,
       marker_digest: null,
       global_ledger_digest: null,
+      migration_head: null,
       catalog_head: null,
     });
     expect(inventory.production_db_connection_count).toBe(0);
@@ -184,6 +203,12 @@ describe("read-only production inventory", () => {
     expect(first.snapshot_digest).not.toBe(second.snapshot_digest);
     expect(first.production_db_connection_count).toBe(0);
     expect(first.mutation_attempt_count).toBe(0);
+
+    const incompleteSurfaces = { ...inventory.surfaces, launchd: [] };
+    const incompleteUnsigned = { ...inventory, surfaces: incompleteSurfaces, surface_digest: sha256Jcs(incompleteSurfaces) };
+    delete (incompleteUnsigned as Record<string, unknown>).inventory_digest;
+    const incomplete = { ...incompleteUnsigned, inventory_digest: sha256Jcs(incompleteUnsigned) };
+    expect(() => createProductionSurfaceSnapshot(incomplete)).toThrow(/complete|required|launchd/iu);
   });
 
   it("limits default Docker inventory to the exact canonical production project", async () => {
@@ -197,9 +222,12 @@ describe("read-only production inventory", () => {
       { mode: 0o600 },
     );
     const commandRunner = vi.fn((_: string, args: string[]) => {
-      if (args[0] === "ps") return { status: 0, stdout: `prod-id\tprod-db\thomecook-production\tpostgres\tsha256:${SHA_A}\trunning\nother-id\tother-db\tunrelated\tpostgres\tsha256:${SHA_B}\trunning\n` };
-      if (args[0] === "network") return { status: 0, stdout: "prod-net\tprod-network\thomecook-production\nother-net\tother-network\tunrelated\n" };
-      if (args[0] === "volume") return { status: 0, stdout: "prod-volume\thomecook-production\tpostgres\nother-volume\tunrelated\tpostgres\n" };
+      if (args[0] === "ps") return { status: 0, stdout: "prod-id\tprod-db\thomecook-production\tpostgres\trunning\nother-id\tother-db\tunrelated\tpostgres\trunning\n" };
+      if (args[0] === "inspect") return { status: 0, stdout: `{"com.docker.compose.project":"homecook-production"}\t[{"Type":"volume","Name":"prod-volume","Source":"/var/lib/prod","Destination":"/var/lib/postgresql/data","Driver":"local","Mode":"rw","RW":true,"Propagation":""}]\tsha256:${SHA_A}\n` };
+      if (args[0] === "network" && args[1] === "ls") return { status: 0, stdout: "prod-net\tprod-network\thomecook-production\nother-net\tother-network\tunrelated\n" };
+      if (args[0] === "network" && args[1] === "inspect") return { status: 0, stdout: "{\"com.docker.compose.project\":\"homecook-production\"}\n" };
+      if (args[0] === "volume" && args[1] === "ls") return { status: 0, stdout: "prod-volume\thomecook-production\tpostgres\nother-volume\tunrelated\tpostgres\n" };
+      if (args[0] === "volume" && args[1] === "inspect") return { status: 0, stdout: "{\"com.docker.compose.project\":\"homecook-production\"}\n" };
       return { status: 1, stdout: "" };
     });
     const adapters = createLocalProductionInventoryAdapters({
@@ -224,6 +252,7 @@ describe("read-only production inventory", () => {
     writeFileSync(markerPath, canonicalizeJcs({
       catalog_head: "20260829000100_release",
       global_ledger_digest: SHA_A,
+      migration_head: "20260829000100_release",
     }), { mode: 0o600 });
     const adapters = createLocalProductionInventoryAdapters({
       rootDir,
@@ -232,6 +261,83 @@ describe("read-only production inventory", () => {
     });
 
     await expect(adapters.readMigrationMarker()).rejects.toThrow(/repository|outside/iu);
+  });
+
+  it("recursively binds nested bytes, mode, and contained symlink targets", async () => {
+    const rootDir = tempDirectory("homecook-tree-root-");
+    const homeDir = tempDirectory("homecook-tree-home-");
+    const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", "snapshot-a");
+    const nested = join(snapshot, "nested");
+    mkdirSync(nested, { recursive: true, mode: 0o700 });
+    const payload = join(nested, "payload.bin");
+    const firstTarget = join(nested, "target-a.txt");
+    const secondTarget = join(nested, "target-b.txt");
+    writeFileSync(payload, "AAAA", { mode: 0o600 });
+    writeFileSync(firstTarget, "one", { mode: 0o600 });
+    writeFileSync(secondTarget, "two", { mode: 0o600 });
+    const link = join(snapshot, "current-target");
+    symlinkSync("nested/target-a.txt", link);
+    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir });
+    const snapshotDigest = async () => (await adapters.readReleaseArtifacts())
+      .find((entry: { kind: string }) => entry.kind.startsWith("sealed_snapshot:"))!.sha256;
+
+    const initial = await snapshotDigest();
+    writeFileSync(payload, "BBBB", { mode: 0o600 });
+    const byteDrift = await snapshotDigest();
+    chmodSync(payload, 0o700);
+    const modeDrift = await snapshotDigest();
+    unlinkSync(link);
+    symlinkSync("nested/target-b.txt", link);
+    const symlinkDrift = await snapshotDigest();
+
+    expect(new Set([initial, byteDrift, modeDrift, symlinkDrift]).size).toBe(4);
+  });
+
+  it("rejects recursive tree path escape and explicit resource bounds", async () => {
+    const inventoryModule = await import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs");
+    expect(inventoryModule.digestProductionTree).toBeTypeOf("function");
+    const root = tempDirectory("homecook-tree-bounds-");
+    const nested = join(root, "nested");
+    mkdirSync(nested, { mode: 0o700 });
+    writeFileSync(join(nested, "a"), "1234", { mode: 0o600 });
+    writeFileSync(join(nested, "b"), "5678", { mode: 0o600 });
+
+    expect(() => inventoryModule.digestProductionTree(root, { maxEntries: 1 })).toThrow(/entry|bound|limit/iu);
+    expect(() => inventoryModule.digestProductionTree(root, { maxDepth: 0 })).toThrow(/depth|bound|limit/iu);
+    expect(() => inventoryModule.digestProductionTree(root, { maxBytes: 4 })).toThrow(/byte|bound|limit/iu);
+
+    const outside = tempDirectory("homecook-tree-outside-");
+    writeFileSync(join(outside, "secret"), "outside", { mode: 0o600 });
+    symlinkSync(join(outside, "secret"), join(root, "escape"));
+    expect(() => inventoryModule.digestProductionTree(root)).toThrow(/symlink|escape|contain/iu);
+  });
+
+  it("preserves actual filesystem identity from bigint stats without Number rounding", async () => {
+    const rootDir = tempDirectory("homecook-bigint-root-");
+    const homeDir = tempDirectory("homecook-bigint-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    mkdirSync(releaseRoot, { recursive: true, mode: 0o700 });
+    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir });
+    const evidence = (await adapters.readReleaseArtifacts())
+      .find((entry: { kind: string }) => entry.kind === "release_root")!;
+    const stats = lstatSync(releaseRoot, { bigint: true });
+
+    expect(evidence.device).toBe(stats.dev.toString());
+    expect(evidence.inode).toBe(stats.ino.toString());
+    expect(evidence.size).toBe(stats.size.toString());
+  });
+
+  it("includes the canonical LaunchAgent plist file identities in release artifacts", async () => {
+    const rootDir = tempDirectory("homecook-plist-root-");
+    const homeDir = tempDirectory("homecook-plist-home-");
+    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir });
+    const kinds = (await adapters.readReleaseArtifacts()).map((entry: { kind: string }) => entry.kind);
+
+    expect(kinds).toEqual(expect.arrayContaining([
+      "launch_agent_plist:com.homecook.production",
+      "launch_agent_plist:com.homecook.full-local-production",
+      "launch_agent_plist:com.homecook.youtube-extraction-worker",
+    ]));
   });
 
   it("rejects relative, symlinked, public-mode, and repository-contained inventory files", async () => {
@@ -268,6 +374,78 @@ describe("mixed-state classifier", () => {
     expect(result.findings).toEqual([]);
   });
 
+  it("marks missing required surfaces and probe failures unknown instead of promotion-safe", async () => {
+    const inventory = await createInventory();
+    const incompleteSurfaces = {
+      ...inventory.surfaces,
+      launchd: [],
+      docker: { containers: [], networks: [], volumes: [] },
+      port_listeners: [],
+      opaque_configs: [],
+    };
+    const incompleteUnsigned = {
+      ...inventory,
+      surfaces: incompleteSurfaces,
+      surface_digest: sha256Jcs(incompleteSurfaces),
+    };
+    delete (incompleteUnsigned as Record<string, unknown>).inventory_digest;
+    const incomplete = { ...incompleteUnsigned, inventory_digest: sha256Jcs(incompleteUnsigned) };
+    const result = classifyProductionInventory(incomplete);
+
+    expect(result.states).toContain("unknown");
+    expect(result.promotion_safe).toBe(false);
+
+    const { adapters } = createAdapters();
+    adapters.readDocker = vi.fn(async () => { throw new Error("TOP_SECRET_DOCKER_FAILURE"); });
+    const failed = await collectReadOnlyProductionInventory({
+      adapters,
+      capturedAt: "2026-08-29T10:00:00.000Z",
+      probeIdentity: probeIdentity(),
+      approvedMigrationMarker: true,
+    });
+    expect(failed.probe_statuses.docker).toEqual({
+      status: "failed",
+      reason_code: "docker_probe_failed",
+      evidence_count: 0,
+    });
+    expect(canonicalizeJcs(failed)).not.toContain("TOP_SECRET");
+    expect(classifyProductionInventory(failed).promotion_safe).toBe(false);
+  });
+
+  it("requires exact component, descriptor, migration, and prepared identity alignment", async () => {
+    const inventory = await createInventory();
+    const variants = [
+      { workloads: [...inventory.surfaces.workloads, inventory.surfaces.workloads[0]] },
+      { workloads: inventory.surfaces.workloads.map((entry: { component: string }) => entry.component === "worker" ? { ...entry, descriptor_digest: SHA_C } : entry) },
+      { migration: { ...inventory.surfaces.migration, approved: false } },
+      { migration: { ...inventory.surfaces.migration, catalog_head: "different" } },
+      {
+        release_artifacts: [...inventory.surfaces.release_artifacts, {
+          kind: "prepared_descriptor",
+          exists: true,
+          device: 1,
+          inode: 99,
+          owner_uid: process.getuid!(),
+          mode: 0o600,
+          size: 1,
+          mtime: "2026-08-29T08:00:00.000Z",
+          sha256: SHA_A,
+        }],
+      },
+    ];
+
+    for (const patch of variants) {
+      const surfaces = { ...inventory.surfaces, ...patch };
+      const unsigned = { ...inventory, surfaces, surface_digest: sha256Jcs(surfaces) };
+      delete (unsigned as Record<string, unknown>).inventory_digest;
+      const candidate = { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+      const result = classifyProductionInventory(candidate);
+      expect(result.promotion_safe, JSON.stringify(patch)).toBe(false);
+      expect(result.states, JSON.stringify(patch)).toContain("unknown");
+      expect(result.states).not.toContain("coherent_prepared");
+    }
+  });
+
   it("classifies Phase-A-shaped mixed evidence with the exact unsafe vocabulary", async () => {
     const inventory = await createInventory({ mixed: true });
     const result = classifyProductionInventory(inventory, {
@@ -279,9 +457,10 @@ describe("mixed-state classifier", () => {
       "partial_failed_install",
       "orphaned_lock_or_descriptor",
       "migration_authority_incomplete",
+      "unknown",
     ]);
     expect(result.promotion_safe).toBe(false);
-    expect(result.recovery_plan).toHaveLength(4);
+    expect(result.recovery_plan).toHaveLength(5);
     expect(result.recovery_plan.every((entry: unknown) => typeof entry === "object" && entry !== null)).toBe(true);
     expect(() => result.recovery_plan.push({})).toThrow();
   });
@@ -330,5 +509,54 @@ describe("mixed-state classifier", () => {
     expect(validateClassification(classification), JSON.stringify(validateClassification.errors)).toBe(true);
     expect(validateInventory({ ...inventory, raw_env: "secret" })).toBe(false);
     expect(validateClassification({ ...classification, promotion_safe: true })).toBe(false);
+  });
+
+  it("rejects the same nested inventory attack table in runtime and JSON Schema", async () => {
+    const require = createRequire(import.meta.url);
+    const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
+    const Ajv = require(require.resolve("ajv", { paths: [eslintPackage] }));
+    const schema = JSON.parse(readFileSync("scripts/schemas/local-mac-production-rehearsal-inventory.schema.json", "utf8"));
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    ajv.addFormat("date-time", (value: string) => {
+      const milliseconds = Date.parse(value);
+      return Number.isFinite(milliseconds) && new Date(milliseconds).toISOString() === value;
+    });
+    const validateSchema = ajv.compile(schema);
+    const valid = await createInventory();
+    const withSurfaces = (surfaces: Record<string, unknown>) => {
+      const unsigned = { ...valid, surfaces, surface_digest: sha256Jcs(surfaces) };
+      delete (unsigned as Record<string, unknown>).inventory_digest;
+      return { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+    };
+    const attacks = [
+      withSurfaces({ ...valid.surfaces, port_listeners: [{ ...valid.surfaces.port_listeners[0], port: 70_000 }] }),
+      withSurfaces({ ...valid.surfaces, launchd: [{ ...valid.surfaces.launchd[0], loaded: "yes" }, ...valid.surfaces.launchd.slice(1)] }),
+      withSurfaces({ ...valid.surfaces, docker: { ...valid.surfaces.docker, containers: [{ ...valid.surfaces.docker.containers[0], labels_digest: "bad" }] } }),
+      withSurfaces({ ...valid.surfaces, release_artifacts: [{ ...valid.surfaces.release_artifacts[0], size: -1 }, ...valid.surfaces.release_artifacts.slice(1)] }),
+      (() => {
+        const unsigned = { ...valid, probe_statuses: { ...valid.probe_statuses, docker: { status: "success", reason_code: null, evidence_count: -1 } } };
+        delete (unsigned as Record<string, unknown>).inventory_digest;
+        return { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+      })(),
+      (() => {
+        const unsigned = { ...valid, captured_at: "2026-02-30T08:00:00.000Z" };
+        delete (unsigned as Record<string, unknown>).inventory_digest;
+        return { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+      })(),
+    ];
+
+    for (const attack of attacks) {
+      let runtimeAccepted = true;
+      try {
+        validateProductionInventory(attack);
+      } catch {
+        runtimeAccepted = false;
+      }
+      const schemaAccepted = validateSchema(attack);
+      expect({ runtimeAccepted, schemaAccepted }, JSON.stringify(attack)).toEqual({
+        runtimeAccepted: false,
+        schemaAccepted: false,
+      });
+    }
   });
 });

@@ -20,6 +20,13 @@ const UNSAFE_STATES = new Set([
   "unknown",
 ]);
 
+function assertClassifiedAt(value) {
+  const milliseconds = typeof value === "string" ? Date.parse(value) : Number.NaN;
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+    throw new Error("Production inventory classification rejected: classified_at must be an exact UTC millisecond instant.");
+  }
+}
+
 function deepFreeze(value) {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -53,11 +60,23 @@ export function classifyProductionInventory(inventory, {
   classifiedAt = new Date().toISOString(),
 } = {}) {
   validateProductionInventory(inventory);
-  const { release_artifacts: artifacts, workloads, launchd, migration } = inventory.surfaces;
+  assertClassifiedAt(classifiedAt);
+  const {
+    release_artifacts: artifacts,
+    workloads,
+    launchd,
+    docker,
+    port_listeners: portListeners,
+    opaque_configs: opaqueConfigs,
+    migration,
+    prepared_identity: preparedIdentity,
+  } = inventory.surfaces;
   const states = [];
   const expectedComponents = ["app", "full_local", "worker"];
   const componentMap = new Map(workloads.map((workload) => [workload.component, workload]));
-  const completeComponents = expectedComponents.every((component) => componentMap.has(component));
+  const completeComponents = workloads.length === expectedComponents.length
+    && componentMap.size === expectedComponents.length
+    && expectedComponents.every((component) => componentMap.has(component));
   const identitiesComplete = completeComponents && expectedComponents.every((component) => {
     const workload = componentMap.get(component);
     return workload.release_sha && workload.release_tree && workload.build_id && workload.sealed_bundle_digest;
@@ -67,6 +86,7 @@ export function classifyProductionInventory(inventory, {
       .map((workload) => `${workload.release_sha}:${workload.release_tree}:${workload.build_id}:${workload.sealed_bundle_digest}`),
   );
   const currentDescriptor = artifacts.some((artifact) => artifact.kind === "current_descriptor" && artifact.exists);
+  const currentDescriptorEvidence = artifacts.find((artifact) => artifact.kind === "current_descriptor" && artifact.exists);
   const recoveredOrStale = artifacts.some((artifact) => artifact.exists && (
     artifact.kind === "orphaned_descriptor"
     || artifact.kind === "recovered_lock"
@@ -76,26 +96,69 @@ export function classifyProductionInventory(inventory, {
   ));
   const partial = workloads.some((workload) => workload.health !== "running")
     || launchd.some((job) => job.loaded && job.state !== "running");
-  const migrationIncomplete = Boolean(migration.marker_digest || migration.catalog_head)
-    && !migration.global_ledger_digest;
+  const migrationIncomplete = Boolean(migration.marker_digest || migration.catalog_head || migration.migration_head)
+    && (!migration.approved || !migration.global_ledger_digest || migration.migration_head !== migration.catalog_head);
+  const requiredProbeNames = ["release_artifacts", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "tool_identities"];
+  const probesComplete = requiredProbeNames.every((name) => inventory.probe_statuses[name].status === "success");
+  const launchdLabels = new Set(launchd.map((job) => job.label));
+  const launchdComplete = launchd.length === 3 && [
+    "com.homecook.production",
+    "com.homecook.full-local-production",
+    "com.homecook.youtube-extraction-worker",
+  ].every((label) => launchdLabels.has(label))
+    && launchd.every((job) => job.loaded && job.state === "running" && Number.isSafeInteger(job.pid));
+  const dockerComplete = docker.containers.length > 0 && docker.networks.length > 0 && docker.volumes.length > 0
+    && docker.containers.every((container) => container.state === "running");
+  const portsComplete = portListeners.some((listener) => listener.port === 3100 && Number.isSafeInteger(listener.pid));
+  const configIdentities = new Set(opaqueConfigs.map((config) => config.identity));
+  const configsComplete = opaqueConfigs.length === 2
+    && configIdentities.has("production-env") && configIdentities.has("full-local-config")
+    && opaqueConfigs.every((config) => config.exists);
+  const plistKinds = new Set(artifacts.filter((artifact) => artifact.exists).map((artifact) => artifact.kind));
+  const plistComplete = [
+    "launch_agent_plist:com.homecook.production",
+    "launch_agent_plist:com.homecook.full-local-production",
+    "launch_agent_plist:com.homecook.youtube-extraction-worker",
+  ].every((kind) => plistKinds.has(kind));
+  const descriptorsAligned = Boolean(currentDescriptorEvidence)
+    && workloads.every((workload) => workload.descriptor_digest === currentDescriptorEvidence.sha256);
+  const requiredSurfacesComplete = probesComplete && launchdComplete && dockerComplete && portsComplete
+    && configsComplete && plistComplete && descriptorsAligned;
+  const unsubstantiatedPrepared = artifacts.some((artifact) => artifact.kind === "prepared_descriptor" && artifact.exists)
+    && preparedIdentity === null;
 
-  if (!completeComponents || !identitiesComplete) states.push("unknown");
+  if (!completeComponents || !identitiesComplete || !requiredSurfacesComplete || unsubstantiatedPrepared || migrationIncomplete) states.push("unknown");
   if (releaseIdentities.size > 1) states.push("mixed_running");
   if (partial) states.push("partial_failed_install");
   if (recoveredOrStale && !currentDescriptor) states.push("orphaned_lock_or_descriptor");
   if (migrationIncomplete) states.push("migration_authority_incomplete");
 
   const allRunning = completeComponents && expectedComponents.every((component) => componentMap.get(component).health === "running");
-  if (states.length === 0 && allRunning && releaseIdentities.size === 1 && currentDescriptor && migration.global_ledger_digest) {
+  if (states.length === 0 && allRunning && releaseIdentities.size === 1 && currentDescriptor
+    && migration.approved && migration.global_ledger_digest && migration.migration_head === migration.catalog_head) {
     states.push("coherent_running");
   }
-  const prepared = artifacts.some((artifact) => artifact.kind === "prepared_descriptor" && artifact.exists);
+  const runningIdentity = completeComponents ? componentMap.get("app") : null;
+  const prepared = preparedIdentity !== null && preparedIdentity.attested === true
+    && preparedIdentity.status === "prepared"
+    && runningIdentity
+    && preparedIdentity.release_sha !== runningIdentity.release_sha;
   if (states.length === 0 && prepared) states.push("coherent_prepared");
   if (states.length === 0) states.push("unknown");
   states.sort((left, right) => MIXED_STATE_VOCABULARY.indexOf(left) - MIXED_STATE_VOCABULARY.indexOf(right));
 
   const findings = states.filter((state) => UNSAFE_STATES.has(state)).map((state) => {
-    const missing = state === "unknown" ? expectedComponents.filter((component) => !componentMap.has(component)) : [];
+    const missing = state === "unknown"
+      ? [
+          ...expectedComponents.filter((component) => !componentMap.has(component)),
+          ...requiredProbeNames.filter((name) => inventory.probe_statuses[name].status !== "success").map((name) => `probe:${name}`),
+          ...(!launchdComplete ? ["surface:launchd"] : []),
+          ...(!dockerComplete ? ["surface:docker"] : []),
+          ...(!portsComplete ? ["surface:port_listeners"] : []),
+          ...(!configsComplete ? ["surface:opaque_configs"] : []),
+          ...(!descriptorsAligned ? ["surface:descriptor_alignment"] : []),
+        ]
+      : [];
     return finding(state, `surfaces/${state}`, missing);
   });
   const recoveryPlan = findings.map(recoveryPlanFor);

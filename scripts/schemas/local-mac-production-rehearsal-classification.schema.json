@@ -21,7 +21,7 @@
   "definitions": {
     "nonempty": { "type": "string", "minLength": 1 },
     "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
     "state": { "enum": ["coherent_running", "coherent_prepared", "mixed_running", "partial_failed_install", "orphaned_lock_or_descriptor", "migration_authority_incomplete", "unknown"] },
     "stringArray": { "type": "array", "items": { "$ref": "#/definitions/nonempty" } },
     "finding": {
