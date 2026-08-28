@@ -255,11 +255,10 @@ describe("connected local Mac production promotion", () => {
     };
     const currentRoot = join(homeDir, "01_vibe_coding/homecook-production-current");
     mkdirSync(currentRoot, { recursive: true, mode: 0o700 });
-    writePrepare(currentRoot, {
-      release_manifest_path: join(repoRoot, "bridge-legacy.json"),
-      release_tag: "prod-20260827.1",
-      ...predecessorIdentity,
-    }, Buffer.from("{}"));
+    mkdirSync(join(currentRoot, ".next"), { mode: 0o700 });
+    writeFileSync(join(currentRoot, ".next/BUILD_ID"), predecessorIdentity.build_id, {
+      mode: 0o600,
+    });
     const currentWorker = workerFixture(
       join(
         homeDir,

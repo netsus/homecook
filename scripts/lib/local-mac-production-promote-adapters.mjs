@@ -285,6 +285,58 @@ function readProcessCwd({ pid, spawn = spawnSync }) {
   return claims[0];
 }
 
+function readFirstCanonicalPredecessorAppIdentity({
+  appRoot,
+  commandRunner,
+  currentUid,
+  pid,
+}) {
+  const runtimeCwd = readProcessCwd({ pid, spawn: commandRunner });
+  if (runtimeCwd !== appRoot) {
+    throw new Error("First canonical predecessor app runtime cwd drifted.");
+  }
+  const releaseSha = readGitRuntimeValue(
+    commandRunner,
+    appRoot,
+    ["rev-parse", "HEAD"],
+    "First canonical predecessor app SHA",
+  );
+  if (releaseSha !== FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA) {
+    throw new Error("First canonical predecessor app SHA drifted.");
+  }
+  const releaseTree = readGitRuntimeValue(
+    commandRunner,
+    appRoot,
+    ["rev-parse", "HEAD^{tree}"],
+    "First canonical predecessor app tree",
+  );
+  const buildIdPath = resolve(appRoot, ".next", "BUILD_ID");
+  assertSafeAncestors(appRoot, buildIdPath, currentUid, "First canonical predecessor build ID");
+  const buildIdStat = lstatSync(buildIdPath);
+  if (
+    buildIdStat.isSymbolicLink()
+    || !buildIdStat.isFile()
+    || buildIdStat.uid !== currentUid
+    || (modeBits(buildIdStat.mode) & 0o022) !== 0
+    || realpathSync(buildIdPath) !== buildIdPath
+  ) {
+    throw new Error("First canonical predecessor build ID owner, mode, or path is unsafe.");
+  }
+  const buildId = readFileSync(buildIdPath, "utf8").trim();
+  if (buildId.length === 0 || buildId.length > 256) {
+    throw new Error("First canonical predecessor build ID is invalid.");
+  }
+  return Object.freeze({
+    component: "app",
+    ready: true,
+    release_sha: releaseSha,
+    release_tree: releaseTree,
+    build_id: buildId,
+    promotion_id: "first-canonical-predecessor-observed-v1",
+    pid,
+  });
+}
+
 function assertReadOnlyArtifactRoot(rootPath) {
   const root = realpathSync(rootPath);
   const visit = (path) => {
@@ -483,6 +535,9 @@ function readFullLocalWorkloadDefault({
   options,
   checkPlist = true,
   allowLegacyBootstrap = false,
+  allowSplitPredecessorIdentity = false,
+  expectedIdentityOverride = null,
+  statusConfigPathOverride = null,
   restartContract = null,
   commandRunner = spawnSync,
 }) {
@@ -513,20 +568,27 @@ function readFullLocalWorkloadDefault({
     label: "Full-local plist",
     trustedRoot: context.homeDir,
   });
-  const expectedIdentity = readLocalMacProductionPreparedReleaseIdentity({
-    component: "full_local",
-    releaseDir: dirname(releaseIdentityPath),
-    runCommand: commandRunner,
-  });
+  const expectedIdentity = expectedIdentityOverride
+    ? {
+        ...expectedIdentityOverride,
+        component: "full_local",
+      }
+    : readLocalMacProductionPreparedReleaseIdentity({
+        component: "full_local",
+        releaseDir: dirname(releaseIdentityPath),
+        runCommand: commandRunner,
+      });
   const runtimeRoot = allowLegacyBootstrap ? context.rootDir : context.releaseDir;
+  const statusConfigPath = statusConfigPathOverride ?? options.fullLocalConfigPath;
   const runtimeArgs = [
       resolve(runtimeRoot, "scripts", "full-local-production-runtime.mjs"),
       "status",
       "--config",
-      options.fullLocalConfigPath,
-      "--release-identity",
-      releaseIdentityPath,
+      statusConfigPath,
   ];
+  if (expectedRestartContract.includeReleaseIdentity) {
+    runtimeArgs.push("--release-identity", releaseIdentityPath);
+  }
   if (allowLegacyBootstrap) runtimeArgs.push("--allow-legacy-release-bootstrap");
   const result = commandRunner(
     options.nodeBin,
@@ -550,13 +612,16 @@ function readFullLocalWorkloadDefault({
   } catch {
     throw new Error("Full-local Docker workload status was invalid.");
   }
-  const observedIdentity = status.release_identity;
+  const observedIdentity = status.release_identity
+    ?? (allowSplitPredecessorIdentity ? expectedIdentity : null);
   if (
     !observedIdentity
     || observedIdentity.release_sha !== expectedIdentity.release_sha
-    || observedIdentity.release_tree !== expectedIdentity.release_tree
-    || observedIdentity.build_id !== expectedIdentity.build_id
-    || observedIdentity.promotion_id !== expectedIdentity.promotion_id
+    || (!allowSplitPredecessorIdentity && (
+      observedIdentity.release_tree !== expectedIdentity.release_tree
+      || observedIdentity.build_id !== expectedIdentity.build_id
+      || observedIdentity.promotion_id !== expectedIdentity.promotion_id
+    ))
   ) {
     throw new Error("Full-local Docker workload release identity mismatch.");
   }
@@ -865,12 +930,19 @@ function buildDefaultDependencies(
       if (!appStatus.running || !Number.isInteger(appStatus.pid)) {
         throw new Error("Current app runtime is not running.");
       }
-      const app = readLocalMacProductionRuntimeIdentity({
-        component: "app",
-        expectedReleaseDir: currentReleaseDir,
-        pid: appStatus.pid,
-        runCommand: commandRunner,
-      });
+      const app = currentRuntimeBridge
+        ? readFirstCanonicalPredecessorAppIdentity({
+            appRoot: currentReleaseDir,
+            commandRunner,
+            currentUid,
+            pid: appStatus.pid,
+          })
+        : readLocalMacProductionRuntimeIdentity({
+            component: "app",
+            expectedReleaseDir: currentReleaseDir,
+            pid: appStatus.pid,
+            runCommand: commandRunner,
+          });
       const fullLocal = readFullLocalWorkloadDefault({
         context: {
           ...context,
@@ -883,6 +955,9 @@ function buildDefaultDependencies(
           fullLocalConfigPath: currentFullLocalConfigPath,
         },
         commandRunner,
+        allowSplitPredecessorIdentity: Boolean(currentRuntimeBridge),
+        expectedIdentityOverride: currentRuntimeBridge ? app : null,
+        statusConfigPathOverride: currentRuntimeBridge ? options.fullLocalConfigPath : null,
         allowLegacyBootstrap:
           !currentRuntimeBridge
           && context.currentDescriptor.release_sha
