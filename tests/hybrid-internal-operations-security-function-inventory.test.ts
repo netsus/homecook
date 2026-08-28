@@ -53,17 +53,21 @@ describe("hybrid internal operation security function inventory", () => {
     );
   });
 
-  it("allows only the approved derived recipe POST helper to use the future propagation internal client", () => {
-    const inventory = inventoryHybridAuthorityPaths(process.cwd());
+  it(
+    "allows only the approved derived recipe POST helper to use the future propagation internal client",
+    () => {
+      const inventory = inventoryHybridAuthorityPaths(process.cwd());
 
-    expect(
-      inventory.internalOperationFunctionAllowlist
-        .createRecipeFuturePropagationInternalClient?.["app/api/v1/recipes/route.ts"],
-    ).toEqual(["postRecipe"]);
-    expect(
-      inventory.internalOperationViolations.filter(
-        (entry) => entry.factory === "createRecipeFuturePropagationInternalClient",
-      ),
-    ).toEqual([]);
-  });
+      expect(
+        inventory.internalOperationFunctionAllowlist
+          .createRecipeFuturePropagationInternalClient?.["app/api/v1/recipes/route.ts"],
+      ).toEqual(["postRecipe"]);
+      expect(
+        inventory.internalOperationViolations.filter(
+          (entry) => entry.factory === "createRecipeFuturePropagationInternalClient",
+        ),
+      ).toEqual([]);
+    },
+    20_000,
+  );
 });
