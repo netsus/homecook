@@ -85,7 +85,7 @@ local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. loc
 
 Untagged exact-SHA candidate의 isolated build/run, repeatability receipt, mixed-state read-only classification은 `docs/engineering/local-mac-production-release-rehearsal.md`가 canonical authority다. production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르며, implementation이 merge되기 전에는 현재 promote 경로가 그 receipt gate를 충족한다고 주장하지 않는다.
 
-rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact rehearsal bundle digest와 repeatability receipt digest를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
+rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`와 `repeatability_receipt_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
 
 Stage B implementation target command family는 다음과 같다.
 

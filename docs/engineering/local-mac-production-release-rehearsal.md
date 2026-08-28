@@ -17,8 +17,8 @@ active production 승격의 역할·lock·tag immutability·manifest·attestatio
 
 - 특정 `.17` prepared candidate를 배포하는 것이 아니라 임의의 CI-green `origin/master` exact SHA를 입력으로 받는다.
 - production tag를 만들기 전에 candidate bytes를 build/seal하고 실제 Docker, Node, worker, migration을 isolated environment에서 실행한다.
-- 같은 SHA를 최소 2회 rehearsal해 bundle digest 재현성과 격리·cleanup을 증명한다.
-- rehearsal을 통과한 exact bundle digest를 rebuild 없이 production tag, manifest, attestation에 결합한다.
+- 같은 SHA를 최소 2회 rehearsal해 sealed bundle digest 재현성과 격리·cleanup을 증명한다.
+- rehearsal을 통과한 exact sealed bundle digest를 rebuild 없이 production tag, manifest, attestation에 결합한다.
 - rehearsal 전후 production surface가 변하지 않았다는 no-production-mutation evidence를 남긴다.
 - 현재처럼 app, worker, full-local, descriptor, lock, migration evidence가 섞인 상태는 mutation 없이 분류하고 별도 recovery plan만 만든다.
 
@@ -157,7 +157,7 @@ pnpm release:rehearsal:verify -- --receipt <absolute-create-only-receipt> --json
 R4 통과 전에는 production authority tag를 만들지 않는다.
 
 - `prod-*` tag creation과 production attestation은 기존 production approval environment와 `release-promoter` 경계를 따른다.
-- tag/manifest/attestation은 exact rehearsal `release_sha`, `release_tree`, `build_id`, `bundle_digest`, `repeatability_receipt_digest`를 포함해야 한다.
+- tag/manifest/attestation은 exact rehearsal `release_sha`, `release_tree`, `build_id`, `sealed_bundle_digest`, `repeatability_receipt_digest`를 포함해야 한다.
 - rehearsal 후 rebuild, dependency reinstall, image re-resolution, migration rewrite, bundle copy mutation은 금지한다.
 - production tag immutability는 그대로 유지한다. tag/attestation 생성 실패 시 기존 tag를 이동·삭제하지 않고 다음 tag 번호로 새 authority attempt를 만든다.
 
@@ -298,7 +298,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 다음 중 하나면 receipt를 발급·재사용하지 않는다.
 
 - candidate가 exact CI-green `origin/master` SHA가 아님
-- clean source/tree, tool, image, migration, bundle digest 중 하나라도 불명확함
+- clean source/tree, tool, image, migration, sealed bundle digest 중 하나라도 불명확함
 - mock-only 실행 또는 app/full-local/worker 중 하나라도 실제 sealed bytes로 시작되지 않음
 - production/rehearsal namespace, port, Docker resource, volume, root, env/DB가 겹침
 - production data copy, Cloud/linked/remote Supabase, unexpected external network 사용
@@ -307,7 +307,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 - canary failure, identity mismatch, supervisor orphan, cleanup 실패 또는 residue
 - production pre/post digest 불일치나 mutation attempt가 1 이상
 - local receipt digest/path/owner/mode/expiry 또는 GitHub attestation signature/trusted-root binding 불일치
-- 두 반복 실행의 bundle digest 불일치 또는 run resources가 distinct하지 않음
+- 두 반복 실행의 sealed bundle digest 불일치 또는 run resources가 distinct하지 않음
 - mixed-state finding이 unresolved이거나 `promotion_safe` 분류가 아님
 
 ## Mixed-state classify and recovery-plan contract
@@ -416,6 +416,5 @@ implementation PR은 test-first RED → GREEN → refactor evidence를 남긴다
 - foreground supervisor process protocol과 canary command ID
 - local Docker image cache provenance 형식과 supported platform matrix
 - migration global ledger의 canonical query/output schema
-- production manifest/attestation schema version bump와 repeatability receipt field 이름
 
 위 결정을 이유로 production mutation, external network, production data copy, receipt gate 또는 독립 review를 생략할 수 없다.

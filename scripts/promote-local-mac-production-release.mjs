@@ -190,16 +190,16 @@ export async function runLocalMacProductionReleaseCli(
     createPromoteAdapters = createLocalMacProductionPromoteAdapters,
     createVerifyAdapters = createLocalMacProductionVerifyAdapters,
     output = process.stdout,
+    parseArguments = parseArgs,
   } = {},
 ) {
-  const options = parseArgs(argv);
+  assertProductionPromoteActivated(argv[0]);
+  const options = parseArguments(argv);
 
   if (!options.command || options.command === "help" || options.command === "--help") {
     printHelp(output);
     return;
   }
-
-  assertProductionPromoteActivated(options.command);
 
   if (options.command === "plan" && !options.releaseManifestPath) {
     throw new Error("plan requires --release-manifest <path>.");

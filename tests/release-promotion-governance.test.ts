@@ -267,4 +267,18 @@ describe("release promotion governance docs", () => {
     expect(releaseRunbook).toContain("activation_blocked: true");
     expect(releaseRunbook).toContain("local task/session ID는 감사 metadata일 뿐");
   });
+
+  it("uses sealed_bundle_digest as the only rehearsal authority field name", () => {
+    const rehearsalContract = read(
+      "docs/engineering/local-mac-production-release-rehearsal.md",
+    );
+    const releaseRunbook = read(
+      "docs/engineering/local-mac-production-release-promotion.md",
+    );
+
+    expect(rehearsalContract).toContain("`sealed_bundle_digest`");
+    expect(releaseRunbook).toContain("`sealed_bundle_digest`");
+    expect(rehearsalContract).not.toContain("`bundle_digest`");
+    expect(releaseRunbook).not.toContain("`bundle_digest`");
+  });
 });

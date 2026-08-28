@@ -16,6 +16,7 @@ import { runLocalMacProductionReleaseCli } from "../scripts/promote-local-mac-pr
 
 const temporaryDirectories: string[] = [];
 const SCRIPT_PATH = join(process.cwd(), "scripts", "promote-local-mac-production-release.mjs");
+const PROMOTE_ACTIVATION_BLOCKED_ERROR = "activation_blocked: production promote requires the implemented and GitHub-attested repeatability receipt gate before any adapter, lock, Docker, LaunchAgent, database, or runtime mutation setup.";
 
 function createTempDirectory(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
@@ -298,7 +299,37 @@ describe("promote-local-mac-production-release CLI", () => {
       },
     );
     expect(promote.status).toBe(1);
-    expect(promote.stderr).toMatch(/activation_blocked.*repeatability receipt/iu);
+    expect(promote.stderr).toBe(`${PROMOTE_ACTIVATION_BLOCKED_ERROR}\n`);
+  });
+
+  it.each([
+    ["unknown option", ["promote", "--unknown", "value"]],
+    ["missing value", ["promote", "--release-manifest"]],
+  ])("blocks malformed promote argv before parsing: %s", async (_name, argv) => {
+    const parseArguments = vi.fn(() => {
+      throw new Error("argument parser reached");
+    });
+    const createAttestationVerifier = vi.fn(() => vi.fn());
+    const createPromoteAdapters = vi.fn(() => {
+      throw new Error("promote adapter factory reached");
+    });
+
+    await expect(runLocalMacProductionReleaseCli(argv, {
+      createAttestationVerifier,
+      createPromoteAdapters,
+      parseArguments,
+    })).rejects.toThrow(new Error(PROMOTE_ACTIVATION_BLOCKED_ERROR));
+
+    expect(parseArguments).not.toHaveBeenCalled();
+    expect(createAttestationVerifier).not.toHaveBeenCalled();
+    expect(createPromoteAdapters).not.toHaveBeenCalled();
+
+    const result = spawnSync(process.execPath, [SCRIPT_PATH, ...argv], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe(`${PROMOTE_ACTIVATION_BLOCKED_ERROR}\n`);
   });
 
   it("keeps verify argument validation available while promote is blocked", () => {
