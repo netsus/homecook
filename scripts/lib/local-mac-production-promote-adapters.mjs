@@ -1342,6 +1342,9 @@ function buildDefaultDependencies(
           options,
           checkPlist: false,
           commandRunner,
+          restartContract: context.currentRuntimeBridge
+            ? firstCanonicalAdoptionRestartContract()
+            : null,
         }),
       }),
     installFullLocal: (input) => installFullLocalLaunchAgent({

@@ -399,7 +399,7 @@ describe("connected local Mac production promotion", () => {
                 healthy: true,
                 authorization_contract_status: "PASS",
                 product_catalog_status: "PASS",
-                release_identity: releaseIdentity,
+                ...(identityPath ? { release_identity: releaseIdentity } : {}),
               }),
               stderr: "",
             };
