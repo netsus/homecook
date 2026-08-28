@@ -17,6 +17,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  allowFirstCanonicalAdoptionWorkerPlist,
   allowFirstCanonicalAdoptionWorkerStandby,
   createLocalMacProductionPromoteAdapters,
 } from "../scripts/lib/local-mac-production-promote-adapters.mjs";
@@ -632,6 +633,21 @@ describe("local Mac production promote adapters", () => {
         ready: true,
         release_sha: "0".repeat(40),
       },
+    })).toBe(false);
+  });
+
+  it("accepts only the exact immutable predecessor worker plist digest", () => {
+    expect(allowFirstCanonicalAdoptionWorkerPlist({
+      currentRuntimeBridge: { previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA },
+      actualDigest: "69393712e063e6e0f84c869c330ff4f58f718b73184a20250395d8c9cfd39da8",
+    })).toBe(true);
+    expect(allowFirstCanonicalAdoptionWorkerPlist({
+      currentRuntimeBridge: { previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA },
+      actualDigest: "0".repeat(64),
+    })).toBe(false);
+    expect(allowFirstCanonicalAdoptionWorkerPlist({
+      currentRuntimeBridge: null,
+      actualDigest: "69393712e063e6e0f84c869c330ff4f58f718b73184a20250395d8c9cfd39da8",
     })).toBe(false);
   });
 
