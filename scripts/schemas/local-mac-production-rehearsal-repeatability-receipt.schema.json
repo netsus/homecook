@@ -32,7 +32,7 @@
     "nonempty": { "type": "string", "minLength": 1 },
     "hex40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
     "twoHex64": { "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": { "$ref": "#/definitions/hex64" } },
     "twoHex64AllowDuplicates": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/definitions/hex64" } },
     "twoStrings": { "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": { "$ref": "#/definitions/nonempty" } }

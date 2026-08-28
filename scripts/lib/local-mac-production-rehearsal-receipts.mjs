@@ -8,6 +8,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { TextDecoder } from "node:util";
 
 import { parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
 
@@ -72,8 +73,16 @@ function assertIdentityInteger(value, label) {
 
 function assertTimestamp(value, label) {
   assertString(value, label, RFC3339_UTC);
-  if (!Number.isFinite(Date.parse(value))) fail(`${label} must be a UTC RFC3339 instant`);
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+    fail(`${label} must be an exact UTC millisecond RFC3339 calendar instant`);
+  }
   return value;
+}
+
+function timestampMilliseconds(value, label) {
+  assertTimestamp(value, label);
+  return Date.parse(value);
 }
 
 function assertSortedUniqueStrings(value, label, { length = null, pattern = null } = {}) {
@@ -96,7 +105,7 @@ function validateToolIdentity(value, label) {
   assertIdentityInteger(tool.inode, `${label}.inode`);
   assertInteger(tool.mode, `${label}.mode`);
   assertTimestamp(tool.ctime, `${label}.ctime`);
-  assertInteger(tool.size, `${label}.size`);
+  assertIdentityInteger(tool.size, `${label}.size`);
   assertString(tool.sha256, `${label}.sha256`, HEX_64);
 }
 
@@ -126,7 +135,7 @@ function validateRunUnsigned(value) {
   assertString(receipt.run_id, "run_id");
   assertTimestamp(receipt.issued_at, "issued_at");
   assertTimestamp(receipt.completed_at, "completed_at");
-  if (Date.parse(receipt.issued_at) > Date.parse(receipt.completed_at)) fail("issued_at must not follow completed_at");
+  if (timestampMilliseconds(receipt.issued_at, "issued_at") > timestampMilliseconds(receipt.completed_at, "completed_at")) fail("issued_at must not follow completed_at");
 
   const toolchain = assertObject(receipt.toolchain, "toolchain", TOOLCHAIN_KEYS);
   for (const key of TOOLCHAIN_KEYS) validateToolIdentity(toolchain[key], `toolchain.${key}`);
@@ -158,6 +167,7 @@ function validateRunUnsigned(value) {
   for (const key of ["network_ids", "container_ids", "volume_ids"]) assertSortedUniqueStrings(isolation[key], `isolation.${key}`);
   if (!Array.isArray(isolation.ports) || isolation.ports.length === 0) fail("isolation.ports must be nonempty");
   isolation.ports.forEach((port) => assertInteger(port, "isolation port", 1));
+  if (isolation.ports.some((port) => port > 65_535)) fail("isolation ports must be <= 65535");
   if (new Set(isolation.ports).size !== isolation.ports.length || isolation.ports.some((port, index) => index > 0 && isolation.ports[index - 1] > port)) fail("isolation ports must be unique ascending values");
 
   const runtime = assertObject(receipt.runtime, "runtime", ["app", "full_local", "worker", "foreground_supervisor"]);
@@ -170,7 +180,7 @@ function validateRunUnsigned(value) {
     canaryIds.push(assertString(canary.canary_id, `canaries[${index}].canary_id`));
     assertTimestamp(canary.started_at, `canaries[${index}].started_at`);
     assertTimestamp(canary.completed_at, `canaries[${index}].completed_at`);
-    if (Date.parse(canary.started_at) > Date.parse(canary.completed_at)) fail("canary time range is invalid");
+    if (timestampMilliseconds(canary.started_at, `canaries[${index}].started_at`) > timestampMilliseconds(canary.completed_at, `canaries[${index}].completed_at`)) fail("canary time range is invalid");
     if (canary.exit_code !== 0) fail("canary exit_code must be 0");
     assertString(canary.normalized_result_digest, `canaries[${index}].normalized_result_digest`, HEX_64);
   }
@@ -256,7 +266,7 @@ function compareCodeUnits(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function validateMemberPair(memberReceipts) {
+function validateMemberPair(memberReceipts, { now = null, requireFresh = false } = {}) {
   if (!Array.isArray(memberReceipts) || memberReceipts.length !== 2) fail("exactly two member receipts are required");
   const members = memberReceipts.map(validateRunReceipt).map(memberProjection).sort((left, right) => compareCodeUnits(left.digest, right.digest));
   if (members[0].digest === members[1].digest) fail("member receipt digests must be distinct");
@@ -264,6 +274,17 @@ function validateMemberPair(memberReceipts) {
   if (members[0].resourceDigest === members[1].resourceDigest) fail("member resource identities must be distinct");
   for (const key of ["repository", "source_ref", "release_sha", "release_tree", "build_id", "sealed_bundle_digest", "bundle_manifest_digest"]) if (members[0].receipt[key] !== members[1].receipt[key]) fail(`member ${key} values must match`);
   for (const [key, label] of [["toolchainDigest", "toolchain"], ["imageSetDigest", "image"], ["migrationDigest", "migration"], ["canarySetDigest", "canary"]]) if (members[0][key] !== members[1][key]) fail(`member ${label} evidence must match`);
+  const completionTimes = members.map((member) => timestampMilliseconds(member.receipt.completed_at, "member completed_at"));
+  if (Math.max(...completionTimes) - Math.min(...completionTimes) > 24 * 60 * 60 * 1000) {
+    fail("member completion interval must be <= 24 hours");
+  }
+  if (requireFresh) {
+    const nowMilliseconds = now instanceof Date ? now.getTime() : Number.NaN;
+    if (!Number.isFinite(nowMilliseconds)) fail("member freshness validation requires a valid current instant");
+    for (const completion of completionTimes) {
+      if (nowMilliseconds >= completion + 24 * 60 * 60 * 1000) fail("member receipt is stale or expired");
+    }
+  }
   return members;
 }
 
@@ -271,9 +292,10 @@ function addHours(timestamp, hours) {
   return new Date(Date.parse(timestamp) + hours * 60 * 60 * 1000).toISOString();
 }
 
-export function buildRepeatabilityReceipt({ memberReceipts, issuerTaskId }) {
-  const members = validateMemberPair(memberReceipts);
-  const completedAt = members.map((member) => member.receipt.completed_at).sort().at(-1);
+export function buildRepeatabilityReceipt({ memberReceipts, issuerTaskId, now = new Date() }) {
+  const members = validateMemberPair(memberReceipts, { now, requireFresh: true });
+  const memberCompletedAt = members.map((member) => member.receipt.completed_at).sort();
+  const completedAt = memberCompletedAt.at(-1);
   const unsigned = {
     schema: REPEATABILITY_RECEIPT_SCHEMA,
     canonicalization: CANONICALIZATION,
@@ -293,7 +315,7 @@ export function buildRepeatabilityReceipt({ memberReceipts, issuerTaskId }) {
     cleanup_evidence_digests: members.map((member) => member.cleanupDigest),
     production_guard_digests: members.map((member) => member.productionGuardDigest),
     completed_at: completedAt,
-    valid_until: addHours(completedAt, 24),
+    valid_until: addHours(memberCompletedAt[0], 24),
     status: "repeatable",
     issuer_task_id: assertString(issuerTaskId, "issuer_task_id"),
   };
@@ -308,11 +330,12 @@ export function validateRepeatabilityReceipt(value, { memberReceipts, now = new 
   const receipt = assertObject(value, "repeatability receipt", [...REPEAT_UNSIGNED_KEYS, "repeatability_receipt_digest"]);
   const { repeatability_receipt_digest: digest, ...unsigned } = receipt;
   if (sha256Jcs(unsigned) !== digest) fail("repeatability receipt digest mismatch");
-  validateMemberPair(memberReceipts);
-  const expected = buildRepeatabilityReceipt({ memberReceipts, issuerTaskId: receipt.issuer_task_id });
+  validateMemberPair(memberReceipts, { now, requireFresh: true });
+  const expected = buildRepeatabilityReceipt({ memberReceipts, issuerTaskId: receipt.issuer_task_id, now });
   for (const key of REPEAT_UNSIGNED_KEYS) if (comparable(receipt[key]) !== comparable(expected[key])) fail(`member alignment or ${key} mismatch`);
-  if (Date.parse(receipt.valid_until) - Date.parse(receipt.completed_at) !== 24 * 60 * 60 * 1000) fail("valid_until must equal completed_at + 24 hours");
-  if (now instanceof Date && now.getTime() > Date.parse(receipt.valid_until)) fail("repeatability receipt is expired at valid_until");
+  const validUntil = timestampMilliseconds(receipt.valid_until, "valid_until");
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) fail("repeatability validation requires a valid current instant");
+  if (now.getTime() >= validUntil) fail("repeatability receipt is expired at valid_until");
   return receipt;
 }
 
@@ -329,24 +352,24 @@ export function parseAndValidateRepeatabilityReceipt(source, options) {
 
 function sameIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid
-    && (left.mode & 0o7777) === (right.mode & 0o7777) && left.size === right.size
-    && left.ctimeMs === right.ctimeMs && left.mtimeMs === right.mtimeMs;
+    && (left.mode & 0o7777n) === (right.mode & 0o7777n) && left.size === right.size
+    && left.ctimeNs === right.ctimeNs && left.mtimeNs === right.mtimeNs;
 }
 
 export function readPrivateCanonicalJsonFile(path, { repoRoot, expectedUid = process.getuid?.() }) {
   if (!isAbsolute(path)) throw new Error("Artifact path must be absolute.");
   const parent = dirname(path);
-  const parentStats = lstatSync(parent);
+  const parentStats = lstatSync(parent, { bigint: true });
   if (!parentStats.isDirectory() || parentStats.isSymbolicLink()) throw new Error("Artifact parent must be a canonical directory.");
-  if ((parentStats.mode & 0o777) !== 0o700) throw new Error("Artifact parent must use exact private mode 0700.");
-  if (parentStats.uid !== expectedUid) throw new Error("Artifact parent owner does not match the current owner.");
+  if ((parentStats.mode & 0o777n) !== 0o700n) throw new Error("Artifact parent must use exact private mode 0700.");
+  if (parentStats.uid !== BigInt(expectedUid)) throw new Error("Artifact parent owner does not match the current owner.");
   if (realpathSync(parent) !== parent) throw new Error("Artifact parent path must be canonical.");
 
-  const before = lstatSync(path);
+  const before = lstatSync(path, { bigint: true });
   if (!before.isFile() || before.isSymbolicLink()) throw new Error("Artifact must be a regular non-symlink file.");
-  if ((before.mode & 0o777) !== 0o600) throw new Error("Artifact must use exact private mode 0600.");
-  if (before.uid !== expectedUid) throw new Error("Artifact owner does not match the current owner.");
-  if (before.nlink !== 1) throw new Error("Artifact hard-link aliases are forbidden.");
+  if ((before.mode & 0o777n) !== 0o600n) throw new Error("Artifact must use exact private mode 0600.");
+  if (before.uid !== BigInt(expectedUid)) throw new Error("Artifact owner does not match the current owner.");
+  if (before.nlink !== 1n) throw new Error("Artifact hard-link aliases are forbidden.");
   const canonicalPath = realpathSync(path);
   if (canonicalPath !== path) throw new Error("Artifact path must be canonical and non-symlinked.");
   const canonicalRepo = realpathSync(resolve(repoRoot));
@@ -355,11 +378,18 @@ export function readPrivateCanonicalJsonFile(path, { repoRoot, expectedUid = pro
 
   const descriptor = openSync(path, FS_CONSTANTS.O_RDONLY | (FS_CONSTANTS.O_NOFOLLOW ?? 0));
   try {
-    const opened = fstatSync(descriptor);
+    const opened = fstatSync(descriptor, { bigint: true });
     if (!sameIdentity(before, opened)) throw new Error("Artifact identity changed before read.");
-    if (opened.size > 4 * 1024 * 1024) throw new Error("Artifact exceeds the maximum receipt size.");
-    const source = readFileSync(descriptor, "utf8");
-    const after = lstatSync(path);
+    if (opened.size > 4n * 1024n * 1024n) throw new Error("Artifact exceeds the maximum receipt size.");
+    const bytes = readFileSync(descriptor);
+    let source;
+    try {
+      source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      throw new Error("Artifact contains invalid UTF-8 bytes.");
+    }
+    if (!Buffer.from(source, "utf8").equals(bytes)) throw new Error("Artifact UTF-8 bytes do not round-trip exactly.");
+    const after = lstatSync(path, { bigint: true });
     if (!sameIdentity(opened, after)) throw new Error("Artifact identity changed during read.");
     return source;
   } finally {

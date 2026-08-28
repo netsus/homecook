@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { canonicalizeJcs } from "./lib/rfc8785-jcs.mjs";
@@ -13,6 +14,9 @@ import {
 } from "./lib/local-mac-production-rehearsal-inventory.mjs";
 import { classifyProductionInventory } from "./lib/local-mac-production-rehearsal-classifier.mjs";
 import { readCanonicalReceiptFile } from "./lib/local-mac-production-rehearsal-receipts.mjs";
+import { resolveTrustedGitExecutable } from "./lib/trusted-production-release-tools.mjs";
+
+const MODULE_REPOSITORY_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
 const HELP = `Homecook local Mac production rehearsal receipt foundation
 
@@ -31,7 +35,7 @@ function parseArguments(argv) {
   const result = {
     command: argv[0] ?? "help",
     json: false,
-    rootDir: process.cwd(),
+    rootDir: null,
     homeDir: process.env.HOME ?? "",
     inventoryPath: null,
     receiptPath: null,
@@ -69,17 +73,31 @@ function requireAbsolute(path, label) {
 
 function defaultProbeIdentity() {
   const path = realpathSync(fileURLToPath(import.meta.url));
-  const stats = lstatSync(path);
+  const stats = lstatSync(path, { bigint: true });
   return {
     version: "homecook-release-rehearsal-inventory-v1",
     realpath: path,
     device: String(stats.dev),
     inode: String(stats.ino),
-    mode: stats.mode & 0o7777,
-    ctime: stats.ctime.toISOString(),
-    size: stats.size,
+    mode: Number(stats.mode & 0o7777n),
+    ctime: new Date(Number(stats.ctimeMs)).toISOString(),
+    size: stats.size.toString(),
     sha256: createHash("sha256").update(readFileSync(path)).digest("hex"),
   };
+}
+
+function defaultRepositoryRootResolver() {
+  const gitBin = resolveTrustedGitExecutable();
+  const result = spawnSync(gitBin, ["-C", MODULE_REPOSITORY_ROOT, "rev-parse", "--show-toplevel"], {
+    encoding: "utf8",
+    env: { PATH: "/usr/bin:/bin" },
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 5_000,
+  });
+  if (result.status !== 0) throw new Error("Actual Git repository root could not be verified.");
+  const gitRoot = realpathSync(String(result.stdout ?? "").trim());
+  if (gitRoot !== MODULE_REPOSITORY_ROOT) throw new Error("Module repository identity does not match the actual Git root.");
+  return gitRoot;
 }
 
 function writeResult(output, result) {
@@ -99,6 +117,7 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     classify = classifyProductionInventory,
     readReceipt = readCanonicalReceiptFile,
     probeIdentity = defaultProbeIdentity,
+    repositoryRootResolver = defaultRepositoryRootResolver,
     now = new Date(),
   } = dependencies;
   const options = parseArguments(argv);
@@ -109,7 +128,9 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
   if (!["inventory", "classify", "verify"].includes(options.command)) throw new Error(`Unknown rehearsal command: ${options.command}`);
   if (!options.json) throw new Error("Rehearsal commands require --json for non-secret deterministic output.");
 
-  const rootDir = resolve(options.rootDir);
+  const actualRepositoryRoot = repositoryRootResolver();
+  const rootDir = options.rootDir === null ? actualRepositoryRoot : realpathSync(resolve(options.rootDir));
+  if (rootDir !== actualRepositoryRoot) throw new Error("--root-dir must exactly match the verified Git repository root.");
   if (options.command === "inventory") {
     if (options.approvedMigrationMarkerPath) requireAbsolute(options.approvedMigrationMarkerPath, "approved migration marker");
     const adapters = createInventoryAdapters({

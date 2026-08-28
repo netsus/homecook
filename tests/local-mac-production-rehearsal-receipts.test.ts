@@ -21,6 +21,8 @@ import {
   parseAndValidateRepeatabilityReceipt,
   parseAndValidateRunReceipt,
   readCanonicalReceiptFile,
+  readPrivateCanonicalJsonFile,
+  validateRunReceipt,
 } from "../scripts/lib/local-mac-production-rehearsal-receipts.mjs";
 
 const temporaryDirectories: string[] = [];
@@ -181,6 +183,12 @@ function redigestRepeatability(receipt: Record<string, unknown>) {
   };
 }
 
+function redigestRun(receipt: Record<string, unknown>) {
+  const unsigned = { ...receipt };
+  delete unsigned.receipt_digest;
+  return { ...unsigned, receipt_digest: sha256Jcs(unsigned) };
+}
+
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
     rmSync(temporaryDirectories.pop()!, { recursive: true, force: true });
@@ -260,17 +268,17 @@ describe("repeatability receipt", () => {
     });
 
     expect(parsed.member_receipt_digests).toEqual([...parsed.member_receipt_digests].sort());
-    expect(parsed.valid_until).toBe("2026-08-30T10:00:00.000Z");
+    expect(parsed.valid_until).toBe("2026-08-30T09:00:00.000Z");
     expect(parsed.status).toBe("repeatable");
   });
 
   it("rejects expired, extended, misaligned, and self-corrupted repeatability receipts", () => {
     const members = [buildRunReceipt(runInput(1)), buildRunReceipt(runInput(2))];
     const valid = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task" });
-    const expiredNow = new Date("2026-08-30T10:00:00.001Z");
+    const expiredNow = new Date("2026-08-30T09:00:00.000Z");
     const extended = redigestRepeatability({
       ...valid,
-      valid_until: "2026-08-30T10:00:00.001Z",
+      valid_until: "2026-08-30T09:00:00.001Z",
     });
     const misaligned = redigestRepeatability({
       ...valid,
@@ -330,6 +338,41 @@ describe("receipt schemas and artifact path boundary", () => {
     expect(validateRepeat({ ...repeat, member_run_ids: [repeat.member_run_ids[0]] })).toBe(false);
   });
 
+  it("rejects the same receipt attack table in runtime and JSON Schema", () => {
+    const require = createRequire(import.meta.url);
+    const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
+    const Ajv = require(require.resolve("ajv", { paths: [eslintPackage] }));
+    const schema = JSON.parse(readFileSync("scripts/schemas/local-mac-production-rehearsal-run-receipt.schema.json", "utf8"));
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    ajv.addFormat("date-time", (value: string) => {
+      const milliseconds = Date.parse(value);
+      return Number.isFinite(milliseconds) && new Date(milliseconds).toISOString() === value;
+    });
+    const validateSchema = ajv.compile(schema);
+    const valid = buildRunReceipt(runInput(1));
+    const attacks = [
+      redigestRun({ ...valid, isolation: { ...valid.isolation, ports: [70_000] } }),
+      redigestRun({ ...valid, toolchain: { ...valid.toolchain, node: { ...valid.toolchain.node, mode: "0755" } } }),
+      redigestRun({ ...valid, runtime: { ...valid.runtime, app: { ...valid.runtime.app, unexpected: true } } }),
+      redigestRun({ ...valid, images: [{ ...valid.images[0], local_cache_provenance_digest: "bad" }] }),
+      redigestRun({ ...valid, issued_at: "2026-02-30T08:00:00.000Z" }),
+    ];
+
+    for (const attack of attacks) {
+      let runtimeAccepted = true;
+      try {
+        validateRunReceipt(attack);
+      } catch {
+        runtimeAccepted = false;
+      }
+      const schemaAccepted = validateSchema(attack);
+      expect({ runtimeAccepted, schemaAccepted }, JSON.stringify(attack)).toEqual({
+        runtimeAccepted: false,
+        schemaAccepted: false,
+      });
+    }
+  });
+
   it("accepts only absolute, canonical, private, current-owner, outside-repository regular files", () => {
     const artifactRoot = tempDirectory("homecook-receipt-");
     const repoRoot = tempDirectory("homecook-repo-");
@@ -371,5 +414,60 @@ describe("receipt schemas and artifact path boundary", () => {
       message = error instanceof Error ? error.message : String(error);
     }
     expect(message).not.toContain(marker);
+  });
+
+  it("rejects invalid UTF-8 bytes before JSON decoding or canonical hashing", () => {
+    const artifactRoot = tempDirectory("homecook-receipt-invalid-utf8-");
+    const repoRoot = tempDirectory("homecook-repo-invalid-utf8-");
+    const receiptPath = join(artifactRoot, "receipt.json");
+    writeFileSync(receiptPath, Buffer.from([0x22, 0xff, 0x22]), { mode: 0o600 });
+
+    expect(() => readPrivateCanonicalJsonFile(receiptPath, {
+      repoRoot,
+      expectedUid: process.getuid!(),
+    })).toThrow(/UTF-8|canonical|invalid/iu);
+  });
+});
+
+describe("strict receipt time authority", () => {
+  it("rejects calendar-invalid RFC3339 instants instead of Date.parse normalization", () => {
+    expect(() => buildRunReceipt(runInput(1, {
+      issued_at: "2026-02-30T08:00:00.000Z",
+    }))).toThrow(/RFC3339|instant|calendar|issued_at/iu);
+  });
+
+  it("expires authority when now equals valid_until", () => {
+    const members = [buildRunReceipt(runInput(1)), buildRunReceipt(runInput(2))];
+    const repeatability = buildRepeatabilityReceipt({
+      memberReceipts: members,
+      issuerTaskId: "task",
+      now: new Date("2026-08-29T10:30:00.000Z"),
+    });
+
+    expect(() => parseAndValidateRepeatabilityReceipt(canonicalizeJcs(repeatability), {
+      memberReceipts: members,
+      now: new Date(repeatability.valid_until),
+    })).toThrow(/expired|valid_until/iu);
+  });
+
+  it("rejects stale members and binds authority to the earlier member expiry", () => {
+    const stale = buildRunReceipt(runInput(1, {
+      issued_at: "2020-01-01T08:00:00.000Z",
+      completed_at: "2020-01-01T09:00:00.000Z",
+    }));
+    const current = buildRunReceipt(runInput(2));
+
+    expect(() => buildRepeatabilityReceipt({
+      memberReceipts: [stale, current],
+      issuerTaskId: "task",
+      now: NOW,
+    })).toThrow(/member|stale|fresh|24|interval|expired/iu);
+
+    const valid = buildRepeatabilityReceipt({
+      memberReceipts: [buildRunReceipt(runInput(1)), current],
+      issuerTaskId: "task",
+      now: NOW,
+    });
+    expect(valid.valid_until).toBe("2026-08-30T09:00:00.000Z");
   });
 });

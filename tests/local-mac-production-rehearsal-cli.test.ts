@@ -101,6 +101,20 @@ describe("local Mac production rehearsal CLI", () => {
     expect(createAdapters).not.toHaveBeenCalled();
   });
 
+  it("rejects a caller-controlled root that differs from the actual repository root", async () => {
+    const readReceipt = vi.fn(() => ({ schema: "must-not-read" }));
+
+    await expect(runLocalMacProductionRehearsalCli([
+      "verify",
+      "--root-dir",
+      join(process.cwd(), "tests"),
+      "--receipt",
+      "/private/tmp/receipt.json",
+      "--json",
+    ], { readReceipt })).rejects.toThrow(/Git root|repository root|root-dir|exact/iu);
+    expect(readReceipt).not.toHaveBeenCalled();
+  });
+
   it("registers the exact package script family without changing the production promote kill switch", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["release:rehearsal:inventory"]).toBe("node scripts/local-mac-production-rehearsal.mjs inventory");
@@ -113,7 +127,7 @@ describe("local Mac production rehearsal CLI", () => {
     expect(productionCli).toContain("activation_blocked");
 
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 1 in review**");
+    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 1 repair in review**");
     expect(rehearsalRunbook).toContain("R0 inventory, mixed-state classify, receipt schema/JCS/offline verify");
     expect(rehearsalRunbook).toContain("candidate build/seal과 isolated run은 아직 구현되지 않았다");
   });

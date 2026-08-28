@@ -62,7 +62,7 @@
     "nonempty": { "type": "string", "minLength": 1 },
     "hex40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
     "identityInteger": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }] },
     "stringArray": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/nonempty" } },
     "toolIdentity": {
@@ -76,7 +76,7 @@
         "inode": { "$ref": "#/definitions/identityInteger" },
         "mode": { "type": "integer", "minimum": 0 },
         "ctime": { "$ref": "#/definitions/timestamp" },
-        "size": { "type": "integer", "minimum": 0 },
+        "size": { "$ref": "#/definitions/identityInteger" },
         "sha256": { "$ref": "#/definitions/hex64" }
       }
     },
