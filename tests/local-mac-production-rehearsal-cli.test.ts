@@ -17,7 +17,7 @@ function outputBuffer() {
 }
 
 describe("local Mac production rehearsal CLI", () => {
-  it("documents only the split-one read-only command family and explicit exclusions", () => {
+  it("documents the split-two candidate command while preserving production mutation zero exclusions", () => {
     const result = spawnSync(process.execPath, [SCRIPT, "help"], {
       cwd: process.cwd(),
       encoding: "utf8",
@@ -26,11 +26,49 @@ describe("local Mac production rehearsal CLI", () => {
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("inventory");
     expect(result.stdout).toContain("classify");
+    expect(result.stdout).toContain("candidate");
     expect(result.stdout).toContain("verify");
     expect(result.stdout).toContain("PRODUCTION MUTATION: 0");
-    expect(result.stdout).toContain("candidate build/seal");
+    expect(result.stdout).toContain("Docker rehearsal runner");
     expect(result.stdout).toContain("recovery execution");
     expect(result.stdout).not.toContain(" promote ");
+  });
+
+  it("builds an exact-SHA candidate through injected trusted adapters", async () => {
+    const output = outputBuffer();
+    const adapters = { trusted: true };
+    const createCandidateAdapters = vi.fn(() => adapters);
+    const buildCandidate = vi.fn(async (options) => ({
+      candidate_root: "/private/candidate/run-a",
+      manifest: {
+        schema: "candidate-fixture",
+        release_sha: options.releaseSha,
+      },
+    }));
+
+    await runLocalMacProductionRehearsalCli([
+      "candidate", "--release-sha", "a".repeat(40), "--json",
+    ], {
+      output: output.stream,
+      createCandidateAdapters,
+      buildCandidate,
+      candidateNamespaceResolver: () => "/private/rehearsal",
+      runIdFactory: () => "run-a",
+    });
+
+    expect(createCandidateAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      rootDir: process.cwd(),
+    }));
+    expect(buildCandidate).toHaveBeenCalledWith(expect.objectContaining({
+      releaseSha: "a".repeat(40),
+      namespaceRoot: "/private/rehearsal",
+      adapters,
+      runId: "run-a",
+    }));
+    expect(JSON.parse(output.value())).toMatchObject({
+      candidate_root: "/private/candidate/run-a",
+      manifest: { release_sha: "a".repeat(40) },
+    });
   });
 
   it("runs inventory through injected read-only adapters and canonical JSON output", async () => {
@@ -96,6 +134,10 @@ describe("local Mac production rehearsal CLI", () => {
 
     await expect(runLocalMacProductionRehearsalCli(["recover"], { createInventoryAdapters: createAdapters }))
       .rejects.toThrow(/unknown|recover/iu);
+    await expect(runLocalMacProductionRehearsalCli(["candidate", "--json"], { createInventoryAdapters: createAdapters }))
+      .rejects.toThrow(/release-sha|required/iu);
+    await expect(runLocalMacProductionRehearsalCli(["candidate", "--release-sha", "short", "--json"], { createInventoryAdapters: createAdapters }))
+      .rejects.toThrow(/40|sha/iu);
     await expect(runLocalMacProductionRehearsalCli(["classify", "--inventory", "relative.json", "--json"], { createInventoryAdapters: createAdapters }))
       .rejects.toThrow(/absolute/iu);
     expect(createAdapters).not.toHaveBeenCalled();
@@ -118,6 +160,7 @@ describe("local Mac production rehearsal CLI", () => {
   it("registers the exact package script family without changing the production promote kill switch", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["release:rehearsal:inventory"]).toBe("node scripts/local-mac-production-rehearsal.mjs inventory");
+    expect(packageJson.scripts["release:rehearsal:candidate"]).toBe("node scripts/local-mac-production-rehearsal.mjs candidate");
     expect(packageJson.scripts["release:rehearsal:classify"]).toBe("node scripts/local-mac-production-rehearsal.mjs classify");
     expect(packageJson.scripts["release:rehearsal:verify"]).toBe("node scripts/local-mac-production-rehearsal.mjs verify");
     expect(packageJson.scripts["release:production:promote"]).toBe("node scripts/promote-local-mac-production-release.mjs promote");
@@ -127,8 +170,8 @@ describe("local Mac production rehearsal CLI", () => {
     expect(productionCli).toContain("activation_blocked");
 
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 1 repair in review**");
-    expect(rehearsalRunbook).toContain("R0 inventory, mixed-state classify, receipt schema/JCS/offline verify");
-    expect(rehearsalRunbook).toContain("candidate build/seal과 isolated run은 아직 구현되지 않았다");
+    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 2 in review**");
+    expect(rehearsalRunbook).toContain("R0 inventory, mixed-state classify, receipt schema/JCS/offline verify와 R1 candidate build/seal");
+    expect(rehearsalRunbook).toContain("isolated run은 아직 구현되지 않았다");
   });
 });

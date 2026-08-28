@@ -1,6 +1,6 @@
 # Homecook 서버 Mac release rehearsal 계약
 
-상태: **canonical / implementation split 1 repair in review**
+상태: **canonical / implementation split 2 in review**
 변경 유형: `docs-governance`
 production mutation: **금지 (`false`)**
 제품 계약 영향: **N/A** — 공식 제품 5종, public API, DB schema 계약을 바꾸지 않는다.
@@ -9,7 +9,7 @@ production mutation: **금지 (`false`)**
 
 active production 승격의 역할·lock·tag immutability·manifest·attestation authority는 계속 [local-mac-production-release-promotion.md](./local-mac-production-release-promotion.md)가 가진다. 이 문서는 그보다 앞선 untagged exact-SHA candidate, isolated rehearsal, receipt, mixed-state read-only classification을 담당한다.
 
-현재 구현 범위는 R0 inventory, mixed-state classify, receipt schema/JCS/offline verify와 production surface snapshot foundation까지다. candidate build/seal과 isolated run은 아직 구현되지 않았다. 따라서 이 구현만으로 rehearsal 또는 production promotion이 가능하다고 주장하지 않으며, 모든 split과 독립 검토가 끝날 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
+현재 구현 범위는 R0 inventory, mixed-state classify, receipt schema/JCS/offline verify와 R1 candidate build/seal, production surface snapshot foundation까지다. isolated run은 아직 구현되지 않았다. 따라서 이 구현만으로 rehearsal 또는 production promotion이 가능하다고 주장하지 않으며, 모든 split과 독립 검토가 끝날 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
 
 ## 목표와 비목표
 
@@ -116,6 +116,18 @@ pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha> --jso
 - build output, worker artifact, migration set, runtime descriptors를 content-addressed create-only bundle로 seal한다.
 - bundle manifest는 contained symlink의 dereferenced bytes, executable mode, owner/mode, build ID, tool/image digest를 포함한다. 외부 realpath, hard-link alias, group/world-writable executable은 거부한다.
 - seal 뒤 원본 checkout을 다시 읽어 실행하지 않는다. 이후 rehearsal과 production authority는 sealed bundle bytes만 소비한다.
+
+split 2 구현 상태:
+
+- CLI와 closed schema는 각각 `scripts/local-mac-production-rehearsal.mjs candidate`, `scripts/schemas/local-mac-production-rehearsal-candidate.schema.json`이다.
+- candidate root는 repository 밖 `<home>/.homecook/rehearsal/{runs,candidates,failed}` 아래 current-user-owned mode `0700` create-only namespace만 사용한다. 성공 root 전체는 non-writable로 seal하고, 실패 root는 non-secret `failure.json`만 더해 재사용 불가 evidence로 보존한다.
+- source는 실행 직전 fetch한 `origin/master` exact SHA/tree를 local `git clone --no-checkout --no-hardlinks --no-local` detached checkout으로 만들고 tracked file bytes/mode/symlink/hardlink inventory를 build 전후 비교한다.
+- current-head GitHub check-runs와 commit statuses는 trusted read-only adapter가 full pagination으로 읽고, expected context를 포함한 started check 전체가 skip 없이 terminal success일 때만 safe projection digest를 candidate에 묶는다. provider raw payload는 저장하지 않는다.
+- build env source는 `<home>/.homecook/rehearsal/build-env.json` 하나다. exact `homecook.release-rehearsal-build-env.v1` JCS, current-user owner, `0600`, link count 1, parent/target non-symlink, `O_NOFOLLOW` FD pre/post identity를 요구한다. 허용값은 public build-time key allowlist만 child env에 새로 구성하며 raw value는 manifest/log에 남기지 않는다.
+- dependency install과 Next build는 absolute trusted Node/pnpm argv를 macOS network-deny sandbox에서 실행한다. `--frozen-lockfile --offline --package-import-method=copy`와 local store만 허용하며 package miss, external network success, Docker pull 필요는 fail closed한다.
+- exact Supabase CLI는 `2.110.0` local cache만 허용한다. Compose의 digest-pinned image는 local `docker image inspect`의 digest/platform/RepoDigest provenance만 읽으며 tag-only, missing digest, platform mismatch에는 pull 없이 실패한다.
+- app/full-local/worker는 한 번 만든 bytes를 기존 production execution-tree copier/mode normalizer와 existing worker artifact materializer로 같은 `sealed-bundle`에 복사한다. manifest digest에서 candidate ID, timestamp, absolute path, inode는 제외하고 file bytes, executable mode, contained symlink target+dereferenced digest, tool/image/migration/build-env input은 포함한다.
+- 이 구현은 Docker rehearsal runner, foreground supervisor, synthetic DB/canary, repeatability receipt, production tag/manifest/attestation binding, promote unlock을 포함하지 않는다.
 
 ### R2. isolated rehearse
 

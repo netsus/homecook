@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
@@ -15,20 +15,25 @@ import {
 import { classifyProductionInventory } from "./lib/local-mac-production-rehearsal-classifier.mjs";
 import { readCanonicalReceiptFile } from "./lib/local-mac-production-rehearsal-receipts.mjs";
 import { resolveTrustedGitExecutable } from "./lib/trusted-production-release-tools.mjs";
+import {
+  buildReleaseRehearsalCandidate,
+  createReleaseRehearsalCandidateAdapters,
+} from "./lib/local-mac-production-rehearsal-candidate.mjs";
 
 const MODULE_REPOSITORY_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
-const HELP = `Homecook local Mac production rehearsal receipt foundation
+const HELP = `Homecook local Mac production rehearsal candidate and receipt foundation
 
 PRODUCTION MUTATION: 0 (read-only/offline commands only)
 
 Usage:
   pnpm release:rehearsal:inventory -- --json [--home-dir <absolute>] [--root-dir <absolute>] [--approved-migration-marker <absolute>]
+  pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> --json
   pnpm release:rehearsal:classify -- --inventory <absolute-private-inventory> --json [--root-dir <absolute>]
   pnpm release:rehearsal:verify -- --receipt <absolute-private-receipt> [--member-receipt <absolute-run-receipt>]... --json [--root-dir <absolute>]
 
-Excluded from this split: candidate build/seal, Docker rehearsal runner, foreground supervisor,
-secret materialization, production attestation/promotion unlock, and recovery execution.
+Excluded from this split: Docker rehearsal runner, foreground supervisor, synthetic DB/canary,
+repeatability attestation, production attestation/promotion unlock, and recovery execution.
 `;
 
 function parseArguments(argv) {
@@ -41,6 +46,7 @@ function parseArguments(argv) {
     receiptPath: null,
     memberReceiptPaths: [],
     approvedMigrationMarkerPath: null,
+    releaseSha: null,
   };
   for (let index = 1; index < argv.length; index += 1) {
     const token = argv[index];
@@ -50,7 +56,7 @@ function parseArguments(argv) {
       continue;
     }
     const value = argv[index + 1];
-    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker"].includes(token)) {
+    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker", "--release-sha"].includes(token)) {
       if (!value || value.startsWith("--")) throw new Error(`${token} requires a value.`);
       index += 1;
       if (token === "--root-dir") result.rootDir = value;
@@ -59,6 +65,7 @@ function parseArguments(argv) {
       if (token === "--receipt") result.receiptPath = value;
       if (token === "--member-receipt") result.memberReceiptPaths.push(value);
       if (token === "--approved-migration-marker") result.approvedMigrationMarkerPath = value;
+      if (token === "--release-sha") result.releaseSha = value;
       continue;
     }
     throw new Error(`Unknown rehearsal option: ${token}`);
@@ -104,6 +111,10 @@ function writeResult(output, result) {
   output.write(`${canonicalizeJcs(result)}\n`);
 }
 
+function defaultCandidateNamespaceResolver({ homeDir }) {
+  return resolve(homeDir, ".homecook", "rehearsal");
+}
+
 /**
  * @param {string[]} argv
  * @param {Record<string, any>} [dependencies]
@@ -119,18 +130,43 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     probeIdentity = defaultProbeIdentity,
     repositoryRootResolver = defaultRepositoryRootResolver,
     now = new Date(),
+    buildCandidate = buildReleaseRehearsalCandidate,
+    createCandidateAdapters = createReleaseRehearsalCandidateAdapters,
+    candidateNamespaceResolver = defaultCandidateNamespaceResolver,
+    runIdFactory = () => randomUUID(),
   } = dependencies;
   const options = parseArguments(argv);
   if (["help", "--help", "-h"].includes(options.command)) {
     output.write(HELP);
     return;
   }
-  if (!["inventory", "classify", "verify"].includes(options.command)) throw new Error(`Unknown rehearsal command: ${options.command}`);
+  if (!["inventory", "candidate", "classify", "verify"].includes(options.command)) throw new Error(`Unknown rehearsal command: ${options.command}`);
   if (!options.json) throw new Error("Rehearsal commands require --json for non-secret deterministic output.");
 
   const actualRepositoryRoot = repositoryRootResolver();
   const rootDir = options.rootDir === null ? actualRepositoryRoot : realpathSync(resolve(options.rootDir));
   if (rootDir !== actualRepositoryRoot) throw new Error("--root-dir must exactly match the verified Git repository root.");
+  if (options.command === "candidate") {
+    if (!/^[0-9a-f]{40}$/u.test(options.releaseSha ?? "")) {
+      throw new Error("candidate --release-sha requires an exact lowercase 40-character SHA.");
+    }
+    const namespaceRoot = candidateNamespaceResolver({
+      homeDir: resolve(options.homeDir),
+      rootDir,
+    });
+    const adapters = createCandidateAdapters({
+      homeDir: resolve(options.homeDir),
+      namespaceRoot,
+      rootDir,
+    });
+    writeResult(output, await buildCandidate({
+      adapters,
+      namespaceRoot,
+      releaseSha: options.releaseSha,
+      runId: runIdFactory(),
+    }));
+    return;
+  }
   if (options.command === "inventory") {
     if (options.approvedMigrationMarkerPath) requireAbsolute(options.approvedMigrationMarkerPath, "approved migration marker");
     const adapters = createInventoryAdapters({
