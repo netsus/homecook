@@ -74,6 +74,25 @@ function sha256Bytes(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+const FIRST_CANONICAL_ADOPTION_WORKER_PLIST_SHA256 =
+  "69393712e063e6e0f84c869c330ff4f58f718b73184a20250395d8c9cfd39da8";
+
+/**
+ * @param {{
+ *   currentRuntimeBridge?: Record<string, unknown> | null,
+ *   actualDigest?: string,
+ * }} options
+ */
+export function allowFirstCanonicalAdoptionWorkerPlist({
+  currentRuntimeBridge = null,
+  actualDigest = "",
+} = {}) {
+  return Boolean(
+    currentRuntimeBridge
+    && actualDigest === FIRST_CANONICAL_ADOPTION_WORKER_PLIST_SHA256
+  );
+}
+
 function modeBits(mode) {
   return Number(mode) & 0o777;
 }
@@ -1146,14 +1165,19 @@ function buildDefaultDependencies(
             workerSecretRoot: currentWorkerPaths.secretRoot,
           },
         });
-      assertCanonicalLocalMacProductionPlist({
-        actualPath: workerPlist.path,
-        currentUid,
-        expectedContent: canonicalWorkerPlist,
-        expectedMode: 0o600,
-        label: "Current YouTube worker plist",
-        trustedRoot: options.homeDir,
-      });
+      if (!allowFirstCanonicalAdoptionWorkerPlist({
+        currentRuntimeBridge,
+        actualDigest: workerPlist.digest,
+      })) {
+        assertCanonicalLocalMacProductionPlist({
+          actualPath: workerPlist.path,
+          currentUid,
+          expectedContent: canonicalWorkerPlist,
+          expectedMode: 0o600,
+          label: "Current YouTube worker plist",
+          trustedRoot: options.homeDir,
+        });
+      }
       const youtubeWorker = {
         release_sha: workerArtifact.release_sha,
         release_tree: legacyBootstrap
