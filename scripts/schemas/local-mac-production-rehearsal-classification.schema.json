@@ -32,7 +32,7 @@
     "recoveryPlan": {
       "type": "object", "additionalProperties": false,
       "required": ["finding_id", "sequence", "required_authority", "preconditions", "expected_mutations", "rollback_or_forward_fix_boundary"],
-      "properties": { "finding_id": { "$ref": "#/definitions/nonempty" }, "sequence": { "type": "integer", "minimum": 0 }, "required_authority": { "$ref": "#/definitions/nonempty" }, "preconditions": { "$ref": "#/definitions/stringArray" }, "expected_mutations": { "$ref": "#/definitions/stringArray" }, "rollback_or_forward_fix_boundary": { "$ref": "#/definitions/nonempty" } }
+      "properties": { "finding_id": { "$ref": "#/definitions/nonempty" }, "sequence": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }, "required_authority": { "$ref": "#/definitions/nonempty" }, "preconditions": { "$ref": "#/definitions/stringArray" }, "expected_mutations": { "$ref": "#/definitions/stringArray" }, "rollback_or_forward_fix_boundary": { "$ref": "#/definitions/nonempty" } }
     }
   }
 }

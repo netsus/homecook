@@ -33,6 +33,10 @@ const RELEASE_SHA = "1".repeat(40);
 const RELEASE_TREE = "2".repeat(40);
 const NOW = new Date("2026-08-29T10:30:00.000Z");
 
+function buildTestRunReceipt(input: Record<string, unknown>) {
+  return buildRunReceipt(input, { now: NOW });
+}
+
 function tempDirectory(prefix: string) {
   const path = mkdtempSync(join(tmpdir(), prefix));
   const canonicalPath = realpathSync(path);
@@ -197,15 +201,15 @@ afterEach(() => {
 
 describe("rehearsal run receipt", () => {
   it("builds and parses an exact canonical self-digested receipt", () => {
-    const receipt = buildRunReceipt(runInput(1));
-    const parsed = parseAndValidateRunReceipt(canonicalizeJcs(receipt));
+    const receipt = buildTestRunReceipt(runInput(1));
+    const parsed = parseAndValidateRunReceipt(canonicalizeJcs(receipt), { now: NOW });
 
     expect(parsed).toEqual(receipt);
     expect(receipt.receipt_digest).toMatch(/^[0-9a-f]{64}$/u);
   });
 
   it("rejects missing, unknown, duplicate, noncanonical, and altered digest input", () => {
-    const receipt = buildRunReceipt(runInput(1));
+    const receipt = buildTestRunReceipt(runInput(1));
     const canonical = canonicalizeJcs(receipt);
     const missing = { ...receipt } as Record<string, unknown>;
     delete missing.repository;
@@ -233,7 +237,7 @@ describe("rehearsal run receipt", () => {
     ];
 
     for (const input of cases) {
-      expect(() => buildRunReceipt(input)).toThrow(/cleanup|residue|mutation|exposed|identity|release|build/iu);
+      expect(() => buildTestRunReceipt(input)).toThrow(/cleanup|residue|mutation|exposed|identity|release|build/iu);
     }
   });
 
@@ -251,16 +255,17 @@ describe("rehearsal run receipt", () => {
       },
     };
 
-    expect(buildRunReceipt(input).toolchain.node.inode).toBe("1152921500311885470");
+    expect(buildTestRunReceipt(input).toolchain.node.inode).toBe("1152921500311885470");
   });
 });
 
 describe("repeatability receipt", () => {
   it("aligns two distinct members by digest and enforces exact 24-hour expiry", () => {
-    const members = [buildRunReceipt(runInput(2)), buildRunReceipt(runInput(1))];
+    const members = [buildTestRunReceipt(runInput(2)), buildTestRunReceipt(runInput(1))];
     const receipt = buildRepeatabilityReceipt({
       memberReceipts: members,
       issuerTaskId: "019ff-rehearsal-author",
+      now: NOW,
     });
     const parsed = parseAndValidateRepeatabilityReceipt(canonicalizeJcs(receipt), {
       memberReceipts: members,
@@ -273,8 +278,8 @@ describe("repeatability receipt", () => {
   });
 
   it("rejects expired, extended, misaligned, and self-corrupted repeatability receipts", () => {
-    const members = [buildRunReceipt(runInput(1)), buildRunReceipt(runInput(2))];
-    const valid = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task" });
+    const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
+    const valid = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
     const expiredNow = new Date("2026-08-30T09:00:00.000Z");
     const extended = redigestRepeatability({
       ...valid,
@@ -292,7 +297,7 @@ describe("repeatability receipt", () => {
   });
 
   it("rejects identical run/resource IDs and bundle/tool/image/migration/canary mismatch", () => {
-    const first = buildRunReceipt(runInput(1));
+    const first = buildTestRunReceipt(runInput(1));
     const mutations = [
       { run_id: first.run_id },
       { isolation: { ...runInput(2).isolation, resource_identity_digest: first.isolation.resource_identity_digest } },
@@ -312,8 +317,8 @@ describe("repeatability receipt", () => {
     ];
 
     for (const override of mutations) {
-      const second = buildRunReceipt(runInput(2, override));
-      expect(() => buildRepeatabilityReceipt({ memberReceipts: [first, second], issuerTaskId: "task" }))
+      const second = buildTestRunReceipt(runInput(2, override));
+      expect(() => buildRepeatabilityReceipt({ memberReceipts: [first, second], issuerTaskId: "task", now: NOW }))
         .toThrow(/run|resource|bundle|toolchain|image|migration|canary|distinct|match/iu);
     }
   });
@@ -329,8 +334,8 @@ describe("receipt schemas and artifact path boundary", () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validateRun = ajv.compile(runSchema);
     const validateRepeat = ajv.compile(repeatSchema);
-    const members = [buildRunReceipt(runInput(1)), buildRunReceipt(runInput(2))];
-    const repeat = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task" });
+    const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
+    const repeat = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
 
     expect(validateRun(members[0]), JSON.stringify(validateRun.errors)).toBe(true);
     expect(validateRepeat(repeat), JSON.stringify(validateRepeat.errors)).toBe(true);
@@ -349,13 +354,14 @@ describe("receipt schemas and artifact path boundary", () => {
       return Number.isFinite(milliseconds) && new Date(milliseconds).toISOString() === value;
     });
     const validateSchema = ajv.compile(schema);
-    const valid = buildRunReceipt(runInput(1));
+    const valid = buildTestRunReceipt(runInput(1));
     const attacks = [
       redigestRun({ ...valid, isolation: { ...valid.isolation, ports: [70_000] } }),
       redigestRun({ ...valid, toolchain: { ...valid.toolchain, node: { ...valid.toolchain.node, mode: "0755" } } }),
       redigestRun({ ...valid, runtime: { ...valid.runtime, app: { ...valid.runtime.app, unexpected: true } } }),
       redigestRun({ ...valid, images: [{ ...valid.images[0], local_cache_provenance_digest: "bad" }] }),
       redigestRun({ ...valid, issued_at: "2026-02-30T08:00:00.000Z" }),
+      redigestRun({ ...valid, toolchain: { ...valid.toolchain, node: { ...valid.toolchain.node, mode: Number.MAX_SAFE_INTEGER + 1 } } }),
     ];
 
     for (const attack of attacks) {
@@ -376,11 +382,11 @@ describe("receipt schemas and artifact path boundary", () => {
   it("accepts only absolute, canonical, private, current-owner, outside-repository regular files", () => {
     const artifactRoot = tempDirectory("homecook-receipt-");
     const repoRoot = tempDirectory("homecook-repo-");
-    const receipt = buildRunReceipt(runInput(1));
+    const receipt = buildTestRunReceipt(runInput(1));
     const receiptPath = join(artifactRoot, "receipt.json");
     writeFileSync(receiptPath, canonicalizeJcs(receipt), { mode: 0o600 });
 
-    expect(readCanonicalReceiptFile(receiptPath, { repoRoot, expectedUid: process.getuid!() }).receipt_digest)
+    expect(readCanonicalReceiptFile(receiptPath, { repoRoot, expectedUid: process.getuid!(), now: NOW }).receipt_digest)
       .toBe(receipt.receipt_digest);
     expect(() => readCanonicalReceiptFile("relative.json", { repoRoot, expectedUid: process.getuid!() })).toThrow(/absolute/iu);
     expect(() => readCanonicalReceiptFile(receiptPath, { repoRoot, expectedUid: process.getuid!() + 1 })).toThrow(/owner/iu);
@@ -433,11 +439,11 @@ describe("strict receipt time authority", () => {
   it("rejects calendar-invalid RFC3339 instants instead of Date.parse normalization", () => {
     expect(() => buildRunReceipt(runInput(1, {
       issued_at: "2026-02-30T08:00:00.000Z",
-    }))).toThrow(/RFC3339|instant|calendar|issued_at/iu);
+    }), { now: NOW })).toThrow(/RFC3339|instant|calendar|issued_at/iu);
   });
 
   it("expires authority when now equals valid_until", () => {
-    const members = [buildRunReceipt(runInput(1)), buildRunReceipt(runInput(2))];
+    const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
     const repeatability = buildRepeatabilityReceipt({
       memberReceipts: members,
       issuerTaskId: "task",
@@ -454,8 +460,8 @@ describe("strict receipt time authority", () => {
     const stale = buildRunReceipt(runInput(1, {
       issued_at: "2020-01-01T08:00:00.000Z",
       completed_at: "2020-01-01T09:00:00.000Z",
-    }));
-    const current = buildRunReceipt(runInput(2));
+    }), { now: NOW });
+    const current = buildTestRunReceipt(runInput(2));
 
     expect(() => buildRepeatabilityReceipt({
       memberReceipts: [stale, current],
@@ -464,10 +470,44 @@ describe("strict receipt time authority", () => {
     })).toThrow(/member|stale|fresh|24|interval|expired/iu);
 
     const valid = buildRepeatabilityReceipt({
-      memberReceipts: [buildRunReceipt(runInput(1)), current],
+      memberReceipts: [buildTestRunReceipt(runInput(1)), current],
       issuerTaskId: "task",
       now: NOW,
     });
     expect(valid.valid_until).toBe("2026-08-30T09:00:00.000Z");
+  });
+
+  it("rejects future run and repeatability authority at build and validation time", () => {
+    const futureNow = new Date("2030-01-01T12:00:00.000Z");
+    const futureRuns = [1, 2].map((index) => {
+      const issuedHour = String(index + 7).padStart(2, "0");
+      const completedHour = String(index + 8).padStart(2, "0");
+      return buildRunReceipt(runInput(index as 1 | 2, {
+      issued_at: `2030-01-01T${issuedHour}:00:00.000Z`,
+      completed_at: `2030-01-01T${completedHour}:00:00.000Z`,
+      canaries: [{
+        ...runInput(index as 1 | 2).canaries[0],
+        started_at: `2030-01-01T${issuedHour}:10:00.000Z`,
+        completed_at: `2030-01-01T${issuedHour}:11:00.000Z`,
+      }],
+      }), { now: futureNow });
+    });
+
+    expect(() => buildRunReceipt(runInput(1, {
+      issued_at: "2099-01-01T08:00:00.000Z",
+      completed_at: "2099-01-01T09:00:00.000Z",
+    }), { now: NOW })).toThrow(/future|completed_at|now/iu);
+    expect(() => buildRepeatabilityReceipt({ memberReceipts: futureRuns, issuerTaskId: "task", now: NOW }))
+      .toThrow(/future|member|completed_at|now/iu);
+
+    const futureRepeatability = buildRepeatabilityReceipt({
+      memberReceipts: futureRuns,
+      issuerTaskId: "task",
+      now: futureNow,
+    });
+    expect(() => parseAndValidateRepeatabilityReceipt(canonicalizeJcs(futureRepeatability), {
+      memberReceipts: futureRuns,
+      now: NOW,
+    })).toThrow(/future|member|completed_at|now/iu);
   });
 });

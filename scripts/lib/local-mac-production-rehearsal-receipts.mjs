@@ -218,21 +218,24 @@ function validateRunUnsigned(value) {
   return receipt;
 }
 
-export function validateRunReceipt(value) {
+export function validateRunReceipt(value, { now = new Date() } = {}) {
   const receipt = assertObject(value, "run receipt", [...RUN_UNSIGNED_KEYS, "receipt_digest"]);
   const { receipt_digest: digest, ...unsigned } = receipt;
   validateRunUnsigned(unsigned);
   assertString(digest, "receipt_digest", HEX_64);
   if (sha256Jcs(unsigned) !== digest) fail("run receipt digest mismatch");
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) fail("run receipt validation requires a valid current instant");
+  if (timestampMilliseconds(receipt.completed_at, "completed_at") > now.getTime()) fail("completed_at must not be in the future relative to now");
   return receipt;
 }
 
-export function buildRunReceipt(input) {
+export function buildRunReceipt(input, { now = new Date() } = {}) {
   validateRunUnsigned(input);
-  return Object.freeze({ ...input, receipt_digest: sha256Jcs(input) });
+  const receipt = Object.freeze({ ...input, receipt_digest: sha256Jcs(input) });
+  return validateRunReceipt(receipt, { now });
 }
 
-export function parseAndValidateRunReceipt(source) {
+export function parseAndValidateRunReceipt(source, options) {
   let parsed;
   try {
     parsed = parseCanonicalJcs(source);
@@ -240,7 +243,7 @@ export function parseAndValidateRunReceipt(source) {
     if (/duplicate/iu.test(error instanceof Error ? error.message : "")) throw error;
     throw new Error("Rehearsal receipt rejected: input is not canonical RFC8785 JCS.");
   }
-  return validateRunReceipt(parsed);
+  return validateRunReceipt(parsed, options);
 }
 
 function normalizedCanarySet(receipt) {
@@ -268,7 +271,7 @@ function compareCodeUnits(left, right) {
 
 function validateMemberPair(memberReceipts, { now = null, requireFresh = false } = {}) {
   if (!Array.isArray(memberReceipts) || memberReceipts.length !== 2) fail("exactly two member receipts are required");
-  const members = memberReceipts.map(validateRunReceipt).map(memberProjection).sort((left, right) => compareCodeUnits(left.digest, right.digest));
+  const members = memberReceipts.map((receipt) => validateRunReceipt(receipt, { now: now ?? new Date() })).map(memberProjection).sort((left, right) => compareCodeUnits(left.digest, right.digest));
   if (members[0].digest === members[1].digest) fail("member receipt digests must be distinct");
   if (members[0].runId === members[1].runId) fail("member run IDs must be distinct");
   if (members[0].resourceDigest === members[1].resourceDigest) fail("member resource identities must be distinct");
@@ -401,7 +404,7 @@ export function readCanonicalReceiptFile(path, options) {
   const source = readPrivateCanonicalJsonFile(path, options);
   try {
     const parsed = parseCanonicalJcs(source);
-    if (parsed.schema === RUN_RECEIPT_SCHEMA) return validateRunReceipt(parsed);
+    if (parsed.schema === RUN_RECEIPT_SCHEMA) return validateRunReceipt(parsed, options);
     if (parsed.schema === REPEATABILITY_RECEIPT_SCHEMA) return validateRepeatabilityReceipt(parsed, options);
     fail("receipt schema is not recognized");
   } catch (error) {
