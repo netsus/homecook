@@ -115,7 +115,7 @@ function validateTool(value) {
 
 function validateSurfaces(value) {
   const surfaces = exactObject(value, "surfaces", SURFACE_KEYS);
-  exactObject(surfaces.active_promotion_lock, "surfaces.active_promotion_lock", ARTIFACT_KEYS);
+  validateArtifactEvidence(surfaces.active_promotion_lock, "surfaces.active_promotion_lock", { expectedKind: "active_promotion_lock" });
   for (const [key, keys] of [["release_artifacts", ARTIFACT_KEYS], ["workloads", WORKLOAD_KEYS], ["launchd", LAUNCHD_KEYS], ["port_listeners", PORT_KEYS], ["opaque_configs", CONFIG_KEYS]]) {
     if (!Array.isArray(surfaces[key])) fail(`surfaces.${key} must be an array`);
     surfaces[key].forEach((entry, index) => exactObject(entry, `surfaces.${key}[${index}]`, keys));
@@ -138,15 +138,9 @@ function validateSurfaces(value) {
     for (const key of ["sealed_bundle_digest", "descriptor_digest"]) if (!HEX_64.test(prepared[key])) fail(`prepared identity ${key} is invalid`);
   }
 
-  for (const artifact of surfaces.release_artifacts) {
-    nonempty(artifact.kind, "release artifact kind");
-    if (typeof artifact.exists !== "boolean") fail("release artifact exists must be boolean");
-    for (const key of ["device", "inode"]) identityInteger(artifact[key], `release artifact ${key}`);
-    for (const key of ["owner_uid", "mode"]) integer(artifact[key], `release artifact ${key}`);
-    identityInteger(artifact.size, "release artifact size");
-    strictTimestamp(artifact.mtime, "release artifact mtime");
-    if (!HEX_64.test(artifact.sha256)) fail("release artifact sha256 has an invalid format");
-  }
+  for (const artifact of surfaces.release_artifacts) validateArtifactEvidence(artifact, "release artifact");
+  const artifactKinds = surfaces.release_artifacts.map((artifact) => artifact.kind);
+  if (new Set(artifactKinds).size !== artifactKinds.length) fail("release artifact kinds must be unique; duplicate descriptor evidence is ambiguous");
   for (const workload of surfaces.workloads) {
     nonempty(workload.component, "workload component");
     nullablePattern(workload.release_sha, "workload release_sha", HEX_40);
@@ -189,6 +183,27 @@ function validateSurfaces(value) {
   return surfaces;
 }
 
+function validateArtifactEvidence(value, label, { expectedKind = null } = {}) {
+  const artifact = exactObject(value, label, ARTIFACT_KEYS);
+  nonempty(artifact.kind, `${label}.kind`);
+  if (expectedKind !== null && artifact.kind !== expectedKind) fail(`${label}.kind must equal ${expectedKind}`);
+  if (typeof artifact.exists !== "boolean") fail(`${label}.exists must be boolean`);
+  for (const key of ["device", "inode"]) identityInteger(artifact[key], `${label}.${key}`);
+  for (const key of ["owner_uid", "mode"]) integer(artifact[key], `${label}.${key}`);
+  identityInteger(artifact.size, `${label}.size`);
+  strictTimestamp(artifact.mtime, `${label}.mtime`);
+  if (!HEX_64.test(artifact.sha256)) fail(`${label}.sha256 has an invalid format`);
+  if (!artifact.exists) {
+    const expectedDigest = sha256Jcs({ kind: artifact.kind, exists: false });
+    if (artifact.device !== "0" || artifact.inode !== "0" || artifact.owner_uid !== 0
+      || artifact.mode !== 0 || ![0, "0"].includes(artifact.size)
+      || artifact.mtime !== "1970-01-01T00:00:00.000Z" || artifact.sha256 !== expectedDigest) {
+      fail(`${label} absent sentinel fields are inconsistent`);
+    }
+  }
+  return artifact;
+}
+
 export function validateProductionInventory(value) {
   const inventory = exactObject(value, "inventory", [...INVENTORY_UNSIGNED_KEYS, "inventory_digest"]);
   const { inventory_digest: digest, ...unsigned } = inventory;
@@ -202,6 +217,9 @@ export function validateProductionInventory(value) {
     if (!['success', 'failed', 'skipped'].includes(status.status)) fail(`probe_statuses.${name}.status is invalid`);
     if (status.reason_code !== null) nonempty(status.reason_code, `probe_statuses.${name}.reason_code`);
     integer(status.evidence_count, `probe_statuses.${name}.evidence_count`);
+  }
+  if (statuses.active_promotion_lock.status === "success" && statuses.active_promotion_lock.evidence_count !== 1) {
+    fail("active promotion lock successful probe must contain exactly one evidence object");
   }
   if (!Array.isArray(inventory.tool_identities)) fail("tool_identities must be an array");
   inventory.tool_identities.forEach((tool, index) => {
@@ -399,21 +417,36 @@ function captureTrustedAncestorChain(basePath, targetParent, label) {
     }
   }
   const uid = BigInt(process.getuid?.());
-  return paths.filter((path) => existsSync(path)).map((path) => {
-    const stats = lstatSync(path, { bigint: true });
+  return paths.map((path) => {
+    let stats;
+    try {
+      stats = lstatSync(path, { bigint: true });
+    } catch (error) {
+      if (error && typeof error === "object" && error.code === "ENOENT") return { path, absent: true };
+      throw error;
+    }
     if (stats.isSymbolicLink() || !stats.isDirectory() || stats.uid !== uid
       || (stats.mode & 0o022n) !== 0n || (stats.mode & 0o111n) === 0n
       || realpathSync(path) !== path) {
       fail(`${label} ancestor trust verification failed`);
     }
-    return { path, stats };
+    return { path, absent: false, stats };
   });
 }
 
-function withTrustedAncestorChains(chains, operation) {
+export function withTrustedProductionAncestors(chains, operation) {
   const snapshots = chains.flatMap(({ base, target, label }) => captureTrustedAncestorChain(base, dirname(target), label));
   const value = operation();
   for (const snapshot of snapshots) {
+    if (snapshot.absent) {
+      try {
+        lstatSync(snapshot.path, { bigint: true });
+        fail("trusted production ancestor was created during probe");
+      } catch (error) {
+        if (error && typeof error === "object" && error.code === "ENOENT") continue;
+        throw error;
+      }
+    }
     const after = lstatSync(snapshot.path, { bigint: true });
     if (!sameFileIdentity(snapshot.stats, after) || realpathSync(snapshot.path) !== snapshot.path) {
       fail("trusted production ancestor changed during probe");
@@ -421,6 +454,8 @@ function withTrustedAncestorChains(chains, operation) {
   }
   return value;
 }
+
+const withTrustedAncestorChains = withTrustedProductionAncestors;
 
 function bigintMetadata(stats, relativePath, type) {
   return {
@@ -630,6 +665,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     approvedMigrationMarkerPath = null,
     dockerBin: dockerBinOption = null,
     commandRunner = spawnSync,
+    trustedToolPaths = {},
   } = options;
   const canonicalHome = realpathSync(resolve(homeDir));
   const canonicalRoot = realpathSync(resolve(rootDir));
@@ -640,6 +676,9 @@ export function createLocalProductionInventoryAdapters(options = {}) {
   const lockRoot = join(releaseRoot, "promotion-locks");
   const snapshotRoot = join(releaseRoot, "execution-snapshots");
   const fullLocalConfigPath = join(canonicalRoot, "infra", "full-local-supabase", ".env.production.local");
+  const gitBin = trustedToolPaths.git ?? resolveTrustedGitExecutable();
+  const launchctlBin = trustedToolPaths.launchctl ?? "/bin/launchctl";
+  const lsofBin = trustedToolPaths.lsof ?? "/usr/sbin/lsof";
   function resolveProductionDockerContext() {
     return withTrustedAncestorChains([
       { base: canonicalRoot, target: fullLocalConfigPath, label: "full-local production config" },
@@ -713,7 +752,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       if (!Number.isInteger(uid)) return [];
       const labels = ["com.homecook.production", "com.homecook.full-local-production", "com.homecook.youtube-extraction-worker"];
       return labels.map((label) => {
-        const raw = commandOutput(commandRunner, "/bin/launchctl", ["print", `gui/${uid}/${label}`]);
+        const raw = commandOutput(commandRunner, launchctlBin, ["print", `gui/${uid}/${label}`]);
         const state = /^\s*state = (.+)$/mu.exec(raw)?.[1]?.trim() ?? (raw ? "unknown" : "missing");
         const pidText = /^\s*pid = (\d+)$/mu.exec(raw)?.[1];
         const projection = { label, loaded: Boolean(raw), state, pid: pidText ? Number(pidText) : null };
@@ -773,7 +812,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       return { containers, networks, volumes };
     },
     async readPortListeners() {
-      const raw = commandOutput(commandRunner, "/usr/sbin/lsof", ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"], { absentExit: "lsof-no-listener" });
+      const raw = commandOutput(commandRunner, lsofBin, ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"], { absentExit: "lsof-no-listener" });
       let pid = null;
       let processName = "unknown";
       const listeners = [];
@@ -800,9 +839,9 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     async readToolIdentities() {
       const { dockerBin } = resolveProductionDockerContext();
       const tools = [
-        executableIdentity("git", resolveTrustedGitExecutable()),
-        executableIdentity("launchctl", "/bin/launchctl"),
-        executableIdentity("lsof", "/usr/sbin/lsof"),
+        executableIdentity("git", gitBin),
+        executableIdentity("launchctl", launchctlBin),
+        executableIdentity("lsof", lsofBin),
       ];
       if (dockerBin) tools.push(executableIdentity("docker", dockerBin));
       return tools;

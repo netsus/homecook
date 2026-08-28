@@ -37,6 +37,10 @@
           }
         }
       }
+    },
+    {
+      "if": { "properties": { "probe_statuses": { "properties": { "active_promotion_lock": { "properties": { "status": { "const": "success" } } } } } } },
+      "then": { "properties": { "probe_statuses": { "properties": { "active_promotion_lock": { "properties": { "evidence_count": { "const": 1 } } } } } } }
     }
   ],
   "definitions": {
@@ -92,6 +96,26 @@
         "mtime": { "$ref": "#/definitions/timestamp" },
         "sha256": { "$ref": "#/definitions/hex64" }
       }
+    },
+    "activePromotionLock": {
+      "allOf": [
+        { "$ref": "#/definitions/artifact" },
+        {
+          "properties": { "kind": { "const": "active_promotion_lock" } },
+          "if": { "properties": { "exists": { "const": false } } },
+          "then": {
+            "properties": {
+              "device": { "const": "0" },
+              "inode": { "const": "0" },
+              "owner_uid": { "const": 0 },
+              "mode": { "const": 0 },
+              "size": { "enum": [0, "0"] },
+              "mtime": { "const": "1970-01-01T00:00:00.000Z" },
+              "sha256": { "const": "9b2f046a660224675df6976575b5b5c0a3747ebda6d8c116633f957d870060ab" }
+            }
+          }
+        }
+      ]
     },
     "workload": {
       "type": "object",
@@ -176,8 +200,8 @@
       "type": "object", "additionalProperties": false,
       "required": ["release_artifacts", "active_promotion_lock", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "prepared_identity"],
       "properties": {
-        "release_artifacts": { "type": "array", "items": { "$ref": "#/definitions/artifact" } },
-        "active_promotion_lock": { "$ref": "#/definitions/artifact" },
+        "release_artifacts": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/artifact" } },
+        "active_promotion_lock": { "$ref": "#/definitions/activePromotionLock" },
         "workloads": { "type": "array", "items": { "$ref": "#/definitions/workload" } },
         "launchd": { "type": "array", "items": { "$ref": "#/definitions/launchd" } },
         "docker": {

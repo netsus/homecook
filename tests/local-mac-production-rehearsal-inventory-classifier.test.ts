@@ -1,6 +1,7 @@
 import {
   chmodSync,
   lstatSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -65,8 +66,28 @@ function createAdapters({ mixed = false } = {}) {
     adapters: {
       readReleaseArtifacts: vi.fn(async () => [
         { kind: "release_root", exists: true, device: 1, inode: 10, owner_uid: process.getuid!(), mode: 0o700, size: 0, mtime: "2026-08-29T08:00:00.000Z", sha256: SHA_A, raw_env: "DATABASE_PASSWORD=secret" },
-        { kind: "current_descriptor", exists: !mixed, device: 1, inode: 11, owner_uid: process.getuid!(), mode: 0o600, size: 10, mtime: "2026-08-29T08:00:00.000Z", sha256: SHA_B },
-        { kind: `recovered_lock:${SHA_C}`, exists: mixed, device: 1, inode: 12, owner_uid: process.getuid!(), mode: 0o700, size: 0, mtime: "2026-08-29T08:00:00.000Z", sha256: SHA_C },
+        {
+          kind: "current_descriptor",
+          exists: !mixed,
+          device: mixed ? "0" : 1,
+          inode: mixed ? "0" : 11,
+          owner_uid: mixed ? 0 : process.getuid!(),
+          mode: mixed ? 0 : 0o600,
+          size: mixed ? "0" : 10,
+          mtime: mixed ? "1970-01-01T00:00:00.000Z" : "2026-08-29T08:00:00.000Z",
+          sha256: mixed ? sha256Jcs({ kind: "current_descriptor", exists: false }) : SHA_B,
+        },
+        {
+          kind: `recovered_lock:${SHA_C}`,
+          exists: mixed,
+          device: mixed ? 1 : "0",
+          inode: mixed ? 12 : "0",
+          owner_uid: mixed ? process.getuid!() : 0,
+          mode: mixed ? 0o700 : 0,
+          size: mixed ? 0 : "0",
+          mtime: mixed ? "2026-08-29T08:00:00.000Z" : "1970-01-01T00:00:00.000Z",
+          sha256: mixed ? SHA_C : sha256Jcs({ kind: `recovered_lock:${SHA_C}`, exists: false }),
+        },
         ...["com.homecook.production", "com.homecook.full-local-production", "com.homecook.youtube-extraction-worker"].map((label, offset) => ({
           kind: `launch_agent_plist:${label}`,
           exists: true,
@@ -89,11 +110,11 @@ function createAdapters({ mixed = false } = {}) {
         exists: false,
         device: "0",
         inode: "0",
-        owner_uid: process.getuid!(),
+        owner_uid: 0,
         mode: 0,
         size: "0",
         mtime: "1970-01-01T00:00:00.000Z",
-        sha256: SHA_A,
+        sha256: sha256Jcs({ kind: "active_promotion_lock", exists: false }),
       })),
       readLaunchd: vi.fn(async () => [
         { label: "com.homecook.production", loaded: true, state: mixed ? "scheduled" : "running", pid: mixed ? null : 101, projection_digest: SHA_A, environment: { TOKEN: "secret" } },
@@ -383,7 +404,7 @@ describe("read-only production inventory", () => {
 
     const failedUnsigned = {
       ...withLock,
-      surfaces: { ...surfaces, active_promotion_lock: { ...lockEvidence, exists: false } },
+      surfaces: { ...surfaces, active_promotion_lock: inventory.surfaces.active_promotion_lock },
       probe_statuses: {
         ...withLock.probe_statuses,
         active_promotion_lock: { status: "failed", reason_code: "active_promotion_lock_probe_failed", evidence_count: 0 },
@@ -393,6 +414,70 @@ describe("read-only production inventory", () => {
     delete (failedUnsigned as Record<string, unknown>).inventory_digest;
     const failedLockProbe = { ...failedUnsigned, inventory_digest: sha256Jcs(failedUnsigned) };
     expect(classifyProductionInventory(failedLockProbe).promotion_safe).toBe(false);
+  });
+
+  it("rejects malformed active lock fields and inconsistent absent sentinels in runtime and schema", async () => {
+    const require = createRequire(import.meta.url);
+    const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
+    const Ajv = require(require.resolve("ajv", { paths: [eslintPackage] }));
+    const validateSchema = new Ajv({ allErrors: true, strict: false }).compile(
+      JSON.parse(readFileSync("scripts/schemas/local-mac-production-rehearsal-inventory.schema.json", "utf8")),
+    );
+    const valid = await createInventory();
+    const mutateLock = (patch: Record<string, unknown>, evidenceCount = 1) => {
+      const surfaces = { ...valid.surfaces, active_promotion_lock: { ...valid.surfaces.active_promotion_lock, ...patch } };
+      const unsigned = {
+        ...valid,
+        surfaces,
+        surface_digest: sha256Jcs(surfaces),
+        probe_statuses: {
+          ...valid.probe_statuses,
+          active_promotion_lock: { status: "success", reason_code: null, evidence_count: evidenceCount },
+        },
+      };
+      delete (unsigned as Record<string, unknown>).inventory_digest;
+      return { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+    };
+    const attacks = [
+      mutateLock({ exists: 0 }),
+      mutateLock({ exists: "false" }),
+      mutateLock({ exists: null }),
+      mutateLock({ kind: "recovered_lock" }),
+      mutateLock({ sha256: "bad" }),
+      mutateLock({ mtime: "2026-02-30T00:00:00.000Z" }),
+      mutateLock({ device: {} }),
+      mutateLock({ exists: false, inode: "1" }),
+      mutateLock({}, 0),
+    ];
+
+    for (const attack of attacks) {
+      let runtimeAccepted = true;
+      try { validateProductionInventory(attack); } catch { runtimeAccepted = false; }
+      expect({ runtimeAccepted, schemaAccepted: validateSchema(attack) }, JSON.stringify(attack)).toEqual({
+        runtimeAccepted: false,
+        schemaAccepted: false,
+      });
+    }
+  });
+
+  it("rejects duplicate current and prepared descriptor kinds before classification", async () => {
+    const inventory = await createInventory();
+    const descriptor = inventory.surfaces.release_artifacts.find((entry: { kind: string }) => entry.kind === "current_descriptor")!;
+    const variants = [
+      [...inventory.surfaces.release_artifacts, { ...descriptor }],
+      [...inventory.surfaces.release_artifacts, { ...descriptor, sha256: SHA_C, inode: 999 }],
+      [...inventory.surfaces.release_artifacts,
+        { ...descriptor, kind: "prepared_descriptor", sha256: SHA_C, inode: 997 },
+        { ...descriptor, kind: "prepared_descriptor", sha256: SHA_A, inode: 998 }],
+    ];
+
+    for (const release_artifacts of variants) {
+      const surfaces = { ...inventory.surfaces, release_artifacts };
+      const unsigned = { ...inventory, surfaces, surface_digest: sha256Jcs(surfaces) };
+      delete (unsigned as Record<string, unknown>).inventory_digest;
+      const candidate = { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+      expect(() => classifyProductionInventory(candidate)).toThrow(/duplicate|descriptor|unique|ambiguous/iu);
+    }
   });
 
   it("fails probes when an intermediate trusted production parent is a symlink", async () => {
@@ -439,14 +524,38 @@ describe("read-only production inventory", () => {
     });
     expect(configInventory.probe_statuses.docker.status).toBe("failed");
     expect(configInventory.probe_statuses.opaque_configs.status).toBe("failed");
+
+    const danglingHome = tempDirectory("homecook-dangling-parent-home-");
+    symlinkSync(join(danglingHome, "missing-target"), join(danglingHome, ".homecook"));
+    const danglingInventory = await collectReadOnlyProductionInventory({
+      adapters: createLocalProductionInventoryAdapters({ rootDir, homeDir: danglingHome }),
+      capturedAt: "2026-08-29T10:00:00.000Z",
+      probeIdentity: probeIdentity(),
+    });
+    expect(danglingInventory.probe_statuses.release_artifacts.status).toBe("failed");
+  });
+
+  it("detects an absent trusted ancestor created during the probe", async () => {
+    const inventoryModule = await import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs");
+    expect(inventoryModule.withTrustedProductionAncestors).toBeTypeOf("function");
+    const homeDir = tempDirectory("homecook-ancestor-race-");
+    const target = join(homeDir, ".homecook", "releases", "current.json");
+
+    expect(() => inventoryModule.withTrustedProductionAncestors([
+      { base: homeDir, target, label: "race fixture" },
+    ], () => {
+      mkdirSync(join(homeDir, ".homecook"), { mode: 0o700 });
+      return null;
+    })).toThrow(/ancestor|created|changed|race/iu);
   });
 
   it("canonicalizes the supplied trusted home root before checking descendants", async () => {
-    const aliasHome = mkdtempSync("/tmp/homecook-canonical-home-");
-    const canonicalHome = realpathSync(aliasHome);
-    temporaryDirectories.push(canonicalHome);
+    const aliasRoot = tempDirectory("homecook-alias-root-");
+    const canonicalHome = join(aliasRoot, "canonical-home");
+    mkdirSync(canonicalHome, { mode: 0o700 });
+    const aliasHome = join(aliasRoot, "home-alias");
+    symlinkSync("canonical-home", aliasHome);
     chmodSync(canonicalHome, 0o700);
-    expect(aliasHome).not.toBe(canonicalHome);
     const rootDir = tempDirectory("homecook-canonical-root-");
     const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir: aliasHome });
 
@@ -454,16 +563,40 @@ describe("read-only production inventory", () => {
     await expect(adapters.readActivePromotionLock()).resolves.toMatchObject({ exists: false });
   });
 
-  it("reads allowlisted system tool identities even when the trusted executable is hardlinked", async () => {
+  it("reads injected allowlisted tool identities even when the trusted executable is hardlinked", async () => {
     const rootDir = tempDirectory("homecook-system-tool-root-");
     const homeDir = tempDirectory("homecook-system-tool-home-");
-    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir });
+    const toolRoot = tempDirectory("homecook-tool-fixtures-");
+    const sourceTool = join(toolRoot, "source-tool");
+    writeFileSync(sourceTool, "fixture-tool", { mode: 0o755 });
+    const gitPath = join(toolRoot, "git");
+    const launchctlPath = join(toolRoot, "launchctl");
+    const lsofPath = join(toolRoot, "lsof");
+    linkSync(sourceTool, gitPath);
+    linkSync(sourceTool, launchctlPath);
+    linkSync(sourceTool, lsofPath);
+    const commands: string[] = [];
+    const commandRunner = vi.fn((command: string) => {
+      commands.push(command);
+      return { status: 1, signal: null, stdout: "", stderr: "" };
+    });
+    const adapters = createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      commandRunner,
+      trustedToolPaths: { git: gitPath, launchctl: launchctlPath, lsof: lsofPath },
+    });
 
-    await expect(adapters.readToolIdentities()).resolves.toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "git" }),
-      expect.objectContaining({ name: "launchctl" }),
-      expect.objectContaining({ name: "lsof" }),
+    const identities = await adapters.readToolIdentities();
+    expect(identities).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "git", realpath: gitPath }),
+      expect.objectContaining({ name: "launchctl", realpath: launchctlPath }),
+      expect.objectContaining({ name: "lsof", realpath: lsofPath }),
     ]));
+    await expect(adapters.readLaunchd()).rejects.toThrow(/command/iu);
+    await expect(adapters.readPortListeners()).resolves.toEqual([]);
+    expect(commands).toContain(launchctlPath);
+    expect(commands).toContain(lsofPath);
   });
 
   it("records command errors, signals, and nonzero launchctl as failed without leaking output", async () => {

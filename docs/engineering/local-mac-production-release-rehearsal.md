@@ -92,7 +92,7 @@ pnpm release:rehearsal:inventory -- --json
 ```
 
 - production app/full-local/worker identity, pointer/descriptor/lock, Docker resource, port, LaunchAgent, migration marker를 read-only로 수집한다.
-- active canonical promotion lock은 `getLocalMacProductionReleasePaths(homeDir).lockPath`, 즉 `~/.homecook/locks/production-promotion.lock` 하나다. `releases/` 아래 recovered/stale lock evidence와 별도 field/probe로 기록하며 active lock 존재 또는 probe failure는 항상 promotion-unsafe다.
+- active canonical promotion lock은 `getLocalMacProductionReleasePaths(homeDir).lockPath`, 즉 `~/.homecook/locks/production-promotion.lock` 하나다. `releases/` 아래 recovered/stale lock evidence와 별도 exact-kind artifact/probe로 기록한다. 성공 probe의 evidence count는 1이고 absent artifact는 canonical zero sentinel과 digest가 모두 일치해야 하며, active lock 존재·malformed artifact·probe failure는 항상 promotion-unsafe다.
 - secret contents, raw env, provider payload, DB row data를 출력하지 않는다.
 - inventory probe 자체의 tool identity와 production pre-digest를 기록한다.
 - 각 required probe는 `success|failed|skipped`, non-secret reason code, evidence count를 기록한다. 실패를 빈 성공 array로 축약하지 않는다.
@@ -197,7 +197,7 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 규칙:
 
 - production surface를 create, chmod, touch, rename, delete, restart, stop, load, unload, migrate, connect-write 하지 않는다.
-- production evidence를 읽기 전에 expected trusted base부터 모든 existing ancestor를 BigInt `lstat`로 검증한다. ancestor는 current-user-owned canonical directory, non-symlink, non-group/world-writable, traversable mode여야 하며 probe 전후 identity가 같아야 한다. `~/.homecook`, releases/locks/config roots와 `~/Library/LaunchAgents`의 intermediate symlink는 probe failure다.
+- production evidence를 읽기 전에 expected trusted base부터 모든 ancestor segment를 BigInt `lstat`로 검증한다. existing ancestor는 current-user-owned canonical directory, non-symlink, non-group/world-writable, traversable mode여야 하며 probe 전후 identity가 같아야 한다. dangling symlink도 거부하고, probe 전 absent였던 ancestor가 probe 중 생성되면 race로 실패한다. `~/.homecook`, releases/locks/config roots와 `~/Library/LaunchAgents`의 intermediate symlink는 probe failure다.
 - directory/snapshot/lock digest는 immediate child 이름만 사용하지 않는다. contained tree를 bounded recursive traversal하며 file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶는다. path escape, cycle, entry/depth/byte limit 초과는 fail closed한다.
 - identity-sensitive `lstat`/`fstat`는 `{ bigint: true }`로 수집하고 decimal string으로 canonicalize한다. Number 변환 뒤의 inode/device/size를 identity 근거로 사용하지 않는다.
 - JSON Number로 남는 count/mode/pid/port/sequence field는 runtime과 schema 모두 `Number.MAX_SAFE_INTEGER` 이하를 강제한다. 더 큰 identity 값은 decimal string만 사용한다.
@@ -340,6 +340,8 @@ pnpm release:rehearsal:classify -- --inventory <absolute-read-only-inventory> --
 - `unknown`: identity 또는 evidence가 부족해 안전 분류 불가
 
 classification output은 `promotion_safe: boolean`, finding ID, evidence path digest, confidence, missing evidence와 recovery-plan 후보만 기록한다.
+
+- `release_artifacts.kind`는 전체 array에서 unique여야 한다. current authority는 exactly one `current_descriptor`, prepared identity가 있으면 exactly one matching `prepared_descriptor`만 허용한다. duplicate match/mismatch 조합은 ambiguity로 거부한다.
 
 - `mixed_running`, `partial_failed_install`, `orphaned_lock_or_descriptor`, `migration_authority_incomplete`, `unknown`은 모두 `promotion_safe: false`다.
 - recovery plan은 가능한 순서, 사전 backup, operator authority, 예상 mutation, rollback/forward-fix 경계를 설명할 뿐 실행하지 않는다.
