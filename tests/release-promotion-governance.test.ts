@@ -85,4 +85,42 @@ describe("release promotion governance docs", () => {
     expect(packageJson.scripts?.["release:production:status"]).toBeTruthy();
     expect(packageJson.scripts?.["release:production:verify"]).toBeTruthy();
   });
+
+  it("separates untagged exact-SHA rehearsal from production authority", () => {
+    const sourceOfTruth = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
+    const currentPlan = read("docs/engineering/current-mac-production-plan.md");
+    const releaseRunbook = read("docs/engineering/local-mac-production-release-promotion.md");
+    const rehearsalContract = read(
+      "docs/engineering/local-mac-production-release-rehearsal.md",
+    );
+    const workflowEntry = read("docs/engineering/workflow-v2/README.md");
+
+    expect(sourceOfTruth).toContain(
+      "docs/engineering/local-mac-production-release-rehearsal.md",
+    );
+    expect(currentPlan).toContain(
+      "rehearsal authority는 `docs/engineering/local-mac-production-release-rehearsal.md`",
+    );
+    expect(releaseRunbook).toContain(
+      "production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`",
+    );
+    expect(workflowEntry).toContain(
+      "docs/engineering/local-mac-production-release-rehearsal.md",
+    );
+
+    expect(rehearsalContract).toContain("상태: **canonical / implementation pending**");
+    expect(rehearsalContract).toContain("untagged exact-SHA candidate");
+    expect(rehearsalContract).toContain("production authority tag");
+    expect(rehearsalContract).toContain("동일 bytes");
+    expect(rehearsalContract).toContain("O_NOFOLLOW");
+    expect(rehearsalContract).toContain("external network");
+    expect(rehearsalContract).toContain("synthetic fixtures");
+    expect(rehearsalContract).toContain("no-production-mutation evidence");
+    expect(rehearsalContract).toContain("mixed-state classify");
+    expect(rehearsalContract).toContain("자동 복구");
+    expect(rehearsalContract).toContain("최소 2회");
+    expect(rehearsalContract).toContain("TDD acceptance");
+    expect(rehearsalContract).toContain("독립 Codex security review");
+    expect(rehearsalContract).toContain("공식 제품 5종");
+  });
 });

@@ -64,6 +64,10 @@ Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
 
 ## Promotion lifecycle
 
+Untagged exact-SHA candidate의 isolated build/run, repeatability receipt, mixed-state read-only classification은 `docs/engineering/local-mac-production-release-rehearsal.md`가 canonical authority다. production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르며, implementation이 merge되기 전에는 현재 promote 경로가 그 receipt gate를 충족한다고 주장하지 않는다.
+
+rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact rehearsal bundle digest와 repeatability receipt digest를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
+
 Stage B implementation target command family는 다음과 같다.
 
 - `pnpm release:production:plan`
@@ -363,6 +367,7 @@ legacy build / install / restart / uninstall / db reset은 active-server release
 
 - `AGENTS.md`
 - `docs/engineering/current-mac-production-plan.md`
+- `docs/engineering/local-mac-production-release-rehearsal.md`
 - `docs/engineering/git-workflow.md`
 - `docs/engineering/agent-workflow-overview.md`
 - `docs/engineering/codex-task-handoff.md`
