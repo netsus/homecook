@@ -19,6 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   allowFirstCanonicalAdoptionWorkerPlist,
   allowFirstCanonicalAdoptionWorkerStandby,
+  buildWorkerRuntimeStableProjection,
   createLocalMacProductionPromoteAdapters,
 } from "../scripts/lib/local-mac-production-promote-adapters.mjs";
 import * as promoteAdapters from "../scripts/lib/local-mac-production-promote-adapters.mjs";
@@ -649,6 +650,22 @@ describe("local Mac production promote adapters", () => {
       currentRuntimeBridge: null,
       actualDigest: "69393712e063e6e0f84c869c330ff4f58f718b73184a20250395d8c9cfd39da8",
     })).toBe(false);
+  });
+
+  it("normalizes only the exact bridge worker runtime into a stable projection", () => {
+    const bridge = { previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA };
+    expect(buildWorkerRuntimeStableProjection({
+      currentRuntimeBridge: bridge,
+      workerStatus: { pid: null, state: "spawn scheduled" },
+    })).toEqual({ worker_pid: null, worker_state: "first-canonical-adoption-verified" });
+    expect(buildWorkerRuntimeStableProjection({
+      currentRuntimeBridge: bridge,
+      workerStatus: { pid: 321, state: "running" },
+    })).toEqual({ worker_pid: null, worker_state: "first-canonical-adoption-verified" });
+    expect(buildWorkerRuntimeStableProjection({
+      currentRuntimeBridge: null,
+      workerStatus: { pid: 321, state: "running" },
+    })).toEqual({ worker_pid: 321, worker_state: "running" });
   });
 
   it("blocks all bundle mutation when sealed snapshot verification fails", async () => {
