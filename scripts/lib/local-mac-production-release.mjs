@@ -816,17 +816,46 @@ function materializeRuntimeEnvironmentFiles({ sourceRoot, checkoutDir, currentUi
     throw new Error("Local Mac production runtime environment source is incomplete.");
   }
   for (const { relativePath, sourcePath } of sources) {
-    assertPrivateRegularFile(sourcePath, `Runtime environment source ${relativePath}`, currentUid);
+    const sourceLabel = `Runtime environment source ${relativePath}`;
+    const sourceSnapshot = readSafeRegularFileSnapshot(sourcePath, sourceLabel);
+    if (sourceSnapshot.uid !== currentUid || sourceSnapshot.mode !== 0o600) {
+      throw new Error(`${sourceLabel} must be current-user owned with mode 0600.`);
+    }
     const destinationPath = resolve(checkoutDir, relativePath);
     assertPathInside(checkoutDir, destinationPath, `Runtime environment destination ${relativePath}`);
     mkdir(dirname(destinationPath), { recursive: true, mode: 0o700 });
-    copyFileSync(sourcePath, destinationPath, fsConstants.COPYFILE_EXCL);
-    chmodSync(destinationPath, 0o600);
-    assertPrivateRegularFile(
-      destinationPath,
-      `Prepared runtime environment ${relativePath}`,
-      currentUid,
+    const destinationDirectory = assertSafeDirectory(
+      dirname(destinationPath),
+      `Runtime environment destination directory ${relativePath}`,
     );
+    assertPathInside(
+      realpathSync(checkoutDir),
+      destinationDirectory,
+      `Runtime environment destination directory ${relativePath}`,
+    );
+    const finalDestinationPath = join(destinationDirectory, basename(destinationPath));
+    let destinationDescriptor;
+    try {
+      destinationDescriptor = openSync(
+        finalDestinationPath,
+        fsConstants.O_WRONLY
+          | fsConstants.O_CREAT
+          | fsConstants.O_EXCL
+          | fsConstants.O_NOFOLLOW,
+        0o600,
+      );
+      writeFileSync(destinationDescriptor, sourceSnapshot.bytes);
+      const destinationStat = fstatSync(destinationDescriptor);
+      if (
+        !destinationStat.isFile()
+        || destinationStat.uid !== currentUid
+        || modeBits(destinationStat.mode) !== 0o600
+      ) {
+        throw new Error(`Prepared runtime environment ${relativePath} permissions drifted.`);
+      }
+    } finally {
+      if (destinationDescriptor !== undefined) closeSync(destinationDescriptor);
+    }
   }
 }
 
