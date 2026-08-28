@@ -21,6 +21,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import {
+  basename,
   dirname,
   isAbsolute,
   join,
@@ -3083,6 +3084,369 @@ export function getLocalMacProductionReleaseStatus({
       staleCandidate,
     },
     manifest,
+  };
+}
+
+function assertExactVerifiedRuntimeIdentity(component, state, expected) {
+  if (!state || typeof state !== "object" || Array.isArray(state) || state.ready !== true) {
+    throw new Error(`Verified ${component} runtime is not ready.`);
+  }
+  for (const field of ["release_sha", "release_tree", "build_id", "promotion_id"]) {
+    if (state[field] !== expected[field]) {
+      throw new Error(
+        `Verified ${component} runtime ${field.replaceAll("_", " ")} drifted from the release manifest.`,
+      );
+    }
+  }
+}
+
+function validateVerifiedLocalMacProductionRuntimeBundle(runtime, manifest) {
+  if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+    throw new Error("Production runtime verification returned invalid evidence.");
+  }
+  assertExactVerifiedRuntimeIdentity("app", runtime.app, manifest);
+  assertExactVerifiedRuntimeIdentity("full-local", runtime.full_local, manifest);
+  assertExactVerifiedRuntimeIdentity("YouTube worker", runtime.youtube_worker, manifest);
+
+  const fullLocal = runtime.full_local;
+  for (const field of [
+    "auth_ready",
+    "docker_ready",
+    "healthy",
+    "jwks_ready",
+    "local_only",
+    "runtime_present",
+    "volume_identity_verified",
+  ]) {
+    if (fullLocal[field] !== true) {
+      throw new Error(`Verified full-local ${field.replaceAll("_", " ")} evidence is incomplete.`);
+    }
+  }
+  if (
+    fullLocal.authorization_contract_status !== "PASS"
+    || fullLocal.product_catalog_status !== "PASS"
+  ) {
+    throw new Error("Verified full-local authorization or product catalog gate failed.");
+  }
+  if (fullLocal.migration_head !== manifest.migration_head) {
+    throw new Error("Verified full-local migration head drifted from the release manifest.");
+  }
+  return runtime;
+}
+
+function readPromotionLockRootGeneration({ currentUid, homeDir }) {
+  const lockRoot = getLocalMacProductionReleasePaths(homeDir).lockRoot;
+  const stat = lstatIfExists(lockRoot);
+  if (!stat) return Object.freeze({ exists: false });
+  assertPrivateDirectory(lockRoot, "Production promotion lock root", currentUid);
+  return Object.freeze({
+    exists: true,
+    dev: stat.dev,
+    ino: stat.ino,
+    ctimeMs: stat.ctimeMs,
+    mtimeMs: stat.mtimeMs,
+  });
+}
+
+function samePromotionLockRootGeneration(left, right) {
+  return left.exists === right.exists
+    && (!left.exists || (
+      left.dev === right.dev
+      && left.ino === right.ino
+      && left.ctimeMs === right.ctimeMs
+      && left.mtimeMs === right.mtimeMs
+    ));
+}
+
+/**
+ * Reconstructs the create-only execution snapshot from current.json and verifies
+ * its inode, ownership, modes, metadata, symlink containment, and content digests.
+ *
+ * @param {{
+ *   descriptor: Record<string, unknown>,
+ *   getCurrentUid?: () => number | undefined,
+ *   homeDir?: string,
+ * }} options
+ */
+export function readAndVerifyLocalMacProductionExecutionSnapshot({
+  descriptor,
+  getCurrentUid = () => process.getuid?.(),
+  homeDir = process.env.HOME ?? "",
+} = {}) {
+  const normalizedDescriptor = normalizeRunningReleaseDescriptor(
+    descriptor,
+    "Current running release descriptor",
+  );
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  const realHomeDir = assertSafeDirectory(
+    requireAbsolutePath(homeDir, "homeDir"),
+    "homeDir",
+  );
+  const paths = getLocalMacProductionReleasePaths(realHomeDir);
+  const executionRoot = join(paths.releaseRoot, "execution-snapshots");
+  assertPrivateDirectory(dirname(paths.releaseRoot), "Homecook state directory", currentUid);
+  assertPrivateDirectory(paths.releaseRoot, "Local Mac production release root", currentUid);
+  assertPrivateDirectory(
+    executionRoot,
+    "Local Mac production execution snapshot root",
+    currentUid,
+  );
+  const snapshotRoot = dirname(normalizedDescriptor.execution_app_root);
+  const canonicalSnapshotRoot = join(
+    executionRoot,
+    normalizedDescriptor.execution_snapshot_digest,
+  );
+  if (
+    basename(snapshotRoot) !== normalizedDescriptor.execution_snapshot_digest
+    || normalizedDescriptor.execution_app_root !== join(snapshotRoot, "app")
+    || normalizedDescriptor.worker_artifact_root !== join(snapshotRoot, "worker")
+  ) {
+    throw new Error("Current descriptor execution snapshot path authority drifted.");
+  }
+  let realSnapshotRoot;
+  try {
+    realSnapshotRoot = realpathSync(snapshotRoot);
+  } catch {
+    throw new Error("Current descriptor canonical execution snapshot is unavailable.");
+  }
+  if (
+    realSnapshotRoot !== canonicalSnapshotRoot
+    || realpathSync(normalizedDescriptor.execution_app_root) !== join(canonicalSnapshotRoot, "app")
+    || realpathSync(normalizedDescriptor.worker_artifact_root)
+      !== join(canonicalSnapshotRoot, "worker")
+  ) {
+    throw new Error("Current descriptor snapshot is outside the canonical release root.");
+  }
+  assertPrivateDirectory(snapshotRoot, "Sealed execution snapshot root", currentUid);
+  if (normalizedDescriptor.worker_manifest_path === normalizedDescriptor.worker_artifact_root) {
+    throw new Error("Current descriptor worker manifest path authority is invalid.");
+  }
+  assertPathInside(
+    normalizedDescriptor.worker_artifact_root,
+    normalizedDescriptor.worker_manifest_path,
+    "Current descriptor worker manifest path authority",
+  );
+  const authorityRoot = join(snapshotRoot, "authority");
+  const metadataPath = join(snapshotRoot, "evidence.json");
+  const metadataBytes = readSafeRegularFileBytes(
+    metadataPath,
+    "Sealed execution snapshot evidence",
+  );
+  let metadata;
+  try {
+    metadata = JSON.parse(metadataBytes.toString("utf8"));
+  } catch {
+    throw new Error("Sealed execution snapshot evidence is unreadable or invalid.");
+  }
+  requireExactAllowedKeys(metadata, new Set([
+    "schema",
+    "app_digest",
+    "execution_snapshot_digest",
+    "promotion_id",
+    "release_sha",
+    "release_tree",
+    "worker_digest",
+    "authority_digest",
+  ]), "Sealed execution snapshot evidence");
+  if (
+    metadata.schema !== EXECUTION_SNAPSHOT_SCHEMA
+    || metadata.execution_snapshot_digest !== normalizedDescriptor.execution_snapshot_digest
+    || metadata.promotion_id !== normalizedDescriptor.promotion_id
+    || metadata.release_sha !== normalizedDescriptor.release_sha
+    || metadata.release_tree !== normalizedDescriptor.release_tree
+  ) {
+    throw new Error("Sealed execution snapshot identity drifted from current.json.");
+  }
+
+  const rootStat = lstatSync(snapshotRoot);
+  const appStat = lstatSync(normalizedDescriptor.execution_app_root);
+  const workerStat = lstatSync(normalizedDescriptor.worker_artifact_root);
+  const authorityStat = lstatSync(authorityRoot);
+  return verifyLocalMacProductionExecutionSnapshot({
+    schema: EXECUTION_SNAPSHOT_SCHEMA,
+    root: snapshotRoot,
+    appRoot: normalizedDescriptor.execution_app_root,
+    workerRoot: normalizedDescriptor.worker_artifact_root,
+    authorityRoot,
+    appDigest: requireDigest(metadata.app_digest, "Execution snapshot app digest"),
+    workerDigest: requireDigest(metadata.worker_digest, "Execution snapshot worker digest"),
+    authorityDigest: requireDigest(
+      metadata.authority_digest,
+      "Execution snapshot authority digest",
+    ),
+    digest: normalizedDescriptor.execution_snapshot_digest,
+    dev: rootStat.dev,
+    ino: rootStat.ino,
+    uid: rootStat.uid,
+    appDev: appStat.dev,
+    appIno: appStat.ino,
+    workerDev: workerStat.dev,
+    workerIno: workerStat.ino,
+    authorityDev: authorityStat.dev,
+    authorityIno: authorityStat.ino,
+    metadataPath,
+    metadataDigest: sha256Bytes(metadataBytes),
+  });
+}
+
+/**
+ * Performs a read-only post-deploy verification of one exact production release.
+ * It never acquires a write lock, changes descriptors, or calls mutation helpers.
+ *
+ * @param {{
+ *   getCurrentUid?: () => number | undefined,
+ *   homeDir?: string,
+ *   manifestPath: string,
+ *   readGitEvidence?: typeof readLocalMacProductionGitReleaseEvidence,
+ *   rootDir?: string,
+ *   verifyAttestation?: (input: Record<string, unknown>) => { verified: boolean, source?: string },
+ *   verifyExecutionSnapshot?: (input: { descriptor: Record<string, unknown> }) => Record<string, unknown>,
+ *   verifyRuntimeBundle: (input: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>,
+ * }} options
+ */
+export async function verifyLocalMacProductionRelease({
+  getCurrentUid = () => process.getuid?.(),
+  homeDir = process.env.HOME ?? "",
+  manifestPath,
+  readGitEvidence = readLocalMacProductionGitReleaseEvidence,
+  rootDir = process.cwd(),
+  verifyAttestation,
+  verifyExecutionSnapshot = readAndVerifyLocalMacProductionExecutionSnapshot,
+  verifyRuntimeBundle,
+} = {}) {
+  if (typeof verifyRuntimeBundle !== "function") {
+    throw new Error("Production release runtime verifier is not configured.");
+  }
+  if (typeof verifyExecutionSnapshot !== "function") {
+    throw new Error("Production release execution snapshot verifier is not configured.");
+  }
+  const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
+  const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
+  const normalizedManifestPath = requireAbsolutePath(manifestPath, "releaseManifestPath");
+  const realHomeDir = assertSafeDirectory(normalizedHomeDir, "homeDir");
+  const realRootDir = assertSafeDirectory(normalizedRootDir, "rootDir");
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  assertOwnedSafeRegularFile(normalizedManifestPath, "Release manifest", currentUid);
+
+  const initialLockRoot = readPromotionLockRootGeneration({
+    currentUid,
+    homeDir: realHomeDir,
+  });
+  const initialLock = readLockRecord({ homeDir: realHomeDir });
+  if (initialLock.locked) {
+    throw new Error("Production promotion lock is held; read-only verify is blocked.");
+  }
+  const manifestSnapshot = readSafeRegularFileSnapshot(
+    normalizedManifestPath,
+    "Release manifest",
+  );
+  const manifestBytes = manifestSnapshot.bytes;
+  let manifestInput;
+  try {
+    manifestInput = JSON.parse(manifestBytes.toString("utf8"));
+  } catch {
+    throw new Error(`Release manifest is unreadable or invalid: ${normalizedManifestPath}`);
+  }
+  const manifestDigest = sha256Bytes(manifestBytes);
+  const manifest = validateLocalMacProductionReleaseManifest({
+    manifest: manifestInput,
+    manifestDigest,
+    manifestPath: normalizedManifestPath,
+    readGitEvidence,
+    requireAttestation: true,
+    rootDir: realRootDir,
+    verifyAttestation,
+  });
+  if (
+    !manifest.app_launch_agent_enabled
+    || !manifest.full_local_launch_agent_enabled
+    || !manifest.youtube_worker_launch_agent_enabled
+  ) {
+    throw new Error(
+      "Production verify requires app, full-local, and YouTube worker enabled as one bundle.",
+    );
+  }
+  const paths = getLocalMacProductionReleasePaths(realHomeDir);
+  const initialRunning = readRunningDescriptorSnapshot({
+    currentUid,
+    path: paths.currentDescriptorPath,
+  });
+  const descriptor = initialRunning.descriptor;
+  for (const field of ["release_tag", "release_sha", "release_tree", "build_id", "promotion_id"]) {
+    if (descriptor[field] !== manifest[field]) {
+      throw new Error(
+        `Current descriptor ${field.replaceAll("_", " ")} drifted from the release manifest.`,
+      );
+    }
+  }
+  if (descriptor.source_manifest_sha256 !== manifestDigest) {
+    throw new Error("Current descriptor source manifest digest drifted from the release manifest.");
+  }
+
+  const snapshotBefore = verifyExecutionSnapshot({
+    descriptor,
+    getCurrentUid: () => currentUid,
+    homeDir: realHomeDir,
+  });
+  if (snapshotBefore?.digest !== descriptor.execution_snapshot_digest) {
+    throw new Error("Verified execution snapshot digest drifted from current.json.");
+  }
+  const runtime = validateVerifiedLocalMacProductionRuntimeBundle(
+    await verifyRuntimeBundle({
+      currentDescriptor: descriptor,
+      homeDir: realHomeDir,
+      manifest,
+      releaseDir: descriptor.execution_app_root,
+      rootDir: realRootDir,
+    }),
+    manifest,
+  );
+  const snapshotAfter = verifyExecutionSnapshot({
+    descriptor,
+    getCurrentUid: () => currentUid,
+    homeDir: realHomeDir,
+  });
+  if (snapshotAfter?.digest !== descriptor.execution_snapshot_digest) {
+    throw new Error("Verified execution snapshot digest changed during runtime verification.");
+  }
+  assertDescriptorSnapshotStable({
+    actual: readOptionalRunningDescriptorSnapshot({
+      currentUid,
+      path: paths.currentDescriptorPath,
+    }),
+    expected: { exists: true, ...initialRunning },
+    label: "Current running release descriptor",
+  });
+  const finalManifestSnapshot = readSafeRegularFileSnapshot(
+    normalizedManifestPath,
+    "Release manifest",
+  );
+  if (
+    finalManifestSnapshot.dev !== manifestSnapshot.dev
+    || finalManifestSnapshot.ino !== manifestSnapshot.ino
+    || finalManifestSnapshot.bytes.length !== manifestBytes.length
+    || !finalManifestSnapshot.bytes.equals(manifestBytes)
+  ) {
+    throw new Error("Release manifest changed concurrently during read-only verify.");
+  }
+  const finalLockState = readLockRecord({ homeDir: realHomeDir });
+  const finalLockRoot = readPromotionLockRootGeneration({
+    currentUid,
+    homeDir: realHomeDir,
+  });
+  if (finalLockState.locked) {
+    throw new Error("Production promotion lock appeared during read-only verify.");
+  }
+  if (!samePromotionLockRootGeneration(initialLockRoot, finalLockRoot)) {
+    throw new Error("Production promotion lock generation changed concurrently during verify.");
+  }
+
+  return {
+    current_head_sha: manifest.git_evidence.originMasterSha,
+    manifest,
+    release_dir: descriptor.execution_app_root,
+    runtime,
+    verified: true,
   };
 }
 

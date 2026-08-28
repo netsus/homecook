@@ -131,6 +131,35 @@ post-deploy evidence 단계다.
 - migration compatibility gate가 없으면 previous release로 자동 rollback 하지 않고 forward-fix 또는 operator review로 전환한다.
 - rollback은 migration compatibility gate가 명시된 경우에만 수행한다.
 
+canonical 실행 형식은 다음과 같다.
+
+```bash
+pnpm release:production:verify -- \
+  --release-manifest /absolute/path/to/release.json \
+  --bundle /absolute/path/to/attestation-bundle.jsonl \
+  --subject-manifest /absolute/path/to/production-release-subject.json \
+  --trusted-root /absolute/path/to/trusted-root.jsonl \
+  --home-dir /absolute/server/home \
+  --root-dir /absolute/homecook/repository \
+  --json
+```
+
+`verify`는 production lock, descriptor, LaunchAgent, Docker, checkout을 변경하지 않는 read-only 명령이다.
+offline attestation을 다시 확인한 뒤 `current.json`, sealed execution snapshot, app/full-local/worker
+identity, canonical plist/process cwd, Docker/Auth/JWKS/volume provenance, database catalog migration
+head를 같은 manifest와 대조한다. 검증 도중 promotion lock이나 descriptor/snapshot drift가 보이면
+자동 복구·재시작·rollback 없이 fail closed한다.
+
+- sealed snapshot은 canonical `~/.homecook/releases/execution-snapshots/<digest>` root와 current-user
+  ownership/private mode에 다시 묶는다.
+- canonical full-local config의 digest/dev/inode/ctime/mtime를 probe 전후로 비교하고
+  `current.json.full_local_config_sha256`와 exact match해야 한다.
+- app/full-local/worker probe 전후의 exact Docker container ID와 named-volume provenance generation,
+  migration query의 PostgreSQL container ID가 모두 같아야 한다.
+- promotion lock root generation을 probe 전후로 비교해 lock이 잠깐 생겼다가 사라진 경우도 거부한다.
+- `gh`, `git`, `docker`, `node`는 fixed trusted resolver의 absolute executable만 사용하고,
+  실행 전후 inode/mode/ctime/size/SHA-256 snapshot이 같아야 한다.
+
 ### 5. reboot-verify
 
 reboot evidence 단계다.

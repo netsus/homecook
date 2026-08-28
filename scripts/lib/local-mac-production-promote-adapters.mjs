@@ -1,8 +1,12 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
+  closeSync,
+  constants as fsConstants,
   existsSync,
+  fstatSync,
   lstatSync,
+  openSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -23,6 +27,11 @@ import {
   installFullLocalLaunchAgent,
   renderFullLocalLaunchAgentPlist,
 } from "./full-local-launch-agent.mjs";
+import { parseFullLocalProductionConfig } from "./full-local-production-resources.mjs";
+import {
+  buildMigrationHeadSql,
+  parseMigrationHeadSqlOutput,
+} from "../capture-full-local-session-lifecycle-evidence.mjs";
 import {
   FIRST_CANONICAL_ADOPTION_BRIDGE_MODE,
   FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
@@ -59,6 +68,10 @@ import {
 
 function sha256Text(value) {
   return createHash("sha256").update(String(value)).digest("hex");
+}
+
+function sha256Bytes(value) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function modeBits(mode) {
@@ -110,10 +123,41 @@ function readCanonicalFullLocalConfigEvidence({ currentUid, options }) {
   ) {
     throw new Error("Full-local config owner, mode, or path is unsafe.");
   }
-  return Object.freeze({
-    digest: sha256File(canonicalPath),
-    path: canonicalPath,
-  });
+  let descriptor;
+  try {
+    descriptor = openSync(canonicalPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const opened = fstatSync(descriptor);
+    const bytes = readFileSync(descriptor);
+    const after = lstatSync(canonicalPath);
+    if (
+      !opened.isFile()
+      || opened.uid !== currentUid
+      || modeBits(opened.mode) !== 0o600
+      || opened.dev !== after.dev
+      || opened.ino !== after.ino
+      || opened.size !== after.size
+      || opened.ctimeMs !== after.ctimeMs
+      || opened.mtimeMs !== after.mtimeMs
+    ) {
+      throw new Error("Full-local config changed while being read.");
+    }
+    return Object.freeze({
+      ctimeMs: opened.ctimeMs,
+      dev: opened.dev,
+      digest: sha256Bytes(bytes),
+      ino: opened.ino,
+      mtimeMs: opened.mtimeMs,
+      path: canonicalPath,
+      size: opened.size,
+    });
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+function sameFullLocalConfigEvidence(left, right) {
+  return ["path", "digest", "dev", "ino", "size", "ctimeMs", "mtimeMs"]
+    .every((field) => left?.[field] === right?.[field]);
 }
 
 function readPlistSnapshot(path, { currentUid, expectedMode, label, trustedRoot }) {
@@ -259,16 +303,26 @@ function assertReadOnlyArtifactRoot(rootPath) {
   return root;
 }
 
-function sanitizedPath(nodeBin) {
-  return [...new Set([
-    dirname(resolve(nodeBin)),
-    "/opt/homebrew/bin",
-    "/usr/local/bin",
-    "/usr/bin",
-    "/bin",
-    "/usr/sbin",
-    "/sbin",
-  ])].join(":");
+function sanitizedPath(nodeBin, dockerBin = null) {
+  const paths = dockerBin
+    ? [
+        dirname(resolve(dockerBin)),
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",
+        dirname(resolve(nodeBin)),
+      ]
+    : [
+        dirname(resolve(nodeBin)),
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",
+      ];
+  return [...new Set(paths)].join(":");
 }
 
 function readGitRuntimeValue(commandRunner, cwd, args, label) {
@@ -474,7 +528,7 @@ function readFullLocalWorkloadDefault({
       encoding: "utf8",
       env: {
         HOME: context.homeDir,
-        PATH: sanitizedPath(options.nodeBin),
+        PATH: sanitizedPath(options.nodeBin, options.dockerBin),
       },
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -1045,7 +1099,7 @@ function buildDefaultDependencies(
         encoding: "utf8",
         env: {
           HOME: context.homeDir,
-          PATH: sanitizedPath(options.nodeBin),
+          PATH: sanitizedPath(options.nodeBin, options.dockerBin),
         },
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -1416,6 +1470,456 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       return {
         ...worker,
         fullLocalConfigSha256: fullLocalConfig.digest,
+      };
+    },
+  };
+}
+
+const VERIFY_DOCKER_SERVICES = Object.freeze([
+  "api-gateway",
+  "auth",
+  "auth-proxy",
+  "postgres",
+  "postgrest",
+  "postgrest-probe",
+  "storage",
+]);
+const DOCKER_CONTAINER_ID_PATTERN = /^[0-9a-f]{64}$/u;
+
+function runVerifyDocker({ commandRunner, dockerBin, args, input = undefined }) {
+  if (!isAbsolute(dockerBin)) {
+    throw new Error("Production verify Docker executable must be absolute.");
+  }
+  const result = commandRunner(dockerBin, args, {
+    encoding: "utf8",
+    env: {
+      PATH: `${dirname(dockerBin)}:/usr/bin:/bin:/usr/sbin:/sbin`,
+    },
+    input,
+    maxBuffer: 32 * 1024 * 1024,
+    stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
+    timeout: 15_000,
+  });
+  if (result.status !== 0 || typeof result.stdout !== "string") {
+    throw new Error("Production verify trusted Docker command failed.");
+  }
+  return result.stdout;
+}
+
+export function readCurrentFullLocalDockerGeneration({
+  commandRunner = spawnSync,
+  dockerBin,
+  fullLocalConfigPath,
+}) {
+  const config = parseFullLocalProductionConfig(readFileSync(fullLocalConfigPath, "utf8"));
+  const composeProject = config.FULL_LOCAL_COMPOSE_PROJECT_NAME;
+  const postgresVolumeName = config.FULL_LOCAL_POSTGRES_VOLUME_NAME;
+  const storageVolumeName = config.FULL_LOCAL_STORAGE_VOLUME_NAME;
+  if (
+    typeof composeProject !== "string"
+    || typeof postgresVolumeName !== "string"
+    || typeof storageVolumeName !== "string"
+  ) {
+    throw new Error("Docker generation verification requires exact production resource names.");
+  }
+  const containerIds = runVerifyDocker({
+    commandRunner,
+    dockerBin,
+    args: [
+      "ps",
+      "--all",
+      "--no-trunc",
+      "--quiet",
+      "--filter",
+      `label=com.docker.compose.project=${composeProject}`,
+    ],
+  }).split(/\r?\n/u).map((value) => value.trim()).filter(Boolean).sort();
+  if (
+    containerIds.length !== VERIFY_DOCKER_SERVICES.length
+    || new Set(containerIds).size !== containerIds.length
+    || containerIds.some((id) => !DOCKER_CONTAINER_ID_PATTERN.test(id))
+  ) {
+    throw new Error("Docker generation must contain seven exact full-local containers.");
+  }
+  let containers;
+  let volumes;
+  try {
+    containers = JSON.parse(runVerifyDocker({
+      commandRunner,
+      dockerBin,
+      args: ["container", "inspect", ...containerIds],
+    }));
+    volumes = JSON.parse(runVerifyDocker({
+      commandRunner,
+      dockerBin,
+      args: ["volume", "inspect", postgresVolumeName, storageVolumeName],
+    }));
+  } catch {
+    throw new Error("Docker generation inspection output is invalid.");
+  }
+  if (!Array.isArray(containers) || containers.length !== containerIds.length) {
+    throw new Error("Docker generation container inspection is incomplete.");
+  }
+  const normalizedContainers = containers.map((container) => {
+    const id = container?.Id;
+    const service = container?.Config?.Labels?.["com.docker.compose.service"];
+    if (
+      !containerIds.includes(id)
+      || !VERIFY_DOCKER_SERVICES.includes(service)
+      || container?.Config?.Labels?.["com.docker.compose.project"] !== composeProject
+      || container?.State?.Running !== true
+      || container?.State?.Status !== "running"
+      || (container?.State?.Health && container.State.Health.Status !== "healthy")
+      || typeof container?.Config?.Image !== "string"
+    ) {
+      throw new Error("Docker generation container identity or health drifted.");
+    }
+    return {
+      health: container.State.Health?.Status ?? null,
+      id,
+      image: container.Config.Image,
+      service,
+      status: container.State.Status,
+    };
+  }).sort((left, right) => left.service.localeCompare(right.service));
+  if (
+    normalizedContainers.some((entry, index) => entry.service !== VERIFY_DOCKER_SERVICES[index])
+  ) {
+    throw new Error("Docker generation service set is incomplete or duplicated.");
+  }
+  if (!Array.isArray(volumes) || volumes.length !== 2) {
+    throw new Error("Docker generation volume inspection is incomplete.");
+  }
+  const expectedVolumeLabels = new Map([
+    [postgresVolumeName, "postgres-data"],
+    [storageVolumeName, "storage-data"],
+  ]);
+  const normalizedVolumes = volumes.map((volume) => {
+    const expectedLabel = expectedVolumeLabels.get(volume?.Name);
+    if (
+      !expectedLabel
+      || volume?.Labels?.["com.docker.compose.project"] !== composeProject
+      || volume?.Labels?.["com.docker.compose.volume"] !== expectedLabel
+      || typeof volume?.Driver !== "string"
+      || typeof volume?.Mountpoint !== "string"
+      || typeof volume?.CreatedAt !== "string"
+    ) {
+      throw new Error("Docker generation volume provenance drifted.");
+    }
+    return {
+      createdAt: volume.CreatedAt,
+      driver: volume.Driver,
+      mountpoint: volume.Mountpoint,
+      name: volume.Name,
+      volumeLabel: expectedLabel,
+    };
+  }).sort((left, right) => left.name.localeCompare(right.name));
+  const postgresContainer = normalizedContainers.find((entry) => entry.service === "postgres");
+  return Object.freeze({
+    digest: sha256Bytes(Buffer.from(JSON.stringify({
+      composeProject,
+      containers: normalizedContainers,
+      volumes: normalizedVolumes,
+    }))),
+    postgresContainerId: postgresContainer.id,
+  });
+}
+
+export function readCurrentFullLocalMigrationHead({
+  commandRunner = spawnSync,
+  dockerBin,
+  expectedPostgresContainerId = null,
+  fullLocalConfigPath,
+}) {
+  const config = parseFullLocalProductionConfig(readFileSync(fullLocalConfigPath, "utf8"));
+  const composeProject = config.FULL_LOCAL_COMPOSE_PROJECT_NAME;
+  if (typeof composeProject !== "string" || composeProject.length === 0) {
+    throw new Error("Full-local migration verification requires an exact compose project.");
+  }
+  let postgresContainerId = expectedPostgresContainerId;
+  if (postgresContainerId === null) {
+    const containerIds = runVerifyDocker({
+      commandRunner,
+      dockerBin,
+      args: [
+        "ps",
+        "--all",
+        "--no-trunc",
+        "--quiet",
+        "--filter",
+        `label=com.docker.compose.project=${composeProject}`,
+        "--filter",
+        "label=com.docker.compose.service=postgres",
+      ],
+    }).split(/\r?\n/u).map((value) => value.trim()).filter(Boolean);
+    if (containerIds.length !== 1) {
+      throw new Error("Full-local migration verification requires one exact PostgreSQL container.");
+    }
+    [postgresContainerId] = containerIds;
+  }
+  if (!DOCKER_CONTAINER_ID_PATTERN.test(postgresContainerId)) {
+    throw new Error("Full-local migration PostgreSQL container identity is invalid.");
+  }
+  const migrationOutput = runVerifyDocker({
+    commandRunner,
+    dockerBin,
+    args: [
+    "exec",
+    "-i",
+    postgresContainerId,
+    "psql",
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    "supabase_admin",
+    "-d",
+    "postgres",
+    ],
+    input: buildMigrationHeadSql(),
+  });
+  return parseMigrationHeadSqlOutput(migrationOutput);
+}
+
+export async function readCurrentFullLocalJwksEvidence({
+  fetchImpl = globalThis.fetch,
+  fullLocalConfigPath,
+}) {
+  if (typeof fetchImpl !== "function") {
+    throw new Error("Full-local JWKS verification fetch is unavailable.");
+  }
+  const config = parseFullLocalProductionConfig(readFileSync(fullLocalConfigPath, "utf8"));
+  const authProxyPort = Number(config.FULL_LOCAL_AUTH_PROXY_PORT);
+  if (!Number.isSafeInteger(authProxyPort) || authProxyPort < 1024 || authProxyPort > 65535) {
+    throw new Error("Full-local Auth verification requires an exact loopback proxy port.");
+  }
+  const origin = `http://127.0.0.1:${authProxyPort}`;
+  const request = (path) => fetchImpl(`${origin}${path}`, {
+    method: "GET",
+    redirect: "error",
+    signal: AbortSignal.timeout(10_000),
+  });
+  const jwks = await request("/auth/v1/.well-known/jwks.json");
+  if (!jwks || jwks.status !== 200) {
+    throw new Error("Full-local JWKS loopback verification failed.");
+  }
+  let jwksPayload;
+  try {
+    jwksPayload = await jwks.json();
+  } catch {
+    throw new Error("Full-local JWKS response is invalid.");
+  }
+  if (
+    !jwksPayload
+    || typeof jwksPayload !== "object"
+    || Array.isArray(jwksPayload)
+    || !Array.isArray(jwksPayload.keys)
+    || jwksPayload.keys.length === 0
+    || jwksPayload.keys.length > 8
+    || jwksPayload.keys.some((key) =>
+      !key
+      || typeof key !== "object"
+      || Array.isArray(key)
+      || typeof key.kty !== "string"
+      || key.kty.length === 0)
+  ) {
+    throw new Error("Full-local JWKS response does not contain valid verification keys.");
+  }
+  return Object.freeze({
+    jwksReady: true,
+    localOnly: true,
+  });
+}
+
+/**
+ * Creates read-only post-deploy adapters. The existing current-runtime reader
+ * validates canonical plists, process cwd, Docker identity, config/JWKS, Auth,
+ * product catalog, and volume provenance before these booleans are projected.
+ */
+export function createLocalMacProductionVerifyCommandRunner({
+  baseCommandRunner = spawnSync,
+  dockerBin,
+  gitBin,
+}) {
+  return (command, args, commandOptions = {}) => {
+    if (command === "git" || command === "docker") {
+      const trustedCommand = command === "git" ? gitBin : dockerBin;
+      if (typeof trustedCommand !== "string" || !isAbsolute(trustedCommand)) {
+        throw new Error(`Production verify trusted ${command} executable is unavailable.`);
+      }
+      return baseCommandRunner(trustedCommand, args, {
+        ...commandOptions,
+        env: {
+          ...(commandOptions.env ?? {}),
+          PATH: `${dirname(trustedCommand)}:/usr/bin:/bin:/usr/sbin:/sbin`,
+        },
+      });
+    }
+    return baseCommandRunner(command, args, commandOptions);
+  };
+}
+
+export function createLocalMacProductionVerifyAdapters(options, dependencies = {}) {
+  const {
+    commandRunner: baseCommandRunner = spawnSync,
+    i031PreflightVerifier = verifyStandaloneYoutubeI031Preflight,
+    appReadinessWaiter = waitForLocalMacProductionReady,
+    platform = process.platform,
+    readConfigEvidence: readConfigEvidenceOverride,
+    readCurrentRuntimeBundle: readCurrentRuntimeBundleOverride,
+    readDockerGeneration: readDockerGenerationOverride,
+    readJwksEvidence: readJwksEvidenceOverride,
+    readMigrationHead: readMigrationHeadOverride,
+  } = dependencies;
+  const normalizedOptions = {
+    ...options,
+    fullLocalConfigPath:
+      options.fullLocalConfigPath ?? getFullLocalResumeConfigPath(options.homeDir),
+    dockerBin: options.dockerBin ?? null,
+    gitBin: options.gitBin ?? null,
+    nodeBin: options.nodeBin ?? process.execPath,
+  };
+  const commandRunner = createLocalMacProductionVerifyCommandRunner({
+    baseCommandRunner,
+    dockerBin: normalizedOptions.dockerBin,
+    gitBin: normalizedOptions.gitBin,
+  });
+  const readCurrentRuntimeBundle = readCurrentRuntimeBundleOverride
+    ?? buildDefaultDependencies(
+      commandRunner,
+      i031PreflightVerifier,
+      appReadinessWaiter,
+      platform,
+    ).readCurrentRuntimeBundle;
+  const readConfigEvidence = readConfigEvidenceOverride
+    ?? (({ options: activeOptions }) => {
+      const currentUid = process.getuid?.();
+      if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+      return readCanonicalFullLocalConfigEvidence({
+        currentUid,
+        options: activeOptions,
+      });
+    });
+  const readDockerGeneration = readDockerGenerationOverride
+    ?? ((input) => readCurrentFullLocalDockerGeneration({
+      ...input,
+      commandRunner,
+    }));
+  const readJwksEvidence = readJwksEvidenceOverride
+    ?? ((input) => readCurrentFullLocalJwksEvidence(input));
+  const readMigrationHead = readMigrationHeadOverride
+    ?? ((input) => readCurrentFullLocalMigrationHead({
+      ...input,
+      commandRunner,
+    }));
+
+  return {
+    verifyRuntimeBundle: async (context) => {
+      const runtimeContext = {
+        context: {
+          ...context,
+          currentReleaseDir: context.releaseDir,
+          currentRuntimeBridge: null,
+        },
+        options: normalizedOptions,
+      };
+      const assertVerifiedRuntime = (runtime) => {
+        if (
+          !runtime
+          || typeof runtime.stable_key !== "string"
+          || runtime.stable_key.length === 0
+          || runtime.full_local?.runtime_present !== true
+          || runtime.full_local?.healthy !== true
+          || runtime.full_local?.authorization_contract_status !== "PASS"
+          || runtime.full_local?.product_catalog_status !== "PASS"
+        ) {
+          throw new Error("Current full-local runtime health or authorization evidence is incomplete.");
+        }
+        for (const component of ["app", "full_local", "youtube_worker"]) {
+          assertExactIdentity(component, runtime[component], context.manifest);
+        }
+        return runtime;
+      };
+      const configBefore = readConfigEvidence({
+        context,
+        options: normalizedOptions,
+      });
+      if (configBefore?.digest !== context.currentDescriptor.full_local_config_sha256) {
+        throw new Error("Current full-local config digest drifted from current.json.");
+      }
+      const runtimeBefore = assertVerifiedRuntime(
+        await readCurrentRuntimeBundle(runtimeContext),
+      );
+      const dockerBefore = await readDockerGeneration({
+        context,
+        dockerBin: normalizedOptions.dockerBin,
+        fullLocalConfigPath: normalizedOptions.fullLocalConfigPath,
+        options: normalizedOptions,
+      });
+      const migration = await readMigrationHead({
+        context,
+        dockerBin: normalizedOptions.dockerBin,
+        expectedPostgresContainerId: dockerBefore.postgresContainerId,
+        fullLocalConfigPath: normalizedOptions.fullLocalConfigPath,
+        options: normalizedOptions,
+      });
+      if (
+        !migration
+        || migration.migrationHeadSource !== "database_catalog_marker"
+        || typeof migration.migrationHead !== "string"
+      ) {
+        throw new Error("Current full-local migration head evidence is invalid.");
+      }
+      const jwks = await readJwksEvidence({
+        context,
+        fullLocalConfigPath: normalizedOptions.fullLocalConfigPath,
+        options: normalizedOptions,
+      });
+      if (
+        jwks?.jwksReady !== true
+        || jwks.localOnly !== true
+      ) {
+        throw new Error("Current full-local Auth or JWKS evidence is incomplete.");
+      }
+      const runtime = assertVerifiedRuntime(
+        await readCurrentRuntimeBundle(runtimeContext),
+      );
+      const dockerAfter = await readDockerGeneration({
+        context,
+        dockerBin: normalizedOptions.dockerBin,
+        fullLocalConfigPath: normalizedOptions.fullLocalConfigPath,
+        options: normalizedOptions,
+      });
+      const configAfter = readConfigEvidence({
+        context,
+        options: normalizedOptions,
+      });
+      if (runtime.stable_key !== runtimeBefore.stable_key) {
+        throw new Error("Current production runtime changed during read-only verification.");
+      }
+      if (
+        dockerBefore?.digest !== dockerAfter?.digest
+        || dockerBefore?.postgresContainerId !== dockerAfter?.postgresContainerId
+      ) {
+        throw new Error("Current Docker container or volume generation changed during verify.");
+      }
+      if (!sameFullLocalConfigEvidence(configBefore, configAfter)) {
+        throw new Error("Current full-local config changed during read-only verify.");
+      }
+      return {
+        ...runtime,
+        full_local: {
+          ...runtime.full_local,
+          auth_ready: true,
+          docker_ready: true,
+          docker_generation_digest: dockerAfter.digest,
+          jwks_ready: jwks.jwksReady,
+          local_only: jwks.localOnly,
+          migration_head: migration.migrationHead,
+          migration_head_source: migration.migrationHeadSource,
+          volume_identity_verified: true,
+        },
       };
     },
   };

@@ -24,7 +24,11 @@ import {
   createGitHubProductionReleaseAttestationVerifier,
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
-import { resolveTrustedGhExecutable } from "../scripts/lib/trusted-production-release-tools.mjs";
+import {
+  assertTrustedExecutableSnapshotStable,
+  resolveTrustedGhExecutable,
+  snapshotTrustedExecutables,
+} from "../scripts/lib/trusted-production-release-tools.mjs";
 import {
   createLocalMacProductionGitEvidence,
   createLocalMacProductionReleaseManifest,
@@ -103,6 +107,18 @@ describe("GitHub production release attestation verification", () => {
       currentUid: statSync(root).uid,
       pathEnvironment: hostileBin,
     })).toThrow(/GitHub CLI|realpath|trusted|unavailable/iu);
+  });
+
+  it("detects trusted executable byte drift across a long-running verification", () => {
+    const root = createTempDirectory("trusted-tool-snapshot-");
+    const tool = join(root, "tool");
+    writeFileSync(tool, "version-a", { mode: 0o700 });
+    const before = snapshotTrustedExecutables({ tool });
+
+    writeFileSync(tool, "version-b", { mode: 0o700 });
+
+    expect(() => assertTrustedExecutableSnapshotStable(before, { tool }))
+      .toThrow(/trusted executable|changed|digest/iu);
   });
 
   it("accepts expected contexts only from the trusted GitHub Actions App and never from commit statuses", () => {
