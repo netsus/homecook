@@ -93,6 +93,24 @@ export function allowFirstCanonicalAdoptionWorkerPlist({
   );
 }
 
+/**
+ * @param {{
+ *   currentRuntimeBridge?: Record<string, unknown> | null,
+ *   workerStatus?: { pid?: number | null, state?: string } | null,
+ * }} options
+ */
+export function buildWorkerRuntimeStableProjection({
+  currentRuntimeBridge = null,
+  workerStatus = null,
+} = {}) {
+  return currentRuntimeBridge
+    ? { worker_pid: null, worker_state: "first-canonical-adoption-verified" }
+    : {
+      worker_pid: workerStatus?.pid ?? null,
+      worker_state: workerStatus?.state ?? "unknown",
+    };
+}
+
 function modeBits(mode) {
   return Number(mode) & 0o777;
 }
@@ -1196,6 +1214,10 @@ function buildDefaultDependencies(
           ? { legacy_bootstrap_contract: "e02f-worker-v1" }
           : {}),
       };
+      const workerRuntimeStableProjection = buildWorkerRuntimeStableProjection({
+        currentRuntimeBridge,
+        workerStatus,
+      });
       const stableKey = sha256Text(JSON.stringify({
         app_pid: appStatus.pid,
         app_plist: appPlist.digest,
@@ -1203,8 +1225,7 @@ function buildDefaultDependencies(
         full_local_runtime_root: fullLocalRuntimeRoot,
         full_local_source_sha: currentRuntimeBridge?.full_local_source_sha ?? null,
         full_local_workload: fullLocal.workload_digest,
-        worker_pid: workerStatus.pid ?? null,
-        worker_state: workerStatus.state,
+        ...workerRuntimeStableProjection,
         worker_plist: workerPlist.digest,
         worker_artifact: workerArtifact.artifact_sha256,
         worker_preflight: currentWorkerPreflight.checks,
