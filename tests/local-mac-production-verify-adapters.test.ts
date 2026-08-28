@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createLocalMacProductionVerifyAdapters,
+  createLocalMacProductionVerifyCommandRunner,
   readCurrentFullLocalJwksEvidence,
   readCurrentFullLocalDockerGeneration,
   readCurrentFullLocalMigrationHead,
@@ -72,6 +73,37 @@ function currentBundle() {
 }
 
 describe("local Mac production verify adapters", () => {
+  it("routes bare Git and Docker calls to fixed trusted absolute executables", () => {
+    const baseCommandRunner = vi.fn((
+      command: string,
+      args: readonly string[],
+      options: { env?: Record<string, string> },
+    ) => {
+      void command;
+      void args;
+      void options;
+      return { status: 0, stdout: "", stderr: "" };
+    });
+    const run = createLocalMacProductionVerifyCommandRunner({
+      baseCommandRunner: baseCommandRunner as unknown as typeof import("node:child_process").spawnSync,
+      dockerBin: "/trusted/docker",
+      gitBin: "/trusted/git",
+    });
+
+    run("git", ["rev-parse", "HEAD"], {});
+    run("docker", ["ps"], {});
+    run("/bin/launchctl", ["print", "gui/501/service"], {});
+
+    expect(baseCommandRunner.mock.calls.map(([command]) => command)).toEqual([
+      "/trusted/git",
+      "/trusted/docker",
+      "/bin/launchctl",
+    ]);
+    expect(baseCommandRunner.mock.calls[0]?.[2].env?.PATH).toBe(
+      "/trusted:/usr/bin:/bin:/usr/sbin:/sbin",
+    );
+  });
+
   it("probes JWKS through the exact loopback-only proxy", async () => {
     const root = mkdtempSync(join(tmpdir(), "homecook-verify-auth-"));
     temporaryDirectories.push(root);

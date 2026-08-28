@@ -1737,43 +1737,82 @@ export async function readCurrentFullLocalJwksEvidence({
  * validates canonical plists, process cwd, Docker identity, config/JWKS, Auth,
  * product catalog, and volume provenance before these booleans are projected.
  */
+export function createLocalMacProductionVerifyCommandRunner({
+  baseCommandRunner = spawnSync,
+  dockerBin,
+  gitBin,
+}) {
+  return (command, args, commandOptions = {}) => {
+    if (command === "git" || command === "docker") {
+      const trustedCommand = command === "git" ? gitBin : dockerBin;
+      if (typeof trustedCommand !== "string" || !isAbsolute(trustedCommand)) {
+        throw new Error(`Production verify trusted ${command} executable is unavailable.`);
+      }
+      return baseCommandRunner(trustedCommand, args, {
+        ...commandOptions,
+        env: {
+          ...(commandOptions.env ?? {}),
+          PATH: `${dirname(trustedCommand)}:/usr/bin:/bin:/usr/sbin:/sbin`,
+        },
+      });
+    }
+    return baseCommandRunner(command, args, commandOptions);
+  };
+}
+
 export function createLocalMacProductionVerifyAdapters(options, dependencies = {}) {
   const {
-    commandRunner = spawnSync,
+    commandRunner: baseCommandRunner = spawnSync,
     i031PreflightVerifier = verifyStandaloneYoutubeI031Preflight,
     appReadinessWaiter = waitForLocalMacProductionReady,
     platform = process.platform,
-    readCurrentRuntimeBundle = buildDefaultDependencies(
-      commandRunner,
-      i031PreflightVerifier,
-      appReadinessWaiter,
-      platform,
-    ).readCurrentRuntimeBundle,
-    readConfigEvidence = ({ options: activeOptions }) => {
-      const currentUid = process.getuid?.();
-      if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
-      return readCanonicalFullLocalConfigEvidence({
-        currentUid,
-        options: activeOptions,
-      });
-    },
-    readDockerGeneration = (input) => readCurrentFullLocalDockerGeneration({
-      ...input,
-      commandRunner,
-    }),
-    readJwksEvidence = (input) => readCurrentFullLocalJwksEvidence(input),
-    readMigrationHead = (input) => readCurrentFullLocalMigrationHead({
-      ...input,
-      commandRunner,
-    }),
+    readConfigEvidence: readConfigEvidenceOverride,
+    readCurrentRuntimeBundle: readCurrentRuntimeBundleOverride,
+    readDockerGeneration: readDockerGenerationOverride,
+    readJwksEvidence: readJwksEvidenceOverride,
+    readMigrationHead: readMigrationHeadOverride,
   } = dependencies;
   const normalizedOptions = {
     ...options,
     fullLocalConfigPath:
       options.fullLocalConfigPath ?? getFullLocalResumeConfigPath(options.homeDir),
     dockerBin: options.dockerBin ?? null,
+    gitBin: options.gitBin ?? null,
     nodeBin: options.nodeBin ?? process.execPath,
   };
+  const commandRunner = createLocalMacProductionVerifyCommandRunner({
+    baseCommandRunner,
+    dockerBin: normalizedOptions.dockerBin,
+    gitBin: normalizedOptions.gitBin,
+  });
+  const readCurrentRuntimeBundle = readCurrentRuntimeBundleOverride
+    ?? buildDefaultDependencies(
+      commandRunner,
+      i031PreflightVerifier,
+      appReadinessWaiter,
+      platform,
+    ).readCurrentRuntimeBundle;
+  const readConfigEvidence = readConfigEvidenceOverride
+    ?? (({ options: activeOptions }) => {
+      const currentUid = process.getuid?.();
+      if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable.");
+      return readCanonicalFullLocalConfigEvidence({
+        currentUid,
+        options: activeOptions,
+      });
+    });
+  const readDockerGeneration = readDockerGenerationOverride
+    ?? ((input) => readCurrentFullLocalDockerGeneration({
+      ...input,
+      commandRunner,
+    }));
+  const readJwksEvidence = readJwksEvidenceOverride
+    ?? ((input) => readCurrentFullLocalJwksEvidence(input));
+  const readMigrationHead = readMigrationHeadOverride
+    ?? ((input) => readCurrentFullLocalMigrationHead({
+      ...input,
+      commandRunner,
+    }));
 
   return {
     verifyRuntimeBundle: async (context) => {

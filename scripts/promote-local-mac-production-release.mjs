@@ -229,6 +229,7 @@ try {
       throw new Error("verify --node-bin must equal the trusted current Node.js executable.");
     }
     options.dockerBin = verifyToolPaths.dockerPath;
+    options.gitBin = verifyToolPaths.gitPath;
     options.nodeBin = verifyToolPaths.nodePath;
   }
   const verifyToolSnapshot = verifyToolPaths
