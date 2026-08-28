@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "homecook.local-mac-production-rehearsal-classification.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "inventory_digest", "classified_at", "states", "promotion_safe", "mutation_attempt_count", "findings", "recovery_plan", "classification_digest"],
+  "properties": {
+    "schema": { "const": "homecook.local-mac-production-rehearsal-classification.v1" },
+    "inventory_digest": { "$ref": "#/definitions/hex64" },
+    "classified_at": { "$ref": "#/definitions/timestamp" },
+    "states": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/state" } },
+    "promotion_safe": { "type": "boolean" },
+    "mutation_attempt_count": { "const": 0 },
+    "findings": { "type": "array", "items": { "$ref": "#/definitions/finding" } },
+    "recovery_plan": { "type": "array", "items": { "$ref": "#/definitions/recoveryPlan" } },
+    "classification_digest": { "$ref": "#/definitions/hex64" }
+  },
+  "allOf": [
+    { "if": { "properties": { "states": { "contains": { "enum": ["mixed_running", "partial_failed_install", "orphaned_lock_or_descriptor", "migration_authority_incomplete", "unknown"] } } } }, "then": { "properties": { "promotion_safe": { "const": false } } } }
+  ],
+  "definitions": {
+    "nonempty": { "type": "string", "minLength": 1 },
+    "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
+    "state": { "enum": ["coherent_running", "coherent_prepared", "mixed_running", "partial_failed_install", "orphaned_lock_or_descriptor", "migration_authority_incomplete", "unknown"] },
+    "stringArray": { "type": "array", "items": { "$ref": "#/definitions/nonempty" } },
+    "finding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["finding_id", "state", "evidence_path_digest", "confidence", "missing_evidence"],
+      "properties": { "finding_id": { "$ref": "#/definitions/nonempty" }, "state": { "$ref": "#/definitions/state" }, "evidence_path_digest": { "$ref": "#/definitions/hex64" }, "confidence": { "enum": ["low", "medium", "high"] }, "missing_evidence": { "$ref": "#/definitions/stringArray" } }
+    },
+    "recoveryPlan": {
+      "type": "object", "additionalProperties": false,
+      "required": ["finding_id", "sequence", "required_authority", "preconditions", "expected_mutations", "rollback_or_forward_fix_boundary"],
+      "properties": { "finding_id": { "$ref": "#/definitions/nonempty" }, "sequence": { "type": "integer", "minimum": 0 }, "required_authority": { "$ref": "#/definitions/nonempty" }, "preconditions": { "$ref": "#/definitions/stringArray" }, "expected_mutations": { "$ref": "#/definitions/stringArray" }, "rollback_or_forward_fix_boundary": { "$ref": "#/definitions/nonempty" } }
+    }
+  }
+}
