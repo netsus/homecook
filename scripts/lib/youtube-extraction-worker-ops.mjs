@@ -1137,6 +1137,10 @@ export function buildYoutubeExtractionWorkerHealth({
  *   credentialPath: string,
  *   queueStatePath?: string | null,
  *   secretRoot?: string,
+ *   workerArtifactVerificationOptions?: {
+ *     allowLegacyReleaseSha?: string | null,
+ *     allowFirstCanonicalAdoptionInventory?: boolean,
+ *   } | null,
  * }} options
  */
 export function loadYoutubeExtractionWorkerRuntimeInputs({
@@ -1147,11 +1151,15 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
   expectedSchemaPath = null,
   queueStatePath = null,
   secretRoot,
+  workerArtifactVerificationOptions = null,
 } = {}) {
   return {
     appDescriptor: readYoutubeExtractionAppDescriptor(appDescriptorPath),
     workerArtifact: expectedSchemaPath
-      ? verifyYoutubeExtractionWorkerArtifact(workerArtifactPath)
+      ? verifyYoutubeExtractionWorkerArtifact(
+        workerArtifactPath,
+        workerArtifactVerificationOptions ?? undefined,
+      )
       : readYoutubeExtractionWorkerArtifact(workerArtifactPath),
     currentPolicy: readYoutubeExtractionCurrentPolicy(currentPolicyPath),
     credentialState: readYoutubeExtractionWorkerCredential(credentialPath, { secretRoot }),
