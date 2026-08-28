@@ -849,12 +849,14 @@ function runPrepareCommand({
   args,
   command,
   cwd,
+  env,
   label,
   runCommand,
 }) {
   const result = runCommand(command, args, {
     cwd,
     encoding: "utf8",
+    ...(env ? { env } : {}),
     stdio: ["ignore", "pipe", "pipe"],
   });
   if (result.status !== 0) {
@@ -1663,6 +1665,14 @@ export function prepareLocalMacProductionRelease({
       runPrepareCommand({
         ...command,
         cwd: destinationPath,
+        ...(command.label === "pnpm mac-production:build"
+          ? {
+              env: {
+                ...process.env,
+                HOMECOOK_RELEASE_BUILD_ID: manifest.build_id,
+              },
+            }
+          : {}),
         runCommand,
       });
     }
