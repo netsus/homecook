@@ -132,7 +132,7 @@ describe("release promotion governance docs", () => {
       "docs/engineering/local-mac-production-release-rehearsal.md",
     );
 
-    expect(rehearsalContract).toContain("상태: **canonical / implementation pending**");
+    expect(rehearsalContract).toContain("상태: **canonical / implementation split 1 repair in review**");
     expect(rehearsalContract).toContain("untagged exact-SHA candidate");
     expect(rehearsalContract).toContain("production authority tag");
     expect(rehearsalContract).toContain("동일 bytes");
@@ -237,7 +237,7 @@ describe("release promotion governance docs", () => {
     expect(individualRules.production_guard).toContain("mutation_attempt_count");
     expect(repeatabilityRules.member_receipt_digests).toContain("exact 2");
     expect(repeatabilityRules.member_receipt_digests).toContain("ascending");
-    expect(repeatabilityRules.valid_until).toContain("completed_at + 24h");
+    expect(repeatabilityRules.valid_until).toContain("더 이른 instant");
     expect(repeatabilityRules.repeatability_receipt_digest).toContain(
       "repeatability_receipt_digest 제외",
     );
