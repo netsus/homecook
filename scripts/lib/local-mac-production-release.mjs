@@ -305,10 +305,22 @@ function assertExecutionSymlinksContained(rootPath) {
   visit(root);
 }
 
-function copyExecutionTree(sourcePath, destinationPath, { copyEntryHook = () => undefined } = {}) {
+function copyExecutionTree(
+  sourcePath,
+  destinationPath,
+  { copyEntryHook = () => undefined, excludeRelativePaths = [] } = {},
+) {
   const sourceRoot = realpathSync(sourcePath);
   const destinationRoot = resolve(destinationPath);
-  const copyEntry = (source, destination) => {
+  const excluded = new Set(excludeRelativePaths);
+  const copyEntry = (source, destination, relativePath = "") => {
+    if (
+      relativePath
+      && [...excluded].some((entry) =>
+        relativePath === entry || relativePath.startsWith(`${entry}/`))
+    ) {
+      return;
+    }
     const stat = lstatSync(source);
     if (stat.isSymbolicLink()) {
       const target = realpathSync(source);
@@ -325,7 +337,11 @@ function copyExecutionTree(sourcePath, destinationPath, { copyEntryHook = () => 
     if (stat.isDirectory()) {
       mkdirSync(destination, { mode: 0o700 });
       for (const name of readdirSync(source).sort()) {
-        copyEntry(join(source, name), join(destination, name));
+        copyEntry(
+          join(source, name),
+          join(destination, name),
+          relativePath ? `${relativePath}/${name}` : name,
+        );
       }
       return;
     }
@@ -406,6 +422,15 @@ function assertSealedExecutionTree(rootPath, expectedUid) {
   };
   visit(rootPath);
 }
+
+// Candidate sealing reuses the production execution-tree copier and mode
+// normalizer so the rehearsal path cannot drift into a weaker parallel seal.
+export {
+  assertSealedExecutionTree as assertLocalMacProductionSealedExecutionTree,
+  copyExecutionTree as copyLocalMacProductionExecutionTree,
+  digestExecutionTree as digestLocalMacProductionExecutionTree,
+  sealExecutionTree as sealLocalMacProductionExecutionTree,
+};
 
 export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
   if (!snapshot || snapshot.schema !== EXECUTION_SNAPSHOT_SCHEMA) {
