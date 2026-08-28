@@ -198,6 +198,7 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 
 - production surface를 create, chmod, touch, rename, delete, restart, stop, load, unload, migrate, connect-write 하지 않는다.
 - production evidence를 읽기 전에 expected trusted base부터 모든 ancestor segment를 BigInt `lstat`로 검증한다. existing ancestor는 current-user-owned canonical directory, non-symlink, non-group/world-writable, traversable mode여야 하며 probe 전후 identity가 같아야 한다. dangling symlink도 거부하고, probe 전 absent였던 ancestor가 probe 중 생성되면 race로 실패한다. `~/.homecook`, releases/locks/config roots와 `~/Library/LaunchAgents`의 intermediate symlink는 probe failure다.
+- final artifact target도 `existsSync`가 아니라 BigInt `lstat`로 판정한다. exact `ENOENT`만 canonical absent sentinel을 만들 수 있고, dangling symlink·unsafe type/owner/mode는 probe failure다. absent target은 probe 종료 전에 다시 `lstat`해 absent→created race를 거부한다. 이 규칙은 active canonical lock과 모든 release/snapshot/recovered artifact target에 공통 적용한다.
 - directory/snapshot/lock digest는 immediate child 이름만 사용하지 않는다. contained tree를 bounded recursive traversal하며 file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶는다. path escape, cycle, entry/depth/byte limit 초과는 fail closed한다.
 - identity-sensitive `lstat`/`fstat`는 `{ bigint: true }`로 수집하고 decimal string으로 canonicalize한다. Number 변환 뒤의 inode/device/size를 identity 근거로 사용하지 않는다.
 - JSON Number로 남는 count/mode/pid/port/sequence field는 runtime과 schema 모두 `Number.MAX_SAFE_INTEGER` 이하를 강제한다. 더 큰 identity 값은 decimal string만 사용한다.

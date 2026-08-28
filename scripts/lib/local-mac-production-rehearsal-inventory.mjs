@@ -555,22 +555,45 @@ export function digestProductionTree(rootPath, {
   return digestNode(canonicalRoot, ".", 0);
 }
 
-function artifactEvidence(kind, path) {
-  if (!existsSync(path)) {
-    return {
-      kind,
-      exists: false,
-      device: "0",
-      inode: "0",
-      owner_uid: 0,
-      mode: 0,
-      size: 0,
-      mtime: "1970-01-01T00:00:00.000Z",
-      sha256: sha256Jcs({ kind, exists: false }),
-    };
+function absentArtifactEvidence(kind) {
+  return {
+    kind,
+    exists: false,
+    device: "0",
+    inode: "0",
+    owner_uid: 0,
+    mode: 0,
+    size: 0,
+    mtime: "1970-01-01T00:00:00.000Z",
+    sha256: sha256Jcs({ kind, exists: false }),
+  };
+}
+
+export function readProductionArtifactTarget(kind, path, {
+  afterAbsentCheck = () => {},
+} = {}) {
+  let stats;
+  try {
+    stats = lstatSync(path, { bigint: true });
+  } catch (error) {
+    if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+    afterAbsentCheck();
+    let stillAbsent = false;
+    try {
+      lstatSync(path, { bigint: true });
+    } catch (afterError) {
+      if (afterError && typeof afterError === "object" && afterError.code === "ENOENT") stillAbsent = true;
+      else throw afterError;
+    }
+    if (!stillAbsent) fail(`production ${kind} target was created after absence check`);
+    return absentArtifactEvidence(kind);
   }
-  const stats = lstatSync(path, { bigint: true });
-  if (stats.isSymbolicLink()) fail(`production ${kind} path must not be a symlink`);
+  const uid = BigInt(process.getuid?.());
+  if (stats.isSymbolicLink()) fail(`production ${kind} target must not be a symlink`);
+  if ((!stats.isFile() && !stats.isDirectory()) || stats.uid !== uid || (stats.mode & 0o022n) !== 0n) {
+    fail(`production ${kind} target has unsafe type, owner, or mode`);
+  }
+  if (stats.isDirectory() && (stats.mode & 0o100n) === 0n) fail(`production ${kind} directory target is not traversable`);
   let digest;
   if (stats.isFile()) {
     digest = sha256Bytes(readOpaqueRegularFile(path, `production ${kind}`));
@@ -579,6 +602,8 @@ function artifactEvidence(kind, path) {
   } else {
     fail(`production ${kind} path must be a regular file or directory`);
   }
+  const after = lstatSync(path, { bigint: true });
+  if (!sameFileIdentity(stats, after)) fail(`production ${kind} target changed during probe`);
   return {
     kind,
     exists: true,
@@ -591,6 +616,8 @@ function artifactEvidence(kind, path) {
     sha256: digest,
   };
 }
+
+const artifactEvidence = readProductionArtifactTarget;
 
 function safeJson(path) {
   if (!existsSync(path)) return null;

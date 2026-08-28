@@ -416,6 +416,41 @@ describe("read-only production inventory", () => {
     expect(classifyProductionInventory(failedLockProbe).promotion_safe).toBe(false);
   });
 
+  it("rejects dangling or unsafe canonical lock and recovered artifact targets", async () => {
+    const rootDir = tempDirectory("homecook-target-root-");
+    const danglingHome = tempDirectory("homecook-target-dangling-home-");
+    const danglingLockRoot = join(danglingHome, ".homecook", "locks");
+    mkdirSync(danglingLockRoot, { recursive: true, mode: 0o700 });
+    symlinkSync("missing-lock-target", join(danglingLockRoot, "production-promotion.lock"));
+    const danglingAdapters = createLocalProductionInventoryAdapters({ rootDir, homeDir: danglingHome });
+    await expect(danglingAdapters.readActivePromotionLock()).rejects.toThrow(/symlink|target|lock/iu);
+
+    const recoveredHome = tempDirectory("homecook-target-recovered-home-");
+    const snapshotRoot = join(recoveredHome, ".homecook", "releases", "execution-snapshots");
+    mkdirSync(snapshotRoot, { recursive: true, mode: 0o700 });
+    symlinkSync("missing-snapshot-target", join(snapshotRoot, "snapshot-a"));
+    const recoveredAdapters = createLocalProductionInventoryAdapters({ rootDir, homeDir: recoveredHome });
+    await expect(recoveredAdapters.readReleaseArtifacts()).rejects.toThrow(/symlink|target|snapshot/iu);
+
+    const unsafeHome = tempDirectory("homecook-target-unsafe-home-");
+    const unsafeLock = join(unsafeHome, ".homecook", "locks", "production-promotion.lock");
+    mkdirSync(unsafeLock, { recursive: true, mode: 0o777 });
+    chmodSync(unsafeLock, 0o777);
+    const unsafeAdapters = createLocalProductionInventoryAdapters({ rootDir, homeDir: unsafeHome });
+    await expect(unsafeAdapters.readActivePromotionLock()).rejects.toThrow(/mode|writable|target|lock/iu);
+  });
+
+  it("rejects an absent artifact target created after the absence check", async () => {
+    const inventoryModule = await import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs");
+    expect(inventoryModule.readProductionArtifactTarget).toBeTypeOf("function");
+    const root = tempDirectory("homecook-target-race-");
+    const target = join(root, "production-promotion.lock");
+
+    expect(() => inventoryModule.readProductionArtifactTarget("active_promotion_lock", target, {
+      afterAbsentCheck: () => mkdirSync(target, { mode: 0o700 }),
+    })).toThrow(/target|created|race|changed/iu);
+  });
+
   it("rejects malformed active lock fields and inconsistent absent sentinels in runtime and schema", async () => {
     const require = createRequire(import.meta.url);
     const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
