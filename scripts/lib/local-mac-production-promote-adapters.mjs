@@ -91,6 +91,42 @@ export function buildFullLocalWorkloadStableDigest(status) {
   }));
 }
 
+/**
+ * @template T
+ * @param {{
+ *   read: () => Promise<T> | T,
+ *   attempts?: number,
+ *   intervalMs?: number,
+ *   sleep?: (ms: number) => Promise<void>,
+ * }} options
+ * @returns {Promise<T>}
+ */
+export async function waitForFullLocalCandidateIdentity({
+  read,
+  attempts = 30,
+  intervalMs = 1_000,
+  sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms)),
+} = {}) {
+  if (typeof read !== "function" || !Number.isInteger(attempts) || attempts < 1) {
+    throw new Error("Candidate identity wait options are invalid.");
+  }
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await read();
+    } catch (error) {
+      if (
+        !(error instanceof Error)
+        || error.message !== "Full-local Docker workload release identity mismatch."
+        || attempt === attempts
+      ) {
+        throw error;
+      }
+      await sleep(intervalMs);
+    }
+  }
+  throw new Error("Full-local candidate identity wait exhausted.");
+}
+
 const FIRST_CANONICAL_ADOPTION_WORKER_PLIST_SHA256 =
   "69393712e063e6e0f84c869c330ff4f58f718b73184a20250395d8c9cfd39da8";
 
@@ -1300,11 +1336,13 @@ function buildDefaultDependencies(
       return { started: true };
     },
     confirmFullLocalCandidate: ({ context, options }) =>
-      readFullLocalWorkloadDefault({
-        context,
-        options,
-        checkPlist: false,
-        commandRunner,
+      waitForFullLocalCandidateIdentity({
+        read: () => readFullLocalWorkloadDefault({
+          context,
+          options,
+          checkPlist: false,
+          commandRunner,
+        }),
       }),
     installFullLocal: (input) => installFullLocalLaunchAgent({
       ...input,

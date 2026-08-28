@@ -21,6 +21,7 @@ import {
   allowFirstCanonicalAdoptionWorkerStandby,
   buildWorkerRuntimeStableProjection,
   buildFullLocalWorkloadStableDigest,
+  waitForFullLocalCandidateIdentity,
   createLocalMacProductionPromoteAdapters,
 } from "../scripts/lib/local-mac-production-promote-adapters.mjs";
 import * as promoteAdapters from "../scripts/lib/local-mac-production-promote-adapters.mjs";
@@ -686,6 +687,28 @@ describe("local Mac production promote adapters", () => {
       .toBe(buildFullLocalWorkloadStableDigest({ ...stable, backup_readiness: { age_seconds: 2 } }));
     expect(buildFullLocalWorkloadStableDigest({ ...stable, healthy: false }))
       .not.toBe(buildFullLocalWorkloadStableDigest(stable));
+  });
+
+  it("waits only for a bounded candidate identity transition", async () => {
+    let reads = 0;
+    const sleeps: number[] = [];
+    await expect(waitForFullLocalCandidateIdentity({
+      attempts: 3,
+      intervalMs: 5,
+      read: async () => {
+        reads += 1;
+        if (reads < 3) throw new Error("Full-local Docker workload release identity mismatch.");
+        return { ready: true };
+      },
+      sleep: async (ms: number) => { sleeps.push(ms); },
+    })).resolves.toEqual({ ready: true });
+    expect(sleeps).toEqual([5, 5]);
+
+    await expect(waitForFullLocalCandidateIdentity({
+      attempts: 3,
+      read: async () => { throw new Error("authorization contract failed"); },
+      sleep: async () => undefined,
+    })).rejects.toThrow(/authorization contract failed/iu);
   });
 
   it("blocks all bundle mutation when sealed snapshot verification fails", async () => {
