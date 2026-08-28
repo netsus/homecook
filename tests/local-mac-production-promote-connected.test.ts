@@ -272,7 +272,7 @@ describe("connected local Mac production promotion", () => {
         ".homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1",
       ),
       predecessorIdentity,
-      false,
+      true,
       true,
     );
 

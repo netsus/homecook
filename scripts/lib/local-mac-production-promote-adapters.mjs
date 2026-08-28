@@ -1076,7 +1076,15 @@ function buildDefaultDependencies(
           legacy_bootstrap_contract: "e02f-worker-v1",
         }
         : evaluateYoutubeExtractionWorkerPreflight(
-          loadYoutubeExtractionWorkerRuntimeInputs(currentWorkerPaths),
+          loadYoutubeExtractionWorkerRuntimeInputs({
+            ...currentWorkerPaths,
+            workerArtifactVerificationOptions: currentRuntimeBridge
+              ? {
+                allowLegacyReleaseSha: currentRuntimeBridge.previous_release_sha,
+                allowFirstCanonicalAdoptionInventory: true,
+              }
+              : null,
+          }),
         );
       const expectedCurrentReleaseSha = currentRuntimeBridge?.previous_release_sha
         ?? context.currentDescriptor.release_sha;
