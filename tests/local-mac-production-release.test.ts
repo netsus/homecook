@@ -667,6 +667,15 @@ describe("local Mac production release prepare", () => {
   it("creates a complete immutable release directory from an exact detached checkout without touching production state", () => {
     const fixture = createPrepareFixture();
     const { invocations, runCommand } = createPrepareCommandRunner();
+    writeFileSync(join(fixture.rootDir, ".env.production.local"), "app-runtime-fixture\n", {
+      mode: 0o600,
+    });
+    mkdirSync(join(fixture.rootDir, "infra/full-local-supabase"), { recursive: true });
+    writeFileSync(
+      join(fixture.rootDir, "infra/full-local-supabase/.env.production.local"),
+      "full-local-runtime-fixture\n",
+      { mode: 0o600 },
+    );
 
     const result = prepareLocalMacProductionRelease({
       homeDir: fixture.homeDir,
@@ -697,6 +706,12 @@ describe("local Mac production release prepare", () => {
     expect(readFileSync(fixture.paths.currentDescriptorPath, "utf8")).toBe("current-before\n");
     expect(readFileSync(fixture.paths.previousDescriptorPath, "utf8")).toBe("previous-before\n");
     expect(readFileSync(fixture.paths.lockMetadataPath, "utf8")).toBe("lock-before\n");
+    expect(readFileSync(join(result.release_dir, ".env.production.local"), "utf8"))
+      .toBe("app-runtime-fixture\n");
+    expect(readFileSync(
+      join(result.release_dir, "infra/full-local-supabase/.env.production.local"),
+      "utf8",
+    )).toBe("full-local-runtime-fixture\n");
     expect(invocations.map(({ command, args }) => [command, args])).toEqual(expect.arrayContaining([
       ["git", ["clone", "--no-checkout", "--no-hardlinks", "--no-local", realpathSync(fixture.rootDir), expect.any(String)]],
       ["git", ["checkout", "--detach", fixture.manifest.release_sha]],

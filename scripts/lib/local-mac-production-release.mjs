@@ -800,6 +800,65 @@ function assertNoUnexpectedUntrackedRuntimeFiles({ checkoutDir, runCommand }) {
   }
 }
 
+const LOCAL_MAC_PRODUCTION_RUNTIME_ENV_PATHS = Object.freeze([
+  ".env.production.local",
+  "infra/full-local-supabase/.env.production.local",
+]);
+
+function materializeRuntimeEnvironmentFiles({ sourceRoot, checkoutDir, currentUid, mkdir }) {
+  const sources = LOCAL_MAC_PRODUCTION_RUNTIME_ENV_PATHS.map((relativePath) => ({
+    relativePath,
+    sourcePath: resolve(sourceRoot, relativePath),
+  }));
+  const existingCount = sources.filter(({ sourcePath }) => existsSync(sourcePath)).length;
+  if (existingCount === 0) return;
+  if (existingCount !== sources.length) {
+    throw new Error("Local Mac production runtime environment source is incomplete.");
+  }
+  for (const { relativePath, sourcePath } of sources) {
+    const sourceLabel = `Runtime environment source ${relativePath}`;
+    const sourceSnapshot = readSafeRegularFileSnapshot(sourcePath, sourceLabel);
+    if (sourceSnapshot.uid !== currentUid || sourceSnapshot.mode !== 0o600) {
+      throw new Error(`${sourceLabel} must be current-user owned with mode 0600.`);
+    }
+    const destinationPath = resolve(checkoutDir, relativePath);
+    assertPathInside(checkoutDir, destinationPath, `Runtime environment destination ${relativePath}`);
+    mkdir(dirname(destinationPath), { recursive: true, mode: 0o700 });
+    const destinationDirectory = assertSafeDirectory(
+      dirname(destinationPath),
+      `Runtime environment destination directory ${relativePath}`,
+    );
+    assertPathInside(
+      realpathSync(checkoutDir),
+      destinationDirectory,
+      `Runtime environment destination directory ${relativePath}`,
+    );
+    const finalDestinationPath = join(destinationDirectory, basename(destinationPath));
+    let destinationDescriptor;
+    try {
+      destinationDescriptor = openSync(
+        finalDestinationPath,
+        fsConstants.O_WRONLY
+          | fsConstants.O_CREAT
+          | fsConstants.O_EXCL
+          | fsConstants.O_NOFOLLOW,
+        0o600,
+      );
+      writeFileSync(destinationDescriptor, sourceSnapshot.bytes);
+      const destinationStat = fstatSync(destinationDescriptor);
+      if (
+        !destinationStat.isFile()
+        || destinationStat.uid !== currentUid
+        || modeBits(destinationStat.mode) !== 0o600
+      ) {
+        throw new Error(`Prepared runtime environment ${relativePath} permissions drifted.`);
+      }
+    } finally {
+      if (destinationDescriptor !== undefined) closeSync(destinationDescriptor);
+    }
+  }
+}
+
 function requireCurrentUserUid(getCurrentUid) {
   const currentUid = getCurrentUid();
   if (!Number.isInteger(currentUid) || currentUid < 0) {
@@ -1660,6 +1719,12 @@ export function prepareLocalMacProductionRelease({
     assertDetachedPrepareCheckout({ checkoutDir: destinationPath, runCommand });
     assertCleanTrackedPrepareCheckout({ checkoutDir: destinationPath, runCommand });
     assertTrackedSymlinksStayInsideCheckout({ checkoutDir: destinationPath, runCommand });
+    materializeRuntimeEnvironmentFiles({
+      sourceRoot: realRootDir,
+      checkoutDir: destinationPath,
+      currentUid,
+      mkdir,
+    });
 
     for (const command of LOCAL_MAC_PRODUCTION_PREPARE_COMMANDS) {
       runPrepareCommand({
