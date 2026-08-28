@@ -20,6 +20,7 @@ import {
   allowFirstCanonicalAdoptionWorkerPlist,
   allowFirstCanonicalAdoptionWorkerStandby,
   buildWorkerRuntimeStableProjection,
+  buildFullLocalWorkloadStableDigest,
   createLocalMacProductionPromoteAdapters,
 } from "../scripts/lib/local-mac-production-promote-adapters.mjs";
 import * as promoteAdapters from "../scripts/lib/local-mac-production-promote-adapters.mjs";
@@ -666,6 +667,25 @@ describe("local Mac production promote adapters", () => {
       currentRuntimeBridge: null,
       workerStatus: { pid: 321, state: "running" },
     })).toEqual({ worker_pid: 321, worker_state: "running" });
+  });
+
+  it("excludes dynamic backup timing from the full-local workload digest", () => {
+    const stable = {
+      healthy: true,
+      authorization_contract_status: "PASS",
+      authorization_contract_missing_requirements: [],
+      product_catalog_status: "PASS",
+      product_catalog_missing_columns: [],
+      product_catalog_missing_functions: [],
+      product_catalog_missing_relations: [],
+      container_count: 7,
+      exited: [],
+      status: "running",
+    };
+    expect(buildFullLocalWorkloadStableDigest({ ...stable, backup_readiness: { age_seconds: 1 } }))
+      .toBe(buildFullLocalWorkloadStableDigest({ ...stable, backup_readiness: { age_seconds: 2 } }));
+    expect(buildFullLocalWorkloadStableDigest({ ...stable, healthy: false }))
+      .not.toBe(buildFullLocalWorkloadStableDigest(stable));
   });
 
   it("blocks all bundle mutation when sealed snapshot verification fails", async () => {

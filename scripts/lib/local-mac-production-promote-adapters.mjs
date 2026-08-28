@@ -74,6 +74,23 @@ function sha256Bytes(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+/** @param {Record<string, unknown>} status */
+export function buildFullLocalWorkloadStableDigest(status) {
+  return sha256Text(JSON.stringify({
+    healthy: status.healthy,
+    authorization_contract_status: status.authorization_contract_status,
+    authorization_contract_missing_requirements:
+      status.authorization_contract_missing_requirements,
+    product_catalog_status: status.product_catalog_status,
+    product_catalog_missing_columns: status.product_catalog_missing_columns,
+    product_catalog_missing_functions: status.product_catalog_missing_functions,
+    product_catalog_missing_relations: status.product_catalog_missing_relations,
+    container_count: status.container_count,
+    exited: status.exited,
+    status: status.status,
+  }));
+}
+
 const FIRST_CANONICAL_ADOPTION_WORKER_PLIST_SHA256 =
   "69393712e063e6e0f84c869c330ff4f58f718b73184a20250395d8c9cfd39da8";
 
@@ -694,7 +711,7 @@ function readFullLocalWorkloadDefault({
     healthy: status.healthy === true,
     authorization_contract_status: status.authorization_contract_status,
     product_catalog_status: status.product_catalog_status,
-    workload_digest: sha256Text(result.stdout ?? ""),
+    workload_digest: buildFullLocalWorkloadStableDigest(status),
   };
 }
 
