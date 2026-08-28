@@ -23,6 +23,11 @@ import {
   installFullLocalLaunchAgent,
   renderFullLocalLaunchAgentPlist,
 } from "./full-local-launch-agent.mjs";
+import { parseFullLocalProductionConfig } from "./full-local-production-resources.mjs";
+import {
+  buildMigrationHeadSql,
+  parseMigrationHeadSqlOutput,
+} from "../capture-full-local-session-lifecycle-evidence.mjs";
 import {
   FIRST_CANONICAL_ADOPTION_BRIDGE_MODE,
   FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
@@ -1416,6 +1421,214 @@ export function createLocalMacProductionPromoteAdapters(options, dependencies = 
       return {
         ...worker,
         fullLocalConfigSha256: fullLocalConfig.digest,
+      };
+    },
+  };
+}
+
+export function readCurrentFullLocalMigrationHead({
+  commandRunner = spawnSync,
+  fullLocalConfigPath,
+}) {
+  const config = parseFullLocalProductionConfig(readFileSync(fullLocalConfigPath, "utf8"));
+  const composeProject = config.FULL_LOCAL_COMPOSE_PROJECT_NAME;
+  if (typeof composeProject !== "string" || composeProject.length === 0) {
+    throw new Error("Full-local migration verification requires an exact compose project.");
+  }
+  const containerResult = commandRunner("docker", [
+    "ps",
+    "--quiet",
+    "--filter",
+    `label=com.docker.compose.project=${composeProject}`,
+    "--filter",
+    "label=com.docker.compose.service=postgres",
+  ], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const containerIds = String(containerResult.stdout ?? "")
+    .split(/\r?\n/u)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (containerResult.status !== 0 || containerIds.length !== 1) {
+    throw new Error("Full-local migration verification requires one exact PostgreSQL container.");
+  }
+  const migrationResult = commandRunner("docker", [
+    "exec",
+    "-i",
+    containerIds[0],
+    "psql",
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    "supabase_admin",
+    "-d",
+    "postgres",
+  ], {
+    encoding: "utf8",
+    input: buildMigrationHeadSql(),
+    maxBuffer: 32 * 1024 * 1024,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  if (migrationResult.status !== 0) {
+    throw new Error("Read-only full-local migration head verification failed.");
+  }
+  return parseMigrationHeadSqlOutput(String(migrationResult.stdout ?? ""));
+}
+
+export async function readCurrentFullLocalJwksEvidence({
+  fetchImpl = globalThis.fetch,
+  fullLocalConfigPath,
+}) {
+  if (typeof fetchImpl !== "function") {
+    throw new Error("Full-local JWKS verification fetch is unavailable.");
+  }
+  const config = parseFullLocalProductionConfig(readFileSync(fullLocalConfigPath, "utf8"));
+  const authProxyPort = Number(config.FULL_LOCAL_AUTH_PROXY_PORT);
+  if (!Number.isSafeInteger(authProxyPort) || authProxyPort < 1024 || authProxyPort > 65535) {
+    throw new Error("Full-local Auth verification requires an exact loopback proxy port.");
+  }
+  const origin = `http://127.0.0.1:${authProxyPort}`;
+  const request = (path) => fetchImpl(`${origin}${path}`, {
+    method: "GET",
+    redirect: "error",
+    signal: AbortSignal.timeout(10_000),
+  });
+  const jwks = await request("/auth/v1/.well-known/jwks.json");
+  if (!jwks || jwks.status !== 200) {
+    throw new Error("Full-local JWKS loopback verification failed.");
+  }
+  let jwksPayload;
+  try {
+    jwksPayload = await jwks.json();
+  } catch {
+    throw new Error("Full-local JWKS response is invalid.");
+  }
+  if (
+    !jwksPayload
+    || typeof jwksPayload !== "object"
+    || Array.isArray(jwksPayload)
+    || !Array.isArray(jwksPayload.keys)
+    || jwksPayload.keys.length === 0
+    || jwksPayload.keys.length > 8
+    || jwksPayload.keys.some((key) =>
+      !key
+      || typeof key !== "object"
+      || Array.isArray(key)
+      || typeof key.kty !== "string"
+      || key.kty.length === 0)
+  ) {
+    throw new Error("Full-local JWKS response does not contain valid verification keys.");
+  }
+  return Object.freeze({
+    jwksReady: true,
+    localOnly: true,
+  });
+}
+
+/**
+ * Creates read-only post-deploy adapters. The existing current-runtime reader
+ * validates canonical plists, process cwd, Docker identity, config/JWKS, Auth,
+ * product catalog, and volume provenance before these booleans are projected.
+ */
+export function createLocalMacProductionVerifyAdapters(options, dependencies = {}) {
+  const {
+    commandRunner = spawnSync,
+    i031PreflightVerifier = verifyStandaloneYoutubeI031Preflight,
+    appReadinessWaiter = waitForLocalMacProductionReady,
+    platform = process.platform,
+    readCurrentRuntimeBundle = buildDefaultDependencies(
+      commandRunner,
+      i031PreflightVerifier,
+      appReadinessWaiter,
+      platform,
+    ).readCurrentRuntimeBundle,
+    readJwksEvidence = (input) => readCurrentFullLocalJwksEvidence(input),
+    readMigrationHead = (input) => readCurrentFullLocalMigrationHead({
+      ...input,
+      commandRunner,
+    }),
+  } = dependencies;
+  const normalizedOptions = {
+    ...options,
+    fullLocalConfigPath:
+      options.fullLocalConfigPath ?? getFullLocalResumeConfigPath(options.homeDir),
+    nodeBin: options.nodeBin ?? process.execPath,
+  };
+
+  return {
+    verifyRuntimeBundle: async (context) => {
+      const runtimeContext = {
+        context: {
+          ...context,
+          currentReleaseDir: context.releaseDir,
+          currentRuntimeBridge: null,
+        },
+        options: normalizedOptions,
+      };
+      const assertVerifiedRuntime = (runtime) => {
+        if (
+          !runtime
+          || typeof runtime.stable_key !== "string"
+          || runtime.stable_key.length === 0
+          || runtime.full_local?.runtime_present !== true
+          || runtime.full_local?.healthy !== true
+          || runtime.full_local?.authorization_contract_status !== "PASS"
+          || runtime.full_local?.product_catalog_status !== "PASS"
+        ) {
+          throw new Error("Current full-local runtime health or authorization evidence is incomplete.");
+        }
+        for (const component of ["app", "full_local", "youtube_worker"]) {
+          assertExactIdentity(component, runtime[component], context.manifest);
+        }
+        return runtime;
+      };
+      const runtimeBefore = assertVerifiedRuntime(
+        await readCurrentRuntimeBundle(runtimeContext),
+      );
+      const migration = await readMigrationHead({
+        context,
+        fullLocalConfigPath: normalizedOptions.fullLocalConfigPath,
+        options: normalizedOptions,
+      });
+      if (
+        !migration
+        || migration.migrationHeadSource !== "database_catalog_marker"
+        || typeof migration.migrationHead !== "string"
+      ) {
+        throw new Error("Current full-local migration head evidence is invalid.");
+      }
+      const jwks = await readJwksEvidence({
+        context,
+        fullLocalConfigPath: normalizedOptions.fullLocalConfigPath,
+        options: normalizedOptions,
+      });
+      if (
+        jwks?.jwksReady !== true
+        || jwks.localOnly !== true
+      ) {
+        throw new Error("Current full-local Auth or JWKS evidence is incomplete.");
+      }
+      const runtime = assertVerifiedRuntime(
+        await readCurrentRuntimeBundle(runtimeContext),
+      );
+      if (runtime.stable_key !== runtimeBefore.stable_key) {
+        throw new Error("Current production runtime changed during read-only verification.");
+      }
+      return {
+        ...runtime,
+        full_local: {
+          ...runtime.full_local,
+          auth_ready: true,
+          docker_ready: true,
+          jwks_ready: jwks.jwksReady,
+          local_only: jwks.localOnly,
+          migration_head: migration.migrationHead,
+          migration_head_source: migration.migrationHeadSource,
+          volume_identity_verified: true,
+        },
       };
     },
   };

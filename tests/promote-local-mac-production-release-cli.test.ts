@@ -255,7 +255,7 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(result.stderr).not.toContain("currently blocked");
   });
 
-  it("enables promote argument validation while keeping verify blocked fail-closed", () => {
+  it("enables promote and verify argument validation without blanket-blocking either command", () => {
     const promote = spawnSync(
       process.execPath,
       [SCRIPT_PATH, "promote"],
@@ -277,8 +277,8 @@ describe("promote-local-mac-production-release CLI", () => {
       },
     );
     expect(verify.status).toBe(1);
-    expect(verify.stderr).toContain("verify");
-    expect(verify.stderr).toContain("blocked");
+    expect(verify.stderr).toContain("verify requires --release-manifest");
+    expect(verify.stderr).not.toContain("currently blocked");
   });
 
 });

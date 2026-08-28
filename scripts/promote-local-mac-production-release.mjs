@@ -5,12 +5,14 @@ import {
   prepareLocalMacProductionRelease,
   promoteLocalMacProductionRelease,
   readLocalMacProductionRepoHeadSha,
+  verifyLocalMacProductionRelease,
 } from "./lib/local-mac-production-release.mjs";
 import {
   createGitHubProductionReleaseAttestationVerifier,
 } from "./lib/github-production-release-attestation.mjs";
 import {
   createLocalMacProductionPromoteAdapters,
+  createLocalMacProductionVerifyAdapters,
 } from "./lib/local-mac-production-promote-adapters.mjs";
 
 function printHelp() {
@@ -19,13 +21,12 @@ function printHelp() {
   node scripts/promote-local-mac-production-release.mjs prepare --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> [--home-dir <path>] [--root-dir <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs promote --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> --full-local-config <path> --worker-config <path> --worker-manifest <path> --worker-credential <path> --worker-app-descriptor <path> --worker-policy <path> --worker-expected-schema <path> --worker-secret-root <path> --confirm-production LOCAL_FULL_PRODUCTION_WORKER_INSTALL [--home-dir <path>] [--root-dir <path>] [--node-bin <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs status [--release-manifest <path>] [--home-dir <path>] [--root-dir <path>] [--json]
-  node scripts/promote-local-mac-production-release.mjs verify --release-manifest <path> [--home-dir <path>] [--root-dir <path>] [--json]
+  node scripts/promote-local-mac-production-release.mjs verify --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> [--home-dir <path>] [--root-dir <path>] [--node-bin <path>] [--json]
 
-Currently implemented in this stage: plan, prepare, promote, status
-Currently blocked fail-closed in this stage: verify
+Currently implemented: plan, prepare, promote, status, verify
 
 Prepare creates an immutable candidate directory only; it does not acquire the production lock or change runtime state.
-Promote requires exact attestation and explicit runtime paths; verify remains blocked fail-closed.
+Promote requires exact attestation and explicit runtime paths; verify is read-only and rechecks the exact attested running bundle.
 `);
 }
 
@@ -126,22 +127,15 @@ function printResult(result, json) {
     process.stdout.write(`prepared: yes\n`);
     process.stdout.write(`release_dir: ${result.release_dir}\n`);
   }
+  if (result.verified) {
+    process.stdout.write("verified: yes\n");
+    process.stdout.write(
+      `migration_head: ${result.runtime?.full_local?.migration_head ?? "-"}\n`,
+    );
+  }
   if (result.lock) {
     process.stdout.write(`lock: ${result.lock.locked ? "held" : "free"}\n`);
     process.stdout.write(`stale_candidate: ${result.lock.staleCandidate ? "yes" : "no"}\n`);
-  }
-}
-
-function isBlockedStageCommand(command) {
-  return command === "verify";
-}
-
-function assertSupportedStageCommand(command) {
-  if (isBlockedStageCommand(command)) {
-    throw new Error(
-      `Command "${command}" is currently blocked fail-closed in this stage. `
-      + "Use plan/prepare/promote/status only until verify is implemented.",
-    );
   }
 }
 
@@ -174,10 +168,6 @@ try {
     process.exit(0);
   }
 
-  if (isBlockedStageCommand(options.command)) {
-    assertSupportedStageCommand(options.command);
-  }
-
   if (options.command === "plan" && !options.releaseManifestPath) {
     throw new Error("plan requires --release-manifest <path>.");
   }
@@ -186,6 +176,9 @@ try {
   }
   if (options.command === "promote" && !options.releaseManifestPath) {
     throw new Error("promote requires --release-manifest <path>.");
+  }
+  if (options.command === "verify" && !options.releaseManifestPath) {
+    throw new Error("verify requires --release-manifest <path>.");
   }
   if (
     options.command === "prepare"
@@ -198,12 +191,20 @@ try {
   if (options.command === "promote") {
     requirePromoteRuntimeInputs(options);
   }
+  if (
+    options.command === "verify"
+    && (!options.bundlePath || !options.subjectManifestPath || !options.trustedRootPath)
+  ) {
+    throw new Error(
+      "verify requires --bundle <path>, --subject-manifest <path>, and --trusted-root <path>.",
+    );
+  }
 
   if (!["plan", "prepare", "promote", "status", "verify"].includes(options.command)) {
     throw new Error(`Unknown command: ${options.command}`);
   }
 
-  const attestationVerifier = ["prepare", "promote"].includes(options.command)
+  const attestationVerifier = ["prepare", "promote", "verify"].includes(options.command)
     ? createGitHubProductionReleaseAttestationVerifier({
       bundlePath: options.bundlePath,
       repository: "netsus/homecook",
@@ -224,6 +225,15 @@ try {
   } else if (options.command === "promote") {
     const adapters = createLocalMacProductionPromoteAdapters(options);
     result = await promoteLocalMacProductionRelease({
+      ...adapters,
+      homeDir: options.homeDir,
+      manifestPath: options.releaseManifestPath,
+      rootDir: options.rootDir,
+      verifyAttestation: attestationVerifier,
+    });
+  } else if (options.command === "verify") {
+    const adapters = createLocalMacProductionVerifyAdapters(options);
+    result = await verifyLocalMacProductionRelease({
       ...adapters,
       homeDir: options.homeDir,
       manifestPath: options.releaseManifestPath,
