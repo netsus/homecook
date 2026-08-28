@@ -150,6 +150,16 @@ identity, canonical plist/process cwd, Docker/Auth/JWKS/volume provenance, datab
 head를 같은 manifest와 대조한다. 검증 도중 promotion lock이나 descriptor/snapshot drift가 보이면
 자동 복구·재시작·rollback 없이 fail closed한다.
 
+- sealed snapshot은 canonical `~/.homecook/releases/execution-snapshots/<digest>` root와 current-user
+  ownership/private mode에 다시 묶는다.
+- canonical full-local config의 digest/dev/inode/ctime/mtime를 probe 전후로 비교하고
+  `current.json.full_local_config_sha256`와 exact match해야 한다.
+- app/full-local/worker probe 전후의 exact Docker container ID와 named-volume provenance generation,
+  migration query의 PostgreSQL container ID가 모두 같아야 한다.
+- promotion lock root generation을 probe 전후로 비교해 lock이 잠깐 생겼다가 사라진 경우도 거부한다.
+- `gh`, `git`, `docker`, `node`는 fixed trusted resolver의 absolute executable만 사용하고,
+  실행 전후 inode/mode/ctime/size/SHA-256 snapshot이 같아야 한다.
+
 ### 5. reboot-verify
 
 reboot evidence 단계다.

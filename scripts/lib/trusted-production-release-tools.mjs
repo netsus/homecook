@@ -2,8 +2,10 @@ import {
   accessSync,
   constants,
   realpathSync,
+  readFileSync,
   statSync,
 } from "node:fs";
+import { createHash } from "node:crypto";
 import { isAbsolute } from "node:path";
 
 const GIT_CANDIDATES = ["/usr/bin/git"];
@@ -115,4 +117,41 @@ export function resolveTrustedProductionReleaseToolPaths() {
     nodePath: resolveTrustedNodeExecutable(),
     tarPath: resolveTrustedTarExecutable(),
   });
+}
+
+export function snapshotTrustedExecutables(paths) {
+  if (!paths || typeof paths !== "object" || Array.isArray(paths)) {
+    throw new Error("Trusted executable paths are required.");
+  }
+  return Object.freeze(Object.fromEntries(Object.entries(paths).map(([name, path]) => {
+    if (typeof path !== "string" || !isAbsolute(path)) {
+      throw new Error(`Trusted executable ${name} path must be absolute.`);
+    }
+    const realpath = realpathSync(path);
+    const stat = statSync(realpath);
+    if (!stat.isFile() || (stat.mode & 0o111) === 0 || (stat.mode & 0o022) !== 0) {
+      throw new Error(`Trusted executable ${name} mode or type is unsafe.`);
+    }
+    return [name, Object.freeze({
+      ctimeMs: stat.ctimeMs,
+      dev: stat.dev,
+      digest: createHash("sha256").update(readFileSync(realpath)).digest("hex"),
+      ino: stat.ino,
+      mode: stat.mode & 0o777,
+      path: realpath,
+      size: stat.size,
+    })];
+  })));
+}
+
+export function assertTrustedExecutableSnapshotStable(expected, paths) {
+  const actual = snapshotTrustedExecutables(paths);
+  if (
+    Object.keys(expected).sort().join("|") !== Object.keys(actual).sort().join("|")
+    || Object.keys(expected).some((name) =>
+      JSON.stringify(expected[name]) !== JSON.stringify(actual[name]))
+  ) {
+    throw new Error("Trusted executable changed during production verification.");
+  }
+  return actual;
 }

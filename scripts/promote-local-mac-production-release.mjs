@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
+import { realpathSync } from "node:fs";
+
 import {
   getLocalMacProductionReleaseStatus,
   prepareLocalMacProductionRelease,
   promoteLocalMacProductionRelease,
+  readLocalMacProductionGitReleaseEvidence,
   readLocalMacProductionRepoHeadSha,
   verifyLocalMacProductionRelease,
 } from "./lib/local-mac-production-release.mjs";
@@ -14,6 +18,14 @@ import {
   createLocalMacProductionPromoteAdapters,
   createLocalMacProductionVerifyAdapters,
 } from "./lib/local-mac-production-promote-adapters.mjs";
+import { resolveTrustedDockerBinary } from "./lib/full-local-session-observation-reader.mjs";
+import {
+  assertTrustedExecutableSnapshotStable,
+  resolveTrustedGhExecutable,
+  resolveTrustedGitExecutable,
+  resolveTrustedNodeExecutable,
+  snapshotTrustedExecutables,
+} from "./lib/trusted-production-release-tools.mjs";
 
 function printHelp() {
   process.stdout.write(`Usage:
@@ -204,9 +216,29 @@ try {
     throw new Error(`Unknown command: ${options.command}`);
   }
 
+  const verifyToolPaths = options.command === "verify"
+    ? Object.freeze({
+        dockerPath: resolveTrustedDockerBinary(),
+        ghPath: resolveTrustedGhExecutable(),
+        gitPath: resolveTrustedGitExecutable(),
+        nodePath: resolveTrustedNodeExecutable(),
+      })
+    : null;
+  if (verifyToolPaths) {
+    if (realpathSync(options.nodeBin) !== verifyToolPaths.nodePath) {
+      throw new Error("verify --node-bin must equal the trusted current Node.js executable.");
+    }
+    options.dockerBin = verifyToolPaths.dockerPath;
+    options.nodeBin = verifyToolPaths.nodePath;
+  }
+  const verifyToolSnapshot = verifyToolPaths
+    ? snapshotTrustedExecutables(verifyToolPaths)
+    : null;
+
   const attestationVerifier = ["prepare", "promote", "verify"].includes(options.command)
     ? createGitHubProductionReleaseAttestationVerifier({
       bundlePath: options.bundlePath,
+      ...(verifyToolPaths ? { ghExecutable: verifyToolPaths.ghPath } : {}),
       repository: "netsus/homecook",
       signerWorkflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
       sourceRef: "refs/heads/master",
@@ -233,13 +265,26 @@ try {
     });
   } else if (options.command === "verify") {
     const adapters = createLocalMacProductionVerifyAdapters(options);
+    const runTrustedGit = (_command, args, commandOptions) => spawnSync(
+      verifyToolPaths.gitPath,
+      args,
+      {
+        ...commandOptions,
+        env: { PATH: "/usr/bin:/bin" },
+      },
+    );
     result = await verifyLocalMacProductionRelease({
       ...adapters,
       homeDir: options.homeDir,
       manifestPath: options.releaseManifestPath,
+      readGitEvidence: (input) => readLocalMacProductionGitReleaseEvidence({
+        ...input,
+        runCommand: runTrustedGit,
+      }),
       rootDir: options.rootDir,
       verifyAttestation: attestationVerifier,
     });
+    assertTrustedExecutableSnapshotStable(verifyToolSnapshot, verifyToolPaths);
   } else {
     result = getLocalMacProductionReleaseStatus({
       currentHeadSha: readLocalMacProductionRepoHeadSha({ rootDir: options.rootDir }),

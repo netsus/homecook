@@ -153,7 +153,10 @@ afterEach(() => {
 
 describe("local Mac production verify", () => {
   it("reconstructs and verifies an existing sealed execution snapshot", () => {
-    const releaseRoot = temp("homecook-verify-snapshot-release-");
+    const homeDir = temp("homecook-verify-snapshot-home-");
+    const releaseRoot = getLocalMacProductionReleasePaths(homeDir).releaseRoot;
+    mkdirSync(releaseRoot, { recursive: true, mode: 0o700 });
+    chmodSync(join(releaseRoot, ".."), 0o700);
     const preparedReleaseDir = temp("homecook-verify-snapshot-app-");
     const workerRoot = temp("homecook-verify-snapshot-worker-");
     const workerAuthority = temp("homecook-verify-snapshot-authority-");
@@ -182,6 +185,7 @@ describe("local Mac production verify", () => {
     });
 
     expect(readAndVerifyLocalMacProductionExecutionSnapshot({
+      homeDir,
       descriptor: {
         schema: "homecook.local-mac-production-running-release.v1",
         release_tag: "prod-20260828.1",
@@ -212,11 +216,28 @@ describe("local Mac production verify", () => {
     const descriptor = JSON.parse(readFileSync(subject.paths.currentDescriptorPath, "utf8"));
 
     expect(() => readAndVerifyLocalMacProductionExecutionSnapshot({
+      homeDir: subject.homeDir,
       descriptor: {
         ...descriptor,
         worker_manifest_path: join(subject.homeDir, "outside-artifact.json"),
       },
     })).toThrow(/worker.*manifest.*path|path.*authority|escape/iu);
+  });
+
+  it("rejects a sealed-looking snapshot outside the canonical release root", () => {
+    const subject = fixture();
+    const descriptor = JSON.parse(readFileSync(subject.paths.currentDescriptorPath, "utf8"));
+    const externalRoot = join(subject.rootDir, descriptor.execution_snapshot_digest);
+
+    expect(() => readAndVerifyLocalMacProductionExecutionSnapshot({
+      homeDir: subject.homeDir,
+      descriptor: {
+        ...descriptor,
+        execution_app_root: join(externalRoot, "app"),
+        worker_artifact_root: join(externalRoot, "worker"),
+        worker_manifest_path: join(externalRoot, "worker", "artifact.json"),
+      },
+    })).toThrow(/canonical|release root|snapshot path authority/iu);
   });
 
   it("verifies the attested descriptor, sealed snapshot, and exact three-part runtime bundle read-only", async () => {
@@ -270,6 +291,26 @@ describe("local Mac production verify", () => {
     await expect(verifyLocalMacProductionRelease(options)).rejects.toThrow(message);
   });
 
+  it("requires app, full-local, and worker enablement as one verified bundle", async () => {
+    const subject = fixture();
+    const disabledManifest = {
+      ...subject.manifest,
+      youtube_worker_launch_agent_enabled: false,
+    };
+    const bytes = Buffer.from(`${JSON.stringify(disabledManifest, null, 2)}\n`);
+    writeFileSync(subject.manifestPath, bytes, { mode: 0o600 });
+    const descriptor = JSON.parse(readFileSync(subject.paths.currentDescriptorPath, "utf8"));
+    writeFileSync(subject.paths.currentDescriptorPath, `${JSON.stringify({
+      ...descriptor,
+      source_manifest_sha256: digest(bytes),
+    }, null, 2)}\n`, { mode: 0o600 });
+
+    await expect(verifyLocalMacProductionRelease({
+      ...verifyOptions(subject),
+      manifestPath: subject.manifestPath,
+    })).rejects.toThrow(/app|full-local|worker|bundle|enabled/iu);
+  });
+
   it("fails closed when current.json changes during the runtime probe", async () => {
     const subject = fixture();
     const options = verifyOptions(subject);
@@ -307,5 +348,18 @@ describe("local Mac production verify", () => {
 
     await expect(verifyLocalMacProductionRelease(verifyOptions(subject)))
       .rejects.toThrow(/promotion.*lock|lock.*held/iu);
+  });
+
+  it("fails closed when a promotion lock appears and disappears during verify", async () => {
+    const subject = fixture();
+    const options = verifyOptions(subject);
+    options.verifyRuntimeBundle.mockImplementation(async () => {
+      mkdirSync(subject.paths.lockPath, { recursive: true, mode: 0o700 });
+      rmSync(subject.paths.lockPath, { recursive: true, force: true });
+      return readyRuntime(subject.manifest);
+    });
+
+    await expect(verifyLocalMacProductionRelease(options))
+      .rejects.toThrow(/lock.*changed|lock.*generation|promotion.*concurrent/iu);
   });
 });

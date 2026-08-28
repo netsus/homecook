@@ -3124,18 +3124,68 @@ function validateVerifiedLocalMacProductionRuntimeBundle(runtime, manifest) {
   return runtime;
 }
 
+function readPromotionLockRootGeneration({ currentUid, homeDir }) {
+  const lockRoot = getLocalMacProductionReleasePaths(homeDir).lockRoot;
+  const stat = lstatIfExists(lockRoot);
+  if (!stat) return Object.freeze({ exists: false });
+  assertPrivateDirectory(lockRoot, "Production promotion lock root", currentUid);
+  return Object.freeze({
+    exists: true,
+    dev: stat.dev,
+    ino: stat.ino,
+    ctimeMs: stat.ctimeMs,
+    mtimeMs: stat.mtimeMs,
+  });
+}
+
+function samePromotionLockRootGeneration(left, right) {
+  return left.exists === right.exists
+    && (!left.exists || (
+      left.dev === right.dev
+      && left.ino === right.ino
+      && left.ctimeMs === right.ctimeMs
+      && left.mtimeMs === right.mtimeMs
+    ));
+}
+
 /**
  * Reconstructs the create-only execution snapshot from current.json and verifies
  * its inode, ownership, modes, metadata, symlink containment, and content digests.
  *
- * @param {{ descriptor: Record<string, unknown> }} options
+ * @param {{
+ *   descriptor: Record<string, unknown>,
+ *   getCurrentUid?: () => number | undefined,
+ *   homeDir?: string,
+ * }} options
  */
-export function readAndVerifyLocalMacProductionExecutionSnapshot({ descriptor } = {}) {
+export function readAndVerifyLocalMacProductionExecutionSnapshot({
+  descriptor,
+  getCurrentUid = () => process.getuid?.(),
+  homeDir = process.env.HOME ?? "",
+} = {}) {
   const normalizedDescriptor = normalizeRunningReleaseDescriptor(
     descriptor,
     "Current running release descriptor",
   );
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  const realHomeDir = assertSafeDirectory(
+    requireAbsolutePath(homeDir, "homeDir"),
+    "homeDir",
+  );
+  const paths = getLocalMacProductionReleasePaths(realHomeDir);
+  const executionRoot = join(paths.releaseRoot, "execution-snapshots");
+  assertPrivateDirectory(dirname(paths.releaseRoot), "Homecook state directory", currentUid);
+  assertPrivateDirectory(paths.releaseRoot, "Local Mac production release root", currentUid);
+  assertPrivateDirectory(
+    executionRoot,
+    "Local Mac production execution snapshot root",
+    currentUid,
+  );
   const snapshotRoot = dirname(normalizedDescriptor.execution_app_root);
+  const canonicalSnapshotRoot = join(
+    executionRoot,
+    normalizedDescriptor.execution_snapshot_digest,
+  );
   if (
     basename(snapshotRoot) !== normalizedDescriptor.execution_snapshot_digest
     || normalizedDescriptor.execution_app_root !== join(snapshotRoot, "app")
@@ -3143,6 +3193,21 @@ export function readAndVerifyLocalMacProductionExecutionSnapshot({ descriptor } 
   ) {
     throw new Error("Current descriptor execution snapshot path authority drifted.");
   }
+  let realSnapshotRoot;
+  try {
+    realSnapshotRoot = realpathSync(snapshotRoot);
+  } catch {
+    throw new Error("Current descriptor canonical execution snapshot is unavailable.");
+  }
+  if (
+    realSnapshotRoot !== canonicalSnapshotRoot
+    || realpathSync(normalizedDescriptor.execution_app_root) !== join(canonicalSnapshotRoot, "app")
+    || realpathSync(normalizedDescriptor.worker_artifact_root)
+      !== join(canonicalSnapshotRoot, "worker")
+  ) {
+    throw new Error("Current descriptor snapshot is outside the canonical release root.");
+  }
+  assertPrivateDirectory(snapshotRoot, "Sealed execution snapshot root", currentUid);
   if (normalizedDescriptor.worker_manifest_path === normalizedDescriptor.worker_artifact_root) {
     throw new Error("Current descriptor worker manifest path authority is invalid.");
   }
@@ -3253,6 +3318,10 @@ export async function verifyLocalMacProductionRelease({
   const currentUid = requireCurrentUserUid(getCurrentUid);
   assertOwnedSafeRegularFile(normalizedManifestPath, "Release manifest", currentUid);
 
+  const initialLockRoot = readPromotionLockRootGeneration({
+    currentUid,
+    homeDir: realHomeDir,
+  });
   const initialLock = readLockRecord({ homeDir: realHomeDir });
   if (initialLock.locked) {
     throw new Error("Production promotion lock is held; read-only verify is blocked.");
@@ -3278,6 +3347,15 @@ export async function verifyLocalMacProductionRelease({
     rootDir: realRootDir,
     verifyAttestation,
   });
+  if (
+    !manifest.app_launch_agent_enabled
+    || !manifest.full_local_launch_agent_enabled
+    || !manifest.youtube_worker_launch_agent_enabled
+  ) {
+    throw new Error(
+      "Production verify requires app, full-local, and YouTube worker enabled as one bundle.",
+    );
+  }
   const paths = getLocalMacProductionReleasePaths(realHomeDir);
   const initialRunning = readRunningDescriptorSnapshot({
     currentUid,
@@ -3295,7 +3373,11 @@ export async function verifyLocalMacProductionRelease({
     throw new Error("Current descriptor source manifest digest drifted from the release manifest.");
   }
 
-  const snapshotBefore = verifyExecutionSnapshot({ descriptor });
+  const snapshotBefore = verifyExecutionSnapshot({
+    descriptor,
+    getCurrentUid: () => currentUid,
+    homeDir: realHomeDir,
+  });
   if (snapshotBefore?.digest !== descriptor.execution_snapshot_digest) {
     throw new Error("Verified execution snapshot digest drifted from current.json.");
   }
@@ -3309,7 +3391,11 @@ export async function verifyLocalMacProductionRelease({
     }),
     manifest,
   );
-  const snapshotAfter = verifyExecutionSnapshot({ descriptor });
+  const snapshotAfter = verifyExecutionSnapshot({
+    descriptor,
+    getCurrentUid: () => currentUid,
+    homeDir: realHomeDir,
+  });
   if (snapshotAfter?.digest !== descriptor.execution_snapshot_digest) {
     throw new Error("Verified execution snapshot digest changed during runtime verification.");
   }
@@ -3333,8 +3419,16 @@ export async function verifyLocalMacProductionRelease({
   ) {
     throw new Error("Release manifest changed concurrently during read-only verify.");
   }
-  if (readLockRecord({ homeDir: realHomeDir }).locked) {
+  const finalLockState = readLockRecord({ homeDir: realHomeDir });
+  const finalLockRoot = readPromotionLockRootGeneration({
+    currentUid,
+    homeDir: realHomeDir,
+  });
+  if (finalLockState.locked) {
     throw new Error("Production promotion lock appeared during read-only verify.");
+  }
+  if (!samePromotionLockRootGeneration(initialLockRoot, finalLockRoot)) {
+    throw new Error("Production promotion lock generation changed concurrently during verify.");
   }
 
   return {
