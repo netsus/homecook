@@ -1,6 +1,6 @@
 # Homecook 서버 Mac release rehearsal 계약
 
-상태: **canonical / implementation pending**
+상태: **canonical / implementation split 1 in review**
 변경 유형: `docs-governance`
 production mutation: **금지 (`false`)**
 제품 계약 영향: **N/A** — 공식 제품 5종, public API, DB schema 계약을 바꾸지 않는다.
@@ -9,7 +9,7 @@ production mutation: **금지 (`false`)**
 
 active production 승격의 역할·lock·tag immutability·manifest·attestation authority는 계속 [local-mac-production-release-promotion.md](./local-mac-production-release-promotion.md)가 가진다. 이 문서는 그보다 앞선 untagged exact-SHA candidate, isolated rehearsal, receipt, mixed-state read-only classification을 담당한다.
 
-현재 상태에서는 이 문서에 적힌 command family와 receipt gate가 구현되지 않았다. 따라서 문서 merge만으로 rehearsal 또는 production promotion이 가능하다고 주장하지 않는다. 구현과 독립 검토가 모두 끝날 때까지 기존 `release:production:promote`는 mixed production state를 안전하게 모델링하거나 새 receipt를 검증할 수 없는 것으로 본다.
+현재 구현 범위는 R0 inventory, mixed-state classify, receipt schema/JCS/offline verify와 production surface snapshot foundation까지다. candidate build/seal과 isolated run은 아직 구현되지 않았다. 따라서 이 구현만으로 rehearsal 또는 production promotion이 가능하다고 주장하지 않으며, 모든 split과 독립 검토가 끝날 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
 
 ## 목표와 비목표
 
