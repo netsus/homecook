@@ -216,44 +216,82 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 
 ## Receipt schema
 
-receipt는 canonical JSON serialization을 사용하는 create-only non-secret artifact다. 최소 schema는 `homecook.local-mac-production-rehearsal-receipt.v1`이다.
+receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `RFC 8785 JSON Canonicalization Scheme (JCS)` UTF-8 bytes이고 digest는 lowercase hex SHA-256이다. local receipt와 repeatability receipt의 self digest는 accidental corruption과 exact binding을 검출하지만 production authority signature가 아니다.
 
-필수 top-level field:
+### Individual run receipt exact schema
 
-- `schema`, `receipt_id`, `run_id`, `status`
-- `issued_at`, `completed_at`, `valid_until`
-- `repository`, `source_ref`, `release_sha`, `release_tree`
-- `ci_head_sha`, `ci_check_summary_digest`
-- `build_id`, `bundle_digest`, `bundle_manifest_digest`
-- `candidate_manifest_path_digest`, `candidate_seal_identity`
-- `toolchain`, `images`, `migration`, `fixtures`
-- `isolation`, `runtime`, `canaries`, `network`
-- `cleanup`, `production_guard`
-- `environment_snapshot`, `threat_controls`
-- `issuer_task_id`, `issuer_tool_digest`, `receipt_digest`
+`homecook.local-mac-production-rehearsal-run-receipt.v1`의 top-level field는 아래 순서와 이름을 정확히 사용한다. unknown field, duplicate JSON key, non-canonical number/string은 거부한다.
 
-중첩 최소 필드:
+| field | exact rule |
+| --- | --- |
+| `schema` | exact `homecook.local-mac-production-rehearsal-run-receipt.v1` |
+| `canonicalization` | exact `RFC8785-JCS+SHA256` |
+| `repository` | exact `netsus/homecook` |
+| `source_ref` | exact `refs/heads/master` |
+| `release_sha` | exact 40-hex CI-green candidate SHA |
+| `release_tree` | exact Git tree SHA |
+| `ci_head_sha` | `release_sha`와 exact match |
+| `ci_check_summary_digest` | current head에서 시작된 전체 terminal check summary의 canonical SHA-256 |
+| `build_id` | sealed build의 nonempty exact ID |
+| `sealed_bundle_digest` | app/full-local/worker same bytes를 묶은 lowercase 64-hex SHA-256 |
+| `bundle_manifest_digest` | canonical sealed bundle manifest의 lowercase 64-hex SHA-256 |
+| `run_id` | cryptographically random unique run ID |
+| `issued_at` | UTC RFC3339 issuance instant |
+| `completed_at` | cleanup과 production post snapshot 뒤 UTC RFC3339 instant |
+| `toolchain` | exact keys `node,pnpm,supabase_cli,git,docker_client,docker_daemon,candidate_builder,rehearsal_runner`; 각 tool identity는 `version,realpath,device,inode,mode,ctime,size,sha256` |
+| `images` | digest 오름차순 array; 각 entry exact keys `digest,platform,local_cache_provenance_digest`; mutable tag-only 금지 |
+| `migration` | exact keys `ordered_migration_files_digest,applied_global_ledger_digest,migration_head,catalog_head,schema_identity_digest` |
+| `fixtures` | exact keys `fixture_set_id,fixture_set_digest,production_derived_row_count`; count는 0 |
+| `isolation` | exact keys `resource_identity_digest,root_identity_digest,docker_project_id,network_ids,container_ids,volume_ids,db_identity,ports,collision_preflight_digest` |
+| `runtime` | exact keys `app,full_local,worker,foreground_supervisor`; 각 runtime은 PID/container와 reported SHA/tree/build/bundle을 포함 |
+| `canaries` | canary ID 오름차순 array; 각 entry exact keys `canary_id,started_at,completed_at,exit_code,normalized_result_digest` |
+| `network` | exact keys `default_deny_policy_digest,allowed_endpoints,denied_attempt_count,unexpected_successful_egress_count`; unexpected count는 0 |
+| `cleanup` | exact keys `completed,owned_resource_ids,removed_resource_ids,residue_resource_ids,cleanup_errors`; completed true, owned/removed exact equality, residue/error empty |
+| `production_guard` | exact keys `surface_allowlist_version,production_snapshot_pre_digest,production_snapshot_post_digest,equal,mutation_attempt_count,production_db_connection_count,production_db_write_count`; equal true, counts 0 |
+| `environment_snapshot` | exact keys `source_allowlist_id,opaque_source_identity_digest,override_policy_digest,exposed_value_count`; exposed count 0 |
+| `threat_controls` | exact keys `symlink_toctou,namespace_collision,digest_substitution,stale_receipt,cleanup_ownership`; 각 result pass |
+| `issuer_task_id` | 감사 metadata only; production authority 또는 trusted issuer가 아님 |
+| `receipt_digest` | 이 field를 제외한 전체 object의 JCS bytes SHA-256 |
 
-- `toolchain`: Node, pnpm, Supabase CLI, git, Docker client/daemon, build/rehearsal script exact version·path identity·SHA-256
-- `images[]`: immutable image digest, platform, local-cache provenance; mutable tag-only identity 금지
-- `migration`: ordered migration file digest, exact applied ledger digest/head, catalog head, schema identity
-- `fixtures`: synthetic fixture set ID/digest, production-derived data 0 attestation
-- `isolation`: root, run namespace, Docker project/network/container/volume IDs, DB identity, allocated ports and collision preflight
-- `runtime`: app/full-local/worker PID/container, reported SHA/tree/build/bundle, supervisor exit projection
-- `canaries[]`: command/test ID, start/end, exit, normalized result digest; raw secret/response body 금지
-- `network`: default-deny policy digest, allowed endpoints, denied attempt count, unexpected successful egress 0
-- `cleanup`: `completed`, owned resource inventory, removed inventory, residue 0, cleanup errors 0
-- `production_guard`: surface allowlist version, pre/post digest, `equal: true`, mutation attempt count 0, production DB connection/write 0
-- `environment_snapshot`: source allowlist ID, opaque source identity digest, override policy digest, exposed value count 0
-- `threat_controls`: symlink/TOCTOU, namespace collision, stale receipt, digest substitution, over-broad cleanup checks
+### Repeatability receipt exact schema
 
-receipt validity:
+두 individual receipt를 결합한 `homecook.local-mac-production-rehearsal-repeatability-receipt.v1`만 GitHub production approval/attestation 입력 후보가 된다.
 
-- receipt artifact는 감사 기록으로 만료 뒤에도 immutable 보존한다.
-- production authority로 사용할 `valid_until`은 두 번째 repeatability run 완료 시각부터 최대 24시간이다.
-- tag/manifest/attestation 생성과 production promote의 final pre-mutation check는 모두 `valid_until` 이전이어야 한다.
+| field | exact rule |
+| --- | --- |
+| `schema` | exact `homecook.local-mac-production-rehearsal-repeatability-receipt.v1` |
+| `canonicalization` | exact `RFC8785-JCS+SHA256` |
+| `repository` | 두 member와 exact `netsus/homecook` |
+| `source_ref` | 두 member와 exact `refs/heads/master` |
+| `release_sha` | 두 member가 공유하는 exact SHA |
+| `release_tree` | 두 member가 공유하는 exact tree |
+| `build_id` | 두 member가 공유하는 exact build ID |
+| `sealed_bundle_digest` | 두 member가 공유하는 exact same-bytes bundle digest |
+| `member_receipt_digests` | exact 2 unique lowercase 64-hex digest를 bytewise ascending 순서로 저장 |
+| `member_run_ids` | `member_receipt_digests`와 같은 positional order의 exact 2 unique run ID |
+| `member_resource_identity_digests` | 같은 positional order의 exact 2 unique resource-set digest; 서로 달라야 함 |
+| `toolchain_digest` | 두 member의 canonical toolchain object digest가 exact match |
+| `image_set_digest` | 두 member의 ordered images array digest가 exact match |
+| `migration_ledger_digest` | 두 member의 ordered global ledger digest가 exact match |
+| `canary_set_digest` | volatile field normalization 뒤 두 member canary set digest가 exact match |
+| `cleanup_evidence_digests` | 같은 positional order의 exact 2 digest; 각 member cleanup completed/residue 0 |
+| `production_guard_digests` | 같은 positional order의 exact 2 digest; 각 member pre/post equal 및 mutation 0 |
+| `completed_at` | 두 member `completed_at` 중 더 늦은 UTC RFC3339 instant |
+| `valid_until` | exact `completed_at + 24h`; 더 긴 값, timezone ambiguity, missing expiry 금지 |
+| `status` | exact `repeatable` |
+| `issuer_task_id` | 감사 metadata only; production authority 또는 trusted issuer가 아님 |
+| `repeatability_receipt_digest` | `repeatability_receipt_digest 제외` 전체 object의 JCS bytes SHA-256 |
+
+각 member digest를 먼저 재계산한 뒤 `member_receipt_digests`의 length, uniqueness, bytewise ascending order와 aligned array 위치를 검증한다. missing field, expiry 누락/연장, member order 오류, 동일 run/resource ID, bundle/tool/image/migration/canary mismatch는 repeatability receipt 발급을 차단한다.
+
+### Trusted production authority chain
+
+- local run/repeatability receipt의 `issuer_task_id`, local file owner, local self digest 또는 임의 local self-signature는 production authority가 아니다. 같은 사용자에게 다시 쓰기 가능한 local key/signature를 trusted issuer로 취급하지 않는다.
+- GitHub `production-release-approval` workflow는 두 member receipt와 repeatability receipt를 다시 canonicalize/hash/validate한 뒤 exact SHA/tree/`sealed_bundle_digest`/`repeatability_receipt_digest`/`valid_until`을 production manifest, subject, predicate와 annotated tag message에 묶는다.
+- server verifier는 pinned GitHub attestation trusted root를 먼저 검증한 뒤 manifest/subject/predicate/tag remote readback과 local sealed bytes/repeatability receipt를 exact 비교한다. GitHub attestation 밖의 local claim은 비교 입력일 뿐 trust anchor가 아니다.
+- receipt artifact는 감사 기록으로 만료 뒤에도 immutable 보존하지만 production authority는 `valid_until` 이전 final pre-mutation check에서만 유효하다.
+- receipt 내용 변경, member 재정렬, re-sign, rebuild, dependency/image/migration 변화, production pre/post drift 또는 cleanup residue는 기존 authority를 재사용하지 않고 두 isolated run부터 새 rehearsal을 요구한다.
 - expiry가 promotion 도중 다가오면 첫 production mutation 전에 중단한다. 이미 mutation을 시작한 뒤의 임의 자동 rollback 근거로 expiry를 사용하지 않는다.
-- SHA/tree/bundle/tool/image/migration/fixture/policy 변경, production pre/post drift, cleanup residue, issuer mismatch는 시간과 무관하게 즉시 invalid다.
 
 ## Fail-closed conditions
 
@@ -268,7 +306,7 @@ receipt validity:
 - migration global ledger가 없거나 catalog marker와 불일치
 - canary failure, identity mismatch, supervisor orphan, cleanup 실패 또는 residue
 - production pre/post digest 불일치나 mutation attempt가 1 이상
-- receipt signature/digest/path/owner/mode/expiry 불일치
+- local receipt digest/path/owner/mode/expiry 또는 GitHub attestation signature/trusted-root binding 불일치
 - 두 반복 실행의 bundle digest 불일치 또는 run resources가 distinct하지 않음
 - mixed-state finding이 unresolved이거나 `promotion_safe` 분류가 아님
 

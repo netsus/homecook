@@ -9,6 +9,30 @@ function read(relativePath: string) {
   return readFileSync(join(repoRoot, relativePath), "utf8");
 }
 
+function readSection(source: string, heading: string) {
+  const marker = `### ${heading}`;
+  const start = source.indexOf(marker);
+  expect(start, `missing section: ${heading}`).toBeGreaterThanOrEqual(0);
+  const rest = source.slice(start + marker.length);
+  const nextHeading = rest.search(/^#{2,3} /mu);
+  return nextHeading === -1 ? rest : rest.slice(0, nextHeading);
+}
+
+function readSchemaTable(source: string, heading: string) {
+  const rows = readSection(source, heading)
+    .split("\n")
+    .filter((line) => /^\| `[^`]+` \|/u.test(line))
+    .map((line) => {
+      const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+      return {
+        field: cells[0].replaceAll("`", ""),
+        rule: cells[1],
+      };
+    });
+  expect(rows.length, `empty schema table: ${heading}`).toBeGreaterThan(0);
+  return rows;
+}
+
 describe("release promotion governance docs", () => {
   it("routes release promotion authority to the canonical runbook", () => {
     const agents = read("AGENTS.md");
@@ -122,5 +146,125 @@ describe("release promotion governance docs", () => {
     expect(rehearsalContract).toContain("TDD acceptance");
     expect(rehearsalContract).toContain("독립 Codex security review");
     expect(rehearsalContract).toContain("공식 제품 5종");
+  });
+
+  it("locks the exact individual and repeatability receipt schemas structurally", () => {
+    const rehearsalContract = read(
+      "docs/engineering/local-mac-production-release-rehearsal.md",
+    );
+    const individual = readSchemaTable(
+      rehearsalContract,
+      "Individual run receipt exact schema",
+    );
+    const repeatability = readSchemaTable(
+      rehearsalContract,
+      "Repeatability receipt exact schema",
+    );
+
+    expect(individual.map(({ field }) => field)).toEqual([
+      "schema",
+      "canonicalization",
+      "repository",
+      "source_ref",
+      "release_sha",
+      "release_tree",
+      "ci_head_sha",
+      "ci_check_summary_digest",
+      "build_id",
+      "sealed_bundle_digest",
+      "bundle_manifest_digest",
+      "run_id",
+      "issued_at",
+      "completed_at",
+      "toolchain",
+      "images",
+      "migration",
+      "fixtures",
+      "isolation",
+      "runtime",
+      "canaries",
+      "network",
+      "cleanup",
+      "production_guard",
+      "environment_snapshot",
+      "threat_controls",
+      "issuer_task_id",
+      "receipt_digest",
+    ]);
+    expect(repeatability.map(({ field }) => field)).toEqual([
+      "schema",
+      "canonicalization",
+      "repository",
+      "source_ref",
+      "release_sha",
+      "release_tree",
+      "build_id",
+      "sealed_bundle_digest",
+      "member_receipt_digests",
+      "member_run_ids",
+      "member_resource_identity_digests",
+      "toolchain_digest",
+      "image_set_digest",
+      "migration_ledger_digest",
+      "canary_set_digest",
+      "cleanup_evidence_digests",
+      "production_guard_digests",
+      "completed_at",
+      "valid_until",
+      "status",
+      "issuer_task_id",
+      "repeatability_receipt_digest",
+    ]);
+
+    const repeatabilityRules = Object.fromEntries(
+      repeatability.map(({ field, rule }) => [field, rule]),
+    );
+    const individualRules = Object.fromEntries(
+      individual.map(({ field, rule }) => [field, rule]),
+    );
+    expect(individualRules.toolchain).toContain("candidate_builder");
+    expect(individualRules.images).toContain("local_cache_provenance_digest");
+    expect(individualRules.migration).toContain("applied_global_ledger_digest");
+    expect(individualRules.isolation).toContain("resource_identity_digest");
+    expect(individualRules.canaries).toContain("normalized_result_digest");
+    expect(individualRules.cleanup).toContain("residue_resource_ids");
+    expect(individualRules.production_guard).toContain(
+      "production_snapshot_pre_digest",
+    );
+    expect(individualRules.production_guard).toContain(
+      "production_snapshot_post_digest",
+    );
+    expect(individualRules.production_guard).toContain("mutation_attempt_count");
+    expect(repeatabilityRules.member_receipt_digests).toContain("exact 2");
+    expect(repeatabilityRules.member_receipt_digests).toContain("ascending");
+    expect(repeatabilityRules.valid_until).toContain("completed_at + 24h");
+    expect(repeatabilityRules.repeatability_receipt_digest).toContain(
+      "repeatability_receipt_digest 제외",
+    );
+  });
+
+  it("locks production manifest, predicate, tag, and server-verifier receipt binding", () => {
+    const releaseRunbook = read(
+      "docs/engineering/local-mac-production-release-promotion.md",
+    );
+    const binding = readSchemaTable(
+      releaseRunbook,
+      "Rehearsal authority binding exact fields",
+    );
+
+    expect(binding.map(({ field }) => field)).toEqual([
+      "rehearsal_receipt_schema",
+      "sealed_bundle_digest",
+      "repeatability_receipt_digest",
+      "rehearsal_receipt_valid_until",
+    ]);
+    for (const { rule } of binding) {
+      expect(rule).toContain("manifest");
+      expect(rule).toContain("subject");
+      expect(rule).toContain("predicate");
+      expect(rule).toContain("server verifier");
+    }
+    expect(releaseRunbook).toContain("activation_blocked: true");
+    expect(releaseRunbook).toContain("local task/session ID는 감사 metadata일 뿐");
   });
 });

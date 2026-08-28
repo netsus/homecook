@@ -2,6 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import {
   getLocalMacProductionReleaseStatus,
@@ -27,18 +28,20 @@ import {
   snapshotTrustedExecutables,
 } from "./lib/trusted-production-release-tools.mjs";
 
-function printHelp() {
-  process.stdout.write(`Usage:
+function printHelp(output = process.stdout) {
+  output.write(`Usage:
   node scripts/promote-local-mac-production-release.mjs plan --release-manifest <path> [--home-dir <path>] [--root-dir <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs prepare --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> [--home-dir <path>] [--root-dir <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs promote --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> --full-local-config <path> --worker-config <path> --worker-manifest <path> --worker-credential <path> --worker-app-descriptor <path> --worker-policy <path> --worker-expected-schema <path> --worker-secret-root <path> --confirm-production LOCAL_FULL_PRODUCTION_WORKER_INSTALL [--home-dir <path>] [--root-dir <path>] [--node-bin <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs status [--release-manifest <path>] [--home-dir <path>] [--root-dir <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs verify --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> [--home-dir <path>] [--root-dir <path>] [--node-bin <path>] [--json]
 
-Currently implemented: plan, prepare, promote, status, verify
+Command surface: plan, prepare, promote (activation blocked), status, verify
 
 Prepare creates an immutable candidate directory only; it does not acquire the production lock or change runtime state.
-Promote requires exact attestation and explicit runtime paths; verify is read-only and rechecks the exact attested running bundle.
+When activated, promote will require exact attestation, repeatability receipt authority, and explicit runtime paths. Verify is read-only and rechecks the exact attested running bundle.
+
+ACTIVATION BLOCKED: promote cannot run until the GitHub-attested repeatability receipt gate is implemented. Plan, prepare, status, and verify remain available within their documented boundaries.
 `);
 }
 
@@ -121,33 +124,33 @@ function parseArgs(argv) {
   return options;
 }
 
-function printResult(result, json) {
+function printResult(result, json, output = process.stdout) {
   if (json) {
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    output.write(`${JSON.stringify(result, null, 2)}\n`);
     return;
   }
 
   if (result.manifest) {
-    process.stdout.write(`release_tag: ${result.manifest.release_tag}\n`);
-    process.stdout.write(`release_sha: ${result.manifest.release_sha}\n`);
+    output.write(`release_tag: ${result.manifest.release_tag}\n`);
+    output.write(`release_sha: ${result.manifest.release_sha}\n`);
   } else {
-    process.stdout.write("release_tag: -\n");
-    process.stdout.write("release_sha: -\n");
+    output.write("release_tag: -\n");
+    output.write("release_sha: -\n");
   }
-  process.stdout.write(`current_head_sha: ${result.current_head_sha ?? "-"}\n`);
+  output.write(`current_head_sha: ${result.current_head_sha ?? "-"}\n`);
   if (result.prepared) {
-    process.stdout.write(`prepared: yes\n`);
-    process.stdout.write(`release_dir: ${result.release_dir}\n`);
+    output.write(`prepared: yes\n`);
+    output.write(`release_dir: ${result.release_dir}\n`);
   }
   if (result.verified) {
-    process.stdout.write("verified: yes\n");
-    process.stdout.write(
+    output.write("verified: yes\n");
+    output.write(
       `migration_head: ${result.runtime?.full_local?.migration_head ?? "-"}\n`,
     );
   }
   if (result.lock) {
-    process.stdout.write(`lock: ${result.lock.locked ? "held" : "free"}\n`);
-    process.stdout.write(`stale_candidate: ${result.lock.staleCandidate ? "yes" : "no"}\n`);
+    output.write(`lock: ${result.lock.locked ? "held" : "free"}\n`);
+    output.write(`stale_candidate: ${result.lock.staleCandidate ? "yes" : "no"}\n`);
   }
 }
 
@@ -172,13 +175,31 @@ function requirePromoteRuntimeInputs(options) {
   }
 }
 
-try {
-  const options = parseArgs(process.argv.slice(2));
+export function assertProductionPromoteActivated(command) {
+  if (command === "promote") {
+    throw new Error(
+      "activation_blocked: production promote requires the implemented and GitHub-attested repeatability receipt gate before any adapter, lock, Docker, LaunchAgent, database, or runtime mutation setup.",
+    );
+  }
+}
+
+export async function runLocalMacProductionReleaseCli(
+  argv,
+  {
+    createAttestationVerifier = createGitHubProductionReleaseAttestationVerifier,
+    createPromoteAdapters = createLocalMacProductionPromoteAdapters,
+    createVerifyAdapters = createLocalMacProductionVerifyAdapters,
+    output = process.stdout,
+  } = {},
+) {
+  const options = parseArgs(argv);
 
   if (!options.command || options.command === "help" || options.command === "--help") {
-    printHelp();
-    process.exit(0);
+    printHelp(output);
+    return;
   }
+
+  assertProductionPromoteActivated(options.command);
 
   if (options.command === "plan" && !options.releaseManifestPath) {
     throw new Error("plan requires --release-manifest <path>.");
@@ -237,7 +258,7 @@ try {
     : null;
 
   const attestationVerifier = ["prepare", "promote", "verify"].includes(options.command)
-    ? createGitHubProductionReleaseAttestationVerifier({
+    ? createAttestationVerifier({
       bundlePath: options.bundlePath,
       ...(verifyToolPaths ? { ghExecutable: verifyToolPaths.ghPath } : {}),
       repository: "netsus/homecook",
@@ -256,7 +277,7 @@ try {
       verifyAttestation: attestationVerifier,
     });
   } else if (options.command === "promote") {
-    const adapters = createLocalMacProductionPromoteAdapters(options);
+    const adapters = createPromoteAdapters(options);
     result = await promoteLocalMacProductionRelease({
       ...adapters,
       homeDir: options.homeDir,
@@ -265,7 +286,7 @@ try {
       verifyAttestation: attestationVerifier,
     });
   } else if (options.command === "verify") {
-    const adapters = createLocalMacProductionVerifyAdapters(options);
+    const adapters = createVerifyAdapters(options);
     const runTrustedGit = (_command, args, commandOptions) => spawnSync(
       verifyToolPaths.gitPath,
       args,
@@ -294,8 +315,25 @@ try {
     });
   }
 
-  printResult(result, options.json);
-} catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exit(1);
+  printResult(result, options.json, output);
+}
+
+function isDirectExecution() {
+  if (!process.argv[1]) {
+    return false;
+  }
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectExecution()) {
+  try {
+    await runLocalMacProductionReleaseCli(process.argv.slice(2));
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
 }
