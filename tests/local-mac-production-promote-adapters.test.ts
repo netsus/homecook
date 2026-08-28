@@ -65,9 +65,9 @@ const FIRST_CANONICAL_ADOPTION_APP_ROOT =
 const FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT =
   "/Users/tester/01_vibe_coding/homecook-session-refresh-storm-deploy-v9";
 const FIRST_CANONICAL_ADOPTION_WORKER_ROOT =
-  "/Users/tester/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/artifact";
+  "/Users/tester/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1";
 const FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST =
-  "/Users/tester/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/artifact/artifact.json";
+  "/Users/tester/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/artifact.json";
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {

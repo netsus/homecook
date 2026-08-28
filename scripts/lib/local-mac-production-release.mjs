@@ -141,7 +141,6 @@ const FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT_SUFFIX =
   "01_vibe_coding/homecook-session-refresh-storm-deploy-v9";
 const FIRST_CANONICAL_ADOPTION_WORKER_RELEASE_ROOT_SUFFIX =
   `.homecook/youtube-extraction-releases/${FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA}-admin-acl-v1`;
-const FIRST_CANONICAL_ADOPTION_WORKER_ARTIFACT_DIRNAME = "artifact";
 const FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST_BASENAME = "artifact.json";
 const RUNNING_DESCRIPTOR_WORKER_PATH_FIELDS = Object.freeze([
   "execution_app_root",
@@ -1926,7 +1925,6 @@ export function getFirstCanonicalAdoptionPathAuthority(homeDir) {
   const workerArtifactRoot = resolve(
     normalizedHomeDir,
     FIRST_CANONICAL_ADOPTION_WORKER_RELEASE_ROOT_SUFFIX,
-    FIRST_CANONICAL_ADOPTION_WORKER_ARTIFACT_DIRNAME,
   );
   const workerManifestPath = resolve(
     workerArtifactRoot,
