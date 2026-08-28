@@ -15,18 +15,37 @@
     "probe_statuses": { "$ref": "#/definitions/probeStatuses" },
     "production_db_connection_count": { "const": 0 },
     "mutation_attempt_count": { "const": 0 },
-    "redacted_field_count": { "type": "integer", "minimum": 0 },
+    "redacted_field_count": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
     "surfaces": { "$ref": "#/definitions/surfaces" },
     "surface_digest": { "$ref": "#/definitions/hex64" },
     "inventory_digest": { "$ref": "#/definitions/hex64" }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "probe_statuses": { "properties": { "tool_identities": { "properties": { "status": { "const": "success" } } } } } } },
+      "then": {
+        "properties": {
+          "tool_identities": {
+            "minItems": 4,
+            "maxItems": 4,
+            "allOf": [
+              { "contains": { "properties": { "name": { "const": "docker" } }, "required": ["name"] } },
+              { "contains": { "properties": { "name": { "const": "git" } }, "required": ["name"] } },
+              { "contains": { "properties": { "name": { "const": "launchctl" } }, "required": ["name"] } },
+              { "contains": { "properties": { "name": { "const": "lsof" } }, "required": ["name"] } }
+            ]
+          }
+        }
+      }
+    }
+  ],
   "definitions": {
     "nonempty": { "type": "string", "minLength": 1 },
     "hex40": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
     "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "nullableHex64": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
     "timestamp": { "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
-    "identityInteger": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }] },
+    "identityInteger": { "oneOf": [{ "type": "integer", "minimum": 0, "maximum": 9007199254740991 }, { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }] },
     "tool": {
       "type": "object",
       "additionalProperties": false,
@@ -36,7 +55,7 @@
         "realpath": { "type": "string", "pattern": "^/" },
         "device": { "$ref": "#/definitions/identityInteger" },
         "inode": { "$ref": "#/definitions/identityInteger" },
-        "mode": { "type": "integer", "minimum": 0 },
+        "mode": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "ctime": { "$ref": "#/definitions/timestamp" },
         "size": { "$ref": "#/definitions/identityInteger" },
         "sha256": { "$ref": "#/definitions/hex64" }
@@ -52,7 +71,7 @@
         "realpath": { "type": "string", "pattern": "^/" },
         "device": { "$ref": "#/definitions/identityInteger" },
         "inode": { "$ref": "#/definitions/identityInteger" },
-        "mode": { "type": "integer", "minimum": 0 },
+        "mode": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "ctime": { "$ref": "#/definitions/timestamp" },
         "size": { "$ref": "#/definitions/identityInteger" },
         "sha256": { "$ref": "#/definitions/hex64" }
@@ -67,8 +86,8 @@
         "exists": { "type": "boolean" },
         "device": { "$ref": "#/definitions/identityInteger" },
         "inode": { "$ref": "#/definitions/identityInteger" },
-        "owner_uid": { "type": "integer", "minimum": 0 },
-        "mode": { "type": "integer", "minimum": 0 },
+        "owner_uid": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "mode": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "size": { "$ref": "#/definitions/identityInteger" },
         "mtime": { "$ref": "#/definitions/timestamp" },
         "sha256": { "$ref": "#/definitions/hex64" }
@@ -96,7 +115,7 @@
         "label": { "$ref": "#/definitions/nonempty" },
         "loaded": { "type": "boolean" },
         "state": { "$ref": "#/definitions/nonempty" },
-        "pid": { "type": ["integer", "null"], "minimum": 1 },
+        "pid": { "type": ["integer", "null"], "minimum": 1, "maximum": 9007199254740991 },
         "projection_digest": { "$ref": "#/definitions/hex64" }
       }
     },
@@ -125,7 +144,7 @@
     "port": {
       "type": "object", "additionalProperties": false,
       "required": ["port", "pid", "process_name", "listener_digest"],
-      "properties": { "port": { "type": "integer", "minimum": 1, "maximum": 65535 }, "pid": { "type": ["integer", "null"], "minimum": 1 }, "process_name": { "$ref": "#/definitions/nonempty" }, "listener_digest": { "$ref": "#/definitions/hex64" } }
+      "properties": { "port": { "type": "integer", "minimum": 1, "maximum": 65535 }, "pid": { "type": ["integer", "null"], "minimum": 1, "maximum": 9007199254740991 }, "process_name": { "$ref": "#/definitions/nonempty" }, "listener_digest": { "$ref": "#/definitions/hex64" } }
     },
     "config": {
       "type": "object", "additionalProperties": false,
@@ -140,12 +159,12 @@
     "probeStatus": {
       "type": "object", "additionalProperties": false,
       "required": ["status", "reason_code", "evidence_count"],
-      "properties": { "status": { "enum": ["success", "failed", "skipped"] }, "reason_code": { "type": ["string", "null"], "minLength": 1 }, "evidence_count": { "type": "integer", "minimum": 0 } }
+      "properties": { "status": { "enum": ["success", "failed", "skipped"] }, "reason_code": { "type": ["string", "null"], "minLength": 1 }, "evidence_count": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 } }
     },
     "probeStatuses": {
       "type": "object", "additionalProperties": false,
-      "required": ["release_artifacts", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "tool_identities"],
-      "properties": { "release_artifacts": { "$ref": "#/definitions/probeStatus" }, "workloads": { "$ref": "#/definitions/probeStatus" }, "launchd": { "$ref": "#/definitions/probeStatus" }, "docker": { "$ref": "#/definitions/probeStatus" }, "port_listeners": { "$ref": "#/definitions/probeStatus" }, "opaque_configs": { "$ref": "#/definitions/probeStatus" }, "migration": { "$ref": "#/definitions/probeStatus" }, "tool_identities": { "$ref": "#/definitions/probeStatus" } }
+      "required": ["release_artifacts", "active_promotion_lock", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "tool_identities"],
+      "properties": { "release_artifacts": { "$ref": "#/definitions/probeStatus" }, "active_promotion_lock": { "$ref": "#/definitions/probeStatus" }, "workloads": { "$ref": "#/definitions/probeStatus" }, "launchd": { "$ref": "#/definitions/probeStatus" }, "docker": { "$ref": "#/definitions/probeStatus" }, "port_listeners": { "$ref": "#/definitions/probeStatus" }, "opaque_configs": { "$ref": "#/definitions/probeStatus" }, "migration": { "$ref": "#/definitions/probeStatus" }, "tool_identities": { "$ref": "#/definitions/probeStatus" } }
     },
     "preparedIdentity": {
       "type": ["object", "null"],
@@ -155,9 +174,10 @@
     },
     "surfaces": {
       "type": "object", "additionalProperties": false,
-      "required": ["release_artifacts", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "prepared_identity"],
+      "required": ["release_artifacts", "active_promotion_lock", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "prepared_identity"],
       "properties": {
         "release_artifacts": { "type": "array", "items": { "$ref": "#/definitions/artifact" } },
+        "active_promotion_lock": { "$ref": "#/definitions/artifact" },
         "workloads": { "type": "array", "items": { "$ref": "#/definitions/workload" } },
         "launchd": { "type": "array", "items": { "$ref": "#/definitions/launchd" } },
         "docker": {

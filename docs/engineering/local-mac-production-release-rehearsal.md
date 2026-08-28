@@ -92,9 +92,12 @@ pnpm release:rehearsal:inventory -- --json
 ```
 
 - production app/full-local/worker identity, pointer/descriptor/lock, Docker resource, port, LaunchAgent, migration marker를 read-only로 수집한다.
+- active canonical promotion lock은 `getLocalMacProductionReleasePaths(homeDir).lockPath`, 즉 `~/.homecook/locks/production-promotion.lock` 하나다. `releases/` 아래 recovered/stale lock evidence와 별도 field/probe로 기록하며 active lock 존재 또는 probe failure는 항상 promotion-unsafe다.
 - secret contents, raw env, provider payload, DB row data를 출력하지 않는다.
 - inventory probe 자체의 tool identity와 production pre-digest를 기록한다.
 - 각 required probe는 `success|failed|skipped`, non-secret reason code, evidence count를 기록한다. 실패를 빈 성공 array로 축약하지 않는다.
+- command result의 `error`, signal, timeout/status null, output overflow와 generic nonzero는 probe failure다. 예외는 정확히 문서화된 resource-absent exit뿐이며 현재는 `lsof`의 `exit 1 + empty stdout/stderr` no-listener만 successful empty evidence로 허용한다.
+- required trusted tool identity set은 exact `docker,git,launchctl,lsof` 4개다. 이름 누락/중복/extra, unsafe owner/mode/realpath 또는 tool probe failure는 promotion-unsafe다.
 - pointer/descriptors/workloads, LaunchAgent plist+print, Docker image/mount/full-label digest, listener, opaque config, migration marker/ledger/catalog 중 required evidence가 없으면 inventory는 수집될 수 있어도 classification은 `unknown`이다.
 - inconsistent state는 분류만 하고 자동 복구하지 않는다.
 
@@ -141,6 +144,7 @@ pnpm release:rehearsal:verify -- --receipt <absolute-create-only-receipt> --json
 
 - receipt schema, issuer/tool identity, cryptographic digest, expiry, exact SHA/tree/build/bundle, image, migration, canary, cleanup, no-production-mutation evidence를 offline으로 재검증한다.
 - receipt path와 parent는 `lstat`/`realpath`, owner, private mode, device/inode를 검증한다. symlink, repository 내부 secret alias, mutable overwrite, duplicate receipt ID를 거부한다.
+- receipt의 `issued_at <= completed_at <= now`는 zero clock-skew로 강제한다. future member/run/repeatability claim은 발급과 검증 모두에서 거부한다.
 - verify는 Docker, process, production pointer/descriptor/lock/LaunchAgent/DB를 변경하지 않는다.
 - production pre/post digest가 다르거나 inventory 중 drift가 있었으면 receipt는 생성하지 않는다.
 
@@ -193,8 +197,10 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 규칙:
 
 - production surface를 create, chmod, touch, rename, delete, restart, stop, load, unload, migrate, connect-write 하지 않는다.
+- production evidence를 읽기 전에 expected trusted base부터 모든 existing ancestor를 BigInt `lstat`로 검증한다. ancestor는 current-user-owned canonical directory, non-symlink, non-group/world-writable, traversable mode여야 하며 probe 전후 identity가 같아야 한다. `~/.homecook`, releases/locks/config roots와 `~/Library/LaunchAgents`의 intermediate symlink는 probe failure다.
 - directory/snapshot/lock digest는 immediate child 이름만 사용하지 않는다. contained tree를 bounded recursive traversal하며 file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶는다. path escape, cycle, entry/depth/byte limit 초과는 fail closed한다.
 - identity-sensitive `lstat`/`fstat`는 `{ bigint: true }`로 수집하고 decimal string으로 canonicalize한다. Number 변환 뒤의 inode/device/size를 identity 근거로 사용하지 않는다.
+- JSON Number로 남는 count/mode/pid/port/sequence field는 runtime과 schema 모두 `Number.MAX_SAFE_INTEGER` 이하를 강제한다. 더 큰 identity 값은 decimal string만 사용한다.
 - receipt/inventory JSON file은 fatal UTF-8 decoding을 통과하고 canonicalized UTF-8 bytes가 원본 file bytes와 exact equality여야 한다.
 - secret/env contents는 receipt, log, manifest에 포함하지 않는다. digest는 프로세스 내부에서만 계산하고 값은 redacted identity와 SHA-256으로만 남긴다.
 - DB는 credential을 사용해 row를 읽는 대신 canonical config/DB container/volume/migration identity의 read-only evidence만 사용한다. 별도 approved probe가 없다면 production DB 접속 0이 기본값이다.
@@ -326,7 +332,7 @@ pnpm release:rehearsal:classify -- --inventory <absolute-read-only-inventory> --
 분류 입력은 read-only inventory뿐이다. 최소 상태 vocabulary:
 
 - `coherent_running`: exact app/full_local/worker component set, pointer/descriptor digest alignment, required probe success, LaunchAgent/Docker/listener/config completeness, approved migration global ledger와 catalog head가 한 release identity로 일치
-- `coherent_prepared`: running identity와 다른 exact attested prepared identity가 구체 evidence로 있고 promotion되지 않음. 단순 prepared descriptor self-claim만으로 판정 금지
+- `coherent_prepared`: 모든 `coherent_running` 요구를 먼저 만족한 뒤 running identity와 다른 exact attested prepared identity가 있고, canonical `prepared_descriptor` artifact digest가 그 identity의 `descriptor_digest`와 일치하며 promotion되지 않음. output은 `coherent_running + coherent_prepared` 조합이며, prepared-only, identity-only 또는 단순 descriptor self-claim은 promotion-safe가 아니다.
 - `mixed_running`: running app/worker/full-local/DB authority가 서로 다른 release identity
 - `partial_failed_install`: Docker/process 일부만 healthy이고 LaunchAgent/descriptor/readiness가 실패
 - `orphaned_lock_or_descriptor`: active authority 없이 recovered/stale lock 또는 descriptor만 존재

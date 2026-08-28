@@ -63,6 +63,7 @@ export function classifyProductionInventory(inventory, {
   assertClassifiedAt(classifiedAt);
   const {
     release_artifacts: artifacts,
+    active_promotion_lock: activePromotionLock,
     workloads,
     launchd,
     docker,
@@ -98,8 +99,10 @@ export function classifyProductionInventory(inventory, {
     || launchd.some((job) => job.loaded && job.state !== "running");
   const migrationIncomplete = Boolean(migration.marker_digest || migration.catalog_head || migration.migration_head)
     && (!migration.approved || !migration.global_ledger_digest || migration.migration_head !== migration.catalog_head);
-  const requiredProbeNames = ["release_artifacts", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "tool_identities"];
+  const requiredProbeNames = ["release_artifacts", "active_promotion_lock", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "tool_identities"];
   const probesComplete = requiredProbeNames.every((name) => inventory.probe_statuses[name].status === "success");
+  const toolNames = inventory.tool_identities.map((tool) => tool.name).sort();
+  const toolsComplete = JSON.stringify(toolNames) === JSON.stringify(["docker", "git", "launchctl", "lsof"]);
   const launchdLabels = new Set(launchd.map((job) => job.label));
   const launchdComplete = launchd.length === 3 && [
     "com.homecook.production",
@@ -122,12 +125,23 @@ export function classifyProductionInventory(inventory, {
   ].every((kind) => plistKinds.has(kind));
   const descriptorsAligned = Boolean(currentDescriptorEvidence)
     && workloads.every((workload) => workload.descriptor_digest === currentDescriptorEvidence.sha256);
-  const requiredSurfacesComplete = probesComplete && launchdComplete && dockerComplete && portsComplete
+  const requiredSurfacesComplete = probesComplete && toolsComplete && launchdComplete && dockerComplete && portsComplete
     && configsComplete && plistComplete && descriptorsAligned;
-  const unsubstantiatedPrepared = artifacts.some((artifact) => artifact.kind === "prepared_descriptor" && artifact.exists)
-    && preparedIdentity === null;
+  const preparedDescriptor = artifacts.find((artifact) => artifact.kind === "prepared_descriptor" && artifact.exists);
+  const preparedEvidenceComplete = preparedIdentity === null
+    ? preparedDescriptor === undefined
+    : preparedDescriptor !== undefined && preparedDescriptor.sha256 === preparedIdentity.descriptor_digest;
+  const unsubstantiatedPrepared = !preparedEvidenceComplete;
+  const runningIdentity = completeComponents ? componentMap.get("app") : null;
+  const prepared = preparedIdentity !== null && preparedIdentity.attested === true
+    && preparedIdentity.status === "prepared"
+    && preparedEvidenceComplete
+    && runningIdentity
+    && preparedIdentity.release_sha !== runningIdentity.release_sha;
+  const invalidPreparedIdentity = preparedIdentity !== null && !prepared;
 
-  if (!completeComponents || !identitiesComplete || !requiredSurfacesComplete || unsubstantiatedPrepared || migrationIncomplete) states.push("unknown");
+  if (!completeComponents || !identitiesComplete || !requiredSurfacesComplete || unsubstantiatedPrepared
+    || invalidPreparedIdentity || migrationIncomplete || activePromotionLock.exists) states.push("unknown");
   if (releaseIdentities.size > 1) states.push("mixed_running");
   if (partial) states.push("partial_failed_install");
   if (recoveredOrStale && !currentDescriptor) states.push("orphaned_lock_or_descriptor");
@@ -138,12 +152,7 @@ export function classifyProductionInventory(inventory, {
     && migration.approved && migration.global_ledger_digest && migration.migration_head === migration.catalog_head) {
     states.push("coherent_running");
   }
-  const runningIdentity = completeComponents ? componentMap.get("app") : null;
-  const prepared = preparedIdentity !== null && preparedIdentity.attested === true
-    && preparedIdentity.status === "prepared"
-    && runningIdentity
-    && preparedIdentity.release_sha !== runningIdentity.release_sha;
-  if (states.length === 0 && prepared) states.push("coherent_prepared");
+  if (states.length === 1 && states[0] === "coherent_running" && prepared) states.push("coherent_prepared");
   if (states.length === 0) states.push("unknown");
   states.sort((left, right) => MIXED_STATE_VOCABULARY.indexOf(left) - MIXED_STATE_VOCABULARY.indexOf(right));
 
@@ -157,6 +166,8 @@ export function classifyProductionInventory(inventory, {
           ...(!portsComplete ? ["surface:port_listeners"] : []),
           ...(!configsComplete ? ["surface:opaque_configs"] : []),
           ...(!descriptorsAligned ? ["surface:descriptor_alignment"] : []),
+          ...(!toolsComplete ? ["surface:tool_identities"] : []),
+          ...(activePromotionLock.exists ? ["surface:active_promotion_lock"] : []),
         ]
       : [];
     return finding(state, `surfaces/${state}`, missing);
