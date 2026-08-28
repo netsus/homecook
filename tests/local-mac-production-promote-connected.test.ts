@@ -304,9 +304,8 @@ describe("connected local Mac production promotion", () => {
       renderFullLocalLaunchAgentPlist({
         configPath: legacyFullConfig,
         homeDir,
-        includeReleaseIdentity: true,
+        includeReleaseIdentity: false,
         nodeBin,
-        releaseIdentityPath: join(currentRoot, "prepare.json"),
         rootDir: fullLocalRoot,
         runtimeCommand: "start",
       }),

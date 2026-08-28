@@ -366,6 +366,14 @@ function firstCanonicalAdoptionRestartContract() {
   });
 }
 
+function firstCanonicalPredecessorRestartContract() {
+  return Object.freeze({
+    includeReleaseIdentity: false,
+    legacyContract: "first-canonical-predecessor-start-v1",
+    runtimeCommand: "start",
+  });
+}
+
 function assertFirstCanonicalAdoptionCurrentBundle(current, bridge) {
   if (!current || typeof current.stable_key !== "string" || current.stable_key.length === 0) {
     throw new Error("First canonical adoption runtime bundle did not produce stable evidence.");
@@ -789,7 +797,7 @@ function buildDefaultDependencies(
       });
       const fullLocalPlistPath = getFullLocalLaunchAgentPaths(options.homeDir).plistPath;
       const fullLocalRestartContract = currentRuntimeBridge
-        ? firstCanonicalAdoptionRestartContract()
+        ? firstCanonicalPredecessorRestartContract()
         : resolveFullLocalCurrentRestartContract(context.currentDescriptor);
       const rawFullLocalPlist = readPlistSnapshot(fullLocalPlistPath, {
         currentUid,
