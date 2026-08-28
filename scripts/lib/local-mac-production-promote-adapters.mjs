@@ -1034,6 +1034,7 @@ function buildDefaultDependencies(
         allowLegacyReleaseSha: legacyBootstrap || currentRuntimeBridge
           ? (currentRuntimeBridge?.previous_release_sha ?? context.currentDescriptor.release_sha)
           : null,
+        allowFirstCanonicalAdoptionInventory: Boolean(currentRuntimeBridge),
       });
       const currentWorkerPaths = legacyBootstrap || currentRuntimeBridge
         ? {
