@@ -1,0 +1,217 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "homecook.local-mac-production-rehearsal-run-receipt.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree", "ci_head_sha", "ci_check_summary_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "run_id", "issued_at", "completed_at", "toolchain", "images", "migration", "fixtures", "isolation", "runtime", "canaries", "network", "cleanup", "production_guard", "environment_snapshot", "threat_controls", "issuer_task_id", "receipt_digest"],
+  "properties": {
+    "schema": { "const": "homecook.local-mac-production-rehearsal-run-receipt.v1" },
+    "canonicalization": { "const": "RFC8785-JCS+SHA256" },
+    "repository": { "const": "netsus/homecook" },
+    "source_ref": { "const": "refs/heads/master" },
+    "release_sha": { "$ref": "#/definitions/hex40" },
+    "release_tree": { "$ref": "#/definitions/hex40" },
+    "ci_head_sha": { "$ref": "#/definitions/hex40" },
+    "ci_check_summary_digest": { "$ref": "#/definitions/hex64" },
+    "build_id": { "$ref": "#/definitions/nonempty" },
+    "sealed_bundle_digest": { "$ref": "#/definitions/hex64" },
+    "bundle_manifest_digest": { "$ref": "#/definitions/hex64" },
+    "run_id": { "$ref": "#/definitions/nonempty" },
+    "issued_at": { "$ref": "#/definitions/timestamp" },
+    "completed_at": { "$ref": "#/definitions/timestamp" },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node", "pnpm", "supabase_cli", "git", "docker_client", "docker_daemon", "candidate_builder", "rehearsal_runner"],
+      "properties": {
+        "node": { "$ref": "#/definitions/toolIdentity" },
+        "pnpm": { "$ref": "#/definitions/toolIdentity" },
+        "supabase_cli": { "$ref": "#/definitions/toolIdentity" },
+        "git": { "$ref": "#/definitions/toolIdentity" },
+        "docker_client": { "$ref": "#/definitions/toolIdentity" },
+        "docker_daemon": { "$ref": "#/definitions/toolIdentity" },
+        "candidate_builder": { "$ref": "#/definitions/toolIdentity" },
+        "rehearsal_runner": { "$ref": "#/definitions/toolIdentity" }
+      }
+    },
+    "images": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/image" } },
+    "migration": { "$ref": "#/definitions/migration" },
+    "fixtures": { "$ref": "#/definitions/fixtures" },
+    "isolation": { "$ref": "#/definitions/isolation" },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app", "full_local", "worker", "foreground_supervisor"],
+      "properties": {
+        "app": { "$ref": "#/definitions/runtimeIdentity" },
+        "full_local": { "$ref": "#/definitions/runtimeIdentity" },
+        "worker": { "$ref": "#/definitions/runtimeIdentity" },
+        "foreground_supervisor": { "$ref": "#/definitions/runtimeIdentity" }
+      }
+    },
+    "canaries": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/canary" } },
+    "network": { "$ref": "#/definitions/network" },
+    "cleanup": { "$ref": "#/definitions/cleanup" },
+    "production_guard": { "$ref": "#/definitions/productionGuard" },
+    "environment_snapshot": { "$ref": "#/definitions/environmentSnapshot" },
+    "threat_controls": { "$ref": "#/definitions/threatControls" },
+    "issuer_task_id": { "$ref": "#/definitions/nonempty" },
+    "receipt_digest": { "$ref": "#/definitions/hex64" }
+  },
+  "definitions": {
+    "nonempty": { "type": "string", "minLength": 1 },
+    "hex40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
+    "identityInteger": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }] },
+    "stringArray": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/nonempty" } },
+    "toolIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256"],
+      "properties": {
+        "version": { "$ref": "#/definitions/nonempty" },
+        "realpath": { "type": "string", "pattern": "^/" },
+        "device": { "$ref": "#/definitions/identityInteger" },
+        "inode": { "$ref": "#/definitions/identityInteger" },
+        "mode": { "type": "integer", "minimum": 0 },
+        "ctime": { "$ref": "#/definitions/timestamp" },
+        "size": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/definitions/hex64" }
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "platform", "local_cache_provenance_digest"],
+      "properties": {
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "platform": { "$ref": "#/definitions/nonempty" },
+        "local_cache_provenance_digest": { "$ref": "#/definitions/hex64" }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordered_migration_files_digest", "applied_global_ledger_digest", "migration_head", "catalog_head", "schema_identity_digest"],
+      "properties": {
+        "ordered_migration_files_digest": { "$ref": "#/definitions/hex64" },
+        "applied_global_ledger_digest": { "$ref": "#/definitions/hex64" },
+        "migration_head": { "$ref": "#/definitions/nonempty" },
+        "catalog_head": { "$ref": "#/definitions/nonempty" },
+        "schema_identity_digest": { "$ref": "#/definitions/hex64" }
+      }
+    },
+    "fixtures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixture_set_id", "fixture_set_digest", "production_derived_row_count"],
+      "properties": {
+        "fixture_set_id": { "$ref": "#/definitions/nonempty" },
+        "fixture_set_digest": { "$ref": "#/definitions/hex64" },
+        "production_derived_row_count": { "const": 0 }
+      }
+    },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource_identity_digest", "root_identity_digest", "docker_project_id", "network_ids", "container_ids", "volume_ids", "db_identity", "ports", "collision_preflight_digest"],
+      "properties": {
+        "resource_identity_digest": { "$ref": "#/definitions/hex64" },
+        "root_identity_digest": { "$ref": "#/definitions/hex64" },
+        "docker_project_id": { "$ref": "#/definitions/nonempty" },
+        "network_ids": { "$ref": "#/definitions/stringArray" },
+        "container_ids": { "$ref": "#/definitions/stringArray" },
+        "volume_ids": { "$ref": "#/definitions/stringArray" },
+        "db_identity": { "$ref": "#/definitions/nonempty" },
+        "ports": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+        "collision_preflight_digest": { "$ref": "#/definitions/hex64" }
+      }
+    },
+    "runtimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pid", "container_id", "reported_release_sha", "reported_release_tree", "reported_build_id", "reported_sealed_bundle_digest"],
+      "properties": {
+        "pid": { "type": "integer", "minimum": 1 },
+        "container_id": { "$ref": "#/definitions/nonempty" },
+        "reported_release_sha": { "$ref": "#/definitions/hex40" },
+        "reported_release_tree": { "$ref": "#/definitions/hex40" },
+        "reported_build_id": { "$ref": "#/definitions/nonempty" },
+        "reported_sealed_bundle_digest": { "$ref": "#/definitions/hex64" }
+      }
+    },
+    "canary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canary_id", "started_at", "completed_at", "exit_code", "normalized_result_digest"],
+      "properties": {
+        "canary_id": { "$ref": "#/definitions/nonempty" },
+        "started_at": { "$ref": "#/definitions/timestamp" },
+        "completed_at": { "$ref": "#/definitions/timestamp" },
+        "exit_code": { "const": 0 },
+        "normalized_result_digest": { "$ref": "#/definitions/hex64" }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_deny_policy_digest", "allowed_endpoints", "denied_attempt_count", "unexpected_successful_egress_count"],
+      "properties": {
+        "default_deny_policy_digest": { "$ref": "#/definitions/hex64" },
+        "allowed_endpoints": { "$ref": "#/definitions/stringArray" },
+        "denied_attempt_count": { "type": "integer", "minimum": 0 },
+        "unexpected_successful_egress_count": { "const": 0 }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed", "owned_resource_ids", "removed_resource_ids", "residue_resource_ids", "cleanup_errors"],
+      "properties": {
+        "completed": { "const": true },
+        "owned_resource_ids": { "$ref": "#/definitions/stringArray" },
+        "removed_resource_ids": { "$ref": "#/definitions/stringArray" },
+        "residue_resource_ids": { "type": "array", "maxItems": 0 },
+        "cleanup_errors": { "type": "array", "maxItems": 0 }
+      }
+    },
+    "productionGuard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface_allowlist_version", "production_snapshot_pre_digest", "production_snapshot_post_digest", "equal", "mutation_attempt_count", "production_db_connection_count", "production_db_write_count"],
+      "properties": {
+        "surface_allowlist_version": { "$ref": "#/definitions/nonempty" },
+        "production_snapshot_pre_digest": { "$ref": "#/definitions/hex64" },
+        "production_snapshot_post_digest": { "$ref": "#/definitions/hex64" },
+        "equal": { "const": true },
+        "mutation_attempt_count": { "const": 0 },
+        "production_db_connection_count": { "const": 0 },
+        "production_db_write_count": { "const": 0 }
+      }
+    },
+    "environmentSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_allowlist_id", "opaque_source_identity_digest", "override_policy_digest", "exposed_value_count"],
+      "properties": {
+        "source_allowlist_id": { "$ref": "#/definitions/nonempty" },
+        "opaque_source_identity_digest": { "$ref": "#/definitions/hex64" },
+        "override_policy_digest": { "$ref": "#/definitions/hex64" },
+        "exposed_value_count": { "const": 0 }
+      }
+    },
+    "threatControls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symlink_toctou", "namespace_collision", "digest_substitution", "stale_receipt", "cleanup_ownership"],
+      "properties": {
+        "symlink_toctou": { "const": "pass" },
+        "namespace_collision": { "const": "pass" },
+        "digest_substitution": { "const": "pass" },
+        "stale_receipt": { "const": "pass" },
+        "cleanup_ownership": { "const": "pass" }
+      }
+    }
+  }
+}
