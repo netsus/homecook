@@ -1020,14 +1020,26 @@ function buildDefaultDependencies(
         stderr: workerRaw.stderr,
         stdout: workerRaw.stdout,
       });
+      const bridgeWorkerIsSpawnScheduled = Boolean(currentRuntimeBridge)
+        && workerStatus.loaded
+        && workerStatus.state === "spawn scheduled"
+        && workerStatus.pid === null;
       if (
         !workerStatus.loaded
-        || !["running", "waiting"].includes(workerStatus.state)
-        || !Number.isInteger(workerStatus.pid)
+        || (
+          !bridgeWorkerIsSpawnScheduled
+          && (
+            !["running", "waiting"].includes(workerStatus.state)
+            || !Number.isInteger(workerStatus.pid)
+          )
+        )
       ) {
         throw new Error("Current worker runtime is not running.");
       }
-      if (readProcessCwd({ pid: workerStatus.pid, spawn: commandRunner }) !== workerArtifactRoot) {
+      if (
+        !bridgeWorkerIsSpawnScheduled
+        && readProcessCwd({ pid: workerStatus.pid, spawn: commandRunner }) !== workerArtifactRoot
+      ) {
         throw new Error("Current worker runtime artifact root drifted.");
       }
       const workerArtifact = verifyYoutubeExtractionWorkerArtifact(workerManifestPath, {

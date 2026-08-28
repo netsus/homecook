@@ -364,6 +364,13 @@ describe("connected local Mac production promotion", () => {
         const joined = args.join(" ");
         if (args[0] === "print") {
           const worker = joined.includes("youtube-extraction-worker");
+          if (worker && workerRoot === currentWorker.artifactRoot) {
+            return {
+              status: 0,
+              stdout: "state = spawn scheduled\nruns = 1269\nlast exit code = 1\n",
+              stderr: "",
+            };
+          }
           const pid = worker ? workerPid : appPid;
           return { status: 0, stdout: `state = running\npid = ${pid}\n`, stderr: "" };
         }
