@@ -615,6 +615,21 @@ describe("local Mac production promote adapters", () => {
       workerStatus: {
         loaded: true,
         pid: null,
+        state: "waiting",
+      },
+      currentWorkerPreflight: {
+        ready: true,
+        release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      },
+    })).toBe(true);
+
+    expect(allowFirstCanonicalAdoptionWorkerStandby({
+      currentRuntimeBridge: {
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      },
+      workerStatus: {
+        loaded: true,
+        pid: null,
         state: "running",
       },
       currentWorkerPreflight: {
