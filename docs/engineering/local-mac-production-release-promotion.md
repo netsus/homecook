@@ -4,6 +4,10 @@
 범위: 서버 Mac의 `homecook` release 승격 governance
 기준 SHA: `origin/master`의 exact approved commit
 
+현재 activation: **`activation_blocked: true` for `release:production:promote`**
+
+rehearsal repeatability receipt와 GitHub attestation binding 구현이 merge되고 독립 code/security review를 통과하기 전까지 `pnpm release:production:promote`는 adapter 생성, lock 획득, Docker/LaunchAgent/DB/runtime 접근보다 먼저 무조건 fail closed한다. command가 `package.json`에 존재한다는 사실은 activation evidence가 아니다. `plan`, `prepare`, `status`, `verify`는 기존 read-only/prepare 경계에서 계속 사용할 수 있으며 이 kill switch가 불필요하게 막지 않는다.
+
 이 문서는 Homecook 서버 Mac production release를 어떻게 승인하고, 어떤 작업만 승격 authority가 수행할 수 있는지 정의한다.
 `master` merge는 통합 evidence일 뿐 release approval이 아니다.
 release 승격은 항상 exact SHA, annotated `prod-*` tag, release manifest, attestation이 모두 일치할 때만 가능하다.
@@ -41,6 +45,21 @@ GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/
 Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
 사후에 master가 더 앞으로 나가도 이미 승인된 release identity는 바뀌지 않는다.
 
+### Rehearsal authority binding exact fields
+
+아래 field가 구현된 production manifest v2, attestation subject/predicate, annotated tag message, server verifier에 모두 exact binding되기 전에는 promote activation을 열 수 없다.
+
+| field | exact comparison rule |
+| --- | --- |
+| `rehearsal_receipt_schema` | manifest, subject, predicate, tag message가 exact repeatability schema를 기록하고 server verifier가 모두 비교 |
+| `sealed_bundle_digest` | manifest, subject, predicate, tag message가 lowercase 64-hex same-bytes digest를 기록하고 server verifier가 실행 snapshot bytes와 모두 비교 |
+| `repeatability_receipt_digest` | manifest, subject, predicate, tag message가 validated JCS receipt digest를 기록하고 server verifier가 local receipt 재계산값과 모두 비교 |
+| `rehearsal_receipt_valid_until` | manifest, subject, predicate, tag message가 exact UTC RFC3339 expiry를 기록하고 server verifier가 첫 mutation 직전 현재 시각과 모두 비교 |
+
+annotated tag object message는 위 네 값을 canonical field order로 포함한다. remote readback tag object의 raw bytes와 SHA를 검증한 뒤에만 attestation을 발급한다. production manifest, subject, predicate, tag 중 하나라도 field가 없거나 값/order/expiry가 다르면 tag가 존재해도 deployment authority가 아니다.
+
+local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. local receipt self digest나 same-user local self-signature도 trust anchor가 아니다. trust chain은 `두 run receipt 검증 → deterministic repeatability receipt → production-release-approval GitHub attestation → pinned trusted root server verifier` 순서다.
+
 ## 승격이 허용되는 역할
 
 ### coordinator
@@ -64,6 +83,10 @@ Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
 
 ## Promotion lifecycle
 
+Untagged exact-SHA candidate의 isolated build/run, repeatability receipt, mixed-state read-only classification은 `docs/engineering/local-mac-production-release-rehearsal.md`가 canonical authority다. production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르며, implementation이 merge되기 전에는 현재 promote 경로가 그 receipt gate를 충족한다고 주장하지 않는다.
+
+rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`와 `repeatability_receipt_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
+
 Stage B implementation target command family는 다음과 같다.
 
 - `pnpm release:production:plan`
@@ -73,6 +96,7 @@ Stage B implementation target command family는 다음과 같다.
 - `pnpm release:production:verify`
 
 `status`는 read-only다.
+`promote`는 현재 activation blocked이고 CLI help도 이를 명시해야 한다.
 
 ### 1. plan
 
@@ -94,7 +118,7 @@ immutable checkout과 build readiness 단계다.
 
 ### 3. promote
 
-실제 mutation 단계다.
+향후 receipt/attestation gate 구현 완료 뒤의 실제 mutation 단계다. 현재 CLI는 아래 어떤 단계에도 진입하지 않고 `activation_blocked`로 종료한다.
 
 - promotion lock을 획득한다.
 - running release가 preflight 동안 바뀌지 않았는지 재확인한다.
@@ -191,6 +215,10 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `approved_by_task_id`
 - `migration_head`
 - `build_id`
+- `rehearsal_receipt_schema`
+- `sealed_bundle_digest`
+- `repeatability_receipt_digest`
+- `rehearsal_receipt_valid_until`
 - `backup_readiness_evidence`
 - `previous_release_sha`
 - `expected_release_contexts`
@@ -201,6 +229,8 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `youtube_worker_launch_agent_enabled`
 
 manifest와 current descriptor는 credentials, provider payload, secret path, raw backup path를 포함하지 않는다.
+
+현재 `homecook.local-mac-production-release.v1` manifest와 기존 subject/predicate/tag는 위 rehearsal binding field가 없으므로 prepare/read-only verify 참고 evidence일 수는 있어도 production promote authority가 아니다. implementation은 production manifest schema를 v2로 명시적으로 bump하고 GitHub workflow·subject/predicate builder·tag raw object·server verifier를 같은 PR train에서 함께 갱신한다. receipt를 바꿔 끼우거나 attestation만 다시 발급하거나 sealed bundle을 rebuild하는 repair는 금지하며 두 isolated run부터 새 authority를 만든다.
 
 ## Handoff fields
 
@@ -363,6 +393,7 @@ legacy build / install / restart / uninstall / db reset은 active-server release
 
 - `AGENTS.md`
 - `docs/engineering/current-mac-production-plan.md`
+- `docs/engineering/local-mac-production-release-rehearsal.md`
 - `docs/engineering/git-workflow.md`
 - `docs/engineering/agent-workflow-overview.md`
 - `docs/engineering/codex-task-handoff.md`

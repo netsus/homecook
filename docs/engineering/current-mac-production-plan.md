@@ -9,6 +9,7 @@
 자동 실행 라벨: macOS `launchd`의 `com.homecook.production`
 
 > 이 문서는 서버 Mac의 local-first bootstrap / rehearsal 기준이다. active-server release 승격 authority는 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
+> 반복 가능한 exact-SHA isolated release rehearsal authority는 `docs/engineering/local-mac-production-release-rehearsal.md`가 가진다. 이 문서의 legacy bootstrap 절차는 receipt를 대신하지 않는다.
 
 ## 딱 한 줄 요약
 

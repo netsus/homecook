@@ -10,10 +10,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { runLocalMacProductionReleaseCli } from "../scripts/promote-local-mac-production-release.mjs";
 
 const temporaryDirectories: string[] = [];
 const SCRIPT_PATH = join(process.cwd(), "scripts", "promote-local-mac-production-release.mjs");
+const PROMOTE_ACTIVATION_BLOCKED_ERROR = "activation_blocked: production promote requires the implemented and GitHub-attested repeatability receipt gate before any adapter, lock, Docker, LaunchAgent, database, or runtime mutation setup.";
 
 function createTempDirectory(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
@@ -130,6 +133,7 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(result.stdout).toContain("promote");
     expect(result.stdout).toContain("status");
     expect(result.stdout).toContain("verify");
+    expect(result.stdout).toContain("ACTIVATION BLOCKED");
   });
 
   it("prints the exact resolved origin/master head for status and plan against a valid fixture repo", () => {
@@ -255,7 +259,37 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(result.stderr).not.toContain("currently blocked");
   });
 
-  it("enables promote and verify argument validation without blanket-blocking either command", () => {
+  it("blocks promote before attestation, adapter, lock, or mutation setup", async () => {
+    const createAttestationVerifier = vi.fn(() => vi.fn());
+    const createPromoteAdapters = vi.fn(() => {
+      throw new Error("promote adapter factory reached");
+    });
+
+    await expect(runLocalMacProductionReleaseCli(
+      [
+        "promote",
+        "--release-manifest", "/does/not/matter/release.json",
+        "--bundle", "/does/not/matter/bundle.jsonl",
+        "--subject-manifest", "/does/not/matter/subject.json",
+        "--trusted-root", "/does/not/matter/trusted-root.jsonl",
+        "--full-local-config", "/does/not/matter/full-local.json",
+        "--worker-config", "/does/not/matter/worker.json",
+        "--worker-manifest", "/does/not/matter/worker-manifest.json",
+        "--worker-credential", "/does/not/matter/worker-credential",
+        "--worker-app-descriptor", "/does/not/matter/app.json",
+        "--worker-policy", "/does/not/matter/policy.json",
+        "--worker-expected-schema", "/does/not/matter/schema.json",
+        "--worker-secret-root", "/does/not/matter/secrets",
+        "--confirm-production", "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      ],
+      { createAttestationVerifier, createPromoteAdapters },
+    )).rejects.toThrow(/activation_blocked.*repeatability receipt/iu);
+
+    expect(createAttestationVerifier).not.toHaveBeenCalled();
+    expect(createPromoteAdapters).not.toHaveBeenCalled();
+  });
+
+  it("reports the promote activation block before argument or adapter validation", () => {
     const promote = spawnSync(
       process.execPath,
       [SCRIPT_PATH, "promote"],
@@ -265,9 +299,40 @@ describe("promote-local-mac-production-release CLI", () => {
       },
     );
     expect(promote.status).toBe(1);
-    expect(promote.stderr).toContain("promote requires --release-manifest");
-    expect(promote.stderr).not.toContain("currently blocked");
+    expect(promote.stderr).toBe(`${PROMOTE_ACTIVATION_BLOCKED_ERROR}\n`);
+  });
 
+  it.each([
+    ["unknown option", ["promote", "--unknown", "value"]],
+    ["missing value", ["promote", "--release-manifest"]],
+  ])("blocks malformed promote argv before parsing: %s", async (_name, argv) => {
+    const parseArguments = vi.fn(() => {
+      throw new Error("argument parser reached");
+    });
+    const createAttestationVerifier = vi.fn(() => vi.fn());
+    const createPromoteAdapters = vi.fn(() => {
+      throw new Error("promote adapter factory reached");
+    });
+
+    await expect(runLocalMacProductionReleaseCli(argv, {
+      createAttestationVerifier,
+      createPromoteAdapters,
+      parseArguments,
+    })).rejects.toThrow(new Error(PROMOTE_ACTIVATION_BLOCKED_ERROR));
+
+    expect(parseArguments).not.toHaveBeenCalled();
+    expect(createAttestationVerifier).not.toHaveBeenCalled();
+    expect(createPromoteAdapters).not.toHaveBeenCalled();
+
+    const result = spawnSync(process.execPath, [SCRIPT_PATH, ...argv], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe(`${PROMOTE_ACTIVATION_BLOCKED_ERROR}\n`);
+  });
+
+  it("keeps verify argument validation available while promote is blocked", () => {
     const verify = spawnSync(
       process.execPath,
       [SCRIPT_PATH, "verify"],
@@ -278,7 +343,7 @@ describe("promote-local-mac-production-release CLI", () => {
     );
     expect(verify.status).toBe(1);
     expect(verify.stderr).toContain("verify requires --release-manifest");
-    expect(verify.stderr).not.toContain("currently blocked");
+    expect(verify.stderr).not.toContain("activation_blocked");
   });
 
 });

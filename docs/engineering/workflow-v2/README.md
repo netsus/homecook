@@ -29,6 +29,7 @@
   - `Codex-orchestrated OMO rail`은 상태 조회, validator, current-head gate, closeout/report projection에만 사용할 수 있다.
   - product Stage 실행은 `codex-task-handoff.md`를 사용한다.
   - slice `12b-shopping-pantry-reflect` 시작 전에는 [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md)의 `Slice 12b Preflight Lock`을 먼저 확인한다.
+- 서버 Mac release rehearsal은 product stage나 OMO actor-dispatch 범위가 아니다. untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state classification은 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르는 별도 engineering docs-governance/implementation 경로다.
 
 ## Why
 
