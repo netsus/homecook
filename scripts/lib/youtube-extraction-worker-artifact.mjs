@@ -87,6 +87,10 @@ export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
   YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
   YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
 ]);
+const FIRST_CANONICAL_ADOPTION_MISSING_ARTIFACT_FILES = new Set([
+  "scripts/lib/local-mac-production-release.mjs",
+  "scripts/lib/production-release-approval-policy.mjs",
+]);
 const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT =
   "lib/server/youtube-i031-runtime/bundle";
 export const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES = Object.freeze([
@@ -788,14 +792,26 @@ function readMaterializedArtifactFileInventory(artifactRoot, manifestPath) {
   return files.sort();
 }
 
+/**
+ * @param {string} path
+ * @param {{
+ *   allowLegacyReleaseSha?: string | null,
+ *   allowFirstCanonicalAdoptionInventory?: boolean,
+ * }} options
+ */
 export function verifyYoutubeExtractionWorkerArtifact(
   path,
-  { allowLegacyReleaseSha = null } = {},
+  {
+    allowLegacyReleaseSha = null,
+    allowFirstCanonicalAdoptionInventory = false,
+  } = {},
 ) {
   const normalizedPath = ensureRegularFile(path, "worker artifact manifest");
   const value = readYoutubeExtractionWorkerArtifact(normalizedPath);
   const legacyAllowed = value.version === 1
     && value.release_sha === allowLegacyReleaseSha;
+  const legacyInventoryAllowed = allowFirstCanonicalAdoptionInventory
+    && legacyAllowed;
   if (
     !legacyAllowed
     && (value.version !== 2
@@ -850,7 +866,9 @@ export function verifyYoutubeExtractionWorkerArtifact(
     }
   }
   assertRuntimeBundleClosure(artifactRoot, value.files);
-  assertRequiredArtifactFileInventory(manifestFiles);
+  assertRequiredArtifactFileInventory(manifestFiles, {
+    allowFirstCanonicalAdoptionInventory: legacyInventoryAllowed,
+  });
   assertArtifactRelativePath(
     value.entrypoint_relative_path,
     "entrypoint relative path",
@@ -949,8 +967,17 @@ function assertRuntimeBundleClosure(artifactRoot, inventoryEntries) {
   }
 }
 
-function assertRequiredArtifactFileInventory(manifestFiles) {
+function assertRequiredArtifactFileInventory(
+  manifestFiles,
+  { allowFirstCanonicalAdoptionInventory = false } = {},
+) {
   for (const requiredPath of YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES) {
+    if (
+      allowFirstCanonicalAdoptionInventory
+      && FIRST_CANONICAL_ADOPTION_MISSING_ARTIFACT_FILES.has(requiredPath)
+    ) {
+      continue;
+    }
     if (!manifestFiles.has(requiredPath)) {
       throw new Error(`worker artifact required file is missing: ${requiredPath}`);
     }

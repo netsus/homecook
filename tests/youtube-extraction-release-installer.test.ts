@@ -657,6 +657,45 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       .toThrow(/required file is missing/i);
   });
 
+  it("accepts only the exact first-adoption predecessor inventory without release-authority helpers", () => {
+    const privateDir = createTempDir("yta-first-adoption-worker-private-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = inputs.manifestPath;
+    const legacyMissingPaths = [
+      "scripts/lib/local-mac-production-release.mjs",
+      "scripts/lib/production-release-approval-policy.mjs",
+    ];
+    const original = JSON.parse(readFileSync(manifestPath, "utf8"));
+
+    makeRemovable(inputs.artifactDir);
+    for (const relativePath of legacyMissingPaths) {
+      unlinkSync(join(inputs.artifactDir, relativePath));
+    }
+    const legacyBase = {
+      ...original,
+      version: 1,
+      files: original.files.filter(
+        (file: { path: string }) => !legacyMissingPaths.includes(file.path),
+      ),
+    };
+    delete legacyBase.release_tree;
+    delete legacyBase.build_id;
+    delete legacyBase.promotion_id;
+    delete legacyBase.artifact_sha256;
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(manifestPath, `${JSON.stringify({
+      ...legacyBase,
+      artifact_sha256: sha256Text(stableStringify(legacyBase)),
+    }, null, 2)}\n`, 0o444);
+
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/release identity|required file/iu);
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath, {
+      allowLegacyReleaseSha: inputs.releaseSha,
+      allowFirstCanonicalAdoptionInventory: true,
+    })).not.toThrow();
+  });
+
   it("rejects a self-consistent artifact that drifts from the frozen timing contract", () => {
     const privateDir = createTempDir("yta-artifact-timing-drift-private-");
     const inputs = createReleaseInputs(privateDir);
