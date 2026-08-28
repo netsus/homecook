@@ -390,7 +390,7 @@ export function allowFirstCanonicalAdoptionWorkerStandby({
   return Boolean(
     currentRuntimeBridge
     && workerStatus?.loaded === true
-    && workerStatus?.state === "spawn scheduled"
+    && ["spawn scheduled", "waiting"].includes(workerStatus?.state)
     && workerStatus?.pid === null
     && currentWorkerPreflight?.ready === true
     && currentWorkerPreflight?.release_sha === currentRuntimeBridge.previous_release_sha,
