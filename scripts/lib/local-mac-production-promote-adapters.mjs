@@ -285,6 +285,28 @@ function readProcessCwd({ pid, spawn = spawnSync }) {
   return claims[0];
 }
 
+/**
+ * @param {{
+ *   currentRuntimeBridge?: ({ previous_release_sha?: string } & Record<string, unknown>) | null,
+ *   workerStatus?: { loaded?: boolean, state?: string, pid?: number | null } | null,
+ *   currentWorkerPreflight?: { ready?: boolean, release_sha?: string } | null,
+ * }} [options]
+ */
+export function allowFirstCanonicalAdoptionWorkerStandby({
+  currentRuntimeBridge = null,
+  workerStatus = null,
+  currentWorkerPreflight = null,
+} = {}) {
+  return Boolean(
+    currentRuntimeBridge
+    && workerStatus?.loaded === true
+    && workerStatus?.state === "spawn scheduled"
+    && workerStatus?.pid === null
+    && currentWorkerPreflight?.ready === true
+    && currentWorkerPreflight?.release_sha === currentRuntimeBridge.previous_release_sha,
+  );
+}
+
 function readFirstCanonicalPredecessorAppIdentity({
   appRoot,
   commandRunner,
@@ -1020,22 +1042,6 @@ function buildDefaultDependencies(
         stderr: workerRaw.stderr,
         stdout: workerRaw.stdout,
       });
-      if (
-        !workerStatus.loaded
-        || !["running", "waiting"].includes(workerStatus.state)
-        || !Number.isInteger(workerStatus.pid)
-      ) {
-        throw new Error("Current worker runtime is not running.");
-      }
-      if (readProcessCwd({ pid: workerStatus.pid, spawn: commandRunner }) !== workerArtifactRoot) {
-        throw new Error("Current worker runtime artifact root drifted.");
-      }
-      const workerArtifact = verifyYoutubeExtractionWorkerArtifact(workerManifestPath, {
-        allowLegacyReleaseSha: legacyBootstrap || currentRuntimeBridge
-          ? (currentRuntimeBridge?.previous_release_sha ?? context.currentDescriptor.release_sha)
-          : null,
-        allowFirstCanonicalAdoptionInventory: Boolean(currentRuntimeBridge),
-      });
       const currentWorkerPaths = legacyBootstrap || currentRuntimeBridge
         ? {
           appDescriptorPath: argumentValue(workerPlist.args, "--app-descriptor"),
@@ -1058,6 +1064,58 @@ function buildDefaultDependencies(
       if (Object.values(currentWorkerPaths).some((value) => !value)) {
         throw new Error("Current worker plist runtime paths are incomplete.");
       }
+      const currentWorkerPreflight = legacyBootstrap
+        ? {
+          ...evaluateYoutubeExtractionWorkerPreflight(
+            loadYoutubeExtractionWorkerRuntimeInputs({
+              ...currentWorkerPaths,
+              expectedSchemaPath: null,
+            }),
+          ),
+          legacy_bootstrap: true,
+          legacy_bootstrap_contract: "e02f-worker-v1",
+        }
+        : evaluateYoutubeExtractionWorkerPreflight(
+          loadYoutubeExtractionWorkerRuntimeInputs(currentWorkerPaths),
+        );
+      const expectedCurrentReleaseSha = currentRuntimeBridge?.previous_release_sha
+        ?? context.currentDescriptor.release_sha;
+      if (
+        !currentWorkerPreflight.ready
+        || currentWorkerPreflight.release_sha !== expectedCurrentReleaseSha
+      ) {
+        throw new Error("Current worker runtime preflight drifted.");
+      }
+      const allowBridgeWorkerStandby = allowFirstCanonicalAdoptionWorkerStandby({
+        currentRuntimeBridge,
+        workerStatus,
+        currentWorkerPreflight,
+      });
+      if (
+        !workerStatus.loaded
+        || (
+          !["running", "waiting"].includes(workerStatus.state)
+          && !allowBridgeWorkerStandby
+        )
+        || (
+          !Number.isInteger(workerStatus.pid)
+          && !allowBridgeWorkerStandby
+        )
+      ) {
+        throw new Error("Current worker runtime is not running.");
+      }
+      if (
+        Number.isInteger(workerStatus.pid)
+        && readProcessCwd({ pid: workerStatus.pid, spawn: commandRunner }) !== workerArtifactRoot
+      ) {
+        throw new Error("Current worker runtime artifact root drifted.");
+      }
+      const workerArtifact = verifyYoutubeExtractionWorkerArtifact(workerManifestPath, {
+        allowLegacyReleaseSha: legacyBootstrap || currentRuntimeBridge
+          ? (currentRuntimeBridge?.previous_release_sha ?? context.currentDescriptor.release_sha)
+          : null,
+        allowFirstCanonicalAdoptionInventory: Boolean(currentRuntimeBridge),
+      });
       const canonicalWorkerPlist = legacyBootstrap || currentRuntimeBridge
         ? renderYoutubeExtractionWorkerPlist({
           appDescriptorPath: currentWorkerPaths.appDescriptorPath,
@@ -1088,28 +1146,6 @@ function buildDefaultDependencies(
         label: "Current YouTube worker plist",
         trustedRoot: options.homeDir,
       });
-      const currentWorkerPreflight = legacyBootstrap
-        ? {
-          ...evaluateYoutubeExtractionWorkerPreflight(
-            loadYoutubeExtractionWorkerRuntimeInputs({
-              ...currentWorkerPaths,
-              expectedSchemaPath: null,
-            }),
-          ),
-          legacy_bootstrap: true,
-          legacy_bootstrap_contract: "e02f-worker-v1",
-        }
-        : evaluateYoutubeExtractionWorkerPreflight(
-          loadYoutubeExtractionWorkerRuntimeInputs(currentWorkerPaths),
-        );
-      const expectedCurrentReleaseSha = currentRuntimeBridge?.previous_release_sha
-        ?? context.currentDescriptor.release_sha;
-      if (
-        !currentWorkerPreflight.ready
-        || currentWorkerPreflight.release_sha !== expectedCurrentReleaseSha
-      ) {
-        throw new Error("Current worker runtime preflight drifted.");
-      }
       const youtubeWorker = {
         release_sha: workerArtifact.release_sha,
         release_tree: legacyBootstrap
@@ -1135,7 +1171,8 @@ function buildDefaultDependencies(
         full_local_runtime_root: fullLocalRuntimeRoot,
         full_local_source_sha: currentRuntimeBridge?.full_local_source_sha ?? null,
         full_local_workload: fullLocal.workload_digest,
-        worker_pid: workerStatus.pid,
+        worker_pid: workerStatus.pid ?? null,
+        worker_state: workerStatus.state,
         worker_plist: workerPlist.digest,
         worker_artifact: workerArtifact.artifact_sha256,
         worker_preflight: currentWorkerPreflight.checks,

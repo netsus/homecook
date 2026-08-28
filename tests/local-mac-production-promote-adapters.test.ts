@@ -17,6 +17,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  allowFirstCanonicalAdoptionWorkerStandby,
   createLocalMacProductionPromoteAdapters,
 } from "../scripts/lib/local-mac-production-promote-adapters.mjs";
 import * as promoteAdapters from "../scripts/lib/local-mac-production-promote-adapters.mjs";
@@ -579,6 +580,59 @@ describe("local Mac production promote adapters", () => {
 
     await expect(adapters.preflightBundle(context))
       .rejects.toThrow(/worker.*root|worker.*manifest|path authority|bridge/iu);
+  });
+
+  it("allows first canonical adoption worker standby only for the exact predecessor bridge", () => {
+    expect(allowFirstCanonicalAdoptionWorkerStandby({
+      currentRuntimeBridge: {
+        app_release_dir: FIRST_CANONICAL_ADOPTION_APP_ROOT,
+        full_local_root: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_ROOT,
+        full_local_source_sha: FIRST_CANONICAL_ADOPTION_FULL_LOCAL_SOURCE_SHA,
+        mode: "first-canonical-adoption-v1",
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+        worker_artifact_root: FIRST_CANONICAL_ADOPTION_WORKER_ROOT,
+        worker_manifest_path: FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST,
+      },
+      workerStatus: {
+        loaded: true,
+        pid: null,
+        state: "spawn scheduled",
+      },
+      currentWorkerPreflight: {
+        ready: true,
+        release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      },
+    })).toBe(true);
+
+    expect(allowFirstCanonicalAdoptionWorkerStandby({
+      currentRuntimeBridge: {
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      },
+      workerStatus: {
+        loaded: true,
+        pid: null,
+        state: "running",
+      },
+      currentWorkerPreflight: {
+        ready: true,
+        release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      },
+    })).toBe(false);
+
+    expect(allowFirstCanonicalAdoptionWorkerStandby({
+      currentRuntimeBridge: {
+        previous_release_sha: FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA,
+      },
+      workerStatus: {
+        loaded: true,
+        pid: null,
+        state: "spawn scheduled",
+      },
+      currentWorkerPreflight: {
+        ready: true,
+        release_sha: "0".repeat(40),
+      },
+    })).toBe(false);
   });
 
   it("blocks all bundle mutation when sealed snapshot verification fails", async () => {
