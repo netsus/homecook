@@ -448,7 +448,7 @@ describe("release rehearsal candidate input gates", () => {
       `${valid.replace("services:", "x-evil: ignored\nservices:")}`,
     ]) {
       expect(() => parseCanonicalComposeImageInventory(invalid))
-        .toThrow(/image|digest|tag|build|service|complete|section|duplicate|unsupported|top-level|plain-key|grammar/iu);
+        .toThrow(/image|digest|tag|build|service|complete|section|duplicate|unsupported|top-level|plain-key|grammar|whitespace|control|BOM|noncharacter/iu);
     }
   });
 
@@ -493,6 +493,40 @@ describe("release rehearsal candidate input gates", () => {
       expect(() => parseCanonicalComposeImageInventory(invalid))
         .toThrow(/Compose|image|platform|service|mapping|grammar|unknown|duplicate|digest|indent|top-level/iu);
     }
+
+    const lexicalAndTokenMutations = [
+      `\uFEFF${canonical}`,
+      canonical.replace("services:", "serv\uFEFFices:"),
+      canonical.replace("\n\nservices:", "\n\uFEFF\nservices:"),
+      canonical.replace("# Compose mounts", "\uFEFF# Compose mounts"),
+      canonical.replace(postgresImage, postgresImage.replace("image", "\uFEFFimage")),
+      canonical.replace(postgresImage, postgresImage.replace("image: ", "image: \uFEFF")),
+      canonical.replace("services:", "services:\u0000"),
+      canonical.replace("services:", "services:\u0001"),
+      canonical.replace("services:", "services:\uFDD0"),
+      canonical.replace('    entrypoint: ["/homecook/secret-entrypoint.sh"]', '    entrypoint: ["unterminated]'),
+      canonical.replace('    command: ["docker-entrypoint.sh", "postgres", "-D", "/etc/postgresql"]', "    command: {image: attacker}"),
+      canonical.replace("    restart: unless-stopped", "    restart: !!str attacker"),
+      canonical.replace("      - data-internal", "      - *restore-attempt-labels"),
+      canonical.replace("      - postgres-data:/var/lib/postgresql/data", "      - {image: attacker}"),
+      canonical.replace("      - no-new-privileges:true", '      - ["unterminated]'),
+      canonical.replace("      POSTGRES_DB: postgres", "      POSTGRES_DB: !!str attacker"),
+      canonical.replace("      interval: 5s", "      interval: *restore-attempt-labels"),
+      canonical.replace("    restart: unless-stopped", "    restart: [always]"),
+      canonical.replace("      POSTGRES_DB: postgres", "      POSTGRES_DB: {value: postgres}"),
+      canonical.replace("      POSTGRES_DB: postgres", '      POSTGRES_DB: "unterminated'),
+      canonical.replace("      - data-internal", "      - 'unterminated"),
+      canonical.replace('    command: ["docker-entrypoint.sh", "postgres", "-D", "/etc/postgresql"]', '    command: ["postgres"}'),
+    ];
+    const survivors = lexicalAndTokenMutations.flatMap((mutation, index) => {
+      try {
+        parseCanonicalComposeImageInventory(mutation);
+        return [index];
+      } catch {
+        return [];
+      }
+    });
+    expect(survivors).toEqual([]);
   });
 
   it("allows only exact Docker version and digest inspect argv outside the build sandbox", () => {

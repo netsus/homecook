@@ -2149,11 +2149,22 @@ export function validateStableCiSnapshots(pre, post, releaseSha) {
 
 export function parseCanonicalComposeImageInventory(source) {
   if (typeof source !== "string" || source.length === 0) fail("Compose source is required");
+  for (const character of source) {
+    const codePoint = character.codePointAt(0);
+    const unicodeWhitespace = /\p{White_Space}/u.test(character)
+      && character !== " " && character !== "\n" && character !== "\r";
+    const forbiddenControl = codePoint <= 0x08
+      || (codePoint >= 0x0b && codePoint <= 0x0c)
+      || (codePoint >= 0x0e && codePoint <= 0x1f)
+      || (codePoint >= 0x7f && codePoint <= 0x9f);
+    const noncharacter = (codePoint >= 0xfdd0 && codePoint <= 0xfdef)
+      || (codePoint & 0xffff) === 0xfffe || (codePoint & 0xffff) === 0xffff;
+    if (codePoint === 0xfeff || unicodeWhitespace || forbiddenControl || noncharacter) {
+      fail("Compose raw lexical input contains forbidden whitespace, control, BOM, or noncharacter bytes");
+    }
+  }
   const lines = source.split(/\r?\n/u);
   if (source.includes("\t")) fail("Compose tabs are unsupported for complete service inventory");
-  if (/[\u000b\u000c\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/u.test(source)) {
-    fail("Compose Unicode whitespace is unsupported");
-  }
   const parseMapping = (line, indent, label) => {
     const prefix = " ".repeat(indent);
     if (!line.startsWith(prefix) || line[indent] === " ") fail(`Compose ${label} indentation is invalid`);
@@ -2172,6 +2183,34 @@ export function parseCanonicalComposeImageInventory(source) {
       fail(`Compose ${label} list item is outside the closed grammar`);
     }
     return line.slice(prefix.length);
+  };
+  const validatePlainScalar = (value, label, { approvedAlias = null } = {}) => {
+    if (typeof value !== "string" || value === "" || value.trim() !== value) {
+      fail(`Compose ${label} scalar is empty or padded`);
+    }
+    if (approvedAlias && value === approvedAlias) return value;
+    if (value.startsWith('"')) {
+      let parsed;
+      try { parsed = JSON.parse(value); } catch { fail(`Compose ${label} quoted scalar is malformed`); }
+      if (typeof parsed !== "string" || JSON.stringify(parsed) !== value) {
+        fail(`Compose ${label} quoted scalar is outside the exact JSON-string grammar`);
+      }
+      return value;
+    }
+    if (/^[!&*?\[\]{}>|'"\\]/u.test(value)) fail(`Compose ${label} scalar starts with a forbidden YAML token`);
+    const withoutTemplates = value.replace(/\$\{[A-Z][A-Z0-9_]*(?::[-+?][^}\r\n]*)?\}/gu, "");
+    if (/[\[\]{}'"\\]/u.test(withoutTemplates) || /(?:^|\s)(?:!!|[&*?])\S*/u.test(withoutTemplates)) {
+      fail(`Compose ${label} scalar contains unsupported flow, quote, tag, alias, anchor, or explicit-key syntax`);
+    }
+    return value;
+  };
+  const parseInlineStringSequence = (value, label) => {
+    let parsed;
+    try { parsed = JSON.parse(value); } catch { fail(`Compose ${label} inline sequence is malformed`); }
+    if (!Array.isArray(parsed) || parsed.length === 0 || parsed.some((entry) => typeof entry !== "string")) {
+      fail(`Compose ${label} inline sequence must contain only strings`);
+    }
+    return parsed;
   };
   const topLevelAllowed = new Set([
     "name", "version", "x-restore-attempt-labels", "services", "networks", "secrets", "volumes",
@@ -2219,6 +2258,7 @@ export function parseCanonicalComposeImageInventory(source) {
         fail(`Compose top-level ${key} must use a nested block`);
       }
       if (["name", "version"].includes(key) && value === null) fail(`Compose top-level ${key} requires a value`);
+      if (["name", "version"].includes(key)) validatePlainScalar(value, `top-level ${key}`);
       if (key === "x-restore-attempt-labels" && value !== "&restore-attempt-labels") {
         fail("Compose known extension anchor is invalid");
       }
@@ -2235,6 +2275,7 @@ export function parseCanonicalComposeImageInventory(source) {
       if (!extensionKeys.has(key) || value === null || nestedKeys.has(key)) {
         fail("Compose known extension mapping is unknown, empty, or duplicated");
       }
+      validatePlainScalar(value, `known extension ${key}`);
       nestedKeys.add(key);
       continue;
     }
@@ -2259,6 +2300,7 @@ export function parseCanonicalComposeImageInventory(source) {
         nestedItem = null;
         if (["image", "platform"].includes(key)) {
           if (value === null) fail(`Compose service ${current.service} ${key} requires a value`);
+          validatePlainScalar(value, `service ${current.service} ${key}`);
           if (key === "image") current.image = value;
           if (key === "platform") current.platform = value;
           continue;
@@ -2269,14 +2311,17 @@ export function parseCanonicalComposeImageInventory(source) {
         }
         if (key === "labels") {
           if (value !== "*restore-attempt-labels") fail("Compose service labels alias is not the approved metadata alias");
+          validatePlainScalar(value, "service labels", { approvedAlias: "*restore-attempt-labels" });
           continue;
         }
         if (["entrypoint", "command"].includes(key)) {
-          if (value === null || !/^\[[^\n]+\]$/u.test(value)) fail(`Compose service ${key} must use the supported inline sequence`);
+          if (value === null) fail(`Compose service ${key} must use the supported inline sequence`);
+          parseInlineStringSequence(value, `service ${key}`);
           continue;
         }
         if (scalarServiceFields.has(key)) {
           if (value === null) fail(`Compose service ${key} requires a scalar value`);
+          validatePlainScalar(value, `service ${key}`);
           continue;
         }
         if (value !== null) fail(`Compose service ${key} must use its supported nested block`);
@@ -2286,7 +2331,7 @@ export function parseCanonicalComposeImageInventory(source) {
       if (indent === 6) {
         if (!nestedBlock) fail("Compose nested service line has no owning block");
         if (listServiceFields.has(nestedBlock)) {
-          parseListItem(line, 6, `${nestedBlock}`);
+          validatePlainScalar(parseListItem(line, 6, `${nestedBlock}`), `${nestedBlock} list item`);
           continue;
         }
         const { key, value } = parseMapping(line, 6, `${nestedBlock}`);
@@ -2294,6 +2339,7 @@ export function parseCanonicalComposeImageInventory(source) {
         nestedKeys.add(key);
         if (nestedBlock === "environment") {
           if (!/^[A-Z][A-Z0-9_]*$/u.test(key) || value === null) fail("Compose environment entry is outside the supported grammar");
+          validatePlainScalar(value, `environment ${key}`);
           continue;
         }
         if (nestedBlock === "healthcheck") {
@@ -2301,6 +2347,8 @@ export function parseCanonicalComposeImageInventory(source) {
           if (key === "test" && value === null) {
             nestedItem = "healthcheck-test";
           } else if (value === null) fail(`Compose healthcheck ${key} requires a value`);
+          else if (key === "test") parseInlineStringSequence(value, "healthcheck test");
+          else validatePlainScalar(value, `healthcheck ${key}`);
           continue;
         }
         if (nestedBlock === "depends_on") {
@@ -2312,12 +2360,13 @@ export function parseCanonicalComposeImageInventory(source) {
       }
       if (indent === 8) {
         if (nestedBlock === "healthcheck" && nestedItem === "healthcheck-test") {
-          parseListItem(line, 8, "healthcheck test");
+          validatePlainScalar(parseListItem(line, 8, "healthcheck test"), "healthcheck test list item");
           continue;
         }
         if (nestedBlock === "depends_on" && nestedItem) {
           const { key, value } = parseMapping(line, 8, "depends_on condition");
           if (key !== "condition" || value === null) fail("Compose depends_on condition is unsupported");
+          validatePlainScalar(value, "depends_on condition");
           nestedItem = null;
           continue;
         }
@@ -2343,9 +2392,18 @@ export function parseCanonicalComposeImageInventory(source) {
         if (nestedKeys.has(key)) fail(`Compose duplicate ${section} metadata key: ${key}`);
         nestedKeys.add(key);
         if (section === "networks" && key === "internal" && value === "true") continue;
-        if (section === "secrets" && key === "file" && value !== null) continue;
-        if (section === "volumes" && key === "name" && value !== null) continue;
-        if (section === "volumes" && key === "labels" && value === "*restore-attempt-labels") continue;
+        if (section === "secrets" && key === "file" && value !== null) {
+          validatePlainScalar(value, "secret file");
+          continue;
+        }
+        if (section === "volumes" && key === "name" && value !== null) {
+          validatePlainScalar(value, "volume name");
+          continue;
+        }
+        if (section === "volumes" && key === "labels" && value === "*restore-attempt-labels") {
+          validatePlainScalar(value, "volume labels", { approvedAlias: "*restore-attempt-labels" });
+          continue;
+        }
         fail(`Compose ${section} metadata is unsupported`);
       }
       fail(`Compose ${section} indentation is unsupported`);
