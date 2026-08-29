@@ -123,6 +123,7 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     immutableBuilderInputDigest = null,
     immutableBuilderInputEntries = null,
     immutableBootstrapVerified = false,
+    beforeCandidateComplete = null,
     candidateNamespaceResolver = defaultCandidateNamespaceResolver,
     runIdFactory = () => randomUUID(),
   } = dependencies;
@@ -147,6 +148,9 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     if (!/^[0-9a-f]{64}$/u.test(immutableBuilderInputDigest ?? "") || !Array.isArray(immutableBuilderInputEntries) || immutableBuilderInputEntries.length === 0) {
       throw new Error("candidate execution requires the verified immutable builder module graph authority.");
     }
+    if (typeof beforeCandidateComplete !== "function") {
+      throw new Error("candidate execution requires an immutable before-complete finalization guard.");
+    }
     const candidateModule = buildCandidate && createCandidateAdapters
       ? null
       : await import("./lib/local-mac-production-rehearsal-candidate.mjs");
@@ -163,12 +167,27 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
       namespaceRoot,
       rootDir,
     });
-    writeResult(output, await candidateBuilder({
+    let completionGuardCalled = false;
+    const guardedBeforeComplete = async (authority) => {
+      if (completionGuardCalled) throw new Error("candidate immutable finalization guard may run only once.");
+      const result = await beforeCandidateComplete(authority);
+      if (
+        result?.verified !== true
+        || result?.builder_input_digest !== immutableBuilderInputDigest
+        || authority?.builder_input_digest !== immutableBuilderInputDigest
+      ) throw new Error("candidate immutable finalization authority is invalid.");
+      completionGuardCalled = true;
+      return result;
+    };
+    const candidateResult = await candidateBuilder({
       adapters,
+      beforeComplete: guardedBeforeComplete,
       namespaceRoot,
       releaseSha: options.releaseSha,
       runId: runIdFactory(),
-    }));
+    });
+    if (!completionGuardCalled) throw new Error("candidate builder returned before immutable finalization.");
+    writeResult(output, candidateResult);
     return;
   }
   if (options.command === "inventory") {

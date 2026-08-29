@@ -71,6 +71,7 @@ const RUN_A = "00000000-0000-4000-8000-000000000001";
 const RUN_B = "00000000-0000-4000-8000-000000000002";
 const RUN_TOOL_CHANGE = "00000000-0000-4000-8000-000000000003";
 const RUN_FAILED = "00000000-0000-4000-8000-000000000006";
+const RUN_FINALIZE_FAILED = "00000000-0000-4000-8000-000000000007";
 
 function privateRoot(prefix = "homecook-candidate-") {
   const root = mkdtempSync(join(tmpdir(), prefix));
@@ -350,11 +351,21 @@ describe("release rehearsal candidate input gates", () => {
     mkdirSync(join(repo, "scripts", "config"), { recursive: true, mode: 0o700 });
     writeFileSync(join(repo, "scripts", "entry.mjs"), `import { readFileSync } from "node:fs"
 const decoy = 'from "./not-a-module"'
+const templateDecoy = \`import("./template-ghost.mjs") \${String.raw\`from "./nested-ghost.mjs"\`}\`
+const regexDecoy = /import\\("\\.\\/regex-ghost\\.mjs"\\)/u
+// from "./line-comment-ghost.mjs"
+/* import "./block-comment-ghost.mjs" */
+import "./lib/bare.mjs"
+const dynamicConfig = await import("./lib/dynamic.json", { with: { type: "json" } })
 export { candidate } from "./lib/candidate.mjs"
 `, { mode: 0o600 });
-    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import { dependency } from './dependency.mjs'\nimport config from './config.json' with { type: 'json' }\nexport const candidate = `exact-${dependency}-${config.value}`\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import {\n  dependency,\n} from './dependency.mjs'\nimport config from './config.json' with { type: \"json\" }\nexport const candidate = `exact-${dependency}-${config.value}`\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "bare.mjs"), "export const bare = true\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "dependency.mjs"), "export const dependency = 'blob'\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "config.json"), "{\"value\":\"exact\"}\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "dynamic.json"), "{\"value\":\"dynamic\"}\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "unsupported.mjs"), "const path = './dynamic.json'\nawait import(path)\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "bad-json.mjs"), "import config from './config.json'\nexport default config\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "config", "lock.json"), "{}", { mode: 0o600 });
     runGit(["add", "."]);
     runGit(["commit", "-m", "fixture"]);
@@ -390,12 +401,44 @@ export { candidate } from "./lib/candidate.mjs"
     expect(graph.entries.map((entry: { path: string }) => entry.path)).toEqual([
       "scripts/config/lock.json",
       "scripts/entry.mjs",
+      "scripts/lib/bare.mjs",
       "scripts/lib/candidate.mjs",
       "scripts/lib/config.json",
       "scripts/lib/dependency.mjs",
+      "scripts/lib/dynamic.json",
     ]);
+    const restoredBeforeFinalizePath = join(outputRoot, "scripts", "lib", "bare.mjs");
+    const restoredBeforeFinalizeBytes = readFileSync(restoredBeforeFinalizePath);
+    const restoredBeforeFinalizeMode = lstatSync(restoredBeforeFinalizePath).mode & 0o7777;
+    chmodSync(restoredBeforeFinalizePath, 0o600);
+    writeFileSync(restoredBeforeFinalizePath, "export const attacker = true\n", { mode: 0o600 });
+    writeFileSync(restoredBeforeFinalizePath, restoredBeforeFinalizeBytes, { mode: 0o600 });
+    chmodSync(restoredBeforeFinalizePath, restoredBeforeFinalizeMode);
+    const restoredGraph = verifyImmutableCandidateModuleGraph({
+      entryPaths: ["scripts/entry.mjs", "scripts/lib/candidate.mjs"],
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      lockPaths: ["scripts/config/lock.json"],
+      releaseSha,
+      repositoryRoot: repo,
+      sourceRoot: outputRoot,
+    });
+    expect(restoredGraph.builder_input_digest).toBe(graph.builder_input_digest);
+    expect(restoredGraph).not.toEqual(graph);
+    for (const entryPath of ["scripts/lib/unsupported.mjs", "scripts/lib/bad-json.mjs"]) {
+      expect(() => verifyImmutableCandidateModuleGraph({
+        entryPaths: [entryPath],
+        gitPath: "/usr/bin/git",
+        homeDir: gitHome,
+        lockPaths: [],
+        releaseSha,
+        repositoryRoot: repo,
+        sourceRoot: outputRoot,
+      })).toThrow(/import|literal|unsupported|attribute|JSON|module graph/iu);
+    }
 
     const candidatePath = join(outputRoot, "scripts", "lib", "candidate.mjs");
+    const candidateMode = lstatSync(candidatePath).mode & 0o7777;
     chmodSync(candidatePath, 0o600);
     const exactCandidate = readFileSync(candidatePath);
     writeFileSync(candidatePath, "export const candidate = 'attacker'\n", { mode: 0o600 });
@@ -409,7 +452,25 @@ export { candidate } from "./lib/candidate.mjs"
       sourceRoot: outputRoot,
     })).toThrow(/immutable|Git|blob|drift|authority/iu);
     writeFileSync(candidatePath, exactCandidate, { mode: 0o600 });
+    chmodSync(candidatePath, candidateMode);
+    const importedJsonPath = join(outputRoot, "scripts", "lib", "dynamic.json");
+    const importedJsonMode = lstatSync(importedJsonPath).mode & 0o7777;
+    chmodSync(importedJsonPath, 0o600);
+    const exactImportedJson = readFileSync(importedJsonPath);
+    writeFileSync(importedJsonPath, "{\"attacker\":true}\n", { mode: 0o600 });
+    expect(() => verifyImmutableCandidateModuleGraph({
+      entryPaths: ["scripts/entry.mjs"],
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      lockPaths: ["scripts/config/lock.json"],
+      releaseSha,
+      repositoryRoot: repo,
+      sourceRoot: outputRoot,
+    })).toThrow(/immutable|Git|blob|drift|authority/iu);
+    writeFileSync(importedJsonPath, exactImportedJson, { mode: 0o600 });
+    chmodSync(importedJsonPath, importedJsonMode);
     const lockPath = join(outputRoot, "scripts", "config", "lock.json");
+    const lockMode = lstatSync(lockPath).mode & 0o7777;
     chmodSync(lockPath, 0o600);
     const exactLock = readFileSync(lockPath);
     writeFileSync(lockPath, "{\"attacker\":true}", { mode: 0o600 });
@@ -423,6 +484,7 @@ export { candidate } from "./lib/candidate.mjs"
       sourceRoot: outputRoot,
     })).toThrow(/immutable|Git|blob|drift|authority/iu);
     writeFileSync(lockPath, exactLock, { mode: 0o600 });
+    chmodSync(lockPath, lockMode);
   });
 
   it("requires stable pre/post remote-master and full CI run/status identity", () => {
@@ -640,6 +702,16 @@ export { candidate } from "./lib/candidate.mjs"
       canonical.replace("  data-internal:\n    internal: true", "  data-internal: {}"),
       canonical.replace("  storage-data:\n    name: ${FULL_LOCAL_STORAGE_VOLUME_NAME:?FULL_LOCAL_STORAGE_VOLUME_NAME is required}\n    labels: *restore-attempt-labels\n", ""),
       canonical.replace("    labels: *restore-attempt-labels\n", ""),
+      canonical.replace("    networks:\n      - data-internal\n", "    networks:\n      - auth-egress\n"),
+      canonical.replace("      - data-internal\n      - auth-egress", "      - data-internal"),
+      canonical.replace("      - auth-edge\n      - data-internal", "      - auth-edge"),
+      canonical.replace("      - postgres-data:/var/lib/postgresql/data", "      - /tmp:/var/lib/postgresql/data"),
+      canonical.replace("      - storage-data:/var/lib/storage\n", ""),
+      canonical.replace("      - storage-data:/var/lib/storage", "      - storage-data:/srv/storage:ro"),
+      canonical.replace("    networks:\n      - data-internal\n    restart:", "    networks:\n      - data-internal\n      - auth-edge\n    restart:"),
+      canonical.replace("      - ./start-auth.sh:/homecook/start-auth.sh:ro", "      - ./start-auth.sh:/homecook/start-auth.sh:ro\n      - /tmp:/tmp"),
+      canonical.replace("      - postgres_password\n    volumes:", "      - postgres_password\n      - jwt_secret\n    volumes:"),
+      canonical.replace("    tmpfs:\n      - /tmp:mode=1777", "    tmpfs:\n      - /tmp"),
     ];
     const semanticSurvivors = coUpdatedSemanticMutations.flatMap((mutation, index) => {
       const coUpdatedLock = {
@@ -653,7 +725,7 @@ export { candidate } from "./lib/candidate.mjs"
         return [];
       }
     });
-    expect(coUpdatedSemanticMutations).toHaveLength(4);
+    expect(coUpdatedSemanticMutations).toHaveLength(14);
     expect(semanticSurvivors).toEqual([]);
   });
 
@@ -1631,9 +1703,15 @@ describe("release rehearsal candidate orchestration", () => {
     const previous = process.env.LEAK_FROM_PROCESS_ENV;
     process.env.LEAK_FROM_PROCESS_ENV = "must-not-leak";
     try {
-      const first = await buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_A });
+      const first = await buildReleaseRehearsalCandidate({
+        releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_A,
+        beforeComplete: vi.fn(() => ({ builder_input_digest: DIGEST_B, verified: true })),
+      });
       expect(callOrder.slice(0, 4)).toEqual(["tool-lock", "tool", "source", "ci"]);
-      const second = await buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_B });
+      const second = await buildReleaseRehearsalCandidate({
+        releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_B,
+        beforeComplete: vi.fn(() => ({ builder_input_digest: DIGEST_B, verified: true })),
+      });
       expect(first.manifest.sealed_bundle_digest).toBe(second.manifest.sealed_bundle_digest);
       expect(first.manifest.manifest_digest).toBe(second.manifest.manifest_digest);
       expect(first.candidate_root).not.toBe(second.candidate_root);
@@ -1648,6 +1726,7 @@ describe("release rehearsal candidate orchestration", () => {
         namespaceRoot,
         adapters,
         runId: RUN_TOOL_CHANGE,
+        beforeComplete: vi.fn(() => ({ builder_input_digest: DIGEST_B, verified: true })),
       });
       expect(toolChanged.manifest.sealed_bundle_digest)
         .toBe(first.manifest.sealed_bundle_digest);
@@ -1656,6 +1735,19 @@ describe("release rehearsal candidate orchestration", () => {
       expect(toolChanged.manifest.candidate_identity_digest)
         .not.toBe(first.manifest.candidate_identity_digest);
       expect(adapters.captureProductionSurface).toHaveBeenCalledTimes(6);
+
+      await expect(buildReleaseRehearsalCandidate({
+        releaseSha: SHA_A,
+        namespaceRoot,
+        adapters,
+        runId: RUN_FINALIZE_FAILED,
+        beforeComplete: vi.fn(() => { throw new Error("immutable graph drift before completion"); }),
+      })).rejects.toThrow(/failed|graph|candidate_build_failed/iu);
+      const failedRoot = join(namespaceRoot, "attempts", RUN_FINALIZE_FAILED);
+      expect(existsSync(join(failedRoot, "complete.json"))).toBe(false);
+      expect(existsSync(join(failedRoot, "candidate.json"))).toBe(false);
+      expect(JSON.parse(readFileSync(join(failedRoot, "failed.json"), "utf8"))).toMatchObject({ status: "failed" });
+      expect(readdirSync(failedRoot)).toEqual(["failed.json"]);
     } finally {
       if (previous === undefined) delete process.env.LEAK_FROM_PROCESS_ENV;
       else process.env.LEAK_FROM_PROCESS_ENV = previous;
@@ -1681,14 +1773,14 @@ describe("release rehearsal candidate orchestration", () => {
       }),
     };
 
-    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_FAILED }))
+    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_FAILED, beforeComplete: vi.fn() }))
       .rejects.toThrow(/candidate_build_failed|path_digest/iu);
     const failedRoot = join(namespaceRoot, "attempts", RUN_FAILED);
     const failedMarker = join(failedRoot, "failed.json");
     expect(JSON.parse(readFileSync(failedMarker, "utf8"))).toMatchObject({ status: "failed" });
     expect(readdirSync(failedRoot)).toEqual(["failed.json"]);
 
-    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_FAILED }))
+    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_FAILED, beforeComplete: vi.fn() }))
       .rejects.toThrow(/collision|exists|create-only/iu);
   });
 
@@ -1699,6 +1791,7 @@ describe("release rehearsal candidate orchestration", () => {
       namespaceRoot,
       adapters: {},
       runId: "../escaped",
+      beforeComplete: vi.fn(),
     })).rejects.toThrow(/run.?id|uuid|cryptorandom/iu);
     expect(existsSync(join(namespaceRoot, "escaped"))).toBe(false);
   });

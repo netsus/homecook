@@ -1659,6 +1659,7 @@ function makeCandidateRootWritable(path) {
  *   adapters?: any,
  *   runId: string,
  *   currentUid?: number,
+ *   beforeComplete: (authority: any) => Promise<any> | any,
  * }} options
  * @returns {Promise<{candidate_root:string, manifest:any}>}
  */
@@ -1668,6 +1669,7 @@ export async function buildReleaseRehearsalCandidate({
   adapters = /** @type {any} */ (createReleaseRehearsalCandidateAdapters()),
   runId,
   currentUid = process.getuid?.(),
+  beforeComplete,
 } = {}) {
   sha(releaseSha, "releaseSha");
   if (!isAbsolute(namespaceRoot ?? "")) fail("candidate namespace root must be absolute");
@@ -1676,6 +1678,7 @@ export async function buildReleaseRehearsalCandidate({
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runId)) {
     fail("runId must be a cryptorandom UUID v4");
   }
+  if (typeof beforeComplete !== "function") fail("immutable beforeComplete guard is required");
   const root = realpathSync(namespaceRoot);
   const rootStat = lstatSync(root);
   if (rootStat.isSymbolicLink() || rootStat.uid !== currentUid || modeBits(rootStat.mode) !== 0o700) {
@@ -1822,6 +1825,21 @@ export async function buildReleaseRehearsalCandidate({
     });
     sealCandidateTree(runRoot);
     chmodSync(runRoot, 0o700);
+    assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
+    const completionAuthority = await beforeComplete({
+      builder_input_digest: manifest.builder_input_digest,
+      candidate_identity_digest: manifest.candidate_identity_digest,
+      manifest_digest: manifest.manifest_digest,
+      run_root: runRoot,
+    });
+    exactObject(completionAuthority, "immutable completion authority", [
+      "builder_input_digest", "verified",
+    ]);
+    digest(completionAuthority.builder_input_digest, "immutable completion builder input digest");
+    if (
+      completionAuthority.verified !== true
+      || completionAuthority.builder_input_digest !== manifest.builder_input_digest
+    ) fail("immutable completion authority does not match the candidate builder graph");
     assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
     writeCandidateTerminalMarker(runRoot, "complete", {
       candidate_identity_digest: manifest.candidate_identity_digest,
@@ -2347,7 +2365,14 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
         if (value !== null || !/^[A-Za-z0-9_-]+$/u.test(key)) fail("Compose service must be a plain nested mapping");
         if (serviceNames.has(key)) fail(`Compose duplicate service key: ${key}`);
         serviceNames.add(key);
-        current = { service: key, image: null, platform: null, build: false, labels: false };
+        current = {
+          service: key,
+          image: null,
+          platform: null,
+          build: false,
+          labels: false,
+          list_items: { networks: [], secrets: [], tmpfs: [], volumes: [] },
+        };
         continue;
       }
       if (!current) fail("Compose service body appears before a service key");
@@ -2393,7 +2418,11 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
       if (indent === 6) {
         if (!nestedBlock) fail("Compose nested service line has no owning block");
         if (listServiceFields.has(nestedBlock)) {
-          validatePlainScalar(parseListItem(line, 6, `${nestedBlock}`), `${nestedBlock} list item`);
+          const item = validatePlainScalar(
+            parseListItem(line, 6, `${nestedBlock}`),
+            `${nestedBlock} list item`,
+          );
+          if (Object.hasOwn(current.list_items, nestedBlock)) current.list_items[nestedBlock].push(item);
           continue;
         }
         const { key, value } = parseMapping(line, 6, `${nestedBlock}`);
@@ -2514,6 +2543,86 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
     const metadata = volumeSemantics.get(name);
     if (metadata?.get("name") !== expectedName || metadata?.get("labels") !== "*restore-attempt-labels" || metadata.size !== 2) {
       fail(`Compose volume ${name} metadata semantic contract is invalid`);
+    }
+  }
+  const serviceListContract = {
+    postgres: {
+      networks: ["data-internal"],
+      secrets: ["postgres_password"],
+      tmpfs: [],
+      volumes: [
+        "postgres-data:/var/lib/postgresql/data",
+        "./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro",
+        "./full-local-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro",
+      ],
+    },
+    auth: {
+      networks: ["data-internal", "auth-egress"],
+      secrets: ["postgres_password", "jwt_secret", "jwt_keys"],
+      tmpfs: [],
+      volumes: [
+        "./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro",
+        "./start-auth.sh:/homecook/start-auth.sh:ro",
+      ],
+    },
+    postgrest: {
+      networks: ["data-internal"],
+      secrets: ["postgres_password", "jwt_jwks"],
+      tmpfs: [],
+      volumes: [
+        "./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro",
+        "./start-postgrest.sh:/homecook/start-postgrest.sh:ro",
+      ],
+    },
+    "postgrest-probe": {
+      networks: ["data-internal"], secrets: [], tmpfs: [], volumes: [],
+    },
+    storage: {
+      networks: ["data-internal"],
+      secrets: [
+        "postgres_password", "anon_key", "service_role_key", "jwt_jwks", "jwt_secret",
+        "storage_s3_access_key_id", "storage_s3_access_key_secret",
+      ],
+      tmpfs: [],
+      volumes: [
+        "storage-data:/var/lib/storage",
+        "./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro",
+        "./start-storage.sh:/homecook/start-storage.sh:ro",
+      ],
+    },
+    "api-gateway": {
+      networks: ["auth-edge", "data-internal"],
+      secrets: [
+        "anon_key", "service_role_key", "publishable_key", "secret_key", "anon_key_asymmetric",
+        "service_role_key_asymmetric", "session_attestation_hmac_key_v1",
+      ],
+      tmpfs: ["/tmp:mode=1777"],
+      volumes: [
+        "./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro",
+        "./kong-entrypoint.sh:/homecook/kong-entrypoint.sh:ro",
+        "./kong.yml:/homecook/kong.yml:ro",
+        "./kong/plugins/homecook-attestation:/usr/local/share/lua/5.1/kong/plugins/homecook-attestation:ro",
+      ],
+    },
+    "auth-proxy": {
+      networks: ["auth-edge"],
+      secrets: [],
+      tmpfs: [],
+      volumes: ["./auth-only-proxy.mjs:/homecook/auth-only-proxy.mjs:ro"],
+    },
+  };
+  if (requireCanonicalSemantics) {
+    for (const service of services) {
+      const expected = serviceListContract[service.service];
+      if (!expected) fail(`Compose service ${service.service} lacks a closed list semantic contract`);
+      for (const field of ["networks", "secrets", "tmpfs", "volumes"]) {
+        const actualItems = service.list_items[field];
+        if (
+          actualItems.length !== expected[field].length
+          || new Set(actualItems).size !== actualItems.length
+          || expected[field].some((item) => !actualItems.includes(item))
+        ) fail(`Compose service ${service.service} ${field} semantic contract is invalid`);
+      }
     }
   }
   return services.map((service) => {

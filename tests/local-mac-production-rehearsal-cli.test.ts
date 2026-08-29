@@ -38,13 +38,20 @@ describe("local Mac production rehearsal CLI", () => {
     const output = outputBuffer();
     const adapters = { trusted: true };
     const createCandidateAdapters = vi.fn(() => adapters);
-    const buildCandidate = vi.fn(async (options) => ({
-      candidate_root: "/private/candidate/run-a",
-      manifest: {
-        schema: "candidate-fixture",
-        release_sha: options.releaseSha,
-      },
+    const beforeCandidateComplete = vi.fn(() => ({
+      builder_input_digest: "b".repeat(64),
+      verified: true,
     }));
+    const buildCandidate = vi.fn(async (options) => {
+      await options.beforeComplete({ builder_input_digest: "b".repeat(64) });
+      return {
+        candidate_root: "/private/candidate/run-a",
+        manifest: {
+          schema: "candidate-fixture",
+          release_sha: options.releaseSha,
+        },
+      };
+    });
 
     await runLocalMacProductionRehearsalCli([
       "candidate", "--release-sha", "a".repeat(40), "--json",
@@ -52,6 +59,7 @@ describe("local Mac production rehearsal CLI", () => {
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
       immutableBootstrapVerified: true,
+      beforeCandidateComplete,
       output: output.stream,
       createCandidateAdapters,
       buildCandidate,
@@ -69,11 +77,37 @@ describe("local Mac production rehearsal CLI", () => {
       namespaceRoot: "/private/rehearsal",
       adapters,
       runId: "run-a",
+      beforeComplete: expect.any(Function),
     }));
+    expect(beforeCandidateComplete).toHaveBeenCalledWith({
+      builder_input_digest: "b".repeat(64),
+    });
     expect(JSON.parse(output.value())).toMatchObject({
       candidate_root: "/private/candidate/run-a",
       manifest: { release_sha: "a".repeat(40) },
     });
+  });
+
+  it("prints no candidate path when immutable finalization fails", async () => {
+    const output = outputBuffer();
+    const buildCandidate = vi.fn(async (options) => {
+      await options.beforeComplete({ builder_input_digest: "b".repeat(64) });
+      return { candidate_root: "/private/must-not-print", manifest: {} };
+    });
+    await expect(runLocalMacProductionRehearsalCli([
+      "candidate", "--release-sha", "a".repeat(40), "--json",
+    ], {
+      immutableBuilderInputDigest: "b".repeat(64),
+      immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
+      immutableBootstrapVerified: true,
+      beforeCandidateComplete: vi.fn(() => { throw new Error("immutable graph drift"); }),
+      output: output.stream,
+      createCandidateAdapters: vi.fn(() => ({})),
+      buildCandidate,
+      candidateNamespaceResolver: () => "/private/rehearsal",
+      runIdFactory: () => "run-a",
+    })).rejects.toThrow(/immutable graph drift/iu);
+    expect(output.value()).toBe("");
   });
 
   it("refuses direct candidate module evaluation without immutable bootstrap verification", async () => {
