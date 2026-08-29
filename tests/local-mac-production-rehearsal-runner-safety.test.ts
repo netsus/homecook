@@ -16,7 +16,6 @@ import { describe, expect, it } from "vitest";
 
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import {
-  buildPinnedDockerArgs,
   buildPrivateDockerEnvironment,
   buildDockerDaemonSnapshot,
   createImmutableCreationLedger,

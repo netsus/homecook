@@ -105,7 +105,6 @@ function assertSafeSocket(path, { currentUid, groups }) {
  */
 export function resolveTrustedLocalDockerEndpoint({
   explicitSocketPath = null,
-  homeDir = process.env.HOME ?? "",
   currentUid = process.getuid?.() ?? -1,
   groups = process.getgroups?.() ?? [],
 } = {}) {
