@@ -1,0 +1,6 @@
+import { describe, expect, it, vi } from "vitest";
+import { createRehearsalPostgrestRpcClient } from "../scripts/lib/youtube-extraction-rehearsal-postgrest-rpc.mjs";
+describe("rehearsal PostgREST RPC client", () => {
+  it("uses only an isolated allowlisted RPC endpoint and headers", async () => { const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify({ claimed: true }), { status: 200 })); const rpc = createRehearsalPostgrestRpcClient({ baseUrl: "http://127.0.0.1:3000", syntheticToken: "a".repeat(16), fixtureIdentity: "fixture", fetchImpl }); await rpc("claim_youtube_extraction_job", { lease_generation: 1 }); expect(String(fetchImpl.mock.calls[0][0])).toBe("http://127.0.0.1:3000/rest/v1/rpc/claim_youtube_extraction_job"); });
+  it("rejects cloud URLs, unknown RPCs, and malformed responses", async () => { expect(() => createRehearsalPostgrestRpcClient({ baseUrl: "https://x.supabase.co", syntheticToken: "a".repeat(16), fixtureIdentity: "x" })).toThrow(/isolated/iu); const rpc = createRehearsalPostgrestRpcClient({ baseUrl: "http://postgrest:3000", syntheticToken: "a".repeat(16), fixtureIdentity: "x", fetchImpl: vi.fn().mockResolvedValue(new Response("bad", { status: 200 })) }); await expect(rpc("unknown")).rejects.toThrow(/allowlisted/iu); await expect(rpc("claim_youtube_extraction_job")).rejects.toThrow(/JSON/iu); });
+});
