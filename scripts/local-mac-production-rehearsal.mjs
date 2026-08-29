@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { createHash, randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -14,7 +13,6 @@ import {
 } from "./lib/local-mac-production-rehearsal-inventory.mjs";
 import { classifyProductionInventory } from "./lib/local-mac-production-rehearsal-classifier.mjs";
 import { readCanonicalReceiptFile } from "./lib/local-mac-production-rehearsal-receipts.mjs";
-import { resolveTrustedGitExecutable } from "./lib/trusted-production-release-tools.mjs";
 import {
   buildReleaseRehearsalCandidate,
   createReleaseRehearsalCandidateAdapters,
@@ -94,17 +92,11 @@ function defaultProbeIdentity() {
 }
 
 function defaultRepositoryRootResolver() {
-  const gitBin = resolveTrustedGitExecutable();
-  const result = spawnSync(gitBin, ["-C", MODULE_REPOSITORY_ROOT, "rev-parse", "--show-toplevel"], {
-    encoding: "utf8",
-    env: { PATH: "/usr/bin:/bin" },
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: 5_000,
-  });
-  if (result.status !== 0) throw new Error("Actual Git repository root could not be verified.");
-  const gitRoot = realpathSync(String(result.stdout ?? "").trim());
-  if (gitRoot !== MODULE_REPOSITORY_ROOT) throw new Error("Module repository identity does not match the actual Git root.");
-  return gitRoot;
+  const stat = lstatSync(MODULE_REPOSITORY_ROOT);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    throw new Error("Module repository root is not a real directory.");
+  }
+  return MODULE_REPOSITORY_ROOT;
 }
 
 function writeResult(output, result) {

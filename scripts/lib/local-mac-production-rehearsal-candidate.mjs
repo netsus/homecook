@@ -56,6 +56,7 @@ const IMAGE_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const CANONICALIZATION = "RFC8785-JCS+SHA256";
 const REPOSITORY = "netsus/homecook";
 const SOURCE_REF = "refs/heads/master";
+const GITHUB_ACTIONS_APP_INTEGRATION_ID = 15368;
 const BUILD_ENV_ALLOWLIST_ID = "homecook-release-rehearsal-build-env-v1";
 const BUILD_ENV_ALLOWED_KEYS = new Set([
   "FULL_LOCAL_DOCKER_PLATFORM",
@@ -69,17 +70,18 @@ const CANDIDATE_KEYS = [
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
   "ci_suite_run_set_digest", "source_manifest_digest", "sandbox_policy_digest",
   "build_id", "sealed_bundle_digest",
-  "bundle_manifest_digest", "toolchain", "images", "migration", "artifacts",
+  "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
   "toolchain_lock_digest", "manifest_digest",
 ];
 const TOOLCHAIN_KEYS = [
   "node", "pnpm", "supabase_cli", "git", "gh", "docker_client", "docker_daemon",
-  "sandbox_exec", "candidate_builder",
+  "launchctl", "lsof", "sandbox_exec", "candidate_builder",
 ];
 const TOOL_IDENTITY_KEYS = [
   "version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256",
 ];
+const SAFE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
 
 function fail(message) {
   throw new Error(`Release rehearsal candidate rejected: ${message}`);
@@ -154,6 +156,7 @@ function validateToolIdentity(value, label, { requireExecutable = true } = {}) {
   decimalString(value.device, `${label}.device`);
   decimalString(value.inode, `${label}.inode`);
   safeInteger(value.mode, `${label}.mode`);
+  if (!SAFE_TOOL_MODES.has(value.mode)) fail(`${label}.mode is outside the trusted mode allowlist`);
   if ((requireExecutable && (value.mode & 0o111) === 0) || (value.mode & 0o022) !== 0) {
     fail(`${label} trusted executable mode is unsafe or writable`);
   }
@@ -231,6 +234,32 @@ export function validateCandidateSourceEvidence(value) {
   return value;
 }
 
+export function validateCandidateBuilderAuthority({
+  currentHead, releaseSha, trackedStatus, sourceManifestDigest,
+  verifiedSourceManifestDigest, entries,
+} = {}) {
+  sha(currentHead, "candidate builder HEAD");
+  sha(releaseSha, "candidate builder release SHA");
+  if (currentHead !== releaseSha) fail("candidate builder HEAD is not the exact release Git authority");
+  if (trackedStatus !== "") fail("candidate builder/config/toolchain lock worktree is dirty");
+  digest(sourceManifestDigest, "candidate builder source manifest digest");
+  digest(verifiedSourceManifestDigest, "candidate builder verified source manifest digest");
+  if (sourceManifestDigest !== verifiedSourceManifestDigest) fail("candidate builder source authority drifted");
+  const requiredPaths = [
+    "scripts/local-mac-production-rehearsal.mjs",
+    "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
+    "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
+  ];
+  const byPath = new Map((entries ?? []).map((entry) => [entry.path, entry]));
+  const authority = requiredPaths.map((path) => {
+    const entry = byPath.get(path);
+    if (!entry) fail(`candidate builder Git authority is missing ${path}`);
+    digest(entry.sha256, `candidate builder Git authority ${path}`);
+    return { path, sha256: entry.sha256 };
+  });
+  return Object.freeze({ builder_input_digest: sha256Jcs(authority) });
+}
+
 export function validateCandidateCiEvidence(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("CI evidence is invalid");
   sha(value.head_sha, "ci.head_sha");
@@ -288,7 +317,7 @@ function validateFileInventory(value) {
   for (const [index, entry] of value.entries()) {
     exactObject(entry, `file_inventory[${index}]`, [
       "component", "source_kind", "path", "type", "mode", "sha256", "symlink_target",
-      "dereferenced_sha256",
+      "dereferenced_sha256", "uid", "gid", "nlink", "device", "inode", "size", "ctime",
     ]);
     if (!["app", "full_local", "worker"].includes(entry.component)) fail("file inventory component is invalid");
     if (!["tracked_source", "generated_build", "worker_artifact", "fixture"].includes(entry.source_kind)) {
@@ -298,6 +327,16 @@ function validateFileInventory(value) {
     if (isAbsolute(path) || path.split("/").includes("..")) fail("file inventory path is unsafe");
     if (!["file", "symlink"].includes(entry.type)) fail("file inventory type is invalid");
     safeInteger(entry.mode, `file_inventory[${index}].mode`);
+    if (entry.mode > 0o7777) fail(`file_inventory[${index}].mode must be <= 4095`);
+    decimalString(entry.uid, `file_inventory[${index}].uid`);
+    decimalString(entry.gid, `file_inventory[${index}].gid`);
+    decimalString(entry.nlink, `file_inventory[${index}].nlink`);
+    decimalString(entry.device, `file_inventory[${index}].device`);
+    decimalString(entry.inode, `file_inventory[${index}].inode`);
+    decimalString(entry.size, `file_inventory[${index}].size`);
+    string(entry.ctime, `file_inventory[${index}].ctime`);
+    if (!/^\d{4}-\d{2}-\d{2}T/u.test(entry.ctime)) fail(`file_inventory[${index}].ctime is invalid`);
+    if (entry.nlink !== "1") fail(`file_inventory[${index}].nlink must be exactly one`);
     digest(entry.sha256, `file_inventory[${index}].sha256`);
     if (entry.type === "file") {
       if (entry.symlink_target !== null || entry.dereferenced_sha256 !== null) fail("regular file symlink metadata is invalid");
@@ -362,6 +401,8 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
   digest(value.bundle_manifest_digest, "bundle_manifest_digest");
   validateCandidateToolchain(value.toolchain, { strictManifest: true });
+  exactObject(value.build_tools, "build_tools", ["next_cli"]);
+  validateToolIdentity(value.build_tools.next_cli, "build_tools.next_cli", { requireExecutable: false });
   digest(value.toolchain_lock_digest, "toolchain_lock_digest");
   validateCandidateImages(value.images, { strictManifest: true });
   validateMigration(value.migration);
@@ -590,7 +631,7 @@ export function verifyExactMaterializedTree({ sourceRoot, sourceManifest } = {})
   const realRoot = realpathSync(sourceRoot);
   for (const entry of sourceManifest.entries) {
     const path = join(sourceRoot, entry.path);
-    const stat = lstatSync(path);
+    const stat = lstatSync(path, { bigint: true });
     if (entry.git_mode === "120000") {
       if (!stat.isSymbolicLink() || readlinkSync(path) !== entry.symlink_target) {
         fail("materialized_git_symlink_drift");
@@ -630,8 +671,11 @@ function trackedForPrefix(entry, prefixes, exactPaths) {
     || prefixes.some((prefix) => entry.path.startsWith(prefix));
 }
 
-export function assembleCandidateArtifacts({ sourceRoot, sourceManifest, artifactsRoot } = {}) {
-  if (!isAbsolute(sourceRoot ?? "") || !isAbsolute(artifactsRoot ?? "")) fail("artifact assembly paths must be absolute");
+/** @param {{sourceRoot:string, generatedRoot?:string, sourceManifest:any, artifactsRoot:string}} options */
+export function assembleCandidateArtifacts({ sourceRoot, generatedRoot = sourceRoot, sourceManifest, artifactsRoot } = /** @type {any} */ ({})) {
+  if (![sourceRoot, generatedRoot, artifactsRoot].every((path) => isAbsolute(path ?? ""))) {
+    fail("artifact assembly paths must be absolute");
+  }
   try {
     mkdirSync(artifactsRoot, { mode: 0o700 });
   } catch (error) {
@@ -655,7 +699,7 @@ export function assembleCandidateArtifacts({ sourceRoot, sourceManifest, artifac
     }
   }
   for (const generatedPath of [".next", "node_modules"]) {
-    const source = join(sourceRoot, generatedPath);
+    const source = join(generatedRoot, generatedPath);
     const stat = lstatSync(source);
     if (stat.isSymbolicLink() || !stat.isDirectory()) fail("generated_build_output_missing");
     copyLocalMacProductionExecutionTree(source, join(appRoot, generatedPath));
@@ -666,6 +710,28 @@ export function assembleCandidateArtifacts({ sourceRoot, sourceManifest, artifac
     full_local: fullLocalRoot,
     worker_fixture: workerFixtureRoot,
   });
+}
+
+function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot, generatedRoot }) {
+  mkdirSync(buildRoot, { mode: 0o700 });
+  mkdirSync(generatedRoot, { mode: 0o700 });
+  for (const entry of sourceManifest.entries) {
+    copyManifestEntry({ sourceRoot, destinationRoot: buildRoot, entry });
+  }
+  for (const name of [".next", "node_modules"]) {
+    const generatedPath = join(generatedRoot, name);
+    mkdirSync(generatedPath, { mode: 0o700 });
+    symlinkSync(generatedPath, join(buildRoot, name));
+  }
+  const sealDirectories = (path) => {
+    for (const name of readdirSync(path)) {
+      const child = join(path, name);
+      const stat = lstatSync(child);
+      if (stat.isDirectory()) sealDirectories(child);
+    }
+    chmodSync(path, 0o500);
+  };
+  sealDirectories(buildRoot);
 }
 
 export function collectSealedMigrationInventory({ bundleRoot } = {}) {
@@ -855,11 +921,22 @@ function assertSourceTreeSafe(rootPath) {
 function inventorySealedComponent(component, rootPath) {
   const root = realpathSync(rootPath);
   const inventory = [];
+  const verifyStableIdentity = (path, before, label) => {
+    const after = lstatSync(path, { bigint: true });
+    for (const key of ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs"]) {
+      if (after[key] !== before[key]) fail(`sealed entry identity drifted during read: ${label}`);
+    }
+  };
   const visit = (path, relativePath) => {
-    const stat = lstatSync(path);
+    const stat = lstatSync(path, { bigint: true });
+    if (stat.uid !== BigInt(process.getuid?.())) fail(`sealed entry owner is unsafe: ${relativePath}`);
     if (stat.isSymbolicLink()) {
+      if (stat.nlink !== 1n) fail(`sealed symlink hard-link identity is unsafe: ${relativePath}`);
       const target = realpathSync(path);
       assertPathContained(root, target, `sealed symlink ${relativePath}`);
+      const symlinkTarget = readlinkSync(path);
+      const dereferencedDigest = digestDereferencedPath(target);
+      verifyStableIdentity(path, stat, relativePath);
       inventory.push({
         component,
         source_kind: component === "worker"
@@ -870,9 +947,16 @@ function inventorySealedComponent(component, rootPath) {
         path: relativePath,
         type: "symlink",
         mode: modeBits(stat.mode),
-        sha256: sha256Bytes(Buffer.from(readlinkSync(path), "utf8")),
-        symlink_target: readlinkSync(path),
-        dereferenced_sha256: digestDereferencedPath(target),
+        uid: String(stat.uid),
+        gid: String(stat.gid),
+        nlink: String(stat.nlink),
+        device: String(stat.dev),
+        inode: String(stat.ino),
+        size: String(stat.size),
+        ctime: new Date(Number(stat.ctimeMs)).toISOString(),
+        sha256: sha256Bytes(Buffer.from(symlinkTarget, "utf8")),
+        symlink_target: symlinkTarget,
+        dereferenced_sha256: dereferencedDigest,
       });
       return;
     }
@@ -883,7 +967,10 @@ function inventorySealedComponent(component, rootPath) {
       return;
     }
     if (!stat.isFile()) fail(`sealed candidate component contains unsupported entry: ${relativePath}`);
+    if (stat.nlink !== 1n) fail(`sealed file hard-link identity is unsafe: ${relativePath}`);
     if ((modeBits(stat.mode) & 0o222) !== 0) fail(`sealed candidate file remains writable: ${relativePath}`);
+    const bytes = readFileSync(path);
+    verifyStableIdentity(path, stat, relativePath);
     inventory.push({
       component,
       source_kind: component === "worker"
@@ -894,7 +981,14 @@ function inventorySealedComponent(component, rootPath) {
       path: relativePath,
       type: "file",
       mode: modeBits(stat.mode),
-      sha256: sha256Bytes(readFileSync(path)),
+      uid: String(stat.uid),
+      gid: String(stat.gid),
+      nlink: String(stat.nlink),
+      device: String(stat.dev),
+      inode: String(stat.ino),
+      size: String(stat.size),
+      ctime: new Date(Number(stat.ctimeMs)).toISOString(),
+      sha256: sha256Bytes(bytes),
       symlink_target: null,
       dereferenced_sha256: null,
     });
@@ -917,6 +1011,7 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
   }
   const artifacts = {};
   const fileInventory = [];
+  const physicalFileInventory = [];
   for (const component of ["app", "full_local", "worker"]) {
     const destination = join(bundleRoot, component);
     copyLocalMacProductionExecutionTree(componentRoots[component], destination);
@@ -925,9 +1020,12 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
     fileInventory.push(...entries);
     const physicalEntries = entries.map((entry) => {
       const physicalEntry = { ...entry };
-      delete physicalEntry.source_kind;
+      for (const field of ["source_kind", "uid", "gid", "nlink", "device", "inode", "ctime"]) {
+        delete physicalEntry[field];
+      }
       return physicalEntry;
     });
+    physicalFileInventory.push(...physicalEntries);
     artifacts[component] = {
       root: component,
       digest: sha256Jcs(physicalEntries),
@@ -935,10 +1033,12 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
   }
   fileInventory.sort((left, right) =>
     `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
+  physicalFileInventory.sort((left, right) =>
+    `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
   const bundleManifest = {
     schema: "homecook.local-mac-production-rehearsal-sealed-bundle.v1",
     artifacts,
-    file_inventory: fileInventory,
+    file_inventory: physicalFileInventory,
   };
   const sealedBundleDigest = sha256Jcs({ schema: bundleManifest.schema, artifacts });
   const unsignedBundleManifest = {
@@ -967,6 +1067,7 @@ export function buildBundleAuthorityManifest(input) {
     "migration", "production_guard", "release_sha", "release_tree",
     "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "toolchain", "toolchain_lock_digest",
+    "build_tools",
   ]);
   validateArtifacts(input.artifacts);
   string(input.build_id, "bundle authority build_id");
@@ -983,6 +1084,10 @@ export function buildBundleAuthorityManifest(input) {
   sha(input.release_sha, "bundle authority release_sha");
   sha(input.release_tree, "bundle authority release_tree");
   validateCandidateToolchain(input.toolchain, { strictManifest: true });
+  exactObject(input.build_tools, "bundle authority build_tools", ["next_cli"]);
+  validateToolIdentity(input.build_tools.next_cli, "bundle authority build_tools.next_cli", {
+    requireExecutable: false,
+  });
   const unsigned = {
     schema: "homecook.local-mac-production-rehearsal-bundle-manifest.v1",
     contract_version: "release-rehearsal-split2-v1",
@@ -1012,8 +1117,10 @@ function sandboxLiteral(path) {
   return `\"${path.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}\"`;
 }
 
-/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[]}} options */
-export function buildCandidateSandboxProfile({ readRoots = [], writeRoots = [], deniedPaths = [] } = {}) {
+/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[]}} options */
+export function buildCandidateSandboxProfile({
+  readRoots = [], writeRoots = [], deniedPaths = [], deniedWritePaths = [],
+} = {}) {
   const systemRuntimeRoots = [
     "/System",
     "/usr",
@@ -1049,17 +1156,22 @@ export function buildCandidateSandboxProfile({ readRoots = [], writeRoots = [], 
     `(deny file-read* (subpath ${sandboxLiteral(path)}))`,
     `(deny file-write* (subpath ${sandboxLiteral(path)}))`,
   ]).join("\n");
+  const denyWriteRules = [...new Set(deniedWritePaths)].map((path) =>
+    `(deny file-write* (subpath ${sandboxLiteral(path)}))`).join("\n");
   return [
     "(version 1)",
     "(deny default)",
-    "(allow process*)",
-    "(allow signal)",
+    "(allow process-exec)",
+    "(allow process-fork)",
+    `(deny process-exec ${[
+      "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
+    ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
     "(allow sysctl-read)",
-    "(allow mach-lookup)",
     `(allow file-read* ${readRules})`,
     `(allow file-write* ${writeRules})`,
     "(deny network*)",
     denyRules,
+    denyWriteRules,
   ].filter(Boolean).join("\n");
 }
 
@@ -1141,6 +1253,63 @@ function readCanonicalCandidateFile(path, label) {
   return parseCanonicalJcs(decodeFatalUtf8(readFileSync(path), label));
 }
 
+function validateStoredCiProjection(value, manifest) {
+  exactObject(value, "candidate CI evidence", [
+    "repository", "check_runs", "commit_statuses", "head_sha", "remote_master_sha", "summary",
+  ]);
+  if (value.repository !== REPOSITORY) fail("candidate CI evidence repository is invalid");
+  sha(value.head_sha, "candidate CI evidence head_sha");
+  sha(value.remote_master_sha, "candidate CI evidence remote_master_sha");
+  if (value.head_sha !== manifest.release_sha || value.remote_master_sha !== manifest.release_sha) {
+    fail("candidate CI evidence head or remote master SHA does not match candidate");
+  }
+  if (!Array.isArray(value.check_runs) || !Array.isArray(value.commit_statuses)) {
+    fail("candidate CI evidence check and status arrays are invalid");
+  }
+  for (const [index, entry] of value.check_runs.entries()) {
+    exactObject(entry, `candidate CI check_runs[${index}]`, [
+      "id", "app_id", "check_suite_id", "head_sha", "completed_at", "conclusion", "name",
+      "started_at", "status",
+    ]);
+    for (const key of ["id", "app_id", "check_suite_id"]) safeInteger(entry[key], `candidate CI check ${key}`);
+    if (
+      entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID
+      || entry.head_sha !== manifest.release_sha || entry.status !== "completed" || entry.conclusion !== "success"
+    ) {
+      fail("candidate CI check identity or terminal success state is invalid");
+    }
+    string(entry.name, "candidate CI check name");
+  }
+  for (const [index, entry] of value.commit_statuses.entries()) {
+    exactObject(entry, `candidate CI commit_statuses[${index}]`, [
+      "id", "sha", "context", "created_at", "state", "updated_at",
+    ]);
+    safeInteger(entry.id, "candidate CI status id");
+    if (entry.sha !== manifest.release_sha || entry.state !== "success") {
+      fail("candidate CI status identity or terminal success state is invalid");
+    }
+    string(entry.context, "candidate CI status context");
+  }
+  const evidenceDigest = sha256Jcs(value);
+  const summaryDigest = sha256Jcs(value.summary);
+  const suiteRunSetDigest = sha256Jcs(value.check_runs.map((entry) => ({
+    app_id: entry.app_id,
+    check_suite_id: entry.check_suite_id,
+    id: entry.id,
+  })));
+  validateCandidateCiEvidence({
+    expected_head_sha: manifest.release_sha,
+    head_sha: value.head_sha,
+    summary: value.summary,
+    summary_digest: summaryDigest,
+  });
+  if (
+    evidenceDigest !== manifest.ci_snapshot_digest
+    || summaryDigest !== manifest.ci_check_summary_digest
+    || suiteRunSetDigest !== manifest.ci_suite_run_set_digest
+  ) fail("candidate CI evidence digest binding is invalid");
+}
+
 export function readCompletedCandidateRoot(root) {
   if (!isAbsolute(root ?? "")) fail("completed candidate root must be absolute");
   const rootStat = lstatSync(root);
@@ -1161,6 +1330,15 @@ export function readCompletedCandidateRoot(root) {
     || complete.status !== "complete"
   ) fail("candidate complete marker schema or status is invalid");
   const manifest = parseAndValidateCandidateManifest(readFileSync(join(root, "candidate.json")));
+  const evidenceRoot = join(root, "evidence");
+  const evidenceNames = readdirSync(evidenceRoot).sort();
+  if (canonicalizeJcs(evidenceNames) !== canonicalizeJcs(["ci-evidence.json"])) {
+    fail("candidate CI evidence inventory is missing or contains additional evidence");
+  }
+  validateStoredCiProjection(
+    readCanonicalCandidateFile(join(evidenceRoot, "ci-evidence.json"), "candidate CI evidence"),
+    manifest,
+  );
   const bundleManifest = readCanonicalCandidateFile(
     join(root, "bundles", "bundle", "bundle-manifest.json"),
     "candidate bundle authority manifest",
@@ -1184,7 +1362,9 @@ export function readCompletedCandidateRoot(root) {
     actualInventory.push(...entries);
     const physicalEntries = entries.map((entry) => {
       const physicalEntry = { ...entry };
-      delete physicalEntry.source_kind;
+      for (const field of ["source_kind", "uid", "gid", "nlink", "device", "inode", "ctime"]) {
+        delete physicalEntry[field];
+      }
       return physicalEntry;
     });
     actualArtifacts[component] = { root: component, digest: sha256Jcs(physicalEntries) };
@@ -1226,8 +1406,22 @@ function reserveRunRoot(path, currentUid) {
     }
     throw error;
   }
-  const stat = lstatSync(path);
-  if (stat.uid !== currentUid || modeBits(stat.mode) !== 0o700) fail("candidate run root is unsafe");
+  const stat = lstatSync(path, { bigint: true });
+  if (stat.uid !== BigInt(currentUid) || modeBits(stat.mode) !== 0o700) fail("candidate run root is unsafe");
+  return Object.freeze({ device: stat.dev, inode: stat.ino });
+}
+
+function assertRunRootIdentity(runRoot, attemptsRoot, identity, currentUid) {
+  const realAttempts = realpathSync(attemptsRoot);
+  const realRun = realpathSync(runRoot);
+  if (realAttempts !== attemptsRoot || dirname(realRun) !== realAttempts || realRun !== runRoot) {
+    fail("candidate run root containment drifted");
+  }
+  const stat = lstatSync(runRoot, { bigint: true });
+  if (
+    stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+    || stat.dev !== identity.device || stat.ino !== identity.inode
+  ) fail("candidate run root identity drifted");
 }
 
 function pathExists(path) {
@@ -1245,11 +1439,12 @@ function sealCandidateTree(path) {
   if (stat.isSymbolicLink()) return;
   if (stat.isDirectory()) {
     for (const name of readdirSync(path)) sealCandidateTree(join(path, name));
-    chmodSync(path, 0o500);
+    if (modeBits(stat.mode) !== 0o500) chmodSync(path, 0o500);
     return;
   }
   if (!stat.isFile()) fail("candidate root contains an unsupported entry while sealing");
-  chmodSync(path, (modeBits(stat.mode) & 0o111) === 0 ? 0o400 : 0o500);
+  const sealedMode = (modeBits(stat.mode) & 0o111) === 0 ? 0o400 : 0o500;
+  if (modeBits(stat.mode) !== sealedMode) chmodSync(path, sealedMode);
 }
 
 function makeCandidateRootWritable(path) {
@@ -1284,6 +1479,9 @@ export async function buildReleaseRehearsalCandidate({
   if (!isAbsolute(namespaceRoot ?? "")) fail("candidate namespace root must be absolute");
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   string(runId, "runId");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runId)) {
+    fail("runId must be a cryptorandom UUID v4");
+  }
   const root = realpathSync(namespaceRoot);
   const rootStat = lstatSync(root);
   if (rootStat.isSymbolicLink() || rootStat.uid !== currentUid || modeBits(rootStat.mode) !== 0o700) {
@@ -1291,7 +1489,7 @@ export async function buildReleaseRehearsalCandidate({
   }
   const attemptsRoot = ensureNamespaceDirectory(join(root, "attempts"), currentUid, "candidate attempts root");
   const runRoot = join(attemptsRoot, runId);
-  reserveRunRoot(runRoot, currentUid);
+  const runIdentity = reserveRunRoot(runRoot, currentUid);
   let productionPre = null;
   let productionGuard = null;
   let result;
@@ -1304,9 +1502,9 @@ export async function buildReleaseRehearsalCandidate({
       releaseSha,
       runRoot,
     }));
-    productionPre = await adapters.captureProductionSurface({ phase: "pre", releaseSha, runRoot });
     const source = await adapters.prepareSource({ releaseSha, runRoot });
     const sourceEvidence = validateCandidateSourceEvidence(source.evidence);
+    productionPre = await adapters.captureProductionSurface({ phase: "pre", releaseSha, runRoot });
     const ciPre = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "pre", releaseSha }));
     const environment = await adapters.readEnvironment({ releaseSha, runRoot });
     validateEnvironmentMetadata(environment.metadata);
@@ -1331,8 +1529,6 @@ export async function buildReleaseRehearsalCandidate({
     if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
       fail("sealed migration digest differs from exact Git input");
     }
-    if (await adapters.networkAttemptCount({ runRoot }) !== 0) fail("offline build attempted external network access");
-    if (await adapters.dockerPullAttemptCount({ runRoot }) !== 0) fail("offline build attempted Docker pull");
     const ciPost = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "post", releaseSha }));
     const ci = validateStableCiSnapshots(ciPre, ciPost, releaseSha);
     const evidenceRoot = join(runRoot, "evidence");
@@ -1341,21 +1537,26 @@ export async function buildReleaseRehearsalCandidate({
       flag: "wx",
       mode: 0o400,
     });
+    const productionPost = await adapters.captureProductionSurface({ phase: "post", releaseSha, runRoot });
+    productionGuard = validateProductionGuardSnapshots(productionPre, productionPost);
     validateCandidateToolchain(await adapters.collectToolchain({
       phase: "post",
       releaseSha,
       runRoot,
     }));
-    const productionPost = await adapters.captureProductionSurface({ phase: "post", releaseSha, runRoot });
-    productionGuard = validateProductionGuardSnapshots(productionPre, productionPost);
     const sealedBundleDigest = digest(
       build.bundle_content_digest ?? build.sealed_bundle_digest,
       "sealed_bundle_digest",
     );
     const sandboxPolicyDigest = digest(build.sandbox_policy_digest, "sandbox policy digest");
+    exactObject(build.build_tools, "build tools", ["next_cli"]);
+    validateToolIdentity(build.build_tools.next_cli, "build tools next_cli", {
+      requireExecutable: false,
+    });
     const bundleAuthorityManifest = buildBundleAuthorityManifest({
       artifacts: build.artifacts,
       build_id: buildId,
+      build_tools: build.build_tools,
       ci_check_summary_digest: ci.summary_digest,
       ci_snapshot_digest: ci.safe_projection_digest,
       ci_suite_run_set_digest: ci.suite_run_set_digest,
@@ -1399,6 +1600,7 @@ export async function buildReleaseRehearsalCandidate({
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
       sandbox_policy_digest: sandboxPolicyDigest,
       build_id: buildId,
+      build_tools: build.build_tools,
       sealed_bundle_digest: sealedBundleDigest,
       bundle_manifest_digest: bundleAuthorityManifest.bundle_manifest_digest,
       candidate_identity_digest: candidateIdentityDigest,
@@ -1411,11 +1613,13 @@ export async function buildReleaseRehearsalCandidate({
       environment_snapshot: environment.metadata,
       production_guard: productionGuard,
     });
+    assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
     writeFileSync(join(runRoot, "candidate.json"), canonicalizeJcs(manifest), {
       flag: "wx", mode: 0o400,
     });
     sealCandidateTree(runRoot);
     chmodSync(runRoot, 0o700);
+    assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
     writeCandidateTerminalMarker(runRoot, "complete", {
       candidate_identity_digest: manifest.candidate_identity_digest,
       manifest_digest: manifest.manifest_digest,
@@ -1434,6 +1638,7 @@ export async function buildReleaseRehearsalCandidate({
     }
   }
   if (failure) {
+    assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
     makeCandidateRootWritable(runRoot);
     for (const name of readdirSync(runRoot)) {
       rmSync(join(runRoot, name), { force: false, recursive: true });
@@ -1477,6 +1682,30 @@ function runBounded(command, args, options = {}) {
     fail(`${options.label ?? basename(command)} failed in the bounded clean environment`);
   }
   return String(result.stdout ?? "");
+}
+
+export function validateSandboxedBuildResult(result, label) {
+  const stderr = String(result?.stderr ?? "");
+  if (result?.error || result?.signal || result?.status !== 0) {
+    fail(`${label} failed in the measured sandbox`);
+  }
+  if (/sandbox:.*deny(?:\(\d+\))?.*(?:network|socket|process|signal|mach|launchctl|docker)/iu.test(stderr)) {
+    fail(`${label} contained an ignored denied network, socket, or process attempt`);
+  }
+  return Object.freeze({
+    audit_digest: sha256Jcs({
+      label,
+      stderr_digest: sha256Bytes(Buffer.from(stderr, "utf8")),
+      stdout_digest: sha256Bytes(Buffer.from(String(result.stdout ?? ""), "utf8")),
+    }),
+  });
+}
+
+function runSandboxedBuild(command, args, options = {}) {
+  return validateSandboxedBuildResult(
+    spawnBounded(command, args, options),
+    options.label ?? basename(command),
+  );
 }
 
 export function validateCandidateDockerReadOnlyArgs(args) {
@@ -1580,11 +1809,16 @@ function exactToolPaths({ homeDir, toolchainLock }) {
     "/opt/homebrew/bin/docker",
   ], "Docker client");
   const sandboxPath = resolveSafeRealExecutable(["/usr/bin/sandbox-exec"], "macOS network sandbox");
+  const launchctlPath = resolveSafeRealExecutable(["/bin/launchctl"], "launchctl");
+  const lsofPath = resolveSafeRealExecutable(["/usr/sbin/lsof"], "lsof");
   const supabasePath = findExactSupabaseCli(
     join(homeDir, "Library", "Caches", "pnpm", "dlx"),
     toolchainLock.supabase_cli.version,
   );
-  return { dockerPath, ghPath, gitPath, nodePath, pnpmCliPath, sandboxPath, supabasePath };
+  return {
+    dockerPath, ghPath, gitPath, launchctlPath, lsofPath, nodePath, pnpmCliPath,
+    sandboxPath, supabasePath,
+  };
 }
 
 function gitEnvironment(homeDir) {
@@ -1658,6 +1892,12 @@ export function parseCanonicalComposeImageInventory(source) {
   for (let index = servicesStart + 1; index < lines.length; index += 1) {
     const line = lines[index];
     if (/^[A-Za-z0-9_.-]+:\s*$/u.test(line)) break;
+    if (/^  [A-Za-z0-9_.-]+:\s*\S/u.test(line)) {
+      fail("Compose inline service definitions are forbidden and cannot bypass image inventory");
+    }
+    if (/^\s*(?:<<:|x-[A-Za-z0-9_.-]+:|&|\*)/u.test(line)) {
+      fail("Compose anchors, merges, and extensions are unsupported for complete image inventory");
+    }
     const serviceMatch = /^  ([A-Za-z0-9_.-]+):\s*$/u.exec(line);
     if (serviceMatch) {
       if (current) services.push(current);
@@ -1721,12 +1961,17 @@ export function loadRehearsalToolchainLock(path) {
   }
   const parsed = parseCanonicalJcs(decodeFatalUtf8(bytes, "rehearsal toolchain lock"));
   exactObject(parsed, "rehearsal toolchain lock", [
-    "schema", "platform", "supabase_cli", "full_local_images",
+    "schema", "platform", "node", "pnpm", "supabase_cli", "full_local_images",
   ]);
   if (parsed.schema !== "homecook.local-mac-production-rehearsal-toolchain-lock.v1") {
     fail("rehearsal toolchain lock schema is invalid");
   }
   if (parsed.platform !== "darwin-arm64") fail("rehearsal toolchain lock platform is invalid");
+  for (const name of ["node", "pnpm"]) {
+    exactObject(parsed[name], `rehearsal toolchain lock ${name}`, ["version", "binary_sha256"]);
+    string(parsed[name].version, `${name} pinned version`);
+    digest(parsed[name].binary_sha256, `${name} pinned binary digest`);
+  }
   exactObject(parsed.supabase_cli, "rehearsal toolchain lock supabase_cli", [
     "package", "version", "npm_integrity", "binary_sha256",
   ]);
@@ -1764,6 +2009,14 @@ export function validatePinnedSupabaseCliIdentity(identity, lock) {
     identity.version !== lock.supabase_cli.version
     || identity.sha256 !== lock.supabase_cli.binary_sha256
   ) fail("Supabase CLI identity does not match repository-pinned version and binary digest");
+  return identity;
+}
+
+function validatePinnedBuildToolIdentity(identity, lockEntry, label) {
+  validateToolIdentity(identity, label);
+  if (identity.version !== lockEntry.version || identity.sha256 !== lockEntry.binary_sha256) {
+    fail(`${label} identity does not match repository-pinned version and binary digest`);
+  }
   return identity;
 }
 
@@ -1881,6 +2134,8 @@ export function createReleaseRehearsalCandidateAdapters({
       gh: snapshotToolFile(tools.ghPath, "pre-use"),
       docker_client: snapshotToolFile(tools.dockerPath, "pre-use"),
       docker_daemon: snapshotToolFile(tools.dockerPath, "pre-use"),
+      launchctl: snapshotToolFile(tools.launchctlPath, "pre-use"),
+      lsof: snapshotToolFile(tools.lsofPath, "pre-use"),
       sandbox_exec: snapshotToolFile(tools.sandboxPath, "pre-use"),
       candidate_builder: snapshotToolFile(builderPath, "pre-use", { requireExecutable: false }),
     };
@@ -1907,6 +2162,8 @@ export function createReleaseRehearsalCandidateAdapters({
       }).split(/\r?\n/u)[0].trim()),
       docker_client: snapshotToolFile(tools.dockerPath, `Docker client ${dockerVersion.Client?.Version ?? "unknown"}`),
       docker_daemon: snapshotToolFile(tools.dockerPath, `Docker daemon ${dockerVersion.Server?.Version ?? "unknown"}/${dockerVersion.Server?.ID ?? "unknown"}`),
+      launchctl: snapshotToolFile(tools.launchctlPath, "macOS launchctl"),
+      lsof: snapshotToolFile(tools.lsofPath, "macOS lsof"),
       sandbox_exec: snapshotToolFile(tools.sandboxPath, "macOS sandbox-exec"),
       candidate_builder: snapshotToolFile(builderPath, "homecook-release-rehearsal-candidate-v1", { requireExecutable: false }),
     };
@@ -1919,6 +2176,8 @@ export function createReleaseRehearsalCandidateAdapters({
         fail(`trusted tool ${key} drifted during first-use identity probing`);
       }
     }
+    validatePinnedBuildToolIdentity(result.node, toolchainLock.node, "node");
+    validatePinnedBuildToolIdentity(result.pnpm, toolchainLock.pnpm, "pnpm");
     validatePinnedSupabaseCliIdentity(result.supabase_cli, toolchainLock);
     validateCandidateToolchain(result);
     if (initialToolchain && canonicalizeJcs(initialToolchain) !== canonicalizeJcs(result)) {
@@ -1942,7 +2201,12 @@ export function createReleaseRehearsalCandidateAdapters({
         approvedMigrationMarkerPath,
         commandRunner: runCommand,
         dockerBin: tools.dockerPath,
-        trustedToolPaths: { git: tools.gitPath },
+        trustedToolPaths: {
+          docker: tools.dockerPath,
+          git: tools.gitPath,
+          launchctl: tools.launchctlPath,
+          lsof: tools.lsofPath,
+        },
       });
       const inventory = await collectReadOnlyProductionInventory({
         adapters: inventoryAdapters,
@@ -1962,6 +2226,12 @@ export function createReleaseRehearsalCandidateAdapters({
         env, label: "origin/master SHA", runCommand,
       }).trim();
       if (originMasterSha !== releaseSha) fail("requested SHA is not the current fetched origin/master");
+      const currentHead = runBounded(gitPath, ["--no-replace-objects", "-C", sourceRoot, "rev-parse", "HEAD"], {
+        env, label: "candidate builder HEAD", runCommand,
+      }).trim();
+      const trackedStatus = runBounded(gitPath, [
+        "--no-replace-objects", "-C", sourceRoot, "status", "--porcelain=v1", "--untracked-files=no",
+      ], { env, label: "candidate builder tracked cleanliness", runCommand }).trim();
       const checkoutDir = join(runRoot, "source");
       const checkoutTree = runBounded(gitPath, [
         "--no-replace-objects", "-C", sourceRoot, "rev-parse", `${releaseSha}^{tree}`,
@@ -1979,6 +2249,18 @@ export function createReleaseRehearsalCandidateAdapters({
         hardlinkCount: 0,
         paths: materialized.source_manifest.entries.map((entry) => entry.path),
       };
+      const verifiedSourceManifestDigest = verifyExactMaterializedTree({
+        sourceRoot,
+        sourceManifest: materialized.source_manifest,
+      });
+      validateCandidateBuilderAuthority({
+        currentHead,
+        releaseSha,
+        trackedStatus,
+        sourceManifestDigest: materialized.source_manifest.source_manifest_digest,
+        verifiedSourceManifestDigest,
+        entries: materialized.source_manifest.entries,
+      });
       currentSource = {
         checkoutDir,
         sourceManifest: materialized.source_manifest,
@@ -2032,6 +2314,9 @@ export function createReleaseRehearsalCandidateAdapters({
       if (checkRuns.some((entry) => entry.head_sha !== releaseSha)) {
         fail("GitHub check-run head SHA does not match candidate SHA");
       }
+      if (checkRuns.some((entry) => Number(entry.app?.id) !== GITHUB_ACTIONS_APP_INTEGRATION_ID)) {
+        fail("GitHub check-run does not use the trusted GitHub Actions integration");
+      }
       if (commitStatuses.some((entry) => entry.sha !== releaseSha)) {
         fail("GitHub commit-status SHA does not match candidate SHA");
       }
@@ -2056,7 +2341,7 @@ export function createReleaseRehearsalCandidateAdapters({
         head_sha: releaseSha,
         remote_master_sha: remoteMasterSha,
         summary,
-        summary_digest: sha256Jcs(safeEvidence),
+        summary_digest: sha256Jcs(summary),
         safe_projection: safeEvidence,
         safe_projection_digest: sha256Jcs(safeEvidence),
         suite_run_set_digest: sha256Jcs(suiteRunSet),
@@ -2125,8 +2410,16 @@ export function createReleaseRehearsalCandidateAdapters({
       const tools = resolveTools();
       const privateHome = join(runRoot, "build-home");
       const privateTmp = join(runRoot, "tmp");
+      const buildRoot = join(runRoot, "build-work");
+      const generatedRoot = join(runRoot, "generated");
       mkdirSync(privateHome, { mode: 0o700 });
       mkdirSync(privateTmp, { mode: 0o700 });
+      materializeBuildWorkspace({
+        sourceRoot: source.checkout_dir,
+        sourceManifest: source.source_manifest,
+        buildRoot,
+        generatedRoot,
+      });
       const storeStat = lstatSync(packageStorePath);
       if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
         fail("offline pnpm package store identity is unsafe");
@@ -2143,11 +2436,16 @@ export function createReleaseRehearsalCandidateAdapters({
       });
       const sandboxProfile = buildCandidateSandboxProfile({
         readRoots: [
-          runRoot,
+          source.checkout_dir,
+          buildRoot,
+          generatedRoot,
+          privateHome,
+          privateTmp,
           resolve(packageStorePath),
           ...Object.values(tools),
         ],
-        writeRoots: [runRoot],
+        writeRoots: [generatedRoot, privateHome, privateTmp],
+        deniedWritePaths: [source.checkout_dir, buildRoot],
         deniedPaths: [
           sourceRoot,
           resolve(environmentSourcePath),
@@ -2160,27 +2458,36 @@ export function createReleaseRehearsalCandidateAdapters({
           join(normalizedHome, ".docker", "run", "docker.sock"),
         ],
       });
-      runBounded(tools.sandboxPath, ["-p", sandboxProfile, tools.nodePath, tools.pnpmCliPath,
+      const installAudit = runSandboxedBuild(tools.sandboxPath, ["-p", sandboxProfile, tools.nodePath, tools.pnpmCliPath,
         "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
         "--store-dir", resolve(packageStorePath)], {
-        cwd: source.checkout_dir,
+        cwd: buildRoot,
         env: cleanBuildEnv,
         label: "offline frozen dependency install",
         runCommand,
         timeout: 20 * 60_000,
       });
-      const nextEntrypoint = resolve(source.checkout_dir, "node_modules", "next", "dist", "bin", "next");
+      const nextEntrypoint = resolve(buildRoot, "node_modules", "next", "dist", "bin", "next");
       const nextStat = lstatSync(nextEntrypoint);
       if (nextStat.isSymbolicLink() || !nextStat.isFile() || (modeBits(nextStat.mode) & 0o022) !== 0) {
         fail("Next.js build entrypoint identity is unsafe");
       }
-      runBounded(tools.sandboxPath, ["-p", sandboxProfile, tools.nodePath, nextEntrypoint, "build", "--no-lint"], {
-        cwd: source.checkout_dir,
+      const nextCliPre = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
+        requireExecutable: false,
+      });
+      const nextBuildAudit = runSandboxedBuild(tools.sandboxPath, ["-p", sandboxProfile, tools.nodePath, nextEntrypoint, "build", "--no-lint"], {
+        cwd: buildRoot,
         env: cleanBuildEnv,
         label: "offline Next.js production build",
         runCommand,
         timeout: 20 * 60_000,
       });
+      const nextCliPost = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
+        requireExecutable: false,
+      });
+      if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
+        fail("Next.js build entrypoint drifted during execution");
+      }
       const postSourceDigest = verifyExactMaterializedTree({
         sourceRoot: source.checkout_dir,
         sourceManifest: source.source_manifest,
@@ -2189,6 +2496,7 @@ export function createReleaseRehearsalCandidateAdapters({
       const artifactsRoot = join(runRoot, "artifacts");
       const assembled = assembleCandidateArtifacts({
         sourceRoot: source.checkout_dir,
+        generatedRoot,
         sourceManifest: source.source_manifest,
         artifactsRoot,
       });
@@ -2228,9 +2536,13 @@ export function createReleaseRehearsalCandidateAdapters({
       await collectToolchain();
       return {
         ...bundle,
+        build_tools: { next_cli: nextCliPost },
         bundle_content_digest: bundle.sealed_bundle_digest,
         migration: sealedMigration,
-        sandbox_policy_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
+        sandbox_policy_digest: sha256Jcs({
+          profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
+          execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+        }),
         staging_bundle_root: stagingBundleRoot,
       };
     },
@@ -2256,7 +2568,5 @@ export function createReleaseRehearsalCandidateAdapters({
       chmodSync(bundlesRoot, 0o500);
     },
 
-    async networkAttemptCount() { return 0; },
-    async dockerPullAttemptCount() { return 0; },
   });
 }

@@ -12,7 +12,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,6 +43,8 @@ import {
   validatePinnedSupabaseCliIdentity,
   validateCandidateDockerReadOnlyArgs,
   validateStableCiSnapshots,
+  validateSandboxedBuildResult,
+  validateCandidateBuilderAuthority,
 } from "../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
 
@@ -51,6 +53,10 @@ const SHA_B = "b".repeat(40);
 const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const DIGEST_C = "c".repeat(64);
+const RUN_A = "00000000-0000-4000-8000-000000000001";
+const RUN_B = "00000000-0000-4000-8000-000000000002";
+const RUN_TOOL_CHANGE = "00000000-0000-4000-8000-000000000003";
+const RUN_FAILED = "00000000-0000-4000-8000-000000000006";
 
 function privateRoot(prefix = "homecook-candidate-") {
   const root = mkdtempSync(join(tmpdir(), prefix));
@@ -80,6 +86,8 @@ function validToolchain() {
     gh: tool("gh"),
     docker_client: tool("docker-client"),
     docker_daemon: tool("docker-daemon"),
+    launchctl: tool("launchctl"),
+    lsof: tool("lsof"),
     sandbox_exec: tool("sandbox-exec"),
     candidate_builder: tool("candidate-builder"),
   };
@@ -133,6 +141,7 @@ function validManifestInput() {
     sealed_bundle_digest: DIGEST_B,
     bundle_manifest_digest: DIGEST_C,
     toolchain: validToolchain(),
+    build_tools: { next_cli: tool("next-cli") },
     toolchain_lock_digest: DIGEST_B,
     images: [{
       service: "fixture",
@@ -158,6 +167,13 @@ function validManifestInput() {
       path: "package.json",
       type: "file",
       mode: 0o400,
+      uid: "501",
+      gid: "20",
+      nlink: "1",
+      device: "1",
+      inode: "2",
+      size: "3",
+      ctime: "2026-08-29T00:00:00.000Z",
       sha256: DIGEST_A,
       symlink_target: null,
       dereferenced_sha256: null,
@@ -202,6 +218,7 @@ describe("release rehearsal candidate manifest", () => {
         "sealed_bundle_digest",
         "bundle_manifest_digest",
         "toolchain",
+        "build_tools",
         "toolchain_lock_digest",
         "images",
         "migration",
@@ -265,6 +282,10 @@ describe("release rehearsal candidate manifest", () => {
     const attacks = [
       { ...manifest, artifacts: { ...manifest.artifacts, app: { ...manifest.artifacts.app, root: "/tmp/escape" } } },
       { ...manifest, file_inventory: [{ ...manifest.file_inventory[0], path: "../escape" }] },
+      { ...manifest, file_inventory: [{ ...manifest.file_inventory[0], mode: 4096 }] },
+      { ...manifest, file_inventory: [{ ...manifest.file_inventory[0], nlink: "2" }] },
+      { ...manifest, file_inventory: [{ ...manifest.file_inventory[0], uid: "-1" }] },
+      { ...manifest, file_inventory: [{ ...manifest.file_inventory[0], inode: "not-decimal" }] },
       { ...manifest, toolchain: { ...manifest.toolchain, git: { ...manifest.toolchain.git, mode: 0o522 } } },
       { ...manifest, toolchain: { ...manifest.toolchain, git: { ...manifest.toolchain.git, device: "not-decimal" } } },
     ];
@@ -276,6 +297,18 @@ describe("release rehearsal candidate manifest", () => {
       ...validManifestInput(),
       toolchain: { ...validToolchain(), git: { ...tool("git"), device: "not-decimal" } },
     })).toThrow(/device|decimal|identity/iu);
+    expect(() => buildCandidateManifest({
+      ...validManifestInput(),
+      toolchain: { ...validToolchain(), git: { ...tool("git"), mode: 0o711 } },
+    })).toThrow(/mode|trusted|tool/iu);
+    expect(() => buildCandidateManifest({
+      ...validManifestInput(),
+      file_inventory: [{ ...validManifestInput().file_inventory[0], mode: 4096 }],
+    })).toThrow(/mode|safe|4095/iu);
+    expect(() => buildCandidateManifest({
+      ...validManifestInput(),
+      file_inventory: [{ ...validManifestInput().file_inventory[0], nlink: "2" }],
+    })).toThrow(/nlink|hard.?link|exactly one/iu);
   });
 });
 
@@ -336,6 +369,9 @@ describe("release rehearsal candidate input gates", () => {
       valid.replace(`    image: example/db@sha256:${DIGEST_B}\n`, "    build: .\n"),
       valid.replace(`    image: example/db@sha256:${DIGEST_B}\n`, ""),
       `${valid.replace("networks:", "  taggy:\n    image: example/taggy:latest\nnetworks:")}`,
+      `${valid.replace("networks:", "  taggy: { image: example/taggy:latest }\nnetworks:")}`,
+      `${valid.replace("networks:", "  merged:\n    <<: *defaults\nnetworks:")}`,
+      `${valid.replace("networks:", "  templated:\n    image: \${IMAGE_REF}\n    platform: linux/arm64\nnetworks:")}`,
     ]) {
       expect(() => parseCanonicalComposeImageInventory(invalid))
         .toThrow(/image|digest|tag|build|service|complete/iu);
@@ -358,6 +394,21 @@ describe("release rehearsal candidate input gates", () => {
     }
   });
 
+  it("rejects a sandboxed child that ignores a denied network, socket, or process attempt", () => {
+    expect(() => validateSandboxedBuildResult({
+      status: 0,
+      signal: null,
+      stdout: "build continued",
+      stderr: "sandbox: node(1) deny(1) network-outbound github.com:443",
+    }, "fixture build")).toThrow(/sandbox|denied|network|attempt/iu);
+    expect(validateSandboxedBuildResult({
+      status: 0,
+      signal: null,
+      stdout: "ok",
+      stderr: "",
+    }, "fixture build")).toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+  });
+
   it("loads the canonical tool lock and rejects self-reported Supabase identity without the pinned binary digest", () => {
     const lock = loadRehearsalToolchainLock(
       "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
@@ -365,6 +416,14 @@ describe("release rehearsal candidate input gates", () => {
     expect(lock).toMatchObject({
       schema: "homecook.local-mac-production-rehearsal-toolchain-lock.v1",
       platform: "darwin-arm64",
+      node: {
+        version: "v22.13.1",
+        binary_sha256: "79de4c62eb09c9cf7859e4a5fb27502f209533b54fa6a97f5a791015798282c0",
+      },
+      pnpm: {
+        version: "10.32.1",
+        binary_sha256: "26917eb9362e274f5856f784298f0499a8558e4c1d983b10b2dcd2c110a4c7fd",
+      },
       supabase_cli: {
         version: "2.110.0",
         binary_sha256: "d28538b3442e6c236fa8b8132e03dbdb240cc56c5594efd4778e09ab48fb8c96",
@@ -428,15 +487,17 @@ describe("release rehearsal candidate input gates", () => {
       blob_oid: expect.stringMatching(/^[0-9a-f]{40}$/u),
     }));
 
-    mkdirSync(join(materializedRoot, ".next"), { mode: 0o700 });
-    mkdirSync(join(materializedRoot, "node_modules"), { mode: 0o700 });
-    writeFileSync(join(materializedRoot, ".next", "BUILD_ID"), "fixture-build\n", { mode: 0o600 });
-    writeFileSync(join(materializedRoot, "node_modules", "runtime.js"), "export {};\n", { mode: 0o600 });
+    const generatedRoot = privateRoot("homecook-candidate-generated-");
+    mkdirSync(join(generatedRoot, ".next"), { mode: 0o700 });
+    mkdirSync(join(generatedRoot, "node_modules"), { mode: 0o700 });
+    writeFileSync(join(generatedRoot, ".next", "BUILD_ID"), "fixture-build\n", { mode: 0o600 });
+    writeFileSync(join(generatedRoot, "node_modules", "runtime.js"), "export {};\n", { mode: 0o600 });
     writeFileSync(join(materializedRoot, "scripts", "late-untracked.mjs"), "throw new Error('late');\n", { mode: 0o700 });
     writeFileSync(join(materializedRoot, "supabase", "migrations", "20260103000000_late.sql"), "select late;\n", { mode: 0o600 });
 
     const artifacts = assembleCandidateArtifacts({
       sourceRoot: materializedRoot,
+      generatedRoot,
       sourceManifest: materialized.source_manifest,
       artifactsRoot: join(privateRoot("homecook-candidate-assembled-"), "artifacts"),
     });
@@ -487,6 +548,33 @@ describe("release rehearsal candidate input gates", () => {
     ]) {
       expect(() => validateCandidateSourceEvidence({ ...valid, ...patch }))
         .toThrow(/sha|tree|detached|clean|symlink|hardlink|drift|source/iu);
+    }
+  });
+
+  it("requires builder, CLI, and tool lock bytes from the exact clean candidate Git authority", () => {
+    const entries = [
+      "scripts/local-mac-production-rehearsal.mjs",
+      "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
+      "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
+    ].map((path) => ({ path, sha256: DIGEST_A }));
+    expect(validateCandidateBuilderAuthority({
+      currentHead: SHA_A,
+      releaseSha: SHA_A,
+      trackedStatus: "",
+      sourceManifestDigest: DIGEST_B,
+      verifiedSourceManifestDigest: DIGEST_B,
+      entries,
+    })).toMatchObject({ builder_input_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    for (const patch of [{ currentHead: SHA_B }, { trackedStatus: " M scripts/lib/local-mac-production-rehearsal-candidate.mjs" }]) {
+      expect(() => validateCandidateBuilderAuthority({
+        currentHead: SHA_A,
+        releaseSha: SHA_A,
+        trackedStatus: "",
+        sourceManifestDigest: DIGEST_B,
+        verifiedSourceManifestDigest: DIGEST_B,
+        entries,
+        ...patch,
+      })).toThrow(/builder|head|dirty|authority|Git/iu);
     }
   });
 
@@ -618,9 +706,12 @@ describe("release rehearsal candidate orchestration", () => {
     const productionRoot = join(root, "production");
     mkdirSync(runRoot, { mode: 0o700 });
     mkdirSync(productionRoot, { mode: 0o700 });
+    const immutableSource = join(runRoot, "source");
+    mkdirSync(immutableSource, { mode: 0o500 });
     const profile = buildCandidateSandboxProfile({
       readRoots: [runRoot, "/usr/bin", "/System", "/usr/lib"],
       writeRoots: [runRoot],
+      deniedWritePaths: [immutableSource],
       deniedPaths: [productionRoot, "/var/run/docker.sock"],
     });
     expect(profile).toContain("(deny default)");
@@ -638,10 +729,32 @@ describe("release rehearsal candidate orchestration", () => {
       const socketRead = spawnSync("/usr/bin/sandbox-exec", [
         "-p", profile, "/usr/bin/stat", "/var/run/docker.sock",
       ], { cwd: runRoot });
+      const sourceWrite = spawnSync("/usr/bin/sandbox-exec", [
+        "-p", profile, "/usr/bin/touch", join(immutableSource, "mutated"),
+      ], { cwd: runRoot });
       expect(allowed.status).toBe(0);
       expect(denied.status).not.toBe(0);
       expect(socketRead.status).not.toBe(0);
+      expect(sourceWrite.status).not.toBe(0);
       expect(existsSync(join(productionRoot, "denied"))).toBe(false);
+      const sibling = spawn("/bin/sleep", ["30"], { stdio: "ignore" });
+      try {
+        const signalAttempt = spawnSync("/usr/bin/sandbox-exec", [
+          "-p", profile, "/bin/kill", "-TERM", String(sibling.pid),
+        ], { cwd: runRoot });
+        const inspectAttempt = spawnSync("/usr/bin/sandbox-exec", [
+          "-p", profile, "/bin/ps", "-p", String(sibling.pid),
+        ], { cwd: runRoot });
+        const launchctlAttempt = spawnSync("/usr/bin/sandbox-exec", [
+          "-p", profile, "/bin/launchctl", "print", `gui/${process.getuid?.()}`,
+        ], { cwd: runRoot });
+        expect(signalAttempt.status).not.toBe(0);
+        expect(inspectAttempt.status).not.toBe(0);
+        expect(launchctlAttempt.status).not.toBe(0);
+        expect(() => process.kill(sibling.pid!, 0)).not.toThrow();
+      } finally {
+        sibling.kill("SIGKILL");
+      }
     }
   });
 
@@ -683,12 +796,28 @@ describe("release rehearsal candidate orchestration", () => {
     }
     const physical = createSealedCandidateBundle({ bundleRoot, componentRoots });
     const manifestInput = validManifestInput();
+    const ciEvidence = validCiEvidence().safe_projection;
+    const ciSnapshotDigest = createHash("sha256").update(canonicalizeJcs(ciEvidence)).digest("hex");
+    const ciSummaryDigest = createHash("sha256").update(canonicalizeJcs(ciEvidence.summary)).digest("hex");
+    expect(ciSummaryDigest).not.toBe(ciSnapshotDigest);
+    const ciSuiteRunSetDigest = createHash("sha256").update(canonicalizeJcs(
+      ciEvidence.check_runs.map((entry) => ({
+        app_id: entry.app_id,
+        check_suite_id: entry.check_suite_id,
+        id: entry.id,
+      })),
+    )).digest("hex");
+    const evidenceRoot = join(root, "evidence");
+    mkdirSync(evidenceRoot, { mode: 0o700 });
+    writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ciEvidence), { mode: 0o400 });
+    chmodSync(evidenceRoot, 0o500);
     const bundleInput = {
       artifacts: physical.artifacts,
       build_id: manifestInput.build_id,
-      ci_check_summary_digest: manifestInput.ci_check_summary_digest,
-      ci_snapshot_digest: manifestInput.ci_snapshot_digest,
-      ci_suite_run_set_digest: manifestInput.ci_suite_run_set_digest,
+      build_tools: manifestInput.build_tools,
+      ci_check_summary_digest: ciSummaryDigest,
+      ci_snapshot_digest: ciSnapshotDigest,
+      ci_suite_run_set_digest: ciSuiteRunSetDigest,
       environment_snapshot: manifestInput.environment_snapshot,
       file_inventory: physical.file_inventory,
       images: manifestInput.images,
@@ -717,6 +846,9 @@ describe("release rehearsal candidate orchestration", () => {
     })).digest("hex");
     const candidate = buildCandidateManifest({
       ...validManifestInput(),
+      ci_check_summary_digest: ciSummaryDigest,
+      ci_snapshot_digest: ciSnapshotDigest,
+      ci_suite_run_set_digest: ciSuiteRunSetDigest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
       bundle_manifest_digest: bundle.bundle_manifest_digest,
       candidate_identity_digest: candidateIdentityDigest,
@@ -730,6 +862,15 @@ describe("release rehearsal candidate orchestration", () => {
     });
     chmodSync(root, 0o500);
     expect(readCompletedCandidateRoot(root).manifest).toEqual(candidate);
+
+    chmodSync(root, 0o700);
+    chmodSync(evidenceRoot, 0o700);
+    chmodSync(join(evidenceRoot, "ci-evidence.json"), 0o600);
+    writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs({ ...ciEvidence, head_sha: SHA_B }));
+    chmodSync(join(evidenceRoot, "ci-evidence.json"), 0o400);
+    chmodSync(evidenceRoot, 0o500);
+    chmodSync(root, 0o500);
+    expect(() => readCompletedCandidateRoot(root)).toThrow(/ci|evidence|snapshot|digest|head/iu);
 
     const incomplete = privateRoot("homecook-candidate-reader-incomplete-");
     writeFileSync(join(incomplete, "candidate.json"), canonicalizeJcs(candidate), { mode: 0o400 });
@@ -783,12 +924,18 @@ describe("release rehearsal candidate orchestration", () => {
 
     expect(first.sealed_bundle_digest).toBe(second.sealed_bundle_digest);
     expect(first.physical_manifest_digest).toBe(second.physical_manifest_digest);
-    expect(first.file_inventory).toEqual(second.file_inventory);
+    expect(first.file_inventory).not.toEqual(second.file_inventory);
     expect(first.file_inventory).toContainEqual(expect.objectContaining({
       component: "app",
       path: "data.txt",
       type: "file",
       mode: 0o400,
+      uid: String(process.getuid?.()),
+      nlink: "1",
+      device: expect.stringMatching(/^\d+$/u),
+      inode: expect.stringMatching(/^\d+$/u),
+      size: expect.stringMatching(/^\d+$/u),
+      ctime: expect.stringMatching(/^\d{4}-/u),
       sha256: expect.any(String),
     }));
     expect(first.file_inventory).toContainEqual(expect.objectContaining({
@@ -922,6 +1069,7 @@ describe("release rehearsal candidate orchestration", () => {
         sealed_bundle_digest: DIGEST_B,
         bundle_manifest_digest: DIGEST_C,
         sandbox_policy_digest: DIGEST_B,
+        build_tools: { next_cli: tool("next-cli") },
       };
     });
     const adapters = {
@@ -967,15 +1115,13 @@ describe("release rehearsal candidate orchestration", () => {
         production_db_connection_count: 0,
         mutation_attempt_count: 0,
       })),
-      networkAttemptCount: vi.fn(() => 0),
-      dockerPullAttemptCount: vi.fn(() => 0),
     };
     const previous = process.env.LEAK_FROM_PROCESS_ENV;
     process.env.LEAK_FROM_PROCESS_ENV = "must-not-leak";
     try {
-      const first = await buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: "run-a" });
+      const first = await buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_A });
       expect(callOrder.slice(0, 4)).toEqual(["tool-lock", "tool", "source", "ci"]);
-      const second = await buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: "run-b" });
+      const second = await buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_B });
       expect(first.manifest.sealed_bundle_digest).toBe(second.manifest.sealed_bundle_digest);
       expect(first.manifest.manifest_digest).toBe(second.manifest.manifest_digest);
       expect(first.candidate_root).not.toBe(second.candidate_root);
@@ -989,7 +1135,7 @@ describe("release rehearsal candidate orchestration", () => {
         releaseSha: SHA_A,
         namespaceRoot,
         adapters,
-        runId: "run-tool-change",
+        runId: RUN_TOOL_CHANGE,
       });
       expect(toolChanged.manifest.sealed_bundle_digest)
         .toBe(first.manifest.sealed_bundle_digest);
@@ -1003,14 +1149,6 @@ describe("release rehearsal candidate orchestration", () => {
       else process.env.LEAK_FROM_PROCESS_ENV = previous;
     }
 
-    adapters.networkAttemptCount = vi.fn(() => 1);
-    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: "run-network" }))
-      .rejects.toThrow(/candidate_build_failed|path_digest/iu);
-    adapters.networkAttemptCount = vi.fn(() => 0);
-    adapters.dockerPullAttemptCount = vi.fn(() => 1);
-    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: "run-pull" }))
-      .rejects.toThrow(/candidate_build_failed|path_digest/iu);
-    expect(adapters.captureProductionSurface).toHaveBeenCalledTimes(10);
   });
 
   it("preserves partial failures under a private failed root and rejects create-only collisions", async () => {
@@ -1031,14 +1169,25 @@ describe("release rehearsal candidate orchestration", () => {
       }),
     };
 
-    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: "failed-a" }))
+    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_FAILED }))
       .rejects.toThrow(/candidate_build_failed|path_digest/iu);
-    const failedRoot = join(namespaceRoot, "attempts", "failed-a");
+    const failedRoot = join(namespaceRoot, "attempts", RUN_FAILED);
     const failedMarker = join(failedRoot, "failed.json");
     expect(JSON.parse(readFileSync(failedMarker, "utf8"))).toMatchObject({ status: "failed" });
     expect(readdirSync(failedRoot)).toEqual(["failed.json"]);
 
-    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: "failed-a" }))
+    await expect(buildReleaseRehearsalCandidate({ releaseSha: SHA_A, namespaceRoot, adapters, runId: RUN_FAILED }))
       .rejects.toThrow(/collision|exists|create-only/iu);
+  });
+
+  it("rejects non-cryptorandom run IDs before reserving any namespace path", async () => {
+    const namespaceRoot = privateRoot("homecook-rehearsal-run-id-");
+    await expect(buildReleaseRehearsalCandidate({
+      releaseSha: SHA_A,
+      namespaceRoot,
+      adapters: {},
+      runId: "../escaped",
+    })).rejects.toThrow(/run.?id|uuid|cryptorandom/iu);
+    expect(existsSync(join(namespaceRoot, "escaped"))).toBe(false);
   });
 });
