@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  existsSync,
   linkSync,
   mkdirSync,
   mkdtempSync,
@@ -30,7 +31,7 @@ function sha256(bytes: Buffer | string) {
 }
 
 async function withUnixSocket(operation: (path: string) => Promise<void>) {
-  const root = mkdtempSync(join(process.cwd(), ".homecook-r2-docker-socket-"));
+  const root = mkdtempSync(join(tmpdir(), "homecook-r2-docker-socket-"));
   chmodSync(root, 0o700);
   const socketPath = join(root, "docker.sock");
   const server = createServer();
@@ -38,6 +39,9 @@ async function withUnixSocket(operation: (path: string) => Promise<void>) {
     server.once("error", reject);
     server.listen(socketPath, () => resolve());
   });
+  // A socket belongs to its server; assert it exists before applying the
+  // deterministic private mode rather than relying on repository cleanup.
+  if (!existsSync(socketPath)) throw new Error("test Docker socket was not created");
   chmodSync(socketPath, 0o600);
   try {
     await operation(socketPath);
