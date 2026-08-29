@@ -236,7 +236,23 @@
         "source_identity_digest": { "$ref": "#/$defs/digest" },
         "observation_digest": { "$ref": "#/$defs/digest" },
         "available": { "const": true }, "truncated": { "const": false },
-        "registered_subjects": { "type": "array", "minItems": 1, "uniqueItems": true }
+        "registered_subjects": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["container_id", "host_pid", "host_pgid", "component", "started_at", "image_digest", "config_digest", "executable_identity_digest"],
+            "properties": {
+              "container_id": { "type": "string", "minLength": 1 },
+              "host_pid": { "type": "integer", "minimum": 1 },
+              "host_pgid": { "type": "integer", "minimum": 1 },
+              "component": { "type": "string", "minLength": 1 },
+              "started_at": { "type": "string", "format": "date-time" },
+              "image_digest": { "$ref": "#/$defs/digest" },
+              "config_digest": { "$ref": "#/$defs/digest" },
+              "executable_identity_digest": { "$ref": "#/$defs/digest" }
+            }
+          }
+        }
       }
     },
     "runtime": {
