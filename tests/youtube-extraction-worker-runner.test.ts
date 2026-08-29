@@ -40,10 +40,14 @@ afterEach(async () => {
 
 describe("YTASYNC-WORKER standalone runner", () => {
   it("runs one synthetic job through the actual fenced runtime and poll loop", async () => {
+    const rpc = async (name: string) => ({ data: ({
+      claim_youtube_extraction_job: { job_id: "22222222-2222-4222-8222-222222222222", youtube_video_id: "synthetic01", lease_generation: 1, policy_snapshot_digest: "a".repeat(64), result_affecting_options: { rehearsal: true } },
+      claim_youtube_extractor_permit: { claimed: true, permit_generation: 1 }, start_youtube_extraction_attempt: { started: true, attempt_count: 1 }, heartbeat_youtube_extraction_job: { updated: true }, heartbeat_youtube_extractor_permit: { updated: true }, read_youtube_extraction_worker_catalog: { applied: true, ingredients: [], cooking_methods: [] }, report_youtube_extraction_progress: { applied: true }, resolve_youtube_extraction_job_draft: { synthetic: true, title: "Synthetic rehearsal recipe" }, finalize_youtube_extraction_job: { finalized: true }, release_youtube_extractor_permit: { released: true },
+    } as Record<string, unknown>)[name], error: null });
     const result = await runSyntheticYoutubeExtractionWorkerJob({
       allowedSnapshotDigest: "a".repeat(64),
       runId: "11111111-2222-4333-8444-555555555555",
-      testOnlyInMemoryRpc: true,
+      rpc,
     });
     expect(result).toMatchObject({
       schema: "homecook.youtube-extraction-worker-rehearsal-result.v1",

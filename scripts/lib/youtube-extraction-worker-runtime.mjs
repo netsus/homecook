@@ -777,58 +777,26 @@ export function createYoutubeExtractionWorkerRuntime({
  * @param {{
  *   allowedSnapshotDigest: string,
  *   runId: string,
- *   rpc?: Function|null,
- *   testOnlyInMemoryRpc?: boolean,
+ *   rpc: Function,
  *   signal?: AbortSignal,
  * }} options
  */
 export async function runSyntheticYoutubeExtractionWorkerJob({
   allowedSnapshotDigest,
   runId,
-  rpc = null,
-  testOnlyInMemoryRpc = false,
+  rpc,
   signal = new AbortController().signal,
 } = {}) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runId ?? "")) {
     throw new Error("synthetic rehearsal run_id must be UUID-v4");
   }
   if (!(signal instanceof AbortSignal)) throw new Error("synthetic rehearsal signal is required");
+  if (typeof rpc !== "function") throw new Error("rehearsal synthetic worker requires an explicit RPC client");
   const rpcSequence = [];
-  const inMemoryRpc = async (name) => {
-    const data = name === "claim_youtube_extraction_job"
-      ? {
-          job_id: "22222222-2222-4222-8222-222222222222",
-          youtube_video_id: "synthetic01",
-          lease_generation: 1,
-          policy_snapshot_digest: allowedSnapshotDigest,
-          result_affecting_options: { rehearsal: true },
-        }
-      : name === "claim_youtube_extractor_permit"
-        ? { claimed: true, permit_generation: 1 }
-        : name === "start_youtube_extraction_attempt"
-          ? { started: true, attempt_count: 1 }
-          : ["heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit"]
-              .includes(name)
-            ? { updated: true }
-            : name === "read_youtube_extraction_worker_catalog"
-              ? { applied: true, ingredients: [], cooking_methods: [] }
-              : name === "report_youtube_extraction_progress"
-                ? { applied: true }
-                : name === "resolve_youtube_extraction_job_draft"
-                  ? { synthetic: true, title: "Synthetic rehearsal recipe" }
-                  : name === "finalize_youtube_extraction_job"
-                    ? { finalized: true }
-                    : name === "release_youtube_extractor_permit"
-                      ? { released: true }
-                      : null;
-    return { data, error: null };
-  };
-  if (!rpc && !testOnlyInMemoryRpc) throw new Error("rehearsal synthetic worker requires an explicit RPC client");
-  const activeRpc = rpc ?? inMemoryRpc;
   const runtime = createYoutubeExtractionWorkerRuntime({
     workerId: `rehearsal-${runId}`,
     allowedSnapshotDigest,
-    rpc: async (...args) => { rpcSequence.push(args[0]); return activeRpc(...args); },
+    rpc: async (...args) => { rpcSequence.push(args[0]); return rpc(...args); },
     heartbeatIntervalMs: 60_000,
     extractor: {
       async extract({ claimedJob, signal: extractionSignal }) {
