@@ -585,9 +585,10 @@ export function validateSealedWorkerSyntheticResult(value) {
   return Object.freeze({ ...value, rpc_sequence: Object.freeze([...value.rpc_sequence]) });
 }
 
-function buildProductionGuard(pre, post, measurement) {
+function buildProductionGuard(pre, post, measurement, observer) {
   validateProductionSnapshot(pre, "pre");
   validateProductionSnapshot(post, "post");
+  validateIndependentProductionObserver(observer);
   if (pre.surface_digest !== post.surface_digest) fail("production surface drifted during rehearsal");
   exactKeys(measurement, [
     "schema", "production_db_connection_count", "production_db_write_count",
@@ -621,6 +622,7 @@ function buildProductionGuard(pre, post, measurement) {
     mutation_attempt_count: measurement.mutation_attempt_count,
     production_db_connection_count: measurement.production_db_connection_count,
     production_db_write_count: measurement.production_db_write_count,
+    independent_observer: observer,
     measurement,
     measurement_digest: sha256Jcs(measurement),
   });
@@ -744,7 +746,7 @@ export function validateRunEvidence(value) {
   exactKeys(value.production_guard, [
     "surface_allowlist_version", "production_snapshot_pre_digest",
     "production_snapshot_post_digest", "equal", "mutation_attempt_count",
-    "production_db_connection_count", "production_db_write_count", "measurement", "measurement_digest",
+    "production_db_connection_count", "production_db_write_count", "measurement", "measurement_digest", "independent_observer",
   ], "run evidence production guard");
   exactKeys(value.threat_controls, [
     "symlink_toctou", "namespace_collision", "digest_substitution",
@@ -846,6 +848,7 @@ export function validateRunEvidence(value) {
   if (value.production_guard.production_snapshot_pre_digest !== value.production_guard.production_snapshot_post_digest) {
     fail("run evidence production snapshots differ");
   }
+  validateIndependentProductionObserver(value.production_guard.independent_observer);
   exactKeys(value.production_guard.measurement, [
     "schema", "production_db_connection_count", "production_db_write_count",
     "mutation_attempt_count", "forbidden_mount_count", "forbidden_environment_count",
@@ -902,6 +905,7 @@ export async function runIsolatedReleaseRehearsal({
   let cleanupResult = null;
   let firstError = null;
   let productionMeasurement = null;
+  let independentObserver = null;
   let stableRunRootIdentity = null;
   let stableExecutionRootIdentity = null;
 
@@ -973,6 +977,10 @@ export async function runIsolatedReleaseRehearsal({
     stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
     verifyStableExecution();
     preSnapshot = validateProductionSnapshot(await adapters.snapshotProduction("pre", { signal }), "pre");
+    if (!adapters.independentObserver || typeof adapters.independentObserver.begin !== "function" || typeof adapters.independentObserver.end !== "function") {
+      fail("independent observer is unavailable");
+    }
+    await adapters.independentObserver.begin({ runId, preSnapshot, signal });
     verifyStableExecution();
     checkAbort();
     const ports = await adapters.reservePorts({ runId, runRoot: reservation.runRoot });
@@ -1032,8 +1040,9 @@ export async function runIsolatedReleaseRehearsal({
     if (!cleanupEvidence.completed) fail("owned cleanup, residue, or secret persistence gate failed");
     verifyStableExecution();
     const postSnapshot = await adapters.snapshotProduction("post", { signal: new AbortController().signal });
+    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, postSnapshot, signal: new AbortController().signal });
     verifyStableExecution();
-    const productionGuard = buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement);
+    const productionGuard = buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement, independentObserver);
     const completedAt = now().toISOString();
     const evidence = makeEvidence({
       manifest,

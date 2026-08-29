@@ -92,6 +92,10 @@ function productionSnapshot(digest = "9".repeat(64)) {
   };
 }
 
+function independentObserver() {
+  return { schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64), started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", pre_snapshot_digest: "9".repeat(64), post_snapshot_digest: "9".repeat(64), process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "d".repeat(64), observation_digest: "e".repeat(64), available: true, truncated: false, production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0, production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0, unrelated_noise_count: 0 };
+}
+
 function migrationReplay(overrides = {}) {
   const globalLedgerEntries = [
     { sequence: 1, migration_id: "20260101000000_one", migration_sha256: "1".repeat(64) },
@@ -200,6 +204,7 @@ function evidenceFixture() {
       production_db_write_count: 0,
       measurement: productionMeasurement,
       measurement_digest: sha256Jcs(productionMeasurement),
+      independent_observer: independentObserver(),
     },
     threat_controls: { symlink_toctou: "pass", namespace_collision: "pass", digest_substitution: "pass", stale_candidate: "pass", cleanup_ownership: "pass" },
   };
@@ -279,6 +284,7 @@ function createAdapters() {
       docker_endpoint_identity_digest: "d".repeat(64),
       docker_daemon_identity_digest: "e".repeat(64),
     }),
+    independentObserver: { begin: vi.fn().mockResolvedValue(undefined), end: vi.fn().mockResolvedValue(independentObserver()) },
     stopRuntime: vi.fn().mockResolvedValue(undefined),
     removeResource: vi.fn().mockResolvedValue(undefined),
     listResidue: vi.fn().mockResolvedValue([]),
@@ -446,6 +452,8 @@ describe("release rehearsal R2 orchestration", () => {
     expect(result.status).toBe("passed");
     expect(result.fixtures.production_derived_row_count).toBe(0);
     expect(result.production_guard).toMatchObject({ equal: true, mutation_attempt_count: 0, production_db_connection_count: 0, production_db_write_count: 0 });
+    expect(adapters.independentObserver.begin).toHaveBeenCalledBefore(adapters.createResources);
+    expect(adapters.independentObserver.end).toHaveBeenCalledAfter(adapters.removeResource);
     expect(result.cleanup).toMatchObject({ completed: true, residue_resource_ids: [], cleanup_errors: [], secret_bearing_persistent_file_count: 0 });
     expect(() => validateRunEvidence(result)).not.toThrow();
     expect(adapters.createResources).toHaveBeenCalledWith(expect.objectContaining({
@@ -733,10 +741,12 @@ describe("release rehearsal R2 public command and schema", () => {
     const plan = compileClosedPrimitivePlan({ name: "ignored", services, networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } }, volumes: { "postgres-data": {}, "storage-data": {} }, secrets: {} }, { project: `homecook-rehearsal-${RUN_ID}`, ports: { app: 1 } });
     const namespace = buildRunNamespace({ runId: RUN_ID, ports: { app: 43101, auth: 43102, postgres: 43103, storage: 43104 } });
     const operations = compilePrimitiveServiceOperations(plan, namespace, ["--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`, "--label", `com.docker.compose.project=${namespace.project}`]);
-    expect(operations.filter((item: any) => item.kind === "create")).toHaveLength(7);
-    expect(operations.find((item: any) => item.kind === "connect" && item.service === "auth")).toMatchObject({ network: "auth-egress" });
-    expect(operations.findIndex((item: any) => item.kind === "readiness" && item.service === "postgres")).toBeLessThan(operations.findIndex((item: any) => item.kind === "create" && item.service === "postgrest"));
-    expect(operations.flatMap((item: any) => "argv" in item ? item.argv : []).join(" ")).not.toMatch(/compose (?:create|start|up)/u);
+    type Operation = { kind: string; service: string; network?: string; argv?: string[] };
+    const typedOperations = operations as Operation[];
+    expect(typedOperations.filter((item) => item.kind === "create")).toHaveLength(7);
+    expect(typedOperations.find((item) => item.kind === "connect" && item.service === "auth")).toMatchObject({ network: "auth-egress" });
+    expect(typedOperations.findIndex((item) => item.kind === "readiness" && item.service === "postgres")).toBeLessThan(typedOperations.findIndex((item) => item.kind === "create" && item.service === "postgrest"));
+    expect(typedOperations.flatMap((item) => item.argv ?? []).join(" ")).not.toMatch(/compose (?:create|start|up)/u);
   });
   it("rejects every post-create container image substitution", () => {
     const authority = {
