@@ -452,6 +452,49 @@ describe("release rehearsal candidate input gates", () => {
     }
   });
 
+  it("parses the exact Git canonical production Compose and rejects structural mutations", () => {
+    const composePath = "infra/full-local-supabase/docker-compose.production.yml";
+    const blob = spawnSync("/usr/bin/git", [
+      "--no-replace-objects", "cat-file", "blob", `HEAD:${composePath}`,
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { HOME: privateRoot("homecook-compose-git-home-"), PATH: "/usr/bin:/bin", NODE_ENV: "test", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" },
+    });
+    expect(blob.status, blob.stderr).toBe(0);
+    const canonical = blob.stdout;
+    const lock = loadRehearsalToolchainLock(
+      "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
+    );
+    const expected = [...lock.full_local_images]
+      .map(({ service, reference, digest, platform_expression }) => ({ service, reference, digest, platform_expression }))
+      .sort((left, right) => left.service.localeCompare(right.service));
+    const actual = parseCanonicalComposeImageInventory(canonical)
+      .sort((left, right) => left.service.localeCompare(right.service));
+    expect(actual).toEqual(expected);
+    expect(actual).toHaveLength(7);
+
+    const postgresImage = "    image: public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a";
+    const postgresPlatform = "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}";
+    for (const invalid of [
+      canonical.replace("networks:\n", "  injected:\n    image: example/injected:latest\n    platform: linux/arm64\n\nnetworks:\n"),
+      canonical.replace(postgresImage, `${postgresImage}\n${postgresImage}`),
+      canonical.replace(postgresImage, `    \"image\": ${postgresImage.slice("    image: ".length)}`),
+      canonical.replace(postgresImage, `    !!str image: ${postgresImage.slice("    image: ".length)}`),
+      canonical.replace(postgresImage, postgresImage.replace("image: ", "image:")),
+      canonical.replace(postgresPlatform, postgresPlatform.replace("platform: ", "platform:")),
+      canonical.replace("    environment:\n", "    environment:\n      image: example/nested:latest\n"),
+      canonical.replace(postgresImage, `    <<: *restore-attempt-labels\n${postgresImage}`),
+      canonical.replace("services:\n", "unknown-top-level: rejected\n\nservices:\n"),
+      canonical.replace(postgresImage, `${postgresImage}\n    unknown_service_key: rejected`),
+      canonical.replace(postgresImage, postgresImage.replace("    image", "   image")),
+      canonical.replace("  postgres:\n", "  postgres:{ }\n"),
+    ]) {
+      expect(() => parseCanonicalComposeImageInventory(invalid))
+        .toThrow(/Compose|image|platform|service|mapping|grammar|unknown|duplicate|digest|indent|top-level/iu);
+    }
+  });
+
   it("allows only exact Docker version and digest inspect argv outside the build sandbox", () => {
     expect(validateCandidateDockerReadOnlyArgs(["version", "--format", "{{json .}}"]))
       .toEqual(["version", "--format", "{{json .}}"]);

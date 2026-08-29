@@ -2151,64 +2151,209 @@ export function parseCanonicalComposeImageInventory(source) {
   if (typeof source !== "string" || source.length === 0) fail("Compose source is required");
   const lines = source.split(/\r?\n/u);
   if (source.includes("\t")) fail("Compose tabs are unsupported for complete service inventory");
+  if (/[\u000b\u000c\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/u.test(source)) {
+    fail("Compose Unicode whitespace is unsupported");
+  }
+  const parseMapping = (line, indent, label) => {
+    const prefix = " ".repeat(indent);
+    if (!line.startsWith(prefix) || line[indent] === " ") fail(`Compose ${label} indentation is invalid`);
+    const match = /^([A-Za-z0-9_.\/-]+):(.*)$/u.exec(line.slice(indent));
+    if (!match) fail(`Compose ${label} mapping key is outside the closed plain grammar`);
+    const tail = match[2];
+    if (tail === "") return { key: match[1], value: null };
+    if (!tail.startsWith(" ")) fail(`Compose ${label} non-empty value requires ASCII space after colon`);
+    const value = tail.replace(/^ +/u, "");
+    if (value === "") fail(`Compose ${label} value cannot be whitespace-only`);
+    return { key: match[1], value };
+  };
+  const parseListItem = (line, indent, label) => {
+    const prefix = `${" ".repeat(indent)}- `;
+    if (!line.startsWith(prefix) || line.slice(prefix.length) === "") {
+      fail(`Compose ${label} list item is outside the closed grammar`);
+    }
+    return line.slice(prefix.length);
+  };
+  const topLevelAllowed = new Set([
+    "name", "version", "x-restore-attempt-labels", "services", "networks", "secrets", "volumes",
+  ]);
+  const serviceFieldAllowed = new Set([
+    "labels", "image", "platform", "entrypoint", "command", "depends_on", "environment",
+    "healthcheck", "networks", "ports", "read_only", "restart", "security_opt", "secrets",
+    "tmpfs", "volumes", "build",
+  ]);
+  const listServiceFields = new Set(["networks", "ports", "security_opt", "secrets", "tmpfs", "volumes"]);
+  const scalarServiceFields = new Set(["read_only", "restart"]);
+  const extensionKeys = new Set([
+    "homecook.local/restore-attempt", "homecook.release.sha", "homecook.release.tree",
+    "homecook.release.build-id", "homecook.release.promotion-id",
+  ]);
   const topLevelKeys = new Set();
-  let servicesStart = -1;
-  for (const [index, line] of lines.entries()) {
-    if (line.trim() === "" || /^\s*#/u.test(line) || line.startsWith(" ")) continue;
-    const match = /^([A-Za-z0-9_-]+):(?:\s*(.*))?$/u.exec(line);
-    if (!match) fail("Compose top-level line is outside the closed plain-key grammar");
-    const [, key, value = ""] = match;
-    if (key.startsWith("x-")) fail("Compose top-level extensions are unsupported");
-    if (topLevelKeys.has(key)) fail("Compose contains duplicate top-level sections");
-    topLevelKeys.add(key);
-    if (key === "services") {
-      if (value !== "" || servicesStart >= 0) fail("Compose services section is inline or duplicated");
-      servicesStart = index;
-    }
-  }
-  if (servicesStart < 0) fail("Compose services section is missing");
-  let servicesEnd = lines.length;
-  for (let index = servicesStart + 1; index < lines.length; index += 1) {
-    if (/^[A-Za-z0-9_-]+:/u.test(lines[index])) {
-      servicesEnd = index;
-      break;
-    }
-  }
   const services = [];
   const serviceNames = new Set();
+  let section = null;
   let current = null;
-  let currentKeys = null;
-  const allowedServiceKeys = new Set(["image", "platform", "build"]);
-  for (let index = servicesStart + 1; index < servicesEnd; index += 1) {
-    const line = lines[index];
+  let currentKeys = new Set();
+  let nestedBlock = null;
+  let nestedKeys = new Set();
+  let nestedItem = null;
+  const sectionItems = new Map();
+  const finishService = () => {
+    if (!current) return;
+    services.push(current);
+    current = null;
+    currentKeys = new Set();
+    nestedBlock = null;
+    nestedKeys = new Set();
+    nestedItem = null;
+  };
+  for (const line of lines) {
     if (line.trim() === "" || /^\s*#/u.test(line)) continue;
-    const serviceMatch = /^  ([A-Za-z0-9_-]+):$/u.exec(line);
-    if (serviceMatch) {
-      if (current) services.push(current);
-      if (serviceNames.has(serviceMatch[1])) fail("Compose service key is duplicated");
-      serviceNames.add(serviceMatch[1]);
-      current = { service: serviceMatch[1], image: null, platform: null, build: false };
-      currentKeys = new Set();
+    const indent = /^ */u.exec(line)[0].length;
+    if (indent === 0) {
+      if (section === "services") finishService();
+      const { key, value } = parseMapping(line, 0, "top-level");
+      if (!topLevelAllowed.has(key)) fail(`Compose unknown top-level key: ${key}`);
+      if (topLevelKeys.has(key)) fail(`Compose duplicate top-level key: ${key}`);
+      topLevelKeys.add(key);
+      if (["services", "networks", "secrets", "volumes"].includes(key) && value !== null) {
+        fail(`Compose top-level ${key} must use a nested block`);
+      }
+      if (["name", "version"].includes(key) && value === null) fail(`Compose top-level ${key} requires a value`);
+      if (key === "x-restore-attempt-labels" && value !== "&restore-attempt-labels") {
+        fail("Compose known extension anchor is invalid");
+      }
+      section = key;
+      nestedBlock = null;
+      nestedKeys = new Set();
+      nestedItem = null;
       continue;
     }
-    if (!current) fail("Compose services block contains content before a service key");
-    const mappingMatch = /^    ([A-Za-z0-9_-]+):(?:\s*(.*))?$/u.exec(line);
-    if (!mappingMatch) fail("Compose service body line is outside the closed plain-key grammar");
-    const [, key, value = ""] = mappingMatch;
-    if (!allowedServiceKeys.has(key)) fail(`Compose service body key is unsupported: ${key}`);
-    if (currentKeys.has(key)) fail(`Compose service ${current.service} has duplicate ${key} authority`);
-    currentKeys.add(key);
-    if (key === "build") {
-      current.build = true;
+    if (!section) fail("Compose nested content appears before a top-level key");
+    if (section === "x-restore-attempt-labels") {
+      if (indent !== 2) fail("Compose known extension indentation is invalid");
+      const { key, value } = parseMapping(line, 2, "known extension");
+      if (!extensionKeys.has(key) || value === null || nestedKeys.has(key)) {
+        fail("Compose known extension mapping is unknown, empty, or duplicated");
+      }
+      nestedKeys.add(key);
       continue;
     }
-    if (value === "" || /^(?:[>|&*!?'"\[{]|!!)/u.test(value)) {
-      fail(`Compose service ${current.service} ${key} value is outside the closed scalar grammar`);
+    if (section === "services") {
+      if (indent === 2) {
+        finishService();
+        const { key, value } = parseMapping(line, 2, "service");
+        if (value !== null || !/^[A-Za-z0-9_-]+$/u.test(key)) fail("Compose service must be a plain nested mapping");
+        if (serviceNames.has(key)) fail(`Compose duplicate service key: ${key}`);
+        serviceNames.add(key);
+        current = { service: key, image: null, platform: null, build: false };
+        continue;
+      }
+      if (!current) fail("Compose service body appears before a service key");
+      if (indent === 4) {
+        const { key, value } = parseMapping(line, 4, `service ${current.service}`);
+        if (!serviceFieldAllowed.has(key)) fail(`Compose unknown service key: ${key}`);
+        if (currentKeys.has(key)) fail(`Compose service ${current.service} has duplicate normalized key: ${key}`);
+        currentKeys.add(key);
+        nestedBlock = null;
+        nestedKeys = new Set();
+        nestedItem = null;
+        if (["image", "platform"].includes(key)) {
+          if (value === null) fail(`Compose service ${current.service} ${key} requires a value`);
+          if (key === "image") current.image = value;
+          if (key === "platform") current.platform = value;
+          continue;
+        }
+        if (key === "build") {
+          current.build = true;
+          continue;
+        }
+        if (key === "labels") {
+          if (value !== "*restore-attempt-labels") fail("Compose service labels alias is not the approved metadata alias");
+          continue;
+        }
+        if (["entrypoint", "command"].includes(key)) {
+          if (value === null || !/^\[[^\n]+\]$/u.test(value)) fail(`Compose service ${key} must use the supported inline sequence`);
+          continue;
+        }
+        if (scalarServiceFields.has(key)) {
+          if (value === null) fail(`Compose service ${key} requires a scalar value`);
+          continue;
+        }
+        if (value !== null) fail(`Compose service ${key} must use its supported nested block`);
+        nestedBlock = key;
+        continue;
+      }
+      if (indent === 6) {
+        if (!nestedBlock) fail("Compose nested service line has no owning block");
+        if (listServiceFields.has(nestedBlock)) {
+          parseListItem(line, 6, `${nestedBlock}`);
+          continue;
+        }
+        const { key, value } = parseMapping(line, 6, `${nestedBlock}`);
+        if (nestedKeys.has(key)) fail(`Compose duplicate nested ${nestedBlock} key: ${key}`);
+        nestedKeys.add(key);
+        if (nestedBlock === "environment") {
+          if (!/^[A-Z][A-Z0-9_]*$/u.test(key) || value === null) fail("Compose environment entry is outside the supported grammar");
+          continue;
+        }
+        if (nestedBlock === "healthcheck") {
+          if (!["test", "interval", "timeout", "retries", "start_period"].includes(key)) fail("Compose healthcheck key is unsupported");
+          if (key === "test" && value === null) {
+            nestedItem = "healthcheck-test";
+          } else if (value === null) fail(`Compose healthcheck ${key} requires a value`);
+          continue;
+        }
+        if (nestedBlock === "depends_on") {
+          if (!/^[A-Za-z0-9_-]+$/u.test(key) || value !== null) fail("Compose depends_on service entry is unsupported");
+          nestedItem = key;
+          continue;
+        }
+        fail(`Compose nested block is unsupported: ${nestedBlock}`);
+      }
+      if (indent === 8) {
+        if (nestedBlock === "healthcheck" && nestedItem === "healthcheck-test") {
+          parseListItem(line, 8, "healthcheck test");
+          continue;
+        }
+        if (nestedBlock === "depends_on" && nestedItem) {
+          const { key, value } = parseMapping(line, 8, "depends_on condition");
+          if (key !== "condition" || value === null) fail("Compose depends_on condition is unsupported");
+          nestedItem = null;
+          continue;
+        }
+        fail("Compose service nested indentation is unsupported");
+      }
+      fail("Compose service indentation is outside the closed grammar");
     }
-    if (key === "image") current.image = value;
-    if (key === "platform") current.platform = value;
+    if (["networks", "secrets", "volumes"].includes(section)) {
+      const items = sectionItems.get(section) ?? new Set();
+      sectionItems.set(section, items);
+      if (indent === 2) {
+        const { key, value } = parseMapping(line, 2, `${section} item`);
+        if (items.has(key)) fail(`Compose duplicate ${section} item: ${key}`);
+        items.add(key);
+        if (section === "networks" && ![null, "{}"].includes(value)) fail("Compose network item value is unsupported");
+        if (section !== "networks" && value !== null) fail(`Compose ${section} item must use a nested block`);
+        nestedItem = key;
+        nestedKeys = new Set();
+        continue;
+      }
+      if (indent === 4 && nestedItem) {
+        const { key, value } = parseMapping(line, 4, `${section} metadata`);
+        if (nestedKeys.has(key)) fail(`Compose duplicate ${section} metadata key: ${key}`);
+        nestedKeys.add(key);
+        if (section === "networks" && key === "internal" && value === "true") continue;
+        if (section === "secrets" && key === "file" && value !== null) continue;
+        if (section === "volumes" && key === "name" && value !== null) continue;
+        if (section === "volumes" && key === "labels" && value === "*restore-attempt-labels") continue;
+        fail(`Compose ${section} metadata is unsupported`);
+      }
+      fail(`Compose ${section} indentation is unsupported`);
+    }
+    fail(`Compose top-level ${section} does not allow nested content`);
   }
-  if (current) services.push(current);
+  if (section === "services") finishService();
+  if (!topLevelKeys.has("services")) fail("Compose services section is missing");
   if (services.length === 0) fail("Compose service inventory is empty");
   return services.map((service) => {
     if (service.build) fail(`Compose service ${service.service} uses forbidden build authority`);
