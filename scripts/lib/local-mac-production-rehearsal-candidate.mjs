@@ -1253,42 +1253,56 @@ export function writeCandidateTerminalMarker(root, kind, payload) {
 /** @param {string} root @param {string} path @param {string} label @param {{afterOpen?:null|(()=>void),maxBytes?:number}} options */
 export function readSealedAuthorityFile(root, path, label, { afterOpen = null, maxBytes = 16 * 1024 * 1024 } = {}) {
   if (!isAbsolute(root ?? "") || !isAbsolute(path ?? "")) fail(`${label} authority path must be absolute`);
-  const realRoot = realpathSync(root);
-  if (realRoot !== root) fail(`${label} authority root is not canonical`);
-  const rootStat = lstatSync(realRoot, { bigint: true });
-  const currentUid = BigInt(process.getuid?.());
-  const privateDirectoryModes = new Set([0o500, 0o700]);
-  if (
-    !rootStat.isDirectory() || rootStat.isSymbolicLink() || rootStat.uid !== currentUid
-    || !privateDirectoryModes.has(modeBits(rootStat.mode))
-  ) {
-    fail(`${label} authority root owner or mode is unsafe`);
-  }
-  const realParent = realpathSync(dirname(path));
-  assertPathContained(realRoot, realParent, `${label} authority parent`);
-  const parentSnapshots = [[realRoot, rootStat]];
-  let currentParent = realRoot;
-  const parentRelative = relative(realRoot, realParent);
-  for (const segment of parentRelative === "" ? [] : parentRelative.split("/")) {
-    currentParent = join(currentParent, segment);
-    if (realpathSync(currentParent) !== currentParent) fail(`${label} authority parent is not canonical`);
-    const parentStat = lstatSync(currentParent, { bigint: true });
-    if (
-      !parentStat.isDirectory() || parentStat.isSymbolicLink() || parentStat.uid !== currentUid
-      || !privateDirectoryModes.has(modeBits(parentStat.mode))
-    ) fail(`${label} authority parent owner or private mode is unsafe`);
-    parentSnapshots.push([currentParent, parentStat]);
-  }
-  const before = lstatSync(path, { bigint: true });
-  if (
-    !before.isFile() || before.isSymbolicLink() || before.uid !== currentUid || before.nlink !== 1n
-    || modeBits(before.mode) !== 0o400 || before.size > BigInt(maxBytes)
-  ) fail(`${label} authority file owner, mode, hardlink, or size is unsafe`);
+  if (resolve(root) !== root || resolve(path) !== path) fail(`${label} authority lexical path is not canonical`);
   const sameIdentity = (left, right) => [
     "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs",
   ].every((key) => left[key] === right[key]);
+  const currentUid = BigInt(process.getuid?.());
+  const privateDirectoryModes = new Set([0o500, 0o700]);
+  const fileRelative = relative(root, path);
+  if (fileRelative === "" || isAbsolute(fileRelative) || fileRelative.startsWith("..")) {
+    fail(`${label} authority lexical path escapes the root`);
+  }
+  const parentRelative = relative(root, dirname(path));
+  if (isAbsolute(parentRelative) || parentRelative.startsWith("..")) {
+    fail(`${label} authority lexical parent escapes the root`);
+  }
+  const parentPaths = [root];
+  let currentParent = root;
+  for (const segment of parentRelative === "" ? [] : parentRelative.split("/")) {
+    currentParent = join(currentParent, segment);
+    parentPaths.push(currentParent);
+  }
+  const parentSnapshots = [];
+  const parentFds = [];
+  try {
+    for (const parentPath of parentPaths) {
+      const parentStat = lstatSync(parentPath, { bigint: true });
+      if (
+        !parentStat.isDirectory() || parentStat.isSymbolicLink() || parentStat.uid !== currentUid
+        || !privateDirectoryModes.has(modeBits(parentStat.mode))
+      ) fail(`${label} authority lexical parent owner, type, symlink, or private mode is unsafe`);
+      if (realpathSync(parentPath) !== parentPath) fail(`${label} authority lexical parent is not canonical`);
+      const parentFd = openSync(parentPath, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      if (!sameIdentity(parentStat, fstatSync(parentFd, { bigint: true }))) {
+        closeSync(parentFd);
+        fail(`${label} authority lexical parent identity drifted before read`);
+      }
+      parentSnapshots.push([parentPath, parentStat]);
+      parentFds.push(parentFd);
+    }
+  } catch (error) {
+    for (const parentFd of parentFds) closeSync(parentFd);
+    throw error;
+  }
   let fd;
   try {
+    const before = lstatSync(path, { bigint: true });
+    if (
+      !before.isFile() || before.isSymbolicLink() || before.uid !== currentUid || before.nlink !== 1n
+      || modeBits(before.mode) !== 0o400 || before.size > BigInt(maxBytes)
+    ) fail(`${label} authority file owner, mode, hardlink, or size is unsafe`);
+    if (realpathSync(path) !== path) fail(`${label} authority lexical file is not canonical`);
     fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
     const opened = fstatSync(fd, { bigint: true });
     if (!sameIdentity(before, opened)) fail(`${label} authority identity drifted before read`);
@@ -1299,14 +1313,21 @@ export function readSealedAuthorityFile(root, path, label, { afterOpen = null, m
     if (!sameIdentity(opened, fdPost) || !sameIdentity(opened, pathPost)) {
       fail(`${label} authority path swap or identity drift occurred during read`);
     }
-    for (const [parentPath, parentBefore] of parentSnapshots) {
-      if (!sameIdentity(parentBefore, lstatSync(parentPath, { bigint: true }))) {
+    for (let index = 0; index < parentSnapshots.length; index += 1) {
+      const [parentPath, parentBefore] = parentSnapshots[index];
+      const lexicalPost = lstatSync(parentPath, { bigint: true });
+      const fdPost = fstatSync(parentFds[index], { bigint: true });
+      if (
+        !sameIdentity(parentBefore, lexicalPost) || !sameIdentity(parentBefore, fdPost)
+        || lexicalPost.isSymbolicLink() || realpathSync(parentPath) !== parentPath
+      ) {
         fail(`${label} authority parent identity drifted during read`);
       }
     }
     return parseCanonicalJcs(decodeFatalUtf8(bytes, label));
   } finally {
     if (fd !== undefined) closeSync(fd);
+    for (const parentFd of parentFds) closeSync(parentFd);
   }
 }
 
@@ -2130,65 +2151,62 @@ export function parseCanonicalComposeImageInventory(source) {
   if (typeof source !== "string" || source.length === 0) fail("Compose source is required");
   const lines = source.split(/\r?\n/u);
   if (source.includes("\t")) fail("Compose tabs are unsupported for complete service inventory");
-  const topLevelKeys = lines.flatMap((line) => {
-    const match = /^([A-Za-z0-9_.-]+):(?:\s.*)?$/u.exec(line);
-    return match ? [match[1]] : [];
-  });
-  if (new Set(topLevelKeys).size !== topLevelKeys.length) {
-    fail("Compose contains duplicate top-level sections");
+  const topLevelKeys = new Set();
+  let servicesStart = -1;
+  for (const [index, line] of lines.entries()) {
+    if (line.trim() === "" || /^\s*#/u.test(line) || line.startsWith(" ")) continue;
+    const match = /^([A-Za-z0-9_-]+):(?:\s*(.*))?$/u.exec(line);
+    if (!match) fail("Compose top-level line is outside the closed plain-key grammar");
+    const [, key, value = ""] = match;
+    if (key.startsWith("x-")) fail("Compose top-level extensions are unsupported");
+    if (topLevelKeys.has(key)) fail("Compose contains duplicate top-level sections");
+    topLevelKeys.add(key);
+    if (key === "services") {
+      if (value !== "" || servicesStart >= 0) fail("Compose services section is inline or duplicated");
+      servicesStart = index;
+    }
   }
-  const serviceSections = lines.map((line, index) => line === "services:" ? index : -1)
-    .filter((index) => index >= 0);
-  if (serviceSections.length !== 1) fail("Compose services section is missing or duplicated");
-  const servicesStart = serviceSections[0];
-  const servicesEnd = lines.findIndex((line, index) => index > servicesStart && /^[A-Za-z0-9_.-]+:\s*$/u.test(line));
-  const serviceLines = lines.slice(servicesStart + 1, servicesEnd < 0 ? lines.length : servicesEnd);
-  for (const line of serviceLines) {
-    if (/^\s+["'][^"']+["']\s*:/u.test(line)) {
-      fail("Compose services block contains a quoted mapping key outside the closed grammar");
-    }
-    if (/^  \S/u.test(line) && !/^  [A-Za-z0-9_.-]+:\s*$/u.test(line) && !/^  #/u.test(line)) {
-      fail("Compose services block contains an unsupported or quoted service key");
-    }
-    if (/(?:^|\s)(?:<<:|[&*][A-Za-z0-9_.-]+)/u.test(line)) {
-      fail("Compose anchors, aliases, and merges are unsupported for complete image inventory");
-    }
-    if (/^\s+(?:image|platform):\s*[>|]/u.test(line)) {
-      fail("Compose multiline image or platform scalars are unsupported");
+  if (servicesStart < 0) fail("Compose services section is missing");
+  let servicesEnd = lines.length;
+  for (let index = servicesStart + 1; index < lines.length; index += 1) {
+    if (/^[A-Za-z0-9_-]+:/u.test(lines[index])) {
+      servicesEnd = index;
+      break;
     }
   }
   const services = [];
   const serviceNames = new Set();
   let current = null;
-  for (let index = servicesStart + 1; index < lines.length; index += 1) {
+  let currentKeys = null;
+  const allowedServiceKeys = new Set(["image", "platform", "build"]);
+  for (let index = servicesStart + 1; index < servicesEnd; index += 1) {
     const line = lines[index];
-    if (/^[A-Za-z0-9_.-]+:\s*$/u.test(line)) break;
-    if (/^  [A-Za-z0-9_.-]+:\s*\S/u.test(line)) {
-      fail("Compose inline service definitions are forbidden and cannot bypass image inventory");
-    }
-    if (/^\s*(?:<<:|x-[A-Za-z0-9_.-]+:|&|\*)/u.test(line)) {
-      fail("Compose anchors, merges, and extensions are unsupported for complete image inventory");
-    }
-    const serviceMatch = /^  ([A-Za-z0-9_.-]+):\s*$/u.exec(line);
+    if (line.trim() === "" || /^\s*#/u.test(line)) continue;
+    const serviceMatch = /^  ([A-Za-z0-9_-]+):$/u.exec(line);
     if (serviceMatch) {
       if (current) services.push(current);
       if (serviceNames.has(serviceMatch[1])) fail("Compose service key is duplicated");
       serviceNames.add(serviceMatch[1]);
       current = { service: serviceMatch[1], image: null, platform: null, build: false };
+      currentKeys = new Set();
       continue;
     }
-    if (!current) continue;
-    const imageMatch = /^    image:\s*(\S+)\s*$/u.exec(line);
-    const platformMatch = /^    platform:\s*(.+?)\s*$/u.exec(line);
-    if (imageMatch) {
-      if (current.image !== null) fail(`Compose service ${current.service} has duplicate image authority`);
-      current.image = imageMatch[1];
+    if (!current) fail("Compose services block contains content before a service key");
+    const mappingMatch = /^    ([A-Za-z0-9_-]+):(?:\s*(.*))?$/u.exec(line);
+    if (!mappingMatch) fail("Compose service body line is outside the closed plain-key grammar");
+    const [, key, value = ""] = mappingMatch;
+    if (!allowedServiceKeys.has(key)) fail(`Compose service body key is unsupported: ${key}`);
+    if (currentKeys.has(key)) fail(`Compose service ${current.service} has duplicate ${key} authority`);
+    currentKeys.add(key);
+    if (key === "build") {
+      current.build = true;
+      continue;
     }
-    if (platformMatch) {
-      if (current.platform !== null) fail(`Compose service ${current.service} has duplicate platform authority`);
-      current.platform = platformMatch[1];
+    if (value === "" || /^(?:[>|&*!?'"\[{]|!!)/u.test(value)) {
+      fail(`Compose service ${current.service} ${key} value is outside the closed scalar grammar`);
     }
-    if (/^    build:\s*/u.test(line)) current.build = true;
+    if (key === "image") current.image = value;
+    if (key === "platform") current.platform = value;
   }
   if (current) services.push(current);
   if (services.length === 0) fail("Compose service inventory is empty");

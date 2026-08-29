@@ -11,12 +11,13 @@ import {
   realpathSync,
   renameSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createRequire } from "node:module";
 
 import { describe, expect, it, vi } from "vitest";
@@ -435,9 +436,19 @@ describe("release rehearsal candidate input gates", () => {
       `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"build\": .")}`,
       `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"environment\": {}")}`,
       `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    'other': ignored")}`,
+      `${valid.replace(`    image: example/app@sha256:${DIGEST_A}`, `    !!str "image": example/attacker:latest\n    image: example/app@sha256:${DIGEST_A}`)}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    environment: {\"EVIL\":\"x\"}")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"oth\\\"er\": ignored")}`,
+      `${valid.replace("networks:", "\"networks\":")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"\": ignored")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"opposite'quote\": ignored")}`,
+      `${valid.replace("  app:", "  !!str \"app\":")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    other: ignored")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    ? image")}`,
+      `${valid.replace("services:", "x-evil: ignored\nservices:")}`,
     ]) {
       expect(() => parseCanonicalComposeImageInventory(invalid))
-        .toThrow(/image|digest|tag|build|service|complete|section|duplicate|unsupported/iu);
+        .toThrow(/image|digest|tag|build|service|complete|section|duplicate|unsupported|top-level|plain-key|grammar/iu);
     }
   });
 
@@ -852,6 +863,52 @@ describe("release rehearsal candidate orchestration", () => {
         .toThrow(/parent|private|mode|authority/iu);
       expect(lstatSync(parent).mode & 0o777).toBe(mode);
     }
+
+    const aliasRoot = privateRoot("homecook-candidate-authority-alias-");
+    const actual = join(aliasRoot, "actual");
+    const alternate = join(aliasRoot, "alternate");
+    mkdirSync(actual, { mode: 0o700 });
+    mkdirSync(alternate, { mode: 0o700 });
+    writeFileSync(join(actual, "authority.json"), canonicalizeJcs({ schema: "actual" }), { mode: 0o400 });
+    writeFileSync(join(alternate, "authority.json"), canonicalizeJcs({ schema: "alternate" }), { mode: 0o400 });
+    chmodSync(actual, 0o500);
+    chmodSync(alternate, 0o500);
+    symlinkSync("actual", join(aliasRoot, "alias"));
+    expect(() => readSealedAuthorityFile(
+      aliasRoot, join(aliasRoot, "alias", "authority.json"), "intermediate alias authority",
+    )).toThrow(/lexical|symlink|alias|parent|canonical/iu);
+
+    chmodSync(actual, 0o700);
+    mkdirSync(join(actual, "nested"), { mode: 0o700 });
+    writeFileSync(join(actual, "nested", "authority.json"), canonicalizeJcs({ schema: "nested" }), { mode: 0o400 });
+    chmodSync(join(actual, "nested"), 0o500);
+    chmodSync(actual, 0o500);
+    symlinkSync(join("..", "actual", "nested"), join(aliasRoot, "nested-alias"));
+    expect(() => readSealedAuthorityFile(
+      aliasRoot, join(aliasRoot, "nested-alias", "authority.json"), "nested alias authority",
+    )).toThrow(/lexical|symlink|alias|parent|canonical/iu);
+
+    const movedActual = join(aliasRoot, "actual-swapped");
+    expect(() => readSealedAuthorityFile(
+      aliasRoot, join(actual, "authority.json"), "transient alias authority", {
+        afterOpen: () => {
+          renameSync(actual, movedActual);
+          symlinkSync(basename(movedActual), actual);
+          unlinkSync(actual);
+          renameSync(movedActual, actual);
+        },
+      },
+    )).toThrow(/lexical|symlink|alias|parent|drift|race/iu);
+
+    const rootAlias = join(dirname(aliasRoot), `${basename(aliasRoot)}-root-alias`);
+    symlinkSync(aliasRoot, rootAlias);
+    expect(() => readSealedAuthorityFile(
+      rootAlias, join(rootAlias, "actual", "authority.json"), "root alias authority",
+    )).toThrow(/root|canonical|symlink|alias/iu);
+    symlinkSync(join("actual", "authority.json"), join(aliasRoot, "file-alias.json"));
+    expect(() => readSealedAuthorityFile(
+      aliasRoot, join(aliasRoot, "file-alias.json"), "file alias authority",
+    )).toThrow(/file|symlink|alias|nofollow/iu);
   });
 
   it("recomputes stored CI summary and rejects candidate-to-bundle authority divergence", () => {
