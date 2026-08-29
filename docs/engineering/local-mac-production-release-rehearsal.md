@@ -1,6 +1,6 @@
 # Homecook 서버 Mac release rehearsal 계약
 
-상태: **canonical / implementation split 2 in review**
+상태: **canonical / implementation split 3 author complete / independent review pending**
 변경 유형: `docs-governance`
 production mutation: **금지 (`false`)**
 제품 계약 영향: **N/A** — 공식 제품 5종, public API, DB schema 계약을 바꾸지 않는다.
@@ -9,7 +9,7 @@ production mutation: **금지 (`false`)**
 
 active production 승격의 역할·lock·tag immutability·manifest·attestation authority는 계속 [local-mac-production-release-promotion.md](./local-mac-production-release-promotion.md)가 가진다. 이 문서는 그보다 앞선 untagged exact-SHA candidate, isolated rehearsal, receipt, mixed-state read-only classification을 담당한다.
 
-현재 구현 범위는 R0 inventory, mixed-state classify, receipt schema/JCS/offline verify와 R1 candidate build/seal, production surface snapshot foundation까지다. isolated run은 아직 구현되지 않았다. 따라서 이 구현만으로 rehearsal 또는 production promotion이 가능하다고 주장하지 않으며, 모든 split과 독립 검토가 끝날 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
+현재 구현 범위는 R0 inventory, mixed-state classify, receipt schema/JCS/offline verify, R1 candidate build/seal과 production surface snapshot foundation, R2 isolated run / foreground supervisor까지다. R2 결과는 trusted receipt가 아닌 run evidence이며 repeatability receipt, GitHub attestation, production binding과 promote unlock은 구현하지 않았다. 따라서 split 3만으로 production promotion이 가능하다고 주장하지 않으며, 후속 split과 독립 conformance/security review가 끝날 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
 
 ## 목표와 비목표
 
@@ -132,7 +132,7 @@ split 2 구현 상태:
 - tool identity는 Git/GitHub/Node/pnpm/Docker/Supabase/launchctl/lsof/unified-log/sandbox/candidate builder와 Next CLI를 first use 전에 owner/mode/realpath/bytes로 snapshot하고 마지막 use 뒤 재검증한다. runtime과 candidate schema는 executable tool mode(`0500|0555|0700|0755`)와 readable artifact mode(`0400|0444|0500|0555|0600|0644|0700|0755`)를 별도 closed definition으로 공유하며 group/world write와 경계 밖 mode를 양방향 attack table로 거부한다. candidate builder/CLI/config/tool lock은 exact immutable Git root에서만 사용한다. `scripts/config/local-mac-production-rehearsal-toolchain-lock.json`은 darwin-arm64 Node `v22.13.1`, direct pnpm `10.32.1` artifact entrypoint와 1,078-file tree digest `e3fcc81f6fb60f174a5fd7eac980c178f95af456c395bb2b30ec28113f9d71df`, 공식 npm integrity와 Supabase CLI `2.110.0` binary digest, full-local exact service/image set을 canonical JCS로 고정한다. Corepack shim/acquisition은 candidate execution authority가 아니다.
 - repository direct dependency에는 승인된 YAML parser가 없으므로 transitive `js-yaml`을 authority로 사용하지 않는다. Compose와 tool/image lock은 같은 target exact Git tree에서 읽고, semantic parse 전에 full Compose Buffer SHA-256이 lock의 `full_local_compose_sha256`과 일치해야 한다. 이 digest는 candidate와 bundle manifest의 `compose_source_digest`에도 직접 결합한다. byte lock을 함께 바꾸는 것만으로 의미 계약을 약화할 수 없도록 parser는 별도의 hard-coded canonical semantic contract도 요구한다. service는 exact 7개와 각 required restore-label alias, top-level network는 exact `auth-edge|auth-egress|data-internal` 및 `data-internal.internal=true`, volume은 exact `postgres-data|storage-data`와 각 name template/labels alias, restore anchor는 services 앞 exact 1회여야 한다. top-level secret은 exact canonical name set과 각 `${FULL_LOCAL_SECRET_DIR...}/<name>` file source 하나만 허용하고 extra/missing, `/tmp` substitution, source/type drift를 거부한다. 또한 7개 service 각각의 network membership과 secret/tmpfs/volume mount set을 exact hard-coded contract로 비교한다. named data volume의 source/target/mode, 승인된 read-only bind mount와 tmpfs shape에 extra/missing/replacement가 있으면 Compose SHA lock을 함께 바꿔도 실패한다. future intentional change는 이 불변 규칙을 완화하지 않는 범위에서 같은 tree의 Compose·lock·test를 함께 갱신해야 한다. Compose 전체는 canonical production file에 맞춘 strict closed line/token state machine으로 소비한다. line split, trim, blank/comment 판정보다 먼저 raw string 전체를 순회해 U+FEFF, NUL, disallowed control/Unicode whitespace/noncharacter와 tab을 거부하며 normalization으로 숨기지 않는다. top-level은 `name|version|services|networks|secrets|volumes`와 exact `x-restore-attempt-labels`만, service body는 canonical `labels|image|platform|entrypoint|command|depends_on|environment|healthcheck|networks|ports|read_only|restart|security_opt|secrets|tmpfs|volumes` 및 forbidden `build`만 허용한다. 각 nested map/list도 canonical indentation·key·value shape를 끝까지 소비한다. inline sequence는 nonempty string array의 exact `JSON.stringify` bytes만, quoted scalar는 exact JSON string만, plain scalar/list token은 template를 제외한 quote/bracket/brace/tag/alias/anchor/explicit-key syntax가 전혀 없어야 한다. metadata anchor/alias는 complete restore block 이전/이후 순서와 exact labels path에서만, flow map `{}`는 canonical named empty network declaration에서만 허용한다. arbitrary network/volume metadata와 다른 위치의 merge/alias/tag/flow syntax는 거부한다. non-empty value의 `:` 뒤에는 ASCII space가 하나 이상 필요하고 `key:`는 승인된 nested block에서만 허용한다. malformed/mismatched quote·bracket, quoted/tagged/empty/explicit key, interpolation in image authority, multiline scalar, duplicate normalized key/section, colon ambiguity, unknown top-level/service/nested key는 field 인식 전에 fail closed한다. exact Git blob의 canonical compose는 lock의 7개 service/reference/digest/platform과 반드시 일치해야 한다. candidate Docker 호출은 exact version 및 local `image inspect` argv allowlist뿐이고 pull 경로는 없다.
 - app/full-local/worker는 한 번 만든 bytes를 기존 production execution-tree copier/mode normalizer와 existing worker artifact materializer로 같은 bundle에 복사한다. `sealed_bundle_digest`는 file bytes, executable mode, contained symlink target+dereferenced bytes인 physical execution bytes만 뜻한다. final provenance inventory는 uid/gid/nlink/device/inode/size/ctime을 묶고 owner mismatch, hardlink, read 중 identity drift를 거부하되 이 ephemeral metadata는 physical digest에서 제외한다. `bundle_manifest_digest`는 provenance inventory에 build ID, CI projection, source manifest, immutable builder graph, sandbox audit policy, tool lock/toolchain, image/service, final sealed migration, build-env override, production guard를 결합한다. `candidate_identity_digest`는 두 digest를 묶는다.
-- 이 구현은 Docker rehearsal runner, foreground supervisor, synthetic DB/canary, repeatability receipt, production tag/manifest/attestation binding, promote unlock을 포함하지 않는다.
+- split 2 구현은 Docker rehearsal runner, foreground supervisor, synthetic DB/canary, repeatability receipt, production tag/manifest/attestation binding, promote unlock을 포함하지 않는다. R2 runner는 아래 split 3 구현으로만 추가되며 split 2의 sealed candidate bytes를 수정하거나 다시 build하지 않는다.
 
 ### R2. isolated rehearse
 
@@ -150,6 +150,17 @@ pnpm release:rehearsal:run -- --candidate <absolute-sealed-candidate-manifest> -
 - exact ordered global migration ledger와 catalog head를 둘 다 생성하고 서로 일치해야 한다. catalog marker만 있는 상태는 pass가 아니다.
 - app/worker canary는 같은 SHA/tree/build/bundle/migration identity를 보고해야 한다.
 - 테스트 종료 시 supervisor가 자신이 생성한 exact run-owned child/resource만 역순 정리한다.
+
+split 3 구현 상태:
+
+- public command는 `pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --json`이며 별도 `scripts/local-mac-production-rehearsal-run.mjs` entry를 사용한다. 원본 candidate를 split 2 `readCompletedCandidateRoot`로 검증한 뒤 run-owned create-only `execution-candidate`에 복사·seal하고 그 복사본을 다시 완전 검증한다. Docker bind, migration, app/worker/full-local probe는 이 검증된 run copy만 사용하고 원본 candidate를 실행 중 다시 열지 않는다. 실행 뒤에도 같은 run copy를 재검증하며 checkout, rebuild, dependency reinstall, image re-resolution을 하지 않는다.
+- `scripts/lib/local-mac-production-rehearsal-runner.mjs`는 UUID-v4 단일 namespace, high-port/reserved-port gate, production name/path/socket/credential denylist, exact ordered migration ledger/catalog equality, child identity, canary, network deny, production pre/post equality와 역순 cleanup을 fail closed하게 묶는다.
+- `scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs`는 sealed full-local Compose와 candidate manifest의 local digest-pinned image만 실행한다. macOS/Linux Compose portability를 위해 generated override에서 7개 service 각각 `pull_policy: never`, CLI에서 `--no-build`를 강제한다. generated override는 모든 rehearsal Docker resource에 exact run/project ownership label을 추가하고 `auth-edge`, `auth-egress`, `data-internal`을 모두 internal network로 강제한다. canary 전 실제 network `Internal=true`, 두 ownership label, exact name/ID와 모든 container attachment를 readback한다. app과 worker도 run-owned internal Docker network에서 sealed run copy를 read-only mount해 실행하며 launchd/LaunchAgent는 사용하지 않는다.
+- app/worker wrapper와 full-local `postgrest-probe` child는 container 내부에서 같은 split 2 completed-candidate reader를 실행해 SHA/tree/build/bundle/migration head의 closed RFC8785 identity JSON을 직접 보고한다. host는 누락 fallback 없이 세 child report를 exact 비교한 뒤에만 runtime/canary evidence를 만든다.
+- fresh run-owned PostgreSQL에 repository migration을 sealed 순서대로 적용하고 create-only global ledger, catalog head와 schema identity를 계산한다. fixture는 rehearsal 전용 schema의 synthetic row뿐이며 `production_derived_row_count=0`이다. provider/cloud 성공을 mock하지 않는다. network canary는 worker→run-owned `api-gateway` positive control, 별도 healthy run-owned sentinel의 self-health, worker와 연결되지 않은 `internal=true` sentinel network IP deny를 함께 요구한다. 임의 DNS/TLS/remote timeout만으로 external deny pass를 만들지 않는다.
+- cleanup은 create 중간 실패와 signal/failure에서도 ownership label + exact ID/name을 다시 inspect한 resource만 역순 stop/remove한다. unknown/production/label-spoofed resource는 건드리지 않고 실패한다. secret file root는 container 종료 뒤 제거하고 run-owned residue와 secret-bearing persistent file count가 모두 0이어야 pass한다.
+- closed schema는 `scripts/schemas/local-mac-production-rehearsal-run-evidence.schema.json`이다. 결과와 create-only terminal marker는 `trusted_receipt:false`이며 split 1의 run receipt 또는 production authority가 아니다. 실패 시에는 non-secret digest/cleanup/production-equality terminal evidence만 남긴다.
+- 이 작성 task에서는 server run, repeatability, GitHub attestation, production tag/manifest binding, promote activation, mixed-state recovery를 수행하지 않는다. 실제 server rehearsal 전 fresh independent conformance review와 deployment-safety/security review가 필요하다.
 
 ### R3. receipt verify
 
@@ -440,12 +451,16 @@ implementation PR은 test-first RED → GREEN → refactor evidence를 남긴다
 
 ## Open implementation decisions
 
-다음은 구현 PR에서 contract를 완화하지 않는 범위로 확정한다.
+split 3에서 다음을 확정했다.
 
-- run-owned high port allocator와 reserved production port denylist의 exact 값
-- receipt JSON Schema 파일 위치와 canonical JSON implementation
-- foreground supervisor process protocol과 canary command ID
-- local Docker image cache provenance 형식과 supported platform matrix
-- migration global ledger의 canonical query/output schema
+- run port는 OS가 한 번 예약한 `20000..60999` high port를 쓰며 `3000`, `3100`, `5432`, `54321..54324`와 중복 port를 거부한다. collision 뒤 suffix/port 재시도는 하지 않는다.
+- run evidence schema 위치는 `scripts/schemas/local-mac-production-rehearsal-run-evidence.schema.json`, canonical JSON은 기존 RFC8785/JCS 구현이다. evidence는 receipt가 아니다.
+- foreground supervisor timeout은 readiness 120초, shutdown 30초, stdout/stderr 각 1 MiB 상한을 evidence policy에 고정한다. canary ID는 app health, full-local synthetic fixture, worker synthetic health, cross-component identity, external-network deny다.
+- migration ledger는 sealed filename 순서를 sequence로 고정하고 각 migration SHA-256을 함께 저장한다. ordered ledger, final catalog head와 candidate migration head가 모두 exact equality여야 한다.
+
+다음은 후속 actual server rehearsal과 split 4에서 contract를 완화하지 않는 범위로 닫는다.
+
+- server Mac의 local Docker image cache provenance와 supported platform 실측 evidence
+- 두 독립 run의 repeatability receipt, GitHub attestation과 production manifest/tag binding
 
 위 결정을 이유로 production mutation, external network, production data copy, receipt gate 또는 독립 review를 생략할 수 없다.
