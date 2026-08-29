@@ -76,7 +76,7 @@ const CANDIDATE_KEYS = [
 ];
 const TOOLCHAIN_KEYS = [
   "node", "pnpm", "supabase_cli", "git", "gh", "docker_client", "docker_daemon",
-  "launchctl", "lsof", "sandbox_exec", "candidate_builder",
+  "launchctl", "lsof", "audit_log", "sandbox_exec", "candidate_builder",
 ];
 const TOOL_IDENTITY_KEYS = [
   "version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256",
@@ -246,6 +246,7 @@ export function validateCandidateBuilderAuthority({
   digest(verifiedSourceManifestDigest, "candidate builder verified source manifest digest");
   if (sourceManifestDigest !== verifiedSourceManifestDigest) fail("candidate builder source authority drifted");
   const requiredPaths = [
+    "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
     "scripts/local-mac-production-rehearsal.mjs",
     "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
     "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
@@ -1068,7 +1069,11 @@ export function buildBundleAuthorityManifest(input) {
     "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "toolchain", "toolchain_lock_digest",
     "build_tools",
+    "repository", "source_ref",
   ]);
+  if (input.repository !== REPOSITORY || input.source_ref !== SOURCE_REF) {
+    fail("bundle authority repository or source_ref is invalid");
+  }
   validateArtifacts(input.artifacts);
   string(input.build_id, "bundle authority build_id");
   for (const field of [
@@ -1245,15 +1250,45 @@ export function writeCandidateTerminalMarker(root, kind, payload) {
   return markerPath;
 }
 
-function readCanonicalCandidateFile(path, label) {
-  const stat = lstatSync(path);
-  if (stat.isSymbolicLink() || !stat.isFile() || (modeBits(stat.mode) & 0o222) !== 0) {
-    fail(`${label} type or mode is unsafe`);
+/** @param {string} root @param {string} path @param {string} label @param {{afterOpen?:null|(()=>void),maxBytes?:number}} options */
+export function readSealedAuthorityFile(root, path, label, { afterOpen = null, maxBytes = 16 * 1024 * 1024 } = {}) {
+  if (!isAbsolute(root ?? "") || !isAbsolute(path ?? "")) fail(`${label} authority path must be absolute`);
+  const realRoot = realpathSync(root);
+  if (realRoot !== root) fail(`${label} authority root is not canonical`);
+  const rootStat = lstatSync(realRoot, { bigint: true });
+  const currentUid = BigInt(process.getuid?.());
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink() || rootStat.uid !== currentUid || (rootStat.mode & 0o022n) !== 0n) {
+    fail(`${label} authority root owner or mode is unsafe`);
   }
-  return parseCanonicalJcs(decodeFatalUtf8(readFileSync(path), label));
+  const realParent = realpathSync(dirname(path));
+  assertPathContained(realRoot, realParent, `${label} authority parent`);
+  const before = lstatSync(path, { bigint: true });
+  if (
+    !before.isFile() || before.isSymbolicLink() || before.uid !== currentUid || before.nlink !== 1n
+    || (before.mode & 0o222n) !== 0n || before.size > BigInt(maxBytes)
+  ) fail(`${label} authority file owner, mode, hardlink, or size is unsafe`);
+  const sameIdentity = (left, right) => [
+    "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs",
+  ].every((key) => left[key] === right[key]);
+  let fd;
+  try {
+    fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const opened = fstatSync(fd, { bigint: true });
+    if (!sameIdentity(before, opened)) fail(`${label} authority identity drifted before read`);
+    afterOpen?.();
+    const bytes = readFileSync(fd);
+    const fdPost = fstatSync(fd, { bigint: true });
+    const pathPost = lstatSync(path, { bigint: true });
+    if (!sameIdentity(opened, fdPost) || !sameIdentity(opened, pathPost)) {
+      fail(`${label} authority path swap or identity drift occurred during read`);
+    }
+    return parseCanonicalJcs(decodeFatalUtf8(bytes, label));
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
 }
 
-function validateStoredCiProjection(value, manifest) {
+export function validateStoredCiProjection(value, manifest) {
   exactObject(value, "candidate CI evidence", [
     "repository", "check_runs", "commit_statuses", "head_sha", "remote_master_sha", "summary",
   ]);
@@ -1279,6 +1314,28 @@ function validateStoredCiProjection(value, manifest) {
       fail("candidate CI check identity or terminal success state is invalid");
     }
     string(entry.name, "candidate CI check name");
+    string(entry.started_at, "candidate CI check started_at");
+    string(entry.completed_at, "candidate CI check completed_at");
+  }
+  if (new Set(value.check_runs.map((entry) => entry.id)).size !== value.check_runs.length) {
+    fail("candidate CI check run identities are duplicated");
+  }
+  if (new Set(value.commit_statuses.map((entry) => entry.id)).size !== value.commit_statuses.length) {
+    fail("candidate CI status identities are duplicated");
+  }
+  const recomputedSummary = {
+    total: new Set(value.check_runs.map((entry) => entry.name)).size,
+    success: new Set(value.check_runs.map((entry) => entry.name)).size,
+    intended_skip: 0,
+    bad: 0,
+    cancelled: 0,
+    failed: 0,
+    pending: 0,
+    queued: 0,
+    rerun: 0,
+  };
+  if (canonicalizeJcs(recomputedSummary) !== canonicalizeJcs(value.summary)) {
+    fail("candidate CI stored summary differs from recomputed check arrays");
   }
   for (const [index, entry] of value.commit_statuses.entries()) {
     exactObject(entry, `candidate CI commit_statuses[${index}]`, [
@@ -1310,6 +1367,39 @@ function validateStoredCiProjection(value, manifest) {
   ) fail("candidate CI evidence digest binding is invalid");
 }
 
+export function validateCandidateBundleCrossBinding(candidate, bundle) {
+  const pairs = [
+    ["repository", candidate.repository, bundle.repository],
+    ["source_ref", candidate.source_ref, bundle.source_ref],
+    ["release_sha", candidate.release_sha, bundle.release_sha],
+    ["release_tree", candidate.release_tree, bundle.release_tree],
+    ["build_id", candidate.build_id, bundle.build_id],
+    ["toolchain", candidate.toolchain, bundle.toolchain],
+    ["build_tools", candidate.build_tools, bundle.build_tools],
+    ["images", candidate.images, bundle.images],
+    ["migration", candidate.migration, bundle.migration],
+    ["artifacts", candidate.artifacts, bundle.artifacts],
+    ["file_inventory", candidate.file_inventory, bundle.file_inventory],
+    ["sealed_bundle_digest", candidate.sealed_bundle_digest, bundle.sealed_bundle_digest],
+    ["bundle_manifest_digest", candidate.bundle_manifest_digest, bundle.bundle_manifest_digest],
+    ["ci_check_summary_digest", candidate.ci_check_summary_digest, bundle.ci_check_summary_digest],
+    ["ci_snapshot_digest", candidate.ci_snapshot_digest, bundle.ci_snapshot_digest],
+    ["ci_suite_run_set_digest", candidate.ci_suite_run_set_digest, bundle.ci_suite_run_set_digest],
+    ["source_manifest_digest", candidate.source_manifest_digest, bundle.source_manifest_digest],
+    ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
+    ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
+    ["toolchain_lock_digest", candidate.toolchain_lock_digest, bundle.toolchain_lock_digest],
+    ["environment_snapshot", candidate.environment_snapshot, bundle.environment_snapshot],
+    ["production_guard", candidate.production_guard, bundle.production_guard],
+  ];
+  for (const [field, left, right] of pairs) {
+    if (canonicalizeJcs(left) !== canonicalizeJcs(right)) {
+      fail(`candidate and bundle cross-binding differs at ${field}`);
+    }
+  }
+  return bundle;
+}
+
 export function readCompletedCandidateRoot(root) {
   if (!isAbsolute(root ?? "")) fail("completed candidate root must be absolute");
   const rootStat = lstatSync(root);
@@ -1321,7 +1411,7 @@ export function readCompletedCandidateRoot(root) {
   if (!pathExists(completePath) || pathExists(failedPath)) {
     fail("candidate complete terminal marker is missing or conflicts with failed marker");
   }
-  const complete = readCanonicalCandidateFile(completePath, "candidate complete marker");
+  const complete = readSealedAuthorityFile(root, completePath, "candidate complete marker");
   exactObject(complete, "candidate complete marker", [
     "schema", "status", "candidate_identity_digest", "manifest_digest",
   ]);
@@ -1329,17 +1419,32 @@ export function readCompletedCandidateRoot(root) {
     complete.schema !== "homecook.local-mac-production-rehearsal-candidate-complete.v1"
     || complete.status !== "complete"
   ) fail("candidate complete marker schema or status is invalid");
-  const manifest = parseAndValidateCandidateManifest(readFileSync(join(root, "candidate.json")));
+  const manifest = validateCandidateManifestObject(
+    readSealedAuthorityFile(root, join(root, "candidate.json"), "candidate manifest"),
+  );
+  const candidateIdentityAuthority = readSealedAuthorityFile(
+    root,
+    join(root, "bundles", "candidate-identity.json"),
+    "candidate identity authority",
+  );
+  exactObject(candidateIdentityAuthority, "candidate identity authority", [
+    "schema", "candidate_identity_digest",
+  ]);
+  if (candidateIdentityAuthority.schema !== "homecook.local-mac-production-rehearsal-candidate-identity.v1") {
+    fail("candidate identity authority schema is invalid");
+  }
+  digest(candidateIdentityAuthority.candidate_identity_digest, "candidate identity authority digest");
   const evidenceRoot = join(root, "evidence");
   const evidenceNames = readdirSync(evidenceRoot).sort();
   if (canonicalizeJcs(evidenceNames) !== canonicalizeJcs(["ci-evidence.json"])) {
     fail("candidate CI evidence inventory is missing or contains additional evidence");
   }
   validateStoredCiProjection(
-    readCanonicalCandidateFile(join(evidenceRoot, "ci-evidence.json"), "candidate CI evidence"),
+    readSealedAuthorityFile(root, join(evidenceRoot, "ci-evidence.json"), "candidate CI evidence"),
     manifest,
   );
-  const bundleManifest = readCanonicalCandidateFile(
+  const bundleManifest = readSealedAuthorityFile(
+    root,
     join(root, "bundles", "bundle", "bundle-manifest.json"),
     "candidate bundle authority manifest",
   );
@@ -1354,8 +1459,18 @@ export function readCompletedCandidateRoot(root) {
     || contractVersion !== "release-rehearsal-split2-v1"
   ) fail("candidate bundle authority schema or contract version is invalid");
   const rebuiltBundleManifest = buildBundleAuthorityManifest(bundleInput);
+  validateCandidateBundleCrossBinding(manifest, bundleManifest);
   const physicalBundleRoot = join(root, "bundles", "bundle");
+  const physicalManifest = readSealedAuthorityFile(
+    root,
+    join(physicalBundleRoot, "physical-manifest.json"),
+    "candidate physical manifest",
+  );
+  exactObject(physicalManifest, "candidate physical manifest", [
+    "schema", "artifacts", "file_inventory", "bundle_content_digest", "physical_manifest_digest",
+  ]);
   const actualInventory = [];
+  const actualPhysicalInventory = [];
   const actualArtifacts = {};
   for (const component of ["app", "full_local", "worker"]) {
     const entries = inventorySealedComponent(component, join(physicalBundleRoot, component));
@@ -1367,14 +1482,23 @@ export function readCompletedCandidateRoot(root) {
       }
       return physicalEntry;
     });
+    actualPhysicalInventory.push(...physicalEntries);
     actualArtifacts[component] = { root: component, digest: sha256Jcs(physicalEntries) };
   }
   actualInventory.sort((left, right) =>
+    `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
+  actualPhysicalInventory.sort((left, right) =>
     `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
   const actualSealedBundleDigest = sha256Jcs({
     schema: "homecook.local-mac-production-rehearsal-sealed-bundle.v1",
     artifacts: actualArtifacts,
   });
+  const physicalUnsigned = {
+    schema: physicalManifest.schema,
+    artifacts: physicalManifest.artifacts,
+    file_inventory: physicalManifest.file_inventory,
+    bundle_content_digest: physicalManifest.bundle_content_digest,
+  };
   if (
     !DIGEST_PATTERN.test(bundleManifestDigest ?? "")
     || rebuiltBundleManifest.bundle_manifest_digest !== bundleManifestDigest
@@ -1383,6 +1507,11 @@ export function readCompletedCandidateRoot(root) {
     || canonicalizeJcs(actualArtifacts) !== canonicalizeJcs(bundleManifest.artifacts)
     || canonicalizeJcs(actualInventory) !== canonicalizeJcs(bundleManifest.file_inventory)
     || actualSealedBundleDigest !== manifest.sealed_bundle_digest
+    || physicalManifest.schema !== "homecook.local-mac-production-rehearsal-sealed-bundle.v1"
+    || physicalManifest.bundle_content_digest !== actualSealedBundleDigest
+    || physicalManifest.physical_manifest_digest !== sha256Jcs(physicalUnsigned)
+    || canonicalizeJcs(physicalManifest.artifacts) !== canonicalizeJcs(actualArtifacts)
+    || canonicalizeJcs(physicalManifest.file_inventory) !== canonicalizeJcs(actualPhysicalInventory)
   ) fail("candidate bundle authority manifest digest is invalid");
   const candidateIdentityDigest = sha256Jcs({
     schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
@@ -1391,6 +1520,7 @@ export function readCompletedCandidateRoot(root) {
   });
   if (
     candidateIdentityDigest !== manifest.candidate_identity_digest
+    || candidateIdentityAuthority.candidate_identity_digest !== candidateIdentityDigest
     || complete.candidate_identity_digest !== candidateIdentityDigest
     || complete.manifest_digest !== manifest.manifest_digest
   ) fail("candidate complete identity binding is invalid");
@@ -1554,6 +1684,8 @@ export async function buildReleaseRehearsalCandidate({
       requireExecutable: false,
     });
     const bundleAuthorityManifest = buildBundleAuthorityManifest({
+      repository: REPOSITORY,
+      source_ref: SOURCE_REF,
       artifacts: build.artifacts,
       build_id: buildId,
       build_tools: build.build_tools,
@@ -1685,27 +1817,48 @@ function runBounded(command, args, options = {}) {
 }
 
 export function validateSandboxedBuildResult(result, label) {
-  const stderr = String(result?.stderr ?? "");
   if (result?.error || result?.signal || result?.status !== 0) {
     fail(`${label} failed in the measured sandbox`);
   }
-  if (/sandbox:.*deny(?:\(\d+\))?.*(?:network|socket|process|signal|mach|launchctl|docker)/iu.test(stderr)) {
-    fail(`${label} contained an ignored denied network, socket, or process attempt`);
+  if (!Array.isArray(result.observed_denials)) fail(`${label} lacks independent OS denial evidence`);
+  if (result.observed_denials.length !== 0) {
+    fail(`${label} contained an independently observed denied sandbox attempt`);
   }
   return Object.freeze({
     audit_digest: sha256Jcs({
-      label,
-      stderr_digest: sha256Bytes(Buffer.from(stderr, "utf8")),
-      stdout_digest: sha256Bytes(Buffer.from(String(result.stdout ?? ""), "utf8")),
+      schema: "homecook.sandbox-denial-audit.v1",
+      enforcement: "macos-unified-log-deny-all-window",
+      denial_count: 0,
     }),
   });
 }
 
-function runSandboxedBuild(command, args, options = {}) {
-  return validateSandboxedBuildResult(
-    spawnBounded(command, args, options),
-    options.label ?? basename(command),
-  );
+/** @param {any} options */
+export function runObservedSandboxCommand({
+  sandboxPath, logPath, profile, command, args, cwd, env, label,
+  timeout = 30_000, runCommand = spawnSync,
+} = /** @type {any} */ ({})) {
+  const child = spawnBounded(sandboxPath, ["-p", profile, command, ...args], {
+    cwd, env, timeout, runCommand,
+  });
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_500);
+  const audit = spawnBounded(logPath, [
+    "show", "--last", "30s",
+    "--style", "json", "--predicate",
+    'process == "kernel" AND eventMessage CONTAINS "Sandbox:"',
+  ], { cwd, env: { HOME: env.HOME, PATH: "/usr/bin:/bin" }, timeout: 30_000, runCommand });
+  if (audit.error || audit.signal || audit.status !== 0) fail(`${label} OS denial audit query failed closed`);
+  let observedDenials;
+  try {
+    const events = JSON.parse(String(audit.stdout ?? "[]"));
+    if (!Array.isArray(events)) fail(`${label} OS denial audit response is invalid`);
+    observedDenials = events.map((event) => ({
+      event_digest: sha256Bytes(Buffer.from(String(event.eventMessage ?? ""), "utf8")),
+    }));
+  } catch {
+    fail(`${label} OS denial audit response is not valid JSON`);
+  }
+  return validateSandboxedBuildResult({ ...child, observed_denials: observedDenials }, label);
 }
 
 export function validateCandidateDockerReadOnlyArgs(args) {
@@ -1765,6 +1918,75 @@ function snapshotToolFile(path, version, { requireExecutable = true } = {}) {
   };
 }
 
+export function snapshotTrustedPnpmArtifact(root, entrypoint, version) {
+  const realRoot = realpathSync(root);
+  if (realRoot !== root || isAbsolute(entrypoint) || entrypoint.split("/").includes("..")) {
+    fail("pnpm artifact root or entrypoint is unsafe");
+  }
+  const currentUid = BigInt(process.getuid?.());
+  const contentInventory = [];
+  const identityInventory = [];
+  let totalSize = 0n;
+  const visit = (path, relativePath) => {
+    const before = lstatSync(path, { bigint: true });
+    if (before.isSymbolicLink() || ![0n, currentUid].includes(before.uid) || (before.mode & 0o022n) !== 0n) {
+      fail(`pnpm artifact contains an unsafe entry: ${relativePath}`);
+    }
+    if (before.isDirectory()) {
+      for (const name of readdirSync(path).sort()) visit(join(path, name), `${relativePath}${relativePath ? "/" : ""}${name}`);
+      return;
+    }
+    if (!before.isFile() || before.nlink !== 1n) fail(`pnpm artifact entry type or hardlink is unsafe: ${relativePath}`);
+    const bytes = readFileSync(path);
+    const after = lstatSync(path, { bigint: true });
+    for (const key of ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs"]) {
+      if (after[key] !== before[key]) fail(`pnpm artifact identity drifted during snapshot: ${relativePath}`);
+    }
+    totalSize += before.size;
+    contentInventory.push({ path: relativePath, mode: modeBits(before.mode), size: String(before.size), sha256: sha256Bytes(bytes) });
+    identityInventory.push({
+      path: relativePath, device: String(before.dev), inode: String(before.ino), mode: modeBits(before.mode),
+      uid: String(before.uid), gid: String(before.gid), nlink: String(before.nlink), size: String(before.size),
+      ctime: String(before.ctimeNs), mtime: String(before.mtimeNs),
+    });
+  };
+  visit(realRoot, "");
+  const entrypointPath = join(realRoot, entrypoint);
+  const entrypointStat = lstatSync(entrypointPath, { bigint: true });
+  if (!entrypointStat.isFile() || entrypointStat.isSymbolicLink()) fail("pnpm artifact entrypoint is unsafe");
+  return Object.freeze({
+    version: string(version, "pnpm artifact version"),
+    realpath: entrypointPath,
+    device: String(entrypointStat.dev),
+    inode: String(entrypointStat.ino),
+    mode: modeBits(entrypointStat.mode),
+    ctime: sha256Jcs(identityInventory),
+    size: String(totalSize),
+    sha256: sha256Jcs(contentInventory),
+  });
+}
+
+export function validatePinnedPnpmArtifactIdentity(identity, lockEntry) {
+  validateToolIdentity(identity, "pnpm");
+  if (identity.version !== lockEntry.version || identity.sha256 !== lockEntry.artifact_tree_sha256) {
+    fail("pnpm artifact identity does not match the repository-pinned artifact tree digest");
+  }
+  if (!identity.realpath.endsWith(`/${lockEntry.entrypoint}`)) fail("pnpm artifact entrypoint differs from the lock");
+  return identity;
+}
+
+export function resolvePinnedPnpmArtifact(homeDir, lockEntry) {
+  let root;
+  try {
+    root = realpathSync(join(homeDir, ".cache", "node", "corepack", "v1", "pnpm", lockEntry.version));
+  } catch {
+    fail("offline pnpm artifact is missing from the approved local artifact root");
+  }
+  const identity = snapshotTrustedPnpmArtifact(root, lockEntry.entrypoint, lockEntry.version);
+  validatePinnedPnpmArtifactIdentity(identity, lockEntry);
+  return Object.freeze({ root, entrypoint: identity.realpath, identity });
+}
+
 function findExactSupabaseCli(root, version = "2.110.0") {
   const marker = `@supabase+cli-darwin-arm64@${version}`;
   let visited = 0;
@@ -1799,10 +2021,9 @@ function exactToolPaths({ homeDir, toolchainLock }) {
   const nodePath = realpathSync(resolveTrustedNodeExecutable());
   const gitPath = realpathSync(resolveTrustedGitExecutable());
   const ghPath = realpathSync(resolveTrustedGhExecutable());
-  const pnpmCliPath = resolveSafeRealExecutable([
-    "/usr/local/lib/node_modules/corepack/dist/pnpm.js",
-    "/opt/homebrew/lib/node_modules/corepack/dist/pnpm.js",
-  ], "pnpm CLI");
+  const pnpmArtifact = resolvePinnedPnpmArtifact(homeDir, toolchainLock.pnpm);
+  const pnpmArtifactRoot = pnpmArtifact.root;
+  const pnpmCliPath = pnpmArtifact.entrypoint;
   const dockerPath = resolveSafeRealExecutable([
     "/Applications/Docker.app/Contents/Resources/bin/docker",
     "/usr/local/bin/docker",
@@ -1811,12 +2032,13 @@ function exactToolPaths({ homeDir, toolchainLock }) {
   const sandboxPath = resolveSafeRealExecutable(["/usr/bin/sandbox-exec"], "macOS network sandbox");
   const launchctlPath = resolveSafeRealExecutable(["/bin/launchctl"], "launchctl");
   const lsofPath = resolveSafeRealExecutable(["/usr/sbin/lsof"], "lsof");
+  const auditLogPath = resolveSafeRealExecutable(["/usr/bin/log"], "macOS unified log reader");
   const supabasePath = findExactSupabaseCli(
     join(homeDir, "Library", "Caches", "pnpm", "dlx"),
     toolchainLock.supabase_cli.version,
   );
   return {
-    dockerPath, ghPath, gitPath, launchctlPath, lsofPath, nodePath, pnpmCliPath,
+    auditLogPath, dockerPath, ghPath, gitPath, launchctlPath, lsofPath, nodePath, pnpmArtifactRoot, pnpmCliPath,
     sandboxPath, supabasePath,
   };
 }
@@ -1885,9 +2107,33 @@ export function validateStableCiSnapshots(pre, post, releaseSha) {
 export function parseCanonicalComposeImageInventory(source) {
   if (typeof source !== "string" || source.length === 0) fail("Compose source is required");
   const lines = source.split(/\r?\n/u);
-  const servicesStart = lines.findIndex((line) => line === "services:");
-  if (servicesStart < 0) fail("Compose services section is missing");
+  if (source.includes("\t")) fail("Compose tabs are unsupported for complete service inventory");
+  const topLevelKeys = lines.flatMap((line) => {
+    const match = /^([A-Za-z0-9_.-]+):(?:\s.*)?$/u.exec(line);
+    return match ? [match[1]] : [];
+  });
+  if (new Set(topLevelKeys).size !== topLevelKeys.length) {
+    fail("Compose contains duplicate top-level sections");
+  }
+  const serviceSections = lines.map((line, index) => line === "services:" ? index : -1)
+    .filter((index) => index >= 0);
+  if (serviceSections.length !== 1) fail("Compose services section is missing or duplicated");
+  const servicesStart = serviceSections[0];
+  const servicesEnd = lines.findIndex((line, index) => index > servicesStart && /^[A-Za-z0-9_.-]+:\s*$/u.test(line));
+  const serviceLines = lines.slice(servicesStart + 1, servicesEnd < 0 ? lines.length : servicesEnd);
+  for (const line of serviceLines) {
+    if (/^  \S/u.test(line) && !/^  [A-Za-z0-9_.-]+:\s*$/u.test(line) && !/^  #/u.test(line)) {
+      fail("Compose services block contains an unsupported or quoted service key");
+    }
+    if (/(?:^|\s)(?:<<:|[&*][A-Za-z0-9_.-]+)/u.test(line)) {
+      fail("Compose anchors, aliases, and merges are unsupported for complete image inventory");
+    }
+    if (/^\s+(?:image|platform):\s*[>|]/u.test(line)) {
+      fail("Compose multiline image or platform scalars are unsupported");
+    }
+  }
   const services = [];
+  const serviceNames = new Set();
   let current = null;
   for (let index = servicesStart + 1; index < lines.length; index += 1) {
     const line = lines[index];
@@ -1901,6 +2147,8 @@ export function parseCanonicalComposeImageInventory(source) {
     const serviceMatch = /^  ([A-Za-z0-9_.-]+):\s*$/u.exec(line);
     if (serviceMatch) {
       if (current) services.push(current);
+      if (serviceNames.has(serviceMatch[1])) fail("Compose service key is duplicated");
+      serviceNames.add(serviceMatch[1]);
       current = { service: serviceMatch[1], image: null, platform: null, build: false };
       continue;
     }
@@ -1911,7 +2159,10 @@ export function parseCanonicalComposeImageInventory(source) {
       if (current.image !== null) fail(`Compose service ${current.service} has duplicate image authority`);
       current.image = imageMatch[1];
     }
-    if (platformMatch) current.platform = platformMatch[1];
+    if (platformMatch) {
+      if (current.platform !== null) fail(`Compose service ${current.service} has duplicate platform authority`);
+      current.platform = platformMatch[1];
+    }
     if (/^    build:\s*/u.test(line)) current.build = true;
   }
   if (current) services.push(current);
@@ -1967,11 +2218,17 @@ export function loadRehearsalToolchainLock(path) {
     fail("rehearsal toolchain lock schema is invalid");
   }
   if (parsed.platform !== "darwin-arm64") fail("rehearsal toolchain lock platform is invalid");
-  for (const name of ["node", "pnpm"]) {
-    exactObject(parsed[name], `rehearsal toolchain lock ${name}`, ["version", "binary_sha256"]);
-    string(parsed[name].version, `${name} pinned version`);
-    digest(parsed[name].binary_sha256, `${name} pinned binary digest`);
+  exactObject(parsed.node, "rehearsal toolchain lock node", ["version", "binary_sha256"]);
+  string(parsed.node.version, "node pinned version");
+  digest(parsed.node.binary_sha256, "node pinned binary digest");
+  exactObject(parsed.pnpm, "rehearsal toolchain lock pnpm", [
+    "version", "entrypoint", "artifact_tree_sha256",
+  ]);
+  string(parsed.pnpm.version, "pnpm pinned version");
+  if (isAbsolute(parsed.pnpm.entrypoint) || parsed.pnpm.entrypoint.split("/").includes("..")) {
+    fail("pnpm pinned entrypoint is unsafe");
   }
+  digest(parsed.pnpm.artifact_tree_sha256, "pnpm pinned artifact tree digest");
   exactObject(parsed.supabase_cli, "rehearsal toolchain lock supabase_cli", [
     "package", "version", "npm_integrity", "binary_sha256",
   ]);
@@ -2128,7 +2385,9 @@ export function createReleaseRehearsalCandidateAdapters({
     const builderPath = realpathSync(fileURLToPath(import.meta.url));
     const preUse = {
       node: snapshotToolFile(tools.nodePath, "pre-use"),
-      pnpm: snapshotToolFile(tools.pnpmCliPath, "pre-use"),
+      pnpm: snapshotTrustedPnpmArtifact(
+        tools.pnpmArtifactRoot, toolchainLock.pnpm.entrypoint, toolchainLock.pnpm.version,
+      ),
       supabase_cli: snapshotToolFile(tools.supabasePath, "pre-use"),
       git: snapshotToolFile(tools.gitPath, "pre-use"),
       gh: snapshotToolFile(tools.ghPath, "pre-use"),
@@ -2136,6 +2395,7 @@ export function createReleaseRehearsalCandidateAdapters({
       docker_daemon: snapshotToolFile(tools.dockerPath, "pre-use"),
       launchctl: snapshotToolFile(tools.launchctlPath, "pre-use"),
       lsof: snapshotToolFile(tools.lsofPath, "pre-use"),
+      audit_log: snapshotToolFile(tools.auditLogPath, "pre-use"),
       sandbox_exec: snapshotToolFile(tools.sandboxPath, "pre-use"),
       candidate_builder: snapshotToolFile(builderPath, "pre-use", { requireExecutable: false }),
     };
@@ -2154,7 +2414,9 @@ export function createReleaseRehearsalCandidateAdapters({
     try { dockerVersion = JSON.parse(dockerVersionText); } catch { fail("Docker version identity is invalid"); }
     const result = {
       node: snapshotToolFile(tools.nodePath, nodeVersion),
-      pnpm: snapshotToolFile(tools.pnpmCliPath, pnpmVersion),
+      pnpm: snapshotTrustedPnpmArtifact(
+        tools.pnpmArtifactRoot, toolchainLock.pnpm.entrypoint, pnpmVersion,
+      ),
       supabase_cli: snapshotToolFile(tools.supabasePath, supabaseVersion),
       git: snapshotToolFile(tools.gitPath, gitVersion),
       gh: snapshotToolFile(tools.ghPath, runBounded(tools.ghPath, ["--version"], {
@@ -2164,6 +2426,7 @@ export function createReleaseRehearsalCandidateAdapters({
       docker_daemon: snapshotToolFile(tools.dockerPath, `Docker daemon ${dockerVersion.Server?.Version ?? "unknown"}/${dockerVersion.Server?.ID ?? "unknown"}`),
       launchctl: snapshotToolFile(tools.launchctlPath, "macOS launchctl"),
       lsof: snapshotToolFile(tools.lsofPath, "macOS lsof"),
+      audit_log: snapshotToolFile(tools.auditLogPath, "macOS unified log reader"),
       sandbox_exec: snapshotToolFile(tools.sandboxPath, "macOS sandbox-exec"),
       candidate_builder: snapshotToolFile(builderPath, "homecook-release-rehearsal-candidate-v1", { requireExecutable: false }),
     };
@@ -2177,7 +2440,7 @@ export function createReleaseRehearsalCandidateAdapters({
       }
     }
     validatePinnedBuildToolIdentity(result.node, toolchainLock.node, "node");
-    validatePinnedBuildToolIdentity(result.pnpm, toolchainLock.pnpm, "pnpm");
+    validatePinnedPnpmArtifactIdentity(result.pnpm, toolchainLock.pnpm);
     validatePinnedSupabaseCliIdentity(result.supabase_cli, toolchainLock);
     validateCandidateToolchain(result);
     if (initialToolchain && canonicalizeJcs(initialToolchain) !== canonicalizeJcs(result)) {
@@ -2458,9 +2721,14 @@ export function createReleaseRehearsalCandidateAdapters({
           join(normalizedHome, ".docker", "run", "docker.sock"),
         ],
       });
-      const installAudit = runSandboxedBuild(tools.sandboxPath, ["-p", sandboxProfile, tools.nodePath, tools.pnpmCliPath,
+      const installAudit = runObservedSandboxCommand({
+        sandboxPath: tools.sandboxPath,
+        logPath: tools.auditLogPath,
+        profile: sandboxProfile,
+        command: tools.nodePath,
+        args: [tools.pnpmCliPath,
         "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
-        "--store-dir", resolve(packageStorePath)], {
+        "--store-dir", resolve(packageStorePath)],
         cwd: buildRoot,
         env: cleanBuildEnv,
         label: "offline frozen dependency install",
@@ -2475,7 +2743,12 @@ export function createReleaseRehearsalCandidateAdapters({
       const nextCliPre = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
         requireExecutable: false,
       });
-      const nextBuildAudit = runSandboxedBuild(tools.sandboxPath, ["-p", sandboxProfile, tools.nodePath, nextEntrypoint, "build", "--no-lint"], {
+      const nextBuildAudit = runObservedSandboxCommand({
+        sandboxPath: tools.sandboxPath,
+        logPath: tools.auditLogPath,
+        profile: sandboxProfile,
+        command: tools.nodePath,
+        args: [nextEntrypoint, "build", "--no-lint"],
         cwd: buildRoot,
         env: cleanBuildEnv,
         label: "offline Next.js production build",

@@ -18,7 +18,7 @@
     "release:production:status": "node scripts/promote-local-mac-production-release.mjs status",
     "release:production:verify": "node scripts/promote-local-mac-production-release.mjs verify",
     "release:rehearsal:inventory": "node scripts/local-mac-production-rehearsal.mjs inventory",
-    "release:rehearsal:candidate": "node scripts/local-mac-production-rehearsal.mjs candidate",
+    "release:rehearsal:candidate": "node scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
     "release:rehearsal:classify": "node scripts/local-mac-production-rehearsal.mjs classify",
     "release:rehearsal:verify": "node scripts/local-mac-production-rehearsal.mjs verify",
     "release:github:rulesets:plan": "node scripts/manage-production-release-rulesets.mjs plan",

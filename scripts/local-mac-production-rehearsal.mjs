@@ -13,10 +13,6 @@ import {
 } from "./lib/local-mac-production-rehearsal-inventory.mjs";
 import { classifyProductionInventory } from "./lib/local-mac-production-rehearsal-classifier.mjs";
 import { readCanonicalReceiptFile } from "./lib/local-mac-production-rehearsal-receipts.mjs";
-import {
-  buildReleaseRehearsalCandidate,
-  createReleaseRehearsalCandidateAdapters,
-} from "./lib/local-mac-production-rehearsal-candidate.mjs";
 
 const MODULE_REPOSITORY_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
@@ -122,8 +118,9 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     probeIdentity = defaultProbeIdentity,
     repositoryRootResolver = defaultRepositoryRootResolver,
     now = new Date(),
-    buildCandidate = buildReleaseRehearsalCandidate,
-    createCandidateAdapters = createReleaseRehearsalCandidateAdapters,
+    buildCandidate = null,
+    createCandidateAdapters = null,
+    immutableBootstrapVerified = false,
     candidateNamespaceResolver = defaultCandidateNamespaceResolver,
     runIdFactory = () => randomUUID(),
   } = dependencies;
@@ -142,16 +139,24 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     if (!/^[0-9a-f]{40}$/u.test(options.releaseSha ?? "")) {
       throw new Error("candidate --release-sha requires an exact lowercase 40-character SHA.");
     }
+    if (!immutableBootstrapVerified) {
+      throw new Error("candidate execution requires the verified immutable Git bootstrap authority.");
+    }
+    const candidateModule = buildCandidate && createCandidateAdapters
+      ? null
+      : await import("./lib/local-mac-production-rehearsal-candidate.mjs");
+    const candidateBuilder = buildCandidate ?? candidateModule.buildReleaseRehearsalCandidate;
+    const candidateAdapterFactory = createCandidateAdapters ?? candidateModule.createReleaseRehearsalCandidateAdapters;
     const namespaceRoot = candidateNamespaceResolver({
       homeDir: resolve(options.homeDir),
       rootDir,
     });
-    const adapters = createCandidateAdapters({
+    const adapters = candidateAdapterFactory({
       homeDir: resolve(options.homeDir),
       namespaceRoot,
       rootDir,
     });
-    writeResult(output, await buildCandidate({
+    writeResult(output, await candidateBuilder({
       adapters,
       namespaceRoot,
       releaseSha: options.releaseSha,

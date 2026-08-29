@@ -49,6 +49,7 @@ describe("local Mac production rehearsal CLI", () => {
     await runLocalMacProductionRehearsalCli([
       "candidate", "--release-sha", "a".repeat(40), "--json",
     ], {
+      immutableBootstrapVerified: true,
       output: output.stream,
       createCandidateAdapters,
       buildCandidate,
@@ -69,6 +70,16 @@ describe("local Mac production rehearsal CLI", () => {
       candidate_root: "/private/candidate/run-a",
       manifest: { release_sha: "a".repeat(40) },
     });
+  });
+
+  it("refuses direct candidate module evaluation without immutable bootstrap verification", async () => {
+    await expect(runLocalMacProductionRehearsalCli([
+      "candidate", "--release-sha", "a".repeat(40), "--json",
+    ], {
+      buildCandidate: vi.fn(),
+      createCandidateAdapters: vi.fn(),
+      candidateNamespaceResolver: () => "/private/rehearsal",
+    })).rejects.toThrow(/immutable|bootstrap|verified|authority/iu);
   });
 
   it("runs inventory through injected read-only adapters and canonical JSON output", async () => {
@@ -160,7 +171,7 @@ describe("local Mac production rehearsal CLI", () => {
   it("registers the exact package script family without changing the production promote kill switch", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["release:rehearsal:inventory"]).toBe("node scripts/local-mac-production-rehearsal.mjs inventory");
-    expect(packageJson.scripts["release:rehearsal:candidate"]).toBe("node scripts/local-mac-production-rehearsal.mjs candidate");
+    expect(packageJson.scripts["release:rehearsal:candidate"]).toBe("node scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs");
     expect(packageJson.scripts["release:rehearsal:classify"]).toBe("node scripts/local-mac-production-rehearsal.mjs classify");
     expect(packageJson.scripts["release:rehearsal:verify"]).toBe("node scripts/local-mac-production-rehearsal.mjs verify");
     expect(packageJson.scripts["release:production:promote"]).toBe("node scripts/promote-local-mac-production-release.mjs promote");

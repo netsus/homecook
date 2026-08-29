@@ -23,7 +23,7 @@
     "toolchain": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["node", "pnpm", "supabase_cli", "git", "gh", "docker_client", "docker_daemon", "launchctl", "lsof", "sandbox_exec", "candidate_builder"],
+      "required": ["node", "pnpm", "supabase_cli", "git", "gh", "docker_client", "docker_daemon", "launchctl", "lsof", "audit_log", "sandbox_exec", "candidate_builder"],
       "properties": {
         "node": { "$ref": "#/$defs/toolIdentity" },
         "pnpm": { "$ref": "#/$defs/toolIdentity" },
@@ -34,6 +34,7 @@
         "docker_daemon": { "$ref": "#/$defs/toolIdentity" },
         "launchctl": { "$ref": "#/$defs/toolIdentity" },
         "lsof": { "$ref": "#/$defs/toolIdentity" },
+        "audit_log": { "$ref": "#/$defs/toolIdentity" },
         "sandbox_exec": { "$ref": "#/$defs/toolIdentity" },
         "candidate_builder": { "$ref": "#/$defs/toolIdentity" }
       }

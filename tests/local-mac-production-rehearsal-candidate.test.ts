@@ -9,6 +9,7 @@ import {
   readlinkSync,
   readdirSync,
   realpathSync,
+  renameSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -45,8 +46,16 @@ import {
   validateStableCiSnapshots,
   validateSandboxedBuildResult,
   validateCandidateBuilderAuthority,
+  validateCandidateBundleCrossBinding,
+  validateStoredCiProjection,
+  readSealedAuthorityFile,
+  snapshotTrustedPnpmArtifact,
+  validatePinnedPnpmArtifactIdentity,
+  runObservedSandboxCommand,
+  resolvePinnedPnpmArtifact,
 } from "../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
+import { materializeImmutableCandidateBootstrap } from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -88,6 +97,7 @@ function validToolchain() {
     docker_daemon: tool("docker-daemon"),
     launchctl: tool("launchctl"),
     lsof: tool("lsof"),
+    audit_log: tool("audit-log"),
     sandbox_exec: tool("sandbox-exec"),
     candidate_builder: tool("candidate-builder"),
   };
@@ -313,6 +323,48 @@ describe("release rehearsal candidate manifest", () => {
 });
 
 describe("release rehearsal candidate input gates", () => {
+  it("loads candidate modules and locks only from the exact immutable Git object", () => {
+    const repo = privateRoot("homecook-bootstrap-repo-");
+    const gitHome = privateRoot("homecook-bootstrap-git-home-");
+    const runGit = (args: string[]) => {
+      const result = spawnSync("/usr/bin/git", args, {
+        cwd: repo,
+        encoding: "utf8",
+        env: { HOME: gitHome, PATH: "/usr/bin:/bin", NODE_ENV: "test", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" },
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout.trim();
+    };
+    runGit(["init"]);
+    runGit(["config", "user.email", "fixture@example.invalid"]);
+    runGit(["config", "user.name", "Fixture"]);
+    mkdirSync(join(repo, "scripts", "lib"), { recursive: true, mode: 0o700 });
+    mkdirSync(join(repo, "scripts", "config"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(repo, "scripts", "entry.mjs"), "export const authority = 'exact'\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "export const candidate = 'exact'\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "config", "lock.json"), "{}", { mode: 0o600 });
+    runGit(["add", "."]);
+    runGit(["commit", "-m", "fixture"]);
+    const releaseSha = runGit(["rev-parse", "HEAD"]);
+    writeFileSync(join(repo, "scripts", "entry.mjs"), "throw new Error('dirty launcher')\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "throw new Error('dirty candidate')\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "config", "lock.json"), "{\"dirty\":true}", { mode: 0o600 });
+
+    const outputRoot = join(privateRoot("homecook-bootstrap-output-"), "source");
+    const result = materializeImmutableCandidateBootstrap({
+      gitPath: "/usr/bin/git",
+      tarPath: "/usr/bin/tar",
+      repositoryRoot: repo,
+      releaseSha,
+      outputRoot,
+      homeDir: gitHome,
+    });
+    expect(readFileSync(join(outputRoot, "scripts", "entry.mjs"), "utf8")).toContain("authority = 'exact'");
+    expect(readFileSync(join(outputRoot, "scripts", "lib", "candidate.mjs"), "utf8")).toContain("candidate = 'exact'");
+    expect(readFileSync(join(outputRoot, "scripts", "config", "lock.json"), "utf8")).toBe("{}");
+    expect(result.release_sha).toBe(releaseSha);
+  });
+
   it("requires stable pre/post remote-master and full CI run/status identity", () => {
     const projection = {
       repository: "netsus/homecook",
@@ -372,9 +424,14 @@ describe("release rehearsal candidate input gates", () => {
       `${valid.replace("networks:", "  taggy: { image: example/taggy:latest }\nnetworks:")}`,
       `${valid.replace("networks:", "  merged:\n    <<: *defaults\nnetworks:")}`,
       `${valid.replace("networks:", "  templated:\n    image: \${IMAGE_REF}\n    platform: linux/arm64\nnetworks:")}`,
+      `${valid.replace("networks:", `  "hidden":\n    image: example/hidden@sha256:${DIGEST_C}\n    platform: linux/arm64\nnetworks:`)}`,
+      `${valid}\nservices:\n  duplicate:\n    image: example/duplicate@sha256:${DIGEST_C}\n    platform: linux/arm64\n`,
+      `${valid.replace("  db:", "  app:")}`,
+      `${valid.replace("    image:", "\timage:")}`,
+      `${valid.replace(`example/db@sha256:${DIGEST_B}`, `>\n      example/db@sha256:${DIGEST_B}`)}`,
     ]) {
       expect(() => parseCanonicalComposeImageInventory(invalid))
-        .toThrow(/image|digest|tag|build|service|complete/iu);
+        .toThrow(/image|digest|tag|build|service|complete|section|duplicate|unsupported/iu);
     }
   });
 
@@ -399,14 +456,39 @@ describe("release rehearsal candidate input gates", () => {
       status: 0,
       signal: null,
       stdout: "build continued",
-      stderr: "sandbox: node(1) deny(1) network-outbound github.com:443",
+      stderr: "",
+      observed_denials: [{ operation: "network-outbound", process: "node" }],
     }, "fixture build")).toThrow(/sandbox|denied|network|attempt/iu);
     expect(validateSandboxedBuildResult({
       status: 0,
       signal: null,
       stdout: "ok",
       stderr: "",
+      observed_denials: [],
     }, "fixture build")).toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+
+    if (process.platform === "darwin" && existsSync("/usr/bin/sandbox-exec") && existsSync("/usr/bin/log")) {
+      const root = privateRoot("homecook-observed-denial-");
+      const deniedRoot = join(root, "denied");
+      mkdirSync(deniedRoot, { mode: 0o700 });
+      const profile = buildCandidateSandboxProfile({
+        readRoots: [root, process.execPath],
+        writeRoots: [root],
+        deniedPaths: [deniedRoot],
+      });
+      const script = `try { require("fs").writeFileSync(${JSON.stringify(join(deniedRoot, "swallowed"))}, "x") } catch {}\ntry { const socket=require("net").connect({host:"127.0.0.1",port:9}); socket.on("error",()=>{}) } catch {}\nsetTimeout(()=>process.exit(0),100)`;
+      expect(() => runObservedSandboxCommand({
+        sandboxPath: "/usr/bin/sandbox-exec",
+        logPath: "/usr/bin/log",
+        profile,
+        command: process.execPath,
+        args: ["-e", script],
+        cwd: root,
+        env: { HOME: root, PATH: "/usr/bin:/bin" },
+        label: "ignored denial fixture",
+      })).toThrow(/observed|denied|sandbox|attempt/iu);
+      expect(existsSync(join(deniedRoot, "swallowed"))).toBe(false);
+    }
   });
 
   it("loads the canonical tool lock and rejects self-reported Supabase identity without the pinned binary digest", () => {
@@ -422,7 +504,8 @@ describe("release rehearsal candidate input gates", () => {
       },
       pnpm: {
         version: "10.32.1",
-        binary_sha256: "26917eb9362e274f5856f784298f0499a8558e4c1d983b10b2dcd2c110a4c7fd",
+        entrypoint: "bin/pnpm.cjs",
+        artifact_tree_sha256: expect.stringMatching(/^[0-9a-f]{64}$/u),
       },
       supabase_cli: {
         version: "2.110.0",
@@ -437,6 +520,26 @@ describe("release rehearsal candidate input gates", () => {
       version: "2.110.0",
       sha256: lock.supabase_cli.binary_sha256,
     }, lock)).toMatchObject({ version: "2.110.0", sha256: lock.supabase_cli.binary_sha256 });
+
+    const artifactRoot = privateRoot("homecook-pnpm-artifact-");
+    mkdirSync(join(artifactRoot, "bin"), { mode: 0o700 });
+    mkdirSync(join(artifactRoot, "dist"), { mode: 0o700 });
+    writeFileSync(join(artifactRoot, "bin", "pnpm.cjs"), "require('../dist/pnpm.cjs')\n", { mode: 0o500 });
+    writeFileSync(join(artifactRoot, "dist", "pnpm.cjs"), "export {}\n", { mode: 0o400 });
+    const before = snapshotTrustedPnpmArtifact(artifactRoot, "bin/pnpm.cjs", "10.32.1");
+    chmodSync(join(artifactRoot, "dist", "pnpm.cjs"), 0o600);
+    writeFileSync(join(artifactRoot, "dist", "pnpm.cjs"), "export const changed = true\n", { mode: 0o400 });
+    chmodSync(join(artifactRoot, "dist", "pnpm.cjs"), 0o400);
+    const after = snapshotTrustedPnpmArtifact(artifactRoot, "bin/pnpm.cjs", "10.32.1");
+    expect(after.sha256).not.toBe(before.sha256);
+    expect(() => validatePinnedPnpmArtifactIdentity(after, {
+      version: "10.32.1",
+      entrypoint: "bin/pnpm.cjs",
+      artifact_tree_sha256: before.sha256,
+    })).toThrow(/pnpm|artifact|digest|pinned/iu);
+    expect(resolvePinnedPnpmArtifact).toBeTypeOf("function");
+    expect(() => resolvePinnedPnpmArtifact(privateRoot("homecook-empty-pnpm-home-"), lock.pnpm))
+      .toThrow(/pnpm|artifact|missing|offline|approved/iu);
   });
 
   it("materializes exact Git blobs and excludes filters plus untracked executable/migration injection", () => {
@@ -553,6 +656,7 @@ describe("release rehearsal candidate input gates", () => {
 
   it("requires builder, CLI, and tool lock bytes from the exact clean candidate Git authority", () => {
     const entries = [
+      "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
       "scripts/local-mac-production-rehearsal.mjs",
       "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
       "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
@@ -700,6 +804,65 @@ describe("release rehearsal build environment FD snapshot", () => {
 });
 
 describe("release rehearsal candidate orchestration", () => {
+  it("reads every authority file through a stable private O_NOFOLLOW FD", () => {
+    const root = privateRoot("homecook-candidate-authority-read-");
+    const authority = join(root, "candidate.json");
+    writeFileSync(authority, canonicalizeJcs({ schema: "fixture" }), { mode: 0o400 });
+    expect(readSealedAuthorityFile(root, authority, "fixture authority")).toEqual({ schema: "fixture" });
+
+    const alias = join(root, "candidate-alias.json");
+    linkSync(authority, alias);
+    expect(() => readSealedAuthorityFile(root, authority, "fixture authority"))
+      .toThrow(/hard.?link|nlink|identity/iu);
+
+    const racedRoot = privateRoot("homecook-candidate-authority-race-");
+    const raced = join(racedRoot, "candidate.json");
+    const moved = join(racedRoot, "candidate-old.json");
+    writeFileSync(raced, canonicalizeJcs({ schema: "fixture" }), { mode: 0o400 });
+    expect(() => readSealedAuthorityFile(racedRoot, raced, "fixture authority", {
+      afterOpen: () => {
+        renameSync(raced, moved);
+        writeFileSync(raced, canonicalizeJcs({ schema: "attacker" }), { mode: 0o400 });
+      },
+    })).toThrow(/drift|swap|identity|race/iu);
+  });
+
+  it("recomputes stored CI summary and rejects candidate-to-bundle authority divergence", () => {
+    const projection = structuredClone(validCiEvidence().safe_projection);
+    projection.check_runs = [];
+    expect(() => validateStoredCiProjection(projection, {
+      release_sha: SHA_A,
+      ci_snapshot_digest: createHash("sha256").update(canonicalizeJcs(projection)).digest("hex"),
+      ci_check_summary_digest: createHash("sha256").update(canonicalizeJcs(projection.summary)).digest("hex"),
+      ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs([])).digest("hex"),
+    })).toThrow(/summary|count|runs|recompute|CI/iu);
+
+    const candidate = buildCandidateManifest(validManifestInput());
+    expect(() => validateCandidateBundleCrossBinding(candidate, {
+      repository: candidate.repository,
+      source_ref: candidate.source_ref,
+      release_sha: SHA_B,
+      release_tree: candidate.release_tree,
+      build_id: candidate.build_id,
+      toolchain: candidate.toolchain,
+      build_tools: candidate.build_tools,
+      images: candidate.images,
+      migration: candidate.migration,
+      artifacts: candidate.artifacts,
+      file_inventory: candidate.file_inventory,
+      sealed_bundle_digest: candidate.sealed_bundle_digest,
+      bundle_manifest_digest: candidate.bundle_manifest_digest,
+      ci_check_summary_digest: candidate.ci_check_summary_digest,
+      ci_snapshot_digest: candidate.ci_snapshot_digest,
+      ci_suite_run_set_digest: candidate.ci_suite_run_set_digest,
+      source_manifest_digest: candidate.source_manifest_digest,
+      sandbox_policy_digest: candidate.sandbox_policy_digest,
+      toolchain_lock_digest: candidate.toolchain_lock_digest,
+      environment_snapshot: candidate.environment_snapshot,
+      production_guard: candidate.production_guard,
+    })).toThrow(/release_sha|cross.?binding|candidate|bundle/iu);
+  });
+
   it("builds a deny-default sandbox that permits only run-owned writes and rejects production/socket access", () => {
     const root = privateRoot("homecook-candidate-sandbox-");
     const runRoot = join(root, "attempt");
@@ -812,6 +975,8 @@ describe("release rehearsal candidate orchestration", () => {
     writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ciEvidence), { mode: 0o400 });
     chmodSync(evidenceRoot, 0o500);
     const bundleInput = {
+      repository: manifestInput.repository,
+      source_ref: manifestInput.source_ref,
       artifacts: physical.artifacts,
       build_id: manifestInput.build_id,
       build_tools: manifestInput.build_tools,
@@ -860,6 +1025,15 @@ describe("release rehearsal candidate orchestration", () => {
       candidate_identity_digest: candidateIdentityDigest,
       manifest_digest: candidate.manifest_digest,
     });
+    chmodSync(root, 0o500);
+    expect(() => readCompletedCandidateRoot(root)).toThrow(/candidate.?identity|authority|missing/iu);
+    chmodSync(root, 0o700);
+    chmodSync(join(root, "bundles"), 0o700);
+    writeFileSync(join(root, "bundles", "candidate-identity.json"), canonicalizeJcs({
+      schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+      candidate_identity_digest: candidateIdentityDigest,
+    }), { mode: 0o400 });
+    chmodSync(join(root, "bundles"), 0o500);
     chmodSync(root, 0o500);
     expect(readCompletedCandidateRoot(root).manifest).toEqual(candidate);
 
