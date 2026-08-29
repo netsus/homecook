@@ -118,11 +118,13 @@ function stableReadMaterializedFile(sourceRoot, relativePath) {
 function relativeModuleSpecifiers(source) {
   const specifiers = new Set();
   for (const pattern of [
-    /(?:^|\n)\s*(?:import|export)\s+[\s\S]*?\sfrom\s+["'](\.{1,2}\/[^"']+)["']/gu,
-    /\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/gu,
-    /\bimport\s+["'](\.{1,2}\/[^"']+)["']/gu,
+    /(?:^|\n)\s*(?:import|export)\s+[\s\S]*?\sfrom\s+["']([^"']+)["']/gu,
+    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/gu,
+    /(?:^|\n)\s*import\s+["']([^"']+)["']/gu,
   ]) {
-    for (const match of source.matchAll(pattern)) specifiers.add(match[1]);
+    for (const match of source.matchAll(pattern)) {
+      if (match[1].startsWith("./") || match[1].startsWith("../")) specifiers.add(match[1]);
+    }
   }
   return [...specifiers];
 }

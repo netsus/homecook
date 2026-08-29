@@ -348,7 +348,10 @@ describe("release rehearsal candidate input gates", () => {
     runGit(["config", "user.name", "Fixture"]);
     mkdirSync(join(repo, "scripts", "lib"), { recursive: true, mode: 0o700 });
     mkdirSync(join(repo, "scripts", "config"), { recursive: true, mode: 0o700 });
-    writeFileSync(join(repo, "scripts", "entry.mjs"), "export { candidate } from './lib/candidate.mjs'\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "entry.mjs"), `import { readFileSync } from "node:fs"
+const decoy = 'from "./not-a-module"'
+export { candidate } from "./lib/candidate.mjs"
+`, { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import { dependency } from './dependency.mjs'\nexport const candidate = `exact-${dependency}`\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "dependency.mjs"), "export const dependency = 'blob'\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "config", "lock.json"), "{}", { mode: 0o600 });
