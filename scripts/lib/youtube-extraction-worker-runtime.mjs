@@ -775,6 +775,103 @@ export function createYoutubeExtractionWorkerRuntime({
 
 /**
  * @param {{
+ *   allowedSnapshotDigest: string,
+ *   runId: string,
+ *   signal?: AbortSignal,
+ * }} options
+ */
+export async function runSyntheticYoutubeExtractionWorkerJob({
+  allowedSnapshotDigest,
+  runId,
+  signal = new AbortController().signal,
+} = {}) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runId ?? "")) {
+    throw new Error("synthetic rehearsal run_id must be UUID-v4");
+  }
+  if (!(signal instanceof AbortSignal)) throw new Error("synthetic rehearsal signal is required");
+  const rpcSequence = [];
+  const rpc = async (name) => {
+    rpcSequence.push(name);
+    const data = name === "claim_youtube_extraction_job"
+      ? {
+          job_id: "22222222-2222-4222-8222-222222222222",
+          youtube_video_id: "synthetic01",
+          lease_generation: 1,
+          policy_snapshot_digest: allowedSnapshotDigest,
+          result_affecting_options: { rehearsal: true },
+        }
+      : name === "claim_youtube_extractor_permit"
+        ? { claimed: true, permit_generation: 1 }
+        : name === "start_youtube_extraction_attempt"
+          ? { started: true, attempt_count: 1 }
+          : ["heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit"]
+              .includes(name)
+            ? { updated: true }
+            : name === "read_youtube_extraction_worker_catalog"
+              ? { applied: true, ingredients: [], cooking_methods: [] }
+              : name === "report_youtube_extraction_progress"
+                ? { applied: true }
+                : name === "resolve_youtube_extraction_job_draft"
+                  ? { synthetic: true, title: "Synthetic rehearsal recipe" }
+                  : name === "finalize_youtube_extraction_job"
+                    ? { finalized: true }
+                    : name === "release_youtube_extractor_permit"
+                      ? { released: true }
+                      : null;
+    return { data, error: null };
+  };
+  const runtime = createYoutubeExtractionWorkerRuntime({
+    workerId: `rehearsal-${runId}`,
+    allowedSnapshotDigest,
+    rpc,
+    heartbeatIntervalMs: 60_000,
+    extractor: {
+      async extract({ claimedJob, signal: extractionSignal }) {
+        if (extractionSignal.aborted) throw extractionSignal.reason;
+        return {
+          synthetic: true,
+          videoId: claimedJob.videoId,
+          videoTitle: "Synthetic rehearsal recipe",
+          workerDataPersisted: true,
+          persistence: {
+            cache_operations: [],
+            quota_reservations: [],
+            events: [],
+            method_labels: [],
+          },
+        };
+      },
+    },
+  });
+  let status = null;
+  const pollController = new AbortController();
+  const onAbort = () => pollController.abort(signal.reason ?? new Error("rehearsal aborted"));
+  signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    await runYoutubeExtractionWorkerPollLoop({
+      signal: pollController.signal,
+      pollIntervalMs: 1,
+      runOnce: async ({ signal: loopSignal }) => {
+        status = await runtime.runOnce({ signal: loopSignal });
+        pollController.abort(new Error("synthetic job complete"));
+        return status;
+      },
+    });
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
+  if (status !== "succeeded") throw new Error(`synthetic worker job did not succeed: ${String(status)}`);
+  return Object.freeze({
+    schema: "homecook.youtube-extraction-worker-rehearsal-result.v1",
+    status,
+    synthetic: true,
+    provider_requests: 0,
+    rpc_sequence: Object.freeze([...rpcSequence]),
+  });
+}
+
+/**
+ * @param {{
  *   runOnce: (input: {signal: AbortSignal}) => Promise<unknown>,
  *   signal: AbortSignal,
  *   pollIntervalMs?: number,

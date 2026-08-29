@@ -630,8 +630,8 @@ function safeJson(path) {
   }
 }
 
-function commandOutput(commandRunner, command, args, { absentExit = null } = {}) {
-  const result = commandRunner(command, args, {
+async function commandOutput(commandRunner, command, args, { absentExit = null } = {}) {
+  const result = await commandRunner(command, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     env: { PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" },
@@ -778,25 +778,25 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       const uid = process.getuid?.();
       if (!Number.isInteger(uid)) return [];
       const labels = ["com.homecook.production", "com.homecook.full-local-production", "com.homecook.youtube-extraction-worker"];
-      return labels.map((label) => {
-        const raw = commandOutput(commandRunner, launchctlBin, ["print", `gui/${uid}/${label}`]);
+      return Promise.all(labels.map(async (label) => {
+        const raw = await commandOutput(commandRunner, launchctlBin, ["print", `gui/${uid}/${label}`]);
         const state = /^\s*state = (.+)$/mu.exec(raw)?.[1]?.trim() ?? (raw ? "unknown" : "missing");
         const pidText = /^\s*pid = (\d+)$/mu.exec(raw)?.[1];
         const projection = { label, loaded: Boolean(raw), state, pid: pidText ? Number(pidText) : null };
         return { ...projection, projection_digest: sha256Jcs(projection) };
-      });
+      }));
     },
     async readDocker() {
       const { dockerBin, productionDockerProject } = resolveProductionDockerContext();
       if (!dockerBin || !productionDockerProject) return { containers: [], networks: [], volumes: [] };
-      const containers = parseDelimitedLines(commandOutput(commandRunner, dockerBin, [
+      const containersSource = parseDelimitedLines(await commandOutput(commandRunner, dockerBin, [
         "ps", "--no-trunc", "--format", "{{.ID}}\t{{.Names}}\t{{.Label \"com.docker.compose.project\"}}\t{{.Label \"com.docker.compose.service\"}}\t{{.State}}",
       ]), ["id", "name", "project", "service", "state"])
-        .filter((entry) => entry.project === productionDockerProject)
-        .map((entry) => {
-          const inspect = commandOutput(commandRunner, dockerBin, [
+        .filter((entry) => entry.project === productionDockerProject);
+      const containers = await Promise.all(containersSource.map(async (entry) => {
+          const inspect = (await commandOutput(commandRunner, dockerBin, [
             "inspect", "--type", "container", "--format", "{{json .Config.Labels}}\t{{json .Mounts}}\t{{.Image}}", entry.id,
-          ]).trim().split("\t");
+          ])).trim().split("\t");
           if (inspect.length !== 3) throw new Error("read-only Docker container evidence is incomplete");
           const labels = JSON.parse(inspect[0]);
           const mounts = JSON.parse(inspect[1]).map((mount) => ({
@@ -817,29 +817,29 @@ export function createLocalProductionInventoryAdapters(options = {}) {
             mounts_digest: sha256Jcs(mounts),
           };
           return { ...projection, generation_digest: sha256Jcs(projection) };
-        });
-      const networks = parseDelimitedLines(commandOutput(commandRunner, dockerBin, [
+        }));
+      const networksSource = parseDelimitedLines(await commandOutput(commandRunner, dockerBin, [
         "network", "ls", "--no-trunc", "--format", "{{.ID}}\t{{.Name}}\t{{.Label \"com.docker.compose.project\"}}",
       ]), ["id", "name", "project"])
-        .filter((entry) => entry.project === productionDockerProject)
-        .map((entry) => {
-          const labels = JSON.parse(commandOutput(commandRunner, dockerBin, ["network", "inspect", "--format", "{{json .Labels}}", entry.id]).trim());
+        .filter((entry) => entry.project === productionDockerProject);
+      const networks = await Promise.all(networksSource.map(async (entry) => {
+          const labels = JSON.parse((await commandOutput(commandRunner, dockerBin, ["network", "inspect", "--format", "{{json .Labels}}", entry.id])).trim());
           const projection = { ...entry, labels_digest: sha256Jcs(labels) };
           return { ...projection, generation_digest: sha256Jcs(projection) };
-        });
-      const volumes = parseDelimitedLines(commandOutput(commandRunner, dockerBin, [
+        }));
+      const volumesSource = parseDelimitedLines(await commandOutput(commandRunner, dockerBin, [
         "volume", "ls", "--format", "{{.Name}}\t{{.Label \"com.docker.compose.project\"}}\t{{.Label \"com.docker.compose.volume\"}}",
       ]), ["name", "project", "service"])
-        .filter((entry) => entry.project === productionDockerProject)
-        .map((entry) => {
-          const labels = JSON.parse(commandOutput(commandRunner, dockerBin, ["volume", "inspect", "--format", "{{json .Labels}}", entry.name]).trim());
+        .filter((entry) => entry.project === productionDockerProject);
+      const volumes = await Promise.all(volumesSource.map(async (entry) => {
+          const labels = JSON.parse((await commandOutput(commandRunner, dockerBin, ["volume", "inspect", "--format", "{{json .Labels}}", entry.name])).trim());
           const projection = { ...entry, labels_digest: sha256Jcs(labels) };
           return { ...projection, generation_digest: sha256Jcs(projection) };
-        });
+        }));
       return { containers, networks, volumes };
     },
     async readPortListeners() {
-      const raw = commandOutput(commandRunner, lsofBin, ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"], { absentExit: "lsof-no-listener" });
+      const raw = await commandOutput(commandRunner, lsofBin, ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"], { absentExit: "lsof-no-listener" });
       let pid = null;
       let processName = "unknown";
       const listeners = [];
