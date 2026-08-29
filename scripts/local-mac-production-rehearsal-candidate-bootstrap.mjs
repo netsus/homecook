@@ -170,7 +170,9 @@ export function verifyImmutableCandidateModuleGraph({
     if (normalizedPath.endsWith(".mjs")) {
       for (const specifier of relativeModuleSpecifiers(exactBytes.toString("utf8"))) {
         const dependencyPath = posix.normalize(posix.join(posix.dirname(normalizedPath), specifier));
-        if (!dependencyPath.endsWith(".mjs")) reject("immutable module graph local import is not an exact .mjs path");
+        if (!dependencyPath.endsWith(".mjs")) {
+          reject(`immutable module graph local import is not an exact .mjs path: ${specifier}`);
+        }
         pending.push(dependencyPath);
       }
     }
