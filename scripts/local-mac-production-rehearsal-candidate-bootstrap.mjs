@@ -292,7 +292,7 @@ function consumeJsonAttributes(tokens, start, { dynamic }) {
   return start + expected.length;
 }
 
-function collectModuleSpecifiers(source) {
+function collectModuleSpecifiers(source, modulePath) {
   const tokens = lexModuleSource(source);
   const specifiers = [];
   const record = (specifier, { jsonAttributes }) => {
@@ -306,6 +306,9 @@ function collectModuleSpecifiers(source) {
     if (token.type !== "id" || !["import", "export"].includes(token.value)) continue;
     if (token.value === "import" && tokens[cursor + 1]?.value === ".") continue;
     if (token.value === "import" && tokens[cursor + 1]?.value === "(") {
+      if (tokens[cursor + 2]?.type !== "string") {
+        reject(`immutable module graph dynamic import specifier is non-literal in ${modulePath}`);
+      }
       const specifier = decodeModuleSpecifier(tokens[cursor + 2]);
       let next = cursor + 3;
       let jsonAttributes = false;
@@ -334,15 +337,30 @@ function collectModuleSpecifiers(source) {
       continue;
     }
     let from = cursor + 1;
+    if (token.value === "export" && tokens[from]?.value === "{") {
+      let depth = 0;
+      let closing = from;
+      for (; closing < tokens.length; closing += 1) {
+        if (tokens[closing].value === "{") depth += 1;
+        if (tokens[closing].value === "}") depth -= 1;
+        if (depth === 0) break;
+      }
+      if (depth !== 0) reject(`immutable module graph export list is unterminated in ${modulePath}`);
+      if (tokens[closing + 1]?.value !== "from") {
+        cursor = closing;
+        continue;
+      }
+      from = closing + 1;
+    }
     while (from < tokens.length && tokens[from].value !== "from") {
       if (tokens[from].value === ";" || (tokens[from].type === "id" && ["import", "export"].includes(tokens[from].value))) {
-        reject("immutable module graph static import/export syntax is unsupported");
+        reject(`immutable module graph static import/export syntax is unsupported in ${modulePath}`);
       }
       from += 1;
     }
     if (from >= tokens.length) {
       if (token.value === "export") continue;
-      reject("immutable module graph static import is missing from");
+      reject(`immutable module graph static import is missing from in ${modulePath}`);
     }
     const specifier = decodeModuleSpecifier(tokens[from + 1]);
     let next = from + 2;
@@ -369,6 +387,7 @@ export function verifyImmutableCandidateModuleGraph({
   ) reject("immutable module graph inputs are invalid");
   const realRepository = realpathSync(repositoryRoot);
   const realSource = realpathSync(sourceRoot);
+  const leafPaths = new Set(lockPaths);
   const pending = [...entryPaths, ...lockPaths];
   const seen = new Set();
   const entries = [];
@@ -398,14 +417,14 @@ export function verifyImmutableCandidateModuleGraph({
     const sha256 = createHash("sha256").update(exactBytes).digest("hex");
     entries.push({ blob_oid: match[2], git_mode: match[1], path: normalizedPath, sha256 });
     localIdentities.push(materialized.identity);
-    if (normalizedPath.endsWith(".mjs")) {
+    if (normalizedPath.endsWith(".mjs") && !leafPaths.has(normalizedPath)) {
       let source;
       try {
         source = new TextDecoder("utf-8", { fatal: true }).decode(exactBytes);
       } catch {
         reject("immutable module graph JavaScript is not fatal UTF-8");
       }
-      for (const specifier of collectModuleSpecifiers(source)) {
+      for (const specifier of collectModuleSpecifiers(source, normalizedPath)) {
         const dependencyPath = posix.normalize(posix.join(posix.dirname(normalizedPath), specifier));
         if (!/\.(?:mjs|json)$/u.test(dependencyPath)) {
           reject(`immutable module graph local import is not an approved module input path: ${specifier}`);
@@ -472,12 +491,14 @@ export async function runBootstrap(argv) {
     if (!materializedBootstrap.equals(readFileSync(bootstrapPath))) reject("materialized bootstrap bytes drifted");
     const builderGraph = verifyImmutableCandidateModuleGraph({
       entryPaths: [
-        "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
         "scripts/local-mac-production-rehearsal.mjs",
       ],
       gitPath,
       homeDir,
-      lockPaths: ["scripts/config/local-mac-production-rehearsal-toolchain-lock.json"],
+      lockPaths: [
+        "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
+        "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
+      ],
       releaseSha,
       repositoryRoot,
       sourceRoot,
@@ -488,12 +509,14 @@ export async function runBootstrap(argv) {
       if (finalizationComplete) reject("immutable candidate finalization guard ran more than once");
       const builderGraphPost = verifyImmutableCandidateModuleGraph({
         entryPaths: [
-          "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
           "scripts/local-mac-production-rehearsal.mjs",
         ],
         gitPath,
         homeDir,
-        lockPaths: ["scripts/config/local-mac-production-rehearsal-toolchain-lock.json"],
+        lockPaths: [
+          "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
+          "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
+        ],
         releaseSha,
         repositoryRoot,
         sourceRoot,

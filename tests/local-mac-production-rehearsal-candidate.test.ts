@@ -359,7 +359,7 @@ import "./lib/bare.mjs"
 const dynamicConfig = await import("./lib/dynamic.json", { with: { type: "json" } })
 export { candidate } from "./lib/candidate.mjs"
 `, { mode: 0o600 });
-    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import {\n  dependency,\n} from './dependency.mjs'\nimport config from './config.json' with { type: \"json\" }\nexport const candidate = `exact-${dependency}-${config.value}`\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import {\n  dependency,\n} from './dependency.mjs'\nimport config from './config.json' with { type: \"json\" }\nexport { dependency as localDependency };\nexport const candidate = `exact-${dependency}-${config.value}`\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "bare.mjs"), "export const bare = true\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "dependency.mjs"), "export const dependency = 'blob'\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "config.json"), "{\"value\":\"exact\"}\n", { mode: 0o600 });
