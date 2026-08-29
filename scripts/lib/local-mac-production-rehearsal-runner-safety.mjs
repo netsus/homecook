@@ -294,19 +294,20 @@ export function runAbortableCommand({
   });
 }
 
-function readExactRegularFile(path) {
+export function readExactPrivateRegularFile(path, { label, maxBytes, acceptedFileModes, expectedUid = BigInt(process.getuid?.() ?? -1) } = {}) {
+  if (typeof label !== "string" || !Number.isSafeInteger(maxBytes) || maxBytes < 1 || !Array.isArray(acceptedFileModes) || acceptedFileModes.length === 0) fail("private file read policy is required");
   const pre = lstatSync(path, { bigint: true });
   if (pre.isSymbolicLink() || !pre.isFile() || pre.nlink !== 1n) {
-    fail("sealed migration must be a regular non-symlink file with link count one");
+    fail(`${label} must be a regular non-symlink file with link count one`);
   }
-  if (pre.uid !== BigInt(process.getuid?.() ?? -1) || ![0o400, 0o500].includes(modeBits(pre))) {
-    fail("sealed migration owner or mode is invalid");
+  if (pre.uid !== expectedUid || !acceptedFileModes.includes(modeBits(pre))) {
+    fail(`${label} owner or mode is invalid`);
   }
-  if (pre.size > BigInt(MIGRATION_MAX_BYTES)) fail("sealed migration exceeds byte bound");
+  if (pre.size > BigInt(maxBytes)) fail(`${label} exceeds byte bound`);
   const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   try {
     const fdPre = fstatSync(fd, { bigint: true });
-    if (!sameIdentity(bigintIdentity(pre), bigintIdentity(fdPre))) fail("migration FD identity differs before read");
+    if (!sameIdentity(bigintIdentity(pre), bigintIdentity(fdPre))) fail(`${label} FD identity differs before read`);
     const bytes = readFileSync(fd);
     new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const fdPost = fstatSync(fd, { bigint: true });
@@ -314,11 +315,15 @@ function readExactRegularFile(path) {
     if (
       !sameIdentity(bigintIdentity(fdPre), bigintIdentity(fdPost))
       || !sameIdentity(bigintIdentity(pre), bigintIdentity(pathPost))
-    ) fail("migration FD/path identity drifted during read");
+    ) fail(`${label} FD/path identity drifted during read`);
     return Object.freeze({ bytes, identity: bigintIdentity(fdPost) });
   } finally {
     closeSync(fd);
   }
+}
+
+function readExactRegularFile(path) {
+  return readExactPrivateRegularFile(path, { label: "sealed migration", maxBytes: MIGRATION_MAX_BYTES, acceptedFileModes: [0o400, 0o500] });
 }
 
 export function readVerifiedMigrationInputs({ candidateRoot, migration }) {
