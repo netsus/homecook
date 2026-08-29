@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,6 +11,12 @@ describe("R2 adapter trusted dependency seam", () => {
   it("constructs a default trusted observer from injected authorities", () => {
     const adapters = createLocalReleaseRehearsalRunnerAdapters(options());
     expect(adapters.independentObserver).toMatchObject({ begin: expect.any(Function), registerChild: expect.any(Function), end: expect.any(Function) });
+  });
+  it("keeps trusted macOS observer construction on the production default path", () => {
+    const source = readFileSync("scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs", "utf8");
+    expect(source).toContain("createTrustedMacOsIndependentObserver");
+    expect(source).toContain("independentObserver,");
+    expect(source).not.toContain("independentObserver: null");
   });
   it("rejects null and non-macOS trusted observer construction", () => {
     expect(() => createLocalReleaseRehearsalRunnerAdapters(options({ dockerEndpointResolver: null }))).toThrow(/dependencies/iu);
