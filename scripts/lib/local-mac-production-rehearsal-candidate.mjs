@@ -1257,15 +1257,32 @@ export function readSealedAuthorityFile(root, path, label, { afterOpen = null, m
   if (realRoot !== root) fail(`${label} authority root is not canonical`);
   const rootStat = lstatSync(realRoot, { bigint: true });
   const currentUid = BigInt(process.getuid?.());
-  if (!rootStat.isDirectory() || rootStat.isSymbolicLink() || rootStat.uid !== currentUid || (rootStat.mode & 0o022n) !== 0n) {
+  const privateDirectoryModes = new Set([0o500, 0o700]);
+  if (
+    !rootStat.isDirectory() || rootStat.isSymbolicLink() || rootStat.uid !== currentUid
+    || !privateDirectoryModes.has(modeBits(rootStat.mode))
+  ) {
     fail(`${label} authority root owner or mode is unsafe`);
   }
   const realParent = realpathSync(dirname(path));
   assertPathContained(realRoot, realParent, `${label} authority parent`);
+  const parentSnapshots = [[realRoot, rootStat]];
+  let currentParent = realRoot;
+  const parentRelative = relative(realRoot, realParent);
+  for (const segment of parentRelative === "" ? [] : parentRelative.split("/")) {
+    currentParent = join(currentParent, segment);
+    if (realpathSync(currentParent) !== currentParent) fail(`${label} authority parent is not canonical`);
+    const parentStat = lstatSync(currentParent, { bigint: true });
+    if (
+      !parentStat.isDirectory() || parentStat.isSymbolicLink() || parentStat.uid !== currentUid
+      || !privateDirectoryModes.has(modeBits(parentStat.mode))
+    ) fail(`${label} authority parent owner or private mode is unsafe`);
+    parentSnapshots.push([currentParent, parentStat]);
+  }
   const before = lstatSync(path, { bigint: true });
   if (
     !before.isFile() || before.isSymbolicLink() || before.uid !== currentUid || before.nlink !== 1n
-    || (before.mode & 0o222n) !== 0n || before.size > BigInt(maxBytes)
+    || modeBits(before.mode) !== 0o400 || before.size > BigInt(maxBytes)
   ) fail(`${label} authority file owner, mode, hardlink, or size is unsafe`);
   const sameIdentity = (left, right) => [
     "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs",
@@ -1281,6 +1298,11 @@ export function readSealedAuthorityFile(root, path, label, { afterOpen = null, m
     const pathPost = lstatSync(path, { bigint: true });
     if (!sameIdentity(opened, fdPost) || !sameIdentity(opened, pathPost)) {
       fail(`${label} authority path swap or identity drift occurred during read`);
+    }
+    for (const [parentPath, parentBefore] of parentSnapshots) {
+      if (!sameIdentity(parentBefore, lstatSync(parentPath, { bigint: true }))) {
+        fail(`${label} authority parent identity drifted during read`);
+      }
     }
     return parseCanonicalJcs(decodeFatalUtf8(bytes, label));
   } finally {
@@ -2122,6 +2144,9 @@ export function parseCanonicalComposeImageInventory(source) {
   const servicesEnd = lines.findIndex((line, index) => index > servicesStart && /^[A-Za-z0-9_.-]+:\s*$/u.test(line));
   const serviceLines = lines.slice(servicesStart + 1, servicesEnd < 0 ? lines.length : servicesEnd);
   for (const line of serviceLines) {
+    if (/^\s+["'][^"']+["']\s*:/u.test(line)) {
+      fail("Compose services block contains a quoted mapping key outside the closed grammar");
+    }
     if (/^  \S/u.test(line) && !/^  [A-Za-z0-9_.-]+:\s*$/u.test(line) && !/^  #/u.test(line)) {
       fail("Compose services block contains an unsupported or quoted service key");
     }

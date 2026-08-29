@@ -429,6 +429,12 @@ describe("release rehearsal candidate input gates", () => {
       `${valid.replace("  db:", "  app:")}`,
       `${valid.replace("    image:", "\timage:")}`,
       `${valid.replace(`example/db@sha256:${DIGEST_B}`, `>\n      example/db@sha256:${DIGEST_B}`)}`,
+      `${valid.replace(`    image: example/app@sha256:${DIGEST_A}`, `    image: example/app@sha256:${DIGEST_A}\n    "image": example/attacker:latest`)}`,
+      `${valid.replace(`    image: example/app@sha256:${DIGEST_A}`, `    'image': example/attacker:latest\n    image: example/app@sha256:${DIGEST_A}`)}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"platform\": linux/amd64")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"build\": .")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    \"environment\": {}")}`,
+      `${valid.replace("    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}", "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?required}\n    'other': ignored")}`,
     ]) {
       expect(() => parseCanonicalComposeImageInventory(invalid))
         .toThrow(/image|digest|tag|build|service|complete|section|duplicate|unsupported/iu);
@@ -825,6 +831,27 @@ describe("release rehearsal candidate orchestration", () => {
         writeFileSync(raced, canonicalizeJcs({ schema: "attacker" }), { mode: 0o400 });
       },
     })).toThrow(/drift|swap|identity|race/iu);
+
+    for (const mode of [0o444, 0o440, 0o040]) {
+      const modeRoot = privateRoot(`homecook-candidate-authority-mode-${mode.toString(8)}-`);
+      const modeFile = join(modeRoot, "candidate.json");
+      writeFileSync(modeFile, canonicalizeJcs({ schema: "fixture" }), { mode });
+      expect(() => readSealedAuthorityFile(modeRoot, modeFile, "fixture authority"))
+        .toThrow(/private|mode|0400|authority/iu);
+      expect(lstatSync(modeFile).mode & 0o777).toBe(mode);
+    }
+
+    for (const mode of [0o555, 0o755]) {
+      const parentRoot = privateRoot(`homecook-candidate-authority-parent-${mode.toString(8)}-`);
+      const parent = join(parentRoot, "evidence");
+      mkdirSync(parent, { mode: 0o700 });
+      const parentFile = join(parent, "ci-evidence.json");
+      writeFileSync(parentFile, canonicalizeJcs({ schema: "fixture" }), { mode: 0o400 });
+      chmodSync(parent, mode);
+      expect(() => readSealedAuthorityFile(parentRoot, parentFile, "fixture authority"))
+        .toThrow(/parent|private|mode|authority/iu);
+      expect(lstatSync(parent).mode & 0o777).toBe(mode);
+    }
   });
 
   it("recomputes stored CI summary and rejects candidate-to-bundle authority divergence", () => {
