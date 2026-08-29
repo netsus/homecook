@@ -46,6 +46,7 @@ import {
   createImmutableCreationLedger,
   resolveTrustedLocalDockerEndpoint,
   runAbortableCommand,
+  readExactPrivateRegularFile,
   validateDockerDaemonSnapshots,
 } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
@@ -658,7 +659,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
     allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest,
     ttlSeconds: 60 * 60,
   });
-  writeFileSync(tokenFile, issued.token, { flag: "wx", mode: 0o600 });
+  writeFileSync(tokenFile, issued.token, { flag: "wx", mode: 0o400 });
   const hostCredential = buildYoutubeExtractionWorkerCredentialState({
     tokenFile,
     generation: 1,
@@ -703,15 +704,39 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
     credential: join(workerSecretRoot, "credential.json"),
     policy: join(workerSecretRoot, "policy.json"),
     queue: join(workerSecretRoot, "queue.json"),
+    rehearsalRpc: join(workerSecretRoot, "rehearsal-rpc-config.json"),
   };
   writeFileSync(paths.config, "HOMECOOK_REHEARSAL_SYNTHETIC=true\n", { flag: "wx", mode: 0o600 });
   for (const [path, value] of [[paths.app, appDescriptor], [paths.credential, credential], [paths.policy, policy], [paths.queue, queue]]) {
     writeFileSync(path, `${JSON.stringify(value)}\n`, { flag: "wx", mode: 0o600 });
   }
+  const rehearsalRpc = {
+    schema: "homecook.rehearsal-worker-rpc-config.v1",
+    base_url: `http://postgrest:3000`, token_file: "worker.jwt", fixture_identity: state.runId,
+    creation_nonce: state.creationNonce, policy_snapshot_digest: policyDigest,
+    schema_identity: artifact.schema_identity, allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest,
+    lifecycle_version: "youtube-extraction-rpc-v1",
+  };
+  writeFileSync(paths.rehearsalRpc, `${JSON.stringify(rehearsalRpc)}\n`, { flag: "wx", mode: 0o400 });
+  const verifiedRpc = readExactPrivateRegularFile(paths.rehearsalRpc, { label: "worker rehearsal RPC config", maxBytes: 65_536, acceptedFileModes: [0o400] });
+  const rehearsalRpcIdentity = Object.freeze({
+    path: "rehearsal-rpc-config.json",
+    sha256: sha256Bytes(readFileSync(paths.rehearsalRpc)),
+    token_reference: "worker.jwt",
+  });
+  const rehearsalRpcExpectedAuthority = Object.freeze({
+    config_digest: sha256Bytes(verifiedRpc.bytes),
+    config_file_identity_digest: sha256Jcs(verifiedRpc.identity),
+    token_reference_digest: sha256Jcs(rehearsalRpc.token_file),
+    lifecycle_version_digest: sha256Jcs(rehearsalRpc.lifecycle_version),
+    fixture_identity_digest: sha256Jcs(rehearsalRpc.fixture_identity),
+  });
   return {
     artifact,
     workerRoot,
     workerSecretRoot,
+    rehearsalRpcIdentity,
+    rehearsalRpcExpectedAuthority,
     containerArgs: [
       "--secret-root", "/run/worker-secrets",
       "--config", "/run/worker-secrets/worker.env",
@@ -721,6 +746,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
       "--policy", "/run/worker-secrets/policy.json",
       "--queue-state", "/run/worker-secrets/queue.json",
       "--expected-schema", "/sealed-worker/scripts/manifests/youtube-extraction-expected-schema.json",
+      "--rehearsal-rpc-config", "/run/worker-secrets/rehearsal-rpc-config.json",
     ],
   };
 }
@@ -775,7 +801,7 @@ function validateReportedIdentity(value, manifest, label) {
   return value;
 }
 
-function runtimeIdentity(component, containerIds, reportedIdentity) {
+function runtimeIdentity(component, containerIds, reportedIdentity, workerRpcIdentity = null) {
   return {
     component,
     kind: "container",
@@ -789,6 +815,7 @@ function runtimeIdentity(component, containerIds, reportedIdentity) {
     migration_head: reportedIdentity.migration_head,
     ready: true,
     exit_code: null,
+    ...(component === "worker" ? { worker_rehearsal_rpc_config_digest: workerRpcIdentity?.sha256, worker_rehearsal_rpc_config_identity_digest: sha256Jcs(workerRpcIdentity) } : {}),
   };
 }
 
@@ -1319,7 +1346,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       return [
         runtimeIdentity("app", [appId], appReported),
         runtimeIdentity("full_local", fullLocalIds, fullLocalReported),
-        runtimeIdentity("worker", [workerId], workerReported),
+        runtimeIdentity("worker", [workerId], workerReported, state.worker.rehearsalRpcIdentity),
       ];
     },
 
@@ -1648,6 +1675,14 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         if (canonicalizeJcs(current) !== canonicalizeJcs(subject)) fail("observer container subject restarted or identity drifted");
       }
       return Object.freeze(subjects.map((subject) => ({ ...subject })));
+    },
+    async readWorkerRehearsalRpcAuthority() {
+      if (!state.worker?.rehearsalRpcExpectedAuthority) fail("worker rehearsal RPC authority is unavailable");
+      const configPath = join(state.worker.workerSecretRoot, "rehearsal-rpc-config.json");
+      const read = readExactPrivateRegularFile(configPath, { label: "worker rehearsal RPC config", maxBytes: 65_536, acceptedFileModes: [0o400] });
+      const expected = state.worker.rehearsalRpcExpectedAuthority;
+      if (sha256Bytes(read.bytes) !== expected.config_digest || sha256Jcs(read.identity) !== expected.config_file_identity_digest) fail("worker rehearsal RPC config authority drifted");
+      return expected;
     },
     async removeResource(entry) {
       if (!state.creationLedger.contains(entry)) fail("cleanup target is absent from immutable creation ledger");

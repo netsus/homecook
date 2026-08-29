@@ -194,6 +194,7 @@ function evidenceFixture() {
       cleanup_errors: [],
       secret_bearing_persistent_file_count: 0,
     },
+    worker_rehearsal_rpc_authority: { config_digest: "c".repeat(64), config_file_identity_digest: "d".repeat(64), token_reference_digest: "e".repeat(64), lifecycle_version: "v1", fixture_identity_digest: "f".repeat(64) },
     production_guard: {
       surface_allowlist_version: "homecook-production-surface-v1",
       production_snapshot_pre_digest: "9".repeat(64),
@@ -225,6 +226,7 @@ function runtime(component: "app" | "full_local" | "worker") {
     migration_head: "20260102000000_two",
     ready: true,
     exit_code: null,
+    ...(component === "worker" ? { worker_rehearsal_rpc_config_digest: "c".repeat(64), worker_rehearsal_rpc_config_identity_digest: "d".repeat(64) } : {}),
   };
 }
 
@@ -285,6 +287,7 @@ function createAdapters() {
       docker_daemon_identity_digest: "e".repeat(64),
     }),
     independentObserver: { begin: vi.fn().mockResolvedValue(undefined), registerChild: vi.fn().mockResolvedValue(undefined), end: vi.fn().mockResolvedValue(independentObserver()) },
+    readWorkerRehearsalRpcAuthority: vi.fn().mockResolvedValue({ config_digest: "c".repeat(64), config_file_identity_digest: "d".repeat(64), token_reference_digest: "e".repeat(64), lifecycle_version: "v1", fixture_identity_digest: "f".repeat(64) }),
     reinspectObserverSubjects: vi.fn().mockResolvedValue(independentObserver().registered_subjects),
     stopRuntime: vi.fn().mockResolvedValue(undefined),
     removeResource: vi.fn().mockResolvedValue(undefined),
@@ -656,6 +659,8 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
     ["runtime kind", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.kind = "process"; }],
     ["runtime release binding", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.release_sha = SHA_B; }],
     ["runtime bundle binding", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.sealed_bundle_digest = DIGEST_B; }],
+    ["worker RPC digest missing", (value: ReturnType<typeof evidenceFixture>) => { delete (value.runtime.worker as Record<string, unknown>).worker_rehearsal_rpc_config_digest; }],
+    ["worker RPC identity mismatch", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.worker_rehearsal_rpc_config_identity_digest = "0".repeat(64); }],
     ["canary set", (value: ReturnType<typeof evidenceFixture>) => { value.canaries = value.canaries.slice(1); }],
     ["failed canary", (value: ReturnType<typeof evidenceFixture>) => { value.canaries[0].exit_code = 9; }],
     ["invalid canary digest", (value: ReturnType<typeof evidenceFixture>) => { value.canaries[0].normalized_result_digest = "not-a-digest"; }],
@@ -852,7 +857,7 @@ describe("release rehearsal R2 public command and schema", () => {
     ]);
     expect(schema.properties.runtime.properties.app.allOf[1].properties.component.const).toBe("app");
     expect(schema.properties.runtime.properties.full_local.allOf[1].properties.component.const).toBe("full_local");
-    expect(schema.properties.runtime.properties.worker.allOf[1].properties.component.const).toBe("worker");
+    expect(schema.properties.runtime.properties.worker.$ref).toBe("#/$defs/workerRuntime");
     expect(schema.properties.production_guard.required).toEqual(expect.arrayContaining([
       "measurement",
       "measurement_digest",

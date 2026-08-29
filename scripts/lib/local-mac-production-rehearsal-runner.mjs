@@ -86,6 +86,7 @@ const TOP_LEVEL_EVIDENCE_KEYS = [
   "canaries",
   "network",
   "cleanup",
+  "worker_rehearsal_rpc_authority",
   "production_guard",
   "threat_controls",
   "evidence_digest",
@@ -637,7 +638,7 @@ function buildProductionGuard(pre, post, measurement, observer) {
   });
 }
 
-function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRootIdentity, executionRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard }) {
+function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRootIdentity, executionRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard, workerRehearsalRpcAuthority }) {
   const unsigned = {
     schema: RUN_EVIDENCE_SCHEMA,
     canonicalization: CANONICALIZATION,
@@ -692,6 +693,7 @@ function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRo
     canaries,
     network,
     cleanup,
+    worker_rehearsal_rpc_authority: workerRehearsalRpcAuthority,
     production_guard: productionGuard,
     threat_controls: {
       symlink_toctou: "pass",
@@ -723,11 +725,14 @@ export function validateRunEvidence(value) {
   exactKeys(value.fixtures, [
     "fixture_set_id", "fixture_set_digest", "production_derived_row_count",
   ], "run evidence fixtures");
+  exactKeys(value.worker_rehearsal_rpc_authority, ["config_digest", "config_file_identity_digest", "token_reference_digest", "lifecycle_version", "fixture_identity_digest"], "worker rehearsal RPC authority");
+  for (const field of ["config_digest", "config_file_identity_digest", "token_reference_digest", "fixture_identity_digest"]) requireDigest(value.worker_rehearsal_rpc_authority[field], field);
   exactKeys(value.runtime, ["app", "full_local", "worker", "foreground_supervisor"], "run evidence runtime");
   for (const component of ["app", "full_local", "worker"]) {
     exactKeys(value.runtime[component], [
       "component", "kind", "pid", "process_group_id", "container_ids", "release_sha",
       "release_tree", "build_id", "sealed_bundle_digest", "migration_head", "ready", "exit_code",
+      ...(component === "worker" ? ["worker_rehearsal_rpc_config_digest", "worker_rehearsal_rpc_config_identity_digest"] : []),
     ], `run evidence runtime.${component}`);
   }
   exactKeys(value.runtime.foreground_supervisor, [
@@ -796,7 +801,9 @@ export function validateRunEvidence(value) {
       || component.migration_head !== value.migration.migration_head
       || component.ready !== true
       || component.exit_code !== null
+      || (component.component === "worker" && (!DIGEST.test(component.worker_rehearsal_rpc_config_digest ?? "") || !DIGEST.test(component.worker_rehearsal_rpc_config_identity_digest ?? "")))
     ) fail("run evidence component identity is not bound to the run evidence authority");
+    if (component.component === "worker" && (component.worker_rehearsal_rpc_config_digest !== value.worker_rehearsal_rpc_authority.config_digest || component.worker_rehearsal_rpc_config_identity_digest !== value.worker_rehearsal_rpc_authority.config_file_identity_digest)) fail("worker runtime RPC identity differs from materialized authority");
     componentContainerIds.push(...component.container_ids);
   }
   if (new Set(componentContainerIds).size !== componentContainerIds.length) {
@@ -914,6 +921,7 @@ export async function runIsolatedReleaseRehearsal({
   let cleanupResult = null;
   let firstError = null;
   let productionMeasurement = null;
+  let workerRehearsalRpcAuthority = null;
   let independentObserver = null;
   let stableRunRootIdentity = null;
   let stableExecutionRootIdentity = null;
@@ -1032,6 +1040,8 @@ export async function runIsolatedReleaseRehearsal({
     if (readiness?.ready !== true) fail("foreground supervisor readiness failed");
     verifyStableExecution();
     const canaries = validateCanaries(await adapters.runCanaries({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, migration, fixtures, signal }));
+    if (typeof adapters.readWorkerRehearsalRpcAuthority !== "function") fail("worker rehearsal RPC authority reader is required");
+    workerRehearsalRpcAuthority = await adapters.readWorkerRehearsalRpcAuthority();
     const network = await adapters.readNetworkEvidence({ runId, namespace, runRoot: reservation.runRoot, signal });
     if (network?.unexpected_successful_egress_count !== 0) fail("external network unexpectedly succeeded");
     requireDigest(network?.default_deny_policy_digest, "network default deny policy digest");
@@ -1070,6 +1080,7 @@ export async function runIsolatedReleaseRehearsal({
       network,
       cleanup: cleanupEvidence,
       productionGuard,
+      workerRehearsalRpcAuthority,
     });
     validateRunEvidence(evidence);
     writeCanonicalCreateOnly(join(reservation.runRoot, "run-evidence.json"), evidence);
