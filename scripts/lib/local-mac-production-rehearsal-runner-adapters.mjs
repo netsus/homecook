@@ -313,13 +313,6 @@ function closePortReservations(state) {
   state.portReservations = [];
 }
 
-function closePortReservation(state, index) {
-  const server = state.portReservations?.[index];
-  if (!server) return;
-  try { server.close(); } catch { /* Already closed. */ }
-  state.portReservations[index] = null;
-}
-
 function resourceNameCollision(names, candidateNames) {
   const candidates = new Set(candidateNames);
   return names.filter((name) => candidates.has(name));
@@ -951,62 +944,28 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         readSecret: (name) => state.secrets[name],
         targetDirectory: env.FULL_LOCAL_SECRET_DIR,
       });
-      const composePrefix = [
-        "compose", "--project-name", namespace.project,
-        "--env-file", envPath,
-        "--file", sealedCompose,
-        "--file", overridePath,
+      // Compose is configuration authority only.  Primitive resources return IDs directly.
+      const primitiveLabels = [
+        "--label", `${RUN_OWNERSHIP_LABEL}=${state.runId}`,
+        "--label", `${RUN_PROJECT_LABEL}=${namespace.project}`,
+        "--label", `${RUN_CREATION_NONCE_LABEL}=${state.creationNonce}`,
       ];
-      const composeExpectedNames = [
-        ...namespace.container_names.slice(0, SERVICES.length),
-        ...namespace.network_names.slice(0, 3),
-        ...namespace.volume_names,
-      ];
-      const createPostgres = [...composePrefix, "create", "--no-build", "postgres"];
-      try {
-        await dockerCommand(state, createPostgres, {
-          signal: state.activeSignal,
-          timeout: 10 * 60_000,
-          ownership: { pullPolicyNever: true },
-        });
-      } catch (error) {
-        // Discovery is residue evidence only.  It must never become cleanup ownership.
-        await assertExpectedCreatedResources(state, composeExpectedNames, { signal: state.cleanupSignal });
-        throw error;
+      for (const name of namespace.network_names.slice(0, 3)) {
+        const stdout = (await dockerCommand(state, ["network", "create", "--internal", ...primitiveLabels, name], { signal: state.activeSignal })).stdout;
+        const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
+        if (!id) fail("primitive network create did not return one exact ID");
+        const entry = { kind: "network", id, name };
+        const observed = await inspectResource(state, entry, { signal: state.activeSignal });
+        recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
       }
-      closePortReservation(state, 2);
-      await dockerCommand(state, [...composePrefix, "start", "postgres"], {
-        signal: state.activeSignal,
-        timeout: 10 * 60_000,
-        ownership: { verifiedCreationLedger: true },
-      });
-      await waitForContainers(state, {
-        signal: state.activeSignal,
-        expectedNames: [`${namespace.project}-postgres-1`],
-      });
-      const quotedDb = `"${namespace.db_name.replaceAll('"', '""')}"`;
-      const quotedRole = `"${namespace.db_user.replaceAll('"', '""')}"`;
-      await executePsql(state, `CREATE ROLE ${quotedRole} NOLOGIN;\nCREATE DATABASE ${quotedDb} OWNER ${quotedRole} TEMPLATE postgres;\n`, { signal: state.activeSignal });
-      closePortReservations(state);
-      try {
-        await dockerCommand(state, [...composePrefix, "create", "--no-build"], {
-          signal: state.activeSignal,
-          timeout: 10 * 60_000,
-          ownership: { pullPolicyNever: true },
-        });
-      } catch (error) {
-        await assertExpectedCreatedResources(state, composeExpectedNames, {
-          signal: state.cleanupSignal,
-          requireAll: true,
-        });
-        throw error;
+      for (const name of namespace.volume_names) {
+        const stdout = (await dockerCommand(state, ["volume", "create", "--name", name, ...primitiveLabels], { signal: state.activeSignal })).stdout;
+        const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
+        if (!id) fail("primitive volume create did not return one exact ID");
+        const entry = { kind: "volume", id, name };
+        const observed = await inspectResource(state, entry, { signal: state.activeSignal });
+        recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
       }
-      await dockerCommand(state, [...composePrefix, "start"], {
-        signal: state.activeSignal,
-        timeout: 10 * 60_000,
-        ownership: { verifiedCreationLedger: true },
-      });
-      await waitForContainers(state, { signal: state.activeSignal });
       return state.creationLedger.snapshot();
     },
 

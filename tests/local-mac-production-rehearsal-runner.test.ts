@@ -694,6 +694,11 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(adaptersSource).toContain("rehearsal-synthetic");
     expect(adaptersSource).toContain("--pull=never");
     expect(adaptersSource).not.toContain("node_modules/next/dist/bin/next','start'");
+    expect(adaptersSource).not.toContain('"compose", "create"');
+    expect(adaptersSource).not.toContain('"compose", "start"');
+    expect(adaptersSource).not.toContain('"compose", "up"');
+    expect((adaptersSource.match(/\["network", "create"/gu) ?? []).length).toBe(1);
+    expect((adaptersSource.match(/\["volume", "create"/gu) ?? []).length).toBe(1);
   });
 
   it("generates only run-owned internal Compose networks and loopback environment", () => {
