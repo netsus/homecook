@@ -7,7 +7,9 @@ const MODULE_PATHS = [
   "scripts/lib/local-mac-production-rehearsal-receipts.mjs",
   "scripts/lib/local-mac-production-rehearsal-inventory.mjs",
   "scripts/lib/local-mac-production-rehearsal-classifier.mjs",
+  "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
   "scripts/local-mac-production-rehearsal.mjs",
+  "scripts/schemas/local-mac-production-rehearsal-candidate.schema.json",
   "scripts/schemas/local-mac-production-rehearsal-inventory.schema.json",
   "scripts/schemas/local-mac-production-rehearsal-classification.schema.json",
 ] as const;
@@ -24,11 +26,12 @@ describe("local Mac production rehearsal foundation", () => {
   });
 
   it("exports the strict JCS, receipt, inventory, classifier, and CLI APIs", async () => {
-    const [jcs, receipts, inventory, classifier, cli] = await Promise.all([
+    const [jcs, receipts, inventory, classifier, candidate, cli] = await Promise.all([
       import("../scripts/lib/rfc8785-jcs.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-receipts.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-classifier.mjs"),
+      import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs"),
       import("../scripts/local-mac-production-rehearsal.mjs"),
     ]);
 
@@ -53,6 +56,12 @@ describe("local Mac production rehearsal foundation", () => {
     expect(classifier).toMatchObject({
       classifyProductionInventory: expect.any(Function),
       parseAndClassifyProductionInventory: expect.any(Function),
+    });
+    expect(candidate).toMatchObject({
+      buildReleaseRehearsalCandidate: expect.any(Function),
+      createReleaseRehearsalCandidateAdapters: expect.any(Function),
+      parseAndValidateCandidateManifest: expect.any(Function),
+      readBuildEnvironmentSnapshot: expect.any(Function),
     });
     expect(cli).toMatchObject({
       runLocalMacProductionRehearsalCli: expect.any(Function),

@@ -15,7 +15,7 @@ services:
     image: public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     entrypoint: ["/homecook/secret-entrypoint.sh"]
-    command: ["docker-entrypoint.sh", "postgres", "-D", "/etc/postgresql"]
+    command: ["docker-entrypoint.sh","postgres","-D","/etc/postgresql"]
     environment:
       FULL_LOCAL_AUTH_EXPECTED_ISSUER: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}
       HOMECOOK_SECRET_EXPORTS: HOMECOOK_POSTGRES_ROLE_PASSWORD=postgres_password
@@ -74,7 +74,7 @@ services:
       # GOTRUE_EXTERNAL_PHONE_ENABLED=false
       # GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED=false
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
+      test: ["CMD","wget","--no-verbose","--tries=1","--spider","http://127.0.0.1:9999/health"]
       interval: 5s
       timeout: 5s
       retries: 60
@@ -125,12 +125,12 @@ services:
     labels: *restore-attempt-labels
     image: docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
-    command: ["node", "-e", "setInterval(() => {}, 2147483647)"]
+    command: ["node","-e","setInterval(() => {}, 2147483647)"]
     depends_on:
       postgrest:
         condition: service_started
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://postgrest:3001/ready').then((r)=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD","node","-e","fetch('http://postgrest:3001/ready').then((r)=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
       interval: 5s
       timeout: 4s
       retries: 60
@@ -168,7 +168,7 @@ services:
       # S3_PROTOCOL_ACCESS_KEY_ID=storage_s3_access_key_id
       # S3_PROTOCOL_ACCESS_KEY_SECRET=storage_s3_access_key_secret
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --timeout=3 --output-document=/dev/null http://127.0.0.1:5000/status"]
+      test: ["CMD-SHELL","wget --quiet --tries=1 --timeout=3 --output-document=/dev/null http://127.0.0.1:5000/status"]
       interval: 5s
       timeout: 4s
       retries: 60
@@ -196,7 +196,7 @@ services:
     image: kong/kong@sha256:6addf50e6bd8d578314cb9ce4f2d2d1e3781d2edecef59f707e00c6e05d384f5
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     entrypoint: ["/homecook/secret-entrypoint.sh"]
-    command: ["/bin/sh", "/homecook/kong-entrypoint.sh"]
+    command: ["/bin/sh","/homecook/kong-entrypoint.sh"]
     depends_on:
       storage:
         condition: service_healthy
@@ -215,7 +215,7 @@ services:
       KONG_PROXY_ACCESS_LOG: "off"
       KONG_ROUTER_FLAVOR: expressions
     healthcheck:
-      test: ["CMD", "kong", "health"]
+      test: ["CMD","kong","health"]
       interval: 5s
       timeout: 5s
       retries: 60
@@ -248,7 +248,7 @@ services:
     labels: *restore-attempt-labels
     image: docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
-    command: ["node", "/homecook/auth-only-proxy.mjs"]
+    command: ["node","/homecook/auth-only-proxy.mjs"]
     depends_on:
       api-gateway:
         condition: service_healthy
@@ -256,7 +256,7 @@ services:
       FULL_LOCAL_INTERNAL_GATEWAY_ORIGIN: http://api-gateway:${FULL_LOCAL_INTERNAL_GATEWAY_PORT:?FULL_LOCAL_INTERNAL_GATEWAY_PORT is required}
       FULL_LOCAL_PUBLIC_AUTH_URL: ${FULL_LOCAL_PUBLIC_AUTH_URL:?FULL_LOCAL_PUBLIC_AUTH_URL is required}
     healthcheck:
-      test: ["CMD", "node", "-e", "const s=require('node:net').connect(8080,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      test: ["CMD","node","-e","const s=require('node:net').connect(8080,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
       interval: 5s
       timeout: 4s
       retries: 60
