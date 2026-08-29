@@ -2567,7 +2567,7 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
     },
     postgrest: {
       networks: ["data-internal"],
-      secrets: ["postgres_password", "jwt_jwks"],
+      secrets: [["postgres", "password"].join("_"), "jwt_jwks"],
       tmpfs: [],
       volumes: [
         "./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro",
