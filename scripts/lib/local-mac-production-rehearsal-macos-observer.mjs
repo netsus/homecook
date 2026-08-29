@@ -4,8 +4,8 @@ const floorTime = (value) => new Date(Math.floor(value / 1000) * 1000).toISOStri
 const ceilTime = (value) => new Date(Math.ceil(value / 1000) * 1000).toISOString();
 const fail = (message) => { throw new Error(`R2 macOS observer rejected: ${message}`); };
 
-export function createTrustedMacOsIndependentObserver({ runCommand, clock = () => Date.now(), sleep = async () => {}, collectProductionSnapshot, snapshotDockerDaemon, toolResolver }) {
-  if (process.platform !== "darwin" && toolResolver?.fixture !== true) fail("non-macOS observer success is forbidden");
+export function createTrustedMacOsIndependentObserver({ runCommand, clock = () => Date.now(), sleep = async () => {}, collectProductionSnapshot, snapshotDockerDaemon, toolResolver, platform = process.platform }) {
+  if (platform !== "darwin" && toolResolver?.fixture !== true) fail("non-macOS observer success is forbidden");
   const subjects = [];
   let pre = null;
   let started = null;

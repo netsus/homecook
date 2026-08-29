@@ -942,6 +942,9 @@ async function collectProductionSnapshot(state, signal) {
   return createProductionSurfaceSnapshot(inventory);
 }
 
+/**
+ * @param {{candidateInput:string, namespaceRoot:string, runId:string, homeDir?:string, rootDir?:string, dockerBin?:string|null, dockerSocketPath?:string|null, runCommand?:Function, productionSnapshotReader?:Function|null, daemonSnapshotReader?:Function|null, dockerEndpointResolver?:Function, trustedToolResolver?:Record<string, any>|null, platform?:string, clock?:Function, sleep?:Function}} options
+ */
 export function createLocalReleaseRehearsalRunnerAdapters({
   candidateInput,
   namespaceRoot,
@@ -951,11 +954,22 @@ export function createLocalReleaseRehearsalRunnerAdapters({
   dockerBin = null,
   dockerSocketPath = null,
   runCommand = runAbortableCommand,
+  productionSnapshotReader = null,
+  daemonSnapshotReader = null,
+  dockerEndpointResolver = resolveTrustedLocalDockerEndpoint,
+  trustedToolResolver = null,
+  platform = process.platform,
+  clock = () => Date.now(),
+  sleep = async () => {},
 } = {}) {
   if (!candidateInput || !namespaceRoot || !runId) fail("adapter factory requires candidate, namespace, and run identity");
   const resolvedHome = resolve(homeDir);
   const resolvedRoot = resolve(rootDir);
-  const dockerEndpoint = resolveTrustedLocalDockerEndpoint({
+  if ([dockerEndpointResolver, runCommand, clock, sleep].some((value) => typeof value !== "function")) fail("adapter trusted dependencies must be functions");
+  if (productionSnapshotReader !== null && typeof productionSnapshotReader !== "function") fail("production snapshot reader is invalid");
+  if (daemonSnapshotReader !== null && typeof daemonSnapshotReader !== "function") fail("daemon snapshot reader is invalid");
+  if (trustedToolResolver !== null && typeof trustedToolResolver !== "object") fail("trusted tool resolver is invalid");
+  const dockerEndpoint = dockerEndpointResolver({
     explicitSocketPath: dockerSocketPath,
     homeDir: resolvedHome,
     ambient: process.env,
@@ -984,18 +998,19 @@ export function createLocalReleaseRehearsalRunnerAdapters({
     deniedAttempts: 0,
     portReservations: [],
   };
-  const observerTools = [
+  const observerTools = trustedToolResolver ?? Object.fromEntries([
     ["log", ["/usr/bin/log"]], ["lsof", ["/usr/sbin/lsof"]], ["ps", ["/bin/ps"]],
   ].map(([name, candidates]) => {
     const path = resolveSafeRealExecutable(candidates, `R2 observer ${name}`);
     return [name, { path, identity: snapshotToolFile(path, "r2-observer") }];
-  });
-  const observerToolMap = Object.fromEntries(observerTools);
+  }));
+  const observerToolMap = observerTools;
   const independentObserver = createTrustedMacOsIndependentObserver({
     runCommand,
-    collectProductionSnapshot: () => collectProductionSnapshot(state, state.activeSignal),
-    snapshotDockerDaemon: () => snapshotDockerDaemon(state, state.activeSignal),
-    toolResolver: { logPath: observerToolMap.log.path, lsofPath: observerToolMap.lsof.path, psPath: observerToolMap.ps.path, logDigest: sha256Jcs(observerToolMap.log.identity), lsofDigest: sha256Jcs(observerToolMap.lsof.identity), psDigest: sha256Jcs(observerToolMap.ps.identity) },
+    clock, sleep, platform,
+    collectProductionSnapshot: () => productionSnapshotReader ? productionSnapshotReader(state) : collectProductionSnapshot(state, state.activeSignal),
+    snapshotDockerDaemon: () => daemonSnapshotReader ? daemonSnapshotReader(state) : snapshotDockerDaemon(state, state.activeSignal),
+    toolResolver: { ...observerToolMap, fixture: platform === "darwin" ? undefined : false, logPath: observerToolMap.log.path, lsofPath: observerToolMap.lsof.path, psPath: observerToolMap.ps.path, logDigest: observerToolMap.logDigest ?? sha256Jcs(observerToolMap.log.identity), lsofDigest: observerToolMap.lsofDigest ?? sha256Jcs(observerToolMap.lsof.identity), psDigest: observerToolMap.psDigest ?? sha256Jcs(observerToolMap.ps.identity) },
   });
 
   return Object.freeze({
