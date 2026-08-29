@@ -16,6 +16,7 @@ import {
   copyLocalMacProductionExecutionTree,
   sealLocalMacProductionExecutionTree,
 } from "./local-mac-production-release.mjs";
+import { readVerifiedMigrationInputs } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
 export const RUN_EVIDENCE_SCHEMA =
   "homecook.local-mac-production-rehearsal-run-evidence.v1";
@@ -38,6 +39,8 @@ const RESERVED_NAME_PREFIXES = [
 ];
 const CHILD_ENV_KEYS = new Set([
   "DATABASE_URL",
+  "DATA_SUPABASE_PUBLISHABLE_KEY",
+  "DATA_SUPABASE_URL",
   "FULL_LOCAL_COMPOSE_PROJECT_NAME",
   "FULL_LOCAL_SECRET_DIR",
   "HOME",
@@ -45,8 +48,11 @@ const CHILD_ENV_KEYS = new Set([
   "HOMECOOK_RELEASE_SHA",
   "HOMECOOK_RELEASE_TREE",
   "HOMECOOK_REHEARSAL_RUN_ID",
+  "HOMECOOK_REHEARSAL_MODE",
   "HOMECOOK_SEALED_BUNDLE_DIGEST",
+  "HOMECOOK_FULL_LOCAL_SECRET_DIR",
   "HOSTNAME",
+  "LOCAL_SUPABASE_INTERNAL_URL",
   "NEXT_PUBLIC_APP_URL",
   "NEXT_PUBLIC_SITE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -58,6 +64,7 @@ const CHILD_ENV_KEYS = new Set([
   "TMPDIR",
 ]);
 const FORBIDDEN_ENV_KEY = /(?:AWS|AZURE|CLOUD|GOOGLE|GITHUB|REMOTE|SERVICE_ROLE|SECRET|TOKEN|PRIVATE_KEY|PASSWORD|DOCKER_HOST|SUPABASE_DB_URL|DATABASE_PASSWORD)/iu;
+const CHILD_SECRET_PATH_KEYS = new Set(["FULL_LOCAL_SECRET_DIR", "HOMECOOK_FULL_LOCAL_SECRET_DIR"]);
 const TOP_LEVEL_EVIDENCE_KEYS = [
   "schema",
   "canonicalization",
@@ -70,7 +77,7 @@ const TOP_LEVEL_EVIDENCE_KEYS = [
   "sealed_bundle_digest",
   "bundle_manifest_digest",
   "run_id",
-  "started_at",
+  "issued_at",
   "completed_at",
   "isolation",
   "migration",
@@ -83,6 +90,16 @@ const TOP_LEVEL_EVIDENCE_KEYS = [
   "threat_controls",
   "evidence_digest",
 ];
+const REQUIRED_CANARY_IDS = Object.freeze([
+  "app-production-route",
+  "cross-component-identity",
+  "external-network-deny",
+  "full-local-api-gateway-route",
+  "full-local-auth-route",
+  "full-local-postgrest-fixture",
+  "full-local-storage-route",
+  "worker-synthetic-job",
+]);
 
 /** @returns {never} */
 function fail(message) {
@@ -222,11 +239,20 @@ export function validateDockerInvocation(argv, context = {}) {
   if (!Array.isArray(argv) || argv.length === 0 || argv.some((token) => typeof token !== "string" || token.length === 0)) {
     fail("Docker argv must be a nonempty string array");
   }
-  const joined = argv.join("\0");
-  if (argv.some((token) => token === "--host" || token === "-H" || /docker\.sock|^unix:/u.test(token))) {
-    fail("Docker socket/context override is forbidden");
+  if (
+    typeof context.dockerHost !== "string"
+    || !context.dockerHost.startsWith("unix:///")
+    || argv[0] !== "--host"
+    || argv[1] !== context.dockerHost
+  ) {
+    fail("Docker invocation requires the exact pinned local --host endpoint");
   }
-  if (argv.some((token) => ["pull", "build", "push", "login", "logout", "system", "prune", "tag", "rmi"].includes(token))) {
+  const commandArgv = argv.slice(2);
+  const joined = commandArgv.join("\0");
+  if (commandArgv.some((token) => token === "--host" || token === "-H" || token === "--context" || /^tcp:|^ssh:|^https?:|^npipe:/u.test(token))) {
+    fail("Docker context or endpoint indirection is forbidden");
+  }
+  if (commandArgv.some((token) => ["pull", "build", "push", "login", "logout", "system", "prune", "tag", "rmi"].includes(token))) {
     fail("Docker pull/build/registry/system mutation is forbidden");
   }
   if (RESERVED_NAME_PREFIXES.some((prefix) => joined.includes(prefix))) {
@@ -236,7 +262,7 @@ export function validateDockerInvocation(argv, context = {}) {
     ["ps"], ["version"], ["info"], ["inspect"],
     ["image", "inspect"], ["network", "ls"], ["network", "inspect"],
     ["volume", "ls"], ["volume", "inspect"],
-  ].some((prefix) => prefix.every((token, index) => argv[index] === token));
+  ].some((prefix) => prefix.every((token, index) => commandArgv[index] === token));
   if (readOnly) return Object.freeze({ mode: "read-only", argv: [...argv] });
 
   const runId = context.runId;
@@ -245,29 +271,36 @@ export function validateDockerInvocation(argv, context = {}) {
     fail("Docker mutation requires an exact rehearsal run ownership context");
   }
   const createMutation = (
-    (argv[0] === "network" && argv[1] === "create")
-    || (argv[0] === "volume" && argv[1] === "create")
-    || argv[0] === "run"
+    (commandArgv[0] === "network" && commandArgv[1] === "create")
+    || (commandArgv[0] === "volume" && commandArgv[1] === "create")
+    || commandArgv[0] === "run"
   );
   if (createMutation) {
     const ownership = `${RUN_OWNERSHIP_LABEL}=${runId}`;
     const projectLabel = `${RUN_PROJECT_LABEL}=${project}`;
-    if (!includesExactPair(argv, "--label", ownership) || !includesExactPair(argv, "--label", projectLabel)) {
+    if (!includesExactPair(commandArgv, "--label", ownership) || !includesExactPair(commandArgv, "--label", projectLabel)) {
       fail("Docker create mutation is missing exact run ownership labels");
+    }
+    if (commandArgv[0] === "run" && !commandArgv.includes("--pull=never")) {
+      fail("Docker run requires exact --pull=never");
     }
     return Object.freeze({ mode: "run-owned-mutation", argv: [...argv] });
   }
-  const destructive = (argv[0] === "network" && argv[1] === "rm")
-    || (argv[0] === "volume" && argv[1] === "rm")
-    || ["stop", "rm", "kill"].includes(argv[0]);
+  const destructive = (commandArgv[0] === "network" && commandArgv[1] === "rm")
+    || (commandArgv[0] === "volume" && commandArgv[1] === "rm")
+    || ["stop", "rm", "kill", "exec"].includes(commandArgv[0]);
   if (destructive && context.verifiedOwnership === true && context.resourceId) {
-    if (!argv.includes(context.resourceId)) fail("Docker cleanup argv does not contain the verified resource ID");
+    if (!commandArgv.includes(context.resourceId)) fail("Docker owned-resource argv does not contain the verified resource ID");
     return Object.freeze({ mode: "run-owned-mutation", argv: [...argv] });
   }
-  if (argv[0] === "compose") {
-    const pullForbidden = (argv.includes("--pull") && argv.includes("never"))
+  if (commandArgv[0] === "compose") {
+    const composeAction = commandArgv.find((token) => ["create", "start", "up"].includes(token));
+    const pullForbidden = (commandArgv.includes("--pull") && commandArgv.includes("never"))
       || context.pullPolicyNever === true;
-    if (!includesExactPair(argv, "--project-name", project) || !pullForbidden || !argv.includes("--no-build")) {
+    const creationSafe = ["create", "up"].includes(composeAction)
+      ? pullForbidden && commandArgv.includes("--no-build")
+      : composeAction === "start" && context.verifiedCreationLedger === true;
+    if (!includesExactPair(commandArgv, "--project-name", project) || !creationSafe) {
       fail("Docker Compose rehearsal must pin project, pull_policy never, and --no-build");
     }
     return Object.freeze({ mode: "run-owned-mutation", argv: [...argv] });
@@ -283,7 +316,7 @@ export function validateChildEnvironment(environment, { runId, runRoot }) {
   /** @type {Record<string, string>} */
   const result = {};
   for (const [key, rawValue] of Object.entries(environment)) {
-    if (!CHILD_ENV_KEYS.has(key) || FORBIDDEN_ENV_KEY.test(key)) {
+    if (!CHILD_ENV_KEYS.has(key) || (FORBIDDEN_ENV_KEY.test(key) && !CHILD_SECRET_PATH_KEYS.has(key))) {
       fail(`production credential or forbidden child environment key: ${key}`);
     }
     if (typeof rawValue !== "string" || rawValue.includes("\0")) fail(`child environment ${key} is invalid`);
@@ -297,6 +330,10 @@ export function validateChildEnvironment(environment, { runId, runRoot }) {
       if (relative === ".." || relative.startsWith("../")) fail(`${key} must stay inside the run root`);
     }
   }
+  if (
+    result.HOMECOOK_FULL_LOCAL_SECRET_DIR !== undefined
+    && result.HOMECOOK_FULL_LOCAL_SECRET_DIR !== "/run/app-secrets"
+  ) fail("HOMECOOK_FULL_LOCAL_SECRET_DIR must use the exact read-only container mount");
   if (result.DATABASE_URL !== undefined) {
     let databaseUrl;
     try { databaseUrl = new URL(result.DATABASE_URL); } catch { fail("DATABASE_URL is invalid"); }
@@ -307,7 +344,10 @@ export function validateChildEnvironment(environment, { runId, runRoot }) {
       fail("DATABASE_URL references a production database identity");
     }
   }
-  for (const key of ["NEXT_PUBLIC_APP_URL", "NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_SUPABASE_URL"]) {
+  for (const key of [
+    "NEXT_PUBLIC_APP_URL", "NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_SUPABASE_URL",
+    "DATA_SUPABASE_URL", "LOCAL_SUPABASE_INTERNAL_URL",
+  ]) {
     if (result[key] === undefined) continue;
     let url;
     try { url = new URL(result[key]); } catch { fail(`${key} is invalid`); }
@@ -320,6 +360,7 @@ export function validateMigrationReplay(value, expected) {
   exactKeys(value, [
     "ordered_migration_files_digest",
     "applied_global_ledger_digest",
+    "global_ledger_entries",
     "ordered_global_ledger",
     "migration_head",
     "catalog_head",
@@ -338,6 +379,20 @@ export function validateMigrationReplay(value, expected) {
   }
   if (value.migration_head !== expected.migration_head || value.catalog_head !== expected.migration_head) {
     fail("migration ledger/catalog head mismatch");
+  }
+  if (!Array.isArray(value.global_ledger_entries) || value.global_ledger_entries.length !== expectedLedger.length) {
+    fail("migration global ledger entries are incomplete");
+  }
+  value.global_ledger_entries.forEach((entry, index) => {
+    exactKeys(entry, ["sequence", "migration_id", "migration_sha256"], `migration ledger entry ${index}`);
+    if (
+      entry.sequence !== index + 1
+      || entry.migration_id !== expectedLedger[index]
+      || !DIGEST.test(entry.migration_sha256 ?? "")
+    ) fail("migration global ledger entry order or digest is invalid");
+  });
+  if (sha256Jcs(value.global_ledger_entries) !== value.applied_global_ledger_digest) {
+    fail("migration applied global ledger digest mismatch");
   }
   return Object.freeze({ ...value, ordered_global_ledger: Object.freeze([...value.ordered_global_ledger]) });
 }
@@ -439,7 +494,27 @@ function reserveRunRoot(namespaceRoot, runId) {
   mkdirSync(runRoot, { mode: 0o700 });
   const stat = lstatSync(runRoot, { bigint: true });
   if (!stat.isDirectory() || stat.isSymbolicLink() || modeBits(stat) !== 0o700) fail("run root reservation is unsafe");
-  return { runRoot, identity: { device: String(stat.dev), inode: String(stat.ino) } };
+  return { runRoot, identity: directoryIdentity(stat) };
+}
+
+function directoryIdentity(stat) {
+  return Object.freeze({
+    device: String(stat.dev),
+    inode: String(stat.ino),
+    uid: Number(stat.uid),
+    gid: Number(stat.gid),
+    mode: Number(stat.mode & 0o7777n),
+    ctime_ns: String(stat.ctimeNs),
+  });
+}
+
+function assertDirectoryIdentity(path, expected, label) {
+  const stat = lstatSync(path, { bigint: true });
+  if (
+    !stat.isDirectory()
+    || stat.isSymbolicLink()
+    || canonicalizeJcs(directoryIdentity(stat)) !== canonicalizeJcs(expected)
+  ) fail(`${label} directory dev/inode/owner/mode/ctime identity drifted`);
 }
 
 function writeCanonicalCreateOnly(path, value, mode = 0o600) {
@@ -479,22 +554,48 @@ function validateProductionSnapshot(value, label) {
   return value;
 }
 
-function buildProductionGuard(pre, post) {
+function buildProductionGuard(pre, post, measurement) {
   validateProductionSnapshot(pre, "pre");
   validateProductionSnapshot(post, "post");
   if (pre.surface_digest !== post.surface_digest) fail("production surface drifted during rehearsal");
+  exactKeys(measurement, [
+    "schema", "production_db_connection_count", "production_db_write_count",
+    "mutation_attempt_count", "forbidden_mount_count", "forbidden_environment_count",
+    "observed_container_count", "container_policy_digest", "command_policy_digest",
+    "network_policy_digest", "external_attempt_count", "successful_egress_count",
+    "docker_endpoint_identity_digest", "docker_daemon_identity_digest",
+  ], "production isolation telemetry");
+  if (
+    measurement.schema !== "homecook.release-rehearsal-production-isolation-telemetry.v1"
+    || measurement.production_db_connection_count !== 0
+    || measurement.production_db_write_count !== 0
+    || measurement.mutation_attempt_count !== 0
+    || measurement.forbidden_mount_count !== 0
+    || measurement.forbidden_environment_count !== 0
+    || !Number.isSafeInteger(measurement.observed_container_count)
+    || measurement.observed_container_count < 1
+    || !DIGEST.test(measurement.container_policy_digest ?? "")
+    || !DIGEST.test(measurement.command_policy_digest ?? "")
+    || !DIGEST.test(measurement.network_policy_digest ?? "")
+    || measurement.external_attempt_count < 1
+    || measurement.successful_egress_count !== 0
+    || !DIGEST.test(measurement.docker_endpoint_identity_digest ?? "")
+    || !DIGEST.test(measurement.docker_daemon_identity_digest ?? "")
+  ) fail("measured production isolation telemetry is not zero");
   return Object.freeze({
     surface_allowlist_version: pre.surface_allowlist_version,
     production_snapshot_pre_digest: pre.surface_digest,
     production_snapshot_post_digest: post.surface_digest,
     equal: true,
-    mutation_attempt_count: 0,
-    production_db_connection_count: 0,
-    production_db_write_count: 0,
+    mutation_attempt_count: measurement.mutation_attempt_count,
+    production_db_connection_count: measurement.production_db_connection_count,
+    production_db_write_count: measurement.production_db_write_count,
+    measurement,
+    measurement_digest: sha256Jcs(measurement),
   });
 }
 
-function makeEvidence({ manifest, runId, startedAt, completedAt, namespace, runRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard }) {
+function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRootIdentity, executionRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard }) {
   const unsigned = {
     schema: RUN_EVIDENCE_SCHEMA,
     canonicalization: CANONICALIZATION,
@@ -507,7 +608,7 @@ function makeEvidence({ manifest, runId, startedAt, completedAt, namespace, runR
     sealed_bundle_digest: manifest.sealed_bundle_digest,
     bundle_manifest_digest: manifest.bundle_manifest_digest,
     run_id: runId,
-    started_at: startedAt,
+    issued_at: issuedAt,
     completed_at: completedAt,
     isolation: {
       docker_project_id: namespace.project,
@@ -521,6 +622,7 @@ function makeEvidence({ manifest, runId, startedAt, completedAt, namespace, runR
       },
       ports: namespace.ports,
       root_identity_digest: sha256Jcs(runRootIdentity),
+      execution_root_identity_digest: sha256Jcs(executionRootIdentity),
       resource_identity_digest: sha256Jcs({
         project: namespace.project,
         container_names: namespace.container_names,
@@ -536,6 +638,10 @@ function makeEvidence({ manifest, runId, startedAt, completedAt, namespace, runR
       full_local: runtime.find((entry) => entry.component === "full_local"),
       worker: runtime.find((entry) => entry.component === "worker"),
       foreground_supervisor: {
+        component: "foreground_supervisor",
+        pid: process.pid,
+        process_group_id: null,
+        child_process_groups_enforced: true,
         launchd_used: false,
         child_identity_digest: sha256Jcs(runtime),
         timeout_policy_digest: sha256Jcs({ readiness_ms: 120_000, shutdown_ms: 30_000, output_bytes: 1_048_576 }),
@@ -565,12 +671,12 @@ export function validateRunEvidence(value) {
   for (const field of ["candidate_identity_digest", "sealed_bundle_digest", "bundle_manifest_digest", "evidence_digest"]) requireDigest(value[field], field);
   exactKeys(value.isolation, [
     "docker_project_id", "container_names", "network_names", "volume_names",
-    "db_identity", "ports", "root_identity_digest", "resource_identity_digest",
+    "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "resource_identity_digest",
   ], "run evidence isolation");
   exactKeys(value.isolation.db_identity, ["name", "user", "identity_digest"], "run evidence DB identity");
   exactKeys(value.migration, [
     "ordered_migration_files_digest", "applied_global_ledger_digest",
-    "ordered_global_ledger", "migration_head", "catalog_head", "schema_identity_digest",
+    "global_ledger_entries", "ordered_global_ledger", "migration_head", "catalog_head", "schema_identity_digest",
   ], "run evidence migration");
   exactKeys(value.fixtures, [
     "fixture_set_id", "fixture_set_digest", "production_derived_row_count",
@@ -583,11 +689,15 @@ export function validateRunEvidence(value) {
     ], `run evidence runtime.${component}`);
   }
   exactKeys(value.runtime.foreground_supervisor, [
-    "launchd_used", "child_identity_digest", "timeout_policy_digest",
+    "component", "pid", "process_group_id", "child_process_groups_enforced", "launchd_used", "child_identity_digest", "timeout_policy_digest",
   ], "run evidence foreground supervisor");
   if (!Array.isArray(value.canaries) || value.canaries.length === 0) fail("run evidence canaries are missing");
   for (const [index, canary] of value.canaries.entries()) {
     exactKeys(canary, ["canary_id", "exit_code", "normalized_result_digest"], `run evidence canaries[${index}]`);
+  }
+  const canaryIds = value.canaries.map((entry) => entry.canary_id).sort();
+  if (canonicalizeJcs(canaryIds) !== canonicalizeJcs(REQUIRED_CANARY_IDS)) {
+    fail("run evidence canary set is not the exact documented set");
   }
   exactKeys(value.network, [
     "default_deny_policy_digest", "allowed_endpoints", "denied_attempt_count",
@@ -600,14 +710,66 @@ export function validateRunEvidence(value) {
   exactKeys(value.production_guard, [
     "surface_allowlist_version", "production_snapshot_pre_digest",
     "production_snapshot_post_digest", "equal", "mutation_attempt_count",
-    "production_db_connection_count", "production_db_write_count",
+    "production_db_connection_count", "production_db_write_count", "measurement", "measurement_digest",
   ], "run evidence production guard");
   exactKeys(value.threat_controls, [
     "symlink_toctou", "namespace_collision", "digest_substitution",
     "stale_candidate", "cleanup_ownership",
   ], "run evidence threat controls");
+  if (
+    typeof value.issued_at !== "string"
+    || typeof value.completed_at !== "string"
+    || new Date(value.issued_at).toISOString() !== value.issued_at
+    || new Date(value.completed_at).toISOString() !== value.completed_at
+    || Date.parse(value.issued_at) > Date.parse(value.completed_at)
+  ) fail("run evidence issued/completed timestamp order is invalid");
+  if (
+    value.runtime.app.component !== "app"
+    || value.runtime.full_local.component !== "full_local"
+    || value.runtime.worker.component !== "worker"
+    || value.runtime.foreground_supervisor.component !== "foreground_supervisor"
+    || !Number.isSafeInteger(value.runtime.foreground_supervisor.pid)
+    || value.runtime.foreground_supervisor.pid < 1
+    || value.runtime.foreground_supervisor.process_group_id !== null
+    || value.runtime.foreground_supervisor.child_process_groups_enforced !== true
+    || value.runtime.foreground_supervisor.launchd_used !== false
+  ) fail("run evidence runtime component set or supervisor identity is invalid");
+  const componentContainerIds = [];
+  for (const component of [value.runtime.app, value.runtime.full_local, value.runtime.worker]) {
+    if (
+      component.kind !== "container"
+      || component.pid !== null
+      || component.process_group_id !== null
+      || !Array.isArray(component.container_ids)
+      || component.container_ids.length < 1
+    ) fail("run evidence component runtime must be an exact container identity");
+    componentContainerIds.push(...component.container_ids);
+  }
+  if (new Set(componentContainerIds).size !== componentContainerIds.length) {
+    fail("run evidence component container identities are duplicated");
+  }
+  const cleanupOwnedIds = new Set(value.cleanup?.owned_resource_ids ?? []);
+  if (componentContainerIds.some((id) => !cleanupOwnedIds.has(id))) {
+    fail("run evidence component container is absent from cleanup ownership ledger");
+  }
+  validateMigrationReplay(value.migration, {
+    ordered_migration_files: value.migration.global_ledger_entries.map((entry) =>
+      `supabase/migrations/${entry.migration_id}.sql`),
+    ordered_migration_files_digest: value.migration.ordered_migration_files_digest,
+    migration_head: value.migration.migration_head,
+  });
+  const migrationFileEntries = value.migration.global_ledger_entries.map((entry) => ({
+    path: `supabase/migrations/${entry.migration_id}.sql`,
+    sha256: entry.migration_sha256,
+  }));
+  if (sha256Jcs(migrationFileEntries) !== value.migration.ordered_migration_files_digest) {
+    fail("run evidence migration file aggregate differs from ledger entries");
+  }
   if (value.fixtures?.production_derived_row_count !== 0) fail("run evidence contains production-derived fixtures");
   if (value.network?.unexpected_successful_egress_count !== 0) fail("run evidence contains successful external egress");
+  if (!Number.isSafeInteger(value.network?.denied_attempt_count) || value.network.denied_attempt_count < 1) {
+    fail("run evidence must contain a measured denied network attempt");
+  }
   if (
     value.cleanup?.completed !== true
     || value.cleanup?.residue_resource_ids?.length !== 0
@@ -625,6 +787,19 @@ export function validateRunEvidence(value) {
     || value.production_guard?.production_db_connection_count !== 0
     || value.production_guard?.production_db_write_count !== 0
   ) fail("run evidence production guard is invalid");
+  exactKeys(value.production_guard.measurement, [
+    "schema", "production_db_connection_count", "production_db_write_count",
+    "mutation_attempt_count", "forbidden_mount_count", "forbidden_environment_count",
+    "observed_container_count", "container_policy_digest", "command_policy_digest",
+    "network_policy_digest", "external_attempt_count", "successful_egress_count",
+    "docker_endpoint_identity_digest", "docker_daemon_identity_digest",
+  ], "run evidence production measurement");
+  if (
+    sha256Jcs(value.production_guard.measurement) !== value.production_guard.measurement_digest
+    || value.production_guard.measurement.production_db_connection_count !== value.production_guard.production_db_connection_count
+    || value.production_guard.measurement.production_db_write_count !== value.production_guard.production_db_write_count
+    || value.production_guard.measurement.mutation_attempt_count !== value.production_guard.mutation_attempt_count
+  ) fail("run evidence production measurement digest/count binding is invalid");
   const { evidence_digest: evidenceDigest, ...unsigned } = value;
   if (sha256Jcs(unsigned) !== evidenceDigest) fail("run evidence digest mismatch");
   return value;
@@ -657,16 +832,26 @@ export async function runIsolatedReleaseRehearsal({
   requireDigest(manifest.bundle_manifest_digest, "candidate bundle manifest digest");
   const reservation = reserveRunRoot(canonicalNamespaceRoot, runId);
   let candidateRoot = sourceCandidateRoot;
-  const startedAt = now().toISOString();
+  const issuedAt = now().toISOString();
   let preSnapshot = null;
   let namespace = null;
   let runtimeEntries = [];
   let ownedResources = [];
   let cleanupResult = null;
   let firstError = null;
+  let productionMeasurement = null;
+  let stableRunRootIdentity = null;
+  let stableExecutionRootIdentity = null;
 
   const checkAbort = () => {
     if (signal?.aborted) throw new Error(`rehearsal interrupted by signal: ${signal.reason ?? "aborted"}`);
+  };
+  const verifyStableExecution = () => {
+    if (!stableRunRootIdentity || !stableExecutionRootIdentity || candidateRoot === sourceCandidateRoot) return;
+    assertDirectoryIdentity(reservation.runRoot, stableRunRootIdentity, "run root");
+    assertDirectoryIdentity(candidateRoot, stableExecutionRootIdentity, "execution candidate root");
+    const current = readCandidate(candidateRoot);
+    verifyCandidateStable(candidateBefore, current);
   };
   const cleanup = async () => {
     if (cleanupResult) return cleanupResult;
@@ -675,12 +860,11 @@ export async function runIsolatedReleaseRehearsal({
       try { await adapters.stopRuntime(entry, { runId, namespace, runRoot: reservation.runRoot }); }
       catch (error) { cleanupErrors.push(normalizeAdapterError(error)); }
     }
-    if (typeof adapters.listOwnedResources === "function") {
+    if (typeof adapters.getCreationLedger === "function") {
       try {
-        const discovered = await adapters.listOwnedResources({ runId, namespace, runRoot: reservation.runRoot });
-        const known = new Map(ownedResources.map((entry) => [`${entry.kind}\0${entry.id}`, entry]));
-        for (const entry of discovered) known.set(`${entry.kind}\0${entry.id}`, entry);
-        ownedResources = [...known.values()];
+        const ledger = adapters.getCreationLedger();
+        if (!Array.isArray(ledger)) throw new Error("creation ledger is invalid");
+        ownedResources = ledger.map((entry) => ({ ...entry }));
       } catch (error) { cleanupErrors.push(normalizeAdapterError(error)); }
     }
     const resourceCleanup = await cleanupOwnedResources({
@@ -722,50 +906,81 @@ export async function runIsolatedReleaseRehearsal({
     });
     candidateRoot = staged.executionRoot;
     candidateBefore = staged.stagedCandidate;
-    preSnapshot = validateProductionSnapshot(await adapters.snapshotProduction("pre"), "pre");
+    mkdirSync(join(reservation.runRoot, "runtime-state"), { mode: 0o700 });
+    stableRunRootIdentity = directoryIdentity(lstatSync(reservation.runRoot, { bigint: true }));
+    stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
+    verifyStableExecution();
+    preSnapshot = validateProductionSnapshot(await adapters.snapshotProduction("pre", { signal }), "pre");
+    verifyStableExecution();
     checkAbort();
     const ports = await adapters.reservePorts({ runId, runRoot: reservation.runRoot });
     namespace = buildRunNamespace({ runId, ports });
-    const collision = await adapters.inspectCollisions({ runId, namespace, runRoot: reservation.runRoot });
+    const collision = await adapters.inspectCollisions({ runId, namespace, runRoot: reservation.runRoot, signal });
     if (!collision || !Array.isArray(collision.collisions) || collision.collisions.length !== 0) {
       fail("existing resource or namespace collision detected; suffix fallback is forbidden");
     }
-    await adapters.assertImagesLocal({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot });
+    await adapters.assertImagesLocal({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
+    verifyStableExecution();
     checkAbort();
-    ownedResources = await adapters.createResources({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot });
+    ownedResources = await adapters.createResources({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     if (!Array.isArray(ownedResources)) fail("created resource inventory is invalid");
+    verifyStableExecution();
     checkAbort();
+    const migrationAuthority = (adapters.readVerifiedMigrationInputs ?? readVerifiedMigrationInputs)({
+      candidateRoot,
+      migration: manifest.migration,
+    });
     const migration = validateMigrationReplay(
-      await adapters.applyMigrations({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot }),
+      await adapters.applyMigrations({
+        manifest,
+        candidateRoot,
+        namespace,
+        runRoot: reservation.runRoot,
+        migrationInputs: migrationAuthority.inputs,
+        signal,
+      }),
       manifest.migration,
     );
+    verifyStableExecution();
     checkAbort();
-    const fixtures = await adapters.loadSyntheticFixtures({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot });
+    const fixtures = await adapters.loadSyntheticFixtures({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     if (fixtures?.production_derived_row_count !== 0) fail("synthetic fixture set contains production-derived rows");
     checkAbort();
-    runtimeEntries = await adapters.startComponents({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, migration });
+    runtimeEntries = await adapters.startComponents({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, migration, signal });
     runtimeEntries = validateRuntimeIdentities(runtimeEntries, manifest);
-    const readiness = await adapters.waitForReadiness({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries });
+    verifyStableExecution();
+    const readiness = await adapters.waitForReadiness({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, signal });
     if (readiness?.ready !== true) fail("foreground supervisor readiness failed");
-    const canaries = validateCanaries(await adapters.runCanaries({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, migration, fixtures }));
-    const network = await adapters.readNetworkEvidence({ runId, namespace, runRoot: reservation.runRoot });
+    verifyStableExecution();
+    const canaries = validateCanaries(await adapters.runCanaries({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, migration, fixtures, signal }));
+    const network = await adapters.readNetworkEvidence({ runId, namespace, runRoot: reservation.runRoot, signal });
     if (network?.unexpected_successful_egress_count !== 0) fail("external network unexpectedly succeeded");
     requireDigest(network?.default_deny_policy_digest, "network default deny policy digest");
+    if (typeof adapters.readIsolationTelemetry !== "function") {
+      fail("measured production isolation telemetry adapter is required");
+    }
+    productionMeasurement = await adapters.readIsolationTelemetry({
+      runId,
+      namespace,
+      runRoot: reservation.runRoot,
+      signal,
+    });
     checkAbort();
     const cleanupEvidence = await cleanup();
     if (!cleanupEvidence.completed) fail("owned cleanup, residue, or secret persistence gate failed");
-    const candidateAfter = readCandidate(candidateRoot);
-    verifyCandidateStable(candidateBefore, candidateAfter);
-    const postSnapshot = await adapters.snapshotProduction("post");
-    const productionGuard = buildProductionGuard(preSnapshot, postSnapshot);
+    verifyStableExecution();
+    const postSnapshot = await adapters.snapshotProduction("post", { signal: new AbortController().signal });
+    verifyStableExecution();
+    const productionGuard = buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement);
     const completedAt = now().toISOString();
     const evidence = makeEvidence({
       manifest,
       runId,
-      startedAt,
+      issuedAt,
       completedAt,
       namespace,
-      runRootIdentity: reservation.identity,
+      runRootIdentity: stableRunRootIdentity,
+      executionRootIdentity: stableExecutionRootIdentity,
       migration,
       fixtures,
       runtime: runtimeEntries,
@@ -789,11 +1004,20 @@ export async function runIsolatedReleaseRehearsal({
     try { await cleanup(); } catch (cleanupError) {
       if (!firstError) firstError = cleanupError;
     }
+    try { verifyStableExecution(); }
+    catch (identityError) {
+      firstError = new Error(`${normalizeAdapterError(firstError)}; ${normalizeAdapterError(identityError)}`);
+    }
     let postSnapshot = null;
     if (preSnapshot) {
       try {
-        postSnapshot = await adapters.snapshotProduction("post");
-        buildProductionGuard(preSnapshot, postSnapshot);
+        postSnapshot = await adapters.snapshotProduction("post", { signal: new AbortController().signal });
+        verifyStableExecution();
+        validateProductionSnapshot(postSnapshot, "post");
+        if (preSnapshot.surface_digest !== postSnapshot.surface_digest) {
+          fail("production surface drifted during failed rehearsal");
+        }
+        if (productionMeasurement) buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement);
       } catch (postError) {
         firstError = new Error(`${normalizeAdapterError(firstError)}; ${normalizeAdapterError(postError)}`);
       }

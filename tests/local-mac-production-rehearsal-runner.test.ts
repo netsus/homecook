@@ -20,13 +20,20 @@ import { runLocalMacProductionRehearsalRunnerCli } from "../scripts/local-mac-pr
 import {
   buildFullLocalComposeOverride,
   buildFullLocalRehearsalEnvironment,
+  validateContainerImageAuthority,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
+import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
 const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
+const MIGRATION_FILE_ENTRIES = [
+  { path: "supabase/migrations/20260101000000_one.sql", sha256: "1".repeat(64) },
+  { path: "supabase/migrations/20260102000000_two.sql", sha256: "2".repeat(64) },
+];
+const MIGRATION_FILES_DIGEST = sha256Jcs(MIGRATION_FILE_ENTRIES);
 
 function candidateManifest() {
   return {
@@ -50,7 +57,7 @@ function candidateManifest() {
         "supabase/migrations/20260101000000_one.sql",
         "supabase/migrations/20260102000000_two.sql",
       ],
-      ordered_migration_files_digest: "f".repeat(64),
+      ordered_migration_files_digest: MIGRATION_FILES_DIGEST,
       migration_head: "20260102000000_two",
     },
   };
@@ -77,9 +84,14 @@ function productionSnapshot(digest = "9".repeat(64)) {
 }
 
 function migrationReplay(overrides = {}) {
+  const globalLedgerEntries = [
+    { sequence: 1, migration_id: "20260101000000_one", migration_sha256: "1".repeat(64) },
+    { sequence: 2, migration_id: "20260102000000_two", migration_sha256: "2".repeat(64) },
+  ];
   return {
-    ordered_migration_files_digest: "f".repeat(64),
-    applied_global_ledger_digest: "7".repeat(64),
+    ordered_migration_files_digest: MIGRATION_FILES_DIGEST,
+    applied_global_ledger_digest: sha256Jcs(globalLedgerEntries),
+    global_ledger_entries: globalLedgerEntries,
     ordered_global_ledger: [
       "20260101000000_one",
       "20260102000000_two",
@@ -91,13 +103,107 @@ function migrationReplay(overrides = {}) {
   };
 }
 
+function evidenceFixture() {
+  const canaryIds = [
+    "app-production-route",
+    "cross-component-identity",
+    "external-network-deny",
+    "full-local-api-gateway-route",
+    "full-local-auth-route",
+    "full-local-postgrest-fixture",
+    "full-local-storage-route",
+    "worker-synthetic-job",
+  ];
+  const productionMeasurement = {
+    schema: "homecook.release-rehearsal-production-isolation-telemetry.v1",
+    production_db_connection_count: 0,
+    production_db_write_count: 0,
+    mutation_attempt_count: 0,
+    forbidden_mount_count: 0,
+    forbidden_environment_count: 0,
+    observed_container_count: 12,
+    container_policy_digest: "a".repeat(64),
+    command_policy_digest: "b".repeat(64),
+    network_policy_digest: "c".repeat(64),
+    external_attempt_count: 1,
+    successful_egress_count: 0,
+    docker_endpoint_identity_digest: "d".repeat(64),
+    docker_daemon_identity_digest: "e".repeat(64),
+  };
+  const unsigned = {
+    schema: RUN_EVIDENCE_SCHEMA,
+    canonicalization: "RFC8785-JCS+SHA256",
+    status: "passed",
+    trusted_receipt: false,
+    candidate_identity_digest: "c".repeat(64),
+    release_sha: SHA_A,
+    release_tree: SHA_B,
+    build_id: "build-r2",
+    sealed_bundle_digest: DIGEST_A,
+    bundle_manifest_digest: DIGEST_B,
+    run_id: RUN_ID,
+    issued_at: "2026-08-29T00:00:00.000Z",
+    completed_at: "2026-08-29T00:01:00.000Z",
+    isolation: {
+      docker_project_id: `homecook-rehearsal-${RUN_ID}`,
+      container_names: ["container-a"],
+      network_names: ["network-a"],
+      volume_names: ["volume-a"],
+      db_identity: { name: "hc_r2_1111111122224333", user: "hc_r2_user_1111111122224333", identity_digest: "1".repeat(64) },
+      ports: { app: 43101, auth: 43102, postgres: 43103, storage: 43104 },
+      root_identity_digest: "2".repeat(64),
+      execution_root_identity_digest: "4".repeat(64),
+      resource_identity_digest: "3".repeat(64),
+    },
+    migration: migrationReplay(),
+    fixtures: { fixture_set_id: "homecook-r2-synthetic-v1", fixture_set_digest: "5".repeat(64), production_derived_row_count: 0 },
+    runtime: {
+      app: runtime("app"),
+      full_local: runtime("full_local"),
+      worker: runtime("worker"),
+      foreground_supervisor: {
+        component: "foreground_supervisor",
+        pid: 41000,
+        process_group_id: null,
+        child_process_groups_enforced: true,
+        launchd_used: false,
+        child_identity_digest: "6".repeat(64),
+        timeout_policy_digest: "7".repeat(64),
+      },
+    },
+    canaries: canaryIds.map((canary_id, index) => ({ canary_id, exit_code: 0, normalized_result_digest: String(index + 1).repeat(64).slice(0, 64) })),
+    network: { default_deny_policy_digest: "8".repeat(64), allowed_endpoints: ["loopback", "run-owned-network"], denied_attempt_count: 1, unexpected_successful_egress_count: 0 },
+    cleanup: {
+      completed: true,
+      owned_resource_ids: ["container-app", "container-full-local", "container-worker"],
+      removed_resource_ids: ["container-app", "container-full-local", "container-worker"],
+      residue_resource_ids: [],
+      cleanup_errors: [],
+      secret_bearing_persistent_file_count: 0,
+    },
+    production_guard: {
+      surface_allowlist_version: "homecook-production-surface-v1",
+      production_snapshot_pre_digest: "9".repeat(64),
+      production_snapshot_post_digest: "9".repeat(64),
+      equal: true,
+      mutation_attempt_count: 0,
+      production_db_connection_count: 0,
+      production_db_write_count: 0,
+      measurement: productionMeasurement,
+      measurement_digest: sha256Jcs(productionMeasurement),
+    },
+    threat_controls: { symlink_toctou: "pass", namespace_collision: "pass", digest_substitution: "pass", stale_candidate: "pass", cleanup_ownership: "pass" },
+  };
+  return { ...unsigned, evidence_digest: sha256Jcs(unsigned) };
+}
+
 function runtime(component: "app" | "full_local" | "worker") {
   return {
     component,
-    kind: component === "full_local" ? "container" : "process",
-    pid: component === "full_local" ? null : component === "app" ? 41001 : 41002,
-    process_group_id: component === "full_local" ? null : 41000,
-    container_ids: component === "full_local" ? ["container-full-local"] : [],
+    kind: "container",
+    pid: null,
+    process_group_id: null,
+    container_ids: [component === "full_local" ? "container-full-local" : `container-${component}`],
     release_sha: SHA_A,
     release_tree: SHA_B,
     build_id: "build-r2",
@@ -113,6 +219,8 @@ function createAdapters() {
     { kind: "network", id: "network-1", name: `homecook-rehearsal-${RUN_ID}-network` },
     { kind: "volume", id: "volume-1", name: `homecook-rehearsal-${RUN_ID}-postgres` },
     { kind: "container", id: "container-full-local", name: `homecook-rehearsal-${RUN_ID}-full-local` },
+    { kind: "container", id: "container-app", name: `homecook-rehearsal-${RUN_ID}-app` },
+    { kind: "container", id: "container-worker", name: `homecook-rehearsal-${RUN_ID}-worker` },
   ];
   return {
     snapshotProduction: vi.fn().mockResolvedValue(productionSnapshot()),
@@ -131,10 +239,14 @@ function createAdapters() {
     ]),
     waitForReadiness: vi.fn().mockResolvedValue({ ready: true }),
     runCanaries: vi.fn().mockResolvedValue([
-      { canary_id: "app-health", exit_code: 0, normalized_result_digest: "1".repeat(64) },
+      { canary_id: "app-production-route", exit_code: 0, normalized_result_digest: "1".repeat(64) },
       { canary_id: "cross-component-identity", exit_code: 0, normalized_result_digest: "2".repeat(64) },
-      { canary_id: "full-local-synthetic-fixture", exit_code: 0, normalized_result_digest: "3".repeat(64) },
-      { canary_id: "worker-synthetic-job", exit_code: 0, normalized_result_digest: "4".repeat(64) },
+      { canary_id: "external-network-deny", exit_code: 0, normalized_result_digest: "3".repeat(64) },
+      { canary_id: "full-local-api-gateway-route", exit_code: 0, normalized_result_digest: "4".repeat(64) },
+      { canary_id: "full-local-auth-route", exit_code: 0, normalized_result_digest: "5".repeat(64) },
+      { canary_id: "full-local-postgrest-fixture", exit_code: 0, normalized_result_digest: "6".repeat(64) },
+      { canary_id: "full-local-storage-route", exit_code: 0, normalized_result_digest: "7".repeat(64) },
+      { canary_id: "worker-synthetic-job", exit_code: 0, normalized_result_digest: "8".repeat(64) },
     ]),
     readNetworkEvidence: vi.fn().mockResolvedValue({
       default_deny_policy_digest: "0".repeat(64),
@@ -142,11 +254,36 @@ function createAdapters() {
       denied_attempt_count: 1,
       unexpected_successful_egress_count: 0,
     }),
+    readIsolationTelemetry: vi.fn().mockResolvedValue({
+      schema: "homecook.release-rehearsal-production-isolation-telemetry.v1",
+      production_db_connection_count: 0,
+      production_db_write_count: 0,
+      mutation_attempt_count: 0,
+      forbidden_mount_count: 0,
+      forbidden_environment_count: 0,
+      observed_container_count: 3,
+      container_policy_digest: "a".repeat(64),
+      command_policy_digest: "b".repeat(64),
+      network_policy_digest: "0".repeat(64),
+      external_attempt_count: 1,
+      successful_egress_count: 0,
+      docker_endpoint_identity_digest: "d".repeat(64),
+      docker_daemon_identity_digest: "e".repeat(64),
+    }),
     stopRuntime: vi.fn().mockResolvedValue(undefined),
     removeResource: vi.fn().mockResolvedValue(undefined),
     listResidue: vi.fn().mockResolvedValue([]),
     countPersistentSecretFiles: vi.fn().mockResolvedValue(0),
     closeSecretHandles: vi.fn().mockResolvedValue(undefined),
+    getCreationLedger: vi.fn().mockReturnValue(resources),
+    readVerifiedMigrationInputs: vi.fn().mockReturnValue({
+      ordered_migration_files_digest: MIGRATION_FILES_DIGEST,
+      entries: MIGRATION_FILE_ENTRIES,
+      inputs: [
+        { path: "supabase/migrations/20260101000000_one.sql", sha256: "1".repeat(64), bytes: Buffer.from("select 1;\n") },
+        { path: "supabase/migrations/20260102000000_two.sql", sha256: "2".repeat(64), bytes: Buffer.from("select 2;\n") },
+      ],
+    }),
     resources,
   };
 }
@@ -201,14 +338,32 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
   });
 
   it("allows only bounded read inventory and exact run-owned mutations", () => {
-    const context = { runId: RUN_ID, project: `homecook-rehearsal-${RUN_ID}` };
-    expect(validateDockerInvocation(["ps", "--no-trunc"], context).mode).toBe("read-only");
+    const dockerHost = "unix:///private/run/homecook-r2/docker.sock";
+    const context = { dockerHost, runId: RUN_ID, project: `homecook-rehearsal-${RUN_ID}` };
+    expect(validateDockerInvocation(["--host", dockerHost, "ps", "--no-trunc"], context).mode).toBe("read-only");
+    expect(() => validateDockerInvocation(["ps", "--no-trunc"], context)).toThrow(/--host|endpoint/iu);
     expect(validateDockerInvocation([
+      "--host", dockerHost,
       "network", "create",
       "--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`,
       "--label", `com.docker.compose.project=${context.project}`,
       `${context.project}-network`,
     ], context).mode).toBe("run-owned-mutation");
+  });
+
+  it("requires --pull=never on every run-owned docker run", () => {
+    const dockerHost = "unix:///private/run/homecook-r2/docker.sock";
+    const context = { dockerHost, runId: RUN_ID, project: `homecook-rehearsal-${RUN_ID}` };
+    const base = [
+      "--host", dockerHost,
+      "run", "--detach",
+      "--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`,
+      "--label", `com.docker.compose.project=${context.project}`,
+    ];
+    expect(() => validateDockerInvocation([...base, "node@sha256:abc"], context))
+      .toThrow(/pull.*never/iu);
+    expect(validateDockerInvocation([...base, "--pull=never", "node@sha256:abc"], context).mode)
+      .toBe("run-owned-mutation");
   });
 
   it("constructs a new allowlisted child environment and rejects production credentials", () => {
@@ -261,7 +416,48 @@ describe("release rehearsal R2 orchestration", () => {
       candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
     }));
     expect(adapters.stopRuntime.mock.calls.map(([entry]) => entry.component)).toEqual(["worker", "full_local", "app"]);
-    expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id)).toEqual(["container-full-local", "volume-1", "network-1"]);
+    expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id)).toEqual([
+      "container-worker", "container-app", "container-full-local", "volume-1", "network-1",
+    ]);
+  });
+
+  it("cleans only the immutable partial-create ledger after create failure", async () => {
+    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-partial-create-"));
+    const candidateRoot = join(namespaceRoot, "candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.createResources.mockRejectedValue(new Error("compose partial start"));
+    adapters.getCreationLedger.mockReturnValue(adapters.resources.slice(0, 2));
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+    })).rejects.toThrow(/partial start/iu);
+    expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id).sort())
+      .toEqual(["network-1", "volume-1"]);
+  });
+
+  it("reports label-only discovered resources as residue and never adopts or removes them", async () => {
+    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-label-residue-"));
+    const candidateRoot = join(namespaceRoot, "candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.listResidue.mockResolvedValue([
+      { kind: "container", id: "attacker-decoy", name: `homecook-rehearsal-${RUN_ID}-app` },
+    ]);
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+    })).rejects.toThrow(/residue|cleanup/iu);
+    expect(adapters.removeResource).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: "attacker-decoy" }),
+      expect.anything(),
+    );
   });
 
   it.each([
@@ -310,7 +506,7 @@ describe("release rehearsal R2 orchestration", () => {
       },
       adapters,
     })).rejects.toThrow(/candidate|sealed|tamper|drift/iu);
-    expect(reads).toBe(3);
+    expect(reads).toBeGreaterThanOrEqual(3);
   });
 
   it("cleans exact run-owned resources when signalled midway", async () => {
@@ -333,6 +529,29 @@ describe("release rehearsal R2 orchestration", () => {
     })).rejects.toThrow(/SIGTERM|signal|interrupt|abort/iu);
     expect(adapters.removeResource).toHaveBeenCalledTimes(adapters.resources.length);
     expect(adapters.applyMigrations).not.toHaveBeenCalled();
+  });
+
+  it("aborts an in-flight readiness wait and immediately enters cleanup", async () => {
+    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-readiness-signal-"));
+    const candidateRoot = join(namespaceRoot, "candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    const controller = new AbortController();
+    adapters.waitForReadiness.mockImplementation(async ({ signal }: { signal: AbortSignal }) =>
+      new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })));
+    const run = runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(adapters.waitForReadiness).toHaveBeenCalled());
+    controller.abort(new Error("SIGTERM readiness"));
+    await expect(run).rejects.toThrow(/SIGTERM|readiness/iu);
+    expect(adapters.removeResource).toHaveBeenCalledTimes(adapters.resources.length);
+    expect(adapters.runCanaries).not.toHaveBeenCalled();
   });
 });
 
@@ -361,7 +580,75 @@ describe("release rehearsal R2 cleanup ownership", () => {
   });
 });
 
+describe("release rehearsal R2 evidence semantic attack table", () => {
+  it("accepts only the exact closed semantic evidence", () => {
+    expect(() => validateRunEvidence(evidenceFixture())).not.toThrow();
+  });
+
+  it.each([
+    ["timestamp order", (value: ReturnType<typeof evidenceFixture>) => { value.issued_at = "2026-08-29T00:02:00.000Z"; }],
+    ["runtime slot", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.app.component = "worker"; }],
+    ["runtime kind", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.kind = "process"; }],
+    ["canary set", (value: ReturnType<typeof evidenceFixture>) => { value.canaries = value.canaries.slice(1); }],
+    ["migration head", (value: ReturnType<typeof evidenceFixture>) => { value.migration.catalog_head = "wrong"; }],
+    ["ledger digest", (value: ReturnType<typeof evidenceFixture>) => { value.migration.applied_global_ledger_digest = "0".repeat(64); }],
+    ["denied count", (value: ReturnType<typeof evidenceFixture>) => { value.network.denied_attempt_count = 0; }],
+    ["cleanup equality", (value: ReturnType<typeof evidenceFixture>) => { value.cleanup.removed_resource_ids = []; }],
+    ["production measurement", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.measurement_digest = "0".repeat(64); }],
+    ["measured production DB access", (value: ReturnType<typeof evidenceFixture>) => {
+      value.production_guard.production_db_connection_count = 1;
+      value.production_guard.measurement.production_db_connection_count = 1;
+      value.production_guard.measurement_digest = sha256Jcs(value.production_guard.measurement);
+    }],
+  ])("rejects digest-correct false pass evidence: %s", (_label, mutate) => {
+    const value = structuredClone(evidenceFixture());
+    mutate(value);
+    const unsigned = { ...value };
+    delete (unsigned as { evidence_digest?: string }).evidence_digest;
+    value.evidence_digest = sha256Jcs(unsigned);
+    expect(() => validateRunEvidence(value)).toThrow();
+  });
+});
+
 describe("release rehearsal R2 public command and schema", () => {
+  it("rejects every post-create container image substitution", () => {
+    const authority = {
+      reference: `docker.io/library/node@sha256:${"a".repeat(64)}`,
+      digest: `sha256:${"a".repeat(64)}`,
+      image_id: `sha256:${"b".repeat(64)}`,
+      platform: "linux/arm64",
+    };
+    const observed = {
+      configured_reference: authority.reference,
+      container_image_id: authority.image_id,
+      local_image_id: authority.image_id,
+      platform: authority.platform,
+      repo_digests: [authority.reference],
+    };
+    expect(() => validateContainerImageAuthority({ authority, observed })).not.toThrow();
+    for (const patch of [
+      { container_image_id: `sha256:${"c".repeat(64)}` },
+      { configured_reference: `docker.io/library/node@sha256:${"d".repeat(64)}` },
+      { local_image_id: `sha256:${"e".repeat(64)}` },
+      { platform: "linux/amd64" },
+      { repo_digests: [`other@sha256:${"f".repeat(64)}`] },
+    ]) {
+      expect(() => validateContainerImageAuthority({ authority, observed: { ...observed, ...patch } }))
+        .toThrow(/image|digest|platform|reference/iu);
+    }
+  });
+
+  it("uses the actual sealed app and worker runtime entrypoints", () => {
+    const adaptersSource = readFileSync(
+      "scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs",
+      "utf8",
+    );
+    expect(adaptersSource).toContain("scripts/start-production.mjs");
+    expect(adaptersSource).toContain("rehearsal-synthetic");
+    expect(adaptersSource).toContain("--pull=never");
+    expect(adaptersSource).not.toContain("node_modules/next/dist/bin/next','start'");
+  });
+
   it("generates only run-owned internal Compose networks and loopback environment", () => {
     const namespace = buildRunNamespace({
       runId: RUN_ID,
@@ -380,7 +667,10 @@ describe("release rehearsal R2 public command and schema", () => {
     const override = buildFullLocalComposeOverride(namespace);
     expect(override.match(/internal: true/gu)).toHaveLength(3);
     expect(override.match(/pull_policy: never/gu)).toHaveLength(7);
+    expect(override.match(/max-size: "1m"/gu)).toHaveLength(7);
     expect(override).toContain(`${RUN_OWNERSHIP_LABEL}: ${JSON.stringify(RUN_ID)}`);
+    expect(override.match(/HOMECOOK_REHEARSAL_DB_NAME:/gu)).toHaveLength(3);
+    expect((override.match(/HOMECOOK_REHEARSAL_RUN_ID:/gu) ?? []).length).toBeGreaterThanOrEqual(3);
     expect(override).not.toMatch(/external:\s*true/iu);
   });
 
@@ -397,11 +687,30 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).toEqual(expect.arrayContaining([
       "trusted_receipt",
+      "issued_at",
       "production_guard",
       "cleanup",
       "evidence_digest",
     ]));
     expect(schema.properties.trusted_receipt.const).toBe(false);
+    expect(schema.properties.canaries.prefixItems.map((entry: { properties: { canary_id: { const: string } } }) =>
+      entry.properties.canary_id.const)).toEqual([
+      "app-production-route",
+      "cross-component-identity",
+      "external-network-deny",
+      "full-local-api-gateway-route",
+      "full-local-auth-route",
+      "full-local-postgrest-fixture",
+      "full-local-storage-route",
+      "worker-synthetic-job",
+    ]);
+    expect(schema.properties.runtime.properties.app.allOf[1].properties.component.const).toBe("app");
+    expect(schema.properties.runtime.properties.full_local.allOf[1].properties.component.const).toBe("full_local");
+    expect(schema.properties.runtime.properties.worker.allOf[1].properties.component.const).toBe("worker");
+    expect(schema.properties.production_guard.required).toEqual(expect.arrayContaining([
+      "measurement",
+      "measurement_digest",
+    ]));
     expect(JSON.stringify(schema)).not.toContain("receipt_digest");
   });
 

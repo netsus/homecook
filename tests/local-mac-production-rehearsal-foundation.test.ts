@@ -10,6 +10,7 @@ const MODULE_PATHS = [
   "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
   "scripts/lib/local-mac-production-rehearsal-runner.mjs",
   "scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs",
+  "scripts/lib/local-mac-production-rehearsal-runner-safety.mjs",
   "scripts/local-mac-production-rehearsal.mjs",
   "scripts/local-mac-production-rehearsal-run.mjs",
   "scripts/schemas/local-mac-production-rehearsal-candidate.schema.json",
@@ -30,7 +31,7 @@ describe("local Mac production rehearsal foundation", () => {
   });
 
   it("exports the strict JCS, receipt, inventory, classifier, and CLI APIs", async () => {
-    const [jcs, receipts, inventory, classifier, candidate, runner, runnerAdapters, cli, runnerCli] = await Promise.all([
+    const [jcs, receipts, inventory, classifier, candidate, runner, runnerAdapters, runnerSafety, cli, runnerCli] = await Promise.all([
       import("../scripts/lib/rfc8785-jcs.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-receipts.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs"),
@@ -38,6 +39,7 @@ describe("local Mac production rehearsal foundation", () => {
       import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-runner.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs"),
+      import("../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs"),
       import("../scripts/local-mac-production-rehearsal.mjs"),
       import("../scripts/local-mac-production-rehearsal-run.mjs"),
     ]);
@@ -77,6 +79,11 @@ describe("local Mac production rehearsal foundation", () => {
     });
     expect(runnerAdapters).toMatchObject({
       createLocalReleaseRehearsalRunnerAdapters: expect.any(Function),
+    });
+    expect(runnerSafety).toMatchObject({
+      resolveTrustedLocalDockerEndpoint: expect.any(Function),
+      runAbortableCommand: expect.any(Function),
+      readVerifiedMigrationInputs: expect.any(Function),
     });
     expect(cli).toMatchObject({
       runLocalMacProductionRehearsalCli: expect.any(Function),

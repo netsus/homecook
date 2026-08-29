@@ -19,6 +19,7 @@ import {
   createYoutubeExtractionWorkerRuntime,
   normalizeYoutubeExtractionRuntimeError,
   resolveYoutubeExtractionTempRoot,
+  runSyntheticYoutubeExtractionWorkerJob,
   runYoutubeExtractionWorkerPollLoop,
   sanitizeYoutubeExtractionChildEnvironment,
   verifyStandaloneYoutubeI031Preflight,
@@ -38,6 +39,27 @@ afterEach(async () => {
 });
 
 describe("YTASYNC-WORKER standalone runner", () => {
+  it("runs one synthetic job through the actual fenced runtime and poll loop", async () => {
+    const result = await runSyntheticYoutubeExtractionWorkerJob({
+      allowedSnapshotDigest: "a".repeat(64),
+      runId: "11111111-2222-4333-8444-555555555555",
+    });
+    expect(result).toMatchObject({
+      schema: "homecook.youtube-extraction-worker-rehearsal-result.v1",
+      status: "succeeded",
+      provider_requests: 0,
+      synthetic: true,
+    });
+    expect(result.rpc_sequence).toEqual(expect.arrayContaining([
+      "claim_youtube_extraction_job",
+      "claim_youtube_extractor_permit",
+      "start_youtube_extraction_attempt",
+      "resolve_youtube_extraction_job_draft",
+      "finalize_youtube_extraction_job",
+      "release_youtube_extractor_permit",
+    ]));
+  });
+
   it("locks the frozen worker timing contract to five minutes and thirty seconds", () => {
     expect(YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS).toBe(300);
     expect(YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS).toBe(30_000);

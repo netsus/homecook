@@ -29,6 +29,7 @@ import {
   readWorkerProviderEnvironment,
   resolveYoutubeExtractionTempRoot,
   runYoutubeExtractionWorkerPollLoop,
+  runSyntheticYoutubeExtractionWorkerJob,
   verifyStandaloneYoutubeI031Preflight,
 } from "./lib/youtube-extraction-worker-runtime.mjs";
 
@@ -92,9 +93,9 @@ function print(result) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  if (options.command !== "run" && options.command !== "health") {
+  if (!["run", "health", "rehearsal-synthetic"].includes(options.command)) {
     throw new Error(
-      "Usage: node scripts/youtube-extraction-worker-runner.mjs <run|health> --secret-root <directory> --config <env> --manifest <artifact.json> --credential <credential.json> --app-descriptor <app.json> --policy <policy.json> --expected-schema <schema.json> [--queue-state <queue.json>] [--dry-run]",
+      "Usage: node scripts/youtube-extraction-worker-runner.mjs <run|health|rehearsal-synthetic> --secret-root <directory> --config <env> --manifest <artifact.json> --credential <credential.json> --app-descriptor <app.json> --policy <policy.json> --expected-schema <schema.json> [--queue-state <queue.json>] [--dry-run]",
     );
   }
 
@@ -147,6 +148,24 @@ async function main() {
           workerArtifact,
         })
         : null,
+    }));
+    return;
+  }
+
+  if (options.command === "rehearsal-synthetic") {
+    if (
+      process.env.HOMECOOK_REHEARSAL_MODE !== "isolated-r2"
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+        .test(process.env.HOMECOOK_REHEARSAL_RUN_ID ?? "")
+    ) {
+      throw new Error("rehearsal synthetic worker mode requires exact isolated R2 authority");
+    }
+    if (!preflight.ready) {
+      throw new Error(`worker preflight failed: ${preflight.blockers.join(",")}`);
+    }
+    print(await runSyntheticYoutubeExtractionWorkerJob({
+      allowedSnapshotDigest: workerArtifact.allowed_snapshot_digest,
+      runId: process.env.HOMECOOK_REHEARSAL_RUN_ID,
     }));
     return;
   }
