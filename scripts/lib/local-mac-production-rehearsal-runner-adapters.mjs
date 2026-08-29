@@ -129,11 +129,30 @@ export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
     const value = config.services[service];
     if (!value || typeof value !== "object" || typeof value.image !== "string" || !value.image.includes("@sha256:")) fail(`resolved Compose image authority is invalid: ${service}`);
     if (value.build || value.pull_policy && value.pull_policy !== "never") fail(`resolved Compose mutation authority is invalid: ${service}`);
-    if (!Array.isArray(value.networks) || value.networks.length < 1 || !value.restart || !Array.isArray(value.security_opt) || !value.security_opt.includes("no-new-privileges:true")) fail(`resolved Compose runtime contract is invalid: ${service}`);
+    const networkNames = Array.isArray(value.networks) ? value.networks : Object.keys(value.networks ?? {});
+    if (networkNames.length < 1 || !value.restart || !Array.isArray(value.security_opt) || !value.security_opt.includes("no-new-privileges:true")) fail(`resolved Compose runtime contract is invalid: ${service}`);
   }
   for (const network of ["auth-edge", "auth-egress", "data-internal"]) if (config.networks?.[network]?.internal !== true) fail(`resolved Compose network is not internal: ${network}`);
   for (const volume of ["postgres-data", "storage-data"]) if (!config.volumes?.[volume]) fail(`resolved Compose volume is missing: ${volume}`);
   return Object.freeze({ schema: "homecook.r2-primitive-plan.v1", project, ports: { ...ports }, networks: ["auth-edge", "auth-egress", "data-internal"], volumes: ["postgres-data", "storage-data"], services: SERVICES.map((name) => Object.freeze({ name, ...config.services[name] })) });
+}
+
+function primitiveServiceArgs(service, namespace, labels) {
+  const networks = Array.isArray(service.networks) ? service.networks : Object.keys(service.networks ?? {});
+  const firstNetwork = networks[0];
+  if (!firstNetwork) fail(`primitive service has no network: ${service.name}`);
+  const args = ["create", "--name", `${namespace.project}-${service.name}-1`, "--pull=never", ...labels, "--network", `${namespace.project}_${firstNetwork}`];
+  for (const [key, value] of Object.entries(service.environment ?? {})) args.push("--env", `${key}=${value}`);
+  for (const option of service.security_opt ?? []) args.push("--security-opt", option);
+  if (service.restart) args.push("--restart", service.restart);
+  if (service.read_only === true) args.push("--read-only");
+  for (const mount of service.volumes ?? []) {
+    if (!mount?.type || !mount.source || !mount.target) fail(`primitive mount is incomplete: ${service.name}`);
+    args.push("--mount", `type=${mount.type},src=${mount.source},dst=${mount.target}${mount.read_only ? ",readonly" : ""}`);
+  }
+  if (service.entrypoint) args.push("--entrypoint", Array.isArray(service.entrypoint) ? service.entrypoint[0] : service.entrypoint);
+  args.push(service.image, ...(Array.isArray(service.command) ? service.command : service.command ? [service.command] : []));
+  return { args, additionalNetworks: networks.slice(1) };
 }
 
 function fail(message) {
@@ -1029,6 +1048,27 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         const observed = await inspectResource(state, entry, { signal: state.activeSignal });
         recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
       }
+      const resolved = await dockerCommand(state, [
+        "compose", "--project-name", namespace.project, "--env-file", envPath,
+        "-f", sealedCompose, "-f", overridePath, "config", "--format", "json",
+      ], { signal: state.activeSignal });
+      let config;
+      try { config = JSON.parse(resolved.stdout); } catch { fail("read-only Compose config output is invalid JSON"); }
+      const plan = compileClosedPrimitivePlan(config, { project: namespace.project, ports: namespace.ports });
+      state.primitivePlan = Object.freeze({ plan, digest: sha256Jcs(plan) });
+      for (const service of plan.services) {
+        const primitive = primitiveServiceArgs(service, namespace, primitiveLabels);
+        const stdout = (await dockerCommand(state, primitive.args, { signal: state.activeSignal })).stdout;
+        const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
+        const entry = { kind: "container", id, name: `${namespace.project}-${service.name}-1` };
+        const observed = await inspectResource(state, entry, { signal: state.activeSignal });
+        recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
+        for (const network of primitive.additionalNetworks) {
+          await dockerCommand(state, ["network", "connect", `${namespace.project}_${network}`, id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
+        }
+        await dockerCommand(state, ["start", id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
+        if (service.name === "postgres") await waitForContainers(state, { signal: state.activeSignal, expectedNames: [entry.name] });
+      }
       return state.creationLedger.snapshot();
     },
 
@@ -1172,22 +1212,16 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       const sentinelNetworkName = `${namespace.project}_egress-sentinel`;
       let sentinelNetworkId;
       try {
-        sentinelNetworkId = (await dockerCommand(state, [
+        const sentinelStdout = (await dockerCommand(state, [
           "network", "create", "--internal",
           ...commonLabels,
           sentinelNetworkName,
-        ], { signal: state.activeSignal })).stdout.trim();
-        if (!sentinelNetworkId) fail("sentinel network create did not return an ID");
+        ], { signal: state.activeSignal })).stdout;
+        sentinelNetworkId = /^([0-9a-f]{64})\n?$/u.exec(sentinelStdout)?.[1];
+        if (!sentinelNetworkId) fail("sentinel network create did not return one exact ID");
         const sentinelNetworkEntry = { kind: "network", id: sentinelNetworkId, name: sentinelNetworkName };
         const sentinelNetworkObserved = await inspectResource(state, sentinelNetworkEntry, { signal: state.activeSignal });
-        if (
-          sentinelNetworkObserved?.id !== sentinelNetworkId
-          || sentinelNetworkObserved?.name !== sentinelNetworkName
-          || sentinelNetworkObserved?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId
-          || sentinelNetworkObserved?.labels?.[RUN_PROJECT_LABEL] !== namespace.project
-          || sentinelNetworkObserved?.labels?.[RUN_CREATION_NONCE_LABEL] !== state.creationNonce
-        ) fail("sentinel network returned identity/labels mismatch");
-        state.creationLedger.record(sentinelNetworkEntry);
+        recordPrimitiveCreateResult(state.creationLedger, { ...sentinelNetworkEntry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, sentinelStdout, sentinelNetworkObserved);
       } catch (error) {
         await assertExpectedCreatedResources(state, [sentinelNetworkName], { signal: state.cleanupSignal });
         throw error;

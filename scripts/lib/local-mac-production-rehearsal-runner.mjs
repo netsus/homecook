@@ -263,7 +263,7 @@ export function validateDockerInvocation(argv, context = {}) {
     ["image", "inspect"], ["network", "ls"], ["network", "inspect"],
     ["volume", "ls"], ["volume", "inspect"],
   ].some((prefix) => prefix.every((token, index) => commandArgv[index] === token));
-  if (readOnly) return Object.freeze({ mode: "read-only", argv: [...argv] });
+  if (readOnly || (commandArgv[0] === "compose" && commandArgv.includes("config") && commandArgv.includes("--format") && commandArgv.includes("json") && !commandArgv.some((token) => ["create", "start", "up"].includes(token)))) return Object.freeze({ mode: "read-only", argv: [...argv] });
 
   const runId = context.runId;
   const project = context.project;
@@ -288,6 +288,7 @@ export function validateDockerInvocation(argv, context = {}) {
   }
   const destructive = (commandArgv[0] === "network" && commandArgv[1] === "rm")
     || (commandArgv[0] === "volume" && commandArgv[1] === "rm")
+    || (commandArgv[0] === "network" && commandArgv[1] === "connect")
     || ["start", "stop", "rm", "kill", "exec"].includes(commandArgv[0]);
   if (destructive && context.verifiedOwnership === true && context.resourceId) {
     if (!commandArgv.includes(context.resourceId)) fail("Docker owned-resource argv does not contain the verified resource ID");
