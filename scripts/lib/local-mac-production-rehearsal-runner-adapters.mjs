@@ -137,7 +137,7 @@ export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
   return Object.freeze({ schema: "homecook.r2-primitive-plan.v1", project, ports: { ...ports }, networks: ["auth-edge", "auth-egress", "data-internal"], volumes: ["postgres-data", "storage-data"], services: SERVICES.map((name) => Object.freeze({ name, ...config.services[name] })) });
 }
 
-function primitiveServiceArgs(service, namespace, labels) {
+export function primitiveServiceArgs(service, namespace, labels) {
   const networks = Array.isArray(service.networks) ? service.networks : Object.keys(service.networks ?? {});
   const firstNetwork = networks[0];
   if (!firstNetwork) fail(`primitive service has no network: ${service.name}`);
@@ -153,6 +153,20 @@ function primitiveServiceArgs(service, namespace, labels) {
   if (service.entrypoint) args.push("--entrypoint", Array.isArray(service.entrypoint) ? service.entrypoint[0] : service.entrypoint);
   args.push(service.image, ...(Array.isArray(service.command) ? service.command : service.command ? [service.command] : []));
   return { args, additionalNetworks: networks.slice(1) };
+}
+
+/** Narrow test seam for the exact service create/connect/start order used by createResources. */
+export function compilePrimitiveServiceOperations(plan, namespace, labels) {
+  if (plan?.schema !== "homecook.r2-primitive-plan.v1") fail("primitive operation plan is invalid");
+  return Object.freeze(plan.services.flatMap((service) => {
+    const primitive = primitiveServiceArgs(service, namespace, labels);
+    return [
+      Object.freeze({ kind: "create", service: service.name, argv: primitive.args }),
+      ...primitive.additionalNetworks.map((network) => Object.freeze({ kind: "connect", service: service.name, network })),
+      Object.freeze({ kind: "start", service: service.name }),
+      ...(service.name === "postgres" ? [Object.freeze({ kind: "readiness", service: service.name })] : []),
+    ];
+  }));
 }
 
 function fail(message) {
@@ -1056,6 +1070,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       try { config = JSON.parse(resolved.stdout); } catch { fail("read-only Compose config output is invalid JSON"); }
       const plan = compileClosedPrimitivePlan(config, { project: namespace.project, ports: namespace.ports });
       state.primitivePlan = Object.freeze({ plan, digest: sha256Jcs(plan) });
+      state.primitiveOperations = compilePrimitiveServiceOperations(plan, namespace, primitiveLabels);
       for (const service of plan.services) {
         const primitive = primitiveServiceArgs(service, namespace, primitiveLabels);
         const stdout = (await dockerCommand(state, primitive.args, { signal: state.activeSignal })).stdout;

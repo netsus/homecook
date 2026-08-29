@@ -28,6 +28,7 @@ import {
   validateContainerImageAuthority,
   normalizeResolvedComposeFixture,
   buildSafeResolvedComposeGoldenFixture,
+  compilePrimitiveServiceOperations,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
@@ -723,6 +724,19 @@ describe("release rehearsal R2 public command and schema", () => {
       const value = structuredClone(config); mutate(value);
       expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: { app: 1 } })).toThrow();
     }
+  });
+
+  it("orders actual primitive service operations with PostgreSQL ready before migration", () => {
+    const services = Object.fromEntries(["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"].map((name) => [name, {
+      image: `example/${name}@sha256:${"a".repeat(64)}`, networks: name === "auth" ? { "data-internal": {}, "auth-egress": {} } : { "data-internal": {} }, restart: "unless-stopped", security_opt: ["no-new-privileges:true"], environment: {}, volumes: [], command: [],
+    }]));
+    const plan = compileClosedPrimitivePlan({ name: "ignored", services, networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } }, volumes: { "postgres-data": {}, "storage-data": {} }, secrets: {} }, { project: `homecook-rehearsal-${RUN_ID}`, ports: { app: 1 } });
+    const namespace = buildRunNamespace({ runId: RUN_ID, ports: { app: 43101, auth: 43102, postgres: 43103, storage: 43104 } });
+    const operations = compilePrimitiveServiceOperations(plan, namespace, ["--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`, "--label", `com.docker.compose.project=${namespace.project}`]);
+    expect(operations.filter((item: any) => item.kind === "create")).toHaveLength(7);
+    expect(operations.find((item: any) => item.kind === "connect" && item.service === "auth")).toMatchObject({ network: "auth-egress" });
+    expect(operations.findIndex((item: any) => item.kind === "readiness" && item.service === "postgres")).toBeLessThan(operations.findIndex((item: any) => item.kind === "create" && item.service === "postgrest"));
+    expect(operations.flatMap((item: any) => "argv" in item ? item.argv : []).join(" ")).not.toMatch(/compose (?:create|start|up)/u);
   });
   it("rejects every post-create container image substitution", () => {
     const authority = {
