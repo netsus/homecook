@@ -57,7 +57,10 @@ import {
   validateCanonicalComposeAuthority,
 } from "../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
-import { materializeImmutableCandidateBootstrap } from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
+import {
+  materializeImmutableCandidateBootstrap,
+  verifyImmutableCandidateModuleGraph,
+} from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -147,6 +150,7 @@ function validManifestInput() {
     ci_check_summary_digest: DIGEST_A,
     ci_snapshot_digest: DIGEST_B,
     ci_suite_run_set_digest: DIGEST_C,
+    builder_input_digest: DIGEST_B,
     source_manifest_digest: DIGEST_A,
     compose_source_digest: DIGEST_C,
     sandbox_policy_digest: DIGEST_B,
@@ -344,8 +348,9 @@ describe("release rehearsal candidate input gates", () => {
     runGit(["config", "user.name", "Fixture"]);
     mkdirSync(join(repo, "scripts", "lib"), { recursive: true, mode: 0o700 });
     mkdirSync(join(repo, "scripts", "config"), { recursive: true, mode: 0o700 });
-    writeFileSync(join(repo, "scripts", "entry.mjs"), "export const authority = 'exact'\n", { mode: 0o600 });
-    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "export const candidate = 'exact'\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "entry.mjs"), "export { candidate } from './lib/candidate.mjs'\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import { dependency } from './dependency.mjs'\nexport const candidate = `exact-${dependency}`\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "dependency.mjs"), "export const dependency = 'blob'\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "config", "lock.json"), "{}", { mode: 0o600 });
     runGit(["add", "."]);
     runGit(["commit", "-m", "fixture"]);
@@ -363,10 +368,56 @@ describe("release rehearsal candidate input gates", () => {
       outputRoot,
       homeDir: gitHome,
     });
-    expect(readFileSync(join(outputRoot, "scripts", "entry.mjs"), "utf8")).toContain("authority = 'exact'");
-    expect(readFileSync(join(outputRoot, "scripts", "lib", "candidate.mjs"), "utf8")).toContain("candidate = 'exact'");
+    expect(readFileSync(join(outputRoot, "scripts", "entry.mjs"), "utf8")).toContain("./lib/candidate.mjs");
+    expect(readFileSync(join(outputRoot, "scripts", "lib", "candidate.mjs"), "utf8")).toContain("exact-${dependency}");
     expect(readFileSync(join(outputRoot, "scripts", "config", "lock.json"), "utf8")).toBe("{}");
     expect(result.release_sha).toBe(releaseSha);
+
+    const graph = verifyImmutableCandidateModuleGraph({
+      entryPaths: ["scripts/entry.mjs", "scripts/lib/candidate.mjs"],
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      lockPaths: ["scripts/config/lock.json"],
+      releaseSha,
+      repositoryRoot: repo,
+      sourceRoot: outputRoot,
+    });
+    expect(graph.builder_input_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(graph.entries.map((entry: { path: string }) => entry.path)).toEqual([
+      "scripts/config/lock.json",
+      "scripts/entry.mjs",
+      "scripts/lib/candidate.mjs",
+      "scripts/lib/dependency.mjs",
+    ]);
+
+    const candidatePath = join(outputRoot, "scripts", "lib", "candidate.mjs");
+    chmodSync(candidatePath, 0o600);
+    const exactCandidate = readFileSync(candidatePath);
+    writeFileSync(candidatePath, "export const candidate = 'attacker'\n", { mode: 0o600 });
+    expect(() => verifyImmutableCandidateModuleGraph({
+      entryPaths: ["scripts/entry.mjs", "scripts/lib/candidate.mjs"],
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      lockPaths: ["scripts/config/lock.json"],
+      releaseSha,
+      repositoryRoot: repo,
+      sourceRoot: outputRoot,
+    })).toThrow(/immutable|Git|blob|drift|authority/iu);
+    writeFileSync(candidatePath, exactCandidate, { mode: 0o600 });
+    const lockPath = join(outputRoot, "scripts", "config", "lock.json");
+    chmodSync(lockPath, 0o600);
+    const exactLock = readFileSync(lockPath);
+    writeFileSync(lockPath, "{\"attacker\":true}", { mode: 0o600 });
+    expect(() => verifyImmutableCandidateModuleGraph({
+      entryPaths: ["scripts/entry.mjs"],
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      lockPaths: ["scripts/config/lock.json"],
+      releaseSha,
+      repositoryRoot: repo,
+      sourceRoot: outputRoot,
+    })).toThrow(/immutable|Git|blob|drift|authority/iu);
+    writeFileSync(lockPath, exactLock, { mode: 0o600 });
   });
 
   it("requires stable pre/post remote-master and full CI run/status identity", () => {
@@ -525,7 +576,7 @@ describe("release rehearsal candidate input gates", () => {
     ];
     const directParserSurvivors = directParserMutations.flatMap((mutation, index) => {
       try {
-        parseCanonicalComposeImageInventory(mutation);
+        parseCanonicalComposeImageInventory(mutation, { requireCanonicalSemantics: true });
         return [index];
       } catch {
         return [];
@@ -578,6 +629,27 @@ describe("release rehearsal candidate input gates", () => {
     expect(() => parseCanonicalComposeImageInventory(validButUnauthorizedCommand)).not.toThrow();
     expect(() => validateCanonicalComposeAuthority(validButUnauthorizedCommand, lock))
       .toThrow(/Compose|digest|authority|lock/iu);
+
+    const coUpdatedSemanticMutations = [
+      canonical.replace("  auth-egress: {}\n", ""),
+      canonical.replace("  data-internal:\n    internal: true", "  data-internal: {}"),
+      canonical.replace("  storage-data:\n    name: ${FULL_LOCAL_STORAGE_VOLUME_NAME:?FULL_LOCAL_STORAGE_VOLUME_NAME is required}\n    labels: *restore-attempt-labels\n", ""),
+      canonical.replace("    labels: *restore-attempt-labels\n", ""),
+    ];
+    const semanticSurvivors = coUpdatedSemanticMutations.flatMap((mutation, index) => {
+      const coUpdatedLock = {
+        ...lock,
+        full_local_compose_sha256: createHash("sha256").update(mutation).digest("hex"),
+      };
+      try {
+        validateCanonicalComposeAuthority(mutation, coUpdatedLock);
+        return [index];
+      } catch {
+        return [];
+      }
+    });
+    expect(coUpdatedSemanticMutations).toHaveLength(4);
+    expect(semanticSurvivors).toEqual([]);
   });
 
   it("allows only exact Docker version and digest inspect argv outside the build sandbox", () => {
@@ -634,6 +706,44 @@ describe("release rehearsal candidate input gates", () => {
       })).toThrow(/observed|denied|sandbox|attempt/iu);
       expect(existsSync(join(deniedRoot, "swallowed"))).toBe(false);
     }
+  });
+
+  it("audits the full sandbox wall-clock interval and catches an early swallowed denial", () => {
+    const calls: Array<{ command: string; args: string[] }> = [];
+    const start = Date.UTC(2026, 7, 29, 0, 0, 0);
+    const times = [start, start + 45_000, start + 46_500];
+    const runCommand = vi.fn((command: string, args: string[]) => {
+      calls.push({ command, args });
+      if (command === "/usr/bin/sandbox-exec") {
+        return { status: 0, signal: null, stdout: "ok", stderr: "", pid: 4242 };
+      }
+      return {
+        status: 0,
+        signal: null,
+        stdout: JSON.stringify([{
+          eventMessage: "Sandbox: node(4242) deny(1) network-outbound",
+          timestamp: "2026-08-29 00:00:01.000000+0000",
+        }]),
+        stderr: "",
+      };
+    });
+    expect(() => runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile: "(version 1) (deny default)",
+      command: "/usr/bin/node",
+      args: ["fixture.mjs"],
+      cwd: "/private/tmp",
+      env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
+      label: "long fixture build",
+      timeout: 60_000,
+      runCommand,
+      now: () => times.shift(),
+      waitForAuditFlush: vi.fn(),
+      formatAuditTime: (milliseconds: number) => new Date(milliseconds).toISOString().replace("T", " ").slice(0, 19),
+    })).toThrow(/observed|denied|sandbox|attempt/iu);
+    expect(calls[1].args).not.toContain("--last");
+    expect(calls[1].args).toEqual(expect.arrayContaining(["--start", "2026-08-28 23:59:59", "--end", "2026-08-29 00:00:46"]));
   });
 
   it("loads the canonical tool lock and rejects self-reported Supabase identity without the pinned binary digest", () => {
@@ -782,6 +892,7 @@ describe("release rehearsal candidate input gates", () => {
       hardlink_count: 0,
       source_snapshot_pre_digest: DIGEST_A,
       source_snapshot_post_digest: DIGEST_A,
+      builder_input_digest: DIGEST_B,
     };
     expect(validateCandidateSourceEvidence(valid)).toEqual(valid);
 
@@ -794,6 +905,7 @@ describe("release rehearsal candidate input gates", () => {
       { tracked_symlinks_contained: false },
       { hardlink_count: 1 },
       { source_snapshot_post_digest: DIGEST_B },
+      { builder_input_digest: "not-a-digest" },
     ]) {
       expect(() => validateCandidateSourceEvidence({ ...valid, ...patch }))
         .toThrow(/sha|tree|detached|clean|symlink|hardlink|drift|source/iu);
@@ -1069,6 +1181,7 @@ describe("release rehearsal candidate orchestration", () => {
       ci_snapshot_digest: candidate.ci_snapshot_digest,
       ci_suite_run_set_digest: candidate.ci_suite_run_set_digest,
       source_manifest_digest: candidate.source_manifest_digest,
+      builder_input_digest: candidate.builder_input_digest,
       compose_source_digest: candidate.compose_source_digest,
       sandbox_policy_digest: candidate.sandbox_policy_digest,
       toolchain_lock_digest: candidate.toolchain_lock_digest,
@@ -1207,6 +1320,7 @@ describe("release rehearsal candidate orchestration", () => {
       sandbox_policy_digest: manifestInput.sandbox_policy_digest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
       source_manifest_digest: manifestInput.source_manifest_digest,
+      builder_input_digest: manifestInput.builder_input_digest,
       compose_source_digest: manifestInput.compose_source_digest,
       source_snapshot_digest: manifestInput.source_manifest_digest,
       toolchain: manifestInput.toolchain,
@@ -1481,6 +1595,7 @@ describe("release rehearsal candidate orchestration", () => {
           hardlink_count: 0,
           source_snapshot_pre_digest: DIGEST_A,
           source_snapshot_post_digest: DIGEST_A,
+          builder_input_digest: DIGEST_B,
         }),
         tracked_files: checkoutFiles,
         });

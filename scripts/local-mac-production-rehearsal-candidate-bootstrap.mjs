@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -97,6 +97,89 @@ export function materializeImmutableCandidateBootstrap({
   return Object.freeze({ release_sha: releaseSha, source_root: realOutput });
 }
 
+function stableReadMaterializedFile(sourceRoot, relativePath) {
+  const absolutePath = resolve(sourceRoot, relativePath);
+  if (relative(sourceRoot, absolutePath).startsWith("..") || absolutePath === sourceRoot) {
+    reject("immutable module graph path escapes materialized source");
+  }
+  const before = lstatSync(absolutePath, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n) {
+    reject("immutable module graph entry type is unsafe");
+  }
+  if (realpathSync(absolutePath) !== absolutePath) reject("immutable module graph path contains a symlink");
+  const bytes = readFileSync(absolutePath);
+  const after = lstatSync(absolutePath, { bigint: true });
+  for (const field of ["dev", "ino", "size", "ctimeNs", "uid", "gid", "nlink"]) {
+    if (before[field] !== after[field]) reject("immutable module graph entry drifted while reading");
+  }
+  return bytes;
+}
+
+function relativeModuleSpecifiers(source) {
+  const specifiers = new Set();
+  for (const pattern of [
+    /(?:^|\n)\s*(?:import|export)\s+[\s\S]*?\sfrom\s+["'](\.{1,2}\/[^"']+)["']/gu,
+    /\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/gu,
+    /\bimport\s+["'](\.{1,2}\/[^"']+)["']/gu,
+  ]) {
+    for (const match of source.matchAll(pattern)) specifiers.add(match[1]);
+  }
+  return [...specifiers];
+}
+
+/** @param {any} options */
+export function verifyImmutableCandidateModuleGraph({
+  entryPaths, gitPath, homeDir, lockPaths = [], releaseSha, repositoryRoot, sourceRoot,
+} = /** @type {any} */ ({})) {
+  if (
+    !/^[0-9a-f]{40}$/u.test(releaseSha ?? "")
+    || !Array.isArray(entryPaths) || entryPaths.length === 0
+    || !Array.isArray(lockPaths)
+    || ![repositoryRoot, sourceRoot, homeDir].every(isAbsolute)
+  ) reject("immutable module graph inputs are invalid");
+  const realRepository = realpathSync(repositoryRoot);
+  const realSource = realpathSync(sourceRoot);
+  const pending = [...entryPaths, ...lockPaths];
+  const seen = new Set();
+  const entries = [];
+  while (pending.length > 0) {
+    const requestedPath = pending.pop();
+    const normalizedPath = posix.normalize(requestedPath);
+    if (
+      requestedPath !== normalizedPath
+      || normalizedPath.startsWith("../")
+      || normalizedPath.startsWith("/")
+      || normalizedPath.includes("\\")
+    ) reject("immutable module graph path is invalid");
+    if (seen.has(normalizedPath)) continue;
+    seen.add(normalizedPath);
+    const treeLine = String(runExact(gitPath, [
+      "--no-replace-objects", "-C", realRepository, "ls-tree", releaseSha, "--", normalizedPath,
+    ], { cwd: realRepository, homeDir })).trim();
+    const match = /^(100644|100755) blob ([0-9a-f]{40})\t(.+)$/u.exec(treeLine);
+    if (!match || match[3] !== normalizedPath) reject("immutable module graph Git blob authority is missing");
+    const exactBytes = Buffer.from(runExact(gitPath, [
+      "--no-replace-objects", "-C", realRepository, "cat-file", "blob", match[2],
+    ], { cwd: realRepository, homeDir, binary: true }));
+    const materializedBytes = stableReadMaterializedFile(realSource, normalizedPath);
+    if (!materializedBytes.equals(exactBytes)) reject("immutable module graph bytes differ from exact Git blob authority");
+    const sha256 = createHash("sha256").update(exactBytes).digest("hex");
+    entries.push({ blob_oid: match[2], git_mode: match[1], path: normalizedPath, sha256 });
+    if (normalizedPath.endsWith(".mjs")) {
+      for (const specifier of relativeModuleSpecifiers(exactBytes.toString("utf8"))) {
+        const dependencyPath = posix.normalize(posix.join(posix.dirname(normalizedPath), specifier));
+        if (!dependencyPath.endsWith(".mjs")) reject("immutable module graph local import is not an exact .mjs path");
+        pending.push(dependencyPath);
+      }
+    }
+  }
+  entries.sort((left, right) => left.path.localeCompare(right.path));
+  return Object.freeze({
+    builder_input_digest: createHash("sha256").update(JSON.stringify(entries)).digest("hex"),
+    entries: Object.freeze(entries),
+  });
+}
+
 function argumentValue(argv, name) {
   const index = argv.indexOf(name);
   return index >= 0 ? argv[index + 1] : null;
@@ -144,11 +227,40 @@ async function runBootstrap(argv) {
     });
     const materializedBootstrap = readFileSync(join(sourceRoot, "scripts", "local-mac-production-rehearsal-candidate-bootstrap.mjs"));
     if (!materializedBootstrap.equals(readFileSync(bootstrapPath))) reject("materialized bootstrap bytes drifted");
+    const builderGraph = verifyImmutableCandidateModuleGraph({
+      entryPaths: [
+        "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
+        "scripts/local-mac-production-rehearsal.mjs",
+      ],
+      gitPath,
+      homeDir,
+      lockPaths: ["scripts/config/local-mac-production-rehearsal-toolchain-lock.json"],
+      releaseSha,
+      repositoryRoot,
+      sourceRoot,
+    });
     const cli = await import(pathToFileURL(join(sourceRoot, "scripts", "local-mac-production-rehearsal.mjs")).href);
     await cli.runLocalMacProductionRehearsalCli(["candidate", ...argv], {
+      immutableBuilderInputDigest: builderGraph.builder_input_digest,
+      immutableBuilderInputEntries: builderGraph.entries,
       immutableBootstrapVerified: true,
       repositoryRootResolver: () => repositoryRoot,
     });
+    const builderGraphPost = verifyImmutableCandidateModuleGraph({
+      entryPaths: [
+        "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
+        "scripts/local-mac-production-rehearsal.mjs",
+      ],
+      gitPath,
+      homeDir,
+      lockPaths: ["scripts/config/local-mac-production-rehearsal-toolchain-lock.json"],
+      releaseSha,
+      repositoryRoot,
+      sourceRoot,
+    });
+    if (JSON.stringify(builderGraph) !== JSON.stringify(builderGraphPost)) {
+      reject("immutable candidate module graph drifted during execution");
+    }
     if (JSON.stringify(bootstrapPre) !== JSON.stringify(snapshotExecutable(bootstrapPath))) {
       reject("bootstrap identity drifted during candidate execution");
     }

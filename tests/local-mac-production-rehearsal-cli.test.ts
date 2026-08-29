@@ -49,6 +49,8 @@ describe("local Mac production rehearsal CLI", () => {
     await runLocalMacProductionRehearsalCli([
       "candidate", "--release-sha", "a".repeat(40), "--json",
     ], {
+      immutableBuilderInputDigest: "b".repeat(64),
+      immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
       immutableBootstrapVerified: true,
       output: output.stream,
       createCandidateAdapters,
@@ -58,6 +60,8 @@ describe("local Mac production rehearsal CLI", () => {
     });
 
     expect(createCandidateAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      builderInputDigest: "b".repeat(64),
+      builderInputEntries: expect.any(Array),
       rootDir: process.cwd(),
     }));
     expect(buildCandidate).toHaveBeenCalledWith(expect.objectContaining({

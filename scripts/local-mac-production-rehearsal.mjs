@@ -120,6 +120,8 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     now = new Date(),
     buildCandidate = null,
     createCandidateAdapters = null,
+    immutableBuilderInputDigest = null,
+    immutableBuilderInputEntries = null,
     immutableBootstrapVerified = false,
     candidateNamespaceResolver = defaultCandidateNamespaceResolver,
     runIdFactory = () => randomUUID(),
@@ -142,6 +144,9 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     if (!immutableBootstrapVerified) {
       throw new Error("candidate execution requires the verified immutable Git bootstrap authority.");
     }
+    if (!/^[0-9a-f]{64}$/u.test(immutableBuilderInputDigest ?? "") || !Array.isArray(immutableBuilderInputEntries) || immutableBuilderInputEntries.length === 0) {
+      throw new Error("candidate execution requires the verified immutable builder module graph authority.");
+    }
     const candidateModule = buildCandidate && createCandidateAdapters
       ? null
       : await import("./lib/local-mac-production-rehearsal-candidate.mjs");
@@ -152,6 +157,8 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
       rootDir,
     });
     const adapters = candidateAdapterFactory({
+      builderInputDigest: immutableBuilderInputDigest,
+      builderInputEntries: immutableBuilderInputEntries,
       homeDir: resolve(options.homeDir),
       namespaceRoot,
       rootDir,

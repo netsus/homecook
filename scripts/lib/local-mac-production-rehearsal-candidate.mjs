@@ -68,7 +68,7 @@ const BUILD_ENV_ALLOWED_KEYS = new Set([
 const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
-  "ci_suite_run_set_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
+  "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
   "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
@@ -228,16 +228,18 @@ export function validateCandidateSourceEvidence(value) {
   if (value.hardlink_count !== 0) fail("tracked source hardlink is forbidden");
   digest(value.source_snapshot_pre_digest, "source_snapshot_pre_digest");
   digest(value.source_snapshot_post_digest, "source_snapshot_post_digest");
+  digest(value.builder_input_digest, "builder_input_digest");
   if (value.source_snapshot_pre_digest !== value.source_snapshot_post_digest) {
     fail("source drifted during candidate build");
   }
   return value;
 }
 
+/** @param {any} options */
 export function validateCandidateBuilderAuthority({
   currentHead, releaseSha, trackedStatus, sourceManifestDigest,
-  verifiedSourceManifestDigest, entries,
-} = {}) {
+  verifiedSourceManifestDigest, entries, expectedBuilderEntries = null,
+} = /** @type {any} */ ({})) {
   sha(currentHead, "candidate builder HEAD");
   sha(releaseSha, "candidate builder release SHA");
   if (currentHead !== releaseSha) fail("candidate builder HEAD is not the exact release Git authority");
@@ -245,7 +247,7 @@ export function validateCandidateBuilderAuthority({
   digest(sourceManifestDigest, "candidate builder source manifest digest");
   digest(verifiedSourceManifestDigest, "candidate builder verified source manifest digest");
   if (sourceManifestDigest !== verifiedSourceManifestDigest) fail("candidate builder source authority drifted");
-  const requiredPaths = [
+  const requiredPaths = expectedBuilderEntries?.map((entry) => entry.path) ?? [
     "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
     "scripts/local-mac-production-rehearsal.mjs",
     "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
@@ -256,9 +258,24 @@ export function validateCandidateBuilderAuthority({
     const entry = byPath.get(path);
     if (!entry) fail(`candidate builder Git authority is missing ${path}`);
     digest(entry.sha256, `candidate builder Git authority ${path}`);
+    if (expectedBuilderEntries) {
+      const expected = expectedBuilderEntries.find((value) => value.path === path);
+      exactObject(expected, `verified bootstrap builder entry ${path}`, [
+        "blob_oid", "git_mode", "path", "sha256",
+      ]);
+      if (
+        entry.blob_oid !== expected.blob_oid
+        || entry.git_mode !== expected.git_mode
+        || entry.sha256 !== expected.sha256
+      ) fail(`candidate builder Git blob authority differs for ${path}`);
+      return expected;
+    }
     return { path, sha256: entry.sha256 };
   });
-  return Object.freeze({ builder_input_digest: sha256Jcs(authority) });
+  const builderInputDigest = expectedBuilderEntries
+    ? sha256Bytes(Buffer.from(JSON.stringify(authority)))
+    : sha256Jcs(authority);
+  return Object.freeze({ builder_input_digest: builderInputDigest });
 }
 
 export function validateCandidateCiEvidence(value) {
@@ -396,6 +413,7 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.ci_check_summary_digest, "ci_check_summary_digest");
   digest(value.ci_snapshot_digest, "ci_snapshot_digest");
   digest(value.ci_suite_run_set_digest, "ci_suite_run_set_digest");
+  digest(value.builder_input_digest, "builder_input_digest");
   digest(value.source_manifest_digest, "source_manifest_digest");
   digest(value.compose_source_digest, "compose_source_digest");
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
@@ -1069,7 +1087,7 @@ export function buildBundleAuthorityManifest(input) {
     "migration", "production_guard", "release_sha", "release_tree",
     "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
-    "build_tools",
+    "build_tools", "builder_input_digest",
     "repository", "source_ref",
   ]);
   if (input.repository !== REPOSITORY || input.source_ref !== SOURCE_REF) {
@@ -1080,7 +1098,7 @@ export function buildBundleAuthorityManifest(input) {
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
     "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
-    "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest",
+    "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest", "builder_input_digest",
   ]) digest(input[field], `bundle authority ${field}`);
   validateEnvironmentMetadata(input.environment_snapshot);
   validateFileInventory(input.file_inventory);
@@ -1430,6 +1448,7 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["ci_snapshot_digest", candidate.ci_snapshot_digest, bundle.ci_snapshot_digest],
     ["ci_suite_run_set_digest", candidate.ci_suite_run_set_digest, bundle.ci_suite_run_set_digest],
     ["source_manifest_digest", candidate.source_manifest_digest, bundle.source_manifest_digest],
+    ["builder_input_digest", candidate.builder_input_digest, bundle.builder_input_digest],
     ["compose_source_digest", candidate.compose_source_digest, bundle.compose_source_digest],
     ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
@@ -1750,6 +1769,7 @@ export async function buildReleaseRehearsalCandidate({
       sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
+      builder_input_digest: sourceEvidence.builder_input_digest,
       compose_source_digest: composeSourceDigest,
       toolchain,
       toolchain_lock_digest: toolchainLock.toolchain_lock_digest,
@@ -1779,6 +1799,7 @@ export async function buildReleaseRehearsalCandidate({
       ci_snapshot_digest: ci.safe_projection_digest,
       ci_suite_run_set_digest: ci.suite_run_set_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
+      builder_input_digest: sourceEvidence.builder_input_digest,
       compose_source_digest: composeSourceDigest,
       sandbox_policy_digest: sandboxPolicyDigest,
       build_id: buildId,
@@ -1887,13 +1908,33 @@ export function validateSandboxedBuildResult(result, label) {
 export function runObservedSandboxCommand({
   sandboxPath, logPath, profile, command, args, cwd, env, label,
   timeout = 30_000, runCommand = spawnSync,
+  now = () => Date.now(),
+  waitForAuditFlush = (milliseconds) => {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+  },
+  formatAuditTime = (milliseconds) => {
+    const date = new Date(milliseconds);
+    const part = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${part(date.getMonth() + 1)}-${part(date.getDate())} ${part(date.getHours())}:${part(date.getMinutes())}:${part(date.getSeconds())}`;
+  },
 } = /** @type {any} */ ({})) {
+  const startedAt = now();
+  if (!Number.isFinite(startedAt)) fail(`${label} OS denial audit start cursor is invalid`);
   const child = spawnBounded(sandboxPath, ["-p", profile, command, ...args], {
     cwd, env, timeout, runCommand,
   });
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_500);
+  const childEndedAt = now();
+  if (!Number.isFinite(childEndedAt) || childEndedAt < startedAt) {
+    fail(`${label} OS denial audit command interval is invalid`);
+  }
+  waitForAuditFlush(1_500);
+  const auditEndedAt = now();
+  if (!Number.isFinite(auditEndedAt) || auditEndedAt < childEndedAt) {
+    fail(`${label} OS denial audit flush interval is invalid`);
+  }
   const audit = spawnBounded(logPath, [
-    "show", "--last", "30s",
+    "show", "--start", formatAuditTime(startedAt - 1_000),
+    "--end", formatAuditTime(auditEndedAt),
     "--style", "json", "--predicate",
     'process == "kernel" AND eventMessage CONTAINS "Sandbox:"',
   ], { cwd, env: { HOME: env.HOME, PATH: "/usr/bin:/bin" }, timeout: 30_000, runCommand });
@@ -2154,7 +2195,7 @@ export function validateStableCiSnapshots(pre, post, releaseSha) {
   return Object.freeze(pre);
 }
 
-export function parseCanonicalComposeImageInventory(source) {
+export function parseCanonicalComposeImageInventory(source, { requireCanonicalSemantics = false } = {}) {
   if (typeof source !== "string" || source.length === 0) fail("Compose source is required");
   for (const character of source) {
     const codePoint = character.codePointAt(0);
@@ -2248,6 +2289,8 @@ export function parseCanonicalComposeImageInventory(source) {
   let nestedKeys = new Set();
   let nestedItem = null;
   const sectionItems = new Map();
+  const networkSemantics = new Map();
+  const volumeSemantics = new Map();
   const finishService = () => {
     if (!current) return;
     services.push(current);
@@ -2304,7 +2347,7 @@ export function parseCanonicalComposeImageInventory(source) {
         if (value !== null || !/^[A-Za-z0-9_-]+$/u.test(key)) fail("Compose service must be a plain nested mapping");
         if (serviceNames.has(key)) fail(`Compose duplicate service key: ${key}`);
         serviceNames.add(key);
-        current = { service: key, image: null, platform: null, build: false };
+        current = { service: key, image: null, platform: null, build: false, labels: false };
         continue;
       }
       if (!current) fail("Compose service body appears before a service key");
@@ -2330,6 +2373,7 @@ export function parseCanonicalComposeImageInventory(source) {
         if (key === "labels") {
           if (value !== "*restore-attempt-labels") fail("Compose service labels alias is not the approved metadata alias");
           validatePlainScalar(value, "service labels", { approvedAlias: "*restore-attempt-labels" });
+          current.labels = true;
           continue;
         }
         if (["entrypoint", "command"].includes(key)) {
@@ -2405,23 +2449,30 @@ export function parseCanonicalComposeImageInventory(source) {
         if (section !== "networks" && value !== null) fail(`Compose ${section} item must use a nested block`);
         nestedItem = key;
         nestedKeys = new Set();
+        if (section === "networks") networkSemantics.set(key, { empty: value === "{}", internal: null });
+        if (section === "volumes") volumeSemantics.set(key, new Map());
         continue;
       }
       if (indent === 4 && nestedItem) {
         const { key, value } = parseMapping(line, 4, `${section} metadata`);
         if (nestedKeys.has(key)) fail(`Compose duplicate ${section} metadata key: ${key}`);
         nestedKeys.add(key);
-        if (section === "networks" && key === "internal" && value === "true") continue;
+        if (section === "networks" && key === "internal" && value === "true") {
+          networkSemantics.get(nestedItem).internal = true;
+          continue;
+        }
         if (section === "secrets" && key === "file" && value !== null) {
           validatePlainScalar(value, "secret file");
           continue;
         }
         if (section === "volumes" && key === "name" && value !== null) {
           validatePlainScalar(value, "volume name");
+          volumeSemantics.get(nestedItem).set("name", value);
           continue;
         }
         if (section === "volumes" && key === "labels" && value === "*restore-attempt-labels") {
           validatePlainScalar(value, "volume labels", { approvedAlias: "*restore-attempt-labels" });
+          volumeSemantics.get(nestedItem).set("labels", value);
           continue;
         }
         fail(`Compose ${section} metadata is unsupported`);
@@ -2433,6 +2484,38 @@ export function parseCanonicalComposeImageInventory(source) {
   if (section === "services") finishService();
   if (!topLevelKeys.has("services")) fail("Compose services section is missing");
   if (services.length === 0) fail("Compose service inventory is empty");
+  const exactSet = (actual, expected) => actual.size === expected.size
+    && [...expected].every((value) => actual.has(value));
+  const requiredServices = new Set([
+    "postgres", "auth", "postgrest", "postgrest-probe", "storage", "api-gateway", "auth-proxy",
+  ]);
+  if (requireCanonicalSemantics && (!exactSet(serviceNames, requiredServices) || services.some((service) => !service.labels))) {
+    fail("Compose required service set or restore labels semantic contract is incomplete");
+  }
+  if (requireCanonicalSemantics && !exactSet(new Set(networkSemantics.keys()), canonicalNetworkNames)) {
+    fail("Compose canonical network set is incomplete");
+  }
+  for (const name of requireCanonicalSemantics ? ["auth-edge", "auth-egress"] : []) {
+    const value = networkSemantics.get(name);
+    if (!value?.empty || value.internal !== null) fail(`Compose network ${name} must be exact empty metadata`);
+  }
+  const dataInternal = networkSemantics.get("data-internal");
+  if (requireCanonicalSemantics && (dataInternal?.empty || dataInternal?.internal !== true)) {
+    fail("Compose data-internal network must require internal true");
+  }
+  if (requireCanonicalSemantics && !exactSet(new Set(volumeSemantics.keys()), canonicalVolumeNames)) {
+    fail("Compose canonical volume set is incomplete");
+  }
+  const requiredVolumeNames = new Map([
+    ["postgres-data", "${FULL_LOCAL_POSTGRES_VOLUME_NAME:?FULL_LOCAL_POSTGRES_VOLUME_NAME is required}"],
+    ["storage-data", "${FULL_LOCAL_STORAGE_VOLUME_NAME:?FULL_LOCAL_STORAGE_VOLUME_NAME is required}"],
+  ]);
+  for (const [name, expectedName] of requireCanonicalSemantics ? requiredVolumeNames : []) {
+    const metadata = volumeSemantics.get(name);
+    if (metadata?.get("name") !== expectedName || metadata?.get("labels") !== "*restore-attempt-labels" || metadata.size !== 2) {
+      fail(`Compose volume ${name} metadata semantic contract is invalid`);
+    }
+  }
   return services.map((service) => {
     if (service.build) fail(`Compose service ${service.service} uses forbidden build authority`);
     const match = /^([^\s@]+)@(sha256:[0-9a-f]{64})$/u.exec(service.image ?? "");
@@ -2454,7 +2537,10 @@ export function validateCanonicalComposeAuthority(source, lock) {
   if (actualDigest !== lock.full_local_compose_sha256) {
     fail("full-local Compose source bytes differ from the repository authority lock");
   }
-  return parseCanonicalComposeImageInventory(decodeFatalUtf8(bytes, "full-local Compose source"));
+  return parseCanonicalComposeImageInventory(
+    decodeFatalUtf8(bytes, "full-local Compose source"),
+    { requireCanonicalSemantics: true },
+  );
 }
 
 export function loadRehearsalToolchainLock(path) {
@@ -2617,6 +2703,8 @@ export function createReleaseRehearsalCandidateAdapters({
   environmentSourcePath = join(namespaceRoot, "build-env.json"),
   packageStorePath = join(homeDir, "Library", "pnpm", "store", "v10"),
   approvedMigrationMarkerPath = join(namespaceRoot, "approved-production-migration-marker.json"),
+  builderInputDigest = null,
+  builderInputEntries = null,
   toolchainLockPath = resolve(
     dirname(fileURLToPath(import.meta.url)),
     "..",
@@ -2794,14 +2882,19 @@ export function createReleaseRehearsalCandidateAdapters({
         sourceRoot,
         sourceManifest: materialized.source_manifest,
       });
-      validateCandidateBuilderAuthority({
+      const builderAuthority = validateCandidateBuilderAuthority({
         currentHead,
         releaseSha,
         trackedStatus,
         sourceManifestDigest: materialized.source_manifest.source_manifest_digest,
         verifiedSourceManifestDigest,
         entries: materialized.source_manifest.entries,
+        expectedBuilderEntries: builderInputEntries,
       });
+      digest(builderInputDigest, "verified bootstrap builder input digest");
+      if (builderAuthority.builder_input_digest !== builderInputDigest) {
+        fail("candidate builder graph differs from verified immutable bootstrap authority");
+      }
       currentSource = {
         checkoutDir,
         sourceManifest: materialized.source_manifest,
@@ -2823,6 +2916,7 @@ export function createReleaseRehearsalCandidateAdapters({
           hardlink_count: tracked.hardlinkCount,
           source_snapshot_pre_digest: tracked.digest,
           source_snapshot_post_digest: tracked.digest,
+          builder_input_digest: builderAuthority.builder_input_digest,
         },
       };
     },
