@@ -4,6 +4,7 @@ import {
   linkSync,
   mkdirSync,
   mkdtempSync,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -30,7 +31,7 @@ function sha256(bytes: Buffer | string) {
 }
 
 async function withUnixSocket(operation: (path: string) => Promise<void>) {
-  const root = mkdtempSync(join(tmpdir(), "homecook-r2-docker-socket-"));
+  const root = mkdtempSync(join(process.cwd(), ".homecook-r2-docker-socket-"));
   chmodSync(root, 0o700);
   const socketPath = join(root, "docker.sock");
   const server = createServer();
@@ -43,6 +44,7 @@ async function withUnixSocket(operation: (path: string) => Promise<void>) {
     await operation(socketPath);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    rmSync(root, { recursive: true, force: true });
   }
 }
 
