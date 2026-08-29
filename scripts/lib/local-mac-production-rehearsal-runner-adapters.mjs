@@ -23,6 +23,8 @@ import {
 } from "./local-mac-production-rehearsal-inventory.mjs";
 import { resolveTrustedDockerBinary } from "./full-local-session-observation-reader.mjs";
 import { canonicalizeJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
+import { createTrustedMacOsIndependentObserver } from "./local-mac-production-rehearsal-macos-observer.mjs";
+import { resolveSafeRealExecutable, snapshotToolFile } from "./local-mac-production-rehearsal-candidate.mjs";
 import {
   RUN_OWNERSHIP_LABEL,
   RUN_PROJECT_LABEL,
@@ -982,8 +984,22 @@ export function createLocalReleaseRehearsalRunnerAdapters({
     deniedAttempts: 0,
     portReservations: [],
   };
+  const observerTools = [
+    ["log", ["/usr/bin/log"]], ["lsof", ["/usr/sbin/lsof"]], ["ps", ["/bin/ps"]],
+  ].map(([name, candidates]) => {
+    const path = resolveSafeRealExecutable(candidates, `R2 observer ${name}`);
+    return [name, { path, identity: snapshotToolFile(path, "r2-observer") }];
+  });
+  const observerToolMap = Object.fromEntries(observerTools);
+  const independentObserver = createTrustedMacOsIndependentObserver({
+    runCommand,
+    collectProductionSnapshot: () => collectProductionSnapshot(state, state.activeSignal),
+    snapshotDockerDaemon: () => snapshotDockerDaemon(state, state.activeSignal),
+    toolResolver: { logPath: observerToolMap.log.path, lsofPath: observerToolMap.lsof.path, psPath: observerToolMap.ps.path, logDigest: sha256Jcs(observerToolMap.log.identity), lsofDigest: sha256Jcs(observerToolMap.lsof.identity), psDigest: sha256Jcs(observerToolMap.ps.identity) },
+  });
 
   return Object.freeze({
+    independentObserver,
     async snapshotProduction(label, { signal } = {}) {
       state.activeSignal = signal ?? state.activeSignal;
       const daemon = await snapshotDockerDaemon(state, state.activeSignal);
