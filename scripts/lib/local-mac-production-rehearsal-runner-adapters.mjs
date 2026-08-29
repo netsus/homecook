@@ -381,6 +381,16 @@ export function assertDiscoveredResourcesRemainUnowned(ledger, discovered) {
   return Object.freeze([...discovered]);
 }
 
+export function recordPrimitiveCreateResult(ledger, expected, stdout, inspected) {
+  const match = /^([0-9a-f]{64})\n?$/u.exec(stdout ?? "");
+  if (!match) fail("primitive create stdout must contain exactly one 64-hex ID");
+  const entry = { kind: expected.kind, id: match[1], name: expected.name };
+  if (!inspected || inspected.kind !== entry.kind || inspected.id !== entry.id || inspected.name !== entry.name) fail("primitive create inspect identity mismatch");
+  for (const [key, value] of Object.entries(expected.labels ?? {})) if (inspected.labels?.[key] !== value) fail("primitive create inspect labels mismatch");
+  ledger.record(entry);
+  return Object.freeze(entry);
+}
+
 async function assertExpectedCreatedResources(state, expectedNames, { signal, requireAll = false } = {}) {
   const expected = new Set(expectedNames);
   const discovered = await listDiscoveredResources(state, { signal });

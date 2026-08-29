@@ -19,6 +19,7 @@ import {
 import { runLocalMacProductionRehearsalRunnerCli } from "../scripts/local-mac-production-rehearsal-run.mjs";
 import {
   assertDiscoveredResourcesRemainUnowned,
+  recordPrimitiveCreateResult,
   compileClosedPrimitivePlan,
   buildFullLocalComposeOverride,
   buildFullLocalRehearsalEnvironment,
@@ -559,6 +560,14 @@ describe("release rehearsal R2 orchestration", () => {
 });
 
 describe("release rehearsal R2 cleanup ownership", () => {
+  it("records only a single create-returned ID with inspect cross-binding", () => {
+    const ledger = createImmutableCreationLedger();
+    const expected = { kind: "network", name: "r2-net", labels: { [RUN_OWNERSHIP_LABEL]: RUN_ID } };
+    const id = "a".repeat(64);
+    expect(recordPrimitiveCreateResult(ledger, expected, `${id}\n`, { kind: "network", id, name: "r2-net", labels: expected.labels })).toEqual({ kind: "network", id, name: "r2-net" });
+    for (const output of ["", `${id}\n${id}\n`, "not-an-id\n"]) expect(() => recordPrimitiveCreateResult(createImmutableCreationLedger(), expected, output, { kind: "network", id, name: "r2-net", labels: expected.labels })).toThrow();
+    expect(() => recordPrimitiveCreateResult(createImmutableCreationLedger(), expected, `${id}\n`, { kind: "network", id, name: "spoof", labels: expected.labels })).toThrow();
+  });
   it("keeps adapter-discovered spoofed resources outside the immutable cleanup ledger", () => {
     const ledger = createImmutableCreationLedger();
     ledger.record({ kind: "network", id: "created-network", name: "expected-network" });
