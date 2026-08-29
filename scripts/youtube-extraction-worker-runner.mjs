@@ -19,7 +19,9 @@ import {
   readYoutubeExtractionExpectedSchema,
   verifyYoutubeExtractionWorkerArtifact,
   readYoutubeExtractionWorkerQueueState,
+  readSealedRehearsalRpcConfig,
 } from "./lib/youtube-extraction-worker-artifact.mjs";
+import { createRehearsalPostgrestRpcClient } from "./lib/youtube-extraction-rehearsal-postgrest-rpc.mjs";
 import {
   buildYoutubeExtractionRuntimeEnvironment,
   createRestrictedPostgrestRpcClient,
@@ -74,6 +76,9 @@ function parseArgs(argv) {
         break;
       case "--expected-schema":
         options.expectedSchemaPath = ensureAbsolutePath(value, "expectedSchemaPath");
+        break;
+      case "--rehearsal-rpc-config":
+        options.rehearsalRpcConfigPath = ensureAbsolutePath(value, "rehearsalRpcConfigPath");
         break;
       case "--secret-root":
         options.secretRoot = ensureAbsolutePath(value, "secretRoot");
@@ -163,9 +168,13 @@ async function main() {
     if (!preflight.ready) {
       throw new Error(`worker preflight failed: ${preflight.blockers.join(",")}`);
     }
+    if (!options.rehearsalRpcConfigPath) throw new Error("rehearsal synthetic worker requires --rehearsal-rpc-config");
+    const rehearsalConfig = readSealedRehearsalRpcConfig(options.rehearsalRpcConfigPath);
+    const rpc = createRehearsalPostgrestRpcClient({ baseUrl: rehearsalConfig.config.base_url, syntheticToken: rehearsalConfig.token, fixtureIdentity: rehearsalConfig.config.fixture_identity });
     print(await runSyntheticYoutubeExtractionWorkerJob({
       allowedSnapshotDigest: workerArtifact.allowed_snapshot_digest,
       runId: process.env.HOMECOOK_REHEARSAL_RUN_ID,
+      rpc,
     }));
     return;
   }

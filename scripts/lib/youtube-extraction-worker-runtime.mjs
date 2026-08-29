@@ -777,12 +777,16 @@ export function createYoutubeExtractionWorkerRuntime({
  * @param {{
  *   allowedSnapshotDigest: string,
  *   runId: string,
+ *   rpc?: Function|null,
+ *   testOnlyInMemoryRpc?: boolean,
  *   signal?: AbortSignal,
  * }} options
  */
 export async function runSyntheticYoutubeExtractionWorkerJob({
   allowedSnapshotDigest,
   runId,
+  rpc = null,
+  testOnlyInMemoryRpc = false,
   signal = new AbortController().signal,
 } = {}) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runId ?? "")) {
@@ -790,8 +794,7 @@ export async function runSyntheticYoutubeExtractionWorkerJob({
   }
   if (!(signal instanceof AbortSignal)) throw new Error("synthetic rehearsal signal is required");
   const rpcSequence = [];
-  const rpc = async (name) => {
-    rpcSequence.push(name);
+  const inMemoryRpc = async (name) => {
     const data = name === "claim_youtube_extraction_job"
       ? {
           job_id: "22222222-2222-4222-8222-222222222222",
@@ -820,10 +823,12 @@ export async function runSyntheticYoutubeExtractionWorkerJob({
                       : null;
     return { data, error: null };
   };
+  if (!rpc && !testOnlyInMemoryRpc) throw new Error("rehearsal synthetic worker requires an explicit RPC client");
+  const activeRpc = rpc ?? inMemoryRpc;
   const runtime = createYoutubeExtractionWorkerRuntime({
     workerId: `rehearsal-${runId}`,
     allowedSnapshotDigest,
-    rpc,
+    rpc: async (...args) => { rpcSequence.push(args[0]); return activeRpc(...args); },
     heartbeatIntervalMs: 60_000,
     extractor: {
       async extract({ claimedJob, signal: extractionSignal }) {
