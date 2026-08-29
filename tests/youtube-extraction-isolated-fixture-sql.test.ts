@@ -1,0 +1,3 @@
+import { describe, expect, it } from "vitest";
+import { buildIsolatedYoutubeWorkerSyntheticFixtureSql } from "../scripts/lib/youtube-extraction-isolated-fixture-sql.mjs";
+describe("isolated worker fixture SQL", () => { it("uses canonical policy, credential, and permit tables", () => { const value = buildIsolatedYoutubeWorkerSyntheticFixtureSql({ runIdentity: "11111111-2222-4333-8444-555555555555", releaseSha: "a".repeat(40), schemaIdentity: "schema", allowedSnapshotDigest: "b".repeat(64), jtiHash: "c".repeat(64), nowEpoch: 2_000_000_000 }); expect(value.sql).toContain("private.youtube_extraction_worker_credentials"); expect(value.sql).toContain("public.youtube_extractor_permits"); }); });
