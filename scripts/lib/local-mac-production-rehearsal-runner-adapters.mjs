@@ -440,6 +440,19 @@ async function inspectResource(state, entry, options = {}) {
   };
 }
 
+/** Read a container's host-process identity without trusting container output. */
+export async function readContainerObserverSubject(state, { containerId, component, signal }) {
+  const inspected = await dockerCommand(state, ["inspect", "--type", "container", containerId, "--format", "{{.Id}}\t{{.State.Pid}}\t{{.State.StartedAt}}\t{{.State.Running}}\t{{.Image}}\t{{json .Config}}"], { signal });
+  const [id, pidText, startedAt, running, image, configText] = inspected.stdout.trim().split("\t");
+  const pid = Number(pidText);
+  if (id !== containerId || !Number.isSafeInteger(pid) || pid <= 0 || running !== "true" || !/^\d{4}-\d{2}-\d{2}T/u.test(startedAt) || !image || !configText) fail("container observer inspect identity is incomplete");
+  const ps = await state.runCommand({ command: "/bin/ps", args: ["-o", "pid=,pgid=,comm=", "-p", String(pid)], cwd: state.runtimeRoot, env: {}, signal, timeoutMs: COMMAND_TIMEOUT_MS, maxOutputBytes: OUTPUT_LIMIT_BYTES });
+  if (ps.error || ps.signal || ps.status !== 0) fail("container observer trusted ps is unavailable");
+  const [hostPid, hostPgid, executable] = ps.stdout.trim().split(/\s+/, 3);
+  if (Number(hostPid) !== pid || !Number.isSafeInteger(Number(hostPgid)) || Number(hostPgid) <= 0 || !executable) fail("container observer host PID/PGID identity is invalid");
+  return Object.freeze({ container_id: id, host_pid: pid, host_pgid: Number(hostPgid), component, started_at: startedAt, image_digest: sha256Jcs(image), config_digest: sha256Jcs(JSON.parse(configText)), executable_identity_digest: sha256Jcs(executable) });
+}
+
 async function listDiscoveredResources(state, options = {}) {
   if (!state.namespace) return [];
   const filter = `label=${RUN_OWNERSHIP_LABEL}=${state.runId}`;
@@ -1017,7 +1030,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       return { verified: true, image_ids: imageIds };
     },
 
-    async createResources({ manifest, candidateRoot, namespace, runRoot, signal }) {
+    async createResources({ manifest, candidateRoot, namespace, runRoot, signal, independentObserver = null }) {
       state.activeSignal = signal ?? state.activeSignal;
       state.namespace = namespace;
       state.runRoot = runRoot;
@@ -1083,6 +1096,12 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         }
         await dockerCommand(state, ["start", id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
         if (service.name === "postgres") await waitForContainers(state, { signal: state.activeSignal, expectedNames: [entry.name] });
+        if (independentObserver?.registerChild) {
+          const subject = await readContainerObserverSubject(state, { containerId: id, component: service.name, signal: state.activeSignal });
+          await independentObserver.registerChild(subject);
+          state.observerSubjects ??= [];
+          state.observerSubjects.push(subject);
+        }
       }
       return state.creationLedger.snapshot();
     },

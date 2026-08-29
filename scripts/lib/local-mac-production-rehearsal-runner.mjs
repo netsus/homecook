@@ -550,6 +550,7 @@ export function validateIndependentProductionObserver(value) {
     "process_binding_digest", "docker_daemon_identity_digest", "observation_digest", "available", "truncated",
     "production_db_connection_count", "production_db_write_count", "production_credential_access_count",
     "production_socket_access_count", "provider_remote_access_count", "production_mutation_count", "unrelated_noise_count",
+    "registered_subjects",
   ], "independent production observer");
   if (value.schema !== "homecook.r2-production-observer.v1" || value.available !== true || value.truncated !== false) {
     fail("independent production observer is unavailable or truncated");
@@ -565,6 +566,14 @@ export function validateIndependentProductionObserver(value) {
     if (!Number.isSafeInteger(value[field]) || value[field] !== 0) fail(`independent production observer ${field} must be zero`);
   }
   if (!Number.isSafeInteger(value.unrelated_noise_count) || value.unrelated_noise_count < 0) fail("independent production observer noise count is invalid");
+  if (!Array.isArray(value.registered_subjects) || value.registered_subjects.length === 0) fail("independent production observer registered subjects are missing");
+  const subjects = new Set();
+  for (const subject of value.registered_subjects) {
+    exactKeys(subject, ["container_id", "host_pid", "host_pgid", "component", "started_at", "image_digest", "config_digest", "executable_identity_digest"], "independent production observer subject");
+    if (typeof subject.container_id !== "string" || !Number.isSafeInteger(subject.host_pid) || subject.host_pid <= 0 || !Number.isSafeInteger(subject.host_pgid) || subject.host_pgid <= 0 || typeof subject.component !== "string" || !/^\d{4}-\d{2}-\d{2}T/u.test(subject.started_at ?? "") || !DIGEST.test(subject.image_digest ?? "") || !DIGEST.test(subject.config_digest ?? "") || !DIGEST.test(subject.executable_identity_digest ?? "")) fail("independent production observer subject identity is invalid");
+    if (subjects.has(subject.container_id)) fail("independent production observer subjects are duplicated");
+    subjects.add(subject.container_id);
+  }
   return Object.freeze({ ...value });
 }
 
@@ -977,7 +986,7 @@ export async function runIsolatedReleaseRehearsal({
     stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
     verifyStableExecution();
     preSnapshot = validateProductionSnapshot(await adapters.snapshotProduction("pre", { signal }), "pre");
-    if (!adapters.independentObserver || typeof adapters.independentObserver.begin !== "function" || typeof adapters.independentObserver.end !== "function") {
+    if (!adapters.independentObserver || typeof adapters.independentObserver.begin !== "function" || typeof adapters.independentObserver.end !== "function" || typeof adapters.independentObserver.registerChild !== "function") {
       fail("independent observer is unavailable");
     }
     await adapters.independentObserver.begin({ runId, preSnapshot, signal });
@@ -992,7 +1001,7 @@ export async function runIsolatedReleaseRehearsal({
     await adapters.assertImagesLocal({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     verifyStableExecution();
     checkAbort();
-    ownedResources = await adapters.createResources({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
+    ownedResources = await adapters.createResources({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal, independentObserver: adapters.independentObserver });
     if (!Array.isArray(ownedResources)) fail("created resource inventory is invalid");
     verifyStableExecution();
     checkAbort();

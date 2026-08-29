@@ -93,7 +93,7 @@ function productionSnapshot(digest = "9".repeat(64)) {
 }
 
 function independentObserver() {
-  return { schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64), started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", pre_snapshot_digest: "9".repeat(64), post_snapshot_digest: "9".repeat(64), process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "d".repeat(64), observation_digest: "e".repeat(64), available: true, truncated: false, production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0, production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0, unrelated_noise_count: 0 };
+  return { schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64), started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", pre_snapshot_digest: "9".repeat(64), post_snapshot_digest: "9".repeat(64), process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "d".repeat(64), observation_digest: "e".repeat(64), available: true, truncated: false, production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0, production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0, unrelated_noise_count: 0, registered_subjects: [{ container_id: "container-app", host_pid: 1, host_pgid: 1, component: "app", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) }] };
 }
 
 function migrationReplay(overrides = {}) {
@@ -284,7 +284,7 @@ function createAdapters() {
       docker_endpoint_identity_digest: "d".repeat(64),
       docker_daemon_identity_digest: "e".repeat(64),
     }),
-    independentObserver: { begin: vi.fn().mockResolvedValue(undefined), end: vi.fn().mockResolvedValue(independentObserver()) },
+    independentObserver: { begin: vi.fn().mockResolvedValue(undefined), registerChild: vi.fn().mockResolvedValue(undefined), end: vi.fn().mockResolvedValue(independentObserver()) },
     stopRuntime: vi.fn().mockResolvedValue(undefined),
     removeResource: vi.fn().mockResolvedValue(undefined),
     listResidue: vi.fn().mockResolvedValue([]),
@@ -351,6 +351,7 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
       production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0,
       production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0,
       unrelated_noise_count: 3,
+      registered_subjects: [{ container_id: "container-app", host_pid: 11, host_pgid: 11, component: "app", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "1".repeat(64), executable_identity_digest: "2".repeat(64) }],
     };
     expect(validateIndependentProductionObserver(observer)).toEqual(observer);
     for (const field of ["production_db_connection_count", "production_socket_access_count", "provider_remote_access_count", "production_mutation_count"] as const) {
@@ -358,6 +359,8 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
     }
     expect(() => validateIndependentProductionObserver({ ...observer, available: false })).toThrow(/observer/iu);
     expect(() => validateIndependentProductionObserver({ ...observer, pre_snapshot_digest: "f".repeat(64) })).toThrow(/snapshot|observer/iu);
+    expect(() => validateIndependentProductionObserver({ ...observer, registered_subjects: [] })).toThrow(/subject/iu);
+    expect(() => validateIndependentProductionObserver({ ...observer, registered_subjects: [observer.registered_subjects[0], observer.registered_subjects[0]] })).toThrow(/duplicated/iu);
   });
 
   it("accepts only the sealed worker's complete fence lifecycle", () => {
