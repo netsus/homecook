@@ -27,18 +27,18 @@
       "additionalProperties": false,
       "required": ["node", "pnpm", "supabase_cli", "git", "gh", "docker_client", "docker_daemon", "launchctl", "lsof", "audit_log", "sandbox_exec", "candidate_builder"],
       "properties": {
-        "node": { "$ref": "#/$defs/toolIdentity" },
-        "pnpm": { "$ref": "#/$defs/toolIdentity" },
-        "supabase_cli": { "$ref": "#/$defs/toolIdentity" },
-        "git": { "$ref": "#/$defs/toolIdentity" },
-        "gh": { "$ref": "#/$defs/toolIdentity" },
-        "docker_client": { "$ref": "#/$defs/toolIdentity" },
-        "docker_daemon": { "$ref": "#/$defs/toolIdentity" },
-        "launchctl": { "$ref": "#/$defs/toolIdentity" },
-        "lsof": { "$ref": "#/$defs/toolIdentity" },
-        "audit_log": { "$ref": "#/$defs/toolIdentity" },
-        "sandbox_exec": { "$ref": "#/$defs/toolIdentity" },
-        "candidate_builder": { "$ref": "#/$defs/toolIdentity" }
+        "node": { "$ref": "#/$defs/executableToolIdentity" },
+        "pnpm": { "$ref": "#/$defs/executableToolIdentity" },
+        "supabase_cli": { "$ref": "#/$defs/executableToolIdentity" },
+        "git": { "$ref": "#/$defs/executableToolIdentity" },
+        "gh": { "$ref": "#/$defs/executableToolIdentity" },
+        "docker_client": { "$ref": "#/$defs/executableToolIdentity" },
+        "docker_daemon": { "$ref": "#/$defs/executableToolIdentity" },
+        "launchctl": { "$ref": "#/$defs/executableToolIdentity" },
+        "lsof": { "$ref": "#/$defs/executableToolIdentity" },
+        "audit_log": { "$ref": "#/$defs/executableToolIdentity" },
+        "sandbox_exec": { "$ref": "#/$defs/executableToolIdentity" },
+        "candidate_builder": { "$ref": "#/$defs/readableToolIdentity" }
       }
     },
     "toolchain_lock_digest": { "$ref": "#/$defs/sha256" },
@@ -46,7 +46,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["next_cli"],
-      "properties": { "next_cli": { "$ref": "#/$defs/toolIdentity" } }
+      "properties": { "next_cli": { "$ref": "#/$defs/readableToolIdentity" } }
     },
     "images": {
       "type": "array",
@@ -149,7 +149,22 @@
       "required": ["root", "digest"],
       "properties": { "root": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" }, "digest": { "$ref": "#/$defs/sha256" } }
     },
-    "toolIdentity": {
+    "executableToolIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "realpath": { "type": "string", "pattern": "^/" },
+        "device": { "type": "string", "pattern": "^[0-9]+$" },
+        "inode": { "type": "string", "pattern": "^[0-9]+$" },
+        "mode": { "type": "integer", "enum": [320, 365, 448, 493] },
+        "ctime": { "type": "string", "minLength": 1 },
+        "size": { "type": "string", "pattern": "^[0-9]+$" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "readableToolIdentity": {
       "type": "object",
       "additionalProperties": false,
       "required": ["version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256"],

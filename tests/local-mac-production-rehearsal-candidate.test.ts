@@ -328,6 +328,48 @@ describe("release rehearsal candidate manifest", () => {
       ...validManifestInput(),
       file_inventory: [{ ...validManifestInput().file_inventory[0], nlink: "2" }],
     })).toThrow(/nlink|hard.?link|exactly one/iu);
+
+    const modeAttackTable = [
+      0, 0o400, 0o444, 0o500, 0o522, 0o555, 0o600, 0o644, 0o700, 0o711, 0o755, 0o777, 0o7777,
+    ];
+    const runtimeAccepts = (input: ReturnType<typeof validManifestInput>) => {
+      try { buildCandidateManifest(input); return true; } catch { return false; }
+    };
+    for (const mode of modeAttackTable) {
+      const executableSchemaCandidate = {
+        ...manifest,
+        toolchain: { ...manifest.toolchain, git: { ...manifest.toolchain.git, mode } },
+      };
+      const executableRuntimeInput = {
+        ...validManifestInput(),
+        toolchain: { ...validToolchain(), git: { ...tool("git"), mode } },
+      };
+      expect(
+        validate(executableSchemaCandidate),
+        `executable mode parity ${mode.toString(8)}: ${JSON.stringify(validate.errors)}`,
+      ).toBe(runtimeAccepts(executableRuntimeInput));
+
+      const readableSchemaCandidate = {
+        ...manifest,
+        toolchain: {
+          ...manifest.toolchain,
+          candidate_builder: { ...manifest.toolchain.candidate_builder, mode },
+        },
+        build_tools: { next_cli: { ...manifest.build_tools.next_cli, mode } },
+      };
+      const readableRuntimeInput = {
+        ...validManifestInput(),
+        toolchain: {
+          ...validToolchain(),
+          candidate_builder: { ...tool("candidate-builder"), mode },
+        },
+        build_tools: { next_cli: { ...tool("next-cli"), mode } },
+      };
+      expect(
+        validate(readableSchemaCandidate),
+        `readable mode parity ${mode.toString(8)}: ${JSON.stringify(validate.errors)}`,
+      ).toBe(runtimeAccepts(readableRuntimeInput));
+    }
   });
 });
 
@@ -357,7 +399,9 @@ const regexDecoy = /import\\("\\.\\/regex-ghost\\.mjs"\\)/u
 /* import "./block-comment-ghost.mjs" */
 import "./lib/bare.mjs"
 const dynamicConfig = await import("./lib/dynamic.json", { with: { type: "json" } })
-export { candidate } from "./lib/candidate.mjs"
+const loadedCandidate = await import("./lib/candidate.mjs")
+export { dependency as exposedDependency } from "./lib/dependency.mjs"
+export const candidate = loadedCandidate.candidate
 `, { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import {\n  dependency,\n} from './dependency.mjs'\nimport config from './config.json' with { type: \"json\" }\nexport { dependency as localDependency };\nexport const candidate = `exact-${dependency}-${config.value}`\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "bare.mjs"), "export const bare = true\n", { mode: 0o600 });
@@ -366,6 +410,17 @@ export { candidate } from "./lib/candidate.mjs"
     writeFileSync(join(repo, "scripts", "lib", "dynamic.json"), "{\"value\":\"dynamic\"}\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "unsupported.mjs"), "const path = './dynamic.json'\nawait import(path)\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "bad-json.mjs"), "import config from './config.json'\nexport default config\n", { mode: 0o600 });
+    const forbiddenExternalSpecifiers = [
+      "/tmp/absolute.mjs", "file:///tmp/file.mjs", "left-pad", "data:text/javascript,export default 1",
+      "http://example.invalid/module.mjs", "https://example.invalid/module.mjs", "custom:module",
+    ];
+    for (const [index, specifier] of forbiddenExternalSpecifiers.entries()) {
+      writeFileSync(
+        join(repo, "scripts", "lib", `external-${index}.mjs`),
+        `import ${JSON.stringify(specifier)}\n`,
+        { mode: 0o600 },
+      );
+    }
     writeFileSync(join(repo, "scripts", "config", "lock.json"), "{}", { mode: 0o600 });
     runGit(["add", "."]);
     runGit(["commit", "-m", "fixture"]);
@@ -425,6 +480,55 @@ export { candidate } from "./lib/candidate.mjs"
     });
     expect(restoredGraph.builder_input_digest).toBe(graph.builder_input_digest);
     expect(restoredGraph).not.toEqual(graph);
+    for (const index of forbiddenExternalSpecifiers.keys()) {
+      expect(() => verifyImmutableCandidateModuleGraph({
+        entryPaths: [`scripts/lib/external-${index}.mjs`],
+        gitPath: "/usr/bin/git",
+        homeDir: gitHome,
+        lockPaths: [],
+        releaseSha,
+        repositoryRoot: repo,
+        sourceRoot: outputRoot,
+      })).toThrow(/external|specifier|node:|scheme|package|absolute/iu);
+    }
+
+    const maliciousMarker = join(dirname(outputRoot), "malicious-path-import-executed");
+    const bootstrapPath = join(process.cwd(), "scripts", "local-mac-production-rehearsal-candidate-bootstrap.mjs");
+    const memoryExecution = spawnSync(process.execPath, [
+      "--experimental-vm-modules",
+      "--input-type=module",
+      "-e",
+      `import { chmodSync, existsSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { pathToFileURL } from "node:url";
+const bootstrap = await import(pathToFileURL(${JSON.stringify(bootstrapPath)}).href);
+const graph = bootstrap.verifyImmutableCandidateModuleGraph(${JSON.stringify({
+        entryPaths: ["scripts/entry.mjs", "scripts/lib/candidate.mjs"],
+        gitPath: "/usr/bin/git",
+        homeDir: gitHome,
+        lockPaths: ["scripts/config/lock.json"],
+        releaseSha,
+        repositoryRoot: repo,
+        sourceRoot: outputRoot,
+      })});
+const entry = ${JSON.stringify(join(outputRoot, "scripts", "entry.mjs"))};
+const aside = entry + ".exact";
+chmodSync(dirname(entry), 0o700);
+renameSync(entry, aside);
+writeFileSync(entry, ${JSON.stringify(`import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(maliciousMarker)}, "bad"); export const candidate = "malicious";\n`)}, { mode: 0o400 });
+try {
+  const namespace = await bootstrap.evaluateVerifiedCandidateModuleGraph({ graph, entryPath: "scripts/entry.mjs", sourceRoot: ${JSON.stringify(outputRoot)} });
+  if (namespace.candidate !== "exact-blob-exact") throw new Error("verified namespace mismatch");
+  if (existsSync(${JSON.stringify(maliciousMarker)})) throw new Error("malicious pathname module executed");
+} finally {
+  unlinkSync(entry);
+  renameSync(aside, entry);
+  chmodSync(dirname(entry), 0o500);
+}
+`,
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    expect(memoryExecution.status, memoryExecution.stderr).toBe(0);
+    expect(existsSync(maliciousMarker)).toBe(false);
     for (const entryPath of ["scripts/lib/unsupported.mjs", "scripts/lib/bad-json.mjs"]) {
       expect(() => verifyImmutableCandidateModuleGraph({
         entryPaths: [entryPath],
@@ -712,6 +816,17 @@ export { candidate } from "./lib/candidate.mjs"
       canonical.replace("      - ./start-auth.sh:/homecook/start-auth.sh:ro", "      - ./start-auth.sh:/homecook/start-auth.sh:ro\n      - /tmp:/tmp"),
       canonical.replace("      - postgres_password\n    volumes:", "      - postgres_password\n      - jwt_secret\n    volumes:"),
       canonical.replace("    tmpfs:\n      - /tmp:mode=1777", "    tmpfs:\n      - /tmp"),
+      canonical.replace("  auth_flow_hmac_key:\n    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/auth_flow_hmac_key\n", ""),
+      canonical.replace("\nvolumes:\n", "  attacker_secret:\n    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/attacker_secret\n\nvolumes:\n"),
+      canonical.replace(
+        "    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/postgres_password",
+        "    file: /tmp/substitute",
+      ),
+      canonical.replace(
+        "    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/jwt_secret",
+        "    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/jwt_keys",
+      ),
+      canonical.replace("  jwt_keys:\n    file:", "  jwt_keys:\n    source:"),
     ];
     const semanticSurvivors = coUpdatedSemanticMutations.flatMap((mutation, index) => {
       const coUpdatedLock = {
@@ -725,7 +840,7 @@ export { candidate } from "./lib/candidate.mjs"
         return [];
       }
     });
-    expect(coUpdatedSemanticMutations).toHaveLength(14);
+    expect(coUpdatedSemanticMutations).toHaveLength(19);
     expect(semanticSurvivors).toEqual([]);
   });
 
@@ -788,7 +903,7 @@ export { candidate } from "./lib/candidate.mjs"
   it("audits the full sandbox wall-clock interval and catches an early swallowed denial", () => {
     const calls: Array<{ command: string; args: string[] }> = [];
     const start = Date.UTC(2026, 7, 29, 0, 0, 0);
-    const times = [start, start + 45_000, start + 46_500];
+    const times = [start, start + 45_999, start + 46_999];
     const runCommand = vi.fn((command: string, args: string[]) => {
       calls.push({ command, args });
       if (command === "/usr/bin/sandbox-exec") {
@@ -798,6 +913,9 @@ export { candidate } from "./lib/candidate.mjs"
         status: 0,
         signal: null,
         stdout: JSON.stringify([{
+          eventMessage: "Sandbox: node(4242) deny(1) file-write-data",
+          timestamp: "2026-08-29 00:00:45.999000+0000",
+        }, {
           eventMessage: "Sandbox: node(4242) deny(1) network-outbound",
           timestamp: "2026-08-29 00:00:01.000000+0000",
         }]),
@@ -820,7 +938,29 @@ export { candidate } from "./lib/candidate.mjs"
       formatAuditTime: (milliseconds: number) => new Date(milliseconds).toISOString().replace("T", " ").slice(0, 19),
     })).toThrow(/observed|denied|sandbox|attempt/iu);
     expect(calls[1].args).not.toContain("--last");
-    expect(calls[1].args).toEqual(expect.arrayContaining(["--start", "2026-08-28 23:59:59", "--end", "2026-08-29 00:00:46"]));
+    expect(calls[1].args).toEqual(expect.arrayContaining(["--start", "2026-08-28 23:59:59", "--end", "2026-08-29 00:00:48"]));
+    expect(calls[1].args.at(-1)).toContain('eventMessage CONTAINS "Sandbox: node(4242)"');
+
+    const unavailableAudit = vi.fn((command: string) => command === "/usr/bin/sandbox-exec"
+      ? { status: 0, signal: null, stdout: "ok", stderr: "", pid: 4242 }
+      : { status: null, signal: null, stdout: "", stderr: "truncated", error: { code: "ENOBUFS" } });
+    expect(() => runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile: "(version 1) (deny default)",
+      command: "/usr/bin/node",
+      args: ["fixture.mjs"],
+      cwd: "/private/tmp",
+      env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
+      label: "unavailable audit fixture",
+      runCommand: unavailableAudit,
+      now: vi.fn()
+        .mockReturnValueOnce(start)
+        .mockReturnValueOnce(start + 1)
+        .mockReturnValueOnce(start + 1_501),
+      waitForAuditFlush: vi.fn(),
+      formatAuditTime: (milliseconds: number) => new Date(milliseconds).toISOString().replace("T", " ").slice(0, 19),
+    })).toThrow(/audit|failed closed|query/iu);
   });
 
   it("loads the canonical tool lock and rejects self-reported Supabase identity without the pinned binary digest", () => {

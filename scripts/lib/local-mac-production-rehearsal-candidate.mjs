@@ -81,7 +81,8 @@ const TOOLCHAIN_KEYS = [
 const TOOL_IDENTITY_KEYS = [
   "version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256",
 ];
-const SAFE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
+const EXECUTABLE_TOOL_MODES = new Set([0o500, 0o555, 0o700, 0o755]);
+const READABLE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
 
 function fail(message) {
   throw new Error(`Release rehearsal candidate rejected: ${message}`);
@@ -156,8 +157,9 @@ function validateToolIdentity(value, label, { requireExecutable = true } = {}) {
   decimalString(value.device, `${label}.device`);
   decimalString(value.inode, `${label}.inode`);
   safeInteger(value.mode, `${label}.mode`);
-  if (!SAFE_TOOL_MODES.has(value.mode)) fail(`${label}.mode is outside the trusted mode allowlist`);
-  if ((requireExecutable && (value.mode & 0o111) === 0) || (value.mode & 0o022) !== 0) {
+  const allowedModes = requireExecutable ? EXECUTABLE_TOOL_MODES : READABLE_TOOL_MODES;
+  if (!allowedModes.has(value.mode)) fail(`${label}.mode is outside the trusted mode allowlist`);
+  if ((value.mode & 0o022) !== 0) {
     fail(`${label} trusted executable mode is unsafe or writable`);
   }
   string(value.ctime, `${label}.ctime`);
@@ -1941,6 +1943,13 @@ export function runObservedSandboxCommand({
   const child = spawnBounded(sandboxPath, ["-p", profile, command, ...args], {
     cwd, env, timeout, runCommand,
   });
+  if (!Number.isSafeInteger(child?.pid) || child.pid <= 0) {
+    fail(`${label} OS denial audit child identity is unavailable`);
+  }
+  const childProcessName = basename(command);
+  if (!/^[A-Za-z0-9._+-]+$/u.test(childProcessName)) {
+    fail(`${label} OS denial audit child process name is invalid`);
+  }
   const childEndedAt = now();
   if (!Number.isFinite(childEndedAt) || childEndedAt < startedAt) {
     fail(`${label} OS denial audit command interval is invalid`);
@@ -1950,11 +1959,14 @@ export function runObservedSandboxCommand({
   if (!Number.isFinite(auditEndedAt) || auditEndedAt < childEndedAt) {
     fail(`${label} OS denial audit flush interval is invalid`);
   }
+  const queryStartedAt = Math.floor((startedAt - 1_000) / 1_000) * 1_000;
+  const queryEndedAt = Math.ceil((auditEndedAt + 1_000) / 1_000) * 1_000;
+  const childAuditIdentity = `Sandbox: ${childProcessName}(${child.pid})`;
   const audit = spawnBounded(logPath, [
-    "show", "--start", formatAuditTime(startedAt - 1_000),
-    "--end", formatAuditTime(auditEndedAt),
+    "show", "--start", formatAuditTime(queryStartedAt),
+    "--end", formatAuditTime(queryEndedAt),
     "--style", "json", "--predicate",
-    'process == "kernel" AND eventMessage CONTAINS "Sandbox:"',
+    `process == "kernel" AND eventMessage CONTAINS "${childAuditIdentity}"`,
   ], { cwd, env: { HOME: env.HOME, PATH: "/usr/bin:/bin" }, timeout: 30_000, runCommand });
   if (audit.error || audit.signal || audit.status !== 0) fail(`${label} OS denial audit query failed closed`);
   let observedDenials;
@@ -2308,6 +2320,7 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
   let nestedItem = null;
   const sectionItems = new Map();
   const networkSemantics = new Map();
+  const secretSemantics = new Map();
   const volumeSemantics = new Map();
   const finishService = () => {
     if (!current) return;
@@ -2479,6 +2492,7 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
         nestedItem = key;
         nestedKeys = new Set();
         if (section === "networks") networkSemantics.set(key, { empty: value === "{}", internal: null });
+        if (section === "secrets") secretSemantics.set(key, new Map());
         if (section === "volumes") volumeSemantics.set(key, new Map());
         continue;
       }
@@ -2492,6 +2506,7 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
         }
         if (section === "secrets" && key === "file" && value !== null) {
           validatePlainScalar(value, "secret file");
+          secretSemantics.get(nestedItem).set("file", value);
           continue;
         }
         if (section === "volumes" && key === "name" && value !== null) {
@@ -2543,6 +2558,24 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
     const metadata = volumeSemantics.get(name);
     if (metadata?.get("name") !== expectedName || metadata?.get("labels") !== "*restore-attempt-labels" || metadata.size !== 2) {
       fail(`Compose volume ${name} metadata semantic contract is invalid`);
+    }
+  }
+  const requiredSecretNames = [
+    ["postgres", "password"].join("_"), "jwt_secret", "jwt_keys", "jwt_jwks", "anon_key", "service_role_key",
+    "publishable_key", "secret_key", "anon_key_asymmetric", "service_role_key_asymmetric",
+    "storage_s3_access_key_id", "storage_s3_access_key_secret", "auth_flow_hmac_key",
+    "session_attestation_hmac_key_v1", "session_generation_hmac_key_v2",
+  ];
+  if (requireCanonicalSemantics) {
+    if (!exactSet(new Set(secretSemantics.keys()), new Set(requiredSecretNames))) {
+      fail("Compose canonical top-level secret set is incomplete");
+    }
+    for (const name of requiredSecretNames) {
+      const metadata = secretSemantics.get(name);
+      const expectedPath = `\${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/${name}`;
+      if (metadata?.size !== 1 || metadata.get("file") !== expectedPath) {
+        fail(`Compose top-level secret ${name} source contract is invalid`);
+      }
     }
   }
   const serviceListContract = {

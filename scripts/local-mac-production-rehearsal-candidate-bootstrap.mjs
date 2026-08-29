@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import * as vm from "node:vm";
 
 function reject(message) {
   throw new Error(`Release rehearsal candidate bootstrap rejected: ${message}`);
@@ -296,7 +297,10 @@ function collectModuleSpecifiers(source, modulePath) {
   const tokens = lexModuleSource(source);
   const specifiers = [];
   const record = (specifier, { jsonAttributes }) => {
-    if (!specifier.startsWith("./") && !specifier.startsWith("../")) return;
+    if (!specifier.startsWith("./") && !specifier.startsWith("../")) {
+      if (specifier.startsWith("node:")) return;
+      reject(`immutable module graph external specifier is forbidden in ${modulePath}`);
+    }
     if (specifier.endsWith(".json") && !jsonAttributes) reject("immutable module graph relative JSON import lacks exact attributes");
     if (!specifier.endsWith(".json") && jsonAttributes) reject("immutable module graph attributes are allowed only for relative JSON imports");
     specifiers.push(specifier);
@@ -392,6 +396,8 @@ export function verifyImmutableCandidateModuleGraph({
   const seen = new Set();
   const entries = [];
   const localIdentities = [];
+  const modulePaths = [];
+  const sourceBuffers = new Map();
   while (pending.length > 0) {
     const requestedPath = pending.pop();
     const normalizedPath = posix.normalize(requestedPath);
@@ -417,7 +423,9 @@ export function verifyImmutableCandidateModuleGraph({
     const sha256 = createHash("sha256").update(exactBytes).digest("hex");
     entries.push({ blob_oid: match[2], git_mode: match[1], path: normalizedPath, sha256 });
     localIdentities.push(materialized.identity);
+    sourceBuffers.set(normalizedPath, Buffer.from(exactBytes));
     if (normalizedPath.endsWith(".mjs") && !leafPaths.has(normalizedPath)) {
+      modulePaths.push(normalizedPath);
       let source;
       try {
         source = new TextDecoder("utf-8", { fatal: true }).decode(exactBytes);
@@ -435,11 +443,117 @@ export function verifyImmutableCandidateModuleGraph({
   }
   entries.sort((left, right) => left.path.localeCompare(right.path));
   localIdentities.sort((left, right) => left.path.localeCompare(right.path));
+  modulePaths.sort((left, right) => left.localeCompare(right));
   return Object.freeze({
     builder_input_digest: createHash("sha256").update(JSON.stringify(entries)).digest("hex"),
     entries: Object.freeze(entries),
     local_identities: Object.freeze(localIdentities),
+    module_paths: Object.freeze(modulePaths),
+    source_buffers: sourceBuffers,
   });
+}
+
+/** @param {any} options */
+export async function evaluateVerifiedCandidateModuleGraph({ graph, entryPath, sourceRoot } = /** @type {any} */ ({})) {
+  if (typeof vm.SourceTextModule !== "function" || typeof vm.SyntheticModule !== "function") {
+    reject("memory-backed candidate modules require --experimental-vm-modules");
+  }
+  if (!isAbsolute(sourceRoot ?? "") || !graph?.source_buffers?.get || !Array.isArray(graph?.entries)) {
+    reject("verified memory module graph inputs are invalid");
+  }
+  const realSource = realpathSync(sourceRoot);
+  const entriesByPath = new Map(graph.entries.map((entry) => [entry.path, entry]));
+  const sourceBuffers = new Map();
+  for (const entry of graph.entries) {
+    const bytes = graph.source_buffers.get(entry.path);
+    if (!Buffer.isBuffer(bytes) || createHash("sha256").update(bytes).digest("hex") !== entry.sha256) {
+      reject("verified memory module source digest is invalid");
+    }
+    sourceBuffers.set(entry.path, Buffer.from(bytes));
+  }
+  const modulesByUrl = new Map();
+  const pathsByUrl = new Map();
+  const builtins = new Map();
+  const identifierFor = (relativePath) => pathToFileURL(join(realSource, relativePath)).href;
+  const decodeSource = (relativePath) => {
+    try {
+      return new TextDecoder("utf-8", { fatal: true }).decode(sourceBuffers.get(relativePath));
+    } catch {
+      reject(`verified memory module is not fatal UTF-8: ${relativePath}`);
+    }
+  };
+  const makeBuiltin = async (specifier) => {
+    if (builtins.has(specifier)) return builtins.get(specifier);
+    let namespace;
+    try {
+      namespace = await import(specifier);
+    } catch {
+      reject(`verified memory module requested an unknown builtin: ${specifier}`);
+    }
+    const names = Object.keys(namespace);
+    const builtInModule = new vm.SyntheticModule(names, function initializeBuiltin() {
+      for (const name of names) this.setExport(name, namespace[name]);
+    }, { identifier: specifier });
+    builtins.set(specifier, builtInModule);
+    return builtInModule;
+  };
+  for (const relativePath of graph.module_paths ?? []) {
+    const identifier = identifierFor(relativePath);
+    const sourceModule = new vm.SourceTextModule(decodeSource(relativePath), {
+      identifier,
+      initializeImportMeta(meta) { meta.url = identifier; },
+      importModuleDynamically: async (specifier, referencingModule, attributes) => {
+        const target = await resolveModule(specifier, referencingModule, attributes);
+        if (target.status === "unlinked") await target.link(linker);
+        if (target.status === "linked") await target.evaluate();
+        return target;
+      },
+    });
+    modulesByUrl.set(identifier, sourceModule);
+    pathsByUrl.set(identifier, relativePath);
+  }
+  for (const entry of graph.entries.filter((value) => value.path.endsWith(".json"))) {
+    let parsed;
+    try {
+      parsed = JSON.parse(decodeSource(entry.path));
+    } catch {
+      reject(`verified memory JSON module is invalid: ${entry.path}`);
+    }
+    const identifier = identifierFor(entry.path);
+    const jsonModule = new vm.SyntheticModule(["default"], function initializeJson() {
+      this.setExport("default", parsed);
+    }, { identifier });
+    modulesByUrl.set(identifier, jsonModule);
+    pathsByUrl.set(identifier, entry.path);
+  }
+  const resolveModule = async (specifier, referencingModule, attributes = {}) => {
+    if (specifier.startsWith("node:")) {
+      if (Object.keys(attributes ?? {}).length !== 0) reject("builtin import attributes are forbidden");
+      return makeBuiltin(specifier);
+    }
+    if (!specifier.startsWith("./") && !specifier.startsWith("../")) {
+      reject("memory module resolver accepts only node: or verified relative specifiers");
+    }
+    const resolved = new URL(specifier, referencingModule.identifier).href;
+    const target = modulesByUrl.get(resolved);
+    const targetPath = pathsByUrl.get(resolved);
+    if (!target || !targetPath || !entriesByPath.has(targetPath)) reject("memory module resolver target is outside the verified graph");
+    const attributeKeys = Object.keys(attributes ?? {});
+    if (targetPath.endsWith(".json")) {
+      if (attributeKeys.length !== 1 || attributes.type !== "json") reject("memory JSON module requires exact type attribute");
+    } else if (attributeKeys.length !== 0) reject("memory JavaScript module attributes are forbidden");
+    return target;
+  };
+  const linker = (specifier, referencingModule, attributes) =>
+    resolveModule(specifier, referencingModule, attributes?.attributes ?? attributes);
+  const normalizedEntry = posix.normalize(entryPath ?? "");
+  if (normalizedEntry !== entryPath || !graph.module_paths.includes(normalizedEntry)) {
+    reject("memory module entry is outside the verified graph");
+  }
+  const entryModule = modulesByUrl.get(identifierFor(normalizedEntry));
+  await entryModule.link(linker);
+  await entryModule.evaluate();
+  return entryModule.namespace;
 }
 
 function argumentValue(argv, name) {
@@ -459,6 +573,9 @@ function makeBootstrapTreeWritable(path) {
 }
 
 export async function runBootstrap(argv) {
+  if (typeof vm.SourceTextModule !== "function") {
+    reject("--experimental-vm-modules is required before candidate bootstrap side effects");
+  }
   const releaseSha = argumentValue(argv, "--release-sha");
   if (!/^[0-9a-f]{40}$/u.test(releaseSha ?? "")) reject("--release-sha must be exact lowercase 40-hex");
   const bootstrapPath = realpathSync(fileURLToPath(import.meta.url));
@@ -503,7 +620,11 @@ export async function runBootstrap(argv) {
       repositoryRoot,
       sourceRoot,
     });
-    const cli = await import(pathToFileURL(join(sourceRoot, "scripts", "local-mac-production-rehearsal.mjs")).href);
+    const cli = await evaluateVerifiedCandidateModuleGraph({
+      entryPath: "scripts/local-mac-production-rehearsal.mjs",
+      graph: builderGraph,
+      sourceRoot,
+    });
     let finalizationComplete = false;
     const beforeCandidateComplete = ({ builder_input_digest: candidateBuilderInputDigest } = {}) => {
       if (finalizationComplete) reject("immutable candidate finalization guard ran more than once");

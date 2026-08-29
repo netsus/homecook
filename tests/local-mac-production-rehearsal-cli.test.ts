@@ -209,7 +209,7 @@ describe("local Mac production rehearsal CLI", () => {
   it("registers the exact package script family without changing the production promote kill switch", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["release:rehearsal:inventory"]).toBe("node scripts/local-mac-production-rehearsal.mjs inventory");
-    expect(packageJson.scripts["release:rehearsal:candidate"]).toBe("node scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs");
+    expect(packageJson.scripts["release:rehearsal:candidate"]).toBe("node --experimental-vm-modules scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs");
     expect(packageJson.scripts["release:rehearsal:classify"]).toBe("node scripts/local-mac-production-rehearsal.mjs classify");
     expect(packageJson.scripts["release:rehearsal:verify"]).toBe("node scripts/local-mac-production-rehearsal.mjs verify");
     expect(packageJson.scripts["release:production:promote"]).toBe("node scripts/promote-local-mac-production-release.mjs promote");
