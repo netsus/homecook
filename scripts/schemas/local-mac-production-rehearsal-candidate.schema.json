@@ -4,7 +4,7 @@
   "title": "Homecook local Mac production rehearsal candidate",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree", "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest", "source_manifest_digest", "sandbox_policy_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "build_tools", "toolchain_lock_digest", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest", "manifest_digest"],
+  "required": ["schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree", "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "build_tools", "toolchain_lock_digest", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest", "manifest_digest"],
   "properties": {
     "schema": { "const": "homecook.local-mac-production-rehearsal-candidate.v1" },
     "canonicalization": { "const": "RFC8785-JCS+SHA256" },
@@ -16,6 +16,7 @@
     "ci_snapshot_digest": { "$ref": "#/$defs/sha256" },
     "ci_suite_run_set_digest": { "$ref": "#/$defs/sha256" },
     "source_manifest_digest": { "$ref": "#/$defs/sha256" },
+    "compose_source_digest": { "$ref": "#/$defs/sha256" },
     "sandbox_policy_digest": { "$ref": "#/$defs/sha256" },
     "build_id": { "type": "string", "minLength": 1 },
     "sealed_bundle_digest": { "$ref": "#/$defs/sha256" },

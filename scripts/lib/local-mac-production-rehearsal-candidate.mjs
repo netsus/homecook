@@ -68,7 +68,7 @@ const BUILD_ENV_ALLOWED_KEYS = new Set([
 const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
-  "ci_suite_run_set_digest", "source_manifest_digest", "sandbox_policy_digest",
+  "ci_suite_run_set_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
   "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
@@ -397,6 +397,7 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.ci_snapshot_digest, "ci_snapshot_digest");
   digest(value.ci_suite_run_set_digest, "ci_suite_run_set_digest");
   digest(value.source_manifest_digest, "source_manifest_digest");
+  digest(value.compose_source_digest, "compose_source_digest");
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
   string(value.build_id, "build_id");
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
@@ -1067,7 +1068,7 @@ export function buildBundleAuthorityManifest(input) {
     "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
     "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
-    "source_snapshot_digest", "toolchain", "toolchain_lock_digest",
+    "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
     "build_tools",
     "repository", "source_ref",
   ]);
@@ -1079,7 +1080,7 @@ export function buildBundleAuthorityManifest(input) {
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
     "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
-    "source_snapshot_digest", "toolchain_lock_digest",
+    "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest",
   ]) digest(input[field], `bundle authority ${field}`);
   validateEnvironmentMetadata(input.environment_snapshot);
   validateFileInventory(input.file_inventory);
@@ -1429,6 +1430,7 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["ci_snapshot_digest", candidate.ci_snapshot_digest, bundle.ci_snapshot_digest],
     ["ci_suite_run_set_digest", candidate.ci_suite_run_set_digest, bundle.ci_suite_run_set_digest],
     ["source_manifest_digest", candidate.source_manifest_digest, bundle.source_manifest_digest],
+    ["compose_source_digest", candidate.compose_source_digest, bundle.compose_source_digest],
     ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
     ["toolchain_lock_digest", candidate.toolchain_lock_digest, bundle.toolchain_lock_digest],
@@ -1681,11 +1683,14 @@ export async function buildReleaseRehearsalCandidate({
     const ciPre = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "pre", releaseSha }));
     const environment = await adapters.readEnvironment({ releaseSha, runRoot });
     validateEnvironmentMetadata(environment.metadata);
-    const images = validateCandidateImages(await adapters.collectImages({
+    const imageEvidence = await adapters.collectImages({
       buildEnvironment: environment.values,
       releaseSha,
       runRoot,
-    }));
+    });
+    exactObject(imageEvidence, "Compose image evidence", ["images", "compose_source_digest"]);
+    const images = validateCandidateImages(imageEvidence.images);
+    const composeSourceDigest = digest(imageEvidence.compose_source_digest, "Compose source digest");
     const migration = validateMigration(await adapters.collectMigration({ releaseSha, runRoot, source }));
     const buildId = `candidate-${releaseSha}`;
     const childEnv = Object.freeze({
@@ -1745,6 +1750,7 @@ export async function buildReleaseRehearsalCandidate({
       sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
+      compose_source_digest: composeSourceDigest,
       toolchain,
       toolchain_lock_digest: toolchainLock.toolchain_lock_digest,
       production_guard: productionGuard,
@@ -1773,6 +1779,7 @@ export async function buildReleaseRehearsalCandidate({
       ci_snapshot_digest: ci.safe_projection_digest,
       ci_suite_run_set_digest: ci.suite_run_set_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
+      compose_source_digest: composeSourceDigest,
       sandbox_policy_digest: sandboxPolicyDigest,
       build_id: buildId,
       build_tools: build.build_tools,
@@ -2199,7 +2206,7 @@ export function parseCanonicalComposeImageInventory(source) {
     }
     if (/^[!&*?\[\]{}>|'"\\]/u.test(value)) fail(`Compose ${label} scalar starts with a forbidden YAML token`);
     const withoutTemplates = value.replace(/\$\{[A-Z][A-Z0-9_]*(?::[-+?][^}\r\n]*)?\}/gu, "");
-    if (/[\[\]{}'"\\]/u.test(withoutTemplates) || /(?:^|\s)(?:!!|[&*?])\S*/u.test(withoutTemplates)) {
+    if (/[\[\]{}'"\\]/u.test(withoutTemplates) || /(?:^|\s)[!&*?]\S*/u.test(withoutTemplates)) {
       fail(`Compose ${label} scalar contains unsupported flow, quote, tag, alias, anchor, or explicit-key syntax`);
     }
     return value;
@@ -2210,6 +2217,9 @@ export function parseCanonicalComposeImageInventory(source) {
     if (!Array.isArray(parsed) || parsed.length === 0 || parsed.some((entry) => typeof entry !== "string")) {
       fail(`Compose ${label} inline sequence must contain only strings`);
     }
+    if (parsed.some((entry) => entry.length === 0)) fail(`Compose ${label} inline sequence contains an empty string`);
+    const canonical = JSON.stringify(parsed);
+    if (canonical !== value) fail(`Compose ${label} inline sequence is not in the exact canonical form`);
     return parsed;
   };
   const topLevelAllowed = new Set([
@@ -2226,6 +2236,8 @@ export function parseCanonicalComposeImageInventory(source) {
     "homecook.local/restore-attempt", "homecook.release.sha", "homecook.release.tree",
     "homecook.release.build-id", "homecook.release.promotion-id",
   ]);
+  const canonicalNetworkNames = new Set(["auth-edge", "auth-egress", "data-internal"]);
+  const canonicalVolumeNames = new Set(["postgres-data", "storage-data"]);
   const topLevelKeys = new Set();
   const services = [];
   const serviceNames = new Set();
@@ -2253,6 +2265,12 @@ export function parseCanonicalComposeImageInventory(source) {
       const { key, value } = parseMapping(line, 0, "top-level");
       if (!topLevelAllowed.has(key)) fail(`Compose unknown top-level key: ${key}`);
       if (topLevelKeys.has(key)) fail(`Compose duplicate top-level key: ${key}`);
+      if (key === "x-restore-attempt-labels" && (!topLevelKeys.has("name") || topLevelKeys.has("services"))) {
+        fail("Compose restore extension is outside its exact pre-services position");
+      }
+      if (key === "services" && (section !== "x-restore-attempt-labels" || nestedKeys.size !== extensionKeys.size)) {
+        fail("Compose services section must immediately follow the complete restore extension block");
+      }
       topLevelKeys.add(key);
       if (["services", "networks", "secrets", "volumes"].includes(key) && value !== null) {
         fail(`Compose top-level ${key} must use a nested block`);
@@ -2380,6 +2398,8 @@ export function parseCanonicalComposeImageInventory(source) {
       if (indent === 2) {
         const { key, value } = parseMapping(line, 2, `${section} item`);
         if (items.has(key)) fail(`Compose duplicate ${section} item: ${key}`);
+        if (section === "networks" && !canonicalNetworkNames.has(key)) fail(`Compose unknown canonical network: ${key}`);
+        if (section === "volumes" && !canonicalVolumeNames.has(key)) fail(`Compose unknown canonical volume: ${key}`);
         items.add(key);
         if (section === "networks" && ![null, "{}"].includes(value)) fail("Compose network item value is unsupported");
         if (section !== "networks" && value !== null) fail(`Compose ${section} item must use a nested block`);
@@ -2427,6 +2447,16 @@ export function parseCanonicalComposeImageInventory(source) {
   });
 }
 
+export function validateCanonicalComposeAuthority(source, lock) {
+  const bytes = Buffer.isBuffer(source) ? source : Buffer.from(source, "utf8");
+  const actualDigest = sha256Bytes(bytes);
+  digest(lock?.full_local_compose_sha256, "full-local Compose pinned source digest");
+  if (actualDigest !== lock.full_local_compose_sha256) {
+    fail("full-local Compose source bytes differ from the repository authority lock");
+  }
+  return parseCanonicalComposeImageInventory(decodeFatalUtf8(bytes, "full-local Compose source"));
+}
+
 export function loadRehearsalToolchainLock(path) {
   const absolutePath = resolve(path);
   const pre = lstatSync(absolutePath, { bigint: true });
@@ -2459,11 +2489,13 @@ export function loadRehearsalToolchainLock(path) {
   const parsed = parseCanonicalJcs(decodeFatalUtf8(bytes, "rehearsal toolchain lock"));
   exactObject(parsed, "rehearsal toolchain lock", [
     "schema", "platform", "node", "pnpm", "supabase_cli", "full_local_images",
+    "full_local_compose_sha256",
   ]);
   if (parsed.schema !== "homecook.local-mac-production-rehearsal-toolchain-lock.v1") {
     fail("rehearsal toolchain lock schema is invalid");
   }
   if (parsed.platform !== "darwin-arm64") fail("rehearsal toolchain lock platform is invalid");
+  digest(parsed.full_local_compose_sha256, "full-local Compose source digest");
   exactObject(parsed.node, "rehearsal toolchain lock node", ["version", "binary_sha256"]);
   string(parsed.node.version, "node pinned version");
   digest(parsed.node.binary_sha256, "node pinned binary digest");
@@ -2862,13 +2894,13 @@ export function createReleaseRehearsalCandidateAdapters({
     async collectImages({ buildEnvironment }) {
       if (!currentSource) fail("candidate source must be prepared before image inventory");
       const platform = string(buildEnvironment.FULL_LOCAL_DOCKER_PLATFORM, "FULL_LOCAL_DOCKER_PLATFORM");
-      const composeText = readFileSync(
+      const composeBytes = readFileSync(
         join(currentSource.checkoutDir, "infra", "full-local-supabase", "docker-compose.production.yml"),
-        "utf8",
       );
-      const composeInventory = parseCanonicalComposeImageInventory(composeText)
+      const toolchainLock = readToolchainLock();
+      const composeInventory = validateCanonicalComposeAuthority(composeBytes, toolchainLock)
         .sort((left, right) => left.service.localeCompare(right.service));
-      const lockedInventory = [...readToolchainLock().full_local_images]
+      const lockedInventory = [...toolchainLock.full_local_images]
         .sort((left, right) => left.service.localeCompare(right.service));
       if (canonicalizeJcs(composeInventory) !== canonicalizeJcs(lockedInventory)) {
         fail("full-local Compose image service set differs from repository lock");
@@ -2903,7 +2935,10 @@ export function createReleaseRehearsalCandidateAdapters({
           local_cache_provenance_digest: sha256Jcs(projection),
         });
       }
-      return results.sort((left, right) => left.service.localeCompare(right.service));
+      return {
+        images: results.sort((left, right) => left.service.localeCompare(right.service)),
+        compose_source_digest: sha256Bytes(composeBytes),
+      };
     },
 
     async collectMigration({ source }) {

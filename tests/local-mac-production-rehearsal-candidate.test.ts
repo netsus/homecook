@@ -54,6 +54,7 @@ import {
   validatePinnedPnpmArtifactIdentity,
   runObservedSandboxCommand,
   resolvePinnedPnpmArtifact,
+  validateCanonicalComposeAuthority,
 } from "../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { materializeImmutableCandidateBootstrap } from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
@@ -147,6 +148,7 @@ function validManifestInput() {
     ci_snapshot_digest: DIGEST_B,
     ci_suite_run_set_digest: DIGEST_C,
     source_manifest_digest: DIGEST_A,
+    compose_source_digest: DIGEST_C,
     sandbox_policy_digest: DIGEST_B,
     build_id: `candidate-${SHA_A}`,
     sealed_bundle_digest: DIGEST_B,
@@ -225,6 +227,7 @@ describe("release rehearsal candidate manifest", () => {
         "ci_snapshot_digest",
         "ci_suite_run_set_digest",
         "source_manifest_digest",
+        "compose_source_digest",
         "sandbox_policy_digest",
         "sealed_bundle_digest",
         "bundle_manifest_digest",
@@ -412,7 +415,7 @@ describe("release rehearsal candidate input gates", () => {
   });
 
   it("accounts for every Compose service and rejects tag-only, build, missing-image, and mixed input", () => {
-    const valid = `services:\n  app:\n    image: example/app@sha256:${DIGEST_A}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\n  db:\n    image: example/db@sha256:${DIGEST_B}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\nnetworks:\n  internal:\n`;
+    const valid = `name: fixture\nx-restore-attempt-labels: &restore-attempt-labels\n  homecook.local/restore-attempt: runtime\n  homecook.release.sha: unmanaged\n  homecook.release.tree: unmanaged\n  homecook.release.build-id: unmanaged\n  homecook.release.promotion-id: unmanaged\nservices:\n  app:\n    image: example/app@sha256:${DIGEST_A}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\n  db:\n    image: example/db@sha256:${DIGEST_B}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\nnetworks:\n  data-internal:\n`;
     expect(parseCanonicalComposeImageInventory(valid)).toEqual([
       { service: "app", reference: `example/app@sha256:${DIGEST_A}`, digest: `sha256:${DIGEST_A}`, platform_expression: "${FULL_LOCAL_DOCKER_PLATFORM:?required}" },
       { service: "db", reference: `example/db@sha256:${DIGEST_B}`, digest: `sha256:${DIGEST_B}`, platform_expression: "${FULL_LOCAL_DOCKER_PLATFORM:?required}" },
@@ -469,14 +472,20 @@ describe("release rehearsal candidate input gates", () => {
     const expected = [...lock.full_local_images]
       .map(({ service, reference, digest, platform_expression }) => ({ service, reference, digest, platform_expression }))
       .sort((left, right) => left.service.localeCompare(right.service));
-    const actual = parseCanonicalComposeImageInventory(canonical)
+    const actual = validateCanonicalComposeAuthority(canonical, lock)
       .sort((left, right) => left.service.localeCompare(right.service));
     expect(actual).toEqual(expected);
     expect(actual).toHaveLength(7);
 
     const postgresImage = "    image: public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a";
     const postgresPlatform = "    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}";
-    for (const invalid of [
+    const restoreBlock = canonical.slice(
+      canonical.indexOf("x-restore-attempt-labels:"),
+      canonical.indexOf("\n\nservices:"),
+    );
+    const movedRestoreBlock = canonical.replace(`${restoreBlock}\n\n`, "")
+      .replace("\nnetworks:\n", `\n${restoreBlock}\n\nnetworks:\n`);
+    const structuralMutations = [
       canonical.replace("networks:\n", "  injected:\n    image: example/injected:latest\n    platform: linux/arm64\n\nnetworks:\n"),
       canonical.replace(postgresImage, `${postgresImage}\n${postgresImage}`),
       canonical.replace(postgresImage, `    \"image\": ${postgresImage.slice("    image: ".length)}`),
@@ -489,10 +498,40 @@ describe("release rehearsal candidate input gates", () => {
       canonical.replace(postgresImage, `${postgresImage}\n    unknown_service_key: rejected`),
       canonical.replace(postgresImage, postgresImage.replace("    image", "   image")),
       canonical.replace("  postgres:\n", "  postgres:{ }\n"),
-    ]) {
-      expect(() => parseCanonicalComposeImageInventory(invalid))
-        .toThrow(/Compose|image|platform|service|mapping|grammar|unknown|duplicate|digest|indent|top-level/iu);
-    }
+      canonical.replace("    internal: true", "    internal: {}"),
+      canonical.replace("  auth-egress: {}", "  attacker: {}"),
+      canonical.replace("  storage-data:\n", "  storage-data:\n    labels: *restore-attempt-labels\n"),
+      movedRestoreBlock,
+    ];
+    const structuralSurvivors = structuralMutations.flatMap((mutation, index) => {
+      try {
+        validateCanonicalComposeAuthority(mutation, lock);
+        return [index];
+      } catch {
+        return [];
+      }
+    });
+    expect(structuralMutations).toHaveLength(16);
+    expect(structuralSurvivors).toEqual([]);
+
+    const directParserMutations = [
+      canonical.replace('    command: ["docker-entrypoint.sh","postgres","-D","/etc/postgresql"]', '    command: ["postgres"] '),
+      canonical.replace("    restart: unless-stopped", "    restart: unless-stopped !evil"),
+      canonical.replace("      FULL_LOCAL_AUTH_EXPECTED_ISSUER: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}", "      FULL_LOCAL_AUTH_EXPECTED_ISSUER: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}!evil"),
+      canonical.replace("    internal: true", "    internal: {}"),
+      canonical.replace("  auth-egress: {}", "  attacker: {}"),
+      canonical.replace("  storage-data:", "  attacker-volume:"),
+      movedRestoreBlock,
+    ];
+    const directParserSurvivors = directParserMutations.flatMap((mutation, index) => {
+      try {
+        parseCanonicalComposeImageInventory(mutation);
+        return [index];
+      } catch {
+        return [];
+      }
+    });
+    expect(directParserSurvivors).toEqual([]);
 
     const lexicalAndTokenMutations = [
       `\uFEFF${canonical}`,
@@ -505,7 +544,7 @@ describe("release rehearsal candidate input gates", () => {
       canonical.replace("services:", "services:\u0001"),
       canonical.replace("services:", "services:\uFDD0"),
       canonical.replace('    entrypoint: ["/homecook/secret-entrypoint.sh"]', '    entrypoint: ["unterminated]'),
-      canonical.replace('    command: ["docker-entrypoint.sh", "postgres", "-D", "/etc/postgresql"]', "    command: {image: attacker}"),
+      canonical.replace('    command: ["docker-entrypoint.sh","postgres","-D","/etc/postgresql"]', "    command: {image: attacker}"),
       canonical.replace("    restart: unless-stopped", "    restart: !!str attacker"),
       canonical.replace("      - data-internal", "      - *restore-attempt-labels"),
       canonical.replace("      - postgres-data:/var/lib/postgresql/data", "      - {image: attacker}"),
@@ -516,17 +555,29 @@ describe("release rehearsal candidate input gates", () => {
       canonical.replace("      POSTGRES_DB: postgres", "      POSTGRES_DB: {value: postgres}"),
       canonical.replace("      POSTGRES_DB: postgres", '      POSTGRES_DB: "unterminated'),
       canonical.replace("      - data-internal", "      - 'unterminated"),
-      canonical.replace('    command: ["docker-entrypoint.sh", "postgres", "-D", "/etc/postgresql"]', '    command: ["postgres"}'),
+      canonical.replace('    command: ["docker-entrypoint.sh","postgres","-D","/etc/postgresql"]', '    command: ["postgres"}'),
+      canonical.replace('    command: ["docker-entrypoint.sh","postgres","-D","/etc/postgresql"]', '    command: ["postgres"] '),
+      canonical.replace("    restart: unless-stopped", "    restart: unless-stopped !evil"),
+      canonical.replace("      FULL_LOCAL_AUTH_EXPECTED_ISSUER: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}", "      FULL_LOCAL_AUTH_EXPECTED_ISSUER: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}!evil"),
     ];
     const survivors = lexicalAndTokenMutations.flatMap((mutation, index) => {
       try {
-        parseCanonicalComposeImageInventory(mutation);
+        validateCanonicalComposeAuthority(mutation, lock);
         return [index];
       } catch {
         return [];
       }
     });
+    expect(lexicalAndTokenMutations).toHaveLength(25);
     expect(survivors).toEqual([]);
+
+    const validButUnauthorizedCommand = canonical.replace(
+      '    command: ["docker-entrypoint.sh","postgres","-D","/etc/postgresql"]',
+      '    command: ["postgres"]',
+    );
+    expect(() => parseCanonicalComposeImageInventory(validButUnauthorizedCommand)).not.toThrow();
+    expect(() => validateCanonicalComposeAuthority(validButUnauthorizedCommand, lock))
+      .toThrow(/Compose|digest|authority|lock/iu);
   });
 
   it("allows only exact Docker version and digest inspect argv outside the build sandbox", () => {
@@ -592,6 +643,7 @@ describe("release rehearsal candidate input gates", () => {
     expect(lock).toMatchObject({
       schema: "homecook.local-mac-production-rehearsal-toolchain-lock.v1",
       platform: "darwin-arm64",
+      full_local_compose_sha256: "1dcb25f698c9a8ff9f1585d6770f532e696cdfe8d9648956adde71de80f0d161",
       node: {
         version: "v22.13.1",
         binary_sha256: "79de4c62eb09c9cf7859e4a5fb27502f209533b54fa6a97f5a791015798282c0",
@@ -1017,6 +1069,7 @@ describe("release rehearsal candidate orchestration", () => {
       ci_snapshot_digest: candidate.ci_snapshot_digest,
       ci_suite_run_set_digest: candidate.ci_suite_run_set_digest,
       source_manifest_digest: candidate.source_manifest_digest,
+      compose_source_digest: candidate.compose_source_digest,
       sandbox_policy_digest: candidate.sandbox_policy_digest,
       toolchain_lock_digest: candidate.toolchain_lock_digest,
       environment_snapshot: candidate.environment_snapshot,
@@ -1154,6 +1207,7 @@ describe("release rehearsal candidate orchestration", () => {
       sandbox_policy_digest: manifestInput.sandbox_policy_digest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
       source_manifest_digest: manifestInput.source_manifest_digest,
+      compose_source_digest: manifestInput.compose_source_digest,
       source_snapshot_digest: manifestInput.source_manifest_digest,
       toolchain: manifestInput.toolchain,
       toolchain_lock_digest: manifestInput.toolchain_lock_digest,
@@ -1439,7 +1493,10 @@ describe("release rehearsal candidate orchestration", () => {
         callOrder.push("tool");
         return validToolchain();
       }),
-      collectImages: vi.fn(() => validManifestInput().images),
+      collectImages: vi.fn(() => ({
+        images: validManifestInput().images,
+        compose_source_digest: validManifestInput().compose_source_digest,
+      })),
       collectMigration: vi.fn(() => validManifestInput().migration),
       readEnvironment: vi.fn(() => ({ values: {}, metadata: validManifestInput().environment_snapshot })),
       executeBuild,
