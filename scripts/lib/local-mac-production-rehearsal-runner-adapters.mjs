@@ -28,6 +28,7 @@ import {
   RUN_PROJECT_LABEL,
   validateChildEnvironment,
   validateDockerInvocation,
+  validateSealedWorkerSyntheticResult,
 } from "./local-mac-production-rehearsal-runner.mjs";
 import {
   buildYoutubeExtractionAppDescriptor,
@@ -61,11 +62,66 @@ const RESOURCE_KIND_ORDER = { network: 0, volume: 1, container: 2 };
 const RUN_IMAGE_SERVICE_LABEL = "com.homecook.release-rehearsal.image-service";
 const RUN_CREATION_NONCE_LABEL = "com.homecook.release-rehearsal.creation-nonce";
 
+const RESOLVED_COMPOSE_TOP_LEVEL_KEYS = ["name", "networks", "secrets", "services", "volumes"];
+const FIXTURE_CREDENTIAL_KEY = /(?:^|[_-])(access[_-]?token|api[_-]?key|password|private[_-]?key|secret)(?:$|[_-])/iu;
+
+/**
+ * Produces a commit-safe golden input from a locally resolved Compose document.
+ * The raw resolver output never becomes an artifact: absolute local values are
+ * replaced in encounter order and credential-shaped scalar fields are rejected.
+ */
+export function normalizeResolvedComposeFixture(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) fail("resolved Compose fixture is invalid");
+  if (canonicalizeJcs(Object.keys(input).sort()) !== canonicalizeJcs(RESOLVED_COMPOSE_TOP_LEVEL_KEYS)) {
+    fail("resolved Compose fixture top-level fields are not closed");
+  }
+  let pathIndex = 0;
+  const visit = (value, key = "") => {
+    if (typeof value === "string") {
+      if (FIXTURE_CREDENTIAL_KEY.test(key)) fail(`resolved Compose fixture contains credential-shaped scalar: ${key}`);
+      if (key === "name" && value === input.name) return "__HOMECOOK_PROJECT__";
+      if (value.startsWith("/")) return `__HOMECOOK_PATH_${String(++pathIndex).padStart(2, "0")}__`;
+      return value;
+    }
+    if (Array.isArray(value)) return value.map((entry) => visit(entry));
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, visit(childValue, childKey)]));
+  };
+  return Object.freeze(visit(input));
+}
+
+/** A structural, non-executable golden authority for regression tests. */
+export function buildSafeResolvedComposeGoldenFixture() {
+  const service = (name) => Object.freeze({
+    image: `registry.invalid/homecook/${name}@sha256:${"0".repeat(64)}`,
+    command: ["__HOMECOOK_COMMAND__"],
+    entrypoint: ["__HOMECOOK_PATH__"],
+    environment: { HOMECOOK_PUBLIC_VALUE: "__HOMECOOK_VALUE__" },
+    labels: { "com.homecook.fixture": "true" },
+    networks: { "data-internal": { aliases: [name] } },
+    restart: "unless-stopped",
+    security_opt: ["no-new-privileges:true"],
+    volumes: [{ type: "bind", source: "__HOMECOOK_PATH__", target: "__HOMECOOK_PATH__", read_only: true }],
+  });
+  const fixture = Object.freeze({
+    name: "__HOMECOOK_PROJECT__",
+    services: Object.freeze(Object.fromEntries(SERVICES.map((name) => [name, service(name)]))),
+    networks: Object.freeze(Object.fromEntries(["auth-edge", "auth-egress", "data-internal"].map((name) => [name, Object.freeze({ name: `__HOMECOOK_NETWORK_${name.toUpperCase().replaceAll("-", "_")}__`, internal: true, external: false, ipam: {} })]))),
+    volumes: Object.freeze(Object.fromEntries(["postgres-data", "storage-data"].map((name) => [name, Object.freeze({ name: `__HOMECOOK_VOLUME_${name.toUpperCase().replaceAll("-", "_")}__`, external: false, labels: {} })]))),
+    secrets: Object.freeze({}),
+  });
+  return Object.freeze({
+    schema: "homecook.r2-resolved-compose-golden.v1",
+    fixture,
+    digest: sha256Jcs(fixture),
+  });
+}
+
 /** Compile read-only `docker compose config --format json` output into a closed R2 plan. */
 export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
   if (!config || typeof config !== "object" || Array.isArray(config)) fail("resolved Compose config is invalid");
   const keys = Object.keys(config).sort();
-  if (canonicalizeJcs(keys) !== canonicalizeJcs(["name", "networks", "services", "volumes"])) fail("resolved Compose top-level fields are not closed");
+  if (canonicalizeJcs(keys) !== canonicalizeJcs(RESOLVED_COMPOSE_TOP_LEVEL_KEYS)) fail("resolved Compose top-level fields are not closed");
   if (!project || !ports || !config.services || typeof config.services !== "object") fail("primitive plan authority is incomplete");
   const names = Object.keys(config.services).sort();
   if (canonicalizeJcs(names) !== canonicalizeJcs([...SERVICES].sort())) fail("resolved Compose service set is not exact");
@@ -625,18 +681,25 @@ async function runContainer(state, args, { signal } = {}) {
   const nameIndex = args.indexOf("--name");
   const expectedName = nameIndex >= 0 ? args[nameIndex + 1] : null;
   try {
-    const id = (await dockerCommand(state, args, { signal })).stdout.trim();
-    if (!id || !expectedName) fail("docker run did not return exact container identity");
+    if (args[0] !== "run" || !args.includes("--detach")) fail("primitive container creation requires a detached run template");
+    const createArgs = ["create", ...args.slice(1).filter((token) => token !== "--detach")];
+    const stdout = (await dockerCommand(state, createArgs, { signal })).stdout;
+    const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
+    if (!id || !expectedName) fail("docker create did not return exact container identity");
     const entry = { kind: "container", id, name: expectedName };
     const observed = await inspectResource(state, entry, { signal });
-    if (
-      observed?.id !== id
-      || observed?.name !== expectedName
-      || observed?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId
-      || observed?.labels?.[RUN_PROJECT_LABEL] !== state.namespace.project
-      || observed?.labels?.[RUN_CREATION_NONCE_LABEL] !== state.creationNonce
-    ) fail("docker run returned container identity/labels mismatch");
-    state.creationLedger.record(entry);
+    recordPrimitiveCreateResult(state.creationLedger, {
+      ...entry,
+      labels: {
+        [RUN_OWNERSHIP_LABEL]: state.runId,
+        [RUN_PROJECT_LABEL]: state.namespace.project,
+        [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
+      },
+    }, stdout, observed);
+    await dockerCommand(state, ["start", id], {
+      signal,
+      ownership: { verifiedOwnership: true, resourceId: id },
+    });
     return id;
   } catch (error) {
     if (expectedName) {
@@ -1284,12 +1347,8 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         if (result.status !== 44) fail("worker synthetic runtime exited without evidence");
         await abortableDelay(100, state.activeSignal);
       }
-      if (
-        workerResult?.schema !== "homecook.youtube-extraction-worker-rehearsal-result.v1"
-        || workerResult.status !== "succeeded"
-        || workerResult.synthetic !== true
-        || workerResult.provider_requests !== 0
-      ) fail("actual worker synthetic job did not complete end-to-end");
+      try { validateSealedWorkerSyntheticResult(workerResult); }
+      catch { fail("actual sealed worker fenced lifecycle did not complete end-to-end"); }
       results.push({
         canary_id: "worker-synthetic-job",
         exit_code: 0,

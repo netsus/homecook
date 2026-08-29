@@ -15,6 +15,8 @@ import {
   validateDockerInvocation,
   validateMigrationReplay,
   validateRunEvidence,
+  validateIndependentProductionObserver,
+  validateSealedWorkerSyntheticResult,
 } from "../scripts/lib/local-mac-production-rehearsal-runner.mjs";
 import { runLocalMacProductionRehearsalRunnerCli } from "../scripts/local-mac-production-rehearsal-run.mjs";
 import {
@@ -24,6 +26,8 @@ import {
   buildFullLocalComposeOverride,
   buildFullLocalRehearsalEnvironment,
   validateContainerImageAuthority,
+  normalizeResolvedComposeFixture,
+  buildSafeResolvedComposeGoldenFixture,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
@@ -157,7 +161,7 @@ function evidenceFixture() {
       ports: { app: 43101, auth: 43102, postgres: 43103, storage: 43104 },
       root_identity_digest: "2".repeat(64),
       execution_root_identity_digest: "4".repeat(64),
-      resource_identity_digest: "3".repeat(64),
+      resource_identity_digest: sha256Jcs({ project: `homecook-rehearsal-${RUN_ID}`, container_names: ["container-a"], network_names: ["network-a"], volume_names: ["volume-a"], owned_resource_ids: ["container-app", "container-full-local", "container-worker"] }),
     },
     migration: migrationReplay(),
     fixtures: { fixture_set_id: "homecook-r2-synthetic-v1", fixture_set_digest: "5".repeat(64), production_derived_row_count: 0 },
@@ -330,6 +334,33 @@ describe("release rehearsal R2 input and namespace gates", () => {
 });
 
 describe("release rehearsal R2 command, env, and migration gates", () => {
+  it("rejects self-reported zeroes unless an independent observer binds the exact run window", () => {
+    const observer = {
+      schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64),
+      started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z",
+      pre_snapshot_digest: "b".repeat(64), post_snapshot_digest: "b".repeat(64),
+      process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "d".repeat(64),
+      observation_digest: "e".repeat(64), available: true, truncated: false,
+      production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0,
+      production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0,
+      unrelated_noise_count: 3,
+    };
+    expect(validateIndependentProductionObserver(observer)).toEqual(observer);
+    for (const field of ["production_db_connection_count", "production_socket_access_count", "provider_remote_access_count", "production_mutation_count"] as const) {
+      expect(() => validateIndependentProductionObserver({ ...observer, [field]: 1 })).toThrow(/observer|production|zero/iu);
+    }
+    expect(() => validateIndependentProductionObserver({ ...observer, available: false })).toThrow(/observer/iu);
+    expect(() => validateIndependentProductionObserver({ ...observer, pre_snapshot_digest: "f".repeat(64) })).toThrow(/snapshot|observer/iu);
+  });
+
+  it("accepts only the sealed worker's complete fence lifecycle", () => {
+    const result = { schema: "homecook.youtube-extraction-worker-rehearsal-result.v1", status: "succeeded", synthetic: true, provider_requests: 0, rpc_sequence: ["claim_youtube_extraction_job", "claim_youtube_extractor_permit", "start_youtube_extraction_attempt", "heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit", "read_youtube_extraction_worker_catalog", "report_youtube_extraction_progress", "resolve_youtube_extraction_job_draft", "finalize_youtube_extraction_job", "release_youtube_extractor_permit"] };
+    expect(validateSealedWorkerSyntheticResult(result)).toEqual(result);
+    expect(() => validateSealedWorkerSyntheticResult({ ...result, rpc_sequence: result.rpc_sequence.filter((step) => step !== "heartbeat_youtube_extraction_job") })).toThrow(/lifecycle|fence/iu);
+    expect(() => validateSealedWorkerSyntheticResult({ ...result, provider_requests: 1 })).toThrow(/provider/iu);
+    expect(() => validateSealedWorkerSyntheticResult({ ...result, status: "succeeded", synthetic: false })).toThrow(/synthetic/iu);
+  });
+
   it.each([
     ["pull", ["pull", "postgres:17"]],
     ["build", ["build", "."]],
@@ -355,12 +386,12 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
     ], context).mode).toBe("run-owned-mutation");
   });
 
-  it("requires --pull=never on every run-owned docker run", () => {
+  it("requires --pull=never on every exact-ID docker create", () => {
     const dockerHost = "unix:///private/run/homecook-r2/docker.sock";
     const context = { dockerHost, runId: RUN_ID, project: `homecook-rehearsal-${RUN_ID}` };
     const base = [
       "--host", dockerHost,
-      "run", "--detach",
+      "create",
       "--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`,
       "--label", `com.docker.compose.project=${context.project}`,
     ];
@@ -620,6 +651,7 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
     ["denied count", (value: ReturnType<typeof evidenceFixture>) => { value.network.denied_attempt_count = 0; }],
     ["network digest", (value: ReturnType<typeof evidenceFixture>) => { value.network.default_deny_policy_digest = "not-a-digest"; }],
     ["cleanup equality", (value: ReturnType<typeof evidenceFixture>) => { value.cleanup.removed_resource_ids = []; }],
+    ["resource identity forgery", (value: ReturnType<typeof evidenceFixture>) => { value.isolation.resource_identity_digest = "0".repeat(64); }],
     ["production measurement", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.measurement_digest = "0".repeat(64); }],
     ["production snapshots differ", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.production_snapshot_post_digest = "0".repeat(64); }],
     ["threat control", (value: ReturnType<typeof evidenceFixture>) => { value.threat_controls.cleanup_ownership = "fail"; }],
@@ -639,12 +671,46 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
 });
 
 describe("release rehearsal R2 public command and schema", () => {
+  it("normalizes only the closed resolved Compose schema into safe sentinels", () => {
+    const resolved = {
+      name: "synthetic-project",
+      services: Object.fromEntries(["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"].map((name) => [name, {
+        image: `example/${name}@sha256:${"a".repeat(64)}`,
+        command: ["node", "service.mjs"], entrypoint: ["/entrypoint"],
+        environment: { SAFE_FLAG: "true", LOCAL_PATH: "/Users/private/synthetic" },
+        labels: { "com.example.safe": "true" }, networks: { "data-internal": { aliases: [name] } },
+        restart: "unless-stopped", security_opt: ["no-new-privileges:true"],
+        volumes: [{ type: "bind", source: "/private/synthetic/script", target: "/homecook/script", read_only: true }],
+      }])),
+      networks: Object.fromEntries(["auth-edge", "auth-egress", "data-internal"].map((name) => [name, { name: `synthetic_${name}`, internal: true, external: false, ipam: {} }])),
+      volumes: Object.fromEntries(["postgres-data", "storage-data"].map((name) => [name, { name: `synthetic_${name}`, external: false, labels: {} }])),
+      secrets: {},
+    };
+    const normalized = normalizeResolvedComposeFixture(resolved);
+    expect(JSON.stringify(normalized)).not.toMatch(/\/Users|\/private|synthetic-project/iu);
+    expect(JSON.stringify(normalized)).not.toContain("credential-shaped-value");
+    expect(normalized.services.postgres.environment.LOCAL_PATH).toMatch(/^__HOMECOOK_PATH_\d{2}__$/u);
+    expect(normalized.services.auth.volumes[0].source).toMatch(/^__HOMECOOK_PATH_\d{2}__$/u);
+    expect(() => normalizeResolvedComposeFixture({ ...resolved, x: true })).toThrow(/closed/i);
+    const credential = structuredClone(resolved);
+    (credential.services.auth.environment as Record<string, string>).ACCESS_TOKEN = "credential-shaped-value";
+    expect(() => normalizeResolvedComposeFixture(credential)).toThrow(/credential/i);
+  });
+
+  it("publishes a digest-bound safe seven-service golden fixture", () => {
+    const golden = buildSafeResolvedComposeGoldenFixture();
+    expect(golden.schema).toBe("homecook.r2-resolved-compose-golden.v1");
+    expect(Object.keys(golden.fixture.services).sort()).toEqual(["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"]);
+    expect(golden.digest).toBe(sha256Jcs(golden.fixture));
+    expect(JSON.stringify(golden)).not.toMatch(/\/Users|\/private|password|access_token/iu);
+  });
+
   it("compiles only the exact resolved seven-service internal primitive plan", () => {
     const services = Object.fromEntries(["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"].map((name) => [name, {
       image: `example/${name}@sha256:${"a".repeat(64)}`,
       networks: ["data-internal"], restart: "unless-stopped", security_opt: ["no-new-privileges:true"],
     }]));
-    const config = { name: "ignored", services, networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } }, volumes: { "postgres-data": {}, "storage-data": {} } };
+    const config = { name: "ignored", services, networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } }, volumes: { "postgres-data": {}, "storage-data": {} }, secrets: {} };
     expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: { app: 1 } }).services).toHaveLength(7);
     for (const mutate of [
       (v: typeof config) => { delete v.services.auth; },

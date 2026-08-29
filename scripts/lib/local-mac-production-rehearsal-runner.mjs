@@ -273,7 +273,7 @@ export function validateDockerInvocation(argv, context = {}) {
   const createMutation = (
     (commandArgv[0] === "network" && commandArgv[1] === "create")
     || (commandArgv[0] === "volume" && commandArgv[1] === "create")
-    || commandArgv[0] === "run"
+    || commandArgv[0] === "create"
   );
   if (createMutation) {
     const ownership = `${RUN_OWNERSHIP_LABEL}=${runId}`;
@@ -281,28 +281,16 @@ export function validateDockerInvocation(argv, context = {}) {
     if (!includesExactPair(commandArgv, "--label", ownership) || !includesExactPair(commandArgv, "--label", projectLabel)) {
       fail("Docker create mutation is missing exact run ownership labels");
     }
-    if (commandArgv[0] === "run" && !commandArgv.includes("--pull=never")) {
-      fail("Docker run requires exact --pull=never");
+    if (commandArgv[0] === "create" && !commandArgv.includes("--pull=never")) {
+      fail("Docker create requires exact --pull=never");
     }
     return Object.freeze({ mode: "run-owned-mutation", argv: [...argv] });
   }
   const destructive = (commandArgv[0] === "network" && commandArgv[1] === "rm")
     || (commandArgv[0] === "volume" && commandArgv[1] === "rm")
-    || ["stop", "rm", "kill", "exec"].includes(commandArgv[0]);
+    || ["start", "stop", "rm", "kill", "exec"].includes(commandArgv[0]);
   if (destructive && context.verifiedOwnership === true && context.resourceId) {
     if (!commandArgv.includes(context.resourceId)) fail("Docker owned-resource argv does not contain the verified resource ID");
-    return Object.freeze({ mode: "run-owned-mutation", argv: [...argv] });
-  }
-  if (commandArgv[0] === "compose") {
-    const composeAction = commandArgv.find((token) => ["create", "start", "up"].includes(token));
-    const pullForbidden = (commandArgv.includes("--pull") && commandArgv.includes("never"))
-      || context.pullPolicyNever === true;
-    const creationSafe = ["create", "up"].includes(composeAction)
-      ? pullForbidden && commandArgv.includes("--no-build")
-      : composeAction === "start" && context.verifiedCreationLedger === true;
-    if (!includesExactPair(commandArgv, "--project-name", project) || !creationSafe) {
-      fail("Docker Compose rehearsal must pin project, pull_policy never, and --no-build");
-    }
     return Object.freeze({ mode: "run-owned-mutation", argv: [...argv] });
   }
   fail("Docker invocation is outside the closed rehearsal allowlist");
@@ -554,6 +542,48 @@ function validateProductionSnapshot(value, label) {
   return value;
 }
 
+/** Rejects telemetry unless it was independently captured for the run window. */
+export function validateIndependentProductionObserver(value) {
+  exactKeys(value, [
+    "schema", "source_identity_digest", "started_at", "completed_at", "pre_snapshot_digest", "post_snapshot_digest",
+    "process_binding_digest", "docker_daemon_identity_digest", "observation_digest", "available", "truncated",
+    "production_db_connection_count", "production_db_write_count", "production_credential_access_count",
+    "production_socket_access_count", "provider_remote_access_count", "production_mutation_count", "unrelated_noise_count",
+  ], "independent production observer");
+  if (value.schema !== "homecook.r2-production-observer.v1" || value.available !== true || value.truncated !== false) {
+    fail("independent production observer is unavailable or truncated");
+  }
+  for (const field of ["source_identity_digest", "pre_snapshot_digest", "post_snapshot_digest", "process_binding_digest", "docker_daemon_identity_digest", "observation_digest"]) {
+    requireDigest(value[field], `independent production observer ${field}`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T.*\.\d{3}Z$/u.test(value.started_at ?? "") || !/^\d{4}-\d{2}-\d{2}T.*\.\d{3}Z$/u.test(value.completed_at ?? "")) {
+    fail("independent production observer timestamps are invalid");
+  }
+  if (value.pre_snapshot_digest !== value.post_snapshot_digest) fail("independent production observer detected production snapshot drift");
+  for (const field of ["production_db_connection_count", "production_db_write_count", "production_credential_access_count", "production_socket_access_count", "provider_remote_access_count", "production_mutation_count"]) {
+    if (!Number.isSafeInteger(value[field]) || value[field] !== 0) fail(`independent production observer ${field} must be zero`);
+  }
+  if (!Number.isSafeInteger(value.unrelated_noise_count) || value.unrelated_noise_count < 0) fail("independent production observer noise count is invalid");
+  return Object.freeze({ ...value });
+}
+
+export function validateSealedWorkerSyntheticResult(value) {
+  exactKeys(value, ["schema", "status", "synthetic", "provider_requests", "rpc_sequence"], "sealed worker synthetic result");
+  const expected = [
+    "claim_youtube_extraction_job", "claim_youtube_extractor_permit", "start_youtube_extraction_attempt",
+    "heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit", "read_youtube_extraction_worker_catalog",
+    "report_youtube_extraction_progress", "resolve_youtube_extraction_job_draft", "finalize_youtube_extraction_job", "release_youtube_extractor_permit",
+  ];
+  if (value.schema !== "homecook.youtube-extraction-worker-rehearsal-result.v1" || value.status !== "succeeded" || value.synthetic !== true) {
+    fail("sealed worker synthetic result is not an actual synthetic success");
+  }
+  if (value.provider_requests !== 0) fail("sealed worker provider requests must be zero");
+  if (!Array.isArray(value.rpc_sequence) || canonicalizeJcs(value.rpc_sequence) !== canonicalizeJcs(expected)) {
+    fail("sealed worker fence lifecycle is incomplete or out of order");
+  }
+  return Object.freeze({ ...value, rpc_sequence: Object.freeze([...value.rpc_sequence]) });
+}
+
 function buildProductionGuard(pre, post, measurement) {
   validateProductionSnapshot(pre, "pre");
   validateProductionSnapshot(post, "post");
@@ -799,6 +829,13 @@ export function validateRunEvidence(value) {
   if (canonicalizeJcs(ownedIds) !== canonicalizeJcs(removedIds)) {
     fail("run evidence owned/removed resource identities differ");
   }
+  if (value.isolation.resource_identity_digest !== sha256Jcs({
+    project: value.isolation.docker_project_id,
+    container_names: value.isolation.container_names,
+    network_names: value.isolation.network_names,
+    volume_names: value.isolation.volume_names,
+    owned_resource_ids: value.cleanup.owned_resource_ids,
+  })) fail("run evidence resource identity digest differs from immutable cleanup ledger");
   if (
     value.production_guard?.equal !== true
     || value.production_guard?.mutation_attempt_count !== 0
