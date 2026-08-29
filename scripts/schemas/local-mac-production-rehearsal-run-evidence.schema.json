@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.local-mac-production-rehearsal-run-evidence.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "canonicalization", "status", "trusted_receipt",
+    "candidate_identity_digest", "release_sha", "release_tree", "build_id",
+    "sealed_bundle_digest", "bundle_manifest_digest", "run_id", "started_at",
+    "completed_at", "isolation", "migration", "fixtures", "runtime",
+    "canaries", "network", "cleanup", "production_guard", "threat_controls",
+    "evidence_digest"
+  ],
+  "properties": {
+    "schema": { "const": "homecook.local-mac-production-rehearsal-run-evidence.v1" },
+    "canonicalization": { "const": "RFC8785-JCS+SHA256" },
+    "status": { "const": "passed" },
+    "trusted_receipt": { "const": false },
+    "candidate_identity_digest": { "$ref": "#/$defs/digest" },
+    "release_sha": { "$ref": "#/$defs/sha" },
+    "release_tree": { "$ref": "#/$defs/sha" },
+    "build_id": { "type": "string", "minLength": 1 },
+    "sealed_bundle_digest": { "$ref": "#/$defs/digest" },
+    "bundle_manifest_digest": { "$ref": "#/$defs/digest" },
+    "run_id": { "type": "string", "format": "uuid" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["docker_project_id", "container_names", "network_names", "volume_names", "db_identity", "ports", "root_identity_digest", "resource_identity_digest"],
+      "properties": {
+        "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-" },
+        "container_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "network_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "volume_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "db_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "user", "identity_digest"],
+          "properties": {
+            "name": { "type": "string", "pattern": "^hc_r2_" },
+            "user": { "type": "string", "pattern": "^hc_r2_user_" },
+            "identity_digest": { "$ref": "#/$defs/digest" }
+          }
+        },
+        "ports": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["app", "auth", "postgres", "storage"],
+          "properties": {
+            "app": { "$ref": "#/$defs/port" },
+            "auth": { "$ref": "#/$defs/port" },
+            "postgres": { "$ref": "#/$defs/port" },
+            "storage": { "$ref": "#/$defs/port" }
+          }
+        },
+        "root_identity_digest": { "$ref": "#/$defs/digest" },
+        "resource_identity_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordered_migration_files_digest", "applied_global_ledger_digest", "ordered_global_ledger", "migration_head", "catalog_head", "schema_identity_digest"],
+      "properties": {
+        "ordered_migration_files_digest": { "$ref": "#/$defs/digest" },
+        "applied_global_ledger_digest": { "$ref": "#/$defs/digest" },
+        "ordered_global_ledger": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "migration_head": { "type": "string", "minLength": 1 },
+        "catalog_head": { "type": "string", "minLength": 1 },
+        "schema_identity_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "fixtures": {
+      "type": "object",
+      "required": ["fixture_set_id", "fixture_set_digest", "production_derived_row_count"],
+      "properties": {
+        "fixture_set_id": { "type": "string", "minLength": 1 },
+        "fixture_set_digest": { "$ref": "#/$defs/digest" },
+        "production_derived_row_count": { "const": 0 }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app", "full_local", "worker", "foreground_supervisor"],
+      "properties": {
+        "app": { "$ref": "#/$defs/runtime" },
+        "full_local": { "$ref": "#/$defs/runtime" },
+        "worker": { "$ref": "#/$defs/runtime" },
+        "foreground_supervisor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["launchd_used", "child_identity_digest", "timeout_policy_digest"],
+          "properties": {
+            "launchd_used": { "const": false },
+            "child_identity_digest": { "$ref": "#/$defs/digest" },
+            "timeout_policy_digest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      }
+    },
+    "canaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["canary_id", "exit_code", "normalized_result_digest"],
+        "properties": {
+          "canary_id": { "type": "string", "minLength": 1 },
+          "exit_code": { "const": 0 },
+          "normalized_result_digest": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "required": ["default_deny_policy_digest", "allowed_endpoints", "denied_attempt_count", "unexpected_successful_egress_count"],
+      "properties": {
+        "default_deny_policy_digest": { "$ref": "#/$defs/digest" },
+        "allowed_endpoints": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "denied_attempt_count": { "type": "integer", "minimum": 0 },
+        "unexpected_successful_egress_count": { "const": 0 }
+      },
+      "additionalProperties": false
+    },
+    "cleanup": {
+      "type": "object",
+      "required": ["completed", "owned_resource_ids", "removed_resource_ids", "residue_resource_ids", "cleanup_errors", "secret_bearing_persistent_file_count"],
+      "properties": {
+        "completed": { "const": true },
+        "owned_resource_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "removed_resource_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "residue_resource_ids": { "type": "array", "maxItems": 0 },
+        "cleanup_errors": { "type": "array", "maxItems": 0 },
+        "secret_bearing_persistent_file_count": { "const": 0 }
+      },
+      "additionalProperties": false
+    },
+    "production_guard": {
+      "type": "object",
+      "required": ["surface_allowlist_version", "production_snapshot_pre_digest", "production_snapshot_post_digest", "equal", "mutation_attempt_count", "production_db_connection_count", "production_db_write_count"],
+      "properties": {
+        "surface_allowlist_version": { "type": "string", "minLength": 1 },
+        "production_snapshot_pre_digest": { "$ref": "#/$defs/digest" },
+        "production_snapshot_post_digest": { "$ref": "#/$defs/digest" },
+        "equal": { "const": true },
+        "mutation_attempt_count": { "const": 0 },
+        "production_db_connection_count": { "const": 0 },
+        "production_db_write_count": { "const": 0 }
+      },
+      "additionalProperties": false
+    },
+    "threat_controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symlink_toctou", "namespace_collision", "digest_substitution", "stale_candidate", "cleanup_ownership"],
+      "properties": {
+        "symlink_toctou": { "const": "pass" },
+        "namespace_collision": { "const": "pass" },
+        "digest_substitution": { "const": "pass" },
+        "stale_candidate": { "const": "pass" },
+        "cleanup_ownership": { "const": "pass" }
+      }
+    },
+    "evidence_digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "port": { "type": "integer", "minimum": 20000, "maximum": 60999 },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "kind", "pid", "process_group_id", "container_ids", "release_sha", "release_tree", "build_id", "sealed_bundle_digest", "migration_head", "ready", "exit_code"],
+      "properties": {
+        "component": { "enum": ["app", "full_local", "worker"] },
+        "kind": { "enum": ["container", "process"] },
+        "pid": { "type": ["integer", "null"] },
+        "process_group_id": { "type": ["integer", "null"] },
+        "container_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "release_sha": { "$ref": "#/$defs/sha" },
+        "release_tree": { "$ref": "#/$defs/sha" },
+        "build_id": { "type": "string", "minLength": 1 },
+        "sealed_bundle_digest": { "$ref": "#/$defs/digest" },
+        "migration_head": { "type": "string", "minLength": 1 },
+        "ready": { "const": true },
+        "exit_code": { "type": "null" }
+      }
+    }
+  }
+}
