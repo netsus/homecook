@@ -1049,7 +1049,9 @@ export async function runIsolatedReleaseRehearsal({
     if (!cleanupEvidence.completed) fail("owned cleanup, residue, or secret persistence gate failed");
     verifyStableExecution();
     const postSnapshot = await adapters.snapshotProduction("post", { signal: new AbortController().signal });
-    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, postSnapshot, signal: new AbortController().signal });
+    if (typeof adapters.reinspectObserverSubjects !== "function") fail("observer subject reinspection is unavailable");
+    const registeredSubjects = await adapters.reinspectObserverSubjects({ signal: new AbortController().signal });
+    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, postSnapshot, registeredSubjects, signal: new AbortController().signal });
     verifyStableExecution();
     const productionGuard = buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement, independentObserver);
     const completedAt = now().toISOString();

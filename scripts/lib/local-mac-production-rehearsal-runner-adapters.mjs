@@ -1609,6 +1609,15 @@ export function createLocalReleaseRehearsalRunnerAdapters({
     },
 
     async inspectResource(entry) { return inspectResource(state, entry, { signal: state.cleanupSignal }); },
+    async reinspectObserverSubjects({ signal } = {}) {
+      const subjects = state.observerSubjects ?? [];
+      if (subjects.length === 0) fail("observer subjects are missing");
+      for (const subject of subjects) {
+        const current = await readContainerObserverSubject(state, { containerId: subject.container_id, component: subject.component, signal: signal ?? state.cleanupSignal });
+        if (canonicalizeJcs(current) !== canonicalizeJcs(subject)) fail("observer container subject restarted or identity drifted");
+      }
+      return Object.freeze(subjects.map((subject) => ({ ...subject })));
+    },
     async removeResource(entry) {
       if (!state.creationLedger.contains(entry)) fail("cleanup target is absent from immutable creation ledger");
       await removeOwnedResource(state, entry, { signal: state.cleanupSignal });

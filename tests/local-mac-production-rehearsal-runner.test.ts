@@ -285,6 +285,7 @@ function createAdapters() {
       docker_daemon_identity_digest: "e".repeat(64),
     }),
     independentObserver: { begin: vi.fn().mockResolvedValue(undefined), registerChild: vi.fn().mockResolvedValue(undefined), end: vi.fn().mockResolvedValue(independentObserver()) },
+    reinspectObserverSubjects: vi.fn().mockResolvedValue(independentObserver().registered_subjects),
     stopRuntime: vi.fn().mockResolvedValue(undefined),
     removeResource: vi.fn().mockResolvedValue(undefined),
     listResidue: vi.fn().mockResolvedValue([]),
