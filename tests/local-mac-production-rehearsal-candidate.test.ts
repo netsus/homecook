@@ -352,8 +352,9 @@ describe("release rehearsal candidate input gates", () => {
 const decoy = 'from "./not-a-module"'
 export { candidate } from "./lib/candidate.mjs"
 `, { mode: 0o600 });
-    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import { dependency } from './dependency.mjs'\nexport const candidate = `exact-${dependency}`\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "candidate.mjs"), "import { dependency } from './dependency.mjs'\nimport config from './config.json' with { type: 'json' }\nexport const candidate = `exact-${dependency}-${config.value}`\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "lib", "dependency.mjs"), "export const dependency = 'blob'\n", { mode: 0o600 });
+    writeFileSync(join(repo, "scripts", "lib", "config.json"), "{\"value\":\"exact\"}\n", { mode: 0o600 });
     writeFileSync(join(repo, "scripts", "config", "lock.json"), "{}", { mode: 0o600 });
     runGit(["add", "."]);
     runGit(["commit", "-m", "fixture"]);
@@ -390,6 +391,7 @@ export { candidate } from "./lib/candidate.mjs"
       "scripts/config/lock.json",
       "scripts/entry.mjs",
       "scripts/lib/candidate.mjs",
+      "scripts/lib/config.json",
       "scripts/lib/dependency.mjs",
     ]);
 
