@@ -4,7 +4,7 @@
   "title": "Homecook local Mac production rehearsal candidate",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree", "ci_check_summary_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "manifest_digest"],
+  "required": ["schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree", "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest", "source_manifest_digest", "sandbox_policy_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "toolchain_lock_digest", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest", "manifest_digest"],
   "properties": {
     "schema": { "const": "homecook.local-mac-production-rehearsal-candidate.v1" },
     "canonicalization": { "const": "RFC8785-JCS+SHA256" },
@@ -13,23 +13,30 @@
     "release_sha": { "$ref": "#/$defs/sha1" },
     "release_tree": { "$ref": "#/$defs/sha1" },
     "ci_check_summary_digest": { "$ref": "#/$defs/sha256" },
+    "ci_snapshot_digest": { "$ref": "#/$defs/sha256" },
+    "ci_suite_run_set_digest": { "$ref": "#/$defs/sha256" },
+    "source_manifest_digest": { "$ref": "#/$defs/sha256" },
+    "sandbox_policy_digest": { "$ref": "#/$defs/sha256" },
     "build_id": { "type": "string", "minLength": 1 },
     "sealed_bundle_digest": { "$ref": "#/$defs/sha256" },
     "bundle_manifest_digest": { "$ref": "#/$defs/sha256" },
     "toolchain": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["node", "pnpm", "supabase_cli", "git", "docker_client", "docker_daemon", "candidate_builder"],
+      "required": ["node", "pnpm", "supabase_cli", "git", "gh", "docker_client", "docker_daemon", "sandbox_exec", "candidate_builder"],
       "properties": {
         "node": { "$ref": "#/$defs/toolIdentity" },
         "pnpm": { "$ref": "#/$defs/toolIdentity" },
         "supabase_cli": { "$ref": "#/$defs/toolIdentity" },
         "git": { "$ref": "#/$defs/toolIdentity" },
+        "gh": { "$ref": "#/$defs/toolIdentity" },
         "docker_client": { "$ref": "#/$defs/toolIdentity" },
         "docker_daemon": { "$ref": "#/$defs/toolIdentity" },
+        "sandbox_exec": { "$ref": "#/$defs/toolIdentity" },
         "candidate_builder": { "$ref": "#/$defs/toolIdentity" }
       }
     },
+    "toolchain_lock_digest": { "$ref": "#/$defs/sha256" },
     "images": {
       "type": "array",
       "minItems": 1,
@@ -37,10 +44,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["digest", "platform", "local_cache_provenance_digest"],
+        "required": ["service", "reference", "digest", "platform", "image_id", "local_cache_provenance_digest"],
         "properties": {
+          "service": { "type": "string", "minLength": 1 },
+          "reference": { "type": "string", "pattern": "^[^ @]+@sha256:[0-9a-f]{64}$" },
           "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
           "platform": { "type": "string", "minLength": 1 },
+          "image_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
           "local_cache_provenance_digest": { "$ref": "#/$defs/sha256" }
         }
       }
@@ -71,10 +81,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["component", "path", "type", "mode", "sha256", "symlink_target", "dereferenced_sha256"],
+        "required": ["component", "source_kind", "path", "type", "mode", "sha256", "symlink_target", "dereferenced_sha256"],
         "properties": {
           "component": { "enum": ["app", "full_local", "worker"] },
-          "path": { "type": "string", "minLength": 1 },
+          "source_kind": { "enum": ["tracked_source", "generated_build", "worker_artifact", "fixture"] },
+          "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
           "type": { "enum": ["file", "symlink"] },
           "mode": { "type": "integer", "minimum": 0, "maximum": 4095 },
           "sha256": { "$ref": "#/$defs/sha256" },
@@ -97,13 +108,18 @@
     "production_guard": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mutation_attempt_count", "production_db_connection_count", "production_db_write_count"],
+      "required": ["snapshot_schema", "production_snapshot_pre_digest", "production_snapshot_post_digest", "equal", "mutation_attempt_count", "production_db_connection_count", "production_db_write_count"],
       "properties": {
+        "snapshot_schema": { "const": "homecook.local-mac-production-surface-snapshot.v1" },
+        "production_snapshot_pre_digest": { "$ref": "#/$defs/sha256" },
+        "production_snapshot_post_digest": { "$ref": "#/$defs/sha256" },
+        "equal": { "const": true },
         "mutation_attempt_count": { "const": 0 },
         "production_db_connection_count": { "const": 0 },
         "production_db_write_count": { "const": 0 }
       }
     },
+    "candidate_identity_digest": { "$ref": "#/$defs/sha256" },
     "manifest_digest": { "$ref": "#/$defs/sha256" }
   },
   "$defs": {
@@ -113,7 +129,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["root", "digest"],
-      "properties": { "root": { "type": "string", "minLength": 1 }, "digest": { "$ref": "#/$defs/sha256" } }
+      "properties": { "root": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" }, "digest": { "$ref": "#/$defs/sha256" } }
     },
     "toolIdentity": {
       "type": "object",
@@ -124,7 +140,7 @@
         "realpath": { "type": "string", "pattern": "^/" },
         "device": { "type": "string", "pattern": "^[0-9]+$" },
         "inode": { "type": "string", "pattern": "^[0-9]+$" },
-        "mode": { "type": "integer", "minimum": 0, "maximum": 4095 },
+        "mode": { "type": "integer", "enum": [256, 292, 320, 365, 384, 420, 448, 493] },
         "ctime": { "type": "string", "minLength": 1 },
         "size": { "type": "string", "pattern": "^[0-9]+$" },
         "sha256": { "$ref": "#/$defs/sha256" }

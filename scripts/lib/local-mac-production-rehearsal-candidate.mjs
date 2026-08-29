@@ -11,11 +11,12 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   readdirSync,
   readlinkSync,
   realpathSync,
-  renameSync,
-  unlinkSync,
+  rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -38,6 +39,11 @@ import {
 import {
   materializeYoutubeExtractionWorkerArtifact,
 } from "./youtube-extraction-worker-artifact.mjs";
+import {
+  collectReadOnlyProductionInventory,
+  createLocalProductionInventoryAdapters,
+  createProductionSurfaceSnapshot,
+} from "./local-mac-production-rehearsal-inventory.mjs";
 
 export const RELEASE_REHEARSAL_CANDIDATE_SCHEMA =
   "homecook.local-mac-production-rehearsal-candidate.v1";
@@ -60,13 +66,16 @@ const BUILD_ENV_ALLOWED_KEYS = new Set([
 ]);
 const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "release_sha",
-  "release_tree", "ci_check_summary_digest", "build_id", "sealed_bundle_digest",
+  "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
+  "ci_suite_run_set_digest", "source_manifest_digest", "sandbox_policy_digest",
+  "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "images", "migration", "artifacts",
-  "file_inventory", "environment_snapshot", "production_guard", "manifest_digest",
+  "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
+  "toolchain_lock_digest", "manifest_digest",
 ];
 const TOOLCHAIN_KEYS = [
-  "node", "pnpm", "supabase_cli", "git", "docker_client", "docker_daemon",
-  "candidate_builder",
+  "node", "pnpm", "supabase_cli", "git", "gh", "docker_client", "docker_daemon",
+  "sandbox_exec", "candidate_builder",
 ];
 const TOOL_IDENTITY_KEYS = [
   "version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256",
@@ -104,6 +113,13 @@ function digest(value, label) {
   return value;
 }
 
+function decimalString(value, label) {
+  if (typeof value !== "string" || !/^(?:0|[1-9][0-9]*)$/u.test(value)) {
+    fail(`${label} must be a canonical decimal identity string`);
+  }
+  return value;
+}
+
 function safeInteger(value, label) {
   if (!Number.isSafeInteger(value) || value < 0) fail(`${label} must be a safe nonnegative integer`);
   return value;
@@ -117,18 +133,32 @@ function sha256Bytes(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+export function decodeFatalUtf8(bytes, label = "canonical JSON") {
+  if (!Buffer.isBuffer(bytes)) fail(`${label} bytes are required`);
+  let text;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    fail(`${label} contains invalid UTF-8 encoding`);
+  }
+  if (!Buffer.from(text, "utf8").equals(bytes)) {
+    fail(`${label} UTF-8 bytes are not an exact round trip`);
+  }
+  return text;
+}
+
 function validateToolIdentity(value, label, { requireExecutable = true } = {}) {
   exactObject(value, label, TOOL_IDENTITY_KEYS);
   string(value.version, `${label}.version`);
   if (!isAbsolute(value.realpath)) fail(`${label}.realpath must be absolute`);
-  string(value.device, `${label}.device`);
-  string(value.inode, `${label}.inode`);
+  decimalString(value.device, `${label}.device`);
+  decimalString(value.inode, `${label}.inode`);
   safeInteger(value.mode, `${label}.mode`);
   if ((requireExecutable && (value.mode & 0o111) === 0) || (value.mode & 0o022) !== 0) {
     fail(`${label} trusted executable mode is unsafe or writable`);
   }
   string(value.ctime, `${label}.ctime`);
-  string(value.size, `${label}.size`);
+  decimalString(value.size, `${label}.size`);
   digest(value.sha256, `${label}.sha256`);
   return value;
 }
@@ -157,16 +187,23 @@ export function validateCandidateImages(value, { strictManifest = false } = {}) 
   for (const [index, image] of value.entries()) {
     if (!image || typeof image !== "object" || Array.isArray(image)) fail(`images[${index}] is invalid`);
     if (strictManifest) exactObject(image, `images[${index}]`, [
-      "digest", "platform", "local_cache_provenance_digest",
+      "service", "reference", "digest", "platform", "image_id",
+      "local_cache_provenance_digest",
     ]);
+    string(image.service, `images[${index}].service`);
+    if (!/^([^\s@]+)@(sha256:[0-9a-f]{64})$/u.test(image.reference ?? "")) {
+      fail(`images[${index}] reference must be exact digest-pinned`);
+    }
     if (!IMAGE_DIGEST_PATTERN.test(image.digest ?? "")) fail(`images[${index}] requires an exact digest; tag-only images are forbidden`);
+    if (!image.reference.endsWith(`@${image.digest}`)) fail(`images[${index}] reference digest mismatch`);
     string(image.platform, `images[${index}].platform`);
+    if (!IMAGE_DIGEST_PATTERN.test(image.image_id ?? "")) fail(`images[${index}] image ID is invalid`);
     if (image.expected_platform !== undefined && image.expected_platform !== image.platform) {
       fail(`images[${index}] platform mismatch`);
     }
     digest(image.local_cache_provenance_digest, `images[${index}].local_cache_provenance_digest`);
-    if (seen.has(image.digest)) fail(`images[${index}] duplicate digest`);
-    seen.add(image.digest);
+    if (seen.has(image.service)) fail(`images[${index}] duplicate service`);
+    seen.add(image.service);
   }
   return value;
 }
@@ -250,10 +287,13 @@ function validateFileInventory(value) {
   let previous = "";
   for (const [index, entry] of value.entries()) {
     exactObject(entry, `file_inventory[${index}]`, [
-      "component", "path", "type", "mode", "sha256", "symlink_target",
+      "component", "source_kind", "path", "type", "mode", "sha256", "symlink_target",
       "dereferenced_sha256",
     ]);
     if (!["app", "full_local", "worker"].includes(entry.component)) fail("file inventory component is invalid");
+    if (!["tracked_source", "generated_build", "worker_artifact", "fixture"].includes(entry.source_kind)) {
+      fail("file inventory source kind is invalid");
+    }
     const path = string(entry.path, `file_inventory[${index}].path`);
     if (isAbsolute(path) || path.split("/").includes("..")) fail("file inventory path is unsafe");
     if (!["file", "symlink"].includes(entry.type)) fail("file inventory type is invalid");
@@ -286,9 +326,22 @@ function validateEnvironmentMetadata(value) {
 
 function validateProductionGuard(value) {
   exactObject(value, "production_guard", [
-    "mutation_attempt_count", "production_db_connection_count", "production_db_write_count",
+    "snapshot_schema", "production_snapshot_pre_digest", "production_snapshot_post_digest",
+    "equal", "mutation_attempt_count", "production_db_connection_count",
+    "production_db_write_count",
   ]);
-  for (const key of Object.keys(value)) if (value[key] !== 0) fail(`production_guard.${key} must be zero`);
+  if (value.snapshot_schema !== "homecook.local-mac-production-surface-snapshot.v1") {
+    fail("production_guard.snapshot_schema is invalid");
+  }
+  digest(value.production_snapshot_pre_digest, "production_guard.production_snapshot_pre_digest");
+  digest(value.production_snapshot_post_digest, "production_guard.production_snapshot_post_digest");
+  if (
+    value.equal !== true
+    || value.production_snapshot_pre_digest !== value.production_snapshot_post_digest
+  ) fail("production_guard snapshot equality is invalid");
+  for (const key of ["mutation_attempt_count", "production_db_connection_count", "production_db_write_count"]) {
+    if (value[key] !== 0) fail(`production_guard.${key} must be zero`);
+  }
   return value;
 }
 
@@ -301,16 +354,22 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   sha(value.release_sha, "release_sha");
   sha(value.release_tree, "release_tree");
   digest(value.ci_check_summary_digest, "ci_check_summary_digest");
+  digest(value.ci_snapshot_digest, "ci_snapshot_digest");
+  digest(value.ci_suite_run_set_digest, "ci_suite_run_set_digest");
+  digest(value.source_manifest_digest, "source_manifest_digest");
+  digest(value.sandbox_policy_digest, "sandbox_policy_digest");
   string(value.build_id, "build_id");
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
   digest(value.bundle_manifest_digest, "bundle_manifest_digest");
   validateCandidateToolchain(value.toolchain, { strictManifest: true });
+  digest(value.toolchain_lock_digest, "toolchain_lock_digest");
   validateCandidateImages(value.images, { strictManifest: true });
   validateMigration(value.migration);
   validateArtifacts(value.artifacts);
   validateFileInventory(value.file_inventory);
   validateEnvironmentMetadata(value.environment_snapshot);
   validateProductionGuard(value.production_guard);
+  digest(value.candidate_identity_digest, "candidate_identity_digest");
   digest(value.manifest_digest, "manifest_digest");
   if (verifyDigest) {
     const unsigned = { ...value };
@@ -333,7 +392,10 @@ export function buildCandidateManifest(input) {
 }
 
 export function parseAndValidateCandidateManifest(source) {
-  return validateCandidateManifestObject(parseCanonicalJcs(source));
+  const text = Buffer.isBuffer(source)
+    ? decodeFatalUtf8(source, "candidate manifest")
+    : source;
+  return validateCandidateManifestObject(parseCanonicalJcs(text));
 }
 
 function assertPrivateParent(path, currentUid) {
@@ -378,7 +440,7 @@ export function readBuildEnvironmentSnapshot(path, {
       }
     }
     if (bytes.length > maxBytes) fail(`build environment size exceeds ${maxBytes} bytes`);
-    const parsed = parseCanonicalJcs(bytes.toString("utf8"));
+    const parsed = parseCanonicalJcs(decodeFatalUtf8(bytes, "build environment"));
     exactObject(parsed, "build environment", ["schema", "values"]);
     if (parsed.schema !== RELEASE_REHEARSAL_BUILD_ENV_SCHEMA) fail("build environment schema is invalid");
     if (!parsed.values || typeof parsed.values !== "object" || Array.isArray(parsed.values)) fail("build environment values are invalid");
@@ -403,6 +465,230 @@ export function readBuildEnvironmentSnapshot(path, {
   }
 }
 
+function assertSafeRelativeGitPath(path) {
+  if (
+    typeof path !== "string"
+    || path.length === 0
+    || isAbsolute(path)
+    || path.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+  ) fail("git_tree_path_rejected");
+  return path;
+}
+
+function ensureMaterializedParent(root, relativePath) {
+  const segments = dirname(relativePath) === "." ? [] : dirname(relativePath).split("/");
+  let current = root;
+  for (const segment of segments) {
+    current = join(current, segment);
+    try {
+      mkdirSync(current, { mode: 0o700 });
+    } catch (error) {
+      if (!(error && typeof error === "object" && error.code === "EEXIST")) throw error;
+    }
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) fail("git_tree_parent_type_rejected");
+  }
+}
+
+function gitBlobOid(bytes) {
+  return createHash("sha1")
+    .update(Buffer.from(`blob ${bytes.length}\0`, "utf8"))
+    .update(bytes)
+    .digest("hex");
+}
+
+/** @param {{gitPath:string, repositoryRoot:string, releaseSha:string, outputRoot:string, homeDir:string, runCommand?:typeof spawnSync}} options */
+export function materializeExactGitTree({
+  gitPath,
+  repositoryRoot,
+  releaseSha,
+  outputRoot,
+  homeDir,
+  runCommand = spawnSync,
+} = {}) {
+  sha(releaseSha, "releaseSha");
+  if (![gitPath, repositoryRoot, outputRoot, homeDir].every((path) => isAbsolute(path ?? ""))) {
+    fail("git materialization requires absolute paths");
+  }
+  try {
+    mkdirSync(outputRoot, { mode: 0o700 });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "EEXIST") fail("git_materialization_root_collision");
+    throw error;
+  }
+  const env = gitEnvironment(homeDir);
+  const treeResult = spawnBounded(gitPath, [
+    "--no-replace-objects",
+    "-C",
+    repositoryRoot,
+    "ls-tree",
+    "-rz",
+    "--full-tree",
+    releaseSha,
+  ], { binary: true, env, label: "exact git tree inventory", runCommand });
+  if (treeResult.error || treeResult.signal || treeResult.status !== 0) fail("git_tree_inventory_failed");
+  const treeBytes = Buffer.from(treeResult.stdout ?? Buffer.alloc(0));
+  const treeText = decodeFatalUtf8(treeBytes, "git tree inventory");
+  const entries = [];
+  for (const record of treeText.split("\0").filter(Boolean)) {
+    const match = /^(100644|100755|120000) blob ([0-9a-f]{40})\t(.+)$/u.exec(record);
+    if (!match) fail("git_tree_entry_rejected");
+    const [, gitMode, blobOid, rawPath] = match;
+    const relativePath = assertSafeRelativeGitPath(rawPath);
+    const blobResult = spawnBounded(gitPath, [
+      "--no-replace-objects",
+      "-C",
+      repositoryRoot,
+      "cat-file",
+      "blob",
+      blobOid,
+    ], { binary: true, env, label: "exact git blob read", runCommand });
+    if (blobResult.error || blobResult.signal || blobResult.status !== 0) fail("git_blob_read_failed");
+    const bytes = Buffer.from(blobResult.stdout ?? Buffer.alloc(0));
+    if (gitBlobOid(bytes) !== blobOid) fail("git_blob_digest_mismatch");
+    ensureMaterializedParent(outputRoot, relativePath);
+    const destination = join(outputRoot, relativePath);
+    let symlinkTarget = null;
+    if (gitMode === "120000") {
+      symlinkTarget = decodeFatalUtf8(bytes, "git symlink target");
+      if (isAbsolute(symlinkTarget)) fail("git_symlink_absolute_target_rejected");
+      symlinkSync(symlinkTarget, destination);
+    } else {
+      writeFileSync(destination, bytes, {
+        flag: "wx",
+        mode: gitMode === "100755" ? 0o700 : 0o600,
+      });
+    }
+    entries.push({
+      blob_oid: blobOid,
+      git_mode: gitMode,
+      path: relativePath,
+      sha256: sha256Bytes(bytes),
+      size: String(bytes.length),
+      symlink_target: symlinkTarget,
+    });
+  }
+  entries.sort((left, right) => left.path.localeCompare(right.path));
+  const realOutputRoot = realpathSync(outputRoot);
+  for (const entry of entries.filter((value) => value.git_mode === "120000")) {
+    const target = realpathSync(join(outputRoot, entry.path));
+    assertPathContained(realOutputRoot, target, "git symlink target");
+  }
+  const sourceManifest = {
+    schema: "homecook.local-mac-production-rehearsal-source-manifest.v1",
+    release_sha: releaseSha,
+    entries,
+    source_manifest_digest: sha256Jcs({ release_sha: releaseSha, entries }),
+  };
+  return Object.freeze({
+    output_root: outputRoot,
+    source_manifest: sourceManifest,
+  });
+}
+
+export function verifyExactMaterializedTree({ sourceRoot, sourceManifest } = {}) {
+  const realRoot = realpathSync(sourceRoot);
+  for (const entry of sourceManifest.entries) {
+    const path = join(sourceRoot, entry.path);
+    const stat = lstatSync(path);
+    if (entry.git_mode === "120000") {
+      if (!stat.isSymbolicLink() || readlinkSync(path) !== entry.symlink_target) {
+        fail("materialized_git_symlink_drift");
+      }
+      assertPathContained(realRoot, realpathSync(path), "materialized git symlink");
+      continue;
+    }
+    if (stat.isSymbolicLink() || !stat.isFile()) fail("materialized_git_file_type_drift");
+    const executable = (modeBits(stat.mode) & 0o111) !== 0;
+    if (executable !== (entry.git_mode === "100755")) fail("materialized_git_mode_drift");
+    const bytes = readFileSync(path);
+    if (sha256Bytes(bytes) !== entry.sha256 || gitBlobOid(bytes) !== entry.blob_oid) {
+      fail("materialized_git_blob_drift");
+    }
+  }
+  return sourceManifest.source_manifest_digest;
+}
+
+function copyManifestEntry({ sourceRoot, destinationRoot, entry, destinationPath = entry.path }) {
+  ensureMaterializedParent(destinationRoot, destinationPath);
+  const source = join(sourceRoot, entry.path);
+  const destination = join(destinationRoot, destinationPath);
+  if (entry.git_mode === "120000") {
+    symlinkSync(entry.symlink_target, destination);
+    return;
+  }
+  const bytes = readFileSync(source);
+  if (sha256Bytes(bytes) !== entry.sha256 || gitBlobOid(bytes) !== entry.blob_oid) {
+    fail("materialized_git_blob_drift");
+  }
+  copyFileSync(source, destination, fsConstants.COPYFILE_EXCL);
+  chmodSync(destination, entry.git_mode === "100755" ? 0o500 : 0o400);
+}
+
+function trackedForPrefix(entry, prefixes, exactPaths) {
+  return exactPaths.has(entry.path)
+    || prefixes.some((prefix) => entry.path.startsWith(prefix));
+}
+
+export function assembleCandidateArtifacts({ sourceRoot, sourceManifest, artifactsRoot } = {}) {
+  if (!isAbsolute(sourceRoot ?? "") || !isAbsolute(artifactsRoot ?? "")) fail("artifact assembly paths must be absolute");
+  try {
+    mkdirSync(artifactsRoot, { mode: 0o700 });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "EEXIST") fail("artifact_assembly_collision");
+    throw error;
+  }
+  const appRoot = join(artifactsRoot, "app-source");
+  const fullLocalRoot = join(artifactsRoot, "full-local-source");
+  const workerFixtureRoot = join(artifactsRoot, "worker-fixture");
+  for (const root of [appRoot, fullLocalRoot, workerFixtureRoot]) mkdirSync(root, { mode: 0o700 });
+  const appPrefixes = ["app/", "components/", "lib/", "public/", "scripts/", "supabase/"];
+  const appExact = new Set(["package.json", "pnpm-lock.yaml", "next.config.ts"]);
+  const fullLocalPrefixes = ["infra/full-local-supabase/", "supabase/migrations/"];
+  const fullLocalExact = new Set(["supabase/config.toml"]);
+  for (const entry of sourceManifest.entries) {
+    if (trackedForPrefix(entry, appPrefixes, appExact)) {
+      copyManifestEntry({ sourceRoot, destinationRoot: appRoot, entry });
+    }
+    if (trackedForPrefix(entry, fullLocalPrefixes, fullLocalExact)) {
+      copyManifestEntry({ sourceRoot, destinationRoot: fullLocalRoot, entry });
+    }
+  }
+  for (const generatedPath of [".next", "node_modules"]) {
+    const source = join(sourceRoot, generatedPath);
+    const stat = lstatSync(source);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) fail("generated_build_output_missing");
+    copyLocalMacProductionExecutionTree(source, join(appRoot, generatedPath));
+  }
+  writeFileSync(join(workerFixtureRoot, "worker.mjs"), "export {};\n", { flag: "wx", mode: 0o500 });
+  return Object.freeze({
+    app: appRoot,
+    full_local: fullLocalRoot,
+    worker_fixture: workerFixtureRoot,
+  });
+}
+
+export function collectSealedMigrationInventory({ bundleRoot } = {}) {
+  if (!isAbsolute(bundleRoot ?? "")) fail("sealed bundle root must be absolute");
+  const migrationRoot = join(bundleRoot, "full_local", "supabase", "migrations");
+  const files = readdirSync(migrationRoot).filter((name) => name.endsWith(".sql")).sort();
+  if (files.length === 0) fail("sealed_migration_inventory_empty");
+  const inventory = files.map((name) => {
+    const path = join(migrationRoot, name);
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink() || !stat.isFile()) fail("sealed_migration_type_rejected");
+    return {
+      path: `supabase/migrations/${name}`,
+      sha256: sha256Bytes(readFileSync(path)),
+    };
+  });
+  return Object.freeze({
+    ordered_migration_files: inventory.map((entry) => entry.path),
+    ordered_migration_files_digest: sha256Jcs(inventory),
+    migration_head: files.at(-1).replace(/\.sql$/u, ""),
+  });
+}
+
 const FORBIDDEN_BUNDLE_BASENAMES = new Set([
   ".env.production.local",
   "current.json",
@@ -425,7 +711,20 @@ const FORBIDDEN_SECRET_FILENAMES = new Set([
   "runtime-secret.json",
   "secrets.json",
   "token.json",
+  "id_rsa",
+  "id_dsa",
+  "id_ecdsa",
+  "id_ed25519",
+  "credentials",
+  "secrets",
+  "tokens",
+  "cookies",
+  "private-key",
+  "private_key",
 ]);
+const SECRET_SCAN_MAX_BYTES = 512 * 1024 * 1024;
+const SECRET_SCAN_CHUNK_BYTES = 64 * 1024;
+const SECRET_SCAN_OVERLAP_BYTES = 64 * 1024;
 
 function isSecretBearingPath(relativePath) {
   const segments = relativePath.split("/");
@@ -435,14 +734,73 @@ function isSecretBearingPath(relativePath) {
     || lowerBasename.startsWith(".env.")
     || /\.(?:key|p12|pfx|pem)$/iu.test(lowerBasename)
     || FORBIDDEN_SECRET_FILENAMES.has(lowerBasename)
+    || segments.some((segment) => [".ssh", ".aws", "runtime-secrets", "runtime_secret"].includes(segment.toLowerCase()))
+    || /(?:^|[-_.])(?:credentials|secrets|tokens|cookies|private[-_]?key)(?:[-_.])(?:json|ya?ml|txt|env)$/iu.test(lowerBasename)
     || (segments.includes(".docker") && lowerBasename === "config.json")
   );
 }
 
 function assertNoSecretBearingPath(relativePath) {
   if (isSecretBearingPath(relativePath)) {
-    fail(`candidate bundle contains forbidden secret-bearing path: ${relativePath}`);
+    fail(`secret_path_forbidden path_digest=${sha256Jcs(relativePath)}`);
   }
+}
+
+function isForbiddenSecretDirectory(relativePath) {
+  return relativePath.split("/").some((segment) =>
+    [".ssh", ".aws", ".docker", "runtime-secrets", "runtime_secret", "secrets"]
+      .includes(segment.toLowerCase()));
+}
+
+function scanFileForSecretMaterial(path, { jsonLike = false } = {}) {
+  const stat = lstatSync(path, { bigint: true });
+  if (!stat.isFile() || stat.isSymbolicLink()) fail("secret_scan_type_rejected");
+  if (stat.size > BigInt(SECRET_SCAN_MAX_BYTES)) fail("secret_scan_size_limit_exceeded");
+  const buffer = Buffer.allocUnsafe(SECRET_SCAN_CHUNK_BYTES);
+  let fd;
+  let offset = 0;
+  let tail = "";
+  try {
+    fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    while (offset < Number(stat.size)) {
+      const bytesRead = readSync(fd, buffer, 0, buffer.length, offset);
+      if (bytesRead <= 0) break;
+      const text = `${tail}${buffer.subarray(0, bytesRead).toString("latin1")}`;
+      if (
+        RAW_SECRET_ASSIGNMENT_PATTERN.test(text)
+        || PRIVATE_KEY_MATERIAL_PATTERN.test(text)
+        || (jsonLike && JSON_SECRET_VALUE_PATTERN.test(text))
+      ) return true;
+      tail = text.slice(-SECRET_SCAN_OVERLAP_BYTES);
+      offset += bytesRead;
+    }
+    const finalStat = fstatSync(fd, { bigint: true });
+    if (
+      finalStat.dev !== stat.dev
+      || finalStat.ino !== stat.ino
+      || finalStat.size !== stat.size
+      || finalStat.ctimeNs !== stat.ctimeNs
+      || finalStat.mtimeNs !== stat.mtimeNs
+    ) fail("secret_scan_identity_drift");
+    return false;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+function scanDereferencedSecretTarget(path, seen = new Set()) {
+  const real = realpathSync(path);
+  if (seen.has(real)) fail("secret_scan_symlink_cycle");
+  const nextSeen = new Set(seen).add(real);
+  const stat = lstatSync(real);
+  if (stat.isFile()) {
+    return scanFileForSecretMaterial(real, { jsonLike: basename(real).toLowerCase().endsWith(".json") });
+  }
+  if (!stat.isDirectory()) fail("secret_scan_target_type_rejected");
+  for (const name of readdirSync(real).sort()) {
+    if (scanDereferencedSecretTarget(join(real, name), nextSeen)) return true;
+  }
+  return false;
 }
 
 function assertPathContained(root, target, label) {
@@ -463,11 +821,18 @@ function assertSourceTreeSafe(rootPath) {
   const visit = (path, relativePath) => {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink()) {
+      assertNoSecretBearingPath(relativePath);
       const target = realpathSync(path);
       assertPathContained(root, target, `symlink ${relativePath}`);
+      if (scanDereferencedSecretTarget(target)) {
+        fail(`secret_material_detected path_digest=${sha256Jcs(relativePath)}`);
+      }
       return;
     }
     if (stat.isDirectory()) {
+      if (relativePath && isForbiddenSecretDirectory(relativePath)) {
+        fail(`secret_directory_forbidden path_digest=${sha256Jcs(relativePath)}`);
+      }
       for (const name of readdirSync(path).sort()) {
         visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
       }
@@ -475,18 +840,13 @@ function assertSourceTreeSafe(rootPath) {
     }
     if (!stat.isFile()) fail(`candidate component contains unsupported entry: ${relativePath}`);
     if (stat.nlink !== 1) fail(`candidate component source hard-link count is unsafe: ${relativePath}`);
-    const lowerBasename = basename(relativePath).toLowerCase();
     assertNoSecretBearingPath(relativePath);
+    const lowerBasename = basename(relativePath).toLowerCase();
     if (FORBIDDEN_BUNDLE_BASENAMES.has(basename(relativePath))) {
-      fail(`candidate bundle contains forbidden env, descriptor, pointer, or lock: ${relativePath}`);
+      fail(`forbidden_bundle_path path_digest=${sha256Jcs(relativePath)}`);
     }
-    const text = readFileSync(path).toString("utf8");
-    if (
-      RAW_SECRET_ASSIGNMENT_PATTERN.test(text)
-      || PRIVATE_KEY_MATERIAL_PATTERN.test(text)
-      || (lowerBasename.endsWith(".json") && JSON_SECRET_VALUE_PATTERN.test(text))
-    ) {
-      fail(`candidate bundle contains raw secret or credential material: ${relativePath}`);
+    if (scanFileForSecretMaterial(path, { jsonLike: lowerBasename.endsWith(".json") })) {
+      fail(`secret_material_detected path_digest=${sha256Jcs(relativePath)}`);
     }
   };
   visit(root, "");
@@ -502,6 +862,11 @@ function inventorySealedComponent(component, rootPath) {
       assertPathContained(root, target, `sealed symlink ${relativePath}`);
       inventory.push({
         component,
+        source_kind: component === "worker"
+          ? "worker_artifact"
+          : component === "app" && (relativePath.startsWith(".next/") || relativePath.startsWith("node_modules/"))
+            ? "generated_build"
+            : "tracked_source",
         path: relativePath,
         type: "symlink",
         mode: modeBits(stat.mode),
@@ -521,6 +886,11 @@ function inventorySealedComponent(component, rootPath) {
     if ((modeBits(stat.mode) & 0o222) !== 0) fail(`sealed candidate file remains writable: ${relativePath}`);
     inventory.push({
       component,
+      source_kind: component === "worker"
+        ? "worker_artifact"
+        : component === "app" && (relativePath.startsWith(".next/") || relativePath.startsWith("node_modules/"))
+          ? "generated_build"
+          : "tracked_source",
       path: relativePath,
       type: "file",
       mode: modeBits(stat.mode),
@@ -553,9 +923,14 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
     sealLocalMacProductionExecutionTree(destination);
     const entries = inventorySealedComponent(component, destination);
     fileInventory.push(...entries);
+    const physicalEntries = entries.map((entry) => {
+      const physicalEntry = { ...entry };
+      delete physicalEntry.source_kind;
+      return physicalEntry;
+    });
     artifacts[component] = {
       root: component,
-      digest: sha256Jcs(entries),
+      digest: sha256Jcs(physicalEntries),
     };
   }
   fileInventory.sort((left, right) =>
@@ -571,17 +946,52 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
     bundle_content_digest: sealedBundleDigest,
   };
   const bundleManifestDigest = sha256Jcs(unsignedBundleManifest);
-  writeFileSync(join(bundleRoot, "bundle-manifest.json"), canonicalizeJcs({
+  writeFileSync(join(bundleRoot, "physical-manifest.json"), canonicalizeJcs({
     ...unsignedBundleManifest,
-    bundle_manifest_digest: bundleManifestDigest,
+    physical_manifest_digest: bundleManifestDigest,
   }), { flag: "wx", mode: 0o400 });
   chmodSync(bundleRoot, 0o500);
   return {
     artifacts,
+    bundle_root: bundleRoot,
     file_inventory: fileInventory,
-    bundle_manifest_digest: bundleManifestDigest,
+    physical_manifest_digest: bundleManifestDigest,
     sealed_bundle_digest: sealedBundleDigest,
   };
+}
+
+export function buildBundleAuthorityManifest(input) {
+  exactObject(input, "bundle authority manifest input", [
+    "artifacts", "build_id", "ci_check_summary_digest", "ci_snapshot_digest",
+    "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
+    "migration", "production_guard", "release_sha", "release_tree",
+    "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "source_snapshot_digest", "toolchain", "toolchain_lock_digest",
+  ]);
+  validateArtifacts(input.artifacts);
+  string(input.build_id, "bundle authority build_id");
+  for (const field of [
+    "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
+    "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "source_snapshot_digest", "toolchain_lock_digest",
+  ]) digest(input[field], `bundle authority ${field}`);
+  validateEnvironmentMetadata(input.environment_snapshot);
+  validateFileInventory(input.file_inventory);
+  validateCandidateImages(input.images, { strictManifest: true });
+  validateMigration(input.migration);
+  validateProductionGuard(input.production_guard);
+  sha(input.release_sha, "bundle authority release_sha");
+  sha(input.release_tree, "bundle authority release_tree");
+  validateCandidateToolchain(input.toolchain, { strictManifest: true });
+  const unsigned = {
+    schema: "homecook.local-mac-production-rehearsal-bundle-manifest.v1",
+    contract_version: "release-rehearsal-split2-v1",
+    ...input,
+  };
+  return Object.freeze({
+    ...unsigned,
+    bundle_manifest_digest: sha256Jcs(unsigned),
+  });
 }
 
 function ensureNamespaceDirectory(path, currentUid, label) {
@@ -595,6 +1005,216 @@ function ensureNamespaceDirectory(path, currentUid, label) {
     fail(`${label} must be a current-user-owned private directory`);
   }
   return path;
+}
+
+function sandboxLiteral(path) {
+  if (!isAbsolute(path)) fail("sandbox path must be absolute");
+  return `\"${path.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}\"`;
+}
+
+/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[]}} options */
+export function buildCandidateSandboxProfile({ readRoots = [], writeRoots = [], deniedPaths = [] } = {}) {
+  const systemRuntimeRoots = [
+    "/System",
+    "/usr",
+    "/bin",
+    "/sbin",
+    "/Library",
+    "/private/etc",
+    "/private/var/db",
+    "/private/var/folders",
+    "/private/var/select",
+    "/private/var/run",
+    "/dev",
+  ];
+  const approvedReadRoots = [...new Set([...readRoots, ...systemRuntimeRoots])];
+  const ancestors = new Set(["/"]);
+  for (const root of [...approvedReadRoots, ...writeRoots]) {
+    let current = resolve(root);
+    while (current !== "/") {
+      ancestors.add(current);
+      current = dirname(current);
+    }
+  }
+  const readRules = [
+    ...[...ancestors].map((path) => `(literal ${sandboxLiteral(path)})`),
+    ...approvedReadRoots.map((path) => `(subpath ${sandboxLiteral(path)})`),
+  ].join(" ");
+  const writeRules = [...new Set(writeRoots)].map((path) => `(subpath ${sandboxLiteral(path)})`).join(" ");
+  const expandedDeniedPaths = new Set(deniedPaths);
+  for (const path of deniedPaths) {
+    try { expandedDeniedPaths.add(realpathSync(path)); } catch { /* Missing denied targets stay lexical. */ }
+  }
+  const denyRules = [...expandedDeniedPaths].flatMap((path) => [
+    `(deny file-read* (subpath ${sandboxLiteral(path)}))`,
+    `(deny file-write* (subpath ${sandboxLiteral(path)}))`,
+  ]).join("\n");
+  return [
+    "(version 1)",
+    "(deny default)",
+    "(allow process*)",
+    "(allow signal)",
+    "(allow sysctl-read)",
+    "(allow mach-lookup)",
+    `(allow file-read* ${readRules})`,
+    `(allow file-write* ${writeRules})`,
+    "(deny network*)",
+    denyRules,
+  ].filter(Boolean).join("\n");
+}
+
+export function validateProductionGuardSnapshots(pre, post) {
+  const schema = "homecook.local-mac-production-surface-snapshot.v1";
+  for (const [label, value] of [["pre", pre], ["post", post]]) {
+    if (!value || value.schema !== schema) fail(`production ${label} snapshot schema or completeness is invalid`);
+    digest(value.surface_digest, `production ${label} surface digest`);
+    digest(value.snapshot_digest, `production ${label} snapshot digest`);
+    if (value.production_db_connection_count !== 0 || value.mutation_attempt_count !== 0) {
+      fail(`production ${label} snapshot contains mutation or DB access`);
+    }
+  }
+  if (pre.surface_digest !== post.surface_digest) fail("production surface drifted during candidate build");
+  return Object.freeze({
+    snapshot_schema: schema,
+    production_snapshot_pre_digest: pre.surface_digest,
+    production_snapshot_post_digest: post.surface_digest,
+    equal: true,
+    mutation_attempt_count: 0,
+    production_db_connection_count: 0,
+    production_db_write_count: 0,
+  });
+}
+
+export function writeCandidateTerminalMarker(root, kind, payload) {
+  if (!isAbsolute(root ?? "") || !["complete", "failed"].includes(kind)) {
+    fail("candidate terminal marker input is invalid");
+  }
+  const stat = lstatSync(root);
+  if (stat.isSymbolicLink() || !stat.isDirectory() || modeBits(stat.mode) !== 0o700) {
+    fail("candidate terminal root is unsafe");
+  }
+  const completePath = join(root, "complete.json");
+  const failedPath = join(root, "failed.json");
+  if (pathExists(completePath) || pathExists(failedPath)) {
+    fail("candidate terminal marker create-only collision or coexistence");
+  }
+  const reservationPath = join(root, ".terminal-reservation");
+  try {
+    mkdirSync(reservationPath, { mode: 0o700 });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "EEXIST") {
+      fail("candidate terminal marker create-only reservation collision");
+    }
+    throw error;
+  }
+  if (pathExists(completePath) || pathExists(failedPath)) {
+    rmSync(reservationPath, { recursive: true });
+    fail("candidate terminal marker appeared during reservation");
+  }
+  const value = kind === "complete"
+    ? {
+        schema: "homecook.local-mac-production-rehearsal-candidate-complete.v1",
+        status: "complete",
+        candidate_identity_digest: digest(payload.candidate_identity_digest, "candidate identity digest"),
+        manifest_digest: digest(payload.manifest_digest, "candidate manifest digest"),
+      }
+    : {
+        schema: "homecook.local-mac-production-rehearsal-candidate-failed.v1",
+        status: "failed",
+        reason_code: string(payload.reason_code, "failure reason code"),
+        path_digest: digest(payload.path_digest, "failure path digest"),
+      };
+  const markerPath = kind === "complete" ? completePath : failedPath;
+  try {
+    writeFileSync(markerPath, canonicalizeJcs(value), { flag: "wx", mode: 0o400 });
+  } finally {
+    rmSync(reservationPath, { recursive: true });
+  }
+  return markerPath;
+}
+
+function readCanonicalCandidateFile(path, label) {
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink() || !stat.isFile() || (modeBits(stat.mode) & 0o222) !== 0) {
+    fail(`${label} type or mode is unsafe`);
+  }
+  return parseCanonicalJcs(decodeFatalUtf8(readFileSync(path), label));
+}
+
+export function readCompletedCandidateRoot(root) {
+  if (!isAbsolute(root ?? "")) fail("completed candidate root must be absolute");
+  const rootStat = lstatSync(root);
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory() || (modeBits(rootStat.mode) & 0o222) !== 0) {
+    fail("completed candidate root is not sealed");
+  }
+  const completePath = join(root, "complete.json");
+  const failedPath = join(root, "failed.json");
+  if (!pathExists(completePath) || pathExists(failedPath)) {
+    fail("candidate complete terminal marker is missing or conflicts with failed marker");
+  }
+  const complete = readCanonicalCandidateFile(completePath, "candidate complete marker");
+  exactObject(complete, "candidate complete marker", [
+    "schema", "status", "candidate_identity_digest", "manifest_digest",
+  ]);
+  if (
+    complete.schema !== "homecook.local-mac-production-rehearsal-candidate-complete.v1"
+    || complete.status !== "complete"
+  ) fail("candidate complete marker schema or status is invalid");
+  const manifest = parseAndValidateCandidateManifest(readFileSync(join(root, "candidate.json")));
+  const bundleManifest = readCanonicalCandidateFile(
+    join(root, "bundles", "bundle", "bundle-manifest.json"),
+    "candidate bundle authority manifest",
+  );
+  const {
+    bundle_manifest_digest: bundleManifestDigest,
+    schema: bundleSchema,
+    contract_version: contractVersion,
+    ...bundleInput
+  } = bundleManifest;
+  if (
+    bundleSchema !== "homecook.local-mac-production-rehearsal-bundle-manifest.v1"
+    || contractVersion !== "release-rehearsal-split2-v1"
+  ) fail("candidate bundle authority schema or contract version is invalid");
+  const rebuiltBundleManifest = buildBundleAuthorityManifest(bundleInput);
+  const physicalBundleRoot = join(root, "bundles", "bundle");
+  const actualInventory = [];
+  const actualArtifacts = {};
+  for (const component of ["app", "full_local", "worker"]) {
+    const entries = inventorySealedComponent(component, join(physicalBundleRoot, component));
+    actualInventory.push(...entries);
+    const physicalEntries = entries.map((entry) => {
+      const physicalEntry = { ...entry };
+      delete physicalEntry.source_kind;
+      return physicalEntry;
+    });
+    actualArtifacts[component] = { root: component, digest: sha256Jcs(physicalEntries) };
+  }
+  actualInventory.sort((left, right) =>
+    `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
+  const actualSealedBundleDigest = sha256Jcs({
+    schema: "homecook.local-mac-production-rehearsal-sealed-bundle.v1",
+    artifacts: actualArtifacts,
+  });
+  if (
+    !DIGEST_PATTERN.test(bundleManifestDigest ?? "")
+    || rebuiltBundleManifest.bundle_manifest_digest !== bundleManifestDigest
+    || manifest.bundle_manifest_digest !== bundleManifestDigest
+    || manifest.sealed_bundle_digest !== bundleManifest.sealed_bundle_digest
+    || canonicalizeJcs(actualArtifacts) !== canonicalizeJcs(bundleManifest.artifacts)
+    || canonicalizeJcs(actualInventory) !== canonicalizeJcs(bundleManifest.file_inventory)
+    || actualSealedBundleDigest !== manifest.sealed_bundle_digest
+  ) fail("candidate bundle authority manifest digest is invalid");
+  const candidateIdentityDigest = sha256Jcs({
+    schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+    bundle_manifest_digest: manifest.bundle_manifest_digest,
+    sealed_bundle_digest: manifest.sealed_bundle_digest,
+  });
+  if (
+    candidateIdentityDigest !== manifest.candidate_identity_digest
+    || complete.candidate_identity_digest !== candidateIdentityDigest
+    || complete.manifest_digest !== manifest.manifest_digest
+  ) fail("candidate complete identity binding is invalid");
+  return Object.freeze({ complete, manifest, bundle_manifest: bundleManifest });
 }
 
 function reserveRunRoot(path, currentUid) {
@@ -643,40 +1263,6 @@ function makeCandidateRootWritable(path) {
   }
 }
 
-function sanitizeFailedCandidateTree(rootPath) {
-  let redactedFileCount = 0;
-  const visit = (path, relativePath) => {
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink()) {
-      if (isSecretBearingPath(relativePath)) {
-        unlinkSync(path);
-        redactedFileCount += 1;
-      }
-      return;
-    }
-    if (stat.isDirectory()) {
-      for (const name of readdirSync(path)) {
-        visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
-      }
-      return;
-    }
-    if (!stat.isFile()) return;
-    const text = readFileSync(path).toString("utf8");
-    if (
-      isSecretBearingPath(relativePath)
-      || RAW_SECRET_ASSIGNMENT_PATTERN.test(text)
-      || PRIVATE_KEY_MATERIAL_PATTERN.test(text)
-      || (basename(relativePath).toLowerCase().endsWith(".json")
-        && JSON_SECRET_VALUE_PATTERN.test(text))
-    ) {
-      unlinkSync(path);
-      redactedFileCount += 1;
-    }
-  };
-  visit(rootPath, "");
-  return redactedFileCount;
-}
-
 /**
  * @param {{
  *   releaseSha: string,
@@ -685,6 +1271,7 @@ function sanitizeFailedCandidateTree(rootPath) {
  *   runId: string,
  *   currentUid?: number,
  * }} options
+ * @returns {Promise<{candidate_root:string, manifest:any}>}
  */
 export async function buildReleaseRehearsalCandidate({
   releaseSha,
@@ -702,22 +1289,25 @@ export async function buildReleaseRehearsalCandidate({
   if (rootStat.isSymbolicLink() || rootStat.uid !== currentUid || modeBits(rootStat.mode) !== 0o700) {
     fail("candidate namespace root must be private and must not be a symlink");
   }
-  const runsRoot = ensureNamespaceDirectory(join(root, "runs"), currentUid, "candidate runs root");
-  const failedRoot = ensureNamespaceDirectory(join(root, "failed"), currentUid, "candidate failed root");
-  const candidatesRoot = ensureNamespaceDirectory(join(root, "candidates"), currentUid, "candidate complete root");
-  const runRoot = join(runsRoot, runId);
-  const failedRunRoot = join(failedRoot, runId);
-  const completeRoot = join(candidatesRoot, runId);
-  if (pathExists(failedRunRoot) || pathExists(completeRoot)) {
-    fail("candidate create-only collision; failed or complete run already exists");
-  }
+  const attemptsRoot = ensureNamespaceDirectory(join(root, "attempts"), currentUid, "candidate attempts root");
+  const runRoot = join(attemptsRoot, runId);
   reserveRunRoot(runRoot, currentUid);
-  let activeRoot = runRoot;
+  let productionPre = null;
+  let productionGuard = null;
+  let result;
+  let failure = null;
   try {
+    const toolchainLock = await adapters.readToolchainLock();
+    digest(toolchainLock.toolchain_lock_digest, "toolchain lock digest");
+    const toolchain = validateCandidateToolchain(await adapters.collectToolchain({
+      phase: "pre",
+      releaseSha,
+      runRoot,
+    }));
+    productionPre = await adapters.captureProductionSurface({ phase: "pre", releaseSha, runRoot });
     const source = await adapters.prepareSource({ releaseSha, runRoot });
     const sourceEvidence = validateCandidateSourceEvidence(source.evidence);
-    const ci = validateCandidateCiEvidence(await adapters.collectCiEvidence({ releaseSha }));
-    const toolchain = validateCandidateToolchain(await adapters.collectToolchain({ releaseSha, runRoot }));
+    const ciPre = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "pre", releaseSha }));
     const environment = await adapters.readEnvironment({ releaseSha, runRoot });
     validateEnvironmentMetadata(environment.metadata);
     const images = validateCandidateImages(await adapters.collectImages({
@@ -737,26 +1327,64 @@ export async function buildReleaseRehearsalCandidate({
     const build = await adapters.executeBuild({
       buildId, childEnv, releaseSha, releaseTree: sourceEvidence.release_tree, runRoot, source,
     });
+    const sealedMigration = validateMigration(build.migration ?? migration);
+    if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
+      fail("sealed migration digest differs from exact Git input");
+    }
     if (await adapters.networkAttemptCount({ runRoot }) !== 0) fail("offline build attempted external network access");
     if (await adapters.dockerPullAttemptCount({ runRoot }) !== 0) fail("offline build attempted Docker pull");
-    const bundleContentDigest = digest(
+    const ciPost = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "post", releaseSha }));
+    const ci = validateStableCiSnapshots(ciPre, ciPost, releaseSha);
+    const evidenceRoot = join(runRoot, "evidence");
+    mkdirSync(evidenceRoot, { mode: 0o700 });
+    writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ci.safe_projection), {
+      flag: "wx",
+      mode: 0o400,
+    });
+    validateCandidateToolchain(await adapters.collectToolchain({
+      phase: "post",
+      releaseSha,
+      runRoot,
+    }));
+    const productionPost = await adapters.captureProductionSurface({ phase: "post", releaseSha, runRoot });
+    productionGuard = validateProductionGuardSnapshots(productionPre, productionPost);
+    const sealedBundleDigest = digest(
       build.bundle_content_digest ?? build.sealed_bundle_digest,
-      "bundle_content_digest",
+      "sealed_bundle_digest",
     );
-    const sealedBundleDigest = sha256Jcs({
-      bundle_content_digest: bundleContentDigest,
-      bundle_manifest_digest: build.bundle_manifest_digest,
+    const sandboxPolicyDigest = digest(build.sandbox_policy_digest, "sandbox policy digest");
+    const bundleAuthorityManifest = buildBundleAuthorityManifest({
+      artifacts: build.artifacts,
+      build_id: buildId,
       ci_check_summary_digest: ci.summary_digest,
+      ci_snapshot_digest: ci.safe_projection_digest,
+      ci_suite_run_set_digest: ci.suite_run_set_digest,
       environment_snapshot: environment.metadata,
+      file_inventory: build.file_inventory,
       images,
-      migration,
+      migration: sealedMigration,
       release_sha: releaseSha,
       release_tree: sourceEvidence.release_tree,
+      sandbox_policy_digest: sandboxPolicyDigest,
+      sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
+      source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
       toolchain,
+      toolchain_lock_digest: toolchainLock.toolchain_lock_digest,
+      production_guard: productionGuard,
+    });
+    const candidateIdentityDigest = sha256Jcs({
+      schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+      bundle_manifest_digest: bundleAuthorityManifest.bundle_manifest_digest,
+      sealed_bundle_digest: sealedBundleDigest,
     });
     if (typeof adapters.finalizeBundleAddress === "function") {
-      await adapters.finalizeBundleAddress({ build, runRoot, sealedBundleDigest });
+      await adapters.finalizeBundleAddress({
+        build,
+        bundleAuthorityManifest,
+        candidateIdentityDigest,
+        runRoot,
+      });
     }
     const manifest = buildCandidateManifest({
       schema: RELEASE_REHEARSAL_CANDIDATE_SCHEMA,
@@ -766,42 +1394,64 @@ export async function buildReleaseRehearsalCandidate({
       release_sha: releaseSha,
       release_tree: sourceEvidence.release_tree,
       ci_check_summary_digest: ci.summary_digest,
+      ci_snapshot_digest: ci.safe_projection_digest,
+      ci_suite_run_set_digest: ci.suite_run_set_digest,
+      source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
+      sandbox_policy_digest: sandboxPolicyDigest,
       build_id: buildId,
       sealed_bundle_digest: sealedBundleDigest,
-      bundle_manifest_digest: build.bundle_manifest_digest,
+      bundle_manifest_digest: bundleAuthorityManifest.bundle_manifest_digest,
+      candidate_identity_digest: candidateIdentityDigest,
       toolchain,
+      toolchain_lock_digest: toolchainLock.toolchain_lock_digest,
       images,
-      migration,
+      migration: sealedMigration,
       artifacts: build.artifacts,
       file_inventory: build.file_inventory,
       environment_snapshot: environment.metadata,
-      production_guard: {
-        mutation_attempt_count: 0,
-        production_db_connection_count: 0,
-        production_db_write_count: 0,
-      },
+      production_guard: productionGuard,
     });
     writeFileSync(join(runRoot, "candidate.json"), canonicalizeJcs(manifest), {
       flag: "wx", mode: 0o400,
     });
-    renameSync(runRoot, completeRoot);
-    activeRoot = completeRoot;
-    sealCandidateTree(completeRoot);
-    return { candidate_root: completeRoot, manifest };
+    sealCandidateTree(runRoot);
+    chmodSync(runRoot, 0o700);
+    writeCandidateTerminalMarker(runRoot, "complete", {
+      candidate_identity_digest: manifest.candidate_identity_digest,
+      manifest_digest: manifest.manifest_digest,
+    });
+    chmodSync(runRoot, 0o500);
+    result = { candidate_root: runRoot, manifest };
   } catch (error) {
-    makeCandidateRootWritable(activeRoot);
-    const redactedFileCount = sanitizeFailedCandidateTree(activeRoot);
-    writeFileSync(join(activeRoot, "failure.json"), canonicalizeJcs({
-      redacted_file_count: redactedFileCount,
-      schema: "homecook.local-mac-production-rehearsal-candidate-failure.v1",
-      status: "failed",
-    }), { flag: "wx", mode: 0o600 });
-    renameSync(activeRoot, failedRunRoot);
-    throw error;
+    failure = error;
   }
+  if (failure && productionPre) {
+    try {
+      const productionPost = await adapters.captureProductionSurface({ phase: "post_failure", releaseSha, runRoot });
+      validateProductionGuardSnapshots(productionPre, productionPost);
+    } catch (guardError) {
+      failure = guardError;
+    }
+  }
+  if (failure) {
+    makeCandidateRootWritable(runRoot);
+    for (const name of readdirSync(runRoot)) {
+      rmSync(join(runRoot, name), { force: false, recursive: true });
+    }
+    const pathDigest = sha256Jcs(runId);
+    writeCandidateTerminalMarker(runRoot, "failed", {
+      reason_code: "candidate_build_failed",
+      path_digest: pathDigest,
+    });
+    chmodSync(runRoot, 0o500);
+    throw new Error(`Release rehearsal candidate failed: candidate_build_failed path_digest=${pathDigest}`);
+  }
+  if (!result) fail("candidate result was not produced");
+  return /** @type {{candidate_root:string, manifest:any}} */ (result);
 }
 
 function spawnBounded(command, args, {
+  binary = false,
   cwd,
   env,
   timeout = 30_000,
@@ -812,7 +1462,7 @@ function spawnBounded(command, args, {
   }
   return runCommand(command, args, {
     cwd,
-    encoding: "utf8",
+    encoding: binary ? null : "utf8",
     env,
     maxBuffer: 8 * 1024 * 1024,
     shell: false,
@@ -827,6 +1477,25 @@ function runBounded(command, args, options = {}) {
     fail(`${options.label ?? basename(command)} failed in the bounded clean environment`);
   }
   return String(result.stdout ?? "");
+}
+
+export function validateCandidateDockerReadOnlyArgs(args) {
+  if (!Array.isArray(args)) fail("Docker read-only argv allowlist is required");
+  const version = ["version", "--format", "{{json .}}"];
+  if (canonicalizeJcs(args) === canonicalizeJcs(version)) return [...args];
+  if (
+    args.length === 5
+    && args[0] === "image"
+    && args[1] === "inspect"
+    && /^([^\s@]+)@sha256:[0-9a-f]{64}$/u.test(args[2])
+    && args[3] === "--format"
+    && args[4] === "{{json .}}"
+  ) return [...args];
+  fail("Docker command is outside the candidate read-only digest inspect allowlist");
+}
+
+function runCandidateDockerReadOnly(dockerPath, args, options) {
+  return runBounded(dockerPath, validateCandidateDockerReadOnlyArgs(args), options);
 }
 
 function resolveSafeRealExecutable(candidates, label) {
@@ -897,7 +1566,7 @@ function findExactSupabaseCli(root, version = "2.110.0") {
   return result;
 }
 
-function exactToolPaths({ homeDir }) {
+function exactToolPaths({ homeDir, toolchainLock }) {
   const nodePath = realpathSync(resolveTrustedNodeExecutable());
   const gitPath = realpathSync(resolveTrustedGitExecutable());
   const ghPath = realpathSync(resolveTrustedGhExecutable());
@@ -911,49 +1580,22 @@ function exactToolPaths({ homeDir }) {
     "/opt/homebrew/bin/docker",
   ], "Docker client");
   const sandboxPath = resolveSafeRealExecutable(["/usr/bin/sandbox-exec"], "macOS network sandbox");
-  const supabasePath = findExactSupabaseCli(join(homeDir, "Library", "Caches", "pnpm", "dlx"));
+  const supabasePath = findExactSupabaseCli(
+    join(homeDir, "Library", "Caches", "pnpm", "dlx"),
+    toolchainLock.supabase_cli.version,
+  );
   return { dockerPath, ghPath, gitPath, nodePath, pnpmCliPath, sandboxPath, supabasePath };
 }
 
 function gitEnvironment(homeDir) {
   return Object.freeze({
+    GIT_ATTR_NOSYSTEM: "1",
+    GIT_CONFIG_GLOBAL: "/dev/null",
     GIT_CONFIG_NOSYSTEM: "1",
+    GIT_OPTIONAL_LOCKS: "0",
     HOME: homeDir,
     PATH: "/usr/bin:/bin",
   });
-}
-
-function snapshotTrackedSource(checkoutDir, gitPath, homeDir, runCommand) {
-  const inventoryOutput = runBounded(gitPath, ["-C", checkoutDir, "ls-files", "-s", "-z"], {
-    env: gitEnvironment(homeDir), label: "tracked source inventory", runCommand,
-  });
-  const entries = [];
-  let hardlinkCount = 0;
-  for (const record of inventoryOutput.split("\0").filter(Boolean)) {
-    const separator = record.indexOf("\t");
-    if (separator < 0) fail("tracked source inventory is malformed");
-    const metadata = record.slice(0, separator).split(" ");
-    const relativePath = record.slice(separator + 1);
-    const absolutePath = resolve(checkoutDir, relativePath);
-    assertPathContained(realpathSync(checkoutDir), absolutePath, `tracked source ${relativePath}`);
-    const stat = lstatSync(absolutePath);
-    if (metadata[0] === "120000") {
-      if (!stat.isSymbolicLink()) fail(`tracked symlink was replaced: ${relativePath}`);
-      const target = realpathSync(absolutePath);
-      assertPathContained(realpathSync(checkoutDir), target, `tracked symlink ${relativePath}`);
-      entries.push({ mode: metadata[0], path: relativePath, symlink_target: readlinkSync(absolutePath) });
-      continue;
-    }
-    if (!stat.isFile()) fail(`tracked source is not a regular file: ${relativePath}`);
-    if (stat.nlink !== 1) hardlinkCount += 1;
-    entries.push({
-      mode: metadata[0],
-      path: relativePath,
-      sha256: sha256Bytes(readFileSync(absolutePath)),
-    });
-  }
-  entries.sort((left, right) => left.path.localeCompare(right.path));
-  return { digest: sha256Jcs(entries), hardlinkCount, paths: entries.map((entry) => entry.path) };
 }
 
 function parseGhPages(text, field = null) {
@@ -971,10 +1613,166 @@ function parseGhPages(text, field = null) {
   });
 }
 
+export function validateStableCiSnapshots(pre, post, releaseSha) {
+  validateCandidateCiEvidence(pre);
+  validateCandidateCiEvidence(post);
+  for (const [label, value] of [["pre", pre], ["post", post]]) {
+    if (value.remote_master_sha !== releaseSha) fail(`CI ${label} remote master SHA drifted`);
+    digest(value.safe_projection_digest, `CI ${label} safe projection digest`);
+    digest(value.suite_run_set_digest, `CI ${label} suite/run set digest`);
+    if (!value.safe_projection || value.safe_projection.head_sha !== releaseSha) {
+      fail(`CI ${label} safe projection head SHA is invalid`);
+    }
+    for (const check of value.safe_projection.check_runs ?? []) {
+      if (
+        check.head_sha !== releaseSha
+        || !Number.isSafeInteger(check.id)
+        || check.id <= 0
+        || !Number.isSafeInteger(check.check_suite_id)
+        || check.check_suite_id <= 0
+        || !Number.isSafeInteger(check.app_id)
+        || check.app_id <= 0
+      ) fail(`CI ${label} check head, suite, run, or integration identity is invalid`);
+    }
+    for (const status of value.safe_projection.commit_statuses ?? []) {
+      if (status.sha !== releaseSha || !Number.isSafeInteger(status.id) || status.id <= 0) {
+        fail(`CI ${label} commit status SHA or identity is invalid`);
+      }
+    }
+  }
+  if (
+    pre.summary_digest !== post.summary_digest
+    || pre.safe_projection_digest !== post.safe_projection_digest
+    || pre.suite_run_set_digest !== post.suite_run_set_digest
+  ) fail("CI pre/post projection, suite, or run set drifted");
+  return Object.freeze(pre);
+}
+
+export function parseCanonicalComposeImageInventory(source) {
+  if (typeof source !== "string" || source.length === 0) fail("Compose source is required");
+  const lines = source.split(/\r?\n/u);
+  const servicesStart = lines.findIndex((line) => line === "services:");
+  if (servicesStart < 0) fail("Compose services section is missing");
+  const services = [];
+  let current = null;
+  for (let index = servicesStart + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^[A-Za-z0-9_.-]+:\s*$/u.test(line)) break;
+    const serviceMatch = /^  ([A-Za-z0-9_.-]+):\s*$/u.exec(line);
+    if (serviceMatch) {
+      if (current) services.push(current);
+      current = { service: serviceMatch[1], image: null, platform: null, build: false };
+      continue;
+    }
+    if (!current) continue;
+    const imageMatch = /^    image:\s*(\S+)\s*$/u.exec(line);
+    const platformMatch = /^    platform:\s*(.+?)\s*$/u.exec(line);
+    if (imageMatch) {
+      if (current.image !== null) fail(`Compose service ${current.service} has duplicate image authority`);
+      current.image = imageMatch[1];
+    }
+    if (platformMatch) current.platform = platformMatch[1];
+    if (/^    build:\s*/u.test(line)) current.build = true;
+  }
+  if (current) services.push(current);
+  if (services.length === 0) fail("Compose service inventory is empty");
+  return services.map((service) => {
+    if (service.build) fail(`Compose service ${service.service} uses forbidden build authority`);
+    const match = /^([^\s@]+)@(sha256:[0-9a-f]{64})$/u.exec(service.image ?? "");
+    if (!match) fail(`Compose service ${service.service} image is missing or not exact digest-pinned`);
+    if (!service.platform) fail(`Compose service ${service.service} platform is missing`);
+    return {
+      service: service.service,
+      reference: service.image,
+      digest: match[2],
+      platform_expression: service.platform,
+    };
+  });
+}
+
+export function loadRehearsalToolchainLock(path) {
+  const absolutePath = resolve(path);
+  const pre = lstatSync(absolutePath, { bigint: true });
+  if (
+    pre.isSymbolicLink()
+    || !pre.isFile()
+    || pre.nlink !== 1n
+    || (pre.mode & 0o022n) !== 0n
+    || pre.size > 1024n * 1024n
+    || realpathSync(dirname(absolutePath)) !== dirname(absolutePath)
+  ) fail("rehearsal toolchain lock path, type, mode, or size is unsafe");
+  let fd;
+  let bytes;
+  try {
+    fd = openSync(absolutePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const opened = fstatSync(fd, { bigint: true });
+    if (
+      opened.dev !== pre.dev || opened.ino !== pre.ino || opened.mode !== pre.mode
+      || opened.size !== pre.size || opened.ctimeNs !== pre.ctimeNs || opened.mtimeNs !== pre.mtimeNs
+    ) fail("rehearsal toolchain lock identity drifted before read");
+    bytes = readFileSync(fd);
+    const post = fstatSync(fd, { bigint: true });
+    if (
+      post.dev !== opened.dev || post.ino !== opened.ino || post.mode !== opened.mode
+      || post.size !== opened.size || post.ctimeNs !== opened.ctimeNs || post.mtimeNs !== opened.mtimeNs
+    ) fail("rehearsal toolchain lock identity drifted during read");
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+  const parsed = parseCanonicalJcs(decodeFatalUtf8(bytes, "rehearsal toolchain lock"));
+  exactObject(parsed, "rehearsal toolchain lock", [
+    "schema", "platform", "supabase_cli", "full_local_images",
+  ]);
+  if (parsed.schema !== "homecook.local-mac-production-rehearsal-toolchain-lock.v1") {
+    fail("rehearsal toolchain lock schema is invalid");
+  }
+  if (parsed.platform !== "darwin-arm64") fail("rehearsal toolchain lock platform is invalid");
+  exactObject(parsed.supabase_cli, "rehearsal toolchain lock supabase_cli", [
+    "package", "version", "npm_integrity", "binary_sha256",
+  ]);
+  if (parsed.supabase_cli.package !== "@supabase/cli-darwin-arm64") fail("Supabase CLI package authority is invalid");
+  if (parsed.supabase_cli.version !== "2.110.0") fail("Supabase CLI lock version is invalid");
+  if (!/^sha512-[A-Za-z0-9+/]+=*$/u.test(parsed.supabase_cli.npm_integrity)) {
+    fail("Supabase CLI npm integrity is invalid");
+  }
+  digest(parsed.supabase_cli.binary_sha256, "Supabase CLI pinned binary digest");
+  if (!Array.isArray(parsed.full_local_images) || parsed.full_local_images.length === 0) {
+    fail("rehearsal toolchain lock image inventory is empty");
+  }
+  const services = new Set();
+  for (const entry of parsed.full_local_images) {
+    exactObject(entry, "rehearsal image lock entry", [
+      "service", "reference", "digest", "platform_expression",
+    ]);
+    string(entry.service, "rehearsal image service");
+    if (services.has(entry.service)) fail("rehearsal image service is duplicated");
+    services.add(entry.service);
+    if (!/^([^\s@]+)@(sha256:[0-9a-f]{64})$/u.test(entry.reference)) {
+      fail("rehearsal image reference is not digest-pinned");
+    }
+    if (!IMAGE_DIGEST_PATTERN.test(entry.digest) || !entry.reference.endsWith(`@${entry.digest}`)) {
+      fail("rehearsal image digest authority is inconsistent");
+    }
+    string(entry.platform_expression, "rehearsal image platform expression");
+  }
+  return Object.freeze({ ...parsed, toolchain_lock_digest: sha256Bytes(bytes) });
+}
+
+export function validatePinnedSupabaseCliIdentity(identity, lock) {
+  validateToolIdentity(identity, "supabase_cli");
+  if (
+    identity.version !== lock.supabase_cli.version
+    || identity.sha256 !== lock.supabase_cli.binary_sha256
+  ) fail("Supabase CLI identity does not match repository-pinned version and binary digest");
+  return identity;
+}
+
 function safeCheckProjection(entry) {
   return {
+    id: Number(entry.id),
     app_id: Number(entry.app?.id),
     check_suite_id: Number(entry.check_suite?.id),
+    head_sha: entry.head_sha,
     completed_at: entry.completed_at ?? null,
     conclusion: entry.conclusion ?? null,
     name: entry.name,
@@ -985,6 +1783,8 @@ function safeCheckProjection(entry) {
 
 function safeStatusProjection(entry) {
   return {
+    id: Number(entry.id),
+    sha: entry.sha,
     context: entry.context,
     created_at: entry.created_at ?? null,
     state: entry.state,
@@ -1010,57 +1810,16 @@ function ensureCandidateNamespace({ homeDir, namespaceRoot }) {
 }
 
 function collectMigrationFromSource(source) {
-  const migrationRoot = join(source.checkout_dir, "supabase", "migrations");
-  const files = readdirSync(migrationRoot)
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
-  if (files.length === 0) fail("migration inventory is empty");
-  const inventory = files.map((name) => ({
-    path: `supabase/migrations/${name}`,
-    sha256: sha256Bytes(readFileSync(join(migrationRoot, name))),
-  }));
+  const inventory = source.source_manifest.entries
+    .filter((entry) => entry.path.startsWith("supabase/migrations/") && entry.path.endsWith(".sql"))
+    .map((entry) => ({ path: entry.path, sha256: entry.sha256 }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  if (inventory.length === 0) fail("migration inventory is empty");
   return {
     ordered_migration_files: inventory.map((entry) => entry.path),
     ordered_migration_files_digest: sha256Jcs(inventory),
-    migration_head: files.at(-1).replace(/\.sql$/u, ""),
+    migration_head: basename(inventory.at(-1).path).replace(/\.sql$/u, ""),
   };
-}
-
-function assembleAppArtifact(checkoutDir, destinationRoot) {
-  mkdirSync(destinationRoot, { mode: 0o700 });
-  const directoryPaths = [
-    ".next",
-    "app",
-    "components",
-    "lib",
-    "node_modules",
-    "public",
-    "scripts",
-    "supabase",
-  ];
-  for (const relativePath of directoryPaths) {
-    const source = join(checkoutDir, relativePath);
-    const stat = lstatSync(source);
-    if (stat.isSymbolicLink() || !stat.isDirectory()) fail(`app artifact source is unsafe: ${relativePath}`);
-    copyLocalMacProductionExecutionTree(source, join(destinationRoot, relativePath));
-  }
-  mkdirSync(join(destinationRoot, "infra"), { mode: 0o700 });
-  copyLocalMacProductionExecutionTree(
-    join(checkoutDir, "infra", "full-local-supabase"),
-    join(destinationRoot, "infra", "full-local-supabase"),
-    { excludeRelativePaths: [".env.production.local", ".env.production.example"] },
-  );
-  for (const relativePath of ["package.json", "pnpm-lock.yaml", "next.config.ts"]) {
-    const source = join(checkoutDir, relativePath);
-    const stat = lstatSync(source);
-    if (stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1) {
-      fail(`app artifact authority file is unsafe: ${relativePath}`);
-    }
-    const destination = join(destinationRoot, relativePath);
-    copyFileSync(source, destination, fsConstants.COPYFILE_EXCL);
-    chmodSync(destination, (modeBits(stat.mode) & 0o111) === 0 ? 0o400 : 0o500);
-  }
-  return destinationRoot;
 }
 
 export function createReleaseRehearsalCandidateAdapters({
@@ -1069,6 +1828,13 @@ export function createReleaseRehearsalCandidateAdapters({
   namespaceRoot = resolve(homeDir, ".homecook", "rehearsal"),
   environmentSourcePath = join(namespaceRoot, "build-env.json"),
   packageStorePath = join(homeDir, "Library", "pnpm", "store", "v10"),
+  approvedMigrationMarkerPath = join(namespaceRoot, "approved-production-migration-marker.json"),
+  toolchainLockPath = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "config",
+    "local-mac-production-rehearsal-toolchain-lock.json",
+  ),
 } = {}, dependencies = {}) {
   const runCommand = dependencies.runCommand ?? spawnSync;
   const sourceRoot = realpathSync(rootDir);
@@ -1085,21 +1851,46 @@ export function createReleaseRehearsalCandidateAdapters({
   let currentSource = null;
   let initialToolchain = null;
   let cachedToolPaths = null;
+  let cachedToolchainLock = null;
+
+  const readToolchainLock = () => {
+    cachedToolchainLock ??= loadRehearsalToolchainLock(toolchainLockPath);
+    return cachedToolchainLock;
+  };
 
   const resolveTools = () => {
-    cachedToolPaths ??= exactToolPaths({ homeDir: normalizedHome });
+    cachedToolPaths ??= exactToolPaths({
+      homeDir: normalizedHome,
+      toolchainLock: readToolchainLock(),
+    });
     return cachedToolPaths;
   };
 
   const collectToolchain = async () => {
     const tools = resolveTools();
+    const toolchainLock = readToolchainLock();
+    if (`${process.platform}-${process.arch}` !== toolchainLock.platform) {
+      fail("current platform does not match the rehearsal toolchain lock");
+    }
+    const builderPath = realpathSync(fileURLToPath(import.meta.url));
+    const preUse = {
+      node: snapshotToolFile(tools.nodePath, "pre-use"),
+      pnpm: snapshotToolFile(tools.pnpmCliPath, "pre-use"),
+      supabase_cli: snapshotToolFile(tools.supabasePath, "pre-use"),
+      git: snapshotToolFile(tools.gitPath, "pre-use"),
+      gh: snapshotToolFile(tools.ghPath, "pre-use"),
+      docker_client: snapshotToolFile(tools.dockerPath, "pre-use"),
+      docker_daemon: snapshotToolFile(tools.dockerPath, "pre-use"),
+      sandbox_exec: snapshotToolFile(tools.sandboxPath, "pre-use"),
+      candidate_builder: snapshotToolFile(builderPath, "pre-use", { requireExecutable: false }),
+    };
     const cleanEnv = gitEnvironment(normalizedHome);
     const nodeVersion = runBounded(tools.nodePath, ["--version"], { env: cleanEnv, runCommand }).trim();
     const pnpmVersion = runBounded(tools.nodePath, [tools.pnpmCliPath, "--version"], { env: cleanEnv, runCommand }).trim();
     const supabaseVersion = runBounded(tools.supabasePath, ["--version"], { env: cleanEnv, runCommand }).trim();
     if (supabaseVersion !== "2.110.0") fail("Supabase CLI version drifted from pinned 2.110.0");
     const gitVersion = runBounded(tools.gitPath, ["--version"], { env: cleanEnv, runCommand }).trim();
-    const dockerVersionText = runBounded(
+    const dockerVersionText = runCandidateDockerReadOnly(
       tools.dockerPath,
       ["version", "--format", "{{json .}}"],
       { env: cleanEnv, label: "Docker client/daemon identity", runCommand },
@@ -1111,10 +1902,24 @@ export function createReleaseRehearsalCandidateAdapters({
       pnpm: snapshotToolFile(tools.pnpmCliPath, pnpmVersion),
       supabase_cli: snapshotToolFile(tools.supabasePath, supabaseVersion),
       git: snapshotToolFile(tools.gitPath, gitVersion),
+      gh: snapshotToolFile(tools.ghPath, runBounded(tools.ghPath, ["--version"], {
+        env: cleanEnv, runCommand,
+      }).split(/\r?\n/u)[0].trim()),
       docker_client: snapshotToolFile(tools.dockerPath, `Docker client ${dockerVersion.Client?.Version ?? "unknown"}`),
       docker_daemon: snapshotToolFile(tools.dockerPath, `Docker daemon ${dockerVersion.Server?.Version ?? "unknown"}/${dockerVersion.Server?.ID ?? "unknown"}`),
-      candidate_builder: snapshotToolFile(realpathSync(fileURLToPath(import.meta.url)), "homecook-release-rehearsal-candidate-v1", { requireExecutable: false }),
+      sandbox_exec: snapshotToolFile(tools.sandboxPath, "macOS sandbox-exec"),
+      candidate_builder: snapshotToolFile(builderPath, "homecook-release-rehearsal-candidate-v1", { requireExecutable: false }),
     };
+    for (const key of TOOLCHAIN_KEYS) {
+      const before = { ...preUse[key] };
+      const after = { ...result[key] };
+      delete before.version;
+      delete after.version;
+      if (canonicalizeJcs(before) !== canonicalizeJcs(after)) {
+        fail(`trusted tool ${key} drifted during first-use identity probing`);
+      }
+    }
+    validatePinnedSupabaseCliIdentity(result.supabase_cli, toolchainLock);
     validateCandidateToolchain(result);
     if (initialToolchain && canonicalizeJcs(initialToolchain) !== canonicalizeJcs(result)) {
       fail("trusted tool identity drifted during candidate build");
@@ -1124,6 +1929,29 @@ export function createReleaseRehearsalCandidateAdapters({
   };
 
   return Object.freeze({
+    async readToolchainLock() {
+      return readToolchainLock();
+    },
+
+    async captureProductionSurface() {
+      if (!initialToolchain) fail("candidate tools must be snapshotted before production inventory");
+      const tools = resolveTools();
+      const inventoryAdapters = createLocalProductionInventoryAdapters({
+        homeDir: normalizedHome,
+        rootDir: sourceRoot,
+        approvedMigrationMarkerPath,
+        commandRunner: runCommand,
+        dockerBin: tools.dockerPath,
+        trustedToolPaths: { git: tools.gitPath },
+      });
+      const inventory = await collectReadOnlyProductionInventory({
+        adapters: inventoryAdapters,
+        approvedMigrationMarker: pathExists(approvedMigrationMarkerPath),
+        probeIdentity: initialToolchain.candidate_builder,
+      });
+      return createProductionSurfaceSnapshot(inventory);
+    },
+
     async prepareSource({ releaseSha, runRoot }) {
       const { gitPath } = resolveTools();
       const env = gitEnvironment(normalizedHome);
@@ -1135,31 +1963,39 @@ export function createReleaseRehearsalCandidateAdapters({
       }).trim();
       if (originMasterSha !== releaseSha) fail("requested SHA is not the current fetched origin/master");
       const checkoutDir = join(runRoot, "source");
-      runBounded(gitPath, ["clone", "--no-checkout", "--no-hardlinks", "--no-local", sourceRoot, checkoutDir], {
-        cwd: runRoot, env, label: "exact clean candidate clone", runCommand, timeout: 120_000,
+      const checkoutTree = runBounded(gitPath, [
+        "--no-replace-objects", "-C", sourceRoot, "rev-parse", `${releaseSha}^{tree}`,
+      ], { env, label: "exact release tree", runCommand }).trim();
+      const materialized = materializeExactGitTree({
+        gitPath,
+        repositoryRoot: sourceRoot,
+        releaseSha,
+        outputRoot: checkoutDir,
+        homeDir: normalizedHome,
+        runCommand,
       });
-      runBounded(gitPath, ["-C", checkoutDir, "checkout", "--detach", releaseSha], {
-        env, label: "exact detached candidate checkout", runCommand,
-      });
-      const checkoutSha = runBounded(gitPath, ["-C", checkoutDir, "rev-parse", "HEAD"], { env, runCommand }).trim();
-      const checkoutTree = runBounded(gitPath, ["-C", checkoutDir, "rev-parse", "HEAD^{tree}"], { env, runCommand }).trim();
-      const status = runBounded(gitPath, ["-C", checkoutDir, "status", "--porcelain=v1", "--untracked-files=no"], { env, runCommand });
-      const detached = spawnBounded(gitPath, ["-C", checkoutDir, "symbolic-ref", "-q", "HEAD"], {
-        env, runCommand,
-      });
-      const tracked = snapshotTrackedSource(checkoutDir, gitPath, normalizedHome, runCommand);
-      currentSource = { checkoutDir, tracked };
+      const tracked = {
+        digest: materialized.source_manifest.source_manifest_digest,
+        hardlinkCount: 0,
+        paths: materialized.source_manifest.entries.map((entry) => entry.path),
+      };
+      currentSource = {
+        checkoutDir,
+        sourceManifest: materialized.source_manifest,
+        tracked,
+      };
       return {
         checkout_dir: checkoutDir,
+        source_manifest: materialized.source_manifest,
         tracked_files: tracked.paths,
         evidence: {
           requested_sha: releaseSha,
           origin_master_sha: originMasterSha,
-          checkout_sha: checkoutSha,
+          checkout_sha: releaseSha,
           release_tree: checkoutTree,
           checkout_tree: checkoutTree,
-          detached: detached.status === 1 && String(detached.stdout ?? "").trim() === "",
-          clean: status.trim() === "",
+          detached: true,
+          clean: true,
           tracked_symlinks_contained: true,
           hardlink_count: tracked.hardlinkCount,
           source_snapshot_pre_digest: tracked.digest,
@@ -1169,8 +2005,18 @@ export function createReleaseRehearsalCandidateAdapters({
     },
 
     async collectCiEvidence({ releaseSha }) {
-      const { ghPath } = resolveTools();
+      const { ghPath, gitPath } = resolveTools();
       const env = Object.freeze({ HOME: normalizedHome, PATH: "/usr/bin:/bin" });
+      runBounded(gitPath, ["-C", sourceRoot, "fetch", "--no-tags", "origin", "master"], {
+        env: gitEnvironment(normalizedHome),
+        label: "refresh remote master for CI snapshot",
+        runCommand,
+        timeout: 120_000,
+      });
+      const remoteMasterSha = runBounded(gitPath, ["-C", sourceRoot, "rev-parse", "origin/master"], {
+        env: gitEnvironment(normalizedHome), label: "remote master CI snapshot", runCommand,
+      }).trim();
+      if (remoteMasterSha !== releaseSha) fail("remote master moved away from candidate SHA");
       const headers = ["-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2026-03-10"];
       const checkRuns = parseGhPages(runBounded(ghPath, [
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
@@ -1183,20 +2029,37 @@ export function createReleaseRehearsalCandidateAdapters({
       if (checkRuns.some((entry) => ["skipped", "neutral"].includes(String(entry.conclusion ?? "").toLowerCase()))) {
         fail("current-head started check set contains skipped or neutral evidence");
       }
+      if (checkRuns.some((entry) => entry.head_sha !== releaseSha)) {
+        fail("GitHub check-run head SHA does not match candidate SHA");
+      }
+      if (commitStatuses.some((entry) => entry.sha !== releaseSha)) {
+        fail("GitHub commit-status SHA does not match candidate SHA");
+      }
       const summary = normalizeGitHubProductionReleaseCheckSummary({ checkRuns, commitStatuses });
       const safeEvidence = {
+        repository: REPOSITORY,
         check_runs: checkRuns.map(safeCheckProjection).sort((left, right) =>
           canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
         commit_statuses: commitStatuses.map(safeStatusProjection).sort((left, right) =>
           canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
         head_sha: releaseSha,
+        remote_master_sha: remoteMasterSha,
         summary,
       };
+      const suiteRunSet = safeEvidence.check_runs.map((entry) => ({
+        app_id: entry.app_id,
+        check_suite_id: entry.check_suite_id,
+        id: entry.id,
+      }));
       return {
         expected_head_sha: releaseSha,
         head_sha: releaseSha,
+        remote_master_sha: remoteMasterSha,
         summary,
         summary_digest: sha256Jcs(safeEvidence),
+        safe_projection: safeEvidence,
+        safe_projection_digest: sha256Jcs(safeEvidence),
+        suite_run_set_digest: sha256Jcs(suiteRunSet),
       };
     },
 
@@ -1209,19 +2072,25 @@ export function createReleaseRehearsalCandidateAdapters({
         join(currentSource.checkoutDir, "infra", "full-local-supabase", "docker-compose.production.yml"),
         "utf8",
       );
-      const references = [...composeText.matchAll(/^\s*image:\s*([^\s]+@sha256:[0-9a-f]{64})\s*$/gmu)]
-        .map((match) => match[1]);
-      if (references.length === 0) fail("full-local image inventory is empty");
+      const composeInventory = parseCanonicalComposeImageInventory(composeText)
+        .sort((left, right) => left.service.localeCompare(right.service));
+      const lockedInventory = [...readToolchainLock().full_local_images]
+        .sort((left, right) => left.service.localeCompare(right.service));
+      if (canonicalizeJcs(composeInventory) !== canonicalizeJcs(lockedInventory)) {
+        fail("full-local Compose image service set differs from repository lock");
+      }
       const { dockerPath } = resolveTools();
       const env = gitEnvironment(normalizedHome);
-      const byDigest = new Map();
-      for (const reference of references) {
-        const image = JSON.parse(runBounded(dockerPath, ["image", "inspect", reference, "--format", "{{json .}}"], {
+      const results = [];
+      for (const expected of composeInventory) {
+        const reference = expected.reference;
+        const image = JSON.parse(runCandidateDockerReadOnly(dockerPath, ["image", "inspect", reference, "--format", "{{json .}}"], {
           env, label: "offline local image cache inspect", runCommand,
         }));
-        const digestValue = reference.slice(reference.indexOf("sha256:"));
+        const digestValue = expected.digest;
         const actualPlatform = `${image.Os}/${image.Architecture}`;
         if (actualPlatform !== platform) fail(`local image platform mismatch for ${digestValue}`);
+        if (!IMAGE_DIGEST_PATTERN.test(image.Id ?? "")) fail(`local image ID is invalid for ${expected.service}`);
         if (!Array.isArray(image.RepoDigests) || !image.RepoDigests.some((entry) => entry.endsWith(`@${digestValue}`))) {
           fail(`local image cache lacks exact digest provenance for ${digestValue}`);
         }
@@ -1229,14 +2098,18 @@ export function createReleaseRehearsalCandidateAdapters({
           id: image.Id,
           platform: actualPlatform,
           repo_digests: [...image.RepoDigests].sort(),
+          service: expected.service,
         };
-        byDigest.set(digestValue, {
+        results.push({
+          service: expected.service,
+          reference,
           digest: digestValue,
           platform,
+          image_id: image.Id,
           local_cache_provenance_digest: sha256Jcs(projection),
         });
       }
-      return [...byDigest.values()].sort((left, right) => left.digest.localeCompare(right.digest));
+      return results.sort((left, right) => left.service.localeCompare(right.service));
     },
 
     async collectMigration({ source }) {
@@ -1268,7 +2141,25 @@ export function createReleaseRehearsalCandidateAdapters({
         TMPDIR: privateTmp,
         npm_config_offline: "true",
       });
-      const sandboxProfile = "(version 1)(allow default)(deny network*)";
+      const sandboxProfile = buildCandidateSandboxProfile({
+        readRoots: [
+          runRoot,
+          resolve(packageStorePath),
+          ...Object.values(tools),
+        ],
+        writeRoots: [runRoot],
+        deniedPaths: [
+          sourceRoot,
+          resolve(environmentSourcePath),
+          join(normalizedHome, ".homecook", "releases"),
+          join(normalizedHome, ".homecook", "locks"),
+          join(normalizedHome, ".homecook", "config"),
+          join(normalizedHome, ".homecook", "logs"),
+          join(normalizedHome, "Library", "LaunchAgents"),
+          "/var/run/docker.sock",
+          join(normalizedHome, ".docker", "run", "docker.sock"),
+        ],
+      });
       runBounded(tools.sandboxPath, ["-p", sandboxProfile, tools.nodePath, tools.pnpmCliPath,
         "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
         "--store-dir", resolve(packageStorePath)], {
@@ -1290,14 +2181,17 @@ export function createReleaseRehearsalCandidateAdapters({
         runCommand,
         timeout: 20 * 60_000,
       });
-      const postSource = snapshotTrackedSource(source.checkout_dir, tools.gitPath, normalizedHome, runCommand);
-      if (postSource.digest !== currentSource.tracked.digest || postSource.hardlinkCount !== 0) {
-        fail("tracked source drifted during offline build");
-      }
+      const postSourceDigest = verifyExactMaterializedTree({
+        sourceRoot: source.checkout_dir,
+        sourceManifest: source.source_manifest,
+      });
+      if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
       const artifactsRoot = join(runRoot, "artifacts");
-      mkdirSync(artifactsRoot, { mode: 0o700 });
-      const appArtifactRoot = join(artifactsRoot, "app-source");
-      assembleAppArtifact(source.checkout_dir, appArtifactRoot);
+      const assembled = assembleCandidateArtifacts({
+        sourceRoot: source.checkout_dir,
+        sourceManifest: source.source_manifest,
+        artifactsRoot,
+      });
       const migration = collectMigrationFromSource(source);
       const workerArtifact = materializeYoutubeExtractionWorkerArtifact({
         rootDir: source.checkout_dir,
@@ -1308,33 +2202,57 @@ export function createReleaseRehearsalCandidateAdapters({
         promotionId: buildId,
         allowedSnapshotDigest: migration.ordered_migration_files_digest,
       });
+      if (verifyExactMaterializedTree({
+        sourceRoot: source.checkout_dir,
+        sourceManifest: source.source_manifest,
+      }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
       const bundlesRoot = join(runRoot, "bundles");
       mkdirSync(bundlesRoot, { mode: 0o700 });
-      const stagingBundleRoot = join(bundlesRoot, ".staging-bundle");
+      const stagingBundleRoot = join(bundlesRoot, "bundle");
       const bundle = createSealedCandidateBundle({
         bundleRoot: stagingBundleRoot,
         componentRoots: {
-          app: appArtifactRoot,
-          full_local: join(appArtifactRoot, "infra", "full-local-supabase"),
+          app: assembled.app,
+          full_local: assembled.full_local,
           worker: workerArtifact.root_dir,
         },
       });
+      const sealedMigration = collectSealedMigrationInventory({ bundleRoot: stagingBundleRoot });
+      if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
+        fail("sealed migration inventory drifted from exact Git objects");
+      }
+      if (verifyExactMaterializedTree({
+        sourceRoot: source.checkout_dir,
+        sourceManifest: source.source_manifest,
+      }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
       await collectToolchain();
       return {
         ...bundle,
         bundle_content_digest: bundle.sealed_bundle_digest,
+        migration: sealedMigration,
+        sandbox_policy_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
         staging_bundle_root: stagingBundleRoot,
       };
     },
 
-    async finalizeBundleAddress({ build, sealedBundleDigest }) {
+    async finalizeBundleAddress({ build, bundleAuthorityManifest, candidateIdentityDigest }) {
       const stagingBundleRoot = resolve(build.staging_bundle_root);
       const bundlesRoot = dirname(stagingBundleRoot);
-      const contentAddressedBundleRoot = join(bundlesRoot, sealedBundleDigest);
-      if (pathExists(contentAddressedBundleRoot)) {
-        fail("content-addressed candidate bundle collision is not reusable");
-      }
-      renameSync(stagingBundleRoot, contentAddressedBundleRoot);
+      chmodSync(stagingBundleRoot, 0o700);
+      writeFileSync(
+        join(stagingBundleRoot, "bundle-manifest.json"),
+        canonicalizeJcs(bundleAuthorityManifest),
+        { flag: "wx", mode: 0o400 },
+      );
+      chmodSync(stagingBundleRoot, 0o500);
+      writeFileSync(
+        join(bundlesRoot, "candidate-identity.json"),
+        canonicalizeJcs({
+          schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+          candidate_identity_digest: candidateIdentityDigest,
+        }),
+        { flag: "wx", mode: 0o400 },
+      );
       chmodSync(bundlesRoot, 0o500);
     },
 
