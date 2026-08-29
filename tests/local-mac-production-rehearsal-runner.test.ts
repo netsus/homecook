@@ -28,6 +28,7 @@ import {
   validateContainerImageAuthority,
   normalizeResolvedComposeFixture,
   buildSafeResolvedComposeGoldenFixture,
+  buildPsqlVariableArgs,
   compilePrimitiveServiceOperations,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
@@ -250,6 +251,7 @@ function createAdapters() {
       fixture_set_digest: "5".repeat(64),
       production_derived_row_count: 0,
     }),
+    prepareYoutubeWorkerSyntheticFixture: vi.fn().mockResolvedValue(undefined),
     startComponents: vi.fn().mockResolvedValue([
       runtime("app"), runtime("full_local"), runtime("worker"),
     ]),
@@ -345,6 +347,11 @@ describe("release rehearsal R2 input and namespace gates", () => {
 });
 
 describe("release rehearsal R2 command, env, and migration gates", () => {
+  it("sorts only explicit safe psql variables", () => {
+    expect(buildPsqlVariableArgs({ job_id: "22222222-2222-4222-8222-222222222222", allowed_snapshot: "a".repeat(64) }, new Set(["job_id", "allowed_snapshot"]))).toEqual([`--set=allowed_snapshot=${"a".repeat(64)}`, "--set=job_id=22222222-2222-4222-8222-222222222222"]);
+    expect(() => buildPsqlVariableArgs({ unknown: "x" }, new Set())).toThrow(/allowlisted/iu);
+    expect(() => buildPsqlVariableArgs({ job_id: "x\n--command=bad" }, new Set(["job_id"]))).toThrow(/unsafe/iu);
+  });
   it("rejects self-reported zeroes unless an independent observer binds the exact run window", () => {
     const observer = {
       schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64),

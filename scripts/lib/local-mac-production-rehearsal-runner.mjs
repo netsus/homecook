@@ -1032,6 +1032,8 @@ export async function runIsolatedReleaseRehearsal({
     checkAbort();
     const fixtures = await adapters.loadSyntheticFixtures({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     if (fixtures?.production_derived_row_count !== 0) fail("synthetic fixture set contains production-derived rows");
+    if (typeof adapters.prepareYoutubeWorkerSyntheticFixture !== "function") fail("worker synthetic fixture adapter is required");
+    await adapters.prepareYoutubeWorkerSyntheticFixture({ manifest, namespace, migration, fixtures, signal });
     checkAbort();
     runtimeEntries = await adapters.startComponents({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, migration, signal });
     runtimeEntries = validateRuntimeIdentities(runtimeEntries, manifest);

@@ -24,6 +24,7 @@ import {
 import { resolveTrustedDockerBinary } from "./full-local-session-observation-reader.mjs";
 import { canonicalizeJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
 import { createTrustedMacOsIndependentObserver } from "./local-mac-production-rehearsal-macos-observer.mjs";
+import { buildIsolatedYoutubeWorkerSyntheticFixtureSql } from "./youtube-extraction-isolated-fixture-sql.mjs";
 import { resolveSafeRealExecutable, snapshotToolFile } from "./local-mac-production-rehearsal-candidate.mjs";
 import {
   RUN_OWNERSHIP_LABEL,
@@ -597,13 +598,26 @@ async function postgresContainer(state, resources, options = {}) {
   return value;
 }
 
-async function executePsql(state, sql, { database = "postgres", tuplesOnly = false, signal } = {}) {
+export function buildPsqlVariableArgs(variables = {}, allowedVariableNames = new Set()) {
+  if (!variables || typeof variables !== "object" || Array.isArray(variables) || !(allowedVariableNames instanceof Set)) fail("psql variables policy is invalid");
+  const variableArgs = [];
+  for (const name of Object.keys(variables).sort()) {
+    const value = variables[name];
+    if (!allowedVariableNames.has(name) || !/^[a-z][a-z0-9_]{0,63}$/u.test(name) || typeof value !== "string" || value.length === 0 || value.length > 512 || /[^\x20-\x7e]|^[\-]/u.test(value)) fail("psql variable is unsafe or not allowlisted");
+    variableArgs.push(`--set=${name}=${value}`);
+  }
+  return Object.freeze(variableArgs);
+}
+
+async function executePsql(state, sql, { database = "postgres", tuplesOnly = false, signal, variables = {}, allowedVariableNames = new Set() } = {}) {
+  const variableArgs = buildPsqlVariableArgs(variables, allowedVariableNames);
   const resources = await listDiscoveredResources(state, { signal });
   const postgres = await postgresContainer(state, resources, { signal });
   const args = [
     "exec", "--interactive", postgres.id,
     "psql", "--set", "ON_ERROR_STOP=1", "--username", "supabase_admin",
     "--dbname", database,
+    ...variableArgs,
     ...(tuplesOnly ? ["--tuples-only", "--no-align"] : []),
   ];
   // docker exec is a run-owned mutation/read against an already ownership-verified ID.
@@ -1223,6 +1237,14 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         fixture_set_digest: sha256Jcs({ id: 1, value: fixtureValue }),
         production_derived_row_count: 0,
       };
+    },
+
+    async prepareYoutubeWorkerSyntheticFixture({ manifest, namespace, signal }) {
+      state.activeSignal = signal ?? state.activeSignal;
+      const fixture = buildIsolatedYoutubeWorkerSyntheticFixtureSql({ runIdentity: namespace.run_id, userId: crypto.randomUUID(), jobId: crypto.randomUUID(), releaseSha: manifest.release_sha, schemaIdentity: manifest.migration.migration_head, allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest, jtiHash: createHash("sha256").update(namespace.run_id).digest("hex"), nowEpoch: Math.floor(Date.now() / 1000) });
+      await executePsql(state, fixture.sql, { database: namespace.db_name, variables: fixture.variables, allowedVariableNames: new Set(fixture.allowedVariableNames), signal: state.activeSignal });
+      state.workerFixtureAuthority = Object.freeze({ fixture_sql_digest: sha256Jcs(fixture), production_derived_row_count: 0 });
+      return state.workerFixtureAuthority;
     },
 
     async startComponents({ manifest, candidateRoot, namespace, signal }) {
