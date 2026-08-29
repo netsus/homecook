@@ -350,7 +350,19 @@ async function listDiscoveredResources(state, options = {}) {
   return resources.sort((left, right) => RESOURCE_KIND_ORDER[left.kind] - RESOURCE_KIND_ORDER[right.kind]);
 }
 
-async function recordExpectedCreatedResources(state, expectedNames, { signal, requireAll = false } = {}) {
+export function assertDiscoveredResourcesRemainUnowned(ledger, discovered) {
+  if (!ledger || typeof ledger.contains !== "function" || !Array.isArray(discovered)) {
+    fail("creation discovery ownership check requires an immutable ledger");
+  }
+  for (const entry of discovered) {
+    if (!ledger.contains(entry)) {
+      fail(`discovered resource is not an exact successful-create ledger entry: ${entry.name}`);
+    }
+  }
+  return Object.freeze([...discovered]);
+}
+
+async function assertExpectedCreatedResources(state, expectedNames, { signal, requireAll = false } = {}) {
   const expected = new Set(expectedNames);
   const discovered = await listDiscoveredResources(state, { signal });
   const matches = discovered.filter((entry) => expected.has(entry.name));
@@ -364,7 +376,7 @@ async function recordExpectedCreatedResources(state, expectedNames, { signal, re
       || observed?.labels?.[RUN_PROJECT_LABEL] !== state.namespace.project
       || observed?.labels?.[RUN_CREATION_NONCE_LABEL] !== state.creationNonce
     ) fail(`created resource identity/labels differ: ${entry.name}`);
-    if (!state.creationLedger.contains(entry)) state.creationLedger.record(entry);
+    assertDiscoveredResourcesRemainUnowned(state.creationLedger, [entry]);
   }
   if (requireAll) {
     const recordedNames = new Set(state.creationLedger.snapshot().map((entry) => entry.name));
@@ -606,7 +618,7 @@ async function runContainer(state, args, { signal } = {}) {
     return id;
   } catch (error) {
     if (expectedName) {
-      await recordExpectedCreatedResources(state, [expectedName], { signal: state.cleanupSignal });
+      await assertExpectedCreatedResources(state, [expectedName], { signal: state.cleanupSignal });
     }
     throw error;
   }
@@ -928,8 +940,10 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           timeout: 10 * 60_000,
           ownership: { pullPolicyNever: true },
         });
-      } finally {
-        await recordExpectedCreatedResources(state, composeExpectedNames, { signal: state.cleanupSignal });
+      } catch (error) {
+        // Discovery is residue evidence only.  It must never become cleanup ownership.
+        await assertExpectedCreatedResources(state, composeExpectedNames, { signal: state.cleanupSignal });
+        throw error;
       }
       closePortReservation(state, 2);
       await dockerCommand(state, [...composePrefix, "start", "postgres"], {
@@ -951,11 +965,12 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           timeout: 10 * 60_000,
           ownership: { pullPolicyNever: true },
         });
-      } finally {
-        await recordExpectedCreatedResources(state, composeExpectedNames, {
+      } catch (error) {
+        await assertExpectedCreatedResources(state, composeExpectedNames, {
           signal: state.cleanupSignal,
           requireAll: true,
         });
+        throw error;
       }
       await dockerCommand(state, [...composePrefix, "start"], {
         signal: state.activeSignal,
@@ -1123,7 +1138,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         ) fail("sentinel network returned identity/labels mismatch");
         state.creationLedger.record(sentinelNetworkEntry);
       } catch (error) {
-        await recordExpectedCreatedResources(state, [sentinelNetworkName], { signal: state.cleanupSignal });
+        await assertExpectedCreatedResources(state, [sentinelNetworkName], { signal: state.cleanupSignal });
         throw error;
       }
       const sentinelName = `${namespace.project}-egress-sentinel`;

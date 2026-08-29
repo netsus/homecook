@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { homedir } from "node:os";
 
 import { canonicalizeJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
 
@@ -108,9 +109,15 @@ export function resolveTrustedLocalDockerEndpoint({
   currentUid = process.getuid?.() ?? -1,
   groups = process.getgroups?.() ?? [],
 } = {}) {
-  const candidates = explicitSocketPath === null
-    ? [join(resolve(homeDir), ".docker", "run", "docker.sock"), "/var/run/docker.sock"]
-    : [explicitSocketPath];
+  const canonicalHome = resolve(homedir());
+  const canonicalSockets = [join(canonicalHome, ".docker", "run", "docker.sock"), "/var/run/docker.sock"];
+  if (explicitSocketPath !== null && (!isAbsolute(explicitSocketPath) || explicitSocketPath.includes("\0") || /^(?:tcp|ssh|https?|npipe|unix):/iu.test(explicitSocketPath))) {
+    fail("approved local Docker Unix socket path is invalid");
+  }
+  if (explicitSocketPath !== null && !canonicalSockets.includes(explicitSocketPath)) {
+    fail("arbitrary Docker socket paths are not authority");
+  }
+  const candidates = explicitSocketPath === null ? canonicalSockets : [explicitSocketPath];
   for (const candidate of candidates) {
     if (
       typeof candidate !== "string"
@@ -128,7 +135,7 @@ export function resolveTrustedLocalDockerEndpoint({
     const { canonical, identity } = assertSafeSocket(candidate, { currentUid, groups });
     const unsigned = {
       schema: DOCKER_ENDPOINT_SCHEMA,
-      source: explicitSocketPath === null ? "canonical-local-socket" : "explicit-approved-socket",
+      source: "canonical-local-socket",
       requested_path: candidate,
       realpath: canonical,
       identity,

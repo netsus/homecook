@@ -49,9 +49,9 @@ async function withUnixSocket(operation: (path: string) => Promise<void>) {
 }
 
 describe("R2 trusted local Docker endpoint", () => {
-  it("pins an approved local Unix socket and ignores user Docker context/config", async () => {
+  it("rejects arbitrary explicit Unix sockets even when their metadata is self-consistent", async () => {
     await withUnixSocket(async (socketPath) => {
-      const endpoint = resolveTrustedLocalDockerEndpoint({
+      expect(() => resolveTrustedLocalDockerEndpoint({
         explicitSocketPath: socketPath,
         homeDir: "/Users/test",
         ambient: {
@@ -59,22 +59,18 @@ describe("R2 trusted local Docker endpoint", () => {
           DOCKER_HOST: "ssh://root@production.example",
           HOME: "/Users/test",
         },
-      });
-      expect(endpoint.url).toBe(`unix://${endpoint.realpath}`);
-      expect(endpoint.source).toBe("explicit-approved-socket");
-      expect(endpoint.identity.mode).toBe(0o600);
-      expect(buildPinnedDockerArgs(["version"], endpoint)).toEqual([
-        "--host", `unix://${endpoint.realpath}`, "version",
-      ]);
-
-      const runRoot = mkdtempSync(join(tmpdir(), "homecook-r2-docker-config-"));
-      chmodSync(runRoot, 0o700);
-      const environment = buildPrivateDockerEnvironment({ runRoot });
-      expect(environment.DOCKER_CONFIG).toBe(join(runRoot, "docker-config"));
-      expect(environment).not.toHaveProperty("HOME");
-      expect(environment).not.toHaveProperty("DOCKER_CONTEXT");
-      expect(environment).not.toHaveProperty("DOCKER_HOST");
+      })).toThrow(/canonical|Docker Desktop|arbitrary|endpoint/iu);
     });
+  });
+
+  it("keeps Docker config private without accepting its socket as authority", () => {
+    const runRoot = mkdtempSync(join(tmpdir(), "homecook-r2-docker-config-"));
+    chmodSync(runRoot, 0o700);
+    const environment = buildPrivateDockerEnvironment({ runRoot });
+    expect(environment.DOCKER_CONFIG).toBe(join(runRoot, "docker-config"));
+    expect(environment).not.toHaveProperty("HOME");
+    expect(environment).not.toHaveProperty("DOCKER_CONTEXT");
+    expect(environment).not.toHaveProperty("DOCKER_HOST");
   });
 
   it.each([
@@ -99,7 +95,7 @@ describe("R2 trusted local Docker endpoint", () => {
         explicitSocketPath: linkPath,
         homeDir: "/Users/test",
         ambient: {},
-      })).toThrow(/symlink|socket identity/iu);
+      })).toThrow(/symlink|socket identity|arbitrary/iu);
     });
   });
 

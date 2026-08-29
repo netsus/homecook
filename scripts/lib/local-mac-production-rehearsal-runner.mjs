@@ -694,6 +694,9 @@ export function validateRunEvidence(value) {
   if (!Array.isArray(value.canaries) || value.canaries.length === 0) fail("run evidence canaries are missing");
   for (const [index, canary] of value.canaries.entries()) {
     exactKeys(canary, ["canary_id", "exit_code", "normalized_result_digest"], `run evidence canaries[${index}]`);
+    if (canary.exit_code !== 0 || !DIGEST.test(canary.normalized_result_digest ?? "")) {
+      fail("run evidence canary must be an exact successful digest-bound result");
+    }
   }
   const canaryIds = value.canaries.map((entry) => entry.canary_id).sort();
   if (canonicalizeJcs(canaryIds) !== canonicalizeJcs(REQUIRED_CANARY_IDS)) {
@@ -743,6 +746,15 @@ export function validateRunEvidence(value) {
       || !Array.isArray(component.container_ids)
       || component.container_ids.length < 1
     ) fail("run evidence component runtime must be an exact container identity");
+    if (
+      component.release_sha !== value.release_sha
+      || component.release_tree !== value.release_tree
+      || component.build_id !== value.build_id
+      || component.sealed_bundle_digest !== value.sealed_bundle_digest
+      || component.migration_head !== value.migration.migration_head
+      || component.ready !== true
+      || component.exit_code !== null
+    ) fail("run evidence component identity is not bound to the run evidence authority");
     componentContainerIds.push(...component.container_ids);
   }
   if (new Set(componentContainerIds).size !== componentContainerIds.length) {
@@ -766,7 +778,13 @@ export function validateRunEvidence(value) {
     fail("run evidence migration file aggregate differs from ledger entries");
   }
   if (value.fixtures?.production_derived_row_count !== 0) fail("run evidence contains production-derived fixtures");
-  if (value.network?.unexpected_successful_egress_count !== 0) fail("run evidence contains successful external egress");
+  if (
+    !DIGEST.test(value.network?.default_deny_policy_digest ?? "")
+    || !Array.isArray(value.network?.allowed_endpoints)
+    || value.network.allowed_endpoints.length === 0
+    || value.network.allowed_endpoints.some((entry) => typeof entry !== "string" || entry.length === 0)
+    || value.network?.unexpected_successful_egress_count !== 0
+  ) fail("run evidence network evidence is invalid");
   if (!Number.isSafeInteger(value.network?.denied_attempt_count) || value.network.denied_attempt_count < 1) {
     fail("run evidence must contain a measured denied network attempt");
   }
@@ -787,6 +805,9 @@ export function validateRunEvidence(value) {
     || value.production_guard?.production_db_connection_count !== 0
     || value.production_guard?.production_db_write_count !== 0
   ) fail("run evidence production guard is invalid");
+  if (value.production_guard.production_snapshot_pre_digest !== value.production_guard.production_snapshot_post_digest) {
+    fail("run evidence production snapshots differ");
+  }
   exactKeys(value.production_guard.measurement, [
     "schema", "production_db_connection_count", "production_db_write_count",
     "mutation_attempt_count", "forbidden_mount_count", "forbidden_environment_count",
@@ -800,6 +821,9 @@ export function validateRunEvidence(value) {
     || value.production_guard.measurement.production_db_write_count !== value.production_guard.production_db_write_count
     || value.production_guard.measurement.mutation_attempt_count !== value.production_guard.mutation_attempt_count
   ) fail("run evidence production measurement digest/count binding is invalid");
+  if (Object.values(value.threat_controls).some((control) => control !== "pass")) {
+    fail("run evidence threat controls must all pass");
+  }
   const { evidence_digest: evidenceDigest, ...unsigned } = value;
   if (sha256Jcs(unsigned) !== evidenceDigest) fail("run evidence digest mismatch");
   return value;

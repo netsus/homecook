@@ -18,11 +18,13 @@ import {
 } from "../scripts/lib/local-mac-production-rehearsal-runner.mjs";
 import { runLocalMacProductionRehearsalRunnerCli } from "../scripts/local-mac-production-rehearsal-run.mjs";
 import {
+  assertDiscoveredResourcesRemainUnowned,
   buildFullLocalComposeOverride,
   buildFullLocalRehearsalEnvironment,
   validateContainerImageAuthority,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
+import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -556,6 +558,15 @@ describe("release rehearsal R2 orchestration", () => {
 });
 
 describe("release rehearsal R2 cleanup ownership", () => {
+  it("keeps adapter-discovered spoofed resources outside the immutable cleanup ledger", () => {
+    const ledger = createImmutableCreationLedger();
+    ledger.record({ kind: "network", id: "created-network", name: "expected-network" });
+    const attacker = { kind: "network", id: "attacker-network", name: "expected-network" };
+    expect(() => assertDiscoveredResourcesRemainUnowned(ledger, [attacker]))
+      .toThrow(/discovered.*exact successful-create.*ledger/iu);
+    expect(ledger.snapshot()).toEqual([{ kind: "network", id: "created-network", name: "expected-network" }]);
+  });
+
   it("never removes unknown, spoofed-label, or mismatched-id resources", async () => {
     const remove = vi.fn();
     const owned = [
@@ -589,12 +600,19 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
     ["timestamp order", (value: ReturnType<typeof evidenceFixture>) => { value.issued_at = "2026-08-29T00:02:00.000Z"; }],
     ["runtime slot", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.app.component = "worker"; }],
     ["runtime kind", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.kind = "process"; }],
+    ["runtime release binding", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.release_sha = SHA_B; }],
+    ["runtime bundle binding", (value: ReturnType<typeof evidenceFixture>) => { value.runtime.worker.sealed_bundle_digest = DIGEST_B; }],
     ["canary set", (value: ReturnType<typeof evidenceFixture>) => { value.canaries = value.canaries.slice(1); }],
+    ["failed canary", (value: ReturnType<typeof evidenceFixture>) => { value.canaries[0].exit_code = 9; }],
+    ["invalid canary digest", (value: ReturnType<typeof evidenceFixture>) => { value.canaries[0].normalized_result_digest = "not-a-digest"; }],
     ["migration head", (value: ReturnType<typeof evidenceFixture>) => { value.migration.catalog_head = "wrong"; }],
     ["ledger digest", (value: ReturnType<typeof evidenceFixture>) => { value.migration.applied_global_ledger_digest = "0".repeat(64); }],
     ["denied count", (value: ReturnType<typeof evidenceFixture>) => { value.network.denied_attempt_count = 0; }],
+    ["network digest", (value: ReturnType<typeof evidenceFixture>) => { value.network.default_deny_policy_digest = "not-a-digest"; }],
     ["cleanup equality", (value: ReturnType<typeof evidenceFixture>) => { value.cleanup.removed_resource_ids = []; }],
     ["production measurement", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.measurement_digest = "0".repeat(64); }],
+    ["production snapshots differ", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.production_snapshot_post_digest = "0".repeat(64); }],
+    ["threat control", (value: ReturnType<typeof evidenceFixture>) => { value.threat_controls.cleanup_ownership = "fail"; }],
     ["measured production DB access", (value: ReturnType<typeof evidenceFixture>) => {
       value.production_guard.production_db_connection_count = 1;
       value.production_guard.measurement.production_db_connection_count = 1;
