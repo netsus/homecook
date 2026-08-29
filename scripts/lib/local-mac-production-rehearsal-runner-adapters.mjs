@@ -61,6 +61,25 @@ const RESOURCE_KIND_ORDER = { network: 0, volume: 1, container: 2 };
 const RUN_IMAGE_SERVICE_LABEL = "com.homecook.release-rehearsal.image-service";
 const RUN_CREATION_NONCE_LABEL = "com.homecook.release-rehearsal.creation-nonce";
 
+/** Compile read-only `docker compose config --format json` output into a closed R2 plan. */
+export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) fail("resolved Compose config is invalid");
+  const keys = Object.keys(config).sort();
+  if (canonicalizeJcs(keys) !== canonicalizeJcs(["name", "networks", "services", "volumes"])) fail("resolved Compose top-level fields are not closed");
+  if (!project || !ports || !config.services || typeof config.services !== "object") fail("primitive plan authority is incomplete");
+  const names = Object.keys(config.services).sort();
+  if (canonicalizeJcs(names) !== canonicalizeJcs([...SERVICES].sort())) fail("resolved Compose service set is not exact");
+  for (const service of SERVICES) {
+    const value = config.services[service];
+    if (!value || typeof value !== "object" || typeof value.image !== "string" || !value.image.includes("@sha256:")) fail(`resolved Compose image authority is invalid: ${service}`);
+    if (value.build || value.pull_policy && value.pull_policy !== "never") fail(`resolved Compose mutation authority is invalid: ${service}`);
+    if (!Array.isArray(value.networks) || value.networks.length < 1 || !value.restart || !Array.isArray(value.security_opt) || !value.security_opt.includes("no-new-privileges:true")) fail(`resolved Compose runtime contract is invalid: ${service}`);
+  }
+  for (const network of ["auth-edge", "auth-egress", "data-internal"]) if (config.networks?.[network]?.internal !== true) fail(`resolved Compose network is not internal: ${network}`);
+  for (const volume of ["postgres-data", "storage-data"]) if (!config.volumes?.[volume]) fail(`resolved Compose volume is missing: ${volume}`);
+  return Object.freeze({ schema: "homecook.r2-primitive-plan.v1", project, ports: { ...ports }, networks: ["auth-edge", "auth-egress", "data-internal"], volumes: ["postgres-data", "storage-data"], services: SERVICES.map((name) => Object.freeze({ name, ...config.services[name] })) });
+}
+
 function fail(message) {
   throw new Error(`Release rehearsal local adapter rejected: ${message}`);
 }

@@ -19,6 +19,7 @@ import {
 import { runLocalMacProductionRehearsalRunnerCli } from "../scripts/local-mac-production-rehearsal-run.mjs";
 import {
   assertDiscoveredResourcesRemainUnowned,
+  compileClosedPrimitivePlan,
   buildFullLocalComposeOverride,
   buildFullLocalRehearsalEnvironment,
   validateContainerImageAuthority,
@@ -629,6 +630,25 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
 });
 
 describe("release rehearsal R2 public command and schema", () => {
+  it("compiles only the exact resolved seven-service internal primitive plan", () => {
+    const services = Object.fromEntries(["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"].map((name) => [name, {
+      image: `example/${name}@sha256:${"a".repeat(64)}`,
+      networks: ["data-internal"], restart: "unless-stopped", security_opt: ["no-new-privileges:true"],
+    }]));
+    const config = { name: "ignored", services, networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } }, volumes: { "postgres-data": {}, "storage-data": {} } };
+    expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: { app: 1 } }).services).toHaveLength(7);
+    for (const mutate of [
+      (v: typeof config) => { delete v.services.auth; },
+      (v: typeof config) => { v.services.extra = structuredClone(v.services.auth); },
+      (v: typeof config) => { v.services.auth.image = "example/auth:latest"; },
+      (v: typeof config) => { v.networks["auth-edge"].internal = false; },
+      (v: typeof config) => { delete (v.volumes as Partial<typeof v.volumes>)["storage-data"]; },
+      (v: typeof config) => { (v.services.auth as typeof v.services.auth & { build?: string }).build = "."; },
+    ]) {
+      const value = structuredClone(config); mutate(value);
+      expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: { app: 1 } })).toThrow();
+    }
+  });
   it("rejects every post-create container image substitution", () => {
     const authority = {
       reference: `docker.io/library/node@sha256:${"a".repeat(64)}`,
