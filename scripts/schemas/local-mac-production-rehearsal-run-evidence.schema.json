@@ -163,7 +163,7 @@
     },
     "production_guard": {
       "type": "object",
-      "required": ["surface_allowlist_version", "production_snapshot_pre_digest", "production_snapshot_post_digest", "equal", "mutation_attempt_count", "production_db_connection_count", "production_db_write_count", "measurement", "measurement_digest"],
+      "required": ["surface_allowlist_version", "production_snapshot_pre_digest", "production_snapshot_post_digest", "equal", "mutation_attempt_count", "production_db_connection_count", "production_db_write_count", "measurement", "measurement_digest", "independent_observer"],
       "properties": {
         "surface_allowlist_version": { "type": "string", "minLength": 1 },
         "production_snapshot_pre_digest": { "$ref": "#/$defs/digest" },
@@ -173,7 +173,8 @@
         "production_db_connection_count": { "const": 0 },
         "production_db_write_count": { "const": 0 },
         "measurement": { "$ref": "#/$defs/productionMeasurement" },
-        "measurement_digest": { "$ref": "#/$defs/digest" }
+        "measurement_digest": { "$ref": "#/$defs/digest" },
+        "independent_observer": { "$ref": "#/$defs/independentObserver" }
       },
       "additionalProperties": false
     },
@@ -224,6 +225,18 @@
         "successful_egress_count": { "const": 0 },
         "docker_endpoint_identity_digest": { "$ref": "#/$defs/digest" },
         "docker_daemon_identity_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "independentObserver": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema", "source_identity_digest", "started_at", "completed_at", "pre_snapshot_digest", "post_snapshot_digest", "process_binding_digest", "docker_daemon_identity_digest", "observation_digest", "available", "truncated", "registered_subjects"],
+      "properties": {
+        "schema": { "const": "homecook.r2-production-observer.v1" },
+        "source_identity_digest": { "$ref": "#/$defs/digest" },
+        "observation_digest": { "$ref": "#/$defs/digest" },
+        "available": { "const": true }, "truncated": { "const": false },
+        "registered_subjects": { "type": "array", "minItems": 1, "uniqueItems": true }
       }
     },
     "runtime": {
