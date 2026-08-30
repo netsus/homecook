@@ -359,6 +359,18 @@ describe("read-only production inventory", () => {
     expect(() => inventoryModule.readProductionEnvironmentAuthority(aliasPath, { homeDir, rootDir }))
       .toThrow(/authority|symlink|regular|identity/iu);
 
+    const publicPath = join(authorityRoot, "public.env");
+    writeFileSync(publicPath, "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\n", { mode: 0o644 });
+    expect(() => inventoryModule.readProductionEnvironmentAuthority(publicPath, { homeDir, rootDir }))
+      .toThrow(/authority|mode|identity|validation/iu);
+
+    const hardlinkSource = join(authorityRoot, "hardlink-source.env");
+    const hardlinkAlias = join(authorityRoot, "hardlink-alias.env");
+    writeFileSync(hardlinkSource, "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\n", { mode: 0o600 });
+    linkSync(hardlinkSource, hardlinkAlias);
+    expect(() => inventoryModule.readProductionEnvironmentAuthority(hardlinkAlias, { homeDir, rootDir }))
+      .toThrow(/authority|link|identity|validation/iu);
+
     const authorityPath = join(authorityRoot, "authority.env");
     const replacementPath = join(authorityRoot, "replacement.env");
     const retiredPath = join(authorityRoot, "retired.env");
@@ -375,13 +387,14 @@ describe("read-only production inventory", () => {
     })).toThrow(/authority|changed|identity|swap/iu);
   });
 
-  it("limits default Docker inventory to the exact canonical production project", async () => {
+  it("limits explicit-authority Docker inventory to the exact canonical production project", async () => {
     const rootDir = tempDirectory("homecook-inventory-adapter-root-");
     const homeDir = tempDirectory("homecook-inventory-adapter-home-");
-    const configDir = join(rootDir, "infra", "full-local-supabase");
+    const configDir = join(homeDir, ".homecook", "config");
     mkdirSync(configDir, { recursive: true, mode: 0o700 });
+    const productionEnvAuthorityPath = join(configDir, "full-local-production.env");
     writeFileSync(
-      join(configDir, ".env.production.local"),
+      productionEnvAuthorityPath,
       "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\nPOSTGRES_PASSWORD=must-not-leak\n",
       { mode: 0o600 },
     );
@@ -397,6 +410,7 @@ describe("read-only production inventory", () => {
     const adapters = createLocalProductionInventoryAdapters({
       rootDir,
       homeDir,
+      productionEnvAuthorityPath,
       dockerBin: "/usr/local/bin/docker-fixture",
       commandRunner,
     });
@@ -566,6 +580,14 @@ describe("read-only production inventory", () => {
     const recoveredAdapters = createLocalProductionInventoryAdapters({ rootDir, homeDir: recoveredHome });
     await expect(recoveredAdapters.readReleaseArtifacts()).rejects.toThrow(/symlink|target|snapshot/iu);
 
+    const aliasedRootHome = tempDirectory("homecook-target-aliased-snapshot-root-home-");
+    const aliasedRootOutside = tempDirectory("homecook-target-aliased-snapshot-root-outside-");
+    const aliasedReleaseRoot = join(aliasedRootHome, ".homecook", "releases");
+    mkdirSync(aliasedReleaseRoot, { recursive: true, mode: 0o700 });
+    symlinkSync(aliasedRootOutside, join(aliasedReleaseRoot, "execution-snapshots"));
+    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir: aliasedRootHome }).readReleaseArtifacts())
+      .rejects.toThrow(/symlink|ancestor|snapshot|root/iu);
+
     const unsafeHome = tempDirectory("homecook-target-unsafe-home-");
     const unsafeLock = join(unsafeHome, ".homecook", "locks", "production-promotion.lock");
     mkdirSync(unsafeLock, { recursive: true, mode: 0o777 });
@@ -683,11 +705,15 @@ describe("read-only production inventory", () => {
     const configRoot = tempDirectory("homecook-config-parent-root-");
     const configHome = tempDirectory("homecook-config-parent-home-");
     const configOutside = tempDirectory("homecook-config-parent-outside-");
-    mkdirSync(join(configOutside, "full-local-supabase"), { mode: 0o700 });
-    writeFileSync(join(configOutside, "full-local-supabase", ".env.production.local"), "FULL_LOCAL_COMPOSE_PROJECT_NAME=prod\n", { mode: 0o600 });
-    symlinkSync(configOutside, join(configRoot, "infra"));
+    mkdirSync(join(configHome, ".homecook"), { mode: 0o700 });
+    writeFileSync(join(configOutside, "full-local-production.env"), "FULL_LOCAL_COMPOSE_PROJECT_NAME=prod\n", { mode: 0o600 });
+    symlinkSync(configOutside, join(configHome, ".homecook", "config"));
     const configInventory = await collectReadOnlyProductionInventory({
-      adapters: createLocalProductionInventoryAdapters({ rootDir: configRoot, homeDir: configHome }),
+      adapters: createLocalProductionInventoryAdapters({
+        rootDir: configRoot,
+        homeDir: configHome,
+        productionEnvAuthorityPath: join(configHome, ".homecook", "config", "full-local-production.env"),
+      }),
       capturedAt: "2026-08-29T10:00:00.000Z",
       probeIdentity: probeIdentity(),
     });
@@ -929,6 +955,19 @@ describe("mixed-state classifier", () => {
     expect(classification.states).toContain("unknown");
     expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
       .toContain("surface:canonical_full_local_launchd");
+
+    const mismatchedSurfaces = {
+      ...surfaces,
+      launchd: inventory.surfaces.launchd,
+    };
+    const mismatchedUnsigned = {
+      ...inventory,
+      surfaces: mismatchedSurfaces,
+      surface_digest: sha256Jcs(mismatchedSurfaces),
+    };
+    delete (mismatchedUnsigned as Record<string, unknown>).inventory_digest;
+    const mismatched = { ...mismatchedUnsigned, inventory_digest: sha256Jcs(mismatchedUnsigned) };
+    expect(() => createProductionSurfaceSnapshot(mismatched)).toThrow(/complete|required|launchd|surface/iu);
   });
 
   it("requires exact component, descriptor, migration, and prepared identity alignment", async () => {

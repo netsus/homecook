@@ -22,7 +22,7 @@ PRODUCTION DB CONNECTION/WRITE: 0
 TRUST: run evidence is NOT a production receipt
 
 Usage:
-  pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --json
+  pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --production-env-authority <absolute-private-file> --json
 
 The runner consumes sealed candidate bytes only. It does not checkout, rebuild,
 install dependencies, pull/build images, use launchd, issue receipts/attestations,
@@ -30,7 +30,7 @@ unlock production promotion, or diagnose/recover production drift.
 `;
 
 function parseArguments(argv) {
-  const result = { candidateInput: null, json: false, help: false };
+  const result = { candidateInput: null, productionEnvAuthorityPath: null, json: false, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--") continue;
@@ -40,6 +40,13 @@ function parseArguments(argv) {
       const value = argv[index + 1];
       if (!value || value.startsWith("--")) throw new Error("--candidate requires a value.");
       result.candidateInput = value;
+      index += 1;
+      continue;
+    }
+    if (token === "--production-env-authority") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) throw new Error("--production-env-authority requires a value.");
+      result.productionEnvAuthorityPath = value;
       index += 1;
       continue;
     }
@@ -95,10 +102,21 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
   if (!options.candidateInput || !isAbsolute(options.candidateInput)) {
     throw new Error("--candidate must be an absolute completed candidate root or candidate.json.");
   }
+  if (options.productionEnvAuthorityPath !== null && !isAbsolute(options.productionEnvAuthorityPath)) {
+    throw new Error("--production-env-authority must be an absolute private file path.");
+  }
+  const resolvedRunnerIdentity = validateRunnerIdentity(runnerIdentity());
+  if (options.productionEnvAuthorityPath === null) {
+    throw new Error("release:rehearsal:run requires --production-env-authority.");
+  }
   const namespaceRoot = namespaceResolver();
   const runId = runIdFactory();
-  const resolvedRunnerIdentity = validateRunnerIdentity(runnerIdentity());
-  const adapters = await createAdapters({ candidateInput: options.candidateInput, namespaceRoot, runId });
+  const adapters = await createAdapters({
+    candidateInput: options.candidateInput,
+    namespaceRoot,
+    productionEnvAuthorityPath: options.productionEnvAuthorityPath,
+    runId,
+  });
   const abortController = new AbortController();
   const signalHandlers = new Map([
     ["SIGINT", () => abortController.abort("SIGINT")],

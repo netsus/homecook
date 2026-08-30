@@ -269,6 +269,7 @@ expected_running_release_sha: <full SHA or N/A>
 - status command는 현재, 이전, 준비 중, lock holder만 보여 준다.
 - any unexpected release change during preflight aborts the promotion.
 - direct `launchctl` or plist drift is blocker evidence, not a hidden recovery path.
+- historical `com.homecook.full-local.production` LaunchAgent label은 rehearsal inventory의 read-only mixed-state alias일 뿐이다. release-promoter도 이를 rename/load/unload/restart하는 implicit recovery로 사용할 수 없고, actual promotion mutation과 readiness authority는 canonical `com.homecook.full-local-production`이 완전하게 복구·승인된 뒤에만 열린다.
 
 ## FileVault and login boundary
 

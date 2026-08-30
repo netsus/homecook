@@ -88,7 +88,7 @@ production과 같은 Docker project, container name, volume, port 또는 LaunchA
 planned command:
 
 ```text
-pnpm release:rehearsal:inventory -- --json
+pnpm release:rehearsal:inventory -- --production-env-authority <absolute-private-full-local-env> --json
 ```
 
 - production app/full-local/worker identity, pointer/descriptor/lock, Docker resource, port, LaunchAgent, migration marker를 read-only로 수집한다.
@@ -99,6 +99,10 @@ pnpm release:rehearsal:inventory -- --json
 - command result의 `error`, signal, timeout/status null, output overflow와 generic nonzero는 probe failure다. 예외는 정확히 문서화된 resource-absent exit뿐이며 현재는 `lsof`의 `exit 1 + empty stdout/stderr` no-listener만 successful empty evidence로 허용한다.
 - required trusted tool identity set은 exact `docker,git,launchctl,lsof` 4개다. 이름 누락/중복/extra, unsafe owner/mode/realpath 또는 tool probe failure는 promotion-unsafe다.
 - pointer/descriptors/workloads, LaunchAgent plist+print, Docker image/mount/full-label digest, listener, opaque config, migration marker/ledger/catalog 중 required evidence가 없으면 inventory는 수집될 수 있어도 classification은 `unknown`이다.
+- production release root 전체를 recursive content authority로 취급하지 않는다. root 자체는 owner/mode/dev/inode/size/ctime/mtime의 metadata-only identity로 고정하고, exact `current.json`, `previous.json`, canonical lock root의 children, `execution-snapshots`의 known children, LaunchAgent plist처럼 닫힌 authority surface만 각 surface별 entry/depth/byte limit 안에서 읽는다. release root 아래 unrelated legacy build/cache bytes는 authority도 probe failure 원인도 아니다.
+- `current.json`과 `previous.json`의 exact `ENOENT`는 각각 canonical absent sentinel로 기록되는 유효한 관측값이다. 둘의 부재는 promotion-safe가 아니지만 pre/post absent sentinel과 전체 surface digest가 같으면 isolated rehearsal의 production-equality evidence로 사용할 수 있다. 실제 promote는 완전한 canonical descriptor authority 없이는 mutation 전에 계속 fail closed한다.
+- full-local LaunchAgent는 canonical `com.homecook.full-local-production`과 historical read-only alias `com.homecook.full-local.production`만 관측할 수 있다. 둘이 동시에 존재하면 authority ambiguity로 실패한다. legacy alias는 mixed-state classification과 pre/post equality에만 쓰며 rename/load/unload/restart하지 않고, promotion-safe 또는 mutation target이 될 수 없다.
+- Docker production project와 full-local config digest는 clean Git source 안의 untracked env를 탐색하지 않는다. caller가 `--production-env-authority`로 지정한 current-user-owned exact mode `0600`, nlink 1, 최대 1 MiB의 non-symlink private regular file만 읽는다. 그 file은 trusted home 아래이면서 verified clean source 밖에 있어야 하고 ancestor/file identity와 bytes를 pre/post 고정한다. exact `FULL_LOCAL_COMPOSE_PROJECT_NAME` 하나만 project selection에 쓰며 raw path, key, value와 file contents는 output/log/evidence에 남기지 않는다. Docker 호출은 이 project에 대한 read-only list/config-equivalent inspect만 허용한다.
 - inconsistent state는 분류만 하고 자동 복구하지 않는다.
 
 ### R1. candidate build and seal
@@ -106,7 +110,7 @@ pnpm release:rehearsal:inventory -- --json
 planned command:
 
 ```text
-pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha> --json
+pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha> --production-env-authority <absolute-private-full-local-env> --json
 ```
 
 - candidate는 실행 시점 `origin/master`가 가리키는 exact full SHA여야 하고 current head에서 시작된 CI check 전체가 terminal success여야 한다.
@@ -139,7 +143,7 @@ split 2 구현 상태:
 planned command:
 
 ```text
-pnpm release:rehearsal:run -- --candidate <absolute-sealed-candidate-manifest> --json
+pnpm release:rehearsal:run -- --candidate <absolute-sealed-candidate-manifest> --production-env-authority <absolute-private-full-local-env> --json
 ```
 
 - 매 실행은 cryptographically random `run_id`와 create-only private root를 가진다.
@@ -241,7 +245,7 @@ FD-anchored walker는 기존 physical digest grammar의 directory-symlink child 
 
 | surface | evidence |
 | --- | --- |
-| release root와 `current.json`/`previous.json` | 존재 여부, lstat identity, normalized metadata/content digest |
+| release root와 `current.json`/`previous.json` | root metadata-only identity + 두 descriptor의 independent exists/absent sentinel과 bounded file digest |
 | active/recovered promotion locks | ordered path, owner/mode, lstat identity, content digest |
 | app/full-local/worker descriptors와 sealed snapshot roots | ordered identity와 normalized digest |
 | LaunchAgent plist/loaded job | file identity/digest + read-only launchctl print projection |
@@ -254,7 +258,7 @@ FD-anchored walker는 기존 physical digest grammar의 directory-symlink child 
 - production surface를 create, chmod, touch, rename, delete, restart, stop, load, unload, migrate, connect-write 하지 않는다.
 - production evidence를 읽기 전에 expected trusted base부터 모든 ancestor segment를 BigInt `lstat`로 검증한다. existing ancestor는 current-user-owned canonical directory, non-symlink, non-group/world-writable, traversable mode여야 하며 probe 전후 identity가 같아야 한다. dangling symlink도 거부하고, probe 전 absent였던 ancestor가 probe 중 생성되면 race로 실패한다. `~/.homecook`, releases/locks/config roots와 `~/Library/LaunchAgents`의 intermediate symlink는 probe failure다.
 - final artifact target도 `existsSync`가 아니라 BigInt `lstat`로 판정한다. exact `ENOENT`만 canonical absent sentinel을 만들 수 있고, dangling symlink·unsafe type/owner/mode는 probe failure다. absent target은 probe 종료 전에 다시 `lstat`해 absent→created race를 거부한다. 이 규칙은 active canonical lock과 모든 release/snapshot/recovered artifact target에 공통 적용한다.
-- directory/snapshot/lock digest는 immediate child 이름만 사용하지 않는다. contained tree를 bounded recursive traversal하며 file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶는다. path escape, cycle, entry/depth/byte limit 초과는 fail closed한다.
+- release root 자체는 recursive traversal하지 않고 metadata-only identity를 사용한다. known snapshot/lock child처럼 닫힌 authority surface의 directory digest는 immediate child 이름만 사용하지 않고 해당 surface 안에서만 bounded recursive traversal한다. file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶으며 path escape, cycle, surface별 entry/depth/byte limit 초과는 fail closed한다. unrelated release-root cache/build data는 열거나 hash하지 않는다.
 - identity-sensitive `lstat`/`fstat`는 `{ bigint: true }`로 수집하고 decimal string으로 canonicalize한다. Number 변환 뒤의 inode/device/size를 identity 근거로 사용하지 않는다.
 - JSON Number로 남는 count/mode/pid/port/sequence field는 runtime과 schema 모두 `Number.MAX_SAFE_INTEGER` 이하를 강제한다. 더 큰 identity 값은 decimal string만 사용한다.
 - receipt/inventory JSON file은 fatal UTF-8 decoding을 통과하고 canonicalized UTF-8 bytes가 원본 file bytes와 exact equality여야 한다.
@@ -264,7 +268,7 @@ FD-anchored walker는 기존 physical digest grammar의 directory-symlink child 
 
 ## Environment and secret handling
 
-- env source는 canonical resolver가 허용한 exact allowlist의 regular file 또는 approved secret provider만 가능하다.
+- production inventory/candidate/run의 full-local env source는 explicit `--production-env-authority` regular file만 가능하다. clean Git source 안의 `.env.production.local`, ambient env, directory search, LaunchAgent mutation 또는 fallback은 authority가 아니다.
 - file source는 parent부터 `lstat`/`realpath`로 containment를 확인하고 `open(..., O_RDONLY | O_NOFOLLOW)`한 FD에서 snapshot한다.
 - open 전후 device/inode/mode/ctime/mtime/size와 FD `fstat`가 같아야 한다. symlink, hard-link count 이상, group/world writable, race는 거부한다.
 - contents는 argv, inherited environment, log, receipt, manifest, temp filename에 노출하지 않는다.
@@ -400,6 +404,7 @@ classification output은 `promotion_safe: boolean`, finding ID, evidence path di
 - `release_artifacts.kind`는 전체 array에서 unique여야 한다. current authority는 exactly one `current_descriptor`, prepared identity가 있으면 exactly one matching `prepared_descriptor`만 허용한다. duplicate match/mismatch 조합은 ambiguity로 거부한다.
 
 - `mixed_running`, `partial_failed_install`, `orphaned_lock_or_descriptor`, `migration_authority_incomplete`, `unknown`은 모두 `promotion_safe: false`다.
+- current/previous descriptor absence와 exact legacy full-local alias는 valid observed mixed-state evidence지만 canonical promotion completeness가 아니다. classifier는 해당 evidence를 지우거나 probe failure로 바꾸지 않고 `unknown`/관련 recovery finding을 남긴다. isolated rehearsal snapshot equality는 동일한 absence/alias를 비교할 수 있지만 actual promote는 canonical descriptor와 canonical `com.homecook.full-local-production` authority를 요구한다.
 - recovery plan은 가능한 순서, 사전 backup, operator authority, 예상 mutation, rollback/forward-fix 경계를 설명할 뿐 실행하지 않는다.
 - 자동 복구, stale lock 삭제, descriptor 생성, volume/container 삭제, LaunchAgent restart/uninstall, DB migration, rollback은 금지한다.
 - 실제 recovery는 별도 사용자 승인과 `release-promoter` 또는 더 좁은 recovery authority를 가진 새 Codex task에서 수행한다.

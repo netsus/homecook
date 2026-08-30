@@ -1,5 +1,9 @@
 import { parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
-import { validateProductionInventory } from "./local-mac-production-rehearsal-inventory.mjs";
+import {
+  CANONICAL_FULL_LOCAL_LAUNCHD_LABEL,
+  LEGACY_FULL_LOCAL_LAUNCHD_LABEL,
+  validateProductionInventory,
+} from "./local-mac-production-rehearsal-inventory.mjs";
 
 export const CLASSIFICATION_SCHEMA = "homecook.local-mac-production-rehearsal-classification.v1";
 export const MIXED_STATE_VOCABULARY = Object.freeze([
@@ -104,12 +108,16 @@ export function classifyProductionInventory(inventory, {
   const toolNames = inventory.tool_identities.map((tool) => tool.name).sort();
   const toolsComplete = JSON.stringify(toolNames) === JSON.stringify(["docker", "git", "launchctl", "lsof"]);
   const launchdLabels = new Set(launchd.map((job) => job.label));
-  const launchdComplete = launchd.length === 3 && [
+  const fullLocalLaunchdCount = [CANONICAL_FULL_LOCAL_LAUNCHD_LABEL, LEGACY_FULL_LOCAL_LAUNCHD_LABEL]
+    .filter((label) => launchdLabels.has(label)).length;
+  const launchdObservedComplete = launchd.length === 3 && [
     "com.homecook.production",
-    "com.homecook.full-local-production",
     "com.homecook.youtube-extraction-worker",
   ].every((label) => launchdLabels.has(label))
+    && fullLocalLaunchdCount === 1
     && launchd.every((job) => job.loaded && job.state === "running" && Number.isSafeInteger(job.pid));
+  const canonicalLaunchdComplete = launchdObservedComplete
+    && launchdLabels.has(CANONICAL_FULL_LOCAL_LAUNCHD_LABEL);
   const dockerComplete = docker.containers.length > 0 && docker.networks.length > 0 && docker.volumes.length > 0
     && docker.containers.every((container) => container.state === "running");
   const portsComplete = portListeners.some((listener) => listener.port === 3100 && Number.isSafeInteger(listener.pid));
@@ -118,15 +126,15 @@ export function classifyProductionInventory(inventory, {
     && configIdentities.has("production-env") && configIdentities.has("full-local-config")
     && opaqueConfigs.every((config) => config.exists);
   const plistKinds = new Set(artifacts.filter((artifact) => artifact.exists).map((artifact) => artifact.kind));
-  const plistComplete = [
+  const canonicalPlistComplete = [
     "launch_agent_plist:com.homecook.production",
-    "launch_agent_plist:com.homecook.full-local-production",
+    `launch_agent_plist:${CANONICAL_FULL_LOCAL_LAUNCHD_LABEL}`,
     "launch_agent_plist:com.homecook.youtube-extraction-worker",
   ].every((kind) => plistKinds.has(kind));
   const descriptorsAligned = Boolean(currentDescriptorEvidence)
     && workloads.every((workload) => workload.descriptor_digest === currentDescriptorEvidence.sha256);
-  const requiredSurfacesComplete = probesComplete && toolsComplete && launchdComplete && dockerComplete && portsComplete
-    && configsComplete && plistComplete && descriptorsAligned;
+  const requiredSurfacesComplete = probesComplete && toolsComplete && canonicalLaunchdComplete && dockerComplete && portsComplete
+    && configsComplete && canonicalPlistComplete && descriptorsAligned;
   const preparedDescriptor = artifacts.find((artifact) => artifact.kind === "prepared_descriptor" && artifact.exists);
   const preparedEvidenceComplete = preparedIdentity === null
     ? preparedDescriptor === undefined
@@ -161,7 +169,8 @@ export function classifyProductionInventory(inventory, {
       ? [
           ...expectedComponents.filter((component) => !componentMap.has(component)),
           ...requiredProbeNames.filter((name) => inventory.probe_statuses[name].status !== "success").map((name) => `probe:${name}`),
-          ...(!launchdComplete ? ["surface:launchd"] : []),
+          ...(!launchdObservedComplete ? ["surface:launchd"] : []),
+          ...(!canonicalLaunchdComplete || !canonicalPlistComplete ? ["surface:canonical_full_local_launchd"] : []),
           ...(!dockerComplete ? ["surface:docker"] : []),
           ...(!portsComplete ? ["surface:port_listeners"] : []),
           ...(!configsComplete ? ["surface:opaque_configs"] : []),

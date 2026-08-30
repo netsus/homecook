@@ -2848,6 +2848,7 @@ export function createReleaseRehearsalCandidateAdapters({
   environmentSourcePath = join(namespaceRoot, "build-env.json"),
   packageStorePath = join(homeDir, "Library", "pnpm", "store", "v10"),
   approvedMigrationMarkerPath = join(namespaceRoot, "approved-production-migration-marker.json"),
+  productionEnvAuthorityPath = null,
   builderInputDigest = null,
   builderInputEntries = null,
   toolchainLockPath = resolve(
@@ -2973,6 +2974,7 @@ export function createReleaseRehearsalCandidateAdapters({
         homeDir: normalizedHome,
         rootDir: sourceRoot,
         approvedMigrationMarkerPath,
+        productionEnvAuthorityPath,
         commandRunner: runCommand,
         dockerBin: tools.dockerPath,
         trustedToolPaths: {

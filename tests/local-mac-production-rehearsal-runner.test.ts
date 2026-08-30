@@ -1153,6 +1153,11 @@ describe("release rehearsal R2 public command and schema", () => {
       productionEnvAuthorityPath: join(root, "full-local-production.env"),
     }));
     expect(JSON.parse(output.value)).toEqual({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
+    const missingAuthorityNamespace = vi.fn(() => root);
+    await expect(runLocalMacProductionRehearsalRunnerCli([
+      "--candidate", join(root, "candidate"), "--json",
+    ], { run, namespaceResolver: missingAuthorityNamespace })).rejects.toThrow(/production-env-authority|required/iu);
+    expect(missingAuthorityNamespace).not.toHaveBeenCalled();
     await expect(runLocalMacProductionRehearsalRunnerCli([
       "--candidate", join(root, "candidate"),
     ], { run })).rejects.toThrow(/--json/iu);

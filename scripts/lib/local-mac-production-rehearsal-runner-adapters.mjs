@@ -1180,6 +1180,7 @@ async function collectProductionSnapshot(state, signal) {
     homeDir: state.homeDir,
     rootDir: state.rootDir,
     approvedMigrationMarkerPath: markerPath,
+    productionEnvAuthorityPath: state.productionEnvAuthorityPath,
     dockerBin: state.dockerBin,
     commandRunner,
   });
@@ -1208,7 +1209,7 @@ async function collectProductionSnapshot(state, signal) {
 }
 
 /**
- * @param {{candidateInput:string, namespaceRoot:string, runId:string, homeDir?:string, rootDir?:string, dockerBin?:string|null, dockerSocketPath?:string|null, runCommand?:Function, productionSnapshotReader?:Function|null, daemonSnapshotReader?:Function|null, dockerEndpointResolver?:Function, trustedToolResolver?:Record<string, any>|null, platform?:string, clock?:Function, sleep?:Function}} options
+ * @param {{candidateInput:string, namespaceRoot:string, runId:string, homeDir?:string, rootDir?:string, productionEnvAuthorityPath?:string|null, dockerBin?:string|null, dockerSocketPath?:string|null, runCommand?:Function, productionSnapshotReader?:Function|null, daemonSnapshotReader?:Function|null, dockerEndpointResolver?:Function, trustedToolResolver?:Record<string, any>|null, platform?:string, clock?:Function, sleep?:Function}} options
  */
 export function createLocalReleaseRehearsalRunnerAdapters({
   candidateInput,
@@ -1216,6 +1217,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
   runId,
   homeDir = process.env.HOME ?? "",
   rootDir = process.cwd(),
+  productionEnvAuthorityPath = null,
   dockerBin = null,
   dockerSocketPath = null,
   runCommand = runAbortableCommand,
@@ -1245,6 +1247,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
     runId,
     homeDir: resolvedHome,
     rootDir: resolvedRoot,
+    productionEnvAuthorityPath,
     runRoot: join(resolve(namespaceRoot), runId),
     runtimeRoot: join(resolve(namespaceRoot), runId, "runtime-state"),
     dockerBin: dockerBin ?? resolveTrustedDockerBinary(),
