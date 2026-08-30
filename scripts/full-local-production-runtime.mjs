@@ -2453,7 +2453,16 @@ export async function resumeCurrentRelease(
   const canonicalConfigPath = getFullLocalResumeConfigPath(homeDir);
   const requestedConfigPath = resolve(optionValue(args, "--config"));
   if (requestedConfigPath !== canonicalConfigPath) {
-    fail("resume-current requires the fixed canonical full-local config path.");
+    const frozenRoot = resolve(homeDir, ".homecook", "rehearsal", "promotion-scratch");
+    const frozenRelative = relative(frozenRoot, requestedConfigPath);
+    const parts = frozenRelative.split(sep);
+    if (frozenRelative.startsWith("..") || isAbsolute(frozenRelative)
+      || parts.length !== 3
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(parts[0])
+      || parts[1] !== "runtime-inputs"
+      || parts[2] !== "full-local-production.env") {
+      fail("resume-current requires the canonical or exact frozen full-local config path.");
+    }
   }
   assertResumeCurrentSafeAncestors(homeDir, requestedConfigPath, "Full-local resume config");
   assertResumeCurrentSafeFile(requestedConfigPath, {

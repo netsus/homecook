@@ -887,7 +887,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       "--current-descriptor",
       state.currentDescriptorPath,
       "--config",
-      fullConfig,
+      expect.stringMatching(/\.homecook\/rehearsal\/promotion-scratch\/[0-9a-f-]+\/runtime-inputs\/full-local-production\.env$/u),
     ]);
     expect(programArguments.join(" ")).not.toMatch(/lock-token|release-manifest/iu);
     expect(workingDirectory).toBe(currentDescriptor.execution_app_root);

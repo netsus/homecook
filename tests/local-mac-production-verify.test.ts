@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -29,7 +30,7 @@ import {
 const temporaryDirectories: string[] = [];
 
 function temp(prefix: string) {
-  const path = mkdtempSync(join(tmpdir(), prefix));
+  const path = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   temporaryDirectories.push(path);
   return path;
 }

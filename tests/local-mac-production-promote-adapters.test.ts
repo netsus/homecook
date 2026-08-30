@@ -207,6 +207,38 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
   return { calls, dependencies };
 }
 
+function createFrozenRuntimeInputsFixture(fullLocalConfigBytes: Buffer | string = "FULL_LOCAL_CONFIG=fixture\n") {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "homecook-adapter-frozen-inputs-")));
+  temporaryDirectories.push(root);
+  const scratchRoot = join(root, "scratch");
+  const secretRoot = join(root, "secrets");
+  mkdirSync(scratchRoot, { mode: 0o700 });
+  mkdirSync(secretRoot, { mode: 0o700 });
+  const fullLocalConfigPath = join(root, "full-local.env");
+  const workerConfigPath = join(secretRoot, "worker.env");
+  const workerCredentialPath = join(secretRoot, "credential.json");
+  const tokenPath = join(secretRoot, "worker.jwt");
+  writeFileSync(fullLocalConfigPath, fullLocalConfigBytes, { mode: 0o600 });
+  writeFileSync(workerConfigPath, `TOKEN_FILE=${tokenPath}\n`, { mode: 0o600 });
+  writeFileSync(workerCredentialPath, JSON.stringify({ token_file: tokenPath }), { mode: 0o600 });
+  writeFileSync(tokenPath, "token\n", { mode: 0o600 });
+  const digest = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  return promoteAdapters.freezeLocalMacProductionRuntimeInputs({
+    options: { fullLocalConfigPath },
+    preflight: {
+      full_local_config_sha256: digest(fullLocalConfigPath),
+      worker: {
+        configPath: workerConfigPath,
+        credentialPath: workerCredentialPath,
+        secretRoot,
+        configSha256: digest(workerConfigPath),
+        credentialSha256: digest(workerCredentialPath),
+      },
+    },
+    scratchRoot,
+  });
+}
+
 function createContext(overrides: Record<string, unknown> = {}) {
   const executionSnapshot = { schema: "fixture-snapshot", appRoot: "/sealed/app" };
   return {
@@ -228,6 +260,7 @@ function createContext(overrides: Record<string, unknown> = {}) {
     homeDir: "/Users/tester",
     manifest: { ...RELEASE_IDENTITY },
     mutationAuthority: { required: true },
+    frozenRuntimeInputs: createFrozenRuntimeInputsFixture(),
     executionSnapshot,
     verifyExecutionSnapshot: vi.fn(() => executionSnapshot),
     releaseDir: "/Users/tester/.homecook/releases/prod-20260825.1",
@@ -414,6 +447,60 @@ describe("local Mac production promote adapters", () => {
     expect(preflight.worker.preflight.ready).toBe(true);
     expect(preflight.worker.policyPath).toBe(realpathSync(fixture.policyPath));
     expect(readCurrentRuntimeBundle).toHaveBeenCalledOnce();
+  });
+
+  it("freezes every external runtime config and secret input before installation", async () => {
+    const fixture = createDefaultWorkerPreflightFixture();
+    const adapters = createLocalMacProductionPromoteAdapters(fixture.options, {
+      validateMutationTargets: vi.fn(),
+      readCurrentRuntimeBundle: vi.fn(async () => ({
+        stable_key: "current-runtime-stable",
+        app: { ...CURRENT_IDENTITY, ready: true },
+        full_local: { ...CURRENT_IDENTITY, ready: true },
+        youtube_worker: { ...CURRENT_IDENTITY, ready: true },
+      })),
+      i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })),
+    });
+    const preflight = await adapters.preflightBundle(fixture.context);
+    const scratchRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-frozen-runtime-inputs-")));
+    temporaryDirectories.push(scratchRoot);
+
+    expect(adapters).toHaveProperty("freezeRuntimeInputs", expect.any(Function));
+    expect(adapters).toHaveProperty("verifyFrozenRuntimeInputs", expect.any(Function));
+    const frozen = await adapters.freezeRuntimeInputs({ scratchRoot, preflight });
+    expect(adapters.verifyFrozenRuntimeInputs(frozen)).toBe(frozen);
+    expect(Object.values(frozen.paths).every((path) => realpathSync(String(path)).startsWith(`${scratchRoot}/`))).toBe(true);
+
+    const originalConfig = readFileSync(String(fixture.options.workerConfigPath));
+    const originalCredential = readFileSync(String(fixture.options.workerCredentialPath));
+    writeFileSync(String(fixture.options.workerConfigPath), "HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=/private/substituted.env\n", { mode: 0o600 });
+    writeFileSync(String(fixture.options.workerCredentialPath), JSON.stringify({ substituted: true }), { mode: 0o600 });
+    expect(() => adapters.verifyFrozenRuntimeInputs(frozen)).toThrow(/source|identity|changed/iu);
+    writeFileSync(String(fixture.options.workerConfigPath), originalConfig, { mode: 0o600 });
+    writeFileSync(String(fixture.options.workerCredentialPath), originalCredential, { mode: 0o600 });
+    expect(() => adapters.verifyFrozenRuntimeInputs(frozen)).toThrow(/source|identity|changed/iu);
+
+    const refreezeRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-refrozen-runtime-inputs-")));
+    temporaryDirectories.push(refreezeRoot);
+    const refrozen = await adapters.freezeRuntimeInputs({ scratchRoot: refreezeRoot, preflight });
+
+    const created = createDependencies();
+    const installAdapters = createLocalMacProductionPromoteAdapters(fixture.options, created.dependencies);
+    await installAdapters.installBundle({
+      ...createContext({ frozenRuntimeInputs: refrozen }),
+      preflight,
+    });
+    expect(created.dependencies.installFullLocal).toHaveBeenCalledWith(expect.objectContaining({
+      configPath: refrozen.paths.fullLocalConfigPath,
+    }));
+    expect(created.dependencies.installWorker).toHaveBeenCalledWith(expect.objectContaining({
+      configPath: refrozen.paths.workerConfigPath,
+      credentialPath: refrozen.paths.workerCredentialPath,
+      secretRoot: refrozen.paths.workerSecretRoot,
+    }));
+    expect(installAdapters.cleanupFrozenRuntimeInputs(refrozen)).toMatchObject({ cleaned: true });
+    expect(existsSync(refrozen.root)).toBe(false);
+    expect(adapters.cleanupFrozenRuntimeInputs(frozen)).toMatchObject({ cleaned: true });
   });
 
   it("installs the worker from its separately attested artifact root", async () => {
@@ -940,6 +1027,7 @@ process.exit(42);
     });
     const adapters = createLocalMacProductionPromoteAdapters(options, dependencies);
     const context = createContext({
+      frozenRuntimeInputs: createFrozenRuntimeInputsFixture(readFileSync(configPath)),
       homeDir,
       lockToken,
       manifest: {

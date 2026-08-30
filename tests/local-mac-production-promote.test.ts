@@ -8,6 +8,7 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -35,7 +36,7 @@ const FIRST_CANONICAL_ADOPTION_PREDECESSOR_SHA =
   "3bdd814da8f9849805185d1b3be5a6ee703133a0";
 
 function createTempDirectory(prefix: string) {
-  const directory = mkdtempSync(join(tmpdir(), prefix));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   temporaryDirectories.push(directory);
   return directory;
 }
@@ -201,6 +202,21 @@ function createFixture() {
 }
 
 function promoteOptions(fixture: ReturnType<typeof createFixture>) {
+  const frozenRuntimeInputs = {
+    schema: "homecook.local-mac-production-frozen-runtime-inputs.v1",
+    authority_digest: "6".repeat(64),
+    paths: {
+      fullLocalConfigPath: "/private/frozen/full-local.env",
+      workerConfigPath: "/private/frozen/worker.env",
+      workerCredentialPath: "/private/frozen/credential.json",
+      workerSecretRoot: "/private/frozen/secrets",
+    },
+    digests: {
+      fullLocalConfigSha256: "1".repeat(64),
+      workerConfigSha256: "5".repeat(64),
+      workerCredentialSha256: "4".repeat(64),
+    },
+  };
   return {
     homeDir: fixture.homeDir,
     manifestPath: fixture.manifestPath,
@@ -234,8 +250,14 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
     expectedRehearsalAuthorityDigest: "9".repeat(64),
     installBundle: fixture.installBundle,
     finalWorkerProbe: fixture.finalWorkerProbe,
+    cleanupFrozenRuntimeInputs: vi.fn(() => ({ cleaned: true })),
+    freezeRuntimeInputs: vi.fn(async ({ scratchRoot }: { scratchRoot: string }) => {
+      mkdirSync(join(scratchRoot, "runtime-inputs"), { mode: 0o700 });
+      return frozenRuntimeInputs;
+    }),
     preflightBundle: fixture.preflightBundle,
     readinessProbe: fixture.readinessProbe,
+    verifyFrozenRuntimeInputs: vi.fn((value) => value),
     lockToken: "88888888-8888-4888-8888-888888888888" as const,
     now: new Date("2026-08-25T11:00:00.000Z"),
   };
@@ -386,6 +408,95 @@ describe("local Mac production promote", () => {
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
     const scratchParent = join(dirname(fixture.paths.releaseRoot), "rehearsal", "promotion-scratch");
     expect(existsSync(scratchParent) ? readdirSync(scratchParent) : []).toEqual([]);
+  });
+
+  it("rejects a symlinked scratch attempt root before writing external bytes or acquiring the production lock", async () => {
+    const fixture = createFixture();
+    const external = createTempDirectory("homecook-scratch-symlink-external-");
+    const mkdir = vi.fn((path: Parameters<typeof mkdirSync>[0], options?: Parameters<typeof mkdirSync>[1]) => {
+      const value = String(path);
+      if (value.includes("/rehearsal/promotion-scratch/") && !value.endsWith("/promotion-scratch")) {
+        symlinkSync(external, value);
+        return undefined;
+      }
+      return mkdirSync(path, options);
+    }) as typeof mkdirSync;
+
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      mkdir,
+    })).rejects.toThrow(/scratch|symlink|contain|ancestor|identity/iu);
+    expect(readdirSync(external)).toEqual([]);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(0);
+  });
+
+  it("never cleans through a replaced scratch attempt root", async () => {
+    const fixture = createFixture();
+    const external = createTempDirectory("homecook-scratch-cleanup-external-");
+    let replaced = false;
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      executionCopyHook: ({ destination, phase }: { destination: string; phase: string }) => {
+        if (replaced || phase !== "after_file_copy") return;
+        const marker = "/execution-snapshots/";
+        const index = destination.indexOf(marker);
+        if (index < 0) return;
+        replaced = true;
+        const scratchRoot = destination.slice(0, index);
+        renameSync(scratchRoot, `${scratchRoot}.replaced`);
+        symlinkSync(external, scratchRoot);
+      },
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/scratch|identity|reservation|symlink/iu);
+    expect(readdirSync(external)).toEqual([]);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(0);
+  });
+
+  it("revalidates fresh expiry and inventory authority after scratch sealing and before lock creation", async () => {
+    const fixture = createFixture();
+    const clock = vi.fn()
+      .mockReturnValueOnce(new Date("2026-08-25T10:50:00.000Z"))
+      .mockReturnValueOnce(new Date("2026-08-25T10:51:00.000Z"))
+      .mockReturnValueOnce(new Date("2026-08-25T11:01:00.000Z"));
+    const baseAuthority = promoteOptions(fixture).verifyRehearsalAuthority();
+    const verifyRehearsalAuthority = vi.fn(({ now, phase }: { now: Date; phase: string }) => {
+      if (phase === "pre-lock" && now >= new Date("2026-08-25T11:00:00.000Z")) {
+        throw new Error("frozen scratch receipt expired and inventory became stale before lock");
+      }
+      return baseAuthority;
+    });
+
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      clock,
+      verifyRehearsalAuthority,
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/expired|inventory|stale|pre-lock/iu);
+    expect(clock).toHaveBeenCalledTimes(3);
+    expect(verifyRehearsalAuthority).toHaveBeenLastCalledWith(expect.objectContaining({ phase: "pre-lock" }));
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(0);
+  });
+
+  it("rejects external config or credential source substitution at the final pre-lock hook with mutation zero", async () => {
+    const fixture = createFixture();
+    let sourceChecks = 0;
+    const verifyFrozenRuntimeInputs = vi.fn((value, options: { checkSources?: boolean } = {}) => {
+      if (options.checkSources && ++sourceChecks === 2) {
+        throw new Error("external runtime input source identity changed after freeze");
+      }
+      return value;
+    });
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      verifyFrozenRuntimeInputs,
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/external runtime input|source identity|freeze/iu);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(0);
+    expect(fixture.readinessProbe).toHaveBeenCalledTimes(0);
   });
 
   it("rechecks a fresh clock at final-pre-mutation and expires before lock or install", async () => {

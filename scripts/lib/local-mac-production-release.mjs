@@ -588,6 +588,13 @@ export function createLocalMacProductionExecutionSnapshot({
     throw new Error("Pre-lock scratch authority digest is invalid.");
   }
   if (frozenScratch) verifyLocalMacProductionExecutionSnapshot(frozenScratch);
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid)) throw new Error("Execution snapshot current user identity is unavailable.");
+  const canonicalReleaseRoot = snapshotPrivateDirectoryIdentity(
+    releaseRoot,
+    "Execution snapshot release root",
+    currentUid,
+  ).realpath;
   const appSourceRoot = frozenScratch?.appRoot ?? sealedCandidate?.appRoot ?? preparedReleaseDir;
   const workerSourceRoot = frozenScratch?.workerRoot ?? sealedCandidate?.workerRoot ?? worker.artifactRoot;
   const fullLocalSourceRoot = frozenScratch?.fullLocalRoot ?? sealedCandidate?.fullLocalRoot ?? null;
@@ -683,17 +690,16 @@ export function createLocalMacProductionExecutionSnapshot({
       prelock_scratch_authority_digest: prelockScratchAuthorityDigest,
     } : {}),
   })));
-  const executionRoot = join(releaseRoot, "execution-snapshots");
+  const executionRoot = join(canonicalReleaseRoot, "execution-snapshots");
   if (!existsSync(executionRoot)) {
     mkdirSync(executionRoot, { mode: 0o700 });
   } else {
     const executionRootStat = lstatSync(executionRoot);
-    const currentUid = process.getuid?.();
     if (
       executionRootStat.isSymbolicLink()
       || !executionRootStat.isDirectory()
       || modeBits(executionRootStat.mode) !== 0o700
-      || (Number.isInteger(currentUid) && executionRootStat.uid !== currentUid)
+      || executionRootStat.uid !== currentUid
     ) {
       throw new Error("Execution snapshot root owner, mode, or symlink state is unsafe.");
     }
@@ -1095,6 +1101,75 @@ function ensureSafePrivateDirectory(path, parentPath, label, { currentUid, mkdir
   assertPathInside(realParentPath, realPath, label);
   assertPrivateDirectory(path, label, currentUid);
   return realPath;
+}
+
+function snapshotPrivateDirectoryIdentity(path, label, currentUid) {
+  const lexicalPath = resolve(path);
+  const stat = lstatSync(lexicalPath);
+  if (stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== currentUid
+    || modeBits(stat.mode) !== 0o700 || stat.nlink < 2) {
+    throw new Error(`${label} owner, mode, link count, or type is unsafe.`);
+  }
+  const canonicalPath = realpathSync(lexicalPath);
+  if (canonicalPath !== lexicalPath) throw new Error(`${label} realpath is not the exact lexical directory.`);
+  let descriptor;
+  try {
+    descriptor = openSync(lexicalPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const opened = fstatSync(descriptor);
+    if (!opened.isDirectory() || opened.dev !== stat.dev || opened.ino !== stat.ino
+      || opened.uid !== stat.uid || modeBits(opened.mode) !== modeBits(stat.mode)
+      || opened.nlink !== stat.nlink) throw new Error(`${label} descriptor identity drifted.`);
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+  return Object.freeze({ path: lexicalPath, realpath: canonicalPath, dev: stat.dev, ino: stat.ino, uid: stat.uid, mode: modeBits(stat.mode), nlink: stat.nlink });
+}
+
+function assertPrivateDirectoryIdentity(snapshot, label, currentUid) {
+  const current = snapshotPrivateDirectoryIdentity(snapshot.path, label, currentUid);
+  if (current.realpath !== snapshot.realpath || current.dev !== snapshot.dev || current.ino !== snapshot.ino
+    || current.uid !== snapshot.uid || current.mode !== snapshot.mode || current.nlink !== snapshot.nlink) {
+    throw new Error(`${label} identity changed after reservation.`);
+  }
+  return current;
+}
+
+function reservePrivatePromotionScratch({ ancestorPaths, currentUid, mkdir, parentPath }) {
+  const ancestorBefore = ancestorPaths.map((path, index) => snapshotPrivateDirectoryIdentity(path, `Promotion scratch ancestor ${index}`, currentUid));
+  const scratchRoot = join(parentPath, randomUUID());
+  if (existsSync(scratchRoot)) throw new Error("Pre-lock promotion scratch identity already exists; reuse is forbidden.");
+  mkdir(scratchRoot, { mode: 0o700 });
+  const rootIdentity = snapshotPrivateDirectoryIdentity(scratchRoot, "Pre-lock promotion scratch attempt", currentUid);
+  assertPathInside(ancestorBefore.at(-1).realpath, rootIdentity.realpath, "Pre-lock promotion scratch attempt");
+  const ancestorIdentities = ancestorPaths.map((path, index) => snapshotPrivateDirectoryIdentity(path, `Promotion scratch ancestor ${index}`, currentUid));
+  for (const [index, before] of ancestorBefore.entries()) {
+    const after = ancestorIdentities[index];
+    const expectedNlink = index === ancestorBefore.length - 1 ? before.nlink + 1 : before.nlink;
+    if (after.realpath !== before.realpath || after.dev !== before.dev || after.ino !== before.ino
+      || after.uid !== before.uid || after.mode !== before.mode || after.nlink !== expectedNlink) {
+      throw new Error(`Promotion scratch ancestor ${index} changed during create-only reservation.`);
+    }
+  }
+  return Object.freeze({ ancestorIdentities: Object.freeze(ancestorIdentities), rootIdentity });
+}
+
+function assertPrivatePromotionScratchReservation(reservation, currentUid, { materialized = false, partial = false, runtimeInputs = false } = {}) {
+  for (const [index, identity] of reservation.ancestorIdentities.entries()) assertPrivateDirectoryIdentity(identity, `Promotion scratch ancestor ${index}`, currentUid);
+  const current = snapshotPrivateDirectoryIdentity(reservation.rootIdentity.path, "Pre-lock promotion scratch attempt", currentUid);
+  const allowedNlinks = partial
+    ? [reservation.rootIdentity.nlink, reservation.rootIdentity.nlink + 1, reservation.rootIdentity.nlink + 2]
+    : [reservation.rootIdentity.nlink + (materialized ? 1 : 0) + (runtimeInputs ? 1 : 0)];
+  if (current.realpath !== reservation.rootIdentity.realpath || current.dev !== reservation.rootIdentity.dev
+    || current.ino !== reservation.rootIdentity.ino || current.uid !== reservation.rootIdentity.uid
+    || current.mode !== reservation.rootIdentity.mode || !allowedNlinks.includes(current.nlink)) {
+    throw new Error("Pre-lock promotion scratch attempt identity changed after reservation.");
+  }
+  return current;
+}
+
+function removeReservedPrivateScratchTree(reservation, currentUid) {
+  assertPrivatePromotionScratchReservation(reservation, currentUid, { partial: true });
+  removePrivateScratchTree(reservation.rootIdentity.path);
 }
 
 function reserveReleaseDestination({ destinationPath, currentUid, mkdir }) {
@@ -2695,6 +2770,7 @@ export async function promoteLocalMacProductionRelease({
   executionCopyHook = (input) => void input,
   expectedRehearsalAuthorityDigest,
   finalWorkerProbe,
+  freezeRuntimeInputs,
   getCurrentUid = () => process.getuid?.(),
   homeDir = process.env.HOME ?? "",
   installBundle,
@@ -2707,6 +2783,7 @@ export async function promoteLocalMacProductionRelease({
   readinessProbe,
   rootDir = process.cwd(),
   verifyAttestation,
+  verifyFrozenRuntimeInputs,
   verifyRehearsalAuthority,
   writeDescriptorAtomically = writeDescriptorFileAtomically,
 } = {}) {
@@ -2727,6 +2804,9 @@ export async function promoteLocalMacProductionRelease({
   }
   if (typeof finalWorkerProbe !== "function") {
     throw new Error("Final production worker probe is not configured.");
+  }
+  if (typeof freezeRuntimeInputs !== "function" || typeof verifyFrozenRuntimeInputs !== "function") {
+    throw new Error("Pre-lock frozen runtime input authority is not configured.");
   }
 
   const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
@@ -2865,13 +2945,16 @@ export async function promoteLocalMacProductionRelease({
     "Non-production promotion scratch root",
     { currentUid, mkdir },
   );
-  const scratchReleaseRoot = join(promotionScratchRoot, randomUUID());
-  if (existsSync(scratchReleaseRoot)) {
-    throw new Error("Pre-lock promotion scratch identity already exists; reuse is forbidden.");
-  }
-  mkdir(scratchReleaseRoot, { mode: 0o700 });
+  const scratchReservation = reservePrivatePromotionScratch({
+    ancestorPaths: [homecookRoot, rehearsalRoot, promotionScratchRoot],
+    currentUid,
+    mkdir,
+    parentPath: promotionScratchRoot,
+  });
+  const scratchReleaseRoot = scratchReservation.rootIdentity.path;
   let frozenScratch;
   try {
+    assertPrivatePromotionScratchReservation(scratchReservation, currentUid);
     frozenScratch = createLocalMacProductionExecutionSnapshot({
       copyEntryHook: executionCopyHook,
       manifest,
@@ -2881,14 +2964,36 @@ export async function promoteLocalMacProductionRelease({
       worker: initialRuntimePreflight.worker,
     });
     verifyLocalMacProductionExecutionSnapshot(frozenScratch);
+    assertPrivatePromotionScratchReservation(scratchReservation, currentUid, { materialized: true });
   } catch (error) {
-    removePrivateScratchTree(scratchReleaseRoot);
+    removeReservedPrivateScratchTree(scratchReservation, currentUid);
     throw error;
+  }
+  const frozenRuntimeInputs = await freezeRuntimeInputs({
+    preflight: initialRuntimePreflight,
+    scratchRoot: scratchReleaseRoot,
+  });
+  if (!frozenRuntimeInputs || !DIGEST_PATTERN.test(frozenRuntimeInputs.authority_digest ?? "")) {
+    throw new Error("Frozen runtime input authority is invalid.");
+  }
+  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: true });
+  const preLockNow = readFreshAuthorityNow("pre-lock");
+  const preLockRehearsalAuthority = await verifyRehearsalAuthority({
+    frozenCandidateAuthority: sealedCandidate,
+    manifest,
+    now: preLockNow,
+    phase: "pre-lock",
+  });
+  if (!preLockRehearsalAuthority || preLockRehearsalAuthority.verified !== true
+    || preLockRehearsalAuthority.authority_digest !== expectedRehearsalAuthorityDigest
+    || preLockRehearsalAuthority.authority_digest !== finalRehearsalAuthority.authority_digest) {
+    throw new Error("Frozen scratch rehearsal authority drifted before production lock creation.");
   }
   const prelockScratchAuthorityDigest = sha256Bytes(Buffer.from(JSON.stringify({
     pre_adapter_authority_digest: expectedRehearsalAuthorityDigest,
     initial_authority_digest: initialRehearsalAuthority.authority_digest,
     final_authority_digest: finalRehearsalAuthority.authority_digest,
+    pre_lock_authority_digest: preLockRehearsalAuthority.authority_digest,
     scratch_snapshot_digest: frozenScratch.digest,
     scratch_device: String(frozenScratch.dev),
     scratch_inode: String(frozenScratch.ino),
@@ -2898,8 +3003,11 @@ export async function promoteLocalMacProductionRelease({
     authority_digest: frozenScratch.authorityDigest,
     sealed_bundle_digest: sealedCandidate.sealedBundleDigest,
     repeatability_receipt_digest: sealedCandidate.repeatabilityReceiptDigest,
+    frozen_runtime_input_authority_digest: frozenRuntimeInputs.authority_digest,
   })));
   verifyLocalMacProductionExecutionSnapshot(frozenScratch);
+  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: true });
+  assertPrivatePromotionScratchReservation(scratchReservation, currentUid, { materialized: true, runtimeInputs: true });
   ensureSafePrivateDirectory(
     paths.lockRoot,
     homecookRoot,
@@ -2913,7 +3021,7 @@ export async function promoteLocalMacProductionRelease({
     manifestPath: normalizedManifestPath,
     lockToken,
     mkdir,
-    now,
+    now: preLockNow,
     readGitEvidence,
     rootDir: realRootDir,
     verifyAttestation,
@@ -2948,6 +3056,7 @@ export async function promoteLocalMacProductionRelease({
     throw new Error("Release manifest changed after promotion lock acquisition.");
   }
   verifyLocalMacProductionExecutionSnapshot(frozenScratch);
+  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
   const lockedRuntimePreflight = initialRuntimePreflight;
 
   const executionSnapshot = createLocalMacProductionExecutionSnapshot({
@@ -2961,6 +3070,7 @@ export async function promoteLocalMacProductionRelease({
   });
   const sealedRuntimePreflight = {
     ...lockedRuntimePreflight,
+    full_local_config_sha256: frozenRuntimeInputs.digests.fullLocalConfigSha256,
     worker: {
       ...lockedRuntimePreflight.worker,
       artifactRoot: executionSnapshot.workerRoot,
@@ -2968,7 +3078,12 @@ export async function promoteLocalMacProductionRelease({
       appDescriptorPath: executionSnapshot.appDescriptorPath,
       expectedSchemaPath: executionSnapshot.expectedSchemaPath,
       policyPath: executionSnapshot.policyPath,
+      configPath: frozenRuntimeInputs.paths.workerConfigPath,
+      credentialPath: frozenRuntimeInputs.paths.workerCredentialPath,
+      secretRoot: frozenRuntimeInputs.paths.workerSecretRoot,
       appDescriptorSha256: sha256Bytes(readFileSync(executionSnapshot.appDescriptorPath)),
+      configSha256: frozenRuntimeInputs.digests.workerConfigSha256,
+      credentialSha256: frozenRuntimeInputs.digests.workerCredentialSha256,
       expectedSchemaSha256: sha256Bytes(readFileSync(executionSnapshot.expectedSchemaPath)),
       policySha256: sha256Bytes(readFileSync(executionSnapshot.policyPath)),
     },
@@ -2978,6 +3093,7 @@ export async function promoteLocalMacProductionRelease({
     preparedReleaseDir: frozenScratch.appRoot,
   });
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
+  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
 
   const mutationAuthority = validateLocalMacProductionMutationAuthority({
     command: "install",
@@ -2990,6 +3106,7 @@ export async function promoteLocalMacProductionRelease({
   });
   const installation = await installBundle({
     executionSnapshot,
+    frozenRuntimeInputs,
     homeDir: realHomeDir,
     currentRuntimeBridge,
     lockToken: lock.lockToken,
@@ -3001,8 +3118,10 @@ export async function promoteLocalMacProductionRelease({
     verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
   });
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
+  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
   let readiness = validateReadyReleaseBundle(bindRehearsalAuthorityToReadyBundle(await readinessProbe({
     executionSnapshot,
+    frozenRuntimeInputs,
     homeDir: realHomeDir,
     currentRuntimeBridge,
     installation,
@@ -3014,6 +3133,7 @@ export async function promoteLocalMacProductionRelease({
     verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
   }), manifest), manifest);
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
+  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
 
   const finalRunning = readOptionalRunningDescriptorSnapshot({
     currentUid,
@@ -3037,6 +3157,7 @@ export async function promoteLocalMacProductionRelease({
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
   const finalWorker = await finalWorkerProbe({
     executionSnapshot,
+    frozenRuntimeInputs,
     homeDir: realHomeDir,
     currentRuntimeBridge,
     installation,

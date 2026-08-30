@@ -158,7 +158,7 @@ export function createProductionPromotionAuthorityVerifier({
   if (!Array.isArray(memberReceiptPaths) || memberReceiptPaths.length !== 2) {
     throw new Error("Production promotion authority requires exactly two member receipt paths.");
   }
-  return ({ manifest = null, now = new Date() } = {}) => {
+  return ({ frozenCandidateAuthority = null, manifest = null, now = new Date() } = {}) => {
     const manifestSource = readManifestSource(manifestPath, { repoRoot });
     let manifestInput;
     try {
@@ -190,19 +190,36 @@ export function createProductionPromotionAuthorityVerifier({
       memberReceipts,
       now,
     });
-    const candidateRoot = resolve(candidatePath);
-    const candidate = readCandidate(candidateRoot);
+    const candidateRoot = frozenCandidateAuthority ? resolve(frozenCandidateAuthority.root) : resolve(candidatePath);
+    const candidate = frozenCandidateAuthority ? {
+      manifest: {
+        release_sha: validatedManifest.release_sha,
+        release_tree: validatedManifest.release_tree,
+        build_id: validatedManifest.build_id,
+        sealed_bundle_digest: validatedManifest.sealed_bundle_digest,
+        candidate_identity_digest: frozenCandidateAuthority.candidateIdentityDigest,
+        bundle_manifest_digest: frozenCandidateAuthority.bundleManifestDigest,
+      },
+    } : readCandidate(candidateRoot);
     const inventory = readInventory(inventoryPath, { repoRoot });
     const classification = classifyProductionInventory(inventory, {
       classifiedAt: now.toISOString(),
     });
     const bundleRoot = join(candidateRoot, "bundles", "bundle");
-    const componentRoots = {
+    const componentRoots = frozenCandidateAuthority ? {
+      app: frozenCandidateAuthority.appRoot,
+      full_local: frozenCandidateAuthority.fullLocalRoot,
+      worker: frozenCandidateAuthority.workerRoot,
+    } : {
       app: join(bundleRoot, "app"),
       full_local: join(bundleRoot, "full_local"),
       worker: join(bundleRoot, "worker"),
     };
-    const candidateComponentDigests = Object.fromEntries(Object.entries(componentRoots).map(
+    const candidateComponentDigests = frozenCandidateAuthority ? {
+      app: frozenCandidateAuthority.appSourceDigest,
+      full_local: frozenCandidateAuthority.fullLocalSourceDigest,
+      worker: frozenCandidateAuthority.workerSourceDigest,
+    } : Object.fromEntries(Object.entries(componentRoots).map(
       ([component, root]) => [component, digestLocalMacProductionExecutionTree(root)],
     ));
     const authority = validateProductionPromotionPreMutationGate({
@@ -218,7 +235,7 @@ export function createProductionPromotionAuthorityVerifier({
     });
     return Object.freeze({
       ...authority,
-      sealed_candidate: Object.freeze({
+      sealed_candidate: Object.freeze(frozenCandidateAuthority ? { ...frozenCandidateAuthority } : {
         root: candidateRoot,
         appRoot: componentRoots.app,
         fullLocalRoot: componentRoots.full_local,

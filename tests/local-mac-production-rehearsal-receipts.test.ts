@@ -328,11 +328,6 @@ function runEvidenceAuthority(index: 1 | 2) {
     ports: { app: 46_000 + index, auth: 47_000 + index, postgres: 48_000 + index, storage: 49_000 + index },
   });
   const globalLedgerEntries = [{ sequence: 1, migration_id: base.migration.migration_head, migration_sha256: SHA_A }];
-  const runtimeContainerIds = [
-    ...base.runtime.app.container_ids,
-    ...base.runtime.full_local.container_ids,
-    ...base.runtime.worker.container_ids,
-  ].sort();
   const allContainerIds = base.isolation.container_ids;
   const orderedMigrationFilesDigest = sha256Jcs([{
     path: `supabase/migrations/${base.migration.migration_head}.sql`,
