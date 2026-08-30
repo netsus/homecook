@@ -7,7 +7,7 @@ export function createRehearsalPostgrestRpcClient({ baseUrl, syntheticToken, fix
   return async (name, body = {}, { signal } = {}) => {
     if (!RPCS.has(name)) fail("RPC endpoint is not allowlisted");
     const timeout = AbortSignal.timeout(5_000); const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-    const response = await fetchImpl(new URL(`/rest/v1/rpc/${name}`, url), { method: "POST", headers: { authorization: `Bearer ${syntheticToken}`, apikey: syntheticToken, "content-type": "application/json", "x-homecook-rehearsal-fixture": fixtureIdentity }, body: JSON.stringify(body), signal: combined });
+    const response = await fetchImpl(new URL(`/rpc/${name}`, url), { method: "POST", headers: { authorization: `Bearer ${syntheticToken}`, apikey: syntheticToken, "content-type": "application/json", "x-homecook-rehearsal-fixture": fixtureIdentity }, body: JSON.stringify(body), signal: combined });
     if (!response.ok) fail(`RPC ${name} returned ${response.status}`);
     const text = await response.text(); if (text.length > 1_048_576) fail("RPC response exceeds bound");
     let data; try { data = JSON.parse(text); } catch { fail("RPC response is not JSON"); }
