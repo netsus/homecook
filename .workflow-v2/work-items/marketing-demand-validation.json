@@ -1,0 +1,126 @@
+{
+  "id": "marketing-demand-validation",
+  "title": "Marketing demand validation landing",
+  "summary": "/beta 수요검증 랜딩 Stage 1 docs draft. 광고 메시지 일치, neutral result-before-email funnel, single route / single table contract, and fail-closed privacy/Turnstile gates를 문서와 machine-readable bookkeeping으로 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "광고-랜딩 메시지 일치, target_qualified truth table, 단일 세션 테이블/단일 route handler, 결과를 이메일 전에 공개하는 neutral funnel, privacy/launch readiness 의존성을 하나의 검증 가능한 세로 슬라이스로 고정한다.",
+  "owners": {
+    "claude": "retired compatibility field; dispatch prohibited",
+    "codex": "separate stage1-docs-author, internal-1.5 reviewer, backend/frontend implementer, stage3/5/6 reviewer, final-authority tasks",
+    "workers": []
+  },
+  "dependencies": [
+    ".omx/plans/mumeok-weekly-nutrition-ad-landing.md",
+    "docs/marketing/demand-validation-plan.md",
+    "docs/marketing/quiz-content-spec.md"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.35.md",
+      "docs/화면정의서-v1.5.39.md",
+      "docs/유저flow맵-v1.3.37.md",
+      "docs/db설계-v1.3.37.md",
+      "docs/api문서-v1.2.42.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/marketing-demand-validation/README.md",
+      "docs/workpacks/marketing-demand-validation/acceptance.md",
+      "docs/workpacks/marketing-demand-validation/automation-spec.json",
+      "docs/marketing/demand-validation-plan.md",
+      "docs/marketing/quiz-content-spec.md",
+      "ui/designs/MARKETING_DEMAND_VALIDATION.md",
+      "ui/designs/critiques/MARKETING_DEMAND_VALIDATION-critique.md",
+      "ui/designs/authority/MARKETING_DEMAND_VALIDATION-authority.md",
+      "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png",
+      "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.md",
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      ".omx/plans/mumeok-weekly-nutrition-ad-landing.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:canonical-privacy-ready",
+      "manual:turnstile-secret-and-hostname-ready",
+      "manual:allowlisted-production-origin-ready",
+      "manual:edge-rate-limit-evidence-captured",
+      "manual:marketing-lead-protection-ready-enabled",
+      "manual:launch-readiness-blockers-green"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 4,
+      "backend": 0,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "beta-message-matches-ad",
+      "hero-neutral-cta-locked",
+      "quiz-five-question-lock",
+      "target-qualified-truth-table-lock",
+      "single-table-single-route-contract",
+      "server-issued-session-cookie",
+      "turnstile-fail-closed",
+      "privacy-readiness-required"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "Independent Codex internal 1.5 APPROVED with FINDINGS_COUNT: 0 after contract, copy, authority, launch-gate, inventory and actor repairs.",
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Product code implementation",
+    "Login flow",
+    "Pricing table",
+    "Testimonials",
+    "Long FAQ",
+    "External analytics SDKs",
+    "Admin dashboard",
+    "Multi-table event logging",
+    "In-memory rate limiting",
+    "Any Turnstile or privacy production deployment before blockers are cleared"
+  ],
+  "open_questions": [
+    "Actual operator privacy data is not yet supplied.",
+    "Turnstile production key and allowlisted hostname are not yet confirmed.",
+    "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
+    "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
+  ],
+  "notes": "Stage 1 author and fresh independent Codex internal 1.5 review are complete; FINDINGS_COUNT: 0. owners.claude is a retired compatibility field and must never dispatch Claude. Official tuple v1.7.35/v1.5.39/v1.3.37/v1.3.37/v1.2.42 is synced. Product implementation remains blocked until this docs contract merges."
+}
