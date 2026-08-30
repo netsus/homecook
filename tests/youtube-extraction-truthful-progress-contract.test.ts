@@ -11,11 +11,11 @@ function read(relativePath: string) {
 }
 
 const officialTuple = {
-  requirements: "docs/요구사항기준선-v1.7.34.md",
-  screens: "docs/화면정의서-v1.5.38.md",
-  flow: "docs/유저flow맵-v1.3.36.md",
-  db: "docs/db설계-v1.3.36.md",
-  api: "docs/api문서-v1.2.41.md",
+  requirements: "docs/요구사항기준선-v1.7.35.md",
+  screens: "docs/화면정의서-v1.5.39.md",
+  flow: "docs/유저flow맵-v1.3.37.md",
+  db: "docs/db설계-v1.3.37.md",
+  api: "docs/api문서-v1.2.42.md",
 } as const;
 
 const contractDocuments = [
@@ -31,11 +31,11 @@ describe("YouTube truthful extraction progress contract evolution", () => {
       expect(source).toContain(`\`${path}\``);
     }
 
-    expect(read(officialTuple.requirements)).toContain("# 요구사항 기준선 v1.7.34");
-    expect(read(officialTuple.screens)).toContain("# 화면정의서 v1.5.38");
-    expect(read(officialTuple.flow)).toContain("# 유저 Flow맵 v1.3.36");
-    expect(read(officialTuple.db)).toContain("# DB 설계 v1.3.36");
-    expect(read(officialTuple.api)).toContain("# API\\_설계\\_v1.2.41");
+    expect(read(officialTuple.requirements)).toContain("# 요구사항 기준선 v1.7.35");
+    expect(read(officialTuple.screens)).toContain("# 화면정의서 v1.5.39");
+    expect(read(officialTuple.flow)).toContain("# 유저 Flow맵 v1.3.37");
+    expect(read(officialTuple.db)).toContain("# DB 설계 v1.3.37");
+    expect(read(officialTuple.api)).toContain("# API\\_설계\\_v1.2.42");
 
     for (const document of contractDocuments) {
       expect(document).toContain(

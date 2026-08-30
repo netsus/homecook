@@ -231,6 +231,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `35a-growth-achievement-album-contract-evolution` | docs | 퀘스트를 튜토리얼 전용으로 축소하고, Clay→Titanium 등급/업적 앨범/stamp 수집/MYPAGE modal button entry 계약을 공식화 |
 | `35b-growth-achievement-album-backend` | merged | 35a 계약 기반 `user_achievement_awards`, 업적 앨범 projection, tutorial category, grade fields, silent backfill backend 구현 |
 | `35c-mypage-achievement-album-ui` | in-progress | MYPAGE profile header 안에 성장 상태를 통합하고 등급/업적/튜토리얼/알림을 modal/bottom sheet로 제공 |
+| `marketing-demand-validation` | docs | /beta 수요검증 랜딩 Stage 1 문서 workpack: neutral CTA, 5문항 퀴즈, target_qualified truth table, server session, Turnstile fail-closed, privacy/launch blockers를 잠근다 |
 | `36a-recipe-tags-contract-evolution` | docs | 레시피 태그를 서버 추천 + 사용자 검수 기능으로 승격하고 `tags`/`recipe_tags` 정규화 모델, 검색, HOME theme seed, P0 의미 태그 목록을 공식 계약으로 잠금 |
 | `36b-recipe-tags-model-write` | merged | `tags`/`recipe_tags` additive migration, P0 seed, tag normalization, YouTube/manual write path, `recipes.tags` projection writer 구현 |
 | `36c-recipe-tags-search-themes` | merged | `GET /recipes?tag=`, 제목+승인 태그 검색, `GET /tags`, HOME theme generation을 cursor-stable dedupe 전략으로 구현 |

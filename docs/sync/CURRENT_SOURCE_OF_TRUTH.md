@@ -1,11 +1,11 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.34.md`
-- `docs/화면정의서-v1.5.38.md`
-- `docs/유저flow맵-v1.3.36.md`
-- `docs/db설계-v1.3.36.md`
-- `docs/api문서-v1.2.41.md`
+- `docs/요구사항기준선-v1.7.35.md`
+- `docs/화면정의서-v1.5.39.md`
+- `docs/유저flow맵-v1.3.37.md`
+- `docs/db설계-v1.3.37.md`
+- `docs/api문서-v1.2.42.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
@@ -14,6 +14,19 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
+
+## 2026-08-31 contract-evolution — marketing demand validation landing
+
+사용자가 2026-08-31 승인한 `.omx/plans/mumeok-weekly-nutrition-ad-landing.md` 계획을 반영해 `/beta` 수요검증 랜딩을 공식 계약에 추가한다.
+
+- 퍼널은 `hero → quiz → result → concept → intent → email → followup → done`이다.
+- 결과는 이메일 전에 공개한다.
+- `public.marketing_validation_sessions` 1개와 `POST /api/v1/marketing/validation` 1개만 추가한다.
+- `target_qualified`는 서버 pure rule로 다시 계산한다.
+- cookie 이름은 `mumeok_validation_session`이다.
+- `MARKETING_LEAD_PROTECTION_READY=1`, Turnstile secret/hostname, `ALLOWED_MARKETING_ORIGINS`, edge rate-limit rule evidence 중 하나라도 없으면 lead는 fail-closed다.
+- 실제 operator privacy data와 Turnstile production key/hostname은 아직 확인되지 않은 blocker다.
+- canonical `/privacy`와 launch-readiness blockers는 선행 의존성이다.
 
 ## 2026-08-27 contract-evolution — YouTube 실제 단계 진행바와 남은 시간 범위
 
