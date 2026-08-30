@@ -22,7 +22,11 @@ export function projectTrustedObservation({ logEvents, lsofEvents, processEvents
     const subject = byPid.get(event.pid)
       ?? byPgid.get(event.pgid)
       ?? byContainer.get(event.subject_container_id);
-    if (!subject) { unrelatedNoiseCount++; continue; }
+    if (!subject) {
+      if (event.relevant === true) fail("unbound observer event contains relevant production access");
+      unrelatedNoiseCount++;
+      continue;
+    }
     if (event.pgid !== subject.host_pgid || !DIGEST.test(event.executable_identity_digest ?? "")) fail("observer PID identity drifted");
     if (event.pid === subject.host_pid && event.executable_identity_digest !== subject.executable_identity_digest) fail("observer root PID identity drifted");
     if (event.subject_container_id !== undefined && event.subject_container_id !== subject.container_id) fail("observer descendant container identity drifted");

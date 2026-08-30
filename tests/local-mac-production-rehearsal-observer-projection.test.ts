@@ -11,5 +11,6 @@ describe("R2 trusted observation projection", () => {
     expect(() => projectTrustedObservation({ ...clean, logEvents: [{ pid: 9, pgid: 9, executable_identity_digest: subject.executable_identity_digest, timestamp: "bad", kind: "x" }] })).toThrow(/malformed/iu);
     expect(() => projectTrustedObservation({ ...clean, logEvents: [{ pid: 9, pgid: 10, executable_identity_digest: subject.executable_identity_digest, timestamp: "2026-08-29T00:00:00.000Z", kind: "x" }] })).toThrow(/identity/iu);
     expect(() => projectTrustedObservation({ ...clean, logEvents: [{ pid: 202, pgid: 9, executable_identity_digest: digest, timestamp: "2026-08-29T00:00:00.000Z", kind: "production-5432", relevant: true }] })).toThrow(/relevant/iu);
+    expect(() => projectTrustedObservation({ ...clean, logEvents: [{ pid: 202, pgid: 0, executable_identity_digest: digest, timestamp: "2026-08-29T00:00:00.000Z", kind: "/var/run/docker.sock", relevant: true }] })).toThrow(/unbound|relevant/iu);
   });
 });
