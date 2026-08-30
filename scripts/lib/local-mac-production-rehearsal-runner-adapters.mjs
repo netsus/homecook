@@ -635,6 +635,17 @@ async function executePsql(state, sql, { database = "postgres", tuplesOnly = fal
   })).stdout;
 }
 
+export async function runOwnedPostgrestFixtureProbe(state, { namespace, jobId, userId, token, expected, signal }) {
+  const probeEntry = state.creationLedger.snapshot().find((entry) => entry.kind === "container" && entry.name === `${namespace.project}-postgrest-probe-1`);
+  if (!probeEntry) fail("run-owned PostgREST probe container is missing");
+  const probeObserved = await inspectResource(state, probeEntry, { signal });
+  if (probeObserved?.id !== probeEntry.id || probeObserved?.name !== probeEntry.name || probeObserved?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId) fail("PostgREST probe ownership mismatch");
+  const probe = buildPostgrestFixtureReadbackProbe({ jobId, userId, token });
+  const probeOutput = await dockerCommand(state, probe.argv.map((value) => value === "<postgrest-probe-id>" ? probeEntry.id : value), { input: probe.stdin, signal, timeout: 10_000, ownership: { verifiedOwnership: true, resourceId: probeEntry.id } });
+  const row = parseAndValidatePostgrestFixtureReadback(probeOutput.stdout, expected);
+  return Object.freeze({ row, redacted: probe.redacted, response_digest: sha256Jcs({ redacted: probe.redacted, row }) });
+}
+
 export function parseAndValidateWorkerFixtureReadback(output, expected) {
   const lines = String(output ?? "").trim().split(/\r?\n/u).filter(Boolean);
   if (lines.length !== 1) fail("worker fixture readback must contain exactly one row");
@@ -1264,13 +1275,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       const readbackSql = "select json_build_object('user_id',u.id,'job_id',j.id,'job_status',j.status,'attempt_count',j.attempt_count,'policy_snapshot_digest',j.policy_snapshot_digest,'credential_jti_hash',c.current_jti_hash,'credential_generation',c.current_generation,'credential_release_sha',c.release_sha,'credential_schema_identity',c.schema_identity,'credential_snapshot_digest',c.allowed_snapshot_digest,'permit_generation',p.permit_generation) from public.users u join public.youtube_extraction_jobs j on j.user_id=u.id join private.youtube_extraction_worker_credentials c on c.credential_name='primary' join public.youtube_extractor_permits p on p.permit_key='primary' where u.id=:'user_id' and j.id=:'job_id';\n";
       const output = await executePsql(state, readbackSql, { database: namespace.db_name, tuplesOnly: true, variables: { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id }, allowedVariableNames: new Set(["user_id", "job_id"]), signal: state.activeSignal });
       parseAndValidateWorkerFixtureReadback(output, { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id, job_status: "queued", attempt_count: 0, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest, credential_jti_hash: issued.jtiHash, credential_generation: 1, credential_release_sha: manifest.release_sha, credential_schema_identity: artifact.schema_identity, credential_snapshot_digest: manifest.migration.ordered_migration_files_digest, permit_generation: 0 });
-      const probeEntry = state.creationLedger.snapshot().find((entry) => entry.kind === "container" && entry.name === `${namespace.project}-postgrest-probe-1`);
-      if (!probeEntry) fail("run-owned PostgREST probe container is missing");
-      const probeObserved = await inspectResource(state, probeEntry, { signal: state.activeSignal });
-      if (probeObserved?.id !== probeEntry.id || probeObserved?.name !== probeEntry.name || probeObserved?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId) fail("PostgREST probe ownership mismatch");
-      const probe = buildPostgrestFixtureReadbackProbe({ jobId: fixture.variables.job_id, userId: fixture.variables.user_id, token: state.secrets.service_role_key });
-      const probeOutput = await dockerCommand(state, probe.argv.map((value) => value === "<postgrest-probe-id>" ? probeEntry.id : value), { input: probe.stdin, signal: state.activeSignal, timeout: 10_000, ownership: { verifiedOwnership: true, resourceId: probeEntry.id } });
-      const probeRow = parseAndValidatePostgrestFixtureReadback(probeOutput.stdout, { job_id: fixture.variables.job_id, user_id: fixture.variables.user_id, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest });
+      const probeResult = await runOwnedPostgrestFixtureProbe(state, { namespace, jobId: fixture.variables.job_id, userId: fixture.variables.user_id, token: state.secrets.service_role_key, expected: { job_id: fixture.variables.job_id, user_id: fixture.variables.user_id, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest }, signal: state.activeSignal });
       state.workerFixtureAuthority = Object.freeze({
         fixture_sql_digest: sha256Jcs(fixture),
         credential_jti_hash: issued.jtiHash,
@@ -1281,7 +1286,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         token_reference_digest: sha256Jcs("worker.jwt"),
         user_id: fixture.variables.user_id,
         job_id: fixture.variables.job_id,
-        postgrest_probe_response_digest: sha256Jcs({ redacted: probe.redacted, row: probeRow }),
+        postgrest_probe_response_digest: probeResult.response_digest,
         production_derived_row_count: 0,
       });
       return state.workerFixtureAuthority;
