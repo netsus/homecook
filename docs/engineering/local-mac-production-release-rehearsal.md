@@ -143,8 +143,16 @@ split 2 구현 상태:
 planned command:
 
 ```text
-pnpm release:rehearsal:run -- --candidate <absolute-sealed-candidate-manifest> --production-env-authority <absolute-private-full-local-env> --json
+pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --production-env-authority <absolute-private-env-authority> --json
 ```
+
+| public argument | required | exact authority |
+| --- | --- | --- |
+| `--candidate` | yes | split 2가 seal한 absolute completed candidate root 또는 그 root의 exact `candidate.json` |
+| `--production-env-authority` | yes | trusted home 아래·verified clean source 밖의 absolute current-user-owned regular file. exact mode `0600`, nlink `1`, 최대 1 MiB, non-symlink ancestor/target와 stable FD identity를 요구한다. |
+| `--json` | yes | non-secret deterministic run evidence output을 강제한다. |
+
+R2 handoff와 server runbook은 위 command를 flag 이름과 순서까지 그대로 전달한다. env authority path와 raw key/value/content는 JSON, run evidence, receipt, manifest, log 또는 handoff에 기록하지 않는다. 운영자는 approved external authority를 argv input으로만 지정하며 clean source 안의 untracked `.env.production.local`을 만들거나 fallback으로 찾지 않는다.
 
 - 매 실행은 cryptographically random `run_id`와 create-only private root를 가진다.
 - Docker project, container, network, volume, port, DB name/user, app/worker state root와 log root는 `run_id` namespace로 분리한다.
@@ -157,7 +165,7 @@ pnpm release:rehearsal:run -- --candidate <absolute-sealed-candidate-manifest> -
 
 split 3 구현 상태:
 
-- public command는 `pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --json`이며 별도 `scripts/local-mac-production-rehearsal-run.mjs` entry를 사용한다. 원본 candidate를 split 2 `readCompletedCandidateRoot`로 검증한 뒤 run-owned create-only `execution-candidate`에 복사·seal하고 그 복사본을 다시 완전 검증한다. Docker bind, migration, app/worker/full-local probe는 이 검증된 run copy만 사용하고 원본 candidate를 실행 중 다시 열지 않는다. 실행 뒤에도 같은 run copy를 재검증하며 checkout, rebuild, dependency reinstall, image re-resolution을 하지 않는다.
+- public command는 `pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --production-env-authority <absolute-private-env-authority> --json`이며 별도 `scripts/local-mac-production-rehearsal-run.mjs` entry를 사용한다. 원본 candidate를 split 2 `readCompletedCandidateRoot`로 검증한 뒤 run-owned create-only `execution-candidate`에 복사·seal하고 그 복사본을 다시 완전 검증한다. Docker bind, migration, app/worker/full-local probe는 이 검증된 run copy만 사용하고 원본 candidate를 실행 중 다시 열지 않는다. 실행 뒤에도 같은 run copy를 재검증하며 checkout, rebuild, dependency reinstall, image re-resolution을 하지 않는다.
 - `scripts/lib/local-mac-production-rehearsal-runner.mjs`는 UUID-v4 단일 namespace, high-port/reserved-port gate, production name/path/socket/credential denylist, exact ordered migration ledger/catalog equality, child identity, canary, network deny, production pre/post equality와 역순 cleanup을 fail closed하게 묶는다. `issued_at <= completed_at`, exact runtime 4종과 아래 canary 8종, ledger/file aggregate, denied count, measured production guard의 runtime/schema 양방향 attack table을 요구한다.
 - `scripts/lib/local-mac-production-rehearsal-runner-safety.mjs`는 user Docker current context/config를 authority로 사용하지 않는다. current-user macOS Docker Desktop socket 또는 canonical `/var/run/docker.sock`의 closed owner/type/mode/realpath identity만 허용하고 모든 Docker/Compose argv에 exact `--host unix://...`를 붙인다. run-owned private empty `DOCKER_CONFIG`를 사용하며 `tcp|ssh|http|npipe|context` indirection을 mutation 전에 거부한다. daemon endpoint/ID/server/OS/arch/rootless/security/root-dir identity는 pre/post와 매 command 전 재검증한다.
 - `scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs`는 sealed full-local Compose와 candidate manifest의 local digest-pinned image만 실행한다. generated override에서 7개 service 각각 `pull_policy: never`, CLI에서 `--no-build`, 개별 `docker run`에서 `--pull=never`를 강제한다. create/start 뒤 각 container `.Image`, configured digest reference, local image ID/platform/repo digest를 preflight authority와 다시 비교한다. generated override는 exact run/project/creation-nonce label을 추가하고 `auth-edge`, `auth-egress`, `data-internal`을 모두 internal network로 강제한다. canary 전 실제 network `Internal=true`, exact labels/name/ID와 모든 container attachment를 readback한다. app과 worker도 run-owned internal Docker network에서 sealed run copy를 read-only mount해 실행하며 launchd/LaunchAgent는 사용하지 않는다.
@@ -268,10 +276,10 @@ FD-anchored walker는 기존 physical digest grammar의 directory-symlink child 
 
 ## Environment and secret handling
 
-- production inventory/candidate/run의 full-local env source는 explicit `--production-env-authority` regular file만 가능하다. clean Git source 안의 `.env.production.local`, ambient env, directory search, LaunchAgent mutation 또는 fallback은 authority가 아니다.
+- production inventory/candidate/run의 full-local env source는 explicit `--production-env-authority` external regular file만 가능하다. exact current-user owner, mode `0600`, nlink `1`, 최대 1 MiB, trusted home containment와 verified clean source 밖의 absolute path를 요구한다. clean Git source 안의 `.env.production.local`, ambient env, directory search, LaunchAgent mutation 또는 fallback은 authority가 아니다.
 - file source는 parent부터 `lstat`/`realpath`로 containment를 확인하고 `open(..., O_RDONLY | O_NOFOLLOW)`한 FD에서 snapshot한다.
 - open 전후 device/inode/mode/ctime/mtime/size와 FD `fstat`가 같아야 한다. symlink, hard-link count 이상, group/world writable, race는 거부한다.
-- contents는 argv, inherited environment, log, receipt, manifest, temp filename에 노출하지 않는다.
+- raw key/value/content는 argv, inherited environment, log, receipt, manifest, temp filename에 노출하지 않는다. authority path는 operator의 top-level CLI input으로만 받고 JSON/output/log/evidence/handoff에 직렬화하지 않는다.
 - snapshot은 private memory 또는 run-owned mode `0600` anonymous/unlinked FD에만 두고 child에 필요한 FD만 명시적으로 전달한다.
 - production endpoint, port, Docker project, DB name/user, storage root, app/worker root는 rehearsal 전용 값으로 강제 override한다. source env가 override를 재정의할 수 없다.
 - child env는 key allowlist로 새로 구성한다. 전체 `process.env` 상속은 금지한다.
