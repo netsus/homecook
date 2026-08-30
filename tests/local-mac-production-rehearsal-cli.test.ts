@@ -54,7 +54,8 @@ describe("local Mac production rehearsal CLI", () => {
     });
 
     await runLocalMacProductionRehearsalCli([
-      "candidate", "--release-sha", "a".repeat(40), "--json",
+      "candidate", "--release-sha", "a".repeat(40),
+      "--production-env-authority", "/private/server/full-local-production.env", "--json",
     ], {
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
@@ -70,6 +71,7 @@ describe("local Mac production rehearsal CLI", () => {
     expect(createCandidateAdapters).toHaveBeenCalledWith(expect.objectContaining({
       builderInputDigest: "b".repeat(64),
       builderInputEntries: expect.any(Array),
+      productionEnvAuthorityPath: "/private/server/full-local-production.env",
       rootDir: process.cwd(),
     }));
     expect(buildCandidate).toHaveBeenCalledWith(expect.objectContaining({
@@ -129,7 +131,9 @@ describe("local Mac production rehearsal CLI", () => {
       adapters_match: received === adapters,
     }));
 
-    await runLocalMacProductionRehearsalCli(["inventory", "--json"], {
+    await runLocalMacProductionRehearsalCli([
+      "inventory", "--production-env-authority", "/private/server/full-local-production.env", "--json",
+    ], {
       output: output.stream,
       createInventoryAdapters: createAdapters,
       collectInventory,
@@ -137,6 +141,9 @@ describe("local Mac production rehearsal CLI", () => {
     });
 
     expect(createAdapters).toHaveBeenCalledTimes(1);
+    expect(createAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      productionEnvAuthorityPath: "/private/server/full-local-production.env",
+    }));
     expect(collectInventory).toHaveBeenCalledTimes(1);
     expect(JSON.parse(output.value())).toEqual({
       adapters_match: true,

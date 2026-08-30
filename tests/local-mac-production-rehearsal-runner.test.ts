@@ -1131,12 +1131,15 @@ describe("release rehearsal R2 public command and schema", () => {
     mkdirSync(join(root, "candidate"), { mode: 0o500 });
     const output = { value: "", write(chunk: string) { this.value += chunk; } };
     const run = vi.fn().mockResolvedValue({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
+    const createAdapters = vi.fn(() => ({ adapter: true }));
     await runLocalMacProductionRehearsalRunnerCli([
-      "--candidate", join(root, "candidate"), "--json",
+      "--candidate", join(root, "candidate"),
+      "--production-env-authority", join(root, "full-local-production.env"),
+      "--json",
     ], {
       output,
       run,
-      createAdapters: () => ({ adapter: true }),
+      createAdapters,
       namespaceResolver: () => root,
       runIdFactory: () => RUN_ID,
     });
@@ -1145,6 +1148,9 @@ describe("release rehearsal R2 public command and schema", () => {
       namespaceRoot: root,
       runId: RUN_ID,
       adapters: { adapter: true },
+    }));
+    expect(createAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      productionEnvAuthorityPath: join(root, "full-local-production.env"),
     }));
     expect(JSON.parse(output.value)).toEqual({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
     await expect(runLocalMacProductionRehearsalRunnerCli([
