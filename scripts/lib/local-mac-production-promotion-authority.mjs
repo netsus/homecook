@@ -6,12 +6,115 @@ import { readCanonicalInventoryFile } from "./local-mac-production-rehearsal-inv
 import {
   readCanonicalReceiptFile,
   readPrivateCanonicalJsonFile,
+  validateRepeatabilityReceipt,
 } from "./local-mac-production-rehearsal-receipts.mjs";
 import {
   readLocalMacProductionGitReleaseEvidence,
   validateLocalMacProductionReleaseManifest,
-  validateProductionPromotionPreMutationGate,
 } from "./local-mac-production-release.mjs";
+import { sha256Jcs } from "./rfc8785-jcs.mjs";
+
+const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
+
+function requireExactUtcTimestamp(value, label) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${label} must be a nonempty timestamp.`);
+  }
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+    throw new Error(`${label} must be an exact UTC millisecond RFC3339 instant.`);
+  }
+  return value;
+}
+
+export function validateProductionPromotionPreMutationGate({
+  manifest,
+  repeatabilityReceipt,
+  memberReceipts,
+  candidateManifest,
+  inventoryCapturedAt,
+  classification,
+  now = new Date(),
+} = {}) {
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
+    throw new Error("Production promotion authority requires a valid current instant.");
+  }
+  if (!repeatabilityReceipt) throw new Error("Production promotion repeatability receipt is missing.");
+  const repeatability = validateRepeatabilityReceipt(repeatabilityReceipt, { memberReceipts, now });
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    throw new Error("Production promotion manifest authority is missing.");
+  }
+  if (!candidateManifest || typeof candidateManifest !== "object" || Array.isArray(candidateManifest)) {
+    throw new Error("Production promotion sealed candidate authority is missing.");
+  }
+  const bindings = [
+    ["release_sha", repeatability.release_sha],
+    ["release_tree", repeatability.release_tree],
+    ["build_id", repeatability.build_id],
+    ["sealed_bundle_digest", repeatability.sealed_bundle_digest],
+  ];
+  for (const [field, expected] of bindings) {
+    if (manifest[field] !== expected) throw new Error(`Production manifest ${field} differs from repeatability authority.`);
+    if (candidateManifest[field] !== expected) throw new Error(`Sealed candidate ${field} differs from repeatability authority.`);
+  }
+  if (
+    manifest.rehearsal_receipt_schema !== repeatability.schema
+    || manifest.repeatability_receipt_digest !== repeatability.repeatability_receipt_digest
+    || manifest.rehearsal_receipt_valid_until !== repeatability.valid_until
+  ) throw new Error("Production manifest receipt authority differs from the validated repeatability receipt.");
+
+  const capturedAt = requireExactUtcTimestamp(inventoryCapturedAt, "inventoryCapturedAt");
+  const capturedMilliseconds = Date.parse(capturedAt);
+  if (capturedMilliseconds > now.getTime()) throw new Error("Production inventory contains a future time claim.");
+  if (now.getTime() - capturedMilliseconds > 5 * 60 * 1000) {
+    throw new Error("Production inventory is stale; a new R0 inventory is required.");
+  }
+  if (!classification || typeof classification !== "object" || Array.isArray(classification)) {
+    throw new Error("Production mixed-state classification authority is missing.");
+  }
+  const classificationKeys = [
+    "schema", "inventory_digest", "classified_at", "states", "promotion_safe",
+    "mutation_attempt_count", "findings", "recovery_plan", "classification_digest",
+  ];
+  if (JSON.stringify(Object.keys(classification).sort()) !== JSON.stringify(classificationKeys.sort())) {
+    throw new Error("Production mixed-state classification has an open or incomplete schema.");
+  }
+  if (classification.schema !== "homecook.local-mac-production-rehearsal-classification.v1") {
+    throw new Error("Production mixed-state classification schema is invalid.");
+  }
+  const classifiedAt = requireExactUtcTimestamp(classification.classified_at, "classification.classified_at");
+  if (Date.parse(classifiedAt) < capturedMilliseconds || Date.parse(classifiedAt) > now.getTime()) {
+    throw new Error("Production mixed-state classification contains a future or pre-inventory time claim.");
+  }
+  const { classification_digest: classificationDigest, ...classificationUnsigned } = classification;
+  if (!DIGEST_PATTERN.test(classification.inventory_digest ?? "")
+    || !DIGEST_PATTERN.test(classificationDigest ?? "")
+    || sha256Jcs(classificationUnsigned) !== classificationDigest) {
+    throw new Error("Production mixed-state classification digest authority is invalid.");
+  }
+  if (
+    classification.promotion_safe !== true
+    || classification.mutation_attempt_count !== 0
+    || !Array.isArray(classification.findings)
+    || classification.findings.length !== 0
+    || !Array.isArray(classification.recovery_plan)
+    || classification.recovery_plan.length !== 0
+    || !Array.isArray(classification.states)
+    || classification.states.length < 1
+    || classification.states.some((state) => !["coherent_running", "coherent_prepared"].includes(state))
+    || !classification.states.includes("coherent_running")
+  ) throw new Error("Production mixed-state classification is not promotion_safe or has unresolved findings.");
+  const authority = {
+    release_sha: repeatability.release_sha,
+    release_tree: repeatability.release_tree,
+    build_id: repeatability.build_id,
+    sealed_bundle_digest: repeatability.sealed_bundle_digest,
+    repeatability_receipt_digest: repeatability.repeatability_receipt_digest,
+    rehearsal_receipt_valid_until: repeatability.valid_until,
+    classification_digest: classificationDigest,
+  };
+  return Object.freeze({ verified: true, authority_digest: sha256Jcs(authority), ...authority });
+}
 
 export function createProductionPromotionAuthorityVerifier({
   candidatePath,

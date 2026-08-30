@@ -21,6 +21,7 @@ export {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
+  buildProductionReleaseAnnotatedTagMessage,
 } from "./production-release-approval-policy.mjs";
 
 export const GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA =
@@ -111,31 +112,6 @@ function normalizeRehearsalAuthority(value, label = "rehearsalAuthority") {
     ),
     rehearsal_receipt_valid_until: validUntil,
   });
-}
-
-export function buildProductionReleaseAnnotatedTagMessage({
-  releaseTag,
-  rehearsal_receipt_schema,
-  build_id,
-  sealed_bundle_digest,
-  repeatability_receipt_digest,
-  rehearsal_receipt_valid_until,
-} = {}) {
-  const authority = normalizeRehearsalAuthority({
-    rehearsal_receipt_schema,
-    build_id,
-    sealed_bundle_digest,
-    repeatability_receipt_digest,
-    rehearsal_receipt_valid_until,
-  }, "annotated tag rehearsal authority");
-  return [
-    `Approved production release ${validateProductionReleaseTag(releaseTag, "releaseTag")}`,
-    `build_id ${authority.build_id}`,
-    `rehearsal_receipt_schema ${authority.rehearsal_receipt_schema}`,
-    `sealed_bundle_digest ${authority.sealed_bundle_digest}`,
-    `repeatability_receipt_digest ${authority.repeatability_receipt_digest}`,
-    `rehearsal_receipt_valid_until ${authority.rehearsal_receipt_valid_until}`,
-  ].join("\n");
 }
 
 function requireAbsoluteExistingPath(value, label) {

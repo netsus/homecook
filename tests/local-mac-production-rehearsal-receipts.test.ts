@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import * as receiptAuthority from "../scripts/lib/local-mac-production-rehearsal-receipts.mjs";
-import * as productionRelease from "../scripts/lib/local-mac-production-release.mjs";
+import * as productionRelease from "../scripts/lib/local-mac-production-promotion-authority.mjs";
 import {
   buildRepeatabilityReceipt,
   buildRunReceipt,
