@@ -229,6 +229,8 @@ pre-adapter/initial/final/pre-lock의 broader promotion authority verifier는 ma
 
 promotion 함수는 첫 release manifest external read부터 lock acquisition 성공 전까지 모든 semantic/identity postcondition과 scratch/runtime-source 검증을 같은 outer boundary로 다시 감싼다. lock 직전에는 frozen scratch component root와 authority file FD identities를 고정한 상태로 app/full-local/worker physical bytes를 각각 fresh re-digest하고 authority physical digest와 combined scratch authority를 재계산한다. stored digest만 재사용하거나 mutable candidate를 다시 읽지 않으며 실제 re-digest 값만 prelock scratch authority digest에 투입한다.
 
+macOS의 `/dev/fd/<dirFd>/relative`는 Node directory traversal authority로 사용하지 않는다. held root FD와 same inode인 frozen component/authority root를 private sibling anchor로 원자 이동해 original pathname substitution과 분리한 뒤, nested directory/file을 각각 no-follow FD로 열고 file bytes는 file FD에서만 hash한다. directory FDs는 sorted traversal이 끝날 때까지 유지하며 root/nested/file/parent identity를 pre/post 비교한다. original component path, authority filepath 또는 nested path를 교체했다가 복원해도 replacement bytes를 authority로 받아들이지 않는다.
+
 하나라도 빠지면 pointer, LaunchAgent, Docker, DB를 건드리기 전에 fail closed한다.
 
 ## Production surface non-mutation contract

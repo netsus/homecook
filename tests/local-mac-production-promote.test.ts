@@ -274,6 +274,45 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
   };
 }
 
+function createAnchoredDigestFixture() {
+  const root = createTempDirectory("homecook-anchored-digest-");
+  const appRoot = join(root, "app");
+  const fullLocalRoot = join(root, "full-local");
+  const workerRoot = join(root, "worker");
+  const authorityRoot = join(root, "authority");
+  for (const directory of [appRoot, fullLocalRoot, workerRoot, authorityRoot]) {
+    mkdirSync(join(directory, "nested"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(directory, "nested", "value.txt"), `${directory}\n`, { mode: 0o400 });
+    chmodSync(join(directory, "nested"), 0o500);
+    chmodSync(directory, 0o500);
+  }
+  const appStat = lstatSync(appRoot);
+  const fullLocalStat = lstatSync(fullLocalRoot);
+  const workerStat = lstatSync(workerRoot);
+  const authorityStat = lstatSync(authorityRoot);
+  return {
+    root,
+    snapshot: {
+      appRoot,
+      fullLocalRoot,
+      workerRoot,
+      authorityRoot,
+      appDigest: localRelease.digestLocalMacProductionExecutionTree(appRoot),
+      fullLocalDigest: localRelease.digestLocalMacProductionExecutionTree(fullLocalRoot),
+      workerDigest: localRelease.digestLocalMacProductionExecutionTree(workerRoot),
+      authorityDigest: localRelease.digestLocalMacProductionExecutionTree(authorityRoot),
+      appDev: appStat.dev,
+      appIno: appStat.ino,
+      fullLocalDev: fullLocalStat.dev,
+      fullLocalIno: fullLocalStat.ino,
+      workerDev: workerStat.dev,
+      workerIno: workerStat.ino,
+      authorityDev: authorityStat.dev,
+      authorityIno: authorityStat.ino,
+    },
+  };
+}
+
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
     const directory = temporaryDirectories.pop();
@@ -296,6 +335,104 @@ afterEach(() => {
 });
 
 describe("local Mac production promote", () => {
+  it.each([
+    "component_root",
+    "authority_file",
+    "nested_file",
+  ])("never accepts pathname substitution during FD-anchored %s digest", (attack) => {
+    const fixture = createAnchoredDigestFixture();
+    let attacked = false;
+    expect(() => localRelease.redigestLocalMacProductionFrozenScratch(
+      fixture.snapshot,
+      {
+        anchoredTraversalHook: (event: {
+          anchoredPath?: string;
+          label: string;
+          originalPath?: string;
+          path?: string;
+          phase: string;
+          relativePath?: string;
+        }) => {
+          if (attacked) return;
+          if (attack === "component_root"
+            && event.phase === "after_root_anchor" && event.label === "app") {
+            attacked = true;
+            mkdirSync(event.originalPath!, { mode: 0o700 });
+            writeFileSync(join(event.originalPath!, "replacement.txt"), "replacement\n");
+            rmSync(event.originalPath!, { recursive: true, force: true });
+          }
+          if (attack === "authority_file"
+            && event.phase === "after_file_open" && event.label === "authority") {
+            attacked = true;
+            const backup = `${event.path}.original`;
+            chmodSync(dirname(event.path!), 0o700);
+            renameSync(event.path!, backup);
+            writeFileSync(event.path!, "replacement-authority\n", { mode: 0o400 });
+            rmSync(event.path!, { force: true });
+            renameSync(backup, event.path!);
+            chmodSync(dirname(event.path!), 0o500);
+          }
+          if (attack === "nested_file"
+            && event.phase === "after_file_open"
+            && event.label === "worker"
+            && event.relativePath === "nested/value.txt") {
+            attacked = true;
+            const backup = `${event.path}.original`;
+            chmodSync(dirname(event.path!), 0o700);
+            renameSync(event.path!, backup);
+            writeFileSync(event.path!, "replacement-worker\n", { mode: 0o400 });
+            rmSync(event.path!, { force: true });
+            renameSync(backup, event.path!);
+            chmodSync(dirname(event.path!), 0o500);
+          }
+        },
+      } as unknown as Parameters<typeof localRelease.redigestLocalMacProductionFrozenScratch>[1],
+    )).toThrow(/anchor|identity|changed|digest|replacement/iu);
+    expect(attacked).toBe(true);
+  });
+
+  it("tracks exactly three FD-rooted component digests plus authority", () => {
+    const fixture = createAnchoredDigestFixture();
+    const labels: string[] = [];
+    const result = localRelease.redigestLocalMacProductionFrozenScratch(
+      fixture.snapshot,
+      {
+        anchoredTraversalHook: ({ label, phase }: { label: string; phase: string }) => {
+          if (phase === "after_tree_digest") labels.push(label);
+        },
+      } as unknown as Parameters<typeof localRelease.redigestLocalMacProductionFrozenScratch>[1],
+    );
+    expect(labels).toEqual(["app", "full_local", "worker", "authority"]);
+    expect(result).toMatchObject({
+      appDigest: fixture.snapshot.appDigest,
+      fullLocalDigest: fixture.snapshot.fullLocalDigest,
+      workerDigest: fixture.snapshot.workerDigest,
+      authorityDigest: fixture.snapshot.authorityDigest,
+    });
+  });
+
+  it("sanitizes anchored traversal inconsistency before production lock", async () => {
+    const fixture = createFixture();
+    let attacked = false;
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      anchoredTraversalHook: (event: {
+        label: string;
+        originalPath?: string;
+        phase: string;
+      }) => {
+        if (attacked || event.phase !== "after_root_anchor" || event.label !== "app") return;
+        attacked = true;
+        mkdirSync(event.originalPath!, { mode: 0o700 });
+        rmSync(event.originalPath!, { recursive: true, force: true });
+      },
+    } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/^promotion_authority_source_changed: production promotion authority source changed\.$/u);
+    expect(attacked).toBe(true);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+  });
+
   it.each([
     "missing_manifest",
     "malformed_manifest",
@@ -420,19 +557,30 @@ describe("local Mac production promote", () => {
       }
       return completeAuthority;
     });
-    const redigestFrozenComponent = vi.fn((root: string) => {
-      expect(root.startsWith(`${scratchAttempt}/execution-snapshots/`)).toBe(true);
-      expect(root).not.toBe(fixture.releaseDir);
-      return localRelease.digestLocalMacProductionExecutionTree(root);
+    const digestedLabels: string[] = [];
+    const anchoredTraversalHook = vi.fn((event: {
+      anchoredPath?: string;
+      label: string;
+      phase: string;
+    }) => {
+      if (event.anchoredPath) {
+        expect(event.anchoredPath.startsWith(`${scratchAttempt}/execution-snapshots/`)).toBe(true);
+        expect(event.anchoredPath).not.toBe(fixture.releaseDir);
+      }
+      if (event.phase === "after_tree_digest") digestedLabels.push(event.label);
     });
 
     await expect(promoteLocalMacProductionRelease({
       ...options,
       verifyRehearsalAuthority,
-      redigestFrozenComponent,
+      anchoredTraversalHook,
     } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0]))
       .rejects.toThrow(/^promotion_authority_source_changed: production promotion authority source changed\.$/u);
-    expect(redigestFrozenComponent).toHaveBeenCalledTimes(3);
+    expect(digestedLabels.filter((label) => label !== "authority")).toEqual([
+      "app",
+      "full_local",
+      "worker",
+    ]);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });

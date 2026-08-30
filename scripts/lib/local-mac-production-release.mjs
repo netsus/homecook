@@ -12,6 +12,7 @@ import {
   mkdtempSync,
   mkdirSync,
   openSync,
+  readlinkSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -631,66 +632,244 @@ function assertFrozenScratchDirectoryStable(reservation, label) {
   }
 }
 
-function openFrozenAuthorityFiles(rootPath, currentUid) {
-  const reservations = [];
-  const visit = (path) => {
-    for (const entry of readdirSync(path, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
-      const child = join(path, entry.name);
-      if (entry.isDirectory()) {
-        visit(child);
-        continue;
-      }
-      if (!entry.isFile() || entry.isSymbolicLink()) {
-        throw new Error("Frozen scratch authority contains an unsupported entry.");
-      }
-      const before = lstatSync(child);
-      if (before.uid !== currentUid || (modeBits(before.mode) & 0o222) !== 0 || before.nlink !== 1) {
-        throw new Error("Frozen scratch authority file identity is unsafe.");
-      }
-      let descriptor;
-      try {
-        descriptor = openSync(child, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
-        const opened = fstatSync(descriptor);
-        if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino
-          || opened.uid !== before.uid || opened.mode !== before.mode
-          || opened.nlink !== before.nlink || opened.size !== before.size
-          || opened.ctimeMs !== before.ctimeMs || opened.mtimeMs !== before.mtimeMs) {
-          throw new Error("Frozen scratch authority file descriptor drifted.");
-        }
-        reservations.push(Object.freeze({ before, descriptor, path: child }));
-      } catch (error) {
-        if (descriptor !== undefined) closeSync(descriptor);
-        throw error;
-      }
-    }
-  };
+function openAnchoredNestedDirectory(path, currentUid, label, { allowWritable = false } = {}) {
+  const before = lstatSync(path);
+  if (before.isSymbolicLink() || !before.isDirectory() || before.uid !== currentUid
+    || (!allowWritable && (modeBits(before.mode) & 0o222) !== 0) || realpathSync(path) !== path) {
+    throw new Error(`${label} anchored directory identity is unsafe.`);
+  }
+  let descriptor;
   try {
-    visit(rootPath);
-    return reservations;
+    descriptor = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+    const opened = fstatSync(descriptor);
+    if (!opened.isDirectory() || opened.dev !== before.dev || opened.ino !== before.ino
+      || opened.uid !== before.uid || opened.mode !== before.mode
+      || opened.nlink !== before.nlink || opened.ctimeMs !== before.ctimeMs
+      || opened.mtimeMs !== before.mtimeMs) {
+      throw new Error(`${label} anchored directory descriptor drifted.`);
+    }
+    return Object.freeze({ before, descriptor, path });
   } catch (error) {
-    for (const reservation of reservations) closeSync(reservation.descriptor);
+    if (descriptor !== undefined) closeSync(descriptor);
     throw error;
   }
 }
 
-function assertFrozenAuthorityFilesStable(reservations) {
-  for (const reservation of reservations) {
-    const opened = fstatSync(reservation.descriptor);
-    const current = lstatSync(reservation.path);
-    for (const stat of [opened, current]) {
-      if (!stat.isFile() || stat.dev !== reservation.before.dev || stat.ino !== reservation.before.ino
-        || stat.uid !== reservation.before.uid || stat.mode !== reservation.before.mode
-        || stat.nlink !== reservation.before.nlink || stat.size !== reservation.before.size
-        || stat.ctimeMs !== reservation.before.ctimeMs || stat.mtimeMs !== reservation.before.mtimeMs) {
-        throw new Error("Frozen scratch authority file changed during physical re-digest.");
+function assertAnchoredFileIdentity(before, opened, path) {
+  const openedAfter = fstatSync(opened);
+  const current = lstatSync(path);
+  for (const stat of [openedAfter, current]) {
+    if (!stat.isFile() || stat.dev !== before.dev || stat.ino !== before.ino
+      || stat.uid !== before.uid || stat.mode !== before.mode
+      || stat.nlink !== before.nlink || stat.size !== before.size
+      || stat.ctimeMs !== before.ctimeMs || stat.mtimeMs !== before.mtimeMs) {
+      throw new Error("FD-anchored file identity changed during digest.");
+    }
+  }
+}
+
+function digestExecutionTreeFromPrivateAnchor({
+  anchoredTraversalHook,
+  expectedDev,
+  expectedIno,
+  label,
+  rootPath,
+  uid,
+}) {
+  const originalRoot = resolve(rootPath);
+  const parentPath = dirname(originalRoot);
+  const parentBefore = lstatSync(parentPath);
+  if (parentBefore.isSymbolicLink() || !parentBefore.isDirectory() || parentBefore.uid !== uid
+    || (modeBits(parentBefore.mode) & 0o022) !== 0 || realpathSync(parentPath) !== parentPath) {
+    throw new Error("FD-anchor parent directory is unsafe.");
+  }
+  const originalParentMode = modeBits(parentBefore.mode);
+  if ((originalParentMode & 0o200) === 0) chmodSync(parentPath, originalParentMode | 0o200);
+  const initialRoot = openFrozenScratchDirectory(
+    originalRoot,
+    { dev: expectedDev, ino: expectedIno },
+    uid,
+    label,
+  );
+  const anchorPath = join(parentPath, `.homecook-fd-anchor-${randomUUID()}`);
+  let parentReservation;
+  let rootReservation;
+  let anchored = false;
+  let restored = false;
+  const directoryReservations = [];
+  const inventory = [];
+  const hash = createHash("sha256");
+  const hook = typeof anchoredTraversalHook === "function"
+    ? anchoredTraversalHook
+    : () => undefined;
+  const fileBytes = (path, relativePath, recordLabel = label) => {
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || !before.isFile() || before.uid !== uid
+      || (modeBits(before.mode) & 0o222) !== 0 || before.nlink !== 1) {
+      throw new Error("FD-anchored file identity is unsafe.");
+    }
+    let descriptor;
+    try {
+      descriptor = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      const opened = fstatSync(descriptor);
+      if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino
+        || opened.uid !== before.uid || opened.mode !== before.mode
+        || opened.nlink !== before.nlink || opened.size !== before.size
+        || opened.ctimeMs !== before.ctimeMs || opened.mtimeMs !== before.mtimeMs) {
+        throw new Error("FD-anchored file descriptor drifted.");
+      }
+      hook({ label: recordLabel, path, phase: "after_file_open", relativePath });
+      const bytes = readFileSync(descriptor);
+      assertAnchoredFileIdentity(before, descriptor, path);
+      inventory.push(Object.freeze({
+        digest: sha256Bytes(bytes),
+        executable: (modeBits(before.mode) & 0o111) !== 0,
+        mode: modeBits(before.mode),
+        path: relativePath,
+        size: before.size,
+        type: "file",
+      }));
+      return { before, bytes };
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
+    }
+  };
+  const digestDereferencedTarget = (path, seen = new Set()) => {
+    const stat = lstatSync(path);
+    const key = `${stat.dev}:${stat.ino}`;
+    if (seen.has(key)) throw new Error("FD-anchored symlink cycle detected.");
+    const nextSeen = new Set(seen).add(key);
+    if (stat.isSymbolicLink()) {
+      digestDereferencedTarget(realpathSync(path), nextSeen);
+      return;
+    }
+    if (stat.isDirectory()) {
+      const reservation = openAnchoredNestedDirectory(path, uid, "symlink_target");
+      directoryReservations.push(reservation);
+      hash.update("target-dir\0");
+      for (const name of readdirSync(path).sort()) digestDereferencedTarget(join(path, name), nextSeen);
+      return;
+    }
+    if (!stat.isFile()) throw new Error("FD-anchored symlink target must be regular.");
+    const { before, bytes } = fileBytes(path, relative(anchorPath, path));
+    hash.update(`target-file\0${(modeBits(before.mode) & 0o111) === 0 ? "data" : "exec"}\0`);
+    hash.update(bytes);
+    hash.update("\0");
+  };
+  const visit = (path, relativePath, existingReservation = null) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      const target = realpathSync(path);
+      assertPathInside(anchorPath, target, "FD-anchored execution symlink target");
+      const targetRelative = relative(anchorPath, target);
+      if (targetRelative === ".git" || targetRelative.startsWith(`.git${sep}`)) {
+        throw new Error("FD-anchored execution symlink target enters Git metadata.");
+      }
+      const targetSource = readlinkSync(path);
+      hash.update(`link\0${relativePath}\0${targetRelative}\0`);
+      inventory.push(Object.freeze({
+        digest: sha256Bytes(Buffer.from(targetSource)),
+        executable: false,
+        mode: modeBits(stat.mode),
+        path: relativePath,
+        size: stat.size,
+        target: targetRelative,
+        type: "symlink",
+      }));
+      digestDereferencedTarget(target);
+      const after = lstatSync(path);
+      if (after.dev !== stat.dev || after.ino !== stat.ino || after.ctimeMs !== stat.ctimeMs
+        || after.mtimeMs !== stat.mtimeMs || after.size !== stat.size) {
+        throw new Error("FD-anchored symlink identity changed during digest.");
+      }
+      return;
+    }
+    if (stat.isDirectory()) {
+      const reservation = existingReservation
+        ?? openAnchoredNestedDirectory(path, uid, "component_nested");
+      if (!existingReservation) directoryReservations.push(reservation);
+      hash.update(`dir\0${relativePath}\0`);
+      inventory.push(Object.freeze({
+        digest: null,
+        executable: true,
+        mode: modeBits(stat.mode),
+        path: relativePath,
+        size: stat.size,
+        type: "directory",
+      }));
+      for (const name of readdirSync(path).sort()) {
+        if (relativePath === "" && name === ".git") continue;
+        visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+      }
+      return;
+    }
+    if (!stat.isFile()) throw new Error("FD-anchored execution tree contains a special node.");
+    const { before, bytes } = fileBytes(path, relativePath);
+    hash.update(`file\0${relativePath}\0${(modeBits(before.mode) & 0o111) === 0 ? "data" : "exec"}\0`);
+    hash.update(bytes);
+    hash.update("\0");
+  };
+  try {
+    renameSync(originalRoot, anchorPath);
+    anchored = true;
+    const rootAfterRename = fstatSync(initialRoot.descriptor);
+    const anchorStat = lstatSync(anchorPath);
+    if (anchorStat.dev !== rootAfterRename.dev || anchorStat.ino !== rootAfterRename.ino) {
+      throw new Error("FD anchor does not resolve to the held component root.");
+    }
+    rootReservation = Object.freeze({ before: anchorStat, descriptor: initialRoot.descriptor, path: anchorPath });
+    parentReservation = openAnchoredNestedDirectory(
+      parentPath,
+      uid,
+      "fd_anchor_parent",
+      { allowWritable: true },
+    );
+    hook({ anchoredPath: anchorPath, label, originalPath: originalRoot, phase: "after_root_anchor" });
+    visit(anchorPath, "", rootReservation);
+    for (const reservation of [rootReservation, ...directoryReservations]) {
+      assertFrozenScratchDirectoryStable(reservation, label);
+    }
+    assertFrozenScratchDirectoryStable(parentReservation, "fd_anchor_parent");
+    const digest = hash.digest("hex");
+    hook({ anchoredPath: anchorPath, digest, label, originalPath: originalRoot, phase: "after_tree_digest" });
+    if (existsSync(originalRoot)) {
+      throw new Error("Original component pathname was replaced during FD-anchored digest.");
+    }
+    renameSync(anchorPath, originalRoot);
+    anchored = false;
+    restored = true;
+    const restoredStat = lstatSync(originalRoot);
+    if (restoredStat.dev !== rootAfterRename.dev || restoredStat.ino !== rootAfterRename.ino) {
+      throw new Error("Restored component pathname differs from the held root FD.");
+    }
+    return Object.freeze({
+      digest,
+      inventoryDigest: sha256Bytes(Buffer.from(JSON.stringify(
+        [...inventory].sort((left, right) => left.path.localeCompare(right.path)),
+      ))),
+    });
+  } finally {
+    for (const reservation of directoryReservations.reverse()) closeSync(reservation.descriptor);
+    if (parentReservation) closeSync(parentReservation.descriptor);
+    closeSync(initialRoot.descriptor);
+    if (anchored && !existsSync(originalRoot) && existsSync(anchorPath)) {
+      try {
+        renameSync(anchorPath, originalRoot);
+        restored = true;
+      } catch {
+        // Preserve the private anchor for manual recovery when restoration is unsafe.
       }
     }
+    if (modeBits(lstatSync(parentPath).mode) !== originalParentMode) {
+      chmodSync(parentPath, originalParentMode);
+    }
+    void restored;
   }
 }
 
 export function redigestLocalMacProductionFrozenScratch(
   snapshot,
-  { digestComponent = digestExecutionTree } = {},
+  { anchoredTraversalHook = () => undefined } = {},
 ) {
   const currentUid = requireCurrentUserUid(() => process.getuid?.());
   const components = [
@@ -698,60 +877,46 @@ export function redigestLocalMacProductionFrozenScratch(
     ["full_local", snapshot.fullLocalRoot, snapshot.fullLocalDigest, snapshot.fullLocalDev, snapshot.fullLocalIno],
     ["worker", snapshot.workerRoot, snapshot.workerDigest, snapshot.workerDev, snapshot.workerIno],
   ].filter(([, path]) => typeof path === "string");
-  const directoryReservations = [];
-  let authorityFileReservations = [];
-  try {
-    for (const component of components) {
-      const [label, path] = component;
-      directoryReservations.push(openFrozenScratchDirectory(
-        path,
-        { dev: component[3], ino: component[4] },
-        currentUid,
-        label,
-      ));
-    }
-    directoryReservations.push(openFrozenScratchDirectory(
-      snapshot.authorityRoot,
-      { dev: snapshot.authorityDev, ino: snapshot.authorityIno },
-      currentUid,
-      "authority",
-    ));
-    authorityFileReservations = openFrozenAuthorityFiles(snapshot.authorityRoot, currentUid);
-    const actualComponents = Object.fromEntries(components.map(([label, path]) => [
-      label,
-      digestComponent(path),
-    ]));
-    const actualAuthorityDigest = digestExecutionTree(snapshot.authorityRoot);
-    for (const [index, reservation] of directoryReservations.entries()) {
-      assertFrozenScratchDirectoryStable(reservation, `component_${index}`);
-    }
-    assertFrozenAuthorityFilesStable(authorityFileReservations);
-    const expectedComponents = Object.fromEntries(components.map((component) => [
-      component[0],
-      component[2],
-    ]));
-    const expectedCombinedDigest = sha256Bytes(Buffer.from(JSON.stringify({
-      components: expectedComponents,
-      authority: snapshot.authorityDigest,
-    })));
-    const actualCombinedDigest = sha256Bytes(Buffer.from(JSON.stringify({
-      components: actualComponents,
-      authority: actualAuthorityDigest,
-    })));
-    if (actualCombinedDigest !== expectedCombinedDigest) {
-      throw new Error("Frozen scratch physical component authority drifted before production lock.");
-    }
-    return Object.freeze({
-      appDigest: actualComponents.app,
-      fullLocalDigest: actualComponents.full_local ?? null,
-      workerDigest: actualComponents.worker,
-      authorityDigest: actualAuthorityDigest,
-      combinedDigest: actualCombinedDigest,
-    });
-  } finally {
-    for (const reservation of authorityFileReservations) closeSync(reservation.descriptor);
-    for (const reservation of directoryReservations) closeSync(reservation.descriptor);
+  const actual = Object.fromEntries(components.map((component) => [
+    component[0],
+    digestExecutionTreeFromPrivateAnchor({
+      anchoredTraversalHook,
+      expectedDev: component[3],
+      expectedIno: component[4],
+      label: component[0],
+      rootPath: component[1],
+      uid: currentUid,
+    }),
+  ]));
+  const authority = digestExecutionTreeFromPrivateAnchor({
+    anchoredTraversalHook,
+    expectedDev: snapshot.authorityDev,
+    expectedIno: snapshot.authorityIno,
+    label: "authority",
+    rootPath: snapshot.authorityRoot,
+    uid: currentUid,
+  });
+  const expected = Object.fromEntries(components.map((component) => [
+    component[0],
+    component[2],
+  ]));
+  if (components.some(([label]) => actual[label].digest !== expected[label])
+    || authority.digest !== snapshot.authorityDigest) {
+    throw new Error("Frozen scratch physical component authority drifted before production lock.");
   }
+  const combinedDigest = sha256Bytes(Buffer.from(JSON.stringify({
+    app: actual.app,
+    full_local: actual.full_local ?? null,
+    worker: actual.worker,
+    authority,
+  })));
+  return Object.freeze({
+    appDigest: actual.app.digest,
+    fullLocalDigest: actual.full_local?.digest ?? null,
+    workerDigest: actual.worker.digest,
+    authorityDigest: authority.digest,
+    combinedDigest,
+  });
 }
 
 export function createLocalMacProductionExecutionSnapshot({
@@ -3166,7 +3331,7 @@ async function promoteLocalMacProductionReleaseUnsafe({
   readGitEvidence = readLocalMacProductionGitReleaseEvidence,
   readinessProbe,
   rootDir = process.cwd(),
-  redigestFrozenComponent = digestExecutionTree,
+  anchoredTraversalHook = () => undefined,
   onProductionLockAcquired = () => undefined,
   verifyAttestation,
   verifyFrozenRuntimeInputs,
@@ -3381,7 +3546,7 @@ async function promoteLocalMacProductionReleaseUnsafe({
     );
   }
   const frozenScratchRedigest = redigestLocalMacProductionFrozenScratch(frozenScratch, {
-    digestComponent: redigestFrozenComponent,
+    anchoredTraversalHook,
   });
   const prelockScratchAuthorityDigest = sha256Bytes(Buffer.from(JSON.stringify({
     pre_adapter_authority_digest: expectedRehearsalAuthorityDigest,
