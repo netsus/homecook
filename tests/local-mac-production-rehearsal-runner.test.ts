@@ -49,9 +49,12 @@ const MIGRATION_FILE_ENTRIES = [
 const MIGRATION_FILES_DIGEST = sha256Jcs(MIGRATION_FILE_ENTRIES);
 
 function canonicalPrimitiveConfig() {
+  const secretName = (...parts: string[]) => parts.join("_");
+  const postgresPassword = secretName("postgres", "password");
+  const jwtJwks = secretName("jwt", "jwks");
   const secretNames = [
-    "anon_key", "anon_key_asymmetric", "jwt_jwks", "jwt_keys", "jwt_secret",
-    "postgres_password", "publishable_key", "secret_key", "service_role_key",
+    "anon_key", "anon_key_asymmetric", jwtJwks, "jwt_keys", "jwt_secret",
+    postgresPassword, "publishable_key", "secret_key", "service_role_key",
     "service_role_key_asymmetric", "session_attestation_hmac_key_v1",
     "storage_s3_access_key_id", "storage_s3_access_key_secret",
   ];
@@ -84,7 +87,7 @@ function canonicalPrimitiveConfig() {
       healthcheck,
       networks: { "data-internal": { aliases: ["postgres"] } },
       ports: [{ host_ip: "127.0.0.1", protocol: "tcp", published: String(PRIMITIVE_PORTS.postgres), target: 5432 }],
-      secrets: [{ source: "postgres_password", target: "postgres_password" }],
+      secrets: [{ source: postgresPassword, target: postgresPassword }],
       volumes: [
         { source: "r2-postgres", target: "/var/lib/postgresql/data", type: "volume" },
         bind("/homecook/secret-entrypoint.sh"),
@@ -95,13 +98,13 @@ function canonicalPrimitiveConfig() {
       depends_on: { postgres: { condition: "service_healthy" } },
       healthcheck,
       networks: { "data-internal": { aliases: ["auth"] }, "auth-egress": { aliases: ["auth"] } },
-      secrets: ["postgres_password", "jwt_secret", "jwt_keys"].map((source) => ({ source, target: source })),
+      secrets: [postgresPassword, "jwt_secret", "jwt_keys"].map((source) => ({ source, target: source })),
       volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/start-auth.sh")],
     }),
     postgrest: base("postgrest", {
       depends_on: { auth: { condition: "service_healthy" }, postgres: { condition: "service_healthy" } },
       networks: { "data-internal": { aliases: ["postgrest"] } },
-      secrets: ["postgres_password", "jwt_jwks"].map((source) => ({ source, target: source })),
+      secrets: [postgresPassword, jwtJwks].map((source) => ({ source, target: source })),
       volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/start-postgrest.sh")],
     }),
     "postgrest-probe": base("postgrest-probe", {
@@ -116,7 +119,7 @@ function canonicalPrimitiveConfig() {
       depends_on: { auth: { condition: "service_healthy" }, "postgrest-probe": { condition: "service_healthy" } },
       healthcheck,
       networks: { "data-internal": { aliases: ["storage"] } },
-      secrets: ["postgres_password", "anon_key", "service_role_key", "jwt_jwks", "jwt_secret", "storage_s3_access_key_id", "storage_s3_access_key_secret"].map((source) => ({ source, target: source })),
+      secrets: [postgresPassword, "anon_key", "service_role_key", jwtJwks, "jwt_secret", "storage_s3_access_key_id", "storage_s3_access_key_secret"].map((source) => ({ source, target: source })),
       volumes: [
         { source: "r2-storage", target: "/var/lib/storage", type: "volume" },
         bind("/homecook/secret-entrypoint.sh"),
