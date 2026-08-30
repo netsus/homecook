@@ -9,6 +9,7 @@ import {
   fstatSync,
   linkSync,
   lstatSync,
+  mkdtempSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -20,6 +21,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import {
   basename,
   dirname,
@@ -377,6 +379,36 @@ function copyExecutionTree(
   assertExecutionSymlinksContained(destinationPath);
 }
 
+function digestComposedAppDestination(appSourceRoot, fullLocalSourceRoot) {
+  const calculationRoot = mkdtempSync(join(tmpdir(), "homecook-execution-app-digest-"));
+  const appRoot = join(calculationRoot, "app");
+  try {
+    copyExecutionTree(appSourceRoot, appRoot);
+    if (fullLocalSourceRoot) {
+      const sealedInfraRoot = join(fullLocalSourceRoot, "infra");
+      if (existsSync(sealedInfraRoot)) {
+        copyExecutionTree(sealedInfraRoot, join(appRoot, "infra"));
+      }
+    }
+    sealExecutionTree(appRoot);
+    return digestExecutionTree(appRoot);
+  } finally {
+    removePrivateScratchTree(calculationRoot);
+  }
+}
+
+function removePrivateScratchTree(rootPath) {
+  if (!existsSync(rootPath)) return;
+  const makeDirectoriesWritable = (path) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) return;
+    chmodSync(path, 0o700);
+    for (const name of readdirSync(path)) makeDirectoriesWritable(join(path, name));
+  };
+  makeDirectoriesWritable(rootPath);
+  rmSync(rootPath, { recursive: true, force: true });
+}
+
 function copySnapshotAuthorityFile(
   sourcePath,
   destinationPath,
@@ -503,6 +535,19 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
   ) {
     throw new Error("Sealed execution snapshot evidence drifted.");
   }
+  let metadata;
+  try {
+    metadata = JSON.parse(readFileSync(snapshot.metadataPath, "utf8"));
+  } catch {
+    throw new Error("Sealed execution snapshot evidence is invalid JSON.");
+  }
+  if (
+    metadata.prelock_scratch_authority_digest !== snapshot.prelockScratchAuthorityDigest
+    && (metadata.prelock_scratch_authority_digest !== undefined
+      || snapshot.prelockScratchAuthorityDigest !== undefined)
+  ) {
+    throw new Error("Pre-lock scratch authority drifted from sealed snapshot metadata.");
+  }
   const appDigest = digestExecutionTree(snapshot.appRoot);
   const fullLocalDigest = snapshot.fullLocalRoot ? digestExecutionTree(snapshot.fullLocalRoot) : null;
   const workerDigest = digestExecutionTree(snapshot.workerRoot);
@@ -521,6 +566,8 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
       || !DIGEST_PATTERN.test(snapshot.candidateIdentityDigest ?? "")
       || !DIGEST_PATTERN.test(snapshot.bundleManifestDigest ?? "")
       || !DIGEST_PATTERN.test(snapshot.repeatabilityReceiptDigest ?? "")
+      || (snapshot.prelockScratchAuthorityDigest !== undefined
+        && !DIGEST_PATTERN.test(snapshot.prelockScratchAuthorityDigest))
     ) throw new Error("Sealed execution snapshot rehearsal authority drifted.");
   }
   return snapshot;
@@ -528,16 +575,35 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
 
 export function createLocalMacProductionExecutionSnapshot({
   copyEntryHook = () => undefined,
+  frozenScratch = null,
   manifest,
+  prelockScratchAuthorityDigest = null,
   preparedReleaseDir,
   releaseRoot,
   sealedCandidate = null,
   worker,
 }) {
-  const appSourceRoot = sealedCandidate?.appRoot ?? preparedReleaseDir;
-  const workerSourceRoot = sealedCandidate?.workerRoot ?? worker.artifactRoot;
-  const fullLocalSourceRoot = sealedCandidate?.fullLocalRoot ?? null;
-  const workerManifestSourcePath = sealedCandidate?.workerManifestPath ?? worker.manifestPath;
+  if (prelockScratchAuthorityDigest !== null
+    && !DIGEST_PATTERN.test(prelockScratchAuthorityDigest)) {
+    throw new Error("Pre-lock scratch authority digest is invalid.");
+  }
+  if (frozenScratch) verifyLocalMacProductionExecutionSnapshot(frozenScratch);
+  const appSourceRoot = frozenScratch?.appRoot ?? sealedCandidate?.appRoot ?? preparedReleaseDir;
+  const workerSourceRoot = frozenScratch?.workerRoot ?? sealedCandidate?.workerRoot ?? worker.artifactRoot;
+  const fullLocalSourceRoot = frozenScratch?.fullLocalRoot ?? sealedCandidate?.fullLocalRoot ?? null;
+  const workerManifestSourcePath = frozenScratch?.manifestPath ?? sealedCandidate?.workerManifestPath ?? worker.manifestPath;
+  const workerAuthority = frozenScratch ? {
+    appDescriptorPath: frozenScratch.appDescriptorPath,
+    expectedSchemaPath: frozenScratch.expectedSchemaPath,
+    policyPath: frozenScratch.policyPath,
+    ...(frozenScratch.attestationBundlePath ? {
+      resumeAuthority: {
+        bundlePath: frozenScratch.attestationBundlePath,
+        subjectManifestPath: frozenScratch.attestationSubjectPath,
+        trustedRootPath: frozenScratch.attestationTrustedRootPath,
+      },
+    } : {}),
+  } : worker;
   if (sealedCandidate && (
     sealedCandidate.sealedBundleDigest !== manifest.sealed_bundle_digest
     || sealedCandidate.repeatabilityReceiptDigest !== manifest.repeatability_receipt_digest
@@ -547,15 +613,26 @@ export function createLocalMacProductionExecutionSnapshot({
   const appSourceDigest = digestExecutionTree(appSourceRoot);
   const fullLocalSourceDigest = fullLocalSourceRoot ? digestExecutionTree(fullLocalSourceRoot) : null;
   const workerSourceDigest = digestExecutionTree(workerSourceRoot);
-  if (sealedCandidate && (
+  if (sealedCandidate && !frozenScratch && (
     sealedCandidate.appSourceDigest !== appSourceDigest
     || sealedCandidate.fullLocalSourceDigest !== fullLocalSourceDigest
     || sealedCandidate.workerSourceDigest !== workerSourceDigest
   )) throw new Error("Sealed candidate physical execution bytes differ from verified authority.");
-  const appDescriptorSourceDigest = sha256Bytes(readFileSync(worker.appDescriptorPath));
-  const expectedSchemaSourceDigest = sha256Bytes(readFileSync(worker.expectedSchemaPath));
-  const policySourceDigest = sha256Bytes(readFileSync(worker.policyPath));
-  const resumeAuthority = worker.resumeAuthority ?? null;
+  if (frozenScratch && (
+    frozenScratch.sealedBundleDigest !== sealedCandidate?.sealedBundleDigest
+    || frozenScratch.repeatabilityReceiptDigest !== sealedCandidate?.repeatabilityReceiptDigest
+    || frozenScratch.candidateIdentityDigest !== sealedCandidate?.candidateIdentityDigest
+    || frozenScratch.bundleManifestDigest !== sealedCandidate?.bundleManifestDigest
+    || frozenScratch.appDigest !== appSourceDigest
+    || frozenScratch.fullLocalDigest !== fullLocalSourceDigest
+    || frozenScratch.workerDigest !== workerSourceDigest
+  )) throw new Error("Frozen pre-lock scratch authority differs from the sealed candidate.");
+  const expectedAppDestinationDigest = frozenScratch?.appDigest
+    ?? digestComposedAppDestination(appSourceRoot, fullLocalSourceRoot);
+  const appDescriptorSourceDigest = sha256Bytes(readFileSync(workerAuthority.appDescriptorPath));
+  const expectedSchemaSourceDigest = sha256Bytes(readFileSync(workerAuthority.expectedSchemaPath));
+  const policySourceDigest = sha256Bytes(readFileSync(workerAuthority.policyPath));
+  const resumeAuthority = workerAuthority.resumeAuthority ?? null;
   const resumeAuthorityFields = resumeAuthority
     ? ["bundlePath", "subjectManifestPath", "trustedRootPath"]
     : [];
@@ -580,7 +657,7 @@ export function createLocalMacProductionExecutionSnapshot({
     : null;
   const gitEvidenceDigest = gitEvidenceBytes ? sha256Bytes(gitEvidenceBytes) : null;
   const identityDigest = sha256Bytes(Buffer.from(JSON.stringify({
-    app: appSourceDigest,
+    app: expectedAppDestinationDigest,
     ...(fullLocalSourceDigest ? { full_local: fullLocalSourceDigest } : {}),
     app_descriptor: appDescriptorSourceDigest,
     ...(resumeAuthority ? {
@@ -601,6 +678,9 @@ export function createLocalMacProductionExecutionSnapshot({
       repeatability_receipt_digest: sealedCandidate.repeatabilityReceiptDigest,
       candidate_identity_digest: sealedCandidate.candidateIdentityDigest,
       bundle_manifest_digest: sealedCandidate.bundleManifestDigest,
+    } : {}),
+    ...(prelockScratchAuthorityDigest ? {
+      prelock_scratch_authority_digest: prelockScratchAuthorityDigest,
     } : {}),
   })));
   const executionRoot = join(releaseRoot, "execution-snapshots");
@@ -625,16 +705,18 @@ export function createLocalMacProductionExecutionSnapshot({
   const workerRoot = join(snapshotRoot, "worker");
   try {
     copyExecutionTree(appSourceRoot, appRoot, { copyEntryHook });
-    if (fullLocalSourceRoot) {
+    if (fullLocalSourceRoot && !frozenScratch) {
       copyExecutionTree(fullLocalSourceRoot, fullLocalRoot, { copyEntryHook });
       const sealedInfraRoot = join(fullLocalRoot, "infra");
       if (existsSync(sealedInfraRoot)) {
         copyExecutionTree(sealedInfraRoot, join(appRoot, "infra"), { copyEntryHook });
       }
+    } else if (fullLocalSourceRoot) {
+      copyExecutionTree(fullLocalSourceRoot, fullLocalRoot, { copyEntryHook });
     }
     copyExecutionTree(workerSourceRoot, workerRoot, { copyEntryHook });
     if (
-      (!fullLocalSourceRoot && digestExecutionTree(appRoot) !== appSourceDigest)
+      digestExecutionTree(appRoot) !== expectedAppDestinationDigest
       || (fullLocalSourceRoot && digestExecutionTree(fullLocalRoot) !== fullLocalSourceDigest)
       || digestExecutionTree(workerRoot) !== workerSourceDigest
     ) {
@@ -643,19 +725,19 @@ export function createLocalMacProductionExecutionSnapshot({
     const authorityRoot = join(snapshotRoot, "authority");
     mkdirSync(authorityRoot, { mode: 0o700 });
     const appDescriptorPath = copySnapshotAuthorityFile(
-      worker.appDescriptorPath,
+      workerAuthority.appDescriptorPath,
       join(authorityRoot, "app-descriptor.json"),
       appDescriptorSourceDigest,
       copyEntryHook,
     );
     const expectedSchemaPath = copySnapshotAuthorityFile(
-      worker.expectedSchemaPath,
+      workerAuthority.expectedSchemaPath,
       join(authorityRoot, "expected-schema.json"),
       expectedSchemaSourceDigest,
       copyEntryHook,
     );
     const policyPath = copySnapshotAuthorityFile(
-      worker.policyPath,
+      workerAuthority.policyPath,
       join(authorityRoot, "policy.json"),
       policySourceDigest,
       copyEntryHook,
@@ -701,9 +783,9 @@ export function createLocalMacProductionExecutionSnapshot({
     if (digestExecutionTree(appSourceRoot) !== appSourceDigest
       || (fullLocalSourceRoot && digestExecutionTree(fullLocalSourceRoot) !== fullLocalSourceDigest)
       || digestExecutionTree(workerSourceRoot) !== workerSourceDigest
-      || sha256Bytes(readFileSync(worker.appDescriptorPath)) !== appDescriptorSourceDigest
-      || sha256Bytes(readFileSync(worker.expectedSchemaPath)) !== expectedSchemaSourceDigest
-      || sha256Bytes(readFileSync(worker.policyPath)) !== policySourceDigest
+      || sha256Bytes(readFileSync(workerAuthority.appDescriptorPath)) !== appDescriptorSourceDigest
+      || sha256Bytes(readFileSync(workerAuthority.expectedSchemaPath)) !== expectedSchemaSourceDigest
+      || sha256Bytes(readFileSync(workerAuthority.policyPath)) !== policySourceDigest
       || (resumeAuthority && (
         sha256Bytes(readFileSync(resumeAuthority.bundlePath)) !== attestationBundleSourceDigest
         || sha256Bytes(readFileSync(resumeAuthority.subjectManifestPath))
@@ -737,6 +819,9 @@ export function createLocalMacProductionExecutionSnapshot({
         repeatability_receipt_digest: sealedCandidate.repeatabilityReceiptDigest,
         candidate_identity_digest: sealedCandidate.candidateIdentityDigest,
         bundle_manifest_digest: sealedCandidate.bundleManifestDigest,
+      } : {}),
+      ...(prelockScratchAuthorityDigest ? {
+        prelock_scratch_authority_digest: prelockScratchAuthorityDigest,
       } : {}),
     }, null, 2), { flag: "wx", mode: 0o600 });
     chmodSync(metadataPath, 0o400);
@@ -785,6 +870,9 @@ export function createLocalMacProductionExecutionSnapshot({
         repeatabilityReceiptDigest: sealedCandidate.repeatabilityReceiptDigest,
         candidateIdentityDigest: sealedCandidate.candidateIdentityDigest,
         bundleManifestDigest: sealedCandidate.bundleManifestDigest,
+      } : {}),
+      ...(prelockScratchAuthorityDigest ? {
+        prelockScratchAuthorityDigest,
       } : {}),
     });
   } catch (error) {
@@ -2297,6 +2385,7 @@ export function validateLocalMacProductionCurrentResumeAuthority({
     throw new Error("resume-current execution root is not the exact descriptor-owned snapshot.");
   }
   const appRoot = resolve(snapshotRoot, "app");
+  const possibleFullLocalRoot = resolve(snapshotRoot, "full-local");
   const workerRoot = resolve(snapshotRoot, "worker");
   const authorityRoot = resolve(snapshotRoot, "authority");
   const metadataPath = resolve(snapshotRoot, "evidence.json");
@@ -2330,6 +2419,7 @@ export function validateLocalMacProductionCurrentResumeAuthority({
     "repeatability_receipt_digest",
     "candidate_identity_digest",
     "bundle_manifest_digest",
+    "prelock_scratch_authority_digest",
   ]), "resume-current snapshot evidence");
   for (const [field, expected] of [
     ["execution_snapshot_digest", descriptor.execution_snapshot_digest],
@@ -2344,20 +2434,27 @@ export function validateLocalMacProductionCurrentResumeAuthority({
   if (descriptor.sealed_bundle_digest !== undefined && (
     evidence.sealed_bundle_digest !== descriptor.sealed_bundle_digest
     || evidence.repeatability_receipt_digest !== descriptor.repeatability_receipt_digest
+    || !DIGEST_PATTERN.test(evidence.prelock_scratch_authority_digest ?? "")
   )) throw new Error("resume-current rehearsal authority drifted.");
+  const fullLocalRoot = evidence.full_local_digest ? possibleFullLocalRoot : null;
   const snapshotStat = lstatSync(snapshotRoot);
   const appStat = lstatSync(appRoot);
+  const fullLocalStat = fullLocalRoot ? lstatSync(fullLocalRoot) : null;
   const workerStat = lstatSync(workerRoot);
   const authorityStat = lstatSync(authorityRoot);
   const snapshot = verifyLocalMacProductionExecutionSnapshot({
     schema: EXECUTION_SNAPSHOT_SCHEMA,
     root: snapshotRoot,
     appRoot,
+    fullLocalRoot,
     workerRoot,
     authorityRoot,
     metadataPath,
     metadataDigest: sha256Bytes(evidenceBytes),
     appDigest: requireDigest(evidence.app_digest, "resume-current app digest"),
+    fullLocalDigest: fullLocalRoot
+      ? requireDigest(evidence.full_local_digest, "resume-current full-local digest")
+      : null,
     workerDigest: requireDigest(evidence.worker_digest, "resume-current worker digest"),
     authorityDigest: requireDigest(
       evidence.authority_digest,
@@ -2369,6 +2466,8 @@ export function validateLocalMacProductionCurrentResumeAuthority({
     uid: currentUid,
     appDev: appStat.dev,
     appIno: appStat.ino,
+    fullLocalDev: fullLocalStat?.dev ?? null,
+    fullLocalIno: fullLocalStat?.ino ?? null,
     workerDev: workerStat.dev,
     workerIno: workerStat.ino,
     authorityDev: authorityStat.dev,
@@ -2378,6 +2477,7 @@ export function validateLocalMacProductionCurrentResumeAuthority({
     repeatabilityReceiptDigest: evidence.repeatability_receipt_digest,
     candidateIdentityDigest: evidence.candidate_identity_digest,
     bundleManifestDigest: evidence.bundle_manifest_digest,
+    prelockScratchAuthorityDigest: evidence.prelock_scratch_authority_digest,
   });
   const authorityFiles = {
     appDescriptorPath: resolve(authorityRoot, "app-descriptor.json"),
@@ -2461,6 +2561,7 @@ export function validateLocalMacProductionCurrentResumeAuthority({
       repeatability_receipt_digest: evidence.repeatability_receipt_digest,
       candidate_identity_digest: evidence.candidate_identity_digest,
       bundle_manifest_digest: evidence.bundle_manifest_digest,
+      prelock_scratch_authority_digest: evidence.prelock_scratch_authority_digest,
     } : {}),
   })));
   if (expectedIdentityDigest !== descriptor.execution_snapshot_digest) {
@@ -2750,6 +2851,55 @@ export async function promoteLocalMacProductionRelease({
   if (finalRehearsalAuthority.sealed_candidate?.root !== sealedCandidate.root) {
     throw new Error("Verified sealed candidate source changed before the first mutation.");
   }
+  const rehearsalRoot = join(homecookRoot, "rehearsal");
+  const promotionScratchRoot = join(rehearsalRoot, "promotion-scratch");
+  ensureSafePrivateDirectory(
+    rehearsalRoot,
+    homecookRoot,
+    "Non-production rehearsal root",
+    { currentUid, mkdir },
+  );
+  ensureSafePrivateDirectory(
+    promotionScratchRoot,
+    rehearsalRoot,
+    "Non-production promotion scratch root",
+    { currentUid, mkdir },
+  );
+  const scratchReleaseRoot = join(promotionScratchRoot, randomUUID());
+  if (existsSync(scratchReleaseRoot)) {
+    throw new Error("Pre-lock promotion scratch identity already exists; reuse is forbidden.");
+  }
+  mkdir(scratchReleaseRoot, { mode: 0o700 });
+  let frozenScratch;
+  try {
+    frozenScratch = createLocalMacProductionExecutionSnapshot({
+      copyEntryHook: executionCopyHook,
+      manifest,
+      preparedReleaseDir: initialCandidate.releaseDir,
+      releaseRoot: scratchReleaseRoot,
+      sealedCandidate,
+      worker: initialRuntimePreflight.worker,
+    });
+    verifyLocalMacProductionExecutionSnapshot(frozenScratch);
+  } catch (error) {
+    removePrivateScratchTree(scratchReleaseRoot);
+    throw error;
+  }
+  const prelockScratchAuthorityDigest = sha256Bytes(Buffer.from(JSON.stringify({
+    pre_adapter_authority_digest: expectedRehearsalAuthorityDigest,
+    initial_authority_digest: initialRehearsalAuthority.authority_digest,
+    final_authority_digest: finalRehearsalAuthority.authority_digest,
+    scratch_snapshot_digest: frozenScratch.digest,
+    scratch_device: String(frozenScratch.dev),
+    scratch_inode: String(frozenScratch.ino),
+    app_digest: frozenScratch.appDigest,
+    full_local_digest: frozenScratch.fullLocalDigest,
+    worker_digest: frozenScratch.workerDigest,
+    authority_digest: frozenScratch.authorityDigest,
+    sealed_bundle_digest: sealedCandidate.sealedBundleDigest,
+    repeatability_receipt_digest: sealedCandidate.repeatabilityReceiptDigest,
+  })));
+  verifyLocalMacProductionExecutionSnapshot(frozenScratch);
   ensureSafePrivateDirectory(
     paths.lockRoot,
     homecookRoot,
@@ -2797,25 +2947,14 @@ export async function promoteLocalMacProductionRelease({
   ) {
     throw new Error("Release manifest changed after promotion lock acquisition.");
   }
-  const lockedCandidate = initialCandidate;
-  if (lockedCandidate.manifestDigest !== initialCandidate.manifestDigest) {
-    throw new Error("Prepared release candidate digest changed after lock acquisition.");
-  }
-  const lockedRuntimePreflight = await preflightBundle({
-    ...preflightContext,
-    releaseDir: lockedCandidate.releaseDir,
-  });
-  if (
-    !lockedRuntimePreflight
-    || lockedRuntimePreflight.stable_key !== initialRuntimePreflight.stable_key
-  ) {
-    throw new Error("Production runtime bundle changed between initial and locked preflight.");
-  }
+  verifyLocalMacProductionExecutionSnapshot(frozenScratch);
+  const lockedRuntimePreflight = initialRuntimePreflight;
 
   const executionSnapshot = createLocalMacProductionExecutionSnapshot({
-    copyEntryHook: executionCopyHook,
+    frozenScratch,
     manifest,
-    preparedReleaseDir: lockedCandidate.releaseDir,
+    prelockScratchAuthorityDigest,
+    preparedReleaseDir: frozenScratch.appRoot,
     releaseRoot: paths.releaseRoot,
     sealedCandidate,
     worker: lockedRuntimePreflight.worker,
@@ -2836,7 +2975,7 @@ export async function promoteLocalMacProductionRelease({
   };
   afterLockedPreflight({
     executionSnapshot,
-    preparedReleaseDir: lockedCandidate.releaseDir,
+    preparedReleaseDir: frozenScratch.appRoot,
   });
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
 
@@ -3449,6 +3588,7 @@ export function readAndVerifyLocalMacProductionExecutionSnapshot({
     "Current descriptor worker manifest path authority",
   );
   const authorityRoot = join(snapshotRoot, "authority");
+  const possibleFullLocalRoot = join(snapshotRoot, "full-local");
   const metadataPath = join(snapshotRoot, "evidence.json");
   const metadataBytes = readSafeRegularFileBytes(
     metadataPath,
@@ -3474,6 +3614,7 @@ export function readAndVerifyLocalMacProductionExecutionSnapshot({
     "repeatability_receipt_digest",
     "candidate_identity_digest",
     "bundle_manifest_digest",
+    "prelock_scratch_authority_digest",
   ]), "Sealed execution snapshot evidence");
   if (
     metadata.schema !== EXECUTION_SNAPSHOT_SCHEMA
@@ -3484,6 +3625,7 @@ export function readAndVerifyLocalMacProductionExecutionSnapshot({
     || (normalizedDescriptor.sealed_bundle_digest !== undefined && (
       metadata.sealed_bundle_digest !== normalizedDescriptor.sealed_bundle_digest
       || metadata.repeatability_receipt_digest !== normalizedDescriptor.repeatability_receipt_digest
+      || !DIGEST_PATTERN.test(metadata.prelock_scratch_authority_digest ?? "")
     ))
   ) {
     throw new Error("Sealed execution snapshot identity drifted from current.json.");
@@ -3491,15 +3633,21 @@ export function readAndVerifyLocalMacProductionExecutionSnapshot({
 
   const rootStat = lstatSync(snapshotRoot);
   const appStat = lstatSync(normalizedDescriptor.execution_app_root);
+  const fullLocalRoot = metadata.full_local_digest ? possibleFullLocalRoot : null;
+  const fullLocalStat = fullLocalRoot ? lstatSync(fullLocalRoot) : null;
   const workerStat = lstatSync(normalizedDescriptor.worker_artifact_root);
   const authorityStat = lstatSync(authorityRoot);
   return verifyLocalMacProductionExecutionSnapshot({
     schema: EXECUTION_SNAPSHOT_SCHEMA,
     root: snapshotRoot,
     appRoot: normalizedDescriptor.execution_app_root,
+    fullLocalRoot,
     workerRoot: normalizedDescriptor.worker_artifact_root,
     authorityRoot,
     appDigest: requireDigest(metadata.app_digest, "Execution snapshot app digest"),
+    fullLocalDigest: fullLocalRoot
+      ? requireDigest(metadata.full_local_digest, "Execution snapshot full-local digest")
+      : null,
     workerDigest: requireDigest(metadata.worker_digest, "Execution snapshot worker digest"),
     authorityDigest: requireDigest(
       metadata.authority_digest,
@@ -3511,6 +3659,8 @@ export function readAndVerifyLocalMacProductionExecutionSnapshot({
     uid: rootStat.uid,
     appDev: appStat.dev,
     appIno: appStat.ino,
+    fullLocalDev: fullLocalStat?.dev ?? null,
+    fullLocalIno: fullLocalStat?.ino ?? null,
     workerDev: workerStat.dev,
     workerIno: workerStat.ino,
     authorityDev: authorityStat.dev,
@@ -3522,6 +3672,7 @@ export function readAndVerifyLocalMacProductionExecutionSnapshot({
     repeatabilityReceiptDigest: metadata.repeatability_receipt_digest,
     candidateIdentityDigest: metadata.candidate_identity_digest,
     bundleManifestDigest: metadata.bundle_manifest_digest,
+    prelockScratchAuthorityDigest: metadata.prelock_scratch_authority_digest,
   });
 }
 

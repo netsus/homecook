@@ -13,7 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -280,6 +280,7 @@ describe("local Mac production promote", () => {
 
     const snapshot = localRelease.createLocalMacProductionExecutionSnapshot({
       manifest: fixture.manifest,
+      prelockScratchAuthorityDigest: "d".repeat(64),
       preparedReleaseDir: fixture.releaseDir,
       releaseRoot: fixture.paths.releaseRoot,
       sealedCandidate: {
@@ -308,9 +309,83 @@ describe("local Mac production promote", () => {
     expect(readFileSync(join(snapshot.appRoot, "infra", "full-local-supabase", "sealed.txt"), "utf8")).toBe("sealed-full-local\n");
     expect(readFileSync(join(snapshot.workerRoot, "sealed-worker.txt"), "utf8")).toBe("sealed-worker\n");
     expect(snapshot).toMatchObject({
+      prelockScratchAuthorityDigest: "d".repeat(64),
       sealedBundleDigest: fixture.manifest.sealed_bundle_digest,
       repeatabilityReceiptDigest: fixture.manifest.repeatability_receipt_digest,
     });
+    expect(() => localRelease.verifyLocalMacProductionExecutionSnapshot({
+      ...snapshot,
+      prelockScratchAuthorityDigest: "e".repeat(64),
+    })).toThrow(/scratch|authority|metadata|drift/iu);
+  });
+
+  it("rejects a mutated app destination when the full-local overlay is present", () => {
+    const fixture = createFixture();
+    const sealedRoot = createTempDirectory("homecook-overlay-destination-");
+    const appRoot = join(sealedRoot, "app");
+    const fullLocalRoot = join(sealedRoot, "full-local");
+    const workerRoot = join(sealedRoot, "worker");
+    mkdirSync(join(appRoot, ".next"), { recursive: true, mode: 0o700 });
+    mkdirSync(join(fullLocalRoot, "infra"), { recursive: true, mode: 0o700 });
+    mkdirSync(workerRoot, { mode: 0o700 });
+    writeFileSync(join(appRoot, ".next", "BUILD_ID"), "sealed-app\n", { mode: 0o400 });
+    writeFileSync(join(fullLocalRoot, "infra", "overlay.txt"), "sealed-overlay\n", { mode: 0o400 });
+    writeFileSync(join(workerRoot, "artifact.json"), "{}\n", { mode: 0o400 });
+
+    expect(() => localRelease.createLocalMacProductionExecutionSnapshot({
+      copyEntryHook: ({ destination, phase }: { destination: string; phase: string }) => {
+        if (phase === "after_file_copy" && destination.endsWith("/app/infra/overlay.txt")) {
+          chmodSync(destination, 0o600);
+          writeFileSync(destination, "tampered-overlay\n");
+        }
+      },
+      manifest: fixture.manifest,
+      preparedReleaseDir: fixture.releaseDir,
+      releaseRoot: fixture.paths.releaseRoot,
+      sealedCandidate: {
+        appRoot,
+        fullLocalRoot,
+        workerRoot,
+        workerManifestPath: join(workerRoot, "artifact.json"),
+        candidateIdentityDigest: "a".repeat(64),
+        bundleManifestDigest: "b".repeat(64),
+        sealedBundleDigest: fixture.manifest.sealed_bundle_digest,
+        repeatabilityReceiptDigest: fixture.manifest.repeatability_receipt_digest,
+        appSourceDigest: localRelease.digestLocalMacProductionExecutionTree(appRoot),
+        fullLocalSourceDigest: localRelease.digestLocalMacProductionExecutionTree(fullLocalRoot),
+        workerSourceDigest: localRelease.digestLocalMacProductionExecutionTree(workerRoot),
+      },
+      worker: {
+        artifactRoot: fixture.workerRoot,
+        manifestPath: fixture.workerManifestPath,
+        appDescriptorPath: fixture.workerAppDescriptorPath,
+        expectedSchemaPath: fixture.workerExpectedSchemaPath,
+        policyPath: fixture.workerPolicyPath,
+      },
+    } as unknown as Parameters<typeof localRelease.createLocalMacProductionExecutionSnapshot>[0]))
+      .toThrow(/app|overlay|destination|digest|copied/iu);
+  });
+
+  it("rejects candidate mutation immediately after the final verifier without creating the production lock", async () => {
+    const fixture = createFixture();
+    const baseOptions = promoteOptions(fixture);
+    const authority = baseOptions.verifyRehearsalAuthority();
+    const verifyRehearsalAuthority = vi.fn()
+      .mockReturnValueOnce(authority)
+      .mockImplementationOnce(() => {
+        writeFileSync(join(fixture.releaseDir, ".next", "BUILD_ID"), "mutated-after-final-verifier\n");
+        return authority;
+      });
+
+    await expect(promoteLocalMacProductionRelease({
+      ...baseOptions,
+      verifyRehearsalAuthority,
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/candidate|physical|source|digest|scratch|bytes/iu);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(0);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    const scratchParent = join(dirname(fixture.paths.releaseRoot), "rehearsal", "promotion-scratch");
+    expect(existsSync(scratchParent) ? readdirSync(scratchParent) : []).toEqual([]);
   });
 
   it("rechecks a fresh clock at final-pre-mutation and expires before lock or install", async () => {
@@ -743,6 +818,8 @@ describe("local Mac production promote", () => {
     expect(existsSync(fixture.paths.lockPath)).toBe(true);
     expect(readFileSync(fixture.paths.currentDescriptorPath)).toEqual(currentBefore);
     expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+    const scratchParent = join(dirname(fixture.paths.releaseRoot), "rehearsal", "promotion-scratch");
+    expect(readdirSync(scratchParent)).toHaveLength(1);
   });
 
   it("blocks a current runtime preflight failure before any install helper", async () => {
@@ -755,20 +832,20 @@ describe("local Mac production promote", () => {
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
   });
 
-  it("rejects runtime evidence drift between initial and locked preflight", async () => {
+  it("never rereads external runtime preflight after the frozen scratch is sealed", async () => {
     const fixture = createFixture();
     fixture.preflightBundle
       .mockResolvedValueOnce({
         full_local_config_sha256: "1".repeat(64),
         stable_key: "runtime-a",
         worker: {
-          artifactRoot: "/private/worker",
-          manifestPath: "/private/worker/worker-artifact.json",
-          appDescriptorPath: "/private/worker/app.json",
+          artifactRoot: fixture.workerRoot,
+          manifestPath: fixture.workerManifestPath,
+          appDescriptorPath: fixture.workerAppDescriptorPath,
           configPath: "/private/worker/worker.env",
           credentialPath: "/private/worker/credential.json",
-          expectedSchemaPath: "/private/worker/schema.json",
-          policyPath: "/private/worker/policy.json",
+          expectedSchemaPath: fixture.workerExpectedSchemaPath,
+          policyPath: fixture.workerPolicyPath,
           secretRoot: "/private/worker/secrets",
           artifactSha256: "7".repeat(64),
           appDescriptorSha256: "6".repeat(64),
@@ -779,32 +856,12 @@ describe("local Mac production promote", () => {
           fullLocalConfigSha256: "1".repeat(64),
         },
       })
-      .mockResolvedValueOnce({
-        full_local_config_sha256: "1".repeat(64),
-        stable_key: "runtime-b",
-        worker: {
-          artifactRoot: "/private/worker",
-          manifestPath: "/private/worker/worker-artifact.json",
-          appDescriptorPath: "/private/worker/app.json",
-          configPath: "/private/worker/worker.env",
-          credentialPath: "/private/worker/credential.json",
-          expectedSchemaPath: "/private/worker/schema.json",
-          policyPath: "/private/worker/policy.json",
-          secretRoot: "/private/worker/secrets",
-          artifactSha256: "7".repeat(64),
-          appDescriptorSha256: "6".repeat(64),
-          configSha256: "5".repeat(64),
-          credentialSha256: "4".repeat(64),
-          expectedSchemaSha256: "3".repeat(64),
-          policySha256: "2".repeat(64),
-          fullLocalConfigSha256: "1".repeat(64),
-        },
-      });
+      .mockRejectedValueOnce(new Error("external preflight was reread after scratch sealing"));
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/runtime|preflight|stable|drift|changed/iu);
-    expect(fixture.installBundle).not.toHaveBeenCalled();
-    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+      .resolves.toMatchObject({ promoted: true });
+    expect(fixture.preflightBundle).toHaveBeenCalledTimes(1);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(1);
   });
 
   it.each(["app", "full_local", "youtube_worker"])(
@@ -990,7 +1047,7 @@ describe("local Mac production promote", () => {
     expect(existsSync(fixture.paths.lockPath)).toBe(true);
   });
 
-  it("revalidates candidate bytes after locking and before invoking the installer", async () => {
+  it("consumes only frozen scratch bytes when the candidate mutates while the production lock is acquired", async () => {
     const fixture = createFixture();
     const mkdir = vi.fn((path: Parameters<typeof mkdirSync>[0], options?: Parameters<typeof mkdirSync>[1]) => {
       const result = mkdirSync(path, options);
@@ -1003,9 +1060,8 @@ describe("local Mac production promote", () => {
     await expect(promoteLocalMacProductionRelease({
       ...promoteOptions(fixture),
       mkdir,
-    })).rejects.toThrow(/build|candidate|drift/iu);
-    expect(fixture.installBundle).not.toHaveBeenCalled();
-    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+    })).resolves.toMatchObject({ promoted: true });
+    expect(fixture.installBundle).toHaveBeenCalledTimes(1);
   });
 
   it("executes only the sealed snapshot when the prepared candidate mutates after locked preflight", async () => {
@@ -1142,7 +1198,7 @@ describe("local Mac production promote", () => {
     await expect(promoteLocalMacProductionRelease(options))
       .rejects.toThrow(/execution source|copy|digest|drift|mutat/iu);
     expect(fixture.installBundle).not.toHaveBeenCalled();
-    expect(existsSync(fixture.paths.lockPath)).toBe(true);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
   });
 
   it.each([
@@ -1168,6 +1224,7 @@ describe("local Mac production promote", () => {
     await expect(promoteLocalMacProductionRelease(options))
       .rejects.toThrow(/authority|copied|digest|drift|race/iu);
     expect(fixture.installBundle).not.toHaveBeenCalled();
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
     expect(readFileSync(sourcePath)).toEqual(original);
   });
 
@@ -1240,7 +1297,7 @@ describe("local Mac production promote", () => {
     const currentDescriptorText = readFileSync(fixture.paths.currentDescriptorPath, "utf8");
     expect(currentDescriptorText).not.toMatch(/credential_path|secret_root|config_path|policy_path/u);
     expect(fixture.installBundle).toHaveBeenCalledTimes(1);
-    expect(fixture.preflightBundle).toHaveBeenCalledTimes(2);
+    expect(fixture.preflightBundle).toHaveBeenCalledTimes(1);
     expect(fixture.readinessProbe).toHaveBeenCalledTimes(1);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
   });

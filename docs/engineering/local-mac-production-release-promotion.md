@@ -122,19 +122,17 @@ legacy/reference checkout과 build readiness 단계다. split 4 production promo
 향후 receipt/attestation gate 구현 완료 뒤의 실제 mutation 단계다. 현재 CLI는 아래 어떤 단계에도 진입하지 않고 `activation_blocked`로 종료한다.
 
 - lock 또는 adapter 생성 전 pre-adapter authority digest를 보존하고 initial/final-pre-mutation fresh read와 exact 비교한다. `classified_at`은 stable digest에서 제외하되 각 read의 expiry/freshness 검증은 생략하지 않는다.
-- promotion lock을 획득한다.
-- running release가 preflight 동안 바뀌지 않았는지 재확인한다.
-- exact sealed candidate component root와 manifest/receipt digest를 재검증한다.
-- rehearsal에서 검증한 sealed app/full-local/worker component root를 promotion lock 보유 중 create-only
-  `content-addressed sealed execution snapshot`으로 복제한다. app/full-local/worker의
-  executable 및 plist WorkingDirectory는 이후 원본 candidate가 아니라 이 snapshot만 사용한다.
+- final authority read 뒤 exact sealed candidate component root와 manifest/receipt/physical digest를 다시 검증하면서 `~/.homecook/rehearsal/promotion-scratch/<random-UUID>` 아래 private create-only non-production scratch를 완전히 materialize한다. app destination digest는 sealed app과 full-local `infra` overlay를 합친 expected tree로 미리 계산하고 app/full-local/worker/authority copy 뒤와 sealing 뒤 각각 exact 비교한다.
+- sealed scratch의 digest와 device/inode identity를 pre-adapter/initial/final authority digest, `sealed_bundle_digest`, `repeatability_receipt_digest`에 묶은 `prelock scratch authority digest`를 만든 뒤 scratch를 다시 검증한다. 이 단계가 실패하면 exact unsealed scratch attempt만 안전하게 제거하고 promotion lock, adapter, install, Docker, LaunchAgent, DB, pointer mutation은 0이다.
+- promotion lock을 획득하고 running release가 preflight 동안 바뀌지 않았는지 재확인한다.
+- production `content-addressed sealed execution snapshot`은 frozen scratch의 app/full-local/worker/authority bytes만 입력으로 사용한다. lock 획득 뒤에는 원본 candidate, prepared checkout, 별도 worker artifact를 다시 읽지 않으며 production copy 뒤에도 prelock scratch authority와 각 component expected digest를 exact 비교한다. app/full-local/worker의 executable 및 plist WorkingDirectory는 이 snapshot만 사용한다.
 - 별도 prepared checkout의 install/build 결과나 별도 worker artifact bytes는 execution snapshot 입력으로 사용하지 않는다.
 - snapshot은 inode, normalized content digest, owner/mode를 각 spawn/install 직전과
   readiness 이후, descriptor commit 직전에 다시 검증한다.
 - execution tree digest는 contained symlink의 dereferenced bytes와 executable metadata를
   포함한다. 외부 target은 거부하고, 내부 absolute symlink는 snapshot 내부의 equivalent
   relative target으로 다시 작성한 뒤 모든 final realpath containment를 재검증한다.
-- snapshot은 실패 시 자동 삭제하지 않는다. lock, snapshot evidence, partial install state를
+- 완전히 seal되기 전 scratch 실패는 exact private attempt만 제거한다. seal된 scratch는 이후 실패 시 자동 삭제하지 않고 lock/snapshot evidence와 함께 manual recovery 근거로 보존한다. production snapshot도 실패 시 자동 삭제하지 않는다. lock, snapshot evidence, partial install state를
   manual recovery 근거로 함께 보존한다. 성공한 snapshot도 running release의 immutable root이므로
   자동 정리하지 않으며 별도 승인된 lifecycle 작업만 제거할 수 있다.
 - app/full-local/worker LaunchAgent를 같은 release bundle로 설치한다.

@@ -221,7 +221,7 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 
 pre-adapter, initial, final-pre-mutation은 각자 fresh clock으로 expiry와 inventory freshness를 다시 계산한다. stable authority digest는 receipt/candidate component/inventory identity만 포함하고 `classified_at` 같은 volatile projection field는 제외한다. 세 단계 digest가 하나라도 다르면 첫 mutation 전에 종료한다.
 
-production execution snapshot의 app/full-local/worker bytes는 검증된 sealed candidate component root만 입력으로 사용한다. rehearsal 뒤 별도 checkout의 reinstall/rebuild 또는 별도 worker artifact를 production execution source로 사용하지 않는다. running descriptor와 readiness에는 `sealed_bundle_digest`와 `repeatability_receipt_digest`를 함께 보존한다.
+final authority 뒤 production lock 전에 검증된 sealed candidate component를 private create-only non-production scratch에 완전히 복제·seal한다. scratch는 app+full-local overlay expected digest와 app/full-local/worker/authority physical digest, device/inode, pre-adapter/initial/final authority, `sealed_bundle_digest`, `repeatability_receipt_digest`를 하나의 prelock authority로 결합한다. production execution snapshot은 lock 뒤 이 frozen scratch bytes만 입력으로 사용하며 candidate/prepared/external artifact path를 다시 읽지 않는다. rehearsal 뒤 별도 checkout의 reinstall/rebuild 또는 별도 worker artifact를 production execution source로 사용하지 않는다. running descriptor와 readiness에는 `sealed_bundle_digest`와 `repeatability_receipt_digest`를 함께 보존한다.
 
 하나라도 빠지면 pointer, LaunchAgent, Docker, DB를 건드리기 전에 fail closed한다.
 
