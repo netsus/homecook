@@ -22,6 +22,7 @@ import {
   relative,
   resolve,
 } from "node:path";
+import { readExactPrivateRegularFile } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
 import workerTiming from
   "../../lib/server/youtube-extraction-worker-timing.json" with { type: "json" };
@@ -51,6 +52,26 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE =
   "i031_codex_vision";
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY =
   "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908";
+export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_FINGERPRINT_KEY_VERSION = "1";
+export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS = Object.freeze({
+  codexEffort: "low",
+  frameMode: "hybrid",
+  hybridAnchorBudget: 36,
+  interval: 4,
+  keyframeTotalLimit: 8,
+  keyframesPerRecipe: 8,
+  packetPromptTextOnly: false,
+  publicSourceBundle: null,
+  recipeMode: "single",
+  screenOcrMode: "auto",
+  selectorCandidateLimit: 12,
+  selectorEffort: "low",
+  singleRecipeOnly: true,
+  sourceMode: "source-text",
+  useApifyFallback: true,
+  useEvidencePackets: false,
+  useVisual: true,
+});
 export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = 300;
 export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS = 30;
 const WORKER_TIMING_RELATIVE_PATH =
@@ -65,6 +86,9 @@ const DEFAULT_INCLUDED_PATHS = Object.freeze([
   "scripts/lib/production-release-approval-policy.mjs",
   "scripts/lib/youtube-extraction-worker-ops.mjs",
   "scripts/lib/youtube-extraction-worker-runtime.mjs",
+  "scripts/lib/youtube-extraction-rehearsal-postgrest-rpc.mjs",
+  "scripts/lib/local-mac-production-rehearsal-runner-safety.mjs",
+  "scripts/lib/rfc8785-jcs.mjs",
   "scripts/manifests/youtube-extraction-expected-schema.json",
   "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
 ]);
@@ -83,6 +107,9 @@ export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
   "scripts/lib/youtube-extraction-worker-ops.mjs",
   "scripts/lib/youtube-extraction-worker-runtime.mjs",
+  "scripts/lib/youtube-extraction-rehearsal-postgrest-rpc.mjs",
+  "scripts/lib/local-mac-production-rehearsal-runner-safety.mjs",
+  "scripts/lib/rfc8785-jcs.mjs",
   EXPECTED_SCHEMA_RELATIVE_PATH,
   YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
   YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
@@ -155,6 +182,21 @@ export function ensureAbsolutePath(value, label) {
     throw new Error(`${label} must be an absolute path.`);
   }
   return resolve(input);
+}
+
+/** Reads the non-secret rehearsal RPC config and its referenced token privately. */
+export function readSealedRehearsalRpcConfig(configPath, { expectedAuthority } = {}) {
+  const absolute = ensureAbsolutePath(configPath, "rehearsal RPC config path");
+  const configRead = readExactPrivateRegularFile(absolute, { label: "rehearsal RPC config", maxBytes: 65_536, acceptedFileModes: [0o400] });
+  let config; try { config = JSON.parse(configRead.bytes.toString("utf8")); } catch { throw new Error("rehearsal RPC config is invalid JSON"); }
+  const keys = Object.keys(config).sort();
+  const required = ["allowed_snapshot_digest", "base_url", "creation_nonce", "fixture_identity", "lifecycle_version", "policy_snapshot_digest", "schema", "schema_identity", "token_file"].sort();
+  if (JSON.stringify(keys) !== JSON.stringify(required) || config.schema !== "homecook.rehearsal-worker-rpc-config.v1" || !/^[a-f0-9]{64}$/u.test(config.allowed_snapshot_digest) || !/^[a-f0-9]{64}$/u.test(config.policy_snapshot_digest) || typeof config.token_file !== "string" || config.token_file.includes("/") || config.token_file === "." || config.token_file === "..") throw new Error("rehearsal RPC config is not closed");
+  const tokenPath = join(dirname(absolute), config.token_file);
+  const tokenRead = readExactPrivateRegularFile(tokenPath, { label: "rehearsal RPC token", maxBytes: 16_384, acceptedFileModes: [0o400] });
+  const configDigest = createHash("sha256").update(configRead.bytes).digest("hex");
+  if (expectedAuthority?.config_digest && expectedAuthority.config_digest !== configDigest) throw new Error("rehearsal RPC config authority mismatch");
+  return Object.freeze({ config, token: tokenRead.bytes.toString("utf8"), config_digest: configDigest, config_identity: configRead.identity, token_reference: config.token_file });
 }
 
 /**
@@ -262,6 +304,22 @@ function canonicalize(value) {
  */
 export function stableStringify(value) {
   return JSON.stringify(canonicalize(value), null, 2);
+}
+
+export function buildYoutubeExtractionWorkerPolicySnapshotDigest({
+  extractorMode = DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE,
+  pipelineIdentity = DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY,
+  policyVersion = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION,
+  resultAffectingOptions = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,
+} = {}) {
+  const preimage = JSON.stringify(canonicalize({
+    extractor_mode: ensureNonEmptyString(extractorMode, "extractorMode"),
+    pipeline_identity: ensureSnapshotDigest(pipelineIdentity, "pipelineIdentity"),
+    policy_version: ensureInteger(policyVersion, "policyVersion", { minimum: 1 }),
+    result_affecting_options: resultAffectingOptions,
+    schema_identity: YOUTUBE_EXTRACTION_POLICY_SNAPSHOT_SCHEMA_IDENTITY,
+  }));
+  return createHash("sha256").update(preimage, "utf8").digest("hex");
 }
 
 /**

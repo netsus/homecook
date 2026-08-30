@@ -8,10 +8,15 @@ const MODULE_PATHS = [
   "scripts/lib/local-mac-production-rehearsal-inventory.mjs",
   "scripts/lib/local-mac-production-rehearsal-classifier.mjs",
   "scripts/lib/local-mac-production-rehearsal-candidate.mjs",
+  "scripts/lib/local-mac-production-rehearsal-runner.mjs",
+  "scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs",
+  "scripts/lib/local-mac-production-rehearsal-runner-safety.mjs",
   "scripts/local-mac-production-rehearsal.mjs",
+  "scripts/local-mac-production-rehearsal-run.mjs",
   "scripts/schemas/local-mac-production-rehearsal-candidate.schema.json",
   "scripts/schemas/local-mac-production-rehearsal-inventory.schema.json",
   "scripts/schemas/local-mac-production-rehearsal-classification.schema.json",
+  "scripts/schemas/local-mac-production-rehearsal-run-evidence.schema.json",
 ] as const;
 
 describe("local Mac production rehearsal foundation", () => {
@@ -26,13 +31,17 @@ describe("local Mac production rehearsal foundation", () => {
   });
 
   it("exports the strict JCS, receipt, inventory, classifier, and CLI APIs", async () => {
-    const [jcs, receipts, inventory, classifier, candidate, cli] = await Promise.all([
+    const [jcs, receipts, inventory, classifier, candidate, runner, runnerAdapters, runnerSafety, cli, runnerCli] = await Promise.all([
       import("../scripts/lib/rfc8785-jcs.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-receipts.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-classifier.mjs"),
       import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs"),
+      import("../scripts/lib/local-mac-production-rehearsal-runner.mjs"),
+      import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs"),
+      import("../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs"),
       import("../scripts/local-mac-production-rehearsal.mjs"),
+      import("../scripts/local-mac-production-rehearsal-run.mjs"),
     ]);
 
     expect(jcs).toMatchObject({
@@ -63,8 +72,24 @@ describe("local Mac production rehearsal foundation", () => {
       parseAndValidateCandidateManifest: expect.any(Function),
       readBuildEnvironmentSnapshot: expect.any(Function),
     });
+    expect(runner).toMatchObject({
+      runIsolatedReleaseRehearsal: expect.any(Function),
+      validateRunEvidence: expect.any(Function),
+      cleanupOwnedResources: expect.any(Function),
+    });
+    expect(runnerAdapters).toMatchObject({
+      createLocalReleaseRehearsalRunnerAdapters: expect.any(Function),
+    });
+    expect(runnerSafety).toMatchObject({
+      resolveTrustedLocalDockerEndpoint: expect.any(Function),
+      runAbortableCommand: expect.any(Function),
+      readVerifiedMigrationInputs: expect.any(Function),
+    });
     expect(cli).toMatchObject({
       runLocalMacProductionRehearsalCli: expect.any(Function),
+    });
+    expect(runnerCli).toMatchObject({
+      runLocalMacProductionRehearsalRunnerCli: expect.any(Function),
     });
   });
 });

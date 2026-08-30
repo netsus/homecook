@@ -524,6 +524,9 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",
       "scripts/lib/youtube-extraction-worker-runtime.mjs",
+      "scripts/lib/youtube-extraction-rehearsal-postgrest-rpc.mjs",
+      "scripts/lib/local-mac-production-rehearsal-runner-safety.mjs",
+      "scripts/lib/rfc8785-jcs.mjs",
       "scripts/manifests/youtube-extraction-expected-schema.json",
       "scripts/youtube-extraction-worker-runner.mjs",
     ]));
@@ -1507,6 +1510,9 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "scripts/lib/production-release-approval-policy.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",
       "scripts/lib/youtube-extraction-worker-runtime.mjs",
+      "scripts/lib/youtube-extraction-rehearsal-postgrest-rpc.mjs",
+      "scripts/lib/local-mac-production-rehearsal-runner-safety.mjs",
+      "scripts/lib/rfc8785-jcs.mjs",
       "scripts/manifests/youtube-extraction-expected-schema.json",
       "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
     ]) {

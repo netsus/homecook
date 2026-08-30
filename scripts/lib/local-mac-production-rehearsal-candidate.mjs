@@ -37,6 +37,7 @@ import {
   resolveTrustedNodeExecutable,
 } from "./trusted-production-release-tools.mjs";
 import {
+  buildYoutubeExtractionWorkerPolicySnapshotDigest,
   materializeYoutubeExtractionWorkerArtifact,
 } from "./youtube-extraction-worker-artifact.mjs";
 import {
@@ -2001,7 +2002,7 @@ function runCandidateDockerReadOnly(dockerPath, args, options) {
   return runBounded(dockerPath, validateCandidateDockerReadOnlyArgs(args), options);
 }
 
-function resolveSafeRealExecutable(candidates, label) {
+export function resolveSafeRealExecutable(candidates, label) {
   for (const candidate of candidates.filter(Boolean)) {
     try {
       const path = realpathSync(candidate);
@@ -2021,7 +2022,7 @@ function resolveSafeRealExecutable(candidates, label) {
   fail(`${label} trusted executable is unavailable`);
 }
 
-function snapshotToolFile(path, version, { requireExecutable = true } = {}) {
+export function snapshotToolFile(path, version, { requireExecutable = true } = {}) {
   const lexical = lstatSync(path, { bigint: true });
   if (lexical.isSymbolicLink()) fail(`trusted tool executable is a symlink: ${path}`);
   if (!lexical.isFile() || (Number(lexical.mode) & 0o022) !== 0) fail(`trusted tool mode is unsafe: ${path}`);
@@ -3298,7 +3299,7 @@ export function createReleaseRehearsalCandidateAdapters({
         releaseTree,
         buildId,
         promotionId: buildId,
-        allowedSnapshotDigest: migration.ordered_migration_files_digest,
+        allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
       });
       if (verifyExactMaterializedTree({
         sourceRoot: source.checkout_dir,

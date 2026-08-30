@@ -775,6 +775,76 @@ export function createYoutubeExtractionWorkerRuntime({
 
 /**
  * @param {{
+ *   allowedSnapshotDigest: string,
+ *   runId: string,
+ *   rpc: Function,
+ *   signal?: AbortSignal,
+ * }} options
+ */
+export async function runSyntheticYoutubeExtractionWorkerJob({
+  allowedSnapshotDigest,
+  runId,
+  rpc,
+  signal = new AbortController().signal,
+} = {}) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runId ?? "")) {
+    throw new Error("synthetic rehearsal run_id must be UUID-v4");
+  }
+  if (!(signal instanceof AbortSignal)) throw new Error("synthetic rehearsal signal is required");
+  if (typeof rpc !== "function") throw new Error("rehearsal synthetic worker requires an explicit RPC client");
+  const rpcSequence = [];
+  const runtime = createYoutubeExtractionWorkerRuntime({
+    workerId: `rehearsal-${runId}`,
+    allowedSnapshotDigest,
+    rpc: async (...args) => { rpcSequence.push(args[0]); return rpc(...args); },
+    heartbeatIntervalMs: 60_000,
+    extractor: {
+      async extract({ claimedJob, signal: extractionSignal }) {
+        if (extractionSignal.aborted) throw extractionSignal.reason;
+        return {
+          synthetic: true,
+          videoId: claimedJob.videoId,
+          videoTitle: "Synthetic rehearsal recipe",
+          workerDataPersisted: true,
+          persistence: {
+            cache_operations: [],
+            quota_reservations: [],
+            events: [],
+            method_labels: [],
+          },
+        };
+      },
+    },
+  });
+  let status = null;
+  const pollController = new AbortController();
+  const onAbort = () => pollController.abort(signal.reason ?? new Error("rehearsal aborted"));
+  signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    await runYoutubeExtractionWorkerPollLoop({
+      signal: pollController.signal,
+      pollIntervalMs: 1,
+      runOnce: async ({ signal: loopSignal }) => {
+        status = await runtime.runOnce({ signal: loopSignal });
+        pollController.abort(new Error("synthetic job complete"));
+        return status;
+      },
+    });
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
+  if (status !== "succeeded") throw new Error(`synthetic worker job did not succeed: ${String(status)}`);
+  return Object.freeze({
+    schema: "homecook.youtube-extraction-worker-rehearsal-result.v1",
+    status,
+    synthetic: true,
+    provider_requests: 0,
+    rpc_sequence: Object.freeze([...rpcSequence]),
+  });
+}
+
+/**
+ * @param {{
  *   runOnce: (input: {signal: AbortSignal}) => Promise<unknown>,
  *   signal: AbortSignal,
  *   pollIntervalMs?: number,
