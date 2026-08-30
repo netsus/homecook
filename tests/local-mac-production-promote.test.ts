@@ -359,6 +359,33 @@ describe("local Mac production promote", () => {
     expect(readFileSync(fixture.paths.currentDescriptorPath)).toEqual(currentBefore);
   });
 
+  it("rejects valid-to-valid authority substitution between initial and final with mutation zero", async () => {
+    const fixture = createFixture();
+    const initial = promoteOptions(fixture).verifyRehearsalAuthority();
+    const substituted = {
+      ...initial,
+      authority_digest: "8".repeat(64),
+      sealed_candidate: {
+        ...initial.sealed_candidate,
+        root: "/private/substituted-valid-candidate",
+      },
+    };
+    const verifyRehearsalAuthority = vi.fn()
+      .mockReturnValueOnce(initial)
+      .mockReturnValueOnce(substituted);
+
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      verifyRehearsalAuthority,
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/authority.*drift|pre-mutation|sealed candidate source/iu);
+
+    expect(fixture.preflightBundle).toHaveBeenCalledTimes(1);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(0);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+  });
+
+
   it("exposes a runtime-owned release identity probe", () => {
     expect(localRelease).toHaveProperty(
       "readLocalMacProductionRuntimeIdentity",
