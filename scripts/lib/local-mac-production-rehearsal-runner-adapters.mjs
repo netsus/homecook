@@ -66,6 +66,11 @@ const SERVICES = [
   "postgrest-probe",
   "storage",
 ];
+export function normalizeObserverComponent(component) {
+  if (component === "app" || component === "worker") return component;
+  if (SERVICES.includes(component)) return "full_local";
+  throw new Error("R2 adapter rejected: observer component is outside the exact runtime set");
+}
 const RESOURCE_KIND_ORDER = { network: 0, volume: 1, container: 2 };
 const RUN_IMAGE_SERVICE_LABEL = "com.homecook.release-rehearsal.image-service";
 const RUN_CREATION_NONCE_LABEL = "com.homecook.release-rehearsal.creation-nonce";
@@ -1393,7 +1398,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         await dockerCommand(state, ["start", id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
         if (service.healthcheck) await waitForContainers(state, { signal: state.activeSignal, expectedNames: [entry.name] });
         if (independentObserver?.registerChild) {
-          const subject = await readContainerObserverSubject(state, { containerId: id, component: service.name, signal: state.activeSignal });
+          const subject = await readContainerObserverSubject(state, { containerId: id, component: normalizeObserverComponent(service.name), signal: state.activeSignal });
           await independentObserver.registerChild(subject);
           state.observerSubjects ??= [];
           state.observerSubjects.push(subject);

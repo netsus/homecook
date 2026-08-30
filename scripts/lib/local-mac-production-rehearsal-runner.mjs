@@ -1173,7 +1173,7 @@ export async function runIsolatedReleaseRehearsal({
     stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
     verifyStableExecution();
     preSnapshot = validateProductionSnapshot(await adapters.snapshotProduction("pre", { signal }), "pre");
-    if (!adapters.independentObserver || typeof adapters.independentObserver.begin !== "function" || typeof adapters.independentObserver.end !== "function" || typeof adapters.independentObserver.registerChild !== "function") {
+    if (!adapters.independentObserver || typeof adapters.independentObserver.begin !== "function" || typeof adapters.independentObserver.captureSubjects !== "function" || typeof adapters.independentObserver.end !== "function" || typeof adapters.independentObserver.registerChild !== "function") {
       fail("independent observer is unavailable");
     }
     await adapters.independentObserver.begin({ runId, preSnapshot, signal });
@@ -1246,6 +1246,7 @@ export async function runIsolatedReleaseRehearsal({
     checkAbort();
     if (typeof adapters.reinspectObserverSubjects !== "function") fail("observer subject reinspection is unavailable");
     const registeredSubjects = await adapters.reinspectObserverSubjects({ signal: new AbortController().signal });
+    await adapters.independentObserver.captureSubjects({ registeredSubjects, signal: new AbortController().signal });
     const cleanupEvidence = await cleanup();
     if (!cleanupEvidence.completed) fail("owned cleanup, residue, or secret persistence gate failed");
     verifyStableExecution();

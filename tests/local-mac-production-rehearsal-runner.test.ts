@@ -417,7 +417,7 @@ function createAdapters() {
       docker_endpoint_identity_digest: "d".repeat(64),
       docker_daemon_identity_digest: "e".repeat(64),
     }),
-    independentObserver: { begin: vi.fn().mockResolvedValue(undefined), registerChild: vi.fn().mockResolvedValue(undefined), end: vi.fn().mockResolvedValue(independentObserver()) },
+    independentObserver: { begin: vi.fn().mockResolvedValue(undefined), registerChild: vi.fn().mockResolvedValue(undefined), captureSubjects: vi.fn().mockResolvedValue(independentObserver().registered_subjects), end: vi.fn().mockResolvedValue(independentObserver()) },
     readWorkerRehearsalRpcAuthority: vi.fn().mockResolvedValue({ config_digest: "c".repeat(64), config_file_identity_digest: "d".repeat(64), token_reference_digest: "e".repeat(64), lifecycle_version: "v1", fixture_identity_digest: "f".repeat(64) }),
     reinspectObserverSubjects: vi.fn().mockResolvedValue(independentObserver().registered_subjects),
     stopRuntime: vi.fn().mockResolvedValue(undefined),
@@ -628,6 +628,7 @@ describe("release rehearsal R2 orchestration", () => {
       && entry.completed_at === "2026-08-29T00:00:00.000Z"
     ))).toBe(true);
     expect(adapters.independentObserver.begin).toHaveBeenCalledBefore(adapters.createResources);
+    expect(adapters.independentObserver.captureSubjects).toHaveBeenCalledBefore(adapters.removeResource);
     expect(adapters.removeResource).toHaveBeenCalledBefore(adapters.independentObserver.end);
     expect(adapters.snapshotProduction.mock.invocationCallOrder.at(-1))
       .toBeLessThan(adapters.independentObserver.end.mock.invocationCallOrder[0]);
