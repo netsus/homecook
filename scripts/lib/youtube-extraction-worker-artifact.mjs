@@ -52,6 +52,26 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE =
   "i031_codex_vision";
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY =
   "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908";
+export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_FINGERPRINT_KEY_VERSION = "1";
+export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS = Object.freeze({
+  codexEffort: "low",
+  frameMode: "hybrid",
+  hybridAnchorBudget: 36,
+  interval: 4,
+  keyframeTotalLimit: 8,
+  keyframesPerRecipe: 8,
+  packetPromptTextOnly: false,
+  publicSourceBundle: null,
+  recipeMode: "single",
+  screenOcrMode: "auto",
+  selectorCandidateLimit: 12,
+  selectorEffort: "low",
+  singleRecipeOnly: true,
+  sourceMode: "source-text",
+  useApifyFallback: true,
+  useEvidencePackets: false,
+  useVisual: true,
+});
 export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = 300;
 export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS = 30;
 const WORKER_TIMING_RELATIVE_PATH =
@@ -284,6 +304,22 @@ function canonicalize(value) {
  */
 export function stableStringify(value) {
   return JSON.stringify(canonicalize(value), null, 2);
+}
+
+export function buildYoutubeExtractionWorkerPolicySnapshotDigest({
+  extractorMode = DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE,
+  pipelineIdentity = DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY,
+  policyVersion = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION,
+  resultAffectingOptions = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,
+} = {}) {
+  const preimage = JSON.stringify(canonicalize({
+    extractor_mode: ensureNonEmptyString(extractorMode, "extractorMode"),
+    pipeline_identity: ensureSnapshotDigest(pipelineIdentity, "pipelineIdentity"),
+    policy_version: ensureInteger(policyVersion, "policyVersion", { minimum: 1 }),
+    result_affecting_options: resultAffectingOptions,
+    schema_identity: YOUTUBE_EXTRACTION_POLICY_SNAPSHOT_SCHEMA_IDENTITY,
+  }));
+  return createHash("sha256").update(preimage, "utf8").digest("hex");
 }
 
 /**

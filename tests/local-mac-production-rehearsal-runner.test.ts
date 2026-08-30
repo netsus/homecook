@@ -354,7 +354,7 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
     expect(() => buildPsqlVariableArgs({ job_id: "x\n--command=bad" }, new Set(["job_id"]))).toThrow(/unsafe/iu);
   });
   it("accepts exactly one closed worker fixture readback row", () => {
-    const expected = { user_id: "22222222-2222-4222-8222-222222222222", job_id: "33333333-3333-4333-8333-333333333333", job_status: "queued", attempt_count: 0, policy_snapshot_digest: "a".repeat(64), credential_jti_hash: "b".repeat(64), credential_generation: 1, credential_release_sha: SHA_A, credential_schema_identity: "schema", credential_snapshot_digest: "a".repeat(64), permit_generation: 0 };
+    const expected = { user_id: "22222222-2222-4222-8222-222222222222", job_id: "33333333-3333-4333-8333-333333333333", job_status: "queued", attempt_count: 0, policy_snapshot_digest: "a".repeat(64), computed_policy_snapshot_digest: "a".repeat(64), credential_jti_hash: "b".repeat(64), credential_generation: 1, credential_release_sha: SHA_A, credential_schema_identity: "schema", credential_snapshot_digest: "a".repeat(64), permit_generation: 0 };
     expect(parseAndValidateWorkerFixtureReadback(JSON.stringify(expected), expected)).toMatchObject(expected);
     for (const bad of ["", "{}", `${JSON.stringify(expected)}\n${JSON.stringify(expected)}`, JSON.stringify({ ...expected, job_status: "processing" })]) expect(() => parseAndValidateWorkerFixtureReadback(bad, expected)).toThrow();
   });

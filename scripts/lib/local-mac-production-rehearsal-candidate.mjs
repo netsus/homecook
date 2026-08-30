@@ -37,6 +37,7 @@ import {
   resolveTrustedNodeExecutable,
 } from "./trusted-production-release-tools.mjs";
 import {
+  buildYoutubeExtractionWorkerPolicySnapshotDigest,
   materializeYoutubeExtractionWorkerArtifact,
 } from "./youtube-extraction-worker-artifact.mjs";
 import {
@@ -3298,7 +3299,7 @@ export function createReleaseRehearsalCandidateAdapters({
         releaseTree,
         buildId,
         promotionId: buildId,
-        allowedSnapshotDigest: migration.ordered_migration_files_digest,
+        allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
       });
       if (verifyExactMaterializedTree({
         sourceRoot: source.checkout_dir,

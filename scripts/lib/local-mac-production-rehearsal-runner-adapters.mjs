@@ -35,9 +35,12 @@ import {
   validateSealedWorkerSyntheticResult,
 } from "./local-mac-production-rehearsal-runner.mjs";
 import {
+  buildYoutubeExtractionWorkerPolicySnapshotDigest,
   buildYoutubeExtractionAppDescriptor,
   buildYoutubeExtractionCurrentPolicy,
   buildYoutubeExtractionWorkerQueueState,
+  DEFAULT_YOUTUBE_EXTRACTION_WORKER_FINGERPRINT_KEY_VERSION,
+  DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,
 } from "./youtube-extraction-worker-artifact.mjs";
 import { issueYoutubeExtractionWorkerCredential } from "./youtube-extraction-worker-local-credential.mjs";
 import { buildYoutubeExtractionWorkerCredentialState } from "./youtube-extraction-worker-ops.mjs";
@@ -650,7 +653,7 @@ export function parseAndValidateWorkerFixtureReadback(output, expected) {
   const lines = String(output ?? "").trim().split(/\r?\n/u).filter(Boolean);
   if (lines.length !== 1) fail("worker fixture readback must contain exactly one row");
   let readback; try { readback = JSON.parse(lines[0]); } catch { fail("worker fixture readback is malformed JSON"); }
-  const keys = ["user_id", "job_id", "job_status", "attempt_count", "policy_snapshot_digest", "credential_jti_hash", "credential_generation", "credential_release_sha", "credential_schema_identity", "credential_snapshot_digest", "permit_generation"].sort();
+  const keys = ["user_id", "job_id", "job_status", "attempt_count", "policy_snapshot_digest", "computed_policy_snapshot_digest", "credential_jti_hash", "credential_generation", "credential_release_sha", "credential_schema_identity", "credential_snapshot_digest", "permit_generation"].sort();
   if (!readback || typeof readback !== "object" || Array.isArray(readback) || canonicalizeJcs(Object.keys(readback).sort()) !== canonicalizeJcs(keys) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(readback.user_id ?? "") || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(readback.job_id ?? "") || !Number.isSafeInteger(readback.attempt_count) || !Number.isSafeInteger(readback.credential_generation) || !Number.isSafeInteger(readback.permit_generation)) fail("worker fixture readback has an invalid closed shape");
   for (const [key, value] of Object.entries(expected)) if (readback[key] !== value) fail("worker fixture readback differs from issued authority");
   return Object.freeze(readback);
@@ -680,14 +683,17 @@ async function waitForContainers(state, { signal, timeoutMs = 180_000, expectedN
 }
 
 export function ensureIssuedWorkerCredential(state, manifest, artifact) {
-  const issuanceInput = { run_id: state.runId, release_sha: manifest.release_sha, schema_identity: artifact.schema_identity, allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest, ttl_seconds: 3600, jwt_keys_digest: sha256Jcs(JSON.parse(state.secrets.jwt_keys)) };
+  if (!/^[0-9a-f]{64}$/u.test(artifact?.allowed_snapshot_digest ?? "")) {
+    fail("sealed worker allowed snapshot authority is invalid");
+  }
+  const issuanceInput = { run_id: state.runId, release_sha: manifest.release_sha, schema_identity: artifact.schema_identity, allowed_snapshot_digest: artifact.allowed_snapshot_digest, ttl_seconds: 3600, jwt_keys_digest: sha256Jcs(JSON.parse(state.secrets.jwt_keys)) };
   const issuanceInputDigest = sha256Jcs(issuanceInput);
   if (state.issuedWorkerCredential) {
     if (state.issuedWorkerCredential.issuance_input_digest !== issuanceInputDigest) fail("worker credential issuance input conflicts with existing credential");
     return state.issuedWorkerCredential;
   }
   const issue = state.credentialIssuer ?? issueYoutubeExtractionWorkerCredential;
-  const issued = issue({ jwtKeys: JSON.parse(state.secrets.jwt_keys), generation: 1, releaseSha: manifest.release_sha, schemaIdentity: artifact.schema_identity, allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest, ttlSeconds: 60 * 60 });
+  const issued = issue({ jwtKeys: JSON.parse(state.secrets.jwt_keys), generation: 1, releaseSha: manifest.release_sha, schemaIdentity: artifact.schema_identity, allowedSnapshotDigest: artifact.allowed_snapshot_digest, ttlSeconds: 60 * 60 });
   state.issuedWorkerCredential = Object.freeze({ ...issued, issuance_input_digest: issuanceInputDigest });
   return state.issuedWorkerCredential;
 }
@@ -710,17 +716,20 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
     expiresAt: issued.metadata.expires_at,
     releaseSha: manifest.release_sha,
     schemaIdentity: artifact.schema_identity,
-    allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest,
+    allowedSnapshotDigest: artifact.allowed_snapshot_digest,
     secretRoot: workerSecretRoot,
   });
   const credential = {
     ...hostCredential,
     token_file: "/run/worker-secrets/worker.jwt",
   };
-  const policyDigest = sha256Jcs({
-    schema: "homecook.release-rehearsal-synthetic-worker-policy.v1",
-    candidate_identity_digest: manifest.candidate_identity_digest,
+  const policyDigest = buildYoutubeExtractionWorkerPolicySnapshotDigest({
+    extractorMode: artifact.extractor_mode,
+    pipelineIdentity: artifact.pipeline_identity,
+    policyVersion: artifact.policy_version,
+    resultAffectingOptions: DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,
   });
+  if (artifact.allowed_snapshot_digest !== policyDigest) fail("sealed worker policy snapshot authority mismatch");
   const policy = buildYoutubeExtractionCurrentPolicy({
     policyVersion: artifact.policy_version,
     policySnapshotDigest: policyDigest,
@@ -757,7 +766,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
     schema: "homecook.rehearsal-worker-rpc-config.v1",
     base_url: `http://postgrest:3000`, token_file: "rehearsal-worker.jwt", fixture_identity: state.runId,
     creation_nonce: state.creationNonce, policy_snapshot_digest: policyDigest,
-    schema_identity: artifact.schema_identity, allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest,
+    schema_identity: artifact.schema_identity, allowed_snapshot_digest: artifact.allowed_snapshot_digest,
     lifecycle_version: "youtube-extraction-rpc-v1",
   };
   writeFileSync(paths.rehearsalRpc, `${JSON.stringify(rehearsalRpc)}\n`, { flag: "wx", mode: 0o400 });
@@ -1272,19 +1281,19 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       state.activeSignal = signal ?? state.activeSignal;
       const artifact = JSON.parse(readFileSync(join(state.candidateRoot, "bundles", "bundle", "worker", "artifact.json"), "utf8"));
       const issued = ensureIssuedWorkerCredential(state, manifest, artifact);
-      const fixture = buildIsolatedYoutubeWorkerSyntheticFixtureSql({ runIdentity: namespace.run_id, userId: crypto.randomUUID(), jobId: crypto.randomUUID(), releaseSha: manifest.release_sha, schemaIdentity: artifact.schema_identity, allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest, jtiHash: issued.jtiHash, nowEpoch: Math.floor(new Date(issued.metadata.issued_at).getTime() / 1000) });
+      const fixture = buildIsolatedYoutubeWorkerSyntheticFixtureSql({ runIdentity: namespace.run_id, userId: crypto.randomUUID(), jobId: crypto.randomUUID(), releaseSha: manifest.release_sha, schemaIdentity: artifact.schema_identity, allowedSnapshotDigest: artifact.allowed_snapshot_digest, extractorMode: artifact.extractor_mode, pipelineIdentity: artifact.pipeline_identity, policyVersion: artifact.policy_version, resultAffectingOptions: DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS, fingerprintKeyVersion: DEFAULT_YOUTUBE_EXTRACTION_WORKER_FINGERPRINT_KEY_VERSION, jtiHash: issued.jtiHash, nowEpoch: Math.floor(new Date(issued.metadata.issued_at).getTime() / 1000) });
       await executePsql(state, fixture.sql, { database: namespace.db_name, variables: fixture.variables, allowedVariableNames: new Set(fixture.allowedVariableNames), signal: state.activeSignal });
-      const readbackSql = "select json_build_object('user_id',u.id,'job_id',j.id,'job_status',j.status,'attempt_count',j.attempt_count,'policy_snapshot_digest',j.policy_snapshot_digest,'credential_jti_hash',c.current_jti_hash,'credential_generation',c.current_generation,'credential_release_sha',c.release_sha,'credential_schema_identity',c.schema_identity,'credential_snapshot_digest',c.allowed_snapshot_digest,'permit_generation',p.permit_generation) from public.users u join public.youtube_extraction_jobs j on j.user_id=u.id join private.youtube_extraction_worker_credentials c on c.credential_name='primary' join public.youtube_extractor_permits p on p.permit_key='primary' where u.id=:'user_id' and j.id=:'job_id';\n";
+      const readbackSql = "select json_build_object('user_id',u.id,'job_id',j.id,'job_status',j.status,'attempt_count',j.attempt_count,'policy_snapshot_digest',j.policy_snapshot_digest,'computed_policy_snapshot_digest',private.youtube_extraction_policy_snapshot_digest(cp.extractor_mode,cp.pipeline_identity,cp.result_affecting_options,cp.policy_version),'credential_jti_hash',c.current_jti_hash,'credential_generation',c.current_generation,'credential_release_sha',c.release_sha,'credential_schema_identity',c.schema_identity,'credential_snapshot_digest',c.allowed_snapshot_digest,'permit_generation',p.permit_generation) from public.users u join public.youtube_extraction_jobs j on j.user_id=u.id join private.youtube_extraction_worker_credentials c on c.credential_name='primary' join public.youtube_extractor_permits p on p.permit_key='primary' join private.youtube_extraction_current_policy cp on cp.policy_key='primary' where u.id=:'user_id' and j.id=:'job_id';\n";
       const output = await executePsql(state, readbackSql, { database: namespace.db_name, tuplesOnly: true, variables: { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id }, allowedVariableNames: new Set(["user_id", "job_id"]), signal: state.activeSignal });
-      parseAndValidateWorkerFixtureReadback(output, { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id, job_status: "queued", attempt_count: 0, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest, credential_jti_hash: issued.jtiHash, credential_generation: 1, credential_release_sha: manifest.release_sha, credential_schema_identity: artifact.schema_identity, credential_snapshot_digest: manifest.migration.ordered_migration_files_digest, permit_generation: 0 });
-      const probeResult = await runOwnedPostgrestFixtureProbe(state, { namespace, jobId: fixture.variables.job_id, userId: fixture.variables.user_id, token: state.secrets.service_role_key, expected: { job_id: fixture.variables.job_id, user_id: fixture.variables.user_id, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest }, signal: state.activeSignal });
+      parseAndValidateWorkerFixtureReadback(output, { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id, job_status: "queued", attempt_count: 0, policy_snapshot_digest: artifact.allowed_snapshot_digest, computed_policy_snapshot_digest: artifact.allowed_snapshot_digest, credential_jti_hash: issued.jtiHash, credential_generation: 1, credential_release_sha: manifest.release_sha, credential_schema_identity: artifact.schema_identity, credential_snapshot_digest: artifact.allowed_snapshot_digest, permit_generation: 0 });
+      const probeResult = await runOwnedPostgrestFixtureProbe(state, { namespace, jobId: fixture.variables.job_id, userId: fixture.variables.user_id, token: state.secrets.service_role_key, expected: { job_id: fixture.variables.job_id, user_id: fixture.variables.user_id, policy_snapshot_digest: artifact.allowed_snapshot_digest }, signal: state.activeSignal });
       state.workerFixtureAuthority = Object.freeze({
         fixture_sql_digest: sha256Jcs(fixture),
         credential_jti_hash: issued.jtiHash,
         credential_generation: 1,
         release_sha: manifest.release_sha,
         schema_identity: artifact.schema_identity,
-        allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest,
+        allowed_snapshot_digest: artifact.allowed_snapshot_digest,
         token_reference_digest: sha256Jcs("rehearsal-worker.jwt"),
         user_id: fixture.variables.user_id,
         job_id: fixture.variables.job_id,
