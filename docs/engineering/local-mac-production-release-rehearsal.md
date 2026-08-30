@@ -1,6 +1,6 @@
 # Homecook 서버 Mac release rehearsal 계약
 
-상태: **canonical / implementation split 3 author complete / independent review pending**
+상태: **canonical / implementation split 4 author complete / independent review pending**
 변경 유형: `docs-governance`
 production mutation: **금지 (`false`)**
 제품 계약 영향: **N/A** — 공식 제품 5종, public API, DB schema 계약을 바꾸지 않는다.
@@ -9,7 +9,7 @@ production mutation: **금지 (`false`)**
 
 active production 승격의 역할·lock·tag immutability·manifest·attestation authority는 계속 [local-mac-production-release-promotion.md](./local-mac-production-release-promotion.md)가 가진다. 이 문서는 그보다 앞선 untagged exact-SHA candidate, isolated rehearsal, receipt, mixed-state read-only classification을 담당한다.
 
-현재 구현 범위는 R0 inventory, mixed-state classify, receipt schema/JCS/offline verify, R1 candidate build/seal과 production surface snapshot foundation, R2 isolated run / foreground supervisor까지다. R2 결과는 trusted receipt가 아닌 run evidence이며 repeatability receipt, GitHub attestation, production binding과 promote unlock은 구현하지 않았다. 따라서 split 3만으로 production promotion이 가능하다고 주장하지 않으며, 후속 split과 독립 conformance/security review가 끝날 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
+현재 구현 범위는 R0 inventory와 mixed-state classify, R1 candidate build/seal, R2 isolated run, R3 create-only run receipt, R4 deterministic repeatability receipt, R5 production manifest/tag/attestation v2 binding, R6 promote pre-mutation gate까지다. R2 결과 자체는 계속 trusted receipt가 아닌 run evidence이고, local receipt self digest도 production trust anchor가 아니다. split 4 author 구현만으로 production promotion이 가능하다고 주장하지 않으며, fresh independent conformance/deployment-safety review, current-head CI, merge가 모두 닫힐 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
 
 ## 목표와 비목표
 
@@ -171,6 +171,13 @@ planned command:
 
 ```text
 pnpm release:rehearsal:verify -- --receipt <absolute-create-only-receipt> --json
+```
+
+split 4 create-only 발급 command는 다음과 같다.
+
+```text
+pnpm release:rehearsal:receipt -- --candidate <absolute-sealed-candidate> --run-evidence <absolute-completed-run> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
+pnpm release:rehearsal:repeatability -- --member-receipt <absolute-run-receipt> --member-receipt <absolute-run-receipt> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
 ```
 
 - receipt schema, issuer/tool identity, cryptographic digest, expiry, exact SHA/tree/build/bundle, image, migration, canary, cleanup, no-production-mutation evidence를 offline으로 재검증한다.
@@ -461,9 +468,10 @@ split 3에서 다음을 확정했다.
 - foreground supervisor timeout은 readiness 120초, shutdown 30초, stdout/stderr 각 1 MiB 상한을 evidence policy에 고정한다. exact canary ID는 bytewise ascending `app-production-route`, `cross-component-identity`, `external-network-deny`, `full-local-api-gateway-route`, `full-local-auth-route`, `full-local-postgrest-fixture`, `full-local-storage-route`, `worker-synthetic-job` 8개다.
 - migration ledger는 sealed filename 순서를 sequence로 고정하고 각 migration SHA-256을 함께 저장한다. ordered ledger, final catalog head와 candidate migration head가 모두 exact equality여야 한다.
 
-다음은 후속 actual server rehearsal과 split 4에서 contract를 완화하지 않는 범위로 닫는다.
+다음은 split 4 구현 범위가 아니라 후속 independent actual server rehearsal/approval task에서 contract를 완화하지 않는 범위로 닫는다.
 
 - server Mac의 local Docker image cache provenance와 supported platform 실측 evidence
-- 두 독립 run의 repeatability receipt, GitHub attestation과 production manifest/tag binding
+- 서버 Mac에서 실제 두 독립 run receipt와 repeatability receipt 생성 evidence
+- production approval environment에서의 GitHub attestation/tag 발급은 별도 release-promoter authority로만 수행
 
 위 결정을 이유로 production mutation, external network, production data copy, receipt gate 또는 독립 review를 생략할 수 없다.

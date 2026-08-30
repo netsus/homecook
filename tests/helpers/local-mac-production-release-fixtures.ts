@@ -13,7 +13,7 @@ export function createLocalMacProductionReleaseManifest(
   overrides: Record<string, unknown> = {},
 ) {
   return {
-    schema: "homecook.local-mac-production-release.v1",
+    schema: "homecook.local-mac-production-release.v2",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
@@ -30,6 +30,10 @@ export function createLocalMacProductionReleaseManifest(
     approved_by_task_id: "task-019-release",
     migration_head: "20260825090000_release_gate",
     build_id: "build-20260825-01",
+    rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+    sealed_bundle_digest: "f".repeat(64),
+    repeatability_receipt_digest: "1".repeat(64),
+    rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
     backup_readiness_evidence: "backup-20260825-01",
     previous_release_sha: "c".repeat(40),
     expected_release_contexts: [
@@ -68,6 +72,14 @@ export function createLocalMacProductionGitEvidence({
     releaseTagObjectSha: "e".repeat(40),
     releaseTagCommitSha: releaseSha,
     releaseTreeSha: releaseTree,
+    releaseTagMessage: [
+      "Approved production release prod-20260825.1",
+      "build_id build-20260825-01",
+      "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+      `sealed_bundle_digest ${"f".repeat(64)}`,
+      `repeatability_receipt_digest ${"1".repeat(64)}`,
+      "rehearsal_receipt_valid_until 2026-08-30T09:00:00.000Z",
+    ].join("\n"),
     ...overrides,
   };
 }

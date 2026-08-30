@@ -12,10 +12,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import * as receiptAuthority from "../scripts/lib/local-mac-production-rehearsal-receipts.mjs";
+import * as productionRelease from "../scripts/lib/local-mac-production-release.mjs";
 import {
   buildRepeatabilityReceipt,
   buildRunReceipt,
@@ -553,6 +554,26 @@ describe("repeatability receipt", () => {
     expect(parsed.status).toBe("repeatable");
   });
 
+  it("projects one closed production authority from canonical member and repeatability sources", () => {
+    expect(typeof receiptAuthority.verifyRehearsalReceiptBundleAuthority).toBe("function");
+    const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
+    const repeatability = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
+
+    expect(receiptAuthority.verifyRehearsalReceiptBundleAuthority({
+      memberSources: members.map((member) => canonicalizeJcs(member)),
+      repeatabilitySource: canonicalizeJcs(repeatability),
+      now: NOW,
+    })).toEqual({
+      rehearsal_receipt_schema: repeatability.schema,
+      release_sha: repeatability.release_sha,
+      release_tree: repeatability.release_tree,
+      build_id: repeatability.build_id,
+      sealed_bundle_digest: repeatability.sealed_bundle_digest,
+      repeatability_receipt_digest: repeatability.repeatability_receipt_digest,
+      rehearsal_receipt_valid_until: repeatability.valid_until,
+    });
+  });
+
   it("rejects expired, extended, misaligned, and self-corrupted repeatability receipts", () => {
     const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
     const valid = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
@@ -733,6 +754,65 @@ describe("receipt schemas and artifact path boundary", () => {
 });
 
 describe("strict receipt time authority", () => {
+  it("keeps every invalid promotion authority before the first mutation", () => {
+    expect(typeof productionRelease.validateProductionPromotionPreMutationGate).toBe("function");
+    const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
+    const repeatability = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
+    const valid = {
+      manifest: {
+        release_sha: repeatability.release_sha,
+        release_tree: repeatability.release_tree,
+        build_id: repeatability.build_id,
+        rehearsal_receipt_schema: repeatability.schema,
+        sealed_bundle_digest: repeatability.sealed_bundle_digest,
+        repeatability_receipt_digest: repeatability.repeatability_receipt_digest,
+        rehearsal_receipt_valid_until: repeatability.valid_until,
+      },
+      repeatabilityReceipt: repeatability,
+      memberReceipts: members,
+      candidateManifest: {
+        release_sha: repeatability.release_sha,
+        release_tree: repeatability.release_tree,
+        build_id: repeatability.build_id,
+        sealed_bundle_digest: repeatability.sealed_bundle_digest,
+      },
+      inventoryCapturedAt: "2026-08-29T10:29:00.000Z",
+      classification: (() => {
+        const unsigned = {
+          schema: "homecook.local-mac-production-rehearsal-classification.v1",
+          inventory_digest: SHA_A,
+          classified_at: "2026-08-29T10:29:30.000Z",
+          states: ["coherent_running"],
+          promotion_safe: true,
+          mutation_attempt_count: 0,
+          findings: [],
+          recovery_plan: [],
+        };
+        return { ...unsigned, classification_digest: sha256Jcs(unsigned) };
+      })(),
+      now: NOW,
+    };
+    expect(productionRelease.validateProductionPromotionPreMutationGate(valid))
+      .toMatchObject({ verified: true, authority_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+
+    const attacks = [
+      { ...valid, repeatabilityReceipt: null },
+      { ...valid, now: new Date(repeatability.valid_until) },
+      { ...valid, manifest: { ...valid.manifest, sealed_bundle_digest: "0".repeat(64) } },
+      { ...valid, candidateManifest: { ...valid.candidateManifest, build_id: "substituted" } },
+      { ...valid, inventoryCapturedAt: "2026-08-29T10:31:00.000Z" },
+      { ...valid, classification: { ...valid.classification, promotion_safe: false, states: ["mixed_running"], findings: [{ finding_id: "mixed" }] } },
+    ];
+    for (const attack of attacks) {
+      const mutation = vi.fn();
+      expect(() => {
+        productionRelease.validateProductionPromotionPreMutationGate(attack);
+        mutation();
+      }).toThrow(/receipt|expired|bundle|candidate|future|classification|mixed|promotion|authority/iu);
+      expect(mutation).toHaveBeenCalledTimes(0);
+    }
+  });
+
   it("rejects calendar-invalid RFC3339 instants instead of Date.parse normalization", () => {
     expect(() => buildRunReceipt(runInput(1, {
       issued_at: "2026-02-30T08:00:00.000Z",

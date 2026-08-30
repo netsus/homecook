@@ -132,7 +132,7 @@ describe("release promotion governance docs", () => {
       "docs/engineering/local-mac-production-release-rehearsal.md",
     );
 
-    expect(rehearsalContract).toContain("상태: **canonical / implementation split 3 author complete / independent review pending**");
+    expect(rehearsalContract).toContain("상태: **canonical / implementation split 4 author complete / independent review pending**");
     expect(rehearsalContract).toContain("untagged exact-SHA candidate");
     expect(rehearsalContract).toContain("production authority tag");
     expect(rehearsalContract).toContain("동일 bytes");

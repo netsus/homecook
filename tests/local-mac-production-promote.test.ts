@@ -210,6 +210,7 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
       releaseTree: String(fixture.manifest.release_tree),
     }),
     verifyAttestation: VERIFIED_ATTESTATION,
+    verifyRehearsalAuthority: vi.fn(() => ({ verified: true, authority_digest: "9".repeat(64) })),
     installBundle: fixture.installBundle,
     finalWorkerProbe: fixture.finalWorkerProbe,
     preflightBundle: fixture.preflightBundle,

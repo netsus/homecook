@@ -34,7 +34,8 @@ import {
 } from "../scripts/lib/full-local-launch-agent.mjs";
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
-  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+  buildProductionReleaseAnnotatedTagMessage,
+  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import {
   FULL_LOCAL_SECRET_NAMES,
@@ -450,6 +451,13 @@ describe("connected local Mac production promotion", () => {
       releaseTagObjectSha,
       releaseTree: identity.release_tree,
       repository: "netsus/homecook",
+      rehearsalAuthority: {
+        rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+        build_id: identity.build_id,
+        sealed_bundle_digest: "f".repeat(64),
+        repeatability_receipt_digest: "1".repeat(64),
+        rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
+      },
       subjectOutputPath: subjectManifestPath,
     });
     const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
@@ -465,7 +473,7 @@ describe("connected local Mac production promotion", () => {
     const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
     writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
     writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
-      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
       predicate: artifacts.predicate,
       subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
     } } }])}\n`, { mode: 0o600 });
@@ -503,11 +511,22 @@ describe("connected local Mac production promotion", () => {
       readGitEvidence: () => createLocalMacProductionGitEvidence({
         releaseSha: identity.release_sha,
         releaseTree: identity.release_tree,
-        overrides: { releaseTagObjectSha: manifest.release_tag_object_sha },
+        overrides: {
+          releaseTagObjectSha: manifest.release_tag_object_sha,
+          releaseTagMessage: buildProductionReleaseAnnotatedTagMessage({
+            releaseTag: manifest.release_tag,
+            build_id: manifest.build_id,
+            rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+            sealed_bundle_digest: manifest.sealed_bundle_digest,
+            repeatability_receipt_digest: manifest.repeatability_receipt_digest,
+            rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
+          }),
+        },
       }),
       rootDir: repoRoot,
       runCommand: commandRunner,
       verifyAttestation: () => ({ verified: true, source: "fixture" }),
+      verifyRehearsalAuthority: () => ({ verified: true, authority_digest: "9".repeat(64) }),
     } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0]);
 
     expect(promoted.promoted).toBe(true);
@@ -659,6 +678,13 @@ describe("connected local Mac production promotion", () => {
         releaseTagObjectSha,
         releaseTree: identity.release_tree,
         repository: "netsus/homecook",
+        rehearsalAuthority: {
+          rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+          build_id: identity.build_id,
+          sealed_bundle_digest: "f".repeat(64),
+          repeatability_receipt_digest: "1".repeat(64),
+          rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
+        },
         subjectOutputPath: subjectManifestPath,
       });
       const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
@@ -674,7 +700,7 @@ describe("connected local Mac production promotion", () => {
       const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
       writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
       writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
-        predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+        predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
         predicate: artifacts.predicate,
         subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
       } } }])}\n`, { mode: 0o600 });
@@ -683,7 +709,7 @@ describe("connected local Mac production promotion", () => {
       writePrepare(candidateRoot, manifest, manifestBytes, { executableRuntime: true });
       const worker = workerFixture(temp(`homecook-connected-worker-v2-${index}-`), identity);
       const adapters = createLocalMacProductionPromoteAdapters({ confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL", bundlePath, subjectManifestPath, trustedRootPath: join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"), fullLocalConfigPath: fullConfig, homeDir, nodeBin, workerConfigPath: worker.configPath, workerManifestPath: worker.manifestPath, workerCredentialPath: worker.credentialPath, workerAppDescriptorPath: worker.appDescriptorPath, workerPolicyPath: worker.policyPath, workerExpectedSchemaPath: worker.expectedSchemaPath, workerSecretRoot: worker.secretRoot }, { commandRunner, i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })), appReadinessWaiter: vi.fn(async () => undefined), platform: "darwin" });
-      const promoteOptions = { ...adapters, homeDir, manifestPath, rootDir: repoRoot, runCommand: commandRunner, readGitEvidence: () => createLocalMacProductionGitEvidence({ releaseSha: identity.release_sha, releaseTree: identity.release_tree, overrides: { releaseTagObjectSha: manifest.release_tag_object_sha } }), verifyAttestation: () => ({ verified: true, source: "fixture" }), lockToken: `${index}${index}${index}${index}${index}${index}${index}${index}-1111-4111-8111-111111111111` } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
+      const promoteOptions = { ...adapters, homeDir, manifestPath, rootDir: repoRoot, runCommand: commandRunner, readGitEvidence: () => createLocalMacProductionGitEvidence({ releaseSha: identity.release_sha, releaseTree: identity.release_tree, overrides: { releaseTagObjectSha: manifest.release_tag_object_sha, releaseTagMessage: buildProductionReleaseAnnotatedTagMessage({ releaseTag: manifest.release_tag, build_id: manifest.build_id, rehearsal_receipt_schema: manifest.rehearsal_receipt_schema, sealed_bundle_digest: manifest.sealed_bundle_digest, repeatability_receipt_digest: manifest.repeatability_receipt_digest, rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until }) } }), verifyAttestation: () => ({ verified: true, source: "fixture" }), verifyRehearsalAuthority: () => ({ verified: true, authority_digest: "9".repeat(64) }), lockToken: `${index}${index}${index}${index}${index}${index}${index}${index}-1111-4111-8111-111111111111` } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
       return promoteLocalMacProductionRelease(promoteOptions);
     };
 

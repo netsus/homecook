@@ -38,8 +38,13 @@ import {
   validateProductionReleaseTag,
 } from "./production-release-approval-policy.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./youtube-extraction-worker-artifact.mjs";
+import { buildProductionReleaseAnnotatedTagMessage } from "./github-production-release-attestation.mjs";
+import { validateRepeatabilityReceipt } from "./local-mac-production-rehearsal-receipts.mjs";
+import { sha256Jcs } from "./rfc8785-jcs.mjs";
 
-export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v1";
+export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v2";
+const LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA =
+  "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
 
 const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
@@ -82,6 +87,10 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "approved_by_task_id",
   "migration_head",
   "build_id",
+  "rehearsal_receipt_schema",
+  "sealed_bundle_digest",
+  "repeatability_receipt_digest",
+  "rehearsal_receipt_valid_until",
   "backup_readiness_evidence",
   "previous_release_sha",
   "expected_release_contexts",
@@ -196,6 +205,109 @@ function requireBoolean(value, label) {
   }
 
   return value;
+}
+
+function requireExactUtcTimestamp(value, label) {
+  const normalized = requireNonEmptyString(value, label);
+  const milliseconds = Date.parse(normalized);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== normalized) {
+    throw new Error(`${label} must be an exact UTC millisecond RFC3339 instant.`);
+  }
+  return normalized;
+}
+
+function requireExactValue(value, expected, label) {
+  if (value !== expected) throw new Error(`${label} must be ${expected}.`);
+  return value;
+}
+
+export function validateProductionPromotionPreMutationGate({
+  manifest,
+  repeatabilityReceipt,
+  memberReceipts,
+  candidateManifest,
+  inventoryCapturedAt,
+  classification,
+  now = new Date(),
+} = {}) {
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
+    throw new Error("Production promotion authority requires a valid current instant.");
+  }
+  if (!repeatabilityReceipt) throw new Error("Production promotion repeatability receipt is missing.");
+  const repeatability = validateRepeatabilityReceipt(repeatabilityReceipt, { memberReceipts, now });
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    throw new Error("Production promotion manifest authority is missing.");
+  }
+  if (!candidateManifest || typeof candidateManifest !== "object" || Array.isArray(candidateManifest)) {
+    throw new Error("Production promotion sealed candidate authority is missing.");
+  }
+  const bindings = [
+    ["release_sha", repeatability.release_sha],
+    ["release_tree", repeatability.release_tree],
+    ["build_id", repeatability.build_id],
+    ["sealed_bundle_digest", repeatability.sealed_bundle_digest],
+  ];
+  for (const [field, expected] of bindings) {
+    if (manifest[field] !== expected) throw new Error(`Production manifest ${field} differs from repeatability authority.`);
+    if (candidateManifest[field] !== expected) throw new Error(`Sealed candidate ${field} differs from repeatability authority.`);
+  }
+  if (
+    manifest.rehearsal_receipt_schema !== repeatability.schema
+    || manifest.repeatability_receipt_digest !== repeatability.repeatability_receipt_digest
+    || manifest.rehearsal_receipt_valid_until !== repeatability.valid_until
+  ) throw new Error("Production manifest receipt authority differs from the validated repeatability receipt.");
+
+  const capturedAt = requireExactUtcTimestamp(inventoryCapturedAt, "inventoryCapturedAt");
+  const capturedMilliseconds = Date.parse(capturedAt);
+  if (capturedMilliseconds > now.getTime()) throw new Error("Production inventory contains a future time claim.");
+  if (now.getTime() - capturedMilliseconds > 5 * 60 * 1000) {
+    throw new Error("Production inventory is stale; a new R0 inventory is required.");
+  }
+  if (!classification || typeof classification !== "object" || Array.isArray(classification)) {
+    throw new Error("Production mixed-state classification authority is missing.");
+  }
+  const classificationKeys = [
+    "schema", "inventory_digest", "classified_at", "states", "promotion_safe",
+    "mutation_attempt_count", "findings", "recovery_plan", "classification_digest",
+  ];
+  if (JSON.stringify(Object.keys(classification).sort()) !== JSON.stringify(classificationKeys.sort())) {
+    throw new Error("Production mixed-state classification has an open or incomplete schema.");
+  }
+  if (classification.schema !== "homecook.local-mac-production-rehearsal-classification.v1") {
+    throw new Error("Production mixed-state classification schema is invalid.");
+  }
+  const classifiedAt = requireExactUtcTimestamp(classification.classified_at, "classification.classified_at");
+  if (Date.parse(classifiedAt) < capturedMilliseconds || Date.parse(classifiedAt) > now.getTime()) {
+    throw new Error("Production mixed-state classification contains a future or pre-inventory time claim.");
+  }
+  const { classification_digest: classificationDigest, ...classificationUnsigned } = classification;
+  if (!DIGEST_PATTERN.test(classification.inventory_digest ?? "")
+    || !DIGEST_PATTERN.test(classificationDigest ?? "")
+    || sha256Jcs(classificationUnsigned) !== classificationDigest) {
+    throw new Error("Production mixed-state classification digest authority is invalid.");
+  }
+  if (
+    classification.promotion_safe !== true
+    || classification.mutation_attempt_count !== 0
+    || !Array.isArray(classification.findings)
+    || classification.findings.length !== 0
+    || !Array.isArray(classification.recovery_plan)
+    || classification.recovery_plan.length !== 0
+    || !Array.isArray(classification.states)
+    || classification.states.length < 1
+    || classification.states.some((state) => !["coherent_running", "coherent_prepared"].includes(state))
+    || !classification.states.includes("coherent_running")
+  ) throw new Error("Production mixed-state classification is not promotion_safe or has unresolved findings.");
+  const authority = {
+    release_sha: repeatability.release_sha,
+    release_tree: repeatability.release_tree,
+    build_id: repeatability.build_id,
+    sealed_bundle_digest: repeatability.sealed_bundle_digest,
+    repeatability_receipt_digest: repeatability.repeatability_receipt_digest,
+    rehearsal_receipt_valid_until: repeatability.valid_until,
+    classification_digest: classificationDigest,
+  };
+  return Object.freeze({ verified: true, authority_digest: sha256Jcs(authority), ...authority });
 }
 
 function requireInteger(value, label, minimum = 0) {
@@ -1176,6 +1288,24 @@ function readGitRevParse({
   return value;
 }
 
+function readGitAnnotatedTagMessage({ rootDir, runCommand, releaseTag }) {
+  const result = runCommand("git", ["cat-file", "tag", `refs/tags/${releaseTag}`], {
+    cwd: requireAbsolutePath(rootDir, "rootDir"),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const raw = String(result.stdout ?? "");
+  const separator = raw.indexOf("\n\n");
+  if (result.status !== 0 || separator < 1 || !raw.endsWith("\n") || raw.includes("\r") || raw.includes("\0")) {
+    throw new Error("Release annotated tag raw message could not be read canonically from git.");
+  }
+  const message = raw.slice(separator + 2, -1);
+  if (message.length === 0 || message.endsWith("\n")) {
+    throw new Error("Release annotated tag message has non-canonical trailing bytes.");
+  }
+  return message;
+}
+
 /**
  * @param {{
  *   component?: string,
@@ -1296,6 +1426,11 @@ export function readLocalMacProductionGitReleaseEvidence({
       runCommand,
       label: "Release tree",
       ref: `${normalizedReleaseSha}^{tree}`,
+    }),
+    releaseTagMessage: readGitAnnotatedTagMessage({
+      rootDir,
+      runCommand,
+      releaseTag: normalizedReleaseTag,
     }),
   };
 }
@@ -1505,6 +1640,10 @@ export function validateLocalMacProductionReleaseManifest({
       gitEvidence.releaseTreeSha,
       "gitEvidence.releaseTreeSha",
     ),
+    releaseTagMessage: requireNonEmptyString(
+      gitEvidence.releaseTagMessage,
+      "gitEvidence.releaseTagMessage",
+    ),
   };
 
   if (normalizedGitEvidence.releaseTagCommitSha !== releaseSha) {
@@ -1519,6 +1658,17 @@ export function validateLocalMacProductionReleaseManifest({
   }
   if (normalizedGitEvidence.releaseTreeSha !== releaseTree) {
     throw new Error("Release manifest tree mismatch: release_tree must equal the tagged release tree.");
+  }
+  const expectedTagMessage = buildProductionReleaseAnnotatedTagMessage({
+    releaseTag,
+    build_id: manifest.build_id,
+    rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+    sealed_bundle_digest: manifest.sealed_bundle_digest,
+    repeatability_receipt_digest: manifest.repeatability_receipt_digest,
+    rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
+  });
+  if (normalizedGitEvidence.releaseTagMessage !== expectedTagMessage) {
+    throw new Error("Release annotated tag message does not match manifest rehearsal authority exactly.");
   }
 
   const approvedAt = requireNonEmptyString(manifest.approved_at, "manifest.approved_at");
@@ -1547,6 +1697,23 @@ export function validateLocalMacProductionReleaseManifest({
     ),
     migration_head: requireNonEmptyString(manifest.migration_head, "manifest.migration_head"),
     build_id: requireNonEmptyString(manifest.build_id, "manifest.build_id"),
+    rehearsal_receipt_schema: requireExactValue(
+      manifest.rehearsal_receipt_schema,
+      LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA,
+      "manifest.rehearsal_receipt_schema",
+    ),
+    sealed_bundle_digest: requireDigest(
+      manifest.sealed_bundle_digest,
+      "manifest.sealed_bundle_digest",
+    ),
+    repeatability_receipt_digest: requireDigest(
+      manifest.repeatability_receipt_digest,
+      "manifest.repeatability_receipt_digest",
+    ),
+    rehearsal_receipt_valid_until: requireExactUtcTimestamp(
+      manifest.rehearsal_receipt_valid_until,
+      "manifest.rehearsal_receipt_valid_until",
+    ),
     backup_readiness_evidence: requireNonEmptyString(
       manifest.backup_readiness_evidence,
       "manifest.backup_readiness_evidence",
@@ -2509,8 +2676,12 @@ export async function promoteLocalMacProductionRelease({
   rootDir = process.cwd(),
   runCommand = spawnSync,
   verifyAttestation,
+  verifyRehearsalAuthority,
   writeDescriptorAtomically = writeDescriptorFileAtomically,
 } = {}) {
+  if (typeof verifyRehearsalAuthority !== "function") {
+    throw new Error("Production rehearsal repeatability pre-mutation authority is not configured.");
+  }
   if (typeof installBundle !== "function") {
     throw new Error("Production release bundle installer is not configured.");
   }
@@ -2556,6 +2727,15 @@ export async function promoteLocalMacProductionRelease({
     throw new Error(
       "Production promotion requires app, full-local, and YouTube worker enabled as one bundle.",
     );
+  }
+  const initialRehearsalAuthority = await verifyRehearsalAuthority({
+    manifest,
+    now,
+    phase: "initial",
+  });
+  if (!initialRehearsalAuthority || initialRehearsalAuthority.verified !== true
+    || !DIGEST_PATTERN.test(initialRehearsalAuthority.authority_digest ?? "")) {
+    throw new Error("Production rehearsal repeatability pre-mutation authority is invalid.");
   }
 
   const paths = getLocalMacProductionReleasePaths(realHomeDir);
@@ -2611,6 +2791,15 @@ export async function promoteLocalMacProductionRelease({
     || initialRuntimePreflight.stable_key.length === 0
   ) {
     throw new Error("Production release bundle preflight returned invalid stable evidence.");
+  }
+  const finalRehearsalAuthority = await verifyRehearsalAuthority({
+    manifest,
+    now,
+    phase: "final-pre-mutation",
+  });
+  if (!finalRehearsalAuthority || finalRehearsalAuthority.verified !== true
+    || finalRehearsalAuthority.authority_digest !== initialRehearsalAuthority.authority_digest) {
+    throw new Error("Production rehearsal repeatability authority drifted before the first mutation.");
   }
   ensureSafePrivateDirectory(
     paths.lockRoot,

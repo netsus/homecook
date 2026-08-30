@@ -16,7 +16,7 @@ import { runLocalMacProductionReleaseCli } from "../scripts/promote-local-mac-pr
 
 const temporaryDirectories: string[] = [];
 const SCRIPT_PATH = join(process.cwd(), "scripts", "promote-local-mac-production-release.mjs");
-const PROMOTE_ACTIVATION_BLOCKED_ERROR = "activation_blocked: production promote requires the implemented and GitHub-attested repeatability receipt gate before any adapter, lock, Docker, LaunchAgent, database, or runtime mutation setup.";
+const PROMOTE_ACTIVATION_BLOCKED_ERROR = "activation_blocked: production promote requires the GitHub-attested repeatability receipt gate to be independently reviewed, current-head green, and merged before any adapter, lock, Docker, LaunchAgent, database, or runtime mutation setup.";
 
 function createTempDirectory(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
@@ -53,7 +53,15 @@ function createFixtureRepo({
   if (includeOriginMaster) {
     runGit(rootDir, ["update-ref", "refs/remotes/origin/master", releaseSha]);
   }
-  runGit(rootDir, ["tag", "-a", "prod-20260825.1", "-m", "fixture release tag"]);
+  const releaseTagMessage = [
+    "Approved production release prod-20260825.1",
+    "build_id build-20260825-01",
+    "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+    `sealed_bundle_digest ${"f".repeat(64)}`,
+    `repeatability_receipt_digest ${"1".repeat(64)}`,
+    "rehearsal_receipt_valid_until 2026-08-30T09:00:00.000Z",
+  ].join("\n");
+  runGit(rootDir, ["tag", "-a", "prod-20260825.1", "-m", releaseTagMessage]);
   const releaseTagObjectSha = runGit(rootDir, [
     "rev-parse",
     "refs/tags/prod-20260825.1^{tag}",
@@ -61,7 +69,7 @@ function createFixtureRepo({
 
   const manifestPath = join(rootDir, "release.json");
   writeFileSync(manifestPath, JSON.stringify({
-    schema: "homecook.local-mac-production-release.v1",
+    schema: "homecook.local-mac-production-release.v2",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
@@ -78,6 +86,10 @@ function createFixtureRepo({
     approved_by_task_id: "task-019-release",
     migration_head: "20260825090000_release_gate",
     build_id: "build-20260825-01",
+    rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+    sealed_bundle_digest: "f".repeat(64),
+    repeatability_receipt_digest: "1".repeat(64),
+    rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
     backup_readiness_evidence: "backup-20260825-01",
     previous_release_sha: "c".repeat(40),
     expected_release_contexts: [
@@ -287,6 +299,54 @@ describe("promote-local-mac-production-release CLI", () => {
 
     expect(createAttestationVerifier).not.toHaveBeenCalled();
     expect(createPromoteAdapters).not.toHaveBeenCalled();
+  });
+
+  it("runs the dormant receipt and mixed-state gate before constructing promotion adapters", async () => {
+    const mutation = vi.fn();
+    const gate = vi.fn(() => { throw new Error("expired repeatability receipt"); });
+    const createPromotionAuthorityVerifier = vi.fn(() => gate);
+    const createPromoteAdapters = vi.fn(() => {
+      mutation();
+      return {};
+    });
+    const createAttestationVerifier = vi.fn(() => vi.fn());
+    const parseArguments = vi.fn(() => ({
+      command: "promote",
+      bundlePath: "/private/bundle",
+      confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      fullLocalConfigPath: "/private/full-local",
+      homeDir: "/private/home",
+      json: true,
+      memberReceiptPaths: ["/private/member-1", "/private/member-2"],
+      nodeBin: process.execPath,
+      productionInventoryPath: "/private/inventory",
+      releaseManifestPath: "/private/manifest",
+      repeatabilityReceiptPath: "/private/repeatability",
+      rootDir: process.cwd(),
+      sealedCandidatePath: "/private/candidate",
+      subjectManifestPath: "/private/subject",
+      trustedRootPath: "/private/trusted-root",
+      workerAppDescriptorPath: "/private/worker-app",
+      workerConfigPath: "/private/worker-config",
+      workerCredentialPath: "/private/worker-credential",
+      workerExpectedSchemaPath: "/private/worker-schema",
+      workerManifestPath: "/private/worker-manifest",
+      workerPolicyPath: "/private/worker-policy",
+      workerSecretRoot: "/private/worker-secrets",
+    }));
+
+    await expect(runLocalMacProductionReleaseCli(["promote"], {
+      assertPromoteActivated: vi.fn(),
+      createAttestationVerifier,
+      createPromotionAuthorityVerifier,
+      createPromoteAdapters,
+      parseArguments,
+    } as unknown as Parameters<typeof runLocalMacProductionReleaseCli>[1]))
+      .rejects.toThrow(/expired|repeatability|receipt/iu);
+
+    expect(gate).toHaveBeenCalledTimes(1);
+    expect(createPromoteAdapters).not.toHaveBeenCalled();
+    expect(mutation).toHaveBeenCalledTimes(0);
   });
 
   it("reports the promote activation block before argument or adapter validation", () => {

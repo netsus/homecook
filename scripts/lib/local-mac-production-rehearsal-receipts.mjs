@@ -539,6 +539,31 @@ export function parseAndValidateRepeatabilityReceipt(source, options) {
   return validateRepeatabilityReceipt(parsed, options);
 }
 
+/** @param {{memberSources: Array<string | Buffer>, repeatabilitySource: string | Buffer, now?: Date}} options */
+export function verifyRehearsalReceiptBundleAuthority({
+  memberSources,
+  repeatabilitySource,
+  now = new Date(),
+} = {}) {
+  if (!Array.isArray(memberSources) || memberSources.length !== 2) {
+    fail("production authority requires exactly two canonical member receipt sources");
+  }
+  const memberReceipts = memberSources.map((source) => parseAndValidateRunReceipt(source, { now }));
+  const repeatability = parseAndValidateRepeatabilityReceipt(repeatabilitySource, {
+    memberReceipts,
+    now,
+  });
+  return Object.freeze({
+    rehearsal_receipt_schema: repeatability.schema,
+    release_sha: repeatability.release_sha,
+    release_tree: repeatability.release_tree,
+    build_id: repeatability.build_id,
+    sealed_bundle_digest: repeatability.sealed_bundle_digest,
+    repeatability_receipt_digest: repeatability.repeatability_receipt_digest,
+    rehearsal_receipt_valid_until: repeatability.valid_until,
+  });
+}
+
 function sameIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid
     && (left.mode & 0o7777n) === (right.mode & 0o7777n) && left.size === right.size

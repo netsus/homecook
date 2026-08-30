@@ -230,7 +230,7 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 
 manifest와 current descriptor는 credentials, provider payload, secret path, raw backup path를 포함하지 않는다.
 
-현재 `homecook.local-mac-production-release.v1` manifest와 기존 subject/predicate/tag는 위 rehearsal binding field가 없으므로 prepare/read-only verify 참고 evidence일 수는 있어도 production promote authority가 아니다. implementation은 production manifest schema를 v2로 명시적으로 bump하고 GitHub workflow·subject/predicate builder·tag raw object·server verifier를 같은 PR train에서 함께 갱신한다. receipt를 바꿔 끼우거나 attestation만 다시 발급하거나 sealed bundle을 rebuild하는 repair는 금지하며 두 isolated run부터 새 authority를 만든다.
+기존 `homecook.local-mac-production-release.v1` manifest와 v1 subject/predicate/tag는 rehearsal binding field가 없으므로 prepare/read-only 참고 evidence일 수는 있어도 production promote authority가 아니다. split 4는 production manifest v2와 GitHub workflow·subject/predicate v2·canonical tag raw message·server verifier cross-binding을 같은 PR train에 구현한다. 다만 fresh independent review, current-head CI와 merge 전에는 activation kill switch를 유지한다. receipt를 바꿔 끼우거나 attestation만 다시 발급하거나 sealed bundle을 rebuild하는 repair는 금지하며 두 isolated run부터 새 authority를 만든다.
 
 ## Handoff fields
 

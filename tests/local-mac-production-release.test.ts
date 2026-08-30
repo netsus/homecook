@@ -43,7 +43,7 @@ function createTempDirectory(prefix: string) {
 
 function createManifest(overrides: Record<string, unknown> = {}) {
   return {
-    schema: "homecook.local-mac-production-release.v1",
+    schema: "homecook.local-mac-production-release.v2",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
@@ -60,6 +60,10 @@ function createManifest(overrides: Record<string, unknown> = {}) {
     approved_by_task_id: "task-019-release",
     migration_head: "20260825090000_release_gate",
     build_id: "build-20260825-01",
+    rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+    sealed_bundle_digest: "f".repeat(64),
+    repeatability_receipt_digest: "1".repeat(64),
+    rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
     backup_readiness_evidence: "backup-20260825-01",
     previous_release_sha: "c".repeat(40),
     required_check_summary: {
@@ -90,6 +94,14 @@ function createGitEvidence(overrides: Record<string, unknown> = {}) {
     releaseTagObjectSha: "e".repeat(40),
     releaseTagCommitSha: "a".repeat(40),
     releaseTreeSha: "b".repeat(40),
+    releaseTagMessage: [
+      "Approved production release prod-20260825.1",
+      "build_id build-20260825-01",
+      "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+      `sealed_bundle_digest ${"f".repeat(64)}`,
+      `repeatability_receipt_digest ${"1".repeat(64)}`,
+      "rehearsal_receipt_valid_until 2026-08-30T09:00:00.000Z",
+    ].join("\n"),
     ...overrides,
   };
 }
@@ -123,6 +135,13 @@ describe("local Mac production release manifest", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).toContain("expected_release_contexts");
     expect(schema.required).toContain("release_tag_object_sha");
+    expect(schema.required).toEqual(expect.arrayContaining([
+      "rehearsal_receipt_schema",
+      "sealed_bundle_digest",
+      "repeatability_receipt_digest",
+      "rehearsal_receipt_valid_until",
+    ]));
+    expect(schema.properties.schema).toEqual({ const: "homecook.local-mac-production-release.v2" });
     expect(schema.properties.release_tag_object_sha).toEqual({
       type: "string",
       pattern: "^[0-9a-f]{40}$",
@@ -230,6 +249,12 @@ describe("local Mac production release manifest", () => {
       if (joined === `rev-parse ${"a".repeat(40)}^{tree}`) {
         return { status: 0, stdout: `${"b".repeat(40)}\n` };
       }
+      if (joined === "cat-file tag refs/tags/prod-20260825.1") {
+        return {
+          status: 0,
+          stdout: `object ${"a".repeat(40)}\ntype commit\ntag prod-20260825.1\ntagger test <test@example.com> 0 +0000\n\n${createGitEvidence().releaseTagMessage}\n`,
+        };
+      }
       throw new Error(`Unexpected git command: ${joined}`);
     }) as typeof import("node:child_process").spawnSync;
 
@@ -247,6 +272,7 @@ describe("local Mac production release manifest", () => {
       ["rev-parse", "refs/tags/prod-20260825.1^{tag}"],
       ["rev-parse", "refs/tags/prod-20260825.1^{commit}"],
       ["rev-parse", `${"a".repeat(40)}^{tree}`],
+      ["cat-file", "tag", "refs/tags/prod-20260825.1"],
     ]);
   });
 

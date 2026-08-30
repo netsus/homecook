@@ -19,6 +19,7 @@ import {
   createLocalMacProductionPromoteAdapters,
   createLocalMacProductionVerifyAdapters,
 } from "./lib/local-mac-production-promote-adapters.mjs";
+import { createProductionPromotionAuthorityVerifier } from "./lib/local-mac-production-promotion-authority.mjs";
 import { resolveTrustedDockerBinary } from "./lib/full-local-session-observation-reader.mjs";
 import {
   assertTrustedExecutableSnapshotStable,
@@ -32,7 +33,7 @@ function printHelp(output = process.stdout) {
   output.write(`Usage:
   node scripts/promote-local-mac-production-release.mjs plan --release-manifest <path> [--home-dir <path>] [--root-dir <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs prepare --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> [--home-dir <path>] [--root-dir <path>] [--json]
-  node scripts/promote-local-mac-production-release.mjs promote --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> --full-local-config <path> --worker-config <path> --worker-manifest <path> --worker-credential <path> --worker-app-descriptor <path> --worker-policy <path> --worker-expected-schema <path> --worker-secret-root <path> --confirm-production LOCAL_FULL_PRODUCTION_WORKER_INSTALL [--home-dir <path>] [--root-dir <path>] [--node-bin <path>] [--json]
+  node scripts/promote-local-mac-production-release.mjs promote --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> --member-receipt <path> --member-receipt <path> --repeatability-receipt <path> --sealed-candidate <path> --production-inventory <path> --full-local-config <path> --worker-config <path> --worker-manifest <path> --worker-credential <path> --worker-app-descriptor <path> --worker-policy <path> --worker-expected-schema <path> --worker-secret-root <path> --confirm-production LOCAL_FULL_PRODUCTION_WORKER_INSTALL [--home-dir <path>] [--root-dir <path>] [--node-bin <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs status [--release-manifest <path>] [--home-dir <path>] [--root-dir <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs verify --release-manifest <path> --bundle <path> --subject-manifest <path> --trusted-root <path> [--home-dir <path>] [--root-dir <path>] [--node-bin <path>] [--json]
 
@@ -41,7 +42,7 @@ Command surface: plan, prepare, promote (activation blocked), status, verify
 Prepare creates an immutable candidate directory only; it does not acquire the production lock or change runtime state.
 When activated, promote will require exact attestation, repeatability receipt authority, and explicit runtime paths. Verify is read-only and rechecks the exact attested running bundle.
 
-ACTIVATION BLOCKED: promote cannot run until the GitHub-attested repeatability receipt gate is implemented. Plan, prepare, status, and verify remain available within their documented boundaries.
+ACTIVATION BLOCKED: promote cannot run until the GitHub-attested repeatability receipt gate is independently reviewed, current-head green, and merged. Plan, prepare, status, and verify remain available within their documented boundaries.
 `);
 }
 
@@ -66,6 +67,10 @@ function parseArgs(argv) {
     workerManifestPath: null,
     workerPolicyPath: null,
     workerSecretRoot: null,
+    memberReceiptPaths: [],
+    repeatabilityReceiptPath: null,
+    sealedCandidatePath: null,
+    productionInventoryPath: null,
   };
 
   for (let index = 0; index < rest.length; index += 1) {
@@ -115,6 +120,14 @@ function parseArgs(argv) {
       options.workerPolicyPath = value;
     } else if (token === "--worker-secret-root") {
       options.workerSecretRoot = value;
+    } else if (token === "--member-receipt") {
+      options.memberReceiptPaths.push(value);
+    } else if (token === "--repeatability-receipt") {
+      options.repeatabilityReceiptPath = value;
+    } else if (token === "--sealed-candidate") {
+      options.sealedCandidatePath = value;
+    } else if (token === "--production-inventory") {
+      options.productionInventoryPath = value;
     } else {
       throw new Error(`Unknown argument: ${token}`);
     }
@@ -168,7 +181,13 @@ function requirePromoteRuntimeInputs(options) {
     ["--worker-expected-schema", options.workerExpectedSchemaPath],
     ["--worker-secret-root", options.workerSecretRoot],
     ["--confirm-production", options.confirmation],
+    ["--repeatability-receipt", options.repeatabilityReceiptPath],
+    ["--sealed-candidate", options.sealedCandidatePath],
+    ["--production-inventory", options.productionInventoryPath],
   ];
+  if (options.memberReceiptPaths.length !== 2) {
+    required.push(["--member-receipt (exactly two)", null]);
+  }
   const missing = required.filter(([, value]) => !value).map(([flag]) => flag);
   if (missing.length > 0) {
     throw new Error(`promote requires ${missing.join(", ")}.`);
@@ -178,7 +197,7 @@ function requirePromoteRuntimeInputs(options) {
 export function assertProductionPromoteActivated(command) {
   if (command === "promote") {
     throw new Error(
-      "activation_blocked: production promote requires the implemented and GitHub-attested repeatability receipt gate before any adapter, lock, Docker, LaunchAgent, database, or runtime mutation setup.",
+      "activation_blocked: production promote requires the GitHub-attested repeatability receipt gate to be independently reviewed, current-head green, and merged before any adapter, lock, Docker, LaunchAgent, database, or runtime mutation setup.",
     );
   }
 }
@@ -189,11 +208,13 @@ export async function runLocalMacProductionReleaseCli(
     createAttestationVerifier = createGitHubProductionReleaseAttestationVerifier,
     createPromoteAdapters = createLocalMacProductionPromoteAdapters,
     createVerifyAdapters = createLocalMacProductionVerifyAdapters,
+    createPromotionAuthorityVerifier = createProductionPromotionAuthorityVerifier,
     output = process.stdout,
     parseArguments = parseArgs,
+    assertPromoteActivated = assertProductionPromoteActivated,
   } = {},
 ) {
-  assertProductionPromoteActivated(argv[0]);
+  assertPromoteActivated(argv[0]);
   const options = parseArguments(argv);
 
   if (!options.command || options.command === "help" || options.command === "--help") {
@@ -277,6 +298,16 @@ export async function runLocalMacProductionReleaseCli(
       verifyAttestation: attestationVerifier,
     });
   } else if (options.command === "promote") {
+    const verifyRehearsalAuthority = createPromotionAuthorityVerifier({
+      candidatePath: options.sealedCandidatePath,
+      inventoryPath: options.productionInventoryPath,
+      manifestPath: options.releaseManifestPath,
+      memberReceiptPaths: options.memberReceiptPaths,
+      repeatabilityReceiptPath: options.repeatabilityReceiptPath,
+      repoRoot: options.rootDir,
+      verifyAttestation: attestationVerifier,
+    });
+    await verifyRehearsalAuthority({ phase: "pre-adapter" });
     const adapters = createPromoteAdapters(options);
     result = await promoteLocalMacProductionRelease({
       ...adapters,
@@ -284,6 +315,7 @@ export async function runLocalMacProductionReleaseCli(
       manifestPath: options.releaseManifestPath,
       rootDir: options.rootDir,
       verifyAttestation: attestationVerifier,
+      verifyRehearsalAuthority,
     });
   } else if (options.command === "verify") {
     const adapters = createVerifyAdapters(options);

@@ -266,12 +266,13 @@ describe("local Mac production rehearsal CLI", () => {
     expect(packageJson.scripts["release:production:promote"]).toBe("node scripts/promote-local-mac-production-release.mjs promote");
 
     const productionCli = readFileSync("scripts/promote-local-mac-production-release.mjs", "utf8");
-    expect(productionCli).toContain("assertProductionPromoteActivated(argv[0])");
+    expect(productionCli).toContain("assertPromoteActivated(argv[0])");
+    expect(productionCli).toContain("assertPromoteActivated = assertProductionPromoteActivated");
     expect(productionCli).toContain("activation_blocked");
 
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 3 author complete / independent review pending**");
-    expect(rehearsalRunbook).toContain("R2 isolated run / foreground supervisor");
+    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 4 author complete / independent review pending**");
+    expect(rehearsalRunbook).toContain("R2 isolated run, R3 create-only run receipt");
     expect(rehearsalRunbook).toContain("trusted receipt가 아닌 run evidence");
   });
 });
