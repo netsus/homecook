@@ -510,6 +510,49 @@ describe("local Mac production promote", () => {
     expect(fixture.readinessProbe).toHaveBeenCalledTimes(0);
   });
 
+  it("rejects same-byte attestation inode substitution at the final pre-lock hook with mutation zero", async () => {
+    const fixture = createFixture();
+    const authorityRoot = createTempDirectory("homecook-attestation-source-");
+    const authorityPath = join(authorityRoot, "bundle.jsonl");
+    const authorityBytes = Buffer.from("attestation-authority\n");
+    writeFileSync(authorityPath, authorityBytes, { mode: 0o600 });
+    const authoritySnapshot = localRelease.readLocalMacProductionAuthorityInputSnapshot({
+      label: "attestation_bundle",
+      path: authorityPath,
+      trustedRoot: authorityRoot,
+    });
+    const baseOptions = promoteOptions(fixture);
+    let sourceChecks = 0;
+    const freezeRuntimeInputs = vi.fn(async (input: { scratchRoot: string }) => ({
+      ...(await baseOptions.freezeRuntimeInputs(input)),
+      attestationSourceSnapshot: authoritySnapshot,
+    }));
+    const verifyFrozenRuntimeInputs = vi.fn((value: Record<string, unknown> & {
+      attestationSourceSnapshot: typeof authoritySnapshot;
+    }, options: { checkSources?: boolean } = {}) => {
+      if (options.checkSources) {
+        localRelease.verifyLocalMacProductionAuthorityInputSnapshot(
+          value.attestationSourceSnapshot,
+        );
+        if (++sourceChecks === 1) {
+          const replacement = join(authorityRoot, "replacement.jsonl");
+          writeFileSync(replacement, authorityBytes, { mode: 0o600 });
+          renameSync(replacement, authorityPath);
+        }
+      }
+      return value;
+    });
+
+    await expect(promoteLocalMacProductionRelease({
+      ...baseOptions,
+      freezeRuntimeInputs,
+      verifyFrozenRuntimeInputs,
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/authority|identity|inode|changed/iu);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+  });
+
   it("rechecks a fresh clock at final-pre-mutation and expires before lock or install", async () => {
     const fixture = createFixture();
     const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
@@ -594,6 +637,39 @@ describe("local Mac production promote", () => {
     );
   });
 
+  it("captures manifest authority with FD and ancestor identity and rejects same-byte replacement", () => {
+    expect(localRelease).toHaveProperty(
+      "readLocalMacProductionAuthorityInputSnapshot",
+      expect.any(Function),
+    );
+    expect(localRelease).toHaveProperty(
+      "verifyLocalMacProductionAuthorityInputSnapshot",
+      expect.any(Function),
+    );
+    const trustedRoot = createTempDirectory("homecook-authority-input-");
+    const path = join(trustedRoot, "release.json");
+    const bytes = Buffer.from('{"authority":true}\n');
+    writeFileSync(path, bytes, { mode: 0o600 });
+    const snapshot = localRelease.readLocalMacProductionAuthorityInputSnapshot({
+      label: "release_manifest",
+      path,
+      trustedRoot,
+    });
+    expect(snapshot).toMatchObject({
+      bytes,
+      mode: 0o600,
+      nlink: 1,
+      path: realpathSync(path),
+    });
+    expect(snapshot.ancestorIdentityDigest).toMatch(/^[0-9a-f]{64}$/u);
+
+    const replacement = join(trustedRoot, "replacement.json");
+    writeFileSync(replacement, bytes, { mode: 0o600 });
+    renameSync(replacement, path);
+    expect(() => localRelease.verifyLocalMacProductionAuthorityInputSnapshot(snapshot))
+      .toThrow(/authority|identity|inode|changed/iu);
+  });
+
   it("derives runtime identity from the live process cwd instead of manifest claims", () => {
     const fixture = createFixture();
     const runCommandMock = vi.fn((command: string, args: readonly string[] = []) => {
@@ -618,6 +694,51 @@ describe("local Mac production promote", () => {
       release_sha: fixture.manifest.release_sha,
       release_tree: fixture.manifest.release_tree,
       build_id: fixture.manifest.build_id,
+    });
+  });
+
+  it("derives worker rehearsal authority from the live process cwd instead of adapter expectations", () => {
+    expect(localRelease).toHaveProperty(
+      "readLocalMacProductionRuntimeRehearsalAuthority",
+      expect.any(Function),
+    );
+    const snapshotRoot = createTempDirectory("homecook-worker-runtime-authority-");
+    const workerRoot = join(snapshotRoot, "worker");
+    mkdirSync(workerRoot, { mode: 0o500 });
+    const observed = {
+      sealed_bundle_digest: "a".repeat(64),
+      repeatability_receipt_digest: "b".repeat(64),
+    };
+    writeFileSync(join(snapshotRoot, "evidence.json"), JSON.stringify(observed), {
+      mode: 0o400,
+    });
+    const runCommand = vi.fn(() => ({
+      status: 0,
+      stdout: `p5151\nfcwd\nn${workerRoot}\n`,
+      stderr: "",
+    })) as unknown as typeof import("node:child_process").spawnSync;
+
+    expect(localRelease.readLocalMacProductionRuntimeRehearsalAuthority({
+      component: "youtube_worker",
+      expectedRuntimeDir: workerRoot,
+      pid: 5151,
+      runCommand,
+    })).toEqual(observed);
+
+    chmodSync(join(snapshotRoot, "evidence.json"), 0o600);
+    writeFileSync(join(snapshotRoot, "evidence.json"), JSON.stringify({
+      ...observed,
+      repeatability_receipt_digest: "c".repeat(64),
+    }), { mode: 0o400 });
+    chmodSync(join(snapshotRoot, "evidence.json"), 0o400);
+    expect(localRelease.readLocalMacProductionRuntimeRehearsalAuthority({
+      component: "youtube_worker",
+      expectedRuntimeDir: workerRoot,
+      pid: 5151,
+      runCommand,
+    })).toEqual({
+      ...observed,
+      repeatability_receipt_digest: "c".repeat(64),
     });
   });
 

@@ -12,7 +12,10 @@ import { spawnSync } from "node:child_process";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { runLocalMacProductionReleaseCli } from "../scripts/promote-local-mac-production-release.mjs";
+import {
+  runLocalMacProductionReleaseCli,
+  sanitizeLocalMacProductionReleaseCliError,
+} from "../scripts/promote-local-mac-production-release.mjs";
 
 const temporaryDirectories: string[] = [];
 const SCRIPT_PATH = join(process.cwd(), "scripts", "promote-local-mac-production-release.mjs");
@@ -129,6 +132,30 @@ afterEach(() => {
 });
 
 describe("promote-local-mac-production-release CLI", () => {
+  it("never serializes secret freeze source paths, names, values, or native syscall errors", () => {
+    const sourcePath = "/private/tmp/homecook/full-local-secrets/postgres_password";
+    const secretValue = "database-password-that-must-not-escape";
+    const nativeCause = new Error(`ENOENT: open '${sourcePath}' containing ${secretValue}`);
+    const publicError = new Error(
+      "runtime_input_freeze_failed: external runtime input authority is invalid.",
+      { cause: nativeCause },
+    );
+    const stderr = `${sanitizeLocalMacProductionReleaseCliError(publicError)}\n`;
+    const jsonArtifact = JSON.stringify({ error: stderr });
+    for (const prohibited of [
+      sourcePath,
+      "postgres_password",
+      secretValue,
+      "ENOENT",
+      "open '",
+    ]) {
+      expect(stderr).not.toContain(prohibited);
+      expect(jsonArtifact).not.toContain(prohibited);
+    }
+    expect(stderr).toBe(
+      "runtime_input_freeze_failed: external runtime input authority is invalid.\n",
+    );
+  });
   it("advertises the full canonical command family in help output", () => {
     const result = spawnSync(
       process.execPath,

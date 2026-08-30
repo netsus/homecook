@@ -650,15 +650,20 @@ export function createLocalMacProductionExecutionSnapshot({
   ) {
     throw new Error("Persistent full-local resume attestation authority is incomplete.");
   }
-  const attestationBundleSourceDigest = resumeAuthority
-    ? sha256Bytes(readFileSync(resumeAuthority.bundlePath))
+  const resumeAuthoritySnapshots = resumeAuthority
+    ? Object.fromEntries([
+        ["bundlePath", "attestation_bundle"],
+        ["subjectManifestPath", "attestation_subject"],
+        ["trustedRootPath", "attestation_trusted_root"],
+      ].map(([field, label]) => [field, readLocalMacProductionAuthorityInputSnapshot({
+        label,
+        path: resumeAuthority[field],
+        trustedRoot: dirname(resumeAuthority[field]),
+      })]))
     : null;
-  const attestationSubjectSourceDigest = resumeAuthority
-    ? sha256Bytes(readFileSync(resumeAuthority.subjectManifestPath))
-    : null;
-  const attestationTrustedRootSourceDigest = resumeAuthority
-    ? sha256Bytes(readFileSync(resumeAuthority.trustedRootPath))
-    : null;
+  const attestationBundleSourceDigest = resumeAuthoritySnapshots?.bundlePath.sha256 ?? null;
+  const attestationSubjectSourceDigest = resumeAuthoritySnapshots?.subjectManifestPath.sha256 ?? null;
+  const attestationTrustedRootSourceDigest = resumeAuthoritySnapshots?.trustedRootPath.sha256 ?? null;
   const gitEvidenceBytes = resumeAuthority
     ? Buffer.from(`${JSON.stringify(manifest.git_evidence, null, 2)}\n`)
     : null;
@@ -749,27 +754,21 @@ export function createLocalMacProductionExecutionSnapshot({
       copyEntryHook,
     );
     const attestationBundlePath = resumeAuthority
-      ? copySnapshotAuthorityFile(
-        resumeAuthority.bundlePath,
+      ? writeSnapshotAuthorityBytes(
         join(authorityRoot, "attestation-bundle.jsonl"),
-        attestationBundleSourceDigest,
-        copyEntryHook,
+        resumeAuthoritySnapshots.bundlePath.bytes,
       )
       : null;
     const attestationSubjectPath = resumeAuthority
-      ? copySnapshotAuthorityFile(
-        resumeAuthority.subjectManifestPath,
+      ? writeSnapshotAuthorityBytes(
         join(authorityRoot, "attestation-subject.json"),
-        attestationSubjectSourceDigest,
-        copyEntryHook,
+        resumeAuthoritySnapshots.subjectManifestPath.bytes,
       )
       : null;
     const attestationTrustedRootPath = resumeAuthority
-      ? copySnapshotAuthorityFile(
-        resumeAuthority.trustedRootPath,
+      ? writeSnapshotAuthorityBytes(
         join(authorityRoot, "attestation-trusted-root.jsonl"),
-        attestationTrustedRootSourceDigest,
-        copyEntryHook,
+        resumeAuthoritySnapshots.trustedRootPath.bytes,
       )
       : null;
     const gitEvidencePath = resumeAuthority
@@ -792,13 +791,14 @@ export function createLocalMacProductionExecutionSnapshot({
       || sha256Bytes(readFileSync(workerAuthority.appDescriptorPath)) !== appDescriptorSourceDigest
       || sha256Bytes(readFileSync(workerAuthority.expectedSchemaPath)) !== expectedSchemaSourceDigest
       || sha256Bytes(readFileSync(workerAuthority.policyPath)) !== policySourceDigest
-      || (resumeAuthority && (
-        sha256Bytes(readFileSync(resumeAuthority.bundlePath)) !== attestationBundleSourceDigest
-        || sha256Bytes(readFileSync(resumeAuthority.subjectManifestPath))
-          !== attestationSubjectSourceDigest
-        || sha256Bytes(readFileSync(resumeAuthority.trustedRootPath))
-          !== attestationTrustedRootSourceDigest
-      ))) {
+      || (resumeAuthoritySnapshots && Object.values(resumeAuthoritySnapshots).some((snapshot) => {
+        try {
+          verifyLocalMacProductionAuthorityInputSnapshot(snapshot);
+          return false;
+        } catch {
+          return true;
+        }
+      }))) {
       throw new Error("Execution source drifted while the sealed snapshot was created.");
     }
     sealExecutionTree(appRoot);
@@ -962,6 +962,132 @@ function readSafeRegularFileSnapshot(path, label) {
       closeSync(fileDescriptor);
     }
   }
+}
+
+function authorityAncestorIdentity(path, currentUid) {
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink() || !stat.isDirectory()
+    || stat.uid !== currentUid || (modeBits(stat.mode) & 0o022) !== 0) {
+    throw new Error("Production authority ancestor identity is unsafe.");
+  }
+  return Object.freeze({
+    dev: stat.dev,
+    ino: stat.ino,
+    uid: stat.uid,
+    mode: modeBits(stat.mode),
+    nlink: stat.nlink,
+    ctimeMs: stat.ctimeMs,
+    mtimeMs: stat.mtimeMs,
+  });
+}
+
+/**
+ * @param {{
+ *   allowedModes?: number[],
+ *   getCurrentUid?: () => number | undefined,
+ *   label?: string,
+ *   path: string,
+ *   trustedRoot: string,
+ * }} options
+ */
+export function readLocalMacProductionAuthorityInputSnapshot({
+  allowedModes = [0o400, 0o444, 0o600, 0o644],
+  getCurrentUid = () => process.getuid?.(),
+  label = "production_authority",
+  path,
+  trustedRoot,
+} = {}) {
+  const currentUid = requireCurrentUserUid(getCurrentUid);
+  const normalizedPath = requireAbsolutePath(path, `${label} path`);
+  const normalizedRoot = requireAbsolutePath(trustedRoot, `${label} trusted root`);
+  const realRoot = assertSafeDirectory(normalizedRoot, `${label} trusted root`);
+  assertPathInside(realRoot, normalizedPath, `${label} input`);
+  const relativeParent = relative(realRoot, dirname(normalizedPath));
+  const ancestorPaths = [realRoot];
+  let cursor = realRoot;
+  for (const segment of relativeParent.split(sep).filter(Boolean)) {
+    cursor = join(cursor, segment);
+    ancestorPaths.push(cursor);
+  }
+  const ancestors = ancestorPaths.map((ancestorPath) =>
+    authorityAncestorIdentity(ancestorPath, currentUid));
+  const before = lstatSync(normalizedPath);
+  if (before.isSymbolicLink() || !before.isFile() || before.uid !== currentUid
+    || !allowedModes.includes(modeBits(before.mode)) || before.nlink !== 1
+    || realpathSync(normalizedPath) !== normalizedPath) {
+    throw new Error("Production authority input identity is unsafe.");
+  }
+  let descriptor;
+  try {
+    descriptor = openSync(normalizedPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const opened = fstatSync(descriptor);
+    const bytes = readFileSync(descriptor);
+    const openedAfter = fstatSync(descriptor);
+    const after = lstatSync(normalizedPath);
+    for (const current of [opened, openedAfter, after]) {
+      if (!current.isFile()
+        || current.dev !== before.dev || current.ino !== before.ino
+        || current.uid !== before.uid || current.mode !== before.mode
+        || current.nlink !== before.nlink || current.size !== before.size
+        || current.ctimeMs !== before.ctimeMs || current.mtimeMs !== before.mtimeMs) {
+        throw new Error("Production authority input identity changed while being read.");
+      }
+    }
+    const ancestorIdentityDigest = sha256Bytes(Buffer.from(JSON.stringify(ancestors)));
+    const sourceIdentityDigest = sha256Bytes(Buffer.from(JSON.stringify({
+      ancestors: ancestorIdentityDigest,
+      dev: opened.dev,
+      ino: opened.ino,
+      uid: opened.uid,
+      mode: modeBits(opened.mode),
+      nlink: opened.nlink,
+      size: opened.size,
+      ctimeMs: opened.ctimeMs,
+      mtimeMs: opened.mtimeMs,
+      sha256: sha256Bytes(bytes),
+    })));
+    return Object.freeze({
+      ancestorIdentityDigest,
+      ancestors: Object.freeze(ancestors),
+      bytes,
+      ctimeMs: opened.ctimeMs,
+      dev: opened.dev,
+      ino: opened.ino,
+      label: String(label),
+      mode: modeBits(opened.mode),
+      mtimeMs: opened.mtimeMs,
+      nlink: opened.nlink,
+      path: normalizedPath,
+      sha256: sha256Bytes(bytes),
+      size: opened.size,
+      sourceIdentityDigest,
+      trustedRoot: realRoot,
+      uid: opened.uid,
+      allowedModes: Object.freeze([...allowedModes]),
+    });
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+export function verifyLocalMacProductionAuthorityInputSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot.path !== "string"
+    || !DIGEST_PATTERN.test(snapshot.sourceIdentityDigest ?? "")) {
+    throw new Error("Production authority input snapshot is incomplete.");
+  }
+  const current = readLocalMacProductionAuthorityInputSnapshot({
+    getCurrentUid: () => snapshot.uid,
+    label: snapshot.label,
+    path: snapshot.path,
+    trustedRoot: snapshot.trustedRoot,
+    allowedModes: snapshot.allowedModes,
+  });
+  if (current.sourceIdentityDigest !== snapshot.sourceIdentityDigest
+    || current.ancestorIdentityDigest !== snapshot.ancestorIdentityDigest
+    || !current.bytes.equals(snapshot.bytes)) {
+    throw new Error("Production authority input identity changed after freeze.");
+  }
+  return snapshot;
 }
 
 function readSafeRegularFileBytes(path, label) {
@@ -2297,6 +2423,59 @@ export function readLocalMacProductionRuntimeIdentity({
   };
 }
 
+/**
+ * @param {{
+ *   component: string,
+ *   expectedRuntimeDir: string,
+ *   pid: number,
+ *   runCommand?: typeof spawnSync,
+ * }} options
+ */
+export function readLocalMacProductionRuntimeRehearsalAuthority({
+  component,
+  expectedRuntimeDir,
+  pid,
+  runCommand = spawnSync,
+} = {}) {
+  const normalizedComponent = requireNonEmptyString(component, "component");
+  if (!Number.isInteger(pid) || pid < 1) {
+    throw new Error(`${normalizedComponent} runtime pid must be a positive integer.`);
+  }
+  const expectedDirectory = assertSafeDirectory(
+    requireAbsolutePath(expectedRuntimeDir, "expectedRuntimeDir"),
+    `${normalizedComponent} expected runtime directory`,
+  );
+  const result = runCommand(
+    "/usr/sbin/lsof",
+    ["-a", "-p", String(pid), "-d", "cwd", "-Fn"],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+  const cwdClaims = result.status === 0
+    ? String(result.stdout ?? "").split(/\r?\n/u)
+      .filter((line) => line.startsWith("n") && line.length > 1)
+      .map((line) => line.slice(1))
+    : [];
+  if (cwdClaims.length !== 1
+    || assertSafeDirectory(cwdClaims[0], `${normalizedComponent} runtime cwd`)
+      !== expectedDirectory) {
+    throw new Error(`${normalizedComponent} runtime cwd authority mismatch.`);
+  }
+  const evidence = readJsonFile(
+    resolve(expectedDirectory, "..", "evidence.json"),
+    `${normalizedComponent} execution snapshot evidence`,
+  );
+  return Object.freeze({
+    sealed_bundle_digest: requireDigest(
+      evidence.sealed_bundle_digest,
+      `${normalizedComponent} observed sealed bundle digest`,
+    ),
+    repeatability_receipt_digest: requireDigest(
+      evidence.repeatability_receipt_digest,
+      `${normalizedComponent} observed repeatability receipt digest`,
+    ),
+  });
+}
+
 function readRunningDescriptorSnapshot({
   currentUid,
   label = "Current running release descriptor",
@@ -2822,8 +3001,12 @@ export async function promoteLocalMacProductionRelease({
   const realHomeDir = assertSafeDirectory(normalizedHomeDir, "homeDir");
   const realRootDir = assertSafeDirectory(normalizedRootDir, "rootDir");
   const currentUid = requireCurrentUserUid(getCurrentUid);
-  assertOwnedSafeRegularFile(normalizedManifestPath, "Release manifest", currentUid);
-  const manifestFileSnapshot = readSafeRegularFileSnapshot(normalizedManifestPath, "Release manifest");
+  const manifestFileSnapshot = readLocalMacProductionAuthorityInputSnapshot({
+    getCurrentUid: () => currentUid,
+    label: "release_manifest",
+    path: normalizedManifestPath,
+    trustedRoot: realRootDir,
+  });
   const manifestBytes = manifestFileSnapshot.bytes;
   let manifestInput;
   try {
@@ -3014,22 +3197,13 @@ export async function promoteLocalMacProductionRelease({
     sealed_bundle_digest: sealedCandidate.sealedBundleDigest,
     repeatability_receipt_digest: sealedCandidate.repeatabilityReceiptDigest,
     frozen_runtime_input_authority_digest: frozenRuntimeInputs.authority_digest,
+    release_manifest_source_identity_digest: manifestFileSnapshot.sourceIdentityDigest,
+    release_manifest_ancestor_identity_digest: manifestFileSnapshot.ancestorIdentityDigest,
   })));
   verifyLocalMacProductionExecutionSnapshot(frozenScratch);
   verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: true });
   assertPrivatePromotionScratchReservation(scratchReservation, currentUid, { materialized: true, runtimeInputs: true });
-  const finalManifestSource = readSafeRegularFileSnapshot(normalizedManifestPath, "Release manifest");
-  if (finalManifestSource.dev !== manifestFileSnapshot.dev
-    || finalManifestSource.ino !== manifestFileSnapshot.ino
-    || finalManifestSource.uid !== manifestFileSnapshot.uid
-    || finalManifestSource.mode !== manifestFileSnapshot.mode
-    || finalManifestSource.nlink !== manifestFileSnapshot.nlink
-    || finalManifestSource.size !== manifestFileSnapshot.size
-    || finalManifestSource.ctimeMs !== manifestFileSnapshot.ctimeMs
-    || finalManifestSource.mtimeMs !== manifestFileSnapshot.mtimeMs
-    || !finalManifestSource.bytes.equals(manifestFileSnapshot.bytes)) {
-    throw new Error("Release manifest source identity changed before production lock creation.");
-  }
+  verifyLocalMacProductionAuthorityInputSnapshot(manifestFileSnapshot);
   ensureSafePrivateDirectory(
     paths.lockRoot,
     homecookRoot,

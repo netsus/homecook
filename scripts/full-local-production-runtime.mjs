@@ -815,6 +815,11 @@ function validateRuntime(
       FULL_LOCAL_RELEASE_TREE: expectedReleaseIdentity.release_tree,
       FULL_LOCAL_RELEASE_BUILD_ID: expectedReleaseIdentity.build_id,
       FULL_LOCAL_RELEASE_PROMOTION_ID: expectedReleaseIdentity.promotion_id,
+      ...(expectedReleaseIdentity.sealed_bundle_digest ? {
+        FULL_LOCAL_SEALED_BUNDLE_DIGEST: expectedReleaseIdentity.sealed_bundle_digest,
+        FULL_LOCAL_REPEATABILITY_RECEIPT_DIGEST:
+          expectedReleaseIdentity.repeatability_receipt_digest,
+      } : {}),
     } : {}),
   };
   delete env.DOCKER_DEFAULT_PLATFORM;
@@ -2533,6 +2538,9 @@ export async function resumeCurrentRelease(
     release_tree: authority.descriptor.release_tree,
     build_id: authority.descriptor.build_id,
     promotion_id: authority.descriptor.promotion_id,
+    sealed_bundle_digest: authority.descriptor.sealed_bundle_digest,
+    repeatability_receipt_digest:
+      authority.descriptor.repeatability_receipt_digest,
   };
   const runtime = validateReadOnlyRuntimeForReleaseIdentity(
     args,

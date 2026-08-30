@@ -387,9 +387,22 @@ describe("connected local Mac production promotion", () => {
           const identityPath = args.includes("--release-identity")
             ? String(args[args.indexOf("--release-identity") + 1])
             : null;
-          const releaseIdentity = identityPath
+          const descriptor = identityPath
             ? JSON.parse(readFileSync(identityPath, "utf8"))
             : activeIdentity;
+          const evidencePath = identityPath
+            ? join(dirname(identityPath), "..", "evidence.json")
+            : null;
+          const evidence = evidencePath && existsSync(evidencePath)
+            ? JSON.parse(readFileSync(evidencePath, "utf8"))
+            : {};
+          const releaseIdentity = {
+            ...descriptor,
+            ...(evidence.sealed_bundle_digest ? {
+              sealed_bundle_digest: evidence.sealed_bundle_digest,
+              repeatability_receipt_digest: evidence.repeatability_receipt_digest,
+            } : {}),
+          };
           if (subcommand === "start") {
             activeIdentity = releaseIdentity;
             return { status: 0, stdout: JSON.stringify({ release_identity: releaseIdentity }), stderr: "" };
@@ -432,6 +445,7 @@ describe("connected local Mac production promotion", () => {
     const manifestPath = join(repoRoot, "release-bridge.json");
     const subjectManifestPath = join(repoRoot, "subject-bridge.json");
     const bundlePath = join(repoRoot, "bundle-bridge.jsonl");
+    const trustedRootPath = join(repoRoot, "trusted-root-bridge.jsonl");
     const releaseTag = "prod-20260828.1";
     const releaseTagObjectSha = "2".repeat(40);
     const checkRuns = [
@@ -471,6 +485,9 @@ describe("connected local Mac production promotion", () => {
       signer_digest: identity.release_sha,
       master_sha_at_approval: identity.release_sha,
     });
+    chmodSync(subjectManifestPath, 0o600);
+    cpSync(join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"), trustedRootPath);
+    chmodSync(trustedRootPath, 0o600);
     const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
     writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
     writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
@@ -486,7 +503,7 @@ describe("connected local Mac production promotion", () => {
       confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
       bundlePath,
       subjectManifestPath,
-      trustedRootPath: join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"),
+      trustedRootPath,
       fullLocalConfigPath: fullConfig,
       homeDir,
       nodeBin,
@@ -664,21 +681,37 @@ describe("connected local Mac production promotion", () => {
         const subcommand = args[1];
         if (subcommand === "start") {
           const identityPath = args[args.indexOf("--release-identity") + 1];
-          activeIdentity = JSON.parse(readFileSync(identityPath, "utf8"));
+          const descriptor = JSON.parse(readFileSync(identityPath, "utf8"));
+          const evidencePath = join(dirname(identityPath), "..", "evidence.json");
+          const evidence = existsSync(evidencePath)
+            ? JSON.parse(readFileSync(evidencePath, "utf8"))
+            : {};
+          activeIdentity = {
+            ...descriptor,
+            ...(evidence.sealed_bundle_digest ? {
+              sealed_bundle_digest: evidence.sealed_bundle_digest,
+              repeatability_receipt_digest: evidence.repeatability_receipt_digest,
+            } : {}),
+          };
           return { status: 0, stdout: "", stderr: "" };
         }
-        if (subcommand === "status") return { status: 0, stdout: JSON.stringify({ healthy: true, authorization_contract_status: "PASS", product_catalog_status: "PASS", release_identity: activeIdentity }), stderr: "" };
+        if (subcommand === "status") {
+          const identityIndex = args.indexOf("--release-identity");
+          const observedIdentity = identityIndex >= 0 ? activeIdentity : null;
+          return { status: 0, stdout: JSON.stringify({ healthy: true, authorization_contract_status: "PASS", product_catalog_status: "PASS", release_identity: observedIdentity }), stderr: "" };
+        }
       }
       return { status: 0, stdout: "", stderr: "" };
     }) as typeof spawnSync;
 
     const runPromotion = async (index: number, previousSha: string) => {
-      const identity = { release_sha: index === 1 ? "a".repeat(40) : "f".repeat(40), release_tree: index === 1 ? "b".repeat(40) : "e".repeat(40), build_id: `build-${index}`, promotion_id: `promotion-${index}` };
+      const identity = { release_sha: ["a", "f", "9"][index - 1].repeat(40), release_tree: ["b", "e", "8"][index - 1].repeat(40), build_id: `build-${index}`, promotion_id: `promotion-${index}` };
       const manifestPath = join(repoRoot, `release-${index}.json`);
       const subjectManifestPath = join(repoRoot, `subject-${index}.json`);
       const bundlePath = join(repoRoot, `bundle-${index}.jsonl`);
+      const trustedRootPath = join(repoRoot, `trusted-root-${index}.jsonl`);
       const releaseTag = `prod-2026082${index}.1`;
-      const releaseTagObjectSha = index === 1 ? "2".repeat(40) : "3".repeat(40);
+      const releaseTagObjectSha = String(index + 1).repeat(40);
       const checkRuns = [
         "build", "changes", "dependency-audit", "policy", "quality",
         "security-function-authorization", "security-smoke",
@@ -716,6 +749,9 @@ describe("connected local Mac production promotion", () => {
         signer_digest: identity.release_sha,
         master_sha_at_approval: identity.release_sha,
       });
+      chmodSync(subjectManifestPath, 0o600);
+      cpSync(join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"), trustedRootPath);
+      chmodSync(trustedRootPath, 0o600);
       const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
       writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
       writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
@@ -727,7 +763,7 @@ describe("connected local Mac production promotion", () => {
       mkdirSync(candidateRoot, { mode: 0o700 });
       writePrepare(candidateRoot, manifest, manifestBytes, { executableRuntime: true });
       const worker = workerFixture(temp(`homecook-connected-worker-v2-${index}-`), identity);
-      const adapters = createLocalMacProductionPromoteAdapters({ confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL", bundlePath, subjectManifestPath, trustedRootPath: join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"), fullLocalConfigPath: fullConfig, homeDir, nodeBin, workerConfigPath: worker.configPath, workerManifestPath: worker.manifestPath, workerCredentialPath: worker.credentialPath, workerAppDescriptorPath: worker.appDescriptorPath, workerPolicyPath: worker.policyPath, workerExpectedSchemaPath: worker.expectedSchemaPath, workerSecretRoot: worker.secretRoot }, { commandRunner, i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })), appReadinessWaiter: vi.fn(async () => undefined), platform: "darwin" });
+      const adapters = createLocalMacProductionPromoteAdapters({ confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL", bundlePath, subjectManifestPath, trustedRootPath, fullLocalConfigPath: fullConfig, homeDir, nodeBin, workerConfigPath: worker.configPath, workerManifestPath: worker.manifestPath, workerCredentialPath: worker.credentialPath, workerAppDescriptorPath: worker.appDescriptorPath, workerPolicyPath: worker.policyPath, workerExpectedSchemaPath: worker.expectedSchemaPath, workerSecretRoot: worker.secretRoot }, { commandRunner, i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })), appReadinessWaiter: vi.fn(async () => undefined), platform: "darwin" });
       const promoteOptions = { ...adapters, homeDir, manifestPath, rootDir: repoRoot, runCommand: commandRunner, readGitEvidence: () => createLocalMacProductionGitEvidence({ releaseSha: identity.release_sha, releaseTree: identity.release_tree, overrides: { releaseTagObjectSha: manifest.release_tag_object_sha, releaseTagMessage: buildProductionReleaseAnnotatedTagMessage({ releaseTag: manifest.release_tag, build_id: manifest.build_id, rehearsal_receipt_schema: manifest.rehearsal_receipt_schema, sealed_bundle_digest: manifest.sealed_bundle_digest, repeatability_receipt_digest: manifest.repeatability_receipt_digest, rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until }) } }), verifyAttestation: () => ({ verified: true, source: "fixture" }), verifyRehearsalAuthority: () => ({ verified: true, authority_digest: "9".repeat(64), sealed_candidate: { root: candidateRoot, appRoot: candidateRoot, fullLocalRoot: null, workerRoot: worker.artifactRoot, workerManifestPath: worker.manifestPath, candidateIdentityDigest: "a".repeat(64), bundleManifestDigest: "b".repeat(64), sealedBundleDigest: manifest.sealed_bundle_digest, repeatabilityReceiptDigest: manifest.repeatability_receipt_digest, appSourceDigest: digestLocalMacProductionExecutionTree(candidateRoot), fullLocalSourceDigest: null, workerSourceDigest: digestLocalMacProductionExecutionTree(worker.artifactRoot) } }), expectedRehearsalAuthorityDigest: "9".repeat(64), lockToken: `${index}${index}${index}${index}${index}${index}${index}${index}-1111-4111-8111-111111111111` } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
       return promoteLocalMacProductionRelease(promoteOptions);
     };
@@ -739,28 +775,18 @@ describe("connected local Mac production promotion", () => {
     expect(firstDescriptor.restart_capability).toBe("full-local-resume-current-v1");
     expect(firstDescriptor.worker_artifact_sha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(JSON.stringify(firstDescriptor)).not.toMatch(/credential_path|secret_root|config_path|policy_path/u);
-    const baseAbacDescriptor = { ...firstDescriptor };
-    delete baseAbacDescriptor.restart_capability;
-    writeFileSync(state.currentDescriptorPath, JSON.stringify(baseAbacDescriptor, null, 2), {
-      mode: 0o600,
-    });
-    writeFileSync(
-      getFullLocalLaunchAgentPaths(homeDir).plistPath,
-      renderFullLocalLaunchAgentPlist({
-        configPath: fullConfig,
-        homeDir,
-        includeReleaseIdentity: true,
-        nodeBin,
-        releaseIdentityPath: join(baseAbacDescriptor.execution_app_root, "prepare.json"),
-        rootDir: baseAbacDescriptor.execution_app_root,
-        runtimeCommand: "start",
-      }),
-      { mode: 0o600 },
-    );
     const second = await runPromotion(2, "a".repeat(40));
     expect(second.promoted).toBe(true);
-    expect(JSON.parse(readFileSync(state.previousDescriptorPath, "utf8"))).toEqual(baseAbacDescriptor);
+    expect(JSON.parse(readFileSync(state.previousDescriptorPath, "utf8"))).toEqual(firstDescriptor);
     expect(JSON.parse(readFileSync(state.currentDescriptorPath, "utf8"))).toMatchObject({ release_sha: "f".repeat(40), promotion_id: "promotion-2", restart_capability: "full-local-resume-current-v1" });
+    const secondDescriptor = JSON.parse(readFileSync(state.currentDescriptorPath, "utf8"));
+    const third = await runPromotion(3, "f".repeat(40));
+    expect(third.promoted).toBe(true);
+    expect(JSON.parse(readFileSync(state.previousDescriptorPath, "utf8"))).toEqual(secondDescriptor);
+    expect(JSON.parse(readFileSync(state.currentDescriptorPath, "utf8"))).toMatchObject({ release_sha: "9".repeat(40), promotion_id: "promotion-3", restart_capability: "full-local-resume-current-v1" });
+    const canonicalStatusCalls = calls.filter((call) =>
+      call.includes("full-local-production-runtime.mjs status "));
+    expect(canonicalStatusCalls.slice(-4).every((call) => call.includes("--release-identity"))).toBe(true);
     expect(calls.findIndex((call) => call.includes(" start "))).toBeLessThan(calls.findIndex((call) => call.includes("bootstrap") && call.includes("com.homecook.production")));
 
     expect(existsSync(state.lockPath)).toBe(false);
@@ -790,7 +816,7 @@ else {
     const fakeDockerPath = join(binDir, "docker");
     const resumeFaultModePath = join(repoRoot, "resume-fault-mode");
     const dockerStartedPath = join(repoRoot, "resume-docker-started");
-    const services = ["auth", "auth-proxy", "api-gateway", "postgres", "postgrest", "realtime", "storage"];
+    const services = ["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"];
     const composeModel = {
       services: {
         auth: {},
@@ -798,7 +824,7 @@ else {
         "api-gateway": { ports: [{ host_ip: "127.0.0.1", published: "54481", target: 54481 }] },
         postgres: {},
         postgrest: {},
-        realtime: {},
+        "postgrest-probe": {},
         storage: {},
       },
     };
@@ -824,6 +850,8 @@ const container = (id, index) => ({
     "homecook.release.tree": ${JSON.stringify(currentDescriptor.release_tree)},
     "homecook.release.build-id": ${JSON.stringify(currentDescriptor.build_id)},
     "homecook.release.promotion-id": ${JSON.stringify(currentDescriptor.promotion_id)},
+    "homecook.release.sealed-bundle-digest": ${JSON.stringify(currentDescriptor.sealed_bundle_digest)},
+    "homecook.release.repeatability-receipt-digest": ${JSON.stringify(currentDescriptor.repeatability_receipt_digest)},
   } },
   State: { Running: id !== "pre-stopped" || fs.existsSync(startedPath) },
 });

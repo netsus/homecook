@@ -46,6 +46,7 @@ import {
   getLocalMacProductionReleasePaths,
   readLocalMacProductionPreparedReleaseIdentity,
   readLocalMacProductionRuntimeIdentity,
+  readLocalMacProductionRuntimeRehearsalAuthority,
 } from "./local-mac-production-release.mjs";
 import {
   buildYoutubeExtractionWorkerServiceTarget,
@@ -85,7 +86,8 @@ function readPrivateRuntimeInput(path, label, expectedUid = process.getuid?.()) 
   const absolute = resolve(path);
   const before = lstatSync(absolute);
   if (before.isSymbolicLink() || !before.isFile() || before.uid !== expectedUid
-    || ![0o400, 0o600].includes(before.mode & 0o777) || before.nlink !== 1) {
+    || ![0o400, 0o600].includes(before.mode & 0o777) || before.nlink !== 1
+    || realpathSync(absolute) !== absolute) {
     throw new Error(`${label} must be a private current-user single-link regular file.`);
   }
   let descriptor;
@@ -93,9 +95,12 @@ function readPrivateRuntimeInput(path, label, expectedUid = process.getuid?.()) 
     descriptor = openSync(absolute, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
     const opened = fstatSync(descriptor);
     const bytes = readFileSync(descriptor);
-    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino
-      || opened.uid !== before.uid || opened.mode !== before.mode || opened.nlink !== before.nlink
-      || opened.size !== before.size || opened.ctimeMs !== before.ctimeMs || opened.mtimeMs !== before.mtimeMs) {
+    const openedAfter = fstatSync(descriptor);
+    const after = lstatSync(absolute);
+    if ([opened, openedAfter, after].some((current) => !current.isFile()
+      || current.dev !== before.dev || current.ino !== before.ino
+      || current.uid !== before.uid || current.mode !== before.mode || current.nlink !== before.nlink
+      || current.size !== before.size || current.ctimeMs !== before.ctimeMs || current.mtimeMs !== before.mtimeMs)) {
       throw new Error(`${label} identity changed while being frozen.`);
     }
     return Object.freeze({
@@ -846,7 +851,9 @@ function readFullLocalWorkloadDefault({
       "--config",
       statusConfigPath,
   ];
-  if (expectedRestartContract.includeReleaseIdentity) {
+  if (expectedRestartContract.includeReleaseIdentity
+    || expectedRestartContract.runtimeCommand === "resume-current"
+    || allowLegacyBootstrap) {
     runtimeArgs.push("--release-identity", releaseIdentityPath);
   }
   if (allowLegacyBootstrap) runtimeArgs.push("--allow-legacy-release-bootstrap");
@@ -887,9 +894,6 @@ function readFullLocalWorkloadDefault({
   }
   return {
     ...observedIdentity,
-    ...(typeof context.verifyExecutionSnapshot === "function" && context.executionSnapshot
-      ? observedRehearsalRuntimeAuthority(context)
-      : {}),
     ready:
       status.healthy === true
       && status.authorization_contract_status === "PASS"
@@ -939,7 +943,7 @@ function requireFunction(value, label) {
   return value;
 }
 
-export function freezeLocalMacProductionRuntimeInputs({ options, preflight, releaseManifestBytes, releaseManifestDigest, scratchRoot }) {
+function freezeLocalMacProductionRuntimeInputsUnsafe({ options, preflight, releaseManifestBytes, releaseManifestDigest, scratchRoot }) {
   const currentUid = process.getuid?.();
   if (!Number.isInteger(currentUid)) throw new Error("Current user uid is unavailable for runtime input freeze.");
   const scratch = assertPrivateRuntimeDirectory(scratchRoot, "Promotion scratch root", currentUid);
@@ -950,6 +954,19 @@ export function freezeLocalMacProductionRuntimeInputs({ options, preflight, rele
   }
   const worker = preflight?.worker;
   if (!worker) throw new Error("Worker preflight authority is required for runtime input freeze.");
+  const attestationFields = [
+    ["attestation_bundle", "bundlePath", "bundlePath"],
+    ["attestation_subject", "subjectManifestPath", "subjectManifestPath"],
+    ["attestation_trusted_root", "trustedRootPath", "trustedRootPath"],
+  ];
+  const attestationSnapshots = attestationFields.map(([label, workerField, optionField]) => {
+    const sourcePath = resolve(worker.resumeAuthority?.[workerField] ?? "");
+    if (!sourcePath || sourcePath !== resolve(options[optionField] ?? "")) {
+      throw new Error("Attestation authority path differs from preflight authority.");
+    }
+    assertPrivateRuntimeDirectory(dirname(sourcePath), "Attestation authority parent", currentUid);
+    return { label, snapshot: readPrivateRuntimeInput(sourcePath, "Attestation authority input", currentUid) };
+  });
   const fullLocalConfig = readPrivateRuntimeInput(options.fullLocalConfigPath, "Full-local config", currentUid);
   const fullLocalConfigText = fullLocalConfig.bytes.toString("utf8");
   if ((fullLocalConfigText.match(/^FULL_LOCAL_SECRET_DIR=/gmu) ?? []).length !== 1) {
@@ -980,6 +997,7 @@ export function freezeLocalMacProductionRuntimeInputs({ options, preflight, rele
   }
   for (const snapshot of secretTree.records) sourceRecordsByPath.set(snapshot.path, { label: "worker_secret", path: snapshot.path, identity: snapshot.identity });
   for (const snapshot of fullLocalSecretTree.records) sourceRecordsByPath.set(snapshot.path, { label: "full_local_secret", path: snapshot.path, identity: snapshot.identity });
+  for (const { label, snapshot } of attestationSnapshots) sourceRecordsByPath.set(snapshot.path, { label, path: snapshot.path, identity: snapshot.identity });
 
   const frozenRoot = join(scratch, "runtime-inputs");
   mkdirSync(frozenRoot, { mode: 0o700 });
@@ -1022,6 +1040,10 @@ export function freezeLocalMacProductionRuntimeInputs({ options, preflight, rele
     releaseManifestBytes,
     0o600,
   );
+  const frozenAttestationPaths = Object.fromEntries(attestationSnapshots.map(({ label, snapshot }) => {
+    const name = `${label.replaceAll("_", "-")}${label.endsWith("root") || label.endsWith("bundle") ? ".jsonl" : ".json"}`;
+    return [label, writeFrozenRuntimeFile(join(frozenRoot, name), snapshot.bytes, snapshot.identity.mode)];
+  }));
   const rewriteSecretRoot = (path) => {
     const bytes = readFileSync(path);
     const rewritten = Buffer.from(bytes.toString("utf8").replaceAll(secretTree.root, frozenSecretRoot));
@@ -1045,9 +1067,22 @@ export function freezeLocalMacProductionRuntimeInputs({ options, preflight, rele
     source_identity_digest: sourceIdentityDigest,
     source_directories: Object.freeze(sourceDirectories.map((entry) => Object.freeze(entry))),
     source_records: Object.freeze(sourceRecords.map((entry) => Object.freeze(entry))),
-    paths: Object.freeze({ fullLocalConfigPath, fullLocalSecretRoot: frozenFullLocalSecretRoot, releaseManifestPath, workerConfigPath, workerCredentialPath, workerSecretRoot: frozenSecretRoot }),
+    paths: Object.freeze({
+      attestationBundlePath: frozenAttestationPaths.attestation_bundle,
+      attestationSubjectPath: frozenAttestationPaths.attestation_subject,
+      attestationTrustedRootPath: frozenAttestationPaths.attestation_trusted_root,
+      fullLocalConfigPath,
+      fullLocalSecretRoot: frozenFullLocalSecretRoot,
+      releaseManifestPath,
+      workerConfigPath,
+      workerCredentialPath,
+      workerSecretRoot: frozenSecretRoot,
+    }),
     digests: Object.freeze({
       fullLocalConfigSha256: sha256File(fullLocalConfigPath),
+      attestationBundleSha256: sha256File(frozenAttestationPaths.attestation_bundle),
+      attestationSubjectSha256: sha256File(frozenAttestationPaths.attestation_subject),
+      attestationTrustedRootSha256: sha256File(frozenAttestationPaths.attestation_trusted_root),
       releaseManifestSha256: sha256File(releaseManifestPath),
       workerConfigSha256: sha256File(workerConfigPath),
       workerCredentialSha256: sha256File(workerCredentialPath),
@@ -1056,6 +1091,17 @@ export function freezeLocalMacProductionRuntimeInputs({ options, preflight, rele
   } catch (error) {
     if (existsSync(frozenRoot)) rmSync(frozenRoot, { recursive: true, force: true });
     throw error;
+  }
+}
+
+export function freezeLocalMacProductionRuntimeInputs(input) {
+  try {
+    return freezeLocalMacProductionRuntimeInputsUnsafe(input);
+  } catch (error) {
+    throw new Error(
+      "runtime_input_freeze_failed: external runtime input authority is invalid.",
+      { cause: error },
+    );
   }
 }
 
@@ -1321,18 +1367,30 @@ function buildDefaultDependencies(
       ) {
         throw new Error("Current full-local root drifted from the first canonical adoption bridge.");
       }
+      const observedFullLocalConfigPath = argumentValue(rawFullLocalPlist.args, "--config");
       const currentFullLocalConfigPath = currentRuntimeBridge
         ? resolve(
             currentRuntimeBridge.full_local_root,
             "infra/full-local-supabase/.env.production.local",
           )
-        : options.fullLocalConfigPath;
+        : resolve(observedFullLocalConfigPath ?? "");
+      if (!currentRuntimeBridge
+        && context.currentDescriptor.restart_capability === FULL_LOCAL_RESUME_CURRENT_CAPABILITY) {
+        const currentConfig = readPrivateRuntimeInput(
+          currentFullLocalConfigPath,
+          "Current frozen full-local config",
+          currentUid,
+        );
+        if (currentConfig.identity.sha256 !== context.currentDescriptor.full_local_config_sha256) {
+          throw new Error("Current frozen full-local config digest drifted from the descriptor.");
+        }
+      }
       const fullLocalPlist = assertCanonicalLocalMacProductionPlist({
         actualPath: fullLocalPlistPath,
         currentUid,
         expectedContent: renderFullLocalLaunchAgentPlist({
           configPath: currentFullLocalConfigPath,
-          frozenConfigRoot: options.frozenRuntimeInputRoot ?? null,
+          frozenConfigRoot: currentRuntimeBridge ? null : dirname(currentFullLocalConfigPath),
           currentDescriptorPath: getLocalMacProductionReleasePaths(options.homeDir)
             .currentDescriptorPath,
           homeDir: options.homeDir,
@@ -1396,6 +1454,9 @@ function buildDefaultDependencies(
         options: {
           ...options,
           fullLocalConfigPath: currentFullLocalConfigPath,
+          frozenRuntimeInputRoot: currentRuntimeBridge
+            ? null
+            : dirname(currentFullLocalConfigPath),
         },
         commandRunner,
         allowSplitPredecessorIdentity: Boolean(currentRuntimeBridge),
@@ -1814,6 +1875,12 @@ function buildDefaultDependencies(
         throw new Error("Final worker i031 preflight failed.");
       }
       const artifact = verifyYoutubeExtractionWorkerArtifact(preflight.worker.manifestPath);
+      const rehearsalAuthority = readLocalMacProductionRuntimeRehearsalAuthority({
+        component: "youtube_worker",
+        expectedRuntimeDir: preflight.worker.artifactRoot,
+        pid: status.pid,
+        runCommand: commandRunner,
+      });
       return {
         release_sha: artifact.release_sha,
         release_tree: artifact.release_tree,
@@ -1821,7 +1888,7 @@ function buildDefaultDependencies(
         promotion_id: artifact.promotion_id,
         pid: status.pid,
         ready: true,
-        ...observedRehearsalRuntimeAuthority(context),
+        ...rehearsalAuthority,
         final_preflight: finalPreflight,
         i031_preflight: finalI031Preflight,
         ...finalDigests,

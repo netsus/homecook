@@ -167,6 +167,16 @@ function printResult(result, json, output = process.stdout) {
   }
 }
 
+const RUNTIME_INPUT_FREEZE_PUBLIC_ERROR =
+  "runtime_input_freeze_failed: external runtime input authority is invalid.";
+
+export function sanitizeLocalMacProductionReleaseCliError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.startsWith("runtime_input_freeze_failed:")
+    ? RUNTIME_INPUT_FREEZE_PUBLIC_ERROR
+    : message;
+}
+
 function requirePromoteRuntimeInputs(options) {
   const required = [
     ["--bundle", options.bundlePath],
@@ -374,7 +384,7 @@ if (isDirectExecution()) {
   try {
     await runLocalMacProductionReleaseCli(process.argv.slice(2));
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(`${sanitizeLocalMacProductionReleaseCliError(error)}\n`);
     process.exitCode = 1;
   }
 }

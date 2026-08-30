@@ -2307,6 +2307,8 @@ export function parseCanonicalComposeImageInventory(source, { requireCanonicalSe
   const extensionKeys = new Set([
     "homecook.local/restore-attempt", "homecook.release.sha", "homecook.release.tree",
     "homecook.release.build-id", "homecook.release.promotion-id",
+    "homecook.release.sealed-bundle-digest",
+    "homecook.release.repeatability-receipt-digest",
   ]);
   const canonicalNetworkNames = new Set(["auth-edge", "auth-egress", "data-internal"]);
   const canonicalVolumeNames = new Set(["postgres-data", "storage-data"]);
