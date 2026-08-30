@@ -292,7 +292,7 @@ describe("local Mac production rehearsal CLI", () => {
     expect(productionCli).toContain("activation_blocked");
 
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 4 author complete / independent review pending**");
+    expect(rehearsalRunbook).toContain("상태: **canonical / post-#1475 server-integration repair author complete / fresh independent review pending**");
     expect(rehearsalRunbook).toContain("R2 isolated run, R3 create-only run receipt");
     expect(rehearsalRunbook).toContain("trusted receipt가 아닌 run evidence");
   });

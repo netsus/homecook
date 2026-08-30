@@ -17,7 +17,11 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
 import { readPrivateCanonicalJsonFile } from "./local-mac-production-rehearsal-receipts.mjs";
 import { resolveTrustedDockerBinary } from "./full-local-session-observation-reader.mjs";
-import { getLocalMacProductionReleasePaths } from "./local-mac-production-release.mjs";
+import {
+  digestLocalMacProductionExecutionTree,
+  getLocalMacProductionReleasePaths,
+  normalizeRunningReleaseDescriptor,
+} from "./local-mac-production-release.mjs";
 import { resolveTrustedGitExecutable } from "./trusted-production-release-tools.mjs";
 
 export const INVENTORY_SCHEMA = "homecook.local-mac-production-rehearsal-inventory.v1";
@@ -34,7 +38,7 @@ const LAUNCHD_KEYS = ["label", "loaded", "state", "pid", "projection_digest"];
 const CONTAINER_KEYS = ["id", "name", "project", "service", "image_digest", "image_id", "labels_digest", "mounts_digest", "state", "generation_digest"];
 const NETWORK_KEYS = ["id", "name", "project", "labels_digest", "generation_digest"];
 const VOLUME_KEYS = ["name", "project", "service", "labels_digest", "generation_digest"];
-const PORT_KEYS = ["port", "pid", "process_name", "listener_digest"];
+const PORT_KEYS = ["port", "present", "pid", "process_name", "listener_digest"];
 const CONFIG_KEYS = ["identity", "exists", "sha256"];
 const MIGRATION_KEYS = ["approved", "marker_digest", "global_ledger_digest", "migration_head", "catalog_head"];
 const PREPARED_IDENTITY_KEYS = ["attested", "status", "release_sha", "release_tree", "build_id", "sealed_bundle_digest", "descriptor_digest"];
@@ -47,6 +51,27 @@ const SURFACE_KEYS = ["release_artifacts", "active_promotion_lock", "workloads",
 const INVENTORY_UNSIGNED_KEYS = ["schema", "canonicalization", "repository", "captured_at", "surface_allowlist_version", "probe_identity", "tool_identities", "probe_statuses", "production_db_connection_count", "mutation_attempt_count", "redacted_field_count", "surfaces", "surface_digest"];
 const DEFAULT_SURFACE_MAX_ENTRIES = 10_000;
 const DEFAULT_SURFACE_MAX_BYTES = 512 * 1024 * 1024;
+const SNAPSHOT_MANIFEST_MAX_BYTES = 1024 * 1024;
+const EXECUTION_SNAPSHOT_SCHEMA = "homecook.local-mac-production-execution-snapshot.v1";
+const EXECUTION_SNAPSHOT_MANIFEST_REQUIRED_KEYS = Object.freeze([
+  "schema",
+  "app_digest",
+  "execution_snapshot_digest",
+  "promotion_id",
+  "release_sha",
+  "release_tree",
+  "worker_digest",
+  "authority_digest",
+]);
+const EXECUTION_SNAPSHOT_MANIFEST_ALLOWED_KEYS = new Set([
+  ...EXECUTION_SNAPSHOT_MANIFEST_REQUIRED_KEYS,
+  "full_local_digest",
+  "sealed_bundle_digest",
+  "repeatability_receipt_digest",
+  "candidate_identity_digest",
+  "bundle_manifest_digest",
+  "prelock_scratch_authority_digest",
+]);
 
 function fail(message) {
   throw new Error(`Production inventory rejected: ${message}`);
@@ -175,9 +200,18 @@ function validateSurfaces(value) {
   for (const [index, listener] of surfaces.port_listeners.entries()) {
     integer(listener.port, `port_listeners[${index}].port`, 1);
     if (listener.port > 65_535) fail(`port_listeners[${index}].port must be <= 65535`);
+    if (typeof listener.present !== "boolean") fail(`port_listeners[${index}].present must be boolean`);
     if (listener.pid !== null) integer(listener.pid, `port_listeners[${index}].pid`, 1);
     nonempty(listener.process_name, `port_listeners[${index}].process_name`);
     if (!HEX_64.test(listener.listener_digest)) fail(`port_listeners[${index}].listener_digest is invalid`);
+    if ((!listener.present && (listener.pid !== null || listener.process_name !== "absent"))
+      || (listener.present && (listener.pid === null || listener.process_name === "absent"))) {
+      fail(`port_listeners[${index}] presence evidence is inconsistent`);
+    }
+    const projection = Object.fromEntries(PORT_KEYS.slice(0, -1).map((key) => [key, listener[key]]));
+    if (sha256Jcs(projection) !== listener.listener_digest) {
+      fail(`port_listeners[${index}].listener_digest does not match exact probe evidence`);
+    }
   }
   for (const [index, config] of surfaces.opaque_configs.entries()) {
     nonempty(config.identity, `opaque_configs[${index}].identity`);
@@ -357,16 +391,30 @@ export function createProductionSurfaceSnapshot(inventory, { capturedAt = new Da
     "com.homecook.youtube-extraction-worker",
   ];
   const configIdentities = new Set(surfaces.opaque_configs.map((entry) => entry.identity));
+  const currentDescriptorPresent = artifactMap.get("current_descriptor")?.exists === true;
+  const previousDescriptorPresent = artifactMap.get("previous_descriptor")?.exists === true;
+  const currentSnapshotCount = surfaces.release_artifacts.filter((entry) => (
+    entry.exists && entry.kind.startsWith("referenced_snapshot:current:")
+  )).length;
+  const previousSnapshotCount = surfaces.release_artifacts.filter((entry) => (
+    entry.exists && entry.kind.startsWith("referenced_snapshot:previous:")
+  )).length;
+  const descriptorSnapshotsComplete = currentSnapshotCount === (currentDescriptorPresent ? 1 : 0)
+    && previousSnapshotCount === (previousDescriptorPresent ? 1 : 0);
   const toolNames = inventory.tool_identities.map((tool) => tool.name).sort();
   const complete = PROBE_NAMES.every((name) => inventory.probe_statuses[name].status === "success")
     && JSON.stringify(toolNames) === JSON.stringify(REQUIRED_TOOL_NAMES)
     && artifactMap.has("release_root") && artifactMap.has("current_descriptor") && artifactMap.has("previous_descriptor")
+    && descriptorSnapshotsComplete
     && requiredInvariantPlists.every((kind) => presentArtifacts.has(kind))
     && requiredFullLocalPlists.every((kind) => artifactMap.has(kind))
     && surfaces.launchd.length === requiredLaunchdLabels.length && launchdLabels.size === requiredLaunchdLabels.length
     && requiredLaunchdLabels.every((label) => launchdLabels.has(label))
     && surfaces.docker.containers.length > 0 && surfaces.docker.networks.length > 0 && surfaces.docker.volumes.length > 0
-    && surfaces.port_listeners.length > 0 && surfaces.opaque_configs.length === 2
+    && surfaces.port_listeners.length === 1
+    && surfaces.port_listeners[0].port === 3100
+    && typeof surfaces.port_listeners[0].present === "boolean"
+    && surfaces.opaque_configs.length === 2
     && configIdentities.has("production-env") && configIdentities.has("full-local-config")
     && surfaces.migration.approved && surfaces.migration.global_ledger_digest
     && surfaces.migration.migration_head === surfaces.migration.catalog_head
@@ -939,6 +987,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     approvedMigrationMarkerPath = null,
     productionEnvAuthorityPath = null,
     releaseArtifactSurfaceLimits = {},
+    releaseArtifactProbeHooks = {},
     dockerBin: dockerBinOption = null,
     commandRunner = spawnSync,
     trustedToolPaths = {},
@@ -997,6 +1046,200 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     });
   }
 
+  function readDescriptorSnapshotReference(path, descriptorKind, expectedDescriptorDigest) {
+    const authority = readOptionalProductionDescriptor(path);
+    if (!authority.exists) return null;
+    if (authority.digest !== expectedDescriptorDigest || authority.value === null) {
+      fail(`${descriptorKind} descriptor authority is ambiguous or changed`);
+    }
+    let descriptor;
+    try {
+      descriptor = normalizeRunningReleaseDescriptor(authority.value, `${descriptorKind} production descriptor`);
+    } catch {
+      fail(`${descriptorKind} production descriptor is not validated canonical authority`);
+    }
+    if (descriptor.execution_snapshot_digest === undefined) return null;
+    const snapshotName = descriptor.execution_snapshot_digest;
+    const expectedSnapshotRoot = join(snapshotRoot, snapshotName);
+    if (!HEX_64.test(snapshotName)
+      || descriptor.execution_app_root !== join(expectedSnapshotRoot, "app")
+      || descriptor.worker_artifact_root !== join(expectedSnapshotRoot, "worker")) {
+      fail(`${descriptorKind} production descriptor snapshot reference is not canonical`);
+    }
+    return Object.freeze({ descriptorKind, snapshotName, descriptorDigest: authority.digest, descriptor });
+  }
+
+  function readSnapshotManifest(snapshotPath, snapshotName, surfaceBudget, { required }) {
+    const manifestPath = join(snapshotPath, "evidence.json");
+    let stats;
+    try {
+      stats = lstatSync(manifestPath, { bigint: true });
+    } catch (error) {
+      if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+      if (required) fail("descriptor-referenced snapshot manifest is missing");
+      return Object.freeze({ exists: false, sha256: sha256Jcs({ exists: false, name_digest: sha256Jcs(snapshotName) }) });
+    }
+    if (stats.isSymbolicLink() || !stats.isFile() || stats.size > BigInt(SNAPSHOT_MANIFEST_MAX_BYTES)) {
+      fail("execution snapshot manifest type or byte limit is invalid");
+    }
+    const manifestEvidence = artifactEvidence(`snapshot_manifest:${sha256Jcs(snapshotName)}`, manifestPath, {
+      maxFileBytes: SNAPSHOT_MANIFEST_MAX_BYTES,
+      surfaceBudget,
+    });
+    let manifest;
+    let manifestBytes;
+    try {
+      manifestBytes = readOpaqueRegularFile(manifestPath, "execution snapshot manifest");
+      manifest = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(manifestBytes));
+    } catch {
+      fail("execution snapshot manifest is invalid JSON");
+    }
+    if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)
+      || EXECUTION_SNAPSHOT_MANIFEST_REQUIRED_KEYS.some((key) => !Object.hasOwn(manifest, key))
+      || Object.keys(manifest).some((key) => !EXECUTION_SNAPSHOT_MANIFEST_ALLOWED_KEYS.has(key))
+      || manifest.schema !== EXECUTION_SNAPSHOT_SCHEMA
+      || !HEX_64.test(snapshotName)
+      || manifest.execution_snapshot_digest !== snapshotName
+      || !HEX_40.test(manifest.release_sha)
+      || !HEX_40.test(manifest.release_tree)
+      || typeof manifest.promotion_id !== "string"
+      || manifest.promotion_id.length === 0
+      || Object.entries(manifest).some(([key, value]) => (
+        (key.endsWith("_digest") || key.endsWith("_sha256"))
+        && (typeof value !== "string" || !HEX_64.test(value))
+      ))
+      || sha256Bytes(manifestBytes) !== manifestEvidence.sha256) {
+      fail("execution snapshot manifest canonical identity mismatch");
+    }
+    return Object.freeze({ exists: true, sha256: manifestEvidence.sha256, value: manifest });
+  }
+
+  function digestBoundedExecutionComponent(rootPath, surfaceBudget) {
+    const consumeCurrentIdentity = (path) => {
+      const stats = lstatSync(path, { bigint: true });
+      const type = stats.isSymbolicLink()
+        ? "symlink"
+        : stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "unsupported";
+      if (type === "unsupported") fail("descriptor-referenced snapshot component contains unsupported evidence");
+      consumeProductionSurfaceBudget(surfaceBudget, stats, type, type === "file" ? stats.size : 0n);
+      return stats;
+    };
+    return digestLocalMacProductionExecutionTree(rootPath, {
+      entryGuard: (path) => {
+        consumeCurrentIdentity(path);
+      },
+      readDirectory: (path) => readBudgetedDirectoryNames(path, surfaceBudget),
+      readRegularFile: (path) => {
+        consumeCurrentIdentity(path);
+        return readOpaqueRegularFile(path, "descriptor-referenced snapshot component");
+      },
+    });
+  }
+
+  function validateReferencedSnapshot(snapshotPath, reference, manifest, surfaceBudget) {
+    const descriptor = reference.descriptor;
+    for (const field of ["release_sha", "release_tree", "promotion_id"]) {
+      if (manifest[field] !== descriptor[field]) {
+        fail(`descriptor-referenced snapshot manifest ${field} mismatch`);
+      }
+    }
+    for (const field of ["sealed_bundle_digest", "repeatability_receipt_digest"]) {
+      if (descriptor[field] !== undefined && manifest[field] !== descriptor[field]) {
+        fail(`descriptor-referenced snapshot manifest ${field} mismatch`);
+      }
+    }
+    let componentDigests;
+    try {
+      componentDigests = {
+        app_digest: digestBoundedExecutionComponent(join(snapshotPath, "app"), surfaceBudget),
+        worker_digest: digestBoundedExecutionComponent(join(snapshotPath, "worker"), surfaceBudget),
+        authority_digest: digestBoundedExecutionComponent(join(snapshotPath, "authority"), surfaceBudget),
+        ...(manifest.full_local_digest === undefined ? {} : {
+          full_local_digest: digestBoundedExecutionComponent(join(snapshotPath, "full-local"), surfaceBudget),
+        }),
+      };
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Production inventory rejected:")) throw error;
+      fail("descriptor-referenced snapshot component authority is incomplete");
+    }
+    for (const [field, digest] of Object.entries(componentDigests)) {
+      if (manifest[field] !== digest) fail(`descriptor-referenced snapshot ${field} content mismatch`);
+    }
+  }
+
+  function readExecutionSnapshotChildren(surfaceBudget, descriptorEvidence) {
+    return withTrustedAncestorChains([
+      { base: canonicalHome, target: join(snapshotRoot, ".authority-child-probe"), label: "execution snapshot root" },
+    ], () => {
+      const rootEvidence = artifactEvidence("execution_snapshot_root", snapshotRoot, {
+        directoryIdentityOnly: true,
+        surfaceBudget,
+      });
+      if (!rootEvidence.exists) {
+        if (descriptorEvidence.some((entry) => entry !== null)) {
+          fail("descriptor-referenced snapshot root is missing");
+        }
+        return [];
+      }
+      const references = descriptorEvidence.filter(Boolean);
+      if (new Set(references.map((entry) => entry.snapshotName)).size !== references.length) {
+        fail("duplicate descriptor snapshot references are ambiguous");
+      }
+      const referenceByName = new Map(references.map((entry) => [entry.snapshotName, entry]));
+      const names = readBudgetedDirectoryNames(snapshotRoot, surfaceBudget);
+      for (const reference of references) {
+        if (!names.includes(reference.snapshotName)) fail("descriptor-referenced snapshot is missing");
+      }
+      return names.map((name) => {
+        const path = join(snapshotRoot, name);
+        const reference = referenceByName.get(name);
+        if (reference) {
+          const before = artifactEvidence(
+            `referenced_snapshot:${reference.descriptorKind}:${sha256Jcs(name)}`,
+            path,
+            { surfaceBudget },
+          );
+          if (releaseArtifactProbeHooks.afterReferencedSnapshotBeforeDigest !== undefined) {
+            if (typeof releaseArtifactProbeHooks.afterReferencedSnapshotBeforeDigest !== "function") {
+              fail("referenced snapshot verification hook is invalid");
+            }
+            releaseArtifactProbeHooks.afterReferencedSnapshotBeforeDigest({ path, snapshotName: name });
+          }
+          const manifest = readSnapshotManifest(path, name, surfaceBudget, { required: true });
+          validateReferencedSnapshot(path, reference, manifest.value, surfaceBudget);
+          const after = artifactEvidence(
+            `referenced_snapshot:${reference.descriptorKind}:${sha256Jcs(name)}`,
+            path,
+            { surfaceBudget },
+          );
+          if (before.sha256 !== after.sha256) fail("descriptor-referenced snapshot changed during verification");
+          return after;
+        }
+        const retained = artifactEvidence(`retained_snapshot:${sha256Jcs(name)}`, path, {
+          directoryIdentityOnly: true,
+          surfaceBudget,
+        });
+        const manifest = readSnapshotManifest(path, name, surfaceBudget, { required: false });
+        return {
+          ...retained,
+          sha256: sha256Jcs({
+            authority_mode: "retained-metadata-only-v1",
+            name_digest: sha256Jcs(name),
+            lstat_identity: {
+              device: retained.device,
+              inode: retained.inode,
+              owner_uid: retained.owner_uid,
+              mode: retained.mode,
+              size: retained.size,
+              mtime: retained.mtime,
+            },
+            manifest,
+          }),
+        };
+      });
+    });
+  }
+
   return Object.freeze({
     async readActivePromotionLock() {
       return withTrustedAncestorChains([
@@ -1010,10 +1253,13 @@ export function createLocalProductionInventoryAdapters(options = {}) {
         { base: canonicalHome, target: join(releaseRoot, ".ancestor-probe"), label: "release root" },
         { base: canonicalHome, target: join(plistRoot, ".ancestor-probe"), label: "LaunchAgent root" },
       ], () => {
+        const releaseRootEvidence = artifactEvidence("release_root", releaseRoot, { directoryIdentityOnly: true, surfaceBudget });
+        const currentEvidence = artifactEvidence("current_descriptor", currentPath, { surfaceBudget });
+        const previousEvidence = artifactEvidence("previous_descriptor", previousPath, { surfaceBudget });
         const entries = [
-          artifactEvidence("release_root", releaseRoot, { directoryIdentityOnly: true, surfaceBudget }),
-          artifactEvidence("current_descriptor", currentPath, { surfaceBudget }),
-          artifactEvidence("previous_descriptor", previousPath, { surfaceBudget }),
+          releaseRootEvidence,
+          currentEvidence,
+          previousEvidence,
           artifactEvidence("launch_agent_plist:com.homecook.production", join(plistRoot, "com.homecook.production.plist"), { surfaceBudget }),
           artifactEvidence("launch_agent_plist:com.homecook.youtube-extraction-worker", join(plistRoot, "com.homecook.youtube-extraction-worker.plist"), { surfaceBudget }),
         ];
@@ -1026,7 +1272,19 @@ export function createLocalProductionInventoryAdapters(options = {}) {
         }));
         entries.push(fullLocal.canonical, fullLocal.legacy);
         entries.push(...readAuthorityChildren(lockRoot, "recovered_lock", surfaceBudget));
-        entries.push(...readAuthorityChildren(snapshotRoot, "sealed_snapshot", surfaceBudget));
+        const descriptorReferences = [
+          readDescriptorSnapshotReference(currentPath, "current", currentEvidence.sha256),
+          readDescriptorSnapshotReference(previousPath, "previous", previousEvidence.sha256),
+        ];
+        entries.push(...readExecutionSnapshotChildren(surfaceBudget, descriptorReferences));
+        for (const reference of descriptorReferences.filter(Boolean)) {
+          const finalAuthority = readOptionalProductionDescriptor(
+            reference.descriptorKind === "current" ? currentPath : previousPath,
+          );
+          if (!finalAuthority.exists || finalAuthority.digest !== reference.descriptorDigest) {
+            fail(`${reference.descriptorKind} descriptor changed during snapshot inventory`);
+          }
+        }
         return entries;
       });
     },
@@ -1117,7 +1375,18 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       return { containers, networks, volumes };
     },
     async readPortListeners() {
-      const raw = await commandOutput(commandRunner, lsofBin, ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"], { absentExit: "lsof-no-listener" });
+      const { status, stdout: raw, stderr } = await readOnlyCommandResult(
+        commandRunner,
+        lsofBin,
+        ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"],
+      );
+      if (status === 1 && raw === "" && stderr === "") {
+        const projection = { port: 3100, present: false, pid: null, process_name: "absent" };
+        return [{ ...projection, listener_digest: sha256Jcs(projection) }];
+      }
+      if (status !== 0 || raw === "" || stderr !== "") {
+        throw new Error("read-only listener command evidence is invalid");
+      }
       let pid = null;
       let processName = "unknown";
       const listeners = [];
@@ -1125,10 +1394,14 @@ export function createLocalProductionInventoryAdapters(options = {}) {
         if (line.startsWith("p")) pid = Number(line.slice(1));
         if (line.startsWith("c")) processName = line.slice(1);
         if (line.startsWith("n") && /:3100(?:\s|$)/u.test(line)) {
-          const projection = { port: 3100, pid: Number.isInteger(pid) ? pid : null, process_name: processName };
+          if (!Number.isSafeInteger(pid) || pid < 1 || processName === "unknown" || processName.length === 0) {
+            throw new Error("read-only listener evidence is incomplete");
+          }
+          const projection = { port: 3100, present: true, pid, process_name: processName };
           listeners.push({ ...projection, listener_digest: sha256Jcs(projection) });
         }
       }
+      if (listeners.length !== 1) throw new Error("read-only listener evidence is ambiguous");
       return listeners;
     },
     async readOpaqueConfigIdentities() {
