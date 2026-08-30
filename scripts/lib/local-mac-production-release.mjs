@@ -943,9 +943,13 @@ function readSafeRegularFileSnapshot(path, label) {
     }
     return {
       bytes: readFileSync(fileDescriptor),
+      ctimeMs: stat.ctimeMs,
       dev: stat.dev,
       ino: stat.ino,
       mode: modeBits(stat.mode),
+      mtimeMs: stat.mtimeMs,
+      nlink: stat.nlink,
+      size: stat.size,
       uid: stat.uid,
     };
   } catch (error) {
@@ -1971,7 +1975,8 @@ export function prepareLocalMacProductionRelease({
   const normalizedManifestPath = requireAbsolutePath(manifestPath, "releaseManifestPath");
   const realHomeDir = assertSafeDirectory(normalizedHomeDir, "homeDir");
   const realRootDir = assertSafeDirectory(normalizedRootDir, "rootDir");
-  const manifestBytes = readSafeRegularFileBytes(normalizedManifestPath, "Release manifest");
+  const manifestFileSnapshot = readSafeRegularFileSnapshot(normalizedManifestPath, "Release manifest");
+  const manifestBytes = manifestFileSnapshot.bytes;
   const manifestDigest = sha256Bytes(manifestBytes);
   let manifestInput;
   try {
@@ -2225,6 +2230,7 @@ function normalizeRunningReleaseDescriptor(value, label = "Current running relea
  *   expectedReleaseDir: string,
  *   getCurrentUid?: () => number | undefined,
  *   pid: number,
+ *   requireRehearsalAuthority?: boolean,
  *   runCommand?: typeof spawnSync,
  * }} options
  */
@@ -2233,6 +2239,7 @@ export function readLocalMacProductionRuntimeIdentity({
   expectedReleaseDir,
   getCurrentUid = () => process.getuid?.(),
   pid,
+  requireRehearsalAuthority = false,
   runCommand = spawnSync,
 } = {}) {
   const normalizedComponent = requireNonEmptyString(component, "component");
@@ -2268,6 +2275,16 @@ export function readLocalMacProductionRuntimeIdentity({
   if (runtimeDirectory !== expectedDirectory) {
     throw new Error(`${normalizedComponent} runtime cwd does not match the exact prepared release.`);
   }
+  const observedRehearsalAuthority = requireRehearsalAuthority
+    ? (() => {
+        const snapshotEvidencePath = resolve(runtimeDirectory, "..", "evidence.json");
+        const snapshotEvidence = readJsonFile(snapshotEvidencePath, `${normalizedComponent} execution snapshot evidence`);
+        return {
+          sealed_bundle_digest: requireDigest(snapshotEvidence.sealed_bundle_digest, `${normalizedComponent} observed sealed bundle digest`),
+          repeatability_receipt_digest: requireDigest(snapshotEvidence.repeatability_receipt_digest, `${normalizedComponent} observed repeatability receipt digest`),
+        };
+      })()
+    : {};
   return {
     ...readLocalMacProductionPreparedReleaseIdentity({
       component: normalizedComponent,
@@ -2275,6 +2292,7 @@ export function readLocalMacProductionRuntimeIdentity({
       releaseDir: runtimeDirectory,
       runCommand,
     }),
+    ...observedRehearsalAuthority,
     pid,
   };
 }
@@ -2723,17 +2741,6 @@ function validateReadyReleaseBundle(bundle, manifest) {
   return bundle;
 }
 
-function bindRehearsalAuthorityToReadyBundle(bundle, manifest) {
-  return Object.fromEntries(Object.entries(bundle).map(([component, state]) => [
-    component,
-    {
-      ...state,
-      sealed_bundle_digest: manifest.sealed_bundle_digest,
-      repeatability_receipt_digest: manifest.repeatability_receipt_digest,
-    },
-  ]));
-}
-
 function writeDescriptorFileAtomically(path, bytes) {
   const stagingPath = `${path}.staging-${randomUUID()}`;
   try {
@@ -2816,7 +2823,8 @@ export async function promoteLocalMacProductionRelease({
   const realRootDir = assertSafeDirectory(normalizedRootDir, "rootDir");
   const currentUid = requireCurrentUserUid(getCurrentUid);
   assertOwnedSafeRegularFile(normalizedManifestPath, "Release manifest", currentUid);
-  const manifestBytes = readSafeRegularFileBytes(normalizedManifestPath, "Release manifest");
+  const manifestFileSnapshot = readSafeRegularFileSnapshot(normalizedManifestPath, "Release manifest");
+  const manifestBytes = manifestFileSnapshot.bytes;
   let manifestInput;
   try {
     manifestInput = JSON.parse(manifestBytes.toString("utf8"));
@@ -2971,6 +2979,8 @@ export async function promoteLocalMacProductionRelease({
   }
   const frozenRuntimeInputs = await freezeRuntimeInputs({
     preflight: initialRuntimePreflight,
+    releaseManifestBytes: manifestBytes,
+    releaseManifestDigest: manifestDigest,
     scratchRoot: scratchReleaseRoot,
   });
   if (!frozenRuntimeInputs || !DIGEST_PATTERN.test(frozenRuntimeInputs.authority_digest ?? "")) {
@@ -3008,6 +3018,18 @@ export async function promoteLocalMacProductionRelease({
   verifyLocalMacProductionExecutionSnapshot(frozenScratch);
   verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: true });
   assertPrivatePromotionScratchReservation(scratchReservation, currentUid, { materialized: true, runtimeInputs: true });
+  const finalManifestSource = readSafeRegularFileSnapshot(normalizedManifestPath, "Release manifest");
+  if (finalManifestSource.dev !== manifestFileSnapshot.dev
+    || finalManifestSource.ino !== manifestFileSnapshot.ino
+    || finalManifestSource.uid !== manifestFileSnapshot.uid
+    || finalManifestSource.mode !== manifestFileSnapshot.mode
+    || finalManifestSource.nlink !== manifestFileSnapshot.nlink
+    || finalManifestSource.size !== manifestFileSnapshot.size
+    || finalManifestSource.ctimeMs !== manifestFileSnapshot.ctimeMs
+    || finalManifestSource.mtimeMs !== manifestFileSnapshot.mtimeMs
+    || !finalManifestSource.bytes.equals(manifestFileSnapshot.bytes)) {
+    throw new Error("Release manifest source identity changed before production lock creation.");
+  }
   ensureSafePrivateDirectory(
     paths.lockRoot,
     homecookRoot,
@@ -3024,7 +3046,7 @@ export async function promoteLocalMacProductionRelease({
     now: preLockNow,
     readGitEvidence,
     rootDir: realRootDir,
-    verifyAttestation,
+    verifyAttestation: () => manifest.attestation,
   });
 
   const stableRunning = readOptionalRunningDescriptorSnapshot({
@@ -3045,16 +3067,6 @@ export async function promoteLocalMacProductionRelease({
     expected: initialPrevious,
     label: "Previous running release descriptor",
   });
-  const currentManifestBytes = readSafeRegularFileBytes(
-    normalizedManifestPath,
-    "Release manifest",
-  );
-  if (
-    currentManifestBytes.length !== manifestBytes.length
-    || !currentManifestBytes.equals(manifestBytes)
-  ) {
-    throw new Error("Release manifest changed after promotion lock acquisition.");
-  }
   verifyLocalMacProductionExecutionSnapshot(frozenScratch);
   verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
   const lockedRuntimePreflight = initialRuntimePreflight;
@@ -3099,10 +3111,11 @@ export async function promoteLocalMacProductionRelease({
     command: "install",
     homeDir: realHomeDir,
     releaseManifestPath: normalizedManifestPath,
+    frozenReleaseManifestPath: frozenRuntimeInputs.paths.releaseManifestPath,
     lockToken: lock.lockToken,
     readGitEvidence,
     rootDir: realRootDir,
-    verifyAttestation,
+    verifyAttestation: () => manifest.attestation,
   });
   const installation = await installBundle({
     executionSnapshot,
@@ -3119,7 +3132,7 @@ export async function promoteLocalMacProductionRelease({
   });
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
   verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
-  let readiness = validateReadyReleaseBundle(bindRehearsalAuthorityToReadyBundle(await readinessProbe({
+  let readiness = validateReadyReleaseBundle(await readinessProbe({
     executionSnapshot,
     frozenRuntimeInputs,
     homeDir: realHomeDir,
@@ -3131,7 +3144,7 @@ export async function promoteLocalMacProductionRelease({
     releaseDir: executionSnapshot.appRoot,
     rootDir: realRootDir,
     verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
-  }), manifest), manifest);
+  }), manifest);
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
   verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
 
@@ -3168,10 +3181,10 @@ export async function promoteLocalMacProductionRelease({
     rootDir: realRootDir,
     verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
   });
-  readiness = validateReadyReleaseBundle(bindRehearsalAuthorityToReadyBundle({
+  readiness = validateReadyReleaseBundle({
     ...readiness,
     youtube_worker: finalWorker,
-  }, manifest), manifest);
+  }, manifest);
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
   const promotedAt = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
   if (Number.isNaN(Date.parse(promotedAt))) {
@@ -3983,6 +3996,7 @@ export function validateLocalMacProductionMutationAuthority({
   readCurrentHeadSha = readLocalMacProductionRepoHeadSha,
   readGitEvidence = readLocalMacProductionGitReleaseEvidence,
   verifyAttestation,
+  frozenReleaseManifestPath = null,
 } = {}) {
   if (!isLocalMacProductionMutationCommand(command)) {
     return brandLocalMacProductionMutationAuthority({
@@ -4007,8 +4021,11 @@ export function validateLocalMacProductionMutationAuthority({
     releaseManifestPath,
     "releaseManifestPath",
   );
+  const manifestReadPath = frozenReleaseManifestPath
+    ? requireAbsolutePath(frozenReleaseManifestPath, "frozenReleaseManifestPath")
+    : normalizedManifestPath;
   const manifest = validateLocalMacProductionReleaseManifest({
-    manifest: readJsonFile(normalizedManifestPath, "Release manifest"),
+    manifest: readJsonFile(manifestReadPath, "Release manifest"),
     manifestPath: normalizedManifestPath,
     readGitEvidence: typeof readGitEvidence === "function"
       ? readGitEvidence

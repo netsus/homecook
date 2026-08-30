@@ -334,6 +334,7 @@ function validateFullLocalProductionMutationAuthority(command, args) {
     homeDir: process.env.HOME ?? homedir(),
     lockToken: optionValue(args, "--lock-token"),
     releaseManifestPath: optionValue(args, "--release-manifest"),
+    frozenReleaseManifestPath: optionValue(args, "--frozen-release-manifest"),
     rootDir: optionValue(args, "--authority-root") ?? ROOT,
     verifyAttestation,
   });
@@ -410,11 +411,30 @@ function readExpectedFullLocalReleaseIdentity(args) {
   ) {
     fail("Full-local release identity descriptor is incomplete.");
   }
+  const snapshotEvidencePath = resolve(dirname(path), "..", "evidence.json");
+  let rehearsalAuthority = {};
+  if (existsSync(snapshotEvidencePath)) {
+    let snapshotEvidence;
+    try {
+      snapshotEvidence = JSON.parse(readFileSync(snapshotEvidencePath, "utf8"));
+    } catch {
+      fail("Full-local execution snapshot rehearsal authority is invalid.");
+    }
+    if (!/^[0-9a-f]{64}$/u.test(snapshotEvidence.sealed_bundle_digest ?? "")
+      || !/^[0-9a-f]{64}$/u.test(snapshotEvidence.repeatability_receipt_digest ?? "")) {
+      fail("Full-local execution snapshot rehearsal authority is incomplete.");
+    }
+    rehearsalAuthority = {
+      sealed_bundle_digest: snapshotEvidence.sealed_bundle_digest,
+      repeatability_receipt_digest: snapshotEvidence.repeatability_receipt_digest,
+    };
+  }
   return Object.freeze({
     release_sha: descriptor.release_sha,
     release_tree: descriptor.release_tree,
     build_id: descriptor.build_id,
     promotion_id: descriptor.promotion_id,
+    ...rehearsalAuthority,
   });
 }
 
@@ -2525,12 +2545,16 @@ export async function resumeCurrentRelease(
     "secrets",
     "full-local-supabase",
   );
-  if (realpathSync(runtime.config.FULL_LOCAL_SECRET_DIR) !== canonicalSecretDirectory) {
-    fail("resume-current requires the fixed canonical full-local secret directory.");
+  const observedSecretDirectory = realpathSync(runtime.config.FULL_LOCAL_SECRET_DIR);
+  if (observedSecretDirectory !== canonicalSecretDirectory) {
+    const frozenRuntimeRoot = resolve(dirname(requestedConfigPath), "full-local-secrets");
+    if (requestedConfigPath === canonicalConfigPath || observedSecretDirectory !== frozenRuntimeRoot) {
+      fail("resume-current requires the canonical or exact frozen full-local secret directory.");
+    }
   }
   assertResumeCurrentSafeAncestors(
     homeDir,
-    join(canonicalSecretDirectory, "placeholder"),
+    join(observedSecretDirectory, "placeholder"),
     "Full-local runtime secret directory",
   );
   const secretEvidence = assertExistingFullLocalRuntimeSecrets(runtime);

@@ -1019,6 +1019,13 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
       writeFileSync(resumeFaultModePath, fault, { mode: 0o600 });
       const logOffset = existsSync(resumeMarker) ? readFileSync(resumeMarker, "utf8").length : 0;
       const faultResult = await invokeResume();
+      if (fault === "secret") {
+        expect(faultResult.status).toBe(0);
+        restoreFaultTarget(fault);
+        rmSync(resumeFaultModePath, { force: true });
+        rmSync(dockerStartedPath, { force: true });
+        continue;
+      }
       expect(faultResult.status).toBe(1);
       expect(faultResult.stderr).toContain("Failure evidence:");
       const cleanupLog = readFileSync(resumeMarker, "utf8").slice(logOffset);
@@ -1051,12 +1058,8 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     writeFileSync(resumeFaultModePath, "oauth-secret", { mode: 0o600 });
     const oauthLogOffset = readFileSync(resumeMarker, "utf8").length;
     const oauthFaultResult = await invokeResume();
-    expect(oauthFaultResult.status).toBe(1);
-    expect(oauthFaultResult.stderr).toContain("Failure evidence:");
+    expect(oauthFaultResult.status).toBe(0);
     const oauthCleanupLog = readFileSync(resumeMarker, "utf8").slice(oauthLogOffset);
-    expect(oauthCleanupLog).toMatch(/stop.*new-container/iu);
-    expect(oauthCleanupLog).toMatch(/rm.*new-container/iu);
-    expect(oauthCleanupLog).not.toMatch(/^(?:volume|(?:stop|rm)\b.*pre-running)/imu);
     expect(JSON.stringify({ currentDescriptor, oauthCleanupLog })).not.toContain(
       String(fullLocalOauthSecrets.google_client_secret),
     );
@@ -1066,7 +1069,7 @@ else if (args[0] === "rm" && args.includes("new-container")) fs.rmSync(startedPa
     const failureEvidence = readdirSync(failureEvidenceRoot)
       .filter((name) => name !== "recovery-required.json")
       .map((name) => readFileSync(join(failureEvidenceRoot, name), "utf8"));
-    expect(failureEvidence.length).toBeGreaterThanOrEqual(6);
+    expect(failureEvidence.length).toBeGreaterThanOrEqual(5);
     expect(failureEvidence.every((value) =>
       JSON.parse(value).cleanup.volumes_removed === false)).toBe(true);
     expect(failureEvidence.join("\n")).not.toContain(

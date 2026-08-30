@@ -76,6 +76,8 @@ function createReadyBundle(manifest: Record<string, unknown>, overrides: Record<
     release_tree: manifest.release_tree,
     build_id: manifest.build_id,
     promotion_id: manifest.promotion_id,
+    sealed_bundle_digest: manifest.sealed_bundle_digest,
+    repeatability_receipt_digest: manifest.repeatability_receipt_digest,
   };
   return {
     app: { ...identity },
@@ -210,11 +212,13 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
       workerConfigPath: "/private/frozen/worker.env",
       workerCredentialPath: "/private/frozen/credential.json",
       workerSecretRoot: "/private/frozen/secrets",
+      releaseManifestPath: "/private/frozen/release-manifest.json",
     },
     digests: {
       fullLocalConfigSha256: "1".repeat(64),
       workerConfigSha256: "5".repeat(64),
       workerCredentialSha256: "4".repeat(64),
+      releaseManifestSha256: sha256(fixture.manifestBytes),
     },
   };
   return {
@@ -252,8 +256,15 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
     finalWorkerProbe: fixture.finalWorkerProbe,
     cleanupFrozenRuntimeInputs: vi.fn(() => ({ cleaned: true })),
     freezeRuntimeInputs: vi.fn(async ({ scratchRoot }: { scratchRoot: string }) => {
-      mkdirSync(join(scratchRoot, "runtime-inputs"), { mode: 0o700 });
-      return frozenRuntimeInputs;
+      const runtimeInputRoot = join(scratchRoot, "runtime-inputs");
+      mkdirSync(runtimeInputRoot, { mode: 0o700 });
+      const releaseManifestPath = join(runtimeInputRoot, "release-manifest.json");
+      writeFileSync(releaseManifestPath, fixture.manifestBytes, { mode: 0o600 });
+      return {
+        ...frozenRuntimeInputs,
+        root: runtimeInputRoot,
+        paths: { ...frozenRuntimeInputs.paths, releaseManifestPath },
+      };
     }),
     preflightBundle: fixture.preflightBundle,
     readinessProbe: fixture.readinessProbe,
@@ -995,6 +1006,38 @@ describe("local Mac production promote", () => {
     },
   );
 
+  it.each(["app", "full_local", "youtube_worker"])(
+    "rejects %s readiness when observed rehearsal digests are missing despite a valid manifest",
+    async (component) => {
+      const fixture = createFixture();
+      const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
+      const bundle = createReadyBundle(fixture.manifest);
+      delete (bundle[component as keyof typeof bundle] as Record<string, unknown>).sealed_bundle_digest;
+      delete (bundle[component as keyof typeof bundle] as Record<string, unknown>).repeatability_receipt_digest;
+      fixture.readinessProbe.mockResolvedValueOnce(bundle);
+      await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+        .rejects.toThrow(/rehearsal|sealed|repeatability|identity|readiness/iu);
+      expect(readFileSync(fixture.paths.currentDescriptorPath)).toEqual(currentBefore);
+      expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+    },
+  );
+
+  it("rejects cross-component observed rehearsal digest mismatch before descriptor commit", async () => {
+    const fixture = createFixture();
+    const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
+    const bundle = createReadyBundle(fixture.manifest);
+    bundle.full_local = {
+      ...bundle.full_local,
+      sealed_bundle_digest: "0".repeat(64),
+      repeatability_receipt_digest: fixture.manifest.repeatability_receipt_digest,
+    };
+    fixture.readinessProbe.mockResolvedValueOnce(bundle);
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .rejects.toThrow(/sealed|repeatability|identity|readiness/iu);
+    expect(readFileSync(fixture.paths.currentDescriptorPath)).toEqual(currentBefore);
+    expect(existsSync(fixture.paths.previousDescriptorPath)).toBe(false);
+  });
+
   it("runs the complete worker probe immediately before descriptor commit", async () => {
     const fixture = createFixture();
     const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
@@ -1172,6 +1215,30 @@ describe("local Mac production promote", () => {
       ...promoteOptions(fixture),
       mkdir,
     })).resolves.toMatchObject({ promoted: true });
+    expect(fixture.installBundle).toHaveBeenCalledTimes(1);
+  });
+
+  it("never reopens original manifest or attestation authority after the production lock", async () => {
+    const fixture = createFixture();
+    const originalManifest = readFileSync(fixture.manifestPath);
+    const verifyAttestation = vi.fn(() => {
+      if (existsSync(fixture.paths.lockPath)) throw new Error("forbidden post-lock attestation source open");
+      return VERIFIED_ATTESTATION();
+    });
+    const mkdir = vi.fn((path: Parameters<typeof mkdirSync>[0], options?: Parameters<typeof mkdirSync>[1]) => {
+      const result = mkdirSync(path, options);
+      if (String(path).endsWith("/production-promotion.lock")) {
+        writeFileSync(fixture.manifestPath, Buffer.from(originalManifest.toString("utf8").replace("backup-20260825-01", "backup-20260825-02")), { mode: 0o600 });
+      }
+      return result;
+    }) as typeof mkdirSync;
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      mkdir,
+      verifyAttestation,
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .resolves.toMatchObject({ promoted: true });
+    expect(verifyAttestation.mock.calls.every(() => true)).toBe(true);
     expect(fixture.installBundle).toHaveBeenCalledTimes(1);
   });
 
