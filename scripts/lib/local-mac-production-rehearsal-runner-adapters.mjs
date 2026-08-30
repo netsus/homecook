@@ -749,7 +749,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
     queue: join(workerSecretRoot, "queue.json"),
     rehearsalRpc: join(workerSecretRoot, "rehearsal-rpc-config.json"),
   };
-  writeFileSync(paths.config, "HOMECOOK_REHEARSAL_SYNTHETIC=true\n", { flag: "wx", mode: 0o600 });
+  writeFileSync(paths.config, "# isolated rehearsal worker\n", { flag: "wx", mode: 0o600 });
   for (const [path, value] of [[paths.app, appDescriptor], [paths.credential, credential], [paths.policy, policy], [paths.queue, queue]]) {
     writeFileSync(path, `${JSON.stringify(value)}\n`, { flag: "wx", mode: 0o600 });
   }
