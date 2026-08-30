@@ -1048,7 +1048,7 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("member_receipt_1_b64:");
     expect(workflow).toContain("member_receipt_2_b64:");
     expect(workflow).toContain("repeatability_receipt_b64:");
-    expect(workflow.match(/verify-production-release-rehearsal-authority\.mjs/gu)).toHaveLength(2);
+    expect(workflow.match(/verify-production-release-rehearsal-authority\.mjs/gu)).toHaveLength(3);
     expect(workflow.match(/--rehearsal-authority-json/gu)).toHaveLength(2);
     expect(workflow).toContain("attestations/production-release/v2");
     for (const binding of [
@@ -1141,10 +1141,13 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("expected-tag-message.txt");
 
     const pushIndex = workflow.indexOf("git push");
+    const tagPushMarginIndex = workflow.indexOf("--minimum-remaining-seconds 900");
     const existingTagRaceIndex = workflow.indexOf("release_tag already exists");
     const readbackIndex = workflow.indexOf("Read back exact remote annotated tag object");
     const attestIndex = workflow.indexOf("actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6");
     expect(pushIndex).toBeGreaterThan(-1);
+    expect(tagPushMarginIndex).toBeGreaterThan(-1);
+    expect(tagPushMarginIndex).toBeLessThan(pushIndex);
     expect(existingTagRaceIndex).toBeGreaterThan(-1);
     expect(existingTagRaceIndex).toBeLessThan(pushIndex);
     expect(workflow).toContain("git push --porcelain");

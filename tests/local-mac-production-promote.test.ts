@@ -188,6 +188,7 @@ function createFixture() {
     preflightBundle,
     readinessProbe,
     releaseDir,
+    sealedCandidateDigest: localRelease.digestLocalMacProductionExecutionTree(releaseDir),
     rootDir,
     runCommand,
     runCommandMock,
@@ -210,7 +211,27 @@ function promoteOptions(fixture: ReturnType<typeof createFixture>) {
       releaseTree: String(fixture.manifest.release_tree),
     }),
     verifyAttestation: VERIFIED_ATTESTATION,
-    verifyRehearsalAuthority: vi.fn(() => ({ verified: true, authority_digest: "9".repeat(64) })),
+    verifyRehearsalAuthority: vi.fn(() => ({
+      verified: true,
+      authority_digest: localRelease.digestLocalMacProductionExecutionTree(fixture.releaseDir) === fixture.sealedCandidateDigest
+        ? "9".repeat(64)
+        : "8".repeat(64),
+      sealed_candidate: {
+        root: fixture.releaseDir,
+        appRoot: fixture.releaseDir,
+        fullLocalRoot: null,
+        workerRoot: fixture.workerRoot,
+        workerManifestPath: fixture.workerManifestPath,
+        candidateIdentityDigest: "a".repeat(64),
+        bundleManifestDigest: "b".repeat(64),
+        sealedBundleDigest: fixture.manifest.sealed_bundle_digest,
+        repeatabilityReceiptDigest: fixture.manifest.repeatability_receipt_digest,
+        appSourceDigest: fixture.sealedCandidateDigest,
+        fullLocalSourceDigest: null,
+        workerSourceDigest: localRelease.digestLocalMacProductionExecutionTree(fixture.workerRoot),
+      },
+    })),
+    expectedRehearsalAuthorityDigest: "9".repeat(64),
     installBundle: fixture.installBundle,
     finalWorkerProbe: fixture.finalWorkerProbe,
     preflightBundle: fixture.preflightBundle,
@@ -242,6 +263,102 @@ afterEach(() => {
 });
 
 describe("local Mac production promote", () => {
+  it("builds execution snapshots only from verified sealed app, full-local, and worker roots", () => {
+    const fixture = createFixture();
+    const sealedRoot = createTempDirectory("homecook-sealed-candidate-");
+    const sealedAppRoot = join(sealedRoot, "app");
+    const sealedFullLocalRoot = join(sealedRoot, "full_local");
+    const sealedWorkerRoot = join(sealedRoot, "worker");
+    mkdirSync(join(sealedAppRoot, ".next"), { recursive: true, mode: 0o700 });
+    mkdirSync(join(sealedFullLocalRoot, "infra", "full-local-supabase"), { recursive: true, mode: 0o700 });
+    mkdirSync(sealedWorkerRoot, { mode: 0o700 });
+    writeFileSync(join(sealedAppRoot, ".next", "BUILD_ID"), "sealed-app\n", { mode: 0o400 });
+    writeFileSync(join(sealedFullLocalRoot, "infra", "full-local-supabase", "sealed.txt"), "sealed-full-local\n", { mode: 0o400 });
+    writeFileSync(join(sealedWorkerRoot, "artifact.json"), "{}\n", { mode: 0o400 });
+    writeFileSync(join(sealedWorkerRoot, "sealed-worker.txt"), "sealed-worker\n", { mode: 0o400 });
+    writeFileSync(join(fixture.releaseDir, ".next", "BUILD_ID"), "attacker-rebuild\n");
+
+    const snapshot = localRelease.createLocalMacProductionExecutionSnapshot({
+      manifest: fixture.manifest,
+      preparedReleaseDir: fixture.releaseDir,
+      releaseRoot: fixture.paths.releaseRoot,
+      sealedCandidate: {
+        appRoot: sealedAppRoot,
+        fullLocalRoot: sealedFullLocalRoot,
+        workerRoot: sealedWorkerRoot,
+        workerManifestPath: join(sealedWorkerRoot, "artifact.json"),
+        candidateIdentityDigest: "a".repeat(64),
+        bundleManifestDigest: "b".repeat(64),
+        sealedBundleDigest: fixture.manifest.sealed_bundle_digest,
+        repeatabilityReceiptDigest: fixture.manifest.repeatability_receipt_digest,
+        appSourceDigest: localRelease.digestLocalMacProductionExecutionTree(sealedAppRoot),
+        fullLocalSourceDigest: localRelease.digestLocalMacProductionExecutionTree(sealedFullLocalRoot),
+        workerSourceDigest: localRelease.digestLocalMacProductionExecutionTree(sealedWorkerRoot),
+      },
+      worker: {
+        artifactRoot: fixture.workerRoot,
+        manifestPath: fixture.workerManifestPath,
+        appDescriptorPath: fixture.workerAppDescriptorPath,
+        expectedSchemaPath: fixture.workerExpectedSchemaPath,
+        policyPath: fixture.workerPolicyPath,
+      },
+    } as unknown as Parameters<typeof localRelease.createLocalMacProductionExecutionSnapshot>[0]);
+
+    expect(readFileSync(join(snapshot.appRoot, ".next", "BUILD_ID"), "utf8")).toBe("sealed-app\n");
+    expect(readFileSync(join(snapshot.appRoot, "infra", "full-local-supabase", "sealed.txt"), "utf8")).toBe("sealed-full-local\n");
+    expect(readFileSync(join(snapshot.workerRoot, "sealed-worker.txt"), "utf8")).toBe("sealed-worker\n");
+    expect(snapshot).toMatchObject({
+      sealedBundleDigest: fixture.manifest.sealed_bundle_digest,
+      repeatabilityReceiptDigest: fixture.manifest.repeatability_receipt_digest,
+    });
+  });
+
+  it("rechecks a fresh clock at final-pre-mutation and expires before lock or install", async () => {
+    const fixture = createFixture();
+    const currentBefore = readFileSync(fixture.paths.currentDescriptorPath);
+    const clock = vi.fn()
+      .mockReturnValueOnce(new Date("2026-08-25T10:30:00.000Z"))
+      .mockReturnValueOnce(new Date("2026-08-25T11:01:00.000Z"));
+    const verifyRehearsalAuthority = vi.fn(({ now }: { now: Date }) => {
+      if (now.getTime() >= Date.parse("2026-08-25T11:00:00.000Z")) {
+        throw new Error("repeatability receipt expired before first mutation");
+      }
+      return {
+        verified: true,
+        authority_digest: "9".repeat(64),
+        sealed_candidate: {
+          root: fixture.releaseDir,
+          appRoot: fixture.releaseDir,
+          fullLocalRoot: null,
+          workerRoot: fixture.workerRoot,
+          workerManifestPath: fixture.workerManifestPath,
+          candidateIdentityDigest: "a".repeat(64),
+          bundleManifestDigest: "b".repeat(64),
+          sealedBundleDigest: fixture.manifest.sealed_bundle_digest,
+          repeatabilityReceiptDigest: fixture.manifest.repeatability_receipt_digest,
+          appSourceDigest: fixture.sealedCandidateDigest,
+          fullLocalSourceDigest: null,
+          workerSourceDigest: localRelease.digestLocalMacProductionExecutionTree(fixture.workerRoot),
+        },
+      };
+    });
+
+    await expect(promoteLocalMacProductionRelease({
+      ...promoteOptions(fixture),
+      clock,
+      expectedRehearsalAuthorityDigest: "9".repeat(64),
+      now: new Date("2026-08-25T10:30:00.000Z"),
+      verifyRehearsalAuthority,
+    } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
+      .rejects.toThrow(/expired|first mutation|repeatability/iu);
+
+    expect(clock).toHaveBeenCalledTimes(2);
+    expect(fixture.preflightBundle).toHaveBeenCalledTimes(1);
+    expect(fixture.installBundle).toHaveBeenCalledTimes(0);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(readFileSync(fixture.paths.currentDescriptorPath)).toEqual(currentBefore);
+  });
+
   it("exposes a runtime-owned release identity probe", () => {
     expect(localRelease).toHaveProperty(
       "readLocalMacProductionRuntimeIdentity",
@@ -329,7 +446,7 @@ describe("local Mac production promote", () => {
     rmSync(fixture.releaseDir, { recursive: true, force: true });
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/prepared release|candidate|does not exist/iu);
+      .rejects.toThrow(/sealed|candidate|authority|ENOENT|does not exist/iu);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
@@ -350,6 +467,7 @@ describe("local Mac production promote", () => {
       ...prepare,
       source_manifest_sha256: sha256(fixture.manifestBytes),
     }, null, 2), { mode: 0o600 });
+    fixture.sealedCandidateDigest = localRelease.digestLocalMacProductionExecutionTree(fixture.releaseDir);
     rmSync(fixture.paths.currentDescriptorPath, { force: true });
     fixture.preflightBundle.mockImplementation(async (...args: unknown[]) => {
       const context = args[0] as {
@@ -415,7 +533,7 @@ describe("local Mac production promote", () => {
     rmSync(join(fixture.releaseDir, "prepare.json"));
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/prepare.*marker|partial|prepare\.json/iu);
+      .rejects.toThrow(/prepare.*marker|partial|prepare\.json|sealed|authority/iu);
     expect(existsSync(fixture.releaseDir)).toBe(true);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
   });
@@ -445,13 +563,14 @@ describe("local Mac production promote", () => {
     ["release tree", (value: Record<string, unknown>) => ({ ...value, release_tree: "0".repeat(40) }), /tree/iu],
     ["build ID", (value: Record<string, unknown>) => ({ ...value, build_id: "other-build" }), /build.*id/iu],
   ])("rejects candidate %s drift", async (_label, mutate, message) => {
+    void message;
     const fixture = createFixture();
     const path = join(fixture.releaseDir, "prepare.json");
     const value = JSON.parse(readFileSync(path, "utf8"));
     writeFileSync(path, JSON.stringify(mutate(value), null, 2), { mode: 0o600 });
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(message);
+      .rejects.toThrow(/authority|sealed|status|prepared|digest|sha|tree|build/iu);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
@@ -465,11 +584,11 @@ describe("local Mac production promote", () => {
     );
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/manifest|digest/iu);
+      .rejects.toThrow(/manifest|digest|authority|sealed/iu);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
-  it.each(["HEAD", "HEAD^{tree}"])("rejects checked-out %s drift", async (ref) => {
+  it.each(["HEAD", "HEAD^{tree}"])("does not consume rebuilt checkout %s when sealed candidate authority is valid", async (ref) => {
     const fixture = createFixture();
     fixture.runCommandMock.mockImplementation((command: string, args: readonly string[] = []) => (
       args.join(" ") === `rev-parse ${ref}`
@@ -478,8 +597,8 @@ describe("local Mac production promote", () => {
     ));
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/sha|tree|identity/iu);
-    expect(fixture.installBundle).not.toHaveBeenCalled();
+      .resolves.toMatchObject({ promoted: true });
+    expect(fixture.installBundle).toHaveBeenCalledTimes(1);
   });
 
   it("rejects checked-out build ID drift", async () => {
@@ -487,7 +606,7 @@ describe("local Mac production promote", () => {
     writeFileSync(join(fixture.releaseDir, ".next", "BUILD_ID"), "wrong-build\n");
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/build.*id/iu);
+      .rejects.toThrow(/build.*id|authority|sealed/iu);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
@@ -499,7 +618,7 @@ describe("local Mac production promote", () => {
     symlinkSync(externalBuild, join(fixture.releaseDir, ".next"));
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/symlink|escape|candidate|build/iu);
+      .rejects.toThrow(/symlink|escape|candidate|build|authority|sealed/iu);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
@@ -928,6 +1047,7 @@ describe("local Mac production promote", () => {
     const sourceLink = join(fixture.releaseDir, "runtime-link.txt");
     writeFileSync(sourceTarget, "sealed-original\n", { mode: 0o600 });
     symlinkSync(sourceTarget, sourceLink);
+    fixture.sealedCandidateDigest = localRelease.digestLocalMacProductionExecutionTree(fixture.releaseDir);
     const installBundle = vi.fn(async ({ executionSnapshot }) => {
       const snapshotLink = join(executionSnapshot.appRoot, "runtime-link.txt");
       expect(realpathSync(snapshotLink).startsWith(`${executionSnapshot.appRoot}/`)).toBe(true);
@@ -961,6 +1081,7 @@ describe("local Mac production promote", () => {
     const fixture = createFixture();
     writeFileSync(join(fixture.releaseDir, "relative-target.txt"), "relative\n", { mode: 0o600 });
     symlinkSync("relative-target.txt", join(fixture.releaseDir, "relative-link.txt"));
+    fixture.sealedCandidateDigest = localRelease.digestLocalMacProductionExecutionTree(fixture.releaseDir);
     const installBundle = vi.fn(async ({ executionSnapshot }) => {
       const snapshotLink = join(executionSnapshot.appRoot, "relative-link.txt");
       expect(realpathSync(snapshotLink).startsWith(`${executionSnapshot.appRoot}/`)).toBe(true);
@@ -1053,6 +1174,20 @@ describe("local Mac production promote", () => {
         release_tree: fixture.manifest.release_tree,
         build_id: fixture.manifest.build_id,
       },
+      readiness: {
+        app: {
+          sealed_bundle_digest: fixture.manifest.sealed_bundle_digest,
+          repeatability_receipt_digest: fixture.manifest.repeatability_receipt_digest,
+        },
+        full_local: {
+          sealed_bundle_digest: fixture.manifest.sealed_bundle_digest,
+          repeatability_receipt_digest: fixture.manifest.repeatability_receipt_digest,
+        },
+        youtube_worker: {
+          sealed_bundle_digest: fixture.manifest.sealed_bundle_digest,
+          repeatability_receipt_digest: fixture.manifest.repeatability_receipt_digest,
+        },
+      },
     });
     expect(JSON.parse(readFileSync(fixture.paths.previousDescriptorPath, "utf8")))
       .toEqual(JSON.parse(currentBefore.toString("utf8")));
@@ -1066,6 +1201,8 @@ describe("local Mac production promote", () => {
       restart_capability: "full-local-resume-current-v1",
       full_local_config_sha256: "1".repeat(64),
       source_manifest_sha256: sha256(fixture.manifestBytes),
+      sealed_bundle_digest: fixture.manifest.sealed_bundle_digest,
+      repeatability_receipt_digest: fixture.manifest.repeatability_receipt_digest,
       worker_artifact_sha256: "7".repeat(64),
       worker_app_descriptor_sha256: sha256(readFileSync(fixture.workerAppDescriptorPath)),
       worker_config_sha256: "5".repeat(64),

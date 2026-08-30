@@ -22,6 +22,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLocalMacProductionPromoteAdapters } from "../scripts/lib/local-mac-production-promote-adapters.mjs";
 import {
   getLocalMacProductionReleasePaths,
+  digestLocalMacProductionExecutionTree,
   promoteLocalMacProductionRelease,
 } from "../scripts/lib/local-mac-production-release.mjs";
 import {
@@ -526,7 +527,25 @@ describe("connected local Mac production promotion", () => {
       rootDir: repoRoot,
       runCommand: commandRunner,
       verifyAttestation: () => ({ verified: true, source: "fixture" }),
-      verifyRehearsalAuthority: () => ({ verified: true, authority_digest: "9".repeat(64) }),
+      verifyRehearsalAuthority: () => ({
+        verified: true,
+        authority_digest: "9".repeat(64),
+        sealed_candidate: {
+          root: candidateRoot,
+          appRoot: candidateRoot,
+          fullLocalRoot: null,
+          workerRoot: worker.artifactRoot,
+          workerManifestPath: worker.manifestPath,
+          candidateIdentityDigest: "a".repeat(64),
+          bundleManifestDigest: "b".repeat(64),
+          sealedBundleDigest: manifest.sealed_bundle_digest,
+          repeatabilityReceiptDigest: manifest.repeatability_receipt_digest,
+          appSourceDigest: digestLocalMacProductionExecutionTree(candidateRoot),
+          fullLocalSourceDigest: null,
+          workerSourceDigest: digestLocalMacProductionExecutionTree(worker.artifactRoot),
+        },
+      }),
+      expectedRehearsalAuthorityDigest: "9".repeat(64),
     } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0]);
 
     expect(promoted.promoted).toBe(true);
@@ -709,7 +728,7 @@ describe("connected local Mac production promotion", () => {
       writePrepare(candidateRoot, manifest, manifestBytes, { executableRuntime: true });
       const worker = workerFixture(temp(`homecook-connected-worker-v2-${index}-`), identity);
       const adapters = createLocalMacProductionPromoteAdapters({ confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL", bundlePath, subjectManifestPath, trustedRootPath: join(process.cwd(), "tests/fixtures/github-attestation-trusted-root.jsonl"), fullLocalConfigPath: fullConfig, homeDir, nodeBin, workerConfigPath: worker.configPath, workerManifestPath: worker.manifestPath, workerCredentialPath: worker.credentialPath, workerAppDescriptorPath: worker.appDescriptorPath, workerPolicyPath: worker.policyPath, workerExpectedSchemaPath: worker.expectedSchemaPath, workerSecretRoot: worker.secretRoot }, { commandRunner, i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })), appReadinessWaiter: vi.fn(async () => undefined), platform: "darwin" });
-      const promoteOptions = { ...adapters, homeDir, manifestPath, rootDir: repoRoot, runCommand: commandRunner, readGitEvidence: () => createLocalMacProductionGitEvidence({ releaseSha: identity.release_sha, releaseTree: identity.release_tree, overrides: { releaseTagObjectSha: manifest.release_tag_object_sha, releaseTagMessage: buildProductionReleaseAnnotatedTagMessage({ releaseTag: manifest.release_tag, build_id: manifest.build_id, rehearsal_receipt_schema: manifest.rehearsal_receipt_schema, sealed_bundle_digest: manifest.sealed_bundle_digest, repeatability_receipt_digest: manifest.repeatability_receipt_digest, rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until }) } }), verifyAttestation: () => ({ verified: true, source: "fixture" }), verifyRehearsalAuthority: () => ({ verified: true, authority_digest: "9".repeat(64) }), lockToken: `${index}${index}${index}${index}${index}${index}${index}${index}-1111-4111-8111-111111111111` } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
+      const promoteOptions = { ...adapters, homeDir, manifestPath, rootDir: repoRoot, runCommand: commandRunner, readGitEvidence: () => createLocalMacProductionGitEvidence({ releaseSha: identity.release_sha, releaseTree: identity.release_tree, overrides: { releaseTagObjectSha: manifest.release_tag_object_sha, releaseTagMessage: buildProductionReleaseAnnotatedTagMessage({ releaseTag: manifest.release_tag, build_id: manifest.build_id, rehearsal_receipt_schema: manifest.rehearsal_receipt_schema, sealed_bundle_digest: manifest.sealed_bundle_digest, repeatability_receipt_digest: manifest.repeatability_receipt_digest, rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until }) } }), verifyAttestation: () => ({ verified: true, source: "fixture" }), verifyRehearsalAuthority: () => ({ verified: true, authority_digest: "9".repeat(64), sealed_candidate: { root: candidateRoot, appRoot: candidateRoot, fullLocalRoot: null, workerRoot: worker.artifactRoot, workerManifestPath: worker.manifestPath, candidateIdentityDigest: "a".repeat(64), bundleManifestDigest: "b".repeat(64), sealedBundleDigest: manifest.sealed_bundle_digest, repeatabilityReceiptDigest: manifest.repeatability_receipt_digest, appSourceDigest: digestLocalMacProductionExecutionTree(candidateRoot), fullLocalSourceDigest: null, workerSourceDigest: digestLocalMacProductionExecutionTree(worker.artifactRoot) } }), expectedRehearsalAuthorityDigest: "9".repeat(64), lockToken: `${index}${index}${index}${index}${index}${index}${index}${index}-1111-4111-8111-111111111111` } as unknown as Parameters<typeof promoteLocalMacProductionRelease>[0];
       return promoteLocalMacProductionRelease(promoteOptions);
     };
 

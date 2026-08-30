@@ -12,6 +12,7 @@ function parseArgs(argv) {
     repeatabilityReceiptPath: null,
     releaseSha: null,
     releaseTree: null,
+    minimumRemainingSeconds: null,
     json: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -25,9 +26,36 @@ function parseArgs(argv) {
     else if (token === "--repeatability-receipt") options.repeatabilityReceiptPath = value;
     else if (token === "--release-sha") options.releaseSha = value;
     else if (token === "--release-tree") options.releaseTree = value;
+    else if (token === "--minimum-remaining-seconds") options.minimumRemainingSeconds = Number(value);
     else throw new Error(`Unknown rehearsal authority option: ${token}`);
   }
   return options;
+}
+
+/** @param {{validUntil: string, now?: Date, minimumRemainingSeconds?: number}} options */
+export function assertRehearsalAuthorityFreshForTagPush({
+  validUntil,
+  now = new Date(),
+  minimumRemainingSeconds = 900,
+} = {}) {
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
+    throw new Error("Tag-push rehearsal authority clock is invalid.");
+  }
+  if (!Number.isSafeInteger(minimumRemainingSeconds) || minimumRemainingSeconds < 1) {
+    throw new Error("Tag-push completion safety margin is invalid.");
+  }
+  const validUntilMs = Date.parse(validUntil);
+  if (!Number.isFinite(validUntilMs) || new Date(validUntilMs).toISOString() !== validUntil) {
+    throw new Error("Tag-push rehearsal valid_until is invalid.");
+  }
+  if (now.getTime() + minimumRemainingSeconds * 1000 >= validUntilMs) {
+    throw new Error("Tag-push rehearsal authority lacks the required attestation completion safety margin before expiry.");
+  }
+  return Object.freeze({
+    valid_until: validUntil,
+    checked_at: now.toISOString(),
+    minimum_remaining_seconds: minimumRemainingSeconds,
+  });
 }
 
 function readFatalUtf8(path) {
@@ -54,6 +82,13 @@ export function runProductionReleaseRehearsalAuthorityCli(argv, dependencies = {
   });
   if (authority.release_sha !== options.releaseSha || authority.release_tree !== options.releaseTree) {
     throw new Error("Rehearsal receipt SHA/tree does not match the exact release authority.");
+  }
+  if (options.minimumRemainingSeconds !== null) {
+    assertRehearsalAuthorityFreshForTagPush({
+      validUntil: authority.rehearsal_receipt_valid_until,
+      now,
+      minimumRemainingSeconds: options.minimumRemainingSeconds,
+    });
   }
   output.write(`${canonicalizeJcs(authority)}\n`);
   return authority;

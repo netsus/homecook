@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isAbsolute, join, resolve } from "node:path";
 
 import { classifyProductionInventory } from "./local-mac-production-rehearsal-classifier.mjs";
 import { readCompletedCandidateRoot } from "./local-mac-production-rehearsal-candidate.mjs";
@@ -9,6 +10,7 @@ import {
   validateRepeatabilityReceipt,
 } from "./local-mac-production-rehearsal-receipts.mjs";
 import {
+  digestLocalMacProductionExecutionTree,
   readLocalMacProductionGitReleaseEvidence,
   validateLocalMacProductionReleaseManifest,
 } from "./local-mac-production-release.mjs";
@@ -27,11 +29,14 @@ function requireExactUtcTimestamp(value, label) {
   return value;
 }
 
+/** @param {any} options */
 export function validateProductionPromotionPreMutationGate({
   manifest,
   repeatabilityReceipt,
   memberReceipts,
   candidateManifest,
+  candidateRoot,
+  candidateComponentDigests,
   inventoryCapturedAt,
   classification,
   now = new Date(),
@@ -46,6 +51,17 @@ export function validateProductionPromotionPreMutationGate({
   }
   if (!candidateManifest || typeof candidateManifest !== "object" || Array.isArray(candidateManifest)) {
     throw new Error("Production promotion sealed candidate authority is missing.");
+  }
+  if (!isAbsolute(candidateRoot ?? "") || resolve(candidateRoot) !== candidateRoot) {
+    throw new Error("Sealed candidate root authority must be an absolute canonical path.");
+  }
+  if (!candidateComponentDigests || ["app", "full_local", "worker"].some(
+    (field) => !DIGEST_PATTERN.test(candidateComponentDigests[field] ?? ""),
+  )) throw new Error("Sealed candidate component execution digests are invalid.");
+  for (const field of ["candidate_identity_digest", "bundle_manifest_digest"]) {
+    if (!DIGEST_PATTERN.test(candidateManifest[field] ?? "")) {
+      throw new Error(`Sealed candidate ${field} is invalid.`);
+    }
   }
   const bindings = [
     ["release_sha", repeatability.release_sha],
@@ -111,9 +127,18 @@ export function validateProductionPromotionPreMutationGate({
     sealed_bundle_digest: repeatability.sealed_bundle_digest,
     repeatability_receipt_digest: repeatability.repeatability_receipt_digest,
     rehearsal_receipt_valid_until: repeatability.valid_until,
-    classification_digest: classificationDigest,
+    candidate_identity_digest: candidateManifest.candidate_identity_digest,
+    bundle_manifest_digest: candidateManifest.bundle_manifest_digest,
+    inventory_digest: classification.inventory_digest,
+    candidate_root_digest: sha256Jcs(candidateRoot),
+    candidate_component_digest: sha256Jcs(candidateComponentDigests),
   };
-  return Object.freeze({ verified: true, authority_digest: sha256Jcs(authority), ...authority });
+  return Object.freeze({
+    verified: true,
+    authority_digest: sha256Jcs(authority),
+    classification_digest: classificationDigest,
+    ...authority,
+  });
 }
 
 export function createProductionPromotionAuthorityVerifier({
@@ -165,19 +190,48 @@ export function createProductionPromotionAuthorityVerifier({
       memberReceipts,
       now,
     });
-    const candidate = readCandidate(candidatePath);
+    const candidateRoot = resolve(candidatePath);
+    const candidate = readCandidate(candidateRoot);
     const inventory = readInventory(inventoryPath, { repoRoot });
     const classification = classifyProductionInventory(inventory, {
       classifiedAt: now.toISOString(),
     });
-    return validateProductionPromotionPreMutationGate({
+    const bundleRoot = join(candidateRoot, "bundles", "bundle");
+    const componentRoots = {
+      app: join(bundleRoot, "app"),
+      full_local: join(bundleRoot, "full_local"),
+      worker: join(bundleRoot, "worker"),
+    };
+    const candidateComponentDigests = Object.fromEntries(Object.entries(componentRoots).map(
+      ([component, root]) => [component, digestLocalMacProductionExecutionTree(root)],
+    ));
+    const authority = validateProductionPromotionPreMutationGate({
       manifest: validatedManifest,
       repeatabilityReceipt,
       memberReceipts,
       candidateManifest: candidate.manifest,
+      candidateRoot,
+      candidateComponentDigests,
       inventoryCapturedAt: inventory.captured_at,
       classification,
       now,
+    });
+    return Object.freeze({
+      ...authority,
+      sealed_candidate: Object.freeze({
+        root: candidateRoot,
+        appRoot: componentRoots.app,
+        fullLocalRoot: componentRoots.full_local,
+        workerRoot: componentRoots.worker,
+        workerManifestPath: join(bundleRoot, "worker", "artifact.json"),
+        candidateIdentityDigest: candidate.manifest.candidate_identity_digest,
+        bundleManifestDigest: candidate.manifest.bundle_manifest_digest,
+        sealedBundleDigest: candidate.manifest.sealed_bundle_digest,
+        repeatabilityReceiptDigest: repeatabilityReceipt.repeatability_receipt_digest,
+        appSourceDigest: candidateComponentDigests.app,
+        fullLocalSourceDigest: candidateComponentDigests.full_local,
+        workerSourceDigest: candidateComponentDigests.worker,
+      }),
     });
   };
 }

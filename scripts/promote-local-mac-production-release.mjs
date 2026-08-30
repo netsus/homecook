@@ -209,6 +209,7 @@ export async function runLocalMacProductionReleaseCli(
     createPromoteAdapters = createLocalMacProductionPromoteAdapters,
     createVerifyAdapters = createLocalMacProductionVerifyAdapters,
     createPromotionAuthorityVerifier = createProductionPromotionAuthorityVerifier,
+    promoteRelease = promoteLocalMacProductionRelease,
     output = process.stdout,
     parseArguments = parseArgs,
     assertPromoteActivated = assertProductionPromoteActivated,
@@ -307,15 +308,23 @@ export async function runLocalMacProductionReleaseCli(
       repoRoot: options.rootDir,
       verifyAttestation: attestationVerifier,
     });
-    await verifyRehearsalAuthority({ phase: "pre-adapter" });
+    const preAdapterAuthority = await verifyRehearsalAuthority({
+      phase: "pre-adapter",
+      now: new Date(),
+    });
+    if (!preAdapterAuthority || preAdapterAuthority.verified !== true
+      || !/^[0-9a-f]{64}$/u.test(preAdapterAuthority.authority_digest ?? "")) {
+      throw new Error("Pre-adapter rehearsal authority is invalid.");
+    }
     const adapters = createPromoteAdapters(options);
-    result = await promoteLocalMacProductionRelease({
+    result = await promoteRelease({
       ...adapters,
       homeDir: options.homeDir,
       manifestPath: options.releaseManifestPath,
       rootDir: options.rootDir,
       verifyAttestation: attestationVerifier,
       verifyRehearsalAuthority,
+      expectedRehearsalAuthorityDigest: preAdapterAuthority.authority_digest,
     });
   } else if (options.command === "verify") {
     const adapters = createVerifyAdapters(options);

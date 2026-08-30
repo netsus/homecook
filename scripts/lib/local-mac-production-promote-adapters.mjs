@@ -891,16 +891,23 @@ function buildDefaultDependencies(
         expectedUserId: userId,
         secretRoot: options.workerSecretRoot,
       });
-      const artifactRoot = assertReadOnlyArtifactRoot(dirname(options.workerManifestPath));
+      const sealedWorkerRoot = context.sealedCandidate?.workerRoot ?? null;
+      const workerManifestPath = sealedWorkerRoot
+        ? resolve(sealedWorkerRoot, "artifact.json")
+        : options.workerManifestPath;
+      const expectedSchemaPath = sealedWorkerRoot
+        ? resolve(sealedWorkerRoot, "scripts", "manifests", "youtube-extraction-expected-schema.json")
+        : options.workerExpectedSchemaPath;
+      const artifactRoot = assertReadOnlyArtifactRoot(dirname(workerManifestPath));
       if (artifactRoot === realpathSync(context.releaseDir)) {
         throw new Error("Worker artifact root must remain separate from the app release candidate.");
       }
       const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
         appDescriptorPath: options.workerAppDescriptorPath,
-        workerArtifactPath: options.workerManifestPath,
+        workerArtifactPath: workerManifestPath,
         currentPolicyPath: options.workerPolicyPath,
         credentialPath: options.workerCredentialPath,
-        expectedSchemaPath: options.workerExpectedSchemaPath,
+        expectedSchemaPath,
         secretRoot: options.workerSecretRoot,
       });
       const preflight = evaluateYoutubeExtractionWorkerPreflight(inputs);
@@ -911,18 +918,18 @@ function buildDefaultDependencies(
       );
       return {
         artifactRoot,
-        manifestPath: realpathSync(options.workerManifestPath),
+        manifestPath: realpathSync(workerManifestPath),
         appDescriptorPath: realpathSync(options.workerAppDescriptorPath),
         configPath: realpathSync(options.workerConfigPath),
         credentialPath: realpathSync(options.workerCredentialPath),
-        expectedSchemaPath: realpathSync(options.workerExpectedSchemaPath),
+        expectedSchemaPath: realpathSync(expectedSchemaPath),
         policyPath: realpathSync(options.workerPolicyPath),
         secretRoot: realpathSync(options.workerSecretRoot),
         artifactSha256: inputs.workerArtifact.artifact_sha256,
         appDescriptorSha256: sha256File(options.workerAppDescriptorPath),
         configSha256: sha256File(options.workerConfigPath),
         credentialSha256: sha256File(options.workerCredentialPath),
-        expectedSchemaSha256: sha256File(options.workerExpectedSchemaPath),
+        expectedSchemaSha256: sha256File(expectedSchemaPath),
         policySha256: sha256File(options.workerPolicyPath),
         fullLocalConfigSha256: fullLocalConfig.digest,
         resumeAuthority: {

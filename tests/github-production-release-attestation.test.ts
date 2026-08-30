@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
@@ -25,6 +25,7 @@ import {
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import * as productionAttestationAuthority from "../scripts/lib/github-production-release-attestation.mjs";
+import * as rehearsalAuthorityCli from "../scripts/verify-production-release-rehearsal-authority.mjs";
 import {
   assertTrustedExecutableSnapshotStable,
   resolveTrustedGhExecutable,
@@ -81,6 +82,28 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
+  it("keeps tag push and attestation at zero without a fresh completion safety margin", () => {
+    expect(typeof rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush).toBe("function");
+    const tagPush = vi.fn();
+    const attest = vi.fn();
+    expect(() => {
+      rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush({
+        validUntil: "2026-08-30T09:00:00.000Z",
+        now: new Date("2026-08-30T08:45:00.000Z"),
+        minimumRemainingSeconds: 900,
+      });
+      tagPush();
+      attest();
+    }).toThrow(/expiry|margin|valid_until|remaining/iu);
+    expect(tagPush).toHaveBeenCalledTimes(0);
+    expect(attest).toHaveBeenCalledTimes(0);
+    expect(() => rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush({
+      validUntil: "2026-08-30T09:00:00.000Z",
+      now: new Date("2026-08-30T08:44:59.999Z"),
+      minimumRemainingSeconds: 900,
+    })).not.toThrow();
+  });
+
   it("builds v2 subject, predicate, and canonical tag message from one rehearsal authority", () => {
     expect(typeof productionAttestationAuthority.buildProductionReleaseAnnotatedTagMessage).toBe("function");
     const artifacts = buildGitHubProductionReleaseAttestationArtifacts({

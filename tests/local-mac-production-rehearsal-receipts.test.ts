@@ -819,7 +819,11 @@ describe("strict receipt time authority", () => {
         release_tree: repeatability.release_tree,
         build_id: repeatability.build_id,
         sealed_bundle_digest: repeatability.sealed_bundle_digest,
+        candidate_identity_digest: SHA_C,
+        bundle_manifest_digest: SHA_B,
       },
+      candidateRoot: "/private/sealed-candidate",
+      candidateComponentDigests: { app: SHA_A, full_local: SHA_B, worker: SHA_C },
       inventoryCapturedAt: "2026-08-29T10:29:00.000Z",
       classification: (() => {
         const unsigned = {
@@ -836,8 +840,25 @@ describe("strict receipt time authority", () => {
       })(),
       now: NOW,
     };
-    expect(productionRelease.validateProductionPromotionPreMutationGate(valid))
-      .toMatchObject({ verified: true, authority_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    const stable = productionRelease.validateProductionPromotionPreMutationGate(valid);
+    expect(stable).toMatchObject({ verified: true, authority_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    const reclassifiedUnsigned = {
+      ...valid.classification,
+      classified_at: "2026-08-29T10:29:40.000Z",
+    };
+    delete (reclassifiedUnsigned as { classification_digest?: string }).classification_digest;
+    const reclassified = {
+      ...reclassifiedUnsigned,
+      classification_digest: sha256Jcs(reclassifiedUnsigned),
+    };
+    expect(productionRelease.validateProductionPromotionPreMutationGate({
+      ...valid,
+      classification: reclassified,
+    }).authority_digest).toBe(stable.authority_digest);
+    expect(productionRelease.validateProductionPromotionPreMutationGate({
+      ...valid,
+      candidateManifest: { ...valid.candidateManifest, candidate_identity_digest: "0".repeat(64) },
+    }).authority_digest).not.toBe(stable.authority_digest);
 
     const attacks = [
       { ...valid, repeatabilityReceipt: null },

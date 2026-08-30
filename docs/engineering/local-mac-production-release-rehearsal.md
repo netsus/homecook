@@ -204,6 +204,7 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 - tag/manifest/attestation은 exact rehearsal `release_sha`, `release_tree`, `build_id`, `sealed_bundle_digest`, `repeatability_receipt_digest`를 포함해야 한다.
 - rehearsal 후 rebuild, dependency reinstall, image re-resolution, migration rewrite, bundle copy mutation은 금지한다.
 - production tag immutability는 그대로 유지한다. tag/attestation 생성 실패 시 기존 tag를 이동·삭제하지 않고 다음 tag 번호로 새 authority attempt를 만든다.
+- protected tag push 직전 두 member와 repeatability receipt를 fresh UTC clock으로 다시 검증하고, `valid_until`까지 attestation 완료 안전 여유가 strict 900초보다 커야 한다. equality 또는 더 짧은 여유는 tag push/attestation 0으로 중단한다.
 
 ### R6. production promote receipt gate
 
@@ -215,6 +216,10 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 - production state가 새 R0 inventory와 모순되지 않음
 - mixed-state classification이 `promotion_safe`이고 unresolved recovery finding이 0임
 - 기존 release-promoter authority, confirmation, lock, operator approval 충족
+
+pre-adapter, initial, final-pre-mutation은 각자 fresh clock으로 expiry와 inventory freshness를 다시 계산한다. stable authority digest는 receipt/candidate component/inventory identity만 포함하고 `classified_at` 같은 volatile projection field는 제외한다. 세 단계 digest가 하나라도 다르면 첫 mutation 전에 종료한다.
+
+production execution snapshot의 app/full-local/worker bytes는 검증된 sealed candidate component root만 입력으로 사용한다. rehearsal 뒤 별도 checkout의 reinstall/rebuild 또는 별도 worker artifact를 production execution source로 사용하지 않는다. running descriptor와 readiness에는 `sealed_bundle_digest`와 `repeatability_receipt_digest`를 함께 보존한다.
 
 하나라도 빠지면 pointer, LaunchAgent, Docker, DB를 건드리기 전에 fail closed한다.
 

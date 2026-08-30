@@ -349,6 +349,41 @@ describe("promote-local-mac-production-release CLI", () => {
     expect(mutation).toHaveBeenCalledTimes(0);
   });
 
+  it("carries the pre-adapter authority digest into internal initial and final verification", async () => {
+    const authority = { verified: true, authority_digest: "a".repeat(64) };
+    const verifyRehearsalAuthority = vi.fn(() => authority);
+    const promoteRelease = vi.fn(async (options) => ({
+      promoted: false,
+      expected_digest: options.expectedRehearsalAuthorityDigest,
+    }));
+    const options = {
+      command: "promote", bundlePath: "/private/bundle", confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      fullLocalConfigPath: "/private/full-local", homeDir: "/private/home", json: true,
+      memberReceiptPaths: ["/private/member-1", "/private/member-2"], nodeBin: process.execPath,
+      productionInventoryPath: "/private/inventory", releaseManifestPath: "/private/manifest",
+      repeatabilityReceiptPath: "/private/repeatability", rootDir: process.cwd(), sealedCandidatePath: "/private/candidate",
+      subjectManifestPath: "/private/subject", trustedRootPath: "/private/trusted-root",
+      workerAppDescriptorPath: "/private/worker-app", workerConfigPath: "/private/worker-config",
+      workerCredentialPath: "/private/worker-credential", workerExpectedSchemaPath: "/private/worker-schema",
+      workerManifestPath: "/private/worker-manifest", workerPolicyPath: "/private/worker-policy",
+      workerSecretRoot: "/private/worker-secrets",
+    };
+
+    await runLocalMacProductionReleaseCli(["promote"], {
+      assertPromoteActivated: vi.fn(),
+      createAttestationVerifier: vi.fn(() => vi.fn()),
+      createPromotionAuthorityVerifier: vi.fn(() => verifyRehearsalAuthority),
+      createPromoteAdapters: vi.fn(() => ({})),
+      parseArguments: vi.fn(() => options),
+      promoteRelease,
+    } as unknown as Parameters<typeof runLocalMacProductionReleaseCli>[1]);
+
+    expect(promoteRelease).toHaveBeenCalledWith(expect.objectContaining({
+      expectedRehearsalAuthorityDigest: authority.authority_digest,
+      verifyRehearsalAuthority,
+    }));
+  });
+
   it("reports the promote activation block before argument or adapter validation", () => {
     const promote = spawnSync(
       process.execPath,

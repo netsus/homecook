@@ -86,6 +86,7 @@ local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. loc
 Untagged exact-SHA candidate의 isolated build/run, repeatability receipt, mixed-state read-only classification은 `docs/engineering/local-mac-production-release-rehearsal.md`가 canonical authority다. production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르며, implementation이 merge되기 전에는 현재 promote 경로가 그 receipt gate를 충족한다고 주장하지 않는다.
 
 rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`와 `repeatability_receipt_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
+protected tag push 직전에는 receipt 전체를 fresh clock으로 다시 검증하고 `rehearsal_receipt_valid_until`까지 strict 900초 초과 여유를 요구한다. equality 또는 더 짧은 여유는 tag push와 attestation을 모두 0으로 유지한다.
 
 Stage B implementation target command family는 다음과 같다.
 
@@ -109,7 +110,7 @@ read-only validation 단계다.
 
 ### 2. prepare
 
-immutable checkout과 build readiness 단계다.
+legacy/reference checkout과 build readiness 단계다. split 4 production promote는 이 단계의 rebuild bytes를 execution source로 소비하지 않는다.
 
 - exact SHA의 detached checkout을 만든다.
 - clean tracked source만 승격 대상이다.
@@ -120,12 +121,14 @@ immutable checkout과 build readiness 단계다.
 
 향후 receipt/attestation gate 구현 완료 뒤의 실제 mutation 단계다. 현재 CLI는 아래 어떤 단계에도 진입하지 않고 `activation_blocked`로 종료한다.
 
+- lock 또는 adapter 생성 전 pre-adapter authority digest를 보존하고 initial/final-pre-mutation fresh read와 exact 비교한다. `classified_at`은 stable digest에서 제외하되 각 read의 expiry/freshness 검증은 생략하지 않는다.
 - promotion lock을 획득한다.
 - running release가 preflight 동안 바뀌지 않았는지 재확인한다.
-- exact checkout root와 manifest digest를 재검증한다.
-- validated candidate와 별도 worker artifact를 promotion lock 보유 중 create-only
+- exact sealed candidate component root와 manifest/receipt digest를 재검증한다.
+- rehearsal에서 검증한 sealed app/full-local/worker component root를 promotion lock 보유 중 create-only
   `content-addressed sealed execution snapshot`으로 복제한다. app/full-local/worker의
   executable 및 plist WorkingDirectory는 이후 원본 candidate가 아니라 이 snapshot만 사용한다.
+- 별도 prepared checkout의 install/build 결과나 별도 worker artifact bytes는 execution snapshot 입력으로 사용하지 않는다.
 - snapshot은 inode, normalized content digest, owner/mode를 각 spawn/install 직전과
   readiness 이후, descriptor commit 직전에 다시 검증한다.
 - execution tree digest는 contained symlink의 dereferenced bytes와 executable metadata를
@@ -136,6 +139,7 @@ immutable checkout과 build readiness 단계다.
   자동 정리하지 않으며 별도 승인된 lifecycle 작업만 제거할 수 있다.
 - app/full-local/worker LaunchAgent를 같은 release bundle로 설치한다.
 - current release descriptor를 readiness 이후에만 갱신한다.
+- running descriptor와 readiness는 `sealed_bundle_digest`와 `repeatability_receipt_digest`를 exact 보존한다.
 
 위 snapshot은 same-user 공격자가 writable prepared candidate를 잠깐 바꿨다가 복원하는
 TOCTOU를 실행 바이트에서 분리하기 위한 cooperative hardening이다. 같은 사용자의 OS 권한 자체를

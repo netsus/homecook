@@ -426,8 +426,19 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
+          release_tree="$(git rev-parse "$RELEASE_SHA^{tree}")"
+          node scripts/verify-production-release-rehearsal-authority.mjs \
+            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-1.json" \
+            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-2.json" \
+            --repeatability-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/repeatability.json" \
+            --release-sha "$RELEASE_SHA" \
+            --release-tree "$release_tree" \
+            --minimum-remaining-seconds 900 \
+            --json > "$RUNNER_TEMP/post-approval/tag-push-rehearsal-authority.json"
+          cmp "$RUNNER_TEMP/post-approval/rehearsal-authority.json" \
+            "$RUNNER_TEMP/post-approval/tag-push-rehearsal-authority.json"
           test "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')" = "$RELEASE_SHA"
-          test "$(git rev-parse "$RELEASE_SHA^{tree}")" = "$(jq -r '.release_tree' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
+          test "$release_tree" = "$(jq -r '.release_tree' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
           test "$(git rev-parse "refs/tags/$RELEASE_TAG^{tag}")" = "$(jq -r '.release_tag_object_sha' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
           push_output="$(
             git push --porcelain \
