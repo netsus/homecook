@@ -1839,7 +1839,7 @@
       "id": "marketing-demand-validation",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-marketing-demand-validation",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1478",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "pending",
