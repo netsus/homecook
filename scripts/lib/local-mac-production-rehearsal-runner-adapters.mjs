@@ -145,6 +145,16 @@ function normalizeHealthcheck(serviceName, value) {
   return Object.freeze({ command: commandText, interval: value.interval, timeout: value.timeout, retries: value.retries, start_period: value.start_period });
 }
 
+function durationNanoseconds(value, label) {
+  if (value === undefined) return 0;
+  const match = /^(\d+(?:\.\d+)?)(ns|us|ms|s|m|h)$/u.exec(String(value));
+  if (!match) fail(`${label} duration is invalid`);
+  const multiplier = { ns: 1, us: 1_000, ms: 1_000_000, s: 1_000_000_000, m: 60_000_000_000, h: 3_600_000_000_000 }[match[2]];
+  const result = Number(match[1]) * multiplier;
+  if (!Number.isSafeInteger(result) || result < 0) fail(`${label} duration exceeds bound`);
+  return result;
+}
+
 /**
  * Produces a commit-safe golden input from a locally resolved Compose document.
  * The raw resolver output never becomes an artifact: absolute local values are
@@ -315,6 +325,9 @@ export function validatePrimitiveContainerInspection(observed, service, namespac
     if (
       canonicalizeJcs(observed.Config.Healthcheck?.Test) !== canonicalizeJcs(["CMD-SHELL", service.healthcheck.command])
       || observed.Config.Healthcheck?.Retries !== service.healthcheck.retries
+      || observed.Config.Healthcheck?.Interval !== durationNanoseconds(service.healthcheck.interval, `${service.name} health interval`)
+      || observed.Config.Healthcheck?.Timeout !== durationNanoseconds(service.healthcheck.timeout, `${service.name} health timeout`)
+      || observed.Config.Healthcheck?.StartPeriod !== durationNanoseconds(service.healthcheck.start_period, `${service.name} health start period`)
     ) fail(`primitive inspect healthcheck differs: ${service.name}`);
   } else if (observed.Config.Healthcheck !== null && observed.Config.Healthcheck !== undefined) fail(`primitive inspect unexpected healthcheck: ${service.name}`);
   if (observed.HostConfig.LogConfig?.Type !== service.logging?.driver) fail(`primitive inspect logging driver differs: ${service.name}`);
@@ -1313,6 +1326,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       state.namespace = namespace;
       state.runRoot = runRoot;
       state.candidateRoot = candidateRoot;
+      state.independentObserver = independentObserver;
       const sealedCompose = join(candidateRoot, "bundles", "bundle", "full_local", "infra", "full-local-supabase", "docker-compose.production.yml");
       if (!existsSync(sealedCompose) || lstatSync(sealedCompose).isSymbolicLink()) fail("sealed full-local Compose authority is missing");
       state.runtimeRoot = join(runRoot, "runtime-state");
@@ -1524,6 +1538,12 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         "node", "-e", appWrapper,
       ];
       const appId = await runContainer(state, appArgs, { signal: state.activeSignal });
+      if (state.independentObserver?.registerChild) {
+        const subject = await readContainerObserverSubject(state, { containerId: appId, component: "app", signal: state.activeSignal });
+        await state.independentObserver.registerChild(subject);
+        state.observerSubjects ??= [];
+        state.observerSubjects.push(subject);
+      }
       state.worker = materializeWorkerHealthBundle(state, manifest, candidateRoot);
       const workerName = namespace.container_names.find((name) => name.endsWith("-worker"));
       const wrapper = `${childIdentitySource({ outputPath: "/tmp/homecook-r2-identity.json" })}.then(()=>{const{spawn}=require('node:child_process');const{writeFileSync}=require('node:fs');const a=JSON.parse(process.env.R2_WORKER_ARGS);const c=spawn('node',['/sealed-worker/scripts/youtube-extraction-worker-runner.mjs','rehearsal-synthetic',...a],{stdio:['ignore','pipe','pipe']});let out='';let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',d=>{bounded(d);out+=d});c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>{if(c.exitCode===null)c.kill(s);else process.exit(0)});c.on('exit',(code)=>{if(code!==0)process.exit(71);writeFileSync('/tmp/homecook-r2-worker-result.json',out,{flag:'wx',mode:0o400});setInterval(()=>{},2147483647)})}).catch(()=>process.exit(70))`;
@@ -1551,6 +1571,12 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         nodeImage, "node", "-e", wrapper,
       ];
       const workerId = await runContainer(state, workerArgs, { signal: state.activeSignal });
+      if (state.independentObserver?.registerChild) {
+        const subject = await readContainerObserverSubject(state, { containerId: workerId, component: "worker", signal: state.activeSignal });
+        await state.independentObserver.registerChild(subject);
+        state.observerSubjects ??= [];
+        state.observerSubjects.push(subject);
+      }
       const sentinelNetworkName = `${namespace.project}_egress-sentinel`;
       let sentinelNetworkId;
       try {

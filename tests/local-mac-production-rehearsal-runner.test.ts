@@ -908,7 +908,7 @@ describe("release rehearsal R2 public command and schema", () => {
         Cmd: service.command,
         Entrypoint: service.entrypoint ?? null,
         Env: Object.entries(service.environment ?? {}).map(([key, value]) => `${key}=${value}`),
-        Healthcheck: { Retries: service.healthcheck.retries, Test: ["CMD-SHELL", service.healthcheck.command] },
+        Healthcheck: { Interval: 5_000_000_000, Retries: service.healthcheck.retries, StartPeriod: 0, Test: ["CMD-SHELL", service.healthcheck.command], Timeout: 5_000_000_000 },
         Image: service.image,
       },
       HostConfig: {
@@ -928,6 +928,7 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(validatePrimitiveContainerInspection(observed, service, namespace)).toBe(service);
     expect(() => validatePrimitiveContainerInspection({ ...observed, Mounts: observed.Mounts.filter((entry) => !entry.Destination.startsWith("/run/secrets/")) }, service, namespace)).toThrow(/mount/iu);
     expect(() => validatePrimitiveContainerInspection({ ...observed, HostConfig: { ...observed.HostConfig, PortBindings: {} } }, service, namespace)).toThrow(/port/iu);
+    expect(() => validatePrimitiveContainerInspection({ ...observed, Config: { ...observed.Config, Healthcheck: { ...observed.Config.Healthcheck, Interval: 1 } } }, service, namespace)).toThrow(/healthcheck/iu);
   });
   it("rejects every post-create container image substitution", () => {
     const authority = {
