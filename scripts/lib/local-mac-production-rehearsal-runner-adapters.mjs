@@ -657,6 +657,19 @@ async function waitForContainers(state, { signal, timeoutMs = 180_000, expectedN
   fail("full-local container readiness timeout");
 }
 
+export function ensureIssuedWorkerCredential(state, manifest, artifact) {
+  const issuanceInput = { run_id: state.runId, release_sha: manifest.release_sha, schema_identity: artifact.schema_identity, allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest, ttl_seconds: 3600, jwt_keys_digest: sha256Jcs(JSON.parse(state.secrets.jwt_keys)) };
+  const issuanceInputDigest = sha256Jcs(issuanceInput);
+  if (state.issuedWorkerCredential) {
+    if (state.issuedWorkerCredential.issuance_input_digest !== issuanceInputDigest) fail("worker credential issuance input conflicts with existing credential");
+    return state.issuedWorkerCredential;
+  }
+  const issue = state.credentialIssuer ?? issueYoutubeExtractionWorkerCredential;
+  const issued = issue({ jwtKeys: JSON.parse(state.secrets.jwt_keys), generation: 1, releaseSha: manifest.release_sha, schemaIdentity: artifact.schema_identity, allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest, ttlSeconds: 60 * 60 });
+  state.issuedWorkerCredential = Object.freeze({ ...issued, issuance_input_digest: issuanceInputDigest });
+  return state.issuedWorkerCredential;
+}
+
 function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
   const workerRoot = join(candidateRoot, "bundles", "bundle", "worker");
   const artifactPath = join(workerRoot, "artifact.json");
@@ -664,15 +677,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
   const workerSecretRoot = join(state.runtimeRoot, "worker-secret-fds");
   mkdirSync(workerSecretRoot, { mode: 0o700 });
   const tokenFile = join(workerSecretRoot, "worker.jwt");
-  const jwtKeys = JSON.parse(state.secrets.jwt_keys);
-  const issued = issueYoutubeExtractionWorkerCredential({
-    jwtKeys,
-    generation: 1,
-    releaseSha: manifest.release_sha,
-    schemaIdentity: artifact.schema_identity,
-    allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest,
-    ttlSeconds: 60 * 60,
-  });
+  const issued = ensureIssuedWorkerCredential(state, manifest, artifact);
   writeFileSync(tokenFile, issued.token, { flag: "wx", mode: 0o400 });
   const hostCredential = buildYoutubeExtractionWorkerCredentialState({
     tokenFile,
@@ -1241,9 +1246,20 @@ export function createLocalReleaseRehearsalRunnerAdapters({
 
     async prepareYoutubeWorkerSyntheticFixture({ manifest, namespace, signal }) {
       state.activeSignal = signal ?? state.activeSignal;
-      const fixture = buildIsolatedYoutubeWorkerSyntheticFixtureSql({ runIdentity: namespace.run_id, userId: crypto.randomUUID(), jobId: crypto.randomUUID(), releaseSha: manifest.release_sha, schemaIdentity: manifest.migration.migration_head, allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest, jtiHash: createHash("sha256").update(namespace.run_id).digest("hex"), nowEpoch: Math.floor(Date.now() / 1000) });
+      const artifact = JSON.parse(readFileSync(join(state.candidateRoot, "bundles", "bundle", "worker", "artifact.json"), "utf8"));
+      const issued = ensureIssuedWorkerCredential(state, manifest, artifact);
+      const fixture = buildIsolatedYoutubeWorkerSyntheticFixtureSql({ runIdentity: namespace.run_id, userId: crypto.randomUUID(), jobId: crypto.randomUUID(), releaseSha: manifest.release_sha, schemaIdentity: artifact.schema_identity, allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest, jtiHash: issued.jtiHash, nowEpoch: Math.floor(new Date(issued.metadata.issued_at).getTime() / 1000) });
       await executePsql(state, fixture.sql, { database: namespace.db_name, variables: fixture.variables, allowedVariableNames: new Set(fixture.allowedVariableNames), signal: state.activeSignal });
-      state.workerFixtureAuthority = Object.freeze({ fixture_sql_digest: sha256Jcs(fixture), production_derived_row_count: 0 });
+      state.workerFixtureAuthority = Object.freeze({
+        fixture_sql_digest: sha256Jcs(fixture),
+        credential_jti_hash: issued.jtiHash,
+        credential_generation: 1,
+        release_sha: manifest.release_sha,
+        schema_identity: artifact.schema_identity,
+        allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest,
+        token_reference_digest: sha256Jcs("worker.jwt"),
+        production_derived_row_count: 0,
+      });
       return state.workerFixtureAuthority;
     },
 
