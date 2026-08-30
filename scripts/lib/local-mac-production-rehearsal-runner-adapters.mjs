@@ -25,6 +25,7 @@ import { resolveTrustedDockerBinary } from "./full-local-session-observation-rea
 import { canonicalizeJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
 import { createTrustedMacOsIndependentObserver } from "./local-mac-production-rehearsal-macos-observer.mjs";
 import { buildIsolatedYoutubeWorkerSyntheticFixtureSql } from "./youtube-extraction-isolated-fixture-sql.mjs";
+import { buildPostgrestFixtureReadbackProbe, parseAndValidatePostgrestFixtureReadback } from "./local-mac-production-rehearsal-postgrest-probe.mjs";
 import { resolveSafeRealExecutable, snapshotToolFile } from "./local-mac-production-rehearsal-candidate.mjs";
 import {
   RUN_OWNERSHIP_LABEL,
@@ -1263,6 +1264,13 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       const readbackSql = "select json_build_object('user_id',u.id,'job_id',j.id,'job_status',j.status,'attempt_count',j.attempt_count,'policy_snapshot_digest',j.policy_snapshot_digest,'credential_jti_hash',c.current_jti_hash,'credential_generation',c.current_generation,'credential_release_sha',c.release_sha,'credential_schema_identity',c.schema_identity,'credential_snapshot_digest',c.allowed_snapshot_digest,'permit_generation',p.permit_generation) from public.users u join public.youtube_extraction_jobs j on j.user_id=u.id join private.youtube_extraction_worker_credentials c on c.credential_name='primary' join public.youtube_extractor_permits p on p.permit_key='primary' where u.id=:'user_id' and j.id=:'job_id';\n";
       const output = await executePsql(state, readbackSql, { database: namespace.db_name, tuplesOnly: true, variables: { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id }, allowedVariableNames: new Set(["user_id", "job_id"]), signal: state.activeSignal });
       parseAndValidateWorkerFixtureReadback(output, { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id, job_status: "queued", attempt_count: 0, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest, credential_jti_hash: issued.jtiHash, credential_generation: 1, credential_release_sha: manifest.release_sha, credential_schema_identity: artifact.schema_identity, credential_snapshot_digest: manifest.migration.ordered_migration_files_digest, permit_generation: 0 });
+      const probeEntry = state.creationLedger.snapshot().find((entry) => entry.kind === "container" && entry.name === `${namespace.project}-postgrest-probe-1`);
+      if (!probeEntry) fail("run-owned PostgREST probe container is missing");
+      const probeObserved = await inspectResource(state, probeEntry, { signal: state.activeSignal });
+      if (probeObserved?.id !== probeEntry.id || probeObserved?.name !== probeEntry.name || probeObserved?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId) fail("PostgREST probe ownership mismatch");
+      const probe = buildPostgrestFixtureReadbackProbe({ jobId: fixture.variables.job_id, userId: fixture.variables.user_id, token: state.secrets.service_role_key });
+      const probeOutput = await dockerCommand(state, probe.argv.map((value) => value === "<postgrest-probe-id>" ? probeEntry.id : value), { input: probe.stdin, signal: state.activeSignal, timeout: 10_000, ownership: { verifiedOwnership: true, resourceId: probeEntry.id } });
+      const probeRow = parseAndValidatePostgrestFixtureReadback(probeOutput.stdout, { job_id: fixture.variables.job_id, user_id: fixture.variables.user_id, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest });
       state.workerFixtureAuthority = Object.freeze({
         fixture_sql_digest: sha256Jcs(fixture),
         credential_jti_hash: issued.jtiHash,
@@ -1273,6 +1281,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         token_reference_digest: sha256Jcs("worker.jwt"),
         user_id: fixture.variables.user_id,
         job_id: fixture.variables.job_id,
+        postgrest_probe_response_digest: sha256Jcs({ redacted: probe.redacted, row: probeRow }),
         production_derived_row_count: 0,
       });
       return state.workerFixtureAuthority;
