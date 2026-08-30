@@ -4,7 +4,7 @@ export function buildPostgrestFixtureReadbackProbe({ jobId, userId, token }) {
   if (!UUID.test(jobId ?? "") || !UUID.test(userId ?? "") || typeof token !== "string" || token.length === 0) fail("fixture probe input is invalid");
   const path = `/youtube_extraction_jobs?id=eq.${jobId}&user_id=eq.${userId}&status=eq.queued&select=id,user_id,status,attempt_count,policy_snapshot_digest`;
   const script = "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync(0,'utf8'));fetch(p.url,{headers:{authorization:'Bearer '+p.token,apikey:p.token}}).then(async r=>process.stdout.write(JSON.stringify({status:r.status,rows:await r.json()}))).catch(()=>process.exit(70));";
-  return Object.freeze({ argv: ["exec", "--interactive", "<postgrest-probe-id>", "node", "-e", script], stdin: JSON.stringify({ url: `http://postgrest:3001${path}`, token }), redacted: Object.freeze({ path, host: "http://postgrest:3001" }) });
+  return Object.freeze({ argv: ["exec", "--interactive", "<postgrest-probe-id>", "node", "-e", script], stdin: JSON.stringify({ url: `http://postgrest:3000${path}`, token }), redacted: Object.freeze({ path, host: "http://postgrest:3000" }) });
 }
 export function parseAndValidatePostgrestFixtureReadback(output, expected) {
   let value; try { value = JSON.parse(output); } catch { fail("probe output is invalid JSON"); }
