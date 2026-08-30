@@ -699,8 +699,10 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
   const workerSecretRoot = join(state.runtimeRoot, "worker-secret-fds");
   mkdirSync(workerSecretRoot, { mode: 0o700 });
   const tokenFile = join(workerSecretRoot, "worker.jwt");
+  const rehearsalTokenFile = join(workerSecretRoot, "rehearsal-worker.jwt");
   const issued = ensureIssuedWorkerCredential(state, manifest, artifact);
-  writeFileSync(tokenFile, issued.token, { flag: "wx", mode: 0o400 });
+  writeFileSync(tokenFile, issued.token, { flag: "wx", mode: 0o600 });
+  writeFileSync(rehearsalTokenFile, issued.token, { flag: "wx", mode: 0o400 });
   const hostCredential = buildYoutubeExtractionWorkerCredentialState({
     tokenFile,
     generation: 1,
@@ -753,7 +755,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
   }
   const rehearsalRpc = {
     schema: "homecook.rehearsal-worker-rpc-config.v1",
-    base_url: `http://postgrest:3000`, token_file: "worker.jwt", fixture_identity: state.runId,
+    base_url: `http://postgrest:3000`, token_file: "rehearsal-worker.jwt", fixture_identity: state.runId,
     creation_nonce: state.creationNonce, policy_snapshot_digest: policyDigest,
     schema_identity: artifact.schema_identity, allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest,
     lifecycle_version: "youtube-extraction-rpc-v1",
@@ -763,7 +765,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
   const rehearsalRpcIdentity = Object.freeze({
     path: "rehearsal-rpc-config.json",
     sha256: sha256Bytes(readFileSync(paths.rehearsalRpc)),
-    token_reference: "worker.jwt",
+    token_reference: "rehearsal-worker.jwt",
   });
   const rehearsalRpcExpectedAuthority = Object.freeze({
     config_digest: sha256Bytes(verifiedRpc.bytes),
@@ -1283,7 +1285,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         release_sha: manifest.release_sha,
         schema_identity: artifact.schema_identity,
         allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest,
-        token_reference_digest: sha256Jcs("worker.jwt"),
+        token_reference_digest: sha256Jcs("rehearsal-worker.jwt"),
         user_id: fixture.variables.user_id,
         job_id: fixture.variables.job_id,
         postgrest_probe_response_digest: probeResult.response_digest,
