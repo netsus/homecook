@@ -136,7 +136,7 @@ function requireString(value, label) {
   return value;
 }
 
-function validateRunnerIdentity(value) {
+export function validateRunnerIdentity(value) {
   exactKeys(value, [
     "version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256",
   ], "rehearsal runner identity");
@@ -147,7 +147,7 @@ function validateRunnerIdentity(value) {
       fail(`rehearsal runner ${field} must be an exact decimal identity string`);
     }
   }
-  if (![0o400, 0o500, 0o555, 0o700, 0o755].includes(value.mode)) {
+  if (![0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755].includes(value.mode)) {
     fail("rehearsal runner mode is outside the closed readable/executable allowlist");
   }
   if (typeof value.ctime !== "string" || new Date(value.ctime).toISOString() !== value.ctime) {

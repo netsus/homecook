@@ -19,6 +19,7 @@ import {
   validateSealedWorkerSyntheticResult,
 } from "../scripts/lib/local-mac-production-rehearsal-runner.mjs";
 import { runLocalMacProductionRehearsalRunnerCli } from "../scripts/local-mac-production-rehearsal-run.mjs";
+import * as rehearsalRunnerCli from "../scripts/local-mac-production-rehearsal-run.mjs";
 import {
   assertDiscoveredResourcesRemainUnowned,
   recordPrimitiveCreateResult,
@@ -46,7 +47,7 @@ const RUNNER_IDENTITY = {
   realpath: "/private/homecook/scripts/local-mac-production-rehearsal-run.mjs",
   device: "16777229",
   inode: "1152921500311885470",
-  mode: 0o500,
+  mode: 0o644,
   ctime: "2026-08-29T00:00:00.000Z",
   size: "4096",
   sha256: "f".repeat(64),
@@ -434,6 +435,21 @@ function createAdapters() {
 }
 
 describe("release rehearsal R2 input and namespace gates", () => {
+  it("accepts the actual tracked Node-readable runner before constructing Docker adapters", async () => {
+    expect(typeof rehearsalRunnerCli.readDefaultRehearsalRunnerIdentity).toBe("function");
+    const identity = rehearsalRunnerCli.readDefaultRehearsalRunnerIdentity();
+    expect(identity.mode).toBe(0o644);
+    const createAdapters = vi.fn();
+    await expect(runLocalMacProductionRehearsalRunnerCli([
+      "--candidate", "/private/candidate", "--json",
+    ], {
+      createAdapters,
+      namespaceResolver: () => "/private/runs",
+      runnerIdentity: () => ({ ...identity, mode: 0o777 }),
+    })).rejects.toThrow(/runner|mode|allowlist/iu);
+    expect(createAdapters).not.toHaveBeenCalled();
+  });
+
   it("accepts only an absolute completed candidate root or its exact candidate.json", () => {
     const root = mkdtempSync(join(tmpdir(), "homecook-r2-input-"));
     const manifest = join(root, "candidate.json");

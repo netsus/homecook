@@ -10,7 +10,10 @@ import {
   snapshotToolFile,
 } from "./lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs } from "./lib/rfc8785-jcs.mjs";
-import { runIsolatedReleaseRehearsal } from "./lib/local-mac-production-rehearsal-runner.mjs";
+import {
+  runIsolatedReleaseRehearsal,
+  validateRunnerIdentity,
+} from "./lib/local-mac-production-rehearsal-runner.mjs";
 
 const HELP = `Homecook isolated local Mac production release rehearsal runner
 
@@ -68,6 +71,14 @@ async function defaultAdapterFactory(options) {
   return adapterModule.createLocalReleaseRehearsalRunnerAdapters(options);
 }
 
+export function readDefaultRehearsalRunnerIdentity() {
+  return snapshotToolFile(
+    realpathSync(fileURLToPath(import.meta.url)),
+    "homecook-release-rehearsal-runner-v1",
+    { requireExecutable: false },
+  );
+}
+
 export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies = {}) {
   const {
     output = process.stdout,
@@ -76,11 +87,7 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
     createAdapters = defaultAdapterFactory,
     namespaceResolver = defaultNamespaceResolver,
     runIdFactory = () => randomUUID(),
-    runnerIdentity = () => snapshotToolFile(
-      realpathSync(fileURLToPath(import.meta.url)),
-      "homecook-release-rehearsal-runner-v1",
-      { requireExecutable: false },
-    ),
+    runnerIdentity = readDefaultRehearsalRunnerIdentity,
   } = dependencies;
   const options = parseArguments(argv);
   if (options.help) { output.write(HELP); return; }
@@ -90,6 +97,7 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
   }
   const namespaceRoot = namespaceResolver();
   const runId = runIdFactory();
+  const resolvedRunnerIdentity = validateRunnerIdentity(runnerIdentity());
   const adapters = await createAdapters({ candidateInput: options.candidateInput, namespaceRoot, runId });
   const abortController = new AbortController();
   const signalHandlers = new Map([
@@ -106,7 +114,7 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
       runId,
       readCandidate,
       adapters,
-      runnerIdentity: runnerIdentity(),
+      runnerIdentity: resolvedRunnerIdentity,
       signal: abortController.signal,
     });
   } finally {

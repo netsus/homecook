@@ -16,7 +16,7 @@
     "build_id": { "$ref": "#/definitions/nonempty" },
     "sealed_bundle_digest": { "$ref": "#/definitions/hex64" },
     "bundle_manifest_digest": { "$ref": "#/definitions/hex64" },
-    "run_id": { "$ref": "#/definitions/nonempty" },
+    "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
     "issued_at": { "$ref": "#/definitions/timestamp" },
     "completed_at": { "$ref": "#/definitions/timestamp" },
     "toolchain": {

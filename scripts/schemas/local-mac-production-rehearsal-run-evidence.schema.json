@@ -227,7 +227,7 @@
         "realpath": { "type": "string", "pattern": "^/" },
         "device": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
         "inode": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
-        "mode": { "enum": [256, 320, 365, 448, 493] },
+        "mode": { "enum": [256, 292, 320, 365, 384, 420, 448, 493] },
         "ctime": { "type": "string", "format": "date-time" },
         "size": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
         "sha256": { "$ref": "#/$defs/digest" }

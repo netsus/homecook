@@ -26,6 +26,7 @@ const HEX_40 = /^[0-9a-f]{40}$/u;
 const HEX_64 = /^[0-9a-f]{64}$/u;
 const IMAGE_DIGEST = /^sha256:[0-9a-f]{64}$/u;
 const RFC3339_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SAFE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
 
 const TOOL_KEYS = ["version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256"];
@@ -152,7 +153,7 @@ function validateRunUnsigned(value) {
     assertString(receipt[key], key, HEX_64);
   }
   assertString(receipt.build_id, "build_id");
-  assertString(receipt.run_id, "run_id");
+  assertString(receipt.run_id, "run_id", UUID_V4);
   assertTimestamp(receipt.issued_at, "issued_at");
   assertTimestamp(receipt.completed_at, "completed_at");
   if (timestampMilliseconds(receipt.issued_at, "issued_at") > timestampMilliseconds(receipt.completed_at, "completed_at")) fail("issued_at must not follow completed_at");
@@ -219,6 +220,25 @@ function validateRunUnsigned(value) {
   if (JSON.stringify(cleanup.owned_resource_ids) !== JSON.stringify(cleanup.removed_resource_ids)) fail("cleanup owned and removed resources must match exactly");
   if (!Array.isArray(cleanup.residue_resource_ids) || cleanup.residue_resource_ids.length !== 0) fail("cleanup residue must be empty");
   if (!Array.isArray(cleanup.cleanup_errors) || cleanup.cleanup_errors.length !== 0) fail("cleanup errors must be empty");
+  const runtimeContainerIds = ["app", "full_local", "worker"]
+    .flatMap((component) => receipt.runtime[component].container_ids)
+    .sort(compareCodeUnits);
+  if (new Set(runtimeContainerIds).size !== runtimeContainerIds.length
+    || comparable(runtimeContainerIds) !== comparable(isolation.container_ids)) {
+    fail("runtime container IDs must equal isolation.container_ids exactly");
+  }
+  const typedResourceIds = [
+    ...isolation.container_ids,
+    ...isolation.network_ids,
+    ...isolation.volume_ids,
+  ].sort(compareCodeUnits);
+  if (new Set(typedResourceIds).size !== typedResourceIds.length) {
+    fail("typed isolation resource IDs must be globally unique");
+  }
+  if (comparable(typedResourceIds) !== comparable(cleanup.owned_resource_ids)
+    || comparable(typedResourceIds) !== comparable(cleanup.removed_resource_ids)) {
+    fail("typed isolation resources must equal cleanup owned/removed IDs exactly");
+  }
 
   const guard = assertObject(receipt.production_guard, "production_guard", ["surface_allowlist_version", "production_snapshot_pre_digest", "production_snapshot_post_digest", "equal", "mutation_attempt_count", "production_db_connection_count", "production_db_write_count"]);
   assertString(guard.surface_allowlist_version, "production_guard.surface_allowlist_version");
@@ -449,6 +469,19 @@ function validateMemberPair(memberReceipts, { now = null, requireFresh = false }
     if (members[0].receipt.isolation[field] === members[1].receipt.isolation[field]) {
       fail(`member ${label} must be distinct`);
     }
+  }
+  const leftResourceIds = new Set([
+    ...members[0].receipt.isolation.network_ids,
+    ...members[0].receipt.isolation.container_ids,
+    ...members[0].receipt.isolation.volume_ids,
+  ]);
+  const rightResourceIds = [
+    ...members[1].receipt.isolation.network_ids,
+    ...members[1].receipt.isolation.container_ids,
+    ...members[1].receipt.isolation.volume_ids,
+  ];
+  if (rightResourceIds.some((entry) => leftResourceIds.has(entry))) {
+    fail("member full resource ID sets must not overlap across resource kinds");
   }
   for (const [field, label] of [
     ["network_ids", "network IDs"],

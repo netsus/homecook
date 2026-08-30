@@ -60,12 +60,12 @@ function toolIdentity(name: string) {
   };
 }
 
-function runtimeIdentity(component: string) {
+function runtimeIdentity(component: string, index = 1) {
   return {
     kind: component === "supervisor" ? "process" : "container",
     pid: component === "supervisor" ? component.length + 100 : null,
     process_group_id: null,
-    container_ids: component === "supervisor" ? [] : [`${component}-container`],
+    container_ids: component === "supervisor" ? [] : [`${component}-container-${index}`],
     reported_release_sha: RELEASE_SHA,
     reported_release_tree: RELEASE_TREE,
     reported_build_id: "build-001",
@@ -89,7 +89,7 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
     build_id: "build-001",
     sealed_bundle_digest: SHA_B,
     bundle_manifest_digest: SHA_C,
-    run_id: `run-00000000-0000-4000-8000-00000000000${index}`,
+    run_id: `00000000-0000-4000-8000-00000000000${index}`,
     issued_at: `2026-08-29T${issuedHour}:00:00.000Z`,
     completed_at: `2026-08-29T${completedHour}:00:00.000Z`,
     toolchain: {
@@ -124,17 +124,17 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
       root_identity_digest: index === 1 ? SHA_C : SHA_A,
       docker_project_id: `homecook-rehearsal-${index}`,
       network_ids: [`network-${index}`],
-      container_ids: [`container-${index}`],
+      container_ids: [`app-container-${index}`, `full_local-container-${index}`, `worker-container-${index}`],
       volume_ids: [`volume-${index}`],
       db_identity: `database-${index}`,
       ports: [46000 + index],
       collision_preflight_digest: SHA_B,
     },
     runtime: {
-      app: runtimeIdentity("app"),
-      full_local: runtimeIdentity("full-local"),
-      worker: runtimeIdentity("worker"),
-      foreground_supervisor: runtimeIdentity("supervisor"),
+      app: runtimeIdentity("app", index),
+      full_local: runtimeIdentity("full_local", index),
+      worker: runtimeIdentity("worker", index),
+      foreground_supervisor: runtimeIdentity("supervisor", index),
     },
     canaries: [{
       canary_id: "identity",
@@ -151,8 +151,8 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
     },
     cleanup: {
       completed: true,
-      owned_resource_ids: [`container-${index}`, `network-${index}`, `volume-${index}`],
-      removed_resource_ids: [`container-${index}`, `network-${index}`, `volume-${index}`],
+      owned_resource_ids: [`app-container-${index}`, `full_local-container-${index}`, `network-${index}`, `volume-${index}`, `worker-container-${index}`],
+      removed_resource_ids: [`app-container-${index}`, `full_local-container-${index}`, `network-${index}`, `volume-${index}`, `worker-container-${index}`],
       residue_resource_ids: [],
       cleanup_errors: [],
     },
@@ -432,6 +432,38 @@ afterEach(() => {
 });
 
 describe("rehearsal run receipt", () => {
+  it("rejects non-UUID runs and any runtime, isolation, or cleanup resource substitution", () => {
+    expect(() => buildTestRunReceipt(runInput(1))).not.toThrow();
+    expect(() => buildTestRunReceipt(runInput(1, {
+      run_id: "not-a-random-run-id",
+    }))).toThrow(/run.?id|UUID|random/iu);
+    expect(() => buildTestRunReceipt(runInput(1, {
+      runtime: {
+        ...runInput(1).runtime,
+        worker: { ...runInput(1).runtime.worker, container_ids: ["substituted-container"] },
+      },
+    }))).toThrow(/runtime|container|isolation/iu);
+    expect(() => buildTestRunReceipt(runInput(1, {
+      cleanup: {
+        ...runInput(1).cleanup,
+        owned_resource_ids: [...runInput(1).cleanup.owned_resource_ids, "extra-resource"].sort(),
+        removed_resource_ids: [...runInput(1).cleanup.removed_resource_ids, "extra-resource"].sort(),
+      },
+    }))).toThrow(/typed|cleanup|resource/iu);
+    expect(() => buildTestRunReceipt(runInput(1, {
+      isolation: {
+        ...runInput(1).isolation,
+        network_ids: [runInput(1).isolation.volume_ids[0]],
+      },
+    }))).toThrow(/typed|unique|resource/iu);
+    expect(() => buildTestRunReceipt(runInput(1, {
+      isolation: {
+        ...runInput(1).isolation,
+        container_ids: [...runInput(1).isolation.container_ids].reverse(),
+      },
+    }))).toThrow(/ascending|order|container/iu);
+  });
+
   it("derives the trusted run receipt only from cross-bound candidate and passed run evidence", () => {
     expect(typeof receiptAuthority.buildRunReceiptFromEvidenceAuthority).toBe("function");
     const receipt = receiptAuthority.buildRunReceiptFromEvidenceAuthority({
@@ -606,6 +638,16 @@ describe("repeatability receipt", () => {
       { isolation: { ...runInput(2).isolation, container_ids: first.isolation.container_ids } },
       { isolation: { ...runInput(2).isolation, volume_ids: first.isolation.volume_ids } },
       {
+        isolation: { ...runInput(2).isolation, network_ids: first.isolation.volume_ids },
+        cleanup: {
+          ...runInput(2).cleanup,
+          owned_resource_ids: runInput(2).cleanup.owned_resource_ids
+            .map((id) => id === "network-2" ? first.isolation.volume_ids[0] : id).sort(),
+          removed_resource_ids: runInput(2).cleanup.removed_resource_ids
+            .map((id) => id === "network-2" ? first.isolation.volume_ids[0] : id).sort(),
+        },
+      },
+      {
         sealed_bundle_digest: "d".repeat(64),
         runtime: Object.fromEntries(
           Object.entries(runInput(2).runtime).map(([key, value]) => [
@@ -621,8 +663,10 @@ describe("repeatability receipt", () => {
     ];
 
     for (const override of mutations) {
-      const second = buildTestRunReceipt(runInput(2, override));
-      expect(() => buildRepeatabilityReceipt({ memberReceipts: [first, second], issuerTaskId: "task", now: NOW }))
+      expect(() => {
+        const second = buildTestRunReceipt(runInput(2, override));
+        return buildRepeatabilityReceipt({ memberReceipts: [first, second], issuerTaskId: "task", now: NOW });
+      })
         .toThrow(/run|resource|root|docker|database|port|network|container|volume|bundle|toolchain|image|migration|canary|distinct|overlap|match/iu);
     }
   });
