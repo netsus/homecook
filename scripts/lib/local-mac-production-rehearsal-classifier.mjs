@@ -92,6 +92,10 @@ export function classifyProductionInventory(inventory, {
   );
   const currentDescriptor = artifacts.some((artifact) => artifact.kind === "current_descriptor" && artifact.exists);
   const currentDescriptorEvidence = artifacts.find((artifact) => artifact.kind === "current_descriptor" && artifact.exists);
+  const currentReferencedSnapshots = artifacts.filter((artifact) => (
+    artifact.exists && artifact.kind.startsWith("referenced_snapshot:current:")
+  ));
+  const currentReferencedSnapshotComplete = currentDescriptor && currentReferencedSnapshots.length === 1;
   const recoveredOrStale = artifacts.some((artifact) => artifact.exists && (
     artifact.kind === "orphaned_descriptor"
     || artifact.kind === "recovered_lock"
@@ -132,7 +136,8 @@ export function classifyProductionInventory(inventory, {
   const portsComplete = portListeners.length === 1
     && portListeners[0].port === 3100
     && portListeners[0].present === true
-    && Number.isSafeInteger(portListeners[0].pid);
+    && Number.isSafeInteger(portListeners[0].pid)
+    && portListeners[0].process_name !== "absent";
   const configIdentities = new Set(opaqueConfigs.map((config) => config.identity));
   const configsComplete = opaqueConfigs.length === 2
     && configIdentities.has("production-env") && configIdentities.has("full-local-config")
@@ -154,6 +159,7 @@ export function classifyProductionInventory(inventory, {
   const descriptorsAligned = Boolean(currentDescriptorEvidence)
     && workloads.every((workload) => workload.descriptor_digest === currentDescriptorEvidence.sha256);
   const requiredSurfacesComplete = probesComplete && toolsComplete && canonicalLaunchdComplete && dockerComplete && portsComplete
+    && currentReferencedSnapshotComplete
     && configsComplete && descriptorsAligned;
   const preparedDescriptor = artifacts.find((artifact) => artifact.kind === "prepared_descriptor" && artifact.exists);
   const preparedEvidenceComplete = preparedIdentity === null
@@ -194,6 +200,7 @@ export function classifyProductionInventory(inventory, {
           ...(!canonicalLaunchdComplete ? ["surface:canonical_full_local_launchd"] : []),
           ...(!dockerComplete ? ["surface:docker"] : []),
           ...(!portsComplete ? ["surface:port_listeners"] : []),
+          ...(!currentReferencedSnapshotComplete ? ["surface:current_referenced_snapshot"] : []),
           ...(!configsComplete ? ["surface:opaque_configs"] : []),
           ...(!descriptorsAligned ? ["surface:descriptor_alignment"] : []),
           ...(!toolsComplete ? ["surface:tool_identities"] : []),

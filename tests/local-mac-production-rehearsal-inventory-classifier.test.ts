@@ -27,6 +27,7 @@ import {
   readCanonicalInventoryFile,
   validateProductionInventory,
 } from "../scripts/lib/local-mac-production-rehearsal-inventory.mjs";
+import { digestLocalMacProductionExecutionTree } from "../scripts/lib/local-mac-production-release.mjs";
 import {
   classifyProductionInventory,
   parseAndClassifyProductionInventory,
@@ -124,22 +125,32 @@ function runningDescriptor(snapshotRoot: string, snapshotDigest: string) {
   };
 }
 
-function createExecutionSnapshot(snapshotRoot: string, snapshotDigest: string, manifestDigest = snapshotDigest) {
-  const root = join(snapshotRoot, snapshotDigest);
-  mkdirSync(join(root, "app"), { recursive: true, mode: 0o700 });
-  mkdirSync(join(root, "worker"), { mode: 0o700 });
-  writeFileSync(join(root, "app", "payload.bin"), "active-payload", { mode: 0o600 });
-  writeFileSync(join(root, "worker", "artifact.json"), "{}", { mode: 0o600 });
-  writeFileSync(join(root, "evidence.json"), JSON.stringify({
+function writeExecutionSnapshotManifest(root: string, snapshotDigest: string, overrides = {}) {
+  const manifest = {
     schema: SNAPSHOT_SCHEMA,
-    app_digest: SHA_A,
-    execution_snapshot_digest: manifestDigest,
+    app_digest: digestLocalMacProductionExecutionTree(join(root, "app")),
+    execution_snapshot_digest: snapshotDigest,
     promotion_id: "promotion-a",
     release_sha: RELEASE_A,
     release_tree: RELEASE_A,
-    worker_digest: SHA_B,
-    authority_digest: SHA_C,
-  }), { mode: 0o600 });
+    worker_digest: digestLocalMacProductionExecutionTree(join(root, "worker")),
+    authority_digest: digestLocalMacProductionExecutionTree(join(root, "authority")),
+    sealed_bundle_digest: SHA_B,
+    repeatability_receipt_digest: SHA_C,
+    ...overrides,
+  };
+  writeFileSync(join(root, "evidence.json"), JSON.stringify(manifest), { mode: 0o600 });
+}
+
+function createExecutionSnapshot(snapshotRoot: string, snapshotDigest: string) {
+  const root = join(snapshotRoot, snapshotDigest);
+  mkdirSync(join(root, "app"), { recursive: true, mode: 0o700 });
+  mkdirSync(join(root, "worker"), { mode: 0o700 });
+  mkdirSync(join(root, "authority"), { mode: 0o700 });
+  writeFileSync(join(root, "app", "payload.bin"), "active-payload", { mode: 0o600 });
+  writeFileSync(join(root, "worker", "artifact.json"), "{}", { mode: 0o600 });
+  writeFileSync(join(root, "authority", "app-descriptor.json"), "{}", { mode: 0o600 });
+  writeExecutionSnapshotManifest(root, snapshotDigest);
   return root;
 }
 
@@ -213,6 +224,19 @@ function createAdapters({ mixed = false } = {}) {
           sha256: mixed ? sha256Jcs({ kind: "current_descriptor", exists: false }) : SHA_B,
         },
         absentArtifact("previous_descriptor"),
+        {
+          kind: `referenced_snapshot:current:${SHA_A}`,
+          exists: !mixed,
+          device: mixed ? "0" : 1,
+          inode: mixed ? "0" : 13,
+          owner_uid: mixed ? 0 : process.getuid!(),
+          mode: mixed ? 0 : 0o500,
+          size: mixed ? "0" : 100,
+          mtime: mixed ? "1970-01-01T00:00:00.000Z" : "2026-08-29T08:00:00.000Z",
+          sha256: mixed
+            ? sha256Jcs({ kind: `referenced_snapshot:current:${SHA_A}`, exists: false })
+            : SHA_C,
+        },
         {
           kind: `recovered_lock:${SHA_C}`,
           exists: mixed,
@@ -676,8 +700,10 @@ describe("read-only production inventory", () => {
 
     const initial = await activeDigest();
     writeFileSync(payload, "BBBB", { mode: 0o600 });
+    writeExecutionSnapshotManifest(snapshot, snapshotDigest);
     const byteDrift = await activeDigest();
     chmodSync(payload, 0o700);
+    writeExecutionSnapshotManifest(snapshot, snapshotDigest);
     const modeDrift = await activeDigest();
 
     expect(new Set([initial, byteDrift, modeDrift]).size).toBe(3);
@@ -736,18 +762,23 @@ describe("read-only production inventory", () => {
       .rejects.toThrow(/duplicate|ambiguous|descriptor|snapshot/iu);
 
     unlinkSync(join(releaseRoot, "previous.json"));
-    writeFileSync(join(snapshotRoot, snapshotDigest, "evidence.json"), JSON.stringify({
-      schema: SNAPSHOT_SCHEMA,
-      app_digest: SHA_A,
-      execution_snapshot_digest: "e".repeat(64),
-      promotion_id: "promotion-a",
-      release_sha: RELEASE_A,
-      release_tree: RELEASE_A,
-      worker_digest: SHA_B,
-      authority_digest: SHA_C,
-    }), { mode: 0o600 });
+    writeExecutionSnapshotManifest(join(snapshotRoot, snapshotDigest), "e".repeat(64));
     await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts())
       .rejects.toThrow(/manifest|evidence|snapshot|digest|mismatch/iu);
+
+    writeExecutionSnapshotManifest(join(snapshotRoot, snapshotDigest), snapshotDigest, {
+      release_sha: RELEASE_B,
+      release_tree: RELEASE_B,
+      promotion_id: "substituted",
+    });
+    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts())
+      .rejects.toThrow(/manifest|descriptor|release|promotion|authority|mismatch/iu);
+
+    writeExecutionSnapshotManifest(join(snapshotRoot, snapshotDigest), snapshotDigest, {
+      app_digest: SHA_A,
+    });
+    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts())
+      .rejects.toThrow(/manifest|component|app|content|digest|mismatch/iu);
   });
 
   it("rejects retained snapshot manifest symlinks, unknown fields, and byte-limit overflow", async () => {
@@ -830,19 +861,12 @@ describe("read-only production inventory", () => {
     const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", snapshotDigest);
     mkdirSync(join(snapshot, "app"), { recursive: true, mode: 0o700 });
     mkdirSync(join(snapshot, "worker"), { mode: 0o700 });
+    mkdirSync(join(snapshot, "authority"), { mode: 0o700 });
     const payload = join(snapshot, "payload");
     writeFileSync(payload, "", { mode: 0o600 });
     truncateSync(payload, 4097);
-    writeFileSync(join(snapshot, "evidence.json"), JSON.stringify({
-      schema: SNAPSHOT_SCHEMA,
-      app_digest: SHA_A,
-      execution_snapshot_digest: snapshotDigest,
-      promotion_id: "promotion-a",
-      release_sha: RELEASE_A,
-      release_tree: RELEASE_A,
-      worker_digest: SHA_B,
-      authority_digest: SHA_C,
-    }), { mode: 0o600 });
+    writeFileSync(join(snapshot, "authority", "authority.json"), "{}", { mode: 0o600 });
+    writeExecutionSnapshotManifest(snapshot, snapshotDigest);
     const releaseRoot = join(homeDir, ".homecook", "releases");
     writeFileSync(join(releaseRoot, "current.json"), JSON.stringify(
       runningDescriptor(join(releaseRoot, "execution-snapshots"), snapshotDigest),
@@ -1225,6 +1249,20 @@ describe("read-only production inventory", () => {
     });
     expect(absentInventory.surfaces.port_listeners).toEqual([listenerEvidence(false)]);
 
+    const falseAbsenceRunner = vi.fn((command: string) => command === "/usr/sbin/lsof"
+      ? { status: 0, signal: null, stdout: "", stderr: "" }
+      : { status: 1, signal: null, stdout: "", stderr: "" });
+    const falseAbsenceInventory = await collectReadOnlyProductionInventory({
+      adapters: createLocalProductionInventoryAdapters({ rootDir, homeDir, commandRunner: falseAbsenceRunner }),
+      capturedAt: "2026-08-29T10:00:00.000Z",
+      probeIdentity: probeIdentity(),
+    });
+    expect(falseAbsenceInventory.probe_statuses.port_listeners).toEqual({
+      status: "failed",
+      reason_code: "port_listeners_probe_failed",
+      evidence_count: 0,
+    });
+
     const malformedListenerRunner = vi.fn((command: string) => command === "/usr/sbin/lsof"
       ? { status: 0, signal: null, stdout: "cnode\nn127.0.0.1:3100\n", stderr: "" }
       : { status: 1, signal: null, stdout: "", stderr: "" });
@@ -1429,6 +1467,29 @@ describe("mixed-state classifier", () => {
     };
     const duplicateListenerInventory = rebuildInventory(inventory, duplicateListenerSurfaces);
     expect(classifyProductionInventory(duplicateListenerInventory).promotion_safe).toBe(false);
+
+    const absentNamedPresentSurfaces = {
+      ...inventory.surfaces,
+      port_listeners: [{
+        ...listenerEvidence(true),
+        process_name: "absent",
+        listener_digest: sha256Jcs({ port: 3100, present: true, pid: 101, process_name: "absent" }),
+      }],
+    };
+    const absentNamedPresent = rebuildInventory(inventory, absentNamedPresentSurfaces);
+    expect(() => validateProductionInventory(absentNamedPresent)).toThrow(/listener|present|absent|inconsistent/iu);
+
+    const missingReferencedSurfaces = {
+      ...inventory.surfaces,
+      release_artifacts: inventory.surfaces.release_artifacts.filter((entry: { kind: string }) => (
+        !entry.kind.startsWith("referenced_snapshot:current:")
+      )),
+    };
+    const missingReferenced = rebuildInventory(inventory, missingReferencedSurfaces);
+    const missingReferencedResult = classifyProductionInventory(missingReferenced);
+    expect(missingReferencedResult.promotion_safe).toBe(false);
+    expect(missingReferencedResult.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:current_referenced_snapshot");
 
     const { adapters } = createAdapters();
     adapters.readDocker = vi.fn(async () => { throw new Error("TOP_SECRET_DOCKER_FAILURE"); });

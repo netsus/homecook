@@ -18,6 +18,7 @@ import { parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
 import { readPrivateCanonicalJsonFile } from "./local-mac-production-rehearsal-receipts.mjs";
 import { resolveTrustedDockerBinary } from "./full-local-session-observation-reader.mjs";
 import {
+  digestLocalMacProductionExecutionTree,
   getLocalMacProductionReleasePaths,
   normalizeRunningReleaseDescriptor,
 } from "./local-mac-production-release.mjs";
@@ -204,7 +205,7 @@ function validateSurfaces(value) {
     nonempty(listener.process_name, `port_listeners[${index}].process_name`);
     if (!HEX_64.test(listener.listener_digest)) fail(`port_listeners[${index}].listener_digest is invalid`);
     if ((!listener.present && (listener.pid !== null || listener.process_name !== "absent"))
-      || (listener.present && listener.pid === null)) {
+      || (listener.present && (listener.pid === null || listener.process_name === "absent"))) {
       fail(`port_listeners[${index}] presence evidence is inconsistent`);
     }
     const projection = Object.fromEntries(PORT_KEYS.slice(0, -1).map((key) => [key, listener[key]]));
@@ -390,10 +391,21 @@ export function createProductionSurfaceSnapshot(inventory, { capturedAt = new Da
     "com.homecook.youtube-extraction-worker",
   ];
   const configIdentities = new Set(surfaces.opaque_configs.map((entry) => entry.identity));
+  const currentDescriptorPresent = artifactMap.get("current_descriptor")?.exists === true;
+  const previousDescriptorPresent = artifactMap.get("previous_descriptor")?.exists === true;
+  const currentSnapshotCount = surfaces.release_artifacts.filter((entry) => (
+    entry.exists && entry.kind.startsWith("referenced_snapshot:current:")
+  )).length;
+  const previousSnapshotCount = surfaces.release_artifacts.filter((entry) => (
+    entry.exists && entry.kind.startsWith("referenced_snapshot:previous:")
+  )).length;
+  const descriptorSnapshotsComplete = currentSnapshotCount === (currentDescriptorPresent ? 1 : 0)
+    && previousSnapshotCount === (previousDescriptorPresent ? 1 : 0);
   const toolNames = inventory.tool_identities.map((tool) => tool.name).sort();
   const complete = PROBE_NAMES.every((name) => inventory.probe_statuses[name].status === "success")
     && JSON.stringify(toolNames) === JSON.stringify(REQUIRED_TOOL_NAMES)
     && artifactMap.has("release_root") && artifactMap.has("current_descriptor") && artifactMap.has("previous_descriptor")
+    && descriptorSnapshotsComplete
     && requiredInvariantPlists.every((kind) => presentArtifacts.has(kind))
     && requiredFullLocalPlists.every((kind) => artifactMap.has(kind))
     && surfaces.launchd.length === requiredLaunchdLabels.length && launchdLabels.size === requiredLaunchdLabels.length
@@ -1053,7 +1065,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       || descriptor.worker_artifact_root !== join(expectedSnapshotRoot, "worker")) {
       fail(`${descriptorKind} production descriptor snapshot reference is not canonical`);
     }
-    return Object.freeze({ descriptorKind, snapshotName, descriptorDigest: authority.digest });
+    return Object.freeze({ descriptorKind, snapshotName, descriptorDigest: authority.digest, descriptor });
   }
 
   function readSnapshotManifest(snapshotPath, snapshotName, surfaceBudget, { required }) {
@@ -1098,7 +1110,37 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       || sha256Bytes(manifestBytes) !== manifestEvidence.sha256) {
       fail("execution snapshot manifest canonical identity mismatch");
     }
-    return Object.freeze({ exists: true, sha256: manifestEvidence.sha256 });
+    return Object.freeze({ exists: true, sha256: manifestEvidence.sha256, value: manifest });
+  }
+
+  function validateReferencedSnapshot(snapshotPath, reference, manifest) {
+    const descriptor = reference.descriptor;
+    for (const field of ["release_sha", "release_tree", "promotion_id"]) {
+      if (manifest[field] !== descriptor[field]) {
+        fail(`descriptor-referenced snapshot manifest ${field} mismatch`);
+      }
+    }
+    for (const field of ["sealed_bundle_digest", "repeatability_receipt_digest"]) {
+      if (descriptor[field] !== undefined && manifest[field] !== descriptor[field]) {
+        fail(`descriptor-referenced snapshot manifest ${field} mismatch`);
+      }
+    }
+    let componentDigests;
+    try {
+      componentDigests = {
+        app_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "app")),
+        worker_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "worker")),
+        authority_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "authority")),
+        ...(manifest.full_local_digest === undefined ? {} : {
+          full_local_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "full-local")),
+        }),
+      };
+    } catch {
+      fail("descriptor-referenced snapshot component authority is incomplete");
+    }
+    for (const [field, digest] of Object.entries(componentDigests)) {
+      if (manifest[field] !== digest) fail(`descriptor-referenced snapshot ${field} content mismatch`);
+    }
   }
 
   function readExecutionSnapshotChildren(surfaceBudget, descriptorEvidence) {
@@ -1128,12 +1170,20 @@ export function createLocalProductionInventoryAdapters(options = {}) {
         const path = join(snapshotRoot, name);
         const reference = referenceByName.get(name);
         if (reference) {
-          readSnapshotManifest(path, name, surfaceBudget, { required: true });
-          return artifactEvidence(
+          const manifest = readSnapshotManifest(path, name, surfaceBudget, { required: true });
+          const before = artifactEvidence(
             `referenced_snapshot:${reference.descriptorKind}:${sha256Jcs(name)}`,
             path,
             { surfaceBudget },
           );
+          validateReferencedSnapshot(path, reference, manifest.value);
+          const after = artifactEvidence(
+            `referenced_snapshot:${reference.descriptorKind}:${sha256Jcs(name)}`,
+            path,
+            { surfaceBudget },
+          );
+          if (before.sha256 !== after.sha256) fail("descriptor-referenced snapshot changed during verification");
+          return after;
         }
         const retained = artifactEvidence(`retained_snapshot:${sha256Jcs(name)}`, path, {
           directoryIdentityOnly: true,
@@ -1295,7 +1345,18 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       return { containers, networks, volumes };
     },
     async readPortListeners() {
-      const raw = await commandOutput(commandRunner, lsofBin, ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"], { absentExit: "lsof-no-listener" });
+      const { status, stdout: raw, stderr } = await readOnlyCommandResult(
+        commandRunner,
+        lsofBin,
+        ["-nP", "-iTCP:3100", "-sTCP:LISTEN", "-Fpcn"],
+      );
+      if (status === 1 && raw === "" && stderr === "") {
+        const projection = { port: 3100, present: false, pid: null, process_name: "absent" };
+        return [{ ...projection, listener_digest: sha256Jcs(projection) }];
+      }
+      if (status !== 0 || raw === "" || stderr !== "") {
+        throw new Error("read-only listener command evidence is invalid");
+      }
       let pid = null;
       let processName = "unknown";
       const listeners = [];
@@ -1309,10 +1370,6 @@ export function createLocalProductionInventoryAdapters(options = {}) {
           const projection = { port: 3100, present: true, pid, process_name: processName };
           listeners.push({ ...projection, listener_digest: sha256Jcs(projection) });
         }
-      }
-      if (listeners.length === 0) {
-        const projection = { port: 3100, present: false, pid: null, process_name: "absent" };
-        return [{ ...projection, listener_digest: sha256Jcs(projection) }];
       }
       if (listeners.length !== 1) throw new Error("read-only listener evidence is ambiguous");
       return listeners;

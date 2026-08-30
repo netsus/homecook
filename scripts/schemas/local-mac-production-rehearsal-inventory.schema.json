@@ -171,7 +171,7 @@
       "properties": { "port": { "type": "integer", "minimum": 1, "maximum": 65535 }, "present": { "type": "boolean" }, "pid": { "type": ["integer", "null"], "minimum": 1, "maximum": 9007199254740991 }, "process_name": { "$ref": "#/definitions/nonempty" }, "listener_digest": { "$ref": "#/definitions/hex64" } },
       "allOf": [
         { "if": { "properties": { "present": { "const": false } } }, "then": { "properties": { "pid": { "const": null }, "process_name": { "const": "absent" } } } },
-        { "if": { "properties": { "present": { "const": true } } }, "then": { "properties": { "pid": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 } } } }
+        { "if": { "properties": { "present": { "const": true } } }, "then": { "properties": { "pid": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }, "process_name": { "allOf": [{ "$ref": "#/definitions/nonempty" }, { "not": { "const": "absent" } }] } } } }
       ]
     },
     "config": {
