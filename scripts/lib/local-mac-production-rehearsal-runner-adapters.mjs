@@ -634,6 +634,16 @@ async function executePsql(state, sql, { database = "postgres", tuplesOnly = fal
   })).stdout;
 }
 
+export function parseAndValidateWorkerFixtureReadback(output, expected) {
+  const lines = String(output ?? "").trim().split(/\r?\n/u).filter(Boolean);
+  if (lines.length !== 1) fail("worker fixture readback must contain exactly one row");
+  let readback; try { readback = JSON.parse(lines[0]); } catch { fail("worker fixture readback is malformed JSON"); }
+  const keys = ["user_id", "job_id", "job_status", "attempt_count", "policy_snapshot_digest", "credential_jti_hash", "credential_generation", "credential_release_sha", "credential_schema_identity", "credential_snapshot_digest", "permit_generation"].sort();
+  if (!readback || typeof readback !== "object" || Array.isArray(readback) || canonicalizeJcs(Object.keys(readback).sort()) !== canonicalizeJcs(keys) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(readback.user_id ?? "") || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(readback.job_id ?? "") || !Number.isSafeInteger(readback.attempt_count) || !Number.isSafeInteger(readback.credential_generation) || !Number.isSafeInteger(readback.permit_generation)) fail("worker fixture readback has an invalid closed shape");
+  for (const [key, value] of Object.entries(expected)) if (readback[key] !== value) fail("worker fixture readback differs from issued authority");
+  return Object.freeze(readback);
+}
+
 async function waitForContainers(state, { signal, timeoutMs = 180_000, expectedNames = null } = {}) {
   const expected = new Set(expectedNames ?? SERVICES.map((service) => `${state.namespace.project}-${service}-1`));
   const deadline = Date.now() + timeoutMs;
@@ -1250,6 +1260,9 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       const issued = ensureIssuedWorkerCredential(state, manifest, artifact);
       const fixture = buildIsolatedYoutubeWorkerSyntheticFixtureSql({ runIdentity: namespace.run_id, userId: crypto.randomUUID(), jobId: crypto.randomUUID(), releaseSha: manifest.release_sha, schemaIdentity: artifact.schema_identity, allowedSnapshotDigest: manifest.migration.ordered_migration_files_digest, jtiHash: issued.jtiHash, nowEpoch: Math.floor(new Date(issued.metadata.issued_at).getTime() / 1000) });
       await executePsql(state, fixture.sql, { database: namespace.db_name, variables: fixture.variables, allowedVariableNames: new Set(fixture.allowedVariableNames), signal: state.activeSignal });
+      const readbackSql = "select json_build_object('user_id',u.id,'job_id',j.id,'job_status',j.status,'attempt_count',j.attempt_count,'policy_snapshot_digest',j.policy_snapshot_digest,'credential_jti_hash',c.current_jti_hash,'credential_generation',c.current_generation,'credential_release_sha',c.release_sha,'credential_schema_identity',c.schema_identity,'credential_snapshot_digest',c.allowed_snapshot_digest,'permit_generation',p.permit_generation) from public.users u join public.youtube_extraction_jobs j on j.user_id=u.id join private.youtube_extraction_worker_credentials c on c.credential_name='primary' join public.youtube_extractor_permits p on p.permit_key='primary' where u.id=:'user_id' and j.id=:'job_id';\n";
+      const output = await executePsql(state, readbackSql, { database: namespace.db_name, tuplesOnly: true, variables: { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id }, allowedVariableNames: new Set(["user_id", "job_id"]), signal: state.activeSignal });
+      parseAndValidateWorkerFixtureReadback(output, { user_id: fixture.variables.user_id, job_id: fixture.variables.job_id, job_status: "queued", attempt_count: 0, policy_snapshot_digest: manifest.migration.ordered_migration_files_digest, credential_jti_hash: issued.jtiHash, credential_generation: 1, credential_release_sha: manifest.release_sha, credential_schema_identity: artifact.schema_identity, credential_snapshot_digest: manifest.migration.ordered_migration_files_digest, permit_generation: 0 });
       state.workerFixtureAuthority = Object.freeze({
         fixture_sql_digest: sha256Jcs(fixture),
         credential_jti_hash: issued.jtiHash,
@@ -1258,6 +1271,8 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         schema_identity: artifact.schema_identity,
         allowed_snapshot_digest: manifest.migration.ordered_migration_files_digest,
         token_reference_digest: sha256Jcs("worker.jwt"),
+        user_id: fixture.variables.user_id,
+        job_id: fixture.variables.job_id,
         production_derived_row_count: 0,
       });
       return state.workerFixtureAuthority;

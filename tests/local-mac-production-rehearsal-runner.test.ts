@@ -29,6 +29,7 @@ import {
   normalizeResolvedComposeFixture,
   buildSafeResolvedComposeGoldenFixture,
   buildPsqlVariableArgs,
+  parseAndValidateWorkerFixtureReadback,
   compilePrimitiveServiceOperations,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
@@ -351,6 +352,11 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
     expect(buildPsqlVariableArgs({ job_id: "22222222-2222-4222-8222-222222222222", allowed_snapshot: "a".repeat(64) }, new Set(["job_id", "allowed_snapshot"]))).toEqual([`--set=allowed_snapshot=${"a".repeat(64)}`, "--set=job_id=22222222-2222-4222-8222-222222222222"]);
     expect(() => buildPsqlVariableArgs({ unknown: "x" }, new Set())).toThrow(/allowlisted/iu);
     expect(() => buildPsqlVariableArgs({ job_id: "x\n--command=bad" }, new Set(["job_id"]))).toThrow(/unsafe/iu);
+  });
+  it("accepts exactly one closed worker fixture readback row", () => {
+    const expected = { user_id: "22222222-2222-4222-8222-222222222222", job_id: "33333333-3333-4333-8333-333333333333", job_status: "queued", attempt_count: 0, policy_snapshot_digest: "a".repeat(64), credential_jti_hash: "b".repeat(64), credential_generation: 1, credential_release_sha: SHA_A, credential_schema_identity: "schema", credential_snapshot_digest: "a".repeat(64), permit_generation: 0 };
+    expect(parseAndValidateWorkerFixtureReadback(JSON.stringify(expected), expected)).toMatchObject(expected);
+    for (const bad of ["", "{}", `${JSON.stringify(expected)}\n${JSON.stringify(expected)}`, JSON.stringify({ ...expected, job_status: "processing" })]) expect(() => parseAndValidateWorkerFixtureReadback(bad, expected)).toThrow();
   });
   it("rejects self-reported zeroes unless an independent observer binds the exact run window", () => {
     const observer = {
