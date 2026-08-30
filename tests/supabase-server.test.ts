@@ -350,6 +350,8 @@ describe("supabase server helpers", () => {
     const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
     server.createYoutubeIngredientRegistrationInternalRpcClient();
     const youtubeExtractionClient = server.createYoutubeExtractionInternalClient();
+    const marketingValidationClient =
+      server.createMarketingValidationInternalClient();
     const adminClient = server.createAdminDataInternalClient();
     const feedbackClient = server.createNotFoundFeedbackInternalClient();
     const eventClient = server.createOperationalEventInternalClient();
@@ -369,6 +371,7 @@ describe("supabase server helpers", () => {
       "account-lifecycle",
       "youtube-ingredient-registration",
       "youtube-extraction",
+      "marketing-validation",
       "admin-data",
       "not-found-feedback",
       "operational-event",
@@ -409,6 +412,16 @@ describe("supabase server helpers", () => {
     expect(() => youtubeExtractionClient?.from("cooking_methods"))
       .not.toThrow();
     expect(youtubeExtractionClient).toEqual({
+      from: expect.any(Function),
+    });
+    expect(() => (
+      marketingValidationClient as { from(table: string): unknown } | null
+    )?.from("users")).toThrow(
+      "Internal Data scope denied table: users",
+    );
+    expect(() => marketingValidationClient?.from("marketing_validation_sessions"))
+      .not.toThrow();
+    expect(marketingValidationClient).toEqual({
       from: expect.any(Function),
     });
     expect(callbackClient).not.toHaveProperty("from");

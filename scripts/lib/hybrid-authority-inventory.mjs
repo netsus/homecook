@@ -55,6 +55,10 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set(["app/api/v1/feedback/404/route.ts"]),
   ],
   [
+    "createMarketingValidationInternalClient",
+    new Set(["app/api/v1/marketing/validation/route.ts"]),
+  ],
+  [
     "createRecipeFuturePropagationInternalClient",
     new Set([
       "app/api/v1/recipes/route.ts",
@@ -195,6 +199,15 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
     ]),
   ],
   [
+    "createMarketingValidationInternalClient",
+    new Map([
+      [
+        "app/api/v1/marketing/validation/route.ts",
+        new Set(["POST"]),
+      ],
+    ]),
+  ],
+  [
     "createYoutubeExtractionInternalClient",
     new Map([
       [
@@ -230,6 +243,7 @@ const SERVICE_ROLE_FACTORY_NAMES = new Set([
   "createServiceRoleClient",
   "createLocalDevSessionBootstrapInternalClient",
   "createFutureMealWriteInternalClient",
+  "createMarketingValidationInternalClient",
   "createShoppingCreateInternalClient",
   "createSnapshotV2SessionInternalClient",
   "createYoutubeExtractionInternalClient",

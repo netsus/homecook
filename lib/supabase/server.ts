@@ -41,6 +41,7 @@ import {
   getDataServiceRoleKey,
   getDataSupabaseEnv,
 } from "@/lib/supabase/env";
+import type { MarketingValidationPersistenceClient } from "@/types/marketing-validation";
 
 function requireHmacSecret(name: string) {
   const value = process.env[name]?.trim() ?? "";
@@ -377,6 +378,7 @@ type LocalInternalScope =
   | "auth-flow"
   | "auth-refresh"
   | "future-meal-write"
+  | "marketing-validation"
   | "not-found-feedback"
   | "operational-event"
   | "recipe-future-propagation"
@@ -716,6 +718,70 @@ export function createYoutubeAsyncExtractionInternalClient() {
         rpc: client.rpc.bind(client),
       }
     : null;
+}
+
+const MARKETING_VALIDATION_TABLES = new Set([
+  "marketing_validation_sessions",
+]);
+
+export function createMarketingValidationInternalClient(): MarketingValidationPersistenceClient | null {
+  const client = createScopedDataServiceRoleClient("marketing-validation");
+  if (!client) {
+    return null;
+  }
+
+  return {
+    from(table: "marketing_validation_sessions") {
+      if (!MARKETING_VALIDATION_TABLES.has(table)) {
+        throw new Error(`Internal Data scope denied table: ${table}`);
+      }
+
+      const tableClient = client.from(table);
+      return {
+        select(columns: string) {
+          return {
+            eq(column: string, value: unknown) {
+              return {
+                maybeSingle() {
+                  return tableClient.select(columns).eq(column, value).maybeSingle();
+                },
+              };
+            },
+          };
+        },
+        insert(payload: Record<string, unknown>) {
+          return {
+            select(columns: string) {
+              return {
+                single() {
+                  return tableClient.insert(payload).select(columns).single();
+                },
+              };
+            },
+          };
+        },
+        update(payload: Record<string, unknown>) {
+          return {
+            eq(column: string, value: unknown) {
+              return {
+                is(innerColumn: string, innerValue: null) {
+                  return {
+                    select(columns: string) {
+                      return tableClient
+                        .update(payload)
+                        .eq(column, value)
+                        .is(innerColumn, innerValue)
+                        .select(columns);
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
 }
 
 const ADMIN_DATA_TABLES = new Set([

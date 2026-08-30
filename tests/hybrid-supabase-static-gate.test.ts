@@ -20,6 +20,7 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "app/api/v1/cooking/session-attempts/route.ts",
   "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
   "app/api/v1/cooking/standalone-complete/route.ts",
+  "app/api/v1/marketing/validation/route.ts",
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/route.ts",
@@ -28,9 +29,9 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "lib/server/youtube-import.ts",
 ];
 const APPROVED_SERVICE_ROLE_FILES = [
-  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 9),
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 10),
   "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
-  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(9),
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(10),
 ];
 
 function fixtureRepository(files: Record<string, string>) {
@@ -103,6 +104,11 @@ describe("hybrid authority AST/static gate", () => {
       {
         factory: "createNotFoundFeedbackInternalClient",
         file: "app/api/v1/feedback/404/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createMarketingValidationInternalClient",
+        file: "app/api/v1/marketing/validation/route.ts",
         functionName: "POST",
       },
       {
@@ -238,6 +244,9 @@ describe("hybrid authority AST/static gate", () => {
     ]);
 
     expect(inventory.internalOperationFunctionAllowlist).toMatchObject({
+      createMarketingValidationInternalClient: {
+        "app/api/v1/marketing/validation/route.ts": ["POST"],
+      },
       createRecipeFuturePropagationInternalClient: {
         "app/api/v1/recipes/route.ts": ["postRecipe"],
         "app/api/v1/recipes/[id]/future-plan-impact/route.ts": ["POST"],
@@ -256,6 +265,9 @@ describe("hybrid authority AST/static gate", () => {
       },
     });
     expect(inventory.internalOperationAllowlist).toMatchObject({
+      createMarketingValidationInternalClient: [
+        "app/api/v1/marketing/validation/route.ts",
+      ],
       createYoutubeExtractionInternalClient: [
         "lib/server/youtube-import.ts",
       ],
