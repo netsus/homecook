@@ -227,6 +227,8 @@ final authority 뒤 production lock 전에 검증된 sealed candidate component�
 
 pre-adapter/initial/final/pre-lock의 broader promotion authority verifier는 manifest, candidate completion/bundle authority, 두 member receipt와 repeatability receipt, inventory/classification, attestation triple, git/tag 및 `gh` offline readback, component physical digest를 하나의 public error boundary 안에서 재검증한다. 어느 source read, canonical parser, identity check, semantic gate 또는 command가 실패해도 public output은 `promotion_authority_source_changed: production promotion authority source changed.`뿐이다. path/basename/receipt ID/raw JSON/provider payload/`gh`·`git` stderr/syscall 텍스트는 CLI stderr, JSON 또는 failure artifact에 포함하지 않는다.
 
+promotion 함수는 첫 release manifest external read부터 lock acquisition 성공 전까지 모든 semantic/identity postcondition과 scratch/runtime-source 검증을 같은 outer boundary로 다시 감싼다. lock 직전에는 frozen scratch component root와 authority file FD identities를 고정한 상태로 app/full-local/worker physical bytes를 각각 fresh re-digest하고 authority physical digest와 combined scratch authority를 재계산한다. stored digest만 재사용하거나 mutable candidate를 다시 읽지 않으며 실제 re-digest 값만 prelock scratch authority digest에 투입한다.
+
 하나라도 빠지면 pointer, LaunchAgent, Docker, DB를 건드리기 전에 fail closed한다.
 
 ## Production surface non-mutation contract

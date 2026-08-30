@@ -41,7 +41,10 @@ import {
   validateProductionReleaseTag,
 } from "./production-release-approval-policy.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./youtube-extraction-worker-artifact.mjs";
-import { verifyPromotionAuthoritySafely } from "./local-mac-production-authority-error.mjs";
+import {
+  toPromotionAuthoritySourceError,
+  verifyPromotionAuthoritySafely,
+} from "./local-mac-production-authority-error.mjs";
 
 export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v2";
 const LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA =
@@ -572,6 +575,183 @@ export function verifyLocalMacProductionExecutionSnapshot(snapshot) {
     ) throw new Error("Sealed execution snapshot rehearsal authority drifted.");
   }
   return snapshot;
+}
+
+function openFrozenScratchDirectory(path, expected, currentUid, label) {
+  const lexicalPath = resolve(path);
+  const before = lstatSync(lexicalPath);
+  if (before.isSymbolicLink() || !before.isDirectory() || before.uid !== currentUid
+    || (modeBits(before.mode) & 0o222) !== 0 || realpathSync(lexicalPath) !== lexicalPath
+    || before.dev !== expected.dev || before.ino !== expected.ino) {
+    throw new Error(`${label} frozen scratch directory identity is unsafe.`);
+  }
+  let descriptor;
+  try {
+    descriptor = openSync(
+      lexicalPath,
+      fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+    );
+    const opened = fstatSync(descriptor);
+    if (!opened.isDirectory() || opened.dev !== before.dev || opened.ino !== before.ino
+      || opened.uid !== before.uid || opened.mode !== before.mode
+      || opened.nlink !== before.nlink || opened.ctimeMs !== before.ctimeMs
+      || opened.mtimeMs !== before.mtimeMs) {
+      throw new Error(`${label} frozen scratch directory descriptor drifted.`);
+    }
+    return Object.freeze({
+      before: Object.freeze({
+        dev: before.dev,
+        ino: before.ino,
+        uid: before.uid,
+        mode: before.mode,
+        nlink: before.nlink,
+        ctimeMs: before.ctimeMs,
+        mtimeMs: before.mtimeMs,
+      }),
+      descriptor,
+      path: lexicalPath,
+    });
+  } catch (error) {
+    if (descriptor !== undefined) closeSync(descriptor);
+    throw error;
+  }
+}
+
+function assertFrozenScratchDirectoryStable(reservation, label) {
+  const opened = fstatSync(reservation.descriptor);
+  const current = lstatSync(reservation.path);
+  for (const stat of [opened, current]) {
+    if (!stat.isDirectory()
+      || stat.dev !== reservation.before.dev || stat.ino !== reservation.before.ino
+      || stat.uid !== reservation.before.uid || stat.mode !== reservation.before.mode
+      || stat.nlink !== reservation.before.nlink || stat.ctimeMs !== reservation.before.ctimeMs
+      || stat.mtimeMs !== reservation.before.mtimeMs) {
+      throw new Error(`${label} frozen scratch directory changed during physical re-digest.`);
+    }
+  }
+}
+
+function openFrozenAuthorityFiles(rootPath, currentUid) {
+  const reservations = [];
+  const visit = (path) => {
+    for (const entry of readdirSync(path, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
+      const child = join(path, entry.name);
+      if (entry.isDirectory()) {
+        visit(child);
+        continue;
+      }
+      if (!entry.isFile() || entry.isSymbolicLink()) {
+        throw new Error("Frozen scratch authority contains an unsupported entry.");
+      }
+      const before = lstatSync(child);
+      if (before.uid !== currentUid || (modeBits(before.mode) & 0o222) !== 0 || before.nlink !== 1) {
+        throw new Error("Frozen scratch authority file identity is unsafe.");
+      }
+      let descriptor;
+      try {
+        descriptor = openSync(child, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+        const opened = fstatSync(descriptor);
+        if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino
+          || opened.uid !== before.uid || opened.mode !== before.mode
+          || opened.nlink !== before.nlink || opened.size !== before.size
+          || opened.ctimeMs !== before.ctimeMs || opened.mtimeMs !== before.mtimeMs) {
+          throw new Error("Frozen scratch authority file descriptor drifted.");
+        }
+        reservations.push(Object.freeze({ before, descriptor, path: child }));
+      } catch (error) {
+        if (descriptor !== undefined) closeSync(descriptor);
+        throw error;
+      }
+    }
+  };
+  try {
+    visit(rootPath);
+    return reservations;
+  } catch (error) {
+    for (const reservation of reservations) closeSync(reservation.descriptor);
+    throw error;
+  }
+}
+
+function assertFrozenAuthorityFilesStable(reservations) {
+  for (const reservation of reservations) {
+    const opened = fstatSync(reservation.descriptor);
+    const current = lstatSync(reservation.path);
+    for (const stat of [opened, current]) {
+      if (!stat.isFile() || stat.dev !== reservation.before.dev || stat.ino !== reservation.before.ino
+        || stat.uid !== reservation.before.uid || stat.mode !== reservation.before.mode
+        || stat.nlink !== reservation.before.nlink || stat.size !== reservation.before.size
+        || stat.ctimeMs !== reservation.before.ctimeMs || stat.mtimeMs !== reservation.before.mtimeMs) {
+        throw new Error("Frozen scratch authority file changed during physical re-digest.");
+      }
+    }
+  }
+}
+
+export function redigestLocalMacProductionFrozenScratch(
+  snapshot,
+  { digestComponent = digestExecutionTree } = {},
+) {
+  const currentUid = requireCurrentUserUid(() => process.getuid?.());
+  const components = [
+    ["app", snapshot.appRoot, snapshot.appDigest, snapshot.appDev, snapshot.appIno],
+    ["full_local", snapshot.fullLocalRoot, snapshot.fullLocalDigest, snapshot.fullLocalDev, snapshot.fullLocalIno],
+    ["worker", snapshot.workerRoot, snapshot.workerDigest, snapshot.workerDev, snapshot.workerIno],
+  ].filter(([, path]) => typeof path === "string");
+  const directoryReservations = [];
+  let authorityFileReservations = [];
+  try {
+    for (const component of components) {
+      const [label, path] = component;
+      directoryReservations.push(openFrozenScratchDirectory(
+        path,
+        { dev: component[3], ino: component[4] },
+        currentUid,
+        label,
+      ));
+    }
+    directoryReservations.push(openFrozenScratchDirectory(
+      snapshot.authorityRoot,
+      { dev: snapshot.authorityDev, ino: snapshot.authorityIno },
+      currentUid,
+      "authority",
+    ));
+    authorityFileReservations = openFrozenAuthorityFiles(snapshot.authorityRoot, currentUid);
+    const actualComponents = Object.fromEntries(components.map(([label, path]) => [
+      label,
+      digestComponent(path),
+    ]));
+    const actualAuthorityDigest = digestExecutionTree(snapshot.authorityRoot);
+    for (const [index, reservation] of directoryReservations.entries()) {
+      assertFrozenScratchDirectoryStable(reservation, `component_${index}`);
+    }
+    assertFrozenAuthorityFilesStable(authorityFileReservations);
+    const expectedComponents = Object.fromEntries(components.map((component) => [
+      component[0],
+      component[2],
+    ]));
+    const expectedCombinedDigest = sha256Bytes(Buffer.from(JSON.stringify({
+      components: expectedComponents,
+      authority: snapshot.authorityDigest,
+    })));
+    const actualCombinedDigest = sha256Bytes(Buffer.from(JSON.stringify({
+      components: actualComponents,
+      authority: actualAuthorityDigest,
+    })));
+    if (actualCombinedDigest !== expectedCombinedDigest) {
+      throw new Error("Frozen scratch physical component authority drifted before production lock.");
+    }
+    return Object.freeze({
+      appDigest: actualComponents.app,
+      fullLocalDigest: actualComponents.full_local ?? null,
+      workerDigest: actualComponents.worker,
+      authorityDigest: actualAuthorityDigest,
+      combinedDigest: actualCombinedDigest,
+    });
+  } finally {
+    for (const reservation of authorityFileReservations) closeSync(reservation.descriptor);
+    for (const reservation of directoryReservations) closeSync(reservation.descriptor);
+  }
 }
 
 export function createLocalMacProductionExecutionSnapshot({
@@ -2950,7 +3130,24 @@ function releaseCompletedPromotionLock({ homeDir, lockToken }) {
  * Promotes one completed immutable candidate as the app/full-local/worker bundle.
  * Failures after lock acquisition intentionally retain the lock and partial state.
  */
-export async function promoteLocalMacProductionRelease({
+function assertPromotionDependencies(options = {}) {
+  if (!DIGEST_PATTERN.test(options.expectedRehearsalAuthorityDigest ?? "")) {
+    throw new Error("Pre-adapter rehearsal authority digest is required before promotion setup.");
+  }
+  for (const [field, label] of [
+    ["verifyRehearsalAuthority", "Production rehearsal repeatability pre-mutation authority"],
+    ["installBundle", "Production release bundle installer"],
+    ["readinessProbe", "Production release bundle readiness probe"],
+    ["preflightBundle", "Production release bundle preflight"],
+    ["finalWorkerProbe", "Final production worker probe"],
+    ["freezeRuntimeInputs", "Pre-lock frozen runtime input authority"],
+    ["verifyFrozenRuntimeInputs", "Pre-lock frozen runtime input authority"],
+  ]) {
+    if (typeof options[field] !== "function") throw new Error(`${label} is not configured.`);
+  }
+}
+
+async function promoteLocalMacProductionReleaseUnsafe({
   afterLockedPreflight = (input) => void input,
   descriptorFault = (phase) => void phase,
   clock = () => new Date(),
@@ -2969,33 +3166,13 @@ export async function promoteLocalMacProductionRelease({
   readGitEvidence = readLocalMacProductionGitReleaseEvidence,
   readinessProbe,
   rootDir = process.cwd(),
+  redigestFrozenComponent = digestExecutionTree,
+  onProductionLockAcquired = () => undefined,
   verifyAttestation,
   verifyFrozenRuntimeInputs,
   verifyRehearsalAuthority,
   writeDescriptorAtomically = writeDescriptorFileAtomically,
 } = {}) {
-  if (!DIGEST_PATTERN.test(expectedRehearsalAuthorityDigest ?? "")) {
-    throw new Error("Pre-adapter rehearsal authority digest is required before promotion setup.");
-  }
-  if (typeof verifyRehearsalAuthority !== "function") {
-    throw new Error("Production rehearsal repeatability pre-mutation authority is not configured.");
-  }
-  if (typeof installBundle !== "function") {
-    throw new Error("Production release bundle installer is not configured.");
-  }
-  if (typeof readinessProbe !== "function") {
-    throw new Error("Production release bundle readiness probe is not configured.");
-  }
-  if (typeof preflightBundle !== "function") {
-    throw new Error("Production release bundle preflight is not configured.");
-  }
-  if (typeof finalWorkerProbe !== "function") {
-    throw new Error("Final production worker probe is not configured.");
-  }
-  if (typeof freezeRuntimeInputs !== "function" || typeof verifyFrozenRuntimeInputs !== "function") {
-    throw new Error("Pre-lock frozen runtime input authority is not configured.");
-  }
-
   const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
   const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
   const normalizedManifestPath = requireAbsolutePath(manifestPath, "releaseManifestPath");
@@ -3193,25 +3370,6 @@ export async function promoteLocalMacProductionRelease({
     || preLockRehearsalAuthority.authority_digest !== finalRehearsalAuthority.authority_digest) {
     throw new Error("Frozen scratch rehearsal authority drifted before production lock creation.");
   }
-  const prelockScratchAuthorityDigest = sha256Bytes(Buffer.from(JSON.stringify({
-    pre_adapter_authority_digest: expectedRehearsalAuthorityDigest,
-    initial_authority_digest: initialRehearsalAuthority.authority_digest,
-    final_authority_digest: finalRehearsalAuthority.authority_digest,
-    pre_lock_authority_digest: preLockRehearsalAuthority.authority_digest,
-    scratch_snapshot_digest: frozenScratch.digest,
-    scratch_device: String(frozenScratch.dev),
-    scratch_inode: String(frozenScratch.ino),
-    app_digest: frozenScratch.appDigest,
-    full_local_digest: frozenScratch.fullLocalDigest,
-    worker_digest: frozenScratch.workerDigest,
-    authority_digest: frozenScratch.authorityDigest,
-    sealed_bundle_digest: sealedCandidate.sealedBundleDigest,
-    repeatability_receipt_digest: sealedCandidate.repeatabilityReceiptDigest,
-    frozen_runtime_input_authority_digest: frozenRuntimeInputs.authority_digest,
-    release_manifest_source_identity_digest: manifestFileSnapshot.sourceIdentityDigest,
-    release_manifest_ancestor_identity_digest: manifestFileSnapshot.ancestorIdentityDigest,
-  })));
-  verifyLocalMacProductionExecutionSnapshot(frozenScratch);
   verifyFrozenRuntimeInputsSafely({ checkSources: true });
   assertPrivatePromotionScratchReservation(scratchReservation, currentUid, { materialized: true, runtimeInputs: true });
   try {
@@ -3222,6 +3380,28 @@ export async function promoteLocalMacProductionRelease({
       { cause: error },
     );
   }
+  const frozenScratchRedigest = redigestLocalMacProductionFrozenScratch(frozenScratch, {
+    digestComponent: redigestFrozenComponent,
+  });
+  const prelockScratchAuthorityDigest = sha256Bytes(Buffer.from(JSON.stringify({
+    pre_adapter_authority_digest: expectedRehearsalAuthorityDigest,
+    initial_authority_digest: initialRehearsalAuthority.authority_digest,
+    final_authority_digest: finalRehearsalAuthority.authority_digest,
+    pre_lock_authority_digest: preLockRehearsalAuthority.authority_digest,
+    scratch_snapshot_digest: frozenScratch.digest,
+    scratch_device: String(frozenScratch.dev),
+    scratch_inode: String(frozenScratch.ino),
+    app_digest: frozenScratchRedigest.appDigest,
+    full_local_digest: frozenScratchRedigest.fullLocalDigest,
+    worker_digest: frozenScratchRedigest.workerDigest,
+    authority_digest: frozenScratchRedigest.authorityDigest,
+    frozen_scratch_component_authority_digest: frozenScratchRedigest.combinedDigest,
+    sealed_bundle_digest: sealedCandidate.sealedBundleDigest,
+    repeatability_receipt_digest: sealedCandidate.repeatabilityReceiptDigest,
+    frozen_runtime_input_authority_digest: frozenRuntimeInputs.authority_digest,
+    release_manifest_source_identity_digest: manifestFileSnapshot.sourceIdentityDigest,
+    release_manifest_ancestor_identity_digest: manifestFileSnapshot.ancestorIdentityDigest,
+  })));
   ensureSafePrivateDirectory(
     paths.lockRoot,
     homecookRoot,
@@ -3240,6 +3420,7 @@ export async function promoteLocalMacProductionRelease({
     rootDir: realRootDir,
     verifyAttestation: () => manifest.attestation,
   });
+  onProductionLockAcquired();
 
   const stableRunning = readOptionalRunningDescriptorSnapshot({
     currentUid,
@@ -3587,6 +3768,22 @@ export async function promoteLocalMacProductionRelease({
     readiness,
     release_dir: executionSnapshot.appRoot,
   };
+}
+
+export async function promoteLocalMacProductionRelease(options = {}) {
+  assertPromotionDependencies(options);
+  let lockAcquired = false;
+  try {
+    return await promoteLocalMacProductionReleaseUnsafe({
+      ...options,
+      onProductionLockAcquired: () => {
+        lockAcquired = true;
+      },
+    });
+  } catch (error) {
+    if (lockAcquired) throw error;
+    throw toPromotionAuthoritySourceError(error);
+  }
 }
 
 function brandLocalMacProductionMutationAuthority(payload) {
