@@ -129,7 +129,10 @@ export function classifyProductionInventory(inventory, {
     && (runningJob(legacyJob) || missingJob(legacyJob));
   const dockerComplete = docker.containers.length > 0 && docker.networks.length > 0 && docker.volumes.length > 0
     && docker.containers.every((container) => container.state === "running");
-  const portsComplete = portListeners.some((listener) => listener.port === 3100 && Number.isSafeInteger(listener.pid));
+  const portsComplete = portListeners.length === 1
+    && portListeners[0].port === 3100
+    && portListeners[0].present === true
+    && Number.isSafeInteger(portListeners[0].pid);
   const configIdentities = new Set(opaqueConfigs.map((config) => config.identity));
   const configsComplete = opaqueConfigs.length === 2
     && configIdentities.has("production-env") && configIdentities.has("full-local-config")

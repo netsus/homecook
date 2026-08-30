@@ -2615,7 +2615,7 @@ export function prepareLocalMacProductionRelease({
   }
 }
 
-function normalizeRunningReleaseDescriptor(value, label = "Current running release descriptor") {
+export function normalizeRunningReleaseDescriptor(value, label = "Current running release descriptor") {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label} must be a JSON object.`);
   }

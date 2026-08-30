@@ -1420,6 +1420,16 @@ describe("mixed-state classifier", () => {
     expect(result.states).toContain("unknown");
     expect(result.promotion_safe).toBe(false);
 
+    const duplicateListenerSurfaces = {
+      ...inventory.surfaces,
+      port_listeners: [
+        inventory.surfaces.port_listeners[0],
+        inventory.surfaces.port_listeners[0],
+      ],
+    };
+    const duplicateListenerInventory = rebuildInventory(inventory, duplicateListenerSurfaces);
+    expect(classifyProductionInventory(duplicateListenerInventory).promotion_safe).toBe(false);
+
     const { adapters } = createAdapters();
     adapters.readDocker = vi.fn(async () => { throw new Error("TOP_SECRET_DOCKER_FAILURE"); });
     const failed = await collectReadOnlyProductionInventory({
