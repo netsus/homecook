@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -226,7 +226,9 @@ function createFrozenRuntimeInputsFixture(fullLocalConfigBytes: Buffer | string 
   const secretRoot = join(root, "secrets");
   mkdirSync(scratchRoot, { mode: 0o700 });
   mkdirSync(secretRoot, { mode: 0o700 });
-  const fullLocalConfigPath = join(root, "full-local.env");
+  const fullLocalConfigPath = approvedHomeDir
+    ? join(approvedHomeDir, ".homecook/config/full-local-production.env")
+    : join(root, "full-local.env");
   const fullLocalSecretRoot = join(root, "full-local-secrets");
   const workerConfigPath = join(secretRoot, "worker.env");
   const workerCredentialPath = join(secretRoot, "credential.json");
@@ -244,6 +246,7 @@ function createFrozenRuntimeInputsFixture(fullLocalConfigBytes: Buffer | string 
   const defaultFullLocalConfig = readFileSync("infra/full-local-supabase/.env.production.example", "utf8")
     .replaceAll("/Users/REPLACE_ME", root)
     .replace(/^FULL_LOCAL_SECRET_DIR=.*$/mu, `FULL_LOCAL_SECRET_DIR=${fullLocalSecretRoot}`);
+  mkdirSync(dirname(fullLocalConfigPath), { recursive: true, mode: 0o700 });
   writeFileSync(fullLocalConfigPath, fullLocalConfigBytes ?? defaultFullLocalConfig, { mode: 0o600 });
   writeFileSync(workerConfigPath, `TOKEN_FILE=${tokenPath}\n`, { mode: 0o600 });
   writeFileSync(workerCredentialPath, JSON.stringify({ token_file: tokenPath }), { mode: 0o600 });
@@ -254,6 +257,7 @@ function createFrozenRuntimeInputsFixture(fullLocalConfigBytes: Buffer | string 
       bundlePath: attestationBundlePath,
       fullLocalConfigPath,
       homeDir: approvedHomeDir ?? root,
+      rootDir: root,
       subjectManifestPath: attestationSubjectPath,
       trustedRootPath: attestationTrustedRootPath,
     },
@@ -338,10 +342,12 @@ function createDefaultWorkerPreflightFixture() {
   const configPath = join(secretRoot, "worker.env");
   const fullLocalConfigPath = join(homeDir, ".homecook/config/full-local-production.env");
   const fullLocalSecretRoot = join(homeDir, ".homecook/secrets/full-local-supabase");
-  const bundlePath = join(root, "attestation-bundle.jsonl");
-  const subjectManifestPath = join(root, "attestation-subject.json");
-  const trustedRootPath = join(root, "attestation-trusted-root.jsonl");
+  const attestationRoot = join(root, "authority/attestation");
+  const bundlePath = join(attestationRoot, "attestation-bundle.jsonl");
+  const subjectManifestPath = join(attestationRoot, "attestation-subject.json");
+  const trustedRootPath = join(attestationRoot, "attestation-trusted-root.jsonl");
   mkdirSync(dirname(fullLocalConfigPath), { recursive: true, mode: 0o700 });
+  mkdirSync(attestationRoot, { recursive: true, mode: 0o700 });
   const fullLocalSecrets = generateFullLocalSecretBundle();
   materializeSecretFilesCreateOnly({
     names: [...FULL_LOCAL_SECRET_NAMES],
@@ -395,6 +401,7 @@ function createDefaultWorkerPreflightFixture() {
       bundlePath,
       fullLocalConfigPath,
       homeDir,
+      rootDir: root,
       subjectManifestPath,
       trustedRootPath,
       workerAppDescriptorPath: appDescriptorPath,
@@ -410,6 +417,7 @@ function createDefaultWorkerPreflightFixture() {
     }),
     policyPath,
     fullLocalSecretRoot,
+    rootDir: root,
   };
 }
 
@@ -534,6 +542,14 @@ describe("local Mac production promote adapters", () => {
     expect(frozenFullLocalConfig).toContain(`FULL_LOCAL_SECRET_DIR=${frozen.paths.fullLocalSecretRoot}`);
     expect(frozenFullLocalConfig).not.toContain(fixture.fullLocalSecretRoot);
     expect(readdirSync(frozen.paths.fullLocalSecretRoot).sort()).toEqual([...FULL_LOCAL_SECRET_NAMES].sort());
+    const attestationSource = frozen.source_records.find((entry: { label: string }) =>
+      entry.label === "attestation_bundle");
+    expect(attestationSource).toBeTruthy();
+    if (!attestationSource) throw new Error("fixture attestation source missing");
+    const sourceDirectoryPaths = frozen.source_directories.map((entry: { path: string }) =>
+      entry.path);
+    expect(sourceDirectoryPaths).toContain(fixture.rootDir);
+    expect(sourceDirectoryPaths).toContain(dirname(dirname(attestationSource.path)));
 
     const fullLocalSecretSource = join(fixture.fullLocalSecretRoot, FULL_LOCAL_SECRET_NAMES[0]);
     const originalFullLocalSecret = readFileSync(fullLocalSecretSource);
@@ -595,6 +611,66 @@ describe("local Mac production promote adapters", () => {
     renameSync(replacement, source.path);
     expect(() => promoteAdapters.verifyLocalMacProductionFrozenRuntimeInputs(frozen))
       .toThrow(/attestation|source|identity|inode|changed/iu);
+  });
+
+  it("binds one deterministic complete ancestor chain for every frozen source", () => {
+    const frozen = createFrozenRuntimeInputsFixture();
+    const directories = frozen.source_directories as ReadonlyArray<{
+      identity: { realpath_sha256?: string };
+      path: string;
+    }>;
+    const directoryPaths = directories.map((entry) => entry.path);
+    expect(directoryPaths).toEqual([...new Set(directoryPaths)].sort());
+    for (const source of frozen.source_records) {
+      expect(directoryPaths).toContain(dirname(source.path));
+    }
+    const attestationSource = frozen.source_records.find((entry: { label: string }) =>
+      entry.label === "attestation_bundle");
+    expect(attestationSource).toBeTruthy();
+    if (!attestationSource) throw new Error("fixture attestation source missing");
+    expect(directoryPaths).toContain(dirname(dirname(attestationSource.path)));
+    expect(directories.every((entry) =>
+      /^[0-9a-f]{64}$/u.test(entry.identity.realpath_sha256 ?? ""))).toBe(true);
+  });
+
+  it.each([
+    ["attestation", "attestation_bundle"],
+    ["worker secret tree", "worker_secret"],
+    ["full-local config", "full_local_config"],
+  ])("rejects and sanitizes a restored %s parent substitution", (_label, sourceLabel) => {
+    const frozen = createFrozenRuntimeInputsFixture();
+    const source = frozen.source_records.find((entry: { label: string }) =>
+      entry.label === sourceLabel);
+    expect(source).toBeTruthy();
+    if (!source) throw new Error("fixture source record missing");
+    const parent = dirname(source.path);
+    const backup = `${parent}.original`;
+    const replacement = `${parent}.replacement`;
+    renameSync(parent, backup);
+    mkdirSync(parent, { mode: 0o700 });
+    renameSync(parent, replacement);
+    renameSync(backup, parent);
+    rmSync(replacement, { recursive: true, force: true });
+
+    let message = "";
+    try {
+      promoteAdapters.verifyLocalMacProductionFrozenRuntimeInputs(frozen);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      "runtime_input_source_changed: frozen runtime input source authority changed.",
+    );
+    for (const prohibited of [
+      parent,
+      source.path,
+      basename(source.path),
+      "ENOENT",
+      "EACCES",
+      "lstat",
+      "open",
+      "realpath",
+    ]) expect(message).not.toContain(prohibited);
   });
 
   it.each(["missing", "extra", "mode", "symlink", "hardlink"])(

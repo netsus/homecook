@@ -169,11 +169,15 @@ function printResult(result, json, output = process.stdout) {
 
 const RUNTIME_INPUT_FREEZE_PUBLIC_ERROR =
   "runtime_input_freeze_failed: external runtime input authority is invalid.";
+const RUNTIME_INPUT_SOURCE_CHANGED_PUBLIC_ERROR =
+  "runtime_input_source_changed: frozen runtime input source authority changed.";
 
 export function sanitizeLocalMacProductionReleaseCliError(error) {
   const message = error instanceof Error ? error.message : String(error);
   return message.startsWith("runtime_input_freeze_failed:")
     ? RUNTIME_INPUT_FREEZE_PUBLIC_ERROR
+    : message.startsWith("runtime_input_source_changed:")
+      ? RUNTIME_INPUT_SOURCE_CHANGED_PUBLIC_ERROR
     : message;
 }
 

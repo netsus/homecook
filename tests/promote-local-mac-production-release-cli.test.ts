@@ -156,6 +156,21 @@ describe("promote-local-mac-production-release CLI", () => {
       "runtime_input_freeze_failed: external runtime input authority is invalid.\n",
     );
   });
+
+  it("sanitizes post-freeze source drift errors with the exact public code", () => {
+    const sensitive = "/private/tmp/full-local-secrets/service_role_key";
+    const error = new Error(
+      `runtime_input_source_changed: ENOENT lstat '${sensitive}' raw-secret-value`,
+    );
+    const stderr = `${sanitizeLocalMacProductionReleaseCliError(error)}\n`;
+    expect(stderr).toBe(
+      "runtime_input_source_changed: frozen runtime input source authority changed.\n",
+    );
+    for (const prohibited of [sensitive, "service_role_key", "ENOENT", "lstat", "raw-secret-value"]) {
+      expect(stderr).not.toContain(prohibited);
+      expect(JSON.stringify({ error: stderr })).not.toContain(prohibited);
+    }
+  });
   it("advertises the full canonical command family in help output", () => {
     const result = spawnSync(
       process.execPath,

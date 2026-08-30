@@ -81,6 +81,8 @@ function sha256Bytes(value) {
 }
 
 const FROZEN_RUNTIME_INPUT_SCHEMA = "homecook.local-mac-production-frozen-runtime-inputs.v1";
+const RUNTIME_INPUT_SOURCE_CHANGED_PUBLIC_ERROR =
+  "runtime_input_source_changed: frozen runtime input source authority changed.";
 
 function readPrivateRuntimeInput(path, label, expectedUid = process.getuid?.()) {
   const absolute = resolve(path);
@@ -124,23 +126,124 @@ function assertPrivateRuntimeDirectory(path, label, expectedUid = process.getuid
 }
 
 function snapshotPrivateRuntimeDirectoryIdentity(path, label, expectedUid = process.getuid?.()) {
-  const absolute = assertPrivateRuntimeDirectory(path, label, expectedUid);
-  const stat = lstatSync(absolute);
-  return Object.freeze({ path: absolute, identity: Object.freeze({ dev: stat.dev, ino: stat.ino, uid: stat.uid, mode: stat.mode & 0o777, nlink: stat.nlink, ctime_ms: stat.ctimeMs, mtime_ms: stat.mtimeMs }) });
+  const reservation = openPrivateRuntimeDirectoryReservation(path, label, expectedUid);
+  try {
+    assertPrivateRuntimeDirectoryReservation(reservation);
+    return Object.freeze({ path: reservation.path, identity: reservation.identity });
+  } finally {
+    closeSync(reservation.descriptor);
+  }
 }
 
-function collectPrivateAncestorDirectoryIdentities(trustedRoot, targetRoot, expectedUid) {
-  const root = resolve(trustedRoot);
-  const target = resolve(targetRoot);
-  const relativeTarget = relative(root, target);
-  if (relativeTarget.startsWith("..") || isAbsolute(relativeTarget)) throw new Error("Private runtime input root escapes its approved ancestor.");
-  const paths = [root];
-  let cursor = root;
-  for (const segment of relativeTarget.split(sep).filter(Boolean)) {
-    cursor = join(cursor, segment);
-    paths.push(cursor);
+function privateRuntimeDirectoryIdentity(stat, path) {
+  return Object.freeze({
+    dev: stat.dev,
+    ino: stat.ino,
+    uid: stat.uid,
+    mode: stat.mode & 0o777,
+    nlink: stat.nlink,
+    ctime_ms: stat.ctimeMs,
+    mtime_ms: stat.mtimeMs,
+    realpath_sha256: sha256Text(realpathSync(path)),
+  });
+}
+
+function openPrivateRuntimeDirectoryReservation(path, label, expectedUid = process.getuid?.()) {
+  const absolute = resolve(path);
+  const before = lstatSync(absolute);
+  if (before.isSymbolicLink() || !before.isDirectory()
+    || before.uid !== expectedUid || (before.mode & 0o022) !== 0
+    || realpathSync(absolute) !== absolute) {
+    throw new Error(`${label} must be an exact current-user safe directory.`);
   }
-  return paths.map((path, index) => ({ label: `approved_ancestor_${index}`, ...snapshotPrivateRuntimeDirectoryIdentity(path, "Approved runtime input ancestor", expectedUid) }));
+  let descriptor;
+  try {
+    descriptor = openSync(
+      absolute,
+      fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+    );
+    const opened = fstatSync(descriptor);
+    const identity = privateRuntimeDirectoryIdentity(opened, absolute);
+    const after = lstatSync(absolute);
+    if (!opened.isDirectory()
+      || opened.dev !== before.dev || opened.ino !== before.ino
+      || opened.uid !== before.uid || opened.mode !== before.mode
+      || opened.nlink !== before.nlink || opened.ctimeMs !== before.ctimeMs
+      || opened.mtimeMs !== before.mtimeMs
+      || privateRuntimeDirectoryIdentity(after, absolute).realpath_sha256
+        !== identity.realpath_sha256) {
+      throw new Error("Private source directory identity changed while being reserved.");
+    }
+    return Object.freeze({ descriptor, identity, path: absolute });
+  } catch (error) {
+    if (descriptor !== undefined) closeSync(descriptor);
+    throw error;
+  }
+}
+
+function assertPrivateRuntimeDirectoryReservation(reservation) {
+  const opened = fstatSync(reservation.descriptor);
+  const current = lstatSync(reservation.path);
+  const openedIdentity = privateRuntimeDirectoryIdentity(opened, reservation.path);
+  const currentIdentity = privateRuntimeDirectoryIdentity(current, reservation.path);
+  if (!opened.isDirectory() || !current.isDirectory()
+    || !sameRuntimeInputIdentity(openedIdentity, reservation.identity)
+    || !sameRuntimeInputIdentity(currentIdentity, reservation.identity)) {
+    throw new Error("Private source directory identity changed after reservation.");
+  }
+  return reservation;
+}
+
+function createPrivateSourceDirectoryRegistry(sourceRootsByPath, expectedUid) {
+  const reservations = new Map();
+  try {
+    for (const [sourcePath, trustedRoot] of [...sourceRootsByPath.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))) {
+      const root = resolve(trustedRoot);
+      const parent = dirname(resolve(sourcePath));
+      const relativeParent = relative(root, parent);
+      if (relativeParent.startsWith("..") || isAbsolute(relativeParent)) {
+        throw new Error("Private runtime input source escapes its approved authority root.");
+      }
+      const chain = [root];
+      let cursor = root;
+      for (const segment of relativeParent.split(sep).filter(Boolean)) {
+        cursor = join(cursor, segment);
+        chain.push(cursor);
+      }
+      for (const directory of chain) {
+        if (!reservations.has(directory)) {
+          reservations.set(directory, openPrivateRuntimeDirectoryReservation(
+            directory,
+            "Approved runtime input ancestor",
+            expectedUid,
+          ));
+        }
+      }
+    }
+    return Object.freeze({
+      assertStable() {
+        for (const reservation of reservations.values()) {
+          assertPrivateRuntimeDirectoryReservation(reservation);
+        }
+      },
+      close() {
+        for (const reservation of reservations.values()) closeSync(reservation.descriptor);
+      },
+      records() {
+        return [...reservations.values()]
+          .sort((left, right) => left.path.localeCompare(right.path))
+          .map((reservation, index) => Object.freeze({
+            label: `source_ancestor_${String(index).padStart(3, "0")}`,
+            path: reservation.path,
+            identity: reservation.identity,
+          }));
+      },
+    });
+  } catch (error) {
+    for (const reservation of reservations.values()) closeSync(reservation.descriptor);
+    throw error;
+  }
 }
 
 function writeFrozenRuntimeFile(path, bytes, mode = 0o600) {
@@ -967,6 +1070,13 @@ function freezeLocalMacProductionRuntimeInputsUnsafe({ options, preflight, relea
     assertPrivateRuntimeDirectory(dirname(sourcePath), "Attestation authority parent", currentUid);
     return { label, snapshot: readPrivateRuntimeInput(sourcePath, "Attestation authority input", currentUid) };
   });
+  const attestationAuthorityRoot = resolve(options.rootDir ?? "");
+  if (!options.rootDir || attestationSnapshots.some(({ snapshot }) => {
+    const relativePath = relative(attestationAuthorityRoot, snapshot.path);
+    return relativePath.startsWith("..") || isAbsolute(relativePath);
+  })) {
+    throw new Error("Attestation authority inputs escape the approved release authority root.");
+  }
   const fullLocalConfig = readPrivateRuntimeInput(options.fullLocalConfigPath, "Full-local config", currentUid);
   const fullLocalConfigText = fullLocalConfig.bytes.toString("utf8");
   if ((fullLocalConfigText.match(/^FULL_LOCAL_SECRET_DIR=/gmu) ?? []).length !== 1) {
@@ -982,7 +1092,6 @@ function freezeLocalMacProductionRuntimeInputsUnsafe({ options, preflight, relea
     ? [...FULL_LOCAL_SECRET_NAMES, ...FULL_LOCAL_OAUTH_SECRET_NAMES]
     : [...FULL_LOCAL_SECRET_NAMES];
   const fullLocalSecretTree = collectExactFullLocalSecretFiles(fullLocalSecretSourceRoot, currentUid, expectedFullLocalSecretNames);
-  const sourceDirectories = collectPrivateAncestorDirectoryIdentities(options.homeDir, fullLocalSecretTree.root, currentUid);
   const workerConfig = readPrivateRuntimeInput(worker.configPath, "Worker config", currentUid);
   const workerCredential = readPrivateRuntimeInput(worker.credentialPath, "Worker credential", currentUid);
   if (fullLocalConfig.identity.sha256 !== preflight.full_local_config_sha256
@@ -992,16 +1101,48 @@ function freezeLocalMacProductionRuntimeInputsUnsafe({ options, preflight, relea
   }
   const secretTree = collectPrivateRuntimeFiles(worker.secretRoot, currentUid);
   const sourceRecordsByPath = new Map();
+  const sourceSnapshotsByPath = new Map();
+  const sourceRootsByPath = new Map();
   for (const [label, snapshot] of [["full_local_config", fullLocalConfig], ["worker_config", workerConfig], ["worker_credential", workerCredential]]) {
     sourceRecordsByPath.set(snapshot.path, { label, path: snapshot.path, identity: snapshot.identity });
+    sourceSnapshotsByPath.set(snapshot.path, snapshot);
+    sourceRootsByPath.set(
+      snapshot.path,
+      label === "full_local_config" ? options.homeDir : secretTree.root,
+    );
   }
-  for (const snapshot of secretTree.records) sourceRecordsByPath.set(snapshot.path, { label: "worker_secret", path: snapshot.path, identity: snapshot.identity });
-  for (const snapshot of fullLocalSecretTree.records) sourceRecordsByPath.set(snapshot.path, { label: "full_local_secret", path: snapshot.path, identity: snapshot.identity });
-  for (const { label, snapshot } of attestationSnapshots) sourceRecordsByPath.set(snapshot.path, { label, path: snapshot.path, identity: snapshot.identity });
+  for (const snapshot of secretTree.records) {
+    sourceRecordsByPath.set(snapshot.path, { label: "worker_secret", path: snapshot.path, identity: snapshot.identity });
+    sourceSnapshotsByPath.set(snapshot.path, snapshot);
+    sourceRootsByPath.set(snapshot.path, secretTree.root);
+  }
+  for (const snapshot of fullLocalSecretTree.records) {
+    sourceRecordsByPath.set(snapshot.path, { label: "full_local_secret", path: snapshot.path, identity: snapshot.identity });
+    sourceSnapshotsByPath.set(snapshot.path, snapshot);
+    sourceRootsByPath.set(snapshot.path, options.homeDir);
+  }
+  for (const { label, snapshot } of attestationSnapshots) {
+    sourceRecordsByPath.set(snapshot.path, { label, path: snapshot.path, identity: snapshot.identity });
+    sourceSnapshotsByPath.set(snapshot.path, snapshot);
+    sourceRootsByPath.set(snapshot.path, attestationAuthorityRoot);
+  }
+
+  const sourceDirectoryRegistry = createPrivateSourceDirectoryRegistry(
+    sourceRootsByPath,
+    currentUid,
+  );
+  const sourceDirectories = sourceDirectoryRegistry.records();
 
   const frozenRoot = join(scratch, "runtime-inputs");
-  mkdirSync(frozenRoot, { mode: 0o700 });
   try {
+  sourceDirectoryRegistry.assertStable();
+  for (const [path, snapshot] of sourceSnapshotsByPath.entries()) {
+    const current = readPrivateRuntimeInput(path, "Reserved runtime input source", currentUid);
+    if (!sameRuntimeInputIdentity(current.identity, snapshot.identity)) {
+      throw new Error("Runtime input source identity changed after ancestor reservation.");
+    }
+  }
+  mkdirSync(frozenRoot, { mode: 0o700 });
   const frozenSecretRoot = join(frozenRoot, "worker-secrets");
   mkdirSync(frozenSecretRoot, { mode: 0o700 });
   const frozenFullLocalSecretRoot = join(frozenRoot, "full-local-secrets");
@@ -1059,6 +1200,7 @@ function freezeLocalMacProductionRuntimeInputsUnsafe({ options, preflight, relea
   }));
   const frozenInventoryDigest = sha256Text(JSON.stringify(frozenInventory));
   const authorityDigest = sha256Text(JSON.stringify({ source_identity_digest: sourceIdentityDigest, frozen_inventory_digest: frozenInventoryDigest }));
+  sourceDirectoryRegistry.assertStable();
   return Object.freeze({
     schema: FROZEN_RUNTIME_INPUT_SCHEMA,
     authority_digest: authorityDigest,
@@ -1091,6 +1233,8 @@ function freezeLocalMacProductionRuntimeInputsUnsafe({ options, preflight, relea
   } catch (error) {
     if (existsSync(frozenRoot)) rmSync(frozenRoot, { recursive: true, force: true });
     throw error;
+  } finally {
+    sourceDirectoryRegistry.close();
   }
 }
 
@@ -1105,7 +1249,7 @@ export function freezeLocalMacProductionRuntimeInputs(input) {
   }
 }
 
-export function verifyLocalMacProductionFrozenRuntimeInputs(frozen, { checkSources = true } = {}) {
+function verifyLocalMacProductionFrozenRuntimeInputsUnsafe(frozen, { checkSources = true } = {}) {
   if (!frozen || frozen.schema !== FROZEN_RUNTIME_INPUT_SCHEMA || !/^[0-9a-f]{64}$/u.test(frozen.authority_digest ?? "")) {
     throw new Error("Frozen runtime input authority is incomplete.");
   }
@@ -1137,6 +1281,14 @@ export function verifyLocalMacProductionFrozenRuntimeInputs(frozen, { checkSourc
   const authorityDigest = sha256Text(JSON.stringify({ source_identity_digest: sourceIdentityDigest, frozen_inventory_digest: frozenInventoryDigest }));
   if (sourceIdentityDigest !== frozen.source_identity_digest || authorityDigest !== frozen.authority_digest) throw new Error("Frozen runtime input authority digest drifted.");
   return frozen;
+}
+
+export function verifyLocalMacProductionFrozenRuntimeInputs(frozen, options) {
+  try {
+    return verifyLocalMacProductionFrozenRuntimeInputsUnsafe(frozen, options);
+  } catch (error) {
+    throw new Error(RUNTIME_INPUT_SOURCE_CHANGED_PUBLIC_ERROR, { cause: error });
+  }
 }
 
 export function cleanupLocalMacProductionFrozenRuntimeInputs(frozen) {

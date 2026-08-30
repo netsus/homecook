@@ -3169,7 +3169,17 @@ export async function promoteLocalMacProductionRelease({
   if (!frozenRuntimeInputs || !DIGEST_PATTERN.test(frozenRuntimeInputs.authority_digest ?? "")) {
     throw new Error("Frozen runtime input authority is invalid.");
   }
-  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: true });
+  const verifyFrozenRuntimeInputsSafely = (options) => {
+    try {
+      return verifyFrozenRuntimeInputs(frozenRuntimeInputs, options);
+    } catch (error) {
+      throw new Error(
+        "runtime_input_source_changed: frozen runtime input source authority changed.",
+        { cause: error },
+      );
+    }
+  };
+  verifyFrozenRuntimeInputsSafely({ checkSources: true });
   const preLockNow = readFreshAuthorityNow("pre-lock");
   const preLockRehearsalAuthority = await verifyRehearsalAuthority({
     frozenCandidateAuthority: sealedCandidate,
@@ -3201,9 +3211,16 @@ export async function promoteLocalMacProductionRelease({
     release_manifest_ancestor_identity_digest: manifestFileSnapshot.ancestorIdentityDigest,
   })));
   verifyLocalMacProductionExecutionSnapshot(frozenScratch);
-  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: true });
+  verifyFrozenRuntimeInputsSafely({ checkSources: true });
   assertPrivatePromotionScratchReservation(scratchReservation, currentUid, { materialized: true, runtimeInputs: true });
-  verifyLocalMacProductionAuthorityInputSnapshot(manifestFileSnapshot);
+  try {
+    verifyLocalMacProductionAuthorityInputSnapshot(manifestFileSnapshot);
+  } catch (error) {
+    throw new Error(
+      "runtime_input_source_changed: frozen runtime input source authority changed.",
+      { cause: error },
+    );
+  }
   ensureSafePrivateDirectory(
     paths.lockRoot,
     homecookRoot,
@@ -3242,7 +3259,7 @@ export async function promoteLocalMacProductionRelease({
     label: "Previous running release descriptor",
   });
   verifyLocalMacProductionExecutionSnapshot(frozenScratch);
-  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
+  verifyFrozenRuntimeInputsSafely({ checkSources: false });
   const lockedRuntimePreflight = initialRuntimePreflight;
 
   const executionSnapshot = createLocalMacProductionExecutionSnapshot({
@@ -3279,7 +3296,7 @@ export async function promoteLocalMacProductionRelease({
     preparedReleaseDir: frozenScratch.appRoot,
   });
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
-  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
+  verifyFrozenRuntimeInputsSafely({ checkSources: false });
 
   const mutationAuthority = validateLocalMacProductionMutationAuthority({
     command: "install",
@@ -3305,7 +3322,7 @@ export async function promoteLocalMacProductionRelease({
     verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
   });
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
-  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
+  verifyFrozenRuntimeInputsSafely({ checkSources: false });
   let readiness = validateReadyReleaseBundle(await readinessProbe({
     executionSnapshot,
     frozenRuntimeInputs,
@@ -3320,7 +3337,7 @@ export async function promoteLocalMacProductionRelease({
     verifyExecutionSnapshot: verifyLocalMacProductionExecutionSnapshot,
   }), manifest);
   verifyLocalMacProductionExecutionSnapshot(executionSnapshot);
-  verifyFrozenRuntimeInputs(frozenRuntimeInputs, { checkSources: false });
+  verifyFrozenRuntimeInputsSafely({ checkSources: false });
 
   const finalRunning = readOptionalRunningDescriptorSnapshot({
     currentUid,

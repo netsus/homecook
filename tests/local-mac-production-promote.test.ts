@@ -504,7 +504,7 @@ describe("local Mac production promote", () => {
       ...promoteOptions(fixture),
       verifyFrozenRuntimeInputs,
     } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
-      .rejects.toThrow(/external runtime input|source identity|freeze/iu);
+      .rejects.toThrow(/^runtime_input_source_changed: frozen runtime input source authority changed\.$/u);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
     expect(fixture.installBundle).toHaveBeenCalledTimes(0);
     expect(fixture.readinessProbe).toHaveBeenCalledTimes(0);
@@ -549,6 +549,43 @@ describe("local Mac production promote", () => {
       verifyFrozenRuntimeInputs,
     } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
       .rejects.toThrow(/authority|identity|inode|changed/iu);
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
+  });
+
+  it("sanitizes every post-freeze source validation failure before lock creation", async () => {
+    const fixture = createFixture();
+    const sourceRoot = createTempDirectory("homecook-sensitive-source-");
+    const sourcePath = join(sourceRoot, "provider-secret.env");
+    const secretValue = "provider-secret-value-that-must-not-escape";
+    let sourceChecks = 0;
+    const verifyFrozenRuntimeInputs = vi.fn((value, options: { checkSources?: boolean } = {}) => {
+      if (options.checkSources && ++sourceChecks === 2) {
+        throw new Error(`ENOENT lstat '${sourcePath}' containing ${secretValue}`);
+      }
+      return value;
+    });
+
+    let message = "";
+    try {
+      await promoteLocalMacProductionRelease({
+        ...promoteOptions(fixture),
+        verifyFrozenRuntimeInputs,
+      } as Parameters<typeof promoteLocalMacProductionRelease>[0]);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      "runtime_input_source_changed: frozen runtime input source authority changed.",
+    );
+    for (const prohibited of [
+      sourceRoot,
+      sourcePath,
+      "provider-secret.env",
+      secretValue,
+      "ENOENT",
+      "lstat",
+    ]) expect(message).not.toContain(prohibited);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
