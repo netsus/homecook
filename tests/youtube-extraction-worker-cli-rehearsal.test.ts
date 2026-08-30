@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import {
   chmodSync,
@@ -132,21 +133,18 @@ function materializeCliFixture(baseUrl = "http://127.0.0.1:3000") {
     })),
     0o600,
   );
-  writePrivateFile(
-    rehearsalRpcConfigPath,
-    JSON.stringify({
-      schema: "homecook.rehearsal-worker-rpc-config.v1",
-      base_url: baseUrl,
-      token_file: "rehearsal-worker.jwt",
-      fixture_identity: runId,
-      creation_nonce: "fixture-creation-nonce",
-      policy_snapshot_digest: policySnapshotDigest,
-      schema_identity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
-      allowed_snapshot_digest: allowedSnapshotDigest,
-      lifecycle_version: "youtube-extraction-rpc-v1",
-    }),
-    0o400,
-  );
+  const rehearsalRpcConfigSource = JSON.stringify({
+    schema: "homecook.rehearsal-worker-rpc-config.v1",
+    base_url: baseUrl,
+    token_file: "rehearsal-worker.jwt",
+    fixture_identity: runId,
+    creation_nonce: "fixture-creation-nonce",
+    policy_snapshot_digest: policySnapshotDigest,
+    schema_identity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+    allowed_snapshot_digest: allowedSnapshotDigest,
+    lifecycle_version: "youtube-extraction-rpc-v1",
+  });
+  writePrivateFile(rehearsalRpcConfigPath, rehearsalRpcConfigSource, 0o400);
 
   const args = [
     "--secret-root", secretRoot,
@@ -158,6 +156,8 @@ function materializeCliFixture(baseUrl = "http://127.0.0.1:3000") {
     "--queue-state", queuePath,
     "--expected-schema", expectedSchemaPath,
     "--rehearsal-rpc-config", rehearsalRpcConfigPath,
+    "--rehearsal-rpc-config-digest",
+    createHash("sha256").update(rehearsalRpcConfigSource).digest("hex"),
   ];
   return { args, materialized, secretRoot };
 }

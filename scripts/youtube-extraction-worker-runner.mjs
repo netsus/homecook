@@ -80,6 +80,12 @@ function parseArgs(argv) {
       case "--rehearsal-rpc-config":
         options.rehearsalRpcConfigPath = ensureAbsolutePath(value, "rehearsalRpcConfigPath");
         break;
+      case "--rehearsal-rpc-config-digest":
+        if (!/^[0-9a-f]{64}$/u.test(value)) {
+          throw new Error("rehearsalRpcConfigDigest must be 64-hex.");
+        }
+        options.rehearsalRpcConfigDigest = value;
+        break;
       case "--secret-root":
         options.secretRoot = ensureAbsolutePath(value, "secretRoot");
         break;
@@ -168,8 +174,13 @@ async function main() {
     if (!preflight.ready) {
       throw new Error(`worker preflight failed: ${preflight.blockers.join(",")}`);
     }
-    if (!options.rehearsalRpcConfigPath) throw new Error("rehearsal synthetic worker requires --rehearsal-rpc-config");
-    const rehearsalConfig = readSealedRehearsalRpcConfig(options.rehearsalRpcConfigPath);
+    if (!options.rehearsalRpcConfigPath || !options.rehearsalRpcConfigDigest) {
+      throw new Error("rehearsal synthetic worker requires sealed RPC config authority");
+    }
+    const rehearsalConfig = readSealedRehearsalRpcConfig(
+      options.rehearsalRpcConfigPath,
+      { expectedAuthority: { config_digest: options.rehearsalRpcConfigDigest } },
+    );
     const rpc = createRehearsalPostgrestRpcClient({ baseUrl: rehearsalConfig.config.base_url, syntheticToken: rehearsalConfig.token, fixtureIdentity: rehearsalConfig.config.fixture_identity });
     print(await runSyntheticYoutubeExtractionWorkerJob({
       allowedSnapshotDigest: workerArtifact.allowed_snapshot_digest,

@@ -799,6 +799,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
       "--queue-state", "/run/worker-secrets/queue.json",
       "--expected-schema", "/sealed-worker/scripts/manifests/youtube-extraction-expected-schema.json",
       "--rehearsal-rpc-config", "/run/worker-secrets/rehearsal-rpc-config.json",
+      "--rehearsal-rpc-config-digest", rehearsalRpcExpectedAuthority.config_digest,
     ],
   };
 }
