@@ -888,16 +888,16 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
 describe("release rehearsal R2 public command and schema", () => {
   it("keeps every canonical R2 public command and argument table aligned with CLI help", () => {
     const runbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    const r2Section = /### R2\. isolated rehearse(?<section>[\s\S]*?)### R3\./u.exec(runbook)?.groups?.section ?? "";
-    const plannedCommand = /planned command:[\s\S]*?```text\n(?<command>pnpm release:rehearsal:run[^\n]+)\n```/u.exec(r2Section)?.groups?.command ?? "";
-    const publicCommand = /public command는 `(?<command>pnpm release:rehearsal:run[^`]+)`/u.exec(r2Section)?.groups?.command ?? "";
-    const argumentTable = [...r2Section.matchAll(/^\| `(?<argument>--[a-z-]+)` \|/gmu)]
-      .map((match) => match.groups?.argument);
+    const r2Section = /### R2\. isolated rehearse([\s\S]*?)### R3\./u.exec(runbook)?.[1] ?? "";
+    const plannedCommand = /planned command:[\s\S]*?```text\n(pnpm release:rehearsal:run[^\n]+)\n```/u.exec(r2Section)?.[1] ?? "";
+    const publicCommand = /public command는 `(pnpm release:rehearsal:run[^`]+)`/u.exec(r2Section)?.[1] ?? "";
+    const argumentTable = [...r2Section.matchAll(/^\| `(--[a-z-]+)` \|/gmu)]
+      .map((match) => match[1]);
     const help = spawnSync(process.execPath, ["scripts/local-mac-production-rehearsal-run.mjs", "--help"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });
-    const helpCommand = /^\s+(?<command>pnpm release:rehearsal:run[^\n]+)$/mu.exec(help.stdout)?.groups?.command ?? "";
+    const helpCommand = /^\s+(pnpm release:rehearsal:run[^\n]+)$/mu.exec(help.stdout)?.[1] ?? "";
     const argumentsIn = (command: string) => command.match(/--[a-z-]+/gu) ?? [];
     const requiredArguments = ["--candidate", "--production-env-authority", "--json"];
 
