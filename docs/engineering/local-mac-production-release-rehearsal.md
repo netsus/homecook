@@ -184,6 +184,7 @@ pnpm release:rehearsal:repeatability -- --member-receipt <absolute-run-receipt> 
 - receipt schema, issuer/tool identity, cryptographic digest, expiry, exact SHA/tree/build/bundle, image, migration, canary, cleanup, no-production-mutation evidence를 offline으로 재검증한다.
 - receipt path와 parent는 `lstat`/`realpath`, owner, private mode, device/inode를 검증한다. symlink, repository 내부 secret alias, mutable overwrite, duplicate receipt ID를 거부한다.
 - receipt의 `issued_at <= completed_at <= now`는 zero clock-skew로 강제한다. future member/run/repeatability claim은 발급과 검증 모두에서 거부한다.
+- receipt는 `run_id` UUID-v4에서 exact `homecook-rehearsal-<run_id>` Docker project와 `hc_r2_<첫 16 hex>` / `hc_r2_user_<첫 16 hex>` DB name/user를 재파생하고 DB identity digest까지 비교한다. app/full-local/worker는 exact `container` + nonempty container IDs, foreground supervisor는 exact `process` + empty container IDs여야 한다. port는 exact 4 unique values, `20000..60999` 범위이며 `3000`, `3100`, `5432`, `54321..54324`를 허용하지 않는다. run evidence, receipt runtime validator와 closed JSON schema는 같은 shape/range를 강제한다.
 - verify는 Docker, process, production pointer/descriptor/lock/LaunchAgent/DB를 변경하지 않는다.
 - production pre/post digest가 다르거나 inventory 중 drift가 있었으면 receipt는 생성하지 않는다.
 
@@ -298,7 +299,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 | `images` | digest 오름차순 array; 각 entry exact keys `digest,platform,local_cache_provenance_digest`; mutable tag-only 금지 |
 | `migration` | exact keys `ordered_migration_files_digest,applied_global_ledger_digest,migration_head,catalog_head,schema_identity_digest` |
 | `fixtures` | exact keys `fixture_set_id,fixture_set_digest,production_derived_row_count`; count는 0 |
-| `isolation` | exact keys `resource_identity_digest,root_identity_digest,docker_project_id,network_ids,container_ids,volume_ids,db_identity,ports,collision_preflight_digest` |
+| `isolation` | exact keys `resource_identity_digest,root_identity_digest,docker_project_id,network_ids,container_ids,volume_ids,db_identity,ports,collision_preflight_digest`; `db_identity`는 exact `name,user,identity_digest`, port는 exact 4 unique safe high values |
 | `runtime` | exact keys `app,full_local,worker,foreground_supervisor`; 각 runtime은 PID/container와 reported SHA/tree/build/bundle을 포함 |
 | `canaries` | canary ID 오름차순 array; 각 entry exact keys `canary_id,started_at,completed_at,exit_code,normalized_result_digest` |
 | `network` | exact keys `default_deny_policy_digest,allowed_endpoints,denied_attempt_count,unexpected_successful_egress_count`; unexpected count는 0 |

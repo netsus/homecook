@@ -202,7 +202,7 @@ export function resolveCompletedCandidateInput(input) {
   return candidateRoot;
 }
 
-function validatePorts(ports) {
+export function validateRunPorts(ports) {
   exactKeys(ports, PORT_KEYS, "run ports");
   const values = [];
   for (const key of PORT_KEYS) {
@@ -225,7 +225,7 @@ function rejectReservedName(value, label) {
 
 export function buildRunNamespace({ runId, ports }) {
   if (!UUID_V4.test(runId ?? "")) fail("run_id must be a cryptographically random UUID-v4");
-  validatePorts(ports);
+  validateRunPorts(ports);
   const project = `homecook-rehearsal-${runId}`;
   rejectReservedName(project, "Docker project");
   const containerNames = [
@@ -809,6 +809,16 @@ export function validateRunEvidence(value) {
     "collision_preflight_digest", "network_ids", "container_ids", "volume_ids",
   ], "run evidence isolation");
   exactKeys(value.isolation.db_identity, ["name", "user", "identity_digest"], "run evidence DB identity");
+  const expectedNamespace = buildRunNamespace({ runId: value.run_id, ports: value.isolation.ports });
+  if (
+    value.isolation.docker_project_id !== expectedNamespace.project
+    || canonicalizeJcs(value.isolation.container_names) !== canonicalizeJcs(expectedNamespace.container_names)
+    || canonicalizeJcs(value.isolation.network_names) !== canonicalizeJcs(expectedNamespace.network_names)
+    || canonicalizeJcs(value.isolation.volume_names) !== canonicalizeJcs(expectedNamespace.volume_names)
+    || value.isolation.db_identity.name !== expectedNamespace.db_name
+    || value.isolation.db_identity.user !== expectedNamespace.db_user
+    || value.isolation.db_identity.identity_digest !== sha256Jcs({ name: expectedNamespace.db_name, user: expectedNamespace.db_user })
+  ) fail("run evidence namespace is not exactly derived from run_id");
   exactKeys(value.migration, [
     "ordered_migration_files_digest", "applied_global_ledger_digest",
     "global_ledger_entries", "ordered_global_ledger", "migration_head", "catalog_head", "schema_identity_digest",

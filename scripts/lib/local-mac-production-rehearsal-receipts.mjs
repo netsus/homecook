@@ -120,8 +120,9 @@ function validateToolIdentity(value, label) {
   assertString(tool.sha256, `${label}.sha256`, HEX_64);
 }
 
-function validateRuntimeIdentity(value, label, receipt) {
+function validateRuntimeIdentity(value, label, receipt, expectedKind) {
   const runtime = assertObject(value, label, RUNTIME_KEYS);
+  if (runtime.kind !== expectedKind) fail(`${label}.kind must be ${expectedKind}`);
   if (runtime.kind === "container") {
     if (runtime.pid !== null || runtime.process_group_id !== null) fail(`${label} container PID fields must be null`);
     assertSortedUniqueStrings(runtime.container_ids, `${label}.container_ids`);
@@ -184,15 +185,30 @@ function validateRunUnsigned(value) {
 
   const isolation = assertObject(receipt.isolation, "isolation", ["resource_identity_digest", "root_identity_digest", "docker_project_id", "network_ids", "container_ids", "volume_ids", "db_identity", "ports", "collision_preflight_digest"]);
   for (const key of ["resource_identity_digest", "root_identity_digest", "collision_preflight_digest"]) assertString(isolation[key], `isolation.${key}`, HEX_64);
-  for (const key of ["docker_project_id", "db_identity"]) assertString(isolation[key], `isolation.${key}`);
+  assertString(isolation.docker_project_id, "isolation.docker_project_id");
+  const dbIdentity = assertObject(isolation.db_identity, "isolation.db_identity", ["name", "user", "identity_digest"]);
+  for (const key of ["name", "user"]) assertString(dbIdentity[key], `isolation.db_identity.${key}`);
+  assertString(dbIdentity.identity_digest, "isolation.db_identity.identity_digest", HEX_64);
+  const expectedCompact = receipt.run_id.replaceAll("-", "").slice(0, 16);
+  const expectedProject = `homecook-rehearsal-${receipt.run_id}`;
+  const expectedDbName = `hc_r2_${expectedCompact}`;
+  const expectedDbUser = `hc_r2_user_${expectedCompact}`;
+  if (
+    isolation.docker_project_id !== expectedProject
+    || dbIdentity.name !== expectedDbName
+    || dbIdentity.user !== expectedDbUser
+    || dbIdentity.identity_digest !== sha256Jcs({ name: expectedDbName, user: expectedDbUser })
+  ) fail("isolation namespace must be exactly derived from run_id");
   for (const key of ["network_ids", "container_ids", "volume_ids"]) assertSortedUniqueStrings(isolation[key], `isolation.${key}`);
-  if (!Array.isArray(isolation.ports) || isolation.ports.length === 0) fail("isolation.ports must be nonempty");
-  isolation.ports.forEach((port) => assertInteger(port, "isolation port", 1));
-  if (isolation.ports.some((port) => port > 65_535)) fail("isolation ports must be <= 65535");
+  if (!Array.isArray(isolation.ports) || isolation.ports.length !== 4) fail("isolation.ports must contain exactly four entries");
+  isolation.ports.forEach((port) => assertInteger(port, "isolation port", 20_000));
+  const reservedPorts = new Set([3000, 3100, 5432, 54321, 54322, 54323, 54324]);
+  if (isolation.ports.some((port) => port > 60_999 || reservedPorts.has(port))) fail("isolation ports must be safe high non-reserved ports");
   if (new Set(isolation.ports).size !== isolation.ports.length || isolation.ports.some((port, index) => index > 0 && isolation.ports[index - 1] > port)) fail("isolation ports must be unique ascending values");
 
   const runtime = assertObject(receipt.runtime, "runtime", ["app", "full_local", "worker", "foreground_supervisor"]);
-  for (const key of ["app", "full_local", "worker", "foreground_supervisor"]) validateRuntimeIdentity(runtime[key], `runtime.${key}`, receipt);
+  for (const key of ["app", "full_local", "worker"]) validateRuntimeIdentity(runtime[key], `runtime.${key}`, receipt, "container");
+  validateRuntimeIdentity(runtime.foreground_supervisor, "runtime.foreground_supervisor", receipt, "process");
 
   if (!Array.isArray(receipt.canaries) || receipt.canaries.length === 0) fail("canaries must be nonempty");
   const canaryIds = [];
@@ -381,7 +397,7 @@ export function buildRunReceiptFromEvidenceAuthority({
       network_ids: runEvidence.isolation.network_ids,
       container_ids: runEvidence.isolation.container_ids,
       volume_ids: runEvidence.isolation.volume_ids,
-      db_identity: runEvidence.isolation.db_identity.identity_digest,
+      db_identity: runEvidence.isolation.db_identity,
       ports: Object.values(runEvidence.isolation.ports).sort((left, right) => left - right),
       collision_preflight_digest: runEvidence.isolation.collision_preflight_digest,
     },
@@ -466,7 +482,7 @@ function validateMemberPair(memberReceipts, { now = null, requireFresh = false }
     ["docker_project_id", "Docker projects"],
     ["db_identity", "database identities"],
   ]) {
-    if (members[0].receipt.isolation[field] === members[1].receipt.isolation[field]) {
+    if (comparable(members[0].receipt.isolation[field]) === comparable(members[1].receipt.isolation[field])) {
       fail(`member ${label} must be distinct`);
     }
   }

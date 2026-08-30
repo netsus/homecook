@@ -22,7 +22,7 @@
     "build_id": { "type": "string", "minLength": 1 },
     "sealed_bundle_digest": { "$ref": "#/$defs/digest" },
     "bundle_manifest_digest": { "$ref": "#/$defs/digest" },
-    "run_id": { "type": "string", "format": "uuid" },
+    "run_id": { "type": "string", "format": "uuid", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
     "issued_at": { "type": "string", "format": "date-time" },
     "completed_at": { "type": "string", "format": "date-time" },
     "isolation": {
@@ -30,7 +30,7 @@
       "additionalProperties": false,
       "required": ["docker_project_id", "container_names", "network_names", "volume_names", "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "collision_preflight_digest", "network_ids", "container_ids", "volume_ids", "resource_identity_digest"],
       "properties": {
-        "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-" },
+        "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
         "container_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "network_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "volume_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
@@ -39,8 +39,8 @@
           "additionalProperties": false,
           "required": ["name", "user", "identity_digest"],
           "properties": {
-            "name": { "type": "string", "pattern": "^hc_r2_" },
-            "user": { "type": "string", "pattern": "^hc_r2_user_" },
+            "name": { "type": "string", "pattern": "^hc_r2_[0-9a-f]{16}$" },
+            "user": { "type": "string", "pattern": "^hc_r2_user_[0-9a-f]{16}$" },
             "identity_digest": { "$ref": "#/$defs/digest" }
           }
         },
@@ -233,7 +233,7 @@
         "sha256": { "$ref": "#/$defs/digest" }
       }
     },
-    "port": { "type": "integer", "minimum": 20000, "maximum": 60999 },
+    "port": { "type": "integer", "minimum": 20000, "maximum": 60999, "not": { "enum": [54321, 54322, 54323, 54324] } },
     "productionMeasurement": {
       "type": "object",
       "additionalProperties": false,

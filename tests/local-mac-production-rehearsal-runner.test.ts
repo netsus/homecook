@@ -242,6 +242,7 @@ function migrationReplay(overrides = {}) {
 }
 
 function evidenceFixture() {
+  const namespace = buildRunNamespace({ runId: RUN_ID, ports: PRIMITIVE_PORTS });
   const canaryIds = [
     "app-production-route",
     "cross-component-identity",
@@ -284,18 +285,18 @@ function evidenceFixture() {
     completed_at: "2026-08-29T00:01:00.000Z",
     isolation: {
       docker_project_id: `homecook-rehearsal-${RUN_ID}`,
-      container_names: ["container-a"],
-      network_names: ["network-a"],
-      volume_names: ["volume-a"],
-      db_identity: { name: "hc_r2_1111111122224333", user: "hc_r2_user_1111111122224333", identity_digest: "1".repeat(64) },
-      ports: { app: 43101, auth: 43102, postgres: 43103, storage: 43104 },
+      container_names: namespace.container_names,
+      network_names: namespace.network_names,
+      volume_names: namespace.volume_names,
+      db_identity: { name: namespace.db_name, user: namespace.db_user, identity_digest: sha256Jcs({ name: namespace.db_name, user: namespace.db_user }) },
+      ports: namespace.ports,
       root_identity_digest: "2".repeat(64),
       execution_root_identity_digest: "4".repeat(64),
       collision_preflight_digest: sha256Jcs({ collisions: [] }),
       network_ids: ["network-1"],
       container_ids: ["container-app", "container-full-local", "container-worker"],
       volume_ids: ["volume-1"],
-      resource_identity_digest: sha256Jcs({ project: `homecook-rehearsal-${RUN_ID}`, container_names: ["container-a"], network_names: ["network-a"], volume_names: ["volume-a"], owned_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"] }),
+      resource_identity_digest: sha256Jcs({ project: `homecook-rehearsal-${RUN_ID}`, container_names: namespace.container_names, network_names: namespace.network_names, volume_names: namespace.volume_names, owned_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"] }),
     },
     migration: migrationReplay(),
     fixtures: { fixture_set_id: "homecook-r2-synthetic-v1", fixture_set_digest: "5".repeat(64), production_derived_row_count: 0 },
@@ -847,6 +848,10 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
     ["network digest", (value: ReturnType<typeof evidenceFixture>) => { value.network.default_deny_policy_digest = "not-a-digest"; }],
     ["cleanup equality", (value: ReturnType<typeof evidenceFixture>) => { value.cleanup.removed_resource_ids = []; }],
     ["resource identity forgery", (value: ReturnType<typeof evidenceFixture>) => { value.isolation.resource_identity_digest = "0".repeat(64); }],
+    ["Docker namespace substitution", (value: ReturnType<typeof evidenceFixture>) => { value.isolation.docker_project_id = "p"; }],
+    ["database namespace substitution", (value: ReturnType<typeof evidenceFixture>) => { value.isolation.db_identity.name = "db"; value.isolation.db_identity.identity_digest = sha256Jcs({ name: "db", user: value.isolation.db_identity.user }); }],
+    ["reserved application port", (value: ReturnType<typeof evidenceFixture>) => { value.isolation.ports.app = 3000; }],
+    ["duplicate run port", (value: ReturnType<typeof evidenceFixture>) => { value.isolation.ports.app = value.isolation.ports.auth; }],
     ["production measurement", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.measurement_digest = "0".repeat(64); }],
     ["production snapshots differ", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.production_snapshot_post_digest = "0".repeat(64); }],
     ["observer subject coverage", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.independent_observer.registered_subjects = value.production_guard.independent_observer.registered_subjects.filter((subject) => subject.component !== "worker"); }],

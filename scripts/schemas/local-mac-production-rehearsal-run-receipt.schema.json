@@ -43,10 +43,10 @@
       "additionalProperties": false,
       "required": ["app", "full_local", "worker", "foreground_supervisor"],
       "properties": {
-        "app": { "$ref": "#/definitions/runtimeIdentity" },
-        "full_local": { "$ref": "#/definitions/runtimeIdentity" },
-        "worker": { "$ref": "#/definitions/runtimeIdentity" },
-        "foreground_supervisor": { "$ref": "#/definitions/runtimeIdentity" }
+        "app": { "$ref": "#/definitions/containerRuntimeIdentity" },
+        "full_local": { "$ref": "#/definitions/containerRuntimeIdentity" },
+        "worker": { "$ref": "#/definitions/containerRuntimeIdentity" },
+        "foreground_supervisor": { "$ref": "#/definitions/processRuntimeIdentity" }
       }
     },
     "canaries": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/canary" } },
@@ -119,24 +119,49 @@
       "properties": {
         "resource_identity_digest": { "$ref": "#/definitions/hex64" },
         "root_identity_digest": { "$ref": "#/definitions/hex64" },
-        "docker_project_id": { "$ref": "#/definitions/nonempty" },
+        "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
         "network_ids": { "$ref": "#/definitions/stringArray" },
         "container_ids": { "$ref": "#/definitions/stringArray" },
         "volume_ids": { "$ref": "#/definitions/stringArray" },
-        "db_identity": { "$ref": "#/definitions/nonempty" },
-        "ports": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+        "db_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "user", "identity_digest"],
+          "properties": {
+            "name": { "type": "string", "pattern": "^hc_r2_[0-9a-f]{16}$" },
+            "user": { "type": "string", "pattern": "^hc_r2_user_[0-9a-f]{16}$" },
+            "identity_digest": { "$ref": "#/definitions/hex64" }
+          }
+        },
+        "ports": { "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true, "items": { "type": "integer", "minimum": 20000, "maximum": 60999, "not": { "enum": [54321, 54322, 54323, 54324] } } },
         "collision_preflight_digest": { "$ref": "#/definitions/hex64" }
       }
     },
-    "runtimeIdentity": {
+    "containerRuntimeIdentity": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "pid", "process_group_id", "container_ids", "reported_release_sha", "reported_release_tree", "reported_build_id", "reported_sealed_bundle_digest", "reported_migration_head"],
       "properties": {
-        "kind": { "enum": ["container", "process"] },
-        "pid": { "type": ["integer", "null"], "minimum": 1, "maximum": 9007199254740991 },
+        "kind": { "const": "container" },
+        "pid": { "type": "null" },
         "process_group_id": { "type": "null" },
-        "container_ids": { "$ref": "#/definitions/stringArray" },
+        "container_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/nonempty" } },
+        "reported_release_sha": { "$ref": "#/definitions/hex40" },
+        "reported_release_tree": { "$ref": "#/definitions/hex40" },
+        "reported_build_id": { "$ref": "#/definitions/nonempty" },
+        "reported_sealed_bundle_digest": { "$ref": "#/definitions/hex64" },
+        "reported_migration_head": { "$ref": "#/definitions/nonempty" }
+      }
+    },
+    "processRuntimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "pid", "process_group_id", "container_ids", "reported_release_sha", "reported_release_tree", "reported_build_id", "reported_sealed_bundle_digest", "reported_migration_head"],
+      "properties": {
+        "kind": { "const": "process" },
+        "pid": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "process_group_id": { "type": "null" },
+        "container_ids": { "type": "array", "maxItems": 0 },
         "reported_release_sha": { "$ref": "#/definitions/hex40" },
         "reported_release_tree": { "$ref": "#/definitions/hex40" },
         "reported_build_id": { "$ref": "#/definitions/nonempty" },

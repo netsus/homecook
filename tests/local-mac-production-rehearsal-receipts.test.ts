@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import * as receiptAuthority from "../scripts/lib/local-mac-production-rehearsal-receipts.mjs";
 import * as productionRelease from "../scripts/lib/local-mac-production-promotion-authority.mjs";
+import { buildRunNamespace } from "../scripts/lib/local-mac-production-rehearsal-runner.mjs";
 import {
   buildRepeatabilityReceipt,
   buildRunReceipt,
@@ -34,6 +35,10 @@ const SHA_C = "c".repeat(64);
 const RELEASE_SHA = "1".repeat(40);
 const RELEASE_TREE = "2".repeat(40);
 const NOW = new Date("2026-08-29T10:30:00.000Z");
+const RUN_IDS = {
+  1: "11111111-1111-4111-8111-111111111111",
+  2: "22222222-2222-4222-8222-222222222222",
+} as const;
 
 function buildTestRunReceipt(input: Record<string, unknown>) {
   return buildRunReceipt(input, { now: NOW });
@@ -77,6 +82,9 @@ function runtimeIdentity(component: string, index = 1) {
 function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
   const issuedHour = String(index + 7).padStart(2, "0");
   const completedHour = String(index + 8).padStart(2, "0");
+  const runId = RUN_IDS[index];
+  const compact = runId.replaceAll("-", "").slice(0, 16);
+  const dbIdentity = { name: `hc_r2_${compact}`, user: `hc_r2_user_${compact}` };
   return {
     schema: "homecook.local-mac-production-rehearsal-run-receipt.v1",
     canonicalization: "RFC8785-JCS+SHA256",
@@ -89,7 +97,7 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
     build_id: "build-001",
     sealed_bundle_digest: SHA_B,
     bundle_manifest_digest: SHA_C,
-    run_id: `00000000-0000-4000-8000-00000000000${index}`,
+    run_id: runId,
     issued_at: `2026-08-29T${issuedHour}:00:00.000Z`,
     completed_at: `2026-08-29T${completedHour}:00:00.000Z`,
     toolchain: {
@@ -122,12 +130,12 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
     isolation: {
       resource_identity_digest: index === 1 ? SHA_A : SHA_C,
       root_identity_digest: index === 1 ? SHA_C : SHA_A,
-      docker_project_id: `homecook-rehearsal-${index}`,
+      docker_project_id: `homecook-rehearsal-${runId}`,
       network_ids: [`network-${index}`],
       container_ids: [`app-container-${index}`, `full_local-container-${index}`, `worker-container-${index}`],
       volume_ids: [`volume-${index}`],
-      db_identity: `database-${index}`,
-      ports: [46000 + index],
+      db_identity: { ...dbIdentity, identity_digest: sha256Jcs(dbIdentity) },
+      ports: [46_000 + index, 47_000 + index, 48_000 + index, 49_000 + index],
       collision_preflight_digest: SHA_B,
     },
     runtime: {
@@ -179,6 +187,27 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
       cleanup_ownership: "pass",
     },
     issuer_task_id: "019ff-rehearsal-author",
+    ...overrides,
+  };
+}
+
+function strictNamespaceRunInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
+  const base = runInput(index);
+  const runId = RUN_IDS[index];
+  const compact = runId.replaceAll("-", "").slice(0, 16);
+  const dbIdentity = {
+    name: `hc_r2_${compact}`,
+    user: `hc_r2_user_${compact}`,
+  };
+  return {
+    ...base,
+    run_id: runId,
+    isolation: {
+      ...base.isolation,
+      docker_project_id: `homecook-rehearsal-${runId}`,
+      db_identity: { ...dbIdentity, identity_digest: sha256Jcs(dbIdentity) },
+      ports: [46_000 + index, 47_000 + index, 48_000 + index, 49_000 + index],
+    },
     ...overrides,
   };
 }
@@ -244,6 +273,10 @@ function candidateAuthority() {
 
 function runEvidenceAuthority(index: 1 | 2) {
   const base = runInput(index);
+  const namespace = buildRunNamespace({
+    runId: RUN_IDS[index],
+    ports: { app: 46_000 + index, auth: 47_000 + index, postgres: 48_000 + index, storage: 49_000 + index },
+  });
   const globalLedgerEntries = [{ sequence: 1, migration_id: base.migration.migration_head, migration_sha256: SHA_A }];
   const runtimeContainerIds = ["app", "full_local", "worker"].map((component) => `${component}-container-${index}`).sort();
   const orderedMigrationFilesDigest = sha256Jcs([{
@@ -257,9 +290,9 @@ function runEvidenceAuthority(index: 1 | 2) {
   ].sort();
   const resourceIdentityDigest = sha256Jcs({
     project: base.isolation.docker_project_id,
-    container_names: [`container-name-${index}`],
-    network_names: [`network-name-${index}`],
-    volume_names: [`volume-name-${index}`],
+    container_names: namespace.container_names,
+    network_names: namespace.network_names,
+    volume_names: namespace.volume_names,
     owned_resource_ids: ownedResourceIds,
   });
   const productionMeasurement = {
@@ -333,7 +366,7 @@ function runEvidenceAuthority(index: 1 | 2) {
     build_id: base.build_id,
     sealed_bundle_digest: base.sealed_bundle_digest,
     bundle_manifest_digest: base.bundle_manifest_digest,
-    run_id: `00000000-0000-4000-8000-00000000000${index}`,
+    run_id: RUN_IDS[index],
     issued_at: base.issued_at,
     completed_at: base.completed_at,
     rehearsal_runner: base.toolchain.rehearsal_runner,
@@ -342,14 +375,14 @@ function runEvidenceAuthority(index: 1 | 2) {
       root_identity_digest: base.isolation.root_identity_digest,
       execution_root_identity_digest: SHA_B,
       docker_project_id: base.isolation.docker_project_id,
-      network_names: [`network-name-${index}`],
-      container_names: [`container-name-${index}`],
-      volume_names: [`volume-name-${index}`],
+      network_names: namespace.network_names,
+      container_names: namespace.container_names,
+      volume_names: namespace.volume_names,
       network_ids: base.isolation.network_ids,
       container_ids: runtimeContainerIds,
       volume_ids: base.isolation.volume_ids,
-      db_identity: { name: `hc_r2_${index}`, user: `hc_r2_user_${index}`, identity_digest: SHA_A },
-      ports: { app: 46000 + index, auth: 47000 + index, postgres: 48000 + index, storage: 49000 + index },
+      db_identity: base.isolation.db_identity,
+      ports: namespace.ports,
       collision_preflight_digest: base.isolation.collision_preflight_digest,
     },
     migration: {
@@ -432,6 +465,42 @@ afterEach(() => {
 });
 
 describe("rehearsal run receipt", () => {
+  it("accepts only exact component kinds, UUID-derived namespaces, and safe unique high ports", () => {
+    expect(() => buildTestRunReceipt(strictNamespaceRunInput(1))).not.toThrow();
+    const valid = strictNamespaceRunInput(1);
+    const attacks = [
+      { runtime: { ...valid.runtime, app: { ...valid.runtime.app, kind: "process", pid: 42, container_ids: [] } } },
+      { runtime: { ...valid.runtime, full_local: { ...valid.runtime.full_local, container_ids: [] } } },
+      { isolation: { ...valid.isolation, docker_project_id: "p" } },
+      { isolation: { ...valid.isolation, db_identity: { ...valid.isolation.db_identity, name: "db" } } },
+      { isolation: { ...valid.isolation, db_identity: { ...valid.isolation.db_identity, user: "user" } } },
+      { isolation: { ...valid.isolation, ports: [3000, 47_001, 48_001, 49_001] } },
+      { isolation: { ...valid.isolation, ports: [46_001, 47_001, 54_321, 49_001] } },
+      { isolation: { ...valid.isolation, ports: [46_001, 46_001, 48_001, 49_001] } },
+    ];
+    for (const attack of attacks) {
+      expect(() => buildTestRunReceipt({ ...valid, ...attack }))
+        .toThrow(/runtime|component|container|namespace|project|database|identity|port|reserved|unique/iu);
+    }
+  });
+
+  it("rejects cross-member namespace substitution even when run and receipt digests are recomputed", () => {
+    const first = buildTestRunReceipt(strictNamespaceRunInput(1));
+    const secondInput = strictNamespaceRunInput(2);
+    expect(() => {
+      const substituted = buildTestRunReceipt({
+        ...secondInput,
+        isolation: {
+          ...secondInput.isolation,
+          docker_project_id: first.isolation.docker_project_id,
+          db_identity: first.isolation.db_identity,
+        },
+      });
+      return buildRepeatabilityReceipt({ memberReceipts: [first, substituted], issuerTaskId: "task", now: NOW });
+    })
+      .toThrow(/namespace|project|database|run.?id|derived/iu);
+  });
+
   it("rejects non-UUID runs and any runtime, isolation, or cleanup resource substitution", () => {
     expect(() => buildTestRunReceipt(runInput(1))).not.toThrow();
     expect(() => buildTestRunReceipt(runInput(1, {
@@ -475,7 +544,7 @@ describe("rehearsal run receipt", () => {
 
     expect(receipt).toMatchObject({
       schema: "homecook.local-mac-production-rehearsal-run-receipt.v1",
-      run_id: "00000000-0000-4000-8000-000000000001",
+      run_id: RUN_IDS[1],
       receipt_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
     expect(receipt.toolchain.rehearsal_runner).toEqual(runInput(1).toolchain.rehearsal_runner);
@@ -705,6 +774,13 @@ describe("receipt schemas and artifact path boundary", () => {
     const valid = buildTestRunReceipt(runInput(1));
     const attacks = [
       redigestRun({ ...valid, isolation: { ...valid.isolation, ports: [70_000] } }),
+      redigestRun({ ...valid, isolation: { ...valid.isolation, docker_project_id: "p" } }),
+      redigestRun({ ...valid, isolation: { ...valid.isolation, db_identity: { ...valid.isolation.db_identity, name: "db" } } }),
+      redigestRun({ ...valid, isolation: { ...valid.isolation, ports: [3000, 47_001, 48_001, 49_001] } }),
+      redigestRun({ ...valid, isolation: { ...valid.isolation, ports: [46_001, 47_001, 54_321, 49_001] } }),
+      redigestRun({ ...valid, isolation: { ...valid.isolation, ports: [46_001, 46_001, 48_001, 49_001] } }),
+      redigestRun({ ...valid, runtime: { ...valid.runtime, app: { ...valid.runtime.app, kind: "process", pid: 42, container_ids: [] } } }),
+      redigestRun({ ...valid, runtime: { ...valid.runtime, full_local: { ...valid.runtime.full_local, container_ids: [] } } }),
       redigestRun({ ...valid, toolchain: { ...valid.toolchain, node: { ...valid.toolchain.node, mode: "0755" } } }),
       redigestRun({ ...valid, runtime: { ...valid.runtime, app: { ...valid.runtime.app, unexpected: true } } }),
       redigestRun({ ...valid, images: [{ ...valid.images[0], local_cache_provenance_digest: "bad" }] }),
