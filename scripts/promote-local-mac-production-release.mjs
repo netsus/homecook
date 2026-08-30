@@ -22,6 +22,10 @@ import {
 import { createProductionPromotionAuthorityVerifier } from "./lib/local-mac-production-promotion-authority.mjs";
 import { resolveTrustedDockerBinary } from "./lib/full-local-session-observation-reader.mjs";
 import {
+  PROMOTION_AUTHORITY_SOURCE_CHANGED_PUBLIC_ERROR,
+  verifyPromotionAuthoritySafely,
+} from "./lib/local-mac-production-authority-error.mjs";
+import {
   assertTrustedExecutableSnapshotStable,
   resolveTrustedGhExecutable,
   resolveTrustedGitExecutable,
@@ -178,6 +182,8 @@ export function sanitizeLocalMacProductionReleaseCliError(error) {
     ? RUNTIME_INPUT_FREEZE_PUBLIC_ERROR
     : message.startsWith("runtime_input_source_changed:")
       ? RUNTIME_INPUT_SOURCE_CHANGED_PUBLIC_ERROR
+      : message.startsWith("promotion_authority_source_changed:")
+        ? PROMOTION_AUTHORITY_SOURCE_CHANGED_PUBLIC_ERROR
     : message;
 }
 
@@ -313,7 +319,7 @@ export async function runLocalMacProductionReleaseCli(
       verifyAttestation: attestationVerifier,
     });
   } else if (options.command === "promote") {
-    const verifyRehearsalAuthority = createPromotionAuthorityVerifier({
+    const unsafeVerifyRehearsalAuthority = createPromotionAuthorityVerifier({
       candidatePath: options.sealedCandidatePath,
       inventoryPath: options.productionInventoryPath,
       manifestPath: options.releaseManifestPath,
@@ -322,6 +328,10 @@ export async function runLocalMacProductionReleaseCli(
       repoRoot: options.rootDir,
       verifyAttestation: attestationVerifier,
     });
+    const verifyRehearsalAuthority = (input) => verifyPromotionAuthoritySafely(
+      unsafeVerifyRehearsalAuthority,
+      input,
+    );
     const preAdapterAuthority = await verifyRehearsalAuthority({
       phase: "pre-adapter",
       now: new Date(),

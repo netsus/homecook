@@ -15,6 +15,7 @@ import {
   validateLocalMacProductionReleaseManifest,
 } from "./local-mac-production-release.mjs";
 import { sha256Jcs } from "./rfc8785-jcs.mjs";
+import { toPromotionAuthoritySourceError } from "./local-mac-production-authority-error.mjs";
 
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 
@@ -154,11 +155,17 @@ export function createProductionPromotionAuthorityVerifier({
   readReceipt = readCanonicalReceiptFile,
   readManifestSource = readPrivateCanonicalJsonFile,
   readGitEvidence = readLocalMacProductionGitReleaseEvidence,
+  validateManifest = validateLocalMacProductionReleaseManifest,
+  classifyInventory = classifyProductionInventory,
+  digestExecutionTree = digestLocalMacProductionExecutionTree,
+  validateGate = validateProductionPromotionPreMutationGate,
 } = {}) {
   if (!Array.isArray(memberReceiptPaths) || memberReceiptPaths.length !== 2) {
     throw new Error("Production promotion authority requires exactly two member receipt paths.");
   }
-  return ({ frozenCandidateAuthority = null, manifest = null, now = new Date() } = {}) => {
+  return ({ frozenCandidateAuthority = null, manifest = null, now = new Date(), phase = "unspecified" } = {}) => {
+    void phase;
+    try {
     const manifestSource = readManifestSource(manifestPath, { repoRoot });
     let manifestInput;
     try {
@@ -166,7 +173,7 @@ export function createProductionPromotionAuthorityVerifier({
     } catch {
       throw new Error("Production release manifest is not valid JSON.");
     }
-    const validatedManifest = validateLocalMacProductionReleaseManifest({
+    const validatedManifest = validateManifest({
       manifest: manifestInput,
       manifestDigest: createHash("sha256").update(manifestSource, "utf8").digest("hex"),
       manifestPath,
@@ -202,7 +209,7 @@ export function createProductionPromotionAuthorityVerifier({
       },
     } : readCandidate(candidateRoot);
     const inventory = readInventory(inventoryPath, { repoRoot });
-    const classification = classifyProductionInventory(inventory, {
+    const classification = classifyInventory(inventory, {
       classifiedAt: now.toISOString(),
     });
     const bundleRoot = join(candidateRoot, "bundles", "bundle");
@@ -220,9 +227,9 @@ export function createProductionPromotionAuthorityVerifier({
       full_local: frozenCandidateAuthority.fullLocalSourceDigest,
       worker: frozenCandidateAuthority.workerSourceDigest,
     } : Object.fromEntries(Object.entries(componentRoots).map(
-      ([component, root]) => [component, digestLocalMacProductionExecutionTree(root)],
+      ([component, root]) => [component, digestExecutionTree(root)],
     ));
-    const authority = validateProductionPromotionPreMutationGate({
+    const authority = validateGate({
       manifest: validatedManifest,
       repeatabilityReceipt,
       memberReceipts,
@@ -250,5 +257,8 @@ export function createProductionPromotionAuthorityVerifier({
         workerSourceDigest: candidateComponentDigests.worker,
       }),
     });
+    } catch (error) {
+      throw toPromotionAuthoritySourceError(error);
+    }
   };
 }

@@ -384,7 +384,7 @@ describe("promote-local-mac-production-release CLI", () => {
       createPromoteAdapters,
       parseArguments,
     } as unknown as Parameters<typeof runLocalMacProductionReleaseCli>[1]))
-      .rejects.toThrow(/expired|repeatability|receipt/iu);
+      .rejects.toThrow(/^promotion_authority_source_changed: production promotion authority source changed\.$/u);
 
     expect(gate).toHaveBeenCalledTimes(1);
     expect(createPromoteAdapters).not.toHaveBeenCalled();
@@ -422,8 +422,50 @@ describe("promote-local-mac-production-release CLI", () => {
 
     expect(promoteRelease).toHaveBeenCalledWith(expect.objectContaining({
       expectedRehearsalAuthorityDigest: authority.authority_digest,
-      verifyRehearsalAuthority,
+      verifyRehearsalAuthority: expect.any(Function),
     }));
+  });
+
+  it("sanitizes a raw pre-adapter authority failure before adapter creation", async () => {
+    const rawRoot = "/private/tmp/promotion-authority";
+    const rawMarker = "RAW_GH_STDERR_ENOENT_EACCES";
+    const createPromoteAdapters = vi.fn();
+    const promoteRelease = vi.fn();
+    const options = {
+      command: "promote", bundlePath: "/private/bundle", confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      fullLocalConfigPath: "/private/full-local", homeDir: "/private/home", json: true,
+      memberReceiptPaths: ["/private/member-1", "/private/member-2"], nodeBin: process.execPath,
+      productionInventoryPath: "/private/inventory", releaseManifestPath: "/private/manifest",
+      repeatabilityReceiptPath: "/private/repeatability", rootDir: process.cwd(), sealedCandidatePath: "/private/candidate",
+      subjectManifestPath: "/private/subject", trustedRootPath: "/private/trusted-root",
+      workerAppDescriptorPath: "/private/worker-app", workerConfigPath: "/private/worker-config",
+      workerCredentialPath: "/private/worker-credential", workerExpectedSchemaPath: "/private/worker-schema",
+      workerManifestPath: "/private/worker-manifest", workerPolicyPath: "/private/worker-policy",
+      workerSecretRoot: "/private/worker-secrets",
+    };
+    let message = "";
+    try {
+      await runLocalMacProductionReleaseCli(["promote"], {
+        assertPromoteActivated: vi.fn(),
+        createAttestationVerifier: vi.fn(() => vi.fn()),
+        createPromotionAuthorityVerifier: vi.fn(() => vi.fn(() => {
+          throw new Error(`${rawMarker} '${rawRoot}/attestation-bundle.jsonl'`);
+        })),
+        createPromoteAdapters,
+        parseArguments: vi.fn(() => options),
+        promoteRelease,
+      } as unknown as Parameters<typeof runLocalMacProductionReleaseCli>[1]);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      "promotion_authority_source_changed: production promotion authority source changed.",
+    );
+    for (const prohibited of [rawRoot, rawMarker, "attestation-bundle.jsonl", "ENOENT", "EACCES", "STDERR"]) {
+      expect(message).not.toContain(prohibited);
+    }
+    expect(createPromoteAdapters).not.toHaveBeenCalled();
+    expect(promoteRelease).not.toHaveBeenCalled();
   });
 
   it("reports the promote activation block before argument or adapter validation", () => {

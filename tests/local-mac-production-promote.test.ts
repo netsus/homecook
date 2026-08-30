@@ -484,7 +484,7 @@ describe("local Mac production promote", () => {
       clock,
       verifyRehearsalAuthority,
     } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
-      .rejects.toThrow(/expired|inventory|stale|pre-lock/iu);
+      .rejects.toThrow(/^promotion_authority_source_changed: production promotion authority source changed\.$/u);
     expect(clock).toHaveBeenCalledTimes(3);
     expect(verifyRehearsalAuthority).toHaveBeenLastCalledWith(expect.objectContaining({ phase: "pre-lock" }));
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
@@ -627,7 +627,7 @@ describe("local Mac production promote", () => {
       now: new Date("2026-08-25T10:30:00.000Z"),
       verifyRehearsalAuthority,
     } as Parameters<typeof promoteLocalMacProductionRelease>[0]))
-      .rejects.toThrow(/expired|first mutation|repeatability/iu);
+      .rejects.toThrow(/^promotion_authority_source_changed: production promotion authority source changed\.$/u);
 
     expect(clock).toHaveBeenCalledTimes(2);
     expect(fixture.preflightBundle).toHaveBeenCalledTimes(1);
@@ -660,6 +660,44 @@ describe("local Mac production promote", () => {
     expect(fixture.preflightBundle).toHaveBeenCalledTimes(1);
     expect(fixture.installBundle).toHaveBeenCalledTimes(0);
     expect(existsSync(fixture.paths.lockPath)).toBe(false);
+  });
+
+  it.each([
+    ["initial", 1],
+    ["final-pre-mutation", 2],
+    ["pre-lock", 3],
+  ])("sanitizes raw promotion authority failures at %s with lock zero", async (_phase, failingCall) => {
+    const fixture = createFixture();
+    const baseOptions = promoteOptions(fixture);
+    const authority = baseOptions.verifyRehearsalAuthority();
+    const rawRoot = createTempDirectory("homecook-authority-raw-");
+    const rawMarker = "RAW_AUTHORITY_ENOENT_EACCES_gh-stderr";
+    let calls = 0;
+    const verifyRehearsalAuthority = vi.fn(() => {
+      calls += 1;
+      if (calls === failingCall) {
+        throw new Error(`${rawMarker} '${join(rawRoot, "repeatability-receipt.json")}'`);
+      }
+      return authority;
+    });
+
+    let message = "";
+    try {
+      await promoteLocalMacProductionRelease({
+        ...baseOptions,
+        verifyRehearsalAuthority,
+      } as Parameters<typeof promoteLocalMacProductionRelease>[0]);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      "promotion_authority_source_changed: production promotion authority source changed.",
+    );
+    for (const prohibited of [rawRoot, rawMarker, "repeatability-receipt.json", "ENOENT", "EACCES", "gh-stderr"]) {
+      expect(message).not.toContain(prohibited);
+    }
+    expect(existsSync(fixture.paths.lockPath)).toBe(false);
+    expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
 
@@ -1492,7 +1530,7 @@ describe("local Mac production promote", () => {
     symlinkSync(external, join(fixture.releaseDir, "outside-link.txt"));
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/symlink.*target|escape|outside|contain/iu);
+      .rejects.toThrow(/^promotion_authority_source_changed: production promotion authority source changed\.$/u);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 
@@ -1571,7 +1609,7 @@ describe("local Mac production promote", () => {
     symlinkSync(gitTarget, join(fixture.releaseDir, "git-link.txt"));
 
     await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
-      .rejects.toThrow(/symlink.*git|git metadata|\.git/iu);
+      .rejects.toThrow(/^promotion_authority_source_changed: production promotion authority source changed\.$/u);
     expect(fixture.installBundle).not.toHaveBeenCalled();
   });
 

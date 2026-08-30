@@ -41,6 +41,7 @@ import {
   validateProductionReleaseTag,
 } from "./production-release-approval-policy.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./youtube-extraction-worker-artifact.mjs";
+import { verifyPromotionAuthoritySafely } from "./local-mac-production-authority-error.mjs";
 
 export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v2";
 const LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA =
@@ -3040,7 +3041,7 @@ export async function promoteLocalMacProductionRelease({
     }
     return value;
   };
-  const initialRehearsalAuthority = await verifyRehearsalAuthority({
+  const initialRehearsalAuthority = await verifyPromotionAuthoritySafely(verifyRehearsalAuthority, {
     manifest,
     now: readFreshAuthorityNow("initial"),
     phase: "initial",
@@ -3109,7 +3110,7 @@ export async function promoteLocalMacProductionRelease({
   ) {
     throw new Error("Production release bundle preflight returned invalid stable evidence.");
   }
-  const finalRehearsalAuthority = await verifyRehearsalAuthority({
+  const finalRehearsalAuthority = await verifyPromotionAuthoritySafely(verifyRehearsalAuthority, {
     manifest,
     now: readFreshAuthorityNow("final-pre-mutation"),
     phase: "final-pre-mutation",
@@ -3181,7 +3182,7 @@ export async function promoteLocalMacProductionRelease({
   };
   verifyFrozenRuntimeInputsSafely({ checkSources: true });
   const preLockNow = readFreshAuthorityNow("pre-lock");
-  const preLockRehearsalAuthority = await verifyRehearsalAuthority({
+  const preLockRehearsalAuthority = await verifyPromotionAuthoritySafely(verifyRehearsalAuthority, {
     frozenCandidateAuthority: sealedCandidate,
     manifest,
     now: preLockNow,

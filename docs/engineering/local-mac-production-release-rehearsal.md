@@ -225,6 +225,8 @@ final authority 뒤 production lock 전에 검증된 sealed candidate component�
 
 각 frozen source file은 approved root부터 parent까지의 complete lexical directory chain을 공유 registry에 등록한다. registry는 canonical path 정렬과 dedupe 후 각 directory를 `O_DIRECTORY|O_NOFOLLOW`로 열어 FD identity를 source read와 create-only scratch copy가 끝날 때까지 유지한다. full-local config/secret, worker config/credential/token/provider secret, manifest와 attestation triple 중 어느 parent라도 transient rename/symlink/bind/A→B→A drift가 있으면 file bytes가 복원되어도 fail closed한다. initial freeze 이후 source revalidation 오류의 유일한 public message는 `runtime_input_source_changed: frozen runtime input source authority changed.`이며 source path/name/value와 raw syscall은 출력하지 않는다.
 
+pre-adapter/initial/final/pre-lock의 broader promotion authority verifier는 manifest, candidate completion/bundle authority, 두 member receipt와 repeatability receipt, inventory/classification, attestation triple, git/tag 및 `gh` offline readback, component physical digest를 하나의 public error boundary 안에서 재검증한다. 어느 source read, canonical parser, identity check, semantic gate 또는 command가 실패해도 public output은 `promotion_authority_source_changed: production promotion authority source changed.`뿐이다. path/basename/receipt ID/raw JSON/provider payload/`gh`·`git` stderr/syscall 텍스트는 CLI stderr, JSON 또는 failure artifact에 포함하지 않는다.
+
 하나라도 빠지면 pointer, LaunchAgent, Docker, DB를 건드리기 전에 fail closed한다.
 
 ## Production surface non-mutation contract

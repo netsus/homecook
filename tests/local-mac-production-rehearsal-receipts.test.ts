@@ -948,6 +948,100 @@ describe("receipt schemas and artifact path boundary", () => {
 });
 
 describe("strict receipt time authority", () => {
+  it.each([
+    "release_manifest",
+    "manifest_parser",
+    "attestation_bundle",
+    "attestation_subject",
+    "attestation_trusted_root",
+    "remote_tag_readback",
+    "member_receipt_1",
+    "member_receipt_2",
+    "repeatability_receipt",
+    "candidate_authority",
+    "inventory",
+    "classification",
+    "component_digest",
+    "gate_parser",
+  ])("sanitizes the public promotion authority boundary for %s", (attack) => {
+    const rawRoot = `/private/tmp/homecook-${attack}`;
+    const rawMarker = `RAW_${attack}_ENOENT_EACCES_gh-stderr`;
+    const rawError = () => new Error(`${rawMarker} '${rawRoot}/authority.json'`);
+    const memberPaths = ["/private/member-1.json", "/private/member-2.json"];
+    const repeatabilityPath = "/private/repeatability.json";
+    const manifest = {
+      release_sha: RELEASE_SHA,
+      release_tree: RELEASE_TREE,
+      build_id: "build-001",
+      sealed_bundle_digest: SHA_B,
+      repeatability_receipt_digest: SHA_C,
+      rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
+    };
+    const verifier = productionRelease.createProductionPromotionAuthorityVerifier({
+      candidatePath: "/private/candidate",
+      inventoryPath: "/private/inventory.json",
+      manifestPath: "/private/manifest.json",
+      memberReceiptPaths: memberPaths,
+      repeatabilityReceiptPath: repeatabilityPath,
+      repoRoot: "/private/repo",
+      verifyAttestation: vi.fn(),
+      readManifestSource: () => {
+        if (attack === "release_manifest") throw rawError();
+        if (attack === "manifest_parser") return rawMarker;
+        return "{}";
+      },
+      validateManifest: () => {
+        if (["attestation_bundle", "attestation_subject", "attestation_trusted_root", "remote_tag_readback"].includes(attack)) throw rawError();
+        return manifest;
+      },
+      readReceipt: (path: string) => {
+        if (attack === "member_receipt_1" && path === memberPaths[0]) throw rawError();
+        if (attack === "member_receipt_2" && path === memberPaths[1]) throw rawError();
+        if (attack === "repeatability_receipt" && path === repeatabilityPath) throw rawError();
+        return { source: path };
+      },
+      readCandidate: () => {
+        if (attack === "candidate_authority") throw rawError();
+        return { manifest: {} };
+      },
+      readInventory: () => {
+        if (attack === "inventory") throw rawError();
+        return { captured_at: "2026-08-29T10:29:00.000Z" };
+      },
+      classifyInventory: () => {
+        if (attack === "classification") throw rawError();
+        return {};
+      },
+      digestExecutionTree: () => {
+        if (attack === "component_digest") throw rawError();
+        return SHA_A;
+      },
+      validateGate: () => {
+        if (attack === "gate_parser") throw rawError();
+        return { verified: true, authority_digest: SHA_A };
+      },
+    } as unknown as Parameters<typeof productionRelease.createProductionPromotionAuthorityVerifier>[0]);
+
+    let message = "";
+    try {
+      verifier({ phase: "pre-adapter", now: NOW });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      "promotion_authority_source_changed: production promotion authority source changed.",
+    );
+    for (const prohibited of [
+      rawRoot,
+      rawMarker,
+      "authority.json",
+      "ENOENT",
+      "EACCES",
+      "gh-stderr",
+      attack,
+    ]) expect(message).not.toContain(prohibited);
+  });
+
   it("keeps every invalid promotion authority before the first mutation", () => {
     expect(typeof productionRelease.validateProductionPromotionPreMutationGate).toBe("function");
     const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
