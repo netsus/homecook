@@ -1,4 +1,5 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createServer } from "node:http";
 import {
   chmodSync,
   existsSync,
@@ -179,6 +180,48 @@ function spawnRunner(command: "health" | "rehearsal-synthetic", args: string[]) 
   );
 }
 
+async function spawnRunnerAsync(command: "rehearsal-synthetic", args: string[]) {
+  return await new Promise<{ code: number | null; stderr: string; stdout: string }>((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      ["scripts/youtube-extraction-worker-runner.mjs", command, ...args],
+      {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          HOMECOOK_REHEARSAL_MODE: "isolated-r2",
+          HOMECOOK_REHEARSAL_RUN_ID: runId,
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    let stderr = "";
+    let stdout = "";
+    let outputBytes = 0;
+    const append = (target: "stderr" | "stdout", chunk: Buffer) => {
+      outputBytes += chunk.length;
+      if (outputBytes > 1_048_576) {
+        child.kill("SIGTERM");
+        reject(new Error("worker child output exceeded test bound"));
+        return;
+      }
+      if (target === "stderr") stderr += chunk.toString("utf8");
+      else stdout += chunk.toString("utf8");
+    };
+    child.stderr.on("data", (chunk: Buffer) => append("stderr", chunk));
+    child.stdout.on("data", (chunk: Buffer) => append("stdout", chunk));
+    child.once("error", reject);
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error("worker child timed out"));
+    }, 15_000);
+    child.once("close", (code) => {
+      clearTimeout(timeout);
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     makeRemovable(root);
@@ -204,5 +247,95 @@ describe("rehearsal worker CLI fixture", () => {
       ready: true,
       state: "waiting",
     });
+  });
+
+  it("runs the actual sealed child through the loopback fenced RPC lifecycle", async () => {
+    const rpcNames = [
+      "claim_youtube_extraction_job",
+      "claim_youtube_extractor_permit",
+      "start_youtube_extraction_attempt",
+      "heartbeat_youtube_extraction_job",
+      "heartbeat_youtube_extractor_permit",
+      "read_youtube_extraction_worker_catalog",
+      "report_youtube_extraction_progress",
+      "resolve_youtube_extraction_job_draft",
+      "finalize_youtube_extraction_job",
+      "release_youtube_extractor_permit",
+    ];
+    const expectedSequence = [
+      ...rpcNames.slice(0, 8),
+      "heartbeat_youtube_extraction_job",
+      "heartbeat_youtube_extractor_permit",
+      ...rpcNames.slice(8),
+    ];
+    const responses: Record<string, object> = {
+      claim_youtube_extraction_job: {
+        job_id: "33333333-3333-4333-8333-333333333333",
+        youtube_video_id: "synthetic01",
+        lease_generation: 1,
+        policy_snapshot_digest: allowedSnapshotDigest,
+        result_affecting_options: { rehearsal: true },
+      },
+      claim_youtube_extractor_permit: { claimed: true, permit_generation: 1 },
+      start_youtube_extraction_attempt: { started: true, attempt_count: 1 },
+      heartbeat_youtube_extraction_job: { updated: true },
+      heartbeat_youtube_extractor_permit: { updated: true },
+      read_youtube_extraction_worker_catalog: {
+        applied: true,
+        cooking_methods: [],
+        ingredients: [],
+      },
+      report_youtube_extraction_progress: { applied: true },
+      resolve_youtube_extraction_job_draft: {
+        synthetic: true,
+        title: "Synthetic rehearsal recipe",
+      },
+      finalize_youtube_extraction_job: { finalized: true },
+      release_youtube_extractor_permit: { released: true },
+    };
+    const requests: Array<{ body: Record<string, unknown>; name: string }> = [];
+    const server = createServer(async (request, response) => {
+      const name = request.url?.replace(/^\/rpc\//u, "") ?? "";
+      let body = "";
+      for await (const chunk of request) body += chunk.toString();
+      if (
+        request.method !== "POST"
+        || !rpcNames.includes(name)
+        || request.headers.authorization !== "Bearer synthetic-rehearsal-token-private"
+        || request.headers.apikey !== "synthetic-rehearsal-token-private"
+        || request.headers["x-homecook-rehearsal-fixture"] !== runId
+      ) {
+        response.statusCode = 403;
+        response.end(JSON.stringify({ error: "forbidden" }));
+        return;
+      }
+      requests.push({ body: JSON.parse(body), name });
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify(responses[name]));
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("loopback server has no port");
+      const fixture = materializeCliFixture(`http://127.0.0.1:${address.port}`);
+      const result = await spawnRunnerAsync("rehearsal-synthetic", fixture.args);
+      expect(result.code, result.stderr).toBe(0);
+      const output = JSON.parse(result.stdout);
+      expect(output).toMatchObject({
+        provider_requests: 0,
+        schema: "homecook.youtube-extraction-worker-rehearsal-result.v1",
+        status: "succeeded",
+        synthetic: true,
+      });
+      expect(requests.map(({ name }) => name)).toEqual(output.rpc_sequence);
+      expect(requests.map(({ name }) => name)).toEqual(expectedSequence);
+      expect(JSON.stringify(requests)).toContain('"lease_generation":1');
+      expect(JSON.stringify(requests)).toContain('"permit_generation":1');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 });
