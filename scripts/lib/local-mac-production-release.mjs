@@ -747,7 +747,10 @@ function digestExecutionTreeFromPrivateAnchor({
       const reservation = openAnchoredNestedDirectory(path, uid, "symlink_target");
       directoryReservations.push(reservation);
       hash.update("target-dir\0");
-      for (const name of readdirSync(path).sort()) digestDereferencedTarget(join(path, name), nextSeen);
+      for (const name of readdirSync(path).sort()) {
+        hash.update(`target-name\0${name}\0`);
+        digestDereferencedTarget(join(path, name), nextSeen);
+      }
       return;
     }
     if (!stat.isFile()) throw new Error("FD-anchored symlink target must be regular.");

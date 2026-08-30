@@ -411,6 +411,78 @@ describe("local Mac production promote", () => {
     });
   });
 
+  it.each([
+    "empty_directory",
+    "nonempty_directory",
+    "nested_directory",
+    "file",
+    "duplicate_aliases",
+  ])("keeps FD digest compatibility for contained %s symlinks", (variant) => {
+    const fixture = createAnchoredDigestFixture();
+    const appRoot = fixture.snapshot.appRoot;
+    chmodSync(appRoot, 0o700);
+    const targets = join(appRoot, "targets");
+    mkdirSync(targets, { mode: 0o700 });
+    if (variant === "file" || variant === "duplicate_aliases") {
+      writeFileSync(join(targets, "value.txt"), "file-target\n", { mode: 0o400 });
+      symlinkSync("targets/value.txt", join(appRoot, "alias-a"));
+      if (variant === "duplicate_aliases") symlinkSync("targets/value.txt", join(appRoot, "alias-b"));
+    } else {
+      const directoryTarget = join(targets, "directory");
+      mkdirSync(directoryTarget, { mode: 0o700 });
+      if (variant === "nonempty_directory") {
+        writeFileSync(join(directoryTarget, "b.txt"), "b\n", { mode: 0o400 });
+        writeFileSync(join(directoryTarget, "a.txt"), "a\n", { mode: 0o400 });
+      }
+      if (variant === "nested_directory") {
+        mkdirSync(join(directoryTarget, "nested"), { mode: 0o700 });
+        writeFileSync(join(directoryTarget, "nested", "value.txt"), "nested\n", { mode: 0o400 });
+        chmodSync(join(directoryTarget, "nested"), 0o500);
+      }
+      chmodSync(directoryTarget, 0o500);
+      symlinkSync("targets/directory", join(appRoot, "alias-directory"));
+    }
+    chmodSync(targets, 0o500);
+    chmodSync(appRoot, 0o500);
+    fixture.snapshot.appDigest = localRelease.digestLocalMacProductionExecutionTree(appRoot);
+
+    expect(localRelease.redigestLocalMacProductionFrozenScratch(fixture.snapshot).appDigest)
+      .toBe(fixture.snapshot.appDigest);
+  });
+
+  it.each(["cycle", "external"])(
+    "matches existing rejection for %s symlink authority",
+    (variant) => {
+      const fixture = createAnchoredDigestFixture();
+      const appRoot = fixture.snapshot.appRoot;
+      chmodSync(appRoot, 0o700);
+      if (variant === "cycle") {
+        symlinkSync("cycle-b", join(appRoot, "cycle-a"));
+        symlinkSync("cycle-a", join(appRoot, "cycle-b"));
+      } else {
+        const external = createTempDirectory("homecook-anchor-external-");
+        writeFileSync(join(external, "value.txt"), "external\n");
+        symlinkSync(join(external, "value.txt"), join(appRoot, "external-link"));
+      }
+      chmodSync(appRoot, 0o500);
+      expect(() => localRelease.digestLocalMacProductionExecutionTree(appRoot)).toThrow();
+      expect(() => localRelease.redigestLocalMacProductionFrozenScratch(fixture.snapshot)).toThrow();
+    },
+  );
+
+  it("promotes a canonical nonempty contained directory symlink fixture", async () => {
+    const fixture = createFixture();
+    const targetRoot = join(fixture.releaseDir, "node_modules-like/target-package");
+    mkdirSync(targetRoot, { recursive: true, mode: 0o700 });
+    writeFileSync(join(targetRoot, "index.mjs"), "export default 1;\n");
+    symlinkSync("target-package", join(fixture.releaseDir, "node_modules-like/alias-package"));
+    fixture.sealedCandidateDigest = localRelease.digestLocalMacProductionExecutionTree(fixture.releaseDir);
+
+    await expect(promoteLocalMacProductionRelease(promoteOptions(fixture)))
+      .resolves.toMatchObject({ promoted: true });
+    expect(fixture.installBundle).toHaveBeenCalledTimes(1);
+  });
+
   it("sanitizes anchored traversal inconsistency before production lock", async () => {
     const fixture = createFixture();
     let attacked = false;

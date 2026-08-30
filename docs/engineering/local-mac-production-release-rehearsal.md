@@ -231,6 +231,8 @@ promotion 함수는 첫 release manifest external read부터 lock acquisition �
 
 macOS의 `/dev/fd/<dirFd>/relative`는 Node directory traversal authority로 사용하지 않는다. held root FD와 same inode인 frozen component/authority root를 private sibling anchor로 원자 이동해 original pathname substitution과 분리한 뒤, nested directory/file을 각각 no-follow FD로 열고 file bytes는 file FD에서만 hash한다. directory FDs는 sorted traversal이 끝날 때까지 유지하며 root/nested/file/parent identity를 pre/post 비교한다. original component path, authority filepath 또는 nested path를 교체했다가 복원해도 replacement bytes를 authority로 받아들이지 않는다.
 
+FD-anchored walker는 기존 physical digest grammar의 directory-symlink child ordering을 그대로 보존한다. dereferenced directory의 각 sorted child는 `target-name\0<name>\0` token 뒤에 target type/bytes가 와야 하며 nonempty/nested directory symlink에서도 stored candidate digest와 fresh pre-lock digest가 exact 같아야 한다.
+
 하나라도 빠지면 pointer, LaunchAgent, Docker, DB를 건드리기 전에 fail closed한다.
 
 ## Production surface non-mutation contract
