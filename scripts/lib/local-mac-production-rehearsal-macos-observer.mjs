@@ -102,6 +102,7 @@ export function createTrustedMacOsIndependentObserver({ runCommand, clock = () =
         }
       }
       captured = Object.freeze({
+        capturedPids: Object.freeze([...observedPids].sort((left, right) => left - right)),
         lsofEvents: Object.freeze(lsofEvents),
         processEvents: Object.freeze(processEvents),
         processRows: Object.freeze(processRows),
@@ -112,14 +113,22 @@ export function createTrustedMacOsIndependentObserver({ runCommand, clock = () =
     async end({ postSnapshot, registeredSubjects } = {}) {
       if (!captured) fail("subject process and lsof capture is missing");
       if (canonicalizeJcs(registeredSubjects) !== canonicalizeJcs(captured.subjects)) fail("final registered subject authority differs from the frozen capture");
-      await sleep(1000);
-      const ended = clock();
-      const { logPath } = trustedToolPaths();
-      const log = await runCommand({ command: logPath, args: ["show", "--style", "json", "--start", floorTime(started), "--end", ceilTime(ended), "--predicate", "subsystem == 'com.apple.sandbox'"], timeoutMs: 30_000, maxOutputBytes: 1_048_576 });
-      if (log.status !== 0 || log.signal || log.truncated) fail("unified log observation is unavailable");
+      const { logPath, psPath } = trustedToolPaths();
+      const postProcessTable = await runCommand({ command: psPath, args: ["-axo", "pid=,ppid=,pgid=,comm="], timeoutMs: 10_000, maxOutputBytes: 1_048_576 });
+      if (postProcessTable.status !== 0 || postProcessTable.signal || postProcessTable.truncated) fail("post-cleanup process table observation is unavailable");
+      const postProcessRows = parseProcessTable(postProcessTable.stdout);
+      const capturedPids = new Set(captured.capturedPids);
+      const capturedPgids = new Set(captured.subjects.map((subject) => subject.host_pgid));
+      if (postProcessRows.some((row) => capturedPids.has(row.pid) || capturedPids.has(row.ppid) || capturedPgids.has(row.pgid))) {
+        fail("registered process or descendant residue remained after cleanup; exact zero is required");
+      }
       const post = await collectProductionSnapshot(); const daemon = await snapshotDockerDaemon();
       if (postSnapshot?.surface_digest !== post?.surface_digest) fail("final production snapshot differs from the runner authority");
       if (daemon?.snapshot_digest !== daemonPre?.snapshot_digest) fail("Docker daemon identity drifted during observation");
+      const ended = clock();
+      await sleep(1000);
+      const log = await runCommand({ command: logPath, args: ["show", "--style", "json", "--start", floorTime(started), "--end", ceilTime(ended), "--predicate", "subsystem == 'com.apple.sandbox'"], timeoutMs: 30_000, maxOutputBytes: 1_048_576 });
+      if (log.status !== 0 || log.signal || log.truncated) fail("unified log observation is unavailable");
       let events; try { events = JSON.parse(log.stdout); } catch { fail("unified log JSON is invalid"); }
       if (!Array.isArray(events)) fail("unified log JSON is not an array");
       return projectTrustedObservation({ logEvents: normalizeSandboxEvents(events, captured.processRows, captured.subjects), lsofEvents: captured.lsofEvents, processEvents: captured.processEvents, subjects: captured.subjects, toolIdentities: { log: toolResolver.logDigest, lsof: toolResolver.lsofDigest, ps: toolResolver.psDigest }, preSurfaceDigest: pre.surface_digest, postSurfaceDigest: post.surface_digest, daemonDigest: daemon.snapshot_digest, startedAt: new Date(started).toISOString(), completedAt: new Date(ended).toISOString() });
