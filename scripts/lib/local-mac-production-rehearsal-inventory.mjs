@@ -6,10 +6,10 @@ import {
   existsSync,
   fstatSync,
   lstatSync,
+  opendirSync,
   openSync,
   readFileSync,
   readlinkSync,
-  readdirSync,
   realpathSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -45,6 +45,8 @@ const TOOL_KEYS = ["version", "realpath", "device", "inode", "mode", "ctime", "s
 const NAMED_TOOL_KEYS = ["name", ...TOOL_KEYS];
 const SURFACE_KEYS = ["release_artifacts", "active_promotion_lock", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "prepared_identity"];
 const INVENTORY_UNSIGNED_KEYS = ["schema", "canonicalization", "repository", "captured_at", "surface_allowlist_version", "probe_identity", "tool_identities", "probe_statuses", "production_db_connection_count", "mutation_attempt_count", "redacted_field_count", "surfaces", "surface_digest"];
+const DEFAULT_SURFACE_MAX_ENTRIES = 10_000;
+const DEFAULT_SURFACE_MAX_BYTES = 512 * 1024 * 1024;
 
 function fail(message) {
   throw new Error(`Production inventory rejected: ${message}`);
@@ -340,27 +342,29 @@ export function createProductionSurfaceSnapshot(inventory, { capturedAt = new Da
     "launch_agent_plist:com.homecook.production",
     "launch_agent_plist:com.homecook.youtube-extraction-worker",
   ];
+  const requiredFullLocalPlists = [
+    `launch_agent_plist:${CANONICAL_FULL_LOCAL_LAUNCHD_LABEL}`,
+    `launch_agent_plist:${LEGACY_FULL_LOCAL_LAUNCHD_LABEL}`,
+  ];
   const artifactMap = new Map(surfaces.release_artifacts.map((entry) => [entry.kind, entry]));
   const presentArtifacts = new Set(surfaces.release_artifacts.filter((entry) => entry.exists).map((entry) => entry.kind));
   const componentSet = new Set(surfaces.workloads.map((entry) => entry.component));
   const launchdLabels = new Set(surfaces.launchd.map((entry) => entry.label));
-  const fullLocalPlistCount = [CANONICAL_FULL_LOCAL_LAUNCHD_LABEL, LEGACY_FULL_LOCAL_LAUNCHD_LABEL]
-    .filter((label) => presentArtifacts.has(`launch_agent_plist:${label}`)).length;
-  const fullLocalLaunchdCount = [CANONICAL_FULL_LOCAL_LAUNCHD_LABEL, LEGACY_FULL_LOCAL_LAUNCHD_LABEL]
-    .filter((label) => launchdLabels.has(label)).length;
-  const observedFullLocalPlistLabel = [CANONICAL_FULL_LOCAL_LAUNCHD_LABEL, LEGACY_FULL_LOCAL_LAUNCHD_LABEL]
-    .find((label) => presentArtifacts.has(`launch_agent_plist:${label}`));
-  const observedFullLocalLaunchdLabel = [CANONICAL_FULL_LOCAL_LAUNCHD_LABEL, LEGACY_FULL_LOCAL_LAUNCHD_LABEL]
-    .find((label) => launchdLabels.has(label));
+  const requiredLaunchdLabels = [
+    "com.homecook.production",
+    CANONICAL_FULL_LOCAL_LAUNCHD_LABEL,
+    LEGACY_FULL_LOCAL_LAUNCHD_LABEL,
+    "com.homecook.youtube-extraction-worker",
+  ];
   const configIdentities = new Set(surfaces.opaque_configs.map((entry) => entry.identity));
   const toolNames = inventory.tool_identities.map((tool) => tool.name).sort();
   const complete = PROBE_NAMES.every((name) => inventory.probe_statuses[name].status === "success")
     && JSON.stringify(toolNames) === JSON.stringify(REQUIRED_TOOL_NAMES)
     && artifactMap.has("release_root") && artifactMap.has("current_descriptor") && artifactMap.has("previous_descriptor")
-    && requiredInvariantPlists.every((kind) => presentArtifacts.has(kind)) && fullLocalPlistCount === 1
-    && surfaces.launchd.length === 3 && fullLocalLaunchdCount === 1
-    && observedFullLocalPlistLabel === observedFullLocalLaunchdLabel
-    && launchdLabels.has("com.homecook.production") && launchdLabels.has("com.homecook.youtube-extraction-worker")
+    && requiredInvariantPlists.every((kind) => presentArtifacts.has(kind))
+    && requiredFullLocalPlists.every((kind) => artifactMap.has(kind))
+    && surfaces.launchd.length === requiredLaunchdLabels.length && launchdLabels.size === requiredLaunchdLabels.length
+    && requiredLaunchdLabels.every((label) => launchdLabels.has(label))
     && surfaces.docker.containers.length > 0 && surfaces.docker.networks.length > 0 && surfaces.docker.volumes.length > 0
     && surfaces.port_listeners.length > 0 && surfaces.opaque_configs.length === 2
     && configIdentities.has("production-env") && configIdentities.has("full-local-config")
@@ -498,30 +502,117 @@ function containedRelative(root, target) {
   fail("recursive production tree symlink target escapes containment");
 }
 
+export function createProductionSurfaceBudget({
+  maxEntries = DEFAULT_SURFACE_MAX_ENTRIES,
+  maxBytes = DEFAULT_SURFACE_MAX_BYTES,
+} = {}) {
+  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1
+    || !Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    fail("production surface aggregate bounds are invalid");
+  }
+  return {
+    maxEntries: BigInt(maxEntries),
+    maxBytes: BigInt(maxBytes),
+    entries: 0n,
+    bytes: 0n,
+    seenEntries: new Set(),
+    fileDigests: new Map(),
+    directoryNames: new Map(),
+  };
+}
+
+function assertProductionSurfaceBudget(value) {
+  if (!value || typeof value !== "object"
+    || typeof value.maxEntries !== "bigint" || typeof value.maxBytes !== "bigint"
+    || typeof value.entries !== "bigint" || typeof value.bytes !== "bigint"
+    || !(value.seenEntries instanceof Set) || !(value.fileDigests instanceof Map)
+    || !(value.directoryNames instanceof Map)
+    || value.maxEntries < 1n || value.maxEntries > BigInt(Number.MAX_SAFE_INTEGER)
+    || value.maxBytes < 0n || value.maxBytes > BigInt(Number.MAX_SAFE_INTEGER)
+    || value.entries < 0n || value.entries > value.maxEntries
+    || value.bytes < 0n || value.bytes > value.maxBytes) {
+    fail("production surface aggregate budget is invalid");
+  }
+  return value;
+}
+
+function budgetIdentity(stats, type) {
+  return [
+    type,
+    stats.dev,
+    stats.ino,
+    stats.nlink,
+    stats.uid,
+    stats.gid,
+    stats.mode,
+    stats.size,
+    stats.ctimeNs,
+    stats.mtimeNs,
+  ].join(":");
+}
+
+function consumeProductionSurfaceBudget(budgetInput, stats, type, byteSize = 0n) {
+  const budget = assertProductionSurfaceBudget(budgetInput);
+  const identity = budgetIdentity(stats, type);
+  if (budget.seenEntries.has(identity)) return { first: false, identity };
+  if (budget.entries + 1n > budget.maxEntries) fail("production surface aggregate entry limit exceeded");
+  if (budget.bytes + byteSize > budget.maxBytes) fail("production surface aggregate byte limit exceeded");
+  budget.entries += 1n;
+  budget.bytes += byteSize;
+  budget.seenEntries.add(identity);
+  return { first: true, identity };
+}
+
+function readBoundedDirectoryNames(path, maxEntries) {
+  const names = [];
+  const directory = opendirSync(path);
+  try {
+    let entry;
+    while ((entry = directory.readSync()) !== null) {
+      if (names.length >= maxEntries) fail("production surface aggregate entry limit exceeded");
+      names.push(entry.name);
+    }
+  } finally {
+    directory.closeSync();
+  }
+  return names.sort();
+}
+
+function readBudgetedDirectoryNames(path, budgetInput) {
+  const budget = assertProductionSurfaceBudget(budgetInput);
+  const before = lstatSync(path, { bigint: true });
+  if (!before.isDirectory() || before.isSymbolicLink()) fail("production surface directory identity is invalid");
+  const consumed = consumeProductionSurfaceBudget(budget, before, "directory");
+  const cached = budget.directoryNames.get(consumed.identity);
+  if (cached !== undefined) return cached;
+  const remaining = Number(budget.maxEntries - budget.entries);
+  const names = Object.freeze(readBoundedDirectoryNames(path, remaining));
+  const after = lstatSync(path, { bigint: true });
+  if (!sameFileIdentity(before, after)) fail("production surface directory changed during bounded read");
+  budget.directoryNames.set(consumed.identity, names);
+  return names;
+}
+
 export function digestProductionTree(rootPath, {
-  maxEntries = 10_000,
+  maxEntries = DEFAULT_SURFACE_MAX_ENTRIES,
   maxDepth = 64,
-  maxBytes = 512 * 1024 * 1024,
+  maxBytes = DEFAULT_SURFACE_MAX_BYTES,
+  surfaceBudget = null,
 } = {}) {
   const canonicalRoot = realpathSync(rootPath);
-  const limits = {
-    maxEntries: BigInt(maxEntries),
-    maxDepth,
-    maxBytes: BigInt(maxBytes),
-  };
-  if (limits.maxEntries < 1n || !Number.isSafeInteger(maxDepth) || maxDepth < 0 || limits.maxBytes < 0n) {
+  const budget = surfaceBudget ?? createProductionSurfaceBudget({ maxEntries, maxBytes });
+  assertProductionSurfaceBudget(budget);
+  if (!Number.isSafeInteger(maxDepth) || maxDepth < 0) {
     fail("recursive production tree bounds are invalid");
   }
-  const counters = { entries: 0n, bytes: 0n };
   const active = new Set();
 
   function digestNode(path, relativePath, depth) {
-    if (depth > limits.maxDepth) fail("recursive production tree depth limit exceeded");
-    counters.entries += 1n;
-    if (counters.entries > limits.maxEntries) fail("recursive production tree entry limit exceeded");
+    if (depth > maxDepth) fail("recursive production tree depth limit exceeded");
     const before = lstatSync(path, { bigint: true });
 
     if (before.isSymbolicLink()) {
+      consumeProductionSurfaceBudget(budget, before, "symlink");
       const target = readlinkSync(path);
       if (isAbsolute(target)) fail("recursive production tree absolute symlink is forbidden");
       const targetRealpath = realpathSync(resolve(dirname(path), target));
@@ -545,18 +636,19 @@ export function digestProductionTree(rootPath, {
     try {
       if (before.isFile()) {
         if (before.nlink !== 1n) fail("recursive production tree hard-linked file is forbidden");
-        counters.bytes += before.size;
-        if (counters.bytes > limits.maxBytes) fail("recursive production tree byte limit exceeded");
-        const bytes = readOpaqueRegularFile(path, "recursive production tree file");
+        const consumed = consumeProductionSurfaceBudget(budget, before, "file", before.size);
+        const cachedDigest = budget.fileDigests.get(consumed.identity);
+        const contentDigest = cachedDigest ?? sha256Bytes(readOpaqueRegularFile(path, "recursive production tree file"));
+        if (cachedDigest === undefined) budget.fileDigests.set(consumed.identity, contentDigest);
         const after = lstatSync(path, { bigint: true });
         if (!sameFileIdentity(before, after)) fail("recursive production tree file drift detected");
         return sha256Jcs({
           ...bigintMetadata(before, relativePath, "file"),
-          content_sha256: sha256Bytes(bytes),
+          content_sha256: contentDigest,
         });
       }
       if (before.isDirectory()) {
-        const names = readdirSync(path).sort();
+        const names = readBudgetedDirectoryNames(path, budget);
         const children = names.map((name) => ({
           name,
           digest: digestNode(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`, depth + 1),
@@ -598,12 +690,13 @@ function absentArtifactEvidence(kind) {
 /**
  * @param {string} kind
  * @param {string} path
- * @param {{afterAbsentCheck?:Function, directoryIdentityOnly?:boolean, maxFileBytes?:number, treeLimits?:{maxEntries?:number, maxDepth?:number, maxBytes?:number}}} [options]
+ * @param {{afterAbsentCheck?:Function, directoryIdentityOnly?:boolean, maxFileBytes?:number, surfaceBudget?:any, treeLimits?:{maxEntries?:number, maxDepth?:number, maxBytes?:number}}} [options]
  */
 export function readProductionArtifactTarget(kind, path, {
   afterAbsentCheck = () => {},
   directoryIdentityOnly = false,
-  maxFileBytes = 512 * 1024 * 1024,
+  maxFileBytes = DEFAULT_SURFACE_MAX_BYTES,
+  surfaceBudget = null,
   treeLimits = undefined,
 } = {}) {
   let stats;
@@ -628,16 +721,26 @@ export function readProductionArtifactTarget(kind, path, {
     fail(`production ${kind} target has unsafe type, owner, or mode`);
   }
   if (stats.isDirectory() && (stats.mode & 0o100n) === 0n) fail(`production ${kind} directory target is not traversable`);
+  const budget = surfaceBudget ?? createProductionSurfaceBudget({
+    maxEntries: treeLimits?.maxEntries ?? DEFAULT_SURFACE_MAX_ENTRIES,
+    maxBytes: treeLimits?.maxBytes ?? DEFAULT_SURFACE_MAX_BYTES,
+  });
   let digest;
   if (stats.isFile()) {
     if (!Number.isSafeInteger(maxFileBytes) || maxFileBytes < 0 || stats.size > BigInt(maxFileBytes)) {
       fail(`production ${kind} file byte limit exceeded`);
     }
-    digest = sha256Bytes(readOpaqueRegularFile(path, `production ${kind}`));
+    const consumed = consumeProductionSurfaceBudget(budget, stats, "file", stats.size);
+    const cachedDigest = budget.fileDigests.get(consumed.identity);
+    digest = cachedDigest ?? sha256Bytes(readOpaqueRegularFile(path, `production ${kind}`));
+    if (cachedDigest === undefined) budget.fileDigests.set(consumed.identity, digest);
   } else if (stats.isDirectory()) {
-    digest = directoryIdentityOnly
-      ? directoryMetadataDigest(stats)
-      : digestProductionTree(path, treeLimits);
+    if (directoryIdentityOnly) {
+      consumeProductionSurfaceBudget(budget, stats, "directory");
+      digest = directoryMetadataDigest(stats);
+    } else {
+      digest = digestProductionTree(path, { ...treeLimits, surfaceBudget: budget });
+    }
   } else {
     fail(`production ${kind} path must be a regular file or directory`);
   }
@@ -741,7 +844,7 @@ function readOptionalProductionDescriptor(path) {
   return { digest: sha256Bytes(bytes), exists: true, value };
 }
 
-async function commandOutput(commandRunner, command, args, { absentExit = null } = {}) {
+async function readOnlyCommandResult(commandRunner, command, args) {
   const result = await commandRunner(command, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -754,11 +857,44 @@ async function commandOutput(commandRunner, command, args, { absentExit = null }
   if (result.error || result.signal || !Number.isInteger(result.status)) {
     throw new Error("read-only inventory command did not terminate normally");
   }
-  if (result.status !== 0) {
-    if (absentExit === "lsof-no-listener" && result.status === 1 && stdout === "" && stderr === "") return "";
+  return { status: result.status, stdout, stderr };
+}
+
+async function commandOutput(commandRunner, command, args, { absentExit = null } = {}) {
+  const { status, stdout, stderr } = await readOnlyCommandResult(commandRunner, command, args);
+  if (status !== 0) {
+    if (absentExit === "lsof-no-listener" && status === 1 && stdout === "" && stderr === "") return "";
     throw new Error("read-only inventory command failed");
   }
   return stdout;
+}
+
+async function readLaunchdJob(commandRunner, launchctlBin, uid, label) {
+  const { status, stdout, stderr } = await readOnlyCommandResult(
+    commandRunner,
+    launchctlBin,
+    ["print", `gui/${uid}/${label}`],
+  );
+  if (status === 113 && stdout === "") {
+    const missingMessage = `Could not find service \"${label}\" in domain for user gui: ${uid}`;
+    const allowed = new Set([
+      missingMessage,
+      `${missingMessage}\n`,
+      `Bad request.\n${missingMessage}`,
+      `Bad request.\n${missingMessage}\n`,
+    ]);
+    if (allowed.has(stderr)) {
+      const projection = { label, loaded: false, state: "missing", pid: null };
+      return { ...projection, projection_digest: sha256Jcs(projection) };
+    }
+  }
+  if (status !== 0 || stdout === "" || stderr !== "") {
+    throw new Error("read-only launchd inventory command failed");
+  }
+  const state = /^\s*state = (.+)$/mu.exec(stdout)?.[1]?.trim() ?? "unknown";
+  const pidText = /^\s*pid = (\d+)$/mu.exec(stdout)?.[1];
+  const projection = { label, loaded: true, state, pid: pidText ? Number(pidText) : null };
+  return { ...projection, projection_digest: sha256Jcs(projection) };
 }
 
 function parseDelimitedLines(source, fieldNames) {
@@ -802,6 +938,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     rootDir = process.cwd(),
     approvedMigrationMarkerPath = null,
     productionEnvAuthorityPath = null,
+    releaseArtifactSurfaceLimits = {},
     dockerBin: dockerBinOption = null,
     commandRunner = spawnSync,
     trustedToolPaths = {},
@@ -839,30 +976,24 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       configDigest: productionDockerAuthority.sha256,
     };
   }
-  function fullLocalLaunchdAuthority() {
-    return withTrustedAncestorChains([
-      { base: canonicalHome, target: canonicalFullLocalPlistPath, label: "canonical full-local LaunchAgent" },
-      { base: canonicalHome, target: legacyFullLocalPlistPath, label: "legacy full-local LaunchAgent" },
-    ], () => {
-      const canonical = artifactEvidence(`launch_agent_plist:${CANONICAL_FULL_LOCAL_LAUNCHD_LABEL}`, canonicalFullLocalPlistPath);
-      const legacy = artifactEvidence(`launch_agent_plist:${LEGACY_FULL_LOCAL_LAUNCHD_LABEL}`, legacyFullLocalPlistPath);
-      if (canonical.exists && legacy.exists) fail("canonical and legacy full-local LaunchAgent authority is ambiguous");
-      return { canonical, legacy, selectedLabel: legacy.exists ? LEGACY_FULL_LOCAL_LAUNCHD_LABEL : CANONICAL_FULL_LOCAL_LAUNCHD_LABEL };
-    });
-  }
-  function readAuthorityChildren(root, prefix) {
+  function readAuthorityChildren(root, prefix, surfaceBudget) {
     return withTrustedAncestorChains([
       { base: canonicalHome, target: join(root, ".authority-child-probe"), label: `${prefix} root` },
     ], () => {
-      let names;
       try {
-        names = readdirSync(root).sort();
+        const rootEvidence = artifactEvidence(`${prefix}_root`, root, {
+          directoryIdentityOnly: true,
+          surfaceBudget,
+        });
+        if (!rootEvidence.exists) return [];
       } catch (error) {
         if (error && typeof error === "object" && error.code === "ENOENT") return [];
         throw error;
       }
-      if (names.length > 10_000) fail(`${prefix} authority entry limit exceeded`);
-      return names.map((name) => artifactEvidence(`${prefix}:${sha256Jcs(name)}`, join(root, name)));
+      const names = readBudgetedDirectoryNames(root, surfaceBudget);
+      return names.map((name) => artifactEvidence(`${prefix}:${sha256Jcs(name)}`, join(root, name), {
+        surfaceBudget,
+      }));
     });
   }
 
@@ -874,21 +1005,28 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     },
     async readReleaseArtifacts() {
       const plistRoot = join(canonicalHome, "Library", "LaunchAgents");
+      const surfaceBudget = createProductionSurfaceBudget(releaseArtifactSurfaceLimits);
       return withTrustedAncestorChains([
         { base: canonicalHome, target: join(releaseRoot, ".ancestor-probe"), label: "release root" },
         { base: canonicalHome, target: join(plistRoot, ".ancestor-probe"), label: "LaunchAgent root" },
       ], () => {
         const entries = [
-          artifactEvidence("release_root", releaseRoot, { directoryIdentityOnly: true }),
-          artifactEvidence("current_descriptor", currentPath),
-          artifactEvidence("previous_descriptor", previousPath),
-          artifactEvidence("launch_agent_plist:com.homecook.production", join(plistRoot, "com.homecook.production.plist")),
-          artifactEvidence("launch_agent_plist:com.homecook.youtube-extraction-worker", join(plistRoot, "com.homecook.youtube-extraction-worker.plist")),
+          artifactEvidence("release_root", releaseRoot, { directoryIdentityOnly: true, surfaceBudget }),
+          artifactEvidence("current_descriptor", currentPath, { surfaceBudget }),
+          artifactEvidence("previous_descriptor", previousPath, { surfaceBudget }),
+          artifactEvidence("launch_agent_plist:com.homecook.production", join(plistRoot, "com.homecook.production.plist"), { surfaceBudget }),
+          artifactEvidence("launch_agent_plist:com.homecook.youtube-extraction-worker", join(plistRoot, "com.homecook.youtube-extraction-worker.plist"), { surfaceBudget }),
         ];
-        const fullLocal = fullLocalLaunchdAuthority();
+        const fullLocal = withTrustedAncestorChains([
+          { base: canonicalHome, target: canonicalFullLocalPlistPath, label: "canonical full-local LaunchAgent" },
+          { base: canonicalHome, target: legacyFullLocalPlistPath, label: "legacy full-local LaunchAgent" },
+        ], () => ({
+          canonical: artifactEvidence(`launch_agent_plist:${CANONICAL_FULL_LOCAL_LAUNCHD_LABEL}`, canonicalFullLocalPlistPath, { surfaceBudget }),
+          legacy: artifactEvidence(`launch_agent_plist:${LEGACY_FULL_LOCAL_LAUNCHD_LABEL}`, legacyFullLocalPlistPath, { surfaceBudget }),
+        }));
         entries.push(fullLocal.canonical, fullLocal.legacy);
-        entries.push(...readAuthorityChildren(lockRoot, "recovered_lock"));
-        entries.push(...readAuthorityChildren(snapshotRoot, "sealed_snapshot"));
+        entries.push(...readAuthorityChildren(lockRoot, "recovered_lock", surfaceBudget));
+        entries.push(...readAuthorityChildren(snapshotRoot, "sealed_snapshot", surfaceBudget));
         return entries;
       });
     },
@@ -918,14 +1056,13 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     async readLaunchd() {
       const uid = process.getuid?.();
       if (!Number.isInteger(uid)) return [];
-      const labels = ["com.homecook.production", fullLocalLaunchdAuthority().selectedLabel, "com.homecook.youtube-extraction-worker"];
-      return Promise.all(labels.map(async (label) => {
-        const raw = await commandOutput(commandRunner, launchctlBin, ["print", `gui/${uid}/${label}`]);
-        const state = /^\s*state = (.+)$/mu.exec(raw)?.[1]?.trim() ?? (raw ? "unknown" : "missing");
-        const pidText = /^\s*pid = (\d+)$/mu.exec(raw)?.[1];
-        const projection = { label, loaded: Boolean(raw), state, pid: pidText ? Number(pidText) : null };
-        return { ...projection, projection_digest: sha256Jcs(projection) };
-      }));
+      const labels = [
+        "com.homecook.production",
+        CANONICAL_FULL_LOCAL_LAUNCHD_LABEL,
+        LEGACY_FULL_LOCAL_LAUNCHD_LABEL,
+        "com.homecook.youtube-extraction-worker",
+      ];
+      return Promise.all(labels.map((label) => readLaunchdJob(commandRunner, launchctlBin, uid, label)));
     },
     async readDocker() {
       const { dockerBin, productionDockerProject } = resolveProductionDockerContext();

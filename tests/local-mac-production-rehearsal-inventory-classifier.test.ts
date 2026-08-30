@@ -87,13 +87,15 @@ function launchdEvidence(label: string, loaded: boolean, pid = 201) {
   return { ...projection, projection_digest: sha256Jcs(projection) };
 }
 
-function rebuildInventory(inventory: Record<string, any>, surfaces: Record<string, any>) {
+type InventoryFixture = Awaited<ReturnType<typeof createInventory>>;
+
+function rebuildInventory(inventory: InventoryFixture, surfaces: InventoryFixture["surfaces"]) {
   const unsigned = { ...inventory, surfaces, surface_digest: sha256Jcs(surfaces) };
-  delete unsigned.inventory_digest;
+  Reflect.deleteProperty(unsigned, "inventory_digest");
   return { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
 }
 
-function withFullLocalAuthority(inventory: Record<string, any>, {
+function withFullLocalAuthority(inventory: InventoryFixture, {
   canonicalPlist,
   legacyPlist,
   canonicalLoaded,
@@ -177,6 +179,7 @@ function createAdapters({ mixed = false } = {}) {
           mtime: "2026-08-29T08:00:00.000Z",
           sha256: SHA_A,
         })),
+        absentArtifact("launch_agent_plist:com.homecook.full-local.production"),
       ]),
       readWorkloads: vi.fn(async () => [
         { component: "app", release_sha: RELEASE_A, release_tree: RELEASE_A, build_id: "build-a", sealed_bundle_digest: SHA_A, health: "running", descriptor_digest: SHA_B, provider_payload: "secret-provider-json" },
@@ -197,6 +200,7 @@ function createAdapters({ mixed = false } = {}) {
       readLaunchd: vi.fn(async () => [
         { label: "com.homecook.production", loaded: true, state: mixed ? "scheduled" : "running", pid: mixed ? null : 101, projection_digest: SHA_A, environment: { TOKEN: "secret" } },
         { label: "com.homecook.full-local-production", loaded: true, state: "running", pid: 102, projection_digest: SHA_B },
+        launchdEvidence("com.homecook.full-local.production", false),
         { label: "com.homecook.youtube-extraction-worker", loaded: true, state: "running", pid: 103, projection_digest: SHA_C },
       ]),
       readDocker: vi.fn(async () => ({
@@ -694,8 +698,9 @@ describe("read-only production inventory", () => {
     symlinkSync("payload", join(root, "alias-a"));
     symlinkSync("payload", join(root, "alias-b"));
 
-    expect(() => inventoryModule.digestProductionTree(root, { maxEntries: 4, maxBytes: 4 }))
-      .not.toThrow();
+    const boundedDigest = inventoryModule.digestProductionTree(root, { maxEntries: 4, maxBytes: 4 });
+    const roomyDigest = inventoryModule.digestProductionTree(root, { maxEntries: 100, maxBytes: 100 });
+    expect(boundedDigest).toBe(roomyDigest);
   });
 
   it("keeps unrelated 40GiB sparse release-root data metadata-only under an exact aggregate boundary", async () => {
@@ -1162,6 +1167,28 @@ describe("mixed-state classifier", () => {
       .toContain("surface:full_local_launchd_ambiguity");
   });
 
+  it("classifies a hidden loaded-but-not-running legacy job as ambiguity", async () => {
+    const inventory = await createInventory();
+    const canonical = withFullLocalAuthority(inventory, {
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: false,
+    });
+    const launchd = canonical.surfaces.launchd.map((entry: { label: string }) => (
+      entry.label === LEGACY_FULL_LOCAL_LABEL
+        ? { ...entry, loaded: true, state: "scheduled", pid: null, projection_digest: SHA_C }
+        : entry
+    ));
+    const hidden = rebuildInventory(canonical, { ...canonical.surfaces, launchd });
+    const classification = classifyProductionInventory(hidden);
+
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toEqual(expect.arrayContaining(["partial_failed_install", "unknown"]));
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:full_local_launchd_ambiguity");
+  });
+
   it("keeps neither full-local plist nor job observable but incomplete", async () => {
     const inventory = await createInventory();
     const absent = withFullLocalAuthority(inventory, {
@@ -1256,19 +1283,12 @@ describe("mixed-state classifier", () => {
 
   it("allows the exact legacy full-local alias in a read-only snapshot but never marks it promotion-safe", async () => {
     const inventory = await createInventory();
-    const canonicalKind = "launch_agent_plist:com.homecook.full-local-production";
-    const legacyKind = "launch_agent_plist:com.homecook.full-local.production";
-    const canonical = inventory.surfaces.release_artifacts.find((entry: { kind: string }) => entry.kind === canonicalKind)!;
-    const releaseArtifacts = inventory.surfaces.release_artifacts
-      .map((entry: { kind: string }) => entry.kind === canonicalKind ? absentArtifact(canonicalKind) : entry)
-      .concat([{ ...canonical, kind: legacyKind }]);
-    const launchd = inventory.surfaces.launchd.map((entry: { label: string }) => entry.label === "com.homecook.full-local-production"
-      ? { ...entry, label: "com.homecook.full-local.production", projection_digest: SHA_B }
-      : entry);
-    const surfaces = { ...inventory.surfaces, release_artifacts: releaseArtifacts, launchd };
-    const unsigned = { ...inventory, surfaces, surface_digest: sha256Jcs(surfaces) };
-    delete (unsigned as Record<string, unknown>).inventory_digest;
-    const legacy = { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+    const legacy = withFullLocalAuthority(inventory, {
+      canonicalPlist: false,
+      legacyPlist: true,
+      canonicalLoaded: false,
+      legacyLoaded: true,
+    });
 
     expect(createProductionSurfaceSnapshot(legacy).surface_digest).toBe(legacy.surface_digest);
     const classification = classifyProductionInventory(legacy);
@@ -1276,19 +1296,6 @@ describe("mixed-state classifier", () => {
     expect(classification.states).toContain("unknown");
     expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
       .toContain("surface:canonical_full_local_launchd");
-
-    const mismatchedSurfaces = {
-      ...surfaces,
-      launchd: inventory.surfaces.launchd,
-    };
-    const mismatchedUnsigned = {
-      ...inventory,
-      surfaces: mismatchedSurfaces,
-      surface_digest: sha256Jcs(mismatchedSurfaces),
-    };
-    delete (mismatchedUnsigned as Record<string, unknown>).inventory_digest;
-    const mismatched = { ...mismatchedUnsigned, inventory_digest: sha256Jcs(mismatchedUnsigned) };
-    expect(() => createProductionSurfaceSnapshot(mismatched)).toThrow(/complete|required|launchd|surface/iu);
   });
 
   it("requires exact component, descriptor, migration, and prepared identity alignment", async () => {
