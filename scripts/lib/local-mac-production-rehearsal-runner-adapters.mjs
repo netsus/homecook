@@ -635,13 +635,13 @@ async function executePsql(state, sql, { database = "postgres", tuplesOnly = fal
   })).stdout;
 }
 
-export async function runOwnedPostgrestFixtureProbe(state, { namespace, jobId, userId, token, expected, signal }) {
+export async function runOwnedPostgrestFixtureProbe(state, { namespace, jobId, userId, token, expected, signal = undefined }, { inspectResourceImpl = inspectResource, dockerCommandImpl = dockerCommand } = {}) {
   const probeEntry = state.creationLedger.snapshot().find((entry) => entry.kind === "container" && entry.name === `${namespace.project}-postgrest-probe-1`);
   if (!probeEntry) fail("run-owned PostgREST probe container is missing");
-  const probeObserved = await inspectResource(state, probeEntry, { signal });
+  const probeObserved = await inspectResourceImpl(state, probeEntry, { signal });
   if (probeObserved?.id !== probeEntry.id || probeObserved?.name !== probeEntry.name || probeObserved?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId) fail("PostgREST probe ownership mismatch");
   const probe = buildPostgrestFixtureReadbackProbe({ jobId, userId, token });
-  const probeOutput = await dockerCommand(state, probe.argv.map((value) => value === "<postgrest-probe-id>" ? probeEntry.id : value), { input: probe.stdin, signal, timeout: 10_000, ownership: { verifiedOwnership: true, resourceId: probeEntry.id } });
+  const probeOutput = await dockerCommandImpl(state, probe.argv.map((value) => value === "<postgrest-probe-id>" ? probeEntry.id : value), { input: probe.stdin, signal, timeout: 10_000, ownership: { verifiedOwnership: true, resourceId: probeEntry.id } });
   const row = parseAndValidatePostgrestFixtureReadback(probeOutput.stdout, expected);
   return Object.freeze({ row, redacted: probe.redacted, response_digest: sha256Jcs({ redacted: probe.redacted, row }) });
 }
