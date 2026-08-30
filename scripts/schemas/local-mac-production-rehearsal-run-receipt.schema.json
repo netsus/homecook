@@ -74,7 +74,7 @@
         "realpath": { "type": "string", "pattern": "^/" },
         "device": { "$ref": "#/definitions/identityInteger" },
         "inode": { "$ref": "#/definitions/identityInteger" },
-        "mode": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "mode": { "enum": [256, 292, 320, 365, 384, 420, 448, 493] },
         "ctime": { "$ref": "#/definitions/timestamp" },
         "size": { "$ref": "#/definitions/identityInteger" },
         "sha256": { "$ref": "#/definitions/hex64" }
@@ -131,14 +131,17 @@
     "runtimeIdentity": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["pid", "container_id", "reported_release_sha", "reported_release_tree", "reported_build_id", "reported_sealed_bundle_digest"],
+      "required": ["kind", "pid", "process_group_id", "container_ids", "reported_release_sha", "reported_release_tree", "reported_build_id", "reported_sealed_bundle_digest", "reported_migration_head"],
       "properties": {
-        "pid": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
-        "container_id": { "$ref": "#/definitions/nonempty" },
+        "kind": { "enum": ["container", "process"] },
+        "pid": { "type": ["integer", "null"], "minimum": 1, "maximum": 9007199254740991 },
+        "process_group_id": { "type": "null" },
+        "container_ids": { "$ref": "#/definitions/stringArray" },
         "reported_release_sha": { "$ref": "#/definitions/hex40" },
         "reported_release_tree": { "$ref": "#/definitions/hex40" },
         "reported_build_id": { "$ref": "#/definitions/nonempty" },
-        "reported_sealed_bundle_digest": { "$ref": "#/definitions/hex64" }
+        "reported_sealed_bundle_digest": { "$ref": "#/definitions/hex64" },
+        "reported_migration_head": { "$ref": "#/definitions/nonempty" }
       }
     },
     "canary": {

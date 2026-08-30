@@ -16,6 +16,7 @@ import {
   copyLocalMacProductionExecutionTree,
   sealLocalMacProductionExecutionTree,
 } from "./local-mac-production-release.mjs";
+import { readSealedAuthorityFile } from "./local-mac-production-rehearsal-candidate.mjs";
 import { readVerifiedMigrationInputs } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
 export const RUN_EVIDENCE_SCHEMA =
@@ -89,6 +90,7 @@ const TOP_LEVEL_EVIDENCE_KEYS = [
   "worker_rehearsal_rpc_authority",
   "production_guard",
   "threat_controls",
+  "rehearsal_runner",
   "evidence_digest",
 ];
 const REQUIRED_CANARY_IDS = Object.freeze([
@@ -131,6 +133,27 @@ function requireSha(value, label) {
 
 function requireString(value, label) {
   if (typeof value !== "string" || value.length === 0) fail(`${label} must be nonempty`);
+  return value;
+}
+
+function validateRunnerIdentity(value) {
+  exactKeys(value, [
+    "version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256",
+  ], "rehearsal runner identity");
+  requireString(value.version, "rehearsal runner version");
+  if (!isAbsolute(value.realpath ?? "")) fail("rehearsal runner realpath must be absolute");
+  for (const field of ["device", "inode", "size"]) {
+    if (!/^(?:0|[1-9]\d*)$/u.test(value[field] ?? "")) {
+      fail(`rehearsal runner ${field} must be an exact decimal identity string`);
+    }
+  }
+  if (![0o400, 0o500, 0o555, 0o700, 0o755].includes(value.mode)) {
+    fail("rehearsal runner mode is outside the closed readable/executable allowlist");
+  }
+  if (typeof value.ctime !== "string" || new Date(value.ctime).toISOString() !== value.ctime) {
+    fail("rehearsal runner ctime is invalid");
+  }
+  requireDigest(value.sha256, "rehearsal runner SHA-256");
   return value;
 }
 
@@ -421,6 +444,13 @@ function validateCanaries(canaries) {
   if (new Set(ordered.map((entry) => entry.canary_id)).size !== ordered.length) fail("canary IDs are duplicated");
   for (const entry of ordered) {
     requireString(entry.canary_id, "canary_id");
+    if (
+      typeof entry.started_at !== "string"
+      || typeof entry.completed_at !== "string"
+      || new Date(entry.started_at).toISOString() !== entry.started_at
+      || new Date(entry.completed_at).toISOString() !== entry.completed_at
+      || Date.parse(entry.started_at) > Date.parse(entry.completed_at)
+    ) fail(`${entry.canary_id} canary time range is invalid`);
     if (entry.exit_code !== 0) fail(`${entry.canary_id} canary failed`);
     requireDigest(entry.normalized_result_digest, `${entry.canary_id} normalized result`);
   }
@@ -507,7 +537,7 @@ function assertDirectoryIdentity(path, expected, label) {
   ) fail(`${label} directory dev/inode/owner/mode/ctime identity drifted`);
 }
 
-function writeCanonicalCreateOnly(path, value, mode = 0o600) {
+function writeCanonicalCreateOnly(path, value, mode = 0o400) {
   const bytes = Buffer.from(canonicalizeJcs(value), "utf8");
   const fd = openSync(path, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW, mode);
   try { writeFileSync(fd, bytes); } finally { closeSync(fd); }
@@ -640,7 +670,11 @@ function buildProductionGuard(pre, post, measurement, observer) {
   });
 }
 
-function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRootIdentity, executionRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard, workerRehearsalRpcAuthority }) {
+function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRootIdentity, executionRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard, workerRehearsalRpcAuthority, collisionPreflightDigest, ownedResources, runnerIdentity }) {
+  const resourceIds = (kind) => ownedResources
+    .filter((entry) => entry.kind === kind)
+    .map((entry) => entry.id)
+    .sort();
   const unsigned = {
     schema: RUN_EVIDENCE_SCHEMA,
     canonicalization: CANONICALIZATION,
@@ -668,6 +702,10 @@ function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRo
       ports: namespace.ports,
       root_identity_digest: sha256Jcs(runRootIdentity),
       execution_root_identity_digest: sha256Jcs(executionRootIdentity),
+      collision_preflight_digest: collisionPreflightDigest,
+      network_ids: resourceIds("network"),
+      container_ids: resourceIds("container"),
+      volume_ids: resourceIds("volume"),
       resource_identity_digest: sha256Jcs({
         project: namespace.project,
         container_names: namespace.container_names,
@@ -704,6 +742,7 @@ function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRo
       stale_candidate: "pass",
       cleanup_ownership: "pass",
     },
+    rehearsal_runner: runnerIdentity,
   };
   return Object.freeze({ ...unsigned, evidence_digest: sha256Jcs(unsigned) });
 }
@@ -718,6 +757,7 @@ export function validateRunEvidence(value) {
   exactKeys(value.isolation, [
     "docker_project_id", "container_names", "network_names", "volume_names",
     "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "resource_identity_digest",
+    "collision_preflight_digest", "network_ids", "container_ids", "volume_ids",
   ], "run evidence isolation");
   exactKeys(value.isolation.db_identity, ["name", "user", "identity_digest"], "run evidence DB identity");
   exactKeys(value.migration, [
@@ -742,7 +782,7 @@ export function validateRunEvidence(value) {
   ], "run evidence foreground supervisor");
   if (!Array.isArray(value.canaries) || value.canaries.length === 0) fail("run evidence canaries are missing");
   for (const [index, canary] of value.canaries.entries()) {
-    exactKeys(canary, ["canary_id", "exit_code", "normalized_result_digest"], `run evidence canaries[${index}]`);
+    exactKeys(canary, ["canary_id", "started_at", "completed_at", "exit_code", "normalized_result_digest"], `run evidence canaries[${index}]`);
     if (canary.exit_code !== 0 || !DIGEST.test(canary.normalized_result_digest ?? "")) {
       fail("run evidence canary must be an exact successful digest-bound result");
     }
@@ -768,6 +808,7 @@ export function validateRunEvidence(value) {
     "symlink_toctou", "namespace_collision", "digest_substitution",
     "stale_candidate", "cleanup_ownership",
   ], "run evidence threat controls");
+  validateRunnerIdentity(value.rehearsal_runner);
   if (
     typeof value.issued_at !== "string"
     || typeof value.completed_at !== "string"
@@ -775,6 +816,19 @@ export function validateRunEvidence(value) {
     || new Date(value.completed_at).toISOString() !== value.completed_at
     || Date.parse(value.issued_at) > Date.parse(value.completed_at)
   ) fail("run evidence issued/completed timestamp order is invalid");
+  if (value.canaries.some((canary) => (
+    Date.parse(canary.started_at) < Date.parse(value.issued_at)
+    || Date.parse(canary.completed_at) > Date.parse(value.completed_at)
+  ))) fail("run evidence canary times escape the run time range");
+  for (const field of ["collision_preflight_digest", "root_identity_digest", "execution_root_identity_digest", "resource_identity_digest"]) {
+    requireDigest(value.isolation[field], `run evidence isolation.${field}`);
+  }
+  for (const field of ["network_ids", "container_ids", "volume_ids"]) {
+    if (!Array.isArray(value.isolation[field]) || new Set(value.isolation[field]).size !== value.isolation[field].length
+      || value.isolation[field].some((entry, index, entries) => typeof entry !== "string" || entry.length === 0 || (index > 0 && entries[index - 1] > entry))) {
+      fail(`run evidence isolation.${field} must be unique bytewise ascending IDs`);
+    }
+  }
   if (
     value.runtime.app.component !== "app"
     || value.runtime.full_local.component !== "full_local"
@@ -857,6 +911,14 @@ export function validateRunEvidence(value) {
     volume_names: value.isolation.volume_names,
     owned_resource_ids: value.cleanup.owned_resource_ids,
   })) fail("run evidence resource identity digest differs from immutable cleanup ledger");
+  const isolatedIds = [
+    ...value.isolation.container_ids,
+    ...value.isolation.network_ids,
+    ...value.isolation.volume_ids,
+  ].sort();
+  if (canonicalizeJcs(isolatedIds) !== canonicalizeJcs(ownedIds)) {
+    fail("run evidence typed resource IDs differ from the immutable cleanup ledger");
+  }
   if (
     value.production_guard?.equal !== true
     || value.production_guard?.mutation_attempt_count !== 0
@@ -888,6 +950,56 @@ export function validateRunEvidence(value) {
   return value;
 }
 
+export function readCompletedRunEvidenceRoot(input, { now = new Date() } = {}) {
+  if (!isAbsolute(input ?? "")) fail("completed run evidence input must be absolute");
+  const absolute = resolve(input);
+  const inputStat = lstatSync(absolute, { bigint: true });
+  if (inputStat.isSymbolicLink()) fail("completed run evidence input may not be a symlink");
+  const root = inputStat.isFile()
+    ? (() => {
+        if (basename(absolute) !== "run-evidence.json" || inputStat.nlink !== 1n) {
+          fail("completed run evidence file input must be the exact single-link run-evidence.json");
+        }
+        return dirname(absolute);
+      })()
+    : absolute;
+  const rootBefore = lstatSync(root, { bigint: true });
+  if (!rootBefore.isDirectory() || rootBefore.isSymbolicLink() || modeBits(rootBefore.mode) !== 0o500) {
+    fail("completed run evidence root must be a sealed mode-0500 directory");
+  }
+  const failedPath = join(root, "failed.json");
+  try {
+    const failed = lstatSync(failedPath, { bigint: true });
+    if (failed) fail("completed run evidence root conflicts with a failed terminal marker");
+  } catch (error) {
+    if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error;
+  }
+  const complete = readSealedAuthorityFile(root, join(root, "complete.json"), "run complete marker");
+  exactKeys(complete, ["schema", "status", "trusted_receipt", "evidence_digest"], "run complete marker");
+  if (
+    complete.schema !== "homecook.local-mac-production-rehearsal-run-terminal.v1"
+    || complete.status !== "complete"
+    || complete.trusted_receipt !== false
+  ) fail("run complete marker authority is invalid");
+  const evidence = validateRunEvidence(
+    readSealedAuthorityFile(root, join(root, "run-evidence.json"), "run evidence"),
+  );
+  if (complete.evidence_digest !== evidence.evidence_digest) fail("run terminal marker and evidence digest differ");
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) fail("completed run evidence requires a valid current instant");
+  if (Date.parse(evidence.issued_at) > now.getTime() || Date.parse(evidence.completed_at) > now.getTime()) {
+    fail("completed run evidence contains a future time claim");
+  }
+  const evidencePost = validateRunEvidence(
+    readSealedAuthorityFile(root, join(root, "run-evidence.json"), "run evidence final readback"),
+  );
+  if (evidencePost.evidence_digest !== evidence.evidence_digest) fail("run evidence changed during offline readback");
+  const rootAfter = lstatSync(root, { bigint: true });
+  if (canonicalizeJcs(directoryIdentity(rootBefore)) !== canonicalizeJcs(directoryIdentity(rootAfter))) {
+    fail("run evidence root identity changed during offline readback");
+  }
+  return Object.freeze({ root, complete, evidence });
+}
+
 function normalizeAdapterError(error) {
   const message = error instanceof Error ? error.message : String(error);
   return message.replace(/[\r\n\t]+/gu, " ").slice(0, 512);
@@ -899,12 +1011,14 @@ export async function runIsolatedReleaseRehearsal({
   runId,
   readCandidate,
   adapters,
+  runnerIdentity,
   now = () => new Date(),
   signal = /** @type {AbortSignal | null} */ (null),
 }) {
   const sourceCandidateRoot = resolveCompletedCandidateInput(candidateInput);
   const canonicalNamespaceRoot = assertPrivateNamespaceRoot(namespaceRoot);
   if (typeof readCandidate !== "function" || !adapters) fail("runner dependencies are incomplete");
+  validateRunnerIdentity(runnerIdentity);
   const sourceCandidate = readCandidate(sourceCandidateRoot);
   let candidateBefore = sourceCandidate;
   const manifest = candidateBefore.manifest;
@@ -925,6 +1039,7 @@ export async function runIsolatedReleaseRehearsal({
   let productionMeasurement = null;
   let workerRehearsalRpcAuthority = null;
   let independentObserver = null;
+  let collisionPreflightDigest = null;
   let stableRunRootIdentity = null;
   let stableExecutionRootIdentity = null;
 
@@ -1008,6 +1123,7 @@ export async function runIsolatedReleaseRehearsal({
     if (!collision || !Array.isArray(collision.collisions) || collision.collisions.length !== 0) {
       fail("existing resource or namespace collision detected; suffix fallback is forbidden");
     }
+    collisionPreflightDigest = sha256Jcs(collision);
     await adapters.assertImagesLocal({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     verifyStableExecution();
     checkAbort();
@@ -1043,7 +1159,14 @@ export async function runIsolatedReleaseRehearsal({
     const readiness = await adapters.waitForReadiness({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, signal });
     if (readiness?.ready !== true) fail("foreground supervisor readiness failed");
     verifyStableExecution();
-    const canaries = validateCanaries(await adapters.runCanaries({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, migration, fixtures, signal }));
+    const canariesStartedAt = now().toISOString();
+    const canaryResults = await adapters.runCanaries({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, migration, fixtures, signal });
+    const canariesCompletedAt = now().toISOString();
+    const canaries = validateCanaries(canaryResults.map((entry) => ({
+      ...entry,
+      started_at: canariesStartedAt,
+      completed_at: canariesCompletedAt,
+    })));
     if (typeof adapters.readWorkerRehearsalRpcAuthority !== "function") fail("worker rehearsal RPC authority reader is required");
     workerRehearsalRpcAuthority = await adapters.readWorkerRehearsalRpcAuthority();
     const network = await adapters.readNetworkEvidence({ runId, namespace, runRoot: reservation.runRoot, signal });
@@ -1085,6 +1208,9 @@ export async function runIsolatedReleaseRehearsal({
       cleanup: cleanupEvidence,
       productionGuard,
       workerRehearsalRpcAuthority,
+      collisionPreflightDigest,
+      ownedResources,
+      runnerIdentity,
     });
     validateRunEvidence(evidence);
     writeCanonicalCreateOnly(join(reservation.runRoot, "run-evidence.json"), evidence);

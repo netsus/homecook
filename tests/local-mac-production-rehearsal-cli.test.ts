@@ -178,6 +178,54 @@ describe("local Mac production rehearsal CLI", () => {
     expect(output.value()).toContain("run-receipt-fixture");
   });
 
+  it("issues run and repeatability receipts through offline create-only commands", async () => {
+    const output = outputBuffer();
+    const createAdapters = vi.fn(() => { throw new Error("must not construct adapters"); });
+    const readCandidate = vi.fn(() => ({ manifest: { candidate: true } }));
+    const readRunEvidence = vi.fn(() => ({ evidence: { run: true } }));
+    const buildRunReceipt = vi.fn(() => ({ schema: "run-receipt", run_id: "run-1" }));
+    const buildRepeatabilityReceipt = vi.fn(() => ({ schema: "repeatability-receipt", repeatability_receipt_digest: "a".repeat(64) }));
+    const readReceipt = vi.fn((path: string) => ({ schema: "member-receipt", path }));
+    const writeReceipt = vi.fn(({ receipt }) => `/private/receipts/${receipt.schema}.json`);
+
+    await runLocalMacProductionRehearsalCli([
+      "receipt",
+      "--candidate", "/private/candidate",
+      "--run-evidence", "/private/run/run-evidence.json",
+      "--receipt-root", "/private/receipts",
+      "--issuer-task-id", "task-author",
+      "--json",
+    ], {
+      output: output.stream,
+      createInventoryAdapters: createAdapters,
+      readCandidate,
+      readRunEvidence,
+      buildRunReceiptFromEvidence: buildRunReceipt,
+      writeReceipt,
+    });
+    await runLocalMacProductionRehearsalCli([
+      "repeatability",
+      "--member-receipt", "/private/receipts/run-1.json",
+      "--member-receipt", "/private/receipts/run-2.json",
+      "--receipt-root", "/private/receipts",
+      "--issuer-task-id", "task-author",
+      "--json",
+    ], {
+      output: output.stream,
+      createInventoryAdapters: createAdapters,
+      readReceipt,
+      buildRepeatability: buildRepeatabilityReceipt,
+      writeReceipt,
+    });
+
+    expect(createAdapters).not.toHaveBeenCalled();
+    expect(buildRunReceipt).toHaveBeenCalledWith(expect.objectContaining({ issuerTaskId: "task-author" }));
+    expect(buildRepeatabilityReceipt).toHaveBeenCalledWith(expect.objectContaining({ issuerTaskId: "task-author" }));
+    expect(writeReceipt).toHaveBeenCalledTimes(2);
+    expect(output.value()).toContain("run-receipt.json");
+    expect(output.value()).toContain("repeatability-receipt.json");
+  });
+
   it("fails closed on unknown commands and missing absolute artifact paths before any adapter call", async () => {
     const createAdapters = vi.fn();
 
@@ -213,6 +261,8 @@ describe("local Mac production rehearsal CLI", () => {
     expect(packageJson.scripts["release:rehearsal:run"]).toBe("node scripts/local-mac-production-rehearsal-run.mjs");
     expect(packageJson.scripts["release:rehearsal:classify"]).toBe("node scripts/local-mac-production-rehearsal.mjs classify");
     expect(packageJson.scripts["release:rehearsal:verify"]).toBe("node scripts/local-mac-production-rehearsal.mjs verify");
+    expect(packageJson.scripts["release:rehearsal:receipt"]).toBe("node scripts/local-mac-production-rehearsal.mjs receipt");
+    expect(packageJson.scripts["release:rehearsal:repeatability"]).toBe("node scripts/local-mac-production-rehearsal.mjs repeatability");
     expect(packageJson.scripts["release:production:promote"]).toBe("node scripts/promote-local-mac-production-release.mjs promote");
 
     const productionCli = readFileSync("scripts/promote-local-mac-production-release.mjs", "utf8");

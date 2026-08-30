@@ -21,6 +21,8 @@
     "release:rehearsal:candidate": "node --experimental-vm-modules scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
     "release:rehearsal:run": "node scripts/local-mac-production-rehearsal-run.mjs",
     "release:rehearsal:classify": "node scripts/local-mac-production-rehearsal.mjs classify",
+    "release:rehearsal:receipt": "node scripts/local-mac-production-rehearsal.mjs receipt",
+    "release:rehearsal:repeatability": "node scripts/local-mac-production-rehearsal.mjs repeatability",
     "release:rehearsal:verify": "node scripts/local-mac-production-rehearsal.mjs verify",
     "release:github:rulesets:plan": "node scripts/manage-production-release-rulesets.mjs plan",
     "release:github:rulesets:verify": "node scripts/manage-production-release-rulesets.mjs verify",

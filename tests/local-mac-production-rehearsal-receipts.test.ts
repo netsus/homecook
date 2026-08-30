@@ -15,6 +15,7 @@ import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
+import * as receiptAuthority from "../scripts/lib/local-mac-production-rehearsal-receipts.mjs";
 import {
   buildRepeatabilityReceipt,
   buildRunReceipt,
@@ -60,12 +61,15 @@ function toolIdentity(name: string) {
 
 function runtimeIdentity(component: string) {
   return {
-    pid: component.length + 100,
-    container_id: `${component}-container`,
+    kind: component === "supervisor" ? "process" : "container",
+    pid: component === "supervisor" ? component.length + 100 : null,
+    process_group_id: null,
+    container_ids: component === "supervisor" ? [] : [`${component}-container`],
     reported_release_sha: RELEASE_SHA,
     reported_release_tree: RELEASE_TREE,
     reported_build_id: "build-001",
     reported_sealed_bundle_digest: SHA_B,
+    reported_migration_head: "20260829000100_release",
   };
 }
 
@@ -193,6 +197,233 @@ function redigestRun(receipt: Record<string, unknown>) {
   return { ...unsigned, receipt_digest: sha256Jcs(unsigned) };
 }
 
+function candidateAuthority() {
+  const base = runInput(1);
+  const orderedMigrationFilesDigest = sha256Jcs([{
+    path: `supabase/migrations/${base.migration.migration_head}.sql`,
+    sha256: SHA_A,
+  }]);
+  return {
+    repository: base.repository,
+    source_ref: base.source_ref,
+    release_sha: base.release_sha,
+    release_tree: base.release_tree,
+    ci_check_summary_digest: base.ci_check_summary_digest,
+    build_id: base.build_id,
+    sealed_bundle_digest: base.sealed_bundle_digest,
+    bundle_manifest_digest: base.bundle_manifest_digest,
+    candidate_identity_digest: SHA_C,
+    toolchain: {
+      ...base.toolchain,
+      gh: toolIdentity("gh"),
+      launchctl: toolIdentity("launchctl"),
+      lsof: toolIdentity("lsof"),
+      audit_log: toolIdentity("audit-log"),
+      sandbox_exec: toolIdentity("sandbox-exec"),
+    },
+    images: base.images.map((image, index) => ({
+      service: `service-${index}`,
+      reference: `example.invalid/service-${index}@${image.digest}`,
+      image_id: image.digest,
+      ...image,
+    })),
+    migration: {
+      ordered_migration_files: ["supabase/migrations/20260829000100_release.sql"],
+      ordered_migration_files_digest: orderedMigrationFilesDigest,
+      migration_head: base.migration.migration_head,
+    },
+    environment_snapshot: {
+      source_allowlist_id: base.environment_snapshot.source_allowlist_id,
+      opaque_source_identity_digest: base.environment_snapshot.opaque_source_identity_digest,
+      opaque_override_digest: base.environment_snapshot.override_policy_digest,
+      exposed_value_count: 0,
+    },
+  };
+}
+
+function runEvidenceAuthority(index: 1 | 2) {
+  const base = runInput(index);
+  const globalLedgerEntries = [{ sequence: 1, migration_id: base.migration.migration_head, migration_sha256: SHA_A }];
+  const runtimeContainerIds = ["app", "full_local", "worker"].map((component) => `${component}-container-${index}`).sort();
+  const orderedMigrationFilesDigest = sha256Jcs([{
+    path: `supabase/migrations/${base.migration.migration_head}.sql`,
+    sha256: SHA_A,
+  }]);
+  const ownedResourceIds = [
+    ...runtimeContainerIds,
+    ...base.isolation.network_ids,
+    ...base.isolation.volume_ids,
+  ].sort();
+  const resourceIdentityDigest = sha256Jcs({
+    project: base.isolation.docker_project_id,
+    container_names: [`container-name-${index}`],
+    network_names: [`network-name-${index}`],
+    volume_names: [`volume-name-${index}`],
+    owned_resource_ids: ownedResourceIds,
+  });
+  const productionMeasurement = {
+    schema: "homecook.release-rehearsal-production-isolation-telemetry.v1",
+    production_db_connection_count: 0,
+    production_db_write_count: 0,
+    mutation_attempt_count: 0,
+    forbidden_mount_count: 0,
+    forbidden_environment_count: 0,
+    observed_container_count: 3,
+    container_policy_digest: SHA_A,
+    command_policy_digest: SHA_B,
+    network_policy_digest: SHA_C,
+    external_attempt_count: 1,
+    successful_egress_count: 0,
+    docker_endpoint_identity_digest: SHA_A,
+    docker_daemon_identity_digest: SHA_B,
+  };
+  const independentObserver = {
+    schema: "homecook.r2-production-observer.v1",
+    source_identity_digest: SHA_A,
+    started_at: base.issued_at,
+    completed_at: base.completed_at,
+    pre_snapshot_digest: SHA_A,
+    post_snapshot_digest: SHA_A,
+    process_binding_digest: SHA_B,
+    docker_daemon_identity_digest: SHA_C,
+    observation_digest: SHA_A,
+    available: true,
+    truncated: false,
+    production_db_connection_count: 0,
+    production_db_write_count: 0,
+    production_credential_access_count: 0,
+    production_socket_access_count: 0,
+    provider_remote_access_count: 0,
+    production_mutation_count: 0,
+    unrelated_noise_count: 0,
+    registered_subjects: [{
+      container_id: `${index}-observer-container`,
+      host_pid: 1,
+      host_pgid: 1,
+      component: "app",
+      started_at: base.issued_at,
+      image_digest: SHA_A,
+      config_digest: SHA_B,
+      executable_identity_digest: SHA_C,
+    }],
+  };
+  const runtime = (component: "app" | "full_local" | "worker") => ({
+    component,
+    kind: "container",
+    pid: null,
+    process_group_id: null,
+    container_ids: [`${component}-container-${index}`],
+    release_sha: base.release_sha,
+    release_tree: base.release_tree,
+    build_id: base.build_id,
+    sealed_bundle_digest: base.sealed_bundle_digest,
+    migration_head: base.migration.migration_head,
+    ready: true,
+    exit_code: null,
+  });
+  const unsigned = {
+    schema: "homecook.local-mac-production-rehearsal-run-evidence.v1",
+    canonicalization: "RFC8785-JCS+SHA256",
+    status: "passed",
+    trusted_receipt: false,
+    candidate_identity_digest: SHA_C,
+    release_sha: base.release_sha,
+    release_tree: base.release_tree,
+    build_id: base.build_id,
+    sealed_bundle_digest: base.sealed_bundle_digest,
+    bundle_manifest_digest: base.bundle_manifest_digest,
+    run_id: `00000000-0000-4000-8000-00000000000${index}`,
+    issued_at: base.issued_at,
+    completed_at: base.completed_at,
+    rehearsal_runner: base.toolchain.rehearsal_runner,
+    isolation: {
+      resource_identity_digest: resourceIdentityDigest,
+      root_identity_digest: base.isolation.root_identity_digest,
+      execution_root_identity_digest: SHA_B,
+      docker_project_id: base.isolation.docker_project_id,
+      network_names: [`network-name-${index}`],
+      container_names: [`container-name-${index}`],
+      volume_names: [`volume-name-${index}`],
+      network_ids: base.isolation.network_ids,
+      container_ids: runtimeContainerIds,
+      volume_ids: base.isolation.volume_ids,
+      db_identity: { name: `hc_r2_${index}`, user: `hc_r2_user_${index}`, identity_digest: SHA_A },
+      ports: { app: 46000 + index, auth: 47000 + index, postgres: 48000 + index, storage: 49000 + index },
+      collision_preflight_digest: base.isolation.collision_preflight_digest,
+    },
+    migration: {
+      ...base.migration,
+      ordered_migration_files_digest: orderedMigrationFilesDigest,
+      applied_global_ledger_digest: sha256Jcs(globalLedgerEntries),
+      global_ledger_entries: globalLedgerEntries,
+      ordered_global_ledger: [base.migration.migration_head],
+    },
+    fixtures: base.fixtures,
+    runtime: {
+      app: runtime("app"),
+      full_local: runtime("full_local"),
+      worker: {
+        ...runtime("worker"),
+        worker_rehearsal_rpc_config_digest: SHA_A,
+        worker_rehearsal_rpc_config_identity_digest: SHA_B,
+      },
+      foreground_supervisor: {
+        component: "foreground_supervisor",
+        pid: 40000 + index,
+        process_group_id: null,
+        child_process_groups_enforced: true,
+        launchd_used: false,
+        child_identity_digest: SHA_A,
+        timeout_policy_digest: SHA_B,
+      },
+    },
+    canaries: [
+      "app-production-route",
+      "cross-component-identity",
+      "external-network-deny",
+      "full-local-api-gateway-route",
+      "full-local-auth-route",
+      "full-local-postgrest-fixture",
+      "full-local-storage-route",
+      "worker-synthetic-job",
+    ].map((canary_id, canaryIndex) => ({
+      canary_id,
+      started_at: base.issued_at,
+      completed_at: base.completed_at,
+      exit_code: 0,
+      normalized_result_digest: String(canaryIndex + 1).repeat(64).slice(0, 64),
+    })),
+    network: base.network,
+    cleanup: {
+      ...base.cleanup,
+      owned_resource_ids: ownedResourceIds,
+      removed_resource_ids: ownedResourceIds,
+      secret_bearing_persistent_file_count: 0,
+    },
+    worker_rehearsal_rpc_authority: {
+      config_digest: SHA_A,
+      config_file_identity_digest: SHA_B,
+      token_reference_digest: SHA_C,
+      lifecycle_version: "v1",
+      fixture_identity_digest: SHA_A,
+    },
+    production_guard: {
+      ...base.production_guard,
+      measurement: productionMeasurement,
+      measurement_digest: sha256Jcs(productionMeasurement),
+      independent_observer: independentObserver,
+    },
+    threat_controls: {
+      symlink_toctou: "pass",
+      namespace_collision: "pass",
+      digest_substitution: "pass",
+      stale_candidate: "pass",
+      cleanup_ownership: "pass",
+    },
+  };
+  return { ...unsigned, evidence_digest: sha256Jcs(unsigned) };
+}
+
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
     rmSync(temporaryDirectories.pop()!, { recursive: true, force: true });
@@ -200,6 +431,51 @@ afterEach(() => {
 });
 
 describe("rehearsal run receipt", () => {
+  it("derives the trusted run receipt only from cross-bound candidate and passed run evidence", () => {
+    expect(typeof receiptAuthority.buildRunReceiptFromEvidenceAuthority).toBe("function");
+    const receipt = receiptAuthority.buildRunReceiptFromEvidenceAuthority({
+      candidateManifest: candidateAuthority(),
+      runEvidence: runEvidenceAuthority(1),
+      issuerTaskId: "019ff-rehearsal-author",
+      now: NOW,
+    });
+
+    expect(receipt).toMatchObject({
+      schema: "homecook.local-mac-production-rehearsal-run-receipt.v1",
+      run_id: "00000000-0000-4000-8000-000000000001",
+      receipt_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+    expect(receipt.toolchain.rehearsal_runner).toEqual(runInput(1).toolchain.rehearsal_runner);
+    expect(receipt.isolation).toMatchObject({
+      network_ids: ["network-1"],
+      container_ids: ["app-container-1", "full_local-container-1", "worker-container-1"],
+      volume_ids: ["volume-1"],
+    });
+  });
+
+  it("writes one canonical private receipt per run ID and rejects duplicate issuance", () => {
+    expect(typeof receiptAuthority.writeCanonicalReceiptCreateOnly).toBe("function");
+    const receiptRoot = tempDirectory("homecook-trusted-receipts-");
+    const repoRoot = tempDirectory("homecook-receipt-repo-");
+    const receipt = buildTestRunReceipt(runInput(1));
+    const first = receiptAuthority.writeCanonicalReceiptCreateOnly({
+      receipt,
+      receiptRoot,
+      repoRoot,
+      expectedUid: process.getuid!(),
+    });
+
+    expect(first).toBe(join(receiptRoot, `${receipt.run_id}.run-receipt.json`));
+    expect(readCanonicalReceiptFile(first, { repoRoot, expectedUid: process.getuid!(), now: NOW }))
+      .toEqual(receipt);
+    expect(() => receiptAuthority.writeCanonicalReceiptCreateOnly({
+      receipt,
+      receiptRoot,
+      repoRoot,
+      expectedUid: process.getuid!(),
+    })).toThrow(/duplicate|exists|create-only|run.?id/iu);
+  });
+
   it("builds and parses an exact canonical self-digested receipt", () => {
     const receipt = buildTestRunReceipt(runInput(1));
     const parsed = parseAndValidateRunReceipt(canonicalizeJcs(receipt), { now: NOW });
@@ -301,6 +577,13 @@ describe("repeatability receipt", () => {
     const mutations = [
       { run_id: first.run_id },
       { isolation: { ...runInput(2).isolation, resource_identity_digest: first.isolation.resource_identity_digest } },
+      { isolation: { ...runInput(2).isolation, root_identity_digest: first.isolation.root_identity_digest } },
+      { isolation: { ...runInput(2).isolation, docker_project_id: first.isolation.docker_project_id } },
+      { isolation: { ...runInput(2).isolation, db_identity: first.isolation.db_identity } },
+      { isolation: { ...runInput(2).isolation, ports: first.isolation.ports } },
+      { isolation: { ...runInput(2).isolation, network_ids: first.isolation.network_ids } },
+      { isolation: { ...runInput(2).isolation, container_ids: first.isolation.container_ids } },
+      { isolation: { ...runInput(2).isolation, volume_ids: first.isolation.volume_ids } },
       {
         sealed_bundle_digest: "d".repeat(64),
         runtime: Object.fromEntries(
@@ -319,7 +602,7 @@ describe("repeatability receipt", () => {
     for (const override of mutations) {
       const second = buildTestRunReceipt(runInput(2, override));
       expect(() => buildRepeatabilityReceipt({ memberReceipts: [first, second], issuerTaskId: "task", now: NOW }))
-        .toThrow(/run|resource|bundle|toolchain|image|migration|canary|distinct|match/iu);
+        .toThrow(/run|resource|root|docker|database|port|network|container|volume|bundle|toolchain|image|migration|canary|distinct|overlap|match/iu);
     }
   });
 });
@@ -362,6 +645,7 @@ describe("receipt schemas and artifact path boundary", () => {
       redigestRun({ ...valid, images: [{ ...valid.images[0], local_cache_provenance_digest: "bad" }] }),
       redigestRun({ ...valid, issued_at: "2026-02-30T08:00:00.000Z" }),
       redigestRun({ ...valid, toolchain: { ...valid.toolchain, node: { ...valid.toolchain.node, mode: Number.MAX_SAFE_INTEGER + 1 } } }),
+      redigestRun({ ...valid, toolchain: { ...valid.toolchain, node: { ...valid.toolchain.node, mode: 0o777 } } }),
     ];
 
     for (const attack of attacks) {
@@ -432,6 +716,19 @@ describe("receipt schemas and artifact path boundary", () => {
       repoRoot,
       expectedUid: process.getuid!(),
     })).toThrow(/UTF-8|canonical|invalid/iu);
+  });
+
+  it("rejects parent and file identity drift after the no-follow descriptor is opened", () => {
+    const artifactRoot = tempDirectory("homecook-receipt-toctou-");
+    const repoRoot = tempDirectory("homecook-repo-toctou-");
+    const receiptPath = join(artifactRoot, "receipt.json");
+    writeFileSync(receiptPath, canonicalizeJcs(buildTestRunReceipt(runInput(1))), { mode: 0o600 });
+
+    expect(() => readPrivateCanonicalJsonFile(receiptPath, {
+      repoRoot,
+      expectedUid: process.getuid!(),
+      afterOpen: () => chmodSync(artifactRoot, 0o755),
+    })).toThrow(/parent|identity|mode|changed|TOCTOU/iu);
   });
 });
 

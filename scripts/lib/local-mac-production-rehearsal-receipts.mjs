@@ -1,16 +1,20 @@
 import {
   closeSync,
   constants as FS_CONSTANTS,
+  fchmodSync,
   fstatSync,
+  fsyncSync,
   lstatSync,
   openSync,
   readFileSync,
   realpathSync,
+  writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
+import { canonicalizeJcs, parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
+import { validateRunEvidence } from "./local-mac-production-rehearsal-runner.mjs";
 
 export const RUN_RECEIPT_SCHEMA = "homecook.local-mac-production-rehearsal-run-receipt.v1";
 export const REPEATABILITY_RECEIPT_SCHEMA = "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
@@ -22,10 +26,15 @@ const HEX_40 = /^[0-9a-f]{40}$/u;
 const HEX_64 = /^[0-9a-f]{64}$/u;
 const IMAGE_DIGEST = /^sha256:[0-9a-f]{64}$/u;
 const RFC3339_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
+const SAFE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
 
 const TOOL_KEYS = ["version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256"];
 const TOOLCHAIN_KEYS = ["node", "pnpm", "supabase_cli", "git", "docker_client", "docker_daemon", "candidate_builder", "rehearsal_runner"];
-const RUNTIME_KEYS = ["pid", "container_id", "reported_release_sha", "reported_release_tree", "reported_build_id", "reported_sealed_bundle_digest"];
+const RUNTIME_KEYS = [
+  "kind", "pid", "process_group_id", "container_ids", "reported_release_sha",
+  "reported_release_tree", "reported_build_id", "reported_sealed_bundle_digest",
+  "reported_migration_head",
+];
 const RUN_UNSIGNED_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree",
   "ci_head_sha", "ci_check_summary_digest", "build_id", "sealed_bundle_digest",
@@ -104,6 +113,7 @@ function validateToolIdentity(value, label) {
   assertIdentityInteger(tool.device, `${label}.device`);
   assertIdentityInteger(tool.inode, `${label}.inode`);
   assertInteger(tool.mode, `${label}.mode`);
+  if (!SAFE_TOOL_MODES.has(tool.mode) || (tool.mode & 0o022) !== 0) fail(`${label}.mode is unsafe or outside the closed allowlist`);
   assertTimestamp(tool.ctime, `${label}.ctime`);
   assertIdentityInteger(tool.size, `${label}.size`);
   assertString(tool.sha256, `${label}.sha256`, HEX_64);
@@ -111,12 +121,22 @@ function validateToolIdentity(value, label) {
 
 function validateRuntimeIdentity(value, label, receipt) {
   const runtime = assertObject(value, label, RUNTIME_KEYS);
-  assertInteger(runtime.pid, `${label}.pid`, 1);
-  assertString(runtime.container_id, `${label}.container_id`);
+  if (runtime.kind === "container") {
+    if (runtime.pid !== null || runtime.process_group_id !== null) fail(`${label} container PID fields must be null`);
+    assertSortedUniqueStrings(runtime.container_ids, `${label}.container_ids`);
+    if (runtime.container_ids.length === 0) fail(`${label}.container_ids must be nonempty`);
+  } else if (runtime.kind === "process") {
+    assertInteger(runtime.pid, `${label}.pid`, 1);
+    if (runtime.process_group_id !== null) fail(`${label}.process_group_id must be null for the foreground supervisor`);
+    if (!Array.isArray(runtime.container_ids) || runtime.container_ids.length !== 0) fail(`${label}.container_ids must be empty for a process`);
+  } else {
+    fail(`${label}.kind must be container or process`);
+  }
   if (runtime.reported_release_sha !== receipt.release_sha) fail(`${label} release identity mismatch`);
   if (runtime.reported_release_tree !== receipt.release_tree) fail(`${label} tree identity mismatch`);
   if (runtime.reported_build_id !== receipt.build_id) fail(`${label} build identity mismatch`);
   if (runtime.reported_sealed_bundle_digest !== receipt.sealed_bundle_digest) fail(`${label} bundle identity mismatch`);
+  if (runtime.reported_migration_head !== receipt.migration.migration_head) fail(`${label} migration identity mismatch`);
 }
 
 function validateRunUnsigned(value) {
@@ -235,6 +255,152 @@ export function buildRunReceipt(input, { now = new Date() } = {}) {
   return validateRunReceipt(receipt, { now });
 }
 
+/**
+ * @param {{candidateManifest: any, runEvidence: any, issuerTaskId: string, now?: Date}} options
+ */
+export function buildRunReceiptFromEvidenceAuthority({
+  candidateManifest,
+  runEvidence,
+  issuerTaskId,
+  now = new Date(),
+} = {}) {
+  validateRunEvidence(runEvidence);
+  if (!candidateManifest || typeof candidateManifest !== "object" || Array.isArray(candidateManifest)) {
+    fail("validated candidate manifest authority is required");
+  }
+  if (candidateManifest.repository !== REPOSITORY || candidateManifest.source_ref !== SOURCE_REF) {
+    fail("candidate repository or source_ref authority mismatch");
+  }
+  for (const field of [
+    "release_sha", "release_tree", "build_id",
+    "sealed_bundle_digest", "bundle_manifest_digest", "candidate_identity_digest",
+  ]) {
+    if (candidateManifest[field] !== runEvidence[field]) {
+      fail(`candidate and run evidence differ at ${field}`);
+    }
+  }
+  if (!candidateManifest.toolchain || !candidateManifest.environment_snapshot) {
+    fail("candidate toolchain and environment authority are required");
+  }
+  if (candidateManifest.migration?.ordered_migration_files_digest !== runEvidence.migration.ordered_migration_files_digest
+    || candidateManifest.migration?.migration_head !== runEvidence.migration.migration_head) {
+    fail("candidate and run evidence migration authority differs");
+  }
+
+  const runtime = Object.fromEntries(
+    ["app", "full_local", "worker"].map((component) => {
+      const evidence = runEvidence.runtime[component];
+      return [component, {
+        kind: evidence.kind,
+        pid: evidence.pid,
+        process_group_id: evidence.process_group_id,
+        container_ids: [...evidence.container_ids].sort(compareCodeUnits),
+        reported_release_sha: evidence.release_sha,
+        reported_release_tree: evidence.release_tree,
+        reported_build_id: evidence.build_id,
+        reported_sealed_bundle_digest: evidence.sealed_bundle_digest,
+        reported_migration_head: evidence.migration_head,
+      }];
+    }),
+  );
+  const supervisor = runEvidence.runtime.foreground_supervisor;
+  runtime.foreground_supervisor = {
+    kind: "process",
+    pid: supervisor.pid,
+    process_group_id: supervisor.process_group_id,
+    container_ids: [],
+    reported_release_sha: runEvidence.release_sha,
+    reported_release_tree: runEvidence.release_tree,
+    reported_build_id: runEvidence.build_id,
+    reported_sealed_bundle_digest: runEvidence.sealed_bundle_digest,
+    reported_migration_head: runEvidence.migration.migration_head,
+  };
+
+  return buildRunReceipt({
+    schema: RUN_RECEIPT_SCHEMA,
+    canonicalization: CANONICALIZATION,
+    repository: REPOSITORY,
+    source_ref: SOURCE_REF,
+    release_sha: runEvidence.release_sha,
+    release_tree: runEvidence.release_tree,
+    ci_head_sha: runEvidence.release_sha,
+    ci_check_summary_digest: candidateManifest.ci_check_summary_digest,
+    build_id: runEvidence.build_id,
+    sealed_bundle_digest: runEvidence.sealed_bundle_digest,
+    bundle_manifest_digest: runEvidence.bundle_manifest_digest,
+    run_id: runEvidence.run_id,
+    issued_at: runEvidence.issued_at,
+    completed_at: runEvidence.completed_at,
+    toolchain: {
+      node: candidateManifest.toolchain.node,
+      pnpm: candidateManifest.toolchain.pnpm,
+      supabase_cli: candidateManifest.toolchain.supabase_cli,
+      git: candidateManifest.toolchain.git,
+      docker_client: candidateManifest.toolchain.docker_client,
+      docker_daemon: candidateManifest.toolchain.docker_daemon,
+      candidate_builder: candidateManifest.toolchain.candidate_builder,
+      rehearsal_runner: runEvidence.rehearsal_runner,
+    },
+    images: candidateManifest.images.map(({ digest, platform, local_cache_provenance_digest }) => ({
+      digest,
+      platform,
+      local_cache_provenance_digest,
+    })).sort((left, right) => compareCodeUnits(left.digest, right.digest)),
+    migration: {
+      ordered_migration_files_digest: runEvidence.migration.ordered_migration_files_digest,
+      applied_global_ledger_digest: runEvidence.migration.applied_global_ledger_digest,
+      migration_head: runEvidence.migration.migration_head,
+      catalog_head: runEvidence.migration.catalog_head,
+      schema_identity_digest: runEvidence.migration.schema_identity_digest,
+    },
+    fixtures: runEvidence.fixtures,
+    isolation: {
+      resource_identity_digest: runEvidence.isolation.resource_identity_digest,
+      root_identity_digest: runEvidence.isolation.root_identity_digest,
+      docker_project_id: runEvidence.isolation.docker_project_id,
+      network_ids: runEvidence.isolation.network_ids,
+      container_ids: runEvidence.isolation.container_ids,
+      volume_ids: runEvidence.isolation.volume_ids,
+      db_identity: runEvidence.isolation.db_identity.identity_digest,
+      ports: Object.values(runEvidence.isolation.ports).sort((left, right) => left - right),
+      collision_preflight_digest: runEvidence.isolation.collision_preflight_digest,
+    },
+    runtime,
+    canaries: runEvidence.canaries,
+    network: runEvidence.network,
+    cleanup: {
+      completed: runEvidence.cleanup.completed,
+      owned_resource_ids: runEvidence.cleanup.owned_resource_ids,
+      removed_resource_ids: runEvidence.cleanup.removed_resource_ids,
+      residue_resource_ids: runEvidence.cleanup.residue_resource_ids,
+      cleanup_errors: runEvidence.cleanup.cleanup_errors,
+    },
+    production_guard: {
+      surface_allowlist_version: runEvidence.production_guard.surface_allowlist_version,
+      production_snapshot_pre_digest: runEvidence.production_guard.production_snapshot_pre_digest,
+      production_snapshot_post_digest: runEvidence.production_guard.production_snapshot_post_digest,
+      equal: runEvidence.production_guard.equal,
+      mutation_attempt_count: runEvidence.production_guard.mutation_attempt_count,
+      production_db_connection_count: runEvidence.production_guard.production_db_connection_count,
+      production_db_write_count: runEvidence.production_guard.production_db_write_count,
+    },
+    environment_snapshot: {
+      source_allowlist_id: candidateManifest.environment_snapshot.source_allowlist_id,
+      opaque_source_identity_digest: candidateManifest.environment_snapshot.opaque_source_identity_digest,
+      override_policy_digest: candidateManifest.environment_snapshot.opaque_override_digest,
+      exposed_value_count: candidateManifest.environment_snapshot.exposed_value_count,
+    },
+    threat_controls: {
+      symlink_toctou: runEvidence.threat_controls.symlink_toctou,
+      namespace_collision: runEvidence.threat_controls.namespace_collision,
+      digest_substitution: runEvidence.threat_controls.digest_substitution,
+      stale_receipt: "pass",
+      cleanup_ownership: runEvidence.threat_controls.cleanup_ownership,
+    },
+    issuer_task_id: assertString(issuerTaskId, "issuer_task_id"),
+  }, { now });
+}
+
 export function parseAndValidateRunReceipt(source, options) {
   let parsed;
   try {
@@ -275,6 +441,26 @@ function validateMemberPair(memberReceipts, { now = null, requireFresh = false }
   if (members[0].digest === members[1].digest) fail("member receipt digests must be distinct");
   if (members[0].runId === members[1].runId) fail("member run IDs must be distinct");
   if (members[0].resourceDigest === members[1].resourceDigest) fail("member resource identities must be distinct");
+  for (const [field, label] of [
+    ["root_identity_digest", "root identities"],
+    ["docker_project_id", "Docker projects"],
+    ["db_identity", "database identities"],
+  ]) {
+    if (members[0].receipt.isolation[field] === members[1].receipt.isolation[field]) {
+      fail(`member ${label} must be distinct`);
+    }
+  }
+  for (const [field, label] of [
+    ["network_ids", "network IDs"],
+    ["container_ids", "container IDs"],
+    ["volume_ids", "volume IDs"],
+    ["ports", "ports"],
+  ]) {
+    const left = new Set(members[0].receipt.isolation[field]);
+    if (members[1].receipt.isolation[field].some((entry) => left.has(entry))) {
+      fail(`member ${label} must not overlap`);
+    }
+  }
   for (const key of ["repository", "source_ref", "release_sha", "release_tree", "build_id", "sealed_bundle_digest", "bundle_manifest_digest"]) if (members[0].receipt[key] !== members[1].receipt[key]) fail(`member ${key} values must match`);
   for (const [key, label] of [["toolchainDigest", "toolchain"], ["imageSetDigest", "image"], ["migrationDigest", "migration"], ["canarySetDigest", "canary"]]) if (members[0][key] !== members[1][key]) fail(`member ${label} evidence must match`);
   const completionTimes = members.map((member) => timestampMilliseconds(member.receipt.completed_at, "member completed_at"));
@@ -359,7 +545,102 @@ function sameIdentity(left, right) {
     && left.ctimeNs === right.ctimeNs && left.mtimeNs === right.mtimeNs;
 }
 
-export function readPrivateCanonicalJsonFile(path, { repoRoot, expectedUid = process.getuid?.() }) {
+function sameDirectoryIdentity(left, right) {
+  return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid
+    && left.gid === right.gid && (left.mode & 0o7777n) === (right.mode & 0o7777n);
+}
+
+function assertPrivateArtifactRoot(path, { repoRoot, expectedUid }) {
+  if (!isAbsolute(path) || resolve(path) !== path) throw new Error("Artifact root must be an absolute canonical lexical path.");
+  const before = lstatSync(path, { bigint: true });
+  if (!before.isDirectory() || before.isSymbolicLink()) throw new Error("Artifact root must be a canonical directory.");
+  if ((before.mode & 0o777n) !== 0o700n) throw new Error("Artifact root must use exact private mode 0700.");
+  if (before.uid !== BigInt(expectedUid)) throw new Error("Artifact root owner does not match the current owner.");
+  if (realpathSync(path) !== path) throw new Error("Artifact root path must be canonical.");
+  const canonicalRepo = realpathSync(resolve(repoRoot));
+  const repoRelative = relative(canonicalRepo, path);
+  if (repoRelative === "" || (!repoRelative.startsWith("..") && !isAbsolute(repoRelative))) {
+    throw new Error("Artifact root must remain outside the repository boundary.");
+  }
+  return before;
+}
+
+/**
+ * @param {{receipt: any, receiptRoot: string, repoRoot: string, expectedUid?: number, memberReceipts?: any[], now?: Date}} options
+ */
+export function writeCanonicalReceiptCreateOnly({
+  receipt,
+  receiptRoot,
+  repoRoot,
+  expectedUid = process.getuid?.(),
+  memberReceipts,
+  now = new Date(),
+} = {}) {
+  if (!Number.isSafeInteger(expectedUid) || expectedUid < 0) throw new Error("Artifact owner identity is unavailable.");
+  let normalized;
+  let basename;
+  if (receipt?.schema === RUN_RECEIPT_SCHEMA) {
+    normalized = validateRunReceipt(receipt, { now });
+    if (!/^[A-Za-z0-9._-]+$/u.test(normalized.run_id)) fail("run_id cannot form a canonical receipt filename");
+    basename = `${normalized.run_id}.run-receipt.json`;
+  } else if (receipt?.schema === REPEATABILITY_RECEIPT_SCHEMA) {
+    normalized = validateRepeatabilityReceipt(receipt, { memberReceipts, now });
+    basename = `${receipt.repeatability_receipt_digest}.repeatability-receipt.json`;
+  } else {
+    fail("receipt schema is not recognized for create-only issuance");
+  }
+  const rootBefore = assertPrivateArtifactRoot(receiptRoot, { repoRoot, expectedUid });
+  const rootFd = openSync(receiptRoot, FS_CONSTANTS.O_RDONLY | FS_CONSTANTS.O_DIRECTORY | (FS_CONSTANTS.O_NOFOLLOW ?? 0));
+  let descriptor;
+  const destination = resolve(receiptRoot, basename);
+  try {
+    if (!sameDirectoryIdentity(rootBefore, fstatSync(rootFd, { bigint: true }))) throw new Error("Artifact root identity changed before create-only issuance.");
+    try {
+      descriptor = openSync(
+        destination,
+        FS_CONSTANTS.O_WRONLY | FS_CONSTANTS.O_CREAT | FS_CONSTANTS.O_EXCL | (FS_CONSTANTS.O_NOFOLLOW ?? 0),
+        0o600,
+      );
+    } catch (error) {
+      if (error && typeof error === "object" && error.code === "EEXIST") {
+        throw new Error("Duplicate receipt ID already exists; create-only issuance rejected.");
+      }
+      throw error;
+    }
+    fchmodSync(descriptor, 0o600);
+    const bytes = Buffer.from(canonicalizeForReceipt(normalized), "utf8");
+    writeFileSync(descriptor, bytes);
+    fsyncSync(descriptor);
+    const opened = fstatSync(descriptor, { bigint: true });
+    if (!opened.isFile() || opened.uid !== BigInt(expectedUid) || opened.nlink !== 1n
+      || (opened.mode & 0o777n) !== 0o600n || opened.size !== BigInt(bytes.length)) {
+      throw new Error("Create-only receipt file identity or private mode is invalid.");
+    }
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+    closeSync(rootFd);
+  }
+  const rootAfter = lstatSync(receiptRoot, { bigint: true });
+  if (!sameDirectoryIdentity(rootBefore, rootAfter)) throw new Error("Artifact root identity changed during create-only issuance.");
+  return destination;
+}
+
+function canonicalizeForReceipt(value) {
+  if (value.schema !== RUN_RECEIPT_SCHEMA && value.schema !== REPEATABILITY_RECEIPT_SCHEMA) {
+    fail("receipt schema is not recognized");
+  }
+  return canonicalizeJcs(value);
+}
+
+/**
+ * @param {string} path
+ * @param {{repoRoot: string, expectedUid?: number, afterOpen?: null | (() => void)}} options
+ */
+export function readPrivateCanonicalJsonFile(path, {
+  repoRoot,
+  expectedUid = process.getuid?.(),
+  afterOpen = null,
+}) {
   if (!isAbsolute(path)) throw new Error("Artifact path must be absolute.");
   const parent = dirname(path);
   const parentStats = lstatSync(parent, { bigint: true });
@@ -379,10 +660,17 @@ export function readPrivateCanonicalJsonFile(path, { repoRoot, expectedUid = pro
   const repoRelative = relative(canonicalRepo, canonicalPath);
   if (repoRelative === "" || (!repoRelative.startsWith("..") && !isAbsolute(repoRelative))) throw new Error("Artifact must remain outside the repository boundary.");
 
-  const descriptor = openSync(path, FS_CONSTANTS.O_RDONLY | (FS_CONSTANTS.O_NOFOLLOW ?? 0));
+  const parentDescriptor = openSync(parent, FS_CONSTANTS.O_RDONLY | FS_CONSTANTS.O_DIRECTORY | (FS_CONSTANTS.O_NOFOLLOW ?? 0));
+  if (!sameIdentity(parentStats, fstatSync(parentDescriptor, { bigint: true }))) {
+    closeSync(parentDescriptor);
+    throw new Error("Artifact parent identity changed before read.");
+  }
+  let descriptor;
   try {
+    descriptor = openSync(path, FS_CONSTANTS.O_RDONLY | (FS_CONSTANTS.O_NOFOLLOW ?? 0));
     const opened = fstatSync(descriptor, { bigint: true });
     if (!sameIdentity(before, opened)) throw new Error("Artifact identity changed before read.");
+    afterOpen?.();
     if (opened.size > 4n * 1024n * 1024n) throw new Error("Artifact exceeds the maximum receipt size.");
     const bytes = readFileSync(descriptor);
     let source;
@@ -392,11 +680,18 @@ export function readPrivateCanonicalJsonFile(path, { repoRoot, expectedUid = pro
       throw new Error("Artifact contains invalid UTF-8 bytes.");
     }
     if (!Buffer.from(source, "utf8").equals(bytes)) throw new Error("Artifact UTF-8 bytes do not round-trip exactly.");
+    const openedAfter = fstatSync(descriptor, { bigint: true });
     const after = lstatSync(path, { bigint: true });
-    if (!sameIdentity(opened, after)) throw new Error("Artifact identity changed during read.");
+    const parentAfter = lstatSync(parent, { bigint: true });
+    const parentOpenedAfter = fstatSync(parentDescriptor, { bigint: true });
+    if (!sameIdentity(opened, openedAfter) || !sameIdentity(opened, after)) throw new Error("Artifact identity changed during read.");
+    if (!sameIdentity(parentStats, parentOpenedAfter) || !sameIdentity(parentStats, parentAfter)) {
+      throw new Error("Artifact parent identity or private mode changed during read.");
+    }
     return source;
   } finally {
-    closeSync(descriptor);
+    if (descriptor !== undefined) closeSync(descriptor);
+    closeSync(parentDescriptor);
   }
 }
 

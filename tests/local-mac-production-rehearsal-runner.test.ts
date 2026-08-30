@@ -41,6 +41,16 @@ const SHA_B = "b".repeat(40);
 const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
+const RUNNER_IDENTITY = {
+  version: "homecook-release-rehearsal-runner-v1",
+  realpath: "/private/homecook/scripts/local-mac-production-rehearsal-run.mjs",
+  device: "16777229",
+  inode: "1152921500311885470",
+  mode: 0o500,
+  ctime: "2026-08-29T00:00:00.000Z",
+  size: "4096",
+  sha256: "f".repeat(64),
+};
 const PRIMITIVE_PORTS = { app: 43101, auth: 43102, postgres: 43103, storage: 43104 };
 const MIGRATION_FILE_ENTRIES = [
   { path: "supabase/migrations/20260101000000_one.sql", sha256: "1".repeat(64) },
@@ -276,7 +286,11 @@ function evidenceFixture() {
       ports: { app: 43101, auth: 43102, postgres: 43103, storage: 43104 },
       root_identity_digest: "2".repeat(64),
       execution_root_identity_digest: "4".repeat(64),
-      resource_identity_digest: sha256Jcs({ project: `homecook-rehearsal-${RUN_ID}`, container_names: ["container-a"], network_names: ["network-a"], volume_names: ["volume-a"], owned_resource_ids: ["container-app", "container-full-local", "container-worker"] }),
+      collision_preflight_digest: sha256Jcs({ collisions: [] }),
+      network_ids: ["network-1"],
+      container_ids: ["container-app", "container-full-local", "container-worker"],
+      volume_ids: ["volume-1"],
+      resource_identity_digest: sha256Jcs({ project: `homecook-rehearsal-${RUN_ID}`, container_names: ["container-a"], network_names: ["network-a"], volume_names: ["volume-a"], owned_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"] }),
     },
     migration: migrationReplay(),
     fixtures: { fixture_set_id: "homecook-r2-synthetic-v1", fixture_set_digest: "5".repeat(64), production_derived_row_count: 0 },
@@ -294,12 +308,12 @@ function evidenceFixture() {
         timeout_policy_digest: "7".repeat(64),
       },
     },
-    canaries: canaryIds.map((canary_id, index) => ({ canary_id, exit_code: 0, normalized_result_digest: String(index + 1).repeat(64).slice(0, 64) })),
+    canaries: canaryIds.map((canary_id, index) => ({ canary_id, started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", exit_code: 0, normalized_result_digest: String(index + 1).repeat(64).slice(0, 64) })),
     network: { default_deny_policy_digest: "8".repeat(64), allowed_endpoints: ["loopback", "run-owned-network"], denied_attempt_count: 1, unexpected_successful_egress_count: 0 },
     cleanup: {
       completed: true,
-      owned_resource_ids: ["container-app", "container-full-local", "container-worker"],
-      removed_resource_ids: ["container-app", "container-full-local", "container-worker"],
+      owned_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"],
+      removed_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"],
       residue_resource_ids: [],
       cleanup_errors: [],
       secret_bearing_persistent_file_count: 0,
@@ -318,6 +332,7 @@ function evidenceFixture() {
       independent_observer: independentObserver(),
     },
     threat_controls: { symlink_toctou: "pass", namespace_collision: "pass", digest_substitution: "pass", stale_candidate: "pass", cleanup_ownership: "pass" },
+    rehearsal_runner: RUNNER_IDENTITY,
   };
   return { ...unsigned, evidence_digest: sha256Jcs(unsigned) };
 }
@@ -572,6 +587,7 @@ describe("release rehearsal R2 orchestration", () => {
       runId: RUN_ID,
       readCandidate: () => completedCandidate(candidateRoot),
       adapters,
+      runnerIdentity: RUNNER_IDENTITY,
       now: () => new Date("2026-08-29T00:00:00.000Z"),
     });
 
@@ -580,6 +596,17 @@ describe("release rehearsal R2 orchestration", () => {
     expect(result.status).toBe("passed");
     expect(result.fixtures.production_derived_row_count).toBe(0);
     expect(result.production_guard).toMatchObject({ equal: true, mutation_attempt_count: 0, production_db_connection_count: 0, production_db_write_count: 0 });
+    expect(result.rehearsal_runner).toEqual(RUNNER_IDENTITY);
+    expect(result.isolation).toMatchObject({
+      collision_preflight_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      network_ids: ["network-1"],
+      container_ids: ["container-app", "container-full-local", "container-worker"],
+      volume_ids: ["volume-1"],
+    });
+    expect(result.canaries.every((entry: { started_at: string; completed_at: string }) => (
+      entry.started_at === "2026-08-29T00:00:00.000Z"
+      && entry.completed_at === "2026-08-29T00:00:00.000Z"
+    ))).toBe(true);
     expect(adapters.independentObserver.begin).toHaveBeenCalledBefore(adapters.createResources);
     expect(adapters.independentObserver.end).toHaveBeenCalledBefore(adapters.removeResource);
     expect(result.cleanup).toMatchObject({ completed: true, residue_resource_ids: [], cleanup_errors: [], secret_bearing_persistent_file_count: 0 });
@@ -606,6 +633,7 @@ describe("release rehearsal R2 orchestration", () => {
       runId: RUN_ID,
       readCandidate: () => completedCandidate(candidateRoot),
       adapters,
+      runnerIdentity: RUNNER_IDENTITY,
     })).rejects.toThrow(/partial start/iu);
     expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id).sort())
       .toEqual(["network-1", "volume-1"]);
@@ -625,6 +653,7 @@ describe("release rehearsal R2 orchestration", () => {
       runId: RUN_ID,
       readCandidate: () => completedCandidate(candidateRoot),
       adapters,
+      runnerIdentity: RUNNER_IDENTITY,
     })).rejects.toThrow(/residue|cleanup/iu);
     expect(adapters.removeResource).not.toHaveBeenCalledWith(
       expect.objectContaining({ id: "attacker-decoy" }),
@@ -656,6 +685,7 @@ describe("release rehearsal R2 orchestration", () => {
       runId: RUN_ID,
       readCandidate: () => completedCandidate(candidateRoot),
       adapters,
+      runnerIdentity: RUNNER_IDENTITY,
     })).rejects.toThrow();
     expect(adapters.closeSecretHandles).toHaveBeenCalled();
   });
@@ -677,6 +707,7 @@ describe("release rehearsal R2 orchestration", () => {
         return value;
       },
       adapters,
+      runnerIdentity: RUNNER_IDENTITY,
     })).rejects.toThrow(/candidate|sealed|tamper|drift/iu);
     expect(reads).toBeGreaterThanOrEqual(3);
   });
@@ -697,6 +728,7 @@ describe("release rehearsal R2 orchestration", () => {
       runId: RUN_ID,
       readCandidate: () => completedCandidate(candidateRoot),
       adapters,
+      runnerIdentity: RUNNER_IDENTITY,
       signal: controller.signal,
     })).rejects.toThrow(/SIGTERM|signal|interrupt|abort/iu);
     expect(adapters.removeResource).toHaveBeenCalledTimes(adapters.resources.length);
@@ -717,6 +749,7 @@ describe("release rehearsal R2 orchestration", () => {
       runId: RUN_ID,
       readCandidate: () => completedCandidate(candidateRoot),
       adapters,
+      runnerIdentity: RUNNER_IDENTITY,
       signal: controller.signal,
     });
     await vi.waitFor(() => expect(adapters.waitForReadiness).toHaveBeenCalled());

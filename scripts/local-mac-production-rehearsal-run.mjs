@@ -3,9 +3,12 @@
 import { randomUUID } from "node:crypto";
 import { lstatSync, mkdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { readCompletedCandidateRoot } from "./lib/local-mac-production-rehearsal-candidate.mjs";
+import {
+  readCompletedCandidateRoot,
+  snapshotToolFile,
+} from "./lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs } from "./lib/rfc8785-jcs.mjs";
 import { runIsolatedReleaseRehearsal } from "./lib/local-mac-production-rehearsal-runner.mjs";
 
@@ -73,6 +76,11 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
     createAdapters = defaultAdapterFactory,
     namespaceResolver = defaultNamespaceResolver,
     runIdFactory = () => randomUUID(),
+    runnerIdentity = () => snapshotToolFile(
+      realpathSync(fileURLToPath(import.meta.url)),
+      "homecook-release-rehearsal-runner-v1",
+      { requireExecutable: false },
+    ),
   } = dependencies;
   const options = parseArguments(argv);
   if (options.help) { output.write(HELP); return; }
@@ -98,6 +106,7 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
       runId,
       readCandidate,
       adapters,
+      runnerIdentity: runnerIdentity(),
       signal: abortController.signal,
     });
   } finally {
