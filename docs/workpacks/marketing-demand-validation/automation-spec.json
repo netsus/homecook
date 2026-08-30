@@ -1,0 +1,149 @@
+{
+  "slice_id": "marketing-demand-validation",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/marketing/validation"
+    ],
+    "invariants": [
+      "official-docs-first",
+      "single-first-party-session-table",
+      "single-route-handler",
+      "result-before-email",
+      "server-issued-cookie",
+      "first-write-wins",
+      "target-qualified-pure-function",
+      "turnstile-and-origin-fail-closed",
+      "privacy-launch-readiness-blockers",
+      "api-envelope-compat",
+      "no-raw-ip-user-agent-referrer-or-cookie-fingerprint",
+      "no-login-pricing-admin-or-external-analytics-sdk",
+      "no-multi-table-event-log"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/demand-validation.test.ts",
+      "tests/marketing-validation-route.test.ts",
+      "tests/marketing-demand-validation-landing.test.tsx",
+      "tests/marketing-client-session.test.ts"
+    ],
+    "schema_changes": [
+      "supabase/migrations/<timestamp>_marketing_validation_sessions.sql"
+    ],
+    "required_tables": [
+      "public.marketing_validation_sessions"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/beta"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "hero",
+      "read-only",
+      "unauthorized",
+      "quiz",
+      "result",
+      "concept",
+      "intent",
+      "email",
+      "followup",
+      "done",
+      "validation-error",
+      "server-error",
+      "duplicate-generic-success",
+      "turnstile-fail-closed"
+    ],
+    "required_endpoints": [
+      "POST /api/v1/marketing/validation"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "beta-message-matches-ad",
+      "hero-neutral-cta-locked",
+      "quiz-five-question-lock",
+      "target-qualified-truth-table-lock",
+      "single-table-single-route-contract",
+      "server-issued-session-cookie",
+      "turnstile-fail-closed",
+      "privacy-readiness-required"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "MARKETING_DEMAND_VALIDATION"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MARKETING_DEMAND_VALIDATION.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MARKETING_DEMAND_VALIDATION-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-390",
+        "mobile-320",
+        "desktop-1280",
+        "quiz-flow",
+        "result-flow",
+        "email-flow",
+        "followup-flow",
+        "turnstile-fail-closed"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png",
+        "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.md"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MARKETING_DEMAND_VALIDATION-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:canonical-privacy-ready",
+    "manual:turnstile-secret-and-hostname-ready",
+    "manual:allowlisted-production-origin-ready",
+    "manual:edge-rate-limit-evidence-captured",
+    "manual:marketing-lead-protection-ready-enabled",
+    "manual:launch-readiness-blockers-green"
+  ],
+  "blocked_conditions": [
+    "production-lead-capture-enabled-without-operator-privacy-data",
+    "production-lead-capture-enabled-without-turnstile-secret-or-allowlisted-hostname",
+    "production-lead-capture-enabled-without-edge-rate-limit-evidence",
+    "production-lead-capture-enabled-without-canonical-privacy-page",
+    "extra-table-or-route-introduced",
+    "login-pricing-admin-or-external-sdk-introduced",
+    "serverless-inmemory-rate-limit-introduced",
+    "result-gated-behind-email",
+    "target-qualified-not-recomputed-server-side",
+    "raw-ip-user-agent-referrer-or-cookie-fingerprint-stored"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
