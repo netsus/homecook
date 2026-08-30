@@ -38,6 +38,10 @@ const SHA_B = "b".repeat(64);
 const SHA_C = "c".repeat(64);
 const RELEASE_A = "1".repeat(40);
 const RELEASE_B = "2".repeat(40);
+const APP_LAUNCHD_LABEL = "com.homecook.production";
+const CANONICAL_FULL_LOCAL_LABEL = "com.homecook.full-local-production";
+const LEGACY_FULL_LOCAL_LABEL = "com.homecook.full-local.production";
+const WORKER_LAUNCHD_LABEL = "com.homecook.youtube-extraction-worker";
 
 function tempDirectory(prefix: string) {
   const path = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
@@ -71,6 +75,63 @@ function absentArtifact(kind: string) {
     mtime: "1970-01-01T00:00:00.000Z",
     sha256: sha256Jcs({ kind, exists: false }),
   };
+}
+
+function launchdEvidence(label: string, loaded: boolean, pid = 201) {
+  const projection = {
+    label,
+    loaded,
+    state: loaded ? "running" : "missing",
+    pid: loaded ? pid : null,
+  };
+  return { ...projection, projection_digest: sha256Jcs(projection) };
+}
+
+function rebuildInventory(inventory: Record<string, any>, surfaces: Record<string, any>) {
+  const unsigned = { ...inventory, surfaces, surface_digest: sha256Jcs(surfaces) };
+  delete unsigned.inventory_digest;
+  return { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+}
+
+function withFullLocalAuthority(inventory: Record<string, any>, {
+  canonicalPlist,
+  legacyPlist,
+  canonicalLoaded,
+  legacyLoaded,
+}: {
+  canonicalPlist: boolean;
+  legacyPlist: boolean;
+  canonicalLoaded: boolean;
+  legacyLoaded: boolean;
+}) {
+  const canonicalKind = `launch_agent_plist:${CANONICAL_FULL_LOCAL_LABEL}`;
+  const legacyKind = `launch_agent_plist:${LEGACY_FULL_LOCAL_LABEL}`;
+  const canonicalTemplate = inventory.surfaces.release_artifacts
+    .find((entry: { kind: string }) => entry.kind === canonicalKind);
+  const presentArtifact = (kind: string, inodeOffset: number) => ({
+    ...canonicalTemplate,
+    kind,
+    exists: true,
+    inode: String(900 + inodeOffset),
+    sha256: inodeOffset === 1 ? SHA_B : SHA_C,
+  });
+  const releaseArtifacts = inventory.surfaces.release_artifacts
+    .filter((entry: { kind: string }) => ![canonicalKind, legacyKind].includes(entry.kind))
+    .concat([
+      canonicalPlist ? presentArtifact(canonicalKind, 1) : absentArtifact(canonicalKind),
+      legacyPlist ? presentArtifact(legacyKind, 2) : absentArtifact(legacyKind),
+    ]);
+  const launchd = inventory.surfaces.launchd
+    .filter((entry: { label: string }) => ![CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL].includes(entry.label))
+    .concat([
+      launchdEvidence(CANONICAL_FULL_LOCAL_LABEL, canonicalLoaded, 102),
+      launchdEvidence(LEGACY_FULL_LOCAL_LABEL, legacyLoaded, 104),
+    ]);
+  return rebuildInventory(inventory, {
+    ...inventory.surfaces,
+    release_artifacts: releaseArtifacts,
+    launchd,
+  });
 }
 
 function createAdapters({ mixed = false } = {}) {
@@ -333,7 +394,75 @@ describe("read-only production inventory", () => {
     expect(seen).toContain(`gui/${process.getuid!()}/com.homecook.full-local.production`);
   });
 
-  it("rejects canonical and legacy full-local LaunchAgent authority ambiguity", async () => {
+  it.each([
+    {
+      name: "canonical plist/job with legacy absent",
+      plistLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      loadedLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      expected: { canonical: true, legacy: false },
+    },
+    {
+      name: "legacy plist/job with canonical absent",
+      plistLabels: [LEGACY_FULL_LOCAL_LABEL],
+      loadedLabels: [LEGACY_FULL_LOCAL_LABEL],
+      expected: { canonical: false, legacy: true },
+    },
+    {
+      name: "canonical plist/job with hidden legacy job",
+      plistLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      loadedLabels: [CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL],
+      expected: { canonical: true, legacy: true },
+    },
+    {
+      name: "legacy plist/job with hidden canonical job",
+      plistLabels: [LEGACY_FULL_LOCAL_LABEL],
+      loadedLabels: [CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL],
+      expected: { canonical: true, legacy: true },
+    },
+    {
+      name: "stale canonical plist only",
+      plistLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      loadedLabels: [],
+      expected: { canonical: false, legacy: false },
+    },
+    {
+      name: "neither full-local plist nor job",
+      plistLabels: [],
+      loadedLabels: [],
+      expected: { canonical: false, legacy: false },
+    },
+  ])("always probes both full-local labels read-only: $name", async ({ plistLabels, loadedLabels, expected }) => {
+    const rootDir = tempDirectory("homecook-dual-launchd-root-");
+    const homeDir = tempDirectory("homecook-dual-launchd-home-");
+    const plistRoot = join(homeDir, "Library", "LaunchAgents");
+    mkdirSync(plistRoot, { recursive: true, mode: 0o700 });
+    for (const label of plistLabels) writeFileSync(join(plistRoot, `${label}.plist`), label, { mode: 0o600 });
+    const loaded = new Set([APP_LAUNCHD_LABEL, WORKER_LAUNCHD_LABEL, ...loadedLabels]);
+    const seen: string[] = [];
+    const commandRunner = vi.fn((_: string, args: string[]) => {
+      const domainTarget = args.at(-1) ?? "";
+      const label = domainTarget.split("/").at(-1) ?? "";
+      seen.push(label);
+      if (loaded.has(label)) {
+        return { status: 0, signal: null, stdout: "state = running\npid = 101\n", stderr: "" };
+      }
+      return {
+        status: 113,
+        signal: null,
+        stdout: "",
+        stderr: `Bad request.\nCould not find service \"${label}\" in domain for user gui: ${process.getuid!()}\n`,
+      };
+    });
+    const launchd = await createLocalProductionInventoryAdapters({ rootDir, homeDir, commandRunner }).readLaunchd();
+    const byLabel = new Map(launchd.map((entry: { label: string; loaded: boolean }) => [entry.label, entry]));
+
+    expect(launchd).toHaveLength(4);
+    expect(byLabel.get(CANONICAL_FULL_LOCAL_LABEL)).toMatchObject({ loaded: expected.canonical });
+    expect(byLabel.get(LEGACY_FULL_LOCAL_LABEL)).toMatchObject({ loaded: expected.legacy });
+    expect(seen).toEqual(expect.arrayContaining([CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL]));
+  });
+
+  it("records both full-local plist authorities so classifier can reject ambiguity", async () => {
     const rootDir = tempDirectory("homecook-label-ambiguity-root-");
     const homeDir = tempDirectory("homecook-label-ambiguity-home-");
     const plistRoot = join(homeDir, "Library", "LaunchAgents");
@@ -341,8 +470,37 @@ describe("read-only production inventory", () => {
     writeFileSync(join(plistRoot, "com.homecook.full-local-production.plist"), "canonical", { mode: 0o600 });
     writeFileSync(join(plistRoot, "com.homecook.full-local.production.plist"), "legacy", { mode: 0o600 });
 
-    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts())
-      .rejects.toThrow(/ambiguous|canonical|legacy|LaunchAgent/iu);
+    const artifacts = await createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts();
+    expect(artifacts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: `launch_agent_plist:${CANONICAL_FULL_LOCAL_LABEL}`, exists: true }),
+      expect.objectContaining({ kind: `launch_agent_plist:${LEGACY_FULL_LOCAL_LABEL}`, exists: true }),
+    ]));
+  });
+
+  it("treats exact launchctl not-loaded as evidence but rejects unexpected errors", async () => {
+    const rootDir = tempDirectory("homecook-launchd-error-root-");
+    const homeDir = tempDirectory("homecook-launchd-error-home-");
+    const seen: string[] = [];
+    const commandRunner = vi.fn((_: string, args: string[]) => {
+      const label = (args.at(-1) ?? "").split("/").at(-1) ?? "";
+      seen.push(label);
+      if ([APP_LAUNCHD_LABEL, WORKER_LAUNCHD_LABEL].includes(label)) {
+        return { status: 0, signal: null, stdout: "state = running\npid = 101\n", stderr: "" };
+      }
+      if (label === CANONICAL_FULL_LOCAL_LABEL) {
+        return {
+          status: 113,
+          signal: null,
+          stdout: "",
+          stderr: `Could not find service \"${label}\" in domain for user gui: ${process.getuid!()}\n`,
+        };
+      }
+      return { status: 1, signal: null, stdout: "", stderr: "TOP_SECRET_UNEXPECTED_LAUNCHCTL" };
+    });
+    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir, commandRunner });
+
+    await expect(adapters.readLaunchd()).rejects.toThrow(/command|launchd|inventory/iu);
+    expect(seen).toEqual(expect.arrayContaining([CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL]));
   });
 
   it("rejects symlinked and path-swapped external env authority without exposing values", async () => {
@@ -492,6 +650,70 @@ describe("read-only production inventory", () => {
     expect(() => inventoryModule.readProductionArtifactTarget("bounded_surface", nested, {
       treeLimits: { maxEntries: 1, maxDepth: 64, maxBytes: 1024 },
     })).toThrow(/entry|bound|limit/iu);
+  });
+
+  it("shares deterministic entry and byte budgets across every closed release-artifact child", async () => {
+    const rootDir = tempDirectory("homecook-aggregate-root-");
+    const homeDir = tempDirectory("homecook-aggregate-home-");
+    const snapshots = join(homeDir, ".homecook", "releases", "execution-snapshots");
+    for (const name of ["snapshot-a", "snapshot-b"]) {
+      mkdirSync(join(snapshots, name), { recursive: true, mode: 0o700 });
+      writeFileSync(join(snapshots, name, "payload"), "1234", { mode: 0o600 });
+    }
+    const readWithLimits = (maxEntries: number, maxBytes: number) => createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactSurfaceLimits: { maxEntries, maxBytes },
+    }).readReleaseArtifacts();
+
+    await expect(readWithLimits(6, 8)).resolves.toEqual(expect.any(Array));
+    await expect(readWithLimits(5, 8)).rejects.toThrow(/entry|aggregate|budget|limit/iu);
+    await expect(readWithLimits(6, 7)).rejects.toThrow(/byte|aggregate|budget|limit/iu);
+  });
+
+  it("rejects one sparse authority file before reading when the shared byte budget is exceeded", async () => {
+    const rootDir = tempDirectory("homecook-one-over-root-");
+    const homeDir = tempDirectory("homecook-one-over-home-");
+    const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", "snapshot-a");
+    mkdirSync(snapshot, { recursive: true, mode: 0o700 });
+    const payload = join(snapshot, "payload");
+    writeFileSync(payload, "", { mode: 0o600 });
+    truncateSync(payload, 9);
+
+    await expect(createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactSurfaceLimits: { maxEntries: 4, maxBytes: 8 },
+    }).readReleaseArtifacts()).rejects.toThrow(/byte|aggregate|budget|limit/iu);
+  });
+
+  it("does not double-count contained file aliases against the byte budget", async () => {
+    const inventoryModule = await import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs");
+    const root = tempDirectory("homecook-budget-alias-");
+    writeFileSync(join(root, "payload"), "1234", { mode: 0o600 });
+    symlinkSync("payload", join(root, "alias-a"));
+    symlinkSync("payload", join(root, "alias-b"));
+
+    expect(() => inventoryModule.digestProductionTree(root, { maxEntries: 4, maxBytes: 4 }))
+      .not.toThrow();
+  });
+
+  it("keeps unrelated 40GiB sparse release-root data metadata-only under an exact aggregate boundary", async () => {
+    const rootDir = tempDirectory("homecook-sparse-budget-root-");
+    const homeDir = tempDirectory("homecook-sparse-budget-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    mkdirSync(releaseRoot, { recursive: true, mode: 0o700 });
+    const unrelated = join(releaseRoot, "unrelated-cache");
+    writeFileSync(unrelated, "", { mode: 0o600 });
+    truncateSync(unrelated, 40 * 1024 * 1024 * 1024);
+
+    await expect(createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactSurfaceLimits: { maxEntries: 1, maxBytes: 0 },
+    }).readReleaseArtifacts()).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "release_root", exists: true }),
+    ]));
   });
 
   it("preserves actual filesystem identity from bigint stats without Number rounding", async () => {
@@ -857,6 +1079,105 @@ describe("read-only production inventory", () => {
 });
 
 describe("mixed-state classifier", () => {
+  it("accepts only exact canonical full-local plist/job authority as promotion-safe", async () => {
+    const inventory = await createInventory();
+    const canonical = withFullLocalAuthority(inventory, {
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: false,
+    });
+
+    expect(createProductionSurfaceSnapshot(canonical).surface_digest).toBe(canonical.surface_digest);
+    expect(classifyProductionInventory(canonical)).toMatchObject({
+      states: ["coherent_running"],
+      promotion_safe: true,
+      findings: [],
+    });
+  });
+
+  it("keeps exact legacy-only full-local authority observable but promotion-unsafe", async () => {
+    const inventory = await createInventory();
+    const legacy = withFullLocalAuthority(inventory, {
+      canonicalPlist: false,
+      legacyPlist: true,
+      canonicalLoaded: false,
+      legacyLoaded: true,
+    });
+
+    expect(createProductionSurfaceSnapshot(legacy).surface_digest).toBe(legacy.surface_digest);
+    const classification = classifyProductionInventory(legacy);
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toContain("unknown");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:canonical_full_local_launchd");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .not.toContain("surface:full_local_launchd_ambiguity");
+  });
+
+  it.each([
+    {
+      name: "both jobs loaded",
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: true,
+    },
+    {
+      name: "both plists present",
+      canonicalPlist: true,
+      legacyPlist: true,
+      canonicalLoaded: true,
+      legacyLoaded: false,
+    },
+    {
+      name: "canonical hidden job behind legacy plist",
+      canonicalPlist: false,
+      legacyPlist: true,
+      canonicalLoaded: true,
+      legacyLoaded: true,
+    },
+    {
+      name: "legacy hidden job behind canonical plist",
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: true,
+    },
+    {
+      name: "stale canonical plist",
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: false,
+      legacyLoaded: false,
+    },
+  ])("classifies full-local LaunchAgent ambiguity: $name", async (scenario) => {
+    const inventory = await createInventory();
+    const ambiguous = withFullLocalAuthority(inventory, scenario);
+    const classification = classifyProductionInventory(ambiguous);
+
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toContain("unknown");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:full_local_launchd_ambiguity");
+  });
+
+  it("keeps neither full-local plist nor job observable but incomplete", async () => {
+    const inventory = await createInventory();
+    const absent = withFullLocalAuthority(inventory, {
+      canonicalPlist: false,
+      legacyPlist: false,
+      canonicalLoaded: false,
+      legacyLoaded: false,
+    });
+    const classification = classifyProductionInventory(absent);
+
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toContain("unknown");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:canonical_full_local_launchd");
+  });
+
   it("classifies coherent running evidence as promotion-safe", async () => {
     const inventory = await createInventory();
     const result = classifyProductionInventory(inventory, {
