@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { linkSync, mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -885,6 +886,31 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
 });
 
 describe("release rehearsal R2 public command and schema", () => {
+  it("keeps every canonical R2 public command and argument table aligned with CLI help", () => {
+    const runbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
+    const r2Section = /### R2\. isolated rehearse([\s\S]*?)### R3\./u.exec(runbook)?.[1] ?? "";
+    const plannedCommand = /planned command:[\s\S]*?```text\n(pnpm release:rehearsal:run[^\n]+)\n```/u.exec(r2Section)?.[1] ?? "";
+    const publicCommand = /public command는 `(pnpm release:rehearsal:run[^`]+)`/u.exec(r2Section)?.[1] ?? "";
+    const argumentTable = [...r2Section.matchAll(/^\| `(--[a-z-]+)` \|/gmu)]
+      .map((match) => match[1]);
+    const help = spawnSync(process.execPath, ["scripts/local-mac-production-rehearsal-run.mjs", "--help"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    const helpCommand = /^\s+(pnpm release:rehearsal:run[^\n]+)$/mu.exec(help.stdout)?.[1] ?? "";
+    const argumentsIn = (command: string) => command.match(/--[a-z-]+/gu) ?? [];
+    const requiredArguments = ["--candidate", "--production-env-authority", "--json"];
+
+    expect(help.status, help.stderr).toBe(0);
+    expect(plannedCommand).not.toBe("");
+    expect(publicCommand).not.toBe("");
+    expect(helpCommand).not.toBe("");
+    expect(argumentsIn(plannedCommand)).toEqual(requiredArguments);
+    expect(argumentsIn(publicCommand)).toEqual(requiredArguments);
+    expect(argumentsIn(helpCommand)).toEqual(requiredArguments);
+    expect(argumentTable).toEqual(requiredArguments);
+  });
+
   it("normalizes only the closed resolved Compose schema into safe sentinels", () => {
     const resolved = {
       name: "synthetic-project",
@@ -1131,12 +1157,15 @@ describe("release rehearsal R2 public command and schema", () => {
     mkdirSync(join(root, "candidate"), { mode: 0o500 });
     const output = { value: "", write(chunk: string) { this.value += chunk; } };
     const run = vi.fn().mockResolvedValue({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
+    const createAdapters = vi.fn(() => ({ adapter: true }));
     await runLocalMacProductionRehearsalRunnerCli([
-      "--candidate", join(root, "candidate"), "--json",
+      "--candidate", join(root, "candidate"),
+      "--production-env-authority", join(root, "full-local-production.env"),
+      "--json",
     ], {
       output,
       run,
-      createAdapters: () => ({ adapter: true }),
+      createAdapters,
       namespaceResolver: () => root,
       runIdFactory: () => RUN_ID,
     });
@@ -1146,7 +1175,15 @@ describe("release rehearsal R2 public command and schema", () => {
       runId: RUN_ID,
       adapters: { adapter: true },
     }));
+    expect(createAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      productionEnvAuthorityPath: join(root, "full-local-production.env"),
+    }));
     expect(JSON.parse(output.value)).toEqual({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
+    const missingAuthorityNamespace = vi.fn(() => root);
+    await expect(runLocalMacProductionRehearsalRunnerCli([
+      "--candidate", join(root, "candidate"), "--json",
+    ], { run, namespaceResolver: missingAuthorityNamespace })).rejects.toThrow(/production-env-authority|required/iu);
+    expect(missingAuthorityNamespace).not.toHaveBeenCalled();
     await expect(runLocalMacProductionRehearsalRunnerCli([
       "--candidate", join(root, "candidate"),
     ], { run })).rejects.toThrow(/--json/iu);

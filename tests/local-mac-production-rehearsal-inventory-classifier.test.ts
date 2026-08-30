@@ -6,8 +6,10 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
+  truncateSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -36,6 +38,10 @@ const SHA_B = "b".repeat(64);
 const SHA_C = "c".repeat(64);
 const RELEASE_A = "1".repeat(40);
 const RELEASE_B = "2".repeat(40);
+const APP_LAUNCHD_LABEL = "com.homecook.production";
+const CANONICAL_FULL_LOCAL_LABEL = "com.homecook.full-local-production";
+const LEGACY_FULL_LOCAL_LABEL = "com.homecook.full-local.production";
+const WORKER_LAUNCHD_LABEL = "com.homecook.youtube-extraction-worker";
 
 function tempDirectory(prefix: string) {
   const path = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
@@ -55,6 +61,79 @@ function probeIdentity() {
     size: 1024,
     sha256: SHA_A,
   };
+}
+
+function absentArtifact(kind: string) {
+  return {
+    kind,
+    exists: false,
+    device: "0",
+    inode: "0",
+    owner_uid: 0,
+    mode: 0,
+    size: "0",
+    mtime: "1970-01-01T00:00:00.000Z",
+    sha256: sha256Jcs({ kind, exists: false }),
+  };
+}
+
+function launchdEvidence(label: string, loaded: boolean, pid = 201) {
+  const projection = {
+    label,
+    loaded,
+    state: loaded ? "running" : "missing",
+    pid: loaded ? pid : null,
+  };
+  return { ...projection, projection_digest: sha256Jcs(projection) };
+}
+
+type InventoryFixture = Awaited<ReturnType<typeof createInventory>>;
+
+function rebuildInventory(inventory: InventoryFixture, surfaces: InventoryFixture["surfaces"]) {
+  const unsigned = { ...inventory, surfaces, surface_digest: sha256Jcs(surfaces) };
+  Reflect.deleteProperty(unsigned, "inventory_digest");
+  return { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+}
+
+function withFullLocalAuthority(inventory: InventoryFixture, {
+  canonicalPlist,
+  legacyPlist,
+  canonicalLoaded,
+  legacyLoaded,
+}: {
+  canonicalPlist: boolean;
+  legacyPlist: boolean;
+  canonicalLoaded: boolean;
+  legacyLoaded: boolean;
+}) {
+  const canonicalKind = `launch_agent_plist:${CANONICAL_FULL_LOCAL_LABEL}`;
+  const legacyKind = `launch_agent_plist:${LEGACY_FULL_LOCAL_LABEL}`;
+  const canonicalTemplate = inventory.surfaces.release_artifacts
+    .find((entry: { kind: string }) => entry.kind === canonicalKind);
+  const presentArtifact = (kind: string, inodeOffset: number) => ({
+    ...canonicalTemplate,
+    kind,
+    exists: true,
+    inode: String(900 + inodeOffset),
+    sha256: inodeOffset === 1 ? SHA_B : SHA_C,
+  });
+  const releaseArtifacts = inventory.surfaces.release_artifacts
+    .filter((entry: { kind: string }) => ![canonicalKind, legacyKind].includes(entry.kind))
+    .concat([
+      canonicalPlist ? presentArtifact(canonicalKind, 1) : absentArtifact(canonicalKind),
+      legacyPlist ? presentArtifact(legacyKind, 2) : absentArtifact(legacyKind),
+    ]);
+  const launchd = inventory.surfaces.launchd
+    .filter((entry: { label: string }) => ![CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL].includes(entry.label))
+    .concat([
+      launchdEvidence(CANONICAL_FULL_LOCAL_LABEL, canonicalLoaded, 102),
+      launchdEvidence(LEGACY_FULL_LOCAL_LABEL, legacyLoaded, 104),
+    ]);
+  return rebuildInventory(inventory, {
+    ...inventory.surfaces,
+    release_artifacts: releaseArtifacts,
+    launchd,
+  });
 }
 
 function createAdapters({ mixed = false } = {}) {
@@ -77,6 +156,7 @@ function createAdapters({ mixed = false } = {}) {
           mtime: mixed ? "1970-01-01T00:00:00.000Z" : "2026-08-29T08:00:00.000Z",
           sha256: mixed ? sha256Jcs({ kind: "current_descriptor", exists: false }) : SHA_B,
         },
+        absentArtifact("previous_descriptor"),
         {
           kind: `recovered_lock:${SHA_C}`,
           exists: mixed,
@@ -99,6 +179,7 @@ function createAdapters({ mixed = false } = {}) {
           mtime: "2026-08-29T08:00:00.000Z",
           sha256: SHA_A,
         })),
+        absentArtifact("launch_agent_plist:com.homecook.full-local.production"),
       ]),
       readWorkloads: vi.fn(async () => [
         { component: "app", release_sha: RELEASE_A, release_tree: RELEASE_A, build_id: "build-a", sealed_bundle_digest: SHA_A, health: "running", descriptor_digest: SHA_B, provider_payload: "secret-provider-json" },
@@ -119,6 +200,7 @@ function createAdapters({ mixed = false } = {}) {
       readLaunchd: vi.fn(async () => [
         { label: "com.homecook.production", loaded: true, state: mixed ? "scheduled" : "running", pid: mixed ? null : 101, projection_digest: SHA_A, environment: { TOKEN: "secret" } },
         { label: "com.homecook.full-local-production", loaded: true, state: "running", pid: 102, projection_digest: SHA_B },
+        launchdEvidence("com.homecook.full-local.production", false),
         { label: "com.homecook.youtube-extraction-worker", loaded: true, state: "running", pid: 103, projection_digest: SHA_C },
       ]),
       readDocker: vi.fn(async () => ({
@@ -245,13 +327,236 @@ describe("read-only production inventory", () => {
     expect(() => createProductionSurfaceSnapshot(incomplete)).toThrow(/complete|required|launchd/iu);
   });
 
-  it("limits default Docker inventory to the exact canonical production project", async () => {
+  it("observes a 40GiB sparse legacy release root without recursively hashing unrelated bytes", async () => {
+    const rootDir = tempDirectory("homecook-bounded-root-");
+    const homeDir = tempDirectory("homecook-bounded-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    mkdirSync(releaseRoot, { recursive: true, mode: 0o700 });
+    const unrelatedCache = join(releaseRoot, "legacy-build-cache.bin");
+    writeFileSync(unrelatedCache, "", { mode: 0o600 });
+    truncateSync(unrelatedCache, 40 * 1024 * 1024 * 1024);
+
+    const artifacts = await createLocalProductionInventoryAdapters({ rootDir, homeDir })
+      .readReleaseArtifacts();
+
+    expect(artifacts.find((entry: { kind: string }) => entry.kind === "release_root"))
+      .toMatchObject({ exists: true, size: expect.any(String), sha256: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    expect(artifacts.map((entry: { kind: string }) => entry.kind)).not.toContain("legacy-build-cache.bin");
+  });
+
+  it("uses an explicit private external full-local env authority without requiring an untracked source file", async () => {
+    const rootDir = tempDirectory("homecook-external-env-root-");
+    const homeDir = tempDirectory("homecook-external-env-home-");
+    const authorityRoot = join(homeDir, ".homecook", "config");
+    mkdirSync(authorityRoot, { recursive: true, mode: 0o700 });
+    const authorityPath = join(authorityRoot, "full-local-production.env");
+    writeFileSync(authorityPath, "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\nPOSTGRES_PASSWORD=must-not-leak\n", { mode: 0o600 });
+    const commandRunner = vi.fn((_: string, args: string[]) => {
+      if (args[0] === "ps") return { status: 0, signal: null, stdout: `prod-id\tprod-db\thomecook-production\tpostgres\trunning\n`, stderr: "" };
+      if (args[0] === "inspect") return { status: 0, signal: null, stdout: `{\"com.docker.compose.project\":\"homecook-production\"}\t[]\tsha256:${SHA_A}\n`, stderr: "" };
+      if (args[0] === "network" && args[1] === "ls") return { status: 0, signal: null, stdout: "", stderr: "" };
+      if (args[0] === "volume" && args[1] === "ls") return { status: 0, signal: null, stdout: "", stderr: "" };
+      return { status: 1, signal: null, stdout: "", stderr: "" };
+    });
+    const adapters = createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      productionEnvAuthorityPath: authorityPath,
+      dockerBin: "/usr/local/bin/docker-fixture",
+      commandRunner,
+    });
+
+    const docker = await adapters.readDocker();
+    const configs = await adapters.readOpaqueConfigIdentities();
+
+    expect(docker.containers.map((entry: { id: string }) => entry.id)).toEqual(["prod-id"]);
+    expect(configs).toContainEqual(expect.objectContaining({ identity: "full-local-config", exists: true }));
+    expect(canonicalizeJcs({ docker, configs })).not.toContain("must-not-leak");
+  });
+
+  it("recognizes only the exact documented legacy full-local LaunchAgent alias for read-only classification", async () => {
+    const rootDir = tempDirectory("homecook-legacy-label-root-");
+    const homeDir = tempDirectory("homecook-legacy-label-home-");
+    const plistRoot = join(homeDir, "Library", "LaunchAgents");
+    mkdirSync(plistRoot, { recursive: true, mode: 0o700 });
+    writeFileSync(join(plistRoot, "com.homecook.full-local.production.plist"), "legacy", { mode: 0o600 });
+    const seen: string[] = [];
+    const commandRunner = vi.fn((_: string, args: string[]) => {
+      seen.push(args.at(-1) ?? "");
+      return { status: 0, signal: null, stdout: "state = running\npid = 101\n", stderr: "" };
+    });
+    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir, commandRunner });
+
+    const artifacts = await adapters.readReleaseArtifacts();
+    const launchd = await adapters.readLaunchd();
+
+    expect(artifacts).toContainEqual(expect.objectContaining({
+      kind: "launch_agent_plist:com.homecook.full-local.production",
+      exists: true,
+    }));
+    expect(launchd.map((entry: { label: string }) => entry.label)).toContain("com.homecook.full-local.production");
+    expect(seen).toContain(`gui/${process.getuid!()}/com.homecook.full-local.production`);
+  });
+
+  it.each([
+    {
+      name: "canonical plist/job with legacy absent",
+      plistLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      loadedLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      expected: { canonical: true, legacy: false },
+    },
+    {
+      name: "legacy plist/job with canonical absent",
+      plistLabels: [LEGACY_FULL_LOCAL_LABEL],
+      loadedLabels: [LEGACY_FULL_LOCAL_LABEL],
+      expected: { canonical: false, legacy: true },
+    },
+    {
+      name: "canonical plist/job with hidden legacy job",
+      plistLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      loadedLabels: [CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL],
+      expected: { canonical: true, legacy: true },
+    },
+    {
+      name: "legacy plist/job with hidden canonical job",
+      plistLabels: [LEGACY_FULL_LOCAL_LABEL],
+      loadedLabels: [CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL],
+      expected: { canonical: true, legacy: true },
+    },
+    {
+      name: "stale canonical plist only",
+      plistLabels: [CANONICAL_FULL_LOCAL_LABEL],
+      loadedLabels: [],
+      expected: { canonical: false, legacy: false },
+    },
+    {
+      name: "neither full-local plist nor job",
+      plistLabels: [],
+      loadedLabels: [],
+      expected: { canonical: false, legacy: false },
+    },
+  ])("always probes both full-local labels read-only: $name", async ({ plistLabels, loadedLabels, expected }) => {
+    const rootDir = tempDirectory("homecook-dual-launchd-root-");
+    const homeDir = tempDirectory("homecook-dual-launchd-home-");
+    const plistRoot = join(homeDir, "Library", "LaunchAgents");
+    mkdirSync(plistRoot, { recursive: true, mode: 0o700 });
+    for (const label of plistLabels) writeFileSync(join(plistRoot, `${label}.plist`), label, { mode: 0o600 });
+    const loaded = new Set([APP_LAUNCHD_LABEL, WORKER_LAUNCHD_LABEL, ...loadedLabels]);
+    const seen: string[] = [];
+    const commandRunner = vi.fn((_: string, args: string[]) => {
+      const domainTarget = args.at(-1) ?? "";
+      const label = domainTarget.split("/").at(-1) ?? "";
+      seen.push(label);
+      if (loaded.has(label)) {
+        return { status: 0, signal: null, stdout: "state = running\npid = 101\n", stderr: "" };
+      }
+      return {
+        status: 113,
+        signal: null,
+        stdout: "",
+        stderr: `Bad request.\nCould not find service \"${label}\" in domain for user gui: ${process.getuid!()}\n`,
+      };
+    });
+    const launchd = await createLocalProductionInventoryAdapters({ rootDir, homeDir, commandRunner }).readLaunchd();
+    const byLabel = new Map(launchd.map((entry: { label: string; loaded: boolean }) => [entry.label, entry]));
+
+    expect(launchd).toHaveLength(4);
+    expect(byLabel.get(CANONICAL_FULL_LOCAL_LABEL)).toMatchObject({ loaded: expected.canonical });
+    expect(byLabel.get(LEGACY_FULL_LOCAL_LABEL)).toMatchObject({ loaded: expected.legacy });
+    expect(seen).toEqual(expect.arrayContaining([CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL]));
+  });
+
+  it("records both full-local plist authorities so classifier can reject ambiguity", async () => {
+    const rootDir = tempDirectory("homecook-label-ambiguity-root-");
+    const homeDir = tempDirectory("homecook-label-ambiguity-home-");
+    const plistRoot = join(homeDir, "Library", "LaunchAgents");
+    mkdirSync(plistRoot, { recursive: true, mode: 0o700 });
+    writeFileSync(join(plistRoot, "com.homecook.full-local-production.plist"), "canonical", { mode: 0o600 });
+    writeFileSync(join(plistRoot, "com.homecook.full-local.production.plist"), "legacy", { mode: 0o600 });
+
+    const artifacts = await createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts();
+    expect(artifacts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: `launch_agent_plist:${CANONICAL_FULL_LOCAL_LABEL}`, exists: true }),
+      expect.objectContaining({ kind: `launch_agent_plist:${LEGACY_FULL_LOCAL_LABEL}`, exists: true }),
+    ]));
+  });
+
+  it("treats exact launchctl not-loaded as evidence but rejects unexpected errors", async () => {
+    const rootDir = tempDirectory("homecook-launchd-error-root-");
+    const homeDir = tempDirectory("homecook-launchd-error-home-");
+    const seen: string[] = [];
+    const commandRunner = vi.fn((_: string, args: string[]) => {
+      const label = (args.at(-1) ?? "").split("/").at(-1) ?? "";
+      seen.push(label);
+      if ([APP_LAUNCHD_LABEL, WORKER_LAUNCHD_LABEL].includes(label)) {
+        return { status: 0, signal: null, stdout: "state = running\npid = 101\n", stderr: "" };
+      }
+      if (label === CANONICAL_FULL_LOCAL_LABEL) {
+        return {
+          status: 113,
+          signal: null,
+          stdout: "",
+          stderr: `Could not find service \"${label}\" in domain for user gui: ${process.getuid!()}\n`,
+        };
+      }
+      return { status: 1, signal: null, stdout: "", stderr: "TOP_SECRET_UNEXPECTED_LAUNCHCTL" };
+    });
+    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir, commandRunner });
+
+    await expect(adapters.readLaunchd()).rejects.toThrow(/command|launchd|inventory/iu);
+    expect(seen).toEqual(expect.arrayContaining([CANONICAL_FULL_LOCAL_LABEL, LEGACY_FULL_LOCAL_LABEL]));
+  });
+
+  it("rejects symlinked and path-swapped external env authority without exposing values", async () => {
+    const inventoryModule = await import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs");
+    expect(inventoryModule.readProductionEnvironmentAuthority).toBeTypeOf("function");
+    const rootDir = tempDirectory("homecook-env-negative-root-");
+    const homeDir = tempDirectory("homecook-env-negative-home-");
+    const authorityRoot = join(homeDir, ".homecook", "config");
+    mkdirSync(authorityRoot, { recursive: true, mode: 0o700 });
+    const realPath = join(authorityRoot, "real.env");
+    const aliasPath = join(authorityRoot, "alias.env");
+    writeFileSync(realPath, "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\nSECRET=never-print\n", { mode: 0o600 });
+    symlinkSync(realPath, aliasPath);
+    expect(() => inventoryModule.readProductionEnvironmentAuthority(aliasPath, { homeDir, rootDir }))
+      .toThrow(/authority|symlink|regular|identity/iu);
+
+    const publicPath = join(authorityRoot, "public.env");
+    writeFileSync(publicPath, "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\n", { mode: 0o644 });
+    expect(() => inventoryModule.readProductionEnvironmentAuthority(publicPath, { homeDir, rootDir }))
+      .toThrow(/authority|mode|identity|validation/iu);
+
+    const hardlinkSource = join(authorityRoot, "hardlink-source.env");
+    const hardlinkAlias = join(authorityRoot, "hardlink-alias.env");
+    writeFileSync(hardlinkSource, "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\n", { mode: 0o600 });
+    linkSync(hardlinkSource, hardlinkAlias);
+    expect(() => inventoryModule.readProductionEnvironmentAuthority(hardlinkAlias, { homeDir, rootDir }))
+      .toThrow(/authority|link|identity|validation/iu);
+
+    const authorityPath = join(authorityRoot, "authority.env");
+    const replacementPath = join(authorityRoot, "replacement.env");
+    const retiredPath = join(authorityRoot, "retired.env");
+    const sameBytes = "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\nSECRET=never-print\n";
+    writeFileSync(authorityPath, sameBytes, { mode: 0o600 });
+    writeFileSync(replacementPath, sameBytes, { mode: 0o600 });
+    expect(() => inventoryModule.readProductionEnvironmentAuthority(authorityPath, {
+      homeDir,
+      rootDir,
+      afterRead: () => {
+        renameSync(authorityPath, retiredPath);
+        renameSync(replacementPath, authorityPath);
+      },
+    })).toThrow(/authority|changed|identity|swap/iu);
+  });
+
+  it("limits explicit-authority Docker inventory to the exact canonical production project", async () => {
     const rootDir = tempDirectory("homecook-inventory-adapter-root-");
     const homeDir = tempDirectory("homecook-inventory-adapter-home-");
-    const configDir = join(rootDir, "infra", "full-local-supabase");
+    const configDir = join(homeDir, ".homecook", "config");
     mkdirSync(configDir, { recursive: true, mode: 0o700 });
+    const productionEnvAuthorityPath = join(configDir, "full-local-production.env");
     writeFileSync(
-      join(configDir, ".env.production.local"),
+      productionEnvAuthorityPath,
       "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-production\nPOSTGRES_PASSWORD=must-not-leak\n",
       { mode: 0o600 },
     );
@@ -267,6 +572,7 @@ describe("read-only production inventory", () => {
     const adapters = createLocalProductionInventoryAdapters({
       rootDir,
       homeDir,
+      productionEnvAuthorityPath,
       dockerBin: "/usr/local/bin/docker-fixture",
       commandRunner,
     });
@@ -344,6 +650,75 @@ describe("read-only production inventory", () => {
     writeFileSync(join(outside, "secret"), "outside", { mode: 0o600 });
     symlinkSync(join(outside, "secret"), join(root, "escape"));
     expect(() => inventoryModule.digestProductionTree(root)).toThrow(/symlink|escape|contain/iu);
+
+    expect(() => inventoryModule.readProductionArtifactTarget("bounded_surface", nested, {
+      treeLimits: { maxEntries: 1, maxDepth: 64, maxBytes: 1024 },
+    })).toThrow(/entry|bound|limit/iu);
+  });
+
+  it("shares deterministic entry and byte budgets across every closed release-artifact child", async () => {
+    const rootDir = tempDirectory("homecook-aggregate-root-");
+    const homeDir = tempDirectory("homecook-aggregate-home-");
+    const snapshots = join(homeDir, ".homecook", "releases", "execution-snapshots");
+    for (const name of ["snapshot-a", "snapshot-b"]) {
+      mkdirSync(join(snapshots, name), { recursive: true, mode: 0o700 });
+      writeFileSync(join(snapshots, name, "payload"), "1234", { mode: 0o600 });
+    }
+    const readWithLimits = (maxEntries: number, maxBytes: number) => createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactSurfaceLimits: { maxEntries, maxBytes },
+    }).readReleaseArtifacts();
+
+    await expect(readWithLimits(6, 8)).resolves.toEqual(expect.any(Array));
+    await expect(readWithLimits(5, 8)).rejects.toThrow(/entry|aggregate|budget|limit/iu);
+    await expect(readWithLimits(6, 7)).rejects.toThrow(/byte|aggregate|budget|limit/iu);
+  });
+
+  it("rejects one sparse authority file before reading when the shared byte budget is exceeded", async () => {
+    const rootDir = tempDirectory("homecook-one-over-root-");
+    const homeDir = tempDirectory("homecook-one-over-home-");
+    const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", "snapshot-a");
+    mkdirSync(snapshot, { recursive: true, mode: 0o700 });
+    const payload = join(snapshot, "payload");
+    writeFileSync(payload, "", { mode: 0o600 });
+    truncateSync(payload, 9);
+
+    await expect(createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactSurfaceLimits: { maxEntries: 4, maxBytes: 8 },
+    }).readReleaseArtifacts()).rejects.toThrow(/byte|aggregate|budget|limit/iu);
+  });
+
+  it("does not double-count contained file aliases against the byte budget", async () => {
+    const inventoryModule = await import("../scripts/lib/local-mac-production-rehearsal-inventory.mjs");
+    const root = tempDirectory("homecook-budget-alias-");
+    writeFileSync(join(root, "payload"), "1234", { mode: 0o600 });
+    symlinkSync("payload", join(root, "alias-a"));
+    symlinkSync("payload", join(root, "alias-b"));
+
+    const boundedDigest = inventoryModule.digestProductionTree(root, { maxEntries: 4, maxBytes: 4 });
+    const roomyDigest = inventoryModule.digestProductionTree(root, { maxEntries: 100, maxBytes: 100 });
+    expect(boundedDigest).toBe(roomyDigest);
+  });
+
+  it("keeps unrelated 40GiB sparse release-root data metadata-only under an exact aggregate boundary", async () => {
+    const rootDir = tempDirectory("homecook-sparse-budget-root-");
+    const homeDir = tempDirectory("homecook-sparse-budget-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    mkdirSync(releaseRoot, { recursive: true, mode: 0o700 });
+    const unrelated = join(releaseRoot, "unrelated-cache");
+    writeFileSync(unrelated, "", { mode: 0o600 });
+    truncateSync(unrelated, 40 * 1024 * 1024 * 1024);
+
+    await expect(createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactSurfaceLimits: { maxEntries: 1, maxBytes: 0 },
+    }).readReleaseArtifacts()).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "release_root", exists: true }),
+    ]));
   });
 
   it("preserves actual filesystem identity from bigint stats without Number rounding", async () => {
@@ -431,6 +806,14 @@ describe("read-only production inventory", () => {
     symlinkSync("missing-snapshot-target", join(snapshotRoot, "snapshot-a"));
     const recoveredAdapters = createLocalProductionInventoryAdapters({ rootDir, homeDir: recoveredHome });
     await expect(recoveredAdapters.readReleaseArtifacts()).rejects.toThrow(/symlink|target|snapshot/iu);
+
+    const aliasedRootHome = tempDirectory("homecook-target-aliased-snapshot-root-home-");
+    const aliasedRootOutside = tempDirectory("homecook-target-aliased-snapshot-root-outside-");
+    const aliasedReleaseRoot = join(aliasedRootHome, ".homecook", "releases");
+    mkdirSync(aliasedReleaseRoot, { recursive: true, mode: 0o700 });
+    symlinkSync(aliasedRootOutside, join(aliasedReleaseRoot, "execution-snapshots"));
+    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir: aliasedRootHome }).readReleaseArtifacts())
+      .rejects.toThrow(/symlink|ancestor|snapshot|root/iu);
 
     const unsafeHome = tempDirectory("homecook-target-unsafe-home-");
     const unsafeLock = join(unsafeHome, ".homecook", "locks", "production-promotion.lock");
@@ -549,11 +932,15 @@ describe("read-only production inventory", () => {
     const configRoot = tempDirectory("homecook-config-parent-root-");
     const configHome = tempDirectory("homecook-config-parent-home-");
     const configOutside = tempDirectory("homecook-config-parent-outside-");
-    mkdirSync(join(configOutside, "full-local-supabase"), { mode: 0o700 });
-    writeFileSync(join(configOutside, "full-local-supabase", ".env.production.local"), "FULL_LOCAL_COMPOSE_PROJECT_NAME=prod\n", { mode: 0o600 });
-    symlinkSync(configOutside, join(configRoot, "infra"));
+    mkdirSync(join(configHome, ".homecook"), { mode: 0o700 });
+    writeFileSync(join(configOutside, "full-local-production.env"), "FULL_LOCAL_COMPOSE_PROJECT_NAME=prod\n", { mode: 0o600 });
+    symlinkSync(configOutside, join(configHome, ".homecook", "config"));
     const configInventory = await collectReadOnlyProductionInventory({
-      adapters: createLocalProductionInventoryAdapters({ rootDir: configRoot, homeDir: configHome }),
+      adapters: createLocalProductionInventoryAdapters({
+        rootDir: configRoot,
+        homeDir: configHome,
+        productionEnvAuthorityPath: join(configHome, ".homecook", "config", "full-local-production.env"),
+      }),
       capturedAt: "2026-08-29T10:00:00.000Z",
       probeIdentity: probeIdentity(),
     });
@@ -697,6 +1084,127 @@ describe("read-only production inventory", () => {
 });
 
 describe("mixed-state classifier", () => {
+  it("accepts only exact canonical full-local plist/job authority as promotion-safe", async () => {
+    const inventory = await createInventory();
+    const canonical = withFullLocalAuthority(inventory, {
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: false,
+    });
+
+    expect(createProductionSurfaceSnapshot(canonical).surface_digest).toBe(canonical.surface_digest);
+    expect(classifyProductionInventory(canonical)).toMatchObject({
+      states: ["coherent_running"],
+      promotion_safe: true,
+      findings: [],
+    });
+  });
+
+  it("keeps exact legacy-only full-local authority observable but promotion-unsafe", async () => {
+    const inventory = await createInventory();
+    const legacy = withFullLocalAuthority(inventory, {
+      canonicalPlist: false,
+      legacyPlist: true,
+      canonicalLoaded: false,
+      legacyLoaded: true,
+    });
+
+    expect(createProductionSurfaceSnapshot(legacy).surface_digest).toBe(legacy.surface_digest);
+    const classification = classifyProductionInventory(legacy);
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toContain("unknown");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:canonical_full_local_launchd");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .not.toContain("surface:full_local_launchd_ambiguity");
+  });
+
+  it.each([
+    {
+      name: "both jobs loaded",
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: true,
+    },
+    {
+      name: "both plists present",
+      canonicalPlist: true,
+      legacyPlist: true,
+      canonicalLoaded: true,
+      legacyLoaded: false,
+    },
+    {
+      name: "canonical hidden job behind legacy plist",
+      canonicalPlist: false,
+      legacyPlist: true,
+      canonicalLoaded: true,
+      legacyLoaded: true,
+    },
+    {
+      name: "legacy hidden job behind canonical plist",
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: true,
+    },
+    {
+      name: "stale canonical plist",
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: false,
+      legacyLoaded: false,
+    },
+  ])("classifies full-local LaunchAgent ambiguity: $name", async (scenario) => {
+    const inventory = await createInventory();
+    const ambiguous = withFullLocalAuthority(inventory, scenario);
+    const classification = classifyProductionInventory(ambiguous);
+
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toContain("unknown");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:full_local_launchd_ambiguity");
+  });
+
+  it("classifies a hidden loaded-but-not-running legacy job as ambiguity", async () => {
+    const inventory = await createInventory();
+    const canonical = withFullLocalAuthority(inventory, {
+      canonicalPlist: true,
+      legacyPlist: false,
+      canonicalLoaded: true,
+      legacyLoaded: false,
+    });
+    const launchd = canonical.surfaces.launchd.map((entry: { label: string }) => (
+      entry.label === LEGACY_FULL_LOCAL_LABEL
+        ? { ...entry, loaded: true, state: "scheduled", pid: null, projection_digest: SHA_C }
+        : entry
+    ));
+    const hidden = rebuildInventory(canonical, { ...canonical.surfaces, launchd });
+    const classification = classifyProductionInventory(hidden);
+
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toEqual(expect.arrayContaining(["partial_failed_install", "unknown"]));
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:full_local_launchd_ambiguity");
+  });
+
+  it("keeps neither full-local plist nor job observable but incomplete", async () => {
+    const inventory = await createInventory();
+    const absent = withFullLocalAuthority(inventory, {
+      canonicalPlist: false,
+      legacyPlist: false,
+      canonicalLoaded: false,
+      legacyLoaded: false,
+    });
+    const classification = classifyProductionInventory(absent);
+
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toContain("unknown");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:canonical_full_local_launchd");
+  });
+
   it("classifies coherent running evidence as promotion-safe", async () => {
     const inventory = await createInventory();
     const result = classifyProductionInventory(inventory, {
@@ -744,6 +1252,50 @@ describe("mixed-state classifier", () => {
     });
     expect(canonicalizeJcs(failed)).not.toContain("TOP_SECRET");
     expect(classifyProductionInventory(failed).promotion_safe).toBe(false);
+  });
+
+  it("keeps absent current/previous descriptors as stable observable mixed-state values for rehearsal equality", async () => {
+    const inventory = await createInventory({ mixed: true });
+    const surfaces = {
+      ...inventory.surfaces,
+      migration: {
+        ...inventory.surfaces.migration,
+        approved: true,
+        global_ledger_digest: SHA_B,
+      },
+    };
+    const unsigned = { ...inventory, surfaces, surface_digest: sha256Jcs(surfaces) };
+    delete (unsigned as Record<string, unknown>).inventory_digest;
+    const descriptorless = { ...unsigned, inventory_digest: sha256Jcs(unsigned) };
+
+    const pre = createProductionSurfaceSnapshot(descriptorless, { capturedAt: "2026-08-29T10:01:00.000Z" });
+    const post = createProductionSurfaceSnapshot(descriptorless, { capturedAt: "2026-08-29T10:02:00.000Z" });
+    const classification = classifyProductionInventory(descriptorless);
+
+    expect(descriptorless.surfaces.release_artifacts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "current_descriptor", exists: false }),
+      expect.objectContaining({ kind: "previous_descriptor", exists: false }),
+    ]));
+    expect(pre.surface_digest).toBe(post.surface_digest);
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toEqual(expect.arrayContaining(["unknown"]));
+  });
+
+  it("allows the exact legacy full-local alias in a read-only snapshot but never marks it promotion-safe", async () => {
+    const inventory = await createInventory();
+    const legacy = withFullLocalAuthority(inventory, {
+      canonicalPlist: false,
+      legacyPlist: true,
+      canonicalLoaded: false,
+      legacyLoaded: true,
+    });
+
+    expect(createProductionSurfaceSnapshot(legacy).surface_digest).toBe(legacy.surface_digest);
+    const classification = classifyProductionInventory(legacy);
+    expect(classification.promotion_safe).toBe(false);
+    expect(classification.states).toContain("unknown");
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:canonical_full_local_launchd");
   });
 
   it("requires exact component, descriptor, migration, and prepared identity alignment", async () => {

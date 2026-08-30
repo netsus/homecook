@@ -88,7 +88,7 @@ production과 같은 Docker project, container name, volume, port 또는 LaunchA
 planned command:
 
 ```text
-pnpm release:rehearsal:inventory -- --json
+pnpm release:rehearsal:inventory -- --production-env-authority <absolute-private-full-local-env> --json
 ```
 
 - production app/full-local/worker identity, pointer/descriptor/lock, Docker resource, port, LaunchAgent, migration marker를 read-only로 수집한다.
@@ -96,9 +96,13 @@ pnpm release:rehearsal:inventory -- --json
 - secret contents, raw env, provider payload, DB row data를 출력하지 않는다.
 - inventory probe 자체의 tool identity와 production pre-digest를 기록한다.
 - 각 required probe는 `success|failed|skipped`, non-secret reason code, evidence count를 기록한다. 실패를 빈 성공 array로 축약하지 않는다.
-- command result의 `error`, signal, timeout/status null, output overflow와 generic nonzero는 probe failure다. 예외는 정확히 문서화된 resource-absent exit뿐이며 현재는 `lsof`의 `exit 1 + empty stdout/stderr` no-listener만 successful empty evidence로 허용한다.
+- command result의 `error`, signal, timeout/status null, output overflow와 generic nonzero는 probe failure다. 예외는 정확히 문서화된 resource-absent exit뿐이다. `lsof`는 `exit 1 + empty stdout/stderr` no-listener만 successful empty evidence로 허용하고, `launchctl print gui/<uid>/<exact-label>`은 status `113`, empty stdout, exact `Could not find service "<exact-label>" in domain for user gui: <uid>` stderr(`Bad request.` prefix와 final newline 유무의 closed form 포함)만 `loaded:false,state:missing,pid:null` evidence로 허용한다. 다른 status/stderr/error는 probe failure다.
 - required trusted tool identity set은 exact `docker,git,launchctl,lsof` 4개다. 이름 누락/중복/extra, unsafe owner/mode/realpath 또는 tool probe failure는 promotion-unsafe다.
 - pointer/descriptors/workloads, LaunchAgent plist+print, Docker image/mount/full-label digest, listener, opaque config, migration marker/ledger/catalog 중 required evidence가 없으면 inventory는 수집될 수 있어도 classification은 `unknown`이다.
+- production release root 전체를 recursive content authority로 취급하지 않는다. root 자체는 owner/mode/dev/inode/size/ctime/mtime의 metadata-only identity로 고정하고, exact `current.json`, `previous.json`, canonical lock root의 children, `execution-snapshots`의 known children, LaunchAgent plist처럼 닫힌 authority surface만 각 surface별 entry/depth/byte limit 안에서 읽는다. release root 아래 unrelated legacy build/cache bytes는 authority도 probe failure 원인도 아니다.
+- `current.json`과 `previous.json`의 exact `ENOENT`는 각각 canonical absent sentinel로 기록되는 유효한 관측값이다. 둘의 부재는 promotion-safe가 아니지만 pre/post absent sentinel과 전체 surface digest가 같으면 isolated rehearsal의 production-equality evidence로 사용할 수 있다. 실제 promote는 완전한 canonical descriptor authority 없이는 mutation 전에 계속 fail closed한다.
+- full-local LaunchAgent는 canonical `com.homecook.full-local-production`과 historical read-only alias `com.homecook.full-local.production`을 plist 존재 여부와 무관하게 각각 `launchctl print`로 항상 조회한다. inventory는 두 plist의 exists/absent sentinel과 두 loaded-job projection을 별도 evidence로 보존한다. both-loaded, both-plist, loaded-without-matching-plist, stale-plist 또는 canonical/legacy identity conflict는 probe를 숨기지 않고 classifier의 ambiguity finding으로 남겨 `promotion_safe:false`로 만든다. exact legacy-only는 mixed-state classification과 pre/post equality에만 쓰며 rename/load/unload/restart하지 않고, promotion-safe 또는 mutation target이 될 수 없다. canonical-only exact plist/job + legacy plist/job absent만 canonical completeness 후보다.
+- Docker production project와 full-local config digest는 clean Git source 안의 untracked env를 탐색하지 않는다. caller가 `--production-env-authority`로 지정한 current-user-owned exact mode `0600`, nlink 1, 최대 1 MiB의 non-symlink private regular file만 읽는다. 그 file은 trusted home 아래이면서 verified clean source 밖에 있어야 하고 ancestor/file identity와 bytes를 pre/post 고정한다. exact `FULL_LOCAL_COMPOSE_PROJECT_NAME` 하나만 project selection에 쓰며 raw path, key, value와 file contents는 output/log/evidence에 남기지 않는다. Docker 호출은 이 project에 대한 read-only list/config-equivalent inspect만 허용한다.
 - inconsistent state는 분류만 하고 자동 복구하지 않는다.
 
 ### R1. candidate build and seal
@@ -106,7 +110,7 @@ pnpm release:rehearsal:inventory -- --json
 planned command:
 
 ```text
-pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha> --json
+pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha> --production-env-authority <absolute-private-full-local-env> --json
 ```
 
 - candidate는 실행 시점 `origin/master`가 가리키는 exact full SHA여야 하고 current head에서 시작된 CI check 전체가 terminal success여야 한다.
@@ -139,8 +143,16 @@ split 2 구현 상태:
 planned command:
 
 ```text
-pnpm release:rehearsal:run -- --candidate <absolute-sealed-candidate-manifest> --json
+pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --production-env-authority <absolute-private-env-authority> --json
 ```
+
+| public argument | required | exact authority |
+| --- | --- | --- |
+| `--candidate` | yes | split 2가 seal한 absolute completed candidate root 또는 그 root의 exact `candidate.json` |
+| `--production-env-authority` | yes | trusted home 아래·verified clean source 밖의 absolute current-user-owned regular file. exact mode `0600`, nlink `1`, 최대 1 MiB, non-symlink ancestor/target와 stable FD identity를 요구한다. |
+| `--json` | yes | non-secret deterministic run evidence output을 강제한다. |
+
+R2 handoff와 server runbook은 위 command를 flag 이름과 순서까지 그대로 전달한다. env authority path와 raw key/value/content는 JSON, run evidence, receipt, manifest, log 또는 handoff에 기록하지 않는다. 운영자는 approved external authority를 argv input으로만 지정하며 clean source 안의 untracked `.env.production.local`을 만들거나 fallback으로 찾지 않는다.
 
 - 매 실행은 cryptographically random `run_id`와 create-only private root를 가진다.
 - Docker project, container, network, volume, port, DB name/user, app/worker state root와 log root는 `run_id` namespace로 분리한다.
@@ -153,7 +165,7 @@ pnpm release:rehearsal:run -- --candidate <absolute-sealed-candidate-manifest> -
 
 split 3 구현 상태:
 
-- public command는 `pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --json`이며 별도 `scripts/local-mac-production-rehearsal-run.mjs` entry를 사용한다. 원본 candidate를 split 2 `readCompletedCandidateRoot`로 검증한 뒤 run-owned create-only `execution-candidate`에 복사·seal하고 그 복사본을 다시 완전 검증한다. Docker bind, migration, app/worker/full-local probe는 이 검증된 run copy만 사용하고 원본 candidate를 실행 중 다시 열지 않는다. 실행 뒤에도 같은 run copy를 재검증하며 checkout, rebuild, dependency reinstall, image re-resolution을 하지 않는다.
+- public command는 `pnpm release:rehearsal:run -- --candidate <absolute-completed-candidate-root-or-candidate.json> --production-env-authority <absolute-private-env-authority> --json`이며 별도 `scripts/local-mac-production-rehearsal-run.mjs` entry를 사용한다. 원본 candidate를 split 2 `readCompletedCandidateRoot`로 검증한 뒤 run-owned create-only `execution-candidate`에 복사·seal하고 그 복사본을 다시 완전 검증한다. Docker bind, migration, app/worker/full-local probe는 이 검증된 run copy만 사용하고 원본 candidate를 실행 중 다시 열지 않는다. 실행 뒤에도 같은 run copy를 재검증하며 checkout, rebuild, dependency reinstall, image re-resolution을 하지 않는다.
 - `scripts/lib/local-mac-production-rehearsal-runner.mjs`는 UUID-v4 단일 namespace, high-port/reserved-port gate, production name/path/socket/credential denylist, exact ordered migration ledger/catalog equality, child identity, canary, network deny, production pre/post equality와 역순 cleanup을 fail closed하게 묶는다. `issued_at <= completed_at`, exact runtime 4종과 아래 canary 8종, ledger/file aggregate, denied count, measured production guard의 runtime/schema 양방향 attack table을 요구한다.
 - `scripts/lib/local-mac-production-rehearsal-runner-safety.mjs`는 user Docker current context/config를 authority로 사용하지 않는다. current-user macOS Docker Desktop socket 또는 canonical `/var/run/docker.sock`의 closed owner/type/mode/realpath identity만 허용하고 모든 Docker/Compose argv에 exact `--host unix://...`를 붙인다. run-owned private empty `DOCKER_CONFIG`를 사용하며 `tcp|ssh|http|npipe|context` indirection을 mutation 전에 거부한다. daemon endpoint/ID/server/OS/arch/rootless/security/root-dir identity는 pre/post와 매 command 전 재검증한다.
 - `scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs`는 sealed full-local Compose와 candidate manifest의 local digest-pinned image만 실행한다. generated override에서 7개 service 각각 `pull_policy: never`, CLI에서 `--no-build`, 개별 `docker run`에서 `--pull=never`를 강제한다. create/start 뒤 각 container `.Image`, configured digest reference, local image ID/platform/repo digest를 preflight authority와 다시 비교한다. generated override는 exact run/project/creation-nonce label을 추가하고 `auth-edge`, `auth-egress`, `data-internal`을 모두 internal network로 강제한다. canary 전 실제 network `Internal=true`, exact labels/name/ID와 모든 container attachment를 readback한다. app과 worker도 run-owned internal Docker network에서 sealed run copy를 read-only mount해 실행하며 launchd/LaunchAgent는 사용하지 않는다.
@@ -241,7 +253,7 @@ FD-anchored walker는 기존 physical digest grammar의 directory-symlink child 
 
 | surface | evidence |
 | --- | --- |
-| release root와 `current.json`/`previous.json` | 존재 여부, lstat identity, normalized metadata/content digest |
+| release root와 `current.json`/`previous.json` | root metadata-only identity + 두 descriptor의 independent exists/absent sentinel과 bounded file digest |
 | active/recovered promotion locks | ordered path, owner/mode, lstat identity, content digest |
 | app/full-local/worker descriptors와 sealed snapshot roots | ordered identity와 normalized digest |
 | LaunchAgent plist/loaded job | file identity/digest + read-only launchctl print projection |
@@ -254,7 +266,7 @@ FD-anchored walker는 기존 physical digest grammar의 directory-symlink child 
 - production surface를 create, chmod, touch, rename, delete, restart, stop, load, unload, migrate, connect-write 하지 않는다.
 - production evidence를 읽기 전에 expected trusted base부터 모든 ancestor segment를 BigInt `lstat`로 검증한다. existing ancestor는 current-user-owned canonical directory, non-symlink, non-group/world-writable, traversable mode여야 하며 probe 전후 identity가 같아야 한다. dangling symlink도 거부하고, probe 전 absent였던 ancestor가 probe 중 생성되면 race로 실패한다. `~/.homecook`, releases/locks/config roots와 `~/Library/LaunchAgents`의 intermediate symlink는 probe failure다.
 - final artifact target도 `existsSync`가 아니라 BigInt `lstat`로 판정한다. exact `ENOENT`만 canonical absent sentinel을 만들 수 있고, dangling symlink·unsafe type/owner/mode는 probe failure다. absent target은 probe 종료 전에 다시 `lstat`해 absent→created race를 거부한다. 이 규칙은 active canonical lock과 모든 release/snapshot/recovered artifact target에 공통 적용한다.
-- directory/snapshot/lock digest는 immediate child 이름만 사용하지 않는다. contained tree를 bounded recursive traversal하며 file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶는다. path escape, cycle, entry/depth/byte limit 초과는 fail closed한다.
+- release root 자체는 recursive traversal하지 않고 metadata-only identity를 사용한다. 하나의 `release_artifacts` probe는 root metadata, current/previous descriptor, app/full-local canonical+legacy/worker plist, recovered-lock root/children, execution-snapshot root/children 전체에 exact shared aggregate budget(기본 total 10,000 entries / regular-file bytes 512 MiB)을 하나만 만든다. child마다 counter를 reset하지 않는다. known snapshot/lock child는 해당 shared counter를 전달받아 bounded recursive traversal하고 file bytes, mode, uid/gid, BigInt dev/ino/nlink/size/ctime/mtime, contained symlink target과 dereferenced digest를 canonical order로 묶는다. physical identity가 같은 contained alias는 entry/file bytes를 한 번만 계상하고 cached content digest를 재사용하며, hardlink·escape·cycle은 계속 거부한다. aggregate entry/byte limit과 individual direct-file/env limit은 file Buffer/readlink/readdir allocation 전에 가능한 가장 이른 identity read에서 fail closed한다. unrelated release-root cache/build data는 열거나 hash하지 않는다.
 - identity-sensitive `lstat`/`fstat`는 `{ bigint: true }`로 수집하고 decimal string으로 canonicalize한다. Number 변환 뒤의 inode/device/size를 identity 근거로 사용하지 않는다.
 - JSON Number로 남는 count/mode/pid/port/sequence field는 runtime과 schema 모두 `Number.MAX_SAFE_INTEGER` 이하를 강제한다. 더 큰 identity 값은 decimal string만 사용한다.
 - receipt/inventory JSON file은 fatal UTF-8 decoding을 통과하고 canonicalized UTF-8 bytes가 원본 file bytes와 exact equality여야 한다.
@@ -264,10 +276,10 @@ FD-anchored walker는 기존 physical digest grammar의 directory-symlink child 
 
 ## Environment and secret handling
 
-- env source는 canonical resolver가 허용한 exact allowlist의 regular file 또는 approved secret provider만 가능하다.
+- production inventory/candidate/run의 full-local env source는 explicit `--production-env-authority` external regular file만 가능하다. exact current-user owner, mode `0600`, nlink `1`, 최대 1 MiB, trusted home containment와 verified clean source 밖의 absolute path를 요구한다. clean Git source 안의 `.env.production.local`, ambient env, directory search, LaunchAgent mutation 또는 fallback은 authority가 아니다.
 - file source는 parent부터 `lstat`/`realpath`로 containment를 확인하고 `open(..., O_RDONLY | O_NOFOLLOW)`한 FD에서 snapshot한다.
 - open 전후 device/inode/mode/ctime/mtime/size와 FD `fstat`가 같아야 한다. symlink, hard-link count 이상, group/world writable, race는 거부한다.
-- contents는 argv, inherited environment, log, receipt, manifest, temp filename에 노출하지 않는다.
+- raw key/value/content는 argv, inherited environment, log, receipt, manifest, temp filename에 노출하지 않는다. authority path는 operator의 top-level CLI input으로만 받고 JSON/output/log/evidence/handoff에 직렬화하지 않는다.
 - snapshot은 private memory 또는 run-owned mode `0600` anonymous/unlinked FD에만 두고 child에 필요한 FD만 명시적으로 전달한다.
 - production endpoint, port, Docker project, DB name/user, storage root, app/worker root는 rehearsal 전용 값으로 강제 override한다. source env가 override를 재정의할 수 없다.
 - child env는 key allowlist로 새로 구성한다. 전체 `process.env` 상속은 금지한다.
@@ -400,6 +412,7 @@ classification output은 `promotion_safe: boolean`, finding ID, evidence path di
 - `release_artifacts.kind`는 전체 array에서 unique여야 한다. current authority는 exactly one `current_descriptor`, prepared identity가 있으면 exactly one matching `prepared_descriptor`만 허용한다. duplicate match/mismatch 조합은 ambiguity로 거부한다.
 
 - `mixed_running`, `partial_failed_install`, `orphaned_lock_or_descriptor`, `migration_authority_incomplete`, `unknown`은 모두 `promotion_safe: false`다.
+- current/previous descriptor absence와 exact legacy full-local alias는 valid observed mixed-state evidence지만 canonical promotion completeness가 아니다. classifier는 해당 evidence를 지우거나 probe failure로 바꾸지 않고 `unknown`/관련 recovery finding을 남긴다. both-loaded, both-plist, hidden loaded job, stale plist와 canonical/legacy identity mismatch는 `surface:full_local_launchd_ambiguity`를 남긴다. isolated rehearsal snapshot equality는 두 label의 동일한 observed projection을 비교할 수 있지만 actual promote는 canonical descriptor와 exact canonical plist/job + legacy plist/job absence authority를 요구한다.
 - recovery plan은 가능한 순서, 사전 backup, operator authority, 예상 mutation, rollback/forward-fix 경계를 설명할 뿐 실행하지 않는다.
 - 자동 복구, stale lock 삭제, descriptor 생성, volume/container 삭제, LaunchAgent restart/uninstall, DB migration, rollback은 금지한다.
 - 실제 recovery는 별도 사용자 승인과 `release-promoter` 또는 더 좁은 recovery authority를 가진 새 Codex task에서 수행한다.
@@ -434,6 +447,8 @@ implementation PR은 test-first RED → GREEN → refactor evidence를 남긴다
 - receipt required field, canonical serialization, digest, expiry, unknown field policy
 - exact SHA/tree/build/bundle/tool/image/migration mismatch 각각의 fail-closed test
 - env allowlist, `O_NOFOLLOW`, symlink/hard-link/mode/TOCTOU rejection
+- canonical/legacy full-local label을 둘 다 read-only probe하고 exact not-loaded와 unexpected error를 구분하는 test
+- release-artifact root 전체가 공유하는 aggregate entry/byte exact-boundary·over-limit·alias-dedup test
 - production/rehearsal namespace·port·Docker resource collision rejection
 - cleanup ownership token과 exact identity 불일치 시 delete 0
 - mixed-state classifier vocabulary와 recovery mutation 0

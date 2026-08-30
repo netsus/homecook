@@ -54,7 +54,8 @@ describe("local Mac production rehearsal CLI", () => {
     });
 
     await runLocalMacProductionRehearsalCli([
-      "candidate", "--release-sha", "a".repeat(40), "--json",
+      "candidate", "--release-sha", "a".repeat(40),
+      "--production-env-authority", "/private/server/full-local-production.env", "--json",
     ], {
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
@@ -70,6 +71,7 @@ describe("local Mac production rehearsal CLI", () => {
     expect(createCandidateAdapters).toHaveBeenCalledWith(expect.objectContaining({
       builderInputDigest: "b".repeat(64),
       builderInputEntries: expect.any(Array),
+      productionEnvAuthorityPath: "/private/server/full-local-production.env",
       rootDir: process.cwd(),
     }));
     expect(buildCandidate).toHaveBeenCalledWith(expect.objectContaining({
@@ -95,7 +97,8 @@ describe("local Mac production rehearsal CLI", () => {
       return { candidate_root: "/private/must-not-print", manifest: {} };
     });
     await expect(runLocalMacProductionRehearsalCli([
-      "candidate", "--release-sha", "a".repeat(40), "--json",
+      "candidate", "--release-sha", "a".repeat(40),
+      "--production-env-authority", "/private/server/full-local-production.env", "--json",
     ], {
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
@@ -129,7 +132,9 @@ describe("local Mac production rehearsal CLI", () => {
       adapters_match: received === adapters,
     }));
 
-    await runLocalMacProductionRehearsalCli(["inventory", "--json"], {
+    await runLocalMacProductionRehearsalCli([
+      "inventory", "--production-env-authority", "/private/server/full-local-production.env", "--json",
+    ], {
       output: output.stream,
       createInventoryAdapters: createAdapters,
       collectInventory,
@@ -137,6 +142,9 @@ describe("local Mac production rehearsal CLI", () => {
     });
 
     expect(createAdapters).toHaveBeenCalledTimes(1);
+    expect(createAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      productionEnvAuthorityPath: "/private/server/full-local-production.env",
+    }));
     expect(collectInventory).toHaveBeenCalledTimes(1);
     expect(JSON.parse(output.value())).toEqual({
       adapters_match: true,
@@ -235,6 +243,19 @@ describe("local Mac production rehearsal CLI", () => {
       .rejects.toThrow(/release-sha|required/iu);
     await expect(runLocalMacProductionRehearsalCli(["candidate", "--release-sha", "short", "--json"], { createInventoryAdapters: createAdapters }))
       .rejects.toThrow(/40|sha/iu);
+    const createCandidateAdapters = vi.fn();
+    await expect(runLocalMacProductionRehearsalCli([
+      "candidate", "--release-sha", "a".repeat(40), "--json",
+    ], {
+      immutableBuilderInputDigest: "b".repeat(64),
+      immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
+      immutableBootstrapVerified: true,
+      beforeCandidateComplete: vi.fn(),
+      createCandidateAdapters,
+      buildCandidate: vi.fn(),
+      candidateNamespaceResolver: () => "/private/rehearsal",
+    })).rejects.toThrow(/production env authority|production-env-authority|required/iu);
+    expect(createCandidateAdapters).not.toHaveBeenCalled();
     await expect(runLocalMacProductionRehearsalCli(["classify", "--inventory", "relative.json", "--json"], { createInventoryAdapters: createAdapters }))
       .rejects.toThrow(/absolute/iu);
     expect(createAdapters).not.toHaveBeenCalled();

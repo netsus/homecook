@@ -6,10 +6,10 @@ import {
   existsSync,
   fstatSync,
   lstatSync,
+  opendirSync,
   openSync,
   readFileSync,
   readlinkSync,
-  readdirSync,
   realpathSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -22,6 +22,8 @@ import { resolveTrustedGitExecutable } from "./trusted-production-release-tools.
 
 export const INVENTORY_SCHEMA = "homecook.local-mac-production-rehearsal-inventory.v1";
 export const PRODUCTION_SURFACE_SNAPSHOT_SCHEMA = "homecook.local-mac-production-surface-snapshot.v1";
+export const CANONICAL_FULL_LOCAL_LAUNCHD_LABEL = "com.homecook.full-local-production";
+export const LEGACY_FULL_LOCAL_LAUNCHD_LABEL = "com.homecook.full-local.production";
 
 const HEX_40 = /^[0-9a-f]{40}$/u;
 const HEX_64 = /^[0-9a-f]{64}$/u;
@@ -43,6 +45,8 @@ const TOOL_KEYS = ["version", "realpath", "device", "inode", "mode", "ctime", "s
 const NAMED_TOOL_KEYS = ["name", ...TOOL_KEYS];
 const SURFACE_KEYS = ["release_artifacts", "active_promotion_lock", "workloads", "launchd", "docker", "port_listeners", "opaque_configs", "migration", "prepared_identity"];
 const INVENTORY_UNSIGNED_KEYS = ["schema", "canonicalization", "repository", "captured_at", "surface_allowlist_version", "probe_identity", "tool_identities", "probe_statuses", "production_db_connection_count", "mutation_attempt_count", "redacted_field_count", "surfaces", "surface_digest"];
+const DEFAULT_SURFACE_MAX_ENTRIES = 10_000;
+const DEFAULT_SURFACE_MAX_BYTES = 512 * 1024 * 1024;
 
 function fail(message) {
   throw new Error(`Production inventory rejected: ${message}`);
@@ -334,20 +338,38 @@ export async function collectReadOnlyProductionInventory({
 export function createProductionSurfaceSnapshot(inventory, { capturedAt = new Date().toISOString() } = {}) {
   validateProductionInventory(inventory);
   const surfaces = inventory.surfaces;
-  const requiredPlists = [
+  const requiredInvariantPlists = [
     "launch_agent_plist:com.homecook.production",
-    "launch_agent_plist:com.homecook.full-local-production",
     "launch_agent_plist:com.homecook.youtube-extraction-worker",
   ];
+  const requiredFullLocalPlists = [
+    `launch_agent_plist:${CANONICAL_FULL_LOCAL_LAUNCHD_LABEL}`,
+    `launch_agent_plist:${LEGACY_FULL_LOCAL_LAUNCHD_LABEL}`,
+  ];
+  const artifactMap = new Map(surfaces.release_artifacts.map((entry) => [entry.kind, entry]));
   const presentArtifacts = new Set(surfaces.release_artifacts.filter((entry) => entry.exists).map((entry) => entry.kind));
   const componentSet = new Set(surfaces.workloads.map((entry) => entry.component));
+  const launchdLabels = new Set(surfaces.launchd.map((entry) => entry.label));
+  const requiredLaunchdLabels = [
+    "com.homecook.production",
+    CANONICAL_FULL_LOCAL_LAUNCHD_LABEL,
+    LEGACY_FULL_LOCAL_LAUNCHD_LABEL,
+    "com.homecook.youtube-extraction-worker",
+  ];
+  const configIdentities = new Set(surfaces.opaque_configs.map((entry) => entry.identity));
+  const toolNames = inventory.tool_identities.map((tool) => tool.name).sort();
   const complete = PROBE_NAMES.every((name) => inventory.probe_statuses[name].status === "success")
-    && surfaces.launchd.length === 3
+    && JSON.stringify(toolNames) === JSON.stringify(REQUIRED_TOOL_NAMES)
+    && artifactMap.has("release_root") && artifactMap.has("current_descriptor") && artifactMap.has("previous_descriptor")
+    && requiredInvariantPlists.every((kind) => presentArtifacts.has(kind))
+    && requiredFullLocalPlists.every((kind) => artifactMap.has(kind))
+    && surfaces.launchd.length === requiredLaunchdLabels.length && launchdLabels.size === requiredLaunchdLabels.length
+    && requiredLaunchdLabels.every((label) => launchdLabels.has(label))
     && surfaces.docker.containers.length > 0 && surfaces.docker.networks.length > 0 && surfaces.docker.volumes.length > 0
     && surfaces.port_listeners.length > 0 && surfaces.opaque_configs.length === 2
+    && configIdentities.has("production-env") && configIdentities.has("full-local-config")
     && surfaces.migration.approved && surfaces.migration.global_ledger_digest
     && surfaces.migration.migration_head === surfaces.migration.catalog_head
-    && presentArtifacts.has("current_descriptor") && requiredPlists.every((kind) => presentArtifacts.has(kind))
     && surfaces.workloads.length === 3 && componentSet.size === 3
     && ["app", "full_local", "worker"].every((component) => componentSet.has(component));
   if (!complete) fail("production surface snapshot required evidence is incomplete");
@@ -383,7 +405,7 @@ function sameFileIdentity(left, right) {
     && left.ctimeNs === right.ctimeNs && left.mtimeNs === right.mtimeNs;
 }
 
-function readOpaqueRegularFile(path, label, { allowHardLinks = false } = {}) {
+function readOpaqueRegularFile(path, label, { allowHardLinks = false, afterRead = () => {} } = {}) {
   const before = lstatSync(path, { bigint: true });
   const uid = BigInt(process.getuid?.());
   if (!before.isFile() || before.isSymbolicLink() || ![0n, uid].includes(before.uid)
@@ -395,6 +417,7 @@ function readOpaqueRegularFile(path, label, { allowHardLinks = false } = {}) {
     const opened = fstatSync(descriptor, { bigint: true });
     if (!sameFileIdentity(before, opened)) fail(`${label} identity changed before read`);
     const bytes = readFileSync(descriptor);
+    afterRead();
     const after = lstatSync(path, { bigint: true });
     if (!sameFileIdentity(opened, after)) fail(`${label} identity changed during read`);
     return bytes;
@@ -479,30 +502,117 @@ function containedRelative(root, target) {
   fail("recursive production tree symlink target escapes containment");
 }
 
+export function createProductionSurfaceBudget({
+  maxEntries = DEFAULT_SURFACE_MAX_ENTRIES,
+  maxBytes = DEFAULT_SURFACE_MAX_BYTES,
+} = {}) {
+  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1
+    || !Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    fail("production surface aggregate bounds are invalid");
+  }
+  return {
+    maxEntries: BigInt(maxEntries),
+    maxBytes: BigInt(maxBytes),
+    entries: 0n,
+    bytes: 0n,
+    seenEntries: new Set(),
+    fileDigests: new Map(),
+    directoryNames: new Map(),
+  };
+}
+
+function assertProductionSurfaceBudget(value) {
+  if (!value || typeof value !== "object"
+    || typeof value.maxEntries !== "bigint" || typeof value.maxBytes !== "bigint"
+    || typeof value.entries !== "bigint" || typeof value.bytes !== "bigint"
+    || !(value.seenEntries instanceof Set) || !(value.fileDigests instanceof Map)
+    || !(value.directoryNames instanceof Map)
+    || value.maxEntries < 1n || value.maxEntries > BigInt(Number.MAX_SAFE_INTEGER)
+    || value.maxBytes < 0n || value.maxBytes > BigInt(Number.MAX_SAFE_INTEGER)
+    || value.entries < 0n || value.entries > value.maxEntries
+    || value.bytes < 0n || value.bytes > value.maxBytes) {
+    fail("production surface aggregate budget is invalid");
+  }
+  return value;
+}
+
+function budgetIdentity(stats, type) {
+  return [
+    type,
+    stats.dev,
+    stats.ino,
+    stats.nlink,
+    stats.uid,
+    stats.gid,
+    stats.mode,
+    stats.size,
+    stats.ctimeNs,
+    stats.mtimeNs,
+  ].join(":");
+}
+
+function consumeProductionSurfaceBudget(budgetInput, stats, type, byteSize = 0n) {
+  const budget = assertProductionSurfaceBudget(budgetInput);
+  const identity = budgetIdentity(stats, type);
+  if (budget.seenEntries.has(identity)) return { first: false, identity };
+  if (budget.entries + 1n > budget.maxEntries) fail("production surface aggregate entry limit exceeded");
+  if (budget.bytes + byteSize > budget.maxBytes) fail("production surface aggregate byte limit exceeded");
+  budget.entries += 1n;
+  budget.bytes += byteSize;
+  budget.seenEntries.add(identity);
+  return { first: true, identity };
+}
+
+function readBoundedDirectoryNames(path, maxEntries) {
+  const names = [];
+  const directory = opendirSync(path);
+  try {
+    let entry;
+    while ((entry = directory.readSync()) !== null) {
+      if (names.length >= maxEntries) fail("production surface aggregate entry limit exceeded");
+      names.push(entry.name);
+    }
+  } finally {
+    directory.closeSync();
+  }
+  return names.sort();
+}
+
+function readBudgetedDirectoryNames(path, budgetInput) {
+  const budget = assertProductionSurfaceBudget(budgetInput);
+  const before = lstatSync(path, { bigint: true });
+  if (!before.isDirectory() || before.isSymbolicLink()) fail("production surface directory identity is invalid");
+  const consumed = consumeProductionSurfaceBudget(budget, before, "directory");
+  const cached = budget.directoryNames.get(consumed.identity);
+  if (cached !== undefined) return cached;
+  const remaining = Number(budget.maxEntries - budget.entries);
+  const names = Object.freeze(readBoundedDirectoryNames(path, remaining));
+  const after = lstatSync(path, { bigint: true });
+  if (!sameFileIdentity(before, after)) fail("production surface directory changed during bounded read");
+  budget.directoryNames.set(consumed.identity, names);
+  return names;
+}
+
 export function digestProductionTree(rootPath, {
-  maxEntries = 10_000,
+  maxEntries = DEFAULT_SURFACE_MAX_ENTRIES,
   maxDepth = 64,
-  maxBytes = 512 * 1024 * 1024,
+  maxBytes = DEFAULT_SURFACE_MAX_BYTES,
+  surfaceBudget = null,
 } = {}) {
   const canonicalRoot = realpathSync(rootPath);
-  const limits = {
-    maxEntries: BigInt(maxEntries),
-    maxDepth,
-    maxBytes: BigInt(maxBytes),
-  };
-  if (limits.maxEntries < 1n || !Number.isSafeInteger(maxDepth) || maxDepth < 0 || limits.maxBytes < 0n) {
+  const budget = surfaceBudget ?? createProductionSurfaceBudget({ maxEntries, maxBytes });
+  assertProductionSurfaceBudget(budget);
+  if (!Number.isSafeInteger(maxDepth) || maxDepth < 0) {
     fail("recursive production tree bounds are invalid");
   }
-  const counters = { entries: 0n, bytes: 0n };
   const active = new Set();
 
   function digestNode(path, relativePath, depth) {
-    if (depth > limits.maxDepth) fail("recursive production tree depth limit exceeded");
-    counters.entries += 1n;
-    if (counters.entries > limits.maxEntries) fail("recursive production tree entry limit exceeded");
+    if (depth > maxDepth) fail("recursive production tree depth limit exceeded");
     const before = lstatSync(path, { bigint: true });
 
     if (before.isSymbolicLink()) {
+      consumeProductionSurfaceBudget(budget, before, "symlink");
       const target = readlinkSync(path);
       if (isAbsolute(target)) fail("recursive production tree absolute symlink is forbidden");
       const targetRealpath = realpathSync(resolve(dirname(path), target));
@@ -526,18 +636,19 @@ export function digestProductionTree(rootPath, {
     try {
       if (before.isFile()) {
         if (before.nlink !== 1n) fail("recursive production tree hard-linked file is forbidden");
-        counters.bytes += before.size;
-        if (counters.bytes > limits.maxBytes) fail("recursive production tree byte limit exceeded");
-        const bytes = readOpaqueRegularFile(path, "recursive production tree file");
+        const consumed = consumeProductionSurfaceBudget(budget, before, "file", before.size);
+        const cachedDigest = budget.fileDigests.get(consumed.identity);
+        const contentDigest = cachedDigest ?? sha256Bytes(readOpaqueRegularFile(path, "recursive production tree file"));
+        if (cachedDigest === undefined) budget.fileDigests.set(consumed.identity, contentDigest);
         const after = lstatSync(path, { bigint: true });
         if (!sameFileIdentity(before, after)) fail("recursive production tree file drift detected");
         return sha256Jcs({
           ...bigintMetadata(before, relativePath, "file"),
-          content_sha256: sha256Bytes(bytes),
+          content_sha256: contentDigest,
         });
       }
       if (before.isDirectory()) {
-        const names = readdirSync(path).sort();
+        const names = readBudgetedDirectoryNames(path, budget);
         const children = names.map((name) => ({
           name,
           digest: digestNode(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`, depth + 1),
@@ -555,6 +666,13 @@ export function digestProductionTree(rootPath, {
   return digestNode(canonicalRoot, ".", 0);
 }
 
+function directoryMetadataDigest(stats) {
+  return sha256Jcs({
+    authority_mode: "metadata-only",
+    ...bigintMetadata(stats, ".", "directory"),
+  });
+}
+
 function absentArtifactEvidence(kind) {
   return {
     kind,
@@ -569,8 +687,17 @@ function absentArtifactEvidence(kind) {
   };
 }
 
+/**
+ * @param {string} kind
+ * @param {string} path
+ * @param {{afterAbsentCheck?:Function, directoryIdentityOnly?:boolean, maxFileBytes?:number, surfaceBudget?:any, treeLimits?:{maxEntries?:number, maxDepth?:number, maxBytes?:number}}} [options]
+ */
 export function readProductionArtifactTarget(kind, path, {
   afterAbsentCheck = () => {},
+  directoryIdentityOnly = false,
+  maxFileBytes = DEFAULT_SURFACE_MAX_BYTES,
+  surfaceBudget = null,
+  treeLimits = undefined,
 } = {}) {
   let stats;
   try {
@@ -594,11 +721,26 @@ export function readProductionArtifactTarget(kind, path, {
     fail(`production ${kind} target has unsafe type, owner, or mode`);
   }
   if (stats.isDirectory() && (stats.mode & 0o100n) === 0n) fail(`production ${kind} directory target is not traversable`);
+  const budget = surfaceBudget ?? createProductionSurfaceBudget({
+    maxEntries: treeLimits?.maxEntries ?? DEFAULT_SURFACE_MAX_ENTRIES,
+    maxBytes: treeLimits?.maxBytes ?? DEFAULT_SURFACE_MAX_BYTES,
+  });
   let digest;
   if (stats.isFile()) {
-    digest = sha256Bytes(readOpaqueRegularFile(path, `production ${kind}`));
+    if (!Number.isSafeInteger(maxFileBytes) || maxFileBytes < 0 || stats.size > BigInt(maxFileBytes)) {
+      fail(`production ${kind} file byte limit exceeded`);
+    }
+    const consumed = consumeProductionSurfaceBudget(budget, stats, "file", stats.size);
+    const cachedDigest = budget.fileDigests.get(consumed.identity);
+    digest = cachedDigest ?? sha256Bytes(readOpaqueRegularFile(path, `production ${kind}`));
+    if (cachedDigest === undefined) budget.fileDigests.set(consumed.identity, digest);
   } else if (stats.isDirectory()) {
-    digest = digestProductionTree(path);
+    if (directoryIdentityOnly) {
+      consumeProductionSurfaceBudget(budget, stats, "directory");
+      digest = directoryMetadataDigest(stats);
+    } else {
+      digest = digestProductionTree(path, { ...treeLimits, surfaceBudget: budget });
+    }
   } else {
     fail(`production ${kind} path must be a regular file or directory`);
   }
@@ -619,18 +761,90 @@ export function readProductionArtifactTarget(kind, path, {
 
 const artifactEvidence = readProductionArtifactTarget;
 
-function safeJson(path) {
-  if (!existsSync(path)) return null;
-  const stats = lstatSync(path, { bigint: true });
-  if (!stats.isFile() || stats.isSymbolicLink()) fail("production descriptor must be a non-symlink regular file");
+/**
+ * @param {string} path
+ * @param {{homeDir:string, rootDir:string, afterRead?:Function}} options
+ */
+export function readProductionEnvironmentAuthority(path, {
+  homeDir,
+  rootDir,
+  afterRead = () => {},
+} = {}) {
   try {
-    return JSON.parse(readOpaqueRegularFile(path, "production descriptor").toString("utf8"));
+    if (!isAbsolute(path ?? "") || !isAbsolute(homeDir ?? "") || !isAbsolute(rootDir ?? "")) {
+      fail("explicit production env authority paths must be absolute");
+    }
+    const canonicalHome = realpathSync(resolve(homeDir));
+    const canonicalRoot = realpathSync(resolve(rootDir));
+    const authorityPath = resolve(path);
+    const sourceRelative = relative(canonicalRoot, authorityPath);
+    if (sourceRelative === "" || (!sourceRelative.startsWith("..") && !isAbsolute(sourceRelative))) {
+      fail("explicit production env authority must remain outside the clean source root");
+    }
+    return withTrustedAncestorChains([
+      { base: canonicalHome, target: authorityPath, label: "explicit production env authority" },
+    ], () => {
+      const before = lstatSync(authorityPath, { bigint: true });
+      const currentUid = BigInt(process.getuid?.());
+      if (!before.isFile() || before.isSymbolicLink() || before.uid !== currentUid
+        || before.nlink !== 1n || Number(before.mode & 0o7777n) !== 0o600
+        || before.size > 1024n * 1024n) {
+        fail("explicit production env authority identity is unsafe");
+      }
+      const bytes = readOpaqueRegularFile(authorityPath, "explicit production env authority", { afterRead });
+      let source;
+      try {
+        source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        fail("explicit production env authority encoding is invalid");
+      }
+      const matches = source.split(/\r?\n/u)
+        .map((line) => /^FULL_LOCAL_COMPOSE_PROJECT_NAME=([A-Za-z0-9][A-Za-z0-9_.-]*)$/u.exec(line))
+        .filter(Boolean);
+      if (matches.length !== 1) fail("explicit production env authority has ambiguous Docker project identity");
+      return Object.freeze({
+        identityDigest: sha256Jcs({
+          device: String(before.dev),
+          inode: String(before.ino),
+          mode: Number(before.mode & 0o7777n),
+          owner_uid: Number(before.uid),
+          size: String(before.size),
+          ctime_ns: String(before.ctimeNs),
+          mtime_ns: String(before.mtimeNs),
+        }),
+        productionDockerProject: matches[0][1],
+        sha256: sha256Bytes(bytes),
+      });
+    });
   } catch {
-    return null;
+    fail("explicit production env authority validation failed");
   }
 }
 
-async function commandOutput(commandRunner, command, args, { absentExit = null } = {}) {
+function readOptionalProductionDescriptor(path) {
+  let bytes;
+  try {
+    bytes = readOpaqueRegularFile(path, "production descriptor");
+  } catch (error) {
+    if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+    try {
+      lstatSync(path, { bigint: true });
+      fail("production descriptor appeared after absence check");
+    } catch (afterError) {
+      if (!(afterError && typeof afterError === "object" && afterError.code === "ENOENT")) throw afterError;
+    }
+    return { digest: null, exists: false, value: null };
+  }
+  let value = null;
+  try {
+    value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    // Malformed descriptor bytes remain observable but cannot provide workload claims.
+  }
+  return { digest: sha256Bytes(bytes), exists: true, value };
+}
+
+async function readOnlyCommandResult(commandRunner, command, args) {
   const result = await commandRunner(command, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -643,11 +857,44 @@ async function commandOutput(commandRunner, command, args, { absentExit = null }
   if (result.error || result.signal || !Number.isInteger(result.status)) {
     throw new Error("read-only inventory command did not terminate normally");
   }
-  if (result.status !== 0) {
-    if (absentExit === "lsof-no-listener" && result.status === 1 && stdout === "" && stderr === "") return "";
+  return { status: result.status, stdout, stderr };
+}
+
+async function commandOutput(commandRunner, command, args, { absentExit = null } = {}) {
+  const { status, stdout, stderr } = await readOnlyCommandResult(commandRunner, command, args);
+  if (status !== 0) {
+    if (absentExit === "lsof-no-listener" && status === 1 && stdout === "" && stderr === "") return "";
     throw new Error("read-only inventory command failed");
   }
   return stdout;
+}
+
+async function readLaunchdJob(commandRunner, launchctlBin, uid, label) {
+  const { status, stdout, stderr } = await readOnlyCommandResult(
+    commandRunner,
+    launchctlBin,
+    ["print", `gui/${uid}/${label}`],
+  );
+  if (status === 113 && stdout === "") {
+    const missingMessage = `Could not find service \"${label}\" in domain for user gui: ${uid}`;
+    const allowed = new Set([
+      missingMessage,
+      `${missingMessage}\n`,
+      `Bad request.\n${missingMessage}`,
+      `Bad request.\n${missingMessage}\n`,
+    ]);
+    if (allowed.has(stderr)) {
+      const projection = { label, loaded: false, state: "missing", pid: null };
+      return { ...projection, projection_digest: sha256Jcs(projection) };
+    }
+  }
+  if (status !== 0 || stdout === "" || stderr !== "") {
+    throw new Error("read-only launchd inventory command failed");
+  }
+  const state = /^\s*state = (.+)$/mu.exec(stdout)?.[1]?.trim() ?? "unknown";
+  const pidText = /^\s*pid = (\d+)$/mu.exec(stdout)?.[1];
+  const projection = { label, loaded: true, state, pid: pidText ? Number(pidText) : null };
+  return { ...projection, projection_digest: sha256Jcs(projection) };
 }
 
 function parseDelimitedLines(source, fieldNames) {
@@ -690,6 +937,8 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     homeDir = process.env.HOME ?? "",
     rootDir = process.cwd(),
     approvedMigrationMarkerPath = null,
+    productionEnvAuthorityPath = null,
+    releaseArtifactSurfaceLimits = {},
     dockerBin: dockerBinOption = null,
     commandRunner = spawnSync,
     trustedToolPaths = {},
@@ -702,26 +951,49 @@ export function createLocalProductionInventoryAdapters(options = {}) {
   const previousPath = join(releaseRoot, "previous.json");
   const lockRoot = join(releaseRoot, "promotion-locks");
   const snapshotRoot = join(releaseRoot, "execution-snapshots");
-  const fullLocalConfigPath = join(canonicalRoot, "infra", "full-local-supabase", ".env.production.local");
+  const canonicalFullLocalPlistPath = join(canonicalHome, "Library", "LaunchAgents", `${CANONICAL_FULL_LOCAL_LAUNCHD_LABEL}.plist`);
+  const legacyFullLocalPlistPath = join(canonicalHome, "Library", "LaunchAgents", `${LEGACY_FULL_LOCAL_LAUNCHD_LABEL}.plist`);
   const gitBin = trustedToolPaths.git ?? resolveTrustedGitExecutable();
   const launchctlBin = trustedToolPaths.launchctl ?? "/bin/launchctl";
   const lsofBin = trustedToolPaths.lsof ?? "/usr/sbin/lsof";
+  let productionDockerAuthority = null;
   function resolveProductionDockerContext() {
+    if (productionEnvAuthorityPath === null) {
+      return { dockerBin: null, productionDockerProject: null, configDigest: null };
+    }
+    const authority = readProductionEnvironmentAuthority(productionEnvAuthorityPath, {
+      homeDir: canonicalHome,
+      rootDir: canonicalRoot,
+    });
+    if (productionDockerAuthority !== null
+      && productionDockerAuthority.identityDigest !== authority.identityDigest) {
+      fail("explicit production env authority changed between read-only probes");
+    }
+    productionDockerAuthority ??= authority;
+    return {
+      dockerBin: dockerBinOption ?? resolveTrustedDockerBinary(),
+      productionDockerProject: productionDockerAuthority.productionDockerProject,
+      configDigest: productionDockerAuthority.sha256,
+    };
+  }
+  function readAuthorityChildren(root, prefix, surfaceBudget) {
     return withTrustedAncestorChains([
-      { base: canonicalRoot, target: fullLocalConfigPath, label: "full-local production config" },
+      { base: canonicalHome, target: join(root, ".authority-child-probe"), label: `${prefix} root` },
     ], () => {
-      if (!existsSync(fullLocalConfigPath)) return { dockerBin: null, productionDockerProject: null };
-      const stats = lstatSync(fullLocalConfigPath, { bigint: true });
-      if (!stats.isFile() || stats.isSymbolicLink() || (stats.mode & 0o022n) !== 0n) {
-        fail("canonical full-local production config must be a private regular file");
+      try {
+        const rootEvidence = artifactEvidence(`${prefix}_root`, root, {
+          directoryIdentityOnly: true,
+          surfaceBudget,
+        });
+        if (!rootEvidence.exists) return [];
+      } catch (error) {
+        if (error && typeof error === "object" && error.code === "ENOENT") return [];
+        throw error;
       }
-      const configText = readOpaqueRegularFile(fullLocalConfigPath, "canonical full-local production config").toString("utf8");
-      const matches = configText.split(/\r?\n/u)
-        .map((line) => /^FULL_LOCAL_COMPOSE_PROJECT_NAME=([A-Za-z0-9][A-Za-z0-9_.-]*)$/u.exec(line.trim()))
-        .filter(Boolean);
-      const productionDockerProject = matches.length === 1 ? matches[0][1] : null;
-      const dockerBin = dockerBinOption ?? (productionDockerProject ? resolveTrustedDockerBinary() : null);
-      return { dockerBin, productionDockerProject };
+      const names = readBudgetedDirectoryNames(root, surfaceBudget);
+      return names.map((name) => artifactEvidence(`${prefix}:${sha256Jcs(name)}`, join(root, name), {
+        surfaceBudget,
+      }));
     });
   }
 
@@ -733,22 +1005,28 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     },
     async readReleaseArtifacts() {
       const plistRoot = join(canonicalHome, "Library", "LaunchAgents");
+      const surfaceBudget = createProductionSurfaceBudget(releaseArtifactSurfaceLimits);
       return withTrustedAncestorChains([
         { base: canonicalHome, target: join(releaseRoot, ".ancestor-probe"), label: "release root" },
         { base: canonicalHome, target: join(plistRoot, ".ancestor-probe"), label: "LaunchAgent root" },
       ], () => {
         const entries = [
-          artifactEvidence("release_root", releaseRoot),
-          artifactEvidence("current_descriptor", currentPath),
-          artifactEvidence("previous_descriptor", previousPath),
-          artifactEvidence("launch_agent_plist:com.homecook.production", join(plistRoot, "com.homecook.production.plist")),
-          artifactEvidence("launch_agent_plist:com.homecook.full-local-production", join(plistRoot, "com.homecook.full-local-production.plist")),
-          artifactEvidence("launch_agent_plist:com.homecook.youtube-extraction-worker", join(plistRoot, "com.homecook.youtube-extraction-worker.plist")),
+          artifactEvidence("release_root", releaseRoot, { directoryIdentityOnly: true, surfaceBudget }),
+          artifactEvidence("current_descriptor", currentPath, { surfaceBudget }),
+          artifactEvidence("previous_descriptor", previousPath, { surfaceBudget }),
+          artifactEvidence("launch_agent_plist:com.homecook.production", join(plistRoot, "com.homecook.production.plist"), { surfaceBudget }),
+          artifactEvidence("launch_agent_plist:com.homecook.youtube-extraction-worker", join(plistRoot, "com.homecook.youtube-extraction-worker.plist"), { surfaceBudget }),
         ];
-        for (const [root, prefix] of [[lockRoot, "recovered_lock"], [snapshotRoot, "sealed_snapshot"]]) {
-          if (!existsSync(root)) continue;
-          for (const name of readdirSync(root).sort()) entries.push(artifactEvidence(`${prefix}:${sha256Jcs(name)}`, join(root, name)));
-        }
+        const fullLocal = withTrustedAncestorChains([
+          { base: canonicalHome, target: canonicalFullLocalPlistPath, label: "canonical full-local LaunchAgent" },
+          { base: canonicalHome, target: legacyFullLocalPlistPath, label: "legacy full-local LaunchAgent" },
+        ], () => ({
+          canonical: artifactEvidence(`launch_agent_plist:${CANONICAL_FULL_LOCAL_LAUNCHD_LABEL}`, canonicalFullLocalPlistPath, { surfaceBudget }),
+          legacy: artifactEvidence(`launch_agent_plist:${LEGACY_FULL_LOCAL_LAUNCHD_LABEL}`, legacyFullLocalPlistPath, { surfaceBudget }),
+        }));
+        entries.push(fullLocal.canonical, fullLocal.legacy);
+        entries.push(...readAuthorityChildren(lockRoot, "recovered_lock", surfaceBudget));
+        entries.push(...readAuthorityChildren(snapshotRoot, "sealed_snapshot", surfaceBudget));
         return entries;
       });
     },
@@ -756,7 +1034,8 @@ export function createLocalProductionInventoryAdapters(options = {}) {
       return withTrustedAncestorChains([
         { base: canonicalHome, target: currentPath, label: "current descriptor" },
       ], () => {
-        const descriptor = safeJson(currentPath);
+        const descriptorAuthority = readOptionalProductionDescriptor(currentPath);
+        const descriptor = descriptorAuthority.value;
         const componentNames = ["app", "full_local", "worker"];
         return componentNames.map((component) => {
           const componentState = descriptor?.[component] ?? descriptor?.components?.[component] ?? descriptor;
@@ -768,8 +1047,8 @@ export function createLocalProductionInventoryAdapters(options = {}) {
             sealed_bundle_digest: typeof componentState?.sealed_bundle_digest === "string"
               ? componentState.sealed_bundle_digest
               : typeof componentState?.execution_tree_digest === "string" ? componentState.execution_tree_digest : null,
-            health: descriptor ? "unknown" : "missing",
-            descriptor_digest: existsSync(currentPath) ? sha256Bytes(readOpaqueRegularFile(currentPath, "current descriptor")) : null,
+            health: descriptorAuthority.exists ? "unknown" : "missing",
+            descriptor_digest: descriptorAuthority.digest,
           };
         });
       });
@@ -777,14 +1056,13 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     async readLaunchd() {
       const uid = process.getuid?.();
       if (!Number.isInteger(uid)) return [];
-      const labels = ["com.homecook.production", "com.homecook.full-local-production", "com.homecook.youtube-extraction-worker"];
-      return Promise.all(labels.map(async (label) => {
-        const raw = await commandOutput(commandRunner, launchctlBin, ["print", `gui/${uid}/${label}`]);
-        const state = /^\s*state = (.+)$/mu.exec(raw)?.[1]?.trim() ?? (raw ? "unknown" : "missing");
-        const pidText = /^\s*pid = (\d+)$/mu.exec(raw)?.[1];
-        const projection = { label, loaded: Boolean(raw), state, pid: pidText ? Number(pidText) : null };
-        return { ...projection, projection_digest: sha256Jcs(projection) };
-      }));
+      const labels = [
+        "com.homecook.production",
+        CANONICAL_FULL_LOCAL_LAUNCHD_LABEL,
+        LEGACY_FULL_LOCAL_LAUNCHD_LABEL,
+        "com.homecook.youtube-extraction-worker",
+      ];
+      return Promise.all(labels.map((label) => readLaunchdJob(commandRunner, launchctlBin, uid, label)));
     },
     async readDocker() {
       const { dockerBin, productionDockerProject } = resolveProductionDockerContext();
@@ -855,12 +1133,14 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     },
     async readOpaqueConfigIdentities() {
       const productionEnvPath = join(canonicalRoot, ".env.production.local");
+      const dockerContext = resolveProductionDockerContext();
       return withTrustedAncestorChains([
         { base: canonicalRoot, target: productionEnvPath, label: "production env root" },
-        { base: canonicalRoot, target: fullLocalConfigPath, label: "full-local config root" },
       ], () => [
         opaqueConfigIdentity("production-env", productionEnvPath),
-        opaqueConfigIdentity("full-local-config", fullLocalConfigPath),
+        dockerContext.configDigest === null
+          ? { identity: "full-local-config", exists: false, sha256: sha256Jcs({ identity: "full-local-config", exists: false }) }
+          : { identity: "full-local-config", exists: true, sha256: dockerContext.configDigest },
       ]);
     },
     async readToolIdentities() {

@@ -28,8 +28,8 @@ const HELP = `Homecook local Mac production rehearsal candidate and receipt foun
 PRODUCTION MUTATION: 0 (read-only/offline commands only)
 
 Usage:
-  pnpm release:rehearsal:inventory -- --json [--home-dir <absolute>] [--root-dir <absolute>] [--approved-migration-marker <absolute>]
-  pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> --json
+  pnpm release:rehearsal:inventory -- --json [--home-dir <absolute>] [--root-dir <absolute>] [--approved-migration-marker <absolute>] [--production-env-authority <absolute-private-file>]
+  pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> --production-env-authority <absolute-private-file> --json
   pnpm release:rehearsal:classify -- --inventory <absolute-private-inventory> --json [--root-dir <absolute>]
   pnpm release:rehearsal:receipt -- --candidate <absolute-sealed-candidate> --run-evidence <absolute-completed-run> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
   pnpm release:rehearsal:repeatability -- --member-receipt <absolute-run-receipt> --member-receipt <absolute-run-receipt> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
@@ -49,6 +49,7 @@ function parseArguments(argv) {
     receiptPath: null,
     memberReceiptPaths: [],
     approvedMigrationMarkerPath: null,
+    productionEnvAuthorityPath: null,
     releaseSha: null,
     candidateInput: null,
     runEvidencePath: null,
@@ -63,7 +64,7 @@ function parseArguments(argv) {
       continue;
     }
     const value = argv[index + 1];
-    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker", "--release-sha", "--candidate", "--run-evidence", "--receipt-root", "--issuer-task-id"].includes(token)) {
+    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker", "--production-env-authority", "--release-sha", "--candidate", "--run-evidence", "--receipt-root", "--issuer-task-id"].includes(token)) {
       if (!value || value.startsWith("--")) throw new Error(`${token} requires a value.`);
       index += 1;
       if (token === "--root-dir") result.rootDir = value;
@@ -72,6 +73,7 @@ function parseArguments(argv) {
       if (token === "--receipt") result.receiptPath = value;
       if (token === "--member-receipt") result.memberReceiptPaths.push(value);
       if (token === "--approved-migration-marker") result.approvedMigrationMarkerPath = value;
+      if (token === "--production-env-authority") result.productionEnvAuthorityPath = value;
       if (token === "--release-sha") result.releaseSha = value;
       if (token === "--candidate") result.candidateInput = value;
       if (token === "--run-evidence") result.runEvidencePath = value;
@@ -173,6 +175,7 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     if (typeof beforeCandidateComplete !== "function") {
       throw new Error("candidate execution requires an immutable before-complete finalization guard.");
     }
+    requireAbsolute(options.productionEnvAuthorityPath, "production env authority");
     const candidateModule = buildCandidate && createCandidateAdapters
       ? null
       : await import("./lib/local-mac-production-rehearsal-candidate.mjs");
@@ -187,6 +190,7 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
       builderInputEntries: immutableBuilderInputEntries,
       homeDir: resolve(options.homeDir),
       namespaceRoot,
+      productionEnvAuthorityPath: options.productionEnvAuthorityPath,
       rootDir,
     });
     let completionGuardCalled = false;
@@ -214,10 +218,12 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
   }
   if (options.command === "inventory") {
     if (options.approvedMigrationMarkerPath) requireAbsolute(options.approvedMigrationMarkerPath, "approved migration marker");
+    if (options.productionEnvAuthorityPath) requireAbsolute(options.productionEnvAuthorityPath, "production env authority");
     const adapters = createInventoryAdapters({
       homeDir: resolve(options.homeDir),
       rootDir,
       approvedMigrationMarkerPath: options.approvedMigrationMarkerPath,
+      productionEnvAuthorityPath: options.productionEnvAuthorityPath,
     });
     const inventory = await collectInventory({
       adapters,
