@@ -781,6 +781,31 @@ describe("read-only production inventory", () => {
       .rejects.toThrow(/manifest|component|app|content|digest|mismatch/iu);
   });
 
+  it("rejects manifest substitution after the first bounded active-snapshot digest", async () => {
+    const rootDir = tempDirectory("homecook-snapshot-toctou-root-");
+    const homeDir = tempDirectory("homecook-snapshot-toctou-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    const snapshotRoot = join(releaseRoot, "execution-snapshots");
+    const snapshotDigest = "d".repeat(64);
+    const snapshot = createExecutionSnapshot(snapshotRoot, snapshotDigest);
+    writeFileSync(join(releaseRoot, "current.json"), JSON.stringify(
+      runningDescriptor(snapshotRoot, snapshotDigest),
+    ), { mode: 0o600 });
+    const afterReferencedSnapshotBeforeDigest = vi.fn(() => {
+      writeExecutionSnapshotManifest(snapshot, snapshotDigest, {
+        candidate_identity_digest: SHA_A,
+      });
+    });
+    const adapters = createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactProbeHooks: { afterReferencedSnapshotBeforeDigest },
+    });
+
+    await expect(adapters.readReleaseArtifacts()).rejects.toThrow(/snapshot|manifest|changed|drift|TOCTOU/iu);
+    expect(afterReferencedSnapshotBeforeDigest).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects retained snapshot manifest symlinks, unknown fields, and byte-limit overflow", async () => {
     const rootDir = tempDirectory("homecook-retained-manifest-root-");
     const homeDir = tempDirectory("homecook-retained-manifest-home-");

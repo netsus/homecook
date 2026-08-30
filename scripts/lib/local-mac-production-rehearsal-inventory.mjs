@@ -987,6 +987,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     approvedMigrationMarkerPath = null,
     productionEnvAuthorityPath = null,
     releaseArtifactSurfaceLimits = {},
+    releaseArtifactProbeHooks = {},
     dockerBin: dockerBinOption = null,
     commandRunner = spawnSync,
     trustedToolPaths = {},
@@ -1170,12 +1171,18 @@ export function createLocalProductionInventoryAdapters(options = {}) {
         const path = join(snapshotRoot, name);
         const reference = referenceByName.get(name);
         if (reference) {
-          const manifest = readSnapshotManifest(path, name, surfaceBudget, { required: true });
           const before = artifactEvidence(
             `referenced_snapshot:${reference.descriptorKind}:${sha256Jcs(name)}`,
             path,
             { surfaceBudget },
           );
+          if (releaseArtifactProbeHooks.afterReferencedSnapshotBeforeDigest !== undefined) {
+            if (typeof releaseArtifactProbeHooks.afterReferencedSnapshotBeforeDigest !== "function") {
+              fail("referenced snapshot verification hook is invalid");
+            }
+            releaseArtifactProbeHooks.afterReferencedSnapshotBeforeDigest({ path, snapshotName: name });
+          }
+          const manifest = readSnapshotManifest(path, name, surfaceBudget, { required: true });
           validateReferencedSnapshot(path, reference, manifest.value);
           const after = artifactEvidence(
             `referenced_snapshot:${reference.descriptorKind}:${sha256Jcs(name)}`,
