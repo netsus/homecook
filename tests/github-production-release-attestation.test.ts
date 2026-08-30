@@ -591,6 +591,19 @@ describe("GitHub production release attestation verification", () => {
 
     writeFileSync(subjectManifestPath, JSON.stringify({
       ...originalSubject,
+      unexpected_authority: "must-not-pass",
+    }, null, 2));
+    expect(() => verifier({
+      gitEvidence,
+      manifest,
+      manifestDigest: "d".repeat(64),
+      manifestPath,
+      rootDir,
+    })).toThrow(/unknown|closed|unexpected|field/iu);
+    writeFileSync(subjectManifestPath, JSON.stringify(originalSubject, null, 2));
+
+    writeFileSync(subjectManifestPath, JSON.stringify({
+      ...originalSubject,
       sealed_bundle_digest: "0".repeat(64),
     }, null, 2));
     expect(() => verifier({

@@ -45,6 +45,11 @@ const REHEARSAL_AUTHORITY_KEYS = [
   "rehearsal_receipt_schema", "build_id", "sealed_bundle_digest",
   "repeatability_receipt_digest", "rehearsal_receipt_valid_until",
 ];
+const SUBJECT_BASE_KEYS = [
+  "schema", "repository", "source_ref", "signer_workflow", "signer_digest",
+  "expected_release_integration_id", "release_tag", "release_tag_object_sha",
+  "release_sha", "release_tree", "expected_release_contexts", "required_check_summary",
+];
 
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -67,6 +72,14 @@ function requireSha256(value, label) {
     throw new Error(`${label} must be a 64-character lowercase digest.`);
   }
   return normalized;
+}
+
+function requireExactKeys(value, expectedKeys, label) {
+  const actual = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`${label} must use the exact closed field set.`);
+  }
 }
 
 function normalizeRehearsalAuthority(value, label = "rehearsalAuthority") {
@@ -552,6 +565,11 @@ function validateSubjectDocument({
       `Production release subject manifest schema must be ${expectedSubjectSchema}.`,
     );
   }
+  requireExactKeys(
+    document,
+    manifestRehearsalAuthority ? [...SUBJECT_BASE_KEYS, ...REHEARSAL_AUTHORITY_KEYS] : SUBJECT_BASE_KEYS,
+    "Production release subject manifest",
+  );
   if (manifestRehearsalAuthority) {
     const subjectAuthority = normalizeRehearsalAuthority(Object.fromEntries(
       REHEARSAL_AUTHORITY_KEYS.map((key) => [key, document[key]]),
@@ -653,6 +671,13 @@ function validatePredicateDocument({
       `Production release attestation predicate schema must be ${expectedPredicateSchema}.`,
     );
   }
+  requireExactKeys(
+    predicate,
+    manifestRehearsalAuthority
+      ? [...SUBJECT_BASE_KEYS, ...REHEARSAL_AUTHORITY_KEYS, "subject_manifest_sha256"]
+      : [...SUBJECT_BASE_KEYS, "subject_manifest_sha256"],
+    "Production release predicate",
+  );
   if (manifestRehearsalAuthority) {
     const predicateAuthority = normalizeRehearsalAuthority(Object.fromEntries(
       REHEARSAL_AUTHORITY_KEYS.map((key) => [key, predicate[key]]),
