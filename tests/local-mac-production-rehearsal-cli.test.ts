@@ -210,6 +210,7 @@ describe("local Mac production rehearsal CLI", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["release:rehearsal:inventory"]).toBe("node scripts/local-mac-production-rehearsal.mjs inventory");
     expect(packageJson.scripts["release:rehearsal:candidate"]).toBe("node --experimental-vm-modules scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs");
+    expect(packageJson.scripts["release:rehearsal:run"]).toBe("node scripts/local-mac-production-rehearsal-run.mjs");
     expect(packageJson.scripts["release:rehearsal:classify"]).toBe("node scripts/local-mac-production-rehearsal.mjs classify");
     expect(packageJson.scripts["release:rehearsal:verify"]).toBe("node scripts/local-mac-production-rehearsal.mjs verify");
     expect(packageJson.scripts["release:production:promote"]).toBe("node scripts/promote-local-mac-production-release.mjs promote");
@@ -219,8 +220,8 @@ describe("local Mac production rehearsal CLI", () => {
     expect(productionCli).toContain("activation_blocked");
 
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 2 in review**");
-    expect(rehearsalRunbook).toContain("R0 inventory, mixed-state classify, receipt schema/JCS/offline verify와 R1 candidate build/seal");
-    expect(rehearsalRunbook).toContain("isolated run은 아직 구현되지 않았다");
+    expect(rehearsalRunbook).toContain("상태: **canonical / implementation split 3 author complete / independent review pending**");
+    expect(rehearsalRunbook).toContain("R2 isolated run / foreground supervisor");
+    expect(rehearsalRunbook).toContain("trusted receipt가 아닌 run evidence");
   });
 });
