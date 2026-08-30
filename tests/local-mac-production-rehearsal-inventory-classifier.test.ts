@@ -42,6 +42,7 @@ const APP_LAUNCHD_LABEL = "com.homecook.production";
 const CANONICAL_FULL_LOCAL_LABEL = "com.homecook.full-local-production";
 const LEGACY_FULL_LOCAL_LABEL = "com.homecook.full-local.production";
 const WORKER_LAUNCHD_LABEL = "com.homecook.youtube-extraction-worker";
+const SNAPSHOT_SCHEMA = "homecook.local-mac-production-execution-snapshot.v1";
 
 function tempDirectory(prefix: string) {
   const path = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
@@ -85,6 +86,61 @@ function launchdEvidence(label: string, loaded: boolean, pid = 201) {
     pid: loaded ? pid : null,
   };
   return { ...projection, projection_digest: sha256Jcs(projection) };
+}
+
+function listenerEvidence(present: boolean) {
+  const projection = {
+    port: 3100,
+    present,
+    pid: present ? 101 : null,
+    process_name: present ? "node" : "absent",
+  };
+  return { ...projection, listener_digest: sha256Jcs(projection) };
+}
+
+function runningDescriptor(snapshotRoot: string, snapshotDigest: string) {
+  const root = join(snapshotRoot, snapshotDigest);
+  return {
+    schema: "homecook.local-mac-production-running-release.v1",
+    release_tag: "prod-20260829.1",
+    release_sha: RELEASE_A,
+    release_tree: RELEASE_A,
+    build_id: "build-a",
+    promotion_id: "promotion-a",
+    promoted_at: "2026-08-29T08:00:00.000Z",
+    source_manifest_sha256: SHA_A,
+    sealed_bundle_digest: SHA_B,
+    repeatability_receipt_digest: SHA_C,
+    execution_app_root: join(root, "app"),
+    execution_snapshot_digest: snapshotDigest,
+    worker_artifact_root: join(root, "worker"),
+    worker_manifest_path: join(root, "worker", "artifact.json"),
+    worker_artifact_sha256: SHA_A,
+    worker_app_descriptor_sha256: SHA_A,
+    worker_config_sha256: SHA_A,
+    worker_credential_sha256: SHA_A,
+    worker_expected_schema_sha256: SHA_A,
+    worker_policy_sha256: SHA_A,
+  };
+}
+
+function createExecutionSnapshot(snapshotRoot: string, snapshotDigest: string, manifestDigest = snapshotDigest) {
+  const root = join(snapshotRoot, snapshotDigest);
+  mkdirSync(join(root, "app"), { recursive: true, mode: 0o700 });
+  mkdirSync(join(root, "worker"), { mode: 0o700 });
+  writeFileSync(join(root, "app", "payload.bin"), "active-payload", { mode: 0o600 });
+  writeFileSync(join(root, "worker", "artifact.json"), "{}", { mode: 0o600 });
+  writeFileSync(join(root, "evidence.json"), JSON.stringify({
+    schema: SNAPSHOT_SCHEMA,
+    app_digest: SHA_A,
+    execution_snapshot_digest: manifestDigest,
+    promotion_id: "promotion-a",
+    release_sha: RELEASE_A,
+    release_tree: RELEASE_A,
+    worker_digest: SHA_B,
+    authority_digest: SHA_C,
+  }), { mode: 0o600 });
+  return root;
 }
 
 type InventoryFixture = Awaited<ReturnType<typeof createInventory>>;
@@ -209,7 +265,7 @@ function createAdapters({ mixed = false } = {}) {
         volumes: [{ name: "homecook-db", project: "homecook", service: "postgres", labels_digest: SHA_C, generation_digest: SHA_C }],
       })),
       readPortListeners: vi.fn(async () => [
-        { port: 3100, pid: 101, process_name: "node", listener_digest: SHA_A, command_line: "node --token secret" },
+        { ...listenerEvidence(true), command_line: "node --token secret" },
       ]),
       readOpaqueConfigIdentities: vi.fn(async () => [
         { identity: "production-env", exists: true, sha256: SHA_A, secret_contents: "secret" },
@@ -603,34 +659,127 @@ describe("read-only production inventory", () => {
     await expect(adapters.readMigrationMarker()).rejects.toThrow(/repository|outside/iu);
   });
 
-  it("recursively binds nested bytes, mode, and contained symlink targets", async () => {
+  it("deep-digests only a descriptor-referenced execution snapshot", async () => {
     const rootDir = tempDirectory("homecook-tree-root-");
     const homeDir = tempDirectory("homecook-tree-home-");
-    const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", "snapshot-a");
-    const nested = join(snapshot, "nested");
-    mkdirSync(nested, { recursive: true, mode: 0o700 });
-    const payload = join(nested, "payload.bin");
-    const firstTarget = join(nested, "target-a.txt");
-    const secondTarget = join(nested, "target-b.txt");
-    writeFileSync(payload, "AAAA", { mode: 0o600 });
-    writeFileSync(firstTarget, "one", { mode: 0o600 });
-    writeFileSync(secondTarget, "two", { mode: 0o600 });
-    const link = join(snapshot, "current-target");
-    symlinkSync("nested/target-a.txt", link);
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    const snapshotRoot = join(releaseRoot, "execution-snapshots");
+    const snapshotDigest = "d".repeat(64);
+    const snapshot = createExecutionSnapshot(snapshotRoot, snapshotDigest);
+    const payload = join(snapshot, "app", "payload.bin");
+    writeFileSync(join(releaseRoot, "current.json"), JSON.stringify(
+      runningDescriptor(snapshotRoot, snapshotDigest),
+    ), { mode: 0o600 });
     const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir });
-    const snapshotDigest = async () => (await adapters.readReleaseArtifacts())
-      .find((entry: { kind: string }) => entry.kind.startsWith("sealed_snapshot:"))!.sha256;
+    const activeDigest = async () => (await adapters.readReleaseArtifacts())
+      .find((entry: { kind: string }) => entry.kind.startsWith("referenced_snapshot:current:"))!.sha256;
 
-    const initial = await snapshotDigest();
+    const initial = await activeDigest();
     writeFileSync(payload, "BBBB", { mode: 0o600 });
-    const byteDrift = await snapshotDigest();
+    const byteDrift = await activeDigest();
     chmodSync(payload, 0o700);
-    const modeDrift = await snapshotDigest();
-    unlinkSync(link);
-    symlinkSync("nested/target-b.txt", link);
-    const symlinkDrift = await snapshotDigest();
+    const modeDrift = await activeDigest();
 
-    expect(new Set([initial, byteDrift, modeDrift, symlinkDrift]).size).toBe(4);
+    expect(new Set([initial, byteDrift, modeDrift]).size).toBe(3);
+  });
+
+  it("keeps multiple retained snapshots larger than 512MiB as bounded metadata-only inventory", async () => {
+    const rootDir = tempDirectory("homecook-retained-large-root-");
+    const homeDir = tempDirectory("homecook-retained-large-home-");
+    const snapshotRoot = join(homeDir, ".homecook", "releases", "execution-snapshots");
+    for (const name of ["retained-a", "retained-b", "retained-c"]) {
+      const snapshot = join(snapshotRoot, name);
+      mkdirSync(snapshot, { recursive: true, mode: 0o700 });
+      const payload = join(snapshot, "payload.bin");
+      writeFileSync(payload, "", { mode: 0o600 });
+      truncateSync(payload, 512 * 1024 * 1024 + 1);
+    }
+
+    const artifacts = await createLocalProductionInventoryAdapters({ rootDir, homeDir })
+      .readReleaseArtifacts();
+    const retained = artifacts.filter((entry: { kind: string }) => entry.kind.startsWith("retained_snapshot:"));
+
+    expect(retained).toHaveLength(3);
+    expect(retained.every((entry: { sha256: string }) => /^[0-9a-f]{64}$/u.test(entry.sha256))).toBe(true);
+  });
+
+  it("excludes retained snapshot payload bytes from active production mutation authority", async () => {
+    const rootDir = tempDirectory("homecook-retained-cache-root-");
+    const homeDir = tempDirectory("homecook-retained-cache-home-");
+    const retained = join(homeDir, ".homecook", "releases", "execution-snapshots", "retained-a");
+    mkdirSync(retained, { recursive: true, mode: 0o700 });
+    const payload = join(retained, "cache.bin");
+    writeFileSync(payload, "AAAA", { mode: 0o600 });
+    const adapters = createLocalProductionInventoryAdapters({ rootDir, homeDir });
+    const retainedDigest = async () => (await adapters.readReleaseArtifacts())
+      .find((entry: { kind: string }) => entry.kind.startsWith("retained_snapshot:"))!.sha256;
+
+    const before = await retainedDigest();
+    writeFileSync(payload, "BBBB", { mode: 0o600 });
+    const after = await retainedDigest();
+
+    expect(after).toBe(before);
+  });
+
+  it("fails closed on duplicate descriptor references and canonical snapshot manifest mismatch", async () => {
+    const rootDir = tempDirectory("homecook-snapshot-reference-root-");
+    const homeDir = tempDirectory("homecook-snapshot-reference-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    const snapshotRoot = join(releaseRoot, "execution-snapshots");
+    const snapshotDigest = "d".repeat(64);
+    createExecutionSnapshot(snapshotRoot, snapshotDigest);
+    const descriptor = runningDescriptor(snapshotRoot, snapshotDigest);
+    writeFileSync(join(releaseRoot, "current.json"), JSON.stringify(descriptor), { mode: 0o600 });
+    writeFileSync(join(releaseRoot, "previous.json"), JSON.stringify(descriptor), { mode: 0o600 });
+
+    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts())
+      .rejects.toThrow(/duplicate|ambiguous|descriptor|snapshot/iu);
+
+    unlinkSync(join(releaseRoot, "previous.json"));
+    writeFileSync(join(snapshotRoot, snapshotDigest, "evidence.json"), JSON.stringify({
+      schema: SNAPSHOT_SCHEMA,
+      app_digest: SHA_A,
+      execution_snapshot_digest: "e".repeat(64),
+      promotion_id: "promotion-a",
+      release_sha: RELEASE_A,
+      release_tree: RELEASE_A,
+      worker_digest: SHA_B,
+      authority_digest: SHA_C,
+    }), { mode: 0o600 });
+    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts())
+      .rejects.toThrow(/manifest|evidence|snapshot|digest|mismatch/iu);
+  });
+
+  it("rejects retained snapshot manifest symlinks, unknown fields, and byte-limit overflow", async () => {
+    const rootDir = tempDirectory("homecook-retained-manifest-root-");
+    const homeDir = tempDirectory("homecook-retained-manifest-home-");
+    const snapshotDigest = "d".repeat(64);
+    const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", snapshotDigest);
+    mkdirSync(snapshot, { recursive: true, mode: 0o700 });
+    const manifest = join(snapshot, "evidence.json");
+    const outside = join(homeDir, "outside-manifest.json");
+    writeFileSync(outside, "{}", { mode: 0o600 });
+    symlinkSync(outside, manifest);
+    const readArtifacts = () => createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts();
+    await expect(readArtifacts()).rejects.toThrow(/manifest|symlink|type/iu);
+
+    unlinkSync(manifest);
+    writeFileSync(manifest, JSON.stringify({
+      schema: SNAPSHOT_SCHEMA,
+      app_digest: SHA_A,
+      execution_snapshot_digest: snapshotDigest,
+      promotion_id: "promotion-a",
+      release_sha: RELEASE_A,
+      release_tree: RELEASE_A,
+      worker_digest: SHA_B,
+      authority_digest: SHA_C,
+      unknown_authority: "forbidden",
+    }), { mode: 0o600 });
+    await expect(readArtifacts()).rejects.toThrow(/manifest|unknown|authority|field/iu);
+
+    writeFileSync(manifest, "", { mode: 0o600 });
+    truncateSync(manifest, 1024 * 1024 + 1);
+    await expect(readArtifacts()).rejects.toThrow(/manifest|byte|limit/iu);
   });
 
   it("rejects recursive tree path escape and explicit resource bounds", async () => {
@@ -656,7 +805,7 @@ describe("read-only production inventory", () => {
     })).toThrow(/entry|bound|limit/iu);
   });
 
-  it("shares deterministic entry and byte budgets across every closed release-artifact child", async () => {
+  it("shares deterministic metadata entry budgets while deep-byte limits apply only to referenced snapshots", async () => {
     const rootDir = tempDirectory("homecook-aggregate-root-");
     const homeDir = tempDirectory("homecook-aggregate-home-");
     const snapshots = join(homeDir, ".homecook", "releases", "execution-snapshots");
@@ -670,24 +819,39 @@ describe("read-only production inventory", () => {
       releaseArtifactSurfaceLimits: { maxEntries, maxBytes },
     }).readReleaseArtifacts();
 
-    await expect(readWithLimits(6, 8)).resolves.toEqual(expect.any(Array));
-    await expect(readWithLimits(5, 8)).rejects.toThrow(/entry|aggregate|budget|limit/iu);
-    await expect(readWithLimits(6, 7)).rejects.toThrow(/byte|aggregate|budget|limit/iu);
+    await expect(readWithLimits(4, 0)).resolves.toEqual(expect.any(Array));
+    await expect(readWithLimits(3, 0)).rejects.toThrow(/entry|aggregate|budget|limit/iu);
   });
 
-  it("rejects one sparse authority file before reading when the shared byte budget is exceeded", async () => {
+  it("rejects one sparse descriptor-referenced authority file before reading when its byte budget is exceeded", async () => {
     const rootDir = tempDirectory("homecook-one-over-root-");
     const homeDir = tempDirectory("homecook-one-over-home-");
-    const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", "snapshot-a");
-    mkdirSync(snapshot, { recursive: true, mode: 0o700 });
+    const snapshotDigest = "a".repeat(64);
+    const snapshot = join(homeDir, ".homecook", "releases", "execution-snapshots", snapshotDigest);
+    mkdirSync(join(snapshot, "app"), { recursive: true, mode: 0o700 });
+    mkdirSync(join(snapshot, "worker"), { mode: 0o700 });
     const payload = join(snapshot, "payload");
     writeFileSync(payload, "", { mode: 0o600 });
-    truncateSync(payload, 9);
+    truncateSync(payload, 4097);
+    writeFileSync(join(snapshot, "evidence.json"), JSON.stringify({
+      schema: SNAPSHOT_SCHEMA,
+      app_digest: SHA_A,
+      execution_snapshot_digest: snapshotDigest,
+      promotion_id: "promotion-a",
+      release_sha: RELEASE_A,
+      release_tree: RELEASE_A,
+      worker_digest: SHA_B,
+      authority_digest: SHA_C,
+    }), { mode: 0o600 });
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    writeFileSync(join(releaseRoot, "current.json"), JSON.stringify(
+      runningDescriptor(join(releaseRoot, "execution-snapshots"), snapshotDigest),
+    ), { mode: 0o600 });
 
     await expect(createLocalProductionInventoryAdapters({
       rootDir,
       homeDir,
-      releaseArtifactSurfaceLimits: { maxEntries: 4, maxBytes: 8 },
+      releaseArtifactSurfaceLimits: { maxEntries: 20, maxBytes: 4096 },
     }).readReleaseArtifacts()).rejects.toThrow(/byte|aggregate|budget|limit/iu);
   });
 
@@ -1016,7 +1180,7 @@ describe("read-only production inventory", () => {
       expect.objectContaining({ name: "lsof", realpath: lsofPath }),
     ]));
     await expect(adapters.readLaunchd()).rejects.toThrow(/command/iu);
-    await expect(adapters.readPortListeners()).resolves.toEqual([]);
+    await expect(adapters.readPortListeners()).resolves.toEqual([listenerEvidence(false)]);
     expect(commands).toContain(launchctlPath);
     expect(commands).toContain(lsofPath);
   });
@@ -1057,6 +1221,25 @@ describe("read-only production inventory", () => {
     expect(absentInventory.probe_statuses.port_listeners).toEqual({
       status: "success",
       reason_code: null,
+      evidence_count: 1,
+    });
+    expect(absentInventory.surfaces.port_listeners).toEqual([listenerEvidence(false)]);
+
+    const malformedListenerRunner = vi.fn((command: string) => command === "/usr/sbin/lsof"
+      ? { status: 0, signal: null, stdout: "cnode\nn127.0.0.1:3100\n", stderr: "" }
+      : { status: 1, signal: null, stdout: "", stderr: "" });
+    const malformedListenerInventory = await collectReadOnlyProductionInventory({
+      adapters: createLocalProductionInventoryAdapters({
+        rootDir,
+        homeDir,
+        commandRunner: malformedListenerRunner,
+      }),
+      capturedAt: "2026-08-29T10:00:00.000Z",
+      probeIdentity: probeIdentity(),
+    });
+    expect(malformedListenerInventory.probe_statuses.port_listeners).toEqual({
+      status: "failed",
+      reason_code: "port_listeners_probe_failed",
       evidence_count: 0,
     });
   });
@@ -1258,6 +1441,7 @@ describe("mixed-state classifier", () => {
     const inventory = await createInventory({ mixed: true });
     const surfaces = {
       ...inventory.surfaces,
+      port_listeners: [listenerEvidence(false)],
       migration: {
         ...inventory.surfaces.migration,
         approved: true,
@@ -1279,6 +1463,27 @@ describe("mixed-state classifier", () => {
     expect(pre.surface_digest).toBe(post.surface_digest);
     expect(classification.promotion_safe).toBe(false);
     expect(classification.states).toEqual(expect.arrayContaining(["unknown"]));
+    expect(classification.findings.flatMap((entry: { missing_evidence: string[] }) => entry.missing_evidence))
+      .toContain("surface:port_listeners");
+  });
+
+  it("detects listener and descriptor changes in pre/post production equality", async () => {
+    const inventory = await createInventory();
+    const baseline = createProductionSurfaceSnapshot(inventory);
+    const changedSurfaces = [
+      { ...inventory.surfaces, port_listeners: [listenerEvidence(false)] },
+      {
+        ...inventory.surfaces,
+        release_artifacts: inventory.surfaces.release_artifacts.map((entry: { kind: string }) => (
+          entry.kind === "current_descriptor" ? absentArtifact("current_descriptor") : entry
+        )),
+      },
+    ];
+
+    for (const surfaces of changedSurfaces) {
+      const changed = rebuildInventory(inventory, surfaces);
+      expect(changed.surface_digest).not.toBe(baseline.surface_digest);
+    }
   });
 
   it("allows the exact legacy full-local alias in a read-only snapshot but never marks it promotion-safe", async () => {
