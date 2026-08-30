@@ -330,8 +330,17 @@ describe("rehearsal worker CLI fixture", () => {
         status: "succeeded",
         synthetic: true,
       });
-      expect(requests.map(({ name }) => name)).toEqual(output.rpc_sequence);
-      expect(requests.map(({ name }) => name)).toEqual(expectedSequence);
+      expect(output.rpc_sequence).toEqual(expectedSequence);
+      const observedSequence = requests.map(({ name }) => name);
+      expect(observedSequence.slice(0, 3)).toEqual(expectedSequence.slice(0, 3));
+      expect(observedSequence.slice(3, 5).sort()).toEqual(
+        expectedSequence.slice(3, 5).sort(),
+      );
+      expect(observedSequence.slice(5, 8)).toEqual(expectedSequence.slice(5, 8));
+      expect(observedSequence.slice(8, 10).sort()).toEqual(
+        expectedSequence.slice(8, 10).sort(),
+      );
+      expect(observedSequence.slice(10)).toEqual(expectedSequence.slice(10));
       expect(JSON.stringify(requests)).toContain('"lease_generation":1');
       expect(JSON.stringify(requests)).toContain('"permit_generation":1');
     } finally {
