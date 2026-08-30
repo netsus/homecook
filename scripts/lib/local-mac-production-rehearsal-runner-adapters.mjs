@@ -72,6 +72,78 @@ const RUN_CREATION_NONCE_LABEL = "com.homecook.release-rehearsal.creation-nonce"
 
 const RESOLVED_COMPOSE_TOP_LEVEL_KEYS = ["name", "networks", "secrets", "services", "volumes"];
 const FIXTURE_CREDENTIAL_KEY = /(?:^|[_-])(access[_-]?token|api[_-]?key|password|private[_-]?key|secret)(?:$|[_-])/iu;
+const SERVICE_RUNTIME_CONTRACT = Object.freeze({
+  postgres: Object.freeze({ dependsOn: {}, health: true, networks: ["data-internal"], ports: [{ key: "postgres", target: 5432 }], secrets: ["postgres_password"], tmpfs: [], volumeTargets: ["/var/lib/postgresql/data", "/homecook/secret-entrypoint.sh", "/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh"] }),
+  auth: Object.freeze({ dependsOn: { postgres: "service_healthy" }, health: true, networks: ["auth-egress", "data-internal"], ports: [], secrets: ["jwt_keys", "jwt_secret", "postgres_password"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-auth.sh"] }),
+  postgrest: Object.freeze({ dependsOn: { auth: "service_healthy", postgres: "service_healthy" }, health: false, networks: ["data-internal"], ports: [], secrets: ["jwt_jwks", "postgres_password"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-postgrest.sh"] }),
+  "postgrest-probe": Object.freeze({ dependsOn: { postgrest: "service_started" }, health: true, networks: ["data-internal"], ports: [], secrets: [], tmpfs: [], volumeTargets: ["/sealed-candidate"] }),
+  storage: Object.freeze({ dependsOn: { auth: "service_healthy", "postgrest-probe": "service_healthy" }, health: true, networks: ["data-internal"], ports: [], secrets: ["anon_key", "jwt_jwks", "jwt_secret", "postgres_password", "service_role_key", "storage_s3_access_key_id", "storage_s3_access_key_secret"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-storage.sh", "/var/lib/storage"] }),
+  "api-gateway": Object.freeze({ dependsOn: { storage: "service_healthy" }, health: true, networks: ["auth-edge", "data-internal"], ports: [{ key: "storage", target: "storage" }], secrets: ["anon_key", "anon_key_asymmetric", "publishable_key", "secret_key", "service_role_key", "service_role_key_asymmetric", "session_attestation_hmac_key_v1"], tmpfs: ["/tmp"], volumeTargets: ["/homecook/kong-entrypoint.sh", "/homecook/kong.yml", "/homecook/secret-entrypoint.sh", "/usr/local/share/lua/5.1/kong/plugins/homecook-attestation"] }),
+  "auth-proxy": Object.freeze({ dependsOn: { "api-gateway": "service_healthy" }, health: true, networks: ["auth-edge"], ports: [{ key: "auth", target: 8080 }], secrets: [], tmpfs: [], volumeTargets: ["/homecook/auth-only-proxy.mjs"] }),
+});
+const SERVICE_DEPENDENCY_ORDER = Object.freeze([
+  "postgres", "auth", "postgrest", "postgrest-probe", "storage", "api-gateway", "auth-proxy",
+]);
+
+function sortedStrings(values) {
+  return [...values].sort((left, right) => left.localeCompare(right));
+}
+
+function normalizeDependsOn(value) {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail("resolved Compose depends_on is invalid");
+  return Object.fromEntries(Object.entries(value).map(([name, entry]) => [
+    name,
+    typeof entry === "string" ? entry : entry?.condition,
+  ]));
+}
+
+function normalizeServiceSecrets(serviceName, value, topLevelSecrets) {
+  const entries = value ?? [];
+  if (!Array.isArray(entries)) fail(`resolved Compose secrets are invalid: ${serviceName}`);
+  return entries.map((entry) => {
+    const source = typeof entry === "string" ? entry : entry?.source;
+    const target = typeof entry === "string" ? entry : (entry?.target ?? source);
+    const file = topLevelSecrets?.[source]?.file;
+    if (typeof source !== "string" || typeof target !== "string" || typeof file !== "string" || !file.startsWith("/")) {
+      fail(`resolved Compose secret authority is invalid: ${serviceName}`);
+    }
+    return Object.freeze({ source, target, file });
+  });
+}
+
+function normalizeServicePorts(serviceName, value, namespacePorts) {
+  const entries = value ?? [];
+  if (!Array.isArray(entries)) fail(`resolved Compose ports are invalid: ${serviceName}`);
+  return entries.map((entry) => {
+    if (typeof entry === "string") {
+      const match = /^(127\.0\.0\.1):([0-9]+):([0-9]+)(?:\/(tcp|udp))?$/u.exec(entry);
+      if (!match) fail(`resolved Compose port is invalid: ${serviceName}`);
+      return Object.freeze({ host_ip: match[1], published: Number(match[2]), target: Number(match[3]), protocol: match[4] ?? "tcp" });
+    }
+    const published = Number(entry?.published);
+    const target = Number(entry?.target);
+    if (entry?.host_ip !== "127.0.0.1" || !Number.isSafeInteger(published) || !Number.isSafeInteger(target) || !["tcp", undefined].includes(entry?.protocol)) {
+      fail(`resolved Compose port is invalid: ${serviceName}`);
+    }
+    return Object.freeze({ host_ip: entry.host_ip, published, target, protocol: entry.protocol ?? "tcp" });
+  }).map((entry) => {
+    if (Object.values(namespacePorts).includes(entry.published) !== true) fail(`resolved Compose published port escapes namespace: ${serviceName}`);
+    return entry;
+  });
+}
+
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", `'"'"'`)}'`;
+}
+
+function normalizeHealthcheck(serviceName, value) {
+  if (!value || !Array.isArray(value.test) || value.test.length < 2) fail(`resolved Compose healthcheck is invalid: ${serviceName}`);
+  const [kind, ...command] = value.test;
+  if (!command.every((entry) => typeof entry === "string") || !["CMD", "CMD-SHELL"].includes(kind)) fail(`resolved Compose healthcheck command is invalid: ${serviceName}`);
+  const commandText = kind === "CMD-SHELL" ? command.join(" ") : `exec ${command.map(shellQuote).join(" ")}`;
+  return Object.freeze({ command: commandText, interval: value.interval, timeout: value.timeout, retries: value.retries, start_period: value.start_period });
+}
 
 /**
  * Produces a commit-safe golden input from a locally resolved Compose document.
@@ -133,23 +205,52 @@ export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
   if (!project || !ports || !config.services || typeof config.services !== "object") fail("primitive plan authority is incomplete");
   const names = Object.keys(config.services).sort();
   if (canonicalizeJcs(names) !== canonicalizeJcs([...SERVICES].sort())) fail("resolved Compose service set is not exact");
+  const compiledServices = new Map();
   for (const service of SERVICES) {
     const value = config.services[service];
-    if (!value || typeof value !== "object" || typeof value.image !== "string" || !value.image.includes("@sha256:")) fail(`resolved Compose image authority is invalid: ${service}`);
+    const contract = SERVICE_RUNTIME_CONTRACT[service];
+    if (!value || typeof value !== "object" || typeof value.image !== "string" || !value.image.includes("@sha256:") || typeof value.platform !== "string" || !value.platform.includes("/")) fail(`resolved Compose image authority is invalid: ${service}`);
     if (value.build || value.pull_policy && value.pull_policy !== "never") fail(`resolved Compose mutation authority is invalid: ${service}`);
     const networkNames = Array.isArray(value.networks) ? value.networks : Object.keys(value.networks ?? {});
     if (networkNames.length < 1 || !value.restart || !Array.isArray(value.security_opt) || !value.security_opt.includes("no-new-privileges:true")) fail(`resolved Compose runtime contract is invalid: ${service}`);
+    if (canonicalizeJcs(sortedStrings(networkNames)) !== canonicalizeJcs(sortedStrings(contract.networks))) fail(`resolved Compose network contract differs: ${service}`);
+    const dependsOn = normalizeDependsOn(value.depends_on);
+    if (canonicalizeJcs(dependsOn) !== canonicalizeJcs(contract.dependsOn)) fail(`resolved Compose dependency contract differs: ${service}`);
+    const secretMounts = normalizeServiceSecrets(service, value.secrets, config.secrets);
+    if (canonicalizeJcs(sortedStrings(secretMounts.map((entry) => entry.source))) !== canonicalizeJcs(contract.secrets)) fail(`resolved Compose secret set differs: ${service}`);
+    const volumeTargets = sortedStrings((value.volumes ?? []).map((entry) => entry?.target));
+    if (canonicalizeJcs(volumeTargets) !== canonicalizeJcs(sortedStrings(contract.volumeTargets))) fail(`resolved Compose volume set differs: ${service}`);
+    const tmpfs = value.tmpfs ?? [];
+    if (!Array.isArray(tmpfs) || canonicalizeJcs(sortedStrings(tmpfs.map((entry) => String(entry).split(":", 1)[0]))) !== canonicalizeJcs(contract.tmpfs)) fail(`resolved Compose tmpfs contract differs: ${service}`);
+    const servicePorts = normalizeServicePorts(service, value.ports, ports);
+    if (servicePorts.length !== contract.ports.length) fail(`resolved Compose port count differs: ${service}`);
+    for (const expectedPort of contract.ports) {
+      const expectedPublished = ports[expectedPort.key];
+      const expectedTarget = expectedPort.target === "storage" ? ports.storage : expectedPort.target;
+      if (!servicePorts.some((entry) => entry.published === expectedPublished && entry.target === expectedTarget)) fail(`resolved Compose port contract differs: ${service}`);
+    }
+    if ((value.healthcheck !== undefined) !== contract.health) fail(`resolved Compose healthcheck presence differs: ${service}`);
+    const healthcheck = contract.health ? normalizeHealthcheck(service, value.healthcheck) : null;
+    compiledServices.set(service, Object.freeze({ name: service, ...value, depends_on: dependsOn, healthcheck, ports: servicePorts, secret_mounts: secretMounts }));
   }
   for (const network of ["auth-edge", "auth-egress", "data-internal"]) if (config.networks?.[network]?.internal !== true) fail(`resolved Compose network is not internal: ${network}`);
   for (const volume of ["postgres-data", "storage-data"]) if (!config.volumes?.[volume]) fail(`resolved Compose volume is missing: ${volume}`);
-  return Object.freeze({ schema: "homecook.r2-primitive-plan.v1", project, ports: { ...ports }, networks: ["auth-edge", "auth-egress", "data-internal"], volumes: ["postgres-data", "storage-data"], services: SERVICES.map((name) => Object.freeze({ name, ...config.services[name] })) });
+  return Object.freeze({ schema: "homecook.r2-primitive-plan.v1", project, ports: { ...ports }, networks: ["auth-edge", "auth-egress", "data-internal"], volumes: ["postgres-data", "storage-data"], services: SERVICE_DEPENDENCY_ORDER.map((name) => compiledServices.get(name)) });
 }
 
 export function primitiveServiceArgs(service, namespace, labels) {
-  const networks = Array.isArray(service.networks) ? service.networks : Object.keys(service.networks ?? {});
+  const networkEntries = Array.isArray(service.networks)
+    ? service.networks.map((name) => [name, { aliases: [service.name] }])
+    : Object.entries(service.networks ?? {});
+  const networks = networkEntries.map(([name]) => name);
   const firstNetwork = networks[0];
   if (!firstNetwork) fail(`primitive service has no network: ${service.name}`);
-  const args = ["create", "--name", `${namespace.project}-${service.name}-1`, "--pull=never", ...labels, "--network", `${namespace.project}_${firstNetwork}`];
+  const args = ["create", "--name", `${namespace.project}-${service.name}-1`, "--pull=never", "--platform", service.platform, ...labels];
+  for (const [key, value] of Object.entries(service.labels ?? {}).sort(([left], [right]) => left.localeCompare(right))) {
+    if (!labels.includes(`${key}=${value}`)) args.push("--label", `${key}=${value}`);
+  }
+  args.push("--network", `${namespace.project}_${firstNetwork}`);
+  for (const alias of networkEntries[0]?.[1]?.aliases ?? [service.name]) args.push("--network-alias", alias);
   for (const [key, value] of Object.entries(service.environment ?? {})) args.push("--env", `${key}=${value}`);
   for (const option of service.security_opt ?? []) args.push("--security-opt", option);
   if (service.restart) args.push("--restart", service.restart);
@@ -158,9 +259,75 @@ export function primitiveServiceArgs(service, namespace, labels) {
     if (!mount?.type || !mount.source || !mount.target) fail(`primitive mount is incomplete: ${service.name}`);
     args.push("--mount", `type=${mount.type},src=${mount.source},dst=${mount.target}${mount.read_only ? ",readonly" : ""}`);
   }
+  for (const secret of service.secret_mounts ?? []) args.push("--mount", `type=bind,src=${secret.file},dst=/run/secrets/${secret.target},readonly`);
+  for (const tmpfs of service.tmpfs ?? []) args.push("--tmpfs", tmpfs);
+  for (const port of service.ports ?? []) args.push("--publish", `${port.host_ip}:${port.published}:${port.target}/${port.protocol}`);
+  if (service.logging?.driver) args.push("--log-driver", service.logging.driver);
+  for (const [key, value] of Object.entries(service.logging?.options ?? {}).sort(([left], [right]) => left.localeCompare(right))) args.push("--log-opt", `${key}=${value}`);
+  if (service.healthcheck) {
+    args.push("--health-cmd", service.healthcheck.command);
+    if (service.healthcheck.interval) args.push("--health-interval", String(service.healthcheck.interval));
+    if (service.healthcheck.timeout) args.push("--health-timeout", String(service.healthcheck.timeout));
+    if (service.healthcheck.retries !== undefined) args.push("--health-retries", String(service.healthcheck.retries));
+    if (service.healthcheck.start_period) args.push("--health-start-period", String(service.healthcheck.start_period));
+  }
   if (service.entrypoint) args.push("--entrypoint", Array.isArray(service.entrypoint) ? service.entrypoint[0] : service.entrypoint);
   args.push(service.image, ...(Array.isArray(service.command) ? service.command : service.command ? [service.command] : []));
-  return { args, additionalNetworks: networks.slice(1) };
+  return { args, additionalNetworks: networkEntries.slice(1).map(([name, entry]) => ({ name, aliases: entry?.aliases ?? [service.name] })) };
+}
+
+export function validatePrimitiveContainerInspection(observed, service, namespace) {
+  if (!observed?.Config || !observed?.HostConfig || !observed?.NetworkSettings) fail(`primitive inspect is incomplete: ${service.name}`);
+  const expectedEntrypoint = service.entrypoint === undefined
+    ? null
+    : (Array.isArray(service.entrypoint) ? service.entrypoint : [service.entrypoint]);
+  const expectedCommand = service.command === undefined
+    ? null
+    : (Array.isArray(service.command) ? service.command : [service.command]);
+  if (
+    observed.Config.Image !== service.image
+    || canonicalizeJcs(observed.Config.Entrypoint ?? null) !== canonicalizeJcs(expectedEntrypoint)
+    || canonicalizeJcs(observed.Config.Cmd ?? null) !== canonicalizeJcs(expectedCommand)
+    || observed.HostConfig.ReadonlyRootfs !== (service.read_only === true)
+    || observed.HostConfig.RestartPolicy?.Name !== service.restart
+  ) fail(`primitive inspect config differs: ${service.name}`);
+  const observedEnvironment = new Set(observed.Config.Env ?? []);
+  for (const [key, value] of Object.entries(service.environment ?? {})) if (!observedEnvironment.has(`${key}=${value}`)) fail(`primitive inspect environment differs: ${service.name}`);
+  for (const option of service.security_opt ?? []) if (!(observed.HostConfig.SecurityOpt ?? []).includes(option)) fail(`primitive inspect security options differ: ${service.name}`);
+  const expectedMounts = [
+    ...(service.volumes ?? []).map((entry) => ({ ...entry, secret: false })),
+    ...(service.secret_mounts ?? []).map((entry) => ({ type: "bind", source: entry.file, target: `/run/secrets/${entry.target}`, read_only: true, secret: true })),
+  ];
+  for (const expected of expectedMounts) {
+    const mount = (observed.Mounts ?? []).find((entry) => entry.Destination === expected.target);
+    if (!mount || mount.Type !== expected.type || mount.RW === expected.read_only) fail(`primitive inspect mount differs: ${service.name}`);
+    if (expected.type === "bind" && mount.Source !== expected.source) fail(`primitive inspect bind source differs: ${service.name}`);
+    if (expected.type === "volume" && mount.Name !== expected.source) fail(`primitive inspect volume source differs: ${service.name}`);
+  }
+  const observedTmpfs = Object.keys(observed.HostConfig.Tmpfs ?? {}).sort();
+  const expectedTmpfs = sortedStrings((service.tmpfs ?? []).map((entry) => String(entry).split(":", 1)[0]));
+  if (canonicalizeJcs(observedTmpfs) !== canonicalizeJcs(expectedTmpfs)) fail(`primitive inspect tmpfs differs: ${service.name}`);
+  for (const port of service.ports ?? []) {
+    const binding = observed.HostConfig.PortBindings?.[`${port.target}/${port.protocol}`]?.[0];
+    if (binding?.HostIp !== port.host_ip || Number(binding?.HostPort) !== port.published) fail(`primitive inspect port binding differs: ${service.name}`);
+  }
+  if (service.healthcheck) {
+    if (
+      canonicalizeJcs(observed.Config.Healthcheck?.Test) !== canonicalizeJcs(["CMD-SHELL", service.healthcheck.command])
+      || observed.Config.Healthcheck?.Retries !== service.healthcheck.retries
+    ) fail(`primitive inspect healthcheck differs: ${service.name}`);
+  } else if (observed.Config.Healthcheck !== null && observed.Config.Healthcheck !== undefined) fail(`primitive inspect unexpected healthcheck: ${service.name}`);
+  if (observed.HostConfig.LogConfig?.Type !== service.logging?.driver) fail(`primitive inspect logging driver differs: ${service.name}`);
+  for (const [key, value] of Object.entries(service.logging?.options ?? {})) if (observed.HostConfig.LogConfig?.Config?.[key] !== String(value)) fail(`primitive inspect logging options differ: ${service.name}`);
+  const networkEntries = Array.isArray(service.networks)
+    ? service.networks.map((name) => [name, { aliases: [service.name] }])
+    : Object.entries(service.networks ?? {});
+  for (const [network, contract] of networkEntries) {
+    const attachment = observed.NetworkSettings.Networks?.[`${namespace.project}_${network}`];
+    if (!attachment) fail(`primitive inspect network attachment differs: ${service.name}`);
+    for (const alias of contract?.aliases ?? [service.name]) if (!(attachment.Aliases ?? []).includes(alias)) fail(`primitive inspect network alias differs: ${service.name}`);
+  }
+  return service;
 }
 
 /** Narrow test seam for the exact service create/connect/start order used by createResources. */
@@ -170,9 +337,9 @@ export function compilePrimitiveServiceOperations(plan, namespace, labels) {
     const primitive = primitiveServiceArgs(service, namespace, labels);
     return [
       Object.freeze({ kind: "create", service: service.name, argv: primitive.args }),
-      ...primitive.additionalNetworks.map((network) => Object.freeze({ kind: "connect", service: service.name, network })),
+      ...primitive.additionalNetworks.map((network) => Object.freeze({ kind: "connect", service: service.name, network: network.name, aliases: network.aliases })),
       Object.freeze({ kind: "start", service: service.name }),
-      ...(service.name === "postgres" ? [Object.freeze({ kind: "readiness", service: service.name })] : []),
+      ...(service.healthcheck ? [Object.freeze({ kind: "readiness", service: service.name })] : []),
     ];
   }));
 }
@@ -1203,10 +1370,14 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         const observed = await inspectResource(state, entry, { signal: state.activeSignal });
         recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
         for (const network of primitive.additionalNetworks) {
-          await dockerCommand(state, ["network", "connect", `${namespace.project}_${network}`, id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
+          await dockerCommand(state, ["network", "connect", ...network.aliases.flatMap((alias) => ["--alias", alias]), `${namespace.project}_${network.name}`, id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
         }
+        const contractInspection = await dockerCommand(state, ["inspect", "--type", "container", id, "--format", "{{json .}}"], { signal: state.activeSignal });
+        let observedContract;
+        try { observedContract = JSON.parse(contractInspection.stdout); } catch { fail(`primitive inspect JSON is invalid: ${service.name}`); }
+        validatePrimitiveContainerInspection(observedContract, service, namespace);
         await dockerCommand(state, ["start", id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
-        if (service.name === "postgres") await waitForContainers(state, { signal: state.activeSignal, expectedNames: [entry.name] });
+        if (service.healthcheck) await waitForContainers(state, { signal: state.activeSignal, expectedNames: [entry.name] });
         if (independentObserver?.registerChild) {
           const subject = await readContainerObserverSubject(state, { containerId: id, component: service.name, signal: state.activeSignal });
           await independentObserver.registerChild(subject);

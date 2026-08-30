@@ -31,6 +31,7 @@ import {
   buildPsqlVariableArgs,
   parseAndValidateWorkerFixtureReadback,
   compilePrimitiveServiceOperations,
+  validatePrimitiveContainerInspection,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
@@ -40,11 +41,115 @@ const SHA_B = "b".repeat(40);
 const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
+const PRIMITIVE_PORTS = { app: 43101, auth: 43102, postgres: 43103, storage: 43104 };
 const MIGRATION_FILE_ENTRIES = [
   { path: "supabase/migrations/20260101000000_one.sql", sha256: "1".repeat(64) },
   { path: "supabase/migrations/20260102000000_two.sql", sha256: "2".repeat(64) },
 ];
 const MIGRATION_FILES_DIGEST = sha256Jcs(MIGRATION_FILE_ENTRIES);
+
+function canonicalPrimitiveConfig() {
+  const secretNames = [
+    "anon_key", "anon_key_asymmetric", "jwt_jwks", "jwt_keys", "jwt_secret",
+    "postgres_password", "publishable_key", "secret_key", "service_role_key",
+    "service_role_key_asymmetric", "session_attestation_hmac_key_v1",
+    "storage_s3_access_key_id", "storage_s3_access_key_secret",
+  ];
+  const base = (name: string, overrides: Record<string, unknown>) => ({
+    command: ["node", `${name}.mjs`],
+    environment: {},
+    image: `example/${name}@sha256:${"a".repeat(64)}`,
+    labels: {},
+    logging: { driver: "local", options: { "max-file": "1", "max-size": "1m" } },
+    platform: "linux/arm64",
+    pull_policy: "never",
+    restart: "unless-stopped",
+    security_opt: ["no-new-privileges:true"],
+    ...overrides,
+  });
+  const healthcheck = {
+    interval: "5s",
+    retries: 60,
+    test: ["CMD", "node", "-e", "process.exit(0)"],
+    timeout: "5s",
+  };
+  const bind = (target: string) => ({
+    read_only: true,
+    source: `/private/rehearsal${target}`,
+    target,
+    type: "bind",
+  });
+  const services: Record<string, Record<string, unknown>> = {
+    postgres: base("postgres", {
+      healthcheck,
+      networks: { "data-internal": { aliases: ["postgres"] } },
+      ports: [{ host_ip: "127.0.0.1", protocol: "tcp", published: String(PRIMITIVE_PORTS.postgres), target: 5432 }],
+      secrets: [{ source: "postgres_password", target: "postgres_password" }],
+      volumes: [
+        { source: "r2-postgres", target: "/var/lib/postgresql/data", type: "volume" },
+        bind("/homecook/secret-entrypoint.sh"),
+        bind("/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh"),
+      ],
+    }),
+    auth: base("auth", {
+      depends_on: { postgres: { condition: "service_healthy" } },
+      healthcheck,
+      networks: { "data-internal": { aliases: ["auth"] }, "auth-egress": { aliases: ["auth"] } },
+      secrets: ["postgres_password", "jwt_secret", "jwt_keys"].map((source) => ({ source, target: source })),
+      volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/start-auth.sh")],
+    }),
+    postgrest: base("postgrest", {
+      depends_on: { auth: { condition: "service_healthy" }, postgres: { condition: "service_healthy" } },
+      networks: { "data-internal": { aliases: ["postgrest"] } },
+      secrets: ["postgres_password", "jwt_jwks"].map((source) => ({ source, target: source })),
+      volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/start-postgrest.sh")],
+    }),
+    "postgrest-probe": base("postgrest-probe", {
+      depends_on: { postgrest: { condition: "service_started" } },
+      healthcheck,
+      networks: { "data-internal": { aliases: ["postgrest-probe"] } },
+      read_only: true,
+      secrets: [],
+      volumes: [bind("/sealed-candidate")],
+    }),
+    storage: base("storage", {
+      depends_on: { auth: { condition: "service_healthy" }, "postgrest-probe": { condition: "service_healthy" } },
+      healthcheck,
+      networks: { "data-internal": { aliases: ["storage"] } },
+      secrets: ["postgres_password", "anon_key", "service_role_key", "jwt_jwks", "jwt_secret", "storage_s3_access_key_id", "storage_s3_access_key_secret"].map((source) => ({ source, target: source })),
+      volumes: [
+        { source: "r2-storage", target: "/var/lib/storage", type: "volume" },
+        bind("/homecook/secret-entrypoint.sh"),
+        bind("/homecook/start-storage.sh"),
+      ],
+    }),
+    "api-gateway": base("api-gateway", {
+      depends_on: { storage: { condition: "service_healthy" } },
+      healthcheck,
+      networks: { "auth-edge": { aliases: ["api-gateway"] }, "data-internal": { aliases: ["api-gateway"] } },
+      ports: [{ host_ip: "127.0.0.1", protocol: "tcp", published: String(PRIMITIVE_PORTS.storage), target: PRIMITIVE_PORTS.storage }],
+      secrets: ["anon_key", "service_role_key", "publishable_key", "secret_key", "anon_key_asymmetric", "service_role_key_asymmetric", "session_attestation_hmac_key_v1"].map((source) => ({ source, target: source })),
+      tmpfs: ["/tmp:mode=1777"],
+      volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/kong-entrypoint.sh"), bind("/homecook/kong.yml"), bind("/usr/local/share/lua/5.1/kong/plugins/homecook-attestation")],
+    }),
+    "auth-proxy": base("auth-proxy", {
+      depends_on: { "api-gateway": { condition: "service_healthy" } },
+      healthcheck,
+      networks: { "auth-edge": { aliases: ["auth-proxy"] } },
+      ports: [{ host_ip: "127.0.0.1", protocol: "tcp", published: String(PRIMITIVE_PORTS.auth), target: 8080 }],
+      read_only: true,
+      secrets: [],
+      volumes: [bind("/homecook/auth-only-proxy.mjs")],
+    }),
+  };
+  return {
+    name: "ignored",
+    networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } },
+    secrets: Object.fromEntries(secretNames.map((name) => [name, { file: `/private/rehearsal/secrets/${name}` }])),
+    services,
+    volumes: { "postgres-data": {}, "storage-data": {} },
+  };
+}
 
 function candidateManifest() {
   return {
@@ -381,7 +486,7 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
   });
 
   it("accepts only the sealed worker's complete fence lifecycle", () => {
-    const result = { schema: "homecook.youtube-extraction-worker-rehearsal-result.v1", status: "succeeded", synthetic: true, provider_requests: 0, rpc_sequence: ["claim_youtube_extraction_job", "claim_youtube_extractor_permit", "start_youtube_extraction_attempt", "heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit", "read_youtube_extraction_worker_catalog", "report_youtube_extraction_progress", "resolve_youtube_extraction_job_draft", "finalize_youtube_extraction_job", "release_youtube_extractor_permit"] };
+    const result = { schema: "homecook.youtube-extraction-worker-rehearsal-result.v1", status: "succeeded", synthetic: true, provider_requests: 0, rpc_sequence: ["claim_youtube_extraction_job", "claim_youtube_extractor_permit", "start_youtube_extraction_attempt", "heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit", "read_youtube_extraction_worker_catalog", "report_youtube_extraction_progress", "resolve_youtube_extraction_job_draft", "heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit", "finalize_youtube_extraction_job", "release_youtube_extractor_permit"] };
     expect(validateSealedWorkerSyntheticResult(result)).toEqual(result);
     expect(() => validateSealedWorkerSyntheticResult({ ...result, rpc_sequence: result.rpc_sequence.filter((step) => step !== "heartbeat_youtube_extraction_job") })).toThrow(/lifecycle|fence/iu);
     expect(() => validateSealedWorkerSyntheticResult({ ...result, provider_requests: 1 })).toThrow(/provider/iu);
@@ -473,7 +578,7 @@ describe("release rehearsal R2 orchestration", () => {
     expect(result.fixtures.production_derived_row_count).toBe(0);
     expect(result.production_guard).toMatchObject({ equal: true, mutation_attempt_count: 0, production_db_connection_count: 0, production_db_write_count: 0 });
     expect(adapters.independentObserver.begin).toHaveBeenCalledBefore(adapters.createResources);
-    expect(adapters.independentObserver.end).toHaveBeenCalledAfter(adapters.removeResource);
+    expect(adapters.independentObserver.end).toHaveBeenCalledBefore(adapters.removeResource);
     expect(result.cleanup).toMatchObject({ completed: true, residue_resource_ids: [], cleanup_errors: [], secret_bearing_persistent_file_count: 0 });
     expect(() => validateRunEvidence(result)).not.toThrow();
     expect(adapters.createResources).toHaveBeenCalledWith(expect.objectContaining({
@@ -737,38 +842,89 @@ describe("release rehearsal R2 public command and schema", () => {
   });
 
   it("compiles only the exact resolved seven-service internal primitive plan", () => {
-    const services = Object.fromEntries(["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"].map((name) => [name, {
-      image: `example/${name}@sha256:${"a".repeat(64)}`,
-      networks: ["data-internal"], restart: "unless-stopped", security_opt: ["no-new-privileges:true"],
-    }]));
-    const config = { name: "ignored", services, networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } }, volumes: { "postgres-data": {}, "storage-data": {} }, secrets: {} };
-    expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: { app: 1 } }).services).toHaveLength(7);
+    const config = canonicalPrimitiveConfig();
+    expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS }).services).toHaveLength(7);
     for (const mutate of [
       (v: typeof config) => { delete v.services.auth; },
       (v: typeof config) => { v.services.extra = structuredClone(v.services.auth); },
       (v: typeof config) => { v.services.auth.image = "example/auth:latest"; },
       (v: typeof config) => { v.networks["auth-edge"].internal = false; },
       (v: typeof config) => { delete (v.volumes as Partial<typeof v.volumes>)["storage-data"]; },
-      (v: typeof config) => { (v.services.auth as typeof v.services.auth & { build?: string }).build = "."; },
+      (v: typeof config) => { v.services.auth.build = "."; },
     ]) {
       const value = structuredClone(config); mutate(value);
-      expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: { app: 1 } })).toThrow();
+      expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS })).toThrow();
     }
   });
 
   it("orders actual primitive service operations with PostgreSQL ready before migration", () => {
-    const services = Object.fromEntries(["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"].map((name) => [name, {
-      image: `example/${name}@sha256:${"a".repeat(64)}`, networks: name === "auth" ? { "data-internal": {}, "auth-egress": {} } : { "data-internal": {} }, restart: "unless-stopped", security_opt: ["no-new-privileges:true"], environment: {}, volumes: [], command: [],
-    }]));
-    const plan = compileClosedPrimitivePlan({ name: "ignored", services, networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } }, volumes: { "postgres-data": {}, "storage-data": {} }, secrets: {} }, { project: `homecook-rehearsal-${RUN_ID}`, ports: { app: 1 } });
-    const namespace = buildRunNamespace({ runId: RUN_ID, ports: { app: 43101, auth: 43102, postgres: 43103, storage: 43104 } });
+    const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), { project: `homecook-rehearsal-${RUN_ID}`, ports: PRIMITIVE_PORTS });
+    const namespace = buildRunNamespace({ runId: RUN_ID, ports: PRIMITIVE_PORTS });
     const operations = compilePrimitiveServiceOperations(plan, namespace, ["--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`, "--label", `com.docker.compose.project=${namespace.project}`]);
     type Operation = { kind: string; service: string; network?: string; argv?: string[] };
     const typedOperations = operations as Operation[];
     expect(typedOperations.filter((item) => item.kind === "create")).toHaveLength(7);
     expect(typedOperations.find((item) => item.kind === "connect" && item.service === "auth")).toMatchObject({ network: "auth-egress" });
     expect(typedOperations.findIndex((item) => item.kind === "readiness" && item.service === "postgres")).toBeLessThan(typedOperations.findIndex((item) => item.kind === "create" && item.service === "postgrest"));
+    const allArgs = typedOperations.flatMap((item) => item.argv ?? []);
+    expect(allArgs).toContain("--health-cmd");
+    expect(allArgs).toContain("--tmpfs");
+    expect(allArgs).toContain("--publish");
+    expect(allArgs.filter((item) => item === "--mount").length).toBeGreaterThan(20);
     expect(typedOperations.flatMap((item) => item.argv ?? []).join(" ")).not.toMatch(/compose (?:create|start|up)/u);
+  });
+
+  it("cross-binds primitive inspect output to secrets, health, ports, mounts, and networks", () => {
+    type PrimitiveService = {
+      command: string[];
+      entrypoint?: string[];
+      environment: Record<string, string>;
+      healthcheck: { command: string; retries: number };
+      image: string;
+      logging: { driver: string; options: Record<string, string> };
+      name: string;
+      networks: Record<string, { aliases: string[] }>;
+      ports: Array<{ host_ip: string; protocol: string; published: number; target: number }>;
+      read_only?: boolean;
+      restart: string;
+      secret_mounts: Array<{ file: string; target: string }>;
+      security_opt: string[];
+      tmpfs: string[];
+      volumes: Array<{ read_only?: boolean; source: string; target: string; type: string }>;
+    };
+    const namespace = buildRunNamespace({ runId: RUN_ID, ports: PRIMITIVE_PORTS });
+    const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), {
+      project: namespace.project,
+      ports: PRIMITIVE_PORTS,
+    });
+    const service = plan.services.find((entry) => entry.name === "api-gateway") as
+      PrimitiveService | undefined;
+    if (!service) throw new Error("api gateway plan missing");
+    const observed = {
+      Config: {
+        Cmd: service.command,
+        Entrypoint: service.entrypoint ?? null,
+        Env: Object.entries(service.environment ?? {}).map(([key, value]) => `${key}=${value}`),
+        Healthcheck: { Retries: service.healthcheck.retries, Test: ["CMD-SHELL", service.healthcheck.command] },
+        Image: service.image,
+      },
+      HostConfig: {
+        LogConfig: { Config: service.logging.options, Type: service.logging.driver },
+        PortBindings: Object.fromEntries(service.ports.map((port) => [`${port.target}/${port.protocol}`, [{ HostIp: port.host_ip, HostPort: String(port.published) }]])),
+        ReadonlyRootfs: service.read_only === true,
+        RestartPolicy: { Name: service.restart },
+        SecurityOpt: service.security_opt,
+        Tmpfs: Object.fromEntries(service.tmpfs.map((entry) => [entry.split(":", 1)[0], entry])),
+      },
+      Mounts: [
+        ...service.volumes.map((entry) => ({ Destination: entry.target, Name: entry.type === "volume" ? entry.source : "", RW: entry.read_only !== true, Source: entry.source, Type: entry.type })),
+        ...service.secret_mounts.map((entry) => ({ Destination: `/run/secrets/${entry.target}`, Name: "", RW: false, Source: entry.file, Type: "bind" })),
+      ],
+      NetworkSettings: { Networks: Object.fromEntries(Object.entries(service.networks).map(([name, entry]) => [`${namespace.project}_${name}`, { Aliases: entry.aliases }])) },
+    };
+    expect(validatePrimitiveContainerInspection(observed, service, namespace)).toBe(service);
+    expect(() => validatePrimitiveContainerInspection({ ...observed, Mounts: observed.Mounts.filter((entry) => !entry.Destination.startsWith("/run/secrets/")) }, service, namespace)).toThrow(/mount/iu);
+    expect(() => validatePrimitiveContainerInspection({ ...observed, HostConfig: { ...observed.HostConfig, PortBindings: {} } }, service, namespace)).toThrow(/port/iu);
   });
   it("rejects every post-create container image substitution", () => {
     const authority = {

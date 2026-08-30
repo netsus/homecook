@@ -583,7 +583,9 @@ export function validateSealedWorkerSyntheticResult(value) {
   const expected = [
     "claim_youtube_extraction_job", "claim_youtube_extractor_permit", "start_youtube_extraction_attempt",
     "heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit", "read_youtube_extraction_worker_catalog",
-    "report_youtube_extraction_progress", "resolve_youtube_extraction_job_draft", "finalize_youtube_extraction_job", "release_youtube_extractor_permit",
+    "report_youtube_extraction_progress", "resolve_youtube_extraction_job_draft",
+    "heartbeat_youtube_extraction_job", "heartbeat_youtube_extractor_permit",
+    "finalize_youtube_extraction_job", "release_youtube_extractor_permit",
   ];
   if (value.schema !== "homecook.youtube-extraction-worker-rehearsal-result.v1" || value.status !== "succeeded" || value.synthetic !== true) {
     fail("sealed worker synthetic result is not an actual synthetic success");
@@ -1057,13 +1059,13 @@ export async function runIsolatedReleaseRehearsal({
       signal,
     });
     checkAbort();
+    if (typeof adapters.reinspectObserverSubjects !== "function") fail("observer subject reinspection is unavailable");
+    const registeredSubjects = await adapters.reinspectObserverSubjects({ signal: new AbortController().signal });
+    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, registeredSubjects, signal: new AbortController().signal });
     const cleanupEvidence = await cleanup();
     if (!cleanupEvidence.completed) fail("owned cleanup, residue, or secret persistence gate failed");
     verifyStableExecution();
     const postSnapshot = await adapters.snapshotProduction("post", { signal: new AbortController().signal });
-    if (typeof adapters.reinspectObserverSubjects !== "function") fail("observer subject reinspection is unavailable");
-    const registeredSubjects = await adapters.reinspectObserverSubjects({ signal: new AbortController().signal });
-    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, postSnapshot, registeredSubjects, signal: new AbortController().signal });
     verifyStableExecution();
     const productionGuard = buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement, independentObserver);
     const completedAt = now().toISOString();
