@@ -608,6 +608,46 @@ export function validateIndependentProductionObserver(value) {
   return Object.freeze({ ...value });
 }
 
+function validateObserverAuthorityBindings({
+  observer,
+  measurement,
+  preDigest,
+  postDigest,
+  runtime,
+  issuedAt,
+  completedAt,
+}) {
+  validateIndependentProductionObserver(observer);
+  if (observer.pre_snapshot_digest !== preDigest || observer.post_snapshot_digest !== postDigest) {
+    fail("independent production observer snapshots are not bound to the production guard");
+  }
+  if (observer.docker_daemon_identity_digest !== measurement.docker_daemon_identity_digest) {
+    fail("independent production observer Docker daemon identity differs from measured isolation telemetry");
+  }
+  const expectedSubjects = new Map();
+  for (const component of ["app", "full_local", "worker"]) {
+    for (const containerId of runtime[component].container_ids) {
+      expectedSubjects.set(containerId, component);
+    }
+  }
+  if (observer.registered_subjects.length !== expectedSubjects.size) {
+    fail("independent production observer does not cover every runtime container");
+  }
+  for (const subject of observer.registered_subjects) {
+    if (expectedSubjects.get(subject.container_id) !== subject.component) {
+      fail("independent production observer subject differs from runtime container authority");
+    }
+    if (Date.parse(subject.started_at) < Date.parse(observer.started_at)
+      || Date.parse(subject.started_at) > Date.parse(observer.completed_at)) {
+      fail("independent production observer subject escapes the observation interval");
+    }
+  }
+  if (Date.parse(observer.started_at) < Date.parse(issuedAt)
+    || observer.completed_at !== completedAt) {
+    fail("independent production observer interval is not bound to the run completion window");
+  }
+}
+
 export function validateSealedWorkerSyntheticResult(value) {
   exactKeys(value, ["schema", "status", "synthetic", "provider_requests", "rpc_sequence"], "sealed worker synthetic result");
   const expected = [
@@ -627,7 +667,7 @@ export function validateSealedWorkerSyntheticResult(value) {
   return Object.freeze({ ...value, rpc_sequence: Object.freeze([...value.rpc_sequence]) });
 }
 
-function buildProductionGuard(pre, post, measurement, observer) {
+function buildProductionGuard(pre, post, measurement, observer, runtime, issuedAt, completedAt) {
   validateProductionSnapshot(pre, "pre");
   validateProductionSnapshot(post, "post");
   validateIndependentProductionObserver(observer);
@@ -656,6 +696,15 @@ function buildProductionGuard(pre, post, measurement, observer) {
     || !DIGEST.test(measurement.docker_endpoint_identity_digest ?? "")
     || !DIGEST.test(measurement.docker_daemon_identity_digest ?? "")
   ) fail("measured production isolation telemetry is not zero");
+  validateObserverAuthorityBindings({
+    observer,
+    measurement,
+    preDigest: pre.surface_digest,
+    postDigest: post.surface_digest,
+    runtime: Object.fromEntries(runtime.map((entry) => [entry.component, entry])),
+    issuedAt,
+    completedAt,
+  });
   return Object.freeze({
     surface_allowlist_version: pre.surface_allowlist_version,
     production_snapshot_pre_digest: pre.surface_digest,
@@ -942,6 +991,19 @@ export function validateRunEvidence(value) {
     || value.production_guard.measurement.production_db_write_count !== value.production_guard.production_db_write_count
     || value.production_guard.measurement.mutation_attempt_count !== value.production_guard.mutation_attempt_count
   ) fail("run evidence production measurement digest/count binding is invalid");
+  validateObserverAuthorityBindings({
+    observer: value.production_guard.independent_observer,
+    measurement: value.production_guard.measurement,
+    preDigest: value.production_guard.production_snapshot_pre_digest,
+    postDigest: value.production_guard.production_snapshot_post_digest,
+    runtime: value.runtime,
+    issuedAt: value.issued_at,
+    completedAt: value.completed_at,
+  });
+  if (value.canaries.some((canary) => (
+    Date.parse(canary.started_at) < Date.parse(value.production_guard.independent_observer.started_at)
+    || Date.parse(canary.completed_at) > Date.parse(value.production_guard.independent_observer.completed_at)
+  ))) fail("run evidence canaries escape the independent observer interval");
   if (Object.values(value.threat_controls).some((control) => control !== "pass")) {
     fail("run evidence threat controls must all pass");
   }
@@ -1184,14 +1246,22 @@ export async function runIsolatedReleaseRehearsal({
     checkAbort();
     if (typeof adapters.reinspectObserverSubjects !== "function") fail("observer subject reinspection is unavailable");
     const registeredSubjects = await adapters.reinspectObserverSubjects({ signal: new AbortController().signal });
-    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, registeredSubjects, signal: new AbortController().signal });
     const cleanupEvidence = await cleanup();
     if (!cleanupEvidence.completed) fail("owned cleanup, residue, or secret persistence gate failed");
     verifyStableExecution();
     const postSnapshot = await adapters.snapshotProduction("post", { signal: new AbortController().signal });
     verifyStableExecution();
-    const productionGuard = buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement, independentObserver);
-    const completedAt = now().toISOString();
+    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, postSnapshot, registeredSubjects, signal: new AbortController().signal });
+    const completedAt = independentObserver.completed_at;
+    const productionGuard = buildProductionGuard(
+      preSnapshot,
+      postSnapshot,
+      productionMeasurement,
+      independentObserver,
+      runtimeEntries,
+      issuedAt,
+      completedAt,
+    );
     const evidence = makeEvidence({
       manifest,
       runId,

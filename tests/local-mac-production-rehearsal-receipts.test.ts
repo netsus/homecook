@@ -286,7 +286,7 @@ function runEvidenceAuthority(index: 1 | 2) {
     pre_snapshot_digest: SHA_A,
     post_snapshot_digest: SHA_A,
     process_binding_digest: SHA_B,
-    docker_daemon_identity_digest: SHA_C,
+    docker_daemon_identity_digest: SHA_B,
     observation_digest: SHA_A,
     available: true,
     truncated: false,
@@ -297,16 +297,16 @@ function runEvidenceAuthority(index: 1 | 2) {
     provider_remote_access_count: 0,
     production_mutation_count: 0,
     unrelated_noise_count: 0,
-    registered_subjects: [{
-      container_id: `${index}-observer-container`,
-      host_pid: 1,
-      host_pgid: 1,
-      component: "app",
+    registered_subjects: ["app", "full_local", "worker"].map((component, subjectIndex) => ({
+      container_id: `${component}-container-${index}`,
+      host_pid: subjectIndex + 1,
+      host_pgid: subjectIndex + 1,
+      component,
       started_at: base.issued_at,
       image_digest: SHA_A,
       config_digest: SHA_B,
       executable_identity_digest: SHA_C,
-    }],
+    })),
   };
   const runtime = (component: "app" | "full_local" | "worker") => ({
     component,

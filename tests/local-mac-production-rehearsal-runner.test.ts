@@ -214,7 +214,11 @@ function productionSnapshot(digest = "9".repeat(64)) {
 }
 
 function independentObserver() {
-  return { schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64), started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", pre_snapshot_digest: "9".repeat(64), post_snapshot_digest: "9".repeat(64), process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "d".repeat(64), observation_digest: "e".repeat(64), available: true, truncated: false, production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0, production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0, unrelated_noise_count: 0, registered_subjects: [{ container_id: "container-app", host_pid: 1, host_pgid: 1, component: "app", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) }] };
+  return { schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64), started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", pre_snapshot_digest: "9".repeat(64), post_snapshot_digest: "9".repeat(64), process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "e".repeat(64), observation_digest: "e".repeat(64), available: true, truncated: false, production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0, production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0, unrelated_noise_count: 0, registered_subjects: [
+    { container_id: "container-app", host_pid: 1, host_pgid: 1, component: "app", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) },
+    { container_id: "container-full-local", host_pid: 2, host_pgid: 2, component: "full_local", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) },
+    { container_id: "container-worker", host_pid: 3, host_pgid: 3, component: "worker", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) },
+  ] };
 }
 
 function migrationReplay(overrides = {}) {
@@ -624,7 +628,9 @@ describe("release rehearsal R2 orchestration", () => {
       && entry.completed_at === "2026-08-29T00:00:00.000Z"
     ))).toBe(true);
     expect(adapters.independentObserver.begin).toHaveBeenCalledBefore(adapters.createResources);
-    expect(adapters.independentObserver.end).toHaveBeenCalledBefore(adapters.removeResource);
+    expect(adapters.removeResource).toHaveBeenCalledBefore(adapters.independentObserver.end);
+    expect(adapters.snapshotProduction.mock.invocationCallOrder.at(-1))
+      .toBeLessThan(adapters.independentObserver.end.mock.invocationCallOrder[0]);
     expect(result.cleanup).toMatchObject({ completed: true, residue_resource_ids: [], cleanup_errors: [], secret_bearing_persistent_file_count: 0 });
     expect(() => validateRunEvidence(result)).not.toThrow();
     expect(adapters.createResources).toHaveBeenCalledWith(expect.objectContaining({
@@ -842,6 +848,10 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
     ["resource identity forgery", (value: ReturnType<typeof evidenceFixture>) => { value.isolation.resource_identity_digest = "0".repeat(64); }],
     ["production measurement", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.measurement_digest = "0".repeat(64); }],
     ["production snapshots differ", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.production_snapshot_post_digest = "0".repeat(64); }],
+    ["observer subject coverage", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.independent_observer.registered_subjects = value.production_guard.independent_observer.registered_subjects.filter((subject) => subject.component !== "worker"); }],
+    ["observer snapshot binding", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.independent_observer.pre_snapshot_digest = "0".repeat(64); value.production_guard.independent_observer.post_snapshot_digest = "0".repeat(64); }],
+    ["observer daemon binding", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.independent_observer.docker_daemon_identity_digest = "0".repeat(64); }],
+    ["observer time window", (value: ReturnType<typeof evidenceFixture>) => { value.production_guard.independent_observer.completed_at = "2026-08-28T23:59:59.000Z"; }],
     ["threat control", (value: ReturnType<typeof evidenceFixture>) => { value.threat_controls.cleanup_ownership = "fail"; }],
     ["measured production DB access", (value: ReturnType<typeof evidenceFixture>) => {
       value.production_guard.production_db_connection_count = 1;
@@ -1083,6 +1093,19 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(schema.properties.production_guard.required).toEqual(expect.arrayContaining([
       "measurement",
       "measurement_digest",
+    ]));
+    expect(schema.$defs.independentObserver.additionalProperties).toBe(false);
+    expect(schema.$defs.independentObserver.required).toEqual(expect.arrayContaining([
+      "production_db_connection_count",
+      "production_db_write_count",
+      "production_credential_access_count",
+      "production_socket_access_count",
+      "provider_remote_access_count",
+      "production_mutation_count",
+      "unrelated_noise_count",
+      "pre_snapshot_digest",
+      "post_snapshot_digest",
+      "docker_daemon_identity_digest",
     ]));
     expect(JSON.stringify(schema)).not.toContain("receipt_digest");
   });
