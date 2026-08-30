@@ -284,7 +284,7 @@ function digestExecutionTree(rootPath, {
     entryGuard(realPath, stat);
     if (stat.isDirectory()) {
       hash.update("target-dir\0");
-      for (const name of readDirectory(realPath, stat).sort()) {
+      for (const name of [...readDirectory(realPath, stat)].sort()) {
         hash.update(`target-name\0${name}\0`);
         digestDereferencedTarget(join(realPath, name), nextSeen);
       }
@@ -311,7 +311,7 @@ function digestExecutionTree(rootPath, {
     }
     if (stat.isDirectory()) {
       hash.update(`dir\0${relativePath}\0`);
-      for (const name of readDirectory(path, stat).sort()) {
+      for (const name of [...readDirectory(path, stat)].sort()) {
         if (relativePath === "" && name === ".git") continue;
         visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
       }

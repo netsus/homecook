@@ -830,6 +830,25 @@ describe("read-only production inventory", () => {
     await expect(adapters.readReleaseArtifacts()).rejects.toThrow(/aggregate byte limit exceeded/iu);
   });
 
+  it("digests multi-entry active components without mutating frozen directory inventory", async () => {
+    const rootDir = tempDirectory("homecook-component-directory-root-");
+    const homeDir = tempDirectory("homecook-component-directory-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    const snapshotRoot = join(releaseRoot, "execution-snapshots");
+    const snapshotDigest = "d".repeat(64);
+    const snapshot = createExecutionSnapshot(snapshotRoot, snapshotDigest);
+    writeFileSync(join(snapshot, "app", "second.bin"), "second", { mode: 0o600 });
+    writeExecutionSnapshotManifest(snapshot, snapshotDigest);
+    writeFileSync(join(releaseRoot, "current.json"), JSON.stringify(
+      runningDescriptor(snapshotRoot, snapshotDigest),
+    ), { mode: 0o600 });
+
+    await expect(createLocalProductionInventoryAdapters({ rootDir, homeDir }).readReleaseArtifacts())
+      .resolves.toEqual(expect.arrayContaining([
+        expect.objectContaining({ kind: expect.stringMatching(/^referenced_snapshot:current:/u) }),
+      ]));
+  });
+
   it("rejects retained snapshot manifest symlinks, unknown fields, and byte-limit overflow", async () => {
     const rootDir = tempDirectory("homecook-retained-manifest-root-");
     const homeDir = tempDirectory("homecook-retained-manifest-home-");
