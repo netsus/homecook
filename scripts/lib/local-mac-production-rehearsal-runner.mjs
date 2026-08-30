@@ -16,6 +16,7 @@ import {
   copyLocalMacProductionExecutionTree,
   sealLocalMacProductionExecutionTree,
 } from "./local-mac-production-release.mjs";
+import { readSealedAuthorityFile } from "./local-mac-production-rehearsal-candidate.mjs";
 import { readVerifiedMigrationInputs } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
 export const RUN_EVIDENCE_SCHEMA =
@@ -89,6 +90,7 @@ const TOP_LEVEL_EVIDENCE_KEYS = [
   "worker_rehearsal_rpc_authority",
   "production_guard",
   "threat_controls",
+  "rehearsal_runner",
   "evidence_digest",
 ];
 const REQUIRED_CANARY_IDS = Object.freeze([
@@ -100,6 +102,9 @@ const REQUIRED_CANARY_IDS = Object.freeze([
   "full-local-postgrest-fixture",
   "full-local-storage-route",
   "worker-synthetic-job",
+]);
+export const FULL_LOCAL_RUNTIME_SERVICES = Object.freeze([
+  "api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage",
 ]);
 
 /** @returns {never} */
@@ -131,6 +136,27 @@ function requireSha(value, label) {
 
 function requireString(value, label) {
   if (typeof value !== "string" || value.length === 0) fail(`${label} must be nonempty`);
+  return value;
+}
+
+export function validateRunnerIdentity(value) {
+  exactKeys(value, [
+    "version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256",
+  ], "rehearsal runner identity");
+  requireString(value.version, "rehearsal runner version");
+  if (!isAbsolute(value.realpath ?? "")) fail("rehearsal runner realpath must be absolute");
+  for (const field of ["device", "inode", "size"]) {
+    if (!/^(?:0|[1-9]\d*)$/u.test(value[field] ?? "")) {
+      fail(`rehearsal runner ${field} must be an exact decimal identity string`);
+    }
+  }
+  if (![0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755].includes(value.mode)) {
+    fail("rehearsal runner mode is outside the closed readable/executable allowlist");
+  }
+  if (typeof value.ctime !== "string" || new Date(value.ctime).toISOString() !== value.ctime) {
+    fail("rehearsal runner ctime is invalid");
+  }
+  requireDigest(value.sha256, "rehearsal runner SHA-256");
   return value;
 }
 
@@ -179,7 +205,7 @@ export function resolveCompletedCandidateInput(input) {
   return candidateRoot;
 }
 
-function validatePorts(ports) {
+export function validateRunPorts(ports) {
   exactKeys(ports, PORT_KEYS, "run ports");
   const values = [];
   for (const key of PORT_KEYS) {
@@ -202,7 +228,7 @@ function rejectReservedName(value, label) {
 
 export function buildRunNamespace({ runId, ports }) {
   if (!UUID_V4.test(runId ?? "")) fail("run_id must be a cryptographically random UUID-v4");
-  validatePorts(ports);
+  validateRunPorts(ports);
   const project = `homecook-rehearsal-${runId}`;
   rejectReservedName(project, "Docker project");
   const containerNames = [
@@ -415,12 +441,75 @@ function validateRuntimeIdentities(entries, manifest) {
   return ordered;
 }
 
+export function validateContainerRoleLedger({ containerRoles, containerIds, runtime }, { reject = fail } = {}) {
+  if (!Array.isArray(containerRoles) || !Array.isArray(containerIds)) reject("container role ledger and isolation container IDs are required");
+  const expectedKeys = ["component", "container_id", "role", "service"];
+  for (const [index, entry] of containerRoles.entries()) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)
+      || canonicalizeJcs(Object.keys(entry).sort()) !== canonicalizeJcs(expectedKeys)) reject(`container role ledger entry ${index} is not closed`);
+    if (typeof entry.container_id !== "string" || entry.container_id.length === 0) reject("container role ledger ID is invalid");
+  }
+  const roleIds = containerRoles.map((entry) => entry.container_id);
+  if (new Set(roleIds).size !== roleIds.length
+    || roleIds.some((entry, index) => index > 0 && roleIds[index - 1] > entry)
+    || canonicalizeJcs(roleIds) !== canonicalizeJcs(containerIds)) reject("every isolation container must have exactly one sorted role");
+  const appIds = [...(runtime?.app?.container_ids ?? [])].sort();
+  const fullLocalIds = [...(runtime?.full_local?.container_ids ?? [])].sort();
+  const workerIds = [...(runtime?.worker?.container_ids ?? [])].sort();
+  if (appIds.length !== 1 || fullLocalIds.length !== FULL_LOCAL_RUNTIME_SERVICES.length || workerIds.length !== 1) reject("runtime container groups must be exact app, seven full-local services, and worker");
+  const runtimeIds = [...appIds, ...fullLocalIds, ...workerIds];
+  if (new Set(runtimeIds).size !== runtimeIds.length) reject("runtime container IDs overlap");
+  const appRoles = containerRoles.filter((entry) => entry.role === "runtime" && entry.component === "app" && entry.service === null);
+  const workerRoles = containerRoles.filter((entry) => entry.role === "runtime" && entry.component === "worker" && entry.service === null);
+  const fullLocalRoles = containerRoles.filter((entry) => entry.role === "runtime" && entry.component === "full_local");
+  const auxiliaryRoles = containerRoles.filter((entry) => entry.role === "auxiliary");
+  if (appRoles.length !== 1 || appRoles[0].container_id !== appIds[0]
+    || workerRoles.length !== 1 || workerRoles[0].container_id !== workerIds[0]
+    || fullLocalRoles.length !== FULL_LOCAL_RUNTIME_SERVICES.length
+    || canonicalizeJcs(fullLocalRoles.map((entry) => entry.container_id).sort()) !== canonicalizeJcs(fullLocalIds)
+    || canonicalizeJcs(fullLocalRoles.map((entry) => entry.service).sort()) !== canonicalizeJcs([...FULL_LOCAL_RUNTIME_SERVICES].sort())) reject("runtime container role authority is incomplete or substituted");
+  if (fullLocalRoles.some((entry) => !FULL_LOCAL_RUNTIME_SERVICES.includes(entry.service))) reject("full-local service role is outside the closed set");
+  if (auxiliaryRoles.length !== 1 || auxiliaryRoles[0].component !== "egress_sentinel" || auxiliaryRoles[0].service !== null || runtimeIds.includes(auxiliaryRoles[0].container_id)) reject("auxiliary egress sentinel role is invalid");
+  if (containerRoles.some((entry) => !(
+    (entry.role === "runtime" && ["app", "full_local", "worker"].includes(entry.component))
+    || (entry.role === "auxiliary" && entry.component === "egress_sentinel")
+  ))) reject("container role is outside the closed runtime/auxiliary contract");
+  return containerRoles;
+}
+
+function buildContainerRoleLedger({ ownedResources, namespace, runtime }) {
+  const containersByName = new Map(ownedResources.filter((entry) => entry.kind === "container").map((entry) => [entry.name, entry.id]));
+  const required = (name) => {
+    const id = containersByName.get(name);
+    if (!id) fail(`container role ledger is missing ${name}`);
+    return id;
+  };
+  const roles = [
+    { container_id: required(`${namespace.project}-app`), role: "runtime", component: "app", service: null },
+    ...FULL_LOCAL_RUNTIME_SERVICES.map((service) => ({ container_id: required(`${namespace.project}-${service}-1`), role: "runtime", component: "full_local", service })),
+    { container_id: required(`${namespace.project}-worker`), role: "runtime", component: "worker", service: null },
+    { container_id: required(`${namespace.project}-egress-sentinel`), role: "auxiliary", component: "egress_sentinel", service: null },
+  ].sort((left, right) => left.container_id.localeCompare(right.container_id));
+  return validateContainerRoleLedger({
+    containerRoles: roles,
+    containerIds: ownedResources.filter((entry) => entry.kind === "container").map((entry) => entry.id).sort(),
+    runtime: Object.fromEntries(runtime.map((entry) => [entry.component, entry])),
+  });
+}
+
 function validateCanaries(canaries) {
   if (!Array.isArray(canaries) || canaries.length === 0) fail("canary evidence is required");
   const ordered = [...canaries].sort((left, right) => left.canary_id.localeCompare(right.canary_id));
   if (new Set(ordered.map((entry) => entry.canary_id)).size !== ordered.length) fail("canary IDs are duplicated");
   for (const entry of ordered) {
     requireString(entry.canary_id, "canary_id");
+    if (
+      typeof entry.started_at !== "string"
+      || typeof entry.completed_at !== "string"
+      || new Date(entry.started_at).toISOString() !== entry.started_at
+      || new Date(entry.completed_at).toISOString() !== entry.completed_at
+      || Date.parse(entry.started_at) > Date.parse(entry.completed_at)
+    ) fail(`${entry.canary_id} canary time range is invalid`);
     if (entry.exit_code !== 0) fail(`${entry.canary_id} canary failed`);
     requireDigest(entry.normalized_result_digest, `${entry.canary_id} normalized result`);
   }
@@ -507,7 +596,7 @@ function assertDirectoryIdentity(path, expected, label) {
   ) fail(`${label} directory dev/inode/owner/mode/ctime identity drifted`);
 }
 
-function writeCanonicalCreateOnly(path, value, mode = 0o600) {
+function writeCanonicalCreateOnly(path, value, mode = 0o400) {
   const bytes = Buffer.from(canonicalizeJcs(value), "utf8");
   const fd = openSync(path, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW, mode);
   try { writeFileSync(fd, bytes); } finally { closeSync(fd); }
@@ -578,6 +667,46 @@ export function validateIndependentProductionObserver(value) {
   return Object.freeze({ ...value });
 }
 
+function validateObserverAuthorityBindings({
+  observer,
+  measurement,
+  preDigest,
+  postDigest,
+  runtime,
+  issuedAt,
+  completedAt,
+}) {
+  validateIndependentProductionObserver(observer);
+  if (observer.pre_snapshot_digest !== preDigest || observer.post_snapshot_digest !== postDigest) {
+    fail("independent production observer snapshots are not bound to the production guard");
+  }
+  if (observer.docker_daemon_identity_digest !== measurement.docker_daemon_identity_digest) {
+    fail("independent production observer Docker daemon identity differs from measured isolation telemetry");
+  }
+  const expectedSubjects = new Map();
+  for (const component of ["app", "full_local", "worker"]) {
+    for (const containerId of runtime[component].container_ids) {
+      expectedSubjects.set(containerId, component);
+    }
+  }
+  if (observer.registered_subjects.length !== expectedSubjects.size) {
+    fail("independent production observer does not cover every runtime container");
+  }
+  for (const subject of observer.registered_subjects) {
+    if (expectedSubjects.get(subject.container_id) !== subject.component) {
+      fail("independent production observer subject differs from runtime container authority");
+    }
+    if (Date.parse(subject.started_at) < Date.parse(observer.started_at)
+      || Date.parse(subject.started_at) > Date.parse(observer.completed_at)) {
+      fail("independent production observer subject escapes the observation interval");
+    }
+  }
+  if (Date.parse(observer.started_at) < Date.parse(issuedAt)
+    || observer.completed_at !== completedAt) {
+    fail("independent production observer interval is not bound to the run completion window");
+  }
+}
+
 export function validateSealedWorkerSyntheticResult(value) {
   exactKeys(value, ["schema", "status", "synthetic", "provider_requests", "rpc_sequence"], "sealed worker synthetic result");
   const expected = [
@@ -597,7 +726,7 @@ export function validateSealedWorkerSyntheticResult(value) {
   return Object.freeze({ ...value, rpc_sequence: Object.freeze([...value.rpc_sequence]) });
 }
 
-function buildProductionGuard(pre, post, measurement, observer) {
+function buildProductionGuard(pre, post, measurement, observer, runtime, issuedAt, completedAt) {
   validateProductionSnapshot(pre, "pre");
   validateProductionSnapshot(post, "post");
   validateIndependentProductionObserver(observer);
@@ -626,6 +755,15 @@ function buildProductionGuard(pre, post, measurement, observer) {
     || !DIGEST.test(measurement.docker_endpoint_identity_digest ?? "")
     || !DIGEST.test(measurement.docker_daemon_identity_digest ?? "")
   ) fail("measured production isolation telemetry is not zero");
+  validateObserverAuthorityBindings({
+    observer,
+    measurement,
+    preDigest: pre.surface_digest,
+    postDigest: post.surface_digest,
+    runtime: Object.fromEntries(runtime.map((entry) => [entry.component, entry])),
+    issuedAt,
+    completedAt,
+  });
   return Object.freeze({
     surface_allowlist_version: pre.surface_allowlist_version,
     production_snapshot_pre_digest: pre.surface_digest,
@@ -640,7 +778,11 @@ function buildProductionGuard(pre, post, measurement, observer) {
   });
 }
 
-function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRootIdentity, executionRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard, workerRehearsalRpcAuthority }) {
+function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRootIdentity, executionRootIdentity, migration, fixtures, runtime, canaries, network, cleanup, productionGuard, workerRehearsalRpcAuthority, collisionPreflightDigest, ownedResources, runnerIdentity }) {
+  const resourceIds = (kind) => ownedResources
+    .filter((entry) => entry.kind === kind)
+    .map((entry) => entry.id)
+    .sort();
   const unsigned = {
     schema: RUN_EVIDENCE_SCHEMA,
     canonicalization: CANONICALIZATION,
@@ -668,6 +810,11 @@ function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRo
       ports: namespace.ports,
       root_identity_digest: sha256Jcs(runRootIdentity),
       execution_root_identity_digest: sha256Jcs(executionRootIdentity),
+      collision_preflight_digest: collisionPreflightDigest,
+      network_ids: resourceIds("network"),
+      container_ids: resourceIds("container"),
+      container_roles: buildContainerRoleLedger({ ownedResources, namespace, runtime }),
+      volume_ids: resourceIds("volume"),
       resource_identity_digest: sha256Jcs({
         project: namespace.project,
         container_names: namespace.container_names,
@@ -704,6 +851,7 @@ function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRo
       stale_candidate: "pass",
       cleanup_ownership: "pass",
     },
+    rehearsal_runner: runnerIdentity,
   };
   return Object.freeze({ ...unsigned, evidence_digest: sha256Jcs(unsigned) });
 }
@@ -718,8 +866,19 @@ export function validateRunEvidence(value) {
   exactKeys(value.isolation, [
     "docker_project_id", "container_names", "network_names", "volume_names",
     "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "resource_identity_digest",
+    "collision_preflight_digest", "network_ids", "container_ids", "container_roles", "volume_ids",
   ], "run evidence isolation");
   exactKeys(value.isolation.db_identity, ["name", "user", "identity_digest"], "run evidence DB identity");
+  const expectedNamespace = buildRunNamespace({ runId: value.run_id, ports: value.isolation.ports });
+  if (
+    value.isolation.docker_project_id !== expectedNamespace.project
+    || canonicalizeJcs(value.isolation.container_names) !== canonicalizeJcs(expectedNamespace.container_names)
+    || canonicalizeJcs(value.isolation.network_names) !== canonicalizeJcs(expectedNamespace.network_names)
+    || canonicalizeJcs(value.isolation.volume_names) !== canonicalizeJcs(expectedNamespace.volume_names)
+    || value.isolation.db_identity.name !== expectedNamespace.db_name
+    || value.isolation.db_identity.user !== expectedNamespace.db_user
+    || value.isolation.db_identity.identity_digest !== sha256Jcs({ name: expectedNamespace.db_name, user: expectedNamespace.db_user })
+  ) fail("run evidence namespace is not exactly derived from run_id");
   exactKeys(value.migration, [
     "ordered_migration_files_digest", "applied_global_ledger_digest",
     "global_ledger_entries", "ordered_global_ledger", "migration_head", "catalog_head", "schema_identity_digest",
@@ -742,7 +901,7 @@ export function validateRunEvidence(value) {
   ], "run evidence foreground supervisor");
   if (!Array.isArray(value.canaries) || value.canaries.length === 0) fail("run evidence canaries are missing");
   for (const [index, canary] of value.canaries.entries()) {
-    exactKeys(canary, ["canary_id", "exit_code", "normalized_result_digest"], `run evidence canaries[${index}]`);
+    exactKeys(canary, ["canary_id", "started_at", "completed_at", "exit_code", "normalized_result_digest"], `run evidence canaries[${index}]`);
     if (canary.exit_code !== 0 || !DIGEST.test(canary.normalized_result_digest ?? "")) {
       fail("run evidence canary must be an exact successful digest-bound result");
     }
@@ -768,6 +927,7 @@ export function validateRunEvidence(value) {
     "symlink_toctou", "namespace_collision", "digest_substitution",
     "stale_candidate", "cleanup_ownership",
   ], "run evidence threat controls");
+  validateRunnerIdentity(value.rehearsal_runner);
   if (
     typeof value.issued_at !== "string"
     || typeof value.completed_at !== "string"
@@ -775,6 +935,24 @@ export function validateRunEvidence(value) {
     || new Date(value.completed_at).toISOString() !== value.completed_at
     || Date.parse(value.issued_at) > Date.parse(value.completed_at)
   ) fail("run evidence issued/completed timestamp order is invalid");
+  if (value.canaries.some((canary) => (
+    Date.parse(canary.started_at) < Date.parse(value.issued_at)
+    || Date.parse(canary.completed_at) > Date.parse(value.completed_at)
+  ))) fail("run evidence canary times escape the run time range");
+  for (const field of ["collision_preflight_digest", "root_identity_digest", "execution_root_identity_digest", "resource_identity_digest"]) {
+    requireDigest(value.isolation[field], `run evidence isolation.${field}`);
+  }
+  for (const field of ["network_ids", "container_ids", "volume_ids"]) {
+    if (!Array.isArray(value.isolation[field]) || new Set(value.isolation[field]).size !== value.isolation[field].length
+      || value.isolation[field].some((entry, index, entries) => typeof entry !== "string" || entry.length === 0 || (index > 0 && entries[index - 1] > entry))) {
+      fail(`run evidence isolation.${field} must be unique bytewise ascending IDs`);
+    }
+  }
+  validateContainerRoleLedger({
+    containerRoles: value.isolation.container_roles,
+    containerIds: value.isolation.container_ids,
+    runtime: value.runtime,
+  });
   if (
     value.runtime.app.component !== "app"
     || value.runtime.full_local.component !== "full_local"
@@ -857,6 +1035,14 @@ export function validateRunEvidence(value) {
     volume_names: value.isolation.volume_names,
     owned_resource_ids: value.cleanup.owned_resource_ids,
   })) fail("run evidence resource identity digest differs from immutable cleanup ledger");
+  const isolatedIds = [
+    ...value.isolation.container_ids,
+    ...value.isolation.network_ids,
+    ...value.isolation.volume_ids,
+  ].sort();
+  if (canonicalizeJcs(isolatedIds) !== canonicalizeJcs(ownedIds)) {
+    fail("run evidence typed resource IDs differ from the immutable cleanup ledger");
+  }
   if (
     value.production_guard?.equal !== true
     || value.production_guard?.mutation_attempt_count !== 0
@@ -880,12 +1066,75 @@ export function validateRunEvidence(value) {
     || value.production_guard.measurement.production_db_write_count !== value.production_guard.production_db_write_count
     || value.production_guard.measurement.mutation_attempt_count !== value.production_guard.mutation_attempt_count
   ) fail("run evidence production measurement digest/count binding is invalid");
+  validateObserverAuthorityBindings({
+    observer: value.production_guard.independent_observer,
+    measurement: value.production_guard.measurement,
+    preDigest: value.production_guard.production_snapshot_pre_digest,
+    postDigest: value.production_guard.production_snapshot_post_digest,
+    runtime: value.runtime,
+    issuedAt: value.issued_at,
+    completedAt: value.completed_at,
+  });
+  if (value.canaries.some((canary) => (
+    Date.parse(canary.started_at) < Date.parse(value.production_guard.independent_observer.started_at)
+    || Date.parse(canary.completed_at) > Date.parse(value.production_guard.independent_observer.completed_at)
+  ))) fail("run evidence canaries escape the independent observer interval");
   if (Object.values(value.threat_controls).some((control) => control !== "pass")) {
     fail("run evidence threat controls must all pass");
   }
   const { evidence_digest: evidenceDigest, ...unsigned } = value;
   if (sha256Jcs(unsigned) !== evidenceDigest) fail("run evidence digest mismatch");
   return value;
+}
+
+export function readCompletedRunEvidenceRoot(input, { now = new Date() } = {}) {
+  if (!isAbsolute(input ?? "")) fail("completed run evidence input must be absolute");
+  const absolute = resolve(input);
+  const inputStat = lstatSync(absolute, { bigint: true });
+  if (inputStat.isSymbolicLink()) fail("completed run evidence input may not be a symlink");
+  const root = inputStat.isFile()
+    ? (() => {
+        if (basename(absolute) !== "run-evidence.json" || inputStat.nlink !== 1n) {
+          fail("completed run evidence file input must be the exact single-link run-evidence.json");
+        }
+        return dirname(absolute);
+      })()
+    : absolute;
+  const rootBefore = lstatSync(root, { bigint: true });
+  if (!rootBefore.isDirectory() || rootBefore.isSymbolicLink() || modeBits(rootBefore.mode) !== 0o500) {
+    fail("completed run evidence root must be a sealed mode-0500 directory");
+  }
+  const failedPath = join(root, "failed.json");
+  try {
+    const failed = lstatSync(failedPath, { bigint: true });
+    if (failed) fail("completed run evidence root conflicts with a failed terminal marker");
+  } catch (error) {
+    if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error;
+  }
+  const complete = readSealedAuthorityFile(root, join(root, "complete.json"), "run complete marker");
+  exactKeys(complete, ["schema", "status", "trusted_receipt", "evidence_digest"], "run complete marker");
+  if (
+    complete.schema !== "homecook.local-mac-production-rehearsal-run-terminal.v1"
+    || complete.status !== "complete"
+    || complete.trusted_receipt !== false
+  ) fail("run complete marker authority is invalid");
+  const evidence = validateRunEvidence(
+    readSealedAuthorityFile(root, join(root, "run-evidence.json"), "run evidence"),
+  );
+  if (complete.evidence_digest !== evidence.evidence_digest) fail("run terminal marker and evidence digest differ");
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) fail("completed run evidence requires a valid current instant");
+  if (Date.parse(evidence.issued_at) > now.getTime() || Date.parse(evidence.completed_at) > now.getTime()) {
+    fail("completed run evidence contains a future time claim");
+  }
+  const evidencePost = validateRunEvidence(
+    readSealedAuthorityFile(root, join(root, "run-evidence.json"), "run evidence final readback"),
+  );
+  if (evidencePost.evidence_digest !== evidence.evidence_digest) fail("run evidence changed during offline readback");
+  const rootAfter = lstatSync(root, { bigint: true });
+  if (canonicalizeJcs(directoryIdentity(rootBefore)) !== canonicalizeJcs(directoryIdentity(rootAfter))) {
+    fail("run evidence root identity changed during offline readback");
+  }
+  return Object.freeze({ root, complete, evidence });
 }
 
 function normalizeAdapterError(error) {
@@ -899,12 +1148,14 @@ export async function runIsolatedReleaseRehearsal({
   runId,
   readCandidate,
   adapters,
+  runnerIdentity,
   now = () => new Date(),
   signal = /** @type {AbortSignal | null} */ (null),
 }) {
   const sourceCandidateRoot = resolveCompletedCandidateInput(candidateInput);
   const canonicalNamespaceRoot = assertPrivateNamespaceRoot(namespaceRoot);
   if (typeof readCandidate !== "function" || !adapters) fail("runner dependencies are incomplete");
+  validateRunnerIdentity(runnerIdentity);
   const sourceCandidate = readCandidate(sourceCandidateRoot);
   let candidateBefore = sourceCandidate;
   const manifest = candidateBefore.manifest;
@@ -925,6 +1176,7 @@ export async function runIsolatedReleaseRehearsal({
   let productionMeasurement = null;
   let workerRehearsalRpcAuthority = null;
   let independentObserver = null;
+  let collisionPreflightDigest = null;
   let stableRunRootIdentity = null;
   let stableExecutionRootIdentity = null;
 
@@ -996,7 +1248,7 @@ export async function runIsolatedReleaseRehearsal({
     stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
     verifyStableExecution();
     preSnapshot = validateProductionSnapshot(await adapters.snapshotProduction("pre", { signal }), "pre");
-    if (!adapters.independentObserver || typeof adapters.independentObserver.begin !== "function" || typeof adapters.independentObserver.end !== "function" || typeof adapters.independentObserver.registerChild !== "function") {
+    if (!adapters.independentObserver || typeof adapters.independentObserver.begin !== "function" || typeof adapters.independentObserver.captureSubjects !== "function" || typeof adapters.independentObserver.end !== "function" || typeof adapters.independentObserver.registerChild !== "function") {
       fail("independent observer is unavailable");
     }
     await adapters.independentObserver.begin({ runId, preSnapshot, signal });
@@ -1008,6 +1260,7 @@ export async function runIsolatedReleaseRehearsal({
     if (!collision || !Array.isArray(collision.collisions) || collision.collisions.length !== 0) {
       fail("existing resource or namespace collision detected; suffix fallback is forbidden");
     }
+    collisionPreflightDigest = sha256Jcs(collision);
     await adapters.assertImagesLocal({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     verifyStableExecution();
     checkAbort();
@@ -1043,7 +1296,14 @@ export async function runIsolatedReleaseRehearsal({
     const readiness = await adapters.waitForReadiness({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, signal });
     if (readiness?.ready !== true) fail("foreground supervisor readiness failed");
     verifyStableExecution();
-    const canaries = validateCanaries(await adapters.runCanaries({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, migration, fixtures, signal }));
+    const canariesStartedAt = now().toISOString();
+    const canaryResults = await adapters.runCanaries({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, migration, fixtures, signal });
+    const canariesCompletedAt = now().toISOString();
+    const canaries = validateCanaries(canaryResults.map((entry) => ({
+      ...entry,
+      started_at: canariesStartedAt,
+      completed_at: canariesCompletedAt,
+    })));
     if (typeof adapters.readWorkerRehearsalRpcAuthority !== "function") fail("worker rehearsal RPC authority reader is required");
     workerRehearsalRpcAuthority = await adapters.readWorkerRehearsalRpcAuthority();
     const network = await adapters.readNetworkEvidence({ runId, namespace, runRoot: reservation.runRoot, signal });
@@ -1061,14 +1321,23 @@ export async function runIsolatedReleaseRehearsal({
     checkAbort();
     if (typeof adapters.reinspectObserverSubjects !== "function") fail("observer subject reinspection is unavailable");
     const registeredSubjects = await adapters.reinspectObserverSubjects({ signal: new AbortController().signal });
-    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, registeredSubjects, signal: new AbortController().signal });
+    await adapters.independentObserver.captureSubjects({ registeredSubjects, signal: new AbortController().signal });
     const cleanupEvidence = await cleanup();
     if (!cleanupEvidence.completed) fail("owned cleanup, residue, or secret persistence gate failed");
     verifyStableExecution();
     const postSnapshot = await adapters.snapshotProduction("post", { signal: new AbortController().signal });
     verifyStableExecution();
-    const productionGuard = buildProductionGuard(preSnapshot, postSnapshot, productionMeasurement, independentObserver);
-    const completedAt = now().toISOString();
+    independentObserver = await adapters.independentObserver.end({ runId, preSnapshot, postSnapshot, registeredSubjects, signal: new AbortController().signal });
+    const completedAt = independentObserver.completed_at;
+    const productionGuard = buildProductionGuard(
+      preSnapshot,
+      postSnapshot,
+      productionMeasurement,
+      independentObserver,
+      runtimeEntries,
+      issuedAt,
+      completedAt,
+    );
     const evidence = makeEvidence({
       manifest,
       runId,
@@ -1085,6 +1354,9 @@ export async function runIsolatedReleaseRehearsal({
       cleanup: cleanupEvidence,
       productionGuard,
       workerRehearsalRpcAuthority,
+      collisionPreflightDigest,
+      ownedResources,
+      runnerIdentity,
     });
     validateRunEvidence(evidence);
     writeCanonicalCreateOnly(join(reservation.runRoot, "run-evidence.json"), evidence);

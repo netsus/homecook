@@ -21,6 +21,7 @@ export {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
+  buildProductionReleaseAnnotatedTagMessage,
 } from "./production-release-approval-policy.mjs";
 
 export const GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA =
@@ -29,11 +30,27 @@ export const GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA =
   "homecook.github.production-release-predicate.v1";
 export const GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE =
   "https://github.com/netsus/homecook/attestations/production-release/v1";
+export const GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2 =
+  "homecook.github.production-release-manifest.v2";
+export const GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V2 =
+  "homecook.github.production-release-predicate.v2";
+export const GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2 =
+  "https://github.com/netsus/homecook/attestations/production-release/v2";
 export const GITHUB_CLI_TRUSTED_ROOT_SHA256 =
   "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c";
 
 const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
+const REPEATABILITY_SCHEMA = "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
+const REHEARSAL_AUTHORITY_KEYS = [
+  "rehearsal_receipt_schema", "build_id", "sealed_bundle_digest",
+  "repeatability_receipt_digest", "rehearsal_receipt_valid_until",
+];
+const SUBJECT_BASE_KEYS = [
+  "schema", "repository", "source_ref", "signer_workflow", "signer_digest",
+  "expected_release_integration_id", "release_tag", "release_tag_object_sha",
+  "release_sha", "release_tree", "expected_release_contexts", "required_check_summary",
+];
 
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -56,6 +73,45 @@ function requireSha256(value, label) {
     throw new Error(`${label} must be a 64-character lowercase digest.`);
   }
   return normalized;
+}
+
+function requireExactKeys(value, expectedKeys, label) {
+  const actual = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`${label} must use the exact closed field set.`);
+  }
+}
+
+function normalizeRehearsalAuthority(value, label = "rehearsalAuthority") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  const actualKeys = Object.keys(value).sort();
+  if (JSON.stringify(actualKeys) !== JSON.stringify([...REHEARSAL_AUTHORITY_KEYS].sort())) {
+    throw new Error(`${label} must use the exact closed rehearsal authority fields.`);
+  }
+  if (value.rehearsal_receipt_schema !== REPEATABILITY_SCHEMA) {
+    throw new Error(`${label}.rehearsal_receipt_schema is invalid.`);
+  }
+  const validUntil = requireNonEmptyString(
+    value.rehearsal_receipt_valid_until,
+    `${label}.rehearsal_receipt_valid_until`,
+  );
+  const validUntilMs = Date.parse(validUntil);
+  if (!Number.isFinite(validUntilMs) || new Date(validUntilMs).toISOString() !== validUntil) {
+    throw new Error(`${label}.rehearsal_receipt_valid_until must be exact UTC millisecond RFC3339.`);
+  }
+  return Object.freeze({
+    rehearsal_receipt_schema: REPEATABILITY_SCHEMA,
+    build_id: requireNonEmptyString(value.build_id, `${label}.build_id`),
+    sealed_bundle_digest: requireSha256(value.sealed_bundle_digest, `${label}.sealed_bundle_digest`),
+    repeatability_receipt_digest: requireSha256(
+      value.repeatability_receipt_digest,
+      `${label}.repeatability_receipt_digest`,
+    ),
+    rehearsal_receipt_valid_until: validUntil,
+  });
 }
 
 function requireAbsoluteExistingPath(value, label) {
@@ -366,6 +422,7 @@ export function normalizeGitHubProductionReleaseCheckSummary({
  *   releaseTagObjectSha: string,
  *   releaseTree: string,
  *   repository: string,
+ *   rehearsalAuthority?: Record<string, unknown> | null,
  *   subjectOutputPath?: string | null,
  * }} [options]
  */
@@ -380,11 +437,17 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   releaseTagObjectSha,
   releaseTree,
   repository,
+  rehearsalAuthority = null,
   subjectOutputPath = null,
 } = {}) {
   const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
+  const normalizedRehearsalAuthority = rehearsalAuthority === null
+    ? null
+    : normalizeRehearsalAuthority(rehearsalAuthority);
   const subject = {
-    schema: GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA,
+    schema: normalizedRehearsalAuthority
+      ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2
+      : GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA,
     repository: requireCanonicalString(
       repository,
       CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
@@ -401,6 +464,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     ),
     release_sha: normalizedReleaseSha,
     release_tree: requireSha1(releaseTree, "releaseTree"),
+    ...(normalizedRehearsalAuthority ?? {}),
     expected_release_contexts: normalizeExpectedReleaseContexts(
       expectedContexts,
       "expected_release_contexts",
@@ -425,7 +489,9 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     : createHash("sha256").update(JSON.stringify(subject)).digest("hex");
 
   const predicate = {
-    schema: GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA,
+    schema: normalizedRehearsalAuthority
+      ? GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V2
+      : GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA,
     repository: subject.repository,
     source_ref: subject.source_ref,
     signer_workflow: subject.signer_workflow,
@@ -435,6 +501,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     release_tag_object_sha: subject.release_tag_object_sha,
     release_sha: subject.release_sha,
     release_tree: subject.release_tree,
+    ...(normalizedRehearsalAuthority ?? {}),
     expected_release_contexts: subject.expected_release_contexts,
     required_check_summary: subject.required_check_summary,
     subject_manifest_sha256: subjectManifestSha256,
@@ -461,10 +528,31 @@ function validateSubjectDocument({
   if (!document || typeof document !== "object" || Array.isArray(document)) {
     throw new Error("Production release subject manifest must be a JSON object.");
   }
-  if (document.schema !== GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA) {
+  const manifestRehearsalAuthority = manifest.schema === "homecook.local-mac-production-release.v2"
+    ? normalizeRehearsalAuthority(Object.fromEntries(
+        REHEARSAL_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+      ), "manifest rehearsal authority")
+    : null;
+  const expectedSubjectSchema = manifestRehearsalAuthority
+    ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2
+    : GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA;
+  if (document.schema !== expectedSubjectSchema) {
     throw new Error(
-      `Production release subject manifest schema must be ${GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA}.`,
+      `Production release subject manifest schema must be ${expectedSubjectSchema}.`,
     );
+  }
+  requireExactKeys(
+    document,
+    manifestRehearsalAuthority ? [...SUBJECT_BASE_KEYS, ...REHEARSAL_AUTHORITY_KEYS] : SUBJECT_BASE_KEYS,
+    "Production release subject manifest",
+  );
+  if (manifestRehearsalAuthority) {
+    const subjectAuthority = normalizeRehearsalAuthority(Object.fromEntries(
+      REHEARSAL_AUTHORITY_KEYS.map((key) => [key, document[key]]),
+    ), "subject rehearsal authority");
+    if (JSON.stringify(subjectAuthority) !== JSON.stringify(manifestRehearsalAuthority)) {
+      throw new Error("Production release subject rehearsal authority does not match the release manifest.");
+    }
   }
 
   if (requireNonEmptyString(document.repository, "subject.repository") !== repository) {
@@ -546,10 +634,33 @@ function validatePredicateDocument({
   if (!predicate || typeof predicate !== "object" || Array.isArray(predicate)) {
     throw new Error("Production release attestation predicate must be a JSON object.");
   }
-  if (predicate.schema !== GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA) {
+  const manifestRehearsalAuthority = manifest.schema === "homecook.local-mac-production-release.v2"
+    ? normalizeRehearsalAuthority(Object.fromEntries(
+        REHEARSAL_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+      ), "manifest rehearsal authority")
+    : null;
+  const expectedPredicateSchema = manifestRehearsalAuthority
+    ? GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V2
+    : GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA;
+  if (predicate.schema !== expectedPredicateSchema) {
     throw new Error(
-      `Production release attestation predicate schema must be ${GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA}.`,
+      `Production release attestation predicate schema must be ${expectedPredicateSchema}.`,
     );
+  }
+  requireExactKeys(
+    predicate,
+    manifestRehearsalAuthority
+      ? [...SUBJECT_BASE_KEYS, ...REHEARSAL_AUTHORITY_KEYS, "subject_manifest_sha256"]
+      : [...SUBJECT_BASE_KEYS, "subject_manifest_sha256"],
+    "Production release predicate",
+  );
+  if (manifestRehearsalAuthority) {
+    const predicateAuthority = normalizeRehearsalAuthority(Object.fromEntries(
+      REHEARSAL_AUTHORITY_KEYS.map((key) => [key, predicate[key]]),
+    ), "predicate rehearsal authority");
+    if (JSON.stringify(predicateAuthority) !== JSON.stringify(manifestRehearsalAuthority)) {
+      throw new Error("Production release predicate rehearsal authority does not match the release manifest.");
+    }
   }
   if (requireNonEmptyString(predicate.repository, "predicate.repository") !== repository) {
     throw new Error("Production release attestation predicate repository does not match the verifier repository.");
@@ -687,6 +798,9 @@ export function verifyGitHubProductionReleaseAttestation({
   if (normalizedSignerDigest !== requireSha1(manifest.release_sha, "manifest.release_sha")) {
     throw new Error("signerDigest must equal the exact release SHA.");
   }
+  const expectedPredicateType = manifest.schema === "homecook.local-mac-production-release.v2"
+    ? GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2
+    : GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE;
   const trustedRootDigest = requireSha256(
     sha256File(normalizedTrustedRootPath),
     "trustedRootSha256",
@@ -713,7 +827,7 @@ export function verifyGitHubProductionReleaseAttestation({
     "--signer-digest",
     normalizedSignerDigest,
     "--predicate-type",
-    GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+    expectedPredicateType,
     "--format",
     "json",
   ], {
@@ -734,7 +848,7 @@ export function verifyGitHubProductionReleaseAttestation({
   }
 
   const statement = verificationPayload[0]?.verificationResult?.statement;
-  if (statement?.predicateType !== GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE) {
+  if (statement?.predicateType !== expectedPredicateType) {
     throw new Error("GitHub offline attestation verification predicate type is not the expected custom release predicate.");
   }
 

@@ -19,6 +19,7 @@ function parseArgs(argv) {
     releaseTagObjectSha: null,
     releaseTree: null,
     repository: null,
+    rehearsalAuthorityPath: null,
     subjectOutputPath: null,
   };
 
@@ -52,6 +53,8 @@ function parseArgs(argv) {
       options.releaseTree = value;
     } else if (token === "--repository") {
       options.repository = value;
+    } else if (token === "--rehearsal-authority-json") {
+      options.rehearsalAuthorityPath = value;
     } else if (token === "--subject-output") {
       options.subjectOutputPath = value;
     } else {
@@ -101,6 +104,20 @@ try {
   if (!Array.isArray(excludedSuiteEvidence.check_suite_ids)) {
     throw new Error("Excluded check suite evidence check_suite_ids must be an array.");
   }
+  if (!options.rehearsalAuthorityPath) {
+    throw new Error("--rehearsal-authority-json <path> is required for production release v2.");
+  }
+  const authority = JSON.parse(readFileSync(options.rehearsalAuthorityPath, "utf8"));
+  if (authority.release_sha !== options.releaseSha || authority.release_tree !== options.releaseTree) {
+    throw new Error("Rehearsal authority SHA/tree does not match the requested release.");
+  }
+  const rehearsalAuthority = {
+    rehearsal_receipt_schema: authority.rehearsal_receipt_schema,
+    build_id: authority.build_id,
+    sealed_bundle_digest: authority.sealed_bundle_digest,
+    repeatability_receipt_digest: authority.repeatability_receipt_digest,
+    rehearsal_receipt_valid_until: authority.rehearsal_receipt_valid_until,
+  };
   const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
     checkRuns,
     commitStatuses,
@@ -112,6 +129,7 @@ try {
     releaseTagObjectSha: options.releaseTagObjectSha,
     releaseTree: options.releaseTree,
     repository: options.repository,
+    rehearsalAuthority,
     subjectOutputPath: options.subjectOutputPath,
   });
 

@@ -1,6 +1,6 @@
 # Homecook 서버 Mac release rehearsal 계약
 
-상태: **canonical / implementation split 3 author complete / independent review pending**
+상태: **canonical / implementation split 4 author complete / independent review pending**
 변경 유형: `docs-governance`
 production mutation: **금지 (`false`)**
 제품 계약 영향: **N/A** — 공식 제품 5종, public API, DB schema 계약을 바꾸지 않는다.
@@ -9,7 +9,7 @@ production mutation: **금지 (`false`)**
 
 active production 승격의 역할·lock·tag immutability·manifest·attestation authority는 계속 [local-mac-production-release-promotion.md](./local-mac-production-release-promotion.md)가 가진다. 이 문서는 그보다 앞선 untagged exact-SHA candidate, isolated rehearsal, receipt, mixed-state read-only classification을 담당한다.
 
-현재 구현 범위는 R0 inventory, mixed-state classify, receipt schema/JCS/offline verify, R1 candidate build/seal과 production surface snapshot foundation, R2 isolated run / foreground supervisor까지다. R2 결과는 trusted receipt가 아닌 run evidence이며 repeatability receipt, GitHub attestation, production binding과 promote unlock은 구현하지 않았다. 따라서 split 3만으로 production promotion이 가능하다고 주장하지 않으며, 후속 split과 독립 conformance/security review가 끝날 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
+현재 구현 범위는 R0 inventory와 mixed-state classify, R1 candidate build/seal, R2 isolated run, R3 create-only run receipt, R4 deterministic repeatability receipt, R5 production manifest/tag/attestation v2 binding, R6 promote pre-mutation gate까지다. R2 결과 자체는 계속 trusted receipt가 아닌 run evidence이고, local receipt self digest도 production trust anchor가 아니다. split 4 author 구현만으로 production promotion이 가능하다고 주장하지 않으며, fresh independent conformance/deployment-safety review, current-head CI, merge가 모두 닫힐 때까지 기존 `release:production:promote` activation kill switch를 유지한다.
 
 ## 목표와 비목표
 
@@ -161,6 +161,7 @@ split 3 구현 상태:
 - fresh run-owned PostgreSQL에 repository migration을 verified FD Buffer 순서대로 적용하고 create-only global ledger, catalog head와 schema identity를 계산한다. Auth/PostgREST/Storage sealed start script는 production 기본 DB `postgres`를 유지하되 exact isolated R2에서만 `hc_r2_*` override를 받아 모두 같은 migrated DB를 사용한다. synthetic public fixture는 PostgREST와 app API 경로에서 실제 조회하며 `production_derived_row_count=0`이다.
 - app은 sealed `scripts/start-production.mjs`와 run-owned env/secret mount를 실제 실행한다. worker는 `health` 반복이 아니라 sealed runner의 `rehearsal-synthetic` command에서 실제 fenced runtime + poll loop로 provider request 0인 synthetic job 1개를 claim/start/heartbeat/resolve/finalize/release한다. provider/cloud 성공을 mock하지 않는다.
 - network canary는 worker→run-owned `api-gateway` positive control, 별도 healthy run-owned sentinel의 self-health, worker와 연결되지 않은 `internal=true` sentinel network IP deny를 함께 요구한다. 임의 DNS/TLS/remote timeout만으로 external deny pass를 만들지 않는다. app/full-local/worker의 actual env key/mount/network projection에서 production DB/socket/credential candidate를 계측하고 측정 불가나 forbidden count가 하나라도 있으면 실패한다.
+- independent macOS observer는 cleanup 전에 exact registered container root PID/PGID와 descendant `ps`/`lsof` 증거를 capture/freeze한다. full-local 7개 service는 exact container/service identity를 유지하되 authority component를 `full_local`로 정규화한다. cleanup 뒤 pinned `ps`로 captured PID/PGID/descendant가 exact zero인지 다시 관측하고 orphan/residue 또는 missing/truncated post-ps를 거부한다. 그 뒤 final production snapshot과 Docker daemon snapshot을 완료하고서 종료 시각을 정한 다음 unified sandbox log를 flush/query한다. 이 full window는 cached pre-cleanup subject identity에 묶인다. 예상된 root process 종료만 허용하며 capture 누락, subject substitution, orphan, daemon drift, runner/observer pre-post snapshot mismatch, final-window relevant denial/event는 fail closed한다.
 - cleanup은 create call이 돌려준 ID 또는 successful Compose create 직후 exact expected name + creation nonce로 고정한 immutable ledger만 역순 stop/remove한다. label discovery는 ledger에 합치지 않으며 unknown/production/label-spoofed resource는 residue/blocker로만 남겨 건드리지 않는다. SIGINT/SIGTERM/timeout/output overflow는 async detached process group을 즉시 중단하고 cleanup으로 전환한다. secret file root는 container 종료 뒤 제거하고 run-owned residue와 secret-bearing persistent file count가 모두 0이어야 pass한다.
 - closed schema는 `scripts/schemas/local-mac-production-rehearsal-run-evidence.schema.json`이다. 결과와 create-only terminal marker는 `trusted_receipt:false`이며 split 1의 run receipt 또는 production authority가 아니다. 실패 시에는 non-secret digest/cleanup/production-equality terminal evidence만 남긴다.
 - 이 작성 task에서는 server run, repeatability, GitHub attestation, production tag/manifest binding, promote activation, mixed-state recovery를 수행하지 않는다. 실제 server rehearsal 전 fresh independent conformance review와 deployment-safety/security review가 필요하다.
@@ -173,9 +174,17 @@ planned command:
 pnpm release:rehearsal:verify -- --receipt <absolute-create-only-receipt> --json
 ```
 
+split 4 create-only 발급 command는 다음과 같다.
+
+```text
+pnpm release:rehearsal:receipt -- --candidate <absolute-sealed-candidate> --run-evidence <absolute-completed-run> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
+pnpm release:rehearsal:repeatability -- --member-receipt <absolute-run-receipt> --member-receipt <absolute-run-receipt> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
+```
+
 - receipt schema, issuer/tool identity, cryptographic digest, expiry, exact SHA/tree/build/bundle, image, migration, canary, cleanup, no-production-mutation evidence를 offline으로 재검증한다.
 - receipt path와 parent는 `lstat`/`realpath`, owner, private mode, device/inode를 검증한다. symlink, repository 내부 secret alias, mutable overwrite, duplicate receipt ID를 거부한다.
 - receipt의 `issued_at <= completed_at <= now`는 zero clock-skew로 강제한다. future member/run/repeatability claim은 발급과 검증 모두에서 거부한다.
+- receipt는 `run_id` UUID-v4에서 exact `homecook-rehearsal-<run_id>` Docker project와 `hc_r2_<첫 16 hex>` / `hc_r2_user_<첫 16 hex>` DB name/user를 재파생하고 DB identity digest까지 비교한다. app 1개, full-local exact 7 service(`api-gateway,auth,auth-proxy,postgres,postgrest,postgrest-probe,storage`), worker 1개는 exact `runtime` container role과 nonempty container IDs를 가지며 egress sentinel 1개만 closed `auxiliary` role이다. isolation의 모든 container ID는 이 role ledger에 정확히 한 번 존재하고 runtime/auxiliary가 겹치지 않으며 cleanup owned/removed는 auxiliary를 포함한 전체 typed resource와 exact 일치해야 한다. foreground supervisor는 exact `process` + empty container IDs여야 한다. port는 exact 4 unique values, `20000..60999` 범위이며 `3000`, `3100`, `5432`, `54321..54324`를 허용하지 않는다. run evidence, receipt runtime validator와 closed JSON schema는 같은 shape/range를 강제한다.
 - verify는 Docker, process, production pointer/descriptor/lock/LaunchAgent/DB를 변경하지 않는다.
 - production pre/post digest가 다르거나 inventory 중 drift가 있었으면 receipt는 생성하지 않는다.
 
@@ -197,6 +206,7 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 - tag/manifest/attestation은 exact rehearsal `release_sha`, `release_tree`, `build_id`, `sealed_bundle_digest`, `repeatability_receipt_digest`를 포함해야 한다.
 - rehearsal 후 rebuild, dependency reinstall, image re-resolution, migration rewrite, bundle copy mutation은 금지한다.
 - production tag immutability는 그대로 유지한다. tag/attestation 생성 실패 시 기존 tag를 이동·삭제하지 않고 다음 tag 번호로 새 authority attempt를 만든다.
+- protected tag push 직전 두 member와 repeatability receipt를 fresh UTC clock으로 다시 검증하고, `valid_until`까지 attestation 완료 안전 여유가 strict 900초보다 커야 한다. equality 또는 더 짧은 여유는 tag push/attestation 0으로 중단한다.
 
 ### R6. production promote receipt gate
 
@@ -208,6 +218,20 @@ R4 통과 전에는 production authority tag를 만들지 않는다.
 - production state가 새 R0 inventory와 모순되지 않음
 - mixed-state classification이 `promotion_safe`이고 unresolved recovery finding이 0임
 - 기존 release-promoter authority, confirmation, lock, operator approval 충족
+
+pre-adapter, initial, final-pre-mutation과 scratch 완료 뒤 pre-lock은 각자 fresh clock으로 expiry와 inventory freshness를 다시 계산한다. pre-lock read는 frozen candidate identity만 사용하고 mutable candidate path를 다시 열지 않는다. stable authority digest는 receipt/candidate component/inventory identity만 포함하고 `classified_at` 같은 volatile projection field는 제외한다. 네 단계 digest가 하나라도 다르거나 scratch 도중 receipt expiry/inventory 5분 freshness/future claim 경계를 넘으면 production lock 전에 종료한다.
+
+final authority 뒤 production lock 전에 검증된 sealed candidate component를 anchored private create-only non-production scratch에 완전히 복제·seal한다. scratch parent/attempt의 FD/lstat identity와 ancestor containment를 create 전후 고정하며 symlink/hardlink/replacement cleanup을 거부한다. app+full-local overlay expected digest와 app/full-local/worker/authority physical digest, device/inode, pre-adapter/initial/final/pre-lock authority, `sealed_bundle_digest`, `repeatability_receipt_digest`를 하나의 prelock authority로 결합한다. full-local config와 exact closed full-local secret root, worker config/credential/token/provider secret root, release manifest/tag/attestation authority도 private scratch에 `lstat → O_NOFOLLOW FD → fstat/read/fstat → path lstat` exact identity로 freeze하고 source/ancestor identity digest만 authority에 기록한다. frozen full-local config는 source path를 노출하지 않고 secret root를 frozen path로 rewrite한다. native secret filesystem 오류도 stable `runtime_input_freeze_failed` 외에는 stderr/JSON/artifact로 직렬화하지 않는다. production execution snapshot과 installer는 lock 뒤 frozen bytes/private inputs/cached attestation만 사용하며 candidate/prepared/original manifest/attestation/config/secret path를 다시 읽지 않는다. rehearsal 뒤 별도 checkout의 reinstall/rebuild 또는 별도 worker artifact를 production execution source로 사용하지 않는다. readiness는 manifest/snapshot expected-value 주입 없이 app live cwd evidence, full-local 7-container digest labels, worker live PID+cwd evidence가 실제 관측한 `sealed_bundle_digest`와 `repeatability_receipt_digest`를 모두 exact 비교한 뒤 descriptor를 commit한다. canonical v2 read-only status probe는 LaunchAgent의 `resume-current` args와 분리해 sealed release identity path를 항상 받는다.
+
+각 frozen source file은 approved root부터 parent까지의 complete lexical directory chain을 공유 registry에 등록한다. registry는 canonical path 정렬과 dedupe 후 각 directory를 `O_DIRECTORY|O_NOFOLLOW`로 열어 FD identity를 source read와 create-only scratch copy가 끝날 때까지 유지한다. full-local config/secret, worker config/credential/token/provider secret, manifest와 attestation triple 중 어느 parent라도 transient rename/symlink/bind/A→B→A drift가 있으면 file bytes가 복원되어도 fail closed한다. initial freeze 이후 source revalidation 오류의 유일한 public message는 `runtime_input_source_changed: frozen runtime input source authority changed.`이며 source path/name/value와 raw syscall은 출력하지 않는다.
+
+pre-adapter/initial/final/pre-lock의 broader promotion authority verifier는 manifest, candidate completion/bundle authority, 두 member receipt와 repeatability receipt, inventory/classification, attestation triple, git/tag 및 `gh` offline readback, component physical digest를 하나의 public error boundary 안에서 재검증한다. 어느 source read, canonical parser, identity check, semantic gate 또는 command가 실패해도 public output은 `promotion_authority_source_changed: production promotion authority source changed.`뿐이다. path/basename/receipt ID/raw JSON/provider payload/`gh`·`git` stderr/syscall 텍스트는 CLI stderr, JSON 또는 failure artifact에 포함하지 않는다.
+
+promotion 함수는 첫 release manifest external read부터 lock acquisition 성공 전까지 모든 semantic/identity postcondition과 scratch/runtime-source 검증을 같은 outer boundary로 다시 감싼다. lock 직전에는 frozen scratch component root와 authority file FD identities를 고정한 상태로 app/full-local/worker physical bytes를 각각 fresh re-digest하고 authority physical digest와 combined scratch authority를 재계산한다. stored digest만 재사용하거나 mutable candidate를 다시 읽지 않으며 실제 re-digest 값만 prelock scratch authority digest에 투입한다.
+
+macOS의 `/dev/fd/<dirFd>/relative`는 Node directory traversal authority로 사용하지 않는다. held root FD와 same inode인 frozen component/authority root를 private sibling anchor로 원자 이동해 original pathname substitution과 분리한 뒤, nested directory/file을 각각 no-follow FD로 열고 file bytes는 file FD에서만 hash한다. directory FDs는 sorted traversal이 끝날 때까지 유지하며 root/nested/file/parent identity를 pre/post 비교한다. original component path, authority filepath 또는 nested path를 교체했다가 복원해도 replacement bytes를 authority로 받아들이지 않는다.
+
+FD-anchored walker는 기존 physical digest grammar의 directory-symlink child ordering을 그대로 보존한다. dereferenced directory의 각 sorted child는 `target-name\0<name>\0` token 뒤에 target type/bytes가 와야 하며 nonempty/nested directory symlink에서도 stored candidate digest와 fresh pre-lock digest가 exact 같아야 한다.
 
 하나라도 빠지면 pointer, LaunchAgent, Docker, DB를 건드리기 전에 fail closed한다.
 
@@ -285,7 +309,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 | `images` | digest 오름차순 array; 각 entry exact keys `digest,platform,local_cache_provenance_digest`; mutable tag-only 금지 |
 | `migration` | exact keys `ordered_migration_files_digest,applied_global_ledger_digest,migration_head,catalog_head,schema_identity_digest` |
 | `fixtures` | exact keys `fixture_set_id,fixture_set_digest,production_derived_row_count`; count는 0 |
-| `isolation` | exact keys `resource_identity_digest,root_identity_digest,docker_project_id,network_ids,container_ids,volume_ids,db_identity,ports,collision_preflight_digest` |
+| `isolation` | exact keys `resource_identity_digest,root_identity_digest,docker_project_id,network_ids,container_ids,container_roles,volume_ids,db_identity,ports,collision_preflight_digest`; `container_roles`는 runtime app/full-local 7 services/worker와 auxiliary egress sentinel의 exact 10-entry ledger, `db_identity`는 exact `name,user,identity_digest`, port는 exact 4 unique safe high values |
 | `runtime` | exact keys `app,full_local,worker,foreground_supervisor`; 각 runtime은 PID/container와 reported SHA/tree/build/bundle을 포함 |
 | `canaries` | canary ID 오름차순 array; 각 entry exact keys `canary_id,started_at,completed_at,exit_code,normalized_result_digest` |
 | `network` | exact keys `default_deny_policy_digest,allowed_endpoints,denied_attempt_count,unexpected_successful_egress_count`; unexpected count는 0 |
@@ -461,9 +485,10 @@ split 3에서 다음을 확정했다.
 - foreground supervisor timeout은 readiness 120초, shutdown 30초, stdout/stderr 각 1 MiB 상한을 evidence policy에 고정한다. exact canary ID는 bytewise ascending `app-production-route`, `cross-component-identity`, `external-network-deny`, `full-local-api-gateway-route`, `full-local-auth-route`, `full-local-postgrest-fixture`, `full-local-storage-route`, `worker-synthetic-job` 8개다.
 - migration ledger는 sealed filename 순서를 sequence로 고정하고 각 migration SHA-256을 함께 저장한다. ordered ledger, final catalog head와 candidate migration head가 모두 exact equality여야 한다.
 
-다음은 후속 actual server rehearsal과 split 4에서 contract를 완화하지 않는 범위로 닫는다.
+다음은 split 4 구현 범위가 아니라 후속 independent actual server rehearsal/approval task에서 contract를 완화하지 않는 범위로 닫는다.
 
 - server Mac의 local Docker image cache provenance와 supported platform 실측 evidence
-- 두 독립 run의 repeatability receipt, GitHub attestation과 production manifest/tag binding
+- 서버 Mac에서 실제 두 독립 run receipt와 repeatability receipt 생성 evidence
+- production approval environment에서의 GitHub attestation/tag 발급은 별도 release-promoter authority로만 수행
 
 위 결정을 이유로 production mutation, external network, production data copy, receipt gate 또는 독립 review를 생략할 수 없다.

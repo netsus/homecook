@@ -1158,6 +1158,8 @@ describe("full-local runtime readiness", () => {
     release_tree: "b".repeat(40),
     build_id: "build-release-a",
     promotion_id: "promotion-a",
+    sealed_bundle_digest: "c".repeat(64),
+    repeatability_receipt_digest: "d".repeat(64),
   };
   const releaseContainers = (identity = releaseIdentity) =>
     Array.from({ length: 7 }, (_, index) => ({
@@ -1196,6 +1198,8 @@ describe("full-local runtime readiness", () => {
       release_tree: "d".repeat(40),
       build_id: "build-old",
       promotion_id: "promotion-old",
+      sealed_bundle_digest: "e".repeat(64),
+      repeatability_receipt_digest: "f".repeat(64),
     };
     expect(() => fullLocalRuntime.readFullLocalReleaseIdentityFromContainers(
       releaseContainers(oldIdentity),
@@ -1228,6 +1232,8 @@ describe("full-local runtime readiness", () => {
         "homecook.release.tree",
         "homecook.release.build-id",
         "homecook.release.promotion-id",
+        "homecook.release.sealed-bundle-digest",
+        "homecook.release.repeatability-receipt-digest",
       ]) Reflect.deleteProperty(container.Config.Labels, label);
     }
     expect(fullLocalRuntime.readFullLocalReleaseIdentityFromContainers(containers, {
@@ -1258,6 +1264,8 @@ describe("full-local runtime readiness", () => {
       "homecook.release.sha",
       "homecook.release.tree",
       "homecook.release.build-id",
+      "homecook.release.sealed-bundle-digest",
+      "homecook.release.repeatability-receipt-digest",
       "homecook.release.promotion-id",
     ]) {
       expect(compose).toContain(label);

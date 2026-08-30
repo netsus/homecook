@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "homecook.local-mac-production-release.v1",
+  "$id": "homecook.local-mac-production-release.v2",
   "title": "Homecook local Mac production release manifest",
   "type": "object",
   "additionalProperties": false,
@@ -22,6 +22,10 @@
     "approved_by_task_id",
     "migration_head",
     "build_id",
+    "rehearsal_receipt_schema",
+    "sealed_bundle_digest",
+    "repeatability_receipt_digest",
+    "rehearsal_receipt_valid_until",
     "backup_readiness_evidence",
     "previous_release_sha",
     "expected_release_contexts",
@@ -33,7 +37,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "homecook.local-mac-production-release.v1"
+      "const": "homecook.local-mac-production-release.v2"
     },
     "repository": {
       "const": "netsus/homecook"
@@ -94,6 +98,22 @@
     "build_id": {
       "type": "string",
       "minLength": 1
+    },
+    "rehearsal_receipt_schema": {
+      "const": "homecook.local-mac-production-rehearsal-repeatability-receipt.v1"
+    },
+    "sealed_bundle_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "repeatability_receipt_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "rehearsal_receipt_valid_until": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
     },
     "backup_readiness_evidence": {
       "type": "string",

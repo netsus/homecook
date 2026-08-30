@@ -146,7 +146,7 @@ export function summarizeFullLocalRuntimeStates(states) {
 }
 
 /**
- * @param {{release_sha:string, release_tree:string, build_id:string, promotion_id:string}} identity
+ * @param {{release_sha:string, release_tree:string, build_id:string, promotion_id:string, sealed_bundle_digest:string, repeatability_receipt_digest:string}} identity
  */
 export function buildFullLocalReleaseContainerLabels(identity) {
   return {
@@ -154,6 +154,8 @@ export function buildFullLocalReleaseContainerLabels(identity) {
     "homecook.release.tree": identity.release_tree,
     "homecook.release.build-id": identity.build_id,
     "homecook.release.promotion-id": identity.promotion_id,
+    "homecook.release.sealed-bundle-digest": identity.sealed_bundle_digest,
+    "homecook.release.repeatability-receipt-digest": identity.repeatability_receipt_digest,
   };
 }
 
@@ -187,6 +189,8 @@ export function readFullLocalReleaseIdentityFromContainers(
     "homecook.release.tree",
     "homecook.release.build-id",
     "homecook.release.promotion-id",
+    "homecook.release.sealed-bundle-digest",
+    "homecook.release.repeatability-receipt-digest",
   ];
   const presentCount = containers.reduce((count, container) =>
     count + labelNames.filter((name) =>
@@ -214,6 +218,8 @@ export function readFullLocalReleaseIdentityFromContainers(
       release_tree: labels?.["homecook.release.tree"],
       build_id: labels?.["homecook.release.build-id"],
       promotion_id: labels?.["homecook.release.promotion-id"],
+      sealed_bundle_digest: labels?.["homecook.release.sealed-bundle-digest"],
+      repeatability_receipt_digest: labels?.["homecook.release.repeatability-receipt-digest"],
     };
     if (
       !/^[0-9a-f]{40}$/u.test(identity.release_sha ?? "")
@@ -222,6 +228,8 @@ export function readFullLocalReleaseIdentityFromContainers(
       || identity.build_id.length === 0
       || typeof identity.promotion_id !== "string"
       || identity.promotion_id.length === 0
+      || !/^[0-9a-f]{64}$/u.test(identity.sealed_bundle_digest ?? "")
+      || !/^[0-9a-f]{64}$/u.test(identity.repeatability_receipt_digest ?? "")
     ) {
       throw new Error(`Full-local container ${index} release labels are missing or invalid.`);
     }

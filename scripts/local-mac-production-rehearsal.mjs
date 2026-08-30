@@ -12,7 +12,14 @@ import {
   readCanonicalInventoryFile,
 } from "./lib/local-mac-production-rehearsal-inventory.mjs";
 import { classifyProductionInventory } from "./lib/local-mac-production-rehearsal-classifier.mjs";
-import { readCanonicalReceiptFile } from "./lib/local-mac-production-rehearsal-receipts.mjs";
+import {
+  buildRepeatabilityReceipt,
+  buildRunReceiptFromEvidenceAuthority,
+  readCanonicalReceiptFile,
+  writeCanonicalReceiptCreateOnly,
+} from "./lib/local-mac-production-rehearsal-receipts.mjs";
+import { readCompletedCandidateRoot } from "./lib/local-mac-production-rehearsal-candidate.mjs";
+import { readCompletedRunEvidenceRoot } from "./lib/local-mac-production-rehearsal-runner.mjs";
 
 const MODULE_REPOSITORY_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
@@ -24,6 +31,8 @@ Usage:
   pnpm release:rehearsal:inventory -- --json [--home-dir <absolute>] [--root-dir <absolute>] [--approved-migration-marker <absolute>]
   pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> --json
   pnpm release:rehearsal:classify -- --inventory <absolute-private-inventory> --json [--root-dir <absolute>]
+  pnpm release:rehearsal:receipt -- --candidate <absolute-sealed-candidate> --run-evidence <absolute-completed-run> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
+  pnpm release:rehearsal:repeatability -- --member-receipt <absolute-run-receipt> --member-receipt <absolute-run-receipt> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
   pnpm release:rehearsal:verify -- --receipt <absolute-private-receipt> [--member-receipt <absolute-run-receipt>]... --json [--root-dir <absolute>]
 
 Excluded from this split: Docker rehearsal runner, foreground supervisor, synthetic DB/canary,
@@ -41,6 +50,10 @@ function parseArguments(argv) {
     memberReceiptPaths: [],
     approvedMigrationMarkerPath: null,
     releaseSha: null,
+    candidateInput: null,
+    runEvidencePath: null,
+    receiptRoot: null,
+    issuerTaskId: null,
   };
   for (let index = 1; index < argv.length; index += 1) {
     const token = argv[index];
@@ -50,7 +63,7 @@ function parseArguments(argv) {
       continue;
     }
     const value = argv[index + 1];
-    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker", "--release-sha"].includes(token)) {
+    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker", "--release-sha", "--candidate", "--run-evidence", "--receipt-root", "--issuer-task-id"].includes(token)) {
       if (!value || value.startsWith("--")) throw new Error(`${token} requires a value.`);
       index += 1;
       if (token === "--root-dir") result.rootDir = value;
@@ -60,6 +73,10 @@ function parseArguments(argv) {
       if (token === "--member-receipt") result.memberReceiptPaths.push(value);
       if (token === "--approved-migration-marker") result.approvedMigrationMarkerPath = value;
       if (token === "--release-sha") result.releaseSha = value;
+      if (token === "--candidate") result.candidateInput = value;
+      if (token === "--run-evidence") result.runEvidencePath = value;
+      if (token === "--receipt-root") result.receiptRoot = value;
+      if (token === "--issuer-task-id") result.issuerTaskId = value;
       continue;
     }
     throw new Error(`Unknown rehearsal option: ${token}`);
@@ -115,6 +132,11 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     readInventory = readCanonicalInventoryFile,
     classify = classifyProductionInventory,
     readReceipt = readCanonicalReceiptFile,
+    readCandidate = readCompletedCandidateRoot,
+    readRunEvidence = readCompletedRunEvidenceRoot,
+    buildRunReceiptFromEvidence = buildRunReceiptFromEvidenceAuthority,
+    buildRepeatability = buildRepeatabilityReceipt,
+    writeReceipt = writeCanonicalReceiptCreateOnly,
     probeIdentity = defaultProbeIdentity,
     repositoryRootResolver = defaultRepositoryRootResolver,
     now = new Date(),
@@ -132,7 +154,7 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     output.write(HELP);
     return;
   }
-  if (!["inventory", "candidate", "classify", "verify"].includes(options.command)) throw new Error(`Unknown rehearsal command: ${options.command}`);
+  if (!["inventory", "candidate", "classify", "receipt", "repeatability", "verify"].includes(options.command)) throw new Error(`Unknown rehearsal command: ${options.command}`);
   if (!options.json) throw new Error("Rehearsal commands require --json for non-secret deterministic output.");
 
   const actualRepositoryRoot = repositoryRootResolver();
@@ -209,6 +231,36 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     const inventoryPath = requireAbsolute(options.inventoryPath, "inventory path");
     const inventory = readInventory(inventoryPath, { repoRoot: rootDir });
     writeResult(output, classify(inventory));
+    return;
+  }
+  if (options.command === "receipt") {
+    const candidateInput = requireAbsolute(options.candidateInput, "candidate input");
+    const runEvidencePath = requireAbsolute(options.runEvidencePath, "run evidence path");
+    const receiptRoot = requireAbsolute(options.receiptRoot, "receipt root");
+    if (!options.issuerTaskId) throw new Error("receipt --issuer-task-id is required.");
+    const candidate = readCandidate(candidateInput);
+    const run = readRunEvidence(runEvidencePath, { now });
+    const receipt = buildRunReceiptFromEvidence({
+      candidateManifest: candidate.manifest,
+      runEvidence: run.evidence,
+      issuerTaskId: options.issuerTaskId,
+      now,
+    });
+    const receiptPath = writeReceipt({ receipt, receiptRoot, repoRoot: rootDir, now });
+    writeResult(output, { status: "created", receipt_path: receiptPath, receipt });
+    return;
+  }
+  if (options.command === "repeatability") {
+    const receiptRoot = requireAbsolute(options.receiptRoot, "receipt root");
+    if (!options.issuerTaskId) throw new Error("repeatability --issuer-task-id is required.");
+    if (options.memberReceiptPaths.length !== 2) throw new Error("repeatability requires exactly two --member-receipt paths.");
+    const memberReceipts = options.memberReceiptPaths.map((path) => readReceipt(
+      requireAbsolute(path, "member receipt path"),
+      { repoRoot: rootDir, now },
+    ));
+    const receipt = buildRepeatability({ memberReceipts, issuerTaskId: options.issuerTaskId, now });
+    const receiptPath = writeReceipt({ receipt, receiptRoot, repoRoot: rootDir, memberReceipts, now });
+    writeResult(output, { status: "created", receipt_path: receiptPath, receipt });
     return;
   }
   const receiptPath = requireAbsolute(options.receiptPath, "receipt path");

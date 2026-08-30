@@ -16,6 +16,8 @@ export const CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW =
 export const CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF = "refs/heads/master";
 
 const PRODUCTION_RELEASE_TAG_PATTERN = /^prod-[0-9]{8}\.[0-9]+$/u;
+const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
+const REPEATABILITY_SCHEMA = "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
 
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -30,6 +32,42 @@ export function validateProductionReleaseTag(value, label = "release tag") {
     throw new Error(`${label} must match prod-YYYYMMDD.N exactly.`);
   }
   return normalized;
+}
+
+export function buildProductionReleaseAnnotatedTagMessage({
+  releaseTag,
+  rehearsal_receipt_schema,
+  build_id,
+  sealed_bundle_digest,
+  repeatability_receipt_digest,
+  rehearsal_receipt_valid_until,
+} = {}) {
+  if (rehearsal_receipt_schema !== REPEATABILITY_SCHEMA) {
+    throw new Error("annotated tag rehearsal receipt schema is invalid.");
+  }
+  const buildId = requireNonEmptyString(build_id, "annotated tag build_id");
+  for (const [value, label] of [
+    [sealed_bundle_digest, "sealed_bundle_digest"],
+    [repeatability_receipt_digest, "repeatability_receipt_digest"],
+  ]) {
+    if (!SHA256_PATTERN.test(value ?? "")) throw new Error(`annotated tag ${label} is invalid.`);
+  }
+  const validUntil = requireNonEmptyString(
+    rehearsal_receipt_valid_until,
+    "annotated tag rehearsal_receipt_valid_until",
+  );
+  const validUntilMs = Date.parse(validUntil);
+  if (!Number.isFinite(validUntilMs) || new Date(validUntilMs).toISOString() !== validUntil) {
+    throw new Error("annotated tag rehearsal_receipt_valid_until must be exact UTC millisecond RFC3339.");
+  }
+  return [
+    `Approved production release ${validateProductionReleaseTag(releaseTag, "releaseTag")}`,
+    `build_id ${buildId}`,
+    `rehearsal_receipt_schema ${REPEATABILITY_SCHEMA}`,
+    `sealed_bundle_digest ${sealed_bundle_digest}`,
+    `repeatability_receipt_digest ${repeatability_receipt_digest}`,
+    `rehearsal_receipt_valid_until ${validUntil}`,
+  ].join("\n");
 }
 
 export function normalizeExpectedReleaseContexts(

@@ -8,7 +8,7 @@
     "candidate_identity_digest", "release_sha", "release_tree", "build_id",
     "sealed_bundle_digest", "bundle_manifest_digest", "run_id", "issued_at",
     "completed_at", "isolation", "migration", "fixtures", "runtime",
-    "canaries", "network", "cleanup", "worker_rehearsal_rpc_authority", "production_guard", "threat_controls",
+    "canaries", "network", "cleanup", "worker_rehearsal_rpc_authority", "production_guard", "threat_controls", "rehearsal_runner",
     "evidence_digest"
   ],
   "properties": {
@@ -22,15 +22,15 @@
     "build_id": { "type": "string", "minLength": 1 },
     "sealed_bundle_digest": { "$ref": "#/$defs/digest" },
     "bundle_manifest_digest": { "$ref": "#/$defs/digest" },
-    "run_id": { "type": "string", "format": "uuid" },
+    "run_id": { "type": "string", "format": "uuid", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
     "issued_at": { "type": "string", "format": "date-time" },
     "completed_at": { "type": "string", "format": "date-time" },
     "isolation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["docker_project_id", "container_names", "network_names", "volume_names", "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "resource_identity_digest"],
+      "required": ["docker_project_id", "container_names", "network_names", "volume_names", "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "collision_preflight_digest", "network_ids", "container_ids", "container_roles", "volume_ids", "resource_identity_digest"],
       "properties": {
-        "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-" },
+        "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
         "container_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "network_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "volume_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
@@ -39,8 +39,8 @@
           "additionalProperties": false,
           "required": ["name", "user", "identity_digest"],
           "properties": {
-            "name": { "type": "string", "pattern": "^hc_r2_" },
-            "user": { "type": "string", "pattern": "^hc_r2_user_" },
+            "name": { "type": "string", "pattern": "^hc_r2_[0-9a-f]{16}$" },
+            "user": { "type": "string", "pattern": "^hc_r2_user_[0-9a-f]{16}$" },
             "identity_digest": { "$ref": "#/$defs/digest" }
           }
         },
@@ -57,6 +57,11 @@
         },
         "root_identity_digest": { "$ref": "#/$defs/digest" },
         "execution_root_identity_digest": { "$ref": "#/$defs/digest" },
+        "collision_preflight_digest": { "$ref": "#/$defs/digest" },
+        "network_ids": { "$ref": "#/$defs/orderedIds" },
+        "container_ids": { "$ref": "#/$defs/orderedIds" },
+        "container_roles": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "$ref": "#/$defs/containerRole" } },
+        "volume_ids": { "$ref": "#/$defs/orderedIds" },
         "resource_identity_digest": { "$ref": "#/$defs/digest" }
       }
     },
@@ -195,22 +200,52 @@
         "cleanup_ownership": { "const": "pass" }
       }
     },
+    "rehearsal_runner": { "$ref": "#/$defs/toolIdentity" },
     "evidence_digest": { "$ref": "#/$defs/digest" }
   },
   "$defs": {
     "canary": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["canary_id", "exit_code", "normalized_result_digest"],
+        "required": ["canary_id", "started_at", "completed_at", "exit_code", "normalized_result_digest"],
         "properties": {
           "canary_id": { "type": "string", "minLength": 1 },
+          "started_at": { "type": "string", "format": "date-time" },
+          "completed_at": { "type": "string", "format": "date-time" },
           "exit_code": { "const": 0 },
           "normalized_result_digest": { "$ref": "#/$defs/digest" }
         }
       },
     "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "port": { "type": "integer", "minimum": 20000, "maximum": 60999 },
+    "orderedIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "containerRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["container_id", "role", "component", "service"],
+      "properties": {
+        "container_id": { "type": "string", "minLength": 1 },
+        "role": { "enum": ["runtime", "auxiliary"] },
+        "component": { "enum": ["app", "full_local", "worker", "egress_sentinel"] },
+        "service": { "type": ["string", "null"], "enum": [null, "api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"] }
+      }
+    },
+    "toolIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "realpath", "device", "inode", "mode", "ctime", "size", "sha256"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "realpath": { "type": "string", "pattern": "^/" },
+        "device": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+        "inode": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+        "mode": { "enum": [256, 292, 320, 365, 384, 420, 448, 493] },
+        "ctime": { "type": "string", "format": "date-time" },
+        "size": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+        "sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "port": { "type": "integer", "minimum": 20000, "maximum": 60999, "not": { "enum": [54321, 54322, 54323, 54324] } },
     "productionMeasurement": {
       "type": "object",
       "additionalProperties": false,
@@ -234,13 +269,26 @@
     },
     "independentObserver": {
       "type": "object",
-      "additionalProperties": true,
-      "required": ["schema", "source_identity_digest", "started_at", "completed_at", "pre_snapshot_digest", "post_snapshot_digest", "process_binding_digest", "docker_daemon_identity_digest", "observation_digest", "available", "truncated", "registered_subjects"],
+      "additionalProperties": false,
+      "required": ["schema", "source_identity_digest", "started_at", "completed_at", "pre_snapshot_digest", "post_snapshot_digest", "process_binding_digest", "docker_daemon_identity_digest", "observation_digest", "available", "truncated", "production_db_connection_count", "production_db_write_count", "production_credential_access_count", "production_socket_access_count", "provider_remote_access_count", "production_mutation_count", "unrelated_noise_count", "registered_subjects"],
       "properties": {
         "schema": { "const": "homecook.r2-production-observer.v1" },
         "source_identity_digest": { "$ref": "#/$defs/digest" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "pre_snapshot_digest": { "$ref": "#/$defs/digest" },
+        "post_snapshot_digest": { "$ref": "#/$defs/digest" },
+        "process_binding_digest": { "$ref": "#/$defs/digest" },
+        "docker_daemon_identity_digest": { "$ref": "#/$defs/digest" },
         "observation_digest": { "$ref": "#/$defs/digest" },
         "available": { "const": true }, "truncated": { "const": false },
+        "production_db_connection_count": { "const": 0 },
+        "production_db_write_count": { "const": 0 },
+        "production_credential_access_count": { "const": 0 },
+        "production_socket_access_count": { "const": 0 },
+        "provider_remote_access_count": { "const": 0 },
+        "production_mutation_count": { "const": 0 },
+        "unrelated_noise_count": { "type": "integer", "minimum": 0 },
         "registered_subjects": {
           "type": "array", "minItems": 1, "uniqueItems": true,
           "items": {
@@ -250,7 +298,7 @@
               "container_id": { "type": "string", "minLength": 1 },
               "host_pid": { "type": "integer", "minimum": 1 },
               "host_pgid": { "type": "integer", "minimum": 1 },
-              "component": { "type": "string", "minLength": 1 },
+              "component": { "enum": ["app", "full_local", "worker"] },
               "started_at": { "type": "string", "format": "date-time" },
               "image_digest": { "$ref": "#/$defs/digest" },
               "config_digest": { "$ref": "#/$defs/digest" },

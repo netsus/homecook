@@ -2,17 +2,20 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
+  renameSync,
   realpathSync,
   readFileSync,
   readdirSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -28,6 +31,11 @@ import * as promoteAdapters from "../scripts/lib/local-mac-production-promote-ad
 import { renderLocalMacProductionPlist } from "../scripts/lib/local-mac-production.mjs";
 import { renderFullLocalLaunchAgentPlist } from "../scripts/lib/full-local-launch-agent.mjs";
 import {
+  FULL_LOCAL_SECRET_NAMES,
+  generateFullLocalSecretBundle,
+  materializeSecretFilesCreateOnly,
+} from "../scripts/lib/full-local-production-runtime.mjs";
+import {
   buildYoutubeExtractionAppDescriptor,
   buildYoutubeExtractionCurrentPolicy,
   materializeYoutubeExtractionWorkerArtifact,
@@ -40,7 +48,8 @@ import {
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
-  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+  buildProductionReleaseAnnotatedTagMessage,
+  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import { acquireLocalMacProductionPromotionLock } from "../scripts/lib/local-mac-production-release.mjs";
 import {
@@ -74,6 +83,8 @@ const FIRST_CANONICAL_ADOPTION_WORKER_ROOT =
 const FIRST_CANONICAL_ADOPTION_WORKER_MANIFEST =
   "/Users/tester/.homecook/youtube-extraction-releases/3bdd814da8f9849805185d1b3be5a6ee703133a0-admin-acl-v1/artifact.json";
 const temporaryDirectories: string[] = [];
+const FROZEN_RELEASE_MANIFEST_BYTES = Buffer.from('{"fixture":true}\n');
+const FROZEN_RELEASE_MANIFEST_DIGEST = createHash("sha256").update(FROZEN_RELEASE_MANIFEST_BYTES).digest("hex");
 
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
@@ -182,11 +193,11 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
       calls.push("install-worker");
       return { changed: true, service_target: "gui/501/worker" };
     }),
-    readAppRuntimeIdentity: vi.fn(async () => {
+    readAppRuntimeIdentity: vi.fn(async ({ context }) => {
       calls.push("ready-app");
-      return { ...RELEASE_IDENTITY, ready: true };
+      return { ...RELEASE_IDENTITY, ready: true, sealed_bundle_digest: context.executionSnapshot.sealedBundleDigest, repeatability_receipt_digest: context.executionSnapshot.repeatabilityReceiptDigest };
     }),
-    readFullLocalWorkloadIdentity: vi.fn(async () => {
+    readFullLocalWorkloadIdentity: vi.fn(async ({ context }) => {
       calls.push("ready-full-local-workload");
       return {
         ...RELEASE_IDENTITY,
@@ -195,19 +206,84 @@ function createDependencies(overrides: Record<string, unknown> = {}) {
         healthy: true,
         authorization_contract_status: "PASS",
         product_catalog_status: "PASS",
+        sealed_bundle_digest: context.executionSnapshot.sealedBundleDigest,
+        repeatability_receipt_digest: context.executionSnapshot.repeatabilityReceiptDigest,
       };
     }),
-    readWorkerRuntimeIdentity: vi.fn(async () => {
+    readWorkerRuntimeIdentity: vi.fn(async ({ context }) => {
       calls.push("ready-worker");
-      return { ...RELEASE_IDENTITY, ready: true };
+      return { ...RELEASE_IDENTITY, ready: true, sealed_bundle_digest: context.executionSnapshot.sealedBundleDigest, repeatability_receipt_digest: context.executionSnapshot.repeatabilityReceiptDigest };
     }),
     ...overrides,
   };
   return { calls, dependencies };
 }
 
+function createFrozenRuntimeInputsFixture(fullLocalConfigBytes: Buffer | string | null = null, approvedHomeDir: string | null = null, releaseManifestBytes = FROZEN_RELEASE_MANIFEST_BYTES) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "homecook-adapter-frozen-inputs-")));
+  temporaryDirectories.push(root);
+  const scratchRoot = join(root, "scratch");
+  const secretRoot = join(root, "secrets");
+  mkdirSync(scratchRoot, { mode: 0o700 });
+  mkdirSync(secretRoot, { mode: 0o700 });
+  const fullLocalConfigPath = approvedHomeDir
+    ? join(approvedHomeDir, ".homecook/config/full-local-production.env")
+    : join(root, "full-local.env");
+  const fullLocalSecretRoot = join(root, "full-local-secrets");
+  const workerConfigPath = join(secretRoot, "worker.env");
+  const workerCredentialPath = join(secretRoot, "credential.json");
+  const tokenPath = join(secretRoot, "worker.jwt");
+  const attestationRoot = join(root, "attestation");
+  const attestationBundlePath = join(attestationRoot, "bundle.jsonl");
+  const attestationSubjectPath = join(attestationRoot, "subject.json");
+  const attestationTrustedRootPath = join(attestationRoot, "trusted-root.jsonl");
+  mkdirSync(attestationRoot, { mode: 0o700 });
+  writeFileSync(attestationBundlePath, "bundle-authority\n", { mode: 0o600 });
+  writeFileSync(attestationSubjectPath, "subject-authority\n", { mode: 0o600 });
+  writeFileSync(attestationTrustedRootPath, "trusted-root-authority\n", { mode: 0o600 });
+  const fullLocalSecrets = generateFullLocalSecretBundle();
+  materializeSecretFilesCreateOnly({ names: [...FULL_LOCAL_SECRET_NAMES], readSecret: (name: string) => fullLocalSecrets[name as keyof typeof fullLocalSecrets], targetDirectory: fullLocalSecretRoot });
+  const defaultFullLocalConfig = readFileSync("infra/full-local-supabase/.env.production.example", "utf8")
+    .replaceAll("/Users/REPLACE_ME", root)
+    .replace(/^FULL_LOCAL_SECRET_DIR=.*$/mu, `FULL_LOCAL_SECRET_DIR=${fullLocalSecretRoot}`);
+  mkdirSync(dirname(fullLocalConfigPath), { recursive: true, mode: 0o700 });
+  writeFileSync(fullLocalConfigPath, fullLocalConfigBytes ?? defaultFullLocalConfig, { mode: 0o600 });
+  writeFileSync(workerConfigPath, `TOKEN_FILE=${tokenPath}\n`, { mode: 0o600 });
+  writeFileSync(workerCredentialPath, JSON.stringify({ token_file: tokenPath }), { mode: 0o600 });
+  writeFileSync(tokenPath, "token\n", { mode: 0o600 });
+  const digest = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  return promoteAdapters.freezeLocalMacProductionRuntimeInputs({
+    options: {
+      bundlePath: attestationBundlePath,
+      fullLocalConfigPath,
+      homeDir: approvedHomeDir ?? root,
+      rootDir: root,
+      subjectManifestPath: attestationSubjectPath,
+      trustedRootPath: attestationTrustedRootPath,
+    },
+    preflight: {
+      full_local_config_sha256: digest(fullLocalConfigPath),
+      worker: {
+        configPath: workerConfigPath,
+        credentialPath: workerCredentialPath,
+        secretRoot,
+        configSha256: digest(workerConfigPath),
+        credentialSha256: digest(workerCredentialPath),
+        resumeAuthority: {
+          bundlePath: attestationBundlePath,
+          subjectManifestPath: attestationSubjectPath,
+          trustedRootPath: attestationTrustedRootPath,
+        },
+      },
+    },
+    scratchRoot,
+    releaseManifestBytes,
+    releaseManifestDigest: createHash("sha256").update(releaseManifestBytes).digest("hex"),
+  });
+}
+
 function createContext(overrides: Record<string, unknown> = {}) {
-  const executionSnapshot = { schema: "fixture-snapshot", appRoot: "/sealed/app" };
+  const executionSnapshot = { schema: "fixture-snapshot", appRoot: "/sealed/app", sealedBundleDigest: "f".repeat(64), repeatabilityReceiptDigest: "1".repeat(64) };
   return {
     currentDescriptor: {
       ...CURRENT_IDENTITY,
@@ -227,6 +303,7 @@ function createContext(overrides: Record<string, unknown> = {}) {
     homeDir: "/Users/tester",
     manifest: { ...RELEASE_IDENTITY },
     mutationAuthority: { required: true },
+    frozenRuntimeInputs: createFrozenRuntimeInputsFixture(),
     executionSnapshot,
     verifyExecutionSnapshot: vi.fn(() => executionSnapshot),
     releaseDir: "/Users/tester/.homecook/releases/prod-20260825.1",
@@ -264,8 +341,26 @@ function createDefaultWorkerPreflightFixture() {
   const providerSecretPath = join(secretRoot, "provider.env");
   const configPath = join(secretRoot, "worker.env");
   const fullLocalConfigPath = join(homeDir, ".homecook/config/full-local-production.env");
+  const fullLocalSecretRoot = join(homeDir, ".homecook/secrets/full-local-supabase");
+  const attestationRoot = join(root, "authority/attestation");
+  const bundlePath = join(attestationRoot, "attestation-bundle.jsonl");
+  const subjectManifestPath = join(attestationRoot, "attestation-subject.json");
+  const trustedRootPath = join(attestationRoot, "attestation-trusted-root.jsonl");
   mkdirSync(dirname(fullLocalConfigPath), { recursive: true, mode: 0o700 });
-  writeFileSync(fullLocalConfigPath, "FULL_LOCAL_CONFIG=fixture\n", { mode: 0o600 });
+  mkdirSync(attestationRoot, { recursive: true, mode: 0o700 });
+  const fullLocalSecrets = generateFullLocalSecretBundle();
+  materializeSecretFilesCreateOnly({
+    names: [...FULL_LOCAL_SECRET_NAMES],
+    readSecret: (name: string) => fullLocalSecrets[name as keyof typeof fullLocalSecrets],
+    targetDirectory: fullLocalSecretRoot,
+  });
+  const fullLocalConfig = readFileSync("infra/full-local-supabase/.env.production.example", "utf8")
+    .replaceAll("/Users/REPLACE_ME", homeDir)
+    .replace(/^FULL_LOCAL_SECRET_DIR=.*$/mu, `FULL_LOCAL_SECRET_DIR=${fullLocalSecretRoot}`);
+  writeFileSync(fullLocalConfigPath, fullLocalConfig, { mode: 0o600 });
+  writeFileSync(bundlePath, "bundle-authority\n", { mode: 0o600 });
+  writeFileSync(subjectManifestPath, "subject-authority\n", { mode: 0o600 });
+  writeFileSync(trustedRootPath, "trusted-root-authority\n", { mode: 0o600 });
   writeFileSync(tokenPath, "worker-token\n", { mode: 0o600 });
   writeFileSync(providerSecretPath, "YOUTUBE_API_KEY=test-key\n", { mode: 0o600 });
   writeFileSync(
@@ -303,8 +398,12 @@ function createDefaultWorkerPreflightFixture() {
   return {
     context: createContext({ homeDir, releaseDir }),
     options: createOptions({
+      bundlePath,
       fullLocalConfigPath,
       homeDir,
+      rootDir: root,
+      subjectManifestPath,
+      trustedRootPath,
       workerAppDescriptorPath: appDescriptorPath,
       workerConfigPath: configPath,
       workerCredentialPath: credentialPath,
@@ -317,6 +416,8 @@ function createDefaultWorkerPreflightFixture() {
       workerSecretRoot: secretRoot,
     }),
     policyPath,
+    fullLocalSecretRoot,
+    rootDir: root,
   };
 }
 
@@ -414,6 +515,201 @@ describe("local Mac production promote adapters", () => {
     expect(preflight.worker.policyPath).toBe(realpathSync(fixture.policyPath));
     expect(readCurrentRuntimeBundle).toHaveBeenCalledOnce();
   });
+
+  it("freezes every external runtime config and secret input before installation", async () => {
+    const fixture = createDefaultWorkerPreflightFixture();
+    const adapters = createLocalMacProductionPromoteAdapters(fixture.options, {
+      validateMutationTargets: vi.fn(),
+      readCurrentRuntimeBundle: vi.fn(async () => ({
+        stable_key: "current-runtime-stable",
+        app: { ...CURRENT_IDENTITY, ready: true },
+        full_local: { ...CURRENT_IDENTITY, ready: true },
+        youtube_worker: { ...CURRENT_IDENTITY, ready: true },
+      })),
+      i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })),
+    });
+    const preflight = await adapters.preflightBundle(fixture.context);
+    const scratchRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-frozen-runtime-inputs-")));
+    temporaryDirectories.push(scratchRoot);
+
+    expect(adapters).toHaveProperty("freezeRuntimeInputs", expect.any(Function));
+    expect(adapters).toHaveProperty("verifyFrozenRuntimeInputs", expect.any(Function));
+    const frozen = await adapters.freezeRuntimeInputs({ scratchRoot, preflight, releaseManifestBytes: FROZEN_RELEASE_MANIFEST_BYTES, releaseManifestDigest: FROZEN_RELEASE_MANIFEST_DIGEST });
+    expect(adapters.verifyFrozenRuntimeInputs(frozen)).toBe(frozen);
+    expect(Object.values(frozen.paths).every((path) => realpathSync(String(path)).startsWith(`${scratchRoot}/`))).toBe(true);
+    expect(frozen.paths.fullLocalSecretRoot).toBeTruthy();
+    const frozenFullLocalConfig = readFileSync(frozen.paths.fullLocalConfigPath, "utf8");
+    expect(frozenFullLocalConfig).toContain(`FULL_LOCAL_SECRET_DIR=${frozen.paths.fullLocalSecretRoot}`);
+    expect(frozenFullLocalConfig).not.toContain(fixture.fullLocalSecretRoot);
+    expect(readdirSync(frozen.paths.fullLocalSecretRoot).sort()).toEqual([...FULL_LOCAL_SECRET_NAMES].sort());
+    const attestationSource = frozen.source_records.find((entry: { label: string }) =>
+      entry.label === "attestation_bundle");
+    expect(attestationSource).toBeTruthy();
+    if (!attestationSource) throw new Error("fixture attestation source missing");
+    const sourceDirectoryPaths = frozen.source_directories.map((entry: { path: string }) =>
+      entry.path);
+    expect(sourceDirectoryPaths).toContain(fixture.rootDir);
+    expect(sourceDirectoryPaths).toContain(dirname(dirname(attestationSource.path)));
+
+    const fullLocalSecretSource = join(fixture.fullLocalSecretRoot, FULL_LOCAL_SECRET_NAMES[0]);
+    const originalFullLocalSecret = readFileSync(fullLocalSecretSource);
+    unlinkSync(fullLocalSecretSource);
+    expect(() => adapters.verifyFrozenRuntimeInputs(frozen)).toThrow(/ENOENT|source|identity|changed|unavailable/iu);
+    writeFileSync(fullLocalSecretSource, originalFullLocalSecret, { mode: 0o600 });
+    expect(() => adapters.verifyFrozenRuntimeInputs(frozen)).toThrow(/source|identity|changed/iu);
+
+    const originalConfig = readFileSync(String(fixture.options.workerConfigPath));
+    const originalCredential = readFileSync(String(fixture.options.workerCredentialPath));
+    writeFileSync(String(fixture.options.workerConfigPath), "HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=/private/substituted.env\n", { mode: 0o600 });
+    writeFileSync(String(fixture.options.workerCredentialPath), JSON.stringify({ substituted: true }), { mode: 0o600 });
+    expect(() => adapters.verifyFrozenRuntimeInputs(frozen)).toThrow(/source|identity|changed/iu);
+    writeFileSync(String(fixture.options.workerConfigPath), originalConfig, { mode: 0o600 });
+    writeFileSync(String(fixture.options.workerCredentialPath), originalCredential, { mode: 0o600 });
+    expect(() => adapters.verifyFrozenRuntimeInputs(frozen)).toThrow(/source|identity|changed/iu);
+
+    const refreezeRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-refrozen-runtime-inputs-")));
+    temporaryDirectories.push(refreezeRoot);
+    const refrozen = await adapters.freezeRuntimeInputs({ scratchRoot: refreezeRoot, preflight, releaseManifestBytes: FROZEN_RELEASE_MANIFEST_BYTES, releaseManifestDigest: FROZEN_RELEASE_MANIFEST_DIGEST });
+
+    const created = createDependencies();
+    const installAdapters = createLocalMacProductionPromoteAdapters(fixture.options, created.dependencies);
+    await installAdapters.installBundle({
+      ...createContext({ frozenRuntimeInputs: refrozen }),
+      preflight,
+    });
+    expect(created.dependencies.installFullLocal).toHaveBeenCalledWith(expect.objectContaining({
+      configPath: refrozen.paths.fullLocalConfigPath,
+    }));
+    expect(created.dependencies.installWorker).toHaveBeenCalledWith(expect.objectContaining({
+      configPath: refrozen.paths.workerConfigPath,
+      credentialPath: refrozen.paths.workerCredentialPath,
+      secretRoot: refrozen.paths.workerSecretRoot,
+    }));
+    expect(installAdapters.cleanupFrozenRuntimeInputs(refrozen)).toMatchObject({ cleaned: true });
+    expect(existsSync(refrozen.root)).toBe(false);
+    expect(adapters.cleanupFrozenRuntimeInputs(frozen)).toMatchObject({ cleaned: true });
+  });
+
+  it("freezes attestation inputs by exact FD identity and rejects same-byte inode replacement", () => {
+    const frozen = createFrozenRuntimeInputsFixture();
+    for (const field of [
+      "attestationBundlePath",
+      "attestationSubjectPath",
+      "attestationTrustedRootPath",
+    ] as const) {
+      expect(frozen.paths[field]).toBeTruthy();
+      expect(realpathSync(frozen.paths[field])).toMatch(/\/runtime-inputs\//u);
+    }
+    expect(frozen.source_records.filter((record: { label: string }) =>
+      record.label.startsWith("attestation_"))).toHaveLength(3);
+
+    const source = frozen.source_records.find((record: { label: string }) =>
+      record.label === "attestation_bundle");
+    expect(source).toBeTruthy();
+    const replacement = `${source.path}.replacement`;
+    writeFileSync(replacement, readFileSync(source.path), { mode: 0o600 });
+    renameSync(replacement, source.path);
+    expect(() => promoteAdapters.verifyLocalMacProductionFrozenRuntimeInputs(frozen))
+      .toThrow(/attestation|source|identity|inode|changed/iu);
+  });
+
+  it("binds one deterministic complete ancestor chain for every frozen source", () => {
+    const frozen = createFrozenRuntimeInputsFixture();
+    const directories = frozen.source_directories as ReadonlyArray<{
+      identity: { realpath_sha256?: string };
+      path: string;
+    }>;
+    const directoryPaths = directories.map((entry) => entry.path);
+    expect(directoryPaths).toEqual([...new Set(directoryPaths)].sort());
+    for (const source of frozen.source_records) {
+      expect(directoryPaths).toContain(dirname(source.path));
+    }
+    const attestationSource = frozen.source_records.find((entry: { label: string }) =>
+      entry.label === "attestation_bundle");
+    expect(attestationSource).toBeTruthy();
+    if (!attestationSource) throw new Error("fixture attestation source missing");
+    expect(directoryPaths).toContain(dirname(dirname(attestationSource.path)));
+    expect(directories.every((entry) =>
+      /^[0-9a-f]{64}$/u.test(entry.identity.realpath_sha256 ?? ""))).toBe(true);
+  });
+
+  it.each([
+    ["attestation", "attestation_bundle"],
+    ["worker secret tree", "worker_secret"],
+    ["full-local config", "full_local_config"],
+  ])("rejects and sanitizes a restored %s parent substitution", (_label, sourceLabel) => {
+    const frozen = createFrozenRuntimeInputsFixture();
+    const source = frozen.source_records.find((entry: { label: string }) =>
+      entry.label === sourceLabel);
+    expect(source).toBeTruthy();
+    if (!source) throw new Error("fixture source record missing");
+    const parent = dirname(source.path);
+    const backup = `${parent}.original`;
+    const replacement = `${parent}.replacement`;
+    renameSync(parent, backup);
+    mkdirSync(parent, { mode: 0o700 });
+    renameSync(parent, replacement);
+    renameSync(backup, parent);
+    rmSync(replacement, { recursive: true, force: true });
+
+    let message = "";
+    try {
+      promoteAdapters.verifyLocalMacProductionFrozenRuntimeInputs(frozen);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      "runtime_input_source_changed: frozen runtime input source authority changed.",
+    );
+    for (const prohibited of [
+      parent,
+      source.path,
+      basename(source.path),
+      "ENOENT",
+      "EACCES",
+      "lstat",
+      "open",
+      "realpath",
+    ]) expect(message).not.toContain(prohibited);
+  });
+
+  it.each(["missing", "extra", "mode", "symlink", "hardlink"])(
+    "rejects a %s full-local secret source before frozen config materialization",
+    async (attack) => {
+      const fixture = createDefaultWorkerPreflightFixture();
+      const target = join(fixture.fullLocalSecretRoot, FULL_LOCAL_SECRET_NAMES[0]);
+      if (attack === "missing") unlinkSync(target);
+      if (attack === "extra") writeFileSync(join(fixture.fullLocalSecretRoot, "unexpected"), "secret\n", { mode: 0o600 });
+      if (attack === "mode") chmodSync(target, 0o644);
+      if (attack === "symlink") { unlinkSync(target); symlinkSync(join(fixture.fullLocalSecretRoot, FULL_LOCAL_SECRET_NAMES[1]), target); }
+      if (attack === "hardlink") { unlinkSync(target); linkSync(join(fixture.fullLocalSecretRoot, FULL_LOCAL_SECRET_NAMES[1]), target); }
+      const adapters = createLocalMacProductionPromoteAdapters(fixture.options, {
+        validateMutationTargets: vi.fn(),
+        readCurrentRuntimeBundle: vi.fn(async () => ({
+          stable_key: "current-runtime-stable",
+          app: { ...CURRENT_IDENTITY, ready: true },
+          full_local: { ...CURRENT_IDENTITY, ready: true },
+          youtube_worker: { ...CURRENT_IDENTITY, ready: true },
+        })),
+        i031PreflightVerifier: vi.fn(async () => ({ codexCliVersion: "0.144.0-alpha.4" })),
+      });
+      const preflight = await adapters.preflightBundle(fixture.context);
+      const scratchRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-invalid-full-local-secret-")));
+      temporaryDirectories.push(scratchRoot);
+      let message = "";
+      try {
+        await adapters.freezeRuntimeInputs({ scratchRoot, preflight, releaseManifestBytes: FROZEN_RELEASE_MANIFEST_BYTES, releaseManifestDigest: FROZEN_RELEASE_MANIFEST_DIGEST });
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message).toMatch(/^runtime_input_freeze_failed:/u);
+      expect(message).not.toContain(fixture.fullLocalSecretRoot);
+      expect(message).not.toContain(target);
+      expect(message).not.toContain(FULL_LOCAL_SECRET_NAMES[0]);
+      expect(message).not.toContain("ENOENT");
+      expect(readdirSync(scratchRoot)).toEqual([]);
+    },
+  );
 
   it("installs the worker from its separately attested artifact root", async () => {
     const { calls, dependencies } = createDependencies();
@@ -837,6 +1133,13 @@ describe("local Mac production promote adapters", () => {
       releaseTagObjectSha: "e".repeat(40),
       releaseTree: "b".repeat(40),
       repository: "netsus/homecook",
+      rehearsalAuthority: {
+        rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+        build_id: "build-20260825-01",
+        sealed_bundle_digest: "f".repeat(64),
+        repeatability_receipt_digest: "1".repeat(64),
+        rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
+      },
       subjectOutputPath: subjectPath,
     });
     const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
@@ -846,19 +1149,28 @@ describe("local Mac production promote adapters", () => {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), { mode: 0o600 });
     writeFileSync(bundlePath, "{}\n", { mode: 0o600 });
     const ghPayload = [{ verificationResult: { statement: {
-      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE,
+      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
       predicate: artifacts.predicate,
       subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
     } } }];
     const markerPath = join(fixtureRoot, "docker-invoked");
     const fakeGhPath = join(binDir, "gh");
     writeFileSync(fakeGhPath, `#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(`${JSON.stringify(ghPayload)}\n`)});\n`, { mode: 0o700 });
+    const releaseTagMessage = buildProductionReleaseAnnotatedTagMessage({
+      releaseTag: manifest.release_tag,
+      build_id: manifest.build_id,
+      rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+      sealed_bundle_digest: manifest.sealed_bundle_digest,
+      repeatability_receipt_digest: manifest.repeatability_receipt_digest,
+      rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
+    });
     const fakeGitPath = join(binDir, "git");
     writeFileSync(fakeGitPath, `#!/usr/bin/env node
 const arg = process.argv.slice(2).join(" ");
 if (arg.includes("origin/master") || arg.includes("^{commit}")) process.stdout.write("${"a".repeat(40)}\\n");
 else if (arg.includes("^{tree}")) process.stdout.write("${"b".repeat(40)}\\n");
 else if (arg.includes("^{tag}")) process.stdout.write("${"e".repeat(40)}\\n");
+else if (arg.includes("cat-file tag")) process.stdout.write(${JSON.stringify(`object ${"a".repeat(40)}\ntype commit\ntag prod-20260825.1\ntagger test <test@example.com> 0 +0000\n\n${releaseTagMessage}\n`)});
 else process.exit(1);
 `, { mode: 0o700 });
     const fakeSecurityPath = join(binDir, "security");
@@ -886,6 +1198,16 @@ process.exit(42);
     ).replaceAll("/Users/REPLACE_ME", homeDir);
     writeFileSync(configPath, config, { mode: 0o600 });
     chmodSync(configPath, 0o600);
+    const fullLocalSecretRoot = join(homeDir, ".homecook/secrets/full-local-supabase");
+    materializeSecretFilesCreateOnly({
+      names: [...FULL_LOCAL_SECRET_NAMES],
+      readSecret: (name: string) => {
+        if (name === "jwt_keys") return JSON.stringify({ keys: [{ d: "private-key-material", kid: "local-es256" }] });
+        if (name === "jwt_jwks") return JSON.stringify({ keys: [{ kid: "local-es256", kty: "EC" }] });
+        return `${name}__000-unique-secret-value-at-least-32-bytes`;
+      },
+      targetDirectory: fullLocalSecretRoot,
+    });
     writeFileSync(join(candidateRoot, "prepare.json"), JSON.stringify({
       schema: "homecook.local-mac-production-prepare.v1",
       status: "prepared",
@@ -923,6 +1245,7 @@ process.exit(42);
     });
     const adapters = createLocalMacProductionPromoteAdapters(options, dependencies);
     const context = createContext({
+      frozenRuntimeInputs: createFrozenRuntimeInputsFixture(readFileSync(configPath), homeDir, readFileSync(manifestPath)),
       homeDir,
       lockToken,
       manifest: {

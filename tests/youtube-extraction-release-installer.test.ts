@@ -520,6 +520,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       "lib/server/youtube-i031-runtime/bundle/manifest.json",
       "lib/server/youtube-i031-runtime/bundle/worker.mjs",
       "scripts/lib/local-mac-production-release.mjs",
+      "scripts/lib/local-mac-production-authority-error.mjs",
       "scripts/lib/production-release-approval-policy.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",
@@ -666,6 +667,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     const manifestPath = inputs.manifestPath;
     const legacyMissingPaths = [
       "scripts/lib/local-mac-production-release.mjs",
+      "scripts/lib/local-mac-production-authority-error.mjs",
       "scripts/lib/production-release-approval-policy.mjs",
     ];
     const original = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -1507,6 +1509,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "scripts/youtube-extraction-worker-runner.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
       "scripts/lib/local-mac-production-release.mjs",
+      "scripts/lib/local-mac-production-authority-error.mjs",
       "scripts/lib/production-release-approval-policy.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",
       "scripts/lib/youtube-extraction-worker-runtime.mjs",

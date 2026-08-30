@@ -8,6 +8,8 @@ x-restore-attempt-labels: &restore-attempt-labels
   homecook.release.tree: ${FULL_LOCAL_RELEASE_TREE:-unmanaged}
   homecook.release.build-id: ${FULL_LOCAL_RELEASE_BUILD_ID:-unmanaged}
   homecook.release.promotion-id: ${FULL_LOCAL_RELEASE_PROMOTION_ID:-unmanaged}
+  homecook.release.sealed-bundle-digest: ${FULL_LOCAL_SEALED_BUNDLE_DIGEST:-unmanaged}
+  homecook.release.repeatability-receipt-digest: ${FULL_LOCAL_REPEATABILITY_RECEIPT_DIGEST:-unmanaged}
 
 services:
   postgres:

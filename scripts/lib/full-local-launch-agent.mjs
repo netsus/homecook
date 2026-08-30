@@ -9,7 +9,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import {
   assertLocalMacProductionMutationAuthority,
@@ -288,6 +288,7 @@ export function getFullLocalResumeConfigPath(homeDir = process.env.HOME ?? "") {
  */
 export function renderFullLocalLaunchAgentPlist({
   configPath,
+  frozenConfigRoot = null,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   currentDescriptorPath,
@@ -316,7 +317,11 @@ export function renderFullLocalLaunchAgentPlist({
     runtimeCommand === "resume-current"
     && normalizedConfigPath !== getFullLocalResumeConfigPath(normalizedHomeDir)
   ) {
-    throw new Error("resume-current requires the fixed canonical full-local config path.");
+    const normalizedFrozenRoot = frozenConfigRoot ? requireAbsolutePath(frozenConfigRoot, "frozenConfigRoot") : null;
+    const frozenRelative = normalizedFrozenRoot ? relative(normalizedFrozenRoot, normalizedConfigPath) : "..";
+    if (!normalizedFrozenRoot || frozenRelative === "" || frozenRelative.startsWith("..") || isAbsolute(frozenRelative)) {
+      throw new Error("resume-current requires the canonical config or a bound frozen config root.");
+    }
   }
   const sanitizedPath = buildSanitizedLaunchAgentPath(normalizedNodeBin);
   const paths = getFullLocalLaunchAgentPaths(normalizedHomeDir);
@@ -461,6 +466,7 @@ export function extractFullLocalConfigPathFromPlist(plist) {
 export function installFullLocalLaunchAgent({
   mutationAuthority,
   configPath,
+  frozenConfigRoot = null,
   getuid = process.getuid?.bind(process),
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
@@ -489,6 +495,7 @@ export function installFullLocalLaunchAgent({
   assertSafeExistingPlistTarget(paths.plistPath, uid);
   const plist = renderFullLocalLaunchAgentPlist({
     configPath: normalizedConfigPath,
+    frozenConfigRoot,
     homeDir,
     nodeBin: normalizedNodeBin,
     currentDescriptorPath,

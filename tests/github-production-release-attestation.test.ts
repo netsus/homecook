@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
@@ -24,6 +24,8 @@ import {
   createGitHubProductionReleaseAttestationVerifier,
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
+import * as productionAttestationAuthority from "../scripts/lib/github-production-release-attestation.mjs";
+import * as rehearsalAuthorityCli from "../scripts/verify-production-release-rehearsal-authority.mjs";
 import {
   assertTrustedExecutableSnapshotStable,
   resolveTrustedGhExecutable,
@@ -45,6 +47,13 @@ const EXPECTED_RELEASE_CONTEXTS = [
   "security-smoke",
 ];
 const RELEASE_TAG_OBJECT_SHA = "e".repeat(40);
+const REHEARSAL_AUTHORITY = {
+  rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+  build_id: "build-20260825-01",
+  sealed_bundle_digest: "f".repeat(64),
+  repeatability_receipt_digest: "1".repeat(64),
+  rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
+};
 
 function createTrustedCheckRuns(checkSuiteId = 200) {
   return EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
@@ -73,6 +82,61 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
+  it("keeps tag push and attestation at zero without a fresh completion safety margin", () => {
+    expect(typeof rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush).toBe("function");
+    const tagPush = vi.fn();
+    const attest = vi.fn();
+    expect(() => {
+      rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush({
+        validUntil: "2026-08-30T09:00:00.000Z",
+        now: new Date("2026-08-30T08:45:00.000Z"),
+        minimumRemainingSeconds: 900,
+      });
+      tagPush();
+      attest();
+    }).toThrow(/expiry|margin|valid_until|remaining/iu);
+    expect(tagPush).toHaveBeenCalledTimes(0);
+    expect(attest).toHaveBeenCalledTimes(0);
+    expect(() => rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush({
+      validUntil: "2026-08-30T09:00:00.000Z",
+      now: new Date("2026-08-30T08:44:59.999Z"),
+      minimumRemainingSeconds: 900,
+    })).not.toThrow();
+  });
+
+  it("builds v2 subject, predicate, and canonical tag message from one rehearsal authority", () => {
+    expect(typeof productionAttestationAuthority.buildProductionReleaseAnnotatedTagMessage).toBe("function");
+    const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns: createTrustedCheckRuns(),
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.1",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: REHEARSAL_AUTHORITY,
+    });
+
+    expect(artifacts.subject).toMatchObject({
+      schema: "homecook.github.production-release-manifest.v2",
+      ...REHEARSAL_AUTHORITY,
+    });
+    expect(artifacts.predicate).toMatchObject({
+      schema: "homecook.github.production-release-predicate.v2",
+      ...REHEARSAL_AUTHORITY,
+    });
+    expect(productionAttestationAuthority.buildProductionReleaseAnnotatedTagMessage({
+      releaseTag: "prod-20260826.1",
+      ...REHEARSAL_AUTHORITY,
+    })).toBe([
+      "Approved production release prod-20260826.1",
+      `build_id ${REHEARSAL_AUTHORITY.build_id}`,
+      `rehearsal_receipt_schema ${REHEARSAL_AUTHORITY.rehearsal_receipt_schema}`,
+      `sealed_bundle_digest ${REHEARSAL_AUTHORITY.sealed_bundle_digest}`,
+      `repeatability_receipt_digest ${REHEARSAL_AUTHORITY.repeatability_receipt_digest}`,
+      `rehearsal_receipt_valid_until ${REHEARSAL_AUTHORITY.rehearsal_receipt_valid_until}`,
+    ].join("\n"));
+  });
+
   it("resolves only an explicitly allowlisted absolute GitHub CLI and rejects escapes", () => {
     const root = createTempDirectory("trusted-gh-");
     const trustedBin = join(root, "trusted-bin");
@@ -414,7 +478,7 @@ describe("GitHub production release attestation verification", () => {
     });
 
     writeFileSync(subjectManifestPath, JSON.stringify({
-      schema: "homecook.github.production-release-manifest.v1",
+      schema: "homecook.github.production-release-manifest.v2",
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
       source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
       signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
@@ -424,6 +488,11 @@ describe("GitHub production release attestation verification", () => {
       release_tag_object_sha: manifest.release_tag_object_sha,
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
+      rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+      build_id: manifest.build_id,
+      sealed_bundle_digest: manifest.sealed_bundle_digest,
+      repeatability_receipt_digest: manifest.repeatability_receipt_digest,
+      rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
       expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
       required_check_summary: manifest.required_check_summary,
     }, null, 2));
@@ -433,6 +502,7 @@ describe("GitHub production release attestation verification", () => {
     const invocations: string[][] = [];
     const invokedCommands: string[] = [];
     let attestedPredicateTagObjectSha = manifest.release_tag_object_sha;
+    let attestedPredicateRepeatabilityDigest = manifest.repeatability_receipt_digest;
     const verifier = createGitHubProductionReleaseAttestationVerifier({
       bundlePath,
       ghExecutable: "/opt/homebrew/bin/gh",
@@ -449,9 +519,9 @@ describe("GitHub production release attestation verification", () => {
             verificationResult: {
               statement: {
                 predicateType:
-                  "https://github.com/netsus/homecook/attestations/production-release/v1",
+                  "https://github.com/netsus/homecook/attestations/production-release/v2",
                 predicate: {
-                  schema: "homecook.github.production-release-predicate.v1",
+                  schema: "homecook.github.production-release-predicate.v2",
                   repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
                   source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
                   signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
@@ -461,6 +531,11 @@ describe("GitHub production release attestation verification", () => {
                   release_tag_object_sha: attestedPredicateTagObjectSha,
                   release_sha: manifest.release_sha,
                   release_tree: manifest.release_tree,
+                  rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+                  build_id: manifest.build_id,
+                  sealed_bundle_digest: manifest.sealed_bundle_digest,
+                  repeatability_receipt_digest: attestedPredicateRepeatabilityDigest,
+                  rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
                   expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
                   required_check_summary: manifest.required_check_summary,
                   subject_manifest_sha256: "a".repeat(64),
@@ -515,7 +590,7 @@ describe("GitHub production release attestation verification", () => {
         "--signer-digest",
         manifest.release_sha,
         "--predicate-type",
-        "https://github.com/netsus/homecook/attestations/production-release/v1",
+        "https://github.com/netsus/homecook/attestations/production-release/v2",
         "--format",
         "json",
       ],
@@ -537,6 +612,32 @@ describe("GitHub production release attestation verification", () => {
     ).toThrow(/tag object|release_tag_object_sha/iu);
     writeFileSync(subjectManifestPath, JSON.stringify(originalSubject, null, 2));
 
+    writeFileSync(subjectManifestPath, JSON.stringify({
+      ...originalSubject,
+      unexpected_authority: "must-not-pass",
+    }, null, 2));
+    expect(() => verifier({
+      gitEvidence,
+      manifest,
+      manifestDigest: "d".repeat(64),
+      manifestPath,
+      rootDir,
+    })).toThrow(/unknown|closed|unexpected|field/iu);
+    writeFileSync(subjectManifestPath, JSON.stringify(originalSubject, null, 2));
+
+    writeFileSync(subjectManifestPath, JSON.stringify({
+      ...originalSubject,
+      sealed_bundle_digest: "0".repeat(64),
+    }, null, 2));
+    expect(() => verifier({
+      gitEvidence,
+      manifest,
+      manifestDigest: "d".repeat(64),
+      manifestPath,
+      rootDir,
+    })).toThrow(/rehearsal|bundle|authority|manifest/iu);
+    writeFileSync(subjectManifestPath, JSON.stringify(originalSubject, null, 2));
+
     attestedPredicateTagObjectSha = "f".repeat(40);
     expect(() =>
       verifier({
@@ -548,6 +649,16 @@ describe("GitHub production release attestation verification", () => {
       }),
     ).toThrow(/tag object|release_tag_object_sha/iu);
     attestedPredicateTagObjectSha = manifest.release_tag_object_sha;
+
+    attestedPredicateRepeatabilityDigest = "0".repeat(64);
+    expect(() => verifier({
+      gitEvidence,
+      manifest,
+      manifestDigest: "d".repeat(64),
+      manifestPath,
+      rootDir,
+    })).toThrow(/rehearsal|repeatability|authority|manifest/iu);
+    attestedPredicateRepeatabilityDigest = manifest.repeatability_receipt_digest;
 
     for (const identityOverride of [
       { repository: "attacker/fork" },

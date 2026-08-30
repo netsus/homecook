@@ -637,7 +637,7 @@ try {
   });
 
   it("accounts for every Compose service and rejects tag-only, build, missing-image, and mixed input", () => {
-    const valid = `name: fixture\nx-restore-attempt-labels: &restore-attempt-labels\n  homecook.local/restore-attempt: runtime\n  homecook.release.sha: unmanaged\n  homecook.release.tree: unmanaged\n  homecook.release.build-id: unmanaged\n  homecook.release.promotion-id: unmanaged\nservices:\n  app:\n    image: example/app@sha256:${DIGEST_A}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\n  db:\n    image: example/db@sha256:${DIGEST_B}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\nnetworks:\n  data-internal:\n`;
+    const valid = `name: fixture\nx-restore-attempt-labels: &restore-attempt-labels\n  homecook.local/restore-attempt: runtime\n  homecook.release.sha: unmanaged\n  homecook.release.tree: unmanaged\n  homecook.release.build-id: unmanaged\n  homecook.release.promotion-id: unmanaged\n  homecook.release.sealed-bundle-digest: unmanaged\n  homecook.release.repeatability-receipt-digest: unmanaged\nservices:\n  app:\n    image: example/app@sha256:${DIGEST_A}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\n  db:\n    image: example/db@sha256:${DIGEST_B}\n    platform: \${FULL_LOCAL_DOCKER_PLATFORM:?required}\nnetworks:\n  data-internal:\n`;
     expect(parseCanonicalComposeImageInventory(valid)).toEqual([
       { service: "app", reference: `example/app@sha256:${DIGEST_A}`, digest: `sha256:${DIGEST_A}`, platform_expression: "${FULL_LOCAL_DOCKER_PLATFORM:?required}" },
       { service: "db", reference: `example/db@sha256:${DIGEST_B}`, digest: `sha256:${DIGEST_B}`, platform_expression: "${FULL_LOCAL_DOCKER_PLATFORM:?required}" },
@@ -970,7 +970,7 @@ try {
     expect(lock).toMatchObject({
       schema: "homecook.local-mac-production-rehearsal-toolchain-lock.v1",
       platform: "darwin-arm64",
-      full_local_compose_sha256: "1dcb25f698c9a8ff9f1585d6770f532e696cdfe8d9648956adde71de80f0d161",
+      full_local_compose_sha256: "cb2cd61202caa9a35a8301500870ce8f277c8e8570f8539715bf7958de2c8797",
       node: {
         version: "v22.13.1",
         binary_sha256: "79de4c62eb09c9cf7859e4a5fb27502f209533b54fa6a97f5a791015798282c0",

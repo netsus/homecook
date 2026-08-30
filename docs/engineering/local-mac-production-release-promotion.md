@@ -86,6 +86,7 @@ local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. loc
 Untagged exact-SHA candidate의 isolated build/run, repeatability receipt, mixed-state read-only classification은 `docs/engineering/local-mac-production-release-rehearsal.md`가 canonical authority다. production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르며, implementation이 merge되기 전에는 현재 promote 경로가 그 receipt gate를 충족한다고 주장하지 않는다.
 
 rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`와 `repeatability_receipt_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
+protected tag push 직전에는 receipt 전체를 fresh clock으로 다시 검증하고 `rehearsal_receipt_valid_until`까지 strict 900초 초과 여유를 요구한다. equality 또는 더 짧은 여유는 tag push와 attestation을 모두 0으로 유지한다.
 
 Stage B implementation target command family는 다음과 같다.
 
@@ -109,7 +110,7 @@ read-only validation 단계다.
 
 ### 2. prepare
 
-immutable checkout과 build readiness 단계다.
+legacy/reference checkout과 build readiness 단계다. split 4 production promote는 이 단계의 rebuild bytes를 execution source로 소비하지 않는다.
 
 - exact SHA의 detached checkout을 만든다.
 - clean tracked source만 승격 대상이다.
@@ -120,22 +121,33 @@ immutable checkout과 build readiness 단계다.
 
 향후 receipt/attestation gate 구현 완료 뒤의 실제 mutation 단계다. 현재 CLI는 아래 어떤 단계에도 진입하지 않고 `activation_blocked`로 종료한다.
 
-- promotion lock을 획득한다.
-- running release가 preflight 동안 바뀌지 않았는지 재확인한다.
-- exact checkout root와 manifest digest를 재검증한다.
-- validated candidate와 별도 worker artifact를 promotion lock 보유 중 create-only
-  `content-addressed sealed execution snapshot`으로 복제한다. app/full-local/worker의
-  executable 및 plist WorkingDirectory는 이후 원본 candidate가 아니라 이 snapshot만 사용한다.
+- lock 또는 adapter 생성 전 pre-adapter authority digest를 보존하고 initial/final-pre-mutation fresh read와 exact 비교한다. `classified_at`은 stable digest에서 제외하되 각 read의 expiry/freshness 검증은 생략하지 않는다.
+- final authority read 뒤 exact sealed candidate component root와 manifest/receipt/physical digest를 다시 검증하면서 `~/.homecook/rehearsal/promotion-scratch/<random-UUID>` 아래 private create-only non-production scratch를 완전히 materialize한다. trusted parent와 attempt root는 non-symlink directory FD의 owner/mode/nlink/dev/inode/realpath identity 및 ancestor chain으로 create 전후 고정하고, snapshot release root도 같은 containment를 요구한다. app destination digest는 sealed app과 full-local `infra` overlay를 합친 expected tree로 미리 계산하고 app/full-local/worker/authority copy 뒤와 sealing 뒤 각각 exact 비교한다.
+- preflight가 읽은 full-local config를 먼저 exact parse하고 `FULL_LOCAL_SECRET_DIR`을 approved home ancestor 아래 private root로 해석한다. social-provider enablement에 맞는 core/OAuth exact closed secret name set만 허용하고 root/ancestor와 각 file의 `O_NOFOLLOW` FD identity, owner/private mode, nlink/dev/inode/size/ctime/mtime/digest를 create 전후 고정한다. full-local secret set과 worker config/credential/token/provider secret root를 scratch의 private `runtime-inputs`에 freeze하고 frozen config의 `FULL_LOCAL_SECRET_DIR`을 새 private root로 create-only rewrite한다. 원본 source identity와 frozen inventory digest만 prelock authority에 넣으며 raw secret bytes/source path는 receipt/manifest/metadata/log에 기록하지 않는다. lock 이후 start/install/readiness/final probe와 resume-current는 frozen config/secret path만 소비하고 original external path를 다시 열지 않는다.
+- external production release manifest bytes와 tag/attestation bundle/subject/trusted-root도 pre-lock에 `lstat → O_NOFOLLOW open → fstat → FD read → fstat → path lstat` 순서로 읽고 exact owner/mode/nlink/dev/inode/size/ctime/mtime와 private ancestor-chain identity를 freeze한다. create-only scratch에는 이 FD bytes만 쓰고 source/ancestor identity digest를 prelock authority에 포함한다. production lock을 만든 뒤 manifest source를 다시 열거나 original-path attestation verifier를 호출하지 않으며 lock acquisition, mutation authority, child installer는 frozen manifest path와 sealed authority files/cached trusted verification만 소비한다. same-byte A→B→A, delete/recreate, symlink/hardlink/path swap을 포함해 pre-lock source identity가 바뀌면 lock 0이고 lock 직후 original path가 valid-to-valid로 바뀌거나 복원되어도 frozen authority 결과에는 영향이 없다.
+- frozen source ancestor authority는 full-local config/secret tree에만 한정하지 않는다. worker config/credential/token/provider-secret tree와 attestation bundle/subject/trusted-root 각각에 approved authority root를 지정하고, 모든 source file의 lexical root→parent chain을 정렬·중복 제거한 closed record로 만든다. 각 directory는 current-user-owned, non-symlink, non-group/world-writable, exact realpath여야 하며 `O_DIRECTORY|O_NOFOLLOW` FD를 열어 owner/mode/nlink/dev/inode/ctime/mtime/realpath digest를 기록한다. directory FD는 source file FD 재검증과 scratch copy 완료까지 유지하고 pre/post identity를 비교한다. overlapping root는 canonical path 하나로만 dedupe하며 parent rename/symlink/bind replacement/A→B→A가 보이면 file bytes/inode가 복원됐어도 production lock 0이다.
+- sealed scratch의 digest와 device/inode identity, frozen runtime input authority를 pre-adapter/initial/final authority digest, `sealed_bundle_digest`, `repeatability_receipt_digest`에 묶는다. scratch 완료 뒤 production lock root를 만들기 직전에 fresh clock으로 `pre-lock` authority를 한 번 더 검증해 receipt expiry, inventory 5분 freshness, future claim과 tag/attestation을 재확인하고 mutable candidate는 다시 읽지 않는다. 이 단계가 실패하면 sealed scratch/private inputs는 private recovery evidence로 보존하되 promotion lock, adapter, install, Docker, LaunchAgent, DB, pointer mutation은 0이다.
+- promotion lock을 획득하고 running release가 preflight 동안 바뀌지 않았는지 재확인한다.
+- production `content-addressed sealed execution snapshot`은 frozen scratch의 app/full-local/worker/authority bytes만 입력으로 사용한다. lock 획득 뒤에는 원본 candidate, prepared checkout, 별도 worker artifact를 다시 읽지 않으며 production copy 뒤에도 prelock scratch authority와 각 component expected digest를 exact 비교한다. app/full-local/worker의 executable 및 plist WorkingDirectory는 이 snapshot만 사용한다.
+- 별도 prepared checkout의 install/build 결과나 별도 worker artifact bytes는 execution snapshot 입력으로 사용하지 않는다.
 - snapshot은 inode, normalized content digest, owner/mode를 각 spawn/install 직전과
   readiness 이후, descriptor commit 직전에 다시 검증한다.
 - execution tree digest는 contained symlink의 dereferenced bytes와 executable metadata를
   포함한다. 외부 target은 거부하고, 내부 absolute symlink는 snapshot 내부의 equivalent
   relative target으로 다시 작성한 뒤 모든 final realpath containment를 재검증한다.
-- snapshot은 실패 시 자동 삭제하지 않는다. lock, snapshot evidence, partial install state를
+- 완전히 seal되기 전 scratch 실패는 anchored reservation identity가 같은 exact private attempt만 제거한다. seal된 scratch와 private frozen runtime inputs는 이후 실패 시 자동 삭제하지 않고 lock/snapshot evidence와 함께 manual recovery 근거로 보존한다. production snapshot도 실패 시 자동 삭제하지 않는다. lock, snapshot evidence, partial install state를
   manual recovery 근거로 함께 보존한다. 성공한 snapshot도 running release의 immutable root이므로
   자동 정리하지 않으며 별도 승인된 lifecycle 작업만 제거할 수 있다.
 - app/full-local/worker LaunchAgent를 같은 release bundle로 설치한다.
 - current release descriptor를 readiness 이후에만 갱신한다.
+- app은 live process cwd의 execution snapshot evidence, full-local은 7개 running container의 immutable `homecook.release.sealed-bundle-digest`/`homecook.release.repeatability-receipt-digest` labels, worker는 launchd PID의 exact artifact cwd와 그 sealed execution snapshot evidence에서 `sealed_bundle_digest`와 `repeatability_receipt_digest`를 각각 관측해 readiness에 반환한다. adapter가 expected snapshot/manifest 값을 observation에 채우거나 덮어쓰는 것은 금지한다. canonical v2 `resume-current` LaunchAgent args에는 기존대로 `--release-identity`를 넣지 않되, read-only status/identity probe는 sealed `prepare.json` path를 별도 인수로 항상 전달한다. 세 observed 값이 모두 frozen authority와 exact 일치한 뒤에만 descriptor를 commit하며 running descriptor도 같은 digest를 보존한다.
+- full-local config/secret freeze의 native filesystem 오류는 trust boundary에서 `runtime_input_freeze_failed` stable public message로 바꾼다. CLI stderr, JSON, receipt, manifest, PR evidence에는 source absolute path, secret basename/value, raw syscall message를 기록하지 않는다. 상세 native cause는 process-internal cause로만 유지할 수 있으며 직렬화하지 않는다.
+- initial freeze 이후 final/pre-lock source file·directory·manifest identity revalidation에서 발생한 `lstat/open/fstat/realpath/ENOENT/EACCES/mode/nlink/digest` 오류는 모두 exact `runtime_input_source_changed: frozen runtime input source authority changed.`로 축약한다. CLI stderr/JSON/PR evidence에는 absolute/relative source path, basename/secret filename, raw syscall 또는 secret content를 기록하지 않으며 opaque internal cause만 process 안에 남길 수 있다.
+- promotion authority verifier의 public boundary는 runtime input보다 넓다. pre-adapter, initial, final-pre-mutation, post-scratch pre-lock마다 release manifest, completed candidate authority, 두 individual receipt, repeatability receipt, R0 inventory/classification, attestation bundle/subject/trusted-root, git annotated-tag/remote readback과 `gh attestation verify`, component physical digest를 다시 검증한다. 이 boundary 안의 source/path/identity/parser/semantic/command failure는 exact `promotion_authority_source_changed: production promotion authority source changed.` 하나로 축약한다. CLI stderr/JSON/failure evidence에는 absolute·relative path, basename/receipt filename, raw JSON/payload, receipt identifier, `gh`/`git` stderr, syscall/ENOENT/EACCES 또는 secret value를 기록하지 않는다. internal cause는 직렬화하지 않는 process-local state로만 유지할 수 있다. pre-adapter failure는 adapter 생성 0, 이후 세 phase failure는 production lock/install/Docker/LaunchAgent/DB/pointer mutation 0이다.
+- `promoteLocalMacProductionRelease` 자체도 dependency wiring 같은 non-source configuration guard 다음의 첫 manifest path normalization/read부터 production lock 획득이 성공해 boundary를 닫을 때까지 outer promotion-authority boundary 안에서 실행한다. manifest JSON/schema/git/attestation, initial returned shape/digest, sealed candidate identity, current descriptor/preflight, final valid-to-valid substitution와 candidate root equality, scratch reservation/materialization, frozen runtime input source error, pre-lock authority postcondition, manifest/scratch/component revalidation과 lock-root precondition 중 어느 branch가 실패해도 public output은 같은 `promotion_authority_source_changed` exact message다. `runtime_input_source_changed`는 adapter를 독립 호출할 때만 public일 수 있고 promotion flow 안에서는 outer code로 다시 정규화한다.
+- production lock root를 건드리기 직전 frozen private scratch의 app/full-local/worker component root와 authority root를 lexical realpath·uid·mode·dev/inode가 stored snapshot과 같은 `O_DIRECTORY|O_NOFOLLOW` FD로 다시 연다. authority regular files도 각각 `O_NOFOLLOW` FD로 열어 file identity를 고정한다. FD를 유지한 채 세 component physical tree를 실제 bytes에서 각각 재다이제스트하고 authority tree를 다시 읽어 stored component/authority digest와 combined frozen-scratch authority를 비교한다. prelock scratch authority digest에는 이 fresh actual digest만 사용한다. re-digest 중 filesystem/identity 오류도 outer promotion code로 정규화하며 mutable candidate/source path는 다시 읽지 않는다.
+- macOS Node/libuv는 `/dev/fd/<directoryFd>/relative` directory traversal을 지원하지 않으므로 그 경로를 authority로 사용하지 않는다. 대신 held component/authority root FD와 same dev/inode인 directory를 private snapshot parent의 unguessable sibling anchor로 원자 이동하고, original pathname을 비운 상태에서 anchor root를 다시 FD identity로 확인한다. anchor 아래 모든 nested directory는 `O_DIRECTORY|O_NOFOLLOW`, 모든 regular file은 `O_NOFOLLOW`로 열며 directory FDs는 traversal 종료까지 유지하고 file bytes는 열린 file FD에서만 읽는다. pre/post fstat+lstat과 parent identity를 비교하고 path replacement/restore, nested substitution, symlink/special/external node를 fail closed한다. deterministic sorted inventory는 relative path/type/mode/size/content digest/executable metadata를 포함하며 component/authority digest와 combined scratch authority는 이 FD-anchored inventory와 bytes에서만 계산한다.
+- FD walker는 기존 `digestExecutionTree` physical digest byte grammar와 exact 호환돼야 한다. contained directory symlink를 dereference할 때 `target-dir\0` 뒤 각 sorted child마다 `target-name\0<name>\0`을 먼저 hash한 후 child target bytes를 이어 붙인다. empty/nonempty/nested directory symlink, contained file symlink와 duplicate alias의 digest는 기존 path implementation과 같아야 하며 cycle, external target, Git metadata와 special node rejection도 동일하게 유지한다.
 
 위 snapshot은 same-user 공격자가 writable prepared candidate를 잠깐 바꿨다가 복원하는
 TOCTOU를 실행 바이트에서 분리하기 위한 cooperative hardening이다. 같은 사용자의 OS 권한 자체를
@@ -230,7 +242,7 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 
 manifest와 current descriptor는 credentials, provider payload, secret path, raw backup path를 포함하지 않는다.
 
-현재 `homecook.local-mac-production-release.v1` manifest와 기존 subject/predicate/tag는 위 rehearsal binding field가 없으므로 prepare/read-only verify 참고 evidence일 수는 있어도 production promote authority가 아니다. implementation은 production manifest schema를 v2로 명시적으로 bump하고 GitHub workflow·subject/predicate builder·tag raw object·server verifier를 같은 PR train에서 함께 갱신한다. receipt를 바꿔 끼우거나 attestation만 다시 발급하거나 sealed bundle을 rebuild하는 repair는 금지하며 두 isolated run부터 새 authority를 만든다.
+기존 `homecook.local-mac-production-release.v1` manifest와 v1 subject/predicate/tag는 rehearsal binding field가 없으므로 prepare/read-only 참고 evidence일 수는 있어도 production promote authority가 아니다. split 4는 production manifest v2와 GitHub workflow·subject/predicate v2·canonical tag raw message·server verifier cross-binding을 같은 PR train에 구현한다. 다만 fresh independent review, current-head CI와 merge 전에는 activation kill switch를 유지한다. receipt를 바꿔 끼우거나 attestation만 다시 발급하거나 sealed bundle을 rebuild하는 repair는 금지하며 두 isolated run부터 새 authority를 만든다.
 
 ## Handoff fields
 
