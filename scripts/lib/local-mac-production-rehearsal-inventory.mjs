@@ -1114,7 +1114,29 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     return Object.freeze({ exists: true, sha256: manifestEvidence.sha256, value: manifest });
   }
 
-  function validateReferencedSnapshot(snapshotPath, reference, manifest) {
+  function digestBoundedExecutionComponent(rootPath, surfaceBudget) {
+    const consumeCurrentIdentity = (path) => {
+      const stats = lstatSync(path, { bigint: true });
+      const type = stats.isSymbolicLink()
+        ? "symlink"
+        : stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "unsupported";
+      if (type === "unsupported") fail("descriptor-referenced snapshot component contains unsupported evidence");
+      consumeProductionSurfaceBudget(surfaceBudget, stats, type, type === "file" ? stats.size : 0n);
+      return stats;
+    };
+    return digestLocalMacProductionExecutionTree(rootPath, {
+      entryGuard: (path) => {
+        consumeCurrentIdentity(path);
+      },
+      readDirectory: (path) => readBudgetedDirectoryNames(path, surfaceBudget),
+      readRegularFile: (path) => {
+        consumeCurrentIdentity(path);
+        return readOpaqueRegularFile(path, "descriptor-referenced snapshot component");
+      },
+    });
+  }
+
+  function validateReferencedSnapshot(snapshotPath, reference, manifest, surfaceBudget) {
     const descriptor = reference.descriptor;
     for (const field of ["release_sha", "release_tree", "promotion_id"]) {
       if (manifest[field] !== descriptor[field]) {
@@ -1129,14 +1151,15 @@ export function createLocalProductionInventoryAdapters(options = {}) {
     let componentDigests;
     try {
       componentDigests = {
-        app_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "app")),
-        worker_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "worker")),
-        authority_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "authority")),
+        app_digest: digestBoundedExecutionComponent(join(snapshotPath, "app"), surfaceBudget),
+        worker_digest: digestBoundedExecutionComponent(join(snapshotPath, "worker"), surfaceBudget),
+        authority_digest: digestBoundedExecutionComponent(join(snapshotPath, "authority"), surfaceBudget),
         ...(manifest.full_local_digest === undefined ? {} : {
-          full_local_digest: digestLocalMacProductionExecutionTree(join(snapshotPath, "full-local")),
+          full_local_digest: digestBoundedExecutionComponent(join(snapshotPath, "full-local"), surfaceBudget),
         }),
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Production inventory rejected:")) throw error;
       fail("descriptor-referenced snapshot component authority is incomplete");
     }
     for (const [field, digest] of Object.entries(componentDigests)) {
@@ -1183,7 +1206,7 @@ export function createLocalProductionInventoryAdapters(options = {}) {
             releaseArtifactProbeHooks.afterReferencedSnapshotBeforeDigest({ path, snapshotName: name });
           }
           const manifest = readSnapshotManifest(path, name, surfaceBudget, { required: true });
-          validateReferencedSnapshot(path, reference, manifest.value);
+          validateReferencedSnapshot(path, reference, manifest.value, surfaceBudget);
           const after = artifactEvidence(
             `referenced_snapshot:${reference.descriptorKind}:${sha256Jcs(name)}`,
             path,

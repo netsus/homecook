@@ -806,6 +806,30 @@ describe("read-only production inventory", () => {
     expect(afterReferencedSnapshotBeforeDigest).toHaveBeenCalledTimes(1);
   });
 
+  it("applies the shared byte bound before component revalidation reads expanded bytes", async () => {
+    const rootDir = tempDirectory("homecook-component-bound-root-");
+    const homeDir = tempDirectory("homecook-component-bound-home-");
+    const releaseRoot = join(homeDir, ".homecook", "releases");
+    const snapshotRoot = join(releaseRoot, "execution-snapshots");
+    const snapshotDigest = "d".repeat(64);
+    const snapshot = createExecutionSnapshot(snapshotRoot, snapshotDigest);
+    writeFileSync(join(releaseRoot, "current.json"), JSON.stringify(
+      runningDescriptor(snapshotRoot, snapshotDigest),
+    ), { mode: 0o600 });
+    const adapters = createLocalProductionInventoryAdapters({
+      rootDir,
+      homeDir,
+      releaseArtifactSurfaceLimits: { maxEntries: 100, maxBytes: 4096 },
+      releaseArtifactProbeHooks: {
+        afterReferencedSnapshotBeforeDigest: () => {
+          truncateSync(join(snapshot, "app", "payload.bin"), 8192);
+        },
+      },
+    });
+
+    await expect(adapters.readReleaseArtifacts()).rejects.toThrow(/aggregate byte limit exceeded/iu);
+  });
+
   it("rejects retained snapshot manifest symlinks, unknown fields, and byte-limit overflow", async () => {
     const rootDir = tempDirectory("homecook-retained-manifest-root-");
     const homeDir = tempDirectory("homecook-retained-manifest-home-");
