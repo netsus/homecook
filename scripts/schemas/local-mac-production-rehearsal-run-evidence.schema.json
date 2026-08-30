@@ -28,7 +28,7 @@
     "isolation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["docker_project_id", "container_names", "network_names", "volume_names", "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "collision_preflight_digest", "network_ids", "container_ids", "volume_ids", "resource_identity_digest"],
+      "required": ["docker_project_id", "container_names", "network_names", "volume_names", "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "collision_preflight_digest", "network_ids", "container_ids", "container_roles", "volume_ids", "resource_identity_digest"],
       "properties": {
         "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
         "container_names": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
@@ -60,6 +60,7 @@
         "collision_preflight_digest": { "$ref": "#/$defs/digest" },
         "network_ids": { "$ref": "#/$defs/orderedIds" },
         "container_ids": { "$ref": "#/$defs/orderedIds" },
+        "container_roles": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "$ref": "#/$defs/containerRole" } },
         "volume_ids": { "$ref": "#/$defs/orderedIds" },
         "resource_identity_digest": { "$ref": "#/$defs/digest" }
       }
@@ -218,6 +219,17 @@
     "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "orderedIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "containerRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["container_id", "role", "component", "service"],
+      "properties": {
+        "container_id": { "type": "string", "minLength": 1 },
+        "role": { "enum": ["runtime", "auxiliary"] },
+        "component": { "enum": ["app", "full_local", "worker", "egress_sentinel"] },
+        "service": { "type": ["string", "null"], "enum": [null, "api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"] }
+      }
+    },
     "toolIdentity": {
       "type": "object",
       "additionalProperties": false,

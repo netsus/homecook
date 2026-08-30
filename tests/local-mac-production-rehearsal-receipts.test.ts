@@ -85,6 +85,17 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
   const runId = RUN_IDS[index];
   const compact = runId.replaceAll("-", "").slice(0, 16);
   const dbIdentity = { name: `hc_r2_${compact}`, user: `hc_r2_user_${compact}` };
+  const appId = `app-container-${index}`;
+  const workerId = `worker-container-${index}`;
+  const sentinelId = `egress-sentinel-container-${index}`;
+  const fullLocalIds = FULL_LOCAL_SERVICES.map((service) => `full-local-${service}-container-${index}`).sort();
+  const containerIds = [appId, ...fullLocalIds, workerId, sentinelId].sort();
+  const containerRoles = [
+    { container_id: appId, role: "runtime", component: "app", service: null },
+    ...FULL_LOCAL_SERVICES.map((service) => ({ container_id: `full-local-${service}-container-${index}`, role: "runtime", component: "full_local", service })),
+    { container_id: workerId, role: "runtime", component: "worker", service: null },
+    { container_id: sentinelId, role: "auxiliary", component: "egress_sentinel", service: null },
+  ].sort((left, right) => left.container_id.localeCompare(right.container_id));
   return {
     schema: "homecook.local-mac-production-rehearsal-run-receipt.v1",
     canonicalization: "RFC8785-JCS+SHA256",
@@ -132,16 +143,17 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
       root_identity_digest: index === 1 ? SHA_C : SHA_A,
       docker_project_id: `homecook-rehearsal-${runId}`,
       network_ids: [`network-${index}`],
-      container_ids: [`app-container-${index}`, `full_local-container-${index}`, `worker-container-${index}`],
+      container_ids: containerIds,
+      container_roles: containerRoles,
       volume_ids: [`volume-${index}`],
       db_identity: { ...dbIdentity, identity_digest: sha256Jcs(dbIdentity) },
       ports: [46_000 + index, 47_000 + index, 48_000 + index, 49_000 + index],
       collision_preflight_digest: SHA_B,
     },
     runtime: {
-      app: runtimeIdentity("app", index),
-      full_local: runtimeIdentity("full_local", index),
-      worker: runtimeIdentity("worker", index),
+      app: { ...runtimeIdentity("app", index), container_ids: [appId] },
+      full_local: { ...runtimeIdentity("full_local", index), container_ids: fullLocalIds },
+      worker: { ...runtimeIdentity("worker", index), container_ids: [workerId] },
       foreground_supervisor: runtimeIdentity("supervisor", index),
     },
     canaries: [{
@@ -159,8 +171,8 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
     },
     cleanup: {
       completed: true,
-      owned_resource_ids: [`app-container-${index}`, `full_local-container-${index}`, `network-${index}`, `volume-${index}`, `worker-container-${index}`],
-      removed_resource_ids: [`app-container-${index}`, `full_local-container-${index}`, `network-${index}`, `volume-${index}`, `worker-container-${index}`],
+      owned_resource_ids: [...containerIds, `network-${index}`, `volume-${index}`].sort(),
+      removed_resource_ids: [...containerIds, `network-${index}`, `volume-${index}`].sort(),
       residue_resource_ids: [],
       cleanup_errors: [],
     },
@@ -207,6 +219,44 @@ function strictNamespaceRunInput(index: 1 | 2, overrides: Record<string, unknown
       docker_project_id: `homecook-rehearsal-${runId}`,
       db_identity: { ...dbIdentity, identity_digest: sha256Jcs(dbIdentity) },
       ports: [46_000 + index, 47_000 + index, 48_000 + index, 49_000 + index],
+    },
+    ...overrides,
+  };
+}
+
+const FULL_LOCAL_SERVICES = ["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"] as const;
+
+function actualRunnerShapedInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
+  const base = runInput(index);
+  const appId = `app-container-${index}`;
+  const workerId = `worker-container-${index}`;
+  const sentinelId = `egress-sentinel-container-${index}`;
+  const fullLocalIds = FULL_LOCAL_SERVICES.map((service) => `full-local-${service}-container-${index}`).sort();
+  const containerRoles = [
+    { container_id: appId, role: "runtime", component: "app", service: null },
+    ...FULL_LOCAL_SERVICES.map((service) => ({ container_id: `full-local-${service}-container-${index}`, role: "runtime", component: "full_local", service })),
+    { container_id: workerId, role: "runtime", component: "worker", service: null },
+    { container_id: sentinelId, role: "auxiliary", component: "egress_sentinel", service: null },
+  ].sort((left, right) => left.container_id.localeCompare(right.container_id));
+  const containerIds = [appId, ...fullLocalIds, workerId, sentinelId].sort();
+  const cleanupIds = [...containerIds, ...base.isolation.network_ids, ...base.isolation.volume_ids].sort();
+  return {
+    ...base,
+    isolation: {
+      ...base.isolation,
+      container_ids: containerIds,
+      container_roles: containerRoles,
+    },
+    runtime: {
+      ...base.runtime,
+      app: { ...base.runtime.app, container_ids: [appId] },
+      full_local: { ...base.runtime.full_local, container_ids: fullLocalIds },
+      worker: { ...base.runtime.worker, container_ids: [workerId] },
+    },
+    cleanup: {
+      ...base.cleanup,
+      owned_resource_ids: cleanupIds,
+      removed_resource_ids: cleanupIds,
     },
     ...overrides,
   };
@@ -278,13 +328,18 @@ function runEvidenceAuthority(index: 1 | 2) {
     ports: { app: 46_000 + index, auth: 47_000 + index, postgres: 48_000 + index, storage: 49_000 + index },
   });
   const globalLedgerEntries = [{ sequence: 1, migration_id: base.migration.migration_head, migration_sha256: SHA_A }];
-  const runtimeContainerIds = ["app", "full_local", "worker"].map((component) => `${component}-container-${index}`).sort();
+  const runtimeContainerIds = [
+    ...base.runtime.app.container_ids,
+    ...base.runtime.full_local.container_ids,
+    ...base.runtime.worker.container_ids,
+  ].sort();
+  const allContainerIds = base.isolation.container_ids;
   const orderedMigrationFilesDigest = sha256Jcs([{
     path: `supabase/migrations/${base.migration.migration_head}.sql`,
     sha256: SHA_A,
   }]);
   const ownedResourceIds = [
-    ...runtimeContainerIds,
+    ...allContainerIds,
     ...base.isolation.network_ids,
     ...base.isolation.volume_ids,
   ].sort();
@@ -302,7 +357,7 @@ function runEvidenceAuthority(index: 1 | 2) {
     mutation_attempt_count: 0,
     forbidden_mount_count: 0,
     forbidden_environment_count: 0,
-    observed_container_count: 3,
+    observed_container_count: allContainerIds.length,
     container_policy_digest: SHA_A,
     command_policy_digest: SHA_B,
     network_policy_digest: SHA_C,
@@ -330,11 +385,11 @@ function runEvidenceAuthority(index: 1 | 2) {
     provider_remote_access_count: 0,
     production_mutation_count: 0,
     unrelated_noise_count: 0,
-    registered_subjects: ["app", "full_local", "worker"].map((component, subjectIndex) => ({
-      container_id: `${component}-container-${index}`,
+    registered_subjects: base.isolation.container_roles.filter((entry) => entry.role === "runtime").map((entry, subjectIndex) => ({
+      container_id: entry.container_id,
       host_pid: subjectIndex + 1,
       host_pgid: subjectIndex + 1,
-      component,
+      component: entry.component,
       started_at: base.issued_at,
       image_digest: SHA_A,
       config_digest: SHA_B,
@@ -346,7 +401,7 @@ function runEvidenceAuthority(index: 1 | 2) {
     kind: "container",
     pid: null,
     process_group_id: null,
-    container_ids: [`${component}-container-${index}`],
+    container_ids: base.runtime[component].container_ids,
     release_sha: base.release_sha,
     release_tree: base.release_tree,
     build_id: base.build_id,
@@ -379,7 +434,8 @@ function runEvidenceAuthority(index: 1 | 2) {
       container_names: namespace.container_names,
       volume_names: namespace.volume_names,
       network_ids: base.isolation.network_ids,
-      container_ids: runtimeContainerIds,
+      container_ids: allContainerIds,
+      container_roles: base.isolation.container_roles,
       volume_ids: base.isolation.volume_ids,
       db_identity: base.isolation.db_identity,
       ports: namespace.ports,
@@ -465,6 +521,28 @@ afterEach(() => {
 });
 
 describe("rehearsal run receipt", () => {
+  it("accepts actual runner-shaped runtime containers plus one closed auxiliary sentinel ledger", () => {
+    expect(() => buildTestRunReceipt(actualRunnerShapedInput(1))).not.toThrow();
+  });
+
+  it("rejects missing, extra, substituted, or cross-role auxiliary container authority", () => {
+    const valid = actualRunnerShapedInput(1);
+    const roles = valid.isolation.container_roles;
+    const sentinel = roles.find((entry) => entry.component === "egress_sentinel")!;
+    const app = roles.find((entry) => entry.component === "app")!;
+    const attacks = [
+      { isolation: { ...valid.isolation, container_roles: roles.filter((entry) => entry !== sentinel) } },
+      { isolation: { ...valid.isolation, container_roles: [...roles, { container_id: "extra-container", role: "auxiliary", component: "egress_sentinel", service: null }].sort((left, right) => left.container_id.localeCompare(right.container_id)) } },
+      { isolation: { ...valid.isolation, container_roles: roles.map((entry) => entry === sentinel ? { ...entry, container_id: app.container_id } : entry) } },
+      { isolation: { ...valid.isolation, container_roles: roles.map((entry) => entry === app ? { ...entry, role: "auxiliary", component: "egress_sentinel" } : entry) } },
+      { cleanup: { ...valid.cleanup, removed_resource_ids: valid.cleanup.removed_resource_ids.filter((entry) => entry !== sentinel.container_id) } },
+    ];
+    for (const attack of attacks) {
+      expect(() => buildTestRunReceipt({ ...valid, ...attack }))
+        .toThrow(/container|role|runtime|auxiliary|sentinel|cleanup|resource/iu);
+    }
+  });
+
   it("accepts only exact component kinds, UUID-derived namespaces, and safe unique high ports", () => {
     expect(() => buildTestRunReceipt(strictNamespaceRunInput(1))).not.toThrow();
     const valid = strictNamespaceRunInput(1);
@@ -550,7 +628,8 @@ describe("rehearsal run receipt", () => {
     expect(receipt.toolchain.rehearsal_runner).toEqual(runInput(1).toolchain.rehearsal_runner);
     expect(receipt.isolation).toMatchObject({
       network_ids: ["network-1"],
-      container_ids: ["app-container-1", "full_local-container-1", "worker-container-1"],
+      container_ids: runInput(1).isolation.container_ids,
+      container_roles: runInput(1).isolation.container_roles,
       volume_ids: ["volume-1"],
     });
   });

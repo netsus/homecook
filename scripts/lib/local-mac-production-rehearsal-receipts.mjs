@@ -14,7 +14,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { TextDecoder } from "node:util";
 
 import { canonicalizeJcs, parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
-import { validateRunEvidence } from "./local-mac-production-rehearsal-runner.mjs";
+import { validateContainerRoleLedger, validateRunEvidence } from "./local-mac-production-rehearsal-runner.mjs";
 
 export const RUN_RECEIPT_SCHEMA = "homecook.local-mac-production-rehearsal-run-receipt.v1";
 export const REPEATABILITY_RECEIPT_SCHEMA = "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
@@ -183,7 +183,7 @@ function validateRunUnsigned(value) {
   assertString(fixtures.fixture_set_digest, "fixtures.fixture_set_digest", HEX_64);
   if (fixtures.production_derived_row_count !== 0) fail("fixtures production-derived row count must be 0");
 
-  const isolation = assertObject(receipt.isolation, "isolation", ["resource_identity_digest", "root_identity_digest", "docker_project_id", "network_ids", "container_ids", "volume_ids", "db_identity", "ports", "collision_preflight_digest"]);
+  const isolation = assertObject(receipt.isolation, "isolation", ["resource_identity_digest", "root_identity_digest", "docker_project_id", "network_ids", "container_ids", "container_roles", "volume_ids", "db_identity", "ports", "collision_preflight_digest"]);
   for (const key of ["resource_identity_digest", "root_identity_digest", "collision_preflight_digest"]) assertString(isolation[key], `isolation.${key}`, HEX_64);
   assertString(isolation.docker_project_id, "isolation.docker_project_id");
   const dbIdentity = assertObject(isolation.db_identity, "isolation.db_identity", ["name", "user", "identity_digest"]);
@@ -209,6 +209,7 @@ function validateRunUnsigned(value) {
   const runtime = assertObject(receipt.runtime, "runtime", ["app", "full_local", "worker", "foreground_supervisor"]);
   for (const key of ["app", "full_local", "worker"]) validateRuntimeIdentity(runtime[key], `runtime.${key}`, receipt, "container");
   validateRuntimeIdentity(runtime.foreground_supervisor, "runtime.foreground_supervisor", receipt, "process");
+  validateContainerRoleLedger({ containerRoles: isolation.container_roles, containerIds: isolation.container_ids, runtime }, { reject: fail });
 
   if (!Array.isArray(receipt.canaries) || receipt.canaries.length === 0) fail("canaries must be nonempty");
   const canaryIds = [];
@@ -236,13 +237,6 @@ function validateRunUnsigned(value) {
   if (JSON.stringify(cleanup.owned_resource_ids) !== JSON.stringify(cleanup.removed_resource_ids)) fail("cleanup owned and removed resources must match exactly");
   if (!Array.isArray(cleanup.residue_resource_ids) || cleanup.residue_resource_ids.length !== 0) fail("cleanup residue must be empty");
   if (!Array.isArray(cleanup.cleanup_errors) || cleanup.cleanup_errors.length !== 0) fail("cleanup errors must be empty");
-  const runtimeContainerIds = ["app", "full_local", "worker"]
-    .flatMap((component) => receipt.runtime[component].container_ids)
-    .sort(compareCodeUnits);
-  if (new Set(runtimeContainerIds).size !== runtimeContainerIds.length
-    || comparable(runtimeContainerIds) !== comparable(isolation.container_ids)) {
-    fail("runtime container IDs must equal isolation.container_ids exactly");
-  }
   const typedResourceIds = [
     ...isolation.container_ids,
     ...isolation.network_ids,
@@ -396,6 +390,7 @@ export function buildRunReceiptFromEvidenceAuthority({
       docker_project_id: runEvidence.isolation.docker_project_id,
       network_ids: runEvidence.isolation.network_ids,
       container_ids: runEvidence.isolation.container_ids,
+      container_roles: runEvidence.isolation.container_roles,
       volume_ids: runEvidence.isolation.volume_ids,
       db_identity: runEvidence.isolation.db_identity,
       ports: Object.values(runEvidence.isolation.ports).sort((left, right) => left - right),

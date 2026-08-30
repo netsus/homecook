@@ -115,13 +115,14 @@
     "isolation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["resource_identity_digest", "root_identity_digest", "docker_project_id", "network_ids", "container_ids", "volume_ids", "db_identity", "ports", "collision_preflight_digest"],
+      "required": ["resource_identity_digest", "root_identity_digest", "docker_project_id", "network_ids", "container_ids", "container_roles", "volume_ids", "db_identity", "ports", "collision_preflight_digest"],
       "properties": {
         "resource_identity_digest": { "$ref": "#/definitions/hex64" },
         "root_identity_digest": { "$ref": "#/definitions/hex64" },
         "docker_project_id": { "type": "string", "pattern": "^homecook-rehearsal-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
         "network_ids": { "$ref": "#/definitions/stringArray" },
         "container_ids": { "$ref": "#/definitions/stringArray" },
+        "container_roles": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "$ref": "#/definitions/containerRole" } },
         "volume_ids": { "$ref": "#/definitions/stringArray" },
         "db_identity": {
           "type": "object",
@@ -135,6 +136,17 @@
         },
         "ports": { "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true, "items": { "type": "integer", "minimum": 20000, "maximum": 60999, "not": { "enum": [54321, 54322, 54323, 54324] } } },
         "collision_preflight_digest": { "$ref": "#/definitions/hex64" }
+      }
+    },
+    "containerRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["container_id", "role", "component", "service"],
+      "properties": {
+        "container_id": { "$ref": "#/definitions/nonempty" },
+        "role": { "enum": ["runtime", "auxiliary"] },
+        "component": { "enum": ["app", "full_local", "worker", "egress_sentinel"] },
+        "service": { "type": ["string", "null"], "enum": [null, "api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"] }
       }
     },
     "containerRuntimeIdentity": {

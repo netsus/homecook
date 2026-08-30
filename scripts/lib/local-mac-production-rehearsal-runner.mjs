@@ -103,6 +103,9 @@ const REQUIRED_CANARY_IDS = Object.freeze([
   "full-local-storage-route",
   "worker-synthetic-job",
 ]);
+export const FULL_LOCAL_RUNTIME_SERVICES = Object.freeze([
+  "api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage",
+]);
 
 /** @returns {never} */
 function fail(message) {
@@ -438,6 +441,62 @@ function validateRuntimeIdentities(entries, manifest) {
   return ordered;
 }
 
+export function validateContainerRoleLedger({ containerRoles, containerIds, runtime }, { reject = fail } = {}) {
+  if (!Array.isArray(containerRoles) || !Array.isArray(containerIds)) reject("container role ledger and isolation container IDs are required");
+  const expectedKeys = ["component", "container_id", "role", "service"];
+  for (const [index, entry] of containerRoles.entries()) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)
+      || canonicalizeJcs(Object.keys(entry).sort()) !== canonicalizeJcs(expectedKeys)) reject(`container role ledger entry ${index} is not closed`);
+    if (typeof entry.container_id !== "string" || entry.container_id.length === 0) reject("container role ledger ID is invalid");
+  }
+  const roleIds = containerRoles.map((entry) => entry.container_id);
+  if (new Set(roleIds).size !== roleIds.length
+    || roleIds.some((entry, index) => index > 0 && roleIds[index - 1] > entry)
+    || canonicalizeJcs(roleIds) !== canonicalizeJcs(containerIds)) reject("every isolation container must have exactly one sorted role");
+  const appIds = [...(runtime?.app?.container_ids ?? [])].sort();
+  const fullLocalIds = [...(runtime?.full_local?.container_ids ?? [])].sort();
+  const workerIds = [...(runtime?.worker?.container_ids ?? [])].sort();
+  if (appIds.length !== 1 || fullLocalIds.length !== FULL_LOCAL_RUNTIME_SERVICES.length || workerIds.length !== 1) reject("runtime container groups must be exact app, seven full-local services, and worker");
+  const runtimeIds = [...appIds, ...fullLocalIds, ...workerIds];
+  if (new Set(runtimeIds).size !== runtimeIds.length) reject("runtime container IDs overlap");
+  const appRoles = containerRoles.filter((entry) => entry.role === "runtime" && entry.component === "app" && entry.service === null);
+  const workerRoles = containerRoles.filter((entry) => entry.role === "runtime" && entry.component === "worker" && entry.service === null);
+  const fullLocalRoles = containerRoles.filter((entry) => entry.role === "runtime" && entry.component === "full_local");
+  const auxiliaryRoles = containerRoles.filter((entry) => entry.role === "auxiliary");
+  if (appRoles.length !== 1 || appRoles[0].container_id !== appIds[0]
+    || workerRoles.length !== 1 || workerRoles[0].container_id !== workerIds[0]
+    || fullLocalRoles.length !== FULL_LOCAL_RUNTIME_SERVICES.length
+    || canonicalizeJcs(fullLocalRoles.map((entry) => entry.container_id).sort()) !== canonicalizeJcs(fullLocalIds)
+    || canonicalizeJcs(fullLocalRoles.map((entry) => entry.service).sort()) !== canonicalizeJcs([...FULL_LOCAL_RUNTIME_SERVICES].sort())) reject("runtime container role authority is incomplete or substituted");
+  if (fullLocalRoles.some((entry) => !FULL_LOCAL_RUNTIME_SERVICES.includes(entry.service))) reject("full-local service role is outside the closed set");
+  if (auxiliaryRoles.length !== 1 || auxiliaryRoles[0].component !== "egress_sentinel" || auxiliaryRoles[0].service !== null || runtimeIds.includes(auxiliaryRoles[0].container_id)) reject("auxiliary egress sentinel role is invalid");
+  if (containerRoles.some((entry) => !(
+    (entry.role === "runtime" && ["app", "full_local", "worker"].includes(entry.component))
+    || (entry.role === "auxiliary" && entry.component === "egress_sentinel")
+  ))) reject("container role is outside the closed runtime/auxiliary contract");
+  return containerRoles;
+}
+
+function buildContainerRoleLedger({ ownedResources, namespace, runtime }) {
+  const containersByName = new Map(ownedResources.filter((entry) => entry.kind === "container").map((entry) => [entry.name, entry.id]));
+  const required = (name) => {
+    const id = containersByName.get(name);
+    if (!id) fail(`container role ledger is missing ${name}`);
+    return id;
+  };
+  const roles = [
+    { container_id: required(`${namespace.project}-app`), role: "runtime", component: "app", service: null },
+    ...FULL_LOCAL_RUNTIME_SERVICES.map((service) => ({ container_id: required(`${namespace.project}-${service}-1`), role: "runtime", component: "full_local", service })),
+    { container_id: required(`${namespace.project}-worker`), role: "runtime", component: "worker", service: null },
+    { container_id: required(`${namespace.project}-egress-sentinel`), role: "auxiliary", component: "egress_sentinel", service: null },
+  ].sort((left, right) => left.container_id.localeCompare(right.container_id));
+  return validateContainerRoleLedger({
+    containerRoles: roles,
+    containerIds: ownedResources.filter((entry) => entry.kind === "container").map((entry) => entry.id).sort(),
+    runtime: Object.fromEntries(runtime.map((entry) => [entry.component, entry])),
+  });
+}
+
 function validateCanaries(canaries) {
   if (!Array.isArray(canaries) || canaries.length === 0) fail("canary evidence is required");
   const ordered = [...canaries].sort((left, right) => left.canary_id.localeCompare(right.canary_id));
@@ -754,6 +813,7 @@ function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRo
       collision_preflight_digest: collisionPreflightDigest,
       network_ids: resourceIds("network"),
       container_ids: resourceIds("container"),
+      container_roles: buildContainerRoleLedger({ ownedResources, namespace, runtime }),
       volume_ids: resourceIds("volume"),
       resource_identity_digest: sha256Jcs({
         project: namespace.project,
@@ -806,7 +866,7 @@ export function validateRunEvidence(value) {
   exactKeys(value.isolation, [
     "docker_project_id", "container_names", "network_names", "volume_names",
     "db_identity", "ports", "root_identity_digest", "execution_root_identity_digest", "resource_identity_digest",
-    "collision_preflight_digest", "network_ids", "container_ids", "volume_ids",
+    "collision_preflight_digest", "network_ids", "container_ids", "container_roles", "volume_ids",
   ], "run evidence isolation");
   exactKeys(value.isolation.db_identity, ["name", "user", "identity_digest"], "run evidence DB identity");
   const expectedNamespace = buildRunNamespace({ runId: value.run_id, ports: value.isolation.ports });
@@ -888,6 +948,11 @@ export function validateRunEvidence(value) {
       fail(`run evidence isolation.${field} must be unique bytewise ascending IDs`);
     }
   }
+  validateContainerRoleLedger({
+    containerRoles: value.isolation.container_roles,
+    containerIds: value.isolation.container_ids,
+    runtime: value.runtime,
+  });
   if (
     value.runtime.app.component !== "app"
     || value.runtime.full_local.component !== "full_local"

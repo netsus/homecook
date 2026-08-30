@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   RUN_EVIDENCE_SCHEMA,
   RUN_OWNERSHIP_LABEL,
+  FULL_LOCAL_RUNTIME_SERVICES,
   buildRunNamespace,
   cleanupOwnedResources,
   resolveCompletedCandidateInput,
@@ -42,6 +43,15 @@ const SHA_B = "b".repeat(40);
 const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
+const PROJECT = `homecook-rehearsal-${RUN_ID}`;
+const FULL_LOCAL_CONTAINER_IDS = FULL_LOCAL_RUNTIME_SERVICES.map((service) => `container-full-local-${service}`).sort();
+const ALL_CONTAINER_IDS = ["container-app", ...FULL_LOCAL_CONTAINER_IDS, "container-worker", "container-egress-sentinel"].sort();
+const CONTAINER_ROLES = [
+  { container_id: "container-app", role: "runtime", component: "app", service: null },
+  ...FULL_LOCAL_RUNTIME_SERVICES.map((service) => ({ container_id: `container-full-local-${service}`, role: "runtime", component: "full_local", service })),
+  { container_id: "container-worker", role: "runtime", component: "worker", service: null },
+  { container_id: "container-egress-sentinel", role: "auxiliary", component: "egress_sentinel", service: null },
+].sort((left, right) => left.container_id.localeCompare(right.container_id));
 const RUNNER_IDENTITY = {
   version: "homecook-release-rehearsal-runner-v1",
   realpath: "/private/homecook/scripts/local-mac-production-rehearsal-run.mjs",
@@ -214,11 +224,9 @@ function productionSnapshot(digest = "9".repeat(64)) {
 }
 
 function independentObserver() {
-  return { schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64), started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", pre_snapshot_digest: "9".repeat(64), post_snapshot_digest: "9".repeat(64), process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "e".repeat(64), observation_digest: "e".repeat(64), available: true, truncated: false, production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0, production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0, unrelated_noise_count: 0, registered_subjects: [
-    { container_id: "container-app", host_pid: 1, host_pgid: 1, component: "app", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) },
-    { container_id: "container-full-local", host_pid: 2, host_pgid: 2, component: "full_local", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) },
-    { container_id: "container-worker", host_pid: 3, host_pgid: 3, component: "worker", started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64) },
-  ] };
+  return { schema: "homecook.r2-production-observer.v1", source_identity_digest: "a".repeat(64), started_at: "2026-08-29T00:00:00.000Z", completed_at: "2026-08-29T00:01:00.000Z", pre_snapshot_digest: "9".repeat(64), post_snapshot_digest: "9".repeat(64), process_binding_digest: "c".repeat(64), docker_daemon_identity_digest: "e".repeat(64), observation_digest: "e".repeat(64), available: true, truncated: false, production_db_connection_count: 0, production_db_write_count: 0, production_credential_access_count: 0, production_socket_access_count: 0, provider_remote_access_count: 0, production_mutation_count: 0, unrelated_noise_count: 0, registered_subjects: CONTAINER_ROLES.filter((entry) => entry.role === "runtime").map((entry, index) => ({
+    container_id: entry.container_id, host_pid: index + 1, host_pgid: index + 1, component: entry.component, started_at: "2026-08-29T00:00:00.000Z", image_digest: "f".repeat(64), config_digest: "a".repeat(64), executable_identity_digest: "b".repeat(64),
+  })) };
 }
 
 function migrationReplay(overrides = {}) {
@@ -294,9 +302,10 @@ function evidenceFixture() {
       execution_root_identity_digest: "4".repeat(64),
       collision_preflight_digest: sha256Jcs({ collisions: [] }),
       network_ids: ["network-1"],
-      container_ids: ["container-app", "container-full-local", "container-worker"],
+      container_ids: ALL_CONTAINER_IDS,
+      container_roles: CONTAINER_ROLES,
       volume_ids: ["volume-1"],
-      resource_identity_digest: sha256Jcs({ project: `homecook-rehearsal-${RUN_ID}`, container_names: namespace.container_names, network_names: namespace.network_names, volume_names: namespace.volume_names, owned_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"] }),
+      resource_identity_digest: sha256Jcs({ project: `homecook-rehearsal-${RUN_ID}`, container_names: namespace.container_names, network_names: namespace.network_names, volume_names: namespace.volume_names, owned_resource_ids: [...ALL_CONTAINER_IDS, "network-1", "volume-1"].sort() }),
     },
     migration: migrationReplay(),
     fixtures: { fixture_set_id: "homecook-r2-synthetic-v1", fixture_set_digest: "5".repeat(64), production_derived_row_count: 0 },
@@ -318,8 +327,8 @@ function evidenceFixture() {
     network: { default_deny_policy_digest: "8".repeat(64), allowed_endpoints: ["loopback", "run-owned-network"], denied_attempt_count: 1, unexpected_successful_egress_count: 0 },
     cleanup: {
       completed: true,
-      owned_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"],
-      removed_resource_ids: ["container-app", "container-full-local", "container-worker", "network-1", "volume-1"],
+      owned_resource_ids: [...ALL_CONTAINER_IDS, "network-1", "volume-1"].sort(),
+      removed_resource_ids: [...ALL_CONTAINER_IDS, "network-1", "volume-1"].sort(),
       residue_resource_ids: [],
       cleanup_errors: [],
       secret_bearing_persistent_file_count: 0,
@@ -349,7 +358,7 @@ function runtime(component: "app" | "full_local" | "worker") {
     kind: "container",
     pid: null,
     process_group_id: null,
-    container_ids: [component === "full_local" ? "container-full-local" : `container-${component}`],
+    container_ids: component === "full_local" ? FULL_LOCAL_CONTAINER_IDS : [`container-${component}`],
     release_sha: SHA_A,
     release_tree: SHA_B,
     build_id: "build-r2",
@@ -363,11 +372,12 @@ function runtime(component: "app" | "full_local" | "worker") {
 
 function createAdapters() {
   const resources = [
-    { kind: "network", id: "network-1", name: `homecook-rehearsal-${RUN_ID}-network` },
-    { kind: "volume", id: "volume-1", name: `homecook-rehearsal-${RUN_ID}-postgres` },
-    { kind: "container", id: "container-full-local", name: `homecook-rehearsal-${RUN_ID}-full-local` },
-    { kind: "container", id: "container-app", name: `homecook-rehearsal-${RUN_ID}-app` },
-    { kind: "container", id: "container-worker", name: `homecook-rehearsal-${RUN_ID}-worker` },
+    { kind: "network", id: "network-1", name: `${PROJECT}_data-internal` },
+    { kind: "volume", id: "volume-1", name: `${PROJECT}-postgres-data` },
+    ...FULL_LOCAL_RUNTIME_SERVICES.map((service) => ({ kind: "container", id: `container-full-local-${service}`, name: `${PROJECT}-${service}-1` })),
+    { kind: "container", id: "container-app", name: `${PROJECT}-app` },
+    { kind: "container", id: "container-worker", name: `${PROJECT}-worker` },
+    { kind: "container", id: "container-egress-sentinel", name: `${PROJECT}-egress-sentinel` },
   ];
   return {
     snapshotProduction: vi.fn().mockResolvedValue(productionSnapshot()),
@@ -409,7 +419,7 @@ function createAdapters() {
       mutation_attempt_count: 0,
       forbidden_mount_count: 0,
       forbidden_environment_count: 0,
-      observed_container_count: 3,
+      observed_container_count: ALL_CONTAINER_IDS.length,
       container_policy_digest: "a".repeat(64),
       command_policy_digest: "b".repeat(64),
       network_policy_digest: "0".repeat(64),
@@ -621,7 +631,8 @@ describe("release rehearsal R2 orchestration", () => {
     expect(result.isolation).toMatchObject({
       collision_preflight_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
       network_ids: ["network-1"],
-      container_ids: ["container-app", "container-full-local", "container-worker"],
+      container_ids: ALL_CONTAINER_IDS,
+      container_roles: CONTAINER_ROLES,
       volume_ids: ["volume-1"],
     });
     expect(result.canaries.every((entry: { started_at: string; completed_at: string }) => (
@@ -639,9 +650,8 @@ describe("release rehearsal R2 orchestration", () => {
       candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
     }));
     expect(adapters.stopRuntime.mock.calls.map(([entry]) => entry.component)).toEqual(["worker", "full_local", "app"]);
-    expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id)).toEqual([
-      "container-worker", "container-app", "container-full-local", "volume-1", "network-1",
-    ]);
+    expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id))
+      .toEqual([...adapters.resources].reverse().map((entry) => entry.id));
   });
 
   it("cleans only the immutable partial-create ledger after create failure", async () => {
