@@ -35,15 +35,15 @@ function markdownTableCellsAfter(text: string, heading: string) {
 }
 
 const officialTuple = [
-  "docs/요구사항기준선-v1.7.34.md",
-  "docs/화면정의서-v1.5.38.md",
-  "docs/유저flow맵-v1.3.36.md",
-  "docs/db설계-v1.3.36.md",
-  "docs/api문서-v1.2.41.md",
+  "docs/요구사항기준선-v1.7.35.md",
+  "docs/화면정의서-v1.5.39.md",
+  "docs/유저flow맵-v1.3.37.md",
+  "docs/db설계-v1.3.37.md",
+  "docs/api문서-v1.2.42.md",
 ];
 
 function getCurrentEndpointHeading(apiDoc: string) {
-  const heading = apiDoc.match(/^## 엔드포인트 전체 목록 \(108개\) `v1\.2\.\d+`$/m)?.[0];
+  const heading = apiDoc.match(/^## 엔드포인트 전체 목록 \(109개\) `v1\.2\.\d+`$/m)?.[0];
   expect(heading).toBeTruthy();
   return heading ?? "";
 }
@@ -91,11 +91,11 @@ describe("YouTube background extraction contract evolution", () => {
       expect(read(relativePath)).toContain("2026-08-12 contract-evolution");
     }
 
-    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.34");
-    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.38");
-    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.36");
-    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.36");
-    expect(read(officialTuple[4])).toContain("# API\\_설계\\_v1.2.41");
+    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.35");
+    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.39");
+    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.37");
+    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.37");
+    expect(read(officialTuple[4])).toContain("# API\\_설계\\_v1.2.42");
   });
 
   it("records approval, public impact, exclusions, and rejected alternatives", () => {
@@ -165,7 +165,7 @@ describe("YouTube background extraction contract evolution", () => {
     expect(api).toContain("standalone 공개 화면의 async UI 전환은 2026-08-15 사용자 승인으로 활성화했다");
     expect(api).toContain("자동 등록하지 않는다");
     expect(api).toContain(endpointHeading);
-    expect(api).toContain("active 107개 + 삭제된 `2-4` tombstone 1개");
+    expect(api).toContain("active 108개 + 삭제된 `2-4` tombstone 1개");
   });
 
   it("parses the official API and DB inventory tables instead of trusting their labels", () => {
@@ -176,11 +176,11 @@ describe("YouTube background extraction contract evolution", () => {
     );
     const dbRows = markdownTableBodyRowsAfter(
       read(officialTuple[3]),
-      "# 17. 전체 테이블 목록 (75개)",
+      "# 17. 전체 테이블 목록 (76개)",
     );
 
-    expect(apiRows).toHaveLength(108);
-    expect(dbRows).toHaveLength(75);
+    expect(apiRows).toHaveLength(109);
+    expect(dbRows).toHaveLength(76);
   });
 
   it("locks retry enqueue as an exact union and exposes one exact retry action projection", () => {
@@ -468,7 +468,7 @@ describe("YouTube background extraction contract evolution", () => {
       expect(db).toContain(token);
     }
 
-    expect(db).toContain("전체 테이블 목록 (75개)");
+    expect(db).toContain("전체 테이블 목록 (76개)");
   });
 
   it("uses the existing user session as the sole enqueue caller authority", () => {
