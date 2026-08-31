@@ -1,7 +1,7 @@
 {
   "id": "marketing-demand-validation",
   "title": "Marketing demand validation landing",
-  "summary": "/beta 수요검증 랜딩 Stage 1 docs draft. 광고 메시지 일치, neutral result-before-email funnel, single route / single table contract, and fail-closed privacy/Turnstile gates를 문서와 machine-readable bookkeeping으로 잠근다.",
+  "summary": "/beta 수요검증 랜딩의 공식 계약과 Stage 2 백엔드 구현을 잇는다. 광고 메시지 일치, neutral result-before-email funnel, single route / single table, ordered first-write-wins, fail-closed privacy/Turnstile gates를 검증 가능한 상태로 유지한다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -61,25 +61,35 @@
     "merge_policy": "manual",
     "max_fix_rounds": {
       "docs": 4,
-      "backend": 0,
-      "frontend": 0
+      "backend": 4,
+      "frontend": 4
     }
   },
   "verification": {
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "BRANCH_NAME=feature/be-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts tests/supabase-server.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-supabase-static-gate.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build",
+      "pnpm verify:security-functions:isolated",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "BRANCH_NAME=feature/be-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts tests/supabase-server.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-supabase-static-gate.test.ts",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build",
+      "pnpm verify:security-functions:isolated",
       "git diff --check"
     ],
     "evaluator_commands": [],
@@ -95,17 +105,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "codex_approved",
-    "verification_status": "passed",
+    "verification_status": "pending",
     "evaluation_status": "passed",
-    "evaluation_round": 1,
-    "last_evaluator_result": "Independent Codex internal 1.5 APPROVED with FINDINGS_COUNT: 0 after contract, copy, authority, launch-gate, inventory and actor repairs.",
+    "evaluation_round": 3,
+    "last_evaluator_result": "Fresh Stage 3 Codex code and security reviewers returned APPROVE / FINDINGS_COUNT: 0 after attribution, replay, negative-intent, Turnstile, nullable target, optional followup, migration-coherence and typed-factory repairs.",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
   "out_of_scope": [
-    "Product code implementation",
     "Login flow",
     "Pricing table",
     "Testimonials",
@@ -122,5 +131,5 @@
     "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
     "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
   ],
-  "notes": "Stage 1 author and fresh independent Codex internal 1.5 review are complete; FINDINGS_COUNT: 0. owners.claude is a retired compatibility field and must never dispatch Claude. Official tuple v1.7.35/v1.5.39/v1.3.37/v1.3.37/v1.2.42 is synced. Product implementation remains blocked until this docs contract merges."
+  "notes": "Stage 1 contract PR #1477 is merged. Stage 2 backend implementation and fresh Stage 3 code/security review are complete with Findings 0; current-head backend PR checks and isolated migration verification remain pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
 }

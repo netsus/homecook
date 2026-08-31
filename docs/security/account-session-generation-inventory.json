@@ -454,6 +454,17 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "POST /api/v1/marketing/validation",
+      "route": "/api/v1/marketing/validation",
+      "source_file": "app/api/v1/marketing/validation/route.ts",
+      "method": "POST",
+      "owner_scope": "public",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "POST /api/v1/meal-log/entries",
       "route": "/api/v1/meal-log/entries",
       "source_file": "app/api/v1/meal-log/entries/route.ts",
@@ -2296,6 +2307,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-24T17:20:55.875Z",
-  "checksum": "252e19403d709b72d58f2f7878a2809f412c7c6e167b71011c69e90e39c01b7e"
+  "generated_at": "2026-08-31T00:12:46.327Z",
+  "checksum": "336c87ddb66b74a3b18f7a933b0518b4e8e3814bdb2e85c61b45c7cea8c8f3c9"
 }

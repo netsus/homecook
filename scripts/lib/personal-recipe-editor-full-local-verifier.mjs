@@ -54,7 +54,9 @@ const APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ROUTE_COUNTS = new Map([
   ["app/api/v1/shopping/lists/route.ts", 1],
   ["lib/server/youtube-import.ts", 2],
 ]);
-const APPROVED_PUBLIC_SERVICE_ROLE_ROUTE_COUNTS = new Map();
+const APPROVED_PUBLIC_SERVICE_ROLE_ROUTE_COUNTS = new Map([
+  ["app/api/v1/marketing/validation/route.ts", 1],
+]);
 const APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ENTRY_COUNT =
   [...APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ROUTE_COUNTS.values()]
     .reduce((sum, count) => sum + count, 0);

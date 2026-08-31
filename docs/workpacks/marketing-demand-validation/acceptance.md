@@ -10,14 +10,14 @@
 
 - [ ] 광고 클릭 뒤 `/beta`에서 Hero, 퀴즈, 결과, concept, intent, email, followup이 같은 메시지 흐름으로 이어진다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
 - [ ] 결과와 해결 아이디어가 이메일 전에 공개된다 <!-- omo:id=accept-result-before-email;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
-- [ ] `view → quiz_started → quiz_completed → solution_viewed → intent_selected → lead_submitted → followup_submitted` 상태 전이가 공식 문서와 일치한다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
-- [ ] read-only 정책이 지켜진다. lead gate가 막히면 결과는 계속 보인다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
-- [ ] 중복 호출에도 결과가 꼬이지 않는다. duplicate email은 generic success다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] `view → quiz_started → quiz_completed → solution_viewed → intent_selected → lead_submitted → followup_submitted` 상태 전이가 공식 문서와 일치한다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
+- [x] read-only 정책이 지켜진다. lead gate가 막히면 결과는 계속 보인다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
+- [x] 중복 호출에도 결과가 꼬이지 않는다. duplicate email은 generic success다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Target Qualification
 
@@ -52,15 +52,15 @@
 
 ## Data Integrity
 
-- [ ] 타인 리소스를 수정할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
-- [ ] 파생 필드와 비정규화 값이 맞다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스를 수정할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] 파생 필드와 비정규화 값이 맞다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다. `view`, `quiz`, `result`, `intent`, `lead`, `followup`의 대표 경로가 있어야 한다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다. 단일 session row와 단일 table만 사용한다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다. `view`, `quiz`, `result`, `intent`, `lead`, `followup`의 대표 경로가 있어야 한다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다. 단일 session row와 단일 table만 사용한다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -78,8 +78,8 @@
 
 ### Vitest
 
-- [ ] 로직 / 유틸 / 상태 전이 / API helper 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
-- [ ] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다. 특히 `target_qualified` pure rule과 `satisfied_control`가 고정되어야 한다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] 로직 / 유틸 / 상태 전이 / API helper 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
+- [x] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다. 특히 `target_qualified` pure rule과 `satisfied_control`가 고정되어야 한다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
 

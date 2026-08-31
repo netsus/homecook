@@ -50,6 +50,13 @@ const requestTransactionAndYoutubeScopeMigration = readFileSync(
   ),
   "utf8",
 );
+const marketingValidationMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260831100000_marketing_validation_sessions.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const authorizationManifest = readFileSync(
   new URL(
     "../docs/security/account-session-generation-security-function-authorization-manifest.json",
@@ -242,6 +249,15 @@ describe("full-local request authority migration", () => {
       expect(requestTransactionAndYoutubeScopeMigration).toContain(path);
     }
     expect(requestTransactionAndYoutubeScopeMigration).toContain("v_method = 'PATCH'");
+  });
+
+  it("allowlists only the marketing validation session table under the dedicated scope", () => {
+    expect(marketingValidationMigration).toContain(
+      "v_scope = 'marketing-validation'",
+    );
+    expect(marketingValidationMigration).toContain("/marketing_validation_sessions");
+    expect(marketingValidationMigration).toContain("v_method in ('GET', 'POST', 'PATCH')");
+    expect(marketingValidationMigration).not.toContain("/users");
   });
 
   it("classifies every full-local pre-request helper as internal-only", () => {

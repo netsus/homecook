@@ -28,7 +28,9 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "lib/server/youtube-import.ts",
 ];
 const APPROVED_SERVICE_ROLE_FILES = [
-  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 9),
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 5),
+  "app/api/v1/marketing/validation/route.ts",
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(5, 9),
   "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
   ...APPROVED_USER_SERVICE_ROLE_FILES.slice(9),
 ];
@@ -59,6 +61,11 @@ describe("hybrid authority AST/static gate", () => {
       .toEqual(APPROVED_USER_SERVICE_ROLE_FILES);
     expect(inventory.userDirectServiceRoleEntries.every((entry) =>
       entry.classification === "user" && entry.kind === "service-role-call"
+    )).toBe(true);
+    expect(inventory.publicServiceRoleEntries.map((entry) => entry.file))
+      .toEqual(["app/api/v1/marketing/validation/route.ts"]);
+    expect(inventory.publicServiceRoleEntries.every((entry) =>
+      entry.classification === "public" && entry.kind === "service-role-call"
     )).toBe(true);
     expect(inventory.internalOperationViolations).toEqual([]);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
@@ -103,6 +110,11 @@ describe("hybrid authority AST/static gate", () => {
       {
         factory: "createNotFoundFeedbackInternalClient",
         file: "app/api/v1/feedback/404/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createMarketingValidationInternalClient",
+        file: "app/api/v1/marketing/validation/route.ts",
         functionName: "POST",
       },
       {
@@ -238,6 +250,9 @@ describe("hybrid authority AST/static gate", () => {
     ]);
 
     expect(inventory.internalOperationFunctionAllowlist).toMatchObject({
+      createMarketingValidationInternalClient: {
+        "app/api/v1/marketing/validation/route.ts": ["POST"],
+      },
       createRecipeFuturePropagationInternalClient: {
         "app/api/v1/recipes/route.ts": ["postRecipe"],
         "app/api/v1/recipes/[id]/future-plan-impact/route.ts": ["POST"],
@@ -256,6 +271,9 @@ describe("hybrid authority AST/static gate", () => {
       },
     });
     expect(inventory.internalOperationAllowlist).toMatchObject({
+      createMarketingValidationInternalClient: [
+        "app/api/v1/marketing/validation/route.ts",
+      ],
       createYoutubeExtractionInternalClient: [
         "lib/server/youtube-import.ts",
       ],

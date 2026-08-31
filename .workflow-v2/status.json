@@ -1838,20 +1838,25 @@
     {
       "id": "marketing-demand-validation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/marketing-demand-validation",
-      "pr_path": "https://github.com/netsus/homecook/pull/1477",
-      "lifecycle": "planned",
+      "branch": "feature/be-marketing-demand-validation",
+      "pr_path": "https://github.com/netsus/homecook/pull/1478",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
-      "verification_status": "passed",
+      "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+        "BRANCH_NAME=feature/be-marketing-demand-validation pnpm validate:workpack",
         "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
         "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts tests/supabase-server.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-supabase-static-gate.test.ts",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm build",
+        "pnpm verify:security-functions:isolated",
         "git diff --check"
       ],
-      "notes": "Stage 1 author and fresh independent Codex internal 1.5 review completed with APPROVED/FINDINGS_COUNT:0. Claude dispatch is prohibited. Official tuple v1.7.35/v1.5.39/v1.3.37/v1.3.37/v1.2.42 is synced. Manual Only launch blockers remain fail-closed and do not block code implementation after docs merge."
+      "notes": "Stage 1 PR #1477 is merged. Stage 2 backend and fresh Stage 3 code/security review completed with APPROVE/FINDINGS_COUNT:0. Current-head backend PR checks and isolated migration verification remain pending; Manual Only production lead blockers stay fail-closed."
     },
     {
       "id": "auth-provider-memory-linking",
