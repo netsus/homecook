@@ -5,7 +5,7 @@
   "additionalProperties": false,
   "required": [
     "schema", "canonicalization", "status", "trusted_receipt",
-    "candidate_identity_digest", "release_sha", "release_tree", "build_id",
+    "candidate_identity_digest", "selection_digest", "release_sha", "release_tree", "build_id",
     "sealed_bundle_digest", "bundle_manifest_digest", "run_id", "issued_at",
     "completed_at", "isolation", "migration", "fixtures", "runtime",
     "canaries", "network", "cleanup", "worker_rehearsal_rpc_authority", "production_guard", "threat_controls", "rehearsal_runner",
@@ -17,6 +17,7 @@
     "status": { "const": "passed" },
     "trusted_receipt": { "const": false },
     "candidate_identity_digest": { "$ref": "#/$defs/digest" },
+    "selection_digest": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
     "release_sha": { "$ref": "#/$defs/sha" },
     "release_tree": { "$ref": "#/$defs/sha" },
     "build_id": { "type": "string", "minLength": 1 },

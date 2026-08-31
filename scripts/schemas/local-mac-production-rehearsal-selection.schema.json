@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.local-mac-production-rehearsal-selection.v1",
+  "title": "Homecook local Mac production rehearsal selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "canonicalization", "repository", "source_ref", "selected_sha", "selected_tree", "observed_master_sha", "observed_master_tree", "selected_at", "expires_at", "approver_role", "approver_id", "approval_digest", "selection_digest"],
+  "properties": {
+    "schema": { "const": "homecook.local-mac-production-rehearsal-selection.v1" },
+    "canonicalization": { "const": "RFC8785-JCS+SHA256" },
+    "repository": { "const": "netsus/homecook" },
+    "source_ref": { "const": "refs/heads/master" },
+    "selected_sha": { "$ref": "#/$defs/sha1" },
+    "selected_tree": { "$ref": "#/$defs/sha1" },
+    "observed_master_sha": { "$ref": "#/$defs/sha1" },
+    "observed_master_tree": { "$ref": "#/$defs/sha1" },
+    "selected_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "approver_role": { "const": "human-release-approver" },
+    "approver_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "approval_digest": { "$ref": "#/$defs/sha256" },
+    "selection_digest": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" }
+  }
+}

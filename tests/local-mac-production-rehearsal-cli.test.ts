@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -17,6 +18,101 @@ function outputBuffer() {
 }
 
 describe("local Mac production rehearsal CLI", () => {
+  it("creates an explicitly confirmed private rehearsal selection before candidate build", async () => {
+    const output = outputBuffer();
+    const resolveSelectionSource = vi.fn(() => ({
+      observed_master_sha: "b".repeat(40),
+      observed_master_tree: "c".repeat(40),
+      selected_sha: "a".repeat(40),
+      selected_tree: "d".repeat(40),
+    }));
+    const buildSelection = vi.fn((input) => ({
+      schema: "homecook.local-mac-production-rehearsal-selection.v1",
+      ...input,
+      selection_digest: "e".repeat(64),
+    }));
+    const writeSelection = vi.fn(() => "/private/selections/ancestor.selection.json");
+
+    await runLocalMacProductionRehearsalCli([
+      "select",
+      "--release-sha", "a".repeat(40),
+      "--selection-root", "/private/selections",
+      "--expires-at", "2026-09-01T00:00:00.000Z",
+      "--approver-role", "human-release-approver",
+      "--approver-id", "user-approved-release-1",
+      "--approval-digest", "f".repeat(64),
+      "--confirm", "CREATE_REHEARSAL_SELECTION",
+      "--json",
+    ], {
+      now: new Date("2026-08-31T00:00:00.000Z"),
+      output: output.stream,
+      resolveSelectionSource,
+      buildSelection,
+      writeSelection,
+    });
+
+    expect(resolveSelectionSource).toHaveBeenCalledWith(expect.objectContaining({
+      releaseSha: "a".repeat(40),
+      rootDir: process.cwd(),
+    }));
+    expect(buildSelection).toHaveBeenCalledWith(expect.objectContaining({
+      approval_digest: "f".repeat(64),
+      approver_id: "user-approved-release-1",
+      approver_role: "human-release-approver",
+      expires_at: "2026-09-01T00:00:00.000Z",
+      selected_at: "2026-08-31T00:00:00.000Z",
+    }));
+    expect(writeSelection).toHaveBeenCalledWith(expect.objectContaining({
+      selectionRoot: "/private/selections",
+      repoRoot: process.cwd(),
+    }));
+    expect(JSON.parse(output.value())).toEqual({
+      selection: expect.objectContaining({ selection_digest: "e".repeat(64) }),
+      selection_path: "/private/selections/ancestor.selection.json",
+      status: "created",
+    });
+  });
+
+  it("atomically creates a canonical mode-0600 selection with a single link", async () => {
+    const temporaryRoot = mkdtempSync(join(tmpdir(), "homecook-selection-cli-"));
+    const selectionRootInput = join(temporaryRoot, "selections");
+    mkdirSync(selectionRootInput, { mode: 0o700 });
+    chmodSync(selectionRootInput, 0o700);
+    const selectionRoot = realpathSync(selectionRootInput);
+    const output = outputBuffer();
+    try {
+      await runLocalMacProductionRehearsalCli([
+        "select",
+        "--release-sha", "a".repeat(40),
+        "--selection-root", selectionRoot,
+        "--expires-at", "2026-08-31T12:00:00.000Z",
+        "--approver-role", "human-release-approver",
+        "--approver-id", "user-approved-release-2",
+        "--approval-digest", "f".repeat(64),
+        "--confirm", "CREATE_REHEARSAL_SELECTION",
+        "--json",
+      ], {
+        now: new Date("2026-08-31T00:00:00.000Z"),
+        output: output.stream,
+        resolveSelectionSource: () => ({
+          observed_master_sha: "b".repeat(40),
+          observed_master_tree: "c".repeat(40),
+          selected_sha: "a".repeat(40),
+          selected_tree: "d".repeat(40),
+        }),
+      });
+
+      const result = JSON.parse(output.value());
+      const selectionStats = lstatSync(result.selection_path);
+      expect(selectionStats.mode & 0o777).toBe(0o600);
+      expect(selectionStats.nlink).toBe(1);
+      expect(readFileSync(result.selection_path, "utf8")).toBe(`${JSON.stringify(result.selection)}\n`.trimEnd());
+      expect(result.selection.selection_digest).toMatch(/^[0-9a-f]{64}$/u);
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true });
+    }
+  });
+
   it("documents the split-two candidate command while preserving production mutation zero exclusions", () => {
     const result = spawnSync(process.execPath, [SCRIPT, "help"], {
       cwd: process.cwd(),
@@ -88,6 +184,57 @@ describe("local Mac production rehearsal CLI", () => {
       candidate_root: "/private/candidate/run-a",
       manifest: { release_sha: "a".repeat(40) },
     });
+  });
+
+  it("validates an approved ancestor selection before invoking the candidate builder", async () => {
+    const output = outputBuffer();
+    const selection = {
+      selected_sha: "a".repeat(40),
+      selected_tree: "c".repeat(40),
+      selection_digest: "d".repeat(64),
+    };
+    const resolveSourceAuthority = vi.fn(() => ({
+      mode: "approved_ancestor",
+      release_sha: selection.selected_sha,
+      release_tree: selection.selected_tree,
+      selection_digest: selection.selection_digest,
+      observed_master_sha: "e".repeat(40),
+      observed_master_tree: "f".repeat(40),
+      current_master_sha: "1".repeat(40),
+      current_master_tree: "2".repeat(40),
+    }));
+    const buildCandidate = vi.fn(async (options) => {
+      expect(resolveSourceAuthority).toHaveBeenCalledTimes(1);
+      await options.beforeComplete({ builder_input_digest: "b".repeat(64) });
+      return { candidate_root: "/private/candidate/selected", manifest: { selection_digest: options.selectionDigest } };
+    });
+
+    await runLocalMacProductionRehearsalCli([
+      "candidate", "--release-sha", selection.selected_sha,
+      "--selection", "/private/selections/approved.selection.json",
+      "--production-env-authority", "/private/server/full-local-production.env", "--json",
+    ], {
+      immutableBuilderInputDigest: "b".repeat(64),
+      immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
+      immutableBootstrapVerified: true,
+      beforeCandidateComplete: () => ({ builder_input_digest: "b".repeat(64), verified: true }),
+      output: output.stream,
+      readSelection: vi.fn(() => selection),
+      createCandidateAdapters: vi.fn(() => ({ resolveSourceAuthority })),
+      buildCandidate,
+      candidateNamespaceResolver: () => "/private/rehearsal",
+      runIdFactory: () => "00000000-0000-4000-8000-000000000010",
+    });
+
+    expect(resolveSourceAuthority).toHaveBeenCalledWith({
+      releaseSha: selection.selected_sha,
+      selection,
+    });
+    expect(buildCandidate).toHaveBeenCalledWith(expect.objectContaining({
+      selectionDigest: selection.selection_digest,
+      sourceAuthority: expect.objectContaining({ mode: "approved_ancestor" }),
+    }));
+    expect(JSON.parse(output.value()).manifest.selection_digest).toBe(selection.selection_digest);
   });
 
   it("prints no candidate path when immutable finalization fails", async () => {
@@ -278,6 +425,7 @@ describe("local Mac production rehearsal CLI", () => {
   it("registers the exact package script family without changing the production promote kill switch", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     expect(packageJson.scripts["release:rehearsal:inventory"]).toBe("node scripts/local-mac-production-rehearsal.mjs inventory");
+    expect(packageJson.scripts["release:rehearsal:select"]).toBe("node scripts/local-mac-production-rehearsal.mjs select");
     expect(packageJson.scripts["release:rehearsal:candidate"]).toBe("node --experimental-vm-modules scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs");
     expect(packageJson.scripts["release:rehearsal:run"]).toBe("node scripts/local-mac-production-rehearsal-run.mjs");
     expect(packageJson.scripts["release:rehearsal:classify"]).toBe("node scripts/local-mac-production-rehearsal.mjs classify");

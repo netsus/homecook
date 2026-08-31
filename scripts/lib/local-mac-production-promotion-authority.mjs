@@ -65,6 +65,7 @@ export function validateProductionPromotionPreMutationGate({
     }
   }
   const bindings = [
+    ["selection_digest", repeatability.selection_digest],
     ["release_sha", repeatability.release_sha],
     ["release_tree", repeatability.release_tree],
     ["build_id", repeatability.build_id],
@@ -122,6 +123,7 @@ export function validateProductionPromotionPreMutationGate({
     || !classification.states.includes("coherent_running")
   ) throw new Error("Production mixed-state classification is not promotion_safe or has unresolved findings.");
   const authority = {
+    selection_digest: repeatability.selection_digest,
     release_sha: repeatability.release_sha,
     release_tree: repeatability.release_tree,
     build_id: repeatability.build_id,
@@ -183,7 +185,7 @@ export function createProductionPromotionAuthorityVerifier({
       verifyAttestation,
     });
     if (manifest && [
-      "release_sha", "release_tree", "build_id", "sealed_bundle_digest",
+      "selection_digest", "release_sha", "release_tree", "build_id", "sealed_bundle_digest",
       "repeatability_receipt_digest", "rehearsal_receipt_valid_until",
     ].some((field) => manifest[field] !== validatedManifest[field])) {
       throw new Error("Production manifest authority changed between pre-mutation reads.");
@@ -200,6 +202,7 @@ export function createProductionPromotionAuthorityVerifier({
     const candidateRoot = frozenCandidateAuthority ? resolve(frozenCandidateAuthority.root) : resolve(candidatePath);
     const candidate = frozenCandidateAuthority ? {
       manifest: {
+        selection_digest: validatedManifest.selection_digest,
         release_sha: validatedManifest.release_sha,
         release_tree: validatedManifest.release_tree,
         build_id: validatedManifest.build_id,
@@ -249,6 +252,7 @@ export function createProductionPromotionAuthorityVerifier({
         workerRoot: componentRoots.worker,
         workerManifestPath: join(bundleRoot, "worker", "artifact.json"),
         candidateIdentityDigest: candidate.manifest.candidate_identity_digest,
+        selectionDigest: candidate.manifest.selection_digest,
         bundleManifestDigest: candidate.manifest.bundle_manifest_digest,
         sealedBundleDigest: candidate.manifest.sealed_bundle_digest,
         repeatabilityReceiptDigest: repeatabilityReceipt.repeatability_receipt_digest,

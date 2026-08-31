@@ -101,6 +101,7 @@ function runInput(index: 1 | 2, overrides: Record<string, unknown> = {}) {
     canonicalization: "RFC8785-JCS+SHA256",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
+    selection_digest: null,
     release_sha: RELEASE_SHA,
     release_tree: RELEASE_TREE,
     ci_head_sha: RELEASE_SHA,
@@ -286,6 +287,7 @@ function candidateAuthority() {
   return {
     repository: base.repository,
     source_ref: base.source_ref,
+    selection_digest: base.selection_digest,
     release_sha: base.release_sha,
     release_tree: base.release_tree,
     ci_check_summary_digest: base.ci_check_summary_digest,
@@ -411,6 +413,7 @@ function runEvidenceAuthority(index: 1 | 2) {
     status: "passed",
     trusted_receipt: false,
     candidate_identity_digest: SHA_C,
+    selection_digest: base.selection_digest,
     release_sha: base.release_sha,
     release_tree: base.release_tree,
     build_id: base.build_id,
@@ -712,6 +715,27 @@ describe("rehearsal run receipt", () => {
 });
 
 describe("repeatability receipt", () => {
+  it("cross-binds one selection digest through both run receipts and repeatability authority", () => {
+    const members = [
+      buildTestRunReceipt({ ...runInput(1), selection_digest: SHA_A }),
+      buildTestRunReceipt({ ...runInput(2), selection_digest: SHA_A }),
+    ];
+    const repeatability = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
+
+    expect(members.every((member) => member.selection_digest === SHA_A)).toBe(true);
+    expect(repeatability.selection_digest).toBe(SHA_A);
+    expect(receiptAuthority.verifyRehearsalReceiptBundleAuthority({
+      memberSources: members.map((member) => canonicalizeJcs(member)),
+      repeatabilitySource: canonicalizeJcs(repeatability),
+      now: NOW,
+    }).selection_digest).toBe(SHA_A);
+    expect(() => buildRepeatabilityReceipt({
+      memberReceipts: [members[0], buildTestRunReceipt({ ...runInput(2), selection_digest: null })],
+      issuerTaskId: "task",
+      now: NOW,
+    })).toThrow(/selection|member|match|digest/iu);
+  });
+
   it("aligns two distinct members by digest and enforces exact 24-hour expiry", () => {
     const members = [buildTestRunReceipt(runInput(2)), buildTestRunReceipt(runInput(1))];
     const receipt = buildRepeatabilityReceipt({
@@ -740,6 +764,7 @@ describe("repeatability receipt", () => {
       now: NOW,
     })).toEqual({
       rehearsal_receipt_schema: repeatability.schema,
+      selection_digest: repeatability.selection_digest,
       release_sha: repeatability.release_sha,
       release_tree: repeatability.release_tree,
       build_id: repeatability.build_id,
@@ -827,6 +852,9 @@ describe("receipt schemas and artifact path boundary", () => {
     const validateRepeat = ajv.compile(repeatSchema);
     const members = [buildTestRunReceipt(runInput(1)), buildTestRunReceipt(runInput(2))];
     const repeat = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
+
+    expect(runSchema.required).toContain("selection_digest");
+    expect(repeatSchema.required).toContain("selection_digest");
 
     expect(validateRun(members[0]), JSON.stringify(validateRun.errors)).toBe(true);
     expect(validateRepeat(repeat), JSON.stringify(validateRepeat.errors)).toBe(true);
@@ -970,6 +998,7 @@ describe("strict receipt time authority", () => {
     const memberPaths = ["/private/member-1.json", "/private/member-2.json"];
     const repeatabilityPath = "/private/repeatability.json";
     const manifest = {
+      selection_digest: null,
       release_sha: RELEASE_SHA,
       release_tree: RELEASE_TREE,
       build_id: "build-001",
@@ -1048,6 +1077,7 @@ describe("strict receipt time authority", () => {
     const repeatability = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
     const valid = {
       manifest: {
+        selection_digest: repeatability.selection_digest,
         release_sha: repeatability.release_sha,
         release_tree: repeatability.release_tree,
         build_id: repeatability.build_id,
@@ -1059,6 +1089,7 @@ describe("strict receipt time authority", () => {
       repeatabilityReceipt: repeatability,
       memberReceipts: members,
       candidateManifest: {
+        selection_digest: repeatability.selection_digest,
         release_sha: repeatability.release_sha,
         release_tree: repeatability.release_tree,
         build_id: repeatability.build_id,
@@ -1120,6 +1151,58 @@ describe("strict receipt time authority", () => {
       }).toThrow(/receipt|expired|bundle|candidate|future|classification|mixed|promotion|authority/iu);
       expect(mutation).toHaveBeenCalledTimes(0);
     }
+  });
+
+  it("does not let a valid selection substitute for repeatability or cross-bound candidate authority", () => {
+    const members = [
+      buildTestRunReceipt({ ...runInput(1), selection_digest: SHA_A }),
+      buildTestRunReceipt({ ...runInput(2), selection_digest: SHA_A }),
+    ];
+    const repeatability = buildRepeatabilityReceipt({ memberReceipts: members, issuerTaskId: "task", now: NOW });
+    const classificationUnsigned = {
+      schema: "homecook.local-mac-production-rehearsal-classification.v1",
+      inventory_digest: SHA_A,
+      classified_at: "2026-08-29T10:29:30.000Z",
+      states: ["coherent_running"],
+      promotion_safe: true,
+      mutation_attempt_count: 0,
+      findings: [],
+      recovery_plan: [],
+    };
+    const authority = {
+      manifest: {
+        selection_digest: SHA_A,
+        release_sha: repeatability.release_sha,
+        release_tree: repeatability.release_tree,
+        build_id: repeatability.build_id,
+        rehearsal_receipt_schema: repeatability.schema,
+        sealed_bundle_digest: repeatability.sealed_bundle_digest,
+        repeatability_receipt_digest: repeatability.repeatability_receipt_digest,
+        rehearsal_receipt_valid_until: repeatability.valid_until,
+      },
+      repeatabilityReceipt: repeatability,
+      memberReceipts: members,
+      candidateManifest: {
+        selection_digest: SHA_A,
+        release_sha: repeatability.release_sha,
+        release_tree: repeatability.release_tree,
+        build_id: repeatability.build_id,
+        sealed_bundle_digest: repeatability.sealed_bundle_digest,
+        candidate_identity_digest: SHA_C,
+        bundle_manifest_digest: SHA_B,
+      },
+      candidateRoot: "/private/sealed-candidate",
+      candidateComponentDigests: { app: SHA_A, full_local: SHA_B, worker: SHA_C },
+      inventoryCapturedAt: "2026-08-29T10:29:00.000Z",
+      classification: { ...classificationUnsigned, classification_digest: sha256Jcs(classificationUnsigned) },
+      now: NOW,
+    };
+
+    expect(productionRelease.validateProductionPromotionPreMutationGate(authority).selection_digest).toBe(SHA_A);
+    expect(() => productionRelease.validateProductionPromotionPreMutationGate({
+      ...authority,
+      candidateManifest: { ...authority.candidateManifest, selection_digest: SHA_B },
+    })).toThrow(/selection|candidate|repeatability|authority/iu);
   });
 
   it("rejects calendar-invalid RFC3339 instants instead of Date.parse normalization", () => {

@@ -61,6 +61,7 @@ import {
   materializeImmutableCandidateBootstrap,
   verifyImmutableCandidateModuleGraph,
 } from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
+import * as candidateBootstrapModule from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -146,6 +147,7 @@ function validManifestInput() {
     canonicalization: "RFC8785-JCS+SHA256",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
+    selection_digest: null,
     release_sha: SHA_A,
     release_tree: SHA_B,
     ci_check_summary_digest: DIGEST_A,
@@ -226,6 +228,7 @@ describe("release rehearsal candidate manifest", () => {
       type: "object",
       additionalProperties: false,
       required: expect.arrayContaining([
+        "selection_digest",
         "release_sha",
         "release_tree",
         "ci_check_summary_digest",
@@ -259,6 +262,24 @@ describe("release rehearsal candidate manifest", () => {
 
     expect(parsed).toEqual(manifest);
     expect(parsed.manifest_digest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it("cross-binds an approved selection digest while preserving explicit current-tip null", () => {
+    const currentTip = buildCandidateManifest({
+      ...validManifestInput(),
+      selection_digest: null,
+    });
+    const selectedAncestor = buildCandidateManifest({
+      ...validManifestInput(),
+      selection_digest: DIGEST_A,
+    });
+
+    expect(currentTip.selection_digest).toBeNull();
+    expect(selectedAncestor.selection_digest).toBe(DIGEST_A);
+    expect(() => validateCandidateBundleCrossBinding(selectedAncestor, {
+      ...selectedAncestor,
+      selection_digest: DIGEST_B,
+    })).toThrow(/selection|cross-binding|digest/iu);
   });
 
   it("rejects unknown, duplicate, missing, and digest-tampered fields", () => {
@@ -374,6 +395,32 @@ describe("release rehearsal candidate manifest", () => {
 });
 
 describe("release rehearsal candidate input gates", () => {
+  it("runs selected-ancestor candidate tooling from current master while preserving current-tip compatibility", () => {
+    const resolveImmutableBootstrapAuthority = (candidateBootstrapModule as unknown as {
+      resolveImmutableBootstrapAuthority?: (input: {
+        releaseSha: string;
+        remoteSha: string;
+        selectionPath: string | null;
+      }) => { builder_authority_sha: string; release_sha: string };
+    }).resolveImmutableBootstrapAuthority;
+    if (typeof resolveImmutableBootstrapAuthority !== "function") throw new Error("bootstrap authority resolver is unavailable");
+    expect(resolveImmutableBootstrapAuthority({
+      releaseSha: SHA_A,
+      remoteSha: SHA_B,
+      selectionPath: "/private/selection.json",
+    })).toEqual({ builder_authority_sha: SHA_B, release_sha: SHA_A });
+    expect(resolveImmutableBootstrapAuthority({
+      releaseSha: SHA_A,
+      remoteSha: SHA_A,
+      selectionPath: null,
+    })).toEqual({ builder_authority_sha: SHA_A, release_sha: SHA_A });
+    expect(() => resolveImmutableBootstrapAuthority({
+      releaseSha: SHA_A,
+      remoteSha: SHA_B,
+      selectionPath: null,
+    })).toThrow(/current|master|selection|release/iu);
+  });
+
   it("loads candidate modules and locks only from the exact immutable Git object", () => {
     const repo = privateRoot("homecook-bootstrap-repo-");
     const gitHome = privateRoot("homecook-bootstrap-git-home-");
@@ -634,6 +681,15 @@ try {
     wrongHead.safe_projection.check_runs[0].head_sha = SHA_B;
     expect(() => validateStableCiSnapshots(wrongHead, wrongHead, SHA_A))
       .toThrow(/head|sha/iu);
+
+    const advancedMaster = structuredClone(evidence);
+    advancedMaster.remote_master_sha = SHA_B;
+    advancedMaster.safe_projection.remote_master_sha = SHA_B;
+    advancedMaster.safe_projection_digest = createHash("sha256")
+      .update(canonicalizeJcs(advancedMaster.safe_projection)).digest("hex");
+    expect(validateStableCiSnapshots(evidence, advancedMaster, SHA_A, {
+      selectionDigest: DIGEST_A,
+    })).toMatchObject({ head_sha: SHA_A, remote_master_sha: SHA_A });
   });
 
   it("accounts for every Compose service and rejects tag-only, build, missing-image, and mixed input", () => {
@@ -1100,6 +1156,7 @@ try {
     const valid = {
       requested_sha: SHA_A,
       origin_master_sha: SHA_A,
+      selection_digest: null,
       checkout_sha: SHA_A,
       release_tree: SHA_B,
       checkout_tree: SHA_B,
@@ -1112,6 +1169,13 @@ try {
       builder_input_digest: DIGEST_B,
     };
     expect(validateCandidateSourceEvidence(valid)).toEqual(valid);
+
+    const selectedAncestor = {
+      ...valid,
+      origin_master_sha: SHA_B,
+      selection_digest: DIGEST_A,
+    };
+    expect(validateCandidateSourceEvidence(selectedAncestor)).toEqual(selectedAncestor);
 
     for (const patch of [
       { origin_master_sha: SHA_B },
@@ -1404,6 +1468,7 @@ describe("release rehearsal candidate orchestration", () => {
       toolchain_lock_digest: candidate.toolchain_lock_digest,
       environment_snapshot: candidate.environment_snapshot,
       production_guard: candidate.production_guard,
+      selection_digest: null,
     })).toThrow(/release_sha|cross.?binding|candidate|bundle/iu);
   });
 
@@ -1521,6 +1586,7 @@ describe("release rehearsal candidate orchestration", () => {
     const bundleInput = {
       repository: manifestInput.repository,
       source_ref: manifestInput.source_ref,
+      selection_digest: manifestInput.selection_digest,
       artifacts: physical.artifacts,
       build_id: manifestInput.build_id,
       build_tools: manifestInput.build_tools,
@@ -1552,6 +1618,7 @@ describe("release rehearsal candidate orchestration", () => {
     chmodSync(join(root, "bundles"), 0o500);
     const candidateIdentityDigest = createHash("sha256").update(canonicalizeJcs({
       schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+      selection_digest: manifestInput.selection_digest,
       bundle_manifest_digest: bundle.bundle_manifest_digest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
     })).digest("hex");
@@ -1803,6 +1870,7 @@ describe("release rehearsal candidate orchestration", () => {
         evidence: validateCandidateSourceEvidence({
           requested_sha: SHA_A,
           origin_master_sha: SHA_A,
+          selection_digest: null,
           checkout_sha: SHA_A,
           release_tree: SHA_B,
           checkout_tree: SHA_B,
