@@ -750,23 +750,33 @@ describe("GitHub production release attestation verification", () => {
       }),
     ).toThrow(/quality|rerun|fresh|check-run/iu);
 
+    const optionalCheck = {
+      id: 9_999,
+      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      check_suite: { id: 999 },
+      completed_at: "2026-08-26T10:01:00Z",
+      conclusion: "skipped",
+      name: "optional-security-advisory",
+      status: "completed",
+    };
     expect(
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
-        checkRuns: [
-          ...checks,
-          {
-            id: 9_999,
-            app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
-            check_suite: { id: 999 },
-            completed_at: "2026-08-26T10:01:00Z",
-            conclusion: "neutral",
-            name: "optional-security-advisory",
-            status: "completed",
-          },
-        ],
+        checkRuns: [...checks, optionalCheck],
       }).subject.required_check_summary,
-    ).toMatchObject({ intended_skip: 1 });
+    ).toMatchObject({ intended_skip: 1, rerun: 0 });
+
+    for (const invalidOptionalCheck of [
+      { ...optionalCheck, conclusion: "neutral" },
+      { ...optionalCheck, completed_at: null, conclusion: null, status: "in_progress" },
+      { ...optionalCheck, conclusion: "failure" },
+      { ...optionalCheck, conclusion: "cancelled" },
+    ]) {
+      expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [...checks, invalidOptionalCheck],
+      })).toThrow(/optional-security-advisory|neutral|pending|failed|cancelled|terminal/iu);
+    }
   });
 
   it("counts a successful required-context check-run replacement as a rerun and rejects it", () => {

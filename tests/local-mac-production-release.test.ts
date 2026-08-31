@@ -223,6 +223,18 @@ describe("local Mac production release manifest", () => {
       expect(authoritySchema.additionalProperties).toBe(false);
       expect(authoritySchema.required).toEqual(expect.arrayContaining([...required]));
     }
+    const externalCheckSchema = JSON.parse(readFileSync(
+      new URL(
+        "../scripts/schemas/github-production-release-external-check-evidence.schema.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ));
+    expect(externalCheckSchema.properties.required_check_summary.properties).toMatchObject({
+      total: { type: "integer", minimum: 7 },
+      success: { type: "integer", minimum: 7 },
+      intended_skip: { type: "integer", minimum: 0 },
+    });
 
     const require = createRequire(import.meta.url);
     const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
@@ -231,8 +243,8 @@ describe("local Mac production release manifest", () => {
       schema.properties.required_check_summary,
     );
     expect(validateSummary({
-      total: 7,
-      success: 5,
+      total: 9,
+      success: 7,
       intended_skip: 2,
       bad: 0,
       cancelled: 0,
@@ -243,6 +255,7 @@ describe("local Mac production release manifest", () => {
     })).toBe(true);
     for (const invalidSummary of [
       { total: -1, success: 0, intended_skip: 0 },
+      { total: 7, success: 6, intended_skip: 1 },
       { total: 7, success: 7, intended_skip: 0, failed: 1 },
       { total: 7, success: 7, intended_skip: 0, unexpected: 0 },
     ]) {
