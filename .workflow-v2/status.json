@@ -1839,7 +1839,7 @@
       "id": "marketing-demand-validation",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-marketing-demand-validation",
-      "pr_path": "https://github.com/netsus/homecook/pull/1479",
+      "pr_path": "https://github.com/netsus/homecook/pull/1480",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "pending",
@@ -1863,7 +1863,7 @@
         "pnpm test:lighthouse:marketing:run",
         "git diff --check"
       ],
-      "notes": "Stage 1 PR #1477 and Stage 2 backend PR #1478 are merged. Stage 3 code/security review, Stage 4 frontend code review, and public Stage 5 authority review completed with Findings 0. Frontend PR #1479 current-head CI and fresh final authority remain pending; Manual Only production lead blockers stay fail-closed."
+      "notes": "Stage 1 PR #1477, Stage 2 PR #1478, and Stage 4 frontend PR #1479 are merged. Stage 3 review, Stage 4 review, public Stage 5, and fresh final authority completed with Findings 0. Stage 5 projection PR #1480 is pending; Stage 6 closeout remains pending and Manual Only production lead blockers stay fail-closed."
     },
     {
       "id": "auth-provider-memory-linking",
