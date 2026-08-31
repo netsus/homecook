@@ -90,7 +90,7 @@
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음
 - Visual artifact: `ui/designs/MARKETING_DEMAND_VALIDATION.md`, `ui/designs/critiques/MARKETING_DEMAND_VALIDATION-critique.md`, `ui/designs/authority/MARKETING_DEMAND_VALIDATION-authority.md`, `ui/designs/evidence/marketing-demand-validation/`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - `/beta`는 앱 셸이 아니라 독립 랜딩이다.
   - 결과와 해결 아이디어는 이메일 전에 보여 준다.
