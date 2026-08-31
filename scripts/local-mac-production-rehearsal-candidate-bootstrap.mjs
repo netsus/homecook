@@ -592,9 +592,13 @@ export async function runBootstrap(argv) {
   const remoteSha = String(runExact(gitPath, ["-C", repositoryRoot, "rev-parse", "origin/master"], {
     cwd: repositoryRoot, homeDir,
   })).trim();
-  if (remoteSha !== releaseSha) reject("release SHA is not current fetched origin/master");
+  if (!/^[0-9a-f]{40}$/u.test(remoteSha)) reject("candidate-start origin/master SHA is invalid");
+  const remoteTree = String(runExact(gitPath, [
+    "--no-replace-objects", "-C", repositoryRoot, "rev-parse", `${remoteSha}^{tree}`,
+  ], { cwd: repositoryRoot, homeDir })).trim();
+  if (!/^[0-9a-f]{40}$/u.test(remoteTree)) reject("candidate-start origin/master tree is invalid");
   const exactBootstrap = runExact(gitPath, [
-    "--no-replace-objects", "-C", repositoryRoot, "show", `${releaseSha}:scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs`,
+    "--no-replace-objects", "-C", repositoryRoot, "show", `${remoteSha}:scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs`,
   ], { cwd: repositoryRoot, homeDir, binary: true });
   if (!Buffer.from(exactBootstrap).equals(readFileSync(bootstrapPath))) reject("bootstrap bytes differ from exact Git authority");
   const privateRoot = mkdtempSync(join(tmpdir(), "homecook-candidate-bootstrap-"));
@@ -602,7 +606,7 @@ export async function runBootstrap(argv) {
   const sourceRoot = join(privateRoot, "source");
   try {
     materializeImmutableCandidateBootstrap({
-      gitPath, tarPath, repositoryRoot, releaseSha, outputRoot: sourceRoot, homeDir,
+      gitPath, tarPath, repositoryRoot, releaseSha: remoteSha, outputRoot: sourceRoot, homeDir,
     });
     const materializedBootstrap = readFileSync(join(sourceRoot, "scripts", "local-mac-production-rehearsal-candidate-bootstrap.mjs"));
     if (!materializedBootstrap.equals(readFileSync(bootstrapPath))) reject("materialized bootstrap bytes drifted");
@@ -616,7 +620,7 @@ export async function runBootstrap(argv) {
         "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
         "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
       ],
-      releaseSha,
+      releaseSha: remoteSha,
       repositoryRoot,
       sourceRoot,
     });
@@ -638,7 +642,7 @@ export async function runBootstrap(argv) {
           "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
           "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
         ],
-        releaseSha,
+        releaseSha: remoteSha,
         repositoryRoot,
         sourceRoot,
       });
@@ -666,6 +670,8 @@ export async function runBootstrap(argv) {
       immutableBuilderInputDigest: builderGraph.builder_input_digest,
       immutableBuilderInputEntries: builderGraph.entries,
       immutableBootstrapVerified: true,
+      immutableObservedMasterSha: remoteSha,
+      immutableObservedMasterTree: remoteTree,
       repositoryRootResolver: () => repositoryRoot,
     });
     if (!finalizationComplete) reject("candidate returned without immutable finalization");

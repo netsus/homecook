@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.local-mac-production-rehearsal-selection.v1",
+  "title": "Homecook local Mac production rehearsal selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "canonicalization",
+    "repository",
+    "source_ref",
+    "selected_release_sha",
+    "selected_release_tree",
+    "observed_master_sha",
+    "observed_master_tree",
+    "selected_at",
+    "valid_until",
+    "local_authority",
+    "approval",
+    "approval_digest",
+    "selection_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "homecook.local-mac-production-rehearsal-selection.v1"
+    },
+    "canonicalization": {
+      "const": "RFC8785-JCS+SHA256"
+    },
+    "repository": {
+      "const": "netsus/homecook"
+    },
+    "source_ref": {
+      "const": "refs/heads/master"
+    },
+    "selected_release_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "selected_release_tree": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "observed_master_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "observed_master_tree": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "selected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "local_authority": {
+      "const": "rehearsal-selection-only"
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved_by",
+        "approval_id",
+        "issuer_task_id",
+        "confirmation_digest"
+      ],
+      "properties": {
+        "approved_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "approval_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "issuer_task_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "confirmation_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "approval_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "selection_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
