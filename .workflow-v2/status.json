@@ -1838,8 +1838,8 @@
     {
       "id": "marketing-demand-validation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/fe-marketing-demand-validation",
-      "pr_path": "https://github.com/netsus/homecook/pull/1480",
+      "branch": "feature/fe-marketing-demand-validation-stage6",
+      "pr_path": "https://github.com/netsus/homecook/pull/1482",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "pending",
