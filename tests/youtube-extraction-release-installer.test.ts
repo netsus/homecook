@@ -570,6 +570,9 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       build_id: "build-worker-v2",
       promotion_id: "promotion-worker-v2",
     });
+    expect(manifest.files).toContainEqual(expect.objectContaining({
+      path: "scripts/lib/local-mac-production-rehearsal-selection.mjs",
+    }));
   });
 
   it("rejects duplicate and incomplete expected-schema authority inventories", () => {
@@ -1509,6 +1512,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "scripts/youtube-extraction-worker-runner.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
       "scripts/lib/local-mac-production-release.mjs",
+      "scripts/lib/local-mac-production-rehearsal-selection.mjs",
       "scripts/lib/local-mac-production-authority-error.mjs",
       "scripts/lib/production-release-approval-policy.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",

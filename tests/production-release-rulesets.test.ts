@@ -1050,7 +1050,7 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("repeatability_receipt_b64:");
     expect(workflow).toContain("selection_b64:");
     expect(workflow.match(/verify-production-release-rehearsal-authority\.mjs/gu)).toHaveLength(4);
-    expect(workflow.match(/--rehearsal-authority-json/gu)).toHaveLength(2);
+    expect(workflow.match(/--rehearsal-authority-json/gu)).toHaveLength(3);
     expect(workflow).toContain("attestations/production-release/v2");
     for (const binding of [
       "build_id",
@@ -1077,7 +1077,7 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("permission-contents: write");
     expect(workflow).not.toContain("permission-administration");
     expect(workflow.match(/persist-credentials: false/gu)).toHaveLength(2);
-    expect(workflow.match(/git\/ref\/heads\/master/gu)).toHaveLength(6);
+    expect(workflow.match(/git\/ref\/heads\/master/gu)).toHaveLength(8);
     expect(workflow).toContain("git/matching-refs/tags/$RELEASE_TAG");
     expect(workflow).not.toContain("git fetch origin");
     expect(workflow).toContain("prod-YYYYMMDD.N");
@@ -1113,7 +1113,10 @@ describe("production release rulesets desired state", () => {
       expect(workflow).toContain(context);
     }
     expect(workflow).not.toContain("security-smoke,snyk");
-    expect(workflow.match(/commits\/\$RELEASE_SHA\/check-runs\?filter=all&per_page=100/gu)).toHaveLength(2);
+    expect(workflow.match(/commits\/\$RELEASE_SHA\/check-runs\?filter=all&per_page=100/gu)).toHaveLength(3);
+    expect(workflow.match(/commits\/"\$RELEASE_SHA"\/statuses/gu)).toHaveLength(3);
+    expect(workflow.match(/build-production-release-attestation\.mjs/gu)).toHaveLength(3);
+    expect(workflow).toContain("Re-fetch and rebuild attestation evidence immediately before publication");
 
     const mutableActionReferences = workflow.match(/uses:\s+[^\s]+@(?![0-9a-f]{40}(?:\s|$))[^\s]+/gu) ?? [];
     expect(mutableActionReferences).toEqual([]);
@@ -1175,8 +1178,23 @@ describe("production release rulesets desired state", () => {
     const finalMasterRecheckIndex = workflow.indexOf(
       "Recheck current master immediately before attestation publication",
     );
+    const finalEvidenceRefreshIndex = workflow.indexOf(
+      "Re-fetch and rebuild attestation evidence immediately before publication",
+    );
     expect(finalMasterRecheckIndex).toBeGreaterThan(readbackIndex);
-    expect(attestIndex).toBeGreaterThan(finalMasterRecheckIndex);
+    expect(finalEvidenceRefreshIndex).toBeGreaterThan(finalMasterRecheckIndex);
+    expect(attestIndex).toBeGreaterThan(finalEvidenceRefreshIndex);
+    const finalRefresh = workflow.slice(finalEvidenceRefreshIndex, attestIndex);
+    expect(finalRefresh).toContain("pre-attestation/release-workflow-suite-ids.json");
+    expect(finalRefresh).toMatch(
+      /cmp[\s\S]*?post-approval\/release-workflow-suite-ids\.json[\s\S]*?pre-attestation\/release-workflow-suite-ids\.json/u,
+    );
+    expect(finalRefresh).toContain("pre-attestation/check-runs.json");
+    expect(finalRefresh).toContain("pre-attestation/commit-statuses.json");
+    expect(finalRefresh).toContain("pre-attestation/production-release-subject.json");
+    expect(finalRefresh).not.toContain('--check-runs-json "$RUNNER_TEMP/post-approval/check-runs.json"');
+    expect(workflow).toContain("subject-path: ${{ runner.temp }}/pre-attestation/production-release-subject.json");
+    expect(workflow).toContain("predicate-path: ${{ runner.temp }}/pre-attestation/production-release-predicate.json");
   });
 
   it("runs every shared release context for every pull request and every master push", () => {

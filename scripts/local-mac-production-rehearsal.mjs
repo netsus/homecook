@@ -30,7 +30,7 @@ PRODUCTION MUTATION: 0 (read-only/offline commands only)
 Usage:
   pnpm release:rehearsal:inventory -- --json [--home-dir <absolute>] [--root-dir <absolute>] [--approved-migration-marker <absolute>] [--production-env-authority <absolute-private-file>]
   pnpm release:rehearsal:select -- --release-sha <approved-origin-master-ancestor-sha> --selection-root <absolute-private-root> --expires-at <UTC-RFC3339> --approver-role human-release-approver --approver-id <id> --approval-digest <sha256> --confirm CREATE_REHEARSAL_SELECTION --json
-  pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> --production-env-authority <absolute-private-file> --json
+  pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> [--selection <absolute-private-selection>] --production-env-authority <absolute-private-file> --json
   pnpm release:rehearsal:classify -- --inventory <absolute-private-inventory> --json [--root-dir <absolute>]
   pnpm release:rehearsal:receipt -- --candidate <absolute-sealed-candidate> --run-evidence <absolute-completed-run> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
   pnpm release:rehearsal:repeatability -- --member-receipt <absolute-run-receipt> --member-receipt <absolute-run-receipt> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
@@ -38,6 +38,7 @@ Usage:
 
 Excluded from this split: Docker rehearsal runner, foreground supervisor, synthetic DB/canary,
 repeatability attestation, production attestation/promotion unlock, and recovery execution.
+Current-tip compatibility: omit --selection only when --release-sha is the exact fetched origin/master tip.
 `;
 
 function parseArguments(argv) {

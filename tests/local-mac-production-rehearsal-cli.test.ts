@@ -125,6 +125,8 @@ describe("local Mac production rehearsal CLI", () => {
     expect(result.stdout).toContain("candidate");
     expect(result.stdout).toContain("verify");
     expect(result.stdout).toContain("PRODUCTION MUTATION: 0");
+    expect(result.stdout).toContain("--selection <absolute-private-selection>");
+    expect(result.stdout).toMatch(/current-tip[^\n]*omit[^\n]*--selection/iu);
     expect(result.stdout).toContain("Docker rehearsal runner");
     expect(result.stdout).toContain("recovery execution");
     expect(result.stdout).not.toContain(" promote ");

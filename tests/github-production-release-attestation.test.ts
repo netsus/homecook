@@ -409,6 +409,54 @@ describe("GitHub production release attestation verification", () => {
     ).toMatchObject({ intended_skip: 1 });
   });
 
+  it("rejects a new pending, rerun, or failed check discovered by the final attestation refresh", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.9",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    };
+    const staleApprovedChecks = createTrustedCheckRuns();
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: staleApprovedChecks,
+    })).not.toThrow();
+
+    const quality = staleApprovedChecks.find((entry) => entry.name === "quality");
+    for (const racedCheck of [
+      {
+        ...quality,
+        check_suite: { id: 901 },
+        completed_at: null,
+        conclusion: null,
+        started_at: "2026-08-26T10:00:00Z",
+        status: "in_progress",
+      },
+      {
+        ...quality,
+        check_suite: { id: 902 },
+        completed_at: null,
+        conclusion: null,
+        started_at: "2026-08-26T10:01:00Z",
+        status: "queued",
+      },
+      {
+        ...quality,
+        check_suite: { id: 903 },
+        completed_at: "2026-08-26T10:02:00Z",
+        conclusion: "failure",
+        started_at: "2026-08-26T10:01:30Z",
+        status: "completed",
+      },
+    ]) {
+      expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [...staleApprovedChecks, racedCheck],
+      })).toThrow(/pending|queued|failed|terminal/iu);
+    }
+  });
+
   it("binds subject and predicate to the exact annotated release tag object SHA", () => {
     const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
       checkRuns: createTrustedCheckRuns(),

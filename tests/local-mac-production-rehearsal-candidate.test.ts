@@ -31,6 +31,7 @@ import {
   assembleCandidateArtifacts,
   collectSealedMigrationInventory,
   materializeExactGitTree,
+  verifyExactMaterializedTree,
   loadRehearsalToolchainLock,
   parseCanonicalComposeImageInventory,
   writeCandidateTerminalMarker,
@@ -395,6 +396,112 @@ describe("release rehearsal candidate manifest", () => {
 });
 
 describe("release rehearsal candidate input gates", () => {
+  it("uses current-master builder blobs while keeping a differing approved ancestor as payload data", () => {
+    const repo = privateRoot("homecook-selected-payload-repo-");
+    const gitHome = privateRoot("homecook-selected-payload-home-");
+    const runGit = (args: string[]) => {
+      const result = spawnSync("/usr/bin/git", args, {
+        cwd: repo,
+        encoding: "utf8",
+        env: {
+          HOME: gitHome,
+          NODE_ENV: "test",
+          PATH: "/usr/bin:/bin",
+          GIT_CONFIG_GLOBAL: "/dev/null",
+          GIT_CONFIG_NOSYSTEM: "1",
+          GIT_AUTHOR_EMAIL: "builder-boundary@test.invalid",
+          GIT_AUTHOR_NAME: "Builder Boundary Test",
+          GIT_COMMITTER_EMAIL: "builder-boundary@test.invalid",
+          GIT_COMMITTER_NAME: "Builder Boundary Test",
+        },
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout.trim();
+    };
+    runGit(["init", "--initial-branch=master"]);
+    mkdirSync(join(repo, "scripts", "config"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(repo, "scripts", "entry.mjs"), "export const builder = 'selected-ancestor'\n");
+    writeFileSync(join(repo, "scripts", "config", "lock.json"), "{\"generation\":1}\n");
+    writeFileSync(join(repo, "release-payload.txt"), "approved ancestor payload\n");
+    runGit(["add", "."]);
+    runGit(["commit", "-m", "approved ancestor"]);
+    const selectedSha = runGit(["rev-parse", "HEAD"]);
+
+    writeFileSync(join(repo, "scripts", "entry.mjs"), "export const builder = 'trusted-current-master'\n");
+    writeFileSync(join(repo, "scripts", "config", "lock.json"), "{\"generation\":2}\n");
+    runGit(["commit", "-am", "advance trusted builder"]);
+    const currentMasterSha = runGit(["rev-parse", "HEAD"]);
+
+    const selectedRoot = join(privateRoot("homecook-selected-payload-root-"), "source");
+    const selectedPayload = materializeExactGitTree({
+      gitPath: "/usr/bin/git",
+      repositoryRoot: repo,
+      releaseSha: selectedSha,
+      outputRoot: selectedRoot,
+      homeDir: gitHome,
+    });
+    const currentBuilderRoot = join(privateRoot("homecook-current-builder-root-"), "source");
+    materializeImmutableCandidateBootstrap({
+      gitPath: "/usr/bin/git",
+      tarPath: "/usr/bin/tar",
+      repositoryRoot: repo,
+      releaseSha: currentMasterSha,
+      outputRoot: currentBuilderRoot,
+      homeDir: gitHome,
+    });
+    const currentBuilderGraph = verifyImmutableCandidateModuleGraph({
+      entryPaths: ["scripts/entry.mjs"],
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      lockPaths: ["scripts/config/lock.json"],
+      releaseSha: currentMasterSha,
+      repositoryRoot: repo,
+      sourceRoot: currentBuilderRoot,
+    });
+    const selectedBuilderEntry = selectedPayload.source_manifest.entries.find(
+      (entry: { path: string }) => entry.path === "scripts/entry.mjs",
+    );
+    const currentBuilderEntry = currentBuilderGraph.entries.find(
+      (entry: { path: string }) => entry.path === "scripts/entry.mjs",
+    );
+    expect(selectedBuilderEntry?.blob_oid).not.toBe(currentBuilderEntry?.blob_oid);
+
+    const verifiedSourceManifestDigest = verifyExactMaterializedTree({
+      sourceRoot: selectedRoot,
+      sourceManifest: selectedPayload.source_manifest,
+    });
+    expect(validateCandidateBuilderAuthority({
+      currentHead: currentMasterSha,
+      releaseSha: selectedSha,
+      builderAuthoritySha: currentMasterSha,
+      trackedStatus: "",
+      sourceManifestDigest: selectedPayload.source_manifest.source_manifest_digest,
+      verifiedSourceManifestDigest,
+      builderEntries: currentBuilderGraph.entries,
+      expectedBuilderInputDigest: currentBuilderGraph.builder_input_digest,
+    })).toEqual({ builder_input_digest: currentBuilderGraph.builder_input_digest });
+
+    const tamperedBuilderEntries = currentBuilderGraph.entries.map((entry) => (
+      entry.path === "scripts/entry.mjs" ? { ...entry, sha256: DIGEST_A } : entry
+    ));
+    expect(() => validateCandidateBuilderAuthority({
+      currentHead: currentMasterSha,
+      releaseSha: selectedSha,
+      builderAuthoritySha: currentMasterSha,
+      trackedStatus: "",
+      sourceManifestDigest: selectedPayload.source_manifest.source_manifest_digest,
+      verifiedSourceManifestDigest,
+      builderEntries: tamperedBuilderEntries,
+      expectedBuilderInputDigest: currentBuilderGraph.builder_input_digest,
+    })).toThrow(/builder|digest|graph|authority/iu);
+
+    writeFileSync(join(selectedRoot, "release-payload.txt"), "tampered payload\n");
+    expect(() => verifyExactMaterializedTree({
+      sourceRoot: selectedRoot,
+      sourceManifest: selectedPayload.source_manifest,
+    })).toThrow(/materialized|blob|drift/iu);
+  });
+
   it("runs selected-ancestor candidate tooling from current master while preserving current-tip compatibility", () => {
     const resolveImmutableBootstrapAuthority = (candidateBootstrapModule as unknown as {
       resolveImmutableBootstrapAuthority?: (input: {

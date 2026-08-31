@@ -251,6 +251,7 @@ export function validateCandidateSourceEvidence(value) {
 export function validateCandidateBuilderAuthority({
   currentHead, releaseSha, builderAuthoritySha = releaseSha, trackedStatus, sourceManifestDigest,
   verifiedSourceManifestDigest, entries, expectedBuilderEntries = null,
+  builderEntries = null, expectedBuilderInputDigest = null,
 } = /** @type {any} */ ({})) {
   sha(currentHead, "candidate builder HEAD");
   sha(releaseSha, "candidate builder release SHA");
@@ -260,6 +261,34 @@ export function validateCandidateBuilderAuthority({
   digest(sourceManifestDigest, "candidate builder source manifest digest");
   digest(verifiedSourceManifestDigest, "candidate builder verified source manifest digest");
   if (sourceManifestDigest !== verifiedSourceManifestDigest) fail("candidate builder source authority drifted");
+  if (builderEntries !== null) {
+    if (!Array.isArray(builderEntries) || builderEntries.length === 0) {
+      fail("candidate builder immutable module graph is empty");
+    }
+    digest(expectedBuilderInputDigest, "verified bootstrap builder input digest");
+    const authority = builderEntries.map((entry, index) => {
+      exactObject(entry, `verified bootstrap builder entry ${index}`, [
+        "blob_oid", "git_mode", "path", "sha256",
+      ]);
+      sha(entry.blob_oid, `verified bootstrap builder entry ${index} blob_oid`);
+      if (!["100644", "100755"].includes(entry.git_mode)) {
+        fail(`verified bootstrap builder entry ${index} git_mode is invalid`);
+      }
+      assertSafeRelativeGitPath(entry.path);
+      digest(entry.sha256, `verified bootstrap builder entry ${entry.path}`);
+      return entry;
+    });
+    const paths = authority.map((entry) => entry.path);
+    if (new Set(paths).size !== paths.length
+      || JSON.stringify(paths) !== JSON.stringify([...paths].sort((left, right) => left.localeCompare(right)))) {
+      fail("candidate builder immutable module graph paths must be unique and sorted");
+    }
+    const builderInputDigest = sha256Bytes(Buffer.from(JSON.stringify(authority)));
+    if (builderInputDigest !== expectedBuilderInputDigest) {
+      fail("candidate builder immutable module graph digest differs from verified bootstrap authority");
+    }
+    return Object.freeze({ builder_input_digest: builderInputDigest });
+  }
   const requiredPaths = expectedBuilderEntries?.map((entry) => entry.path) ?? [
     "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
     "scripts/local-mac-production-rehearsal.mjs",
@@ -3122,13 +3151,9 @@ export function createReleaseRehearsalCandidateAdapters({
         trackedStatus,
         sourceManifestDigest: materialized.source_manifest.source_manifest_digest,
         verifiedSourceManifestDigest,
-        entries: materialized.source_manifest.entries,
-        expectedBuilderEntries: builderInputEntries,
+        builderEntries: builderInputEntries,
+        expectedBuilderInputDigest: builderInputDigest,
       });
-      digest(builderInputDigest, "verified bootstrap builder input digest");
-      if (builderAuthority.builder_input_digest !== builderInputDigest) {
-        fail("candidate builder graph differs from verified immutable bootstrap authority");
-      }
       currentSource = {
         checkoutDir,
         sourceManifest: materialized.source_manifest,

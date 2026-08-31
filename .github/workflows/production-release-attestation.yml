@@ -635,12 +635,108 @@ jobs:
           test "$(gh api "repos/netsus/homecook/git/ref/tags/${{ inputs.release_tag }}" --jq '.object.sha')" = "$expected_tag_object_sha"
         working-directory: trusted-current-master
 
+      - name: Re-fetch and rebuild attestation evidence immediately before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          EXPECTED_RELEASE_CONTEXTS: build,changes,dependency-audit,policy,quality,security-function-authorization,security-smoke
+        run: |
+          mkdir "$RUNNER_TEMP/pre-attestation"
+          current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+          git fetch --no-tags origin master
+          git merge-base --is-ancestor "${{ steps.trusted-master.outputs.current_master_sha }}" "$current_master_sha"
+          git merge-base --is-ancestor "$RELEASE_SHA" "$current_master_sha"
+          selection_digest="$(jq -r '.selection_digest // "none"' "$RUNNER_TEMP/post-approval/pre-attestation-rehearsal-authority.json")"
+          if [ "$selection_digest" = "none" ]; then test "$current_master_sha" = "$RELEASE_SHA"; else [[ "$selection_digest" =~ ^[0-9a-f]{64}$ ]]; fi
+          release_tree="$(git rev-parse "$RELEASE_SHA^{tree}")"
+          release_tag_object_sha="$(jq -r '.release_tag_object_sha' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
+          [[ "$release_tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
+
+          gh api repos/netsus/homecook/actions/workflows/production-release-attestation.yml \
+            > "$RUNNER_TEMP/pre-attestation/release-workflow.json"
+          canonical_workflow_id="$(jq -er '.id | select(type == "number" and . > 0)' "$RUNNER_TEMP/pre-attestation/release-workflow.json")"
+          jq -e '
+            .path == ".github/workflows/production-release-attestation.yml"
+          ' "$RUNNER_TEMP/pre-attestation/release-workflow.json" > /dev/null
+          gh api "repos/netsus/homecook/actions/workflows/$canonical_workflow_id/runs?head_sha=$RELEASE_SHA&event=workflow_dispatch&per_page=100" \
+            --paginate --jq '.workflow_runs[]' \
+            > "$RUNNER_TEMP/pre-attestation/release-workflow-runs.jsonl"
+          jq -s '.' "$RUNNER_TEMP/pre-attestation/release-workflow-runs.jsonl" \
+            > "$RUNNER_TEMP/pre-attestation/release-workflow-runs.json"
+          jq -e \
+            --argjson workflow_id "$canonical_workflow_id" \
+            --argjson current_run_id "${{ github.run_id }}" \
+            --arg release_sha "$RELEASE_SHA" '
+              length > 0
+              and all(.[];
+                .workflow_id == $workflow_id
+                and .path == ".github/workflows/production-release-attestation.yml"
+                and .event == "workflow_dispatch"
+                and .head_sha == $release_sha
+                and (.check_suite_id | type == "number")
+                and (.check_suite_id > 0)
+              )
+              and any(.[]; .id == $current_run_id)
+            ' "$RUNNER_TEMP/pre-attestation/release-workflow-runs.json" > /dev/null
+          jq -n \
+            --arg schema "homecook.github.production-release-suite-exclusions.v1" \
+            --arg repository "netsus/homecook" \
+            --arg workflow_path ".github/workflows/production-release-attestation.yml" \
+            --arg event "workflow_dispatch" \
+            --arg release_sha "$RELEASE_SHA" \
+            --argjson workflow_id "$canonical_workflow_id" \
+            --slurpfile runs "$RUNNER_TEMP/pre-attestation/release-workflow-runs.json" '
+              {
+                schema: $schema,
+                repository: $repository,
+                workflow_id: $workflow_id,
+                workflow_path: $workflow_path,
+                event: $event,
+                release_sha: $release_sha,
+                check_suite_ids: ($runs[0] | map(.check_suite_id) | unique | sort)
+              }
+              | select(.check_suite_ids | length > 0)
+            ' > "$RUNNER_TEMP/pre-attestation/release-workflow-suite-ids.json"
+          cmp \
+            "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json" \
+            "$RUNNER_TEMP/pre-attestation/release-workflow-suite-ids.json"
+
+          gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
+            --paginate --jq '.check_runs[]' > "$RUNNER_TEMP/pre-attestation/check-runs.jsonl"
+          jq -s '.' "$RUNNER_TEMP/pre-attestation/check-runs.jsonl" \
+            > "$RUNNER_TEMP/pre-attestation/check-runs.json"
+          gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/statuses \
+            --paginate --jq '.[]' > "$RUNNER_TEMP/pre-attestation/commit-statuses.jsonl"
+          jq -s '.' "$RUNNER_TEMP/pre-attestation/commit-statuses.jsonl" \
+            > "$RUNNER_TEMP/pre-attestation/commit-statuses.json"
+
+          node scripts/build-production-release-attestation.mjs \
+            --repository "netsus/homecook" \
+            --release-sha "$RELEASE_SHA" \
+            --release-tag "$RELEASE_TAG" \
+            --release-tag-object-sha "$release_tag_object_sha" \
+            --release-tree "$release_tree" \
+            --check-runs-json "$RUNNER_TEMP/pre-attestation/check-runs.json" \
+            --commit-statuses-json "$RUNNER_TEMP/pre-attestation/commit-statuses.json" \
+            --excluded-check-suite-ids-json "$RUNNER_TEMP/pre-attestation/release-workflow-suite-ids.json" \
+            --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
+            --rehearsal-authority-json "$RUNNER_TEMP/post-approval/pre-attestation-rehearsal-authority.json" \
+            --subject-output "$RUNNER_TEMP/pre-attestation/production-release-subject.json" \
+            --predicate-output "$RUNNER_TEMP/pre-attestation/production-release-predicate.json" \
+            > "$RUNNER_TEMP/pre-attestation/production-release-build.json"
+          jq -e '.subject.required_check_summary and .predicate.required_check_summary' \
+            "$RUNNER_TEMP/pre-attestation/production-release-build.json" > /dev/null
+          test "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')" = "$current_master_sha"
+          test "$(gh api "repos/netsus/homecook/git/ref/tags/$RELEASE_TAG" --jq '.object.sha')" = "$release_tag_object_sha"
+        working-directory: trusted-current-master
+
       - name: Attest release approval manifest with a custom predicate
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: ${{ runner.temp }}/post-approval/production-release-subject.json
-          predicate-path: ${{ runner.temp }}/post-approval/production-release-predicate.json
+          subject-path: ${{ runner.temp }}/pre-attestation/production-release-subject.json
+          predicate-path: ${{ runner.temp }}/pre-attestation/production-release-predicate.json
           predicate-type: https://github.com/netsus/homecook/attestations/production-release/v2
 
       - name: Upload attestation bundle and approved artifacts
@@ -648,12 +744,14 @@ jobs:
         with:
           name: production-release-attestation
           path: |
-            ${{ runner.temp }}/post-approval/production-release-build.json
-            ${{ runner.temp }}/post-approval/production-release-predicate.json
-            ${{ runner.temp }}/post-approval/production-release-subject.json
+            ${{ runner.temp }}/pre-attestation/production-release-build.json
+            ${{ runner.temp }}/pre-attestation/production-release-predicate.json
+            ${{ runner.temp }}/pre-attestation/production-release-subject.json
+            ${{ runner.temp }}/pre-attestation/check-runs.json
+            ${{ runner.temp }}/pre-attestation/commit-statuses.json
+            ${{ runner.temp }}/pre-attestation/release-workflow-suite-ids.json
             ${{ runner.temp }}/post-approval/remote-tag-ref.json
             ${{ runner.temp }}/post-approval/remote-tag-object.json
-            ${{ runner.temp }}/post-approval/release-workflow-suite-ids.json
             ${{ runner.temp }}/post-approval/rehearsal-authority.json
             ${{ runner.temp }}/production-release-attestation-inputs/rehearsal-receipts/member-1.json
             ${{ runner.temp }}/production-release-attestation-inputs/rehearsal-receipts/member-2.json
