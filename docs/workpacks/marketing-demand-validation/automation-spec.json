@@ -24,6 +24,7 @@
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm test:marketing:operations",
       "pnpm verify:security-functions:isolated",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
@@ -72,6 +73,7 @@
     ],
     "verify_commands": [
       "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-*.test.ts tests/marketing-*.test.tsx tests/ci-path-filter.test.ts",
+      "pnpm test:marketing:operations",
       "pnpm test:e2e:marketing",
       "pnpm test:e2e:marketing:a11y",
       "pnpm test:e2e:marketing:visual",
@@ -102,7 +104,11 @@
       "single-table-single-route-contract",
       "server-issued-session-cookie",
       "turnstile-fail-closed",
-      "privacy-readiness-required"
+      "privacy-readiness-required",
+      "stage6-analysis-is-pii-free-and-thresholded",
+      "stage6-export-is-safe-path-private-csv-and-stdout-redacted",
+      "stage6-purge-is-dry-run-first-confirm-gated-and-count-redacted",
+      "stage6-result-template-separates-accepted-duplicate-deliverable-and-manual-only"
     ],
     "design_authority": {
       "ui_risk": "new-screen",
