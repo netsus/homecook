@@ -43,9 +43,13 @@
         "failed", "pending", "queued", "rerun"
       ],
       "properties": {
-        "total": { "type": "integer", "minimum": 0 },
-        "success": { "type": "integer", "minimum": 0 },
-        "intended_skip": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 7 },
+        "success": { "type": "integer", "minimum": 7 },
+        "intended_skip": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Additional non-required contexts whose exact terminal conclusion is skipped."
+        },
         "bad": { "const": 0 },
         "cancelled": { "const": 0 },
         "failed": { "const": 0 },

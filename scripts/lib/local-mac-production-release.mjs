@@ -36,6 +36,7 @@ import {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+  EXPECTED_RELEASE_CONTEXTS,
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
   buildProductionReleaseAnnotatedTagMessage,
   normalizeExpectedReleaseContexts,
@@ -2171,6 +2172,11 @@ function normalizeRequiredCheckSummary(summary) {
   if (normalized.total !== normalized.success + normalized.intended_skip) {
     throw new Error(
       "manifest.required_check_summary total must equal success + intended_skip exactly.",
+    );
+  }
+  if (normalized.success < EXPECTED_RELEASE_CONTEXTS.length) {
+    throw new Error(
+      "manifest.required_check_summary must preserve success for all expected release contexts.",
     );
   }
 

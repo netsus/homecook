@@ -280,8 +280,8 @@
       "additionalProperties": false,
       "required": ["total", "success", "intended_skip"],
       "properties": {
-        "total": { "type": "integer", "minimum": 0 },
-        "success": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 7 },
+        "success": { "type": "integer", "minimum": 7 },
         "intended_skip": { "type": "integer", "minimum": 0 },
         "bad": { "const": 0 },
         "cancelled": { "const": 0 },

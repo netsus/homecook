@@ -32,6 +32,10 @@ import {
   normalizeGitHubProductionReleaseCheckSummary,
 } from "./github-production-release-attestation.mjs";
 import {
+  EXPECTED_RELEASE_CONTEXTS,
+  GITHUB_ACTIONS_APP_INTEGRATION_ID,
+} from "./production-release-approval-policy.mjs";
+import {
   resolveTrustedGhExecutable,
   resolveTrustedGitExecutable,
   resolveTrustedNodeExecutable,
@@ -58,7 +62,6 @@ const IMAGE_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const CANONICALIZATION = "RFC8785-JCS+SHA256";
 const REPOSITORY = "netsus/homecook";
 const SOURCE_REF = "refs/heads/master";
-const GITHUB_ACTIONS_APP_INTEGRATION_ID = 15368;
 const BUILD_ENV_ALLOWLIST_ID = "homecook-release-rehearsal-build-env-v1";
 const BUILD_ENV_ALLOWED_KEYS = new Set([
   "FULL_LOCAL_DOCKER_PLATFORM",
@@ -332,10 +335,11 @@ export function validateCandidateCiEvidence(value) {
     safeInteger(summary[key], `ci.summary.${key}`);
   }
   if (
-    summary.total === 0 || summary.success !== summary.total || summary.intended_skip !== 0
+    summary.total !== summary.success + summary.intended_skip
+    || summary.success < EXPECTED_RELEASE_CONTEXTS.length
     || ["bad", "cancelled", "failed", "pending", "queued", "rerun"].some((key) => summary[key] !== 0)
   ) {
-    fail("all current-head started CI checks must be terminal success; pending, fail, and skip are forbidden");
+    fail("canonical current-head CI summary must preserve all required successes, allow only intended skips, and contain no pending, failed, cancelled, neutral, or rerun result");
   }
   return value;
 }
@@ -1416,13 +1420,15 @@ export function validateStoredCiProjection(value, manifest) {
     for (const key of ["id", "app_id", "check_suite_id"]) safeInteger(entry[key], `candidate CI check ${key}`);
     if (
       entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID
-      || entry.head_sha !== manifest.release_sha || entry.status !== "completed" || entry.conclusion !== "success"
+      || entry.head_sha !== manifest.release_sha
     ) {
-      fail("candidate CI check identity or terminal success state is invalid");
+      fail("candidate CI check identity is invalid");
     }
     string(entry.name, "candidate CI check name");
-    string(entry.started_at, "candidate CI check started_at");
-    string(entry.completed_at, "candidate CI check completed_at");
+    string(entry.status, "candidate CI check status");
+    if (entry.conclusion !== null) string(entry.conclusion, "candidate CI check conclusion");
+    if (entry.started_at !== null) string(entry.started_at, "candidate CI check started_at");
+    if (entry.completed_at !== null) string(entry.completed_at, "candidate CI check completed_at");
   }
   if (new Set(value.check_runs.map((entry) => entry.id)).size !== value.check_runs.length) {
     fail("candidate CI check run identities are duplicated");
@@ -1430,29 +1436,41 @@ export function validateStoredCiProjection(value, manifest) {
   if (new Set(value.commit_statuses.map((entry) => entry.id)).size !== value.commit_statuses.length) {
     fail("candidate CI status identities are duplicated");
   }
-  const recomputedSummary = {
-    total: new Set(value.check_runs.map((entry) => entry.name)).size,
-    success: new Set(value.check_runs.map((entry) => entry.name)).size,
-    intended_skip: 0,
-    bad: 0,
-    cancelled: 0,
-    failed: 0,
-    pending: 0,
-    queued: 0,
-    rerun: 0,
-  };
-  if (canonicalizeJcs(recomputedSummary) !== canonicalizeJcs(value.summary)) {
-    fail("candidate CI stored summary differs from recomputed check arrays");
-  }
   for (const [index, entry] of value.commit_statuses.entries()) {
     exactObject(entry, `candidate CI commit_statuses[${index}]`, [
       "id", "sha", "context", "created_at", "state", "updated_at",
     ]);
     safeInteger(entry.id, "candidate CI status id");
-    if (entry.sha !== manifest.release_sha || entry.state !== "success") {
-      fail("candidate CI status identity or terminal success state is invalid");
+    if (entry.sha !== manifest.release_sha) {
+      fail("candidate CI status identity is invalid");
     }
     string(entry.context, "candidate CI status context");
+    string(entry.state, "candidate CI status state");
+    if (entry.created_at !== null) string(entry.created_at, "candidate CI status created_at");
+    if (entry.updated_at !== null) string(entry.updated_at, "candidate CI status updated_at");
+  }
+  let recomputedSummary;
+  try {
+    recomputedSummary = normalizeGitHubProductionReleaseCheckSummary({
+      checkRuns: value.check_runs.map((entry) => ({
+        id: entry.id,
+        app: { id: entry.app_id },
+        check_suite: { id: entry.check_suite_id },
+        head_sha: entry.head_sha,
+        completed_at: entry.completed_at,
+        conclusion: entry.conclusion,
+        name: entry.name,
+        started_at: entry.started_at,
+        status: entry.status,
+      })),
+      commitStatuses: value.commit_statuses,
+      expectedContexts: EXPECTED_RELEASE_CONTEXTS,
+    });
+  } catch (error) {
+    fail(`candidate CI canonical policy rejected stored arrays: ${error instanceof Error ? error.message : "unknown error"}`);
+  }
+  if (canonicalizeJcs(recomputedSummary) !== canonicalizeJcs(value.summary)) {
+    fail("candidate CI stored summary differs from canonical recomputation of check/status arrays");
   }
   const evidenceDigest = sha256Jcs(value);
   const summaryDigest = sha256Jcs(value.summary);
@@ -3218,9 +3236,6 @@ export function createReleaseRehearsalCandidateAdapters({
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
         `/repos/${REPOSITORY}/commits/${releaseSha}/statuses?per_page=100`,
       ], { env, label: "trusted GitHub commit-status readback", runCommand, timeout: 120_000 }));
-      if (checkRuns.some((entry) => ["skipped", "neutral"].includes(String(entry.conclusion ?? "").toLowerCase()))) {
-        fail("current-head started check set contains skipped or neutral evidence");
-      }
       if (checkRuns.some((entry) => entry.head_sha !== releaseSha)) {
         fail("GitHub check-run head SHA does not match candidate SHA");
       }
@@ -3230,7 +3245,11 @@ export function createReleaseRehearsalCandidateAdapters({
       if (commitStatuses.some((entry) => entry.sha !== releaseSha)) {
         fail("GitHub commit-status SHA does not match candidate SHA");
       }
-      const summary = normalizeGitHubProductionReleaseCheckSummary({ checkRuns, commitStatuses });
+      const summary = normalizeGitHubProductionReleaseCheckSummary({
+        checkRuns,
+        commitStatuses,
+        expectedContexts: EXPECTED_RELEASE_CONTEXTS,
+      });
       const safeEvidence = {
         repository: REPOSITORY,
         check_runs: checkRuns.map(safeCheckProjection).sort((left, right) =>
