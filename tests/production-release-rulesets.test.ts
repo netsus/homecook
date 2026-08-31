@@ -20,6 +20,46 @@ const EXPECTED_RELEASE_CONTEXTS = [
   "security-smoke",
 ];
 const GITHUB_ACTIONS_APP_INTEGRATION_ID = 15368;
+const RELEASE_RELEVANT_PUSH_WORKFLOWS = [
+  ".github/workflows/ci.yml",
+  ".github/workflows/playwright.yml",
+  ".github/workflows/policy.yml",
+  ".github/workflows/security-review.yml",
+  ".github/workflows/security-smoke.yml",
+] as const;
+
+function releaseWorkflowJobs(workflow: string) {
+  const jobs = workflow.match(/^jobs:\n([\s\S]*)$/mu)?.[1] ?? "";
+  return [...jobs.matchAll(
+    /^  ([a-z0-9-]+):\n([\s\S]*?)(?=^  [a-z0-9-]+:\n|(?![\s\S]))/gmu,
+  )].map((match) => {
+    const id = match[1];
+    const source = match[0];
+    const explicitName = match[2].match(/^    name:\s*([^\n]+)$/mu)?.[1]?.trim();
+    return {
+      context: explicitName ?? id,
+      id,
+      source,
+    };
+  });
+}
+
+function expectUniqueReleaseWorkflowJobContexts(
+  workflows: ReadonlyArray<{ file: string; source: string }>,
+) {
+  const owners = new Map<string, string>();
+  for (const { file, source } of workflows) {
+    for (const { context } of releaseWorkflowJobs(source)) {
+      const existingOwner = owners.get(context);
+      if (existingOwner) {
+        throw new Error(
+          `Duplicate release workflow job context ${context}: ${existingOwner}, ${file}`,
+        );
+      }
+      owners.set(context, file);
+    }
+  }
+}
 
 function read(filePath: string) {
   return readFileSync(isAbsolute(filePath) ? filePath : join(repoRoot, filePath), "utf8");
@@ -1235,6 +1275,105 @@ describe("production release rulesets desired state", () => {
     expect(securitySmoke).not.toMatch(/push:[\s\S]*?paths:/u);
     expect(securitySmoke).toContain("scope:");
     expect(securitySmoke).toContain("if: always()");
+  });
+
+  it("uses an explicit job name as the displayed check context and the job id as fallback", () => {
+    expect(releaseWorkflowJobs(`jobs:
+  implicit-context:
+    runs-on: ubuntu-latest
+  internal-id:
+    name: displayed-context
+    runs-on: ubuntu-latest
+`)).toEqual([
+      expect.objectContaining({ context: "implicit-context", id: "implicit-context" }),
+      expect.objectContaining({ context: "displayed-context", id: "internal-id" }),
+    ]);
+  });
+
+  it("keeps release-relevant push workflow displayed job contexts unique across workflows", () => {
+    const workflows = RELEASE_RELEVANT_PUSH_WORKFLOWS.map((file) => ({
+      file,
+      source: read(file),
+    }));
+
+    expect(() => expectUniqueReleaseWorkflowJobContexts(workflows)).not.toThrow();
+
+    const mutated = workflows.map((workflow) => workflow.file === ".github/workflows/security-smoke.yml"
+      ? {
+          ...workflow,
+          source: workflow.source.replace(
+            /^    name: security-smoke-scope$/mu,
+            "    name: ci-scope",
+          ),
+        }
+      : workflow);
+    expect(() => expectUniqueReleaseWorkflowJobContexts(mutated)).toThrow(
+      /Duplicate release workflow job context ci-scope/u,
+    );
+  });
+
+  it("keeps each required release job on the stable scope id while assigning a unique displayed context", () => {
+    const requiredJobs = [
+      {
+        file: ".github/workflows/ci.yml",
+        jobs: ["quality", "build", "security-function-authorization"],
+        context: "ci-scope",
+      },
+      {
+        file: ".github/workflows/security-review.yml",
+        jobs: ["dependency-audit"],
+        context: "security-review-scope",
+      },
+      {
+        file: ".github/workflows/security-smoke.yml",
+        jobs: ["security-smoke"],
+        context: "security-smoke-scope",
+      },
+    ];
+
+    for (const { file, jobs, context } of requiredJobs) {
+      const workflow = read(file);
+      const scopeJob = releaseWorkflowJobs(workflow).find((job) => job.id === "scope");
+      expect(scopeJob?.context, file).toBe(context);
+      expect(scopeJob?.source, file).toContain("run: node scripts/ci-path-filter.mjs");
+      for (const job of jobs) {
+        const section = workflow.match(
+          new RegExp(
+            `^  ${job}:\\n([\\s\\S]*?)(?=^  [a-z0-9-]+:|(?![\\s\\S]))`,
+            "mu",
+          ),
+        )?.[0] ?? "";
+        expect(section, `${file}:${job}`).toContain("needs: scope");
+        expect(section, `${file}:${job}`).toContain("needs.scope.result");
+        expect(section, `${file}:${job}`).toContain("needs.scope.outputs.");
+      }
+    }
+
+    for (const context of [
+      "scope",
+      "ci-scope",
+      "security-review-scope",
+      "security-smoke-scope",
+    ]) {
+      expect(EXPECTED_RELEASE_CONTEXTS).not.toContain(context);
+    }
+  });
+
+  it("documents unique lightweight scope contexts without promoting them to ruleset requirements", () => {
+    const workflowOverview = read("docs/engineering/agent-workflow-overview.md");
+    const releaseRunbook = read("docs/engineering/local-mac-production-release-promotion.md");
+
+    for (const context of [
+      "ci-scope",
+      "security-review-scope",
+      "security-smoke-scope",
+    ]) {
+      expect(workflowOverview).toContain(context);
+      expect(releaseRunbook).toContain(context);
+    }
+    expect(workflowOverview).toContain("표시 context는 workflow 간 고유");
+    expect(releaseRunbook).toContain("동일한 표시 context 재사용을 금지");
+    expect(releaseRunbook).toContain("ruleset required context에 추가하지 않는다");
   });
 
   it("fails required jobs closed when scope resolution fails and reports unrelated changes as N/A", () => {

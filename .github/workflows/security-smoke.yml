@@ -19,6 +19,7 @@ env:
 
 jobs:
   scope:
+    name: security-smoke-scope
     runs-on: ubuntu-latest
     outputs:
       security_smoke: ${{ steps.filter.outputs.security_smoke }}

@@ -15,6 +15,7 @@ on:
 
 jobs:
   scope:
+    name: security-review-scope
     runs-on: ubuntu-latest
     outputs:
       dependency_audit: ${{ steps.filter.outputs.dependency_audit }}

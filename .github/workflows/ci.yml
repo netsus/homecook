@@ -13,6 +13,7 @@ on:
 
 jobs:
   scope:
+    name: ci-scope
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
