@@ -1838,11 +1838,11 @@
     {
       "id": "marketing-demand-validation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/fe-marketing-demand-validation-stage6",
-      "pr_path": "https://github.com/netsus/homecook/pull/1482",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "branch": "fix/marketing-validation-stage6-ops-safety",
+      "pr_path": "https://github.com/netsus/homecook/pull/1487",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -1864,7 +1864,7 @@
         "pnpm test:lighthouse:marketing:run",
         "git diff --check"
       ],
-      "notes": "Stage 1 PR #1477, Stage 2 PR #1478, Stage 4 frontend PR #1479, and final-authority PR #1480 are merged. Stage 6 adds analysis SQL, safe export/purge CLIs, exact internal-scope migration, result template, and focused operations tests while Manual Only production lead blockers stay fail-closed."
+      "notes": "Canonical closeout: .workflow-v2/work-items/marketing-demand-validation.json#closeout. PR #1477, #1478, #1479, #1480, #1482, and safety follow-up #1487 are merged. Stage 6 exact-count export/purge, forward export scope, loopback full-local operator enforcement, result template, analysis SQL, and retained evidence passed independent Findings 0 reviews and current-head CI. Manual Only production lead blockers remain fail-closed. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1482 Stage 6 operations merge,GitHub PR #1487 safety follow-up and current-head checks,tests/marketing-validation-operations.test.ts,supabase/migrations/20260831120000_marketing_validation_export_scope.sql,docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md,independent Stage 6 plan-compliance safety-security and final-critic reviews | latest_reason_code=stage6-post-merge-operator-safety-repaired | last_recovery_at=2026-08-31T06:21:10Z"
     },
     {
       "id": "auth-provider-memory-linking",

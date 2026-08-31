@@ -90,7 +90,7 @@
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음
 - Visual artifact: `ui/designs/MARKETING_DEMAND_VALIDATION.md`, `ui/designs/critiques/MARKETING_DEMAND_VALIDATION-critique.md`, `ui/designs/authority/MARKETING_DEMAND_VALIDATION-authority.md`, `ui/designs/evidence/marketing-demand-validation/`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - `/beta`는 앱 셸이 아니라 독립 랜딩이다.
   - 결과와 해결 아이디어는 이메일 전에 보여 준다.
@@ -204,12 +204,12 @@
 
 ## Stage 6 / Internal 6.5 Closeout Evidence `2026-08-31`
 
-- Stage 6 운영 closeout 범위는 `docs/marketing/demand-validation-analysis.sql`, `docs/marketing/demand-validation-result-template.md`, `scripts/export-marketing-leads.mjs`, `scripts/purge-expired-marketing-validation.mjs`, `scripts/lib/marketing-validation-operations.mjs`, `supabase/migrations/20260831110000_marketing_validation_retention_operations.sql`, `tests/marketing-validation-operations.test.ts`다.
-- 운영 테스트는 PII 비노출 stdout, `.artifacts/marketing-validation` safe path 강제, consented accepted-only export, CSV injection escape, default dry-run + explicit confirm purge, mock fixture 전용 `--now`, non-PII `--operator-id`, `retention_until < now` strict expiry, paid allowlisted `weekly_nutrition_v2` denominator, Wilson 95%, target rule literal sync, delete-only internal scope를 고정한다.
-- Stage 6 closeout은 Manual Only blocker를 해제하지 않는다. operator privacy facts, production Turnstile secret/hostname, production origin, edge rate-limit evidence, `MARKETING_LEAD_PROTECTION_READY=1`, paid ads 집행 승인은 계속 pending이며 fail-closed 상태를 유지한다.
+- Stage 6 운영 closeout 범위는 `docs/marketing/demand-validation-analysis.sql`, `docs/marketing/demand-validation-result-template.md`, `scripts/export-marketing-leads.mjs`, `scripts/purge-expired-marketing-validation.mjs`, `scripts/lib/marketing-validation-operations.mjs`, `supabase/migrations/20260831110000_marketing_validation_retention_operations.sql`, `supabase/migrations/20260831120000_marketing_validation_export_scope.sql`, `tests/marketing-validation-operations.test.ts`다.
+- 운영 테스트는 PII 비노출 stdout, repo-root 기준 `.artifacts/marketing-validation` safe path 강제, consented accepted-only export, CSV injection escape, exact-count pagination, default dry-run + explicit confirm purge, mock fixture 전용 `--now`, non-PII `--operator-id`, `retention_until < now` strict expiry, loopback full-local target 강제, paid allowlisted `weekly_nutrition_v2` denominator, Wilson 95%, target rule literal sync, export exact GET 및 purge exact GET/DELETE internal scope를 고정한다.
+- Stage 6 closeout은 Manual Only blocker를 해제하지 않는다. operator privacy facts, canonical `/privacy`와 launch-readiness PR1/2/3, production Turnstile secret/hostname, production origin, edge rate-limit evidence, `MARKETING_LEAD_PROTECTION_READY=1`, `MARKETING_CAMPAIGN_END_AT`/retention, staging·production full-local migration apply 승인, 베타 초대 발신 이메일·도메인, 실제 iOS Safari smoke, paid ads 집행 승인은 계속 pending이며 fail-closed 상태를 유지한다.
 - canonical closeout projection은 Stage 6 non-Manual 범위를 complete로 올리되, broader production activation은 `in_progress`로 남긴다.
 - [x] Stage 6 운영 분석 SQL이 paid allowlisted `weekly_nutrition_v2` cohort, accepted/duplicate, Wilson 95%, 진단 분포를 PII 없이 계산한다 <!-- omo:id=delivery-stage6-analysis-sql;stage=2;scope=backend;review=6 -->
 - [x] Stage 6 accepted lead export CLI가 consented accepted lead만 `.artifacts/marketing-validation` 아래 CSV로 내보내고 stdout에 PII를 남기지 않는다 <!-- omo:id=delivery-stage6-lead-export;stage=2;scope=backend;review=6 -->
 - [x] Stage 6 retention purge CLI가 dry-run 기본, `--confirm` + `MARKETING_VALIDATION_ALLOW_PURGE=1` 이중 게이트, mock fixture 전용 `--now`, non-PII `--operator-id`, JSON evidence를 강제한다 <!-- omo:id=delivery-stage6-retention-purge;stage=2;scope=backend;review=6 -->
-- [x] Stage 6 internal scope migration이 `marketing-validation-purge`의 exact GET/DELETE table path만 추가하고 기존 내부 scope를 보존한다 <!-- omo:id=delivery-stage6-scope-migration;stage=2;scope=backend;review=6 -->
+- [x] Stage 6 internal scope migration이 연락 export용 exact GET scope와 purge용 exact GET/DELETE scope만 추가하고 기존 내부 scope를 보존한다 <!-- omo:id=delivery-stage6-scope-migration;stage=2;scope=backend;review=6 -->
 - [x] Stage 6 결과 템플릿과 closeout evidence가 Manual Only blocker를 유지한 채 운영 보고 형식을 고정한다 <!-- omo:id=delivery-stage6-result-template;stage=4;scope=shared;review=6 -->

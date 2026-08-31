@@ -54,7 +54,12 @@
       "manual:allowlisted-production-origin-ready",
       "manual:edge-rate-limit-evidence-captured",
       "manual:marketing-lead-protection-ready-enabled",
-      "manual:launch-readiness-blockers-green"
+      "manual:launch-readiness-blockers-green",
+      "manual:campaign-end-and-retention-ready",
+      "manual:full-local-migrations-approved-and-applied",
+      "manual:beta-invitation-sender-domain-ready",
+      "manual:actual-ios-safari-smoke",
+      "manual:paid-ads-execution-approved"
     ],
     "execution_mode": "manual",
     "evaluator_profile": "vertical-slice-strict",
@@ -128,14 +133,80 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 6,
-    "last_evaluator_result": "Fresh final authority independently reviewed merged master 7226a77ec302afd15dcf61de71cd8144b96bf03e and returned APPROVE / FINDINGS_COUNT: 0 with blocker, major, and minor all zero. Stage 6 adds PII-safe analysis/export/purge operations, exact internal-scope migration, and result-template evidence while Manual Only production lead blockers remain fail-closed.",
+    "last_evaluator_result": "Fresh final authority approved the landing with Findings 0. The Stage 6 plan-compliance reviewer, safety security reviewer, and final critic each returned Findings 0 after the exact-count, full-local target, forward-migration, and Manual Only sign-off repairs.",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [
+        "ui/designs/authority/MARKETING_DEMAND_VALIDATION-authority.md"
+      ],
+      "actual_verification_refs": [
+        "Stage 1 contract PR #1477 and Stage 2 backend PR #1478 merged before frontend delivery",
+        "Stage 3 code and security reviews returned Findings 0",
+        "Stage 4 frontend PR #1479 merged after marketing Vitest Playwright accessibility visual and Lighthouse verification",
+        "Stage 5 final-authority PR #1480 confirmed the design after public and fresh authority reviews returned Findings 0",
+        "Stage 6 operations PR #1482 added PII-free analysis SQL minimal contact export retention purge result template and retained closeout evidence",
+        "Safety follow-up PR #1487 head c17cb09f489c0d22c4eff293ce6762c72923160d passed every started current-head check or intended skip and merged as 47abcd051122e8009e3c10bafd3dd9d3310f4897",
+        "Focused marketing Vitest passed 60 tests and Stage 6 operations Vitest passed 11 tests",
+        "CI=1 pnpm verify:security-functions:isolated replayed all migrations including the forward export scope and passed authorization checks",
+        "PostgreSQL 17 executed demand-validation-analysis.sql at the 99-session judgment-hold and exact 200-session 20-lead Green boundaries",
+        "Independent Stage 6 plan-compliance safety-security and final-critic reviews returned Findings 0",
+        "docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md retains the operational proof and Manual Only blockers",
+        "Production privacy Turnstile origin edge campaign retention migration sender iOS and paid-ad readiness remain Manual Only and lead capture stays fail-closed"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "c17cb09f489c0d22c4eff293ce6762c72923160d",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 2,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-08-31T06:21:10Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 4,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "stage6-post-merge-operator-safety-repaired",
+      "evidence_sources": [
+        "GitHub PR #1482 Stage 6 operations merge",
+        "GitHub PR #1487 safety follow-up and current-head checks",
+        "tests/marketing-validation-operations.test.ts",
+        "supabase/migrations/20260831120000_marketing_validation_export_scope.sql",
+        "docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md",
+        "independent Stage 6 plan-compliance safety-security and final-critic reviews"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-08-31T06:21:10Z",
+      "status_synced_at": "2026-08-31T06:21:10Z",
+      "pr_body_synced_at": "2026-08-31T06:21:10Z"
+    }
   },
   "out_of_scope": [
     "Login flow",
@@ -152,7 +223,10 @@
     "Actual operator privacy data is not yet supplied.",
     "Turnstile production key and allowlisted hostname are not yet confirmed.",
     "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
-    "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
+    "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied.",
+    "MARKETING_CAMPAIGN_END_AT and the campaign-end-plus-180-day retention value are not yet confirmed.",
+    "The forward full-local migration apply still needs target, backup, and operator approval.",
+    "The beta invitation sender email and sending domain are not yet verified."
   ],
-  "notes": "Stage 1 contract PR #1477, Stage 2 backend PR #1478, Stage 4 frontend PR #1479, and final-authority PR #1480 are merged. Stage 6 adds `docs/marketing/demand-validation-analysis.sql`, `docs/marketing/demand-validation-result-template.md`, accepted-lead export, retention purge, exact internal-scope migration, and focused operations tests. The Stage 6 closeout evidence is `docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md`. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
+  "notes": "PR #1477, #1478, #1479, #1480, #1482, and safety follow-up #1487 are merged. Stage 6 exact-count export/purge, forward export scope, loopback full-local operator enforcement, result template, analysis SQL, and retained evidence passed independent Findings 0 reviews and current-head CI. Manual Only production lead blockers remain fail-closed. owners.claude is a retired compatibility field and must never dispatch Claude. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1482 Stage 6 operations merge,GitHub PR #1487 safety follow-up and current-head checks,tests/marketing-validation-operations.test.ts,supabase/migrations/20260831120000_marketing_validation_export_scope.sql,docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md,independent Stage 6 plan-compliance safety-security and final-critic reviews | latest_reason_code=stage6-post-merge-operator-safety-repaired | last_recovery_at=2026-08-31T06:21:10Z"
 }
