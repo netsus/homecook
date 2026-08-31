@@ -1135,6 +1135,7 @@ describe("local Mac production promote adapters", () => {
       repository: "netsus/homecook",
       rehearsalAuthority: {
         rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+        selection_digest: null,
         build_id: "build-20260825-01",
         sealed_bundle_digest: "f".repeat(64),
         repeatability_receipt_digest: "1".repeat(64),

@@ -256,6 +256,7 @@ describe("release promotion governance docs", () => {
 
     expect(binding.map(({ field }) => field)).toEqual([
       "rehearsal_receipt_schema",
+      "selection_digest",
       "sealed_bundle_digest",
       "repeatability_receipt_digest",
       "rehearsal_receipt_valid_until",

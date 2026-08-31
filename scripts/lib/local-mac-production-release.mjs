@@ -93,6 +93,7 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "migration_head",
   "build_id",
   "rehearsal_receipt_schema",
+  "selection_digest",
   "sealed_bundle_digest",
   "repeatability_receipt_digest",
   "rehearsal_receipt_valid_until",
@@ -204,6 +205,11 @@ function requireDigest(value, label) {
     throw new Error(`${label} must be a 64-character lowercase digest.`);
   }
   return normalized;
+}
+
+function requireNullableDigest(value, label) {
+  if (value === null) return value;
+  return requireDigest(value, label);
 }
 
 function requireBoolean(value, label) {
@@ -2291,6 +2297,7 @@ export function validateLocalMacProductionReleaseManifest({
     releaseTag,
     build_id: manifest.build_id,
     rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+    selection_digest: manifest.selection_digest,
     sealed_bundle_digest: manifest.sealed_bundle_digest,
     repeatability_receipt_digest: manifest.repeatability_receipt_digest,
     rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
@@ -2329,6 +2336,10 @@ export function validateLocalMacProductionReleaseManifest({
       manifest.rehearsal_receipt_schema,
       LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA,
       "manifest.rehearsal_receipt_schema",
+    ),
+    selection_digest: requireNullableDigest(
+      manifest.selection_digest,
+      "manifest.selection_digest",
     ),
     sealed_bundle_digest: requireDigest(
       manifest.sealed_bundle_digest,

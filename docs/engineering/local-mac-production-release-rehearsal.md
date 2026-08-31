@@ -107,19 +107,31 @@ pnpm release:rehearsal:inventory -- --production-env-authority <absolute-private
 
 ### R1. candidate build and seal
 
+명시적으로 승인된 정상 `origin/master` 조상은 candidate 전에 private create-only selection으로 고정할 수 있다.
+
+```text
+pnpm release:rehearsal:select -- --release-sha <approved-ancestor-sha> --selection-root <absolute-private-root> --expires-at <UTC-RFC3339> --approver-role human-release-approver --approver-id <id> --approval-digest <sha256> --confirm CREATE_REHEARSAL_SELECTION --json
+```
+
+- selection은 exact JCS `homecook.local-mac-production-rehearsal-selection.v1` artifact다. repository/source ref, selected SHA/tree, 당시 observed master SHA/tree, selected/expires 시각, approver role/id, approval digest와 self `selection_digest`를 하나로 묶는다.
+- selection root와 parent는 current-user-owned `0700`, artifact는 `0600`, nlink `1`, non-symlink, repository 밖의 canonical path여야 한다. 생성은 temporary private file의 fsync 뒤 no-overwrite hard-link publish와 nlink `1` 재검증으로 atomic create-only 처리한다.
+- selection 생성·read 모두 `O_NOFOLLOW`, lstat/open/fstat/read/fstat/path-post identity를 요구한다. expired/tampered/path-swap/hard-link/private-mode 위반은 candidate root를 만들기 전에 fail closed한다. 선택 유효기간은 selected 시각부터 최대 24시간이다.
+- candidate의 `--selection <absolute-private-artifact>`은 optional이다. 없으면 기존 current-tip authority를 유지하고 모든 candidate/bundle/run evidence/run receipt/repeatability receipt의 `selection_digest`는 explicit `null`이다.
+- selection이 있으면 full fetched non-shallow history에서 selected→observed master→current master ancestry와 selected/observed/current tree를 모두 검증한다. observed master가 current master의 조상이 아니면 force-push divergence로 거부한다. candidate 시작 뒤의 정상 master 전진은 selected SHA를 무효화하지 않지만, 이후 read에서 divergence·expiry·tree mismatch가 보이면 fail closed한다.
+
 planned command:
 
 ```text
-pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha> --production-env-authority <absolute-private-full-local-env> --json
+pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha-or-approved-ancestor> [--selection <absolute-private-selection>] --production-env-authority <absolute-private-full-local-env> --json
 ```
 
-- candidate는 실행 시점 `origin/master`가 가리키는 exact full SHA여야 하고 current head에서 시작된 CI check 전체가 terminal success여야 한다.
+- selection 없이 candidate는 실행 시점 `origin/master`가 가리키는 exact full SHA여야 한다. selection이 있으면 verified selected ancestor SHA를 사용하며 current master가 selection의 observed master를 계속 포함해야 한다. 두 경우 모두 selected SHA에서 시작된 CI check 전체가 terminal success여야 한다.
 - 이 단계에서는 `prod-*` tag, production manifest, production attestation을 요구하거나 만들지 않는다.
 - exact SHA/tree의 clean detached source, `pnpm-lock.yaml`, pinned Node/pnpm/Supabase CLI, exact Docker image digest와 build tool identity를 고정한다.
 - frozen lockfile과 승인된 local package store/image cache만 사용한다. 필요한 dependency/image가 없으면 external fetch로 보완하지 않고 fail closed한다.
 - build output, worker artifact, migration set, runtime descriptors를 content-addressed create-only bundle로 seal한다.
 - bundle manifest는 contained symlink의 dereferenced bytes, executable mode, owner/mode, build ID, tool/image digest를 포함한다. 외부 realpath, hard-link alias, group/world-writable executable은 거부한다.
-- seal 뒤 원본 checkout을 다시 읽어 실행하지 않는다. 이후 rehearsal과 production authority는 sealed bundle bytes만 소비한다.
+- seal 뒤 원본 checkout을 다시 읽어 실행하지 않는다. 이후 rehearsal과 production authority는 sealed bundle bytes만 소비한다. candidate identity, bundle manifest, R2 evidence, R3 run receipt, R4 repeatability receipt, R5 manifest/tag/subject/predicate/attestation은 release SHA/tree와 `selection_digest`를 exact cross-bind한다.
 
 split 2 구현 상태:
 
@@ -377,6 +389,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 다음 중 하나면 receipt를 발급·재사용하지 않는다.
 
 - candidate가 exact CI-green `origin/master` SHA가 아님
+- selection artifact가 expired/missing/tampered/path-swapped이거나 current master가 selected/observed ancestry를 잃음
 - clean source/tree, tool, image, migration, sealed bundle digest 중 하나라도 불명확함
 - mock-only 실행 또는 app/full-local/worker 중 하나라도 실제 sealed bytes로 시작되지 않음
 - production/rehearsal namespace, port, Docker resource, volume, root, env/DB가 겹침
@@ -445,6 +458,7 @@ implementation PR은 test-first RED → GREEN → refactor evidence를 남긴다
 ### Unit / schema tests
 
 - receipt required field, canonical serialization, digest, expiry, unknown field policy
+- selection create-only JCS/private mode/nlink/no-follow/atomic publish, explicit confirmation·human approver, expiry, full-history ancestor, force-push divergence와 normal master advancement test
 - exact SHA/tree/build/bundle/tool/image/migration mismatch 각각의 fail-closed test
 - env allowlist, `O_NOFOLLOW`, symlink/hard-link/mode/TOCTOU rejection
 - canonical/legacy full-local label을 둘 다 read-only probe하고 exact not-loaded와 unexpected error를 구분하는 test

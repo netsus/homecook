@@ -468,6 +468,7 @@ describe("connected local Mac production promotion", () => {
       repository: "netsus/homecook",
       rehearsalAuthority: {
         rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+        selection_digest: null,
         build_id: identity.build_id,
         sealed_bundle_digest: "f".repeat(64),
         repeatability_receipt_digest: "1".repeat(64),
@@ -733,6 +734,7 @@ describe("connected local Mac production promotion", () => {
         repository: "netsus/homecook",
         rehearsalAuthority: {
           rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+          selection_digest: null,
           build_id: identity.build_id,
           sealed_bundle_digest: "f".repeat(64),
           repeatability_receipt_digest: "1".repeat(64),

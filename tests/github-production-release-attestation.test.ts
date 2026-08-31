@@ -49,6 +49,7 @@ const EXPECTED_RELEASE_CONTEXTS = [
 const RELEASE_TAG_OBJECT_SHA = "e".repeat(40);
 const REHEARSAL_AUTHORITY = {
   rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+  selection_digest: "2".repeat(64),
   build_id: "build-20260825-01",
   sealed_bundle_digest: "f".repeat(64),
   repeatability_receipt_digest: "1".repeat(64),
@@ -131,6 +132,7 @@ describe("GitHub production release attestation verification", () => {
       "Approved production release prod-20260826.1",
       `build_id ${REHEARSAL_AUTHORITY.build_id}`,
       `rehearsal_receipt_schema ${REHEARSAL_AUTHORITY.rehearsal_receipt_schema}`,
+      `selection_digest ${REHEARSAL_AUTHORITY.selection_digest}`,
       `sealed_bundle_digest ${REHEARSAL_AUTHORITY.sealed_bundle_digest}`,
       `repeatability_receipt_digest ${REHEARSAL_AUTHORITY.repeatability_receipt_digest}`,
       `rehearsal_receipt_valid_until ${REHEARSAL_AUTHORITY.rehearsal_receipt_valid_until}`,
@@ -489,6 +491,7 @@ describe("GitHub production release attestation verification", () => {
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
       rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+      selection_digest: manifest.selection_digest,
       build_id: manifest.build_id,
       sealed_bundle_digest: manifest.sealed_bundle_digest,
       repeatability_receipt_digest: manifest.repeatability_receipt_digest,
@@ -532,6 +535,7 @@ describe("GitHub production release attestation verification", () => {
                   release_sha: manifest.release_sha,
                   release_tree: manifest.release_tree,
                   rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+                  selection_digest: manifest.selection_digest,
                   build_id: manifest.build_id,
                   sealed_bundle_digest: manifest.sealed_bundle_digest,
                   repeatability_receipt_digest: attestedPredicateRepeatabilityDigest,

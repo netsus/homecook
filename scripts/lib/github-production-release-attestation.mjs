@@ -43,7 +43,7 @@ const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const REPEATABILITY_SCHEMA = "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
 const REHEARSAL_AUTHORITY_KEYS = [
-  "rehearsal_receipt_schema", "build_id", "sealed_bundle_digest",
+  "rehearsal_receipt_schema", "selection_digest", "build_id", "sealed_bundle_digest",
   "repeatability_receipt_digest", "rehearsal_receipt_valid_until",
 ];
 const SUBJECT_BASE_KEYS = [
@@ -75,6 +75,11 @@ function requireSha256(value, label) {
   return normalized;
 }
 
+function requireNullableSha256(value, label) {
+  if (value === null) return value;
+  return requireSha256(value, label);
+}
+
 function requireExactKeys(value, expectedKeys, label) {
   const actual = Object.keys(value).sort();
   const expected = [...expectedKeys].sort();
@@ -104,6 +109,7 @@ function normalizeRehearsalAuthority(value, label = "rehearsalAuthority") {
   }
   return Object.freeze({
     rehearsal_receipt_schema: REPEATABILITY_SCHEMA,
+    selection_digest: requireNullableSha256(value.selection_digest, `${label}.selection_digest`),
     build_id: requireNonEmptyString(value.build_id, `${label}.build_id`),
     sealed_bundle_digest: requireSha256(value.sealed_bundle_digest, `${label}.sealed_bundle_digest`),
     repeatability_receipt_digest: requireSha256(

@@ -52,11 +52,12 @@ Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
 | field | exact comparison rule |
 | --- | --- |
 | `rehearsal_receipt_schema` | manifest, subject, predicate, tag message가 exact repeatability schema를 기록하고 server verifier가 모두 비교 |
+| `selection_digest` | manifest, subject, predicate, annotated tag message, server verifier와 sealed candidate/repeatability authority가 same digest 또는 explicit current-tip `null`을 exact 비교 |
 | `sealed_bundle_digest` | manifest, subject, predicate, tag message가 lowercase 64-hex same-bytes digest를 기록하고 server verifier가 실행 snapshot bytes와 모두 비교 |
 | `repeatability_receipt_digest` | manifest, subject, predicate, tag message가 validated JCS receipt digest를 기록하고 server verifier가 local receipt 재계산값과 모두 비교 |
 | `rehearsal_receipt_valid_until` | manifest, subject, predicate, tag message가 exact UTC RFC3339 expiry를 기록하고 server verifier가 첫 mutation 직전 현재 시각과 모두 비교 |
 
-annotated tag object message는 위 네 값을 canonical field order로 포함한다. remote readback tag object의 raw bytes와 SHA를 검증한 뒤에만 attestation을 발급한다. production manifest, subject, predicate, tag 중 하나라도 field가 없거나 값/order/expiry가 다르면 tag가 존재해도 deployment authority가 아니다.
+annotated tag object message는 위 field를 canonical order로 포함한다. current-tip 경로의 `selection_digest`는 tag text에서 `none`으로 materialize하지만 manifest/subject/predicate/receipt authority에서는 explicit JSON `null`로 cross-bind한다. remote readback tag object의 raw bytes와 SHA를 검증한 뒤에만 attestation을 발급한다. production manifest, subject, predicate, tag 중 하나라도 field가 없거나 값/order/expiry가 다르면 tag가 존재해도 deployment authority가 아니다.
 
 local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. local receipt self digest나 same-user local self-signature도 trust anchor가 아니다. trust chain은 `두 run receipt 검증 → deterministic repeatability receipt → production-release-approval GitHub attestation → pinned trusted root server verifier` 순서다.
 
@@ -85,7 +86,7 @@ local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. loc
 
 Untagged exact-SHA candidate의 isolated build/run, repeatability receipt, mixed-state read-only classification은 `docs/engineering/local-mac-production-release-rehearsal.md`가 canonical authority다. production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르며, implementation이 merge되기 전에는 현재 promote 경로가 그 receipt gate를 충족한다고 주장하지 않는다.
 
-rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`와 `repeatability_receipt_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
+rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`, `repeatability_receipt_digest`, `selection_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다. selection은 candidate의 조상 SHA 선택 authority일 뿐 promote unlock이 아니며, activation kill switch와 receipt·attestation·classification·release-promoter gate를 대체하지 않는다.
 protected tag push 직전에는 receipt 전체를 fresh clock으로 다시 검증하고 `rehearsal_receipt_valid_until`까지 strict 900초 초과 여유를 요구한다. equality 또는 더 짧은 여유는 tag push와 attestation을 모두 0으로 유지한다.
 
 Stage B implementation target command family는 다음과 같다.

@@ -61,6 +61,7 @@ function createManifest(overrides: Record<string, unknown> = {}) {
     migration_head: "20260825090000_release_gate",
     build_id: "build-20260825-01",
     rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+    selection_digest: null,
     sealed_bundle_digest: "f".repeat(64),
     repeatability_receipt_digest: "1".repeat(64),
     rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
@@ -98,6 +99,7 @@ function createGitEvidence(overrides: Record<string, unknown> = {}) {
       "Approved production release prod-20260825.1",
       "build_id build-20260825-01",
       "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+      "selection_digest none",
       `sealed_bundle_digest ${"f".repeat(64)}`,
       `repeatability_receipt_digest ${"1".repeat(64)}`,
       "rehearsal_receipt_valid_until 2026-08-30T09:00:00.000Z",
@@ -137,6 +139,7 @@ describe("local Mac production release manifest", () => {
     expect(schema.required).toContain("release_tag_object_sha");
     expect(schema.required).toEqual(expect.arrayContaining([
       "rehearsal_receipt_schema",
+      "selection_digest",
       "sealed_bundle_digest",
       "repeatability_receipt_digest",
       "rehearsal_receipt_valid_until",
@@ -183,6 +186,33 @@ describe("local Mac production release manifest", () => {
     ]) {
       expect(validateSummary(invalidSummary), JSON.stringify(validateSummary.errors)).toBe(false);
     }
+  });
+
+  it("validates an explicit selected-ancestor digest without treating normal master advancement as substitution", () => {
+    const selectionDigest = "2".repeat(64);
+    const manifest = createManifest({
+      release_manifest_path: "/tmp/release.json",
+      selection_digest: selectionDigest,
+    });
+    const evidence = createGitEvidence({
+      originMasterSha: "f".repeat(40),
+      releaseTagMessage: [
+        "Approved production release prod-20260825.1",
+        "build_id build-20260825-01",
+        "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+        `selection_digest ${selectionDigest}`,
+        `sealed_bundle_digest ${"f".repeat(64)}`,
+        `repeatability_receipt_digest ${"1".repeat(64)}`,
+        "rehearsal_receipt_valid_until 2026-08-30T09:00:00.000Z",
+      ].join("\n"),
+    });
+
+    expect(validateLocalMacProductionReleaseManifest({
+      manifest,
+      manifestPath: "/tmp/release.json",
+      readGitEvidence: () => evidence,
+      requireAttestation: false,
+    }).selection_digest).toBe(selectionDigest);
   });
 
   it("resolves the approved release SHA from origin/master instead of the local checkout head", () => {

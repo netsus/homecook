@@ -23,6 +23,7 @@
     "migration_head",
     "build_id",
     "rehearsal_receipt_schema",
+    "selection_digest",
     "sealed_bundle_digest",
     "repeatability_receipt_digest",
     "rehearsal_receipt_valid_until",
@@ -101,6 +102,12 @@
     },
     "rehearsal_receipt_schema": {
       "const": "homecook.local-mac-production-rehearsal-repeatability-receipt.v1"
+    },
+    "selection_digest": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        { "type": "null" }
+      ]
     },
     "sealed_bundle_digest": {
       "type": "string",

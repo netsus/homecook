@@ -34,9 +34,13 @@ export function validateProductionReleaseTag(value, label = "release tag") {
   return normalized;
 }
 
+/**
+ * @param {{releaseTag: string, rehearsal_receipt_schema: string, selection_digest?: string | null, build_id: string, sealed_bundle_digest: string, repeatability_receipt_digest: string, rehearsal_receipt_valid_until: string}} options
+ */
 export function buildProductionReleaseAnnotatedTagMessage({
   releaseTag,
   rehearsal_receipt_schema,
+  selection_digest = /** @type {string | null} */ (null),
   build_id,
   sealed_bundle_digest,
   repeatability_receipt_digest,
@@ -46,6 +50,9 @@ export function buildProductionReleaseAnnotatedTagMessage({
     throw new Error("annotated tag rehearsal receipt schema is invalid.");
   }
   const buildId = requireNonEmptyString(build_id, "annotated tag build_id");
+  if (selection_digest !== null && !SHA256_PATTERN.test(selection_digest ?? "")) {
+    throw new Error("annotated tag selection_digest is invalid.");
+  }
   for (const [value, label] of [
     [sealed_bundle_digest, "sealed_bundle_digest"],
     [repeatability_receipt_digest, "repeatability_receipt_digest"],
@@ -64,6 +71,7 @@ export function buildProductionReleaseAnnotatedTagMessage({
     `Approved production release ${validateProductionReleaseTag(releaseTag, "releaseTag")}`,
     `build_id ${buildId}`,
     `rehearsal_receipt_schema ${REPEATABILITY_SCHEMA}`,
+    `selection_digest ${selection_digest ?? "none"}`,
     `sealed_bundle_digest ${sealed_bundle_digest}`,
     `repeatability_receipt_digest ${repeatability_receipt_digest}`,
     `rehearsal_receipt_valid_until ${validUntil}`,
