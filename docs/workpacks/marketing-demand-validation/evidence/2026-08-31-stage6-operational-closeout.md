@@ -18,11 +18,11 @@ Stage 6 closes the post-merge operational surface for `/beta` demand validation 
 
 - analysis SQL is PII-free and scopes to `campaign_key=weekly_nutrition_2026`, `creative_key=weekly_nutrition_v2`, `attribution_status=paid_allowlisted`
 - primary report includes unique paid sessions, accepted submitted leads, duplicate submissions, target-rule mismatch count, Wilson 95% intervals, and diagnostic distributions
-- accepted lead export limits each row to `email / consent_version / consented_at`, writes only consented accepted leads to `.artifacts/marketing-validation/*.csv`, sets file mode `0600`, escapes spreadsheet formulas, and never prints email or session identifiers to stdout
+- accepted lead export limits each row to `email / consent_version / consented_at`, pages through an exact-count deterministic query, writes only consented accepted leads to `.artifacts/marketing-validation/*.csv`, sets file mode `0600`, escapes spreadsheet formulas, and never prints email or session identifiers to stdout
 - retention purge requires a non-PII `--operator-id`, `.artifacts/marketing-validation/*.json` evidence, defaults to dry-run, and requires both `--confirm` and `MARKETING_VALIDATION_ALLOW_PURGE=1` before deletion
-- purge deletes only rows whose `retention_until < now` and emits redacted JSON evidence with count, mode, non-PII operator alias, and remaining-expired count only
+- purge deletes only rows whose `retention_until < now`, obtains exact PostgREST counts independent of response row caps, and emits redacted JSON evidence with count, mode, non-PII operator alias, and remaining-expired count only
 - `--now` cutoff override remains mock-fixture-only and is rejected in live operator mode
-- internal scope migration preserves existing `marketing-validation` access and adds only exact `marketing-validation-purge` GET/DELETE access to `/marketing_validation_sessions`
+- internal scope migration preserves existing `marketing-validation` access and adds exact `marketing-validation-export` GET plus exact `marketing-validation-purge` GET/DELETE access to `/marketing_validation_sessions`
 - mock fixture mode remains explicit CLI-only test support and does not widen runtime route behavior
 
 ## Commands run
@@ -32,7 +32,7 @@ Stage 6 closes the post-merge operational surface for `/beta` demand validation 
 
 ## Results
 
-- `tests/marketing-validation-operations.test.ts`: 1 file, 8 tests passed
+- `tests/marketing-validation-operations.test.ts`: 1 file, 9 tests passed
 - `pnpm audit --prod`: one existing moderate `postcss` advisory via `next > postcss`; no new dependency was added in this Stage 6 slice
 
 ## Security review summary
@@ -48,6 +48,9 @@ Stage 6 closes the post-merge operational surface for `/beta` demand validation 
 - production allowlisted origin and ad settings
 - edge rate-limit evidence
 - `MARKETING_LEAD_PROTECTION_READY=1` production enable approval
+- `MARKETING_CAMPAIGN_END_AT` and campaign-end-plus-180-day retention readiness
+- separately approved staging/production full-local migration apply with target and backup evidence
+- verified beta-invitation sender email and sending domain
 - actual iOS Safari smoke
 - explicit paid-ads execution approval after every readiness item is green
 

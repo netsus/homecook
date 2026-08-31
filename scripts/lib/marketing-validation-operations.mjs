@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const TABLE = "marketing_validation_sessions";
 const SAFE_EXPORT_ROOT = path.join(".artifacts", "marketing-validation");
+const EXPORT_PAGE_SIZE = 500;
 const EXPORT_COLUMNS = [
   "email",
   "consent_version",
@@ -215,20 +216,37 @@ async function loadAcceptedLeadRows({ client, fixtureRows }) {
     ));
   }
 
-  const { data, error } = await client
-    .from(TABLE)
-    .select("email,consent_version,consented_at")
-    .eq("campaign_key", "weekly_nutrition_2026")
-    .eq("creative_key", "weekly_nutrition_v2")
-    .eq("lead_submission_status", "accepted")
-    .eq("consent_version", "marketing-demand-validation-v1")
-    .not("consented_at", "is", null)
-    .not("email", "is", null)
-    .order("lead_submitted_at", { ascending: true });
-  if (error || !Array.isArray(data)) {
-    throw new MarketingValidationOperationError("accepted lead export 조회에 실패했어요.");
+  const rows = [];
+  let expectedCount = null;
+  let offset = 0;
+  while (expectedCount === null || rows.length < expectedCount) {
+    const { count, data, error } = await client
+      .from(TABLE)
+      .select("id,email,consent_version,consented_at,lead_submitted_at", {
+        count: "exact",
+      })
+      .eq("campaign_key", "weekly_nutrition_2026")
+      .eq("creative_key", "weekly_nutrition_v2")
+      .eq("lead_submission_status", "accepted")
+      .eq("consent_version", "marketing-demand-validation-v1")
+      .not("consented_at", "is", null)
+      .not("email", "is", null)
+      .order("lead_submitted_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + EXPORT_PAGE_SIZE - 1);
+    if (error || !Array.isArray(data) || !Number.isSafeInteger(count) || count < 0) {
+      throw new MarketingValidationOperationError("accepted lead export 조회에 실패했어요.");
+    }
+    expectedCount ??= count;
+    if (data.length === 0 && rows.length < expectedCount) {
+      throw new MarketingValidationOperationError(
+        "accepted lead export가 조회 중 변경되어 전체 결과를 확인할 수 없어요.",
+      );
+    }
+    rows.push(...data);
+    offset += data.length;
   }
-  return data;
+  return rows;
 }
 
 export async function runMarketingLeadExport({
@@ -242,7 +260,9 @@ export async function runMarketingLeadExport({
     flagName: "--output",
   });
   const fixtureRows = await readFixtureRows(args.mock_db_export);
-  const client = fixtureRows ? null : createOperatorClient(env, "marketing-validation");
+  const client = fixtureRows
+    ? null
+    : createOperatorClient(env, "marketing-validation-export");
   const rows = await loadAcceptedLeadRows({ client, fixtureRows });
   await writePrivateFile(outputPath, renderLeadCsv(rows));
 
@@ -260,17 +280,18 @@ function expiredRows(rows, nowIso) {
   });
 }
 
-async function loadExpiredRows({ client, fixtureRows, nowIso }) {
-  if (fixtureRows) return expiredRows(fixtureRows, nowIso);
+async function countExpiredRows({ client, fixtureRows, nowIso }) {
+  if (fixtureRows) return expiredRows(fixtureRows, nowIso).length;
 
-  const { data, error } = await client
+  const { count, error } = await client
     .from(TABLE)
-    .select("id,retention_until")
-    .lt("retention_until", nowIso);
-  if (error || !Array.isArray(data)) {
+    .select("retention_until", { count: "exact" })
+    .lt("retention_until", nowIso)
+    .limit(1);
+  if (error || !Number.isSafeInteger(count) || count < 0) {
     throw new MarketingValidationOperationError("retention dry-run 조회에 실패했어요.");
   }
-  return data;
+  return count;
 }
 
 async function deleteExpiredRows({ client, fixturePath, fixtureRows, nowIso }) {
@@ -284,15 +305,14 @@ async function deleteExpiredRows({ client, fixturePath, fixtureRows, nowIso }) {
     return expiredIds.size;
   }
 
-  const { data, error } = await client
+  const { count, error } = await client
     .from(TABLE)
-    .delete()
-    .lt("retention_until", nowIso)
-    .select("id");
-  if (error || !Array.isArray(data)) {
+    .delete({ count: "exact" })
+    .lt("retention_until", nowIso);
+  if (error || !Number.isSafeInteger(count) || count < 0) {
     throw new MarketingValidationOperationError("retention purge 실행에 실패했어요.");
   }
-  return data.length;
+  return count;
 }
 
 export async function runExpiredMarketingValidationPurge({
@@ -334,17 +354,17 @@ export async function runExpiredMarketingValidationPurge({
   const client = fixtureRows
     ? null
     : createOperatorClient(env, "marketing-validation-purge");
-  const expired = await loadExpiredRows({ client, fixtureRows, nowIso });
+  const matchedCount = await countExpiredRows({ client, fixtureRows, nowIso });
   if (args.confirm) {
     await writePrivateFile(
       evidencePath,
       `${JSON.stringify({
         deleted_count: 0,
         generated_at: nowIso,
-        matched_count: expired.length,
+        matched_count: matchedCount,
         mode: "confirm-pending",
         operator_id: operatorId,
-        remaining_expired_count: expired.length,
+        remaining_expired_count: matchedCount,
       }, null, 2)}\n`,
     );
   }
@@ -356,22 +376,22 @@ export async function runExpiredMarketingValidationPurge({
         nowIso,
       })
     : 0;
-  const remainingExpired = args.confirm
-    ? await loadExpiredRows({
+  const remainingExpiredCount = args.confirm
+    ? await countExpiredRows({
         client,
         fixtureRows: fixtureRows
           ? await readFixtureRows(args.mock_db_export)
           : null,
         nowIso,
       })
-    : expired;
+    : matchedCount;
   const evidence = {
     deleted_count: deletedCount,
     generated_at: nowIso,
-    matched_count: expired.length,
+    matched_count: matchedCount,
     mode: args.confirm ? "confirm" : "dry-run",
     operator_id: operatorId,
-    remaining_expired_count: remainingExpired.length,
+    remaining_expired_count: remainingExpiredCount,
   };
   await writePrivateFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
   return evidence;
