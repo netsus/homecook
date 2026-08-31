@@ -464,18 +464,18 @@ describe("marketing validation Stage 6 operations", () => {
     expect(sql).toContain("하루 합계와 주간 흐름을 한눈에 못 볼 때");
   });
 
-  it("adds a delete-only retention scope without broadening the public marketing route scope", () => {
+  it("adds exact export and purge internal scopes without broadening the public marketing route scope", () => {
     const migration = requireFileText(retentionMigrationPath);
 
-    expect(migration).toContain("v_scope = 'marketing-validation-export'");
+    expect(migration).toMatch(
+      /v_scope\s*=\s*'marketing-validation'[\s\S]*?v_method\s+in\s*\(\s*'GET'\s*,\s*'POST'\s*,\s*'PATCH'\s*\)[\s\S]*?v_path\s*=\s*'\/marketing_validation_sessions'/iu,
+    );
     expect(migration).toMatch(
       /v_scope\s*=\s*'marketing-validation-export'[\s\S]*?v_method\s*=\s*'GET'[\s\S]*?v_path\s*=\s*'\/marketing_validation_sessions'/iu,
     );
     expect(migration).toContain("v_scope = 'marketing-validation-purge'");
     expect(migration).toMatch(/v_method\s+in\s*\(\s*'GET'\s*,\s*'DELETE'\s*\)/iu);
     expect(migration).toContain("v_path = '/marketing_validation_sessions'");
-    expect(migration).toContain("v_scope = 'marketing-validation'");
-    expect(migration).toMatch(/v_method\s+in\s*\(\s*'GET'\s*,\s*'POST'\s*,\s*'PATCH'\s*\)/iu);
     expect(requireFileText(operationsModulePath)).toContain(
       'createOperatorClient(env, "marketing-validation-export")',
     );

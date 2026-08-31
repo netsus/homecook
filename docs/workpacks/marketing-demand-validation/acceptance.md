@@ -94,7 +94,7 @@
 - [x] export CSV는 수식 시작 문자 escape와 `0600` 권한을 강제한다 <!-- omo:id=accept-stage6-lead-export-permissions;stage=6;scope=backend;review=6 -->
 - [x] `scripts/purge-expired-marketing-validation.mjs`는 dry-run 기본, `--confirm` + `MARKETING_VALIDATION_ALLOW_PURGE=1` 이중 게이트, mock fixture 전용 `--now`, non-PII `--operator-id`, `.artifacts/marketing-validation/*.json` evidence 강제를 지킨다 <!-- omo:id=accept-stage6-retention-purge-gates;stage=6;scope=backend;review=6 -->
 - [x] purge는 `retention_until < now` row만 삭제하고 evidence JSON에는 직접 식별자 없이 count, mode, non-PII operator alias, remaining count만 남긴다 <!-- omo:id=accept-stage6-retention-purge-redaction;stage=6;scope=backend;review=6 -->
-- [x] `supabase/migrations/20260831110000_marketing_validation_retention_operations.sql`는 기존 내부 scope를 유지하면서 `marketing-validation-purge` exact GET/DELETE path만 추가한다 <!-- omo:id=accept-stage6-retention-scope-migration;stage=6;scope=backend;review=6 -->
+- [x] `supabase/migrations/20260831110000_marketing_validation_retention_operations.sql`는 기존 내부 scope를 유지하면서 `marketing-validation-export` exact GET과 `marketing-validation-purge` exact GET/DELETE path만 추가한다 <!-- omo:id=accept-stage6-retention-scope-migration;stage=6;scope=backend;review=6 -->
 - [x] `docs/marketing/demand-validation-result-template.md`가 accepted/duplicate/deliverable 분리, primary threshold, Manual Only readiness sign-off를 고정한다 <!-- omo:id=accept-stage6-result-template;stage=6;scope=shared;review=6 -->
 - [x] Stage 6 운영 테스트 `tests/marketing-validation-operations.test.ts`가 export/purge/analysis/migration 경계를 회귀로 고정한다 <!-- omo:id=accept-stage6-operations-tests;stage=6;scope=shared;review=6 -->
 

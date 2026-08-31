@@ -211,5 +211,5 @@
 - [x] Stage 6 운영 분석 SQL이 paid allowlisted `weekly_nutrition_v2` cohort, accepted/duplicate, Wilson 95%, 진단 분포를 PII 없이 계산한다 <!-- omo:id=delivery-stage6-analysis-sql;stage=6;scope=backend;review=6 -->
 - [x] Stage 6 accepted lead export CLI가 consented accepted lead만 `.artifacts/marketing-validation` 아래 CSV로 내보내고 stdout에 PII를 남기지 않는다 <!-- omo:id=delivery-stage6-lead-export;stage=6;scope=backend;review=6 -->
 - [x] Stage 6 retention purge CLI가 dry-run 기본, `--confirm` + `MARKETING_VALIDATION_ALLOW_PURGE=1` 이중 게이트, mock fixture 전용 `--now`, non-PII `--operator-id`, JSON evidence를 강제한다 <!-- omo:id=delivery-stage6-retention-purge;stage=6;scope=backend;review=6 -->
-- [x] Stage 6 internal scope migration이 `marketing-validation-purge`의 exact GET/DELETE table path만 추가하고 기존 내부 scope를 보존한다 <!-- omo:id=delivery-stage6-scope-migration;stage=6;scope=backend;review=6 -->
+- [x] Stage 6 internal scope migration이 연락 export용 exact GET scope와 purge용 exact GET/DELETE scope만 추가하고 기존 내부 scope를 보존한다 <!-- omo:id=delivery-stage6-scope-migration;stage=6;scope=backend;review=6 -->
 - [x] Stage 6 결과 템플릿과 closeout evidence가 Manual Only blocker를 유지한 채 운영 보고 형식을 고정한다 <!-- omo:id=delivery-stage6-result-template;stage=6;scope=shared;review=6 -->

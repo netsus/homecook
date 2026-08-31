@@ -20,6 +20,12 @@ begin
     return;
   end if;
 
+  if v_scope = 'marketing-validation-export'
+    and v_method = 'GET'
+    and v_path = '/marketing_validation_sessions' then
+    return;
+  end if;
+
   if v_scope = 'marketing-validation-purge'
     and v_method in ('GET', 'DELETE')
     and v_path = '/marketing_validation_sessions' then

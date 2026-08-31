@@ -22,7 +22,7 @@ Stage 6 closes the post-merge operational surface for `/beta` demand validation 
 - retention purge requires a non-PII `--operator-id`, `.artifacts/marketing-validation/*.json` evidence, defaults to dry-run, and requires both `--confirm` and `MARKETING_VALIDATION_ALLOW_PURGE=1` before deletion
 - purge deletes only rows whose `retention_until < now`, obtains exact PostgREST counts independent of response row caps, and emits redacted JSON evidence with count, mode, non-PII operator alias, and remaining-expired count only
 - `--now` cutoff override remains mock-fixture-only and is rejected in live operator mode
-- internal scope migration preserves existing `marketing-validation` access and adds only exact `marketing-validation-purge` GET/DELETE access to `/marketing_validation_sessions`
+- internal scope migration preserves existing `marketing-validation` access and adds exact `marketing-validation-export` GET plus exact `marketing-validation-purge` GET/DELETE access to `/marketing_validation_sessions`
 - mock fixture mode remains explicit CLI-only test support and does not widen runtime route behavior
 
 ## Commands run
