@@ -45,6 +45,7 @@ import {
   createLocalProductionInventoryAdapters,
   createProductionSurfaceSnapshot,
 } from "./local-mac-production-rehearsal-inventory.mjs";
+import { resolveCandidateRehearsalSourceAuthority } from "./local-mac-production-rehearsal-selection.mjs";
 
 export const RELEASE_REHEARSAL_CANDIDATE_SCHEMA =
   "homecook.local-mac-production-rehearsal-candidate.v1";
@@ -67,7 +68,7 @@ const BUILD_ENV_ALLOWED_KEYS = new Set([
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
 ]);
 const CANDIDATE_KEYS = [
-  "schema", "canonicalization", "repository", "source_ref", "release_sha",
+  "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
   "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
   "build_id", "sealed_bundle_digest",
@@ -115,6 +116,11 @@ function sha(value, label) {
 function digest(value, label) {
   if (!DIGEST_PATTERN.test(value ?? "")) fail(`${label} must be lowercase SHA-256`);
   return value;
+}
+
+function nullableDigest(value, label) {
+  if (value === null) return value;
+  return digest(value, label);
 }
 
 function decimalString(value, label) {
@@ -221,8 +227,11 @@ export function validateCandidateSourceEvidence(value) {
   sha(value.checkout_sha, "checkout_sha");
   sha(value.release_tree, "release_tree");
   sha(value.checkout_tree, "checkout_tree");
-  if (value.requested_sha !== value.origin_master_sha || value.checkout_sha !== value.requested_sha) {
-    fail("requested SHA is not the current fetched origin/master exact SHA");
+  if (!Object.hasOwn(value, "selection_digest")) fail("source evidence selection_digest is required");
+  nullableDigest(value.selection_digest, "source evidence selection_digest");
+  if ((value.selection_digest === null && value.requested_sha !== value.origin_master_sha)
+    || value.checkout_sha !== value.requested_sha) {
+    fail("requested SHA is not authorized by current origin/master or an approved selection");
   }
   if (value.release_tree !== value.checkout_tree) fail("checkout tree does not match release tree");
   if (value.detached !== true) fail("checkout must be detached");
@@ -240,16 +249,46 @@ export function validateCandidateSourceEvidence(value) {
 
 /** @param {any} options */
 export function validateCandidateBuilderAuthority({
-  currentHead, releaseSha, trackedStatus, sourceManifestDigest,
+  currentHead, releaseSha, builderAuthoritySha = releaseSha, trackedStatus, sourceManifestDigest,
   verifiedSourceManifestDigest, entries, expectedBuilderEntries = null,
+  builderEntries = null, expectedBuilderInputDigest = null,
 } = /** @type {any} */ ({})) {
   sha(currentHead, "candidate builder HEAD");
   sha(releaseSha, "candidate builder release SHA");
-  if (currentHead !== releaseSha) fail("candidate builder HEAD is not the exact release Git authority");
+  sha(builderAuthoritySha, "candidate builder authority SHA");
+  if (currentHead !== builderAuthoritySha) fail("candidate builder HEAD is not the exact current master Git authority");
   if (trackedStatus !== "") fail("candidate builder/config/toolchain lock worktree is dirty");
   digest(sourceManifestDigest, "candidate builder source manifest digest");
   digest(verifiedSourceManifestDigest, "candidate builder verified source manifest digest");
   if (sourceManifestDigest !== verifiedSourceManifestDigest) fail("candidate builder source authority drifted");
+  if (builderEntries !== null) {
+    if (!Array.isArray(builderEntries) || builderEntries.length === 0) {
+      fail("candidate builder immutable module graph is empty");
+    }
+    digest(expectedBuilderInputDigest, "verified bootstrap builder input digest");
+    const authority = builderEntries.map((entry, index) => {
+      exactObject(entry, `verified bootstrap builder entry ${index}`, [
+        "blob_oid", "git_mode", "path", "sha256",
+      ]);
+      sha(entry.blob_oid, `verified bootstrap builder entry ${index} blob_oid`);
+      if (!["100644", "100755"].includes(entry.git_mode)) {
+        fail(`verified bootstrap builder entry ${index} git_mode is invalid`);
+      }
+      assertSafeRelativeGitPath(entry.path);
+      digest(entry.sha256, `verified bootstrap builder entry ${entry.path}`);
+      return entry;
+    });
+    const paths = authority.map((entry) => entry.path);
+    if (new Set(paths).size !== paths.length
+      || JSON.stringify(paths) !== JSON.stringify([...paths].sort((left, right) => left.localeCompare(right)))) {
+      fail("candidate builder immutable module graph paths must be unique and sorted");
+    }
+    const builderInputDigest = sha256Bytes(Buffer.from(JSON.stringify(authority)));
+    if (builderInputDigest !== expectedBuilderInputDigest) {
+      fail("candidate builder immutable module graph digest differs from verified bootstrap authority");
+    }
+    return Object.freeze({ builder_input_digest: builderInputDigest });
+  }
   const requiredPaths = expectedBuilderEntries?.map((entry) => entry.path) ?? [
     "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
     "scripts/local-mac-production-rehearsal.mjs",
@@ -411,6 +450,7 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   if (value.canonicalization !== CANONICALIZATION) fail("candidate canonicalization is invalid");
   if (value.repository !== REPOSITORY) fail("candidate repository is invalid");
   if (value.source_ref !== SOURCE_REF) fail("candidate source_ref is invalid");
+  nullableDigest(value.selection_digest, "selection_digest");
   sha(value.release_sha, "release_sha");
   sha(value.release_tree, "release_tree");
   digest(value.ci_check_summary_digest, "ci_check_summary_digest");
@@ -1091,11 +1131,12 @@ export function buildBundleAuthorityManifest(input) {
     "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
     "build_tools", "builder_input_digest",
-    "repository", "source_ref",
+    "repository", "source_ref", "selection_digest",
   ]);
   if (input.repository !== REPOSITORY || input.source_ref !== SOURCE_REF) {
     fail("bundle authority repository or source_ref is invalid");
   }
+  nullableDigest(input.selection_digest, "bundle authority selection_digest");
   validateArtifacts(input.artifacts);
   string(input.build_id, "bundle authority build_id");
   for (const field of [
@@ -1360,7 +1401,8 @@ export function validateStoredCiProjection(value, manifest) {
   if (value.repository !== REPOSITORY) fail("candidate CI evidence repository is invalid");
   sha(value.head_sha, "candidate CI evidence head_sha");
   sha(value.remote_master_sha, "candidate CI evidence remote_master_sha");
-  if (value.head_sha !== manifest.release_sha || value.remote_master_sha !== manifest.release_sha) {
+  if (value.head_sha !== manifest.release_sha
+    || (manifest.selection_digest === null && value.remote_master_sha !== manifest.release_sha)) {
     fail("candidate CI evidence head or remote master SHA does not match candidate");
   }
   if (!Array.isArray(value.check_runs) || !Array.isArray(value.commit_statuses)) {
@@ -1436,6 +1478,7 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
   const pairs = [
     ["repository", candidate.repository, bundle.repository],
     ["source_ref", candidate.source_ref, bundle.source_ref],
+    ["selection_digest", candidate.selection_digest, bundle.selection_digest],
     ["release_sha", candidate.release_sha, bundle.release_sha],
     ["release_tree", candidate.release_tree, bundle.release_tree],
     ["build_id", candidate.build_id, bundle.build_id],
@@ -1582,6 +1625,7 @@ export function readCompletedCandidateRoot(root) {
   ) fail("candidate bundle authority manifest digest is invalid");
   const candidateIdentityDigest = sha256Jcs({
     schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+    selection_digest: manifest.selection_digest,
     bundle_manifest_digest: manifest.bundle_manifest_digest,
     sealed_bundle_digest: manifest.sealed_bundle_digest,
   });
@@ -1662,6 +1706,8 @@ function makeCandidateRootWritable(path) {
  *   adapters?: any,
  *   runId: string,
  *   currentUid?: number,
+ *   selectionDigest?: string | null,
+ *   sourceAuthority?: any,
  *   beforeComplete: (authority: any) => Promise<any> | any,
  * }} options
  * @returns {Promise<{candidate_root:string, manifest:any}>}
@@ -1672,9 +1718,26 @@ export async function buildReleaseRehearsalCandidate({
   adapters = /** @type {any} */ (createReleaseRehearsalCandidateAdapters()),
   runId,
   currentUid = process.getuid?.(),
+  selectionDigest = null,
+  sourceAuthority = null,
   beforeComplete,
 } = {}) {
   sha(releaseSha, "releaseSha");
+  nullableDigest(selectionDigest, "selectionDigest");
+  if (selectionDigest !== null) {
+    exactObject(sourceAuthority, "selected source authority", [
+      "mode", "release_sha", "release_tree", "selection_digest",
+      "observed_master_sha", "observed_master_tree", "current_master_sha", "current_master_tree",
+    ]);
+    if (sourceAuthority.mode !== "approved_ancestor" || sourceAuthority.release_sha !== releaseSha
+      || sourceAuthority.selection_digest !== selectionDigest) {
+      fail("selected source authority does not match the approved selection");
+    }
+    sha(sourceAuthority.release_tree, "selected source authority release_tree");
+    for (const key of ["observed_master_sha", "observed_master_tree", "current_master_sha", "current_master_tree"]) {
+      sha(sourceAuthority[key], `selected source authority ${key}`);
+    }
+  }
   if (!isAbsolute(namespaceRoot ?? "")) fail("candidate namespace root must be absolute");
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   string(runId, "runId");
@@ -1733,7 +1796,7 @@ export async function buildReleaseRehearsalCandidate({
       fail("sealed migration digest differs from exact Git input");
     }
     const ciPost = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "post", releaseSha }));
-    const ci = validateStableCiSnapshots(ciPre, ciPost, releaseSha);
+    const ci = validateStableCiSnapshots(ciPre, ciPost, releaseSha, { selectionDigest });
     const evidenceRoot = join(runRoot, "evidence");
     mkdirSync(evidenceRoot, { mode: 0o700 });
     writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ci.safe_projection), {
@@ -1759,6 +1822,7 @@ export async function buildReleaseRehearsalCandidate({
     const bundleAuthorityManifest = buildBundleAuthorityManifest({
       repository: REPOSITORY,
       source_ref: SOURCE_REF,
+      selection_digest: selectionDigest,
       artifacts: build.artifacts,
       build_id: buildId,
       build_tools: build.build_tools,
@@ -1783,6 +1847,7 @@ export async function buildReleaseRehearsalCandidate({
     });
     const candidateIdentityDigest = sha256Jcs({
       schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+      selection_digest: selectionDigest,
       bundle_manifest_digest: bundleAuthorityManifest.bundle_manifest_digest,
       sealed_bundle_digest: sealedBundleDigest,
     });
@@ -1799,6 +1864,7 @@ export async function buildReleaseRehearsalCandidate({
       canonicalization: CANONICALIZATION,
       repository: REPOSITORY,
       source_ref: SOURCE_REF,
+      selection_digest: selectionDigest,
       release_sha: releaseSha,
       release_tree: sourceEvidence.release_tree,
       ci_check_summary_digest: ci.summary_digest,
@@ -2191,15 +2257,20 @@ function parseGhPages(text, field = null) {
   });
 }
 
-export function validateStableCiSnapshots(pre, post, releaseSha) {
+export function validateStableCiSnapshots(pre, post, releaseSha, { selectionDigest = /** @type {string | null} */ (null) } = {}) {
   validateCandidateCiEvidence(pre);
   validateCandidateCiEvidence(post);
+  nullableDigest(selectionDigest, "CI selection digest");
   for (const [label, value] of [["pre", pre], ["post", post]]) {
-    if (value.remote_master_sha !== releaseSha) fail(`CI ${label} remote master SHA drifted`);
+    sha(value.remote_master_sha, `CI ${label} remote master SHA`);
+    if (selectionDigest === null && value.remote_master_sha !== releaseSha) fail(`CI ${label} remote master SHA drifted`);
     digest(value.safe_projection_digest, `CI ${label} safe projection digest`);
     digest(value.suite_run_set_digest, `CI ${label} suite/run set digest`);
     if (!value.safe_projection || value.safe_projection.head_sha !== releaseSha) {
       fail(`CI ${label} safe projection head SHA is invalid`);
+    }
+    if (value.safe_projection.remote_master_sha !== value.remote_master_sha) {
+      fail(`CI ${label} safe projection remote master SHA is invalid`);
     }
     for (const check of value.safe_projection.check_runs ?? []) {
       if (
@@ -2220,9 +2291,18 @@ export function validateStableCiSnapshots(pre, post, releaseSha) {
   }
   if (
     pre.summary_digest !== post.summary_digest
-    || pre.safe_projection_digest !== post.safe_projection_digest
     || pre.suite_run_set_digest !== post.suite_run_set_digest
   ) fail("CI pre/post projection, suite, or run set drifted");
+  if (selectionDigest === null) {
+    if (pre.safe_projection_digest !== post.safe_projection_digest) {
+      fail("CI pre/post projection, suite, or run set drifted");
+    }
+  } else {
+    const normalized = (projection) => ({ ...projection, remote_master_sha: "approved-selection-descendant" });
+    if (canonicalizeJcs(normalized(pre.safe_projection)) !== canonicalizeJcs(normalized(post.safe_projection))) {
+      fail("selected CI pre/post projection changed beyond normal master advancement");
+    }
+  }
   return Object.freeze(pre);
 }
 
@@ -2849,8 +2929,10 @@ export function createReleaseRehearsalCandidateAdapters({
   packageStorePath = join(homeDir, "Library", "pnpm", "store", "v10"),
   approvedMigrationMarkerPath = join(namespaceRoot, "approved-production-migration-marker.json"),
   productionEnvAuthorityPath = null,
+  builderAuthoritySha = null,
   builderInputDigest = null,
   builderInputEntries = null,
+  selection = null,
   toolchainLockPath = resolve(
     dirname(fileURLToPath(import.meta.url)),
     "..",
@@ -2859,7 +2941,9 @@ export function createReleaseRehearsalCandidateAdapters({
   ),
 } = {}, dependencies = {}) {
   const runCommand = dependencies.runCommand ?? spawnSync;
+  const resolveToolPaths = dependencies.resolveToolPaths ?? exactToolPaths;
   const sourceRoot = realpathSync(rootDir);
+  sha(builderAuthoritySha, "bootstrap-start builder authority SHA");
   const normalizedHome = realpathSync(homeDir);
   const normalizedNamespace = resolve(namespaceRoot);
   const namespaceFromRepository = relative(sourceRoot, normalizedNamespace);
@@ -2874,6 +2958,7 @@ export function createReleaseRehearsalCandidateAdapters({
   let initialToolchain = null;
   let cachedToolPaths = null;
   let cachedToolchainLock = null;
+  let selectedSourceAuthority = null;
 
   const readToolchainLock = () => {
     cachedToolchainLock ??= loadRehearsalToolchainLock(toolchainLockPath);
@@ -2881,7 +2966,7 @@ export function createReleaseRehearsalCandidateAdapters({
   };
 
   const resolveTools = () => {
-    cachedToolPaths ??= exactToolPaths({
+    cachedToolPaths ??= resolveToolPaths({
       homeDir: normalizedHome,
       toolchainLock: readToolchainLock(),
     });
@@ -2992,16 +3077,47 @@ export function createReleaseRehearsalCandidateAdapters({
       return createProductionSurfaceSnapshot(inventory);
     },
 
+    async resolveSourceAuthority({ releaseSha, selection: requestedSelection }) {
+      if (selection === null || requestedSelection?.selection_digest !== selection.selection_digest) {
+        fail("candidate adapter selection authority is missing or substituted");
+      }
+      selectedSourceAuthority = resolveCandidateRehearsalSourceAuthority({
+        releaseSha,
+        rootDir: sourceRoot,
+        selection,
+        homeDir: normalizedHome,
+      });
+      return selectedSourceAuthority;
+    },
+
     async prepareSource({ releaseSha, runRoot }) {
       const { gitPath } = resolveTools();
       const env = gitEnvironment(normalizedHome);
       runBounded(gitPath, ["-C", sourceRoot, "fetch", "--no-tags", "origin", "master"], {
         env, label: "fetch origin/master", runCommand, timeout: 120_000,
       });
-      const originMasterSha = runBounded(gitPath, ["-C", sourceRoot, "rev-parse", "origin/master"], {
+      let originMasterSha = runBounded(gitPath, ["-C", sourceRoot, "rev-parse", "origin/master"], {
         env, label: "origin/master SHA", runCommand,
       }).trim();
-      if (originMasterSha !== releaseSha) fail("requested SHA is not the current fetched origin/master");
+      if (selection === null) {
+        if (originMasterSha !== releaseSha) fail("requested SHA is not the current fetched origin/master");
+      } else {
+        if (!selectedSourceAuthority) fail("selected source authority was not validated before candidate reservation");
+        const refreshed = resolveCandidateRehearsalSourceAuthority({
+          releaseSha,
+          rootDir: sourceRoot,
+          selection,
+          homeDir: normalizedHome,
+        });
+        if (refreshed.selection_digest !== selectedSourceAuthority.selection_digest
+          || refreshed.release_tree !== selectedSourceAuthority.release_tree
+          || refreshed.observed_master_sha !== selectedSourceAuthority.observed_master_sha
+          || refreshed.observed_master_tree !== selectedSourceAuthority.observed_master_tree) {
+          fail("selected source authority changed before materialization");
+        }
+        selectedSourceAuthority = refreshed;
+        originMasterSha = refreshed.current_master_sha;
+      }
       const currentHead = runBounded(gitPath, ["--no-replace-objects", "-C", sourceRoot, "rev-parse", "HEAD"], {
         env, label: "candidate builder HEAD", runCommand,
       }).trim();
@@ -3026,22 +3142,19 @@ export function createReleaseRehearsalCandidateAdapters({
         paths: materialized.source_manifest.entries.map((entry) => entry.path),
       };
       const verifiedSourceManifestDigest = verifyExactMaterializedTree({
-        sourceRoot,
+        sourceRoot: checkoutDir,
         sourceManifest: materialized.source_manifest,
       });
       const builderAuthority = validateCandidateBuilderAuthority({
         currentHead,
         releaseSha,
+        builderAuthoritySha,
         trackedStatus,
         sourceManifestDigest: materialized.source_manifest.source_manifest_digest,
         verifiedSourceManifestDigest,
-        entries: materialized.source_manifest.entries,
-        expectedBuilderEntries: builderInputEntries,
+        builderEntries: builderInputEntries,
+        expectedBuilderInputDigest: builderInputDigest,
       });
-      digest(builderInputDigest, "verified bootstrap builder input digest");
-      if (builderAuthority.builder_input_digest !== builderInputDigest) {
-        fail("candidate builder graph differs from verified immutable bootstrap authority");
-      }
       currentSource = {
         checkoutDir,
         sourceManifest: materialized.source_manifest,
@@ -3054,6 +3167,7 @@ export function createReleaseRehearsalCandidateAdapters({
         evidence: {
           requested_sha: releaseSha,
           origin_master_sha: originMasterSha,
+          selection_digest: selection?.selection_digest ?? null,
           checkout_sha: releaseSha,
           release_tree: checkoutTree,
           checkout_tree: checkoutTree,
@@ -3080,7 +3194,21 @@ export function createReleaseRehearsalCandidateAdapters({
       const remoteMasterSha = runBounded(gitPath, ["-C", sourceRoot, "rev-parse", "origin/master"], {
         env: gitEnvironment(normalizedHome), label: "remote master CI snapshot", runCommand,
       }).trim();
-      if (remoteMasterSha !== releaseSha) fail("remote master moved away from candidate SHA");
+      if (selection === null) {
+        if (remoteMasterSha !== releaseSha) fail("remote master moved away from candidate SHA");
+      } else {
+        const refreshed = resolveCandidateRehearsalSourceAuthority({
+          releaseSha,
+          rootDir: sourceRoot,
+          selection,
+          homeDir: normalizedHome,
+        });
+        if (refreshed.current_master_sha !== remoteMasterSha
+          || refreshed.selection_digest !== selectedSourceAuthority?.selection_digest) {
+          fail("selected remote master ancestry authority changed during CI collection");
+        }
+        selectedSourceAuthority = refreshed;
+      }
       const headers = ["-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2026-03-10"];
       const checkRuns = parseGhPages(runBounded(ghPath, [
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,

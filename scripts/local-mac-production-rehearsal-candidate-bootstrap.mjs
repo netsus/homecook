@@ -572,6 +572,46 @@ function makeBootstrapTreeWritable(path) {
   if (stat.isFile()) chmodSync(path, 0o600);
 }
 
+export function resolveImmutableBootstrapAuthority({ releaseSha, remoteSha, selectionPath = null } = {}) {
+  if (!/^[0-9a-f]{40}$/u.test(releaseSha ?? "") || !/^[0-9a-f]{40}$/u.test(remoteSha ?? "")) {
+    reject("bootstrap release and remote master SHAs must be exact lowercase 40-hex");
+  }
+  if (selectionPath === null) {
+    if (releaseSha !== remoteSha) reject("release SHA is not current fetched origin/master without an approved selection");
+    return Object.freeze({ builder_authority_sha: releaseSha, release_sha: releaseSha });
+  }
+  if (!isAbsolute(selectionPath)) reject("approved selection path must be absolute");
+  return Object.freeze({ builder_authority_sha: remoteSha, release_sha: releaseSha });
+}
+
+export function assertImmutableBootstrapMasterLineage({
+  builderAuthoritySha,
+  currentMasterSha,
+  gitPath,
+  homeDir,
+  repositoryRoot,
+} = {}) {
+  if (
+    !/^[0-9a-f]{40}$/u.test(builderAuthoritySha ?? "")
+    || !/^[0-9a-f]{40}$/u.test(currentMasterSha ?? "")
+    || ![homeDir, repositoryRoot].every(isAbsolute)
+  ) reject("immutable bootstrap master lineage inputs are invalid");
+  const trustedGit = realpathSync(gitPath);
+  if (trustedGit !== "/usr/bin/git") reject("immutable bootstrap master lineage requires trusted system Git");
+  try {
+    runExact(trustedGit, [
+      "--no-replace-objects", "-C", realpathSync(repositoryRoot), "merge-base", "--is-ancestor",
+      builderAuthoritySha, currentMasterSha,
+    ], { cwd: repositoryRoot, homeDir });
+  } catch {
+    reject("current master diverged from the bootstrap-start immutable builder authority");
+  }
+  return Object.freeze({
+    builder_authority_sha: builderAuthoritySha,
+    current_master_sha: currentMasterSha,
+  });
+}
+
 export async function runBootstrap(argv) {
   if (typeof vm.SourceTextModule !== "function") {
     reject("--experimental-vm-modules is required before candidate bootstrap side effects");
@@ -592,9 +632,14 @@ export async function runBootstrap(argv) {
   const remoteSha = String(runExact(gitPath, ["-C", repositoryRoot, "rev-parse", "origin/master"], {
     cwd: repositoryRoot, homeDir,
   })).trim();
-  if (remoteSha !== releaseSha) reject("release SHA is not current fetched origin/master");
+  const bootstrapAuthority = resolveImmutableBootstrapAuthority({
+    releaseSha,
+    remoteSha,
+    selectionPath: argumentValue(argv, "--selection"),
+  });
+  const builderAuthoritySha = bootstrapAuthority.builder_authority_sha;
   const exactBootstrap = runExact(gitPath, [
-    "--no-replace-objects", "-C", repositoryRoot, "show", `${releaseSha}:scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs`,
+    "--no-replace-objects", "-C", repositoryRoot, "show", `${builderAuthoritySha}:scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs`,
   ], { cwd: repositoryRoot, homeDir, binary: true });
   if (!Buffer.from(exactBootstrap).equals(readFileSync(bootstrapPath))) reject("bootstrap bytes differ from exact Git authority");
   const privateRoot = mkdtempSync(join(tmpdir(), "homecook-candidate-bootstrap-"));
@@ -602,7 +647,7 @@ export async function runBootstrap(argv) {
   const sourceRoot = join(privateRoot, "source");
   try {
     materializeImmutableCandidateBootstrap({
-      gitPath, tarPath, repositoryRoot, releaseSha, outputRoot: sourceRoot, homeDir,
+      gitPath, tarPath, repositoryRoot, releaseSha: builderAuthoritySha, outputRoot: sourceRoot, homeDir,
     });
     const materializedBootstrap = readFileSync(join(sourceRoot, "scripts", "local-mac-production-rehearsal-candidate-bootstrap.mjs"));
     if (!materializedBootstrap.equals(readFileSync(bootstrapPath))) reject("materialized bootstrap bytes drifted");
@@ -616,7 +661,7 @@ export async function runBootstrap(argv) {
         "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
         "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
       ],
-      releaseSha,
+      releaseSha: builderAuthoritySha,
       repositoryRoot,
       sourceRoot,
     });
@@ -638,7 +683,7 @@ export async function runBootstrap(argv) {
           "scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs",
           "scripts/config/local-mac-production-rehearsal-toolchain-lock.json",
         ],
-        releaseSha,
+        releaseSha: builderAuthoritySha,
         repositoryRoot,
         sourceRoot,
       });
@@ -655,6 +700,19 @@ export async function runBootstrap(argv) {
       if (JSON.stringify(gitPre) !== JSON.stringify(snapshotExecutable(gitPath))) {
         reject("bootstrap Git identity drifted during candidate execution");
       }
+      runExact(gitPath, ["-C", repositoryRoot, "fetch", "--no-tags", "origin", "master"], {
+        cwd: repositoryRoot, homeDir,
+      });
+      const currentMasterSha = String(runExact(gitPath, [
+        "--no-replace-objects", "-C", repositoryRoot, "rev-parse", "origin/master^{commit}",
+      ], { cwd: repositoryRoot, homeDir })).trim();
+      assertImmutableBootstrapMasterLineage({
+        builderAuthoritySha,
+        currentMasterSha,
+        gitPath,
+        homeDir,
+        repositoryRoot,
+      });
       finalizationComplete = true;
       return Object.freeze({
         builder_input_digest: builderGraphPost.builder_input_digest,
@@ -663,6 +721,7 @@ export async function runBootstrap(argv) {
     };
     await cli.runLocalMacProductionRehearsalCli(["candidate", ...argv], {
       beforeCandidateComplete,
+      immutableBuilderAuthoritySha: builderAuthoritySha,
       immutableBuilderInputDigest: builderGraph.builder_input_digest,
       immutableBuilderInputEntries: builderGraph.entries,
       immutableBootstrapVerified: true,

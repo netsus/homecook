@@ -8,6 +8,41 @@ import {
 
 export const VERIFIED_ATTESTATION = () => ({ source: "test-attestation", verified: true });
 
+export function createCompleteProductionCheckPageInput({
+  checkRuns,
+  releaseSha,
+  selfSuiteId = null,
+}: {
+  checkRuns: Array<Record<string, unknown>>,
+  releaseSha: string,
+  selfSuiteId?: number | null,
+}) {
+  const allCheckRuns = selfSuiteId === null
+    ? checkRuns
+    : [
+        ...checkRuns,
+        {
+          id: 9_000_000 + selfSuiteId,
+          app: { id: 15368 },
+          check_suite: { id: selfSuiteId },
+          name: "approve-and-tag",
+          started_at: "2026-08-28T09:05:00Z",
+          status: "in_progress",
+        },
+      ];
+  const suiteIds = [...new Set(allCheckRuns.map((entry) =>
+    Number((entry.check_suite as { id?: unknown } | undefined)?.id)))];
+  return {
+    checkRuns: allCheckRuns,
+    checkRunPages: [{ total_count: allCheckRuns.length, check_runs: allCheckRuns }],
+    checkSuitePages: [{
+      total_count: suiteIds.length,
+      check_suites: suiteIds.map((id) => ({ id, head_sha: releaseSha })),
+    }],
+    excludedCheckSuiteIds: selfSuiteId === null ? [] : [selfSuiteId],
+  };
+}
+
 export function createLocalMacProductionReleaseManifest(
   manifestPath: string,
   overrides: Record<string, unknown> = {},
@@ -25,12 +60,28 @@ export function createLocalMacProductionReleaseManifest(
     release_manifest_path: manifestPath,
     release_sha: "a".repeat(40),
     release_tree: "b".repeat(40),
+    workflow_head_sha: "a".repeat(40),
+    workflow_head_tree: "b".repeat(40),
+    workflow_run_id: 9_001,
+    workflow_run_attempt: 1,
+    workflow_check_suite_id: 9_002,
     master_sha_at_approval: "a".repeat(40),
+    master_tree_at_approval: "b".repeat(40),
     approved_at: "2026-08-25T09:00:00.000Z",
     approved_by_task_id: "task-019-release",
     migration_head: "20260825090000_release_gate",
     build_id: "build-20260825-01",
     rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+    selected_sha: null,
+    selected_tree: null,
+    observed_master_sha: null,
+    observed_master_tree: null,
+    selected_at: null,
+    expires_at: null,
+    approver_role: null,
+    approver_id: null,
+    approval_digest: null,
+    selection_digest: null,
     sealed_bundle_digest: "f".repeat(64),
     repeatability_receipt_digest: "1".repeat(64),
     rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
@@ -50,6 +101,11 @@ export function createLocalMacProductionReleaseManifest(
       success: 10,
       intended_skip: 2,
     },
+    all_check_suite_count: 2,
+    all_check_suite_ids_digest: "4".repeat(64),
+    all_context_check_run_instances_digest: "2".repeat(64),
+    all_context_check_suite_ids: [200, 201],
+    all_context_commit_statuses_digest: "3".repeat(64),
     attestation_digest: "d".repeat(64),
     app_launch_agent_enabled: true,
     full_local_launch_agent_enabled: true,
@@ -69,6 +125,11 @@ export function createLocalMacProductionGitEvidence({
 } = {}) {
   return {
     originMasterSha: releaseSha,
+    workflowHeadTreeSha: releaseTree,
+    masterAtApprovalTreeSha: releaseTree,
+    releaseIsAncestorOfWorkflowHead: true,
+    workflowHeadIsAncestorOfMasterAtApproval: true,
+    masterAtApprovalIsAncestorOfOriginMaster: true,
     releaseTagObjectSha: "e".repeat(40),
     releaseTagCommitSha: releaseSha,
     releaseTreeSha: releaseTree,
@@ -76,6 +137,11 @@ export function createLocalMacProductionGitEvidence({
       "Approved production release prod-20260825.1",
       "build_id build-20260825-01",
       "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+      `workflow_head_sha ${"a".repeat(40)}`,
+      `workflow_head_tree ${"b".repeat(40)}`,
+      `master_sha_at_approval ${"a".repeat(40)}`,
+      `master_tree_at_approval ${"b".repeat(40)}`,
+      "selection_digest none",
       `sealed_bundle_digest ${"f".repeat(64)}`,
       `repeatability_receipt_digest ${"1".repeat(64)}`,
       "rehearsal_receipt_valid_until 2026-08-30T09:00:00.000Z",

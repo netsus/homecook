@@ -16,12 +16,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
+  buildGitHubProductionReleaseExternalCheckEvidence,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
   GITHUB_CLI_TRUSTED_ROOT_SHA256,
   createGitHubProductionReleaseAttestationVerifier,
+  normalizeGitHubProductionReleaseCheckSummary,
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import * as productionAttestationAuthority from "../scripts/lib/github-production-release-attestation.mjs";
@@ -35,6 +37,9 @@ import {
   createLocalMacProductionGitEvidence,
   createLocalMacProductionReleaseManifest,
 } from "./helpers/local-mac-production-release-fixtures";
+import {
+  buildRehearsalSelection,
+} from "../scripts/lib/local-mac-production-rehearsal-selection.mjs";
 
 const temporaryDirectories: string[] = [];
 const EXPECTED_RELEASE_CONTEXTS = [
@@ -47,16 +52,68 @@ const EXPECTED_RELEASE_CONTEXTS = [
   "security-smoke",
 ];
 const RELEASE_TAG_OBJECT_SHA = "e".repeat(40);
+const WORKFLOW_AUTHORITY = {
+  workflow_head_sha: "c".repeat(40),
+  workflow_head_tree: "d".repeat(40),
+  workflow_run_id: 9_001,
+  workflow_run_attempt: 1,
+  workflow_check_suite_id: 9_002,
+};
+const APPROVAL_AUTHORITY = {
+  master_sha_at_approval: "e".repeat(40),
+  master_tree_at_approval: "f".repeat(40),
+};
+const FULL_SELECTION = buildRehearsalSelection({
+  schema: "homecook.local-mac-production-rehearsal-selection.v1",
+  canonicalization: "RFC8785-JCS+SHA256",
+  repository: "netsus/homecook",
+  source_ref: "refs/heads/master",
+  selected_sha: "a".repeat(40),
+  selected_tree: "b".repeat(40),
+  observed_master_sha: "c".repeat(40),
+  observed_master_tree: "d".repeat(40),
+  selected_at: "2026-08-29T09:00:00.000Z",
+  expires_at: "2026-08-30T09:00:00.000Z",
+  approver_role: "human-release-approver",
+  approver_id: "release-approver-1",
+  approval_digest: "e".repeat(64),
+}, { now: new Date("2026-08-29T09:00:00.000Z") });
+
 const REHEARSAL_AUTHORITY = {
   rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+  selected_sha: FULL_SELECTION.selected_sha,
+  selected_tree: FULL_SELECTION.selected_tree,
+  observed_master_sha: FULL_SELECTION.observed_master_sha,
+  observed_master_tree: FULL_SELECTION.observed_master_tree,
+  selected_at: FULL_SELECTION.selected_at,
+  expires_at: FULL_SELECTION.expires_at,
+  approver_role: FULL_SELECTION.approver_role,
+  approver_id: FULL_SELECTION.approver_id,
+  approval_digest: FULL_SELECTION.approval_digest,
+  selection_digest: FULL_SELECTION.selection_digest,
   build_id: "build-20260825-01",
   sealed_bundle_digest: "f".repeat(64),
   repeatability_receipt_digest: "1".repeat(64),
   rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
 };
+const FULL_REHEARSAL_AUTHORITY = REHEARSAL_AUTHORITY;
+const CURRENT_TIP_REHEARSAL_AUTHORITY = {
+  ...REHEARSAL_AUTHORITY,
+  selected_sha: null,
+  selected_tree: null,
+  observed_master_sha: null,
+  observed_master_tree: null,
+  selected_at: null,
+  expires_at: null,
+  approver_role: null,
+  approver_id: null,
+  approval_digest: null,
+  selection_digest: null,
+};
 
 function createTrustedCheckRuns(checkSuiteId = 200) {
   return EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
+    id: 1_000 + index,
     app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
     check_suite: { id: checkSuiteId },
     completed_at: `2026-08-26T09:00:${String(index).padStart(2, "0")}Z`,
@@ -64,6 +121,57 @@ function createTrustedCheckRuns(checkSuiteId = 200) {
     name,
     status: "completed",
   }));
+}
+
+function createCheckSuitePages({
+  count,
+  releaseSha = "a".repeat(40),
+  suiteIdStart = 200,
+}: {
+  count: number,
+  releaseSha?: string,
+  suiteIdStart?: number,
+}) {
+  const suites = Array.from({ length: count }, (_, index) => ({
+    id: suiteIdStart + index,
+    head_sha: releaseSha,
+  }));
+  const pages = [];
+  for (let index = 0; index < Math.max(1, Math.ceil(count / 100)); index += 1) {
+    pages.push({
+      total_count: count,
+      check_suites: suites.slice(index * 100, (index + 1) * 100),
+    });
+  }
+  return pages;
+}
+
+function createCheckRunPages(checkRuns: Array<Record<string, unknown>>) {
+  const pages = [];
+  for (
+    let index = 0;
+    index < Math.max(1, Math.ceil(checkRuns.length / 100));
+    index += 1
+  ) {
+    pages.push({
+      total_count: checkRuns.length,
+      check_runs: checkRuns.slice(index * 100, (index + 1) * 100),
+    });
+  }
+  return pages;
+}
+
+function createCompleteCheckPageInput(
+  checkRuns: Array<Record<string, unknown>>,
+  releaseSha = "a".repeat(40),
+) {
+  const suiteIds = [...new Set(checkRuns.map((entry) =>
+    Number((entry.check_suite as { id?: unknown } | undefined)?.id)))];
+  const checkSuites = suiteIds.map((id) => ({ id, head_sha: releaseSha }));
+  return {
+    checkRunPages: createCheckRunPages(checkRuns),
+    checkSuitePages: [{ total_count: checkSuites.length, check_suites: checkSuites }],
+  };
 }
 
 function createTempDirectory(prefix: string) {
@@ -82,6 +190,252 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
+  it("proves a complete below-boundary 999-suite snapshot without per-suite check-run calls", () => {
+    const checkRuns = createTrustedCheckRuns(200);
+    const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRunPages: createCheckRunPages(checkRuns),
+      checkSuitePages: createCheckSuitePages({ count: 999 }),
+      releaseSha: "a".repeat(40),
+    });
+
+    expect(evidence).toMatchObject({
+      all_check_suite_count: 999,
+      all_check_suite_ids_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      all_context_check_suite_ids: [200],
+      required_check_summary: {
+        rerun: 0,
+        success: EXPECTED_RELEASE_CONTEXTS.length,
+      },
+    });
+  });
+
+  it("fails closed at the documented 1000-suite check-runs truncation boundary", () => {
+    const checkRuns = createTrustedCheckRuns(200);
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRunPages: createCheckRunPages(checkRuns),
+      checkSuitePages: createCheckSuitePages({ count: 1_000 }),
+      releaseSha: "a".repeat(40),
+    })).toThrow(/1000|boundary|truncat|suite/iu);
+  });
+
+  it.each([
+    {
+      label: "missing page",
+      mutate: (pages: ReturnType<typeof createCheckSuitePages>) => pages.slice(0, -1),
+    },
+    {
+      label: "duplicate page",
+      mutate: (pages: ReturnType<typeof createCheckSuitePages>) => [
+        pages[0],
+        pages[0],
+        ...pages.slice(2),
+      ],
+    },
+    {
+      label: "fake total count",
+      mutate: (pages: ReturnType<typeof createCheckSuitePages>) => pages.map((page) => ({
+        ...page,
+        total_count: page.total_count + 1,
+      })),
+    },
+  ])("rejects incomplete suite pagination: $label", ({ mutate }) => {
+    const checkRuns = createTrustedCheckRuns(200);
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRunPages: createCheckRunPages(checkRuns),
+      checkSuitePages: mutate(createCheckSuitePages({ count: 201 })),
+      releaseSha: "a".repeat(40),
+    })).toThrow(/complete|count|duplicate|page|pagination|suite/iu);
+  });
+
+  it.each([
+    {
+      label: "missing page",
+      mutate: (pages: ReturnType<typeof createCheckRunPages>) => pages.slice(0, -1),
+    },
+    {
+      label: "duplicate page",
+      mutate: (pages: ReturnType<typeof createCheckRunPages>) => [pages[0], pages[0]],
+    },
+    {
+      label: "fake total count",
+      mutate: (pages: ReturnType<typeof createCheckRunPages>) => pages.map((page) => ({
+        ...page,
+        total_count: page.total_count + 1,
+      })),
+    },
+  ])("rejects incomplete check-run pagination: $label", ({ mutate }) => {
+    const checkRuns = [
+      ...createTrustedCheckRuns(200),
+      ...Array.from({ length: 100 }, (_, index) => ({
+        id: 5_000 + index,
+        app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+        check_suite: { id: 200 },
+        completed_at: "2026-08-26T10:00:00Z",
+        conclusion: "success",
+        name: `optional-${index}`,
+        status: "completed",
+      })),
+    ];
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRunPages: mutate(createCheckRunPages(checkRuns)),
+      checkSuitePages: createCheckSuitePages({ count: 1 }),
+      releaseSha: "a".repeat(40),
+    })).toThrow(/complete|count|duplicate|page|pagination|check-run/iu);
+  });
+
+  it("detects an old success plus latest success rerun from the complete check-run pages", () => {
+    const initialRuns = createTrustedCheckRuns(200);
+    const originalQuality = initialRuns.find((entry) => entry.name === "quality");
+    const rerun = {
+      ...originalQuality,
+      id: 2_005,
+      check_suite: { id: 201 },
+      completed_at: "2026-08-26T10:00:00Z",
+      started_at: "2026-08-26T09:59:00Z",
+    };
+    const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRunPages: createCheckRunPages([...initialRuns, rerun]),
+      checkSuitePages: createCheckSuitePages({ count: 2 }),
+      releaseSha: "a".repeat(40),
+    });
+
+    expect(evidence.required_check_summary).toMatchObject({
+      rerun: 1,
+      success: EXPECTED_RELEASE_CONTEXTS.length,
+    });
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns: [...initialRuns, rerun],
+      checkRunPages: createCheckRunPages([...initialRuns, rerun]),
+      checkSuitePages: createCheckSuitePages({ count: 2 }),
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.11",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
+    })).toThrow(/rerun|fresh|check-run/iu);
+  });
+
+  it("keeps the exact current self-suite in complete authority while excluding it only from external results", () => {
+    const releaseSha = WORKFLOW_AUTHORITY.workflow_head_sha;
+    const externalRuns = createTrustedCheckRuns(200);
+    const selfRun = {
+      id: 9_003,
+      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      check_suite: { id: WORKFLOW_AUTHORITY.workflow_check_suite_id },
+      name: "approve-and-tag",
+      started_at: "2026-08-26T10:00:00Z",
+      status: "in_progress",
+    };
+    const allRuns = [...externalRuns, selfRun];
+    const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns: allRuns,
+      checkRunPages: createCheckRunPages(allRuns),
+      checkSuitePages: [{
+        total_count: 2,
+        check_suites: [
+          { id: 200, head_sha: releaseSha },
+          { id: WORKFLOW_AUTHORITY.workflow_check_suite_id, head_sha: releaseSha },
+        ],
+      }],
+      excludedCheckSuiteIds: [WORKFLOW_AUTHORITY.workflow_check_suite_id],
+      releaseSha,
+      releaseTag: "prod-20260826.12",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: WORKFLOW_AUTHORITY.workflow_head_tree,
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: CURRENT_TIP_REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
+    });
+
+    expect(artifacts.subject).toMatchObject({
+      all_check_suite_count: 2,
+      all_context_check_suite_ids: [200],
+      workflow_check_suite_id: WORKFLOW_AUTHORITY.workflow_check_suite_id,
+    });
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns: externalRuns,
+      checkRunPages: createCheckRunPages(externalRuns),
+      checkSuitePages: [{
+        total_count: 1,
+        check_suites: [{ id: 200, head_sha: releaseSha }],
+      }],
+      excludedCheckSuiteIds: [],
+      releaseSha,
+      releaseTag: "prod-20260826.13",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: WORKFLOW_AUTHORITY.workflow_head_tree,
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: CURRENT_TIP_REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
+    })).toThrow(/self|current workflow suite|complete suite/iu);
+  });
+
+  it("separates approved-ancestor payload identity from exact current workflow-run authority", () => {
+    const buildWorkflowEvidence = (
+      productionAttestationAuthority as unknown as Record<string, unknown>
+    ).buildGitHubProductionReleaseWorkflowEvidence;
+    expect(typeof buildWorkflowEvidence).toBe("function");
+    if (typeof buildWorkflowEvidence !== "function") return;
+
+    const input = {
+      releaseSha: "a".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      sourceRef: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+      workflowHeadSha: WORKFLOW_AUTHORITY.workflow_head_sha,
+      workflowHeadTree: WORKFLOW_AUTHORITY.workflow_head_tree,
+      workflowId: 77,
+      workflowPath: ".github/workflows/production-release-attestation.yml",
+      runId: WORKFLOW_AUTHORITY.workflow_run_id,
+      runAttempt: WORKFLOW_AUTHORITY.workflow_run_attempt,
+      run: {
+        id: WORKFLOW_AUTHORITY.workflow_run_id,
+        run_attempt: WORKFLOW_AUTHORITY.workflow_run_attempt,
+        check_suite_id: WORKFLOW_AUTHORITY.workflow_check_suite_id,
+        workflow_id: 77,
+        path: ".github/workflows/production-release-attestation.yml",
+        event: "workflow_dispatch",
+        head_sha: WORKFLOW_AUTHORITY.workflow_head_sha,
+        head_branch: "master",
+        head_repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+        repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+      },
+    };
+    const invoke = (overrides: Record<string, unknown> = {}) =>
+      (buildWorkflowEvidence as (value: Record<string, unknown>) => Record<string, unknown>)({
+        ...input,
+        ...overrides,
+      });
+
+    expect(invoke()).toMatchObject({
+      workflow_authority: WORKFLOW_AUTHORITY,
+      suite_exclusion: {
+        release_sha: "a".repeat(40),
+        workflow_head_sha: WORKFLOW_AUTHORITY.workflow_head_sha,
+        workflow_run_id: WORKFLOW_AUTHORITY.workflow_run_id,
+        check_suite_ids: [],
+      },
+    });
+    expect(invoke({ releaseSha: WORKFLOW_AUTHORITY.workflow_head_sha })).toMatchObject({
+      suite_exclusion: {
+        check_suite_ids: [WORKFLOW_AUTHORITY.workflow_check_suite_id],
+      },
+    });
+
+    for (const [label, run] of [
+      ["head", { ...input.run, head_sha: "0".repeat(40) }],
+      ["ref", { ...input.run, head_branch: "feature/forged" }],
+      ["run ID", { ...input.run, id: WORKFLOW_AUTHORITY.workflow_run_id + 1 }],
+    ] as const) {
+      expect(() => invoke({ run }), label).toThrow(/workflow|run|head|ref|branch|identity/iu);
+    }
+  });
+
   it("keeps tag push and attestation at zero without a fresh completion safety margin", () => {
     expect(typeof rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush).toBe("function");
     const tagPush = vi.fn();
@@ -106,35 +460,155 @@ describe("GitHub production release attestation verification", () => {
 
   it("builds v2 subject, predicate, and canonical tag message from one rehearsal authority", () => {
     expect(typeof productionAttestationAuthority.buildProductionReleaseAnnotatedTagMessage).toBe("function");
+    const checkRuns = createTrustedCheckRuns();
     const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
-      checkRuns: createTrustedCheckRuns(),
+      checkRuns,
+      ...createCompleteCheckPageInput(checkRuns),
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.1",
       releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
       releaseTree: "b".repeat(40),
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
       rehearsalAuthority: REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
     });
 
     expect(artifacts.subject).toMatchObject({
       schema: "homecook.github.production-release-manifest.v2",
       ...REHEARSAL_AUTHORITY,
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
+      signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
+      all_check_suite_count: 1,
+      all_check_suite_ids_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      all_context_check_suite_ids: [200],
+      all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
     expect(artifacts.predicate).toMatchObject({
       schema: "homecook.github.production-release-predicate.v2",
       ...REHEARSAL_AUTHORITY,
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
+      signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
+      all_check_suite_count: 1,
+      all_check_suite_ids_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      all_context_check_suite_ids: [200],
+      all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
     expect(productionAttestationAuthority.buildProductionReleaseAnnotatedTagMessage({
       releaseTag: "prod-20260826.1",
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
       ...REHEARSAL_AUTHORITY,
     })).toBe([
       "Approved production release prod-20260826.1",
       `build_id ${REHEARSAL_AUTHORITY.build_id}`,
       `rehearsal_receipt_schema ${REHEARSAL_AUTHORITY.rehearsal_receipt_schema}`,
+      `workflow_head_sha ${WORKFLOW_AUTHORITY.workflow_head_sha}`,
+      `workflow_head_tree ${WORKFLOW_AUTHORITY.workflow_head_tree}`,
+      `master_sha_at_approval ${APPROVAL_AUTHORITY.master_sha_at_approval}`,
+      `master_tree_at_approval ${APPROVAL_AUTHORITY.master_tree_at_approval}`,
+      `selection_digest ${REHEARSAL_AUTHORITY.selection_digest}`,
       `sealed_bundle_digest ${REHEARSAL_AUTHORITY.sealed_bundle_digest}`,
       `repeatability_receipt_digest ${REHEARSAL_AUTHORITY.repeatability_receipt_digest}`,
       `rehearsal_receipt_valid_until ${REHEARSAL_AUTHORITY.rehearsal_receipt_valid_until}`,
     ].join("\n"));
+  });
+
+  it("attests the immutable full selection authority instead of accepting a digest-only claim", () => {
+    const checkRuns = createTrustedCheckRuns();
+    const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns,
+      ...createCompleteCheckPageInput(checkRuns),
+      releaseSha: FULL_SELECTION.selected_sha,
+      releaseTag: "prod-20260826.2",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: FULL_SELECTION.selected_tree,
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: FULL_REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
+    });
+
+    for (const key of [
+      "observed_master_sha", "observed_master_tree", "selected_sha", "selected_tree",
+      "approver_role", "approver_id", "approval_digest", "selected_at", "expires_at",
+      "selection_digest",
+    ] as const) {
+      expect((artifacts.subject as unknown as Record<string, unknown>)[key]).toBe(
+        (FULL_REHEARSAL_AUTHORITY as Record<string, unknown>)[key],
+      );
+      expect((artifacts.predicate as unknown as Record<string, unknown>)[key]).toBe(
+        (FULL_REHEARSAL_AUTHORITY as Record<string, unknown>)[key],
+      );
+    }
+
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns,
+      ...createCompleteCheckPageInput(checkRuns),
+      releaseSha: FULL_SELECTION.selected_sha,
+      releaseTag: "prod-20260826.3",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: FULL_SELECTION.selected_tree,
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: {
+        ...FULL_REHEARSAL_AUTHORITY,
+        approver_id: "substituted-approver",
+      },
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
+    })).toThrow(/selection|digest|authority|approver/iu);
+  });
+
+  it("revalidates the selection file and complete current-master lineage before exposing attestation authority", () => {
+    const output: string[] = [];
+    const readSelection = vi.fn(() => FULL_SELECTION);
+    const resolveSelectionAuthority = vi.fn(() => ({
+      mode: "approved_ancestor",
+      release_sha: FULL_SELECTION.selected_sha,
+      release_tree: FULL_SELECTION.selected_tree,
+      selection_digest: FULL_SELECTION.selection_digest,
+      observed_master_sha: FULL_SELECTION.observed_master_sha,
+      observed_master_tree: FULL_SELECTION.observed_master_tree,
+      current_master_sha: "f".repeat(40),
+      current_master_tree: "1".repeat(40),
+    }));
+
+    const result = rehearsalAuthorityCli.runProductionReleaseRehearsalAuthorityCli([
+      "--member-receipt", "/private/member-1.json",
+      "--member-receipt", "/private/member-2.json",
+      "--repeatability-receipt", "/private/repeatability.json",
+      "--selection", `/private/${FULL_SELECTION.selection_digest}.selection.json`,
+      "--repository-root", process.cwd(),
+      "--current-master-sha", "f".repeat(40),
+      "--release-sha", FULL_SELECTION.selected_sha,
+      "--release-tree", FULL_SELECTION.selected_tree,
+      "--json",
+    ], {
+      now: new Date("2026-08-29T10:00:00.000Z"),
+      output: { write: (value: string) => { output.push(value); } },
+      readSource: () => "{}",
+      verifyAuthority: () => ({
+        ...REHEARSAL_AUTHORITY,
+        selection_digest: FULL_SELECTION.selection_digest,
+        release_sha: FULL_SELECTION.selected_sha,
+        release_tree: FULL_SELECTION.selected_tree,
+      }),
+      readSelection,
+      resolveSelectionAuthority,
+    });
+
+    expect(readSelection).toHaveBeenCalledWith(
+      `/private/${FULL_SELECTION.selection_digest}.selection.json`,
+      expect.objectContaining({ repoRoot: process.cwd() }),
+    );
+    expect(resolveSelectionAuthority).toHaveBeenCalledWith(expect.objectContaining({
+      releaseSha: FULL_SELECTION.selected_sha,
+      selection: FULL_SELECTION,
+    }));
+    expect(result).toMatchObject(FULL_REHEARSAL_AUTHORITY);
+    expect(JSON.parse(output.join(""))).toMatchObject(FULL_REHEARSAL_AUTHORITY);
   });
 
   it("resolves only an explicitly allowlisted absolute GitHub CLI and rejects escapes", () => {
@@ -251,6 +725,8 @@ describe("GitHub production release attestation verification", () => {
           ...checks,
           {
             ...quality,
+            id: 2_004,
+            check_suite: { id: 201 },
             completed_at: "2026-08-26T10:00:00Z",
             conclusion: "skipped",
           },
@@ -265,12 +741,14 @@ describe("GitHub production release attestation verification", () => {
           ...checks,
           {
             ...quality,
+            id: 3_004,
+            check_suite: { id: 202 },
             completed_at: "2026-08-26T08:00:00Z",
             conclusion: "skipped",
           },
         ],
       }),
-    ).not.toThrow();
+    ).toThrow(/quality|rerun|fresh|check-run/iu);
 
     expect(
       buildGitHubProductionReleaseAttestationArtifacts({
@@ -278,6 +756,7 @@ describe("GitHub production release attestation verification", () => {
         checkRuns: [
           ...checks,
           {
+            id: 9_999,
             app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
             check_suite: { id: 999 },
             completed_at: "2026-08-26T10:01:00Z",
@@ -288,6 +767,149 @@ describe("GitHub production release attestation verification", () => {
         ],
       }).subject.required_check_summary,
     ).toMatchObject({ intended_skip: 1 });
+  });
+
+  it("counts a successful required-context check-run replacement as a rerun and rejects it", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.8",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    };
+    const normalizeCheckSummary = normalizeGitHubProductionReleaseCheckSummary as unknown as (
+      input: { checkRuns: Array<Record<string, unknown>> },
+    ) => { rerun: number; success: number };
+    const originalChecks = createTrustedCheckRuns(200);
+    expect(normalizeCheckSummary({
+      checkRuns: originalChecks,
+    })).toMatchObject({ rerun: 0, success: EXPECTED_RELEASE_CONTEXTS.length });
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: originalChecks,
+    })).not.toThrow();
+
+    const originalQuality = originalChecks.find((entry) => entry.name === "quality");
+    const successfulQualityRerun = {
+      ...originalQuality,
+      id: 2_005,
+      check_suite: { id: 201 },
+      completed_at: "2026-08-26T10:00:00Z",
+      started_at: "2026-08-26T09:59:00Z",
+    };
+    const rawRerunSnapshot = [...originalChecks, successfulQualityRerun];
+    expect(normalizeCheckSummary({
+      checkRuns: rawRerunSnapshot,
+    })).toMatchObject({ rerun: 1, success: EXPECTED_RELEASE_CONTEXTS.length });
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: rawRerunSnapshot,
+    })).toThrow(/rerun|fresh|required context|check-run/iu);
+  });
+
+  it("counts successful optional-context replacements as reruns while accepting one exact instance", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.10",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
+    };
+    const optionalSecurityAdvisory = {
+      id: 3_001,
+      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      check_suite: { id: 301 },
+      completed_at: "2026-08-26T10:00:00Z",
+      conclusion: "success",
+      name: "optional-security-advisory",
+      status: "completed",
+    };
+
+    const oneOptionalInstance = buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: [...createTrustedCheckRuns(), optionalSecurityAdvisory],
+      ...createCompleteCheckPageInput([...createTrustedCheckRuns(), optionalSecurityAdvisory]),
+    });
+    expect(oneOptionalInstance.subject.required_check_summary).toMatchObject({ rerun: 0 });
+    expect(oneOptionalInstance.subject).toMatchObject({
+      all_context_check_suite_ids: [200, 301],
+      all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: [
+        ...createTrustedCheckRuns(),
+        optionalSecurityAdvisory,
+        {
+          ...optionalSecurityAdvisory,
+          id: 3_002,
+          check_suite: { id: 302 },
+          completed_at: "2026-08-26T10:01:00Z",
+        },
+      ],
+      ...createCompleteCheckPageInput([
+        ...createTrustedCheckRuns(),
+        optionalSecurityAdvisory,
+        {
+          ...optionalSecurityAdvisory,
+          id: 3_002,
+          check_suite: { id: 302 },
+          completed_at: "2026-08-26T10:01:00Z",
+        },
+      ]),
+    })).toThrow(/optional-security-advisory|rerun|fresh|check-run/iu);
+  });
+
+  it("rejects a new pending, rerun, or failed check discovered by the final attestation refresh", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.9",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    };
+    const staleApprovedChecks = createTrustedCheckRuns();
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: staleApprovedChecks,
+    })).not.toThrow();
+
+    const quality = staleApprovedChecks.find((entry) => entry.name === "quality");
+    for (const racedCheck of [
+      {
+        ...quality,
+        check_suite: { id: 901 },
+        completed_at: null,
+        conclusion: null,
+        started_at: "2026-08-26T10:00:00Z",
+        status: "in_progress",
+      },
+      {
+        ...quality,
+        check_suite: { id: 902 },
+        completed_at: null,
+        conclusion: null,
+        started_at: "2026-08-26T10:01:00Z",
+        status: "queued",
+      },
+      {
+        ...quality,
+        check_suite: { id: 903 },
+        completed_at: "2026-08-26T10:02:00Z",
+        conclusion: "failure",
+        started_at: "2026-08-26T10:01:30Z",
+        status: "completed",
+      },
+    ]) {
+      expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [...staleApprovedChecks, racedCheck],
+      })).toThrow(/pending|queued|failed|terminal/iu);
+    }
   });
 
   it("binds subject and predicate to the exact annotated release tag object SHA", () => {
@@ -360,6 +982,7 @@ describe("GitHub production release attestation verification", () => {
           priorCanonicalSuiteFailed,
           currentSuitePending,
           {
+            id: 7_778,
             app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
             check_suite: { id: 778 },
             name: "other-pending-check",
@@ -395,7 +1018,6 @@ describe("GitHub production release attestation verification", () => {
   });
 
   it.each([
-    { excludedCheckSuiteIds: [] },
     { excludedCheckSuiteIds: [777, 777] },
     { excludedCheckSuiteIds: [0] },
     { excludedCheckSuiteIds: [-1] },
@@ -435,6 +1057,8 @@ describe("GitHub production release attestation verification", () => {
           ...successfulRuns,
           {
             ...qualitySuccess,
+            id: 2_004,
+            check_suite: { id: 201 },
             completed_at: "2026-08-26T08:00:00Z",
             conclusion: "failure",
           },
@@ -471,10 +1095,19 @@ describe("GitHub production release attestation verification", () => {
     const manifestPath = join(rootDir, "release-manifest.json");
     const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
       attestation_digest: "a".repeat(64),
+      ...FULL_REHEARSAL_AUTHORITY,
+      signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
     });
     const gitEvidence = createLocalMacProductionGitEvidence({
       releaseSha: manifest.release_sha,
       releaseTree: manifest.release_tree,
+      overrides: {
+        originMasterSha: "9".repeat(40),
+        workflowHeadTreeSha: WORKFLOW_AUTHORITY.workflow_head_tree,
+        masterAtApprovalTreeSha: APPROVAL_AUTHORITY.master_tree_at_approval,
+      },
     });
 
     writeFileSync(subjectManifestPath, JSON.stringify({
@@ -482,19 +1115,41 @@ describe("GitHub production release attestation verification", () => {
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
       source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
       signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
-      signer_digest: manifest.release_sha,
+      signer_digest: manifest.workflow_head_sha,
       expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
       release_tag: manifest.release_tag,
       release_tag_object_sha: manifest.release_tag_object_sha,
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
+      workflow_head_sha: manifest.workflow_head_sha,
+      workflow_head_tree: manifest.workflow_head_tree,
+      workflow_run_id: manifest.workflow_run_id,
+      workflow_run_attempt: manifest.workflow_run_attempt,
+      workflow_check_suite_id: manifest.workflow_check_suite_id,
+      master_sha_at_approval: manifest.master_sha_at_approval,
+      master_tree_at_approval: manifest.master_tree_at_approval,
       rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+      selected_sha: manifest.selected_sha,
+      selected_tree: manifest.selected_tree,
+      observed_master_sha: manifest.observed_master_sha,
+      observed_master_tree: manifest.observed_master_tree,
+      selected_at: manifest.selected_at,
+      expires_at: manifest.expires_at,
+      approver_role: manifest.approver_role,
+      approver_id: manifest.approver_id,
+      approval_digest: manifest.approval_digest,
+      selection_digest: manifest.selection_digest,
       build_id: manifest.build_id,
       sealed_bundle_digest: manifest.sealed_bundle_digest,
       repeatability_receipt_digest: manifest.repeatability_receipt_digest,
       rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
       expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
       required_check_summary: manifest.required_check_summary,
+      all_check_suite_count: manifest.all_check_suite_count,
+      all_check_suite_ids_digest: manifest.all_check_suite_ids_digest,
+      all_context_check_run_instances_digest: manifest.all_context_check_run_instances_digest,
+      all_context_check_suite_ids: manifest.all_context_check_suite_ids,
+      all_context_commit_statuses_digest: manifest.all_context_commit_statuses_digest,
     }, null, 2));
     writeFileSync(bundlePath, "{}\n");
     writeFileSync(trustedRootPath, "{}\n");
@@ -525,19 +1180,41 @@ describe("GitHub production release attestation verification", () => {
                   repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
                   source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
                   signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
-                  signer_digest: manifest.release_sha,
+                  signer_digest: manifest.workflow_head_sha,
                   expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
                   release_tag: manifest.release_tag,
                   release_tag_object_sha: attestedPredicateTagObjectSha,
                   release_sha: manifest.release_sha,
                   release_tree: manifest.release_tree,
+                  workflow_head_sha: manifest.workflow_head_sha,
+                  workflow_head_tree: manifest.workflow_head_tree,
+                  workflow_run_id: manifest.workflow_run_id,
+                  workflow_run_attempt: manifest.workflow_run_attempt,
+                  workflow_check_suite_id: manifest.workflow_check_suite_id,
+                  master_sha_at_approval: manifest.master_sha_at_approval,
+                  master_tree_at_approval: manifest.master_tree_at_approval,
                   rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+                  selected_sha: manifest.selected_sha,
+                  selected_tree: manifest.selected_tree,
+                  observed_master_sha: manifest.observed_master_sha,
+                  observed_master_tree: manifest.observed_master_tree,
+                  selected_at: manifest.selected_at,
+                  expires_at: manifest.expires_at,
+                  approver_role: manifest.approver_role,
+                  approver_id: manifest.approver_id,
+                  approval_digest: manifest.approval_digest,
+                  selection_digest: manifest.selection_digest,
                   build_id: manifest.build_id,
                   sealed_bundle_digest: manifest.sealed_bundle_digest,
                   repeatability_receipt_digest: attestedPredicateRepeatabilityDigest,
                   rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
                   expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
                   required_check_summary: manifest.required_check_summary,
+                  all_check_suite_count: manifest.all_check_suite_count,
+                  all_check_suite_ids_digest: manifest.all_check_suite_ids_digest,
+                  all_context_check_run_instances_digest: manifest.all_context_check_run_instances_digest,
+                  all_context_check_suite_ids: manifest.all_context_check_suite_ids,
+                  all_context_commit_statuses_digest: manifest.all_context_commit_statuses_digest,
                   subject_manifest_sha256: "a".repeat(64),
                 },
                 subject: [
@@ -572,6 +1249,19 @@ describe("GitHub production release attestation verification", () => {
     });
     expect(invokedCommands).toEqual(["/opt/homebrew/bin/gh"]);
 
+    expect(() => verifier({
+      gitEvidence,
+      manifest: {
+        ...manifest,
+        master_sha_at_approval: "0".repeat(40),
+      },
+      manifestDigest: "d".repeat(64),
+      manifestPath,
+      rootDir,
+    })).toThrow(/approval|master_sha_at_approval|authority|manifest/iu);
+    invocations.pop();
+    invokedCommands.pop();
+
     expect(invocations).toEqual([
       [
         "attestation",
@@ -588,7 +1278,7 @@ describe("GitHub production release attestation verification", () => {
         "--source-ref",
         CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
         "--signer-digest",
-        manifest.release_sha,
+        manifest.workflow_head_sha,
         "--predicate-type",
         "https://github.com/netsus/homecook/attestations/production-release/v2",
         "--format",

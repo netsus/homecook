@@ -1048,7 +1048,8 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("member_receipt_1_b64:");
     expect(workflow).toContain("member_receipt_2_b64:");
     expect(workflow).toContain("repeatability_receipt_b64:");
-    expect(workflow.match(/verify-production-release-rehearsal-authority\.mjs/gu)).toHaveLength(3);
+    expect(workflow).toContain("selection_b64:");
+    expect(workflow.match(/verify-production-release-rehearsal-authority\.mjs/gu)).toHaveLength(4);
     expect(workflow.match(/--rehearsal-authority-json/gu)).toHaveLength(2);
     expect(workflow).toContain("attestations/production-release/v2");
     for (const binding of [
@@ -1057,9 +1058,14 @@ describe("production release rulesets desired state", () => {
       "sealed_bundle_digest",
       "repeatability_receipt_digest",
       "rehearsal_receipt_valid_until",
+      "workflow_head_sha",
+      "workflow_head_tree",
+      "master_sha_at_approval",
+      "master_tree_at_approval",
     ]) {
       expect(workflow).toContain(binding);
     }
+    expect(workflow).toContain("external-check-evidence.json");
     expect(workflow).toContain("attestations: write");
     expect(workflow).toContain("artifact-metadata: write");
     expect(workflow).toContain("id-token: write");
@@ -1076,7 +1082,7 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("permission-contents: write");
     expect(workflow).not.toContain("permission-administration");
     expect(workflow.match(/persist-credentials: false/gu)).toHaveLength(2);
-    expect(workflow.match(/git\/ref\/heads\/master/gu)).toHaveLength(3);
+    expect(workflow.match(/git\/ref\/heads\/master/gu)).toHaveLength(7);
     expect(workflow).toContain("git/matching-refs/tags/$RELEASE_TAG");
     expect(workflow).not.toContain("git fetch origin");
     expect(workflow).toContain("prod-YYYYMMDD.N");
@@ -1084,15 +1090,20 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("commits/\"$RELEASE_SHA\"/statuses");
     expect(workflow).toMatch(/statuses[\s\S]*?--paginate/u);
     expect(workflow).toContain("--excluded-check-suite-ids-json");
+    expect(workflow.match(/commits\/\$RELEASE_SHA\/check-suites\?per_page=100/gu)).toHaveLength(3);
+    expect(workflow.match(/--check-suite-pages-json/gu)).toHaveLength(5);
+    expect(workflow.match(/--check-run-pages-json/gu)).toHaveLength(5);
+    expect(workflow).not.toMatch(/check-suites\/\$\{?[^\s/}]+\}?\/check-runs/u);
     expect(workflow).not.toContain("--excluded-check-suite-id ");
     expect(workflow).toContain("actions/workflows/production-release-attestation.yml");
-    expect(workflow).toContain("head_sha=$RELEASE_SHA");
-    expect(workflow).toContain("event=workflow_dispatch");
+    expect(workflow).not.toContain("head_sha=$RELEASE_SHA");
+    expect(workflow.match(/actions\/runs\/\$\{\{ github\.run_id \}\}/gu)).toHaveLength(3);
     expect(workflow).toContain("--paginate");
     expect(workflow).toContain('.path == ".github/workflows/production-release-attestation.yml"');
-    expect(workflow).toContain(".workflow_id == $workflow_id");
+    expect(workflow).toContain("build-production-release-workflow-evidence.mjs");
+    expect(workflow.match(/--run-attempt "\$\{\{ github\.run_attempt \}\}"/gu)).toHaveLength(3);
     expect(workflow).toContain("release-workflow-suite-ids.json");
-    expect(workflow).toContain("check_suite_ids");
+    expect(workflow.match(/--suite-exclusion-output/gu)).toHaveLength(3);
     expect(workflow).toMatch(
       /cmp[\s\S]*?production-release-attestation-inputs\/release-workflow-suite-ids\.json[\s\S]*?post-approval\/release-workflow-suite-ids\.json/u,
     );
@@ -1107,12 +1118,17 @@ describe("production release rulesets desired state", () => {
     expect(workflow.match(/x-access-token:\$\{\{ steps\.app-token\.outputs\.token \}\}/gu)).toHaveLength(1);
     expect(workflow).toContain("actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6");
     expect(workflow).toContain("custom predicate");
-    expect(workflow).toContain("terminal check summary");
+    expect(workflow).toContain("immutable external selected-release check evidence");
     for (const context of EXPECTED_RELEASE_CONTEXTS) {
       expect(workflow).toContain(context);
     }
     expect(workflow).not.toContain("security-smoke,snyk");
-    expect(workflow.match(/commits\/\$RELEASE_SHA\/check-runs\?filter=all&per_page=100/gu)).toHaveLength(2);
+    expect(workflow.match(/commits\/\$RELEASE_SHA\/check-runs\?filter=all&per_page=100/gu)).toHaveLength(3);
+    expect(workflow.match(/commits\/"\$RELEASE_SHA"\/statuses/gu)).toHaveLength(3);
+    expect(workflow.match(/build-production-release-attestation\.mjs/gu)).toHaveLength(2);
+    expect(workflow.match(/--workflow-authority-json/gu)).toHaveLength(2);
+    expect(workflow.match(/--approval-authority-json/gu)).toHaveLength(2);
+    expect(workflow).toContain("Re-fetch and rebuild attestation evidence immediately before publication");
 
     const mutableActionReferences = workflow.match(/uses:\s+[^\s]+@(?![0-9a-f]{40}(?:\s|$))[^\s]+/gu) ?? [];
     expect(mutableActionReferences).toEqual([]);
@@ -1130,8 +1146,10 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain('test "${{ github.ref }}" = "refs/heads/master"');
     expect(workflow).toContain('test "${{ github.workflow_ref }}" = "netsus/homecook/.github/workflows/production-release-attestation.yml@refs/heads/master"');
     expect(workflow).toContain("Re-fetch and rebuild approval evidence after environment approval");
+    expect(workflow).toContain("Revalidate canonical rehearsal receipts after approval");
     expect(workflow).toContain("Compare approval evidence to preflight evidence");
     expect(workflow).toContain("Recheck origin/master immediately before protected tag push");
+    expect(workflow).toContain("Recheck current master immediately before attestation publication");
     expect(workflow).toContain("release_tag_object_sha");
     expect(workflow).toContain("production-release-tag-object.raw");
     expect(workflow).toContain("git/ref/tags/$RELEASE_TAG");
@@ -1141,11 +1159,20 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("expected-tag-message.txt");
 
     const pushIndex = workflow.indexOf("git push");
+    const postApprovalAuthorityProducerIndex = workflow.indexOf(
+      '--json > "$RUNNER_TEMP/post-approval/rehearsal-authority.json"',
+    );
+    const postApprovalAuthorityConsumerIndex = workflow.indexOf(
+      'selection_digest="$(jq -r \'.selection_digest // "none"\' "$RUNNER_TEMP/post-approval/rehearsal-authority.json")"',
+    );
     const tagPushMarginIndex = workflow.indexOf("--minimum-remaining-seconds 900");
     const existingTagRaceIndex = workflow.indexOf("release_tag already exists");
     const readbackIndex = workflow.indexOf("Read back exact remote annotated tag object");
     const attestIndex = workflow.indexOf("actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6");
     expect(pushIndex).toBeGreaterThan(-1);
+    expect(postApprovalAuthorityProducerIndex).toBeGreaterThan(-1);
+    expect(postApprovalAuthorityConsumerIndex).toBeGreaterThan(-1);
+    expect(postApprovalAuthorityProducerIndex).toBeLessThan(postApprovalAuthorityConsumerIndex);
     expect(tagPushMarginIndex).toBeGreaterThan(-1);
     expect(tagPushMarginIndex).toBeLessThan(pushIndex);
     expect(existingTagRaceIndex).toBeGreaterThan(-1);
@@ -1155,6 +1182,32 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("protected tag creation race detected");
     expect(readbackIndex).toBeGreaterThan(pushIndex);
     expect(attestIndex).toBeGreaterThan(readbackIndex);
+
+    expect(workflow).not.toContain("ref: ${{ inputs.release_sha }}");
+    expect(workflow.match(/path: trusted-current-master/gu)).toHaveLength(2);
+    expect(workflow.match(/working-directory: trusted-current-master/gu)?.length ?? 0).toBeGreaterThan(0);
+    expect(workflow).toContain("ref: ${{ steps.workflow-head.outputs.workflow_head_sha }}");
+    expect(workflow).toContain("ref: ${{ steps.approval-master.outputs.workflow_head_sha }}");
+    const finalMasterRecheckIndex = workflow.indexOf(
+      "Recheck current master immediately before attestation publication",
+    );
+    const finalEvidenceRefreshIndex = workflow.indexOf(
+      "Re-fetch and rebuild attestation evidence immediately before publication",
+    );
+    expect(finalMasterRecheckIndex).toBeGreaterThan(readbackIndex);
+    expect(finalEvidenceRefreshIndex).toBeGreaterThan(finalMasterRecheckIndex);
+    expect(attestIndex).toBeGreaterThan(finalEvidenceRefreshIndex);
+    const finalRefresh = workflow.slice(finalEvidenceRefreshIndex, attestIndex);
+    expect(finalRefresh).toContain("pre-attestation/release-workflow-suite-ids.json");
+    expect(finalRefresh).toMatch(
+      /cmp[\s\S]*?post-approval\/release-workflow-suite-ids\.json[\s\S]*?pre-attestation\/release-workflow-suite-ids\.json/u,
+    );
+    expect(finalRefresh).toContain("pre-attestation/check-runs.json");
+    expect(finalRefresh).toContain("pre-attestation/commit-statuses.json");
+    expect(finalRefresh).toContain("pre-attestation/production-release-subject.json");
+    expect(finalRefresh).not.toContain('--check-runs-json "$RUNNER_TEMP/post-approval/check-runs.json"');
+    expect(workflow).toContain("subject-path: ${{ runner.temp }}/pre-attestation/production-release-subject.json");
+    expect(workflow).toContain("predicate-path: ${{ runner.temp }}/pre-attestation/production-release-predicate.json");
   });
 
   it("runs every shared release context for every pull request and every master push", () => {
@@ -1323,7 +1376,7 @@ describe("production release rulesets desired state", () => {
     expect(runbook).toContain("production deployment authority가 아니며");
     expect(runbook).toContain("다음 `prod-YYYYMMDD.N`");
     expect(runbook).toContain("self-referential suite exception");
-    expect(runbook).toContain("canonical `production-release-attestation.yml`");
-    expect(runbook).toContain("external bad/pending/rerun");
+    expect(runbook).toContain("exact `GITHUB_RUN_ID`");
+    expect(runbook).toContain("모든 non-excluded context");
   });
 });

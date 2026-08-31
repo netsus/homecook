@@ -27,10 +27,12 @@ import {
   buildBundleAuthorityManifest,
   buildCandidateSandboxProfile,
   buildReleaseRehearsalCandidate,
+  createReleaseRehearsalCandidateAdapters,
   createSealedCandidateBundle,
   assembleCandidateArtifacts,
   collectSealedMigrationInventory,
   materializeExactGitTree,
+  verifyExactMaterializedTree,
   loadRehearsalToolchainLock,
   parseCanonicalComposeImageInventory,
   writeCandidateTerminalMarker,
@@ -56,11 +58,13 @@ import {
   resolvePinnedPnpmArtifact,
   validateCanonicalComposeAuthority,
 } from "../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
+import { buildRehearsalSelection } from "../scripts/lib/local-mac-production-rehearsal-selection.mjs";
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import {
   materializeImmutableCandidateBootstrap,
   verifyImmutableCandidateModuleGraph,
 } from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
+import * as candidateBootstrapModule from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -146,6 +150,7 @@ function validManifestInput() {
     canonicalization: "RFC8785-JCS+SHA256",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
+    selection_digest: null,
     release_sha: SHA_A,
     release_tree: SHA_B,
     ci_check_summary_digest: DIGEST_A,
@@ -226,6 +231,7 @@ describe("release rehearsal candidate manifest", () => {
       type: "object",
       additionalProperties: false,
       required: expect.arrayContaining([
+        "selection_digest",
         "release_sha",
         "release_tree",
         "ci_check_summary_digest",
@@ -259,6 +265,24 @@ describe("release rehearsal candidate manifest", () => {
 
     expect(parsed).toEqual(manifest);
     expect(parsed.manifest_digest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it("cross-binds an approved selection digest while preserving explicit current-tip null", () => {
+    const currentTip = buildCandidateManifest({
+      ...validManifestInput(),
+      selection_digest: null,
+    });
+    const selectedAncestor = buildCandidateManifest({
+      ...validManifestInput(),
+      selection_digest: DIGEST_A,
+    });
+
+    expect(currentTip.selection_digest).toBeNull();
+    expect(selectedAncestor.selection_digest).toBe(DIGEST_A);
+    expect(() => validateCandidateBundleCrossBinding(selectedAncestor, {
+      ...selectedAncestor,
+      selection_digest: DIGEST_B,
+    })).toThrow(/selection|cross-binding|digest/iu);
   });
 
   it("rejects unknown, duplicate, missing, and digest-tampered fields", () => {
@@ -374,6 +398,314 @@ describe("release rehearsal candidate manifest", () => {
 });
 
 describe("release rehearsal candidate input gates", () => {
+  it("uses current-master builder blobs while keeping a differing approved ancestor as payload data", async () => {
+    const repo = privateRoot("homecook-selected-payload-repo-");
+    const origin = join(privateRoot("homecook-selected-payload-origin-"), "origin.git");
+    const gitHome = privateRoot("homecook-selected-payload-home-");
+    const runGit = (args: string[]) => {
+      const result = spawnSync("/usr/bin/git", args, {
+        cwd: repo,
+        encoding: "utf8",
+        env: {
+          HOME: gitHome,
+          NODE_ENV: "test",
+          PATH: "/usr/bin:/bin",
+          GIT_CONFIG_GLOBAL: "/dev/null",
+          GIT_CONFIG_NOSYSTEM: "1",
+          GIT_AUTHOR_EMAIL: "builder-boundary@test.invalid",
+          GIT_AUTHOR_NAME: "Builder Boundary Test",
+          GIT_COMMITTER_EMAIL: "builder-boundary@test.invalid",
+          GIT_COMMITTER_NAME: "Builder Boundary Test",
+        },
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout.trim();
+    };
+    runGit(["init", "--bare", origin]);
+    runGit(["init", "--initial-branch=master"]);
+    mkdirSync(join(repo, "scripts", "config"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(repo, "scripts", "entry.mjs"), "export const builder = 'selected-ancestor'\n");
+    writeFileSync(join(repo, "scripts", "config", "lock.json"), "{\"generation\":1}\n");
+    writeFileSync(join(repo, "release-payload.txt"), "approved ancestor payload\n");
+    runGit(["add", "."]);
+    runGit(["commit", "-m", "approved ancestor"]);
+    const selectedSha = runGit(["rev-parse", "HEAD"]);
+
+    writeFileSync(join(repo, "scripts", "entry.mjs"), "export const builder = 'trusted-current-master'\n");
+    writeFileSync(join(repo, "scripts", "config", "lock.json"), "{\"generation\":2}\n");
+    runGit(["commit", "-am", "advance trusted builder"]);
+    const currentMasterSha = runGit(["rev-parse", "HEAD"]);
+    const currentMasterTree = runGit(["rev-parse", "HEAD^{tree}"]);
+    runGit(["remote", "add", "origin", origin]);
+    runGit(["push", "-u", "origin", "master"]);
+
+    runGit(["switch", "-c", "divergent-observed", selectedSha]);
+    writeFileSync(join(repo, "release-payload.txt"), "divergent observed payload\n");
+    runGit(["commit", "-am", "divergent observed master"]);
+    const divergentObservedSha = runGit(["rev-parse", "HEAD"]);
+    const divergentObservedTree = runGit(["rev-parse", "HEAD^{tree}"]);
+    runGit(["switch", "master"]);
+
+    const selectedRoot = join(privateRoot("homecook-selected-payload-root-"), "source");
+    const selectedPayload = materializeExactGitTree({
+      gitPath: "/usr/bin/git",
+      repositoryRoot: repo,
+      releaseSha: selectedSha,
+      outputRoot: selectedRoot,
+      homeDir: gitHome,
+    });
+    const currentBuilderRoot = join(privateRoot("homecook-current-builder-root-"), "source");
+    materializeImmutableCandidateBootstrap({
+      gitPath: "/usr/bin/git",
+      tarPath: "/usr/bin/tar",
+      repositoryRoot: repo,
+      releaseSha: currentMasterSha,
+      outputRoot: currentBuilderRoot,
+      homeDir: gitHome,
+    });
+    const currentBuilderGraph = verifyImmutableCandidateModuleGraph({
+      entryPaths: ["scripts/entry.mjs"],
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      lockPaths: ["scripts/config/lock.json"],
+      releaseSha: currentMasterSha,
+      repositoryRoot: repo,
+      sourceRoot: currentBuilderRoot,
+    });
+    const selectedBuilderEntry = selectedPayload.source_manifest.entries.find(
+      (entry: { path: string }) => entry.path === "scripts/entry.mjs",
+    );
+    const currentBuilderEntry = currentBuilderGraph.entries.find(
+      (entry: { path: string }) => entry.path === "scripts/entry.mjs",
+    );
+    expect(selectedBuilderEntry?.blob_oid).not.toBe(currentBuilderEntry?.blob_oid);
+
+    const now = new Date();
+    const selectionInput = {
+      schema: "homecook.local-mac-production-rehearsal-selection.v1",
+      canonicalization: "RFC8785-JCS+SHA256",
+      repository: "netsus/homecook",
+      source_ref: "refs/heads/master",
+      selected_sha: selectedSha,
+      selected_tree: runGit(["rev-parse", `${selectedSha}^{tree}`]),
+      observed_master_sha: currentMasterSha,
+      observed_master_tree: currentMasterTree,
+      selected_at: new Date(now.getTime() - 1_000).toISOString(),
+      expires_at: new Date(now.getTime() + 60 * 60 * 1_000).toISOString(),
+      approver_role: "human-release-approver",
+      approver_id: "adapter-fixture-approver",
+      approval_digest: DIGEST_A,
+    } as const;
+    const selection = buildRehearsalSelection(selectionInput, { now });
+    const namespaceRoot = join(privateRoot("homecook-selected-payload-namespace-"), "rehearsal");
+    const candidateAdapterFactory = createReleaseRehearsalCandidateAdapters as unknown as (
+      options: Record<string, unknown>,
+      dependencies: { resolveToolPaths: () => { gitPath: string } },
+    ) => {
+      resolveSourceAuthority(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+      prepareSource(input: Record<string, unknown>): Promise<{
+        checkout_dir: string;
+        evidence: Record<string, unknown>;
+        source_manifest: Record<string, unknown>;
+      }>;
+    };
+    const adapters = candidateAdapterFactory({
+      builderAuthoritySha: currentMasterSha,
+      builderInputDigest: currentBuilderGraph.builder_input_digest,
+      builderInputEntries: currentBuilderGraph.entries,
+      homeDir: gitHome,
+      namespaceRoot,
+      rootDir: repo,
+      selection,
+    }, {
+      resolveToolPaths: () => ({ gitPath: "/usr/bin/git" }),
+    });
+    const sourceAuthority = await adapters.resolveSourceAuthority({ releaseSha: selectedSha, selection });
+    expect(sourceAuthority).toMatchObject({
+      current_master_sha: currentMasterSha,
+      release_sha: selectedSha,
+      release_tree: selection.selected_tree,
+    });
+    const preparedSource = await adapters.prepareSource({
+      releaseSha: selectedSha,
+      runRoot: privateRoot("homecook-selected-payload-run-"),
+    });
+    expect(preparedSource).toMatchObject({
+      evidence: {
+        builder_input_digest: currentBuilderGraph.builder_input_digest,
+        checkout_sha: selectedSha,
+        release_tree: selection.selected_tree,
+      },
+    });
+    writeFileSync(join(preparedSource.checkout_dir, "release-payload.txt"), "tampered payload\n");
+    expect(() => verifyExactMaterializedTree({
+      sourceRoot: preparedSource.checkout_dir,
+      sourceManifest: preparedSource.source_manifest,
+    })).toThrow(/materialized|blob|drift/iu);
+
+    const treeMismatchSelection = buildRehearsalSelection({
+      ...selectionInput,
+      selected_tree: currentMasterTree,
+    }, { now });
+    const treeMismatchAdapters = candidateAdapterFactory({
+      builderAuthoritySha: currentMasterSha,
+      builderInputDigest: currentBuilderGraph.builder_input_digest,
+      builderInputEntries: currentBuilderGraph.entries,
+      homeDir: gitHome,
+      namespaceRoot: join(privateRoot("homecook-tree-mismatch-namespace-"), "rehearsal"),
+      rootDir: repo,
+      selection: treeMismatchSelection,
+    }, {
+      resolveToolPaths: () => ({ gitPath: "/usr/bin/git" }),
+    });
+    await expect(treeMismatchAdapters.resolveSourceAuthority({
+      releaseSha: selectedSha,
+      selection: treeMismatchSelection,
+    })).rejects.toThrow(/tree|authority|mismatch/iu);
+
+    const divergentSelection = buildRehearsalSelection({
+      ...selectionInput,
+      observed_master_sha: divergentObservedSha,
+      observed_master_tree: divergentObservedTree,
+    }, { now });
+    const divergentAdapters = candidateAdapterFactory({
+      builderAuthoritySha: currentMasterSha,
+      builderInputDigest: currentBuilderGraph.builder_input_digest,
+      builderInputEntries: currentBuilderGraph.entries,
+      homeDir: gitHome,
+      namespaceRoot: join(privateRoot("homecook-divergent-namespace-"), "rehearsal"),
+      rootDir: repo,
+      selection: divergentSelection,
+    }, {
+      resolveToolPaths: () => ({ gitPath: "/usr/bin/git" }),
+    });
+    await expect(divergentAdapters.resolveSourceAuthority({
+      releaseSha: selectedSha,
+      selection: divergentSelection,
+    })).rejects.toThrow(/force|diverg|ancestor|observed|master/iu);
+
+    const verifiedSourceManifestDigest = verifyExactMaterializedTree({
+      sourceRoot: selectedRoot,
+      sourceManifest: selectedPayload.source_manifest,
+    });
+    expect(validateCandidateBuilderAuthority({
+      currentHead: currentMasterSha,
+      releaseSha: selectedSha,
+      builderAuthoritySha: currentMasterSha,
+      trackedStatus: "",
+      sourceManifestDigest: selectedPayload.source_manifest.source_manifest_digest,
+      verifiedSourceManifestDigest,
+      builderEntries: currentBuilderGraph.entries,
+      expectedBuilderInputDigest: currentBuilderGraph.builder_input_digest,
+    })).toEqual({ builder_input_digest: currentBuilderGraph.builder_input_digest });
+
+    const tamperedBuilderEntries = currentBuilderGraph.entries.map((entry) => (
+      entry.path === "scripts/entry.mjs" ? { ...entry, sha256: DIGEST_A } : entry
+    ));
+    expect(() => validateCandidateBuilderAuthority({
+      currentHead: currentMasterSha,
+      releaseSha: selectedSha,
+      builderAuthoritySha: currentMasterSha,
+      trackedStatus: "",
+      sourceManifestDigest: selectedPayload.source_manifest.source_manifest_digest,
+      verifiedSourceManifestDigest,
+      builderEntries: tamperedBuilderEntries,
+      expectedBuilderInputDigest: currentBuilderGraph.builder_input_digest,
+    })).toThrow(/builder|digest|graph|authority/iu);
+
+  });
+
+  it("runs selected-ancestor candidate tooling from current master while preserving current-tip compatibility", () => {
+    const resolveImmutableBootstrapAuthority = (candidateBootstrapModule as unknown as {
+      resolveImmutableBootstrapAuthority?: (input: {
+        releaseSha: string;
+        remoteSha: string;
+        selectionPath: string | null;
+      }) => { builder_authority_sha: string; release_sha: string };
+    }).resolveImmutableBootstrapAuthority;
+    if (typeof resolveImmutableBootstrapAuthority !== "function") throw new Error("bootstrap authority resolver is unavailable");
+    expect(resolveImmutableBootstrapAuthority({
+      releaseSha: SHA_A,
+      remoteSha: SHA_B,
+      selectionPath: "/private/selection.json",
+    })).toEqual({ builder_authority_sha: SHA_B, release_sha: SHA_A });
+    expect(resolveImmutableBootstrapAuthority({
+      releaseSha: SHA_A,
+      remoteSha: SHA_A,
+      selectionPath: null,
+    })).toEqual({ builder_authority_sha: SHA_A, release_sha: SHA_A });
+    expect(() => resolveImmutableBootstrapAuthority({
+      releaseSha: SHA_A,
+      remoteSha: SHA_B,
+      selectionPath: null,
+    })).toThrow(/current|master|selection|release/iu);
+  });
+
+  it("keeps the bootstrap-start master as immutable builder authority while allowing only descendant advancement", () => {
+    const assertLineage = (candidateBootstrapModule as unknown as {
+      assertImmutableBootstrapMasterLineage?: (input: {
+        builderAuthoritySha: string;
+        currentMasterSha: string;
+        gitPath: string;
+        homeDir: string;
+        repositoryRoot: string;
+      }) => unknown;
+    }).assertImmutableBootstrapMasterLineage;
+    expect(typeof assertLineage).toBe("function");
+    if (typeof assertLineage !== "function") return;
+
+    const repo = privateRoot("homecook-bootstrap-lineage-repo-");
+    const gitHome = privateRoot("homecook-bootstrap-lineage-home-");
+    const runGit = (args: string[]) => {
+      const result = spawnSync("/usr/bin/git", args, {
+        cwd: repo,
+        encoding: "utf8",
+        env: {
+          HOME: gitHome,
+          NODE_ENV: "test",
+          PATH: "/usr/bin:/bin",
+          GIT_CONFIG_GLOBAL: "/dev/null",
+          GIT_CONFIG_NOSYSTEM: "1",
+          GIT_AUTHOR_EMAIL: "bootstrap@test.invalid",
+          GIT_AUTHOR_NAME: "Bootstrap Test",
+          GIT_COMMITTER_EMAIL: "bootstrap@test.invalid",
+          GIT_COMMITTER_NAME: "Bootstrap Test",
+        },
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout.trim();
+    };
+    runGit(["init", "--initial-branch=master"]);
+    writeFileSync(join(repo, "authority.txt"), "observed\n");
+    runGit(["add", "authority.txt"]);
+    runGit(["commit", "-m", "observed master"]);
+    const observedMasterSha = runGit(["rev-parse", "HEAD"]);
+    writeFileSync(join(repo, "authority.txt"), "advanced\n");
+    runGit(["commit", "-am", "normal advance"]);
+    const advancedMasterSha = runGit(["rev-parse", "HEAD"]);
+
+    expect(() => assertLineage({
+      builderAuthoritySha: observedMasterSha,
+      currentMasterSha: advancedMasterSha,
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      repositoryRoot: repo,
+    })).not.toThrow();
+
+    runGit(["checkout", "--orphan", "rewritten"]);
+    writeFileSync(join(repo, "authority.txt"), "rewritten\n");
+    runGit(["add", "authority.txt"]);
+    runGit(["commit", "-m", "divergent master"]);
+    const divergentMasterSha = runGit(["rev-parse", "HEAD"]);
+    expect(() => assertLineage({
+      builderAuthoritySha: observedMasterSha,
+      currentMasterSha: divergentMasterSha,
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      repositoryRoot: repo,
+    })).toThrow(/ancestor|diverg|force|builder|master/iu);
+  });
+
   it("loads candidate modules and locks only from the exact immutable Git object", () => {
     const repo = privateRoot("homecook-bootstrap-repo-");
     const gitHome = privateRoot("homecook-bootstrap-git-home-");
@@ -634,6 +966,15 @@ try {
     wrongHead.safe_projection.check_runs[0].head_sha = SHA_B;
     expect(() => validateStableCiSnapshots(wrongHead, wrongHead, SHA_A))
       .toThrow(/head|sha/iu);
+
+    const advancedMaster = structuredClone(evidence);
+    advancedMaster.remote_master_sha = SHA_B;
+    advancedMaster.safe_projection.remote_master_sha = SHA_B;
+    advancedMaster.safe_projection_digest = createHash("sha256")
+      .update(canonicalizeJcs(advancedMaster.safe_projection)).digest("hex");
+    expect(validateStableCiSnapshots(evidence, advancedMaster, SHA_A, {
+      selectionDigest: DIGEST_A,
+    })).toMatchObject({ head_sha: SHA_A, remote_master_sha: SHA_A });
   });
 
   it("accounts for every Compose service and rejects tag-only, build, missing-image, and mixed input", () => {
@@ -1100,6 +1441,7 @@ try {
     const valid = {
       requested_sha: SHA_A,
       origin_master_sha: SHA_A,
+      selection_digest: null,
       checkout_sha: SHA_A,
       release_tree: SHA_B,
       checkout_tree: SHA_B,
@@ -1112,6 +1454,13 @@ try {
       builder_input_digest: DIGEST_B,
     };
     expect(validateCandidateSourceEvidence(valid)).toEqual(valid);
+
+    const selectedAncestor = {
+      ...valid,
+      origin_master_sha: SHA_B,
+      selection_digest: DIGEST_A,
+    };
+    expect(validateCandidateSourceEvidence(selectedAncestor)).toEqual(selectedAncestor);
 
     for (const patch of [
       { origin_master_sha: SHA_B },
@@ -1404,6 +1753,7 @@ describe("release rehearsal candidate orchestration", () => {
       toolchain_lock_digest: candidate.toolchain_lock_digest,
       environment_snapshot: candidate.environment_snapshot,
       production_guard: candidate.production_guard,
+      selection_digest: null,
     })).toThrow(/release_sha|cross.?binding|candidate|bundle/iu);
   });
 
@@ -1521,6 +1871,7 @@ describe("release rehearsal candidate orchestration", () => {
     const bundleInput = {
       repository: manifestInput.repository,
       source_ref: manifestInput.source_ref,
+      selection_digest: manifestInput.selection_digest,
       artifacts: physical.artifacts,
       build_id: manifestInput.build_id,
       build_tools: manifestInput.build_tools,
@@ -1552,6 +1903,7 @@ describe("release rehearsal candidate orchestration", () => {
     chmodSync(join(root, "bundles"), 0o500);
     const candidateIdentityDigest = createHash("sha256").update(canonicalizeJcs({
       schema: "homecook.local-mac-production-rehearsal-candidate-identity.v1",
+      selection_digest: manifestInput.selection_digest,
       bundle_manifest_digest: bundle.bundle_manifest_digest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
     })).digest("hex");
@@ -1803,6 +2155,7 @@ describe("release rehearsal candidate orchestration", () => {
         evidence: validateCandidateSourceEvidence({
           requested_sha: SHA_A,
           origin_master_sha: SHA_A,
+          selection_digest: null,
           checkout_sha: SHA_A,
           release_tree: SHA_B,
           checkout_tree: SHA_B,

@@ -28,12 +28,15 @@ release 승격은 항상 exact SHA, annotated `prod-*` tag, release manifest, at
 
 release identity는 다음을 함께 만족해야 한다.
 
-GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/master`, signer workflow `netsus/homecook/.github/workflows/production-release-attestation.yml`, signer digest `release_sha`로 고정한다. CLI 인수는 이 identity를 바꿀 수 없다. offline `gh attestation verify`는 release-tagged code에 pin된 custom trusted-root SHA-256 `65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c`와 먼저 일치해야 한다.
+GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/master`, signer workflow `netsus/homecook/.github/workflows/production-release-attestation.yml`로 고정한다. signer digest는 selected payload의 `release_sha`가 아니라 실제 workflow/verifier bytes가 실행된 immutable `workflow_head_sha`다. CLI 인수는 이 identity를 바꿀 수 없다. offline `gh attestation verify`는 release-tagged code에 pin된 custom trusted-root SHA-256 `65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c`와 먼저 일치해야 한다.
 
 | field | meaning |
 | --- | --- |
 | `master_sha_at_approval` | 승인 시점의 `origin/master` exact full SHA |
+| `master_tree_at_approval` | 승인 시점 master commit의 exact tree SHA |
 | `release_sha` | 실제 승격 대상 exact full SHA |
+| `workflow_head_sha` / `workflow_head_tree` | `GITHUB_RUN_ID`가 실행하는 workflow/verifier commit과 tree |
+| `workflow_run_id` / `workflow_run_attempt` / `workflow_check_suite_id` | current self-run control-plane authority |
 | `release_tag` | `prod-YYYYMMDD.N` 형식의 annotated tag |
 | `release_tag_object_sha` | remote readback으로 확인한 immutable annotated tag object의 exact SHA |
 | `release_tree` | tag가 가리키는 tree SHA |
@@ -41,9 +44,14 @@ GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/
 | `attestation_digest` | GitHub attestation으로 검증되는 subject manifest SHA-256 |
 | `promotion_id` | 단일 승격 시도 식별자 |
 | `expected_running_release_sha` | 승격 후 실제 돌아야 하는 SHA |
+| `all_check_suite_count` | selected release의 self-suite를 포함한 complete check-suite count. `1000` 미만이어야 함 |
+| `all_check_suite_ids_digest` | selected release의 sorted unique complete check-suite ID set SHA-256. current self-suite도 포함 |
+| `all_context_check_run_instances_digest` | self-suite만 제외한 모든 external context의 sorted unique `(check_run_id, check_suite_id)` instance set digest |
+| `all_context_check_suite_ids` | 위 external instance set의 sorted unique suite IDs |
+| `all_context_commit_statuses_digest` | selected release의 normalized `/statuses` 전체 digest |
 
-Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
-사후에 master가 더 앞으로 나가도 이미 승인된 release identity는 바뀌지 않는다.
+current-tip 경로는 `release_sha == master_sha_at_approval`을 요구한다. approved ancestor selection 경로에서는 Release SHA/tree가 full selection의 `selected_sha/tree`와 같아야 한다. 두 경로 모두 `release_sha → workflow_head_sha → master_sha_at_approval → current origin/master` descendant lineage와 각 tree를 exact Git evidence로 재검증한다.
+사후에 master가 정상 descendant로 더 앞으로 나가도 이미 승인된 release identity는 바뀌지 않지만 divergence/force-push는 tag 전과 attestation 발급 직전 모두 fail closed한다.
 
 ### Rehearsal authority binding exact fields
 
@@ -52,11 +60,21 @@ Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
 | field | exact comparison rule |
 | --- | --- |
 | `rehearsal_receipt_schema` | manifest, subject, predicate, tag message가 exact repeatability schema를 기록하고 server verifier가 모두 비교 |
+| `selection_digest` | manifest, subject, predicate, annotated tag message, server verifier와 sealed candidate/repeatability authority가 same digest 또는 explicit current-tip `null`을 exact 비교 |
+| `selected_sha` | selected 경로에서 manifest, subject, predicate, server verifier가 exact release SHA와 비교하고 current-tip은 explicit `null` |
+| `selected_tree` | selected 경로에서 manifest, subject, predicate, server verifier가 exact release tree와 비교하고 current-tip은 explicit `null` |
+| `observed_master_sha` | manifest, subject, predicate, server verifier가 full selection authority와 exact 비교하고 GitHub trusted verifier가 observed→current ancestry를 재검증 |
+| `observed_master_tree` | manifest, subject, predicate, server verifier가 full selection authority와 exact 비교하고 GitHub trusted verifier가 exact Git tree를 재검증 |
+| `selected_at` | manifest, subject, predicate, server verifier가 full selection authority UTC instant와 exact 비교 |
+| `expires_at` | manifest, subject, predicate, server verifier가 full selection authority expiry와 exact 비교하고 GitHub trusted verifier가 fresh clock으로 재검증 |
+| `approver_role` | manifest, subject, predicate, server verifier가 exact `human-release-approver` selection authority와 비교 |
+| `approver_id` | manifest, subject, predicate, server verifier가 nonempty immutable selection approver identity와 exact 비교 |
+| `approval_digest` | manifest, subject, predicate, server verifier가 full selection approval digest와 exact 비교 |
 | `sealed_bundle_digest` | manifest, subject, predicate, tag message가 lowercase 64-hex same-bytes digest를 기록하고 server verifier가 실행 snapshot bytes와 모두 비교 |
 | `repeatability_receipt_digest` | manifest, subject, predicate, tag message가 validated JCS receipt digest를 기록하고 server verifier가 local receipt 재계산값과 모두 비교 |
 | `rehearsal_receipt_valid_until` | manifest, subject, predicate, tag message가 exact UTC RFC3339 expiry를 기록하고 server verifier가 첫 mutation 직전 현재 시각과 모두 비교 |
 
-annotated tag object message는 위 네 값을 canonical field order로 포함한다. remote readback tag object의 raw bytes와 SHA를 검증한 뒤에만 attestation을 발급한다. production manifest, subject, predicate, tag 중 하나라도 field가 없거나 값/order/expiry가 다르면 tag가 존재해도 deployment authority가 아니다.
+annotated tag object message는 rehearsal authority에 더해 `workflow_head_sha/tree`와 `master_sha/tree_at_approval`을 canonical order로 포함한다. current-tip 경로의 `selection_digest`는 tag text에서 `none`으로 materialize하지만 manifest/subject/predicate/receipt authority에서는 explicit JSON `null`로 cross-bind한다. remote readback tag object의 raw bytes와 SHA를 검증한 뒤에만 attestation을 발급한다. production manifest, subject, predicate, tag 중 하나라도 field가 없거나 값/order/expiry가 다르면 tag가 존재해도 deployment authority가 아니다.
 
 local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. local receipt self digest나 same-user local self-signature도 trust anchor가 아니다. trust chain은 `두 run receipt 검증 → deterministic repeatability receipt → production-release-approval GitHub attestation → pinned trusted root server verifier` 순서다.
 
@@ -85,7 +103,7 @@ local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. loc
 
 Untagged exact-SHA candidate의 isolated build/run, repeatability receipt, mixed-state read-only classification은 `docs/engineering/local-mac-production-release-rehearsal.md`가 canonical authority다. production promote의 receipt gate는 `docs/engineering/local-mac-production-release-rehearsal.md`를 따르며, implementation이 merge되기 전에는 현재 promote 경로가 그 receipt gate를 충족한다고 주장하지 않는다.
 
-rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`와 `repeatability_receipt_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다.
+rehearsal 통과 뒤에도 rebuild는 금지한다. production tag, manifest, attestation은 exact `sealed_bundle_digest`, `repeatability_receipt_digest`, `selection_digest`를 묶어야 하며 기존 `prod-*` tag immutability를 완화하지 않는다. selection은 candidate의 조상 SHA 선택 authority일 뿐 promote unlock이 아니며, activation kill switch와 receipt·attestation·classification·release-promoter gate를 대체하지 않는다.
 protected tag push 직전에는 receipt 전체를 fresh clock으로 다시 검증하고 `rehearsal_receipt_valid_until`까지 strict 900초 초과 여유를 요구한다. equality 또는 더 짧은 여유는 tag push와 attestation을 모두 0으로 유지한다.
 
 Stage B implementation target command family는 다음과 같다.
@@ -215,7 +233,7 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `repository` (`netsus/homecook`)
 - `source_ref` (`refs/heads/master`)
 - `signer_workflow` (`netsus/homecook/.github/workflows/production-release-attestation.yml`)
-- `signer_digest` (`release_sha`와 exact match)
+- `signer_digest` (`workflow_head_sha`와 exact match)
 - `expected_release_integration_id` (`15368`)
 - `promotion_id`
 - `release_tag`
@@ -223,12 +241,28 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `release_manifest_path`
 - `release_sha`
 - `release_tree`
+- `workflow_head_sha`
+- `workflow_head_tree`
+- `workflow_run_id`
+- `workflow_run_attempt`
+- `workflow_check_suite_id`
 - `master_sha_at_approval`
+- `master_tree_at_approval`
 - `approved_at`
 - `approved_by_task_id`
 - `migration_head`
 - `build_id`
 - `rehearsal_receipt_schema`
+- `selected_sha` (current-tip이면 `null`)
+- `selected_tree` (current-tip이면 `null`)
+- `observed_master_sha` (current-tip이면 `null`)
+- `observed_master_tree` (current-tip이면 `null`)
+- `selected_at` (current-tip이면 `null`)
+- `expires_at` (current-tip이면 `null`)
+- `approver_role` (current-tip이면 `null`)
+- `approver_id` (current-tip이면 `null`)
+- `approval_digest` (current-tip이면 `null`)
+- `selection_digest`
 - `sealed_bundle_digest`
 - `repeatability_receipt_digest`
 - `rehearsal_receipt_valid_until`
@@ -236,6 +270,11 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `previous_release_sha`
 - `expected_release_contexts`
 - `required_check_summary`
+- `all_check_suite_count`
+- `all_check_suite_ids_digest`
+- `all_context_check_run_instances_digest`
+- `all_context_check_suite_ids`
+- `all_context_commit_statuses_digest`
 - `attestation_digest`
 - `app_launch_agent_enabled`
 - `full_local_launch_agent_enabled`
@@ -373,19 +412,27 @@ C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 - `production-release-tag-immutability`는 update / deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. `update`가 fast-forward tag 이동까지 막으므로 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 이동하거나 삭제할 수 없다.
 - environment `production-release-approval`은 `can_admins_bypass: false`, required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다. admin bypass readback 누락 또는 `true`는 activation blocker다.
 - environment secrets는 App ID와 private key 두 개뿐이다. workflow는 `actions/create-github-app-token`으로 short-lived token을 만들고 tag App token은 `contents:write`만 요청한다. Administration permission과 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
-- workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있다.
-- `self-referential suite exception`은 canonical `production-release-attestation.yml`의 exact `workflow_dispatch` event와 exact release SHA에 속한 현재/이전 retry `check_suite_id`에만 적용한다. workflow-specific Actions REST를 full pagination으로 읽고 path, workflow id, event, head SHA를 모두 검증한 nonempty unique positive ID 목록만 제외한다. pre/post approval 목록은 evidence JSON으로 업로드하며 exact equality가 깨지면 concurrent drift로 실패한다. 목록 밖의 external bad/pending/rerun, failed, cancelled, queued check는 항상 0이어야 하며 그대로 fail-closed한다.
-- workflow 승인 뒤 `github.ref`, `github.workflow_ref`, exact `origin/master`, tree, 전체 check-runs와 `/statuses` 모든 page를 다시 읽고 preflight subject/predicate evidence와 비교한다. tag push 직전에도 `origin/master`를 다시 확인한다. deterministic raw annotated tag object를 App token으로 먼저 push한 뒤 GitHub ref API가 exact `release_tag_object_sha`와 object type `tag`를 반환해야만 `actions/attest`를 실행한다. remote readback 전 attestation은 금지한다.
+- workflow 승인 전, 환경 승인 직후, attestation 발급 직전의 세 snapshot은 먼저 quoted `check-suites?per_page=100` URL과 `--paginate --slurp`로 complete check-suite page authority를 읽는다. 모든 page의 `total_count`가 같고, page 수와 각 page 길이가 `per_page=100` 계산과 exact 일치하며, suite ID가 unique이고 모든 `head_sha`가 selected release SHA여야 한다. [GitHub의 commit check-runs endpoint](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference)가 최신 1,000 suite로 제한되므로 `total_count >= 1000`, page 누락/중복, count 불일치 또는 완전성 미증명은 protected tag/attestation 전에 fail closed한다.
+- suite count가 1,000 미만인 정상 경로에서만 quoted `check-runs?filter=all&per_page=100` URL을 한 번 pagination한다. check-run page도 stable `total_count`, exact page 수/길이, unique run ID를 요구하고 모든 run suite ID가 complete suite set에 속해야 한다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있지만, 모든 non-excluded context에서 unique check instance가 둘 이상이면 success→success도 rerun이므로 거부한다. 정상 경로에서 suite별 check-runs API를 N회 호출하지 않는다.
+- complete sorted suite ID set의 `all_check_suite_count`와 `all_check_suite_ids_digest`, external sorted check-run instance set의 `all_context_check_run_instances_digest`를 subject/predicate/production manifest/server readback에 exact cross-bind한다. `self-referential suite exception`은 exact `GITHUB_RUN_ID`의 current `workflow_check_suite_id` 하나뿐이다. complete suite count/digest에는 self-suite를 포함하되 external terminal-result set에서만 exact current suite를 제외한다. exact run API readback은 workflow id/path, event, master ref, repository, `workflow_head_sha`, `run_id`, `run_attempt`을 모두 검증한다. `release_sha != workflow_head_sha`이면 selected release check set에 self-suite가 없으므로 exclusion은 empty다. 과거 retry suite나 동일 context name 전체를 제외하지 않는다.
+- workflow 승인 전에는 selected release의 external check/status evidence와 current self-run control-plane evidence만 분리 보존한다. 환경 승인 직후 `master_sha_at_approval/tree`를 fresh capture한 다음에만 tag object와 subject/predicate를 만든다. tag push 직전과 attestation 발급 직전에 exact run, approval authority, external evidence, live master lineage를 각각 다시 확인한다.
+- 두 workflow job은 selected release checkout을 executable authority로 사용하지 않는다. `github.sha`와 exact run API가 함께 증명한 `workflow_head_sha/tree`를 `trusted-current-master/`에 full-history immutable checkout하고 verifier, attestation builder, desired-state reader, tag-object builder를 모두 그 bytes에서 실행한다. selected SHA/tree는 같은 repository의 verified Git object와 subject artifact로만 소비한다.
+- non-null selection은 raw canonical selection artifact를 별도 input으로 받아 digest 기반 basename/private file authority를 닫고, current master trusted verifier가 full selection field·expiry·approval과 selected→observed/current, observed→current ancestry 및 exact trees를 검증한다. protected tag push 직전과 `actions/attest` 바로 전마다 live current master ref를 readback하고 trusted checkout→live current master lineage와 full selection authority를 다시 검증한다.
 
-attestation workflow artifact baseline은 다음 세 가지다.
+attestation workflow artifact baseline은 다음 산출물이다.
 
 - `production-release-subject.json`
 - `production-release-predicate.json`
 - `production-release-tag-object.raw`와 exact SHA
 - `release-workflow-suite-ids.json`
+- `workflow-authority.json`
+- `approval-authority.json`
+- `external-check-evidence.json`
+- `check-suite-pages.json`
+- `check-run-pages.json`
 - `actions/attest@v4`가 만든 JSON bundle
 
-server-side verifier는 위 subject manifest SHA-256, repository, tag, `release_tag_object_sha`, release SHA, tree, normalized terminal check summary를 함께 다시 확인한다.
+server-side verifier는 위 subject manifest SHA-256, repository, tag, `release_tag_object_sha`, selected release SHA/tree, workflow head/run/suite authority, approval-time master SHA/tree, complete suite count/digest, all-context instance/status digests, external suite IDs, normalized terminal summary와 complete Git lineage를 함께 다시 확인한다.
 
 remote tag push/readback 뒤 attestation 생성이 실패하면 해당 immutable tag는 attestation이 없는 상태로 남는다. 이 tag는 production deployment authority가 아니며 승격에 사용할 수 없다. immutability ruleset 때문에 삭제·이동하지 않고, 재시도는 반드시 다음 `prod-YYYYMMDD.N` 번호를 사용한다.
 

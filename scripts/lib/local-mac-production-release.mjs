@@ -41,6 +41,10 @@ import {
   normalizeExpectedReleaseContexts,
   validateProductionReleaseTag,
 } from "./production-release-approval-policy.mjs";
+import {
+  REHEARSAL_SELECTION_AUTHORITY_KEYS,
+  validateRehearsalSelectionAuthority,
+} from "./local-mac-production-rehearsal-selection.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./youtube-extraction-worker-artifact.mjs";
 import {
   toPromotionAuthoritySourceError,
@@ -87,12 +91,19 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "release_manifest_path",
   "release_sha",
   "release_tree",
+  "workflow_head_sha",
+  "workflow_head_tree",
+  "workflow_run_id",
+  "workflow_run_attempt",
+  "workflow_check_suite_id",
   "master_sha_at_approval",
+  "master_tree_at_approval",
   "approved_at",
   "approved_by_task_id",
   "migration_head",
   "build_id",
   "rehearsal_receipt_schema",
+  ...REHEARSAL_SELECTION_AUTHORITY_KEYS,
   "sealed_bundle_digest",
   "repeatability_receipt_digest",
   "rehearsal_receipt_valid_until",
@@ -100,6 +111,11 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "previous_release_sha",
   "expected_release_contexts",
   "required_check_summary",
+  "all_check_suite_count",
+  "all_check_suite_ids_digest",
+  "all_context_check_run_instances_digest",
+  "all_context_check_suite_ids",
+  "all_context_commit_statuses_digest",
   "attestation_digest",
   "app_launch_agent_enabled",
   "full_local_launch_agent_enabled",
@@ -1934,6 +1950,17 @@ function readGitAnnotatedTagMessage({ rootDir, runCommand, releaseTag }) {
   return message;
 }
 
+function readGitIsAncestor({ ancestor, descendant, label, rootDir, runCommand }) {
+  const result = runCommand("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
+    cwd: requireAbsolutePath(rootDir, "rootDir"),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  throw new Error(`${label} could not be resolved from git.`);
+}
+
 /**
  * @param {{
  *   component?: string,
@@ -2017,25 +2044,47 @@ export function readLocalMacProductionPreparedReleaseIdentity({
  * @param {{
  *   releaseSha: string,
  *   releaseTag: string,
+ *   workflowHeadSha: string,
+ *   masterShaAtApproval: string,
  *   rootDir?: string,
  *   runCommand?: typeof spawnSync,
  * }} [options]
  */
 export function readLocalMacProductionGitReleaseEvidence({
+  masterShaAtApproval,
   releaseSha,
   releaseTag,
   rootDir = process.cwd(),
   runCommand = spawnSync,
+  workflowHeadSha,
 } = {}) {
   const normalizedReleaseSha = requireReleaseSha(releaseSha, "releaseSha");
   const normalizedReleaseTag = requireNonEmptyString(releaseTag, "releaseTag");
+  const normalizedWorkflowHeadSha = requireReleaseSha(workflowHeadSha, "workflowHeadSha");
+  const normalizedMasterShaAtApproval = requireReleaseSha(
+    masterShaAtApproval,
+    "masterShaAtApproval",
+  );
+  const originMasterSha = readGitRevParse({
+    rootDir,
+    runCommand,
+    label: "origin/master release SHA",
+    ref: "refs/remotes/origin/master^{commit}",
+  });
 
   return {
-    originMasterSha: readGitRevParse({
+    originMasterSha,
+    workflowHeadTreeSha: readGitRevParse({
       rootDir,
       runCommand,
-      label: "origin/master release SHA",
-      ref: "refs/remotes/origin/master^{commit}",
+      label: "Workflow head tree",
+      ref: `${normalizedWorkflowHeadSha}^{tree}`,
+    }),
+    masterAtApprovalTreeSha: readGitRevParse({
+      rootDir,
+      runCommand,
+      label: "Approval-time master tree",
+      ref: `${normalizedMasterShaAtApproval}^{tree}`,
     }),
     releaseTagObjectSha: readGitRevParse({
       rootDir,
@@ -2059,6 +2108,27 @@ export function readLocalMacProductionGitReleaseEvidence({
       rootDir,
       runCommand,
       releaseTag: normalizedReleaseTag,
+    }),
+    releaseIsAncestorOfWorkflowHead: readGitIsAncestor({
+      ancestor: normalizedReleaseSha,
+      descendant: normalizedWorkflowHeadSha,
+      label: "Release to workflow-head lineage",
+      rootDir,
+      runCommand,
+    }),
+    workflowHeadIsAncestorOfMasterAtApproval: readGitIsAncestor({
+      ancestor: normalizedWorkflowHeadSha,
+      descendant: normalizedMasterShaAtApproval,
+      label: "Workflow-head to approval-time master lineage",
+      rootDir,
+      runCommand,
+    }),
+    masterAtApprovalIsAncestorOfOriginMaster: readGitIsAncestor({
+      ancestor: normalizedMasterShaAtApproval,
+      descendant: originMasterSha,
+      label: "Approval-time master to origin/master lineage",
+      rootDir,
+      runCommand,
     }),
   };
 }
@@ -2150,9 +2220,11 @@ function requireTrustedAttestationVerification({
  *   manifestPath?: string | null,
  *   readGitEvidence?: (input: {
  *     manifestPath?: string | null,
+ *     masterShaAtApproval: string,
  *     releaseSha: string,
  *     releaseTag: string,
  *     rootDir: string,
+ *     workflowHeadSha: string,
  *   }) => {
  *     originMasterSha: string,
  *     releaseTagObjectSha: string,
@@ -2211,8 +2283,16 @@ export function validateLocalMacProductionReleaseManifest({
     manifest.signer_digest,
     "manifest.signer_digest",
   );
-  if (signerDigest !== releaseSha) {
-    throw new Error("manifest.signer_digest must equal manifest.release_sha exactly.");
+  const workflowHeadSha = requireReleaseSha(
+    manifest.workflow_head_sha,
+    "manifest.workflow_head_sha",
+  );
+  const workflowHeadTree = requireReleaseSha(
+    manifest.workflow_head_tree,
+    "manifest.workflow_head_tree",
+  );
+  if (signerDigest !== workflowHeadSha) {
+    throw new Error("manifest.signer_digest must equal manifest.workflow_head_sha exactly.");
   }
   if (manifest.repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
     throw new Error(`manifest.repository must be ${CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY}.`);
@@ -2231,17 +2311,35 @@ export function validateLocalMacProductionReleaseManifest({
     manifest.master_sha_at_approval,
     "manifest.master_sha_at_approval",
   );
-  if (releaseSha !== masterShaAtApproval) {
+  const masterTreeAtApproval = requireReleaseSha(
+    manifest.master_tree_at_approval,
+    "manifest.master_tree_at_approval",
+  );
+  const selectionAuthority = validateRehearsalSelectionAuthority(Object.fromEntries(
+    REHEARSAL_SELECTION_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+  ));
+  if (selectionAuthority.selection_digest === null && releaseSha !== masterShaAtApproval) {
     throw new Error(
       "Release manifest exact approved master mismatch: release_sha must equal origin/master at approval.",
     );
   }
+  if (
+    selectionAuthority.selection_digest !== null
+    && (
+      selectionAuthority.selected_sha !== releaseSha
+      || selectionAuthority.selected_tree !== releaseTree
+    )
+  ) {
+    throw new Error("Release manifest selected authority SHA/tree must equal the release SHA/tree.");
+  }
 
   const gitEvidence = readGitEvidence({
     manifestPath: normalizedManifestPath,
+    masterShaAtApproval,
     releaseSha,
     releaseTag,
     rootDir: normalizedRootDir,
+    workflowHeadSha,
   });
   if (
     !gitEvidence
@@ -2255,6 +2353,14 @@ export function validateLocalMacProductionReleaseManifest({
     originMasterSha: requireReleaseSha(
       gitEvidence.originMasterSha,
       "gitEvidence.originMasterSha",
+    ),
+    workflowHeadTreeSha: requireReleaseSha(
+      gitEvidence.workflowHeadTreeSha,
+      "gitEvidence.workflowHeadTreeSha",
+    ),
+    masterAtApprovalTreeSha: requireReleaseSha(
+      gitEvidence.masterAtApprovalTreeSha,
+      "gitEvidence.masterAtApprovalTreeSha",
     ),
     releaseTagObjectSha: requireReleaseSha(
       gitEvidence.releaseTagObjectSha,
@@ -2272,7 +2378,28 @@ export function validateLocalMacProductionReleaseManifest({
       gitEvidence.releaseTagMessage,
       "gitEvidence.releaseTagMessage",
     ),
+    releaseIsAncestorOfWorkflowHead: gitEvidence.releaseIsAncestorOfWorkflowHead === true,
+    workflowHeadIsAncestorOfMasterAtApproval:
+      gitEvidence.workflowHeadIsAncestorOfMasterAtApproval === true,
+    masterAtApprovalIsAncestorOfOriginMaster:
+      gitEvidence.masterAtApprovalIsAncestorOfOriginMaster === true,
   };
+
+  if (normalizedGitEvidence.workflowHeadTreeSha !== workflowHeadTree) {
+    throw new Error("Release manifest workflow head tree does not match current git evidence.");
+  }
+  if (normalizedGitEvidence.masterAtApprovalTreeSha !== masterTreeAtApproval) {
+    throw new Error("Release manifest approval-time master tree does not match current git evidence.");
+  }
+  if (!normalizedGitEvidence.releaseIsAncestorOfWorkflowHead) {
+    throw new Error("Release SHA must be an ancestor of the workflow head.");
+  }
+  if (!normalizedGitEvidence.workflowHeadIsAncestorOfMasterAtApproval) {
+    throw new Error("Workflow head must be an ancestor of the approval-time master.");
+  }
+  if (!normalizedGitEvidence.masterAtApprovalIsAncestorOfOriginMaster) {
+    throw new Error("Approval-time master must equal or be an ancestor of current origin/master.");
+  }
 
   if (normalizedGitEvidence.releaseTagCommitSha !== releaseSha) {
     throw new Error(
@@ -2291,6 +2418,11 @@ export function validateLocalMacProductionReleaseManifest({
     releaseTag,
     build_id: manifest.build_id,
     rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+    workflow_head_sha: workflowHeadSha,
+    workflow_head_tree: workflowHeadTree,
+    master_sha_at_approval: masterShaAtApproval,
+    master_tree_at_approval: masterTreeAtApproval,
+    selection_digest: manifest.selection_digest,
     sealed_bundle_digest: manifest.sealed_bundle_digest,
     repeatability_receipt_digest: manifest.repeatability_receipt_digest,
     rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
@@ -2317,7 +2449,21 @@ export function validateLocalMacProductionReleaseManifest({
     release_manifest_path: releaseManifestPath,
     release_sha: releaseSha,
     release_tree: releaseTree,
+    workflow_head_sha: workflowHeadSha,
+    workflow_head_tree: workflowHeadTree,
+    workflow_run_id: requireInteger(manifest.workflow_run_id, "manifest.workflow_run_id", 1),
+    workflow_run_attempt: requireInteger(
+      manifest.workflow_run_attempt,
+      "manifest.workflow_run_attempt",
+      1,
+    ),
+    workflow_check_suite_id: requireInteger(
+      manifest.workflow_check_suite_id,
+      "manifest.workflow_check_suite_id",
+      1,
+    ),
     master_sha_at_approval: masterShaAtApproval,
+    master_tree_at_approval: masterTreeAtApproval,
     approved_at: approvedAt,
     approved_by_task_id: requireNonEmptyString(
       manifest.approved_by_task_id,
@@ -2330,6 +2476,7 @@ export function validateLocalMacProductionReleaseManifest({
       LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA,
       "manifest.rehearsal_receipt_schema",
     ),
+    ...selectionAuthority,
     sealed_bundle_digest: requireDigest(
       manifest.sealed_bundle_digest,
       "manifest.sealed_bundle_digest",
@@ -2355,6 +2502,47 @@ export function validateLocalMacProductionReleaseManifest({
       "manifest.expected_release_contexts",
     ),
     required_check_summary: normalizeRequiredCheckSummary(manifest.required_check_summary),
+    all_check_suite_count: (() => {
+      const count = requireInteger(
+        manifest.all_check_suite_count,
+        "manifest.all_check_suite_count",
+        1,
+      );
+      if (count >= 1_000) {
+        throw new Error("manifest.all_check_suite_count must be below 1000.");
+      }
+      return count;
+    })(),
+    all_check_suite_ids_digest: requireDigest(
+      manifest.all_check_suite_ids_digest,
+      "manifest.all_check_suite_ids_digest",
+    ),
+    all_context_check_run_instances_digest: requireDigest(
+      manifest.all_context_check_run_instances_digest,
+      "manifest.all_context_check_run_instances_digest",
+    ),
+    all_context_check_suite_ids: (() => {
+      if (
+        !Array.isArray(manifest.all_context_check_suite_ids)
+        || manifest.all_context_check_suite_ids.length === 0
+      ) {
+        throw new Error("manifest.all_context_check_suite_ids must be a nonempty array.");
+      }
+      const ids = manifest.all_context_check_suite_ids.map((value, index) =>
+        requireInteger(value, `manifest.all_context_check_suite_ids[${index}]`, 1));
+      if (new Set(ids).size !== ids.length) {
+        throw new Error("manifest.all_context_check_suite_ids must contain unique IDs.");
+      }
+      const sorted = [...ids].sort((left, right) => left - right);
+      if (JSON.stringify(ids) !== JSON.stringify(sorted)) {
+        throw new Error("manifest.all_context_check_suite_ids must be sorted ascending.");
+      }
+      return sorted;
+    })(),
+    all_context_commit_statuses_digest: requireDigest(
+      manifest.all_context_commit_statuses_digest,
+      "manifest.all_context_commit_statuses_digest",
+    ),
     attestation_digest: requireDigest(
       manifest.attestation_digest,
       "manifest.attestation_digest",

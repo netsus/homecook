@@ -72,6 +72,7 @@ const TOP_LEVEL_EVIDENCE_KEYS = [
   "status",
   "trusted_receipt",
   "candidate_identity_digest",
+  "selection_digest",
   "release_sha",
   "release_tree",
   "build_id",
@@ -127,6 +128,11 @@ function exactKeys(value, keys, label) {
 function requireDigest(value, label) {
   if (!DIGEST.test(value ?? "")) fail(`${label} must be a lowercase SHA-256 digest`);
   return value;
+}
+
+function requireNullableDigest(value, label) {
+  if (value === null) return value;
+  return requireDigest(value, label);
 }
 
 function requireSha(value, label) {
@@ -604,7 +610,7 @@ function writeCanonicalCreateOnly(path, value, mode = 0o400) {
 
 function verifyCandidateStable(before, after) {
   const fields = [
-    "candidate_identity_digest", "manifest_digest", "release_sha", "release_tree", "build_id",
+    "candidate_identity_digest", "selection_digest", "manifest_digest", "release_sha", "release_tree", "build_id",
     "sealed_bundle_digest", "bundle_manifest_digest", "migration",
   ];
   for (const field of fields) {
@@ -789,6 +795,7 @@ function makeEvidence({ manifest, runId, issuedAt, completedAt, namespace, runRo
     status: "passed",
     trusted_receipt: false,
     candidate_identity_digest: manifest.candidate_identity_digest,
+    selection_digest: manifest.selection_digest,
     release_sha: manifest.release_sha,
     release_tree: manifest.release_tree,
     build_id: manifest.build_id,
@@ -862,6 +869,7 @@ export function validateRunEvidence(value) {
   if (value.status !== "passed" || value.trusted_receipt !== false) fail("run evidence must explicitly be an untrusted non-receipt pass artifact");
   requireSha(value.release_sha, "run evidence release_sha");
   requireSha(value.release_tree, "run evidence release_tree");
+  requireNullableDigest(value.selection_digest, "run evidence selection_digest");
   for (const field of ["candidate_identity_digest", "sealed_bundle_digest", "bundle_manifest_digest", "evidence_digest"]) requireDigest(value[field], field);
   exactKeys(value.isolation, [
     "docker_project_id", "container_names", "network_names", "volume_names",
@@ -1162,6 +1170,7 @@ export async function runIsolatedReleaseRehearsal({
   requireSha(manifest.release_sha, "candidate release_sha");
   requireSha(manifest.release_tree, "candidate release_tree");
   requireDigest(manifest.candidate_identity_digest, "candidate identity digest");
+  requireNullableDigest(manifest.selection_digest, "candidate selection digest");
   requireDigest(manifest.sealed_bundle_digest, "candidate sealed bundle digest");
   requireDigest(manifest.bundle_manifest_digest, "candidate bundle manifest digest");
   const reservation = reserveRunRoot(canonicalNamespaceRoot, runId);

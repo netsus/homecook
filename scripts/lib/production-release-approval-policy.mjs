@@ -16,6 +16,7 @@ export const CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW =
 export const CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF = "refs/heads/master";
 
 const PRODUCTION_RELEASE_TAG_PATTERN = /^prod-[0-9]{8}\.[0-9]+$/u;
+const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const REPEATABILITY_SCHEMA = "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
 
@@ -34,10 +35,18 @@ export function validateProductionReleaseTag(value, label = "release tag") {
   return normalized;
 }
 
+/**
+ * @param {{releaseTag: string, rehearsal_receipt_schema: string, selection_digest?: string | null, build_id: string, workflow_head_sha: string, workflow_head_tree: string, master_sha_at_approval: string, master_tree_at_approval: string, sealed_bundle_digest: string, repeatability_receipt_digest: string, rehearsal_receipt_valid_until: string}} options
+ */
 export function buildProductionReleaseAnnotatedTagMessage({
   releaseTag,
   rehearsal_receipt_schema,
+  selection_digest = /** @type {string | null} */ (null),
   build_id,
+  workflow_head_sha,
+  workflow_head_tree,
+  master_sha_at_approval,
+  master_tree_at_approval,
   sealed_bundle_digest,
   repeatability_receipt_digest,
   rehearsal_receipt_valid_until,
@@ -46,6 +55,17 @@ export function buildProductionReleaseAnnotatedTagMessage({
     throw new Error("annotated tag rehearsal receipt schema is invalid.");
   }
   const buildId = requireNonEmptyString(build_id, "annotated tag build_id");
+  if (selection_digest !== null && !SHA256_PATTERN.test(selection_digest ?? "")) {
+    throw new Error("annotated tag selection_digest is invalid.");
+  }
+  for (const [value, label] of [
+    [workflow_head_sha, "workflow_head_sha"],
+    [workflow_head_tree, "workflow_head_tree"],
+    [master_sha_at_approval, "master_sha_at_approval"],
+    [master_tree_at_approval, "master_tree_at_approval"],
+  ]) {
+    if (!SHA1_PATTERN.test(value ?? "")) throw new Error(`annotated tag ${label} is invalid.`);
+  }
   for (const [value, label] of [
     [sealed_bundle_digest, "sealed_bundle_digest"],
     [repeatability_receipt_digest, "repeatability_receipt_digest"],
@@ -64,6 +84,11 @@ export function buildProductionReleaseAnnotatedTagMessage({
     `Approved production release ${validateProductionReleaseTag(releaseTag, "releaseTag")}`,
     `build_id ${buildId}`,
     `rehearsal_receipt_schema ${REPEATABILITY_SCHEMA}`,
+    `workflow_head_sha ${workflow_head_sha}`,
+    `workflow_head_tree ${workflow_head_tree}`,
+    `master_sha_at_approval ${master_sha_at_approval}`,
+    `master_tree_at_approval ${master_tree_at_approval}`,
+    `selection_digest ${selection_digest ?? "none"}`,
     `sealed_bundle_digest ${sealed_bundle_digest}`,
     `repeatability_receipt_digest ${repeatability_receipt_digest}`,
     `rehearsal_receipt_valid_until ${validUntil}`,

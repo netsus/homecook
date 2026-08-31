@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.github.production-release-approval-authority.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["master_sha_at_approval", "master_tree_at_approval"],
+  "properties": {
+    "master_sha_at_approval": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "master_tree_at_approval": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+  }
+}

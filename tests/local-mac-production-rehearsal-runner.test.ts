@@ -181,6 +181,7 @@ function candidateManifest() {
     schema: "homecook.local-mac-production-rehearsal-candidate.v1",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
+    selection_digest: null,
     release_sha: SHA_A,
     release_tree: SHA_B,
     build_id: "build-r2",
@@ -284,6 +285,7 @@ function evidenceFixture() {
     status: "passed",
     trusted_receipt: false,
     candidate_identity_digest: "c".repeat(64),
+    selection_digest: null,
     release_sha: SHA_A,
     release_tree: SHA_B,
     build_id: "build-r2",
@@ -886,6 +888,15 @@ describe("release rehearsal R2 evidence semantic attack table", () => {
 });
 
 describe("release rehearsal R2 public command and schema", () => {
+  it("binds an approved selection digest into otherwise identical run evidence", () => {
+    const evidence = evidenceFixture();
+    const selectedUnsigned = { ...evidence, selection_digest: DIGEST_B };
+    delete (selectedUnsigned as { evidence_digest?: string }).evidence_digest;
+    const selected = { ...selectedUnsigned, evidence_digest: sha256Jcs(selectedUnsigned) };
+
+    expect(validateRunEvidence(selected).selection_digest).toBe(DIGEST_B);
+  });
+
   it("keeps every canonical R2 public command and argument table aligned with CLI help", () => {
     const runbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
     const r2Section = /### R2\. isolated rehearse([\s\S]*?)### R3\./u.exec(runbook)?.[1] ?? "";
@@ -1111,6 +1122,7 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(schema.$id).toBe(RUN_EVIDENCE_SCHEMA);
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).toEqual(expect.arrayContaining([
+      "selection_digest",
       "trusted_receipt",
       "issued_at",
       "production_guard",

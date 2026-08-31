@@ -37,14 +37,14 @@ const RUNTIME_KEYS = [
   "reported_migration_head",
 ];
 const RUN_UNSIGNED_KEYS = [
-  "schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree",
+  "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha", "release_tree",
   "ci_head_sha", "ci_check_summary_digest", "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "run_id", "issued_at", "completed_at", "toolchain", "images",
   "migration", "fixtures", "isolation", "runtime", "canaries", "network", "cleanup",
   "production_guard", "environment_snapshot", "threat_controls", "issuer_task_id",
 ];
 const REPEAT_UNSIGNED_KEYS = [
-  "schema", "canonicalization", "repository", "source_ref", "release_sha", "release_tree",
+  "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha", "release_tree",
   "build_id", "sealed_bundle_digest", "member_receipt_digests", "member_run_ids",
   "member_resource_identity_digests", "toolchain_digest", "image_set_digest",
   "migration_ledger_digest", "canary_set_digest", "cleanup_evidence_digests",
@@ -69,6 +69,11 @@ function assertString(value, label, pattern = null) {
   if (typeof value !== "string" || value.length === 0) fail(`${label} must be a nonempty string`);
   if (pattern && !pattern.test(value)) fail(`${label} has an invalid format`);
   return value;
+}
+
+function assertNullableDigest(value, label) {
+  if (value === null) return value;
+  return assertString(value, label, HEX_64);
 }
 
 function assertInteger(value, label, minimum = 0) {
@@ -147,6 +152,7 @@ function validateRunUnsigned(value) {
   if (receipt.canonicalization !== CANONICALIZATION) fail("canonicalization mismatch");
   if (receipt.repository !== REPOSITORY) fail("repository mismatch");
   if (receipt.source_ref !== SOURCE_REF) fail("source_ref mismatch");
+  assertNullableDigest(receipt.selection_digest, "selection_digest");
   assertString(receipt.release_sha, "release_sha", HEX_40);
   assertString(receipt.release_tree, "release_tree", HEX_40);
   if (receipt.ci_head_sha !== receipt.release_sha) fail("ci_head_sha must equal release_sha");
@@ -302,7 +308,7 @@ export function buildRunReceiptFromEvidenceAuthority({
     fail("candidate repository or source_ref authority mismatch");
   }
   for (const field of [
-    "release_sha", "release_tree", "build_id",
+    "selection_digest", "release_sha", "release_tree", "build_id",
     "sealed_bundle_digest", "bundle_manifest_digest", "candidate_identity_digest",
   ]) {
     if (candidateManifest[field] !== runEvidence[field]) {
@@ -351,6 +357,7 @@ export function buildRunReceiptFromEvidenceAuthority({
     canonicalization: CANONICALIZATION,
     repository: REPOSITORY,
     source_ref: SOURCE_REF,
+    selection_digest: runEvidence.selection_digest,
     release_sha: runEvidence.release_sha,
     release_tree: runEvidence.release_tree,
     ci_head_sha: runEvidence.release_sha,
@@ -505,7 +512,7 @@ function validateMemberPair(memberReceipts, { now = null, requireFresh = false }
       fail(`member ${label} must not overlap`);
     }
   }
-  for (const key of ["repository", "source_ref", "release_sha", "release_tree", "build_id", "sealed_bundle_digest", "bundle_manifest_digest"]) if (members[0].receipt[key] !== members[1].receipt[key]) fail(`member ${key} values must match`);
+  for (const key of ["repository", "source_ref", "selection_digest", "release_sha", "release_tree", "build_id", "sealed_bundle_digest", "bundle_manifest_digest"]) if (members[0].receipt[key] !== members[1].receipt[key]) fail(`member ${key} values must match`);
   for (const [key, label] of [["toolchainDigest", "toolchain"], ["imageSetDigest", "image"], ["migrationDigest", "migration"], ["canarySetDigest", "canary"]]) if (members[0][key] !== members[1][key]) fail(`member ${label} evidence must match`);
   const completionTimes = members.map((member) => timestampMilliseconds(member.receipt.completed_at, "member completed_at"));
   if (Math.max(...completionTimes) - Math.min(...completionTimes) > 24 * 60 * 60 * 1000) {
@@ -534,6 +541,7 @@ export function buildRepeatabilityReceipt({ memberReceipts, issuerTaskId, now = 
     canonicalization: CANONICALIZATION,
     repository: REPOSITORY,
     source_ref: SOURCE_REF,
+    selection_digest: members[0].receipt.selection_digest,
     release_sha: members[0].receipt.release_sha,
     release_tree: members[0].receipt.release_tree,
     build_id: members[0].receipt.build_id,
@@ -599,6 +607,7 @@ export function verifyRehearsalReceiptBundleAuthority({
   });
   return Object.freeze({
     rehearsal_receipt_schema: repeatability.schema,
+    selection_digest: repeatability.selection_digest,
     release_sha: repeatability.release_sha,
     release_tree: repeatability.release_tree,
     build_id: repeatability.build_id,

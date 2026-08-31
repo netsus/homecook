@@ -53,6 +53,7 @@ import {
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import { acquireLocalMacProductionPromotionLock } from "../scripts/lib/local-mac-production-release.mjs";
 import {
+  createCompleteProductionCheckPageInput,
   createLocalMacProductionGitEvidence,
   createLocalMacProductionReleaseManifest,
   VERIFIED_ATTESTATION,
@@ -1119,6 +1120,7 @@ describe("local Mac production promote adapters", () => {
       "security-function-authorization", "security-smoke",
       "extra-a", "extra-b", "extra-c", "extra-d", "extra-e",
     ].map((name, index) => ({
+      id: 1_900 + index,
       app: { id: 15368 },
       check_suite: { id: 900 + index },
       completed_at: `2026-08-25T09:00:${String(index).padStart(2, "0")}Z`,
@@ -1127,7 +1129,11 @@ describe("local Mac production promote adapters", () => {
       status: "completed",
     }));
     const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
-      checkRuns,
+      ...createCompleteProductionCheckPageInput({
+        checkRuns,
+        releaseSha: "a".repeat(40),
+        selfSuiteId: 9_002,
+      }),
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260825.1",
       releaseTagObjectSha: "e".repeat(40),
@@ -1135,16 +1141,42 @@ describe("local Mac production promote adapters", () => {
       repository: "netsus/homecook",
       rehearsalAuthority: {
         rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+        selected_sha: null,
+        selected_tree: null,
+        observed_master_sha: null,
+        observed_master_tree: null,
+        selected_at: null,
+        expires_at: null,
+        approver_role: null,
+        approver_id: null,
+        approval_digest: null,
+        selection_digest: null,
         build_id: "build-20260825-01",
         sealed_bundle_digest: "f".repeat(64),
         repeatability_receipt_digest: "1".repeat(64),
         rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
+      },
+      workflowAuthority: {
+        workflow_head_sha: "a".repeat(40),
+        workflow_head_tree: "b".repeat(40),
+        workflow_run_id: 9_001,
+        workflow_run_attempt: 1,
+        workflow_check_suite_id: 9_002,
+      },
+      approvalAuthority: {
+        master_sha_at_approval: "a".repeat(40),
+        master_tree_at_approval: "b".repeat(40),
       },
       subjectOutputPath: subjectPath,
     });
     const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
       attestation_digest: artifacts.subject_manifest_sha256,
       required_check_summary: artifacts.subject.required_check_summary,
+      all_check_suite_count: artifacts.subject.all_check_suite_count,
+      all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
+      all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,
+      all_context_check_suite_ids: artifacts.subject.all_context_check_suite_ids,
+      all_context_commit_statuses_digest: artifacts.subject.all_context_commit_statuses_digest,
     });
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), { mode: 0o600 });
     writeFileSync(bundlePath, "{}\n", { mode: 0o600 });
@@ -1160,6 +1192,10 @@ describe("local Mac production promote adapters", () => {
       releaseTag: manifest.release_tag,
       build_id: manifest.build_id,
       rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+      workflow_head_sha: manifest.workflow_head_sha,
+      workflow_head_tree: manifest.workflow_head_tree,
+      master_sha_at_approval: manifest.master_sha_at_approval,
+      master_tree_at_approval: manifest.master_tree_at_approval,
       sealed_bundle_digest: manifest.sealed_bundle_digest,
       repeatability_receipt_digest: manifest.repeatability_receipt_digest,
       rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
@@ -1171,6 +1207,7 @@ if (arg.includes("origin/master") || arg.includes("^{commit}")) process.stdout.w
 else if (arg.includes("^{tree}")) process.stdout.write("${"b".repeat(40)}\\n");
 else if (arg.includes("^{tag}")) process.stdout.write("${"e".repeat(40)}\\n");
 else if (arg.includes("cat-file tag")) process.stdout.write(${JSON.stringify(`object ${"a".repeat(40)}\ntype commit\ntag prod-20260825.1\ntagger test <test@example.com> 0 +0000\n\n${releaseTagMessage}\n`)});
+else if (arg.includes("merge-base --is-ancestor")) process.exit(0);
 else process.exit(1);
 `, { mode: 0o700 });
     const fakeSecurityPath = join(binDir, "security");

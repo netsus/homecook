@@ -83,6 +83,7 @@ const DEFAULT_INCLUDED_PATHS = Object.freeze([
   "scripts/youtube-extraction-worker-runner.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
   "scripts/lib/local-mac-production-release.mjs",
+  "scripts/lib/local-mac-production-rehearsal-selection.mjs",
   "scripts/lib/local-mac-production-authority-error.mjs",
   "scripts/lib/production-release-approval-policy.mjs",
   "scripts/lib/youtube-extraction-worker-ops.mjs",
@@ -104,6 +105,7 @@ export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
   "lib/server/youtube-i031-runtime/bundle/manifest.json",
   "lib/server/youtube-i031-runtime/bundle/worker.mjs",
   "scripts/lib/local-mac-production-release.mjs",
+  "scripts/lib/local-mac-production-rehearsal-selection.mjs",
   "scripts/lib/local-mac-production-authority-error.mjs",
   "scripts/lib/production-release-approval-policy.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
@@ -118,6 +120,7 @@ export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
 ]);
 const FIRST_CANONICAL_ADOPTION_MISSING_ARTIFACT_FILES = new Set([
   "scripts/lib/local-mac-production-release.mjs",
+  "scripts/lib/local-mac-production-rehearsal-selection.mjs",
   "scripts/lib/local-mac-production-authority-error.mjs",
   "scripts/lib/production-release-approval-policy.mjs",
 ]);

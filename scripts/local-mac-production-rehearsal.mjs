@@ -29,7 +29,8 @@ PRODUCTION MUTATION: 0 (read-only/offline commands only)
 
 Usage:
   pnpm release:rehearsal:inventory -- --json [--home-dir <absolute>] [--root-dir <absolute>] [--approved-migration-marker <absolute>] [--production-env-authority <absolute-private-file>]
-  pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> --production-env-authority <absolute-private-file> --json
+  pnpm release:rehearsal:select -- --release-sha <approved-origin-master-ancestor-sha> --selection-root <absolute-private-root> --expires-at <UTC-RFC3339> --approver-role human-release-approver --approver-id <id> --approval-digest <sha256> --confirm CREATE_REHEARSAL_SELECTION --json
+  pnpm release:rehearsal:candidate -- --release-sha <exact-40hex-origin-master-sha> [--selection <absolute-private-selection>] --production-env-authority <absolute-private-file> --json
   pnpm release:rehearsal:classify -- --inventory <absolute-private-inventory> --json [--root-dir <absolute>]
   pnpm release:rehearsal:receipt -- --candidate <absolute-sealed-candidate> --run-evidence <absolute-completed-run> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
   pnpm release:rehearsal:repeatability -- --member-receipt <absolute-run-receipt> --member-receipt <absolute-run-receipt> --receipt-root <absolute-private-root> --issuer-task-id <task-id> --json
@@ -37,6 +38,7 @@ Usage:
 
 Excluded from this split: Docker rehearsal runner, foreground supervisor, synthetic DB/canary,
 repeatability attestation, production attestation/promotion unlock, and recovery execution.
+Current-tip compatibility: omit --selection only when --release-sha is the exact fetched origin/master tip.
 `;
 
 function parseArguments(argv) {
@@ -55,6 +57,13 @@ function parseArguments(argv) {
     runEvidencePath: null,
     receiptRoot: null,
     issuerTaskId: null,
+    selectionRoot: null,
+    expiresAt: null,
+    approverRole: null,
+    approverId: null,
+    approvalDigest: null,
+    confirmation: null,
+    selectionPath: null,
   };
   for (let index = 1; index < argv.length; index += 1) {
     const token = argv[index];
@@ -64,7 +73,7 @@ function parseArguments(argv) {
       continue;
     }
     const value = argv[index + 1];
-    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker", "--production-env-authority", "--release-sha", "--candidate", "--run-evidence", "--receipt-root", "--issuer-task-id"].includes(token)) {
+    if (["--root-dir", "--home-dir", "--inventory", "--receipt", "--member-receipt", "--approved-migration-marker", "--production-env-authority", "--release-sha", "--candidate", "--run-evidence", "--receipt-root", "--issuer-task-id", "--selection-root", "--selection", "--expires-at", "--approver-role", "--approver-id", "--approval-digest", "--confirm"].includes(token)) {
       if (!value || value.startsWith("--")) throw new Error(`${token} requires a value.`);
       index += 1;
       if (token === "--root-dir") result.rootDir = value;
@@ -79,6 +88,13 @@ function parseArguments(argv) {
       if (token === "--run-evidence") result.runEvidencePath = value;
       if (token === "--receipt-root") result.receiptRoot = value;
       if (token === "--issuer-task-id") result.issuerTaskId = value;
+      if (token === "--selection-root") result.selectionRoot = value;
+      if (token === "--expires-at") result.expiresAt = value;
+      if (token === "--approver-role") result.approverRole = value;
+      if (token === "--approver-id") result.approverId = value;
+      if (token === "--approval-digest") result.approvalDigest = value;
+      if (token === "--confirm") result.confirmation = value;
+      if (token === "--selection") result.selectionPath = value;
       continue;
     }
     throw new Error(`Unknown rehearsal option: ${token}`);
@@ -144,24 +160,60 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     now = new Date(),
     buildCandidate = null,
     createCandidateAdapters = null,
+    immutableBuilderAuthoritySha = null,
     immutableBuilderInputDigest = null,
     immutableBuilderInputEntries = null,
     immutableBootstrapVerified = false,
     beforeCandidateComplete = null,
     candidateNamespaceResolver = defaultCandidateNamespaceResolver,
     runIdFactory = () => randomUUID(),
+    resolveSelectionSource = null,
+    buildSelection = null,
+    writeSelection = null,
+    readSelection = null,
   } = dependencies;
   const options = parseArguments(argv);
   if (["help", "--help", "-h"].includes(options.command)) {
     output.write(HELP);
     return;
   }
-  if (!["inventory", "candidate", "classify", "receipt", "repeatability", "verify"].includes(options.command)) throw new Error(`Unknown rehearsal command: ${options.command}`);
+  if (!["inventory", "select", "candidate", "classify", "receipt", "repeatability", "verify"].includes(options.command)) throw new Error(`Unknown rehearsal command: ${options.command}`);
   if (!options.json) throw new Error("Rehearsal commands require --json for non-secret deterministic output.");
 
   const actualRepositoryRoot = repositoryRootResolver();
   const rootDir = options.rootDir === null ? actualRepositoryRoot : realpathSync(resolve(options.rootDir));
   if (rootDir !== actualRepositoryRoot) throw new Error("--root-dir must exactly match the verified Git repository root.");
+  if (options.command === "select") {
+    if (!/^[0-9a-f]{40}$/u.test(options.releaseSha ?? "")) throw new Error("select --release-sha requires an exact lowercase 40-character SHA.");
+    const selectionRoot = requireAbsolute(options.selectionRoot, "selection root");
+    if (options.confirmation !== "CREATE_REHEARSAL_SELECTION") throw new Error("select requires exact --confirm CREATE_REHEARSAL_SELECTION.");
+    if (options.approverRole !== "human-release-approver") throw new Error("select requires --approver-role human-release-approver.");
+    if (!options.approverId) throw new Error("select --approver-id is required.");
+    if (!/^[0-9a-f]{64}$/u.test(options.approvalDigest ?? "")) throw new Error("select --approval-digest requires lowercase SHA-256.");
+    if (!options.expiresAt) throw new Error("select --expires-at is required.");
+    const selectionModule = [resolveSelectionSource, buildSelection, writeSelection].every((value) => typeof value === "function")
+      ? null
+      : await import("./lib/local-mac-production-rehearsal-selection.mjs");
+    const sourceResolver = resolveSelectionSource ?? selectionModule.resolveRehearsalSelectionSource;
+    const selectionBuilder = buildSelection ?? selectionModule.buildRehearsalSelection;
+    const selectionWriter = writeSelection ?? selectionModule.writeRehearsalSelectionCreateOnly;
+    const source = await sourceResolver({ releaseSha: options.releaseSha, rootDir });
+    const selection = selectionBuilder({
+      schema: "homecook.local-mac-production-rehearsal-selection.v1",
+      canonicalization: "RFC8785-JCS+SHA256",
+      repository: "netsus/homecook",
+      source_ref: "refs/heads/master",
+      ...source,
+      selected_at: now.toISOString(),
+      expires_at: options.expiresAt,
+      approver_role: options.approverRole,
+      approver_id: options.approverId,
+      approval_digest: options.approvalDigest,
+    });
+    const selectionPath = selectionWriter({ selection, selectionRoot, repoRoot: rootDir, now });
+    writeResult(output, { status: "created", selection_path: selectionPath, selection });
+    return;
+  }
   if (options.command === "candidate") {
     if (!/^[0-9a-f]{40}$/u.test(options.releaseSha ?? "")) {
       throw new Error("candidate --release-sha requires an exact lowercase 40-character SHA.");
@@ -172,10 +224,25 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     if (!/^[0-9a-f]{64}$/u.test(immutableBuilderInputDigest ?? "") || !Array.isArray(immutableBuilderInputEntries) || immutableBuilderInputEntries.length === 0) {
       throw new Error("candidate execution requires the verified immutable builder module graph authority.");
     }
+    if (!/^[0-9a-f]{40}$/u.test(immutableBuilderAuthoritySha ?? "")) {
+      throw new Error("candidate execution requires the bootstrap-start immutable builder master authority.");
+    }
     if (typeof beforeCandidateComplete !== "function") {
       throw new Error("candidate execution requires an immutable before-complete finalization guard.");
     }
     requireAbsolute(options.productionEnvAuthorityPath, "production env authority");
+    let selection = null;
+    if (options.selectionPath !== null) {
+      const selectionPath = requireAbsolute(options.selectionPath, "selection path");
+      const selectionModule = readSelection
+        ? null
+        : await import("./lib/local-mac-production-rehearsal-selection.mjs");
+      const selectionReader = readSelection ?? selectionModule.readRehearsalSelectionArtifact;
+      selection = selectionReader(selectionPath, { repoRoot: rootDir, now });
+      if (selection.selected_sha !== options.releaseSha) {
+        throw new Error("candidate --release-sha must equal the approved selection selected_sha.");
+      }
+    }
     const candidateModule = buildCandidate && createCandidateAdapters
       ? null
       : await import("./lib/local-mac-production-rehearsal-candidate.mjs");
@@ -186,13 +253,25 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
       rootDir,
     });
     const adapters = candidateAdapterFactory({
+      builderAuthoritySha: immutableBuilderAuthoritySha,
       builderInputDigest: immutableBuilderInputDigest,
       builderInputEntries: immutableBuilderInputEntries,
       homeDir: resolve(options.homeDir),
       namespaceRoot,
       productionEnvAuthorityPath: options.productionEnvAuthorityPath,
       rootDir,
+      selection,
     });
+    let sourceAuthority = null;
+    if (selection !== null) {
+      if (typeof adapters.resolveSourceAuthority !== "function") {
+        throw new Error("candidate selection requires pre-build full-history source authority validation.");
+      }
+      sourceAuthority = await adapters.resolveSourceAuthority({
+        releaseSha: options.releaseSha,
+        selection,
+      });
+    }
     let completionGuardCalled = false;
     const guardedBeforeComplete = async (authority) => {
       if (completionGuardCalled) throw new Error("candidate immutable finalization guard may run only once.");
@@ -210,6 +289,8 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
       beforeComplete: guardedBeforeComplete,
       namespaceRoot,
       releaseSha: options.releaseSha,
+      selectionDigest: selection?.selection_digest ?? null,
+      sourceAuthority,
       runId: runIdFactory(),
     });
     if (!completionGuardCalled) throw new Error("candidate builder returned before immutable finalization.");
