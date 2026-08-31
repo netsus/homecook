@@ -60,6 +60,8 @@ annotated tag object message는 위 네 값을 canonical field order로 포함�
 
 local task/session ID는 감사 metadata일 뿐 trusted issuer가 아니다. local receipt self digest나 same-user local self-signature도 trust anchor가 아니다. trust chain은 `두 run receipt 검증 → deterministic repeatability receipt → production-release-approval GitHub attestation → pinned trusted root server verifier` 순서다.
 
+private `homecook.local-mac-production-rehearsal-selection.v1` rehearsal-selection artifact는 production approval 또는 deployment authority가 아니다. 이 artifact는 candidate 시작 시점 master의 approved ancestor SHA/tree를 R1 입력으로 선택하는 local fail-closed 증거일 뿐이다. master가 이후 전진해도 선택된 release identity는 유지할 수 있지만, production 승격은 그 selected SHA/tree에 exact 결합된 completed candidate, 두 run, 유효한 repeatability receipt, production manifest, 새 immutable annotated `prod-*` tag, GitHub attestation과 모든 기존 pre-mutation gate를 다시 충족해야 한다. selection digest, approval metadata, local owner 또는 local file identity만으로 tag·attestation·promotion을 만들거나 기존 authority를 재사용하지 않는다.
+
 ## 승격이 허용되는 역할
 
 ### coordinator

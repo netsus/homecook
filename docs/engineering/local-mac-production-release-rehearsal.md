@@ -107,13 +107,39 @@ pnpm release:rehearsal:inventory -- --production-env-authority <absolute-private
 
 ### R1. candidate build and seal
 
+candidate는 기본적으로 candidate 시작 시점의 current `origin/master` exact SHA를 그대로 받는다. 이미 준비한 rehearsal SHA를 보존하면서 unrelated merge만 master에 추가된 경우에는 먼저 private rehearsal-selection artifact를 명시적으로 발급한다.
+
+```text
+pnpm release:rehearsal:selection -- \
+  --release-sha <selected-full-sha> \
+  --selection <absolute-create-only-private-json> \
+  --valid-until <UTC-RFC3339> \
+  --approved-by <actor> \
+  --approval-id <approval-id> \
+  --issuer-task-id <task-id> \
+  --confirm APPROVE_RELEASE_REHEARSAL_SELECTION \
+  --json
+```
+
+`homecook.local-mac-production-rehearsal-selection.v1`은 RFC 8785 JCS의 closed artifact다. exact field는 `schema`, `canonicalization`, `repository`, `source_ref`, `selected_release_sha`, `selected_release_tree`, `observed_master_sha`, `observed_master_tree`, `selected_at`, `valid_until`, `local_authority`, `approval`, `approval_digest`, `selection_digest`다. `approval`은 exact `approved_by`, `approval_id`, `issuer_task_id`, `confirmation_digest`만 가진다. `local_authority`는 exact `rehearsal-selection-only`이며 이 local selection은 production authority가 아니다. selection file의 owner나 self digest도 production approval 또는 trusted issuer가 아니다.
+
+- selection command는 fetch한 `origin/master`와 complete non-shallow Git history에서 selected SHA가 exact commit이고 current master와 같거나 그 조상인지, exact tree와 merge-base가 일치하는지 확인한다. replace object, ambiguous ref, shallow/missing history, non-ancestor는 거부한다.
+- destination은 caller가 지정한 absolute normalized path다. parent는 current uid 소유의 real mode `0700` private directory여야 한다. file은 `O_CREAT|O_EXCL|O_NOFOLLOW`로 한 번만 만들고 exact uid, mode `0600`, nlink `1`, regular-file identity를 다시 확인한다. 기존 file, symlink, hardlink, public parent, path/identity race는 overwrite·chmod·repair하지 않고 거부한다.
+- `selected_at`은 candidate 검증 시점보다 미래일 수 없고 `selected_at < valid_until <= selected_at + 24h`, `now < valid_until`만 유효하다. equality는 expired다. JCS/UTF-8/unknown·duplicate field/approval digest/selection digest 불일치는 모두 fail closed한다.
+- SHA가 candidate 시작 시점 current master와 다르면 `--selection`은 필수다. raw ancestor SHA는 거부한다. current-tip command는 기존처럼 selection 없이 호환된다.
+- candidate는 selection file과 private parent를 `lstat → O_NOFOLLOW open → fstat → FD read → fstat → path lstat`로 고정하고 completion marker 직전 fresh clock과 같은 identity/digest로 다시 검증한다.
+- selected SHA/tree, selection이 관측한 master SHA/tree, candidate 시작 master SHA/tree는 complete history에서 연속된 ancestor chain이어야 한다. history rewrite, fork ambiguity, tree mismatch, expiry는 candidate root completion을 막는다.
+- immutable candidate validator/module graph는 candidate 시작 시점 master SHA/tree에서 읽고, app/full-local/worker build payload는 selected SHA/tree에서 별도로 materialize한다. 두 authority를 같은 tree로 간주하지 않는다.
+- source authorization을 한 번 닫고 candidate가 시작되면 이후 CI pre/post와 completion에서 remote master를 다시 fetch/re-read하지 않는다. 따라서 candidate 시작 뒤 `origin/master`가 앞으로 이동해도 이미 검증한 selected SHA를 무효화하지 않는다. CI와 build, candidate manifest, sealed bundle, run/receipt/repeatability, production manifest/tag/attestation의 release identity는 계속 selected SHA/tree에만 결합한다.
+- selection만으로 promotion할 수 없다. promote는 selected SHA/tree의 completed candidate, 두 독립 run, 유효한 repeatability receipt, production manifest, immutable annotated tag, GitHub attestation과 기존 pre-mutation gate를 모두 다시 요구한다.
+
 planned command:
 
 ```text
-pnpm release:rehearsal:candidate -- --release-sha <full-origin-master-sha> --production-env-authority <absolute-private-full-local-env> --json
+pnpm release:rehearsal:candidate -- --release-sha <selected-full-sha> [--selection <absolute-private-selection>] --production-env-authority <absolute-private-full-local-env> --json
 ```
 
-- candidate는 실행 시점 `origin/master`가 가리키는 exact full SHA여야 하고 current head에서 시작된 CI check 전체가 terminal success여야 한다.
+- selection이 없으면 candidate는 실행 시작 시점 `origin/master`가 가리키는 exact full SHA여야 한다. selection이 있으면 위 approved-ancestor 검증을 통과한 selected SHA를 허용한다. 어느 경우든 selected SHA에서 시작된 CI check 전체가 terminal success여야 한다.
 - 이 단계에서는 `prod-*` tag, production manifest, production attestation을 요구하거나 만들지 않는다.
 - exact SHA/tree의 clean detached source, `pnpm-lock.yaml`, pinned Node/pnpm/Supabase CLI, exact Docker image digest와 build tool identity를 고정한다.
 - frozen lockfile과 승인된 local package store/image cache만 사용한다. 필요한 dependency/image가 없으면 external fetch로 보완하지 않고 fail closed한다.
@@ -126,8 +152,8 @@ split 2 구현 상태:
 - CLI와 closed schema는 각각 `scripts/local-mac-production-rehearsal.mjs candidate`, `scripts/schemas/local-mac-production-rehearsal-candidate.schema.json`이다.
 - public command는 minimal built-in-only `scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs`를 trust launcher로 사용하며 Node `--experimental-vm-modules` flag가 없으면 side effect 전에 실패한다. launcher는 trusted Git/tar/Node와 자기 bytes를 first/last snapshot하고, fetched exact `origin/master` Git archive를 private read-only root에 materialize한다. import graph는 regex가 아니라 comments, strings, regex literals, template literals와 `${...}` expression을 구분하는 closed lexical scanner로 읽는다. external specifier는 `node:` built-in만, graph specifier는 verified `./|../` relative `.mjs`와 exact JSON attribute가 있는 `.json`만 허용하며 absolute/file/data/http/bare/unknown scheme, computed/unsupported syntax는 fail closed한다. exact Git blob OID·Git mode·SHA-256과 materialized file의 dev/inode/ctime/size/uid/gid/nlink/private mode identity를 검증한 뒤 verified source Buffer를 메모리에 유지한다. CLI와 graph module은 pathname `import()`가 아니라 `vm.SourceTextModule`, JSON은 `vm.SyntheticModule`로 생성하고 static/dynamic import 모두 같은 closed linker를 사용한다. 따라서 path/parent를 malicious bytes로 바꿨다가 복구해도 실행 bytes는 변하지 않고 provenance drift는 finalization에서 실패한다. graph의 정렬된 `builder_input_digest`는 source evidence, candidate manifest, bundle authority manifest에 결합되어 completed reader가 교차 검증한다. worktree candidate module을 직접 실행하거나 immutable-bootstrap/module-graph verification 없이 CLI candidate branch를 호출하면 실패한다.
 - candidate root는 repository 밖 `<home>/.homecook/rehearsal/attempts/<UUID-v4>`를 `mkdir` create-only로 한 번 예약한다. caller path 조각을 받지 않고 parent/run root의 realpath·owner·mode·device/inode containment를 terminal marker와 failure cleanup 직전에 다시 검증한다. candidate/bundle/CI authority를 모두 만든 뒤에도 `complete.json`보다 먼저 bootstrap의 단회 `beforeComplete` guard가 실제 loaded module/JSON/tool-lock graph, `builder_input_digest`, bootstrap/Node/Git identity를 재검증해야 한다. guard가 실패하면 CLI는 candidate path를 출력하지 않고 candidate root에는 fixed-schema `failed.json`만 남는다. global destination rename/replace 없이 성공 guard 뒤에만 `complete.json`을 `wx`로 쓰며, 두 marker가 함께 있거나 marker가 없는 root는 reusable candidate가 아니다.
-- source는 실행 직전 fetch한 `origin/master` exact SHA/tree를 trusted Git의 immutable `ls-tree`/`cat-file` blob에서 직접 materialize한다. system/global config, replace object, checkout/index/smudge filter/hook를 authority로 사용하지 않으며 blob OID, Git mode, executable bit, symlink target/containment을 build 전후와 copy 시점에 다시 검증한다. tracked allowlist 밖의 untracked script/migration은 bundle에 들어가지 않고 `.next`/`node_modules`만 run-owned generated output으로 별도 inventory한다.
-- current-head GitHub check-runs와 commit statuses 및 remote `origin/master`는 trusted read-only adapter가 full pagination으로 build 전후 두 번 읽는다. 각 REST item의 actual `head_sha`/`sha`, run ID, suite ID, trusted GitHub Actions integration ID를 보존하고 expected context를 포함한 started check 전체가 계약상 terminal success여야 한다. normalized projection과 suite/run set이 전후 exact match할 때만 create-only `ci-evidence.json`과 digest를 candidate에 묶으며 provider raw payload는 저장하지 않는다. completed candidate reader도 이 evidence file 하나만 허용하고 fatal UTF-8/JCS, closed identity/state, candidate의 세 CI digest를 다시 검증한다.
+- build payload source는 source authorization이 고정한 selected SHA/tree를 trusted Git의 immutable `ls-tree`/`cat-file` blob에서 직접 materialize한다. immutable validator/module graph는 별도로 candidate 시작 master SHA/tree에서 읽는다. system/global config, replace object, checkout/index/smudge filter/hook를 authority로 사용하지 않으며 blob OID, Git mode, executable bit, symlink target/containment을 build 전후와 copy 시점에 다시 검증한다. tracked allowlist 밖의 untracked script/migration은 bundle에 들어가지 않고 `.next`/`node_modules`만 run-owned generated output으로 별도 inventory한다.
+- selected SHA의 GitHub check-runs와 commit statuses는 trusted read-only adapter가 full pagination으로 build 전후 두 번 읽는다. candidate 시작 master SHA/tree는 immutable bootstrap snapshot에서 보존하되 build 중 remote master를 다시 읽지 않는다. 각 REST item의 actual `head_sha`/`sha`, run ID, suite ID, trusted GitHub Actions integration ID를 보존하고 expected context를 포함한 selected SHA started check 전체가 계약상 terminal success여야 한다. normalized projection과 suite/run set이 전후 exact match할 때만 create-only `ci-evidence.json`과 digest를 candidate에 묶으며 provider raw payload는 저장하지 않는다. completed candidate reader도 이 evidence file 하나만 허용하고 fatal UTF-8/JCS, closed identity/state, candidate의 세 CI digest를 다시 검증한다.
 - `ci_check_summary_digest`는 normalized summary만, `ci_snapshot_digest`는 전체 safe projection만 각각 독립 hashing한다. 두 field를 같은 projection digest의 alias로 사용하지 않는다.
 - completed reader는 `complete.json`, `candidate.json`, `candidate-identity.json`, `ci-evidence.json`, physical manifest, bundle authority manifest를 모두 current-owner exact mode `0400`, nlink-1 `O_NOFOLLOW` FD로 읽고 lstat/open/fstat/read/fstat/path-post identity와 containment를 검증한다. realpath를 먼저 적용하지 않고 authority root부터 original absolute lexical path의 각 directory segment를 `lstat`해 symlink가 아님을 확인하며, 각 segment를 `O_DIRECTORY|O_NOFOLLOW` FD로 읽기 종료까지 고정한다. 그 뒤의 realpath는 lexical canonical path와 같아야 하고 전체 chain을 post-read에 다시 검증한다. authority root/parent directory mode는 lifecycle에 따라 exact `0500` 또는 `0700`만 허용하며 group/world bit가 있는 `0444`/`0440`/`0040` file이나 `0555`/`0755` parent를 읽기 위해 자동 chmod하지 않는다. stored CI summary는 check/status array에서 재계산하며 candidate와 bundle의 repository/source ref/SHA/tree/build/toolchain/images/migration/artifacts/file inventory/physical·provenance·input digest를 exact 교차 비교한다.
 - build env source는 `<home>/.homecook/rehearsal/build-env.json` 하나다. exact `homecook.release-rehearsal-build-env.v1` JCS, current-user owner, `0600`, link count 1, parent/target non-symlink, `O_NOFOLLOW` FD pre/post identity를 요구한다. 허용값은 public build-time key allowlist만 child env에 새로 구성하며 raw value는 manifest/log에 남기지 않는다.
@@ -310,7 +336,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 | `release_sha` | exact 40-hex CI-green candidate SHA |
 | `release_tree` | exact Git tree SHA |
 | `ci_head_sha` | `release_sha`와 exact match |
-| `ci_check_summary_digest` | current head에서 시작된 전체 terminal check summary의 canonical SHA-256 |
+| `ci_check_summary_digest` | selected SHA에서 시작된 전체 terminal check summary의 canonical SHA-256 |
 | `build_id` | sealed build의 nonempty exact ID |
 | `sealed_bundle_digest` | app/full-local/worker same bytes를 묶은 lowercase 64-hex SHA-256 |
 | `bundle_manifest_digest` | canonical sealed bundle manifest의 lowercase 64-hex SHA-256 |
@@ -376,7 +402,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 
 다음 중 하나면 receipt를 발급·재사용하지 않는다.
 
-- candidate가 exact CI-green `origin/master` SHA가 아님
+- selection 없는 candidate가 candidate 시작 시점 exact CI-green `origin/master` SHA가 아니거나, ancestor candidate가 valid private rehearsal-selection artifact와 complete-history 검증을 갖추지 않음
 - clean source/tree, tool, image, migration, sealed bundle digest 중 하나라도 불명확함
 - mock-only 실행 또는 app/full-local/worker 중 하나라도 실제 sealed bytes로 시작되지 않음
 - production/rehearsal namespace, port, Docker resource, volume, root, env/DB가 겹침
