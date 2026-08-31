@@ -670,6 +670,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     const manifestPath = inputs.manifestPath;
     const legacyMissingPaths = [
       "scripts/lib/local-mac-production-release.mjs",
+      "scripts/lib/local-mac-production-rehearsal-selection.mjs",
       "scripts/lib/local-mac-production-authority-error.mjs",
       "scripts/lib/production-release-approval-policy.mjs",
     ];
@@ -702,6 +703,27 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       allowLegacyReleaseSha: inputs.releaseSha,
       allowFirstCanonicalAdoptionInventory: true,
     })).not.toThrow();
+  });
+
+  it("keeps the rehearsal selection helper mandatory in current v2 artifacts", () => {
+    const privateDir = createTempDir("yta-current-worker-selection-required-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = inputs.manifestPath;
+    const original = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const requiredPath = "scripts/lib/local-mac-production-rehearsal-selection.mjs";
+    const shortenedBase = {
+      ...original,
+      files: original.files.filter((file: { path: string }) => file.path !== requiredPath),
+    };
+    delete shortenedBase.artifact_sha256;
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(manifestPath, `${JSON.stringify({
+      ...shortenedBase,
+      artifact_sha256: sha256Text(stableStringify(shortenedBase)),
+    }, null, 2)}\n`, 0o444);
+
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/required file is missing.*rehearsal-selection/iu);
   });
 
   it("rejects a self-consistent artifact that drifts from the frozen timing contract", () => {

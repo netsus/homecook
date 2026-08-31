@@ -22,6 +22,7 @@ import {
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
   GITHUB_CLI_TRUSTED_ROOT_SHA256,
   createGitHubProductionReleaseAttestationVerifier,
+  normalizeGitHubProductionReleaseCheckSummary,
   verifyGitHubProductionReleaseAttestation,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import * as productionAttestationAuthority from "../scripts/lib/github-production-release-attestation.mjs";
@@ -87,6 +88,7 @@ const FULL_REHEARSAL_AUTHORITY = REHEARSAL_AUTHORITY;
 
 function createTrustedCheckRuns(checkSuiteId = 200) {
   return EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
+    id: 1_000 + index,
     app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
     check_suite: { id: checkSuiteId },
     completed_at: `2026-08-26T09:00:${String(index).padStart(2, "0")}Z`,
@@ -407,6 +409,44 @@ describe("GitHub production release attestation verification", () => {
         ],
       }).subject.required_check_summary,
     ).toMatchObject({ intended_skip: 1 });
+  });
+
+  it("counts a successful required-context check-run replacement as a rerun and rejects it", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.8",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    };
+    const normalizeCheckSummary = normalizeGitHubProductionReleaseCheckSummary as unknown as (
+      input: { checkRuns: Array<Record<string, unknown>> },
+    ) => { rerun: number; success: number };
+    const originalChecks = createTrustedCheckRuns(200);
+    expect(normalizeCheckSummary({
+      checkRuns: originalChecks,
+    })).toMatchObject({ rerun: 0, success: EXPECTED_RELEASE_CONTEXTS.length });
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: originalChecks,
+    })).not.toThrow();
+
+    const originalQuality = originalChecks.find((entry) => entry.name === "quality");
+    const successfulQualityRerun = {
+      ...originalQuality,
+      id: 2_005,
+      check_suite: { id: 201 },
+      completed_at: "2026-08-26T10:00:00Z",
+      started_at: "2026-08-26T09:59:00Z",
+    };
+    const rawRerunSnapshot = [...originalChecks, successfulQualityRerun];
+    expect(normalizeCheckSummary({
+      checkRuns: rawRerunSnapshot,
+    })).toMatchObject({ rerun: 1, success: EXPECTED_RELEASE_CONTEXTS.length });
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: rawRerunSnapshot,
+    })).toThrow(/rerun|fresh|required context|check-run/iu);
   });
 
   it("rejects a new pending, rerun, or failed check discovered by the final attestation refresh", () => {

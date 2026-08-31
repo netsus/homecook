@@ -2941,6 +2941,7 @@ export function createReleaseRehearsalCandidateAdapters({
   ),
 } = {}, dependencies = {}) {
   const runCommand = dependencies.runCommand ?? spawnSync;
+  const resolveToolPaths = dependencies.resolveToolPaths ?? exactToolPaths;
   const sourceRoot = realpathSync(rootDir);
   sha(builderAuthoritySha, "bootstrap-start builder authority SHA");
   const normalizedHome = realpathSync(homeDir);
@@ -2965,7 +2966,7 @@ export function createReleaseRehearsalCandidateAdapters({
   };
 
   const resolveTools = () => {
-    cachedToolPaths ??= exactToolPaths({
+    cachedToolPaths ??= resolveToolPaths({
       homeDir: normalizedHome,
       toolchainLock: readToolchainLock(),
     });
@@ -3141,7 +3142,7 @@ export function createReleaseRehearsalCandidateAdapters({
         paths: materialized.source_manifest.entries.map((entry) => entry.path),
       };
       const verifiedSourceManifestDigest = verifyExactMaterializedTree({
-        sourceRoot,
+        sourceRoot: checkoutDir,
         sourceManifest: materialized.source_manifest,
       });
       const builderAuthority = validateCandidateBuilderAuthority({

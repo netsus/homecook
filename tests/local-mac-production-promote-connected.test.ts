@@ -452,6 +452,7 @@ describe("connected local Mac production promotion", () => {
       "build", "changes", "dependency-audit", "policy", "quality",
       "security-function-authorization", "security-smoke",
     ].map((name, checkIndex) => ({
+      id: 1_900 + checkIndex,
       app: { id: 15368 },
       check_suite: { id: 900 + checkIndex },
       completed_at: `2026-08-28T09:00:${String(checkIndex).padStart(2, "0")}Z`,
@@ -727,6 +728,7 @@ describe("connected local Mac production promotion", () => {
         "build", "changes", "dependency-audit", "policy", "quality",
         "security-function-authorization", "security-smoke",
       ].map((name, checkIndex) => ({
+        id: (index * 1_000) + checkIndex,
         app: { id: 15368 },
         check_suite: { id: 800 + checkIndex },
         completed_at: `2026-08-25T09:00:${String(checkIndex).padStart(2, "0")}Z`,

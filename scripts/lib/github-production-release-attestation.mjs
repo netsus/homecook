@@ -314,6 +314,8 @@ export function normalizeGitHubProductionReleaseCheckSummary({
     const normalized = {
       appId: Number(entry.app?.id),
       bucket: normalizeBucket(entry),
+      checkRunId: Number(entry.id),
+      checkSuiteId,
       context: contextKey(entry.name ?? entry.context, "check.context"),
       timestamp: sortTimestamp(entry),
     };
@@ -379,6 +381,20 @@ export function normalizeGitHubProductionReleaseCheckSummary({
         `Production release expected context must use trusted GitHub Actions App integration ${GITHUB_ACTIONS_APP_INTEGRATION_ID}: ${expectedContext}.`,
       );
     }
+    if (entries.some((entry) => (
+      !Number.isSafeInteger(entry.checkRunId)
+      || entry.checkRunId <= 0
+      || !Number.isSafeInteger(entry.checkSuiteId)
+      || entry.checkSuiteId <= 0
+    ))) {
+      throw new Error(
+        `Production release expected context must bind positive check-run and check-suite IDs: ${expectedContext}.`,
+      );
+    }
+    const checkRunInstances = new Set(entries.map(
+      (entry) => `${entry.checkRunId}:${entry.checkSuiteId}`,
+    ));
+    summary.rerun += Math.max(0, checkRunInstances.size - 1);
     const latestTimestamp = Math.max(...entries.map((entry) => entry.timestamp));
     const latestEntries = entries.filter((entry) => entry.timestamp === latestTimestamp);
     const latestBuckets = new Set(latestEntries.map((entry) => entry.bucket));
@@ -464,6 +480,15 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   ) {
     throw new Error("Selected rehearsal authority SHA/tree must equal the attested release SHA/tree.");
   }
+  const requiredCheckSummary = normalizeGitHubProductionReleaseCheckSummary({
+    checkRuns,
+    commitStatuses,
+    excludedCheckSuiteIds,
+    expectedContexts,
+  });
+  if (requiredCheckSummary.rerun !== 0) {
+    throw new Error("Production release required context snapshot contains check-run reruns and is not fresh.");
+  }
   const subject = {
     schema: normalizedRehearsalAuthority
       ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2
@@ -489,12 +514,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
       expectedContexts,
       "expected_release_contexts",
     ),
-    required_check_summary: normalizeGitHubProductionReleaseCheckSummary({
-      checkRuns,
-      commitStatuses,
-      excludedCheckSuiteIds,
-      expectedContexts,
-    }),
+    required_check_summary: requiredCheckSummary,
   };
 
   if (subjectOutputPath) {

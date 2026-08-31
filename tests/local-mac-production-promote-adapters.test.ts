@@ -1119,6 +1119,7 @@ describe("local Mac production promote adapters", () => {
       "security-function-authorization", "security-smoke",
       "extra-a", "extra-b", "extra-c", "extra-d", "extra-e",
     ].map((name, index) => ({
+      id: 1_900 + index,
       app: { id: 15368 },
       check_suite: { id: 900 + index },
       completed_at: `2026-08-25T09:00:${String(index).padStart(2, "0")}Z`,

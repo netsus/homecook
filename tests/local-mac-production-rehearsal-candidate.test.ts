@@ -27,6 +27,7 @@ import {
   buildBundleAuthorityManifest,
   buildCandidateSandboxProfile,
   buildReleaseRehearsalCandidate,
+  createReleaseRehearsalCandidateAdapters,
   createSealedCandidateBundle,
   assembleCandidateArtifacts,
   collectSealedMigrationInventory,
@@ -57,6 +58,7 @@ import {
   resolvePinnedPnpmArtifact,
   validateCanonicalComposeAuthority,
 } from "../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
+import { buildRehearsalSelection } from "../scripts/lib/local-mac-production-rehearsal-selection.mjs";
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import {
   materializeImmutableCandidateBootstrap,
@@ -396,8 +398,9 @@ describe("release rehearsal candidate manifest", () => {
 });
 
 describe("release rehearsal candidate input gates", () => {
-  it("uses current-master builder blobs while keeping a differing approved ancestor as payload data", () => {
+  it("uses current-master builder blobs while keeping a differing approved ancestor as payload data", async () => {
     const repo = privateRoot("homecook-selected-payload-repo-");
+    const origin = join(privateRoot("homecook-selected-payload-origin-"), "origin.git");
     const gitHome = privateRoot("homecook-selected-payload-home-");
     const runGit = (args: string[]) => {
       const result = spawnSync("/usr/bin/git", args, {
@@ -418,6 +421,7 @@ describe("release rehearsal candidate input gates", () => {
       expect(result.status, result.stderr).toBe(0);
       return result.stdout.trim();
     };
+    runGit(["init", "--bare", origin]);
     runGit(["init", "--initial-branch=master"]);
     mkdirSync(join(repo, "scripts", "config"), { recursive: true, mode: 0o700 });
     writeFileSync(join(repo, "scripts", "entry.mjs"), "export const builder = 'selected-ancestor'\n");
@@ -431,6 +435,16 @@ describe("release rehearsal candidate input gates", () => {
     writeFileSync(join(repo, "scripts", "config", "lock.json"), "{\"generation\":2}\n");
     runGit(["commit", "-am", "advance trusted builder"]);
     const currentMasterSha = runGit(["rev-parse", "HEAD"]);
+    const currentMasterTree = runGit(["rev-parse", "HEAD^{tree}"]);
+    runGit(["remote", "add", "origin", origin]);
+    runGit(["push", "-u", "origin", "master"]);
+
+    runGit(["switch", "-c", "divergent-observed", selectedSha]);
+    writeFileSync(join(repo, "release-payload.txt"), "divergent observed payload\n");
+    runGit(["commit", "-am", "divergent observed master"]);
+    const divergentObservedSha = runGit(["rev-parse", "HEAD"]);
+    const divergentObservedTree = runGit(["rev-parse", "HEAD^{tree}"]);
+    runGit(["switch", "master"]);
 
     const selectedRoot = join(privateRoot("homecook-selected-payload-root-"), "source");
     const selectedPayload = materializeExactGitTree({
@@ -466,6 +480,110 @@ describe("release rehearsal candidate input gates", () => {
     );
     expect(selectedBuilderEntry?.blob_oid).not.toBe(currentBuilderEntry?.blob_oid);
 
+    const now = new Date();
+    const selectionInput = {
+      schema: "homecook.local-mac-production-rehearsal-selection.v1",
+      canonicalization: "RFC8785-JCS+SHA256",
+      repository: "netsus/homecook",
+      source_ref: "refs/heads/master",
+      selected_sha: selectedSha,
+      selected_tree: runGit(["rev-parse", `${selectedSha}^{tree}`]),
+      observed_master_sha: currentMasterSha,
+      observed_master_tree: currentMasterTree,
+      selected_at: new Date(now.getTime() - 1_000).toISOString(),
+      expires_at: new Date(now.getTime() + 60 * 60 * 1_000).toISOString(),
+      approver_role: "human-release-approver",
+      approver_id: "adapter-fixture-approver",
+      approval_digest: DIGEST_A,
+    } as const;
+    const selection = buildRehearsalSelection(selectionInput, { now });
+    const namespaceRoot = join(privateRoot("homecook-selected-payload-namespace-"), "rehearsal");
+    const candidateAdapterFactory = createReleaseRehearsalCandidateAdapters as unknown as (
+      options: Record<string, unknown>,
+      dependencies: { resolveToolPaths: () => { gitPath: string } },
+    ) => {
+      resolveSourceAuthority(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+      prepareSource(input: Record<string, unknown>): Promise<{
+        checkout_dir: string;
+        evidence: Record<string, unknown>;
+        source_manifest: Record<string, unknown>;
+      }>;
+    };
+    const adapters = candidateAdapterFactory({
+      builderAuthoritySha: currentMasterSha,
+      builderInputDigest: currentBuilderGraph.builder_input_digest,
+      builderInputEntries: currentBuilderGraph.entries,
+      homeDir: gitHome,
+      namespaceRoot,
+      rootDir: repo,
+      selection,
+    }, {
+      resolveToolPaths: () => ({ gitPath: "/usr/bin/git" }),
+    });
+    const sourceAuthority = await adapters.resolveSourceAuthority({ releaseSha: selectedSha, selection });
+    expect(sourceAuthority).toMatchObject({
+      current_master_sha: currentMasterSha,
+      release_sha: selectedSha,
+      release_tree: selection.selected_tree,
+    });
+    const preparedSource = await adapters.prepareSource({
+      releaseSha: selectedSha,
+      runRoot: privateRoot("homecook-selected-payload-run-"),
+    });
+    expect(preparedSource).toMatchObject({
+      evidence: {
+        builder_input_digest: currentBuilderGraph.builder_input_digest,
+        checkout_sha: selectedSha,
+        release_tree: selection.selected_tree,
+      },
+    });
+    writeFileSync(join(preparedSource.checkout_dir, "release-payload.txt"), "tampered payload\n");
+    expect(() => verifyExactMaterializedTree({
+      sourceRoot: preparedSource.checkout_dir,
+      sourceManifest: preparedSource.source_manifest,
+    })).toThrow(/materialized|blob|drift/iu);
+
+    const treeMismatchSelection = buildRehearsalSelection({
+      ...selectionInput,
+      selected_tree: currentMasterTree,
+    }, { now });
+    const treeMismatchAdapters = candidateAdapterFactory({
+      builderAuthoritySha: currentMasterSha,
+      builderInputDigest: currentBuilderGraph.builder_input_digest,
+      builderInputEntries: currentBuilderGraph.entries,
+      homeDir: gitHome,
+      namespaceRoot: join(privateRoot("homecook-tree-mismatch-namespace-"), "rehearsal"),
+      rootDir: repo,
+      selection: treeMismatchSelection,
+    }, {
+      resolveToolPaths: () => ({ gitPath: "/usr/bin/git" }),
+    });
+    await expect(treeMismatchAdapters.resolveSourceAuthority({
+      releaseSha: selectedSha,
+      selection: treeMismatchSelection,
+    })).rejects.toThrow(/tree|authority|mismatch/iu);
+
+    const divergentSelection = buildRehearsalSelection({
+      ...selectionInput,
+      observed_master_sha: divergentObservedSha,
+      observed_master_tree: divergentObservedTree,
+    }, { now });
+    const divergentAdapters = candidateAdapterFactory({
+      builderAuthoritySha: currentMasterSha,
+      builderInputDigest: currentBuilderGraph.builder_input_digest,
+      builderInputEntries: currentBuilderGraph.entries,
+      homeDir: gitHome,
+      namespaceRoot: join(privateRoot("homecook-divergent-namespace-"), "rehearsal"),
+      rootDir: repo,
+      selection: divergentSelection,
+    }, {
+      resolveToolPaths: () => ({ gitPath: "/usr/bin/git" }),
+    });
+    await expect(divergentAdapters.resolveSourceAuthority({
+      releaseSha: selectedSha,
+      selection: divergentSelection,
+    })).rejects.toThrow(/force|diverg|ancestor|observed|master/iu);
+
     const verifiedSourceManifestDigest = verifyExactMaterializedTree({
       sourceRoot: selectedRoot,
       sourceManifest: selectedPayload.source_manifest,
@@ -495,11 +613,6 @@ describe("release rehearsal candidate input gates", () => {
       expectedBuilderInputDigest: currentBuilderGraph.builder_input_digest,
     })).toThrow(/builder|digest|graph|authority/iu);
 
-    writeFileSync(join(selectedRoot, "release-payload.txt"), "tampered payload\n");
-    expect(() => verifyExactMaterializedTree({
-      sourceRoot: selectedRoot,
-      sourceManifest: selectedPayload.source_manifest,
-    })).toThrow(/materialized|blob|drift/iu);
   });
 
   it("runs selected-ancestor candidate tooling from current master while preserving current-tip compatibility", () => {
