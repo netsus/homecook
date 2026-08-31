@@ -56,7 +56,13 @@ function createManifest(overrides: Record<string, unknown> = {}) {
     release_manifest_path: "/Users/tester/.homecook/releases/manifests/prod-20260825.1.json",
     release_sha: "a".repeat(40),
     release_tree: "b".repeat(40),
+    workflow_head_sha: "a".repeat(40),
+    workflow_head_tree: "b".repeat(40),
+    workflow_run_id: 9_001,
+    workflow_run_attempt: 1,
+    workflow_check_suite_id: 9_002,
     master_sha_at_approval: "a".repeat(40),
+    master_tree_at_approval: "b".repeat(40),
     approved_at: "2026-08-25T09:00:00.000Z",
     approved_by_task_id: "task-019-release",
     migration_head: "20260825090000_release_gate",
@@ -82,6 +88,9 @@ function createManifest(overrides: Record<string, unknown> = {}) {
       success: 10,
       intended_skip: 2,
     },
+    all_context_check_run_instances_digest: "2".repeat(64),
+    all_context_check_suite_ids: [200, 201],
+    all_context_commit_statuses_digest: "3".repeat(64),
     expected_release_contexts: [
       "build",
       "changes",
@@ -102,6 +111,11 @@ function createManifest(overrides: Record<string, unknown> = {}) {
 function createGitEvidence(overrides: Record<string, unknown> = {}) {
   return {
     originMasterSha: "a".repeat(40),
+    workflowHeadTreeSha: "b".repeat(40),
+    masterAtApprovalTreeSha: "b".repeat(40),
+    releaseIsAncestorOfWorkflowHead: true,
+    workflowHeadIsAncestorOfMasterAtApproval: true,
+    masterAtApprovalIsAncestorOfOriginMaster: true,
     releaseTagObjectSha: "e".repeat(40),
     releaseTagCommitSha: "a".repeat(40),
     releaseTreeSha: "b".repeat(40),
@@ -109,6 +123,10 @@ function createGitEvidence(overrides: Record<string, unknown> = {}) {
       "Approved production release prod-20260825.1",
       "build_id build-20260825-01",
       "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+      `workflow_head_sha ${"a".repeat(40)}`,
+      `workflow_head_tree ${"b".repeat(40)}`,
+      `master_sha_at_approval ${"a".repeat(40)}`,
+      `master_tree_at_approval ${"b".repeat(40)}`,
       "selection_digest none",
       `sealed_bundle_digest ${"f".repeat(64)}`,
       `repeatability_receipt_digest ${"1".repeat(64)}`,
@@ -148,6 +166,15 @@ describe("local Mac production release manifest", () => {
     expect(schema.required).toContain("expected_release_contexts");
     expect(schema.required).toContain("release_tag_object_sha");
     expect(schema.required).toEqual(expect.arrayContaining([
+      "workflow_head_sha",
+      "workflow_head_tree",
+      "workflow_run_id",
+      "workflow_run_attempt",
+      "workflow_check_suite_id",
+      "master_tree_at_approval",
+      "all_context_check_run_instances_digest",
+      "all_context_check_suite_ids",
+      "all_context_commit_statuses_digest",
       "rehearsal_receipt_schema",
       "selection_digest",
       "selected_sha",
@@ -180,6 +207,18 @@ describe("local Mac production release manifest", () => {
       const: "netsus/homecook/.github/workflows/production-release-attestation.yml",
     });
     expect(schema.properties.expected_release_integration_id).toEqual({ const: 15368 });
+    for (const [file, required] of [
+      ["github-production-release-workflow-authority.schema.json", ["workflow_head_sha", "workflow_run_id", "workflow_check_suite_id"]],
+      ["github-production-release-approval-authority.schema.json", ["master_sha_at_approval", "master_tree_at_approval"]],
+      ["github-production-release-external-check-evidence.schema.json", ["all_context_check_run_instances_digest", "all_context_check_suite_ids", "all_context_commit_statuses_digest"]],
+    ] as const) {
+      const authoritySchema = JSON.parse(readFileSync(
+        new URL(`../scripts/schemas/${file}`, import.meta.url),
+        "utf8",
+      ));
+      expect(authoritySchema.additionalProperties).toBe(false);
+      expect(authoritySchema.required).toEqual(expect.arrayContaining([...required]));
+    }
 
     const require = createRequire(import.meta.url);
     const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
@@ -225,6 +264,11 @@ describe("local Mac production release manifest", () => {
     }, { now: new Date("2026-08-25T08:00:00.000Z") });
     const manifest = createManifest({
       release_manifest_path: "/tmp/release.json",
+      signer_digest: "c".repeat(40),
+      workflow_head_sha: "c".repeat(40),
+      workflow_head_tree: "d".repeat(40),
+      master_sha_at_approval: "e".repeat(40),
+      master_tree_at_approval: "f".repeat(40),
       selected_sha: selection.selected_sha,
       selected_tree: selection.selected_tree,
       observed_master_sha: selection.observed_master_sha,
@@ -238,10 +282,16 @@ describe("local Mac production release manifest", () => {
     });
     const evidence = createGitEvidence({
       originMasterSha: "f".repeat(40),
+      workflowHeadTreeSha: "d".repeat(40),
+      masterAtApprovalTreeSha: "f".repeat(40),
       releaseTagMessage: [
         "Approved production release prod-20260825.1",
         "build_id build-20260825-01",
         "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+        `workflow_head_sha ${"c".repeat(40)}`,
+        `workflow_head_tree ${"d".repeat(40)}`,
+        `master_sha_at_approval ${"e".repeat(40)}`,
+        `master_tree_at_approval ${"f".repeat(40)}`,
         `selection_digest ${selection.selection_digest}`,
         `sealed_bundle_digest ${"f".repeat(64)}`,
         `repeatability_receipt_digest ${"1".repeat(64)}`,
@@ -259,7 +309,24 @@ describe("local Mac production release manifest", () => {
       selected_sha: selection.selected_sha,
       observed_master_sha: selection.observed_master_sha,
       approver_id: selection.approver_id,
+      workflow_head_sha: "c".repeat(40),
+      master_sha_at_approval: "e".repeat(40),
     });
+
+    for (const brokenLineage of [
+      { releaseIsAncestorOfWorkflowHead: false },
+      { workflowHeadIsAncestorOfMasterAtApproval: false },
+      { masterAtApprovalIsAncestorOfOriginMaster: false },
+      { workflowHeadTreeSha: "0".repeat(40) },
+      { masterAtApprovalTreeSha: "0".repeat(40) },
+    ]) {
+      expect(() => validateLocalMacProductionReleaseManifest({
+        manifest,
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => ({ ...evidence, ...brokenLineage }),
+        requireAttestation: false,
+      })).toThrow(/lineage|ancestor|workflow|approval|tree|origin\/master/iu);
+    }
   });
 
   it("resolves the approved release SHA from origin/master instead of the local checkout head", () => {
@@ -332,24 +399,34 @@ describe("local Mac production release manifest", () => {
           stdout: `object ${"a".repeat(40)}\ntype commit\ntag prod-20260825.1\ntagger test <test@example.com> 0 +0000\n\n${createGitEvidence().releaseTagMessage}\n`,
         };
       }
+      if (joined.startsWith("merge-base --is-ancestor ")) {
+        return { status: 0, stdout: "" };
+      }
       throw new Error(`Unexpected git command: ${joined}`);
     }) as typeof import("node:child_process").spawnSync;
 
     expect(
       readLocalMacProductionGitReleaseEvidence({
+        masterShaAtApproval: "a".repeat(40),
         releaseSha: "a".repeat(40),
         releaseTag: "prod-20260825.1",
         rootDir: "/repo",
         runCommand,
+        workflowHeadSha: "a".repeat(40),
       }),
     ).toEqual(createGitEvidence());
 
     expect(invocations).toEqual([
       ["rev-parse", "refs/remotes/origin/master^{commit}"],
+      ["rev-parse", `${"a".repeat(40)}^{tree}`],
+      ["rev-parse", `${"a".repeat(40)}^{tree}`],
       ["rev-parse", "refs/tags/prod-20260825.1^{tag}"],
       ["rev-parse", "refs/tags/prod-20260825.1^{commit}"],
       ["rev-parse", `${"a".repeat(40)}^{tree}`],
       ["cat-file", "tag", "refs/tags/prod-20260825.1"],
+      ["merge-base", "--is-ancestor", "a".repeat(40), "a".repeat(40)],
+      ["merge-base", "--is-ancestor", "a".repeat(40), "a".repeat(40)],
+      ["merge-base", "--is-ancestor", "a".repeat(40), "a".repeat(40)],
     ]);
   });
 

@@ -51,6 +51,18 @@ const REHEARSAL_AUTHORITY_KEYS = [
   "build_id", "sealed_bundle_digest",
   "repeatability_receipt_digest", "rehearsal_receipt_valid_until",
 ];
+const CANONICAL_WORKFLOW_PATH = ".github/workflows/production-release-attestation.yml";
+const WORKFLOW_AUTHORITY_KEYS = [
+  "workflow_head_sha", "workflow_head_tree", "workflow_run_id",
+  "workflow_run_attempt", "workflow_check_suite_id",
+];
+const APPROVAL_AUTHORITY_KEYS = [
+  "master_sha_at_approval", "master_tree_at_approval",
+];
+const EXTERNAL_CHECK_EVIDENCE_KEYS = [
+  "all_context_check_run_instances_digest", "all_context_check_suite_ids",
+  "all_context_commit_statuses_digest",
+];
 const SUBJECT_BASE_KEYS = [
   "schema", "repository", "source_ref", "signer_workflow", "signer_digest",
   "expected_release_integration_id", "release_tag", "release_tag_object_sha",
@@ -78,6 +90,13 @@ function requireSha256(value, label) {
     throw new Error(`${label} must be a 64-character lowercase digest.`);
   }
   return normalized;
+}
+
+function requirePositiveInteger(value, label) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive safe integer.`);
+  }
+  return value;
 }
 
 function requireExactKeys(value, expectedKeys, label) {
@@ -120,6 +139,76 @@ function normalizeRehearsalAuthority(value, label = "rehearsalAuthority") {
       `${label}.repeatability_receipt_digest`,
     ),
     rehearsal_receipt_valid_until: validUntil,
+  });
+}
+
+function normalizeWorkflowAuthority(value, label = "workflowAuthority") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  requireExactKeys(value, WORKFLOW_AUTHORITY_KEYS, label);
+  return Object.freeze({
+    workflow_head_sha: requireSha1(value.workflow_head_sha, `${label}.workflow_head_sha`),
+    workflow_head_tree: requireSha1(value.workflow_head_tree, `${label}.workflow_head_tree`),
+    workflow_run_id: requirePositiveInteger(value.workflow_run_id, `${label}.workflow_run_id`),
+    workflow_run_attempt: requirePositiveInteger(
+      value.workflow_run_attempt,
+      `${label}.workflow_run_attempt`,
+    ),
+    workflow_check_suite_id: requirePositiveInteger(
+      value.workflow_check_suite_id,
+      `${label}.workflow_check_suite_id`,
+    ),
+  });
+}
+
+function normalizeApprovalAuthority(value, label = "approvalAuthority") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  requireExactKeys(value, APPROVAL_AUTHORITY_KEYS, label);
+  return Object.freeze({
+    master_sha_at_approval: requireSha1(
+      value.master_sha_at_approval,
+      `${label}.master_sha_at_approval`,
+    ),
+    master_tree_at_approval: requireSha1(
+      value.master_tree_at_approval,
+      `${label}.master_tree_at_approval`,
+    ),
+  });
+}
+
+function normalizeCheckSuiteIds(value, label) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${label} must be a nonempty array.`);
+  }
+  const normalized = value.map((entry, index) =>
+    requirePositiveInteger(entry, `${label}[${index}]`));
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error(`${label} must contain unique IDs.`);
+  }
+  return [...normalized].sort((left, right) => left - right);
+}
+
+function normalizeExternalCheckEvidence(value, label = "externalCheckEvidence") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  requireExactKeys(value, EXTERNAL_CHECK_EVIDENCE_KEYS, label);
+  return Object.freeze({
+    all_context_check_run_instances_digest: requireSha256(
+      value.all_context_check_run_instances_digest,
+      `${label}.all_context_check_run_instances_digest`,
+    ),
+    all_context_check_suite_ids: normalizeCheckSuiteIds(
+      value.all_context_check_suite_ids,
+      `${label}.all_context_check_suite_ids`,
+    ),
+    all_context_commit_statuses_digest: requireSha256(
+      value.all_context_commit_statuses_digest,
+      `${label}.all_context_commit_statuses_digest`,
+    ),
   });
 }
 
@@ -194,8 +283,8 @@ function normalizeExcludedCheckSuiteIds(value) {
   if (value === undefined || value === null) {
     return [];
   }
-  if (!Array.isArray(value) || value.length === 0) {
-    throw new Error("excludedCheckSuiteIds must be a nonempty array.");
+  if (!Array.isArray(value)) {
+    throw new Error("excludedCheckSuiteIds must be an array.");
   }
   const normalized = value.map((entry, index) => {
     if (!Number.isSafeInteger(entry) || entry <= 0) {
@@ -219,6 +308,99 @@ function sameCheckSummary(left, right) {
 
 function contextKey(value, label) {
   return requireNonEmptyString(value, label).toLowerCase();
+}
+
+export function buildGitHubProductionReleaseWorkflowEvidence({
+  releaseSha,
+  repository,
+  run,
+  runAttempt,
+  runId,
+  sourceRef,
+  workflowHeadSha,
+  workflowHeadTree,
+  workflowId,
+  workflowPath,
+} = {}) {
+  const normalizedRepository = requireCanonicalString(
+    repository,
+    CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    "repository",
+  );
+  const normalizedSourceRef = requireCanonicalString(
+    sourceRef,
+    CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+    "sourceRef",
+  );
+  const normalizedWorkflowPath = requireNonEmptyString(workflowPath, "workflowPath");
+  if (normalizedWorkflowPath !== CANONICAL_WORKFLOW_PATH) {
+    throw new Error(`workflowPath must be ${CANONICAL_WORKFLOW_PATH}.`);
+  }
+  if (!run || typeof run !== "object" || Array.isArray(run)) {
+    throw new Error("Current workflow run evidence must be an object.");
+  }
+  const normalizedRunId = requirePositiveInteger(runId, "runId");
+  const normalizedRunAttempt = requirePositiveInteger(runAttempt, "runAttempt");
+  const normalizedWorkflowId = requirePositiveInteger(workflowId, "workflowId");
+  const normalizedWorkflowHeadSha = requireSha1(workflowHeadSha, "workflowHeadSha");
+  const normalizedWorkflowHeadTree = requireSha1(workflowHeadTree, "workflowHeadTree");
+  const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
+  const expectedRun = {
+    id: normalizedRunId,
+    run_attempt: normalizedRunAttempt,
+    workflow_id: normalizedWorkflowId,
+    path: normalizedWorkflowPath,
+    event: "workflow_dispatch",
+    head_sha: normalizedWorkflowHeadSha,
+    head_branch: normalizedSourceRef.replace(/^refs\/heads\//u, ""),
+    head_repository: normalizedRepository,
+    repository: normalizedRepository,
+  };
+  const actualRun = {
+    id: run.id,
+    run_attempt: run.run_attempt,
+    workflow_id: run.workflow_id,
+    path: run.path,
+    event: run.event,
+    head_sha: run.head_sha,
+    head_branch: run.head_branch,
+    head_repository: run.head_repository?.full_name,
+    repository: run.repository?.full_name,
+  };
+  if (JSON.stringify(actualRun) !== JSON.stringify(expectedRun)) {
+    throw new Error("Current workflow run identity/head/ref/repository/attempt is not exact.");
+  }
+  const workflowCheckSuiteId = requirePositiveInteger(
+    run.check_suite_id,
+    "run.check_suite_id",
+  );
+  const workflowAuthority = normalizeWorkflowAuthority({
+    workflow_head_sha: normalizedWorkflowHeadSha,
+    workflow_head_tree: normalizedWorkflowHeadTree,
+    workflow_run_id: normalizedRunId,
+    workflow_run_attempt: normalizedRunAttempt,
+    workflow_check_suite_id: workflowCheckSuiteId,
+  });
+
+  return Object.freeze({
+    workflow_authority: workflowAuthority,
+    suite_exclusion: Object.freeze({
+      schema: "homecook.github.production-release-suite-exclusions.v2",
+      repository: normalizedRepository,
+      source_ref: normalizedSourceRef,
+      workflow_id: normalizedWorkflowId,
+      workflow_path: normalizedWorkflowPath,
+      event: "workflow_dispatch",
+      release_sha: normalizedReleaseSha,
+      workflow_head_sha: normalizedWorkflowHeadSha,
+      workflow_run_id: normalizedRunId,
+      workflow_run_attempt: normalizedRunAttempt,
+      workflow_check_suite_id: workflowCheckSuiteId,
+      check_suite_ids: normalizedReleaseSha === normalizedWorkflowHeadSha
+        ? [workflowCheckSuiteId]
+        : [],
+    }),
+  });
 }
 
 function sortTimestamp(entry) {
@@ -278,7 +460,7 @@ function normalizeCommitStatusBucket(entry) {
   return "failed";
 }
 
-export function normalizeGitHubProductionReleaseCheckSummary({
+export function buildGitHubProductionReleaseExternalCheckEvidence({
   checkRuns = [],
   commitStatuses = [],
   excludedCheckSuiteIds = null,
@@ -298,6 +480,7 @@ export function normalizeGitHubProductionReleaseCheckSummary({
   const excludedSuiteIdSet = new Set(normalizedExcludedCheckSuiteIds);
   const observedExcludedSuiteIds = new Set();
   const byKey = new Map();
+  const instancesByIdentity = new Map();
   for (const entry of checkRuns) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error("Each production release check run must be an object.");
@@ -319,6 +502,16 @@ export function normalizeGitHubProductionReleaseCheckSummary({
       context: contextKey(entry.name ?? entry.context, "check.context"),
       timestamp: sortTimestamp(entry),
     };
+    if (
+      !Number.isSafeInteger(normalized.checkRunId)
+      || normalized.checkRunId <= 0
+      || !Number.isSafeInteger(normalized.checkSuiteId)
+      || normalized.checkSuiteId <= 0
+    ) {
+      throw new Error(
+        `Production release check context must bind positive check-run and check-suite IDs: ${normalized.context}.`,
+      );
+    }
     if (["pending", "queued"].includes(normalized.bucket)) {
       throw new Error(
         `Production release terminal check summary contains pending checks for ${normalized.context}.`,
@@ -329,6 +522,17 @@ export function normalizeGitHubProductionReleaseCheckSummary({
         `Production release terminal check summary contains failed checks for ${normalized.context}.`,
       );
     }
+    const instanceIdentity = `${normalized.checkRunId}:${normalized.checkSuiteId}`;
+    const existingInstance = instancesByIdentity.get(instanceIdentity);
+    if (existingInstance) {
+      if (JSON.stringify(existingInstance) !== JSON.stringify(normalized)) {
+        throw new Error(
+          `Production release check-run instance has conflicting evidence: ${instanceIdentity}.`,
+        );
+      }
+      continue;
+    }
+    instancesByIdentity.set(instanceIdentity, normalized);
     const bucket = byKey.get(normalized.context) ?? [];
     bucket.push(normalized);
     byKey.set(normalized.context, bucket);
@@ -350,6 +554,9 @@ export function normalizeGitHubProductionReleaseCheckSummary({
     const normalized = {
       bucket: normalizeCommitStatusBucket(entry),
       context: contextKey(entry.context, "commitStatus.context"),
+      id: Number.isSafeInteger(Number(entry.id)) && Number(entry.id) > 0
+        ? Number(entry.id)
+        : null,
       timestamp: sortCommitStatusTimestamp(entry),
     };
     const bucket = statusesByContext.get(normalized.context) ?? [];
@@ -381,20 +588,6 @@ export function normalizeGitHubProductionReleaseCheckSummary({
         `Production release expected context must use trusted GitHub Actions App integration ${GITHUB_ACTIONS_APP_INTEGRATION_ID}: ${expectedContext}.`,
       );
     }
-    if (entries.some((entry) => (
-      !Number.isSafeInteger(entry.checkRunId)
-      || entry.checkRunId <= 0
-      || !Number.isSafeInteger(entry.checkSuiteId)
-      || entry.checkSuiteId <= 0
-    ))) {
-      throw new Error(
-        `Production release expected context must bind positive check-run and check-suite IDs: ${expectedContext}.`,
-      );
-    }
-    const checkRunInstances = new Set(entries.map(
-      (entry) => `${entry.checkRunId}:${entry.checkSuiteId}`,
-    ));
-    summary.rerun += Math.max(0, checkRunInstances.size - 1);
     const latestTimestamp = Math.max(...entries.map((entry) => entry.timestamp));
     const latestEntries = entries.filter((entry) => entry.timestamp === latestTimestamp);
     const latestBuckets = new Set(latestEntries.map((entry) => entry.bucket));
@@ -403,6 +596,10 @@ export function normalizeGitHubProductionReleaseCheckSummary({
         `Production release latest trusted expected context must be exactly success: ${expectedContext}.`,
       );
     }
+  }
+
+  for (const entries of byKey.values()) {
+    summary.rerun += Math.max(0, entries.length - 1);
   }
 
   for (const [context, entries] of statusesByContext) {
@@ -432,12 +629,41 @@ export function normalizeGitHubProductionReleaseCheckSummary({
     summary[latestBucket] += 1;
   }
 
-  return summary;
+  const allInstances = [...instancesByIdentity.values()].sort((left, right) =>
+    left.context.localeCompare(right.context)
+    || left.checkRunId - right.checkRunId
+    || left.checkSuiteId - right.checkSuiteId);
+  const allContextCheckSuiteIds = [...new Set(allInstances.map(
+    (entry) => entry.checkSuiteId,
+  ))].sort((left, right) => left - right);
+  const normalizedCommitStatuses = [...statusesByContext.values()]
+    .flat()
+    .sort((left, right) =>
+      left.context.localeCompare(right.context)
+      || left.timestamp - right.timestamp
+      || (left.id ?? 0) - (right.id ?? 0)
+      || left.bucket.localeCompare(right.bucket));
+
+  return {
+    all_context_check_run_instances_digest: createHash("sha256")
+      .update(JSON.stringify(allInstances))
+      .digest("hex"),
+    all_context_check_suite_ids: allContextCheckSuiteIds,
+    all_context_commit_statuses_digest: createHash("sha256")
+      .update(JSON.stringify(normalizedCommitStatuses))
+      .digest("hex"),
+    required_check_summary: summary,
+  };
+}
+
+export function normalizeGitHubProductionReleaseCheckSummary(options = {}) {
+  return buildGitHubProductionReleaseExternalCheckEvidence(options).required_check_summary;
 }
 
 /**
  * @param {{
  *   checkRuns: Array<Record<string, unknown>>,
+ *   approvalAuthority?: Record<string, unknown> | null,
  *   commitStatuses?: Array<Record<string, unknown>>,
  *   excludedCheckSuiteIds?: number[] | null,
  *   expectedContexts?: string[],
@@ -449,9 +675,11 @@ export function normalizeGitHubProductionReleaseCheckSummary({
  *   repository: string,
  *   rehearsalAuthority?: Record<string, unknown> | null,
  *   subjectOutputPath?: string | null,
+ *   workflowAuthority?: Record<string, unknown> | null,
  * }} [options]
  */
 export function buildGitHubProductionReleaseAttestationArtifacts({
+  approvalAuthority = null,
   checkRuns,
   commitStatuses = [],
   excludedCheckSuiteIds = null,
@@ -464,12 +692,38 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   repository,
   rehearsalAuthority = null,
   subjectOutputPath = null,
+  workflowAuthority = null,
 } = {}) {
   const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
   const normalizedReleaseTree = requireSha1(releaseTree, "releaseTree");
   const normalizedRehearsalAuthority = rehearsalAuthority === null
     ? null
     : normalizeRehearsalAuthority(rehearsalAuthority);
+  const normalizedWorkflowAuthority = normalizedRehearsalAuthority === null
+    ? null
+    : normalizeWorkflowAuthority(workflowAuthority);
+  const normalizedApprovalAuthority = normalizedRehearsalAuthority === null
+    ? null
+    : normalizeApprovalAuthority(approvalAuthority);
+  const normalizedExcludedCheckSuiteIds = normalizeExcludedCheckSuiteIds(excludedCheckSuiteIds);
+  if (normalizedWorkflowAuthority !== null) {
+    const selfSuiteObserved = checkRuns.some((entry) =>
+      Number(entry?.check_suite?.id) === normalizedWorkflowAuthority.workflow_check_suite_id);
+    const expectedExcludedCheckSuiteIds = (
+      normalizedReleaseSha === normalizedWorkflowAuthority.workflow_head_sha
+      && selfSuiteObserved
+    )
+      ? [normalizedWorkflowAuthority.workflow_check_suite_id]
+      : [];
+    if (
+      JSON.stringify(normalizedExcludedCheckSuiteIds)
+      !== JSON.stringify(expectedExcludedCheckSuiteIds)
+    ) {
+      throw new Error(
+        "Production release self-suite exclusion must contain only the exact current workflow suite when observed on the selected release.",
+      );
+    }
+  }
   if (
     normalizedRehearsalAuthority !== null
     && normalizedRehearsalAuthority.selection_digest !== null
@@ -480,14 +734,15 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   ) {
     throw new Error("Selected rehearsal authority SHA/tree must equal the attested release SHA/tree.");
   }
-  const requiredCheckSummary = normalizeGitHubProductionReleaseCheckSummary({
+  const externalCheckEvidence = buildGitHubProductionReleaseExternalCheckEvidence({
     checkRuns,
     commitStatuses,
-    excludedCheckSuiteIds,
+    excludedCheckSuiteIds: normalizedExcludedCheckSuiteIds,
     expectedContexts,
   });
+  const requiredCheckSummary = externalCheckEvidence.required_check_summary;
   if (requiredCheckSummary.rerun !== 0) {
-    throw new Error("Production release required context snapshot contains check-run reruns and is not fresh.");
+    throw new Error("Production release all-context snapshot contains check-run reruns and is not fresh.");
   }
   const subject = {
     schema: normalizedRehearsalAuthority
@@ -500,7 +755,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     ),
     source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
     signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
-    signer_digest: normalizedReleaseSha,
+    signer_digest: normalizedWorkflowAuthority?.workflow_head_sha ?? normalizedReleaseSha,
     expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
     release_tag: validateProductionReleaseTag(releaseTag, "releaseTag"),
     release_tag_object_sha: requireSha1(
@@ -510,6 +765,15 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     release_sha: normalizedReleaseSha,
     release_tree: normalizedReleaseTree,
     ...(normalizedRehearsalAuthority ?? {}),
+    ...(normalizedWorkflowAuthority ?? {}),
+    ...(normalizedApprovalAuthority ?? {}),
+    ...(normalizedRehearsalAuthority === null ? {} : {
+      all_context_check_run_instances_digest:
+        externalCheckEvidence.all_context_check_run_instances_digest,
+      all_context_check_suite_ids: externalCheckEvidence.all_context_check_suite_ids,
+      all_context_commit_statuses_digest:
+        externalCheckEvidence.all_context_commit_statuses_digest,
+    }),
     expected_release_contexts: normalizeExpectedReleaseContexts(
       expectedContexts,
       "expected_release_contexts",
@@ -542,6 +806,15 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     release_sha: subject.release_sha,
     release_tree: subject.release_tree,
     ...(normalizedRehearsalAuthority ?? {}),
+    ...(normalizedWorkflowAuthority ?? {}),
+    ...(normalizedApprovalAuthority ?? {}),
+    ...(normalizedRehearsalAuthority === null ? {} : {
+      all_context_check_run_instances_digest:
+        externalCheckEvidence.all_context_check_run_instances_digest,
+      all_context_check_suite_ids: externalCheckEvidence.all_context_check_suite_ids,
+      all_context_commit_statuses_digest:
+        externalCheckEvidence.all_context_commit_statuses_digest,
+    }),
     expected_release_contexts: subject.expected_release_contexts,
     required_check_summary: subject.required_check_summary,
     subject_manifest_sha256: subjectManifestSha256,
@@ -583,7 +856,15 @@ function validateSubjectDocument({
   }
   requireExactKeys(
     document,
-    manifestRehearsalAuthority ? [...SUBJECT_BASE_KEYS, ...REHEARSAL_AUTHORITY_KEYS] : SUBJECT_BASE_KEYS,
+    manifestRehearsalAuthority
+      ? [
+          ...SUBJECT_BASE_KEYS,
+          ...REHEARSAL_AUTHORITY_KEYS,
+          ...WORKFLOW_AUTHORITY_KEYS,
+          ...APPROVAL_AUTHORITY_KEYS,
+          ...EXTERNAL_CHECK_EVIDENCE_KEYS,
+        ]
+      : SUBJECT_BASE_KEYS,
     "Production release subject manifest",
   );
   if (manifestRehearsalAuthority) {
@@ -593,6 +874,52 @@ function validateSubjectDocument({
     if (JSON.stringify(subjectAuthority) !== JSON.stringify(manifestRehearsalAuthority)) {
       throw new Error("Production release subject rehearsal authority does not match the release manifest.");
     }
+    const subjectWorkflowAuthority = normalizeWorkflowAuthority(Object.fromEntries(
+      WORKFLOW_AUTHORITY_KEYS.map((key) => [key, document[key]]),
+    ), "subject workflow authority");
+    const manifestWorkflowAuthority = normalizeWorkflowAuthority(Object.fromEntries(
+      WORKFLOW_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+    ), "manifest workflow authority");
+    if (JSON.stringify(subjectWorkflowAuthority) !== JSON.stringify(manifestWorkflowAuthority)) {
+      throw new Error("Production release subject workflow authority does not match the release manifest.");
+    }
+    const subjectApprovalAuthority = normalizeApprovalAuthority(Object.fromEntries(
+      APPROVAL_AUTHORITY_KEYS.map((key) => [key, document[key]]),
+    ), "subject approval authority");
+    const manifestApprovalAuthority = normalizeApprovalAuthority(Object.fromEntries(
+      APPROVAL_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+    ), "manifest approval authority");
+    if (JSON.stringify(subjectApprovalAuthority) !== JSON.stringify(manifestApprovalAuthority)) {
+      throw new Error("Production release subject approval authority does not match the release manifest.");
+    }
+    const subjectExternalEvidence = normalizeExternalCheckEvidence(Object.fromEntries(
+      EXTERNAL_CHECK_EVIDENCE_KEYS.map((key) => [key, document[key]]),
+    ), "subject external check evidence");
+    const manifestExternalEvidence = normalizeExternalCheckEvidence(Object.fromEntries(
+      EXTERNAL_CHECK_EVIDENCE_KEYS.map((key) => [key, manifest[key]]),
+    ), "manifest external check evidence");
+    if (JSON.stringify(subjectExternalEvidence) !== JSON.stringify(manifestExternalEvidence)) {
+      throw new Error("Production release subject external check evidence does not match the release manifest.");
+    }
+    if (
+      subjectWorkflowAuthority.workflow_head_tree
+      !== requireSha1(gitEvidence.workflowHeadTreeSha, "gitEvidence.workflowHeadTreeSha")
+    ) {
+      throw new Error("Production release subject workflow head tree does not match git evidence.");
+    }
+    if (
+      subjectApprovalAuthority.master_tree_at_approval
+      !== requireSha1(gitEvidence.masterAtApprovalTreeSha, "gitEvidence.masterAtApprovalTreeSha")
+    ) {
+      throw new Error("Production release subject approval-time master tree does not match git evidence.");
+    }
+    if (
+      gitEvidence.releaseIsAncestorOfWorkflowHead !== true
+      || gitEvidence.workflowHeadIsAncestorOfMasterAtApproval !== true
+      || gitEvidence.masterAtApprovalIsAncestorOfOriginMaster !== true
+    ) {
+      throw new Error("Production release subject Git authority lineage is incomplete.");
+    }
   }
 
   if (requireNonEmptyString(document.repository, "subject.repository") !== repository) {
@@ -600,8 +927,8 @@ function validateSubjectDocument({
   }
   requireCanonicalString(document.source_ref, CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF, "subject.source_ref");
   requireCanonicalString(document.signer_workflow, CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW, "subject.signer_workflow");
-  if (requireSha1(document.signer_digest, "subject.signer_digest") !== requireSha1(manifest.release_sha, "manifest.release_sha")) {
-    throw new Error("Production release subject signer digest does not match the release SHA.");
+  if (requireSha1(document.signer_digest, "subject.signer_digest") !== requireSha1(manifest.workflow_head_sha, "manifest.workflow_head_sha")) {
+    throw new Error("Production release subject signer digest does not match the workflow head SHA.");
   }
   if (
     document.expected_release_integration_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID
@@ -690,7 +1017,14 @@ function validatePredicateDocument({
   requireExactKeys(
     predicate,
     manifestRehearsalAuthority
-      ? [...SUBJECT_BASE_KEYS, ...REHEARSAL_AUTHORITY_KEYS, "subject_manifest_sha256"]
+      ? [
+          ...SUBJECT_BASE_KEYS,
+          ...REHEARSAL_AUTHORITY_KEYS,
+          ...WORKFLOW_AUTHORITY_KEYS,
+          ...APPROVAL_AUTHORITY_KEYS,
+          ...EXTERNAL_CHECK_EVIDENCE_KEYS,
+          "subject_manifest_sha256",
+        ]
       : [...SUBJECT_BASE_KEYS, "subject_manifest_sha256"],
     "Production release predicate",
   );
@@ -701,14 +1035,41 @@ function validatePredicateDocument({
     if (JSON.stringify(predicateAuthority) !== JSON.stringify(manifestRehearsalAuthority)) {
       throw new Error("Production release predicate rehearsal authority does not match the release manifest.");
     }
+    const predicateWorkflowAuthority = normalizeWorkflowAuthority(Object.fromEntries(
+      WORKFLOW_AUTHORITY_KEYS.map((key) => [key, predicate[key]]),
+    ), "predicate workflow authority");
+    const manifestWorkflowAuthority = normalizeWorkflowAuthority(Object.fromEntries(
+      WORKFLOW_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+    ), "manifest workflow authority");
+    if (JSON.stringify(predicateWorkflowAuthority) !== JSON.stringify(manifestWorkflowAuthority)) {
+      throw new Error("Production release predicate workflow authority does not match the release manifest.");
+    }
+    const predicateApprovalAuthority = normalizeApprovalAuthority(Object.fromEntries(
+      APPROVAL_AUTHORITY_KEYS.map((key) => [key, predicate[key]]),
+    ), "predicate approval authority");
+    const manifestApprovalAuthority = normalizeApprovalAuthority(Object.fromEntries(
+      APPROVAL_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+    ), "manifest approval authority");
+    if (JSON.stringify(predicateApprovalAuthority) !== JSON.stringify(manifestApprovalAuthority)) {
+      throw new Error("Production release predicate approval authority does not match the release manifest.");
+    }
+    const predicateExternalEvidence = normalizeExternalCheckEvidence(Object.fromEntries(
+      EXTERNAL_CHECK_EVIDENCE_KEYS.map((key) => [key, predicate[key]]),
+    ), "predicate external check evidence");
+    const manifestExternalEvidence = normalizeExternalCheckEvidence(Object.fromEntries(
+      EXTERNAL_CHECK_EVIDENCE_KEYS.map((key) => [key, manifest[key]]),
+    ), "manifest external check evidence");
+    if (JSON.stringify(predicateExternalEvidence) !== JSON.stringify(manifestExternalEvidence)) {
+      throw new Error("Production release predicate external check evidence does not match the release manifest.");
+    }
   }
   if (requireNonEmptyString(predicate.repository, "predicate.repository") !== repository) {
     throw new Error("Production release attestation predicate repository does not match the verifier repository.");
   }
   requireCanonicalString(predicate.source_ref, CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF, "predicate.source_ref");
   requireCanonicalString(predicate.signer_workflow, CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW, "predicate.signer_workflow");
-  if (requireSha1(predicate.signer_digest, "predicate.signer_digest") !== requireSha1(manifest.release_sha, "manifest.release_sha")) {
-    throw new Error("Production release predicate signer digest does not match the release SHA.");
+  if (requireSha1(predicate.signer_digest, "predicate.signer_digest") !== requireSha1(manifest.workflow_head_sha, "manifest.workflow_head_sha")) {
+    throw new Error("Production release predicate signer digest does not match the workflow head SHA.");
   }
   if (
     predicate.expected_release_integration_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID
@@ -769,8 +1130,13 @@ function validatePredicateDocument({
  *   bundlePath?: string | null,
  *   ghExecutable?: string | null,
  *   gitEvidence: {
+ *     masterAtApprovalIsAncestorOfOriginMaster: boolean,
+ *     masterAtApprovalTreeSha: string,
  *     originMasterSha: string,
+ *     releaseIsAncestorOfWorkflowHead: boolean,
  *     releaseTreeSha: string,
+ *     workflowHeadIsAncestorOfMasterAtApproval: boolean,
+ *     workflowHeadTreeSha: string,
  *   },
  *   manifest: Record<string, unknown>,
  *   manifestDigest?: string | null,
@@ -833,10 +1199,10 @@ export function verifyGitHubProductionReleaseAttestation({
     "sourceRef",
   );
   const normalizedSignerDigest = signerDigest === undefined || signerDigest === null
-    ? requireSha1(manifest.release_sha, "manifest.release_sha")
+    ? requireSha1(manifest.workflow_head_sha, "manifest.workflow_head_sha")
     : requireSha1(signerDigest, "signerDigest");
-  if (normalizedSignerDigest !== requireSha1(manifest.release_sha, "manifest.release_sha")) {
-    throw new Error("signerDigest must equal the exact release SHA.");
+  if (normalizedSignerDigest !== requireSha1(manifest.workflow_head_sha, "manifest.workflow_head_sha")) {
+    throw new Error("signerDigest must equal the exact workflow head SHA.");
   }
   const expectedPredicateType = manifest.schema === "homecook.local-mac-production-release.v2"
     ? GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2

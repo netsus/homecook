@@ -51,6 +51,17 @@ const EXPECTED_RELEASE_CONTEXTS = [
   "security-smoke",
 ];
 const RELEASE_TAG_OBJECT_SHA = "e".repeat(40);
+const WORKFLOW_AUTHORITY = {
+  workflow_head_sha: "c".repeat(40),
+  workflow_head_tree: "d".repeat(40),
+  workflow_run_id: 9_001,
+  workflow_run_attempt: 1,
+  workflow_check_suite_id: 9_002,
+};
+const APPROVAL_AUTHORITY = {
+  master_sha_at_approval: "e".repeat(40),
+  master_tree_at_approval: "f".repeat(40),
+};
 const FULL_SELECTION = buildRehearsalSelection({
   schema: "homecook.local-mac-production-rehearsal-selection.v1",
   canonicalization: "RFC8785-JCS+SHA256",
@@ -114,6 +125,66 @@ afterEach(() => {
 });
 
 describe("GitHub production release attestation verification", () => {
+  it("separates approved-ancestor payload identity from exact current workflow-run authority", () => {
+    const buildWorkflowEvidence = (
+      productionAttestationAuthority as unknown as Record<string, unknown>
+    ).buildGitHubProductionReleaseWorkflowEvidence;
+    expect(typeof buildWorkflowEvidence).toBe("function");
+    if (typeof buildWorkflowEvidence !== "function") return;
+
+    const input = {
+      releaseSha: "a".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      sourceRef: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
+      workflowHeadSha: WORKFLOW_AUTHORITY.workflow_head_sha,
+      workflowHeadTree: WORKFLOW_AUTHORITY.workflow_head_tree,
+      workflowId: 77,
+      workflowPath: ".github/workflows/production-release-attestation.yml",
+      runId: WORKFLOW_AUTHORITY.workflow_run_id,
+      runAttempt: WORKFLOW_AUTHORITY.workflow_run_attempt,
+      run: {
+        id: WORKFLOW_AUTHORITY.workflow_run_id,
+        run_attempt: WORKFLOW_AUTHORITY.workflow_run_attempt,
+        check_suite_id: WORKFLOW_AUTHORITY.workflow_check_suite_id,
+        workflow_id: 77,
+        path: ".github/workflows/production-release-attestation.yml",
+        event: "workflow_dispatch",
+        head_sha: WORKFLOW_AUTHORITY.workflow_head_sha,
+        head_branch: "master",
+        head_repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+        repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+      },
+    };
+    const invoke = (overrides: Record<string, unknown> = {}) =>
+      (buildWorkflowEvidence as (value: Record<string, unknown>) => Record<string, unknown>)({
+        ...input,
+        ...overrides,
+      });
+
+    expect(invoke()).toMatchObject({
+      workflow_authority: WORKFLOW_AUTHORITY,
+      suite_exclusion: {
+        release_sha: "a".repeat(40),
+        workflow_head_sha: WORKFLOW_AUTHORITY.workflow_head_sha,
+        workflow_run_id: WORKFLOW_AUTHORITY.workflow_run_id,
+        check_suite_ids: [],
+      },
+    });
+    expect(invoke({ releaseSha: WORKFLOW_AUTHORITY.workflow_head_sha })).toMatchObject({
+      suite_exclusion: {
+        check_suite_ids: [WORKFLOW_AUTHORITY.workflow_check_suite_id],
+      },
+    });
+
+    for (const [label, run] of [
+      ["head", { ...input.run, head_sha: "0".repeat(40) }],
+      ["ref", { ...input.run, head_branch: "feature/forged" }],
+      ["run ID", { ...input.run, id: WORKFLOW_AUTHORITY.workflow_run_id + 1 }],
+    ] as const) {
+      expect(() => invoke({ run }), label).toThrow(/workflow|run|head|ref|branch|identity/iu);
+    }
+  });
+
   it("keeps tag push and attestation at zero without a fresh completion safety margin", () => {
     expect(typeof rehearsalAuthorityCli.assertRehearsalAuthorityFreshForTagPush).toBe("function");
     const tagPush = vi.fn();
@@ -146,23 +217,41 @@ describe("GitHub production release attestation verification", () => {
       releaseTree: "b".repeat(40),
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
       rehearsalAuthority: REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
     });
 
     expect(artifacts.subject).toMatchObject({
       schema: "homecook.github.production-release-manifest.v2",
       ...REHEARSAL_AUTHORITY,
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
+      signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
+      all_context_check_suite_ids: [200],
+      all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
     expect(artifacts.predicate).toMatchObject({
       schema: "homecook.github.production-release-predicate.v2",
       ...REHEARSAL_AUTHORITY,
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
+      signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
+      all_context_check_suite_ids: [200],
+      all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
     expect(productionAttestationAuthority.buildProductionReleaseAnnotatedTagMessage({
       releaseTag: "prod-20260826.1",
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
       ...REHEARSAL_AUTHORITY,
     })).toBe([
       "Approved production release prod-20260826.1",
       `build_id ${REHEARSAL_AUTHORITY.build_id}`,
       `rehearsal_receipt_schema ${REHEARSAL_AUTHORITY.rehearsal_receipt_schema}`,
+      `workflow_head_sha ${WORKFLOW_AUTHORITY.workflow_head_sha}`,
+      `workflow_head_tree ${WORKFLOW_AUTHORITY.workflow_head_tree}`,
+      `master_sha_at_approval ${APPROVAL_AUTHORITY.master_sha_at_approval}`,
+      `master_tree_at_approval ${APPROVAL_AUTHORITY.master_tree_at_approval}`,
       `selection_digest ${REHEARSAL_AUTHORITY.selection_digest}`,
       `sealed_bundle_digest ${REHEARSAL_AUTHORITY.sealed_bundle_digest}`,
       `repeatability_receipt_digest ${REHEARSAL_AUTHORITY.repeatability_receipt_digest}`,
@@ -179,6 +268,8 @@ describe("GitHub production release attestation verification", () => {
       releaseTree: FULL_SELECTION.selected_tree,
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
       rehearsalAuthority: FULL_REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
     });
 
     for (const key of [
@@ -205,6 +296,8 @@ describe("GitHub production release attestation verification", () => {
         ...FULL_REHEARSAL_AUTHORITY,
         approver_id: "substituted-approver",
       },
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
     })).toThrow(/selection|digest|authority|approver/iu);
   });
 
@@ -372,6 +465,8 @@ describe("GitHub production release attestation verification", () => {
           ...checks,
           {
             ...quality,
+            id: 2_004,
+            check_suite: { id: 201 },
             completed_at: "2026-08-26T10:00:00Z",
             conclusion: "skipped",
           },
@@ -386,12 +481,14 @@ describe("GitHub production release attestation verification", () => {
           ...checks,
           {
             ...quality,
+            id: 3_004,
+            check_suite: { id: 202 },
             completed_at: "2026-08-26T08:00:00Z",
             conclusion: "skipped",
           },
         ],
       }),
-    ).not.toThrow();
+    ).toThrow(/quality|rerun|fresh|check-run/iu);
 
     expect(
       buildGitHubProductionReleaseAttestationArtifacts({
@@ -399,6 +496,7 @@ describe("GitHub production release attestation verification", () => {
         checkRuns: [
           ...checks,
           {
+            id: 9_999,
             app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
             check_suite: { id: 999 },
             completed_at: "2026-08-26T10:01:00Z",
@@ -447,6 +545,52 @@ describe("GitHub production release attestation verification", () => {
       ...releaseInput,
       checkRuns: rawRerunSnapshot,
     })).toThrow(/rerun|fresh|required context|check-run/iu);
+  });
+
+  it("counts successful optional-context replacements as reruns while accepting one exact instance", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.10",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: REHEARSAL_AUTHORITY,
+      workflowAuthority: WORKFLOW_AUTHORITY,
+      approvalAuthority: APPROVAL_AUTHORITY,
+    };
+    const optionalSecurityAdvisory = {
+      id: 3_001,
+      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      check_suite: { id: 301 },
+      completed_at: "2026-08-26T10:00:00Z",
+      conclusion: "success",
+      name: "optional-security-advisory",
+      status: "completed",
+    };
+
+    const oneOptionalInstance = buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: [...createTrustedCheckRuns(), optionalSecurityAdvisory],
+    });
+    expect(oneOptionalInstance.subject.required_check_summary).toMatchObject({ rerun: 0 });
+    expect(oneOptionalInstance.subject).toMatchObject({
+      all_context_check_suite_ids: [200, 301],
+      all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      ...releaseInput,
+      checkRuns: [
+        ...createTrustedCheckRuns(),
+        optionalSecurityAdvisory,
+        {
+          ...optionalSecurityAdvisory,
+          id: 3_002,
+          check_suite: { id: 302 },
+          completed_at: "2026-08-26T10:01:00Z",
+        },
+      ],
+    })).toThrow(/optional-security-advisory|rerun|fresh|check-run/iu);
   });
 
   it("rejects a new pending, rerun, or failed check discovered by the final attestation refresh", () => {
@@ -567,6 +711,7 @@ describe("GitHub production release attestation verification", () => {
           priorCanonicalSuiteFailed,
           currentSuitePending,
           {
+            id: 7_778,
             app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
             check_suite: { id: 778 },
             name: "other-pending-check",
@@ -602,7 +747,6 @@ describe("GitHub production release attestation verification", () => {
   });
 
   it.each([
-    { excludedCheckSuiteIds: [] },
     { excludedCheckSuiteIds: [777, 777] },
     { excludedCheckSuiteIds: [0] },
     { excludedCheckSuiteIds: [-1] },
@@ -642,6 +786,8 @@ describe("GitHub production release attestation verification", () => {
           ...successfulRuns,
           {
             ...qualitySuccess,
+            id: 2_004,
+            check_suite: { id: 201 },
             completed_at: "2026-08-26T08:00:00Z",
             conclusion: "failure",
           },
@@ -678,10 +824,19 @@ describe("GitHub production release attestation verification", () => {
     const manifestPath = join(rootDir, "release-manifest.json");
     const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
       attestation_digest: "a".repeat(64),
+      ...FULL_REHEARSAL_AUTHORITY,
+      signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
+      ...WORKFLOW_AUTHORITY,
+      ...APPROVAL_AUTHORITY,
     });
     const gitEvidence = createLocalMacProductionGitEvidence({
       releaseSha: manifest.release_sha,
       releaseTree: manifest.release_tree,
+      overrides: {
+        originMasterSha: "9".repeat(40),
+        workflowHeadTreeSha: WORKFLOW_AUTHORITY.workflow_head_tree,
+        masterAtApprovalTreeSha: APPROVAL_AUTHORITY.master_tree_at_approval,
+      },
     });
 
     writeFileSync(subjectManifestPath, JSON.stringify({
@@ -689,12 +844,19 @@ describe("GitHub production release attestation verification", () => {
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
       source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
       signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
-      signer_digest: manifest.release_sha,
+      signer_digest: manifest.workflow_head_sha,
       expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
       release_tag: manifest.release_tag,
       release_tag_object_sha: manifest.release_tag_object_sha,
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
+      workflow_head_sha: manifest.workflow_head_sha,
+      workflow_head_tree: manifest.workflow_head_tree,
+      workflow_run_id: manifest.workflow_run_id,
+      workflow_run_attempt: manifest.workflow_run_attempt,
+      workflow_check_suite_id: manifest.workflow_check_suite_id,
+      master_sha_at_approval: manifest.master_sha_at_approval,
+      master_tree_at_approval: manifest.master_tree_at_approval,
       rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
       selected_sha: manifest.selected_sha,
       selected_tree: manifest.selected_tree,
@@ -712,6 +874,9 @@ describe("GitHub production release attestation verification", () => {
       rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
       expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
       required_check_summary: manifest.required_check_summary,
+      all_context_check_run_instances_digest: manifest.all_context_check_run_instances_digest,
+      all_context_check_suite_ids: manifest.all_context_check_suite_ids,
+      all_context_commit_statuses_digest: manifest.all_context_commit_statuses_digest,
     }, null, 2));
     writeFileSync(bundlePath, "{}\n");
     writeFileSync(trustedRootPath, "{}\n");
@@ -742,12 +907,19 @@ describe("GitHub production release attestation verification", () => {
                   repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
                   source_ref: CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
                   signer_workflow: CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
-                  signer_digest: manifest.release_sha,
+                  signer_digest: manifest.workflow_head_sha,
                   expected_release_integration_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
                   release_tag: manifest.release_tag,
                   release_tag_object_sha: attestedPredicateTagObjectSha,
                   release_sha: manifest.release_sha,
                   release_tree: manifest.release_tree,
+                  workflow_head_sha: manifest.workflow_head_sha,
+                  workflow_head_tree: manifest.workflow_head_tree,
+                  workflow_run_id: manifest.workflow_run_id,
+                  workflow_run_attempt: manifest.workflow_run_attempt,
+                  workflow_check_suite_id: manifest.workflow_check_suite_id,
+                  master_sha_at_approval: manifest.master_sha_at_approval,
+                  master_tree_at_approval: manifest.master_tree_at_approval,
                   rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
                   selected_sha: manifest.selected_sha,
                   selected_tree: manifest.selected_tree,
@@ -765,6 +937,9 @@ describe("GitHub production release attestation verification", () => {
                   rehearsal_receipt_valid_until: manifest.rehearsal_receipt_valid_until,
                   expected_release_contexts: EXPECTED_RELEASE_CONTEXTS,
                   required_check_summary: manifest.required_check_summary,
+                  all_context_check_run_instances_digest: manifest.all_context_check_run_instances_digest,
+                  all_context_check_suite_ids: manifest.all_context_check_suite_ids,
+                  all_context_commit_statuses_digest: manifest.all_context_commit_statuses_digest,
                   subject_manifest_sha256: "a".repeat(64),
                 },
                 subject: [
@@ -799,6 +974,19 @@ describe("GitHub production release attestation verification", () => {
     });
     expect(invokedCommands).toEqual(["/opt/homebrew/bin/gh"]);
 
+    expect(() => verifier({
+      gitEvidence,
+      manifest: {
+        ...manifest,
+        master_sha_at_approval: "0".repeat(40),
+      },
+      manifestDigest: "d".repeat(64),
+      manifestPath,
+      rootDir,
+    })).toThrow(/approval|master_sha_at_approval|authority|manifest/iu);
+    invocations.pop();
+    invokedCommands.pop();
+
     expect(invocations).toEqual([
       [
         "attestation",
@@ -815,7 +1003,7 @@ describe("GitHub production release attestation verification", () => {
         "--source-ref",
         CANONICAL_GITHUB_PRODUCTION_RELEASE_SOURCE_REF,
         "--signer-digest",
-        manifest.release_sha,
+        manifest.workflow_head_sha,
         "--predicate-type",
         "https://github.com/netsus/homecook/attestations/production-release/v2",
         "--format",

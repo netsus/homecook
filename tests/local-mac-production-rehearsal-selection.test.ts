@@ -223,6 +223,7 @@ describe("release rehearsal selection authority", () => {
         releaseSha: string;
         rootDir: string;
         selection: ReturnType<typeof buildSelection>;
+        now?: Date;
       }) => Record<string, unknown>;
     }).resolveCandidateRehearsalSourceAuthority;
     if (typeof resolveCandidateAuthority !== "function") throw new Error("candidate selection resolver is unavailable");
@@ -230,6 +231,7 @@ describe("release rehearsal selection authority", () => {
       releaseSha: history.selectedSha,
       rootDir: history.repository,
       selection,
+      now: NOW,
     })).toMatchObject({
       mode: "approved_ancestor",
       current_master_sha: advancedMasterSha,
@@ -248,6 +250,7 @@ describe("release rehearsal selection authority", () => {
       releaseSha: history.selectedSha,
       rootDir: history.repository,
       selection,
+      now: NOW,
     })).toThrow(/force|diverg|ancestor|observed|master/iu);
   });
 

@@ -9,6 +9,7 @@ import { normalizeExpectedReleaseContexts } from "./lib/production-release-appro
 
 function parseArgs(argv) {
   const options = {
+    approvalAuthorityPath: null,
     checkRunsPath: null,
     commitStatusesPath: null,
     excludedCheckSuiteIdsPath: null,
@@ -21,6 +22,7 @@ function parseArgs(argv) {
     repository: null,
     rehearsalAuthorityPath: null,
     subjectOutputPath: null,
+    workflowAuthorityPath: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -33,7 +35,9 @@ function parseArgs(argv) {
       throw new Error(`${token} requires a value.`);
     }
 
-    if (token === "--check-runs-json") {
+    if (token === "--approval-authority-json") {
+      options.approvalAuthorityPath = value;
+    } else if (token === "--check-runs-json") {
       options.checkRunsPath = value;
     } else if (token === "--commit-statuses-json") {
       options.commitStatusesPath = value;
@@ -57,6 +61,8 @@ function parseArgs(argv) {
       options.rehearsalAuthorityPath = value;
     } else if (token === "--subject-output") {
       options.subjectOutputPath = value;
+    } else if (token === "--workflow-authority-json") {
+      options.workflowAuthorityPath = value;
     } else {
       throw new Error(`Unknown argument: ${token}`);
     }
@@ -107,6 +113,12 @@ try {
   if (!options.rehearsalAuthorityPath) {
     throw new Error("--rehearsal-authority-json <path> is required for production release v2.");
   }
+  if (!options.workflowAuthorityPath) {
+    throw new Error("--workflow-authority-json <path> is required for production release v2.");
+  }
+  if (!options.approvalAuthorityPath) {
+    throw new Error("--approval-authority-json <path> is required for production release v2.");
+  }
   const authority = JSON.parse(readFileSync(options.rehearsalAuthorityPath, "utf8"));
   if (authority.release_sha !== options.releaseSha || authority.release_tree !== options.releaseTree) {
     throw new Error("Rehearsal authority SHA/tree does not match the requested release.");
@@ -128,7 +140,10 @@ try {
     repeatability_receipt_digest: authority.repeatability_receipt_digest,
     rehearsal_receipt_valid_until: authority.rehearsal_receipt_valid_until,
   };
+  const workflowAuthority = JSON.parse(readFileSync(options.workflowAuthorityPath, "utf8"));
+  const approvalAuthority = JSON.parse(readFileSync(options.approvalAuthorityPath, "utf8"));
   const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+    approvalAuthority,
     checkRuns,
     commitStatuses,
     excludedCheckSuiteIds: excludedSuiteEvidence.check_suite_ids,
@@ -141,6 +156,7 @@ try {
     repository: options.repository,
     rehearsalAuthority,
     subjectOutputPath: options.subjectOutputPath,
+    workflowAuthority,
   });
 
   process.stdout.write(`${JSON.stringify(artifacts, null, 2)}\n`);
