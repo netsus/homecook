@@ -15,6 +15,7 @@ const SCAN_ROOTS = ["app", "components", "lib"];
 
 const PUBLIC_ALLOWLIST_FILES = new Set([
   "app/api/v1/feedback/404/route.ts",
+  "app/api/v1/marketing/validation/route.ts",
   ...HYBRID_PUBLIC_ROUTE_CONTRACTS.map((contract) => contract.file),
 ]);
 

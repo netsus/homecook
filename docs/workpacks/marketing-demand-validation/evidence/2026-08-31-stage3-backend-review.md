@@ -29,11 +29,13 @@
 
 - Focused Vitest: 6 files, 80 tests passed
 - Product Vitest: 253 files, 2,984 tests (2,809 passed / 175 intentionally skipped)
+- Full Vitest: 683 files, 8,163 tests (7,659 passed / 504 intentionally skipped)
 - TypeScript: `pnpm typecheck` passed
 - ESLint: `pnpm lint` passed
 - Next production build: passed; `/api/v1/marketing/validation` route emitted
 - Security Playwright smoke: 12/12 passed
 - Fresh isolated full-local migration/security gate: all migrations including `20260831100000_marketing_validation_sessions.sql` replayed; security-function PostgreSQL and Data API negative smoke passed
+- Global authority inventory repair: marketing route classified as `public`, verified-session user route count preserved at 11, account-session inventory updated to 71 routes / 107 write surfaces; related 110 focused tests passed
 - Diff whitespace: `git diff --check` passed
 
 ## Pending

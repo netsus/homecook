@@ -20,7 +20,6 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "app/api/v1/cooking/session-attempts/route.ts",
   "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
   "app/api/v1/cooking/standalone-complete/route.ts",
-  "app/api/v1/marketing/validation/route.ts",
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/route.ts",
@@ -29,9 +28,11 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "lib/server/youtube-import.ts",
 ];
 const APPROVED_SERVICE_ROLE_FILES = [
-  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 10),
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 5),
+  "app/api/v1/marketing/validation/route.ts",
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(5, 9),
   "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
-  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(10),
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(9),
 ];
 
 function fixtureRepository(files: Record<string, string>) {
@@ -60,6 +61,11 @@ describe("hybrid authority AST/static gate", () => {
       .toEqual(APPROVED_USER_SERVICE_ROLE_FILES);
     expect(inventory.userDirectServiceRoleEntries.every((entry) =>
       entry.classification === "user" && entry.kind === "service-role-call"
+    )).toBe(true);
+    expect(inventory.publicServiceRoleEntries.map((entry) => entry.file))
+      .toEqual(["app/api/v1/marketing/validation/route.ts"]);
+    expect(inventory.publicServiceRoleEntries.every((entry) =>
+      entry.classification === "public" && entry.kind === "service-role-call"
     )).toBe(true);
     expect(inventory.internalOperationViolations).toEqual([]);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))

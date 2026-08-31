@@ -42,6 +42,7 @@ const ROUTE_METADATA_BY_KEY = {
   "POST /api/v1/cooked-batches/[id]/adjust": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/cooked-batches/[id]/close-unweighed": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/feedback/404": { owner_scope: "public", persists_personal_state: false },
+  "POST /api/v1/marketing/validation": { owner_scope: "public", persists_personal_state: false },
   "POST /api/v1/food-products": { owner_scope: "authenticated-user", persists_personal_state: true },
   "PATCH /api/v1/food-products/[product_id]": { owner_scope: "authenticated-user", persists_personal_state: true },
   "DELETE /api/v1/food-products/[product_id]": { owner_scope: "authenticated-user", persists_personal_state: true },

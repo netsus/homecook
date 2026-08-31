@@ -236,7 +236,7 @@ const sourceEvidence = {
   recipe_delete_handler_count: 1,
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
-  public_service_role_entry_count: 0,
+  public_service_role_entry_count: 1,
   user_direct_service_role_count: 11,
   user_service_role_violation_count: 0,
 };
@@ -329,6 +329,7 @@ function createSourceEvidenceFixtureRepository(extraFiles: Record<string, string
     "app/api/v1/cooking/session-attempts/route.ts",
     "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
     "app/api/v1/cooking/standalone-complete/route.ts",
+    "app/api/v1/marketing/validation/route.ts",
     "app/api/v1/meals/[meal_id]/route.ts",
     "app/api/v1/meals/route.ts",
     "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
@@ -629,6 +630,7 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, browser_raw_rest_mutation_count: 1 },
       { ...sourceEvidence, user_direct_service_role_count: 8 },
       { ...sourceEvidence, user_direct_service_role_count: 10 },
+      { ...sourceEvidence, user_direct_service_role_count: 12 },
       { ...sourceEvidence, user_service_role_violation_count: 1 },
       { ...sourceEvidence, capability_on_occurrence_count: 1 },
       { ...sourceEvidence, capability_off_occurrence_count: 0 },
@@ -641,7 +643,7 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, recipe_delete_handler_count: 2 },
       { ...sourceEvidence, recipe_collection_personal_origin_field_count: 6 },
       { ...sourceEvidence, recipe_collection_personal_origin_field_count: 8 },
-      { ...sourceEvidence, public_service_role_entry_count: 1 },
+      { ...sourceEvidence, public_service_role_entry_count: 0 },
       { ...sourceEvidence, public_service_role_entry_count: 2 },
       { ...sourceEvidence, extra: 0 },
     ]) {
