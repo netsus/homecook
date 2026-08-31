@@ -99,6 +99,7 @@ function selectionDigestInput(selection) {
   return input;
 }
 
+/** @param {any} options */
 export function buildRehearsalSelection({
   repository = REPOSITORY,
   source_ref: sourceRef = SOURCE_REF,
@@ -366,6 +367,7 @@ function isAncestor(gitPath, repositoryRoot, homeDir, ancestor, descendant) {
   return result.status === 0;
 }
 
+/** @param {any} options */
 export async function resolveRehearsalSelectionGitAuthority({ releaseSha, repositoryRoot, homeDir } = {}) {
   exactSha(releaseSha, "selection release SHA");
   const gitPath = assertGitInputs({ repositoryRoot, homeDir });
@@ -388,6 +390,7 @@ export async function resolveRehearsalSelectionGitAuthority({ releaseSha, reposi
   });
 }
 
+/** @param {any} options */
 export async function resolveRehearsalCandidateGitHistory({
   selectedSha,
   observedMasterSha,
@@ -432,6 +435,7 @@ export async function resolveRehearsalCandidateGitHistory({
   });
 }
 
+/** @param {any} options */
 export function writeRehearsalSelectionCreateOnly({
   path,
   selection,
@@ -469,6 +473,7 @@ export function writeRehearsalSelectionCreateOnly({
   return path;
 }
 
+/** @param {any} options */
 export async function authorizeRehearsalCandidateSource({
   releaseSha,
   observedMasterSha,
