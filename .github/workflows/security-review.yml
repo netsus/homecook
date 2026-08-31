@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  scope:
+  security-review-scope:
     runs-on: ubuntu-latest
     outputs:
       dependency_audit: ${{ steps.filter.outputs.dependency_audit }}
@@ -29,48 +29,48 @@ jobs:
         run: node scripts/ci-path-filter.mjs
 
   dependency-audit:
-    needs: scope
+    needs: security-review-scope
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Fail closed when scope resolution failed
-        if: needs.scope.result != 'success'
+        if: needs.security-review-scope.result != 'success'
         run: |
           echo "Security review scope resolution did not succeed." >&2
           exit 1
 
       - name: Report not applicable
-        if: needs.scope.result == 'success' && needs.scope.outputs.dependency_audit != 'true'
+        if: needs.security-review-scope.result == 'success' && needs.security-review-scope.outputs.dependency_audit != 'true'
         run: echo "N/A - no dependency-audit paths changed."
 
       - name: Checkout
-        if: needs.scope.outputs.dependency_audit == 'true'
+        if: needs.security-review-scope.outputs.dependency_audit == 'true'
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup pnpm
-        if: needs.scope.outputs.dependency_audit == 'true'
+        if: needs.security-review-scope.outputs.dependency_audit == 'true'
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 10.32.1
 
       - name: Setup Node
-        if: needs.scope.outputs.dependency_audit == 'true'
+        if: needs.security-review-scope.outputs.dependency_audit == 'true'
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
-        if: needs.scope.outputs.dependency_audit == 'true'
+        if: needs.security-review-scope.outputs.dependency_audit == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        if: needs.scope.outputs.dependency_audit == 'true'
+        if: needs.security-review-scope.outputs.dependency_audit == 'true'
         run: pnpm audit --audit-level high
 
   snyk:
-    needs: scope
-    if: needs.scope.result == 'success' && needs.scope.outputs.dependency_audit == 'true' && github.event_name != 'pull_request'
+    needs: security-review-scope
+    if: needs.security-review-scope.result == 'success' && needs.security-review-scope.outputs.dependency_audit == 'true' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Probe Snyk token presence

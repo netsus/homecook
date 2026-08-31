@@ -76,6 +76,7 @@ CI 실행:
 - branch/commit/workpack 같은 governance 검증은 항상 유지하고, quality/build/QA는 관련 파일 변경이 있을 때만 뜬다.
 - `.github/workflows/playwright.yml`은 `scripts/ci-path-filter.mjs`로 job-level path filter를 계산한다. 그래서 workflow 자체는 떠도 무거운 Playwright/Lighthouse job은 관련 변경이 있을 때만 실행된다.
 - dependency audit은 `.github/workflows/security-review.yml`에서 protected branch push, schedule, manual dispatch 기준으로 실행한다.
+- `tests/production-release-rulesets.test.ts`는 release-relevant push workflow의 모든 check job context가 workflow 간 고유한지, required job이 자기 workflow의 고유 scope job ID를 `needs`로 사용하는지 검증한다. 동일 context 이름 재도입은 release rerun 오판을 막기 위해 실패해야 한다.
 
 ### Layer 2 — Agentic Exploratory QA
 
