@@ -4,7 +4,7 @@
   "title": "Homecook local Mac production rehearsal candidate",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha", "release_tree", "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest", "pnpm_store_snapshot_identity_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "build_tools", "toolchain_lock_digest", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest", "manifest_digest"],
+  "required": ["schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha", "release_tree", "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "build_tools", "toolchain_lock_digest", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest", "manifest_digest"],
   "properties": {
     "schema": { "const": "homecook.local-mac-production-rehearsal-candidate.v1" },
     "canonicalization": { "const": "RFC8785-JCS+SHA256" },
@@ -35,11 +35,7 @@
     },
     "pnpm_store_snapshot_inventory_digest": {
       "$ref": "#/$defs/sha256",
-      "description": "SHA-256 of the candidate-owned sealed pnpm files/index snapshot inventory, cross-bound into candidate and bundle authority and recomputed during completed-root readback."
-    },
-    "pnpm_store_snapshot_identity_digest": {
-      "$ref": "#/$defs/sha256",
-      "description": "SHA-256 of the complete sealed pnpm files/index physical identity inventory, including device, inode, mode, owner, nlink, size, ctime, and mtime."
+      "description": "SHA-256 of the portable candidate-owned pnpm files/index path, type, mode, size, and content inventory; cross-bound into candidate and bundle authority and recomputed for each completed-root copy. Root-local device, inode, owner, nlink, ctime, and mtime evidence is held only by the separate physical authority."
     },
     "build_id": { "type": "string", "minLength": 1 },
     "sealed_bundle_digest": { "$ref": "#/$defs/sha256" },

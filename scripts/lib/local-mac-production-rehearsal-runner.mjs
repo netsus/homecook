@@ -16,7 +16,11 @@ import {
   copyLocalMacProductionExecutionTree,
   sealLocalMacProductionExecutionTree,
 } from "./local-mac-production-release.mjs";
-import { readSealedAuthorityFile } from "./local-mac-production-rehearsal-candidate.mjs";
+import {
+  issueCompletedCandidatePhysicalAuthority,
+  readCompletedCandidateRoot,
+  readSealedAuthorityFile,
+} from "./local-mac-production-rehearsal-candidate.mjs";
 import { readVerifiedMigrationInputs } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
 export const RUN_EVIDENCE_SCHEMA =
@@ -620,13 +624,31 @@ function verifyCandidateStable(before, after) {
   }
 }
 
-function stageVerifiedCandidate({ sourceRoot, runRoot, readCandidate, candidateBefore }) {
+function stageVerifiedCandidate({
+  sourceRoot,
+  runRoot,
+  readCandidate,
+  candidateBefore,
+  afterCandidateCopy = null,
+}) {
   const executionRoot = join(runRoot, "execution-candidate");
   copyLocalMacProductionExecutionTree(sourceRoot, executionRoot);
+  afterCandidateCopy?.({ executionRoot });
   sealLocalMacProductionExecutionTree(executionRoot);
-  const stagedCandidate = readCandidate(executionRoot);
+  let physicalAuthorityPath = null;
+  let stagedCandidate;
+  if (readCandidate === readCompletedCandidateRoot) {
+    physicalAuthorityPath = join(runRoot, "execution-candidate.physical-authority.json");
+    issueCompletedCandidatePhysicalAuthority({
+      candidateRoot: executionRoot,
+      authorityPath: physicalAuthorityPath,
+    });
+    stagedCandidate = readCandidate(executionRoot, { physicalAuthorityPath });
+  } else {
+    stagedCandidate = readCandidate(executionRoot);
+  }
   verifyCandidateStable(candidateBefore, stagedCandidate);
-  return Object.freeze({ executionRoot, stagedCandidate });
+  return Object.freeze({ executionRoot, physicalAuthorityPath, stagedCandidate });
 }
 
 function validateProductionSnapshot(value, label) {
@@ -1154,11 +1176,12 @@ export async function runIsolatedReleaseRehearsal({
   candidateInput,
   namespaceRoot,
   runId,
-  readCandidate,
+  readCandidate = readCompletedCandidateRoot,
   adapters,
   runnerIdentity,
   now = () => new Date(),
   signal = /** @type {AbortSignal | null} */ (null),
+  afterCandidateCopy = /** @type {null|((entry:{executionRoot:string})=>void)} */ (null),
 }) {
   const sourceCandidateRoot = resolveCompletedCandidateInput(candidateInput);
   const canonicalNamespaceRoot = assertPrivateNamespaceRoot(namespaceRoot);
@@ -1188,6 +1211,7 @@ export async function runIsolatedReleaseRehearsal({
   let collisionPreflightDigest = null;
   let stableRunRootIdentity = null;
   let stableExecutionRootIdentity = null;
+  let executionPhysicalAuthorityPath = null;
 
   const checkAbort = () => {
     if (signal?.aborted) throw new Error(`rehearsal interrupted by signal: ${signal.reason ?? "aborted"}`);
@@ -1196,7 +1220,9 @@ export async function runIsolatedReleaseRehearsal({
     if (!stableRunRootIdentity || !stableExecutionRootIdentity || candidateRoot === sourceCandidateRoot) return;
     assertDirectoryIdentity(reservation.runRoot, stableRunRootIdentity, "run root");
     assertDirectoryIdentity(candidateRoot, stableExecutionRootIdentity, "execution candidate root");
-    const current = readCandidate(candidateRoot);
+    const current = executionPhysicalAuthorityPath === null
+      ? readCandidate(candidateRoot)
+      : readCandidate(candidateRoot, { physicalAuthorityPath: executionPhysicalAuthorityPath });
     verifyCandidateStable(candidateBefore, current);
   };
   const cleanup = async () => {
@@ -1249,9 +1275,11 @@ export async function runIsolatedReleaseRehearsal({
       runRoot: reservation.runRoot,
       readCandidate,
       candidateBefore: sourceCandidate,
+      afterCandidateCopy,
     });
     candidateRoot = staged.executionRoot;
     candidateBefore = staged.stagedCandidate;
+    executionPhysicalAuthorityPath = staged.physicalAuthorityPath;
     mkdirSync(join(reservation.runRoot, "runtime-state"), { mode: 0o700 });
     stableRunRootIdentity = directoryIdentity(lstatSync(reservation.runRoot, { bigint: true }));
     stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
