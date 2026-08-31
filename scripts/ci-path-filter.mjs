@@ -4,6 +4,7 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const UI_APP_PATTERNS = [
+  "app/beta/**",
   "app/globals.css",
   "app/layout.tsx",
   "app/login/**",
@@ -20,9 +21,22 @@ const UI_APP_PATTERNS = [
   "app/shopping/**",
 ];
 
+const MARKETING_VALIDATION_PATTERNS = [
+  "app/beta/**",
+  "components/marketing/**",
+  "lib/api/marketing-validation.ts",
+  "lib/marketing/**",
+  "tests/demand-validation.test.ts",
+  "tests/marketing-*.test.ts",
+  "tests/marketing-*.test.tsx",
+  "tests/e2e/slice-marketing-demand-validation.spec.ts",
+  "ui/designs/evidence/marketing-demand-validation/**",
+];
+
 const QA_TOOLING_PATTERNS = [
   ".github/workflows/playwright.yml",
   "lighthouserc.js",
+  "lighthouserc.marketing.js",
   "package.json",
   "playwright.config.ts",
   "pnpm-lock.yaml",
@@ -68,6 +82,7 @@ const CODE_PATTERNS = [
   "tailwind.config.*",
   "tsconfig*.json",
   "vitest*.config.ts",
+  ...MARKETING_VALIDATION_PATTERNS,
   ...TRUSTED_CONTEXT_WORKFLOW_PATTERNS,
 ];
 
@@ -116,6 +131,7 @@ const SMOKE_PATTERNS = [
   "lib/**",
   "stores/**",
   "tests/e2e/slice-*.spec.ts",
+  ...MARKETING_VALIDATION_PATTERNS,
   ...PLAYWRIGHT_SHARED_PATTERNS,
   ...QA_TOOLING_PATTERNS,
 ];
@@ -125,6 +141,7 @@ const ACCESSIBILITY_PATTERNS = [
   "components/**",
   "lib/mock/**",
   "tests/e2e/qa-a11y.spec.ts",
+  ...MARKETING_VALIDATION_PATTERNS,
   ...PLAYWRIGHT_SHARED_PATTERNS,
   ...QA_TOOLING_PATTERNS,
 ];
@@ -135,6 +152,7 @@ const VISUAL_PATTERNS = [
   "lib/mock/**",
   "tests/e2e/qa-visual.spec.ts",
   "tests/e2e/qa-visual.spec.ts-snapshots/**",
+  ...MARKETING_VALIDATION_PATTERNS,
   ...PLAYWRIGHT_SHARED_PATTERNS,
   ...QA_TOOLING_PATTERNS,
 ];
@@ -142,16 +160,20 @@ const VISUAL_PATTERNS = [
 const LIGHTHOUSE_PATTERNS = [
   "app/globals.css",
   "app/layout.tsx",
+  "app/beta/**",
   "app/page.tsx",
   "app/recipe/**",
+  "components/marketing/**",
   "components/home/**",
   "components/layout/**",
   "components/recipe/**",
   "lighthouserc.js",
+  "lighthouserc.marketing.js",
   "next.config.*",
   "package.json",
   "pnpm-lock.yaml",
   "qa/lighthouse-budget.json",
+  "ui/designs/evidence/marketing-demand-validation/**",
 ];
 
 const FULL_REGRESSION_PATTERNS = [

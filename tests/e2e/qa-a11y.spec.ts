@@ -31,6 +31,11 @@ import {
   STANDALONE_COOK_MODE_VISUAL_PATH,
   YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
+import {
+  installMarketingDemandValidationRoutes,
+  MARKETING_BETA_PATH,
+  openMarketingLeadForm,
+} from "./helpers/marketing-demand-validation";
 
 async function expectNoAxeViolations(
   page: import("@playwright/test").Page,
@@ -396,6 +401,45 @@ test.describe("QA accessibility smoke", () => {
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(getLoginActionButton(page));
+  });
+
+  test("marketing beta landing keeps hero, intent pair, and followup controls accessible @a11y-core @marketing", async ({
+    page,
+  }) => {
+    await installMarketingDemandValidationRoutes(page);
+
+    await page.goto(MARKETING_BETA_PATH);
+    await expect(page.getByRole("button", { name: "30초 식단 기록 테스트" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
+      allowPrototypeDesktopColorContrast: true,
+    });
+    await expectReadableTouchTarget(
+      page.getByRole("button", { name: "30초 식단 기록 테스트" }),
+    );
+
+    await openMarketingLeadForm(page);
+    const needed = page.getByRole("button", { name: "써보고 싶어요" });
+    const enough = page.getByRole("button", { name: "지금은 필요하지 않아요" });
+    await expectReadableTouchTarget(needed);
+    await expectReadableTouchTarget(enough);
+    await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.getByRole("textbox", { name: "이메일" }).fill("qa@example.com");
+    await page.getByRole("checkbox", {
+      name: "베타 초대와 관련 안내를 이메일로 받는 데 동의합니다.",
+    }).click();
+    await page.getByRole("button", { name: "베타 우선 초대받기" }).click();
+    await expect(page.getByRole("heading", { name: "조금만 더 알려주세요" })).toBeVisible();
+    await expectReadableTouchTarget(page.getByRole("button", { name: "건너뛰기" }));
+    await expectReadableTouchTarget(page.getByRole("button", { name: "완료" }));
+    await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
+      allowPrototypeDesktopColorContrast: true,
+    });
   });
 
   test("home toolbar and ingredient dialog controls keep design lock metrics", async ({

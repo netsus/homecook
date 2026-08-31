@@ -112,6 +112,46 @@ describe("ci path filter", () => {
     ).toBe(true);
   });
 
+  it("treats beta landing route, marketing components, and evidence assets as frontend QA inputs", () => {
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: ["app/beta/page.tsx"],
+        eventName: "pull_request",
+        draft: false,
+      }),
+    ).toMatchObject({
+      accessibility: true,
+      lighthouse: true,
+      smoke: true,
+      visual: true,
+    });
+
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: ["components/marketing/marketing-demand-validation-screen.tsx"],
+        eventName: "pull_request",
+        draft: false,
+      }),
+    ).toMatchObject({
+      accessibility: true,
+      smoke: true,
+      visual: true,
+    });
+
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: ["ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png"],
+        eventName: "pull_request",
+        draft: false,
+      }),
+    ).toMatchObject({
+      accessibility: true,
+      lighthouse: true,
+      smoke: true,
+      visual: true,
+    });
+  });
+
   it("enables full regression for ready-for-review and full-ci label events", () => {
     const readyForReviewResult = evaluateCiPathFilters({
       changedFiles: ["components/home/home-screen.tsx"],

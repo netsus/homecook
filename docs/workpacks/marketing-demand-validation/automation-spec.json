@@ -23,9 +23,11 @@
       "no-multi-table-event-log"
     ],
     "verify_commands": [
+      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm verify:security-functions:isolated",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "BRANCH_NAME=feature/be-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
@@ -33,8 +35,7 @@
     "required_test_targets": [
       "tests/demand-validation.test.ts",
       "tests/marketing-validation-route.test.ts",
-      "tests/marketing-demand-validation-landing.test.tsx",
-      "tests/marketing-client-session.test.ts"
+      "tests/marketing-validation-migration.test.ts"
     ],
     "schema_changes": [
       "supabase/migrations/<timestamp>_marketing_validation_sessions.sql"
@@ -70,11 +71,22 @@
       "POST /api/v1/marketing/validation"
     ],
     "verify_commands": [
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-*.test.ts tests/marketing-*.test.tsx tests/ci-path-filter.test.ts",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "PLAYWRIGHT_SNAPSHOT_PLATFORM=linux pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm build",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation pnpm validate:workpack",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
       "git diff --check"
     ],
     "playwright_projects": [
@@ -115,7 +127,11 @@
       ],
       "evidence_artifact_refs": [
         "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png",
-        "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.md"
+        "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.md",
+        "ui/designs/evidence/marketing-demand-validation/beta-hero-390.png",
+        "ui/designs/evidence/marketing-demand-validation/beta-hero-320.png",
+        "ui/designs/evidence/marketing-demand-validation/beta-hero-1280.png",
+        "ui/designs/evidence/marketing-demand-validation/pending-state-manifest.json"
       ],
       "authority_report_paths": [
         "ui/designs/authority/MARKETING_DEMAND_VALIDATION-authority.md"

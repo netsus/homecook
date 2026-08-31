@@ -199,7 +199,9 @@ jobs:
         run: pnpm build
 
       - name: Run Lighthouse budget checks
-        run: pnpm test:lighthouse:run
+        run: |
+          pnpm test:lighthouse:run
+          pnpm test:lighthouse:marketing:run
 
       - name: Upload Lighthouse report
         if: failure()
@@ -207,7 +209,9 @@ jobs:
         continue-on-error: true
         with:
           name: lighthouse-report
-          path: .lighthouseci
+          path: |
+            .lighthouseci
+            .lighthouseci-marketing
           include-hidden-files: true
 
   full-regression:
