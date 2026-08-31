@@ -80,11 +80,23 @@
 
 - [x] 로직 / 유틸 / 상태 전이 / API helper 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
 - [x] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다. 특히 `target_qualified` pure rule과 `satisfied_control`가 고정되어야 한다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 6 운영 테스트가 PII 비노출 stdout, safe artifact path, CSV injection 방지, dry-run/confirm purge, paid allowlist cohort, Wilson interval, retention internal scope를 고정한다 <!-- omo:id=accept-stage6-operations-lock;stage=6;scope=shared;review=6 -->
 
 ### Playwright
 
 - [x] 실제 사용자 흐름, 라우팅, modal-like stepper, 권한 게이트가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+
+### Stage 6 Operations
+
+- [x] `docs/marketing/demand-validation-analysis.sql`이 paid allowlisted `weekly_nutrition_v2` cohort만 대상으로 unique 세션, accepted/duplicate lead, Green/Yellow/Red, Wilson 95%, target mismatch, result/target/planner 진단 분포를 direct identifier 없이 계산한다 <!-- omo:id=accept-stage6-analysis-sql;stage=6;scope=backend;review=6 -->
+- [x] `scripts/export-marketing-leads.mjs`는 consent가 있는 accepted lead의 연락 필드 `email / consent_version / consented_at`만 CSV로 export하고 `.artifacts/marketing-validation/*.csv` 밖 경로를 거부하며 stdout에 email/session 식별자를 남기지 않는다 <!-- omo:id=accept-stage6-lead-export-safe-path;stage=6;scope=backend;review=6 -->
+- [x] export CSV는 수식 시작 문자 escape와 `0600` 권한을 강제한다 <!-- omo:id=accept-stage6-lead-export-permissions;stage=6;scope=backend;review=6 -->
+- [x] `scripts/purge-expired-marketing-validation.mjs`는 dry-run 기본, `--confirm` + `MARKETING_VALIDATION_ALLOW_PURGE=1` 이중 게이트, mock fixture 전용 `--now`, non-PII `--operator-id`, `.artifacts/marketing-validation/*.json` evidence 강제를 지킨다 <!-- omo:id=accept-stage6-retention-purge-gates;stage=6;scope=backend;review=6 -->
+- [x] purge는 `retention_until < now` row만 삭제하고 evidence JSON에는 직접 식별자 없이 count, mode, non-PII operator alias, remaining count만 남긴다 <!-- omo:id=accept-stage6-retention-purge-redaction;stage=6;scope=backend;review=6 -->
+- [x] `supabase/migrations/20260831110000_marketing_validation_retention_operations.sql`는 기존 내부 scope를 유지하면서 `marketing-validation-export` exact GET과 `marketing-validation-purge` exact GET/DELETE path만 추가한다 <!-- omo:id=accept-stage6-retention-scope-migration;stage=6;scope=backend;review=6 -->
+- [x] `docs/marketing/demand-validation-result-template.md`가 accepted/duplicate/deliverable 분리, primary threshold, Manual Only readiness sign-off를 고정한다 <!-- omo:id=accept-stage6-result-template;stage=6;scope=shared;review=6 -->
+- [x] Stage 6 운영 테스트 `tests/marketing-validation-operations.test.ts`가 export/purge/analysis/migration 경계를 회귀로 고정한다 <!-- omo:id=accept-stage6-operations-tests;stage=6;scope=shared;review=6 -->
 
 ### Manual Only
 
@@ -93,5 +105,10 @@
 - [ ] `ALLOWED_MARKETING_ORIGINS` production origin/hostname가 확정되어 있다
 - [ ] `/api/v1/marketing/validation` edge rate-limit rule 캡처와 정상 7-stage smoke가 있다
 - [ ] `MARKETING_LEAD_PROTECTION_READY=1` production enable 승인과 증거가 있다
+- [ ] 실제 iOS Safari에서 주요 퍼널 smoke가 완료되었다
+- [ ] `MARKETING_CAMPAIGN_END_AT`와 캠페인 종료 + 180일 retention 값이 확정되어 staging/production 환경에 반영되었다
+- [ ] staging/production full-local Supabase migration apply가 별도 승인·backup·target 확인 뒤 완료되었다
+- [ ] 실제 베타 초대 발신 이메일과 발신 도메인이 제공되고 발송 가능 상태로 검증되었다
+- [ ] 위 준비 상태를 모두 확인한 뒤 paid ads 집행 승인이 기록되었다
 
 > Manual Only가 남아 있어도 fail-closed code closeout은 가능하다. 위 항목이 모두 체크되기 전 production email 저장·광고 집행은 금지한다.
