@@ -146,10 +146,14 @@ Green은 세 항목을 모두 만족할 때만 선택한다. 세션이 200 미�
 | 항목 | 상태 | 확인자 | evidence |
 | --- | --- | --- | --- |
 | operator privacy facts | `[Blocked / Ready]` | `[작성]` | `[작성]` |
+| canonical /privacy 운영 반영 / launch-readiness PR1/2/3 | `[Blocked / Ready]` | `[작성]` | `[작성]` |
 | production Turnstile secret / hostname | `[Blocked / Ready]` | `[작성]` | `[작성]` |
 | production origin / 광고 UTM / audience | `[Blocked / Ready]` | `[작성]` | `[작성]` |
 | edge rate-limit rule | `[Blocked / Ready]` | `[작성]` | `[작성]` |
 | `MARKETING_LEAD_PROTECTION_READY=1` 승인 | `[Blocked / Ready]` | `[작성]` | `[작성]` |
+| `MARKETING_CAMPAIGN_END_AT` / 종료 + 180일 retention | `[Blocked / Ready]` | `[작성]` | `[작성]` |
+| staging/production full-local migration apply | `[Blocked / Ready]` | `[작성]` | `[작성]` |
+| 베타 초대 발신 이메일 / 도메인 | `[Blocked / Ready]` | `[작성]` | `[작성]` |
 | 실제 iOS Safari smoke | `[Blocked / Ready]` | `[작성]` | `[작성]` |
 | paid ads 집행 승인 | `[Blocked / Ready]` | `[작성]` | `[작성]` |
 

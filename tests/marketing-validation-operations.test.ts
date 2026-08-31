@@ -6,14 +6,27 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { buildQuizOutcome } from "@/lib/marketing/demand-validation";
+import { readMarketingValidationOperatorEnv } from "../scripts/lib/marketing-validation-operations.mjs";
 
 const repoRoot = path.resolve(__dirname, "..");
 const purgeScriptPath = path.join(repoRoot, "scripts/purge-expired-marketing-validation.mjs");
 const exportScriptPath = path.join(repoRoot, "scripts/export-marketing-leads.mjs");
+const operationsModulePath = path.join(
+  repoRoot,
+  "scripts/lib/marketing-validation-operations.mjs",
+);
 const analysisSqlPath = path.join(repoRoot, "docs/marketing/demand-validation-analysis.sql");
+const resultTemplatePath = path.join(
+  repoRoot,
+  "docs/marketing/demand-validation-result-template.md",
+);
 const retentionMigrationPath = path.join(
   repoRoot,
   "supabase/migrations/20260831110000_marketing_validation_retention_operations.sql",
+);
+const exportScopeMigrationPath = path.join(
+  repoRoot,
+  "supabase/migrations/20260831120000_marketing_validation_export_scope.sql",
 );
 const safeOutputRoot = path.join(repoRoot, ".artifacts", "marketing-validation");
 
@@ -316,6 +329,42 @@ describe("marketing validation Stage 6 operations", () => {
     );
   });
 
+  it("rejects remote or ambiguous operator targets and accepts only explicit full-local loopback Data authority", () => {
+    expect(() => readMarketingValidationOperatorEnv({
+      DATA_SUPABASE_SECRET_KEY: "fixture-secret",
+      DATA_SUPABASE_URL: "http://127.0.0.1:54321",
+    })).toThrow(/HOMECOOK_DATA_AUTHORITY=local/u);
+
+    expect(() => readMarketingValidationOperatorEnv({
+      DATA_SUPABASE_SECRET_KEY: "fixture-secret",
+      HOMECOOK_DATA_AUTHORITY: "local",
+      MARKETING_VALIDATION_SUPABASE_URL: "https://example.supabase.co",
+    })).toThrow(/loopback/u);
+
+    expect(readMarketingValidationOperatorEnv({
+      DATA_SUPABASE_SECRET_KEY: "fixture-secret",
+      DATA_SUPABASE_URL: "http://127.0.0.1:54321",
+      HOMECOOK_DATA_AUTHORITY: "local",
+    })).toEqual({
+      serviceRoleKey: "fixture-secret",
+      url: "http://127.0.0.1:54321",
+    });
+  });
+
+  it("uses exact PostgREST counts, deterministic export pagination, and a repo-anchored safe artifact root", () => {
+    const moduleText = requireFileText(operationsModulePath);
+    const exactCountUses = moduleText.match(/count:\s*"exact"/gu) ?? [];
+
+    expect(exactCountUses.length).toBeGreaterThanOrEqual(3);
+    expect(moduleText).toContain(".range(offset, offset + EXPORT_PAGE_SIZE - 1)");
+    expect(moduleText).toContain('.order("lead_submitted_at", { ascending: true })');
+    expect(moduleText).toContain('.order("id", { ascending: true })');
+    expect(moduleText).toContain('.select("retention_until", { count: "exact" })');
+    expect(moduleText).not.toContain("head: true");
+    expect(moduleText).not.toContain("return data.length;");
+    expect(moduleText).toContain("cwd = REPO_ROOT");
+  });
+
   it("requires an explicit export output path inside a gitignored safe directory and writes an accepted-lead-only CSV with 0600 permissions", () => {
     const sandbox = mkdtempSync(path.join(tmpdir(), "marketing-validation-export-"));
     const inputPath = path.join(sandbox, "marketing-validation-sessions.json");
@@ -449,13 +498,45 @@ describe("marketing validation Stage 6 operations", () => {
     expect(sql).toContain("하루 합계와 주간 흐름을 한눈에 못 볼 때");
   });
 
-  it("adds a delete-only retention scope without broadening the public marketing route scope", () => {
-    const migration = requireFileText(retentionMigrationPath);
+  it("keeps every production activation blocker visible in the result-template sign-off", () => {
+    const template = requireFileText(resultTemplatePath);
 
-    expect(migration).toContain("v_scope = 'marketing-validation-purge'");
-    expect(migration).toMatch(/v_method\s+in\s*\(\s*'GET'\s*,\s*'DELETE'\s*\)/iu);
-    expect(migration).toContain("v_path = '/marketing_validation_sessions'");
-    expect(migration).toContain("v_scope = 'marketing-validation'");
-    expect(migration).toMatch(/v_method\s+in\s*\(\s*'GET'\s*,\s*'POST'\s*,\s*'PATCH'\s*\)/iu);
+    for (const blocker of [
+      "canonical /privacy",
+      "launch-readiness PR1/2/3",
+      "production Turnstile",
+      "production origin",
+      "edge rate-limit rule",
+      "MARKETING_LEAD_PROTECTION_READY=1",
+      "MARKETING_CAMPAIGN_END_AT",
+      "full-local migration apply",
+      "베타 초대 발신 이메일 / 도메인",
+      "실제 iOS Safari smoke",
+      "paid ads 집행 승인",
+    ]) {
+      expect(template).toContain(blocker);
+    }
+  });
+
+  it("adds exact export and purge internal scopes without broadening the public marketing route scope", () => {
+    const retentionMigration = requireFileText(retentionMigrationPath);
+    const exportScopeMigration = requireFileText(exportScopeMigrationPath);
+
+    expect(retentionMigration).toContain("v_scope = 'marketing-validation-purge'");
+    expect(retentionMigration).toMatch(
+      /v_method\s+in\s*\(\s*'GET'\s*,\s*'DELETE'\s*\)/iu,
+    );
+    expect(exportScopeMigration).toMatch(
+      /v_scope\s*=\s*'marketing-validation'\s+and\s+v_method\s+in\s*\(\s*'GET'\s*,\s*'POST'\s*,\s*'PATCH'\s*\)[\s\S]*?v_path\s*=\s*'\/marketing_validation_sessions'/iu,
+    );
+    expect(exportScopeMigration).toMatch(
+      /v_scope\s*=\s*'marketing-validation-export'\s+and\s+v_method\s*=\s*'GET'[\s\S]*?v_path\s*=\s*'\/marketing_validation_sessions'/iu,
+    );
+    expect(exportScopeMigration).toMatch(
+      /v_scope\s*=\s*'marketing-validation-purge'\s+and\s+v_method\s+in\s*\(\s*'GET'\s*,\s*'DELETE'\s*\)[\s\S]*?v_path\s*=\s*'\/marketing_validation_sessions'/iu,
+    );
+    expect(requireFileText(operationsModulePath)).toContain(
+      'createOperatorClient(env, "marketing-validation-export")',
+    );
   });
 });

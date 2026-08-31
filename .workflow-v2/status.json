@@ -1838,7 +1838,7 @@
     {
       "id": "marketing-demand-validation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/fe-marketing-demand-validation-stage6",
+      "branch": "fix/marketing-validation-stage6-ops-safety",
       "pr_path": "https://github.com/netsus/homecook/pull/1482",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
@@ -1864,7 +1864,7 @@
         "pnpm test:lighthouse:marketing:run",
         "git diff --check"
       ],
-      "notes": "Stage 1 PR #1477, Stage 2 PR #1478, Stage 4 frontend PR #1479, and final-authority PR #1480 are merged. Stage 6 adds analysis SQL, safe export/purge CLIs, exact internal-scope migration, result template, and focused operations tests while Manual Only production lead blockers stay fail-closed."
+      "notes": "Stage 1 PR #1477, Stage 2 PR #1478, Stage 4 frontend PR #1479, final-authority PR #1480, and Stage 6 PR #1482 are merged. The active safety follow-up fixes exact-count pagination/purge evidence, adds a forward export GET scope, and rejects non-loopback Data targets; canonical merged closeout remains pending until this follow-up merges. Manual Only production lead blockers stay fail-closed."
     },
     {
       "id": "auth-provider-memory-linking",
