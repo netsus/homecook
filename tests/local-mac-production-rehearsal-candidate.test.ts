@@ -2715,7 +2715,9 @@ describe("release rehearsal candidate orchestration", () => {
   });
 
   it("accepts only complete roots with exact candidate and bundle authority manifests", async () => {
-    const root = privateRoot("homecook-candidate-reader-");
+    const authorityRoot = privateRoot("homecook-candidate-reader-");
+    const root = join(authorityRoot, "candidate");
+    mkdirSync(root, { mode: 0o700 });
     const sourceStore = join(privateRoot("homecook-candidate-reader-store-source-"), "v10");
     const sourceBlobBytes = Buffer.from("package bytes\n");
     const sourceBlobIntegrity = createHash("sha512").update(sourceBlobBytes).digest("hex");
