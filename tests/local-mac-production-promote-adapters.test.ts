@@ -53,6 +53,7 @@ import {
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import { acquireLocalMacProductionPromotionLock } from "../scripts/lib/local-mac-production-release.mjs";
 import {
+  createCompleteProductionCheckPageInput,
   createLocalMacProductionGitEvidence,
   createLocalMacProductionReleaseManifest,
   VERIFIED_ATTESTATION,
@@ -1128,7 +1129,11 @@ describe("local Mac production promote adapters", () => {
       status: "completed",
     }));
     const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
-      checkRuns,
+      ...createCompleteProductionCheckPageInput({
+        checkRuns,
+        releaseSha: "a".repeat(40),
+        selfSuiteId: 9_002,
+      }),
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260825.1",
       releaseTagObjectSha: "e".repeat(40),
@@ -1167,6 +1172,8 @@ describe("local Mac production promote adapters", () => {
     const manifest = createLocalMacProductionReleaseManifest(manifestPath, {
       attestation_digest: artifacts.subject_manifest_sha256,
       required_check_summary: artifacts.subject.required_check_summary,
+      all_check_suite_count: artifacts.subject.all_check_suite_count,
+      all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
       all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,
       all_context_check_suite_ids: artifacts.subject.all_context_check_suite_ids,
       all_context_commit_statuses_digest: artifacts.subject.all_context_commit_statuses_digest,

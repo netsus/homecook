@@ -58,6 +58,7 @@ import {
   renderYoutubeExtractionWorkerPlist,
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 import {
+  createCompleteProductionCheckPageInput,
   createLocalMacProductionGitEvidence,
   createLocalMacProductionReleaseManifest,
 } from "./helpers/local-mac-production-release-fixtures";
@@ -461,7 +462,11 @@ describe("connected local Mac production promotion", () => {
       status: "completed",
     }));
     const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
-      checkRuns,
+      ...createCompleteProductionCheckPageInput({
+        checkRuns,
+        releaseSha: identity.release_sha,
+        selfSuiteId: 9_002,
+      }),
       releaseSha: identity.release_sha,
       releaseTag,
       releaseTagObjectSha,
@@ -504,6 +509,8 @@ describe("connected local Mac production promotion", () => {
       release_tag: releaseTag,
       release_tag_object_sha: releaseTagObjectSha,
       required_check_summary: artifacts.subject.required_check_summary,
+      all_check_suite_count: artifacts.subject.all_check_suite_count,
+      all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
       all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,
       all_context_check_suite_ids: artifacts.subject.all_context_check_suite_ids,
       all_context_commit_statuses_digest: artifacts.subject.all_context_commit_statuses_digest,
@@ -758,7 +765,11 @@ describe("connected local Mac production promotion", () => {
         status: "completed",
       }));
       const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
-        checkRuns,
+        ...createCompleteProductionCheckPageInput({
+          checkRuns,
+          releaseSha: identity.release_sha,
+          selfSuiteId: 9_010 + index,
+        }),
         releaseSha: identity.release_sha,
         releaseTag,
         releaseTagObjectSha,
@@ -801,6 +812,8 @@ describe("connected local Mac production promotion", () => {
         release_tag: releaseTag,
         release_tag_object_sha: releaseTagObjectSha,
         required_check_summary: artifacts.subject.required_check_summary,
+        all_check_suite_count: artifacts.subject.all_check_suite_count,
+        all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
         all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,
         all_context_check_suite_ids: artifacts.subject.all_context_check_suite_ids,
         all_context_commit_statuses_digest: artifacts.subject.all_context_commit_statuses_digest,

@@ -111,6 +111,8 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "previous_release_sha",
   "expected_release_contexts",
   "required_check_summary",
+  "all_check_suite_count",
+  "all_check_suite_ids_digest",
   "all_context_check_run_instances_digest",
   "all_context_check_suite_ids",
   "all_context_commit_statuses_digest",
@@ -2500,6 +2502,21 @@ export function validateLocalMacProductionReleaseManifest({
       "manifest.expected_release_contexts",
     ),
     required_check_summary: normalizeRequiredCheckSummary(manifest.required_check_summary),
+    all_check_suite_count: (() => {
+      const count = requireInteger(
+        manifest.all_check_suite_count,
+        "manifest.all_check_suite_count",
+        1,
+      );
+      if (count >= 1_000) {
+        throw new Error("manifest.all_check_suite_count must be below 1000.");
+      }
+      return count;
+    })(),
+    all_check_suite_ids_digest: requireDigest(
+      manifest.all_check_suite_ids_digest,
+      "manifest.all_check_suite_ids_digest",
+    ),
     all_context_check_run_instances_digest: requireDigest(
       manifest.all_context_check_run_instances_digest,
       "manifest.all_context_check_run_instances_digest",

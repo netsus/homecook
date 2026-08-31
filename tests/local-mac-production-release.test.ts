@@ -88,6 +88,8 @@ function createManifest(overrides: Record<string, unknown> = {}) {
       success: 10,
       intended_skip: 2,
     },
+    all_check_suite_count: 2,
+    all_check_suite_ids_digest: "4".repeat(64),
     all_context_check_run_instances_digest: "2".repeat(64),
     all_context_check_suite_ids: [200, 201],
     all_context_commit_statuses_digest: "3".repeat(64),
@@ -172,6 +174,8 @@ describe("local Mac production release manifest", () => {
       "workflow_run_attempt",
       "workflow_check_suite_id",
       "master_tree_at_approval",
+      "all_check_suite_count",
+      "all_check_suite_ids_digest",
       "all_context_check_run_instances_digest",
       "all_context_check_suite_ids",
       "all_context_commit_statuses_digest",
@@ -210,7 +214,7 @@ describe("local Mac production release manifest", () => {
     for (const [file, required] of [
       ["github-production-release-workflow-authority.schema.json", ["workflow_head_sha", "workflow_run_id", "workflow_check_suite_id"]],
       ["github-production-release-approval-authority.schema.json", ["master_sha_at_approval", "master_tree_at_approval"]],
-      ["github-production-release-external-check-evidence.schema.json", ["all_context_check_run_instances_digest", "all_context_check_suite_ids", "all_context_commit_statuses_digest"]],
+      ["github-production-release-external-check-evidence.schema.json", ["all_check_suite_count", "all_check_suite_ids_digest", "all_context_check_run_instances_digest", "all_context_check_suite_ids", "all_context_commit_statuses_digest"]],
     ] as const) {
       const authoritySchema = JSON.parse(readFileSync(
         new URL(`../scripts/schemas/${file}`, import.meta.url),

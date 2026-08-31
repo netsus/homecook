@@ -1090,6 +1090,10 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("commits/\"$RELEASE_SHA\"/statuses");
     expect(workflow).toMatch(/statuses[\s\S]*?--paginate/u);
     expect(workflow).toContain("--excluded-check-suite-ids-json");
+    expect(workflow.match(/commits\/\$RELEASE_SHA\/check-suites\?per_page=100/gu)).toHaveLength(3);
+    expect(workflow.match(/--check-suite-pages-json/gu)).toHaveLength(5);
+    expect(workflow.match(/--check-run-pages-json/gu)).toHaveLength(5);
+    expect(workflow).not.toMatch(/check-suites\/\$\{?[^\s/}]+\}?\/check-runs/u);
     expect(workflow).not.toContain("--excluded-check-suite-id ");
     expect(workflow).toContain("actions/workflows/production-release-attestation.yml");
     expect(workflow).not.toContain("head_sha=$RELEASE_SHA");

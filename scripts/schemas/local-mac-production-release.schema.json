@@ -46,6 +46,8 @@
     "previous_release_sha",
     "expected_release_contexts",
     "required_check_summary",
+    "all_check_suite_count",
+    "all_check_suite_ids_digest",
     "all_context_check_run_instances_digest",
     "all_context_check_suite_ids",
     "all_context_commit_statuses_digest",
@@ -288,6 +290,15 @@
         "queued": { "const": 0 },
         "rerun": { "const": 0 }
       }
+    },
+    "all_check_suite_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999
+    },
+    "all_check_suite_ids_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
     },
     "all_context_check_run_instances_digest": {
       "type": "string",

@@ -10,7 +10,9 @@ import { normalizeExpectedReleaseContexts } from "./lib/production-release-appro
 function parseArgs(argv) {
   const options = {
     approvalAuthorityPath: null,
+    checkRunPagesPath: null,
     checkRunsPath: null,
+    checkSuitePagesPath: null,
     commitStatusesPath: null,
     excludedCheckSuiteIdsPath: null,
     expectedContexts: null,
@@ -37,8 +39,12 @@ function parseArgs(argv) {
 
     if (token === "--approval-authority-json") {
       options.approvalAuthorityPath = value;
+    } else if (token === "--check-run-pages-json") {
+      options.checkRunPagesPath = value;
     } else if (token === "--check-runs-json") {
       options.checkRunsPath = value;
+    } else if (token === "--check-suite-pages-json") {
+      options.checkSuitePagesPath = value;
     } else if (token === "--commit-statuses-json") {
       options.commitStatusesPath = value;
     } else if (token === "--excluded-check-suite-ids-json") {
@@ -74,8 +80,11 @@ function parseArgs(argv) {
 
 try {
   const options = parseArgs(process.argv.slice(2));
-  if (!options.checkRunsPath) {
-    throw new Error("--check-runs-json <path> is required.");
+  if (!options.checkRunPagesPath) {
+    throw new Error("--check-run-pages-json <path> is required.");
+  }
+  if (!options.checkSuitePagesPath) {
+    throw new Error("--check-suite-pages-json <path> is required.");
   }
   if (!options.subjectOutputPath) {
     throw new Error("--subject-output <path> is required.");
@@ -87,7 +96,11 @@ try {
     throw new Error("--excluded-check-suite-ids-json <path> is required.");
   }
 
-  const checkRuns = JSON.parse(readFileSync(options.checkRunsPath, "utf8"));
+  const checkRunPages = JSON.parse(readFileSync(options.checkRunPagesPath, "utf8"));
+  const checkSuitePages = JSON.parse(readFileSync(options.checkSuitePagesPath, "utf8"));
+  const checkRuns = options.checkRunsPath
+    ? JSON.parse(readFileSync(options.checkRunsPath, "utf8"))
+    : [];
   const commitStatuses = options.commitStatusesPath
     ? JSON.parse(readFileSync(options.commitStatusesPath, "utf8"))
     : [];
@@ -144,7 +157,9 @@ try {
   const approvalAuthority = JSON.parse(readFileSync(options.approvalAuthorityPath, "utf8"));
   const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
     approvalAuthority,
+    checkRunPages,
     checkRuns,
+    checkSuitePages,
     commitStatuses,
     excludedCheckSuiteIds: excludedSuiteEvidence.check_suite_ids,
     expectedContexts,

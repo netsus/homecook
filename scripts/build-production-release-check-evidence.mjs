@@ -23,8 +23,8 @@ function parseArgs(argv) {
 try {
   const options = parseArgs(process.argv.slice(2));
   const required = [
-    "check_runs_json", "commit_statuses_json", "excluded_check_suite_ids_json",
-    "expected_contexts", "output",
+    "check_run_pages_json", "check_suite_pages_json", "commit_statuses_json",
+    "excluded_check_suite_ids_json", "expected_contexts", "output", "release_sha",
   ];
   for (const key of required) {
     if (!options[key]) throw new Error(`--${key.replaceAll("_", "-")} is required.`);
@@ -34,13 +34,15 @@ try {
     throw new Error("Excluded check suite evidence must contain check_suite_ids.");
   }
   const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
-    checkRuns: JSON.parse(readFileSync(options.check_runs_json, "utf8")),
+    checkRunPages: JSON.parse(readFileSync(options.check_run_pages_json, "utf8")),
+    checkSuitePages: JSON.parse(readFileSync(options.check_suite_pages_json, "utf8")),
     commitStatuses: JSON.parse(readFileSync(options.commit_statuses_json, "utf8")),
     excludedCheckSuiteIds: exclusion.check_suite_ids,
     expectedContexts: normalizeExpectedReleaseContexts(
       options.expected_contexts.split(",").map((value) => value.trim()).filter(Boolean),
       "expected_release_contexts",
     ),
+    releaseSha: options.release_sha,
   });
   writeFileSync(options.output, `${JSON.stringify(evidence, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);

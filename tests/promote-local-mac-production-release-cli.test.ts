@@ -130,6 +130,8 @@ function createFixtureRepo({
       success: 10,
       intended_skip: 2,
     },
+    all_check_suite_count: 2,
+    all_check_suite_ids_digest: "4".repeat(64),
     all_context_check_run_instances_digest: "2".repeat(64),
     all_context_check_suite_ids: [200, 201],
     all_context_commit_statuses_digest: "3".repeat(64),

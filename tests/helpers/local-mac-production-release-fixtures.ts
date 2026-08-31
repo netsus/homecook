@@ -8,6 +8,41 @@ import {
 
 export const VERIFIED_ATTESTATION = () => ({ source: "test-attestation", verified: true });
 
+export function createCompleteProductionCheckPageInput({
+  checkRuns,
+  releaseSha,
+  selfSuiteId = null,
+}: {
+  checkRuns: Array<Record<string, unknown>>,
+  releaseSha: string,
+  selfSuiteId?: number | null,
+}) {
+  const allCheckRuns = selfSuiteId === null
+    ? checkRuns
+    : [
+        ...checkRuns,
+        {
+          id: 9_000_000 + selfSuiteId,
+          app: { id: 15368 },
+          check_suite: { id: selfSuiteId },
+          name: "approve-and-tag",
+          started_at: "2026-08-28T09:05:00Z",
+          status: "in_progress",
+        },
+      ];
+  const suiteIds = [...new Set(allCheckRuns.map((entry) =>
+    Number((entry.check_suite as { id?: unknown } | undefined)?.id)))];
+  return {
+    checkRuns: allCheckRuns,
+    checkRunPages: [{ total_count: allCheckRuns.length, check_runs: allCheckRuns }],
+    checkSuitePages: [{
+      total_count: suiteIds.length,
+      check_suites: suiteIds.map((id) => ({ id, head_sha: releaseSha })),
+    }],
+    excludedCheckSuiteIds: selfSuiteId === null ? [] : [selfSuiteId],
+  };
+}
+
 export function createLocalMacProductionReleaseManifest(
   manifestPath: string,
   overrides: Record<string, unknown> = {},
@@ -66,6 +101,8 @@ export function createLocalMacProductionReleaseManifest(
       success: 10,
       intended_skip: 2,
     },
+    all_check_suite_count: 2,
+    all_check_suite_ids_digest: "4".repeat(64),
     all_context_check_run_instances_digest: "2".repeat(64),
     all_context_check_suite_ids: [200, 201],
     all_context_commit_statuses_digest: "3".repeat(64),

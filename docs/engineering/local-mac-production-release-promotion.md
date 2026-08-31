@@ -44,6 +44,8 @@ GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/
 | `attestation_digest` | GitHub attestation으로 검증되는 subject manifest SHA-256 |
 | `promotion_id` | 단일 승격 시도 식별자 |
 | `expected_running_release_sha` | 승격 후 실제 돌아야 하는 SHA |
+| `all_check_suite_count` | selected release의 self-suite를 포함한 complete check-suite count. `1000` 미만이어야 함 |
+| `all_check_suite_ids_digest` | selected release의 sorted unique complete check-suite ID set SHA-256. current self-suite도 포함 |
 | `all_context_check_run_instances_digest` | self-suite만 제외한 모든 external context의 sorted unique `(check_run_id, check_suite_id)` instance set digest |
 | `all_context_check_suite_ids` | 위 external instance set의 sorted unique suite IDs |
 | `all_context_commit_statuses_digest` | selected release의 normalized `/statuses` 전체 digest |
@@ -268,6 +270,8 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `previous_release_sha`
 - `expected_release_contexts`
 - `required_check_summary`
+- `all_check_suite_count`
+- `all_check_suite_ids_digest`
 - `all_context_check_run_instances_digest`
 - `all_context_check_suite_ids`
 - `all_context_commit_statuses_digest`
@@ -408,8 +412,9 @@ C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 - `production-release-tag-immutability`는 update / deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. `update`가 fast-forward tag 이동까지 막으므로 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 이동하거나 삭제할 수 없다.
 - environment `production-release-approval`은 `can_admins_bypass: false`, required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다. admin bypass readback 누락 또는 `true`는 activation blocker다.
 - environment secrets는 App ID와 private key 두 개뿐이다. workflow는 `actions/create-github-app-token`으로 short-lived token을 만들고 tag App token은 `contents:write`만 요청한다. Administration permission과 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
-- workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있지만, 모든 non-excluded context에서 unique check instance가 둘 이상이면 success→success도 rerun이므로 거부한다.
-- `self-referential suite exception`은 exact `GITHUB_RUN_ID`의 current `workflow_check_suite_id` 하나뿐이다. exact run API readback은 workflow id/path, event, master ref, repository, `workflow_head_sha`, `run_id`, `run_attempt`을 모두 검증한다. `release_sha != workflow_head_sha`이면 selected release check set에 self-suite가 없으므로 exclusion은 empty다. 과거 retry suite나 동일 context name 전체를 제외하지 않는다.
+- workflow 승인 전, 환경 승인 직후, attestation 발급 직전의 세 snapshot은 먼저 quoted `check-suites?per_page=100` URL과 `--paginate --slurp`로 complete check-suite page authority를 읽는다. 모든 page의 `total_count`가 같고, page 수와 각 page 길이가 `per_page=100` 계산과 exact 일치하며, suite ID가 unique이고 모든 `head_sha`가 selected release SHA여야 한다. [GitHub의 commit check-runs endpoint](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference)가 최신 1,000 suite로 제한되므로 `total_count >= 1000`, page 누락/중복, count 불일치 또는 완전성 미증명은 protected tag/attestation 전에 fail closed한다.
+- suite count가 1,000 미만인 정상 경로에서만 quoted `check-runs?filter=all&per_page=100` URL을 한 번 pagination한다. check-run page도 stable `total_count`, exact page 수/길이, unique run ID를 요구하고 모든 run suite ID가 complete suite set에 속해야 한다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있지만, 모든 non-excluded context에서 unique check instance가 둘 이상이면 success→success도 rerun이므로 거부한다. 정상 경로에서 suite별 check-runs API를 N회 호출하지 않는다.
+- complete sorted suite ID set의 `all_check_suite_count`와 `all_check_suite_ids_digest`, external sorted check-run instance set의 `all_context_check_run_instances_digest`를 subject/predicate/production manifest/server readback에 exact cross-bind한다. `self-referential suite exception`은 exact `GITHUB_RUN_ID`의 current `workflow_check_suite_id` 하나뿐이다. complete suite count/digest에는 self-suite를 포함하되 external terminal-result set에서만 exact current suite를 제외한다. exact run API readback은 workflow id/path, event, master ref, repository, `workflow_head_sha`, `run_id`, `run_attempt`을 모두 검증한다. `release_sha != workflow_head_sha`이면 selected release check set에 self-suite가 없으므로 exclusion은 empty다. 과거 retry suite나 동일 context name 전체를 제외하지 않는다.
 - workflow 승인 전에는 selected release의 external check/status evidence와 current self-run control-plane evidence만 분리 보존한다. 환경 승인 직후 `master_sha_at_approval/tree`를 fresh capture한 다음에만 tag object와 subject/predicate를 만든다. tag push 직전과 attestation 발급 직전에 exact run, approval authority, external evidence, live master lineage를 각각 다시 확인한다.
 - 두 workflow job은 selected release checkout을 executable authority로 사용하지 않는다. `github.sha`와 exact run API가 함께 증명한 `workflow_head_sha/tree`를 `trusted-current-master/`에 full-history immutable checkout하고 verifier, attestation builder, desired-state reader, tag-object builder를 모두 그 bytes에서 실행한다. selected SHA/tree는 같은 repository의 verified Git object와 subject artifact로만 소비한다.
 - non-null selection은 raw canonical selection artifact를 별도 input으로 받아 digest 기반 basename/private file authority를 닫고, current master trusted verifier가 full selection field·expiry·approval과 selected→observed/current, observed→current ancestry 및 exact trees를 검증한다. protected tag push 직전과 `actions/attest` 바로 전마다 live current master ref를 readback하고 trusted checkout→live current master lineage와 full selection authority를 다시 검증한다.
@@ -423,9 +428,11 @@ attestation workflow artifact baseline은 다음 산출물이다.
 - `workflow-authority.json`
 - `approval-authority.json`
 - `external-check-evidence.json`
+- `check-suite-pages.json`
+- `check-run-pages.json`
 - `actions/attest@v4`가 만든 JSON bundle
 
-server-side verifier는 위 subject manifest SHA-256, repository, tag, `release_tag_object_sha`, selected release SHA/tree, workflow head/run/suite authority, approval-time master SHA/tree, all-context instance/status digests, suite IDs, normalized terminal summary와 complete Git lineage를 함께 다시 확인한다.
+server-side verifier는 위 subject manifest SHA-256, repository, tag, `release_tag_object_sha`, selected release SHA/tree, workflow head/run/suite authority, approval-time master SHA/tree, complete suite count/digest, all-context instance/status digests, external suite IDs, normalized terminal summary와 complete Git lineage를 함께 다시 확인한다.
 
 remote tag push/readback 뒤 attestation 생성이 실패하면 해당 immutable tag는 attestation이 없는 상태로 남는다. 이 tag는 production deployment authority가 아니며 승격에 사용할 수 없다. immutability ruleset 때문에 삭제·이동하지 않고, 재시도는 반드시 다음 `prod-YYYYMMDD.N` 번호를 사용한다.
 
