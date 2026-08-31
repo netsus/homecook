@@ -200,7 +200,7 @@
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [x] Stage 6 운영 closeout: 분석 SQL, lead export, retention purge, 결과 템플릿, safe artifact path와 PII-free evidence를 구현하고 검증 <!-- omo:id=delivery-stage6-operations-closeout;stage=6;scope=shared;review=6 -->
+- [x] Stage 6 운영 closeout: 분석 SQL, lead export, retention purge, 결과 템플릿, safe artifact path와 PII-free evidence를 구현하고 검증 <!-- omo:id=delivery-stage6-operations-closeout;stage=4;scope=shared;review=6 -->
 
 ## Stage 6 / Internal 6.5 Closeout Evidence `2026-08-31`
 
@@ -208,8 +208,8 @@
 - 운영 테스트는 PII 비노출 stdout, `.artifacts/marketing-validation` safe path 강제, consented accepted-only export, CSV injection escape, default dry-run + explicit confirm purge, mock fixture 전용 `--now`, non-PII `--operator-id`, `retention_until < now` strict expiry, paid allowlisted `weekly_nutrition_v2` denominator, Wilson 95%, target rule literal sync, delete-only internal scope를 고정한다.
 - Stage 6 closeout은 Manual Only blocker를 해제하지 않는다. operator privacy facts, production Turnstile secret/hostname, production origin, edge rate-limit evidence, `MARKETING_LEAD_PROTECTION_READY=1`, paid ads 집행 승인은 계속 pending이며 fail-closed 상태를 유지한다.
 - canonical closeout projection은 Stage 6 non-Manual 범위를 complete로 올리되, broader production activation은 `in_progress`로 남긴다.
-- [x] Stage 6 운영 분석 SQL이 paid allowlisted `weekly_nutrition_v2` cohort, accepted/duplicate, Wilson 95%, 진단 분포를 PII 없이 계산한다 <!-- omo:id=delivery-stage6-analysis-sql;stage=6;scope=backend;review=6 -->
-- [x] Stage 6 accepted lead export CLI가 consented accepted lead만 `.artifacts/marketing-validation` 아래 CSV로 내보내고 stdout에 PII를 남기지 않는다 <!-- omo:id=delivery-stage6-lead-export;stage=6;scope=backend;review=6 -->
-- [x] Stage 6 retention purge CLI가 dry-run 기본, `--confirm` + `MARKETING_VALIDATION_ALLOW_PURGE=1` 이중 게이트, mock fixture 전용 `--now`, non-PII `--operator-id`, JSON evidence를 강제한다 <!-- omo:id=delivery-stage6-retention-purge;stage=6;scope=backend;review=6 -->
-- [x] Stage 6 internal scope migration이 `marketing-validation-purge`의 exact GET/DELETE table path만 추가하고 기존 내부 scope를 보존한다 <!-- omo:id=delivery-stage6-scope-migration;stage=6;scope=backend;review=6 -->
-- [x] Stage 6 결과 템플릿과 closeout evidence가 Manual Only blocker를 유지한 채 운영 보고 형식을 고정한다 <!-- omo:id=delivery-stage6-result-template;stage=6;scope=shared;review=6 -->
+- [x] Stage 6 운영 분석 SQL이 paid allowlisted `weekly_nutrition_v2` cohort, accepted/duplicate, Wilson 95%, 진단 분포를 PII 없이 계산한다 <!-- omo:id=delivery-stage6-analysis-sql;stage=2;scope=backend;review=6 -->
+- [x] Stage 6 accepted lead export CLI가 consented accepted lead만 `.artifacts/marketing-validation` 아래 CSV로 내보내고 stdout에 PII를 남기지 않는다 <!-- omo:id=delivery-stage6-lead-export;stage=2;scope=backend;review=6 -->
+- [x] Stage 6 retention purge CLI가 dry-run 기본, `--confirm` + `MARKETING_VALIDATION_ALLOW_PURGE=1` 이중 게이트, mock fixture 전용 `--now`, non-PII `--operator-id`, JSON evidence를 강제한다 <!-- omo:id=delivery-stage6-retention-purge;stage=2;scope=backend;review=6 -->
+- [x] Stage 6 internal scope migration이 `marketing-validation-purge`의 exact GET/DELETE table path만 추가하고 기존 내부 scope를 보존한다 <!-- omo:id=delivery-stage6-scope-migration;stage=2;scope=backend;review=6 -->
+- [x] Stage 6 결과 템플릿과 closeout evidence가 Manual Only blocker를 유지한 채 운영 보고 형식을 고정한다 <!-- omo:id=delivery-stage6-result-template;stage=4;scope=shared;review=6 -->
