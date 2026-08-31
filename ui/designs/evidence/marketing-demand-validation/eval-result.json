@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "mode": "coverage-sensitive",
+  "generatedAt": "2026-08-31T04:36:17.284Z",
+  "checklistPath": "ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json",
+  "reportPath": "ui/designs/evidence/marketing-demand-validation/exploratory-report.json",
+  "validationErrors": [],
+  "score": {
+    "total": 100,
+    "breakdown": {
+      "coverageRate": 1,
+      "blockedRate": 0,
+      "deviceCoverage": 1,
+      "findingQualityRate": 1,
+      "severityRate": 1,
+      "summaryRate": 1
+    },
+    "pass": true,
+    "thresholds": {
+      "minTotal": 90
+    }
+  }
+}

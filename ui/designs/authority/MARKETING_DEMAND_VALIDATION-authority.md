@@ -106,7 +106,7 @@ It should compare the rendered landing against the locked creative, the copy con
 - major count: `0`
 - minor count: `0`
 - Stage 5 confirmed 가능 여부: `가능`
-- 한 줄 요약: Hero부터 follow-up까지 모바일 퍼널의 위계, 단계 이동, result-before-email, 대칭 intent, fail-closed 복구, 320px follow-up containment와 localized scroll affordance가 계약과 일치한다.
+- 한 줄 요약: Hero부터 follow-up까지 모바일 퍼널의 위계, 단계 이동, result-before-email, 대칭 intent, fail-closed 복구, 390px viewport에서 검증한 최대 높이 320px follow-up containment와 localized scroll affordance가 계약과 일치한다.
 - next gate: authority-required slice이므로 `Design Status: confirmed` 반영은 fresh `final_authority_gate` 통과 후 수행한다.
 
 ## final_authority_gate — fresh Codex task only

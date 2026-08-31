@@ -163,6 +163,13 @@
 - authority: new-screen이므로 design authority와 runtime evidence가 필요하다.
 - closeout: Stage 6는 fail-closed 구현과 자동 검증을 완료하면 Manual Only blocker를 unchecked로 남긴 채 code closeout할 수 있다. 다만 operator privacy, allowlisted origin/hostname, Turnstile production key, edge-rule evidence, launch-readiness PR1/2/3가 끝나기 전에는 production lead 수집과 광고 집행을 열지 않는다.
 
+## Exploratory QA Evidence
+
+- checklist: `ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json`
+- report: `ui/designs/evidence/marketing-demand-validation/exploratory-report.json` — desktop/mobile/narrow coverage, findings `0`
+- eval: `ui/designs/evidence/marketing-demand-validation/eval-result.json` — score `100`, pass, validation errors `0`
+- production privacy/Turnstile/origin/edge readiness는 위 QA pass와 별개인 `Manual Only` blocker로 계속 fail-closed다.
+
 ## Contract Evolution Candidates (Optional)
 
 - 없음. 이번 슬라이스는 승인된 단일 퍼널과 단일 테이블/route 계약만 구현 대상으로 둔다.

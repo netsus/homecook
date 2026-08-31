@@ -86,6 +86,7 @@
       "pnpm validate:omo-bookkeeping",
       "pnpm validate:authority-evidence-presence",
       "pnpm validate:exploratory-qa-evidence",
+      "pnpm qa:eval -- --checklist ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json --report ui/designs/evidence/marketing-demand-validation/exploratory-report.json --fail-under 90",
       "git diff --check"
     ],
     "playwright_projects": [
@@ -115,13 +116,13 @@
       "critic_artifact": "ui/designs/critiques/MARKETING_DEMAND_VALIDATION-critique.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "mobile-390",
-        "mobile-320",
-        "desktop-1280",
-        "quiz-flow",
-        "result-flow",
-        "email-flow",
-        "followup-flow",
+        "hero-390",
+        "hero-320",
+        "hero-1280",
+        "quiz-390",
+        "result-390",
+        "email-390",
+        "followup-390",
         "turnstile-fail-closed"
       ],
       "evidence_artifact_refs": [
