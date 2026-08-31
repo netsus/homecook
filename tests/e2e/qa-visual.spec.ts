@@ -150,6 +150,14 @@ async function stabilizeVisualSnapshot(page: Page) {
         font-family: "QaSnapshotSans", sans-serif !important;
       }
 
+      @media (min-width: 1024px) {
+        .marketing-beta-root,
+        .marketing-beta-root button,
+        .marketing-beta-root input {
+          font-family: "QaSnapshotSans", sans-serif !important;
+        }
+      }
+
       nextjs-portal,
       [data-next-badge-root],
       [aria-label="Open Next.js Dev Tools"],

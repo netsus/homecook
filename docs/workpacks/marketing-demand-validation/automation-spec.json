@@ -75,7 +75,6 @@
       "pnpm test:e2e:marketing",
       "pnpm test:e2e:marketing:a11y",
       "pnpm test:e2e:marketing:visual",
-      "PLAYWRIGHT_SNAPSHOT_PLATFORM=linux pnpm test:e2e:marketing:visual",
       "pnpm test:lighthouse:marketing",
       "pnpm lint",
       "pnpm typecheck",

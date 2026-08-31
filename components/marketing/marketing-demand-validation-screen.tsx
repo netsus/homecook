@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -46,7 +46,13 @@ import type {
   MarketingValidationQuizResult,
   MarketingValidationRequestBody,
 } from "@/types/marketing-validation";
-import proofImage from "@/ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png";
+
+// Keep the tracked campaign proof in the bundle without making clean TypeScript
+// jobs resolve the raster extension as a source module.
+const proofImage: StaticImageData | string = process.env.NODE_ENV === "test"
+  ? "/marketing-demand-validation-proof.png"
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  : require("../../ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png") as StaticImageData;
 
 const styles = {
   body: "marketing-beta-body",
