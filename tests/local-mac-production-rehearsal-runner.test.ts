@@ -136,7 +136,7 @@ function canonicalPrimitiveConfig() {
       networks: { "data-internal": { aliases: ["postgrest-probe"] } },
       read_only: true,
       secrets: [],
-      volumes: [bind("/sealed-candidate")],
+      volumes: [bind("/sealed-candidate"), bind("/sealed-candidate-authority")],
     }),
     storage: base("storage", {
       depends_on: { auth: { condition: "service_healthy" }, "postgrest-probe": { condition: "service_healthy" } },
@@ -616,6 +616,7 @@ describe("release rehearsal R2 orchestration", () => {
     const candidate = await createCompletedRehearsalCandidateFixture();
     const candidateRoot = candidate.candidateRoot;
     const adapters = createAdapters();
+    let fullCafsReads = 0;
     adapters.startComponents.mockResolvedValue([
       runtime("app"), runtime("full_local"), runtime("worker"),
     ].map((entry) => ({
@@ -629,6 +630,9 @@ describe("release rehearsal R2 orchestration", () => {
       adapters,
       runnerIdentity: RUNNER_IDENTITY,
       now: () => new Date("2026-08-29T00:00:00.000Z"),
+      afterCandidatePnpmStoreFileOpen: (entry: { contentVerified?: boolean; relativePath: string }) => {
+        if (entry.contentVerified === true && entry.relativePath.startsWith("files/")) fullCafsReads += 1;
+      },
     });
 
     expect(result.schema).toBe(RUN_EVIDENCE_SCHEMA);
@@ -658,6 +662,15 @@ describe("release rehearsal R2 orchestration", () => {
     expect(adapters.createResources).toHaveBeenCalledWith(expect.objectContaining({
       candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
     }));
+    expect(adapters.startComponents).toHaveBeenCalledWith(expect.objectContaining({
+      candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
+      candidateContainerAuthorityRoot: join(
+        namespaceRoot,
+        RUN_ID,
+        "execution-candidate.container-authority",
+      ),
+    }));
+    expect(fullCafsReads).toBe(2);
     expect(adapters.stopRuntime.mock.calls.map(([entry]) => entry.component)).toEqual(["worker", "full_local", "app"]);
     expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id))
       .toEqual([...adapters.resources].reverse().map((entry) => entry.id));

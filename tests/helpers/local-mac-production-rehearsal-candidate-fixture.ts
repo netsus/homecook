@@ -119,6 +119,8 @@ export async function createCompletedRehearsalCandidateFixture(prefix = "homecoo
     join(sourceStore, "files"),
     join(sourceStore, "files", blobIntegrity.slice(0, 2)),
     join(sourceStore, "index"),
+    join(sourceStore, "projects"),
+    join(sourceStore, "tmp"),
   ]) mkdirSync(path, { mode: 0o700 });
   writeFileSync(join(sourceStore, blobRelativePath), blobBytes, { mode: 0o400 });
   writeFileSync(join(sourceStore, "index", "package.json"), "{}\n", { mode: 0o400 });

@@ -1753,6 +1753,8 @@ describe("release rehearsal candidate orchestration", () => {
     const fixture = await createCompletedRehearsalCandidateFixture();
     expect(readCompletedCandidateRoot(fixture.candidateRoot).manifest)
       .toEqual(fixture.manifest);
+    expect(JSON.parse(readFileSync(fixture.physicalAuthorityPath, "utf8")))
+      .toMatchObject({ authority_path_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
 
     const copyRoot = (label: string) => {
       const parent = privateRoot(`homecook-candidate-portable-${label}-`);
@@ -1771,7 +1773,7 @@ describe("release rehearsal candidate orchestration", () => {
     expect(() => readCompletedCandidateRoot(portable.executionRoot, {
       physicalAuthorityPath: copiedAuthority,
     })).toThrow(/physical|authority|root|path|identity|stale/iu);
-    const executionAuthority = join(portable.parent, "execution-physical-authority.json");
+    const executionAuthority = `${portable.executionRoot}.physical-authority.json`;
     issueCompletedCandidatePhysicalAuthority({
       candidateRoot: portable.executionRoot,
       authorityPath: executionAuthority,
@@ -1779,10 +1781,15 @@ describe("release rehearsal candidate orchestration", () => {
     expect(readCompletedCandidateRoot(portable.executionRoot, {
       physicalAuthorityPath: executionAuthority,
     }).manifest).toEqual(fixture.manifest);
+    const copiedSameRootAuthority = join(portable.parent, "copied-same-root-authority.json");
+    copyFileSync(executionAuthority, copiedSameRootAuthority);
+    expect(() => readCompletedCandidateRoot(portable.executionRoot, {
+      physicalAuthorityPath: copiedSameRootAuthority,
+    })).toThrow(/authority|canonical|exact|location|path/iu);
 
     const tamper = (label: string, mutate: (root: string) => void) => {
       const copy = copyRoot(label);
-      const authorityPath = join(copy.parent, "execution-physical-authority.json");
+      const authorityPath = `${copy.executionRoot}.physical-authority.json`;
       issueCompletedCandidatePhysicalAuthority({ candidateRoot: copy.executionRoot, authorityPath });
       mutate(copy.executionRoot);
       expect(() => readCompletedCandidateRoot(copy.executionRoot, { physicalAuthorityPath: authorityPath }))
@@ -1826,7 +1833,7 @@ describe("release rehearsal candidate orchestration", () => {
     });
 
     const swapped = copyRoot("swap-during-read");
-    const swappedAuthority = join(swapped.parent, "execution-physical-authority.json");
+    const swappedAuthority = `${swapped.executionRoot}.physical-authority.json`;
     issueCompletedCandidatePhysicalAuthority({
       candidateRoot: swapped.executionRoot,
       authorityPath: swappedAuthority,
@@ -1847,7 +1854,7 @@ describe("release rehearsal candidate orchestration", () => {
     expect(swappedOnce).toBe(true);
 
     const authorityHardlink = copyRoot("authority-hardlink");
-    const authorityPath = join(authorityHardlink.parent, "execution-physical-authority.json");
+    const authorityPath = `${authorityHardlink.executionRoot}.physical-authority.json`;
     issueCompletedCandidatePhysicalAuthority({
       candidateRoot: authorityHardlink.executionRoot,
       authorityPath,
@@ -1859,6 +1866,154 @@ describe("release rehearsal candidate orchestration", () => {
     symlinkSync("execution-physical-authority.json", authoritySymlink);
     expect(() => readCompletedCandidateRoot(authorityHardlink.executionRoot, { physicalAuthorityPath: authoritySymlink }))
       .toThrow(/authority|symlink|nofollow|canonical/iu);
+
+    for (const childName of ["projects", "tmp", "unexpected-after-authority"]) {
+      const residue = copyRoot(`store-residue-${childName}`);
+      const residueAuthority = `${residue.executionRoot}.physical-authority.json`;
+      issueCompletedCandidatePhysicalAuthority({
+        candidateRoot: residue.executionRoot,
+        authorityPath: residueAuthority,
+      });
+      const storeRoot = join(residue.executionRoot, "pnpm-store", "v10");
+      chmodSync(storeRoot, 0o700);
+      const residueRoot = join(storeRoot, childName);
+      mkdirSync(residueRoot, { mode: 0o700 });
+      writeFileSync(join(residueRoot, "residue"), "unexpected bytes\n", { mode: 0o400 });
+      chmodSync(residueRoot, 0o500);
+      chmodSync(storeRoot, 0o500);
+      expect(() => readCompletedCandidateRoot(residue.executionRoot, {
+        physicalAuthorityPath: residueAuthority,
+      })).toThrow(/pnpm|store|child|children|unexpected|inventory|physical|authority/iu);
+    }
+  });
+
+  it("uses a separate container-portable authority and rejects tamper before child startup", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
+    const issueContainerAuthority = candidateModule.issueCompletedCandidateContainerAuthority;
+    const readContainerCandidate = candidateModule.readCompletedCandidateContainerRoot;
+    const buildContainerContract = adaptersModule.buildCandidateContainerVerificationContract;
+    expect(typeof issueContainerAuthority).toBe("function");
+    expect(typeof readContainerCandidate).toBe("function");
+    expect(typeof buildContainerContract).toBe("function");
+    if (
+      typeof issueContainerAuthority !== "function"
+      || typeof readContainerCandidate !== "function"
+      || typeof buildContainerContract !== "function"
+    ) return;
+
+    const fixture = await createCompletedRehearsalCandidateFixture("homecook-container-candidate-");
+    const containerAuthorityRoot = `${fixture.candidateRoot}.container-authority`;
+    const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
+    const issued = (issueContainerAuthority as (options: {
+      candidateRoot: string;
+      containerCandidateRoot: string;
+      containerAuthorityPath: string;
+    }) => { authority_path: string })({
+      candidateRoot: fixture.candidateRoot,
+      containerCandidateRoot: fixture.candidateRoot,
+      containerAuthorityPath,
+    });
+    expect(issued.authority_path).toBe(containerAuthorityPath);
+    expect((readContainerCandidate as (root: string, options: { containerAuthorityPath: string }) => {
+      manifest: unknown;
+    })(fixture.candidateRoot, { containerAuthorityPath }).manifest).toEqual(fixture.manifest);
+
+    const repoRoot = realpathSync(process.cwd());
+    const contract = (buildContainerContract as (options: {
+      candidateRoot: string;
+      containerCandidateRoot?: string;
+      containerAuthorityRoot?: string;
+      candidateModuleUrl?: string;
+      jcsModuleUrl?: string;
+    }) => {
+      container_candidate_root: string;
+      container_authority_path: string;
+      host_authority_root: string;
+      mount_args: string[];
+      identitySource: (options?: { outputPath?: string | null }) => string;
+    })({
+      candidateRoot: fixture.candidateRoot,
+      containerCandidateRoot: fixture.candidateRoot,
+      containerAuthorityRoot,
+      candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+      jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+    });
+    expect(contract).toMatchObject({
+      container_candidate_root: fixture.candidateRoot,
+      container_authority_path: containerAuthorityPath,
+      host_authority_root: containerAuthorityRoot,
+    });
+    expect(contract.mount_args).toEqual([
+      "--mount", `type=bind,src=${fixture.candidateRoot},dst=${fixture.candidateRoot},readonly`,
+      "--mount", `type=bind,src=${containerAuthorityRoot},dst=${containerAuthorityRoot},readonly`,
+    ]);
+
+    const started = join(fixture.authorityRoot, "app-started");
+    const identity = join(fixture.authorityRoot, "container-identity.json");
+    const success = spawnSync(process.execPath, [
+      "-e",
+      `${contract.identitySource({ outputPath: identity })}.then(()=>require('node:fs').writeFileSync(${JSON.stringify(started)},'started',{flag:'wx',mode:0o400})).catch((error)=>{console.error(error);process.exit(70)})`,
+    ], { encoding: "utf8" });
+    expect(success.status, success.stderr).toBe(0);
+    expect(existsSync(identity)).toBe(true);
+    expect(existsSync(started)).toBe(true);
+
+    const copiedAuthority = join(fixture.authorityRoot, "copied-container-authority.json");
+    copyFileSync(containerAuthorityPath, copiedAuthority);
+    expect(() => (readContainerCandidate as (root: string, options: { containerAuthorityPath: string }) => unknown)(
+      fixture.candidateRoot,
+      { containerAuthorityPath: copiedAuthority },
+    )).toThrow(/authority|container|exact|path|location/iu);
+
+    const indexPath = join(fixture.candidateRoot, "pnpm-store", "v10", "index", "package.json");
+    chmodSync(indexPath, 0o600);
+    writeFileSync(indexPath, "{\"tampered\":true}\n");
+    chmodSync(indexPath, 0o400);
+    const tamperedStarted = join(fixture.authorityRoot, "worker-started-after-tamper");
+    const tampered = spawnSync(process.execPath, [
+      "-e",
+      `${contract.identitySource()}.then(()=>require('node:fs').writeFileSync(${JSON.stringify(tamperedStarted)},'started',{flag:'wx',mode:0o400})).catch(()=>process.exit(70))`,
+    ], { encoding: "utf8" });
+    expect(tampered.status).toBe(70);
+    expect(existsSync(tamperedStarted)).toBe(false);
+  });
+
+  it("bounds full CAFS verification to trust transitions while stable checks reject physical drift", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const verifyStable = candidateModule.verifyCompletedCandidatePhysicalStability;
+    expect(typeof verifyStable).toBe("function");
+    if (typeof verifyStable !== "function") return;
+
+    const fixture = await createCompletedRehearsalCandidateFixture("homecook-candidate-stable-scan-");
+    let fullCafsReads = 0;
+    const observe = (entry: { contentVerified?: boolean; relativePath: string }) => {
+      if (entry.contentVerified === true && entry.relativePath.startsWith("files/")) fullCafsReads += 1;
+    };
+    expect(readCompletedCandidateRoot(fixture.candidateRoot, {
+      afterPnpmStoreFileOpen: observe,
+    }).manifest).toEqual(fixture.manifest);
+    expect(fullCafsReads).toBe(1);
+    for (let index = 0; index < 12; index += 1) {
+      expect((verifyStable as (root: string, options: {
+        physicalAuthorityPath: string;
+        afterPnpmStoreFileOpen: typeof observe;
+      }) => { manifest: unknown })(fixture.candidateRoot, {
+        physicalAuthorityPath: fixture.physicalAuthorityPath,
+        afterPnpmStoreFileOpen: observe,
+      }).manifest).toEqual(fixture.manifest);
+    }
+    expect(fullCafsReads).toBe(1);
+
+    const cafsPath = join(fixture.candidateRoot, "pnpm-store", "v10", fixture.blobRelativePath);
+    chmodSync(cafsPath, 0o600);
+    writeFileSync(cafsPath, "tampered bytes\n");
+    chmodSync(cafsPath, 0o400);
+    expect(() => (verifyStable as (root: string, options: {
+      physicalAuthorityPath: string;
+    }) => unknown)(fixture.candidateRoot, {
+      physicalAuthorityPath: fixture.physicalAuthorityPath,
+    })).toThrow(/candidate|pnpm|physical|identity|authority|drift/iu);
   });
 
   it("reads every authority file through a stable private O_NOFOLLOW FD", () => {
@@ -2466,7 +2621,7 @@ describe("release rehearsal candidate orchestration", () => {
       const blobRelativePath = join("files", blobIntegrity.slice(0, 2), blobIntegrity.slice(2));
       for (const path of [
         sourceStore, join(sourceStore, "files"), join(sourceStore, "files", blobIntegrity.slice(0, 2)),
-        join(sourceStore, "index"), privateHome,
+        join(sourceStore, "index"), join(sourceStore, "projects"), join(sourceStore, "tmp"), privateHome,
       ]) {
         mkdirSync(path, { mode: 0o700 });
       }
@@ -2499,12 +2654,16 @@ describe("release rehearsal candidate orchestration", () => {
       expect(readFileSync(join(storePath, allowed.blobRelativePath), "utf8")).toBe("package bytes\n");
       expect(readFileSync(join(storePath, "index", "package.json"), "utf8")).toBe("{}\n");
       writeFileSync(join(storePath, "projects", "candidate"), "owned\n", { mode: 0o600 });
+      writeFileSync(join(storePath, "tmp", "metadata"), "scratch\n", { mode: 0o600 });
       return "ready";
     });
     expect(result.value).toBe("ready");
     expect(result.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
     expect(lstatSync(join(allowed.storeRoot, "v10", allowed.blobRelativePath)).mode & 0o777).toBe(0o400);
     expect(readFileSync(join(allowed.sourceStore, allowed.blobRelativePath), "utf8")).toBe("package bytes\n");
+    expect(readdirSync(join(allowed.storeRoot, "v10")).sort()).toEqual(["files", "index"]);
+    expect(existsSync(join(allowed.storeRoot, "v10", "projects"))).toBe(false);
+    expect(existsSync(join(allowed.storeRoot, "v10", "tmp"))).toBe(false);
 
     const sourceDrift = fixture("homecook-pnpm-store-view-source-drift-");
     await expect(invoke(sourceDrift, ({ storePath }) => {
@@ -2565,7 +2724,7 @@ describe("release rehearsal candidate orchestration", () => {
     );
     for (const path of [
       sourceStore, join(sourceStore, "files"), join(sourceStore, "files", sourceBlobIntegrity.slice(0, 2)),
-      join(sourceStore, "index"),
+      join(sourceStore, "index"), join(sourceStore, "projects"), join(sourceStore, "tmp"),
     ]) mkdirSync(path, { mode: 0o700 });
     writeFileSync(join(sourceStore, sourceBlobRelativePath), sourceBlobBytes, { mode: 0o400 });
     writeFileSync(join(sourceStore, "index", "package.json"), "{}\n", { mode: 0o400 });
@@ -2678,10 +2837,7 @@ describe("release rehearsal candidate orchestration", () => {
     }), { mode: 0o400 });
     chmodSync(join(root, "bundles"), 0o500);
     chmodSync(root, 0o500);
-    const originalPhysicalAuthority = join(
-      privateRoot("homecook-candidate-reader-physical-authority-"),
-      "candidate-physical-authority.json",
-    );
+    const originalPhysicalAuthority = `${root}.physical-authority.json`;
     issueCompletedCandidatePhysicalAuthority({
       candidateRoot: root,
       authorityPath: originalPhysicalAuthority,
