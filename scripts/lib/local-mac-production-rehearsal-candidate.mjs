@@ -75,6 +75,8 @@ const CANDIDATE_KEYS = [
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
   "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
   "generated_build_inventory_digest",
+  "pnpm_store_snapshot_inventory_digest",
+  "pnpm_store_snapshot_identity_digest",
   "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
@@ -481,6 +483,8 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.compose_source_digest, "compose_source_digest");
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
   digest(value.generated_build_inventory_digest, "generated_build_inventory_digest");
+  digest(value.pnpm_store_snapshot_inventory_digest, "pnpm_store_snapshot_inventory_digest");
+  digest(value.pnpm_store_snapshot_identity_digest, "pnpm_store_snapshot_identity_digest");
   string(value.build_id, "build_id");
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
   digest(value.bundle_manifest_digest, "bundle_manifest_digest");
@@ -799,10 +803,13 @@ export function assembleCandidateArtifacts({ sourceRoot, generatedRoot = sourceR
   });
 }
 
-function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot }) {
+export function materializeCandidateBuildWorkspace({ sourceRoot, sourceManifest, buildRoot }) {
   mkdirSync(buildRoot, { mode: 0o700 });
   for (const entry of sourceManifest.entries) {
     copyManifestEntry({ sourceRoot, destinationRoot: buildRoot, entry });
+  }
+  for (const name of [".next", "node_modules"]) {
+    mkdirSync(join(buildRoot, name), { mode: 0o700 });
   }
   const sealDirectories = (path) => {
     for (const name of readdirSync(path)) {
@@ -813,9 +820,7 @@ function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot }) {
     chmodSync(path, 0o500);
   };
   sealDirectories(buildRoot);
-  for (const name of [".next", "node_modules"]) {
-    mkdirSync(join(buildRoot, name), { mode: 0o700 });
-  }
+  for (const name of [".next", "node_modules"]) chmodSync(join(buildRoot, name), 0o700);
 }
 
 export function collectSealedMigrationInventory({ bundleRoot } = {}) {
@@ -1149,7 +1154,9 @@ export function buildBundleAuthorityManifest(input) {
     "artifacts", "build_id", "ci_check_summary_digest", "ci_snapshot_digest",
     "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
-    "sandbox_policy_digest", "generated_build_inventory_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_snapshot_identity_digest",
+    "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
     "build_tools", "builder_input_digest",
     "repository", "source_ref", "selection_digest",
@@ -1162,7 +1169,9 @@ export function buildBundleAuthorityManifest(input) {
   string(input.build_id, "bundle authority build_id");
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
-    "sandbox_policy_digest", "generated_build_inventory_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_snapshot_identity_digest",
+    "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest", "builder_input_digest",
   ]) digest(input[field], `bundle authority ${field}`);
   validateEnvironmentMetadata(input.environment_snapshot);
@@ -1318,29 +1327,217 @@ export async function withCandidateBuildWorkAuthority({
   return Object.freeze({ authority_digest: authorityDigest, value });
 }
 
+const PNPM_STORE_IDENTITY_KEYS = [
+  "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs",
+];
+
+function samePnpmStoreIdentity(left, right) {
+  return PNPM_STORE_IDENTITY_KEYS.every((key) => left[key] === right[key]);
+}
+
+function pnpmStoreInventory(root, currentUid, {
+  requireSealed = false,
+  verifyCafsContent = false,
+} = {}) {
+  const entries = [];
+  const visit = (path, relativePath) => {
+    const before = lstatSync(path, { bigint: true });
+    const mode = modeBits(before.mode);
+    if (
+      before.isSymbolicLink() || before.uid !== BigInt(currentUid)
+      || realpathSync(path) !== path || (!requireSealed && (mode & 0o022) !== 0)
+      || (requireSealed && (mode & 0o222) !== 0)
+    ) fail("pnpm store inventory owner, mode, type, or canonical path is unsafe");
+    if (before.isDirectory()) {
+      if (requireSealed && mode !== 0o500) fail("private pnpm store directory is not sealed");
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail("pnpm store directory identity drifted during inventory");
+        }
+        entries.push({
+          path: relativePath,
+          type: "directory",
+          mode,
+          uid: String(before.uid),
+          gid: String(before.gid),
+          nlink: String(before.nlink),
+          device: String(before.dev),
+          inode: String(before.ino),
+          size: String(before.size),
+          ctime_ns: String(before.ctimeNs),
+          mtime_ns: String(before.mtimeNs),
+          content_identity: null,
+        });
+        for (const name of readdirSync(path).sort()) {
+          visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+        }
+        if (!samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))) {
+          fail("pnpm store directory identity drifted during inventory");
+        }
+      } finally {
+        closeSync(fd);
+      }
+      return;
+    }
+    if (!before.isFile() || before.nlink !== 1n) {
+      fail("pnpm store inventory requires regular nlink1 files");
+    }
+    const executable = (mode & 0o111) !== 0;
+    if (requireSealed && mode !== (executable ? 0o500 : 0o400)) {
+      fail("private pnpm store file is not canonically sealed");
+    }
+    let contentIdentity;
+    const cafsMatch = /^files\/([0-9a-f]{2})\/([0-9a-f]{126})(-exec)?$/u.exec(relativePath);
+    if (relativePath.startsWith("files/")) {
+      if (!cafsMatch || executable !== Boolean(cafsMatch[3])) {
+        fail("pnpm CAFS path or executable identity is invalid");
+      }
+      if (verifyCafsContent) {
+        const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+        try {
+          if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+            fail("pnpm CAFS file identity drifted before content verification");
+          }
+          const actualIntegrity = createHash("sha512").update(readFileSync(fd)).digest("hex");
+          if (actualIntegrity !== `${cafsMatch[1]}${cafsMatch[2]}`) {
+            fail("pnpm CAFS content differs from its content-addressed path");
+          }
+          if (
+            !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
+            || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
+          ) fail("pnpm CAFS file identity drifted during content verification");
+        } finally {
+          closeSync(fd);
+        }
+      }
+      contentIdentity = `sha512:${cafsMatch[1]}${cafsMatch[2]}${cafsMatch[3] ?? ""}`;
+    } else if (relativePath.startsWith("index/")) {
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail("pnpm store index file identity drifted before read");
+        }
+        contentIdentity = `sha256:${sha256Bytes(readFileSync(fd))}`;
+        if (
+          !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
+          || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
+        ) fail("pnpm store index file identity drifted during read");
+      } finally {
+        closeSync(fd);
+      }
+    } else {
+      fail("pnpm store inventory contains an unexpected root");
+    }
+    entries.push({
+      path: relativePath,
+      type: "file",
+      mode,
+      uid: String(before.uid),
+      gid: String(before.gid),
+      nlink: String(before.nlink),
+      device: String(before.dev),
+      inode: String(before.ino),
+      size: String(before.size),
+      ctime_ns: String(before.ctimeNs),
+      mtime_ns: String(before.mtimeNs),
+      content_identity: contentIdentity,
+    });
+  };
+  for (const name of ["files", "index"]) visit(join(root, name), name);
+  const logicalEntries = entries.map(({ path, type, size, content_identity: contentIdentity }) => ({
+    path,
+    type,
+    size: type === "file" ? size : null,
+    content_identity: contentIdentity,
+  }));
+  return Object.freeze({
+    entries,
+    inventory_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-store-snapshot-inventory.v1",
+      entries: logicalEntries,
+    }),
+    identity_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-store-physical-identity.v1",
+      entries,
+    }),
+  });
+}
+
+function clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory) {
+  const sourceEntries = new Map(sourceInventory.entries.map((entry) => [entry.path, entry]));
+  const cloneEntry = (source, destination, relativePath) => {
+    const expected = sourceEntries.get(relativePath);
+    const before = lstatSync(source, { bigint: true });
+    if (
+      !expected || before.isSymbolicLink() || realpathSync(source) !== source
+      || String(before.dev) !== expected.device || String(before.ino) !== expected.inode
+      || String(before.ctimeNs) !== expected.ctime_ns || String(before.mtimeNs) !== expected.mtime_ns
+    ) fail("approved pnpm store source drifted before private snapshot copy");
+    if (before.isDirectory()) {
+      mkdirSync(destination, { mode: 0o700 });
+      for (const name of readdirSync(source).sort()) {
+        cloneEntry(join(source, name), join(destination, name), `${relativePath}/${name}`);
+      }
+      chmodSync(destination, 0o500);
+      return;
+    }
+    copyFileSync(
+      source,
+      destination,
+      fsConstants.COPYFILE_EXCL | fsConstants.COPYFILE_FICLONE,
+    );
+    const isIndex = relativePath.startsWith("index/");
+    chmodSync(destination, relativePath.endsWith("-exec") ? (isIndex ? 0o500 : 0o700) : (isIndex ? 0o400 : 0o600));
+    const copied = lstatSync(destination, { bigint: true });
+    if (
+      copied.isSymbolicLink() || !copied.isFile() || copied.nlink !== 1n
+      || realpathSync(destination) !== destination || copied.size !== before.size
+      || !samePnpmStoreIdentity(before, lstatSync(source, { bigint: true }))
+    ) fail("private pnpm store clone or source identity drifted during copy");
+  };
+  mkdirSync(storePath, { mode: 0o700 });
+  for (const name of ["files", "index"]) {
+    cloneEntry(join(sourceStore, name), join(storePath, name), name);
+  }
+}
+
+function sealPnpmStoreFiles(filesRoot) {
+  const visit = (path) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) fail("private pnpm store contains a symlink while sealing");
+    if (stat.isDirectory()) {
+      for (const name of readdirSync(path)) visit(join(path, name));
+      return;
+    }
+    if (!stat.isFile() || stat.nlink !== 1) fail("private pnpm store contains an unsafe file while sealing");
+    chmodSync(path, (stat.mode & 0o111) === 0 ? 0o400 : 0o500);
+  };
+  visit(filesRoot);
+}
+
 /**
- * @param {{sourceStore:string,privateHome:string,currentUid?:number}} options
- * @param {(authority:{storePath:string})=>unknown|Promise<unknown>} callback
+ * @param {{sourceStore:string,storeRoot:string,currentUid?:number}} options
+ * @param {(authority:{storePath:string,writableRoots:string[],snapshotInventoryDigest:string})=>unknown|Promise<unknown>} callback
  */
 export async function withCandidatePnpmStoreView({
   sourceStore,
-  privateHome,
+  storeRoot,
   currentUid = process.getuid?.(),
 } = /** @type {any} */ ({}), callback) {
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   if (typeof callback !== "function") fail("candidate pnpm store-view callback is required");
-  if (![sourceStore, privateHome].every((path) => isAbsolute(path ?? "") && resolve(path) === path)) {
+  if (![sourceStore, storeRoot].every((path) => isAbsolute(path ?? "") && resolve(path) === path)) {
     fail("candidate pnpm store-view paths must be absolute and canonical");
   }
-  const privateHomeStat = lstatSync(privateHome);
+  const privateParent = dirname(storeRoot);
+  const privateParentStat = lstatSync(privateParent, { bigint: true });
   if (
-    privateHomeStat.isSymbolicLink() || !privateHomeStat.isDirectory()
-    || privateHomeStat.uid !== currentUid || modeBits(privateHomeStat.mode) !== 0o700
-    || realpathSync(privateHome) !== privateHome
-  ) fail("candidate pnpm store-view private home is unsafe");
+    privateParentStat.isSymbolicLink() || !privateParentStat.isDirectory()
+    || privateParentStat.uid !== BigInt(currentUid) || modeBits(privateParentStat.mode) !== 0o700
+    || realpathSync(privateParent) !== privateParent
+  ) fail("candidate pnpm store-view parent is unsafe");
 
-  const identityKeys = ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs"];
-  const sameIdentity = (left, right) => identityKeys.every((key) => left[key] === right[key]);
   const sourcePaths = [sourceStore, join(sourceStore, "files"), join(sourceStore, "index")];
   const sourceSnapshots = [];
   try {
@@ -1351,9 +1548,9 @@ export async function withCandidatePnpmStoreView({
         || (modeBits(stat.mode) & 0o022) !== 0 || realpathSync(path) !== path
       ) fail("approved pnpm package store path, owner, mode, or identity is unsafe");
       const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
-      if (!sameIdentity(stat, fstatSync(fd, { bigint: true }))) {
+      if (!samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))) {
         closeSync(fd);
-        fail("approved pnpm package store identity drifted before view creation");
+        fail("approved pnpm package store identity drifted before snapshot creation");
       }
       sourceSnapshots.push({ fd, path, stat });
     }
@@ -1362,98 +1559,115 @@ export async function withCandidatePnpmStoreView({
     throw error;
   }
 
-  const storeParent = join(privateHome, "pnpm-store");
-  const storePath = join(storeParent, "v10");
-  const sourceIndexPath = join(sourceStore, "index");
-  const privateIndexPath = join(storePath, "index");
-  const sourceIndexDigest = digestLocalMacProductionExecutionTree(sourceIndexPath);
+  const storePath = join(storeRoot, "v10");
+  let sourceInventory;
+  let snapshotInventory;
   try {
-    mkdirSync(storeParent, { mode: 0o700 });
-    mkdirSync(storePath, { mode: 0o700 });
-    symlinkSync(join(sourceStore, "files"), join(storePath, "files"));
-    copyLocalMacProductionExecutionTree(sourceIndexPath, privateIndexPath);
-    sealLocalMacProductionExecutionTree(privateIndexPath);
-    if (digestLocalMacProductionExecutionTree(privateIndexPath) !== sourceIndexDigest) {
-      fail("candidate pnpm store-view index copy digest mismatch");
-    }
+    sourceInventory = pnpmStoreInventory(sourceStore, currentUid, { verifyCafsContent: true });
+    mkdirSync(storeRoot, { mode: 0o700 });
+    clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory);
     for (const name of ["projects", "tmp"]) mkdirSync(join(storePath, name), { mode: 0o700 });
+    chmodSync(storePath, 0o500);
+    chmodSync(storeRoot, 0o500);
+    snapshotInventory = pnpmStoreInventory(storePath, currentUid);
+    if (snapshotInventory.inventory_digest !== sourceInventory.inventory_digest) {
+      fail("candidate pnpm store snapshot inventory digest differs from its approved source");
+    }
+    const sourceAfterCopy = pnpmStoreInventory(sourceStore, currentUid);
+    if (
+      sourceAfterCopy.inventory_digest !== sourceInventory.inventory_digest
+      || sourceAfterCopy.identity_digest !== sourceInventory.identity_digest
+    ) fail("approved pnpm package store drifted during private snapshot creation");
   } catch (error) {
-    for (const { fd } of sourceSnapshots) closeSync(fd);
-    fail(`candidate pnpm store-view create-only materialization failed: ${error?.code ?? "unknown"}`);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    fail(`candidate pnpm store-view create-only materialization failed: ${error?.message ?? error?.code ?? "unknown"}`);
   }
-  const viewDirectories = [storeParent, storePath, join(storePath, "projects"), join(storePath, "tmp")]
-    .map((path) => ({ path, stat: lstatSync(path, { bigint: true }) }));
-  for (const { path, stat } of viewDirectories) {
-    if (
-      stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
-      || modeBits(stat.mode) !== 0o700 || realpathSync(path) !== path
-    ) fail("candidate pnpm store-view directory identity is unsafe");
-  }
-  const linkSnapshots = ["files"].map((name) => {
-    const path = join(storePath, name);
-    const stat = lstatSync(path, { bigint: true });
-    const target = join(sourceStore, name);
-    if (
-      !stat.isSymbolicLink() || stat.uid !== BigInt(currentUid) || stat.nlink !== 1n
-      || realpathSync(path) !== target
-    ) fail("candidate pnpm store-view read link escapes its approved target");
-    return { path, stat, target: readlinkSync(path), realTarget: target };
-  });
-  const authorityDigest = sha256Jcs({
-    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v1",
-    source: sourceSnapshots.map(({ path, stat }) => ({
-      path_digest: sha256Jcs(path),
-      device: String(stat.dev),
-      inode: String(stat.ino),
-      mode: modeBits(stat.mode),
-      uid: String(stat.uid),
-    })),
-    view_path_digest: sha256Jcs(storePath),
-    index_digest: sourceIndexDigest,
-  });
 
+  const writableRoots = [join(storePath, "projects"), join(storePath, "tmp")];
+  const viewDirectories = [storeRoot, storePath, join(storePath, "files"), join(storePath, "index"), ...writableRoots]
+    .map((path) => {
+      const stat = lstatSync(path, { bigint: true });
+      const expectedMode = writableRoots.includes(path) ? 0o700 : 0o500;
+      if (
+        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+        || modeBits(stat.mode) !== expectedMode || realpathSync(path) !== path
+      ) fail("candidate pnpm store-view directory identity is unsafe");
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      if (!samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))) {
+        closeSync(fd);
+        fail("candidate pnpm store-view directory identity drifted before execution");
+      }
+      return { fd, path, stat, mutable: writableRoots.includes(path) };
+    });
   let value;
   let callbackError;
   try {
-    value = await callback({ storePath });
+    value = await callback({
+      storePath,
+      writableRoots: Object.freeze([...writableRoots]),
+      snapshotInventoryDigest: snapshotInventory.inventory_digest,
+    });
   } catch (error) {
     callbackError = error;
   }
   let identityError;
+  let sealedSnapshotInventory;
   try {
     for (const { fd, path, stat } of sourceSnapshots) {
       const pathPost = lstatSync(path, { bigint: true });
       const fdPost = fstatSync(fd, { bigint: true });
       if (
         pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
-        || !sameIdentity(stat, pathPost) || !sameIdentity(stat, fdPost)
+        || !samePnpmStoreIdentity(stat, pathPost) || !samePnpmStoreIdentity(stat, fdPost)
       ) fail("approved pnpm package store identity drifted during candidate build");
     }
-    for (const { path, stat, target, realTarget } of linkSnapshots) {
-      const post = lstatSync(path, { bigint: true });
-      if (
-        !post.isSymbolicLink() || !sameIdentity(stat, post)
-        || readlinkSync(path) !== target || realpathSync(path) !== realTarget
-      ) fail("candidate pnpm store-view link identity drifted during candidate build");
-    }
-    for (const { path, stat } of viewDirectories.slice(0, 2)) {
-      const post = lstatSync(path, { bigint: true });
-      if (!sameIdentity(stat, post) || realpathSync(path) !== path) {
-        fail("candidate pnpm store-view identity drifted during candidate build");
-      }
-    }
+    const sourcePost = pnpmStoreInventory(sourceStore, currentUid);
     if (
-      digestLocalMacProductionExecutionTree(sourceIndexPath) !== sourceIndexDigest
-      || digestLocalMacProductionExecutionTree(privateIndexPath) !== sourceIndexDigest
-    ) fail("candidate pnpm store-view index authority drifted during candidate build");
+      sourcePost.inventory_digest !== sourceInventory.inventory_digest
+      || sourcePost.identity_digest !== sourceInventory.identity_digest
+    ) fail("approved pnpm package store inventory drifted during candidate build");
+    const snapshotBeforeSeal = pnpmStoreInventory(storePath, currentUid);
+    if (
+      snapshotBeforeSeal.inventory_digest !== snapshotInventory.inventory_digest
+      || snapshotBeforeSeal.identity_digest !== snapshotInventory.identity_digest
+    ) fail("candidate pnpm store snapshot inventory drifted during candidate build");
+    sealPnpmStoreFiles(join(storePath, "files"));
+    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
+    if (sealedSnapshotInventory.inventory_digest !== snapshotInventory.inventory_digest) {
+      fail("candidate pnpm store sealed snapshot inventory drifted after build");
+    }
+    for (const { fd, path, stat, mutable } of viewDirectories) {
+      const pathPost = lstatSync(path, { bigint: true });
+      const fdPost = fstatSync(fd, { bigint: true });
+      const keys = mutable ? ["dev", "ino", "mode", "uid", "gid"] : PNPM_STORE_IDENTITY_KEYS;
+      if (
+        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
+        || !keys.every((key) => stat[key] === pathPost[key] && stat[key] === fdPost[key])
+      ) fail("candidate pnpm store-view directory identity drifted during candidate build");
+    }
   } catch (error) {
     identityError = error;
   } finally {
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
     for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
   }
   if (identityError) throw identityError;
   if (callbackError) throw callbackError;
-  return Object.freeze({ authority_digest: authorityDigest, value });
+  const authorityDigest = sha256Jcs({
+    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v2",
+    source_inventory_digest: sourceInventory.inventory_digest,
+    source_identity_digest: sourceInventory.identity_digest,
+    snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
+    snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    view_path_digest: sha256Jcs(storePath),
+    writable_path_digests: writableRoots.map((path) => sha256Jcs(path)),
+  });
+  return Object.freeze({
+    authority_digest: authorityDigest,
+    snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
+    snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    value,
+  });
 }
 
 /** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[]}} options */
@@ -1785,6 +1999,8 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
     ["generated_build_inventory_digest", candidate.generated_build_inventory_digest, bundle.generated_build_inventory_digest],
+    ["pnpm_store_snapshot_inventory_digest", candidate.pnpm_store_snapshot_inventory_digest, bundle.pnpm_store_snapshot_inventory_digest],
+    ["pnpm_store_snapshot_identity_digest", candidate.pnpm_store_snapshot_identity_digest, bundle.pnpm_store_snapshot_identity_digest],
     ["toolchain_lock_digest", candidate.toolchain_lock_digest, bundle.toolchain_lock_digest],
     ["environment_snapshot", candidate.environment_snapshot, bundle.environment_snapshot],
     ["production_guard", candidate.production_guard, bundle.production_guard],
@@ -1819,6 +2035,17 @@ export function readCompletedCandidateRoot(root) {
   const manifest = validateCandidateManifestObject(
     readSealedAuthorityFile(root, join(root, "candidate.json"), "candidate manifest"),
   );
+  const storeSnapshot = pnpmStoreInventory(
+    join(root, "pnpm-store", "v10"),
+    rootStat.uid,
+    { requireSealed: true, verifyCafsContent: true },
+  );
+  if (
+    storeSnapshot.inventory_digest !== manifest.pnpm_store_snapshot_inventory_digest
+    || storeSnapshot.identity_digest !== manifest.pnpm_store_snapshot_identity_digest
+  ) {
+    fail("completed candidate pnpm store snapshot inventory or identity digest is invalid");
+  }
   const candidateIdentityAuthority = readSealedAuthorityFile(
     root,
     join(root, "bundles", "candidate-identity.json"),
@@ -2103,6 +2330,14 @@ export async function buildReleaseRehearsalCandidate({
     );
     const sandboxPolicyDigest = digest(build.sandbox_policy_digest, "sandbox policy digest");
     const generatedInventoryDigest = generatedBuildInventoryDigest(build.file_inventory);
+    const pnpmStoreSnapshotInventoryDigest = digest(
+      build.pnpm_store_snapshot_inventory_digest,
+      "pnpm store snapshot inventory digest",
+    );
+    const pnpmStoreSnapshotIdentityDigest = digest(
+      build.pnpm_store_snapshot_identity_digest,
+      "pnpm store snapshot identity digest",
+    );
     exactObject(build.build_tools, "build tools", ["next_cli"]);
     validateToolIdentity(build.build_tools.next_cli, "build tools next_cli", {
       requireExecutable: false,
@@ -2125,6 +2360,8 @@ export async function buildReleaseRehearsalCandidate({
       release_tree: sourceEvidence.release_tree,
       sandbox_policy_digest: sandboxPolicyDigest,
       generated_build_inventory_digest: generatedInventoryDigest,
+      pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+      pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
       sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
@@ -2164,6 +2401,8 @@ export async function buildReleaseRehearsalCandidate({
       compose_source_digest: composeSourceDigest,
       sandbox_policy_digest: sandboxPolicyDigest,
       generated_build_inventory_digest: generatedInventoryDigest,
+      pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+      pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
       build_id: buildId,
       build_tools: build.build_tools,
       sealed_bundle_digest: sealedBundleDigest,
@@ -3617,7 +3856,7 @@ export function createReleaseRehearsalCandidateAdapters({
       const buildRoot = join(runRoot, "build-work");
       mkdirSync(privateHome, { mode: 0o700 });
       mkdirSync(privateTmp, { mode: 0o700 });
-      materializeBuildWorkspace({
+      materializeCandidateBuildWorkspace({
         sourceRoot: source.checkout_dir,
         sourceManifest: source.source_manifest,
         buildRoot,
@@ -3637,9 +3876,9 @@ export function createReleaseRehearsalCandidateAdapters({
         }
         const storeViewBuild = await withCandidatePnpmStoreView({
           sourceStore: resolve(packageStorePath),
-          privateHome,
+          storeRoot: join(runRoot, "pnpm-store"),
           currentUid: process.getuid?.(),
-        }, async ({ storePath }) => {
+        }, async ({ storePath, writableRoots: storeWritableRoots }) => {
           const cleanBuildEnv = Object.freeze({
             ...childEnv,
             CI: "1",
@@ -3655,12 +3894,16 @@ export function createReleaseRehearsalCandidateAdapters({
               buildRoot,
               privateHome,
               privateTmp,
-              resolve(packageStorePath),
               storePath,
               ...Object.values(tools),
             ],
-            writeRoots,
-            deniedWritePaths: [source.checkout_dir, resolve(packageStorePath), join(storePath, "index")],
+            writeRoots: [...writeRoots, ...storeWritableRoots],
+            deniedWritePaths: [
+              source.checkout_dir,
+              resolve(packageStorePath),
+              join(storePath, "files"),
+              join(storePath, "index"),
+            ],
             deniedPaths: [
               sourceRoot,
               resolve(environmentSourcePath),
@@ -3776,15 +4019,21 @@ export function createReleaseRehearsalCandidateAdapters({
         return {
           ...storeViewBuild.value,
           pnpm_store_view_authority_digest: storeViewBuild.authority_digest,
+          pnpm_store_snapshot_inventory_digest: storeViewBuild.snapshot_inventory_digest,
+          pnpm_store_snapshot_identity_digest: storeViewBuild.snapshot_identity_digest,
         };
       });
       const {
         pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
+        pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+        pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
         sandbox_policy_evidence: sandboxPolicyEvidence,
         ...build
       } = authorizedBuild.value;
       return {
         ...build,
+        pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+        pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
         sandbox_policy_digest: sha256Jcs({
           ...sandboxPolicyEvidence,
           build_work_authority_digest: authorizedBuild.authority_digest,

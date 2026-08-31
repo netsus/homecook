@@ -450,6 +450,8 @@ describe("local Mac production rehearsal CLI", () => {
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
     expect(rehearsalRunbook).toContain("상태: **canonical / candidate build-work sandbox repair author complete / fresh independent review pending**");
     expect(rehearsalRunbook).toContain("generated_build_inventory_digest");
+    expect(rehearsalRunbook).toContain("pnpm_store_snapshot_inventory_digest");
+    expect(rehearsalRunbook).toContain("pnpm_store_snapshot_identity_digest");
     expect(rehearsalRunbook).toContain("(target children)");
     expect(rehearsalRunbook).toContain("R2 isolated run, R3 create-only run receipt");
     expect(rehearsalRunbook).toContain("trusted receipt가 아닌 run evidence");

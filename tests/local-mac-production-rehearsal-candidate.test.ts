@@ -275,6 +275,7 @@ function validManifestInput() {
       fileInventory.filter((entry) => entry.source_kind === "generated_build"),
     )).digest("hex"),
     pnpm_store_snapshot_inventory_digest: DIGEST_C,
+    pnpm_store_snapshot_identity_digest: DIGEST_A,
     build_id: `candidate-${SHA_A}`,
     sealed_bundle_digest: DIGEST_B,
     bundle_manifest_digest: DIGEST_C,
@@ -341,6 +342,7 @@ describe("release rehearsal candidate manifest", () => {
         "sandbox_policy_digest",
         "generated_build_inventory_digest",
         "pnpm_store_snapshot_inventory_digest",
+        "pnpm_store_snapshot_identity_digest",
         "sealed_bundle_digest",
         "bundle_manifest_digest",
         "toolchain",
@@ -384,6 +386,11 @@ describe("release rehearsal candidate manifest", () => {
       source_snapshot_digest: manifest.source_manifest_digest,
       pnpm_store_snapshot_inventory_digest: DIGEST_A,
     })).toThrow(/pnpm|store|inventory|cross-binding|digest/iu);
+    expect(() => validateCandidateBundleCrossBinding(manifest, {
+      ...manifest,
+      source_snapshot_digest: manifest.source_manifest_digest,
+      pnpm_store_snapshot_identity_digest: DIGEST_B,
+    })).toThrow(/pnpm|store|identity|cross-binding|digest/iu);
     expect(() => buildCandidateManifest({
       ...validManifestInput(),
       file_inventory: validManifestInput().file_inventory.filter(
@@ -2342,12 +2349,20 @@ describe("release rehearsal candidate orchestration", () => {
       const sourceStore = join(root, "approved-store-v10");
       const privateHome = join(root, "candidate-home");
       const storeRoot = join(root, "candidate-store");
-      for (const path of [sourceStore, join(sourceStore, "files"), join(sourceStore, "index"), privateHome]) {
+      const blobBytes = Buffer.from("package bytes\n");
+      const blobIntegrity = createHash("sha512").update(blobBytes).digest("hex");
+      const blobRelativePath = join("files", blobIntegrity.slice(0, 2), blobIntegrity.slice(2));
+      for (const path of [
+        sourceStore, join(sourceStore, "files"), join(sourceStore, "files", blobIntegrity.slice(0, 2)),
+        join(sourceStore, "index"), privateHome,
+      ]) {
         mkdirSync(path, { mode: 0o700 });
       }
-      writeFileSync(join(sourceStore, "files", "blob"), "package bytes\n", { mode: 0o400 });
+      writeFileSync(join(sourceStore, blobRelativePath), blobBytes, { mode: 0o400 });
       writeFileSync(join(sourceStore, "index", "package.json"), "{}\n", { mode: 0o400 });
-      return { root, sourceStore, privateHome, storeRoot, currentUid: process.getuid?.() };
+      return {
+        root, sourceStore, privateHome, storeRoot, blobRelativePath, currentUid: process.getuid?.(),
+      };
     };
     const invoke = async (
       paths: ReturnType<typeof fixture>,
@@ -2363,28 +2378,29 @@ describe("release rehearsal candidate orchestration", () => {
       expect(storePath.startsWith(`${allowed.privateHome}/`)).toBe(false);
       expect(lstatSync(storePath).mode & 0o777).toBe(0o500);
       expect(lstatSync(join(storePath, "files")).isSymbolicLink()).toBe(false);
-      expect(lstatSync(join(storePath, "files", "blob")).nlink).toBe(1);
-      expect(lstatSync(join(storePath, "files", "blob")).mode & 0o777).toBe(0o400);
+      expect(lstatSync(join(storePath, allowed.blobRelativePath)).nlink).toBe(1);
+      expect(lstatSync(join(storePath, allowed.blobRelativePath)).mode & 0o777).toBe(0o600);
       expect(realpathSync(join(storePath, "files"))).toBe(join(storePath, "files"));
       expect(realpathSync(join(storePath, "index"))).toBe(join(storePath, "index"));
       expect(writableRoots).toEqual([join(storePath, "projects"), join(storePath, "tmp")]);
       expect(snapshotInventoryDigest).toMatch(/^[0-9a-f]{64}$/u);
-      expect(readFileSync(join(storePath, "files", "blob"), "utf8")).toBe("package bytes\n");
+      expect(readFileSync(join(storePath, allowed.blobRelativePath), "utf8")).toBe("package bytes\n");
       expect(readFileSync(join(storePath, "index", "package.json"), "utf8")).toBe("{}\n");
       writeFileSync(join(storePath, "projects", "candidate"), "owned\n", { mode: 0o600 });
       return "ready";
     });
     expect(result.value).toBe("ready");
     expect(result.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
-    expect(readFileSync(join(allowed.sourceStore, "files", "blob"), "utf8")).toBe("package bytes\n");
+    expect(lstatSync(join(allowed.storeRoot, "v10", allowed.blobRelativePath)).mode & 0o777).toBe(0o400);
+    expect(readFileSync(join(allowed.sourceStore, allowed.blobRelativePath), "utf8")).toBe("package bytes\n");
 
     const sourceDrift = fixture("homecook-pnpm-store-view-source-drift-");
     await expect(invoke(sourceDrift, ({ storePath }) => {
-      const sourceBlob = join(sourceDrift.sourceStore, "files", "blob");
+      const sourceBlob = join(sourceDrift.sourceStore, sourceDrift.blobRelativePath);
       chmodSync(sourceBlob, 0o600);
       writeFileSync(sourceBlob, "mutated source bytes\n");
       chmodSync(sourceBlob, 0o400);
-      expect(readFileSync(join(storePath, "files", "blob"), "utf8")).toBe("package bytes\n");
+      expect(readFileSync(join(storePath, sourceDrift.blobRelativePath), "utf8")).toBe("package bytes\n");
     })).rejects.toThrow(/source|store|inventory|identity|drift/iu);
 
     const escaped = fixture("homecook-pnpm-store-view-escape-");
@@ -2427,8 +2443,25 @@ describe("release rehearsal candidate orchestration", () => {
     expect(readFileSync(join(raced, "complete.json"), "utf8")).toBe("attacker");
   });
 
-  it("accepts only complete roots with exact candidate and bundle authority manifests", () => {
+  it("accepts only complete roots with exact candidate and bundle authority manifests", async () => {
     const root = privateRoot("homecook-candidate-reader-");
+    const sourceStore = join(privateRoot("homecook-candidate-reader-store-source-"), "v10");
+    const sourceBlobBytes = Buffer.from("package bytes\n");
+    const sourceBlobIntegrity = createHash("sha512").update(sourceBlobBytes).digest("hex");
+    const sourceBlobRelativePath = join(
+      "files", sourceBlobIntegrity.slice(0, 2), sourceBlobIntegrity.slice(2),
+    );
+    for (const path of [
+      sourceStore, join(sourceStore, "files"), join(sourceStore, "files", sourceBlobIntegrity.slice(0, 2)),
+      join(sourceStore, "index"),
+    ]) mkdirSync(path, { mode: 0o700 });
+    writeFileSync(join(sourceStore, sourceBlobRelativePath), sourceBlobBytes, { mode: 0o400 });
+    writeFileSync(join(sourceStore, "index", "package.json"), "{}\n", { mode: 0o400 });
+    const storeSnapshot = await withCandidatePnpmStoreView({
+      sourceStore,
+      storeRoot: join(root, "pnpm-store"),
+      currentUid: process.getuid?.(),
+    }, () => undefined);
     const bundleRoot = join(root, "bundles", "bundle");
     mkdirSync(join(root, "bundles"), { mode: 0o700 });
     const componentSource = privateRoot("homecook-candidate-reader-components-");
@@ -2483,6 +2516,8 @@ describe("release rehearsal candidate orchestration", () => {
       generated_build_inventory_digest: createHash("sha256").update(canonicalizeJcs(
         physical.file_inventory.filter((entry) => entry.source_kind === "generated_build"),
       )).digest("hex"),
+      pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
+      pnpm_store_snapshot_identity_digest: storeSnapshot.snapshot_identity_digest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
       source_manifest_digest: manifestInput.source_manifest_digest,
       builder_input_digest: manifestInput.builder_input_digest,
@@ -2515,6 +2550,8 @@ describe("release rehearsal candidate orchestration", () => {
       artifacts: physical.artifacts,
       file_inventory: physical.file_inventory,
       generated_build_inventory_digest: bundleInput.generated_build_inventory_digest,
+      pnpm_store_snapshot_inventory_digest: bundleInput.pnpm_store_snapshot_inventory_digest,
+      pnpm_store_snapshot_identity_digest: bundleInput.pnpm_store_snapshot_identity_digest,
     });
     writeFileSync(join(root, "candidate.json"), canonicalizeJcs(candidate), { mode: 0o400 });
     writeCandidateTerminalMarker(root, "complete", {
@@ -2565,6 +2602,19 @@ describe("release rehearsal candidate orchestration", () => {
     chmodSync(evidenceRoot, 0o500);
     chmodSync(root, 0o500);
     expect(() => readCompletedCandidateRoot(root)).toThrow(/ci|evidence|snapshot|digest|head/iu);
+
+    chmodSync(root, 0o700);
+    chmodSync(evidenceRoot, 0o700);
+    chmodSync(join(evidenceRoot, "ci-evidence.json"), 0o600);
+    writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ciEvidence));
+    chmodSync(join(evidenceRoot, "ci-evidence.json"), 0o400);
+    chmodSync(evidenceRoot, 0o500);
+    chmodSync(root, 0o500);
+    const sealedStoreBlob = join(root, "pnpm-store", "v10", sourceBlobRelativePath);
+    chmodSync(sealedStoreBlob, 0o600);
+    writeFileSync(sealedStoreBlob, "mutated bytes\n");
+    chmodSync(sealedStoreBlob, 0o400);
+    expect(() => readCompletedCandidateRoot(root)).toThrow(/pnpm|store|CAFS|inventory|identity|content/iu);
 
     const incomplete = privateRoot("homecook-candidate-reader-incomplete-");
     writeFileSync(join(incomplete, "candidate.json"), canonicalizeJcs(candidate), { mode: 0o400 });
@@ -2763,6 +2813,8 @@ describe("release rehearsal candidate orchestration", () => {
         sealed_bundle_digest: DIGEST_B,
         bundle_manifest_digest: DIGEST_C,
         sandbox_policy_digest: DIGEST_B,
+        pnpm_store_snapshot_inventory_digest: DIGEST_C,
+        pnpm_store_snapshot_identity_digest: DIGEST_A,
         build_tools: { next_cli: tool("next-cli") },
       };
     });
