@@ -14,7 +14,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { TextDecoder } from "node:util";
 
 import { canonicalizeJcs, parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
@@ -32,6 +32,11 @@ const UNSIGNED_KEYS = [
   "observed_master_sha", "observed_master_tree", "selected_at", "expires_at", "approver_role",
   "approver_id", "approval_digest",
 ];
+export const REHEARSAL_SELECTION_AUTHORITY_KEYS = Object.freeze([
+  "selected_sha", "selected_tree", "observed_master_sha", "observed_master_tree",
+  "selected_at", "expires_at", "approver_role", "approver_id", "approval_digest",
+  "selection_digest",
+]);
 
 function reject(message) {
   throw new Error(`Release rehearsal selection rejected: ${message}`);
@@ -83,6 +88,47 @@ export function buildRehearsalSelection(value, { now = new Date(value?.selected_
   const unsigned = assertExactObject(value, UNSIGNED_KEYS);
   const selection = { ...unsigned, selection_digest: sha256Jcs(unsigned) };
   return validateRehearsalSelection(selection, { now, requireFresh: true });
+}
+
+export function emptyRehearsalSelectionAuthority() {
+  return Object.freeze(Object.fromEntries(
+    REHEARSAL_SELECTION_AUTHORITY_KEYS.map((key) => [key, null]),
+  ));
+}
+
+/** @param {unknown} value @param {{now?: Date | null, requireFresh?: boolean}} [options] */
+export function validateRehearsalSelectionAuthority(value, {
+  now = null,
+  requireFresh = false,
+} = {}) {
+  const projection = assertExactObject(value, REHEARSAL_SELECTION_AUTHORITY_KEYS);
+  if (projection.selection_digest === null) {
+    if (REHEARSAL_SELECTION_AUTHORITY_KEYS.some((key) => projection[key] !== null)) {
+      reject("current-tip selection authority must use an all-null closed projection");
+    }
+    return emptyRehearsalSelectionAuthority();
+  }
+  if (REHEARSAL_SELECTION_AUTHORITY_KEYS.some((key) => projection[key] === null)) {
+    reject("selected-ancestor authority must provide every immutable selection field");
+  }
+  const selection = validateRehearsalSelection({
+    schema: REHEARSAL_SELECTION_SCHEMA,
+    canonicalization: CANONICALIZATION,
+    repository: REPOSITORY,
+    source_ref: SOURCE_REF,
+    ...projection,
+  }, { now, requireFresh });
+  return Object.freeze(Object.fromEntries(
+    REHEARSAL_SELECTION_AUTHORITY_KEYS.map((key) => [key, selection[key]]),
+  ));
+}
+
+/** @param {unknown} value @param {{now?: Date | null, requireFresh?: boolean}} [options] */
+export function projectRehearsalSelectionAuthority(value, options = {}) {
+  const selection = validateRehearsalSelection(value, options);
+  return Object.freeze(Object.fromEntries(
+    REHEARSAL_SELECTION_AUTHORITY_KEYS.map((key) => [key, selection[key]]),
+  ));
 }
 
 function assertPrivateRoot(path, { repoRoot, expectedUid }) {
@@ -218,7 +264,11 @@ export function readRehearsalSelectionArtifact(path, {
     } catch {
       reject("selection artifact is not canonical RFC8785 JCS");
     }
-    return validateRehearsalSelection(parsed, { now, requireFresh: true });
+    const selection = validateRehearsalSelection(parsed, { now, requireFresh: true });
+    if (basename(path) !== `${selection.selection_digest}.selection.json`) {
+      reject("selection artifact basename must equal selection_digest.selection.json");
+    }
+    return selection;
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
     closeSync(parentFd);

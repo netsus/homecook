@@ -159,6 +159,7 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     now = new Date(),
     buildCandidate = null,
     createCandidateAdapters = null,
+    immutableBuilderAuthoritySha = null,
     immutableBuilderInputDigest = null,
     immutableBuilderInputEntries = null,
     immutableBootstrapVerified = false,
@@ -222,6 +223,9 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
     if (!/^[0-9a-f]{64}$/u.test(immutableBuilderInputDigest ?? "") || !Array.isArray(immutableBuilderInputEntries) || immutableBuilderInputEntries.length === 0) {
       throw new Error("candidate execution requires the verified immutable builder module graph authority.");
     }
+    if (!/^[0-9a-f]{40}$/u.test(immutableBuilderAuthoritySha ?? "")) {
+      throw new Error("candidate execution requires the bootstrap-start immutable builder master authority.");
+    }
     if (typeof beforeCandidateComplete !== "function") {
       throw new Error("candidate execution requires an immutable before-complete finalization guard.");
     }
@@ -248,6 +252,7 @@ export async function runLocalMacProductionRehearsalCli(argv, dependencies = {})
       rootDir,
     });
     const adapters = candidateAdapterFactory({
+      builderAuthoritySha: immutableBuilderAuthoritySha,
       builderInputDigest: immutableBuilderInputDigest,
       builderInputEntries: immutableBuilderInputEntries,
       homeDir: resolve(options.homeDir),

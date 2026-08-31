@@ -42,8 +42,8 @@ GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/
 | `promotion_id` | 단일 승격 시도 식별자 |
 | `expected_running_release_sha` | 승격 후 실제 돌아야 하는 SHA |
 
-Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
-사후에 master가 더 앞으로 나가도 이미 승인된 release identity는 바뀌지 않는다.
+current-tip 경로의 Release SHA는 `origin/master`의 approved SHA와 같아야 한다. approved ancestor selection 경로에서는 Release SHA/tree가 full selection의 `selected_sha/tree`와 같고, selection의 observed master와 approval/current master가 complete history에서 정상 descendant lineage를 유지해야 한다.
+사후에 master가 정상 descendant로 더 앞으로 나가도 이미 승인된 release identity는 바뀌지 않지만 divergence/force-push는 tag 전과 attestation 발급 직전 모두 fail closed한다.
 
 ### Rehearsal authority binding exact fields
 
@@ -53,6 +53,15 @@ Release SHA는 반드시 `origin/master`의 approved SHA와 같아야 한다.
 | --- | --- |
 | `rehearsal_receipt_schema` | manifest, subject, predicate, tag message가 exact repeatability schema를 기록하고 server verifier가 모두 비교 |
 | `selection_digest` | manifest, subject, predicate, annotated tag message, server verifier와 sealed candidate/repeatability authority가 same digest 또는 explicit current-tip `null`을 exact 비교 |
+| `selected_sha` | selected 경로에서 manifest, subject, predicate, server verifier가 exact release SHA와 비교하고 current-tip은 explicit `null` |
+| `selected_tree` | selected 경로에서 manifest, subject, predicate, server verifier가 exact release tree와 비교하고 current-tip은 explicit `null` |
+| `observed_master_sha` | manifest, subject, predicate, server verifier가 full selection authority와 exact 비교하고 GitHub trusted verifier가 observed→current ancestry를 재검증 |
+| `observed_master_tree` | manifest, subject, predicate, server verifier가 full selection authority와 exact 비교하고 GitHub trusted verifier가 exact Git tree를 재검증 |
+| `selected_at` | manifest, subject, predicate, server verifier가 full selection authority UTC instant와 exact 비교 |
+| `expires_at` | manifest, subject, predicate, server verifier가 full selection authority expiry와 exact 비교하고 GitHub trusted verifier가 fresh clock으로 재검증 |
+| `approver_role` | manifest, subject, predicate, server verifier가 exact `human-release-approver` selection authority와 비교 |
+| `approver_id` | manifest, subject, predicate, server verifier가 nonempty immutable selection approver identity와 exact 비교 |
+| `approval_digest` | manifest, subject, predicate, server verifier가 full selection approval digest와 exact 비교 |
 | `sealed_bundle_digest` | manifest, subject, predicate, tag message가 lowercase 64-hex same-bytes digest를 기록하고 server verifier가 실행 snapshot bytes와 모두 비교 |
 | `repeatability_receipt_digest` | manifest, subject, predicate, tag message가 validated JCS receipt digest를 기록하고 server verifier가 local receipt 재계산값과 모두 비교 |
 | `rehearsal_receipt_valid_until` | manifest, subject, predicate, tag message가 exact UTC RFC3339 expiry를 기록하고 server verifier가 첫 mutation 직전 현재 시각과 모두 비교 |
@@ -230,6 +239,16 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `migration_head`
 - `build_id`
 - `rehearsal_receipt_schema`
+- `selected_sha` (current-tip이면 `null`)
+- `selected_tree` (current-tip이면 `null`)
+- `observed_master_sha` (current-tip이면 `null`)
+- `observed_master_tree` (current-tip이면 `null`)
+- `selected_at` (current-tip이면 `null`)
+- `expires_at` (current-tip이면 `null`)
+- `approver_role` (current-tip이면 `null`)
+- `approver_id` (current-tip이면 `null`)
+- `approval_digest` (current-tip이면 `null`)
+- `selection_digest`
 - `sealed_bundle_digest`
 - `repeatability_receipt_digest`
 - `rehearsal_receipt_valid_until`
@@ -377,6 +396,8 @@ C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 - workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있다.
 - `self-referential suite exception`은 canonical `production-release-attestation.yml`의 exact `workflow_dispatch` event와 exact release SHA에 속한 현재/이전 retry `check_suite_id`에만 적용한다. workflow-specific Actions REST를 full pagination으로 읽고 path, workflow id, event, head SHA를 모두 검증한 nonempty unique positive ID 목록만 제외한다. pre/post approval 목록은 evidence JSON으로 업로드하며 exact equality가 깨지면 concurrent drift로 실패한다. 목록 밖의 external bad/pending/rerun, failed, cancelled, queued check는 항상 0이어야 하며 그대로 fail-closed한다.
 - workflow 승인 뒤 `github.ref`, `github.workflow_ref`, exact `origin/master`, tree, 전체 check-runs와 `/statuses` 모든 page를 다시 읽고 preflight subject/predicate evidence와 비교한다. tag push 직전에도 `origin/master`를 다시 확인한다. deterministic raw annotated tag object를 App token으로 먼저 push한 뒤 GitHub ref API가 exact `release_tag_object_sha`와 object type `tag`를 반환해야만 `actions/attest`를 실행한다. remote readback 전 attestation은 금지한다.
+- 두 workflow job은 selected release checkout을 executable authority로 사용하지 않는다. job 시작 시 GitHub ref/tree readback으로 pin한 current master를 `trusted-current-master/`에 full-history immutable checkout하고 verifier, attestation builder, desired-state reader, tag-object builder를 모두 그 bytes에서 실행한다. selected SHA/tree는 같은 repository의 verified Git object와 subject artifact로만 소비한다.
+- non-null selection은 raw canonical selection artifact를 별도 input으로 받아 digest 기반 basename/private file authority를 닫고, current master trusted verifier가 full selection field·expiry·approval과 selected→observed/current, observed→current ancestry 및 exact trees를 검증한다. protected tag push 직전과 `actions/attest` 바로 전마다 live current master ref를 readback하고 trusted checkout→live current master lineage와 full selection authority를 다시 검증한다.
 
 attestation workflow artifact baseline은 다음 세 가지다.
 

@@ -35,6 +35,9 @@ import {
   createLocalMacProductionGitEvidence,
   createLocalMacProductionReleaseManifest,
 } from "./helpers/local-mac-production-release-fixtures";
+import {
+  buildRehearsalSelection,
+} from "../scripts/lib/local-mac-production-rehearsal-selection.mjs";
 
 const temporaryDirectories: string[] = [];
 const EXPECTED_RELEASE_CONTEXTS = [
@@ -47,14 +50,40 @@ const EXPECTED_RELEASE_CONTEXTS = [
   "security-smoke",
 ];
 const RELEASE_TAG_OBJECT_SHA = "e".repeat(40);
+const FULL_SELECTION = buildRehearsalSelection({
+  schema: "homecook.local-mac-production-rehearsal-selection.v1",
+  canonicalization: "RFC8785-JCS+SHA256",
+  repository: "netsus/homecook",
+  source_ref: "refs/heads/master",
+  selected_sha: "a".repeat(40),
+  selected_tree: "b".repeat(40),
+  observed_master_sha: "c".repeat(40),
+  observed_master_tree: "d".repeat(40),
+  selected_at: "2026-08-29T09:00:00.000Z",
+  expires_at: "2026-08-30T09:00:00.000Z",
+  approver_role: "human-release-approver",
+  approver_id: "release-approver-1",
+  approval_digest: "e".repeat(64),
+}, { now: new Date("2026-08-29T09:00:00.000Z") });
+
 const REHEARSAL_AUTHORITY = {
   rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
-  selection_digest: "2".repeat(64),
+  selected_sha: FULL_SELECTION.selected_sha,
+  selected_tree: FULL_SELECTION.selected_tree,
+  observed_master_sha: FULL_SELECTION.observed_master_sha,
+  observed_master_tree: FULL_SELECTION.observed_master_tree,
+  selected_at: FULL_SELECTION.selected_at,
+  expires_at: FULL_SELECTION.expires_at,
+  approver_role: FULL_SELECTION.approver_role,
+  approver_id: FULL_SELECTION.approver_id,
+  approval_digest: FULL_SELECTION.approval_digest,
+  selection_digest: FULL_SELECTION.selection_digest,
   build_id: "build-20260825-01",
   sealed_bundle_digest: "f".repeat(64),
   repeatability_receipt_digest: "1".repeat(64),
   rehearsal_receipt_valid_until: "2026-08-30T09:00:00.000Z",
 };
+const FULL_REHEARSAL_AUTHORITY = REHEARSAL_AUTHORITY;
 
 function createTrustedCheckRuns(checkSuiteId = 200) {
   return EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
@@ -137,6 +166,94 @@ describe("GitHub production release attestation verification", () => {
       `repeatability_receipt_digest ${REHEARSAL_AUTHORITY.repeatability_receipt_digest}`,
       `rehearsal_receipt_valid_until ${REHEARSAL_AUTHORITY.rehearsal_receipt_valid_until}`,
     ].join("\n"));
+  });
+
+  it("attests the immutable full selection authority instead of accepting a digest-only claim", () => {
+    const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns: createTrustedCheckRuns(),
+      releaseSha: FULL_SELECTION.selected_sha,
+      releaseTag: "prod-20260826.2",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: FULL_SELECTION.selected_tree,
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: FULL_REHEARSAL_AUTHORITY,
+    });
+
+    for (const key of [
+      "observed_master_sha", "observed_master_tree", "selected_sha", "selected_tree",
+      "approver_role", "approver_id", "approval_digest", "selected_at", "expires_at",
+      "selection_digest",
+    ] as const) {
+      expect((artifacts.subject as unknown as Record<string, unknown>)[key]).toBe(
+        (FULL_REHEARSAL_AUTHORITY as Record<string, unknown>)[key],
+      );
+      expect((artifacts.predicate as unknown as Record<string, unknown>)[key]).toBe(
+        (FULL_REHEARSAL_AUTHORITY as Record<string, unknown>)[key],
+      );
+    }
+
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns: createTrustedCheckRuns(),
+      releaseSha: FULL_SELECTION.selected_sha,
+      releaseTag: "prod-20260826.3",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: FULL_SELECTION.selected_tree,
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      rehearsalAuthority: {
+        ...FULL_REHEARSAL_AUTHORITY,
+        approver_id: "substituted-approver",
+      },
+    })).toThrow(/selection|digest|authority|approver/iu);
+  });
+
+  it("revalidates the selection file and complete current-master lineage before exposing attestation authority", () => {
+    const output: string[] = [];
+    const readSelection = vi.fn(() => FULL_SELECTION);
+    const resolveSelectionAuthority = vi.fn(() => ({
+      mode: "approved_ancestor",
+      release_sha: FULL_SELECTION.selected_sha,
+      release_tree: FULL_SELECTION.selected_tree,
+      selection_digest: FULL_SELECTION.selection_digest,
+      observed_master_sha: FULL_SELECTION.observed_master_sha,
+      observed_master_tree: FULL_SELECTION.observed_master_tree,
+      current_master_sha: "f".repeat(40),
+      current_master_tree: "1".repeat(40),
+    }));
+
+    const result = rehearsalAuthorityCli.runProductionReleaseRehearsalAuthorityCli([
+      "--member-receipt", "/private/member-1.json",
+      "--member-receipt", "/private/member-2.json",
+      "--repeatability-receipt", "/private/repeatability.json",
+      "--selection", `/private/${FULL_SELECTION.selection_digest}.selection.json`,
+      "--repository-root", process.cwd(),
+      "--current-master-sha", "f".repeat(40),
+      "--release-sha", FULL_SELECTION.selected_sha,
+      "--release-tree", FULL_SELECTION.selected_tree,
+      "--json",
+    ], {
+      now: new Date("2026-08-29T10:00:00.000Z"),
+      output: { write: (value: string) => { output.push(value); } },
+      readSource: () => "{}",
+      verifyAuthority: () => ({
+        ...REHEARSAL_AUTHORITY,
+        selection_digest: FULL_SELECTION.selection_digest,
+        release_sha: FULL_SELECTION.selected_sha,
+        release_tree: FULL_SELECTION.selected_tree,
+      }),
+      readSelection,
+      resolveSelectionAuthority,
+    });
+
+    expect(readSelection).toHaveBeenCalledWith(
+      `/private/${FULL_SELECTION.selection_digest}.selection.json`,
+      expect.objectContaining({ repoRoot: process.cwd() }),
+    );
+    expect(resolveSelectionAuthority).toHaveBeenCalledWith(expect.objectContaining({
+      releaseSha: FULL_SELECTION.selected_sha,
+      selection: FULL_SELECTION,
+    }));
+    expect(result).toMatchObject(FULL_REHEARSAL_AUTHORITY);
+    expect(JSON.parse(output.join(""))).toMatchObject(FULL_REHEARSAL_AUTHORITY);
   });
 
   it("resolves only an explicitly allowlisted absolute GitHub CLI and rejects escapes", () => {
@@ -491,6 +608,15 @@ describe("GitHub production release attestation verification", () => {
       release_sha: manifest.release_sha,
       release_tree: manifest.release_tree,
       rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+      selected_sha: manifest.selected_sha,
+      selected_tree: manifest.selected_tree,
+      observed_master_sha: manifest.observed_master_sha,
+      observed_master_tree: manifest.observed_master_tree,
+      selected_at: manifest.selected_at,
+      expires_at: manifest.expires_at,
+      approver_role: manifest.approver_role,
+      approver_id: manifest.approver_id,
+      approval_digest: manifest.approval_digest,
       selection_digest: manifest.selection_digest,
       build_id: manifest.build_id,
       sealed_bundle_digest: manifest.sealed_bundle_digest,
@@ -535,6 +661,15 @@ describe("GitHub production release attestation verification", () => {
                   release_sha: manifest.release_sha,
                   release_tree: manifest.release_tree,
                   rehearsal_receipt_schema: manifest.rehearsal_receipt_schema,
+                  selected_sha: manifest.selected_sha,
+                  selected_tree: manifest.selected_tree,
+                  observed_master_sha: manifest.observed_master_sha,
+                  observed_master_tree: manifest.observed_master_tree,
+                  selected_at: manifest.selected_at,
+                  expires_at: manifest.expires_at,
+                  approver_role: manifest.approver_role,
+                  approver_id: manifest.approver_id,
+                  approval_digest: manifest.approval_digest,
                   selection_digest: manifest.selection_digest,
                   build_id: manifest.build_id,
                   sealed_bundle_digest: manifest.sealed_bundle_digest,

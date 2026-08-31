@@ -31,6 +31,7 @@ import {
   validateLocalMacProductionReleaseManifest,
 } from "../scripts/lib/local-mac-production-release.mjs";
 import { validateProductionReleaseTag } from "../scripts/lib/production-release-approval-policy.mjs";
+import { buildRehearsalSelection } from "../scripts/lib/local-mac-production-rehearsal-selection.mjs";
 
 const temporaryDirectories: string[] = [];
 const VERIFIED_ATTESTATION = () => ({ source: "test-attestation", verified: true });
@@ -61,6 +62,15 @@ function createManifest(overrides: Record<string, unknown> = {}) {
     migration_head: "20260825090000_release_gate",
     build_id: "build-20260825-01",
     rehearsal_receipt_schema: "homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
+    selected_sha: null,
+    selected_tree: null,
+    observed_master_sha: null,
+    observed_master_tree: null,
+    selected_at: null,
+    expires_at: null,
+    approver_role: null,
+    approver_id: null,
+    approval_digest: null,
     selection_digest: null,
     sealed_bundle_digest: "f".repeat(64),
     repeatability_receipt_digest: "1".repeat(64),
@@ -140,6 +150,15 @@ describe("local Mac production release manifest", () => {
     expect(schema.required).toEqual(expect.arrayContaining([
       "rehearsal_receipt_schema",
       "selection_digest",
+      "selected_sha",
+      "selected_tree",
+      "observed_master_sha",
+      "observed_master_tree",
+      "selected_at",
+      "expires_at",
+      "approver_role",
+      "approver_id",
+      "approval_digest",
       "sealed_bundle_digest",
       "repeatability_receipt_digest",
       "rehearsal_receipt_valid_until",
@@ -189,10 +208,33 @@ describe("local Mac production release manifest", () => {
   });
 
   it("validates an explicit selected-ancestor digest without treating normal master advancement as substitution", () => {
-    const selectionDigest = "2".repeat(64);
+    const selection = buildRehearsalSelection({
+      schema: "homecook.local-mac-production-rehearsal-selection.v1",
+      canonicalization: "RFC8785-JCS+SHA256",
+      repository: "netsus/homecook",
+      source_ref: "refs/heads/master",
+      selected_sha: "a".repeat(40),
+      selected_tree: "b".repeat(40),
+      observed_master_sha: "c".repeat(40),
+      observed_master_tree: "d".repeat(40),
+      selected_at: "2026-08-25T08:00:00.000Z",
+      expires_at: "2026-08-26T08:00:00.000Z",
+      approver_role: "human-release-approver",
+      approver_id: "release-approver-1",
+      approval_digest: "2".repeat(64),
+    }, { now: new Date("2026-08-25T08:00:00.000Z") });
     const manifest = createManifest({
       release_manifest_path: "/tmp/release.json",
-      selection_digest: selectionDigest,
+      selected_sha: selection.selected_sha,
+      selected_tree: selection.selected_tree,
+      observed_master_sha: selection.observed_master_sha,
+      observed_master_tree: selection.observed_master_tree,
+      selected_at: selection.selected_at,
+      expires_at: selection.expires_at,
+      approver_role: selection.approver_role,
+      approver_id: selection.approver_id,
+      approval_digest: selection.approval_digest,
+      selection_digest: selection.selection_digest,
     });
     const evidence = createGitEvidence({
       originMasterSha: "f".repeat(40),
@@ -200,7 +242,7 @@ describe("local Mac production release manifest", () => {
         "Approved production release prod-20260825.1",
         "build_id build-20260825-01",
         "rehearsal_receipt_schema homecook.local-mac-production-rehearsal-repeatability-receipt.v1",
-        `selection_digest ${selectionDigest}`,
+        `selection_digest ${selection.selection_digest}`,
         `sealed_bundle_digest ${"f".repeat(64)}`,
         `repeatability_receipt_digest ${"1".repeat(64)}`,
         "rehearsal_receipt_valid_until 2026-08-30T09:00:00.000Z",
@@ -212,7 +254,12 @@ describe("local Mac production release manifest", () => {
       manifestPath: "/tmp/release.json",
       readGitEvidence: () => evidence,
       requireAttestation: false,
-    }).selection_digest).toBe(selectionDigest);
+    })).toMatchObject({
+      selection_digest: selection.selection_digest,
+      selected_sha: selection.selected_sha,
+      observed_master_sha: selection.observed_master_sha,
+      approver_id: selection.approver_id,
+    });
   });
 
   it("resolves the approved release SHA from origin/master instead of the local checkout head", () => {

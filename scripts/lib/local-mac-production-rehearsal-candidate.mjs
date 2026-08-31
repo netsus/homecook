@@ -2900,6 +2900,7 @@ export function createReleaseRehearsalCandidateAdapters({
   packageStorePath = join(homeDir, "Library", "pnpm", "store", "v10"),
   approvedMigrationMarkerPath = join(namespaceRoot, "approved-production-migration-marker.json"),
   productionEnvAuthorityPath = null,
+  builderAuthoritySha = null,
   builderInputDigest = null,
   builderInputEntries = null,
   selection = null,
@@ -2912,6 +2913,7 @@ export function createReleaseRehearsalCandidateAdapters({
 } = {}, dependencies = {}) {
   const runCommand = dependencies.runCommand ?? spawnSync;
   const sourceRoot = realpathSync(rootDir);
+  sha(builderAuthoritySha, "bootstrap-start builder authority SHA");
   const normalizedHome = realpathSync(homeDir);
   const normalizedNamespace = resolve(namespaceRoot);
   const namespaceFromRepository = relative(sourceRoot, normalizedNamespace);
@@ -3116,7 +3118,7 @@ export function createReleaseRehearsalCandidateAdapters({
       const builderAuthority = validateCandidateBuilderAuthority({
         currentHead,
         releaseSha,
-        builderAuthoritySha: selection === null ? releaseSha : selectedSourceAuthority.current_master_sha,
+        builderAuthoritySha,
         trackedStatus,
         sourceManifestDigest: materialized.source_manifest.source_manifest_digest,
         verifiedSourceManifestDigest,

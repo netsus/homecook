@@ -584,6 +584,34 @@ export function resolveImmutableBootstrapAuthority({ releaseSha, remoteSha, sele
   return Object.freeze({ builder_authority_sha: remoteSha, release_sha: releaseSha });
 }
 
+export function assertImmutableBootstrapMasterLineage({
+  builderAuthoritySha,
+  currentMasterSha,
+  gitPath,
+  homeDir,
+  repositoryRoot,
+} = {}) {
+  if (
+    !/^[0-9a-f]{40}$/u.test(builderAuthoritySha ?? "")
+    || !/^[0-9a-f]{40}$/u.test(currentMasterSha ?? "")
+    || ![homeDir, repositoryRoot].every(isAbsolute)
+  ) reject("immutable bootstrap master lineage inputs are invalid");
+  const trustedGit = realpathSync(gitPath);
+  if (trustedGit !== "/usr/bin/git") reject("immutable bootstrap master lineage requires trusted system Git");
+  try {
+    runExact(trustedGit, [
+      "--no-replace-objects", "-C", realpathSync(repositoryRoot), "merge-base", "--is-ancestor",
+      builderAuthoritySha, currentMasterSha,
+    ], { cwd: repositoryRoot, homeDir });
+  } catch {
+    reject("current master diverged from the bootstrap-start immutable builder authority");
+  }
+  return Object.freeze({
+    builder_authority_sha: builderAuthoritySha,
+    current_master_sha: currentMasterSha,
+  });
+}
+
 export async function runBootstrap(argv) {
   if (typeof vm.SourceTextModule !== "function") {
     reject("--experimental-vm-modules is required before candidate bootstrap side effects");
@@ -672,6 +700,19 @@ export async function runBootstrap(argv) {
       if (JSON.stringify(gitPre) !== JSON.stringify(snapshotExecutable(gitPath))) {
         reject("bootstrap Git identity drifted during candidate execution");
       }
+      runExact(gitPath, ["-C", repositoryRoot, "fetch", "--no-tags", "origin", "master"], {
+        cwd: repositoryRoot, homeDir,
+      });
+      const currentMasterSha = String(runExact(gitPath, [
+        "--no-replace-objects", "-C", repositoryRoot, "rev-parse", "origin/master^{commit}",
+      ], { cwd: repositoryRoot, homeDir })).trim();
+      assertImmutableBootstrapMasterLineage({
+        builderAuthoritySha,
+        currentMasterSha,
+        gitPath,
+        homeDir,
+        repositoryRoot,
+      });
       finalizationComplete = true;
       return Object.freeze({
         builder_input_digest: builderGraphPost.builder_input_digest,
@@ -680,6 +721,7 @@ export async function runBootstrap(argv) {
     };
     await cli.runLocalMacProductionRehearsalCli(["candidate", ...argv], {
       beforeCandidateComplete,
+      immutableBuilderAuthoritySha: builderAuthoritySha,
       immutableBuilderInputDigest: builderGraph.builder_input_digest,
       immutableBuilderInputEntries: builderGraph.entries,
       immutableBootstrapVerified: true,

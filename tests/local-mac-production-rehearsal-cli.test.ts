@@ -153,6 +153,7 @@ describe("local Mac production rehearsal CLI", () => {
       "candidate", "--release-sha", "a".repeat(40),
       "--production-env-authority", "/private/server/full-local-production.env", "--json",
     ], {
+      immutableBuilderAuthoritySha: "a".repeat(40),
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
       immutableBootstrapVerified: true,
@@ -165,6 +166,7 @@ describe("local Mac production rehearsal CLI", () => {
     });
 
     expect(createCandidateAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      builderAuthoritySha: "a".repeat(40),
       builderInputDigest: "b".repeat(64),
       builderInputEntries: expect.any(Array),
       productionEnvAuthorityPath: "/private/server/full-local-production.env",
@@ -214,6 +216,7 @@ describe("local Mac production rehearsal CLI", () => {
       "--selection", "/private/selections/approved.selection.json",
       "--production-env-authority", "/private/server/full-local-production.env", "--json",
     ], {
+      immutableBuilderAuthoritySha: "1".repeat(40),
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
       immutableBootstrapVerified: true,
@@ -230,6 +233,7 @@ describe("local Mac production rehearsal CLI", () => {
       releaseSha: selection.selected_sha,
       selection,
     });
+    expect((buildCandidate.mock.calls[0]?.[0] as { adapters?: unknown }).adapters).toBeDefined();
     expect(buildCandidate).toHaveBeenCalledWith(expect.objectContaining({
       selectionDigest: selection.selection_digest,
       sourceAuthority: expect.objectContaining({ mode: "approved_ancestor" }),
@@ -247,6 +251,7 @@ describe("local Mac production rehearsal CLI", () => {
       "candidate", "--release-sha", "a".repeat(40),
       "--production-env-authority", "/private/server/full-local-production.env", "--json",
     ], {
+      immutableBuilderAuthoritySha: "a".repeat(40),
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
       immutableBootstrapVerified: true,
@@ -394,6 +399,7 @@ describe("local Mac production rehearsal CLI", () => {
     await expect(runLocalMacProductionRehearsalCli([
       "candidate", "--release-sha", "a".repeat(40), "--json",
     ], {
+      immutableBuilderAuthoritySha: "a".repeat(40),
       immutableBuilderInputDigest: "b".repeat(64),
       immutableBuilderInputEntries: [{ blob_oid: "c".repeat(40), git_mode: "100644", path: "scripts/fixture.mjs", sha256: "d".repeat(64) }],
       immutableBootstrapVerified: true,

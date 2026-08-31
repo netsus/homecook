@@ -168,6 +168,7 @@ describe("release promotion governance docs", () => {
       "canonicalization",
       "repository",
       "source_ref",
+      "selection_digest",
       "release_sha",
       "release_tree",
       "ci_head_sha",
@@ -198,6 +199,7 @@ describe("release promotion governance docs", () => {
       "canonicalization",
       "repository",
       "source_ref",
+      "selection_digest",
       "release_sha",
       "release_tree",
       "build_id",
@@ -225,6 +227,7 @@ describe("release promotion governance docs", () => {
       individual.map(({ field, rule }) => [field, rule]),
     );
     expect(individualRules.toolchain).toContain("candidate_builder");
+    expect(individualRules.selection_digest).toContain("selection");
     expect(individualRules.images).toContain("local_cache_provenance_digest");
     expect(individualRules.migration).toContain("applied_global_ledger_digest");
     expect(individualRules.isolation).toContain("resource_identity_digest");
@@ -238,6 +241,7 @@ describe("release promotion governance docs", () => {
     );
     expect(individualRules.production_guard).toContain("mutation_attempt_count");
     expect(repeatabilityRules.member_receipt_digests).toContain("exact 2");
+    expect(repeatabilityRules.selection_digest).toContain("selection");
     expect(repeatabilityRules.member_receipt_digests).toContain("ascending");
     expect(repeatabilityRules.valid_until).toContain("더 이른 instant");
     expect(repeatabilityRules.repeatability_receipt_digest).toContain(
@@ -257,6 +261,15 @@ describe("release promotion governance docs", () => {
     expect(binding.map(({ field }) => field)).toEqual([
       "rehearsal_receipt_schema",
       "selection_digest",
+      "selected_sha",
+      "selected_tree",
+      "observed_master_sha",
+      "observed_master_tree",
+      "selected_at",
+      "expires_at",
+      "approver_role",
+      "approver_id",
+      "approval_digest",
       "sealed_bundle_digest",
       "repeatability_receipt_digest",
       "rehearsal_receipt_valid_until",
@@ -268,6 +281,8 @@ describe("release promotion governance docs", () => {
       expect(rule).toContain("server verifier");
     }
     expect(releaseRunbook).toContain("activation_blocked: true");
+    expect(releaseRunbook).toMatch(/## Release manifest[\s\S]*- `selection_digest`/u);
+    expect(releaseRunbook).toMatch(/## Release manifest[\s\S]*- `observed_master_sha`/u);
     expect(releaseRunbook).toContain("local task/session ID는 감사 metadata일 뿐");
   });
 

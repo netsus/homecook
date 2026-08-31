@@ -41,6 +41,10 @@ import {
   normalizeExpectedReleaseContexts,
   validateProductionReleaseTag,
 } from "./production-release-approval-policy.mjs";
+import {
+  REHEARSAL_SELECTION_AUTHORITY_KEYS,
+  validateRehearsalSelectionAuthority,
+} from "./local-mac-production-rehearsal-selection.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./youtube-extraction-worker-artifact.mjs";
 import {
   toPromotionAuthoritySourceError,
@@ -93,7 +97,7 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "migration_head",
   "build_id",
   "rehearsal_receipt_schema",
-  "selection_digest",
+  ...REHEARSAL_SELECTION_AUTHORITY_KEYS,
   "sealed_bundle_digest",
   "repeatability_receipt_digest",
   "rehearsal_receipt_valid_until",
@@ -205,11 +209,6 @@ function requireDigest(value, label) {
     throw new Error(`${label} must be a 64-character lowercase digest.`);
   }
   return normalized;
-}
-
-function requireNullableDigest(value, label) {
-  if (value === null) return value;
-  return requireDigest(value, label);
 }
 
 function requireBoolean(value, label) {
@@ -2237,10 +2236,22 @@ export function validateLocalMacProductionReleaseManifest({
     manifest.master_sha_at_approval,
     "manifest.master_sha_at_approval",
   );
-  if (releaseSha !== masterShaAtApproval) {
+  const selectionAuthority = validateRehearsalSelectionAuthority(Object.fromEntries(
+    REHEARSAL_SELECTION_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
+  ));
+  if (selectionAuthority.selection_digest === null && releaseSha !== masterShaAtApproval) {
     throw new Error(
       "Release manifest exact approved master mismatch: release_sha must equal origin/master at approval.",
     );
+  }
+  if (
+    selectionAuthority.selection_digest !== null
+    && (
+      selectionAuthority.selected_sha !== releaseSha
+      || selectionAuthority.selected_tree !== releaseTree
+    )
+  ) {
+    throw new Error("Release manifest selected authority SHA/tree must equal the release SHA/tree.");
   }
 
   const gitEvidence = readGitEvidence({
@@ -2337,10 +2348,7 @@ export function validateLocalMacProductionReleaseManifest({
       LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA,
       "manifest.rehearsal_receipt_schema",
     ),
-    selection_digest: requireNullableDigest(
-      manifest.selection_digest,
-      "manifest.selection_digest",
-    ),
+    ...selectionAuthority,
     sealed_bundle_digest: requireDigest(
       manifest.sealed_bundle_digest,
       "manifest.sealed_bundle_digest",

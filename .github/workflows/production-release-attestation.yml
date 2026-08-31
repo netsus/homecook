@@ -23,6 +23,10 @@ on:
         description: Canonical repeatability receipt encoded as base64
         required: true
         type: string
+      selection_b64:
+        description: Canonical approved-ancestor selection encoded as base64; empty for current tip
+        required: false
+        type: string
 
 permissions:
   attestations: write
@@ -51,31 +55,51 @@ jobs:
             exit 1
           }
 
-      - name: Checkout exact release SHA
+      - name: Resolve immutable trusted current master verifier authority
+        id: trusted-master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+          current_master_tree="$(gh api "repos/netsus/homecook/git/commits/$current_master_sha" --jq '.tree.sha')"
+          [[ "$current_master_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$current_master_tree" =~ ^[0-9a-f]{40}$ ]]
+          printf 'current_master_sha=%s\n' "$current_master_sha" >> "$GITHUB_OUTPUT"
+          printf 'current_master_tree=%s\n' "$current_master_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout immutable trusted current master verifier
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          path: trusted-current-master
           persist-credentials: false
-          ref: ${{ inputs.release_sha }}
+          ref: ${{ steps.trusted-master.outputs.current_master_sha }}
 
       - name: Verify exact release SHA is reachable from origin/master
         id: git
         env:
           GH_TOKEN: ${{ github.token }}
+          TRUSTED_MASTER_SHA: ${{ steps.trusted-master.outputs.current_master_sha }}
+          TRUSTED_MASTER_TREE: ${{ steps.trusted-master.outputs.current_master_tree }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$TRUSTED_MASTER_SHA"
+          test "$(git rev-parse "$TRUSTED_MASTER_SHA^{tree}")" = "$TRUSTED_MASTER_TREE"
           current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+          test "$current_master_sha" = "$TRUSTED_MASTER_SHA"
           git fetch --no-tags origin master
           git merge-base --is-ancestor "$RELEASE_SHA" "$current_master_sha"
           printf 'current_master_sha=%s\n' "$current_master_sha" >> "$GITHUB_OUTPUT"
           printf 'release_tree=%s\n' "$(git rev-parse "$RELEASE_SHA^{tree}")" >> "$GITHUB_OUTPUT"
+        working-directory: trusted-current-master
 
       - name: Revalidate canonical rehearsal receipts and project authority
         env:
           MEMBER_RECEIPT_1_B64: ${{ inputs.member_receipt_1_b64 }}
           MEMBER_RECEIPT_2_B64: ${{ inputs.member_receipt_2_b64 }}
           REPEATABILITY_RECEIPT_B64: ${{ inputs.repeatability_receipt_b64 }}
+          SELECTION_B64: ${{ inputs.selection_b64 }}
+          CURRENT_MASTER_SHA: ${{ steps.git.outputs.current_master_sha }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_TREE: ${{ steps.git.outputs.release_tree }}
         run: |
@@ -84,20 +108,39 @@ jobs:
           printf '%s' "$MEMBER_RECEIPT_1_B64" | base64 --decode > "$RUNNER_TEMP/rehearsal-receipts/member-1.json"
           printf '%s' "$MEMBER_RECEIPT_2_B64" | base64 --decode > "$RUNNER_TEMP/rehearsal-receipts/member-2.json"
           printf '%s' "$REPEATABILITY_RECEIPT_B64" | base64 --decode > "$RUNNER_TEMP/rehearsal-receipts/repeatability.json"
+          selection_digest="$(jq -r '.selection_digest // "none"' "$RUNNER_TEMP/rehearsal-receipts/repeatability.json")"
+          selection_args=()
+          if [ "$selection_digest" = "none" ]; then
+            test -z "$SELECTION_B64"
+          else
+            [[ "$selection_digest" =~ ^[0-9a-f]{64}$ ]]
+            test -n "$SELECTION_B64"
+            mkdir "$RUNNER_TEMP/rehearsal-selection"
+            selection_path="$RUNNER_TEMP/rehearsal-selection/$selection_digest.selection.json"
+            printf '%s' "$SELECTION_B64" | base64 --decode > "$selection_path"
+            selection_args=(--selection "$selection_path")
+          fi
           node scripts/verify-production-release-rehearsal-authority.mjs \
             --member-receipt "$RUNNER_TEMP/rehearsal-receipts/member-1.json" \
             --member-receipt "$RUNNER_TEMP/rehearsal-receipts/member-2.json" \
             --repeatability-receipt "$RUNNER_TEMP/rehearsal-receipts/repeatability.json" \
             --release-sha "$RELEASE_SHA" \
             --release-tree "$RELEASE_TREE" \
+            --repository-root "$GITHUB_WORKSPACE/trusted-current-master" \
+            --current-master-sha "$CURRENT_MASTER_SHA" \
+            "${selection_args[@]}" \
             --json > "$RUNNER_TEMP/rehearsal-authority.json"
-          jq -e '
+          jq -e --arg release_sha "$RELEASE_SHA" --arg release_tree "$RELEASE_TREE" '
             .rehearsal_receipt_schema == "homecook.local-mac-production-rehearsal-repeatability-receipt.v1"
-            and ((.selection_digest == null) or (.selection_digest | test("^[0-9a-f]{64}$")))
+            and (
+              ((.selection_digest == null) and ([.selected_sha,.selected_tree,.observed_master_sha,.observed_master_tree,.selected_at,.expires_at,.approver_role,.approver_id,.approval_digest] | all(. == null)))
+              or ((.selection_digest | test("^[0-9a-f]{64}$")) and (.selected_sha == $release_sha) and (.selected_tree == $release_tree) and (.observed_master_sha | test("^[0-9a-f]{40}$")) and (.observed_master_tree | test("^[0-9a-f]{40}$")) and (.approver_role == "human-release-approver") and (.approver_id | type == "string" and length > 0) and (.approval_digest | test("^[0-9a-f]{64}$")) and (.selected_at | type == "string") and (.expires_at | type == "string"))
+            )
             and (.sealed_bundle_digest | test("^[0-9a-f]{64}$"))
             and (.repeatability_receipt_digest | test("^[0-9a-f]{64}$"))
             and (.rehearsal_receipt_valid_until | type == "string")
           ' "$RUNNER_TEMP/rehearsal-authority.json" > /dev/null
+        working-directory: trusted-current-master
 
       - name: Build deterministic annotated tag object
         id: tag-object
@@ -129,6 +172,7 @@ jobs:
           [[ "$release_tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
           printf '%s\n' "$release_tag_object_sha" > "$RUNNER_TEMP/production-release-tag-object.sha"
           printf 'release_tag_object_sha=%s\n' "$release_tag_object_sha" >> "$GITHUB_OUTPUT"
+        working-directory: trusted-current-master
 
       - name: Collect canonical release workflow check suites
         env:
@@ -180,6 +224,7 @@ jobs:
               }
               | select(.check_suite_ids | length > 0)
             ' > "$RUNNER_TEMP/release-workflow-suite-ids.json"
+        working-directory: trusted-current-master
 
       - name: Validate resolved committed desired state without admin readback
         run: |
@@ -189,6 +234,7 @@ jobs:
             .actual_dir == null
             and ([.activation_blockers[] | select((startswith("missing_") | not))] | length == 0)
           ' "$RUNNER_TEMP/desired-state-verify.json" > /dev/null
+        working-directory: trusted-current-master
 
       - name: Download full current-head check runs
         env:
@@ -199,6 +245,7 @@ jobs:
             --paginate --jq '.check_runs[]' \
             > "$RUNNER_TEMP/check-runs.jsonl"
           jq -s '.' "$RUNNER_TEMP/check-runs.jsonl" > "$RUNNER_TEMP/check-runs.json"
+        working-directory: trusted-current-master
 
       - name: Download all current-head commit status pages
         env:
@@ -209,6 +256,7 @@ jobs:
             --paginate --jq '.[]' \
             > "$RUNNER_TEMP/commit-statuses.jsonl"
           jq -s '.' "$RUNNER_TEMP/commit-statuses.jsonl" > "$RUNNER_TEMP/commit-statuses.json"
+        working-directory: trusted-current-master
 
       - name: Build terminal check summary custom predicate and subject manifest
         env:
@@ -230,6 +278,7 @@ jobs:
             > "$RUNNER_TEMP/production-release-build.json"
           jq -e '.subject.required_check_summary and .predicate.required_check_summary' \
             "$RUNNER_TEMP/production-release-build.json" > /dev/null
+        working-directory: trusted-current-master
 
       - name: Upload subject, predicate, desired-state, and suite evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -262,12 +311,25 @@ jobs:
       id-token: write
       statuses: read
     steps:
-      - name: Checkout exact release SHA
+      - name: Resolve immutable trusted current master after approval
+        id: trusted-master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+          current_master_tree="$(gh api "repos/netsus/homecook/git/commits/$current_master_sha" --jq '.tree.sha')"
+          [[ "$current_master_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$current_master_tree" =~ ^[0-9a-f]{40}$ ]]
+          printf 'current_master_sha=%s\n' "$current_master_sha" >> "$GITHUB_OUTPUT"
+          printf 'current_master_tree=%s\n' "$current_master_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout immutable trusted current master after approval
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          path: trusted-current-master
           persist-credentials: false
-          ref: ${{ inputs.release_sha }}
+          ref: ${{ steps.trusted-master.outputs.current_master_sha }}
 
       - name: Download verified release attestation inputs
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -329,6 +391,47 @@ jobs:
           cmp \
             "$RUNNER_TEMP/production-release-attestation-inputs/release-workflow-suite-ids.json" \
             "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json"
+        working-directory: trusted-current-master
+
+      - name: Revalidate canonical rehearsal receipts after approval
+        env:
+          CURRENT_MASTER_SHA: ${{ steps.trusted-master.outputs.current_master_sha }}
+          MEMBER_RECEIPT_1_B64: ${{ inputs.member_receipt_1_b64 }}
+          MEMBER_RECEIPT_2_B64: ${{ inputs.member_receipt_2_b64 }}
+          REPEATABILITY_RECEIPT_B64: ${{ inputs.repeatability_receipt_b64 }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          SELECTION_B64: ${{ inputs.selection_b64 }}
+          TRUSTED_MASTER_TREE: ${{ steps.trusted-master.outputs.current_master_tree }}
+        run: |
+          umask 077
+          test "$(git rev-parse HEAD)" = "$CURRENT_MASTER_SHA"
+          test "$(git rev-parse "$CURRENT_MASTER_SHA^{tree}")" = "$TRUSTED_MASTER_TREE"
+          release_tree="$(git rev-parse "$RELEASE_SHA^{tree}")"
+          mkdir "$RUNNER_TEMP/post-approval-selection"
+          selection_digest="$(jq -r '.selection_digest // "none"' "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-authority.json")"
+          selection_args=()
+          if [ "$selection_digest" = "none" ]; then
+            test -z "$SELECTION_B64"
+          else
+            [[ "$selection_digest" =~ ^[0-9a-f]{64}$ ]]
+            test -n "$SELECTION_B64"
+            selection_path="$RUNNER_TEMP/post-approval-selection/$selection_digest.selection.json"
+            printf '%s' "$SELECTION_B64" | base64 --decode > "$selection_path"
+            selection_args=(--selection "$selection_path")
+          fi
+          node scripts/verify-production-release-rehearsal-authority.mjs \
+            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-1.json" \
+            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-2.json" \
+            --repeatability-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/repeatability.json" \
+            --release-sha "$RELEASE_SHA" \
+            --release-tree "$release_tree" \
+            --repository-root "$GITHUB_WORKSPACE/trusted-current-master" \
+            --current-master-sha "$CURRENT_MASTER_SHA" \
+            "${selection_args[@]}" \
+            --json > "$RUNNER_TEMP/post-approval/rehearsal-authority.json"
+          cmp "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-authority.json" \
+            "$RUNNER_TEMP/post-approval/rehearsal-authority.json"
+        working-directory: trusted-current-master
 
       - name: Re-fetch and rebuild approval evidence after environment approval
         env:
@@ -341,8 +444,9 @@ jobs:
           test "${{ github.ref }}" = "refs/heads/master"
           test "${{ github.workflow_ref }}" = "netsus/homecook/.github/workflows/production-release-attestation.yml@refs/heads/master"
           [[ "$RELEASE_TAG" =~ ^prod-[0-9]{8}\.[0-9]+$ ]]
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "${{ steps.trusted-master.outputs.current_master_sha }}"
           current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+          test "$current_master_sha" = "${{ steps.trusted-master.outputs.current_master_sha }}"
           selection_digest="$(jq -r '.selection_digest // "none"' "$RUNNER_TEMP/post-approval/rehearsal-authority.json")"
           git fetch --no-tags origin master
           git merge-base --is-ancestor "$RELEASE_SHA" "$current_master_sha"
@@ -350,16 +454,6 @@ jobs:
           release_tree="$(git rev-parse "$RELEASE_SHA^{tree}")"
           release_tag_object_sha="$(cat "$RUNNER_TEMP/production-release-attestation-inputs/production-release-tag-object.sha")"
           [[ "$release_tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
-
-          node scripts/verify-production-release-rehearsal-authority.mjs \
-            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-1.json" \
-            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-2.json" \
-            --repeatability-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/repeatability.json" \
-            --release-sha "$RELEASE_SHA" \
-            --release-tree "$release_tree" \
-            --json > "$RUNNER_TEMP/post-approval/rehearsal-authority.json"
-          cmp "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-authority.json" \
-            "$RUNNER_TEMP/post-approval/rehearsal-authority.json"
 
           gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
             --paginate --jq '.check_runs[]' > "$RUNNER_TEMP/post-approval/check-runs.jsonl"
@@ -382,6 +476,7 @@ jobs:
             --subject-output "$RUNNER_TEMP/post-approval/production-release-subject.json" \
             --predicate-output "$RUNNER_TEMP/post-approval/production-release-predicate.json" \
             > "$RUNNER_TEMP/post-approval/production-release-build.json"
+        working-directory: trusted-current-master
 
       - name: Compare approval evidence to preflight evidence
         run: |
@@ -389,6 +484,7 @@ jobs:
             cmp "$RUNNER_TEMP/production-release-attestation-inputs/$name.json" \
               "$RUNNER_TEMP/post-approval/$name.json"
           done
+        working-directory: trusted-current-master
 
       - name: Mint protected-tag GitHub App token
         id: app-token
@@ -409,6 +505,7 @@ jobs:
             | select(length == 1) | .[0] | select(type == "number" and . > 0)
           ' .github/rulesets/production-release-tag-creation.json)"
           test "$HOMECOOK_RELEASE_ATTESTATION_APP_ID" = "$actor_id"
+        working-directory: trusted-current-master
 
       - name: Reconstruct exact annotated tag object and reject existing remote tag
         env:
@@ -429,6 +526,7 @@ jobs:
           test "$reconstructed_tag_object_sha" = "$(jq -r '.release_tag_object_sha' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
           git update-ref "refs/tags/$RELEASE_TAG" "$reconstructed_tag_object_sha" ""
           test "$(git rev-parse "refs/tags/$RELEASE_TAG^{tag}")" = "$reconstructed_tag_object_sha"
+        working-directory: trusted-current-master
 
       - name: Recheck origin/master immediately before protected tag push
         env:
@@ -437,19 +535,28 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           release_tree="$(git rev-parse "$RELEASE_SHA^{tree}")"
+          current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+          git fetch --no-tags origin master
+          git merge-base --is-ancestor "${{ steps.trusted-master.outputs.current_master_sha }}" "$current_master_sha"
+          selection_digest="$(jq -r '.selection_digest // "none"' "$RUNNER_TEMP/post-approval/rehearsal-authority.json")"
+          selection_args=()
+          if [ "$selection_digest" != "none" ]; then
+            selection_args=(--selection "$RUNNER_TEMP/post-approval-selection/$selection_digest.selection.json")
+          fi
           node scripts/verify-production-release-rehearsal-authority.mjs \
             --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-1.json" \
             --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-2.json" \
             --repeatability-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/repeatability.json" \
             --release-sha "$RELEASE_SHA" \
             --release-tree "$release_tree" \
+            --repository-root "$GITHUB_WORKSPACE/trusted-current-master" \
+            --current-master-sha "$current_master_sha" \
+            "${selection_args[@]}" \
             --minimum-remaining-seconds 900 \
             --json > "$RUNNER_TEMP/post-approval/tag-push-rehearsal-authority.json"
           cmp "$RUNNER_TEMP/post-approval/rehearsal-authority.json" \
             "$RUNNER_TEMP/post-approval/tag-push-rehearsal-authority.json"
-          current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
           selection_digest="$(jq -r '.selection_digest // "none"' "$RUNNER_TEMP/post-approval/tag-push-rehearsal-authority.json")"
-          git fetch --no-tags origin master
           git merge-base --is-ancestor "$RELEASE_SHA" "$current_master_sha"
           if [ "$selection_digest" = "none" ]; then test "$current_master_sha" = "$RELEASE_SHA"; else [[ "$selection_digest" =~ ^[0-9a-f]{64}$ ]]; fi
           test "$release_tree" = "$(jq -r '.release_tree' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
@@ -464,6 +571,7 @@ jobs:
             echo "protected tag creation race detected: remote ref was not newly created" >&2
             exit 1
           fi
+        working-directory: trusted-current-master
 
       - name: Read back exact remote annotated tag object
         env:
@@ -494,6 +602,38 @@ jobs:
             > "$RUNNER_TEMP/post-approval/remote-tag-message.txt"
           cmp "$RUNNER_TEMP/post-approval/expected-tag-message.txt" \
             "$RUNNER_TEMP/post-approval/remote-tag-message.txt"
+        working-directory: trusted-current-master
+
+      - name: Recheck current master immediately before attestation publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          release_tree="$(git rev-parse "$RELEASE_SHA^{tree}")"
+          current_master_sha="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+          git fetch --no-tags origin master
+          git merge-base --is-ancestor "${{ steps.trusted-master.outputs.current_master_sha }}" "$current_master_sha"
+          selection_digest="$(jq -r '.selection_digest // "none"' "$RUNNER_TEMP/post-approval/rehearsal-authority.json")"
+          selection_args=()
+          if [ "$selection_digest" != "none" ]; then
+            selection_args=(--selection "$RUNNER_TEMP/post-approval-selection/$selection_digest.selection.json")
+          fi
+          node scripts/verify-production-release-rehearsal-authority.mjs \
+            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-1.json" \
+            --member-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/member-2.json" \
+            --repeatability-receipt "$RUNNER_TEMP/production-release-attestation-inputs/rehearsal-receipts/repeatability.json" \
+            --release-sha "$RELEASE_SHA" \
+            --release-tree "$release_tree" \
+            --repository-root "$GITHUB_WORKSPACE/trusted-current-master" \
+            --current-master-sha "$current_master_sha" \
+            "${selection_args[@]}" \
+            --minimum-remaining-seconds 900 \
+            --json > "$RUNNER_TEMP/post-approval/pre-attestation-rehearsal-authority.json"
+          cmp "$RUNNER_TEMP/post-approval/rehearsal-authority.json" \
+            "$RUNNER_TEMP/post-approval/pre-attestation-rehearsal-authority.json"
+          expected_tag_object_sha="$(jq -r '.release_tag_object_sha' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
+          test "$(gh api "repos/netsus/homecook/git/ref/tags/${{ inputs.release_tag }}" --jq '.object.sha')" = "$expected_tag_object_sha"
+        working-directory: trusted-current-master
 
       - name: Attest release approval manifest with a custom predicate
         id: attest

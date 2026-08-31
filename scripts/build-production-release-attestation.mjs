@@ -113,6 +113,15 @@ try {
   }
   const rehearsalAuthority = {
     rehearsal_receipt_schema: authority.rehearsal_receipt_schema,
+    selected_sha: authority.selected_sha,
+    selected_tree: authority.selected_tree,
+    observed_master_sha: authority.observed_master_sha,
+    observed_master_tree: authority.observed_master_tree,
+    selected_at: authority.selected_at,
+    expires_at: authority.expires_at,
+    approver_role: authority.approver_role,
+    approver_id: authority.approver_id,
+    approval_digest: authority.approval_digest,
     selection_digest: authority.selection_digest,
     build_id: authority.build_id,
     sealed_bundle_digest: authority.sealed_bundle_digest,

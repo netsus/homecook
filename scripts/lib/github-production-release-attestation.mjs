@@ -15,6 +15,10 @@ import {
   normalizeExpectedReleaseContexts,
   validateProductionReleaseTag,
 } from "./production-release-approval-policy.mjs";
+import {
+  REHEARSAL_SELECTION_AUTHORITY_KEYS,
+  validateRehearsalSelectionAuthority,
+} from "./local-mac-production-rehearsal-selection.mjs";
 
 export {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
@@ -43,7 +47,8 @@ const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const REPEATABILITY_SCHEMA = "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
 const REHEARSAL_AUTHORITY_KEYS = [
-  "rehearsal_receipt_schema", "selection_digest", "build_id", "sealed_bundle_digest",
+  "rehearsal_receipt_schema", ...REHEARSAL_SELECTION_AUTHORITY_KEYS,
+  "build_id", "sealed_bundle_digest",
   "repeatability_receipt_digest", "rehearsal_receipt_valid_until",
 ];
 const SUBJECT_BASE_KEYS = [
@@ -75,11 +80,6 @@ function requireSha256(value, label) {
   return normalized;
 }
 
-function requireNullableSha256(value, label) {
-  if (value === null) return value;
-  return requireSha256(value, label);
-}
-
 function requireExactKeys(value, expectedKeys, label) {
   const actual = Object.keys(value).sort();
   const expected = [...expectedKeys].sort();
@@ -99,6 +99,9 @@ function normalizeRehearsalAuthority(value, label = "rehearsalAuthority") {
   if (value.rehearsal_receipt_schema !== REPEATABILITY_SCHEMA) {
     throw new Error(`${label}.rehearsal_receipt_schema is invalid.`);
   }
+  const selectionAuthority = validateRehearsalSelectionAuthority(Object.fromEntries(
+    REHEARSAL_SELECTION_AUTHORITY_KEYS.map((key) => [key, value[key]]),
+  ));
   const validUntil = requireNonEmptyString(
     value.rehearsal_receipt_valid_until,
     `${label}.rehearsal_receipt_valid_until`,
@@ -109,7 +112,7 @@ function normalizeRehearsalAuthority(value, label = "rehearsalAuthority") {
   }
   return Object.freeze({
     rehearsal_receipt_schema: REPEATABILITY_SCHEMA,
-    selection_digest: requireNullableSha256(value.selection_digest, `${label}.selection_digest`),
+    ...selectionAuthority,
     build_id: requireNonEmptyString(value.build_id, `${label}.build_id`),
     sealed_bundle_digest: requireSha256(value.sealed_bundle_digest, `${label}.sealed_bundle_digest`),
     repeatability_receipt_digest: requireSha256(
@@ -447,9 +450,20 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   subjectOutputPath = null,
 } = {}) {
   const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
+  const normalizedReleaseTree = requireSha1(releaseTree, "releaseTree");
   const normalizedRehearsalAuthority = rehearsalAuthority === null
     ? null
     : normalizeRehearsalAuthority(rehearsalAuthority);
+  if (
+    normalizedRehearsalAuthority !== null
+    && normalizedRehearsalAuthority.selection_digest !== null
+    && (
+      normalizedRehearsalAuthority.selected_sha !== normalizedReleaseSha
+      || normalizedRehearsalAuthority.selected_tree !== normalizedReleaseTree
+    )
+  ) {
+    throw new Error("Selected rehearsal authority SHA/tree must equal the attested release SHA/tree.");
+  }
   const subject = {
     schema: normalizedRehearsalAuthority
       ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2
@@ -469,7 +483,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
       "releaseTagObjectSha",
     ),
     release_sha: normalizedReleaseSha,
-    release_tree: requireSha1(releaseTree, "releaseTree"),
+    release_tree: normalizedReleaseTree,
     ...(normalizedRehearsalAuthority ?? {}),
     expected_release_contexts: normalizeExpectedReleaseContexts(
       expectedContexts,

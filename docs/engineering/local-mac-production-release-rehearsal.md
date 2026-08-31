@@ -118,6 +118,7 @@ pnpm release:rehearsal:select -- --release-sha <approved-ancestor-sha> --selecti
 - selection 생성·read 모두 `O_NOFOLLOW`, lstat/open/fstat/read/fstat/path-post identity를 요구한다. expired/tampered/path-swap/hard-link/private-mode 위반은 candidate root를 만들기 전에 fail closed한다. 선택 유효기간은 selected 시각부터 최대 24시간이다.
 - candidate의 `--selection <absolute-private-artifact>`은 optional이다. 없으면 기존 current-tip authority를 유지하고 모든 candidate/bundle/run evidence/run receipt/repeatability receipt의 `selection_digest`는 explicit `null`이다.
 - selection이 있으면 full fetched non-shallow history에서 selected→observed master→current master ancestry와 selected/observed/current tree를 모두 검증한다. observed master가 current master의 조상이 아니면 force-push divergence로 거부한다. candidate 시작 뒤의 정상 master 전진은 selected SHA를 무효화하지 않지만, 이후 read에서 divergence·expiry·tree mismatch가 보이면 fail closed한다.
+- candidate bootstrap은 시작 시 readback한 current master를 immutable `builder_authority_sha`로 한 번 고정하고 그 exact Git object의 bootstrap/module graph만 끝까지 실행한다. selected release SHA는 build 대상 source/artifact authority일 뿐 builder executable authority가 아니다. 종료 guard는 live current master를 다시 fetch해 `builder_authority_sha → current master` ancestry를 요구한다. 정상 descendant advance는 허용하지만 분기·force-push divergence는 `complete.json` 전에 거부한다.
 
 planned command:
 
@@ -319,6 +320,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 | `canonicalization` | exact `RFC8785-JCS+SHA256` |
 | `repository` | exact `netsus/homecook` |
 | `source_ref` | exact `refs/heads/master` |
+| `selection_digest` | current-tip이면 explicit `null`, selected ancestor이면 full selection artifact의 lowercase 64-hex digest; 별도 full selection authority file과 exact 결합 |
 | `release_sha` | exact 40-hex CI-green candidate SHA |
 | `release_tree` | exact Git tree SHA |
 | `ci_head_sha` | `release_sha`와 exact match |
@@ -354,6 +356,7 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 | `canonicalization` | exact `RFC8785-JCS+SHA256` |
 | `repository` | 두 member와 exact `netsus/homecook` |
 | `source_ref` | 두 member와 exact `refs/heads/master` |
+| `selection_digest` | 두 member와 exact 동일한 explicit `null` 또는 full selection artifact digest; mixed null/non-null 금지 |
 | `release_sha` | 두 member가 공유하는 exact SHA |
 | `release_tree` | 두 member가 공유하는 exact tree |
 | `build_id` | 두 member가 공유하는 exact build ID |
@@ -379,6 +382,8 @@ receipt는 create-only non-secret JSON artifact다. canonicalization은 exact `R
 
 - local run/repeatability receipt의 `issuer_task_id`, local file owner, local self digest 또는 임의 local self-signature는 production authority가 아니다. 같은 사용자에게 다시 쓰기 가능한 local key/signature를 trusted issuer로 취급하지 않는다.
 - GitHub `production-release-approval` workflow는 두 member receipt와 repeatability receipt를 다시 canonicalize/hash/validate한 뒤 exact SHA/tree/`sealed_bundle_digest`/`repeatability_receipt_digest`/`valid_until`을 production manifest, subject, predicate와 annotated tag message에 묶는다.
+- non-null `selection_digest`이면 workflow input은 exact `<selection_digest>.selection.json` bytes를 함께 제공한다. current master의 immutable checkout에 있는 trusted verifier가 private/no-follow/single-link file authority와 basename, approver role/id, approval digest, selected/expires time, selected/observed SHA·tree를 다시 검증하고 full history에서 `selected → observed master → current master` 및 `selected → current master` ancestry를 닫는다. current-tip이면 이 full selection projection은 전부 explicit `null`이고 selection file input도 비어 있어야 한다.
+- attestation builder와 selection/receipt verifier는 selected ancestor checkout에서 실행하지 않는다. 각 job 시작 시 pin한 current master immutable checkout bytes만 executable authority이며 selected ancestor는 그 checkout의 complete Git history 안에서 검증하는 target Git object/source artifact다. protected tag push 직전과 `actions/attest` 직전에는 live current master ref를 다시 읽어 trusted checkout→live current master와 full selection ancestry를 재검증한다.
 - server verifier는 pinned GitHub attestation trusted root를 먼저 검증한 뒤 manifest/subject/predicate/tag remote readback과 local sealed bytes/repeatability receipt를 exact 비교한다. GitHub attestation 밖의 local claim은 비교 입력일 뿐 trust anchor가 아니다.
 - receipt artifact는 감사 기록으로 만료 뒤에도 immutable 보존하지만 production authority는 strict `now < valid_until`인 final pre-mutation check에서만 유효하다. equality는 expired다.
 - receipt 내용 변경, member 재정렬, re-sign, rebuild, dependency/image/migration 변화, production pre/post drift 또는 cleanup residue는 기존 authority를 재사용하지 않고 두 isolated run부터 새 rehearsal을 요구한다.

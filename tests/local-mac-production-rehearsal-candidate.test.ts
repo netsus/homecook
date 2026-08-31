@@ -421,6 +421,71 @@ describe("release rehearsal candidate input gates", () => {
     })).toThrow(/current|master|selection|release/iu);
   });
 
+  it("keeps the bootstrap-start master as immutable builder authority while allowing only descendant advancement", () => {
+    const assertLineage = (candidateBootstrapModule as unknown as {
+      assertImmutableBootstrapMasterLineage?: (input: {
+        builderAuthoritySha: string;
+        currentMasterSha: string;
+        gitPath: string;
+        homeDir: string;
+        repositoryRoot: string;
+      }) => unknown;
+    }).assertImmutableBootstrapMasterLineage;
+    expect(typeof assertLineage).toBe("function");
+    if (typeof assertLineage !== "function") return;
+
+    const repo = privateRoot("homecook-bootstrap-lineage-repo-");
+    const gitHome = privateRoot("homecook-bootstrap-lineage-home-");
+    const runGit = (args: string[]) => {
+      const result = spawnSync("/usr/bin/git", args, {
+        cwd: repo,
+        encoding: "utf8",
+        env: {
+          HOME: gitHome,
+          NODE_ENV: "test",
+          PATH: "/usr/bin:/bin",
+          GIT_CONFIG_GLOBAL: "/dev/null",
+          GIT_CONFIG_NOSYSTEM: "1",
+          GIT_AUTHOR_EMAIL: "bootstrap@test.invalid",
+          GIT_AUTHOR_NAME: "Bootstrap Test",
+          GIT_COMMITTER_EMAIL: "bootstrap@test.invalid",
+          GIT_COMMITTER_NAME: "Bootstrap Test",
+        },
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout.trim();
+    };
+    runGit(["init", "--initial-branch=master"]);
+    writeFileSync(join(repo, "authority.txt"), "observed\n");
+    runGit(["add", "authority.txt"]);
+    runGit(["commit", "-m", "observed master"]);
+    const observedMasterSha = runGit(["rev-parse", "HEAD"]);
+    writeFileSync(join(repo, "authority.txt"), "advanced\n");
+    runGit(["commit", "-am", "normal advance"]);
+    const advancedMasterSha = runGit(["rev-parse", "HEAD"]);
+
+    expect(() => assertLineage({
+      builderAuthoritySha: observedMasterSha,
+      currentMasterSha: advancedMasterSha,
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      repositoryRoot: repo,
+    })).not.toThrow();
+
+    runGit(["checkout", "--orphan", "rewritten"]);
+    writeFileSync(join(repo, "authority.txt"), "rewritten\n");
+    runGit(["add", "authority.txt"]);
+    runGit(["commit", "-m", "divergent master"]);
+    const divergentMasterSha = runGit(["rev-parse", "HEAD"]);
+    expect(() => assertLineage({
+      builderAuthoritySha: observedMasterSha,
+      currentMasterSha: divergentMasterSha,
+      gitPath: "/usr/bin/git",
+      homeDir: gitHome,
+      repositoryRoot: repo,
+    })).toThrow(/ancestor|diverg|force|builder|master/iu);
+  });
+
   it("loads candidate modules and locks only from the exact immutable Git object", () => {
     const repo = privateRoot("homecook-bootstrap-repo-");
     const gitHome = privateRoot("homecook-bootstrap-git-home-");

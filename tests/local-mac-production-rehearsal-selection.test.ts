@@ -133,6 +133,29 @@ describe("release rehearsal selection authority", () => {
     expect(readFileSync(path, "utf8")).toBe(canonicalizeJcs(selection));
   });
 
+  it("rejects a valid same-release selection renamed over another selection digest path", () => {
+    const { path, selection } = createSelectionArtifact();
+    const selectionRoot = realpathSync(dirname(path));
+    const replacement = buildSelection({
+      approver_id: "different-release-approver",
+    });
+    expect(replacement.selected_sha).toBe(selection.selected_sha);
+    expect(replacement.selection_digest).not.toBe(selection.selection_digest);
+    const replacementPath = selectionModule.writeRehearsalSelectionCreateOnly({
+      selection: replacement,
+      selectionRoot,
+      repoRoot: process.cwd(),
+      now: NOW,
+    });
+    renameSync(path, `${path}.original`);
+    renameSync(replacementPath, path);
+
+    expect(() => selectionModule.readRehearsalSelectionArtifact(path, {
+      repoRoot: process.cwd(),
+      now: NOW,
+    })).toThrow(/basename|file name|selection_digest|digest path/iu);
+  });
+
   it("resolves an approved full-history origin/master ancestor and both exact trees", () => {
     const history = createGitHistory();
 
