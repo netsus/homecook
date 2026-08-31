@@ -39,7 +39,9 @@
       "tests/marketing-validation-migration.test.ts"
     ],
     "schema_changes": [
-      "supabase/migrations/<timestamp>_marketing_validation_sessions.sql"
+      "supabase/migrations/20260831100000_marketing_validation_sessions.sql",
+      "supabase/migrations/20260831110000_marketing_validation_retention_operations.sql",
+      "supabase/migrations/20260831120000_marketing_validation_export_scope.sql"
     ],
     "required_tables": [
       "public.marketing_validation_sessions"
@@ -150,7 +152,12 @@
     "manual:allowlisted-production-origin-ready",
     "manual:edge-rate-limit-evidence-captured",
     "manual:marketing-lead-protection-ready-enabled",
-    "manual:launch-readiness-blockers-green"
+    "manual:launch-readiness-blockers-green",
+    "manual:campaign-end-and-retention-ready",
+    "manual:full-local-migrations-approved-and-applied",
+    "manual:beta-invitation-sender-domain-ready",
+    "manual:actual-ios-safari-smoke",
+    "manual:paid-ads-execution-approved"
   ],
   "blocked_conditions": [
     "production-lead-capture-enabled-without-operator-privacy-data",

@@ -54,7 +54,12 @@
       "manual:allowlisted-production-origin-ready",
       "manual:edge-rate-limit-evidence-captured",
       "manual:marketing-lead-protection-ready-enabled",
-      "manual:launch-readiness-blockers-green"
+      "manual:launch-readiness-blockers-green",
+      "manual:campaign-end-and-retention-ready",
+      "manual:full-local-migrations-approved-and-applied",
+      "manual:beta-invitation-sender-domain-ready",
+      "manual:actual-ios-safari-smoke",
+      "manual:paid-ads-execution-approved"
     ],
     "execution_mode": "manual",
     "evaluator_profile": "vertical-slice-strict",
@@ -152,7 +157,10 @@
     "Actual operator privacy data is not yet supplied.",
     "Turnstile production key and allowlisted hostname are not yet confirmed.",
     "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
-    "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
+    "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied.",
+    "MARKETING_CAMPAIGN_END_AT and the campaign-end-plus-180-day retention value are not yet confirmed.",
+    "The forward full-local migration apply still needs target, backup, and operator approval.",
+    "The beta invitation sender email and sending domain are not yet verified."
   ],
-  "notes": "Stage 1 contract PR #1477, Stage 2 backend PR #1478, Stage 4 frontend PR #1479, and final-authority PR #1480 are merged. Stage 6 adds `docs/marketing/demand-validation-analysis.sql`, `docs/marketing/demand-validation-result-template.md`, accepted-lead export, retention purge, exact internal-scope migration, and focused operations tests. The Stage 6 closeout evidence is `docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md`. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
+  "notes": "Stage 1 contract PR #1477, Stage 2 backend PR #1478, Stage 4 frontend PR #1479, final-authority PR #1480, and Stage 6 PR #1482 are merged. A follow-up safety patch adds exact-count export/purge behavior, a forward export-scope migration, loopback full-local operator enforcement, and expanded Manual Only readiness tracking before canonical merged closeout. The Stage 6 closeout evidence is `docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md`. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
 }
