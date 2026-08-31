@@ -2702,7 +2702,9 @@ describe("release rehearsal candidate orchestration", () => {
     chmodSync(bundleRoot, 0o500);
     chmodSync(join(root, "bundles"), 0o500);
     chmodSync(root, 0o500);
-    expect(() => readCompletedCandidateRoot(root)).toThrow(/generated|inventory|digest|bundle/iu);
+    expect(() => readCompletedCandidateRoot(root, {
+      physicalAuthorityPath: originalPhysicalAuthority,
+    })).toThrow(/generated|inventory|digest|bundle/iu);
 
     chmodSync(root, 0o700);
     chmodSync(join(root, "bundles"), 0o700);
@@ -2721,7 +2723,9 @@ describe("release rehearsal candidate orchestration", () => {
     chmodSync(join(evidenceRoot, "ci-evidence.json"), 0o400);
     chmodSync(evidenceRoot, 0o500);
     chmodSync(root, 0o500);
-    expect(() => readCompletedCandidateRoot(root)).toThrow(/ci|evidence|snapshot|digest|head/iu);
+    expect(() => readCompletedCandidateRoot(root, {
+      physicalAuthorityPath: originalPhysicalAuthority,
+    })).toThrow(/ci|evidence|snapshot|digest|head/iu);
 
     chmodSync(root, 0o700);
     chmodSync(evidenceRoot, 0o700);
@@ -2734,11 +2738,14 @@ describe("release rehearsal candidate orchestration", () => {
     chmodSync(sealedStoreBlob, 0o600);
     writeFileSync(sealedStoreBlob, "mutated bytes\n");
     chmodSync(sealedStoreBlob, 0o400);
-    expect(() => readCompletedCandidateRoot(root)).toThrow(/pnpm|store|CAFS|inventory|identity|content/iu);
+    expect(() => readCompletedCandidateRoot(root, {
+      physicalAuthorityPath: originalPhysicalAuthority,
+    })).toThrow(/pnpm|store|CAFS|inventory|identity|content/iu);
 
     const incomplete = privateRoot("homecook-candidate-reader-incomplete-");
     writeFileSync(join(incomplete, "candidate.json"), canonicalizeJcs(candidate), { mode: 0o400 });
-    expect(() => readCompletedCandidateRoot(incomplete)).toThrow(/complete|terminal|marker/iu);
+    expect(() => readCompletedCandidateRoot(incomplete))
+      .toThrow(/complete|terminal|marker|physical|authority|missing/iu);
   });
 
   it("requires complete split-one production snapshots and rejects pre/post drift", () => {
