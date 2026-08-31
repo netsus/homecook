@@ -34,6 +34,7 @@ import {
   assembleCandidateArtifacts,
   collectSealedMigrationInventory,
   materializeExactGitTree,
+  materializeCandidateBuildWorkspace,
   verifyExactMaterializedTree,
   loadRehearsalToolchainLock,
   parseCanonicalComposeImageInventory,
@@ -273,6 +274,7 @@ function validManifestInput() {
     generated_build_inventory_digest: createHash("sha256").update(canonicalizeJcs(
       fileInventory.filter((entry) => entry.source_kind === "generated_build"),
     )).digest("hex"),
+    pnpm_store_snapshot_inventory_digest: DIGEST_C,
     build_id: `candidate-${SHA_A}`,
     sealed_bundle_digest: DIGEST_B,
     bundle_manifest_digest: DIGEST_C,
@@ -338,6 +340,7 @@ describe("release rehearsal candidate manifest", () => {
         "compose_source_digest",
         "sandbox_policy_digest",
         "generated_build_inventory_digest",
+        "pnpm_store_snapshot_inventory_digest",
         "sealed_bundle_digest",
         "bundle_manifest_digest",
         "toolchain",
@@ -365,7 +368,7 @@ describe("release rehearsal candidate manifest", () => {
     expect(parsed.manifest_digest).toMatch(/^[0-9a-f]{64}$/u);
   });
 
-  it("cross-binds the exact sealed generated build inventory into candidate and bundle authority", () => {
+  it("cross-binds generated build and pnpm store snapshot inventories into candidate and bundle authority", () => {
     const manifest = buildCandidateManifest(validManifestInput());
     expect(manifest.generated_build_inventory_digest).toBe(createHash("sha256")
       .update(canonicalizeJcs(manifest.file_inventory.filter(
@@ -376,6 +379,11 @@ describe("release rehearsal candidate manifest", () => {
       source_snapshot_digest: manifest.source_manifest_digest,
       generated_build_inventory_digest: DIGEST_A,
     })).toThrow(/generated|inventory|cross-binding|digest/iu);
+    expect(() => validateCandidateBundleCrossBinding(manifest, {
+      ...manifest,
+      source_snapshot_digest: manifest.source_manifest_digest,
+      pnpm_store_snapshot_inventory_digest: DIGEST_A,
+    })).toThrow(/pnpm|store|inventory|cross-binding|digest/iu);
     expect(() => buildCandidateManifest({
       ...validManifestInput(),
       file_inventory: validManifestInput().file_inventory.filter(
@@ -2129,32 +2137,45 @@ describe("release rehearsal candidate orchestration", () => {
     const nextRoot = join(buildRoot, ".next");
     const privateHome = join(runRoot, "build-home");
     const privateTmp = join(runRoot, "tmp");
-    const appRoot = join(buildRoot, "app");
-    const patchesRoot = join(buildRoot, "patches");
-    for (const path of [
-      runRoot, buildRoot, nodeModulesRoot, nextRoot, privateHome, privateTmp,
-      appRoot, patchesRoot,
-    ]) mkdirSync(path, { mode: 0o700 });
-    copyFileSync("package.json", join(buildRoot, "package.json"));
-    copyFileSync("pnpm-lock.yaml", join(buildRoot, "pnpm-lock.yaml"));
-    copyFileSync("pnpm-workspace.yaml", join(buildRoot, "pnpm-workspace.yaml"));
-    copyFileSync("next.config.ts", join(buildRoot, "next.config.ts"));
+    const storeRoot = join(runRoot, "pnpm-store");
+    const sourceRoot = join(root, "source");
+    const appRoot = join(sourceRoot, "app");
+    const patchesRoot = join(sourceRoot, "patches");
+    for (const path of [runRoot, privateHome, privateTmp, sourceRoot, appRoot, patchesRoot]) {
+      mkdirSync(path, { mode: 0o700 });
+    }
+    copyFileSync("package.json", join(sourceRoot, "package.json"));
+    copyFileSync("pnpm-lock.yaml", join(sourceRoot, "pnpm-lock.yaml"));
+    copyFileSync("pnpm-workspace.yaml", join(sourceRoot, "pnpm-workspace.yaml"));
+    copyFileSync("next.config.ts", join(sourceRoot, "next.config.ts"));
     copyFileSync("patches/minimatch@3.1.5.patch", join(patchesRoot, "minimatch@3.1.5.patch"));
     writeFileSync(join(appRoot, "layout.js"), [
       "export default function Layout({ children }) {",
       "  return <html><body>{children}</body></html>;",
       "}",
       "",
-    ].join("\n"), { mode: 0o400 });
-    writeFileSync(join(appRoot, "page.js"), "export default function Page() { return <main>fixture</main>; }\n", { mode: 0o400 });
-    chmodSync(join(buildRoot, "package.json"), 0o400);
-    chmodSync(join(buildRoot, "pnpm-lock.yaml"), 0o400);
-    chmodSync(join(buildRoot, "pnpm-workspace.yaml"), 0o400);
-    chmodSync(join(buildRoot, "next.config.ts"), 0o400);
-    chmodSync(join(patchesRoot, "minimatch@3.1.5.patch"), 0o400);
-    chmodSync(appRoot, 0o500);
-    chmodSync(patchesRoot, 0o500);
-    chmodSync(buildRoot, 0o500);
+    ].join("\n"), { mode: 0o600 });
+    writeFileSync(join(appRoot, "page.js"), "export default function Page() { return <main>fixture</main>; }\n", { mode: 0o600 });
+    const trackedPaths = [
+      "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "next.config.ts",
+      "patches/minimatch@3.1.5.patch", "app/layout.js", "app/page.js",
+    ];
+    const sourceManifest = {
+      entries: trackedPaths.map((path) => {
+        const bytes = readFileSync(join(sourceRoot, path));
+        return {
+          path,
+          git_mode: "100644",
+          blob_oid: createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex"),
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+          symlink_target: null,
+        };
+      }),
+    };
+    materializeCandidateBuildWorkspace({ sourceRoot, sourceManifest, buildRoot });
+    expect(lstatSync(buildRoot).mode & 0o777).toBe(0o500);
+    expect(lstatSync(nodeModulesRoot).mode & 0o777).toBe(0o700);
+    expect(lstatSync(nextRoot).mode & 0o777).toBe(0o700);
 
     const pnpmArtifactRoot = realpathSync(join(
       process.env.HOME ?? "",
@@ -2172,16 +2193,20 @@ describe("release rehearsal candidate orchestration", () => {
       currentUid: process.getuid?.(),
     }, async ({ writeRoots }) => withCandidatePnpmStoreView({
       sourceStore: packageStore,
-      privateHome,
+      storeRoot,
       currentUid: process.getuid?.(),
-    }, async ({ storePath: packageStoreView }) => {
+    }, async ({ storePath: packageStoreView, writableRoots: storeWritableRoots }) => {
     const enforcedProfile = buildCandidateSandboxProfile({
       readRoots: [
         buildRoot, privateHome, privateTmp, pnpmArtifactRoot,
-        packageStore, packageStoreView, process.execPath,
+        packageStoreView, process.execPath,
       ],
-      writeRoots,
-      deniedWritePaths: [packageStore, join(packageStoreView, "index")],
+      writeRoots: [...writeRoots, ...storeWritableRoots],
+      deniedWritePaths: [
+        packageStore,
+        join(packageStoreView, "files"),
+        join(packageStoreView, "index"),
+      ],
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
     });
     const profile = enforcedProfile;
@@ -2206,6 +2231,14 @@ describe("release rehearsal candidate orchestration", () => {
       stderr: install.stderr,
     })).toBe(0);
     expect(existsSync(join(nodeModulesRoot, "next", "dist", "bin", "next"))).toBe(true);
+    const deniedStoreRootWrite = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", profile, "/usr/bin/touch", join(packageStoreView, "unexpected"),
+    ], { cwd: buildRoot, env });
+    const deniedPrivateFilesWrite = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", profile, "/usr/bin/touch", join(packageStoreView, "files", "unexpected"),
+    ], { cwd: buildRoot, env });
+    expect(deniedStoreRootWrite.status).not.toBe(0);
+    expect(deniedPrivateFilesWrite.status).not.toBe(0);
 
     const build = spawnSync("/usr/bin/sandbox-exec", [
       "-p", profile, process.execPath, join(nodeModulesRoot, "next", "dist", "bin", "next"),
@@ -2266,6 +2299,13 @@ describe("release rehearsal candidate orchestration", () => {
     expect(result.value).toBe("built");
     expect(result.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
 
+    const swapped = fixture("homecook-build-work-authority-swapped-");
+    await expect(withBuildWorkAuthority({
+      ...swapped,
+      nodeModulesRoot: swapped.nextRoot,
+      nextRoot: swapped.nodeModulesRoot,
+    }, () => undefined)).rejects.toThrow(/exact|canonical|run-owned|path/iu);
+
     const escaped = fixture("homecook-build-work-authority-escape-");
     const outside = join(escaped.root, "outside");
     mkdirSync(outside, { mode: 0o700 });
@@ -2291,7 +2331,7 @@ describe("release rehearsal candidate orchestration", () => {
     })).rejects.toThrow(/identity|substitution|drift|parent/iu);
   });
 
-  it("holds a private pnpm v10 store view while keeping the approved package store read-only", async () => {
+  it("holds a sealed private pnpm v10 store snapshot outside broad home writes", async () => {
     const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
     const withStoreView = candidateModule.withCandidatePnpmStoreView;
     expect(typeof withStoreView).toBe("function");
@@ -2301,26 +2341,35 @@ describe("release rehearsal candidate orchestration", () => {
       const root = privateRoot(prefix);
       const sourceStore = join(root, "approved-store-v10");
       const privateHome = join(root, "candidate-home");
+      const storeRoot = join(root, "candidate-store");
       for (const path of [sourceStore, join(sourceStore, "files"), join(sourceStore, "index"), privateHome]) {
         mkdirSync(path, { mode: 0o700 });
       }
       writeFileSync(join(sourceStore, "files", "blob"), "package bytes\n", { mode: 0o400 });
       writeFileSync(join(sourceStore, "index", "package.json"), "{}\n", { mode: 0o400 });
-      return { root, sourceStore, privateHome, currentUid: process.getuid?.() };
+      return { root, sourceStore, privateHome, storeRoot, currentUid: process.getuid?.() };
     };
     const invoke = async (
       paths: ReturnType<typeof fixture>,
-      callback: (authority: { storePath: string }) => unknown,
+      callback: (authority: { storePath: string, writableRoots: string[], snapshotInventoryDigest: string }) => unknown,
     ) => (withStoreView as (
       options: ReturnType<typeof fixture>,
-      callback: (authority: { storePath: string }) => unknown,
+      callback: (authority: { storePath: string, writableRoots: string[], snapshotInventoryDigest: string }) => unknown,
     ) => Promise<{ authority_digest: string, value: unknown }>)(paths, callback);
 
     const allowed = fixture("homecook-pnpm-store-view-allowed-");
-    const result = await invoke(allowed, ({ storePath }) => {
-      expect(storePath).toBe(join(allowed.privateHome, "pnpm-store", "v10"));
-      expect(realpathSync(join(storePath, "files"))).toBe(join(allowed.sourceStore, "files"));
+    const result = await invoke(allowed, ({ storePath, writableRoots, snapshotInventoryDigest }) => {
+      expect(storePath).toBe(join(allowed.storeRoot, "v10"));
+      expect(storePath.startsWith(`${allowed.privateHome}/`)).toBe(false);
+      expect(lstatSync(storePath).mode & 0o777).toBe(0o500);
+      expect(lstatSync(join(storePath, "files")).isSymbolicLink()).toBe(false);
+      expect(lstatSync(join(storePath, "files", "blob")).nlink).toBe(1);
+      expect(lstatSync(join(storePath, "files", "blob")).mode & 0o777).toBe(0o400);
+      expect(realpathSync(join(storePath, "files"))).toBe(join(storePath, "files"));
       expect(realpathSync(join(storePath, "index"))).toBe(join(storePath, "index"));
+      expect(writableRoots).toEqual([join(storePath, "projects"), join(storePath, "tmp")]);
+      expect(snapshotInventoryDigest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(readFileSync(join(storePath, "files", "blob"), "utf8")).toBe("package bytes\n");
       expect(readFileSync(join(storePath, "index", "package.json"), "utf8")).toBe("{}\n");
       writeFileSync(join(storePath, "projects", "candidate"), "owned\n", { mode: 0o600 });
       return "ready";
@@ -2328,6 +2377,15 @@ describe("release rehearsal candidate orchestration", () => {
     expect(result.value).toBe("ready");
     expect(result.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
     expect(readFileSync(join(allowed.sourceStore, "files", "blob"), "utf8")).toBe("package bytes\n");
+
+    const sourceDrift = fixture("homecook-pnpm-store-view-source-drift-");
+    await expect(invoke(sourceDrift, ({ storePath }) => {
+      const sourceBlob = join(sourceDrift.sourceStore, "files", "blob");
+      chmodSync(sourceBlob, 0o600);
+      writeFileSync(sourceBlob, "mutated source bytes\n");
+      chmodSync(sourceBlob, 0o400);
+      expect(readFileSync(join(storePath, "files", "blob"), "utf8")).toBe("package bytes\n");
+    })).rejects.toThrow(/source|store|inventory|identity|drift/iu);
 
     const escaped = fixture("homecook-pnpm-store-view-escape-");
     const outside = join(escaped.root, "outside");
