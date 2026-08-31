@@ -74,6 +74,7 @@ const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
   "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
+  "generated_build_inventory_digest",
   "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
@@ -415,6 +416,21 @@ function validateFileInventory(value) {
   return value;
 }
 
+function generatedBuildInventoryDigest(value) {
+  const generated = value.filter((entry) => entry.source_kind === "generated_build");
+  if (generated.length === 0) fail("generated build inventory must be nonempty");
+  for (const prefix of [".next/", "node_modules/"]) {
+    if (!generated.some((entry) => entry.component === "app" && entry.path.startsWith(prefix))) {
+      fail(`generated build inventory is missing sealed ${prefix.slice(0, -1)} output`);
+    }
+  }
+  if (generated.some((entry) => entry.component !== "app"
+    || !(entry.path.startsWith(".next/") || entry.path.startsWith("node_modules/")))) {
+    fail("generated build inventory contains a non-canonical writable artifact path");
+  }
+  return sha256Jcs(generated);
+}
+
 function validateEnvironmentMetadata(value) {
   exactObject(value, "environment_snapshot", [
     "source_allowlist_id", "opaque_source_identity_digest", "opaque_override_digest",
@@ -464,6 +480,7 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.source_manifest_digest, "source_manifest_digest");
   digest(value.compose_source_digest, "compose_source_digest");
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
+  digest(value.generated_build_inventory_digest, "generated_build_inventory_digest");
   string(value.build_id, "build_id");
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
   digest(value.bundle_manifest_digest, "bundle_manifest_digest");
@@ -475,6 +492,9 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   validateMigration(value.migration);
   validateArtifacts(value.artifacts);
   validateFileInventory(value.file_inventory);
+  if (generatedBuildInventoryDigest(value.file_inventory) !== value.generated_build_inventory_digest) {
+    fail("generated build inventory digest mismatch");
+  }
   validateEnvironmentMetadata(value.environment_snapshot);
   validateProductionGuard(value.production_guard);
   digest(value.candidate_identity_digest, "candidate_identity_digest");
@@ -779,16 +799,10 @@ export function assembleCandidateArtifacts({ sourceRoot, generatedRoot = sourceR
   });
 }
 
-function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot, generatedRoot }) {
+function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot }) {
   mkdirSync(buildRoot, { mode: 0o700 });
-  mkdirSync(generatedRoot, { mode: 0o700 });
   for (const entry of sourceManifest.entries) {
     copyManifestEntry({ sourceRoot, destinationRoot: buildRoot, entry });
-  }
-  for (const name of [".next", "node_modules"]) {
-    const generatedPath = join(generatedRoot, name);
-    mkdirSync(generatedPath, { mode: 0o700 });
-    symlinkSync(generatedPath, join(buildRoot, name));
   }
   const sealDirectories = (path) => {
     for (const name of readdirSync(path)) {
@@ -799,6 +813,9 @@ function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot, gene
     chmodSync(path, 0o500);
   };
   sealDirectories(buildRoot);
+  for (const name of [".next", "node_modules"]) {
+    mkdirSync(join(buildRoot, name), { mode: 0o700 });
+  }
 }
 
 export function collectSealedMigrationInventory({ bundleRoot } = {}) {
@@ -1132,7 +1149,7 @@ export function buildBundleAuthorityManifest(input) {
     "artifacts", "build_id", "ci_check_summary_digest", "ci_snapshot_digest",
     "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
-    "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "sandbox_policy_digest", "generated_build_inventory_digest", "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
     "build_tools", "builder_input_digest",
     "repository", "source_ref", "selection_digest",
@@ -1145,11 +1162,14 @@ export function buildBundleAuthorityManifest(input) {
   string(input.build_id, "bundle authority build_id");
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
-    "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "sandbox_policy_digest", "generated_build_inventory_digest", "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest", "builder_input_digest",
   ]) digest(input[field], `bundle authority ${field}`);
   validateEnvironmentMetadata(input.environment_snapshot);
   validateFileInventory(input.file_inventory);
+  if (generatedBuildInventoryDigest(input.file_inventory) !== input.generated_build_inventory_digest) {
+    fail("bundle authority generated build inventory digest mismatch");
+  }
   validateCandidateImages(input.images, { strictManifest: true });
   validateMigration(input.migration);
   validateProductionGuard(input.production_guard);
@@ -1187,6 +1207,253 @@ function ensureNamespaceDirectory(path, currentUid, label) {
 function sandboxLiteral(path) {
   if (!isAbsolute(path)) fail("sandbox path must be absolute");
   return `\"${path.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}\"`;
+}
+
+/**
+ * @param {{runRoot:string,buildRoot:string,nodeModulesRoot:string,nextRoot:string,privateHome:string,privateTmp:string,currentUid?:number}} options
+ * @param {(authority:{writeRoots:string[]})=>unknown|Promise<unknown>} callback
+ */
+export async function withCandidateBuildWorkAuthority({
+  runRoot, buildRoot, nodeModulesRoot, nextRoot, privateHome, privateTmp,
+  currentUid = process.getuid?.(),
+} = /** @type {any} */ ({}), callback) {
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  if (typeof callback !== "function") fail("candidate build-work authority callback is required");
+  const expectedPaths = {
+    runRoot: resolve(runRoot ?? ""),
+    buildRoot: join(resolve(runRoot ?? ""), "build-work"),
+    nodeModulesRoot: join(resolve(runRoot ?? ""), "build-work", "node_modules"),
+    nextRoot: join(resolve(runRoot ?? ""), "build-work", ".next"),
+    privateHome: join(resolve(runRoot ?? ""), "build-home"),
+    privateTmp: join(resolve(runRoot ?? ""), "tmp"),
+  };
+  const suppliedPaths = { runRoot, buildRoot, nodeModulesRoot, nextRoot, privateHome, privateTmp };
+  for (const [role, path] of Object.entries(suppliedPaths)) {
+    if (!isAbsolute(path ?? "") || resolve(path) !== path || expectedPaths[role] !== path) {
+      fail(`candidate build-work ${role} path must be exact, canonical, and run-owned`);
+    }
+  }
+
+  const strictRoles = new Map([
+    [dirname(runRoot), 0o700],
+    [runRoot, 0o700],
+    [buildRoot, 0o500],
+  ]);
+  const writableRoles = new Map([
+    [nodeModulesRoot, 0o700],
+    [nextRoot, 0o700],
+    [privateHome, 0o700],
+    [privateTmp, 0o700],
+  ]);
+  const identityKeys = ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs"];
+  const writableIdentityKeys = ["dev", "ino", "mode", "uid", "gid"];
+  const sameIdentity = (left, right, keys) => keys.every((key) => left[key] === right[key]);
+  const snapshots = [];
+  const fds = [];
+  const openDirectory = (path, expectedMode, mutable) => {
+    const stat = lstatSync(path, { bigint: true });
+    if (
+      stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+      || modeBits(stat.mode) !== expectedMode || realpathSync(path) !== path
+    ) fail("candidate build-work directory owner, mode, type, or canonical path is unsafe");
+    const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+    if (!sameIdentity(stat, fstatSync(fd, { bigint: true }), identityKeys)) {
+      closeSync(fd);
+      fail("candidate build-work directory identity drifted before execution");
+    }
+    snapshots.push({ fd, path, stat, mutable });
+    fds.push(fd);
+  };
+  for (const [path, mode] of strictRoles) openDirectory(path, mode, path === runRoot);
+  for (const [path, mode] of writableRoles) openDirectory(path, mode, true);
+
+  for (const root of [nodeModulesRoot, nextRoot, privateHome, privateTmp]) {
+    const children = readdirSync(root);
+    for (const name of children) {
+      const stat = lstatSync(join(root, name), { bigint: true });
+      if (stat.isFile() && stat.nlink !== 1n) fail("candidate generated build root contains a hard-link escape");
+    }
+    if (children.length !== 0) fail("candidate generated build roots must begin empty");
+  }
+
+  const authorityDigest = sha256Jcs({
+    schema: "homecook.release-rehearsal-build-work-authority.v1",
+    directories: snapshots.map(({ path, stat, mutable }) => ({
+      path_digest: sha256Jcs(path),
+      mutable,
+      device: String(stat.dev),
+      inode: String(stat.ino),
+      mode: modeBits(stat.mode),
+      uid: String(stat.uid),
+    })),
+  });
+
+  let value;
+  let callbackError;
+  try {
+    value = await callback({
+      writeRoots: [nodeModulesRoot, nextRoot, privateHome, privateTmp],
+    });
+  } catch (error) {
+    callbackError = error;
+  }
+  let identityError;
+  try {
+    for (const { fd, path, stat, mutable } of snapshots) {
+      const pathPost = lstatSync(path, { bigint: true });
+      const fdPost = fstatSync(fd, { bigint: true });
+      const keys = mutable ? writableIdentityKeys : identityKeys;
+      if (
+        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
+        || !sameIdentity(stat, pathPost, keys) || !sameIdentity(stat, fdPost, keys)
+      ) fail("candidate build-work directory identity or parent drifted during execution");
+    }
+  } catch (error) {
+    identityError = error;
+  } finally {
+    for (const fd of fds.reverse()) closeSync(fd);
+  }
+  if (identityError) throw identityError;
+  if (callbackError) throw callbackError;
+  return Object.freeze({ authority_digest: authorityDigest, value });
+}
+
+/**
+ * @param {{sourceStore:string,privateHome:string,currentUid?:number}} options
+ * @param {(authority:{storePath:string})=>unknown|Promise<unknown>} callback
+ */
+export async function withCandidatePnpmStoreView({
+  sourceStore,
+  privateHome,
+  currentUid = process.getuid?.(),
+} = /** @type {any} */ ({}), callback) {
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  if (typeof callback !== "function") fail("candidate pnpm store-view callback is required");
+  if (![sourceStore, privateHome].every((path) => isAbsolute(path ?? "") && resolve(path) === path)) {
+    fail("candidate pnpm store-view paths must be absolute and canonical");
+  }
+  const privateHomeStat = lstatSync(privateHome);
+  if (
+    privateHomeStat.isSymbolicLink() || !privateHomeStat.isDirectory()
+    || privateHomeStat.uid !== currentUid || modeBits(privateHomeStat.mode) !== 0o700
+    || realpathSync(privateHome) !== privateHome
+  ) fail("candidate pnpm store-view private home is unsafe");
+
+  const identityKeys = ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs"];
+  const sameIdentity = (left, right) => identityKeys.every((key) => left[key] === right[key]);
+  const sourcePaths = [sourceStore, join(sourceStore, "files"), join(sourceStore, "index")];
+  const sourceSnapshots = [];
+  try {
+    for (const path of sourcePaths) {
+      const stat = lstatSync(path, { bigint: true });
+      if (
+        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+        || (modeBits(stat.mode) & 0o022) !== 0 || realpathSync(path) !== path
+      ) fail("approved pnpm package store path, owner, mode, or identity is unsafe");
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      if (!sameIdentity(stat, fstatSync(fd, { bigint: true }))) {
+        closeSync(fd);
+        fail("approved pnpm package store identity drifted before view creation");
+      }
+      sourceSnapshots.push({ fd, path, stat });
+    }
+  } catch (error) {
+    for (const { fd } of sourceSnapshots) closeSync(fd);
+    throw error;
+  }
+
+  const storeParent = join(privateHome, "pnpm-store");
+  const storePath = join(storeParent, "v10");
+  const sourceIndexPath = join(sourceStore, "index");
+  const privateIndexPath = join(storePath, "index");
+  const sourceIndexDigest = digestLocalMacProductionExecutionTree(sourceIndexPath);
+  try {
+    mkdirSync(storeParent, { mode: 0o700 });
+    mkdirSync(storePath, { mode: 0o700 });
+    symlinkSync(join(sourceStore, "files"), join(storePath, "files"));
+    copyLocalMacProductionExecutionTree(sourceIndexPath, privateIndexPath);
+    sealLocalMacProductionExecutionTree(privateIndexPath);
+    if (digestLocalMacProductionExecutionTree(privateIndexPath) !== sourceIndexDigest) {
+      fail("candidate pnpm store-view index copy digest mismatch");
+    }
+    for (const name of ["projects", "tmp"]) mkdirSync(join(storePath, name), { mode: 0o700 });
+  } catch (error) {
+    for (const { fd } of sourceSnapshots) closeSync(fd);
+    fail(`candidate pnpm store-view create-only materialization failed: ${error?.code ?? "unknown"}`);
+  }
+  const viewDirectories = [storeParent, storePath, join(storePath, "projects"), join(storePath, "tmp")]
+    .map((path) => ({ path, stat: lstatSync(path, { bigint: true }) }));
+  for (const { path, stat } of viewDirectories) {
+    if (
+      stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+      || modeBits(stat.mode) !== 0o700 || realpathSync(path) !== path
+    ) fail("candidate pnpm store-view directory identity is unsafe");
+  }
+  const linkSnapshots = ["files"].map((name) => {
+    const path = join(storePath, name);
+    const stat = lstatSync(path, { bigint: true });
+    const target = join(sourceStore, name);
+    if (
+      !stat.isSymbolicLink() || stat.uid !== BigInt(currentUid) || stat.nlink !== 1n
+      || realpathSync(path) !== target
+    ) fail("candidate pnpm store-view read link escapes its approved target");
+    return { path, stat, target: readlinkSync(path), realTarget: target };
+  });
+  const authorityDigest = sha256Jcs({
+    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v1",
+    source: sourceSnapshots.map(({ path, stat }) => ({
+      path_digest: sha256Jcs(path),
+      device: String(stat.dev),
+      inode: String(stat.ino),
+      mode: modeBits(stat.mode),
+      uid: String(stat.uid),
+    })),
+    view_path_digest: sha256Jcs(storePath),
+    index_digest: sourceIndexDigest,
+  });
+
+  let value;
+  let callbackError;
+  try {
+    value = await callback({ storePath });
+  } catch (error) {
+    callbackError = error;
+  }
+  let identityError;
+  try {
+    for (const { fd, path, stat } of sourceSnapshots) {
+      const pathPost = lstatSync(path, { bigint: true });
+      const fdPost = fstatSync(fd, { bigint: true });
+      if (
+        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
+        || !sameIdentity(stat, pathPost) || !sameIdentity(stat, fdPost)
+      ) fail("approved pnpm package store identity drifted during candidate build");
+    }
+    for (const { path, stat, target, realTarget } of linkSnapshots) {
+      const post = lstatSync(path, { bigint: true });
+      if (
+        !post.isSymbolicLink() || !sameIdentity(stat, post)
+        || readlinkSync(path) !== target || realpathSync(path) !== realTarget
+      ) fail("candidate pnpm store-view link identity drifted during candidate build");
+    }
+    for (const { path, stat } of viewDirectories.slice(0, 2)) {
+      const post = lstatSync(path, { bigint: true });
+      if (!sameIdentity(stat, post) || realpathSync(path) !== path) {
+        fail("candidate pnpm store-view identity drifted during candidate build");
+      }
+    }
+    if (
+      digestLocalMacProductionExecutionTree(sourceIndexPath) !== sourceIndexDigest
+      || digestLocalMacProductionExecutionTree(privateIndexPath) !== sourceIndexDigest
+    ) fail("candidate pnpm store-view index authority drifted during candidate build");
+  } catch (error) {
+    identityError = error;
+  } finally {
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+  }
+  if (identityError) throw identityError;
+  if (callbackError) throw callbackError;
+  return Object.freeze({ authority_digest: authorityDigest, value });
 }
 
 /** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[]}} options */
@@ -1235,6 +1502,7 @@ export function buildCandidateSandboxProfile({
     "(deny default)",
     "(allow process-exec)",
     "(allow process-fork)",
+    "(allow signal (target children))",
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
     ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
@@ -1516,6 +1784,7 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["compose_source_digest", candidate.compose_source_digest, bundle.compose_source_digest],
     ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
+    ["generated_build_inventory_digest", candidate.generated_build_inventory_digest, bundle.generated_build_inventory_digest],
     ["toolchain_lock_digest", candidate.toolchain_lock_digest, bundle.toolchain_lock_digest],
     ["environment_snapshot", candidate.environment_snapshot, bundle.environment_snapshot],
     ["production_guard", candidate.production_guard, bundle.production_guard],
@@ -1833,6 +2102,7 @@ export async function buildReleaseRehearsalCandidate({
       "sealed_bundle_digest",
     );
     const sandboxPolicyDigest = digest(build.sandbox_policy_digest, "sandbox policy digest");
+    const generatedInventoryDigest = generatedBuildInventoryDigest(build.file_inventory);
     exactObject(build.build_tools, "build tools", ["next_cli"]);
     validateToolIdentity(build.build_tools.next_cli, "build tools next_cli", {
       requireExecutable: false,
@@ -1854,6 +2124,7 @@ export async function buildReleaseRehearsalCandidate({
       release_sha: releaseSha,
       release_tree: sourceEvidence.release_tree,
       sandbox_policy_digest: sandboxPolicyDigest,
+      generated_build_inventory_digest: generatedInventoryDigest,
       sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
@@ -1892,6 +2163,7 @@ export async function buildReleaseRehearsalCandidate({
       builder_input_digest: sourceEvidence.builder_input_digest,
       compose_source_digest: composeSourceDigest,
       sandbox_policy_digest: sandboxPolicyDigest,
+      generated_build_inventory_digest: generatedInventoryDigest,
       build_id: buildId,
       build_tools: build.build_tools,
       sealed_bundle_digest: sealedBundleDigest,
@@ -3343,149 +3615,181 @@ export function createReleaseRehearsalCandidateAdapters({
       const privateHome = join(runRoot, "build-home");
       const privateTmp = join(runRoot, "tmp");
       const buildRoot = join(runRoot, "build-work");
-      const generatedRoot = join(runRoot, "generated");
       mkdirSync(privateHome, { mode: 0o700 });
       mkdirSync(privateTmp, { mode: 0o700 });
       materializeBuildWorkspace({
         sourceRoot: source.checkout_dir,
         sourceManifest: source.source_manifest,
         buildRoot,
-        generatedRoot,
       });
-      const storeStat = lstatSync(packageStorePath);
-      if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
-        fail("offline pnpm package store identity is unsafe");
-      }
-      const cleanBuildEnv = Object.freeze({
-        ...childEnv,
-        CI: "1",
-        COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
-        HOME: privateHome,
-        NEXT_TELEMETRY_DISABLED: "1",
-        PATH: `${dirname(tools.nodePath)}:/usr/bin:/bin`,
-        TMPDIR: privateTmp,
-        npm_config_offline: "true",
-      });
-      const sandboxProfile = buildCandidateSandboxProfile({
-        readRoots: [
-          source.checkout_dir,
-          buildRoot,
-          generatedRoot,
+      const authorizedBuild = await withCandidateBuildWorkAuthority({
+        runRoot,
+        buildRoot,
+        nodeModulesRoot: join(buildRoot, "node_modules"),
+        nextRoot: join(buildRoot, ".next"),
+        privateHome,
+        privateTmp,
+        currentUid: process.getuid?.(),
+      }, async ({ writeRoots }) => {
+        const storeStat = lstatSync(packageStorePath);
+        if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
+          fail("offline pnpm package store identity is unsafe");
+        }
+        const storeViewBuild = await withCandidatePnpmStoreView({
+          sourceStore: resolve(packageStorePath),
           privateHome,
-          privateTmp,
-          resolve(packageStorePath),
-          ...Object.values(tools),
-        ],
-        writeRoots: [generatedRoot, privateHome, privateTmp],
-        deniedWritePaths: [source.checkout_dir, buildRoot],
-        deniedPaths: [
-          sourceRoot,
-          resolve(environmentSourcePath),
-          join(normalizedHome, ".homecook", "releases"),
-          join(normalizedHome, ".homecook", "locks"),
-          join(normalizedHome, ".homecook", "config"),
-          join(normalizedHome, ".homecook", "logs"),
-          join(normalizedHome, "Library", "LaunchAgents"),
-          "/var/run/docker.sock",
-          join(normalizedHome, ".docker", "run", "docker.sock"),
-        ],
+          currentUid: process.getuid?.(),
+        }, async ({ storePath }) => {
+          const cleanBuildEnv = Object.freeze({
+            ...childEnv,
+            CI: "1",
+            COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+            HOME: privateHome,
+            NEXT_TELEMETRY_DISABLED: "1",
+            PATH: `${dirname(tools.nodePath)}:/usr/bin:/bin`,
+            TMPDIR: privateTmp,
+            npm_config_offline: "true",
+          });
+          const sandboxProfile = buildCandidateSandboxProfile({
+            readRoots: [
+              buildRoot,
+              privateHome,
+              privateTmp,
+              resolve(packageStorePath),
+              storePath,
+              ...Object.values(tools),
+            ],
+            writeRoots,
+            deniedWritePaths: [source.checkout_dir, resolve(packageStorePath), join(storePath, "index")],
+            deniedPaths: [
+              sourceRoot,
+              resolve(environmentSourcePath),
+              join(normalizedHome, ".homecook", "releases"),
+              join(normalizedHome, ".homecook", "locks"),
+              join(normalizedHome, ".homecook", "config"),
+              join(normalizedHome, ".homecook", "logs"),
+              join(normalizedHome, "Library", "LaunchAgents"),
+              "/var/run/docker.sock",
+              join(normalizedHome, ".docker", "run", "docker.sock"),
+            ],
+          });
+          const installAudit = runObservedSandboxCommand({
+            sandboxPath: tools.sandboxPath,
+            logPath: tools.auditLogPath,
+            profile: sandboxProfile,
+            command: tools.nodePath,
+            args: [
+              tools.pnpmCliPath,
+              "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
+              "--store-dir", storePath,
+            ],
+            cwd: buildRoot,
+            env: cleanBuildEnv,
+            label: "offline frozen dependency install",
+            runCommand,
+            timeout: 20 * 60_000,
+          });
+          const nextEntrypoint = resolve(buildRoot, "node_modules", "next", "dist", "bin", "next");
+          const nextStat = lstatSync(nextEntrypoint);
+          if (nextStat.isSymbolicLink() || !nextStat.isFile() || (modeBits(nextStat.mode) & 0o022) !== 0) {
+            fail("Next.js build entrypoint identity is unsafe");
+          }
+          const nextCliPre = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
+            requireExecutable: false,
+          });
+          const nextBuildAudit = runObservedSandboxCommand({
+            sandboxPath: tools.sandboxPath,
+            logPath: tools.auditLogPath,
+            profile: sandboxProfile,
+            command: tools.nodePath,
+            args: [nextEntrypoint, "build", "--no-lint"],
+            cwd: buildRoot,
+            env: cleanBuildEnv,
+            label: "offline Next.js production build",
+            runCommand,
+            timeout: 20 * 60_000,
+          });
+          const nextCliPost = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
+            requireExecutable: false,
+          });
+          if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
+            fail("Next.js build entrypoint drifted during execution");
+          }
+          const postSourceDigest = verifyExactMaterializedTree({
+            sourceRoot: source.checkout_dir,
+            sourceManifest: source.source_manifest,
+          });
+          if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
+          const artifactsRoot = join(runRoot, "artifacts");
+          const assembled = assembleCandidateArtifacts({
+            sourceRoot: source.checkout_dir,
+            generatedRoot: buildRoot,
+            sourceManifest: source.source_manifest,
+            artifactsRoot,
+          });
+          const migration = collectMigrationFromSource(source);
+          const workerArtifact = materializeYoutubeExtractionWorkerArtifact({
+            rootDir: source.checkout_dir,
+            outputDir: join(artifactsRoot, "worker-source"),
+            releaseSha,
+            releaseTree,
+            buildId,
+            promotionId: buildId,
+            allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
+          });
+          if (verifyExactMaterializedTree({
+            sourceRoot: source.checkout_dir,
+            sourceManifest: source.source_manifest,
+          }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
+          const bundlesRoot = join(runRoot, "bundles");
+          mkdirSync(bundlesRoot, { mode: 0o700 });
+          const stagingBundleRoot = join(bundlesRoot, "bundle");
+          const bundle = createSealedCandidateBundle({
+            bundleRoot: stagingBundleRoot,
+            componentRoots: {
+              app: assembled.app,
+              full_local: assembled.full_local,
+              worker: workerArtifact.root_dir,
+            },
+          });
+          const sealedMigration = collectSealedMigrationInventory({ bundleRoot: stagingBundleRoot });
+          if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
+            fail("sealed migration inventory drifted from exact Git objects");
+          }
+          if (verifyExactMaterializedTree({
+            sourceRoot: source.checkout_dir,
+            sourceManifest: source.source_manifest,
+          }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
+          await collectToolchain();
+          return {
+            ...bundle,
+            build_tools: { next_cli: nextCliPost },
+            bundle_content_digest: bundle.sealed_bundle_digest,
+            migration: sealedMigration,
+            sandbox_policy_evidence: {
+              profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
+              execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+            },
+            staging_bundle_root: stagingBundleRoot,
+          };
+        });
+        return {
+          ...storeViewBuild.value,
+          pnpm_store_view_authority_digest: storeViewBuild.authority_digest,
+        };
       });
-      const installAudit = runObservedSandboxCommand({
-        sandboxPath: tools.sandboxPath,
-        logPath: tools.auditLogPath,
-        profile: sandboxProfile,
-        command: tools.nodePath,
-        args: [tools.pnpmCliPath,
-        "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
-        "--store-dir", resolve(packageStorePath)],
-        cwd: buildRoot,
-        env: cleanBuildEnv,
-        label: "offline frozen dependency install",
-        runCommand,
-        timeout: 20 * 60_000,
-      });
-      const nextEntrypoint = resolve(buildRoot, "node_modules", "next", "dist", "bin", "next");
-      const nextStat = lstatSync(nextEntrypoint);
-      if (nextStat.isSymbolicLink() || !nextStat.isFile() || (modeBits(nextStat.mode) & 0o022) !== 0) {
-        fail("Next.js build entrypoint identity is unsafe");
-      }
-      const nextCliPre = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
-        requireExecutable: false,
-      });
-      const nextBuildAudit = runObservedSandboxCommand({
-        sandboxPath: tools.sandboxPath,
-        logPath: tools.auditLogPath,
-        profile: sandboxProfile,
-        command: tools.nodePath,
-        args: [nextEntrypoint, "build", "--no-lint"],
-        cwd: buildRoot,
-        env: cleanBuildEnv,
-        label: "offline Next.js production build",
-        runCommand,
-        timeout: 20 * 60_000,
-      });
-      const nextCliPost = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
-        requireExecutable: false,
-      });
-      if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
-        fail("Next.js build entrypoint drifted during execution");
-      }
-      const postSourceDigest = verifyExactMaterializedTree({
-        sourceRoot: source.checkout_dir,
-        sourceManifest: source.source_manifest,
-      });
-      if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
-      const artifactsRoot = join(runRoot, "artifacts");
-      const assembled = assembleCandidateArtifacts({
-        sourceRoot: source.checkout_dir,
-        generatedRoot,
-        sourceManifest: source.source_manifest,
-        artifactsRoot,
-      });
-      const migration = collectMigrationFromSource(source);
-      const workerArtifact = materializeYoutubeExtractionWorkerArtifact({
-        rootDir: source.checkout_dir,
-        outputDir: join(artifactsRoot, "worker-source"),
-        releaseSha,
-        releaseTree,
-        buildId,
-        promotionId: buildId,
-        allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
-      });
-      if (verifyExactMaterializedTree({
-        sourceRoot: source.checkout_dir,
-        sourceManifest: source.source_manifest,
-      }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
-      const bundlesRoot = join(runRoot, "bundles");
-      mkdirSync(bundlesRoot, { mode: 0o700 });
-      const stagingBundleRoot = join(bundlesRoot, "bundle");
-      const bundle = createSealedCandidateBundle({
-        bundleRoot: stagingBundleRoot,
-        componentRoots: {
-          app: assembled.app,
-          full_local: assembled.full_local,
-          worker: workerArtifact.root_dir,
-        },
-      });
-      const sealedMigration = collectSealedMigrationInventory({ bundleRoot: stagingBundleRoot });
-      if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
-        fail("sealed migration inventory drifted from exact Git objects");
-      }
-      if (verifyExactMaterializedTree({
-        sourceRoot: source.checkout_dir,
-        sourceManifest: source.source_manifest,
-      }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
-      await collectToolchain();
+      const {
+        pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
+        sandbox_policy_evidence: sandboxPolicyEvidence,
+        ...build
+      } = authorizedBuild.value;
       return {
-        ...bundle,
-        build_tools: { next_cli: nextCliPost },
-        bundle_content_digest: bundle.sealed_bundle_digest,
-        migration: sealedMigration,
+        ...build,
         sandbox_policy_digest: sha256Jcs({
-          profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
-          execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+          ...sandboxPolicyEvidence,
+          build_work_authority_digest: authorizedBuild.authority_digest,
+          pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
         }),
-        staging_bundle_root: stagingBundleRoot,
       };
     },
 
