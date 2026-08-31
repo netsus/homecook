@@ -237,6 +237,18 @@ function snapshotSelectionFile(path, currentUid) {
   return Object.fromEntries(FILE_IDENTITY_FIELDS.map((field) => [field, String(stat[field])]));
 }
 
+function snapshotOpenedSelectionFile(descriptor, currentUid) {
+  const stat = fstatSync(descriptor, { bigint: true });
+  if (
+    !stat.isFile()
+    || stat.uid !== BigInt(currentUid)
+    || modeBits(stat.mode) !== 0o600
+    || stat.nlink !== 1n
+    || stat.size > BigInt(MAX_SELECTION_BYTES)
+  ) reject("opened selection FD must remain a current-user-owned mode 0600 nlink-1 bounded regular file");
+  return Object.fromEntries(FILE_IDENTITY_FIELDS.map((field) => [field, String(stat[field])]));
+}
+
 function sameIdentity(left, right) {
   return FILE_IDENTITY_FIELDS.every((field) => left[field] === right[field]);
 }
@@ -441,6 +453,7 @@ export function writeRehearsalSelectionCreateOnly({
   selection,
   currentUid = process.getuid?.(),
   now = new Date(),
+  afterOpen = null,
 } = {}) {
   if (!isAbsolute(path ?? "") || resolve(path) !== path) reject("selection path must be an absolute normalized path");
   const parentBefore = assertPrivateParent(path, currentUid);
@@ -460,15 +473,30 @@ export function writeRehearsalSelectionCreateOnly({
     reject("selection artifact create-only O_NOFOLLOW open failed");
   }
   try {
+    const openedIdentity = snapshotOpenedSelectionFile(descriptor, currentUid);
+    if (typeof afterOpen === "function") afterOpen();
     let offset = 0;
-    while (offset < bytes.length) offset += writeSync(descriptor, bytes, offset);
+    while (offset < bytes.length) {
+      const written = writeSync(descriptor, bytes, offset);
+      if (!Number.isInteger(written) || written <= 0) reject("selection create-only write made no progress");
+      offset += written;
+    }
+    const finalFdIdentity = snapshotOpenedSelectionFile(descriptor, currentUid);
+    for (const field of ["dev", "ino", "mode", "uid", "gid", "nlink"]) {
+      if (openedIdentity[field] !== finalFdIdentity[field]) {
+        reject("selection opened FD identity changed during create-only write");
+      }
+    }
+    const finalPathIdentity = snapshotSelectionFile(path, currentUid);
+    if (!sameIdentity(finalFdIdentity, finalPathIdentity)) {
+      reject("selection final path was replaced after create-only O_NOFOLLOW open");
+    }
+    const parentAfter = assertPrivateParent(path, currentUid);
+    if (JSON.stringify(parentBefore) !== JSON.stringify(parentAfter)) {
+      reject("selection private parent identity changed during create-only write");
+    }
   } finally {
     closeSync(descriptor);
-  }
-  snapshotSelectionFile(path, currentUid);
-  const parentAfter = assertPrivateParent(path, currentUid);
-  if (JSON.stringify(parentBefore) !== JSON.stringify(parentAfter)) {
-    reject("selection private parent identity changed during create-only write");
   }
   return path;
 }

@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -176,6 +177,23 @@ describe("release rehearsal selection artifact", () => {
       now: NOW,
       afterOpen: () => chmodSync(realPath, 0o400),
     })).toThrow(/identity|changed|0600/iu);
+  });
+
+  it("rejects create-only path replacement between O_NOFOLLOW open and final identity binding", () => {
+    const parent = privateDirectory();
+    const path = join(parent, "selection.json");
+    const displacedPath = join(parent, "selection-displaced.json");
+    const selection = validSelection();
+
+    expect(() => writeRehearsalSelectionCreateOnly({
+      path,
+      selection,
+      now: NOW,
+      afterOpen: () => {
+        renameSync(path, displacedPath);
+        writeFileSync(path, canonicalizeJcs(selection), { mode: 0o600 });
+      },
+    })).toThrow(/identity|replaced|path|inode/iu);
   });
 });
 
