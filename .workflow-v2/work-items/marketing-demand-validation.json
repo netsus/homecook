@@ -72,6 +72,7 @@
       "BRANCH_NAME=feature/fe-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm test:marketing:operations",
       "pnpm qa:eval -- --checklist ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json --report ui/designs/evidence/marketing-demand-validation/exploratory-report.json --fail-under 90",
       "pnpm validate:exploratory-qa-evidence",
       "pnpm validate:authority-evidence-presence",
@@ -92,6 +93,7 @@
       "BRANCH_NAME=feature/fe-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm test:marketing:operations",
       "pnpm qa:eval -- --checklist ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json --report ui/designs/evidence/marketing-demand-validation/exploratory-report.json --fail-under 90",
       "pnpm validate:exploratory-qa-evidence",
       "pnpm validate:authority-evidence-presence",
@@ -118,7 +120,11 @@
       "privacy-readiness-required",
       "result-before-email",
       "followup-compact-local-scroll",
-      "marketing-route-noindex"
+      "marketing-route-noindex",
+      "stage6-analysis-is-pii-free-and-thresholded",
+      "stage6-export-is-safe-path-private-csv-and-stdout-redacted",
+      "stage6-purge-is-dry-run-first-confirm-gated-and-count-redacted",
+      "stage6-result-template-separates-accepted-duplicate-deliverable-and-manual-only"
     ]
   },
   "status": {
@@ -127,7 +133,7 @@
     "verification_status": "pending",
     "evaluation_status": "passed",
     "evaluation_round": 6,
-    "last_evaluator_result": "Fresh final authority independently reviewed merged master 7226a77ec302afd15dcf61de71cd8144b96bf03e and returned APPROVE / FINDINGS_COUNT: 0 with blocker, major, and minor all zero. Design Status is confirmed; Stage 6 operational closeout remains pending.",
+    "last_evaluator_result": "Fresh final authority independently reviewed merged master 7226a77ec302afd15dcf61de71cd8144b96bf03e and returned APPROVE / FINDINGS_COUNT: 0 with blocker, major, and minor all zero. Stage 6 adds PII-safe analysis/export/purge operations, exact internal-scope migration, and result-template evidence while Manual Only production lead blockers remain fail-closed.",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -148,5 +154,5 @@
     "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
     "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
   ],
-  "notes": "Stage 1 contract PR #1477, Stage 2 backend PR #1478, and Stage 4 frontend PR #1479 are merged. Stage 3 code/security review, Stage 4 frontend code review, public Stage 5, and fresh final authority are complete with Findings 0. Design Status is confirmed; Stage 6 closeout remains pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
+  "notes": "Stage 1 contract PR #1477, Stage 2 backend PR #1478, Stage 4 frontend PR #1479, and final-authority PR #1480 are merged. Stage 6 adds `docs/marketing/demand-validation-analysis.sql`, `docs/marketing/demand-validation-result-template.md`, accepted-lead export, retention purge, exact internal-scope migration, and focused operations tests. The Stage 6 closeout evidence is `docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md`. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
 }
