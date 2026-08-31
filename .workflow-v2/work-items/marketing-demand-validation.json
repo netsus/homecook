@@ -126,8 +126,8 @@
     "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "passed",
-    "evaluation_round": 5,
-    "last_evaluator_result": "Fresh Stage 4 frontend code reviewer and public Stage 5 design authority returned APPROVE / FINDINGS_COUNT: 0 after stale-queue resync, deterministic Lighthouse, active-stage focus/scroll, compact followup, named radiogroups and start/middle/end localized-scroll evidence repairs. Fresh final authority remains pending.",
+    "evaluation_round": 6,
+    "last_evaluator_result": "Fresh final authority independently reviewed merged master 7226a77ec302afd15dcf61de71cd8144b96bf03e and returned APPROVE / FINDINGS_COUNT: 0 with blocker, major, and minor all zero. Design Status is confirmed; Stage 6 operational closeout remains pending.",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -148,5 +148,5 @@
     "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
     "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
   ],
-  "notes": "Stage 1 contract PR #1477 and Stage 2 backend PR #1478 are merged. Stage 3 code/security review, Stage 4 frontend code review, and public Stage 5 authority review are complete with Findings 0. Stage 4 frontend PR #1479 current-head CI and fresh final authority remain pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
+  "notes": "Stage 1 contract PR #1477, Stage 2 backend PR #1478, and Stage 4 frontend PR #1479 are merged. Stage 3 code/security review, Stage 4 frontend code review, public Stage 5, and fresh final authority are complete with Findings 0. Design Status is confirmed; Stage 6 closeout remains pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
 }

@@ -95,13 +95,14 @@
   - `/beta`는 앱 셸이 아니라 독립 랜딩이다.
   - 결과와 해결 아이디어는 이메일 전에 보여 준다.
   - neutral CTA pair `써보고 싶어요 / 지금은 필요하지 않아요`를 유지한다.
-  - design-critic은 PASS지만 authority report는 runtime evidence가 들어오기 전까지 hold 상태다.
+  - design-critic, public Stage 5, fresh final authority가 모두 Findings 0으로 통과했다.
+  - final authority reviewed commit: `7226a77ec302afd15dcf61de71cd8144b96bf03e`
 
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 기본값
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후
-- [ ] 확정 (confirmed) — Stage 5/6 후
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후
+- [x] 확정 (confirmed) — Stage 5 final authority Findings 0
 - [ ] N/A — BE-only 슬라이스
 
 > Design Status 전이: `temporary → pending-review → confirmed`

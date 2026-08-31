@@ -1,6 +1,6 @@
 # MARKETING_DEMAND_VALIDATION authority report
 
-> status: Codex draft skeleton pending final-owner review
+> status: confirmed — public Stage 5 and fresh final authority approved with Findings 0
 > reviewed artifact: `ui/designs/MARKETING_DEMAND_VALIDATION.md`
 > source evidence:
 > - `ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png`
@@ -125,15 +125,20 @@ It must be read after Stage 5, not before it.
 - the control-group path stays dignified
 - the optional follow-up stays optional
 
-### Final gate outcome slot
+### Final gate outcome
 
-- verdict: `pending`
-- blocker count: `TBD`
-- major count: `TBD`
-- minor count: `TBD`
-- confirmed: `no`
-- Design Status projection: `pending-review`
+- decision: `APPROVE`
+- findings count: `0`
+- verdict: `pass`
+- blocker count: `0`
+- major count: `0`
+- minor count: `0`
+- confirmed: `yes`
+- Design Status projection: `confirmed`
+- reviewed commit: `7226a77ec302afd15dcf61de71cd8144b96bf03e`
+- 한 줄 요약: 광고와 랜딩의 메시지가 일치하고 full-poster 없이 phone-only crop을 유지한다. 320/390/1280px 위계와 단계별 focus/scroll, result-before-email, 대칭적인 부정 의향 경로, fail-closed 복구, 390px에서 최대 높이 320px인 follow-up localized scroll 및 시작·중간·끝 affordance가 공식 UI 계약과 일치한다.
+- final authority note: 공개 Stage 5 결과와 독립적으로 merged master의 공식 계약, 실제 화면 evidence, manifest, exploratory QA, 컴포넌트·CSS·테스트를 재검토했다. 남은 production privacy·Turnstile·origin·edge readiness 항목은 디자인 결함이 아닌 Manual Only 출시 차단 조건이며 `Design Status: confirmed` 전환을 막지 않는다.
 
 ### Closeout note
 
-This report is intentionally incomplete. It is a canonical skeleton only, ready to accept future evidence without changing the section order.
+Public Stage 5와 fresh final authority가 모두 Findings 0으로 완료되었다. 디자인은 확정됐지만 Manual Only production blocker가 닫히기 전 lead 저장과 paid ads는 계속 금지된다.
