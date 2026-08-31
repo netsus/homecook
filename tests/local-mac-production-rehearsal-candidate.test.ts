@@ -42,6 +42,7 @@ import {
   parseAndValidateCandidateManifest,
   readBuildEnvironmentSnapshot,
   readCompletedCandidateRoot,
+  issueCompletedCandidatePhysicalAuthority,
   validateCandidateCiEvidence,
   validateCandidateImages,
   validateCandidateSourceEvidence,
@@ -63,6 +64,10 @@ import {
   withCandidateBuildWorkAuthority,
   withCandidatePnpmStoreView,
 } from "../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
+import {
+  copyLocalMacProductionExecutionTree,
+  sealLocalMacProductionExecutionTree,
+} from "../scripts/lib/local-mac-production-release.mjs";
 import { buildRehearsalSelection } from "../scripts/lib/local-mac-production-rehearsal-selection.mjs";
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import {
@@ -73,6 +78,7 @@ import * as candidateBootstrapModule from "../scripts/local-mac-production-rehea
 import {
   EXPECTED_RELEASE_CONTEXTS,
 } from "../scripts/lib/production-release-approval-policy.mjs";
+import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -275,7 +281,6 @@ function validManifestInput() {
       fileInventory.filter((entry) => entry.source_kind === "generated_build"),
     )).digest("hex"),
     pnpm_store_snapshot_inventory_digest: DIGEST_C,
-    pnpm_store_snapshot_identity_digest: DIGEST_A,
     build_id: `candidate-${SHA_A}`,
     sealed_bundle_digest: DIGEST_B,
     bundle_manifest_digest: DIGEST_C,
@@ -342,7 +347,6 @@ describe("release rehearsal candidate manifest", () => {
         "sandbox_policy_digest",
         "generated_build_inventory_digest",
         "pnpm_store_snapshot_inventory_digest",
-        "pnpm_store_snapshot_identity_digest",
         "sealed_bundle_digest",
         "bundle_manifest_digest",
         "toolchain",
@@ -386,11 +390,7 @@ describe("release rehearsal candidate manifest", () => {
       source_snapshot_digest: manifest.source_manifest_digest,
       pnpm_store_snapshot_inventory_digest: DIGEST_A,
     })).toThrow(/pnpm|store|inventory|cross-binding|digest/iu);
-    expect(() => validateCandidateBundleCrossBinding(manifest, {
-      ...manifest,
-      source_snapshot_digest: manifest.source_manifest_digest,
-      pnpm_store_snapshot_identity_digest: DIGEST_B,
-    })).toThrow(/pnpm|store|identity|cross-binding|digest/iu);
+    expect(manifest).not.toHaveProperty("pnpm_store_snapshot_identity_digest");
     expect(() => buildCandidateManifest({
       ...validManifestInput(),
       file_inventory: validManifestInput().file_inventory.filter(
@@ -1749,6 +1749,118 @@ describe("release rehearsal build environment FD snapshot", () => {
 });
 
 describe("release rehearsal candidate orchestration", () => {
+  it("separates portable candidate bytes from exact root-local physical authority", async () => {
+    const fixture = await createCompletedRehearsalCandidateFixture();
+    expect(readCompletedCandidateRoot(fixture.candidateRoot).manifest)
+      .toEqual(fixture.manifest);
+
+    const copyRoot = (label: string) => {
+      const parent = privateRoot(`homecook-candidate-portable-${label}-`);
+      const executionRoot = join(parent, "execution-candidate");
+      copyLocalMacProductionExecutionTree(fixture.candidateRoot, executionRoot);
+      sealLocalMacProductionExecutionTree(executionRoot);
+      return { parent, executionRoot };
+    };
+
+    const portable = copyRoot("pass");
+    expect(() => readCompletedCandidateRoot(portable.executionRoot, {
+      physicalAuthorityPath: fixture.physicalAuthorityPath,
+    })).toThrow(/physical|authority|root|path|identity|stale/iu);
+    const copiedAuthority = join(portable.parent, "copied-physical-authority.json");
+    copyFileSync(fixture.physicalAuthorityPath, copiedAuthority);
+    expect(() => readCompletedCandidateRoot(portable.executionRoot, {
+      physicalAuthorityPath: copiedAuthority,
+    })).toThrow(/physical|authority|root|path|identity|stale/iu);
+    const executionAuthority = join(portable.parent, "execution-physical-authority.json");
+    issueCompletedCandidatePhysicalAuthority({
+      candidateRoot: portable.executionRoot,
+      authorityPath: executionAuthority,
+    });
+    expect(readCompletedCandidateRoot(portable.executionRoot, {
+      physicalAuthorityPath: executionAuthority,
+    }).manifest).toEqual(fixture.manifest);
+
+    const tamper = (label: string, mutate: (root: string) => void) => {
+      const copy = copyRoot(label);
+      const authorityPath = join(copy.parent, "execution-physical-authority.json");
+      issueCompletedCandidatePhysicalAuthority({ candidateRoot: copy.executionRoot, authorityPath });
+      mutate(copy.executionRoot);
+      expect(() => readCompletedCandidateRoot(copy.executionRoot, { physicalAuthorityPath: authorityPath }))
+        .toThrow(/candidate|pnpm|store|physical|authority|inventory|identity|content|mode|path|hard.?link|symlink|drift/iu);
+    };
+
+    tamper("byte", (root) => {
+      const path = join(root, "pnpm-store", "v10", "index", "package.json");
+      chmodSync(path, 0o600);
+      writeFileSync(path, "{\"tampered\":true}\n");
+      chmodSync(path, 0o400);
+    });
+    tamper("path", (root) => {
+      const indexRoot = join(root, "pnpm-store", "v10", "index");
+      chmodSync(indexRoot, 0o700);
+      renameSync(
+        join(indexRoot, "package.json"),
+        join(indexRoot, "renamed.json"),
+      );
+      chmodSync(indexRoot, 0o500);
+    });
+    tamper("mode", (root) => {
+      chmodSync(join(root, "pnpm-store", "v10", "index", "package.json"), 0o500);
+    });
+    tamper("hardlink", (root) => {
+      const indexRoot = join(root, "pnpm-store", "v10", "index");
+      chmodSync(indexRoot, 0o700);
+      linkSync(
+        join(indexRoot, "package.json"),
+        join(indexRoot, "hardlink.json"),
+      );
+      chmodSync(indexRoot, 0o500);
+    });
+    tamper("symlink", (root) => {
+      const indexRoot = join(root, "pnpm-store", "v10", "index");
+      const path = join(indexRoot, "package.json");
+      chmodSync(indexRoot, 0o700);
+      renameSync(path, `${path}.real`);
+      symlinkSync("package.json.real", path);
+      chmodSync(indexRoot, 0o500);
+    });
+
+    const swapped = copyRoot("swap-during-read");
+    const swappedAuthority = join(swapped.parent, "execution-physical-authority.json");
+    issueCompletedCandidatePhysicalAuthority({
+      candidateRoot: swapped.executionRoot,
+      authorityPath: swappedAuthority,
+    });
+    let swappedOnce = false;
+    expect(() => readCompletedCandidateRoot(swapped.executionRoot, {
+      physicalAuthorityPath: swappedAuthority,
+      afterPnpmStoreFileOpen: ({ path }: { path: string }) => {
+        if (swappedOnce || !path.endsWith("/index/package.json")) return;
+        swappedOnce = true;
+        const indexRoot = dirname(path);
+        chmodSync(indexRoot, 0o700);
+        renameSync(path, `${path}.old`);
+        writeFileSync(path, "{}\n", { mode: 0o400 });
+        chmodSync(indexRoot, 0o500);
+      },
+    })).toThrow(/swap|drift|identity|physical|authority/iu);
+    expect(swappedOnce).toBe(true);
+
+    const authorityHardlink = copyRoot("authority-hardlink");
+    const authorityPath = join(authorityHardlink.parent, "execution-physical-authority.json");
+    issueCompletedCandidatePhysicalAuthority({
+      candidateRoot: authorityHardlink.executionRoot,
+      authorityPath,
+    });
+    linkSync(authorityPath, join(authorityHardlink.parent, "authority-hardlink.json"));
+    expect(() => readCompletedCandidateRoot(authorityHardlink.executionRoot, { physicalAuthorityPath: authorityPath }))
+      .toThrow(/authority|hard.?link|nlink|identity/iu);
+    const authoritySymlink = join(authorityHardlink.parent, "authority-symlink.json");
+    symlinkSync("execution-physical-authority.json", authoritySymlink);
+    expect(() => readCompletedCandidateRoot(authorityHardlink.executionRoot, { physicalAuthorityPath: authoritySymlink }))
+      .toThrow(/authority|symlink|nofollow|canonical/iu);
+  });
+
   it("reads every authority file through a stable private O_NOFOLLOW FD", () => {
     const root = privateRoot("homecook-candidate-authority-read-");
     const authority = join(root, "candidate.json");
@@ -2517,7 +2629,6 @@ describe("release rehearsal candidate orchestration", () => {
         physical.file_inventory.filter((entry) => entry.source_kind === "generated_build"),
       )).digest("hex"),
       pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
-      pnpm_store_snapshot_identity_digest: storeSnapshot.snapshot_identity_digest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
       source_manifest_digest: manifestInput.source_manifest_digest,
       builder_input_digest: manifestInput.builder_input_digest,
@@ -2551,7 +2662,6 @@ describe("release rehearsal candidate orchestration", () => {
       file_inventory: physical.file_inventory,
       generated_build_inventory_digest: bundleInput.generated_build_inventory_digest,
       pnpm_store_snapshot_inventory_digest: bundleInput.pnpm_store_snapshot_inventory_digest,
-      pnpm_store_snapshot_identity_digest: bundleInput.pnpm_store_snapshot_identity_digest,
     });
     writeFileSync(join(root, "candidate.json"), canonicalizeJcs(candidate), { mode: 0o400 });
     writeCandidateTerminalMarker(root, "complete", {
@@ -2568,7 +2678,17 @@ describe("release rehearsal candidate orchestration", () => {
     }), { mode: 0o400 });
     chmodSync(join(root, "bundles"), 0o500);
     chmodSync(root, 0o500);
-    expect(readCompletedCandidateRoot(root).manifest).toEqual(candidate);
+    const originalPhysicalAuthority = join(
+      privateRoot("homecook-candidate-reader-physical-authority-"),
+      "candidate-physical-authority.json",
+    );
+    issueCompletedCandidatePhysicalAuthority({
+      candidateRoot: root,
+      authorityPath: originalPhysicalAuthority,
+    });
+    expect(readCompletedCandidateRoot(root, {
+      physicalAuthorityPath: originalPhysicalAuthority,
+    }).manifest).toEqual(candidate);
 
     chmodSync(root, 0o700);
     chmodSync(join(root, "bundles"), 0o700);

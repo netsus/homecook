@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { linkSync, mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -38,6 +38,7 @@ import {
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
+import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -611,15 +612,20 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
 
 describe("release rehearsal R2 orchestration", () => {
   it("runs sealed identities, canaries, exact cleanup, and produces non-receipt evidence", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-runs-"));
-    const candidateRoot = join(namespaceRoot, "candidate");
-    mkdirSync(candidateRoot, { mode: 0o500 });
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-runs-")));
+    const candidate = await createCompletedRehearsalCandidateFixture();
+    const candidateRoot = candidate.candidateRoot;
     const adapters = createAdapters();
+    adapters.startComponents.mockResolvedValue([
+      runtime("app"), runtime("full_local"), runtime("worker"),
+    ].map((entry) => ({
+      ...entry,
+      sealed_bundle_digest: candidate.manifest.sealed_bundle_digest,
+    })));
     const result = await runIsolatedReleaseRehearsal({
       candidateInput: candidateRoot,
       namespaceRoot,
       runId: RUN_ID,
-      readCandidate: () => completedCandidate(candidateRoot),
       adapters,
       runnerIdentity: RUNNER_IDENTITY,
       now: () => new Date("2026-08-29T00:00:00.000Z"),
@@ -655,6 +661,27 @@ describe("release rehearsal R2 orchestration", () => {
     expect(adapters.stopRuntime.mock.calls.map(([entry]) => entry.component)).toEqual(["worker", "full_local", "app"]);
     expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id))
       .toEqual([...adapters.resources].reverse().map((entry) => entry.id));
+  });
+
+  it("uses the actual copied-candidate reader and rejects tampering before resource creation", async () => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-real-reader-tamper-")));
+    const candidate = await createCompletedRehearsalCandidateFixture();
+    const adapters = createAdapters();
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidate.candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+      afterCandidateCopy: ({ executionRoot }: { executionRoot: string }) => {
+        const indexPath = join(executionRoot, "pnpm-store", "v10", "index", "package.json");
+        chmodSync(indexPath, 0o600);
+        writeFileSync(indexPath, "{\"tampered\":true}\n");
+        chmodSync(indexPath, 0o400);
+      },
+    })).rejects.toThrow(/candidate|pnpm|store|inventory|content|physical|authority|identity/iu);
+    expect(adapters.createResources).not.toHaveBeenCalled();
+    expect(adapters.snapshotProduction).not.toHaveBeenCalled();
   });
 
   it("cleans only the immutable partial-create ledger after create failure", async () => {
