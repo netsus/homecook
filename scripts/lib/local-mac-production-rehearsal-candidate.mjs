@@ -221,8 +221,19 @@ export function validateCandidateSourceEvidence(value) {
   sha(value.checkout_sha, "checkout_sha");
   sha(value.release_tree, "release_tree");
   sha(value.checkout_tree, "checkout_tree");
-  if (value.requested_sha !== value.origin_master_sha || value.checkout_sha !== value.requested_sha) {
-    fail("requested SHA is not the current fetched origin/master exact SHA");
+  if (value.checkout_sha !== value.requested_sha) fail("checkout SHA is not the requested release SHA");
+  const selectionMode = value.selection_mode ?? "current-tip";
+  if (selectionMode === "current-tip") {
+    if (value.requested_sha !== value.origin_master_sha) {
+      fail("requested SHA differs from origin/master without an approved selection");
+    }
+  } else if (selectionMode === "approved-ancestor") {
+    sha(value.observed_master_tree, "observed_master_tree");
+    digest(value.selection_digest, "selection_digest");
+    string(value.selection_valid_until, "selection_valid_until");
+    if (value.requested_sha === value.origin_master_sha) fail("approved-ancestor selection must select an earlier SHA");
+  } else {
+    fail("source selection mode is invalid");
   }
   if (value.release_tree !== value.checkout_tree) fail("checkout tree does not match release tree");
   if (value.detached !== true) fail("checkout must be detached");
@@ -242,10 +253,12 @@ export function validateCandidateSourceEvidence(value) {
 export function validateCandidateBuilderAuthority({
   currentHead, releaseSha, trackedStatus, sourceManifestDigest,
   verifiedSourceManifestDigest, entries, expectedBuilderEntries = null,
+  builderAuthoritySha = releaseSha,
 } = /** @type {any} */ ({})) {
   sha(currentHead, "candidate builder HEAD");
   sha(releaseSha, "candidate builder release SHA");
-  if (currentHead !== releaseSha) fail("candidate builder HEAD is not the exact release Git authority");
+  sha(builderAuthoritySha, "candidate builder authority SHA");
+  if (currentHead !== builderAuthoritySha) fail("candidate builder HEAD is not the exact immutable builder Git authority");
   if (trackedStatus !== "") fail("candidate builder/config/toolchain lock worktree is dirty");
   digest(sourceManifestDigest, "candidate builder source manifest digest");
   digest(verifiedSourceManifestDigest, "candidate builder verified source manifest digest");
@@ -285,7 +298,7 @@ export function validateCandidateCiEvidence(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("CI evidence is invalid");
   sha(value.head_sha, "ci.head_sha");
   sha(value.expected_head_sha, "ci.expected_head_sha");
-  if (value.head_sha !== value.expected_head_sha) fail("CI head is not the requested current head");
+  if (value.head_sha !== value.expected_head_sha) fail("CI head is not the requested selected SHA");
   digest(value.summary_digest, "ci.summary_digest");
   const summary = value.summary;
   if (!summary || typeof summary !== "object" || Array.isArray(summary)) fail("CI summary is invalid");
@@ -296,7 +309,7 @@ export function validateCandidateCiEvidence(value) {
     summary.total === 0 || summary.success !== summary.total || summary.intended_skip !== 0
     || ["bad", "cancelled", "failed", "pending", "queued", "rerun"].some((key) => summary[key] !== 0)
   ) {
-    fail("all current-head started CI checks must be terminal success; pending, fail, and skip are forbidden");
+    fail("all selected-SHA started CI checks must be terminal success; pending, fail, and skip are forbidden");
   }
   return value;
 }
@@ -1668,6 +1681,7 @@ function makeCandidateRootWritable(path) {
  */
 export async function buildReleaseRehearsalCandidate({
   releaseSha,
+  sourceAuthorization = null,
   namespaceRoot,
   adapters = /** @type {any} */ (createReleaseRehearsalCandidateAdapters()),
   runId,
@@ -1675,6 +1689,9 @@ export async function buildReleaseRehearsalCandidate({
   beforeComplete,
 } = {}) {
   sha(releaseSha, "releaseSha");
+  if (sourceAuthorization && sourceAuthorization.release_sha !== releaseSha) {
+    fail("source authorization release SHA differs from candidate request");
+  }
   if (!isAbsolute(namespaceRoot ?? "")) fail("candidate namespace root must be absolute");
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   string(runId, "runId");
@@ -1733,7 +1750,9 @@ export async function buildReleaseRehearsalCandidate({
       fail("sealed migration digest differs from exact Git input");
     }
     const ciPost = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "post", releaseSha }));
-    const ci = validateStableCiSnapshots(ciPre, ciPost, releaseSha);
+    const ci = validateStableCiSnapshots(ciPre, ciPost, releaseSha, {
+      observedMasterSha: sourceAuthorization?.observed_master_sha ?? releaseSha,
+    });
     const evidenceRoot = join(runRoot, "evidence");
     mkdirSync(evidenceRoot, { mode: 0o700 });
     writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ci.safe_projection), {
@@ -2191,11 +2210,11 @@ function parseGhPages(text, field = null) {
   });
 }
 
-export function validateStableCiSnapshots(pre, post, releaseSha) {
+export function validateStableCiSnapshots(pre, post, releaseSha, { observedMasterSha = releaseSha } = {}) {
   validateCandidateCiEvidence(pre);
   validateCandidateCiEvidence(post);
   for (const [label, value] of [["pre", pre], ["post", post]]) {
-    if (value.remote_master_sha !== releaseSha) fail(`CI ${label} remote master SHA drifted`);
+    if (value.remote_master_sha !== observedMasterSha) fail(`CI ${label} candidate-start master SHA drifted`);
     digest(value.safe_projection_digest, `CI ${label} safe projection digest`);
     digest(value.suite_run_set_digest, `CI ${label} suite/run set digest`);
     if (!value.safe_projection || value.safe_projection.head_sha !== releaseSha) {
@@ -2851,6 +2870,7 @@ export function createReleaseRehearsalCandidateAdapters({
   productionEnvAuthorityPath = null,
   builderInputDigest = null,
   builderInputEntries = null,
+  sourceAuthorization = null,
   toolchainLockPath = resolve(
     dirname(fileURLToPath(import.meta.url)),
     "..",
@@ -2995,13 +3015,17 @@ export function createReleaseRehearsalCandidateAdapters({
     async prepareSource({ releaseSha, runRoot }) {
       const { gitPath } = resolveTools();
       const env = gitEnvironment(normalizedHome);
-      runBounded(gitPath, ["-C", sourceRoot, "fetch", "--no-tags", "origin", "master"], {
-        env, label: "fetch origin/master", runCommand, timeout: 120_000,
-      });
-      const originMasterSha = runBounded(gitPath, ["-C", sourceRoot, "rev-parse", "origin/master"], {
-        env, label: "origin/master SHA", runCommand,
-      }).trim();
-      if (originMasterSha !== releaseSha) fail("requested SHA is not the current fetched origin/master");
+      const authorization = sourceAuthorization ?? {
+        mode: "current-tip",
+        release_sha: releaseSha,
+        release_tree: null,
+        observed_master_sha: releaseSha,
+        observed_master_tree: null,
+        selection_digest: null,
+        selection_valid_until: null,
+      };
+      if (authorization.release_sha !== releaseSha) fail("candidate source authorization SHA mismatch");
+      const originMasterSha = authorization.observed_master_sha;
       const currentHead = runBounded(gitPath, ["--no-replace-objects", "-C", sourceRoot, "rev-parse", "HEAD"], {
         env, label: "candidate builder HEAD", runCommand,
       }).trim();
@@ -3012,6 +3036,9 @@ export function createReleaseRehearsalCandidateAdapters({
       const checkoutTree = runBounded(gitPath, [
         "--no-replace-objects", "-C", sourceRoot, "rev-parse", `${releaseSha}^{tree}`,
       ], { env, label: "exact release tree", runCommand }).trim();
+      if (authorization.release_tree && checkoutTree !== authorization.release_tree) {
+        fail("exact release tree differs from selected source authorization");
+      }
       const materialized = materializeExactGitTree({
         gitPath,
         repositoryRoot: sourceRoot,
@@ -3026,16 +3053,17 @@ export function createReleaseRehearsalCandidateAdapters({
         paths: materialized.source_manifest.entries.map((entry) => entry.path),
       };
       const verifiedSourceManifestDigest = verifyExactMaterializedTree({
-        sourceRoot,
+        sourceRoot: checkoutDir,
         sourceManifest: materialized.source_manifest,
       });
       const builderAuthority = validateCandidateBuilderAuthority({
         currentHead,
+        builderAuthoritySha: originMasterSha,
         releaseSha,
         trackedStatus,
         sourceManifestDigest: materialized.source_manifest.source_manifest_digest,
         verifiedSourceManifestDigest,
-        entries: materialized.source_manifest.entries,
+        entries: builderInputEntries ?? materialized.source_manifest.entries,
         expectedBuilderEntries: builderInputEntries,
       });
       digest(builderInputDigest, "verified bootstrap builder input digest");
@@ -3054,6 +3082,10 @@ export function createReleaseRehearsalCandidateAdapters({
         evidence: {
           requested_sha: releaseSha,
           origin_master_sha: originMasterSha,
+          observed_master_tree: authorization.observed_master_tree,
+          selection_mode: authorization.mode === "approved-current-tip" ? "current-tip" : authorization.mode,
+          selection_digest: authorization.selection_digest,
+          selection_valid_until: authorization.selection_valid_until,
           checkout_sha: releaseSha,
           release_tree: checkoutTree,
           checkout_tree: checkoutTree,
@@ -3069,18 +3101,9 @@ export function createReleaseRehearsalCandidateAdapters({
     },
 
     async collectCiEvidence({ releaseSha }) {
-      const { ghPath, gitPath } = resolveTools();
+      const { ghPath } = resolveTools();
       const env = Object.freeze({ HOME: normalizedHome, PATH: "/usr/bin:/bin" });
-      runBounded(gitPath, ["-C", sourceRoot, "fetch", "--no-tags", "origin", "master"], {
-        env: gitEnvironment(normalizedHome),
-        label: "refresh remote master for CI snapshot",
-        runCommand,
-        timeout: 120_000,
-      });
-      const remoteMasterSha = runBounded(gitPath, ["-C", sourceRoot, "rev-parse", "origin/master"], {
-        env: gitEnvironment(normalizedHome), label: "remote master CI snapshot", runCommand,
-      }).trim();
-      if (remoteMasterSha !== releaseSha) fail("remote master moved away from candidate SHA");
+      const remoteMasterSha = sourceAuthorization?.observed_master_sha ?? releaseSha;
       const headers = ["-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2026-03-10"];
       const checkRuns = parseGhPages(runBounded(ghPath, [
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
@@ -3091,7 +3114,7 @@ export function createReleaseRehearsalCandidateAdapters({
         `/repos/${REPOSITORY}/commits/${releaseSha}/statuses?per_page=100`,
       ], { env, label: "trusted GitHub commit-status readback", runCommand, timeout: 120_000 }));
       if (checkRuns.some((entry) => ["skipped", "neutral"].includes(String(entry.conclusion ?? "").toLowerCase()))) {
-        fail("current-head started check set contains skipped or neutral evidence");
+        fail("selected-SHA started check set contains skipped or neutral evidence");
       }
       if (checkRuns.some((entry) => entry.head_sha !== releaseSha)) {
         fail("GitHub check-run head SHA does not match candidate SHA");

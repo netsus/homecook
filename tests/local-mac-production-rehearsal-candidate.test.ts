@@ -621,6 +621,16 @@ try {
     };
     expect(validateStableCiSnapshots(evidence, structuredClone(evidence), SHA_A))
       .toMatchObject({ summary_digest: DIGEST_A, safe_projection_digest: DIGEST_C });
+    const selectedAncestorEvidence = structuredClone(evidence);
+    selectedAncestorEvidence.remote_master_sha = SHA_B;
+    selectedAncestorEvidence.safe_projection.remote_master_sha = SHA_B;
+    selectedAncestorEvidence.safe_projection_digest = DIGEST_B;
+    expect(validateStableCiSnapshots(
+      selectedAncestorEvidence,
+      structuredClone(selectedAncestorEvidence),
+      SHA_A,
+      { observedMasterSha: SHA_B },
+    )).toMatchObject({ head_sha: SHA_A, remote_master_sha: SHA_B });
     expect(() => validateStableCiSnapshots(evidence, {
       ...structuredClone(evidence),
       remote_master_sha: SHA_B,
@@ -1113,6 +1123,18 @@ try {
     };
     expect(validateCandidateSourceEvidence(valid)).toEqual(valid);
 
+    const approvedAncestor = {
+      ...valid,
+      origin_master_sha: SHA_B,
+      observed_master_tree: SHA_A,
+      selection_mode: "approved-ancestor",
+      selection_digest: DIGEST_C,
+      selection_valid_until: "2026-08-31T07:00:00.000Z",
+    };
+    expect(validateCandidateSourceEvidence(approvedAncestor)).toEqual(approvedAncestor);
+    expect(() => validateCandidateSourceEvidence({ ...valid, origin_master_sha: SHA_B }))
+      .toThrow(/selection|origin|master|sha/iu);
+
     for (const patch of [
       { origin_master_sha: SHA_B },
       { checkout_sha: SHA_B },
@@ -1138,6 +1160,15 @@ try {
     ].map((path) => ({ path, sha256: DIGEST_A }));
     expect(validateCandidateBuilderAuthority({
       currentHead: SHA_A,
+      releaseSha: SHA_A,
+      trackedStatus: "",
+      sourceManifestDigest: DIGEST_B,
+      verifiedSourceManifestDigest: DIGEST_B,
+      entries,
+    })).toMatchObject({ builder_input_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    expect(validateCandidateBuilderAuthority({
+      currentHead: SHA_B,
+      builderAuthoritySha: SHA_B,
       releaseSha: SHA_A,
       trackedStatus: "",
       sourceManifestDigest: DIGEST_B,
