@@ -26,7 +26,11 @@ import { canonicalizeJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
 import { createTrustedMacOsIndependentObserver } from "./local-mac-production-rehearsal-macos-observer.mjs";
 import { buildIsolatedYoutubeWorkerSyntheticFixtureSql } from "./youtube-extraction-isolated-fixture-sql.mjs";
 import { buildPostgrestFixtureReadbackProbe, parseAndValidatePostgrestFixtureReadback } from "./local-mac-production-rehearsal-postgrest-probe.mjs";
-import { resolveSafeRealExecutable, snapshotToolFile } from "./local-mac-production-rehearsal-candidate.mjs";
+import {
+  completedCandidateContainerAuthorityRoot,
+  resolveSafeRealExecutable,
+  snapshotToolFile,
+} from "./local-mac-production-rehearsal-candidate.mjs";
 import {
   RUN_OWNERSHIP_LABEL,
   RUN_PROJECT_LABEL,
@@ -81,7 +85,7 @@ const SERVICE_RUNTIME_CONTRACT = Object.freeze({
   postgres: Object.freeze({ dependsOn: {}, health: true, networks: ["data-internal"], ports: [{ key: "postgres", target: 5432 }], secrets: ["postgres_password"], tmpfs: [], volumeTargets: ["/var/lib/postgresql/data", "/homecook/secret-entrypoint.sh", "/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh"] }),
   auth: Object.freeze({ dependsOn: { postgres: "service_healthy" }, health: true, networks: ["auth-egress", "data-internal"], ports: [], secrets: ["jwt_keys", "jwt_secret", "postgres_password"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-auth.sh"] }),
   postgrest: Object.freeze({ dependsOn: { auth: "service_healthy", postgres: "service_healthy" }, health: false, networks: ["data-internal"], ports: [], secrets: ["jwt_jwks", "postgres_password"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-postgrest.sh"] }),
-  "postgrest-probe": Object.freeze({ dependsOn: { postgrest: "service_started" }, health: true, networks: ["data-internal"], ports: [], secrets: [], tmpfs: [], volumeTargets: ["/sealed-candidate"] }),
+  "postgrest-probe": Object.freeze({ dependsOn: { postgrest: "service_started" }, health: true, networks: ["data-internal"], ports: [], secrets: [], tmpfs: [], volumeTargets: ["/sealed-candidate", "/sealed-candidate-authority"] }),
   storage: Object.freeze({ dependsOn: { auth: "service_healthy", "postgrest-probe": "service_healthy" }, health: true, networks: ["data-internal"], ports: [], secrets: ["anon_key", "jwt_jwks", "jwt_secret", "postgres_password", "service_role_key", "storage_s3_access_key_id", "storage_s3_access_key_secret"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-storage.sh", "/var/lib/storage"] }),
   "api-gateway": Object.freeze({ dependsOn: { storage: "service_healthy" }, health: true, networks: ["auth-edge", "data-internal"], ports: [{ key: "storage", target: "storage" }], secrets: ["anon_key", "anon_key_asymmetric", "publishable_key", "secret_key", "service_role_key", "service_role_key_asymmetric", "session_attestation_hmac_key_v1"], tmpfs: ["/tmp"], volumeTargets: ["/homecook/kong-entrypoint.sh", "/homecook/kong.yml", "/homecook/secret-entrypoint.sh", "/usr/local/share/lua/5.1/kong/plugins/homecook-attestation"] }),
   "auth-proxy": Object.freeze({ dependsOn: { "api-gateway": "service_healthy" }, health: true, networks: ["auth-edge"], ports: [{ key: "auth", target: 8080 }], secrets: [], tmpfs: [], volumeTargets: ["/homecook/auth-only-proxy.mjs"] }),
@@ -448,7 +452,14 @@ function quoteYaml(value) {
   return JSON.stringify(String(value));
 }
 
-export function buildFullLocalComposeOverride(namespace, { candidateRoot = null, creationNonce = null } = {}) {
+export function buildFullLocalComposeOverride(namespace, {
+  candidateRoot = null,
+  candidateContainerAuthorityRoot = null,
+  creationNonce = null,
+} = {}) {
+  if ((candidateRoot === null) !== (candidateContainerAuthorityRoot === null)) {
+    fail("full-local candidate and container authority mounts must be supplied together");
+  }
   const labels = [
     `      ${RUN_OWNERSHIP_LABEL}: ${quoteYaml(namespace.run_id)}`,
     `      ${RUN_PROJECT_LABEL}: ${quoteYaml(namespace.project)}`,
@@ -473,6 +484,10 @@ export function buildFullLocalComposeOverride(namespace, { candidateRoot = null,
       "      - type: bind",
       `        source: ${quoteYaml(candidateRoot)}`,
       "        target: /sealed-candidate",
+      "        read_only: true",
+      "      - type: bind",
+      `        source: ${quoteYaml(candidateContainerAuthorityRoot)}`,
+      "        target: /sealed-candidate-authority",
       "        read_only: true",
     ] : []),
     ...(["auth", "postgrest", "storage"].includes(service) ? [
@@ -1057,11 +1072,38 @@ function runtimeIdentity(component, containerIds, reportedIdentity, workerRpcIde
   };
 }
 
-function childIdentitySource({ outputPath = null } = {}) {
-  const write = outputPath
-    ? `require('node:fs').writeFileSync(${JSON.stringify(outputPath)},canonical,{flag:'wx',mode:0o400});`
-    : "process.stdout.write(canonical);";
-  return `(async()=>{const c=await import('file:///sealed-candidate/bundles/bundle/app/scripts/lib/local-mac-production-rehearsal-candidate.mjs');const j=await import('file:///sealed-candidate/bundles/bundle/app/scripts/lib/rfc8785-jcs.mjs');const m=c.readCompletedCandidateRoot('/sealed-candidate').manifest;const identity={release_sha:m.release_sha,release_tree:m.release_tree,build_id:m.build_id,sealed_bundle_digest:m.sealed_bundle_digest,migration_head:m.migration.migration_head};const canonical=j.canonicalizeJcs(identity);${write}return identity})()`;
+export function buildCandidateContainerVerificationContract({
+  candidateRoot,
+  containerCandidateRoot = "/sealed-candidate",
+  containerAuthorityRoot = "/sealed-candidate-authority",
+  candidateModuleUrl = "file:///sealed-candidate/bundles/bundle/app/scripts/lib/local-mac-production-rehearsal-candidate.mjs",
+  jcsModuleUrl = "file:///sealed-candidate/bundles/bundle/app/scripts/lib/rfc8785-jcs.mjs",
+} = {}) {
+  if (
+    typeof candidateRoot !== "string" || resolve(candidateRoot) !== candidateRoot
+    || typeof containerCandidateRoot !== "string" || resolve(containerCandidateRoot) !== containerCandidateRoot
+    || typeof containerAuthorityRoot !== "string" || resolve(containerAuthorityRoot) !== containerAuthorityRoot
+    || !String(candidateModuleUrl).startsWith("file://")
+    || !String(jcsModuleUrl).startsWith("file://")
+  ) fail("candidate container verification contract paths are invalid");
+  const hostAuthorityRoot = completedCandidateContainerAuthorityRoot(candidateRoot);
+  const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
+  const identitySource = ({ outputPath = null } = {}) => {
+    const write = outputPath
+      ? `require('node:fs').writeFileSync(${JSON.stringify(outputPath)},canonical,{flag:'wx',mode:0o400});`
+      : "process.stdout.write(canonical);";
+    return `(async()=>{const c=await import(${JSON.stringify(candidateModuleUrl)});const j=await import(${JSON.stringify(jcsModuleUrl)});const m=c.readCompletedCandidateContainerRoot(${JSON.stringify(containerCandidateRoot)},{containerAuthorityPath:${JSON.stringify(containerAuthorityPath)}}).manifest;const identity={release_sha:m.release_sha,release_tree:m.release_tree,build_id:m.build_id,sealed_bundle_digest:m.sealed_bundle_digest,migration_head:m.migration.migration_head};const canonical=j.canonicalizeJcs(identity);${write}return identity})()`;
+  };
+  return Object.freeze({
+    container_candidate_root: containerCandidateRoot,
+    container_authority_path: containerAuthorityPath,
+    host_authority_root: hostAuthorityRoot,
+    mount_args: Object.freeze([
+      "--mount", `type=bind,src=${candidateRoot},dst=${containerCandidateRoot},readonly`,
+      "--mount", `type=bind,src=${hostAuthorityRoot},dst=${containerAuthorityRoot},readonly`,
+    ]),
+    identitySource,
+  });
 }
 
 async function readContainerIdentity(state, entry, manifest, { outputPath = "/tmp/homecook-r2-identity.json", signal } = {}) {
@@ -1075,7 +1117,7 @@ async function readContainerIdentity(state, entry, manifest, { outputPath = "/tm
   ) fail(`${entry.name} identity read ownership mismatch`);
   const args = outputPath
     ? ["exec", entry.id, "node", "-e", `process.stdout.write(require('node:fs').readFileSync(${JSON.stringify(outputPath)},'utf8'))`]
-    : ["exec", entry.id, "node", "--input-type=module", "-e", `${childIdentitySource()}.catch(()=>process.exit(70))`];
+    : ["exec", entry.id, "node", "--input-type=module", "-e", `${state.candidateVerification.identitySource()}.catch(()=>process.exit(70))`];
   let output = "";
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -1329,11 +1371,23 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       return { verified: true, image_ids: imageIds };
     },
 
-    async createResources({ manifest, candidateRoot, namespace, runRoot, signal, independentObserver = null }) {
+    async createResources({
+      manifest,
+      candidateRoot,
+      candidateContainerAuthorityRoot,
+      namespace,
+      runRoot,
+      signal,
+      independentObserver = null,
+    }) {
       state.activeSignal = signal ?? state.activeSignal;
       state.namespace = namespace;
       state.runRoot = runRoot;
       state.candidateRoot = candidateRoot;
+      state.candidateVerification = buildCandidateContainerVerificationContract({ candidateRoot });
+      if (candidateContainerAuthorityRoot !== state.candidateVerification.host_authority_root) {
+        fail("runner supplied a non-canonical candidate container authority root");
+      }
       state.independentObserver = independentObserver;
       const sealedCompose = join(candidateRoot, "bundles", "bundle", "full_local", "infra", "full-local-supabase", "docker-compose.production.yml");
       if (!existsSync(sealedCompose) || lstatSync(sealedCompose).isSymbolicLink()) fail("sealed full-local Compose authority is missing");
@@ -1341,6 +1395,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       const overridePath = join(state.runtimeRoot, "compose.rehearsal.override.yml");
       writeFileSync(overridePath, buildFullLocalComposeOverride(namespace, {
         candidateRoot,
+        candidateContainerAuthorityRoot,
         creationNonce: state.creationNonce,
       }), { flag: "wx", mode: 0o600 });
       const env = buildFullLocalRehearsalEnvironment({ namespace, runRoot: state.runtimeRoot, manifest });
@@ -1497,8 +1552,20 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       return state.workerFixtureAuthority;
     },
 
-    async startComponents({ manifest, candidateRoot, namespace, signal }) {
+    async startComponents({
+      manifest,
+      candidateRoot,
+      candidateContainerAuthorityRoot,
+      namespace,
+      signal,
+    }) {
       state.activeSignal = signal ?? state.activeSignal;
+      const candidateVerification = buildCandidateContainerVerificationContract({ candidateRoot });
+      if (
+        candidateContainerAuthorityRoot !== candidateVerification.host_authority_root
+        || state.candidateVerification?.host_authority_root !== candidateVerification.host_authority_root
+      ) fail("runtime candidate container authority root differs from resource authority");
+      state.candidateVerification = candidateVerification;
       const nodeImage = findImage(manifest, "auth-proxy");
       const appRoot = join(candidateRoot, "bundles", "bundle", "app");
       const appName = namespace.container_names.find((name) => name.endsWith("-app"));
@@ -1526,7 +1593,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         LOCAL_SUPABASE_INTERNAL_URL: `http://127.0.0.1:${namespace.ports.storage}`,
         HOMECOOK_FULL_LOCAL_SECRET_DIR: "/run/app-secrets",
       }, { runId: state.runId, runRoot: state.runRoot });
-      const appWrapper = `${childIdentitySource({ outputPath: "/tmp/homecook-r2-identity.json" })}.then(()=>{const net=require('node:net');const proxy=net.createServer(i=>{const o=net.connect(${namespace.ports.storage},'api-gateway');i.pipe(o);o.pipe(i)});proxy.listen(${namespace.ports.storage},'127.0.0.1',()=>{const{spawn}=require('node:child_process');const c=spawn('node',['scripts/start-production.mjs','--hostname','0.0.0.0','--port',process.env.PORT],{stdio:['ignore','pipe','pipe']});let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',bounded);c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>c.kill(s));c.on('exit',(code,signal)=>{proxy.close();if(signal)process.kill(process.pid,signal);else process.exit(code??1)})})}).catch(()=>process.exit(70))`;
+      const appWrapper = `${candidateVerification.identitySource({ outputPath: "/tmp/homecook-r2-identity.json" })}.then(()=>{const net=require('node:net');const proxy=net.createServer(i=>{const o=net.connect(${namespace.ports.storage},'api-gateway');i.pipe(o);o.pipe(i)});proxy.listen(${namespace.ports.storage},'127.0.0.1',()=>{const{spawn}=require('node:child_process');const c=spawn('node',['scripts/start-production.mjs','--hostname','0.0.0.0','--port',process.env.PORT],{stdio:['ignore','pipe','pipe']});let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',bounded);c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>c.kill(s));c.on('exit',(code,signal)=>{proxy.close();if(signal)process.kill(process.pid,signal);else process.exit(code??1)})})}).catch(()=>process.exit(70))`;
       const appArgs = [
         "run", "--detach", "--name", appName,
         "--pull=never",
@@ -1537,7 +1604,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         "--log-driver", "local", "--log-opt", "max-size=1m", "--log-opt", "max-file=1",
         "--tmpfs", "/workspace/.next/cache:rw,noexec,nosuid,size=64m",
         "--mount", `type=bind,src=${appRoot},dst=/workspace,readonly`,
-        "--mount", `type=bind,src=${candidateRoot},dst=/sealed-candidate,readonly`,
+        ...candidateVerification.mount_args,
         "--mount", `type=bind,src=${join(state.runtimeRoot, "secret-fds")},dst=/run/app-secrets,readonly`,
         "--publish", `127.0.0.1:${namespace.ports.app}:${namespace.ports.app}`,
         ...dockerEnvironmentArgs(appEnvironment),
@@ -1554,7 +1621,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       }
       state.worker = materializeWorkerHealthBundle(state, manifest, candidateRoot);
       const workerName = namespace.container_names.find((name) => name.endsWith("-worker"));
-      const wrapper = `${childIdentitySource({ outputPath: "/tmp/homecook-r2-identity.json" })}.then(()=>{const{spawn}=require('node:child_process');const{writeFileSync}=require('node:fs');const a=JSON.parse(process.env.R2_WORKER_ARGS);const c=spawn('node',['/sealed-worker/scripts/youtube-extraction-worker-runner.mjs','rehearsal-synthetic',...a],{stdio:['ignore','pipe','pipe']});let out='';let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',d=>{bounded(d);out+=d});c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>{if(c.exitCode===null)c.kill(s);else process.exit(0)});c.on('exit',(code)=>{if(code!==0)process.exit(71);writeFileSync('/tmp/homecook-r2-worker-result.json',out,{flag:'wx',mode:0o400});setInterval(()=>{},2147483647)})}).catch(()=>process.exit(70))`;
+      const wrapper = `${candidateVerification.identitySource({ outputPath: "/tmp/homecook-r2-identity.json" })}.then(()=>{const{spawn}=require('node:child_process');const{writeFileSync}=require('node:fs');const a=JSON.parse(process.env.R2_WORKER_ARGS);const c=spawn('node',['/sealed-worker/scripts/youtube-extraction-worker-runner.mjs','rehearsal-synthetic',...a],{stdio:['ignore','pipe','pipe']});let out='';let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',d=>{bounded(d);out+=d});c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>{if(c.exitCode===null)c.kill(s);else process.exit(0)});c.on('exit',(code)=>{if(code!==0)process.exit(71);writeFileSync('/tmp/homecook-r2-worker-result.json',out,{flag:'wx',mode:0o400});setInterval(()=>{},2147483647)})}).catch(()=>process.exit(70))`;
       const workerEnvironment = validateChildEnvironment({
         HOMECOOK_REHEARSAL_RUN_ID: state.runId,
         HOMECOOK_REHEARSAL_MODE: "isolated-r2",
@@ -1574,7 +1641,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         "--log-driver", "local", "--log-opt", "max-size=1m", "--log-opt", "max-file=1",
         "--mount", `type=bind,src=${state.worker.workerRoot},dst=/sealed-worker,readonly`,
         "--mount", `type=bind,src=${state.worker.workerSecretRoot},dst=/run/worker-secrets,readonly`,
-        "--mount", `type=bind,src=${candidateRoot},dst=/sealed-candidate,readonly`,
+        ...candidateVerification.mount_args,
         ...dockerEnvironmentArgs(workerEnvironment),
         nodeImage, "node", "-e", wrapper,
       ];

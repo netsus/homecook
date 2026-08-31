@@ -1084,6 +1084,93 @@ function inventorySealedComponent(component, rootPath) {
   return inventory;
 }
 
+function inventoryStableSealedComponent(component, rootPath, expectedInventory) {
+  const root = realpathSync(rootPath);
+  const expectedEntries = expectedInventory
+    .filter((entry) => entry.component === component)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const expectedByPath = new Map(expectedEntries.map((entry) => [entry.path, entry]));
+  const inventory = [];
+  const sameIdentity = (left, right) => [
+    "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs",
+  ].every((key) => left[key] === right[key]);
+  const currentEntry = (expected, stat) => ({
+    ...expected,
+    mode: modeBits(stat.mode),
+    uid: String(stat.uid),
+    gid: String(stat.gid),
+    nlink: String(stat.nlink),
+    device: String(stat.dev),
+    inode: String(stat.ino),
+    size: String(stat.size),
+    ctime: new Date(Number(stat.ctimeMs)).toISOString(),
+  });
+  const visit = (path, relativePath) => {
+    const before = lstatSync(path, { bigint: true });
+    if (before.uid !== BigInt(process.getuid?.())) fail(`sealed entry owner is unsafe: ${relativePath}`);
+    if (before.isDirectory()) {
+      if ((modeBits(before.mode) & 0o222) !== 0) fail(`sealed candidate directory remains writable: ${relativePath}`);
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!sameIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail(`sealed directory identity drifted before stable verification: ${relativePath}`);
+        }
+        for (const name of readdirSync(path).sort()) {
+          visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+        }
+        if (
+          !sameIdentity(before, fstatSync(fd, { bigint: true }))
+          || !sameIdentity(before, lstatSync(path, { bigint: true }))
+        ) fail(`sealed directory identity drifted during stable verification: ${relativePath}`);
+      } finally {
+        closeSync(fd);
+      }
+      return;
+    }
+    const expected = expectedByPath.get(relativePath);
+    if (!expected) fail(`sealed candidate contains an unexpected entry: ${relativePath}`);
+    if (before.isSymbolicLink()) {
+      if (expected.type !== "symlink" || before.nlink !== 1n) {
+        fail(`sealed symlink physical identity is unsafe: ${relativePath}`);
+      }
+      const target = realpathSync(path);
+      assertPathContained(root, target, `sealed symlink ${relativePath}`);
+      if (readlinkSync(path) !== expected.symlink_target) {
+        fail(`sealed symlink target drifted during stable verification: ${relativePath}`);
+      }
+      if (!sameIdentity(before, lstatSync(path, { bigint: true }))) {
+        fail(`sealed symlink identity drifted during stable verification: ${relativePath}`);
+      }
+      inventory.push(currentEntry(expected, before));
+      return;
+    }
+    if (
+      expected.type !== "file" || !before.isFile() || before.nlink !== 1n
+      || (modeBits(before.mode) & 0o222) !== 0
+    ) fail(`sealed file physical identity is unsafe: ${relativePath}`);
+    const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    try {
+      if (!sameIdentity(before, fstatSync(fd, { bigint: true }))) {
+        fail(`sealed file identity drifted before stable verification: ${relativePath}`);
+      }
+      if (
+        !sameIdentity(before, fstatSync(fd, { bigint: true }))
+        || !sameIdentity(before, lstatSync(path, { bigint: true }))
+      ) fail(`sealed file identity drifted during stable verification: ${relativePath}`);
+    } finally {
+      closeSync(fd);
+    }
+    inventory.push(currentEntry(expected, before));
+  };
+  for (const name of readdirSync(root).sort()) visit(join(root, name), name);
+  inventory.sort((left, right) => left.path.localeCompare(right.path));
+  if (
+    canonicalizeJcs(inventory.map((entry) => entry.path))
+    !== canonicalizeJcs(expectedEntries.map((entry) => entry.path))
+  ) fail(`sealed ${component} physical inventory is incomplete`);
+  return inventory;
+}
+
 export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {}) {
   if (!isAbsolute(bundleRoot ?? "")) fail("bundleRoot must be absolute");
   exactObject(componentRoots, "componentRoots", ["app", "full_local", "worker"]);
@@ -1335,7 +1422,27 @@ function pnpmStoreInventory(root, currentUid, {
   requireSealed = false,
   verifyCafsContent = false,
   afterFileOpen = null,
+  allowedRootChildren = ["files", "index"],
 } = {}) {
+  if (
+    !Array.isArray(allowedRootChildren)
+    || allowedRootChildren.some((name) => typeof name !== "string" || name.length === 0 || name.includes("/"))
+    || new Set(allowedRootChildren).size !== allowedRootChildren.length
+  ) fail("pnpm store allowed root children are invalid");
+  const expectedRootChildren = [...allowedRootChildren].sort();
+  const rootBefore = lstatSync(root, { bigint: true });
+  const rootMode = modeBits(rootBefore.mode);
+  if (
+    rootBefore.isSymbolicLink() || !rootBefore.isDirectory()
+    || rootBefore.uid !== BigInt(currentUid) || realpathSync(root) !== root
+    || (!requireSealed && (rootMode & 0o022) !== 0)
+    || (requireSealed && rootMode !== 0o500)
+  ) fail("pnpm store root owner, mode, type, or canonical path is unsafe");
+  const rootFd = openSync(root, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+  if (!samePnpmStoreIdentity(rootBefore, fstatSync(rootFd, { bigint: true }))) {
+    closeSync(rootFd);
+    fail("pnpm store root identity drifted before inventory");
+  }
   const entries = [];
   const visit = (path, relativePath) => {
     const before = lstatSync(path, { bigint: true });
@@ -1390,24 +1497,24 @@ function pnpmStoreInventory(root, currentUid, {
       if (!cafsMatch || executable !== Boolean(cafsMatch[3])) {
         fail("pnpm CAFS path or executable identity is invalid");
       }
-      if (verifyCafsContent) {
-        const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
-        try {
-          if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
-            fail("pnpm CAFS file identity drifted before content verification");
-          }
-          afterFileOpen?.({ path, relativePath });
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail("pnpm CAFS file identity drifted before verification");
+        }
+        afterFileOpen?.({ path, relativePath, contentVerified: verifyCafsContent });
+        if (verifyCafsContent) {
           const actualIntegrity = createHash("sha512").update(readFileSync(fd)).digest("hex");
           if (actualIntegrity !== `${cafsMatch[1]}${cafsMatch[2]}`) {
             fail("pnpm CAFS content differs from its content-addressed path");
           }
-          if (
-            !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
-            || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
-          ) fail("pnpm CAFS file identity drifted during content verification");
-        } finally {
-          closeSync(fd);
         }
+        if (
+          !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
+          || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
+        ) fail("pnpm CAFS file identity drifted during verification");
+      } finally {
+        closeSync(fd);
       }
       contentIdentity = `sha512:${cafsMatch[1]}${cafsMatch[2]}${cafsMatch[3] ?? ""}`;
     } else if (relativePath.startsWith("index/")) {
@@ -1416,7 +1523,7 @@ function pnpmStoreInventory(root, currentUid, {
         if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
           fail("pnpm store index file identity drifted before read");
         }
-        afterFileOpen?.({ path, relativePath });
+        afterFileOpen?.({ path, relativePath, contentVerified: true });
         contentIdentity = `sha256:${sha256Bytes(readFileSync(fd))}`;
         if (
           !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
@@ -1443,7 +1550,19 @@ function pnpmStoreInventory(root, currentUid, {
       content_identity: contentIdentity,
     });
   };
-  for (const name of ["files", "index"]) visit(join(root, name), name);
+  try {
+    if (canonicalizeJcs(readdirSync(root).sort()) !== canonicalizeJcs(expectedRootChildren)) {
+      fail("pnpm store root contains unexpected children");
+    }
+    for (const name of ["files", "index"]) visit(join(root, name), name);
+    if (
+      canonicalizeJcs(readdirSync(root).sort()) !== canonicalizeJcs(expectedRootChildren)
+      || !samePnpmStoreIdentity(rootBefore, lstatSync(root, { bigint: true }))
+      || !samePnpmStoreIdentity(rootBefore, fstatSync(rootFd, { bigint: true }))
+    ) fail("pnpm store root identity or children drifted during inventory");
+  } finally {
+    closeSync(rootFd);
+  }
   const contentEntries = entries.map(({ path, type, size, content_identity: contentIdentity }) => ({
     path,
     type,
@@ -1573,17 +1692,24 @@ export async function withCandidatePnpmStoreView({
   let sourceInventory;
   let snapshotInventory;
   try {
-    sourceInventory = pnpmStoreInventory(sourceStore, currentUid, { verifyCafsContent: true });
+    sourceInventory = pnpmStoreInventory(sourceStore, currentUid, {
+      verifyCafsContent: true,
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
     mkdirSync(storeRoot, { mode: 0o700 });
     clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory);
     for (const name of ["projects", "tmp"]) mkdirSync(join(storePath, name), { mode: 0o700 });
     chmodSync(storePath, 0o500);
     chmodSync(storeRoot, 0o500);
-    snapshotInventory = pnpmStoreInventory(storePath, currentUid);
+    snapshotInventory = pnpmStoreInventory(storePath, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
     if (snapshotInventory.content_digest !== sourceInventory.content_digest) {
       fail("candidate pnpm store snapshot inventory digest differs from its approved source");
     }
-    const sourceAfterCopy = pnpmStoreInventory(sourceStore, currentUid);
+    const sourceAfterCopy = pnpmStoreInventory(sourceStore, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
     if (
       sourceAfterCopy.inventory_digest !== sourceInventory.inventory_digest
       || sourceAfterCopy.identity_digest !== sourceInventory.identity_digest
@@ -1631,21 +1757,20 @@ export async function withCandidatePnpmStoreView({
         || !samePnpmStoreIdentity(stat, pathPost) || !samePnpmStoreIdentity(stat, fdPost)
       ) fail("approved pnpm package store identity drifted during candidate build");
     }
-    const sourcePost = pnpmStoreInventory(sourceStore, currentUid);
+    const sourcePost = pnpmStoreInventory(sourceStore, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
     if (
       sourcePost.inventory_digest !== sourceInventory.inventory_digest
       || sourcePost.identity_digest !== sourceInventory.identity_digest
     ) fail("approved pnpm package store inventory drifted during candidate build");
-    const snapshotBeforeSeal = pnpmStoreInventory(storePath, currentUid);
+    const snapshotBeforeSeal = pnpmStoreInventory(storePath, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
     if (
       snapshotBeforeSeal.inventory_digest !== snapshotInventory.inventory_digest
       || snapshotBeforeSeal.identity_digest !== snapshotInventory.identity_digest
     ) fail("candidate pnpm store snapshot inventory drifted during candidate build");
-    sealPnpmStoreFiles(join(storePath, "files"));
-    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
-    if (sealedSnapshotInventory.content_digest !== snapshotInventory.content_digest) {
-      fail("candidate pnpm store sealed snapshot inventory drifted after build");
-    }
     for (const { fd, path, stat, mutable } of viewDirectories) {
       const pathPost = lstatSync(path, { bigint: true });
       const fdPost = fstatSync(fd, { bigint: true });
@@ -1663,6 +1788,34 @@ export async function withCandidatePnpmStoreView({
   }
   if (identityError) throw identityError;
   if (callbackError) throw callbackError;
+  try {
+    chmodSync(storePath, 0o700);
+    for (const writableRoot of writableRoots) {
+      const stat = lstatSync(writableRoot, { bigint: true });
+      if (
+        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+        || modeBits(stat.mode) !== 0o700 || realpathSync(writableRoot) !== writableRoot
+      ) fail("candidate pnpm store scratch directory is unsafe before cleanup");
+      rmSync(writableRoot, { recursive: true, force: false });
+      try {
+        lstatSync(writableRoot);
+        fail("candidate pnpm store scratch directory remained after cleanup");
+      } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+      }
+    }
+    if (canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])) {
+      fail("candidate pnpm store contains unexpected children after scratch cleanup");
+    }
+    sealPnpmStoreFiles(join(storePath, "files"));
+    chmodSync(storePath, 0o500);
+    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
+    if (sealedSnapshotInventory.content_digest !== snapshotInventory.content_digest) {
+      fail("candidate pnpm store sealed snapshot inventory drifted after build");
+    }
+  } catch (error) {
+    fail(`candidate pnpm store scratch cleanup or seal failed: ${error?.message ?? error?.code ?? "unknown"}`);
+  }
   const authorityDigest = sha256Jcs({
     schema: "homecook.release-rehearsal-pnpm-store-view-authority.v2",
     source_inventory_digest: sourceInventory.inventory_digest,
@@ -2044,6 +2197,7 @@ function completedCandidatePhysicalAuthorityPath(root) {
 
 function readCompletedCandidatePortableRootWithIdentity(root, {
   afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string})=>void)} */ (null),
+  verifyPortableContent = true,
 } = {}) {
   if (!isAbsolute(root ?? "")) fail("completed candidate root must be absolute");
   if (resolve(root) !== root || realpathSync(root) !== root) {
@@ -2078,7 +2232,11 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
   const storeSnapshot = pnpmStoreInventory(
     join(root, "pnpm-store", "v10"),
     Number(rootStat.uid),
-    { requireSealed: true, verifyCafsContent: true, afterFileOpen: afterPnpmStoreFileOpen },
+    {
+      requireSealed: true,
+      verifyCafsContent: verifyPortableContent,
+      afterFileOpen: afterPnpmStoreFileOpen,
+    },
   );
   if (storeSnapshot.inventory_digest !== manifest.pnpm_store_snapshot_inventory_digest) {
     fail("completed candidate pnpm store portable inventory digest is invalid");
@@ -2134,7 +2292,13 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
   const actualPhysicalInventory = [];
   const actualArtifacts = {};
   for (const component of ["app", "full_local", "worker"]) {
-    const entries = inventorySealedComponent(component, join(physicalBundleRoot, component));
+    const entries = verifyPortableContent
+      ? inventorySealedComponent(component, join(physicalBundleRoot, component))
+      : inventoryStableSealedComponent(
+        component,
+        join(physicalBundleRoot, component),
+        bundleManifest.file_inventory,
+      );
     actualInventory.push(...entries);
     const physicalEntries = entries.map((entry) => {
       const physicalEntry = { ...entry };
@@ -2209,16 +2373,82 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
   }
 }
 
-export function issueCompletedCandidatePhysicalAuthority({ candidateRoot, authorityPath } = {}) {
-  if (!isAbsolute(authorityPath ?? "") || resolve(authorityPath) !== authorityPath) {
-    fail("completed candidate physical authority path must be absolute and canonical");
+function readCompletedCandidatePhysicalAuthority(root, physicalAuthorityPath) {
+  const canonicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root);
+  if (
+    !isAbsolute(physicalAuthorityPath ?? "")
+    || resolve(physicalAuthorityPath) !== physicalAuthorityPath
+    || physicalAuthorityPath !== canonicalAuthorityPath
+  ) fail("completed candidate physical authority must use the exact canonical sibling path");
+  const authority = readSealedAuthorityFile(
+    dirname(physicalAuthorityPath),
+    physicalAuthorityPath,
+    "completed candidate physical authority",
+  );
+  exactObject(authority, "completed candidate physical authority", [
+    "schema", "authority_path_digest", "candidate_root_path_digest", "candidate_identity_digest",
+    "manifest_digest", "pnpm_store_snapshot_inventory_digest", "physical_identity_digest",
+    "authority_digest",
+  ]);
+  const { authority_digest: authorityDigest, ...unsigned } = authority;
+  if (
+    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1"
+    || authority.authority_path_digest !== sha256Jcs(physicalAuthorityPath)
+    || authorityDigest !== sha256Jcs(unsigned)
+  ) fail("completed candidate root-local physical authority is stale or invalid");
+  return authority;
+}
+
+function readCompletedCandidateWithPhysicalAuthority(root, {
+  physicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root),
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+  verifyPortableContent = true,
+} = {}) {
+  const authority = readCompletedCandidatePhysicalAuthority(root, physicalAuthorityPath);
+  const portable = readCompletedCandidatePortableRootWithIdentity(root, {
+    afterPnpmStoreFileOpen,
+    verifyPortableContent,
+  });
+  if (
+    authority.candidate_root_path_digest !== sha256Jcs(root)
+    || authority.candidate_identity_digest !== portable.manifest.candidate_identity_digest
+    || authority.manifest_digest !== portable.manifest.manifest_digest
+    || authority.pnpm_store_snapshot_inventory_digest
+      !== portable.manifest.pnpm_store_snapshot_inventory_digest
+    || authority.physical_identity_digest !== portable.physical_identity_digest
+  ) fail("completed candidate root-local physical authority is stale or invalid");
+  return Object.freeze({
+    complete: portable.complete,
+    manifest: portable.manifest,
+    bundle_manifest: portable.bundle_manifest,
+  });
+}
+
+/**
+ * @param {{candidateRoot:string,authorityPath:string,afterPnpmStoreFileOpen?:null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)}} options
+ */
+export function issueCompletedCandidatePhysicalAuthority({
+  candidateRoot,
+  authorityPath,
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  const canonicalAuthorityPath = completedCandidatePhysicalAuthorityPath(candidateRoot);
+  if (
+    !isAbsolute(authorityPath ?? "") || resolve(authorityPath) !== authorityPath
+    || authorityPath !== canonicalAuthorityPath
+  ) {
+    fail("completed candidate physical authority must use the exact canonical sibling path");
   }
   const currentUid = process.getuid?.();
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   assertPrivateParent(authorityPath, currentUid);
-  const portable = readCompletedCandidatePortableRootWithIdentity(candidateRoot);
+  const portable = readCompletedCandidatePortableRootWithIdentity(candidateRoot, {
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: true,
+  });
   const unsigned = {
     schema: "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1",
+    authority_path_digest: sha256Jcs(authorityPath),
     candidate_root_path_digest: sha256Jcs(candidateRoot),
     candidate_identity_digest: portable.manifest.candidate_identity_digest,
     manifest_digest: portable.manifest.manifest_digest,
@@ -2239,31 +2469,180 @@ export function issueCompletedCandidatePhysicalAuthority({ candidateRoot, author
 
 export function readCompletedCandidateRoot(root, {
   physicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root),
-  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string})=>void)} */ (null),
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
 } = {}) {
-  const authority = readSealedAuthorityFile(
-    dirname(physicalAuthorityPath),
+  return readCompletedCandidateWithPhysicalAuthority(root, {
     physicalAuthorityPath,
-    "completed candidate physical authority",
-  );
-  exactObject(authority, "completed candidate physical authority", [
-    "schema", "candidate_root_path_digest", "candidate_identity_digest", "manifest_digest",
-    "pnpm_store_snapshot_inventory_digest", "physical_identity_digest", "authority_digest",
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: true,
+  });
+}
+
+export function verifyCompletedCandidatePhysicalStability(root, {
+  physicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root),
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  return readCompletedCandidateWithPhysicalAuthority(root, {
+    physicalAuthorityPath,
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: false,
+  });
+}
+
+export function completedCandidateContainerAuthorityRoot(root) {
+  if (!isAbsolute(root ?? "") || resolve(root) !== root) {
+    fail("completed candidate container authority requires an absolute canonical candidate root");
+  }
+  return `${root}.container-authority`;
+}
+
+function completedCandidateContainerAuthoritySourcePath(root) {
+  return join(completedCandidateContainerAuthorityRoot(root), "authority.json");
+}
+
+function validateCompletedCandidateContainerAuthority(authority) {
+  exactObject(authority, "completed candidate container authority", [
+    "schema", "authority_source_path_digest", "container_candidate_root_path_digest",
+    "container_authority_path_digest", "candidate_identity_digest", "manifest_digest",
+    "bundle_manifest_digest", "sealed_bundle_digest", "pnpm_store_snapshot_inventory_digest",
+    "authority_digest",
   ]);
   const { authority_digest: authorityDigest, ...unsigned } = authority;
   if (
-    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1"
+    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-container-authority.v1"
+    || !DIGEST_PATTERN.test(authority.authority_source_path_digest ?? "")
     || authorityDigest !== sha256Jcs(unsigned)
-  ) fail("completed candidate root-local physical authority is stale or invalid");
-  const portable = readCompletedCandidatePortableRootWithIdentity(root, { afterPnpmStoreFileOpen });
+  ) fail("completed candidate container authority is stale or invalid");
+  return authority;
+}
+
+function assertContainerAuthorityBindings(authority, {
+  candidateRoot,
+  authoritySourcePath = null,
+  containerCandidateRoot,
+  containerAuthorityPath,
+  manifest,
+}) {
   if (
-    authority.candidate_root_path_digest !== sha256Jcs(root)
-    || authority.candidate_identity_digest !== portable.manifest.candidate_identity_digest
-    || authority.manifest_digest !== portable.manifest.manifest_digest
+    authority.container_candidate_root_path_digest !== sha256Jcs(containerCandidateRoot)
+    || authority.container_authority_path_digest !== sha256Jcs(containerAuthorityPath)
+    || (authoritySourcePath !== null
+      && authority.authority_source_path_digest !== sha256Jcs(authoritySourcePath))
+    || authority.candidate_identity_digest !== manifest.candidate_identity_digest
+    || authority.manifest_digest !== manifest.manifest_digest
+    || authority.bundle_manifest_digest !== manifest.bundle_manifest_digest
+    || authority.sealed_bundle_digest !== manifest.sealed_bundle_digest
     || authority.pnpm_store_snapshot_inventory_digest
-      !== portable.manifest.pnpm_store_snapshot_inventory_digest
-    || authority.physical_identity_digest !== portable.physical_identity_digest
-  ) fail("completed candidate root-local physical authority is stale or invalid");
+      !== manifest.pnpm_store_snapshot_inventory_digest
+    || !isAbsolute(candidateRoot ?? "")
+  ) fail("completed candidate container authority binding is stale or invalid");
+}
+
+export function verifyCompletedCandidateContainerAuthoritySource({
+  candidateRoot,
+  containerCandidateRoot,
+  containerAuthorityPath,
+  manifest,
+} = {}) {
+  if (
+    !isAbsolute(containerCandidateRoot ?? "") || resolve(containerCandidateRoot) !== containerCandidateRoot
+    || !isAbsolute(containerAuthorityPath ?? "") || resolve(containerAuthorityPath) !== containerAuthorityPath
+  ) fail("completed candidate container authority paths must be absolute and canonical");
+  const authoritySourcePath = completedCandidateContainerAuthoritySourcePath(candidateRoot);
+  const authority = validateCompletedCandidateContainerAuthority(readSealedAuthorityFile(
+    dirname(authoritySourcePath),
+    authoritySourcePath,
+    "completed candidate container authority source",
+  ));
+  assertContainerAuthorityBindings(authority, {
+    candidateRoot,
+    authoritySourcePath,
+    containerCandidateRoot,
+    containerAuthorityPath,
+    manifest,
+  });
+  return Object.freeze({ authority, authority_path: authoritySourcePath });
+}
+
+export function issueCompletedCandidateContainerAuthority({
+  candidateRoot,
+  containerCandidateRoot,
+  containerAuthorityPath,
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  if (
+    !isAbsolute(containerCandidateRoot ?? "") || resolve(containerCandidateRoot) !== containerCandidateRoot
+    || !isAbsolute(containerAuthorityPath ?? "") || resolve(containerAuthorityPath) !== containerAuthorityPath
+  ) fail("completed candidate container authority paths must be absolute and canonical");
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  const authorityRoot = completedCandidateContainerAuthorityRoot(candidateRoot);
+  const authoritySourcePath = completedCandidateContainerAuthoritySourcePath(candidateRoot);
+  try {
+    mkdirSync(authorityRoot, { mode: 0o700 });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "EEXIST") {
+      fail("completed candidate container authority create-only collision");
+    }
+    throw error;
+  }
+  const stable = verifyCompletedCandidatePhysicalStability(candidateRoot, {
+    afterPnpmStoreFileOpen,
+  });
+  const unsigned = {
+    schema: "homecook.local-mac-production-rehearsal-candidate-container-authority.v1",
+    authority_source_path_digest: sha256Jcs(authoritySourcePath),
+    container_candidate_root_path_digest: sha256Jcs(containerCandidateRoot),
+    container_authority_path_digest: sha256Jcs(containerAuthorityPath),
+    candidate_identity_digest: stable.manifest.candidate_identity_digest,
+    manifest_digest: stable.manifest.manifest_digest,
+    bundle_manifest_digest: stable.manifest.bundle_manifest_digest,
+    sealed_bundle_digest: stable.manifest.sealed_bundle_digest,
+    pnpm_store_snapshot_inventory_digest: stable.manifest.pnpm_store_snapshot_inventory_digest,
+  };
+  const authority = Object.freeze({ ...unsigned, authority_digest: sha256Jcs(unsigned) });
+  try {
+    writeFileSync(authoritySourcePath, canonicalizeJcs(authority), { flag: "wx", mode: 0o400 });
+    chmodSync(authorityRoot, 0o500);
+  } catch (error) {
+    fail(`completed candidate container authority issuance failed: ${error?.message ?? error?.code ?? "unknown"}`);
+  }
+  verifyCompletedCandidateContainerAuthoritySource({
+    candidateRoot,
+    containerCandidateRoot,
+    containerAuthorityPath,
+    manifest: stable.manifest,
+  });
+  return Object.freeze({
+    authority,
+    authority_path: authoritySourcePath,
+    candidate: stable,
+  });
+}
+
+export function readCompletedCandidateContainerRoot(root, {
+  containerAuthorityPath,
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  if (
+    !isAbsolute(containerAuthorityPath ?? "")
+    || resolve(containerAuthorityPath) !== containerAuthorityPath
+  ) fail("completed candidate container authority path must be absolute and canonical");
+  const authority = validateCompletedCandidateContainerAuthority(readSealedAuthorityFile(
+    dirname(containerAuthorityPath),
+    containerAuthorityPath,
+    "completed candidate container authority",
+  ));
+  const portable = readCompletedCandidatePortableRootWithIdentity(root, {
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: true,
+  });
+  assertContainerAuthorityBindings(authority, {
+    candidateRoot: root,
+    containerCandidateRoot: root,
+    containerAuthorityPath,
+    manifest: portable.manifest,
+  });
   return Object.freeze({
     complete: portable.complete,
     manifest: portable.manifest,

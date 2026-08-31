@@ -17,9 +17,13 @@ import {
   sealLocalMacProductionExecutionTree,
 } from "./local-mac-production-release.mjs";
 import {
+  completedCandidateContainerAuthorityRoot,
+  issueCompletedCandidateContainerAuthority,
   issueCompletedCandidatePhysicalAuthority,
   readCompletedCandidateRoot,
   readSealedAuthorityFile,
+  verifyCompletedCandidateContainerAuthoritySource,
+  verifyCompletedCandidatePhysicalStability,
 } from "./local-mac-production-rehearsal-candidate.mjs";
 import { readVerifiedMigrationInputs } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
@@ -630,25 +634,35 @@ function stageVerifiedCandidate({
   readCandidate,
   candidateBefore,
   afterCandidateCopy = null,
+  afterPnpmStoreFileOpen = null,
 }) {
   const executionRoot = join(runRoot, "execution-candidate");
   copyLocalMacProductionExecutionTree(sourceRoot, executionRoot);
   afterCandidateCopy?.({ executionRoot });
   sealLocalMacProductionExecutionTree(executionRoot);
   let physicalAuthorityPath = null;
+  let containerAuthorityRoot = null;
   let stagedCandidate;
   if (readCandidate === readCompletedCandidateRoot) {
     physicalAuthorityPath = join(runRoot, "execution-candidate.physical-authority.json");
     issueCompletedCandidatePhysicalAuthority({
       candidateRoot: executionRoot,
       authorityPath: physicalAuthorityPath,
+      afterPnpmStoreFileOpen,
     });
-    stagedCandidate = readCandidate(executionRoot, { physicalAuthorityPath });
+    const containerAuthority = issueCompletedCandidateContainerAuthority({
+      candidateRoot: executionRoot,
+      containerCandidateRoot: "/sealed-candidate",
+      containerAuthorityPath: "/sealed-candidate-authority/authority.json",
+      afterPnpmStoreFileOpen,
+    });
+    containerAuthorityRoot = dirname(containerAuthority.authority_path);
+    stagedCandidate = containerAuthority.candidate;
   } else {
     stagedCandidate = readCandidate(executionRoot);
   }
   verifyCandidateStable(candidateBefore, stagedCandidate);
-  return Object.freeze({ executionRoot, physicalAuthorityPath, stagedCandidate });
+  return Object.freeze({ executionRoot, physicalAuthorityPath, containerAuthorityRoot, stagedCandidate });
 }
 
 function validateProductionSnapshot(value, label) {
@@ -1182,12 +1196,15 @@ export async function runIsolatedReleaseRehearsal({
   now = () => new Date(),
   signal = /** @type {AbortSignal | null} */ (null),
   afterCandidateCopy = /** @type {null|((entry:{executionRoot:string})=>void)} */ (null),
+  afterCandidatePnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
 }) {
   const sourceCandidateRoot = resolveCompletedCandidateInput(candidateInput);
   const canonicalNamespaceRoot = assertPrivateNamespaceRoot(namespaceRoot);
   if (typeof readCandidate !== "function" || !adapters) fail("runner dependencies are incomplete");
   validateRunnerIdentity(runnerIdentity);
-  const sourceCandidate = readCandidate(sourceCandidateRoot);
+  const sourceCandidate = readCandidate(sourceCandidateRoot, {
+    afterPnpmStoreFileOpen: afterCandidatePnpmStoreFileOpen,
+  });
   let candidateBefore = sourceCandidate;
   const manifest = candidateBefore.manifest;
   requireSha(manifest.release_sha, "candidate release_sha");
@@ -1212,6 +1229,7 @@ export async function runIsolatedReleaseRehearsal({
   let stableRunRootIdentity = null;
   let stableExecutionRootIdentity = null;
   let executionPhysicalAuthorityPath = null;
+  let executionContainerAuthorityRoot = null;
 
   const checkAbort = () => {
     if (signal?.aborted) throw new Error(`rehearsal interrupted by signal: ${signal.reason ?? "aborted"}`);
@@ -1222,7 +1240,21 @@ export async function runIsolatedReleaseRehearsal({
     assertDirectoryIdentity(candidateRoot, stableExecutionRootIdentity, "execution candidate root");
     const current = executionPhysicalAuthorityPath === null
       ? readCandidate(candidateRoot)
-      : readCandidate(candidateRoot, { physicalAuthorityPath: executionPhysicalAuthorityPath });
+      : verifyCompletedCandidatePhysicalStability(candidateRoot, {
+        physicalAuthorityPath: executionPhysicalAuthorityPath,
+        afterPnpmStoreFileOpen: afterCandidatePnpmStoreFileOpen,
+      });
+    if (executionContainerAuthorityRoot !== null) {
+      if (executionContainerAuthorityRoot !== completedCandidateContainerAuthorityRoot(candidateRoot)) {
+        fail("execution candidate container authority root is not canonical");
+      }
+      verifyCompletedCandidateContainerAuthoritySource({
+        candidateRoot,
+        containerCandidateRoot: "/sealed-candidate",
+        containerAuthorityPath: "/sealed-candidate-authority/authority.json",
+        manifest: current.manifest,
+      });
+    }
     verifyCandidateStable(candidateBefore, current);
   };
   const cleanup = async () => {
@@ -1276,10 +1308,12 @@ export async function runIsolatedReleaseRehearsal({
       readCandidate,
       candidateBefore: sourceCandidate,
       afterCandidateCopy,
+      afterPnpmStoreFileOpen: afterCandidatePnpmStoreFileOpen,
     });
     candidateRoot = staged.executionRoot;
     candidateBefore = staged.stagedCandidate;
     executionPhysicalAuthorityPath = staged.physicalAuthorityPath;
+    executionContainerAuthorityRoot = staged.containerAuthorityRoot;
     mkdirSync(join(reservation.runRoot, "runtime-state"), { mode: 0o700 });
     stableRunRootIdentity = directoryIdentity(lstatSync(reservation.runRoot, { bigint: true }));
     stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
@@ -1301,7 +1335,15 @@ export async function runIsolatedReleaseRehearsal({
     await adapters.assertImagesLocal({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     verifyStableExecution();
     checkAbort();
-    ownedResources = await adapters.createResources({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal, independentObserver: adapters.independentObserver });
+    ownedResources = await adapters.createResources({
+      manifest,
+      candidateRoot,
+      candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
+      namespace,
+      runRoot: reservation.runRoot,
+      signal,
+      independentObserver: adapters.independentObserver,
+    });
     if (!Array.isArray(ownedResources)) fail("created resource inventory is invalid");
     verifyStableExecution();
     checkAbort();
@@ -1327,7 +1369,15 @@ export async function runIsolatedReleaseRehearsal({
     if (typeof adapters.prepareYoutubeWorkerSyntheticFixture !== "function") fail("worker synthetic fixture adapter is required");
     await adapters.prepareYoutubeWorkerSyntheticFixture({ manifest, namespace, migration, fixtures, signal });
     checkAbort();
-    runtimeEntries = await adapters.startComponents({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, migration, signal });
+    runtimeEntries = await adapters.startComponents({
+      manifest,
+      candidateRoot,
+      candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
+      namespace,
+      runRoot: reservation.runRoot,
+      migration,
+      signal,
+    });
     runtimeEntries = validateRuntimeIdentities(runtimeEntries, manifest);
     verifyStableExecution();
     const readiness = await adapters.waitForReadiness({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, signal });
