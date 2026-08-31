@@ -142,5 +142,5 @@
     "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
     "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
   ],
-  "notes": "Stage 1 contract PR #1477 and Stage 2 backend PR #1478 are merged. Stage 3 code/security review, Stage 4 frontend code review, and public Stage 5 authority review are complete with Findings 0. The Stage 4 frontend PR/current-head CI and fresh final authority remain pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
+  "notes": "Stage 1 contract PR #1477 and Stage 2 backend PR #1478 are merged. Stage 3 code/security review, Stage 4 frontend code review, and public Stage 5 authority review are complete with Findings 0. Stage 4 frontend PR #1479 current-head CI and fresh final authority remain pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
 }
