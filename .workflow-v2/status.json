@@ -1838,25 +1838,32 @@
     {
       "id": "marketing-demand-validation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-marketing-demand-validation",
-      "pr_path": "https://github.com/netsus/homecook/pull/1478",
+      "branch": "feature/fe-marketing-demand-validation",
+      "pr_path": "https://github.com/netsus/homecook/pull/1479",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=feature/be-marketing-demand-validation pnpm validate:workpack",
+        "BRANCH_NAME=feature/fe-marketing-demand-validation pnpm validate:workpack",
         "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
         "pnpm validate:omo-bookkeeping",
-        "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts tests/supabase-server.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-supabase-static-gate.test.ts",
+        "pnpm qa:eval -- --checklist ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json --report ui/designs/evidence/marketing-demand-validation/exploratory-report.json --fail-under 90",
+        "pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
+        "pnpm exec vitest run tests/playwright-workflow.test.ts",
         "pnpm typecheck",
         "pnpm lint",
         "pnpm build",
-        "pnpm verify:security-functions:isolated",
+        "pnpm test:e2e:marketing",
+        "pnpm test:e2e:marketing:a11y",
+        "pnpm test:e2e:marketing:visual",
+        "pnpm test:lighthouse:marketing:run",
         "git diff --check"
       ],
-      "notes": "Stage 1 PR #1477 is merged. Stage 2 backend and fresh Stage 3 code/security review completed with APPROVE/FINDINGS_COUNT:0. Current-head backend PR checks and isolated migration verification remain pending; Manual Only production lead blockers stay fail-closed."
+      "notes": "Stage 1 PR #1477 and Stage 2 backend PR #1478 are merged. Stage 3 code/security review, Stage 4 frontend code review, and public Stage 5 authority review completed with Findings 0. Frontend PR #1479 current-head CI and fresh final authority remain pending; Manual Only production lead blockers stay fail-closed."
     },
     {
       "id": "auth-provider-memory-linking",

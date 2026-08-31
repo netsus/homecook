@@ -45,6 +45,11 @@ describe("playwright workflow", () => {
     expect(workflow).toContain("pnpm test:e2e:regression");
     expect(workflow).toContain("pnpm test:e2e:regression:ci");
     expect(workflow).toContain("pnpm test:lighthouse:run");
+    expect(workflow).toContain("pnpm test:lighthouse:marketing:run");
+    expect(workflow).toContain(".lighthouseci-marketing");
+    expect(packageJson.scripts["test:lighthouse:marketing:run"]).toContain(
+      "lighthouserc.marketing.js",
+    );
     expect(ciRegression).toContain("--project=desktop-chrome");
     expect(ciRegression).toContain("--project=mobile-chrome");
     expect(ciRegression).not.toContain("--project=mobile-ios-small");

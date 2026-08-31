@@ -10,12 +10,17 @@
 
 > evidence:
 > - locked ad reference: `ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png`
-> - mobile default runtime: `ui/designs/evidence/marketing-demand-validation/pending-mobile-390.png`
-> - mobile narrow runtime: `ui/designs/evidence/marketing-demand-validation/pending-mobile-320.png`
-> - desktop runtime: `ui/designs/evidence/marketing-demand-validation/pending-desktop-1280.png`
+> - mobile default runtime: `ui/designs/evidence/marketing-demand-validation/beta-hero-390.png`
+> - mobile narrow runtime: `ui/designs/evidence/marketing-demand-validation/beta-hero-320.png`
+> - desktop runtime: `ui/designs/evidence/marketing-demand-validation/beta-hero-1280.png`
 > - state set: `ui/designs/evidence/marketing-demand-validation/pending-state-manifest.json`
+> - quiz flow runtime: `ui/designs/evidence/marketing-demand-validation/beta-quiz-390.png`
+> - result runtime: `ui/designs/evidence/marketing-demand-validation/beta-result-390.png`
+> - email runtime: `ui/designs/evidence/marketing-demand-validation/beta-email-390.png`
+> - follow-up runtime: `ui/designs/evidence/marketing-demand-validation/beta-followup-390.png`
+> - fail-closed runtime: `ui/designs/evidence/marketing-demand-validation/beta-turnstile-fail-closed-390.png`
 
-The `pending-*` runtime paths are required placeholders, not completion evidence. They must exist and replace this note before `pass` or `confirmed` is allowed.
+Runtime evidence now exists for Stage 4 and public Stage 5 returned `APPROVE / FINDINGS_COUNT: 0`. This report stays `hold` only until the fresh final-owner authority review runs.
 
 ## authority_precheck
 
@@ -28,8 +33,8 @@ The `pending-*` runtime paths are required placeholders, not completion evidence
 
 ### Why this is hold
 
-This skeleton has the correct shape, but it does not yet include runtime screenshots for the actual /beta surface.
-The selected ad evidence is fixed and immutable, yet the authority review still needs:
+Stage 4 runtime screenshots now exist for the actual /beta surface.
+The selected ad evidence is fixed and immutable, and the remaining authority work is:
 
 - mobile default screenshot
 - 320px narrow screenshot
@@ -54,11 +59,11 @@ The selected ad evidence is fixed and immutable, yet the authority review still 
 
 | axis | status | note |
 |---|---|---|
-| mobile UX | pending | Needs rendered 390px and 320px evidence |
-| interaction clarity | pending | Needs the quiz/result/email state stack rendered |
-| visual hierarchy | pending | Needs proof that the crop does not overpower the CTA or push quiz entry below the fold |
-| color/material fit | pending | Needs runtime confirmation that the utilitarian blue/white palette reads cleanly |
-| familiar app pattern fit | pending | Needs a real /beta render, not just the wireframe |
+| mobile UX | ready-for-review | 390px and 320px runtime evidence captured |
+| interaction clarity | ready-for-review | quiz/result/email/follow-up stack rendered |
+| visual hierarchy | ready-for-review | crop stays phone-only and CTA remains above the fold |
+| color/material fit | ready-for-review | runtime screenshots and a11y color-contrast pass captured |
+| familiar app pattern fit | ready-for-review | rendered /beta evidence now exists for review |
 
 ## public Stage 5
 
@@ -81,17 +86,28 @@ It should compare the rendered landing against the locked creative, the copy con
 
 ### Stage 5 evidence placeholders
 
-- `ui/designs/evidence/marketing-demand-validation/<pending>-mobile.png`
-- `ui/designs/evidence/marketing-demand-validation/<pending>-mobile-narrow.png`
-- `ui/designs/evidence/marketing-demand-validation/pending-desktop-1280.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-hero-390.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-hero-320.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-hero-1280.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-quiz-390.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-result-390.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-email-390.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-followup-390.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-followup-scrolled-390.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-followup-end-390.png`
+- `ui/designs/evidence/marketing-demand-validation/beta-turnstile-fail-closed-390.png`
 
-### Stage 5 outcome slot
+### Stage 5 outcome
 
-- verdict: `pending`
-- blocker count: `TBD`
-- major count: `TBD`
-- minor count: `TBD`
-- Stage 5 confirmed 가능 여부: `TBD`
+- decision: `APPROVE`
+- findings count: `0`
+- verdict: `pass`
+- blocker count: `0`
+- major count: `0`
+- minor count: `0`
+- Stage 5 confirmed 가능 여부: `가능`
+- 한 줄 요약: Hero부터 follow-up까지 모바일 퍼널의 위계, 단계 이동, result-before-email, 대칭 intent, fail-closed 복구, 390px viewport에서 검증한 최대 높이 320px follow-up containment와 localized scroll affordance가 계약과 일치한다.
+- next gate: authority-required slice이므로 `Design Status: confirmed` 반영은 fresh `final_authority_gate` 통과 후 수행한다.
 
 ## final_authority_gate — fresh Codex task only
 
@@ -116,7 +132,7 @@ It must be read after Stage 5, not before it.
 - major count: `TBD`
 - minor count: `TBD`
 - confirmed: `no`
-- Design Status projection: `temporary`
+- Design Status projection: `pending-review`
 
 ### Closeout note
 

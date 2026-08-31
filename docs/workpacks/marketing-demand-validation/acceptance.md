@@ -8,10 +8,10 @@
 
 ## Happy Path
 
-- [ ] 광고 클릭 뒤 `/beta`에서 Hero, 퀴즈, 결과, concept, intent, email, followup이 같은 메시지 흐름으로 이어진다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] 결과와 해결 아이디어가 이메일 전에 공개된다 <!-- omo:id=accept-result-before-email;stage=4;scope=frontend;review=5,6 -->
+- [x] 광고 클릭 뒤 `/beta`에서 Hero, 퀴즈, 결과, concept, intent, email, followup이 같은 메시지 흐름으로 이어진다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 결과와 해결 아이디어가 이메일 전에 공개된다 <!-- omo:id=accept-result-before-email;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
@@ -43,12 +43,12 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다. 역순 action과 fail-closed readiness는 409/503로 막는다 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 보호 액션이 없더라도 session 복귀 / retry 흐름이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] session cookie만 남고 로컬 결과가 없을 때 복구 안내 empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized는 N/A다. `/beta`와 validation route는 로그인 없는 public funnel이며 사용자 소유 리소스를 읽거나 수정하지 않는다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다. 역순 action은 409 후 server-state 재동기화하고 fail-closed readiness는 503과 재시도 안내로 막는다 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 보호 액션이 없더라도 session 복귀 / retry 흐름이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -83,8 +83,8 @@
 
 ### Playwright
 
-- [ ] 실제 사용자 흐름, 라우팅, modal-like stepper, 권한 게이트가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] 실제 사용자 흐름, 라우팅, modal-like stepper, 권한 게이트가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 

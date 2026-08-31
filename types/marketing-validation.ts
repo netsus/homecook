@@ -37,6 +37,44 @@ export type MarketingValidationPlannerPriority =
   | "plan_record_switch"
   | "not_interested";
 
+export type MarketingValidationRequestBody =
+  | {
+      action: "view";
+      honeypot: "";
+      utm_campaign?: string | null;
+      utm_content?: string | null;
+      utm_medium?: string | null;
+      utm_source?: string | null;
+      utm_term?: string | null;
+    }
+  | {
+      action: "quiz_started" | "solution_viewed";
+      honeypot: "";
+    }
+  | {
+      action: "quiz_completed";
+      answers: MarketingValidationQuizAnswers;
+      honeypot: "";
+    }
+  | {
+      action: "intent_selected";
+      honeypot: "";
+      intent_choice: MarketingValidationIntentChoice;
+    }
+  | {
+      action: "lead_submitted";
+      consent: true;
+      email: string;
+      honeypot: "";
+      turnstile_token: string;
+    }
+  | {
+      action: "followup_submitted";
+      honeypot: "";
+      planner_intent?: MarketingValidationPlannerIntent | null;
+      planner_priority?: MarketingValidationPlannerPriority | null;
+    };
+
 export interface MarketingValidationQuizAnswers {
   q1: string;
   q2: string;

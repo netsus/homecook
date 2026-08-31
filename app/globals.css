@@ -13828,3 +13828,587 @@ button {
     padding: 48px;
   }
 }
+/* marketing-demand-validation */
+.marketing-beta-root {
+  --marketing-beta-accent: #0a5bd8;
+  --marketing-beta-accent-soft: rgba(15, 111, 255, 0.1);
+  --marketing-beta-border: rgba(15, 23, 42, 0.12);
+  --marketing-beta-ink: #09101f;
+  --marketing-beta-muted: #516076;
+  --marketing-beta-surface: rgba(255, 255, 255, 0.96);
+  --marketing-beta-surface-soft: rgba(248, 251, 255, 0.96);
+  background:
+    radial-gradient(circle at top, rgba(15, 111, 255, 0.12), transparent 28rem),
+    linear-gradient(180deg, #f7faff 0%, #ffffff 36%, #f4f8ff 100%);
+  color: var(--marketing-beta-ink);
+  min-height: 100vh;
+}
+
+.marketing-beta-page {
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 32px 0 72px;
+}
+
+.marketing-beta-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.marketing-beta-hero,
+.marketing-beta-panel,
+.marketing-beta-status-card {
+  backdrop-filter: blur(18px);
+  background: var(--marketing-beta-surface);
+  border: 1px solid var(--marketing-beta-border);
+  border-radius: 32px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.08);
+}
+
+.marketing-beta-hero {
+  display: grid;
+  gap: 24px;
+  overflow: hidden;
+  padding: 24px;
+}
+
+.marketing-beta-hero-header {
+  align-items: center;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.marketing-beta-badge {
+  background: #eef4ff;
+  border: 1px solid rgba(15, 111, 255, 0.18);
+  border-radius: 999px;
+  color: var(--marketing-beta-accent);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  text-transform: uppercase;
+}
+
+.marketing-beta-wordmark {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.marketing-beta-hero-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.marketing-beta-hero-copy {
+  display: grid;
+  gap: 14px;
+}
+
+.marketing-beta-kicker {
+  color: var(--marketing-beta-accent);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.marketing-beta-headline {
+  font-size: clamp(2rem, 5vw, 3.7rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+.marketing-beta-keep-all {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.marketing-beta-body {
+  color: var(--marketing-beta-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0;
+  max-width: 34rem;
+}
+
+.marketing-beta-hero-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.marketing-beta-primary-button,
+.marketing-beta-secondary-button,
+.marketing-beta-ghost-button,
+.marketing-beta-next-button {
+  align-items: center;
+  border-radius: 18px;
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.marketing-beta-primary-button,
+.marketing-beta-next-button {
+  background: var(--marketing-beta-accent);
+  color: white;
+}
+
+.marketing-beta-secondary-button {
+  background: white;
+  color: var(--marketing-beta-ink);
+}
+
+.marketing-beta-ghost-button {
+  background: transparent;
+  border: 1px solid var(--marketing-beta-border);
+  color: var(--marketing-beta-ink);
+}
+
+.marketing-beta-hero-meta {
+  align-items: center;
+  color: var(--marketing-beta-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.marketing-beta-privacy-link {
+  color: var(--marketing-beta-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.marketing-beta-proof-rail {
+  display: grid;
+  gap: 10px;
+}
+
+.marketing-beta-proof-label {
+  color: var(--marketing-beta-muted);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.marketing-beta-proof-frame,
+.marketing-beta-proof-frame-small {
+  background:
+    linear-gradient(180deg, rgba(237, 244, 255, 0.92), rgba(255, 255, 255, 0.98));
+  border: 1px solid rgba(15, 111, 255, 0.12);
+  border-radius: 28px;
+  overflow: hidden;
+  position: relative;
+}
+
+.marketing-beta-proof-frame {
+  height: 204px;
+}
+
+.marketing-beta-proof-frame-small {
+  height: 144px;
+}
+
+.marketing-beta-proof-image {
+  height: 100%;
+  object-fit: cover;
+  object-position: center 48%;
+  transform: scale(1.22);
+  width: 100%;
+}
+
+.marketing-beta-panel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.marketing-beta-stage-section {
+  scroll-margin-top: 20px;
+}
+
+.marketing-beta-stage-heading {
+  scroll-margin-top: 20px;
+}
+
+.marketing-beta-stage-heading:focus-visible {
+  border-radius: 8px;
+  outline: 3px solid rgba(15, 111, 255, 0.3);
+  outline-offset: 4px;
+}
+
+.marketing-beta-panel-header {
+  display: grid;
+  gap: 8px;
+}
+
+.marketing-beta-panel-eyebrow {
+  color: var(--marketing-beta-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.marketing-beta-panel-title {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.marketing-beta-panel-body {
+  color: var(--marketing-beta-muted);
+  font-size: 0.97rem;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.marketing-beta-quiz-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.marketing-beta-progress-pill {
+  background: var(--marketing-beta-accent-soft);
+  border-radius: 999px;
+  color: var(--marketing-beta-accent);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.marketing-beta-choice-list {
+  display: grid;
+  gap: 12px;
+}
+
+.marketing-beta-choice {
+  border: 1px solid var(--marketing-beta-border);
+  border-radius: 20px;
+  display: grid;
+  gap: 10px;
+  min-height: 44px;
+  padding: 14px 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.marketing-beta-choice-active {
+  border-color: rgba(15, 111, 255, 0.45);
+  box-shadow: 0 0 0 4px rgba(15, 111, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.marketing-beta-choice-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.marketing-beta-choice-control {
+  accent-color: var(--marketing-beta-accent);
+  height: 20px;
+  width: 20px;
+}
+
+.marketing-beta-choice-text {
+  color: var(--marketing-beta-ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.marketing-beta-followup {
+  gap: 8px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: 320px;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.marketing-beta-followup .marketing-beta-panel-header {
+  gap: 2px;
+}
+
+.marketing-beta-followup .marketing-beta-panel-title {
+  font-size: 1.22rem;
+}
+
+.marketing-beta-followup .marketing-beta-panel-body {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.marketing-beta-followup-scroll-shell {
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.marketing-beta-followup-questions {
+  -webkit-overflow-scrolling: touch;
+  display: grid;
+  gap: 18px;
+  height: 100%;
+  min-height: 0;
+  overflow-anchor: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 6px 28px 0;
+  scrollbar-gutter: stable;
+}
+
+.marketing-beta-followup-scroll-cue {
+  align-items: center;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.82), #ffffff 34%);
+  border: 1px solid rgba(15, 111, 255, 0.2);
+  border-radius: 999px;
+  bottom: 4px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  color: var(--marketing-beta-accent);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  min-height: 24px;
+  padding: 3px 8px;
+  pointer-events: none;
+  position: absolute;
+  right: 8px;
+  z-index: 2;
+}
+
+.marketing-beta-followup-questions:focus-visible {
+  border-radius: 12px;
+  outline: 3px solid rgba(15, 111, 255, 0.24);
+  outline-offset: 2px;
+}
+
+.marketing-beta-followup .marketing-beta-choice-list {
+  gap: 4px;
+}
+
+.marketing-beta-followup .marketing-beta-choice {
+  border-radius: 16px;
+  padding: 10px 12px;
+}
+
+.marketing-beta-followup-fieldset {
+  border: 0;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.marketing-beta-followup-legend {
+  color: var(--marketing-beta-ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+  padding: 0;
+}
+
+.marketing-beta-quiz-actions,
+.marketing-beta-email-actions,
+.marketing-beta-followup-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.marketing-beta-followup-actions {
+  background: var(--marketing-beta-surface);
+  border-top: 1px solid var(--marketing-beta-border);
+  flex-wrap: nowrap;
+  padding-top: 8px;
+}
+
+.marketing-beta-result-accent {
+  color: var(--marketing-beta-accent);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.marketing-beta-concept-line {
+  background: var(--marketing-beta-surface-soft);
+  border: 1px solid rgba(15, 111, 255, 0.12);
+  border-radius: 20px;
+  color: var(--marketing-beta-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.55;
+  margin: 0;
+  padding: 16px;
+}
+
+.marketing-beta-equal-buttons {
+  display: grid;
+  gap: 12px;
+}
+
+.marketing-beta-status-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+}
+
+.marketing-beta-status-text {
+  color: var(--marketing-beta-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.marketing-beta-status-live {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.marketing-beta-status-alert {
+  background: #fff5f5;
+  border: 1px solid rgba(220, 38, 38, 0.14);
+  color: #b42318;
+}
+
+.marketing-beta-field-group {
+  display: grid;
+  gap: 10px;
+}
+
+.marketing-beta-label {
+  color: var(--marketing-beta-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.marketing-beta-input {
+  background: white;
+  border: 1px solid var(--marketing-beta-border);
+  border-radius: 18px;
+  color: var(--marketing-beta-ink);
+  font-size: 16px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.marketing-beta-helper {
+  color: var(--marketing-beta-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.marketing-beta-checkbox-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
+.marketing-beta-checkbox {
+  accent-color: var(--marketing-beta-accent);
+  flex: 0 0 auto;
+  height: 20px;
+  margin-top: 2px;
+  width: 20px;
+}
+
+.marketing-beta-checkbox-label {
+  color: var(--marketing-beta-ink);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.marketing-beta-done {
+  background: linear-gradient(180deg, rgba(15, 111, 255, 0.08), rgba(255, 255, 255, 0.98));
+}
+
+@media (min-width: 720px) {
+  .marketing-beta-equal-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .marketing-beta-hero {
+    padding: 28px;
+  }
+
+  .marketing-beta-hero-grid {
+    align-items: start;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  }
+
+  .marketing-beta-proof-frame {
+    height: 224px;
+  }
+
+  .marketing-beta-proof-frame-small {
+    height: 144px;
+    opacity: 0.94;
+  }
+}
+
+@media (max-width: 389px) {
+  .marketing-beta-page {
+    padding-top: 20px;
+  }
+
+  .marketing-beta-hero,
+  .marketing-beta-panel {
+    border-radius: 24px;
+    padding: 18px;
+  }
+
+  .marketing-beta-proof-frame {
+    height: 156px;
+  }
+
+  .marketing-beta-proof-frame-small {
+    height: 132px;
+  }
+
+  .marketing-beta-followup {
+    padding: 16px;
+  }
+
+  .marketing-beta-headline {
+    font-size: 1.82rem;
+    line-height: 1.08;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-beta-choice,
+  .marketing-beta-proof-image {
+    transition: none;
+    transform: none;
+  }
+}

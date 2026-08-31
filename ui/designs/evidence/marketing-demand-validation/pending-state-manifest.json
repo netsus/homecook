@@ -1,0 +1,56 @@
+{
+  "captured_at": "2026-08-31T02:54:59.468Z",
+  "captures": [
+    {
+      "file": "beta-hero-390.png",
+      "note": "hero",
+      "viewport": "390x844"
+    },
+    {
+      "file": "beta-hero-320.png",
+      "note": "hero",
+      "viewport": "320x693"
+    },
+    {
+      "file": "beta-hero-1280.png",
+      "note": "hero",
+      "viewport": "1280x900"
+    },
+    {
+      "file": "beta-quiz-390.png",
+      "note": "quiz-flow",
+      "viewport": "390x844"
+    },
+    {
+      "file": "beta-result-390.png",
+      "note": "result-flow",
+      "viewport": "390x844"
+    },
+    {
+      "file": "beta-email-390.png",
+      "note": "email-flow",
+      "viewport": "390x844"
+    },
+    {
+      "file": "beta-followup-390.png",
+      "note": "followup-flow",
+      "viewport": "390x844"
+    },
+    {
+      "file": "beta-followup-scrolled-390.png",
+      "note": "followup-flow-scrolled",
+      "viewport": "390x844"
+    },
+    {
+      "file": "beta-followup-end-390.png",
+      "note": "followup-flow-end",
+      "viewport": "390x844"
+    },
+    {
+      "file": "beta-turnstile-fail-closed-390.png",
+      "note": "turnstile-fail-closed",
+      "viewport": "390x844"
+    }
+  ],
+  "generated_by": "tests/e2e/slice-marketing-demand-validation.spec.ts"
+}

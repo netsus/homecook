@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "marketing-demand-validation",
+  "generatedAt": "2026-08-31T13:25:00+09:00",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": ["desktop-chrome", "mobile-chrome", "mobile-ios-small"],
+  "summary": "The /beta demand-validation landing was explored across desktop, 390px mobile, and 320px narrow mobile after deterministic gates passed. The review covered ad-to-landing message match, the five-question result-before-email funnel, the neutral negative branch, fail-closed lead recovery, active-stage focus handoff, named follow-up radio groups, and the max-height 320px localized follow-up panel at the captured 390px viewport across start, middle, and end states. Independent frontend review and public design authority both returned Findings 0.",
+  "findings": [],
+  "remainingRisks": [
+    "Production email capture and paid ads remain disabled until operator privacy facts, production Turnstile keys and hostname, allowed origin, edge rate-limit evidence, and explicit readiness approval exist.",
+    "A fresh final authority review and Stage 6 closeout remain after the Stage 4 frontend merge."
+  ],
+  "evidence": [
+    "ui/designs/evidence/marketing-demand-validation/beta-hero-1280.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-hero-390.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-hero-320.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-quiz-390.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-result-390.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-email-390.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-followup-390.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-followup-scrolled-390.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-followup-end-390.png",
+    "ui/designs/evidence/marketing-demand-validation/beta-turnstile-fail-closed-390.png",
+    "ui/designs/authority/MARKETING_DEMAND_VALIDATION-authority.md"
+  ],
+  "checks": [
+    "focused Vitest marketing suite: 34 passed",
+    "marketing Playwright flow: 10 passed, 2 skipped by project design",
+    "marketing accessibility: 3 passed",
+    "marketing visual regression: Darwin and Ubuntu platform baselines passed",
+    "deterministic mobile Lighthouse: performance/accessibility 1.0, LCP 1675-1676ms, CLS 0",
+    "frontend code review: APPROVE / FINDINGS_COUNT:0",
+    "public Stage 5 authority: APPROVE / FINDINGS_COUNT:0",
+    "visual verdict: 98 / pass / category_match=true"
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "hero-message-match",
+      "status": "covered",
+      "notes": "1280, 390, and 320 evidence shows the locked campaign copy, primary CTA, privacy link, and phone-only proof without reproducing the full poster.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "quiz-result-before-email",
+      "status": "covered",
+      "notes": "Browser flow and result/email evidence confirm five single-choice questions and result/concept exposure before email.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "intent-symmetry",
+      "status": "covered",
+      "notes": "Browser geometry locks equal intent buttons; negative branch ends without rendering the email field.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "lead-fail-closed-recovery",
+      "status": "covered",
+      "notes": "Fail-closed browser evidence preserves the result and entered email while showing a retryable error and storing no lead.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "followup-local-scroll",
+      "status": "covered",
+      "notes": "Start, middle, and end screenshots at the 390px viewport show the max-height 320px panel, fixed skip/complete actions, visible more cue, second question, and cue removal at the end.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "stage-focus-accessibility",
+      "status": "covered",
+      "notes": "Unit tests cover section scroll/title focus and named radio groups; axe smoke passed on all three Playwright projects.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "responsive-stability",
+      "status": "covered",
+      "notes": "Runtime evidence and current-head Ubuntu/Darwin visual checks show no horizontal overflow or layout collapse at required viewports.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "copy-and-cta-sanity",
+      "status": "covered",
+      "notes": "Independent design and code reviews found no blocker, major, minor, coercive copy, duplicate CTA, or placeholder UI issue.",
+      "linked_findings": []
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "id": "marketing-demand-validation",
   "title": "Marketing demand validation landing",
-  "summary": "/beta 수요검증 랜딩의 공식 계약과 Stage 2 백엔드 구현을 잇는다. 광고 메시지 일치, neutral result-before-email funnel, single route / single table, ordered first-write-wins, fail-closed privacy/Turnstile gates를 검증 가능한 상태로 유지한다.",
+  "summary": "/beta 수요검증 랜딩의 공식 계약, Stage 2 백엔드, Stage 4 프런트엔드 구현을 잇는다. 광고 메시지 일치, neutral result-before-email funnel, single route / single table, ordered first-write-wins, fail-closed privacy/Turnstile gates를 검증 가능한 상태로 유지한다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -69,27 +69,41 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/be-marketing-demand-validation pnpm validate:workpack",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts tests/supabase-server.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-supabase-static-gate.test.ts",
+      "pnpm qa:eval -- --checklist ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json --report ui/designs/evidence/marketing-demand-validation/exploratory-report.json --fail-under 90",
+      "pnpm validate:exploratory-qa-evidence",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
+      "pnpm exec vitest run tests/playwright-workflow.test.ts",
       "pnpm typecheck",
       "pnpm lint",
       "pnpm build",
-      "pnpm verify:security-functions:isolated",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing:run",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/be-marketing-demand-validation pnpm validate:workpack",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts tests/supabase-server.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-supabase-static-gate.test.ts",
+      "pnpm qa:eval -- --checklist ui/designs/evidence/marketing-demand-validation/exploratory-checklist.json --report ui/designs/evidence/marketing-demand-validation/exploratory-report.json --fail-under 90",
+      "pnpm validate:exploratory-qa-evidence",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
+      "pnpm exec vitest run tests/playwright-workflow.test.ts",
       "pnpm typecheck",
       "pnpm lint",
       "pnpm build",
-      "pnpm verify:security-functions:isolated",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing:run",
       "git diff --check"
     ],
     "evaluator_commands": [],
@@ -101,7 +115,10 @@
       "single-table-single-route-contract",
       "server-issued-session-cookie",
       "turnstile-fail-closed",
-      "privacy-readiness-required"
+      "privacy-readiness-required",
+      "result-before-email",
+      "followup-compact-local-scroll",
+      "marketing-route-noindex"
     ]
   },
   "status": {
@@ -109,8 +126,8 @@
     "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "passed",
-    "evaluation_round": 3,
-    "last_evaluator_result": "Fresh Stage 3 Codex code and security reviewers returned APPROVE / FINDINGS_COUNT: 0 after attribution, replay, negative-intent, Turnstile, nullable target, optional followup, migration-coherence and typed-factory repairs.",
+    "evaluation_round": 5,
+    "last_evaluator_result": "Fresh Stage 4 frontend code reviewer and public Stage 5 design authority returned APPROVE / FINDINGS_COUNT: 0 after stale-queue resync, deterministic Lighthouse, active-stage focus/scroll, compact followup, named radiogroups and start/middle/end localized-scroll evidence repairs. Fresh final authority remains pending.",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -131,5 +148,5 @@
     "ALLOWED_MARKETING_ORIGINS production value is not yet confirmed.",
     "Edge rate-limit rule evidence and MARKETING_LEAD_PROTECTION_READY production approval are not yet supplied."
   ],
-  "notes": "Stage 1 contract PR #1477 is merged. Stage 2 backend implementation and fresh Stage 3 code/security review are complete with Findings 0; current-head backend PR checks and isolated migration verification remain pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
+  "notes": "Stage 1 contract PR #1477 and Stage 2 backend PR #1478 are merged. Stage 3 code/security review, Stage 4 frontend code review, and public Stage 5 authority review are complete with Findings 0. Stage 4 frontend PR #1479 current-head CI and fresh final authority remain pending. owners.claude is a retired compatibility field and must never dispatch Claude. Manual Only production lead blockers remain fail-closed."
 }

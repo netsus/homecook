@@ -33,6 +33,10 @@ import {
   STANDALONE_COOK_MODE_VISUAL_PATH,
   YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
+import {
+  installMarketingDemandValidationRoutes,
+  MARKETING_BETA_PATH,
+} from "./helpers/marketing-demand-validation";
 
 const qaSnapshotFonts = [
   ["NotoSans-Regular.ttf", 400],
@@ -75,6 +79,8 @@ const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 5200;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
 const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
+const MARKETING_BETA_VISUAL_MAX_DIFF_PIXELS = 240;
+const MARKETING_BETA_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 1800;
 const FIXED_HOME_VISUAL_NOW = "2026-06-01T10:30:00.000Z";
 const FIXED_PLANNER_VISUAL_NOW = "2026-06-18T10:30:00.000Z";
 const FIXED_LEFTOVERS_VISUAL_NOW = "2026-06-21T10:30:00.000Z";
@@ -108,6 +114,12 @@ function homeSortVisualMaxDiffPixels(page: Page) {
     : HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS;
 }
 
+function marketingBetaVisualMaxDiffPixels(page: Page) {
+  return isMobileViewport(page)
+    ? MARKETING_BETA_VISUAL_MAX_DIFF_PIXELS
+    : MARKETING_BETA_DESKTOP_VISUAL_MAX_DIFF_PIXELS;
+}
+
 async function stabilizeVisualSnapshot(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.mouse.move(0, 0);
@@ -136,6 +148,14 @@ async function stabilizeVisualSnapshot(page: Page) {
       textarea,
       [role="dialog"] {
         font-family: "QaSnapshotSans", sans-serif !important;
+      }
+
+      @media (min-width: 1024px) {
+        .marketing-beta-root,
+        .marketing-beta-root button,
+        .marketing-beta-root input {
+          font-family: "QaSnapshotSans", sans-serif !important;
+        }
       }
 
       nextjs-portal,
@@ -290,6 +310,22 @@ test.describe("QA visual regression", () => {
     await expect(loginGate).toHaveScreenshot("qa-login-gate-modal.png", {
       animations: "disabled",
       maxDiffPixels: LOGIN_GATE_MODAL_VISUAL_MAX_DIFF_PIXELS,
+    });
+  });
+
+  test("marketing beta landing matches the visual baseline @visual-core @marketing", async ({
+    page,
+  }) => {
+    await installMarketingDemandValidationRoutes(page);
+
+    await page.goto(MARKETING_BETA_PATH);
+    await expect(page.getByRole("button", { name: "30초 식단 기록 테스트" })).toBeVisible();
+
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-marketing-beta.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: marketingBetaVisualMaxDiffPixels(page),
     });
   });
 
