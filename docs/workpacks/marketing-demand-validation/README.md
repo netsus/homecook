@@ -200,7 +200,7 @@
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [x] Stage 6 운영 closeout: 분석 SQL, lead export, retention purge, 결과 템플릿, safe artifact path와 PII-free evidence를 구현하고 검증 <!-- omo:id=delivery-stage6-operations-closeout;stage=6;scope=shared;review=6 -->
+- [x] Stage 6 운영 closeout: 분석 SQL, lead export, retention purge, 결과 템플릿, safe artifact path와 PII-free evidence를 구현하고 검증 <!-- omo:id=delivery-stage6-operations-closeout;stage=2;scope=shared;review=6 -->
 
 ## Stage 6 / Internal 6.5 Closeout Evidence `2026-08-31`
 
