@@ -65,6 +65,9 @@ import {
   verifyImmutableCandidateModuleGraph,
 } from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
 import * as candidateBootstrapModule from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
+import {
+  EXPECTED_RELEASE_CONTEXTS,
+} from "../scripts/lib/production-release-approval-policy.mjs";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -76,6 +79,37 @@ const RUN_B = "00000000-0000-4000-8000-000000000002";
 const RUN_TOOL_CHANGE = "00000000-0000-4000-8000-000000000003";
 const RUN_FAILED = "00000000-0000-4000-8000-000000000006";
 const RUN_FINALIZE_FAILED = "00000000-0000-4000-8000-000000000007";
+const CURRENT_MASTER_SHA = "5e9bf7929c762dc6371ff64ae288159ddb9dc317";
+
+const CURRENT_MASTER_CHECK_RUNS = ([
+  [99_587_894_041, "accessibility", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
+  [99_587_904_361, "build", "success", 90_563_911_120, "2026-08-31T17:58:32Z", "2026-08-31T18:01:38Z"],
+  [99_587_807_613, "changes", "success", 90_563_911_335, "2026-08-31T17:58:12Z", "2026-08-31T17:58:27Z"],
+  [99_587_808_361, "ci-scope", "success", 90_563_911_120, "2026-08-31T17:58:12Z", "2026-08-31T17:58:30Z"],
+  [99_587_934_096, "dependency-audit", "success", 90_563_911_570, "2026-08-31T17:58:39Z", "2026-08-31T17:59:08Z"],
+  [99_587_893_691, "full-regression", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
+  [99_587_893_999, "lighthouse", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
+  [99_587_808_085, "policy", "success", 90_563_911_553, "2026-08-31T17:58:13Z", "2026-08-31T17:58:41Z"],
+  [99_587_808_256, "qa-eval", "success", 90_563_911_579, "2026-08-31T17:58:13Z", "2026-08-31T17:58:43Z"],
+  [99_587_904_537, "quality", "success", 90_563_911_120, "2026-08-31T17:58:32Z", "2026-08-31T18:06:17Z"],
+  [99_587_904_357, "security-function-authorization", "success", 90_563_911_120, "2026-08-31T17:58:33Z", "2026-08-31T18:00:55Z"],
+  [99_587_808_064, "security-review-scope", "success", 90_563_911_570, "2026-08-31T17:58:13Z", "2026-08-31T17:58:36Z"],
+  [99_587_891_157, "security-smoke", "success", 90_563_911_610, "2026-08-31T17:58:30Z", "2026-08-31T18:00:21Z"],
+  [99_587_807_840, "security-smoke-scope", "success", 90_563_911_610, "2026-08-31T17:58:12Z", "2026-08-31T17:58:27Z"],
+  [99_587_894_617, "smoke", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
+  [99_587_934_200, "snyk", "success", 90_563_911_570, "2026-08-31T17:58:39Z", "2026-08-31T17:59:02Z"],
+  [99_587_894_155, "visual", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
+] as const).map(([id, name, conclusion, checkSuiteId, startedAt, completedAt]) => ({
+  id,
+  app_id: 15_368,
+  check_suite_id: checkSuiteId,
+  head_sha: CURRENT_MASTER_SHA,
+  name,
+  status: "completed",
+  conclusion,
+  started_at: startedAt,
+  completed_at: completedAt,
+}));
 
 function privateRoot(prefix = "homecook-candidate-") {
   const root = mkdtempSync(join(tmpdir(), prefix));
@@ -114,23 +148,24 @@ function validToolchain() {
 }
 
 function validCiEvidence() {
+  const checkRuns = EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
+    id: 11 + index,
+    app_id: 15_368,
+    check_suite_id: 21 + index,
+    head_sha: SHA_A,
+    name,
+    status: "completed",
+    conclusion: "success",
+    started_at: `2026-08-29T00:00:${String(index).padStart(2, "0")}Z`,
+    completed_at: `2026-08-29T00:01:${String(index).padStart(2, "0")}Z`,
+  }));
   const safeProjection = {
     repository: "netsus/homecook",
     head_sha: SHA_A,
     remote_master_sha: SHA_A,
-    check_runs: [{
-      id: 11,
-      app_id: 15368,
-      check_suite_id: 21,
-      head_sha: SHA_A,
-      name: "build",
-      status: "completed",
-      conclusion: "success",
-      started_at: "2026-08-29T00:00:00Z",
-      completed_at: "2026-08-29T00:01:00Z",
-    }],
+    check_runs: checkRuns,
     commit_statuses: [],
-    summary: { total: 1, success: 1, intended_skip: 0, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
+    summary: { total: 7, success: 7, intended_skip: 0, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
   };
   return {
     head_sha: SHA_A,
@@ -141,6 +176,28 @@ function validCiEvidence() {
     safe_projection_digest: DIGEST_C,
     safe_projection: safeProjection,
     summary: safeProjection.summary,
+  };
+}
+
+function storedCiManifest(projection: {
+  check_runs: Array<{ app_id: number, check_suite_id: number, id: number }>,
+  head_sha: string,
+  summary: Record<string, number>,
+}) {
+  return {
+    release_sha: projection.head_sha,
+    selection_digest: null,
+    ci_snapshot_digest: createHash("sha256")
+      .update(canonicalizeJcs(projection)).digest("hex"),
+    ci_check_summary_digest: createHash("sha256")
+      .update(canonicalizeJcs(projection.summary)).digest("hex"),
+    ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs(
+      projection.check_runs.map((entry) => ({
+        app_id: entry.app_id,
+        check_suite_id: entry.check_suite_id,
+        id: entry.id,
+      })),
+    )).digest("hex"),
   };
 }
 
@@ -924,28 +981,16 @@ try {
   });
 
   it("requires stable pre/post remote-master and full CI run/status identity", () => {
+    const validEvidence = validCiEvidence();
     const projection = {
-      repository: "netsus/homecook",
-      head_sha: SHA_A,
-      remote_master_sha: SHA_A,
-      check_runs: [{
-        id: 11,
-        check_suite_id: 21,
-        app_id: 15368,
-        head_sha: SHA_A,
-        name: "build",
-        status: "completed",
-        conclusion: "success",
-        started_at: "2026-08-29T00:00:00Z",
-        completed_at: "2026-08-29T00:01:00Z",
-      }],
+      ...validEvidence.safe_projection,
       commit_statuses: [{ id: 31, sha: SHA_A, context: "external", state: "success" }],
     };
     const evidence = {
       expected_head_sha: SHA_A,
       head_sha: SHA_A,
       remote_master_sha: SHA_A,
-      summary: { total: 1, success: 1, intended_skip: 0, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
+      summary: validEvidence.summary,
       summary_digest: DIGEST_A,
       suite_run_set_digest: DIGEST_B,
       safe_projection: projection,
@@ -1506,23 +1551,24 @@ try {
     }
   });
 
-  it("requires every current-head started check and status to be terminal success", () => {
+  it("accepts intended skips only when the canonical required contexts remain successful", () => {
     const valid = {
       head_sha: SHA_A,
       expected_head_sha: SHA_A,
       summary_digest: DIGEST_A,
-      summary: { total: 2, success: 2, intended_skip: 0, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
+      summary: { total: 8, success: 7, intended_skip: 1, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
     };
     expect(validateCandidateCiEvidence(valid)).toEqual(valid);
 
     for (const patch of [
       { head_sha: SHA_B },
-      { summary: { ...valid.summary, total: 2, success: 1, pending: 1 } },
-      { summary: { ...valid.summary, total: 2, success: 1, failed: 1 } },
-      { summary: { ...valid.summary, total: 2, success: 1, intended_skip: 1 } },
+      { summary: { ...valid.summary, success: 6, intended_skip: 2 } },
+      { summary: { ...valid.summary, success: 6, pending: 1 } },
+      { summary: { ...valid.summary, success: 6, failed: 1 } },
+      { summary: { ...valid.summary, rerun: 1 } },
     ]) {
       expect(() => validateCandidateCiEvidence({ ...valid, ...patch }))
-        .toThrow(/head|pending|failed|skip|terminal|success/iu);
+        .toThrow(/head|required|pending|failed|rerun|terminal|success/iu);
     }
   });
 
@@ -1755,6 +1801,137 @@ describe("release rehearsal candidate orchestration", () => {
       production_guard: candidate.production_guard,
       selection_digest: null,
     })).toThrow(/release_sha|cross.?binding|candidate|bundle/iu);
+  });
+
+  it("accepts the actual current master fixture with optional skips and unique scope contexts", async () => {
+    const projection = {
+      repository: "netsus/homecook",
+      head_sha: CURRENT_MASTER_SHA,
+      remote_master_sha: CURRENT_MASTER_SHA,
+      check_runs: structuredClone(CURRENT_MASTER_CHECK_RUNS),
+      commit_statuses: [],
+      summary: {
+        total: 17,
+        success: 12,
+        intended_skip: 5,
+        bad: 0,
+        cancelled: 0,
+        failed: 0,
+        pending: 0,
+        queued: 0,
+        rerun: 0,
+      },
+    };
+
+    expect(validateStoredCiProjection(projection, storedCiManifest(projection))).toBeUndefined();
+
+    const hardcodedAllSuccess = structuredClone(projection);
+    hardcodedAllSuccess.summary = {
+      ...hardcodedAllSuccess.summary,
+      success: 17,
+      intended_skip: 0,
+    };
+    expect(() => validateStoredCiProjection(
+      hardcodedAllSuccess,
+      storedCiManifest(hardcodedAllSuccess),
+    )).toThrow(/stored summary|canonical|recomputed|check arrays/iu);
+
+    const adapterHome = privateRoot("homecook-candidate-ci-adapter-home-");
+    const adapterRoot = privateRoot("homecook-candidate-ci-adapter-root-");
+    const rawCheckRuns = CURRENT_MASTER_CHECK_RUNS.map((entry) => ({
+      id: entry.id,
+      app: { id: entry.app_id },
+      check_suite: { id: entry.check_suite_id },
+      head_sha: entry.head_sha,
+      completed_at: entry.completed_at,
+      conclusion: entry.conclusion,
+      name: entry.name,
+      started_at: entry.started_at,
+      status: entry.status,
+    }));
+    const createCandidateAdapters = createReleaseRehearsalCandidateAdapters as unknown as (
+      options: Record<string, unknown>,
+      dependencies: Record<string, unknown>,
+    ) => {
+      collectCiEvidence: (options: { releaseSha: string }) => Promise<Record<string, unknown>>,
+    };
+    const adapters = createCandidateAdapters({
+      rootDir: adapterRoot,
+      homeDir: adapterHome,
+      builderAuthoritySha: CURRENT_MASTER_SHA,
+    }, {
+      resolveToolPaths: () => ({ ghPath: "/trusted/gh", gitPath: "/trusted/git" }),
+      runCommand: (command: string, args: string[]) => {
+        let stdout = "";
+        if (command === "/trusted/git" && args.includes("rev-parse")) {
+          stdout = `${CURRENT_MASTER_SHA}\n`;
+        } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/check-runs?"))) {
+          stdout = JSON.stringify([{ check_runs: rawCheckRuns }]);
+        } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/statuses?"))) {
+          stdout = JSON.stringify([[]]);
+        }
+        return { status: 0, signal: null, stdout, stderr: "" };
+      },
+    });
+    await expect(adapters.collectCiEvidence({ releaseSha: CURRENT_MASTER_SHA }))
+      .resolves.toMatchObject({
+        summary: projection.summary,
+        safe_projection: { summary: projection.summary },
+      });
+  });
+
+  it("rejects required skips and the old duplicate generic scope projection", () => {
+    const requiredSkipped = {
+      repository: "netsus/homecook",
+      head_sha: CURRENT_MASTER_SHA,
+      remote_master_sha: CURRENT_MASTER_SHA,
+      check_runs: structuredClone(CURRENT_MASTER_CHECK_RUNS),
+      commit_statuses: [],
+      summary: {
+        total: 17,
+        success: 11,
+        intended_skip: 6,
+        bad: 0,
+        cancelled: 0,
+        failed: 0,
+        pending: 0,
+        queued: 0,
+        rerun: 0,
+      },
+    };
+    requiredSkipped.check_runs.find((entry) => entry.name === "build")!.conclusion = "skipped";
+    expect(() => validateStoredCiProjection(
+      requiredSkipped,
+      storedCiManifest(requiredSkipped),
+    )).toThrow(/required|expected|build|success/iu);
+
+    const duplicateGenericScope = {
+      repository: "netsus/homecook",
+      head_sha: CURRENT_MASTER_SHA,
+      remote_master_sha: CURRENT_MASTER_SHA,
+      check_runs: structuredClone(CURRENT_MASTER_CHECK_RUNS).map((entry) => ({
+        ...entry,
+        name: ["ci-scope", "security-review-scope", "security-smoke-scope"].includes(entry.name)
+          ? "scope"
+          : entry.name,
+      })),
+      commit_statuses: [],
+      summary: {
+        total: 15,
+        success: 10,
+        intended_skip: 5,
+        bad: 0,
+        cancelled: 0,
+        failed: 0,
+        pending: 0,
+        queued: 0,
+        rerun: 2,
+      },
+    };
+    expect(() => validateStoredCiProjection(
+      duplicateGenericScope,
+      storedCiManifest(duplicateGenericScope),
+    )).toThrow(/rerun|fresh|duplicate|context/iu);
   });
 
   it("builds a deny-default sandbox that permits only run-owned writes and rejects production/socket access", () => {

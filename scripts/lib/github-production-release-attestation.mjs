@@ -277,6 +277,9 @@ function requireCheckSummary(value, label) {
   if (summary.total !== summary.success + summary.intended_skip) {
     throw new Error(`${label} total must equal success + intended_skip exactly.`);
   }
+  if (summary.success < EXPECTED_RELEASE_CONTEXTS.length) {
+    throw new Error(`${label} must preserve success for all expected release contexts.`);
+  }
 
   return summary;
 }
@@ -459,7 +462,7 @@ function normalizeBucket(entry) {
   if (["success"].includes(conclusion)) {
     return "success";
   }
-  if (["skipped", "neutral"].includes(conclusion)) {
+  if (conclusion === "skipped") {
     return "intended_skip";
   }
   if (conclusion === "cancelled") {

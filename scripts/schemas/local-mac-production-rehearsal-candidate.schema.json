@@ -13,9 +13,18 @@
     "selection_digest": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
     "release_sha": { "$ref": "#/$defs/sha1" },
     "release_tree": { "$ref": "#/$defs/sha1" },
-    "ci_check_summary_digest": { "$ref": "#/$defs/sha256" },
-    "ci_snapshot_digest": { "$ref": "#/$defs/sha256" },
-    "ci_suite_run_set_digest": { "$ref": "#/$defs/sha256" },
+    "ci_check_summary_digest": {
+      "$ref": "#/$defs/sha256",
+      "description": "SHA-256 of the shared canonical GitHub release-check summary recomputed from the stored safe check/status arrays."
+    },
+    "ci_snapshot_digest": {
+      "$ref": "#/$defs/sha256",
+      "description": "SHA-256 of the complete stored safe CI projection, including intended skipped optional contexts."
+    },
+    "ci_suite_run_set_digest": {
+      "$ref": "#/$defs/sha256",
+      "description": "SHA-256 of the exact ordered trusted GitHub Actions app, check-suite, and check-run identity set."
+    },
     "builder_input_digest": { "$ref": "#/$defs/sha256" },
     "source_manifest_digest": { "$ref": "#/$defs/sha256" },
     "compose_source_digest": { "$ref": "#/$defs/sha256" },
