@@ -10,6 +10,10 @@ import { buildQuizOutcome } from "@/lib/marketing/demand-validation";
 const repoRoot = path.resolve(__dirname, "..");
 const purgeScriptPath = path.join(repoRoot, "scripts/purge-expired-marketing-validation.mjs");
 const exportScriptPath = path.join(repoRoot, "scripts/export-marketing-leads.mjs");
+const operationsModulePath = path.join(
+  repoRoot,
+  "scripts/lib/marketing-validation-operations.mjs",
+);
 const analysisSqlPath = path.join(repoRoot, "docs/marketing/demand-validation-analysis.sql");
 const retentionMigrationPath = path.join(
   repoRoot,
@@ -316,6 +320,17 @@ describe("marketing validation Stage 6 operations", () => {
     );
   });
 
+  it("uses exact PostgREST counts for purge evidence and paginates the full accepted-lead export", () => {
+    const moduleText = requireFileText(operationsModulePath);
+    const exactCountUses = moduleText.match(/count:\s*"exact"/gu) ?? [];
+
+    expect(exactCountUses.length).toBeGreaterThanOrEqual(3);
+    expect(moduleText).toContain(".range(offset, offset + EXPORT_PAGE_SIZE - 1)");
+    expect(moduleText).toContain('.order("lead_submitted_at", { ascending: true })');
+    expect(moduleText).toContain('.order("id", { ascending: true })');
+    expect(moduleText).not.toContain("return data.length;");
+  });
+
   it("requires an explicit export output path inside a gitignored safe directory and writes an accepted-lead-only CSV with 0600 permissions", () => {
     const sandbox = mkdtempSync(path.join(tmpdir(), "marketing-validation-export-"));
     const inputPath = path.join(sandbox, "marketing-validation-sessions.json");
@@ -452,10 +467,17 @@ describe("marketing validation Stage 6 operations", () => {
   it("adds a delete-only retention scope without broadening the public marketing route scope", () => {
     const migration = requireFileText(retentionMigrationPath);
 
+    expect(migration).toContain("v_scope = 'marketing-validation-export'");
+    expect(migration).toMatch(
+      /v_scope\s*=\s*'marketing-validation-export'[\s\S]*?v_method\s*=\s*'GET'[\s\S]*?v_path\s*=\s*'\/marketing_validation_sessions'/iu,
+    );
     expect(migration).toContain("v_scope = 'marketing-validation-purge'");
     expect(migration).toMatch(/v_method\s+in\s*\(\s*'GET'\s*,\s*'DELETE'\s*\)/iu);
     expect(migration).toContain("v_path = '/marketing_validation_sessions'");
     expect(migration).toContain("v_scope = 'marketing-validation'");
     expect(migration).toMatch(/v_method\s+in\s*\(\s*'GET'\s*,\s*'POST'\s*,\s*'PATCH'\s*\)/iu);
+    expect(requireFileText(operationsModulePath)).toContain(
+      'createOperatorClient(env, "marketing-validation-export")',
+    );
   });
 });

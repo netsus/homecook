@@ -106,6 +106,9 @@
 - [ ] `/api/v1/marketing/validation` edge rate-limit rule 캡처와 정상 7-stage smoke가 있다
 - [ ] `MARKETING_LEAD_PROTECTION_READY=1` production enable 승인과 증거가 있다
 - [ ] 실제 iOS Safari에서 주요 퍼널 smoke가 완료되었다
+- [ ] `MARKETING_CAMPAIGN_END_AT`와 캠페인 종료 + 180일 retention 값이 확정되어 staging/production 환경에 반영되었다
+- [ ] staging/production full-local Supabase migration apply가 별도 승인·backup·target 확인 뒤 완료되었다
+- [ ] 실제 베타 초대 발신 이메일과 발신 도메인이 제공되고 발송 가능 상태로 검증되었다
 - [ ] 위 준비 상태를 모두 확인한 뒤 paid ads 집행 승인이 기록되었다
 
 > Manual Only가 남아 있어도 fail-closed code closeout은 가능하다. 위 항목이 모두 체크되기 전 production email 저장·광고 집행은 금지한다.
