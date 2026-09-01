@@ -2710,14 +2710,15 @@ describe("release rehearsal candidate orchestration", () => {
     expect(profile).toContain(productionRoot);
     expect(profile).toContain("/var/run/docker.sock");
 
+    const exactNodePath = realpathSync(process.execPath);
     const exactExecutableProfile = buildCandidateSandboxProfile({
-      readRoots: [runRoot, process.execPath],
+      readRoots: [runRoot, exactNodePath],
       writeRoots: [runRoot],
       deniedWritePaths: [immutableSource],
       deniedPaths: [productionRoot, "/var/run/docker.sock"],
-      executablePaths: [process.execPath],
+      executablePaths: [exactNodePath],
     } as Parameters<typeof buildCandidateSandboxProfile>[0]);
-    expect(exactExecutableProfile).toContain(`(allow process-exec (literal \"${process.execPath}\"))`);
+    expect(exactExecutableProfile).toContain(`(allow process-exec (literal \"${exactNodePath}\"))`);
     expect(exactExecutableProfile).not.toContain("(allow process-exec)\n");
     const unsafeExecutable = join(runRoot, "unsafe-executable");
     writeFileSync(unsafeExecutable, "#!/bin/sh\n", { mode: 0o720 });
@@ -2737,7 +2738,7 @@ describe("release rehearsal candidate orchestration", () => {
 
     if (process.platform === "darwin" && existsSync("/usr/bin/sandbox-exec")) {
       const exactNode = spawnSync("/usr/bin/sandbox-exec", [
-        "-p", exactExecutableProfile, process.execPath, "-e", "process.exit(0)",
+        "-p", exactExecutableProfile, exactNodePath, "-e", "process.exit(0)",
       ], { cwd: runRoot });
       const otherExecutable = spawnSync("/usr/bin/sandbox-exec", [
         "-p", exactExecutableProfile, "/usr/bin/true",
@@ -3833,7 +3834,7 @@ describe("release rehearsal candidate orchestration", () => {
     expect(cleanupCommands).toEqual([
       process.platform === "darwin"
         ? "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
-        : "/usr/bin/python3",
+        : realpathSync("/usr/bin/python3"),
     ]);
     expect(readdirSync(allowed.root).filter((name) => name.startsWith(".homecook-pnpm-quarantine-")))
       .toEqual([]);

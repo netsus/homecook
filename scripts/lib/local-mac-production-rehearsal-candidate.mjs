@@ -2313,7 +2313,7 @@ print(json.dumps({"removed": True, "entry_count": len(records)}, separators=(","
 
 const DEFERRED_QUARANTINE_PYTHON_PATH = process.platform === "darwin"
   ? "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
-  : "/usr/bin/python3";
+  : realpathSync("/usr/bin/python3");
 
 function cleanupDeferredPnpmQuarantine({
   parentFd,
