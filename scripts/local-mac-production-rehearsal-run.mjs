@@ -58,7 +58,7 @@ function parseArguments(argv) {
 function ensurePrivateDirectory(path) {
   const absolute = resolve(path);
   try { mkdirSync(absolute, { recursive: true, mode: 0o700 }); }
-  catch (error) { throw new Error(`Unable to reserve rehearsal namespace: ${error instanceof Error ? error.message : String(error)}`); }
+  catch { throw new Error("Unable to reserve the private rehearsal namespace."); }
   const stat = lstatSync(absolute, { bigint: true });
   if (!stat.isDirectory() || stat.isSymbolicLink() || (stat.mode & 0o077n) !== 0n) {
     throw new Error("Rehearsal namespace must be a private current-user directory.");
@@ -67,10 +67,31 @@ function ensurePrivateDirectory(path) {
   return absolute;
 }
 
+export function resolveDefaultRehearsalNamespace(home = process.env.HOME) {
+  try {
+    if (!home || !isAbsolute(home)) throw new Error("invalid home authority");
+    const trustedNamespaceAnchor = realpathSync(home);
+    const anchorStat = lstatSync(trustedNamespaceAnchor, { bigint: true });
+    const currentUid = process.getuid?.();
+    if (
+      resolve(home) !== trustedNamespaceAnchor
+      || !Number.isInteger(currentUid)
+      || !anchorStat.isDirectory()
+      || anchorStat.isSymbolicLink()
+      || anchorStat.uid !== BigInt(currentUid)
+      || (anchorStat.mode & 0o077n) !== 0n
+    ) throw new Error("unsafe home authority");
+    return Object.freeze({
+      trustedNamespaceAnchor,
+      namespaceRoot: ensurePrivateDirectory(join(trustedNamespaceAnchor, ".homecook", "rehearsal", "runs")),
+    });
+  } catch {
+    throw new Error("Trusted private rehearsal namespace authority is unavailable.");
+  }
+}
+
 function defaultNamespaceResolver() {
-  const home = process.env.HOME;
-  if (!home || !isAbsolute(home)) throw new Error("HOME must be an absolute path.");
-  return ensurePrivateDirectory(join(home, ".homecook", "rehearsal", "runs"));
+  return resolveDefaultRehearsalNamespace();
 }
 
 async function defaultAdapterFactory(options) {
@@ -109,10 +130,20 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
   if (options.productionEnvAuthorityPath === null) {
     throw new Error("release:rehearsal:run requires --production-env-authority.");
   }
-  const namespaceRoot = namespaceResolver();
+  const namespaceResolution = namespaceResolver();
+  const namespaceRoot = typeof namespaceResolution === "string"
+    ? namespaceResolution
+    : namespaceResolution?.namespaceRoot;
+  const trustedNamespaceAnchor = typeof namespaceResolution === "string"
+    ? namespaceResolution
+    : namespaceResolution?.trustedNamespaceAnchor;
+  if (!namespaceRoot || !trustedNamespaceAnchor) {
+    throw new Error("rehearsal namespace resolver did not provide a trusted anchor and runs root.");
+  }
   const runId = runIdFactory();
   const adapters = await createAdapters({
     candidateInput: options.candidateInput,
+    trustedNamespaceAnchor,
     namespaceRoot,
     productionEnvAuthorityPath: options.productionEnvAuthorityPath,
     runId,
@@ -128,6 +159,7 @@ export async function runLocalMacProductionRehearsalRunnerCli(argv, dependencies
   try {
     result = await run({
       candidateInput: options.candidateInput,
+      trustedNamespaceAnchor,
       namespaceRoot,
       runId,
       readCandidate,

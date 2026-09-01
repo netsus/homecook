@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
-import { linkSync, mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { chmodSync, existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -25,6 +25,7 @@ import * as rehearsalRunnerCli from "../scripts/local-mac-production-rehearsal-r
 import {
   assertDiscoveredResourcesRemainUnowned,
   recordPrimitiveCreateResult,
+  createLocalReleaseRehearsalRunnerAdapters,
   compileClosedPrimitivePlan,
   buildFullLocalComposeOverride,
   buildFullLocalRehearsalEnvironment,
@@ -35,9 +36,12 @@ import {
   parseAndValidateWorkerFixtureReadback,
   compilePrimitiveServiceOperations,
   validatePrimitiveContainerInspection,
+  buildCandidateContainerVerificationContract,
+  buildFullLocalProbeStartupContract,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
-import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
+import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
+import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -70,7 +74,12 @@ const MIGRATION_FILE_ENTRIES = [
 ];
 const MIGRATION_FILES_DIGEST = sha256Jcs(MIGRATION_FILE_ENTRIES);
 
-function canonicalPrimitiveConfig() {
+function canonicalPrimitiveConfig({
+  candidateRoot = "/private/rehearsal/candidate",
+  candidateAuthorityRoot = "/private/rehearsal/candidate.container-authority",
+  fullLocalRoot = "/private/rehearsal/full-local",
+  secretRoot = "/private/rehearsal/secrets",
+} = {}) {
   const secretName = (...parts: string[]) => parts.join("_");
   const postgresPassword = secretName("postgres", "password");
   const jwtJwks = secretName("jwt", "jwks");
@@ -98,9 +107,15 @@ function canonicalPrimitiveConfig() {
     test: ["CMD", "node", "-e", "process.exit(0)"],
     timeout: "5s",
   };
-  const bind = (target: string) => ({
+  const probeContract = buildFullLocalProbeStartupContract({
+    candidateVerification: buildCandidateContainerVerificationContract({
+      candidateRoot,
+    }),
+    expectedIdentity: candidateStartupIdentity(),
+  });
+  const bind = (relativePath: string, target: string) => ({
     read_only: true,
-    source: `/private/rehearsal${target}`,
+    source: join(fullLocalRoot, relativePath),
     target,
     type: "bind",
   });
@@ -112,8 +127,8 @@ function canonicalPrimitiveConfig() {
       secrets: [{ source: postgresPassword, target: postgresPassword }],
       volumes: [
         { source: "r2-postgres", target: "/var/lib/postgresql/data", type: "volume" },
-        bind("/homecook/secret-entrypoint.sh"),
-        bind("/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh"),
+        bind("secret-entrypoint.sh", "/homecook/secret-entrypoint.sh"),
+        bind("full-local-role-passwords.sh", "/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh"),
       ],
     }),
     auth: base("auth", {
@@ -121,21 +136,26 @@ function canonicalPrimitiveConfig() {
       healthcheck,
       networks: { "data-internal": { aliases: ["auth"] }, "auth-egress": { aliases: ["auth"] } },
       secrets: [postgresPassword, "jwt_secret", "jwt_keys"].map((source) => ({ source, target: source })),
-      volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/start-auth.sh")],
+      volumes: [bind("secret-entrypoint.sh", "/homecook/secret-entrypoint.sh"), bind("start-auth.sh", "/homecook/start-auth.sh")],
     }),
     postgrest: base("postgrest", {
       depends_on: { auth: { condition: "service_healthy" }, postgres: { condition: "service_healthy" } },
       networks: { "data-internal": { aliases: ["postgrest"] } },
       secrets: [postgresPassword, jwtJwks].map((source) => ({ source, target: source })),
-      volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/start-postgrest.sh")],
+      volumes: [bind("secret-entrypoint.sh", "/homecook/secret-entrypoint.sh"), bind("start-postgrest.sh", "/homecook/start-postgrest.sh")],
     }),
     "postgrest-probe": base("postgrest-probe", {
+      command: probeContract.command,
       depends_on: { postgrest: { condition: "service_started" } },
-      healthcheck,
+      healthcheck: { ...healthcheck, test: probeContract.healthcheck },
       networks: { "data-internal": { aliases: ["postgrest-probe"] } },
       read_only: true,
       secrets: [],
-      volumes: [bind("/sealed-candidate")],
+      tmpfs: ["/tmp:rw,noexec,nosuid,size=1m"],
+      volumes: [
+        { read_only: true, source: candidateRoot, target: "/sealed-candidate", type: "bind" },
+        { read_only: true, source: candidateAuthorityRoot, target: "/sealed-candidate-authority", type: "bind" },
+      ],
     }),
     storage: base("storage", {
       depends_on: { auth: { condition: "service_healthy" }, "postgrest-probe": { condition: "service_healthy" } },
@@ -144,8 +164,8 @@ function canonicalPrimitiveConfig() {
       secrets: [postgresPassword, "anon_key", "service_role_key", jwtJwks, "jwt_secret", "storage_s3_access_key_id", "storage_s3_access_key_secret"].map((source) => ({ source, target: source })),
       volumes: [
         { source: "r2-storage", target: "/var/lib/storage", type: "volume" },
-        bind("/homecook/secret-entrypoint.sh"),
-        bind("/homecook/start-storage.sh"),
+        bind("secret-entrypoint.sh", "/homecook/secret-entrypoint.sh"),
+        bind("start-storage.sh", "/homecook/start-storage.sh"),
       ],
     }),
     "api-gateway": base("api-gateway", {
@@ -155,7 +175,12 @@ function canonicalPrimitiveConfig() {
       ports: [{ host_ip: "127.0.0.1", protocol: "tcp", published: String(PRIMITIVE_PORTS.storage), target: PRIMITIVE_PORTS.storage }],
       secrets: ["anon_key", "service_role_key", "publishable_key", "secret_key", "anon_key_asymmetric", "service_role_key_asymmetric", "session_attestation_hmac_key_v1"].map((source) => ({ source, target: source })),
       tmpfs: ["/tmp:mode=1777"],
-      volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/kong-entrypoint.sh"), bind("/homecook/kong.yml"), bind("/usr/local/share/lua/5.1/kong/plugins/homecook-attestation")],
+      volumes: [
+        bind("secret-entrypoint.sh", "/homecook/secret-entrypoint.sh"),
+        bind("kong-entrypoint.sh", "/homecook/kong-entrypoint.sh"),
+        bind("kong.yml", "/homecook/kong.yml"),
+        bind("kong/plugins/homecook-attestation", "/usr/local/share/lua/5.1/kong/plugins/homecook-attestation"),
+      ],
     }),
     "auth-proxy": base("auth-proxy", {
       depends_on: { "api-gateway": { condition: "service_healthy" } },
@@ -164,13 +189,13 @@ function canonicalPrimitiveConfig() {
       ports: [{ host_ip: "127.0.0.1", protocol: "tcp", published: String(PRIMITIVE_PORTS.auth), target: 8080 }],
       read_only: true,
       secrets: [],
-      volumes: [bind("/homecook/auth-only-proxy.mjs")],
+      volumes: [bind("auth-only-proxy.mjs", "/homecook/auth-only-proxy.mjs")],
     }),
   };
   return {
     name: "ignored",
     networks: { "auth-edge": { internal: true }, "auth-egress": { internal: true }, "data-internal": { internal: true } },
-    secrets: Object.fromEntries(secretNames.map((name) => [name, { file: `/private/rehearsal/secrets/${name}` }])),
+    secrets: Object.fromEntries(secretNames.map((name) => [name, { file: join(secretRoot, name) }])),
     services,
     volumes: { "postgres-data": {}, "storage-data": {} },
   };
@@ -185,10 +210,24 @@ function candidateManifest() {
     release_sha: SHA_A,
     release_tree: SHA_B,
     build_id: "build-r2",
+    builder_input_digest: "1".repeat(64),
+    source_manifest_digest: "2".repeat(64),
+    compose_source_digest: "3".repeat(64),
+    sandbox_policy_digest: "4".repeat(64),
+    generated_build_inventory_digest: "5".repeat(64),
+    pnpm_store_snapshot_inventory_digest: "6".repeat(64),
     sealed_bundle_digest: DIGEST_A,
     bundle_manifest_digest: DIGEST_B,
     candidate_identity_digest: "c".repeat(64),
     manifest_digest: "d".repeat(64),
+    toolchain: {},
+    build_tools: {},
+    toolchain_lock_digest: "7".repeat(64),
+    artifacts: {
+      app: { root: "app", digest: "8".repeat(64) },
+      full_local: { root: "full_local", digest: "9".repeat(64) },
+      worker: { root: "worker", digest: "0".repeat(64) },
+    },
     images: [{
       digest: `sha256:${"d".repeat(64)}`,
       platform: "linux/arm64",
@@ -203,6 +242,38 @@ function candidateManifest() {
       migration_head: "20260102000000_two",
     },
   };
+}
+
+function candidateStartupIdentity(manifest = candidateManifest()) {
+  const unsigned = {
+    schema: "homecook.local-mac-production-rehearsal-startup-identity.v1",
+    candidate_schema: manifest.schema,
+    release_sha: manifest.release_sha,
+    release_tree: manifest.release_tree,
+    candidate_identity_digest: manifest.candidate_identity_digest,
+    manifest_digest: manifest.manifest_digest,
+    build_id: manifest.build_id,
+    build_inputs_digest: sha256Jcs({
+      builder_input_digest: manifest.builder_input_digest,
+      source_manifest_digest: manifest.source_manifest_digest,
+      compose_source_digest: manifest.compose_source_digest,
+      sandbox_policy_digest: manifest.sandbox_policy_digest,
+      generated_build_inventory_digest: manifest.generated_build_inventory_digest,
+      pnpm_store_snapshot_inventory_digest: manifest.pnpm_store_snapshot_inventory_digest,
+    }),
+    sealed_bundle_digest: manifest.sealed_bundle_digest,
+    bundle_manifest_digest: manifest.bundle_manifest_digest,
+    artifacts_digest: sha256Jcs(manifest.artifacts),
+    toolchain_digest: sha256Jcs({
+      toolchain: manifest.toolchain,
+      build_tools: manifest.build_tools,
+      toolchain_lock_digest: manifest.toolchain_lock_digest,
+    }),
+    images_digest: sha256Jcs(manifest.images),
+    migration_head: manifest.migration.migration_head,
+    migration_digest: sha256Jcs(manifest.migration),
+  };
+  return { ...unsigned, identity_digest: sha256Jcs(unsigned) };
 }
 
 function completedCandidate(root: string) {
@@ -388,6 +459,7 @@ function createAdapters() {
     reservePorts: vi.fn().mockResolvedValue({ app: 43101, auth: 43102, postgres: 43103, storage: 43104 }),
     assertImagesLocal: vi.fn().mockResolvedValue({ verified: true, image_ids: ["image-local"] }),
     createResources: vi.fn().mockResolvedValue(resources),
+    readFullLocalStartupIdentity: vi.fn().mockImplementation(({ manifest }) => candidateStartupIdentity(manifest)),
     applyMigrations: vi.fn().mockResolvedValue(migrationReplay()),
     loadSyntheticFixtures: vi.fn().mockResolvedValue({
       fixture_set_id: "homecook-r2-synthetic-v1",
@@ -453,6 +525,43 @@ function createAdapters() {
 }
 
 describe("release rehearsal R2 input and namespace gates", () => {
+  it("redacts the trusted home path when default namespace resolution fails", () => {
+    const resolveNamespace = (rehearsalRunnerCli as Record<string, unknown>).resolveDefaultRehearsalNamespace;
+    expect(typeof resolveNamespace).toBe("function");
+    if (typeof resolveNamespace !== "function") return;
+    const privateMarker = join(tmpdir(), "homecook-private-home-marker", "missing");
+    let failure: unknown = null;
+    try { resolveNamespace(privateMarker); }
+    catch (error) { failure = error; }
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).not.toContain(privateMarker);
+  });
+
+  it("rejects a HOME symlink, non-private mode, or wrong owner projection", () => {
+    const resolveNamespace = (rehearsalRunnerCli as Record<string, unknown>).resolveDefaultRehearsalNamespace;
+    expect(typeof resolveNamespace).toBe("function");
+    if (typeof resolveNamespace !== "function") return;
+    const typedResolveNamespace = resolveNamespace as (home: string) => unknown;
+    const parent = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-home-locator-safety-")));
+    const realHome = join(parent, "real-home");
+    const linkedHome = join(parent, "linked-home");
+    mkdirSync(realHome, { mode: 0o700 });
+    symlinkSync(realHome, linkedHome);
+    expect(() => typedResolveNamespace(linkedHome)).toThrow(/trusted|private|namespace|authority|unsafe/iu);
+    chmodSync(realHome, 0o755);
+    expect(() => typedResolveNamespace(realHome)).toThrow(/trusted|private|namespace|authority|unsafe/iu);
+    chmodSync(realHome, 0o700);
+    const currentUid = process.getuid?.();
+    if (Number.isInteger(currentUid)) {
+      const getuid = vi.spyOn(process, "getuid").mockReturnValue((currentUid as number) + 1);
+      try {
+        expect(() => typedResolveNamespace(realHome)).toThrow(/trusted|private|namespace|authority|unsafe/iu);
+      } finally {
+        getuid.mockRestore();
+      }
+    }
+  });
+
   it("accepts the actual tracked Node-readable runner before constructing Docker adapters", async () => {
     expect(typeof rehearsalRunnerCli.readDefaultRehearsalRunnerIdentity).toBe("function");
     const identity = rehearsalRunnerCli.readDefaultRehearsalRunnerIdentity();
@@ -611,18 +720,27 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
 
 describe("release rehearsal R2 orchestration", () => {
   it("runs sealed identities, canaries, exact cleanup, and produces non-receipt evidence", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-runs-"));
-    const candidateRoot = join(namespaceRoot, "candidate");
-    mkdirSync(candidateRoot, { mode: 0o500 });
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-runs-")));
+    const candidate = await createCompletedRehearsalCandidateFixture();
+    const candidateRoot = candidate.candidateRoot;
     const adapters = createAdapters();
+    let fullCafsReads = 0;
+    adapters.startComponents.mockResolvedValue([
+      runtime("app"), runtime("full_local"), runtime("worker"),
+    ].map((entry) => ({
+      ...entry,
+      sealed_bundle_digest: candidate.manifest.sealed_bundle_digest,
+    })));
     const result = await runIsolatedReleaseRehearsal({
       candidateInput: candidateRoot,
       namespaceRoot,
       runId: RUN_ID,
-      readCandidate: () => completedCandidate(candidateRoot),
       adapters,
       runnerIdentity: RUNNER_IDENTITY,
       now: () => new Date("2026-08-29T00:00:00.000Z"),
+      afterCandidatePnpmStoreFileOpen: (entry: { contentVerified?: boolean; relativePath: string }) => {
+        if (entry.contentVerified === true && entry.relativePath.startsWith("files/")) fullCafsReads += 1;
+      },
     });
 
     expect(result.schema).toBe(RUN_EVIDENCE_SCHEMA);
@@ -652,13 +770,286 @@ describe("release rehearsal R2 orchestration", () => {
     expect(adapters.createResources).toHaveBeenCalledWith(expect.objectContaining({
       candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
     }));
+    expect(adapters.createResources).toHaveBeenCalledBefore(adapters.startComponents);
+    expect(adapters.startComponents).toHaveBeenCalledWith(expect.objectContaining({
+      candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
+      candidateContainerAuthorityRoot: join(
+        namespaceRoot,
+        RUN_ID,
+        "execution-candidate.container-authority",
+      ),
+    }));
+    expect(fullCafsReads).toBe(2);
+    const pathAuthority = JSON.parse(readFileSync(
+      join(namespaceRoot, RUN_ID, "runtime-state", "candidate-path-authority.json"),
+      "utf8",
+    ));
+    const { authority_digest: pathAuthorityDigest, ...pathAuthorityUnsigned } = pathAuthority;
+    expect(pathAuthority).toMatchObject({
+      schema: "homecook.release-rehearsal-candidate-path-authority.v1",
+      directory_chain_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+    expect(pathAuthorityDigest).toBe(sha256Jcs(pathAuthorityUnsigned));
+    expect(JSON.stringify(result)).not.toContain(namespaceRoot);
     expect(adapters.stopRuntime.mock.calls.map(([entry]) => entry.component)).toEqual(["worker", "full_local", "app"]);
     expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id))
       .toEqual([...adapters.resources].reverse().map((entry) => entry.id));
   });
 
+  it("uses the actual copied-candidate reader and rejects tampering before resource creation", async () => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-real-reader-tamper-")));
+    const candidate = await createCompletedRehearsalCandidateFixture();
+    const adapters = createAdapters();
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidate.candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+      afterCandidateCopy: ({ executionRoot }: { executionRoot: string }) => {
+        const indexPath = join(executionRoot, "pnpm-store", "v10", "index", "package.json");
+        chmodSync(indexPath, 0o600);
+        writeFileSync(indexPath, "{\"tampered\":true}\n");
+        chmodSync(indexPath, 0o400);
+      },
+    })).rejects.toThrow(/candidate|pnpm|store|inventory|content|physical|authority|identity/iu);
+    expect(adapters.createResources).not.toHaveBeenCalled();
+    expect(adapters.snapshotProduction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a shape-valid wrong full-local startup identity before app or worker start", async () => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-wrong-startup-identity-")));
+    const candidateRoot = join(namespaceRoot, "candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    const wrong = { ...candidateStartupIdentity() };
+    wrong.release_sha = SHA_B;
+    wrong.identity_digest = sha256Jcs(Object.fromEntries(
+      Object.entries(wrong).filter(([key]) => key !== "identity_digest"),
+    ));
+    adapters.readFullLocalStartupIdentity.mockResolvedValue(wrong);
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/startup|identity|release_sha|candidate/iu);
+    expect(adapters.readFullLocalStartupIdentity).toHaveBeenCalledOnce();
+    expect(adapters.startComponents).not.toHaveBeenCalled();
+    expect(adapters.applyMigrations).not.toHaveBeenCalled();
+  });
+
+  it("rejects an intermediate symlink in the namespace ancestor chain before resources", async () => {
+    const parent = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-symlink-ancestor-")));
+    const realAncestor = join(parent, "real-ancestor");
+    const aliasAncestor = join(parent, "alias-ancestor");
+    mkdirSync(realAncestor, { mode: 0o700 });
+    symlinkSync(realAncestor, aliasAncestor);
+    const namespaceRoot = join(aliasAncestor, "runs");
+    mkdirSync(namespaceRoot, { mode: 0o700 });
+    const candidateRoot = join(parent, "candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/namespace|ancestor|symlink|lexical|canonical/iu);
+    expect(adapters.createResources).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["swap", false],
+    ["swap and restore", true],
+  ])("rejects a namespace ancestor %s during a candidate mount transition", async (_label, restoreBeforePost) => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-mount-ancestor-swap-")));
+    const candidateRoot = join(namespaceRoot, "source-candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.createResources.mockImplementation(async ({
+      candidateRoot: executionRoot,
+      candidateContainerAuthorityRoot,
+      verifyCandidatePathAuthority,
+      runRoot,
+    }: {
+      candidateRoot: string;
+      candidateContainerAuthorityRoot: string;
+      verifyCandidatePathAuthority?: (input: Record<string, string>) => unknown;
+      runRoot: string;
+    }) => {
+      expect(typeof verifyCandidatePathAuthority).toBe("function");
+      if (typeof verifyCandidatePathAuthority !== "function") throw new Error("candidate path authority callback missing");
+      verifyCandidatePathAuthority({ candidateRoot: executionRoot, candidateContainerAuthorityRoot, phase: "pre-bind" });
+      adapters.getCreationLedger.mockReturnValue([adapters.resources[0]]);
+      const displaced = `${runRoot}.displaced`;
+      const replacement = `${runRoot}.replacement`;
+      renameSync(runRoot, displaced);
+      mkdirSync(runRoot, { mode: 0o700 });
+      if (restoreBeforePost) {
+        renameSync(runRoot, replacement);
+        renameSync(displaced, runRoot);
+      }
+      try {
+        verifyCandidatePathAuthority({ candidateRoot: executionRoot, candidateContainerAuthorityRoot, phase: "post-bind" });
+      } finally {
+        if (restoreBeforePost) {
+          rmSync(replacement, { recursive: true, force: true });
+        } else {
+          rmSync(runRoot, { recursive: true, force: true });
+          renameSync(displaced, runRoot);
+        }
+      }
+      return adapters.resources;
+    });
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/namespace|ancestor|directory|path|authority|identity|drift/iu);
+    expect(adapters.startComponents).not.toHaveBeenCalled();
+    expect(adapters.removeResource).toHaveBeenCalledWith(
+      expect.objectContaining({ id: adapters.resources[0].id }),
+      expect.anything(),
+    );
+  });
+
+  it("allows an unrelated HOME child mutation while keeping .homecook as the exact anchor", async () => {
+    const trustedNamespaceAnchor = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-home-locator-runner-")));
+    const namespaceRoot = join(trustedNamespaceAnchor, ".homecook", "rehearsal", "runs");
+    mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
+    const candidateRoot = join(trustedNamespaceAnchor, "source-candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.createResources.mockImplementation(async () => {
+      mkdirSync(join(trustedNamespaceAnchor, "unrelated-user-child"), { mode: 0o700 });
+      return adapters.resources;
+    });
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      trustedNamespaceAnchor,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+      now: () => new Date("2026-08-29T00:00:00.000Z"),
+    })).resolves.toMatchObject({ status: "passed" });
+    expect(adapters.removeResource).toHaveBeenCalledTimes(adapters.resources.length);
+  });
+
+  it("holds the trusted home anchor through .homecook parent swap and restore", async () => {
+    const trustedNamespaceAnchor = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-trusted-anchor-")));
+    const homecookRoot = join(trustedNamespaceAnchor, ".homecook");
+    const namespaceRoot = join(homecookRoot, "rehearsal", "runs");
+    mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
+    const candidateRoot = join(trustedNamespaceAnchor, "source-candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.createResources.mockImplementation(async ({
+      candidateRoot: executionRoot,
+      candidateContainerAuthorityRoot,
+      verifyCandidatePathAuthority,
+    }: {
+      candidateRoot: string;
+      candidateContainerAuthorityRoot: string;
+      verifyCandidatePathAuthority?: (input: Record<string, string>) => unknown;
+    }) => {
+      if (typeof verifyCandidatePathAuthority !== "function") throw new Error("candidate path authority callback missing");
+      verifyCandidatePathAuthority({
+        candidateRoot: executionRoot,
+        candidateContainerAuthorityRoot,
+        phase: "trusted-parent pre-bind",
+      });
+      adapters.getCreationLedger.mockReturnValue([adapters.resources[0]]);
+      const displaced = `${homecookRoot}.displaced`;
+      const replacement = `${homecookRoot}.replacement`;
+      renameSync(homecookRoot, displaced);
+      mkdirSync(join(homecookRoot, "rehearsal", "runs"), { recursive: true, mode: 0o700 });
+      renameSync(homecookRoot, replacement);
+      renameSync(displaced, homecookRoot);
+      try {
+        verifyCandidatePathAuthority({
+          candidateRoot: executionRoot,
+          candidateContainerAuthorityRoot,
+          phase: "trusted-parent post-bind",
+        });
+        adapters.getCreationLedger.mockReturnValue(adapters.resources);
+      } finally {
+        rmSync(replacement, { recursive: true, force: true });
+      }
+      return adapters.resources;
+    });
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      trustedNamespaceAnchor,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+      now: () => new Date("2026-08-29T00:00:00.000Z"),
+    })).rejects.toThrow(/trusted|anchor|namespace|parent|directory|identity|drift/iu);
+    expect(adapters.startComponents).not.toHaveBeenCalled();
+    expect(adapters.removeResource).toHaveBeenCalledWith(
+      expect.objectContaining({ id: adapters.resources[0].id }),
+      expect.anything(),
+    );
+  });
+
+  it("rejects a wrong candidate tree bind before resource creation", async () => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-wrong-tree-bind-")));
+    const candidateRoot = join(namespaceRoot, "source-candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.getCreationLedger.mockReturnValue([]);
+    adapters.createResources.mockImplementation(async ({
+      candidateContainerAuthorityRoot,
+      verifyCandidatePathAuthority,
+      runRoot,
+    }: {
+      candidateContainerAuthorityRoot: string;
+      verifyCandidatePathAuthority?: (input: Record<string, string>) => unknown;
+      runRoot: string;
+    }) => {
+      expect(typeof verifyCandidatePathAuthority).toBe("function");
+      if (typeof verifyCandidatePathAuthority !== "function") throw new Error("candidate path authority callback missing");
+      const wrongTree = join(runRoot, "wrong-candidate-tree");
+      mkdirSync(wrongTree, { mode: 0o500 });
+      verifyCandidatePathAuthority({
+        candidateRoot: wrongTree,
+        candidateContainerAuthorityRoot,
+        phase: "pre-bind",
+      });
+      return adapters.resources;
+    });
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/candidate|tree|path|authority|bind/iu);
+    expect(adapters.startComponents).not.toHaveBeenCalled();
+    expect(adapters.removeResource).not.toHaveBeenCalled();
+  });
+
   it("cleans only the immutable partial-create ledger after create failure", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-partial-create-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-partial-create-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -677,7 +1068,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("reports label-only discovered resources as residue and never adopts or removes them", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-label-residue-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-label-residue-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -711,7 +1102,7 @@ describe("release rehearsal R2 orchestration", () => {
     ["residue", (adapters: ReturnType<typeof createAdapters>) => adapters.listResidue.mockResolvedValue([{ id: "orphan" }])],
     ["secret persistence", (adapters: ReturnType<typeof createAdapters>) => adapters.countPersistentSecretFiles.mockResolvedValue(1)],
   ])("fails closed on %s but still attempts cleanup", async (_label, arrange) => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-fail-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-fail-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -728,7 +1119,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("re-reads the sealed candidate after execution and rejects tampering", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-stale-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-stale-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -750,7 +1141,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("cleans exact run-owned resources when signalled midway", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-signal-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-signal-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -773,7 +1164,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("aborts an in-flight readiness wait and immediately enters cleanup", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-readiness-signal-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-readiness-signal-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -798,6 +1189,62 @@ describe("release rehearsal R2 orchestration", () => {
 });
 
 describe("release rehearsal R2 cleanup ownership", () => {
+  it("records every create-site ID before inspect failure and cleans only the exact ledger", async () => {
+    const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
+    const createSites = adaptersModule.DOCKER_CREATE_SITE_RESOURCE_KINDS;
+    const executeCreate = adaptersModule.executeDockerPrimitiveCreateTransition;
+    const expectedSites = {
+      full_local_network: "network",
+      full_local_volume: "volume",
+      full_local_service: "container",
+      app: "container",
+      worker: "container",
+      sentinel_network: "network",
+      sentinel_container: "container",
+    };
+    expect(createSites).toEqual(expectedSites);
+    expect(typeof executeCreate).toBe("function");
+    if (typeof executeCreate !== "function") return;
+    const transition = executeCreate as (options: Record<string, unknown>) => Promise<unknown>;
+
+    for (const [siteIndex, [site, kind]] of Object.entries(expectedSites).entries()) {
+      for (const failureMode of ["inspect-error", "invalid-json"] as const) {
+        const name = `r2-${site.replaceAll("_", "-")}`;
+        const id = kind === "volume" ? name : (siteIndex + 1).toString(16).repeat(64);
+        const expected = {
+          kind,
+          name,
+          labels: {
+            [RUN_OWNERSHIP_LABEL]: RUN_ID,
+            "com.docker.compose.project": PROJECT,
+          },
+        };
+        const ledger = createImmutableCreationLedger();
+        await expect(transition({
+          ledger,
+          site,
+          expected,
+          create: async () => `${id}\n`,
+          inspect: async () => {
+            expect(ledger.snapshot()).toEqual([{ kind, id, name }]);
+            if (failureMode === "invalid-json") JSON.parse(`{private-inspect-payload:${site}}`);
+            throw new Error(`private inspect failure: ${site}`);
+          },
+        })).rejects.toThrow();
+        const removeResource = vi.fn();
+        const cleanup = await cleanupOwnedResources({
+          runId: RUN_ID,
+          project: PROJECT,
+          ownedResources: ledger.snapshot(),
+          inspectResource: async (entry: Record<string, string>) => ({ ...entry, labels: expected.labels }),
+          removeResource,
+        });
+        expect(cleanup).toEqual({ removed_resource_ids: [id], cleanup_errors: [] });
+        expect(removeResource).toHaveBeenCalledExactlyOnceWith({ kind, id, name });
+      }
+    }
+  });
+
   it("records only a single create-returned ID with inspect cross-binding", () => {
     const ledger = createImmutableCreationLedger();
     const expected = { kind: "network", name: "r2-net", labels: { [RUN_OWNERSHIP_LABEL]: RUN_ID } };
@@ -958,7 +1405,7 @@ describe("release rehearsal R2 public command and schema", () => {
 
   it("compiles only the exact resolved seven-service internal primitive plan", () => {
     const config = canonicalPrimitiveConfig();
-    expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS }).services).toHaveLength(7);
+    expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS, expectedStartupIdentity: candidateStartupIdentity() }).services).toHaveLength(7);
     for (const mutate of [
       (v: typeof config) => { delete v.services.auth; },
       (v: typeof config) => { v.services.extra = structuredClone(v.services.auth); },
@@ -966,14 +1413,50 @@ describe("release rehearsal R2 public command and schema", () => {
       (v: typeof config) => { v.networks["auth-edge"].internal = false; },
       (v: typeof config) => { delete (v.volumes as Partial<typeof v.volumes>)["storage-data"]; },
       (v: typeof config) => { v.services.auth.build = "."; },
+      (v: typeof config) => { v.services["postgrest-probe"].command = ["node", "-e", "setInterval(()=>{},2147483647)"]; },
+      (v: typeof config) => { v.services["postgrest-probe"].healthcheck = { interval: "5s", retries: 60, test: ["CMD", "node", "-e", "process.exit(0)"], timeout: "5s" }; },
     ]) {
       const value = structuredClone(config); mutate(value);
-      expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS })).toThrow();
+      expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS, expectedStartupIdentity: candidateStartupIdentity() })).toThrow();
     }
   });
 
+  it("derives and enforces the exact full-local bind-source contract instead of trusting resolved Compose paths", async () => {
+    const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
+    const buildContract = adaptersModule.buildFullLocalBindSourceContract;
+    expect(typeof buildContract).toBe("function");
+    if (typeof buildContract !== "function") return;
+    const roots = {
+      candidateRoot: "/private/rehearsal/candidate",
+      candidateAuthorityRoot: "/private/rehearsal/candidate.container-authority",
+      fullLocalRoot: "/private/rehearsal/full-local",
+      secretRoot: "/private/rehearsal/secrets",
+    };
+    const contract = (buildContract as (value: typeof roots) => Record<string, unknown>)(roots);
+    const config = canonicalPrimitiveConfig(roots);
+    expect(() => compileClosedPrimitivePlan(config, {
+      project: "homecook-rehearsal-x",
+      ports: PRIMITIVE_PORTS,
+      expectedStartupIdentity: candidateStartupIdentity(),
+      bindSourceContract: contract,
+    })).not.toThrow();
+    config.services.auth.volumes = [
+      ...(config.services.auth.volumes as Array<Record<string, unknown>>).slice(0, 1),
+      {
+        ...(config.services.auth.volumes as Array<Record<string, unknown>>)[1],
+        source: "/private/rehearsal/wrong-tree/start-auth.sh",
+      },
+    ];
+    expect(() => compileClosedPrimitivePlan(config, {
+      project: "homecook-rehearsal-x",
+      ports: PRIMITIVE_PORTS,
+      expectedStartupIdentity: candidateStartupIdentity(),
+      bindSourceContract: contract,
+    })).toThrow(/bind|source|wrong|full-local|authority/iu);
+  });
+
   it("orders actual primitive service operations with PostgreSQL ready before migration", () => {
-    const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), { project: `homecook-rehearsal-${RUN_ID}`, ports: PRIMITIVE_PORTS });
+    const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), { project: `homecook-rehearsal-${RUN_ID}`, ports: PRIMITIVE_PORTS, expectedStartupIdentity: candidateStartupIdentity() });
     const namespace = buildRunNamespace({ runId: RUN_ID, ports: PRIMITIVE_PORTS });
     const operations = compilePrimitiveServiceOperations(plan, namespace, ["--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`, "--label", `com.docker.compose.project=${namespace.project}`]);
     type Operation = { kind: string; service: string; network?: string; argv?: string[] };
@@ -981,12 +1464,409 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(typedOperations.filter((item) => item.kind === "create")).toHaveLength(7);
     expect(typedOperations.find((item) => item.kind === "connect" && item.service === "auth")).toMatchObject({ network: "auth-egress" });
     expect(typedOperations.findIndex((item) => item.kind === "readiness" && item.service === "postgres")).toBeLessThan(typedOperations.findIndex((item) => item.kind === "create" && item.service === "postgrest"));
+    expect(typedOperations.findIndex((item) => item.kind === "readiness" && item.service === "postgrest-probe"))
+      .toBeLessThan(typedOperations.findIndex((item) => item.kind === "create" && item.service === "storage"));
     const allArgs = typedOperations.flatMap((item) => item.argv ?? []);
     expect(allArgs).toContain("--health-cmd");
     expect(allArgs).toContain("--tmpfs");
     expect(allArgs).toContain("--publish");
     expect(allArgs.filter((item) => item === "--mount").length).toBeGreaterThan(20);
     expect(typedOperations.flatMap((item) => item.argv ?? []).join(" ")).not.toMatch(/compose (?:create|start|up)/u);
+  });
+
+  it("holds every Docker bind and config source across create with exact pre/post ledger semantics", async () => {
+    const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
+    const createGuard = adaptersModule.createDockerBindSourceGuard;
+    const executeCreate = adaptersModule.executeDockerBindCreateTransition;
+    expect(typeof createGuard).toBe("function");
+    expect(typeof executeCreate).toBe("function");
+    if (typeof createGuard !== "function" || typeof executeCreate !== "function") return;
+
+    const makeRoot = (prefix: string) => {
+      const trustedAnchorRoot = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+      const namespaceRoot = join(trustedAnchorRoot, ".homecook", "rehearsal", "runs");
+      const runRoot = join(namespaceRoot, RUN_ID);
+      const candidateRoot = join(runRoot, "execution-candidate");
+      mkdirSync(candidateRoot, { recursive: true, mode: 0o700 });
+      return { trustedAnchorRoot, namespaceRoot, runRoot, candidateRoot };
+    };
+    type BindSource = {
+      source: string;
+      source_kind: "candidate-tree" | "recursive-directory" | "regular-file";
+      target?: string;
+    };
+    type Guard = { verify: (phase: string) => unknown; close: () => void };
+    const openGuard = createGuard as (options: {
+      authoritySources?: BindSource[];
+      candidateRoot: string;
+      dockerArgs?: string[];
+      expectedMounts?: BindSource[];
+      namespaceRoot: string;
+      resourceName: string;
+      trustedAnchorRoot: string;
+      verifyCandidateTree?: () => unknown;
+    }) => Guard;
+    const guardedCreate = executeCreate as (options: {
+      create: () => Promise<Record<string, string>>;
+      guard: Guard;
+      inspect: (created: Record<string, string>) => Promise<Record<string, string>>;
+      record: (created: Record<string, string>, observed: Record<string, string>) => void;
+    }) => Promise<unknown>;
+
+    const locatorRoots = makeRoot("homecook-r2-home-locator-");
+    const locatorSource = join(locatorRoots.candidateRoot, "locator-source.json");
+    writeFileSync(locatorSource, "{}\n", { mode: 0o400 });
+    const locatorGuard = openGuard({
+      trustedAnchorRoot: locatorRoots.trustedAnchorRoot,
+      namespaceRoot: locatorRoots.namespaceRoot,
+      candidateRoot: locatorRoots.candidateRoot,
+      resourceName: "home-locator-bind",
+      expectedMounts: [{ source: locatorSource, target: "/run/locator-source.json", source_kind: "regular-file" }],
+      dockerArgs: ["create", "--mount", `type=bind,src=${locatorSource},dst=/run/locator-source.json,readonly`],
+    });
+    const locatorLedger: Array<Record<string, string>> = [];
+    await expect(guardedCreate({
+      guard: locatorGuard,
+      create: async () => {
+        mkdirSync(join(locatorRoots.trustedAnchorRoot, "unrelated-user-child"), { mode: 0o700 });
+        return { kind: "container", id: "home-locator-container-id", name: "home-locator-container" };
+      },
+      inspect: async (created) => ({ ...created }),
+      record: (created) => locatorLedger.push(created),
+    })).resolves.toMatchObject({
+      created: { kind: "container", id: "home-locator-container-id", name: "home-locator-container" },
+    });
+    expect(locatorLedger).toEqual([
+      { kind: "container", id: "home-locator-container-id", name: "home-locator-container" },
+    ]);
+
+    const replacementRoots = makeRoot("homecook-r2-home-replacement-");
+    const replacementSource = join(replacementRoots.candidateRoot, "replacement-source.json");
+    writeFileSync(replacementSource, "{}\n", { mode: 0o400 });
+    const replacementGuard = openGuard({
+      trustedAnchorRoot: replacementRoots.trustedAnchorRoot,
+      namespaceRoot: replacementRoots.namespaceRoot,
+      candidateRoot: replacementRoots.candidateRoot,
+      resourceName: "home-replacement-bind",
+      expectedMounts: [{ source: replacementSource, target: "/run/replacement-source.json", source_kind: "regular-file" }],
+      dockerArgs: ["create", "--mount", `type=bind,src=${replacementSource},dst=/run/replacement-source.json,readonly`],
+    });
+    const displacedHome = `${replacementRoots.trustedAnchorRoot}.displaced`;
+    await expect(guardedCreate({
+      guard: replacementGuard,
+      create: async () => ({ kind: "container", id: "home-replacement-container-id", name: "home-replacement-container" }),
+      inspect: async (created) => {
+        renameSync(replacementRoots.trustedAnchorRoot, displacedHome);
+        mkdirSync(replacementRoots.trustedAnchorRoot, { mode: 0o700 });
+        return { ...created };
+      },
+      record: () => undefined,
+    })).rejects.toThrow(/bind|source|authority|identity|directory|drift/iu);
+    rmSync(replacementRoots.trustedAnchorRoot, { recursive: true, force: true });
+    renameSync(displacedHome, replacementRoots.trustedAnchorRoot);
+
+    for (const sourceKind of ["compose", "script", "secret"] as const) {
+      const roots = makeRoot(`homecook-r2-${sourceKind}-source-`);
+      const fullLocalRoot = join(roots.candidateRoot, "bundles", "bundle", "full_local", "infra", "full-local-supabase");
+      const secretRoot = join(roots.runRoot, "runtime-state", "secret-fds");
+      mkdirSync(fullLocalRoot, { recursive: true, mode: 0o700 });
+      mkdirSync(secretRoot, { recursive: true, mode: 0o700 });
+      const composePath = join(fullLocalRoot, "docker-compose.production.yml");
+      const scriptPath = join(fullLocalRoot, "start-auth.sh");
+      const secretPath = join(secretRoot, "postgres_password");
+      writeFileSync(composePath, "services: {}\n", { mode: 0o400 });
+      writeFileSync(scriptPath, "#!/bin/sh\n", { mode: 0o500 });
+      writeFileSync(secretPath, "opaque\n", { mode: 0o400 });
+      const mounts: BindSource[] = [
+        { source: scriptPath, target: "/homecook/start-auth.sh", source_kind: "regular-file" },
+        { source: secretPath, target: "/run/secrets/postgres_password", source_kind: "regular-file" },
+      ];
+      const guard = openGuard({
+        trustedAnchorRoot: roots.trustedAnchorRoot,
+        namespaceRoot: roots.namespaceRoot,
+        candidateRoot: roots.candidateRoot,
+        resourceName: `full-local-${sourceKind}`,
+        authoritySources: [{ source: composePath, source_kind: "regular-file" }],
+        expectedMounts: mounts,
+        dockerArgs: [
+          "create",
+          "--mount", `type=bind,src=${scriptPath},dst=/homecook/start-auth.sh,readonly`,
+          "--mount", `type=bind,src=${secretPath},dst=/run/secrets/postgres_password,readonly`,
+        ],
+      });
+      const selectedPath = { compose: composePath, script: scriptPath, secret: secretPath }[sourceKind];
+      const ledger: Array<Record<string, string>> = [];
+      await expect(guardedCreate({
+        guard,
+        create: async () => {
+          const displaced = `${selectedPath}.displaced`;
+          renameSync(selectedPath, displaced);
+          writeFileSync(selectedPath, "decoy\n", { mode: 0o400 });
+          rmSync(selectedPath);
+          renameSync(displaced, selectedPath);
+          return { kind: "container", id: `${sourceKind}-container-id`, name: `${sourceKind}-container` };
+        },
+        inspect: async (created) => ({ ...created }),
+        record: (created) => ledger.push(created),
+      })).rejects.toThrow(/bind|source|authority|identity|directory|drift/iu);
+      expect(ledger).toEqual([{ kind: "container", id: `${sourceKind}-container-id`, name: `${sourceKind}-container` }]);
+    }
+
+    const deepRoots = makeRoot("homecook-r2-deep-bind-source-");
+    const runtimeTree = join(deepRoots.runRoot, "runtime-state", "worker-secret-fds");
+    const deepDirectory = join(runtimeTree, "deep", "nested");
+    mkdirSync(deepDirectory, { recursive: true, mode: 0o700 });
+    writeFileSync(join(deepDirectory, "value.json"), "{}\n", { mode: 0o400 });
+    const deepGuard = openGuard({
+      trustedAnchorRoot: deepRoots.trustedAnchorRoot,
+      namespaceRoot: deepRoots.namespaceRoot,
+      candidateRoot: deepRoots.candidateRoot,
+      resourceName: "worker-deep-runtime-tree",
+      expectedMounts: [{ source: runtimeTree, target: "/run/worker-secrets", source_kind: "recursive-directory" }],
+      dockerArgs: ["create", "--mount", `type=bind,src=${runtimeTree},dst=/run/worker-secrets,readonly`],
+    });
+    const deepLedger: Array<Record<string, string>> = [];
+    await expect(guardedCreate({
+      guard: deepGuard,
+      create: async () => ({ kind: "container", id: "deep-container-id", name: "deep-container" }),
+      inspect: async (created) => {
+        expect(deepLedger).toEqual([created]);
+        const displaced = `${deepDirectory}.displaced`;
+        renameSync(deepDirectory, displaced);
+        mkdirSync(deepDirectory, { mode: 0o700 });
+        writeFileSync(join(deepDirectory, "value.json"), "{\"decoy\":true}\n", { mode: 0o400 });
+        rmSync(deepDirectory, { recursive: true, force: true });
+        renameSync(displaced, deepDirectory);
+        return { ...created };
+      },
+      record: (created) => deepLedger.push(created),
+    })).rejects.toThrow(/bind|source|authority|identity|directory|drift/iu);
+    expect(deepLedger).toEqual([{ kind: "container", id: "deep-container-id", name: "deep-container" }]);
+
+    const splitRoots = makeRoot("homecook-r2-component-identity-split-");
+    const appRoot = join(splitRoots.candidateRoot, "bundles", "bundle", "app");
+    const identityRoot = `${splitRoots.candidateRoot}.container-authority`;
+    const wrongTree = join(splitRoots.runRoot, "wrong-tree");
+    for (const path of [appRoot, identityRoot, wrongTree]) mkdirSync(path, { recursive: true, mode: 0o700 });
+    writeFileSync(join(identityRoot, "authority.json"), "{}\n", { mode: 0o400 });
+    const create = vi.fn();
+    expect(() => openGuard({
+      trustedAnchorRoot: splitRoots.trustedAnchorRoot,
+      namespaceRoot: splitRoots.namespaceRoot,
+      candidateRoot: splitRoots.candidateRoot,
+      resourceName: "app-component-identity-split",
+      expectedMounts: [
+        { source: appRoot, target: "/workspace", source_kind: "candidate-tree" },
+        { source: identityRoot, target: "/sealed-candidate-authority", source_kind: "recursive-directory" },
+      ],
+      dockerArgs: [
+        "create",
+        "--mount", `type=bind,src=${appRoot},dst=/workspace,readonly`,
+        "--mount", `type=bind,src=${wrongTree},dst=/sealed-candidate-authority,readonly`,
+      ],
+      verifyCandidateTree: () => undefined,
+    })).toThrow(/wrong|mount|bind|source|authority|identity/iu);
+    expect(create).not.toHaveBeenCalled();
+
+    const redactionRoots = makeRoot("homecook-r2-bind-source-redaction-");
+    const redactedSource = join(redactionRoots.runRoot, "runtime-state", "secret-fds", "opaque-secret");
+    mkdirSync(dirname(redactedSource), { recursive: true, mode: 0o700 });
+    writeFileSync(redactedSource, "opaque\n", { mode: 0o400 });
+    rmSync(redactedSource);
+    let redactedError: unknown = null;
+    try {
+      openGuard({
+        trustedAnchorRoot: redactionRoots.trustedAnchorRoot,
+        namespaceRoot: redactionRoots.namespaceRoot,
+        candidateRoot: redactionRoots.candidateRoot,
+        resourceName: "redacted secret bind",
+        expectedMounts: [{ source: redactedSource, target: "/run/secrets/opaque", source_kind: "regular-file" }],
+        dockerArgs: ["create", "--mount", `type=bind,src=${redactedSource},dst=/run/secrets/opaque,readonly`],
+      });
+    }
+    catch (error) { redactedError = error; }
+    expect(redactedError).toBeInstanceOf(Error);
+    expect((redactedError as Error).message).not.toContain(redactionRoots.trustedAnchorRoot);
+  });
+
+  it("executes the completed candidate reader in the full-local probe startup contract", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
+    const issueContainerAuthority = candidateModule.issueCompletedCandidateContainerAuthority;
+    const buildContainerContract = adaptersModule.buildCandidateContainerVerificationContract;
+    const buildProbeContract = adaptersModule.buildFullLocalProbeStartupContract;
+    expect(typeof issueContainerAuthority).toBe("function");
+    expect(typeof buildContainerContract).toBe("function");
+    expect(typeof buildProbeContract).toBe("function");
+    if (
+      typeof issueContainerAuthority !== "function"
+      || typeof buildContainerContract !== "function"
+      || typeof buildProbeContract !== "function"
+    ) return;
+
+    const fixture = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-");
+    const containerAuthorityRoot = `${fixture.candidateRoot}.container-authority`;
+    const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
+    (issueContainerAuthority as (options: {
+      candidateRoot: string;
+      containerCandidateRoot: string;
+      containerAuthorityPath: string;
+    }) => unknown)({
+      candidateRoot: fixture.candidateRoot,
+      containerCandidateRoot: fixture.candidateRoot,
+      containerAuthorityPath,
+    });
+    const repoRoot = realpathSync(process.cwd());
+    const candidateVerification = (buildContainerContract as (options: Record<string, string>) => {
+      identitySource: (options?: { outputPath?: string | null }) => string;
+    })({
+      candidateRoot: fixture.candidateRoot,
+      containerCandidateRoot: fixture.candidateRoot,
+      containerAuthorityRoot,
+      candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+      jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+    });
+    const identityOutputPath = join(fixture.authorityRoot, "full-local-startup-identity.json");
+    const probe = (buildProbeContract as (options: {
+      candidateVerification: typeof candidateVerification;
+      expectedIdentity: ReturnType<typeof candidateStartupIdentity>;
+      identityOutputPath: string;
+      postgrestReadyUrl: string;
+    }) => { command: string[]; healthcheck: string[]; identity_output_path: string })({
+      candidateVerification,
+      expectedIdentity: candidateStartupIdentity(fixture.manifest),
+      identityOutputPath,
+      postgrestReadyUrl: "data:text/plain,ready",
+    });
+
+    const child = spawn(process.execPath, probe.command.slice(1), { stdio: "ignore" });
+    const deadline = Date.now() + 5_000;
+    while (!existsSync(identityOutputPath) && child.exitCode === null && Date.now() < deadline) {
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+    }
+    expect(existsSync(identityOutputPath)).toBe(true);
+    expect(JSON.parse(readFileSync(identityOutputPath, "utf8")))
+      .toEqual(candidateStartupIdentity(fixture.manifest));
+    const healthy = spawnSync(process.execPath, probe.healthcheck.slice(2), { encoding: "utf8" });
+    expect(healthy.status, healthy.stderr).toBe(0);
+    const shapeValidWrongIdentity = {
+      ...JSON.parse(readFileSync(identityOutputPath, "utf8")),
+      release_sha: "0".repeat(40),
+    };
+    shapeValidWrongIdentity.identity_digest = sha256Jcs(Object.fromEntries(
+      Object.entries(shapeValidWrongIdentity).filter(([key]) => key !== "identity_digest"),
+    ));
+    chmodSync(identityOutputPath, 0o600);
+    writeFileSync(identityOutputPath, canonicalizeJcs(shapeValidWrongIdentity));
+    chmodSync(identityOutputPath, 0o400);
+    const wrongIdentityHealth = spawnSync(process.execPath, probe.healthcheck.slice(2), { encoding: "utf8" });
+    expect(wrongIdentityHealth.status).not.toBe(0);
+    child.kill("SIGTERM");
+    await new Promise((resolvePromise) => child.once("exit", resolvePromise));
+
+    const missing = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-missing-");
+    const missingAuthorityRoot = `${missing.candidateRoot}.container-authority`;
+    const missingVerification = (buildContainerContract as (options: Record<string, string>) => {
+      identitySource: (options?: { outputPath?: string | null }) => string;
+    })({
+      candidateRoot: missing.candidateRoot,
+      containerCandidateRoot: missing.candidateRoot,
+      containerAuthorityRoot: missingAuthorityRoot,
+      candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+      jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+    });
+    const missingIdentity = join(missing.authorityRoot, "missing-startup-identity.json");
+    const missingProbe = (buildProbeContract as (options: {
+      candidateVerification: typeof missingVerification;
+      expectedIdentity: ReturnType<typeof candidateStartupIdentity>;
+      identityOutputPath: string;
+      postgrestReadyUrl: string;
+    }) => { command: string[]; healthcheck: string[] })({
+      candidateVerification: missingVerification,
+      expectedIdentity: candidateStartupIdentity(missing.manifest),
+      identityOutputPath: missingIdentity,
+      postgrestReadyUrl: "data:text/plain,ready",
+    });
+    const rejected = spawnSync(process.execPath, missingProbe.command.slice(1), { encoding: "utf8" });
+    expect(rejected.status).toBe(70);
+    expect(existsSync(missingIdentity)).toBe(false);
+    const unhealthy = spawnSync(process.execPath, missingProbe.healthcheck.slice(2), { encoding: "utf8" });
+    expect(unhealthy.status).not.toBe(0);
+
+    const tampered = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-tamper-");
+    const tamperedAuthorityRoot = `${tampered.candidateRoot}.container-authority`;
+    (issueContainerAuthority as (options: {
+      candidateRoot: string;
+      containerCandidateRoot: string;
+      containerAuthorityPath: string;
+    }) => unknown)({
+      candidateRoot: tampered.candidateRoot,
+      containerCandidateRoot: tampered.candidateRoot,
+      containerAuthorityPath: join(tamperedAuthorityRoot, "authority.json"),
+    });
+    const indexPath = join(tampered.candidateRoot, "pnpm-store", "v10", "index", "package.json");
+    chmodSync(indexPath, 0o600);
+    writeFileSync(indexPath, "{\"tampered\":true}\n");
+    chmodSync(indexPath, 0o400);
+    const tamperedIdentity = join(tampered.authorityRoot, "tampered-startup-identity.json");
+    const tamperedProbe = (buildProbeContract as typeof buildFullLocalProbeStartupContract)({
+      candidateVerification: (buildContainerContract as typeof buildCandidateContainerVerificationContract)({
+        candidateRoot: tampered.candidateRoot,
+        containerCandidateRoot: tampered.candidateRoot,
+        containerAuthorityRoot: tamperedAuthorityRoot,
+        candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+        jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+      }),
+      expectedIdentity: candidateStartupIdentity(tampered.manifest),
+      identityOutputPath: tamperedIdentity,
+      postgrestReadyUrl: "data:text/plain,ready",
+    });
+    const tamperedResult = spawnSync(process.execPath, tamperedProbe.command.slice(1), { encoding: "utf8" });
+    expect(tamperedResult.status).toBe(70);
+    expect(existsSync(tamperedIdentity)).toBe(false);
+    expect(spawnSync(process.execPath, tamperedProbe.healthcheck.slice(2)).status).not.toBe(0);
+  });
+
+  it("rejects a different valid candidate identity inside the container before app or worker child spawn", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const issueContainerAuthority = candidateModule.issueCompletedCandidateContainerAuthority;
+    expect(typeof issueContainerAuthority).toBe("function");
+    if (typeof issueContainerAuthority !== "function") return;
+
+    const mounted = await createCompletedRehearsalCandidateFixture("homecook-runtime-mounted-candidate-");
+    const expected = await createCompletedRehearsalCandidateFixture(
+      "homecook-runtime-expected-candidate-",
+      { releaseSha: "0".repeat(40), releaseTree: "1".repeat(40) },
+    );
+    const containerAuthorityRoot = `${mounted.candidateRoot}.container-authority`;
+    (issueContainerAuthority as (options: {
+      candidateRoot: string;
+      containerCandidateRoot: string;
+      containerAuthorityPath: string;
+    }) => unknown)({
+      candidateRoot: mounted.candidateRoot,
+      containerCandidateRoot: mounted.candidateRoot,
+      containerAuthorityPath: join(containerAuthorityRoot, "authority.json"),
+    });
+    const repoRoot = realpathSync(process.cwd());
+    const verification = buildCandidateContainerVerificationContract({
+      candidateRoot: mounted.candidateRoot,
+      containerCandidateRoot: mounted.candidateRoot,
+      containerAuthorityRoot,
+      candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+      jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+      expectedIdentity: candidateStartupIdentity(expected.manifest),
+    });
+    const childSentinel = join(mounted.authorityRoot, "runtime-child-spawned");
+    const wrapper = [
+      verification.identitySource(),
+      `.then(()=>require('node:fs').writeFileSync(${JSON.stringify(childSentinel)},'spawned',{flag:'wx'}))`,
+      ".catch(()=>process.exit(70))",
+    ].join("");
+
+    const result = spawnSync(process.execPath, ["-e", wrapper], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(70);
+    expect(existsSync(childSentinel)).toBe(false);
   });
 
   it("cross-binds primitive inspect output to secrets, health, ports, mounts, and networks", () => {
@@ -1011,6 +1891,7 @@ describe("release rehearsal R2 public command and schema", () => {
     const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), {
       project: namespace.project,
       ports: PRIMITIVE_PORTS,
+      expectedStartupIdentity: candidateStartupIdentity(),
     });
     const service = plan.services.find((entry) => entry.name === "api-gateway") as
       PrimitiveService | undefined;
@@ -1077,6 +1958,10 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(adaptersSource).toContain("scripts/start-production.mjs");
     expect(adaptersSource).toContain("rehearsal-synthetic");
     expect(adaptersSource).toContain("--pull=never");
+    expect(adaptersSource).toContain('guard.verify("Docker bind source pre-create")');
+    expect(adaptersSource).toContain('guard.verify("Docker bind source post-create inspect")');
+    expect((adaptersSource.match(/candidatePathAuthority: true/gu) ?? [])).toHaveLength(2);
+    expect(adaptersSource).toContain("readFullLocalStartupIdentity");
     expect(adaptersSource).not.toContain("node_modules/next/dist/bin/next','start'");
     expect(adaptersSource).not.toContain('"compose", "create"');
     expect(adaptersSource).not.toContain('"compose", "start"');
@@ -1100,7 +1985,11 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(environment.FULL_LOCAL_SECRET_DIR).toMatch(/^\/private\/r2-run\//u);
     expect(environment.FULL_LOCAL_API_EXTERNAL_URL).toMatch(/^http:\/\/127\.0\.0\.1:/u);
     expect(Object.values(environment).join("\n")).not.toContain("mumeok.kr");
-    const override = buildFullLocalComposeOverride(namespace);
+    const override = buildFullLocalComposeOverride(namespace, {
+      candidateRoot: "/private/rehearsal/candidate",
+      candidateContainerAuthorityRoot: "/private/rehearsal/candidate.container-authority",
+      manifest,
+    });
     expect(override.match(/internal: true/gu)).toHaveLength(3);
     expect(override.match(/pull_policy: never/gu)).toHaveLength(7);
     expect(override.match(/max-size: "1m"/gu)).toHaveLength(7);
@@ -1166,6 +2055,8 @@ describe("release rehearsal R2 public command and schema", () => {
 
   it("requires --json and delegates an absolute candidate to the isolated runner", async () => {
     const root = mkdtempSync(join(tmpdir(), "homecook-r2-cli-"));
+    const namespaceRoot = join(root, ".homecook", "rehearsal", "runs");
+    mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
     mkdirSync(join(root, "candidate"), { mode: 0o500 });
     const output = { value: "", write(chunk: string) { this.value += chunk; } };
     const run = vi.fn().mockResolvedValue({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
@@ -1178,16 +2069,19 @@ describe("release rehearsal R2 public command and schema", () => {
       output,
       run,
       createAdapters,
-      namespaceResolver: () => root,
+      namespaceResolver: () => ({ trustedNamespaceAnchor: root, namespaceRoot }),
       runIdFactory: () => RUN_ID,
     });
     expect(run).toHaveBeenCalledWith(expect.objectContaining({
       candidateInput: join(root, "candidate"),
-      namespaceRoot: root,
+      trustedNamespaceAnchor: root,
+      namespaceRoot,
       runId: RUN_ID,
       adapters: { adapter: true },
     }));
     expect(createAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      trustedNamespaceAnchor: root,
+      namespaceRoot,
       productionEnvAuthorityPath: join(root, "full-local-production.env"),
     }));
     expect(JSON.parse(output.value)).toEqual({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
@@ -1199,5 +2093,83 @@ describe("release rehearsal R2 public command and schema", () => {
     await expect(runLocalMacProductionRehearsalRunnerCli([
       "--candidate", join(root, "candidate"),
     ], { run })).rejects.toThrow(/--json/iu);
+  });
+
+  it("redacts Docker stdout and stderr from the CLI failure and failed artifact", async () => {
+    const homeRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-docker-redaction-")));
+    const namespaceRoot = join(homeRoot, ".homecook", "rehearsal", "runs");
+    mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
+    const candidate = await createCompletedRehearsalCandidateFixture("homecook-r2-docker-redaction-candidate-");
+    const privateHomePath = join(homeRoot, ".homecook", "rehearsal", "runs", "secret-bind.env");
+    const privateBindPath = join(homeRoot, ".homecook", "rehearsal", "runs", "runtime-state", "secret-fds");
+    const secretFilename = "provider-production-secret.json";
+    const secretValue = "SUPABASE_SERVICE_ROLE_KEY=private-service-role-value";
+    const providerPayload = '{"provider":"private-provider","access_token":"private-provider-token"}';
+    const rawStdout = `${privateBindPath}/${secretFilename}\n${providerPayload}\n`;
+    const rawStderr = `${privateHomePath}: ${secretValue}\n`;
+    const dockerEndpoint = Object.freeze({
+      schema: "homecook.release-rehearsal-local-docker-endpoint.v1",
+      realpath: "/tmp/homecook-r2-offline-docker.sock",
+      identity_digest: DIGEST_A,
+      url: "unix:///tmp/homecook-r2-offline-docker.sock",
+    });
+    const output = { value: "", write(chunk: string) { this.value += chunk; } };
+    let cliFailure: unknown = null;
+    try {
+      await runLocalMacProductionRehearsalRunnerCli([
+        "--candidate", candidate.candidateRoot,
+        "--production-env-authority", privateHomePath,
+        "--json",
+      ], {
+        output,
+        namespaceResolver: () => ({ trustedNamespaceAnchor: homeRoot, namespaceRoot }),
+        runIdFactory: () => RUN_ID,
+        createAdapters: (adapterOptions: {
+          candidateInput: string;
+          trustedNamespaceAnchor: string;
+          namespaceRoot: string;
+          productionEnvAuthorityPath: string;
+          runId: string;
+        }) => createLocalReleaseRehearsalRunnerAdapters({
+          ...adapterOptions,
+          homeDir: homeRoot,
+          rootDir: process.cwd(),
+          dockerBin: "/private/test/docker",
+          dockerEndpointResolver: () => dockerEndpoint,
+          trustedToolResolver: {
+            log: { path: "/usr/bin/log", identity: { digest: DIGEST_A } },
+            lsof: { path: "/usr/sbin/lsof", identity: { digest: DIGEST_A } },
+            ps: { path: "/bin/ps", identity: { digest: DIGEST_A } },
+          },
+          platform: "darwin",
+          runCommand: async () => ({
+            status: 42,
+            signal: null,
+            truncated: false,
+            stdout: rawStdout,
+            stderr: rawStderr,
+          }),
+        }),
+      });
+    } catch (error) {
+      cliFailure = error;
+    }
+    expect(cliFailure).toBeInstanceOf(Error);
+    const failedJson = readFileSync(join(namespaceRoot, RUN_ID, "failed.json"), "utf8");
+    const publicSurfaces = `${(cliFailure as Error).message}\n${output.value}\n${failedJson}`;
+    expect((cliFailure as Error).message).toMatch(/^docker_command_failed: isolated Docker command failed\.?/u);
+    for (const privateValue of [
+      privateHomePath,
+      privateBindPath,
+      secretFilename,
+      secretValue,
+      "private-service-role-value",
+      providerPayload,
+      "private-provider-token",
+      rawStdout,
+      rawStderr,
+    ]) {
+      expect(publicSurfaces).not.toContain(privateValue);
+    }
   });
 });

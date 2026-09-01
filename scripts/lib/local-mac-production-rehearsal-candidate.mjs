@@ -55,6 +55,8 @@ export const RELEASE_REHEARSAL_CANDIDATE_SCHEMA =
   "homecook.local-mac-production-rehearsal-candidate.v1";
 export const RELEASE_REHEARSAL_BUILD_ENV_SCHEMA =
   "homecook.release-rehearsal-build-env.v1";
+export const RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA =
+  "homecook.local-mac-production-rehearsal-startup-identity.v1";
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
@@ -74,6 +76,8 @@ const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
   "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
+  "generated_build_inventory_digest",
+  "pnpm_store_snapshot_inventory_digest",
   "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
@@ -119,6 +123,69 @@ function sha(value, label) {
 function digest(value, label) {
   if (!DIGEST_PATTERN.test(value ?? "")) fail(`${label} must be lowercase SHA-256`);
   return value;
+}
+
+export function buildCandidateStartupIdentity(manifest) {
+  const unsigned = {
+    schema: RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA,
+    candidate_schema: string(manifest?.schema, "startup identity candidate schema"),
+    release_sha: sha(manifest?.release_sha, "startup identity release SHA"),
+    release_tree: sha(manifest?.release_tree, "startup identity release tree"),
+    candidate_identity_digest: digest(manifest?.candidate_identity_digest, "startup identity candidate digest"),
+    manifest_digest: digest(manifest?.manifest_digest, "startup identity manifest digest"),
+    build_id: string(manifest?.build_id, "startup identity build ID"),
+    build_inputs_digest: sha256Jcs({
+      builder_input_digest: digest(manifest?.builder_input_digest, "startup identity builder input digest"),
+      source_manifest_digest: digest(manifest?.source_manifest_digest, "startup identity source manifest digest"),
+      compose_source_digest: digest(manifest?.compose_source_digest, "startup identity Compose source digest"),
+      sandbox_policy_digest: digest(manifest?.sandbox_policy_digest, "startup identity sandbox policy digest"),
+      generated_build_inventory_digest: digest(manifest?.generated_build_inventory_digest, "startup identity generated build inventory digest"),
+      pnpm_store_snapshot_inventory_digest: digest(manifest?.pnpm_store_snapshot_inventory_digest, "startup identity pnpm store inventory digest"),
+    }),
+    sealed_bundle_digest: digest(manifest?.sealed_bundle_digest, "startup identity sealed bundle digest"),
+    bundle_manifest_digest: digest(manifest?.bundle_manifest_digest, "startup identity bundle manifest digest"),
+    artifacts_digest: sha256Jcs(manifest?.artifacts),
+    toolchain_digest: sha256Jcs({
+      toolchain: manifest?.toolchain,
+      build_tools: manifest?.build_tools,
+      toolchain_lock_digest: digest(manifest?.toolchain_lock_digest, "startup identity toolchain lock digest"),
+    }),
+    images_digest: sha256Jcs(manifest?.images),
+    migration_head: string(manifest?.migration?.migration_head, "startup identity migration head"),
+    migration_digest: sha256Jcs(manifest?.migration),
+  };
+  return Object.freeze({ ...unsigned, identity_digest: sha256Jcs(unsigned) });
+}
+
+export function validateCandidateStartupIdentity(value, manifest = null, label = "candidate startup identity") {
+  exactObject(value, label, [
+    "schema", "candidate_schema", "release_sha", "release_tree", "candidate_identity_digest",
+    "manifest_digest", "build_id", "build_inputs_digest", "sealed_bundle_digest",
+    "bundle_manifest_digest", "artifacts_digest", "toolchain_digest", "images_digest",
+    "migration_head", "migration_digest", "identity_digest",
+  ]);
+  const { identity_digest: identityDigest, ...unsigned } = value;
+  if (
+    value.schema !== RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA
+    || !SHA_PATTERN.test(value.release_sha ?? "")
+    || !SHA_PATTERN.test(value.release_tree ?? "")
+    || typeof value.candidate_schema !== "string" || value.candidate_schema.length === 0
+    || typeof value.build_id !== "string" || value.build_id.length === 0
+    || typeof value.migration_head !== "string" || value.migration_head.length === 0
+    || ![
+      "candidate_identity_digest", "manifest_digest", "build_inputs_digest", "sealed_bundle_digest",
+      "bundle_manifest_digest", "artifacts_digest", "toolchain_digest", "images_digest",
+      "migration_digest", "identity_digest",
+    ].every((field) => DIGEST_PATTERN.test(value[field] ?? ""))
+    || identityDigest !== sha256Jcs(unsigned)
+  ) fail(`${label} is malformed or not self-bound`);
+  if (manifest !== null) {
+    const expected = buildCandidateStartupIdentity(manifest);
+    if (canonicalizeJcs(value) !== canonicalizeJcs(expected)) {
+      fail(`${label} differs from the completed candidate manifest`);
+    }
+  }
+  return Object.freeze({ ...value });
 }
 
 function nullableDigest(value, label) {
@@ -415,6 +482,21 @@ function validateFileInventory(value) {
   return value;
 }
 
+function generatedBuildInventoryDigest(value) {
+  const generated = value.filter((entry) => entry.source_kind === "generated_build");
+  if (generated.length === 0) fail("generated build inventory must be nonempty");
+  for (const prefix of [".next/", "node_modules/"]) {
+    if (!generated.some((entry) => entry.component === "app" && entry.path.startsWith(prefix))) {
+      fail(`generated build inventory is missing sealed ${prefix.slice(0, -1)} output`);
+    }
+  }
+  if (generated.some((entry) => entry.component !== "app"
+    || !(entry.path.startsWith(".next/") || entry.path.startsWith("node_modules/")))) {
+    fail("generated build inventory contains a non-canonical writable artifact path");
+  }
+  return sha256Jcs(generated);
+}
+
 function validateEnvironmentMetadata(value) {
   exactObject(value, "environment_snapshot", [
     "source_allowlist_id", "opaque_source_identity_digest", "opaque_override_digest",
@@ -464,6 +546,8 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.source_manifest_digest, "source_manifest_digest");
   digest(value.compose_source_digest, "compose_source_digest");
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
+  digest(value.generated_build_inventory_digest, "generated_build_inventory_digest");
+  digest(value.pnpm_store_snapshot_inventory_digest, "pnpm_store_snapshot_inventory_digest");
   string(value.build_id, "build_id");
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
   digest(value.bundle_manifest_digest, "bundle_manifest_digest");
@@ -475,6 +559,9 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   validateMigration(value.migration);
   validateArtifacts(value.artifacts);
   validateFileInventory(value.file_inventory);
+  if (generatedBuildInventoryDigest(value.file_inventory) !== value.generated_build_inventory_digest) {
+    fail("generated build inventory digest mismatch");
+  }
   validateEnvironmentMetadata(value.environment_snapshot);
   validateProductionGuard(value.production_guard);
   digest(value.candidate_identity_digest, "candidate_identity_digest");
@@ -779,16 +866,13 @@ export function assembleCandidateArtifacts({ sourceRoot, generatedRoot = sourceR
   });
 }
 
-function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot, generatedRoot }) {
+export function materializeCandidateBuildWorkspace({ sourceRoot, sourceManifest, buildRoot }) {
   mkdirSync(buildRoot, { mode: 0o700 });
-  mkdirSync(generatedRoot, { mode: 0o700 });
   for (const entry of sourceManifest.entries) {
     copyManifestEntry({ sourceRoot, destinationRoot: buildRoot, entry });
   }
   for (const name of [".next", "node_modules"]) {
-    const generatedPath = join(generatedRoot, name);
-    mkdirSync(generatedPath, { mode: 0o700 });
-    symlinkSync(generatedPath, join(buildRoot, name));
+    mkdirSync(join(buildRoot, name), { mode: 0o700 });
   }
   const sealDirectories = (path) => {
     for (const name of readdirSync(path)) {
@@ -799,6 +883,7 @@ function materializeBuildWorkspace({ sourceRoot, sourceManifest, buildRoot, gene
     chmodSync(path, 0o500);
   };
   sealDirectories(buildRoot);
+  for (const name of [".next", "node_modules"]) chmodSync(join(buildRoot, name), 0o700);
 }
 
 export function collectSealedMigrationInventory({ bundleRoot } = {}) {
@@ -985,9 +1070,25 @@ function assertSourceTreeSafe(rootPath) {
   visit(root, "");
 }
 
+function physicalDirectoryEntry(path, stat) {
+  return Object.freeze({
+    path,
+    type: "directory",
+    mode: modeBits(stat.mode),
+    uid: String(stat.uid),
+    gid: String(stat.gid),
+    nlink: String(stat.nlink),
+    device: String(stat.dev),
+    inode: String(stat.ino),
+    size: String(stat.size),
+    ctime_ns: String(stat.ctimeNs),
+  });
+}
+
 function inventorySealedComponent(component, rootPath) {
   const root = realpathSync(rootPath);
   const inventory = [];
+  const directories = [];
   const verifyStableIdentity = (path, before, label) => {
     const after = lstatSync(path, { bigint: true });
     for (const key of ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs"]) {
@@ -1028,8 +1129,24 @@ function inventorySealedComponent(component, rootPath) {
       return;
     }
     if (stat.isDirectory()) {
-      for (const name of readdirSync(path).sort()) {
-        visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+      if ((modeBits(stat.mode) & 0o222) !== 0) {
+        fail(`sealed candidate directory remains writable: ${relativePath}`);
+      }
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))) {
+          fail(`sealed directory identity drifted before read: ${relativePath}`);
+        }
+        directories.push(physicalDirectoryEntry(relativePath, stat));
+        for (const name of readdirSync(path).sort()) {
+          visit(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`);
+        }
+        if (
+          !samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))
+          || !samePnpmStoreIdentity(stat, lstatSync(path, { bigint: true }))
+        ) fail(`sealed directory identity drifted during read: ${relativePath}`);
+      } finally {
+        closeSync(fd);
       }
       return;
     }
@@ -1060,8 +1177,97 @@ function inventorySealedComponent(component, rootPath) {
       dereferenced_sha256: null,
     });
   };
-  for (const name of readdirSync(root).sort()) visit(join(root, name), name);
-  return inventory;
+  visit(root, ".");
+  return Object.freeze({ entries: inventory, directories });
+}
+
+function inventoryStableSealedComponent(component, rootPath, expectedInventory) {
+  const root = realpathSync(rootPath);
+  const expectedEntries = expectedInventory
+    .filter((entry) => entry.component === component)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const expectedByPath = new Map(expectedEntries.map((entry) => [entry.path, entry]));
+  const inventory = [];
+  const directories = [];
+  const sameIdentity = (left, right) => [
+    "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs",
+  ].every((key) => left[key] === right[key]);
+  const currentEntry = (expected, stat) => ({
+    ...expected,
+    mode: modeBits(stat.mode),
+    uid: String(stat.uid),
+    gid: String(stat.gid),
+    nlink: String(stat.nlink),
+    device: String(stat.dev),
+    inode: String(stat.ino),
+    size: String(stat.size),
+    ctime: new Date(Number(stat.ctimeMs)).toISOString(),
+  });
+  const visit = (path, relativePath) => {
+    const before = lstatSync(path, { bigint: true });
+    if (before.uid !== BigInt(process.getuid?.())) fail(`sealed entry owner is unsafe: ${relativePath}`);
+    if (before.isDirectory()) {
+      if ((modeBits(before.mode) & 0o222) !== 0) fail(`sealed candidate directory remains writable: ${relativePath}`);
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!sameIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail(`sealed directory identity drifted before stable verification: ${relativePath}`);
+        }
+        directories.push(physicalDirectoryEntry(relativePath, before));
+        for (const name of readdirSync(path).sort()) {
+          visit(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`);
+        }
+        if (
+          !sameIdentity(before, fstatSync(fd, { bigint: true }))
+          || !sameIdentity(before, lstatSync(path, { bigint: true }))
+        ) fail(`sealed directory identity drifted during stable verification: ${relativePath}`);
+      } finally {
+        closeSync(fd);
+      }
+      return;
+    }
+    const expected = expectedByPath.get(relativePath);
+    if (!expected) fail(`sealed candidate contains an unexpected entry: ${relativePath}`);
+    if (before.isSymbolicLink()) {
+      if (expected.type !== "symlink" || before.nlink !== 1n) {
+        fail(`sealed symlink physical identity is unsafe: ${relativePath}`);
+      }
+      const target = realpathSync(path);
+      assertPathContained(root, target, `sealed symlink ${relativePath}`);
+      if (readlinkSync(path) !== expected.symlink_target) {
+        fail(`sealed symlink target drifted during stable verification: ${relativePath}`);
+      }
+      if (!sameIdentity(before, lstatSync(path, { bigint: true }))) {
+        fail(`sealed symlink identity drifted during stable verification: ${relativePath}`);
+      }
+      inventory.push(currentEntry(expected, before));
+      return;
+    }
+    if (
+      expected.type !== "file" || !before.isFile() || before.nlink !== 1n
+      || (modeBits(before.mode) & 0o222) !== 0
+    ) fail(`sealed file physical identity is unsafe: ${relativePath}`);
+    const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    try {
+      if (!sameIdentity(before, fstatSync(fd, { bigint: true }))) {
+        fail(`sealed file identity drifted before stable verification: ${relativePath}`);
+      }
+      if (
+        !sameIdentity(before, fstatSync(fd, { bigint: true }))
+        || !sameIdentity(before, lstatSync(path, { bigint: true }))
+      ) fail(`sealed file identity drifted during stable verification: ${relativePath}`);
+    } finally {
+      closeSync(fd);
+    }
+    inventory.push(currentEntry(expected, before));
+  };
+  visit(root, ".");
+  inventory.sort((left, right) => left.path.localeCompare(right.path));
+  if (
+    canonicalizeJcs(inventory.map((entry) => entry.path))
+    !== canonicalizeJcs(expectedEntries.map((entry) => entry.path))
+  ) fail(`sealed ${component} physical inventory is incomplete`);
+  return Object.freeze({ entries: inventory, directories });
 }
 
 export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {}) {
@@ -1083,7 +1289,7 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
     const destination = join(bundleRoot, component);
     copyLocalMacProductionExecutionTree(componentRoots[component], destination);
     sealLocalMacProductionExecutionTree(destination);
-    const entries = inventorySealedComponent(component, destination);
+    const { entries } = inventorySealedComponent(component, destination);
     fileInventory.push(...entries);
     const physicalEntries = entries.map((entry) => {
       const physicalEntry = { ...entry };
@@ -1132,7 +1338,8 @@ export function buildBundleAuthorityManifest(input) {
     "artifacts", "build_id", "ci_check_summary_digest", "ci_snapshot_digest",
     "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
-    "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
     "build_tools", "builder_input_digest",
     "repository", "source_ref", "selection_digest",
@@ -1145,11 +1352,15 @@ export function buildBundleAuthorityManifest(input) {
   string(input.build_id, "bundle authority build_id");
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
-    "sandbox_policy_digest", "sealed_bundle_digest", "source_manifest_digest",
+    "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest", "builder_input_digest",
   ]) digest(input[field], `bundle authority ${field}`);
   validateEnvironmentMetadata(input.environment_snapshot);
   validateFileInventory(input.file_inventory);
+  if (generatedBuildInventoryDigest(input.file_inventory) !== input.generated_build_inventory_digest) {
+    fail("bundle authority generated build inventory digest mismatch");
+  }
   validateCandidateImages(input.images, { strictManifest: true });
   validateMigration(input.migration);
   validateProductionGuard(input.production_guard);
@@ -1187,6 +1398,539 @@ function ensureNamespaceDirectory(path, currentUid, label) {
 function sandboxLiteral(path) {
   if (!isAbsolute(path)) fail("sandbox path must be absolute");
   return `\"${path.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}\"`;
+}
+
+/**
+ * @param {{runRoot:string,buildRoot:string,nodeModulesRoot:string,nextRoot:string,privateHome:string,privateTmp:string,currentUid?:number}} options
+ * @param {(authority:{writeRoots:string[]})=>unknown|Promise<unknown>} callback
+ */
+export async function withCandidateBuildWorkAuthority({
+  runRoot, buildRoot, nodeModulesRoot, nextRoot, privateHome, privateTmp,
+  currentUid = process.getuid?.(),
+} = /** @type {any} */ ({}), callback) {
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  if (typeof callback !== "function") fail("candidate build-work authority callback is required");
+  const expectedPaths = {
+    runRoot: resolve(runRoot ?? ""),
+    buildRoot: join(resolve(runRoot ?? ""), "build-work"),
+    nodeModulesRoot: join(resolve(runRoot ?? ""), "build-work", "node_modules"),
+    nextRoot: join(resolve(runRoot ?? ""), "build-work", ".next"),
+    privateHome: join(resolve(runRoot ?? ""), "build-home"),
+    privateTmp: join(resolve(runRoot ?? ""), "tmp"),
+  };
+  const suppliedPaths = { runRoot, buildRoot, nodeModulesRoot, nextRoot, privateHome, privateTmp };
+  for (const [role, path] of Object.entries(suppliedPaths)) {
+    if (!isAbsolute(path ?? "") || resolve(path) !== path || expectedPaths[role] !== path) {
+      fail(`candidate build-work ${role} path must be exact, canonical, and run-owned`);
+    }
+  }
+
+  const strictRoles = new Map([
+    [dirname(runRoot), 0o700],
+    [runRoot, 0o700],
+    [buildRoot, 0o500],
+  ]);
+  const writableRoles = new Map([
+    [nodeModulesRoot, 0o700],
+    [nextRoot, 0o700],
+    [privateHome, 0o700],
+    [privateTmp, 0o700],
+  ]);
+  const identityKeys = ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs"];
+  const writableIdentityKeys = ["dev", "ino", "mode", "uid", "gid"];
+  const sameIdentity = (left, right, keys) => keys.every((key) => left[key] === right[key]);
+  const snapshots = [];
+  const fds = [];
+  const openDirectory = (path, expectedMode, mutable) => {
+    const stat = lstatSync(path, { bigint: true });
+    if (
+      stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+      || modeBits(stat.mode) !== expectedMode || realpathSync(path) !== path
+    ) fail("candidate build-work directory owner, mode, type, or canonical path is unsafe");
+    const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+    if (!sameIdentity(stat, fstatSync(fd, { bigint: true }), identityKeys)) {
+      closeSync(fd);
+      fail("candidate build-work directory identity drifted before execution");
+    }
+    snapshots.push({ fd, path, stat, mutable });
+    fds.push(fd);
+  };
+  for (const [path, mode] of strictRoles) openDirectory(path, mode, path === runRoot);
+  for (const [path, mode] of writableRoles) openDirectory(path, mode, true);
+
+  for (const root of [nodeModulesRoot, nextRoot, privateHome, privateTmp]) {
+    const children = readdirSync(root);
+    for (const name of children) {
+      const stat = lstatSync(join(root, name), { bigint: true });
+      if (stat.isFile() && stat.nlink !== 1n) fail("candidate generated build root contains a hard-link escape");
+    }
+    if (children.length !== 0) fail("candidate generated build roots must begin empty");
+  }
+
+  const authorityDigest = sha256Jcs({
+    schema: "homecook.release-rehearsal-build-work-authority.v1",
+    directories: snapshots.map(({ path, stat, mutable }) => ({
+      path_digest: sha256Jcs(path),
+      mutable,
+      device: String(stat.dev),
+      inode: String(stat.ino),
+      mode: modeBits(stat.mode),
+      uid: String(stat.uid),
+    })),
+  });
+
+  let value;
+  let callbackError;
+  try {
+    value = await callback({
+      writeRoots: [nodeModulesRoot, nextRoot, privateHome, privateTmp],
+    });
+  } catch (error) {
+    callbackError = error;
+  }
+  let identityError;
+  try {
+    for (const { fd, path, stat, mutable } of snapshots) {
+      const pathPost = lstatSync(path, { bigint: true });
+      const fdPost = fstatSync(fd, { bigint: true });
+      const keys = mutable ? writableIdentityKeys : identityKeys;
+      if (
+        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
+        || !sameIdentity(stat, pathPost, keys) || !sameIdentity(stat, fdPost, keys)
+      ) fail("candidate build-work directory identity or parent drifted during execution");
+    }
+  } catch (error) {
+    identityError = error;
+  } finally {
+    for (const fd of fds.reverse()) closeSync(fd);
+  }
+  if (identityError) throw identityError;
+  if (callbackError) throw callbackError;
+  return Object.freeze({ authority_digest: authorityDigest, value });
+}
+
+const PNPM_STORE_IDENTITY_KEYS = [
+  "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs",
+];
+
+function samePnpmStoreIdentity(left, right) {
+  return PNPM_STORE_IDENTITY_KEYS.every((key) => left[key] === right[key]);
+}
+
+function pnpmStoreInventory(root, currentUid, {
+  requireSealed = false,
+  verifyCafsContent = false,
+  afterFileOpen = null,
+  allowedRootChildren = ["files", "index"],
+} = {}) {
+  if (
+    !Array.isArray(allowedRootChildren)
+    || allowedRootChildren.some((name) => typeof name !== "string" || name.length === 0 || name.includes("/"))
+    || new Set(allowedRootChildren).size !== allowedRootChildren.length
+  ) fail("pnpm store allowed root children are invalid");
+  const expectedRootChildren = [...allowedRootChildren].sort();
+  const rootBefore = lstatSync(root, { bigint: true });
+  const rootMode = modeBits(rootBefore.mode);
+  if (
+    rootBefore.isSymbolicLink() || !rootBefore.isDirectory()
+    || rootBefore.uid !== BigInt(currentUid) || realpathSync(root) !== root
+    || (!requireSealed && (rootMode & 0o022) !== 0)
+    || (requireSealed && rootMode !== 0o500)
+  ) fail("pnpm store root owner, mode, type, or canonical path is unsafe");
+  const rootFd = openSync(root, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+  if (!samePnpmStoreIdentity(rootBefore, fstatSync(rootFd, { bigint: true }))) {
+    closeSync(rootFd);
+    fail("pnpm store root identity drifted before inventory");
+  }
+  const entries = [];
+  const visit = (path, relativePath) => {
+    const before = lstatSync(path, { bigint: true });
+    const mode = modeBits(before.mode);
+    if (
+      before.isSymbolicLink() || before.uid !== BigInt(currentUid)
+      || realpathSync(path) !== path || (!requireSealed && (mode & 0o022) !== 0)
+      || (requireSealed && (mode & 0o222) !== 0)
+    ) fail("pnpm store inventory owner, mode, type, or canonical path is unsafe");
+    if (before.isDirectory()) {
+      if (requireSealed && mode !== 0o500) fail("private pnpm store directory is not sealed");
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail("pnpm store directory identity drifted during inventory");
+        }
+        entries.push({
+          path: relativePath,
+          type: "directory",
+          mode,
+          uid: String(before.uid),
+          gid: String(before.gid),
+          nlink: String(before.nlink),
+          device: String(before.dev),
+          inode: String(before.ino),
+          size: String(before.size),
+          ctime_ns: String(before.ctimeNs),
+          mtime_ns: String(before.mtimeNs),
+          content_identity: null,
+        });
+        for (const name of readdirSync(path).sort()) {
+          visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+        }
+        if (!samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))) {
+          fail("pnpm store directory identity drifted during inventory");
+        }
+      } finally {
+        closeSync(fd);
+      }
+      return;
+    }
+    if (!before.isFile() || before.nlink !== 1n) {
+      fail("pnpm store inventory requires regular nlink1 files");
+    }
+    const executable = (mode & 0o111) !== 0;
+    if (requireSealed && mode !== (executable ? 0o500 : 0o400)) {
+      fail("private pnpm store file is not canonically sealed");
+    }
+    let contentIdentity;
+    const cafsMatch = /^files\/([0-9a-f]{2})\/([0-9a-f]{126})(-exec)?$/u.exec(relativePath);
+    if (relativePath.startsWith("files/")) {
+      if (!cafsMatch || executable !== Boolean(cafsMatch[3])) {
+        fail("pnpm CAFS path or executable identity is invalid");
+      }
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail("pnpm CAFS file identity drifted before verification");
+        }
+        afterFileOpen?.({ path, relativePath, contentVerified: verifyCafsContent });
+        if (verifyCafsContent) {
+          const actualIntegrity = createHash("sha512").update(readFileSync(fd)).digest("hex");
+          if (actualIntegrity !== `${cafsMatch[1]}${cafsMatch[2]}`) {
+            fail("pnpm CAFS content differs from its content-addressed path");
+          }
+        }
+        if (
+          !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
+          || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
+        ) fail("pnpm CAFS file identity drifted during verification");
+      } finally {
+        closeSync(fd);
+      }
+      contentIdentity = `sha512:${cafsMatch[1]}${cafsMatch[2]}${cafsMatch[3] ?? ""}`;
+    } else if (relativePath.startsWith("index/")) {
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+          fail("pnpm store index file identity drifted before read");
+        }
+        afterFileOpen?.({ path, relativePath, contentVerified: true });
+        contentIdentity = `sha256:${sha256Bytes(readFileSync(fd))}`;
+        if (
+          !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
+          || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
+        ) fail("pnpm store index file identity drifted during read");
+      } finally {
+        closeSync(fd);
+      }
+    } else {
+      fail("pnpm store inventory contains an unexpected root");
+    }
+    entries.push({
+      path: relativePath,
+      type: "file",
+      mode,
+      uid: String(before.uid),
+      gid: String(before.gid),
+      nlink: String(before.nlink),
+      device: String(before.dev),
+      inode: String(before.ino),
+      size: String(before.size),
+      ctime_ns: String(before.ctimeNs),
+      mtime_ns: String(before.mtimeNs),
+      content_identity: contentIdentity,
+    });
+  };
+  try {
+    if (canonicalizeJcs(readdirSync(root).sort()) !== canonicalizeJcs(expectedRootChildren)) {
+      fail("pnpm store root contains unexpected children");
+    }
+    for (const name of ["files", "index"]) visit(join(root, name), name);
+    if (
+      canonicalizeJcs(readdirSync(root).sort()) !== canonicalizeJcs(expectedRootChildren)
+      || !samePnpmStoreIdentity(rootBefore, lstatSync(root, { bigint: true }))
+      || !samePnpmStoreIdentity(rootBefore, fstatSync(rootFd, { bigint: true }))
+    ) fail("pnpm store root identity or children drifted during inventory");
+  } finally {
+    closeSync(rootFd);
+  }
+  const contentEntries = entries.map(({ path, type, size, content_identity: contentIdentity }) => ({
+    path,
+    type,
+    size: type === "file" ? size : null,
+    content_identity: contentIdentity,
+  }));
+  const portableEntries = entries.map(({ path, type, mode, size, content_identity: contentIdentity }) => ({
+    path,
+    type,
+    mode,
+    size: type === "file" ? size : null,
+    content_identity: contentIdentity,
+  }));
+  return Object.freeze({
+    entries,
+    content_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-store-content-inventory.v1",
+      entries: contentEntries,
+    }),
+    inventory_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-store-snapshot-inventory.v1",
+      entries: portableEntries,
+    }),
+    identity_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-store-physical-identity.v2",
+      root_identity: physicalDirectoryEntry(".", rootBefore),
+      entries,
+    }),
+  });
+}
+
+function clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory) {
+  const sourceEntries = new Map(sourceInventory.entries.map((entry) => [entry.path, entry]));
+  const cloneEntry = (source, destination, relativePath) => {
+    const expected = sourceEntries.get(relativePath);
+    const before = lstatSync(source, { bigint: true });
+    if (
+      !expected || before.isSymbolicLink() || realpathSync(source) !== source
+      || String(before.dev) !== expected.device || String(before.ino) !== expected.inode
+      || String(before.ctimeNs) !== expected.ctime_ns || String(before.mtimeNs) !== expected.mtime_ns
+    ) fail("approved pnpm store source drifted before private snapshot copy");
+    if (before.isDirectory()) {
+      mkdirSync(destination, { mode: 0o700 });
+      for (const name of readdirSync(source).sort()) {
+        cloneEntry(join(source, name), join(destination, name), `${relativePath}/${name}`);
+      }
+      chmodSync(destination, 0o500);
+      return;
+    }
+    copyFileSync(
+      source,
+      destination,
+      fsConstants.COPYFILE_EXCL | fsConstants.COPYFILE_FICLONE,
+    );
+    const isIndex = relativePath.startsWith("index/");
+    chmodSync(destination, relativePath.endsWith("-exec") ? (isIndex ? 0o500 : 0o700) : (isIndex ? 0o400 : 0o600));
+    const copied = lstatSync(destination, { bigint: true });
+    if (
+      copied.isSymbolicLink() || !copied.isFile() || copied.nlink !== 1n
+      || realpathSync(destination) !== destination || copied.size !== before.size
+      || !samePnpmStoreIdentity(before, lstatSync(source, { bigint: true }))
+    ) fail("private pnpm store clone or source identity drifted during copy");
+  };
+  mkdirSync(storePath, { mode: 0o700 });
+  for (const name of ["files", "index"]) {
+    cloneEntry(join(sourceStore, name), join(storePath, name), name);
+  }
+}
+
+function sealPnpmStoreFiles(filesRoot) {
+  const visit = (path) => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) fail("private pnpm store contains a symlink while sealing");
+    if (stat.isDirectory()) {
+      for (const name of readdirSync(path)) visit(join(path, name));
+      return;
+    }
+    if (!stat.isFile() || stat.nlink !== 1) fail("private pnpm store contains an unsafe file while sealing");
+    chmodSync(path, (stat.mode & 0o111) === 0 ? 0o400 : 0o500);
+  };
+  visit(filesRoot);
+}
+
+/**
+ * @param {{sourceStore:string,storeRoot:string,currentUid?:number}} options
+ * @param {(authority:{storePath:string,writableRoots:string[],snapshotInventoryDigest:string})=>unknown|Promise<unknown>} callback
+ */
+export async function withCandidatePnpmStoreView({
+  sourceStore,
+  storeRoot,
+  currentUid = process.getuid?.(),
+} = /** @type {any} */ ({}), callback) {
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  if (typeof callback !== "function") fail("candidate pnpm store-view callback is required");
+  if (![sourceStore, storeRoot].every((path) => isAbsolute(path ?? "") && resolve(path) === path)) {
+    fail("candidate pnpm store-view paths must be absolute and canonical");
+  }
+  const privateParent = dirname(storeRoot);
+  const privateParentStat = lstatSync(privateParent, { bigint: true });
+  if (
+    privateParentStat.isSymbolicLink() || !privateParentStat.isDirectory()
+    || privateParentStat.uid !== BigInt(currentUid) || modeBits(privateParentStat.mode) !== 0o700
+    || realpathSync(privateParent) !== privateParent
+  ) fail("candidate pnpm store-view parent is unsafe");
+
+  const sourcePaths = [sourceStore, join(sourceStore, "files"), join(sourceStore, "index")];
+  const sourceSnapshots = [];
+  try {
+    for (const path of sourcePaths) {
+      const stat = lstatSync(path, { bigint: true });
+      if (
+        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+        || (modeBits(stat.mode) & 0o022) !== 0 || realpathSync(path) !== path
+      ) fail("approved pnpm package store path, owner, mode, or identity is unsafe");
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      if (!samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))) {
+        closeSync(fd);
+        fail("approved pnpm package store identity drifted before snapshot creation");
+      }
+      sourceSnapshots.push({ fd, path, stat });
+    }
+  } catch (error) {
+    for (const { fd } of sourceSnapshots) closeSync(fd);
+    throw error;
+  }
+
+  const storePath = join(storeRoot, "v10");
+  let sourceInventory;
+  let snapshotInventory;
+  try {
+    sourceInventory = pnpmStoreInventory(sourceStore, currentUid, {
+      verifyCafsContent: true,
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
+    mkdirSync(storeRoot, { mode: 0o700 });
+    clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory);
+    for (const name of ["projects", "tmp"]) mkdirSync(join(storePath, name), { mode: 0o700 });
+    chmodSync(storePath, 0o500);
+    chmodSync(storeRoot, 0o500);
+    snapshotInventory = pnpmStoreInventory(storePath, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
+    if (snapshotInventory.content_digest !== sourceInventory.content_digest) {
+      fail("candidate pnpm store snapshot inventory digest differs from its approved source");
+    }
+    const sourceAfterCopy = pnpmStoreInventory(sourceStore, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
+    if (
+      sourceAfterCopy.inventory_digest !== sourceInventory.inventory_digest
+      || sourceAfterCopy.identity_digest !== sourceInventory.identity_digest
+    ) fail("approved pnpm package store drifted during private snapshot creation");
+  } catch (error) {
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    fail(`candidate pnpm store-view create-only materialization failed: ${error?.message ?? error?.code ?? "unknown"}`);
+  }
+
+  const writableRoots = [join(storePath, "projects"), join(storePath, "tmp")];
+  const viewDirectories = [storeRoot, storePath, join(storePath, "files"), join(storePath, "index"), ...writableRoots]
+    .map((path) => {
+      const stat = lstatSync(path, { bigint: true });
+      const expectedMode = writableRoots.includes(path) ? 0o700 : 0o500;
+      if (
+        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+        || modeBits(stat.mode) !== expectedMode || realpathSync(path) !== path
+      ) fail("candidate pnpm store-view directory identity is unsafe");
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      if (!samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))) {
+        closeSync(fd);
+        fail("candidate pnpm store-view directory identity drifted before execution");
+      }
+      return { fd, path, stat, mutable: writableRoots.includes(path) };
+    });
+  let value;
+  let callbackError;
+  try {
+    value = await callback({
+      storePath,
+      writableRoots: Object.freeze([...writableRoots]),
+      snapshotInventoryDigest: snapshotInventory.inventory_digest,
+    });
+  } catch (error) {
+    callbackError = error;
+  }
+  let identityError;
+  let sealedSnapshotInventory;
+  try {
+    for (const { fd, path, stat } of sourceSnapshots) {
+      const pathPost = lstatSync(path, { bigint: true });
+      const fdPost = fstatSync(fd, { bigint: true });
+      if (
+        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
+        || !samePnpmStoreIdentity(stat, pathPost) || !samePnpmStoreIdentity(stat, fdPost)
+      ) fail("approved pnpm package store identity drifted during candidate build");
+    }
+    const sourcePost = pnpmStoreInventory(sourceStore, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
+    if (
+      sourcePost.inventory_digest !== sourceInventory.inventory_digest
+      || sourcePost.identity_digest !== sourceInventory.identity_digest
+    ) fail("approved pnpm package store inventory drifted during candidate build");
+    const snapshotBeforeSeal = pnpmStoreInventory(storePath, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
+    });
+    if (
+      snapshotBeforeSeal.inventory_digest !== snapshotInventory.inventory_digest
+      || snapshotBeforeSeal.identity_digest !== snapshotInventory.identity_digest
+    ) fail("candidate pnpm store snapshot inventory drifted during candidate build");
+    for (const { fd, path, stat, mutable } of viewDirectories) {
+      const pathPost = lstatSync(path, { bigint: true });
+      const fdPost = fstatSync(fd, { bigint: true });
+      const keys = mutable ? ["dev", "ino", "mode", "uid", "gid"] : PNPM_STORE_IDENTITY_KEYS;
+      if (
+        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
+        || !keys.every((key) => stat[key] === pathPost[key] && stat[key] === fdPost[key])
+      ) fail("candidate pnpm store-view directory identity drifted during candidate build");
+    }
+  } catch (error) {
+    identityError = error;
+  } finally {
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+  }
+  if (identityError) throw identityError;
+  if (callbackError) throw callbackError;
+  try {
+    chmodSync(storePath, 0o700);
+    for (const writableRoot of writableRoots) {
+      const stat = lstatSync(writableRoot, { bigint: true });
+      if (
+        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+        || modeBits(stat.mode) !== 0o700 || realpathSync(writableRoot) !== writableRoot
+      ) fail("candidate pnpm store scratch directory is unsafe before cleanup");
+      rmSync(writableRoot, { recursive: true, force: false });
+      try {
+        lstatSync(writableRoot);
+        fail("candidate pnpm store scratch directory remained after cleanup");
+      } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+      }
+    }
+    if (canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])) {
+      fail("candidate pnpm store contains unexpected children after scratch cleanup");
+    }
+    sealPnpmStoreFiles(join(storePath, "files"));
+    chmodSync(storePath, 0o500);
+    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
+    if (sealedSnapshotInventory.content_digest !== snapshotInventory.content_digest) {
+      fail("candidate pnpm store sealed snapshot inventory drifted after build");
+    }
+  } catch (error) {
+    fail(`candidate pnpm store scratch cleanup or seal failed: ${error?.message ?? error?.code ?? "unknown"}`);
+  }
+  const authorityDigest = sha256Jcs({
+    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v2",
+    source_inventory_digest: sourceInventory.inventory_digest,
+    source_identity_digest: sourceInventory.identity_digest,
+    snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
+    snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    view_path_digest: sha256Jcs(storePath),
+    writable_path_digests: writableRoots.map((path) => sha256Jcs(path)),
+  });
+  return Object.freeze({
+    authority_digest: authorityDigest,
+    snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
+    snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    value,
+  });
 }
 
 /** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[]}} options */
@@ -1235,6 +1979,7 @@ export function buildCandidateSandboxProfile({
     "(deny default)",
     "(allow process-exec)",
     "(allow process-fork)",
+    "(allow signal (target children))",
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
     ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
@@ -1516,6 +2261,8 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["compose_source_digest", candidate.compose_source_digest, bundle.compose_source_digest],
     ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
+    ["generated_build_inventory_digest", candidate.generated_build_inventory_digest, bundle.generated_build_inventory_digest],
+    ["pnpm_store_snapshot_inventory_digest", candidate.pnpm_store_snapshot_inventory_digest, bundle.pnpm_store_snapshot_inventory_digest],
     ["toolchain_lock_digest", candidate.toolchain_lock_digest, bundle.toolchain_lock_digest],
     ["environment_snapshot", candidate.environment_snapshot, bundle.environment_snapshot],
     ["production_guard", candidate.production_guard, bundle.production_guard],
@@ -1528,12 +2275,79 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
   return bundle;
 }
 
-export function readCompletedCandidateRoot(root) {
+function portableCandidateFileInventory(entries) {
+  return entries.map((entry) => {
+    const portable = { ...entry };
+    for (const field of ["uid", "gid", "nlink", "device", "inode", "ctime"]) delete portable[field];
+    return portable;
+  });
+}
+
+function candidatePhysicalIdentityDigest(bundleInventory, directoryInventory, storeIdentityDigest) {
+  return sha256Jcs({
+    schema: "homecook.local-mac-production-rehearsal-candidate-physical-identity.v2",
+    bundle_file_inventory_digest: sha256Jcs(bundleInventory),
+    directory_inventory_digest: sha256Jcs(directoryInventory),
+    pnpm_store_physical_identity_digest: storeIdentityDigest,
+  });
+}
+
+function readSealedDirectoryPhysicalIdentity(path, relativePath, currentUid) {
+  const before = lstatSync(path, { bigint: true });
+  if (
+    !before.isDirectory() || before.isSymbolicLink()
+    || before.uid !== BigInt(currentUid) || modeBits(before.mode) !== 0o500
+    || realpathSync(path) !== path
+  ) fail(`completed candidate directory authority is unsafe: ${relativePath}`);
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+  try {
+    if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+      fail(`completed candidate directory identity drifted before read: ${relativePath}`);
+    }
+    const entry = physicalDirectoryEntry(relativePath, before);
+    if (
+      !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
+      || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
+    ) fail(`completed candidate directory identity drifted during read: ${relativePath}`);
+    return entry;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function completedCandidatePhysicalAuthorityPath(root) {
+  return `${root}.physical-authority.json`;
+}
+
+function readCompletedCandidatePortableRootWithIdentity(root, {
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string})=>void)} */ (null),
+  verifyPortableContent = true,
+} = {}) {
   if (!isAbsolute(root ?? "")) fail("completed candidate root must be absolute");
-  const rootStat = lstatSync(root);
+  if (resolve(root) !== root || realpathSync(root) !== root) {
+    fail("completed candidate root path is not canonical");
+  }
+  const rootStat = lstatSync(root, { bigint: true });
   if (rootStat.isSymbolicLink() || !rootStat.isDirectory() || (modeBits(rootStat.mode) & 0o222) !== 0) {
     fail("completed candidate root is not sealed");
   }
+  const rootFd = openSync(root, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+  if (!samePnpmStoreIdentity(rootStat, fstatSync(rootFd, { bigint: true }))) {
+    closeSync(rootFd);
+    fail("completed candidate root identity drifted before read");
+  }
+  try {
+  const candidateDirectories = [
+    [root, "."],
+    [join(root, "bundles"), "bundles"],
+    [join(root, "bundles", "bundle"), "bundles/bundle"],
+    [join(root, "evidence"), "evidence"],
+    [join(root, "pnpm-store"), "pnpm-store"],
+  ].map(([path, relativePath]) => readSealedDirectoryPhysicalIdentity(
+    path,
+    relativePath,
+    Number(rootStat.uid),
+  ));
   const completePath = join(root, "complete.json");
   const failedPath = join(root, "failed.json");
   if (!pathExists(completePath) || pathExists(failedPath)) {
@@ -1550,6 +2364,18 @@ export function readCompletedCandidateRoot(root) {
   const manifest = validateCandidateManifestObject(
     readSealedAuthorityFile(root, join(root, "candidate.json"), "candidate manifest"),
   );
+  const storeSnapshot = pnpmStoreInventory(
+    join(root, "pnpm-store", "v10"),
+    Number(rootStat.uid),
+    {
+      requireSealed: true,
+      verifyCafsContent: verifyPortableContent,
+      afterFileOpen: afterPnpmStoreFileOpen,
+    },
+  );
+  if (storeSnapshot.inventory_digest !== manifest.pnpm_store_snapshot_inventory_digest) {
+    fail("completed candidate pnpm store portable inventory digest is invalid");
+  }
   const candidateIdentityAuthority = readSealedAuthorityFile(
     root,
     join(root, "bundles", "candidate-identity.json"),
@@ -1599,10 +2425,22 @@ export function readCompletedCandidateRoot(root) {
   ]);
   const actualInventory = [];
   const actualPhysicalInventory = [];
+  const bundleDirectories = [];
   const actualArtifacts = {};
   for (const component of ["app", "full_local", "worker"]) {
-    const entries = inventorySealedComponent(component, join(physicalBundleRoot, component));
+    const componentInventory = verifyPortableContent
+      ? inventorySealedComponent(component, join(physicalBundleRoot, component))
+      : inventoryStableSealedComponent(
+        component,
+        join(physicalBundleRoot, component),
+        bundleManifest.file_inventory,
+      );
+    const entries = componentInventory.entries;
     actualInventory.push(...entries);
+    bundleDirectories.push(...componentInventory.directories.map((entry) => ({
+      ...entry,
+      path: `bundles/bundle/${component}${entry.path === "." ? "" : `/${entry.path}`}`,
+    })));
     const physicalEntries = entries.map((entry) => {
       const physicalEntry = { ...entry };
       for (const field of ["source_kind", "uid", "gid", "nlink", "device", "inode", "ctime"]) {
@@ -1617,6 +2455,8 @@ export function readCompletedCandidateRoot(root) {
     `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
   actualPhysicalInventory.sort((left, right) =>
     `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
+  const directoryInventory = [...candidateDirectories, ...bundleDirectories]
+    .sort((left, right) => left.path.localeCompare(right.path));
   const actualSealedBundleDigest = sha256Jcs({
     schema: "homecook.local-mac-production-rehearsal-sealed-bundle.v1",
     artifacts: actualArtifacts,
@@ -1633,7 +2473,8 @@ export function readCompletedCandidateRoot(root) {
     || manifest.bundle_manifest_digest !== bundleManifestDigest
     || manifest.sealed_bundle_digest !== bundleManifest.sealed_bundle_digest
     || canonicalizeJcs(actualArtifacts) !== canonicalizeJcs(bundleManifest.artifacts)
-    || canonicalizeJcs(actualInventory) !== canonicalizeJcs(bundleManifest.file_inventory)
+    || canonicalizeJcs(portableCandidateFileInventory(actualInventory))
+      !== canonicalizeJcs(portableCandidateFileInventory(bundleManifest.file_inventory))
     || actualSealedBundleDigest !== manifest.sealed_bundle_digest
     || physicalManifest.schema !== "homecook.local-mac-production-rehearsal-sealed-bundle.v1"
     || physicalManifest.bundle_content_digest !== actualSealedBundleDigest
@@ -1653,7 +2494,304 @@ export function readCompletedCandidateRoot(root) {
     || complete.candidate_identity_digest !== candidateIdentityDigest
     || complete.manifest_digest !== manifest.manifest_digest
   ) fail("candidate complete identity binding is invalid");
-  return Object.freeze({ complete, manifest, bundle_manifest: bundleManifest });
+  const rootAfter = lstatSync(root, { bigint: true });
+  const fdAfter = fstatSync(rootFd, { bigint: true });
+  if (
+    !samePnpmStoreIdentity(rootStat, rootAfter)
+    || !samePnpmStoreIdentity(rootStat, fdAfter)
+    || rootAfter.isSymbolicLink()
+    || realpathSync(root) !== root
+  ) fail("completed candidate root identity drifted during read");
+  return Object.freeze({
+    complete,
+    manifest,
+    bundle_manifest: bundleManifest,
+    physical_identity_digest: candidatePhysicalIdentityDigest(
+      actualInventory,
+      directoryInventory,
+      storeSnapshot.identity_digest,
+    ),
+  });
+  } finally {
+    closeSync(rootFd);
+  }
+}
+
+function readCompletedCandidatePhysicalAuthority(root, physicalAuthorityPath) {
+  const canonicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root);
+  if (
+    !isAbsolute(physicalAuthorityPath ?? "")
+    || resolve(physicalAuthorityPath) !== physicalAuthorityPath
+    || physicalAuthorityPath !== canonicalAuthorityPath
+  ) fail("completed candidate physical authority must use the exact canonical sibling path");
+  const authority = readSealedAuthorityFile(
+    dirname(physicalAuthorityPath),
+    physicalAuthorityPath,
+    "completed candidate physical authority",
+  );
+  exactObject(authority, "completed candidate physical authority", [
+    "schema", "authority_path_digest", "candidate_root_path_digest", "candidate_identity_digest",
+    "manifest_digest", "pnpm_store_snapshot_inventory_digest", "physical_identity_digest",
+    "authority_digest",
+  ]);
+  const { authority_digest: authorityDigest, ...unsigned } = authority;
+  if (
+    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1"
+    || authority.authority_path_digest !== sha256Jcs(physicalAuthorityPath)
+    || authorityDigest !== sha256Jcs(unsigned)
+  ) fail("completed candidate root-local physical authority is stale or invalid");
+  return authority;
+}
+
+function readCompletedCandidateWithPhysicalAuthority(root, {
+  physicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root),
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+  verifyPortableContent = true,
+} = {}) {
+  const authority = readCompletedCandidatePhysicalAuthority(root, physicalAuthorityPath);
+  const portable = readCompletedCandidatePortableRootWithIdentity(root, {
+    afterPnpmStoreFileOpen,
+    verifyPortableContent,
+  });
+  if (
+    authority.candidate_root_path_digest !== sha256Jcs(root)
+    || authority.candidate_identity_digest !== portable.manifest.candidate_identity_digest
+    || authority.manifest_digest !== portable.manifest.manifest_digest
+    || authority.pnpm_store_snapshot_inventory_digest
+      !== portable.manifest.pnpm_store_snapshot_inventory_digest
+    || authority.physical_identity_digest !== portable.physical_identity_digest
+  ) fail("completed candidate root-local physical authority is stale or invalid");
+  return Object.freeze({
+    complete: portable.complete,
+    manifest: portable.manifest,
+    bundle_manifest: portable.bundle_manifest,
+  });
+}
+
+/**
+ * @param {{candidateRoot:string,authorityPath:string,afterPnpmStoreFileOpen?:null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)}} options
+ */
+export function issueCompletedCandidatePhysicalAuthority({
+  candidateRoot,
+  authorityPath,
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  const canonicalAuthorityPath = completedCandidatePhysicalAuthorityPath(candidateRoot);
+  if (
+    !isAbsolute(authorityPath ?? "") || resolve(authorityPath) !== authorityPath
+    || authorityPath !== canonicalAuthorityPath
+  ) {
+    fail("completed candidate physical authority must use the exact canonical sibling path");
+  }
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  assertPrivateParent(authorityPath, currentUid);
+  const portable = readCompletedCandidatePortableRootWithIdentity(candidateRoot, {
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: true,
+  });
+  const unsigned = {
+    schema: "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1",
+    authority_path_digest: sha256Jcs(authorityPath),
+    candidate_root_path_digest: sha256Jcs(candidateRoot),
+    candidate_identity_digest: portable.manifest.candidate_identity_digest,
+    manifest_digest: portable.manifest.manifest_digest,
+    pnpm_store_snapshot_inventory_digest: portable.manifest.pnpm_store_snapshot_inventory_digest,
+    physical_identity_digest: portable.physical_identity_digest,
+  };
+  const authority = Object.freeze({ ...unsigned, authority_digest: sha256Jcs(unsigned) });
+  try {
+    writeFileSync(authorityPath, canonicalizeJcs(authority), { flag: "wx", mode: 0o400 });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "EEXIST") {
+      fail("completed candidate physical authority create-only collision");
+    }
+    throw error;
+  }
+  return Object.freeze({ authority, authority_path: authorityPath });
+}
+
+export function readCompletedCandidateRoot(root, {
+  physicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root),
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  return readCompletedCandidateWithPhysicalAuthority(root, {
+    physicalAuthorityPath,
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: true,
+  });
+}
+
+export function verifyCompletedCandidatePhysicalStability(root, {
+  physicalAuthorityPath = completedCandidatePhysicalAuthorityPath(root),
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  return readCompletedCandidateWithPhysicalAuthority(root, {
+    physicalAuthorityPath,
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: false,
+  });
+}
+
+export function completedCandidateContainerAuthorityRoot(root) {
+  if (!isAbsolute(root ?? "") || resolve(root) !== root) {
+    fail("completed candidate container authority requires an absolute canonical candidate root");
+  }
+  return `${root}.container-authority`;
+}
+
+function completedCandidateContainerAuthoritySourcePath(root) {
+  return join(completedCandidateContainerAuthorityRoot(root), "authority.json");
+}
+
+function validateCompletedCandidateContainerAuthority(authority) {
+  exactObject(authority, "completed candidate container authority", [
+    "schema", "authority_source_path_digest", "container_candidate_root_path_digest",
+    "container_authority_path_digest", "candidate_identity_digest", "manifest_digest",
+    "bundle_manifest_digest", "sealed_bundle_digest", "pnpm_store_snapshot_inventory_digest",
+    "authority_digest",
+  ]);
+  const { authority_digest: authorityDigest, ...unsigned } = authority;
+  if (
+    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-container-authority.v1"
+    || !DIGEST_PATTERN.test(authority.authority_source_path_digest ?? "")
+    || authorityDigest !== sha256Jcs(unsigned)
+  ) fail("completed candidate container authority is stale or invalid");
+  return authority;
+}
+
+function assertContainerAuthorityBindings(authority, {
+  candidateRoot,
+  authoritySourcePath = null,
+  containerCandidateRoot,
+  containerAuthorityPath,
+  manifest,
+}) {
+  if (
+    authority.container_candidate_root_path_digest !== sha256Jcs(containerCandidateRoot)
+    || authority.container_authority_path_digest !== sha256Jcs(containerAuthorityPath)
+    || (authoritySourcePath !== null
+      && authority.authority_source_path_digest !== sha256Jcs(authoritySourcePath))
+    || authority.candidate_identity_digest !== manifest.candidate_identity_digest
+    || authority.manifest_digest !== manifest.manifest_digest
+    || authority.bundle_manifest_digest !== manifest.bundle_manifest_digest
+    || authority.sealed_bundle_digest !== manifest.sealed_bundle_digest
+    || authority.pnpm_store_snapshot_inventory_digest
+      !== manifest.pnpm_store_snapshot_inventory_digest
+    || !isAbsolute(candidateRoot ?? "")
+  ) fail("completed candidate container authority binding is stale or invalid");
+}
+
+export function verifyCompletedCandidateContainerAuthoritySource({
+  candidateRoot,
+  containerCandidateRoot,
+  containerAuthorityPath,
+  manifest,
+} = {}) {
+  if (
+    !isAbsolute(containerCandidateRoot ?? "") || resolve(containerCandidateRoot) !== containerCandidateRoot
+    || !isAbsolute(containerAuthorityPath ?? "") || resolve(containerAuthorityPath) !== containerAuthorityPath
+  ) fail("completed candidate container authority paths must be absolute and canonical");
+  const authoritySourcePath = completedCandidateContainerAuthoritySourcePath(candidateRoot);
+  const authority = validateCompletedCandidateContainerAuthority(readSealedAuthorityFile(
+    dirname(authoritySourcePath),
+    authoritySourcePath,
+    "completed candidate container authority source",
+  ));
+  assertContainerAuthorityBindings(authority, {
+    candidateRoot,
+    authoritySourcePath,
+    containerCandidateRoot,
+    containerAuthorityPath,
+    manifest,
+  });
+  return Object.freeze({ authority, authority_path: authoritySourcePath });
+}
+
+export function issueCompletedCandidateContainerAuthority({
+  candidateRoot,
+  containerCandidateRoot,
+  containerAuthorityPath,
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  if (
+    !isAbsolute(containerCandidateRoot ?? "") || resolve(containerCandidateRoot) !== containerCandidateRoot
+    || !isAbsolute(containerAuthorityPath ?? "") || resolve(containerAuthorityPath) !== containerAuthorityPath
+  ) fail("completed candidate container authority paths must be absolute and canonical");
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  const authorityRoot = completedCandidateContainerAuthorityRoot(candidateRoot);
+  const authoritySourcePath = completedCandidateContainerAuthoritySourcePath(candidateRoot);
+  try {
+    mkdirSync(authorityRoot, { mode: 0o700 });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "EEXIST") {
+      fail("completed candidate container authority create-only collision");
+    }
+    throw error;
+  }
+  const stable = verifyCompletedCandidatePhysicalStability(candidateRoot, {
+    afterPnpmStoreFileOpen,
+  });
+  const unsigned = {
+    schema: "homecook.local-mac-production-rehearsal-candidate-container-authority.v1",
+    authority_source_path_digest: sha256Jcs(authoritySourcePath),
+    container_candidate_root_path_digest: sha256Jcs(containerCandidateRoot),
+    container_authority_path_digest: sha256Jcs(containerAuthorityPath),
+    candidate_identity_digest: stable.manifest.candidate_identity_digest,
+    manifest_digest: stable.manifest.manifest_digest,
+    bundle_manifest_digest: stable.manifest.bundle_manifest_digest,
+    sealed_bundle_digest: stable.manifest.sealed_bundle_digest,
+    pnpm_store_snapshot_inventory_digest: stable.manifest.pnpm_store_snapshot_inventory_digest,
+  };
+  const authority = Object.freeze({ ...unsigned, authority_digest: sha256Jcs(unsigned) });
+  try {
+    writeFileSync(authoritySourcePath, canonicalizeJcs(authority), { flag: "wx", mode: 0o400 });
+    chmodSync(authorityRoot, 0o500);
+  } catch (error) {
+    fail(`completed candidate container authority issuance failed: ${error?.message ?? error?.code ?? "unknown"}`);
+  }
+  verifyCompletedCandidateContainerAuthoritySource({
+    candidateRoot,
+    containerCandidateRoot,
+    containerAuthorityPath,
+    manifest: stable.manifest,
+  });
+  return Object.freeze({
+    authority,
+    authority_path: authoritySourcePath,
+    candidate: stable,
+  });
+}
+
+export function readCompletedCandidateContainerRoot(root, {
+  containerAuthorityPath,
+  afterPnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
+} = {}) {
+  if (
+    !isAbsolute(containerAuthorityPath ?? "")
+    || resolve(containerAuthorityPath) !== containerAuthorityPath
+  ) fail("completed candidate container authority path must be absolute and canonical");
+  const authority = validateCompletedCandidateContainerAuthority(readSealedAuthorityFile(
+    dirname(containerAuthorityPath),
+    containerAuthorityPath,
+    "completed candidate container authority",
+  ));
+  const portable = readCompletedCandidatePortableRootWithIdentity(root, {
+    afterPnpmStoreFileOpen,
+    verifyPortableContent: true,
+  });
+  assertContainerAuthorityBindings(authority, {
+    candidateRoot: root,
+    containerCandidateRoot: root,
+    containerAuthorityPath,
+    manifest: portable.manifest,
+  });
+  return Object.freeze({
+    complete: portable.complete,
+    manifest: portable.manifest,
+    bundle_manifest: portable.bundle_manifest,
+  });
 }
 
 function reserveRunRoot(path, currentUid) {
@@ -1770,11 +2908,13 @@ export async function buildReleaseRehearsalCandidate({
   }
   const attemptsRoot = ensureNamespaceDirectory(join(root, "attempts"), currentUid, "candidate attempts root");
   const runRoot = join(attemptsRoot, runId);
+  const physicalAuthorityPath = completedCandidatePhysicalAuthorityPath(runRoot);
   const runIdentity = reserveRunRoot(runRoot, currentUid);
   let productionPre = null;
   let productionGuard = null;
   let result;
   let failure = null;
+  let physicalAuthorityCreated = false;
   try {
     const toolchainLock = await adapters.readToolchainLock();
     digest(toolchainLock.toolchain_lock_digest, "toolchain lock digest");
@@ -1833,6 +2973,11 @@ export async function buildReleaseRehearsalCandidate({
       "sealed_bundle_digest",
     );
     const sandboxPolicyDigest = digest(build.sandbox_policy_digest, "sandbox policy digest");
+    const generatedInventoryDigest = generatedBuildInventoryDigest(build.file_inventory);
+    const pnpmStoreSnapshotInventoryDigest = digest(
+      build.pnpm_store_snapshot_inventory_digest,
+      "pnpm store snapshot inventory digest",
+    );
     exactObject(build.build_tools, "build tools", ["next_cli"]);
     validateToolIdentity(build.build_tools.next_cli, "build tools next_cli", {
       requireExecutable: false,
@@ -1854,6 +2999,8 @@ export async function buildReleaseRehearsalCandidate({
       release_sha: releaseSha,
       release_tree: sourceEvidence.release_tree,
       sandbox_policy_digest: sandboxPolicyDigest,
+      generated_build_inventory_digest: generatedInventoryDigest,
+      pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
       sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
@@ -1892,6 +3039,8 @@ export async function buildReleaseRehearsalCandidate({
       builder_input_digest: sourceEvidence.builder_input_digest,
       compose_source_digest: composeSourceDigest,
       sandbox_policy_digest: sandboxPolicyDigest,
+      generated_build_inventory_digest: generatedInventoryDigest,
+      pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
       build_id: buildId,
       build_tools: build.build_tools,
       sealed_bundle_digest: sealedBundleDigest,
@@ -1933,6 +3082,13 @@ export async function buildReleaseRehearsalCandidate({
       manifest_digest: manifest.manifest_digest,
     });
     chmodSync(runRoot, 0o500);
+    if (typeof adapters.finalizeBundleAddress === "function") {
+      issueCompletedCandidatePhysicalAuthority({
+        candidateRoot: runRoot,
+        authorityPath: physicalAuthorityPath,
+      });
+      physicalAuthorityCreated = true;
+    }
     result = { candidate_root: runRoot, manifest };
   } catch (error) {
     failure = error;
@@ -1946,6 +3102,7 @@ export async function buildReleaseRehearsalCandidate({
     }
   }
   if (failure) {
+    if (physicalAuthorityCreated) rmSync(physicalAuthorityPath, { force: false });
     assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
     makeCandidateRootWritable(runRoot);
     for (const name of readdirSync(runRoot)) {
@@ -3343,149 +4500,191 @@ export function createReleaseRehearsalCandidateAdapters({
       const privateHome = join(runRoot, "build-home");
       const privateTmp = join(runRoot, "tmp");
       const buildRoot = join(runRoot, "build-work");
-      const generatedRoot = join(runRoot, "generated");
       mkdirSync(privateHome, { mode: 0o700 });
       mkdirSync(privateTmp, { mode: 0o700 });
-      materializeBuildWorkspace({
+      materializeCandidateBuildWorkspace({
         sourceRoot: source.checkout_dir,
         sourceManifest: source.source_manifest,
         buildRoot,
-        generatedRoot,
       });
-      const storeStat = lstatSync(packageStorePath);
-      if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
-        fail("offline pnpm package store identity is unsafe");
-      }
-      const cleanBuildEnv = Object.freeze({
-        ...childEnv,
-        CI: "1",
-        COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
-        HOME: privateHome,
-        NEXT_TELEMETRY_DISABLED: "1",
-        PATH: `${dirname(tools.nodePath)}:/usr/bin:/bin`,
-        TMPDIR: privateTmp,
-        npm_config_offline: "true",
+      const authorizedBuild = await withCandidateBuildWorkAuthority({
+        runRoot,
+        buildRoot,
+        nodeModulesRoot: join(buildRoot, "node_modules"),
+        nextRoot: join(buildRoot, ".next"),
+        privateHome,
+        privateTmp,
+        currentUid: process.getuid?.(),
+      }, async ({ writeRoots }) => {
+        const storeStat = lstatSync(packageStorePath);
+        if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
+          fail("offline pnpm package store identity is unsafe");
+        }
+        const storeViewBuild = await withCandidatePnpmStoreView({
+          sourceStore: resolve(packageStorePath),
+          storeRoot: join(runRoot, "pnpm-store"),
+          currentUid: process.getuid?.(),
+        }, async ({ storePath, writableRoots: storeWritableRoots }) => {
+          const cleanBuildEnv = Object.freeze({
+            ...childEnv,
+            CI: "1",
+            COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+            HOME: privateHome,
+            NEXT_TELEMETRY_DISABLED: "1",
+            PATH: `${dirname(tools.nodePath)}:/usr/bin:/bin`,
+            TMPDIR: privateTmp,
+            npm_config_offline: "true",
+          });
+          const sandboxProfile = buildCandidateSandboxProfile({
+            readRoots: [
+              buildRoot,
+              privateHome,
+              privateTmp,
+              storePath,
+              ...Object.values(tools),
+            ],
+            writeRoots: [...writeRoots, ...storeWritableRoots],
+            deniedWritePaths: [
+              source.checkout_dir,
+              resolve(packageStorePath),
+              join(storePath, "files"),
+              join(storePath, "index"),
+            ],
+            deniedPaths: [
+              sourceRoot,
+              resolve(environmentSourcePath),
+              join(normalizedHome, ".homecook", "releases"),
+              join(normalizedHome, ".homecook", "locks"),
+              join(normalizedHome, ".homecook", "config"),
+              join(normalizedHome, ".homecook", "logs"),
+              join(normalizedHome, "Library", "LaunchAgents"),
+              "/var/run/docker.sock",
+              join(normalizedHome, ".docker", "run", "docker.sock"),
+            ],
+          });
+          const installAudit = runObservedSandboxCommand({
+            sandboxPath: tools.sandboxPath,
+            logPath: tools.auditLogPath,
+            profile: sandboxProfile,
+            command: tools.nodePath,
+            args: [
+              tools.pnpmCliPath,
+              "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
+              "--store-dir", storePath,
+            ],
+            cwd: buildRoot,
+            env: cleanBuildEnv,
+            label: "offline frozen dependency install",
+            runCommand,
+            timeout: 20 * 60_000,
+          });
+          const nextEntrypoint = resolve(buildRoot, "node_modules", "next", "dist", "bin", "next");
+          const nextStat = lstatSync(nextEntrypoint);
+          if (nextStat.isSymbolicLink() || !nextStat.isFile() || (modeBits(nextStat.mode) & 0o022) !== 0) {
+            fail("Next.js build entrypoint identity is unsafe");
+          }
+          const nextCliPre = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
+            requireExecutable: false,
+          });
+          const nextBuildAudit = runObservedSandboxCommand({
+            sandboxPath: tools.sandboxPath,
+            logPath: tools.auditLogPath,
+            profile: sandboxProfile,
+            command: tools.nodePath,
+            args: [nextEntrypoint, "build", "--no-lint"],
+            cwd: buildRoot,
+            env: cleanBuildEnv,
+            label: "offline Next.js production build",
+            runCommand,
+            timeout: 20 * 60_000,
+          });
+          const nextCliPost = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
+            requireExecutable: false,
+          });
+          if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
+            fail("Next.js build entrypoint drifted during execution");
+          }
+          const postSourceDigest = verifyExactMaterializedTree({
+            sourceRoot: source.checkout_dir,
+            sourceManifest: source.source_manifest,
+          });
+          if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
+          const artifactsRoot = join(runRoot, "artifacts");
+          const assembled = assembleCandidateArtifacts({
+            sourceRoot: source.checkout_dir,
+            generatedRoot: buildRoot,
+            sourceManifest: source.source_manifest,
+            artifactsRoot,
+          });
+          const migration = collectMigrationFromSource(source);
+          const workerArtifact = materializeYoutubeExtractionWorkerArtifact({
+            rootDir: source.checkout_dir,
+            outputDir: join(artifactsRoot, "worker-source"),
+            releaseSha,
+            releaseTree,
+            buildId,
+            promotionId: buildId,
+            allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
+          });
+          if (verifyExactMaterializedTree({
+            sourceRoot: source.checkout_dir,
+            sourceManifest: source.source_manifest,
+          }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
+          const bundlesRoot = join(runRoot, "bundles");
+          mkdirSync(bundlesRoot, { mode: 0o700 });
+          const stagingBundleRoot = join(bundlesRoot, "bundle");
+          const bundle = createSealedCandidateBundle({
+            bundleRoot: stagingBundleRoot,
+            componentRoots: {
+              app: assembled.app,
+              full_local: assembled.full_local,
+              worker: workerArtifact.root_dir,
+            },
+          });
+          const sealedMigration = collectSealedMigrationInventory({ bundleRoot: stagingBundleRoot });
+          if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
+            fail("sealed migration inventory drifted from exact Git objects");
+          }
+          if (verifyExactMaterializedTree({
+            sourceRoot: source.checkout_dir,
+            sourceManifest: source.source_manifest,
+          }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
+          await collectToolchain();
+          return {
+            ...bundle,
+            build_tools: { next_cli: nextCliPost },
+            bundle_content_digest: bundle.sealed_bundle_digest,
+            migration: sealedMigration,
+            sandbox_policy_evidence: {
+              profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
+              execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+            },
+            staging_bundle_root: stagingBundleRoot,
+          };
+        });
+        return {
+          ...storeViewBuild.value,
+          pnpm_store_view_authority_digest: storeViewBuild.authority_digest,
+          pnpm_store_snapshot_inventory_digest: storeViewBuild.snapshot_inventory_digest,
+          pnpm_store_snapshot_identity_digest: storeViewBuild.snapshot_identity_digest,
+        };
       });
-      const sandboxProfile = buildCandidateSandboxProfile({
-        readRoots: [
-          source.checkout_dir,
-          buildRoot,
-          generatedRoot,
-          privateHome,
-          privateTmp,
-          resolve(packageStorePath),
-          ...Object.values(tools),
-        ],
-        writeRoots: [generatedRoot, privateHome, privateTmp],
-        deniedWritePaths: [source.checkout_dir, buildRoot],
-        deniedPaths: [
-          sourceRoot,
-          resolve(environmentSourcePath),
-          join(normalizedHome, ".homecook", "releases"),
-          join(normalizedHome, ".homecook", "locks"),
-          join(normalizedHome, ".homecook", "config"),
-          join(normalizedHome, ".homecook", "logs"),
-          join(normalizedHome, "Library", "LaunchAgents"),
-          "/var/run/docker.sock",
-          join(normalizedHome, ".docker", "run", "docker.sock"),
-        ],
-      });
-      const installAudit = runObservedSandboxCommand({
-        sandboxPath: tools.sandboxPath,
-        logPath: tools.auditLogPath,
-        profile: sandboxProfile,
-        command: tools.nodePath,
-        args: [tools.pnpmCliPath,
-        "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
-        "--store-dir", resolve(packageStorePath)],
-        cwd: buildRoot,
-        env: cleanBuildEnv,
-        label: "offline frozen dependency install",
-        runCommand,
-        timeout: 20 * 60_000,
-      });
-      const nextEntrypoint = resolve(buildRoot, "node_modules", "next", "dist", "bin", "next");
-      const nextStat = lstatSync(nextEntrypoint);
-      if (nextStat.isSymbolicLink() || !nextStat.isFile() || (modeBits(nextStat.mode) & 0o022) !== 0) {
-        fail("Next.js build entrypoint identity is unsafe");
-      }
-      const nextCliPre = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
-        requireExecutable: false,
-      });
-      const nextBuildAudit = runObservedSandboxCommand({
-        sandboxPath: tools.sandboxPath,
-        logPath: tools.auditLogPath,
-        profile: sandboxProfile,
-        command: tools.nodePath,
-        args: [nextEntrypoint, "build", "--no-lint"],
-        cwd: buildRoot,
-        env: cleanBuildEnv,
-        label: "offline Next.js production build",
-        runCommand,
-        timeout: 20 * 60_000,
-      });
-      const nextCliPost = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
-        requireExecutable: false,
-      });
-      if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
-        fail("Next.js build entrypoint drifted during execution");
-      }
-      const postSourceDigest = verifyExactMaterializedTree({
-        sourceRoot: source.checkout_dir,
-        sourceManifest: source.source_manifest,
-      });
-      if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
-      const artifactsRoot = join(runRoot, "artifacts");
-      const assembled = assembleCandidateArtifacts({
-        sourceRoot: source.checkout_dir,
-        generatedRoot,
-        sourceManifest: source.source_manifest,
-        artifactsRoot,
-      });
-      const migration = collectMigrationFromSource(source);
-      const workerArtifact = materializeYoutubeExtractionWorkerArtifact({
-        rootDir: source.checkout_dir,
-        outputDir: join(artifactsRoot, "worker-source"),
-        releaseSha,
-        releaseTree,
-        buildId,
-        promotionId: buildId,
-        allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
-      });
-      if (verifyExactMaterializedTree({
-        sourceRoot: source.checkout_dir,
-        sourceManifest: source.source_manifest,
-      }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
-      const bundlesRoot = join(runRoot, "bundles");
-      mkdirSync(bundlesRoot, { mode: 0o700 });
-      const stagingBundleRoot = join(bundlesRoot, "bundle");
-      const bundle = createSealedCandidateBundle({
-        bundleRoot: stagingBundleRoot,
-        componentRoots: {
-          app: assembled.app,
-          full_local: assembled.full_local,
-          worker: workerArtifact.root_dir,
-        },
-      });
-      const sealedMigration = collectSealedMigrationInventory({ bundleRoot: stagingBundleRoot });
-      if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
-        fail("sealed migration inventory drifted from exact Git objects");
-      }
-      if (verifyExactMaterializedTree({
-        sourceRoot: source.checkout_dir,
-        sourceManifest: source.source_manifest,
-      }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
-      await collectToolchain();
+      const {
+        pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
+        pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+        pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
+        sandbox_policy_evidence: sandboxPolicyEvidence,
+        ...build
+      } = authorizedBuild.value;
       return {
-        ...bundle,
-        build_tools: { next_cli: nextCliPost },
-        bundle_content_digest: bundle.sealed_bundle_digest,
-        migration: sealedMigration,
+        ...build,
+        pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+        pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
         sandbox_policy_digest: sha256Jcs({
-          profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
-          execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+          ...sandboxPolicyEvidence,
+          build_work_authority_digest: authorizedBuild.authority_digest,
+          pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
         }),
-        staging_bundle_root: stagingBundleRoot,
       };
     },
 

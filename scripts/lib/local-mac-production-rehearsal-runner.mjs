@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   constants as fsConstants,
+  fstatSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -16,7 +17,16 @@ import {
   copyLocalMacProductionExecutionTree,
   sealLocalMacProductionExecutionTree,
 } from "./local-mac-production-release.mjs";
-import { readSealedAuthorityFile } from "./local-mac-production-rehearsal-candidate.mjs";
+import {
+  completedCandidateContainerAuthorityRoot,
+  issueCompletedCandidateContainerAuthority,
+  issueCompletedCandidatePhysicalAuthority,
+  readCompletedCandidateRoot,
+  readSealedAuthorityFile,
+  verifyCompletedCandidateContainerAuthoritySource,
+  verifyCompletedCandidatePhysicalStability,
+  validateCandidateStartupIdentity,
+} from "./local-mac-production-rehearsal-candidate.mjs";
 import { readVerifiedMigrationInputs } from "./local-mac-production-rehearsal-runner-safety.mjs";
 
 export const RUN_EVIDENCE_SCHEMA =
@@ -564,14 +574,22 @@ export async function cleanupOwnedResources({
 }
 
 function assertPrivateNamespaceRoot(path) {
-  if (!isAbsolute(path ?? "")) fail("run namespace root must be absolute");
-  realpathSync(path);
-  const canonical = path;
-  const stat = lstatSync(canonical, { bigint: true });
-  if (!stat.isDirectory() || stat.isSymbolicLink() || (stat.mode & 0o077n) !== 0n) {
-    fail("run namespace root must be a private directory");
+  try {
+    if (!isAbsolute(path ?? "") || resolve(path) !== path) fail("run namespace root must be absolute and lexically canonical");
+    if (realpathSync(path) !== path) fail("run namespace root ancestor chain contains a symlink or non-canonical segment");
+    const canonical = path;
+    const stat = lstatSync(canonical, { bigint: true });
+    const currentUid = process.getuid?.();
+    if (
+      !Number.isInteger(currentUid)
+      || !stat.isDirectory() || stat.isSymbolicLink()
+      || stat.uid !== BigInt(currentUid)
+      || modeBits(stat) !== 0o700 || stat.nlink < 1n
+    ) fail("run namespace root must be an exact current-user private directory");
+    return canonical;
+  } catch {
+    fail("run namespace root authority is unavailable or unsafe");
   }
-  return canonical;
 }
 
 function reserveRunRoot(namespaceRoot, runId) {
@@ -589,17 +607,248 @@ function directoryIdentity(stat) {
     uid: Number(stat.uid),
     gid: Number(stat.gid),
     mode: Number(stat.mode & 0o7777n),
+    nlink: String(stat.nlink),
     ctime_ns: String(stat.ctimeNs),
+    size: String(stat.size),
   });
 }
 
 function assertDirectoryIdentity(path, expected, label) {
-  const stat = lstatSync(path, { bigint: true });
+  let stat;
+  try { stat = lstatSync(path, { bigint: true }); }
+  catch { fail(`${label} directory identity is unavailable`); }
   if (
     !stat.isDirectory()
     || stat.isSymbolicLink()
     || canonicalizeJcs(directoryIdentity(stat)) !== canonicalizeJcs(expected)
-  ) fail(`${label} directory dev/inode/owner/mode/ctime identity drifted`);
+  ) fail(`${label} directory dev/inode/owner/mode/nlink/ctime/size identity drifted`);
+}
+
+function trustedContainedDirectoryPaths(trustedAnchorRoot, target) {
+  if (
+    !isAbsolute(target ?? "") || resolve(target) !== target
+    || (target !== trustedAnchorRoot && !target.startsWith(`${trustedAnchorRoot}/`))
+  ) fail("candidate namespace directory path escapes the trusted private anchor");
+  const relative = target === trustedAnchorRoot ? [] : target.slice(trustedAnchorRoot.length + 1).split("/");
+  const paths = [trustedAnchorRoot];
+  for (const segment of relative) {
+    if (!segment || segment === "." || segment === "..") fail("candidate namespace directory path is not lexical");
+    paths.push(join(paths.at(-1), segment));
+  }
+  return paths;
+}
+
+function openNamespaceDirectory(path, currentUid) {
+  let fd = null;
+  try {
+    const before = lstatSync(path, { bigint: true });
+    if (
+      !before.isDirectory() || before.isSymbolicLink()
+      || before.uid !== BigInt(currentUid)
+      || (before.mode & 0o022n) !== 0n || before.nlink < 1n
+      || realpathSync(path) !== path
+    ) fail("candidate namespace directory chain is unsafe");
+    fd = openSync(
+      path,
+      fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | (fsConstants.O_NOFOLLOW ?? 0),
+    );
+    const opened = fstatSync(fd, { bigint: true });
+    if (canonicalizeJcs(directoryIdentity(before)) !== canonicalizeJcs(directoryIdentity(opened))) {
+      fail("candidate namespace directory changed while opening authority");
+    }
+    return Object.freeze({ path, fd, identity: directoryIdentity(opened) });
+  } catch {
+    if (fd !== null) closeSync(fd);
+    fail("candidate namespace directory chain is unavailable or changed");
+  }
+}
+
+function stableDirectoryLocatorIdentity(identity) {
+  return {
+    device: identity.device,
+    inode: identity.inode,
+    uid: identity.uid,
+    gid: identity.gid,
+    mode: identity.mode,
+  };
+}
+
+function createRunRootTransitionAuthority(trustedAnchorRoot, namespaceRoot, runRoot) {
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid)) fail("run root transition owner identity is unavailable");
+  const entries = [];
+  try {
+    for (const path of trustedContainedDirectoryPaths(trustedAnchorRoot, namespaceRoot)) {
+      entries.push(openNamespaceDirectory(path, currentUid));
+    }
+    entries.push(openNamespaceDirectory(runRoot, currentUid));
+  } catch (error) {
+    for (const entry of entries.reverse()) closeSync(entry.fd);
+    throw error;
+  }
+  const namespaceEntries = entries.slice(0, -1);
+  const runEntry = entries.at(-1);
+  const homeLocatorPath = trustedAnchorRoot === namespaceRoot ? null : trustedAnchorRoot;
+  let runIdentity = runEntry.identity;
+  let closed = false;
+  const verifyEntry = (entry, expected, label, { locatorOnly = false } = {}) => {
+    let pathStat;
+    let descriptorStat;
+    try {
+      pathStat = lstatSync(entry.path, { bigint: true });
+      descriptorStat = fstatSync(entry.fd, { bigint: true });
+    } catch {
+      fail(`${label} directory path or held descriptor disappeared`);
+    }
+    let canonical = false;
+    try { canonical = realpathSync(entry.path) === entry.path; } catch { /* normalized below */ }
+    if (!pathStat.isDirectory() || pathStat.isSymbolicLink() || !canonical) {
+      fail(`${label} directory lexical chain changed`);
+    }
+    const pathIdentity = directoryIdentity(pathStat);
+    const descriptorIdentity = directoryIdentity(descriptorStat);
+    const project = locatorOnly ? stableDirectoryLocatorIdentity : (value) => value;
+    if (
+      canonicalizeJcs(project(pathIdentity)) !== canonicalizeJcs(project(expected))
+      || canonicalizeJcs(project(descriptorIdentity)) !== canonicalizeJcs(project(expected))
+    ) fail(`${label} directory FD or lexical identity drifted`);
+    return descriptorIdentity;
+  };
+  const verify = (phase = "run root transition") => {
+    if (closed) fail("run root transition authority is closed");
+    for (const entry of namespaceEntries) {
+      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`, {
+        locatorOnly: entry.path === homeLocatorPath,
+      });
+    }
+    verifyEntry(runEntry, runIdentity, `${phase} run root`);
+  };
+  const rebaselineAfterOwnedChildCreation = (phase) => {
+    if (closed) fail("run root transition authority is closed");
+    for (const entry of namespaceEntries) {
+      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`, {
+        locatorOnly: entry.path === homeLocatorPath,
+      });
+    }
+    runIdentity = verifyEntry(runEntry, runIdentity, `${phase} run root`, { locatorOnly: true });
+  };
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    for (const entry of [...entries].reverse()) closeSync(entry.fd);
+  };
+  try {
+    verify("run root authority issuance");
+  } catch (error) {
+    close();
+    throw error;
+  }
+  return Object.freeze({ verify, rebaselineAfterOwnedChildCreation, close });
+}
+
+function createCandidatePathAuthority({
+  trustedAnchorRoot,
+  namespaceRoot,
+  runRoot,
+  candidateRoot,
+  physicalAuthorityPath,
+  candidateContainerAuthorityRoot,
+  evidencePath,
+}) {
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid)) fail("candidate namespace owner identity is unavailable");
+  const paths = [...new Set([
+    ...trustedContainedDirectoryPaths(trustedAnchorRoot, namespaceRoot),
+    ...trustedContainedDirectoryPaths(trustedAnchorRoot, runRoot),
+    ...trustedContainedDirectoryPaths(trustedAnchorRoot, candidateRoot),
+    ...(candidateContainerAuthorityRoot === null
+      ? []
+      : trustedContainedDirectoryPaths(trustedAnchorRoot, candidateContainerAuthorityRoot)),
+  ])];
+  const entries = [];
+  try {
+    for (const path of paths) entries.push(openNamespaceDirectory(path, currentUid));
+  } catch (error) {
+    for (const entry of entries.reverse()) closeSync(entry.fd);
+    throw error;
+  }
+  const homeLocatorPath = trustedAnchorRoot === namespaceRoot ? null : trustedAnchorRoot;
+  const chainProjection = entries.map((entry) => ({
+    path_digest: sha256Jcs(entry.path),
+    identity: entry.path === homeLocatorPath
+      ? stableDirectoryLocatorIdentity(entry.identity)
+      : entry.identity,
+  }));
+  const chainDigest = sha256Jcs({
+    schema: "homecook.release-rehearsal-candidate-path-chain.v1",
+    directories: chainProjection,
+  });
+  const authorityUnsigned = {
+    schema: "homecook.release-rehearsal-candidate-path-authority.v1",
+    trusted_anchor_path_digest: sha256Jcs(trustedAnchorRoot),
+    namespace_root_path_digest: sha256Jcs(namespaceRoot),
+    run_root_path_digest: sha256Jcs(runRoot),
+    candidate_root_path_digest: sha256Jcs(candidateRoot),
+    physical_authority_path_digest: sha256Jcs(physicalAuthorityPath),
+    container_authority_root_path_digest: sha256Jcs(candidateContainerAuthorityRoot),
+    directory_chain_digest: chainDigest,
+    authority_path_digest: sha256Jcs(evidencePath),
+  };
+  const authority = Object.freeze({
+    ...authorityUnsigned,
+    authority_digest: sha256Jcs(authorityUnsigned),
+  });
+  try {
+    writeCanonicalCreateOnly(evidencePath, authority);
+  } catch (error) {
+    for (const entry of [...entries].reverse()) closeSync(entry.fd);
+    throw error;
+  }
+  let closed = false;
+  const verify = ({
+    candidateRoot: observedCandidateRoot,
+    candidateContainerAuthorityRoot: observedAuthorityRoot,
+    phase = "candidate path transition",
+  } = {}) => {
+    if (closed) fail("candidate namespace path authority is closed");
+    if (observedCandidateRoot !== candidateRoot || observedAuthorityRoot !== candidateContainerAuthorityRoot) {
+      fail(`${phase} requested a wrong candidate tree or authority bind path`);
+    }
+    for (const entry of entries) {
+      let pathStat;
+      let descriptorStat;
+      try {
+        pathStat = lstatSync(entry.path, { bigint: true });
+        descriptorStat = fstatSync(entry.fd, { bigint: true });
+      } catch {
+        fail(`${phase} candidate namespace ancestor path is missing or replaced`);
+      }
+      let canonical = false;
+      try { canonical = realpathSync(entry.path) === entry.path; } catch { /* normalized below */ }
+      const projectIdentity = entry.path === homeLocatorPath
+        ? stableDirectoryLocatorIdentity
+        : (identity) => identity;
+      if (
+        !pathStat.isDirectory() || pathStat.isSymbolicLink()
+        || !canonical
+        || canonicalizeJcs(projectIdentity(directoryIdentity(pathStat))) !== canonicalizeJcs(projectIdentity(entry.identity))
+        || canonicalizeJcs(projectIdentity(directoryIdentity(descriptorStat))) !== canonicalizeJcs(projectIdentity(entry.identity))
+      ) fail(`${phase} candidate namespace ancestor FD or lexical identity drifted`);
+    }
+    return authority;
+  };
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    for (const entry of [...entries].reverse()) closeSync(entry.fd);
+  };
+  try {
+    verify({ candidateRoot, candidateContainerAuthorityRoot, phase: "candidate path authority issuance" });
+  } catch (error) {
+    close();
+    throw error;
+  }
+  return Object.freeze({ authority, chainDigest, verify, close });
 }
 
 function writeCanonicalCreateOnly(path, value, mode = 0o400) {
@@ -620,13 +869,41 @@ function verifyCandidateStable(before, after) {
   }
 }
 
-function stageVerifiedCandidate({ sourceRoot, runRoot, readCandidate, candidateBefore }) {
+function stageVerifiedCandidate({
+  sourceRoot,
+  runRoot,
+  readCandidate,
+  candidateBefore,
+  afterCandidateCopy = null,
+  afterPnpmStoreFileOpen = null,
+}) {
   const executionRoot = join(runRoot, "execution-candidate");
   copyLocalMacProductionExecutionTree(sourceRoot, executionRoot);
+  afterCandidateCopy?.({ executionRoot });
   sealLocalMacProductionExecutionTree(executionRoot);
-  const stagedCandidate = readCandidate(executionRoot);
+  let physicalAuthorityPath = null;
+  let containerAuthorityRoot = null;
+  let stagedCandidate;
+  if (readCandidate === readCompletedCandidateRoot) {
+    physicalAuthorityPath = join(runRoot, "execution-candidate.physical-authority.json");
+    issueCompletedCandidatePhysicalAuthority({
+      candidateRoot: executionRoot,
+      authorityPath: physicalAuthorityPath,
+      afterPnpmStoreFileOpen,
+    });
+    const containerAuthority = issueCompletedCandidateContainerAuthority({
+      candidateRoot: executionRoot,
+      containerCandidateRoot: "/sealed-candidate",
+      containerAuthorityPath: "/sealed-candidate-authority/authority.json",
+      afterPnpmStoreFileOpen,
+    });
+    containerAuthorityRoot = dirname(containerAuthority.authority_path);
+    stagedCandidate = containerAuthority.candidate;
+  } else {
+    stagedCandidate = readCandidate(executionRoot);
+  }
   verifyCandidateStable(candidateBefore, stagedCandidate);
-  return Object.freeze({ executionRoot, stagedCandidate });
+  return Object.freeze({ executionRoot, physicalAuthorityPath, containerAuthorityRoot, stagedCandidate });
 }
 
 function validateProductionSnapshot(value, label) {
@@ -1152,19 +1429,29 @@ function normalizeAdapterError(error) {
 
 export async function runIsolatedReleaseRehearsal({
   candidateInput,
+  trustedNamespaceAnchor = /** @type {string|null} */ (null),
   namespaceRoot,
   runId,
-  readCandidate,
+  readCandidate = readCompletedCandidateRoot,
   adapters,
   runnerIdentity,
   now = () => new Date(),
   signal = /** @type {AbortSignal | null} */ (null),
+  afterCandidateCopy = /** @type {null|((entry:{executionRoot:string})=>void)} */ (null),
+  afterCandidatePnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
 }) {
   const sourceCandidateRoot = resolveCompletedCandidateInput(candidateInput);
+  const canonicalTrustedNamespaceAnchor = assertPrivateNamespaceRoot(trustedNamespaceAnchor ?? namespaceRoot);
   const canonicalNamespaceRoot = assertPrivateNamespaceRoot(namespaceRoot);
+  if (
+    canonicalNamespaceRoot !== canonicalTrustedNamespaceAnchor
+    && !canonicalNamespaceRoot.startsWith(`${canonicalTrustedNamespaceAnchor}/`)
+  ) fail("run namespace root must be contained by the approved trusted anchor");
   if (typeof readCandidate !== "function" || !adapters) fail("runner dependencies are incomplete");
   validateRunnerIdentity(runnerIdentity);
-  const sourceCandidate = readCandidate(sourceCandidateRoot);
+  const sourceCandidate = readCandidate(sourceCandidateRoot, {
+    afterPnpmStoreFileOpen: afterCandidatePnpmStoreFileOpen,
+  });
   let candidateBefore = sourceCandidate;
   const manifest = candidateBefore.manifest;
   requireSha(manifest.release_sha, "candidate release_sha");
@@ -1187,17 +1474,47 @@ export async function runIsolatedReleaseRehearsal({
   let independentObserver = null;
   let collisionPreflightDigest = null;
   let stableRunRootIdentity = null;
+  let stableRunRootDirectoryIdentity = null;
   let stableExecutionRootIdentity = null;
+  let executionPhysicalAuthorityPath = null;
+  let executionContainerAuthorityRoot = null;
+  let candidatePathAuthority = null;
+  let runRootTransitionAuthority = null;
 
   const checkAbort = () => {
     if (signal?.aborted) throw new Error(`rehearsal interrupted by signal: ${signal.reason ?? "aborted"}`);
   };
   const verifyStableExecution = () => {
-    if (!stableRunRootIdentity || !stableExecutionRootIdentity || candidateRoot === sourceCandidateRoot) return;
-    assertDirectoryIdentity(reservation.runRoot, stableRunRootIdentity, "run root");
+    if (!stableRunRootDirectoryIdentity || !stableExecutionRootIdentity || candidateRoot === sourceCandidateRoot) return;
+    candidatePathAuthority?.verify({
+      candidateRoot,
+      candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
+      phase: "stable execution gate",
+    });
+    assertDirectoryIdentity(reservation.runRoot, stableRunRootDirectoryIdentity, "run root");
     assertDirectoryIdentity(candidateRoot, stableExecutionRootIdentity, "execution candidate root");
-    const current = readCandidate(candidateRoot);
+    const current = executionPhysicalAuthorityPath === null
+      ? readCandidate(candidateRoot)
+      : verifyCompletedCandidatePhysicalStability(candidateRoot, {
+        physicalAuthorityPath: executionPhysicalAuthorityPath,
+        afterPnpmStoreFileOpen: afterCandidatePnpmStoreFileOpen,
+      });
+    if (executionContainerAuthorityRoot !== null) {
+      if (executionContainerAuthorityRoot !== completedCandidateContainerAuthorityRoot(candidateRoot)) {
+        fail("execution candidate container authority root is not canonical");
+      }
+      verifyCompletedCandidateContainerAuthoritySource({
+        candidateRoot,
+        containerCandidateRoot: "/sealed-candidate",
+        containerAuthorityPath: "/sealed-candidate-authority/authority.json",
+        manifest: current.manifest,
+      });
+    }
     verifyCandidateStable(candidateBefore, current);
+  };
+  const verifyCandidateDockerSourceAuthority = (input) => {
+    candidatePathAuthority?.verify(input);
+    verifyStableExecution();
   };
   const cleanup = async () => {
     if (cleanupResult) return cleanupResult;
@@ -1243,17 +1560,50 @@ export async function runIsolatedReleaseRehearsal({
   };
 
   try {
+    runRootTransitionAuthority = createRunRootTransitionAuthority(
+      canonicalTrustedNamespaceAnchor,
+      canonicalNamespaceRoot,
+      reservation.runRoot,
+    );
     checkAbort();
+    runRootTransitionAuthority.verify("execution candidate staging pre-transition");
     const staged = stageVerifiedCandidate({
       sourceRoot: sourceCandidateRoot,
       runRoot: reservation.runRoot,
       readCandidate,
       candidateBefore: sourceCandidate,
+      afterCandidateCopy,
+      afterPnpmStoreFileOpen: afterCandidatePnpmStoreFileOpen,
     });
+    runRootTransitionAuthority.rebaselineAfterOwnedChildCreation(
+      "execution candidate staging post-transition",
+    );
     candidateRoot = staged.executionRoot;
     candidateBefore = staged.stagedCandidate;
+    executionPhysicalAuthorityPath = staged.physicalAuthorityPath;
+    executionContainerAuthorityRoot = staged.containerAuthorityRoot;
+    runRootTransitionAuthority.verify("runtime state creation pre-transition");
     mkdirSync(join(reservation.runRoot, "runtime-state"), { mode: 0o700 });
-    stableRunRootIdentity = directoryIdentity(lstatSync(reservation.runRoot, { bigint: true }));
+    runRootTransitionAuthority.rebaselineAfterOwnedChildCreation(
+      "runtime state creation post-transition",
+    );
+    candidatePathAuthority = createCandidatePathAuthority({
+      trustedAnchorRoot: canonicalTrustedNamespaceAnchor,
+      namespaceRoot: canonicalNamespaceRoot,
+      runRoot: reservation.runRoot,
+      candidateRoot,
+      physicalAuthorityPath: executionPhysicalAuthorityPath,
+      candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
+      evidencePath: join(reservation.runRoot, "runtime-state", "candidate-path-authority.json"),
+    });
+    runRootTransitionAuthority.verify("candidate path authority handoff");
+    runRootTransitionAuthority.close();
+    stableRunRootDirectoryIdentity = directoryIdentity(lstatSync(reservation.runRoot, { bigint: true }));
+    stableRunRootIdentity = Object.freeze({
+      directory_identity: stableRunRootDirectoryIdentity,
+      namespace_chain_digest: candidatePathAuthority.chainDigest,
+      namespace_authority_digest: candidatePathAuthority.authority.authority_digest,
+    });
     stableExecutionRootIdentity = directoryIdentity(lstatSync(candidateRoot, { bigint: true }));
     verifyStableExecution();
     preSnapshot = validateProductionSnapshot(await adapters.snapshotProduction("pre", { signal }), "pre");
@@ -1273,8 +1623,35 @@ export async function runIsolatedReleaseRehearsal({
     await adapters.assertImagesLocal({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal });
     verifyStableExecution();
     checkAbort();
-    ownedResources = await adapters.createResources({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, signal, independentObserver: adapters.independentObserver });
+    ownedResources = await adapters.createResources({
+      manifest,
+      candidateRoot,
+      candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
+      namespace,
+      runRoot: reservation.runRoot,
+      trustedNamespaceAnchor: canonicalTrustedNamespaceAnchor,
+      signal,
+      independentObserver: adapters.independentObserver,
+      verifyCandidatePathAuthority: verifyCandidateDockerSourceAuthority,
+    });
     if (!Array.isArray(ownedResources)) fail("created resource inventory is invalid");
+    verifyStableExecution();
+    checkAbort();
+    if (typeof adapters.readFullLocalStartupIdentity !== "function") {
+      fail("full-local startup identity reader is unavailable");
+    }
+    validateCandidateStartupIdentity(
+      await adapters.readFullLocalStartupIdentity({
+        manifest,
+        candidateRoot,
+        candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
+        namespace,
+        runRoot: reservation.runRoot,
+        signal,
+      }),
+      manifest,
+      "full-local startup identity",
+    );
     verifyStableExecution();
     checkAbort();
     const migrationAuthority = (adapters.readVerifiedMigrationInputs ?? readVerifiedMigrationInputs)({
@@ -1299,7 +1676,17 @@ export async function runIsolatedReleaseRehearsal({
     if (typeof adapters.prepareYoutubeWorkerSyntheticFixture !== "function") fail("worker synthetic fixture adapter is required");
     await adapters.prepareYoutubeWorkerSyntheticFixture({ manifest, namespace, migration, fixtures, signal });
     checkAbort();
-    runtimeEntries = await adapters.startComponents({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, migration, signal });
+    runtimeEntries = await adapters.startComponents({
+      manifest,
+      candidateRoot,
+      candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
+      namespace,
+      runRoot: reservation.runRoot,
+      trustedNamespaceAnchor: canonicalTrustedNamespaceAnchor,
+      migration,
+      signal,
+      verifyCandidatePathAuthority: verifyCandidateDockerSourceAuthority,
+    });
     runtimeEntries = validateRuntimeIdentities(runtimeEntries, manifest);
     verifyStableExecution();
     const readiness = await adapters.waitForReadiness({ manifest, candidateRoot, namespace, runRoot: reservation.runRoot, runtime: runtimeEntries, signal });
@@ -1411,5 +1798,8 @@ export async function runIsolatedReleaseRehearsal({
     };
     try { writeCanonicalCreateOnly(join(reservation.runRoot, "failed.json"), failure); } catch { /* Existing marker remains authoritative. */ }
     throw firstError;
+  } finally {
+    candidatePathAuthority?.close();
+    runRootTransitionAuthority?.close();
   }
 }
