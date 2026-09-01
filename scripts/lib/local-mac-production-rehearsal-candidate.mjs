@@ -1509,6 +1509,311 @@ export async function withCandidateBuildWorkAuthority({
   return Object.freeze({ authority_digest: authorityDigest, value });
 }
 
+const NEXT_ENTRYPOINT_IDENTITY_KEYS = [
+  "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs",
+];
+const NEXT_ENTRYPOINT_MAX_BYTES = 1024 * 1024;
+const NEXT_PNPM_PACKAGE_SEGMENT_PATTERN =
+  /^next@15\.5\.21(?:_[A-Za-z0-9._+@-]+)?$/u;
+
+function sameNextEntrypointIdentity(left, right) {
+  return NEXT_ENTRYPOINT_IDENTITY_KEYS.every((key) => left[key] === right[key]);
+}
+
+function readExactFdBytes(fd, size, label) {
+  if (size < 0n || size > BigInt(NEXT_ENTRYPOINT_MAX_BYTES)) {
+    fail(`${label} size is outside the bounded authority`);
+  }
+  const bytes = Buffer.alloc(Number(size));
+  let offset = 0;
+  while (offset < bytes.length) {
+    const read = readSync(fd, bytes, offset, bytes.length - offset, offset);
+    if (read <= 0) fail(`${label} ended before its declared size`);
+    offset += read;
+  }
+  return bytes;
+}
+
+/**
+ * Hold the pnpm-created Next package link, its lexical target chain, and the
+ * exact package/entrypoint bytes stable while the candidate builder uses them.
+ *
+ * @param {{buildRoot:string,currentUid?:number}} options
+ * @param {(authority:{entrypointPath:string,entrypointTarget:string,packageJsonTarget:string,verifyBeforeSpawn:()=>void})=>unknown|Promise<unknown>} callback
+ */
+async function holdCandidateNextEntrypointAuthority({
+  buildRoot,
+  currentUid = process.getuid?.(),
+} = /** @type {any} */ ({}), callback) {
+  if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
+  if (typeof callback !== "function") fail("Next.js entrypoint authority callback is required");
+  if (!isAbsolute(buildRoot ?? "") || resolve(buildRoot) !== buildRoot || basename(buildRoot) !== "build-work") {
+    fail("Next.js entrypoint build-work path must be exact and canonical");
+  }
+
+  const uid = BigInt(currentUid);
+  const nodeModulesRoot = join(buildRoot, "node_modules");
+  const pnpmRoot = join(nodeModulesRoot, ".pnpm");
+  const packageLink = join(nodeModulesRoot, "next");
+  const linkBefore = lstatSync(packageLink, { bigint: true });
+  if (!linkBefore.isSymbolicLink() || linkBefore.uid !== uid || linkBefore.nlink !== 1n) {
+    fail("Next.js package authority must be the expected candidate-owned pnpm symlink");
+  }
+  const linkTarget = readlinkSync(packageLink);
+  const targetSegments = linkTarget.split("/");
+  if (
+    isAbsolute(linkTarget)
+    || targetSegments.length !== 4
+    || targetSegments[0] !== ".pnpm"
+    || !NEXT_PNPM_PACKAGE_SEGMENT_PATTERN.test(targetSegments[1])
+    || targetSegments[2] !== "node_modules"
+    || targetSegments[3] !== "next"
+    || targetSegments.some((segment) => segment === "" || segment === "." || segment === "..")
+  ) fail("Next.js package symlink target is outside the closed pnpm lexical grammar");
+
+  const packageRoot = join(nodeModulesRoot, ...targetSegments);
+  const packageRelative = relative(pnpmRoot, packageRoot);
+  if (packageRelative === "" || packageRelative.startsWith("..") || isAbsolute(packageRelative)) {
+    fail("Next.js package symlink target must stay strictly inside candidate node_modules/.pnpm");
+  }
+  if (realpathSync(packageLink) !== packageRoot) {
+    fail("Next.js package symlink realpath does not match its candidate-private pnpm target");
+  }
+
+  const directoryPaths = [
+    buildRoot,
+    nodeModulesRoot,
+    pnpmRoot,
+    ...targetSegments.slice(1).reduce((paths, segment) => {
+      paths.push(join(paths.at(-1), segment));
+      return paths;
+    }, [pnpmRoot]),
+    join(packageRoot, "dist"),
+    join(packageRoot, "dist", "bin"),
+  ];
+  const uniqueDirectoryPaths = [...new Set(directoryPaths)];
+  const directorySnapshots = [];
+  const fds = [];
+  const openDirectory = (path) => {
+    const before = lstatSync(path, { bigint: true });
+    if (
+      before.isSymbolicLink() || !before.isDirectory() || before.uid !== uid
+      || (modeBits(before.mode) & 0o022) !== 0 || realpathSync(path) !== path
+    ) fail("Next.js package target chain contains an unsafe directory");
+    const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+    if (!sameNextEntrypointIdentity(before, fstatSync(fd, { bigint: true }))) {
+      closeSync(fd);
+      fail("Next.js package target directory drifted before verification");
+    }
+    directorySnapshots.push({ fd, path, before });
+    fds.push(fd);
+  };
+
+  const openRegularFile = (path, label) => {
+    const before = lstatSync(path, { bigint: true });
+    if (
+      before.isSymbolicLink() || !before.isFile() || before.uid !== uid || before.nlink !== 1n
+      || (modeBits(before.mode) & 0o022) !== 0 || realpathSync(path) !== path
+    ) fail(`${label} target identity is unsafe`);
+    const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    if (!sameNextEntrypointIdentity(before, fstatSync(fd, { bigint: true }))) {
+      closeSync(fd);
+      fail(`${label} target drifted before verification`);
+    }
+    const bytes = readExactFdBytes(fd, before.size, label);
+    if (
+      !sameNextEntrypointIdentity(before, fstatSync(fd, { bigint: true }))
+      || !sameNextEntrypointIdentity(before, lstatSync(path, { bigint: true }))
+    ) {
+      closeSync(fd);
+      fail(`${label} target drifted during verification`);
+    }
+    fds.push(fd);
+    return { fd, path, before, bytes, sha256: sha256Bytes(bytes) };
+  };
+
+  let packageSnapshot;
+  let entrypointSnapshot;
+  try {
+    for (const path of uniqueDirectoryPaths) openDirectory(path);
+    const packageJsonTarget = join(packageRoot, "package.json");
+    const entrypointTarget = join(packageRoot, "dist", "bin", "next");
+    packageSnapshot = openRegularFile(packageJsonTarget, "Next.js package.json");
+    entrypointSnapshot = openRegularFile(entrypointTarget, "Next.js build entrypoint");
+    let packageJson;
+    try {
+      packageJson = JSON.parse(decodeFatalUtf8(packageSnapshot.bytes, "Next.js package.json"));
+    } catch {
+      fail("Next.js package.json bytes are invalid");
+    }
+    if (packageJson?.name !== "next" || packageJson?.version !== "15.5.21") {
+      fail("Next.js package identity does not match the pinned release toolchain");
+    }
+
+    const entrypointPath = join(packageLink, "dist", "bin", "next");
+    if (realpathSync(entrypointPath) !== entrypointTarget) {
+      fail("Next.js build entrypoint does not resolve to the verified pnpm package target");
+    }
+    const verifyStable = () => {
+      const linkPost = lstatSync(packageLink, { bigint: true });
+      if (
+        !sameNextEntrypointIdentity(linkBefore, linkPost)
+        || !linkPost.isSymbolicLink()
+        || readlinkSync(packageLink) !== linkTarget
+        || realpathSync(packageLink) !== packageRoot
+        || realpathSync(entrypointPath) !== entrypointTarget
+      ) fail("Next.js package symlink changed during verification");
+      for (const { fd, path, before } of directorySnapshots) {
+        if (
+          !sameNextEntrypointIdentity(before, fstatSync(fd, { bigint: true }))
+          || !sameNextEntrypointIdentity(before, lstatSync(path, { bigint: true }))
+          || realpathSync(path) !== path
+        ) fail("Next.js package target directory changed during verification");
+      }
+      for (const snapshot of [packageSnapshot, entrypointSnapshot]) {
+        if (
+          !sameNextEntrypointIdentity(snapshot.before, fstatSync(snapshot.fd, { bigint: true }))
+          || !sameNextEntrypointIdentity(snapshot.before, lstatSync(snapshot.path, { bigint: true }))
+          || sha256Bytes(readExactFdBytes(snapshot.fd, snapshot.before.size, "Next.js authority file")) !== snapshot.sha256
+        ) fail("Next.js package or entrypoint changed during verification");
+      }
+    };
+    verifyStable();
+    let preSpawnVerificationCount = 0;
+    const verifyBeforeSpawn = () => {
+      verifyStable();
+      preSpawnVerificationCount += 1;
+    };
+    let value;
+    let callbackError;
+    let callbackFailed = false;
+    try {
+      value = await callback(Object.freeze({
+        entrypointPath,
+        entrypointTarget,
+        packageJsonTarget,
+        verifyBeforeSpawn,
+      }));
+    } catch (error) {
+      callbackError = error;
+      callbackFailed = true;
+    }
+    let postVerificationError;
+    try {
+      if (
+        preSpawnVerificationCount > 1
+        || (!callbackFailed && preSpawnVerificationCount !== 1)
+      ) fail("Next.js entrypoint pre-spawn authority guard must run exactly once");
+      verifyStable();
+    } catch (error) {
+      postVerificationError = error;
+    }
+    if (postVerificationError) throw postVerificationError;
+    if (callbackFailed) throw callbackError;
+    const inventoryBinding = Object.freeze({
+      package_link_path: "node_modules/next",
+      package_link_target: linkTarget,
+      package_json_path: relative(buildRoot, packageJsonTarget),
+      package_json_sha256: packageSnapshot.sha256,
+      entrypoint_path: relative(buildRoot, entrypointTarget),
+      entrypoint_sha256: entrypointSnapshot.sha256,
+    });
+    return Object.freeze({
+      authority_digest: sha256Jcs({
+        schema: "homecook.release-rehearsal-next-entrypoint-authority.v1",
+        ...inventoryBinding,
+      }),
+      inventory_binding: inventoryBinding,
+      value,
+    });
+  } finally {
+    for (const fd of fds.reverse()) closeSync(fd);
+  }
+}
+
+export async function withCandidateNextEntrypointAuthority(options, callback) {
+  try {
+    return await holdCandidateNextEntrypointAuthority(options, callback);
+  } catch (error) {
+    if (
+      error instanceof Error
+      && error.message.startsWith("Release rehearsal candidate rejected:")
+    ) throw error;
+    fail("Next.js entrypoint authority could not be verified");
+  }
+}
+
+export function validateCandidateNextEntrypointInventoryBinding(binding, fileInventory) {
+  exactObject(binding, "Next.js generated inventory binding", [
+    "package_link_path", "package_link_target", "package_json_path", "package_json_sha256",
+    "entrypoint_path", "entrypoint_sha256",
+  ]);
+  if (binding.package_link_path !== "node_modules/next") {
+    fail("Next.js generated inventory binding has an unexpected package link path");
+  }
+  const targetSegments = string(
+    binding.package_link_target,
+    "Next.js generated inventory package link target",
+  ).split("/");
+  if (
+    targetSegments.length !== 4
+    || targetSegments[0] !== ".pnpm"
+    || !NEXT_PNPM_PACKAGE_SEGMENT_PATTERN.test(targetSegments[1])
+    || targetSegments[2] !== "node_modules"
+    || targetSegments[3] !== "next"
+    || targetSegments.some((segment) => segment === "" || segment === "." || segment === "..")
+  ) fail("Next.js generated inventory package link target is unsafe");
+  const packageRootPath = `node_modules/${binding.package_link_target}`;
+  if (
+    binding.package_json_path !== `${packageRootPath}/package.json`
+    || binding.entrypoint_path !== `${packageRootPath}/dist/bin/next`
+  ) fail("Next.js generated inventory binding paths do not match the pnpm package target");
+  digest(binding.package_json_sha256, "Next.js generated inventory package.json digest");
+  digest(binding.entrypoint_sha256, "Next.js generated inventory entrypoint digest");
+  if (!Array.isArray(fileInventory)) fail("Next.js generated file inventory is required");
+
+  const exactEntry = (path, label) => {
+    const matches = fileInventory.filter((entry) =>
+      entry?.component === "app"
+      && entry?.source_kind === "generated_build"
+      && entry?.path === path);
+    if (matches.length !== 1) fail(`Next.js ${label} inventory entry must exist exactly once`);
+    return matches[0];
+  };
+  const linkEntry = exactEntry(binding.package_link_path, "package link");
+  if (
+    linkEntry.type !== "symlink"
+    || linkEntry.symlink_target !== binding.package_link_target
+    || linkEntry.sha256 !== sha256Bytes(Buffer.from(binding.package_link_target, "utf8"))
+    || linkEntry.nlink !== "1"
+  ) fail("Next.js package link inventory identity is invalid");
+
+  const assertBoundFile = (path, expectedDigest, label) => {
+    const entry = exactEntry(path, label);
+    if (
+      entry.type !== "file"
+      || entry.symlink_target !== null
+      || entry.dereferenced_sha256 !== null
+      || entry.sha256 !== expectedDigest
+      || entry.nlink !== "1"
+      || !Number.isSafeInteger(entry.mode)
+      || (entry.mode & 0o222) !== 0
+      || entry.uid !== String(process.getuid?.())
+    ) fail(`Next.js ${label} inventory bytes, type, owner, hard-link, or mode are invalid`);
+  };
+  assertBoundFile(
+    binding.package_json_path,
+    binding.package_json_sha256,
+    "package.json",
+  );
+  assertBoundFile(
+    binding.entrypoint_path,
+    binding.entrypoint_sha256,
+    "entrypoint",
+  );
+  return Object.freeze({ ...binding });
+}
+
 const PNPM_STORE_IDENTITY_KEYS = [
   "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs", "mtimeNs",
 ];
@@ -3170,6 +3475,7 @@ export function validateSandboxedBuildResult(result, label) {
 export function runObservedSandboxCommand({
   sandboxPath, logPath, profile, command, args, cwd, env, label,
   timeout = 30_000, runCommand = spawnSync,
+  beforeSpawn = () => undefined,
   now = () => Date.now(),
   waitForAuditFlush = (milliseconds) => {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
@@ -3182,6 +3488,8 @@ export function runObservedSandboxCommand({
 } = /** @type {any} */ ({})) {
   const startedAt = now();
   if (!Number.isFinite(startedAt)) fail(`${label} OS denial audit start cursor is invalid`);
+  if (typeof beforeSpawn !== "function") fail(`${label} pre-spawn authority guard is invalid`);
+  beforeSpawn();
   const child = spawnBounded(sandboxPath, ["-p", profile, command, ...args], {
     cwd, env, timeout, runCommand,
   });
@@ -4578,88 +4886,100 @@ export function createReleaseRehearsalCandidateAdapters({
             runCommand,
             timeout: 20 * 60_000,
           });
-          const nextEntrypoint = resolve(buildRoot, "node_modules", "next", "dist", "bin", "next");
-          const nextStat = lstatSync(nextEntrypoint);
-          if (nextStat.isSymbolicLink() || !nextStat.isFile() || (modeBits(nextStat.mode) & 0o022) !== 0) {
-            fail("Next.js build entrypoint identity is unsafe");
-          }
-          const nextCliPre = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
-            requireExecutable: false,
+          const nextEntrypointAuthority = await withCandidateNextEntrypointAuthority({
+            buildRoot,
+            currentUid: process.getuid?.(),
+          }, async ({ entrypointPath, entrypointTarget, verifyBeforeSpawn }) => {
+            const nextCliPre = snapshotToolFile(entrypointTarget, "next-cli@15.5.21", {
+              requireExecutable: false,
+            });
+            const nextBuildAudit = runObservedSandboxCommand({
+              sandboxPath: tools.sandboxPath,
+              logPath: tools.auditLogPath,
+              profile: sandboxProfile,
+              command: tools.nodePath,
+              args: [entrypointPath, "build", "--no-lint"],
+              cwd: buildRoot,
+              env: cleanBuildEnv,
+              label: "offline Next.js production build",
+              runCommand,
+              timeout: 20 * 60_000,
+              beforeSpawn: verifyBeforeSpawn,
+            });
+            const nextCliPost = snapshotToolFile(entrypointTarget, "next-cli@15.5.21", {
+              requireExecutable: false,
+            });
+            if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
+              fail("Next.js build entrypoint drifted during execution");
+            }
+            const postSourceDigest = verifyExactMaterializedTree({
+              sourceRoot: source.checkout_dir,
+              sourceManifest: source.source_manifest,
+            });
+            if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
+            const artifactsRoot = join(runRoot, "artifacts");
+            const assembled = assembleCandidateArtifacts({
+              sourceRoot: source.checkout_dir,
+              generatedRoot: buildRoot,
+              sourceManifest: source.source_manifest,
+              artifactsRoot,
+            });
+            const migration = collectMigrationFromSource(source);
+            const workerArtifact = materializeYoutubeExtractionWorkerArtifact({
+              rootDir: source.checkout_dir,
+              outputDir: join(artifactsRoot, "worker-source"),
+              releaseSha,
+              releaseTree,
+              buildId,
+              promotionId: buildId,
+              allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
+            });
+            if (verifyExactMaterializedTree({
+              sourceRoot: source.checkout_dir,
+              sourceManifest: source.source_manifest,
+            }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
+            const bundlesRoot = join(runRoot, "bundles");
+            mkdirSync(bundlesRoot, { mode: 0o700 });
+            const stagingBundleRoot = join(bundlesRoot, "bundle");
+            const bundle = createSealedCandidateBundle({
+              bundleRoot: stagingBundleRoot,
+              componentRoots: {
+                app: assembled.app,
+                full_local: assembled.full_local,
+                worker: workerArtifact.root_dir,
+              },
+            });
+            const sealedMigration = collectSealedMigrationInventory({ bundleRoot: stagingBundleRoot });
+            if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
+              fail("sealed migration inventory drifted from exact Git objects");
+            }
+            if (verifyExactMaterializedTree({
+              sourceRoot: source.checkout_dir,
+              sourceManifest: source.source_manifest,
+            }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
+            await collectToolchain();
+            return {
+              ...bundle,
+              build_tools: { next_cli: nextCliPost },
+              bundle_content_digest: bundle.sealed_bundle_digest,
+              migration: sealedMigration,
+              sandbox_policy_evidence: {
+                profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
+                execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+              },
+              staging_bundle_root: stagingBundleRoot,
+            };
           });
-          const nextBuildAudit = runObservedSandboxCommand({
-            sandboxPath: tools.sandboxPath,
-            logPath: tools.auditLogPath,
-            profile: sandboxProfile,
-            command: tools.nodePath,
-            args: [nextEntrypoint, "build", "--no-lint"],
-            cwd: buildRoot,
-            env: cleanBuildEnv,
-            label: "offline Next.js production build",
-            runCommand,
-            timeout: 20 * 60_000,
-          });
-          const nextCliPost = snapshotToolFile(nextEntrypoint, "next-cli@15.5.21", {
-            requireExecutable: false,
-          });
-          if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
-            fail("Next.js build entrypoint drifted during execution");
-          }
-          const postSourceDigest = verifyExactMaterializedTree({
-            sourceRoot: source.checkout_dir,
-            sourceManifest: source.source_manifest,
-          });
-          if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
-          const artifactsRoot = join(runRoot, "artifacts");
-          const assembled = assembleCandidateArtifacts({
-            sourceRoot: source.checkout_dir,
-            generatedRoot: buildRoot,
-            sourceManifest: source.source_manifest,
-            artifactsRoot,
-          });
-          const migration = collectMigrationFromSource(source);
-          const workerArtifact = materializeYoutubeExtractionWorkerArtifact({
-            rootDir: source.checkout_dir,
-            outputDir: join(artifactsRoot, "worker-source"),
-            releaseSha,
-            releaseTree,
-            buildId,
-            promotionId: buildId,
-            allowedSnapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest(),
-          });
-          if (verifyExactMaterializedTree({
-            sourceRoot: source.checkout_dir,
-            sourceManifest: source.source_manifest,
-          }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
-          const bundlesRoot = join(runRoot, "bundles");
-          mkdirSync(bundlesRoot, { mode: 0o700 });
-          const stagingBundleRoot = join(bundlesRoot, "bundle");
-          const bundle = createSealedCandidateBundle({
-            bundleRoot: stagingBundleRoot,
-            componentRoots: {
-              app: assembled.app,
-              full_local: assembled.full_local,
-              worker: workerArtifact.root_dir,
-            },
-          });
-          const sealedMigration = collectSealedMigrationInventory({ bundleRoot: stagingBundleRoot });
-          if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
-            fail("sealed migration inventory drifted from exact Git objects");
-          }
-          if (verifyExactMaterializedTree({
-            sourceRoot: source.checkout_dir,
-            sourceManifest: source.source_manifest,
-          }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
-          await collectToolchain();
+          validateCandidateNextEntrypointInventoryBinding(
+            nextEntrypointAuthority.inventory_binding,
+            nextEntrypointAuthority.value.file_inventory,
+          );
           return {
-            ...bundle,
-            build_tools: { next_cli: nextCliPost },
-            bundle_content_digest: bundle.sealed_bundle_digest,
-            migration: sealedMigration,
+            ...nextEntrypointAuthority.value,
             sandbox_policy_evidence: {
-              profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
-              execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+              ...nextEntrypointAuthority.value.sandbox_policy_evidence,
+              next_entrypoint_authority_digest: nextEntrypointAuthority.authority_digest,
             },
-            staging_bundle_root: stagingBundleRoot,
           };
         });
         return {
