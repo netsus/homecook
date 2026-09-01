@@ -1832,6 +1832,7 @@ try {
       }],
       escaped_process_count: 0,
       surviving_process_count: 0,
+      exited_at: "2026-09-01T11:00:00.500000Z",
     };
     const run = (event: string | Record<string, unknown>) => runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
@@ -1873,6 +1874,12 @@ try {
     await expect(run({
       eventMessage: `Sandbox: hcnode1234abcdi(${rootPid}) deny(1) file-write-create /fixture`,
       executionAuditToken: "02".repeat(32),
+      timestamp: "2026-09-01 11:00:00.900000+0000",
+    })).resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    await expect(run({
+      eventMessage: `Sandbox: hcnode1234abcdi(${rootPid}) deny(1) file-write-create /fixture`,
+      executionAuditToken,
+      timestamp: "2026-09-01 11:00:00.900000+0000",
     })).resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
     await expect(run({
       eventMessage: `Sandbox: hcnode1234abcdi(${rootPid}) deny(1) file-write-create /fixture`,
