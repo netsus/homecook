@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   accessSync,
   chmodSync,
@@ -17,7 +17,6 @@ import {
   readlinkSync,
   realpathSync,
   renameSync,
-  rmdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -2192,11 +2191,190 @@ function sealPnpmStoreTreeFdBound(root, {
   visit(root, subtree);
 }
 
+function inventoryDeferredPnpmQuarantine(root, currentUid, { maxEntries = 100_000 } = {}) {
+  const entries = [];
+  const visit = (path, relativePath) => {
+    if (entries.length >= maxEntries) fail("candidate pnpm deferred quarantine entry limit exceeded");
+    const stat = lstatSync(path, { bigint: true });
+    if (
+      stat.uid !== BigInt(currentUid)
+      || (!stat.isSymbolicLink() && realpathSync(path) !== path)
+    ) fail("candidate pnpm deferred quarantine contains an unsafe entry");
+    const type = stat.isSymbolicLink()
+      ? "symlink"
+      : (stat.isDirectory() ? "directory" : (stat.isFile() ? "file" : "unsupported"));
+    if (type === "unsupported" || (["file", "symlink"].includes(type) && stat.nlink !== 1n)) {
+      fail("candidate pnpm deferred quarantine type or hard-link count is unsafe");
+    }
+    entries.push({
+      path: relativePath,
+      type,
+      device: String(stat.dev),
+      inode: String(stat.ino),
+      mode: modeBits(stat.mode),
+      uid: String(stat.uid),
+      gid: String(stat.gid),
+      nlink: String(stat.nlink),
+      size: String(stat.size),
+      ctime_ns: String(stat.ctimeNs),
+      mtime_ns: String(stat.mtimeNs),
+      symlink_target: type === "symlink" ? readlinkSync(path) : null,
+    });
+    if (type === "directory") {
+      for (const name of readdirSync(path).sort()) {
+        visit(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`);
+      }
+    }
+  };
+  visit(root, ".");
+  return Object.freeze({
+    entries: Object.freeze(entries),
+    inventory_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-deferred-quarantine-inventory.v1",
+      entries,
+    }),
+  });
+}
+
+const DEFERRED_QUARANTINE_CLEANUP_SCRIPT = String.raw`
+import json, os, stat, sys
+
+root_name = sys.argv[1]
+expected_uid = int(sys.argv[2])
+records = {entry["path"]: entry for entry in json.load(sys.stdin)["entries"]}
+parent_fd = 3
+
+def fail(message):
+    raise RuntimeError(message)
+
+def check(st, record, label):
+    if (str(st.st_dev) != record["device"] or str(st.st_ino) != record["inode"] or
+        stat.S_IMODE(st.st_mode) != record["mode"] or str(st.st_uid) != record["uid"] or
+        str(st.st_gid) != record["gid"] or str(st.st_nlink) != record["nlink"] or
+        str(st.st_size) != record["size"] or str(st.st_ctime_ns) != record["ctime_ns"] or
+        str(st.st_mtime_ns) != record["mtime_ns"] or st.st_uid != expected_uid):
+        fail(label + " identity mismatch")
+    actual_type = "symlink" if stat.S_ISLNK(st.st_mode) else ("directory" if stat.S_ISDIR(st.st_mode) else ("file" if stat.S_ISREG(st.st_mode) else "unsupported"))
+    if actual_type != record["type"]:
+        fail(label + " type mismatch")
+
+def expected_children(relative_path):
+    prefix = "" if relative_path == "." else relative_path + "/"
+    names = []
+    for path in records:
+        if path == "." or not path.startswith(prefix):
+            continue
+        tail = path[len(prefix):]
+        if "/" not in tail:
+            names.append(tail)
+    return sorted(names)
+
+def remove_directory(parent, name, relative_path):
+    record = records.get(relative_path)
+    if not record or record["type"] != "directory":
+        fail("missing directory ledger entry")
+    fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+    try:
+        check(os.fstat(fd), record, relative_path)
+        names = sorted(os.listdir(fd))
+        if names != expected_children(relative_path):
+            fail(relative_path + " child set mismatch")
+        for child in names:
+            child_relative = child if relative_path == "." else relative_path + "/" + child
+            child_record = records.get(child_relative)
+            if not child_record:
+                fail("missing child ledger entry")
+            child_stat = os.stat(child, dir_fd=fd, follow_symlinks=False)
+            check(child_stat, child_record, child_relative)
+            if child_record["type"] == "directory":
+                remove_directory(fd, child, child_relative)
+                os.rmdir(child, dir_fd=fd)
+            elif child_record["type"] == "file":
+                os.unlink(child, dir_fd=fd)
+            elif child_record["type"] == "symlink":
+                if os.readlink(child, dir_fd=fd) != child_record["symlink_target"]:
+                    fail(child_relative + " symlink target mismatch")
+                os.unlink(child, dir_fd=fd)
+            else:
+                fail("unsupported cleanup entry")
+        if os.listdir(fd):
+            fail(relative_path + " cleanup residue")
+    finally:
+        os.close(fd)
+
+remove_directory(parent_fd, root_name, ".")
+root_stat = os.stat(root_name, dir_fd=parent_fd, follow_symlinks=False)
+root_record = records["."]
+if str(root_stat.st_dev) != root_record["device"] or str(root_stat.st_ino) != root_record["inode"]:
+    fail("root swapped before final removal")
+os.rmdir(root_name, dir_fd=parent_fd)
+print(json.dumps({"removed": True, "entry_count": len(records)}, separators=(",", ":")))
+`;
+
+const DEFERRED_QUARANTINE_PYTHON_PATH = process.platform === "darwin"
+  ? "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+  : "/usr/bin/python3";
+
+function cleanupDeferredPnpmQuarantine({
+  parentFd,
+  rootName,
+  inventory,
+  currentUid,
+  pythonPath = DEFERRED_QUARANTINE_PYTHON_PATH,
+  runCommand = spawnSync,
+}) {
+  if (!/^\.homecook-pnpm-quarantine-[0-9a-f-]{36}$/u.test(rootName)) {
+    fail("candidate pnpm deferred quarantine name is invalid");
+  }
+  const toolPre = snapshotToolFile(pythonPath, "deferred-quarantine-cleanup-python");
+  const result = runCommand(
+    pythonPath,
+    ["-I", "-c", DEFERRED_QUARANTINE_CLEANUP_SCRIPT, rootName, String(currentUid)],
+    {
+      encoding: "utf8",
+      env: { PATH: "/usr/bin:/bin" },
+      input: canonicalizeJcs({ entries: inventory.entries }),
+      maxBuffer: 1024 * 1024,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe", parentFd],
+      timeout: 30_000,
+    },
+  );
+  if (result.error || result.signal || result.status !== 0) {
+    fail("candidate pnpm deferred quarantine cleanup failed closed");
+  }
+  let output;
+  try {
+    output = JSON.parse(String(result.stdout ?? ""));
+  } catch {
+    fail("candidate pnpm deferred quarantine cleanup result is invalid");
+  }
+  if (
+    output?.removed !== true
+    || output.entry_count !== inventory.entries.length
+  ) fail("candidate pnpm deferred quarantine cleanup result is incomplete");
+  const toolPost = snapshotToolFile(pythonPath, "deferred-quarantine-cleanup-python");
+  if (canonicalizeJcs(toolPre) !== canonicalizeJcs(toolPost)) {
+    fail("candidate pnpm deferred quarantine cleanup tool drifted");
+  }
+  return Object.freeze({
+    cleanup_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-deferred-quarantine-cleanup.v1",
+      inventory_digest: inventory.inventory_digest,
+      entry_count: inventory.entries.length,
+      tool_identity_digest: sha256Jcs(toolPost),
+    }),
+  });
+}
+
 /**
  * @param {{
  *   sourceStore:string,
  *   storeRoot:string,
  *   currentUid?:number,
+ *   cleanupPythonPath?:string,
+ *   cleanupRunCommand?:Function,
+ *   quarantineParent?:string,
  *   transitionObserver?:(event:Record<string,unknown>)=>void,
  * }} options
  * @param {(authority:{
@@ -2211,11 +2389,15 @@ export async function withCandidatePnpmStoreView({
   sourceStore,
   storeRoot,
   currentUid = process.getuid?.(),
+  cleanupPythonPath = DEFERRED_QUARANTINE_PYTHON_PATH,
+  cleanupRunCommand = spawnSync,
+  quarantineParent = dirname(storeRoot),
   transitionObserver = () => undefined,
 } = /** @type {any} */ ({}), callback) {
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   if (typeof callback !== "function") fail("candidate pnpm store-view callback is required");
   if (typeof transitionObserver !== "function") fail("candidate pnpm transition observer is invalid");
+  if (typeof cleanupRunCommand !== "function") fail("candidate pnpm cleanup command is invalid");
   if (![sourceStore, storeRoot].every((path) => isAbsolute(path ?? "") && resolve(path) === path)) {
     fail("candidate pnpm store-view paths must be absolute and canonical");
   }
@@ -2226,6 +2408,15 @@ export async function withCandidatePnpmStoreView({
     || privateParentStat.uid !== BigInt(currentUid) || modeBits(privateParentStat.mode) !== 0o700
     || realpathSync(privateParent) !== privateParent
   ) fail("candidate pnpm store-view parent is unsafe");
+  if (!isAbsolute(quarantineParent ?? "") || resolve(quarantineParent) !== quarantineParent) {
+    fail("candidate pnpm quarantine parent must be absolute and canonical");
+  }
+  const quarantineParentInitialStat = lstatSync(quarantineParent, { bigint: true });
+  if (
+    quarantineParentInitialStat.isSymbolicLink() || !quarantineParentInitialStat.isDirectory()
+    || quarantineParentInitialStat.uid !== BigInt(currentUid) || modeBits(quarantineParentInitialStat.mode) !== 0o700
+    || realpathSync(quarantineParent) !== quarantineParent
+  ) fail("candidate pnpm quarantine parent is unsafe");
 
   const sourcePaths = [sourceStore, join(sourceStore, "files"), join(sourceStore, "index")];
   const sourceSnapshots = [];
@@ -2328,12 +2519,26 @@ export async function withCandidatePnpmStoreView({
     for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
     fail("candidate pnpm transition parent identity drifted before execution");
   }
+  const quarantineParentStat = lstatSync(quarantineParent, { bigint: true });
+  const quarantineParentFd = openSync(
+    quarantineParent,
+    fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+  );
+  if (!samePnpmStoreIdentity(quarantineParentStat, fstatSync(quarantineParentFd, { bigint: true }))) {
+    closeSync(quarantineParentFd);
+    closeSync(transitionParentFd);
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    fail("candidate pnpm quarantine parent identity drifted before execution");
+  }
 
   const initialFilesAuthority = pnpmStoreSubtreeAuthority(snapshotInventory, "files");
   let storePhase = "install";
   let sealedSnapshotInventory;
   let finalIndexAuthority;
   let installTransitionDigest;
+  let deferredCleanupDigest;
+  let deferredQuarantine;
   const viewByPath = new Map(viewDirectories.map((entry) => [entry.path, entry]));
   const assertHeldDirectory = (entry, keys, label) => {
     const pathPost = lstatSync(entry.path, { bigint: true });
@@ -2351,6 +2556,18 @@ export async function withCandidatePnpmStoreView({
       || !samePnpmStoreIdentity(transitionParentStat, pathPost)
       || !samePnpmStoreIdentity(transitionParentStat, fdPost)
     ) fail("candidate pnpm transition parent identity drifted");
+  };
+  const assertTransitionParentStable = () => {
+    const pathPost = lstatSync(privateParent, { bigint: true });
+    const fdPost = fstatSync(transitionParentFd, { bigint: true });
+    for (const key of ["dev", "ino", "mode", "uid", "gid"]) {
+      if (transitionParentStat[key] !== pathPost[key] || transitionParentStat[key] !== fdPost[key]) {
+        fail("candidate pnpm transition parent stable identity drifted");
+      }
+    }
+    if (pathPost.isSymbolicLink() || realpathSync(privateParent) !== privateParent) {
+      fail("candidate pnpm transition parent became unsafe");
+    }
   };
   const assertAbsent = (path, label) => {
     try {
@@ -2398,16 +2615,18 @@ export async function withCandidatePnpmStoreView({
     if (!storeRootEntry || !storePathEntry || !indexEntry) {
       fail("candidate pnpm transition directory registry is incomplete");
     }
-    const quarantineRoot = join(storeRoot, `.install-transition-${randomUUID()}`);
+    const quarantineName = `.homecook-pnpm-quarantine-${randomUUID()}`;
+    const quarantineRoot = join(quarantineParent, quarantineName);
     let quarantineFd;
+    let retainQuarantineFd = false;
     try {
-      fchmodSync(storeRootEntry.fd, 0o700);
-      const storeRootWritable = lstatSync(storeRoot, { bigint: true });
+      const quarantineParentBefore = lstatSync(quarantineParent, { bigint: true });
+      const quarantineParentOpened = fstatSync(quarantineParentFd, { bigint: true });
       if (
-        storeRootWritable.isSymbolicLink() || storeRootWritable.dev !== fstatSync(storeRootEntry.fd, { bigint: true }).dev
-        || storeRootWritable.ino !== fstatSync(storeRootEntry.fd, { bigint: true }).ino
-        || modeBits(storeRootWritable.mode) !== 0o700
-      ) fail("candidate pnpm store root swapped before quarantine creation");
+        quarantineParentBefore.isSymbolicLink()
+        || !samePnpmStoreIdentity(quarantineParentStat, quarantineParentBefore)
+        || !samePnpmStoreIdentity(quarantineParentStat, quarantineParentOpened)
+      ) fail("candidate pnpm quarantine parent swapped before quarantine creation");
       mkdirSync(quarantineRoot, { mode: 0o700 });
       const quarantineStat = lstatSync(quarantineRoot, { bigint: true });
       if (
@@ -2473,27 +2692,6 @@ export async function withCandidatePnpmStoreView({
         transitionObserver,
       });
 
-      for (const [kind, scratchRoot] of [["projects", scratchRoots[0]], ["tmp", scratchRoots[1]]]) {
-        const entry = viewByPath.get(scratchRoot);
-        if (!entry?.quarantinePath || !entry.quarantineStat) {
-          fail("candidate pnpm scratch quarantine authority is incomplete");
-        }
-        transitionObserver(Object.freeze({
-          phase: "before_scratch_remove",
-          kind,
-          path: entry.quarantinePath,
-        }));
-        const pathPost = lstatSync(entry.quarantinePath, { bigint: true });
-        const fdPost = fstatSync(entry.fd, { bigint: true });
-        if (
-          pathPost.isSymbolicLink() || !pathPost.isDirectory()
-          || !samePnpmStoreIdentity(entry.quarantineStat, pathPost)
-          || !samePnpmStoreIdentity(entry.quarantineStat, fdPost)
-        ) fail(`candidate pnpm ${kind} scratch identity swapped before quarantine removal`);
-        rmSync(entry.quarantinePath, { recursive: true, force: false });
-        assertAbsent(entry.quarantinePath, `${kind} quarantine after removal`);
-      }
-
       const sealedIndexQuarantine = lstatSync(indexEntry.quarantinePath, { bigint: true });
       const sealedIndexFd = fstatSync(indexEntry.fd, { bigint: true });
       if (
@@ -2532,22 +2730,25 @@ export async function withCandidatePnpmStoreView({
         || modeBits(sealedIndexFinal.mode) !== 0o500
       ) fail("candidate pnpm index root swapped during final FD-bound chmod");
 
-      if (readdirSync(quarantineRoot).length !== 0) {
-        fail("candidate pnpm transition quarantine contains residue");
+      if (canonicalizeJcs(readdirSync(quarantineRoot).sort()) !== canonicalizeJcs(["projects", "tmp"])) {
+        fail("candidate pnpm deferred quarantine child set is invalid");
       }
-      const quarantineBeforeRemove = lstatSync(quarantineRoot, { bigint: true });
-      const quarantineFdBeforeRemove = fstatSync(quarantineFd, { bigint: true });
-      if (!samePnpmStoreIdentity(quarantineBeforeRemove, quarantineFdBeforeRemove)) {
-        fail("candidate pnpm transition quarantine swapped before removal");
+      const deferredStat = lstatSync(quarantineRoot, { bigint: true });
+      if (!samePnpmStoreIdentity(deferredStat, fstatSync(quarantineFd, { bigint: true }))) {
+        fail("candidate pnpm deferred quarantine identity drifted after transition");
       }
-      rmdirSync(quarantineRoot);
-      assertAbsent(quarantineRoot, "transition quarantine after removal");
+      deferredQuarantine = Object.freeze({
+        fd: quarantineFd,
+        name: quarantineName,
+        path: quarantineRoot,
+        stat: deferredStat,
+      });
+      retainQuarantineFd = true;
       fchmodSync(storePathEntry.fd, 0o500);
-      fchmodSync(storeRootEntry.fd, 0o500);
     } finally {
-      if (quarantineFd !== undefined) closeSync(quarantineFd);
+      if (quarantineFd !== undefined && !retainQuarantineFd) closeSync(quarantineFd);
     }
-    assertTransitionParent();
+    assertTransitionParentStable();
     if (
       canonicalizeJcs(readdirSync(storeRoot).sort()) !== canonicalizeJcs(["v10"])
       || canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])
@@ -2637,9 +2838,45 @@ export async function withCandidatePnpmStoreView({
         if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
       }
     }
+    if (!deferredQuarantine) {
+      fail("candidate pnpm deferred quarantine authority is missing");
+    }
+    const assertDeferredQuarantineIdentity = (phase) => {
+      const pathStat = lstatSync(deferredQuarantine.path, { bigint: true });
+      const fdStat = fstatSync(deferredQuarantine.fd, { bigint: true });
+      if (
+        pathStat.isSymbolicLink() || !pathStat.isDirectory()
+        || realpathSync(deferredQuarantine.path) !== deferredQuarantine.path
+        || !samePnpmStoreIdentity(deferredQuarantine.stat, pathStat)
+        || !samePnpmStoreIdentity(deferredQuarantine.stat, fdStat)
+      ) fail(`candidate pnpm deferred quarantine identity drifted ${phase}`);
+    };
+    assertDeferredQuarantineIdentity("before cleanup inventory");
+    const deferredInventory = inventoryDeferredPnpmQuarantine(
+      deferredQuarantine.path,
+      currentUid,
+    );
+    assertDeferredQuarantineIdentity("during cleanup inventory");
+    transitionObserver(Object.freeze({
+      phase: "before_deferred_cleanup",
+      path: deferredQuarantine.path,
+      inventory_digest: deferredInventory.inventory_digest,
+    }));
+    const cleanup = cleanupDeferredPnpmQuarantine({
+      parentFd: quarantineParentFd,
+      rootName: deferredQuarantine.name,
+      inventory: deferredInventory,
+      currentUid,
+      pythonPath: cleanupPythonPath,
+      runCommand: cleanupRunCommand,
+    });
+    assertAbsent(deferredQuarantine.path, "deferred quarantine after cleanup");
+    deferredCleanupDigest = cleanup.cleanup_digest;
   } catch (error) {
     identityError = error;
   } finally {
+    if (deferredQuarantine?.fd !== undefined) closeSync(deferredQuarantine.fd);
+    closeSync(quarantineParentFd);
     closeSync(transitionParentFd);
     for (const { fd } of viewDirectories.reverse()) closeSync(fd);
     for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
@@ -2657,6 +2894,7 @@ export async function withCandidatePnpmStoreView({
     final_index_inventory_digest: finalIndexAuthority.inventory_digest,
     final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
     install_transition_digest: installTransitionDigest,
+    deferred_cleanup_digest: deferredCleanupDigest,
     view_path_digest: sha256Jcs(storePath),
     install_writable_path_digests: installWritableRoots.map((path) => sha256Jcs(path)),
   });
@@ -2670,10 +2908,34 @@ export async function withCandidatePnpmStoreView({
   });
 }
 
-/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[]}} options */
+/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[], executablePaths?:string[]|null}} options */
 export function buildCandidateSandboxProfile({
-  readRoots = [], writeRoots = [], deniedPaths = [], deniedWritePaths = [],
+  readRoots = [], writeRoots = [], deniedPaths = [], deniedWritePaths = [], executablePaths = null,
 } = {}) {
+  let processExecRule = "(allow process-exec)";
+  if (executablePaths !== null) {
+    if (
+      !Array.isArray(executablePaths) || executablePaths.length === 0
+      || executablePaths.some((path) => typeof path !== "string" || !isAbsolute(path) || resolve(path) !== path)
+    ) fail("candidate sandbox exact executable paths are invalid");
+    const exactExecutables = [...new Set(executablePaths)].sort();
+    for (const path of exactExecutables) {
+      let stat;
+      try {
+        stat = lstatSync(path);
+      } catch {
+        fail("candidate sandbox exact executable is unavailable");
+      }
+      if (
+        stat.isSymbolicLink() || !stat.isFile() || realpathSync(path) !== path
+        || ![0, process.getuid?.()].includes(stat.uid)
+        || (modeBits(stat.mode) & 0o111) === 0
+        || (modeBits(stat.mode) & 0o022) !== 0
+      ) fail("candidate sandbox exact executable mode, owner, or identity is unsafe");
+    }
+    processExecRule = `(allow process-exec ${exactExecutables
+      .map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`;
+  }
   const systemRuntimeRoots = [
     "/System",
     "/usr",
@@ -2741,13 +3003,14 @@ export function buildCandidateSandboxProfile({
   return [
     "(version 1)",
     "(deny default)",
-    "(allow process-exec)",
+    processExecRule,
     "(allow process-fork)",
     "(allow signal (target children))",
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
     ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
     '(deny file-write-data (literal "/dev/dtracehelper") (with no-log))',
+    '(deny mach-lookup (global-name "com.apple.diagnosticd") (with no-log))',
     `(deny mach-lookup ${[
       "com.apple.SystemConfiguration.DNSConfiguration",
       "com.apple.logd",
@@ -3949,32 +4212,458 @@ function runBounded(command, args, options = {}) {
   return String(result.stdout ?? "");
 }
 
+function parseProcessTable(source, label) {
+  const rows = [];
+  for (const line of String(source ?? "").split("\n")) {
+    if (line.trim().length === 0) continue;
+    const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+([A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.+?)\s*$/u.exec(line);
+    if (!match) fail(`${label} process discovery output is truncated or malformed`);
+    const [, pidSource, ppidSource, pgidSource, state, startedAt, command] = match;
+    const pid = Number(pidSource);
+    const ppid = Number(ppidSource);
+    const pgid = Number(pgidSource);
+    if (![pid, ppid, pgid].every((value) => Number.isSafeInteger(value) && value >= 0)) {
+      fail(`${label} process discovery identity is invalid`);
+    }
+    const normalizedCommand = command.trim();
+    if (normalizedCommand.length === 0 || normalizedCommand.includes("\0")) {
+      fail(`${label} process executable path is unavailable`);
+    }
+    rows.push({ pid, ppid, pgid, state, startedAt, command: normalizedCommand });
+  }
+  return rows;
+}
+
+async function observeSandboxProcessTree({
+  sandboxPath,
+  profile,
+  command,
+  args,
+  cwd,
+  env,
+  label,
+  timeout,
+  lsofPath = "/usr/sbin/lsof",
+  psPath = "/bin/ps",
+  pollCommand = spawnSync,
+  spawnProcess = spawn,
+  pollIntervalMs = 20,
+  maxOutputBytes = 8 * 1024 * 1024,
+  processExecutablePaths = null,
+} = /** @type {any} */ ({})) {
+  const observerToolsPre = Object.freeze({
+    lsof: snapshotToolFile(lsofPath, "sandbox-process-observer-lsof"),
+    ps: snapshotToolFile(psPath, "sandbox-process-observer-ps"),
+  });
+  const child = spawnProcess(sandboxPath, ["-p", profile, command, ...args], {
+    cwd,
+    detached: true,
+    env,
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  await new Promise((resolveSpawn, rejectSpawn) => {
+    child.once("spawn", resolveSpawn);
+    child.once("error", rejectSpawn);
+  }).catch(() => fail(`${label} sandbox root spawn failed closed`));
+  if (!Number.isSafeInteger(child.pid) || child.pid <= 0) {
+    fail(`${label} sandbox root PID is unavailable`);
+  }
+  const rootPid = child.pid;
+  const rootPgid = rootPid;
+  const startedAt = Date.now();
+  let stdout = Buffer.alloc(0);
+  let stderr = Buffer.alloc(0);
+  let outputOverflow = false;
+  const appendOutput = (kind, chunk) => {
+    const bytes = Buffer.from(chunk);
+    if (kind === "stdout") stdout = Buffer.concat([stdout, bytes]);
+    else stderr = Buffer.concat([stderr, bytes]);
+    if (stdout.length > maxOutputBytes || stderr.length > maxOutputBytes) outputOverflow = true;
+  };
+  child.stdout?.on("data", (chunk) => appendOutput("stdout", chunk));
+  child.stderr?.on("data", (chunk) => appendOutput("stderr", chunk));
+  let exitResult = null;
+  const exitPromise = new Promise((resolveExit) => {
+    child.once("exit", (code, signal) => {
+      exitResult = { code, signal, error: null };
+      resolveExit(exitResult);
+    });
+    child.once("error", (error) => {
+      exitResult = { code: null, signal: null, error };
+      resolveExit(exitResult);
+    });
+  });
+  const registeredPids = new Set([rootPid]);
+  const registeredStarts = new Map();
+  const registeredCommands = new Map();
+  const processIdentities = new Map();
+  const executableCache = new Map();
+  const exactProcessExecutable = Array.isArray(processExecutablePaths)
+    && processExecutablePaths.length === 1
+    ? processExecutablePaths[0]
+    : null;
+  let rootObserved = false;
+  let escapedProcessCount = 0;
+  const processRows = () => {
+    const result = spawnBounded(psPath, [
+      "-axo", "pid=,ppid=,pgid=,state=,lstart=,ucomm=",
+    ], {
+      cwd,
+      env: {
+        HOME: env.HOME,
+        LANG: "C",
+        LC_ALL: "C",
+        PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+      },
+      timeout: 5_000,
+      runCommand: pollCommand,
+    });
+    if (result.error || result.signal || result.status !== 0 || String(result.stdout ?? "").length === 0) {
+      fail(`${label} process discovery failed closed`);
+    }
+    return parseProcessTable(result.stdout, label);
+  };
+  const executableDigest = (pid, observedCommand) => {
+    const observedBasename = basename(observedCommand).replace(/^\((.+)\)$/u, "$1");
+    let executablePath = observedCommand;
+    if (pid === rootPid && observedBasename === basename(sandboxPath)) {
+      executablePath = sandboxPath;
+    } else if (pid === rootPid && observedBasename === basename(command)) {
+      executablePath = command;
+    }
+    if (!isAbsolute(executablePath) || !pathExists(executablePath)) {
+      const lsof = spawnBounded(lsofPath, ["-a", "-p", String(pid), "-d", "txt", "-Fn"], {
+        cwd,
+        env: { HOME: env.HOME, PATH: "/usr/bin:/bin:/usr/sbin:/sbin" },
+        timeout: 5_000,
+        runCommand: pollCommand,
+      });
+      if (lsof.error || lsof.signal) {
+        fail(`${label} process executable discovery failed closed`);
+      }
+      if (lsof.status !== 0) {
+        if (exactProcessExecutable && basename(exactProcessExecutable) === observedBasename) {
+          executablePath = exactProcessExecutable;
+        } else {
+          return null;
+        }
+      }
+      const candidates = String(lsof.stdout ?? "").split("\n")
+        .filter((line) => line.startsWith("n/"))
+        .map((line) => line.slice(1));
+      if (lsof.status === 0) {
+        if (candidates.length < 1) return null;
+        executablePath = candidates.find((candidate) => basename(candidate) === observedBasename)
+          ?? candidates[0];
+      }
+    }
+    const realpath = realpathSync(executablePath);
+    const cached = executableCache.get(realpath);
+    if (cached) return cached;
+    const identity = snapshotToolFile(realpath, `sandbox-process:${basename(realpath)}`);
+    const value = sha256Jcs(identity);
+    executableCache.set(realpath, value);
+    return value;
+  };
+  const registerRows = (rows) => {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const row of rows) {
+        if (
+          row.pid === rootPid
+          || row.pgid === rootPgid
+          || registeredPids.has(row.ppid)
+        ) {
+          if (!registeredPids.has(row.pid)) {
+            registeredPids.add(row.pid);
+            registeredStarts.set(row.pid, row.startedAt);
+            registeredCommands.set(row.pid, row.command);
+            changed = true;
+          }
+        }
+      }
+    }
+    for (const row of rows) {
+      if (!registeredPids.has(row.pid)) continue;
+      const registeredStart = registeredStarts.get(row.pid);
+      if (registeredStart && registeredStart !== row.startedAt) {
+        fail(`${label} registered process PID was reused`);
+      }
+      registeredStarts.set(row.pid, row.startedAt);
+      registeredCommands.set(row.pid, row.command);
+      if (row.pid === rootPid) rootObserved = true;
+      if (row.pid !== rootPid && row.pgid !== rootPgid) escapedProcessCount += 1;
+      const identityDigest = executableDigest(row.pid, row.command);
+      if (!identityDigest) continue;
+      processIdentities.set(`${row.pid}:${identityDigest}`, {
+        pid: row.pid,
+        ppid: row.ppid,
+        pgid: row.pgid,
+        started_at: row.startedAt,
+        executable_identity_digest: identityDigest,
+      });
+    }
+  };
+  const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+  const signalRegistered = (signal) => {
+    const rows = processRows();
+    registerRows(rows);
+    const current = rows.filter((row) => (
+      registeredPids.has(row.pid)
+      && registeredStarts.get(row.pid) === row.startedAt
+    ));
+    if (current.some((row) => row.pgid === rootPgid)) {
+      try { process.kill(-rootPgid, signal); } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ESRCH")) throw error;
+      }
+    }
+    for (const row of current.filter((entry) => entry.pgid !== rootPgid)) {
+      try { process.kill(row.pid, signal); } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ESRCH")) throw error;
+      }
+    }
+  };
+  const terminateRegistered = async () => {
+    signalRegistered("SIGTERM");
+    await delay(100);
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      signalRegistered("SIGKILL");
+      await delay(100);
+      const rows = processRows();
+      registerRows(rows);
+      const residues = rows.filter((row) => (
+        registeredPids.has(row.pid)
+        && registeredStarts.get(row.pid) === row.startedAt
+      ));
+      if (residues.length === 0) return;
+    }
+    fail(`${label} process group cleanup was incomplete`);
+  };
+  let timedOut = false;
+  try {
+    while (!exitResult) {
+      registerRows(processRows());
+      if (outputOverflow || Date.now() - startedAt > timeout) {
+        timedOut = true;
+        await terminateRegistered();
+        break;
+      }
+      await Promise.race([exitPromise, delay(pollIntervalMs)]);
+    }
+    await exitPromise;
+    const finalRows = processRows();
+    registerRows(finalRows);
+    const survivors = finalRows.filter((row) => (
+      row.pid !== rootPid
+      && registeredPids.has(row.pid)
+      && !row.state.startsWith("Z")
+    ));
+    if (survivors.length > 0 || escapedProcessCount > 0) {
+      await terminateRegistered();
+    }
+    if (!rootObserved) fail(`${label} sandbox root was never observed by process discovery`);
+    const identifiedPids = new Set([...processIdentities.values()].map((identity) => identity.pid));
+    const unidentifiedPids = [...registeredPids].filter((pid) => !identifiedPids.has(pid));
+    if (unidentifiedPids.length > 0) {
+      const projection = unidentifiedPids
+        .map((pid) => `${pid}:${registeredCommands.get(pid) ?? "unknown"}`)
+        .join(",");
+      fail(`${label} process executable identity remained unavailable (${projection})`);
+    }
+    const observerToolsPost = Object.freeze({
+      lsof: snapshotToolFile(lsofPath, "sandbox-process-observer-lsof"),
+      ps: snapshotToolFile(psPath, "sandbox-process-observer-ps"),
+    });
+    if (canonicalizeJcs(observerToolsPost) !== canonicalizeJcs(observerToolsPre)) {
+      fail(`${label} process observer tool identity drifted`);
+    }
+    return Object.freeze({
+      error: timedOut || outputOverflow ? new Error("sandbox process tree failed closed") : exitResult?.error,
+      signal: exitResult?.signal ?? null,
+      status: timedOut || outputOverflow ? null : exitResult?.code,
+      stdout: stdout.toString("utf8"),
+      stderr: stderr.toString("utf8"),
+      pid: rootPid,
+      root_pgid: rootPgid,
+      observer_tool_identity_digest: sha256Jcs(observerToolsPost),
+      process_tree_complete: true,
+      process_identities: [...processIdentities.values()].sort((left, right) => (
+        left.pid - right.pid
+        || left.executable_identity_digest.localeCompare(right.executable_identity_digest)
+      )),
+      escaped_process_count: escapedProcessCount,
+      surviving_process_count: survivors.length,
+    });
+  } catch (error) {
+    await terminateRegistered().catch(() => {
+      if (!exitResult) {
+        try { process.kill(-rootPgid, "SIGKILL"); } catch { /* Discovery already failed closed. */ }
+      }
+    });
+    throw error;
+  }
+}
+
 export function validateSandboxedBuildResult(result, label) {
   if (result?.error || result?.signal || result?.status !== 0) {
     fail(`${label} failed in the measured sandbox`);
   }
+  if (
+    result.process_tree_complete !== true
+    || !Number.isSafeInteger(result.root_pid) || result.root_pid <= 0
+    || !Number.isSafeInteger(result.root_pgid) || result.root_pgid <= 0
+    || result.root_pid !== result.root_pgid
+    || !Array.isArray(result.process_identities) || result.process_identities.length === 0
+    || result.escaped_process_count !== 0
+    || result.surviving_process_count !== 0
+    || typeof result.stage !== "string" || result.stage.length === 0
+    || !Number.isFinite(Date.parse(result.audit_started_at ?? ""))
+    || !Number.isFinite(Date.parse(result.audit_ended_at ?? ""))
+    || Date.parse(result.audit_ended_at) < Date.parse(result.audit_started_at)
+  ) fail(`${label} process tree discovery or lifecycle is incomplete`);
+  digest(result.observer_tool_identity_digest, `${label} observer tool identity digest`);
+  for (const identity of result.process_identities) {
+    exactObject(identity, `${label} process identity`, [
+      "pid", "ppid", "pgid", "started_at", "executable_identity_digest",
+    ]);
+    if (
+      !Number.isSafeInteger(identity.pid) || identity.pid <= 0
+      || !Number.isSafeInteger(identity.ppid) || identity.ppid < 0
+      || !Number.isSafeInteger(identity.pgid) || identity.pgid <= 0
+      || typeof identity.started_at !== "string" || identity.started_at.length === 0
+    ) fail(`${label} process identity is invalid`);
+    digest(identity.executable_identity_digest, `${label} executable identity digest`);
+  }
+  const sortedProcessIdentities = [...result.process_identities].sort((left, right) => (
+    left.pid - right.pid
+    || left.executable_identity_digest.localeCompare(right.executable_identity_digest)
+  ));
+  if (
+    canonicalizeJcs(sortedProcessIdentities) !== canonicalizeJcs(result.process_identities)
+    || new Set(result.process_identities.map((identity) => (
+      `${identity.pid}:${identity.started_at}:${identity.executable_identity_digest}`
+    ))).size !== result.process_identities.length
+  ) fail(`${label} process identity set is not sorted and unique`);
+  if (
+    !result.process_identities.some((identity) => identity.pid === result.root_pid)
+    || result.process_identities.some((identity) => identity.pgid !== result.root_pgid)
+  ) fail(`${label} process tree root or process-group identity is invalid`);
   if (!Array.isArray(result.observed_denials)) fail(`${label} lacks independent OS denial evidence`);
   if (result.observed_denials.length !== 0) {
     fail(`${label} contained an independently observed denied sandbox attempt`);
   }
   return Object.freeze({
     audit_digest: sha256Jcs({
-      schema: "homecook.sandbox-denial-audit.v1",
-      enforcement: "macos-unified-log-deny-all-window",
+      schema: "homecook.sandbox-process-tree-audit.v2",
+      enforcement: "macos-unified-log-deny-process-tree-window",
+      stage: result.stage,
+      audit_started_at: result.audit_started_at,
+      audit_ended_at: result.audit_ended_at,
+      root_pid: result.root_pid,
+      root_pgid: result.root_pgid,
+      observer_tool_identity_digest: result.observer_tool_identity_digest,
+      process_identities: result.process_identities,
       denial_count: 0,
     }),
   });
 }
 
+function parseUnifiedLogJson(source, label, { streaming = false } = {}) {
+  let payload = String(source ?? "");
+  if (streaming) {
+    const start = payload.indexOf("[");
+    if (start < 0 && payload.includes("Filtering the log data using")) return [];
+    if (start < 0) fail(`${label} unified log stream did not produce JSON`);
+    payload = payload.slice(start).trim();
+    if (!payload.endsWith("]")) payload = `${payload.replace(/,\s*$/u, "")}\n]`;
+  }
+  let events;
+  try {
+    events = JSON.parse(payload || "[]");
+  } catch {
+    fail(`${label} unified log response is not valid JSON`);
+  }
+  if (!Array.isArray(events)) fail(`${label} unified log response is invalid`);
+  return events;
+}
+
+async function streamSandboxUnifiedLog({
+  logPath,
+  cwd,
+  env,
+  label,
+  execute,
+  spawnProcess = spawn,
+  maxOutputBytes = 16 * 1024 * 1024,
+}) {
+  const stream = spawnProcess(logPath, [
+    "stream", "--style", "json", "--predicate",
+    'process == "kernel" AND eventMessage CONTAINS "Sandbox:"',
+  ], {
+    cwd,
+    env: { HOME: env.HOME, PATH: "/usr/bin:/bin" },
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  await new Promise((resolveSpawn, rejectSpawn) => {
+    stream.once("spawn", resolveSpawn);
+    stream.once("error", rejectSpawn);
+  }).catch(() => fail(`${label} unified log stream failed to start`));
+  let stdout = Buffer.alloc(0);
+  let stderr = Buffer.alloc(0);
+  let overflow = false;
+  stream.stdout?.on("data", (chunk) => {
+    stdout = Buffer.concat([stdout, Buffer.from(chunk)]);
+    if (stdout.length > maxOutputBytes) overflow = true;
+  });
+  stream.stderr?.on("data", (chunk) => {
+    stderr = Buffer.concat([stderr, Buffer.from(chunk)]);
+    if (stderr.length > maxOutputBytes) overflow = true;
+  });
+  let streamExited = false;
+  const streamExit = new Promise((resolveExit) => {
+    stream.once("exit", (code, signal) => {
+      streamExited = true;
+      resolveExit({ code, signal });
+    });
+    stream.once("error", () => {
+      streamExited = true;
+      resolveExit({ code: null, signal: null });
+    });
+  });
+  const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+  await delay(500);
+  if (streamExited) fail(`${label} unified log stream exited before sandbox spawn`);
+  let child;
+  try {
+    child = await execute();
+    await delay(1_500);
+  } finally {
+    if (!streamExited) stream.kill("SIGTERM");
+    await Promise.race([streamExit, delay(2_000)]);
+    if (!streamExited) {
+      stream.kill("SIGKILL");
+      await streamExit;
+    }
+  }
+  if (overflow) fail(`${label} unified log stream overflowed`);
+  const events = parseUnifiedLogJson(stdout, label, { streaming: true });
+  return Object.freeze({ child, events });
+}
+
 /** @param {any} options */
-export function runObservedSandboxCommand({
+export async function runObservedSandboxCommand({
   sandboxPath, logPath, profile, command, args, cwd, env, label,
+  stage = label,
+  processExecutablePaths = null,
   timeout = 30_000, runCommand = spawnSync,
+  observeProcessTree = observeSandboxProcessTree,
   beforeSpawn = () => undefined,
   now = () => Date.now(),
-  waitForAuditFlush = (milliseconds) => {
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
-  },
+  waitForAuditFlush = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait, milliseconds)),
+  streamUnifiedLog = streamSandboxUnifiedLog,
   formatAuditTime = (milliseconds) => {
     const date = new Date(milliseconds);
     const part = (value) => String(value).padStart(2, "0");
@@ -3984,47 +4673,76 @@ export function runObservedSandboxCommand({
   const startedAt = now();
   if (!Number.isFinite(startedAt)) fail(`${label} OS denial audit start cursor is invalid`);
   if (typeof beforeSpawn !== "function") fail(`${label} pre-spawn authority guard is invalid`);
+  if (processExecutablePaths !== null) {
+    if (
+      !Array.isArray(processExecutablePaths) || processExecutablePaths.length !== 1
+      || processExecutablePaths[0] !== command
+    ) fail(`${label} exact process executable authority is invalid`);
+    const exactRule = `(allow process-exec (literal ${sandboxLiteral(command)}))`;
+    if (!String(profile).split("\n").includes(exactRule)) {
+      fail(`${label} sandbox profile lacks its exact process executable authority`);
+    }
+  }
   beforeSpawn();
-  const child = spawnBounded(sandboxPath, ["-p", profile, command, ...args], {
-    cwd, env, timeout, runCommand,
+  const execute = () => observeProcessTree({
+    args, command, cwd, env, label, profile, sandboxPath, timeout,
+    pollCommand: runCommand, processExecutablePaths,
   });
+  const streamed = observeProcessTree === observeSandboxProcessTree
+    ? await streamUnifiedLog({ logPath, cwd, env, label, execute })
+    : { child: await execute(), events: [] };
+  const child = streamed.child;
   if (!Number.isSafeInteger(child?.pid) || child.pid <= 0) {
     fail(`${label} OS denial audit child identity is unavailable`);
   }
-  const childProcessName = basename(command);
-  if (!/^[A-Za-z0-9._+-]+$/u.test(childProcessName)) {
-    fail(`${label} OS denial audit child process name is invalid`);
-  }
+  if (
+    child.process_tree_complete !== true
+    || child.escaped_process_count !== 0
+    || child.surviving_process_count !== 0
+  ) fail(`${label} process tree lifecycle failed closed`);
   const childEndedAt = now();
   if (!Number.isFinite(childEndedAt) || childEndedAt < startedAt) {
     fail(`${label} OS denial audit command interval is invalid`);
   }
-  waitForAuditFlush(1_500);
+  await waitForAuditFlush(1_500);
   const auditEndedAt = now();
   if (!Number.isFinite(auditEndedAt) || auditEndedAt < childEndedAt) {
     fail(`${label} OS denial audit flush interval is invalid`);
   }
   const queryStartedAt = Math.floor((startedAt - 1_000) / 1_000) * 1_000;
   const queryEndedAt = Math.ceil((auditEndedAt + 1_000) / 1_000) * 1_000;
-  const childAuditIdentity = `Sandbox: ${childProcessName}(${child.pid})`;
   const audit = spawnBounded(logPath, [
     "show", "--start", formatAuditTime(queryStartedAt),
     "--end", formatAuditTime(queryEndedAt),
     "--style", "json", "--predicate",
-    `process == "kernel" AND eventMessage CONTAINS "${childAuditIdentity}"`,
+    'process == "kernel" AND eventMessage CONTAINS "Sandbox:"',
   ], { cwd, env: { HOME: env.HOME, PATH: "/usr/bin:/bin" }, timeout: 30_000, runCommand });
   if (audit.error || audit.signal || audit.status !== 0) fail(`${label} OS denial audit query failed closed`);
   let observedDenials;
   try {
-    const events = JSON.parse(String(audit.stdout ?? "[]"));
-    if (!Array.isArray(events)) fail(`${label} OS denial audit response is invalid`);
-    observedDenials = events.map((event) => ({
-      event_digest: sha256Bytes(Buffer.from(String(event.eventMessage ?? ""), "utf8")),
-    }));
-  } catch {
+    const events = [
+      ...streamed.events,
+      ...parseUnifiedLogJson(audit.stdout, label),
+    ];
+    const registeredPids = new Set(child.process_identities.map((identity) => identity.pid));
+    observedDenials = events.flatMap((event) => {
+      const message = String(event.eventMessage ?? "");
+      const match = /Sandbox:\s+[^()]+\((\d+)\)/u.exec(message);
+      if (!match || !registeredPids.has(Number(match[1]))) return [];
+      return [{ event_digest: sha256Bytes(Buffer.from(message, "utf8")) }];
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Release rehearsal candidate rejected:")) throw error;
     fail(`${label} OS denial audit response is not valid JSON`);
   }
-  return validateSandboxedBuildResult({ ...child, observed_denials: observedDenials }, label);
+  return validateSandboxedBuildResult({
+    ...child,
+    audit_started_at: new Date(startedAt).toISOString(),
+    audit_ended_at: new Date(auditEndedAt).toISOString(),
+    observed_denials: observedDenials,
+    root_pid: child.pid,
+    stage,
+  }, label);
 }
 
 export function validateCandidateDockerReadOnlyArgs(args) {
@@ -4082,6 +4800,67 @@ export function snapshotToolFile(path, version, { requireExecutable = true } = {
     size: String(lexical.size),
     sha256: sha256Bytes(bytes),
   };
+}
+
+function materializeSandboxStageNode({
+  sourceNode,
+  privateHome,
+  stage,
+  copyPath,
+  currentUid,
+  runCommand = spawnSync,
+}) {
+  if (!/^[a-z][a-z0-9-]{1,31}$/u.test(stage ?? "")) {
+    fail("sandbox stage Node label is invalid");
+  }
+  const token = randomUUID().replaceAll("-", "").slice(0, 8);
+  const path = join(privateHome, `hcnode${token}${stage[0]}`);
+  if (pathExists(path)) fail("sandbox stage Node clone collided before creation");
+  const sourcePre = snapshotToolFile(sourceNode, "sandbox-stage-node-source");
+  const copyToolPre = snapshotToolFile(copyPath, "sandbox-stage-node-copy-tool");
+  const copied = spawnBounded(copyPath, ["-c", "-p", sourceNode, path], {
+    cwd: privateHome,
+    env: { HOME: privateHome, PATH: "/usr/bin:/bin" },
+    runCommand,
+    timeout: 30_000,
+  });
+  if (copied.error || copied.signal || copied.status !== 0) {
+    fail("sandbox stage Node metadata-preserving APFS clone failed");
+  }
+  chmodSync(path, 0o500);
+  const stat = lstatSync(path, { bigint: true });
+  if (
+    stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1n
+    || stat.uid !== BigInt(currentUid) || modeBits(stat.mode) !== 0o500
+    || realpathSync(path) !== path
+  ) fail("sandbox stage Node clone identity is unsafe");
+  const cloneIdentity = snapshotToolFile(path, `sandbox-stage-node:${stage}`);
+  if (
+    cloneIdentity.sha256 !== sourcePre.sha256
+    || cloneIdentity.size !== sourcePre.size
+  ) fail("sandbox stage Node clone bytes differ from the pinned source");
+  const verify = () => {
+    const sourcePost = snapshotToolFile(sourceNode, "sandbox-stage-node-source");
+    const copyToolPost = snapshotToolFile(copyPath, "sandbox-stage-node-copy-tool");
+    const clonePost = snapshotToolFile(path, `sandbox-stage-node:${stage}`);
+    if (
+      canonicalizeJcs(sourcePost) !== canonicalizeJcs(sourcePre)
+      || canonicalizeJcs(copyToolPost) !== canonicalizeJcs(copyToolPre)
+      || canonicalizeJcs(clonePost) !== canonicalizeJcs(cloneIdentity)
+    ) fail("sandbox stage Node clone authority drifted");
+    return Object.freeze({ clone: clonePost, copy_tool: copyToolPost, source: sourcePost });
+  };
+  return Object.freeze({
+    authority_digest: sha256Jcs({
+      schema: "homecook.sandbox-stage-node-clone-authority.v1",
+      stage,
+      clone: cloneIdentity,
+      copy_tool: copyToolPre,
+      source: sourcePre,
+    }),
+    path,
+    verify,
+  });
 }
 
 export function snapshotTrustedPnpmArtifact(root, entrypoint, version) {
@@ -4199,12 +4978,13 @@ function exactToolPaths({ homeDir, toolchainLock }) {
   const launchctlPath = resolveSafeRealExecutable(["/bin/launchctl"], "launchctl");
   const lsofPath = resolveSafeRealExecutable(["/usr/sbin/lsof"], "lsof");
   const auditLogPath = resolveSafeRealExecutable(["/usr/bin/log"], "macOS unified log reader");
+  const copyPath = resolveSafeRealExecutable(["/bin/cp"], "macOS metadata-preserving copy tool");
   const supabasePath = findExactSupabaseCli(
     join(homeDir, "Library", "Caches", "pnpm", "dlx"),
     toolchainLock.supabase_cli.version,
   );
   return {
-    auditLogPath, dockerPath, ghPath, gitPath, launchctlPath, lsofPath, nodePath, pnpmArtifactRoot, pnpmCliPath,
+    auditLogPath, copyPath, dockerPath, ghPath, gitPath, launchctlPath, lsofPath, nodePath, pnpmArtifactRoot, pnpmCliPath,
     sandboxPath, supabasePath,
   };
 }
@@ -5319,11 +6099,28 @@ export function createReleaseRehearsalCandidateAdapters({
         privateTmp,
         currentUid: process.getuid?.(),
       }, async ({ writeRoots }) => {
+        const installStageNode = materializeSandboxStageNode({
+          sourceNode: tools.nodePath,
+          privateHome,
+          stage: "install",
+          copyPath: tools.copyPath,
+          currentUid: process.getuid?.(),
+          runCommand,
+        });
+        const buildStageNode = materializeSandboxStageNode({
+          sourceNode: tools.nodePath,
+          privateHome,
+          stage: "build",
+          copyPath: tools.copyPath,
+          currentUid: process.getuid?.(),
+          runCommand,
+        });
         const storeStat = lstatSync(packageStorePath);
         if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
           fail("offline pnpm package store identity is unsafe");
         }
         const storeViewBuild = await withCandidatePnpmStoreView({
+          quarantineParent: dirname(runRoot),
           sourceStore: resolve(packageStorePath),
           storeRoot: join(runRoot, "pnpm-store"),
           currentUid: process.getuid?.(),
@@ -5339,6 +6136,7 @@ export function createReleaseRehearsalCandidateAdapters({
             __CF_USER_TEXT_ENCODING: `0x${Number(process.getuid?.()).toString(16).toUpperCase()}:0:0`,
             CFPREFERENCES_AVOID_DAEMON: "1",
             CI: "1",
+            CIRCLE_NODE_TOTAL: "2",
             COMMAND_MODE: "unix2003",
             COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
             HOME: privateHome,
@@ -5346,6 +6144,7 @@ export function createReleaseRehearsalCandidateAdapters({
             LC_ALL: "C",
             LOGNAME: "homecook-rehearsal",
             NEXT_TELEMETRY_DISABLED: "1",
+            NODE_DISABLE_COMPILE_CACHE: "1",
             NODE_OPTIONS: "--no-global-search-paths",
             PATH: `${dirname(tools.nodePath)}:/usr/bin:/bin`,
             TZ: "UTC0",
@@ -5354,6 +6153,7 @@ export function createReleaseRehearsalCandidateAdapters({
             npm_config_offline: "true",
           });
           const installSandboxProfile = buildCandidateSandboxProfile({
+            executablePaths: [installStageNode.path],
             readRoots: [
               buildRoot,
               privateHome,
@@ -5366,6 +6166,8 @@ export function createReleaseRehearsalCandidateAdapters({
               source.checkout_dir,
               resolve(packageStorePath),
               join(storePath, "files"),
+              installStageNode.path,
+              buildStageNode.path,
             ],
             deniedPaths: [
               sourceRoot,
@@ -5379,25 +6181,29 @@ export function createReleaseRehearsalCandidateAdapters({
               join(normalizedHome, ".docker", "run", "docker.sock"),
             ],
           });
-          const installAudit = runObservedSandboxCommand({
+          const installAudit = await runObservedSandboxCommand({
             sandboxPath: tools.sandboxPath,
             logPath: tools.auditLogPath,
             profile: installSandboxProfile,
-            command: tools.nodePath,
+            command: installStageNode.path,
             args: [
               tools.pnpmCliPath,
-              "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
+              "install", "--frozen-lockfile", "--offline", "--ignore-scripts",
+              "--package-import-method=copy",
               "--store-dir", storePath,
             ],
             cwd: buildRoot,
             env: cleanBuildEnv,
             label: "offline frozen dependency install",
+            processExecutablePaths: [installStageNode.path],
+            stage: "offline-install",
             runCommand,
             timeout: 20 * 60_000,
             beforeSpawn: verifyInstallPhaseBeforeSpawn,
           });
           const finalIndexAuthority = sealInstallIndex();
           const buildSandboxProfile = buildCandidateSandboxProfile({
+            executablePaths: [buildStageNode.path],
             readRoots: [
               buildRoot,
               privateHome,
@@ -5410,6 +6216,8 @@ export function createReleaseRehearsalCandidateAdapters({
               source.checkout_dir,
               resolve(packageStorePath),
               storePath,
+              installStageNode.path,
+              buildStageNode.path,
             ],
             deniedPaths: [
               sourceRoot,
@@ -5430,15 +6238,17 @@ export function createReleaseRehearsalCandidateAdapters({
             const nextCliPre = snapshotToolFile(entrypointTarget, "next-cli@15.5.21", {
               requireExecutable: false,
             });
-            const nextBuildAudit = runObservedSandboxCommand({
+            const nextBuildAudit = await runObservedSandboxCommand({
               sandboxPath: tools.sandboxPath,
               logPath: tools.auditLogPath,
               profile: buildSandboxProfile,
-              command: tools.nodePath,
+              command: buildStageNode.path,
               args: [entrypointPath, "build", "--no-lint"],
               cwd: buildRoot,
               env: cleanBuildEnv,
               label: "offline Next.js production build",
+              processExecutablePaths: [buildStageNode.path],
+              stage: "next-build",
               runCommand,
               timeout: 20 * 60_000,
               beforeSpawn: verifyBeforeSpawn,
@@ -5449,6 +6259,8 @@ export function createReleaseRehearsalCandidateAdapters({
             if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
               fail("Next.js build entrypoint drifted during execution");
             }
+            const installStageNodePost = installStageNode.verify();
+            const buildStageNodePost = buildStageNode.verify();
             const postSourceDigest = verifyExactMaterializedTree({
               sourceRoot: source.checkout_dir,
               sourceManifest: source.source_manifest,
@@ -5505,9 +6317,11 @@ export function createReleaseRehearsalCandidateAdapters({
                 build_profile_digest: sha256Bytes(Buffer.from(buildSandboxProfile, "utf8")),
                 deterministic_runtime_environment_digest: sha256Jcs({
                   COMMAND_MODE: cleanBuildEnv.COMMAND_MODE,
+                  CIRCLE_NODE_TOTAL: cleanBuildEnv.CIRCLE_NODE_TOTAL,
                   LANG: cleanBuildEnv.LANG,
                   LC_ALL: cleanBuildEnv.LC_ALL,
                   LOGNAME: cleanBuildEnv.LOGNAME,
+                  NODE_DISABLE_COMPILE_CACHE: cleanBuildEnv.NODE_DISABLE_COMPILE_CACHE,
                   NODE_OPTIONS: cleanBuildEnv.NODE_OPTIONS,
                   TZ: cleanBuildEnv.TZ,
                   USER: cleanBuildEnv.USER,
@@ -5517,6 +6331,14 @@ export function createReleaseRehearsalCandidateAdapters({
                 final_index_inventory_digest: finalIndexAuthority.inventory_digest,
                 final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
                 execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+                stage_node_clone_authority_digests: [
+                  installStageNode.authority_digest,
+                  buildStageNode.authority_digest,
+                ],
+                stage_node_clone_post_identity_digests: [
+                  sha256Jcs(installStageNodePost),
+                  sha256Jcs(buildStageNodePost),
+                ],
               },
               staging_bundle_root: stagingBundleRoot,
             };
