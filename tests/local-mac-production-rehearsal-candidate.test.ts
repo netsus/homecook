@@ -2710,7 +2710,7 @@ describe("release rehearsal candidate orchestration", () => {
     expect(profile).toContain(productionRoot);
     expect(profile).toContain("/var/run/docker.sock");
 
-    const exactNodePath = realpathSync(process.execPath);
+    const exactNodePath = realpathSync("/usr/bin/true");
     const exactExecutableProfile = buildCandidateSandboxProfile({
       readRoots: [runRoot, exactNodePath],
       writeRoots: [runRoot],
@@ -2738,10 +2738,10 @@ describe("release rehearsal candidate orchestration", () => {
 
     if (process.platform === "darwin" && existsSync("/usr/bin/sandbox-exec")) {
       const exactNode = spawnSync("/usr/bin/sandbox-exec", [
-        "-p", exactExecutableProfile, exactNodePath, "-e", "process.exit(0)",
+        "-p", exactExecutableProfile, exactNodePath,
       ], { cwd: runRoot });
       const otherExecutable = spawnSync("/usr/bin/sandbox-exec", [
-        "-p", exactExecutableProfile, "/usr/bin/true",
+        "-p", exactExecutableProfile, "/usr/bin/echo", "unexpected",
       ], { cwd: runRoot });
       expect(exactNode.status).toBe(0);
       expect(otherExecutable.status).not.toBe(0);
