@@ -924,6 +924,31 @@ describe("release rehearsal R2 orchestration", () => {
     );
   });
 
+  it("allows an unrelated HOME child mutation while keeping .homecook as the exact anchor", async () => {
+    const trustedNamespaceAnchor = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-home-locator-runner-")));
+    const namespaceRoot = join(trustedNamespaceAnchor, ".homecook", "rehearsal", "runs");
+    mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
+    const candidateRoot = join(trustedNamespaceAnchor, "source-candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.createResources.mockImplementation(async () => {
+      mkdirSync(join(trustedNamespaceAnchor, "unrelated-user-child"), { mode: 0o700 });
+      return adapters.resources;
+    });
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      trustedNamespaceAnchor,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+      now: () => new Date("2026-08-29T00:00:00.000Z"),
+    })).resolves.toMatchObject({ status: "passed" });
+    expect(adapters.removeResource).toHaveBeenCalledTimes(adapters.resources.length);
+  });
+
   it("holds the trusted home anchor through .homecook parent swap and restore", async () => {
     const trustedNamespaceAnchor = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-trusted-anchor-")));
     const homecookRoot = join(trustedNamespaceAnchor, ".homecook");
@@ -1184,8 +1209,8 @@ describe("release rehearsal R2 cleanup ownership", () => {
 
     for (const [siteIndex, [site, kind]] of Object.entries(expectedSites).entries()) {
       for (const failureMode of ["inspect-error", "invalid-json"] as const) {
-        const id = (siteIndex + 1).toString(16).repeat(64);
         const name = `r2-${site.replaceAll("_", "-")}`;
+        const id = kind === "volume" ? name : (siteIndex + 1).toString(16).repeat(64);
         const expected = {
           kind,
           name,
@@ -2094,7 +2119,13 @@ describe("release rehearsal R2 public command and schema", () => {
         output,
         namespaceResolver: () => ({ trustedNamespaceAnchor: homeRoot, namespaceRoot }),
         runIdFactory: () => RUN_ID,
-        createAdapters: (adapterOptions: Record<string, unknown>) => createLocalReleaseRehearsalRunnerAdapters({
+        createAdapters: (adapterOptions: {
+          candidateInput: string;
+          trustedNamespaceAnchor: string;
+          namespaceRoot: string;
+          productionEnvAuthorityPath: string;
+          runId: string;
+        }) => createLocalReleaseRehearsalRunnerAdapters({
           ...adapterOptions,
           homeDir: homeRoot,
           rootDir: process.cwd(),

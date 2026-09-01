@@ -688,6 +688,7 @@ function createRunRootTransitionAuthority(trustedAnchorRoot, namespaceRoot, runR
   }
   const namespaceEntries = entries.slice(0, -1);
   const runEntry = entries.at(-1);
+  const homeLocatorPath = trustedAnchorRoot === namespaceRoot ? null : trustedAnchorRoot;
   let runIdentity = runEntry.identity;
   let closed = false;
   const verifyEntry = (entry, expected, label, { locatorOnly = false } = {}) => {
@@ -716,14 +717,18 @@ function createRunRootTransitionAuthority(trustedAnchorRoot, namespaceRoot, runR
   const verify = (phase = "run root transition") => {
     if (closed) fail("run root transition authority is closed");
     for (const entry of namespaceEntries) {
-      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`);
+      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`, {
+        locatorOnly: entry.path === homeLocatorPath,
+      });
     }
     verifyEntry(runEntry, runIdentity, `${phase} run root`);
   };
   const rebaselineAfterOwnedChildCreation = (phase) => {
     if (closed) fail("run root transition authority is closed");
     for (const entry of namespaceEntries) {
-      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`);
+      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`, {
+        locatorOnly: entry.path === homeLocatorPath,
+      });
     }
     runIdentity = verifyEntry(runEntry, runIdentity, `${phase} run root`, { locatorOnly: true });
   };
@@ -767,9 +772,12 @@ function createCandidatePathAuthority({
     for (const entry of entries.reverse()) closeSync(entry.fd);
     throw error;
   }
+  const homeLocatorPath = trustedAnchorRoot === namespaceRoot ? null : trustedAnchorRoot;
   const chainProjection = entries.map((entry) => ({
     path_digest: sha256Jcs(entry.path),
-    identity: entry.identity,
+    identity: entry.path === homeLocatorPath
+      ? stableDirectoryLocatorIdentity(entry.identity)
+      : entry.identity,
   }));
   const chainDigest = sha256Jcs({
     schema: "homecook.release-rehearsal-candidate-path-chain.v1",
@@ -817,11 +825,14 @@ function createCandidatePathAuthority({
       }
       let canonical = false;
       try { canonical = realpathSync(entry.path) === entry.path; } catch { /* normalized below */ }
+      const projectIdentity = entry.path === homeLocatorPath
+        ? stableDirectoryLocatorIdentity
+        : (identity) => identity;
       if (
         !pathStat.isDirectory() || pathStat.isSymbolicLink()
         || !canonical
-        || canonicalizeJcs(directoryIdentity(pathStat)) !== canonicalizeJcs(entry.identity)
-        || canonicalizeJcs(directoryIdentity(descriptorStat)) !== canonicalizeJcs(entry.identity)
+        || canonicalizeJcs(projectIdentity(directoryIdentity(pathStat))) !== canonicalizeJcs(projectIdentity(entry.identity))
+        || canonicalizeJcs(projectIdentity(directoryIdentity(descriptorStat))) !== canonicalizeJcs(projectIdentity(entry.identity))
       ) fail(`${phase} candidate namespace ancestor FD or lexical identity drifted`);
     }
     return authority;

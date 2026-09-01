@@ -84,6 +84,15 @@ export function normalizeObserverComponent(component) {
   throw new Error("R2 adapter rejected: observer component is outside the exact runtime set");
 }
 const RESOURCE_KIND_ORDER = { network: 0, volume: 1, container: 2 };
+export const DOCKER_CREATE_SITE_RESOURCE_KINDS = Object.freeze({
+  full_local_network: "network",
+  full_local_volume: "volume",
+  full_local_service: "container",
+  app: "container",
+  worker: "container",
+  sentinel_network: "network",
+  sentinel_container: "container",
+});
 const RUN_IMAGE_SERVICE_LABEL = "com.homecook.release-rehearsal.image-service";
 const RUN_CREATION_NONCE_LABEL = "com.homecook.release-rehearsal.creation-nonce";
 const FULL_LOCAL_IDENTITY_OUTPUT_PATH = "/tmp/homecook-r2-identity.json";
@@ -200,6 +209,16 @@ function bindSourceIdentity(stat) {
   });
 }
 
+function bindSourceLocatorIdentity(identity) {
+  return Object.freeze({
+    device: identity.device,
+    inode: identity.inode,
+    uid: identity.uid,
+    gid: identity.gid,
+    mode: identity.mode,
+  });
+}
+
 function containedDirectoryPaths(anchorRoot, target) {
   if (
     typeof anchorRoot !== "string" || resolve(anchorRoot) !== anchorRoot
@@ -306,9 +325,12 @@ function createDockerBindSourceGuardUnsafe({
   const openDirectory = (path) => {
     if (directories.has(path)) return directories.get(path);
     const before = lstatSync(path, { bigint: true });
+    const homeLocator = trustedAnchorRoot !== namespaceRoot && path === trustedAnchorRoot;
     if (
       !before.isDirectory() || before.isSymbolicLink()
-      || before.uid !== BigInt(currentUid) || (before.mode & 0o022n) !== 0n || before.nlink < 1n
+      || before.uid !== BigInt(currentUid)
+      || (homeLocator ? (before.mode & 0o777n) !== 0o700n : (before.mode & 0o022n) !== 0n)
+      || before.nlink < 1n
       || realpathSync(path) !== path
     ) fail(`${resourceName} bind source directory is unsafe`);
     const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | (fsConstants.O_NOFOLLOW ?? 0));
@@ -403,7 +425,12 @@ function createDockerBindSourceGuardUnsafe({
       target: entry.target,
       read_only: entry.read_only,
     })),
-    directories: [...directories.values()].map((entry) => ({ path_digest: sha256Jcs(entry.path), identity: entry.identity })),
+    directories: [...directories.values()].map((entry) => ({
+      path_digest: sha256Jcs(entry.path),
+      identity: trustedAnchorRoot !== namespaceRoot && entry.path === trustedAnchorRoot
+        ? bindSourceLocatorIdentity(entry.identity)
+        : entry.identity,
+    })),
     files: [...files.values()].map((entry) => ({ path_digest: sha256Jcs(entry.path), identity: entry.identity, content_digest: entry.content_digest })),
   };
   let closed = false;
@@ -413,10 +440,13 @@ function createDockerBindSourceGuardUnsafe({
     for (const entry of directories.values()) {
       const pathStat = lstatSync(entry.path, { bigint: true });
       const fdStat = fstatSync(entry.fd, { bigint: true });
+      const projectIdentity = trustedAnchorRoot !== namespaceRoot && entry.path === trustedAnchorRoot
+        ? bindSourceLocatorIdentity
+        : (identity) => identity;
       if (
         !pathStat.isDirectory() || pathStat.isSymbolicLink() || realpathSync(entry.path) !== entry.path
-        || canonicalizeJcs(bindSourceIdentity(pathStat)) !== canonicalizeJcs(entry.identity)
-        || canonicalizeJcs(bindSourceIdentity(fdStat)) !== canonicalizeJcs(entry.identity)
+        || canonicalizeJcs(projectIdentity(bindSourceIdentity(pathStat))) !== canonicalizeJcs(projectIdentity(entry.identity))
+        || canonicalizeJcs(projectIdentity(bindSourceIdentity(fdStat))) !== canonicalizeJcs(projectIdentity(entry.identity))
       ) fail(`${phase} detected bind source directory identity drift`);
     }
     for (const entry of files.values()) {
@@ -459,18 +489,33 @@ export function createDockerBindSourceGuard(options = {}) {
   });
 }
 
-export async function executeDockerBindCreateTransition({ guard, create, inspect, record } = {}) {
+export async function executeDockerBindCreateTransition({
+  guard,
+  ledger = null,
+  site = null,
+  expected = null,
+  create,
+  inspect,
+  record = null,
+} = {}) {
+  const primitiveTransition = ledger !== null || site !== null || expected !== null;
   if (
     typeof guard?.verify !== "function" || typeof guard?.close !== "function"
-    || typeof create !== "function" || typeof inspect !== "function" || typeof record !== "function"
+    || typeof create !== "function" || typeof inspect !== "function"
+    || (!primitiveTransition && typeof record !== "function")
   ) fail("Docker bind create transition dependencies are incomplete");
   try {
     guard.verify("Docker bind source pre-create");
-    const created = await create();
-    record(created);
-    const observed = await inspect(created);
+    const transition = primitiveTransition
+      ? await executeDockerPrimitiveCreateTransition({ ledger, site, expected, create, inspect })
+      : await (async () => {
+        const created = await create();
+        record(created);
+        const observed = await inspect(created);
+        return Object.freeze({ created, observed });
+      })();
     guard.verify("Docker bind source post-create inspect");
-    return Object.freeze({ created, observed });
+    return transition;
   } finally {
     guard.close();
   }
@@ -827,28 +872,41 @@ async function dockerCommand(state, args, options = {}) {
     ...(options.ownership ?? {}),
   };
   validateDockerInvocation(pinnedArgs, ownership);
-  const result = await state.runCommand({
-    command: state.dockerBin,
-    args: pinnedArgs,
-    env: ensureDockerCommandEnvironment(state),
-    input: options.input,
-    signal: options.signal ?? state.activeSignal,
-    timeoutMs: options.timeout ?? COMMAND_TIMEOUT_MS,
-    maxOutputBytes: OUTPUT_LIMIT_BYTES,
-  });
+  let result;
+  try {
+    result = await state.runCommand({
+      command: state.dockerBin,
+      args: pinnedArgs,
+      env: ensureDockerCommandEnvironment(state),
+      input: options.input,
+      signal: options.signal ?? state.activeSignal,
+      timeoutMs: options.timeout ?? COMMAND_TIMEOUT_MS,
+      maxOutputBytes: OUTPUT_LIMIT_BYTES,
+    });
+  } catch {
+    throw new Error("docker_command_failed: isolated Docker command failed.");
+  }
   state.commandTelemetry.push(Object.freeze({
     argv_digest: sha256Jcs(pinnedArgs),
     mode: ownership.verifiedOwnership === true ? "owned" : "bounded",
     production_target: false,
   }));
-  if (!options.allowFailure && result.status !== 0) {
-    fail(`command exited ${String(result.status)}: ${result.stderr.slice(0, 512)}`);
+  if (
+    !options.allowFailure
+    && (result?.error || result?.signal || result?.truncated === true || result?.status !== 0)
+  ) {
+    throw new Error("docker_command_failed: isolated Docker command failed.");
   }
   return result;
 }
 
 function parseLines(source) {
   return source.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+}
+
+function parseDockerJson(source) {
+  try { return JSON.parse(source); }
+  catch { throw new Error("docker_output_invalid: isolated Docker command output was invalid."); }
 }
 
 function abortableDelay(milliseconds, signal) {
@@ -1082,7 +1140,7 @@ async function inspectResource(state, entry, options = {}) {
     kind: entry.kind,
     id: entry.id,
     name: (rawName ?? entry.name).replace(/^\//u, ""),
-    labels: JSON.parse(labelsText),
+    labels: parseDockerJson(labelsText),
   };
 }
 
@@ -1096,7 +1154,7 @@ export async function readContainerObserverSubject(state, { containerId, compone
   if (ps.error || ps.signal || ps.status !== 0) fail("container observer trusted ps is unavailable");
   const [hostPid, hostPgid, executable] = ps.stdout.trim().split(/\s+/, 3);
   if (Number(hostPid) !== pid || !Number.isSafeInteger(Number(hostPgid)) || Number(hostPgid) <= 0 || !executable) fail("container observer host PID/PGID identity is invalid");
-  return Object.freeze({ container_id: id, host_pid: pid, host_pgid: Number(hostPgid), component, started_at: startedAt, image_digest: sha256Jcs(image), config_digest: sha256Jcs(JSON.parse(configText)), executable_identity_digest: sha256Jcs(executable) });
+  return Object.freeze({ container_id: id, host_pid: pid, host_pgid: Number(hostPgid), component, started_at: startedAt, image_digest: sha256Jcs(image), config_digest: sha256Jcs(parseDockerJson(configText)), executable_identity_digest: sha256Jcs(executable) });
 }
 
 async function listDiscoveredResources(state, options = {}) {
@@ -1122,13 +1180,44 @@ export function assertDiscoveredResourcesRemainUnowned(ledger, discovered) {
   return Object.freeze([...discovered]);
 }
 
-export function recordPrimitiveCreateResult(ledger, expected, stdout, inspected) {
-  const match = /^([0-9a-f]{64})\n?$/u.exec(stdout ?? "");
-  if (!match) fail("primitive create stdout must contain exactly one 64-hex ID");
-  const entry = { kind: expected.kind, id: match[1], name: expected.name };
+function validateDockerCreateSite(site, kind) {
+  if (DOCKER_CREATE_SITE_RESOURCE_KINDS[site] !== kind) {
+    fail("Docker create site is absent from the closed resource-kind inventory");
+  }
+}
+
+export function recordPrimitiveCreateReturnedId(ledger, site, expected, stdout) {
+  if (!ledger || typeof ledger.record !== "function" || !expected) {
+    fail("primitive create ledger authority is incomplete");
+  }
+  validateDockerCreateSite(site, expected.kind);
+  const output = stdout ?? "";
+  const id = expected.kind === "volume"
+    ? ([expected.name, `${expected.name}\n`].includes(output) ? expected.name : null)
+    : /^([0-9a-f]{64})\n?$/u.exec(output)?.[1];
+  if (!id) fail("primitive create stdout must contain one exact returned resource ID");
+  const entry = { kind: expected.kind, id, name: expected.name };
   ledger.record(entry);
-  validatePrimitiveCreatedInspection(expected, entry, inspected);
   return Object.freeze(entry);
+}
+
+export async function executeDockerPrimitiveCreateTransition({ ledger, site, expected, create, inspect } = {}) {
+  if (typeof create !== "function" || typeof inspect !== "function") {
+    fail("primitive create transition dependencies are incomplete");
+  }
+  const stdout = await create();
+  const entry = recordPrimitiveCreateReturnedId(ledger, site, expected, stdout);
+  const inspected = await inspect(entry);
+  validatePrimitiveCreatedInspection(expected, entry, inspected);
+  return Object.freeze({ created: entry, observed: inspected });
+}
+
+export function recordPrimitiveCreateResult(ledger, expected, stdout, inspected) {
+  const site = Object.entries(DOCKER_CREATE_SITE_RESOURCE_KINDS)
+    .find(([, kind]) => kind === expected.kind)?.[0];
+  const entry = recordPrimitiveCreateReturnedId(ledger, site, expected, stdout);
+  validatePrimitiveCreatedInspection(expected, entry, inspected);
+  return entry;
 }
 
 function validatePrimitiveCreatedInspection(expected, entry, inspected) {
@@ -1206,7 +1295,7 @@ async function verifyCreatedContainerImages(state, { signal } = {}) {
       "--format", "{{.Image}}\t{{.Config.Image}}\t{{json .Config.Labels}}",
     ], { signal });
     const [imageId, configuredReference, labelsText] = result.stdout.trim().split("\t");
-    const labels = JSON.parse(labelsText);
+    const labels = parseDockerJson(labelsText);
     const service = labels?.[RUN_IMAGE_SERVICE_LABEL] ?? labels?.["com.docker.compose.service"];
     const authority = state.imageAuthorities?.get(service);
     if (!authority) fail(`container image service authority is missing: ${entry.name}`);
@@ -1215,7 +1304,7 @@ async function verifyCreatedContainerImages(state, { signal } = {}) {
       "--format", "{{.Id}}\t{{.Os}}/{{.Architecture}}\t{{json .RepoDigests}}",
     ], { signal });
     const [readbackId, platform, repoDigestsText] = image.stdout.trim().split("\t");
-    const repoDigests = JSON.parse(repoDigestsText);
+    const repoDigests = parseDockerJson(repoDigestsText);
     validateContainerImageAuthority({
       authority,
       observed: {
@@ -1449,6 +1538,7 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
 
 async function runContainer(state, args, {
   signal,
+  createSite,
   candidatePathAuthority = false,
   trustedNamespaceAnchor = state.trustedNamespaceAnchor ?? state.namespaceRoot,
   expectedMounts = [],
@@ -1476,43 +1566,34 @@ async function runContainer(state, args, {
         dockerArgs: createArgs,
         verifyCandidateTree,
       });
-    let stdout = "";
+    const expected = {
+      kind: "container",
+      name: expectedName,
+      labels: {
+        [RUN_OWNERSHIP_LABEL]: state.runId,
+        [RUN_PROJECT_LABEL]: state.namespace.project,
+        [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
+      },
+    };
     const create = async () => {
-      stdout = (await dockerCommand(state, createArgs, { signal })).stdout;
-      const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
-      if (!id || !expectedName) fail("docker create did not return exact container identity");
-      return { kind: "container", id, name: expectedName };
+      if (!expectedName) fail("docker create did not return exact container identity");
+      return (await dockerCommand(state, createArgs, { signal })).stdout;
     };
     const transition = bindGuard === null
-      ? await (async () => {
-        const created = await create();
-        const observed = await inspectResource(state, created, { signal });
-        recordPrimitiveCreateResult(state.creationLedger, {
-          ...created,
-          labels: {
-            [RUN_OWNERSHIP_LABEL]: state.runId,
-            [RUN_PROJECT_LABEL]: state.namespace.project,
-            [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
-          },
-        }, stdout, observed);
-        return { created, observed };
-      })()
+      ? await executeDockerPrimitiveCreateTransition({
+        ledger: state.creationLedger,
+        site: createSite,
+        expected,
+        create,
+        inspect: (created) => inspectResource(state, created, { signal }),
+      })
       : await executeDockerBindCreateTransition({
         guard: bindGuard,
+        ledger: state.creationLedger,
+        site: createSite,
+        expected,
         create,
-        inspect: async (created) => {
-          const observed = await inspectResource(state, created, { signal });
-          validatePrimitiveCreatedInspection({
-            ...created,
-            labels: {
-              [RUN_OWNERSHIP_LABEL]: state.runId,
-              [RUN_PROJECT_LABEL]: state.namespace.project,
-              [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
-            },
-          }, created, observed);
-          return observed;
-        },
-        record: (created) => state.creationLedger.record(created),
+        inspect: (created) => inspectResource(state, created, { signal }),
       });
     const id = transition.created.id;
     await dockerCommand(state, ["start", id], {
@@ -1967,21 +2048,28 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         "--label", `${RUN_PROJECT_LABEL}=${namespace.project}`,
         "--label", `${RUN_CREATION_NONCE_LABEL}=${state.creationNonce}`,
       ];
+      const expectedLabels = {
+        [RUN_OWNERSHIP_LABEL]: state.runId,
+        [RUN_PROJECT_LABEL]: namespace.project,
+        [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
+      };
       for (const name of namespace.network_names.slice(0, 3)) {
-        const stdout = (await dockerCommand(state, ["network", "create", "--internal", ...primitiveLabels, name], { signal: state.activeSignal })).stdout;
-        const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
-        if (!id) fail("primitive network create did not return one exact ID");
-        const entry = { kind: "network", id, name };
-        const observed = await inspectResource(state, entry, { signal: state.activeSignal });
-        recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
+        await executeDockerPrimitiveCreateTransition({
+          ledger: state.creationLedger,
+          site: "full_local_network",
+          expected: { kind: "network", name, labels: expectedLabels },
+          create: async () => (await dockerCommand(state, ["network", "create", "--internal", ...primitiveLabels, name], { signal: state.activeSignal })).stdout,
+          inspect: (entry) => inspectResource(state, entry, { signal: state.activeSignal }),
+        });
       }
       for (const name of namespace.volume_names) {
-        const stdout = (await dockerCommand(state, ["volume", "create", "--name", name, ...primitiveLabels], { signal: state.activeSignal })).stdout;
-        const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
-        if (!id) fail("primitive volume create did not return one exact ID");
-        const entry = { kind: "volume", id, name };
-        const observed = await inspectResource(state, entry, { signal: state.activeSignal });
-        recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
+        await executeDockerPrimitiveCreateTransition({
+          ledger: state.creationLedger,
+          site: "full_local_volume",
+          expected: { kind: "volume", name, labels: expectedLabels },
+          create: async () => (await dockerCommand(state, ["volume", "create", "--name", name, ...primitiveLabels], { signal: state.activeSignal })).stdout,
+          inspect: (entry) => inspectResource(state, entry, { signal: state.activeSignal }),
+        });
       }
       const composeSourceGuard = createDockerBindSourceGuard({
         trustedAnchorRoot: trustedNamespaceAnchor,
@@ -2033,21 +2121,17 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         });
         const transition = await executeDockerBindCreateTransition({
           guard: bindGuard,
+          ledger: state.creationLedger,
+          site: "full_local_service",
+          expected: {
+            kind: "container",
+            name: `${namespace.project}-${service.name}-1`,
+            labels: expectedLabels,
+          },
           create: async () => {
-            const stdout = (await dockerCommand(state, primitive.args, { signal: state.activeSignal })).stdout;
-            const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
-            if (!id) fail(`full-local ${service.name} create did not return one exact ID`);
-            return { kind: "container", id, name: `${namespace.project}-${service.name}-1` };
+            return (await dockerCommand(state, primitive.args, { signal: state.activeSignal })).stdout;
           },
-          inspect: async (entry) => {
-            const observed = await inspectResource(state, entry, { signal: state.activeSignal });
-            validatePrimitiveCreatedInspection({
-              ...entry,
-              labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce },
-            }, entry, observed);
-            return observed;
-          },
-          record: (entry) => state.creationLedger.record(entry),
+          inspect: (entry) => inspectResource(state, entry, { signal: state.activeSignal }),
         });
         const entry = transition.created;
         const id = entry.id;
@@ -2254,6 +2338,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       ];
       const appId = await runContainer(state, appArgs, {
         signal: state.activeSignal,
+        createSite: "app",
         candidatePathAuthority: true,
         trustedNamespaceAnchor,
         expectedMounts: [
@@ -2296,6 +2381,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       ];
       const workerId = await runContainer(state, workerArgs, {
         signal: state.activeSignal,
+        createSite: "worker",
         candidatePathAuthority: true,
         trustedNamespaceAnchor,
         expectedMounts: [
@@ -2313,16 +2399,26 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       const sentinelNetworkName = `${namespace.project}_egress-sentinel`;
       let sentinelNetworkId;
       try {
-        const sentinelStdout = (await dockerCommand(state, [
-          "network", "create", "--internal",
-          ...commonLabels,
-          sentinelNetworkName,
-        ], { signal: state.activeSignal })).stdout;
-        sentinelNetworkId = /^([0-9a-f]{64})\n?$/u.exec(sentinelStdout)?.[1];
-        if (!sentinelNetworkId) fail("sentinel network create did not return one exact ID");
-        const sentinelNetworkEntry = { kind: "network", id: sentinelNetworkId, name: sentinelNetworkName };
-        const sentinelNetworkObserved = await inspectResource(state, sentinelNetworkEntry, { signal: state.activeSignal });
-        recordPrimitiveCreateResult(state.creationLedger, { ...sentinelNetworkEntry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, sentinelStdout, sentinelNetworkObserved);
+        const transition = await executeDockerPrimitiveCreateTransition({
+          ledger: state.creationLedger,
+          site: "sentinel_network",
+          expected: {
+            kind: "network",
+            name: sentinelNetworkName,
+            labels: {
+              [RUN_OWNERSHIP_LABEL]: state.runId,
+              [RUN_PROJECT_LABEL]: namespace.project,
+              [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
+            },
+          },
+          create: async () => (await dockerCommand(state, [
+            "network", "create", "--internal",
+            ...commonLabels,
+            sentinelNetworkName,
+          ], { signal: state.activeSignal })).stdout,
+          inspect: (entry) => inspectResource(state, entry, { signal: state.activeSignal }),
+        });
+        sentinelNetworkId = transition.created.id;
       } catch (error) {
         await assertExpectedCreatedResources(state, [sentinelNetworkName], { signal: state.cleanupSignal });
         throw error;
@@ -2337,7 +2433,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         "--log-driver", "local", "--log-opt", "max-size=1m", "--log-opt", "max-file=1",
         nodeImage, "node", "-e",
         "require('node:http').createServer((_,r)=>r.end('sentinel')).listen(8080,'0.0.0.0')",
-      ], { signal: state.activeSignal });
+      ], { signal: state.activeSignal, createSite: "sentinel_container" });
       await verifyCreatedContainerImages(state, { signal: state.activeSignal });
       const ownedContainers = (await listDiscoveredResources(state, { signal: state.activeSignal }))
         .filter((entry) => entry.kind === "container");
@@ -2547,7 +2643,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           "{{json .Labels}}\t{{.Name}}\t{{.Internal}}",
         ], { signal: state.activeSignal })).stdout.trim().split("\t");
         if (result.length !== 3) fail("network isolation readback is incomplete");
-        const labels = JSON.parse(result[0]);
+        const labels = parseDockerJson(result[0]);
         if (
           result[1] !== expectedName
           || result[2] !== "true"
@@ -2567,7 +2663,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           "inspect", "--type", "container", entry.id,
           "--format", "{{json .NetworkSettings.Networks}}",
         ], { signal: state.activeSignal })).stdout.trim();
-        const attachedNames = Object.keys(JSON.parse(raw)).sort();
+        const attachedNames = Object.keys(parseDockerJson(raw)).sort();
         if (attachedNames.length === 0 || attachedNames.some((name) => !expectedNetworks.has(name))) {
           fail(`container has an external or unknown network attachment: ${entry.name}`);
         }
@@ -2606,8 +2702,8 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           "--format", "{{json .Config.Env}}\t{{json .Mounts}}",
         ], { signal: state.activeSignal });
         const [environmentText, mountsText] = result.stdout.trim().split("\t");
-        const environment = JSON.parse(environmentText);
-        const mounts = JSON.parse(mountsText);
+        const environment = parseDockerJson(environmentText);
+        const mounts = parseDockerJson(mountsText);
         const forbiddenEnvironment = environment.filter((assignment) => {
           const separator = assignment.indexOf("=");
           const key = separator >= 0 ? assignment.slice(0, separator) : assignment;
