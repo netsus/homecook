@@ -2397,9 +2397,8 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         state.observerSubjects.push(subject);
       }
       const sentinelNetworkName = `${namespace.project}_egress-sentinel`;
-      let sentinelNetworkId;
       try {
-        const transition = await executeDockerPrimitiveCreateTransition({
+        await executeDockerPrimitiveCreateTransition({
           ledger: state.creationLedger,
           site: "sentinel_network",
           expected: {
@@ -2418,7 +2417,6 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           ], { signal: state.activeSignal })).stdout,
           inspect: (entry) => inspectResource(state, entry, { signal: state.activeSignal }),
         });
-        sentinelNetworkId = transition.created.id;
       } catch (error) {
         await assertExpectedCreatedResources(state, [sentinelNetworkName], { signal: state.cleanupSignal });
         throw error;

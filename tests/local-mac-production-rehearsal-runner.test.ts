@@ -1225,7 +1225,7 @@ describe("release rehearsal R2 cleanup ownership", () => {
           site,
           expected,
           create: async () => `${id}\n`,
-          inspect: async (created: Record<string, string>) => {
+          inspect: async () => {
             expect(ledger.snapshot()).toEqual([{ kind, id, name }]);
             if (failureMode === "invalid-json") JSON.parse(`{private-inspect-payload:${site}}`);
             throw new Error(`private inspect failure: ${site}`);
