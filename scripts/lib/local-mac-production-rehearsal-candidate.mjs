@@ -3037,21 +3037,12 @@ export function buildCandidateSandboxProfile({
     "(version 1)",
     `(deny default${auditMessageRule})`,
     processExecRule,
-    "(allow process-fork)",
+    `(deny process-fork${auditMessageRule})`,
     "(allow signal (target children))",
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
     ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")}${auditMessageRule})`,
-    '(deny file-write-data (literal "/dev/dtracehelper") (with no-log))',
     '(deny mach-lookup (global-name "com.apple.diagnosticd") (with no-log))',
-    `(deny mach-lookup ${[
-      "com.apple.SystemConfiguration.DNSConfiguration",
-      "com.apple.logd",
-      "com.apple.system.notification_center",
-      "com.apple.system.opendirectoryd.libinfo",
-    ].map((name) => `(global-name ${JSON.stringify(name)})`).join(" ")} (with no-log))`,
-    '(deny ipc-posix-shm-read-data (ipc-posix-name "apple.shm.notification_center") (with no-log))',
-    '(deny file-read* (literal "/private/etc/passwd") (with no-log))',
     "(allow sysctl-read)",
     '(allow file-read-metadata (literal "/etc") (literal "/var"))',
     `(allow file-read-metadata ${aliasParentMetadataRules})`,
@@ -4245,6 +4236,108 @@ function runBounded(command, args, options = {}) {
   return String(result.stdout ?? "");
 }
 
+export function materializeSandboxProcessWitness({
+  clangPath = "/usr/bin/clang",
+  nodePath = process.execPath,
+  outputPath,
+  sourcePath: requestedSourcePath = null,
+  preloadSourcePath: requestedPreloadSourcePath = null,
+  runCommand = spawnSync,
+} = /** @type {any} */ ({})) {
+  if (process.platform !== "darwin") fail("sandbox process witness requires macOS");
+  if (!isAbsolute(outputPath ?? "") || pathExists(outputPath)) {
+    fail("sandbox process witness output must be a fresh absolute path");
+  }
+  const sourcePath = requestedSourcePath === null
+    ? resolve(dirname(fileURLToPath(import.meta.url)), "../native/local-mac-sandbox-process-witness.c")
+    : resolve(requestedSourcePath);
+  const preloadSourcePath = requestedPreloadSourcePath === null
+    ? resolve(dirname(fileURLToPath(import.meta.url)), "../native/local-mac-sandbox-process-witness-preload.cjs")
+    : resolve(requestedPreloadSourcePath);
+  if (!isAbsolute(sourcePath) || !isAbsolute(preloadSourcePath)) {
+    fail("sandbox process witness sources must be absolute");
+  }
+  const preloadPath = `${outputPath}.cjs`;
+  const realClang = resolveSafeRealExecutable([clangPath], "sandbox process witness clang");
+  const realNode = realpathSync(nodePath);
+  const nodeInclude = resolve(dirname(realNode), "../include/node");
+  const headerPath = join(nodeInclude, "node_api.h");
+  const sourcePre = snapshotToolFile(sourcePath, "sandbox-process-witness-source", { requireExecutable: false });
+  const preloadSourcePre = snapshotToolFile(
+    preloadSourcePath,
+    "sandbox-process-witness-preload-source",
+    { requireExecutable: false },
+  );
+  const clangPre = snapshotToolFile(realClang, "sandbox-process-witness-clang");
+  const nodePre = snapshotToolFile(realNode, "sandbox-process-witness-node");
+  const headerPre = snapshotToolFile(
+    headerPath,
+    "sandbox-process-witness-node-api-header",
+    { requireExecutable: false },
+  );
+  const built = spawnBounded(realClang, [
+    "-bundle", "-undefined", "dynamic_lookup", "-O2", "-std=c11",
+    "-Wno-deprecated-declarations", "-I", nodeInclude,
+    sourcePath, "-o", outputPath, "-lsandbox",
+  ], {
+    cwd: dirname(outputPath),
+    env: { HOME: dirname(outputPath), PATH: "/usr/bin:/bin" },
+    runCommand,
+    timeout: 60_000,
+  });
+  if (built.error || built.signal || built.status !== 0) {
+    fail("sandbox process witness compilation failed closed");
+  }
+  chmodSync(outputPath, 0o400);
+  writeFileSync(preloadPath, readFileSync(preloadSourcePath), { flag: "wx", mode: 0o400 });
+  const output = snapshotToolFile(realpathSync(outputPath), "sandbox-process-witness-v1", { requireExecutable: false });
+  const preload = snapshotToolFile(
+    realpathSync(preloadPath),
+    "sandbox-process-witness-preload-v1",
+    { requireExecutable: false },
+  );
+  if (
+    canonicalizeJcs(sourcePre) !== canonicalizeJcs(
+      snapshotToolFile(sourcePath, "sandbox-process-witness-source", { requireExecutable: false }),
+    )
+    || canonicalizeJcs(preloadSourcePre) !== canonicalizeJcs(
+      snapshotToolFile(
+        preloadSourcePath,
+        "sandbox-process-witness-preload-source",
+        { requireExecutable: false },
+      ),
+    )
+    || canonicalizeJcs(clangPre) !== canonicalizeJcs(
+      snapshotToolFile(realClang, "sandbox-process-witness-clang"),
+    )
+    || canonicalizeJcs(nodePre) !== canonicalizeJcs(
+      snapshotToolFile(realNode, "sandbox-process-witness-node"),
+    )
+    || canonicalizeJcs(headerPre) !== canonicalizeJcs(
+      snapshotToolFile(
+        headerPath,
+        "sandbox-process-witness-node-api-header",
+        { requireExecutable: false },
+      ),
+    )
+  ) fail("sandbox process witness build inputs drifted");
+  return Object.freeze({
+    path: output.realpath,
+    preload_path: preload.realpath,
+    identity: output,
+    identity_digest: sha256Jcs({ output, preload }),
+    authority_digest: sha256Jcs({
+      source: sourcePre,
+      preload_source: preloadSourcePre,
+      clang: clangPre,
+      node: nodePre,
+      node_api_header: headerPre,
+      output,
+      preload,
+    }),
+  });
+}
+
 function parseProcessTable(source, label) {
   const rows = [];
   for (const line of String(source ?? "").split("\n")) {
@@ -4283,7 +4376,6 @@ export async function observeSandboxProcessTree({
   killProcess = process.kill.bind(process),
   pollIntervalMs = 20,
   maxOutputBytes = 8 * 1024 * 1024,
-  processExecutablePaths = null,
 } = /** @type {any} */ ({})) {
   const observerToolsPre = Object.freeze({
     lsof: snapshotToolFile(lsofPath, "sandbox-process-observer-lsof"),
@@ -4333,10 +4425,6 @@ export async function observeSandboxProcessTree({
   const registeredCommands = new Map();
   const processIdentities = new Map();
   const executableCache = new Map();
-  const exactProcessExecutable = Array.isArray(processExecutablePaths)
-    && processExecutablePaths.length === 1
-    ? processExecutablePaths[0]
-    : null;
   let rootObserved = false;
   let escapedProcessCount = 0;
   const processRows = () => {
@@ -4401,24 +4489,13 @@ export async function observeSandboxProcessTree({
       if (lsof.error || lsof.signal) {
         fail(`${label} process executable discovery failed closed`);
       }
-      if (lsof.status !== 0) {
-        if (exactProcessExecutable && basename(exactProcessExecutable) === observedBasename) {
-          executablePath = exactProcessExecutable;
-        } else {
-          return null;
-        }
-      }
+      if (lsof.status !== 0) return null;
       const candidates = String(lsof.stdout ?? "").split("\n")
         .filter((line) => line.startsWith("n/"))
         .map((line) => line.slice(1));
       if (lsof.status === 0) {
-        if (candidates.length < 1) {
-          if (exactProcessExecutable && basename(exactProcessExecutable) === observedBasename) {
-            executablePath = exactProcessExecutable;
-          } else {
-            return null;
-          }
-        } else {
+        if (candidates.length < 1) return null;
+        else {
           executablePath = candidates.find((candidate) => basename(candidate) === observedBasename)
             ?? candidates[0];
         }
@@ -4591,7 +4668,242 @@ export async function observeSandboxProcessTree({
   }
 }
 
+export async function observeWitnessedSandboxRoot({
+  profile,
+  command,
+  args,
+  cwd,
+  env,
+  label,
+  timeout,
+  sandboxWitnessPath,
+  spawnProcess = spawn,
+  afterExecutableSnapshot = () => undefined,
+  maxOutputBytes = 8 * 1024 * 1024,
+}) {
+  if (
+    typeof profile !== "string" || profile.length === 0
+    || !isAbsolute(command ?? "") || !isAbsolute(sandboxWitnessPath ?? "")
+    || !Array.isArray(args) || args.some((arg) => typeof arg !== "string")
+  ) fail(`${label} witnessed sandbox input is invalid`);
+  if (!profile.split("\n").some((line) => line.startsWith("(deny process-fork"))) {
+    fail(`${label} sandbox profile does not deny every child creation`);
+  }
+  const executablePre = snapshotToolFile(command, `sandbox-root-executable:${label}`);
+  const witnessPre = snapshotToolFile(
+    sandboxWitnessPath,
+    `sandbox-process-witness:${label}`,
+    { requireExecutable: false },
+  );
+  const witnessPreloadPath = `${sandboxWitnessPath}.cjs`;
+  const witnessPreloadPre = snapshotToolFile(
+    witnessPreloadPath,
+    `sandbox-process-witness-preload:${label}`,
+    { requireExecutable: false },
+  );
+  if (typeof afterExecutableSnapshot !== "function") {
+    fail(`${label} executable snapshot continuation is invalid`);
+  }
+  afterExecutableSnapshot();
+  const existingNodeOptions = String(env.NODE_OPTIONS ?? "").trim();
+  if (existingNodeOptions.includes("--require") || /\s/u.test(sandboxWitnessPath)) {
+    fail(`${label} sandbox witness preload authority is ambiguous`);
+  }
+  const child = spawnProcess(command, args, {
+    cwd,
+    detached: true,
+    env: {
+      ...env,
+      HOMECOOK_SANDBOX_PROFILE_FD: "3",
+      HOMECOOK_SANDBOX_WITNESS_FD: "4",
+      HOMECOOK_SANDBOX_WITNESS_MODULE: sandboxWitnessPath,
+      NODE_OPTIONS: [existingNodeOptions, `--require=${witnessPreloadPath}`].filter(Boolean).join(" "),
+    },
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe", "pipe", "pipe"],
+  });
+  await new Promise((resolveSpawn, rejectSpawn) => {
+    child.once("spawn", resolveSpawn);
+    child.once("error", rejectSpawn);
+  }).catch(() => fail(`${label} witnessed sandbox root spawn failed closed`));
+  if (!Number.isSafeInteger(child.pid) || child.pid <= 0) {
+    fail(`${label} witnessed sandbox root PID is unavailable`);
+  }
+  const rootPid = child.pid;
+  const startedAt = Date.now();
+  let stdout = Buffer.alloc(0);
+  let stderr = Buffer.alloc(0);
+  let witnessBytes = Buffer.alloc(0);
+  let outputOverflow = false;
+  const append = (kind, chunk) => {
+    const bytes = Buffer.from(chunk);
+    if (kind === "stdout") stdout = Buffer.concat([stdout, bytes]);
+    else if (kind === "stderr") stderr = Buffer.concat([stderr, bytes]);
+    else witnessBytes = Buffer.concat([witnessBytes, bytes]);
+    if (
+      stdout.length > maxOutputBytes || stderr.length > maxOutputBytes
+      || witnessBytes.length > 64 * 1024
+    ) outputOverflow = true;
+  };
+  child.stdout?.on("data", (chunk) => append("stdout", chunk));
+  child.stderr?.on("data", (chunk) => append("stderr", chunk));
+  let resolveInitialWitness;
+  const initialWitness = new Promise((resolveWitness) => {
+    resolveInitialWitness = resolveWitness;
+  });
+  child.stdio?.[4]?.on("data", (chunk) => {
+    append("witness", chunk);
+    if (witnessBytes.includes(0x0a)) resolveInitialWitness(true);
+  });
+  child.stdio?.[3]?.end(profile, "utf8");
+  let exitResult = null;
+  const exitPromise = new Promise((resolveExit) => {
+    child.once("exit", (code, signal) => {
+      exitResult = { code, signal, error: null };
+      resolveExit(exitResult);
+    });
+    child.once("error", (error) => {
+      exitResult = { code: null, signal: null, error };
+      resolveExit(exitResult);
+    });
+  });
+  const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+  const witnessReady = await Promise.race([
+    initialWitness,
+    exitPromise.then(() => false),
+    delay(5_000).then(() => false),
+  ]);
+  if (!witnessReady || outputOverflow) {
+    if (!exitResult) child.kill("SIGKILL");
+    await exitPromise;
+    fail(`${label} process execution witness was unavailable`);
+  }
+  let witness;
+  try {
+    witness = JSON.parse(witnessBytes.toString("utf8").split("\n")[0]);
+  } catch {
+    if (!exitResult) child.kill("SIGKILL");
+    await exitPromise;
+    fail(`${label} process execution witness was malformed`);
+  }
+  exactObject(witness, `${label} process execution witness`, [
+    "pid", "ppid", "pgid", "pidversion", "started_at_sec", "started_at_usec",
+    "process_name", "execution_audit_token", "executable_path", "device", "inode",
+    "size", "ctime_sec", "ctime_nsec", "executable_sha256",
+  ]);
+  const witnessNumbers = [
+    witness.pid, witness.ppid, witness.pgid, witness.pidversion,
+    witness.started_at_sec, witness.started_at_usec, witness.ctime_sec, witness.ctime_nsec,
+  ];
+  if (
+    witness.pid !== rootPid
+    || !witnessNumbers.every((value) => Number.isSafeInteger(value) && value >= 0)
+    || witness.pidversion <= 0 || witness.pgid !== rootPid
+    || witness.started_at_usec > 999_999 || witness.ctime_nsec > 999_999_999
+    || !/^[0-9a-f]{64}$/u.test(witness.execution_audit_token ?? "")
+    || !/^[0-9a-f]{64}$/u.test(witness.executable_sha256 ?? "")
+    || witness.executable_path !== command
+    || witness.process_name !== basename(command)
+    || witness.device !== executablePre.device
+    || witness.inode !== executablePre.inode
+    || witness.size !== executablePre.size
+    || witness.executable_sha256 !== executablePre.sha256
+  ) {
+    if (!exitResult) child.kill("SIGKILL");
+    await exitPromise;
+    fail(`${label} process execution witness did not match the exact executable instance`);
+  }
+  let timedOut = false;
+  while (!exitResult) {
+    if (outputOverflow || Date.now() - startedAt > timeout) {
+      timedOut = true;
+      child.kill("SIGKILL");
+      break;
+    }
+    await Promise.race([exitPromise, delay(20)]);
+  }
+  await exitPromise;
+  const executablePost = snapshotToolFile(command, `sandbox-root-executable:${label}`);
+  const witnessPost = snapshotToolFile(
+    sandboxWitnessPath,
+    `sandbox-process-witness:${label}`,
+    { requireExecutable: false },
+  );
+  const witnessPreloadPost = snapshotToolFile(
+    witnessPreloadPath,
+    `sandbox-process-witness-preload:${label}`,
+    { requireExecutable: false },
+  );
+  if (
+    canonicalizeJcs(executablePost) !== canonicalizeJcs(executablePre)
+    || canonicalizeJcs(witnessPost) !== canonicalizeJcs(witnessPre)
+    || canonicalizeJcs(witnessPreloadPost) !== canonicalizeJcs(witnessPreloadPre)
+  ) fail(`${label} process execution authority drifted`);
+  let processAttempts;
+  try {
+    processAttempts = witnessBytes.toString("utf8").trim().split("\n").slice(1).map((line) => {
+      const record = JSON.parse(line);
+      exactObject(record, `${label} process attempt witness`, ["process_attempt"]);
+      if (!/^[A-Za-z]+$/u.test(record.process_attempt ?? "")) {
+        fail(`${label} process attempt witness is invalid`);
+      }
+      return record.process_attempt;
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Release rehearsal candidate rejected:")) throw error;
+    fail(`${label} process attempt witness was malformed`);
+  }
+  const startMilliseconds = witness.started_at_sec * 1_000 + Math.floor(witness.started_at_usec / 1_000);
+  const startedIso = new Date(startMilliseconds).toISOString().replace(
+    /\.\d{3}Z$/u,
+    `.${String(witness.started_at_usec).padStart(6, "0")}Z`,
+  );
+  const processInstanceId = sha256Jcs({
+    execution_audit_token: witness.execution_audit_token,
+    executable_identity_digest: sha256Jcs(executablePre),
+    pidversion: witness.pidversion,
+    started_at: startedIso,
+  });
+  return Object.freeze({
+    error: timedOut || outputOverflow ? new Error("witnessed sandbox root failed closed") : exitResult?.error,
+    signal: exitResult?.signal ?? null,
+    status: timedOut || outputOverflow ? null : exitResult?.code,
+    stdout: stdout.toString("utf8"),
+    stderr: stderr.toString("utf8"),
+    pid: rootPid,
+    root_pgid: rootPid,
+    observer_tool_identity_digest: sha256Jcs(witnessPost),
+    process_lifecycle_enforcement: "macos-sandbox-deny-process-fork",
+    process_attempt_count: processAttempts.length,
+    process_attempt_kinds: processAttempts,
+    process_tree_complete: true,
+    process_identities: [{
+      pid: rootPid,
+      ppid: witness.ppid,
+      pgid: witness.pgid,
+      started_at: startedIso,
+      process_name: witness.process_name,
+      execution_audit_token: witness.execution_audit_token,
+      process_instance_id: processInstanceId,
+      executable_path: witness.executable_path,
+      executable_identity_digest: sha256Jcs(executablePre),
+    }],
+    escaped_process_count: 0,
+    surviving_process_count: 0,
+    exited_at: new Date().toISOString(),
+  });
+}
+
 export function validateSandboxedBuildResult(result, label) {
+  if (
+    result?.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork"
+    && result.process_attempt_count !== 0
+  ) {
+    const kinds = Array.isArray(result.process_attempt_kinds)
+      ? result.process_attempt_kinds.join(",")
+      : "unknown";
+    fail(`${label} contained a witnessed child process or signal attempt (${kinds})`);
+  }
   if (result?.error || result?.signal || result?.status !== 0) {
     fail(`${label} failed in the measured sandbox`);
   }
@@ -4609,8 +4921,18 @@ export function validateSandboxedBuildResult(result, label) {
     || Date.parse(result.audit_ended_at) < Date.parse(result.audit_started_at)
   ) fail(`${label} process tree discovery or lifecycle is incomplete`);
   digest(result.observer_tool_identity_digest, `${label} observer tool identity digest`);
+  const witnessedLifecycle = result.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork";
+  if (result.process_lifecycle_enforcement !== undefined && !witnessedLifecycle) {
+    fail(`${label} process lifecycle enforcement is unknown`);
+  }
+  if (witnessedLifecycle && result.process_identities.length !== 1) {
+    fail(`${label} single-process lifecycle completeness was not proven`);
+  }
   for (const identity of result.process_identities) {
-    exactObject(identity, `${label} process identity`, [
+    exactObject(identity, `${label} process identity`, witnessedLifecycle ? [
+      "pid", "ppid", "pgid", "started_at", "process_name", "execution_audit_token",
+      "process_instance_id", "executable_path", "executable_identity_digest",
+    ] : [
       "pid", "ppid", "pgid", "started_at", "executable_identity_digest",
     ]);
     if (
@@ -4620,6 +4942,13 @@ export function validateSandboxedBuildResult(result, label) {
       || typeof identity.started_at !== "string" || identity.started_at.length === 0
     ) fail(`${label} process identity is invalid`);
     digest(identity.executable_identity_digest, `${label} executable identity digest`);
+    if (witnessedLifecycle && (
+      !Number.isFinite(Date.parse(identity.started_at))
+      || typeof identity.process_name !== "string" || identity.process_name.length === 0
+      || !/^[0-9a-f]{64}$/u.test(identity.execution_audit_token ?? "")
+      || !isAbsolute(identity.executable_path ?? "")
+    )) fail(`${label} process execution audit token or instance identity is invalid`);
+    if (witnessedLifecycle) digest(identity.process_instance_id, `${label} process instance ID`);
   }
   const sortedProcessIdentities = [...result.process_identities].sort((left, right) => (
     left.pid - right.pid
@@ -4641,8 +4970,12 @@ export function validateSandboxedBuildResult(result, label) {
   }
   return Object.freeze({
     audit_digest: sha256Jcs({
-      schema: "homecook.sandbox-process-tree-audit.v2",
-      enforcement: "macos-unified-log-deny-process-tree-window",
+      schema: witnessedLifecycle
+        ? "homecook.sandbox-process-tree-audit.v3"
+        : "homecook.sandbox-process-tree-audit.v2",
+      enforcement: witnessedLifecycle
+        ? "macos-sandbox-deny-process-fork+audit-token-witness+unified-log-deny-window"
+        : "macos-unified-log-deny-process-tree-window",
       stage: result.stage,
       audit_started_at: result.audit_started_at,
       audit_ended_at: result.audit_ended_at,
@@ -4650,8 +4983,12 @@ export function validateSandboxedBuildResult(result, label) {
       root_pgid: result.root_pgid,
       observer_tool_identity_digest: result.observer_tool_identity_digest,
       process_identities: result.process_identities,
+      process_attempt_count: witnessedLifecycle ? result.process_attempt_count : null,
       denial_count: 0,
     }),
+    process_instance_digest: witnessedLifecycle
+      ? result.process_identities[0].process_instance_id
+      : sha256Jcs(result.process_identities),
   });
 }
 
@@ -4741,6 +5078,7 @@ async function streamSandboxUnifiedLog({
 /** @param {any} options */
 export async function runObservedSandboxCommand({
   sandboxPath, logPath, profile, command, args, cwd, env, label,
+  sandboxWitnessPath = null,
   stage = label,
   processExecutablePaths = null,
   timeout = 30_000, runCommand = spawnSync,
@@ -4780,11 +5118,20 @@ export async function runObservedSandboxCommand({
     ) fail(`${label} sandbox profile lacks its execution-scoped audit message`);
   }
   beforeSpawn();
-  const execute = () => observeProcessTree({
-    args, command, cwd, env, label, profile, sandboxPath, timeout,
-    pollCommand: runCommand, processExecutablePaths,
-  });
-  const streamed = observeProcessTree === observeSandboxProcessTree
+  if (
+    processExecutablePaths !== null
+    && sandboxWitnessPath === null
+    && observeProcessTree === observeSandboxProcessTree
+  ) fail(`${label} exact process authority requires the audit-token sandbox witness`);
+  const execute = () => sandboxWitnessPath === null
+    ? observeProcessTree({
+      args, command, cwd, env, label, profile, sandboxPath, timeout,
+      pollCommand: runCommand, processExecutablePaths,
+    })
+    : observeWitnessedSandboxRoot({
+      args, command, cwd, env, label, profile, timeout, sandboxWitnessPath,
+    });
+  const streamed = sandboxWitnessPath !== null || observeProcessTree === observeSandboxProcessTree
     ? await streamUnifiedLog({ logPath, cwd, env, label, execute })
     : { child: await execute(), events: [] };
   const child = streamed.child;
@@ -4821,21 +5168,43 @@ export async function runObservedSandboxCommand({
       ...parseUnifiedLogJson(audit.stdout, label),
     ];
     const registeredPids = new Set(child.process_identities.map((identity) => identity.pid));
+    const registeredIdentities = new Map(child.process_identities.map((identity) => [identity.pid, identity]));
     observedDenials = events.flatMap((event) => {
       const message = String(event.eventMessage ?? "");
       const match = /Sandbox:\s+([^()]+)\((\d+)\)/u.exec(message);
       if (!match) return [];
       const eventProcessName = match[1].trim();
       const eventPid = Number(match[2]);
+      const registeredIdentity = registeredIdentities.get(eventPid);
       const hasExecutionAuditMessage = executionAuditMessage !== null
         && message.split("\n").includes(executionAuditMessage);
       if (
-        !registeredPids.has(eventPid)
-        && (
-          executionScopedProcessName === null
-          || eventProcessName !== executionScopedProcessName
-          || !hasExecutionAuditMessage
-        )
+        executionScopedProcessName !== null
+        && eventProcessName !== executionScopedProcessName
+      ) return [];
+      if (
+        executionScopedProcessName !== null
+        && !registeredPids.has(eventPid)
+        && !hasExecutionAuditMessage
+      ) return [];
+      if (executionScopedProcessName === null && !registeredPids.has(eventPid)) return [];
+      if (
+        typeof event.executionAuditToken === "string"
+        && registeredIdentity?.execution_audit_token !== undefined
+        && event.executionAuditToken !== registeredIdentity.execution_audit_token
+      ) return [];
+      const eventTime = Date.parse(event.timestamp ?? "");
+      const identityStartedAt = Date.parse(registeredIdentity?.started_at ?? "");
+      const childExitedAt = Date.parse(child.exited_at ?? "");
+      if (
+        child.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork"
+        && Number.isFinite(eventTime) && Number.isFinite(identityStartedAt)
+        && eventTime < identityStartedAt
+      ) return [];
+      if (
+        child.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork"
+        && Number.isFinite(eventTime) && Number.isFinite(childExitedAt)
+        && eventTime > childExitedAt
       ) return [];
       return [{ event_digest: sha256Bytes(Buffer.from(message, "utf8")) }];
     });
@@ -6223,6 +6592,19 @@ export function createReleaseRehearsalCandidateAdapters({
           currentUid: process.getuid?.(),
           runCommand,
         });
+        const sandboxWitness = materializeSandboxProcessWitness({
+          clangPath: "/usr/bin/clang",
+          nodePath: tools.nodePath,
+          outputPath: join(privateHome, "hcsandboxwitness.node"),
+          sourcePath: join(source.checkout_dir, "scripts", "native", "local-mac-sandbox-process-witness.c"),
+          preloadSourcePath: join(
+            source.checkout_dir,
+            "scripts",
+            "native",
+            "local-mac-sandbox-process-witness-preload.cjs",
+          ),
+          runCommand,
+        });
         const storeStat = lstatSync(packageStorePath);
         if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
           fail("offline pnpm package store identity is unsafe");
@@ -6248,6 +6630,7 @@ export function createReleaseRehearsalCandidateAdapters({
             COMMAND_MODE: "unix2003",
             COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
             HOME: privateHome,
+            HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES: "1",
             LANG: "C",
             LC_ALL: "C",
             LOGNAME: "homecook-rehearsal",
@@ -6276,6 +6659,8 @@ export function createReleaseRehearsalCandidateAdapters({
               join(storePath, "files"),
               installStageNode.path,
               buildStageNode.path,
+              sandboxWitness.path,
+              sandboxWitness.preload_path,
             ],
             deniedPaths: [
               sourceRoot,
@@ -6291,6 +6676,7 @@ export function createReleaseRehearsalCandidateAdapters({
           });
           const installAudit = await runObservedSandboxCommand({
             sandboxPath: tools.sandboxPath,
+            sandboxWitnessPath: sandboxWitness.path,
             logPath: tools.auditLogPath,
             profile: installSandboxProfile,
             command: installStageNode.path,
@@ -6326,6 +6712,8 @@ export function createReleaseRehearsalCandidateAdapters({
               storePath,
               installStageNode.path,
               buildStageNode.path,
+              sandboxWitness.path,
+              sandboxWitness.preload_path,
             ],
             deniedPaths: [
               sourceRoot,
@@ -6348,6 +6736,7 @@ export function createReleaseRehearsalCandidateAdapters({
             });
             const nextBuildAudit = await runObservedSandboxCommand({
               sandboxPath: tools.sandboxPath,
+              sandboxWitnessPath: sandboxWitness.path,
               logPath: tools.auditLogPath,
               profile: buildSandboxProfile,
               command: buildStageNode.path,
@@ -6429,6 +6818,8 @@ export function createReleaseRehearsalCandidateAdapters({
                   LANG: cleanBuildEnv.LANG,
                   LC_ALL: cleanBuildEnv.LC_ALL,
                   LOGNAME: cleanBuildEnv.LOGNAME,
+                  HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES:
+                    cleanBuildEnv.HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES,
                   NODE_DISABLE_COMPILE_CACHE: cleanBuildEnv.NODE_DISABLE_COMPILE_CACHE,
                   NODE_OPTIONS: cleanBuildEnv.NODE_OPTIONS,
                   TZ: cleanBuildEnv.TZ,
@@ -6438,6 +6829,7 @@ export function createReleaseRehearsalCandidateAdapters({
                 }),
                 final_index_inventory_digest: finalIndexAuthority.inventory_digest,
                 final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
+                sandbox_witness_authority_digest: sandboxWitness.authority_digest,
                 execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
                 stage_node_clone_authority_digests: [
                   installStageNode.authority_digest,

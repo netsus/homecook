@@ -1,13 +1,20 @@
 import {
   chmodSync,
+  closeSync,
+  constants as fsConstants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdtempSync,
+  openSync,
   readdirSync,
   realpathSync,
   rmSync,
+  renameSync,
   unlinkSync,
 } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import type { BigIntStats } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -19,18 +26,25 @@ type OwnedDirectoryIdentity = {
 };
 
 type OwnedRootIdentity = OwnedDirectoryIdentity & {
+  fd: number;
   parent: string;
   parentIdentity: OwnedDirectoryIdentity;
 };
 
 type OwnedAliasIdentity = {
   device: bigint;
+  fd: number | null;
   inode: bigint;
   uid: bigint;
   parent: string;
   parentIdentity: OwnedDirectoryIdentity;
   root: string;
 };
+
+type AtomicClaimHook = (value: {
+  kind: "alias" | "root";
+  path: string;
+}) => void;
 
 function directoryIdentity(path: string): OwnedDirectoryIdentity {
   const stat = lstatSync(path, { bigint: true });
@@ -65,7 +79,29 @@ function makeOwnedTreeDirectoriesWritable(root: string) {
   }
 }
 
-export function createOwnedTempRegistry() {
+function currentDescriptorPath(fd: number) {
+  if (process.platform === "linux") return realpathSync(`/proc/self/fd/${fd}`);
+  if (process.platform !== "darwin") {
+    throw new Error("owned test temp descriptor paths are unsupported on this platform");
+  }
+  const result = spawnSync("/usr/sbin/lsof", [
+    "-a", "-p", String(process.pid), "-d", String(fd), "-Fn",
+  ], { encoding: "utf8" });
+  if (result.error || result.signal || result.status !== 0) {
+    throw new Error("owned test temp descriptor path lookup failed closed");
+  }
+  const paths = result.stdout.split("\n")
+    .filter((line) => line.startsWith("n/"))
+    .map((line) => line.slice(1));
+  if (paths.length !== 1) throw new Error("owned test temp descriptor path is ambiguous");
+  return paths[0];
+}
+
+export function createOwnedTempRegistry({
+  beforeAtomicClaim = () => undefined,
+}: {
+  beforeAtomicClaim?: AtomicClaimHook;
+} = {}) {
   const ownedRoots = new Map<string, OwnedRootIdentity>();
   const ownedAliases = new Map<string, OwnedAliasIdentity>();
 
@@ -78,8 +114,18 @@ export function createOwnedTempRegistry() {
     chmodSync(root, 0o700);
     const canonicalRoot = realpathSync(root);
     const parentIdentity = directoryIdentity(canonicalParent);
+    const fd = openSync(
+      canonicalRoot,
+      fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+    );
+    const opened = fstatSync(fd, { bigint: true });
+    if (!opened.isDirectory() || !sameIdentity(opened, directoryIdentity(canonicalRoot))) {
+      closeSync(fd);
+      throw new Error(`owned test temp root descriptor is unsafe: ${canonicalRoot}`);
+    }
     ownedRoots.set(canonicalRoot, {
       ...directoryIdentity(canonicalRoot),
+      fd,
       parent: canonicalParent,
       parentIdentity,
     });
@@ -101,8 +147,18 @@ export function createOwnedTempRegistry() {
     if (!sameIdentity(target, rootIdentity)) {
       throw new Error(`owned test temp alias target is not the registered root: ${alias}`);
     }
+    let fd: number | null = null;
+    if (process.platform === "darwin") {
+      fd = openSync(alias, fsConstants.O_RDONLY | fsConstants.O_SYMLINK);
+      const opened = fstatSync(fd, { bigint: true });
+      if (!opened.isSymbolicLink() || opened.dev !== stat.dev || opened.ino !== stat.ino) {
+        closeSync(fd);
+        throw new Error(`owned test temp alias descriptor is unsafe: ${alias}`);
+      }
+    }
     ownedAliases.set(alias, {
       device: stat.dev,
+      fd,
       inode: stat.ino,
       uid: stat.uid,
       parent,
@@ -111,27 +167,58 @@ export function createOwnedTempRegistry() {
     });
   };
 
+  const atomicClaim = (
+    kind: "alias" | "root",
+    registeredPath: string,
+    identity: (OwnedAliasIdentity | OwnedRootIdentity),
+  ) => {
+    beforeAtomicClaim({ kind, path: registeredPath });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const livePath = identity.fd === null
+        ? registeredPath
+        : currentDescriptorPath(identity.fd);
+      if (dirname(livePath) !== identity.parent) {
+        throw new Error(`refusing to clean an owned test temp outside its parent: ${livePath}`);
+      }
+      const parentPost = lstatSync(identity.parent, { bigint: true });
+      if (
+        parentPost.isSymbolicLink() || !parentPost.isDirectory()
+        || !sameIdentity(parentPost, identity.parentIdentity)
+        || realpathSync(identity.parent) !== identity.parent
+      ) throw new Error(`refusing to clean through a replaced test temp parent: ${identity.parent}`);
+      const liveStat = lstatIfPresent(livePath);
+      if (!liveStat) {
+        if (identity.fd !== null) {
+          const descriptor = fstatSync(identity.fd, { bigint: true });
+          if (
+            sameIdentity(descriptor, identity)
+            && (descriptor.nlink === BigInt(0) || livePath === registeredPath)
+          ) return null;
+        }
+        continue;
+      }
+      if (!sameIdentity(liveStat, identity)) continue;
+      const tombstone = join(
+        identity.parent,
+        `.homecook-owned-${kind}-${randomUUID()}.tombstone`,
+      );
+      renameSync(livePath, tombstone);
+      const claimed = lstatSync(tombstone, { bigint: true });
+      if (sameIdentity(claimed, identity)) return tombstone;
+      if (lstatIfPresent(livePath)) {
+        throw new Error(`refusing to overwrite a concurrent test temp replacement: ${livePath}`);
+      }
+      renameSync(tombstone, livePath);
+    }
+    throw new Error(`refusing to clean a replaced test temp ${kind}: ${registeredPath}`);
+  };
+
   const cleanupOwnedTempAlias = (alias: string) => {
     const identity = ownedAliases.get(alias);
     if (!identity) return;
-    const parentPost = lstatSync(identity.parent, { bigint: true });
-    let aliasPost;
-    try {
-      aliasPost = lstatSync(alias, { bigint: true });
-    } catch (error) {
-      if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-        ownedAliases.delete(alias);
-        return;
-      }
-      throw error;
-    }
-    if (
-      parentPost.isSymbolicLink() || !parentPost.isDirectory()
-      || !sameIdentity(parentPost, identity.parentIdentity)
-      || !aliasPost.isSymbolicLink()
-      || aliasPost.dev !== identity.device || aliasPost.ino !== identity.inode || aliasPost.uid !== identity.uid
-    ) throw new Error(`refusing to clean a replaced test temp alias: ${alias}`);
-    unlinkSync(alias);
+    const claimed = atomicClaim("alias", alias, identity);
+    if (claimed) unlinkSync(claimed);
+    if (identity.fd !== null) closeSync(identity.fd);
     ownedAliases.delete(alias);
   };
 
@@ -141,35 +228,20 @@ export function createOwnedTempRegistry() {
     for (const [alias, aliasIdentity] of [...ownedAliases]) {
       if (aliasIdentity.root === root) cleanupOwnedTempAlias(alias);
     }
-    const parentPost = lstatSync(identity.parent, { bigint: true });
-    if (
-      parentPost.isSymbolicLink() || !parentPost.isDirectory()
-      || !sameIdentity(parentPost, identity.parentIdentity)
-      || realpathSync(identity.parent) !== identity.parent
-    ) throw new Error(`refusing to clean through a replaced test temp parent: ${identity.parent}`);
-
-    const entries = readdirSync(identity.parent).map((name) => join(identity.parent, name));
-    const ownedPaths = entries.filter((path) => {
-      const stat = lstatIfPresent(path);
-      if (!stat) return false;
-      return !stat.isSymbolicLink() && stat.isDirectory() && sameIdentity(stat, identity);
-    });
-    if (ownedPaths.length === 0) {
+    const claimed = atomicClaim("root", root, identity);
+    if (!claimed) {
+      closeSync(identity.fd);
       ownedRoots.delete(root);
       return;
     }
-    if (ownedPaths.length !== 1) {
-      throw new Error(`owned test temp inode has multiple directory names: ${root}`);
-    }
-    const ownedPath = ownedPaths[0];
-
-    makeOwnedTreeDirectoriesWritable(ownedPath);
-    const afterChmod = lstatSync(ownedPath, { bigint: true });
+    makeOwnedTreeDirectoriesWritable(claimed);
+    const afterChmod = lstatSync(claimed, { bigint: true });
     if (!sameIdentity(afterChmod, identity)) {
-      throw new Error(`test temp root identity changed before cleanup: ${ownedPath}`);
+      throw new Error(`test temp root identity changed before cleanup: ${claimed}`);
     }
-    rmSync(ownedPath, { recursive: true, force: false, maxRetries: 2, retryDelay: 10 });
-    if (existsSync(ownedPath)) throw new Error(`test temp root cleanup remained incomplete: ${ownedPath}`);
+    rmSync(claimed, { recursive: true, force: false, maxRetries: 2, retryDelay: 10 });
+    if (existsSync(claimed)) throw new Error(`test temp root cleanup remained incomplete: ${claimed}`);
+    closeSync(identity.fd);
     ownedRoots.delete(root);
   };
 

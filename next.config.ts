@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const isQaFixtureServer = process.env.HOMECOOK_ENABLE_QA_FIXTURES === "1";
 const isProduction = process.env.NODE_ENV === "production";
+const isReleaseRehearsalNoChildProcesses =
+  process.env.HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES === "1";
 const releaseBuildId = process.env.HOMECOOK_RELEASE_BUILD_ID?.trim() || null;
 
 if (releaseBuildId && !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(releaseBuildId)) {
@@ -190,6 +192,17 @@ const nextConfig: NextConfig = {
     qualities: [75, 95],
   },
   poweredByHeader: false,
+  ...(isReleaseRehearsalNoChildProcesses
+    ? {
+        experimental: {
+          cpus: 1,
+          parallelServerBuildTraces: false,
+          parallelServerCompiles: false,
+          webpackBuildWorker: false,
+          workerThreads: true,
+        },
+      }
+    : {}),
   async headers() {
     return [
       {
