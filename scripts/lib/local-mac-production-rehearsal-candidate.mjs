@@ -2237,7 +2237,7 @@ function inventoryDeferredPnpmQuarantine(root, currentUid, { maxEntries = 100_00
 }
 
 const DEFERRED_QUARANTINE_CLEANUP_SCRIPT = String.raw`
-import json, os, stat, sys
+import json, os, secrets, stat, sys
 
 root_name = sys.argv[1]
 expected_uid = int(sys.argv[2])
@@ -2258,6 +2258,17 @@ def check(st, record, label):
     if actual_type != record["type"]:
         fail(label + " type mismatch")
 
+def check_claimed(st, record, label):
+    if (str(st.st_dev) != record["device"] or str(st.st_ino) != record["inode"] or
+        stat.S_IMODE(st.st_mode) != record["mode"] or str(st.st_uid) != record["uid"] or
+        str(st.st_gid) != record["gid"] or str(st.st_nlink) != record["nlink"] or
+        str(st.st_size) != record["size"] or str(st.st_mtime_ns) != record["mtime_ns"] or
+        st.st_uid != expected_uid):
+        fail(label + " claimed identity mismatch")
+    actual_type = "symlink" if stat.S_ISLNK(st.st_mode) else ("directory" if stat.S_ISDIR(st.st_mode) else ("file" if stat.S_ISREG(st.st_mode) else "unsupported"))
+    if actual_type != record["type"]:
+        fail(label + " claimed type mismatch")
+
 def expected_children(relative_path):
     prefix = "" if relative_path == "." else relative_path + "/"
     names = []
@@ -2269,13 +2280,32 @@ def expected_children(relative_path):
             names.append(tail)
     return sorted(names)
 
-def remove_directory(parent, name, relative_path):
+def restore_unverified_claim(parent, claimed_name, original_name):
+    try:
+        os.stat(original_name, dir_fd=parent, follow_symlinks=False)
+    except FileNotFoundError:
+        os.rename(claimed_name, original_name, src_dir_fd=parent, dst_dir_fd=parent)
+
+def claim_entry(parent, name, record, child_relative):
+    child_stat = os.stat(name, dir_fd=parent, follow_symlinks=False)
+    check(child_stat, record, child_relative)
+    claimed_name = ".homecook-delete-" + secrets.token_hex(16)
+    os.rename(name, claimed_name, src_dir_fd=parent, dst_dir_fd=parent)
+    try:
+        check_claimed(os.stat(claimed_name, dir_fd=parent, follow_symlinks=False), record, child_relative)
+    except BaseException:
+        restore_unverified_claim(parent, claimed_name, name)
+        raise
+    return claimed_name
+
+def remove_directory(parent, name, relative_path, already_claimed=False):
     record = records.get(relative_path)
     if not record or record["type"] != "directory":
         fail("missing directory ledger entry")
-    fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+    claimed_name = name if already_claimed else claim_entry(parent, name, record, relative_path)
+    fd = os.open(claimed_name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
     try:
-        check(os.fstat(fd), record, relative_path)
+        check_claimed(os.fstat(fd), record, relative_path)
         names = sorted(os.listdir(fd))
         if names != expected_children(relative_path):
             fail(relative_path + " child set mismatch")
@@ -2284,30 +2314,26 @@ def remove_directory(parent, name, relative_path):
             child_record = records.get(child_relative)
             if not child_record:
                 fail("missing child ledger entry")
-            child_stat = os.stat(child, dir_fd=fd, follow_symlinks=False)
-            check(child_stat, child_record, child_relative)
+            claimed_child = claim_entry(fd, child, child_record, child_relative)
             if child_record["type"] == "directory":
-                remove_directory(fd, child, child_relative)
-                os.rmdir(child, dir_fd=fd)
+                remove_directory(fd, claimed_child, child_relative, already_claimed=True)
+                os.rmdir(claimed_child, dir_fd=fd)
             elif child_record["type"] == "file":
-                os.unlink(child, dir_fd=fd)
+                os.unlink(claimed_child, dir_fd=fd)
             elif child_record["type"] == "symlink":
-                if os.readlink(child, dir_fd=fd) != child_record["symlink_target"]:
+                if os.readlink(claimed_child, dir_fd=fd) != child_record["symlink_target"]:
                     fail(child_relative + " symlink target mismatch")
-                os.unlink(child, dir_fd=fd)
+                os.unlink(claimed_child, dir_fd=fd)
             else:
                 fail("unsupported cleanup entry")
         if os.listdir(fd):
             fail(relative_path + " cleanup residue")
     finally:
         os.close(fd)
+    return claimed_name
 
-remove_directory(parent_fd, root_name, ".")
-root_stat = os.stat(root_name, dir_fd=parent_fd, follow_symlinks=False)
-root_record = records["."]
-if str(root_stat.st_dev) != root_record["device"] or str(root_stat.st_ino) != root_record["inode"]:
-    fail("root swapped before final removal")
-os.rmdir(root_name, dir_fd=parent_fd)
+claimed_root = remove_directory(parent_fd, root_name, ".")
+os.rmdir(claimed_root, dir_fd=parent_fd)
 print(json.dumps({"removed": True, "entry_count": len(records)}, separators=(",", ":")))
 `;
 
@@ -2913,6 +2939,7 @@ export function buildCandidateSandboxProfile({
   readRoots = [], writeRoots = [], deniedPaths = [], deniedWritePaths = [], executablePaths = null,
 } = {}) {
   let processExecRule = "(allow process-exec)";
+  let executionAuditMessage = null;
   if (executablePaths !== null) {
     if (
       !Array.isArray(executablePaths) || executablePaths.length === 0
@@ -2935,7 +2962,13 @@ export function buildCandidateSandboxProfile({
     }
     processExecRule = `(allow process-exec ${exactExecutables
       .map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`;
+    if (exactExecutables.length === 1 && /^hcnode[0-9a-f]{8}[a-z]$/u.test(basename(exactExecutables[0]))) {
+      executionAuditMessage = `homecook-sandbox-${basename(exactExecutables[0])}`;
+    }
   }
+  const auditMessageRule = executionAuditMessage === null
+    ? ""
+    : ` (with message ${JSON.stringify(executionAuditMessage)})`;
   const systemRuntimeRoots = [
     "/System",
     "/usr",
@@ -2995,20 +3028,20 @@ export function buildCandidateSandboxProfile({
     try { expandedDeniedPaths.add(realpathSync(path)); } catch { /* Missing denied targets stay lexical. */ }
   }
   const denyRules = [...expandedDeniedPaths].flatMap((path) => [
-    `(deny file-read* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)}))`,
-    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)}))`,
+    `(deny file-read* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)})${auditMessageRule})`,
+    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)})${auditMessageRule})`,
   ]).join("\n");
   const denyWriteRules = [...new Set(deniedWritePaths)].map((path) =>
-    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)}))`).join("\n");
+    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)})${auditMessageRule})`).join("\n");
   return [
     "(version 1)",
-    "(deny default)",
+    `(deny default${auditMessageRule})`,
     processExecRule,
     "(allow process-fork)",
     "(allow signal (target children))",
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
-    ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
+    ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")}${auditMessageRule})`,
     '(deny file-write-data (literal "/dev/dtracehelper") (with no-log))',
     '(deny mach-lookup (global-name "com.apple.diagnosticd") (with no-log))',
     `(deny mach-lookup ${[
@@ -3023,9 +3056,9 @@ export function buildCandidateSandboxProfile({
     '(allow file-read-metadata (literal "/etc") (literal "/var"))',
     `(allow file-read-metadata ${aliasParentMetadataRules})`,
     `(allow file-read* ${readRules})`,
-    '(deny file-read-data (literal "/etc") (literal "/var") (literal "/private/etc") (literal "/private/var"))',
+    `(deny file-read-data (literal "/etc") (literal "/var") (literal "/private/etc") (literal "/private/var")${auditMessageRule})`,
     `(allow file-write* ${writeRules})`,
-    "(deny network*)",
+    `(deny network*${auditMessageRule})`,
     denyRules,
     denyWriteRules,
   ].filter(Boolean).join("\n");
@@ -4234,7 +4267,7 @@ function parseProcessTable(source, label) {
   return rows;
 }
 
-async function observeSandboxProcessTree({
+export async function observeSandboxProcessTree({
   sandboxPath,
   profile,
   command,
@@ -4247,6 +4280,7 @@ async function observeSandboxProcessTree({
   psPath = "/bin/ps",
   pollCommand = spawnSync,
   spawnProcess = spawn,
+  killProcess = process.kill.bind(process),
   pollIntervalMs = 20,
   maxOutputBytes = 8 * 1024 * 1024,
   processExecutablePaths = null,
@@ -4324,6 +4358,31 @@ async function observeSandboxProcessTree({
     }
     return parseProcessTable(result.stdout, label);
   };
+  const targetedProcessRows = () => {
+    const targets = [...registeredPids].sort((left, right) => left - right);
+    if (targets.length === 0) return [];
+    const result = spawnBounded(psPath, [
+      "-p", targets.join(","),
+      "-o", "pid=,ppid=,pgid=,state=,lstart=,ucomm=",
+    ], {
+      cwd,
+      env: {
+        HOME: env.HOME,
+        LANG: "C",
+        LC_ALL: "C",
+        PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+      },
+      timeout: 5_000,
+      runCommand: pollCommand,
+    });
+    if (result.status === 1 && !result.error && !result.signal && String(result.stdout ?? "").trim() === "") {
+      return [];
+    }
+    if (result.error || result.signal || result.status !== 0) {
+      fail(`${label} targeted process discovery failed closed`);
+    }
+    return parseProcessTable(result.stdout, label);
+  };
   const executableDigest = (pid, observedCommand) => {
     const observedBasename = basename(observedCommand).replace(/^\((.+)\)$/u, "$1");
     let executablePath = observedCommand;
@@ -4353,9 +4412,16 @@ async function observeSandboxProcessTree({
         .filter((line) => line.startsWith("n/"))
         .map((line) => line.slice(1));
       if (lsof.status === 0) {
-        if (candidates.length < 1) return null;
-        executablePath = candidates.find((candidate) => basename(candidate) === observedBasename)
-          ?? candidates[0];
+        if (candidates.length < 1) {
+          if (exactProcessExecutable && basename(exactProcessExecutable) === observedBasename) {
+            executablePath = exactProcessExecutable;
+          } else {
+            return null;
+          }
+        } else {
+          executablePath = candidates.find((candidate) => basename(candidate) === observedBasename)
+            ?? candidates[0];
+        }
       }
     }
     const realpath = realpathSync(executablePath);
@@ -4407,20 +4473,41 @@ async function observeSandboxProcessTree({
     }
   };
   const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
-  const signalRegistered = (signal) => {
-    const rows = processRows();
+  let cleanupPidReuseDetected = false;
+  const currentRegisteredRows = () => {
+    let rows;
+    try {
+      rows = processRows();
+    } catch {
+      rows = targetedProcessRows();
+      return rows.filter((row) => {
+        if (!registeredPids.has(row.pid)) return false;
+        if (registeredStarts.get(row.pid) !== row.startedAt) {
+          cleanupPidReuseDetected = true;
+          return false;
+        }
+        return true;
+      });
+    }
     registerRows(rows);
-    const current = rows.filter((row) => (
-      registeredPids.has(row.pid)
-      && registeredStarts.get(row.pid) === row.startedAt
-    ));
+    return rows.filter((row) => {
+      if (!registeredPids.has(row.pid)) return false;
+      if (registeredStarts.get(row.pid) !== row.startedAt) {
+        cleanupPidReuseDetected = true;
+        return false;
+      }
+      return true;
+    });
+  };
+  const signalRegistered = (signal) => {
+    const current = currentRegisteredRows();
     if (current.some((row) => row.pgid === rootPgid)) {
-      try { process.kill(-rootPgid, signal); } catch (error) {
+      try { killProcess(-rootPgid, signal); } catch (error) {
         if (!(error && typeof error === "object" && error.code === "ESRCH")) throw error;
       }
     }
     for (const row of current.filter((entry) => entry.pgid !== rootPgid)) {
-      try { process.kill(row.pid, signal); } catch (error) {
+      try { killProcess(row.pid, signal); } catch (error) {
         if (!(error && typeof error === "object" && error.code === "ESRCH")) throw error;
       }
     }
@@ -4431,13 +4518,11 @@ async function observeSandboxProcessTree({
     for (let attempt = 0; attempt < 10; attempt += 1) {
       signalRegistered("SIGKILL");
       await delay(100);
-      const rows = processRows();
-      registerRows(rows);
-      const residues = rows.filter((row) => (
-        registeredPids.has(row.pid)
-        && registeredStarts.get(row.pid) === row.startedAt
-      ));
-      if (residues.length === 0) return;
+      const residues = currentRegisteredRows();
+      if (residues.length === 0) {
+        if (cleanupPidReuseDetected) fail(`${label} registered process PID was reused during cleanup`);
+        return;
+      }
     }
     fail(`${label} process group cleanup was incomplete`);
   };
@@ -4499,7 +4584,7 @@ async function observeSandboxProcessTree({
   } catch (error) {
     await terminateRegistered().catch(() => {
       if (!exitResult) {
-        try { process.kill(-rootPgid, "SIGKILL"); } catch { /* Discovery already failed closed. */ }
+        try { killProcess(-rootPgid, "SIGKILL"); } catch { /* Discovery already failed closed. */ }
       }
     });
     throw error;
@@ -4673,6 +4758,13 @@ export async function runObservedSandboxCommand({
   const startedAt = now();
   if (!Number.isFinite(startedAt)) fail(`${label} OS denial audit start cursor is invalid`);
   if (typeof beforeSpawn !== "function") fail(`${label} pre-spawn authority guard is invalid`);
+  const executionScopedProcessName = processExecutablePaths !== null
+    && /^hcnode[0-9a-f]{8}[a-z]$/u.test(basename(command))
+    ? basename(command)
+    : null;
+  const executionAuditMessage = executionScopedProcessName === null
+    ? null
+    : `homecook-sandbox-${executionScopedProcessName}`;
   if (processExecutablePaths !== null) {
     if (
       !Array.isArray(processExecutablePaths) || processExecutablePaths.length !== 1
@@ -4682,6 +4774,10 @@ export async function runObservedSandboxCommand({
     if (!String(profile).split("\n").includes(exactRule)) {
       fail(`${label} sandbox profile lacks its exact process executable authority`);
     }
+    if (
+      executionAuditMessage !== null
+      && !String(profile).includes(`(with message ${JSON.stringify(executionAuditMessage)})`)
+    ) fail(`${label} sandbox profile lacks its execution-scoped audit message`);
   }
   beforeSpawn();
   const execute = () => observeProcessTree({
@@ -4727,8 +4823,20 @@ export async function runObservedSandboxCommand({
     const registeredPids = new Set(child.process_identities.map((identity) => identity.pid));
     observedDenials = events.flatMap((event) => {
       const message = String(event.eventMessage ?? "");
-      const match = /Sandbox:\s+[^()]+\((\d+)\)/u.exec(message);
-      if (!match || !registeredPids.has(Number(match[1]))) return [];
+      const match = /Sandbox:\s+([^()]+)\((\d+)\)/u.exec(message);
+      if (!match) return [];
+      const eventProcessName = match[1].trim();
+      const eventPid = Number(match[2]);
+      const hasExecutionAuditMessage = executionAuditMessage !== null
+        && message.split("\n").includes(executionAuditMessage);
+      if (
+        !registeredPids.has(eventPid)
+        && (
+          executionScopedProcessName === null
+          || eventProcessName !== executionScopedProcessName
+          || !hasExecutionAuditMessage
+        )
+      ) return [];
       return [{ event_digest: sha256Bytes(Buffer.from(message, "utf8")) }];
     });
   } catch (error) {

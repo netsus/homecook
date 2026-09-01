@@ -18,11 +18,13 @@ import {
 } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { createRequire } from "node:module";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildCandidateManifest,
@@ -80,6 +82,12 @@ import {
   EXPECTED_RELEASE_CONTEXTS,
 } from "../scripts/lib/production-release-approval-policy.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
+import {
+  cleanupOwnedTempRoot,
+  cleanupOwnedTempRoots,
+  createOwnedTempRoot,
+  withOwnedTempRoot,
+} from "./helpers/owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -124,10 +132,12 @@ const CURRENT_MASTER_CHECK_RUNS = ([
 }));
 
 function privateRoot(prefix = "homecook-candidate-") {
-  const root = mkdtempSync(join(tmpdir(), prefix));
-  chmodSync(root, 0o700);
-  return realpathSync(root);
+  return createOwnedTempRoot(prefix);
 }
+
+afterEach(() => {
+  cleanupOwnedTempRoots();
+});
 
 function privateNodeClone(root: string, suffix: string) {
   const path = join(root, `hcnode${suffix}`);
@@ -234,6 +244,66 @@ function privateNativeSandboxDenialProbe({
   }
   chmodSync(executablePath, 0o500);
   return realpathSync(executablePath);
+}
+
+function privateFastNativeSandboxDenialProbe({
+  root,
+  deniedPath,
+}: {
+  root: string;
+  deniedPath: string;
+}) {
+  const token = createHash("sha256").update(root).digest("hex").slice(0, 8);
+  const sourcePath = join(root, `sub-poll-${token}.c`);
+  const executablePath = join(root, `hcnode${token}i`);
+  const resultPath = join(root, `sub-poll-${token}.result`);
+  writeFileSync(sourcePath, [
+    "#include <errno.h>",
+    "#include <fcntl.h>",
+    "#include <stdio.h>",
+    "#include <sys/types.h>",
+    "#include <sys/wait.h>",
+    "#include <time.h>",
+    "#include <unistd.h>",
+    "int main(void) {",
+    "  struct timespec started = {0}, ended = {0};",
+    "  clock_gettime(CLOCK_MONOTONIC, &started);",
+    "  pid_t child = fork();",
+    "  if (child < 0) return 71;",
+    "  if (child == 0) {",
+    "    errno = 0;",
+    `    int fd = open(${JSON.stringify(deniedPath)}, O_WRONLY | O_CREAT, 0600);`,
+    "    int denied = fd < 0 && errno == EPERM;",
+    "    if (fd >= 0) close(fd);",
+    "    _exit(denied ? 0 : 72);",
+    "  }",
+    "  int status = 0;",
+    "  waitpid(child, &status, 0);",
+    "  clock_gettime(CLOCK_MONOTONIC, &ended);",
+    "  long long elapsed_us = (ended.tv_sec - started.tv_sec) * 1000000LL + (ended.tv_nsec - started.tv_nsec) / 1000LL;",
+    `  int result_fd = open(${JSON.stringify(resultPath)}, O_WRONLY | O_CREAT | O_TRUNC, 0600);`,
+    "  if (result_fd >= 0) {",
+    '    dprintf(result_fd, "%d %lld\\n", WIFEXITED(status) ? WEXITSTATUS(status) : 73, elapsed_us);',
+    "    close(result_fd);",
+    "  }",
+    "  usleep(100000);",
+    "  return WIFEXITED(status) ? WEXITSTATUS(status) : 73;",
+    "}",
+    "",
+  ].join("\n"), { mode: 0o600 });
+  const compile = spawnSync(
+    "/Library/Developer/CommandLineTools/usr/bin/clang",
+    [
+      "-isysroot", "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      sourcePath, "-o", executablePath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (compile.error || compile.signal || compile.status !== 0) {
+    throw new Error(`fast native sandbox denial probe compilation failed: ${compile.stderr}`);
+  }
+  chmodSync(executablePath, 0o500);
+  return { executablePath: realpathSync(executablePath), resultPath };
 }
 
 function tool(name: string) {
@@ -435,6 +505,38 @@ function validManifestInput() {
 }
 
 describe("release rehearsal candidate manifest", () => {
+  it("cleans exact owned temp roots after success, failure, and interruption without touching siblings", async () => {
+    const ownedRoots: string[] = [];
+    const unrelatedRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-unrelated-control-")));
+    try {
+      await expect(withOwnedTempRoot("homecook-owned-success-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "success"), "owned\n", { mode: 0o600 });
+        symlinkSync(unrelatedRoot, join(root, "unrelated-sibling-link"));
+        return "complete";
+      })).resolves.toBe("complete");
+      await expect(withOwnedTempRoot("homecook-owned-failure-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "failure"), "owned\n", { mode: 0o600 });
+        throw new Error("simulated test failure");
+      })).rejects.toThrow(/simulated test failure/iu);
+      const interruption = new AbortController();
+      await expect(withOwnedTempRoot("homecook-owned-interrupted-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "interrupted"), "owned\n", { mode: 0o600 });
+        return new Promise((_resolve, reject) => {
+          interruption.signal.addEventListener("abort", () => reject(new Error("simulated test interruption")));
+          interruption.abort();
+        });
+      })).rejects.toThrow(/simulated test interruption/iu);
+      expect(ownedRoots).toHaveLength(3);
+      expect(ownedRoots.every((path) => !existsSync(path))).toBe(true);
+      expect(existsSync(unrelatedRoot)).toBe(true);
+    } finally {
+      if (existsSync(unrelatedRoot)) rmdirSync(unrelatedRoot);
+    }
+  });
+
   it("publishes a closed JSON schema for the exact candidate manifest", () => {
     const schema = JSON.parse(readFileSync(
       "scripts/schemas/local-mac-production-rehearsal-candidate.schema.json",
@@ -1604,6 +1706,251 @@ try {
     }
   }, 35_000);
 
+  it("attributes sub-poll sandbox events by the execution-scoped process token only", async () => {
+    const command = "/private/tmp/hcnode1234abcdi";
+    const auditMessage = "homecook-sandbox-hcnode1234abcdi";
+    const rootPid = 4242;
+    const rootProcess = {
+      status: 0,
+      signal: null,
+      stdout: "",
+      stderr: "",
+      pid: rootPid,
+      root_pgid: rootPid,
+      process_tree_complete: true,
+      observer_tool_identity_digest: DIGEST_B,
+      process_identities: [{
+        pid: rootPid,
+        ppid: 1,
+        pgid: rootPid,
+        started_at: "Tue Sep  1 20:00:00 2026",
+        executable_identity_digest: DIGEST_A,
+      }],
+      escaped_process_count: 0,
+      surviving_process_count: 0,
+    };
+    const run = (eventMessage: string) => runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile: [
+        "(version 1)",
+        `(deny default (with message ${JSON.stringify(auditMessage)}))`,
+        `(allow process-exec (literal ${JSON.stringify(command)}))`,
+      ].join("\n"),
+      command,
+      processExecutablePaths: [command],
+      args: [],
+      cwd: "/private/tmp",
+      env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
+      label: "sub-poll event attribution fixture",
+      stage: "offline-install",
+      observeProcessTree: vi.fn(async () => rootProcess),
+      runCommand: vi.fn(() => ({
+        status: 0,
+        signal: null,
+        stdout: JSON.stringify([{ eventMessage }]),
+        stderr: "",
+      })),
+      now: vi.fn()
+        .mockReturnValueOnce(1_000)
+        .mockReturnValueOnce(1_001)
+        .mockReturnValueOnce(1_002),
+      waitForAuditFlush: vi.fn(),
+    });
+
+    await expect(run(`Sandbox: hcnode1234abcdi(4243) deny(1) file-write-create /fixture\n${auditMessage}`))
+      .rejects.toThrow(/observed|denied|sandbox|attempt/iu);
+    await expect(run("Sandbox: hcnode1234abcdi(9898) deny(1) file-write-create /fixture"))
+      .resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    await expect(run(`Sandbox: unrelated(9898) deny(1) file-write-create /fixture\n${auditMessage}`))
+      .resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+  });
+
+  it("rejects a real macOS denial from a child that exits within one process poll interval", async () => {
+    if (
+      process.platform !== "darwin"
+      || !existsSync("/usr/bin/sandbox-exec")
+      || !existsSync("/usr/bin/log")
+      || !existsSync("/Library/Developer/CommandLineTools/usr/bin/clang")
+    ) return;
+    const root = privateRoot("homecook-sub-poll-denial-");
+    const deniedRoot = join(root, "denied");
+    mkdirSync(deniedRoot, { mode: 0o700 });
+    const deniedPath = join(deniedRoot, "child-created");
+    const probe = privateFastNativeSandboxDenialProbe({ root, deniedPath });
+    const profile = buildCandidateSandboxProfile({
+      executablePaths: [probe.executablePath],
+      readRoots: [root, probe.executablePath],
+      writeRoots: [root],
+      deniedPaths: [deniedRoot],
+    });
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile,
+      command: probe.executablePath,
+      processExecutablePaths: [probe.executablePath],
+      args: [],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "real sub-poll child denial",
+      stage: "offline-install",
+    })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
+    const [childStatus, elapsedMicroseconds] = readFileSync(probe.resultPath, "utf8")
+      .trim().split(" ").map(Number);
+    expect(childStatus).toBe(0);
+    expect(elapsedMicroseconds).toBeLessThan(20_000);
+    expect(existsSync(deniedPath)).toBe(false);
+  }, 20_000);
+
+  it("cleans registered descendants after root exit when full-table lookup fails without signaling reused PIDs", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const observeProcessTree = candidateModule.observeSandboxProcessTree;
+    expect(typeof observeProcessTree).toBe("function");
+    if (typeof observeProcessTree !== "function") return;
+
+    const rootPid = 4242;
+    const childPid = 4243;
+    const reusedPid = 4244;
+    const started = "Tue Sep  1 20:00:00 2026";
+    const reusedStarted = "Tue Sep  1 20:00:01 2026";
+    const rows = [
+      `${rootPid} 1 ${rootPid} S ${started} ${process.execPath}`,
+      `${childPid} ${rootPid} 5000 S ${started} ${process.execPath}`,
+      `${reusedPid} ${rootPid} 6000 S ${started} ${process.execPath}`,
+    ].join("\n");
+    const child = new EventEmitter() as EventEmitter & {
+      pid: number,
+      stdout: PassThrough,
+      stderr: PassThrough,
+    };
+    child.pid = rootPid;
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    const spawnProcess = vi.fn(() => {
+      setTimeout(() => child.emit("spawn"), 0);
+      setTimeout(() => child.emit("exit", 0, null), 5);
+      return child;
+    });
+    let fullTableCalls = 0;
+    let matchingChildAlive = true;
+    const pollCommand = vi.fn((_command: string, args: string[]) => {
+      if (args.includes("-axo")) {
+        fullTableCalls += 1;
+        if (fullTableCalls === 1) {
+          return { status: 0, signal: null, stdout: `${rows}\n`, stderr: "" };
+        }
+        return { status: null, signal: null, stdout: "", stderr: "lookup failed", error: { code: "EIO" } };
+      }
+      if (args.includes("-p")) {
+        const targeted = [
+          ...(matchingChildAlive
+            ? [`${childPid} ${rootPid} 5000 S ${started} ${process.execPath}`]
+            : []),
+          `${reusedPid} 1 6000 S ${reusedStarted} ${process.execPath}`,
+        ];
+        return { status: 0, signal: null, stdout: `${targeted.join("\n")}\n`, stderr: "" };
+      }
+      return { status: 1, signal: null, stdout: "", stderr: "unexpected observer command" };
+    });
+    const killProcess = vi.fn((pid: number, signal: NodeJS.Signals) => {
+      if (pid === childPid && ["SIGTERM", "SIGKILL"].includes(signal)) matchingChildAlive = false;
+    });
+
+    await expect((observeProcessTree as (options: Record<string, unknown>) => Promise<unknown>)({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      profile: "(version 1)\n(deny default)",
+      command: process.execPath,
+      args: [],
+      cwd: "/private/tmp",
+      env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
+      label: "post-root lookup failure fixture",
+      timeout: 1_000,
+      lsofPath: process.execPath,
+      psPath: process.execPath,
+      pollCommand,
+      spawnProcess,
+      killProcess,
+      pollIntervalMs: 20,
+    })).rejects.toThrow(/process discovery|failed closed/iu);
+    expect(killProcess).toHaveBeenCalledWith(childPid, expect.stringMatching(/^SIG/));
+    expect(killProcess.mock.calls.some(([pid]) => pid === reusedPid)).toBe(false);
+  });
+
+  it("keeps exact executable identity when a registered child exits between ps and lsof", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const observeProcessTree = candidateModule.observeSandboxProcessTree;
+    expect(typeof observeProcessTree).toBe("function");
+    if (typeof observeProcessTree !== "function") return;
+
+    const root = privateRoot("homecook-process-identity-race-");
+    const command = join(root, "hcnode1234abcdb");
+    copyFileSync(process.execPath, command);
+    chmodSync(command, 0o500);
+    const rootPid = 4242;
+    const childPid = 4243;
+    const started = "Tue Sep  1 20:00:00 2026";
+    const initialRows = [
+      `${rootPid} 1 ${rootPid} S ${started} ${basename(command)}`,
+      `${childPid} ${rootPid} ${rootPid} S ${started} ${basename(command)}`,
+    ].join("\n");
+    const unrelatedRows = `9898 1 9898 S ${started} ${process.execPath}\n`;
+    const child = new EventEmitter() as EventEmitter & {
+      pid: number,
+      stdout: PassThrough,
+      stderr: PassThrough,
+    };
+    child.pid = rootPid;
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    const spawnProcess = vi.fn(() => {
+      setTimeout(() => child.emit("spawn"), 0);
+      setTimeout(() => child.emit("exit", 0, null), 5);
+      return child;
+    });
+    let fullTableCalls = 0;
+    const pollCommand = vi.fn((_tool: string, args: string[]) => {
+      if (args.includes("-axo")) {
+        fullTableCalls += 1;
+        return {
+          status: 0,
+          signal: null,
+          stdout: fullTableCalls === 1 ? `${initialRows}\n` : unrelatedRows,
+          stderr: "",
+        };
+      }
+      if (args[0] === "-a" && args.includes("-Fn")) {
+        return { status: 0, signal: null, stdout: "", stderr: "" };
+      }
+      return { status: 1, signal: null, stdout: "", stderr: "unexpected observer command" };
+    });
+
+    await expect((observeProcessTree as (options: Record<string, unknown>) => Promise<{
+      process_identities: Array<{ pid: number }>,
+    }>)({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      profile: "(version 1)\n(deny default)",
+      command,
+      args: [],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin" },
+      label: "exact executable lsof race fixture",
+      timeout: 1_000,
+      lsofPath: process.execPath,
+      psPath: process.execPath,
+      pollCommand,
+      spawnProcess,
+      pollIntervalMs: 20,
+      processExecutablePaths: [command],
+    })).resolves.toMatchObject({
+      process_identities: [
+        expect.objectContaining({ pid: rootPid }),
+        expect.objectContaining({ pid: childPid }),
+      ],
+    });
+  });
+
   it("rejects escaped process groups, post-root survivors, and unavailable discovery", async () => {
     if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec") || !existsSync("/usr/bin/log")) return;
     const root = privateRoot("homecook-process-tree-lifecycle-");
@@ -2720,6 +3067,21 @@ describe("release rehearsal candidate orchestration", () => {
     } as Parameters<typeof buildCandidateSandboxProfile>[0]);
     expect(exactExecutableProfile).toContain(`(allow process-exec (literal \"${exactNodePath}\"))`);
     expect(exactExecutableProfile).not.toContain("(allow process-exec)\n");
+    const auditNodePath = join(root, "hcnode1234abcdi");
+    copyFileSync(process.execPath, auditNodePath);
+    chmodSync(auditNodePath, 0o500);
+    const auditedProfile = buildCandidateSandboxProfile({
+      readRoots: [runRoot, auditNodePath],
+      writeRoots: [runRoot],
+      deniedWritePaths: [immutableSource],
+      deniedPaths: [productionRoot],
+      executablePaths: [auditNodePath],
+    });
+    const auditMessageRule = '(with message "homecook-sandbox-hcnode1234abcdi")';
+    expect(auditedProfile).toContain(`(deny default ${auditMessageRule})`);
+    expect(auditedProfile).toContain(`(deny network* ${auditMessageRule})`);
+    expect(auditedProfile).toContain(`(subpath "${productionRoot}") ${auditMessageRule})`);
+    expect(auditedProfile).toContain(`(subpath "${immutableSource}") ${auditMessageRule})`);
     const unsafeExecutable = join(runRoot, "unsafe-executable");
     writeFileSync(unsafeExecutable, "#!/bin/sh\n", { mode: 0o720 });
     chmodSync(unsafeExecutable, 0o720);
@@ -3028,8 +3390,8 @@ describe("release rehearsal candidate orchestration", () => {
     );
     mkdirSync(userCacheRoot, { recursive: true, mode: 0o700 });
     chmodSync(userCacheRoot, 0o700);
-    const root = realpathSync(mkdtempSync(join(userCacheRoot, "candidate-")));
-    chmodSync(root, 0o700);
+    const root = createOwnedTempRoot("candidate-", userCacheRoot);
+    try {
     const runRoot = join(root, "attempt");
     const buildRoot = join(runRoot, "build-work");
     const nodeModulesRoot = join(buildRoot, "node_modules");
@@ -3091,7 +3453,7 @@ describe("release rehearsal candidate orchestration", () => {
       privateTmp,
       currentUid: process.getuid?.(),
     }, async ({ writeRoots }) => {
-      const nodeCloneSuffix = basename(root).slice(-6);
+      const nodeCloneSuffix = createHash("sha256").update(root).digest("hex").slice(0, 8);
       const installAuditNode = privateNodeClone(privateHome, `${nodeCloneSuffix}i`);
       const buildAuditNode = privateNodeClone(privateHome, `${nodeCloneSuffix}b`);
       const stageNodeDigests = new Map([installAuditNode, buildAuditNode].map((path) => [
@@ -3275,6 +3637,9 @@ describe("release rehearsal candidate orchestration", () => {
     expect(existsSync(join(nextRoot, "server", "app-paths-manifest.json"))).toBe(true);
     });
     });
+    } finally {
+      cleanupOwnedTempRoot(root);
+    }
   }, 240_000);
 
   it("accepts the normal pnpm Next link only inside candidate-owned node_modules/.pnpm", async () => {
@@ -3997,6 +4362,53 @@ describe("release rehearsal candidate orchestration", () => {
       sealInstallIndex();
     })).rejects.toThrow(/deferred|nested|identity|swap|cleanup/iu);
     expect(readFileSync(deferredNestedSentinel, "utf8")).toBe("sentinel\n");
+
+    const deferredDeleteRace = fixture("homecook-pnpm-deferred-delete-race-");
+    const racedRelativePath = join("projects", "raced.txt");
+    let racedQuarantineRoot = "";
+    const replacementBytes = "replacement inode must survive\n";
+    const cleanupRunCommand = (command: string, args: string[], options: unknown) => {
+      const raceNeedle = [
+        "    child_stat = os.stat(name, dir_fd=parent, follow_symlinks=False)",
+        "    check(child_stat, record, child_relative)",
+      ].join("\n");
+      const raceInjection = [
+        raceNeedle,
+        `    if child_relative == ${JSON.stringify(racedRelativePath)}:`,
+        "        os.rename(name, name + '.parked', src_dir_fd=parent, dst_dir_fd=parent)",
+        "        replacement_fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent)",
+        "        os.write(replacement_fd, b'replacement inode must survive\\n')",
+        "        os.close(replacement_fd)",
+      ].join("\n");
+      const racedArgs = [...args];
+      racedArgs[2] = String(racedArgs[2]).replace(raceNeedle, raceInjection);
+      expect(racedArgs[2]).not.toBe(args[2]);
+      return spawnSync(command, racedArgs, options as Parameters<typeof spawnSync>[2]);
+    };
+    await expect(invoke({
+      ...deferredDeleteRace,
+      cleanupRunCommand,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (event.phase === "before_deferred_cleanup") racedQuarantineRoot = String(event.path);
+      },
+    }, ({ storePath, sealInstallIndex }) => {
+      writeFileSync(join(storePath, racedRelativePath), "owned inode\n", { mode: 0o600 });
+      sealInstallIndex();
+    })).rejects.toThrow(/deferred|quarantine|identity|cleanup/iu);
+    const claimedRootName = readdirSync(deferredDeleteRace.root)
+      .find((name) => name.startsWith(".homecook-delete-"));
+    expect(claimedRootName).toBeTypeOf("string");
+    const residualRoot = existsSync(racedQuarantineRoot)
+      ? racedQuarantineRoot
+      : join(deferredDeleteRace.root, claimedRootName!);
+    const claimedProjectsName = readdirSync(residualRoot)
+      .find((name) => name.startsWith(".homecook-delete-"));
+    expect(claimedProjectsName).toBeTypeOf("string");
+    const racedPath = join(residualRoot, claimedProjectsName!, basename(racedRelativePath));
+    const parkedPath = `${racedPath}.parked`;
+    expect(readFileSync(parkedPath, "utf8")).toBe("owned inode\n");
+    expect(existsSync(racedPath)).toBe(true);
+    if (existsSync(racedPath)) expect(readFileSync(racedPath, "utf8")).toBe(replacementBytes);
 
     const deferredSwapRestore = fixture("homecook-pnpm-deferred-swap-restore-");
     let deferredRestored = false;

@@ -2,11 +2,8 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   mkdirSync,
-  mkdtempSync,
-  realpathSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -19,6 +16,7 @@ import {
 } from "../../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs, sha256Jcs } from "../../scripts/lib/rfc8785-jcs.mjs";
 import { EXPECTED_RELEASE_CONTEXTS } from "../../scripts/lib/production-release-approval-policy.mjs";
+import { createOwnedTempRoot } from "./owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -27,9 +25,7 @@ const DIGEST_B = "b".repeat(64);
 const DIGEST_C = "c".repeat(64);
 
 function privateRoot(prefix: string) {
-  const root = mkdtempSync(join(tmpdir(), prefix));
-  chmodSync(root, 0o700);
-  return realpathSync(root);
+  return createOwnedTempRoot(prefix);
 }
 
 function tool(name: string) {

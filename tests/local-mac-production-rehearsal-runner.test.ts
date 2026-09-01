@@ -1,9 +1,9 @@
 import { spawn, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, linkSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   RUN_EVIDENCE_SCHEMA,
@@ -42,6 +42,7 @@ import {
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
+import { cleanupOwnedTempRoots, createOwnedTempRoot } from "./helpers/owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -73,6 +74,8 @@ const MIGRATION_FILE_ENTRIES = [
   { path: "supabase/migrations/20260102000000_two.sql", sha256: "2".repeat(64) },
 ];
 const MIGRATION_FILES_DIGEST = sha256Jcs(MIGRATION_FILE_ENTRIES);
+
+afterEach(() => cleanupOwnedTempRoots());
 
 function canonicalPrimitiveConfig({
   candidateRoot = "/private/rehearsal/candidate",
@@ -544,7 +547,7 @@ describe("release rehearsal R2 input and namespace gates", () => {
     expect(typeof resolveNamespace).toBe("function");
     if (typeof resolveNamespace !== "function") return;
     const typedResolveNamespace = resolveNamespace as (home: string) => unknown;
-    const parent = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-home-locator-safety-")));
+    const parent = createOwnedTempRoot("homecook-r2-home-locator-safety-");
     const realHome = join(parent, "real-home");
     const linkedHome = join(parent, "linked-home");
     mkdirSync(realHome, { mode: 0o700 });
@@ -580,7 +583,7 @@ describe("release rehearsal R2 input and namespace gates", () => {
   });
 
   it("accepts only an absolute completed candidate root or its exact candidate.json", () => {
-    const root = mkdtempSync(join(tmpdir(), "homecook-r2-input-"));
+    const root = createOwnedTempRoot("homecook-r2-input-");
     const manifest = join(root, "candidate.json");
     writeFileSync(manifest, "{}", { mode: 0o400 });
     expect(resolveCompletedCandidateInput(root)).toBe(root);
@@ -590,7 +593,7 @@ describe("release rehearsal R2 input and namespace gates", () => {
   });
 
   it("rejects symlink, hardlink-shaped and production path candidates", () => {
-    const parent = mkdtempSync(join(tmpdir(), "homecook-r2-input-attack-"));
+    const parent = createOwnedTempRoot("homecook-r2-input-attack-");
     const real = join(parent, "real");
     mkdirSync(real, { mode: 0o500 });
     const link = join(parent, "candidate-link");
@@ -722,7 +725,7 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
 
 describe("release rehearsal R2 orchestration", () => {
   it("runs sealed identities, canaries, exact cleanup, and produces non-receipt evidence", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-runs-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-runs-");
     const candidate = await createCompletedRehearsalCandidateFixture();
     const candidateRoot = candidate.candidateRoot;
     const adapters = createAdapters();
@@ -799,7 +802,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("uses the actual copied-candidate reader and rejects tampering before resource creation", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-real-reader-tamper-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-real-reader-tamper-");
     const candidate = await createCompletedRehearsalCandidateFixture();
     const adapters = createAdapters();
     await expect(runIsolatedReleaseRehearsal({
@@ -820,7 +823,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("rejects a shape-valid wrong full-local startup identity before app or worker start", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-wrong-startup-identity-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-wrong-startup-identity-");
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -845,7 +848,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("rejects an intermediate symlink in the namespace ancestor chain before resources", async () => {
-    const parent = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-symlink-ancestor-")));
+    const parent = createOwnedTempRoot("homecook-r2-symlink-ancestor-");
     const realAncestor = join(parent, "real-ancestor");
     const aliasAncestor = join(parent, "alias-ancestor");
     mkdirSync(realAncestor, { mode: 0o700 });
@@ -871,7 +874,7 @@ describe("release rehearsal R2 orchestration", () => {
     ["swap", false],
     ["swap and restore", true],
   ])("rejects a namespace ancestor %s during a candidate mount transition", async (_label, restoreBeforePost) => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-mount-ancestor-swap-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-mount-ancestor-swap-");
     const candidateRoot = join(namespaceRoot, "source-candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -927,7 +930,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("allows an unrelated HOME child mutation while keeping .homecook as the exact anchor", async () => {
-    const trustedNamespaceAnchor = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-home-locator-runner-")));
+    const trustedNamespaceAnchor = createOwnedTempRoot("homecook-r2-home-locator-runner-");
     const namespaceRoot = join(trustedNamespaceAnchor, ".homecook", "rehearsal", "runs");
     mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
     const candidateRoot = join(trustedNamespaceAnchor, "source-candidate");
@@ -952,7 +955,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("holds the trusted home anchor through .homecook parent swap and restore", async () => {
-    const trustedNamespaceAnchor = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-trusted-anchor-")));
+    const trustedNamespaceAnchor = createOwnedTempRoot("homecook-r2-trusted-anchor-");
     const homecookRoot = join(trustedNamespaceAnchor, ".homecook");
     const namespaceRoot = join(homecookRoot, "rehearsal", "runs");
     mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
@@ -1012,7 +1015,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("rejects a wrong candidate tree bind before resource creation", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-wrong-tree-bind-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-wrong-tree-bind-");
     const candidateRoot = join(namespaceRoot, "source-candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1051,7 +1054,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("cleans only the immutable partial-create ledger after create failure", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-partial-create-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-partial-create-");
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1070,7 +1073,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("reports label-only discovered resources as residue and never adopts or removes them", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-label-residue-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-label-residue-");
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1104,7 +1107,7 @@ describe("release rehearsal R2 orchestration", () => {
     ["residue", (adapters: ReturnType<typeof createAdapters>) => adapters.listResidue.mockResolvedValue([{ id: "orphan" }])],
     ["secret persistence", (adapters: ReturnType<typeof createAdapters>) => adapters.countPersistentSecretFiles.mockResolvedValue(1)],
   ])("fails closed on %s but still attempts cleanup", async (_label, arrange) => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-fail-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-fail-");
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1121,7 +1124,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("re-reads the sealed candidate after execution and rejects tampering", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-stale-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-stale-");
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1143,7 +1146,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("cleans exact run-owned resources when signalled midway", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-signal-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-signal-");
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1166,7 +1169,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("aborts an in-flight readiness wait and immediately enters cleanup", async () => {
-    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-readiness-signal-")));
+    const namespaceRoot = createOwnedTempRoot("homecook-r2-readiness-signal-");
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1485,7 +1488,7 @@ describe("release rehearsal R2 public command and schema", () => {
     if (typeof createGuard !== "function" || typeof executeCreate !== "function") return;
 
     const makeRoot = (prefix: string) => {
-      const trustedAnchorRoot = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+      const trustedAnchorRoot = createOwnedTempRoot(prefix);
       const namespaceRoot = join(trustedAnchorRoot, ".homecook", "rehearsal", "runs");
       const runRoot = join(namespaceRoot, RUN_ID);
       const candidateRoot = join(runRoot, "execution-candidate");
@@ -2056,7 +2059,7 @@ describe("release rehearsal R2 public command and schema", () => {
   });
 
   it("requires --json and delegates an absolute candidate to the isolated runner", async () => {
-    const root = mkdtempSync(join(tmpdir(), "homecook-r2-cli-"));
+    const root = createOwnedTempRoot("homecook-r2-cli-");
     const namespaceRoot = join(root, ".homecook", "rehearsal", "runs");
     mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
     mkdirSync(join(root, "candidate"), { mode: 0o500 });
@@ -2098,7 +2101,7 @@ describe("release rehearsal R2 public command and schema", () => {
   });
 
   it("redacts Docker stdout and stderr from the CLI failure and failed artifact", async () => {
-    const homeRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-docker-redaction-")));
+    const homeRoot = createOwnedTempRoot("homecook-r2-docker-redaction-");
     const namespaceRoot = join(homeRoot, ".homecook", "rehearsal", "runs");
     mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
     const candidate = await createCompletedRehearsalCandidateFixture("homecook-r2-docker-redaction-candidate-");
