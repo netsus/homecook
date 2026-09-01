@@ -40,7 +40,7 @@ import {
   buildFullLocalProbeStartupContract,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
-import { createImmutableCreationLedger, resolveTrustedLocalDockerEndpoint } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
+import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
 
 const SHA_A = "a".repeat(40);
@@ -2107,7 +2107,12 @@ describe("release rehearsal R2 public command and schema", () => {
     const providerPayload = '{"provider":"private-provider","access_token":"private-provider-token"}';
     const rawStdout = `${privateBindPath}/${secretFilename}\n${providerPayload}\n`;
     const rawStderr = `${privateHomePath}: ${secretValue}\n`;
-    const dockerEndpoint = resolveTrustedLocalDockerEndpoint();
+    const dockerEndpoint = Object.freeze({
+      schema: "homecook.release-rehearsal-local-docker-endpoint.v1",
+      realpath: "/tmp/homecook-r2-offline-docker.sock",
+      identity_digest: DIGEST_A,
+      url: "unix:///tmp/homecook-r2-offline-docker.sock",
+    });
     const output = { value: "", write(chunk: string) { this.value += chunk; } };
     let cliFailure: unknown = null;
     try {

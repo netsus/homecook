@@ -856,7 +856,7 @@ function ensureDockerCommandEnvironment(state) {
 }
 
 async function dockerCommand(state, args, options = {}) {
-  const endpointNow = resolveTrustedLocalDockerEndpoint({
+  const endpointNow = state.dockerEndpointResolver({
     explicitSocketPath: state.dockerEndpoint.realpath,
     homeDir: state.homeDir,
     ambient: {},
@@ -1776,7 +1776,7 @@ async function snapshotDockerDaemon(state, signal) {
   } catch {
     fail("local Docker daemon identity output is not JSON");
   }
-  const endpointNow = resolveTrustedLocalDockerEndpoint({
+  const endpointNow = state.dockerEndpointResolver({
     explicitSocketPath: state.dockerEndpoint.realpath,
     homeDir: state.homeDir,
     ambient: {},
@@ -1914,6 +1914,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
     runtimeRoot: join(resolve(namespaceRoot), runId, "runtime-state"),
     dockerBin: dockerBin ?? resolveTrustedDockerBinary(),
     dockerEndpoint,
+    dockerEndpointResolver,
     runCommand,
     commandEnvironment: null,
     activeSignal: new AbortController().signal,
