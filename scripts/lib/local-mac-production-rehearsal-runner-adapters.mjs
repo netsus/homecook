@@ -1,15 +1,21 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
+  closeSync,
+  constants as fsConstants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
+  readSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { createServer } from "node:net";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import {
   FULL_LOCAL_SECRET_NAMES,
@@ -96,6 +102,20 @@ const SERVICE_RUNTIME_CONTRACT = Object.freeze({
 const SERVICE_DEPENDENCY_ORDER = Object.freeze([
   "postgres", "auth", "postgrest", "postgrest-probe", "storage", "api-gateway", "auth-proxy",
 ]);
+const FULL_LOCAL_BIND_RELATIVE_BY_TARGET = Object.freeze({
+  "/homecook/secret-entrypoint.sh": "secret-entrypoint.sh",
+  "/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh": "full-local-role-passwords.sh",
+  "/homecook/start-auth.sh": "start-auth.sh",
+  "/homecook/start-postgrest.sh": "start-postgrest.sh",
+  "/homecook/start-storage.sh": "start-storage.sh",
+  "/homecook/kong-entrypoint.sh": "kong-entrypoint.sh",
+  "/homecook/kong.yml": "kong.yml",
+  "/usr/local/share/lua/5.1/kong/plugins/homecook-attestation": "kong/plugins/homecook-attestation",
+  "/homecook/auth-only-proxy.mjs": "auth-only-proxy.mjs",
+});
+const BIND_SOURCE_FILE_LIMIT = 1_048_576;
+const BIND_SOURCE_TOTAL_LIMIT = 16 * 1_048_576;
+const BIND_SOURCE_ENTRY_LIMIT = 4_096;
 
 function sortedStrings(values) {
   return [...values].sort((left, right) => left.localeCompare(right));
@@ -167,6 +187,295 @@ function durationNanoseconds(value, label) {
   return result;
 }
 
+function bindSourceIdentity(stat) {
+  return Object.freeze({
+    device: String(stat.dev),
+    inode: String(stat.ino),
+    uid: Number(stat.uid),
+    gid: Number(stat.gid),
+    mode: Number(stat.mode & 0o7777n),
+    nlink: String(stat.nlink),
+    ctime_ns: String(stat.ctimeNs),
+    size: String(stat.size),
+  });
+}
+
+function containedDirectoryPaths(anchorRoot, target) {
+  if (
+    typeof anchorRoot !== "string" || resolve(anchorRoot) !== anchorRoot
+    || typeof target !== "string" || resolve(target) !== target
+    || (target !== anchorRoot && !target.startsWith(`${anchorRoot}/`))
+  ) fail("bind source escapes the trusted private anchor");
+  const segments = target === anchorRoot ? [] : target.slice(anchorRoot.length + 1).split("/");
+  const paths = [anchorRoot];
+  for (const segment of segments) {
+    if (!segment || segment === "." || segment === "..") fail("bind source path is not lexical");
+    paths.push(join(paths.at(-1), segment));
+  }
+  return paths;
+}
+
+function readHeldRegularFile(fd, stat, label) {
+  if (stat.size > BigInt(BIND_SOURCE_FILE_LIMIT) || stat.size > BigInt(Number.MAX_SAFE_INTEGER)) {
+    fail(`${label} bind source file exceeds the closed size limit`);
+  }
+  const bytes = Buffer.alloc(Number(stat.size));
+  let offset = 0;
+  while (offset < bytes.length) {
+    const count = readSync(fd, bytes, offset, bytes.length - offset, offset);
+    if (count <= 0) fail(`${label} bind source file ended before its held size`);
+    offset += count;
+  }
+  return bytes;
+}
+
+function parseBindMountArgs(args) {
+  if (!Array.isArray(args)) return null;
+  const mounts = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== "--mount") continue;
+    const raw = args[index + 1];
+    if (typeof raw !== "string") fail("Docker bind mount argv is incomplete");
+    index += 1;
+    const fields = Object.create(null);
+    let readOnly = false;
+    for (const token of raw.split(",")) {
+      if (["readonly", "ro"].includes(token)) { readOnly = true; continue; }
+      const separator = token.indexOf("=");
+      if (separator <= 0) fail("Docker bind mount argv contains an unsupported token");
+      fields[token.slice(0, separator)] = token.slice(separator + 1);
+    }
+    if (fields.type !== "bind") continue;
+    const source = fields.src ?? fields.source;
+    const target = fields.dst ?? fields.destination ?? fields.target;
+    if (!source || !target || resolve(source) !== source || resolve(target) !== target || readOnly !== true) {
+      fail("Docker pathname bind mount must be absolute and read-only");
+    }
+    mounts.push({ source, target, read_only: true });
+  }
+  return mounts.sort((left, right) => left.target.localeCompare(right.target));
+}
+
+/**
+ * Holds the lexical chain and source nodes for one Docker create. Candidate
+ * trees reuse the existing metadata-only physical verifier; small config and
+ * runtime trees keep every directory/file FD plus regular-file content digest.
+ */
+function createDockerBindSourceGuardUnsafe({
+  trustedAnchorRoot,
+  namespaceRoot,
+  candidateRoot,
+  resourceName,
+  authoritySources = [],
+  expectedMounts = [],
+  dockerArgs = null,
+  verifyCandidateTree = null,
+} = {}) {
+  const currentUid = process.getuid?.();
+  if (!Number.isInteger(currentUid) || typeof resourceName !== "string" || resourceName.length === 0) {
+    fail("Docker bind source guard identity is incomplete");
+  }
+  for (const path of [trustedAnchorRoot, namespaceRoot, candidateRoot]) {
+    if (typeof path !== "string" || resolve(path) !== path || realpathSync(path) !== path) {
+      fail("Docker bind source guard roots must be absolute lexical paths");
+    }
+  }
+  if (
+    namespaceRoot !== trustedAnchorRoot && !namespaceRoot.startsWith(`${trustedAnchorRoot}/`)
+    || candidateRoot !== namespaceRoot && !candidateRoot.startsWith(`${namespaceRoot}/`)
+  ) fail("Docker bind source guard roots escape the trusted namespace");
+  const sources = [...authoritySources, ...expectedMounts];
+  if (sources.length === 0) fail("Docker bind source guard requires at least one pathname source");
+  const mountProjection = expectedMounts.map(({ source, target }) => ({ source, target, read_only: true }))
+    .sort((left, right) => left.target.localeCompare(right.target));
+  const actualMounts = parseBindMountArgs(dockerArgs);
+  if (actualMounts !== null && canonicalizeJcs(actualMounts) !== canonicalizeJcs(mountProjection)) {
+    fail(`${resourceName} Docker bind source argv differs from the exact authority`);
+  }
+  const directories = new Map();
+  const files = new Map();
+  let totalBytes = 0;
+  let totalEntries = 0;
+  let candidateTreeRequired = false;
+  const closeAll = () => {
+    for (const entry of [...files.values()].reverse()) closeSync(entry.fd);
+    for (const entry of [...directories.values()].reverse()) closeSync(entry.fd);
+    files.clear();
+    directories.clear();
+  };
+  const openDirectory = (path) => {
+    if (directories.has(path)) return directories.get(path);
+    const before = lstatSync(path, { bigint: true });
+    if (
+      !before.isDirectory() || before.isSymbolicLink()
+      || before.uid !== BigInt(currentUid) || (before.mode & 0o022n) !== 0n || before.nlink < 1n
+      || realpathSync(path) !== path
+    ) fail(`${resourceName} bind source directory is unsafe`);
+    const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | (fsConstants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(fd, { bigint: true });
+    if (canonicalizeJcs(bindSourceIdentity(before)) !== canonicalizeJcs(bindSourceIdentity(opened))) {
+      closeSync(fd);
+      fail(`${resourceName} bind source directory changed while opening`);
+    }
+    const entry = Object.freeze({ path, fd, identity: bindSourceIdentity(opened) });
+    directories.set(path, entry);
+    totalEntries += 1;
+    if (totalEntries > BIND_SOURCE_ENTRY_LIMIT) fail(`${resourceName} bind source entry limit exceeded`);
+    return entry;
+  };
+  const openFile = (path) => {
+    if (files.has(path)) return files.get(path);
+    const before = lstatSync(path, { bigint: true });
+    if (
+      !before.isFile() || before.isSymbolicLink()
+      || before.uid !== BigInt(currentUid) || (before.mode & 0o022n) !== 0n || before.nlink !== 1n
+      || realpathSync(path) !== path
+    ) fail(`${resourceName} bind source regular file is unsafe`);
+    const fd = openSync(path, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(fd, { bigint: true });
+    if (canonicalizeJcs(bindSourceIdentity(before)) !== canonicalizeJcs(bindSourceIdentity(opened))) {
+      closeSync(fd);
+      fail(`${resourceName} bind source file changed while opening`);
+    }
+    const bytes = readHeldRegularFile(fd, opened, resourceName);
+    const after = fstatSync(fd, { bigint: true });
+    if (canonicalizeJcs(bindSourceIdentity(opened)) !== canonicalizeJcs(bindSourceIdentity(after))) {
+      closeSync(fd);
+      fail(`${resourceName} bind source file changed while hashing`);
+    }
+    totalBytes += bytes.length;
+    totalEntries += 1;
+    if (totalBytes > BIND_SOURCE_TOTAL_LIMIT || totalEntries > BIND_SOURCE_ENTRY_LIMIT) {
+      closeSync(fd);
+      fail(`${resourceName} bind source inventory limit exceeded`);
+    }
+    const entry = Object.freeze({
+      path,
+      fd,
+      identity: bindSourceIdentity(opened),
+      content_digest: sha256Bytes(bytes),
+    });
+    files.set(path, entry);
+    return entry;
+  };
+  const openParents = (path) => {
+    for (const parent of containedDirectoryPaths(trustedAnchorRoot, dirname(path))) openDirectory(parent);
+  };
+  const openRecursiveDirectory = (path) => {
+    openDirectory(path);
+    for (const name of readdirSync(path).sort((left, right) => left.localeCompare(right))) {
+      if (!name || name === "." || name === "..") fail(`${resourceName} bind source child is invalid`);
+      const child = join(path, name);
+      const stat = lstatSync(child, { bigint: true });
+      if (stat.isDirectory() && !stat.isSymbolicLink()) openRecursiveDirectory(child);
+      else if (stat.isFile() && !stat.isSymbolicLink()) openFile(child);
+      else fail(`${resourceName} bind source contains a symlink or special node`);
+    }
+  };
+  try {
+    for (const source of sources) {
+      if (
+        !source || typeof source.source !== "string" || resolve(source.source) !== source.source
+        || !["candidate-tree", "recursive-directory", "regular-file"].includes(source.source_kind)
+        || (source.source !== namespaceRoot && !source.source.startsWith(`${namespaceRoot}/`))
+      ) fail(`${resourceName} bind source contract is invalid or escapes the run namespace`);
+      openParents(source.source);
+      if (source.source_kind === "regular-file") openFile(source.source);
+      else if (source.source_kind === "recursive-directory") openRecursiveDirectory(source.source);
+      else {
+        if (
+          source.source !== candidateRoot && !source.source.startsWith(`${candidateRoot}/`)
+          || typeof verifyCandidateTree !== "function"
+        ) fail(`${resourceName} candidate-tree bind source lacks physical authority`);
+        openDirectory(source.source);
+        candidateTreeRequired = true;
+      }
+    }
+  } catch (error) {
+    closeAll();
+    throw error;
+  }
+  const sourceProjection = {
+    schema: "homecook.release-rehearsal-docker-bind-source-authority.v1",
+    resource_name_digest: sha256Jcs(resourceName),
+    mount_projection: mountProjection.map((entry) => ({
+      source_path_digest: sha256Jcs(entry.source),
+      target: entry.target,
+      read_only: entry.read_only,
+    })),
+    directories: [...directories.values()].map((entry) => ({ path_digest: sha256Jcs(entry.path), identity: entry.identity })),
+    files: [...files.values()].map((entry) => ({ path_digest: sha256Jcs(entry.path), identity: entry.identity, content_digest: entry.content_digest })),
+  };
+  let closed = false;
+  const verify = (phase = "Docker bind source transition") => {
+    if (closed) fail(`${resourceName} Docker bind source guard is closed`);
+    if (candidateTreeRequired) verifyCandidateTree();
+    for (const entry of directories.values()) {
+      const pathStat = lstatSync(entry.path, { bigint: true });
+      const fdStat = fstatSync(entry.fd, { bigint: true });
+      if (
+        !pathStat.isDirectory() || pathStat.isSymbolicLink() || realpathSync(entry.path) !== entry.path
+        || canonicalizeJcs(bindSourceIdentity(pathStat)) !== canonicalizeJcs(entry.identity)
+        || canonicalizeJcs(bindSourceIdentity(fdStat)) !== canonicalizeJcs(entry.identity)
+      ) fail(`${phase} detected bind source directory identity drift`);
+    }
+    for (const entry of files.values()) {
+      const pathStat = lstatSync(entry.path, { bigint: true });
+      const fdStat = fstatSync(entry.fd, { bigint: true });
+      if (
+        !pathStat.isFile() || pathStat.isSymbolicLink() || realpathSync(entry.path) !== entry.path
+        || canonicalizeJcs(bindSourceIdentity(pathStat)) !== canonicalizeJcs(entry.identity)
+        || canonicalizeJcs(bindSourceIdentity(fdStat)) !== canonicalizeJcs(entry.identity)
+        || sha256Bytes(readHeldRegularFile(entry.fd, fdStat, resourceName)) !== entry.content_digest
+      ) fail(`${phase} detected bind source regular-file identity or content drift`);
+    }
+    return sha256Jcs(sourceProjection);
+  };
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    closeAll();
+  };
+  try { verify(`${resourceName} bind source authority issuance`); }
+  catch (error) { close(); throw error; }
+  return Object.freeze({ verify, close, authority_digest: sha256Jcs(sourceProjection) });
+}
+
+export function createDockerBindSourceGuard(options = {}) {
+  const stableFailure = () => fail("Docker bind source authority changed");
+  let guard;
+  try { guard = createDockerBindSourceGuardUnsafe(options); }
+  catch { stableFailure(); }
+  return Object.freeze({
+    authority_digest: guard.authority_digest,
+    verify(phase) {
+      try { return guard.verify(phase); }
+      catch { return stableFailure(); }
+    },
+    close() {
+      try { return guard.close(); }
+      catch { return stableFailure(); }
+    },
+  });
+}
+
+export async function executeDockerBindCreateTransition({ guard, create, inspect, record } = {}) {
+  if (
+    typeof guard?.verify !== "function" || typeof guard?.close !== "function"
+    || typeof create !== "function" || typeof inspect !== "function" || typeof record !== "function"
+  ) fail("Docker bind create transition dependencies are incomplete");
+  try {
+    guard.verify("Docker bind source pre-create");
+    const created = await create();
+    record(created);
+    const observed = await inspect(created);
+    guard.verify("Docker bind source post-create inspect");
+    return Object.freeze({ created, observed });
+  } finally {
+    guard.close();
+  }
+}
+
 /**
  * Produces a commit-safe golden input from a locally resolved Compose document.
  * The raw resolver output never becomes an artifact: absolute local values are
@@ -219,14 +528,82 @@ export function buildSafeResolvedComposeGoldenFixture() {
   });
 }
 
-/** Compile read-only `docker compose config --format json` output into a closed R2 plan. */
-export function compileClosedPrimitivePlan(config, { project, ports, expectedStartupIdentity } = {}) {
+export function buildFullLocalBindSourceContract({
+  candidateRoot,
+  candidateAuthorityRoot,
+  fullLocalRoot,
+  secretRoot,
+} = {}) {
+  for (const [label, path] of Object.entries({ candidateRoot, candidateAuthorityRoot, fullLocalRoot, secretRoot })) {
+    if (typeof path !== "string" || resolve(path) !== path) fail(`full-local ${label} bind root is not absolute and lexical`);
+  }
+  const services = Object.fromEntries(SERVICES.map((service) => {
+    const contract = SERVICE_RUNTIME_CONTRACT[service];
+    const sources = [];
+    for (const target of contract.volumeTargets) {
+      if (["/var/lib/postgresql/data", "/var/lib/storage"].includes(target)) continue;
+      if (target === "/sealed-candidate") {
+        sources.push({ source: candidateRoot, target, read_only: true, source_kind: "candidate-tree" });
+        continue;
+      }
+      if (target === "/sealed-candidate-authority") {
+        sources.push({ source: candidateAuthorityRoot, target, read_only: true, source_kind: "recursive-directory" });
+        continue;
+      }
+      const relative = FULL_LOCAL_BIND_RELATIVE_BY_TARGET[target];
+      if (!relative) fail(`full-local bind target lacks a canonical source: ${service}`);
+      sources.push({
+        source: join(fullLocalRoot, relative),
+        target,
+        read_only: true,
+        source_kind: target.endsWith("/homecook-attestation") ? "recursive-directory" : "regular-file",
+      });
+    }
+    for (const secret of contract.secrets) {
+      sources.push({
+        source: join(secretRoot, secret),
+        target: `/run/secrets/${secret}`,
+        read_only: true,
+        source_kind: "regular-file",
+      });
+    }
+    return [service, Object.freeze(sources.sort((left, right) => left.target.localeCompare(right.target)))];
+  }));
+  return Object.freeze({
+    schema: "homecook.r2-full-local-bind-source-contract.v1",
+    services: Object.freeze(services),
+    contract_digest: sha256Jcs({ schema: "homecook.r2-full-local-bind-source-contract.v1", services }),
+  });
+}
+
+/**
+ * Compile read-only `docker compose config --format json` output into a closed R2 plan.
+ * @param {Record<string, any>} config
+ * @param {{project?:string,ports?:Record<string,number>,expectedStartupIdentity?:Record<string,unknown>,bindSourceContract?:Record<string,any>|null}} options
+ */
+export function compileClosedPrimitivePlan(config, {
+  project,
+  ports,
+  expectedStartupIdentity,
+  bindSourceContract = /** @type {Record<string, any>|null} */ (null),
+} = {}) {
   if (!config || typeof config !== "object" || Array.isArray(config)) fail("resolved Compose config is invalid");
   const keys = Object.keys(config).sort();
   if (canonicalizeJcs(keys) !== canonicalizeJcs(RESOLVED_COMPOSE_TOP_LEVEL_KEYS)) fail("resolved Compose top-level fields are not closed");
   if (!project || !ports || !config.services || typeof config.services !== "object") fail("primitive plan authority is incomplete");
   const names = Object.keys(config.services).sort();
   if (canonicalizeJcs(names) !== canonicalizeJcs([...SERVICES].sort())) fail("resolved Compose service set is not exact");
+  if (
+    bindSourceContract !== null
+    && (
+      bindSourceContract?.schema !== "homecook.r2-full-local-bind-source-contract.v1"
+      || canonicalizeJcs(Object.keys(bindSourceContract.services ?? {}).sort()) !== canonicalizeJcs([...SERVICES].sort())
+      || bindSourceContract.contract_digest !== sha256Jcs({
+        schema: bindSourceContract.schema,
+        services: bindSourceContract.services,
+      })
+    )
+  ) fail("full-local bind source contract is invalid");
   const compiledServices = new Map();
   for (const service of SERVICES) {
     const value = config.services[service];
@@ -257,6 +634,7 @@ export function compileClosedPrimitivePlan(config, { project, ports, expectedSta
       const expectedProbe = buildFullLocalProbeStartupContract({
         candidateVerification: buildCandidateContainerVerificationContract({
           candidateRoot: "/private/homecook-r2-candidate-authority",
+          expectedIdentity: expectedStartupIdentity,
         }),
         expectedIdentity: expectedStartupIdentity,
       });
@@ -266,7 +644,32 @@ export function compileClosedPrimitivePlan(config, { project, ports, expectedSta
         || healthcheck.command !== expectedHealthcheck.command
       ) fail("resolved Compose postgrest-probe startup authority differs");
     }
-    compiledServices.set(service, Object.freeze({ name: service, ...value, depends_on: dependsOn, healthcheck, ports: servicePorts, secret_mounts: secretMounts }));
+    const actualBindSources = [
+      ...(value.volumes ?? []).filter((entry) => entry?.type === "bind").map((entry) => ({
+        source: entry.source,
+        target: entry.target,
+        read_only: entry.read_only === true,
+      })),
+      ...secretMounts.map((entry) => ({
+        source: entry.file,
+        target: `/run/secrets/${entry.target}`,
+        read_only: true,
+      })),
+    ].sort((left, right) => left.target.localeCompare(right.target));
+    const expectedBindSources = bindSourceContract?.services?.[service] ?? null;
+    if (
+      expectedBindSources !== null
+      && canonicalizeJcs(actualBindSources) !== canonicalizeJcs(expectedBindSources.map(({ source, target, read_only }) => ({ source, target, read_only })))
+    ) fail(`resolved Compose bind source authority differs: ${service}`);
+    compiledServices.set(service, Object.freeze({
+      name: service,
+      ...value,
+      depends_on: dependsOn,
+      healthcheck,
+      ports: servicePorts,
+      secret_mounts: secretMounts,
+      bind_sources: expectedBindSources ?? actualBindSources.map((entry) => ({ ...entry, source_kind: "regular-file" })),
+    }));
   }
   for (const network of ["auth-edge", "auth-egress", "data-internal"]) if (config.networks?.[network]?.internal !== true) fail(`resolved Compose network is not internal: ${network}`);
   for (const volume of ["postgres-data", "storage-data"]) if (!config.volumes?.[volume]) fail(`resolved Compose volume is missing: ${volume}`);
@@ -484,7 +887,10 @@ export function buildFullLocalComposeOverride(namespace, {
   const probeContract = candidateRoot === null
     ? null
     : buildFullLocalProbeStartupContract({
-      candidateVerification: buildCandidateContainerVerificationContract({ candidateRoot }),
+      candidateVerification: buildCandidateContainerVerificationContract({
+        candidateRoot,
+        expectedIdentity: buildCandidateStartupIdentity(manifest),
+      }),
       expectedIdentity: buildCandidateStartupIdentity(manifest),
     });
   const labels = [
@@ -720,10 +1126,15 @@ export function recordPrimitiveCreateResult(ledger, expected, stdout, inspected)
   const match = /^([0-9a-f]{64})\n?$/u.exec(stdout ?? "");
   if (!match) fail("primitive create stdout must contain exactly one 64-hex ID");
   const entry = { kind: expected.kind, id: match[1], name: expected.name };
+  ledger.record(entry);
+  validatePrimitiveCreatedInspection(expected, entry, inspected);
+  return Object.freeze(entry);
+}
+
+function validatePrimitiveCreatedInspection(expected, entry, inspected) {
   if (!inspected || inspected.kind !== entry.kind || inspected.id !== entry.id || inspected.name !== entry.name) fail("primitive create inspect identity mismatch");
   for (const [key, value] of Object.entries(expected.labels ?? {})) if (inspected.labels?.[key] !== value) fail("primitive create inspect labels mismatch");
-  ledger.record(entry);
-  return Object.freeze(entry);
+  return inspected;
 }
 
 async function assertExpectedCreatedResources(state, expectedNames, { signal, requireAll = false } = {}) {
@@ -1036,39 +1447,74 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
   };
 }
 
-async function runContainer(state, args, { signal, candidatePathAuthority = false } = {}) {
+async function runContainer(state, args, {
+  signal,
+  candidatePathAuthority = false,
+  trustedNamespaceAnchor = state.trustedNamespaceAnchor ?? state.namespaceRoot,
+  expectedMounts = [],
+} = {}) {
   const nameIndex = args.indexOf("--name");
   const expectedName = nameIndex >= 0 ? args[nameIndex + 1] : null;
   try {
     if (args[0] !== "run" || !args.includes("--detach")) fail("primitive container creation requires a detached run template");
     const createArgs = ["create", ...args.slice(1).filter((token) => token !== "--detach")];
-    if (candidatePathAuthority) {
-      state.verifyCandidatePathAuthority({
+    const verifyCandidateTree = candidatePathAuthority
+      ? () => state.verifyCandidatePathAuthority({
         candidateRoot: state.candidateRoot,
         candidateContainerAuthorityRoot: state.candidateVerification.host_authority_root,
-        phase: `${expectedName} pre-bind`,
-      });
-    }
-    const stdout = (await dockerCommand(state, createArgs, { signal })).stdout;
-    const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
-    if (!id || !expectedName) fail("docker create did not return exact container identity");
-    const entry = { kind: "container", id, name: expectedName };
-    const observed = await inspectResource(state, entry, { signal });
-    recordPrimitiveCreateResult(state.creationLedger, {
-      ...entry,
-      labels: {
-        [RUN_OWNERSHIP_LABEL]: state.runId,
-        [RUN_PROJECT_LABEL]: state.namespace.project,
-        [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
-      },
-    }, stdout, observed);
-    if (candidatePathAuthority) {
-      state.verifyCandidatePathAuthority({
+        phase: `${expectedName} candidate-tree bind gate`,
+      })
+      : null;
+    const bindGuard = expectedMounts.length === 0
+      ? null
+      : createDockerBindSourceGuard({
+        trustedAnchorRoot: trustedNamespaceAnchor,
+        namespaceRoot: state.namespaceRoot,
         candidateRoot: state.candidateRoot,
-        candidateContainerAuthorityRoot: state.candidateVerification.host_authority_root,
-        phase: `${expectedName} post-bind`,
+        resourceName: expectedName ?? "unnamed container",
+        expectedMounts,
+        dockerArgs: createArgs,
+        verifyCandidateTree,
       });
-    }
+    let stdout = "";
+    const create = async () => {
+      stdout = (await dockerCommand(state, createArgs, { signal })).stdout;
+      const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
+      if (!id || !expectedName) fail("docker create did not return exact container identity");
+      return { kind: "container", id, name: expectedName };
+    };
+    const transition = bindGuard === null
+      ? await (async () => {
+        const created = await create();
+        const observed = await inspectResource(state, created, { signal });
+        recordPrimitiveCreateResult(state.creationLedger, {
+          ...created,
+          labels: {
+            [RUN_OWNERSHIP_LABEL]: state.runId,
+            [RUN_PROJECT_LABEL]: state.namespace.project,
+            [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
+          },
+        }, stdout, observed);
+        return { created, observed };
+      })()
+      : await executeDockerBindCreateTransition({
+        guard: bindGuard,
+        create,
+        inspect: async (created) => {
+          const observed = await inspectResource(state, created, { signal });
+          validatePrimitiveCreatedInspection({
+            ...created,
+            labels: {
+              [RUN_OWNERSHIP_LABEL]: state.runId,
+              [RUN_PROJECT_LABEL]: state.namespace.project,
+              [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
+            },
+          }, created, observed);
+          return observed;
+        },
+        record: (created) => state.creationLedger.record(created),
+      });
+    const id = transition.created.id;
     await dockerCommand(state, ["start", id], {
       signal,
       ownership: { verifiedOwnership: true, resourceId: id },
@@ -1109,7 +1555,7 @@ function runtimeIdentity(component, containerIds, reportedIdentity, workerRpcIde
 }
 
 /**
- * @param {{candidateRoot:string,containerCandidateRoot?:string,containerAuthorityRoot?:string,candidateModuleUrl?:string,jcsModuleUrl?:string}} options
+ * @param {{candidateRoot:string,containerCandidateRoot?:string,containerAuthorityRoot?:string,candidateModuleUrl?:string,jcsModuleUrl?:string,expectedIdentity?:Record<string,unknown>|null}} options
  */
 export function buildCandidateContainerVerificationContract({
   candidateRoot,
@@ -1117,6 +1563,7 @@ export function buildCandidateContainerVerificationContract({
   containerAuthorityRoot = "/sealed-candidate-authority",
   candidateModuleUrl = "file:///sealed-candidate/bundles/bundle/app/scripts/lib/local-mac-production-rehearsal-candidate.mjs",
   jcsModuleUrl = "file:///sealed-candidate/bundles/bundle/app/scripts/lib/rfc8785-jcs.mjs",
+  expectedIdentity = null,
 } = {}) {
   if (
     typeof candidateRoot !== "string" || resolve(candidateRoot) !== candidateRoot
@@ -1127,12 +1574,20 @@ export function buildCandidateContainerVerificationContract({
   ) fail("candidate container verification contract paths are invalid");
   const hostAuthorityRoot = completedCandidateContainerAuthorityRoot(candidateRoot);
   const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
-  /** @param {{outputPath?:string|null}} options */
-  const identitySource = ({ outputPath = null } = {}) => {
+  const contractExpected = expectedIdentity === null
+    ? null
+    : canonicalizeJcs(validateCandidateStartupIdentity(expectedIdentity));
+  /** @param {{outputPath?:string|null,expectedIdentity?:Record<string,unknown>|null}} options */
+  const identitySource = ({ outputPath = null, expectedIdentity: callExpected = null } = {}) => {
+    const expected = callExpected === null
+      ? contractExpected
+      : canonicalizeJcs(validateCandidateStartupIdentity(callExpected));
+    if (expected === null) fail("candidate container wrapper requires a manifest-derived expected startup identity");
     const write = outputPath
       ? `require('node:fs').writeFileSync(${JSON.stringify(outputPath)},canonical,{flag:'wx',mode:0o400});`
       : "process.stdout.write(canonical);";
-    return `(async()=>{const c=await import(${JSON.stringify(candidateModuleUrl)});const j=await import(${JSON.stringify(jcsModuleUrl)});const m=c.readCompletedCandidateContainerRoot(${JSON.stringify(containerCandidateRoot)},{containerAuthorityPath:${JSON.stringify(containerAuthorityPath)}}).manifest;const identity=c.buildCandidateStartupIdentity(m);const canonical=j.canonicalizeJcs(identity);${write}return identity})()`;
+    const compare = `if(canonical!==${JSON.stringify(expected)})throw new Error('candidate startup identity differs');`;
+    return `(async()=>{const c=await import(${JSON.stringify(candidateModuleUrl)});const j=await import(${JSON.stringify(jcsModuleUrl)});const m=c.readCompletedCandidateContainerRoot(${JSON.stringify(containerCandidateRoot)},{containerAuthorityPath:${JSON.stringify(containerAuthorityPath)}}).manifest;const identity=c.buildCandidateStartupIdentity(m);const canonical=j.canonicalizeJcs(identity);${compare}${write}return identity})()`;
   };
   return Object.freeze({
     container_candidate_root: containerCandidateRoot,
@@ -1166,7 +1621,7 @@ export function buildFullLocalProbeStartupContract({
     || typeof postgrestReadyUrl !== "string" || postgrestReadyUrl.length === 0
   ) fail("full-local probe startup authority is incomplete");
   const canonicalExpectedIdentity = canonicalizeJcs(validateCandidateStartupIdentity(expectedIdentity));
-  const startupSource = `${candidateVerification.identitySource({ outputPath: identityOutputPath })}.then(()=>setInterval(()=>{},2147483647)).catch(()=>process.exit(70))`;
+  const startupSource = `${candidateVerification.identitySource({ outputPath: identityOutputPath, expectedIdentity })}.then(()=>setInterval(()=>{},2147483647)).catch(()=>process.exit(70))`;
   const healthSource = [
     "const fs=require('node:fs');",
     `const path=${JSON.stringify(identityOutputPath)};`,
@@ -1327,10 +1782,11 @@ async function collectProductionSnapshot(state, signal) {
 }
 
 /**
- * @param {{candidateInput:string, namespaceRoot:string, runId:string, homeDir?:string, rootDir?:string, productionEnvAuthorityPath?:string|null, dockerBin?:string|null, dockerSocketPath?:string|null, runCommand?:Function, productionSnapshotReader?:Function|null, daemonSnapshotReader?:Function|null, dockerEndpointResolver?:Function, trustedToolResolver?:Record<string, any>|null, platform?:string, clock?:Function, sleep?:Function}} options
+ * @param {{candidateInput:string, trustedNamespaceAnchor?:string, namespaceRoot:string, runId:string, homeDir?:string, rootDir?:string, productionEnvAuthorityPath?:string|null, dockerBin?:string|null, dockerSocketPath?:string|null, runCommand?:Function, productionSnapshotReader?:Function|null, daemonSnapshotReader?:Function|null, dockerEndpointResolver?:Function, trustedToolResolver?:Record<string, any>|null, platform?:string, clock?:Function, sleep?:Function}} options
  */
 export function createLocalReleaseRehearsalRunnerAdapters({
   candidateInput,
+  trustedNamespaceAnchor = /** @type {string|null} */ (null),
   namespaceRoot,
   runId,
   homeDir = process.env.HOME ?? "",
@@ -1347,7 +1803,13 @@ export function createLocalReleaseRehearsalRunnerAdapters({
   clock = () => Date.now(),
   sleep = async () => {},
 } = {}) {
-  if (!candidateInput || !namespaceRoot || !runId) fail("adapter factory requires candidate, namespace, and run identity");
+  const resolvedTrustedNamespaceAnchor = trustedNamespaceAnchor ?? namespaceRoot;
+  if (!candidateInput || !resolvedTrustedNamespaceAnchor || !namespaceRoot || !runId) fail("adapter factory requires candidate, trusted anchor, namespace, and run identity");
+  if (
+    resolve(resolvedTrustedNamespaceAnchor) !== resolvedTrustedNamespaceAnchor
+    || resolve(namespaceRoot) !== namespaceRoot
+    || (namespaceRoot !== resolvedTrustedNamespaceAnchor && !namespaceRoot.startsWith(`${resolvedTrustedNamespaceAnchor}/`))
+  ) fail("adapter trusted namespace anchor contract is invalid");
   const resolvedHome = resolve(homeDir);
   const resolvedRoot = resolve(rootDir);
   if ([dockerEndpointResolver, runCommand, clock, sleep].some((value) => typeof value !== "function")) fail("adapter trusted dependencies must be functions");
@@ -1361,6 +1823,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
   });
   const state = {
     candidateInput,
+    trustedNamespaceAnchor: resolvedTrustedNamespaceAnchor,
     namespaceRoot,
     runId,
     homeDir: resolvedHome,
@@ -1453,6 +1916,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       candidateContainerAuthorityRoot,
       namespace,
       runRoot,
+      trustedNamespaceAnchor = state.trustedNamespaceAnchor,
       signal,
       independentObserver = null,
       verifyCandidatePathAuthority,
@@ -1461,7 +1925,11 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       state.namespace = namespace;
       state.runRoot = runRoot;
       state.candidateRoot = candidateRoot;
-      state.candidateVerification = buildCandidateContainerVerificationContract({ candidateRoot });
+      if (trustedNamespaceAnchor !== state.trustedNamespaceAnchor) fail("resource trusted namespace anchor differs from adapter authority");
+      state.candidateVerification = buildCandidateContainerVerificationContract({
+        candidateRoot,
+        expectedIdentity: buildCandidateStartupIdentity(manifest),
+      });
       if (typeof verifyCandidatePathAuthority !== "function") fail("candidate path authority verifier is unavailable");
       state.verifyCandidatePathAuthority = verifyCandidatePathAuthority;
       if (candidateContainerAuthorityRoot !== state.candidateVerification.host_authority_root) {
@@ -1488,6 +1956,11 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         readSecret: (name) => state.secrets[name],
         targetDirectory: env.FULL_LOCAL_SECRET_DIR,
       });
+      const verifyCandidateTree = () => state.verifyCandidatePathAuthority({
+        candidateRoot,
+        candidateContainerAuthorityRoot,
+        phase: "Docker bind source candidate-tree gate",
+      });
       // Compose is configuration authority only.  Primitive resources return IDs directly.
       const primitiveLabels = [
         "--label", `${RUN_OWNERSHIP_LABEL}=${state.runId}`,
@@ -1510,40 +1983,74 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         const observed = await inspectResource(state, entry, { signal: state.activeSignal });
         recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
       }
-      const resolved = await dockerCommand(state, [
-        "compose", "--project-name", namespace.project, "--env-file", envPath,
-        "-f", sealedCompose, "-f", overridePath, "config", "--format", "json",
-      ], { signal: state.activeSignal });
+      const composeSourceGuard = createDockerBindSourceGuard({
+        trustedAnchorRoot: trustedNamespaceAnchor,
+        namespaceRoot: state.namespaceRoot,
+        candidateRoot,
+        resourceName: "full-local resolved Compose configuration",
+        authoritySources: [sealedCompose, overridePath, envPath].map((source) => ({
+          source,
+          source_kind: "regular-file",
+        })),
+      });
+      let resolved;
+      try {
+        composeSourceGuard.verify("full-local Compose config pre-read");
+        resolved = await dockerCommand(state, [
+          "compose", "--project-name", namespace.project, "--env-file", envPath,
+          "-f", sealedCompose, "-f", overridePath, "config", "--format", "json",
+        ], { signal: state.activeSignal });
+        composeSourceGuard.verify("full-local Compose config post-read");
+      } finally {
+        composeSourceGuard.close();
+      }
       let config;
       try { config = JSON.parse(resolved.stdout); } catch { fail("read-only Compose config output is invalid JSON"); }
+      const bindSourceContract = buildFullLocalBindSourceContract({
+        candidateRoot,
+        candidateAuthorityRoot: candidateContainerAuthorityRoot,
+        fullLocalRoot: dirname(sealedCompose),
+        secretRoot: env.FULL_LOCAL_SECRET_DIR,
+      });
       const plan = compileClosedPrimitivePlan(config, {
         project: namespace.project,
         ports: namespace.ports,
         expectedStartupIdentity: buildCandidateStartupIdentity(manifest),
+        bindSourceContract,
       });
       state.primitivePlan = Object.freeze({ plan, digest: sha256Jcs(plan) });
       state.primitiveOperations = compilePrimitiveServiceOperations(plan, namespace, primitiveLabels);
       for (const service of plan.services) {
         const primitive = primitiveServiceArgs(service, namespace, primitiveLabels);
-        if (service.name === "postgrest-probe") {
-          state.verifyCandidatePathAuthority({
-            candidateRoot,
-            candidateContainerAuthorityRoot,
-            phase: "postgrest-probe pre-bind",
-          });
-        }
-        const stdout = (await dockerCommand(state, primitive.args, { signal: state.activeSignal })).stdout;
-        const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
-        const entry = { kind: "container", id, name: `${namespace.project}-${service.name}-1` };
-        const observed = await inspectResource(state, entry, { signal: state.activeSignal });
-        recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
-        if (service.name === "postgrest-probe") {
-          state.verifyCandidatePathAuthority({
-            candidateRoot,
-            candidateContainerAuthorityRoot,
-            phase: "postgrest-probe post-bind",
-          });
-        }
+        const bindGuard = createDockerBindSourceGuard({
+          trustedAnchorRoot: trustedNamespaceAnchor,
+          namespaceRoot: state.namespaceRoot,
+          candidateRoot,
+          resourceName: `full-local ${service.name}`,
+          expectedMounts: service.bind_sources,
+          dockerArgs: primitive.args,
+          verifyCandidateTree,
+        });
+        const transition = await executeDockerBindCreateTransition({
+          guard: bindGuard,
+          create: async () => {
+            const stdout = (await dockerCommand(state, primitive.args, { signal: state.activeSignal })).stdout;
+            const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
+            if (!id) fail(`full-local ${service.name} create did not return one exact ID`);
+            return { kind: "container", id, name: `${namespace.project}-${service.name}-1` };
+          },
+          inspect: async (entry) => {
+            const observed = await inspectResource(state, entry, { signal: state.activeSignal });
+            validatePrimitiveCreatedInspection({
+              ...entry,
+              labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce },
+            }, entry, observed);
+            return observed;
+          },
+          record: (entry) => state.creationLedger.record(entry),
+        });
+        const entry = transition.created;
+        const id = entry.id;
         for (const network of primitive.additionalNetworks) {
           await dockerCommand(state, ["network", "connect", ...network.aliases.flatMap((alias) => ["--alias", alias]), `${namespace.project}_${network.name}`, id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
         }
@@ -1666,11 +2173,16 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       candidateRoot,
       candidateContainerAuthorityRoot,
       namespace,
+      trustedNamespaceAnchor = state.trustedNamespaceAnchor,
       signal,
       verifyCandidatePathAuthority,
     }) {
       state.activeSignal = signal ?? state.activeSignal;
-      const candidateVerification = buildCandidateContainerVerificationContract({ candidateRoot });
+      if (trustedNamespaceAnchor !== state.trustedNamespaceAnchor) fail("runtime trusted namespace anchor differs from resource authority");
+      const candidateVerification = buildCandidateContainerVerificationContract({
+        candidateRoot,
+        expectedIdentity: buildCandidateStartupIdentity(manifest),
+      });
       if (
         candidateContainerAuthorityRoot !== candidateVerification.host_authority_root
         || state.candidateVerification?.host_authority_root !== candidateVerification.host_authority_root
@@ -1726,7 +2238,30 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         nodeImage,
         "node", "-e", appWrapper,
       ];
-      const appId = await runContainer(state, appArgs, { signal: state.activeSignal, candidatePathAuthority: true });
+      const candidateMountSources = [
+        {
+          source: candidateRoot,
+          target: candidateVerification.container_candidate_root,
+          read_only: true,
+          source_kind: "candidate-tree",
+        },
+        {
+          source: candidateVerification.host_authority_root,
+          target: dirname(candidateVerification.container_authority_path),
+          read_only: true,
+          source_kind: "recursive-directory",
+        },
+      ];
+      const appId = await runContainer(state, appArgs, {
+        signal: state.activeSignal,
+        candidatePathAuthority: true,
+        trustedNamespaceAnchor,
+        expectedMounts: [
+          { source: appRoot, target: "/workspace", read_only: true, source_kind: "candidate-tree" },
+          ...candidateMountSources,
+          { source: join(state.runtimeRoot, "secret-fds"), target: "/run/app-secrets", read_only: true, source_kind: "recursive-directory" },
+        ],
+      });
       if (state.independentObserver?.registerChild) {
         const subject = await readContainerObserverSubject(state, { containerId: appId, component: "app", signal: state.activeSignal });
         await state.independentObserver.registerChild(subject);
@@ -1759,7 +2294,16 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         ...dockerEnvironmentArgs(workerEnvironment),
         nodeImage, "node", "-e", wrapper,
       ];
-      const workerId = await runContainer(state, workerArgs, { signal: state.activeSignal, candidatePathAuthority: true });
+      const workerId = await runContainer(state, workerArgs, {
+        signal: state.activeSignal,
+        candidatePathAuthority: true,
+        trustedNamespaceAnchor,
+        expectedMounts: [
+          { source: state.worker.workerRoot, target: "/sealed-worker", read_only: true, source_kind: "candidate-tree" },
+          { source: state.worker.workerSecretRoot, target: "/run/worker-secrets", read_only: true, source_kind: "recursive-directory" },
+          ...candidateMountSources,
+        ],
+      });
       if (state.independentObserver?.registerChild) {
         const subject = await readContainerObserverSubject(state, { containerId: workerId, component: "worker", signal: state.activeSignal });
         await state.independentObserver.registerChild(subject);

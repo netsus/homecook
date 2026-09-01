@@ -1893,13 +1893,16 @@ describe("release rehearsal candidate orchestration", () => {
     const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
     const issueContainerAuthority = candidateModule.issueCompletedCandidateContainerAuthority;
     const readContainerCandidate = candidateModule.readCompletedCandidateContainerRoot;
+    const buildStartupIdentity = candidateModule.buildCandidateStartupIdentity;
     const buildContainerContract = adaptersModule.buildCandidateContainerVerificationContract;
     expect(typeof issueContainerAuthority).toBe("function");
     expect(typeof readContainerCandidate).toBe("function");
+    expect(typeof buildStartupIdentity).toBe("function");
     expect(typeof buildContainerContract).toBe("function");
     if (
       typeof issueContainerAuthority !== "function"
       || typeof readContainerCandidate !== "function"
+      || typeof buildStartupIdentity !== "function"
       || typeof buildContainerContract !== "function"
     ) return;
 
@@ -1927,6 +1930,7 @@ describe("release rehearsal candidate orchestration", () => {
       containerAuthorityRoot?: string;
       candidateModuleUrl?: string;
       jcsModuleUrl?: string;
+      expectedIdentity?: Record<string, unknown>;
     }) => {
       container_candidate_root: string;
       container_authority_path: string;
@@ -1939,6 +1943,7 @@ describe("release rehearsal candidate orchestration", () => {
       containerAuthorityRoot,
       candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
       jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+      expectedIdentity: (buildStartupIdentity as (manifest: Record<string, unknown>) => Record<string, unknown>)(fixture.manifest),
     });
     expect(contract).toMatchObject({
       container_candidate_root: fixture.candidateRoot,

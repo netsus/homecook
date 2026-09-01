@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { chmodSync, existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -524,6 +524,18 @@ function createAdapters() {
 }
 
 describe("release rehearsal R2 input and namespace gates", () => {
+  it("redacts the trusted home path when default namespace resolution fails", () => {
+    const resolveNamespace = (rehearsalRunnerCli as Record<string, unknown>).resolveDefaultRehearsalNamespace;
+    expect(typeof resolveNamespace).toBe("function");
+    if (typeof resolveNamespace !== "function") return;
+    const privateMarker = join(tmpdir(), "homecook-private-home-marker", "missing");
+    let failure: unknown = null;
+    try { resolveNamespace(privateMarker); }
+    catch (error) { failure = error; }
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).not.toContain(privateMarker);
+  });
+
   it("accepts the actual tracked Node-readable runner before constructing Docker adapters", async () => {
     expect(typeof rehearsalRunnerCli.readDefaultRehearsalRunnerIdentity).toBe("function");
     const identity = rehearsalRunnerCli.readDefaultRehearsalRunnerIdentity();
@@ -1313,7 +1325,7 @@ describe("release rehearsal R2 public command and schema", () => {
       fullLocalRoot: "/private/rehearsal/full-local",
       secretRoot: "/private/rehearsal/secrets",
     };
-    const contract = (buildContract as (value: typeof roots) => unknown)(roots);
+    const contract = (buildContract as (value: typeof roots) => Record<string, unknown>)(roots);
     const config = canonicalPrimitiveConfig(roots);
     expect(() => compileClosedPrimitivePlan(config, {
       project: "homecook-rehearsal-x",
@@ -1457,16 +1469,17 @@ describe("release rehearsal R2 public command and schema", () => {
     const deepLedger: Array<Record<string, string>> = [];
     await expect(guardedCreate({
       guard: deepGuard,
-      create: async () => {
+      create: async () => ({ kind: "container", id: "deep-container-id", name: "deep-container" }),
+      inspect: async (created) => {
+        expect(deepLedger).toEqual([created]);
         const displaced = `${deepDirectory}.displaced`;
         renameSync(deepDirectory, displaced);
         mkdirSync(deepDirectory, { mode: 0o700 });
         writeFileSync(join(deepDirectory, "value.json"), "{\"decoy\":true}\n", { mode: 0o400 });
         rmSync(deepDirectory, { recursive: true, force: true });
         renameSync(displaced, deepDirectory);
-        return { kind: "container", id: "deep-container-id", name: "deep-container" };
+        return { ...created };
       },
-      inspect: async (created) => ({ ...created }),
       record: (created) => deepLedger.push(created),
     })).rejects.toThrow(/bind|source|authority|identity|directory|drift/iu);
     expect(deepLedger).toEqual([{ kind: "container", id: "deep-container-id", name: "deep-container" }]);
@@ -1495,6 +1508,26 @@ describe("release rehearsal R2 public command and schema", () => {
       verifyCandidateTree: () => undefined,
     })).toThrow(/wrong|mount|bind|source|authority|identity/iu);
     expect(create).not.toHaveBeenCalled();
+
+    const redactionRoots = makeRoot("homecook-r2-bind-source-redaction-");
+    const redactedSource = join(redactionRoots.runRoot, "runtime-state", "secret-fds", "opaque-secret");
+    mkdirSync(dirname(redactedSource), { recursive: true, mode: 0o700 });
+    writeFileSync(redactedSource, "opaque\n", { mode: 0o400 });
+    rmSync(redactedSource);
+    let redactedError: unknown = null;
+    try {
+      openGuard({
+        trustedAnchorRoot: redactionRoots.trustedAnchorRoot,
+        namespaceRoot: redactionRoots.namespaceRoot,
+        candidateRoot: redactionRoots.candidateRoot,
+        resourceName: "redacted secret bind",
+        expectedMounts: [{ source: redactedSource, target: "/run/secrets/opaque", source_kind: "regular-file" }],
+        dockerArgs: ["create", "--mount", `type=bind,src=${redactedSource},dst=/run/secrets/opaque,readonly`],
+      });
+    }
+    catch (error) { redactedError = error; }
+    expect(redactedError).toBeInstanceOf(Error);
+    expect((redactedError as Error).message).not.toContain(redactionRoots.trustedAnchorRoot);
   });
 
   it("executes the completed candidate reader in the full-local probe startup contract", async () => {
@@ -1766,8 +1799,8 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(adaptersSource).toContain("scripts/start-production.mjs");
     expect(adaptersSource).toContain("rehearsal-synthetic");
     expect(adaptersSource).toContain("--pull=never");
-    expect(adaptersSource).toContain('phase: "postgrest-probe pre-bind"');
-    expect(adaptersSource).toContain('phase: "postgrest-probe post-bind"');
+    expect(adaptersSource).toContain('guard.verify("Docker bind source pre-create")');
+    expect(adaptersSource).toContain('guard.verify("Docker bind source post-create inspect")');
     expect((adaptersSource.match(/candidatePathAuthority: true/gu) ?? [])).toHaveLength(2);
     expect(adaptersSource).toContain("readFullLocalStartupIdentity");
     expect(adaptersSource).not.toContain("node_modules/next/dist/bin/next','start'");
@@ -1863,6 +1896,8 @@ describe("release rehearsal R2 public command and schema", () => {
 
   it("requires --json and delegates an absolute candidate to the isolated runner", async () => {
     const root = mkdtempSync(join(tmpdir(), "homecook-r2-cli-"));
+    const namespaceRoot = join(root, ".homecook", "rehearsal", "runs");
+    mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
     mkdirSync(join(root, "candidate"), { mode: 0o500 });
     const output = { value: "", write(chunk: string) { this.value += chunk; } };
     const run = vi.fn().mockResolvedValue({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });
@@ -1875,16 +1910,19 @@ describe("release rehearsal R2 public command and schema", () => {
       output,
       run,
       createAdapters,
-      namespaceResolver: () => root,
+      namespaceResolver: () => ({ trustedNamespaceAnchor: root, namespaceRoot }),
       runIdFactory: () => RUN_ID,
     });
     expect(run).toHaveBeenCalledWith(expect.objectContaining({
       candidateInput: join(root, "candidate"),
-      namespaceRoot: root,
+      trustedNamespaceAnchor: root,
+      namespaceRoot,
       runId: RUN_ID,
       adapters: { adapter: true },
     }));
     expect(createAdapters).toHaveBeenCalledWith(expect.objectContaining({
+      trustedNamespaceAnchor: root,
+      namespaceRoot,
       productionEnvAuthorityPath: join(root, "full-local-production.env"),
     }));
     expect(JSON.parse(output.value)).toEqual({ schema: RUN_EVIDENCE_SCHEMA, status: "passed" });

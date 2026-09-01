@@ -574,20 +574,22 @@ export async function cleanupOwnedResources({
 }
 
 function assertPrivateNamespaceRoot(path) {
-  if (!isAbsolute(path ?? "") || resolve(path) !== path) fail("run namespace root must be absolute and lexically canonical");
-  if (realpathSync(path) !== path) fail("run namespace root ancestor chain contains a symlink or non-canonical segment");
-  const canonical = path;
-  const stat = lstatSync(canonical, { bigint: true });
-  const currentUid = process.getuid?.();
-  if (
-    !Number.isInteger(currentUid)
-    || !stat.isDirectory() || stat.isSymbolicLink()
-    || stat.uid !== BigInt(currentUid)
-    || modeBits(stat) !== 0o700 || stat.nlink < 1n
-  ) {
-    fail("run namespace root must be an exact current-user private directory");
+  try {
+    if (!isAbsolute(path ?? "") || resolve(path) !== path) fail("run namespace root must be absolute and lexically canonical");
+    if (realpathSync(path) !== path) fail("run namespace root ancestor chain contains a symlink or non-canonical segment");
+    const canonical = path;
+    const stat = lstatSync(canonical, { bigint: true });
+    const currentUid = process.getuid?.();
+    if (
+      !Number.isInteger(currentUid)
+      || !stat.isDirectory() || stat.isSymbolicLink()
+      || stat.uid !== BigInt(currentUid)
+      || modeBits(stat) !== 0o700 || stat.nlink < 1n
+    ) fail("run namespace root must be an exact current-user private directory");
+    return canonical;
+  } catch {
+    fail("run namespace root authority is unavailable or unsafe");
   }
-  return canonical;
 }
 
 function reserveRunRoot(namespaceRoot, runId) {
@@ -612,7 +614,9 @@ function directoryIdentity(stat) {
 }
 
 function assertDirectoryIdentity(path, expected, label) {
-  const stat = lstatSync(path, { bigint: true });
+  let stat;
+  try { stat = lstatSync(path, { bigint: true }); }
+  catch { fail(`${label} directory identity is unavailable`); }
   if (
     !stat.isDirectory()
     || stat.isSymbolicLink()
@@ -620,13 +624,13 @@ function assertDirectoryIdentity(path, expected, label) {
   ) fail(`${label} directory dev/inode/owner/mode/nlink/ctime/size identity drifted`);
 }
 
-function namespaceContainedDirectoryPaths(namespaceRoot, target) {
+function trustedContainedDirectoryPaths(trustedAnchorRoot, target) {
   if (
     !isAbsolute(target ?? "") || resolve(target) !== target
-    || (target !== namespaceRoot && !target.startsWith(`${namespaceRoot}/`))
-  ) fail("candidate namespace directory path escapes the trusted private root");
-  const relative = target === namespaceRoot ? [] : target.slice(namespaceRoot.length + 1).split("/");
-  const paths = [namespaceRoot];
+    || (target !== trustedAnchorRoot && !target.startsWith(`${trustedAnchorRoot}/`))
+  ) fail("candidate namespace directory path escapes the trusted private anchor");
+  const relative = target === trustedAnchorRoot ? [] : target.slice(trustedAnchorRoot.length + 1).split("/");
+  const paths = [trustedAnchorRoot];
   for (const segment of relative) {
     if (!segment || segment === "." || segment === "..") fail("candidate namespace directory path is not lexical");
     paths.push(join(paths.at(-1), segment));
@@ -635,26 +639,27 @@ function namespaceContainedDirectoryPaths(namespaceRoot, target) {
 }
 
 function openNamespaceDirectory(path, currentUid) {
-  const before = lstatSync(path, { bigint: true });
-  if (
-    !before.isDirectory() || before.isSymbolicLink()
-    || before.uid !== BigInt(currentUid)
-    || (before.mode & 0o022n) !== 0n || before.nlink < 1n
-    || realpathSync(path) !== path
-  ) fail("candidate namespace directory chain is unsafe");
-  const fd = openSync(
-    path,
-    fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | (fsConstants.O_NOFOLLOW ?? 0),
-  );
+  let fd = null;
   try {
+    const before = lstatSync(path, { bigint: true });
+    if (
+      !before.isDirectory() || before.isSymbolicLink()
+      || before.uid !== BigInt(currentUid)
+      || (before.mode & 0o022n) !== 0n || before.nlink < 1n
+      || realpathSync(path) !== path
+    ) fail("candidate namespace directory chain is unsafe");
+    fd = openSync(
+      path,
+      fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | (fsConstants.O_NOFOLLOW ?? 0),
+    );
     const opened = fstatSync(fd, { bigint: true });
     if (canonicalizeJcs(directoryIdentity(before)) !== canonicalizeJcs(directoryIdentity(opened))) {
       fail("candidate namespace directory changed while opening authority");
     }
     return Object.freeze({ path, fd, identity: directoryIdentity(opened) });
-  } catch (error) {
-    closeSync(fd);
-    throw error;
+  } catch {
+    if (fd !== null) closeSync(fd);
+    fail("candidate namespace directory chain is unavailable or changed");
   }
 }
 
@@ -668,17 +673,21 @@ function stableDirectoryLocatorIdentity(identity) {
   };
 }
 
-function createRunRootTransitionAuthority(namespaceRoot, runRoot) {
+function createRunRootTransitionAuthority(trustedAnchorRoot, namespaceRoot, runRoot) {
   const currentUid = process.getuid?.();
   if (!Number.isInteger(currentUid)) fail("run root transition owner identity is unavailable");
-  const namespaceEntry = openNamespaceDirectory(namespaceRoot, currentUid);
-  let runEntry;
+  const entries = [];
   try {
-    runEntry = openNamespaceDirectory(runRoot, currentUid);
+    for (const path of trustedContainedDirectoryPaths(trustedAnchorRoot, namespaceRoot)) {
+      entries.push(openNamespaceDirectory(path, currentUid));
+    }
+    entries.push(openNamespaceDirectory(runRoot, currentUid));
   } catch (error) {
-    closeSync(namespaceEntry.fd);
+    for (const entry of entries.reverse()) closeSync(entry.fd);
     throw error;
   }
+  const namespaceEntries = entries.slice(0, -1);
+  const runEntry = entries.at(-1);
   let runIdentity = runEntry.identity;
   let closed = false;
   const verifyEntry = (entry, expected, label, { locatorOnly = false } = {}) => {
@@ -690,7 +699,9 @@ function createRunRootTransitionAuthority(namespaceRoot, runRoot) {
     } catch {
       fail(`${label} directory path or held descriptor disappeared`);
     }
-    if (!pathStat.isDirectory() || pathStat.isSymbolicLink() || realpathSync(entry.path) !== entry.path) {
+    let canonical = false;
+    try { canonical = realpathSync(entry.path) === entry.path; } catch { /* normalized below */ }
+    if (!pathStat.isDirectory() || pathStat.isSymbolicLink() || !canonical) {
       fail(`${label} directory lexical chain changed`);
     }
     const pathIdentity = directoryIdentity(pathStat);
@@ -704,19 +715,22 @@ function createRunRootTransitionAuthority(namespaceRoot, runRoot) {
   };
   const verify = (phase = "run root transition") => {
     if (closed) fail("run root transition authority is closed");
-    verifyEntry(namespaceEntry, namespaceEntry.identity, `${phase} namespace root`);
+    for (const entry of namespaceEntries) {
+      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`);
+    }
     verifyEntry(runEntry, runIdentity, `${phase} run root`);
   };
   const rebaselineAfterOwnedChildCreation = (phase) => {
     if (closed) fail("run root transition authority is closed");
-    verifyEntry(namespaceEntry, namespaceEntry.identity, `${phase} namespace root`);
+    for (const entry of namespaceEntries) {
+      verifyEntry(entry, entry.identity, `${phase} trusted namespace chain`);
+    }
     runIdentity = verifyEntry(runEntry, runIdentity, `${phase} run root`, { locatorOnly: true });
   };
   const close = () => {
     if (closed) return;
     closed = true;
-    closeSync(runEntry.fd);
-    closeSync(namespaceEntry.fd);
+    for (const entry of [...entries].reverse()) closeSync(entry.fd);
   };
   try {
     verify("run root authority issuance");
@@ -728,6 +742,7 @@ function createRunRootTransitionAuthority(namespaceRoot, runRoot) {
 }
 
 function createCandidatePathAuthority({
+  trustedAnchorRoot,
   namespaceRoot,
   runRoot,
   candidateRoot,
@@ -738,11 +753,12 @@ function createCandidatePathAuthority({
   const currentUid = process.getuid?.();
   if (!Number.isInteger(currentUid)) fail("candidate namespace owner identity is unavailable");
   const paths = [...new Set([
-    ...namespaceContainedDirectoryPaths(namespaceRoot, runRoot),
-    ...namespaceContainedDirectoryPaths(namespaceRoot, candidateRoot),
+    ...trustedContainedDirectoryPaths(trustedAnchorRoot, namespaceRoot),
+    ...trustedContainedDirectoryPaths(trustedAnchorRoot, runRoot),
+    ...trustedContainedDirectoryPaths(trustedAnchorRoot, candidateRoot),
     ...(candidateContainerAuthorityRoot === null
       ? []
-      : namespaceContainedDirectoryPaths(namespaceRoot, candidateContainerAuthorityRoot)),
+      : trustedContainedDirectoryPaths(trustedAnchorRoot, candidateContainerAuthorityRoot)),
   ])];
   const entries = [];
   try {
@@ -761,6 +777,7 @@ function createCandidatePathAuthority({
   });
   const authorityUnsigned = {
     schema: "homecook.release-rehearsal-candidate-path-authority.v1",
+    trusted_anchor_path_digest: sha256Jcs(trustedAnchorRoot),
     namespace_root_path_digest: sha256Jcs(namespaceRoot),
     run_root_path_digest: sha256Jcs(runRoot),
     candidate_root_path_digest: sha256Jcs(candidateRoot),
@@ -798,9 +815,11 @@ function createCandidatePathAuthority({
       } catch {
         fail(`${phase} candidate namespace ancestor path is missing or replaced`);
       }
+      let canonical = false;
+      try { canonical = realpathSync(entry.path) === entry.path; } catch { /* normalized below */ }
       if (
         !pathStat.isDirectory() || pathStat.isSymbolicLink()
-        || realpathSync(entry.path) !== entry.path
+        || !canonical
         || canonicalizeJcs(directoryIdentity(pathStat)) !== canonicalizeJcs(entry.identity)
         || canonicalizeJcs(directoryIdentity(descriptorStat)) !== canonicalizeJcs(entry.identity)
       ) fail(`${phase} candidate namespace ancestor FD or lexical identity drifted`);
@@ -1399,6 +1418,7 @@ function normalizeAdapterError(error) {
 
 export async function runIsolatedReleaseRehearsal({
   candidateInput,
+  trustedNamespaceAnchor = /** @type {string|null} */ (null),
   namespaceRoot,
   runId,
   readCandidate = readCompletedCandidateRoot,
@@ -1410,7 +1430,12 @@ export async function runIsolatedReleaseRehearsal({
   afterCandidatePnpmStoreFileOpen = /** @type {null|((entry:{path:string,relativePath:string,contentVerified?:boolean})=>void)} */ (null),
 }) {
   const sourceCandidateRoot = resolveCompletedCandidateInput(candidateInput);
+  const canonicalTrustedNamespaceAnchor = assertPrivateNamespaceRoot(trustedNamespaceAnchor ?? namespaceRoot);
   const canonicalNamespaceRoot = assertPrivateNamespaceRoot(namespaceRoot);
+  if (
+    canonicalNamespaceRoot !== canonicalTrustedNamespaceAnchor
+    && !canonicalNamespaceRoot.startsWith(`${canonicalTrustedNamespaceAnchor}/`)
+  ) fail("run namespace root must be contained by the approved trusted anchor");
   if (typeof readCandidate !== "function" || !adapters) fail("runner dependencies are incomplete");
   validateRunnerIdentity(runnerIdentity);
   const sourceCandidate = readCandidate(sourceCandidateRoot, {
@@ -1476,6 +1501,10 @@ export async function runIsolatedReleaseRehearsal({
     }
     verifyCandidateStable(candidateBefore, current);
   };
+  const verifyCandidateDockerSourceAuthority = (input) => {
+    candidatePathAuthority?.verify(input);
+    verifyStableExecution();
+  };
   const cleanup = async () => {
     if (cleanupResult) return cleanupResult;
     const cleanupErrors = [];
@@ -1521,6 +1550,7 @@ export async function runIsolatedReleaseRehearsal({
 
   try {
     runRootTransitionAuthority = createRunRootTransitionAuthority(
+      canonicalTrustedNamespaceAnchor,
       canonicalNamespaceRoot,
       reservation.runRoot,
     );
@@ -1547,6 +1577,7 @@ export async function runIsolatedReleaseRehearsal({
       "runtime state creation post-transition",
     );
     candidatePathAuthority = createCandidatePathAuthority({
+      trustedAnchorRoot: canonicalTrustedNamespaceAnchor,
       namespaceRoot: canonicalNamespaceRoot,
       runRoot: reservation.runRoot,
       candidateRoot,
@@ -1587,9 +1618,10 @@ export async function runIsolatedReleaseRehearsal({
       candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
       namespace,
       runRoot: reservation.runRoot,
+      trustedNamespaceAnchor: canonicalTrustedNamespaceAnchor,
       signal,
       independentObserver: adapters.independentObserver,
-      verifyCandidatePathAuthority: candidatePathAuthority.verify,
+      verifyCandidatePathAuthority: verifyCandidateDockerSourceAuthority,
     });
     if (!Array.isArray(ownedResources)) fail("created resource inventory is invalid");
     verifyStableExecution();
@@ -1639,9 +1671,10 @@ export async function runIsolatedReleaseRehearsal({
       candidateContainerAuthorityRoot: executionContainerAuthorityRoot,
       namespace,
       runRoot: reservation.runRoot,
+      trustedNamespaceAnchor: canonicalTrustedNamespaceAnchor,
       migration,
       signal,
-      verifyCandidatePathAuthority: candidatePathAuthority.verify,
+      verifyCandidatePathAuthority: verifyCandidateDockerSourceAuthority,
     });
     runtimeEntries = validateRuntimeIdentities(runtimeEntries, manifest);
     verifyStableExecution();
