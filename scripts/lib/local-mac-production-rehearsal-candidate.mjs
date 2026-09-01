@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   accessSync,
@@ -6,6 +6,7 @@ import {
   closeSync,
   copyFileSync,
   constants as fsConstants,
+  fchmodSync,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -15,6 +16,8 @@ import {
   readdirSync,
   readlinkSync,
   realpathSync,
+  renameSync,
+  rmdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -2091,22 +2094,128 @@ function setPnpmStoreTreeMode(root, { writable, label, currentUid }) {
   visit(root);
 }
 
+function sealPnpmStoreTreeFdBound(root, {
+  inventory,
+  subtree,
+  currentUid,
+  deferRootFchmod = false,
+  transitionObserver = () => undefined,
+}) {
+  const expectedEntries = new Map(inventory.entries
+    .filter((entry) => entry.path === subtree || entry.path.startsWith(`${subtree}/`))
+    .map((entry) => [entry.path, entry]));
+  const rootExpected = expectedEntries.get(subtree);
+  if (!rootExpected || rootExpected.type !== "directory") {
+    fail(`candidate pnpm ${subtree} FD-bound seal inventory is incomplete`);
+  }
+  const rootRelocated = !root.endsWith(`/v10/${subtree}`);
+  const assertExpectedIdentity = (stat, expected, label, { allowRenameCtime = false } = {}) => {
+    if (
+      String(stat.dev) !== expected.device
+      || String(stat.ino) !== expected.inode
+      || modeBits(stat.mode) !== expected.mode
+      || String(stat.uid) !== expected.uid
+      || String(stat.gid) !== expected.gid
+      || String(stat.nlink) !== expected.nlink
+      || String(stat.size) !== expected.size
+      || (!allowRenameCtime && String(stat.ctimeNs) !== expected.ctime_ns)
+      || String(stat.mtimeNs) !== expected.mtime_ns
+    ) fail(`candidate pnpm ${label} identity drifted before FD-bound seal`);
+  };
+  const expectedChildren = (relativePath) => {
+    const prefix = `${relativePath}/`;
+    return [...expectedEntries.keys()]
+      .filter((path) => path.startsWith(prefix) && !path.slice(prefix.length).includes("/"))
+      .map((path) => path.slice(prefix.length))
+      .sort();
+  };
+  const visit = (path, relativePath) => {
+    const expected = expectedEntries.get(relativePath);
+    if (!expected) fail(`candidate pnpm ${subtree} contains an unexpected seal entry`);
+    const before = lstatSync(path, { bigint: true });
+    if (before.isSymbolicLink() || before.uid !== BigInt(currentUid) || realpathSync(path) !== path) {
+      fail(`candidate pnpm ${subtree} seal entry owner, symlink, or canonical path is unsafe`);
+    }
+    const allowRenameCtime = rootRelocated && relativePath === subtree;
+    assertExpectedIdentity(before, expected, `${subtree} entry`, { allowRenameCtime });
+    const directory = expected.type === "directory";
+    if (directory !== before.isDirectory() || (!directory && (!before.isFile() || before.nlink !== 1n))) {
+      fail(`candidate pnpm ${subtree} seal entry type or hard-link count is unsafe`);
+    }
+    const fd = openSync(
+      path,
+      fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | (directory ? fsConstants.O_DIRECTORY : 0),
+    );
+    try {
+      const opened = fstatSync(fd, { bigint: true });
+      assertExpectedIdentity(opened, expected, `${subtree} opened entry`, { allowRenameCtime });
+      if (directory) {
+        const names = readdirSync(path).sort();
+        if (canonicalizeJcs(names) !== canonicalizeJcs(expectedChildren(relativePath))) {
+          fail(`candidate pnpm ${subtree} directory children drifted before FD-bound seal`);
+        }
+        for (const name of names) visit(join(path, name), `${relativePath}/${name}`);
+        if (canonicalizeJcs(readdirSync(path).sort()) !== canonicalizeJcs(names)) {
+          fail(`candidate pnpm ${subtree} directory children drifted during FD-bound seal`);
+        }
+      }
+      transitionObserver(Object.freeze({
+        phase: "before_entry_fchmod",
+        path,
+        relativePath,
+        type: expected.type,
+      }));
+      if (deferRootFchmod && relativePath === subtree) return;
+      const pathBeforeMode = lstatSync(path, { bigint: true });
+      if (
+        pathBeforeMode.isSymbolicLink()
+        || pathBeforeMode.dev !== opened.dev
+        || pathBeforeMode.ino !== opened.ino
+        || fstatSync(fd, { bigint: true }).dev !== opened.dev
+        || fstatSync(fd, { bigint: true }).ino !== opened.ino
+      ) fail(`candidate pnpm ${subtree} entry path swapped before FD-bound chmod`);
+      const executable = (expected.mode & 0o111) !== 0;
+      const sealedMode = directory ? 0o500 : (executable ? 0o500 : 0o400);
+      fchmodSync(fd, sealedMode);
+      const fdPost = fstatSync(fd, { bigint: true });
+      const pathPost = lstatSync(path, { bigint: true });
+      if (
+        pathPost.isSymbolicLink()
+        || fdPost.dev !== opened.dev || fdPost.ino !== opened.ino
+        || pathPost.dev !== opened.dev || pathPost.ino !== opened.ino
+        || modeBits(fdPost.mode) !== sealedMode || modeBits(pathPost.mode) !== sealedMode
+      ) fail(`candidate pnpm ${subtree} entry path swapped during FD-bound chmod`);
+    } finally {
+      closeSync(fd);
+    }
+  };
+  visit(root, subtree);
+}
+
 /**
- * @param {{sourceStore:string,storeRoot:string,currentUid?:number}} options
+ * @param {{
+ *   sourceStore:string,
+ *   storeRoot:string,
+ *   currentUid?:number,
+ *   transitionObserver?:(event:Record<string,unknown>)=>void,
+ * }} options
  * @param {(authority:{
  *   storePath:string,
  *   installWritableRoots:string[],
  *   snapshotInventoryDigest:string,
  *   sealInstallIndex:()=>{inventory_digest:string,physical_identity_digest:string},
+ *   verifyInstallPhaseBeforeSpawn:()=>void,
  * })=>unknown|Promise<unknown>} callback
  */
 export async function withCandidatePnpmStoreView({
   sourceStore,
   storeRoot,
   currentUid = process.getuid?.(),
+  transitionObserver = () => undefined,
 } = /** @type {any} */ ({}), callback) {
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   if (typeof callback !== "function") fail("candidate pnpm store-view callback is required");
+  if (typeof transitionObserver !== "function") fail("candidate pnpm transition observer is invalid");
   if (![sourceStore, storeRoot].every((path) => isAbsolute(path ?? "") && resolve(path) === path)) {
     fail("candidate pnpm store-view paths must be absolute and canonical");
   }
@@ -2208,11 +2317,24 @@ export async function withCandidatePnpmStoreView({
     throw error;
   }
 
+  const transitionParentStat = lstatSync(privateParent, { bigint: true });
+  const transitionParentFd = openSync(
+    privateParent,
+    fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+  );
+  if (!samePnpmStoreIdentity(transitionParentStat, fstatSync(transitionParentFd, { bigint: true }))) {
+    closeSync(transitionParentFd);
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    fail("candidate pnpm transition parent identity drifted before execution");
+  }
+
   const initialFilesAuthority = pnpmStoreSubtreeAuthority(snapshotInventory, "files");
   let storePhase = "install";
   let sealedSnapshotInventory;
   let finalIndexAuthority;
   let installTransitionDigest;
+  const viewByPath = new Map(viewDirectories.map((entry) => [entry.path, entry]));
   const assertHeldDirectory = (entry, keys, label) => {
     const pathPost = lstatSync(entry.path, { bigint: true });
     const fdPost = fstatSync(entry.fd, { bigint: true });
@@ -2221,8 +2343,37 @@ export async function withCandidatePnpmStoreView({
       || !keys.every((key) => entry.stat[key] === pathPost[key] && entry.stat[key] === fdPost[key])
     ) fail(`candidate pnpm store-view ${label} identity drifted`);
   };
+  const assertTransitionParent = () => {
+    const pathPost = lstatSync(privateParent, { bigint: true });
+    const fdPost = fstatSync(transitionParentFd, { bigint: true });
+    if (
+      pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(privateParent) !== privateParent
+      || !samePnpmStoreIdentity(transitionParentStat, pathPost)
+      || !samePnpmStoreIdentity(transitionParentStat, fdPost)
+    ) fail("candidate pnpm transition parent identity drifted");
+  };
+  const assertAbsent = (path, label) => {
+    try {
+      lstatSync(path);
+      fail(`candidate pnpm ${label} unexpectedly exists`);
+    } catch (error) {
+      if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+    }
+  };
+  const verifyInstallPhaseBeforeSpawn = () => {
+    if (storePhase !== "install") fail("candidate pnpm install profile cannot be reused after seal");
+    assertTransitionParent();
+    for (const entry of viewDirectories) {
+      const keys = ["working", "scratch"].includes(entry.phase)
+        ? ["dev", "ino", "mode", "uid", "gid"]
+        : PNPM_STORE_IDENTITY_KEYS;
+      assertHeldDirectory(entry, keys, `${entry.phase} install phase`);
+    }
+  };
   const sealInstallIndex = () => {
     if (storePhase !== "install") fail("candidate pnpm install index seal transition may run exactly once");
+    transitionObserver(Object.freeze({ phase: "before_transition", storePath, storeRoot }));
+    verifyInstallPhaseBeforeSpawn();
     if (
       canonicalizeJcs(readdirSync(storePath).sort())
       !== canonicalizeJcs(["files", "index", "projects", "tmp"])
@@ -2241,36 +2392,166 @@ export async function withCandidatePnpmStoreView({
       workingFilesAuthority.inventory_digest !== initialFilesAuthority.inventory_digest
       || workingFilesAuthority.physical_identity_digest !== initialFilesAuthority.physical_identity_digest
     ) fail("candidate pnpm store files inventory drifted during install");
-
-    setPnpmStoreTreeMode(filesPath, {
-      writable: false,
-      label: "files",
-      currentUid,
-    });
-    setPnpmStoreTreeMode(indexPath, {
-      writable: false,
-      label: "final index",
-      currentUid,
-    });
-    chmodSync(storePath, 0o700);
-    for (const scratchRoot of scratchRoots) {
-      const stat = lstatSync(scratchRoot, { bigint: true });
+    const storeRootEntry = viewByPath.get(storeRoot);
+    const storePathEntry = viewByPath.get(storePath);
+    const indexEntry = viewByPath.get(indexPath);
+    if (!storeRootEntry || !storePathEntry || !indexEntry) {
+      fail("candidate pnpm transition directory registry is incomplete");
+    }
+    const quarantineRoot = join(storeRoot, `.install-transition-${randomUUID()}`);
+    let quarantineFd;
+    try {
+      fchmodSync(storeRootEntry.fd, 0o700);
+      const storeRootWritable = lstatSync(storeRoot, { bigint: true });
       if (
-        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
-        || modeBits(stat.mode) !== 0o700 || realpathSync(scratchRoot) !== scratchRoot
-      ) fail("candidate pnpm store scratch directory is unsafe before install cleanup");
-      rmSync(scratchRoot, { recursive: true, force: false });
-      try {
-        lstatSync(scratchRoot);
-        fail("candidate pnpm store scratch directory remained after install cleanup");
-      } catch (error) {
-        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+        storeRootWritable.isSymbolicLink() || storeRootWritable.dev !== fstatSync(storeRootEntry.fd, { bigint: true }).dev
+        || storeRootWritable.ino !== fstatSync(storeRootEntry.fd, { bigint: true }).ino
+        || modeBits(storeRootWritable.mode) !== 0o700
+      ) fail("candidate pnpm store root swapped before quarantine creation");
+      mkdirSync(quarantineRoot, { mode: 0o700 });
+      const quarantineStat = lstatSync(quarantineRoot, { bigint: true });
+      if (
+        quarantineStat.isSymbolicLink() || !quarantineStat.isDirectory()
+        || quarantineStat.uid !== BigInt(currentUid) || modeBits(quarantineStat.mode) !== 0o700
+        || realpathSync(quarantineRoot) !== quarantineRoot
+      ) fail("candidate pnpm transition quarantine is unsafe");
+      quarantineFd = openSync(
+        quarantineRoot,
+        fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+      );
+      if (!samePnpmStoreIdentity(quarantineStat, fstatSync(quarantineFd, { bigint: true }))) {
+        fail("candidate pnpm transition quarantine identity drifted before move");
       }
+      fchmodSync(storePathEntry.fd, 0o700);
+      const storePathWritable = lstatSync(storePath, { bigint: true });
+      if (
+        storePathWritable.isSymbolicLink() || storePathWritable.dev !== fstatSync(storePathEntry.fd, { bigint: true }).dev
+        || storePathWritable.ino !== fstatSync(storePathEntry.fd, { bigint: true }).ino
+        || modeBits(storePathWritable.mode) !== 0o700
+      ) fail("candidate pnpm store path swapped before quarantine move");
+
+      for (const [kind, sourcePath] of [["index", indexPath], ["projects", scratchRoots[0]], ["tmp", scratchRoots[1]]]) {
+        const entry = viewByPath.get(sourcePath);
+        if (!entry) fail("candidate pnpm transition child registry is incomplete");
+        const targetPath = join(quarantineRoot, kind);
+        const sourceBefore = lstatSync(sourcePath, { bigint: true });
+        const sourceFd = fstatSync(entry.fd, { bigint: true });
+        if (
+          sourceBefore.isSymbolicLink() || !sourceBefore.isDirectory()
+          || sourceBefore.dev !== sourceFd.dev || sourceBefore.ino !== sourceFd.ino
+          || realpathSync(sourcePath) !== sourcePath
+        ) fail(`candidate pnpm ${kind} path swapped before quarantine move`);
+        renameSync(sourcePath, targetPath);
+        const moved = lstatSync(targetPath, { bigint: true });
+        const movedFd = fstatSync(entry.fd, { bigint: true });
+        if (
+          moved.isSymbolicLink() || !moved.isDirectory() || realpathSync(targetPath) !== targetPath
+          || moved.dev !== sourceFd.dev || moved.ino !== sourceFd.ino
+          || movedFd.dev !== sourceFd.dev || movedFd.ino !== sourceFd.ino
+          || moved.uid !== BigInt(currentUid)
+        ) fail(`candidate pnpm ${kind} quarantine identity differs from held authority`);
+        assertAbsent(sourcePath, `${kind} original path after quarantine move`);
+        entry.quarantinePath = targetPath;
+        entry.quarantineStat = moved;
+      }
+      if (
+        canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files"])
+        || canonicalizeJcs(readdirSync(quarantineRoot).sort()) !== canonicalizeJcs(["index", "projects", "tmp"])
+      ) fail("candidate pnpm transition quarantine child set is invalid");
+
+      sealPnpmStoreTreeFdBound(filesPath, {
+        inventory: workingInventory,
+        subtree: "files",
+        currentUid,
+        transitionObserver,
+      });
+      sealPnpmStoreTreeFdBound(indexEntry.quarantinePath, {
+        inventory: workingInventory,
+        subtree: "index",
+        currentUid,
+        deferRootFchmod: true,
+        transitionObserver,
+      });
+
+      for (const [kind, scratchRoot] of [["projects", scratchRoots[0]], ["tmp", scratchRoots[1]]]) {
+        const entry = viewByPath.get(scratchRoot);
+        if (!entry?.quarantinePath || !entry.quarantineStat) {
+          fail("candidate pnpm scratch quarantine authority is incomplete");
+        }
+        transitionObserver(Object.freeze({
+          phase: "before_scratch_remove",
+          kind,
+          path: entry.quarantinePath,
+        }));
+        const pathPost = lstatSync(entry.quarantinePath, { bigint: true });
+        const fdPost = fstatSync(entry.fd, { bigint: true });
+        if (
+          pathPost.isSymbolicLink() || !pathPost.isDirectory()
+          || !samePnpmStoreIdentity(entry.quarantineStat, pathPost)
+          || !samePnpmStoreIdentity(entry.quarantineStat, fdPost)
+        ) fail(`candidate pnpm ${kind} scratch identity swapped before quarantine removal`);
+        rmSync(entry.quarantinePath, { recursive: true, force: false });
+        assertAbsent(entry.quarantinePath, `${kind} quarantine after removal`);
+      }
+
+      const sealedIndexQuarantine = lstatSync(indexEntry.quarantinePath, { bigint: true });
+      const sealedIndexFd = fstatSync(indexEntry.fd, { bigint: true });
+      if (
+        sealedIndexQuarantine.isSymbolicLink() || !sealedIndexQuarantine.isDirectory()
+        || sealedIndexQuarantine.dev !== sealedIndexFd.dev || sealedIndexQuarantine.ino !== sealedIndexFd.ino
+        || modeBits(sealedIndexQuarantine.mode) !== 0o700
+      ) fail("candidate pnpm sealed index quarantine identity is invalid");
+      assertAbsent(indexPath, "index destination before restore");
+      renameSync(indexEntry.quarantinePath, indexPath);
+      const restoredIndex = lstatSync(indexPath, { bigint: true });
+      const restoredIndexFd = fstatSync(indexEntry.fd, { bigint: true });
+      if (
+        restoredIndex.isSymbolicLink() || !restoredIndex.isDirectory()
+        || restoredIndex.dev !== restoredIndexFd.dev || restoredIndex.ino !== restoredIndexFd.ino
+        || modeBits(restoredIndex.mode) !== 0o700 || realpathSync(indexPath) !== indexPath
+      ) fail("candidate pnpm sealed index identity drifted during restore");
+      assertAbsent(indexEntry.quarantinePath, "index quarantine after restore");
+      transitionObserver(Object.freeze({
+        phase: "before_entry_fchmod",
+        path: indexPath,
+        relativePath: "index",
+        type: "directory",
+      }));
+      const indexBeforeFinalMode = lstatSync(indexPath, { bigint: true });
+      if (
+        indexBeforeFinalMode.isSymbolicLink()
+        || indexBeforeFinalMode.dev !== restoredIndexFd.dev
+        || indexBeforeFinalMode.ino !== restoredIndexFd.ino
+      ) fail("candidate pnpm index root swapped before final FD-bound chmod");
+      fchmodSync(indexEntry.fd, 0o500);
+      const sealedIndexFinal = lstatSync(indexPath, { bigint: true });
+      if (
+        sealedIndexFinal.isSymbolicLink()
+        || sealedIndexFinal.dev !== fstatSync(indexEntry.fd, { bigint: true }).dev
+        || sealedIndexFinal.ino !== fstatSync(indexEntry.fd, { bigint: true }).ino
+        || modeBits(sealedIndexFinal.mode) !== 0o500
+      ) fail("candidate pnpm index root swapped during final FD-bound chmod");
+
+      if (readdirSync(quarantineRoot).length !== 0) {
+        fail("candidate pnpm transition quarantine contains residue");
+      }
+      const quarantineBeforeRemove = lstatSync(quarantineRoot, { bigint: true });
+      const quarantineFdBeforeRemove = fstatSync(quarantineFd, { bigint: true });
+      if (!samePnpmStoreIdentity(quarantineBeforeRemove, quarantineFdBeforeRemove)) {
+        fail("candidate pnpm transition quarantine swapped before removal");
+      }
+      rmdirSync(quarantineRoot);
+      assertAbsent(quarantineRoot, "transition quarantine after removal");
+      fchmodSync(storePathEntry.fd, 0o500);
+      fchmodSync(storeRootEntry.fd, 0o500);
+    } finally {
+      if (quarantineFd !== undefined) closeSync(quarantineFd);
     }
-    if (canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])) {
-      fail("candidate pnpm store contains unexpected children after install cleanup");
-    }
-    chmodSync(storePath, 0o500);
+    assertTransitionParent();
+    if (
+      canonicalizeJcs(readdirSync(storeRoot).sort()) !== canonicalizeJcs(["v10"])
+      || canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])
+    ) fail("candidate pnpm store contains unexpected children after FD-bound transition");
     sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
     finalIndexAuthority = pnpmStoreSubtreeAuthority(sealedSnapshotInventory, "index");
     for (const entry of viewDirectories.filter(({ phase }) => phase !== "scratch")) {
@@ -2290,6 +2571,7 @@ export async function withCandidatePnpmStoreView({
       final_index_inventory_digest: finalIndexAuthority.inventory_digest,
       final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
       install_writable_path_digests: installWritableRoots.map((path) => sha256Jcs(path)),
+      quarantine_path_digest: sha256Jcs(quarantineRoot),
     });
     storePhase = "sealed";
     return Object.freeze({ ...finalIndexAuthority });
@@ -2303,6 +2585,7 @@ export async function withCandidatePnpmStoreView({
       installWritableRoots: Object.freeze([...installWritableRoots]),
       snapshotInventoryDigest: snapshotInventory.inventory_digest,
       sealInstallIndex,
+      verifyInstallPhaseBeforeSpawn,
     });
   } catch (error) {
     callbackError = error;
@@ -2357,6 +2640,7 @@ export async function withCandidatePnpmStoreView({
   } catch (error) {
     identityError = error;
   } finally {
+    closeSync(transitionParentFd);
     for (const { fd } of viewDirectories.reverse()) closeSync(fd);
     for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
   }
@@ -2396,29 +2680,52 @@ export function buildCandidateSandboxProfile({
     "/bin",
     "/sbin",
     "/Library",
-    "/private/etc",
-    "/private/var/db",
     "/private/var/folders",
     "/private/var/select",
     "/private/var/run",
     "/dev",
   ];
+  const systemRuntimeFiles = new Set([
+    "/private/var/db/timezone/zoneinfo/posixrules",
+  ]);
+  for (const path of [...systemRuntimeFiles]) {
+    try { systemRuntimeFiles.add(realpathSync(path)); } catch { /* Missing system aliases stay lexical. */ }
+  }
+  const systemMetadataPathSet = new Set([
+    "/etc",
+    "/var",
+    "/private/etc",
+    "/private/var",
+    "/private/var/db",
+    "/private/var/db/timezone",
+    "/private/var/db/timezone/zoneinfo",
+  ]);
+  for (const file of systemRuntimeFiles) {
+    let current = dirname(file);
+    while (current !== "/") {
+      systemMetadataPathSet.add(current);
+      if (current === "/private/var") break;
+      current = dirname(current);
+    }
+  }
+  const systemMetadataPaths = [...systemMetadataPathSet].sort();
   const approvedReadRoots = [...new Set([...readRoots, ...systemRuntimeRoots])];
   const ancestors = new Set(["/"]);
-  for (const root of [...approvedReadRoots, ...writeRoots]) {
+  for (const root of [...approvedReadRoots, ...writeRoots, ...systemMetadataPaths]) {
     let current = resolve(root);
     while (current !== "/") {
       ancestors.add(current);
       current = dirname(current);
     }
   }
-  const aliasParentMetadataRules = ["/var", "/private/var"]
+  const aliasParentMetadataRules = systemMetadataPaths
     .map((path) => `(literal ${sandboxLiteral(path)})`).join(" ");
   const readRules = [
     ...[...ancestors]
-      .filter((path) => !["/var", "/private/var"].includes(path))
+      .filter((path) => !systemMetadataPaths.includes(path))
       .map((path) => `(literal ${sandboxLiteral(path)})`),
     ...approvedReadRoots.map((path) => `(subpath ${sandboxLiteral(path)})`),
+    ...[...systemRuntimeFiles].sort().map((path) => `(literal ${sandboxLiteral(path)})`),
   ].join(" ");
   const writeRules = [...new Set(writeRoots)].map((path) => `(subpath ${sandboxLiteral(path)})`).join(" ");
   const expandedDeniedPaths = new Set(deniedPaths);
@@ -2440,6 +2747,15 @@ export function buildCandidateSandboxProfile({
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
     ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
+    '(deny file-write-data (literal "/dev/dtracehelper") (with no-log))',
+    `(deny mach-lookup ${[
+      "com.apple.SystemConfiguration.DNSConfiguration",
+      "com.apple.logd",
+      "com.apple.system.notification_center",
+      "com.apple.system.opendirectoryd.libinfo",
+    ].map((name) => `(global-name ${JSON.stringify(name)})`).join(" ")} (with no-log))`,
+    '(deny ipc-posix-shm-read-data (ipc-posix-name "apple.shm.notification_center") (with no-log))',
+    '(deny file-read* (literal "/private/etc/passwd") (with no-log))',
     "(allow sysctl-read)",
     '(allow file-read-metadata (literal "/etc") (literal "/var"))',
     `(allow file-read-metadata ${aliasParentMetadataRules})`,
@@ -5011,15 +5327,30 @@ export function createReleaseRehearsalCandidateAdapters({
           sourceStore: resolve(packageStorePath),
           storeRoot: join(runRoot, "pnpm-store"),
           currentUid: process.getuid?.(),
-        }, async ({ storePath, installWritableRoots, sealInstallIndex }) => {
+        }, async ({
+          storePath,
+          installWritableRoots,
+          sealInstallIndex,
+          verifyInstallPhaseBeforeSpawn,
+        }) => {
           const cleanBuildEnv = Object.freeze({
             ...childEnv,
+            __CFPREFERENCES_AVOID_DAEMON: "1",
+            __CF_USER_TEXT_ENCODING: `0x${Number(process.getuid?.()).toString(16).toUpperCase()}:0:0`,
+            CFPREFERENCES_AVOID_DAEMON: "1",
             CI: "1",
+            COMMAND_MODE: "unix2003",
             COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
             HOME: privateHome,
+            LANG: "C",
+            LC_ALL: "C",
+            LOGNAME: "homecook-rehearsal",
             NEXT_TELEMETRY_DISABLED: "1",
+            NODE_OPTIONS: "--no-global-search-paths",
             PATH: `${dirname(tools.nodePath)}:/usr/bin:/bin`,
+            TZ: "UTC0",
             TMPDIR: privateTmp,
+            USER: "homecook-rehearsal",
             npm_config_offline: "true",
           });
           const installSandboxProfile = buildCandidateSandboxProfile({
@@ -5063,6 +5394,7 @@ export function createReleaseRehearsalCandidateAdapters({
             label: "offline frozen dependency install",
             runCommand,
             timeout: 20 * 60_000,
+            beforeSpawn: verifyInstallPhaseBeforeSpawn,
           });
           const finalIndexAuthority = sealInstallIndex();
           const buildSandboxProfile = buildCandidateSandboxProfile({
@@ -5171,6 +5503,17 @@ export function createReleaseRehearsalCandidateAdapters({
               sandbox_policy_evidence: {
                 install_profile_digest: sha256Bytes(Buffer.from(installSandboxProfile, "utf8")),
                 build_profile_digest: sha256Bytes(Buffer.from(buildSandboxProfile, "utf8")),
+                deterministic_runtime_environment_digest: sha256Jcs({
+                  COMMAND_MODE: cleanBuildEnv.COMMAND_MODE,
+                  LANG: cleanBuildEnv.LANG,
+                  LC_ALL: cleanBuildEnv.LC_ALL,
+                  LOGNAME: cleanBuildEnv.LOGNAME,
+                  NODE_OPTIONS: cleanBuildEnv.NODE_OPTIONS,
+                  TZ: cleanBuildEnv.TZ,
+                  USER: cleanBuildEnv.USER,
+                  __CFPREFERENCES_AVOID_DAEMON: cleanBuildEnv.__CFPREFERENCES_AVOID_DAEMON,
+                  __CF_USER_TEXT_ENCODING: cleanBuildEnv.__CF_USER_TEXT_ENCODING,
+                }),
                 final_index_inventory_digest: finalIndexAuthority.inventory_digest,
                 final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
                 execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
