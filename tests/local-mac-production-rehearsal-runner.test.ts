@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
-import { chmodSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { chmodSync, existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -35,6 +35,8 @@ import {
   parseAndValidateWorkerFixtureReadback,
   compilePrimitiveServiceOperations,
   validatePrimitiveContainerInspection,
+  buildCandidateContainerVerificationContract,
+  buildFullLocalProbeStartupContract,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
@@ -99,6 +101,11 @@ function canonicalPrimitiveConfig() {
     test: ["CMD", "node", "-e", "process.exit(0)"],
     timeout: "5s",
   };
+  const probeContract = buildFullLocalProbeStartupContract({
+    candidateVerification: buildCandidateContainerVerificationContract({
+      candidateRoot: "/private/rehearsal/candidate",
+    }),
+  });
   const bind = (target: string) => ({
     read_only: true,
     source: `/private/rehearsal${target}`,
@@ -131,11 +138,13 @@ function canonicalPrimitiveConfig() {
       volumes: [bind("/homecook/secret-entrypoint.sh"), bind("/homecook/start-postgrest.sh")],
     }),
     "postgrest-probe": base("postgrest-probe", {
+      command: probeContract.command,
       depends_on: { postgrest: { condition: "service_started" } },
-      healthcheck,
+      healthcheck: { ...healthcheck, test: probeContract.healthcheck },
       networks: { "data-internal": { aliases: ["postgrest-probe"] } },
       read_only: true,
       secrets: [],
+      tmpfs: ["/tmp:rw,noexec,nosuid,size=1m"],
       volumes: [bind("/sealed-candidate"), bind("/sealed-candidate-authority")],
     }),
     storage: base("storage", {
@@ -662,6 +671,7 @@ describe("release rehearsal R2 orchestration", () => {
     expect(adapters.createResources).toHaveBeenCalledWith(expect.objectContaining({
       candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
     }));
+    expect(adapters.createResources).toHaveBeenCalledBefore(adapters.startComponents);
     expect(adapters.startComponents).toHaveBeenCalledWith(expect.objectContaining({
       candidateRoot: join(namespaceRoot, RUN_ID, "execution-candidate"),
       candidateContainerAuthorityRoot: join(
@@ -1006,6 +1016,8 @@ describe("release rehearsal R2 public command and schema", () => {
       (v: typeof config) => { v.networks["auth-edge"].internal = false; },
       (v: typeof config) => { delete (v.volumes as Partial<typeof v.volumes>)["storage-data"]; },
       (v: typeof config) => { v.services.auth.build = "."; },
+      (v: typeof config) => { v.services["postgrest-probe"].command = ["node", "-e", "setInterval(()=>{},2147483647)"]; },
+      (v: typeof config) => { v.services["postgrest-probe"].healthcheck = { interval: "5s", retries: 60, test: ["CMD", "node", "-e", "process.exit(0)"], timeout: "5s" }; },
     ]) {
       const value = structuredClone(config); mutate(value);
       expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS })).toThrow();
@@ -1021,12 +1033,140 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(typedOperations.filter((item) => item.kind === "create")).toHaveLength(7);
     expect(typedOperations.find((item) => item.kind === "connect" && item.service === "auth")).toMatchObject({ network: "auth-egress" });
     expect(typedOperations.findIndex((item) => item.kind === "readiness" && item.service === "postgres")).toBeLessThan(typedOperations.findIndex((item) => item.kind === "create" && item.service === "postgrest"));
+    expect(typedOperations.findIndex((item) => item.kind === "readiness" && item.service === "postgrest-probe"))
+      .toBeLessThan(typedOperations.findIndex((item) => item.kind === "create" && item.service === "storage"));
     const allArgs = typedOperations.flatMap((item) => item.argv ?? []);
     expect(allArgs).toContain("--health-cmd");
     expect(allArgs).toContain("--tmpfs");
     expect(allArgs).toContain("--publish");
     expect(allArgs.filter((item) => item === "--mount").length).toBeGreaterThan(20);
     expect(typedOperations.flatMap((item) => item.argv ?? []).join(" ")).not.toMatch(/compose (?:create|start|up)/u);
+  });
+
+  it("executes the completed candidate reader in the full-local probe startup contract", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
+    const issueContainerAuthority = candidateModule.issueCompletedCandidateContainerAuthority;
+    const buildContainerContract = adaptersModule.buildCandidateContainerVerificationContract;
+    const buildProbeContract = adaptersModule.buildFullLocalProbeStartupContract;
+    expect(typeof issueContainerAuthority).toBe("function");
+    expect(typeof buildContainerContract).toBe("function");
+    expect(typeof buildProbeContract).toBe("function");
+    if (
+      typeof issueContainerAuthority !== "function"
+      || typeof buildContainerContract !== "function"
+      || typeof buildProbeContract !== "function"
+    ) return;
+
+    const fixture = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-");
+    const containerAuthorityRoot = `${fixture.candidateRoot}.container-authority`;
+    const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
+    (issueContainerAuthority as (options: {
+      candidateRoot: string;
+      containerCandidateRoot: string;
+      containerAuthorityPath: string;
+    }) => unknown)({
+      candidateRoot: fixture.candidateRoot,
+      containerCandidateRoot: fixture.candidateRoot,
+      containerAuthorityPath,
+    });
+    const repoRoot = realpathSync(process.cwd());
+    const candidateVerification = (buildContainerContract as (options: Record<string, string>) => {
+      identitySource: (options?: { outputPath?: string | null }) => string;
+    })({
+      candidateRoot: fixture.candidateRoot,
+      containerCandidateRoot: fixture.candidateRoot,
+      containerAuthorityRoot,
+      candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+      jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+    });
+    const identityOutputPath = join(fixture.authorityRoot, "full-local-startup-identity.json");
+    const probe = (buildProbeContract as (options: {
+      candidateVerification: typeof candidateVerification;
+      identityOutputPath: string;
+      postgrestReadyUrl: string;
+    }) => { command: string[]; healthcheck: string[]; identity_output_path: string })({
+      candidateVerification,
+      identityOutputPath,
+      postgrestReadyUrl: "data:text/plain,ready",
+    });
+
+    const child = spawn(process.execPath, probe.command.slice(1), { stdio: "ignore" });
+    const deadline = Date.now() + 5_000;
+    while (!existsSync(identityOutputPath) && child.exitCode === null && Date.now() < deadline) {
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+    }
+    expect(existsSync(identityOutputPath)).toBe(true);
+    expect(JSON.parse(readFileSync(identityOutputPath, "utf8"))).toEqual({
+      release_sha: fixture.manifest.release_sha,
+      release_tree: fixture.manifest.release_tree,
+      build_id: fixture.manifest.build_id,
+      sealed_bundle_digest: fixture.manifest.sealed_bundle_digest,
+      migration_head: fixture.manifest.migration.migration_head,
+    });
+    const healthy = spawnSync(process.execPath, probe.healthcheck.slice(2), { encoding: "utf8" });
+    expect(healthy.status, healthy.stderr).toBe(0);
+    child.kill("SIGTERM");
+    await new Promise((resolvePromise) => child.once("exit", resolvePromise));
+
+    const missing = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-missing-");
+    const missingAuthorityRoot = `${missing.candidateRoot}.container-authority`;
+    const missingVerification = (buildContainerContract as (options: Record<string, string>) => {
+      identitySource: (options?: { outputPath?: string | null }) => string;
+    })({
+      candidateRoot: missing.candidateRoot,
+      containerCandidateRoot: missing.candidateRoot,
+      containerAuthorityRoot: missingAuthorityRoot,
+      candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+      jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+    });
+    const missingIdentity = join(missing.authorityRoot, "missing-startup-identity.json");
+    const missingProbe = (buildProbeContract as (options: {
+      candidateVerification: typeof missingVerification;
+      identityOutputPath: string;
+      postgrestReadyUrl: string;
+    }) => { command: string[]; healthcheck: string[] })({
+      candidateVerification: missingVerification,
+      identityOutputPath: missingIdentity,
+      postgrestReadyUrl: "data:text/plain,ready",
+    });
+    const rejected = spawnSync(process.execPath, missingProbe.command.slice(1), { encoding: "utf8" });
+    expect(rejected.status).toBe(70);
+    expect(existsSync(missingIdentity)).toBe(false);
+    const unhealthy = spawnSync(process.execPath, missingProbe.healthcheck.slice(2), { encoding: "utf8" });
+    expect(unhealthy.status).not.toBe(0);
+
+    const tampered = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-tamper-");
+    const tamperedAuthorityRoot = `${tampered.candidateRoot}.container-authority`;
+    (issueContainerAuthority as (options: {
+      candidateRoot: string;
+      containerCandidateRoot: string;
+      containerAuthorityPath: string;
+    }) => unknown)({
+      candidateRoot: tampered.candidateRoot,
+      containerCandidateRoot: tampered.candidateRoot,
+      containerAuthorityPath: join(tamperedAuthorityRoot, "authority.json"),
+    });
+    const indexPath = join(tampered.candidateRoot, "pnpm-store", "v10", "index", "package.json");
+    chmodSync(indexPath, 0o600);
+    writeFileSync(indexPath, "{\"tampered\":true}\n");
+    chmodSync(indexPath, 0o400);
+    const tamperedIdentity = join(tampered.authorityRoot, "tampered-startup-identity.json");
+    const tamperedProbe = (buildProbeContract as typeof buildFullLocalProbeStartupContract)({
+      candidateVerification: (buildContainerContract as typeof buildCandidateContainerVerificationContract)({
+        candidateRoot: tampered.candidateRoot,
+        containerCandidateRoot: tampered.candidateRoot,
+        containerAuthorityRoot: tamperedAuthorityRoot,
+        candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
+        jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
+      }),
+      identityOutputPath: tamperedIdentity,
+      postgrestReadyUrl: "data:text/plain,ready",
+    });
+    const tamperedResult = spawnSync(process.execPath, tamperedProbe.command.slice(1), { encoding: "utf8" });
+    expect(tamperedResult.status).toBe(70);
+    expect(existsSync(tamperedIdentity)).toBe(false);
+    expect(spawnSync(process.execPath, tamperedProbe.healthcheck.slice(2)).status).not.toBe(0);
   });
 
   it("cross-binds primitive inspect output to secrets, health, ports, mounts, and networks", () => {
@@ -1140,7 +1280,10 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(environment.FULL_LOCAL_SECRET_DIR).toMatch(/^\/private\/r2-run\//u);
     expect(environment.FULL_LOCAL_API_EXTERNAL_URL).toMatch(/^http:\/\/127\.0\.0\.1:/u);
     expect(Object.values(environment).join("\n")).not.toContain("mumeok.kr");
-    const override = buildFullLocalComposeOverride(namespace);
+    const override = buildFullLocalComposeOverride(namespace, {
+      candidateRoot: "/private/rehearsal/candidate",
+      candidateContainerAuthorityRoot: "/private/rehearsal/candidate.container-authority",
+    });
     expect(override.match(/internal: true/gu)).toHaveLength(3);
     expect(override.match(/pull_policy: never/gu)).toHaveLength(7);
     expect(override.match(/max-size: "1m"/gu)).toHaveLength(7);

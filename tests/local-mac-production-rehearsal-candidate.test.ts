@@ -43,6 +43,7 @@ import {
   readBuildEnvironmentSnapshot,
   readCompletedCandidateRoot,
   issueCompletedCandidatePhysicalAuthority,
+  verifyCompletedCandidatePhysicalStability,
   validateCandidateCiEvidence,
   validateCandidateImages,
   validateCandidateSourceEvidence,
@@ -2014,6 +2015,34 @@ describe("release rehearsal candidate orchestration", () => {
     }) => unknown)(fixture.candidateRoot, {
       physicalAuthorityPath: fixture.physicalAuthorityPath,
     })).toThrow(/candidate|pnpm|physical|identity|authority|drift/iu);
+  });
+
+  it("binds candidate and bundle parent directory identities across stable gates", async () => {
+    for (const attack of ["mutate-restore", "swap-restore"] as const) {
+      const fixture = await createCompletedRehearsalCandidateFixture(
+        `homecook-candidate-directory-${attack}-`,
+      );
+      const bundleRoot = join(fixture.candidateRoot, "bundles", "bundle");
+      const appRoot = join(bundleRoot, "app");
+
+      if (attack === "mutate-restore") {
+        chmodSync(appRoot, 0o700);
+        const transient = join(appRoot, "transient-entry");
+        writeFileSync(transient, "transient\n", { mode: 0o400 });
+        unlinkSync(transient);
+        chmodSync(appRoot, 0o500);
+      } else {
+        chmodSync(bundleRoot, 0o700);
+        const held = join(bundleRoot, "app-held");
+        renameSync(appRoot, held);
+        renameSync(held, appRoot);
+        chmodSync(bundleRoot, 0o500);
+      }
+
+      expect(() => verifyCompletedCandidatePhysicalStability(fixture.candidateRoot, {
+        physicalAuthorityPath: fixture.physicalAuthorityPath,
+      })).toThrow(/candidate|bundle|directory|parent|physical|identity|authority|drift/iu);
+    }
   });
 
   it("reads every authority file through a stable private O_NOFOLLOW FD", () => {
