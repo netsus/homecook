@@ -1005,9 +1005,25 @@ function assertSourceTreeSafe(rootPath) {
   visit(root, "");
 }
 
+function physicalDirectoryEntry(path, stat) {
+  return Object.freeze({
+    path,
+    type: "directory",
+    mode: modeBits(stat.mode),
+    uid: String(stat.uid),
+    gid: String(stat.gid),
+    nlink: String(stat.nlink),
+    device: String(stat.dev),
+    inode: String(stat.ino),
+    size: String(stat.size),
+    ctime_ns: String(stat.ctimeNs),
+  });
+}
+
 function inventorySealedComponent(component, rootPath) {
   const root = realpathSync(rootPath);
   const inventory = [];
+  const directories = [];
   const verifyStableIdentity = (path, before, label) => {
     const after = lstatSync(path, { bigint: true });
     for (const key of ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs"]) {
@@ -1048,8 +1064,24 @@ function inventorySealedComponent(component, rootPath) {
       return;
     }
     if (stat.isDirectory()) {
-      for (const name of readdirSync(path).sort()) {
-        visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+      if ((modeBits(stat.mode) & 0o222) !== 0) {
+        fail(`sealed candidate directory remains writable: ${relativePath}`);
+      }
+      const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+      try {
+        if (!samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))) {
+          fail(`sealed directory identity drifted before read: ${relativePath}`);
+        }
+        directories.push(physicalDirectoryEntry(relativePath, stat));
+        for (const name of readdirSync(path).sort()) {
+          visit(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`);
+        }
+        if (
+          !samePnpmStoreIdentity(stat, fstatSync(fd, { bigint: true }))
+          || !samePnpmStoreIdentity(stat, lstatSync(path, { bigint: true }))
+        ) fail(`sealed directory identity drifted during read: ${relativePath}`);
+      } finally {
+        closeSync(fd);
       }
       return;
     }
@@ -1080,8 +1112,8 @@ function inventorySealedComponent(component, rootPath) {
       dereferenced_sha256: null,
     });
   };
-  for (const name of readdirSync(root).sort()) visit(join(root, name), name);
-  return inventory;
+  visit(root, ".");
+  return Object.freeze({ entries: inventory, directories });
 }
 
 function inventoryStableSealedComponent(component, rootPath, expectedInventory) {
@@ -1091,6 +1123,7 @@ function inventoryStableSealedComponent(component, rootPath, expectedInventory) 
     .sort((left, right) => left.path.localeCompare(right.path));
   const expectedByPath = new Map(expectedEntries.map((entry) => [entry.path, entry]));
   const inventory = [];
+  const directories = [];
   const sameIdentity = (left, right) => [
     "dev", "ino", "mode", "uid", "gid", "nlink", "size", "ctimeNs",
   ].every((key) => left[key] === right[key]);
@@ -1115,8 +1148,9 @@ function inventoryStableSealedComponent(component, rootPath, expectedInventory) 
         if (!sameIdentity(before, fstatSync(fd, { bigint: true }))) {
           fail(`sealed directory identity drifted before stable verification: ${relativePath}`);
         }
+        directories.push(physicalDirectoryEntry(relativePath, before));
         for (const name of readdirSync(path).sort()) {
-          visit(join(path, name), relativePath ? `${relativePath}/${name}` : name);
+          visit(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`);
         }
         if (
           !sameIdentity(before, fstatSync(fd, { bigint: true }))
@@ -1162,13 +1196,13 @@ function inventoryStableSealedComponent(component, rootPath, expectedInventory) 
     }
     inventory.push(currentEntry(expected, before));
   };
-  for (const name of readdirSync(root).sort()) visit(join(root, name), name);
+  visit(root, ".");
   inventory.sort((left, right) => left.path.localeCompare(right.path));
   if (
     canonicalizeJcs(inventory.map((entry) => entry.path))
     !== canonicalizeJcs(expectedEntries.map((entry) => entry.path))
   ) fail(`sealed ${component} physical inventory is incomplete`);
-  return inventory;
+  return Object.freeze({ entries: inventory, directories });
 }
 
 export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {}) {
@@ -1190,7 +1224,7 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
     const destination = join(bundleRoot, component);
     copyLocalMacProductionExecutionTree(componentRoots[component], destination);
     sealLocalMacProductionExecutionTree(destination);
-    const entries = inventorySealedComponent(component, destination);
+    const { entries } = inventorySealedComponent(component, destination);
     fileInventory.push(...entries);
     const physicalEntries = entries.map((entry) => {
       const physicalEntry = { ...entry };
@@ -1587,7 +1621,8 @@ function pnpmStoreInventory(root, currentUid, {
       entries: portableEntries,
     }),
     identity_digest: sha256Jcs({
-      schema: "homecook.release-rehearsal-pnpm-store-physical-identity.v1",
+      schema: "homecook.release-rehearsal-pnpm-store-physical-identity.v2",
+      root_identity: physicalDirectoryEntry(".", rootBefore),
       entries,
     }),
   });
@@ -2183,12 +2218,36 @@ function portableCandidateFileInventory(entries) {
   });
 }
 
-function candidatePhysicalIdentityDigest(bundleInventory, storeIdentityDigest) {
+function candidatePhysicalIdentityDigest(bundleInventory, directoryInventory, storeIdentityDigest) {
   return sha256Jcs({
-    schema: "homecook.local-mac-production-rehearsal-candidate-physical-identity.v1",
+    schema: "homecook.local-mac-production-rehearsal-candidate-physical-identity.v2",
     bundle_file_inventory_digest: sha256Jcs(bundleInventory),
+    directory_inventory_digest: sha256Jcs(directoryInventory),
     pnpm_store_physical_identity_digest: storeIdentityDigest,
   });
+}
+
+function readSealedDirectoryPhysicalIdentity(path, relativePath, currentUid) {
+  const before = lstatSync(path, { bigint: true });
+  if (
+    !before.isDirectory() || before.isSymbolicLink()
+    || before.uid !== BigInt(currentUid) || modeBits(before.mode) !== 0o500
+    || realpathSync(path) !== path
+  ) fail(`completed candidate directory authority is unsafe: ${relativePath}`);
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW);
+  try {
+    if (!samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))) {
+      fail(`completed candidate directory identity drifted before read: ${relativePath}`);
+    }
+    const entry = physicalDirectoryEntry(relativePath, before);
+    if (
+      !samePnpmStoreIdentity(before, fstatSync(fd, { bigint: true }))
+      || !samePnpmStoreIdentity(before, lstatSync(path, { bigint: true }))
+    ) fail(`completed candidate directory identity drifted during read: ${relativePath}`);
+    return entry;
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function completedCandidatePhysicalAuthorityPath(root) {
@@ -2213,6 +2272,17 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
     fail("completed candidate root identity drifted before read");
   }
   try {
+  const candidateDirectories = [
+    [root, "."],
+    [join(root, "bundles"), "bundles"],
+    [join(root, "bundles", "bundle"), "bundles/bundle"],
+    [join(root, "evidence"), "evidence"],
+    [join(root, "pnpm-store"), "pnpm-store"],
+  ].map(([path, relativePath]) => readSealedDirectoryPhysicalIdentity(
+    path,
+    relativePath,
+    Number(rootStat.uid),
+  ));
   const completePath = join(root, "complete.json");
   const failedPath = join(root, "failed.json");
   if (!pathExists(completePath) || pathExists(failedPath)) {
@@ -2290,16 +2360,22 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
   ]);
   const actualInventory = [];
   const actualPhysicalInventory = [];
+  const bundleDirectories = [];
   const actualArtifacts = {};
   for (const component of ["app", "full_local", "worker"]) {
-    const entries = verifyPortableContent
+    const componentInventory = verifyPortableContent
       ? inventorySealedComponent(component, join(physicalBundleRoot, component))
       : inventoryStableSealedComponent(
         component,
         join(physicalBundleRoot, component),
         bundleManifest.file_inventory,
       );
+    const entries = componentInventory.entries;
     actualInventory.push(...entries);
+    bundleDirectories.push(...componentInventory.directories.map((entry) => ({
+      ...entry,
+      path: `bundles/bundle/${component}${entry.path === "." ? "" : `/${entry.path}`}`,
+    })));
     const physicalEntries = entries.map((entry) => {
       const physicalEntry = { ...entry };
       for (const field of ["source_kind", "uid", "gid", "nlink", "device", "inode", "ctime"]) {
@@ -2314,6 +2390,8 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
     `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
   actualPhysicalInventory.sort((left, right) =>
     `${left.component}\0${left.path}`.localeCompare(`${right.component}\0${right.path}`));
+  const directoryInventory = [...candidateDirectories, ...bundleDirectories]
+    .sort((left, right) => left.path.localeCompare(right.path));
   const actualSealedBundleDigest = sha256Jcs({
     schema: "homecook.local-mac-production-rehearsal-sealed-bundle.v1",
     artifacts: actualArtifacts,
@@ -2365,6 +2443,7 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
     bundle_manifest: bundleManifest,
     physical_identity_digest: candidatePhysicalIdentityDigest(
       actualInventory,
+      directoryInventory,
       storeSnapshot.identity_digest,
     ),
   });

@@ -78,6 +78,7 @@ export function normalizeObserverComponent(component) {
 const RESOURCE_KIND_ORDER = { network: 0, volume: 1, container: 2 };
 const RUN_IMAGE_SERVICE_LABEL = "com.homecook.release-rehearsal.image-service";
 const RUN_CREATION_NONCE_LABEL = "com.homecook.release-rehearsal.creation-nonce";
+const FULL_LOCAL_IDENTITY_OUTPUT_PATH = "/tmp/homecook-r2-identity.json";
 
 const RESOLVED_COMPOSE_TOP_LEVEL_KEYS = ["name", "networks", "secrets", "services", "volumes"];
 const FIXTURE_CREDENTIAL_KEY = /(?:^|[_-])(access[_-]?token|api[_-]?key|password|private[_-]?key|secret)(?:$|[_-])/iu;
@@ -85,7 +86,7 @@ const SERVICE_RUNTIME_CONTRACT = Object.freeze({
   postgres: Object.freeze({ dependsOn: {}, health: true, networks: ["data-internal"], ports: [{ key: "postgres", target: 5432 }], secrets: ["postgres_password"], tmpfs: [], volumeTargets: ["/var/lib/postgresql/data", "/homecook/secret-entrypoint.sh", "/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh"] }),
   auth: Object.freeze({ dependsOn: { postgres: "service_healthy" }, health: true, networks: ["auth-egress", "data-internal"], ports: [], secrets: ["jwt_keys", "jwt_secret", "postgres_password"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-auth.sh"] }),
   postgrest: Object.freeze({ dependsOn: { auth: "service_healthy", postgres: "service_healthy" }, health: false, networks: ["data-internal"], ports: [], secrets: ["jwt_jwks", "postgres_password"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-postgrest.sh"] }),
-  "postgrest-probe": Object.freeze({ dependsOn: { postgrest: "service_started" }, health: true, networks: ["data-internal"], ports: [], secrets: [], tmpfs: [], volumeTargets: ["/sealed-candidate", "/sealed-candidate-authority"] }),
+  "postgrest-probe": Object.freeze({ dependsOn: { postgrest: "service_started" }, health: true, networks: ["data-internal"], ports: [], secrets: [], tmpfs: ["/tmp"], volumeTargets: ["/sealed-candidate", "/sealed-candidate-authority"] }),
   storage: Object.freeze({ dependsOn: { auth: "service_healthy", "postgrest-probe": "service_healthy" }, health: true, networks: ["data-internal"], ports: [], secrets: ["anon_key", "jwt_jwks", "jwt_secret", "postgres_password", "service_role_key", "storage_s3_access_key_id", "storage_s3_access_key_secret"], tmpfs: [], volumeTargets: ["/homecook/secret-entrypoint.sh", "/homecook/start-storage.sh", "/var/lib/storage"] }),
   "api-gateway": Object.freeze({ dependsOn: { storage: "service_healthy" }, health: true, networks: ["auth-edge", "data-internal"], ports: [{ key: "storage", target: "storage" }], secrets: ["anon_key", "anon_key_asymmetric", "publishable_key", "secret_key", "service_role_key", "service_role_key_asymmetric", "session_attestation_hmac_key_v1"], tmpfs: ["/tmp"], volumeTargets: ["/homecook/kong-entrypoint.sh", "/homecook/kong.yml", "/homecook/secret-entrypoint.sh", "/usr/local/share/lua/5.1/kong/plugins/homecook-attestation"] }),
   "auth-proxy": Object.freeze({ dependsOn: { "api-gateway": "service_healthy" }, health: true, networks: ["auth-edge"], ports: [{ key: "auth", target: 8080 }], secrets: [], tmpfs: [], volumeTargets: ["/homecook/auth-only-proxy.mjs"] }),
@@ -250,6 +251,18 @@ export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
     }
     if ((value.healthcheck !== undefined) !== contract.health) fail(`resolved Compose healthcheck presence differs: ${service}`);
     const healthcheck = contract.health ? normalizeHealthcheck(service, value.healthcheck) : null;
+    if (service === "postgrest-probe") {
+      const expectedProbe = buildFullLocalProbeStartupContract({
+        candidateVerification: buildCandidateContainerVerificationContract({
+          candidateRoot: "/private/homecook-r2-candidate-authority",
+        }),
+      });
+      const expectedHealthcheck = normalizeHealthcheck(service, { test: expectedProbe.healthcheck });
+      if (
+        canonicalizeJcs(value.command) !== canonicalizeJcs(expectedProbe.command)
+        || healthcheck.command !== expectedHealthcheck.command
+      ) fail("resolved Compose postgrest-probe startup authority differs");
+    }
     compiledServices.set(service, Object.freeze({ name: service, ...value, depends_on: dependsOn, healthcheck, ports: servicePorts, secret_mounts: secretMounts }));
   }
   for (const network of ["auth-edge", "auth-egress", "data-internal"]) if (config.networks?.[network]?.internal !== true) fail(`resolved Compose network is not internal: ${network}`);
@@ -452,6 +465,10 @@ function quoteYaml(value) {
   return JSON.stringify(String(value));
 }
 
+/**
+ * @param {{run_id:string,project:string,ports:{postgres:number},volume_names:string[]}} namespace
+ * @param {{candidateRoot?:string|null,candidateContainerAuthorityRoot?:string|null,creationNonce?:string|null}} options
+ */
 export function buildFullLocalComposeOverride(namespace, {
   candidateRoot = null,
   candidateContainerAuthorityRoot = null,
@@ -460,6 +477,11 @@ export function buildFullLocalComposeOverride(namespace, {
   if ((candidateRoot === null) !== (candidateContainerAuthorityRoot === null)) {
     fail("full-local candidate and container authority mounts must be supplied together");
   }
+  const probeContract = candidateRoot === null
+    ? null
+    : buildFullLocalProbeStartupContract({
+      candidateVerification: buildCandidateContainerVerificationContract({ candidateRoot }),
+    });
   const labels = [
     `      ${RUN_OWNERSHIP_LABEL}: ${quoteYaml(namespace.run_id)}`,
     `      ${RUN_PROJECT_LABEL}: ${quoteYaml(namespace.project)}`,
@@ -480,6 +502,11 @@ export function buildFullLocalComposeOverride(namespace, {
       `      - ${quoteYaml(`127.0.0.1:${namespace.ports.postgres}:5432`)}`,
     ] : []),
     ...(service === "postgrest-probe" && candidateRoot ? [
+      `    command: ${JSON.stringify(probeContract.command)}`,
+      "    healthcheck:",
+      `      test: ${JSON.stringify(probeContract.healthcheck)}`,
+      "    tmpfs:",
+      "      - /tmp:rw,noexec,nosuid,size=1m",
       "    volumes:",
       "      - type: bind",
       `        source: ${quoteYaml(candidateRoot)}`,
@@ -1072,6 +1099,9 @@ function runtimeIdentity(component, containerIds, reportedIdentity, workerRpcIde
   };
 }
 
+/**
+ * @param {{candidateRoot:string,containerCandidateRoot?:string,containerAuthorityRoot?:string,candidateModuleUrl?:string,jcsModuleUrl?:string}} options
+ */
 export function buildCandidateContainerVerificationContract({
   candidateRoot,
   containerCandidateRoot = "/sealed-candidate",
@@ -1088,6 +1118,7 @@ export function buildCandidateContainerVerificationContract({
   ) fail("candidate container verification contract paths are invalid");
   const hostAuthorityRoot = completedCandidateContainerAuthorityRoot(candidateRoot);
   const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
+  /** @param {{outputPath?:string|null}} options */
   const identitySource = ({ outputPath = null } = {}) => {
     const write = outputPath
       ? `require('node:fs').writeFileSync(${JSON.stringify(outputPath)},canonical,{flag:'wx',mode:0o400});`
@@ -1106,7 +1137,46 @@ export function buildCandidateContainerVerificationContract({
   });
 }
 
-async function readContainerIdentity(state, entry, manifest, { outputPath = "/tmp/homecook-r2-identity.json", signal } = {}) {
+/**
+ * @param {{
+ *   candidateVerification:{identitySource:(options?:{outputPath?:string|null})=>string},
+ *   identityOutputPath?:string,
+ *   postgrestReadyUrl?:string,
+ * }} options
+ */
+export function buildFullLocalProbeStartupContract({
+  candidateVerification,
+  identityOutputPath = FULL_LOCAL_IDENTITY_OUTPUT_PATH,
+  postgrestReadyUrl = "http://postgrest:3001/ready",
+} = {}) {
+  if (
+    typeof candidateVerification?.identitySource !== "function"
+    || typeof identityOutputPath !== "string" || resolve(identityOutputPath) !== identityOutputPath
+    || typeof postgrestReadyUrl !== "string" || postgrestReadyUrl.length === 0
+  ) fail("full-local probe startup authority is incomplete");
+  const expectedKeys = [
+    "build_id", "migration_head", "release_sha", "release_tree", "sealed_bundle_digest",
+  ];
+  const startupSource = `${candidateVerification.identitySource({ outputPath: identityOutputPath })}.then(()=>setInterval(()=>{},2147483647)).catch(()=>process.exit(70))`;
+  const healthSource = [
+    "const fs=require('node:fs');",
+    `const path=${JSON.stringify(identityOutputPath)};`,
+    `const keys=${JSON.stringify(expectedKeys)};`,
+    "(async()=>{const value=JSON.parse(fs.readFileSync(path,'utf8'));",
+    "if(JSON.stringify(Object.keys(value).sort())!==JSON.stringify(keys))throw new Error('identity fields');",
+    "if(!/^[0-9a-f]{40}$/.test(value.release_sha)||!/^[0-9a-f]{40}$/.test(value.release_tree)||!/^[0-9a-f]{64}$/.test(value.sealed_bundle_digest)||typeof value.build_id!=='string'||!value.build_id||typeof value.migration_head!=='string'||!value.migration_head)throw new Error('identity values');",
+    `const response=await fetch(${JSON.stringify(postgrestReadyUrl)});`,
+    "if(response.status!==200)throw new Error('postgrest readiness');",
+    "})().then(()=>process.exit(0)).catch(()=>process.exit(71));",
+  ].join("");
+  return Object.freeze({
+    command: Object.freeze(["node", "-e", startupSource]),
+    healthcheck: Object.freeze(["CMD", "node", "-e", healthSource]),
+    identity_output_path: identityOutputPath,
+  });
+}
+
+async function readContainerIdentity(state, entry, manifest, { signal } = {}) {
   const observed = await inspectResource(state, entry, { signal });
   if (
     observed?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId
@@ -1115,9 +1185,7 @@ async function readContainerIdentity(state, entry, manifest, { outputPath = "/tm
     || observed.name !== entry.name
     || !state.creationLedger.contains(entry)
   ) fail(`${entry.name} identity read ownership mismatch`);
-  const args = outputPath
-    ? ["exec", entry.id, "node", "-e", `process.stdout.write(require('node:fs').readFileSync(${JSON.stringify(outputPath)},'utf8'))`]
-    : ["exec", entry.id, "node", "--input-type=module", "-e", `${state.candidateVerification.identitySource()}.catch(()=>process.exit(70))`];
+  const args = ["exec", entry.id, "node", "-e", `process.stdout.write(require('node:fs').readFileSync(${JSON.stringify(FULL_LOCAL_IDENTITY_OUTPUT_PATH)},'utf8'))`];
   let output = "";
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -1593,7 +1661,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         LOCAL_SUPABASE_INTERNAL_URL: `http://127.0.0.1:${namespace.ports.storage}`,
         HOMECOOK_FULL_LOCAL_SECRET_DIR: "/run/app-secrets",
       }, { runId: state.runId, runRoot: state.runRoot });
-      const appWrapper = `${candidateVerification.identitySource({ outputPath: "/tmp/homecook-r2-identity.json" })}.then(()=>{const net=require('node:net');const proxy=net.createServer(i=>{const o=net.connect(${namespace.ports.storage},'api-gateway');i.pipe(o);o.pipe(i)});proxy.listen(${namespace.ports.storage},'127.0.0.1',()=>{const{spawn}=require('node:child_process');const c=spawn('node',['scripts/start-production.mjs','--hostname','0.0.0.0','--port',process.env.PORT],{stdio:['ignore','pipe','pipe']});let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',bounded);c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>c.kill(s));c.on('exit',(code,signal)=>{proxy.close();if(signal)process.kill(process.pid,signal);else process.exit(code??1)})})}).catch(()=>process.exit(70))`;
+      const appWrapper = `${candidateVerification.identitySource({ outputPath: FULL_LOCAL_IDENTITY_OUTPUT_PATH })}.then(()=>{const net=require('node:net');const proxy=net.createServer(i=>{const o=net.connect(${namespace.ports.storage},'api-gateway');i.pipe(o);o.pipe(i)});proxy.listen(${namespace.ports.storage},'127.0.0.1',()=>{const{spawn}=require('node:child_process');const c=spawn('node',['scripts/start-production.mjs','--hostname','0.0.0.0','--port',process.env.PORT],{stdio:['ignore','pipe','pipe']});let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',bounded);c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>c.kill(s));c.on('exit',(code,signal)=>{proxy.close();if(signal)process.kill(process.pid,signal);else process.exit(code??1)})})}).catch(()=>process.exit(70))`;
       const appArgs = [
         "run", "--detach", "--name", appName,
         "--pull=never",
@@ -1621,7 +1689,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       }
       state.worker = materializeWorkerHealthBundle(state, manifest, candidateRoot);
       const workerName = namespace.container_names.find((name) => name.endsWith("-worker"));
-      const wrapper = `${candidateVerification.identitySource({ outputPath: "/tmp/homecook-r2-identity.json" })}.then(()=>{const{spawn}=require('node:child_process');const{writeFileSync}=require('node:fs');const a=JSON.parse(process.env.R2_WORKER_ARGS);const c=spawn('node',['/sealed-worker/scripts/youtube-extraction-worker-runner.mjs','rehearsal-synthetic',...a],{stdio:['ignore','pipe','pipe']});let out='';let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',d=>{bounded(d);out+=d});c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>{if(c.exitCode===null)c.kill(s);else process.exit(0)});c.on('exit',(code)=>{if(code!==0)process.exit(71);writeFileSync('/tmp/homecook-r2-worker-result.json',out,{flag:'wx',mode:0o400});setInterval(()=>{},2147483647)})}).catch(()=>process.exit(70))`;
+      const wrapper = `${candidateVerification.identitySource({ outputPath: FULL_LOCAL_IDENTITY_OUTPUT_PATH })}.then(()=>{const{spawn}=require('node:child_process');const{writeFileSync}=require('node:fs');const a=JSON.parse(process.env.R2_WORKER_ARGS);const c=spawn('node',['/sealed-worker/scripts/youtube-extraction-worker-runner.mjs','rehearsal-synthetic',...a],{stdio:['ignore','pipe','pipe']});let out='';let bytes=0;const bounded=d=>{bytes+=d.length;if(bytes>1048576){c.kill('SIGTERM');process.exit(72)}};c.stdout.on('data',d=>{bounded(d);out+=d});c.stderr.on('data',bounded);for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,()=>{if(c.exitCode===null)c.kill(s);else process.exit(0)});c.on('exit',(code)=>{if(code!==0)process.exit(71);writeFileSync('/tmp/homecook-r2-worker-result.json',out,{flag:'wx',mode:0o400});setInterval(()=>{},2147483647)})}).catch(()=>process.exit(70))`;
       const workerEnvironment = validateChildEnvironment({
         HOMECOOK_REHEARSAL_RUN_ID: state.runId,
         HOMECOOK_REHEARSAL_MODE: "isolated-r2",
@@ -1689,7 +1757,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       if (!appResource || !workerResource || !probeResource) fail("runtime identity probe container set is incomplete");
       const appReported = await readContainerIdentity(state, appResource, manifest, { signal: state.activeSignal });
       const workerReported = await readContainerIdentity(state, workerResource, manifest, { signal: state.activeSignal });
-      const fullLocalReported = await readContainerIdentity(state, probeResource, manifest, { outputPath: null, signal: state.activeSignal });
+      const fullLocalReported = await readContainerIdentity(state, probeResource, manifest, { signal: state.activeSignal });
       const fullLocalIds = ownedContainers
         .filter((entry) => entry.kind === "container" && ![appId, workerId, sentinelId].includes(entry.id))
         .map((entry) => entry.id);
