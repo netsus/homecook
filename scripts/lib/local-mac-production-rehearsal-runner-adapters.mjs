@@ -855,18 +855,128 @@ function ensureDockerCommandEnvironment(state) {
   return state.commandEnvironment;
 }
 
-const EXPECTED_DOCKER_NONZERO_OUTCOMES = Object.freeze({
-  resource_absent: Object.freeze([1]),
-  startup_identity_pending: Object.freeze([1]),
-  worker_evidence_pending: Object.freeze([44]),
-  network_probe_outcome: Object.freeze([41, 42, 43]),
-});
+const STARTUP_IDENTITY_PENDING_EXIT_CODE = 45;
+const STARTUP_IDENTITY_READ_SOURCE = `const f=require('node:fs');const p=${JSON.stringify(FULL_LOCAL_IDENTITY_OUTPUT_PATH)};if(!f.existsSync(p))process.exit(${STARTUP_IDENTITY_PENDING_EXIT_CODE});process.stdout.write(f.readFileSync(p,'utf8'))`;
+const WORKER_EVIDENCE_READ_SOURCE = "const f=require('node:fs');const p='/tmp/homecook-r2-worker-result.json';if(!f.existsSync(p))process.exit(44);process.stdout.write(f.readFileSync(p,'utf8'))";
+const EXPECTED_DOCKER_NONZERO_CONTRACTS = Object.freeze([
+  Object.freeze({ outcome: "resource_absent", commandClass: "inspect_container", status: 1, stdoutForm: "empty", stderrMatcher: "container_absence_exact_optional_newline" }),
+  Object.freeze({ outcome: "resource_absent", commandClass: "inspect_network", status: 1, stdoutForm: "empty", stderrMatcher: "network_absence_exact_optional_newline" }),
+  Object.freeze({ outcome: "resource_absent", commandClass: "inspect_volume", status: 1, stdoutForm: "empty", stderrMatcher: "volume_absence_exact_optional_newline" }),
+  Object.freeze({ outcome: "startup_identity_pending", commandClass: "exec_startup_identity", status: STARTUP_IDENTITY_PENDING_EXIT_CODE, stdoutForm: "empty", stderrMatcher: "empty" }),
+  Object.freeze({ outcome: "worker_evidence_pending", commandClass: "exec_worker_evidence", status: 44, stdoutForm: "empty", stderrMatcher: "empty" }),
+  Object.freeze({ outcome: "network_probe_outcome", commandClass: "exec_network_probe", status: 41, stdoutForm: "empty", stderrMatcher: "empty" }),
+  Object.freeze({ outcome: "network_probe_outcome", commandClass: "exec_network_probe", status: 42, stdoutForm: "empty", stderrMatcher: "empty" }),
+  Object.freeze({ outcome: "network_probe_outcome", commandClass: "exec_network_probe", status: 43, stdoutForm: "empty", stderrMatcher: "empty" }),
+]);
 
-function isExpectedDockerNonzero(result, outcome) {
-  const statuses = EXPECTED_DOCKER_NONZERO_OUTCOMES[outcome];
-  return Array.isArray(statuses)
-    && statuses.includes(result.status)
-    && result.stdout === "";
+export function getExpectedDockerNonzeroContractInventory() {
+  return EXPECTED_DOCKER_NONZERO_CONTRACTS;
+}
+
+function isCanonicalInspectResourceId(kind, value) {
+  if (typeof value !== "string") return false;
+  if (kind === "container" || kind === "network") return /^[0-9a-f]{64}$/u.test(value);
+  return kind === "volume"
+    && value.length <= 255
+    && /^[A-Za-z0-9][A-Za-z0-9_.-]+$/u.test(value);
+}
+
+function classifyExpectedDockerCommand(outcome, args) {
+  if (!Array.isArray(args)) return null;
+  if (
+    outcome === "resource_absent"
+    && args.length === 6
+    && args[0] === "inspect"
+    && args[1] === "--type"
+    && args[2] === "container"
+    && isCanonicalInspectResourceId("container", args[3])
+    && args[4] === "--format"
+    && args[5] === "{{json .Config.Labels}}\t{{.Name}}"
+  ) return Object.freeze({ commandClass: "inspect_container", resourceId: args[3] });
+  if (
+    outcome === "resource_absent"
+    && args.length === 5
+    && ["network", "volume"].includes(args[0])
+    && args[1] === "inspect"
+    && isCanonicalInspectResourceId(args[0], args[2])
+    && args[3] === "--format"
+    && args[4] === "{{json .Labels}}\t{{.Name}}"
+  ) return Object.freeze({ commandClass: `inspect_${args[0]}`, resourceId: args[2] });
+  if (
+    outcome === "startup_identity_pending"
+    && args.length === 5
+    && args[0] === "exec"
+    && isCanonicalInspectResourceId("container", args[1])
+    && args[2] === "node"
+    && args[3] === "-e"
+    && args[4] === STARTUP_IDENTITY_READ_SOURCE
+  ) return Object.freeze({ commandClass: "exec_startup_identity", resourceId: args[1] });
+  if (
+    outcome === "worker_evidence_pending"
+    && args.length === 5
+    && args[0] === "exec"
+    && isCanonicalInspectResourceId("container", args[1])
+    && args[2] === "node"
+    && args[3] === "-e"
+    && args[4] === WORKER_EVIDENCE_READ_SOURCE
+  ) return Object.freeze({ commandClass: "exec_worker_evidence", resourceId: args[1] });
+  if (
+    outcome === "network_probe_outcome"
+    && args.length === 5
+    && args[0] === "exec"
+    && isCanonicalInspectResourceId("container", args[1])
+    && args[2] === "node"
+    && args[3] === "-e"
+    && typeof args[4] === "string"
+    && args[4].startsWith("const net=require('node:net');const probe=")
+    && args[4].endsWith(".catch(()=>process.exit(43));")
+  ) return Object.freeze({ commandClass: "exec_network_probe", resourceId: args[1] });
+  return null;
+}
+
+function normalizeSingleOptionalLineEnding(source) {
+  if (typeof source !== "string") return null;
+  if (source.endsWith("\r\n")) return source.slice(0, -2);
+  if (source.endsWith("\n")) return source.slice(0, -1);
+  return source;
+}
+
+function exactResourceAbsenceStderr(commandClass, resourceId) {
+  if (commandClass === "inspect_container") return Object.freeze([
+    `Error: No such object: ${resourceId}`,
+    `Error: No such container: ${resourceId}`,
+    `Error response from daemon: No such container: ${resourceId}`,
+  ]);
+  if (commandClass === "inspect_network") return Object.freeze([
+    `Error: No such network: ${resourceId}`,
+    `Error response from daemon: network ${resourceId} not found`,
+  ]);
+  if (commandClass === "inspect_volume") return Object.freeze([
+    `Error: No such volume: ${resourceId}`,
+    `Error response from daemon: get ${resourceId}: no such volume`,
+  ]);
+  return Object.freeze([]);
+}
+
+export function matchesExpectedDockerNonzero(result, outcome, args) {
+  if (
+    !result
+    || Boolean(result.error)
+    || (result.signal !== null && result.signal !== undefined)
+    || result.truncated === true
+    || !Number.isSafeInteger(result.status)
+  ) return false;
+  const command = classifyExpectedDockerCommand(outcome, args);
+  if (!command) return false;
+  const contract = EXPECTED_DOCKER_NONZERO_CONTRACTS.find((entry) =>
+    entry.outcome === outcome
+    && entry.commandClass === command.commandClass
+    && entry.status === result.status);
+  if (!contract || contract.stdoutForm !== "empty" || result.stdout !== "") return false;
+  if (contract.stderrMatcher === "empty") return result.stderr === "";
+  const normalizedStderr = normalizeSingleOptionalLineEnding(result.stderr);
+  return normalizedStderr !== null
+    && exactResourceAbsenceStderr(command.commandClass, command.resourceId).includes(normalizedStderr);
 }
 
 async function dockerCommand(state, args, options = {}) {
@@ -912,7 +1022,7 @@ async function dockerCommand(state, args, options = {}) {
     || !Number.isSafeInteger(result.status);
   const allowedNonzero = !transportFailed
     && result.status !== 0
-    && isExpectedDockerNonzero(result, options.allowFailure);
+    && matchesExpectedDockerNonzero(result, options.allowFailure, args);
   if (transportFailed || result.status !== 0 && !allowedNonzero) {
     throw new Error("docker_command_failed: isolated Docker command failed.");
   }
@@ -1770,7 +1880,7 @@ async function readContainerIdentity(state, entry, manifest, { signal } = {}) {
     || observed.name !== entry.name
     || !state.creationLedger.contains(entry)
   ) fail(`${entry.name} identity read ownership mismatch`);
-  const args = ["exec", entry.id, "node", "-e", `process.stdout.write(require('node:fs').readFileSync(${JSON.stringify(FULL_LOCAL_IDENTITY_OUTPUT_PATH)},'utf8'))`];
+  const args = ["exec", entry.id, "node", "-e", STARTUP_IDENTITY_READ_SOURCE];
   let output = "";
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -2593,7 +2703,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       while (Date.now() < workerDeadline && !workerResult) {
         const result = await dockerCommand(state, [
           "exec", workerRuntime.id, "node", "-e",
-          "const f=require('node:fs');const p='/tmp/homecook-r2-worker-result.json';if(!f.existsSync(p))process.exit(44);process.stdout.write(f.readFileSync(p,'utf8'))",
+          WORKER_EVIDENCE_READ_SOURCE,
         ], {
           allowFailure: "worker_evidence_pending",
           signal: state.activeSignal,
