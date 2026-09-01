@@ -134,7 +134,7 @@ describe("release promotion governance docs", () => {
       "docs/engineering/local-mac-production-release-rehearsal.md",
     );
 
-    expect(rehearsalContract).toContain("상태: **canonical / candidate build-work sandbox repair author complete / fresh independent review pending**");
+    expect(rehearsalContract).toContain("상태: **canonical / bind-source and startup repair author complete / fresh independent review pending**");
     expect(rehearsalContract).toContain("untagged exact-SHA candidate");
     expect(rehearsalContract).toContain("production authority tag");
     expect(rehearsalContract).toContain("동일 bytes");

@@ -448,7 +448,7 @@ describe("local Mac production rehearsal CLI", () => {
     expect(productionCli).toContain("activation_blocked");
 
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    expect(rehearsalRunbook).toContain("상태: **canonical / candidate build-work sandbox repair author complete / fresh independent review pending**");
+    expect(rehearsalRunbook).toContain("상태: **canonical / bind-source and startup repair author complete / fresh independent review pending**");
     expect(rehearsalRunbook).toContain("generated_build_inventory_digest");
     expect(rehearsalRunbook).toContain("pnpm_store_snapshot_inventory_digest");
     expect(rehearsalRunbook).toContain("root-local physical authority");
