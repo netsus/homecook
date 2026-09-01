@@ -585,7 +585,7 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     expect(await screen.findByText("두 번째 페이지 요거트")).toBeTruthy();
     const amount = screen.getByRole("spinbutton", { name: "완제품 수량" });
     expect((amount as HTMLInputElement).value).toBe("2.5");
-    expect(document.activeElement).toBe(amount);
+    await waitFor(() => expect(document.activeElement).toBe(amount));
     expect(screen.getByText("예상 열량 525 kcal")).toBeTruthy();
     expect(screen.getAllByText(/단백질 최소 7 g/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/지방 정보 준비 중/).length).toBeGreaterThan(0);
