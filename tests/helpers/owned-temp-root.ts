@@ -7,6 +7,7 @@ import {
   lstatSync,
   mkdtempSync,
   openSync,
+  readlinkSync,
   readdirSync,
   realpathSync,
   rmSync,
@@ -79,8 +80,18 @@ function makeOwnedTreeDirectoriesWritable(root: string) {
   }
 }
 
+export function normalizeOwnedTempDescriptorTarget(target: string) {
+  const normalized = target.replace(/ \(deleted\)$/u, "");
+  if (!normalized.startsWith("/")) {
+    throw new Error("owned test temp descriptor path is not absolute");
+  }
+  return normalized;
+}
+
 function currentDescriptorPath(fd: number) {
-  if (process.platform === "linux") return realpathSync(`/proc/self/fd/${fd}`);
+  if (process.platform === "linux") {
+    return normalizeOwnedTempDescriptorTarget(readlinkSync(`/proc/self/fd/${fd}`));
+  }
   if (process.platform !== "darwin") {
     throw new Error("owned test temp descriptor paths are unsupported on this platform");
   }

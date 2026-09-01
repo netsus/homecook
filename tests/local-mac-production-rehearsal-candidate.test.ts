@@ -82,7 +82,10 @@ import {
   EXPECTED_RELEASE_CONTEXTS,
 } from "../scripts/lib/production-release-approval-policy.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
-import { createOwnedTempRegistry } from "./helpers/owned-temp-root";
+import {
+  createOwnedTempRegistry,
+  normalizeOwnedTempDescriptorTarget,
+} from "./helpers/owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -512,6 +515,13 @@ function validManifestInput() {
 }
 
 describe("release rehearsal candidate manifest", () => {
+  it("normalizes Linux deleted descriptor annotations without scanning sibling temp paths", () => {
+    expect(normalizeOwnedTempDescriptorTarget("/tmp/homecook-owned-fixture (deleted)"))
+      .toBe("/tmp/homecook-owned-fixture");
+    expect(() => normalizeOwnedTempDescriptorTarget("relative (deleted)"))
+      .toThrow(/absolute/iu);
+  });
+
   it("cleans exact owned temp roots after success, intended failure, throw, skip, and interruption", async () => {
     const ownedRoots: string[] = [];
     const unrelatedRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-unrelated-control-")));
