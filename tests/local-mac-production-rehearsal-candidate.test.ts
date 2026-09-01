@@ -2408,6 +2408,15 @@ describe("release rehearsal candidate orchestration", () => {
     expect(profile).not.toContain('(allow file-read-data (literal "/var")');
     expect(profile).not.toContain('(allow file-write* (subpath "/etc")');
     expect(profile).not.toContain('(allow file-write* (subpath "/var")');
+    expect(profile).not.toContain('(subpath "/private/etc")');
+    expect(profile).not.toContain('(subpath "/private/var/db")');
+    expect(profile).toContain('(literal "/private/var/db/timezone/zoneinfo/posixrules")');
+    expect(profile).toContain("(deny mach-lookup");
+    expect(profile).toContain('(global-name "com.apple.system.notification_center")');
+    expect(profile).toContain('(deny file-write-data (literal "/dev/dtracehelper") (with no-log))');
+    expect(profile).toContain('(deny file-read* (literal "/private/etc/passwd") (with no-log))');
+    expect(profile).not.toContain("(allow mach-lookup");
+    expect(profile).not.toContain("(allow mach-lookup");
 
     if (
       process.platform !== "darwin"
@@ -2458,6 +2467,12 @@ describe("release rehearsal candidate orchestration", () => {
       const deniedScripts = [
         'require("node:fs").readdirSync("/etc")',
         'require("node:fs").readdirSync("/var")',
+        'require("node:fs").readdirSync("/private/etc")',
+        'require("node:fs").readdirSync("/private/var/db")',
+        'require("node:fs").readFileSync("/etc/hosts")',
+        'require("node:fs").readFileSync("/private/etc/hosts")',
+        'require("node:fs").readFileSync("/var/db/timezone/zoneinfo/UTC")',
+        'require("node:fs").readFileSync("/private/var/db/timezone/zoneinfo/UTC")',
         `require("node:fs").readFileSync(${JSON.stringify(deniedContentPath)})`,
         `require("node:fs").writeFileSync(${JSON.stringify(join("/var/tmp", `homecook-sandbox-${process.pid}`))}, "x")`,
       ];
@@ -2593,7 +2608,8 @@ describe("release rehearsal candidate orchestration", () => {
       privateHome,
       privateTmp,
       currentUid: process.getuid?.(),
-    }, async ({ writeRoots }) => withCandidatePnpmStoreView({
+    }, async ({ writeRoots }) => {
+      return withCandidatePnpmStoreView({
       sourceStore: packageStore,
       storeRoot,
       currentUid: process.getuid?.(),
@@ -2601,6 +2617,7 @@ describe("release rehearsal candidate orchestration", () => {
       storePath: packageStoreView,
       installWritableRoots,
       sealInstallIndex,
+      verifyInstallPhaseBeforeSpawn,
     }) => {
     const installProfile = buildCandidateSandboxProfile({
       readRoots: [
@@ -2615,13 +2632,23 @@ describe("release rehearsal candidate orchestration", () => {
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
     });
     const env: NodeJS.ProcessEnv = {
+      __CFPREFERENCES_AVOID_DAEMON: "1",
+      __CF_USER_TEXT_ENCODING: `0x${Number(process.getuid?.()).toString(16).toUpperCase()}:0:0`,
+      CFPREFERENCES_AVOID_DAEMON: "1",
       CI: "1",
+      COMMAND_MODE: "unix2003",
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
       HOME: privateHome,
+      LANG: "C",
+      LC_ALL: "C",
+      LOGNAME: "homecook-rehearsal",
       NEXT_TELEMETRY_DISABLED: "1",
       NODE_ENV: "production",
+      NODE_OPTIONS: "--no-global-search-paths",
       PATH: `${dirname(process.execPath)}:/usr/bin:/bin`,
+      TZ: "UTC0",
       TMPDIR: privateTmp,
+      USER: "homecook-rehearsal",
       npm_config_offline: "true",
     };
     const allowedWorkingIndexWrite = spawnSync("/usr/bin/sandbox-exec", [
@@ -2643,16 +2670,23 @@ describe("release rehearsal candidate orchestration", () => {
       deniedSourceStoreWrite,
     ]) expect(denied.status).not.toBe(0);
 
-    const install = spawnSync("/usr/bin/sandbox-exec", [
-      "-p", installProfile, process.execPath, pnpmCli,
+    const installAudit = runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile: installProfile,
+      command: process.execPath,
+      args: [
+        pnpmCli,
         "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
         "--store-dir", packageStoreView,
-    ], { cwd: buildRoot, env, encoding: "utf8", maxBuffer: 1_048_576, timeout: 120_000 });
-    expect(install.status, JSON.stringify({
-      signal: install.signal,
-      stdout: install.stdout,
-      stderr: install.stderr,
-    })).toBe(0);
+      ],
+      cwd: buildRoot,
+      env,
+      label: "real offline pnpm 10.32.1 install",
+      timeout: 120_000,
+      beforeSpawn: verifyInstallPhaseBeforeSpawn,
+    });
+    expect(installAudit.audit_digest).toMatch(/^[0-9a-f]{64}$/u);
     expect(existsSync(join(nodeModulesRoot, "next", "dist", "bin", "next"))).toBe(true);
     const finalIndexAuthority = sealInstallIndex();
     expect(finalIndexAuthority.inventory_digest).toMatch(/^[0-9a-f]{64}$/u);
@@ -2668,6 +2702,23 @@ describe("release rehearsal candidate orchestration", () => {
       deniedWritePaths: [packageStore, packageStoreView],
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
     });
+    expect(buildProfile).not.toBe(installProfile);
+    const reuseSpawn = vi.fn(() => ({
+      status: 0, signal: null, stdout: "[]", stderr: "", pid: 4242,
+    }));
+    expect(() => runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile: installProfile,
+      command: process.execPath,
+      args: [pnpmCli, "install"],
+      cwd: buildRoot,
+      env,
+      label: "sealed install profile reuse",
+      beforeSpawn: verifyInstallPhaseBeforeSpawn,
+      runCommand: reuseSpawn,
+    })).toThrow(/install|phase|sealed|reuse|transition/iu);
+    expect(reuseSpawn).not.toHaveBeenCalled();
     const deniedPostSealIndexWrite = spawnSync("/usr/bin/sandbox-exec", [
       "-p", buildProfile, "/usr/bin/touch", join(packageStoreView, "index", "post-seal"),
     ], { cwd: buildRoot, env });
@@ -2682,25 +2733,30 @@ describe("release rehearsal candidate orchestration", () => {
     const nextAuthority = await (withNextEntrypointAuthority as (
       options: { buildRoot: string, currentUid: number | undefined },
       callback: (authority: { entrypointPath: string, verifyBeforeSpawn: () => void }) => unknown,
-    ) => Promise<{ authority_digest: string, value: ReturnType<typeof spawnSync> }>)(
+    ) => Promise<{ authority_digest: string, value: { audit_digest: string } }>)(
       { buildRoot, currentUid: process.getuid?.() },
       ({ entrypointPath, verifyBeforeSpawn }) => {
         verifyBeforeSpawn();
-        return spawnSync("/usr/bin/sandbox-exec", [
-          "-p", buildProfile, process.execPath, entrypointPath, "build", "--no-lint",
-        ], { cwd: buildRoot, env, encoding: "utf8", maxBuffer: 1_048_576, timeout: 120_000 });
+        return runObservedSandboxCommand({
+          sandboxPath: "/usr/bin/sandbox-exec",
+          logPath: "/usr/bin/log",
+          profile: buildProfile,
+          command: process.execPath,
+          args: [entrypointPath, "build", "--no-lint"],
+          cwd: buildRoot,
+          env,
+          label: "real offline Next 15.5.21 build",
+          timeout: 120_000,
+        });
       },
     );
     const build = nextAuthority.value;
     expect(nextAuthority.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
-    expect(build.status, JSON.stringify({
-      signal: build.signal,
-      stdout: build.stdout,
-      stderr: build.stderr,
-    })).toBe(0);
+    expect(build.audit_digest).toMatch(/^[0-9a-f]{64}$/u);
     expect(readFileSync(join(nextRoot, "BUILD_ID"), "utf8").trim()).not.toBe("");
     expect(existsSync(join(nextRoot, "server", "app-paths-manifest.json"))).toBe(true);
-    }));
+    });
+    });
   }, 240_000);
 
   it("accepts the normal pnpm Next link only inside candidate-owned node_modules/.pnpm", async () => {
@@ -3171,8 +3227,11 @@ describe("release rehearsal candidate orchestration", () => {
         root, sourceStore, privateHome, storeRoot, blobRelativePath, currentUid: process.getuid?.(),
       };
     };
+    type StoreFixture = ReturnType<typeof fixture> & {
+      transitionObserver?: (event: Record<string, unknown>) => void,
+    };
     const invoke = async (
-      paths: ReturnType<typeof fixture>,
+      paths: StoreFixture,
       callback: (authority: {
         storePath: string,
         installWritableRoots: string[],
@@ -3181,9 +3240,10 @@ describe("release rehearsal candidate orchestration", () => {
           inventory_digest: string,
           physical_identity_digest: string,
         },
+        verifyInstallPhaseBeforeSpawn: () => void,
       }) => unknown,
     ) => (withStoreView as (
-      options: ReturnType<typeof fixture>,
+      options: StoreFixture,
       callback: (authority: {
         storePath: string,
         installWritableRoots: string[],
@@ -3192,6 +3252,7 @@ describe("release rehearsal candidate orchestration", () => {
           inventory_digest: string,
           physical_identity_digest: string,
         },
+        verifyInstallPhaseBeforeSpawn: () => void,
       }) => unknown,
     ) => Promise<{
       authority_digest: string,
@@ -3206,6 +3267,7 @@ describe("release rehearsal candidate orchestration", () => {
       installWritableRoots,
       snapshotInventoryDigest,
       sealInstallIndex,
+      verifyInstallPhaseBeforeSpawn,
     }) => {
       expect(storePath).toBe(join(allowed.storeRoot, "v10"));
       expect(storePath.startsWith(`${allowed.privateHome}/`)).toBe(false);
@@ -3223,12 +3285,15 @@ describe("release rehearsal candidate orchestration", () => {
         join(storePath, "index"),
       ]);
       expect(snapshotInventoryDigest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(verifyInstallPhaseBeforeSpawn).toBeTypeOf("function");
+      expect(() => verifyInstallPhaseBeforeSpawn()).not.toThrow();
       expect(readFileSync(join(storePath, allowed.blobRelativePath), "utf8")).toBe("package bytes\n");
       expect(readFileSync(join(storePath, "index", "package.json"), "utf8")).toBe("{}\n");
       writeFileSync(join(storePath, "projects", "candidate"), "owned\n", { mode: 0o600 });
       writeFileSync(join(storePath, "tmp", "metadata"), "scratch\n", { mode: 0o600 });
       writeFileSync(join(storePath, "index", "candidate.json"), "{\"candidate\":true}\n", { mode: 0o600 });
       const sealedIndex = sealInstallIndex();
+      expect(() => verifyInstallPhaseBeforeSpawn()).toThrow(/install|phase|sealed|reuse|transition/iu);
       expect(sealedIndex.inventory_digest).toMatch(/^[0-9a-f]{64}$/u);
       expect(sealedIndex.physical_identity_digest).toMatch(/^[0-9a-f]{64}$/u);
       expect(readdirSync(storePath).sort()).toEqual(["files", "index"]);
@@ -3287,6 +3352,63 @@ describe("release rehearsal candidate orchestration", () => {
       writeFileSync(join(storePath, filesMutation.blobRelativePath), "mutated files bytes\n");
       sealInstallIndex();
     })).rejects.toThrow(/files|store|inventory|identity|drift/iu);
+
+    const childSwap = fixture("homecook-pnpm-store-view-index-child-swap-");
+    const childSwapSentinel = join(childSwap.root, "external-index-sentinel");
+    writeFileSync(childSwapSentinel, "sentinel\n", { mode: 0o600 });
+    let childSwapped = false;
+    await expect(invoke({
+      ...childSwap,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (childSwapped || event.phase !== "before_entry_fchmod" || event.relativePath !== "index/package.json") return;
+        childSwapped = true;
+        const target = String(event.path);
+        renameSync(target, `${target}.original`);
+        symlinkSync(childSwapSentinel, target);
+      },
+    }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/index|entry|identity|swap|symlink|transition/iu);
+    expect(readFileSync(childSwapSentinel, "utf8")).toBe("sentinel\n");
+    expect(lstatSync(childSwapSentinel).mode & 0o777).toBe(0o600);
+
+    const scratchSwap = fixture("homecook-pnpm-store-view-scratch-swap-");
+    const scratchSwapSentinelRoot = join(scratchSwap.root, "external-scratch-sentinel");
+    mkdirSync(scratchSwapSentinelRoot, { mode: 0o700 });
+    writeFileSync(join(scratchSwapSentinelRoot, "sentinel"), "sentinel\n", { mode: 0o600 });
+    let scratchSwapped = false;
+    await expect(invoke({
+      ...scratchSwap,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (scratchSwapped || event.phase !== "before_scratch_remove" || event.kind !== "projects") return;
+        scratchSwapped = true;
+        const target = String(event.path);
+        renameSync(target, `${target}.parked`);
+        symlinkSync(scratchSwapSentinelRoot, target);
+      },
+    }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/scratch|identity|swap|symlink|transition/iu);
+    expect(readFileSync(join(scratchSwapSentinelRoot, "sentinel"), "utf8")).toBe("sentinel\n");
+
+    for (const targetKind of ["storeRoot", "storePath"] as const) {
+      const transientSwap = fixture(`homecook-pnpm-store-view-${targetKind}-transient-swap-`);
+      let swapped = false;
+      await expect(invoke({
+        ...transientSwap,
+        transitionObserver: (event: Record<string, unknown>) => {
+          if (swapped || event.phase !== "before_transition") return;
+          swapped = true;
+          const target = targetKind === "storeRoot"
+            ? transientSwap.storeRoot
+            : String(event.storePath);
+          const parent = dirname(target);
+          const parked = `${target}.parked`;
+          if (targetKind === "storePath") chmodSync(parent, 0o700);
+          renameSync(target, parked);
+          mkdirSync(target, { mode: 0o700 });
+          rmdirSync(target);
+          renameSync(parked, target);
+          if (targetKind === "storePath") chmodSync(parent, 0o500);
+        },
+      }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/store|identity|swap|drift|transition/iu);
+    }
 
     const sourceDrift = fixture("homecook-pnpm-store-view-source-drift-");
     await expect(invoke(sourceDrift, ({ storePath, sealInstallIndex }) => {
