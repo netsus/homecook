@@ -131,7 +131,7 @@ export async function createCompletedRehearsalCandidateFixture(
     sourceStore,
     storeRoot: join(candidateRoot, "pnpm-store"),
     currentUid: process.getuid?.(),
-  }, () => undefined);
+  }, ({ sealInstallIndex }) => sealInstallIndex());
 
   const componentSource = privateRoot(`${prefix}components-`);
   const componentRoots = {
@@ -212,6 +212,7 @@ export async function createCompletedRehearsalCandidateFixture(
     sandbox_policy_digest: DIGEST_B,
     generated_build_inventory_digest: generatedBuildInventoryDigest,
     pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,
     sealed_bundle_digest: physical.sealed_bundle_digest,
     source_manifest_digest: DIGEST_A,
     builder_input_digest: DIGEST_B,
@@ -256,6 +257,7 @@ export async function createCompletedRehearsalCandidateFixture(
     sandbox_policy_digest: DIGEST_B,
     generated_build_inventory_digest: generatedBuildInventoryDigest,
     pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,
     build_id: "build-r2",
     sealed_bundle_digest: physical.sealed_bundle_digest,
     bundle_manifest_digest: bundle.bundle_manifest_digest,

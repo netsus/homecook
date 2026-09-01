@@ -78,6 +78,7 @@ const CANDIDATE_KEYS = [
   "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
   "generated_build_inventory_digest",
   "pnpm_store_snapshot_inventory_digest",
+  "pnpm_store_final_index_inventory_digest",
   "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
@@ -141,6 +142,10 @@ export function buildCandidateStartupIdentity(manifest) {
       sandbox_policy_digest: digest(manifest?.sandbox_policy_digest, "startup identity sandbox policy digest"),
       generated_build_inventory_digest: digest(manifest?.generated_build_inventory_digest, "startup identity generated build inventory digest"),
       pnpm_store_snapshot_inventory_digest: digest(manifest?.pnpm_store_snapshot_inventory_digest, "startup identity pnpm store inventory digest"),
+      pnpm_store_final_index_inventory_digest: digest(
+        manifest?.pnpm_store_final_index_inventory_digest,
+        "startup identity pnpm store final index inventory digest",
+      ),
     }),
     sealed_bundle_digest: digest(manifest?.sealed_bundle_digest, "startup identity sealed bundle digest"),
     bundle_manifest_digest: digest(manifest?.bundle_manifest_digest, "startup identity bundle manifest digest"),
@@ -548,6 +553,7 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
   digest(value.generated_build_inventory_digest, "generated_build_inventory_digest");
   digest(value.pnpm_store_snapshot_inventory_digest, "pnpm_store_snapshot_inventory_digest");
+  digest(value.pnpm_store_final_index_inventory_digest, "pnpm_store_final_index_inventory_digest");
   string(value.build_id, "build_id");
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
   digest(value.bundle_manifest_digest, "bundle_manifest_digest");
@@ -1339,6 +1345,7 @@ export function buildBundleAuthorityManifest(input) {
     "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
     "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_final_index_inventory_digest",
     "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
     "build_tools", "builder_input_digest",
@@ -1353,6 +1360,7 @@ export function buildBundleAuthorityManifest(input) {
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
     "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_final_index_inventory_digest",
     "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest", "builder_input_digest",
   ]) digest(input[field], `bundle authority ${field}`);
@@ -1998,6 +2006,32 @@ function pnpmStoreInventory(root, currentUid, {
   });
 }
 
+function pnpmStoreSubtreeAuthority(inventory, subtree) {
+  const entries = inventory.entries.filter((entry) => (
+    entry.path === subtree || entry.path.startsWith(`${subtree}/`)
+  ));
+  if (entries.length === 0 || entries[0]?.path !== subtree || entries[0]?.type !== "directory") {
+    fail(`pnpm store ${subtree} subtree authority is incomplete`);
+  }
+  const portableEntries = entries.map(({ path, type, mode, size, content_identity: contentIdentity }) => ({
+    path,
+    type,
+    mode,
+    size: type === "file" ? size : null,
+    content_identity: contentIdentity,
+  }));
+  return Object.freeze({
+    inventory_digest: sha256Jcs({
+      schema: `homecook.release-rehearsal-pnpm-store-${subtree}-inventory.v1`,
+      entries: portableEntries,
+    }),
+    physical_identity_digest: sha256Jcs({
+      schema: `homecook.release-rehearsal-pnpm-store-${subtree}-physical-identity.v1`,
+      entries,
+    }),
+  });
+}
+
 function clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory) {
   const sourceEntries = new Map(sourceInventory.entries.map((entry) => [entry.path, entry]));
   const cloneEntry = (source, destination, relativePath) => {
@@ -2036,23 +2070,35 @@ function clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory) {
   }
 }
 
-function sealPnpmStoreFiles(filesRoot) {
+function setPnpmStoreTreeMode(root, { writable, label, currentUid }) {
   const visit = (path) => {
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink()) fail("private pnpm store contains a symlink while sealing");
+    const stat = lstatSync(path, { bigint: true });
+    if (stat.isSymbolicLink()) fail(`private pnpm store ${label} contains a symlink while changing phase`);
+    if (stat.uid !== BigInt(currentUid)) {
+      fail(`private pnpm store ${label} owner changed while changing phase`);
+    }
     if (stat.isDirectory()) {
       for (const name of readdirSync(path)) visit(join(path, name));
+      chmodSync(path, writable ? 0o700 : 0o500);
       return;
     }
-    if (!stat.isFile() || stat.nlink !== 1) fail("private pnpm store contains an unsafe file while sealing");
-    chmodSync(path, (stat.mode & 0o111) === 0 ? 0o400 : 0o500);
+    if (!stat.isFile() || stat.nlink !== 1n) {
+      fail(`private pnpm store ${label} contains an unsafe file while changing phase`);
+    }
+    const executable = (modeBits(stat.mode) & 0o111) !== 0;
+    chmodSync(path, writable ? (executable ? 0o700 : 0o600) : (executable ? 0o500 : 0o400));
   };
-  visit(filesRoot);
+  visit(root);
 }
 
 /**
  * @param {{sourceStore:string,storeRoot:string,currentUid?:number}} options
- * @param {(authority:{storePath:string,writableRoots:string[],snapshotInventoryDigest:string})=>unknown|Promise<unknown>} callback
+ * @param {(authority:{
+ *   storePath:string,
+ *   installWritableRoots:string[],
+ *   snapshotInventoryDigest:string,
+ *   sealInstallIndex:()=>{inventory_digest:string,physical_identity_digest:string},
+ * })=>unknown|Promise<unknown>} callback
  */
 export async function withCandidatePnpmStoreView({
   sourceStore,
@@ -2094,6 +2140,10 @@ export async function withCandidatePnpmStoreView({
   }
 
   const storePath = join(storeRoot, "v10");
+  const filesPath = join(storePath, "files");
+  const indexPath = join(storePath, "index");
+  const scratchRoots = [join(storePath, "projects"), join(storePath, "tmp")];
+  const installWritableRoots = [...scratchRoots, indexPath];
   let sourceInventory;
   let snapshotInventory;
   try {
@@ -2103,7 +2153,12 @@ export async function withCandidatePnpmStoreView({
     });
     mkdirSync(storeRoot, { mode: 0o700 });
     clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory);
-    for (const name of ["projects", "tmp"]) mkdirSync(join(storePath, name), { mode: 0o700 });
+    setPnpmStoreTreeMode(indexPath, {
+      writable: true,
+      label: "working index",
+      currentUid,
+    });
+    for (const path of scratchRoots) mkdirSync(path, { mode: 0o700 });
     chmodSync(storePath, 0o500);
     chmodSync(storeRoot, 0o500);
     snapshotInventory = pnpmStoreInventory(storePath, currentUid, {
@@ -2124,11 +2179,18 @@ export async function withCandidatePnpmStoreView({
     fail(`candidate pnpm store-view create-only materialization failed: ${error?.message ?? error?.code ?? "unknown"}`);
   }
 
-  const writableRoots = [join(storePath, "projects"), join(storePath, "tmp")];
-  const viewDirectories = [storeRoot, storePath, join(storePath, "files"), join(storePath, "index"), ...writableRoots]
-    .map((path) => {
+  const viewDirectoryInputs = [
+    { path: storeRoot, phase: "immutable" },
+    { path: storePath, phase: "immutable" },
+    { path: filesPath, phase: "immutable" },
+    { path: indexPath, phase: "working" },
+    ...scratchRoots.map((path) => ({ path, phase: "scratch" })),
+  ];
+  const viewDirectories = [];
+  try {
+    for (const { path, phase } of viewDirectoryInputs) {
       const stat = lstatSync(path, { bigint: true });
-      const expectedMode = writableRoots.includes(path) ? 0o700 : 0o500;
+      const expectedMode = ["working", "scratch"].includes(phase) ? 0o700 : 0o500;
       if (
         stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
         || modeBits(stat.mode) !== expectedMode || realpathSync(path) !== path
@@ -2138,22 +2200,119 @@ export async function withCandidatePnpmStoreView({
         closeSync(fd);
         fail("candidate pnpm store-view directory identity drifted before execution");
       }
-      return { fd, path, stat, mutable: writableRoots.includes(path) };
+      viewDirectories.push({ fd, path, phase, stat, sealedStat: null });
+    }
+  } catch (error) {
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    throw error;
+  }
+
+  const initialFilesAuthority = pnpmStoreSubtreeAuthority(snapshotInventory, "files");
+  let storePhase = "install";
+  let sealedSnapshotInventory;
+  let finalIndexAuthority;
+  let installTransitionDigest;
+  const assertHeldDirectory = (entry, keys, label) => {
+    const pathPost = lstatSync(entry.path, { bigint: true });
+    const fdPost = fstatSync(entry.fd, { bigint: true });
+    if (
+      pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(entry.path) !== entry.path
+      || !keys.every((key) => entry.stat[key] === pathPost[key] && entry.stat[key] === fdPost[key])
+    ) fail(`candidate pnpm store-view ${label} identity drifted`);
+  };
+  const sealInstallIndex = () => {
+    if (storePhase !== "install") fail("candidate pnpm install index seal transition may run exactly once");
+    if (
+      canonicalizeJcs(readdirSync(storePath).sort())
+      !== canonicalizeJcs(["files", "index", "projects", "tmp"])
+    ) fail("candidate pnpm store contains an unexpected child before install index seal");
+    for (const entry of viewDirectories) {
+      const keys = ["working", "scratch"].includes(entry.phase)
+        ? ["dev", "ino", "mode", "uid", "gid"]
+        : PNPM_STORE_IDENTITY_KEYS;
+      assertHeldDirectory(entry, keys, `${entry.phase} phase`);
+    }
+    const workingInventory = pnpmStoreInventory(storePath, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
     });
+    const workingFilesAuthority = pnpmStoreSubtreeAuthority(workingInventory, "files");
+    if (
+      workingFilesAuthority.inventory_digest !== initialFilesAuthority.inventory_digest
+      || workingFilesAuthority.physical_identity_digest !== initialFilesAuthority.physical_identity_digest
+    ) fail("candidate pnpm store files inventory drifted during install");
+
+    setPnpmStoreTreeMode(filesPath, {
+      writable: false,
+      label: "files",
+      currentUid,
+    });
+    setPnpmStoreTreeMode(indexPath, {
+      writable: false,
+      label: "final index",
+      currentUid,
+    });
+    chmodSync(storePath, 0o700);
+    for (const scratchRoot of scratchRoots) {
+      const stat = lstatSync(scratchRoot, { bigint: true });
+      if (
+        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
+        || modeBits(stat.mode) !== 0o700 || realpathSync(scratchRoot) !== scratchRoot
+      ) fail("candidate pnpm store scratch directory is unsafe before install cleanup");
+      rmSync(scratchRoot, { recursive: true, force: false });
+      try {
+        lstatSync(scratchRoot);
+        fail("candidate pnpm store scratch directory remained after install cleanup");
+      } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+      }
+    }
+    if (canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])) {
+      fail("candidate pnpm store contains unexpected children after install cleanup");
+    }
+    chmodSync(storePath, 0o500);
+    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
+    finalIndexAuthority = pnpmStoreSubtreeAuthority(sealedSnapshotInventory, "index");
+    for (const entry of viewDirectories.filter(({ phase }) => phase !== "scratch")) {
+      const sealedStat = lstatSync(entry.path, { bigint: true });
+      const fdPost = fstatSync(entry.fd, { bigint: true });
+      if (
+        sealedStat.isSymbolicLink() || !sealedStat.isDirectory()
+        || realpathSync(entry.path) !== entry.path
+        || !samePnpmStoreIdentity(sealedStat, fdPost)
+      ) fail("candidate pnpm store sealed directory identity drifted during transition");
+      entry.sealedStat = sealedStat;
+    }
+    installTransitionDigest = sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-install-index-transition.v1",
+      initial_snapshot_inventory_digest: snapshotInventory.inventory_digest,
+      sealed_snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
+      final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+      final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
+      install_writable_path_digests: installWritableRoots.map((path) => sha256Jcs(path)),
+    });
+    storePhase = "sealed";
+    return Object.freeze({ ...finalIndexAuthority });
+  };
+
   let value;
   let callbackError;
   try {
     value = await callback({
       storePath,
-      writableRoots: Object.freeze([...writableRoots]),
+      installWritableRoots: Object.freeze([...installWritableRoots]),
       snapshotInventoryDigest: snapshotInventory.inventory_digest,
+      sealInstallIndex,
     });
   } catch (error) {
     callbackError = error;
   }
   let identityError;
-  let sealedSnapshotInventory;
   try {
+    if (storePhase !== "sealed" || !sealedSnapshotInventory || !finalIndexAuthority) {
+      if (callbackError) throw callbackError;
+      fail("candidate pnpm install index seal transition did not complete");
+    }
     for (const { fd, path, stat } of sourceSnapshots) {
       const pathPost = lstatSync(path, { bigint: true });
       const fdPost = fstatSync(fd, { bigint: true });
@@ -2169,21 +2328,31 @@ export async function withCandidatePnpmStoreView({
       sourcePost.inventory_digest !== sourceInventory.inventory_digest
       || sourcePost.identity_digest !== sourceInventory.identity_digest
     ) fail("approved pnpm package store inventory drifted during candidate build");
-    const snapshotBeforeSeal = pnpmStoreInventory(storePath, currentUid, {
-      allowedRootChildren: ["files", "index", "projects", "tmp"],
-    });
+    const sealedPost = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
+    const finalIndexPost = pnpmStoreSubtreeAuthority(sealedPost, "index");
     if (
-      snapshotBeforeSeal.inventory_digest !== snapshotInventory.inventory_digest
-      || snapshotBeforeSeal.identity_digest !== snapshotInventory.identity_digest
-    ) fail("candidate pnpm store snapshot inventory drifted during candidate build");
-    for (const { fd, path, stat, mutable } of viewDirectories) {
-      const pathPost = lstatSync(path, { bigint: true });
-      const fdPost = fstatSync(fd, { bigint: true });
-      const keys = mutable ? ["dev", "ino", "mode", "uid", "gid"] : PNPM_STORE_IDENTITY_KEYS;
+      sealedPost.inventory_digest !== sealedSnapshotInventory.inventory_digest
+      || sealedPost.identity_digest !== sealedSnapshotInventory.identity_digest
+      || finalIndexPost.inventory_digest !== finalIndexAuthority.inventory_digest
+      || finalIndexPost.physical_identity_digest !== finalIndexAuthority.physical_identity_digest
+    ) fail("candidate pnpm sealed index or store inventory drifted during build");
+    for (const entry of viewDirectories.filter(({ phase }) => phase !== "scratch")) {
+      const pathPost = lstatSync(entry.path, { bigint: true });
+      const fdPost = fstatSync(entry.fd, { bigint: true });
       if (
-        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
-        || !keys.every((key) => stat[key] === pathPost[key] && stat[key] === fdPost[key])
-      ) fail("candidate pnpm store-view directory identity drifted during candidate build");
+        !entry.sealedStat || pathPost.isSymbolicLink() || !pathPost.isDirectory()
+        || realpathSync(entry.path) !== entry.path
+        || !samePnpmStoreIdentity(entry.sealedStat, pathPost)
+        || !samePnpmStoreIdentity(entry.sealedStat, fdPost)
+      ) fail("candidate pnpm sealed directory identity drifted during build");
+    }
+    for (const scratchRoot of scratchRoots) {
+      try {
+        lstatSync(scratchRoot);
+        fail("candidate pnpm scratch path returned after install seal");
+      } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+      }
     }
   } catch (error) {
     identityError = error;
@@ -2193,47 +2362,26 @@ export async function withCandidatePnpmStoreView({
   }
   if (identityError) throw identityError;
   if (callbackError) throw callbackError;
-  try {
-    chmodSync(storePath, 0o700);
-    for (const writableRoot of writableRoots) {
-      const stat = lstatSync(writableRoot, { bigint: true });
-      if (
-        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
-        || modeBits(stat.mode) !== 0o700 || realpathSync(writableRoot) !== writableRoot
-      ) fail("candidate pnpm store scratch directory is unsafe before cleanup");
-      rmSync(writableRoot, { recursive: true, force: false });
-      try {
-        lstatSync(writableRoot);
-        fail("candidate pnpm store scratch directory remained after cleanup");
-      } catch (error) {
-        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
-      }
-    }
-    if (canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])) {
-      fail("candidate pnpm store contains unexpected children after scratch cleanup");
-    }
-    sealPnpmStoreFiles(join(storePath, "files"));
-    chmodSync(storePath, 0o500);
-    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
-    if (sealedSnapshotInventory.content_digest !== snapshotInventory.content_digest) {
-      fail("candidate pnpm store sealed snapshot inventory drifted after build");
-    }
-  } catch (error) {
-    fail(`candidate pnpm store scratch cleanup or seal failed: ${error?.message ?? error?.code ?? "unknown"}`);
-  }
+
   const authorityDigest = sha256Jcs({
-    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v2",
+    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v3",
     source_inventory_digest: sourceInventory.inventory_digest,
     source_identity_digest: sourceInventory.identity_digest,
+    initial_snapshot_inventory_digest: snapshotInventory.inventory_digest,
     snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
     snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+    final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
+    install_transition_digest: installTransitionDigest,
     view_path_digest: sha256Jcs(storePath),
-    writable_path_digests: writableRoots.map((path) => sha256Jcs(path)),
+    install_writable_path_digests: installWritableRoots.map((path) => sha256Jcs(path)),
   });
   return Object.freeze({
     authority_digest: authorityDigest,
     snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
     snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+    final_index_identity_digest: finalIndexAuthority.physical_identity_digest,
     value,
   });
 }
@@ -2264,8 +2412,12 @@ export function buildCandidateSandboxProfile({
       current = dirname(current);
     }
   }
+  const aliasParentMetadataRules = ["/var", "/private/var"]
+    .map((path) => `(literal ${sandboxLiteral(path)})`).join(" ");
   const readRules = [
-    ...[...ancestors].map((path) => `(literal ${sandboxLiteral(path)})`),
+    ...[...ancestors]
+      .filter((path) => !["/var", "/private/var"].includes(path))
+      .map((path) => `(literal ${sandboxLiteral(path)})`),
     ...approvedReadRoots.map((path) => `(subpath ${sandboxLiteral(path)})`),
   ].join(" ");
   const writeRules = [...new Set(writeRoots)].map((path) => `(subpath ${sandboxLiteral(path)})`).join(" ");
@@ -2274,11 +2426,11 @@ export function buildCandidateSandboxProfile({
     try { expandedDeniedPaths.add(realpathSync(path)); } catch { /* Missing denied targets stay lexical. */ }
   }
   const denyRules = [...expandedDeniedPaths].flatMap((path) => [
-    `(deny file-read* (subpath ${sandboxLiteral(path)}))`,
-    `(deny file-write* (subpath ${sandboxLiteral(path)}))`,
+    `(deny file-read* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)}))`,
+    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)}))`,
   ]).join("\n");
   const denyWriteRules = [...new Set(deniedWritePaths)].map((path) =>
-    `(deny file-write* (subpath ${sandboxLiteral(path)}))`).join("\n");
+    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)}))`).join("\n");
   return [
     "(version 1)",
     "(deny default)",
@@ -2289,7 +2441,10 @@ export function buildCandidateSandboxProfile({
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
     ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
     "(allow sysctl-read)",
+    '(allow file-read-metadata (literal "/etc") (literal "/var"))',
+    `(allow file-read-metadata ${aliasParentMetadataRules})`,
     `(allow file-read* ${readRules})`,
+    '(deny file-read-data (literal "/etc") (literal "/var") (literal "/private/etc") (literal "/private/var"))',
     `(allow file-write* ${writeRules})`,
     "(deny network*)",
     denyRules,
@@ -2568,6 +2723,7 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
     ["generated_build_inventory_digest", candidate.generated_build_inventory_digest, bundle.generated_build_inventory_digest],
     ["pnpm_store_snapshot_inventory_digest", candidate.pnpm_store_snapshot_inventory_digest, bundle.pnpm_store_snapshot_inventory_digest],
+    ["pnpm_store_final_index_inventory_digest", candidate.pnpm_store_final_index_inventory_digest, bundle.pnpm_store_final_index_inventory_digest],
     ["toolchain_lock_digest", candidate.toolchain_lock_digest, bundle.toolchain_lock_digest],
     ["environment_snapshot", candidate.environment_snapshot, bundle.environment_snapshot],
     ["production_guard", candidate.production_guard, bundle.production_guard],
@@ -2680,6 +2836,10 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
   );
   if (storeSnapshot.inventory_digest !== manifest.pnpm_store_snapshot_inventory_digest) {
     fail("completed candidate pnpm store portable inventory digest is invalid");
+  }
+  const finalIndexAuthority = pnpmStoreSubtreeAuthority(storeSnapshot, "index");
+  if (finalIndexAuthority.inventory_digest !== manifest.pnpm_store_final_index_inventory_digest) {
+    fail("completed candidate pnpm store final index inventory digest is invalid");
   }
   const candidateIdentityAuthority = readSealedAuthorityFile(
     root,
@@ -2816,6 +2976,7 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
       directoryInventory,
       storeSnapshot.identity_digest,
     ),
+    pnpm_store_final_index_identity_digest: finalIndexAuthority.physical_identity_digest,
   });
   } finally {
     closeSync(rootFd);
@@ -2836,12 +2997,14 @@ function readCompletedCandidatePhysicalAuthority(root, physicalAuthorityPath) {
   );
   exactObject(authority, "completed candidate physical authority", [
     "schema", "authority_path_digest", "candidate_root_path_digest", "candidate_identity_digest",
-    "manifest_digest", "pnpm_store_snapshot_inventory_digest", "physical_identity_digest",
+    "manifest_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_final_index_inventory_digest", "pnpm_store_final_index_identity_digest",
+    "physical_identity_digest",
     "authority_digest",
   ]);
   const { authority_digest: authorityDigest, ...unsigned } = authority;
   if (
-    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1"
+    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-physical-authority.v2"
     || authority.authority_path_digest !== sha256Jcs(physicalAuthorityPath)
     || authorityDigest !== sha256Jcs(unsigned)
   ) fail("completed candidate root-local physical authority is stale or invalid");
@@ -2864,6 +3027,10 @@ function readCompletedCandidateWithPhysicalAuthority(root, {
     || authority.manifest_digest !== portable.manifest.manifest_digest
     || authority.pnpm_store_snapshot_inventory_digest
       !== portable.manifest.pnpm_store_snapshot_inventory_digest
+    || authority.pnpm_store_final_index_inventory_digest
+      !== portable.manifest.pnpm_store_final_index_inventory_digest
+    || authority.pnpm_store_final_index_identity_digest
+      !== portable.pnpm_store_final_index_identity_digest
     || authority.physical_identity_digest !== portable.physical_identity_digest
   ) fail("completed candidate root-local physical authority is stale or invalid");
   return Object.freeze({
@@ -2896,12 +3063,14 @@ export function issueCompletedCandidatePhysicalAuthority({
     verifyPortableContent: true,
   });
   const unsigned = {
-    schema: "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1",
+    schema: "homecook.local-mac-production-rehearsal-candidate-physical-authority.v2",
     authority_path_digest: sha256Jcs(authorityPath),
     candidate_root_path_digest: sha256Jcs(candidateRoot),
     candidate_identity_digest: portable.manifest.candidate_identity_digest,
     manifest_digest: portable.manifest.manifest_digest,
     pnpm_store_snapshot_inventory_digest: portable.manifest.pnpm_store_snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: portable.manifest.pnpm_store_final_index_inventory_digest,
+    pnpm_store_final_index_identity_digest: portable.pnpm_store_final_index_identity_digest,
     physical_identity_digest: portable.physical_identity_digest,
   };
   const authority = Object.freeze({ ...unsigned, authority_digest: sha256Jcs(unsigned) });
@@ -2954,6 +3123,7 @@ function validateCompletedCandidateContainerAuthority(authority) {
     "schema", "authority_source_path_digest", "container_candidate_root_path_digest",
     "container_authority_path_digest", "candidate_identity_digest", "manifest_digest",
     "bundle_manifest_digest", "sealed_bundle_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_final_index_inventory_digest",
     "authority_digest",
   ]);
   const { authority_digest: authorityDigest, ...unsigned } = authority;
@@ -2983,6 +3153,8 @@ function assertContainerAuthorityBindings(authority, {
     || authority.sealed_bundle_digest !== manifest.sealed_bundle_digest
     || authority.pnpm_store_snapshot_inventory_digest
       !== manifest.pnpm_store_snapshot_inventory_digest
+    || authority.pnpm_store_final_index_inventory_digest
+      !== manifest.pnpm_store_final_index_inventory_digest
     || !isAbsolute(candidateRoot ?? "")
   ) fail("completed candidate container authority binding is stale or invalid");
 }
@@ -3048,6 +3220,7 @@ export function issueCompletedCandidateContainerAuthority({
     bundle_manifest_digest: stable.manifest.bundle_manifest_digest,
     sealed_bundle_digest: stable.manifest.sealed_bundle_digest,
     pnpm_store_snapshot_inventory_digest: stable.manifest.pnpm_store_snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: stable.manifest.pnpm_store_final_index_inventory_digest,
   };
   const authority = Object.freeze({ ...unsigned, authority_digest: sha256Jcs(unsigned) });
   try {
@@ -3283,6 +3456,10 @@ export async function buildReleaseRehearsalCandidate({
       build.pnpm_store_snapshot_inventory_digest,
       "pnpm store snapshot inventory digest",
     );
+    const pnpmStoreFinalIndexInventoryDigest = digest(
+      build.pnpm_store_final_index_inventory_digest,
+      "pnpm store final index inventory digest",
+    );
     exactObject(build.build_tools, "build tools", ["next_cli"]);
     validateToolIdentity(build.build_tools.next_cli, "build tools next_cli", {
       requireExecutable: false,
@@ -3306,6 +3483,7 @@ export async function buildReleaseRehearsalCandidate({
       sandbox_policy_digest: sandboxPolicyDigest,
       generated_build_inventory_digest: generatedInventoryDigest,
       pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+      pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
       sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
@@ -3346,6 +3524,7 @@ export async function buildReleaseRehearsalCandidate({
       sandbox_policy_digest: sandboxPolicyDigest,
       generated_build_inventory_digest: generatedInventoryDigest,
       pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+      pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
       build_id: buildId,
       build_tools: build.build_tools,
       sealed_bundle_digest: sealedBundleDigest,
@@ -4832,7 +5011,7 @@ export function createReleaseRehearsalCandidateAdapters({
           sourceStore: resolve(packageStorePath),
           storeRoot: join(runRoot, "pnpm-store"),
           currentUid: process.getuid?.(),
-        }, async ({ storePath, writableRoots: storeWritableRoots }) => {
+        }, async ({ storePath, installWritableRoots, sealInstallIndex }) => {
           const cleanBuildEnv = Object.freeze({
             ...childEnv,
             CI: "1",
@@ -4843,7 +5022,7 @@ export function createReleaseRehearsalCandidateAdapters({
             TMPDIR: privateTmp,
             npm_config_offline: "true",
           });
-          const sandboxProfile = buildCandidateSandboxProfile({
+          const installSandboxProfile = buildCandidateSandboxProfile({
             readRoots: [
               buildRoot,
               privateHome,
@@ -4851,12 +5030,11 @@ export function createReleaseRehearsalCandidateAdapters({
               storePath,
               ...Object.values(tools),
             ],
-            writeRoots: [...writeRoots, ...storeWritableRoots],
+            writeRoots: [...writeRoots, ...installWritableRoots],
             deniedWritePaths: [
               source.checkout_dir,
               resolve(packageStorePath),
               join(storePath, "files"),
-              join(storePath, "index"),
             ],
             deniedPaths: [
               sourceRoot,
@@ -4873,7 +5051,7 @@ export function createReleaseRehearsalCandidateAdapters({
           const installAudit = runObservedSandboxCommand({
             sandboxPath: tools.sandboxPath,
             logPath: tools.auditLogPath,
-            profile: sandboxProfile,
+            profile: installSandboxProfile,
             command: tools.nodePath,
             args: [
               tools.pnpmCliPath,
@@ -4886,6 +5064,33 @@ export function createReleaseRehearsalCandidateAdapters({
             runCommand,
             timeout: 20 * 60_000,
           });
+          const finalIndexAuthority = sealInstallIndex();
+          const buildSandboxProfile = buildCandidateSandboxProfile({
+            readRoots: [
+              buildRoot,
+              privateHome,
+              privateTmp,
+              storePath,
+              ...Object.values(tools),
+            ],
+            writeRoots,
+            deniedWritePaths: [
+              source.checkout_dir,
+              resolve(packageStorePath),
+              storePath,
+            ],
+            deniedPaths: [
+              sourceRoot,
+              resolve(environmentSourcePath),
+              join(normalizedHome, ".homecook", "releases"),
+              join(normalizedHome, ".homecook", "locks"),
+              join(normalizedHome, ".homecook", "config"),
+              join(normalizedHome, ".homecook", "logs"),
+              join(normalizedHome, "Library", "LaunchAgents"),
+              "/var/run/docker.sock",
+              join(normalizedHome, ".docker", "run", "docker.sock"),
+            ],
+          });
           const nextEntrypointAuthority = await withCandidateNextEntrypointAuthority({
             buildRoot,
             currentUid: process.getuid?.(),
@@ -4896,7 +5101,7 @@ export function createReleaseRehearsalCandidateAdapters({
             const nextBuildAudit = runObservedSandboxCommand({
               sandboxPath: tools.sandboxPath,
               logPath: tools.auditLogPath,
-              profile: sandboxProfile,
+              profile: buildSandboxProfile,
               command: tools.nodePath,
               args: [entrypointPath, "build", "--no-lint"],
               cwd: buildRoot,
@@ -4964,7 +5169,10 @@ export function createReleaseRehearsalCandidateAdapters({
               bundle_content_digest: bundle.sealed_bundle_digest,
               migration: sealedMigration,
               sandbox_policy_evidence: {
-                profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
+                install_profile_digest: sha256Bytes(Buffer.from(installSandboxProfile, "utf8")),
+                build_profile_digest: sha256Bytes(Buffer.from(buildSandboxProfile, "utf8")),
+                final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+                final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
                 execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
               },
               staging_bundle_root: stagingBundleRoot,
@@ -4987,19 +5195,29 @@ export function createReleaseRehearsalCandidateAdapters({
           pnpm_store_view_authority_digest: storeViewBuild.authority_digest,
           pnpm_store_snapshot_inventory_digest: storeViewBuild.snapshot_inventory_digest,
           pnpm_store_snapshot_identity_digest: storeViewBuild.snapshot_identity_digest,
+          pnpm_store_final_index_inventory_digest: storeViewBuild.final_index_inventory_digest,
+          pnpm_store_final_index_identity_digest: storeViewBuild.final_index_identity_digest,
         };
       });
       const {
         pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
         pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
         pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
+        pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
+        pnpm_store_final_index_identity_digest: pnpmStoreFinalIndexIdentityDigest,
         sandbox_policy_evidence: sandboxPolicyEvidence,
         ...build
       } = authorizedBuild.value;
+      if (
+        sandboxPolicyEvidence.final_index_inventory_digest !== pnpmStoreFinalIndexInventoryDigest
+        || sandboxPolicyEvidence.final_index_physical_identity_digest !== pnpmStoreFinalIndexIdentityDigest
+      ) fail("candidate pnpm final index builder authority cross-binding is invalid");
       return {
         ...build,
         pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
         pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
+        pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
+        pnpm_store_final_index_identity_digest: pnpmStoreFinalIndexIdentityDigest,
         sandbox_policy_digest: sha256Jcs({
           ...sandboxPolicyEvidence,
           build_work_authority_digest: authorizedBuild.authority_digest,
