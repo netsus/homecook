@@ -55,6 +55,8 @@ export const RELEASE_REHEARSAL_CANDIDATE_SCHEMA =
   "homecook.local-mac-production-rehearsal-candidate.v1";
 export const RELEASE_REHEARSAL_BUILD_ENV_SCHEMA =
   "homecook.release-rehearsal-build-env.v1";
+export const RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA =
+  "homecook.local-mac-production-rehearsal-startup-identity.v1";
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
@@ -121,6 +123,69 @@ function sha(value, label) {
 function digest(value, label) {
   if (!DIGEST_PATTERN.test(value ?? "")) fail(`${label} must be lowercase SHA-256`);
   return value;
+}
+
+export function buildCandidateStartupIdentity(manifest) {
+  const unsigned = {
+    schema: RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA,
+    candidate_schema: string(manifest?.schema, "startup identity candidate schema"),
+    release_sha: sha(manifest?.release_sha, "startup identity release SHA"),
+    release_tree: sha(manifest?.release_tree, "startup identity release tree"),
+    candidate_identity_digest: digest(manifest?.candidate_identity_digest, "startup identity candidate digest"),
+    manifest_digest: digest(manifest?.manifest_digest, "startup identity manifest digest"),
+    build_id: string(manifest?.build_id, "startup identity build ID"),
+    build_inputs_digest: sha256Jcs({
+      builder_input_digest: digest(manifest?.builder_input_digest, "startup identity builder input digest"),
+      source_manifest_digest: digest(manifest?.source_manifest_digest, "startup identity source manifest digest"),
+      compose_source_digest: digest(manifest?.compose_source_digest, "startup identity Compose source digest"),
+      sandbox_policy_digest: digest(manifest?.sandbox_policy_digest, "startup identity sandbox policy digest"),
+      generated_build_inventory_digest: digest(manifest?.generated_build_inventory_digest, "startup identity generated build inventory digest"),
+      pnpm_store_snapshot_inventory_digest: digest(manifest?.pnpm_store_snapshot_inventory_digest, "startup identity pnpm store inventory digest"),
+    }),
+    sealed_bundle_digest: digest(manifest?.sealed_bundle_digest, "startup identity sealed bundle digest"),
+    bundle_manifest_digest: digest(manifest?.bundle_manifest_digest, "startup identity bundle manifest digest"),
+    artifacts_digest: sha256Jcs(manifest?.artifacts),
+    toolchain_digest: sha256Jcs({
+      toolchain: manifest?.toolchain,
+      build_tools: manifest?.build_tools,
+      toolchain_lock_digest: digest(manifest?.toolchain_lock_digest, "startup identity toolchain lock digest"),
+    }),
+    images_digest: sha256Jcs(manifest?.images),
+    migration_head: string(manifest?.migration?.migration_head, "startup identity migration head"),
+    migration_digest: sha256Jcs(manifest?.migration),
+  };
+  return Object.freeze({ ...unsigned, identity_digest: sha256Jcs(unsigned) });
+}
+
+export function validateCandidateStartupIdentity(value, manifest = null, label = "candidate startup identity") {
+  exactObject(value, label, [
+    "schema", "candidate_schema", "release_sha", "release_tree", "candidate_identity_digest",
+    "manifest_digest", "build_id", "build_inputs_digest", "sealed_bundle_digest",
+    "bundle_manifest_digest", "artifacts_digest", "toolchain_digest", "images_digest",
+    "migration_head", "migration_digest", "identity_digest",
+  ]);
+  const { identity_digest: identityDigest, ...unsigned } = value;
+  if (
+    value.schema !== RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA
+    || !SHA_PATTERN.test(value.release_sha ?? "")
+    || !SHA_PATTERN.test(value.release_tree ?? "")
+    || typeof value.candidate_schema !== "string" || value.candidate_schema.length === 0
+    || typeof value.build_id !== "string" || value.build_id.length === 0
+    || typeof value.migration_head !== "string" || value.migration_head.length === 0
+    || ![
+      "candidate_identity_digest", "manifest_digest", "build_inputs_digest", "sealed_bundle_digest",
+      "bundle_manifest_digest", "artifacts_digest", "toolchain_digest", "images_digest",
+      "migration_digest", "identity_digest",
+    ].every((field) => DIGEST_PATTERN.test(value[field] ?? ""))
+    || identityDigest !== sha256Jcs(unsigned)
+  ) fail(`${label} is malformed or not self-bound`);
+  if (manifest !== null) {
+    const expected = buildCandidateStartupIdentity(manifest);
+    if (canonicalizeJcs(value) !== canonicalizeJcs(expected)) {
+      fail(`${label} differs from the completed candidate manifest`);
+    }
+  }
+  return Object.freeze({ ...value });
 }
 
 function nullableDigest(value, label) {

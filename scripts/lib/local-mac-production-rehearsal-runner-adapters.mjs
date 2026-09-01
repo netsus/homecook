@@ -27,9 +27,11 @@ import { createTrustedMacOsIndependentObserver } from "./local-mac-production-re
 import { buildIsolatedYoutubeWorkerSyntheticFixtureSql } from "./youtube-extraction-isolated-fixture-sql.mjs";
 import { buildPostgrestFixtureReadbackProbe, parseAndValidatePostgrestFixtureReadback } from "./local-mac-production-rehearsal-postgrest-probe.mjs";
 import {
+  buildCandidateStartupIdentity,
   completedCandidateContainerAuthorityRoot,
   resolveSafeRealExecutable,
   snapshotToolFile,
+  validateCandidateStartupIdentity,
 } from "./local-mac-production-rehearsal-candidate.mjs";
 import {
   RUN_OWNERSHIP_LABEL,
@@ -218,7 +220,7 @@ export function buildSafeResolvedComposeGoldenFixture() {
 }
 
 /** Compile read-only `docker compose config --format json` output into a closed R2 plan. */
-export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
+export function compileClosedPrimitivePlan(config, { project, ports, expectedStartupIdentity } = {}) {
   if (!config || typeof config !== "object" || Array.isArray(config)) fail("resolved Compose config is invalid");
   const keys = Object.keys(config).sort();
   if (canonicalizeJcs(keys) !== canonicalizeJcs(RESOLVED_COMPOSE_TOP_LEVEL_KEYS)) fail("resolved Compose top-level fields are not closed");
@@ -256,6 +258,7 @@ export function compileClosedPrimitivePlan(config, { project, ports } = {}) {
         candidateVerification: buildCandidateContainerVerificationContract({
           candidateRoot: "/private/homecook-r2-candidate-authority",
         }),
+        expectedIdentity: expectedStartupIdentity,
       });
       const expectedHealthcheck = normalizeHealthcheck(service, { test: expectedProbe.healthcheck });
       if (
@@ -467,12 +470,13 @@ function quoteYaml(value) {
 
 /**
  * @param {{run_id:string,project:string,ports:{postgres:number},volume_names:string[]}} namespace
- * @param {{candidateRoot?:string|null,candidateContainerAuthorityRoot?:string|null,creationNonce?:string|null}} options
+ * @param {{candidateRoot?:string|null,candidateContainerAuthorityRoot?:string|null,creationNonce?:string|null,manifest?:Record<string,any>|null}} options
  */
 export function buildFullLocalComposeOverride(namespace, {
   candidateRoot = null,
   candidateContainerAuthorityRoot = null,
   creationNonce = null,
+  manifest = null,
 } = {}) {
   if ((candidateRoot === null) !== (candidateContainerAuthorityRoot === null)) {
     fail("full-local candidate and container authority mounts must be supplied together");
@@ -481,6 +485,7 @@ export function buildFullLocalComposeOverride(namespace, {
     ? null
     : buildFullLocalProbeStartupContract({
       candidateVerification: buildCandidateContainerVerificationContract({ candidateRoot }),
+      expectedIdentity: buildCandidateStartupIdentity(manifest),
     });
   const labels = [
     `      ${RUN_OWNERSHIP_LABEL}: ${quoteYaml(namespace.run_id)}`,
@@ -1031,12 +1036,19 @@ function materializeWorkerHealthBundle(state, manifest, candidateRoot) {
   };
 }
 
-async function runContainer(state, args, { signal } = {}) {
+async function runContainer(state, args, { signal, candidatePathAuthority = false } = {}) {
   const nameIndex = args.indexOf("--name");
   const expectedName = nameIndex >= 0 ? args[nameIndex + 1] : null;
   try {
     if (args[0] !== "run" || !args.includes("--detach")) fail("primitive container creation requires a detached run template");
     const createArgs = ["create", ...args.slice(1).filter((token) => token !== "--detach")];
+    if (candidatePathAuthority) {
+      state.verifyCandidatePathAuthority({
+        candidateRoot: state.candidateRoot,
+        candidateContainerAuthorityRoot: state.candidateVerification.host_authority_root,
+        phase: `${expectedName} pre-bind`,
+      });
+    }
     const stdout = (await dockerCommand(state, createArgs, { signal })).stdout;
     const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
     if (!id || !expectedName) fail("docker create did not return exact container identity");
@@ -1050,6 +1062,13 @@ async function runContainer(state, args, { signal } = {}) {
         [RUN_CREATION_NONCE_LABEL]: state.creationNonce,
       },
     }, stdout, observed);
+    if (candidatePathAuthority) {
+      state.verifyCandidatePathAuthority({
+        candidateRoot: state.candidateRoot,
+        candidateContainerAuthorityRoot: state.candidateVerification.host_authority_root,
+        phase: `${expectedName} post-bind`,
+      });
+    }
     await dockerCommand(state, ["start", id], {
       signal,
       ownership: { verifiedOwnership: true, resourceId: id },
@@ -1064,21 +1083,11 @@ async function runContainer(state, args, { signal } = {}) {
 }
 
 function validateReportedIdentity(value, manifest, label) {
-  const keys = ["release_sha", "release_tree", "build_id", "sealed_bundle_digest", "migration_head"];
-  if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${label} child identity report is invalid`);
-  if (canonicalizeJcs(Object.keys(value).sort()) !== canonicalizeJcs([...keys].sort())) {
-    fail(`${label} child identity report fields are not closed`);
+  try {
+    return validateCandidateStartupIdentity(value, manifest, `${label} child identity report`);
+  } catch {
+    fail(`${label} child identity report differs from completed candidate authority`);
   }
-  for (const [field, expected] of [
-    ["release_sha", manifest.release_sha],
-    ["release_tree", manifest.release_tree],
-    ["build_id", manifest.build_id],
-    ["sealed_bundle_digest", manifest.sealed_bundle_digest],
-    ["migration_head", manifest.migration.migration_head],
-  ]) {
-    if (value[field] !== expected) fail(`${label} child-reported ${field} mismatch`);
-  }
-  return value;
 }
 
 function runtimeIdentity(component, containerIds, reportedIdentity, workerRpcIdentity = null) {
@@ -1123,7 +1132,7 @@ export function buildCandidateContainerVerificationContract({
     const write = outputPath
       ? `require('node:fs').writeFileSync(${JSON.stringify(outputPath)},canonical,{flag:'wx',mode:0o400});`
       : "process.stdout.write(canonical);";
-    return `(async()=>{const c=await import(${JSON.stringify(candidateModuleUrl)});const j=await import(${JSON.stringify(jcsModuleUrl)});const m=c.readCompletedCandidateContainerRoot(${JSON.stringify(containerCandidateRoot)},{containerAuthorityPath:${JSON.stringify(containerAuthorityPath)}}).manifest;const identity={release_sha:m.release_sha,release_tree:m.release_tree,build_id:m.build_id,sealed_bundle_digest:m.sealed_bundle_digest,migration_head:m.migration.migration_head};const canonical=j.canonicalizeJcs(identity);${write}return identity})()`;
+    return `(async()=>{const c=await import(${JSON.stringify(candidateModuleUrl)});const j=await import(${JSON.stringify(jcsModuleUrl)});const m=c.readCompletedCandidateContainerRoot(${JSON.stringify(containerCandidateRoot)},{containerAuthorityPath:${JSON.stringify(containerAuthorityPath)}}).manifest;const identity=c.buildCandidateStartupIdentity(m);const canonical=j.canonicalizeJcs(identity);${write}return identity})()`;
   };
   return Object.freeze({
     container_candidate_root: containerCandidateRoot,
@@ -1140,12 +1149,14 @@ export function buildCandidateContainerVerificationContract({
 /**
  * @param {{
  *   candidateVerification:{identitySource:(options?:{outputPath?:string|null})=>string},
+ *   expectedIdentity:Record<string,unknown>,
  *   identityOutputPath?:string,
  *   postgrestReadyUrl?:string,
  * }} options
  */
 export function buildFullLocalProbeStartupContract({
   candidateVerification,
+  expectedIdentity,
   identityOutputPath = FULL_LOCAL_IDENTITY_OUTPUT_PATH,
   postgrestReadyUrl = "http://postgrest:3001/ready",
 } = {}) {
@@ -1154,17 +1165,14 @@ export function buildFullLocalProbeStartupContract({
     || typeof identityOutputPath !== "string" || resolve(identityOutputPath) !== identityOutputPath
     || typeof postgrestReadyUrl !== "string" || postgrestReadyUrl.length === 0
   ) fail("full-local probe startup authority is incomplete");
-  const expectedKeys = [
-    "build_id", "migration_head", "release_sha", "release_tree", "sealed_bundle_digest",
-  ];
+  const canonicalExpectedIdentity = canonicalizeJcs(validateCandidateStartupIdentity(expectedIdentity));
   const startupSource = `${candidateVerification.identitySource({ outputPath: identityOutputPath })}.then(()=>setInterval(()=>{},2147483647)).catch(()=>process.exit(70))`;
   const healthSource = [
     "const fs=require('node:fs');",
     `const path=${JSON.stringify(identityOutputPath)};`,
-    `const keys=${JSON.stringify(expectedKeys)};`,
-    "(async()=>{const value=JSON.parse(fs.readFileSync(path,'utf8'));",
-    "if(JSON.stringify(Object.keys(value).sort())!==JSON.stringify(keys))throw new Error('identity fields');",
-    "if(!/^[0-9a-f]{40}$/.test(value.release_sha)||!/^[0-9a-f]{40}$/.test(value.release_tree)||!/^[0-9a-f]{64}$/.test(value.sealed_bundle_digest)||typeof value.build_id!=='string'||!value.build_id||typeof value.migration_head!=='string'||!value.migration_head)throw new Error('identity values');",
+    `const expected=${JSON.stringify(canonicalExpectedIdentity)};`,
+    "(async()=>{const actual=fs.readFileSync(path,'utf8');",
+    "if(actual!==expected)throw new Error('identity authority');",
     `const response=await fetch(${JSON.stringify(postgrestReadyUrl)});`,
     "if(response.status!==200)throw new Error('postgrest readiness');",
     "})().then(()=>process.exit(0)).catch(()=>process.exit(71));",
@@ -1447,12 +1455,15 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       runRoot,
       signal,
       independentObserver = null,
+      verifyCandidatePathAuthority,
     }) {
       state.activeSignal = signal ?? state.activeSignal;
       state.namespace = namespace;
       state.runRoot = runRoot;
       state.candidateRoot = candidateRoot;
       state.candidateVerification = buildCandidateContainerVerificationContract({ candidateRoot });
+      if (typeof verifyCandidatePathAuthority !== "function") fail("candidate path authority verifier is unavailable");
+      state.verifyCandidatePathAuthority = verifyCandidatePathAuthority;
       if (candidateContainerAuthorityRoot !== state.candidateVerification.host_authority_root) {
         fail("runner supplied a non-canonical candidate container authority root");
       }
@@ -1465,6 +1476,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         candidateRoot,
         candidateContainerAuthorityRoot,
         creationNonce: state.creationNonce,
+        manifest,
       }), { flag: "wx", mode: 0o600 });
       const env = buildFullLocalRehearsalEnvironment({ namespace, runRoot: state.runtimeRoot, manifest });
       mkdirSync(join(state.runtimeRoot, "state"), { mode: 0o700 });
@@ -1504,16 +1516,34 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       ], { signal: state.activeSignal });
       let config;
       try { config = JSON.parse(resolved.stdout); } catch { fail("read-only Compose config output is invalid JSON"); }
-      const plan = compileClosedPrimitivePlan(config, { project: namespace.project, ports: namespace.ports });
+      const plan = compileClosedPrimitivePlan(config, {
+        project: namespace.project,
+        ports: namespace.ports,
+        expectedStartupIdentity: buildCandidateStartupIdentity(manifest),
+      });
       state.primitivePlan = Object.freeze({ plan, digest: sha256Jcs(plan) });
       state.primitiveOperations = compilePrimitiveServiceOperations(plan, namespace, primitiveLabels);
       for (const service of plan.services) {
         const primitive = primitiveServiceArgs(service, namespace, primitiveLabels);
+        if (service.name === "postgrest-probe") {
+          state.verifyCandidatePathAuthority({
+            candidateRoot,
+            candidateContainerAuthorityRoot,
+            phase: "postgrest-probe pre-bind",
+          });
+        }
         const stdout = (await dockerCommand(state, primitive.args, { signal: state.activeSignal })).stdout;
         const id = /^([0-9a-f]{64})\n?$/u.exec(stdout)?.[1];
         const entry = { kind: "container", id, name: `${namespace.project}-${service.name}-1` };
         const observed = await inspectResource(state, entry, { signal: state.activeSignal });
         recordPrimitiveCreateResult(state.creationLedger, { ...entry, labels: { [RUN_OWNERSHIP_LABEL]: state.runId, [RUN_PROJECT_LABEL]: namespace.project, [RUN_CREATION_NONCE_LABEL]: state.creationNonce } }, stdout, observed);
+        if (service.name === "postgrest-probe") {
+          state.verifyCandidatePathAuthority({
+            candidateRoot,
+            candidateContainerAuthorityRoot,
+            phase: "postgrest-probe post-bind",
+          });
+        }
         for (const network of primitive.additionalNetworks) {
           await dockerCommand(state, ["network", "connect", ...network.aliases.flatMap((alias) => ["--alias", alias]), `${namespace.project}_${network.name}`, id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
         }
@@ -1531,6 +1561,17 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         }
       }
       return state.creationLedger.snapshot();
+    },
+
+    async readFullLocalStartupIdentity({ manifest, namespace, signal }) {
+      state.activeSignal = signal ?? state.activeSignal;
+      if (namespace?.project !== state.namespace?.project) fail("full-local startup identity namespace differs from resource authority");
+      const probeName = `${namespace.project}-postgrest-probe-1`;
+      const probe = state.creationLedger.snapshot().find((entry) => (
+        entry.kind === "container" && entry.name === probeName
+      ));
+      if (!probe) fail("full-local startup identity probe resource is missing");
+      return readContainerIdentity(state, probe, manifest, { signal: state.activeSignal });
     },
 
     getCreationLedger() { return state.creationLedger.snapshot(); },
@@ -1626,6 +1667,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       candidateContainerAuthorityRoot,
       namespace,
       signal,
+      verifyCandidatePathAuthority,
     }) {
       state.activeSignal = signal ?? state.activeSignal;
       const candidateVerification = buildCandidateContainerVerificationContract({ candidateRoot });
@@ -1633,6 +1675,10 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         candidateContainerAuthorityRoot !== candidateVerification.host_authority_root
         || state.candidateVerification?.host_authority_root !== candidateVerification.host_authority_root
       ) fail("runtime candidate container authority root differs from resource authority");
+      if (
+        typeof verifyCandidatePathAuthority !== "function"
+        || verifyCandidatePathAuthority !== state.verifyCandidatePathAuthority
+      ) fail("runtime candidate path authority verifier differs from resource authority");
       state.candidateVerification = candidateVerification;
       const nodeImage = findImage(manifest, "auth-proxy");
       const appRoot = join(candidateRoot, "bundles", "bundle", "app");
@@ -1680,7 +1726,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         nodeImage,
         "node", "-e", appWrapper,
       ];
-      const appId = await runContainer(state, appArgs, { signal: state.activeSignal });
+      const appId = await runContainer(state, appArgs, { signal: state.activeSignal, candidatePathAuthority: true });
       if (state.independentObserver?.registerChild) {
         const subject = await readContainerObserverSubject(state, { containerId: appId, component: "app", signal: state.activeSignal });
         await state.independentObserver.registerChild(subject);
@@ -1713,7 +1759,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         ...dockerEnvironmentArgs(workerEnvironment),
         nodeImage, "node", "-e", wrapper,
       ];
-      const workerId = await runContainer(state, workerArgs, { signal: state.activeSignal });
+      const workerId = await runContainer(state, workerArgs, { signal: state.activeSignal, candidatePathAuthority: true });
       if (state.independentObserver?.registerChild) {
         const subject = await readContainerObserverSubject(state, { containerId: workerId, component: "worker", signal: state.activeSignal });
         await state.independentObserver.registerChild(subject);
