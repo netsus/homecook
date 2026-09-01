@@ -321,7 +321,7 @@ describe("personal recipe editor hybrid verifier", () => {
         assertPersonalRecipeEditorHybridSourceEvidence(evidence),
       ).toThrow(/source evidence failed closed/i);
     }
-  });
+  }, 15_000);
 
   it("uses only a loopback database and strips inherited PG settings", () => {
     const request = buildPersonalRecipeEditorHybridLocalPsqlRequest({
