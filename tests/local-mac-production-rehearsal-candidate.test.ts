@@ -2548,10 +2548,26 @@ describe("release rehearsal candidate orchestration", () => {
     expect(deniedStoreRootWrite.status).not.toBe(0);
     expect(deniedPrivateFilesWrite.status).not.toBe(0);
 
-    const build = spawnSync("/usr/bin/sandbox-exec", [
-      "-p", profile, process.execPath, join(nodeModulesRoot, "next", "dist", "bin", "next"),
-      "build", "--no-lint",
-    ], { cwd: buildRoot, env, encoding: "utf8", maxBuffer: 1_048_576, timeout: 120_000 });
+    expect(lstatSync(join(nodeModulesRoot, "next")).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(join(nodeModulesRoot, "next"))).toMatch(/^\.pnpm\/next@15\.5\.21_/u);
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const withNextEntrypointAuthority = candidateModule.withCandidateNextEntrypointAuthority;
+    expect(typeof withNextEntrypointAuthority).toBe("function");
+    if (typeof withNextEntrypointAuthority !== "function") return;
+    const nextAuthority = await (withNextEntrypointAuthority as (
+      options: { buildRoot: string, currentUid: number | undefined },
+      callback: (authority: { entrypointPath: string, verifyBeforeSpawn: () => void }) => unknown,
+    ) => Promise<{ authority_digest: string, value: ReturnType<typeof spawnSync> }>)(
+      { buildRoot, currentUid: process.getuid?.() },
+      ({ entrypointPath, verifyBeforeSpawn }) => {
+        verifyBeforeSpawn();
+        return spawnSync("/usr/bin/sandbox-exec", [
+          "-p", profile, process.execPath, entrypointPath, "build", "--no-lint",
+        ], { cwd: buildRoot, env, encoding: "utf8", maxBuffer: 1_048_576, timeout: 120_000 });
+      },
+    );
+    const build = nextAuthority.value;
+    expect(nextAuthority.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
     expect(build.status, JSON.stringify({
       signal: build.signal,
       stdout: build.stdout,
@@ -2561,6 +2577,371 @@ describe("release rehearsal candidate orchestration", () => {
     expect(existsSync(join(nextRoot, "server", "app-paths-manifest.json"))).toBe(true);
     }));
   }, 120_000);
+
+  it("accepts the normal pnpm Next link only inside candidate-owned node_modules/.pnpm", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const withNextEntrypointAuthority = candidateModule.withCandidateNextEntrypointAuthority;
+    expect(typeof withNextEntrypointAuthority).toBe("function");
+    if (typeof withNextEntrypointAuthority !== "function") return;
+
+    const root = privateRoot("homecook-candidate-next-entrypoint-allowed-");
+    const buildRoot = join(root, "build-work");
+    const nodeModulesRoot = join(buildRoot, "node_modules");
+    const packageRoot = join(
+      nodeModulesRoot,
+      ".pnpm",
+      "next@15.5.21_react@19.1.1",
+      "node_modules",
+      "next",
+    );
+    const entrypointTarget = join(packageRoot, "dist", "bin", "next");
+    mkdirSync(dirname(entrypointTarget), { recursive: true, mode: 0o700 });
+    writeFileSync(join(packageRoot, "package.json"), '{"name":"next","version":"15.5.21"}\n', { mode: 0o400 });
+    writeFileSync(entrypointTarget, "#!/usr/bin/env node\n", { mode: 0o500 });
+    symlinkSync(
+      ".pnpm/next@15.5.21_react@19.1.1/node_modules/next",
+      join(nodeModulesRoot, "next"),
+    );
+
+    const result = await (withNextEntrypointAuthority as (
+      options: { buildRoot: string, currentUid: number | undefined },
+      callback: (authority: {
+        entrypointPath: string,
+        entrypointTarget: string,
+        packageJsonTarget: string,
+        verifyBeforeSpawn: () => void,
+      }) => unknown,
+    ) => Promise<{
+      authority_digest: string,
+      inventory_binding: {
+        package_link_path: string,
+        package_link_target: string,
+        package_json_path: string,
+        package_json_sha256: string,
+        entrypoint_path: string,
+        entrypoint_sha256: string,
+      },
+      value: unknown,
+    }>)(
+      { buildRoot, currentUid: process.getuid?.() },
+      (authority) => {
+        expect(authority.entrypointPath).toBe(join(nodeModulesRoot, "next", "dist", "bin", "next"));
+        expect(authority.entrypointTarget).toBe(entrypointTarget);
+        expect(authority.packageJsonTarget).toBe(join(packageRoot, "package.json"));
+        authority.verifyBeforeSpawn();
+        return "verified";
+      },
+    );
+
+    expect(result.value).toBe("verified");
+    expect(result.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(result.inventory_binding).toEqual({
+      package_link_path: "node_modules/next",
+      package_link_target: ".pnpm/next@15.5.21_react@19.1.1/node_modules/next",
+      package_json_path: "node_modules/.pnpm/next@15.5.21_react@19.1.1/node_modules/next/package.json",
+      package_json_sha256: createHash("sha256")
+        .update('{"name":"next","version":"15.5.21"}\n').digest("hex"),
+      entrypoint_path: "node_modules/.pnpm/next@15.5.21_react@19.1.1/node_modules/next/dist/bin/next",
+      entrypoint_sha256: createHash("sha256").update("#!/usr/bin/env node\n").digest("hex"),
+    });
+  });
+
+  it("cross-binds the verified Next link and package bytes to generated build inventory", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const validateBinding = candidateModule.validateCandidateNextEntrypointInventoryBinding;
+    expect(typeof validateBinding).toBe("function");
+    if (typeof validateBinding !== "function") return;
+
+    const packageLinkTarget = ".pnpm/next@15.5.21_react@19.1.1/node_modules/next";
+    const binding = {
+      package_link_path: "node_modules/next",
+      package_link_target: packageLinkTarget,
+      package_json_path: `node_modules/${packageLinkTarget}/package.json`,
+      package_json_sha256: DIGEST_A,
+      entrypoint_path: `node_modules/${packageLinkTarget}/dist/bin/next`,
+      entrypoint_sha256: DIGEST_B,
+    };
+    const generated = [
+      {
+        component: "app", source_kind: "generated_build", path: binding.package_link_path,
+        type: "symlink", mode: 0o755, sha256: createHash("sha256").update(packageLinkTarget).digest("hex"),
+        symlink_target: packageLinkTarget, dereferenced_sha256: DIGEST_C,
+        uid: String(process.getuid?.()), gid: String(process.getgid?.()), nlink: "1",
+      },
+      {
+        component: "app", source_kind: "generated_build", path: binding.package_json_path,
+        type: "file", mode: 0o400, sha256: DIGEST_A, symlink_target: null,
+        dereferenced_sha256: null, uid: String(process.getuid?.()), gid: String(process.getgid?.()), nlink: "1",
+      },
+      {
+        component: "app", source_kind: "generated_build", path: binding.entrypoint_path,
+        type: "file", mode: 0o500, sha256: DIGEST_B, symlink_target: null,
+        dereferenced_sha256: null, uid: String(process.getuid?.()), gid: String(process.getgid?.()), nlink: "1",
+      },
+    ];
+    const invoke = (inventory = generated, candidateBinding = binding) => (
+      validateBinding as (value: typeof binding, fileInventory: typeof generated) => unknown
+    )(candidateBinding, inventory);
+
+    expect(invoke()).toEqual(binding);
+    expect(() => invoke(generated.slice(1))).toThrow(/link|inventory|missing|exact/iu);
+    expect(() => invoke(generated.map((entry) => entry.path === binding.entrypoint_path
+      ? { ...entry, sha256: DIGEST_C }
+      : entry))).toThrow(/entrypoint|bytes|digest|inventory/iu);
+    expect(() => invoke(generated.map((entry) => entry.path === binding.package_json_path
+      ? { ...entry, nlink: "2" }
+      : entry))).toThrow(/package|hard.?link|nlink|inventory/iu);
+    expect(() => invoke(generated.map((entry) => entry.path === binding.entrypoint_path
+      ? { ...entry, mode: 0o522 }
+      : entry))).toThrow(/entrypoint|mode|writ/iu);
+  });
+
+  it("rejects a changed Next target before the sandboxed process can spawn", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const withNextEntrypointAuthority = candidateModule.withCandidateNextEntrypointAuthority;
+    expect(typeof withNextEntrypointAuthority).toBe("function");
+    if (typeof withNextEntrypointAuthority !== "function") return;
+
+    const root = privateRoot("homecook-candidate-next-entrypoint-pre-spawn-");
+    const buildRoot = join(root, "build-work");
+    const nodeModulesRoot = join(buildRoot, "node_modules");
+    const packageRoot = join(nodeModulesRoot, ".pnpm", "next@15.5.21", "node_modules", "next");
+    const entrypointTarget = join(packageRoot, "dist", "bin", "next");
+    mkdirSync(dirname(entrypointTarget), { recursive: true, mode: 0o700 });
+    writeFileSync(join(packageRoot, "package.json"), '{"name":"next","version":"15.5.21"}\n', { mode: 0o400 });
+    writeFileSync(entrypointTarget, "original entrypoint\n", { mode: 0o500 });
+    symlinkSync(".pnpm/next@15.5.21/node_modules/next", join(nodeModulesRoot, "next"));
+    const runCommand = vi.fn(() => ({
+      status: 0, signal: null, stdout: "[]", stderr: "", pid: 4242,
+    }));
+
+    await expect((withNextEntrypointAuthority as (
+      options: { buildRoot: string, currentUid: number | undefined },
+      callback: (authority: { verifyBeforeSpawn: () => void }) => unknown,
+    ) => Promise<unknown>)(
+      { buildRoot, currentUid: process.getuid?.() },
+      ({ verifyBeforeSpawn }) => {
+        chmodSync(entrypointTarget, 0o600);
+        writeFileSync(entrypointTarget, "swapped before spawn\n");
+        chmodSync(entrypointTarget, 0o500);
+        return runObservedSandboxCommand({
+          sandboxPath: "/usr/bin/sandbox-exec",
+          logPath: "/usr/bin/log",
+          profile: "(version 1) (deny default)",
+          command: "/usr/bin/node",
+          args: [entrypointTarget, "build"],
+          cwd: buildRoot,
+          env: { HOME: root },
+          label: "Next pre-spawn target guard",
+          beforeSpawn: verifyBeforeSpawn,
+          runCommand,
+          now: () => Date.parse("2026-09-01T00:00:00.000Z"),
+          waitForAuditFlush: () => undefined,
+        });
+      },
+    )).rejects.toThrow(/Next|entrypoint|changed|drift|verification/iu);
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it("rejects a noncanonical pnpm package target even when it stays inside .pnpm", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const withNextEntrypointAuthority = candidateModule.withCandidateNextEntrypointAuthority;
+    expect(typeof withNextEntrypointAuthority).toBe("function");
+    if (typeof withNextEntrypointAuthority !== "function") return;
+
+    const root = privateRoot("homecook-candidate-next-entrypoint-shape-");
+    const buildRoot = join(root, "build-work");
+    const nodeModulesRoot = join(buildRoot, "node_modules");
+    const packageRoot = join(nodeModulesRoot, ".pnpm", "next@15.5.21", "node_modules", "renamed");
+    mkdirSync(join(packageRoot, "dist", "bin"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(packageRoot, "package.json"), '{"name":"next","version":"15.5.21"}\n', { mode: 0o400 });
+    writeFileSync(join(packageRoot, "dist", "bin", "next"), "entrypoint\n", { mode: 0o500 });
+    symlinkSync(".pnpm/next@15.5.21/node_modules/renamed", join(nodeModulesRoot, "next"));
+
+    await expect((withNextEntrypointAuthority as (
+      options: { buildRoot: string, currentUid: number | undefined },
+      callback: () => unknown,
+    ) => Promise<unknown>)(
+      { buildRoot, currentUid: process.getuid?.() },
+      () => undefined,
+    )).rejects.toThrow(/pnpm|target|shape|next|lexical/iu);
+  });
+
+  it("fails closed without exposing candidate paths when the Next target is missing", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const withNextEntrypointAuthority = candidateModule.withCandidateNextEntrypointAuthority;
+    expect(typeof withNextEntrypointAuthority).toBe("function");
+    if (typeof withNextEntrypointAuthority !== "function") return;
+
+    const root = privateRoot("homecook-candidate-next-entrypoint-missing-");
+    const buildRoot = join(root, "build-work");
+    const nodeModulesRoot = join(buildRoot, "node_modules");
+    mkdirSync(nodeModulesRoot, { recursive: true, mode: 0o700 });
+    symlinkSync(".pnpm/next@15.5.21/node_modules/next", join(nodeModulesRoot, "next"));
+
+    let thrown: unknown;
+    try {
+      await (withNextEntrypointAuthority as (
+        options: { buildRoot: string, currentUid: number | undefined },
+        callback: () => unknown,
+      ) => Promise<unknown>)({ buildRoot, currentUid: process.getuid?.() }, () => undefined);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toMatch(/Next|entrypoint|authority|missing|unsafe/iu);
+    expect((thrown as Error).message).not.toContain(root);
+  });
+
+  it("rejects external, traversing, nested-link, hardlink, owner, mode, directory, and link-swap attacks", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const withNextEntrypointAuthority = candidateModule.withCandidateNextEntrypointAuthority;
+    expect(typeof withNextEntrypointAuthority).toBe("function");
+    if (typeof withNextEntrypointAuthority !== "function") return;
+
+    const fixture = (prefix: string, packageSegment = "next@15.5.21") => {
+      const root = privateRoot(prefix);
+      const buildRoot = join(root, "build-work");
+      const nodeModulesRoot = join(buildRoot, "node_modules");
+      const packageRoot = join(nodeModulesRoot, ".pnpm", packageSegment, "node_modules", "next");
+      const entrypoint = join(packageRoot, "dist", "bin", "next");
+      mkdirSync(dirname(entrypoint), { recursive: true, mode: 0o700 });
+      writeFileSync(join(packageRoot, "package.json"), '{"name":"next","version":"15.5.21"}\n', { mode: 0o400 });
+      writeFileSync(entrypoint, "entrypoint\n", { mode: 0o500 });
+      symlinkSync(`.pnpm/${packageSegment}/node_modules/next`, join(nodeModulesRoot, "next"));
+      return { root, buildRoot, nodeModulesRoot, packageRoot, entrypoint };
+    };
+    const invoke = (
+      value: ReturnType<typeof fixture>,
+      callback: (authority: { verifyBeforeSpawn: () => void }) => unknown = (
+        { verifyBeforeSpawn },
+      ) => verifyBeforeSpawn(),
+      currentUid = process.getuid?.(),
+    ) => (withNextEntrypointAuthority as (
+      options: { buildRoot: string, currentUid: number | undefined },
+      authorityCallback: typeof callback,
+    ) => Promise<unknown>)({ buildRoot: value.buildRoot, currentUid }, callback);
+
+    const absolute = fixture("homecook-next-absolute-");
+    const externalPackage = join(absolute.root, "original-store", "next");
+    mkdirSync(join(externalPackage, "dist", "bin"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(externalPackage, "package.json"), '{"name":"next","version":"15.5.21"}\n', { mode: 0o400 });
+    writeFileSync(join(externalPackage, "dist", "bin", "next"), "external\n", { mode: 0o500 });
+    unlinkSync(join(absolute.nodeModulesRoot, "next"));
+    symlinkSync(externalPackage, join(absolute.nodeModulesRoot, "next"));
+    await expect(invoke(absolute)).rejects.toThrow(/Next|pnpm|authority|target|lexical/iu);
+
+    const traversing = fixture("homecook-next-traversal-");
+    unlinkSync(join(traversing.nodeModulesRoot, "next"));
+    symlinkSync(
+      ".pnpm/next@15.5.21/node_modules/../node_modules/next",
+      join(traversing.nodeModulesRoot, "next"),
+    );
+    await expect(invoke(traversing)).rejects.toThrow(/pnpm|target|lexical|authority/iu);
+
+    const unsafeSegment = fixture(
+      "homecook-next-unsafe-segment-",
+      "next@15.5.21_unsafe\nsegment",
+    );
+    await expect(invoke(unsafeSegment)).rejects.toThrow(/pnpm|target|lexical|segment/iu);
+
+    const malformedPackage = fixture("homecook-next-malformed-package-");
+    const packageJson = join(malformedPackage.packageRoot, "package.json");
+    chmodSync(packageJson, 0o600);
+    writeFileSync(packageJson, Buffer.concat([
+      Buffer.from('{"name":"next","version":"15.5.21","note":"'),
+      Buffer.from([0xff]),
+      Buffer.from('"}\n'),
+    ]));
+    chmodSync(packageJson, 0o400);
+    await expect(invoke(malformedPackage)).rejects.toThrow(/package|utf|encoding|bytes|invalid/iu);
+
+    const nestedEscape = fixture("homecook-next-nested-escape-");
+    unlinkSync(nestedEscape.entrypoint);
+    rmdirSync(dirname(nestedEscape.entrypoint));
+    rmdirSync(join(nestedEscape.packageRoot, "dist"));
+    const outsideDist = join(nestedEscape.root, "outside-dist");
+    mkdirSync(join(outsideDist, "bin"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(outsideDist, "bin", "next"), "outside\n", { mode: 0o500 });
+    symlinkSync(outsideDist, join(nestedEscape.packageRoot, "dist"));
+    await expect(invoke(nestedEscape)).rejects.toThrow(/Next|unsafe|authority|directory/iu);
+
+    const hardlinked = fixture("homecook-next-hardlink-");
+    linkSync(hardlinked.entrypoint, join(hardlinked.root, "entrypoint-alias"));
+    await expect(invoke(hardlinked)).rejects.toThrow(/Next|unsafe|authority|hard|identity/iu);
+
+    const wrongMode = fixture("homecook-next-mode-");
+    chmodSync(wrongMode.entrypoint, 0o522);
+    await expect(invoke(wrongMode)).rejects.toThrow(/Next|unsafe|mode|identity/iu);
+
+    const wrongOwner = fixture("homecook-next-owner-");
+    await expect(invoke(wrongOwner, () => undefined, (process.getuid?.() ?? 0) + 1))
+      .rejects.toThrow(/Next|unsafe|owner|authority/iu);
+
+    const directDirectory = fixture("homecook-next-direct-directory-");
+    unlinkSync(join(directDirectory.nodeModulesRoot, "next"));
+    mkdirSync(join(directDirectory.nodeModulesRoot, "next"), { mode: 0o700 });
+    await expect(invoke(directDirectory)).rejects.toThrow(/Next|pnpm|symlink|authority/iu);
+
+    const unguarded = fixture("homecook-next-unguarded-");
+    await expect(invoke(unguarded, () => undefined))
+      .rejects.toThrow(/pre.?spawn|guard|verification|use/iu);
+
+    const swappedLink = fixture("homecook-next-link-swap-");
+    const alternate = join(
+      swappedLink.nodeModulesRoot,
+      ".pnpm",
+      "next@15.5.21_alternate",
+      "node_modules",
+      "next",
+    );
+    mkdirSync(join(alternate, "dist", "bin"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(alternate, "package.json"), '{"name":"next","version":"15.5.21"}\n', { mode: 0o400 });
+    writeFileSync(join(alternate, "dist", "bin", "next"), "alternate\n", { mode: 0o500 });
+    await expect(invoke(swappedLink, ({ verifyBeforeSpawn }) => {
+      unlinkSync(join(swappedLink.nodeModulesRoot, "next"));
+      symlinkSync(".pnpm/next@15.5.21_alternate/node_modules/next", join(swappedLink.nodeModulesRoot, "next"));
+      verifyBeforeSpawn();
+    })).rejects.toThrow(/Next|symlink|changed|verification|authority/iu);
+
+    const restoredLink = fixture("homecook-next-restored-link-");
+    await expect(invoke(restoredLink, ({ verifyBeforeSpawn }) => {
+      const linkPath = join(restoredLink.nodeModulesRoot, "next");
+      unlinkSync(linkPath);
+      symlinkSync(".pnpm/missing/node_modules/next", linkPath);
+      unlinkSync(linkPath);
+      symlinkSync(".pnpm/next@15.5.21/node_modules/next", linkPath);
+      verifyBeforeSpawn();
+    })).rejects.toThrow(/Next|symlink|changed|verification|identity/iu);
+
+    const restoredEntrypoint = fixture("homecook-next-restored-entrypoint-");
+    await expect(invoke(restoredEntrypoint, ({ verifyBeforeSpawn }) => {
+      const original = readFileSync(restoredEntrypoint.entrypoint);
+      chmodSync(restoredEntrypoint.entrypoint, 0o700);
+      writeFileSync(restoredEntrypoint.entrypoint, "swapped\n");
+      writeFileSync(restoredEntrypoint.entrypoint, original);
+      chmodSync(restoredEntrypoint.entrypoint, 0o500);
+      verifyBeforeSpawn();
+    })).rejects.toThrow(/Next|entrypoint|package|changed|verification/iu);
+
+    const failedMutatedEntrypoint = fixture("homecook-next-failed-mutated-entrypoint-");
+    await expect(invoke(failedMutatedEntrypoint, ({ verifyBeforeSpawn }) => {
+      verifyBeforeSpawn();
+      chmodSync(failedMutatedEntrypoint.entrypoint, 0o700);
+      writeFileSync(failedMutatedEntrypoint.entrypoint, "mutated-before-failure\n");
+      throw new Error("sandboxed Next build failed");
+    })).rejects.toThrow(/package or entrypoint changed during verification/iu);
+
+    const restoredTarget = fixture("homecook-next-restored-target-");
+    await expect(invoke(restoredTarget, ({ verifyBeforeSpawn }) => {
+      const parked = `${restoredTarget.packageRoot}-parked`;
+      renameSync(restoredTarget.packageRoot, parked);
+      mkdirSync(restoredTarget.packageRoot, { mode: 0o700 });
+      rmdirSync(restoredTarget.packageRoot);
+      renameSync(parked, restoredTarget.packageRoot);
+      verifyBeforeSpawn();
+    })).rejects.toThrow(/Next|target|directory|changed|verification/iu);
+  });
 
   it("holds canonical private build-work path authority across generation and rejects path substitution", async () => {
     const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
