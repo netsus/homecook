@@ -69,8 +69,44 @@ function collectAdapterBoundaryInventory() {
     ts.forEachChild(node, visit);
   };
   visit(file);
-  return { allowFailure, dockerJson, rawJsonParse };
+  const readExpectedNonzeroInventory = (runnerAdaptersModule as Record<string, unknown>).getExpectedDockerNonzeroContractInventory;
+  return {
+    allowFailure,
+    expectedNonzero: typeof readExpectedNonzeroInventory === "function"
+      ? readExpectedNonzeroInventory()
+      : "<missing>",
+    dockerJson,
+    rawJsonParse,
+  };
 }
+
+const resourceAbsenceCases = [
+  {
+    kind: "container",
+    id: "b".repeat(64),
+    stderrForms: [
+      `Error: No such object: ${"b".repeat(64)}`,
+      `Error: No such container: ${"b".repeat(64)}`,
+      `Error response from daemon: No such container: ${"b".repeat(64)}`,
+    ],
+  },
+  {
+    kind: "network",
+    id: "c".repeat(64),
+    stderrForms: [
+      `Error: No such network: ${"c".repeat(64)}`,
+      `Error response from daemon: network ${"c".repeat(64)} not found`,
+    ],
+  },
+  {
+    kind: "volume",
+    id: "homecook-r2-missing-volume",
+    stderrForms: [
+      "Error: No such volume: homecook-r2-missing-volume",
+      "Error response from daemon: get homecook-r2-missing-volume: no such volume",
+    ],
+  },
+] as const;
 
 describe("R2 adapter trusted dependency seam", () => {
   it("normalizes every exact full-local service subject while preserving app and worker components", () => {
@@ -118,20 +154,77 @@ describe("R2 adapter trusted dependency seam", () => {
     expect((failure as Error).message).not.toContain(privateOutput);
   });
 
-  it("allows only the exact documented resource-absence status", async () => {
-    const entry = { kind: "container", id: "b".repeat(64), name: "expected-absent" };
-    const absent = createLocalReleaseRehearsalRunnerAdapters(options({
-      runCommand: async () => ({ status: 1, signal: null, truncated: false, stdout: "", stderr: "No such container" }),
-    }));
-    await expect(absent.inspectResource(entry)).resolves.toBeNull();
+  it.each(resourceAbsenceCases)("accepts only closed $kind absence stderr with one optional line ending", async ({ kind, id, stderrForms }) => {
+    const entry = { kind, id, name: "expected-absent" };
+    for (const stderr of stderrForms.flatMap((value) => [value, `${value}\n`, `${value}\r\n`])) {
+      const adapters = createLocalReleaseRehearsalRunnerAdapters(options({
+        runCommand: async () => ({ status: 1, signal: null, truncated: false, stdout: "", stderr }),
+      }));
+      await expect(adapters.inspectResource(entry)).resolves.toBeNull();
+    }
+  });
 
-    for (const result of [
-      { status: 2, signal: null, truncated: false, stdout: "", stderr: "unexpected" },
-      { status: 1, signal: null, truncated: false, stdout: "{}", stderr: "unexpected payload" },
+  it.each(resourceAbsenceCases)("rejects status 1 with near-miss, prefixed, suffixed, or private-path $kind stderr", async ({ kind, id, stderrForms }) => {
+    const entry = { kind, id, name: "expected-absent" };
+    const exact = stderrForms[0];
+    for (const stderr of [
+      "unexpected-status-one",
+      `prefix:${exact}`,
+      `${exact}:suffix`,
+      `${exact}\n/private/provider-secret`,
+      `/private/provider-secret\n${exact}`,
+      `${exact}\n\n`,
+      exact.replace(id, `${id}-near-miss`),
     ]) {
-      const adapters = createLocalReleaseRehearsalRunnerAdapters(options({ runCommand: async () => result }));
+      const adapters = createLocalReleaseRehearsalRunnerAdapters(options({
+        runCommand: async () => ({ status: 1, signal: null, truncated: false, stdout: "", stderr }),
+      }));
       await expect(adapters.inspectResource(entry)).rejects.toThrow(/^docker_command_failed: isolated Docker command failed\.$/u);
     }
+  });
+
+  it.each([
+    { kind: "container", id: "/private/provider-container", stderr: "Error: No such container: /private/provider-container" },
+    { kind: "network", id: "c".repeat(63), stderr: `Error: No such network: ${"c".repeat(63)}` },
+    { kind: "volume", id: "/private/provider-volume", stderr: "Error: No such volume: /private/provider-volume" },
+  ])("rejects non-canonical $kind identities even when stderr echoes them exactly", async ({ kind, id, stderr }) => {
+    const adapters = createLocalReleaseRehearsalRunnerAdapters(options({
+      runCommand: async () => ({ status: 1, signal: null, truncated: false, stdout: "", stderr }),
+    }));
+    await expect(adapters.inspectResource({ kind, id, name: "expected-absent" })).rejects.toThrow(
+      /^docker_command_failed: isolated Docker command failed\.$/u,
+    );
+  });
+
+  it("requires the dedicated startup identity pending code and exact no-output contract", () => {
+    const matchesExpectedDockerNonzero = (runnerAdaptersModule as Record<string, unknown>).matchesExpectedDockerNonzero;
+    expect(matchesExpectedDockerNonzero).toBeTypeOf("function");
+    if (typeof matchesExpectedDockerNonzero !== "function") return;
+    const startupArgs = [
+      "exec", "b".repeat(64), "node", "-e",
+      "const f=require('node:fs');const p=\"/tmp/homecook-r2-identity.json\";if(!f.existsSync(p))process.exit(45);process.stdout.write(f.readFileSync(p,'utf8'))",
+    ];
+    expect(matchesExpectedDockerNonzero(
+      { status: 45, signal: null, truncated: false, stdout: "", stderr: "" },
+      "startup_identity_pending",
+      startupArgs,
+    )).toBe(true);
+    for (const result of [
+      { status: 1, signal: null, truncated: false, stdout: "", stderr: "" },
+      { status: 45, signal: null, truncated: false, stdout: "pending", stderr: "" },
+      { status: 45, signal: null, truncated: false, stdout: "", stderr: "pending" },
+      { status: 45, signal: "SIGKILL", truncated: false, stdout: "", stderr: "" },
+      { status: null, signal: null, truncated: false, stdout: "", stderr: "" },
+      { status: 45, signal: null, truncated: true, stdout: "", stderr: "" },
+      { status: 45, signal: null, truncated: false, error: { code: "EIO" }, stdout: "", stderr: "" },
+    ]) {
+      expect(matchesExpectedDockerNonzero(result, "startup_identity_pending", startupArgs)).toBe(false);
+    }
+    expect(matchesExpectedDockerNonzero(
+      { status: 45, signal: null, truncated: false, stdout: "", stderr: "" },
+      "startup_identity_pending",
+      ["exec", "/private/provider-container", ...startupArgs.slice(2)],
+    )).toBe(false);
   });
 
   it.each([
@@ -155,6 +248,16 @@ describe("R2 adapter trusted dependency seam", () => {
         { owner: "readContainerIdentity", outcome: "startup_identity_pending" },
         { owner: "runCanaries", outcome: "worker_evidence_pending" },
         { owner: "runCanaries", outcome: "network_probe_outcome" },
+      ],
+      expectedNonzero: [
+        { outcome: "resource_absent", commandClass: "inspect_container", status: 1, stdoutForm: "empty", stderrMatcher: "container_absence_exact_optional_newline" },
+        { outcome: "resource_absent", commandClass: "inspect_network", status: 1, stdoutForm: "empty", stderrMatcher: "network_absence_exact_optional_newline" },
+        { outcome: "resource_absent", commandClass: "inspect_volume", status: 1, stdoutForm: "empty", stderrMatcher: "volume_absence_exact_optional_newline" },
+        { outcome: "startup_identity_pending", commandClass: "exec_startup_identity", status: 45, stdoutForm: "empty", stderrMatcher: "empty" },
+        { outcome: "worker_evidence_pending", commandClass: "exec_worker_evidence", status: 44, stdoutForm: "empty", stderrMatcher: "empty" },
+        { outcome: "network_probe_outcome", commandClass: "exec_network_probe", status: 41, stdoutForm: "empty", stderrMatcher: "empty" },
+        { outcome: "network_probe_outcome", commandClass: "exec_network_probe", status: 42, stdoutForm: "empty", stderrMatcher: "empty" },
+        { outcome: "network_probe_outcome", commandClass: "exec_network_probe", status: 43, stdoutForm: "empty", stderrMatcher: "empty" },
       ],
       dockerJson: [
         { owner: "inspectResource", shape: "record" },
