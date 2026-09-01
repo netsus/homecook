@@ -62,12 +62,12 @@ function toolchain() {
   };
 }
 
-function storedCiEvidence() {
+function storedCiEvidence(releaseSha = SHA_A) {
   const checkRuns = EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
     id: 11 + index,
     app_id: 15_368,
     check_suite_id: 21 + index,
-    head_sha: SHA_A,
+    head_sha: releaseSha,
     name,
     status: "completed",
     conclusion: "success",
@@ -87,8 +87,8 @@ function storedCiEvidence() {
   };
   const projection = {
     repository: "netsus/homecook",
-    head_sha: SHA_A,
-    remote_master_sha: SHA_A,
+    head_sha: releaseSha,
+    remote_master_sha: releaseSha,
     check_runs: checkRuns,
     commit_statuses: [],
     summary,
@@ -105,7 +105,10 @@ function storedCiEvidence() {
   };
 }
 
-export async function createCompletedRehearsalCandidateFixture(prefix = "homecook-r2-real-candidate-") {
+export async function createCompletedRehearsalCandidateFixture(
+  prefix = "homecook-r2-real-candidate-",
+  { releaseSha = SHA_A, releaseTree = SHA_B } = {},
+) {
   const authorityRoot = privateRoot(prefix);
   const candidateRoot = join(authorityRoot, "candidate");
   mkdirSync(candidateRoot, { mode: 0o700 });
@@ -149,7 +152,7 @@ export async function createCompletedRehearsalCandidateFixture(prefix = "homecoo
   const bundleRoot = join(bundlesRoot, "bundle");
   mkdirSync(bundlesRoot, { mode: 0o700 });
   const physical = createSealedCandidateBundle({ bundleRoot, componentRoots });
-  const ci = storedCiEvidence();
+  const ci = storedCiEvidence(releaseSha);
   const evidenceRoot = join(candidateRoot, "evidence");
   mkdirSync(evidenceRoot, { mode: 0o700 });
   writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ci.projection), { mode: 0o400 });
@@ -204,8 +207,8 @@ export async function createCompletedRehearsalCandidateFixture(prefix = "homecoo
     }],
     migration,
     production_guard: productionGuard,
-    release_sha: SHA_A,
-    release_tree: SHA_B,
+    release_sha: releaseSha,
+    release_tree: releaseTree,
     sandbox_policy_digest: DIGEST_B,
     generated_build_inventory_digest: generatedBuildInventoryDigest,
     pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
@@ -242,8 +245,8 @@ export async function createCompletedRehearsalCandidateFixture(prefix = "homecoo
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     selection_digest: null,
-    release_sha: SHA_A,
-    release_tree: SHA_B,
+    release_sha: releaseSha,
+    release_tree: releaseTree,
     ci_check_summary_digest: ci.summaryDigest,
     ci_snapshot_digest: ci.snapshotDigest,
     ci_suite_run_set_digest: ci.suiteRunSetDigest,
