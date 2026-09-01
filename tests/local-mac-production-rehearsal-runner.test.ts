@@ -25,6 +25,7 @@ import * as rehearsalRunnerCli from "../scripts/local-mac-production-rehearsal-r
 import {
   assertDiscoveredResourcesRemainUnowned,
   recordPrimitiveCreateResult,
+  createLocalReleaseRehearsalRunnerAdapters,
   compileClosedPrimitivePlan,
   buildFullLocalComposeOverride,
   buildFullLocalRehearsalEnvironment,
@@ -39,7 +40,7 @@ import {
   buildFullLocalProbeStartupContract,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
-import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
+import { createImmutableCreationLedger, resolveTrustedLocalDockerEndpoint } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
 
 const SHA_A = "a".repeat(40);
@@ -534,6 +535,31 @@ describe("release rehearsal R2 input and namespace gates", () => {
     catch (error) { failure = error; }
     expect(failure).toBeInstanceOf(Error);
     expect((failure as Error).message).not.toContain(privateMarker);
+  });
+
+  it("rejects a HOME symlink, non-private mode, or wrong owner projection", () => {
+    const resolveNamespace = (rehearsalRunnerCli as Record<string, unknown>).resolveDefaultRehearsalNamespace;
+    expect(typeof resolveNamespace).toBe("function");
+    if (typeof resolveNamespace !== "function") return;
+    const typedResolveNamespace = resolveNamespace as (home: string) => unknown;
+    const parent = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-home-locator-safety-")));
+    const realHome = join(parent, "real-home");
+    const linkedHome = join(parent, "linked-home");
+    mkdirSync(realHome, { mode: 0o700 });
+    symlinkSync(realHome, linkedHome);
+    expect(() => typedResolveNamespace(linkedHome)).toThrow(/trusted|private|namespace|authority|unsafe/iu);
+    chmodSync(realHome, 0o755);
+    expect(() => typedResolveNamespace(realHome)).toThrow(/trusted|private|namespace|authority|unsafe/iu);
+    chmodSync(realHome, 0o700);
+    const currentUid = process.getuid?.();
+    if (Number.isInteger(currentUid)) {
+      const getuid = vi.spyOn(process, "getuid").mockReturnValue((currentUid as number) + 1);
+      try {
+        expect(() => typedResolveNamespace(realHome)).toThrow(/trusted|private|namespace|authority|unsafe/iu);
+      } finally {
+        getuid.mockRestore();
+      }
+    }
   });
 
   it("accepts the actual tracked Node-readable runner before constructing Docker adapters", async () => {
@@ -1138,6 +1164,62 @@ describe("release rehearsal R2 orchestration", () => {
 });
 
 describe("release rehearsal R2 cleanup ownership", () => {
+  it("records every create-site ID before inspect failure and cleans only the exact ledger", async () => {
+    const adaptersModule = await import("../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs") as Record<string, unknown>;
+    const createSites = adaptersModule.DOCKER_CREATE_SITE_RESOURCE_KINDS;
+    const executeCreate = adaptersModule.executeDockerPrimitiveCreateTransition;
+    const expectedSites = {
+      full_local_network: "network",
+      full_local_volume: "volume",
+      full_local_service: "container",
+      app: "container",
+      worker: "container",
+      sentinel_network: "network",
+      sentinel_container: "container",
+    };
+    expect(createSites).toEqual(expectedSites);
+    expect(typeof executeCreate).toBe("function");
+    if (typeof executeCreate !== "function") return;
+    const transition = executeCreate as (options: Record<string, unknown>) => Promise<unknown>;
+
+    for (const [siteIndex, [site, kind]] of Object.entries(expectedSites).entries()) {
+      for (const failureMode of ["inspect-error", "invalid-json"] as const) {
+        const id = (siteIndex + 1).toString(16).repeat(64);
+        const name = `r2-${site.replaceAll("_", "-")}`;
+        const expected = {
+          kind,
+          name,
+          labels: {
+            [RUN_OWNERSHIP_LABEL]: RUN_ID,
+            "com.docker.compose.project": PROJECT,
+          },
+        };
+        const ledger = createImmutableCreationLedger();
+        await expect(transition({
+          ledger,
+          site,
+          expected,
+          create: async () => `${id}\n`,
+          inspect: async (created: Record<string, string>) => {
+            expect(ledger.snapshot()).toEqual([{ kind, id, name }]);
+            if (failureMode === "invalid-json") JSON.parse(`{private-inspect-payload:${site}}`);
+            throw new Error(`private inspect failure: ${site}`);
+          },
+        })).rejects.toThrow();
+        const removeResource = vi.fn();
+        const cleanup = await cleanupOwnedResources({
+          runId: RUN_ID,
+          project: PROJECT,
+          ownedResources: ledger.snapshot(),
+          inspectResource: async (entry: Record<string, string>) => ({ ...entry, labels: expected.labels }),
+          removeResource,
+        });
+        expect(cleanup).toEqual({ removed_resource_ids: [id], cleanup_errors: [] });
+        expect(removeResource).toHaveBeenCalledExactlyOnceWith({ kind, id, name });
+      }
+    }
+  });
+
   it("records only a single create-returned ID with inspect cross-binding", () => {
     const ledger = createImmutableCreationLedger();
     const expected = { kind: "network", name: "r2-net", labels: { [RUN_OWNERSHIP_LABEL]: RUN_ID } };
@@ -1405,6 +1487,58 @@ describe("release rehearsal R2 public command and schema", () => {
       inspect: (created: Record<string, string>) => Promise<Record<string, string>>;
       record: (created: Record<string, string>, observed: Record<string, string>) => void;
     }) => Promise<unknown>;
+
+    const locatorRoots = makeRoot("homecook-r2-home-locator-");
+    const locatorSource = join(locatorRoots.candidateRoot, "locator-source.json");
+    writeFileSync(locatorSource, "{}\n", { mode: 0o400 });
+    const locatorGuard = openGuard({
+      trustedAnchorRoot: locatorRoots.trustedAnchorRoot,
+      namespaceRoot: locatorRoots.namespaceRoot,
+      candidateRoot: locatorRoots.candidateRoot,
+      resourceName: "home-locator-bind",
+      expectedMounts: [{ source: locatorSource, target: "/run/locator-source.json", source_kind: "regular-file" }],
+      dockerArgs: ["create", "--mount", `type=bind,src=${locatorSource},dst=/run/locator-source.json,readonly`],
+    });
+    const locatorLedger: Array<Record<string, string>> = [];
+    await expect(guardedCreate({
+      guard: locatorGuard,
+      create: async () => {
+        mkdirSync(join(locatorRoots.trustedAnchorRoot, "unrelated-user-child"), { mode: 0o700 });
+        return { kind: "container", id: "home-locator-container-id", name: "home-locator-container" };
+      },
+      inspect: async (created) => ({ ...created }),
+      record: (created) => locatorLedger.push(created),
+    })).resolves.toMatchObject({
+      created: { kind: "container", id: "home-locator-container-id", name: "home-locator-container" },
+    });
+    expect(locatorLedger).toEqual([
+      { kind: "container", id: "home-locator-container-id", name: "home-locator-container" },
+    ]);
+
+    const replacementRoots = makeRoot("homecook-r2-home-replacement-");
+    const replacementSource = join(replacementRoots.candidateRoot, "replacement-source.json");
+    writeFileSync(replacementSource, "{}\n", { mode: 0o400 });
+    const replacementGuard = openGuard({
+      trustedAnchorRoot: replacementRoots.trustedAnchorRoot,
+      namespaceRoot: replacementRoots.namespaceRoot,
+      candidateRoot: replacementRoots.candidateRoot,
+      resourceName: "home-replacement-bind",
+      expectedMounts: [{ source: replacementSource, target: "/run/replacement-source.json", source_kind: "regular-file" }],
+      dockerArgs: ["create", "--mount", `type=bind,src=${replacementSource},dst=/run/replacement-source.json,readonly`],
+    });
+    const displacedHome = `${replacementRoots.trustedAnchorRoot}.displaced`;
+    await expect(guardedCreate({
+      guard: replacementGuard,
+      create: async () => ({ kind: "container", id: "home-replacement-container-id", name: "home-replacement-container" }),
+      inspect: async (created) => {
+        renameSync(replacementRoots.trustedAnchorRoot, displacedHome);
+        mkdirSync(replacementRoots.trustedAnchorRoot, { mode: 0o700 });
+        return { ...created };
+      },
+      record: () => undefined,
+    })).rejects.toThrow(/bind|source|authority|identity|directory|drift/iu);
+    rmSync(replacementRoots.trustedAnchorRoot, { recursive: true, force: true });
+    renameSync(displacedHome, replacementRoots.trustedAnchorRoot);
 
     for (const sourceKind of ["compose", "script", "secret"] as const) {
       const roots = makeRoot(`homecook-r2-${sourceKind}-source-`);
@@ -1934,5 +2068,72 @@ describe("release rehearsal R2 public command and schema", () => {
     await expect(runLocalMacProductionRehearsalRunnerCli([
       "--candidate", join(root, "candidate"),
     ], { run })).rejects.toThrow(/--json/iu);
+  });
+
+  it("redacts Docker stdout and stderr from the CLI failure and failed artifact", async () => {
+    const homeRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-docker-redaction-")));
+    const namespaceRoot = join(homeRoot, ".homecook", "rehearsal", "runs");
+    mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
+    const candidate = await createCompletedRehearsalCandidateFixture("homecook-r2-docker-redaction-candidate-");
+    const privateHomePath = join(homeRoot, ".homecook", "rehearsal", "runs", "secret-bind.env");
+    const privateBindPath = join(homeRoot, ".homecook", "rehearsal", "runs", "runtime-state", "secret-fds");
+    const secretFilename = "provider-production-secret.json";
+    const secretValue = "SUPABASE_SERVICE_ROLE_KEY=private-service-role-value";
+    const providerPayload = '{"provider":"private-provider","access_token":"private-provider-token"}';
+    const rawStdout = `${privateBindPath}/${secretFilename}\n${providerPayload}\n`;
+    const rawStderr = `${privateHomePath}: ${secretValue}\n`;
+    const dockerEndpoint = resolveTrustedLocalDockerEndpoint();
+    const output = { value: "", write(chunk: string) { this.value += chunk; } };
+    let cliFailure: unknown = null;
+    try {
+      await runLocalMacProductionRehearsalRunnerCli([
+        "--candidate", candidate.candidateRoot,
+        "--production-env-authority", privateHomePath,
+        "--json",
+      ], {
+        output,
+        namespaceResolver: () => ({ trustedNamespaceAnchor: homeRoot, namespaceRoot }),
+        runIdFactory: () => RUN_ID,
+        createAdapters: (adapterOptions: Record<string, unknown>) => createLocalReleaseRehearsalRunnerAdapters({
+          ...adapterOptions,
+          homeDir: homeRoot,
+          rootDir: process.cwd(),
+          dockerBin: "/private/test/docker",
+          dockerEndpointResolver: () => dockerEndpoint,
+          trustedToolResolver: {
+            log: { path: "/usr/bin/log", identity: { digest: DIGEST_A } },
+            lsof: { path: "/usr/sbin/lsof", identity: { digest: DIGEST_A } },
+            ps: { path: "/bin/ps", identity: { digest: DIGEST_A } },
+          },
+          platform: "darwin",
+          runCommand: async () => ({
+            status: 42,
+            signal: null,
+            truncated: false,
+            stdout: rawStdout,
+            stderr: rawStderr,
+          }),
+        }),
+      });
+    } catch (error) {
+      cliFailure = error;
+    }
+    expect(cliFailure).toBeInstanceOf(Error);
+    const failedJson = readFileSync(join(namespaceRoot, RUN_ID, "failed.json"), "utf8");
+    const publicSurfaces = `${(cliFailure as Error).message}\n${output.value}\n${failedJson}`;
+    expect((cliFailure as Error).message).toMatch(/^docker_command_failed: isolated Docker command failed\.?/u);
+    for (const privateValue of [
+      privateHomePath,
+      privateBindPath,
+      secretFilename,
+      secretValue,
+      "private-service-role-value",
+      providerPayload,
+      "private-provider-token",
+      rawStdout,
+      rawStderr,
+    ]) {
+      expect(publicSurfaces).not.toContain(privateValue);
+    }
   });
 });
