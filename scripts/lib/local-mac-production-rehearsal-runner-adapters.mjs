@@ -855,6 +855,20 @@ function ensureDockerCommandEnvironment(state) {
   return state.commandEnvironment;
 }
 
+const EXPECTED_DOCKER_NONZERO_OUTCOMES = Object.freeze({
+  resource_absent: Object.freeze([1]),
+  startup_identity_pending: Object.freeze([1]),
+  worker_evidence_pending: Object.freeze([44]),
+  network_probe_outcome: Object.freeze([41, 42, 43]),
+});
+
+function isExpectedDockerNonzero(result, outcome) {
+  const statuses = EXPECTED_DOCKER_NONZERO_OUTCOMES[outcome];
+  return Array.isArray(statuses)
+    && statuses.includes(result.status)
+    && result.stdout === "";
+}
+
 async function dockerCommand(state, args, options = {}) {
   const endpointNow = state.dockerEndpointResolver({
     explicitSocketPath: state.dockerEndpoint.realpath,
@@ -891,10 +905,15 @@ async function dockerCommand(state, args, options = {}) {
     mode: ownership.verifiedOwnership === true ? "owned" : "bounded",
     production_target: false,
   }));
-  if (
-    !options.allowFailure
-    && (result?.error || result?.signal || result?.truncated === true || result?.status !== 0)
-  ) {
+  const transportFailed = !result
+    || Boolean(result.error)
+    || (result.signal !== null && result.signal !== undefined)
+    || result.truncated === true
+    || !Number.isSafeInteger(result.status);
+  const allowedNonzero = !transportFailed
+    && result.status !== 0
+    && isExpectedDockerNonzero(result, options.allowFailure);
+  if (transportFailed || result.status !== 0 && !allowedNonzero) {
     throw new Error("docker_command_failed: isolated Docker command failed.");
   }
   return result;
@@ -904,9 +923,28 @@ function parseLines(source) {
   return source.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
 }
 
-function parseDockerJson(source) {
-  try { return JSON.parse(source); }
-  catch { throw new Error("docker_output_invalid: isolated Docker command output was invalid."); }
+function isDockerJsonRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+const DOCKER_JSON_SHAPE_VALIDATORS = Object.freeze({
+  record: isDockerJsonRecord,
+  "string-array": (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string"),
+  "record-array": (value) => Array.isArray(value) && value.every(isDockerJsonRecord),
+});
+
+export function parseDockerOutputJson(source, shape) {
+  try {
+    if (typeof source !== "string" || source.trim().length === 0) throw new Error("empty Docker output");
+    const parsed = JSON.parse(source);
+    const validator = Object.prototype.hasOwnProperty.call(DOCKER_JSON_SHAPE_VALIDATORS, shape)
+      ? DOCKER_JSON_SHAPE_VALIDATORS[shape]
+      : null;
+    if (!validator?.(parsed)) throw new Error("unexpected Docker output");
+    return parsed;
+  } catch {
+    throw new Error("docker_output_invalid: isolated Docker command output was invalid.");
+  }
 }
 
 function abortableDelay(milliseconds, signal) {
@@ -1133,14 +1171,14 @@ async function inspectResource(state, entry, options = {}) {
     : entry.kind === "network"
       ? ["network", "inspect", entry.id, "--format", "{{json .Labels}}\t{{.Name}}"]
       : ["inspect", "--type", type, entry.id, "--format", "{{json .Config.Labels}}\t{{.Name}}"];
-  const result = await dockerCommand(state, args, { ...options, allowFailure: true });
+  const result = await dockerCommand(state, args, { ...options, allowFailure: "resource_absent" });
   if (result.status !== 0) return null;
   const [labelsText, rawName] = result.stdout.trim().split("\t");
   return {
     kind: entry.kind,
     id: entry.id,
     name: (rawName ?? entry.name).replace(/^\//u, ""),
-    labels: parseDockerJson(labelsText),
+    labels: parseDockerOutputJson(labelsText, "record"),
   };
 }
 
@@ -1154,7 +1192,7 @@ export async function readContainerObserverSubject(state, { containerId, compone
   if (ps.error || ps.signal || ps.status !== 0) fail("container observer trusted ps is unavailable");
   const [hostPid, hostPgid, executable] = ps.stdout.trim().split(/\s+/, 3);
   if (Number(hostPid) !== pid || !Number.isSafeInteger(Number(hostPgid)) || Number(hostPgid) <= 0 || !executable) fail("container observer host PID/PGID identity is invalid");
-  return Object.freeze({ container_id: id, host_pid: pid, host_pgid: Number(hostPgid), component, started_at: startedAt, image_digest: sha256Jcs(image), config_digest: sha256Jcs(parseDockerJson(configText)), executable_identity_digest: sha256Jcs(executable) });
+  return Object.freeze({ container_id: id, host_pid: pid, host_pgid: Number(hostPgid), component, started_at: startedAt, image_digest: sha256Jcs(image), config_digest: sha256Jcs(parseDockerOutputJson(configText, "record")), executable_identity_digest: sha256Jcs(executable) });
 }
 
 async function listDiscoveredResources(state, options = {}) {
@@ -1295,7 +1333,7 @@ async function verifyCreatedContainerImages(state, { signal } = {}) {
       "--format", "{{.Image}}\t{{.Config.Image}}\t{{json .Config.Labels}}",
     ], { signal });
     const [imageId, configuredReference, labelsText] = result.stdout.trim().split("\t");
-    const labels = parseDockerJson(labelsText);
+    const labels = parseDockerOutputJson(labelsText, "record");
     const service = labels?.[RUN_IMAGE_SERVICE_LABEL] ?? labels?.["com.docker.compose.service"];
     const authority = state.imageAuthorities?.get(service);
     if (!authority) fail(`container image service authority is missing: ${entry.name}`);
@@ -1304,7 +1342,7 @@ async function verifyCreatedContainerImages(state, { signal } = {}) {
       "--format", "{{.Id}}\t{{.Os}}/{{.Architecture}}\t{{json .RepoDigests}}",
     ], { signal });
     const [readbackId, platform, repoDigestsText] = image.stdout.trim().split("\t");
-    const repoDigests = parseDockerJson(repoDigestsText);
+    const repoDigests = parseDockerOutputJson(repoDigestsText, "string-array");
     validateContainerImageAuthority({
       authority,
       observed: {
@@ -1377,14 +1415,17 @@ export async function runOwnedPostgrestFixtureProbe(state, { namespace, jobId, u
   if (probeObserved?.id !== probeEntry.id || probeObserved?.name !== probeEntry.name || probeObserved?.labels?.[RUN_OWNERSHIP_LABEL] !== state.runId) fail("PostgREST probe ownership mismatch");
   const probe = buildPostgrestFixtureReadbackProbe({ jobId, userId, token });
   const probeOutput = await dockerCommandImpl(state, probe.argv.map((value) => value === "<postgrest-probe-id>" ? probeEntry.id : value), { input: probe.stdin, signal, timeout: 10_000, ownership: { verifiedOwnership: true, resourceId: probeEntry.id } });
-  const row = parseAndValidatePostgrestFixtureReadback(probeOutput.stdout, expected);
+  const row = parseAndValidatePostgrestFixtureReadback(
+    canonicalizeJcs(parseDockerOutputJson(probeOutput.stdout, "record")),
+    expected,
+  );
   return Object.freeze({ row, redacted: probe.redacted, response_digest: sha256Jcs({ redacted: probe.redacted, row }) });
 }
 
 export function parseAndValidateWorkerFixtureReadback(output, expected) {
   const lines = String(output ?? "").trim().split(/\r?\n/u).filter(Boolean);
   if (lines.length !== 1) fail("worker fixture readback must contain exactly one row");
-  let readback; try { readback = JSON.parse(lines[0]); } catch { fail("worker fixture readback is malformed JSON"); }
+  const readback = parseDockerOutputJson(lines[0], "record");
   const keys = ["user_id", "job_id", "job_status", "attempt_count", "policy_snapshot_digest", "computed_policy_snapshot_digest", "credential_jti_hash", "credential_generation", "credential_release_sha", "credential_schema_identity", "credential_snapshot_digest", "permit_generation"].sort();
   if (!readback || typeof readback !== "object" || Array.isArray(readback) || canonicalizeJcs(Object.keys(readback).sort()) !== canonicalizeJcs(keys) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(readback.user_id ?? "") || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(readback.job_id ?? "") || !Number.isSafeInteger(readback.attempt_count) || !Number.isSafeInteger(readback.credential_generation) || !Number.isSafeInteger(readback.permit_generation)) fail("worker fixture readback has an invalid closed shape");
   for (const [key, value] of Object.entries(expected)) if (readback[key] !== value) fail("worker fixture readback differs from issued authority");
@@ -1734,7 +1775,7 @@ async function readContainerIdentity(state, entry, manifest, { signal } = {}) {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     const result = await dockerCommand(state, args, {
-      allowFailure: true,
+      allowFailure: "startup_identity_pending",
       signal,
       ownership: {
         dockerHost: state.dockerEndpoint.url,
@@ -1753,8 +1794,7 @@ async function readContainerIdentity(state, entry, manifest, { signal } = {}) {
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
   }
   if (!output) fail(`${entry.name} child identity report timed out`);
-  let parsed;
-  try { parsed = JSON.parse(output); } catch { fail(`${entry.name} child identity is not canonical JSON`); }
+  const parsed = parseDockerOutputJson(output, "record");
   if (canonicalizeJcs(parsed) !== output) fail(`${entry.name} child identity JSON is not RFC8785 canonical`);
   return validateReportedIdentity(parsed, manifest, entry.name);
 }
@@ -1768,14 +1808,8 @@ function dockerEnvironmentArgs(environment) {
 async function snapshotDockerDaemon(state, signal) {
   const version = await dockerCommand(state, ["version", "--format", "{{json .}}"], { signal });
   const info = await dockerCommand(state, ["info", "--format", "{{json .}}"], { signal });
-  let parsedVersion;
-  let parsedInfo;
-  try {
-    parsedVersion = JSON.parse(version.stdout);
-    parsedInfo = JSON.parse(info.stdout);
-  } catch {
-    fail("local Docker daemon identity output is not JSON");
-  }
+  const parsedVersion = parseDockerOutputJson(version.stdout, "record");
+  const parsedInfo = parseDockerOutputJson(info.stdout, "record");
   const endpointNow = state.dockerEndpointResolver({
     explicitSocketPath: state.dockerEndpoint.realpath,
     homeDir: state.homeDir,
@@ -2093,8 +2127,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       } finally {
         composeSourceGuard.close();
       }
-      let config;
-      try { config = JSON.parse(resolved.stdout); } catch { fail("read-only Compose config output is invalid JSON"); }
+      const config = parseDockerOutputJson(resolved.stdout, "record");
       const bindSourceContract = buildFullLocalBindSourceContract({
         candidateRoot,
         candidateAuthorityRoot: candidateContainerAuthorityRoot,
@@ -2140,8 +2173,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           await dockerCommand(state, ["network", "connect", ...network.aliases.flatMap((alias) => ["--alias", alias]), `${namespace.project}_${network.name}`, id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
         }
         const contractInspection = await dockerCommand(state, ["inspect", "--type", "container", id, "--format", "{{json .}}"], { signal: state.activeSignal });
-        let observedContract;
-        try { observedContract = JSON.parse(contractInspection.stdout); } catch { fail(`primitive inspect JSON is invalid: ${service.name}`); }
+        const observedContract = parseDockerOutputJson(contractInspection.stdout, "record");
         validatePrimitiveContainerInspection(observedContract, service, namespace);
         await dockerCommand(state, ["start", id], { signal: state.activeSignal, ownership: { verifiedOwnership: true, resourceId: id } });
         if (service.healthcheck) await waitForContainers(state, { signal: state.activeSignal, expectedNames: [entry.name] });
@@ -2536,9 +2568,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
         signal: state.activeSignal,
         ownership: { verifiedOwnership: true, resourceId: probeRuntime.id },
       });
-      let serviceResult;
-      try { serviceResult = JSON.parse(serviceProbe.stdout); }
-      catch { fail("full-local service route canary output is invalid"); }
+      const serviceResult = parseDockerOutputJson(serviceProbe.stdout, "record");
       if (
         !Array.isArray(serviceResult.fixture)
         || serviceResult.fixture.length !== 1
@@ -2565,13 +2595,12 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           "exec", workerRuntime.id, "node", "-e",
           "const f=require('node:fs');const p='/tmp/homecook-r2-worker-result.json';if(!f.existsSync(p))process.exit(44);process.stdout.write(f.readFileSync(p,'utf8'))",
         ], {
-          allowFailure: true,
+          allowFailure: "worker_evidence_pending",
           signal: state.activeSignal,
           ownership: { verifiedOwnership: true, resourceId: workerRuntime.id },
         });
         if (result.status === 0) {
-          try { workerResult = JSON.parse(result.stdout); }
-          catch { fail("worker synthetic result is invalid JSON"); }
+          workerResult = parseDockerOutputJson(result.stdout, "record");
           break;
         }
         if (result.status !== 44) fail("worker synthetic runtime exited without evidence");
@@ -2611,7 +2640,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
       const egressAttempt = await dockerCommand(state, [
         "exec", workerRuntime.id, "node", "-e", networkProbe,
       ], {
-        allowFailure: true,
+        allowFailure: "network_probe_outcome",
         signal: state.activeSignal,
         timeout: 10_000,
         ownership: { verifiedOwnership: true, resourceId: workerRuntime.id },
@@ -2642,7 +2671,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           "{{json .Labels}}\t{{.Name}}\t{{.Internal}}",
         ], { signal: state.activeSignal })).stdout.trim().split("\t");
         if (result.length !== 3) fail("network isolation readback is incomplete");
-        const labels = parseDockerJson(result[0]);
+        const labels = parseDockerOutputJson(result[0], "record");
         if (
           result[1] !== expectedName
           || result[2] !== "true"
@@ -2662,7 +2691,7 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           "inspect", "--type", "container", entry.id,
           "--format", "{{json .NetworkSettings.Networks}}",
         ], { signal: state.activeSignal })).stdout.trim();
-        const attachedNames = Object.keys(parseDockerJson(raw)).sort();
+        const attachedNames = Object.keys(parseDockerOutputJson(raw, "record")).sort();
         if (attachedNames.length === 0 || attachedNames.some((name) => !expectedNetworks.has(name))) {
           fail(`container has an external or unknown network attachment: ${entry.name}`);
         }
@@ -2701,8 +2730,8 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           "--format", "{{json .Config.Env}}\t{{json .Mounts}}",
         ], { signal: state.activeSignal });
         const [environmentText, mountsText] = result.stdout.trim().split("\t");
-        const environment = parseDockerJson(environmentText);
-        const mounts = parseDockerJson(mountsText);
+        const environment = parseDockerOutputJson(environmentText, "string-array");
+        const mounts = parseDockerOutputJson(mountsText, "record-array");
         const forbiddenEnvironment = environment.filter((assignment) => {
           const separator = assignment.indexOf("=");
           const key = separator >= 0 ? assignment.slice(0, separator) : assignment;
@@ -2763,7 +2792,6 @@ export function createLocalReleaseRehearsalRunnerAdapters({
           fail("runtime stop ownership mismatch");
         }
         await dockerCommand(state, ["stop", "--time", "30", id], {
-          allowFailure: true,
           signal: state.cleanupSignal,
           ownership: { verifiedOwnership: true, resourceId: id },
         });
