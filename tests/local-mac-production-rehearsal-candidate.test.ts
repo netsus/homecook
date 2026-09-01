@@ -100,6 +100,7 @@ const RUN_TOOL_CHANGE = "00000000-0000-4000-8000-000000000003";
 const RUN_FAILED = "00000000-0000-4000-8000-000000000006";
 const RUN_FINALIZE_FAILED = "00000000-0000-4000-8000-000000000007";
 const CURRENT_MASTER_SHA = "5e9bf7929c762dc6371ff64ae288159ddb9dc317";
+const TEST_OBSERVER_TOOL = realpathSync("/usr/bin/true");
 
 const CURRENT_MASTER_CHECK_RUNS = ([
   [99_587_894_041, "accessibility", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
@@ -1816,9 +1817,9 @@ try {
     const started = "Tue Sep  1 20:00:00 2026";
     const reusedStarted = "Tue Sep  1 20:00:01 2026";
     const rows = [
-      `${rootPid} 1 ${rootPid} S ${started} ${process.execPath}`,
-      `${childPid} ${rootPid} 5000 S ${started} ${process.execPath}`,
-      `${reusedPid} ${rootPid} 6000 S ${started} ${process.execPath}`,
+      `${rootPid} 1 ${rootPid} S ${started} ${TEST_OBSERVER_TOOL}`,
+      `${childPid} ${rootPid} 5000 S ${started} ${TEST_OBSERVER_TOOL}`,
+      `${reusedPid} ${rootPid} 6000 S ${started} ${TEST_OBSERVER_TOOL}`,
     ].join("\n");
     const child = new EventEmitter() as EventEmitter & {
       pid: number,
@@ -1846,9 +1847,9 @@ try {
       if (args.includes("-p")) {
         const targeted = [
           ...(matchingChildAlive
-            ? [`${childPid} ${rootPid} 5000 S ${started} ${process.execPath}`]
+            ? [`${childPid} ${rootPid} 5000 S ${started} ${TEST_OBSERVER_TOOL}`]
             : []),
-          `${reusedPid} 1 6000 S ${reusedStarted} ${process.execPath}`,
+          `${reusedPid} 1 6000 S ${reusedStarted} ${TEST_OBSERVER_TOOL}`,
         ];
         return { status: 0, signal: null, stdout: `${targeted.join("\n")}\n`, stderr: "" };
       }
@@ -1861,14 +1862,14 @@ try {
     await expect((observeProcessTree as (options: Record<string, unknown>) => Promise<unknown>)({
       sandboxPath: "/usr/bin/sandbox-exec",
       profile: "(version 1)\n(deny default)",
-      command: process.execPath,
+      command: TEST_OBSERVER_TOOL,
       args: [],
       cwd: "/private/tmp",
       env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
       label: "post-root lookup failure fixture",
       timeout: 1_000,
-      lsofPath: process.execPath,
-      psPath: process.execPath,
+      lsofPath: TEST_OBSERVER_TOOL,
+      psPath: TEST_OBSERVER_TOOL,
       pollCommand,
       spawnProcess,
       killProcess,
@@ -1895,7 +1896,7 @@ try {
       `${rootPid} 1 ${rootPid} S ${started} ${basename(command)}`,
       `${childPid} ${rootPid} ${rootPid} S ${started} ${basename(command)}`,
     ].join("\n");
-    const unrelatedRows = `9898 1 9898 S ${started} ${process.execPath}\n`;
+    const unrelatedRows = `9898 1 9898 S ${started} ${TEST_OBSERVER_TOOL}\n`;
     const child = new EventEmitter() as EventEmitter & {
       pid: number,
       stdout: PassThrough,
@@ -1937,8 +1938,8 @@ try {
       env: { HOME: root, PATH: "/usr/bin:/bin" },
       label: "exact executable lsof race fixture",
       timeout: 1_000,
-      lsofPath: process.execPath,
-      psPath: process.execPath,
+      lsofPath: TEST_OBSERVER_TOOL,
+      psPath: TEST_OBSERVER_TOOL,
       pollCommand,
       spawnProcess,
       pollIntervalMs: 20,
