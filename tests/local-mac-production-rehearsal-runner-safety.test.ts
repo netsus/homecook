@@ -11,7 +11,7 @@ import {
 import { createServer } from "node:net";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import {
@@ -23,9 +23,12 @@ import {
   runAbortableCommand,
   validateDockerDaemonSnapshots,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
-import { cleanupOwnedTempRoots, createOwnedTempRoot } from "./helpers/owned-temp-root";
+import { createOwnedTempRegistry } from "./helpers/owned-temp-root";
 
+const ownedTempRegistry = createOwnedTempRegistry();
+const { cleanupOwnedTempRoots, createOwnedTempRoot } = ownedTempRegistry;
 afterEach(() => cleanupOwnedTempRoots());
+afterAll(() => cleanupOwnedTempRoots());
 
 function sha256(bytes: Buffer | string) {
   return createHash("sha256").update(bytes).digest("hex");

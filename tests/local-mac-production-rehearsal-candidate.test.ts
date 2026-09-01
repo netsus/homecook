@@ -24,7 +24,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { createRequire } from "node:module";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildCandidateManifest,
@@ -82,12 +82,7 @@ import {
   EXPECTED_RELEASE_CONTEXTS,
 } from "../scripts/lib/production-release-approval-policy.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
-import {
-  cleanupOwnedTempRoot,
-  cleanupOwnedTempRoots,
-  createOwnedTempRoot,
-  withOwnedTempRoot,
-} from "./helpers/owned-temp-root";
+import { createOwnedTempRegistry } from "./helpers/owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -101,6 +96,14 @@ const RUN_FAILED = "00000000-0000-4000-8000-000000000006";
 const RUN_FINALIZE_FAILED = "00000000-0000-4000-8000-000000000007";
 const CURRENT_MASTER_SHA = "5e9bf7929c762dc6371ff64ae288159ddb9dc317";
 const TEST_OBSERVER_TOOL = realpathSync("/usr/bin/true");
+const ownedTempRegistry = createOwnedTempRegistry();
+const {
+  cleanupOwnedTempRoot,
+  cleanupOwnedTempRoots,
+  createOwnedTempRoot,
+  registerOwnedTempAlias,
+  withOwnedTempRoot,
+} = ownedTempRegistry;
 
 const CURRENT_MASTER_CHECK_RUNS = ([
   [99_587_894_041, "accessibility", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
@@ -137,6 +140,9 @@ function privateRoot(prefix = "homecook-candidate-") {
 }
 
 afterEach(() => {
+  cleanupOwnedTempRoots();
+});
+afterAll(() => {
   cleanupOwnedTempRoots();
 });
 
@@ -506,7 +512,7 @@ function validManifestInput() {
 }
 
 describe("release rehearsal candidate manifest", () => {
-  it("cleans exact owned temp roots after success, failure, and interruption without touching siblings", async () => {
+  it("cleans exact owned temp roots after success, intended failure, throw, skip, and interruption", async () => {
     const ownedRoots: string[] = [];
     const unrelatedRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-unrelated-control-")));
     try {
@@ -516,11 +522,22 @@ describe("release rehearsal candidate manifest", () => {
         symlinkSync(unrelatedRoot, join(root, "unrelated-sibling-link"));
         return "complete";
       })).resolves.toBe("complete");
-      await expect(withOwnedTempRoot("homecook-owned-failure-", (root) => {
+      await expect(withOwnedTempRoot("homecook-owned-intended-failure-", async (root) => {
         ownedRoots.push(root);
-        writeFileSync(join(root, "failure"), "owned\n", { mode: 0o600 });
+        writeFileSync(join(root, "intended-failure"), "owned\n", { mode: 0o600 });
+        await Promise.resolve();
+        throw new Error("simulated intended failure");
+      })).rejects.toThrow(/simulated intended failure/iu);
+      await expect(withOwnedTempRoot("homecook-owned-throw-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "throw"), "owned\n", { mode: 0o600 });
         throw new Error("simulated test failure");
       })).rejects.toThrow(/simulated test failure/iu);
+      await expect(withOwnedTempRoot("homecook-owned-skip-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "skip"), "owned\n", { mode: 0o600 });
+        return { status: "skipped" } as const;
+      })).resolves.toEqual({ status: "skipped" });
       const interruption = new AbortController();
       await expect(withOwnedTempRoot("homecook-owned-interrupted-", (root) => {
         ownedRoots.push(root);
@@ -530,11 +547,62 @@ describe("release rehearsal candidate manifest", () => {
           interruption.abort();
         });
       })).rejects.toThrow(/simulated test interruption/iu);
-      expect(ownedRoots).toHaveLength(3);
+      expect(ownedRoots).toHaveLength(5);
       expect(ownedRoots.every((path) => !existsSync(path))).toBe(true);
       expect(existsSync(unrelatedRoot)).toBe(true);
     } finally {
       if (existsSync(unrelatedRoot)) rmdirSync(unrelatedRoot);
+    }
+  });
+
+  it("removes a relocated owned inode while preserving a replacement at the original name", () => {
+    const root = createOwnedTempRoot("homecook-owned-relocated-");
+    const relocated = `${root}.relocated`;
+    renameSync(root, relocated);
+    mkdirSync(root, { mode: 0o700 });
+    const replacement = lstatSync(root, { bigint: true });
+    try {
+      expect(() => cleanupOwnedTempRoot(root)).not.toThrow();
+      expect(existsSync(relocated)).toBe(false);
+      const replacementPost = lstatSync(root, { bigint: true });
+      expect(replacementPost.dev).toBe(replacement.dev);
+      expect(replacementPost.ino).toBe(replacement.ino);
+    } finally {
+      if (existsSync(root)) rmdirSync(root);
+      if (existsSync(relocated)) {
+        renameSync(relocated, root);
+        cleanupOwnedTempRoot(root);
+      }
+    }
+  });
+
+  it("removes an exact sibling alias to an owned temp root without touching other siblings", () => {
+    const root = createOwnedTempRoot("homecook-owned-alias-");
+    const alias = `${root}-root-alias`;
+    const unregisteredAlias = `${root}-unregistered-alias`;
+    const unrelated = realpathSync(mkdtempSync(join(tmpdir(), "homecook-unrelated-alias-control-")));
+    symlinkSync(root, alias);
+    symlinkSync(root, unregisteredAlias);
+    registerOwnedTempAlias(alias, root);
+    const pathEntryExists = (path: string) => {
+      try {
+        lstatSync(path);
+        return true;
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return false;
+        throw error;
+      }
+    };
+    try {
+      cleanupOwnedTempRoot(root);
+      expect(existsSync(root)).toBe(false);
+      expect(pathEntryExists(alias)).toBe(false);
+      expect(pathEntryExists(unregisteredAlias)).toBe(true);
+      expect(existsSync(unrelated)).toBe(true);
+    } finally {
+      try { unlinkSync(alias); } catch { /* Exact alias was already cleaned. */ }
+      try { unlinkSync(unregisteredAlias); } catch { /* Unregistered alias cleanup belongs to this test. */ }
+      if (existsSync(unrelated)) rmdirSync(unrelated);
     }
   });
 
@@ -2480,7 +2548,7 @@ describe("release rehearsal build environment FD snapshot", () => {
 
 describe("release rehearsal candidate orchestration", () => {
   it("separates portable candidate bytes from exact root-local physical authority", async () => {
-    const fixture = await createCompletedRehearsalCandidateFixture();
+    const fixture = await createCompletedRehearsalCandidateFixture(undefined, { tempRegistry: ownedTempRegistry });
     expect(readCompletedCandidateRoot(fixture.candidateRoot).manifest)
       .toEqual(fixture.manifest);
     expect(JSON.parse(readFileSync(fixture.physicalAuthorityPath, "utf8")))
@@ -2635,7 +2703,10 @@ describe("release rehearsal candidate orchestration", () => {
       || typeof buildContainerContract !== "function"
     ) return;
 
-    const fixture = await createCompletedRehearsalCandidateFixture("homecook-container-candidate-");
+    const fixture = await createCompletedRehearsalCandidateFixture(
+      "homecook-container-candidate-",
+      { tempRegistry: ownedTempRegistry },
+    );
     const containerAuthorityRoot = `${fixture.candidateRoot}.container-authority`;
     const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
     const issued = (issueContainerAuthority as (options: {
@@ -2720,7 +2791,10 @@ describe("release rehearsal candidate orchestration", () => {
     expect(typeof verifyStable).toBe("function");
     if (typeof verifyStable !== "function") return;
 
-    const fixture = await createCompletedRehearsalCandidateFixture("homecook-candidate-stable-scan-");
+    const fixture = await createCompletedRehearsalCandidateFixture(
+      "homecook-candidate-stable-scan-",
+      { tempRegistry: ownedTempRegistry },
+    );
     let fullCafsReads = 0;
     const observe = (entry: { contentVerified?: boolean; relativePath: string }) => {
       if (entry.contentVerified === true && entry.relativePath.startsWith("files/")) fullCafsReads += 1;
@@ -2755,6 +2829,7 @@ describe("release rehearsal candidate orchestration", () => {
     for (const attack of ["mutate-restore", "swap-restore"] as const) {
       const fixture = await createCompletedRehearsalCandidateFixture(
         `homecook-candidate-directory-${attack}-`,
+        { tempRegistry: ownedTempRegistry },
       );
       const bundleRoot = join(fixture.candidateRoot, "bundles", "bundle");
       const appRoot = join(bundleRoot, "app");
@@ -2860,6 +2935,7 @@ describe("release rehearsal candidate orchestration", () => {
 
     const rootAlias = join(dirname(aliasRoot), `${basename(aliasRoot)}-root-alias`);
     symlinkSync(aliasRoot, rootAlias);
+    registerOwnedTempAlias(rootAlias, aliasRoot);
     expect(() => readSealedAuthorityFile(
       rootAlias, join(rootAlias, "actual", "authority.json"), "root alias authority",
     )).toThrow(/root|canonical|symlink|alias/iu);

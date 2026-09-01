@@ -3,7 +3,7 @@ import { chmodSync, existsSync, linkSync, mkdirSync, readFileSync, realpathSync,
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   RUN_EVIDENCE_SCHEMA,
@@ -42,7 +42,7 @@ import {
 import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
-import { cleanupOwnedTempRoots, createOwnedTempRoot } from "./helpers/owned-temp-root";
+import { createOwnedTempRegistry } from "./helpers/owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -74,8 +74,11 @@ const MIGRATION_FILE_ENTRIES = [
   { path: "supabase/migrations/20260102000000_two.sql", sha256: "2".repeat(64) },
 ];
 const MIGRATION_FILES_DIGEST = sha256Jcs(MIGRATION_FILE_ENTRIES);
+const ownedTempRegistry = createOwnedTempRegistry();
+const { cleanupOwnedTempRoots, createOwnedTempRoot } = ownedTempRegistry;
 
 afterEach(() => cleanupOwnedTempRoots());
+afterAll(() => cleanupOwnedTempRoots());
 
 function canonicalPrimitiveConfig({
   candidateRoot = "/private/rehearsal/candidate",
@@ -726,7 +729,7 @@ describe("release rehearsal R2 command, env, and migration gates", () => {
 describe("release rehearsal R2 orchestration", () => {
   it("runs sealed identities, canaries, exact cleanup, and produces non-receipt evidence", async () => {
     const namespaceRoot = createOwnedTempRoot("homecook-r2-runs-");
-    const candidate = await createCompletedRehearsalCandidateFixture();
+    const candidate = await createCompletedRehearsalCandidateFixture(undefined, { tempRegistry: ownedTempRegistry });
     const candidateRoot = candidate.candidateRoot;
     const adapters = createAdapters();
     let fullCafsReads = 0;
@@ -803,7 +806,7 @@ describe("release rehearsal R2 orchestration", () => {
 
   it("uses the actual copied-candidate reader and rejects tampering before resource creation", async () => {
     const namespaceRoot = createOwnedTempRoot("homecook-r2-real-reader-tamper-");
-    const candidate = await createCompletedRehearsalCandidateFixture();
+    const candidate = await createCompletedRehearsalCandidateFixture(undefined, { tempRegistry: ownedTempRegistry });
     const adapters = createAdapters();
     await expect(runIsolatedReleaseRehearsal({
       candidateInput: candidate.candidateRoot,
@@ -1709,7 +1712,10 @@ describe("release rehearsal R2 public command and schema", () => {
       || typeof buildProbeContract !== "function"
     ) return;
 
-    const fixture = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-");
+    const fixture = await createCompletedRehearsalCandidateFixture(
+      "homecook-full-local-probe-",
+      { tempRegistry: ownedTempRegistry },
+    );
     const containerAuthorityRoot = `${fixture.candidateRoot}.container-authority`;
     const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
     (issueContainerAuthority as (options: {
@@ -1769,7 +1775,10 @@ describe("release rehearsal R2 public command and schema", () => {
     child.kill("SIGTERM");
     await new Promise((resolvePromise) => child.once("exit", resolvePromise));
 
-    const missing = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-missing-");
+    const missing = await createCompletedRehearsalCandidateFixture(
+      "homecook-full-local-probe-missing-",
+      { tempRegistry: ownedTempRegistry },
+    );
     const missingAuthorityRoot = `${missing.candidateRoot}.container-authority`;
     const missingVerification = (buildContainerContract as (options: Record<string, string>) => {
       identitySource: (options?: { outputPath?: string | null }) => string;
@@ -1798,7 +1807,10 @@ describe("release rehearsal R2 public command and schema", () => {
     const unhealthy = spawnSync(process.execPath, missingProbe.healthcheck.slice(2), { encoding: "utf8" });
     expect(unhealthy.status).not.toBe(0);
 
-    const tampered = await createCompletedRehearsalCandidateFixture("homecook-full-local-probe-tamper-");
+    const tampered = await createCompletedRehearsalCandidateFixture(
+      "homecook-full-local-probe-tamper-",
+      { tempRegistry: ownedTempRegistry },
+    );
     const tamperedAuthorityRoot = `${tampered.candidateRoot}.container-authority`;
     (issueContainerAuthority as (options: {
       candidateRoot: string;
@@ -1838,10 +1850,17 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(typeof issueContainerAuthority).toBe("function");
     if (typeof issueContainerAuthority !== "function") return;
 
-    const mounted = await createCompletedRehearsalCandidateFixture("homecook-runtime-mounted-candidate-");
+    const mounted = await createCompletedRehearsalCandidateFixture(
+      "homecook-runtime-mounted-candidate-",
+      { tempRegistry: ownedTempRegistry },
+    );
     const expected = await createCompletedRehearsalCandidateFixture(
       "homecook-runtime-expected-candidate-",
-      { releaseSha: "0".repeat(40), releaseTree: "1".repeat(40) },
+      {
+        releaseSha: "0".repeat(40),
+        releaseTree: "1".repeat(40),
+        tempRegistry: ownedTempRegistry,
+      },
     );
     const containerAuthorityRoot = `${mounted.candidateRoot}.container-authority`;
     (issueContainerAuthority as (options: {
@@ -2104,7 +2123,10 @@ describe("release rehearsal R2 public command and schema", () => {
     const homeRoot = createOwnedTempRoot("homecook-r2-docker-redaction-");
     const namespaceRoot = join(homeRoot, ".homecook", "rehearsal", "runs");
     mkdirSync(namespaceRoot, { recursive: true, mode: 0o700 });
-    const candidate = await createCompletedRehearsalCandidateFixture("homecook-r2-docker-redaction-candidate-");
+    const candidate = await createCompletedRehearsalCandidateFixture(
+      "homecook-r2-docker-redaction-candidate-",
+      { tempRegistry: ownedTempRegistry },
+    );
     const privateHomePath = join(homeRoot, ".homecook", "rehearsal", "runs", "secret-bind.env");
     const privateBindPath = join(homeRoot, ".homecook", "rehearsal", "runs", "runtime-state", "secret-fds");
     const secretFilename = "provider-production-secret.json";

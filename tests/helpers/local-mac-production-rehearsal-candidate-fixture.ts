@@ -16,7 +16,7 @@ import {
 } from "../../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs, sha256Jcs } from "../../scripts/lib/rfc8785-jcs.mjs";
 import { EXPECTED_RELEASE_CONTEXTS } from "../../scripts/lib/production-release-approval-policy.mjs";
-import { createOwnedTempRoot } from "./owned-temp-root";
+import type { OwnedTempRegistry } from "./owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -24,8 +24,8 @@ const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const DIGEST_C = "c".repeat(64);
 
-function privateRoot(prefix: string) {
-  return createOwnedTempRoot(prefix);
+function privateRoot(prefix: string, tempRegistry: OwnedTempRegistry) {
+  return tempRegistry.createOwnedTempRoot(prefix);
 }
 
 function tool(name: string) {
@@ -103,13 +103,21 @@ function storedCiEvidence(releaseSha = SHA_A) {
 
 export async function createCompletedRehearsalCandidateFixture(
   prefix = "homecook-r2-real-candidate-",
-  { releaseSha = SHA_A, releaseTree = SHA_B } = {},
+  {
+    releaseSha = SHA_A,
+    releaseTree = SHA_B,
+    tempRegistry,
+  }: {
+    releaseSha?: string;
+    releaseTree?: string;
+    tempRegistry: OwnedTempRegistry;
+  },
 ) {
-  const authorityRoot = privateRoot(prefix);
+  const authorityRoot = privateRoot(prefix, tempRegistry);
   const candidateRoot = join(authorityRoot, "candidate");
   mkdirSync(candidateRoot, { mode: 0o700 });
 
-  const sourceStore = join(privateRoot(`${prefix}store-`), "v10");
+  const sourceStore = join(privateRoot(`${prefix}store-`, tempRegistry), "v10");
   const blobBytes = Buffer.from("package bytes\n");
   const blobIntegrity = createHash("sha512").update(blobBytes).digest("hex");
   const blobRelativePath = join("files", blobIntegrity.slice(0, 2), blobIntegrity.slice(2));
@@ -129,7 +137,7 @@ export async function createCompletedRehearsalCandidateFixture(
     currentUid: process.getuid?.(),
   }, ({ sealInstallIndex }) => sealInstallIndex());
 
-  const componentSource = privateRoot(`${prefix}components-`);
+  const componentSource = privateRoot(`${prefix}components-`, tempRegistry);
   const componentRoots = {
     app: join(componentSource, "app"),
     full_local: join(componentSource, "full_local"),
