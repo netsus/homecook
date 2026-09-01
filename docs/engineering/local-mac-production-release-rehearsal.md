@@ -1,6 +1,6 @@
 # Homecook 서버 Mac release rehearsal 계약
 
-상태: **canonical / macOS alias and pnpm working-index repair author complete / fresh independent review pending**
+상태: **canonical / bind-source and startup repair author complete / fresh independent review pending**
 변경 유형: `docs-governance`
 production mutation: **금지 (`false`)**
 제품 계약 영향: **N/A** — 공식 제품 5종, public API, DB schema 계약을 바꾸지 않는다.
