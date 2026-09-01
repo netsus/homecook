@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -38,7 +38,7 @@ import {
   buildCandidateContainerVerificationContract,
   buildFullLocalProbeStartupContract,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-adapters.mjs";
-import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
+import { canonicalizeJcs, sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { createImmutableCreationLedger } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
 
@@ -105,6 +105,7 @@ function canonicalPrimitiveConfig() {
     candidateVerification: buildCandidateContainerVerificationContract({
       candidateRoot: "/private/rehearsal/candidate",
     }),
+    expectedIdentity: candidateStartupIdentity(),
   });
   const bind = (target: string) => ({
     read_only: true,
@@ -195,10 +196,24 @@ function candidateManifest() {
     release_sha: SHA_A,
     release_tree: SHA_B,
     build_id: "build-r2",
+    builder_input_digest: "1".repeat(64),
+    source_manifest_digest: "2".repeat(64),
+    compose_source_digest: "3".repeat(64),
+    sandbox_policy_digest: "4".repeat(64),
+    generated_build_inventory_digest: "5".repeat(64),
+    pnpm_store_snapshot_inventory_digest: "6".repeat(64),
     sealed_bundle_digest: DIGEST_A,
     bundle_manifest_digest: DIGEST_B,
     candidate_identity_digest: "c".repeat(64),
     manifest_digest: "d".repeat(64),
+    toolchain: {},
+    build_tools: {},
+    toolchain_lock_digest: "7".repeat(64),
+    artifacts: {
+      app: { root: "app", digest: "8".repeat(64) },
+      full_local: { root: "full_local", digest: "9".repeat(64) },
+      worker: { root: "worker", digest: "0".repeat(64) },
+    },
     images: [{
       digest: `sha256:${"d".repeat(64)}`,
       platform: "linux/arm64",
@@ -213,6 +228,38 @@ function candidateManifest() {
       migration_head: "20260102000000_two",
     },
   };
+}
+
+function candidateStartupIdentity(manifest = candidateManifest()) {
+  const unsigned = {
+    schema: "homecook.local-mac-production-rehearsal-startup-identity.v1",
+    candidate_schema: manifest.schema,
+    release_sha: manifest.release_sha,
+    release_tree: manifest.release_tree,
+    candidate_identity_digest: manifest.candidate_identity_digest,
+    manifest_digest: manifest.manifest_digest,
+    build_id: manifest.build_id,
+    build_inputs_digest: sha256Jcs({
+      builder_input_digest: manifest.builder_input_digest,
+      source_manifest_digest: manifest.source_manifest_digest,
+      compose_source_digest: manifest.compose_source_digest,
+      sandbox_policy_digest: manifest.sandbox_policy_digest,
+      generated_build_inventory_digest: manifest.generated_build_inventory_digest,
+      pnpm_store_snapshot_inventory_digest: manifest.pnpm_store_snapshot_inventory_digest,
+    }),
+    sealed_bundle_digest: manifest.sealed_bundle_digest,
+    bundle_manifest_digest: manifest.bundle_manifest_digest,
+    artifacts_digest: sha256Jcs(manifest.artifacts),
+    toolchain_digest: sha256Jcs({
+      toolchain: manifest.toolchain,
+      build_tools: manifest.build_tools,
+      toolchain_lock_digest: manifest.toolchain_lock_digest,
+    }),
+    images_digest: sha256Jcs(manifest.images),
+    migration_head: manifest.migration.migration_head,
+    migration_digest: sha256Jcs(manifest.migration),
+  };
+  return { ...unsigned, identity_digest: sha256Jcs(unsigned) };
 }
 
 function completedCandidate(root: string) {
@@ -398,6 +445,7 @@ function createAdapters() {
     reservePorts: vi.fn().mockResolvedValue({ app: 43101, auth: 43102, postgres: 43103, storage: 43104 }),
     assertImagesLocal: vi.fn().mockResolvedValue({ verified: true, image_ids: ["image-local"] }),
     createResources: vi.fn().mockResolvedValue(resources),
+    readFullLocalStartupIdentity: vi.fn().mockImplementation(({ manifest }) => candidateStartupIdentity(manifest)),
     applyMigrations: vi.fn().mockResolvedValue(migrationReplay()),
     loadSyntheticFixtures: vi.fn().mockResolvedValue({
       fixture_set_id: "homecook-r2-synthetic-v1",
@@ -681,6 +729,17 @@ describe("release rehearsal R2 orchestration", () => {
       ),
     }));
     expect(fullCafsReads).toBe(2);
+    const pathAuthority = JSON.parse(readFileSync(
+      join(namespaceRoot, RUN_ID, "runtime-state", "candidate-path-authority.json"),
+      "utf8",
+    ));
+    const { authority_digest: pathAuthorityDigest, ...pathAuthorityUnsigned } = pathAuthority;
+    expect(pathAuthority).toMatchObject({
+      schema: "homecook.release-rehearsal-candidate-path-authority.v1",
+      directory_chain_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+    expect(pathAuthorityDigest).toBe(sha256Jcs(pathAuthorityUnsigned));
+    expect(JSON.stringify(result)).not.toContain(namespaceRoot);
     expect(adapters.stopRuntime.mock.calls.map(([entry]) => entry.component)).toEqual(["worker", "full_local", "app"]);
     expect(adapters.removeResource.mock.calls.map(([entry]) => entry.id))
       .toEqual([...adapters.resources].reverse().map((entry) => entry.id));
@@ -707,8 +766,154 @@ describe("release rehearsal R2 orchestration", () => {
     expect(adapters.snapshotProduction).not.toHaveBeenCalled();
   });
 
+  it("rejects a shape-valid wrong full-local startup identity before app or worker start", async () => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-wrong-startup-identity-")));
+    const candidateRoot = join(namespaceRoot, "candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    const wrong = { ...candidateStartupIdentity() };
+    wrong.release_sha = SHA_B;
+    wrong.identity_digest = sha256Jcs(Object.fromEntries(
+      Object.entries(wrong).filter(([key]) => key !== "identity_digest"),
+    ));
+    adapters.readFullLocalStartupIdentity.mockResolvedValue(wrong);
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/startup|identity|release_sha|candidate/iu);
+    expect(adapters.readFullLocalStartupIdentity).toHaveBeenCalledOnce();
+    expect(adapters.startComponents).not.toHaveBeenCalled();
+    expect(adapters.applyMigrations).not.toHaveBeenCalled();
+  });
+
+  it("rejects an intermediate symlink in the namespace ancestor chain before resources", async () => {
+    const parent = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-symlink-ancestor-")));
+    const realAncestor = join(parent, "real-ancestor");
+    const aliasAncestor = join(parent, "alias-ancestor");
+    mkdirSync(realAncestor, { mode: 0o700 });
+    symlinkSync(realAncestor, aliasAncestor);
+    const namespaceRoot = join(aliasAncestor, "runs");
+    mkdirSync(namespaceRoot, { mode: 0o700 });
+    const candidateRoot = join(parent, "candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/namespace|ancestor|symlink|lexical|canonical/iu);
+    expect(adapters.createResources).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["swap", false],
+    ["swap and restore", true],
+  ])("rejects a namespace ancestor %s during a candidate mount transition", async (_label, restoreBeforePost) => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-mount-ancestor-swap-")));
+    const candidateRoot = join(namespaceRoot, "source-candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.createResources.mockImplementation(async ({
+      candidateRoot: executionRoot,
+      candidateContainerAuthorityRoot,
+      verifyCandidatePathAuthority,
+      runRoot,
+    }: {
+      candidateRoot: string;
+      candidateContainerAuthorityRoot: string;
+      verifyCandidatePathAuthority?: (input: Record<string, string>) => unknown;
+      runRoot: string;
+    }) => {
+      expect(typeof verifyCandidatePathAuthority).toBe("function");
+      if (typeof verifyCandidatePathAuthority !== "function") throw new Error("candidate path authority callback missing");
+      verifyCandidatePathAuthority({ candidateRoot: executionRoot, candidateContainerAuthorityRoot, phase: "pre-bind" });
+      adapters.getCreationLedger.mockReturnValue([adapters.resources[0]]);
+      const displaced = `${runRoot}.displaced`;
+      const replacement = `${runRoot}.replacement`;
+      renameSync(runRoot, displaced);
+      mkdirSync(runRoot, { mode: 0o700 });
+      if (restoreBeforePost) {
+        renameSync(runRoot, replacement);
+        renameSync(displaced, runRoot);
+      }
+      try {
+        verifyCandidatePathAuthority({ candidateRoot: executionRoot, candidateContainerAuthorityRoot, phase: "post-bind" });
+      } finally {
+        if (restoreBeforePost) {
+          rmSync(replacement, { recursive: true, force: true });
+        } else {
+          rmSync(runRoot, { recursive: true, force: true });
+          renameSync(displaced, runRoot);
+        }
+      }
+      return adapters.resources;
+    });
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/namespace|ancestor|directory|path|authority|identity|drift/iu);
+    expect(adapters.startComponents).not.toHaveBeenCalled();
+    expect(adapters.removeResource).toHaveBeenCalledWith(
+      expect.objectContaining({ id: adapters.resources[0].id }),
+      expect.anything(),
+    );
+  });
+
+  it("rejects a wrong candidate tree bind before resource creation", async () => {
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-wrong-tree-bind-")));
+    const candidateRoot = join(namespaceRoot, "source-candidate");
+    mkdirSync(candidateRoot, { mode: 0o500 });
+    const adapters = createAdapters();
+    adapters.getCreationLedger.mockReturnValue([]);
+    adapters.createResources.mockImplementation(async ({
+      candidateContainerAuthorityRoot,
+      verifyCandidatePathAuthority,
+      runRoot,
+    }: {
+      candidateContainerAuthorityRoot: string;
+      verifyCandidatePathAuthority?: (input: Record<string, string>) => unknown;
+      runRoot: string;
+    }) => {
+      expect(typeof verifyCandidatePathAuthority).toBe("function");
+      if (typeof verifyCandidatePathAuthority !== "function") throw new Error("candidate path authority callback missing");
+      const wrongTree = join(runRoot, "wrong-candidate-tree");
+      mkdirSync(wrongTree, { mode: 0o500 });
+      verifyCandidatePathAuthority({
+        candidateRoot: wrongTree,
+        candidateContainerAuthorityRoot,
+        phase: "pre-bind",
+      });
+      return adapters.resources;
+    });
+
+    await expect(runIsolatedReleaseRehearsal({
+      candidateInput: candidateRoot,
+      namespaceRoot,
+      runId: RUN_ID,
+      readCandidate: () => completedCandidate(candidateRoot),
+      adapters,
+      runnerIdentity: RUNNER_IDENTITY,
+    })).rejects.toThrow(/candidate|tree|path|authority|bind/iu);
+    expect(adapters.startComponents).not.toHaveBeenCalled();
+    expect(adapters.removeResource).not.toHaveBeenCalled();
+  });
+
   it("cleans only the immutable partial-create ledger after create failure", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-partial-create-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-partial-create-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -727,7 +932,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("reports label-only discovered resources as residue and never adopts or removes them", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-label-residue-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-label-residue-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -761,7 +966,7 @@ describe("release rehearsal R2 orchestration", () => {
     ["residue", (adapters: ReturnType<typeof createAdapters>) => adapters.listResidue.mockResolvedValue([{ id: "orphan" }])],
     ["secret persistence", (adapters: ReturnType<typeof createAdapters>) => adapters.countPersistentSecretFiles.mockResolvedValue(1)],
   ])("fails closed on %s but still attempts cleanup", async (_label, arrange) => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-fail-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-fail-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -778,7 +983,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("re-reads the sealed candidate after execution and rejects tampering", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-stale-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-stale-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -800,7 +1005,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("cleans exact run-owned resources when signalled midway", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-signal-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-signal-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -823,7 +1028,7 @@ describe("release rehearsal R2 orchestration", () => {
   });
 
   it("aborts an in-flight readiness wait and immediately enters cleanup", async () => {
-    const namespaceRoot = mkdtempSync(join(tmpdir(), "homecook-r2-readiness-signal-"));
+    const namespaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-r2-readiness-signal-")));
     const candidateRoot = join(namespaceRoot, "candidate");
     mkdirSync(candidateRoot, { mode: 0o500 });
     const adapters = createAdapters();
@@ -1008,7 +1213,7 @@ describe("release rehearsal R2 public command and schema", () => {
 
   it("compiles only the exact resolved seven-service internal primitive plan", () => {
     const config = canonicalPrimitiveConfig();
-    expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS }).services).toHaveLength(7);
+    expect(compileClosedPrimitivePlan(config, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS, expectedStartupIdentity: candidateStartupIdentity() }).services).toHaveLength(7);
     for (const mutate of [
       (v: typeof config) => { delete v.services.auth; },
       (v: typeof config) => { v.services.extra = structuredClone(v.services.auth); },
@@ -1020,12 +1225,12 @@ describe("release rehearsal R2 public command and schema", () => {
       (v: typeof config) => { v.services["postgrest-probe"].healthcheck = { interval: "5s", retries: 60, test: ["CMD", "node", "-e", "process.exit(0)"], timeout: "5s" }; },
     ]) {
       const value = structuredClone(config); mutate(value);
-      expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS })).toThrow();
+      expect(() => compileClosedPrimitivePlan(value, { project: "homecook-rehearsal-x", ports: PRIMITIVE_PORTS, expectedStartupIdentity: candidateStartupIdentity() })).toThrow();
     }
   });
 
   it("orders actual primitive service operations with PostgreSQL ready before migration", () => {
-    const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), { project: `homecook-rehearsal-${RUN_ID}`, ports: PRIMITIVE_PORTS });
+    const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), { project: `homecook-rehearsal-${RUN_ID}`, ports: PRIMITIVE_PORTS, expectedStartupIdentity: candidateStartupIdentity() });
     const namespace = buildRunNamespace({ runId: RUN_ID, ports: PRIMITIVE_PORTS });
     const operations = compilePrimitiveServiceOperations(plan, namespace, ["--label", `${RUN_OWNERSHIP_LABEL}=${RUN_ID}`, "--label", `com.docker.compose.project=${namespace.project}`]);
     type Operation = { kind: string; service: string; network?: string; argv?: string[] };
@@ -1083,10 +1288,12 @@ describe("release rehearsal R2 public command and schema", () => {
     const identityOutputPath = join(fixture.authorityRoot, "full-local-startup-identity.json");
     const probe = (buildProbeContract as (options: {
       candidateVerification: typeof candidateVerification;
+      expectedIdentity: ReturnType<typeof candidateStartupIdentity>;
       identityOutputPath: string;
       postgrestReadyUrl: string;
     }) => { command: string[]; healthcheck: string[]; identity_output_path: string })({
       candidateVerification,
+      expectedIdentity: candidateStartupIdentity(fixture.manifest),
       identityOutputPath,
       postgrestReadyUrl: "data:text/plain,ready",
     });
@@ -1097,15 +1304,22 @@ describe("release rehearsal R2 public command and schema", () => {
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
     }
     expect(existsSync(identityOutputPath)).toBe(true);
-    expect(JSON.parse(readFileSync(identityOutputPath, "utf8"))).toEqual({
-      release_sha: fixture.manifest.release_sha,
-      release_tree: fixture.manifest.release_tree,
-      build_id: fixture.manifest.build_id,
-      sealed_bundle_digest: fixture.manifest.sealed_bundle_digest,
-      migration_head: fixture.manifest.migration.migration_head,
-    });
+    expect(JSON.parse(readFileSync(identityOutputPath, "utf8")))
+      .toEqual(candidateStartupIdentity(fixture.manifest));
     const healthy = spawnSync(process.execPath, probe.healthcheck.slice(2), { encoding: "utf8" });
     expect(healthy.status, healthy.stderr).toBe(0);
+    const shapeValidWrongIdentity = {
+      ...JSON.parse(readFileSync(identityOutputPath, "utf8")),
+      release_sha: "0".repeat(40),
+    };
+    shapeValidWrongIdentity.identity_digest = sha256Jcs(Object.fromEntries(
+      Object.entries(shapeValidWrongIdentity).filter(([key]) => key !== "identity_digest"),
+    ));
+    chmodSync(identityOutputPath, 0o600);
+    writeFileSync(identityOutputPath, canonicalizeJcs(shapeValidWrongIdentity));
+    chmodSync(identityOutputPath, 0o400);
+    const wrongIdentityHealth = spawnSync(process.execPath, probe.healthcheck.slice(2), { encoding: "utf8" });
+    expect(wrongIdentityHealth.status).not.toBe(0);
     child.kill("SIGTERM");
     await new Promise((resolvePromise) => child.once("exit", resolvePromise));
 
@@ -1123,10 +1337,12 @@ describe("release rehearsal R2 public command and schema", () => {
     const missingIdentity = join(missing.authorityRoot, "missing-startup-identity.json");
     const missingProbe = (buildProbeContract as (options: {
       candidateVerification: typeof missingVerification;
+      expectedIdentity: ReturnType<typeof candidateStartupIdentity>;
       identityOutputPath: string;
       postgrestReadyUrl: string;
     }) => { command: string[]; healthcheck: string[] })({
       candidateVerification: missingVerification,
+      expectedIdentity: candidateStartupIdentity(missing.manifest),
       identityOutputPath: missingIdentity,
       postgrestReadyUrl: "data:text/plain,ready",
     });
@@ -1160,6 +1376,7 @@ describe("release rehearsal R2 public command and schema", () => {
         candidateModuleUrl: `file://${join(repoRoot, "scripts/lib/local-mac-production-rehearsal-candidate.mjs")}`,
         jcsModuleUrl: `file://${join(repoRoot, "scripts/lib/rfc8785-jcs.mjs")}`,
       }),
+      expectedIdentity: candidateStartupIdentity(tampered.manifest),
       identityOutputPath: tamperedIdentity,
       postgrestReadyUrl: "data:text/plain,ready",
     });
@@ -1191,6 +1408,7 @@ describe("release rehearsal R2 public command and schema", () => {
     const plan = compileClosedPrimitivePlan(canonicalPrimitiveConfig(), {
       project: namespace.project,
       ports: PRIMITIVE_PORTS,
+      expectedStartupIdentity: candidateStartupIdentity(),
     });
     const service = plan.services.find((entry) => entry.name === "api-gateway") as
       PrimitiveService | undefined;
@@ -1257,6 +1475,10 @@ describe("release rehearsal R2 public command and schema", () => {
     expect(adaptersSource).toContain("scripts/start-production.mjs");
     expect(adaptersSource).toContain("rehearsal-synthetic");
     expect(adaptersSource).toContain("--pull=never");
+    expect(adaptersSource).toContain('phase: "postgrest-probe pre-bind"');
+    expect(adaptersSource).toContain('phase: "postgrest-probe post-bind"');
+    expect((adaptersSource.match(/candidatePathAuthority: true/gu) ?? [])).toHaveLength(2);
+    expect(adaptersSource).toContain("readFullLocalStartupIdentity");
     expect(adaptersSource).not.toContain("node_modules/next/dist/bin/next','start'");
     expect(adaptersSource).not.toContain('"compose", "create"');
     expect(adaptersSource).not.toContain('"compose", "start"');
@@ -1283,6 +1505,7 @@ describe("release rehearsal R2 public command and schema", () => {
     const override = buildFullLocalComposeOverride(namespace, {
       candidateRoot: "/private/rehearsal/candidate",
       candidateContainerAuthorityRoot: "/private/rehearsal/candidate.container-authority",
+      manifest,
     });
     expect(override.match(/internal: true/gu)).toHaveLength(3);
     expect(override.match(/pull_policy: never/gu)).toHaveLength(7);
