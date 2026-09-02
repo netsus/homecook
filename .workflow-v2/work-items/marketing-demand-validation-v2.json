@@ -70,18 +70,26 @@
   "verification": {
     "required_checks": [
       "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm test:marketing:operations",
+      "pnpm verify:security-functions:isolated",
+      "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation-v2-contract pnpm validate:workpack",
+      "BRANCH_NAME=feature/be-marketing-demand-validation-v2 pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm test:marketing:operations",
+      "pnpm verify:security-functions:isolated",
+      "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation-v2-contract pnpm validate:workpack",
+      "BRANCH_NAME=feature/be-marketing-demand-validation-v2 pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
@@ -102,14 +110,14 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
-    "blocked_reason_code": "internal-1.5-review-pending"
+    "blocked_reason_code": "stage3-review-pending"
   },
   "out_of_scope": [
     "Backend or frontend implementation in Stage 1",
@@ -127,5 +135,5 @@
     "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
     "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
   ],
-  "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997. User-approved source prototype commit 63f8ef2a019c6d260a96a42fab9d67f727d93557. Draft PR: https://github.com/netsus/homecook/pull/1497. Internal 1.5 reviewer task 01a0636c-cdf3-74b1-8292-2d50418837a1 closed P1-001..P1-004/P2-001 on successor 6adb3baaab03bf0f9fec0cade5b4c9162902d486 and opened P1-005 for missing TomorrowPreview wireframe/acceptance/evidence alignment; another successor re-review is required. This task does not perform Ready transition, merge, migration apply, or production mutation."
+  "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997 and independent reviewer 01a0636c-cdf3-74b1-8292-2d50418837a1 completed with findings 0; docs PR #1497 merged as c1d43f60e427943087a7065f188d32224e739ecf. Stage 2 backend-implementer prepared Draft PR #1498 on feature/be-marketing-demand-validation-v2. RED 26 failures became 44/44 required tests green; verify:backend and pinned isolated Supabase migration/security gate passed. Stage 3 exact-head review and current-head PR checks remain required. Manual Only production readiness, full-local apply, Ready transition, merge, release and production mutation remain forbidden for this task."
 }
