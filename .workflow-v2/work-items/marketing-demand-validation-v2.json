@@ -125,5 +125,5 @@
     "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
     "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
   ],
-  "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997. User-approved source prototype commit 63f8ef2a019c6d260a96a42fab9d67f727d93557. RED evidence: marketing-demand-validation-v2 document contract test failed 4/4 before docs updates. This task records but does not perform internal 1.5 review, Ready transition, merge, migration apply, or production mutation."
+  "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997. User-approved source prototype commit 63f8ef2a019c6d260a96a42fab9d67f727d93557. RED evidence: marketing-demand-validation-v2 document contract test failed 4/4 before docs updates. Draft PR: https://github.com/netsus/homecook/pull/1497. This task records but does not perform internal 1.5 review, Ready transition, merge, migration apply, or production mutation."
 }

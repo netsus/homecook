@@ -1397,7 +1397,7 @@
       "id": "taxonomy-v2-contract-evolution",
       "preset": "vertical-slice-strict",
       "branch": "feature/taxonomy-v2-implementation",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/1497",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
