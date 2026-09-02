@@ -1,5 +1,7 @@
 # Acceptance Checklist
 
+> **Historical v1 acceptance.** 이 체크 상태는 v1 closeout evidence다. 4문항·4결과 v2 acceptance는 `docs/workpacks/marketing-demand-validation-v2/acceptance.md`에서 새로 잠그며 여기의 완료 항목을 v2 완료 근거로 재사용하지 않는다.
+
 > README의 `Contract Evolution Candidates`는 사용자 승인과 공식 문서 갱신 전까지 acceptance 범위에 포함하지 않는다.
 > acceptance는 living closeout 문서다. 체크는 테스트, exploratory QA, real DB smoke, 실제 브라우저 확인처럼 evidence가 생긴 뒤에만 한다.
 > Stage 6 merge 시점에는 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.

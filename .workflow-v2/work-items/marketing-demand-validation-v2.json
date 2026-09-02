@@ -1,0 +1,131 @@
+{
+  "id": "marketing-demand-validation-v2",
+  "title": "Marketing demand validation v2 contract and port",
+  "summary": "사용자 확정 4문항·4결과 퍼널을 single POST/single table/local-only/PII-separated/fail-closed 경계로 재잠그고 후속 backend/frontend/operations Stage를 준비한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "검증된 source prototype의 app-owned 화면을 Next.js에 안전하게 포팅하고 익명 stage와 consented lead를 분리 측정한다.",
+  "owners": {
+    "claude": "retired compatibility field; dispatch prohibited",
+    "codex": "separate stage1-docs-author, internal 1.5 reviewer, backend/frontend implementer, stage3/5/6 reviewer, final-authority tasks",
+    "workers": []
+  },
+  "dependencies": [
+    "marketing-demand-validation",
+    "feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557",
+    "docs/marketing/demand-validation-plan.md",
+    "docs/marketing/quiz-content-spec.md"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.36.md",
+      "docs/화면정의서-v1.5.40.md",
+      "docs/유저flow맵-v1.3.38.md",
+      "docs/db설계-v1.3.38.md",
+      "docs/api문서-v1.2.43.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/marketing-demand-validation-v2/README.md",
+      "docs/workpacks/marketing-demand-validation-v2/acceptance.md",
+      "docs/workpacks/marketing-demand-validation-v2/automation-spec.json",
+      "docs/marketing/demand-validation-plan.md",
+      "docs/marketing/quiz-content-spec.md",
+      "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+      "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
+      "docs/workpacks/marketing-demand-validation/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:canonical-privacy-and-operator-facts-ready",
+      "manual:turnstile-secret-hostname-action-ready",
+      "manual:allowlisted-production-origin-ready",
+      "manual:edge-rate-limit-evidence-captured",
+      "manual:campaign-retention-ready",
+      "manual:full-local-migration-apply-approved-and-backed-up",
+      "manual:beta-invitation-sender-domain-ready",
+      "manual:youtube-thumbnail-rights-or-replacement-ready",
+      "manual:product-image-rights-and-example-label-ready",
+      "manual:actual-ios-safari-smoke",
+      "manual:paid-ads-execution-approved"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/marketing-demand-validation-v2-contract pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/marketing-demand-validation-v2-contract pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-five-docs-and-csot-synchronized",
+      "exact-q1-q4-and-four-results",
+      "q3-only-result-and-target-null",
+      "single-post-single-table-local-only",
+      "anonymous-action-and-lead-pii-boundary",
+      "utm-and-ad-variant-contract",
+      "ordered-idempotency-and-duplicate-generic-success",
+      "consent-version-server-time-and-safe-errors",
+      "device-runtime-excluded",
+      "image-rights-product-example-and-lead-blockers",
+      "source-prototype-and-task-evidence-recorded"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": "internal-1.5-review-pending"
+  },
+  "out_of_scope": [
+    "Backend or frontend implementation in Stage 1",
+    "Migration apply or full-local reset",
+    "Remote cloud or linked Supabase",
+    "Production release tag deploy Caddy or launchd mutation",
+    "New endpoint table event log or external analytics SDK",
+    "iPhone Pixel frame device selector or standalone mobile runtime",
+    "Unapproved target qualification rule",
+    "Production asset use before rights confirmation"
+  ],
+  "open_questions": [
+    "Independent internal 1.5 reviewer must approve the exact Draft PR head before merge.",
+    "YouTube thumbnail rights or a replacement asset remain Manual Only.",
+    "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
+    "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
+  ],
+  "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997. User-approved source prototype commit 63f8ef2a019c6d260a96a42fab9d67f727d93557. Draft PR: https://github.com/netsus/homecook/pull/1497. Internal 1.5 reviewer task 01a0636c-cdf3-74b1-8292-2d50418837a1 closed P1-001..P1-004/P2-001 on successor 6adb3baaab03bf0f9fec0cade5b4c9162902d486 and opened P1-005 for missing TomorrowPreview wireframe/acceptance/evidence alignment; another successor re-review is required. This task does not perform Ready transition, merge, migration apply, or production mutation."
+}
