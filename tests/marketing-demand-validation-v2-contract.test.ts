@@ -215,7 +215,8 @@ describe("marketing demand validation v2 runtime contract", () => {
   it("separates the verified backend lead-gate boundary from Stage 4 read-only UI evidence", () => {
     const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");
 
-    expect(acceptance).toMatch(/- \[x\].*lead readiness.*anonymous.*omo:id=accept-read-only-backend;stage=2;scope=backend;review=3,6/iu);
-    expect(acceptance).toMatch(/- \[ \].*결과.*체험.*UI.*omo:id=accept-read-only-ui;stage=4;scope=frontend;review=5,6/iu);
+    expect(acceptance).toMatch(/- \[x\].*lead readiness.*result\/experience\/planner payoff.*omo:id=accept-read-only;stage=2;scope=shared;review=3,6/iu);
+    expect(acceptance).toContain("Stage 2 evidence scope: lead gate가 anonymous");
+    expect(acceptance).toContain("Stage 4 UI evidence는 기존 `accept-result-before-email`, `accept-error`");
   });
 });
