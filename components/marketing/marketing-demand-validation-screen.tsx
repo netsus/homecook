@@ -15,15 +15,11 @@ import {
 } from "@/components/web";
 import { postMarketingValidation } from "@/lib/api/marketing-validation";
 import {
-  buildQuizOutcome,
+  buildLegacyQuizOutcome as buildQuizOutcome,
   FOLLOWUP_INTENT_OPTIONS,
   FOLLOWUP_PRIORITY_OPTIONS,
   MARKETING_INTENT_CHOICES,
-  QUIZ_Q1_OPTIONS,
-  QUIZ_Q2_OPTIONS,
-  QUIZ_Q3_OPTIONS,
-  QUIZ_Q4_OPTIONS,
-  QUIZ_Q5_OPTIONS,
+  LEGACY_QUIZ_OPTIONS,
 } from "@/lib/marketing/demand-validation";
 import {
   enqueueMarketingQueueAction,
@@ -38,14 +34,22 @@ import {
   writeMarketingClientSnapshot,
 } from "@/lib/marketing/marketing-validation-client-session";
 import type {
-  MarketingValidationAction,
+  MarketingValidationLegacyAction as MarketingValidationAction,
   MarketingValidationIntentChoice,
   MarketingValidationPlannerIntent,
   MarketingValidationPlannerPriority,
-  MarketingValidationQuizAnswers,
-  MarketingValidationQuizResult,
-  MarketingValidationRequestBody,
+  MarketingValidationLegacyQuizAnswers as MarketingValidationQuizAnswers,
+  MarketingValidationLegacyQuizResult as MarketingValidationQuizResult,
+  MarketingValidationLegacyRequestBody as MarketingValidationRequestBody,
 } from "@/types/marketing-validation";
+
+const {
+  q1: QUIZ_Q1_OPTIONS,
+  q2: QUIZ_Q2_OPTIONS,
+  q3: QUIZ_Q3_OPTIONS,
+  q4: QUIZ_Q4_OPTIONS,
+  q5: QUIZ_Q5_OPTIONS,
+} = LEGACY_QUIZ_OPTIONS;
 
 // Keep the tracked campaign proof in the bundle without making clean TypeScript
 // jobs resolve the raster extension as a source module.

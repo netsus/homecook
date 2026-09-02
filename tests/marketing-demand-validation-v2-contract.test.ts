@@ -191,3 +191,24 @@ describe("marketing demand validation v2 document contract", () => {
     ]));
   });
 });
+
+describe("marketing demand validation v2 runtime contract", () => {
+  it("moves the runtime, migration, and analysis surfaces to v2 without adding a route or table", () => {
+    const types = readRequired("types/marketing-validation.ts");
+    const rules = readRequired("lib/marketing/demand-validation.ts");
+    const server = readRequired("lib/server/marketing-validation.ts");
+    const migration = readRequired("supabase/migrations/20260903010000_marketing_validation_sessions_v2.sql");
+    const analysis = readRequired("docs/marketing/demand-validation-analysis.sql");
+    const template = readRequired("docs/marketing/demand-validation-result-template.md");
+    const runtime = `${types}\n${rules}\n${server}`;
+
+    for (const action of [...anonymousActions, "lead_submitted"]) expect(runtime).toContain(`"${action}"`);
+    for (const resultKey of resultKeys) expect(runtime).toContain(`"${resultKey}"`);
+    expect(runtime).toContain("target_qualified: null");
+    expect(runtime).toContain("mumeok_funnel_prototype_v2");
+    expect(migration).toContain("marketing_validation_sessions_v2_legacy_null_check");
+    expect(`${analysis}\n${template}`).toContain("ad_variant");
+    expect(`${analysis}\n${template}`).not.toContain("target_qualified_count");
+    expect(`${analysis}\n${template}`).not.toContain("planner_intent_distribution");
+  });
+});

@@ -48,7 +48,7 @@
 | --- | --- | --- |
 | `marketing-demand-validation` v1 | merged | [x] |
 | source prototype commit `63f8ef2a019c6d260a96a42fab9d67f727d93557` | verified handoff | [x] |
-| official v2 tuple contract-evolution | 이 PR | [ ] |
+| official v2 tuple contract-evolution | PR #1497 merged (`c1d43f60e427943087a7065f188d32224e739ecf`) | [x] |
 
 > `launch-readiness-blockers`, actual operator privacy facts, production Turnstile/origin/edge/retention/sender/iOS/paid-ad 승인은 Stage 2/4 로컬 구현 선행 조건이 아니라 production lead activation의 Manual Only blocker다.
 
@@ -214,14 +214,14 @@
 
 > v1 closeout evidence는 `docs/workpacks/marketing-demand-validation/`에 보존한다. 아래 항목은 v2 구현에 대한 새 잠금이며 evidence 전에는 체크하지 않는다.
 
-- [ ] v2 백엔드 계약 고정: q1..q4, Q3 result, v2 actions, legacy boundary <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 API adapter를 v2 single-route/single-table 계약으로 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] shared type을 q1..q4, 네 result, nullable target, v2 actions로 변경 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] v2 백엔드 계약 고정: q1..q4, Q3 result, v2 actions, legacy boundary <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 API adapter를 v2 single-route/single-table 계약으로 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] shared type을 q1..q4, 네 result, nullable target, v2 actions로 변경 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] source app-owned UI를 Next.js `/beta`로 포팅 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이/legacy session/멱등성/duplicate/fail-closed/PII 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이/legacy session/멱등성/duplicate/fail-closed/PII 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] Vitest/Playwright/a11y/visual/Lighthouse 범위 분리 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] isolated migration fixture와 controlled full-local smoke 분리 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] v2 session bootstrap와 legacy cookie restart 검증 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] isolated migration fixture와 controlled full-local smoke 분리 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] v2 session bootstrap와 legacy cookie restart 검증 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] loading/empty/error/read-only/unauthorized(N/A) 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 이미지 권리/제품 예시/실기기/lead blocker 수동 QA handoff <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [ ] v2 cohort 분석 SQL/result template을 old taxonomy 없이 갱신 <!-- omo:id=delivery-stage6-operations-closeout;stage=4;scope=shared;review=6 -->
@@ -238,3 +238,12 @@
 - Stage 1 design gate: generator 완료, design-critic 🟢 / findings 0. 이는 internal 1.5 재승인을 대체하지 않는다.
 - successor re-review head `6adb3baaab03bf0f9fec0cade5b4c9162902d486`: previous 5 findings CLOSED, new `P1-005` TomorrowPreview design/acceptance/evidence mismatch OPEN.
 - P1-005 repair: 두 planner wireframe에 오늘 card 다음·CTA 직전의 read-only TomorrowPreview를 추가하고 393/320 Stage 4 browser evidence를 잠근다. 이 repair도 exact successor head 재검토가 필요하다.
+- final internal 1.5: reviewer task `01a0636c-cdf3-74b1-8292-2d50418837a1`, APPROVED, findings 0; merged PR #1497 tree `e70617a384ddd084417f443cc28abb268348798b`.
+
+## Stage 2 Evidence
+
+- implementer role: `backend-implementer`; this task does not approve its own changes.
+- RED: required four-file Vitest run → 26 failed / 16 passed against the v1 runtime; separate historical-cookie RED → expected 409, received 503.
+- GREEN: required four-file Vitest run → 44 passed; product regression → 2,881 passed / 175 intended skips; marketing operations → 11 passed.
+- isolated schema/security: Supabase CLI `2.110.0`, migration SHA-256 `a7c718a4925a20826643ee7f77019ecd2373e883a391ab0881e9791729aab17b`; migration replay, v1 digest/v2 rejection fixture, RLS/ACL and local Data API negative smoke passed; remote/cloud/linked access 0.
+- Manual Only blockers remain open; production lead activation, full-local apply, release/tag/deploy were not performed.

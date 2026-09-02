@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 
 import { ensureDockerRunning } from "./lib/local-docker.mjs";
 import {
@@ -84,6 +85,17 @@ try {
   run("pnpm", buildSupabaseCliArgs(["db", "reset", "--local", "--yes"], {
     workdir: isolated.rootDir,
   }), { cwd: isolated.rootDir, env: commandEnv, timeoutMs: 300_000 });
+  run(
+    "psql",
+    [
+      isolated.databaseUrl,
+      "--set",
+      "ON_ERROR_STOP=1",
+      "--file",
+      join(repositoryRoot, "tests/sql/marketing-validation-v2-fixture.sql"),
+    ],
+    { cwd: repositoryRoot, env: commandEnv, timeoutMs: 60_000 },
+  );
   const dataApi = startIsolatedDataApi(isolated, { env: commandEnv });
   await waitForIsolatedDataApi({
     beforeAttempt: () => assertNoIsolatedDockerOom(

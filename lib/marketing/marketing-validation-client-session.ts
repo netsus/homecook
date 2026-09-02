@@ -1,16 +1,16 @@
 import type {
-  MarketingValidationAction,
+  MarketingValidationLegacyAction as MarketingValidationAction,
   MarketingValidationIntentChoice,
   MarketingValidationPlannerIntent,
   MarketingValidationPlannerPriority,
-  MarketingValidationQuizAnswers,
-  MarketingValidationQuizResult,
+  MarketingValidationLegacyQuizAnswers as MarketingValidationQuizAnswers,
+  MarketingValidationLegacyQuizResult as MarketingValidationQuizResult,
 } from "@/types/marketing-validation";
 import {
   FOLLOWUP_INTENT_OPTIONS,
   FOLLOWUP_PRIORITY_OPTIONS,
   MARKETING_INTENT_CHOICES,
-  MARKETING_VALIDATION_ACTIONS,
+  MARKETING_VALIDATION_LEGACY_ACTIONS as MARKETING_VALIDATION_ACTIONS,
 } from "@/lib/marketing/demand-validation";
 
 export const MARKETING_VALIDATION_CLIENT_STORAGE_KEY =

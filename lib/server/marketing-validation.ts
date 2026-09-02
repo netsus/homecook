@@ -2,10 +2,8 @@ import { ok, fail } from "@/lib/api/response";
 import {
   buildQuizOutcome,
   classifyMarketingAttribution,
-  FOLLOWUP_INTENT_OPTIONS,
-  FOLLOWUP_PRIORITY_OPTIONS,
   isAllowedQuizAnswer,
-  MARKETING_INTENT_CHOICES,
+  MARKETING_AD_VARIANTS,
   MARKETING_VALIDATION_ACTIONS,
   MARKETING_VALIDATION_AUDIENCE_KEY,
   MARKETING_VALIDATION_CAMPAIGN_KEY,
@@ -19,14 +17,13 @@ import {
   MARKETING_VALIDATION_TURNSTILE_ACTION,
   normalizeAllowedOrigins,
   readMarketingValidationState,
+  resolveMarketingAdVariant,
   validateMarketingTransition,
 } from "@/lib/marketing/demand-validation";
 import type { ApiErrorField } from "@/types/api";
 import type {
   MarketingValidationAction,
-  MarketingValidationIntentChoice,
-  MarketingValidationPlannerIntent,
-  MarketingValidationPlannerPriority,
+  MarketingValidationAdVariant,
   MarketingValidationPersistenceClient,
   MarketingValidationQuizAnswers,
   MarketingValidationResponseData,
@@ -47,9 +44,10 @@ type ParsedBody =
       utm_campaign: string | null;
       utm_content: string | null;
       utm_term: string | null;
+      ad_variant: MarketingValidationAdVariant;
     }
   | {
-      action: "quiz_started" | "solution_viewed";
+      action: "quiz_started" | "result_viewed" | "experience_started" | "experience_completed" | "beta_form_viewed";
       honeypot: "";
     }
   | {
@@ -58,23 +56,13 @@ type ParsedBody =
       answers: MarketingValidationQuizAnswers;
     }
   | {
-      action: "intent_selected";
-      honeypot: "";
-      intent_choice: MarketingValidationIntentChoice;
-    }
-  | {
       action: "lead_submitted";
       honeypot: "";
       email: string;
       consent: true;
       turnstile_token: string;
     }
-  | {
-      action: "followup_submitted";
-      honeypot: "";
-      planner_intent: MarketingValidationPlannerIntent | null;
-      planner_priority: MarketingValidationPlannerPriority | null;
-    };
+  ;
 
 type ParseBodyResult =
   | { ok: true; value: ParsedBody }
@@ -129,12 +117,6 @@ interface PersistLeadPayload {
 type AdvancePayload =
   | { occurred_at: string }
   | { occurred_at: string; answers: MarketingValidationQuizAnswers }
-  | { occurred_at: string; intent_choice: MarketingValidationIntentChoice }
-  | {
-      occurred_at: string;
-      planner_intent: MarketingValidationPlannerIntent | null;
-      planner_priority: MarketingValidationPlannerPriority | null;
-    }
   | { occurred_at: string; lead: PersistLeadPayload };
 
 interface MarketingValidationHandlerDependencies {
@@ -233,8 +215,8 @@ function parseQuizAnswers(value: unknown): ParseQuizAnswersResult {
 
   const record = value as Record<string, unknown>;
   const fields: ApiErrorField[] = [];
-  const answers: Partial<MarketingValidationQuizAnswers> = {};
-  for (const key of ["q1", "q2", "q3", "q4", "q5"] as const) {
+  const answers: Record<string, string> = {};
+  for (const key of ["q1", "q2", "q3", "q4"] as const) {
     if (typeof record[key] !== "string" || !isAllowedQuizAnswer(key, record[key])) {
       fields.push({ field: key, reason: "invalid_enum" });
       continue;
@@ -242,7 +224,7 @@ function parseQuizAnswers(value: unknown): ParseQuizAnswersResult {
     answers[key] = record[key];
   }
   for (const key of Object.keys(record)) {
-    if (!["q1", "q2", "q3", "q4", "q5"].includes(key)) {
+    if (!["q1", "q2", "q3", "q4"].includes(key)) {
       fields.push({ field: `answers.${key}`, reason: "unexpected" });
     }
   }
@@ -251,7 +233,7 @@ function parseQuizAnswers(value: unknown): ParseQuizAnswersResult {
     ? buildQuizValidationError(fields)
     : {
         ok: true as const,
-        answers: answers as MarketingValidationQuizAnswers,
+        answers: answers as unknown as MarketingValidationQuizAnswers,
       };
 }
 
@@ -291,12 +273,19 @@ export function parseMarketingValidationBody(
         "utm_campaign",
         "utm_content",
         "utm_term",
+        "ad_variant",
       ]);
       const utm_source = validateOptionalUtm("utm_source", record.utm_source, fields);
       const utm_medium = validateOptionalUtm("utm_medium", record.utm_medium, fields);
       const utm_campaign = validateOptionalUtm("utm_campaign", record.utm_campaign, fields);
       const utm_content = validateOptionalUtm("utm_content", record.utm_content, fields);
       const utm_term = validateOptionalUtm("utm_term", record.utm_term, fields);
+      const candidate = record.ad_variant === undefined || record.ad_variant === null
+        ? null
+        : record.ad_variant as MarketingValidationAdVariant;
+      if (candidate !== null && !MARKETING_AD_VARIANTS.includes(candidate)) {
+        fields.push({ field: "ad_variant", reason: "invalid_enum" });
+      }
       if (fields.length > 0) return buildValidationError(fields);
       return {
         ok: true,
@@ -308,11 +297,15 @@ export function parseMarketingValidationBody(
           utm_campaign,
           utm_content,
           utm_term,
+          ad_variant: resolveMarketingAdVariant(utm_content, candidate),
         },
       };
     }
     case "quiz_started":
-    case "solution_viewed": {
+    case "result_viewed":
+    case "experience_started":
+    case "experience_completed":
+    case "beta_form_viewed": {
       const fields = validateExactKeys(record, ["action", "honeypot"]);
       return fields.length > 0
         ? buildValidationError(fields)
@@ -331,21 +324,6 @@ export function parseMarketingValidationBody(
           action,
           honeypot: "",
           answers: parsedAnswers.answers,
-        },
-      };
-    }
-    case "intent_selected": {
-      const fields = validateExactKeys(record, ["action", "honeypot", "intent_choice"]);
-      if (fields.length > 0) return buildValidationError(fields);
-      if (!MARKETING_INTENT_CHOICES.includes(record.intent_choice as MarketingValidationIntentChoice)) {
-        return buildValidationError([{ field: "intent_choice", reason: "invalid_enum" }]);
-      }
-      return {
-        ok: true,
-        value: {
-          action,
-          honeypot: "",
-          intent_choice: record.intent_choice as MarketingValidationIntentChoice,
         },
       };
     }
@@ -376,39 +354,6 @@ export function parseMarketingValidationBody(
           turnstile_token: (record.turnstile_token as string).trim(),
         },
       };
-    }
-    case "followup_submitted": {
-      const fields = validateExactKeys(record, [
-        "action",
-        "honeypot",
-        "planner_intent",
-        "planner_priority",
-      ]);
-      const plannerIntent =
-        record.planner_intent === undefined || record.planner_intent === null
-          ? null
-          : record.planner_intent as MarketingValidationPlannerIntent;
-      const plannerPriority =
-        record.planner_priority === undefined || record.planner_priority === null
-          ? null
-          : record.planner_priority as MarketingValidationPlannerPriority;
-      if (plannerIntent !== null && !FOLLOWUP_INTENT_OPTIONS.includes(plannerIntent)) {
-        fields.push({ field: "planner_intent", reason: "invalid_enum" });
-      }
-      if (plannerPriority !== null && !FOLLOWUP_PRIORITY_OPTIONS.includes(plannerPriority)) {
-        fields.push({ field: "planner_priority", reason: "invalid_enum" });
-      }
-      return fields.length > 0
-        ? buildValidationError(fields)
-        : {
-            ok: true,
-            value: {
-              action,
-              honeypot: "",
-              planner_intent: plannerIntent,
-              planner_priority: plannerPriority,
-            },
-          };
     }
   }
 }
@@ -665,10 +610,8 @@ function buildSuccessData(
     state: readMarketingValidationState(session),
   };
   if (action === "quiz_completed") {
-    data.quiz_result = session.quiz_result ?? undefined;
-    if (typeof session.target_qualified === "boolean") {
-      data.target_qualified = session.target_qualified;
-    }
+    data.quiz_result = session.quiz_result as MarketingValidationResponseData["quiz_result"];
+    data.target_qualified = null;
   }
   return data;
 }
@@ -728,6 +671,7 @@ export function createMarketingValidationSupabaseAdapter(
     utm_medium,
     utm_source,
     utm_term,
+    ad_variant,
   }) => {
     void request_origin;
     const result = await table()
@@ -741,6 +685,7 @@ export function createMarketingValidationSupabaseAdapter(
         utm_campaign,
         utm_content,
         utm_term,
+        ad_variant,
         attribution_status,
         viewed_at,
         target_qualified: null,
@@ -804,19 +749,28 @@ export function createMarketingValidationSupabaseAdapter(
           quiz_completed_at: payload?.occurred_at,
           quiz_answers: answers,
           quiz_result: outcome.quiz_result,
-          target_qualified: outcome.target_qualified,
+          target_qualified: null,
           updated_at: payload?.occurred_at,
         });
       }
-      case "solution_viewed":
-        return updateStage(sessionId, "solution_viewed_at", {
-          solution_viewed_at: payload?.occurred_at,
+      case "result_viewed":
+        return updateStage(sessionId, "result_viewed_at", {
+          result_viewed_at: payload?.occurred_at,
           updated_at: payload?.occurred_at,
         });
-      case "intent_selected":
-        return updateStage(sessionId, "intent_clicked_at", {
-          intent_clicked_at: payload?.occurred_at,
-          intent_choice: (payload as { intent_choice: MarketingValidationIntentChoice }).intent_choice,
+      case "experience_started":
+        return updateStage(sessionId, "experience_started_at", {
+          experience_started_at: payload?.occurred_at,
+          updated_at: payload?.occurred_at,
+        });
+      case "experience_completed":
+        return updateStage(sessionId, "experience_completed_at", {
+          experience_completed_at: payload?.occurred_at,
+          updated_at: payload?.occurred_at,
+        });
+      case "beta_form_viewed":
+        return updateStage(sessionId, "beta_form_viewed_at", {
+          beta_form_viewed_at: payload?.occurred_at,
           updated_at: payload?.occurred_at,
         });
       case "lead_submitted":
@@ -828,13 +782,6 @@ export function createMarketingValidationSupabaseAdapter(
           consented_at: (payload as { lead: PersistLeadPayload }).lead.consented_at,
           turnstile_verified_at: (payload as { lead: PersistLeadPayload }).lead.turnstile_verified_at,
           updated_at: (payload as { lead: PersistLeadPayload }).lead.lead_submitted_at,
-        });
-      case "followup_submitted":
-        return updateStage(sessionId, "followup_submitted_at", {
-          followup_submitted_at: payload?.occurred_at,
-          planner_intent: (payload as { planner_intent: MarketingValidationPlannerIntent | null }).planner_intent,
-          planner_priority: (payload as { planner_priority: MarketingValidationPlannerPriority | null }).planner_priority,
-          updated_at: payload?.occurred_at,
         });
     }
   };
@@ -889,7 +836,7 @@ export function createMarketingValidationHandler(
         const existingSessionId = readCookieSessionId(request);
         if (existingSessionId) {
           const existingSession = await dependencies.readSession(existingSessionId);
-          if (existingSession) {
+          if (existingSession?.creative_key === MARKETING_VALIDATION_CREATIVE_KEY) {
             return ok(buildSuccessData("view", existingSession));
           }
         }
@@ -928,13 +875,12 @@ export function createMarketingValidationHandler(
       if (!session) {
         return fail("INVALID_TRANSITION", "세션을 다시 시작해 주세요.", 409);
       }
+      if (session.creative_key !== MARKETING_VALIDATION_CREATIVE_KEY) {
+        return fail("INVALID_TRANSITION", "세션을 다시 시작해 주세요.", 409);
+      }
 
       if (value.action === "lead_submitted" && session.lead_submitted_at) {
         return ok(buildSuccessData("lead_submitted", session));
-      }
-
-      if (value.action === "lead_submitted" && session.intent_choice !== "needed") {
-        return fail("INVALID_TRANSITION", "순서를 다시 확인해 주세요.", 409);
       }
 
       const transition = validateMarketingTransition(session, value.action);
@@ -948,7 +894,10 @@ export function createMarketingValidationHandler(
       const occurredAt = requestNow.toISOString();
       switch (value.action) {
         case "quiz_started":
-        case "solution_viewed":
+        case "result_viewed":
+        case "experience_started":
+        case "experience_completed":
+        case "beta_form_viewed":
           return ok(buildSuccessData(
             value.action,
             await dependencies.advanceSession(sessionId, value.action, {
@@ -961,23 +910,6 @@ export function createMarketingValidationHandler(
             await dependencies.advanceSession(sessionId, value.action, {
               occurred_at: occurredAt,
               answers: value.answers,
-            }),
-          ));
-        case "intent_selected":
-          return ok(buildSuccessData(
-            value.action,
-            await dependencies.advanceSession(sessionId, value.action, {
-              occurred_at: occurredAt,
-              intent_choice: value.intent_choice,
-            }),
-          ));
-        case "followup_submitted":
-          return ok(buildSuccessData(
-            value.action,
-            await dependencies.advanceSession(sessionId, value.action, {
-              occurred_at: occurredAt,
-              planner_intent: value.planner_intent,
-              planner_priority: value.planner_priority,
             }),
           ));
         case "lead_submitted": {

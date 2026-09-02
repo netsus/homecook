@@ -1,7 +1,10 @@
 import { expect, type Page, type Route } from "@playwright/test";
 
-import { buildQuizOutcome } from "@/lib/marketing/demand-validation";
-import type { MarketingValidationIntentChoice, MarketingValidationQuizAnswers } from "@/types/marketing-validation";
+import { buildLegacyQuizOutcome as buildQuizOutcome } from "@/lib/marketing/demand-validation";
+import type {
+  MarketingValidationIntentChoice,
+  MarketingValidationLegacyQuizAnswers as MarketingValidationQuizAnswers,
+} from "@/types/marketing-validation";
 
 export const MARKETING_BETA_PATH = "/beta";
 export const MARKETING_QA_TURNSTILE_TOKEN_KEY =
