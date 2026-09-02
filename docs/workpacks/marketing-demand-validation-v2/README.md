@@ -250,3 +250,9 @@
 - Stage 3 reviewer task `01a063fb-8d16-7842-8b81-09e863ebee18` reviewed head `25bd7d9b5fb1e1d0e648ad2c610a73c15e056be0` and returned `REQUEST_CHANGES`: `P1-001..P1-003`, `P2-001..P2-002`.
 - repair RED: finding-focused 4-file run `10 failed / 37 passed`; invalid UTM focused run `5 failed`; each failure reproduced the requested boundary.
 - repair GREEN: required four-file run `66/66`, operations `11/11`, lint, typecheck, workflow/workpack/automation/bookkeeping/diff validators and the pinned isolated pre/post migration gate passed. Exact successor head requires the same reviewer task's re-review.
+
+## Stage 3 Evidence
+
+- independent reviewer task `01a063fb-8d16-7842-8b81-09e863ebee18` approved reviewed implementation head `b5d4ea2babcc69d13753119acbf4371f61aea317`, tree `d9c79898d0f695aec83ed08b20be6e394476229e`, with findings 0.
+- retained artifact: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage3-backend-review.md`
+- this evidence-only successor commit is not covered by that approval until the same reviewer rechecks its new exact head. The author does not self-approve or merge.
