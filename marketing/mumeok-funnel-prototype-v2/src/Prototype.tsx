@@ -6,15 +6,12 @@ import {
   ChevronLeftIcon,
   EnvelopeClosedIcon,
   LockClosedIcon,
-  PieChartIcon,
   PlayIcon,
   PlusIcon,
   QuoteIcon,
   ReloadIcon,
-  RowsIcon,
   Share2Icon,
   StarFilledIcon,
-  LightningBoltIcon,
 } from "@radix-ui/react-icons";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import {
@@ -130,25 +127,25 @@ const results: Record<ResultType, ResultContent> = {
   "homecook-passer": {
     title: "집밥 패스형",
     quote: "닭가슴살까지는 기록했는데\n김치찌개에서 앱을 닫는 타입.",
-    description: "재료가 7개를 넘어가면 기록을 내려놓는 편이에요.",
+    description: "재료가 많아질수록\n기록을 포기하기 쉬워요.",
     asset: "/assets/funnel/characters/homecook-passer.png",
   },
   "eyeballing-master": {
     title: "눈대중 장인",
     quote: "칼로리는 과학이지만\n내 눈도 꽤 정확하다고 믿는 편.",
-    description: "비슷한 메뉴를 빠르게 골라 기록하는 실용주의자예요.",
+    description: "비슷한 메뉴를 빠르게 골라\n기록하는 실용주의자예요.",
     asset: "/assets/funnel/characters/eyeballing-master.png",
   },
   "ingredient-tracker": {
     title: "성분 추적러",
     quote: "딱 맞는 음식이 없어\n오늘도 검색 결과를 추적하는 사람.",
-    description: "필요한 건 더 긴 검색이 아니라 내 레시피를 바로 기록하는 자동화일지도 몰라요.",
+    description: "긴 검색보다 내 레시피를 바로 기록하는 편이\n더 잘 맞아요.",
     asset: "/assets/funnel/characters/ingredient-tracker.png",
   },
   "pro-measurer": {
     title: "프로 계량러",
     quote: "완성 음식까지 저울에 올렸다면\n당신은 이미 상위 기록러.",
-    description: "정확하지만, 이 값을 매번 다시 계산하는 시간이 너무 길어요.",
+    description: "정확한 대신 매번 다시 계산하는\n시간이 오래 걸려요.",
     asset: "/assets/funnel/characters/pro-measurer.png",
     checks: ["재료 무게", "완성 무게", "먹은 무게"],
   },
@@ -247,9 +244,9 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function BackButton({ flow, label = "이전 화면" }: { flow: FlowControls; label?: string }) {
+function BackButton({ flow, label = "이전 화면", fallback }: { flow: FlowControls; label?: string; fallback?: () => void }) {
   return (
-    <button className="icon-button back-button" type="button" onClick={flow.pop} aria-label={label}>
+    <button className="icon-button back-button" type="button" onClick={flow.canGoBack ? flow.pop : fallback} aria-label={label}>
       <ChevronLeftIcon />
     </button>
   );
@@ -311,7 +308,7 @@ function QuizScreen({ flow, index, selected, onSelect }: { flow: FlowControls; i
   return (
     <ScreenFrame className="quiz-screen" testId={`screen-question-${index + 1}`}>
       <div className="quiz-topbar">
-        {index > 0 ? <BackButton flow={flow} label="이전 질문" /> : <span className="topbar-spacer" />}
+        <BackButton flow={flow} label={index > 0 ? "이전 질문" : "이전 화면"} />
         <span className="progress-count">{index + 1} / 4</span>
       </div>
       <div className="progress-track" role="progressbar" aria-valuemin={1} aria-valuemax={4} aria-valuenow={index + 1} aria-label={`${index + 1} / 4 진행`}>
@@ -392,7 +389,11 @@ function ResultScreen({ flow, type, onExperience }: { flow: FlowControls; type: 
   }, [result]);
   return (
     <ScreenFrame className="result-screen" testId="screen-result" dataAttributes={{ "data-result-type": type }}>
-      {flow.canGoBack ? <BackButton flow={flow} label="마지막 질문으로 돌아가기" /> : null}
+      <BackButton
+        flow={flow}
+        label="마지막 질문으로 돌아가기"
+        fallback={() => window.location.assign(window.location.pathname)}
+      />
       <p className="result-kicker">당신의 집밥 기록 타입은…</p>
       <h1>
         <span>{titleLead}</span>
@@ -418,10 +419,12 @@ function ResultScreen({ flow, type, onExperience }: { flow: FlowControls; type: 
           ))}
         </div>
       ) : null}
-      <p className="result-description" data-testid="result-description">{result.description}</p>
+      <p className="result-description" data-testid="result-description">
+        {result.description.split("\n").map((line) => <span key={line}>{line}</span>)}
+      </p>
       <div className="conversion-block">
         <p>그런데 집밥 기록이</p>
-        <h2>20초 만에<br />끝난다면?</h2>
+        <h2 data-testid="conversion-headline">20초 만에 끝난다면?</h2>
         <span>직접 한 번 기록해보세요.</span>
       </div>
       <button className="primary-button" type="button" onClick={onExperience}>
@@ -546,9 +549,7 @@ function DemoTwo({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
         <span>오늘은 돼지고기를 조금 덜 넣었어요.</span>
         {!adjusted ? (
           <button className="change-weight-button" type="button" aria-label="돼지고기 양을 520g으로 바꾸기" onClick={confirmWeight} disabled={transitioning}>
-            <span>눌러서 실제 양으로 바꾸기</span>
             <strong>600g → 520g</strong>
-            <ArrowRightIcon aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -629,18 +630,18 @@ function DemoFive({ flow, onNext }: { flow: FlowControls; onNext: () => void }) 
       </strong>
       <div className="macro-grid">
         <div className="macro-card macro-card--carb">
-          <span className="macro-icon" data-testid="macro-icon" data-macro="carbs"><RowsIcon /></span>
           <span>탄수화물</span>
+          <img className="macro-image" data-testid="macro-image" src="/assets/funnel/food/macro-carb-wheat.png" alt="황금빛 밀 이삭" />
           <strong>{carbs}g</strong>
         </div>
         <div className="macro-card macro-card--protein">
-          <span className="macro-icon" data-testid="macro-icon"><LightningBoltIcon /></span>
           <span>단백질</span>
+          <img className="macro-image" data-testid="macro-image" src="/assets/funnel/food/macro-protein-arm.png" alt="힘을 준 팔" />
           <strong>{protein}g</strong>
         </div>
         <div className="macro-card macro-card--fat">
-          <span className="macro-icon" data-testid="macro-icon" data-macro="fat"><PieChartIcon /></span>
           <span>지방</span>
+          <img className="macro-image" data-testid="macro-image" src="/assets/funnel/food/macro-fat-drop.png" alt="황금빛 기름 방울" />
           <strong>{fat}g</strong>
         </div>
       </div>
@@ -747,7 +748,28 @@ const lunchFood: PlannerFood = { name: "닭가슴살 현미밥", detail: "700 kc
 const homecookFood: PlannerFood = { name: "제육볶음 320g", detail: "487 kcal · 단백질 39g", image: "/assets/funnel/food/recipe-jeyuk-thumbnail.png" };
 const drinkFood: PlannerFood = { name: "더:단백 드링크 초코", detail: "105 kcal · 단백질 20g", image: "/assets/funnel/products/the-protein-choco.png", product: true };
 
-function PlannerHomecook({ onNext }: { onNext: () => void }) {
+function TomorrowPreview() {
+  const tomorrow = getKoreanToday();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return (
+    <section className="next-day-preview" data-testid="next-day-preview">
+      <header>
+        <strong>내일 · {formatKoreanDate(tomorrow, { includeYear: false })}</strong>
+        <span>0 / 3</span>
+      </header>
+      <div className="next-day-meals">
+        {["아침", "점심", "저녁"].map((label) => (
+          <div key={label}>
+            <span>{label}</span>
+            <button className="meal-add-button" type="button" aria-label={`내일 ${label} 추가`}>+</button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PlannerHomecook({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [entered, setEntered] = useState(false);
   const [metricsReady, setMetricsReady] = useState(false);
@@ -755,21 +777,24 @@ function PlannerHomecook({ onNext }: { onNext: () => void }) {
   const todayLabel = formatKoreanDate(today, { includeYear: false });
 
   useEffect(() => {
-    const mealTimer = window.setTimeout(() => setEntered(true), prefersReducedMotion ? 0 : 700);
-    const metricsTimer = window.setTimeout(() => setMetricsReady(true), prefersReducedMotion ? 0 : 1250);
+    const mealTimer = window.setTimeout(() => setEntered(true), prefersReducedMotion ? 0 : 950);
+    const metricsTimer = window.setTimeout(() => setMetricsReady(true), prefersReducedMotion ? 0 : 2350);
     return () => { window.clearTimeout(mealTimer); window.clearTimeout(metricsTimer); };
   }, [prefersReducedMotion]);
 
-  const calories = useCountUp(1607, metricsReady, 650, 1120);
-  const carbs = useCountUp(177, metricsReady, 650, 146);
-  const protein = useCountUp(111, metricsReady, 650, 72);
-  const fat = useCountUp(60, metricsReady, 650, 38);
+  const calories = useCountUp(1607, metricsReady, 1250, 1120);
+  const carbs = useCountUp(177, metricsReady, 1250, 146);
+  const protein = useCountUp(111, metricsReady, 1250, 72);
+  const fat = useCountUp(60, metricsReady, 1250, 38);
 
   return (
     <ScreenFrame className="planner-screen" testId="screen-planner-homecook" dataAttributes={{ "data-meal-entered": entered ? "true" : "false" }}>
-      <div className="planner-heading">
-        <CalendarIcon />
-        <h1>이번 주 식단</h1>
+      <div className="planner-topline">
+        <BackButton flow={flow} />
+        <div className="planner-heading">
+          <CalendarIcon />
+          <h1>이번 주 식단</h1>
+        </div>
       </div>
       <PlannerSummary calories={calories} carbs={carbs} protein={protein} fat={fat} />
       <PlannerWeekHeader />
@@ -783,9 +808,12 @@ function PlannerHomecook({ onNext }: { onNext: () => void }) {
         <PlannerMealRow label="점심" foods={[lunchFood]} />
         <PlannerMealRow label="저녁" foods={entered ? [homecookFood] : []} animateLast={entered} highlight={entered ? "meal" : undefined} testId="dinner-foods" />
       </section>
-      <button className="primary-button screen-bottom-button planner-floating-cta strong-action-button" type="button" onClick={onNext}>
-        편의점 음식도 기록해보기 <ArrowRightIcon />
-      </button>
+      <div className="planner-footer-stack">
+        <TomorrowPreview />
+        <button className="primary-button planner-floating-cta strong-action-button" type="button" onClick={onNext}>
+          편의점 음식도 기록해보기 <ArrowRightIcon />
+        </button>
+      </div>
     </ScreenFrame>
   );
 }
@@ -828,18 +856,18 @@ function PlannerComplete({ flow, onNext }: { flow: FlowControls; onNext: () => v
   const [metricsReady, setMetricsReady] = useState(false);
 
   useEffect(() => {
-    const drinkTimer = window.setTimeout(() => setDrinkEntered(true), prefersReducedMotion ? 0 : 700);
-    const metricsTimer = window.setTimeout(() => setMetricsReady(true), prefersReducedMotion ? 0 : 1200);
+    const drinkTimer = window.setTimeout(() => setDrinkEntered(true), prefersReducedMotion ? 0 : 950);
+    const metricsTimer = window.setTimeout(() => setMetricsReady(true), prefersReducedMotion ? 0 : 2200);
     return () => {
       window.clearTimeout(drinkTimer);
       window.clearTimeout(metricsTimer);
     };
   }, [prefersReducedMotion]);
 
-  const calories = useCountUp(1712, metricsReady, 520, 1607);
-  const carbs = useCountUp(184, metricsReady, 520, 177);
-  const protein = useCountUp(131, metricsReady, 520, 111);
-  const fat = useCountUp(61, metricsReady, 520, 60);
+  const calories = useCountUp(1712, metricsReady, 1150, 1607);
+  const carbs = useCountUp(184, metricsReady, 1150, 177);
+  const protein = useCountUp(131, metricsReady, 1150, 111);
+  const fat = useCountUp(61, metricsReady, 1150, 60);
 
   return (
     <ScreenFrame className="planner-screen" testId="screen-planner-complete" dataAttributes={{ "data-product-entered": drinkEntered ? "true" : "false" }}>
@@ -859,17 +887,19 @@ function PlannerComplete({ flow, onNext }: { flow: FlowControls; onNext: () => v
         <PlannerMealRow label="점심" foods={[lunchFood]} />
         <PlannerMealRow label="저녁" foods={drinkEntered ? [homecookFood, drinkFood] : [homecookFood]} animateLast={drinkEntered} highlight={drinkEntered ? "product" : undefined} testId="dinner-foods" />
       </section>
-      <button className="primary-button screen-bottom-button planner-floating-cta strong-action-button" type="button" onClick={onNext}>
-        무료 베타 먼저 써보기 <ArrowRightIcon />
-      </button>
+      <div className="planner-footer-stack">
+        <TomorrowPreview />
+        <button className="primary-button planner-floating-cta strong-action-button" type="button" onClick={onNext}>
+          무료 베타 먼저 써보기 <ArrowRightIcon />
+        </button>
+      </div>
     </ScreenFrame>
   );
 }
 
-function BetaScreen({ flow, resultType, onSuccess }: { flow: FlowControls; resultType: ResultType; onSuccess: () => void }) {
+function BetaScreen({ flow, onSuccess }: { flow: FlowControls; onSuccess: () => void }) {
   const keyboard = useKeyboard();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const result = results[resultType];
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -899,14 +929,11 @@ function BetaScreen({ flow, resultType, onSuccess }: { flow: FlowControls; resul
   return (
     <ScreenFrame className="beta-screen" testId="screen-beta">
       <BackButton flow={flow} />
-      <div className="beta-brand-line">
-        <img className="beta-brand-wordmark" src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" />
-      </div>
       <div className="beta-invitation">
-        <img className="beta-character" data-testid="beta-character" src={result.asset} alt={`${result.title} 캐릭터`} />
+        <img className="beta-character" data-testid="beta-character" src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 소금병 캐릭터" />
         <div className="beta-copy">
-          <h1>직접 써보고 싶나요?</h1>
-          <p>첫 베타테스트를 준비하고 있어요.<br />이메일을 남겨주시면 준비되는 대로<br />가장 먼저 초대해드릴게요.</p>
+          <img className="beta-brand-wordmark" src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" />
+          <p><strong>직접 써보고 싶나요?</strong> 이메일을 남기면 베타가 준비되는 대로 가장 먼저 초대해드릴게요.</p>
         </div>
       </div>
       <form className="email-form" onSubmit={submit} noValidate>
@@ -946,11 +973,12 @@ function BetaScreen({ flow, resultType, onSuccess }: { flow: FlowControls; resul
   );
 }
 
-function SuccessScreen({ onReset }: { onReset: () => void }) {
+function SuccessScreen({ flow, onReset }: { flow: FlowControls; onReset: () => void }) {
   return (
     <ScreenFrame className="success-screen" testId="screen-success">
+      <BackButton flow={flow} />
       <div className="success-character-wrap">
-        <img data-testid="success-character" className="success-character" src="/assets/funnel/characters/welcome-mascot-v2.png" alt="반갑게 손을 흔드는 무먹 소금병 캐릭터" />
+        <img data-testid="success-character" className="success-character" src="/assets/funnel/characters/beta-success-mascot.png" alt="파란 하트와 함께 반기는 무먹 소금병 캐릭터" />
       </div>
       <h1>신청이 완료됐어요!</h1>
       <p>
@@ -969,7 +997,6 @@ export default function Prototype() {
   const [, setAnswers] = useState<Answers>({});
   const [flowVersion, setFlowVersion] = useState(0);
   const answersRef = useRef<Answers>({});
-  const activeResultRef = useRef<ResultType>("eyeballing-master");
   const transitionLocked = useRef(false);
   const [variant] = useState<HeroVariant>(() => readHeroVariant());
   const [sharedResult] = useState<ResultType | null>(() => readSharedResult());
@@ -1011,7 +1038,6 @@ export default function Prototype() {
 
   function resultScreen(forcedType?: ResultType): FlowScreen {
     const type = forcedType ?? deriveResult(answersRef.current.q3);
-    activeResultRef.current = type;
     return { id: "result", render: (flow) => <ResultScreen flow={flow} type={type} onExperience={() => flow.push(demoOneScreen())} /> };
   }
 
@@ -1031,7 +1057,7 @@ export default function Prototype() {
     return { id: "demo-5", render: (flow) => <DemoFive flow={flow} onNext={() => flow.push(plannerHomecookScreen())} /> };
   }
   function plannerHomecookScreen(): FlowScreen {
-    return { id: "planner-homecook", render: (flow) => <PlannerHomecook onNext={() => flow.push(packagedFoodScreen())} /> };
+    return { id: "planner-homecook", render: (flow) => <PlannerHomecook flow={flow} onNext={() => flow.push(packagedFoodScreen())} /> };
   }
   function packagedFoodScreen(): FlowScreen {
     return { id: "packaged-food", render: (flow) => <PackagedFood flow={flow} onNext={() => flow.push(plannerCompleteScreen())} /> };
@@ -1040,12 +1066,12 @@ export default function Prototype() {
     return { id: "planner-complete", render: (flow) => <PlannerComplete flow={flow} onNext={() => flow.push(betaScreen())} /> };
   }
   function betaScreen(): FlowScreen {
-    return { id: "beta", render: (flow) => <BetaScreen flow={flow} resultType={activeResultRef.current} onSuccess={() => flow.push(successScreen())} /> };
+    return { id: "beta", render: (flow) => <BetaScreen flow={flow} onSuccess={() => flow.push(successScreen())} /> };
   }
   function successScreen(): FlowScreen {
     return {
       id: "success",
-      render: () => <SuccessScreen onReset={() => {
+      render: (flow) => <SuccessScreen flow={flow} onReset={() => {
         answersRef.current = {};
         setAnswers({});
         setFlowVersion((current) => current + 1);

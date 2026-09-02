@@ -69,3 +69,13 @@ When any text-entry control loses focus, dismiss the simulated keyboard. If the 
 - Fixed phone chrome should not animate with pushed screens. Screen content can animate; the status bar, camera cutout, and preview chrome should stay put.
 - Keep the keyboard below the home indicator/safe area layer in z-index, and above ordinary app UI while visible.
 - Keep the home indicator as the topmost safe-area layer in the z-index above everything else in the prototype.
+
+## Prototype-specific design decisions
+
+- Keep one consistent circular back button on every post-Hero screen, including question 1, both planner states, beta signup, and signup success.
+- Result screens use the rotated opening-quote mark, short two-line gray descriptions, a single-line `20초 만에 끝난다면?` prompt, and a heavy primary CTA.
+- Demo 2 uses one blue `600g → 520g` action with no helper copy or trailing arrow.
+- Demo 5 uses real raster wheat, flexed-arm, and oil-drop assets for carbohydrate, protein, and fat.
+- Both planner states show a compact tomorrow preview below today, with the next CTA floating over that preview. Meal insertion and summary count-up motion should remain slow enough to notice.
+- Beta signup uses the Pantry salt-character art direction: tiny oval felt hands and feet attached directly to the jar. Signup uses the envelope variant; success uses the blue-heart variant. Do not add spilled or falling salt.
+- On beta signup, place the horizontal Mumeok wordmark inside the invitation block where the former headline sat, keep the supporting sentence unforced (no manual line breaks), and align the privacy detail with the checkbox block's left edge.

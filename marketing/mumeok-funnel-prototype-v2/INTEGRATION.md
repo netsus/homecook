@@ -57,11 +57,13 @@ npm run dev -- --host 127.0.0.1 --port 4173
 - Sites worker: 4개 통과
 - 보호 모바일 런타임: 28개 통과
 - 프로덕션 빌드: 통과
-- 디자인 QA: 94/100, `final result: passed`
+- 디자인 QA: 95/100, `final result: passed`
 - 브라우저 콘솔 오류: 0건
 - 현재 핵심 흐름의 외부 네트워크 요청: 0건
 
-렌더링 근거는 `evidence/design-qa/final/`에 있다.
+전체 렌더링 근거는 `evidence/design-qa/final/`, 최신 화면 변경은 `evidence/design-qa/final-v4/`, 최종 봉투·하트 캐릭터는 `evidence/design-qa/final-v5/`에 있다.
+
+최신 시각 변경은 운영 계약을 바꾸지 않는다. 모든 post-Hero 화면의 뒤로가기 통일, 결과 인용부와 CTA, 재료 변경 CTA, 탄·단·지 이미지, 내일 식단 미리보기, 느린 식단 반영, 베타 정렬과 최종 캐릭터 자산이 갱신됐다.
 
 ## 4. 운영 통합 전 반드시 잠글 계약
 

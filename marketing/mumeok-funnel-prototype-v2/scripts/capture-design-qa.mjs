@@ -108,14 +108,14 @@ await capture("06-demo-5");
 await page.getByTestId("screen-demo-5").getByRole("button", { name: "식단에 기록하기" }).click();
 await page.getByTestId("screen-planner-homecook").waitFor();
 await page.getByTestId("screen-planner-homecook").waitFor({ state: "visible" });
-await page.waitForTimeout(1500);
+await page.waitForTimeout(3900);
 await capture("07-planner-homecook");
 await page.getByTestId("screen-planner-homecook").getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
 await page.getByTestId("screen-packaged-food").waitFor();
 await capture("08-packaged-food");
 await page.getByTestId("screen-packaged-food").getByRole("button", { name: "더:단백 드링크 초코 + 기록하기" }).click();
 await page.getByTestId("screen-planner-complete").waitFor();
-await page.waitForTimeout(1500);
+await page.waitForTimeout(3800);
 await capture("09-planner-complete");
 
 await page.getByTestId("screen-planner-complete").getByRole("button", { name: "무료 베타 먼저 써보기" }).click();

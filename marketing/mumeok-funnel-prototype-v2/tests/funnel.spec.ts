@@ -40,6 +40,7 @@ test("질문 카피와 선택지는 제품 결정표와 일치한다", async ({ 
   await openHero(page);
   await page.getByRole("button", { name: "테스트 시작하기" }).click();
 
+  await expect(page.getByRole("button", { name: "이전 화면" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "평소 칼로리나 탄단지를 얼마나 자주 기록하나요?" })).toBeVisible();
   await expect(page.getByTestId("question-prompt").locator("br")).toHaveCount(1);
   await expect(page.getByRole("button", { name: "거의 매일" })).toBeVisible();
@@ -76,7 +77,10 @@ for (const scenario of [
     await expect(page.getByTestId("result-celebration")).toBeVisible();
     const characterAnimation = await page.getByTestId("result-character").evaluate((element) => getComputedStyle(element).animationName);
     expect(characterAnimation).not.toBe("none");
-    await expect(page.getByRole("button", { name: "무먹으로 20초 체험하기" })).toBeVisible();
+    const experienceButton = page.getByRole("button", { name: "무먹으로 20초 체험하기" });
+    await expect(experienceButton).toBeVisible();
+    expect(Number(await experienceButton.evaluate((element) => getComputedStyle(element).fontWeight))).toBeGreaterThanOrEqual(900);
+    await expect(page.getByTestId("conversion-headline").locator("br")).toHaveCount(0);
   });
 }
 
@@ -106,8 +110,15 @@ test("결과부터 5단계 체험, 식단 반영, 완제품, 베타 신청까지
   const ingredientNext = page.getByRole("button", { name: "다음" });
   await expect(ingredientNext).toBeDisabled();
   const porkChangeButton = page.getByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" });
-  await expect(porkChangeButton).toContainText("눌러서 실제 양으로 바꾸기");
   await expect(porkChangeButton).toContainText("600g → 520g");
+  await expect(porkChangeButton).not.toContainText("눌러서 실제 양으로 바꾸기");
+  await expect(porkChangeButton.locator("svg")).toHaveCount(0);
+  const changeWeightColors = await porkChangeButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, color: style.color };
+  });
+  expect(changeWeightColors.backgroundColor).toBe("rgb(0, 161, 255)");
+  expect(changeWeightColors.color).toBe("rgb(255, 255, 255)");
   await porkChangeButton.click();
   await expect(page.getByTestId("pork-amount")).toHaveText("520g");
   await expect(page.getByText("520g으로 반영 완료", { exact: true })).toHaveCount(0);
@@ -138,11 +149,15 @@ test("결과부터 5단계 체험, 식단 반영, 완제품, 베타 신청까지
   await expect(page.getByText("31g", { exact: true })).toBeVisible();
   await expect(page.getByText("39g", { exact: true })).toBeVisible();
   await expect(page.getByText("22g", { exact: true })).toBeVisible();
-  await expect(page.getByTestId("macro-icon")).toHaveCount(3);
+  await expect(page.getByTestId("macro-image")).toHaveCount(3);
+  await expect(page.getByTestId("macro-image").nth(0)).toHaveAttribute("src", /macro-carb-wheat\.png/);
+  await expect(page.getByTestId("macro-image").nth(1)).toHaveAttribute("src", /macro-protein-arm\.png/);
+  await expect(page.getByTestId("macro-image").nth(2)).toHaveAttribute("src", /macro-fat-drop\.png/);
   await page.getByRole("button", { name: "식단에 기록하기" }).click();
 
   const plannerHomecook = page.getByTestId("screen-planner-homecook");
   await expect(plannerHomecook).toBeVisible();
+  await expect(plannerHomecook.getByRole("button", { name: "이전 화면" })).toBeVisible();
   for (const label of ["칼로리", "탄수화물", "단백질", "지방"]) {
     await expect(plannerHomecook.getByText(label, { exact: true })).toBeVisible();
   }
@@ -160,14 +175,15 @@ test("결과부터 5단계 체험, 식단 반영, 완제품, 베타 신청까지
   await expect(plannerHomecook.getByText("111g", { exact: true })).toBeVisible();
   await expect(plannerHomecook.getByText("60g", { exact: true })).toBeVisible();
   await expect(plannerHomecook.getByText("오늘의 합계", { exact: true })).toHaveCount(0);
-  await expect(plannerHomecook.getByTestId("next-day-preview")).toHaveCount(0);
-  const plannerScroll = await plannerHomecook.evaluate((element) => {
-    const scroll = element.closest(".mobile-scroll");
-    return scroll ? { scrollHeight: scroll.scrollHeight, clientHeight: scroll.clientHeight } : null;
-  });
-  expect((plannerScroll?.scrollHeight ?? 0) - (plannerScroll?.clientHeight ?? 0)).toBeLessThanOrEqual(2);
+  await expect(plannerHomecook.getByTestId("next-day-preview")).toBeVisible();
   const packagedCta = page.getByRole("button", { name: "편의점 음식도 기록해보기" });
   expect(Number(await packagedCta.evaluate((element) => getComputedStyle(element).fontWeight))).toBeGreaterThanOrEqual(850);
+  const [tomorrowBox, packagedCtaBox] = await Promise.all([
+    plannerHomecook.getByTestId("next-day-preview").boundingBox(),
+    packagedCta.boundingBox(),
+  ]);
+  expect((packagedCtaBox?.y ?? 0)).toBeLessThan((tomorrowBox?.y ?? 0) + (tomorrowBox?.height ?? 0));
+  expect((packagedCtaBox?.y ?? 0) + (packagedCtaBox?.height ?? 0)).toBeGreaterThan(tomorrowBox?.y ?? 0);
   await packagedCta.click();
 
   await expect(page.getByTestId("screen-packaged-food")).toBeVisible();
@@ -198,20 +214,22 @@ test("결과부터 5단계 체험, 식단 반영, 완제품, 베타 신청까지
   await expect(plannerComplete.getByTestId("dinner-foods").getByText("더:단백 드링크 초코", { exact: true })).toBeVisible();
   await expect(plannerComplete.getByTestId("dinner-foods")).toHaveAttribute("data-highlight", "product");
   await expect(plannerComplete.getByText("오늘의 합계", { exact: true })).toHaveCount(0);
-  await expect(plannerComplete.getByTestId("next-day-preview")).toHaveCount(0);
+  await expect(plannerComplete.getByTestId("next-day-preview")).toBeVisible();
   const betaCta = page.getByRole("button", { name: "무료 베타 먼저 써보기" });
   expect(Number(await betaCta.evaluate((element) => getComputedStyle(element).fontWeight))).toBeGreaterThanOrEqual(850);
   await betaCta.click();
 
   await expect(page.getByTestId("screen-beta")).toBeVisible();
   const betaScreen = page.getByTestId("screen-beta");
-  await expect(betaScreen.getByTestId("beta-character")).toHaveAttribute("src", /eyeballing-master\.png/);
-  await expect(betaScreen.getByRole("heading", { name: "직접 써보고 싶나요?" })).toBeVisible();
-  await expect(betaScreen.locator(".beta-brand-symbol")).toHaveCount(0);
+  await expect(betaScreen.getByTestId("beta-character")).toHaveAttribute("src", /beta-invitation-mascot\.png/);
+  await expect(betaScreen.getByText(/직접 써보고 싶나요\?/)).toBeVisible();
+  await expect(betaScreen.locator(".beta-copy br")).toHaveCount(0);
   await expect(betaScreen.locator(".beta-brand-wordmark")).toHaveCount(1);
+  await expect(betaScreen.locator(".beta-invitation .beta-brand-wordmark")).toHaveCount(1);
   const consentBlock = betaScreen.getByTestId("consent-block");
   await expect(consentBlock.getByRole("checkbox")).toBeVisible();
   await expect(consentBlock.getByText(/수집: 이메일/)).toBeVisible();
+  expect(await consentBlock.locator(".privacy-details").evaluate((element) => getComputedStyle(element).marginLeft)).toBe("0px");
   const email = page.getByRole("textbox", { name: "이메일" });
   await page.getByRole("button", { name: "무료 베타 초대받기" }).click();
   await expect(page.getByText("이메일을 입력해주세요.", { exact: true })).toBeVisible();
@@ -227,7 +245,8 @@ test("결과부터 5단계 체험, 식단 반영, 완제품, 베타 신청까지
   await page.getByRole("button", { name: "무료 베타 초대받기" }).click();
   await expect(page.getByRole("heading", { name: "신청이 완료됐어요!" })).toBeVisible();
   const success = page.getByTestId("screen-success");
-  await expect(success.getByTestId("success-character")).toHaveAttribute("src", /welcome-mascot-v2\.png/);
+  await expect(success.getByRole("button", { name: "이전 화면" })).toBeVisible();
+  await expect(success.getByTestId("success-character")).toHaveAttribute("src", /beta-success-mascot\.png/);
   await expect(success.getByText("무먹 베타 신청 완료", { exact: true })).toHaveCount(0);
   const successCopy = success.locator(":scope > p");
   const resetButton = success.getByRole("button", { name: "처음으로 돌아가기" });
@@ -263,6 +282,7 @@ test("공유 결과 URL은 해당 결과 화면을 바로 연다", async ({ page
   const resultAccent = page.getByRole("heading", { name: "눈대중 장인" }).locator("em");
   expect(await resultAccent.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(0, 161, 255)");
   await expect(page.getByTestId("result-quote-icon")).toBeVisible();
+  expect(await page.getByTestId("result-quote-icon").evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
   await expect(page.getByTestId("result-quote-lines").locator("span")).toHaveCount(2);
 });
 
