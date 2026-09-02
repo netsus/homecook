@@ -170,15 +170,21 @@ alter table public.marketing_validation_sessions
     )
   ),
   add constraint marketing_validation_sessions_v2_legacy_null_check check (
-    creative_key <> 'mumeok_funnel_prototype_v2'
-    or (
-      solution_viewed_at is null
-      and intent_choice is null
-      and intent_clicked_at is null
-      and planner_intent is null
-      and planner_priority is null
-      and followup_submitted_at is null
-    )
+    case
+      when creative_key <> 'mumeok_funnel_prototype_v2' then
+        ad_variant is null
+        and result_viewed_at is null
+        and experience_started_at is null
+        and experience_completed_at is null
+        and beta_form_viewed_at is null
+      else
+        solution_viewed_at is null
+        and intent_choice is null
+        and intent_clicked_at is null
+        and planner_intent is null
+        and planner_priority is null
+        and followup_submitted_at is null
+    end
   );
 
 commit;

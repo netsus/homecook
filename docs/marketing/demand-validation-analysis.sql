@@ -54,6 +54,7 @@ funnel as (
   union all select 'experience_complete', experience_complete, experience_start from counts
   union all select 'beta_form_view', beta_form_view, experience_complete from counts
   union all select 'accepted_lead', accepted_lead, beta_form_view from counts
+  union all select 'duplicate_submission', duplicate_submission, beta_form_view from counts
 )
 select
   metric,

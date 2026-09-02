@@ -211,4 +211,11 @@ describe("marketing demand validation v2 runtime contract", () => {
     expect(`${analysis}\n${template}`).not.toContain("target_qualified_count");
     expect(`${analysis}\n${template}`).not.toContain("planner_intent_distribution");
   });
+
+  it("separates the verified backend lead-gate boundary from Stage 4 read-only UI evidence", () => {
+    const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");
+
+    expect(acceptance).toMatch(/- \[x\].*lead readiness.*anonymous.*omo:id=accept-read-only-backend;stage=2;scope=backend;review=3,6/iu);
+    expect(acceptance).toMatch(/- \[ \].*결과.*체험.*UI.*omo:id=accept-read-only-ui;stage=4;scope=frontend;review=5,6/iu);
+  });
 });

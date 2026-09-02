@@ -245,5 +245,8 @@
 - implementer role: `backend-implementer`; this task does not approve its own changes.
 - RED: required four-file Vitest run → 26 failed / 16 passed against the v1 runtime; separate historical-cookie RED → expected 409, received 503.
 - GREEN: required four-file Vitest run → 44 passed; product regression → 2,881 passed / 175 intended skips; marketing operations → 11 passed.
-- isolated schema/security: Supabase CLI `2.110.0`, migration SHA-256 `a7c718a4925a20826643ee7f77019ecd2373e883a391ab0881e9791729aab17b`; migration replay, v1 digest/v2 rejection fixture, RLS/ACL and local Data API negative smoke passed; remote/cloud/linked access 0.
+- isolated schema/security: Supabase CLI `2.110.0`, aggregate migration SHA-256 `39b8171e36e704a742c583fb213b6257d524fba2fd1ca4664bfa935d5508bf4a`; v1 baseline row/digest → v2 migration → same v1 projection digest와 v1→v2 field rejection → clean full replay, RLS/ACL, local Data API negative smoke가 통과했다. remote/cloud/linked access는 0이다.
 - Manual Only blockers remain open; production lead activation, full-local apply, release/tag/deploy were not performed.
+- Stage 3 reviewer task `01a063fb-8d16-7842-8b81-09e863ebee18` reviewed head `25bd7d9b5fb1e1d0e648ad2c610a73c15e056be0` and returned `REQUEST_CHANGES`: `P1-001..P1-003`, `P2-001..P2-002`.
+- repair RED: finding-focused 4-file run `10 failed / 37 passed`; invalid UTM focused run `5 failed`; each failure reproduced the requested boundary.
+- repair GREEN: required four-file run `66/66`, operations `11/11`, lint, typecheck, workflow/workpack/automation/bookkeeping/diff validators and the pinned isolated pre/post migration gate passed. Exact successor head requires the same reviewer task's re-review.

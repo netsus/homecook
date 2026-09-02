@@ -149,16 +149,13 @@ interface MarketingValidationHandlerDependencies {
   ) => Promise<TurnstileVerificationResult>;
 }
 
-function normalizeOptionalText(value: unknown) {
+function validateOptionalUtm(field: string, value: unknown, fields: ApiErrorField[]) {
+  if (value === undefined || value === null) return null;
   if (typeof value !== "string") {
+    fields.push({ field, reason: "invalid_type" });
     return null;
   }
-  const normalized = value.trim();
-  return normalized || null;
-}
-
-function validateOptionalUtm(field: string, value: unknown, fields: ApiErrorField[]) {
-  const normalized = normalizeOptionalText(value);
+  const normalized = value.trim() || null;
   if (normalized && normalized.length > MARKETING_VALIDATION_MAX_UTM_LENGTH) {
     fields.push({ field, reason: "too_long" });
   }
@@ -198,14 +195,11 @@ function buildQuizValidationError(fields: ApiErrorField[]): ParseQuizAnswersResu
 function validateExactKeys(
   body: Record<string, unknown>,
   allowedKeys: readonly string[],
+  safeField = "body",
 ) {
-  const fields: ApiErrorField[] = [];
-  for (const key of Object.keys(body)) {
-    if (!allowedKeys.includes(key)) {
-      fields.push({ field: key, reason: "unexpected" });
-    }
-  }
-  return fields;
+  return Object.keys(body).some((key) => !allowedKeys.includes(key))
+    ? [{ field: safeField, reason: "unexpected" }]
+    : [];
 }
 
 function parseQuizAnswers(value: unknown): ParseQuizAnswersResult {
@@ -223,10 +217,8 @@ function parseQuizAnswers(value: unknown): ParseQuizAnswersResult {
     }
     answers[key] = record[key];
   }
-  for (const key of Object.keys(record)) {
-    if (!["q1", "q2", "q3", "q4"].includes(key)) {
-      fields.push({ field: `answers.${key}`, reason: "unexpected" });
-    }
+  if (Object.keys(record).some((key) => !["q1", "q2", "q3", "q4"].includes(key))) {
+    fields.push({ field: "answers", reason: "unexpected" });
   }
 
   return fields.length > 0

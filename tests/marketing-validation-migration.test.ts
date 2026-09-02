@@ -7,6 +7,8 @@ const migrationPath =
 const v2MigrationPath =
   "supabase/migrations/20260903010000_marketing_validation_sessions_v2.sql";
 const fixturePath = "tests/sql/marketing-validation-v2-fixture.sql";
+const preMigrationFixturePath =
+  "tests/sql/marketing-validation-v2-pre-migration-fixture.sql";
 
 describe("marketing demand validation migration contract", () => {
   it("creates exactly one marketing session table and extends the internal scope allowlist", () => {
@@ -72,6 +74,13 @@ describe("marketing demand validation v2 successor migration", () => {
     expect(sql).toContain("target_qualified is null");
     expect(sql).toContain("beta_form_viewed_at is not null");
     expect(sql).toContain("lead_submitted_at >= beta_form_viewed_at");
+    expect(sql).toContain("creative_key <> 'mumeok_funnel_prototype_v2'");
+    for (const column of [
+      "ad_variant", "result_viewed_at", "experience_started_at",
+      "experience_completed_at", "beta_form_viewed_at",
+    ]) {
+      expect(sql).toMatch(new RegExp(`creative_key <> 'mumeok_funnel_prototype_v2'[\\s\\S]*${column} is null`));
+    }
   });
 
   it("preserves v1 taxonomy while allowing only four v2 results", () => {
@@ -86,15 +95,26 @@ describe("marketing demand validation v2 successor migration", () => {
   });
 
   it("runs v1 digest and v2 rejection fixtures in the pinned isolated gate", () => {
+    expect(existsSync(preMigrationFixturePath)).toBe(true);
     expect(existsSync(fixturePath)).toBe(true);
+    const preFixture = existsSync(preMigrationFixturePath)
+      ? readFileSync(preMigrationFixturePath, "utf8")
+      : "";
     const fixture = existsSync(fixturePath) ? readFileSync(fixturePath, "utf8") : "";
     const runner = readFileSync("scripts/run-isolated-security-function-gate.mjs", "utf8");
 
-    expect(runner).toContain("marketing-validation-v2-fixture.sql");
-    expect(fixture).toContain("v1_digest_before");
+    expect(preFixture).toContain("v1_digest_before");
+    expect(runner).toMatch(/marketing-validation-v2-pre-migration-fixture\.sql[\s\S]*20260903010000_marketing_validation_sessions_v2\.sql[\s\S]*marketing-validation-v2-fixture\.sql/);
+    expect(fixture).toContain("v1_digest_preserved");
+    expect(fixture).toContain("to_jsonb(row_value) - array[");
+    expect(fixture).toContain("v1_digest_mismatch_should_fail");
     expect(fixture).toContain("mumeok_funnel_prototype_v2");
     expect(fixture).toContain("beta_form_viewed_at");
     expect(fixture).toContain("expected v2 lead-before-beta rejection");
     expect(fixture).toContain("expected v2 target-qualified rejection");
+    for (const column of [
+      "ad_variant", "result_viewed_at", "experience_started_at",
+      "experience_completed_at", "beta_form_viewed_at",
+    ]) expect(fixture).toContain(`expected v1 ${column} rejection`);
   });
 });

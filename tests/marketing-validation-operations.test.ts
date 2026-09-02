@@ -456,8 +456,10 @@ describe("marketing validation Stage 6 operations", () => {
     for (const metric of [
       "landing_view", "quiz_start", "quiz_complete", "result_view",
       "experience_start", "experience_complete", "beta_form_view", "accepted_lead",
+      "duplicate_submission",
     ]) expect(sql).toContain(`'${metric}'`);
     expect(sql).toContain("beta_form_to_lead_rate");
+    expect(sql).toMatch(/select 'accepted_lead', accepted_lead, beta_form_view from counts[\s\S]*select 'duplicate_submission', duplicate_submission, beta_form_view from counts/iu);
   });
 
   it("keeps the analysis SQL aligned with the Q3-only four-result rule", () => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMarketingValidationHandler } from "@/lib/server/marketing-validation-route";
+import { parseMarketingValidationBody } from "@/lib/server/marketing-validation";
 import type { MarketingValidationSessionRecord } from "@/types/marketing-validation";
 
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -128,6 +129,37 @@ describe("marketing validation v2 route", () => {
       expect(response.status).toBe(422);
       expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
     }
+  });
+
+  it("never reflects arbitrary unknown key names into validation errors", async () => {
+    const handler = createMarketingValidationHandler(dependencies());
+    const sensitiveUnknownKeys = [
+      "person@example.com",
+      "turnstile-secret-token",
+    ];
+    const response = await handler(request({
+      action: "quiz_started",
+      honeypot: "",
+      [sensitiveUnknownKeys[0]]: "x",
+      [sensitiveUnknownKeys[1]]: "x",
+    }));
+    const text = await response.text();
+
+    expect(response.status).toBe(422);
+    for (const sensitive of sensitiveUnknownKeys) expect(text).not.toContain(sensitive);
+    expect(JSON.parse(text).error.fields).toEqual([{ field: "body", reason: "unexpected" }]);
+  });
+
+  it.each(
+    ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]
+      .flatMap((field) => [1, true, { value: "x" }, ["x"]].map((value) => [field, value] as const)),
+  )("rejects invalid %s types instead of normalizing them to null", (field, value) => {
+    expect(parseMarketingValidationBody({ action: "view", honeypot: "", [field]: value }))
+      .toEqual({
+        ok: false,
+        code: "VALIDATION_ERROR",
+        fields: [{ field, reason: "invalid_type" }],
+      });
   });
 
   it("rejects email, consent, and Turnstile fields on every anonymous action", async () => {

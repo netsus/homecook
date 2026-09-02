@@ -1887,7 +1887,7 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs PR #1497 merged at c1d43f60e427943087a7065f188d32224e739ecf after independent findings 0. Stage 2 backend Draft PR #1498 implements the approved v2 contract; local required tests, verify:backend and pinned isolated migration/security gate passed. Stage 3 exact-head review and current-head PR checks remain pending. Ready, merge, full-local apply, release and production mutation are forbidden for this task."
+      "notes": "Stage 1 docs PR #1497 merged at c1d43f60e427943087a7065f188d32224e739ecf after independent findings 0. Stage 2 PR #1498 is Ready but not merge-authorized. Stage 3 reviewer task 01a063fb-8d16-7842-8b81-09e863ebee18 returned REQUEST_CHANGES P1-001..P1-003/P2-001..P2-002 on head 25bd7d9b5fb1e1d0e648ad2c610a73c15e056be0; author repair is locally green including 66/66 required tests and pinned isolated v1-pre/v2-migration/v1-post plus clean replay. Exact successor re-review and current-head complete checks remain pending. Merge, full-local apply, release and production mutation are forbidden."
     },
     {
       "id": "auth-provider-memory-linking",

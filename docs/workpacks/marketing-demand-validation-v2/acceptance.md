@@ -16,7 +16,8 @@
 - [x] `view → quiz_started → quiz_completed → result_viewed → experience_started → experience_completed → beta_form_viewed → lead_submitted`만 허용한다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
 - [x] 동일 session/action replay는 first-write-wins generic success이고 skip/reverse는 `409 INVALID_TRANSITION`이다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 - [x] v1 cookie는 새 v2 row/cookie로 재시작하고 v1 row와 v2 action/result를 섞지 않는다 <!-- omo:id=accept-legacy-session-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] lead readiness가 닫혀도 result/experience/planner payoff는 read-only로 유지된다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
+- [x] lead readiness가 닫혀도 anonymous result/experience stage transition은 계속 허용된다 <!-- omo:id=accept-read-only-backend;stage=2;scope=backend;review=3,6 -->
+- [ ] lead readiness 오류에서도 결과·체험·planner payoff UI를 유지한다 <!-- omo:id=accept-read-only-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] v2 `target_qualified`는 response/DB에서 null이며 Q1/Q2/Q4 hidden rule을 만들지 않는다 <!-- omo:id=accept-target-null;stage=2;scope=backend;review=3,6 -->
 - [x] successor migration이 기존 CHECK를 creative_key별 v1/v2 조건부 CHECK로 교체한다 <!-- omo:id=accept-conditional-db-checks;stage=2;scope=backend;review=3,6 -->
 - [x] v1 fixture는 기존 CHECK를 그대로 통과하고 row digest가 유지된다 <!-- omo:id=accept-v1-check-preservation;stage=2;scope=backend;review=3,6 -->
