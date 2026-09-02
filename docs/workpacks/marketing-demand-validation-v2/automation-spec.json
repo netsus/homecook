@@ -14,7 +14,11 @@
       "exact-four-question-contract",
       "q3-only-four-result-contract",
       "target-qualified-null-for-v2",
+      "creative-key-conditional-v1-v2-checks",
+      "v2-beta-form-before-lead-stage-order",
       "anonymous-actions-separated-from-lead-pii",
+      "resolved-ad-variant-with-utm-precedence",
+      "opaque-result-key-only-share-deep-link",
       "server-issued-cookie",
       "ordered-first-write-wins",
       "legacy-session-restarts-without-mixed-writes",
@@ -105,6 +109,11 @@
       "quiz-exact-q1-q4-no-q5",
       "q3-only-four-results",
       "result-and-experience-before-email",
+      "v1-check-fixture-preserved",
+      "v2-target-and-legacy-fields-null",
+      "v2-beta-form-before-lead-db-order",
+      "resolved-ad-variant-conflict-unknown-direct",
+      "opaque-result-key-share-query-stripping",
       "single-table-single-route",
       "anonymous-pii-boundary",
       "duplicate-generic-success",
@@ -113,6 +122,7 @@
       "accessibility-and-reduced-motion",
       "image-rights-or-replacement-evidence",
       "product-example-non-affiliation-label",
+      "stage1-generator-and-critic-artifacts",
       "v2-result-ad-cohort-analysis-without-pii"
     ],
     "design_authority": {
@@ -121,10 +131,10 @@
       "required_screens": [
         "MARKETING_DEMAND_VALIDATION_V2"
       ],
-      "generator_required": false,
-      "generator_artifact": null,
-      "critic_required": false,
-      "critic_artifact": null,
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
         "hero-a-b-c-d-default-320-390-desktop",
@@ -139,6 +149,8 @@
         "bundle-excludes-device-frame-selector-runtime"
       ],
       "evidence_artifact_refs": [
+        "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+        "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
         "git:63f8ef2a019c6d260a96a42fab9d67f727d93557:marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final/",
         "git:63f8ef2a019c6d260a96a42fab9d67f727d93557:marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/",
         "git:63f8ef2a019c6d260a96a42fab9d67f727d93557:marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v5/",
@@ -170,6 +182,7 @@
     "production-lead-enabled-without-readiness-evidence",
     "extra-route-table-event-log-or-browser-db-access",
     "remote-cloud-or-linked-supabase-used",
+    "stage1-generator-or-critic-artifact-missing",
     "iphone-pixel-frame-device-selector-or-standalone-runtime-shipped",
     "unverified-image-rights-or-missing-product-example-label",
     "result-or-experience-gated-behind-email"

@@ -18,6 +18,10 @@
 - [ ] v1 cookie는 새 v2 row/cookie로 재시작하고 v1 row와 v2 action/result를 섞지 않는다 <!-- omo:id=accept-legacy-session-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] lead readiness가 닫혀도 result/experience/planner payoff는 read-only로 유지된다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
 - [ ] v2 `target_qualified`는 response/DB에서 null이며 Q1/Q2/Q4 hidden rule을 만들지 않는다 <!-- omo:id=accept-target-null;stage=2;scope=backend;review=3,6 -->
+- [ ] successor migration이 기존 CHECK를 creative_key별 v1/v2 조건부 CHECK로 교체한다 <!-- omo:id=accept-conditional-db-checks;stage=2;scope=backend;review=3,6 -->
+- [ ] v1 fixture는 기존 CHECK를 그대로 통과하고 row digest가 유지된다 <!-- omo:id=accept-v1-check-preservation;stage=2;scope=backend;review=3,6 -->
+- [ ] v2 fixture는 legacy field와 `target_qualified`가 모두 null이며 q1..q4/new result만 사용한다 <!-- omo:id=accept-v2-null-contract;stage=2;scope=backend;review=3,6 -->
+- [ ] v2 stage order와 exact `beta_form_viewed_at → lead_submitted_at`이 DB CHECK로 강제된다 <!-- omo:id=accept-v2-stage-db-order;stage=2;scope=backend;review=3,6 -->
 
 ## Exact Question / Result Contract
 
@@ -33,9 +37,10 @@
 
 ## Attribution
 
-- [ ] known `utm_content` hook → `ad_variant` → `default` 순서로 Hero를 결정한다 <!-- omo:id=accept-hero-priority;stage=4;scope=frontend;review=5,6 -->
-- [ ] `ad_variant`는 `a | b | c | d | default`만 저장하고 UTM과 email을 분리한다 <!-- omo:id=accept-ad-variant;stage=2;scope=backend;review=3,6 -->
-- [ ] 개발용 `variant`와 unknown raw query는 public request field가 아니며 unknown API field는 `422`다 <!-- omo:id=accept-attribution-unknown;stage=2;scope=shared;review=3,6 -->
+- [ ] exact mapping은 `hook_reentry → a`, `hook_cooked_weight → b`, `hook_calorie_quiz → c`, `hook_workaround → d`다 <!-- omo:id=accept-hero-priority;stage=4;scope=frontend;review=5,6 -->
+- [ ] 저장 `ad_variant`는 resolved Hero variant이며 recognized `utm_content`가 `ad_variant`와 충돌하면 `utm_content`가 우선한다 <!-- omo:id=accept-ad-variant;stage=2;scope=backend;review=3,6 -->
+- [ ] unknown URL variant와 direct visit은 `default`이고 unknown `utm_content`는 valid candidate로 fall through한다 <!-- omo:id=accept-attribution-unknown;stage=2;scope=shared;review=3,6 -->
+- [ ] API enum 밖 `ad_variant`는 `422`이고 개발용 `variant`는 public request field가 아니다 <!-- omo:id=accept-attribution-validation;stage=2;scope=shared;review=3,6 -->
 
 ## Lead / PII / Consent
 
@@ -68,6 +73,8 @@
 - [ ] 320px 이상 폭, safe-area, 44×44px touch, visible focus, semantic label/heading/progress/live message를 만족한다 <!-- omo:id=accept-accessibility;stage=4;scope=frontend;review=5,6 -->
 - [ ] `prefers-reduced-motion`에서 자동 이동/count-up/motion은 즉시 완료 상태다 <!-- omo:id=accept-reduced-motion;stage=4;scope=frontend;review=5,6 -->
 - [ ] share 취소/미지원/복사 실패가 퍼널 error나 email gate로 전이되지 않는다 <!-- omo:id=accept-share-fallback;stage=4;scope=frontend;review=5,6 -->
+- [ ] canonical share는 `/beta?result=<opaque-result-key>`이고 공유 URL은 다른 query parameter를 모두 제거한다 <!-- omo:id=accept-share-deep-link;stage=4;scope=frontend;review=5,6 -->
+- [ ] email, answers, UTM, `ad_variant`는 공유 URL에 넣지 않는다. known result key만 read-only preview이며 unknown result key는 기본 Hero다 <!-- omo:id=accept-share-privacy;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
@@ -90,7 +97,7 @@
 
 ### Vitest
 
-- [ ] q1..q4 parser, Q3-only mapping, v2 action/state, legacy restart, idempotency, duplicate, consent, PII, migration을 단위/통합 테스트로 고정한다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
+- [ ] q1..q4 parser, Q3-only mapping, resolved ad variant, v2 action/state, legacy restart, idempotency, duplicate, consent, PII, conditional CHECK migration을 단위/통합 테스트로 고정한다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
 - [ ] old contract가 v2에서 조용히 통과하지 않고 `target_qualified`가 null임을 회귀 테스트로 고정한다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright

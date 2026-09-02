@@ -25,6 +25,7 @@
 - DB 영향:
   - 기존 `public.marketing_validation_sessions` 하나
   - nullable `ad_variant`, `result_viewed_at`, `experience_started_at`, `experience_completed_at`, `beta_form_viewed_at`
+  - v1 전용 CHECK를 `creative_key`별 v1/v2 conditional quiz/lead/stage/legacy-null CHECK로 교체
 - Schema Change:
   - [ ] 없음 (읽기 전용)
   - [x] 있음 → 후속 Stage 2에서 additive local-only migration 생성 필요
@@ -73,6 +74,8 @@
   - v2 `creative_key=mumeok_funnel_prototype_v2`
   - v1 cookie는 새 v2 `view`에서 새 row/cookie로 교체; historical v1 row write 금지
   - v1 action/result/followup field와 v2 의미를 implicit mapping하지 않음
+  - v1 row는 기존 quiz completeness, intent lead, timestamp CHECK를 보존
+  - v2 row는 q1..q4/new result, legacy field null, `target_qualified=null`, `beta_form_viewed_at → lead_submitted_at`을 DB CHECK로 강제
 - fail-closed
   - origin mismatch `403`, invalid transition `409`, validation/Turnstile `422`, readiness `503`
   - lead readiness가 닫혀도 result/experience/planner payoff는 계속 표시
@@ -90,6 +93,7 @@
 | consent | `marketing-demand-validation-v1` | `marketing-demand-validation-v2` | lead evidence version bump |
 | API endpoint | single POST | same single POST | path/method/count 변화 없음 |
 | DB table | single session table | same single session table | table count 변화 없음; nullable columns additive |
+| DB CHECK | v1 quiz target/intent/followup 전용 | creative_key별 v1 보존 + v2 null/new stage | 기존 CHECK 교체 migration과 v1/v2 fixture 필요 |
 | frontend | 5문항, concept/intent/followup | 4문항, 5단계 체험, planner payoff, beta form | high-risk Next.js port와 새 authority evidence 필요 |
 
 근거 runtime은 `types/marketing-validation.ts`, `lib/marketing/demand-validation.ts`, `lib/server/marketing-validation.ts`, `components/marketing/marketing-demand-validation-screen.tsx`, `supabase/migrations/20260831100000_marketing_validation_sessions.sql`, `tests/demand-validation.test.ts`, `tests/marketing-validation-route.test.ts`, `tests/marketing-demand-validation-landing.test.tsx`다. 이 Stage 1은 위 gap을 문서로만 잠그며 runtime이 이미 v2라고 주장하지 않는다.
@@ -109,6 +113,8 @@
 - UI risk: `high-risk`
 - Anchor screen dependency: 없음. isolated `/beta` 안의 planner representation이며 실제 `PLANNER_WEEK` anchor를 수정하지 않는다.
 - Visual artifact:
+  - `ui/designs/MARKETING_DEMAND_VALIDATION_V2.md`
+  - `ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md`
   - source prototype commit `63f8ef2a019c6d260a96a42fab9d67f727d93557`
   - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final/`
   - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/`
@@ -118,6 +124,8 @@
 - Notes:
   - source prototype은 standalone 기준 95/100 passed지만 Next.js port의 최종 authority가 아니다.
   - latest source는 뒤로가기·결과·체험·planner·beta layout과 최종 캐릭터/영양 자산을 개선했으며 exact 4문항·4결과 계약은 유지한다.
+  - Stage 1 generator artifact: `ui/designs/MARKETING_DEMAND_VALIDATION_V2.md`
+  - Stage 1 critic artifact: `ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md` — 🟢 통과, blocker/major/minor `0/0/0`
   - iPhone/Pixel frame과 기기 선택기는 평가·배포 대상이 아니다.
   - Stage 4는 app-owned 화면만 현재 shell/accessibility/motion 기준으로 구현하고 새 screenshot evidence를 만든다.
   - Stage 5와 final authority는 Stage 4 및 이 Stage 1 author와 다른 task ID를 사용한다.
@@ -152,6 +160,10 @@
   - v1 cookie → 새 v2 session
   - accepted/duplicate same response, lead retry, fail-closed readiness
   - no PII response/log/event
+  - v1 existing CHECK fixture + row digest preservation
+  - v2 target/legacy null fixture, stage-order/lead prerequisite rejection
+  - recognized UTM conflict, unknown UTM fallthrough, unknown/direct default resolved ad variant
+  - opaque result deep-link known/unknown and query stripping
 - real DB smoke
   - pinned isolated local stack에서 additive migration replay
   - controlled full-local은 사전 승인된 read-only/controlled runbook만 사용
@@ -177,6 +189,9 @@
 - single POST/single table/local-only boundary를 유지한다.
 - 익명 event와 email 신청은 별도 action/write boundary다.
 - UTM과 `ad_variant`는 email 원문과 분리한다.
+- 저장 `ad_variant`는 resolved Hero variant이며 recognized UTM conflict가 우선하고 unknown/direct는 default다.
+- canonical share URL은 opaque result key만 남기고 email/answers/UTM/ad variant를 제거한다.
+- v1 CHECK는 그대로 보존하고 v2 CHECK는 target/legacy null과 새 stage order를 강제한다.
 - same-action replay, duplicate email은 generic success다.
 - `consent_version`, `consented_at`, Turnstile, retention과 PII redaction을 잠근다.
 - source의 app-owned UI만 포팅하고 iPhone/Pixel frame/runtime을 배포하지 않는다.
@@ -217,4 +232,7 @@
 - author task/thread ID: `01a0630e-81f1-7f42-8b1b-cb259d1d5997`
 - user approval: current handoff prompt의 4문항/4결과 contract-evolution 승인
 - RED: `pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts` → 4 tests failed before document updates
-- independent internal 1.5: pending; 이 author task는 승인하지 않는다.
+- independent internal 1.5 reviewer task: `01a0636c-cdf3-74b1-8292-2d50418837a1`
+- reviewed head `0b8867dd61f56013859eb1ee5309582f2a1749e6`: `REQUEST_CHANGES`, findings `P1-001..P1-004`, `P2-001`
+- repair: creative-key conditional DB CHECK, generator/critic artifacts, PR projection, resolved ad variant, opaque share deep-link를 successor에서 보강한다. 이 author task는 repair를 승인하지 않으며 exact successor head 재검토가 필요하다.
+- Stage 1 design gate: generator 완료, design-critic 🟢 / findings 0. 이는 internal 1.5 재승인을 대체하지 않는다.

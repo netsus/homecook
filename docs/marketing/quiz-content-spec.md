@@ -75,6 +75,8 @@ client-supplied result는 받지 않는다. 서버가 Q3 value에서 결과를 �
 
 결과 공유는 지원 환경에서 Web Share API, 그 외 링크 복사를 사용한다. 취소, 미지원, 복사 실패가 결과를 지우거나 email 단계로 강제 이동시키지 않는다.
 
+canonical deep link는 exact `/beta?result=<opaque-result-key>`다. opaque value는 이 문서의 네 result key 중 하나이며 한국어 title을 query value로 사용하지 않는다. 공유 URL은 다른 query parameter를 모두 제거한다. email, answers, UTM, `ad_variant`는 공유 URL에 넣지 않는다. known result key만 read-only preview를 열고 unknown result key는 기본 Hero로 이동한다. preview는 DB quiz/result event를 만들지 않으며 수신자의 CTA는 Hero/Q1부터 새 테스트를 시작한다.
+
 ## 4. `target_qualified` 처리
 
 v2에는 승인된 `target_qualified` truth table이 없다. 따라서 Q1/Q2/Q4 또는 result key에서 적합도 boolean을 추론하지 않는다.
@@ -90,5 +92,5 @@ v2에는 승인된 `target_qualified` truth table이 없다. 따라서 Q1/Q2/Q4 
 - old result enum과 새 result enum 혼용
 - Q1/Q2/Q4 기반 implicit result/qualification mapping
 - email, consent, Turnstile token을 quiz answer/event에 포함
-- 답변/result/email을 URL이나 로그에 기록
+- answers/email/PII를 URL이나 로그에 기록. result는 canonical opaque result key deep link만 예외
 - unknown answer를 `none`이나 default result로 조용히 치환

@@ -12,13 +12,15 @@
 >
 > 서버 action 흐름은 `view → quiz_started → quiz_completed → result_viewed → experience_started → experience_completed → beta_form_viewed → lead_submitted`이다. 첫 `view`만 UUIDv4 `mumeok_validation_session` cookie를 발급한다. 같은 session/action replay는 first-write-wins generic success이고 다음 한 단계만 advance한다. 건너뛰기·역순은 `409 INVALID_TRANSITION`이며 mixed v1/v2 cookie는 새 v2 `view`로 재시작한다.
 >
-> `view`는 allowlisted `utm_*`와 normalized `ad_variant`만 기록한다. Hero 선택은 알려진 `utm_content` → `ad_variant` → `default`다. `quiz_completed`는 exact `q1..q4`와 Q3-derived result만 기록한다. 나머지 익명 action은 timestamp만 기록하며 email/consent/Turnstile을 받거나 쓰지 않는다.
+> `view`는 allowlisted `utm_*`와 resolved `ad_variant`만 기록한다. `hook_reentry→a`, `hook_cooked_weight→b`, `hook_calorie_quiz→c`, `hook_workaround→d`의 recognized UTM mapping이 candidate와 충돌하면 우선하고, unknown UTM은 valid candidate로 fall through하며 unknown/direct는 `default`다. `quiz_completed`는 exact `q1..q4`와 Q3-derived result만 기록한다. 나머지 익명 action은 timestamp만 기록하며 email/consent/Turnstile을 받거나 쓰지 않는다.
 >
 > `beta_form_viewed` 뒤 `lead_submitted`만 normalized email, `consent_version=marketing-demand-validation-v2`, server time `consented_at`, Turnstile verification evidence를 쓴다. 같은 session lead replay는 Turnstile을 다시 요구하지 않고, 다른 row의 normalized duplicate email은 Turnstile 검증 뒤 email을 보존하지 않은 `duplicate` 상태로 같은 generic success를 반환한다. response/log/URL/anonymous event에는 PII를 노출하지 않는다.
 >
 > lead gate가 닫혀도 `hero → result → experience → planner_complete`까지는 사용할 수 있다. 제출만 safe `503 LEAD_CAPTURE_NOT_READY|LEAD_CAPTURE_UNAVAILABLE` 또는 `422 TURNSTILE_FAILED`로 실패하고 beta form retry 상태에 남는다. operator privacy, `/privacy`, production origin/hostname/Turnstile/edge evidence/retention/sender/iOS/paid-ad blocker를 모두 닫기 전에는 lead를 열지 않는다.
 >
 > 기존 v1 action `solution_viewed | intent_selected | followup_submitted`와 neutral CTA/followup 화면은 v2에서 호출·렌더하지 않는다. historical row는 보존하고 v2 row에 implicit mapping하지 않는다.
+>
+> 결과 공유는 action chain 밖의 read-only presentation flow다. sender는 다른 query를 제거한 `/beta?result=<opaque-result-key>`만 공유하며 recipient의 known key는 read-only result preview, unknown key는 기본 Hero다. preview는 quiz/result event를 기록하지 않고 CTA는 Hero/Q1부터 정상 flow를 시작한다. email, answers, UTM, ad variant와 session identifier는 공유 URL에 없다.
 
 > **2026-08-31 contract-evolution — 마케팅 수요검증 흐름**
 >

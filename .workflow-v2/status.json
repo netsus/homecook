@@ -1397,7 +1397,7 @@
       "id": "taxonomy-v2-contract-evolution",
       "preset": "vertical-slice-strict",
       "branch": "feature/taxonomy-v2-implementation",
-      "pr_path": "https://github.com/netsus/homecook/pull/1497",
+      "pr_path": null,
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
@@ -1870,7 +1870,7 @@
       "id": "marketing-demand-validation-v2",
       "preset": "vertical-slice-strict",
       "branch": "docs/marketing-demand-validation-v2-contract",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/1497",
       "lifecycle": "planned",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -1883,7 +1883,7 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997 is relocking the user-approved source prototype 63f8ef2a019c6d260a96a42fab9d67f727d93557. RED 4/4 was observed before docs updates. Independent internal 1.5 review, Draft PR head evidence, Ready, merge, implementation, migration apply, and production mutation remain pending."
+      "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997 is relocking source prototype 63f8ef2a019c6d260a96a42fab9d67f727d93557 in Draft PR #1497. Internal 1.5 reviewer task 01a0636c-cdf3-74b1-8292-2d50418837a1 returned REQUEST_CHANGES P1-001..P1-004/P2-001 on head 0b8867dd61f56013859eb1ee5309582f2a1749e6; successor exact-head re-review remains pending. Ready, merge, implementation, migration apply, and production mutation are forbidden."
     },
     {
       "id": "auth-provider-memory-linking",

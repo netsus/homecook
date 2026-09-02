@@ -12,7 +12,9 @@
 >
 > 익명 action은 각각 `view`, `quiz_started`, `quiz_completed`, `result_viewed`, `experience_started`, `experience_completed`, `beta_form_viewed`다. PII action은 `lead_submitted` 하나다.
 >
-> `view` exact body는 `action`, 빈 `honeypot`, optional allowlisted `utm_source | utm_medium | utm_campaign | utm_content | utm_term`, optional normalized `ad_variant`만 허용한다. `ad_variant` enum은 `a | b | c | d | default`다. raw URL query의 알려진 `utm_content` hook를 frontend가 우선 해석하고, 그다음 `ad_variant`, 알 수 없는 값은 `default`로 정규화한다. 개발용 `variant`, email, result, campaign/creative/audience authority는 request field가 아니다.
+> `view` exact body는 `action`, 빈 `honeypot`, optional allowlisted `utm_source | utm_medium | utm_campaign | utm_content | utm_term`, optional normalized `ad_variant`만 허용한다. `ad_variant` enum은 `a | b | c | d | default`다. request `ad_variant`는 URL에서 정규화한 candidate이고 DB 저장 `ad_variant`는 resolved Hero variant다. 서버는 allowlisted `utm_content`와 candidate를 다시 resolve한 뒤 저장하므로 client가 conflict 결과를 결정하지 않는다.
+>
+> exact mapping은 `hook_reentry → a`, `hook_cooked_weight → b`, `hook_calorie_quiz → c`, `hook_workaround → d`다. recognized `utm_content`가 `ad_variant`와 충돌하면 `utm_content`가 우선한다. unknown `utm_content`는 valid candidate `ad_variant`로 fall through한다. unknown URL variant와 direct visit은 `default`다. frontend는 unknown URL variant를 `default`로 정규화하고, API에 enum 밖 `ad_variant`가 직접 들어오면 계속 `422 VALIDATION_ERROR`다. 개발용 `variant`, email, result, campaign/creative/audience authority는 request field가 아니다.
 >
 > `quiz_started | result_viewed | experience_started | experience_completed | beta_form_viewed`는 exact `{ action, honeypot: "" }`다. `quiz_completed`는 exact `{ action, honeypot: "", answers: { q1, q2, q3, q4 } }`이며 `q5`, unknown key, 누락, 허용하지 않은 선택지는 `422 VALIDATION_ERROR`다. 서버는 Q3 하나로 result를 다시 계산하고 client-supplied result를 받지 않는다.
 >

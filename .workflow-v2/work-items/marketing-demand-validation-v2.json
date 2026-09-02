@@ -34,6 +34,8 @@
       "docs/workpacks/marketing-demand-validation-v2/automation-spec.json",
       "docs/marketing/demand-validation-plan.md",
       "docs/marketing/quiz-content-spec.md",
+      "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+      "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
       "docs/workpacks/marketing-demand-validation/README.md",
       "docs/engineering/slice-workflow.md",
       "docs/engineering/agent-workflow-overview.md",
@@ -125,5 +127,5 @@
     "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
     "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
   ],
-  "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997. User-approved source prototype commit 63f8ef2a019c6d260a96a42fab9d67f727d93557. RED evidence: marketing-demand-validation-v2 document contract test failed 4/4 before docs updates. Draft PR: https://github.com/netsus/homecook/pull/1497. This task records but does not perform internal 1.5 review, Ready transition, merge, migration apply, or production mutation."
+  "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997. User-approved source prototype commit 63f8ef2a019c6d260a96a42fab9d67f727d93557. RED evidence: marketing-demand-validation-v2 document contract test failed before docs updates. Draft PR: https://github.com/netsus/homecook/pull/1497. Internal 1.5 reviewer task 01a0636c-cdf3-74b1-8292-2d50418837a1 reviewed 0b8867dd61f56013859eb1ee5309582f2a1749e6 and returned REQUEST_CHANGES P1-001..P1-004/P2-001; successor re-review is required. This task does not perform Ready transition, merge, migration apply, or production mutation."
 }

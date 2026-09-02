@@ -96,4 +96,77 @@ describe("marketing demand validation v2 document contract", () => {
     expect(workItem).toContain("01a0630e-81f1-7f42-8b1b-cb259d1d5997");
     expect(workItem).toContain("internal 1.5");
   });
+
+  it("replaces the v1 row checks with a creative-key conditional v1/v2 contract", () => {
+    const db = readRequired(officialFiles.db);
+    const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");
+
+    expect(db).toContain("creative_key별 조건부 CHECK 교체");
+    expect(db).toContain("`creative_key='mumeok_funnel_prototype_v2'`");
+    expect(db).toContain("`target_qualified IS NULL`");
+    expect(db).toContain("`beta_form_viewed_at <= lead_submitted_at`");
+    expect(db).toContain("v1 row는 기존 CHECK 의미를 그대로 보존");
+    expect(acceptance).toContain("v1 fixture는 기존 CHECK를 그대로 통과");
+    expect(acceptance).toContain("v2 fixture는 legacy field와 `target_qualified`가 모두 null");
+    expect(acceptance).toContain("`beta_form_viewed_at → lead_submitted_at`");
+  });
+
+  it("requires the Stage 1 design generator and critic artifacts", () => {
+    const generatorPath = "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md";
+    const criticPath = "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md";
+    const automation = JSON.parse(
+      readRequired("docs/workpacks/marketing-demand-validation-v2/automation-spec.json"),
+    );
+
+    readRequired(generatorPath);
+    readRequired(criticPath);
+    expect(automation.frontend.design_authority).toMatchObject({
+      generator_required: true,
+      generator_artifact: generatorPath,
+      critic_required: true,
+      critic_artifact: criticPath,
+    });
+  });
+
+  it("projects Draft PR 1497 only onto the v2 workflow item", () => {
+    const status = JSON.parse(readRequired(".workflow-v2/status.json"));
+    const taxonomy = status.items.find(
+      (item: { id: string }) => item.id === "taxonomy-v2-contract-evolution",
+    );
+    const marketingV2 = status.items.find(
+      (item: { id: string }) => item.id === "marketing-demand-validation-v2",
+    );
+
+    expect(taxonomy?.pr_path).toBeNull();
+    expect(marketingV2?.pr_path).toBe("https://github.com/netsus/homecook/pull/1497");
+  });
+
+  it("stores the resolved hero variant after deterministic attribution precedence", () => {
+    const api = readRequired(officialFiles.api);
+    const plan = readRequired("docs/marketing/demand-validation-plan.md");
+    const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");
+    const contract = `${api}\n${plan}\n${acceptance}`;
+
+    expect(contract).toContain("`hook_reentry → a`");
+    expect(contract).toContain("`hook_cooked_weight → b`");
+    expect(contract).toContain("`hook_calorie_quiz → c`");
+    expect(contract).toContain("`hook_workaround → d`");
+    expect(contract).toContain("저장 `ad_variant`는 resolved Hero variant");
+    expect(contract).toContain("recognized `utm_content`가 `ad_variant`와 충돌하면 `utm_content`가 우선");
+    expect(contract).toContain("unknown URL variant와 direct visit은 `default`");
+  });
+
+  it("allows only an opaque result key in the canonical share deep link", () => {
+    const requirements = readRequired(officialFiles.requirements);
+    const screens = readRequired(officialFiles.screens);
+    const quizSpec = readRequired("docs/marketing/quiz-content-spec.md");
+    const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");
+    const contract = `${requirements}\n${screens}\n${quizSpec}\n${acceptance}`;
+
+    expect(contract).toContain("`/beta?result=<opaque-result-key>`");
+    expect(contract).toContain("공유 URL은 다른 query parameter를 모두 제거");
+    expect(contract).toContain("email, answers, UTM, `ad_variant`는 공유 URL에 넣지 않는다");
+    expect(contract).toContain("known result key만 read-only preview");
+    expect(contract).toContain("unknown result key는 기본 Hero");
+  });
 });

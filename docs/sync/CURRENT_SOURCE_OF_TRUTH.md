@@ -24,9 +24,11 @@
 - 화면 흐름은 `hero → quiz(q1..q4) → result → experience(1..5) → planner_homecook → packaged_food → planner_complete → beta_form → done`이다. 결과와 전체 체험은 이메일 전에 공개한다.
 - 익명 stage action은 `view → quiz_started → quiz_completed → result_viewed → experience_started → experience_completed → beta_form_viewed`이고 PII를 받거나 쓰지 않는다. 이메일은 별도 `lead_submitted` action만 받는다.
 - 기존 `POST /api/v1/marketing/validation`, `public.marketing_validation_sessions`, `{ success, data, error }`, local-only Supabase 경계는 보존한다. 신규 endpoint/table은 없다.
-- v2는 `ad_variant=a|b|c|d|default`와 allowlisted `utm_*`를 저장한다. `utm_content`의 알려진 hook가 Hero를 먼저 결정하고, 그다음 `ad_variant`, 그 외는 `default`다. 개발용 `variant` query는 운영 API field가 아니다.
+- v2는 allowlisted `utm_*`와 resolved Hero variant인 `ad_variant=a|b|c|d|default`를 저장한다. exact mapping은 `hook_reentry→a`, `hook_cooked_weight→b`, `hook_calorie_quiz→c`, `hook_workaround→d`이며 recognized `utm_content`가 candidate `ad_variant`와 충돌하면 우선한다. unknown/direct는 `default`다. 개발용 `variant` query는 운영 API field가 아니다.
 - 기존 5문항 결과, `target_qualified`, `solution_viewed`/`intent_selected`/`followup_submitted`와 planner followup 컬럼은 historical v1 row 호환용으로만 보존한다. v2 row에서 `target_qualified`는 `null`이며 Q1/Q2/Q4로 새 적합도 규칙을 임의 발명하지 않는다.
 - normalized email duplicate와 동일 session replay는 같은 generic success를 반환한다. `consent_version=marketing-demand-validation-v2`, server-issued `consented_at`, Turnstile 검증, first-write-wins와 역순 409를 잠근다. email/consent/Turnstile field는 익명 action에서 거부한다.
+- 기존 v1 quiz/intent/stage CHECK는 `creative_key`별 조건부 CHECK로 교체한다. v1 row는 기존 의미를 보존하고 v2 row는 `target_qualified`/legacy field null, 새 stage 순서와 `beta_form_viewed_at <= lead_submitted_at`을 강제한다. migration/test/apply는 후속 Stage 2다.
+- 결과 공유는 `/beta?result=<opaque-result-key>`만 허용하며 다른 query를 제거한다. email/answers/UTM/ad variant는 공유 URL에서 금지하고 known key는 read-only preview, unknown key는 기본 Hero로 처리한다.
 - iPhone/Pixel frame, device selector와 standalone mobile runtime은 운영 범위 밖이다. `src/Prototype.tsx`, `src/prototype.css`, `public/assets/funnel/`의 app-owned 화면·스타일·최종 자산만 Next.js shell, 공용 접근성, `prefers-reduced-motion` 기준으로 포팅한다.
 - latest source commit은 뒤로가기, 결과·체험·planner·beta layout과 최종 캐릭터/영양 자산을 개선했으며 4문항·4결과·API/DB 계약은 바꾸지 않는다. 최신 visual evidence는 `evidence/design-qa/final-v4/`와 `final-v5/`다.
 - 실제 YouTube 썸네일과 제품 이미지는 공개 사용 전 권리를 확인해야 한다. 제품 이미지를 쓰면 `제품 예시`를 표시하고 제휴로 오인시키지 않는다. 권리 미확인 자산은 교체 전까지 production blocker다.

@@ -26,6 +26,7 @@ latest source는 뒤로가기·결과·체험·planner·beta layout, 최종 캐�
 - 5단계 체험, 집밥 식단 payoff, 완제품 식단 payoff도 이메일 전에 공개한다.
 - beta form 제출 성공 뒤에만 done을 보여 준다.
 - 기존 concept/neutral intent/followup은 v2 화면에 없다.
+- 결과 공유 URL은 `/beta?result=<opaque-result-key>`만 허용하고 다른 query를 제거한다. known key는 read-only preview, unknown key는 기본 Hero이며 공유 수신자는 Hero/Q1에서 정상 테스트를 시작한다.
 
 ## 3. 단일 API·DB 계약
 
@@ -48,9 +49,9 @@ PII action:
 
 익명 action은 email, consent, Turnstile field를 거부한다. `lead_submitted`만 email/consent/Turnstile을 받고 `consent_version=marketing-demand-validation-v2`, server time `consented_at`을 기록한다. accepted와 duplicate는 같은 generic success를 반환하고 PII는 response, URL, console/server log, analytics/event payload에 넣지 않는다.
 
-## 4. Attribution
+## 4. Attribution과 resolved Hero variant
 
-`view`는 아래 public field만 받는다.
+`view`는 아래 public field만 받는다. request의 `ad_variant`는 normalized candidate이고, 저장 `ad_variant`는 resolved Hero variant다.
 
 - `utm_source`
 - `utm_medium`
@@ -59,7 +60,14 @@ PII action:
 - `utm_term`
 - `ad_variant=a|b|c|d|default`
 
-`campaign_key`, `creative_key`, `audience_key`는 server authority다. v2 row는 `creative_key=mumeok_funnel_prototype_v2`로 구분한다. 개발용 `variant` query는 standalone 호환일 뿐 운영 API field가 아니다. unknown query/variant는 frontend에서 `default`로 정규화하고 API unknown field를 만들지 않는다.
+exact `utm_content` mapping:
+
+- `hook_reentry → a`
+- `hook_cooked_weight → b`
+- `hook_calorie_quiz → c`
+- `hook_workaround → d`
+
+recognized `utm_content`가 `ad_variant`와 충돌하면 `utm_content`가 우선한다. unknown `utm_content`는 valid `ad_variant` candidate로 fall through한다. unknown URL variant와 direct visit은 `default`다. `campaign_key`, `creative_key`, `audience_key`는 server authority다. v2 row는 `creative_key=mumeok_funnel_prototype_v2`로 구분한다. 개발용 `variant` query는 standalone 호환일 뿐 운영 API field가 아니다. API enum 밖 `ad_variant`는 `422`다.
 
 ## 5. Quiz/result와 legacy 경계
 

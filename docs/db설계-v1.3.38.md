@@ -10,13 +10,23 @@
 >
 > v2 successor migration은 기존 row를 삭제·재작성하지 않고 `ad_variant text`, `result_viewed_at timestamptz`, `experience_started_at timestamptz`, `experience_completed_at timestamptz`, `beta_form_viewed_at timestamptz`를 nullable additive column으로 추가한다. `ad_variant` 허용값은 `a | b | c | d | default`다. migration 파일 작성·isolated local replay·controlled full-local 적용은 후속 Stage 2 범위이며 이 docs PR에서는 apply/reset하지 않는다.
 >
-> v2 row는 server constant `creative_key=mumeok_funnel_prototype_v2`로 식별한다. `quiz_answers`는 exact `q1..q4` object이고 `quiz_result`는 `homecook-passer | eyeballing-master | ingredient-tracker | pro-measurer` 중 하나다. 기존 5개 result enum은 historical v1 row를 읽기 위해 constraint에 남기되 v2 write에서는 거부한다.
+> successor migration은 단순 column 추가로 끝나지 않는다. 현재 v1 전용 quiz completeness, lead intent, timestamp order CHECK를 **creative_key별 조건부 CHECK 교체**로 전환하고 안정적인 이름의 `marketing_validation_sessions_quiz_contract_check`, `marketing_validation_sessions_lead_contract_check`, `marketing_validation_sessions_stage_order_check`, `marketing_validation_sessions_v2_legacy_null_check`를 만든다. migration은 transaction 안에서 기존 CHECK를 교체하며 어느 검증이든 실패하면 전체 rollback한다.
+>
+> v2 row는 server constant `creative_key=mumeok_funnel_prototype_v2`로 식별하며 DB 조건식에서는 exact `creative_key='mumeok_funnel_prototype_v2'`를 사용한다. `quiz_answers`는 exact `q1..q4` object이고 `quiz_result`는 `homecook-passer | eyeballing-master | ingredient-tracker | pro-measurer` 중 하나다. 기존 5개 result enum은 historical v1 row를 읽기 위해 constraint에 남기되 v2 write에서는 거부한다.
+>
+> quiz CHECK는 두 branch를 가진다. v1 row는 기존 CHECK 의미를 그대로 보존한다: quiz 미완료면 `quiz_result`, `quiz_answers`, `target_qualified`가 모두 null이고, 완료면 세 값이 모두 non-null이다. v2 row는 quiz 미완료면 세 값이 모두 null이며, 완료면 exact q1..q4 answers와 새 result가 non-null이면서 `target_qualified IS NULL`이어야 한다. v2에서 q5, old result, non-null `target_qualified`는 DB CHECK에서도 거부한다.
 >
 > v2 익명 action은 attribution, `quiz_answers`, `quiz_result`, 위 stage timestamp만 first-write-wins로 갱신한다. anonymous action은 email을 쓰지 않는다. `email`, `consent_version`, `consented_at`, `turnstile_verified_at`, `lead_submitted_at`, `lead_submission_status`는 `lead_submitted` write boundary에서만 바뀐다. v2 consent는 exact `consent_version=marketing-demand-validation-v2`와 server-issued `consented_at`을 사용한다.
 >
 > `target_qualified`는 historical v1 분석 field다. v2에서는 `target_qualified=null`이고 새 Q1/Q2/Q4 적합도 계산을 추가하지 않는다. 기존 `solution_viewed_at`, `intent_choice`, `intent_clicked_at`, `planner_intent`, `planner_priority`, `followup_submitted_at`도 v1 historical field이며 `creative_key=mumeok_funnel_prototype_v2` row에서는 null이어야 한다. old/new 의미를 implicit mapping하지 않는다.
 >
+> v2 legacy-null CHECK는 `solution_viewed_at`, `intent_choice`, `intent_clicked_at`, `planner_intent`, `planner_priority`, `followup_submitted_at`, `target_qualified`가 모두 null임을 강제한다. 반대로 v1 row에는 새 v2 timestamp를 쓰지 않으며 `result_viewed_at`, `experience_started_at`, `experience_completed_at`, `beta_form_viewed_at`, `ad_variant`는 null로 유지한다.
+>
+> stage-order CHECK는 v1과 v2를 분리한다. v1은 기존 `viewed_at → quiz_started_at → quiz_completed_at → solution_viewed_at → intent_clicked_at → lead_submitted_at → followup_submitted_at` 순서와 `intent_choice='needed'` lead 조건을 그대로 보존한다. v2는 `viewed_at → quiz_started_at → quiz_completed_at → result_viewed_at → experience_started_at → experience_completed_at → beta_form_viewed_at → lead_submitted_at` 순서다. 각 뒤 timestamp는 앞 timestamp가 non-null이고 앞 시각 이상일 때만 non-null일 수 있으며 lead constraint는 exact `beta_form_viewed_at <= lead_submitted_at`을 요구한다. v2 lead는 `intent_choice`를 요구하지 않는다.
+>
 > accepted lead만 normalized email을 보관한다. normalized email unique index는 유지하고 duplicate row는 email을 null로 두면서 consent/Turnstile/server timestamp evidence와 `lead_submission_status=duplicate`만 보존한다. accepted/duplicate는 public response에서 구분하지 않는다. raw IP, user-agent, full referrer, cookie fingerprint, email을 포함한 analytics payload/log/URL, Turnstile token 원문은 저장하지 않는다. PII export/purge scope와 stdout redaction은 기존 최소 권한을 유지한다.
+>
+> migration acceptance는 다음을 최소로 고정한다. (1) pre-migration v1 fixture와 v1 mutation이 기존 CHECK를 그대로 통과하고 row digest가 바뀌지 않는다. (2) v2 fixture는 exact q1..q4/new result를 가지면서 legacy field와 `target_qualified`가 모두 null일 때 통과한다. (3) v2 non-null target, legacy field, q5/old result는 실패한다. (4) `beta_form_viewed_at` 없이 lead를 쓰거나 stage timestamp를 역순으로 쓰면 실패한다. (5) v1 row에 v2 field를 쓰거나 v2 row에 v1 field를 쓰면 실패한다. 이 acceptance를 migration contract test와 isolated local replay로 검증하기 전에는 apply 승인을 요청하지 않는다.
 >
 > RLS enabled/forced, anon/authenticated direct access 0, service-role와 exact full-local internal scope만 허용하는 경계는 유지한다. Supabase Cloud/linked/remote target, destructive full-local reset, 새 event table, direct browser write는 금지한다.
 
