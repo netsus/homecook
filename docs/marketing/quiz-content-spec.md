@@ -1,106 +1,94 @@
-# 무먹 주간 영양 광고 연계 퀴즈 콘텐츠 명세
+# 무먹 광고 퍼널 v2 퀴즈 콘텐츠 명세
 
-이 문서는 `/beta` 수요검증 랜딩의 5문항, 결과 키, 대조군, 후속 질문을 고정한다.
+- 상태: 2026-09-03 사용자 승인 contract-evolution
+- source prototype: `feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557`
+- Stage 1 author task: `01a0630e-81f1-7f42-8b1b-cb259d1d5997`
 
-## 1. 퀴즈 문항
+이 문서는 `/beta` v2의 exact `q1..q4` 질문, 선택지, 결과 key와 Q3-only 결과 규칙의 단일 authority다. 기존 5문항과 결과 `ingredient_reentry | rough_match | split_tracking | weekly_blindspot | satisfied_control`은 historical v1 계약이며 v2에 사용하지 않는다. `q5`는 허용하지 않는다.
 
-### Q1. 최근 4주 동안 칼로리나 탄단지 기록은 어땠나요?
+## 1. Exact 질문과 선택지
 
-- 관심이 없음
-- 해보려 했지만 시작하지 못함
-- 시작했지만 중단함
-- 가끔 기록 중
-- 꾸준히 기록 중
+모든 문항은 단일 선택이다. Q1/Q2의 비핵심 답변도 조기 종료하지 않고 네 문항을 모두 완료한다. value는 API/DB에 저장되는 exact enum이고 label은 사용자 표시 문구다.
 
-### Q2. 지난 7일 동안 집밥을 먹은 날은 며칠인가요?
+### `q1`
 
-- 0일
-- 1일
-- 2~3일
-- 4~7일
+질문: `평소 칼로리나 탄단지를 얼마나 자주 기록하나요?`
 
-### Q3. 직접 만든 음식을 기록할 때 보통 어떻게 하나요?
-
-- 재료를 하나씩 검색해 입력
-- 비슷한 완성 음식을 선택
-- 대략 계산
-- 저장한 레시피를 재사용
-- 집밥은 기록하지 않음
-
-### Q4. 가장 불편한 순간은 무엇인가요?
-
-- 레시피에 있는 재료를 다시 입력할 때
-- 조리 후 무게와 내가 먹은 양을 계산할 때
-- 집밥과 완제품을 따로 기록할 때
-- 하루 합계와 주간 흐름을 한눈에 못 볼 때
-- 특별히 불편하지 않음
-
-### Q5. 어떤 수준이라면 실제로 써보고 싶나요?
-
-- 빠른 추정값이면 충분
-- 레시피 기준 자동 계산
-- 완성 무게·섭취량까지 반영한 정확한 계산
-- 아직 잘 모르겠음
-- 현재 방식으로 충분함
-
-## 2. 결과 키
-
-결과 키는 다섯 개만 사용한다.
-
-| key | 의미 |
+| value | label |
 | --- | --- |
-| `ingredient_reentry` | 재료 재입력형 |
-| `rough_match` | 대충 기록형 |
-| `split_tracking` | 식단 분리형 |
-| `weekly_blindspot` | 주간 흐름 실종형 |
-| `satisfied_control` | 현재 방식 만족형 |
+| `daily` | 거의 매일 |
+| `3_5` | 주 3~5일 |
+| `1_2` | 주 1~2일 |
+| `none` | 거의 안 함 / 안 함 |
 
-우선순위 규칙:
+### `q2`
 
-1. Q4가 "특별히 불편하지 않음"이거나 Q5가 "현재 방식으로 충분함"이면 `satisfied_control`을 우선한다.
-2. 그 외에는 Q3와 Q4를 먼저 본다.
-3. Q1과 Q5는 동률 해소에만 사용한다.
-4. Q2는 결과 키가 아니라 적합도 판단에만 사용한다.
+질문: `일주일에 집밥을 몇 끼 정도 먹나요?`
 
-## 3. target_qualified truth table
+보조 설명: `직접 만들거나 가족이 만든 음식 모두 포함`
 
-대표 true 케이스 1개와 false 경계만 고정한다.
+| value | label |
+| --- | --- |
+| `none` | 거의 안 먹음 |
+| `1_2` | 1~2끼 |
+| `3_5` | 3~5끼 |
+| `6_plus` | 6끼 이상 |
 
-Q1은 `해보려 했지만 시작하지 못함 / 시작했지만 중단함 / 가끔 기록 중`, Q2는 `2~3일 / 4~7일`, Q4는 pain option, Q5는 `현재 방식으로 충분함`이 아닌 경우를 적합 범위로 본다. 네 조건을 모두 만족해야 true다.
+### `q3`
 
-| Q1 | Q2 | Q4 | Q5 | target_qualified |
-| --- | --- | --- | --- | --- |
-| 시작했지만 중단함 | 2~3일 | 집밥과 완제품을 따로 기록할 때 | 레시피 기준 자동 계산 | true |
-| 관심이 없음 | 2~3일 | 집밥과 완제품을 따로 기록할 때 | 레시피 기준 자동 계산 | false |
-| 꾸준히 기록 중 | 2~3일 | 집밥과 완제품을 따로 기록할 때 | 레시피 기준 자동 계산 | false |
-| 시작했지만 중단함 | 0일 | 집밥과 완제품을 따로 기록할 때 | 레시피 기준 자동 계산 | false |
-| 시작했지만 중단함 | 2~3일 | 특별히 불편하지 않음 | 레시피 기준 자동 계산 | false |
-| 시작했지만 중단함 | 2~3일 | 집밥과 완제품을 따로 기록할 때 | 현재 방식으로 충분함 | false |
+질문: `집밥은 주로 어떻게 기록하나요?`
 
-## 4. 중립 콘셉트와 의향 선택
+| value | label | result key | 결과명 |
+| --- | --- | --- | --- |
+| `pass` | 집밥은 기록하지 않음 | `homecook-passer` | 집밥 패스형 |
+| `eyeball` | 먹은 양을 눈대중으로 기록 | `eyeballing-master` | 눈대중 장인 |
+| `track` | 딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록 | `ingredient-tracker` | 성분 추적러 |
+| `measure` | 재료와 음식 무게까지 재서 기록 | `pro-measurer` | 프로 계량러 |
 
-결과와 콘셉트 화면의 CTA는 과장하지 않는다.
+### `q4`
 
-- 콘셉트 제목: `이렇게 기록할 수 있다면 어떨까요?`
-- 선택 A: `써보고 싶어요`
-- 선택 B: `지금은 필요하지 않아요`
+질문: `집밥을 기록할 때 가장 불편한 것은?`
 
-두 선택은 같은 크기와 위계로 보여준다. 기본 선택, 선호 강조, 사전 체크는 두지 않는다.
+| value | label |
+| --- | --- |
+| `ingredients` | 재료와 양을 하나씩 입력하는 것 |
+| `weight` | 완성된 음식과 먹은 양을 재는 것 |
+| `search` | 딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것 |
+| `none` | 별로 불편하지 않음 |
 
-## 5. 후속 질문
+## 2. Exact 결과 규칙
 
-이메일 제출 뒤에만 노출한다.
+결과는 Q3 하나로만 결정한다. Q1/Q2/Q4는 결과 점수, tie-break, hidden qualification에 영향을 주지 않는다. 같은 Q3라면 다른 세 답변이 달라도 같은 result key가 나와야 한다.
 
-### Q1. 이 주간 화면이 있다면 써볼 의향은?
+허용 결과는 아래 네 개뿐이다.
 
-- 꼭 써보고 싶음
-- 상황에 따라 써볼 것 같음
-- 필요하지 않음
+- `homecook-passer`
+- `eyeballing-master`
+- `ingredient-tracker`
+- `pro-measurer`
 
-### Q2. 가장 먼저 보고 싶은 정보는?
+client-supplied result는 받지 않는다. 서버가 Q3 value에서 결과를 다시 계산한다. old result key, unknown result, `q5`, unknown answer key는 `422 VALIDATION_ERROR`다.
 
-- 날짜별 kcal·탄·단·지
-- 주간 평균
-- 아침·점심·저녁·간식 표
-- 요리 계획과 식단 기록 전환
-- 관심 없음
+## 3. Result copy authority
+
+결과 title·quote·description·캐릭터는 source prototype `docs/product-decisions.md`와 `src/Prototype.tsx`의 사용자 확정 값을 포팅한다. result key와 한국어 title의 1:1 매핑은 바꾸지 않는다.
+
+결과 공유는 지원 환경에서 Web Share API, 그 외 링크 복사를 사용한다. 취소, 미지원, 복사 실패가 결과를 지우거나 email 단계로 강제 이동시키지 않는다.
+
+## 4. `target_qualified` 처리
+
+v2에는 승인된 `target_qualified` truth table이 없다. 따라서 Q1/Q2/Q4 또는 result key에서 적합도 boolean을 추론하지 않는다.
+
+- v2 row: `target_qualified=null`
+- v2 quiz response: `target_qualified: null`
+- historical v1 row: 기존 boolean 보존
+- v2 분석: `ad_variant`/result cohort의 `beta_form_viewed → accepted lead` 전환을 사용
+
+## 5. 금지 사항
+
+- `q5` 또는 5문항 progress
+- old result enum과 새 result enum 혼용
+- Q1/Q2/Q4 기반 implicit result/qualification mapping
+- email, consent, Turnstile token을 quiz answer/event에 포함
+- 답변/result/email을 URL이나 로그에 기록
+- unknown answer를 `none`이나 default result로 조용히 치환

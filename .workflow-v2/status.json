@@ -1867,6 +1867,25 @@
       "notes": "Canonical closeout: .workflow-v2/work-items/marketing-demand-validation.json#closeout. PR #1477, #1478, #1479, #1480, #1482, and safety follow-up #1487 are merged. Stage 6 exact-count export/purge, forward export scope, loopback full-local operator enforcement, result template, analysis SQL, and retained evidence passed independent Findings 0 reviews and current-head CI. Manual Only production lead blockers remain fail-closed. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1482 Stage 6 operations merge,GitHub PR #1487 safety follow-up and current-head checks,tests/marketing-validation-operations.test.ts,supabase/migrations/20260831120000_marketing_validation_export_scope.sql,docs/workpacks/marketing-demand-validation/evidence/2026-08-31-stage6-operational-closeout.md,independent Stage 6 plan-compliance safety-security and final-critic reviews | latest_reason_code=stage6-post-merge-operator-safety-repaired | last_recovery_at=2026-08-31T06:21:10Z"
     },
     {
+      "id": "marketing-demand-validation-v2",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/marketing-demand-validation-v2-contract",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/marketing-demand-validation-v2-contract pnpm validate:workpack",
+        "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
+        "pnpm validate:omo-bookkeeping",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 author task/thread 01a0630e-81f1-7f42-8b1b-cb259d1d5997 is relocking the user-approved source prototype 63f8ef2a019c6d260a96a42fab9d67f727d93557. RED 4/4 was observed before docs updates. Independent internal 1.5 review, Draft PR head evidence, Ready, merge, implementation, migration apply, and production mutation remain pending."
+    },
+    {
       "id": "auth-provider-memory-linking",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-auth-provider-memory-linking",

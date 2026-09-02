@@ -1,5 +1,6 @@
 {
   "slice_id": "marketing-demand-validation",
+  "successor_slice_id": "marketing-demand-validation-v2",
   "execution_mode": "manual",
   "risk_class": "high",
   "merge_policy": "manual",
