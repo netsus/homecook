@@ -236,3 +236,5 @@
 - reviewed head `0b8867dd61f56013859eb1ee5309582f2a1749e6`: `REQUEST_CHANGES`, findings `P1-001..P1-004`, `P2-001`
 - repair: creative-key conditional DB CHECK, generator/critic artifacts, PR projection, resolved ad variant, opaque share deep-link를 successor에서 보강한다. 이 author task는 repair를 승인하지 않으며 exact successor head 재검토가 필요하다.
 - Stage 1 design gate: generator 완료, design-critic 🟢 / findings 0. 이는 internal 1.5 재승인을 대체하지 않는다.
+- successor re-review head `6adb3baaab03bf0f9fec0cade5b4c9162902d486`: previous 5 findings CLOSED, new `P1-005` TomorrowPreview design/acceptance/evidence mismatch OPEN.
+- P1-005 repair: 두 planner wireframe에 오늘 card 다음·CTA 직전의 read-only TomorrowPreview를 추가하고 393/320 Stage 4 browser evidence를 잠근다. 이 repair도 exact successor head 재검토가 필요하다.

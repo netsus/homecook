@@ -159,6 +159,11 @@ loading → 성공 live message      [ 600g → 520g ] ← CTA
 │ │ 점심  닭가슴살 현미밥     + │ │
 │ │ 저녁  제육볶음 320g       + │ │  ← drop-in 강조
 │ └───────────────────────────┘ │
+│ ┌ TomorrowPreview ──────────┐ │
+│ │ 내일 · 9/4 (금)       0/3 │ │  ← 오늘 card 다음
+│ │ 아침       +  점심       + │ │
+│ │ 저녁       +              │ │  ← read-only affordance
+│ └───────────────────────────┘ │
 │ [ 편의점 음식도 기록해보기 → ] │  ← safe-area 위 primary
 └─────────────────────────────────┘
 
@@ -179,6 +184,10 @@ loading → 성공 live message      [ 600g → 520g ] ← CTA
 │ …같은 오늘 day card…            │
 │ 저녁  제육볶음 320g             │
 │       더:단백 드링크 초코       │  ← 같은 저녁 행, drop-in
+│ ┌ TomorrowPreview ────────────┐ │
+│ │ 내일 · 9/4 (금)         0/3 │ │  ← 오늘 card 다음
+│ │ 아침 +   점심 +   저녁 +    │ │  ← read-only affordance
+│ └─────────────────────────────┘ │
 │ [ 무료 베타 먼저 써보기 → ]     │
 └─────────────────────────────────┘
 ```
@@ -187,6 +196,7 @@ loading → 성공 live message      [ 600g → 520g ] ← CTA
 - 날짜 범위 컨트롤은 요일/오늘 card 바로 위에 둔다. 모든 7일은 viewport 안에서 맞추며 페이지 전체 가로 스크롤을 만들지 않는다.
 - 같은 날짜의 아침·점심·저녁은 하나의 day card로 묶는다. desktop에서도 별도 dashboard나 다른 navigation model로 바꾸지 않는다.
 - source의 `+`는 데모 맥락을 보여 주는 시각 요소다. Stage 4에서 활성화할 문서 계약이 없으므로 focusable mutation CTA로 만들지 않거나 명확히 disabled/read-only 처리한다.
+- 두 planner의 내일 preview는 모두 오늘 card 다음, primary CTA 직전에 둔다. 내일 날짜와 `0 / 3`, 아침·점심·저녁 empty slot을 보여 주되 내일 preview의 `+`는 read-only 또는 disabled semantics이며 실제 meal/planner mutation을 만들지 않는다.
 - 첫 payoff는 `1,607 kcal / 177g / 111g / 60g`, 두 번째는 `1,712 kcal / 184g / 131g / 61g`이다. 완제품은 제육볶음과 같은 저녁 묶음에 추가한다.
 - 제품 카드에는 `제품 예시`를 항상 보이게 하고 제휴·추천으로 오인시키지 않는다. 이미지 사용 권리 확인 또는 대체 자산 승인은 production blocker다.
 
@@ -323,8 +333,8 @@ loading → 성공 live message      [ 600g → 520g ] ← CTA
 ## Stage 4 evidence 및 authority 계획
 
 - future evidence root: `ui/designs/evidence/marketing-demand-validation-v2/`
-- mobile default 393×852: Hero, Q1, 각 result 대표/4종 확인, demo 1~5, planner_homecook, packaged_food, planner_complete, beta default/error/submitting, done
-- mobile narrow 320×568: Q4 긴 선택지, 긴 result, demo 2, planner 두 상태, beta keyboard/error, done safe-area
+- mobile default 393×852: Hero, Q1, 각 result 대표/4종 확인, demo 1~5, planner_homecook의 내일 preview, packaged_food, planner_complete의 내일 preview, beta default/error/submitting, done
+- mobile narrow 320×568: Q4 긴 선택지, 긴 result, demo 2, 두 planner의 내일 preview와 CTA 배치, beta keyboard/error, done safe-area
 - 상태 evidence: loading, stale/missing session empty, `403/409/422/503`, share cancel/copy fail, accepted/duplicate generic success, lead read-only
 - automated geometry: page-level overflow 0, touch target, sticky/fixed CTA overlap, 200% zoom, keyboard occlusion
 - manual: VoiceOver/TalkBack, 실제 키보드 focus, iOS Safari safe area, native share cancel/fallback, 이미지 권리·제품 예시·비제휴 표시

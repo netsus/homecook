@@ -75,6 +75,8 @@
 - [ ] share 취소/미지원/복사 실패가 퍼널 error나 email gate로 전이되지 않는다 <!-- omo:id=accept-share-fallback;stage=4;scope=frontend;review=5,6 -->
 - [ ] canonical share는 `/beta?result=<opaque-result-key>`이고 공유 URL은 다른 query parameter를 모두 제거한다 <!-- omo:id=accept-share-deep-link;stage=4;scope=frontend;review=5,6 -->
 - [ ] email, answers, UTM, `ad_variant`는 공유 URL에 넣지 않는다. known result key만 read-only preview이며 unknown result key는 기본 Hero다 <!-- omo:id=accept-share-privacy;stage=4;scope=frontend;review=5,6 -->
+- [ ] planner_homecook과 planner_complete 모두 TomorrowPreview를 오늘 card 다음·primary CTA 직전에 표시한다 <!-- omo:id=accept-tomorrow-preview-layout;stage=4;scope=frontend;review=5,6 -->
+- [ ] 내일 preview의 `+`는 read-only 또는 disabled이며 실제 planner/meal mutation을 만들지 않는다 <!-- omo:id=accept-tomorrow-preview-read-only;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
@@ -103,6 +105,7 @@
 ### Playwright
 
 - [ ] Hero→q1..q4→result→experience→planner→beta→done 사용자 흐름과 session recovery를 고정한다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [ ] 393px와 320px에서 두 planner의 내일 preview, 오늘 card 다음 배치, CTA visibility, read-only `+`를 browser evidence로 고정한다 <!-- omo:id=accept-playwright-tomorrow-preview;stage=4;scope=frontend;review=5,6 -->
 - [ ] mock lead와 optional local Turnstile/smoke를 구분하고 production key를 테스트에 사용하지 않는다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only

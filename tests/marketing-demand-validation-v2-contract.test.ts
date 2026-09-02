@@ -169,4 +169,25 @@ describe("marketing demand validation v2 document contract", () => {
     expect(contract).toContain("known result key만 read-only preview");
     expect(contract).toContain("unknown result key는 기본 Hero");
   });
+
+  it("keeps TomorrowPreview aligned across official screen, both planner wireframes, acceptance, and Stage 4 evidence", () => {
+    const screens = readRequired(officialFiles.screens);
+    const design = readRequired("ui/designs/MARKETING_DEMAND_VALIDATION_V2.md");
+    const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");
+    const automation = JSON.parse(
+      readRequired("docs/workpacks/marketing-demand-validation-v2/automation-spec.json"),
+    );
+    const stage4Evidence = automation.frontend.design_authority.stage4_evidence_requirements;
+
+    expect(screens).toContain("내일 식단 preview");
+    expect(design.match(/TomorrowPreview/g)).toHaveLength(2);
+    expect(design).toContain("오늘 card 다음, primary CTA 직전");
+    expect(design).toContain("내일 preview의 `+`는 read-only");
+    expect(acceptance).toContain("planner_homecook과 planner_complete 모두 TomorrowPreview");
+    expect(acceptance).toContain("내일 preview의 `+`는 read-only");
+    expect(stage4Evidence).toEqual(expect.arrayContaining([
+      "planner-homecook-tomorrow-preview-393-320",
+      "planner-complete-tomorrow-preview-393-320",
+    ]));
+  });
 });
