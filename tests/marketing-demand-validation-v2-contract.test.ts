@@ -128,7 +128,7 @@ describe("marketing demand validation v2 document contract", () => {
     });
   });
 
-  it("projects Draft PR 1497 only onto the v2 workflow item", () => {
+  it("projects the current Stage 2 Draft PR only onto the v2 workflow item", () => {
     const status = JSON.parse(readRequired(".workflow-v2/status.json"));
     const taxonomy = status.items.find(
       (item: { id: string }) => item.id === "taxonomy-v2-contract-evolution",
@@ -138,7 +138,7 @@ describe("marketing demand validation v2 document contract", () => {
     );
 
     expect(taxonomy?.pr_path).toBeNull();
-    expect(marketingV2?.pr_path).toBe("https://github.com/netsus/homecook/pull/1497");
+    expect(marketingV2?.pr_path).toBe("https://github.com/netsus/homecook/pull/1498");
   });
 
   it("stores the resolved hero variant after deterministic attribution precedence", () => {
