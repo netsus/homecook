@@ -132,9 +132,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — v2 Stage 1 재잠금
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후
-- [ ] 확정 (confirmed) — Stage 5와 final authority blocker 0 후
+- [ ] 임시 UI (temporary) — v2 Stage 1 재잠금
+- [ ] 리뷰 대기 (pending-review) — Stage 4 구현/evidence 완료, 독립 Stage 5/final authority 대기
+- [x] 확정 (confirmed) — Stage 5 `APPROVE`, final authority `CONFIRMED 93/100`, blocker/major `0/0`
 - [ ] N/A — BE-only 슬라이스
 
 ## Source Links
@@ -217,14 +217,14 @@
 - [x] v2 백엔드 계약 고정: q1..q4, Q3 result, v2 actions, legacy boundary <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 API adapter를 v2 single-route/single-table 계약으로 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] shared type을 q1..q4, 네 result, nullable target, v2 actions로 변경 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] source app-owned UI를 Next.js `/beta`로 포팅 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] source app-owned UI를 Next.js `/beta`로 포팅 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이/legacy session/멱등성/duplicate/fail-closed/PII 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] Vitest/Playwright/a11y/visual/Lighthouse 범위 분리 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest/Playwright/a11y/visual/Lighthouse 범위 분리 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] isolated migration fixture와 controlled full-local smoke 분리 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] v2 session bootstrap와 legacy cookie restart 검증 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] loading/empty/error/read-only/unauthorized(N/A) 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 이미지 권리/제품 예시/실기기/lead blocker 수동 QA handoff <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] v2 cohort 분석 SQL/result template을 old taxonomy 없이 갱신 <!-- omo:id=delivery-stage6-operations-closeout;stage=4;scope=shared;review=6 -->
+- [x] loading/empty/error/read-only/unauthorized(N/A) 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 이미지 권리/제품 예시/실기기/lead blocker 수동 QA handoff <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] v2 cohort 분석 SQL/result template을 old taxonomy 없이 갱신 <!-- omo:id=delivery-stage6-operations-closeout;stage=4;scope=shared;review=6 -->
 
 ## Stage 1 Evidence
 
@@ -256,3 +256,38 @@
 - independent reviewer task `01a063fb-8d16-7842-8b81-09e863ebee18` approved reviewed implementation head `b5d4ea2babcc69d13753119acbf4371f61aea317`, tree `d9c79898d0f695aec83ed08b20be6e394476229e`, with findings 0.
 - retained artifact: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage3-backend-review.md`
 - this evidence-only successor commit is not covered by that approval until the same reviewer rechecks its new exact head. The author does not self-approve or merge.
+
+## Stage 4 Evidence
+
+- implementer role: `frontend-implementer`; this task does not self-approve or merge.
+- RED: detached base `c29d4a9bd39a8b9d4fcd89b1160bf64290ef405e` + current Stage 4 tests only → Vitest `20 failed / 20 total` (`tests/marketing-client-session.test.ts`, `tests/marketing-demand-validation-landing.test.tsx`).
+- GREEN focused:
+  - Vitest landing/client-session/metadata → `24/24`
+  - product-focused marketing suite → `37/37`
+  - operations/contract suite → `23/23`
+  - Playwright marketing flow → `16 passed / 2 intentional skips`
+  - Playwright marketing visual snapshot update → `3 passed`
+- evidence artifacts:
+  - authority precheck: `ui/designs/authority/MARKETING_DEMAND_VALIDATION_V2-authority.md`
+  - Stage 4 captures: `ui/designs/evidence/marketing-demand-validation-v2/`
+  - exploratory QA bundle: `.artifacts/qa/marketing-demand-validation-v2/2026-09-03T07-26-41-418Z/`
+- Stage 5 repair increased the focused landing coverage to `20/20`, product frontend suite to `41/41`, and preserved contract `12/12`, operations `11/11`, browser `16 pass / 2 intentional skips`, a11y `3/3`, visual `3/3`, and Lighthouse three-run success.
+- exact repaired product head/tree: `4a746ad2c33710a12e0227abc59f92f771041e19` / `b47c0510b0531a2b4036ee910add4d12dbce1090`.
+
+## Stage 5 Evidence
+
+- independent reviewer task `/root/stage5_frontend_review` returned `APPROVE` on the exact repaired product head/tree.
+- all five initial findings are closed; new `P0/P1/P2/P3 = 0/0/0/0`.
+- retained report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage5-frontend-rereview.md`.
+
+## Final Product Design Authority
+
+- independent authority task `/root/final_product_design_authority` returned `CONFIRMED 93/100` with blocker/major `0/0`.
+- the A/B/C/D hook-to-hero mapping, complete funnel, characters, responsive evidence, and recovery feedback preserve the approved source direction.
+- retained report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-final-product-design-authority.md`.
+
+## Stage 6 Candidate
+
+- repair publication report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-repair-publication.md`.
+- remaining gate: fresh independent Stage 6 review of the evidence-only successor, successor-head CI, Ready validation, merge, and post-merge exact-tree verification.
+- all Manual Only production blockers remain open; no production, remote database, release, or deployment action is authorized by this candidate.

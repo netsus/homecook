@@ -1,0 +1,504 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "marketing-demand-validation-v2",
+  "generatedAt": "2026-09-03T07:26:41.420Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "sourceFiles": {
+    "readme": "docs/workpacks/marketing-demand-validation-v2/README.md",
+    "acceptance": "docs/workpacks/marketing-demand-validation-v2/acceptance.md"
+  },
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "primaryUserPath": [
+    "사용자가 광고 또는 직접 URL로 `/beta`에 들어오고 normalized Hero를 본다.",
+    "exact 네 문항에 답하고 Q3-derived 결과를 즉시 확인·공유한다.",
+    "5단계 집밥 기록 체험과 두 planner payoff를 완료한다.",
+    "beta form을 보고 consent와 email을 제출한다.",
+    "accepted/duplicate generic success 뒤 done을 본다."
+  ],
+  "testDataSetup": [
+    {
+      "title": "fixture baseline",
+      "steps": [
+        "Hero a/b/c/d/default와 `utm_content` 우선순위",
+        "exact q1..q4 options, Q3-only 네 result mapping",
+        "anonymous stage replay/advance/skip/reverse",
+        "v1 cookie → 새 v2 session",
+        "accepted/duplicate same response, lead retry, fail-closed readiness",
+        "no PII response/log/event",
+        "v1 existing CHECK fixture + row digest preservation",
+        "v2 target/legacy null fixture, stage-order/lead prerequisite rejection",
+        "recognized UTM conflict, unknown UTM fallthrough, unknown/direct default resolved ad variant",
+        "opaque result deep-link known/unknown and query stripping"
+      ]
+    },
+    {
+      "title": "real DB smoke",
+      "steps": [
+        "pinned isolated local stack에서 additive migration replay",
+        "controlled full-local은 사전 승인된 read-only/controlled runbook만 사용",
+        "single `marketing_validation_sessions` table와 exact internal scope 확인"
+      ]
+    },
+    {
+      "title": "seed/reset",
+      "steps": [
+        "isolated disposable stack만 migration replay 가능",
+        "운영 데이터가 있는 full-local reset/volume delete 금지"
+      ]
+    },
+    {
+      "title": "bootstrap/system row",
+      "steps": [
+        "별도 system row 없음",
+        "first `view`가 v2 session row와 cookie를 생성하는 owning flow"
+      ]
+    },
+    {
+      "title": "blocker",
+      "steps": [
+        "schema/constraint가 v1 history를 훼손함",
+        "extra route/table/direct browser DB access",
+        "old/new action/result 혼용",
+        "권리 미확인 이미지와 제품 예시 표시 누락",
+        "lead readiness fail-open"
+      ]
+    }
+  ],
+  "checklistItems": [
+    {
+      "id": "happy-path-1",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "`ad_variant`/`utm_content`로 선택된 Hero에서 같은 Q1로 이동하고 q1..q4를 모두 완료한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-2",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "`q1`, `q2`, `q3`, `q4`의 질문·선택지와 `1 / 4..4 / 4` progress가 exact spec과 일치하며 `q5`는 허용하지 않는다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-3",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "결과가 Q3 하나로만 `homecook-passer | eyeballing-master | ingredient-tracker | pro-measurer` 중 하나가 된다 <!-- omo:id=accept-result-taxonomy;stage=2;scope=shared;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-4",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "결과·공유·5단계 체험·두 planner payoff가 beta form 전에 공개된다 <!-- omo:id=accept-result-before-email;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-5",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "API 응답 형식이 `{ success, data, error }`, error가 `{ code, message, fields[] }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-6",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "백엔드 action/result/answer 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-1",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "`view → quiz_started → quiz_completed → result_viewed → experience_started → experience_completed → beta_form_viewed → lead_submitted`만 허용한다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-2",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "동일 session/action replay는 first-write-wins generic success이고 skip/reverse는 `409 INVALID_TRANSITION`이다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-3",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "v1 cookie는 새 v2 row/cookie로 재시작하고 v1 row와 v2 action/result를 섞지 않는다 <!-- omo:id=accept-legacy-session-boundary;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-4",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "lead readiness가 닫혀도 result/experience/planner payoff는 read-only로 유지된다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-5",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "v2 `target_qualified`는 response/DB에서 null이며 Q1/Q2/Q4 hidden rule을 만들지 않는다 <!-- omo:id=accept-target-null;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-6",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "successor migration이 기존 CHECK를 creative_key별 v1/v2 조건부 CHECK로 교체한다 <!-- omo:id=accept-conditional-db-checks;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-7",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "v1 fixture는 기존 CHECK를 그대로 통과하고 row digest가 유지된다 <!-- omo:id=accept-v1-check-preservation;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-8",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "v2 fixture는 legacy field와 `target_qualified`가 모두 null이며 q1..q4/new result만 사용한다 <!-- omo:id=accept-v2-null-contract;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-9",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "v2 stage order와 exact `beta_form_viewed_at → lead_submitted_at`이 DB CHECK로 강제된다 <!-- omo:id=accept-v2-stage-db-order;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "exact-question-result-contract-1",
+      "section": "Exact Question / Result Contract",
+      "subsection": null,
+      "text": "같은 Q3에 Q1/Q2/Q4 조합을 바꿔도 result가 변하지 않는다 <!-- omo:id=accept-q3-only-result;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "exact-question-result-contract-2",
+      "section": "Exact Question / Result Contract",
+      "subsection": null,
+      "text": "old result key, unknown result, unknown answer key, `q5`, 누락 answer는 `422 VALIDATION_ERROR`다 <!-- omo:id=accept-old-contract-rejected;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "attribution-1",
+      "section": "Attribution",
+      "subsection": null,
+      "text": "exact mapping은 `hook_reentry → a`, `hook_cooked_weight → b`, `hook_calorie_quiz → c`, `hook_workaround → d`다 <!-- omo:id=accept-hero-priority;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "attribution-2",
+      "section": "Attribution",
+      "subsection": null,
+      "text": "저장 `ad_variant`는 resolved Hero variant이며 recognized `utm_content`가 `ad_variant`와 충돌하면 `utm_content`가 우선한다 <!-- omo:id=accept-ad-variant;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "attribution-3",
+      "section": "Attribution",
+      "subsection": null,
+      "text": "unknown URL variant와 direct visit은 `default`이고 unknown `utm_content`는 valid candidate로 fall through한다 <!-- omo:id=accept-attribution-unknown;stage=2;scope=shared;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "attribution-4",
+      "section": "Attribution",
+      "subsection": null,
+      "text": "API enum 밖 `ad_variant`는 `422`이고 개발용 `variant`는 public request field가 아니다 <!-- omo:id=accept-attribution-validation;stage=2;scope=shared;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "lead-pii-consent-1",
+      "section": "Lead / PII / Consent",
+      "subsection": null,
+      "text": "anonymous action은 email/consent/Turnstile field를 거부하고 PII column을 쓰지 않는다 <!-- omo:id=accept-anonymous-pii-boundary;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "lead-pii-consent-2",
+      "section": "Lead / PII / Consent",
+      "subsection": null,
+      "text": "`lead_submitted`만 normalized email, `consent_version=marketing-demand-validation-v2`, server `consented_at`, verified timestamp를 쓴다 <!-- omo:id=accept-consent-evidence;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "lead-pii-consent-3",
+      "section": "Lead / PII / Consent",
+      "subsection": null,
+      "text": "same-session lead replay는 Turnstile을 다시 요구하지 않고 accepted/duplicate는 같은 generic success다 <!-- omo:id=accept-duplicate-generic-success;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "lead-pii-consent-4",
+      "section": "Lead / PII / Consent",
+      "subsection": null,
+      "text": "duplicate row는 email을 저장하지 않고 accepted row만 normalized email을 보관한다 <!-- omo:id=accept-duplicate-email-redaction;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "lead-pii-consent-5",
+      "section": "Lead / PII / Consent",
+      "subsection": null,
+      "text": "email/Turnstile token/raw IP/user-agent/full referrer/cookie fingerprint가 URL, response, anonymous event, console/server log에 없다 <!-- omo:id=accept-pii-redaction;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "error-permission-1",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-2",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "stale/missing session을 새 Hero로 복구하는 empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-3",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "validation/Turnstile/readiness/server error 상태가 결과·체험을 지우지 않는다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-4",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "unauthorized는 N/A다. public no-login funnel이고 browser DB access는 없다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-5",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "`403 ORIGIN_NOT_ALLOWED`, `409 INVALID_TRANSITION`, `422 VALIDATION_ERROR|TURNSTILE_FAILED`, `503 LEAD_CAPTURE_NOT_READY|LEAD_CAPTURE_UNAVAILABLE` recovery가 있다 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-6",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "로그인 return-to-action 대신 session restart/retry가 동작한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "high"
+    },
+    {
+      "id": "data-integrity-1",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "기존 `public.marketing_validation_sessions` 한 table과 기존 POST 한 endpoint만 사용한다 <!-- omo:id=accept-single-table-route;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-2",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "RLS forced, anon/authenticated direct access 0, exact full-local internal scope를 유지한다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-3",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "v2 nullable columns와 result constraint가 historical v1 row를 보존한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-4",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "q3→result, `creative_key=mumeok_funnel_prototype_v2`, server timestamp와 attribution projection이 정확하다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-1",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "`src/Prototype.tsx`, `src/prototype.css`, `public/assets/funnel/`의 app-owned surface만 포팅한다 <!-- omo:id=accept-app-owned-port;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-2",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "iPhone/Pixel frame, device selector, `src/mobile/`, standalone keyboard/status/runtime을 운영 bundle에 넣지 않는다 <!-- omo:id=accept-runtime-excluded;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-3",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "320px 이상 폭, safe-area, 44×44px touch, visible focus, semantic label/heading/progress/live message를 만족한다 <!-- omo:id=accept-accessibility;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-4",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "`prefers-reduced-motion`에서 자동 이동/count-up/motion은 즉시 완료 상태다 <!-- omo:id=accept-reduced-motion;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-5",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "share 취소/미지원/복사 실패가 퍼널 error나 email gate로 전이되지 않는다 <!-- omo:id=accept-share-fallback;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-6",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "canonical share는 `/beta?result=<opaque-result-key>`이고 공유 URL은 다른 query parameter를 모두 제거한다 <!-- omo:id=accept-share-deep-link;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-7",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "email, answers, UTM, `ad_variant`는 공유 URL에 넣지 않는다. known result key만 read-only preview이며 unknown result key는 기본 Hero다 <!-- omo:id=accept-share-privacy;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-8",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "planner_homecook과 planner_complete 모두 TomorrowPreview를 오늘 card 다음·primary CTA 직전에 표시한다 <!-- omo:id=accept-tomorrow-preview-layout;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "frontend-port-accessibility-9",
+      "section": "Frontend Port / Accessibility",
+      "subsection": null,
+      "text": "내일 preview의 `+`는 read-only 또는 disabled이며 실제 planner/meal mutation을 만들지 않는다 <!-- omo:id=accept-tomorrow-preview-read-only;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "manual-qa-1",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "verifier: Stage 4와 다른 Stage 5/final authority/Stage 6 task",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-2",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "environment: local Next.js + mock/isolated full-local; production activation은 별도 승인 전 금지",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-3",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "scenarios:",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-mobile-readability",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "모바일에서 정렬, 필터, CTA처럼 자주 쓰는 control의 텍스트가 읽기 어려울 정도로 작지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-small-viewport-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "작은 높이 viewport(iPhone SE 급)에서 primary CTA가 가려지지 않고 짧은 스크롤 안에서 도달 가능한지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-duplicate-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "같은 기능을 수행하는 CTA가 한 화면에 중복으로 노출되지 않는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-information-hierarchy",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "핵심 정보와 그 정보에 대한 액션이 물리적으로 멀리 떨어지지 않고 같은 맥락 안에 배치되는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-copy-sanity",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "h1/h2, 버튼, 상태 메시지 카피가 과하게 길거나 어색하지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-empty-noop",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "empty, loading, error 상태에서 사용자가 의미 없는 no-op CTA를 누를 수 없는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-placeholder-polish",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "아이콘, 버튼, 피드백 표현이 placeholder나 MVP 임시 UI처럼 보이지 않는지 확인한다.",
+      "priority": "high"
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "desktop-happy-path",
+      "text": "Desktop viewport에서 대표 사용자 흐름을 처음부터 끝까지 다시 검증한다."
+    },
+    {
+      "id": "mobile-happy-path",
+      "text": "Mobile viewport에서 동일 흐름을 다시 검증한다."
+    },
+    {
+      "id": "small-viewport-fold",
+      "text": "작은 iOS viewport(iPhone SE 급)에서 above-the-fold 영역과 하단 CTA 가시성을 확인한다."
+    },
+    {
+      "id": "hard-refresh",
+      "text": "중간 상태에서 hard refresh 후 상태 복원과 URL 정합성을 확인한다."
+    },
+    {
+      "id": "back-forward",
+      "text": "뒤로가기/앞으로가기 후 UI와 상태가 어긋나지 않는지 확인한다."
+    },
+    {
+      "id": "slow-network",
+      "text": "느린 네트워크에서 pending, skeleton, retry UX를 확인한다."
+    },
+    {
+      "id": "offline-recovery",
+      "text": "오프라인 또는 서버 오류에서 에러 메시지와 복구 동선을 확인한다."
+    },
+    {
+      "id": "keyboard-only",
+      "text": "키보드만으로 주요 동선과 모달 닫기/탐색이 가능한지 확인한다."
+    },
+    {
+      "id": "double-submit",
+      "text": "중복 탭/연속 클릭 시 중복 호출 방지와 최종 상태 일관성을 확인한다."
+    },
+    {
+      "id": "auth-return-to-action",
+      "text": "비로그인 보호 액션 후 로그인 복귀와 return-to-action 재실행을 확인한다."
+    },
+    {
+      "id": "read-only-bypass",
+      "text": "read-only 상태에서 우회 수정 시도와 409/차단 UX를 확인한다."
+    }
+  ]
+}

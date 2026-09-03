@@ -4,12 +4,12 @@
 
 ## Happy Path
 
-- [ ] `ad_variant`/`utm_content`로 선택된 Hero에서 같은 Q1로 이동하고 q1..q4를 모두 완료한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] `q1`, `q2`, `q3`, `q4`의 질문·선택지와 `1 / 4..4 / 4` progress가 exact spec과 일치하며 `q5`는 허용하지 않는다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] `ad_variant`/`utm_content`로 선택된 Hero에서 같은 Q1로 이동하고 q1..q4를 모두 완료한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] `q1`, `q2`, `q3`, `q4`의 질문·선택지와 `1 / 4..4 / 4` progress가 exact spec과 일치하며 `q5`는 허용하지 않는다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
 - [x] 결과가 Q3 하나로만 `homecook-passer | eyeballing-master | ingredient-tracker | pro-measurer` 중 하나가 된다 <!-- omo:id=accept-result-taxonomy;stage=2;scope=shared;review=3,6 -->
-- [ ] 결과·공유·5단계 체험·두 planner payoff가 beta form 전에 공개된다 <!-- omo:id=accept-result-before-email;stage=4;scope=frontend;review=5,6 -->
+- [x] 결과·공유·5단계 체험·두 planner payoff가 beta form 전에 공개된다 <!-- omo:id=accept-result-before-email;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`, error가 `{ code, message, fields[] }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 action/result/answer 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 action/result/answer 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
@@ -39,7 +39,7 @@
 
 ## Attribution
 
-- [ ] exact mapping은 `hook_reentry → a`, `hook_cooked_weight → b`, `hook_calorie_quiz → c`, `hook_workaround → d`다 <!-- omo:id=accept-hero-priority;stage=4;scope=frontend;review=5,6 -->
+- [x] exact mapping은 `hook_reentry → a`, `hook_cooked_weight → b`, `hook_calorie_quiz → c`, `hook_workaround → d`다 <!-- omo:id=accept-hero-priority;stage=4;scope=frontend;review=5,6 -->
 - [x] 저장 `ad_variant`는 resolved Hero variant이며 recognized `utm_content`가 `ad_variant`와 충돌하면 `utm_content`가 우선한다 <!-- omo:id=accept-ad-variant;stage=2;scope=backend;review=3,6 -->
 - [x] unknown URL variant와 direct visit은 `default`이고 unknown `utm_content`는 valid candidate로 fall through한다 <!-- omo:id=accept-attribution-unknown;stage=2;scope=shared;review=3,6 -->
 - [x] API enum 밖 `ad_variant`는 `422`이고 개발용 `variant`는 public request field가 아니다 <!-- omo:id=accept-attribution-validation;stage=2;scope=shared;review=3,6 -->
@@ -54,12 +54,12 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] stale/missing session을 새 Hero로 복구하는 empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] validation/Turnstile/readiness/server error 상태가 결과·체험을 지우지 않는다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized는 N/A다. public no-login funnel이고 browser DB access는 없다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] `403 ORIGIN_NOT_ALLOWED`, `409 INVALID_TRANSITION`, `422 VALIDATION_ERROR|TURNSTILE_FAILED`, `503 LEAD_CAPTURE_NOT_READY|LEAD_CAPTURE_UNAVAILABLE` recovery가 있다 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 return-to-action 대신 session restart/retry가 동작한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] stale/missing session을 새 Hero로 복구하는 empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] validation/Turnstile/readiness/server error 상태가 결과·체험을 지우지 않는다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized는 N/A다. public no-login funnel이고 browser DB access는 없다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] `403 ORIGIN_NOT_ALLOWED`, `409 INVALID_TRANSITION`, `422 VALIDATION_ERROR|TURNSTILE_FAILED`, `503 LEAD_CAPTURE_NOT_READY|LEAD_CAPTURE_UNAVAILABLE` recovery가 있다 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 return-to-action 대신 session restart/retry가 동작한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -70,15 +70,15 @@
 
 ## Frontend Port / Accessibility
 
-- [ ] `src/Prototype.tsx`, `src/prototype.css`, `public/assets/funnel/`의 app-owned surface만 포팅한다 <!-- omo:id=accept-app-owned-port;stage=4;scope=frontend;review=5,6 -->
-- [ ] iPhone/Pixel frame, device selector, `src/mobile/`, standalone keyboard/status/runtime을 운영 bundle에 넣지 않는다 <!-- omo:id=accept-runtime-excluded;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320px 이상 폭, safe-area, 44×44px touch, visible focus, semantic label/heading/progress/live message를 만족한다 <!-- omo:id=accept-accessibility;stage=4;scope=frontend;review=5,6 -->
-- [ ] `prefers-reduced-motion`에서 자동 이동/count-up/motion은 즉시 완료 상태다 <!-- omo:id=accept-reduced-motion;stage=4;scope=frontend;review=5,6 -->
-- [ ] share 취소/미지원/복사 실패가 퍼널 error나 email gate로 전이되지 않는다 <!-- omo:id=accept-share-fallback;stage=4;scope=frontend;review=5,6 -->
-- [ ] canonical share는 `/beta?result=<opaque-result-key>`이고 공유 URL은 다른 query parameter를 모두 제거한다 <!-- omo:id=accept-share-deep-link;stage=4;scope=frontend;review=5,6 -->
-- [ ] email, answers, UTM, `ad_variant`는 공유 URL에 넣지 않는다. known result key만 read-only preview이며 unknown result key는 기본 Hero다 <!-- omo:id=accept-share-privacy;stage=4;scope=frontend;review=5,6 -->
-- [ ] planner_homecook과 planner_complete 모두 TomorrowPreview를 오늘 card 다음·primary CTA 직전에 표시한다 <!-- omo:id=accept-tomorrow-preview-layout;stage=4;scope=frontend;review=5,6 -->
-- [ ] 내일 preview의 `+`는 read-only 또는 disabled이며 실제 planner/meal mutation을 만들지 않는다 <!-- omo:id=accept-tomorrow-preview-read-only;stage=4;scope=frontend;review=5,6 -->
+- [x] `src/Prototype.tsx`, `src/prototype.css`, `public/assets/funnel/`의 app-owned surface만 포팅한다 <!-- omo:id=accept-app-owned-port;stage=4;scope=frontend;review=5,6 -->
+- [x] iPhone/Pixel frame, device selector, `src/mobile/`, standalone keyboard/status/runtime을 운영 bundle에 넣지 않는다 <!-- omo:id=accept-runtime-excluded;stage=4;scope=frontend;review=5,6 -->
+- [x] 320px 이상 폭, safe-area, 44×44px touch, visible focus, semantic label/heading/progress/live message를 만족한다 <!-- omo:id=accept-accessibility;stage=4;scope=frontend;review=5,6 -->
+- [x] `prefers-reduced-motion`에서 자동 이동/count-up/motion은 즉시 완료 상태다 <!-- omo:id=accept-reduced-motion;stage=4;scope=frontend;review=5,6 -->
+- [x] share 취소/미지원/복사 실패가 퍼널 error나 email gate로 전이되지 않는다 <!-- omo:id=accept-share-fallback;stage=4;scope=frontend;review=5,6 -->
+- [x] canonical share는 `/beta?result=<opaque-result-key>`이고 공유 URL은 다른 query parameter를 모두 제거한다 <!-- omo:id=accept-share-deep-link;stage=4;scope=frontend;review=5,6 -->
+- [x] email, answers, UTM, `ad_variant`는 공유 URL에 넣지 않는다. known result key만 read-only preview이며 unknown result key는 기본 Hero다 <!-- omo:id=accept-share-privacy;stage=4;scope=frontend;review=5,6 -->
+- [x] planner_homecook과 planner_complete 모두 TomorrowPreview를 오늘 card 다음·primary CTA 직전에 표시한다 <!-- omo:id=accept-tomorrow-preview-layout;stage=4;scope=frontend;review=5,6 -->
+- [x] 내일 preview의 `+`는 read-only 또는 disabled이며 실제 planner/meal mutation을 만들지 않는다 <!-- omo:id=accept-tomorrow-preview-read-only;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
@@ -106,9 +106,9 @@
 
 ### Playwright
 
-- [ ] Hero→q1..q4→result→experience→planner→beta→done 사용자 흐름과 session recovery를 고정한다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 393px와 320px에서 두 planner의 내일 preview, 오늘 card 다음 배치, CTA visibility, read-only `+`를 browser evidence로 고정한다 <!-- omo:id=accept-playwright-tomorrow-preview;stage=4;scope=frontend;review=5,6 -->
-- [ ] mock lead와 optional local Turnstile/smoke를 구분하고 production key를 테스트에 사용하지 않는다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] Hero→q1..q4→result→experience→planner→beta→done 사용자 흐름과 session recovery를 고정한다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 393px와 320px에서 두 planner의 내일 preview, 오늘 card 다음 배치, CTA visibility, read-only `+`를 browser evidence로 고정한다 <!-- omo:id=accept-playwright-tomorrow-preview;stage=4;scope=frontend;review=5,6 -->
+- [x] mock lead와 optional local Turnstile/smoke를 구분하고 production key를 테스트에 사용하지 않는다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 

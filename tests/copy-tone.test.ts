@@ -82,6 +82,8 @@ describe("user-facing copy tone", () => {
       "표시됩니다",
       "공유되었습니다",
       "복사되었습니다",
+      "이메일을 입력해주세요.",
+      "이메일 형식을 확인해주세요.",
     ];
 
     for (const filePath of targets) {

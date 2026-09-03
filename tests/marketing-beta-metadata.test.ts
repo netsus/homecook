@@ -9,6 +9,7 @@ describe("/beta metadata", () => {
         canonical: "/beta",
       },
       openGraph: {
+        images: ["/assets/funnel/share/og-share.png"],
         title: "30초 식단 기록 테스트",
         type: "website",
         url: "/beta",
@@ -18,6 +19,11 @@ describe("/beta metadata", () => {
         index: false,
       },
       title: "30초 식단 기록 테스트",
+      twitter: {
+        card: "summary_large_image",
+        images: ["/assets/funnel/share/og-share.png"],
+        title: "30초 식단 기록 테스트",
+      },
     });
   });
 

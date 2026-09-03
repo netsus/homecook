@@ -1,540 +1,287 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/image", () => ({
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
-    const { priority, ...imageProps } = props;
+  default: ({ alt = "", priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
     void priority;
-
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img alt="" {...imageProps} />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img {...props} alt={alt} />
+    );
   },
 }));
 
 const postMarketingValidation = vi.fn();
+vi.mock("@/lib/api/marketing-validation", () => ({ postMarketingValidation: (...args: unknown[]) => postMarketingValidation(...args) }));
 
-vi.mock("@/lib/api/marketing-validation", () => ({
-  postMarketingValidation: (...args: unknown[]) => postMarketingValidation(...args),
-}));
-
-async function importScreen() {
-  return import("@/components/marketing/marketing-demand-validation-screen");
+async function importScreen() { return import("@/components/marketing/marketing-demand-validation-screen"); }
+async function importSession() { return import("@/lib/marketing/marketing-validation-client-session"); }
+function ok(state: string, extra: Record<string, unknown> = {}) { return { success: true, data: { stage: state, state, ...extra }, error: null }; }
+function installHappyApi() {
+  postMarketingValidation.mockImplementation(async (body: { action: string }) => body.action === "quiz_completed"
+    ? ok("quiz_completed", { quiz_result: "ingredient-tracker", target_qualified: null })
+    : ok(body.action));
 }
 
-async function openHappyPathIntent(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("button", { name: "30초 식단 기록 테스트" }));
-  await user.click(screen.getByRole("radio", { name: "시작했지만 중단함" }));
-  await user.click(screen.getByRole("button", { name: "다음 질문" }));
-  await user.click(screen.getByRole("radio", { name: "2~3일" }));
-  await user.click(screen.getByRole("button", { name: "다음 질문" }));
-  await user.click(screen.getByRole("radio", { name: "재료를 하나씩 검색해 입력" }));
-  await user.click(screen.getByRole("button", { name: "다음 질문" }));
-  await user.click(screen.getByRole("radio", { name: "하루 합계와 주간 흐름을 한눈에 못 볼 때" }));
-  await user.click(screen.getByRole("button", { name: "다음 질문" }));
-  await user.click(screen.getByRole("radio", { name: "레시피 기준 자동 계산" }));
-  await user.click(screen.getByRole("button", { name: "결과 보기" }));
-  await user.click(await screen.findByRole("button", { name: "이렇게 기록할 수 있다면 어떨까요?" }));
+async function answerQuiz(user: ReturnType<typeof userEvent.setup>, { waitForResult = true } = {}) {
+  await user.click(await screen.findByRole("button", { name: "테스트 시작하기" }));
+  for (const answer of ["거의 매일", "3~5끼", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"]) {
+    await user.click(screen.getByRole("button", { name: answer }));
+  }
+  if (waitForResult) await screen.findByRole("heading", { name: "성분 추적러" });
 }
 
-async function openHappyPathFollowup(user: ReturnType<typeof userEvent.setup>) {
-  await openHappyPathIntent(user);
-  await user.click(screen.getByRole("button", { name: "써보고 싶어요" }));
-  await user.type(screen.getByLabelText("이메일"), "tester@example.com");
-  await user.click(screen.getByRole("checkbox", { name: /베타 초대와 관련 안내를 이메일로 받는 데 동의합니다\./ }));
-  await user.click(screen.getByRole("button", { name: "베타 우선 초대받기" }));
-  await screen.findByRole("heading", { name: "조금만 더 알려주세요" });
+async function reachBeta(user: ReturnType<typeof userEvent.setup>) {
+  await answerQuiz(user);
+  await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
+  await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
+  await user.click(await screen.findByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }));
+  await user.click(screen.getByRole("button", { name: "다음" }));
+  await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+  await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
+  await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
+  await user.click(screen.getByRole("button", { name: "편의점 음식도 기록해보기" }));
+  await user.click(screen.getByRole("button", { name: "+ 기록하기" }));
+  await user.click(screen.getByRole("button", { name: "무료 베타 먼저 써보기" }));
+  await screen.findByRole("textbox", { name: "이메일" });
 }
 
-describe("marketing demand validation landing", () => {
+describe("marketing demand validation v2 landing", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/beta");
     window.sessionStorage.clear();
     postMarketingValidation.mockReset();
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })) });
+  });
+  afterEach(cleanup);
+
+  it("shows loading and recovers a missing session through the empty restart state", async () => {
+    postMarketingValidation.mockResolvedValue({ success: false, data: null, error: { code: "SESSION_NOT_FOUND", message: "진행 정보를 찾지 못했어요.", fields: [] } });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+    expect(screen.getByRole("status", { name: "테스트 불러오는 중" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "새 테스트로 다시 시작할게요." })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "새로 시작하기" })).toBeTruthy();
   });
 
-  afterEach(() => {
-    cleanup();
+  it.each([
+    ["hook_reentry", "a", "왜 레시피에 다 있는데"],
+    ["hook_cooked_weight", "b", "요리 전 1,420g"],
+    ["hook_calorie_quiz", "c", "이 제육볶음 300g"],
+    ["hook_workaround", "d", "식단은 꼼꼼히 기록하는데"],
+  ])("uses utm_content %s ahead of candidate variant %s", async (utm, variant, title) => {
+    window.history.replaceState({}, "", `/beta?utm_content=${utm}&ad_variant=d`);
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+    expect((await screen.findByRole("heading")).textContent).toContain(title);
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({ action: "view", ad_variant: variant, utm_content: utm }));
   });
 
-  it("moves focus and scroll handoff to the active section heading when the flow advances", async () => {
-    postMarketingValidation
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "view" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "quiz_started", state: "quiz_started" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: {
-          quiz_result: "weekly_blindspot",
-          stage: "quiz_completed",
-          state: "quiz_completed",
-          target_qualified: true,
-        },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "solution_viewed", state: "solution_viewed" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "intent_selected", state: "intent_selected" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "lead_submitted", state: "lead_submitted" },
-      });
+  it("falls back to default Hero for unknown result and preserves allowlisted attribution", async () => {
+    window.history.replaceState({}, "", "/beta?result=not-real&utm_source=campaign&ad_variant=z");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+    expect(await screen.findByRole("heading", { name: "집밥도 정확하게 기록할 수 있을까?" })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith({ action: "view", honeypot: "", ad_variant: "default", utm_source: "campaign" });
+  });
 
-    const scrollIntoView = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-      configurable: true,
-      value: scrollIntoView,
-      writable: true,
+  it("renders a known opaque result as read-only without recording quiz events", async () => {
+    window.history.replaceState({}, "", "/beta?result=pro-measurer&utm_source=must-go");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+    expect(await screen.findByRole("heading", { name: "프로 계량러" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "나도 테스트하기" })).toBeTruthy();
+    expect(postMarketingValidation).not.toHaveBeenCalled();
+  });
+
+  it("shows four-question progress, preserves back answers, and exposes result before email", async () => {
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await user.click(await screen.findByRole("button", { name: "테스트 시작하기" }));
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("1");
+    await user.click(screen.getByRole("button", { name: "거의 매일" }));
+    expect(await screen.findByText("2 / 4")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "이전 질문" }));
+    expect(screen.getByRole("button", { name: "거의 매일" }).getAttribute("aria-pressed")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "거의 매일" }));
+    for (const answer of ["3~5끼", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"]) await user.click(screen.getByRole("button", { name: answer }));
+    expect(await screen.findByRole("heading", { name: "성분 추적러" })).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "이메일" })).toBeNull();
+  });
+
+  it("keeps result_viewed queued, blocks result navigation, and offers retry/restart when the durable write fails", async () => {
+    const { readMarketingQueue } = await importSession();
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "quiz_completed") {
+        return ok("quiz_completed", { quiz_result: "ingredient-tracker", target_qualified: null });
+      }
+      if (body.action === "result_viewed") {
+        const resultViewedCalls = postMarketingValidation.mock.calls.filter(([payload]) => payload.action === "result_viewed").length;
+        return resultViewedCalls === 1
+          ? { success: false, data: null, error: { code: "NETWORK_ERROR", message: "결과 화면을 열지 못했어요. 다시 시도해 주세요.", fields: [] } }
+          : ok("result_viewed");
+      }
+      return ok(body.action);
     });
-
     const { MarketingDemandValidationScreen } = await importScreen();
     const user = userEvent.setup();
     render(<MarketingDemandValidationScreen />);
 
-    await openHappyPathIntent(user);
+    await answerQuiz(user, { waitForResult: false });
 
-    const intentHeading = screen.getByRole("heading", {
-      name: "이렇게 기록할 수 있다면 어떨까요?",
-    });
+    expect(screen.queryByRole("heading", { name: "성분 추적러" })).toBeNull();
+    expect((await screen.findByRole("alert")).textContent).toContain("결과 화면을 열지 못했어요. 다시 시도해 주세요.");
+    expect(readMarketingQueue()).toEqual([{ action: "result_viewed" }]);
 
-    expect(intentHeading.getAttribute("tabindex")).toBe("-1");
-    expect(scrollIntoView).toHaveBeenCalled();
-    expect(document.activeElement).toBe(intentHeading);
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
 
-    await user.click(screen.getByRole("button", { name: "써보고 싶어요" }));
-    const emailHeading = await screen.findByRole("heading", {
-      name: "이런 앱이라면 써보고 싶나요?",
-    });
-    expect(emailHeading.getAttribute("tabindex")).toBe("-1");
-    expect(document.activeElement).toBe(emailHeading);
-
-    await user.type(screen.getByLabelText("이메일"), "tester@example.com");
-    await user.click(screen.getByRole("checkbox", { name: /베타 초대와 관련 안내를 이메일로 받는 데 동의합니다\./ }));
-    await user.click(screen.getByRole("button", { name: "베타 우선 초대받기" }));
-
-    const followupHeading = await screen.findByRole("heading", { name: "조금만 더 알려주세요" });
-    expect(followupHeading.getAttribute("tabindex")).toBe("-1");
-    expect(document.activeElement).toBe(followupHeading);
-  });
-
-  it("shows the locked hero copy and restores the quiz/result flow from the server view state", async () => {
-    postMarketingValidation.mockResolvedValueOnce({
-      error: null,
-      success: true,
-      data: {
-        stage: "view",
-        state: "quiz_started",
-      },
-    });
-
-    const { MarketingDemandValidationScreen } = await importScreen();
-    render(<MarketingDemandValidationScreen />);
-
-    expect(await screen.findByText("레시피도, 편의점도")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "하루·한 주 영양을 한눈에" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "30초 식단 기록 테스트" })).toBeTruthy();
-    expect(screen.getByText("무료 · 로그인 없이 참여")).toBeTruthy();
-
-    await waitFor(() => {
-      expect(screen.getByText("1/5")).toBeTruthy();
-    });
-  });
-
-  it("keeps the result visible when lead submission fails closed and allows email retry", async () => {
-    postMarketingValidation
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "view" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "quiz_started", state: "quiz_started" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: {
-          quiz_result: "weekly_blindspot",
-          stage: "quiz_completed",
-          state: "quiz_completed",
-          target_qualified: true,
-        },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "solution_viewed", state: "solution_viewed" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "intent_selected", state: "intent_selected" },
-      })
-      .mockResolvedValue({
-        success: false,
-        data: null,
-        error: {
-          code: "LEAD_CAPTURE_NOT_READY",
-          message: "베타 신청은 아직 열리지 않았어요.",
-          fields: [],
-        },
-      });
-
-    const { MarketingDemandValidationScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<MarketingDemandValidationScreen />);
-
-    await user.click(await screen.findByRole("button", { name: "30초 식단 기록 테스트" }));
-    await user.click(screen.getByRole("radio", { name: "시작했지만 중단함" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "2~3일" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "재료를 하나씩 검색해 입력" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "하루 합계와 주간 흐름을 한눈에 못 볼 때" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "레시피 기준 자동 계산" }));
-    await user.click(screen.getByRole("button", { name: "결과 보기" }));
-    await user.click(await screen.findByRole("button", { name: "이렇게 기록할 수 있다면 어떨까요?" }));
-    await user.click(screen.getByRole("button", { name: "써보고 싶어요" }));
-    await user.type(screen.getByLabelText("이메일"), "tester@example.com");
-    await user.click(screen.getByRole("checkbox", { name: /베타 초대와 관련 안내를 이메일로 받는 데 동의합니다\./ }));
-    await user.click(screen.getByRole("button", { name: "베타 우선 초대받기" }));
-
-    expect(await screen.findByText("주간 흐름 실종형")).toBeTruthy();
-    expect(screen.getByDisplayValue("tester@example.com")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain("베타 신청은 아직 열리지 않았어요.");
-  });
-
-  it("keeps the negative branch neutral and ends without the email form", async () => {
-    postMarketingValidation
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "view" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "quiz_started", state: "quiz_started" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: {
-          quiz_result: "satisfied_control",
-          stage: "quiz_completed",
-          state: "quiz_completed",
-          target_qualified: false,
-        },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "solution_viewed", state: "solution_viewed" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "intent_selected", state: "intent_selected" },
-      });
-
-    const { MarketingDemandValidationScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<MarketingDemandValidationScreen />);
-
-    await user.click(await screen.findByRole("button", { name: "30초 식단 기록 테스트" }));
-    await user.click(screen.getByRole("radio", { name: "가끔 기록 중" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "4~7일" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "저장한 레시피를 재사용" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "특별히 불편하지 않음" }));
-    await user.click(screen.getByRole("button", { name: "다음 질문" }));
-    await user.click(screen.getByRole("radio", { name: "현재 방식으로 충분함" }));
-    await user.click(screen.getByRole("button", { name: "결과 보기" }));
-    await user.click(await screen.findByRole("button", { name: "이렇게 기록할 수 있다면 어떨까요?" }));
-    await user.click(screen.getByRole("button", { name: "지금은 필요하지 않아요" }));
-
-    expect(await screen.findByText("지금 방식도 괜찮은 편")).toBeTruthy();
-    expect(screen.queryByLabelText("이메일")).toBeNull();
-    expect(screen.getByText("이 응답도 제품 우선순위를 정하는 데 중요합니다.")).toBeTruthy();
-  });
-
-  it("does not render followup or done beside the restore-gap empty state", async () => {
-    postMarketingValidation.mockResolvedValueOnce({
-      error: null,
-      success: true,
-      data: { stage: "view", state: "lead_submitted" },
-    });
-
-    const { MarketingDemandValidationScreen } = await importScreen();
-    render(<MarketingDemandValidationScreen />);
-
-    expect(await screen.findByText("이전 결과를 바로 복원하지 못했어요")).toBeTruthy();
-    expect(screen.queryByText("조금만 더 알려주세요")).toBeNull();
-    expect(screen.queryByText("참여해 주셔서 고마워요")).toBeNull();
-  });
-
-  it("removes a stale queued head after INVALID_TRANSITION resync and does not block the next lead submission", async () => {
-    const { MARKETING_VALIDATION_CLIENT_STORAGE_KEY, readMarketingQueue } = await import(
-      "@/lib/marketing/marketing-validation-client-session"
-    );
-
-    window.sessionStorage.setItem(
-      MARKETING_VALIDATION_CLIENT_STORAGE_KEY,
-      JSON.stringify({
-        queue: [
-          { action: "solution_viewed" },
-          { action: "intent_selected", intent_choice: "needed" },
-        ],
-        snapshot: {
-          intentChoice: "needed",
-          quizAnswers: {
-            q1: "시작했지만 중단함",
-            q2: "2~3일",
-            q3: "재료를 하나씩 검색해 입력",
-            q4: "하루 합계와 주간 흐름을 한눈에 못 볼 때",
-            q5: "레시피 기준 자동 계산",
-          },
-          quizResult: "weekly_blindspot",
-          serverState: "quiz_completed",
-          stage: "email",
-          targetQualified: true,
-        },
-        version: 1,
-      }),
-    );
-
-    postMarketingValidation
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "quiz_completed" },
-      })
-      .mockResolvedValueOnce({
-        success: false,
-        data: null,
-        error: {
-          code: "INVALID_TRANSITION",
-          message: "허용되지 않은 접근이에요.",
-          fields: [],
-        },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "solution_viewed" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "intent_selected", state: "intent_selected" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "lead_submitted", state: "lead_submitted" },
-      });
-
-    const { MarketingDemandValidationScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<MarketingDemandValidationScreen />);
-
-    await waitFor(() => {
-      expect(readMarketingQueue()).toEqual([]);
-    });
-    expect(await screen.findByLabelText("이메일")).toBeTruthy();
-
-    await user.type(screen.getByLabelText("이메일"), "tester@example.com");
-    await user.click(screen.getByRole("checkbox", { name: /베타 초대와 관련 안내를 이메일로 받는 데 동의합니다\./ }));
-    await user.click(screen.getByRole("button", { name: "베타 우선 초대받기" }));
-
-    expect(await screen.findByRole("heading", { name: "조금만 더 알려주세요" })).toBeTruthy();
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(await screen.findByRole("heading", { name: "성분 추적러" })).toBeTruthy();
     expect(readMarketingQueue()).toEqual([]);
-    expect(
-      postMarketingValidation.mock.calls.map(([payload]) => (
-        payload as { action?: string }
-      ).action),
-    ).toEqual([
-      "view",
-      "solution_viewed",
-      "view",
-      "intent_selected",
-      "lead_submitted",
-    ]);
   });
 
-  it("renders both followup questions as named radio groups", async () => {
-    postMarketingValidation
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "view" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "quiz_started", state: "quiz_started" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: {
-          quiz_result: "weekly_blindspot",
-          stage: "quiz_completed",
-          state: "quiz_completed",
-          target_qualified: true,
-        },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "solution_viewed", state: "solution_viewed" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "intent_selected", state: "intent_selected" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "lead_submitted", state: "lead_submitted" },
-      });
+  it("keeps both TomorrowPreview controls disabled and before their CTA", async () => {
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await answerQuiz(user);
+    await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
+    await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
+    await user.click(await screen.findByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }));
+    await user.click(screen.getByRole("button", { name: "다음" }));
+    await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+    await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
+    await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
+    const firstPreview = screen.getByTestId("tomorrow-preview");
+    expect(firstPreview.compareDocumentPosition(screen.getByRole("button", { name: "편의점 음식도 기록해보기" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const button of screen.getAllByRole("button", { name: /내일 .* 추가/ })) expect((button as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole("button", { name: "편의점 음식도 기록해보기" }));
+    expect(screen.getByText("제품 예시")).toBeTruthy();
+    expect(screen.getByText(/특정 브랜드와 제휴하거나 추천하는 화면이 아닙니다/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "+ 기록하기" }));
+    expect(screen.getByTestId("tomorrow-preview")).toBeTruthy();
+    for (const button of screen.getAllByRole("button", { name: /내일 .* 추가/ })) expect((button as HTMLButtonElement).disabled).toBe(true);
+  });
 
+  it("uses an opaque canonical share URL and ignores cancel", async () => {
+    installHappyApi();
+    Object.defineProperty(navigator, "share", { configurable: true, value: vi.fn().mockRejectedValue(new DOMException("cancel", "AbortError")) });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await answerQuiz(user);
+    await user.click(screen.getByRole("button", { name: "내 결과 공유하기" }));
+    expect(navigator.share).toHaveBeenCalledWith(expect.objectContaining({ url: "http://localhost:3000/beta?result=ingredient-tracker" }));
+    expect(screen.getByRole("heading", { name: "성분 추적러" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the result usable when Web Share is unsupported and clipboard copy fails", async () => {
+    installHappyApi();
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    const writeText = vi.fn()
+      .mockRejectedValueOnce(new Error("copy blocked"))
+      .mockResolvedValueOnce(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    render(<MarketingDemandValidationScreen />);
+    await answerQuiz(user);
+    await user.click(screen.getByRole("button", { name: "내 결과 공유하기" }));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("/beta?result=ingredient-tracker"));
+    expect(await screen.findByText("공유 링크를 준비하지 못했어요. 다시 시도해 주세요.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(await screen.findByText("링크를 복사해 뒀어요.")).toBeTruthy();
+  });
+
+  it("validates, submits once on rapid clicks, and shows done only after generic success", async () => {
+    let release: ((value: unknown) => void) | undefined;
+    installHappyApi();
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "quiz_completed") return ok("quiz_completed", { quiz_result: "ingredient-tracker", target_qualified: null });
+      if (body.action === "lead_submitted") return new Promise((resolve) => { release = resolve; });
+      return ok(body.action);
+    });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen getTurnstileToken={async () => ({ ok: true, token: "test-token" })} />);
+    await reachBeta(user);
+    await user.click(screen.getByRole("button", { name: "무료 베타 초대받기" }));
+    expect(screen.getByRole("alert").textContent).toContain("이메일을 입력해 주세요.");
+    await user.type(screen.getByRole("textbox", { name: "이메일" }), "tester@example.com");
+    await user.click(screen.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }));
+    const submit = screen.getByRole("button", { name: "무료 베타 초대받기" });
+    await user.click(submit);
+    await user.click(submit);
+    expect(await screen.findByText("신청 내용을 확인하고 있어요.")).toBeTruthy();
+    expect(postMarketingValidation.mock.calls.filter(([body]) => body.action === "lead_submitted")).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "신청이 완료됐어요!" })).toBeNull();
+    release?.(ok("lead_submitted"));
+    expect(await screen.findByRole("heading", { name: "신청이 완료됐어요!" })).toBeTruthy();
+  });
+
+  it("keeps experience_completed queued, blocks planner navigation, and offers retry/restart when the durable write fails", async () => {
+    const { readMarketingQueue } = await importSession();
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "quiz_completed") {
+        return ok("quiz_completed", { quiz_result: "ingredient-tracker", target_qualified: null });
+      }
+      if (body.action === "experience_completed") {
+        const experienceCompletedCalls = postMarketingValidation.mock.calls.filter(([payload]) => payload.action === "experience_completed").length;
+        return experienceCompletedCalls === 1
+          ? { success: false, data: null, error: { code: "NETWORK_ERROR", message: "식단 화면을 열지 못했어요. 다시 시도해 주세요.", fields: [] } }
+          : ok("experience_completed");
+      }
+      return ok(body.action);
+    });
     const { MarketingDemandValidationScreen } = await importScreen();
     const user = userEvent.setup();
     render(<MarketingDemandValidationScreen />);
 
-    await openHappyPathFollowup(user);
+    await answerQuiz(user);
+    await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
+    await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
+    await user.click(await screen.findByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }));
+    await user.click(screen.getByRole("button", { name: "다음" }));
+    await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+    await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
+    await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
 
-    expect(screen.getByRole("radiogroup", { name: "이 주간 화면이 있다면 써볼 의향은?" })).toBeTruthy();
-    expect(screen.getByRole("radiogroup", { name: "가장 먼저 보고 싶은 정보는?" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "이번 주 식단" })).toBeNull();
+    expect((await screen.findByRole("alert")).textContent).toContain("식단 화면을 열지 못했어요. 다시 시도해 주세요.");
+    expect(readMarketingQueue()).toEqual([{ action: "experience_completed" }]);
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByRole("heading", { name: "이번 주 식단" })).toBeTruthy();
+    expect(readMarketingQueue()).toEqual([]);
   });
 
-  it("keeps followup questions inside a localized scroll region and leaves actions in a separate compact footer", async () => {
-    postMarketingValidation
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "view" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "quiz_started", state: "quiz_started" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: {
-          quiz_result: "weekly_blindspot",
-          stage: "quiz_completed",
-          state: "quiz_completed",
-          target_qualified: true,
-        },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "solution_viewed", state: "solution_viewed" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "intent_selected", state: "intent_selected" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "lead_submitted", state: "lead_submitted" },
-      });
-
+  it.each(["ORIGIN_NOT_ALLOWED", "INVALID_TRANSITION", "VALIDATION_ERROR", "TURNSTILE_FAILED", "LEAD_CAPTURE_NOT_READY", "LEAD_CAPTURE_UNAVAILABLE"])("keeps prior value and recovery visible for %s", async (code) => {
+    installHappyApi();
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "quiz_completed") return ok("quiz_completed", { quiz_result: "ingredient-tracker", target_qualified: null });
+      if (body.action === "lead_submitted") return { success: false, data: null, error: { code, message: "안전하게 다시 시도해 주세요.", fields: [] } };
+      return ok(body.action);
+    });
     const { MarketingDemandValidationScreen } = await importScreen();
     const user = userEvent.setup();
-    const { container } = render(<MarketingDemandValidationScreen />);
-
-    await openHappyPathFollowup(user);
-
-    const followupPanel = container.querySelector(".marketing-beta-followup");
-    const scrollRegion = container.querySelector("[data-testid='marketing-beta-followup-scroll-region']");
-    const actions = container.querySelector("[data-testid='marketing-beta-followup-actions']");
-
-    expect(followupPanel?.getAttribute("data-compact-panel")).toBe("true");
-    expect(scrollRegion?.getAttribute("data-local-scroll")).toBe("true");
-    expect(actions?.getAttribute("data-sticky-actions")).toBe("true");
-    expect(actions?.previousElementSibling?.contains(scrollRegion)).toBe(true);
-  });
-
-  it("shows a visible followup scroll cue before the second question is reached", async () => {
-    postMarketingValidation
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "view", state: "view" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "quiz_started", state: "quiz_started" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: {
-          quiz_result: "weekly_blindspot",
-          stage: "quiz_completed",
-          state: "quiz_completed",
-          target_qualified: true,
-        },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "solution_viewed", state: "solution_viewed" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "intent_selected", state: "intent_selected" },
-      })
-      .mockResolvedValueOnce({
-        error: null,
-        success: true,
-        data: { stage: "lead_submitted", state: "lead_submitted" },
-      });
-
-    const { MarketingDemandValidationScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<MarketingDemandValidationScreen />);
-
-    await openHappyPathFollowup(user);
-
-    const cue = screen.queryByText("아래로 더 보기")
-      ?? document.querySelector("[data-testid='marketing-beta-followup-scroll-cue']");
-
-    expect(cue).toBeTruthy();
+    render(<MarketingDemandValidationScreen getTurnstileToken={async () => ({ ok: true, token: "test-token" })} />);
+    await reachBeta(user);
+    await user.type(screen.getByRole("textbox", { name: "이메일" }), "retry@example.com");
+    await user.click(screen.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }));
+    await user.click(screen.getByRole("button", { name: "무료 베타 초대받기" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("안전하게 다시 시도해 주세요.");
+    expect(screen.getByDisplayValue("retry@example.com")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 });
