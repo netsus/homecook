@@ -11,6 +11,7 @@ import {
   readdirSync,
   realpathSync,
   renameSync,
+  rmSync,
   rmdirSync,
   symlinkSync,
   unlinkSync,
@@ -515,6 +516,54 @@ function validManifestInput() {
 }
 
 describe("release rehearsal candidate manifest", () => {
+  it("locks the authoritative release suite to the original 26 files plus both teardown files", () => {
+    const scopePath = "scripts/config/local-mac-production-release-test-scope.json";
+    expect(existsSync(scopePath)).toBe(true);
+    if (!existsSync(scopePath)) return;
+    const scope = JSON.parse(readFileSync(scopePath, "utf8"));
+    const original = [
+      "tests/github-production-release-attestation.test.ts",
+      "tests/local-mac-production-promote-adapters.test.ts",
+      "tests/local-mac-production-promote-connected.test.ts",
+      "tests/local-mac-production-promote.test.ts",
+      "tests/local-mac-production-rehearsal-adapter-factory.test.ts",
+      "tests/local-mac-production-rehearsal-candidate.test.ts",
+      "tests/local-mac-production-rehearsal-cli.test.ts",
+      "tests/local-mac-production-rehearsal-credential-issuance.test.ts",
+      "tests/local-mac-production-rehearsal-foundation.test.ts",
+      "tests/local-mac-production-rehearsal-inventory-classifier.test.ts",
+      "tests/local-mac-production-rehearsal-macos-observer.test.ts",
+      "tests/local-mac-production-rehearsal-observer-projection.test.ts",
+      "tests/local-mac-production-rehearsal-owned-probe.test.ts",
+      "tests/local-mac-production-rehearsal-postgrest-probe.test.ts",
+      "tests/local-mac-production-rehearsal-receipts.test.ts",
+      "tests/local-mac-production-rehearsal-runner-safety.test.ts",
+      "tests/local-mac-production-rehearsal-runner.test.ts",
+      "tests/local-mac-production-rehearsal-selection.test.ts",
+      "tests/local-mac-production-release.test.ts",
+      "tests/local-mac-production-verify-adapters.test.ts",
+      "tests/local-mac-production-verify.test.ts",
+      "tests/local-mac-production.test.ts",
+      "tests/production-release-rulesets-c2.test.ts",
+      "tests/production-release-rulesets.test.ts",
+      "tests/promote-local-mac-production-release-cli.test.ts",
+      "tests/release-promotion-governance.test.ts",
+    ];
+    expect(scope).toEqual({
+      schema: "homecook.local-mac-production-release-test-scope.v1",
+      original_file_count: 26,
+      files: [...original, "tests/vitest-owned-suite-temp-subprocess.test.ts", "tests/vitest-owned-suite-temp-teardown.test.ts"],
+    });
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+    expect(packageJson.scripts["test:local-mac-production-release"]).toBe(
+      "node scripts/run-local-mac-production-release-tests.mjs",
+    );
+    expect(existsSync("scripts/validate-local-mac-production-release-evidence.mjs")).toBe(true);
+    expect(packageJson.scripts["verify:local-mac-production-release-evidence"]).toBe(
+      "node scripts/validate-local-mac-production-release-evidence.mjs",
+    );
+  });
+
   it("normalizes Linux deleted descriptor annotations without scanning sibling temp paths", () => {
     expect(normalizeOwnedTempDescriptorTarget("/tmp/homecook-owned-fixture (deleted)"))
       .toBe("/tmp/homecook-owned-fixture");
@@ -675,6 +724,88 @@ describe("release rehearsal candidate manifest", () => {
       }
       try { registry.cleanupOwnedTempRoot(root); } catch { /* Exact fixture cleanup is best effort after fail-closed proof. */ }
       if (existsSync(external)) rmdirSync(external);
+    }
+  });
+
+  it("fails closed without deleting post-claim replacements in the real descriptor cleanup helper", () => {
+    const scenarios = [
+      {
+        marker: "        # HOMECOOK_TEST_BEFORE_FINAL_FILE_REMOVE",
+        setup(root: string) { writeFileSync(join(root, "owned.txt"), "owned\n", { mode: 0o600 }); },
+        injection: [
+          '        os.rename(claimed, claimed + ".parked", src_dir_fd=parent, dst_dir_fd=parent)',
+          '        replacement_fd = os.open(claimed, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent)',
+          '        os.write(replacement_fd, b"replacement-file\\n")',
+          '        os.close(replacement_fd)',
+        ],
+        replacement: "replacement-file\n",
+      },
+      {
+        marker: "        # HOMECOOK_TEST_BEFORE_FINAL_DIRECTORY_REMOVE",
+        setup(root: string) { mkdirSync(join(root, "owned-dir"), { mode: 0o700 }); },
+        injection: [
+          '        os.rename(claimed, claimed + ".parked", src_dir_fd=parent, dst_dir_fd=parent)',
+          '        os.mkdir(claimed, 0o700, dir_fd=parent)',
+          '        replacement_fd = os.open(claimed + "/replacement.txt", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent)',
+          '        os.write(replacement_fd, b"replacement-directory\\n")',
+          '        os.close(replacement_fd)',
+        ],
+        replacement: "replacement-directory\n",
+      },
+      {
+        marker: "# HOMECOOK_TEST_BEFORE_FINAL_ROOT_REMOVE",
+        setup() {},
+        injection: [
+          'os.rename(root_name, root_name + ".parked", src_dir_fd=parent_fd, dst_dir_fd=parent_fd)',
+          'os.mkdir(root_name, 0o700, dir_fd=parent_fd)',
+          'replacement_fd = os.open(root_name + "/replacement.txt", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent_fd)',
+          'os.write(replacement_fd, b"replacement-root\\n")',
+          'os.close(replacement_fd)',
+        ],
+        replacement: "replacement-root\n",
+      },
+    ] as const;
+    for (const scenario of scenarios) {
+      let injected = false;
+      const registry = createOwnedTempRegistry({
+        transformOwnedTreeCleanupScript(script: string) {
+          expect(script).toContain(scenario.marker);
+          injected = true;
+          return script.replace(scenario.marker, scenario.injection.join("\n"));
+        },
+      } as never);
+      const root = registry.createOwnedTempRoot("homecook-real-helper-race-");
+      const parent = dirname(root);
+      const before = new Set(readdirSync(parent));
+      scenario.setup(root);
+      try {
+        expect(() => registry.cleanupOwnedTempRoot(root)).toThrow(/cleanup|identity|replaced|changed|closed/iu);
+        expect(injected).toBe(true);
+        const claimedRoots = readdirSync(parent)
+          .filter((name) => !before.has(name) && name.startsWith(".homecook-owned-root-"))
+          .map((name) => join(parent, name));
+        const retainedRoots = [...claimedRoots, ...(existsSync(root) ? [root] : [])];
+        expect(retainedRoots.length).toBeGreaterThan(0);
+        const pending = [...retainedRoots];
+        const replacementPayloads: string[] = [];
+        while (pending.length > 0) {
+          const path = pending.pop()!;
+          const stat = lstatSync(path);
+          if (stat.isDirectory()) {
+            for (const name of readdirSync(path)) pending.push(join(path, name));
+          } else if (stat.isFile()) {
+            replacementPayloads.push(readFileSync(path, "utf8"));
+          }
+        }
+        expect(replacementPayloads).toContain(scenario.replacement);
+      } finally {
+        for (const name of readdirSync(parent)) {
+          if (!before.has(name) && name.startsWith(".homecook-owned-root-")) {
+            rmSync(join(parent, name), { recursive: true, force: true });
+          }
+        }
+        if (existsSync(root)) rmSync(root, { recursive: true, force: true });
+      }
     }
   });
 
@@ -2475,6 +2606,57 @@ try {
     expect(existsSync(escapedPidPath)).toBe(false);
   }, 30_000);
 
+  it("reaps the exact live child on every initial witness rejection branch", async () => {
+    if (process.platform !== "darwin" || !existsSync("/usr/bin/clang")) return;
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const materializeWitness = candidateModule.materializeSandboxProcessWitness;
+    const observeWitnessedRoot = candidateModule.observeWitnessedSandboxRoot;
+    expect(typeof materializeWitness).toBe("function");
+    expect(typeof observeWitnessedRoot).toBe("function");
+    if (typeof materializeWitness !== "function" || typeof observeWitnessedRoot !== "function") return;
+
+    const root = privateRoot("homecook-initial-witness-rejection-");
+    const command = privateNodeClone(root, "1234abcdj");
+    const witnessPath = join(root, "sandbox-process-witness.node");
+    (materializeWitness as (options: Record<string, unknown>) => unknown)({
+      clangPath: "/usr/bin/clang",
+      nodePath: process.execPath,
+      outputPath: witnessPath,
+    });
+    const profile = buildCandidateSandboxProfile({
+      executablePaths: [command],
+      readRoots: [root, command, witnessPath],
+      writeRoots: [root],
+    });
+    const cases = [
+      ["unavailable", () => Buffer.alloc(0), /unavailable/iu],
+      ["overflow", () => Buffer.concat([Buffer.from("{}\n"), Buffer.alloc(65 * 1024)]), /unavailable|overflow/iu],
+      ["malformed", () => Buffer.from("{malformed\n"), /malformed/iu],
+      ["mismatch", (chunk: Buffer) => {
+        const witness = JSON.parse(chunk.toString("utf8").split("\n")[0]);
+        return Buffer.from(`${JSON.stringify({ ...witness, pid: witness.pid + 1 })}\n`);
+      }, /match|instance/iu],
+    ] as const;
+    for (const [name, transformInitialWitnessChunk, message] of cases) {
+      let livePid = 0;
+      await expect((observeWitnessedRoot as (options: Record<string, unknown>) => Promise<unknown>)({
+        profile,
+        command,
+        args: ["-e", "setTimeout(() => {}, 30000)"],
+        cwd: root,
+        env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+        label: `initial witness ${name}`,
+        timeout: 10_000,
+        initialWitnessTimeout: 100,
+        sandboxWitnessPath: witnessPath,
+        transformInitialWitnessChunk,
+        afterTrustedProcessStart: (pid: number) => { livePid = pid; },
+      })).rejects.toThrow(message);
+      expect(livePid).toBeGreaterThan(0);
+      expect(() => process.kill(livePid, 0)).toThrowError(expect.objectContaining({ code: "ESRCH" }));
+    }
+  }, 30_000);
+
   it("rejects an executable pathname swap using only run-owned Node copies", async () => {
     if (
       process.platform !== "darwin"
@@ -3614,7 +3796,6 @@ describe("release rehearsal candidate orchestration", () => {
     const sandboxWitness = (materializeWitness as (options: Record<string, unknown>) => {
       path: string;
       preload_path: string;
-      signal_path: string;
     })({
       clangPath: "/usr/bin/clang",
       nodePath: process.execPath,
@@ -3630,7 +3811,7 @@ describe("release rehearsal candidate orchestration", () => {
       executablePaths: [command],
       readRoots: [root, command, sandboxWitness.path, sandboxWitness.preload_path, ...new Set(pythonRuntimePaths)],
       writeRoots: [root],
-      deniedWritePaths: [sandboxWitness.path, sandboxWitness.preload_path, sandboxWitness.signal_path],
+      deniedWritePaths: [sandboxWitness.path, sandboxWitness.preload_path],
     });
     await expect(runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
@@ -3724,6 +3905,72 @@ describe("release rehearsal candidate orchestration", () => {
     expect(accessResult.stdout).toBe("all-dns-accessors-attempted\n");
     expect(accessResult.process_attempt_count).toBe(26);
     expect(new Set(accessResult.process_attempt_kinds)).toEqual(new Set(["network"]));
+
+    const workerDnsPath = join(root, "worker-dns-accessors.mjs");
+    writeFileSync(workerDnsPath, [
+      'import dnsNode, { lookup as staticNodeLookup } from "node:dns";',
+      'import dnsBare, { lookup as staticBareLookup } from "dns";',
+      'import promisesNode, { lookup as staticNodePromiseLookup } from "node:dns/promises";',
+      'import promisesBare, { lookup as staticBarePromiseLookup } from "dns/promises";',
+      'import { createRequire } from "node:module";',
+      'import { parentPort } from "node:worker_threads";',
+      'const require = createRequire(import.meta.url);',
+      'const syncCalls = [',
+      '  () => require("dns").lookup("127.0.0.1", () => {}),',
+      '  () => require("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => staticNodeLookup("127.0.0.1", () => {}),',
+      '  () => staticBareLookup("127.0.0.1", () => {}),',
+      '  () => new dnsNode.Resolver(), () => new dnsBare.Resolver(),',
+      '];',
+      'for (const call of syncCalls) { try { call(); } catch {} }',
+      'const promiseModules = [',
+      '  require("dns/promises"), require("node:dns/promises"),',
+      '  process.getBuiltinModule("dns/promises"), process.getBuiltinModule("node:dns/promises"),',
+      '  promisesNode, promisesBare, await import("node:dns/promises"), await import("dns/promises"),',
+      '];',
+      'for (const dns of promiseModules) {',
+      '  try { new dns.Resolver(); } catch {}',
+      '  try { await dns.lookup("127.0.0.1"); } catch {}',
+      '}',
+      'for (const dns of [await import("node:dns"), await import("dns")]) {',
+      '  try { dns.lookup("127.0.0.1", () => {}); } catch {}',
+      '}',
+      'parentPort.postMessage({ value: "worker-dns-accessors-attempted", gate: process.env.HOMECOOK_OFFLINE_DNS_PROJECTION ?? null, execArgv: process.execArgv });',
+    ].join("\n"), { mode: 0o400 });
+    const workerDnsDriver = [
+      'const { Worker } = require("node:worker_threads");',
+      'process.stdout.write(`${Worker.name}\\n`);',
+      `const worker = new Worker(${JSON.stringify(workerDnsPath)}, { env: { HOME: process.env.HOME, PATH: process.env.PATH, TMPDIR: process.env.TMPDIR } });`,
+      'worker.once("message", value => { process.stdout.write(`${JSON.stringify(value)}\\n`); });',
+      'worker.once("exit", code => process.exit(code));',
+      'worker.once("error", error => { throw error; });',
+    ].join("\n");
+    const workerAccessResult = await (observeWitnessedRoot as (options: Record<string, unknown>) => Promise<{
+      process_attempt_count: number;
+      process_attempt_kinds: string[];
+      stdout: string;
+    }>)({
+      profile,
+      command,
+      args: ["-e", workerDnsDriver],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "worker-thread Node 22 DNS built-in accessors",
+      timeout: 10_000,
+      sandboxWitnessPath: sandboxWitness.path,
+      offlineDnsProjection: true,
+    });
+    expect(workerAccessResult).toMatchObject({ status: 0, signal: null });
+    expect(workerAccessResult.stdout.split("\n")[0]).toBe("HomecookOfflineDnsWorker");
+    expect(JSON.parse(workerAccessResult.stdout.split("\n")[1])).toEqual({
+      value: "worker-dns-accessors-attempted",
+      gate: null,
+      execArgv: [`--require=${sandboxWitness.preload_path}`],
+    });
+    expect(workerAccessResult.process_attempt_count).toBe(26);
+    expect(new Set(workerAccessResult.process_attempt_kinds)).toEqual(new Set(["network"]));
 
     await expect(runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
@@ -3929,7 +4176,8 @@ describe("release rehearsal candidate orchestration", () => {
     expect(existsSync(join(escapeRoot, "escaped"))).toBe(false);
   });
 
-  it("runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox", async () => {
+  it.skipIf(process.env.HOMECOOK_RUN_ACTUAL_RELEASE_BUILD !== "1")(
+  "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox", async () => {
     if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) return;
 
     const root = createOwnedTempRoot("candidate-");
@@ -4007,7 +4255,6 @@ describe("release rehearsal candidate orchestration", () => {
       const sandboxWitness = (materializeWitness as (options: Record<string, unknown>) => {
         path: string;
         preload_path: string;
-        signal_path: string;
       })({
         clangPath: "/usr/bin/clang",
         nodePath: process.execPath,
@@ -4038,7 +4285,6 @@ describe("release rehearsal candidate orchestration", () => {
         join(packageStoreView, "files"),
         sandboxWitness.path,
         sandboxWitness.preload_path,
-        sandboxWitness.signal_path,
       ],
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
     };
@@ -4129,7 +4375,6 @@ describe("release rehearsal candidate orchestration", () => {
         packageStoreView,
         sandboxWitness.path,
         sandboxWitness.preload_path,
-        sandboxWitness.signal_path,
       ],
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
     };

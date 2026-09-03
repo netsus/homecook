@@ -22,6 +22,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { createRequire } from "node:module";
+import { constants as osConstants } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { canonicalizeJcs, parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
@@ -95,6 +97,8 @@ const TOOL_IDENTITY_KEYS = [
 ];
 const EXECUTABLE_TOOL_MODES = new Set([0o500, 0o555, 0o700, 0o755]);
 const READABLE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
+const requireNativeWitness = createRequire(import.meta.url);
+const pinnedSandboxWitnessControllers = new Map();
 
 function fail(message) {
   throw new Error(`Release rehearsal candidate rejected: ${message}`);
@@ -4242,7 +4246,6 @@ export function materializeSandboxProcessWitness({
   outputPath,
   sourcePath: requestedSourcePath = null,
   preloadSourcePath: requestedPreloadSourcePath = null,
-  signalSourcePath: requestedSignalSourcePath = null,
   runCommand = spawnSync,
 } = /** @type {any} */ ({})) {
   if (process.platform !== "darwin") fail("sandbox process witness requires macOS");
@@ -4255,14 +4258,10 @@ export function materializeSandboxProcessWitness({
   const preloadSourcePath = requestedPreloadSourcePath === null
     ? resolve(dirname(fileURLToPath(import.meta.url)), "../native/local-mac-sandbox-process-witness-preload.cjs")
     : resolve(requestedPreloadSourcePath);
-  const signalSourcePath = requestedSignalSourcePath === null
-    ? resolve(dirname(fileURLToPath(import.meta.url)), "../native/local-mac-process-instance-signal.c")
-    : resolve(requestedSignalSourcePath);
-  if (!isAbsolute(sourcePath) || !isAbsolute(preloadSourcePath) || !isAbsolute(signalSourcePath)) {
+  if (!isAbsolute(sourcePath) || !isAbsolute(preloadSourcePath)) {
     fail("sandbox process witness sources must be absolute");
   }
   const preloadPath = `${outputPath}.cjs`;
-  const signalPath = `${outputPath}.instance`;
   const realClang = resolveSafeRealExecutable([clangPath], "sandbox process witness clang");
   const realNode = realpathSync(nodePath);
   const nodeInclude = resolve(dirname(realNode), "../include/node");
@@ -4271,11 +4270,6 @@ export function materializeSandboxProcessWitness({
   const preloadSourcePre = snapshotToolFile(
     preloadSourcePath,
     "sandbox-process-witness-preload-source",
-    { requireExecutable: false },
-  );
-  const signalSourcePre = snapshotToolFile(
-    signalSourcePath,
-    "sandbox-process-instance-signal-source",
     { requireExecutable: false },
   );
   const clangPre = snapshotToolFile(realClang, "sandbox-process-witness-clang");
@@ -4298,19 +4292,7 @@ export function materializeSandboxProcessWitness({
   if (built.error || built.signal || built.status !== 0) {
     fail("sandbox process witness compilation failed closed");
   }
-  const signalBuilt = spawnBounded(realClang, [
-    "-O2", "-std=c11", "-Wno-deprecated-declarations", signalSourcePath, "-o", signalPath, "-lbsm",
-  ], {
-    cwd: dirname(outputPath),
-    env: { HOME: dirname(outputPath), PATH: "/usr/bin:/bin" },
-    runCommand,
-    timeout: 60_000,
-  });
-  if (signalBuilt.error || signalBuilt.signal || signalBuilt.status !== 0) {
-    fail("sandbox process instance signal helper compilation failed closed");
-  }
   chmodSync(outputPath, 0o400);
-  chmodSync(signalPath, 0o500);
   writeFileSync(preloadPath, readFileSync(preloadSourcePath), { flag: "wx", mode: 0o400 });
   const output = snapshotToolFile(realpathSync(outputPath), "sandbox-process-witness-v1", { requireExecutable: false });
   const preload = snapshotToolFile(
@@ -4318,7 +4300,14 @@ export function materializeSandboxProcessWitness({
     "sandbox-process-witness-preload-v1",
     { requireExecutable: false },
   );
-  const signal = snapshotToolFile(realpathSync(signalPath), "sandbox-process-instance-signal-v1");
+  const controller = requireNativeWitness(output.realpath);
+  if (
+    typeof controller?.captureStoppedProcessInstance !== "function"
+    || typeof controller?.signalOwnedProcessInstance !== "function"
+    || typeof controller?.abortStoppedDirectChild !== "function"
+    || typeof controller?.releaseOwnedProcessInstance !== "function"
+  ) fail("sandbox process witness controller exports are unavailable");
+  pinnedSandboxWitnessControllers.set(output.realpath, Object.freeze(controller));
   if (
     canonicalizeJcs(sourcePre) !== canonicalizeJcs(
       snapshotToolFile(sourcePath, "sandbox-process-witness-source", { requireExecutable: false }),
@@ -4329,9 +4318,6 @@ export function materializeSandboxProcessWitness({
         "sandbox-process-witness-preload-source",
         { requireExecutable: false },
       ),
-    )
-    || canonicalizeJcs(signalSourcePre) !== canonicalizeJcs(
-      snapshotToolFile(signalSourcePath, "sandbox-process-instance-signal-source", { requireExecutable: false }),
     )
     || canonicalizeJcs(clangPre) !== canonicalizeJcs(
       snapshotToolFile(realClang, "sandbox-process-witness-clang"),
@@ -4350,19 +4336,16 @@ export function materializeSandboxProcessWitness({
   return Object.freeze({
     path: output.realpath,
     preload_path: preload.realpath,
-    signal_path: signal.realpath,
     identity: output,
-    identity_digest: sha256Jcs({ output, preload, signal }),
+    identity_digest: sha256Jcs({ output, preload }),
     authority_digest: sha256Jcs({
       source: sourcePre,
       preload_source: preloadSourcePre,
-      signal_source: signalSourcePre,
       clang: clangPre,
       node: nodePre,
       node_api_header: headerPre,
       output,
       preload,
-      signal,
     }),
   });
 }
@@ -4713,31 +4696,10 @@ export async function signalWitnessedProcessInstance({
   signalProcess(pid, signal);
 }
 
-function signalLiveProcessInstance(signalPath, witness, signal, label) {
+function signalLiveProcessInstance(controller, witness, signal, label) {
   const signalNumber = signal === "SIGTERM" ? 15 : signal === "SIGKILL" ? 9 : null;
   if (signalNumber === null) fail(`${label} process termination signal is invalid`);
-  const helperPre = snapshotToolFile(signalPath, `${label}:process-instance-signal-helper`);
-  const args = [
-    "signal", String(witness.pid), String(witness.pidversion), String(witness.started_at_sec),
-    String(witness.started_at_usec), witness.executable_path, String(witness.device),
-    String(witness.inode), String(witness.size), String(witness.ctime_sec),
-    String(witness.ctime_nsec), witness.executable_sha256, witness.execution_audit_token,
-    String(signalNumber),
-  ];
-  const result = spawnBounded(signalPath, args, {
-    cwd: dirname(signalPath), env: { HOME: dirname(signalPath), PATH: "/usr/bin:/bin" }, timeout: 5_000,
-  });
-  const helperPost = snapshotToolFile(signalPath, `${label}:process-instance-signal-helper`);
-  if (canonicalizeJcs(helperPre) !== canonicalizeJcs(helperPost)) {
-    fail(`${label} process instance signal helper drifted`);
-  }
-  if (result.status === 69) fail(`${label} process instance changed before signal; PID reuse is preserved`);
-  if (result.error || result.signal || result.status !== 0) {
-    try { process.kill(witness.pid, 0); } catch (error) {
-      if (error && typeof error === "object" && error.code === "ESRCH") return;
-    }
-    fail(`${label} process instance signal failed closed`);
-  }
+  if (controller.signalOwnedProcessInstance(witness.pid, signalNumber) !== true) return;
 }
 
 export async function observeWitnessedSandboxRoot({
@@ -4751,6 +4713,9 @@ export async function observeWitnessedSandboxRoot({
   sandboxWitnessPath,
   spawnProcess = spawn,
   afterExecutableSnapshot = () => undefined,
+  afterTrustedProcessStart = () => undefined,
+  transformInitialWitnessChunk = (chunk) => chunk,
+  initialWitnessTimeout = 5_000,
   maxOutputBytes = 8 * 1024 * 1024,
   offlineDnsProjection = false,
 }) {
@@ -4769,14 +4734,19 @@ export async function observeWitnessedSandboxRoot({
     { requireExecutable: false },
   );
   const witnessPreloadPath = `${sandboxWitnessPath}.cjs`;
-  const signalPath = `${sandboxWitnessPath}.instance`;
   const witnessPreloadPre = snapshotToolFile(
     witnessPreloadPath,
     `sandbox-process-witness-preload:${label}`,
     { requireExecutable: false },
   );
-  const signalPre = snapshotToolFile(signalPath, `sandbox-process-instance-signal:${label}`);
-  if (typeof afterExecutableSnapshot !== "function") {
+  const controller = pinnedSandboxWitnessControllers.get(sandboxWitnessPath);
+  if (!controller) fail(`${label} sandbox process witness controller is not pinned`);
+  if (
+    typeof afterExecutableSnapshot !== "function"
+    || typeof afterTrustedProcessStart !== "function"
+    || typeof transformInitialWitnessChunk !== "function"
+    || !Number.isSafeInteger(initialWitnessTimeout) || initialWitnessTimeout < 1 || initialWitnessTimeout > 5_000
+  ) {
     fail(`${label} executable snapshot continuation is invalid`);
   }
   afterExecutableSnapshot();
@@ -4808,7 +4778,6 @@ export async function observeWitnessedSandboxRoot({
     fail(`${label} witnessed sandbox root PID is unavailable`);
   }
   const rootPid = child.pid;
-  const startedAt = Date.now();
   let stdout = Buffer.alloc(0);
   let stderr = Buffer.alloc(0);
   let witnessBytes = Buffer.alloc(0);
@@ -4829,8 +4798,18 @@ export async function observeWitnessedSandboxRoot({
   const initialWitness = new Promise((resolveWitness) => {
     resolveInitialWitness = resolveWitness;
   });
+  let pendingInitialWitness = Buffer.alloc(0);
+  let initialWitnessTransformed = false;
   child.stdio?.[4]?.on("data", (chunk) => {
-    append("witness", chunk);
+    if (!initialWitnessTransformed) {
+      pendingInitialWitness = Buffer.concat([pendingInitialWitness, Buffer.from(chunk)]);
+      if (!pendingInitialWitness.includes(0x0a)) return;
+      initialWitnessTransformed = true;
+      append("witness", transformInitialWitnessChunk(pendingInitialWitness));
+      pendingInitialWitness = Buffer.alloc(0);
+    } else {
+      append("witness", chunk);
+    }
     if (witnessBytes.includes(0x0a)) resolveInitialWitness(true);
   });
   child.stdio?.[3]?.end(profile, "utf8");
@@ -4846,21 +4825,58 @@ export async function observeWitnessedSandboxRoot({
     });
   });
   const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+  let trustedWitness = null;
+  const trustedStartDeadline = Date.now() + 5_000;
+  while (!exitResult && trustedWitness === null && Date.now() <= trustedStartDeadline) {
+    trustedWitness = controller.captureStoppedProcessInstance(rootPid);
+    if (trustedWitness === null) await Promise.race([exitPromise, delay(5)]);
+  }
+  if (trustedWitness === null) {
+    if (!exitResult && controller.abortStoppedDirectChild(rootPid) !== true) {
+      fail(`${label} trusted stopped process instance was unavailable`);
+    }
+    await exitPromise;
+    fail(`${label} witnessed sandbox root exited before trusted startup handshake`);
+  }
+  if (
+    trustedWitness.pid !== rootPid
+    || trustedWitness.pgid !== rootPid
+    || trustedWitness.executable_path !== command
+    || trustedWitness.device !== executablePre.device
+    || trustedWitness.inode !== executablePre.inode
+    || String(trustedWitness.size) !== executablePre.size
+    || trustedWitness.executable_sha256 !== executablePre.sha256
+  ) {
+    signalLiveProcessInstance(controller, trustedWitness, "SIGKILL", label);
+    await exitPromise;
+    controller.releaseOwnedProcessInstance(rootPid);
+    fail(`${label} trusted stopped process did not match the exact executable instance`);
+  }
+  afterTrustedProcessStart(rootPid);
+  if (controller.signalOwnedProcessInstance(rootPid, osConstants.signals.SIGCONT) !== true) {
+    await exitPromise;
+    controller.releaseOwnedProcessInstance(rootPid);
+    fail(`${label} trusted stopped process could not be resumed`);
+  }
+  const rejectInitialWitness = async (message) => {
+    if (!exitResult) signalLiveProcessInstance(controller, trustedWitness, "SIGKILL", label);
+    await exitPromise;
+    controller.releaseOwnedProcessInstance(rootPid);
+    fail(message);
+  };
   const witnessReady = await Promise.race([
     initialWitness,
     exitPromise.then(() => false),
-    delay(5_000).then(() => false),
+    delay(initialWitnessTimeout).then(() => false),
   ]);
   if (!witnessReady || outputOverflow) {
-    if (exitResult) await exitPromise;
-    fail(`${label} process execution witness was unavailable`);
+    await rejectInitialWitness(`${label} process execution witness was unavailable or overflowed`);
   }
   let witness;
   try {
     witness = JSON.parse(witnessBytes.toString("utf8").split("\n")[0]);
   } catch {
-    if (exitResult) await exitPromise;
-    fail(`${label} process execution witness was malformed`);
+    await rejectInitialWitness(`${label} process execution witness was malformed`);
   }
   exactObject(witness, `${label} process execution witness`, [
     "pid", "ppid", "pgid", "pidversion", "started_at_sec", "started_at_usec",
@@ -4885,19 +4901,20 @@ export async function observeWitnessedSandboxRoot({
     || witness.size !== executablePre.size
     || witness.executable_sha256 !== executablePre.sha256
   ) {
-    if (exitResult) await exitPromise;
-    fail(`${label} process execution witness did not match the exact executable instance`);
+    await rejectInitialWitness(`${label} process execution witness did not match the exact executable instance`);
   }
+  const executionStartedAt = Date.now();
   let timedOut = false;
   while (!exitResult) {
-    if (outputOverflow || Date.now() - startedAt > timeout) {
+    if (outputOverflow || Date.now() - executionStartedAt > timeout) {
       timedOut = true;
-      signalLiveProcessInstance(signalPath, witness, "SIGKILL", label);
+      signalLiveProcessInstance(controller, trustedWitness, "SIGKILL", label);
       break;
     }
     await Promise.race([exitPromise, delay(20)]);
   }
   await exitPromise;
+  controller.releaseOwnedProcessInstance(rootPid);
   const executablePost = snapshotToolFile(command, `sandbox-root-executable:${label}`);
   const witnessPost = snapshotToolFile(
     sandboxWitnessPath,
@@ -4909,12 +4926,10 @@ export async function observeWitnessedSandboxRoot({
     `sandbox-process-witness-preload:${label}`,
     { requireExecutable: false },
   );
-  const signalPost = snapshotToolFile(signalPath, `sandbox-process-instance-signal:${label}`);
   if (
     canonicalizeJcs(executablePost) !== canonicalizeJcs(executablePre)
     || canonicalizeJcs(witnessPost) !== canonicalizeJcs(witnessPre)
     || canonicalizeJcs(witnessPreloadPost) !== canonicalizeJcs(witnessPreloadPre)
-    || canonicalizeJcs(signalPost) !== canonicalizeJcs(signalPre)
   ) fail(`${label} process execution authority drifted`);
   let processAttempts;
   try {
@@ -6681,12 +6696,6 @@ export function createReleaseRehearsalCandidateAdapters({
             "native",
             "local-mac-sandbox-process-witness-preload.cjs",
           ),
-          signalSourcePath: join(
-            source.checkout_dir,
-            "scripts",
-            "native",
-            "local-mac-process-instance-signal.c",
-          ),
           runCommand,
         });
         const storeStat = lstatSync(packageStorePath);
@@ -6745,7 +6754,6 @@ export function createReleaseRehearsalCandidateAdapters({
               buildStageNode.path,
               sandboxWitness.path,
               sandboxWitness.preload_path,
-              sandboxWitness.signal_path,
             ],
             deniedPaths: [
               sourceRoot,
@@ -6799,7 +6807,6 @@ export function createReleaseRehearsalCandidateAdapters({
               buildStageNode.path,
               sandboxWitness.path,
               sandboxWitness.preload_path,
-              sandboxWitness.signal_path,
             ],
             deniedPaths: [
               sourceRoot,

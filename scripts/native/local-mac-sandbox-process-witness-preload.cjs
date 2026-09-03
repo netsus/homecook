@@ -3,7 +3,17 @@
 
 const witnessPath = process.env.HOMECOOK_SANDBOX_WITNESS_MODULE;
 if (!witnessPath) process.exit(125);
-const witness = require(witnessPath);
+const workerThreadMode = process.env.HOMECOOK_SANDBOX_WORKER_THREAD === "1";
+const witness = workerThreadMode
+  ? Object.freeze({
+      recordProcessAttempt(kind) {
+        if (!/^[A-Za-z]+$/u.test(kind)) process.exit(125);
+        require("node:fs").writeSync(4, `${JSON.stringify({ process_attempt: kind })}\n`);
+      },
+    })
+  : require(witnessPath);
+delete process.env.HOMECOOK_SANDBOX_WORKER_THREAD;
+delete process.env.HOMECOOK_SANDBOX_WITNESS_FD;
 
 const Module = require("node:module");
 const offlineDnsProjectionEnabled = process.env.HOMECOOK_OFFLINE_DNS_PROJECTION === "1";
@@ -164,7 +174,25 @@ function sanitizeForWorkerThread(value, seen = new WeakMap()) {
   }
   return output;
 }
-if (!offlineDnsProjectionEnabled) {
+if (offlineDnsProjectionEnabled) {
+  const OriginalWorker = workerThreads.Worker;
+  workerThreads.Worker = class HomecookOfflineDnsWorker extends OriginalWorker {
+    constructor(filename, options = {}) {
+      super(filename, {
+        ...options,
+        execArgv: [`--require=${__filename}`],
+        env: {
+          ...(options.env ?? process.env),
+          HOMECOOK_OFFLINE_DNS_PROJECTION: "1",
+          HOMECOOK_SANDBOX_WORKER_THREAD: "1",
+          HOMECOOK_SANDBOX_WITNESS_FD: "4",
+          HOMECOOK_SANDBOX_WITNESS_MODULE: witnessPath,
+        },
+      });
+    }
+  };
+  Module.syncBuiltinESMExports();
+} else {
   workerThreads.Worker.prototype.postMessage = function homecookWitnessedWorkerMessage(value, ...args) {
     return Reflect.apply(originalPostMessage, this, [sanitizeForWorkerThread(value), ...args]);
   };
