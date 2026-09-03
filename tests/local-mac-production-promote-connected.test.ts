@@ -36,7 +36,7 @@ import {
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
   buildProductionReleaseAnnotatedTagMessage,
-  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
+  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V3,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import {
   FULL_LOCAL_SECRET_NAMES,
@@ -511,6 +511,8 @@ describe("connected local Mac production promotion", () => {
       required_check_summary: artifacts.subject.required_check_summary,
       all_check_suite_count: artifacts.subject.all_check_suite_count,
       all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
+      all_actions_workflow_run_provenance_digest:
+        artifacts.subject.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,
       all_context_check_suite_ids: artifacts.subject.all_context_check_suite_ids,
       all_context_commit_statuses_digest: artifacts.subject.all_context_commit_statuses_digest,
@@ -526,7 +528,7 @@ describe("connected local Mac production promotion", () => {
     const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
     writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
     writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
-      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
+      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V3,
       predicate: artifacts.predicate,
       subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
     } } }])}\n`, { mode: 0o600 });
@@ -814,6 +816,8 @@ describe("connected local Mac production promotion", () => {
         required_check_summary: artifacts.subject.required_check_summary,
         all_check_suite_count: artifacts.subject.all_check_suite_count,
         all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
+        all_actions_workflow_run_provenance_digest:
+          artifacts.subject.all_actions_workflow_run_provenance_digest,
         all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,
         all_context_check_suite_ids: artifacts.subject.all_context_check_suite_ids,
         all_context_commit_statuses_digest: artifacts.subject.all_context_commit_statuses_digest,
@@ -832,7 +836,7 @@ describe("connected local Mac production promotion", () => {
       const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
       writeFileSync(manifestPath, manifestBytes, { mode: 0o600 });
       writeFileSync(bundlePath, `${JSON.stringify([{ verificationResult: { statement: {
-        predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
+        predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V3,
         predicate: artifacts.predicate,
         subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
       } } }])}\n`, { mode: 0o600 });

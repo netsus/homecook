@@ -52,7 +52,7 @@ import {
   verifyPromotionAuthoritySafely,
 } from "./local-mac-production-authority-error.mjs";
 
-export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v2";
+export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v3";
 const LOCAL_MAC_REHEARSAL_REPEATABILITY_SCHEMA =
   "homecook.local-mac-production-rehearsal-repeatability-receipt.v1";
 
@@ -114,6 +114,7 @@ const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
   "required_check_summary",
   "all_check_suite_count",
   "all_check_suite_ids_digest",
+  "all_actions_workflow_run_provenance_digest",
   "all_context_check_run_instances_digest",
   "all_context_check_suite_ids",
   "all_context_commit_statuses_digest",
@@ -2522,6 +2523,10 @@ export function validateLocalMacProductionReleaseManifest({
     all_check_suite_ids_digest: requireDigest(
       manifest.all_check_suite_ids_digest,
       "manifest.all_check_suite_ids_digest",
+    ),
+    all_actions_workflow_run_provenance_digest: requireDigest(
+      manifest.all_actions_workflow_run_provenance_digest,
+      "manifest.all_actions_workflow_run_provenance_digest",
     ),
     all_context_check_run_instances_digest: requireDigest(
       manifest.all_context_check_run_instances_digest,

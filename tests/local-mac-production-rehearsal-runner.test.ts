@@ -209,7 +209,7 @@ function canonicalPrimitiveConfig({
 
 function candidateManifest() {
   return {
-    schema: "homecook.local-mac-production-rehearsal-candidate.v1",
+    schema: "homecook.local-mac-production-rehearsal-candidate.v2",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     selection_digest: null,
@@ -288,7 +288,7 @@ function completedCandidate(root: string) {
   return Object.freeze({
     complete: { status: "complete" },
     manifest: candidateManifest(),
-    bundle_manifest: { schema: "homecook.local-mac-production-rehearsal-bundle-manifest.v1" },
+    bundle_manifest: { schema: "homecook.local-mac-production-rehearsal-bundle-manifest.v2" },
     root,
   });
 }

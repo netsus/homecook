@@ -1,11 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "homecook.github.production-release-external-check-evidence.v1",
+  "$id": "homecook.github.production-release-external-check-evidence.v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "all_check_suite_count",
     "all_check_suite_ids_digest",
+    "all_actions_workflow_run_provenance_digest",
     "all_context_check_run_instances_digest",
     "all_context_check_suite_ids",
     "all_context_commit_statuses_digest",
@@ -18,6 +19,10 @@
       "maximum": 999
     },
     "all_check_suite_ids_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "all_actions_workflow_run_provenance_digest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },

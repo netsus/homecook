@@ -15,6 +15,18 @@
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
 
+## 2026-09-04 contract-evolution — production CI workflow-run attempt authority
+
+사용자는 같은 exact SHA의 정상 `push` QA와 후속 `schedule` QA를 context 이름 중복만으로 rerun 처리해 release candidate를 영구 차단하는 결함을 수정하도록 승인했다. 공식 제품 문서 5종, public API와 DB schema 영향은 N/A다.
+
+- complete check-suite와 `check-runs?filter=all`에 exact-head Actions workflow-run full pagination을 추가한다. workflow-run search 1,000-result boundary, page/count/ID 중복, SHA/repository/suite mapping 불일치는 fail closed한다.
+- non-excluded started check는 GitHub Actions App `15368`이어야 하고 exact 하나의 workflow run에 suite ID로 결합돼야 한다. 각 run은 `run_attempt=1`, terminal success, exact repository/head SHA와 nonempty workflow ID/path/event를 가져야 한다. commit statuses는 current contract에서 exact empty다.
+- 동일 context 복수는 distinct check/run/suite ID와 동일 workflow ID/path를 가진 서로 다른 first-attempt run일 때만 허용한다. 따라서 정상 `push`+`schedule`은 `rerun=0`이고 attempt 2, same-run duplicate, cross-workflow owner collision, missing metadata는 차단한다.
+- 모든 raw expected context instance는 success여야 한다. optional은 exact skipped만 intended skip이며 neutral/pending/queued/failure/cancelled와 non-Actions started check는 차단한다. started check가 0인 GitGuardian 등 external suite는 complete suite digest에는 남지만 terminal gate에는 추가하지 않는다.
+- candidate v2/bundle authority v2는 `ci_workflow_run_provenance_digest`를, external-check evidence v2와 production manifest/subject/predicate v3는 `all_actions_workflow_run_provenance_digest`를 교차 결합한다. 이전 candidate/production/attestation authority는 current promotion authority가 아니다.
+- 이 변경은 Draft implementation/docs-governance 범위이며 release rehearsal, server/production mutation, tag/attestation 발급, DB/Docker/LaunchAgent 작업과 activation은 수행하지 않는다. 작성 task는 자기 변경을 최종 승인하지 않는다.
+- repository-wide harness audit의 기존 `H-CI-001` Playwright path coverage와 `H-OMO-001` OMO promotion-readiness는 이 production authority 결함과 별개인 deferred risk다. 이 PR에서 generic OMO supervisor 또는 frontend path filter로 범위를 넓히지 않는다.
+
 ## 2026-09-04 contract-evolution — macOS offline-install local DNS configuration capability
 
 사용자 승인과 독립 security/architecture 검토에 따라 서버 Mac release rehearsal의 install-only capability 계약을 최소 확장했다. 공식 제품 문서 5종과 product API/DB 계약에는 영향이 없다.
