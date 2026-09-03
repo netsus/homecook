@@ -128,7 +128,7 @@ describe("marketing demand validation v2 document contract", () => {
     });
   });
 
-  it("projects Draft PR 1497 only onto the v2 workflow item", () => {
+  it("projects the current Stage 2 Draft PR only onto the v2 workflow item", () => {
     const status = JSON.parse(readRequired(".workflow-v2/status.json"));
     const taxonomy = status.items.find(
       (item: { id: string }) => item.id === "taxonomy-v2-contract-evolution",
@@ -138,7 +138,7 @@ describe("marketing demand validation v2 document contract", () => {
     );
 
     expect(taxonomy?.pr_path).toBeNull();
-    expect(marketingV2?.pr_path).toBe("https://github.com/netsus/homecook/pull/1497");
+    expect(marketingV2?.pr_path).toBe("https://github.com/netsus/homecook/pull/1498");
   });
 
   it("stores the resolved hero variant after deterministic attribution precedence", () => {
@@ -189,5 +189,34 @@ describe("marketing demand validation v2 document contract", () => {
       "planner-homecook-tomorrow-preview-393-320",
       "planner-complete-tomorrow-preview-393-320",
     ]));
+  });
+});
+
+describe("marketing demand validation v2 runtime contract", () => {
+  it("moves the runtime, migration, and analysis surfaces to v2 without adding a route or table", () => {
+    const types = readRequired("types/marketing-validation.ts");
+    const rules = readRequired("lib/marketing/demand-validation.ts");
+    const server = readRequired("lib/server/marketing-validation.ts");
+    const migration = readRequired("supabase/migrations/20260903010000_marketing_validation_sessions_v2.sql");
+    const analysis = readRequired("docs/marketing/demand-validation-analysis.sql");
+    const template = readRequired("docs/marketing/demand-validation-result-template.md");
+    const runtime = `${types}\n${rules}\n${server}`;
+
+    for (const action of [...anonymousActions, "lead_submitted"]) expect(runtime).toContain(`"${action}"`);
+    for (const resultKey of resultKeys) expect(runtime).toContain(`"${resultKey}"`);
+    expect(runtime).toContain("target_qualified: null");
+    expect(runtime).toContain("mumeok_funnel_prototype_v2");
+    expect(migration).toContain("marketing_validation_sessions_v2_legacy_null_check");
+    expect(`${analysis}\n${template}`).toContain("ad_variant");
+    expect(`${analysis}\n${template}`).not.toContain("target_qualified_count");
+    expect(`${analysis}\n${template}`).not.toContain("planner_intent_distribution");
+  });
+
+  it("separates the verified backend lead-gate boundary from Stage 4 read-only UI evidence", () => {
+    const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");
+
+    expect(acceptance).toMatch(/- \[x\].*lead readiness.*result\/experience\/planner payoff.*omo:id=accept-read-only;stage=2;scope=shared;review=3,6/iu);
+    expect(acceptance).toContain("Stage 2 evidence scope: lead gate가 anonymous");
+    expect(acceptance).toContain("Stage 4 UI evidence는 기존 `accept-result-before-email`, `accept-error`");
   });
 });

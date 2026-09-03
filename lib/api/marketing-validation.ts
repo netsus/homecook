@@ -1,6 +1,8 @@
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   MarketingValidationRequestBody,
+  MarketingValidationLegacyRequestBody,
+  MarketingValidationLegacyResponseData,
   MarketingValidationResponseData,
 } from "@/types/marketing-validation";
 
@@ -24,9 +26,15 @@ function invalidResponse<T>(): ApiResponse<T> {
   };
 }
 
-export async function postMarketingValidation(
+export function postMarketingValidation(
+  body: MarketingValidationLegacyRequestBody,
+): Promise<ApiResponse<MarketingValidationLegacyResponseData>>;
+export function postMarketingValidation(
   body: MarketingValidationRequestBody,
-): Promise<ApiResponse<MarketingValidationResponseData>> {
+): Promise<ApiResponse<MarketingValidationResponseData>>;
+export async function postMarketingValidation(
+  body: MarketingValidationRequestBody | MarketingValidationLegacyRequestBody,
+): Promise<ApiResponse<MarketingValidationResponseData | MarketingValidationLegacyResponseData>> {
   try {
     const response = await fetch(
       "/api/v1/marketing/validation",
@@ -38,9 +46,9 @@ export async function postMarketingValidation(
         method: "POST",
       },
     );
-    let payload: ApiResponse<MarketingValidationResponseData>;
+    let payload: ApiResponse<MarketingValidationResponseData | MarketingValidationLegacyResponseData>;
     try {
-      payload = await response.json() as ApiResponse<MarketingValidationResponseData>;
+      payload = await response.json() as ApiResponse<MarketingValidationResponseData | MarketingValidationLegacyResponseData>;
     } catch {
       return invalidResponse();
     }
