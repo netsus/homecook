@@ -158,6 +158,7 @@ export function parseReleaseSuiteOutput(source) {
     release_test_inventory_sha256: inventorySha256,
     vitest_test_files: summary.files.total,
     vitest_test_files_passed: summary.files.passed,
+    vitest_test_files_skipped: summary.files.skipped,
     vitest_test_files_failed: summary.files.failed,
     vitest_tests: summary.tests.total,
     vitest_passed: summary.tests.passed,
@@ -194,6 +195,7 @@ export function parseActualBuildOutput(source) {
     selected_test_name: selectedTestName,
     vitest_test_files: summary.files.total,
     vitest_test_files_passed: summary.files.passed,
+    vitest_test_files_skipped: summary.files.skipped,
     vitest_test_files_failed: summary.files.failed,
     vitest_tests: summary.tests.total,
     vitest_passed: summary.tests.passed,
@@ -355,7 +357,7 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
   assertExactKeys(releaseProjection, [
     "schema", "kind", "release_test_files", "release_test_cases",
     "release_test_inventory_sha256", "vitest_test_files", "vitest_test_files_passed",
-    "vitest_test_files_failed", "vitest_tests", "vitest_passed", "vitest_skipped",
+    "vitest_test_files_skipped", "vitest_test_files_failed", "vitest_tests", "vitest_passed", "vitest_skipped",
     "vitest_failed",
   ], "release suite stdout projection");
   if (
@@ -365,7 +367,8 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
     || releaseProjection.release_test_cases !== evidence.release_suite.test_count
     || releaseProjection.release_test_inventory_sha256 !== evidence.release_suite.inventory_sha256
     || releaseProjection.vitest_test_files !== evidence.release_suite.file_count
-    || releaseProjection.vitest_test_files_passed !== evidence.release_suite.file_count
+    || releaseProjection.vitest_test_files_passed + releaseProjection.vitest_test_files_skipped
+      !== evidence.release_suite.file_count
     || releaseProjection.vitest_test_files_failed !== 0
     || releaseProjection.vitest_tests !== evidence.release_suite.test_count
     || releaseProjection.vitest_passed !== evidence.release_suite.passed
@@ -375,7 +378,7 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
   const actualProjection = commands.get("actual-build").stdout_projection;
   assertExactKeys(actualProjection, [
     "schema", "kind", "selected_test_file", "selected_test_name", "vitest_test_files",
-    "vitest_test_files_passed", "vitest_test_files_failed", "vitest_tests", "vitest_passed",
+    "vitest_test_files_passed", "vitest_test_files_skipped", "vitest_test_files_failed", "vitest_tests", "vitest_passed",
     "vitest_skipped", "vitest_failed", "stage_capability_policy", "egress_probe",
   ], "actual build stdout projection");
   if (
@@ -385,6 +388,7 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
     || actualProjection.selected_test_name !== RELEASE_EVIDENCE_COMMANDS.get("actual-build").at(-1)
     || actualProjection.vitest_test_files !== 1
     || actualProjection.vitest_test_files_passed !== 1
+    || actualProjection.vitest_test_files_skipped !== 0
     || actualProjection.vitest_test_files_failed !== 0
     || actualProjection.vitest_tests !== 1
     || actualProjection.vitest_passed !== 1
