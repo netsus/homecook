@@ -6,7 +6,8 @@ if (!witnessPath) process.exit(125);
 const witness = require(witnessPath);
 
 const Module = require("node:module");
-const originalModuleLoad = Module._load;
+const offlineDnsProjectionEnabled = process.env.HOMECOOK_OFFLINE_DNS_PROJECTION === "1";
+delete process.env.HOMECOOK_OFFLINE_DNS_PROJECTION;
 const offlineDnsError = () => {
   witness.recordProcessAttempt("network");
   const error = new Error("offline release build attempted DNS access");
@@ -37,11 +38,55 @@ const offlineDns = new Proxy(Object.freeze({
     return offlineDnsError;
   },
 });
-Module._load = function homecookOfflineModuleLoad(request, ...args) {
-  if (request === "dns" || request === "node:dns") return offlineDns;
-  if (request === "dns/promises" || request === "node:dns/promises") return offlineDnsPromises;
-  return Reflect.apply(originalModuleLoad, this, [request, ...args]);
-};
+if (offlineDnsProjectionEnabled) {
+  const originalModuleLoad = Module._load;
+  Module._load = function homecookOfflineModuleLoad(request, ...args) {
+    if (request === "dns" || request === "node:dns") return offlineDns;
+    if (request === "dns/promises" || request === "node:dns/promises") return offlineDnsPromises;
+    return Reflect.apply(originalModuleLoad, this, [request, ...args]);
+  };
+  const originalGetBuiltinModule = process.getBuiltinModule.bind(process);
+  process.getBuiltinModule = function homecookOfflineBuiltinModule(request) {
+    if (request === "dns" || request === "node:dns") return offlineDns;
+    if (request === "dns/promises" || request === "node:dns/promises") return offlineDnsPromises;
+    return originalGetBuiltinModule(request);
+  };
+  const symbolName = "homecook.offlineDnsProjection";
+  globalThis[Symbol.for(symbolName)] = Object.freeze({ dns: offlineDns, promises: offlineDnsPromises });
+  const dnsExports = [
+    "ADDRCONFIG", "ADDRGETNETWORKPARAMS", "ALL", "BADFAMILY", "BADFLAGS", "BADHINTS",
+    "BADNAME", "BADQUERY", "BADRESP", "BADSTR", "CANCELLED", "CONNREFUSED", "DESTRUCTION",
+    "EOF", "FILE", "FORMERR", "LOADIPHLPAPI", "NODATA", "NOMEM", "NONAME", "NOTFOUND",
+    "NOTIMP", "NOTINITIALIZED", "REFUSED", "Resolver", "SERVFAIL", "TIMEOUT", "V4MAPPED",
+    "getDefaultResultOrder", "getServers", "lookup", "lookupService", "resolve", "resolve4",
+    "resolve6", "resolveAny", "resolveCaa", "resolveCname", "resolveMx", "resolveNaptr", "resolveNs",
+    "resolvePtr", "resolveSoa", "resolveSrv", "resolveTxt", "reverse", "setDefaultResultOrder", "setServers",
+  ];
+  const moduleSource = (kind, exports) => {
+    const projection = `globalThis[Symbol.for(${JSON.stringify(symbolName)})].${kind}`;
+    return [
+      `const projection=${projection};`,
+      ...exports.map((name) => `export const ${name}=projection.${name};`),
+      "export default projection;",
+    ].join("\n");
+  };
+  const dnsSource = moduleSource("dns", [...dnsExports, "promises"]);
+  const promisesSource = moduleSource("promises", dnsExports.filter((name) => ![
+    "ADDRCONFIG", "ALL", "V4MAPPED", "promises",
+  ].includes(name)));
+  const loaderSource = [
+    `const dnsUrl="data:text/javascript,"+encodeURIComponent(${JSON.stringify(dnsSource)});`,
+    `const promisesUrl="data:text/javascript,"+encodeURIComponent(${JSON.stringify(promisesSource)});`,
+    "export async function resolve(specifier, context, nextResolve) {",
+    '  if (specifier === "dns" || specifier === "node:dns") return { url: dnsUrl, shortCircuit: true };',
+    '  if (specifier === "dns/promises" || specifier === "node:dns/promises") return { url: promisesUrl, shortCircuit: true };',
+    "  return nextResolve(specifier, context);",
+    "}",
+  ].join("\n");
+  Module.register(`data:text/javascript,${encodeURIComponent(loaderSource)}`, {
+    parentURL: require("node:url").pathToFileURL(`${process.cwd()}/`).href,
+  });
+}
 
 const childProcess = require("node:child_process");
 for (const name of ["exec", "execFile", "execFileSync", "execSync", "fork", "spawn", "spawnSync"]) {
@@ -119,6 +164,8 @@ function sanitizeForWorkerThread(value, seen = new WeakMap()) {
   }
   return output;
 }
-workerThreads.Worker.prototype.postMessage = function homecookWitnessedWorkerMessage(value, ...args) {
-  return Reflect.apply(originalPostMessage, this, [sanitizeForWorkerThread(value), ...args]);
-};
+if (!offlineDnsProjectionEnabled) {
+  workerThreads.Worker.prototype.postMessage = function homecookWitnessedWorkerMessage(value, ...args) {
+    return Reflect.apply(originalPostMessage, this, [sanitizeForWorkerThread(value), ...args]);
+  };
+}

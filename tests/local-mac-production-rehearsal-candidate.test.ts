@@ -630,6 +630,54 @@ describe("release rehearsal candidate manifest", () => {
     }
   });
 
+  it("fails closed on a concurrent nested swap without touching the replacement or an external symlink target", () => {
+    let nested = "";
+    let relocated = "";
+    let replacementDevice: bigint | null = null;
+    let replacementInode: bigint | null = null;
+    let raced = false;
+    const external = realpathSync(mkdtempSync(join(tmpdir(), "homecook-external-nested-control-")));
+    const registry = createOwnedTempRegistry({
+      beforeAtomicClaim: ({ kind, path }: { kind: string, path: string }) => {
+        if (raced || kind !== "entry" || basename(path) !== "nested") return;
+        raced = true;
+        nested = path;
+        relocated = `${path}.relocated`;
+        renameSync(path, relocated);
+        mkdirSync(path, { mode: 0o700 });
+        symlinkSync(external, join(path, "external-link"));
+        const replacementIdentity = lstatSync(path, { bigint: true });
+        replacementDevice = replacementIdentity.dev;
+        replacementInode = replacementIdentity.ino;
+      },
+    });
+    const root = registry.createOwnedTempRoot("homecook-owned-nested-swap-");
+    nested = join(root, "nested");
+    mkdirSync(nested, { mode: 0o700 });
+    writeFileSync(join(nested, "owned"), "owned\n", { mode: 0o400 });
+    chmodSync(nested, 0o500);
+    try {
+      expect(() => registry.cleanupOwnedTempRoot(root)).toThrow(/nested|replaced|identity|entry/iu);
+      expect(raced).toBe(true);
+      nested = join(root, "nested");
+      relocated = `${nested}.relocated`;
+      const replacementPost = lstatSync(nested, { bigint: true });
+      expect(replacementPost.dev).toBe(replacementDevice);
+      expect(replacementPost.ino).toBe(replacementInode);
+      expect(existsSync(external)).toBe(true);
+    } finally {
+      if (existsSync(nested)) {
+        unlinkSync(join(nested, "external-link"));
+        rmdirSync(nested);
+      }
+      if (existsSync(relocated)) {
+        renameSync(relocated, nested);
+      }
+      try { registry.cleanupOwnedTempRoot(root); } catch { /* Exact fixture cleanup is best effort after fail-closed proof. */ }
+      if (existsSync(external)) rmdirSync(external);
+    }
+  });
+
   it("removes an exact sibling alias to an owned temp root without touching other siblings", () => {
     const root = createOwnedTempRoot("homecook-owned-alias-");
     const alias = `${root}-root-alias`;
@@ -1924,7 +1972,11 @@ try {
       processExecutablePaths: [probe.executablePath],
       args: [],
       cwd: root,
-      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      env: {
+        HOME: root,
+        PATH: "/usr/bin:/bin",
+        TMPDIR: root,
+      },
       label: "real sub-poll child denial",
       stage: "offline-install",
     })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
@@ -2337,6 +2389,24 @@ try {
     expect(successful.audit_digest).toMatch(/^[0-9a-f]{64}$/u);
     expect(successful.process_instance_digest).toMatch(/^[0-9a-f]{64}$/u);
 
+    const timeoutPidPath = join(root, "timeout.pid");
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: witnessPath,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      processExecutablePaths: [command],
+      args: ["-e", `require("node:fs").writeFileSync(${JSON.stringify(timeoutPidPath)},String(process.pid));setTimeout(()=>{},30000)`],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "audit-token-bound timeout termination",
+      stage: "next-build",
+      timeout: 100,
+    } as never)).rejects.toThrow(/failed|timeout|sandbox|observed/iu);
+    const timeoutPid = Number(readFileSync(timeoutPidPath, "utf8"));
+    expect(() => process.kill(timeoutPid, 0)).toThrowError(expect.objectContaining({ code: "ESRCH" }));
+
     const workerThreadProjection = [
       'const { Worker } = require("node:worker_threads");',
       'const worker = new Worker("const { parentPort } = require(\\\"node:worker_threads\\\"); parentPort.once(\\\"message\\\", value => parentPort.postMessage(value.callback === null));", { eval: true });',
@@ -2405,11 +2475,10 @@ try {
     expect(existsSync(escapedPidPath)).toBe(false);
   }, 30_000);
 
-  it("rejects an executable pathname swap even when the original bytes are restored", async () => {
+  it("rejects an executable pathname swap using only run-owned Node copies", async () => {
     if (
       process.platform !== "darwin"
       || !existsSync("/usr/bin/clang")
-      || !existsSync("/Users/shj/.nvm/versions/node/v23.7.0/bin/node")
     ) return;
     const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
     const materializeWitness = candidateModule.materializeSandboxProcessWitness;
@@ -2421,6 +2490,10 @@ try {
     const root = privateRoot("homecook-executable-swap-");
     const command = privateNodeClone(root, "1234abcds");
     const original = `${command}.original`;
+    const replacement = privateNodeClone(root, "1234abcdr");
+    const commandIdentity = lstatSync(command, { bigint: true });
+    const replacementIdentity = lstatSync(replacement, { bigint: true });
+    expect(replacementIdentity.ino).not.toBe(commandIdentity.ino);
     const witnessPath = join(root, "sandbox-process-witness.node");
     (materializeWitness as (options: Record<string, unknown>) => unknown)({
       clangPath: "/usr/bin/clang",
@@ -2445,7 +2518,7 @@ try {
         sandboxWitnessPath: witnessPath,
         afterExecutableSnapshot: () => {
           renameSync(command, original);
-          copyFileSync("/Users/shj/.nvm/versions/node/v23.7.0/bin/node", command);
+          renameSync(replacement, command);
           chmodSync(command, 0o500);
           swapped = true;
         },
@@ -2458,6 +2531,36 @@ try {
       }
     }
   }, 20_000);
+
+  it("never signals a reused PID when the witnessed process instance no longer matches", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const signalWitnessedProcessInstance = candidateModule.signalWitnessedProcessInstance;
+    expect(typeof signalWitnessedProcessInstance).toBe("function");
+    if (typeof signalWitnessedProcessInstance !== "function") return;
+    const signalProcess = vi.fn();
+    const verifyProcessInstance = vi.fn(() => false);
+    await expect((signalWitnessedProcessInstance as (options: Record<string, unknown>) => unknown)({
+      pid: 4242,
+      signal: "SIGKILL",
+      witness: {
+        pid: 4242,
+        pidversion: 7,
+        started_at_sec: 1_788_436_000,
+        started_at_usec: 123_456,
+        executable_path: "/private/tmp/hcnode1234abcdx",
+        device: "1",
+        inode: "2",
+        size: "3",
+        ctime_sec: 4,
+        ctime_nsec: 5,
+        executable_sha256: DIGEST_A,
+      },
+      verifyProcessInstance,
+      signalProcess,
+    })).rejects.toThrow(/instance|reused|signal|failed closed/iu);
+    expect(verifyProcessInstance).toHaveBeenCalledOnce();
+    expect(signalProcess).not.toHaveBeenCalled();
+  });
 
   it("loads the canonical tool lock and rejects self-reported Supabase identity without the pinned binary digest", () => {
     const lock = loadRehearsalToolchainLock(
@@ -3511,6 +3614,7 @@ describe("release rehearsal candidate orchestration", () => {
     const sandboxWitness = (materializeWitness as (options: Record<string, unknown>) => {
       path: string;
       preload_path: string;
+      signal_path: string;
     })({
       clangPath: "/usr/bin/clang",
       nodePath: process.execPath,
@@ -3526,7 +3630,7 @@ describe("release rehearsal candidate orchestration", () => {
       executablePaths: [command],
       readRoots: [root, command, sandboxWitness.path, sandboxWitness.preload_path, ...new Set(pythonRuntimePaths)],
       writeRoots: [root],
-      deniedWritePaths: [sandboxWitness.path, sandboxWitness.preload_path],
+      deniedWritePaths: [sandboxWitness.path, sandboxWitness.preload_path, sandboxWitness.signal_path],
     });
     await expect(runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
@@ -3562,7 +3666,91 @@ describe("release rehearsal candidate orchestration", () => {
       env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
       label: "offline CommonJS DNS initialization",
       processExecutablePaths: [command],
-      stage: "offline-dns-init",
+      stage: "offline-install",
+    })).resolves.toMatchObject({
+      audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+
+    const observeWitnessedRoot = candidateModule.observeWitnessedSandboxRoot;
+    expect(typeof observeWitnessedRoot).toBe("function");
+    if (typeof observeWitnessedRoot !== "function") return;
+    const allDnsAccessors = [
+      'import dnsNode, { lookup as staticNodeLookup } from "node:dns";',
+      'import dnsBare, { lookup as staticBareLookup } from "dns";',
+      'import promisesNode, { lookup as staticNodePromiseLookup } from "node:dns/promises";',
+      'import promisesBare, { lookup as staticBarePromiseLookup } from "dns/promises";',
+      'import { createRequire } from "node:module";',
+      'const require = createRequire(import.meta.url);',
+      'const syncCalls = [',
+      '  () => require("dns").lookup("127.0.0.1", () => {}),',
+      '  () => require("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => staticNodeLookup("127.0.0.1", () => {}),',
+      '  () => staticBareLookup("127.0.0.1", () => {}),',
+      '  () => new dnsNode.Resolver(), () => new dnsBare.Resolver(),',
+      '];',
+      'for (const call of syncCalls) { try { call(); } catch {} }',
+      'const promiseModules = [',
+      '  require("dns/promises"), require("node:dns/promises"),',
+      '  process.getBuiltinModule("dns/promises"), process.getBuiltinModule("node:dns/promises"),',
+      '  promisesNode, promisesBare, await import("node:dns/promises"), await import("dns/promises"),',
+      '];',
+      'for (const dns of promiseModules) {',
+      '  try { new dns.Resolver(); } catch {}',
+      '  try { await dns.lookup("127.0.0.1"); } catch {}',
+      '}',
+      'for (const dns of [await import("node:dns"), await import("dns")]) {',
+      '  try { dns.lookup("127.0.0.1", () => {}); } catch {}',
+      '}',
+      'process.stdout.write("all-dns-accessors-attempted\\n");',
+    ].join("\n");
+    const accessResult = await (observeWitnessedRoot as (options: Record<string, unknown>) => Promise<{
+      process_attempt_count: number;
+      process_attempt_kinds: string[];
+      stdout: string;
+    }>)({
+      profile,
+      command,
+      args: ["--input-type=module", "-e", allDnsAccessors],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "all Node 22 DNS built-in accessors",
+      timeout: 10_000,
+      sandboxWitnessPath: sandboxWitness.path,
+      offlineDnsProjection: true,
+    });
+    expect(accessResult).toMatchObject({ status: 0, signal: null, stderr: "" });
+    expect(accessResult.stdout).toBe("all-dns-accessors-attempted\n");
+    expect(accessResult.process_attempt_count).toBe(26);
+    expect(new Set(accessResult.process_attempt_kinds)).toEqual(new Set(["network"]));
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      args: ["-e", 'process.getBuiltinModule("dns").lookup("127.0.0.1",()=>{})'],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "offline DNS validation failure",
+      processExecutablePaths: [command],
+      stage: "offline-install",
+    })).rejects.toThrow(/network|attempt|sandbox|failed/iu);
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      args: ["-e", 'process.getBuiltinModule("dns").lookup("127.0.0.1",error=>process.exit(error?70:0))'],
+      cwd: root,
+      env: { HOME: root, HOMECOOK_OFFLINE_DNS_PROJECTION: "1", PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "Next build retains application DNS module semantics",
+      processExecutablePaths: [command],
+      stage: "next-build",
     })).resolves.toMatchObject({
       audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
@@ -3580,7 +3768,7 @@ describe("release rehearsal candidate orchestration", () => {
       processExecutablePaths: [command],
       stage: "adjacent-mach-deny",
     })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
-  }, 30_000);
+  }, 60_000);
 
   it("allows only root metadata for the observed macOS /etc and /var aliases", () => {
     const root = privateRoot("homecook-candidate-macos-root-aliases-");
@@ -3819,6 +4007,7 @@ describe("release rehearsal candidate orchestration", () => {
       const sandboxWitness = (materializeWitness as (options: Record<string, unknown>) => {
         path: string;
         preload_path: string;
+        signal_path: string;
       })({
         clangPath: "/usr/bin/clang",
         nodePath: process.execPath,
@@ -3849,6 +4038,7 @@ describe("release rehearsal candidate orchestration", () => {
         join(packageStoreView, "files"),
         sandboxWitness.path,
         sandboxWitness.preload_path,
+        sandboxWitness.signal_path,
       ],
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
     };
@@ -3939,6 +4129,7 @@ describe("release rehearsal candidate orchestration", () => {
         packageStoreView,
         sandboxWitness.path,
         sandboxWitness.preload_path,
+        sandboxWitness.signal_path,
       ],
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
     };

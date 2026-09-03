@@ -47,7 +47,7 @@ export function establishOwnedVitestSuiteTemp() {
       try {
         cleanup();
       } finally {
-        process.off(signal, handler);
+        process.removeAllListeners(signal);
         process.kill(process.pid, signal);
       }
     };
