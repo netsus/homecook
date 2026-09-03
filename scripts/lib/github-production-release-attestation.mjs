@@ -604,6 +604,92 @@ function normalizeCompleteCheckRunPages({ checkRunPages, checkSuiteIdSet }) {
   return checkRuns;
 }
 
+function normalizeWorkflowRunMetadata({
+  releaseSha,
+  requiredCheckSuiteIds,
+  workflowRuns,
+}) {
+  if (!Array.isArray(workflowRuns)) {
+    throw new Error("GitHub Actions workflow run metadata is required.");
+  }
+
+  const requiredSuiteIdSet = new Set(requiredCheckSuiteIds);
+  const byCheckSuiteId = new Map();
+  const observedRunIds = new Set();
+  for (const [index, entry] of workflowRuns.entries()) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`workflowRuns[${index}] must be an object.`);
+    }
+    const checkSuiteId = requirePositiveInteger(
+      entry.check_suite_id,
+      `workflowRuns[${index}].check_suite_id`,
+    );
+    const runId = requirePositiveInteger(entry.id, `workflowRuns[${index}].id`);
+    if (observedRunIds.has(runId)) {
+      throw new Error(`GitHub Actions workflow run metadata contains duplicate run ID ${runId}.`);
+    }
+    if (byCheckSuiteId.has(checkSuiteId)) {
+      throw new Error(
+        `GitHub Actions workflow run metadata contains duplicate check suite ${checkSuiteId}.`,
+      );
+    }
+    observedRunIds.add(runId);
+
+    const normalized = {
+      checkSuiteId,
+      conclusion: entry.conclusion === null
+        ? null
+        : requireNonEmptyString(
+            entry.conclusion,
+            `workflowRuns[${index}].conclusion`,
+          ).toLowerCase(),
+      event: requireNonEmptyString(entry.event, `workflowRuns[${index}].event`).toLowerCase(),
+      headSha: requireSha1(entry.head_sha, `workflowRuns[${index}].head_sha`),
+      repository: requireNonEmptyString(
+        entry.repository?.full_name,
+        `workflowRuns[${index}].repository.full_name`,
+      ),
+      runAttempt: requirePositiveInteger(
+        entry.run_attempt,
+        `workflowRuns[${index}].run_attempt`,
+      ),
+      runId,
+      status: requireNonEmptyString(
+        entry.status,
+        `workflowRuns[${index}].status`,
+      ).toLowerCase(),
+    };
+    if (normalized.headSha !== releaseSha) {
+      throw new Error(`GitHub Actions workflow run ${runId} head SHA metadata is inconsistent.`);
+    }
+    if (normalized.repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
+      throw new Error(`GitHub Actions workflow run ${runId} repository metadata is inconsistent.`);
+    }
+    if (
+      requiredSuiteIdSet.has(checkSuiteId)
+      && (
+        normalized.status !== "completed"
+        || !["success", "skipped"].includes(normalized.conclusion)
+      )
+    ) {
+      throw new Error(
+        `GitHub Actions workflow run ${runId} is not terminal success or intended skip.`,
+      );
+    }
+    byCheckSuiteId.set(checkSuiteId, normalized);
+  }
+
+  for (const checkSuiteId of requiredSuiteIdSet) {
+    if (!byCheckSuiteId.has(checkSuiteId)) {
+      throw new Error(
+        `GitHub Actions workflow run metadata is missing for check suite ${checkSuiteId}.`,
+      );
+    }
+  }
+
+  return byCheckSuiteId;
+}
+
 /**
  * @param {{
  *   checkRunPages?: Array<Record<string, unknown>> | null,
@@ -613,6 +699,7 @@ function normalizeCompleteCheckRunPages({ checkRunPages, checkSuiteIdSet }) {
  *   excludedCheckSuiteIds?: number[] | null,
  *   expectedContexts?: string[],
  *   releaseSha?: string | null,
+ *   workflowRuns?: Array<Record<string, unknown>> | null,
  * }} [options]
  */
 export function buildGitHubProductionReleaseExternalCheckEvidence({
@@ -623,6 +710,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
   excludedCheckSuiteIds = null,
   expectedContexts = EXPECTED_RELEASE_CONTEXTS,
   releaseSha = null,
+  workflowRuns = null,
 } = {}) {
   const hasCompletePages = checkRunPages !== null || checkSuitePages !== null;
   if (hasCompletePages && (checkRunPages === null || checkSuitePages === null)) {
@@ -644,11 +732,24 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     expectedContexts,
     "expected_release_contexts",
   );
+  const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
 
   const normalizedExcludedCheckSuiteIds = normalizeExcludedCheckSuiteIds(
     excludedCheckSuiteIds,
   );
   const excludedSuiteIdSet = new Set(normalizedExcludedCheckSuiteIds);
+  const githubActionsCheckSuiteIds = [...new Set(normalizedCheckRuns
+    .filter((entry) => {
+      const checkSuiteId = Number(entry?.check_suite?.id);
+      return Number(entry?.app?.id) === GITHUB_ACTIONS_APP_INTEGRATION_ID
+        && !excludedSuiteIdSet.has(checkSuiteId);
+    })
+    .map((entry) => Number(entry.check_suite?.id)))];
+  const workflowRunByCheckSuiteId = normalizeWorkflowRunMetadata({
+    releaseSha: normalizedReleaseSha,
+    requiredCheckSuiteIds: githubActionsCheckSuiteIds,
+    workflowRuns,
+  });
   const observedExcludedSuiteIds = new Set(
     completeSuiteAuthority === null
       ? []
@@ -677,6 +778,9 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
       checkSuiteId,
       context: contextKey(entry.name ?? entry.context, "check.context"),
       timestamp: sortTimestamp(entry),
+      workflowEvent: null,
+      workflowRunAttempt: null,
+      workflowRunId: null,
     };
     if (
       !Number.isSafeInteger(normalized.checkRunId)
@@ -687,6 +791,17 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
       throw new Error(
         `Production release check context must bind positive check-run and check-suite IDs: ${normalized.context}.`,
       );
+    }
+    if (normalized.appId === GITHUB_ACTIONS_APP_INTEGRATION_ID) {
+      const workflowRun = workflowRunByCheckSuiteId.get(normalized.checkSuiteId);
+      if (!workflowRun) {
+        throw new Error(
+          `GitHub Actions workflow run metadata is missing for ${normalized.context}.`,
+        );
+      }
+      normalized.workflowEvent = workflowRun.event;
+      normalized.workflowRunAttempt = workflowRun.runAttempt;
+      normalized.workflowRunId = workflowRun.runId;
     }
     if (["pending", "queued"].includes(normalized.bucket)) {
       throw new Error(
@@ -720,6 +835,20 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     throw new Error(
       `excludedCheckSuiteIds were not observed in current check runs: ${unobservedExcludedSuiteIds.join(", ")}.`,
     );
+  }
+
+  const contextByRunIdentity = new Set();
+  for (const entry of instancesByIdentity.values()) {
+    const runIdentity = entry.workflowRunId === null
+      ? `app:${entry.appId}:suite:${entry.checkSuiteId}`
+      : `workflow-run:${entry.workflowRunId}`;
+    const key = `${runIdentity}:context:${entry.context}`;
+    if (contextByRunIdentity.has(key) && !(entry.workflowRunAttempt > 1)) {
+      throw new Error(
+        `Production release check context is duplicated inside the same run: ${entry.context}.`,
+      );
+    }
+    contextByRunIdentity.add(key);
   }
 
   const statusesByContext = new Map();
@@ -774,9 +903,17 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     }
   }
 
-  for (const entries of byKey.values()) {
-    summary.rerun += Math.max(0, entries.length - 1);
-  }
+  const normalizedWorkflowRuns = [...new Map(
+    [...instancesByIdentity.values()]
+      .filter((entry) => entry.workflowRunId !== null)
+      .map((entry) => [entry.workflowRunId, {
+        check_suite_id: entry.checkSuiteId,
+        event: entry.workflowEvent,
+        run_attempt: entry.workflowRunAttempt,
+        run_id: entry.workflowRunId,
+      }]),
+  ).values()].sort((left, right) => left.run_id - right.run_id);
+  summary.rerun = normalizedWorkflowRuns.filter((entry) => entry.run_attempt > 1).length;
 
   for (const [context, entries] of statusesByContext) {
     const latestTimestamp = Math.max(...entries.map((entry) => entry.timestamp));
@@ -829,6 +966,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
       .update(JSON.stringify(allInstances))
       .digest("hex"),
     all_context_check_suite_ids: allContextCheckSuiteIds,
+    all_context_workflow_runs: normalizedWorkflowRuns,
     all_context_commit_statuses_digest: createHash("sha256")
       .update(JSON.stringify(normalizedCommitStatuses))
       .digest("hex"),
@@ -858,6 +996,7 @@ export function normalizeGitHubProductionReleaseCheckSummary(options = {}) {
  *   rehearsalAuthority?: Record<string, unknown> | null,
  *   subjectOutputPath?: string | null,
  *   workflowAuthority?: Record<string, unknown> | null,
+ *   workflowRuns?: Array<Record<string, unknown>> | null,
  * }} [options]
  */
 export function buildGitHubProductionReleaseAttestationArtifacts({
@@ -877,6 +1016,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   rehearsalAuthority = null,
   subjectOutputPath = null,
   workflowAuthority = null,
+  workflowRuns = null,
 } = {}) {
   const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
   const normalizedReleaseTree = requireSha1(releaseTree, "releaseTree");
@@ -943,6 +1083,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     excludedCheckSuiteIds: normalizedExcludedCheckSuiteIds,
     expectedContexts,
     releaseSha: normalizedReleaseSha,
+    workflowRuns,
   });
   const requiredCheckSummary = externalCheckEvidence.required_check_summary;
   if (requiredCheckSummary.rerun !== 0) {

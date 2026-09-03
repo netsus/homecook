@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  buildGitHubProductionReleaseAttestationArtifacts,
+  buildGitHubProductionReleaseAttestationArtifacts as buildGitHubProductionReleaseAttestationArtifactsRaw,
   buildGitHubProductionReleaseExternalCheckEvidence,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
   CANONICAL_GITHUB_PRODUCTION_RELEASE_SIGNER_WORKFLOW,
@@ -123,6 +123,89 @@ function createTrustedCheckRuns(checkSuiteId = 200) {
   }));
 }
 
+function createWorkflowRun({
+  checkSuiteId,
+  conclusion = "success",
+  event = "push",
+  headSha = "a".repeat(40),
+  id,
+  runAttempt = 1,
+  status = "completed",
+}: {
+  checkSuiteId: number,
+  conclusion?: string | null,
+  event?: string,
+  headSha?: string,
+  id: number,
+  runAttempt?: number,
+  status?: string,
+}) {
+  return {
+    id,
+    check_suite_id: checkSuiteId,
+    conclusion,
+    event,
+    head_sha: headSha,
+    repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+    run_attempt: runAttempt,
+    status,
+  };
+}
+
+function createWorkflowRunsForCheckRuns(
+  checkRuns: Array<Record<string, unknown>>,
+  releaseSha = "a".repeat(40),
+) {
+  const runsBySuiteId = new Map<number, ReturnType<typeof createWorkflowRun>>();
+  for (const checkRun of checkRuns) {
+    const appId = Number((checkRun.app as { id?: unknown } | undefined)?.id);
+    if (appId !== GITHUB_ACTIONS_APP_INTEGRATION_ID) continue;
+    const checkSuiteId = Number(
+      (checkRun.check_suite as { id?: unknown } | undefined)?.id,
+    );
+    if (!runsBySuiteId.has(checkSuiteId)) {
+      runsBySuiteId.set(checkSuiteId, createWorkflowRun({
+        checkSuiteId,
+        headSha: releaseSha,
+        id: 5_000_000 + checkSuiteId,
+      }));
+    }
+    if (checkRun.status !== "completed") {
+      runsBySuiteId.set(checkSuiteId, createWorkflowRun({
+        checkSuiteId,
+        conclusion: null,
+        headSha: releaseSha,
+        id: 5_000_000 + checkSuiteId,
+        status: String(checkRun.status),
+      }));
+    }
+  }
+  return [...runsBySuiteId.values()].sort((left, right) => left.id - right.id);
+}
+
+function checkRunsFromInput(input: Record<string, unknown>) {
+  if (Array.isArray(input.checkRuns)) return input.checkRuns;
+  if (!Array.isArray(input.checkRunPages)) return [];
+  return input.checkRunPages.flatMap((page) =>
+    Array.isArray((page as { check_runs?: unknown }).check_runs)
+      ? (page as { check_runs: Array<Record<string, unknown>> }).check_runs
+      : []);
+}
+
+function buildGitHubProductionReleaseAttestationArtifacts(
+  input: NonNullable<Parameters<typeof buildGitHubProductionReleaseAttestationArtifactsRaw>[0]>,
+) {
+  const checkRuns = checkRunsFromInput(input as Record<string, unknown>);
+  const releaseSha = typeof input.releaseSha === "string"
+    ? input.releaseSha
+    : "a".repeat(40);
+  return buildGitHubProductionReleaseAttestationArtifactsRaw({
+    ...input,
+    workflowRuns: input.workflowRuns
+      ?? createWorkflowRunsForCheckRuns(checkRuns, releaseSha),
+  });
+}
+
 function createCheckSuitePages({
   count,
   releaseSha = "a".repeat(40),
@@ -171,6 +254,7 @@ function createCompleteCheckPageInput(
   return {
     checkRunPages: createCheckRunPages(checkRuns),
     checkSuitePages: [{ total_count: checkSuites.length, check_suites: checkSuites }],
+    workflowRuns: createWorkflowRunsForCheckRuns(checkRuns, releaseSha),
   };
 }
 
@@ -196,6 +280,7 @@ describe("GitHub production release attestation verification", () => {
       checkRunPages: createCheckRunPages(checkRuns),
       checkSuitePages: createCheckSuitePages({ count: 999 }),
       releaseSha: "a".repeat(40),
+      workflowRuns: createWorkflowRunsForCheckRuns(checkRuns),
     });
 
     expect(evidence).toMatchObject({
@@ -284,20 +369,20 @@ describe("GitHub production release attestation verification", () => {
     })).toThrow(/complete|count|duplicate|page|pagination|check-run/iu);
   });
 
-  it("detects an old success plus latest success rerun from the complete check-run pages", () => {
+  it("detects an actual run_attempt 2 from the complete check-run pages", () => {
     const initialRuns = createTrustedCheckRuns(200);
     const originalQuality = initialRuns.find((entry) => entry.name === "quality");
     const rerun = {
       ...originalQuality,
       id: 2_005,
-      check_suite: { id: 201 },
       completed_at: "2026-08-26T10:00:00Z",
       started_at: "2026-08-26T09:59:00Z",
     };
     const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
       checkRunPages: createCheckRunPages([...initialRuns, rerun]),
-      checkSuitePages: createCheckSuitePages({ count: 2 }),
+      checkSuitePages: createCheckSuitePages({ count: 1 }),
       releaseSha: "a".repeat(40),
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 200, id: 5_000, runAttempt: 2 })],
     });
 
     expect(evidence.required_check_summary).toMatchObject({
@@ -307,7 +392,7 @@ describe("GitHub production release attestation verification", () => {
     expect(() => buildGitHubProductionReleaseAttestationArtifacts({
       checkRuns: [...initialRuns, rerun],
       checkRunPages: createCheckRunPages([...initialRuns, rerun]),
-      checkSuitePages: createCheckSuitePages({ count: 2 }),
+      checkSuitePages: createCheckSuitePages({ count: 1 }),
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.11",
       releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
@@ -316,7 +401,167 @@ describe("GitHub production release attestation verification", () => {
       rehearsalAuthority: REHEARSAL_AUTHORITY,
       workflowAuthority: WORKFLOW_AUTHORITY,
       approvalAuthority: APPROVAL_AUTHORITY,
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 200, id: 5_000, runAttempt: 2 })],
     })).toThrow(/rerun|fresh|check-run/iu);
+  });
+
+  it("allows first-attempt push and later schedule contexts on the same SHA without calling them reruns", () => {
+    const releaseSha = "a".repeat(40);
+    const pushChecks = createTrustedCheckRuns(200).map((entry) => ({
+      ...entry,
+      head_sha: releaseSha,
+    }));
+    const scheduledChecks = pushChecks
+      .filter((entry) => entry.name !== "changes")
+      .map((entry, index) => ({
+        ...entry,
+        id: 2_000 + index,
+        check_suite: { id: 201 },
+        completed_at: `2026-08-26T10:00:${String(index).padStart(2, "0")}Z`,
+      }));
+    const gitGuardian = {
+      id: 3_000,
+      app: { id: 20_000 },
+      check_suite: { id: 202 },
+      completed_at: "2026-08-26T10:10:00Z",
+      conclusion: "success",
+      head_sha: releaseSha,
+      name: "GitGuardian Security Checks",
+      status: "completed",
+    };
+    const checkRuns = [...pushChecks, ...scheduledChecks, gitGuardian];
+
+    const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
+      ...createCompleteCheckPageInput(checkRuns, releaseSha),
+      workflowRuns: [
+        createWorkflowRun({ checkSuiteId: 200, event: "push", id: 5_000 }),
+        createWorkflowRun({ checkSuiteId: 201, event: "schedule", id: 5_001 }),
+      ],
+      releaseSha,
+    });
+
+    expect(evidence.required_check_summary).toMatchObject({
+      rerun: 0,
+      success: EXPECTED_RELEASE_CONTEXTS.length + 1,
+    });
+    expect(evidence.all_context_workflow_runs).toEqual([
+      { check_suite_id: 200, event: "push", run_attempt: 1, run_id: 5_000 },
+      { check_suite_id: 201, event: "schedule", run_attempt: 1, run_id: 5_001 },
+    ]);
+  });
+
+  it("blocks an actual GitHub Actions rerun when workflow metadata reports run_attempt 2", () => {
+    const checkRuns = createTrustedCheckRuns(200).map((entry) => ({
+      ...entry,
+      head_sha: "a".repeat(40),
+    }));
+
+    expect(() => buildGitHubProductionReleaseAttestationArtifacts({
+      checkRuns,
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 200, id: 5_000, runAttempt: 2 })],
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.14",
+      releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    })).toThrow(/rerun|attempt|fresh/iu);
+  });
+
+  it("blocks a scheduled workflow run whose metadata is still pending", () => {
+    const checkRuns = createTrustedCheckRuns(200).map((entry) => ({
+      ...entry,
+      head_sha: "a".repeat(40),
+    }));
+
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRuns,
+      workflowRuns: [createWorkflowRun({
+        checkSuiteId: 200,
+        conclusion: null,
+        event: "schedule",
+        id: 5_000,
+        status: "in_progress",
+      })],
+      releaseSha: "a".repeat(40),
+    })).toThrow(/workflow run|pending|completed|terminal/iu);
+  });
+
+  it.each([
+    { label: "old", failedSuiteId: 200, currentSuiteId: 201 },
+    { label: "current", failedSuiteId: 201, currentSuiteId: 200 },
+  ])("blocks a failed $label check even when another first-attempt run succeeds", ({
+    currentSuiteId,
+    failedSuiteId,
+  }) => {
+    const releaseSha = "a".repeat(40);
+    const failedChecks = createTrustedCheckRuns(failedSuiteId).map((entry, index) => ({
+      ...entry,
+      head_sha: releaseSha,
+      ...(index === 0 ? { conclusion: "failure" } : {}),
+    }));
+    const successfulChecks = createTrustedCheckRuns(currentSuiteId).map((entry, index) => ({
+      ...entry,
+      id: 2_000 + index,
+      head_sha: releaseSha,
+      completed_at: `2026-08-26T10:00:${String(index).padStart(2, "0")}Z`,
+    }));
+
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRuns: [...failedChecks, ...successfulChecks],
+      workflowRuns: [
+        createWorkflowRun({ checkSuiteId: 200, id: 5_000 }),
+        createWorkflowRun({ checkSuiteId: 201, event: "schedule", id: 5_001 }),
+      ],
+      releaseSha,
+    })).toThrow(/failed|terminal/iu);
+  });
+
+  it.each([
+    {
+      label: "missing",
+      workflowRuns: [],
+    },
+    {
+      label: "suite mismatch",
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 201, id: 5_000 })],
+    },
+    {
+      label: "head mismatch",
+      workflowRuns: [createWorkflowRun({
+        checkSuiteId: 200,
+        headSha: "b".repeat(40),
+        id: 5_000,
+      })],
+    },
+  ])("fails closed when workflow-run metadata is $label", ({ workflowRuns }) => {
+    const checkRuns = createTrustedCheckRuns(200).map((entry) => ({
+      ...entry,
+      head_sha: "a".repeat(40),
+    }));
+
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRuns,
+      workflowRuns,
+      releaseSha: "a".repeat(40),
+    })).toThrow(/workflow run|metadata|suite|head|missing/iu);
+  });
+
+  it("rejects duplicate contexts inside one first-attempt workflow run", () => {
+    const checkRuns = createTrustedCheckRuns(200).map((entry) => ({
+      ...entry,
+      head_sha: "a".repeat(40),
+    }));
+    checkRuns.push({
+      ...checkRuns[0],
+      id: 2_000,
+      completed_at: "2026-08-26T10:00:00Z",
+    });
+
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRuns,
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 200, id: 5_000 })],
+      releaseSha: "a".repeat(40),
+    })).toThrow(/duplicate|same run|context|suite/iu);
   });
 
   it("keeps the exact current self-suite in complete authority while excluding it only from external results", () => {
@@ -734,7 +979,7 @@ describe("GitHub production release attestation verification", () => {
       }),
     ).toThrow(/quality|expected context|latest|success/iu);
 
-    expect(() =>
+    expect(
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
         checkRuns: [
@@ -747,8 +992,8 @@ describe("GitHub production release attestation verification", () => {
             conclusion: "skipped",
           },
         ],
-      }),
-    ).toThrow(/quality|rerun|fresh|check-run/iu);
+      }).subject.required_check_summary,
+    ).toMatchObject({ rerun: 0, success: EXPECTED_RELEASE_CONTEXTS.length });
 
     const optionalCheck = {
       id: 9_999,
@@ -779,7 +1024,7 @@ describe("GitHub production release attestation verification", () => {
     }
   });
 
-  it("counts a successful required-context check-run replacement as a rerun and rejects it", () => {
+  it("counts run_attempt 2 for a required context as a rerun and rejects it", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.8",
@@ -788,11 +1033,17 @@ describe("GitHub production release attestation verification", () => {
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
     };
     const normalizeCheckSummary = normalizeGitHubProductionReleaseCheckSummary as unknown as (
-      input: { checkRuns: Array<Record<string, unknown>> },
+      input: {
+        checkRuns: Array<Record<string, unknown>>,
+        releaseSha: string,
+        workflowRuns: Array<Record<string, unknown>>,
+      },
     ) => { rerun: number; success: number };
     const originalChecks = createTrustedCheckRuns(200);
     expect(normalizeCheckSummary({
       checkRuns: originalChecks,
+      releaseSha: releaseInput.releaseSha,
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 200, id: 5_000 })],
     })).toMatchObject({ rerun: 0, success: EXPECTED_RELEASE_CONTEXTS.length });
     expect(() => buildGitHubProductionReleaseAttestationArtifacts({
       ...releaseInput,
@@ -803,21 +1054,23 @@ describe("GitHub production release attestation verification", () => {
     const successfulQualityRerun = {
       ...originalQuality,
       id: 2_005,
-      check_suite: { id: 201 },
       completed_at: "2026-08-26T10:00:00Z",
       started_at: "2026-08-26T09:59:00Z",
     };
     const rawRerunSnapshot = [...originalChecks, successfulQualityRerun];
     expect(normalizeCheckSummary({
       checkRuns: rawRerunSnapshot,
+      releaseSha: releaseInput.releaseSha,
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 200, id: 5_000, runAttempt: 2 })],
     })).toMatchObject({ rerun: 1, success: EXPECTED_RELEASE_CONTEXTS.length });
     expect(() => buildGitHubProductionReleaseAttestationArtifacts({
       ...releaseInput,
       checkRuns: rawRerunSnapshot,
+      workflowRuns: [createWorkflowRun({ checkSuiteId: 200, id: 5_000, runAttempt: 2 })],
     })).toThrow(/rerun|fresh|required context|check-run/iu);
   });
 
-  it("counts successful optional-context replacements as reruns while accepting one exact instance", () => {
+  it("counts run_attempt 2 for an optional context as a rerun while accepting attempt 1", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.10",
@@ -857,7 +1110,6 @@ describe("GitHub production release attestation verification", () => {
         {
           ...optionalSecurityAdvisory,
           id: 3_002,
-          check_suite: { id: 302 },
           completed_at: "2026-08-26T10:01:00Z",
         },
       ],
@@ -867,10 +1119,13 @@ describe("GitHub production release attestation verification", () => {
         {
           ...optionalSecurityAdvisory,
           id: 3_002,
-          check_suite: { id: 302 },
           completed_at: "2026-08-26T10:01:00Z",
         },
       ]),
+      workflowRuns: [
+        createWorkflowRun({ checkSuiteId: 200, id: 5_000 }),
+        createWorkflowRun({ checkSuiteId: 301, id: 5_001, runAttempt: 2 }),
+      ],
     })).toThrow(/optional-security-advisory|rerun|fresh|check-run/iu);
   });
 

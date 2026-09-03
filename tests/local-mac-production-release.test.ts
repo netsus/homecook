@@ -219,7 +219,7 @@ describe("local Mac production release manifest", () => {
     for (const [file, required] of [
       ["github-production-release-workflow-authority.schema.json", ["workflow_head_sha", "workflow_run_id", "workflow_check_suite_id"]],
       ["github-production-release-approval-authority.schema.json", ["master_sha_at_approval", "master_tree_at_approval"]],
-      ["github-production-release-external-check-evidence.schema.json", ["all_check_suite_count", "all_check_suite_ids_digest", "all_context_check_run_instances_digest", "all_context_check_suite_ids", "all_context_commit_statuses_digest"]],
+      ["github-production-release-external-check-evidence.schema.json", ["all_check_suite_count", "all_check_suite_ids_digest", "all_context_check_run_instances_digest", "all_context_check_suite_ids", "all_context_commit_statuses_digest", "all_context_workflow_runs"]],
     ] as const) {
       const authoritySchema = JSON.parse(readFileSync(
         new URL(`../scripts/schemas/${file}`, import.meta.url),
@@ -239,6 +239,11 @@ describe("local Mac production release manifest", () => {
       total: { type: "integer", minimum: 7 },
       success: { type: "integer", minimum: 7 },
       intended_skip: { type: "integer", minimum: 0 },
+    });
+    expect(externalCheckSchema.properties.all_context_workflow_runs).toMatchObject({
+      type: "array",
+      minItems: 1,
+      uniqueItems: true,
     });
 
     const require = createRequire(import.meta.url);

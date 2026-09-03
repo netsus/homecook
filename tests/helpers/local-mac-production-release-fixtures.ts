@@ -32,6 +32,18 @@ export function createCompleteProductionCheckPageInput({
       ];
   const suiteIds = [...new Set(allCheckRuns.map((entry) =>
     Number((entry.check_suite as { id?: unknown } | undefined)?.id)))];
+  const workflowRuns = suiteIds
+    .filter((id) => id !== selfSuiteId)
+    .map((checkSuiteId) => ({
+      id: 5_000_000 + checkSuiteId,
+      check_suite_id: checkSuiteId,
+      conclusion: "success",
+      event: "push",
+      head_sha: releaseSha,
+      repository: { full_name: "netsus/homecook" },
+      run_attempt: 1,
+      status: "completed",
+    }));
   return {
     checkRuns: allCheckRuns,
     checkRunPages: [{ total_count: allCheckRuns.length, check_runs: allCheckRuns }],
@@ -40,6 +52,7 @@ export function createCompleteProductionCheckPageInput({
       check_suites: suiteIds.map((id) => ({ id, head_sha: releaseSha })),
     }],
     excludedCheckSuiteIds: selfSuiteId === null ? [] : [selfSuiteId],
+    workflowRuns,
   };
 }
 

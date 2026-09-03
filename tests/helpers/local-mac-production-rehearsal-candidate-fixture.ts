@@ -104,11 +104,22 @@ function storedCiEvidence(releaseSha = SHA_A) {
     queued: 0,
     rerun: 0,
   };
+  const workflowRuns = checkRuns.map((entry, index) => ({
+    id: 101 + index,
+    check_suite_id: entry.check_suite_id,
+    conclusion: "success",
+    event: "push",
+    head_sha: releaseSha,
+    repository: "netsus/homecook",
+    run_attempt: 1,
+    status: "completed",
+  }));
   const projection = {
     repository: "netsus/homecook",
     head_sha: releaseSha,
     remote_master_sha: releaseSha,
     check_runs: checkRuns,
+    workflow_runs: workflowRuns,
     commit_statuses: [],
     summary,
   };
@@ -116,11 +127,19 @@ function storedCiEvidence(releaseSha = SHA_A) {
     projection,
     snapshotDigest: sha256Jcs(projection),
     summaryDigest: sha256Jcs(summary),
-    suiteRunSetDigest: sha256Jcs(checkRuns.map(({ app_id, check_suite_id, id }) => ({
-      app_id,
-      check_suite_id,
-      id,
-    }))),
+    suiteRunSetDigest: sha256Jcs({
+      check_runs: checkRuns.map(({ app_id, check_suite_id, id }) => ({
+        app_id,
+        check_suite_id,
+        id,
+      })),
+      workflow_runs: workflowRuns.map(({ check_suite_id, event, id, run_attempt }) => ({
+        check_suite_id,
+        event,
+        id,
+        run_attempt,
+      })),
+    }),
   };
 }
 

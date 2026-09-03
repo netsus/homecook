@@ -1136,7 +1136,9 @@ describe("production release rulesets desired state", { timeout: 10_000 }, () =>
     expect(workflow).not.toMatch(/check-suites\/\$\{?[^\s/}]+\}?\/check-runs/u);
     expect(workflow).not.toContain("--excluded-check-suite-id ");
     expect(workflow).toContain("actions/workflows/production-release-attestation.yml");
-    expect(workflow).not.toContain("head_sha=$RELEASE_SHA");
+    expect(workflow.match(/actions\/runs\?head_sha=\$RELEASE_SHA&per_page=100/gu)).toHaveLength(3);
+    expect(workflow.match(/--workflow-runs-json/gu)).toHaveLength(5);
+    expect(workflow).toContain("workflow-runs.json");
     expect(workflow.match(/actions\/runs\/\$\{\{ github\.run_id \}\}/gu)).toHaveLength(3);
     expect(workflow).toContain("--paginate");
     expect(workflow).toContain('.path == ".github/workflows/production-release-attestation.yml"');

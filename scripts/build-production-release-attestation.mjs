@@ -25,6 +25,7 @@ function parseArgs(argv) {
     rehearsalAuthorityPath: null,
     subjectOutputPath: null,
     workflowAuthorityPath: null,
+    workflowRunsPath: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -69,6 +70,8 @@ function parseArgs(argv) {
       options.subjectOutputPath = value;
     } else if (token === "--workflow-authority-json") {
       options.workflowAuthorityPath = value;
+    } else if (token === "--workflow-runs-json") {
+      options.workflowRunsPath = value;
     } else {
       throw new Error(`Unknown argument: ${token}`);
     }
@@ -132,6 +135,9 @@ try {
   if (!options.approvalAuthorityPath) {
     throw new Error("--approval-authority-json <path> is required for production release v2.");
   }
+  if (!options.workflowRunsPath) {
+    throw new Error("--workflow-runs-json <path> is required for production release v2.");
+  }
   const authority = JSON.parse(readFileSync(options.rehearsalAuthorityPath, "utf8"));
   if (authority.release_sha !== options.releaseSha || authority.release_tree !== options.releaseTree) {
     throw new Error("Rehearsal authority SHA/tree does not match the requested release.");
@@ -154,6 +160,7 @@ try {
     rehearsal_receipt_valid_until: authority.rehearsal_receipt_valid_until,
   };
   const workflowAuthority = JSON.parse(readFileSync(options.workflowAuthorityPath, "utf8"));
+  const workflowRuns = JSON.parse(readFileSync(options.workflowRunsPath, "utf8"));
   const approvalAuthority = JSON.parse(readFileSync(options.approvalAuthorityPath, "utf8"));
   const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
     approvalAuthority,
@@ -172,6 +179,7 @@ try {
     rehearsalAuthority,
     subjectOutputPath: options.subjectOutputPath,
     workflowAuthority,
+    workflowRuns,
   });
 
   process.stdout.write(`${JSON.stringify(artifacts, null, 2)}\n`);

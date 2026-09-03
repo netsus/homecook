@@ -15,6 +15,16 @@
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
 
+## 2026-09-04 contract-evolution — canonical current-SHA CI history classification
+
+사용자는 동일 SHA의 정상적인 `push` 뒤 `schedule` 실행이 같은 context 이름을 만들었다는 이유만으로 rerun으로 오분류되던 CI authority 계약을 교정하도록 승인했다. 공식 제품 문서 5종과 product API/DB 계약에는 영향이 없다.
+
+- `filter=all`로 수집한 모든 check-run은 계속 terminal `success` 또는 optional context의 exact `skipped`여야 한다. 과거/current failure, pending, queued, cancelled, neutral은 하나라도 있으면 차단한다.
+- 서로 다른 workflow `run_id`의 first attempt(`run_attempt=1`)가 같은 SHA에서 같은 context 이름을 만드는 것은 정상 실행 이력이며 허용한다. `push`, `schedule` 등 event 차이는 rerun 근거가 아니다.
+- 실제 GitHub Actions rerun은 check context 중복 개수가 아니라 exact workflow run API의 `run_attempt > 1`로만 판정한다. Actions check suite마다 `run_id`, `check_suite_id`, `head_sha`, repository, event, status/conclusion, attempt를 exact 결합하며 metadata 누락·중복·불일치는 fail closed한다.
+- 같은 workflow run 안의 중복 context는 first attempt에서 suspicious evidence로 거부한다. GitGuardian 같은 external App check는 workflow-run metadata 대상으로 위조하지 않고 전체 terminal check 집합에 그대로 보존한다.
+- safe evidence는 비밀 없이 고유 `run_id/event/run_attempt/check_suite_id`를 보고하고 check-instance/suite-run digest에 결합한다. production mutation, tag, rehearsal, server 실행은 이 계약 교정 범위에 포함되지 않는다.
+
 ## 2026-09-04 contract-evolution — macOS offline-install local DNS configuration capability
 
 사용자 승인과 독립 security/architecture 검토에 따라 서버 Mac release rehearsal의 install-only capability 계약을 최소 확장했다. 공식 제품 문서 5종과 product API/DB 계약에는 영향이 없다.

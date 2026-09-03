@@ -3351,6 +3351,7 @@ export function readSealedAuthorityFile(root, path, label, { afterOpen = null, m
 export function validateStoredCiProjection(value, manifest) {
   exactObject(value, "candidate CI evidence", [
     "repository", "check_runs", "commit_statuses", "head_sha", "remote_master_sha", "summary",
+    "workflow_runs",
   ]);
   if (value.repository !== REPOSITORY) fail("candidate CI evidence repository is invalid");
   sha(value.head_sha, "candidate CI evidence head_sha");
@@ -3368,10 +3369,7 @@ export function validateStoredCiProjection(value, manifest) {
       "started_at", "status",
     ]);
     for (const key of ["id", "app_id", "check_suite_id"]) safeInteger(entry[key], `candidate CI check ${key}`);
-    if (
-      entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID
-      || entry.head_sha !== manifest.release_sha
-    ) {
+    if (entry.app_id <= 0 || entry.head_sha !== manifest.release_sha) {
       fail("candidate CI check identity is invalid");
     }
     string(entry.name, "candidate CI check name");
@@ -3385,6 +3383,32 @@ export function validateStoredCiProjection(value, manifest) {
   }
   if (new Set(value.commit_statuses.map((entry) => entry.id)).size !== value.commit_statuses.length) {
     fail("candidate CI status identities are duplicated");
+  }
+  if (!Array.isArray(value.workflow_runs)) {
+    fail("candidate CI workflow run metadata is invalid");
+  }
+  const workflowRunIds = new Set();
+  const workflowSuiteIds = new Set();
+  for (const [index, entry] of value.workflow_runs.entries()) {
+    exactObject(entry, `candidate CI workflow_runs[${index}]`, [
+      "id", "check_suite_id", "conclusion", "event", "head_sha", "repository",
+      "run_attempt", "status",
+    ]);
+    for (const key of ["id", "check_suite_id", "run_attempt"]) {
+      safeInteger(entry[key], `candidate CI workflow run ${key}`);
+      if (entry[key] <= 0) fail(`candidate CI workflow run ${key} must be positive`);
+    }
+    if (workflowRunIds.has(entry.id) || workflowSuiteIds.has(entry.check_suite_id)) {
+      fail("candidate CI workflow run identities are duplicated");
+    }
+    workflowRunIds.add(entry.id);
+    workflowSuiteIds.add(entry.check_suite_id);
+    if (entry.head_sha !== manifest.release_sha || entry.repository !== REPOSITORY) {
+      fail("candidate CI workflow run identity is invalid");
+    }
+    string(entry.event, "candidate CI workflow run event");
+    string(entry.status, "candidate CI workflow run status");
+    if (entry.conclusion !== null) string(entry.conclusion, "candidate CI workflow run conclusion");
   }
   for (const [index, entry] of value.commit_statuses.entries()) {
     exactObject(entry, `candidate CI commit_statuses[${index}]`, [
@@ -3415,6 +3439,11 @@ export function validateStoredCiProjection(value, manifest) {
       })),
       commitStatuses: value.commit_statuses,
       expectedContexts: EXPECTED_RELEASE_CONTEXTS,
+      releaseSha: manifest.release_sha,
+      workflowRuns: value.workflow_runs.map((entry) => ({
+        ...entry,
+        repository: { full_name: entry.repository },
+      })),
     });
   } catch (error) {
     fail(`candidate CI canonical policy rejected stored arrays: ${error instanceof Error ? error.message : "unknown error"}`);
@@ -3424,11 +3453,19 @@ export function validateStoredCiProjection(value, manifest) {
   }
   const evidenceDigest = sha256Jcs(value);
   const summaryDigest = sha256Jcs(value.summary);
-  const suiteRunSetDigest = sha256Jcs(value.check_runs.map((entry) => ({
-    app_id: entry.app_id,
-    check_suite_id: entry.check_suite_id,
-    id: entry.id,
-  })));
+  const suiteRunSetDigest = sha256Jcs({
+    check_runs: value.check_runs.map((entry) => ({
+      app_id: entry.app_id,
+      check_suite_id: entry.check_suite_id,
+      id: entry.id,
+    })),
+    workflow_runs: value.workflow_runs.map((entry) => ({
+      check_suite_id: entry.check_suite_id,
+      event: entry.event,
+      id: entry.id,
+      run_attempt: entry.run_attempt,
+    })),
+  });
   validateCandidateCiEvidence({
     expected_head_sha: manifest.release_sha,
     head_sha: value.head_sha,
@@ -6355,6 +6392,19 @@ function safeCheckProjection(entry) {
   };
 }
 
+function safeWorkflowRunProjection(entry) {
+  return {
+    id: Number(entry.id),
+    check_suite_id: Number(entry.check_suite_id),
+    conclusion: entry.conclusion ?? null,
+    event: entry.event,
+    head_sha: entry.head_sha,
+    repository: entry.repository?.full_name,
+    run_attempt: Number(entry.run_attempt),
+    status: entry.status,
+  };
+}
+
 function safeStatusProjection(entry) {
   return {
     id: Number(entry.id),
@@ -6689,6 +6739,10 @@ export function createReleaseRehearsalCandidateAdapters({
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
         `/repos/${REPOSITORY}/commits/${releaseSha}/check-runs?filter=all&per_page=100`,
       ], { env, label: "trusted GitHub check-runs readback", runCommand, timeout: 120_000 }), "check_runs");
+      const allWorkflowRuns = parseGhPages(runBounded(ghPath, [
+        "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
+        `/repos/${REPOSITORY}/actions/runs?head_sha=${releaseSha}&per_page=100`,
+      ], { env, label: "trusted GitHub workflow-runs readback", runCommand, timeout: 120_000 }), "workflow_runs");
       const commitStatuses = parseGhPages(runBounded(ghPath, [
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
         `/repos/${REPOSITORY}/commits/${releaseSha}/statuses?per_page=100`,
@@ -6696,20 +6750,26 @@ export function createReleaseRehearsalCandidateAdapters({
       if (checkRuns.some((entry) => entry.head_sha !== releaseSha)) {
         fail("GitHub check-run head SHA does not match candidate SHA");
       }
-      if (checkRuns.some((entry) => Number(entry.app?.id) !== GITHUB_ACTIONS_APP_INTEGRATION_ID)) {
-        fail("GitHub check-run does not use the trusted GitHub Actions integration");
-      }
       if (commitStatuses.some((entry) => entry.sha !== releaseSha)) {
         fail("GitHub commit-status SHA does not match candidate SHA");
       }
+      const githubActionsCheckSuiteIds = new Set(checkRuns
+        .filter((entry) => Number(entry.app?.id) === GITHUB_ACTIONS_APP_INTEGRATION_ID)
+        .map((entry) => Number(entry.check_suite?.id)));
+      const workflowRuns = allWorkflowRuns.filter((entry) =>
+        githubActionsCheckSuiteIds.has(Number(entry.check_suite_id)));
       const summary = normalizeGitHubProductionReleaseCheckSummary({
         checkRuns,
         commitStatuses,
         expectedContexts: EXPECTED_RELEASE_CONTEXTS,
+        releaseSha,
+        workflowRuns,
       });
       const safeEvidence = {
         repository: REPOSITORY,
         check_runs: checkRuns.map(safeCheckProjection).sort((left, right) =>
+          canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
+        workflow_runs: workflowRuns.map(safeWorkflowRunProjection).sort((left, right) =>
           canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
         commit_statuses: commitStatuses.map(safeStatusProjection).sort((left, right) =>
           canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
@@ -6717,11 +6777,19 @@ export function createReleaseRehearsalCandidateAdapters({
         remote_master_sha: remoteMasterSha,
         summary,
       };
-      const suiteRunSet = safeEvidence.check_runs.map((entry) => ({
-        app_id: entry.app_id,
-        check_suite_id: entry.check_suite_id,
-        id: entry.id,
-      }));
+      const suiteRunSet = {
+        check_runs: safeEvidence.check_runs.map((entry) => ({
+          app_id: entry.app_id,
+          check_suite_id: entry.check_suite_id,
+          id: entry.id,
+        })),
+        workflow_runs: safeEvidence.workflow_runs.map((entry) => ({
+          check_suite_id: entry.check_suite_id,
+          event: entry.event,
+          id: entry.id,
+          run_attempt: entry.run_attempt,
+        })),
+      };
       return {
         expected_head_sha: releaseSha,
         head_sha: releaseSha,

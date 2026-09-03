@@ -193,6 +193,10 @@ jobs:
             --paginate --slurp > "$RUNNER_TEMP/check-run-pages.json"
           jq '[.[].check_runs[]]' "$RUNNER_TEMP/check-run-pages.json" \
             > "$RUNNER_TEMP/check-runs.json"
+          gh api "repos/netsus/homecook/actions/runs?head_sha=$RELEASE_SHA&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/workflow-run-pages.json"
+          jq '[.[].workflow_runs[]]' "$RUNNER_TEMP/workflow-run-pages.json" \
+            > "$RUNNER_TEMP/workflow-runs.json"
         working-directory: trusted-current-master
 
       - name: Download all selected-release commit status pages
@@ -217,6 +221,7 @@ jobs:
             --excluded-check-suite-ids-json "$RUNNER_TEMP/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --release-sha "${{ inputs.release_sha }}" \
+            --workflow-runs-json "$RUNNER_TEMP/workflow-runs.json" \
             --output "$RUNNER_TEMP/external-check-evidence.json" \
             > "$RUNNER_TEMP/external-check-evidence-build.json"
           jq -e '.required_check_summary.rerun == 0' \
@@ -231,6 +236,8 @@ jobs:
             ${{ runner.temp }}/external-check-evidence.json
             ${{ runner.temp }}/check-run-pages.json
             ${{ runner.temp }}/check-suite-pages.json
+            ${{ runner.temp }}/workflow-run-pages.json
+            ${{ runner.temp }}/workflow-runs.json
             ${{ runner.temp }}/workflow-authority.json
             ${{ runner.temp }}/workflow-evidence.json
             ${{ runner.temp }}/current-workflow-run.json
@@ -445,6 +452,10 @@ jobs:
             --paginate --slurp > "$RUNNER_TEMP/post-approval/check-run-pages.json"
           jq '[.[].check_runs[]]' "$RUNNER_TEMP/post-approval/check-run-pages.json" \
             > "$RUNNER_TEMP/post-approval/check-runs.json"
+          gh api "repos/netsus/homecook/actions/runs?head_sha=$RELEASE_SHA&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/post-approval/workflow-run-pages.json"
+          jq '[.[].workflow_runs[]]' "$RUNNER_TEMP/post-approval/workflow-run-pages.json" \
+            > "$RUNNER_TEMP/post-approval/workflow-runs.json"
           gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/statuses \
             --paginate --jq '.[]' > "$RUNNER_TEMP/post-approval/commit-statuses.jsonl"
           jq -s '.' "$RUNNER_TEMP/post-approval/commit-statuses.jsonl" > "$RUNNER_TEMP/post-approval/commit-statuses.json"
@@ -456,6 +467,7 @@ jobs:
             --excluded-check-suite-ids-json "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --release-sha "$RELEASE_SHA" \
+            --workflow-runs-json "$RUNNER_TEMP/post-approval/workflow-runs.json" \
             --output "$RUNNER_TEMP/post-approval/external-check-evidence.json" \
             > "$RUNNER_TEMP/post-approval/external-check-evidence-build.json"
           cmp "$RUNNER_TEMP/production-release-attestation-inputs/external-check-evidence.json" \
@@ -475,6 +487,7 @@ jobs:
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --rehearsal-authority-json "$RUNNER_TEMP/post-approval/rehearsal-authority.json" \
             --workflow-authority-json "$RUNNER_TEMP/post-approval/workflow-authority.json" \
+            --workflow-runs-json "$RUNNER_TEMP/post-approval/workflow-runs.json" \
             --approval-authority-json "$RUNNER_TEMP/post-approval/approval-authority.json" \
             --subject-output "$RUNNER_TEMP/post-approval/production-release-subject.json" \
             --predicate-output "$RUNNER_TEMP/post-approval/production-release-predicate.json" \
@@ -696,6 +709,10 @@ jobs:
             --paginate --slurp > "$RUNNER_TEMP/pre-attestation/check-run-pages.json"
           jq '[.[].check_runs[]]' "$RUNNER_TEMP/pre-attestation/check-run-pages.json" \
             > "$RUNNER_TEMP/pre-attestation/check-runs.json"
+          gh api "repos/netsus/homecook/actions/runs?head_sha=$RELEASE_SHA&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/pre-attestation/workflow-run-pages.json"
+          jq '[.[].workflow_runs[]]' "$RUNNER_TEMP/pre-attestation/workflow-run-pages.json" \
+            > "$RUNNER_TEMP/pre-attestation/workflow-runs.json"
           gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/statuses \
             --paginate --jq '.[]' > "$RUNNER_TEMP/pre-attestation/commit-statuses.jsonl"
           jq -s '.' "$RUNNER_TEMP/pre-attestation/commit-statuses.jsonl" \
@@ -708,6 +725,7 @@ jobs:
             --excluded-check-suite-ids-json "$RUNNER_TEMP/pre-attestation/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --release-sha "$RELEASE_SHA" \
+            --workflow-runs-json "$RUNNER_TEMP/pre-attestation/workflow-runs.json" \
             --output "$RUNNER_TEMP/pre-attestation/external-check-evidence.json" \
             > "$RUNNER_TEMP/pre-attestation/external-check-evidence-build.json"
           cmp "$RUNNER_TEMP/post-approval/external-check-evidence.json" \
@@ -727,6 +745,7 @@ jobs:
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --rehearsal-authority-json "$RUNNER_TEMP/post-approval/pre-attestation-rehearsal-authority.json" \
             --workflow-authority-json "$RUNNER_TEMP/pre-attestation/workflow-authority.json" \
+            --workflow-runs-json "$RUNNER_TEMP/pre-attestation/workflow-runs.json" \
             --approval-authority-json "$RUNNER_TEMP/post-approval/approval-authority.json" \
             --subject-output "$RUNNER_TEMP/pre-attestation/production-release-subject.json" \
             --predicate-output "$RUNNER_TEMP/pre-attestation/production-release-predicate.json" \
@@ -756,6 +775,8 @@ jobs:
             ${{ runner.temp }}/pre-attestation/check-runs.json
             ${{ runner.temp }}/pre-attestation/check-run-pages.json
             ${{ runner.temp }}/pre-attestation/check-suite-pages.json
+            ${{ runner.temp }}/pre-attestation/workflow-run-pages.json
+            ${{ runner.temp }}/pre-attestation/workflow-runs.json
             ${{ runner.temp }}/pre-attestation/commit-statuses.json
             ${{ runner.temp }}/pre-attestation/external-check-evidence.json
             ${{ runner.temp }}/pre-attestation/workflow-authority.json

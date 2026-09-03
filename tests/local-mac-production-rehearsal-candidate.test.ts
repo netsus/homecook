@@ -139,6 +139,18 @@ const CURRENT_MASTER_CHECK_RUNS = ([
   started_at: startedAt,
   completed_at: completedAt,
 }));
+const CURRENT_MASTER_WORKFLOW_RUNS = [...new Set(
+  CURRENT_MASTER_CHECK_RUNS.map((entry) => entry.check_suite_id),
+)].sort((left, right) => left - right).map((checkSuiteId, index) => ({
+  id: 310_000 + index,
+  check_suite_id: checkSuiteId,
+  conclusion: "success",
+  event: index === 0 ? "schedule" : "push",
+  head_sha: CURRENT_MASTER_SHA,
+  repository: "netsus/homecook",
+  run_attempt: 1,
+  status: "completed",
+}));
 
 function privateRoot(prefix = "homecook-candidate-") {
   return createOwnedTempRoot(prefix);
@@ -360,11 +372,22 @@ function validCiEvidence() {
     started_at: `2026-08-29T00:00:${String(index).padStart(2, "0")}Z`,
     completed_at: `2026-08-29T00:01:${String(index).padStart(2, "0")}Z`,
   }));
+  const workflowRuns = checkRuns.map((entry, index) => ({
+    id: 101 + index,
+    check_suite_id: entry.check_suite_id,
+    conclusion: "success",
+    event: "push",
+    head_sha: SHA_A,
+    repository: "netsus/homecook",
+    run_attempt: 1,
+    status: "completed",
+  }));
   const safeProjection = {
     repository: "netsus/homecook",
     head_sha: SHA_A,
     remote_master_sha: SHA_A,
     check_runs: checkRuns,
+    workflow_runs: workflowRuns,
     commit_statuses: [],
     summary: { total: 7, success: 7, intended_skip: 0, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
   };
@@ -382,6 +405,7 @@ function validCiEvidence() {
 
 function storedCiManifest(projection: {
   check_runs: Array<{ app_id: number, check_suite_id: number, id: number }>,
+  workflow_runs: Array<{ check_suite_id: number, event: string, id: number, run_attempt: number }>,
   head_sha: string,
   summary: Record<string, number>,
 }) {
@@ -392,13 +416,19 @@ function storedCiManifest(projection: {
       .update(canonicalizeJcs(projection)).digest("hex"),
     ci_check_summary_digest: createHash("sha256")
       .update(canonicalizeJcs(projection.summary)).digest("hex"),
-    ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs(
-      projection.check_runs.map((entry) => ({
+    ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs({
+      check_runs: projection.check_runs.map((entry) => ({
         app_id: entry.app_id,
         check_suite_id: entry.check_suite_id,
         id: entry.id,
       })),
-    )).digest("hex"),
+      workflow_runs: projection.workflow_runs.map((entry) => ({
+        check_suite_id: entry.check_suite_id,
+        event: entry.event,
+        id: entry.id,
+        run_attempt: entry.run_attempt,
+      })),
+    })).digest("hex"),
   };
 }
 
@@ -3553,6 +3583,7 @@ describe("release rehearsal candidate orchestration", () => {
       head_sha: CURRENT_MASTER_SHA,
       remote_master_sha: CURRENT_MASTER_SHA,
       check_runs: structuredClone(CURRENT_MASTER_CHECK_RUNS),
+      workflow_runs: structuredClone(CURRENT_MASTER_WORKFLOW_RUNS),
       commit_statuses: [],
       summary: {
         total: 17,
@@ -3599,29 +3630,41 @@ describe("release rehearsal candidate orchestration", () => {
     ) => {
       collectCiEvidence: (options: { releaseSha: string }) => Promise<Record<string, unknown>>,
     };
+    const runCommand = vi.fn((command: string, args: string[]) => {
+      let stdout = "";
+      if (command === "/trusted/git" && args.includes("rev-parse")) {
+        stdout = `${CURRENT_MASTER_SHA}\n`;
+      } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/check-runs?"))) {
+        stdout = JSON.stringify([{ check_runs: rawCheckRuns }]);
+      } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/actions/runs?"))) {
+        stdout = JSON.stringify([{ workflow_runs: CURRENT_MASTER_WORKFLOW_RUNS.map((entry) => ({
+          ...entry,
+          repository: { full_name: entry.repository },
+        })) }]);
+      } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/statuses?"))) {
+        stdout = JSON.stringify([[]]);
+      }
+      return { status: 0, signal: null, stdout, stderr: "" };
+    });
     const adapters = createCandidateAdapters({
       rootDir: adapterRoot,
       homeDir: adapterHome,
       builderAuthoritySha: CURRENT_MASTER_SHA,
     }, {
       resolveToolPaths: () => ({ ghPath: "/trusted/gh", gitPath: "/trusted/git" }),
-      runCommand: (command: string, args: string[]) => {
-        let stdout = "";
-        if (command === "/trusted/git" && args.includes("rev-parse")) {
-          stdout = `${CURRENT_MASTER_SHA}\n`;
-        } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/check-runs?"))) {
-          stdout = JSON.stringify([{ check_runs: rawCheckRuns }]);
-        } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/statuses?"))) {
-          stdout = JSON.stringify([[]]);
-        }
-        return { status: 0, signal: null, stdout, stderr: "" };
-      },
+      runCommand,
     });
     await expect(adapters.collectCiEvidence({ releaseSha: CURRENT_MASTER_SHA }))
       .resolves.toMatchObject({
         summary: projection.summary,
-        safe_projection: { summary: projection.summary },
+        safe_projection: {
+          summary: projection.summary,
+          workflow_runs: projection.workflow_runs,
+        },
       });
+    expect(runCommand.mock.calls.some(([, args]) =>
+      args.some((arg) => arg.includes(`/actions/runs?head_sha=${CURRENT_MASTER_SHA}`))))
+      .toBe(true);
   });
 
   it("rejects required skips and the old duplicate generic scope projection", () => {
@@ -3630,6 +3673,7 @@ describe("release rehearsal candidate orchestration", () => {
       head_sha: CURRENT_MASTER_SHA,
       remote_master_sha: CURRENT_MASTER_SHA,
       check_runs: structuredClone(CURRENT_MASTER_CHECK_RUNS),
+      workflow_runs: structuredClone(CURRENT_MASTER_WORKFLOW_RUNS),
       commit_statuses: [],
       summary: {
         total: 17,
@@ -3658,7 +3702,12 @@ describe("release rehearsal candidate orchestration", () => {
         name: ["ci-scope", "security-review-scope", "security-smoke-scope"].includes(entry.name)
           ? "scope"
           : entry.name,
+        check_suite_id: ["ci-scope", "security-review-scope", "security-smoke-scope"]
+          .includes(entry.name)
+          ? 90_563_911_120
+          : entry.check_suite_id,
       })),
+      workflow_runs: structuredClone(CURRENT_MASTER_WORKFLOW_RUNS),
       commit_statuses: [],
       summary: {
         total: 15,
@@ -5573,13 +5622,19 @@ describe("release rehearsal candidate orchestration", () => {
     const ciSnapshotDigest = createHash("sha256").update(canonicalizeJcs(ciEvidence)).digest("hex");
     const ciSummaryDigest = createHash("sha256").update(canonicalizeJcs(ciEvidence.summary)).digest("hex");
     expect(ciSummaryDigest).not.toBe(ciSnapshotDigest);
-    const ciSuiteRunSetDigest = createHash("sha256").update(canonicalizeJcs(
-      ciEvidence.check_runs.map((entry) => ({
+    const ciSuiteRunSetDigest = createHash("sha256").update(canonicalizeJcs({
+      check_runs: ciEvidence.check_runs.map((entry) => ({
         app_id: entry.app_id,
         check_suite_id: entry.check_suite_id,
         id: entry.id,
       })),
-    )).digest("hex");
+      workflow_runs: ciEvidence.workflow_runs.map((entry) => ({
+        check_suite_id: entry.check_suite_id,
+        event: entry.event,
+        id: entry.id,
+        run_attempt: entry.run_attempt,
+      })),
+    })).digest("hex");
     const evidenceRoot = join(root, "evidence");
     mkdirSync(evidenceRoot, { mode: 0o700 });
     writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ciEvidence), { mode: 0o400 });
