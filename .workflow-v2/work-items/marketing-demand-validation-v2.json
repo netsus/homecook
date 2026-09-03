@@ -215,7 +215,6 @@
     "Production asset use before rights confirmation"
   ],
   "open_questions": [
-    "Independent internal 1.5 reviewer must approve the exact Draft PR head before merge.",
     "YouTube thumbnail rights or a replacement asset remain Manual Only.",
     "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
     "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
