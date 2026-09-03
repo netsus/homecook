@@ -4,16 +4,14 @@ import {
   existsSync,
   linkSync,
   mkdirSync,
-  mkdtempSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { sha256Jcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import {
@@ -25,13 +23,19 @@ import {
   runAbortableCommand,
   validateDockerDaemonSnapshots,
 } from "../scripts/lib/local-mac-production-rehearsal-runner-safety.mjs";
+import { createOwnedTempRegistry } from "./helpers/owned-temp-root";
+
+const ownedTempRegistry = createOwnedTempRegistry();
+const { cleanupOwnedTempRoots, createOwnedTempRoot } = ownedTempRegistry;
+afterEach(() => cleanupOwnedTempRoots());
+afterAll(() => cleanupOwnedTempRoots());
 
 function sha256(bytes: Buffer | string) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
 async function withUnixSocket(operation: (path: string) => Promise<void>) {
-  const root = mkdtempSync(join(tmpdir(), "homecook-r2-docker-socket-"));
+  const root = createOwnedTempRoot("homecook-r2-docker-socket-");
   chmodSync(root, 0o700);
   const socketPath = join(root, "docker.sock");
   const server = createServer();
@@ -67,7 +71,7 @@ describe("R2 trusted local Docker endpoint", () => {
   });
 
   it("keeps Docker config private without accepting its socket as authority", () => {
-    const runRoot = mkdtempSync(join(tmpdir(), "homecook-r2-docker-config-"));
+    const runRoot = createOwnedTempRoot("homecook-r2-docker-config-");
     chmodSync(runRoot, 0o700);
     const environment = buildPrivateDockerEnvironment({ runRoot });
     expect(environment.DOCKER_CONFIG).toBe(join(runRoot, "docker-config"));
@@ -163,7 +167,7 @@ describe("R2 abortable command lifecycle", () => {
 
 describe("R2 verified migration bytes", () => {
   it("holds exact sealed migration Buffers and recomputes the ordered aggregate", () => {
-    const root = mkdtempSync(join(tmpdir(), "homecook-r2-migrations-"));
+    const root = createOwnedTempRoot("homecook-r2-migrations-");
     chmodSync(root, 0o700);
     const migrationRoot = join(root, "bundles", "bundle", "full_local", "supabase", "migrations");
     mkdirSync(migrationRoot, { recursive: true, mode: 0o700 });
@@ -191,7 +195,7 @@ describe("R2 verified migration bytes", () => {
   });
 
   it("rejects aggregate mismatch, symlink, and hardlink substitution", () => {
-    const root = mkdtempSync(join(tmpdir(), "homecook-r2-migration-attacks-"));
+    const root = createOwnedTempRoot("homecook-r2-migration-attacks-");
     chmodSync(root, 0o700);
     const migrationRoot = join(root, "bundles", "bundle", "full_local", "supabase", "migrations");
     mkdirSync(migrationRoot, { recursive: true, mode: 0o700 });

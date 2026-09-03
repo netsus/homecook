@@ -15,6 +15,15 @@
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
 
+## 2026-09-04 contract-evolution — macOS offline-install local DNS configuration capability
+
+사용자 승인과 독립 security/architecture 검토에 따라 서버 Mac release rehearsal의 install-only capability 계약을 최소 확장했다. 공식 제품 문서 5종과 product API/DB 계약에는 영향이 없다.
+
+- `offline-install` sandbox만 exact local Mach service `com.apple.SystemConfiguration.DNSConfiguration` lookup 1개를 허용하고 `next-build`와 runtime은 0개를 유지한다.
+- `(deny network*)`와 diagnosticd exact deny/no-log는 유지한다. DNSConfiguration allow에는 `with no-log`를 쓰지 않으며 wildcard·다른 Mach service·synthetic net/tls 성공 투영은 금지한다.
+- direct DNS lookup, net/TLS connect, public IP connect, HTTP의 성공 수는 모두 0이어야 한다.
+- canonical policy text/digest, stage별 allow count, install/build audit digest와 zero denial/process-attempt 결과를 candidate/bundle/evidence에 결합한다. 이 evidence는 서명된 production trust가 아니다.
+
 ## 2026-09-03 contract-evolution — marketing demand validation v2
 
 사용자는 source prototype branch `feature/demand-validation-funnel-integration`, exact commit `63f8ef2a019c6d260a96a42fab9d67f727d93557`의 사용자 확정 프런트를 운영 계약으로 진화시키는 방향을 승인했다. Stage 1 작성 task는 `01a0630e-81f1-7f42-8b1b-cb259d1d5997`이며 자기 변경을 최종 승인하지 않는다.

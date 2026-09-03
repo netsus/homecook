@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -32,6 +33,10 @@ import {
 } from "../scripts/lib/local-mac-production-release.mjs";
 import { validateProductionReleaseTag } from "../scripts/lib/production-release-approval-policy.mjs";
 import { buildRehearsalSelection } from "../scripts/lib/local-mac-production-rehearsal-selection.mjs";
+import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
+import { validateLocalMacProductionReleaseEvidence } from "../scripts/lib/local-mac-production-release-evidence.mjs";
+import * as releaseEvidenceModule from "../scripts/lib/local-mac-production-release-evidence.mjs";
+import * as releaseInventoryModule from "../scripts/lib/local-mac-production-release-test-inventory.mjs";
 
 const temporaryDirectories: string[] = [];
 const VERIFIED_ATTESTATION = () => ({ source: "test-attestation", verified: true });
@@ -570,6 +575,497 @@ describe("local Mac production release manifest", () => {
         readGitEvidence: () => createGitEvidence({ originMasterSha: "f".repeat(40) }),
       }).release_sha,
     ).toBe("a".repeat(40));
+  });
+});
+
+describe("local Mac production release evidence validation", () => {
+  it("normalizes collected release test identities into deterministic canonical order", () => {
+    const normalizeReleaseTestInventory = (
+      releaseInventoryModule as Record<string, unknown>
+    ).normalizeReleaseTestInventory;
+    expect(typeof normalizeReleaseTestInventory).toBe("function");
+    if (typeof normalizeReleaseTestInventory !== "function") return;
+    const left = [
+      { file: "tests/b.test.ts", name: "beta", occurrence: 0 },
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 1 },
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 0 },
+    ];
+    const right = [...left].reverse();
+
+    expect(normalizeReleaseTestInventory(left)).toEqual(normalizeReleaseTestInventory(right));
+    expect(normalizeReleaseTestInventory(left)).toEqual([
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 0 },
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 1 },
+      { file: "tests/b.test.ts", name: "beta", occurrence: 0 },
+    ]);
+  });
+  type TestReleaseCommand = {
+    [key: string]: unknown;
+    stdout_projection: Record<string, unknown>;
+    stderr_projection: Record<string, unknown>;
+    stdout_sha256: string;
+    stderr_sha256: string;
+  };
+  type TestReleaseEvidence = {
+    [key: string]: unknown;
+    head_sha: string;
+    tree_sha: string;
+    commands: TestReleaseCommand[];
+    release_suite: {
+      file_count: number;
+      test_count: number;
+      passed: number;
+      skipped: number;
+      failed: number;
+      inventory_sha256: string;
+    };
+    evidence_digest: string;
+  };
+  const inventory = {
+    expectedFileSkipCount: 1,
+    expectedTestSkipCount: 2,
+    fileCount: 28,
+    testCount: 787,
+    inventorySha256: "d".repeat(64),
+    tests: [
+      {
+        file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+        name: "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox",
+        occurrence: 0,
+      },
+      {
+        file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+        name: "another non-selected candidate test",
+        occurrence: 0,
+      },
+    ],
+  };
+  const projectionDigest = (value: unknown) => createHash("sha256")
+    .update(canonicalizeJcs(value))
+    .digest("hex");
+  const stageCapabilityPolicy = () => {
+    const policy = {
+      schema: "homecook.sandbox-stage-capability-policy-text.v1",
+      stages: [
+        {
+          stage: "offline-install",
+          allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+        },
+        { stage: "next-build", allowed_mach_lookup_global_names: [] },
+      ],
+      network_policy: "deny-all",
+      no_log_denials: ["com.apple.diagnosticd"],
+    };
+    const policyText = canonicalizeJcs(policy);
+    return {
+      schema: "homecook.sandbox-stage-capability-policy.v1",
+      policy_text: policyText,
+      policy_digest: createHash("sha256").update(policyText).digest("hex"),
+      install: {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+        allow_count: 1,
+      },
+      build: {
+        stage: "next-build",
+        allowed_mach_lookup_global_names: [],
+        allow_count: 0,
+      },
+      observed: {
+        install_audit_digest: "a".repeat(64),
+        install_denial_count: 0,
+        install_process_attempt_count: 0,
+        build_audit_digest: "b".repeat(64),
+        build_denial_count: 0,
+        build_process_attempt_count: 0,
+      },
+    };
+  };
+  const egressProbe = () => {
+    const unsigned = {
+      schema: "homecook.sandbox-egress-probe.v1",
+      dns_lookup_success_count: 0,
+      net_connect_success_count: 0,
+      tls_connect_success_count: 0,
+      public_ip_connect_success_count: 0,
+      http_success_count: 0,
+    };
+    return { ...unsigned, probe_digest: projectionDigest(unsigned) };
+  };
+  type CapabilityProjectionFixture = {
+    stage_capability_policy: ReturnType<typeof stageCapabilityPolicy>;
+    egress_probe: ReturnType<typeof egressProbe>;
+  };
+  const resignEvidence = (evidence: TestReleaseEvidence | Record<string, unknown>) => {
+    const unsigned = { ...evidence };
+    delete unsigned.evidence_digest;
+    return { ...unsigned, evidence_digest: projectionDigest(unsigned) } as TestReleaseEvidence;
+  };
+
+  function createReleaseEvidence(overrides: Record<string, unknown> = {}) {
+    const command = (
+      id: "release-suite" | "actual-build",
+      argv: string[],
+      stdoutProjection: Record<string, unknown>,
+    ) => {
+      const stderrProjection = {
+        schema: "homecook.local-mac-production-release-stderr-projection.v1",
+        kind: id,
+        empty: true,
+      };
+      return {
+        id,
+        argv,
+        cwd: "<repository>",
+        status: 0,
+        signal: null,
+        duration_ms: 1,
+        stdout_projection: stdoutProjection,
+        stderr_projection: stderrProjection,
+        stdout_sha256: projectionDigest(stdoutProjection),
+        stderr_sha256: projectionDigest(stderrProjection),
+      };
+    };
+    const releaseSuiteProjection = {
+      schema: "homecook.local-mac-production-release-stdout-projection.v1",
+      kind: "release-suite",
+      release_test_files: inventory.fileCount,
+      release_test_cases: inventory.testCount,
+      release_test_inventory_sha256: inventory.inventorySha256,
+      vitest_test_files: 28,
+      vitest_test_files_passed: 27,
+      vitest_test_files_skipped: 1,
+      vitest_test_files_failed: 0,
+      vitest_tests: 787,
+      vitest_passed: 785,
+      vitest_skipped: 2,
+      vitest_failed: 0,
+    };
+    const actualBuildProjection = {
+      schema: "homecook.local-mac-production-release-stdout-projection.v1",
+      kind: "actual-build",
+      selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+      selected_test_name: "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox",
+      vitest_test_files: 1,
+      vitest_test_files_passed: 1,
+      vitest_test_files_skipped: 0,
+      vitest_test_files_failed: 0,
+      vitest_tests: 2,
+      vitest_passed: 1,
+      vitest_skipped: 1,
+      vitest_failed: 0,
+      stage_capability_policy: stageCapabilityPolicy(),
+      egress_probe: egressProbe(),
+    };
+    const unsigned = {
+      schema: "homecook.local-mac-production-release-evidence.v2",
+      repository: "netsus/homecook",
+      head_sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+      tree_sha: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim(),
+      platform: "darwin-arm64",
+      commands: [
+        command(
+          "release-suite",
+          ["pnpm", "test:local-mac-production-release"],
+          releaseSuiteProjection,
+        ),
+        command("actual-build", [
+          "env", "HOMECOOK_RUN_ACTUAL_RELEASE_BUILD=1", "pnpm", "exec", "vitest", "run",
+          "tests/local-mac-production-rehearsal-candidate.test.ts", "-t",
+          "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox",
+        ], actualBuildProjection),
+      ],
+      release_suite: {
+        file_count: inventory.fileCount,
+        test_count: inventory.testCount,
+        passed: 785,
+        skipped: 2,
+        failed: 0,
+        inventory_sha256: inventory.inventorySha256,
+      },
+      residue: {
+        suite_roots: 0,
+        homecook_system_temp: 0,
+        hcv_run_roots: 0,
+        actual_root_exists: false,
+      },
+      secrets_redacted: true,
+      ...overrides,
+    };
+    return resignEvidence(unsigned as unknown as TestReleaseEvidence);
+  }
+
+  it("rejects an alternate well-formed inventory digest", () => {
+    const evidence = createReleaseEvidence();
+    const alternate = "c".repeat(64);
+    evidence.release_suite.inventory_sha256 = alternate;
+    evidence.commands[0].stdout_projection.release_test_inventory_sha256 = alternate;
+    evidence.commands[0].stdout_sha256 = projectionDigest(evidence.commands[0].stdout_projection);
+    const resigned = resignEvidence(evidence);
+
+    expect(() => validateLocalMacProductionReleaseEvidence(resigned, {
+      expectedHeadSha: resigned.head_sha,
+      expectedTreeSha: resigned.tree_sha,
+      inventory,
+    })).toThrow(/inventory/iu);
+  });
+
+  it("accepts a valid secret-free canonical note payload", () => {
+    const evidence = createReleaseEvidence();
+
+    expect(validateLocalMacProductionReleaseEvidence(evidence, {
+      expectedHeadSha: evidence.head_sha,
+      expectedTreeSha: evidence.tree_sha,
+      inventory,
+    })).toBe(evidence);
+  });
+
+  it.each(["stdout", "stderr"])("rejects a stale %s projection digest", (stream) => {
+    const evidence = createReleaseEvidence();
+    const command = evidence.commands[0];
+    const projectionKey = `${stream}_projection` as "stdout_projection" | "stderr_projection";
+    command[projectionKey] = { ...command[projectionKey], empty: false };
+    const resigned = resignEvidence(evidence);
+
+    expect(() => validateLocalMacProductionReleaseEvidence(resigned, {
+      expectedHeadSha: resigned.head_sha,
+      expectedTreeSha: resigned.tree_sha,
+      inventory,
+    })).toThrow(new RegExp(`${stream}.*digest|digest.*${stream}`, "iu"));
+  });
+
+  it("rejects a changed output projection even when all enclosing digests are resigned", () => {
+    const evidence = createReleaseEvidence();
+    evidence.commands[0].stdout_projection.vitest_passed = 784;
+    evidence.commands[0].stdout_sha256 = projectionDigest(evidence.commands[0].stdout_projection);
+    const resigned = resignEvidence(evidence);
+
+    expect(() => validateLocalMacProductionReleaseEvidence(resigned, {
+      expectedHeadSha: resigned.head_sha,
+      expectedTreeSha: resigned.tree_sha,
+      inventory,
+    })).toThrow(/release.*projection|projection.*release/iu);
+    for (const [filePassed, fileSkipped, testPassed, testSkipped] of [
+      [26, 2, 785, 2],
+      [27, 1, 784, 3],
+    ]) {
+      const alternate = createReleaseEvidence();
+      Object.assign(alternate.commands[0].stdout_projection, {
+        vitest_test_files_passed: filePassed,
+        vitest_test_files_skipped: fileSkipped,
+        vitest_passed: testPassed,
+        vitest_skipped: testSkipped,
+      });
+      Object.assign(alternate.release_suite, {
+        passed: testPassed,
+        skipped: testSkipped,
+      });
+      alternate.commands[0].stdout_sha256 = projectionDigest(alternate.commands[0].stdout_projection);
+      const resignedAlternate = resignEvidence(alternate);
+      expect(() => validateLocalMacProductionReleaseEvidence(resignedAlternate, {
+        expectedHeadSha: resignedAlternate.head_sha,
+        expectedTreeSha: resignedAlternate.tree_sha,
+        inventory,
+      })).toThrow(/skip|split|projection|suite/iu);
+    }
+  });
+
+  it("rejects evidence captured before the current scope inventory changed", () => {
+    const evidence = createReleaseEvidence();
+
+    expect(() => validateLocalMacProductionReleaseEvidence(evidence, {
+      expectedHeadSha: evidence.head_sha,
+      expectedTreeSha: evidence.tree_sha,
+      inventory: { ...inventory, testCount: inventory.testCount + 1 },
+    })).toThrow(/inventory|total/iu);
+  });
+
+  it.each(["unknown", "missing"])("rejects %s fields in the closed note shape", (variant) => {
+    const evidence = createReleaseEvidence();
+    if (variant === "unknown") evidence.commands[0].raw_stdout = "not retained";
+    else Reflect.deleteProperty(evidence.commands[0], "stderr_projection");
+    const resigned = resignEvidence(evidence);
+
+    expect(() => validateLocalMacProductionReleaseEvidence(resigned, {
+      expectedHeadSha: resigned.head_sha,
+      expectedTreeSha: resigned.tree_sha,
+      inventory,
+    })).toThrow(/shape/iu);
+  });
+
+  it("rejects secret-shaped strings inside a retained projection", () => {
+    const evidence = createReleaseEvidence();
+    evidence.commands[1].stdout_projection.selected_test_name = "token=not-allowed";
+    evidence.commands[1].stdout_sha256 = projectionDigest(evidence.commands[1].stdout_projection);
+    const resigned = resignEvidence(evidence);
+
+    expect(() => validateLocalMacProductionReleaseEvidence(resigned, {
+      expectedHeadSha: resigned.head_sha,
+      expectedTreeSha: resigned.tree_sha,
+      inventory,
+    })).toThrow(/secret/iu);
+  });
+
+  it("parses the exact release runner header and Vitest totals into a closed projection", () => {
+    const parseReleaseSuiteOutput = (
+      releaseEvidenceModule as Record<string, unknown>
+    ).parseReleaseSuiteOutput;
+    expect(typeof parseReleaseSuiteOutput).toBe("function");
+    if (typeof parseReleaseSuiteOutput !== "function") return;
+    const projection = parseReleaseSuiteOutput([
+      "RELEASE_TEST_FILES=28",
+      "RELEASE_TEST_CASES=787",
+      `RELEASE_TEST_INVENTORY_SHA256=${inventory.inventorySha256}`,
+      " Test Files  27 passed | 1 skipped (28)",
+      "      Tests  785 passed | 2 skipped (787)",
+    ].join("\n"));
+
+    expect(projection).toEqual({
+      schema: "homecook.local-mac-production-release-stdout-projection.v1",
+      kind: "release-suite",
+      release_test_files: 28,
+      release_test_cases: 787,
+      release_test_inventory_sha256: inventory.inventorySha256,
+      vitest_test_files: 28,
+      vitest_test_files_passed: 27,
+      vitest_test_files_skipped: 1,
+      vitest_test_files_failed: 0,
+      vitest_tests: 787,
+      vitest_passed: 785,
+      vitest_skipped: 2,
+      vitest_failed: 0,
+    });
+    const buildReleaseEvidenceCommandEnv = (
+      releaseEvidenceModule as Record<string, unknown>
+    ).buildReleaseEvidenceCommandEnv;
+    expect(typeof buildReleaseEvidenceCommandEnv).toBe("function");
+    if (typeof buildReleaseEvidenceCommandEnv !== "function") return;
+    const poisoned = {
+      SAFE_VALUE: "preserved",
+      HOMECOOK_RUN_ACTUAL_RELEASE_BUILD: "poisoned",
+      HOMECOOK_VITEST_TEARDOWN_FIXTURE_MODE: "success",
+      HOMECOOK_VITEST_TEARDOWN_SIGNAL: "SIGTERM",
+      HOMECOOK_VITEST_TEARDOWN_OTHER_HANDLER_MARKER: "/tmp/marker",
+      HOMECOOK_VITEST_SUITE_TEMP_ROOT: "/tmp/stale-suite",
+      HOMECOOK_VITEST_WORKER_TEMP_ROOT: "/tmp/stale-worker",
+    };
+    expect(buildReleaseEvidenceCommandEnv("release-suite", poisoned)).toEqual({ SAFE_VALUE: "preserved" });
+    expect(buildReleaseEvidenceCommandEnv("actual-build", poisoned)).toEqual({
+      SAFE_VALUE: "preserved", HOMECOOK_RUN_ACTUAL_RELEASE_BUILD: "1",
+    });
+  });
+
+  it("parses only the exact selected actual-build test into a closed projection", () => {
+    const parseActualBuildOutput = (
+      releaseEvidenceModule as Record<string, unknown>
+    ).parseActualBuildOutput;
+    expect(typeof parseActualBuildOutput).toBe("function");
+    if (typeof parseActualBuildOutput !== "function") return;
+    const selected = "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox";
+    const projection = parseActualBuildOutput([
+      `RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+        selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+        selected_test_name: selected,
+        stage_capability_policy: stageCapabilityPolicy(),
+        egress_probe: egressProbe(),
+      })}`,
+      " Test Files  1 passed (1)",
+      "      Tests  1 passed | 1 skipped (2)",
+    ].join("\n"));
+
+    expect(projection).toMatchObject({
+      kind: "actual-build",
+      selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+      selected_test_name: selected,
+      vitest_test_files: 1,
+      vitest_test_files_passed: 1,
+      vitest_test_files_skipped: 0,
+      vitest_test_files_failed: 0,
+      vitest_tests: 2,
+      vitest_passed: 1,
+      vitest_skipped: 1,
+      vitest_failed: 0,
+      stage_capability_policy: stageCapabilityPolicy(),
+      egress_probe: egressProbe(),
+    });
+  });
+
+  it.each([
+    ["service", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.allowed_mach_lookup_global_names[0] = "com.apple.logd"; }],
+    ["stage", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.stage = "next-build"; }],
+    ["policy digest", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.policy_digest = "c".repeat(64); }],
+    ["wildcard", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.allowed_mach_lookup_global_names.push("*"); }],
+    ["additional allow", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.allow_count = 2; }],
+    ["successful egress", (value: CapabilityProjectionFixture) => { value.egress_probe.net_connect_success_count = 1; }],
+  ])("rejects changed %s capability evidence even when enclosing digests are resigned", (_label, mutate) => {
+    const evidence = createReleaseEvidence();
+    mutate(evidence.commands[1].stdout_projection as unknown as CapabilityProjectionFixture);
+    evidence.commands[1].stdout_sha256 = projectionDigest(evidence.commands[1].stdout_projection);
+    const resigned = resignEvidence(evidence);
+
+    expect(() => validateLocalMacProductionReleaseEvidence(resigned, {
+      expectedHeadSha: resigned.head_sha,
+      expectedTreeSha: resigned.tree_sha,
+      inventory,
+    })).toThrow(/capability|policy|egress|projection/iu);
+  });
+
+  it("builds a validator-closed note without retaining raw command output", () => {
+    const buildReleaseEvidence = (
+      releaseEvidenceModule as Record<string, unknown>
+    ).buildLocalMacProductionReleaseEvidence;
+    expect(typeof buildReleaseEvidence).toBe("function");
+    if (typeof buildReleaseEvidence !== "function") return;
+    const selected = "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox";
+    const evidence = buildReleaseEvidence({
+      headSha: "a".repeat(40),
+      treeSha: "b".repeat(40),
+      platform: "darwin-arm64",
+      inventory,
+      releaseSuite: {
+        stdout: [
+          "RELEASE_TEST_FILES=28",
+          "RELEASE_TEST_CASES=787",
+          `RELEASE_TEST_INVENTORY_SHA256=${inventory.inventorySha256}`,
+          " Test Files  27 passed | 1 skipped (28)",
+          "      Tests  785 passed | 2 skipped (787)",
+        ].join("\n"),
+        stderr: "",
+        status: 0,
+        signal: null,
+        durationMs: 100,
+      },
+      actualBuild: {
+        stdout: [
+          `RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+            selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+            selected_test_name: selected,
+            stage_capability_policy: stageCapabilityPolicy(),
+            egress_probe: egressProbe(),
+          })}`,
+          ` ✓ tests/local-mac-production-rehearsal-candidate.test.ts > local Mac > ${selected} 160000ms`,
+          " Test Files  1 passed (1)",
+          "      Tests  1 passed | 1 skipped (2)",
+        ].join("\n"),
+        stderr: "",
+        status: 0,
+        signal: null,
+        durationMs: 160_000,
+      },
+      residue: {
+        suite_roots: 0,
+        homecook_system_temp: 0,
+        hcv_run_roots: 0,
+        actual_root_exists: false,
+      },
+    });
+
+    expect(canonicalizeJcs(evidence)).not.toContain("raw");
+    expect(validateLocalMacProductionReleaseEvidence(evidence, {
+      expectedHeadSha: "a".repeat(40),
+      expectedTreeSha: "b".repeat(40),
+      inventory,
+    })).toBe(evidence);
   });
 });
 

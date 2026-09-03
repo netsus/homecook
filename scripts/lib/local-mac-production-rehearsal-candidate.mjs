@@ -1,11 +1,12 @@
-import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { spawn, spawnSync } from "node:child_process";
 import {
   accessSync,
   chmodSync,
   closeSync,
   copyFileSync,
   constants as fsConstants,
+  fchmodSync,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -15,11 +16,14 @@ import {
   readdirSync,
   readlinkSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { createRequire } from "node:module";
+import { constants as osConstants } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { canonicalizeJcs, parseCanonicalJcs, sha256Jcs } from "./rfc8785-jcs.mjs";
@@ -76,8 +80,10 @@ const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
   "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
+  "sandbox_stage_capability_policy",
   "generated_build_inventory_digest",
   "pnpm_store_snapshot_inventory_digest",
+  "pnpm_store_final_index_inventory_digest",
   "build_id", "sealed_bundle_digest",
   "bundle_manifest_digest", "toolchain", "build_tools", "images", "migration", "artifacts",
   "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest",
@@ -92,6 +98,10 @@ const TOOL_IDENTITY_KEYS = [
 ];
 const EXECUTABLE_TOOL_MODES = new Set([0o500, 0o555, 0o700, 0o755]);
 const READABLE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
+const DNS_CONFIGURATION_MACH_SERVICE = "com.apple.SystemConfiguration.DNSConfiguration";
+const DIAGNOSTICD_MACH_SERVICE = "com.apple.diagnosticd";
+const requireNativeWitness = createRequire(import.meta.url);
+const pinnedSandboxWitnessControllers = new Map();
 
 function fail(message) {
   throw new Error(`Release rehearsal candidate rejected: ${message}`);
@@ -141,6 +151,10 @@ export function buildCandidateStartupIdentity(manifest) {
       sandbox_policy_digest: digest(manifest?.sandbox_policy_digest, "startup identity sandbox policy digest"),
       generated_build_inventory_digest: digest(manifest?.generated_build_inventory_digest, "startup identity generated build inventory digest"),
       pnpm_store_snapshot_inventory_digest: digest(manifest?.pnpm_store_snapshot_inventory_digest, "startup identity pnpm store inventory digest"),
+      pnpm_store_final_index_inventory_digest: digest(
+        manifest?.pnpm_store_final_index_inventory_digest,
+        "startup identity pnpm store final index inventory digest",
+      ),
     }),
     sealed_bundle_digest: digest(manifest?.sealed_bundle_digest, "startup identity sealed bundle digest"),
     bundle_manifest_digest: digest(manifest?.bundle_manifest_digest, "startup identity bundle manifest digest"),
@@ -546,8 +560,10 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.source_manifest_digest, "source_manifest_digest");
   digest(value.compose_source_digest, "compose_source_digest");
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
+  validateSandboxStageCapabilityPolicy(value.sandbox_stage_capability_policy);
   digest(value.generated_build_inventory_digest, "generated_build_inventory_digest");
   digest(value.pnpm_store_snapshot_inventory_digest, "pnpm_store_snapshot_inventory_digest");
+  digest(value.pnpm_store_final_index_inventory_digest, "pnpm_store_final_index_inventory_digest");
   string(value.build_id, "build_id");
   digest(value.sealed_bundle_digest, "sealed_bundle_digest");
   digest(value.bundle_manifest_digest, "bundle_manifest_digest");
@@ -1339,6 +1355,8 @@ export function buildBundleAuthorityManifest(input) {
     "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
     "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "sandbox_stage_capability_policy",
+    "pnpm_store_final_index_inventory_digest",
     "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
     "build_tools", "builder_input_digest",
@@ -1353,9 +1371,11 @@ export function buildBundleAuthorityManifest(input) {
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
     "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_final_index_inventory_digest",
     "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest", "builder_input_digest",
   ]) digest(input[field], `bundle authority ${field}`);
+  validateSandboxStageCapabilityPolicy(input.sandbox_stage_capability_policy);
   validateEnvironmentMetadata(input.environment_snapshot);
   validateFileInventory(input.file_inventory);
   if (generatedBuildInventoryDigest(input.file_inventory) !== input.generated_build_inventory_digest) {
@@ -1998,6 +2018,32 @@ function pnpmStoreInventory(root, currentUid, {
   });
 }
 
+function pnpmStoreSubtreeAuthority(inventory, subtree) {
+  const entries = inventory.entries.filter((entry) => (
+    entry.path === subtree || entry.path.startsWith(`${subtree}/`)
+  ));
+  if (entries.length === 0 || entries[0]?.path !== subtree || entries[0]?.type !== "directory") {
+    fail(`pnpm store ${subtree} subtree authority is incomplete`);
+  }
+  const portableEntries = entries.map(({ path, type, mode, size, content_identity: contentIdentity }) => ({
+    path,
+    type,
+    mode,
+    size: type === "file" ? size : null,
+    content_identity: contentIdentity,
+  }));
+  return Object.freeze({
+    inventory_digest: sha256Jcs({
+      schema: `homecook.release-rehearsal-pnpm-store-${subtree}-inventory.v1`,
+      entries: portableEntries,
+    }),
+    physical_identity_digest: sha256Jcs({
+      schema: `homecook.release-rehearsal-pnpm-store-${subtree}-physical-identity.v1`,
+      entries,
+    }),
+  });
+}
+
 function clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory) {
   const sourceEntries = new Map(sourceInventory.entries.map((entry) => [entry.path, entry]));
   const cloneEntry = (source, destination, relativePath) => {
@@ -2036,31 +2082,358 @@ function clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory) {
   }
 }
 
-function sealPnpmStoreFiles(filesRoot) {
+function setPnpmStoreTreeMode(root, { writable, label, currentUid }) {
   const visit = (path) => {
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink()) fail("private pnpm store contains a symlink while sealing");
+    const stat = lstatSync(path, { bigint: true });
+    if (stat.isSymbolicLink()) fail(`private pnpm store ${label} contains a symlink while changing phase`);
+    if (stat.uid !== BigInt(currentUid)) {
+      fail(`private pnpm store ${label} owner changed while changing phase`);
+    }
     if (stat.isDirectory()) {
       for (const name of readdirSync(path)) visit(join(path, name));
+      chmodSync(path, writable ? 0o700 : 0o500);
       return;
     }
-    if (!stat.isFile() || stat.nlink !== 1) fail("private pnpm store contains an unsafe file while sealing");
-    chmodSync(path, (stat.mode & 0o111) === 0 ? 0o400 : 0o500);
+    if (!stat.isFile() || stat.nlink !== 1n) {
+      fail(`private pnpm store ${label} contains an unsafe file while changing phase`);
+    }
+    const executable = (modeBits(stat.mode) & 0o111) !== 0;
+    chmodSync(path, writable ? (executable ? 0o700 : 0o600) : (executable ? 0o500 : 0o400));
   };
-  visit(filesRoot);
+  visit(root);
+}
+
+function sealPnpmStoreTreeFdBound(root, {
+  inventory,
+  subtree,
+  currentUid,
+  deferRootFchmod = false,
+  transitionObserver = () => undefined,
+}) {
+  const expectedEntries = new Map(inventory.entries
+    .filter((entry) => entry.path === subtree || entry.path.startsWith(`${subtree}/`))
+    .map((entry) => [entry.path, entry]));
+  const rootExpected = expectedEntries.get(subtree);
+  if (!rootExpected || rootExpected.type !== "directory") {
+    fail(`candidate pnpm ${subtree} FD-bound seal inventory is incomplete`);
+  }
+  const rootRelocated = !root.endsWith(`/v10/${subtree}`);
+  const assertExpectedIdentity = (stat, expected, label, { allowRenameCtime = false } = {}) => {
+    if (
+      String(stat.dev) !== expected.device
+      || String(stat.ino) !== expected.inode
+      || modeBits(stat.mode) !== expected.mode
+      || String(stat.uid) !== expected.uid
+      || String(stat.gid) !== expected.gid
+      || String(stat.nlink) !== expected.nlink
+      || String(stat.size) !== expected.size
+      || (!allowRenameCtime && String(stat.ctimeNs) !== expected.ctime_ns)
+      || String(stat.mtimeNs) !== expected.mtime_ns
+    ) fail(`candidate pnpm ${label} identity drifted before FD-bound seal`);
+  };
+  const expectedChildren = (relativePath) => {
+    const prefix = `${relativePath}/`;
+    return [...expectedEntries.keys()]
+      .filter((path) => path.startsWith(prefix) && !path.slice(prefix.length).includes("/"))
+      .map((path) => path.slice(prefix.length))
+      .sort();
+  };
+  const visit = (path, relativePath) => {
+    const expected = expectedEntries.get(relativePath);
+    if (!expected) fail(`candidate pnpm ${subtree} contains an unexpected seal entry`);
+    const before = lstatSync(path, { bigint: true });
+    if (before.isSymbolicLink() || before.uid !== BigInt(currentUid) || realpathSync(path) !== path) {
+      fail(`candidate pnpm ${subtree} seal entry owner, symlink, or canonical path is unsafe`);
+    }
+    const allowRenameCtime = rootRelocated && relativePath === subtree;
+    assertExpectedIdentity(before, expected, `${subtree} entry`, { allowRenameCtime });
+    const directory = expected.type === "directory";
+    if (directory !== before.isDirectory() || (!directory && (!before.isFile() || before.nlink !== 1n))) {
+      fail(`candidate pnpm ${subtree} seal entry type or hard-link count is unsafe`);
+    }
+    const fd = openSync(
+      path,
+      fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | (directory ? fsConstants.O_DIRECTORY : 0),
+    );
+    try {
+      const opened = fstatSync(fd, { bigint: true });
+      assertExpectedIdentity(opened, expected, `${subtree} opened entry`, { allowRenameCtime });
+      if (directory) {
+        const names = readdirSync(path).sort();
+        if (canonicalizeJcs(names) !== canonicalizeJcs(expectedChildren(relativePath))) {
+          fail(`candidate pnpm ${subtree} directory children drifted before FD-bound seal`);
+        }
+        for (const name of names) visit(join(path, name), `${relativePath}/${name}`);
+        if (canonicalizeJcs(readdirSync(path).sort()) !== canonicalizeJcs(names)) {
+          fail(`candidate pnpm ${subtree} directory children drifted during FD-bound seal`);
+        }
+      }
+      transitionObserver(Object.freeze({
+        phase: "before_entry_fchmod",
+        path,
+        relativePath,
+        type: expected.type,
+      }));
+      if (deferRootFchmod && relativePath === subtree) return;
+      const pathBeforeMode = lstatSync(path, { bigint: true });
+      if (
+        pathBeforeMode.isSymbolicLink()
+        || pathBeforeMode.dev !== opened.dev
+        || pathBeforeMode.ino !== opened.ino
+        || fstatSync(fd, { bigint: true }).dev !== opened.dev
+        || fstatSync(fd, { bigint: true }).ino !== opened.ino
+      ) fail(`candidate pnpm ${subtree} entry path swapped before FD-bound chmod`);
+      const executable = (expected.mode & 0o111) !== 0;
+      const sealedMode = directory ? 0o500 : (executable ? 0o500 : 0o400);
+      fchmodSync(fd, sealedMode);
+      const fdPost = fstatSync(fd, { bigint: true });
+      const pathPost = lstatSync(path, { bigint: true });
+      if (
+        pathPost.isSymbolicLink()
+        || fdPost.dev !== opened.dev || fdPost.ino !== opened.ino
+        || pathPost.dev !== opened.dev || pathPost.ino !== opened.ino
+        || modeBits(fdPost.mode) !== sealedMode || modeBits(pathPost.mode) !== sealedMode
+      ) fail(`candidate pnpm ${subtree} entry path swapped during FD-bound chmod`);
+    } finally {
+      closeSync(fd);
+    }
+  };
+  visit(root, subtree);
+}
+
+function inventoryDeferredPnpmQuarantine(root, currentUid, { maxEntries = 100_000 } = {}) {
+  const entries = [];
+  const visit = (path, relativePath) => {
+    if (entries.length >= maxEntries) fail("candidate pnpm deferred quarantine entry limit exceeded");
+    const stat = lstatSync(path, { bigint: true });
+    if (
+      stat.uid !== BigInt(currentUid)
+      || (!stat.isSymbolicLink() && realpathSync(path) !== path)
+    ) fail("candidate pnpm deferred quarantine contains an unsafe entry");
+    const type = stat.isSymbolicLink()
+      ? "symlink"
+      : (stat.isDirectory() ? "directory" : (stat.isFile() ? "file" : "unsupported"));
+    if (type === "unsupported" || (["file", "symlink"].includes(type) && stat.nlink !== 1n)) {
+      fail("candidate pnpm deferred quarantine type or hard-link count is unsafe");
+    }
+    entries.push({
+      path: relativePath,
+      type,
+      device: String(stat.dev),
+      inode: String(stat.ino),
+      mode: modeBits(stat.mode),
+      uid: String(stat.uid),
+      gid: String(stat.gid),
+      nlink: String(stat.nlink),
+      size: String(stat.size),
+      ctime_ns: String(stat.ctimeNs),
+      mtime_ns: String(stat.mtimeNs),
+      symlink_target: type === "symlink" ? readlinkSync(path) : null,
+    });
+    if (type === "directory") {
+      for (const name of readdirSync(path).sort()) {
+        visit(join(path, name), relativePath === "." ? name : `${relativePath}/${name}`);
+      }
+    }
+  };
+  visit(root, ".");
+  return Object.freeze({
+    entries: Object.freeze(entries),
+    inventory_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-deferred-quarantine-inventory.v1",
+      entries,
+    }),
+  });
+}
+
+const DEFERRED_QUARANTINE_CLEANUP_SCRIPT = String.raw`
+import json, os, secrets, stat, sys
+
+root_name = sys.argv[1]
+expected_uid = int(sys.argv[2])
+records = {entry["path"]: entry for entry in json.load(sys.stdin)["entries"]}
+parent_fd = 3
+
+def fail(message):
+    raise RuntimeError(message)
+
+def check(st, record, label):
+    if (str(st.st_dev) != record["device"] or str(st.st_ino) != record["inode"] or
+        stat.S_IMODE(st.st_mode) != record["mode"] or str(st.st_uid) != record["uid"] or
+        str(st.st_gid) != record["gid"] or str(st.st_nlink) != record["nlink"] or
+        str(st.st_size) != record["size"] or str(st.st_ctime_ns) != record["ctime_ns"] or
+        str(st.st_mtime_ns) != record["mtime_ns"] or st.st_uid != expected_uid):
+        fail(label + " identity mismatch")
+    actual_type = "symlink" if stat.S_ISLNK(st.st_mode) else ("directory" if stat.S_ISDIR(st.st_mode) else ("file" if stat.S_ISREG(st.st_mode) else "unsupported"))
+    if actual_type != record["type"]:
+        fail(label + " type mismatch")
+
+def check_claimed(st, record, label):
+    if (str(st.st_dev) != record["device"] or str(st.st_ino) != record["inode"] or
+        stat.S_IMODE(st.st_mode) != record["mode"] or str(st.st_uid) != record["uid"] or
+        str(st.st_gid) != record["gid"] or str(st.st_nlink) != record["nlink"] or
+        str(st.st_size) != record["size"] or str(st.st_mtime_ns) != record["mtime_ns"] or
+        st.st_uid != expected_uid):
+        fail(label + " claimed identity mismatch")
+    actual_type = "symlink" if stat.S_ISLNK(st.st_mode) else ("directory" if stat.S_ISDIR(st.st_mode) else ("file" if stat.S_ISREG(st.st_mode) else "unsupported"))
+    if actual_type != record["type"]:
+        fail(label + " claimed type mismatch")
+
+def expected_children(relative_path):
+    prefix = "" if relative_path == "." else relative_path + "/"
+    names = []
+    for path in records:
+        if path == "." or not path.startswith(prefix):
+            continue
+        tail = path[len(prefix):]
+        if "/" not in tail:
+            names.append(tail)
+    return sorted(names)
+
+def restore_unverified_claim(parent, claimed_name, original_name):
+    try:
+        os.stat(original_name, dir_fd=parent, follow_symlinks=False)
+    except FileNotFoundError:
+        os.rename(claimed_name, original_name, src_dir_fd=parent, dst_dir_fd=parent)
+
+def claim_entry(parent, name, record, child_relative):
+    child_stat = os.stat(name, dir_fd=parent, follow_symlinks=False)
+    check(child_stat, record, child_relative)
+    claimed_name = ".homecook-delete-" + secrets.token_hex(16)
+    os.rename(name, claimed_name, src_dir_fd=parent, dst_dir_fd=parent)
+    try:
+        check_claimed(os.stat(claimed_name, dir_fd=parent, follow_symlinks=False), record, child_relative)
+    except BaseException:
+        restore_unverified_claim(parent, claimed_name, name)
+        raise
+    return claimed_name
+
+def remove_directory(parent, name, relative_path, already_claimed=False):
+    record = records.get(relative_path)
+    if not record or record["type"] != "directory":
+        fail("missing directory ledger entry")
+    claimed_name = name if already_claimed else claim_entry(parent, name, record, relative_path)
+    fd = os.open(claimed_name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+    try:
+        check_claimed(os.fstat(fd), record, relative_path)
+        names = sorted(os.listdir(fd))
+        if names != expected_children(relative_path):
+            fail(relative_path + " child set mismatch")
+        for child in names:
+            child_relative = child if relative_path == "." else relative_path + "/" + child
+            child_record = records.get(child_relative)
+            if not child_record:
+                fail("missing child ledger entry")
+            claimed_child = claim_entry(fd, child, child_record, child_relative)
+            if child_record["type"] == "directory":
+                remove_directory(fd, claimed_child, child_relative, already_claimed=True)
+                os.rmdir(claimed_child, dir_fd=fd)
+            elif child_record["type"] == "file":
+                os.unlink(claimed_child, dir_fd=fd)
+            elif child_record["type"] == "symlink":
+                if os.readlink(claimed_child, dir_fd=fd) != child_record["symlink_target"]:
+                    fail(child_relative + " symlink target mismatch")
+                os.unlink(claimed_child, dir_fd=fd)
+            else:
+                fail("unsupported cleanup entry")
+        if os.listdir(fd):
+            fail(relative_path + " cleanup residue")
+    finally:
+        os.close(fd)
+    return claimed_name
+
+claimed_root = remove_directory(parent_fd, root_name, ".")
+os.rmdir(claimed_root, dir_fd=parent_fd)
+print(json.dumps({"removed": True, "entry_count": len(records)}, separators=(",", ":")))
+`;
+
+const DEFERRED_QUARANTINE_PYTHON_PATH = process.platform === "darwin"
+  ? "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+  : realpathSync("/usr/bin/python3");
+
+function cleanupDeferredPnpmQuarantine({
+  parentFd,
+  rootName,
+  inventory,
+  currentUid,
+  pythonPath = DEFERRED_QUARANTINE_PYTHON_PATH,
+  runCommand = spawnSync,
+}) {
+  if (!/^\.homecook-pnpm-quarantine-[0-9a-f-]{36}$/u.test(rootName)) {
+    fail("candidate pnpm deferred quarantine name is invalid");
+  }
+  const toolPre = snapshotToolFile(pythonPath, "deferred-quarantine-cleanup-python");
+  const result = runCommand(
+    pythonPath,
+    ["-I", "-c", DEFERRED_QUARANTINE_CLEANUP_SCRIPT, rootName, String(currentUid)],
+    {
+      encoding: "utf8",
+      env: { PATH: "/usr/bin:/bin" },
+      input: canonicalizeJcs({ entries: inventory.entries }),
+      maxBuffer: 1024 * 1024,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe", parentFd],
+      timeout: 30_000,
+    },
+  );
+  if (result.error || result.signal || result.status !== 0) {
+    fail("candidate pnpm deferred quarantine cleanup failed closed");
+  }
+  let output;
+  try {
+    output = JSON.parse(String(result.stdout ?? ""));
+  } catch {
+    fail("candidate pnpm deferred quarantine cleanup result is invalid");
+  }
+  if (
+    output?.removed !== true
+    || output.entry_count !== inventory.entries.length
+  ) fail("candidate pnpm deferred quarantine cleanup result is incomplete");
+  const toolPost = snapshotToolFile(pythonPath, "deferred-quarantine-cleanup-python");
+  if (canonicalizeJcs(toolPre) !== canonicalizeJcs(toolPost)) {
+    fail("candidate pnpm deferred quarantine cleanup tool drifted");
+  }
+  return Object.freeze({
+    cleanup_digest: sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-deferred-quarantine-cleanup.v1",
+      inventory_digest: inventory.inventory_digest,
+      entry_count: inventory.entries.length,
+      tool_identity_digest: sha256Jcs(toolPost),
+    }),
+  });
 }
 
 /**
- * @param {{sourceStore:string,storeRoot:string,currentUid?:number}} options
- * @param {(authority:{storePath:string,writableRoots:string[],snapshotInventoryDigest:string})=>unknown|Promise<unknown>} callback
+ * @param {{
+ *   sourceStore:string,
+ *   storeRoot:string,
+ *   currentUid?:number,
+ *   cleanupPythonPath?:string,
+ *   cleanupRunCommand?:Function,
+ *   quarantineParent?:string,
+ *   transitionObserver?:(event:Record<string,unknown>)=>void,
+ * }} options
+ * @param {(authority:{
+ *   storePath:string,
+ *   installWritableRoots:string[],
+ *   snapshotInventoryDigest:string,
+ *   sealInstallIndex:()=>{inventory_digest:string,physical_identity_digest:string},
+ *   verifyInstallPhaseBeforeSpawn:()=>void,
+ * })=>unknown|Promise<unknown>} callback
  */
 export async function withCandidatePnpmStoreView({
   sourceStore,
   storeRoot,
   currentUid = process.getuid?.(),
+  cleanupPythonPath = DEFERRED_QUARANTINE_PYTHON_PATH,
+  cleanupRunCommand = spawnSync,
+  quarantineParent = dirname(storeRoot),
+  transitionObserver = () => undefined,
 } = /** @type {any} */ ({}), callback) {
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   if (typeof callback !== "function") fail("candidate pnpm store-view callback is required");
+  if (typeof transitionObserver !== "function") fail("candidate pnpm transition observer is invalid");
+  if (typeof cleanupRunCommand !== "function") fail("candidate pnpm cleanup command is invalid");
   if (![sourceStore, storeRoot].every((path) => isAbsolute(path ?? "") && resolve(path) === path)) {
     fail("candidate pnpm store-view paths must be absolute and canonical");
   }
@@ -2071,6 +2444,15 @@ export async function withCandidatePnpmStoreView({
     || privateParentStat.uid !== BigInt(currentUid) || modeBits(privateParentStat.mode) !== 0o700
     || realpathSync(privateParent) !== privateParent
   ) fail("candidate pnpm store-view parent is unsafe");
+  if (!isAbsolute(quarantineParent ?? "") || resolve(quarantineParent) !== quarantineParent) {
+    fail("candidate pnpm quarantine parent must be absolute and canonical");
+  }
+  const quarantineParentInitialStat = lstatSync(quarantineParent, { bigint: true });
+  if (
+    quarantineParentInitialStat.isSymbolicLink() || !quarantineParentInitialStat.isDirectory()
+    || quarantineParentInitialStat.uid !== BigInt(currentUid) || modeBits(quarantineParentInitialStat.mode) !== 0o700
+    || realpathSync(quarantineParent) !== quarantineParent
+  ) fail("candidate pnpm quarantine parent is unsafe");
 
   const sourcePaths = [sourceStore, join(sourceStore, "files"), join(sourceStore, "index")];
   const sourceSnapshots = [];
@@ -2094,6 +2476,10 @@ export async function withCandidatePnpmStoreView({
   }
 
   const storePath = join(storeRoot, "v10");
+  const filesPath = join(storePath, "files");
+  const indexPath = join(storePath, "index");
+  const scratchRoots = [join(storePath, "projects"), join(storePath, "tmp")];
+  const installWritableRoots = [...scratchRoots, indexPath];
   let sourceInventory;
   let snapshotInventory;
   try {
@@ -2103,7 +2489,12 @@ export async function withCandidatePnpmStoreView({
     });
     mkdirSync(storeRoot, { mode: 0o700 });
     clonePnpmStoreSnapshot(sourceStore, storePath, sourceInventory);
-    for (const name of ["projects", "tmp"]) mkdirSync(join(storePath, name), { mode: 0o700 });
+    setPnpmStoreTreeMode(indexPath, {
+      writable: true,
+      label: "working index",
+      currentUid,
+    });
+    for (const path of scratchRoots) mkdirSync(path, { mode: 0o700 });
     chmodSync(storePath, 0o500);
     chmodSync(storeRoot, 0o500);
     snapshotInventory = pnpmStoreInventory(storePath, currentUid, {
@@ -2124,11 +2515,18 @@ export async function withCandidatePnpmStoreView({
     fail(`candidate pnpm store-view create-only materialization failed: ${error?.message ?? error?.code ?? "unknown"}`);
   }
 
-  const writableRoots = [join(storePath, "projects"), join(storePath, "tmp")];
-  const viewDirectories = [storeRoot, storePath, join(storePath, "files"), join(storePath, "index"), ...writableRoots]
-    .map((path) => {
+  const viewDirectoryInputs = [
+    { path: storeRoot, phase: "immutable" },
+    { path: storePath, phase: "immutable" },
+    { path: filesPath, phase: "immutable" },
+    { path: indexPath, phase: "working" },
+    ...scratchRoots.map((path) => ({ path, phase: "scratch" })),
+  ];
+  const viewDirectories = [];
+  try {
+    for (const { path, phase } of viewDirectoryInputs) {
       const stat = lstatSync(path, { bigint: true });
-      const expectedMode = writableRoots.includes(path) ? 0o700 : 0o500;
+      const expectedMode = ["working", "scratch"].includes(phase) ? 0o700 : 0o500;
       if (
         stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
         || modeBits(stat.mode) !== expectedMode || realpathSync(path) !== path
@@ -2138,22 +2536,303 @@ export async function withCandidatePnpmStoreView({
         closeSync(fd);
         fail("candidate pnpm store-view directory identity drifted before execution");
       }
-      return { fd, path, stat, mutable: writableRoots.includes(path) };
+      viewDirectories.push({ fd, path, phase, stat, sealedStat: null });
+    }
+  } catch (error) {
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    throw error;
+  }
+
+  const transitionParentStat = lstatSync(privateParent, { bigint: true });
+  const transitionParentFd = openSync(
+    privateParent,
+    fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+  );
+  if (!samePnpmStoreIdentity(transitionParentStat, fstatSync(transitionParentFd, { bigint: true }))) {
+    closeSync(transitionParentFd);
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    fail("candidate pnpm transition parent identity drifted before execution");
+  }
+  const quarantineParentStat = lstatSync(quarantineParent, { bigint: true });
+  const quarantineParentFd = openSync(
+    quarantineParent,
+    fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+  );
+  if (!samePnpmStoreIdentity(quarantineParentStat, fstatSync(quarantineParentFd, { bigint: true }))) {
+    closeSync(quarantineParentFd);
+    closeSync(transitionParentFd);
+    for (const { fd } of viewDirectories.reverse()) closeSync(fd);
+    for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
+    fail("candidate pnpm quarantine parent identity drifted before execution");
+  }
+
+  const initialFilesAuthority = pnpmStoreSubtreeAuthority(snapshotInventory, "files");
+  let storePhase = "install";
+  let sealedSnapshotInventory;
+  let finalIndexAuthority;
+  let installTransitionDigest;
+  let deferredCleanupDigest;
+  let deferredQuarantine;
+  const viewByPath = new Map(viewDirectories.map((entry) => [entry.path, entry]));
+  const assertHeldDirectory = (entry, keys, label) => {
+    const pathPost = lstatSync(entry.path, { bigint: true });
+    const fdPost = fstatSync(entry.fd, { bigint: true });
+    if (
+      pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(entry.path) !== entry.path
+      || !keys.every((key) => entry.stat[key] === pathPost[key] && entry.stat[key] === fdPost[key])
+    ) fail(`candidate pnpm store-view ${label} identity drifted`);
+  };
+  const assertTransitionParent = () => {
+    const pathPost = lstatSync(privateParent, { bigint: true });
+    const fdPost = fstatSync(transitionParentFd, { bigint: true });
+    if (
+      pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(privateParent) !== privateParent
+      || !samePnpmStoreIdentity(transitionParentStat, pathPost)
+      || !samePnpmStoreIdentity(transitionParentStat, fdPost)
+    ) fail("candidate pnpm transition parent identity drifted");
+  };
+  const assertTransitionParentStable = () => {
+    const pathPost = lstatSync(privateParent, { bigint: true });
+    const fdPost = fstatSync(transitionParentFd, { bigint: true });
+    for (const key of ["dev", "ino", "mode", "uid", "gid"]) {
+      if (transitionParentStat[key] !== pathPost[key] || transitionParentStat[key] !== fdPost[key]) {
+        fail("candidate pnpm transition parent stable identity drifted");
+      }
+    }
+    if (pathPost.isSymbolicLink() || realpathSync(privateParent) !== privateParent) {
+      fail("candidate pnpm transition parent became unsafe");
+    }
+  };
+  const assertAbsent = (path, label) => {
+    try {
+      lstatSync(path);
+      fail(`candidate pnpm ${label} unexpectedly exists`);
+    } catch (error) {
+      if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+    }
+  };
+  const verifyInstallPhaseBeforeSpawn = () => {
+    if (storePhase !== "install") fail("candidate pnpm install profile cannot be reused after seal");
+    assertTransitionParent();
+    for (const entry of viewDirectories) {
+      const keys = ["working", "scratch"].includes(entry.phase)
+        ? ["dev", "ino", "mode", "uid", "gid"]
+        : PNPM_STORE_IDENTITY_KEYS;
+      assertHeldDirectory(entry, keys, `${entry.phase} install phase`);
+    }
+  };
+  const sealInstallIndex = () => {
+    if (storePhase !== "install") fail("candidate pnpm install index seal transition may run exactly once");
+    transitionObserver(Object.freeze({ phase: "before_transition", storePath, storeRoot }));
+    verifyInstallPhaseBeforeSpawn();
+    if (
+      canonicalizeJcs(readdirSync(storePath).sort())
+      !== canonicalizeJcs(["files", "index", "projects", "tmp"])
+    ) fail("candidate pnpm store contains an unexpected child before install index seal");
+    for (const entry of viewDirectories) {
+      const keys = ["working", "scratch"].includes(entry.phase)
+        ? ["dev", "ino", "mode", "uid", "gid"]
+        : PNPM_STORE_IDENTITY_KEYS;
+      assertHeldDirectory(entry, keys, `${entry.phase} phase`);
+    }
+    const workingInventory = pnpmStoreInventory(storePath, currentUid, {
+      allowedRootChildren: ["files", "index", "projects", "tmp"],
     });
+    const workingFilesAuthority = pnpmStoreSubtreeAuthority(workingInventory, "files");
+    if (
+      workingFilesAuthority.inventory_digest !== initialFilesAuthority.inventory_digest
+      || workingFilesAuthority.physical_identity_digest !== initialFilesAuthority.physical_identity_digest
+    ) fail("candidate pnpm store files inventory drifted during install");
+    const storeRootEntry = viewByPath.get(storeRoot);
+    const storePathEntry = viewByPath.get(storePath);
+    const indexEntry = viewByPath.get(indexPath);
+    if (!storeRootEntry || !storePathEntry || !indexEntry) {
+      fail("candidate pnpm transition directory registry is incomplete");
+    }
+    const quarantineName = `.homecook-pnpm-quarantine-${randomUUID()}`;
+    const quarantineRoot = join(quarantineParent, quarantineName);
+    let quarantineFd;
+    let retainQuarantineFd = false;
+    try {
+      const quarantineParentBefore = lstatSync(quarantineParent, { bigint: true });
+      const quarantineParentOpened = fstatSync(quarantineParentFd, { bigint: true });
+      if (
+        quarantineParentBefore.isSymbolicLink()
+        || !samePnpmStoreIdentity(quarantineParentStat, quarantineParentBefore)
+        || !samePnpmStoreIdentity(quarantineParentStat, quarantineParentOpened)
+      ) fail("candidate pnpm quarantine parent swapped before quarantine creation");
+      mkdirSync(quarantineRoot, { mode: 0o700 });
+      const quarantineStat = lstatSync(quarantineRoot, { bigint: true });
+      if (
+        quarantineStat.isSymbolicLink() || !quarantineStat.isDirectory()
+        || quarantineStat.uid !== BigInt(currentUid) || modeBits(quarantineStat.mode) !== 0o700
+        || realpathSync(quarantineRoot) !== quarantineRoot
+      ) fail("candidate pnpm transition quarantine is unsafe");
+      quarantineFd = openSync(
+        quarantineRoot,
+        fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+      );
+      if (!samePnpmStoreIdentity(quarantineStat, fstatSync(quarantineFd, { bigint: true }))) {
+        fail("candidate pnpm transition quarantine identity drifted before move");
+      }
+      fchmodSync(storePathEntry.fd, 0o700);
+      const storePathWritable = lstatSync(storePath, { bigint: true });
+      if (
+        storePathWritable.isSymbolicLink() || storePathWritable.dev !== fstatSync(storePathEntry.fd, { bigint: true }).dev
+        || storePathWritable.ino !== fstatSync(storePathEntry.fd, { bigint: true }).ino
+        || modeBits(storePathWritable.mode) !== 0o700
+      ) fail("candidate pnpm store path swapped before quarantine move");
+
+      for (const [kind, sourcePath] of [["index", indexPath], ["projects", scratchRoots[0]], ["tmp", scratchRoots[1]]]) {
+        const entry = viewByPath.get(sourcePath);
+        if (!entry) fail("candidate pnpm transition child registry is incomplete");
+        const targetPath = join(quarantineRoot, kind);
+        const sourceBefore = lstatSync(sourcePath, { bigint: true });
+        const sourceFd = fstatSync(entry.fd, { bigint: true });
+        if (
+          sourceBefore.isSymbolicLink() || !sourceBefore.isDirectory()
+          || sourceBefore.dev !== sourceFd.dev || sourceBefore.ino !== sourceFd.ino
+          || realpathSync(sourcePath) !== sourcePath
+        ) fail(`candidate pnpm ${kind} path swapped before quarantine move`);
+        renameSync(sourcePath, targetPath);
+        const moved = lstatSync(targetPath, { bigint: true });
+        const movedFd = fstatSync(entry.fd, { bigint: true });
+        if (
+          moved.isSymbolicLink() || !moved.isDirectory() || realpathSync(targetPath) !== targetPath
+          || moved.dev !== sourceFd.dev || moved.ino !== sourceFd.ino
+          || movedFd.dev !== sourceFd.dev || movedFd.ino !== sourceFd.ino
+          || moved.uid !== BigInt(currentUid)
+        ) fail(`candidate pnpm ${kind} quarantine identity differs from held authority`);
+        assertAbsent(sourcePath, `${kind} original path after quarantine move`);
+        entry.quarantinePath = targetPath;
+        entry.quarantineStat = moved;
+      }
+      if (
+        canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files"])
+        || canonicalizeJcs(readdirSync(quarantineRoot).sort()) !== canonicalizeJcs(["index", "projects", "tmp"])
+      ) fail("candidate pnpm transition quarantine child set is invalid");
+
+      sealPnpmStoreTreeFdBound(filesPath, {
+        inventory: workingInventory,
+        subtree: "files",
+        currentUid,
+        transitionObserver,
+      });
+      sealPnpmStoreTreeFdBound(indexEntry.quarantinePath, {
+        inventory: workingInventory,
+        subtree: "index",
+        currentUid,
+        deferRootFchmod: true,
+        transitionObserver,
+      });
+
+      const sealedIndexQuarantine = lstatSync(indexEntry.quarantinePath, { bigint: true });
+      const sealedIndexFd = fstatSync(indexEntry.fd, { bigint: true });
+      if (
+        sealedIndexQuarantine.isSymbolicLink() || !sealedIndexQuarantine.isDirectory()
+        || sealedIndexQuarantine.dev !== sealedIndexFd.dev || sealedIndexQuarantine.ino !== sealedIndexFd.ino
+        || modeBits(sealedIndexQuarantine.mode) !== 0o700
+      ) fail("candidate pnpm sealed index quarantine identity is invalid");
+      assertAbsent(indexPath, "index destination before restore");
+      renameSync(indexEntry.quarantinePath, indexPath);
+      const restoredIndex = lstatSync(indexPath, { bigint: true });
+      const restoredIndexFd = fstatSync(indexEntry.fd, { bigint: true });
+      if (
+        restoredIndex.isSymbolicLink() || !restoredIndex.isDirectory()
+        || restoredIndex.dev !== restoredIndexFd.dev || restoredIndex.ino !== restoredIndexFd.ino
+        || modeBits(restoredIndex.mode) !== 0o700 || realpathSync(indexPath) !== indexPath
+      ) fail("candidate pnpm sealed index identity drifted during restore");
+      assertAbsent(indexEntry.quarantinePath, "index quarantine after restore");
+      transitionObserver(Object.freeze({
+        phase: "before_entry_fchmod",
+        path: indexPath,
+        relativePath: "index",
+        type: "directory",
+      }));
+      const indexBeforeFinalMode = lstatSync(indexPath, { bigint: true });
+      if (
+        indexBeforeFinalMode.isSymbolicLink()
+        || indexBeforeFinalMode.dev !== restoredIndexFd.dev
+        || indexBeforeFinalMode.ino !== restoredIndexFd.ino
+      ) fail("candidate pnpm index root swapped before final FD-bound chmod");
+      fchmodSync(indexEntry.fd, 0o500);
+      const sealedIndexFinal = lstatSync(indexPath, { bigint: true });
+      if (
+        sealedIndexFinal.isSymbolicLink()
+        || sealedIndexFinal.dev !== fstatSync(indexEntry.fd, { bigint: true }).dev
+        || sealedIndexFinal.ino !== fstatSync(indexEntry.fd, { bigint: true }).ino
+        || modeBits(sealedIndexFinal.mode) !== 0o500
+      ) fail("candidate pnpm index root swapped during final FD-bound chmod");
+
+      if (canonicalizeJcs(readdirSync(quarantineRoot).sort()) !== canonicalizeJcs(["projects", "tmp"])) {
+        fail("candidate pnpm deferred quarantine child set is invalid");
+      }
+      const deferredStat = lstatSync(quarantineRoot, { bigint: true });
+      if (!samePnpmStoreIdentity(deferredStat, fstatSync(quarantineFd, { bigint: true }))) {
+        fail("candidate pnpm deferred quarantine identity drifted after transition");
+      }
+      deferredQuarantine = Object.freeze({
+        fd: quarantineFd,
+        name: quarantineName,
+        path: quarantineRoot,
+        stat: deferredStat,
+      });
+      retainQuarantineFd = true;
+      fchmodSync(storePathEntry.fd, 0o500);
+    } finally {
+      if (quarantineFd !== undefined && !retainQuarantineFd) closeSync(quarantineFd);
+    }
+    assertTransitionParentStable();
+    if (
+      canonicalizeJcs(readdirSync(storeRoot).sort()) !== canonicalizeJcs(["v10"])
+      || canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])
+    ) fail("candidate pnpm store contains unexpected children after FD-bound transition");
+    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
+    finalIndexAuthority = pnpmStoreSubtreeAuthority(sealedSnapshotInventory, "index");
+    for (const entry of viewDirectories.filter(({ phase }) => phase !== "scratch")) {
+      const sealedStat = lstatSync(entry.path, { bigint: true });
+      const fdPost = fstatSync(entry.fd, { bigint: true });
+      if (
+        sealedStat.isSymbolicLink() || !sealedStat.isDirectory()
+        || realpathSync(entry.path) !== entry.path
+        || !samePnpmStoreIdentity(sealedStat, fdPost)
+      ) fail("candidate pnpm store sealed directory identity drifted during transition");
+      entry.sealedStat = sealedStat;
+    }
+    installTransitionDigest = sha256Jcs({
+      schema: "homecook.release-rehearsal-pnpm-install-index-transition.v1",
+      initial_snapshot_inventory_digest: snapshotInventory.inventory_digest,
+      sealed_snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
+      final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+      final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
+      install_writable_path_digests: installWritableRoots.map((path) => sha256Jcs(path)),
+      quarantine_path_digest: sha256Jcs(quarantineRoot),
+    });
+    storePhase = "sealed";
+    return Object.freeze({ ...finalIndexAuthority });
+  };
+
   let value;
   let callbackError;
   try {
     value = await callback({
       storePath,
-      writableRoots: Object.freeze([...writableRoots]),
+      installWritableRoots: Object.freeze([...installWritableRoots]),
       snapshotInventoryDigest: snapshotInventory.inventory_digest,
+      sealInstallIndex,
+      verifyInstallPhaseBeforeSpawn,
     });
   } catch (error) {
     callbackError = error;
   }
   let identityError;
-  let sealedSnapshotInventory;
   try {
+    if (storePhase !== "sealed" || !sealedSnapshotInventory || !finalIndexAuthority) {
+      if (callbackError) throw callbackError;
+      fail("candidate pnpm install index seal transition did not complete");
+    }
     for (const { fd, path, stat } of sourceSnapshots) {
       const pathPost = lstatSync(path, { bigint: true });
       const fdPost = fstatSync(fd, { bigint: true });
@@ -2169,104 +2848,193 @@ export async function withCandidatePnpmStoreView({
       sourcePost.inventory_digest !== sourceInventory.inventory_digest
       || sourcePost.identity_digest !== sourceInventory.identity_digest
     ) fail("approved pnpm package store inventory drifted during candidate build");
-    const snapshotBeforeSeal = pnpmStoreInventory(storePath, currentUid, {
-      allowedRootChildren: ["files", "index", "projects", "tmp"],
-    });
+    const sealedPost = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
+    const finalIndexPost = pnpmStoreSubtreeAuthority(sealedPost, "index");
     if (
-      snapshotBeforeSeal.inventory_digest !== snapshotInventory.inventory_digest
-      || snapshotBeforeSeal.identity_digest !== snapshotInventory.identity_digest
-    ) fail("candidate pnpm store snapshot inventory drifted during candidate build");
-    for (const { fd, path, stat, mutable } of viewDirectories) {
-      const pathPost = lstatSync(path, { bigint: true });
-      const fdPost = fstatSync(fd, { bigint: true });
-      const keys = mutable ? ["dev", "ino", "mode", "uid", "gid"] : PNPM_STORE_IDENTITY_KEYS;
+      sealedPost.inventory_digest !== sealedSnapshotInventory.inventory_digest
+      || sealedPost.identity_digest !== sealedSnapshotInventory.identity_digest
+      || finalIndexPost.inventory_digest !== finalIndexAuthority.inventory_digest
+      || finalIndexPost.physical_identity_digest !== finalIndexAuthority.physical_identity_digest
+    ) fail("candidate pnpm sealed index or store inventory drifted during build");
+    for (const entry of viewDirectories.filter(({ phase }) => phase !== "scratch")) {
+      const pathPost = lstatSync(entry.path, { bigint: true });
+      const fdPost = fstatSync(entry.fd, { bigint: true });
       if (
-        pathPost.isSymbolicLink() || !pathPost.isDirectory() || realpathSync(path) !== path
-        || !keys.every((key) => stat[key] === pathPost[key] && stat[key] === fdPost[key])
-      ) fail("candidate pnpm store-view directory identity drifted during candidate build");
+        !entry.sealedStat || pathPost.isSymbolicLink() || !pathPost.isDirectory()
+        || realpathSync(entry.path) !== entry.path
+        || !samePnpmStoreIdentity(entry.sealedStat, pathPost)
+        || !samePnpmStoreIdentity(entry.sealedStat, fdPost)
+      ) fail("candidate pnpm sealed directory identity drifted during build");
     }
+    for (const scratchRoot of scratchRoots) {
+      try {
+        lstatSync(scratchRoot);
+        fail("candidate pnpm scratch path returned after install seal");
+      } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
+      }
+    }
+    if (!deferredQuarantine) {
+      fail("candidate pnpm deferred quarantine authority is missing");
+    }
+    const assertDeferredQuarantineIdentity = (phase) => {
+      const pathStat = lstatSync(deferredQuarantine.path, { bigint: true });
+      const fdStat = fstatSync(deferredQuarantine.fd, { bigint: true });
+      if (
+        pathStat.isSymbolicLink() || !pathStat.isDirectory()
+        || realpathSync(deferredQuarantine.path) !== deferredQuarantine.path
+        || !samePnpmStoreIdentity(deferredQuarantine.stat, pathStat)
+        || !samePnpmStoreIdentity(deferredQuarantine.stat, fdStat)
+      ) fail(`candidate pnpm deferred quarantine identity drifted ${phase}`);
+    };
+    assertDeferredQuarantineIdentity("before cleanup inventory");
+    const deferredInventory = inventoryDeferredPnpmQuarantine(
+      deferredQuarantine.path,
+      currentUid,
+    );
+    assertDeferredQuarantineIdentity("during cleanup inventory");
+    transitionObserver(Object.freeze({
+      phase: "before_deferred_cleanup",
+      path: deferredQuarantine.path,
+      inventory_digest: deferredInventory.inventory_digest,
+    }));
+    const cleanup = cleanupDeferredPnpmQuarantine({
+      parentFd: quarantineParentFd,
+      rootName: deferredQuarantine.name,
+      inventory: deferredInventory,
+      currentUid,
+      pythonPath: cleanupPythonPath,
+      runCommand: cleanupRunCommand,
+    });
+    assertAbsent(deferredQuarantine.path, "deferred quarantine after cleanup");
+    deferredCleanupDigest = cleanup.cleanup_digest;
   } catch (error) {
     identityError = error;
   } finally {
+    if (deferredQuarantine?.fd !== undefined) closeSync(deferredQuarantine.fd);
+    closeSync(quarantineParentFd);
+    closeSync(transitionParentFd);
     for (const { fd } of viewDirectories.reverse()) closeSync(fd);
     for (const { fd } of sourceSnapshots.reverse()) closeSync(fd);
   }
   if (identityError) throw identityError;
   if (callbackError) throw callbackError;
-  try {
-    chmodSync(storePath, 0o700);
-    for (const writableRoot of writableRoots) {
-      const stat = lstatSync(writableRoot, { bigint: true });
-      if (
-        stat.isSymbolicLink() || !stat.isDirectory() || stat.uid !== BigInt(currentUid)
-        || modeBits(stat.mode) !== 0o700 || realpathSync(writableRoot) !== writableRoot
-      ) fail("candidate pnpm store scratch directory is unsafe before cleanup");
-      rmSync(writableRoot, { recursive: true, force: false });
-      try {
-        lstatSync(writableRoot);
-        fail("candidate pnpm store scratch directory remained after cleanup");
-      } catch (error) {
-        if (!(error && typeof error === "object" && error.code === "ENOENT")) throw error;
-      }
-    }
-    if (canonicalizeJcs(readdirSync(storePath).sort()) !== canonicalizeJcs(["files", "index"])) {
-      fail("candidate pnpm store contains unexpected children after scratch cleanup");
-    }
-    sealPnpmStoreFiles(join(storePath, "files"));
-    chmodSync(storePath, 0o500);
-    sealedSnapshotInventory = pnpmStoreInventory(storePath, currentUid, { requireSealed: true });
-    if (sealedSnapshotInventory.content_digest !== snapshotInventory.content_digest) {
-      fail("candidate pnpm store sealed snapshot inventory drifted after build");
-    }
-  } catch (error) {
-    fail(`candidate pnpm store scratch cleanup or seal failed: ${error?.message ?? error?.code ?? "unknown"}`);
-  }
+
   const authorityDigest = sha256Jcs({
-    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v2",
+    schema: "homecook.release-rehearsal-pnpm-store-view-authority.v3",
     source_inventory_digest: sourceInventory.inventory_digest,
     source_identity_digest: sourceInventory.identity_digest,
+    initial_snapshot_inventory_digest: snapshotInventory.inventory_digest,
     snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
     snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+    final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
+    install_transition_digest: installTransitionDigest,
+    deferred_cleanup_digest: deferredCleanupDigest,
     view_path_digest: sha256Jcs(storePath),
-    writable_path_digests: writableRoots.map((path) => sha256Jcs(path)),
+    install_writable_path_digests: installWritableRoots.map((path) => sha256Jcs(path)),
   });
   return Object.freeze({
     authority_digest: authorityDigest,
     snapshot_inventory_digest: sealedSnapshotInventory.inventory_digest,
     snapshot_identity_digest: sealedSnapshotInventory.identity_digest,
+    final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+    final_index_identity_digest: finalIndexAuthority.physical_identity_digest,
     value,
   });
 }
 
-/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[]}} options */
+/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[], executablePaths?:string[]|null, stage?:"offline-install"|"next-build"|null}} options */
 export function buildCandidateSandboxProfile({
-  readRoots = [], writeRoots = [], deniedPaths = [], deniedWritePaths = [],
+  readRoots = [], writeRoots = [], deniedPaths = [], deniedWritePaths = [], executablePaths = null,
+  stage = null,
 } = {}) {
+  if (stage !== null && !["offline-install", "next-build"].includes(stage)) {
+    fail("candidate sandbox stage is invalid");
+  }
+  let processExecRule = "(allow process-exec)";
+  let executionAuditMessage = null;
+  if (executablePaths !== null) {
+    if (
+      !Array.isArray(executablePaths) || executablePaths.length === 0
+      || executablePaths.some((path) => typeof path !== "string" || !isAbsolute(path) || resolve(path) !== path)
+    ) fail("candidate sandbox exact executable paths are invalid");
+    const exactExecutables = [...new Set(executablePaths)].sort();
+    for (const path of exactExecutables) {
+      let stat;
+      try {
+        stat = lstatSync(path);
+      } catch {
+        fail("candidate sandbox exact executable is unavailable");
+      }
+      if (
+        stat.isSymbolicLink() || !stat.isFile() || realpathSync(path) !== path
+        || ![0, process.getuid?.()].includes(stat.uid)
+        || (modeBits(stat.mode) & 0o111) === 0
+        || (modeBits(stat.mode) & 0o022) !== 0
+      ) fail("candidate sandbox exact executable mode, owner, or identity is unsafe");
+    }
+    processExecRule = `(allow process-exec ${exactExecutables
+      .map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`;
+    if (exactExecutables.length === 1 && /^hcnode[0-9a-f]{8}[a-z]$/u.test(basename(exactExecutables[0]))) {
+      executionAuditMessage = `homecook-sandbox-${basename(exactExecutables[0])}`;
+    }
+  }
+  const auditMessageRule = executionAuditMessage === null
+    ? ""
+    : ` (with message ${JSON.stringify(executionAuditMessage)})`;
   const systemRuntimeRoots = [
     "/System",
     "/usr",
     "/bin",
     "/sbin",
     "/Library",
-    "/private/etc",
-    "/private/var/db",
     "/private/var/folders",
     "/private/var/select",
     "/private/var/run",
     "/dev",
   ];
+  const systemRuntimeFiles = new Set([
+    "/private/var/db/timezone/zoneinfo/posixrules",
+  ]);
+  for (const path of [...systemRuntimeFiles]) {
+    try { systemRuntimeFiles.add(realpathSync(path)); } catch { /* Missing system aliases stay lexical. */ }
+  }
+  const systemMetadataPathSet = new Set([
+    "/etc",
+    "/var",
+    "/private/etc",
+    "/private/var",
+    "/private/var/db",
+    "/private/var/db/timezone",
+    "/private/var/db/timezone/zoneinfo",
+  ]);
+  for (const file of systemRuntimeFiles) {
+    let current = dirname(file);
+    while (current !== "/") {
+      systemMetadataPathSet.add(current);
+      if (current === "/private/var") break;
+      current = dirname(current);
+    }
+  }
+  const systemMetadataPaths = [...systemMetadataPathSet].sort();
   const approvedReadRoots = [...new Set([...readRoots, ...systemRuntimeRoots])];
   const ancestors = new Set(["/"]);
-  for (const root of [...approvedReadRoots, ...writeRoots]) {
+  for (const root of [...approvedReadRoots, ...writeRoots, ...systemMetadataPaths]) {
     let current = resolve(root);
     while (current !== "/") {
       ancestors.add(current);
       current = dirname(current);
     }
   }
+  const aliasParentMetadataRules = systemMetadataPaths
+    .map((path) => `(literal ${sandboxLiteral(path)})`).join(" ");
   const readRules = [
-    ...[...ancestors].map((path) => `(literal ${sandboxLiteral(path)})`),
+    ...[...ancestors]
+      .filter((path) => !systemMetadataPaths.includes(path))
+      .map((path) => `(literal ${sandboxLiteral(path)})`),
     ...approvedReadRoots.map((path) => `(subpath ${sandboxLiteral(path)})`),
+    ...[...systemRuntimeFiles].sort().map((path) => `(literal ${sandboxLiteral(path)})`),
   ].join(" ");
   const writeRules = [...new Set(writeRoots)].map((path) => `(subpath ${sandboxLiteral(path)})`).join(" ");
   const expandedDeniedPaths = new Set(deniedPaths);
@@ -2274,27 +3042,159 @@ export function buildCandidateSandboxProfile({
     try { expandedDeniedPaths.add(realpathSync(path)); } catch { /* Missing denied targets stay lexical. */ }
   }
   const denyRules = [...expandedDeniedPaths].flatMap((path) => [
-    `(deny file-read* (subpath ${sandboxLiteral(path)}))`,
-    `(deny file-write* (subpath ${sandboxLiteral(path)}))`,
+    `(deny file-read* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)})${auditMessageRule})`,
+    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)})${auditMessageRule})`,
   ]).join("\n");
   const denyWriteRules = [...new Set(deniedWritePaths)].map((path) =>
-    `(deny file-write* (subpath ${sandboxLiteral(path)}))`).join("\n");
+    `(deny file-write* (literal ${sandboxLiteral(path)}) (subpath ${sandboxLiteral(path)})${auditMessageRule})`).join("\n");
   return [
     "(version 1)",
-    "(deny default)",
-    "(allow process-exec)",
-    "(allow process-fork)",
+    `(deny default${auditMessageRule})`,
+    processExecRule,
+    `(deny process-fork${auditMessageRule})`,
     "(allow signal (target children))",
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
-    ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")})`,
+    ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")}${auditMessageRule})`,
+    `(deny mach-lookup (global-name "${DIAGNOSTICD_MACH_SERVICE}") (with no-log))`,
+    stage === "offline-install"
+      ? `(allow mach-lookup (global-name "${DNS_CONFIGURATION_MACH_SERVICE}"))`
+      : "",
     "(allow sysctl-read)",
+    '(allow file-read-metadata (literal "/etc") (literal "/var"))',
+    `(allow file-read-metadata ${aliasParentMetadataRules})`,
     `(allow file-read* ${readRules})`,
+    `(deny file-read-data (literal "/etc") (literal "/var") (literal "/private/etc") (literal "/private/var")${auditMessageRule})`,
     `(allow file-write* ${writeRules})`,
-    "(deny network*)",
+    `(deny network*${auditMessageRule})`,
     denyRules,
     denyWriteRules,
   ].filter(Boolean).join("\n");
+}
+
+export function buildSandboxStageCapabilityPolicy({
+  installProfile, buildProfile, installAudit, buildAudit,
+}) {
+  const exactInstallAllow = `(allow mach-lookup (global-name "${DNS_CONFIGURATION_MACH_SERVICE}"))`;
+  const machAllows = (profile) => String(profile).split("\n")
+    .filter((line) => line.startsWith("(allow mach-lookup"));
+  const assertProfile = (profile, stage, expectedAllows) => {
+    const allows = machAllows(profile);
+    if (canonicalizeJcs(allows) !== canonicalizeJcs(expectedAllows)) {
+      fail(`${stage} sandbox Mach capability projection is invalid`);
+    }
+    if (!String(profile).split("\n").some((line) => line.startsWith("(deny network*"))) {
+      fail(`${stage} sandbox network deny is missing`);
+    }
+    if ((String(profile).match(/\(with no-log\)/gu) ?? []).length !== 1
+      || !String(profile).split("\n").includes(
+        `(deny mach-lookup (global-name "${DIAGNOSTICD_MACH_SERVICE}") (with no-log))`,
+      )) fail(`${stage} sandbox no-log policy is invalid`);
+  };
+  assertProfile(installProfile, "offline-install", [exactInstallAllow]);
+  assertProfile(buildProfile, "next-build", []);
+  const assertAudit = (audit, stage) => {
+    if (!audit || typeof audit !== "object" || Array.isArray(audit)) {
+      fail(`${stage} capability audit is invalid`);
+    }
+    digest(audit.audit_digest, `${stage} capability audit digest`);
+    if (audit.stage !== stage || audit.denial_count !== 0 || audit.process_attempt_count !== 0) {
+      fail(`${stage} capability audit did not remain fail closed`);
+    }
+  };
+  assertAudit(installAudit, "offline-install");
+  assertAudit(buildAudit, "next-build");
+  const policy = {
+    schema: "homecook.sandbox-stage-capability-policy-text.v1",
+    stages: [
+      {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      },
+      { stage: "next-build", allowed_mach_lookup_global_names: [] },
+    ],
+    network_policy: "deny-all",
+    no_log_denials: [DIAGNOSTICD_MACH_SERVICE],
+  };
+  const policyText = canonicalizeJcs(policy);
+  return validateSandboxStageCapabilityPolicy(Object.freeze({
+    schema: "homecook.sandbox-stage-capability-policy.v1",
+    policy_text: policyText,
+    policy_digest: sha256Bytes(Buffer.from(policyText, "utf8")),
+    install: {
+      stage: "offline-install",
+      allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      allow_count: 1,
+    },
+    build: {
+      stage: "next-build",
+      allowed_mach_lookup_global_names: [],
+      allow_count: 0,
+    },
+    observed: {
+      install_audit_digest: installAudit.audit_digest,
+      install_denial_count: installAudit.denial_count,
+      install_process_attempt_count: installAudit.process_attempt_count,
+      build_audit_digest: buildAudit.audit_digest,
+      build_denial_count: buildAudit.denial_count,
+      build_process_attempt_count: buildAudit.process_attempt_count,
+    },
+  }));
+}
+
+export function validateSandboxStageCapabilityPolicy(value) {
+  exactObject(value, "sandbox stage capability policy", [
+    "schema", "policy_text", "policy_digest", "install", "build", "observed",
+  ]);
+  exactObject(value.install, "sandbox install capability", [
+    "stage", "allowed_mach_lookup_global_names", "allow_count",
+  ]);
+  exactObject(value.build, "sandbox build capability", [
+    "stage", "allowed_mach_lookup_global_names", "allow_count",
+  ]);
+  exactObject(value.observed, "sandbox capability observations", [
+    "install_audit_digest", "install_denial_count", "install_process_attempt_count",
+    "build_audit_digest", "build_denial_count", "build_process_attempt_count",
+  ]);
+  let parsedPolicy;
+  try {
+    parsedPolicy = JSON.parse(value.policy_text);
+  } catch {
+    fail("sandbox stage capability policy text is invalid");
+  }
+  const expectedPolicy = {
+    schema: "homecook.sandbox-stage-capability-policy-text.v1",
+    stages: [
+      {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      },
+      { stage: "next-build", allowed_mach_lookup_global_names: [] },
+    ],
+    network_policy: "deny-all",
+    no_log_denials: [DIAGNOSTICD_MACH_SERVICE],
+  };
+  if (
+    value.schema !== "homecook.sandbox-stage-capability-policy.v1"
+    || value.policy_text !== canonicalizeJcs(parsedPolicy)
+    || value.policy_text !== canonicalizeJcs(expectedPolicy)
+    || value.policy_digest !== sha256Bytes(Buffer.from(value.policy_text, "utf8"))
+    || canonicalizeJcs(value.install) !== canonicalizeJcs({
+      stage: "offline-install",
+      allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      allow_count: 1,
+    })
+    || canonicalizeJcs(value.build) !== canonicalizeJcs({
+      stage: "next-build", allowed_mach_lookup_global_names: [], allow_count: 0,
+    })
+    || value.observed.install_denial_count !== 0
+    || value.observed.install_process_attempt_count !== 0
+    || value.observed.build_denial_count !== 0
+    || value.observed.build_process_attempt_count !== 0
+  ) fail("sandbox stage capability policy is not the exact install-only authority");
+  digest(value.observed.install_audit_digest, "sandbox install capability audit digest");
+  digest(value.observed.build_audit_digest, "sandbox build capability audit digest");
+  return value;
 }
 
 export function validateProductionGuardSnapshots(pre, post) {
@@ -2566,8 +3466,10 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["compose_source_digest", candidate.compose_source_digest, bundle.compose_source_digest],
     ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
+    ["sandbox_stage_capability_policy", candidate.sandbox_stage_capability_policy, bundle.sandbox_stage_capability_policy],
     ["generated_build_inventory_digest", candidate.generated_build_inventory_digest, bundle.generated_build_inventory_digest],
     ["pnpm_store_snapshot_inventory_digest", candidate.pnpm_store_snapshot_inventory_digest, bundle.pnpm_store_snapshot_inventory_digest],
+    ["pnpm_store_final_index_inventory_digest", candidate.pnpm_store_final_index_inventory_digest, bundle.pnpm_store_final_index_inventory_digest],
     ["toolchain_lock_digest", candidate.toolchain_lock_digest, bundle.toolchain_lock_digest],
     ["environment_snapshot", candidate.environment_snapshot, bundle.environment_snapshot],
     ["production_guard", candidate.production_guard, bundle.production_guard],
@@ -2680,6 +3582,10 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
   );
   if (storeSnapshot.inventory_digest !== manifest.pnpm_store_snapshot_inventory_digest) {
     fail("completed candidate pnpm store portable inventory digest is invalid");
+  }
+  const finalIndexAuthority = pnpmStoreSubtreeAuthority(storeSnapshot, "index");
+  if (finalIndexAuthority.inventory_digest !== manifest.pnpm_store_final_index_inventory_digest) {
+    fail("completed candidate pnpm store final index inventory digest is invalid");
   }
   const candidateIdentityAuthority = readSealedAuthorityFile(
     root,
@@ -2816,6 +3722,7 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
       directoryInventory,
       storeSnapshot.identity_digest,
     ),
+    pnpm_store_final_index_identity_digest: finalIndexAuthority.physical_identity_digest,
   });
   } finally {
     closeSync(rootFd);
@@ -2836,12 +3743,14 @@ function readCompletedCandidatePhysicalAuthority(root, physicalAuthorityPath) {
   );
   exactObject(authority, "completed candidate physical authority", [
     "schema", "authority_path_digest", "candidate_root_path_digest", "candidate_identity_digest",
-    "manifest_digest", "pnpm_store_snapshot_inventory_digest", "physical_identity_digest",
+    "manifest_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_final_index_inventory_digest", "pnpm_store_final_index_identity_digest",
+    "physical_identity_digest",
     "authority_digest",
   ]);
   const { authority_digest: authorityDigest, ...unsigned } = authority;
   if (
-    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1"
+    authority.schema !== "homecook.local-mac-production-rehearsal-candidate-physical-authority.v2"
     || authority.authority_path_digest !== sha256Jcs(physicalAuthorityPath)
     || authorityDigest !== sha256Jcs(unsigned)
   ) fail("completed candidate root-local physical authority is stale or invalid");
@@ -2864,6 +3773,10 @@ function readCompletedCandidateWithPhysicalAuthority(root, {
     || authority.manifest_digest !== portable.manifest.manifest_digest
     || authority.pnpm_store_snapshot_inventory_digest
       !== portable.manifest.pnpm_store_snapshot_inventory_digest
+    || authority.pnpm_store_final_index_inventory_digest
+      !== portable.manifest.pnpm_store_final_index_inventory_digest
+    || authority.pnpm_store_final_index_identity_digest
+      !== portable.pnpm_store_final_index_identity_digest
     || authority.physical_identity_digest !== portable.physical_identity_digest
   ) fail("completed candidate root-local physical authority is stale or invalid");
   return Object.freeze({
@@ -2896,12 +3809,14 @@ export function issueCompletedCandidatePhysicalAuthority({
     verifyPortableContent: true,
   });
   const unsigned = {
-    schema: "homecook.local-mac-production-rehearsal-candidate-physical-authority.v1",
+    schema: "homecook.local-mac-production-rehearsal-candidate-physical-authority.v2",
     authority_path_digest: sha256Jcs(authorityPath),
     candidate_root_path_digest: sha256Jcs(candidateRoot),
     candidate_identity_digest: portable.manifest.candidate_identity_digest,
     manifest_digest: portable.manifest.manifest_digest,
     pnpm_store_snapshot_inventory_digest: portable.manifest.pnpm_store_snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: portable.manifest.pnpm_store_final_index_inventory_digest,
+    pnpm_store_final_index_identity_digest: portable.pnpm_store_final_index_identity_digest,
     physical_identity_digest: portable.physical_identity_digest,
   };
   const authority = Object.freeze({ ...unsigned, authority_digest: sha256Jcs(unsigned) });
@@ -2954,6 +3869,7 @@ function validateCompletedCandidateContainerAuthority(authority) {
     "schema", "authority_source_path_digest", "container_candidate_root_path_digest",
     "container_authority_path_digest", "candidate_identity_digest", "manifest_digest",
     "bundle_manifest_digest", "sealed_bundle_digest", "pnpm_store_snapshot_inventory_digest",
+    "pnpm_store_final_index_inventory_digest",
     "authority_digest",
   ]);
   const { authority_digest: authorityDigest, ...unsigned } = authority;
@@ -2983,6 +3899,8 @@ function assertContainerAuthorityBindings(authority, {
     || authority.sealed_bundle_digest !== manifest.sealed_bundle_digest
     || authority.pnpm_store_snapshot_inventory_digest
       !== manifest.pnpm_store_snapshot_inventory_digest
+    || authority.pnpm_store_final_index_inventory_digest
+      !== manifest.pnpm_store_final_index_inventory_digest
     || !isAbsolute(candidateRoot ?? "")
   ) fail("completed candidate container authority binding is stale or invalid");
 }
@@ -3048,6 +3966,7 @@ export function issueCompletedCandidateContainerAuthority({
     bundle_manifest_digest: stable.manifest.bundle_manifest_digest,
     sealed_bundle_digest: stable.manifest.sealed_bundle_digest,
     pnpm_store_snapshot_inventory_digest: stable.manifest.pnpm_store_snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: stable.manifest.pnpm_store_final_index_inventory_digest,
   };
   const authority = Object.freeze({ ...unsigned, authority_digest: sha256Jcs(unsigned) });
   try {
@@ -3278,10 +4197,17 @@ export async function buildReleaseRehearsalCandidate({
       "sealed_bundle_digest",
     );
     const sandboxPolicyDigest = digest(build.sandbox_policy_digest, "sandbox policy digest");
+    const sandboxStageCapabilityPolicy = validateSandboxStageCapabilityPolicy(
+      build.sandbox_stage_capability_policy,
+    );
     const generatedInventoryDigest = generatedBuildInventoryDigest(build.file_inventory);
     const pnpmStoreSnapshotInventoryDigest = digest(
       build.pnpm_store_snapshot_inventory_digest,
       "pnpm store snapshot inventory digest",
+    );
+    const pnpmStoreFinalIndexInventoryDigest = digest(
+      build.pnpm_store_final_index_inventory_digest,
+      "pnpm store final index inventory digest",
     );
     exactObject(build.build_tools, "build tools", ["next_cli"]);
     validateToolIdentity(build.build_tools.next_cli, "build tools next_cli", {
@@ -3304,8 +4230,10 @@ export async function buildReleaseRehearsalCandidate({
       release_sha: releaseSha,
       release_tree: sourceEvidence.release_tree,
       sandbox_policy_digest: sandboxPolicyDigest,
+      sandbox_stage_capability_policy: sandboxStageCapabilityPolicy,
       generated_build_inventory_digest: generatedInventoryDigest,
       pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+      pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
       sealed_bundle_digest: sealedBundleDigest,
       source_snapshot_digest: sourceEvidence.source_snapshot_pre_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
@@ -3344,8 +4272,10 @@ export async function buildReleaseRehearsalCandidate({
       builder_input_digest: sourceEvidence.builder_input_digest,
       compose_source_digest: composeSourceDigest,
       sandbox_policy_digest: sandboxPolicyDigest,
+      sandbox_stage_capability_policy: sandboxStageCapabilityPolicy,
       generated_build_inventory_digest: generatedInventoryDigest,
       pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
+      pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
       build_id: buildId,
       build_tools: build.build_tools,
       sealed_bundle_digest: sealedBundleDigest,
@@ -3454,32 +4384,948 @@ function runBounded(command, args, options = {}) {
   return String(result.stdout ?? "");
 }
 
+export function materializeSandboxProcessWitness({
+  clangPath = "/usr/bin/clang",
+  nodePath = process.execPath,
+  outputPath,
+  sourcePath: requestedSourcePath = null,
+  preloadSourcePath: requestedPreloadSourcePath = null,
+  runCommand = spawnSync,
+} = /** @type {any} */ ({})) {
+  if (process.platform !== "darwin") fail("sandbox process witness requires macOS");
+  if (!isAbsolute(outputPath ?? "") || pathExists(outputPath)) {
+    fail("sandbox process witness output must be a fresh absolute path");
+  }
+  const sourcePath = requestedSourcePath === null
+    ? resolve(dirname(fileURLToPath(import.meta.url)), "../native/local-mac-sandbox-process-witness.c")
+    : resolve(requestedSourcePath);
+  const preloadSourcePath = requestedPreloadSourcePath === null
+    ? resolve(dirname(fileURLToPath(import.meta.url)), "../native/local-mac-sandbox-process-witness-preload.cjs")
+    : resolve(requestedPreloadSourcePath);
+  if (!isAbsolute(sourcePath) || !isAbsolute(preloadSourcePath)) {
+    fail("sandbox process witness sources must be absolute");
+  }
+  const preloadPath = `${outputPath}.cjs`;
+  const realClang = resolveSafeRealExecutable([clangPath], "sandbox process witness clang");
+  const realNode = realpathSync(nodePath);
+  const nodeInclude = resolve(dirname(realNode), "../include/node");
+  const headerPath = join(nodeInclude, "node_api.h");
+  const sourcePre = snapshotToolFile(sourcePath, "sandbox-process-witness-source", { requireExecutable: false });
+  const preloadSourcePre = snapshotToolFile(
+    preloadSourcePath,
+    "sandbox-process-witness-preload-source",
+    { requireExecutable: false },
+  );
+  const clangPre = snapshotToolFile(realClang, "sandbox-process-witness-clang");
+  const nodePre = snapshotToolFile(realNode, "sandbox-process-witness-node");
+  const headerPre = snapshotToolFile(
+    headerPath,
+    "sandbox-process-witness-node-api-header",
+    { requireExecutable: false },
+  );
+  const built = spawnBounded(realClang, [
+    "-bundle", "-undefined", "dynamic_lookup", "-O2", "-std=c11",
+    "-Wno-deprecated-declarations", "-I", nodeInclude,
+    sourcePath, "-o", outputPath, "-lsandbox",
+  ], {
+    cwd: dirname(outputPath),
+    env: { HOME: dirname(outputPath), PATH: "/usr/bin:/bin" },
+    runCommand,
+    timeout: 60_000,
+  });
+  if (built.error || built.signal || built.status !== 0) {
+    fail("sandbox process witness compilation failed closed");
+  }
+  chmodSync(outputPath, 0o400);
+  writeFileSync(preloadPath, readFileSync(preloadSourcePath), { flag: "wx", mode: 0o400 });
+  const output = snapshotToolFile(realpathSync(outputPath), "sandbox-process-witness-v1", { requireExecutable: false });
+  const preload = snapshotToolFile(
+    realpathSync(preloadPath),
+    "sandbox-process-witness-preload-v1",
+    { requireExecutable: false },
+  );
+  const controller = requireNativeWitness(output.realpath);
+  if (
+    typeof controller?.captureStoppedProcessInstance !== "function"
+    || typeof controller?.signalOwnedProcessInstance !== "function"
+    || typeof controller?.abortStoppedDirectChild !== "function"
+    || typeof controller?.releaseOwnedProcessInstance !== "function"
+  ) fail("sandbox process witness controller exports are unavailable");
+  pinnedSandboxWitnessControllers.set(output.realpath, Object.freeze(controller));
+  if (
+    canonicalizeJcs(sourcePre) !== canonicalizeJcs(
+      snapshotToolFile(sourcePath, "sandbox-process-witness-source", { requireExecutable: false }),
+    )
+    || canonicalizeJcs(preloadSourcePre) !== canonicalizeJcs(
+      snapshotToolFile(
+        preloadSourcePath,
+        "sandbox-process-witness-preload-source",
+        { requireExecutable: false },
+      ),
+    )
+    || canonicalizeJcs(clangPre) !== canonicalizeJcs(
+      snapshotToolFile(realClang, "sandbox-process-witness-clang"),
+    )
+    || canonicalizeJcs(nodePre) !== canonicalizeJcs(
+      snapshotToolFile(realNode, "sandbox-process-witness-node"),
+    )
+    || canonicalizeJcs(headerPre) !== canonicalizeJcs(
+      snapshotToolFile(
+        headerPath,
+        "sandbox-process-witness-node-api-header",
+        { requireExecutable: false },
+      ),
+    )
+  ) fail("sandbox process witness build inputs drifted");
+  return Object.freeze({
+    path: output.realpath,
+    preload_path: preload.realpath,
+    identity: output,
+    identity_digest: sha256Jcs({ output, preload }),
+    authority_digest: sha256Jcs({
+      source: sourcePre,
+      preload_source: preloadSourcePre,
+      clang: clangPre,
+      node: nodePre,
+      node_api_header: headerPre,
+      output,
+      preload,
+    }),
+  });
+}
+
+function parseProcessTable(source, label) {
+  const rows = [];
+  for (const line of String(source ?? "").split("\n")) {
+    if (line.trim().length === 0) continue;
+    const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+([A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.+?)\s*$/u.exec(line);
+    if (!match) fail(`${label} process discovery output is truncated or malformed`);
+    const [, pidSource, ppidSource, pgidSource, state, startedAt, command] = match;
+    const pid = Number(pidSource);
+    const ppid = Number(ppidSource);
+    const pgid = Number(pgidSource);
+    if (![pid, ppid, pgid].every((value) => Number.isSafeInteger(value) && value >= 0)) {
+      fail(`${label} process discovery identity is invalid`);
+    }
+    const normalizedCommand = command.trim();
+    if (normalizedCommand.length === 0 || normalizedCommand.includes("\0")) {
+      fail(`${label} process executable path is unavailable`);
+    }
+    rows.push({ pid, ppid, pgid, state, startedAt, command: normalizedCommand });
+  }
+  return rows;
+}
+
+export async function observeSandboxProcessTree({
+  sandboxPath,
+  profile,
+  command,
+  args,
+  cwd,
+  env,
+  label,
+  timeout,
+  lsofPath = "/usr/sbin/lsof",
+  psPath = "/bin/ps",
+  pollCommand = spawnSync,
+  spawnProcess = spawn,
+  killProcess = process.kill.bind(process),
+  pollIntervalMs = 20,
+  maxOutputBytes = 8 * 1024 * 1024,
+} = /** @type {any} */ ({})) {
+  const observerToolsPre = Object.freeze({
+    lsof: snapshotToolFile(lsofPath, "sandbox-process-observer-lsof"),
+    ps: snapshotToolFile(psPath, "sandbox-process-observer-ps"),
+  });
+  const child = spawnProcess(sandboxPath, ["-p", profile, command, ...args], {
+    cwd,
+    detached: true,
+    env,
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  await new Promise((resolveSpawn, rejectSpawn) => {
+    child.once("spawn", resolveSpawn);
+    child.once("error", rejectSpawn);
+  }).catch(() => fail(`${label} sandbox root spawn failed closed`));
+  if (!Number.isSafeInteger(child.pid) || child.pid <= 0) {
+    fail(`${label} sandbox root PID is unavailable`);
+  }
+  const rootPid = child.pid;
+  const rootPgid = rootPid;
+  const startedAt = Date.now();
+  let stdout = Buffer.alloc(0);
+  let stderr = Buffer.alloc(0);
+  let outputOverflow = false;
+  const appendOutput = (kind, chunk) => {
+    const bytes = Buffer.from(chunk);
+    if (kind === "stdout") stdout = Buffer.concat([stdout, bytes]);
+    else stderr = Buffer.concat([stderr, bytes]);
+    if (stdout.length > maxOutputBytes || stderr.length > maxOutputBytes) outputOverflow = true;
+  };
+  child.stdout?.on("data", (chunk) => appendOutput("stdout", chunk));
+  child.stderr?.on("data", (chunk) => appendOutput("stderr", chunk));
+  let exitResult = null;
+  const exitPromise = new Promise((resolveExit) => {
+    child.once("exit", (code, signal) => {
+      exitResult = { code, signal, error: null };
+      resolveExit(exitResult);
+    });
+    child.once("error", (error) => {
+      exitResult = { code: null, signal: null, error };
+      resolveExit(exitResult);
+    });
+  });
+  const registeredPids = new Set([rootPid]);
+  const registeredStarts = new Map();
+  const registeredCommands = new Map();
+  const processIdentities = new Map();
+  const executableCache = new Map();
+  let rootObserved = false;
+  let escapedProcessCount = 0;
+  const processRows = () => {
+    const result = spawnBounded(psPath, [
+      "-axo", "pid=,ppid=,pgid=,state=,lstart=,ucomm=",
+    ], {
+      cwd,
+      env: {
+        HOME: env.HOME,
+        LANG: "C",
+        LC_ALL: "C",
+        PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+      },
+      timeout: 5_000,
+      runCommand: pollCommand,
+    });
+    if (result.error || result.signal || result.status !== 0 || String(result.stdout ?? "").length === 0) {
+      fail(`${label} process discovery failed closed`);
+    }
+    return parseProcessTable(result.stdout, label);
+  };
+  const targetedProcessRows = () => {
+    const targets = [...registeredPids].sort((left, right) => left - right);
+    if (targets.length === 0) return [];
+    const result = spawnBounded(psPath, [
+      "-p", targets.join(","),
+      "-o", "pid=,ppid=,pgid=,state=,lstart=,ucomm=",
+    ], {
+      cwd,
+      env: {
+        HOME: env.HOME,
+        LANG: "C",
+        LC_ALL: "C",
+        PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+      },
+      timeout: 5_000,
+      runCommand: pollCommand,
+    });
+    if (result.status === 1 && !result.error && !result.signal && String(result.stdout ?? "").trim() === "") {
+      return [];
+    }
+    if (result.error || result.signal || result.status !== 0) {
+      fail(`${label} targeted process discovery failed closed`);
+    }
+    return parseProcessTable(result.stdout, label);
+  };
+  const executableDigest = (pid, observedCommand) => {
+    const observedBasename = basename(observedCommand).replace(/^\((.+)\)$/u, "$1");
+    let executablePath = observedCommand;
+    if (pid === rootPid && observedBasename === basename(sandboxPath)) {
+      executablePath = sandboxPath;
+    } else if (pid === rootPid && observedBasename === basename(command)) {
+      executablePath = command;
+    }
+    if (!isAbsolute(executablePath) || !pathExists(executablePath)) {
+      const lsof = spawnBounded(lsofPath, ["-a", "-p", String(pid), "-d", "txt", "-Fn"], {
+        cwd,
+        env: { HOME: env.HOME, PATH: "/usr/bin:/bin:/usr/sbin:/sbin" },
+        timeout: 5_000,
+        runCommand: pollCommand,
+      });
+      if (lsof.error || lsof.signal) {
+        fail(`${label} process executable discovery failed closed`);
+      }
+      if (lsof.status !== 0) return null;
+      const candidates = String(lsof.stdout ?? "").split("\n")
+        .filter((line) => line.startsWith("n/"))
+        .map((line) => line.slice(1));
+      if (lsof.status === 0) {
+        if (candidates.length < 1) return null;
+        else {
+          executablePath = candidates.find((candidate) => basename(candidate) === observedBasename)
+            ?? candidates[0];
+        }
+      }
+    }
+    const realpath = realpathSync(executablePath);
+    const cached = executableCache.get(realpath);
+    if (cached) return cached;
+    const identity = snapshotToolFile(realpath, `sandbox-process:${basename(realpath)}`);
+    const value = sha256Jcs(identity);
+    executableCache.set(realpath, value);
+    return value;
+  };
+  const registerRows = (rows) => {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const row of rows) {
+        if (
+          row.pid === rootPid
+          || row.pgid === rootPgid
+          || registeredPids.has(row.ppid)
+        ) {
+          if (!registeredPids.has(row.pid)) {
+            registeredPids.add(row.pid);
+            registeredStarts.set(row.pid, row.startedAt);
+            registeredCommands.set(row.pid, row.command);
+            changed = true;
+          }
+        }
+      }
+    }
+    for (const row of rows) {
+      if (!registeredPids.has(row.pid)) continue;
+      const registeredStart = registeredStarts.get(row.pid);
+      if (registeredStart && registeredStart !== row.startedAt) {
+        fail(`${label} registered process PID was reused`);
+      }
+      registeredStarts.set(row.pid, row.startedAt);
+      registeredCommands.set(row.pid, row.command);
+      if (row.pid === rootPid) rootObserved = true;
+      if (row.pid !== rootPid && row.pgid !== rootPgid) escapedProcessCount += 1;
+      const identityDigest = executableDigest(row.pid, row.command);
+      if (!identityDigest) continue;
+      processIdentities.set(`${row.pid}:${identityDigest}`, {
+        pid: row.pid,
+        ppid: row.ppid,
+        pgid: row.pgid,
+        started_at: row.startedAt,
+        executable_identity_digest: identityDigest,
+      });
+    }
+  };
+  const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+  let cleanupPidReuseDetected = false;
+  const currentRegisteredRows = () => {
+    let rows;
+    try {
+      rows = processRows();
+    } catch {
+      rows = targetedProcessRows();
+      return rows.filter((row) => {
+        if (!registeredPids.has(row.pid)) return false;
+        if (registeredStarts.get(row.pid) !== row.startedAt) {
+          cleanupPidReuseDetected = true;
+          return false;
+        }
+        return true;
+      });
+    }
+    registerRows(rows);
+    return rows.filter((row) => {
+      if (!registeredPids.has(row.pid)) return false;
+      if (registeredStarts.get(row.pid) !== row.startedAt) {
+        cleanupPidReuseDetected = true;
+        return false;
+      }
+      return true;
+    });
+  };
+  const signalRegistered = (signal) => {
+    const current = currentRegisteredRows();
+    if (current.some((row) => row.pgid === rootPgid)) {
+      try { killProcess(-rootPgid, signal); } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ESRCH")) throw error;
+      }
+    }
+    for (const row of current.filter((entry) => entry.pgid !== rootPgid)) {
+      try { killProcess(row.pid, signal); } catch (error) {
+        if (!(error && typeof error === "object" && error.code === "ESRCH")) throw error;
+      }
+    }
+  };
+  const terminateRegistered = async () => {
+    signalRegistered("SIGTERM");
+    await delay(100);
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      signalRegistered("SIGKILL");
+      await delay(100);
+      const residues = currentRegisteredRows();
+      if (residues.length === 0) {
+        if (cleanupPidReuseDetected) fail(`${label} registered process PID was reused during cleanup`);
+        return;
+      }
+    }
+    fail(`${label} process group cleanup was incomplete`);
+  };
+  let timedOut = false;
+  try {
+    while (!exitResult) {
+      registerRows(processRows());
+      if (outputOverflow || Date.now() - startedAt > timeout) {
+        timedOut = true;
+        await terminateRegistered();
+        break;
+      }
+      await Promise.race([exitPromise, delay(pollIntervalMs)]);
+    }
+    await exitPromise;
+    const finalRows = processRows();
+    registerRows(finalRows);
+    const survivors = finalRows.filter((row) => (
+      row.pid !== rootPid
+      && registeredPids.has(row.pid)
+      && !row.state.startsWith("Z")
+    ));
+    if (survivors.length > 0 || escapedProcessCount > 0) {
+      await terminateRegistered();
+    }
+    if (!rootObserved) fail(`${label} sandbox root was never observed by process discovery`);
+    const identifiedPids = new Set([...processIdentities.values()].map((identity) => identity.pid));
+    const unidentifiedPids = [...registeredPids].filter((pid) => !identifiedPids.has(pid));
+    if (unidentifiedPids.length > 0) {
+      const projection = unidentifiedPids
+        .map((pid) => `${pid}:${registeredCommands.get(pid) ?? "unknown"}`)
+        .join(",");
+      fail(`${label} process executable identity remained unavailable (${projection})`);
+    }
+    const observerToolsPost = Object.freeze({
+      lsof: snapshotToolFile(lsofPath, "sandbox-process-observer-lsof"),
+      ps: snapshotToolFile(psPath, "sandbox-process-observer-ps"),
+    });
+    if (canonicalizeJcs(observerToolsPost) !== canonicalizeJcs(observerToolsPre)) {
+      fail(`${label} process observer tool identity drifted`);
+    }
+    return Object.freeze({
+      error: timedOut || outputOverflow ? new Error("sandbox process tree failed closed") : exitResult?.error,
+      signal: exitResult?.signal ?? null,
+      status: timedOut || outputOverflow ? null : exitResult?.code,
+      stdout: stdout.toString("utf8"),
+      stderr: stderr.toString("utf8"),
+      pid: rootPid,
+      root_pgid: rootPgid,
+      observer_tool_identity_digest: sha256Jcs(observerToolsPost),
+      process_tree_complete: true,
+      process_identities: [...processIdentities.values()].sort((left, right) => (
+        left.pid - right.pid
+        || left.executable_identity_digest.localeCompare(right.executable_identity_digest)
+      )),
+      escaped_process_count: escapedProcessCount,
+      surviving_process_count: survivors.length,
+    });
+  } catch (error) {
+    await terminateRegistered().catch(() => {
+      if (!exitResult) {
+        try { killProcess(-rootPgid, "SIGKILL"); } catch { /* Discovery already failed closed. */ }
+      }
+    });
+    throw error;
+  }
+}
+
+export async function signalWitnessedProcessInstance({
+  pid,
+  signal,
+  witness,
+  verifyProcessInstance,
+  signalProcess,
+}) {
+  if (typeof verifyProcessInstance !== "function" || typeof signalProcess !== "function") {
+    fail("witnessed process instance signal boundary is invalid");
+  }
+  if (!await verifyProcessInstance({ pid, signal, witness })) {
+    fail("witnessed process instance changed before signal; PID reuse is preserved");
+  }
+  signalProcess(pid, signal);
+}
+
+function signalLiveProcessInstance(controller, witness, signal, label) {
+  const signalNumber = signal === "SIGTERM" ? 15 : signal === "SIGKILL" ? 9 : null;
+  if (signalNumber === null) fail(`${label} process termination signal is invalid`);
+  if (controller.signalOwnedProcessInstance(witness.pid, signalNumber) !== true) return;
+}
+
+export async function observeWitnessedSandboxRoot({
+  profile,
+  command,
+  args,
+  cwd,
+  env,
+  label,
+  timeout,
+  sandboxWitnessPath,
+  spawnProcess = spawn,
+  afterExecutableSnapshot = () => undefined,
+  afterTrustedProcessStart = () => undefined,
+  transformInitialWitnessChunk = (chunk) => chunk,
+  initialWitnessTimeout = 5_000,
+  maxOutputBytes = 8 * 1024 * 1024,
+  offlineDnsProjection = false,
+}) {
+  if (
+    typeof profile !== "string" || profile.length === 0
+    || !isAbsolute(command ?? "") || !isAbsolute(sandboxWitnessPath ?? "")
+    || !Array.isArray(args) || args.some((arg) => typeof arg !== "string")
+  ) fail(`${label} witnessed sandbox input is invalid`);
+  if (!profile.split("\n").some((line) => line.startsWith("(deny process-fork"))) {
+    fail(`${label} sandbox profile does not deny every child creation`);
+  }
+  const executablePre = snapshotToolFile(command, `sandbox-root-executable:${label}`);
+  const witnessPre = snapshotToolFile(
+    sandboxWitnessPath,
+    `sandbox-process-witness:${label}`,
+    { requireExecutable: false },
+  );
+  const witnessPreloadPath = `${sandboxWitnessPath}.cjs`;
+  const witnessPreloadPre = snapshotToolFile(
+    witnessPreloadPath,
+    `sandbox-process-witness-preload:${label}`,
+    { requireExecutable: false },
+  );
+  const controller = pinnedSandboxWitnessControllers.get(sandboxWitnessPath);
+  if (!controller) fail(`${label} sandbox process witness controller is not pinned`);
+  if (
+    typeof afterExecutableSnapshot !== "function"
+    || typeof afterTrustedProcessStart !== "function"
+    || typeof transformInitialWitnessChunk !== "function"
+    || !Number.isSafeInteger(initialWitnessTimeout) || initialWitnessTimeout < 1 || initialWitnessTimeout > 5_000
+  ) {
+    fail(`${label} executable snapshot continuation is invalid`);
+  }
+  afterExecutableSnapshot();
+  const existingNodeOptions = String(env.NODE_OPTIONS ?? "").trim();
+  if (existingNodeOptions.includes("--require") || /\s/u.test(sandboxWitnessPath)) {
+    fail(`${label} sandbox witness preload authority is ambiguous`);
+  }
+  const childEnv = { ...env };
+  delete childEnv.HOMECOOK_OFFLINE_DNS_PROJECTION;
+  if (offlineDnsProjection) childEnv.HOMECOOK_OFFLINE_DNS_PROJECTION = "1";
+  const child = spawnProcess(command, args, {
+    cwd,
+    detached: true,
+    env: {
+      ...childEnv,
+      HOMECOOK_SANDBOX_PROFILE_FD: "3",
+      HOMECOOK_SANDBOX_WITNESS_FD: "4",
+      HOMECOOK_SANDBOX_WITNESS_MODULE: sandboxWitnessPath,
+      NODE_OPTIONS: [existingNodeOptions, `--require=${witnessPreloadPath}`].filter(Boolean).join(" "),
+    },
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe", "pipe", "pipe"],
+  });
+  await new Promise((resolveSpawn, rejectSpawn) => {
+    child.once("spawn", resolveSpawn);
+    child.once("error", rejectSpawn);
+  }).catch(() => fail(`${label} witnessed sandbox root spawn failed closed`));
+  if (!Number.isSafeInteger(child.pid) || child.pid <= 0) {
+    fail(`${label} witnessed sandbox root PID is unavailable`);
+  }
+  const rootPid = child.pid;
+  let stdout = Buffer.alloc(0);
+  let stderr = Buffer.alloc(0);
+  let witnessBytes = Buffer.alloc(0);
+  let outputOverflow = false;
+  const append = (kind, chunk) => {
+    const bytes = Buffer.from(chunk);
+    if (kind === "stdout") stdout = Buffer.concat([stdout, bytes]);
+    else if (kind === "stderr") stderr = Buffer.concat([stderr, bytes]);
+    else witnessBytes = Buffer.concat([witnessBytes, bytes]);
+    if (
+      stdout.length > maxOutputBytes || stderr.length > maxOutputBytes
+      || witnessBytes.length > 64 * 1024
+    ) outputOverflow = true;
+  };
+  child.stdout?.on("data", (chunk) => append("stdout", chunk));
+  child.stderr?.on("data", (chunk) => append("stderr", chunk));
+  let resolveInitialWitness;
+  const initialWitness = new Promise((resolveWitness) => {
+    resolveInitialWitness = resolveWitness;
+  });
+  let pendingInitialWitness = Buffer.alloc(0);
+  let initialWitnessTransformed = false;
+  child.stdio?.[4]?.on("data", (chunk) => {
+    if (!initialWitnessTransformed) {
+      pendingInitialWitness = Buffer.concat([pendingInitialWitness, Buffer.from(chunk)]);
+      if (!pendingInitialWitness.includes(0x0a)) return;
+      initialWitnessTransformed = true;
+      append("witness", transformInitialWitnessChunk(pendingInitialWitness));
+      pendingInitialWitness = Buffer.alloc(0);
+    } else {
+      append("witness", chunk);
+    }
+    if (witnessBytes.includes(0x0a)) resolveInitialWitness(true);
+  });
+  child.stdio?.[3]?.end(profile, "utf8");
+  let exitResult = null;
+  const exitPromise = new Promise((resolveExit) => {
+    child.once("exit", (code, signal) => {
+      exitResult = { code, signal, error: null };
+      resolveExit(exitResult);
+    });
+    child.once("error", (error) => {
+      exitResult = { code: null, signal: null, error };
+      resolveExit(exitResult);
+    });
+  });
+  const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+  let trustedWitness = null;
+  const trustedStartDeadline = Date.now() + 5_000;
+  while (!exitResult && trustedWitness === null && Date.now() <= trustedStartDeadline) {
+    trustedWitness = controller.captureStoppedProcessInstance(rootPid);
+    if (trustedWitness === null) await Promise.race([exitPromise, delay(5)]);
+  }
+  if (trustedWitness === null) {
+    if (!exitResult && controller.abortStoppedDirectChild(rootPid) !== true) {
+      fail(`${label} trusted stopped process instance was unavailable`);
+    }
+    await exitPromise;
+    fail(`${label} witnessed sandbox root exited before trusted startup handshake`);
+  }
+  if (
+    trustedWitness.pid !== rootPid
+    || trustedWitness.pgid !== rootPid
+    || trustedWitness.executable_path !== command
+    || trustedWitness.device !== executablePre.device
+    || trustedWitness.inode !== executablePre.inode
+    || String(trustedWitness.size) !== executablePre.size
+    || trustedWitness.executable_sha256 !== executablePre.sha256
+  ) {
+    signalLiveProcessInstance(controller, trustedWitness, "SIGKILL", label);
+    await exitPromise;
+    controller.releaseOwnedProcessInstance(rootPid);
+    fail(`${label} trusted stopped process did not match the exact executable instance`);
+  }
+  afterTrustedProcessStart(rootPid);
+  if (controller.signalOwnedProcessInstance(rootPid, osConstants.signals.SIGCONT) !== true) {
+    await exitPromise;
+    controller.releaseOwnedProcessInstance(rootPid);
+    fail(`${label} trusted stopped process could not be resumed`);
+  }
+  const rejectInitialWitness = async (message) => {
+    if (!exitResult) signalLiveProcessInstance(controller, trustedWitness, "SIGKILL", label);
+    await exitPromise;
+    controller.releaseOwnedProcessInstance(rootPid);
+    fail(message);
+  };
+  const witnessReady = await Promise.race([
+    initialWitness,
+    exitPromise.then(() => false),
+    delay(initialWitnessTimeout).then(() => false),
+  ]);
+  if (!witnessReady || outputOverflow) {
+    await rejectInitialWitness(`${label} process execution witness was unavailable or overflowed`);
+  }
+  let witness;
+  try {
+    witness = JSON.parse(witnessBytes.toString("utf8").split("\n")[0]);
+  } catch {
+    await rejectInitialWitness(`${label} process execution witness was malformed`);
+  }
+  exactObject(witness, `${label} process execution witness`, [
+    "pid", "ppid", "pgid", "pidversion", "started_at_sec", "started_at_usec",
+    "process_name", "execution_audit_token", "executable_path", "device", "inode",
+    "size", "ctime_sec", "ctime_nsec", "executable_sha256",
+  ]);
+  const witnessNumbers = [
+    witness.pid, witness.ppid, witness.pgid, witness.pidversion,
+    witness.started_at_sec, witness.started_at_usec, witness.ctime_sec, witness.ctime_nsec,
+  ];
+  if (
+    witness.pid !== rootPid
+    || !witnessNumbers.every((value) => Number.isSafeInteger(value) && value >= 0)
+    || witness.pidversion <= 0 || witness.pgid !== rootPid
+    || witness.started_at_usec > 999_999 || witness.ctime_nsec > 999_999_999
+    || !/^[0-9a-f]{64}$/u.test(witness.execution_audit_token ?? "")
+    || !/^[0-9a-f]{64}$/u.test(witness.executable_sha256 ?? "")
+    || witness.executable_path !== command
+    || witness.process_name !== basename(command)
+    || witness.device !== executablePre.device
+    || witness.inode !== executablePre.inode
+    || witness.size !== executablePre.size
+    || witness.executable_sha256 !== executablePre.sha256
+  ) {
+    await rejectInitialWitness(`${label} process execution witness did not match the exact executable instance`);
+  }
+  const executionStartedAt = Date.now();
+  let timedOut = false;
+  while (!exitResult) {
+    if (outputOverflow || Date.now() - executionStartedAt > timeout) {
+      timedOut = true;
+      signalLiveProcessInstance(controller, trustedWitness, "SIGKILL", label);
+      break;
+    }
+    await Promise.race([exitPromise, delay(20)]);
+  }
+  await exitPromise;
+  controller.releaseOwnedProcessInstance(rootPid);
+  const executablePost = snapshotToolFile(command, `sandbox-root-executable:${label}`);
+  const witnessPost = snapshotToolFile(
+    sandboxWitnessPath,
+    `sandbox-process-witness:${label}`,
+    { requireExecutable: false },
+  );
+  const witnessPreloadPost = snapshotToolFile(
+    witnessPreloadPath,
+    `sandbox-process-witness-preload:${label}`,
+    { requireExecutable: false },
+  );
+  if (
+    canonicalizeJcs(executablePost) !== canonicalizeJcs(executablePre)
+    || canonicalizeJcs(witnessPost) !== canonicalizeJcs(witnessPre)
+    || canonicalizeJcs(witnessPreloadPost) !== canonicalizeJcs(witnessPreloadPre)
+  ) fail(`${label} process execution authority drifted`);
+  let processAttempts;
+  try {
+    processAttempts = witnessBytes.toString("utf8").trim().split("\n").slice(1).map((line) => {
+      const record = JSON.parse(line);
+      exactObject(record, `${label} process attempt witness`, ["process_attempt"]);
+      if (!/^[A-Za-z]+$/u.test(record.process_attempt ?? "")) {
+        fail(`${label} process attempt witness is invalid`);
+      }
+      return record.process_attempt;
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Release rehearsal candidate rejected:")) throw error;
+    fail(`${label} process attempt witness was malformed`);
+  }
+  const startMilliseconds = witness.started_at_sec * 1_000 + Math.floor(witness.started_at_usec / 1_000);
+  const startedIso = new Date(startMilliseconds).toISOString().replace(
+    /\.\d{3}Z$/u,
+    `.${String(witness.started_at_usec).padStart(6, "0")}Z`,
+  );
+  const processInstanceId = sha256Jcs({
+    execution_audit_token: witness.execution_audit_token,
+    executable_identity_digest: sha256Jcs(executablePre),
+    pidversion: witness.pidversion,
+    started_at: startedIso,
+  });
+  return Object.freeze({
+    error: timedOut || outputOverflow ? new Error("witnessed sandbox root failed closed") : exitResult?.error,
+    signal: exitResult?.signal ?? null,
+    status: timedOut || outputOverflow ? null : exitResult?.code,
+    stdout: stdout.toString("utf8"),
+    stderr: stderr.toString("utf8"),
+    pid: rootPid,
+    root_pgid: rootPid,
+    observer_tool_identity_digest: sha256Jcs(witnessPost),
+    process_lifecycle_enforcement: "macos-sandbox-deny-process-fork",
+    process_attempt_count: processAttempts.length,
+    process_attempt_kinds: processAttempts,
+    process_tree_complete: true,
+    process_identities: [{
+      pid: rootPid,
+      ppid: witness.ppid,
+      pgid: witness.pgid,
+      started_at: startedIso,
+      process_name: witness.process_name,
+      execution_audit_token: witness.execution_audit_token,
+      process_instance_id: processInstanceId,
+      executable_path: witness.executable_path,
+      executable_identity_digest: sha256Jcs(executablePre),
+    }],
+    escaped_process_count: 0,
+    surviving_process_count: 0,
+    exited_at: new Date().toISOString(),
+  });
+}
+
 export function validateSandboxedBuildResult(result, label) {
+  if (
+    result?.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork"
+    && result.process_attempt_count !== 0
+  ) {
+    const kinds = Array.isArray(result.process_attempt_kinds)
+      ? result.process_attempt_kinds.join(",")
+      : "unknown";
+    fail(`${label} contained a witnessed child process or signal attempt (${kinds})`);
+  }
   if (result?.error || result?.signal || result?.status !== 0) {
     fail(`${label} failed in the measured sandbox`);
   }
+  if (
+    result.process_tree_complete !== true
+    || !Number.isSafeInteger(result.root_pid) || result.root_pid <= 0
+    || !Number.isSafeInteger(result.root_pgid) || result.root_pgid <= 0
+    || result.root_pid !== result.root_pgid
+    || !Array.isArray(result.process_identities) || result.process_identities.length === 0
+    || result.escaped_process_count !== 0
+    || result.surviving_process_count !== 0
+    || typeof result.stage !== "string" || result.stage.length === 0
+    || !Number.isFinite(Date.parse(result.audit_started_at ?? ""))
+    || !Number.isFinite(Date.parse(result.audit_ended_at ?? ""))
+    || Date.parse(result.audit_ended_at) < Date.parse(result.audit_started_at)
+  ) fail(`${label} process tree discovery or lifecycle is incomplete`);
+  digest(result.observer_tool_identity_digest, `${label} observer tool identity digest`);
+  const witnessedLifecycle = result.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork";
+  if (result.process_lifecycle_enforcement !== undefined && !witnessedLifecycle) {
+    fail(`${label} process lifecycle enforcement is unknown`);
+  }
+  if (witnessedLifecycle && result.process_identities.length !== 1) {
+    fail(`${label} single-process lifecycle completeness was not proven`);
+  }
+  for (const identity of result.process_identities) {
+    exactObject(identity, `${label} process identity`, witnessedLifecycle ? [
+      "pid", "ppid", "pgid", "started_at", "process_name", "execution_audit_token",
+      "process_instance_id", "executable_path", "executable_identity_digest",
+    ] : [
+      "pid", "ppid", "pgid", "started_at", "executable_identity_digest",
+    ]);
+    if (
+      !Number.isSafeInteger(identity.pid) || identity.pid <= 0
+      || !Number.isSafeInteger(identity.ppid) || identity.ppid < 0
+      || !Number.isSafeInteger(identity.pgid) || identity.pgid <= 0
+      || typeof identity.started_at !== "string" || identity.started_at.length === 0
+    ) fail(`${label} process identity is invalid`);
+    digest(identity.executable_identity_digest, `${label} executable identity digest`);
+    if (witnessedLifecycle && (
+      !Number.isFinite(Date.parse(identity.started_at))
+      || typeof identity.process_name !== "string" || identity.process_name.length === 0
+      || !/^[0-9a-f]{64}$/u.test(identity.execution_audit_token ?? "")
+      || !isAbsolute(identity.executable_path ?? "")
+    )) fail(`${label} process execution audit token or instance identity is invalid`);
+    if (witnessedLifecycle) digest(identity.process_instance_id, `${label} process instance ID`);
+  }
+  const sortedProcessIdentities = [...result.process_identities].sort((left, right) => (
+    left.pid - right.pid
+    || left.executable_identity_digest.localeCompare(right.executable_identity_digest)
+  ));
+  if (
+    canonicalizeJcs(sortedProcessIdentities) !== canonicalizeJcs(result.process_identities)
+    || new Set(result.process_identities.map((identity) => (
+      `${identity.pid}:${identity.started_at}:${identity.executable_identity_digest}`
+    ))).size !== result.process_identities.length
+  ) fail(`${label} process identity set is not sorted and unique`);
+  if (
+    !result.process_identities.some((identity) => identity.pid === result.root_pid)
+    || result.process_identities.some((identity) => identity.pgid !== result.root_pgid)
+  ) fail(`${label} process tree root or process-group identity is invalid`);
   if (!Array.isArray(result.observed_denials)) fail(`${label} lacks independent OS denial evidence`);
   if (result.observed_denials.length !== 0) {
     fail(`${label} contained an independently observed denied sandbox attempt`);
   }
   return Object.freeze({
     audit_digest: sha256Jcs({
-      schema: "homecook.sandbox-denial-audit.v1",
-      enforcement: "macos-unified-log-deny-all-window",
+      schema: witnessedLifecycle
+        ? "homecook.sandbox-process-tree-audit.v3"
+        : "homecook.sandbox-process-tree-audit.v2",
+      enforcement: witnessedLifecycle
+        ? "macos-sandbox-deny-process-fork+audit-token-witness+unified-log-deny-window"
+        : "macos-unified-log-deny-process-tree-window",
+      stage: result.stage,
+      audit_started_at: result.audit_started_at,
+      audit_ended_at: result.audit_ended_at,
+      root_pid: result.root_pid,
+      root_pgid: result.root_pgid,
+      observer_tool_identity_digest: result.observer_tool_identity_digest,
+      process_identities: result.process_identities,
+      process_attempt_count: witnessedLifecycle ? result.process_attempt_count : null,
       denial_count: 0,
     }),
+    process_instance_digest: witnessedLifecycle
+      ? result.process_identities[0].process_instance_id
+      : sha256Jcs(result.process_identities),
+    stage: result.stage,
+    denial_count: 0,
+    process_attempt_count: witnessedLifecycle ? result.process_attempt_count : 0,
   });
 }
 
+function parseUnifiedLogJson(source, label, { streaming = false } = {}) {
+  let payload = String(source ?? "");
+  if (streaming) {
+    const start = payload.indexOf("[");
+    if (start < 0 && payload.includes("Filtering the log data using")) return [];
+    if (start < 0) fail(`${label} unified log stream did not produce JSON`);
+    payload = payload.slice(start).trim();
+    if (!payload.endsWith("]")) payload = `${payload.replace(/,\s*$/u, "")}\n]`;
+  }
+  let events;
+  try {
+    events = JSON.parse(payload || "[]");
+  } catch {
+    fail(`${label} unified log response is not valid JSON`);
+  }
+  if (!Array.isArray(events)) fail(`${label} unified log response is invalid`);
+  return events;
+}
+
+async function streamSandboxUnifiedLog({
+  logPath,
+  cwd,
+  env,
+  label,
+  execute,
+  spawnProcess = spawn,
+  maxOutputBytes = 16 * 1024 * 1024,
+}) {
+  const stream = spawnProcess(logPath, [
+    "stream", "--style", "json", "--predicate",
+    'process == "kernel" AND eventMessage CONTAINS "Sandbox:"',
+  ], {
+    cwd,
+    env: { HOME: env.HOME, PATH: "/usr/bin:/bin" },
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  await new Promise((resolveSpawn, rejectSpawn) => {
+    stream.once("spawn", resolveSpawn);
+    stream.once("error", rejectSpawn);
+  }).catch(() => fail(`${label} unified log stream failed to start`));
+  let stdout = Buffer.alloc(0);
+  let stderr = Buffer.alloc(0);
+  let overflow = false;
+  stream.stdout?.on("data", (chunk) => {
+    stdout = Buffer.concat([stdout, Buffer.from(chunk)]);
+    if (stdout.length > maxOutputBytes) overflow = true;
+  });
+  stream.stderr?.on("data", (chunk) => {
+    stderr = Buffer.concat([stderr, Buffer.from(chunk)]);
+    if (stderr.length > maxOutputBytes) overflow = true;
+  });
+  let streamExited = false;
+  const streamExit = new Promise((resolveExit) => {
+    stream.once("exit", (code, signal) => {
+      streamExited = true;
+      resolveExit({ code, signal });
+    });
+    stream.once("error", () => {
+      streamExited = true;
+      resolveExit({ code: null, signal: null });
+    });
+  });
+  const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+  await delay(500);
+  if (streamExited) fail(`${label} unified log stream exited before sandbox spawn`);
+  let child;
+  try {
+    child = await execute();
+    await delay(1_500);
+  } finally {
+    if (!streamExited) stream.kill("SIGTERM");
+    await Promise.race([streamExit, delay(2_000)]);
+    if (!streamExited) {
+      stream.kill("SIGKILL");
+      await streamExit;
+    }
+  }
+  if (overflow) fail(`${label} unified log stream overflowed`);
+  const events = parseUnifiedLogJson(stdout, label, { streaming: true });
+  return Object.freeze({ child, events });
+}
+
 /** @param {any} options */
-export function runObservedSandboxCommand({
+export async function runObservedSandboxCommand({
   sandboxPath, logPath, profile, command, args, cwd, env, label,
+  sandboxWitnessPath = null,
+  stage = label,
+  processExecutablePaths = null,
   timeout = 30_000, runCommand = spawnSync,
+  observeProcessTree = observeSandboxProcessTree,
   beforeSpawn = () => undefined,
   now = () => Date.now(),
-  waitForAuditFlush = (milliseconds) => {
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
-  },
+  waitForAuditFlush = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait, milliseconds)),
+  streamUnifiedLog = streamSandboxUnifiedLog,
   formatAuditTime = (milliseconds) => {
     const date = new Date(milliseconds);
     const part = (value) => String(value).padStart(2, "0");
@@ -3489,47 +5335,131 @@ export function runObservedSandboxCommand({
   const startedAt = now();
   if (!Number.isFinite(startedAt)) fail(`${label} OS denial audit start cursor is invalid`);
   if (typeof beforeSpawn !== "function") fail(`${label} pre-spawn authority guard is invalid`);
+  const executionScopedProcessName = processExecutablePaths !== null
+    && /^hcnode[0-9a-f]{8}[a-z]$/u.test(basename(command))
+    ? basename(command)
+    : null;
+  const executionAuditMessage = executionScopedProcessName === null
+    ? null
+    : `homecook-sandbox-${executionScopedProcessName}`;
+  if (processExecutablePaths !== null) {
+    if (
+      !Array.isArray(processExecutablePaths) || processExecutablePaths.length !== 1
+      || processExecutablePaths[0] !== command
+    ) fail(`${label} exact process executable authority is invalid`);
+    const exactRule = `(allow process-exec (literal ${sandboxLiteral(command)}))`;
+    if (!String(profile).split("\n").includes(exactRule)) {
+      fail(`${label} sandbox profile lacks its exact process executable authority`);
+    }
+    if (
+      executionAuditMessage !== null
+      && !String(profile).includes(`(with message ${JSON.stringify(executionAuditMessage)})`)
+    ) fail(`${label} sandbox profile lacks its execution-scoped audit message`);
+  }
   beforeSpawn();
-  const child = spawnBounded(sandboxPath, ["-p", profile, command, ...args], {
-    cwd, env, timeout, runCommand,
-  });
+  if (
+    processExecutablePaths !== null
+    && sandboxWitnessPath === null
+    && observeProcessTree === observeSandboxProcessTree
+  ) fail(`${label} exact process authority requires the audit-token sandbox witness`);
+  const execute = () => sandboxWitnessPath === null
+    ? observeProcessTree({
+      args, command, cwd, env, label, profile, sandboxPath, timeout,
+      pollCommand: runCommand, processExecutablePaths,
+    })
+    : observeWitnessedSandboxRoot({
+      args, command, cwd, env, label, profile, timeout, sandboxWitnessPath,
+      offlineDnsProjection: stage === "offline-install",
+    });
+  const streamed = sandboxWitnessPath !== null || observeProcessTree === observeSandboxProcessTree
+    ? await streamUnifiedLog({ logPath, cwd, env, label, execute })
+    : { child: await execute(), events: [] };
+  const child = streamed.child;
   if (!Number.isSafeInteger(child?.pid) || child.pid <= 0) {
     fail(`${label} OS denial audit child identity is unavailable`);
   }
-  const childProcessName = basename(command);
-  if (!/^[A-Za-z0-9._+-]+$/u.test(childProcessName)) {
-    fail(`${label} OS denial audit child process name is invalid`);
-  }
+  if (
+    child.process_tree_complete !== true
+    || child.escaped_process_count !== 0
+    || child.surviving_process_count !== 0
+  ) fail(`${label} process tree lifecycle failed closed`);
   const childEndedAt = now();
   if (!Number.isFinite(childEndedAt) || childEndedAt < startedAt) {
     fail(`${label} OS denial audit command interval is invalid`);
   }
-  waitForAuditFlush(1_500);
+  await waitForAuditFlush(1_500);
   const auditEndedAt = now();
   if (!Number.isFinite(auditEndedAt) || auditEndedAt < childEndedAt) {
     fail(`${label} OS denial audit flush interval is invalid`);
   }
   const queryStartedAt = Math.floor((startedAt - 1_000) / 1_000) * 1_000;
   const queryEndedAt = Math.ceil((auditEndedAt + 1_000) / 1_000) * 1_000;
-  const childAuditIdentity = `Sandbox: ${childProcessName}(${child.pid})`;
   const audit = spawnBounded(logPath, [
     "show", "--start", formatAuditTime(queryStartedAt),
     "--end", formatAuditTime(queryEndedAt),
     "--style", "json", "--predicate",
-    `process == "kernel" AND eventMessage CONTAINS "${childAuditIdentity}"`,
+    'process == "kernel" AND eventMessage CONTAINS "Sandbox:"',
   ], { cwd, env: { HOME: env.HOME, PATH: "/usr/bin:/bin" }, timeout: 30_000, runCommand });
   if (audit.error || audit.signal || audit.status !== 0) fail(`${label} OS denial audit query failed closed`);
   let observedDenials;
   try {
-    const events = JSON.parse(String(audit.stdout ?? "[]"));
-    if (!Array.isArray(events)) fail(`${label} OS denial audit response is invalid`);
-    observedDenials = events.map((event) => ({
-      event_digest: sha256Bytes(Buffer.from(String(event.eventMessage ?? ""), "utf8")),
-    }));
-  } catch {
+    const events = [
+      ...streamed.events,
+      ...parseUnifiedLogJson(audit.stdout, label),
+    ];
+    const registeredPids = new Set(child.process_identities.map((identity) => identity.pid));
+    const registeredIdentities = new Map(child.process_identities.map((identity) => [identity.pid, identity]));
+    observedDenials = events.flatMap((event) => {
+      const message = String(event.eventMessage ?? "");
+      const match = /Sandbox:\s+([^()]+)\((\d+)\)/u.exec(message);
+      if (!match) return [];
+      const eventProcessName = match[1].trim();
+      const eventPid = Number(match[2]);
+      const registeredIdentity = registeredIdentities.get(eventPid);
+      const hasExecutionAuditMessage = executionAuditMessage !== null
+        && message.split("\n").includes(executionAuditMessage);
+      if (
+        executionScopedProcessName !== null
+        && eventProcessName !== executionScopedProcessName
+      ) return [];
+      if (
+        executionScopedProcessName !== null
+        && !registeredPids.has(eventPid)
+        && !hasExecutionAuditMessage
+      ) return [];
+      if (executionScopedProcessName === null && !registeredPids.has(eventPid)) return [];
+      if (
+        typeof event.executionAuditToken === "string"
+        && registeredIdentity?.execution_audit_token !== undefined
+        && event.executionAuditToken !== registeredIdentity.execution_audit_token
+      ) return [];
+      const eventTime = Date.parse(event.timestamp ?? "");
+      const identityStartedAt = Date.parse(registeredIdentity?.started_at ?? "");
+      const childExitedAt = Date.parse(child.exited_at ?? "");
+      if (
+        child.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork"
+        && Number.isFinite(eventTime) && Number.isFinite(identityStartedAt)
+        && eventTime < identityStartedAt
+      ) return [];
+      if (
+        child.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork"
+        && Number.isFinite(eventTime) && Number.isFinite(childExitedAt)
+        && eventTime > childExitedAt
+      ) return [];
+      return [{ event_digest: sha256Bytes(Buffer.from(message, "utf8")) }];
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Release rehearsal candidate rejected:")) throw error;
     fail(`${label} OS denial audit response is not valid JSON`);
   }
-  return validateSandboxedBuildResult({ ...child, observed_denials: observedDenials }, label);
+  return validateSandboxedBuildResult({
+    ...child,
+    audit_started_at: new Date(startedAt).toISOString(),
+    audit_ended_at: new Date(auditEndedAt).toISOString(),
+    observed_denials: observedDenials,
+    root_pid: child.pid,
+    stage,
+  }, label);
 }
 
 export function validateCandidateDockerReadOnlyArgs(args) {
@@ -3587,6 +5517,67 @@ export function snapshotToolFile(path, version, { requireExecutable = true } = {
     size: String(lexical.size),
     sha256: sha256Bytes(bytes),
   };
+}
+
+function materializeSandboxStageNode({
+  sourceNode,
+  privateHome,
+  stage,
+  copyPath,
+  currentUid,
+  runCommand = spawnSync,
+}) {
+  if (!/^[a-z][a-z0-9-]{1,31}$/u.test(stage ?? "")) {
+    fail("sandbox stage Node label is invalid");
+  }
+  const token = randomUUID().replaceAll("-", "").slice(0, 8);
+  const path = join(privateHome, `hcnode${token}${stage[0]}`);
+  if (pathExists(path)) fail("sandbox stage Node clone collided before creation");
+  const sourcePre = snapshotToolFile(sourceNode, "sandbox-stage-node-source");
+  const copyToolPre = snapshotToolFile(copyPath, "sandbox-stage-node-copy-tool");
+  const copied = spawnBounded(copyPath, ["-c", "-p", sourceNode, path], {
+    cwd: privateHome,
+    env: { HOME: privateHome, PATH: "/usr/bin:/bin" },
+    runCommand,
+    timeout: 30_000,
+  });
+  if (copied.error || copied.signal || copied.status !== 0) {
+    fail("sandbox stage Node metadata-preserving APFS clone failed");
+  }
+  chmodSync(path, 0o500);
+  const stat = lstatSync(path, { bigint: true });
+  if (
+    stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1n
+    || stat.uid !== BigInt(currentUid) || modeBits(stat.mode) !== 0o500
+    || realpathSync(path) !== path
+  ) fail("sandbox stage Node clone identity is unsafe");
+  const cloneIdentity = snapshotToolFile(path, `sandbox-stage-node:${stage}`);
+  if (
+    cloneIdentity.sha256 !== sourcePre.sha256
+    || cloneIdentity.size !== sourcePre.size
+  ) fail("sandbox stage Node clone bytes differ from the pinned source");
+  const verify = () => {
+    const sourcePost = snapshotToolFile(sourceNode, "sandbox-stage-node-source");
+    const copyToolPost = snapshotToolFile(copyPath, "sandbox-stage-node-copy-tool");
+    const clonePost = snapshotToolFile(path, `sandbox-stage-node:${stage}`);
+    if (
+      canonicalizeJcs(sourcePost) !== canonicalizeJcs(sourcePre)
+      || canonicalizeJcs(copyToolPost) !== canonicalizeJcs(copyToolPre)
+      || canonicalizeJcs(clonePost) !== canonicalizeJcs(cloneIdentity)
+    ) fail("sandbox stage Node clone authority drifted");
+    return Object.freeze({ clone: clonePost, copy_tool: copyToolPost, source: sourcePost });
+  };
+  return Object.freeze({
+    authority_digest: sha256Jcs({
+      schema: "homecook.sandbox-stage-node-clone-authority.v1",
+      stage,
+      clone: cloneIdentity,
+      copy_tool: copyToolPre,
+      source: sourcePre,
+    }),
+    path,
+    verify,
+  });
 }
 
 export function snapshotTrustedPnpmArtifact(root, entrypoint, version) {
@@ -3704,12 +5695,13 @@ function exactToolPaths({ homeDir, toolchainLock }) {
   const launchctlPath = resolveSafeRealExecutable(["/bin/launchctl"], "launchctl");
   const lsofPath = resolveSafeRealExecutable(["/usr/sbin/lsof"], "lsof");
   const auditLogPath = resolveSafeRealExecutable(["/usr/bin/log"], "macOS unified log reader");
+  const copyPath = resolveSafeRealExecutable(["/bin/cp"], "macOS metadata-preserving copy tool");
   const supabasePath = findExactSupabaseCli(
     join(homeDir, "Library", "Caches", "pnpm", "dlx"),
     toolchainLock.supabase_cli.version,
   );
   return {
-    auditLogPath, dockerPath, ghPath, gitPath, launchctlPath, lsofPath, nodePath, pnpmArtifactRoot, pnpmCliPath,
+    auditLogPath, copyPath, dockerPath, ghPath, gitPath, launchctlPath, lsofPath, nodePath, pnpmArtifactRoot, pnpmCliPath,
     sandboxPath, supabasePath,
   };
 }
@@ -4824,26 +6816,76 @@ export function createReleaseRehearsalCandidateAdapters({
         privateTmp,
         currentUid: process.getuid?.(),
       }, async ({ writeRoots }) => {
+        const installStageNode = materializeSandboxStageNode({
+          sourceNode: tools.nodePath,
+          privateHome,
+          stage: "install",
+          copyPath: tools.copyPath,
+          currentUid: process.getuid?.(),
+          runCommand,
+        });
+        const buildStageNode = materializeSandboxStageNode({
+          sourceNode: tools.nodePath,
+          privateHome,
+          stage: "build",
+          copyPath: tools.copyPath,
+          currentUid: process.getuid?.(),
+          runCommand,
+        });
+        const sandboxWitness = materializeSandboxProcessWitness({
+          clangPath: "/usr/bin/clang",
+          nodePath: tools.nodePath,
+          outputPath: join(privateHome, "hcsandboxwitness.node"),
+          sourcePath: join(source.checkout_dir, "scripts", "native", "local-mac-sandbox-process-witness.c"),
+          preloadSourcePath: join(
+            source.checkout_dir,
+            "scripts",
+            "native",
+            "local-mac-sandbox-process-witness-preload.cjs",
+          ),
+          runCommand,
+        });
         const storeStat = lstatSync(packageStorePath);
         if (storeStat.isSymbolicLink() || !storeStat.isDirectory() || storeStat.uid !== process.getuid?.() || (modeBits(storeStat.mode) & 0o022) !== 0) {
           fail("offline pnpm package store identity is unsafe");
         }
         const storeViewBuild = await withCandidatePnpmStoreView({
+          quarantineParent: dirname(runRoot),
           sourceStore: resolve(packageStorePath),
           storeRoot: join(runRoot, "pnpm-store"),
           currentUid: process.getuid?.(),
-        }, async ({ storePath, writableRoots: storeWritableRoots }) => {
+        }, async ({
+          storePath,
+          installWritableRoots,
+          sealInstallIndex,
+          verifyInstallPhaseBeforeSpawn,
+        }) => {
           const cleanBuildEnv = Object.freeze({
             ...childEnv,
+            __CFPREFERENCES_AVOID_DAEMON: "1",
+            __CF_USER_TEXT_ENCODING: `0x${Number(process.getuid?.()).toString(16).toUpperCase()}:0:0`,
+            CFPREFERENCES_AVOID_DAEMON: "1",
             CI: "1",
+            CIRCLE_NODE_TOTAL: "2",
+            COMMAND_MODE: "unix2003",
             COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
             HOME: privateHome,
+            HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES: "1",
+            LANG: "C",
+            LC_ALL: "C",
+            LOGNAME: "homecook-rehearsal",
             NEXT_TELEMETRY_DISABLED: "1",
+            NODE_DISABLE_COMPILE_CACHE: "1",
+            NODE_OPTIONS: "--no-global-search-paths",
             PATH: `${dirname(tools.nodePath)}:/usr/bin:/bin`,
+            TZ: "UTC0",
             TMPDIR: privateTmp,
+            USER: "homecook-rehearsal",
             npm_config_offline: "true",
           });
-          const sandboxProfile = buildCandidateSandboxProfile({
+          const installSandboxProfile = buildCandidateSandboxProfile({
+            stage: "offline-install",
+            executablePaths: [installStageNode.path],
             readRoots: [
               buildRoot,
               privateHome,
@@ -4851,12 +6893,15 @@ export function createReleaseRehearsalCandidateAdapters({
               storePath,
               ...Object.values(tools),
             ],
-            writeRoots: [...writeRoots, ...storeWritableRoots],
+            writeRoots: [...writeRoots, ...installWritableRoots],
             deniedWritePaths: [
               source.checkout_dir,
               resolve(packageStorePath),
               join(storePath, "files"),
-              join(storePath, "index"),
+              installStageNode.path,
+              buildStageNode.path,
+              sandboxWitness.path,
+              sandboxWitness.preload_path,
             ],
             deniedPaths: [
               sourceRoot,
@@ -4870,21 +6915,59 @@ export function createReleaseRehearsalCandidateAdapters({
               join(normalizedHome, ".docker", "run", "docker.sock"),
             ],
           });
-          const installAudit = runObservedSandboxCommand({
+          const installAudit = await runObservedSandboxCommand({
             sandboxPath: tools.sandboxPath,
+            sandboxWitnessPath: sandboxWitness.path,
             logPath: tools.auditLogPath,
-            profile: sandboxProfile,
-            command: tools.nodePath,
+            profile: installSandboxProfile,
+            command: installStageNode.path,
             args: [
               tools.pnpmCliPath,
-              "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
+              "install", "--frozen-lockfile", "--offline", "--ignore-scripts",
+              "--package-import-method=copy",
               "--store-dir", storePath,
             ],
             cwd: buildRoot,
             env: cleanBuildEnv,
             label: "offline frozen dependency install",
+            processExecutablePaths: [installStageNode.path],
+            stage: "offline-install",
             runCommand,
             timeout: 20 * 60_000,
+            beforeSpawn: verifyInstallPhaseBeforeSpawn,
+          });
+          const finalIndexAuthority = sealInstallIndex();
+          const buildSandboxProfile = buildCandidateSandboxProfile({
+            stage: "next-build",
+            executablePaths: [buildStageNode.path],
+            readRoots: [
+              buildRoot,
+              privateHome,
+              privateTmp,
+              storePath,
+              ...Object.values(tools),
+            ],
+            writeRoots,
+            deniedWritePaths: [
+              source.checkout_dir,
+              resolve(packageStorePath),
+              storePath,
+              installStageNode.path,
+              buildStageNode.path,
+              sandboxWitness.path,
+              sandboxWitness.preload_path,
+            ],
+            deniedPaths: [
+              sourceRoot,
+              resolve(environmentSourcePath),
+              join(normalizedHome, ".homecook", "releases"),
+              join(normalizedHome, ".homecook", "locks"),
+              join(normalizedHome, ".homecook", "config"),
+              join(normalizedHome, ".homecook", "logs"),
+              join(normalizedHome, "Library", "LaunchAgents"),
+              "/var/run/docker.sock",
+              join(normalizedHome, ".docker", "run", "docker.sock"),
+            ],
           });
           const nextEntrypointAuthority = await withCandidateNextEntrypointAuthority({
             buildRoot,
@@ -4893,15 +6976,18 @@ export function createReleaseRehearsalCandidateAdapters({
             const nextCliPre = snapshotToolFile(entrypointTarget, "next-cli@15.5.21", {
               requireExecutable: false,
             });
-            const nextBuildAudit = runObservedSandboxCommand({
+            const nextBuildAudit = await runObservedSandboxCommand({
               sandboxPath: tools.sandboxPath,
+              sandboxWitnessPath: sandboxWitness.path,
               logPath: tools.auditLogPath,
-              profile: sandboxProfile,
-              command: tools.nodePath,
+              profile: buildSandboxProfile,
+              command: buildStageNode.path,
               args: [entrypointPath, "build", "--no-lint"],
               cwd: buildRoot,
               env: cleanBuildEnv,
               label: "offline Next.js production build",
+              processExecutablePaths: [buildStageNode.path],
+              stage: "next-build",
               runCommand,
               timeout: 20 * 60_000,
               beforeSpawn: verifyBeforeSpawn,
@@ -4912,6 +6998,8 @@ export function createReleaseRehearsalCandidateAdapters({
             if (canonicalizeJcs(nextCliPre) !== canonicalizeJcs(nextCliPost)) {
               fail("Next.js build entrypoint drifted during execution");
             }
+            const installStageNodePost = installStageNode.verify();
+            const buildStageNodePost = buildStageNode.verify();
             const postSourceDigest = verifyExactMaterializedTree({
               sourceRoot: source.checkout_dir,
               sourceManifest: source.source_manifest,
@@ -4964,8 +7052,41 @@ export function createReleaseRehearsalCandidateAdapters({
               bundle_content_digest: bundle.sealed_bundle_digest,
               migration: sealedMigration,
               sandbox_policy_evidence: {
-                profile_digest: sha256Bytes(Buffer.from(sandboxProfile, "utf8")),
+                stage_capability_policy: buildSandboxStageCapabilityPolicy({
+                  installProfile: installSandboxProfile,
+                  buildProfile: buildSandboxProfile,
+                  installAudit,
+                  buildAudit: nextBuildAudit,
+                }),
+                install_profile_digest: sha256Bytes(Buffer.from(installSandboxProfile, "utf8")),
+                build_profile_digest: sha256Bytes(Buffer.from(buildSandboxProfile, "utf8")),
+                deterministic_runtime_environment_digest: sha256Jcs({
+                  COMMAND_MODE: cleanBuildEnv.COMMAND_MODE,
+                  CIRCLE_NODE_TOTAL: cleanBuildEnv.CIRCLE_NODE_TOTAL,
+                  LANG: cleanBuildEnv.LANG,
+                  LC_ALL: cleanBuildEnv.LC_ALL,
+                  LOGNAME: cleanBuildEnv.LOGNAME,
+                  HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES:
+                    cleanBuildEnv.HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES,
+                  NODE_DISABLE_COMPILE_CACHE: cleanBuildEnv.NODE_DISABLE_COMPILE_CACHE,
+                  NODE_OPTIONS: cleanBuildEnv.NODE_OPTIONS,
+                  TZ: cleanBuildEnv.TZ,
+                  USER: cleanBuildEnv.USER,
+                  __CFPREFERENCES_AVOID_DAEMON: cleanBuildEnv.__CFPREFERENCES_AVOID_DAEMON,
+                  __CF_USER_TEXT_ENCODING: cleanBuildEnv.__CF_USER_TEXT_ENCODING,
+                }),
+                final_index_inventory_digest: finalIndexAuthority.inventory_digest,
+                final_index_physical_identity_digest: finalIndexAuthority.physical_identity_digest,
+                sandbox_witness_authority_digest: sandboxWitness.authority_digest,
                 execution_audit_digests: [installAudit.audit_digest, nextBuildAudit.audit_digest],
+                stage_node_clone_authority_digests: [
+                  installStageNode.authority_digest,
+                  buildStageNode.authority_digest,
+                ],
+                stage_node_clone_post_identity_digests: [
+                  sha256Jcs(installStageNodePost),
+                  sha256Jcs(buildStageNodePost),
+                ],
               },
               staging_bundle_root: stagingBundleRoot,
             };
@@ -4987,19 +7108,30 @@ export function createReleaseRehearsalCandidateAdapters({
           pnpm_store_view_authority_digest: storeViewBuild.authority_digest,
           pnpm_store_snapshot_inventory_digest: storeViewBuild.snapshot_inventory_digest,
           pnpm_store_snapshot_identity_digest: storeViewBuild.snapshot_identity_digest,
+          pnpm_store_final_index_inventory_digest: storeViewBuild.final_index_inventory_digest,
+          pnpm_store_final_index_identity_digest: storeViewBuild.final_index_identity_digest,
         };
       });
       const {
         pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
         pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
         pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
+        pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
+        pnpm_store_final_index_identity_digest: pnpmStoreFinalIndexIdentityDigest,
         sandbox_policy_evidence: sandboxPolicyEvidence,
         ...build
       } = authorizedBuild.value;
+      if (
+        sandboxPolicyEvidence.final_index_inventory_digest !== pnpmStoreFinalIndexInventoryDigest
+        || sandboxPolicyEvidence.final_index_physical_identity_digest !== pnpmStoreFinalIndexIdentityDigest
+      ) fail("candidate pnpm final index builder authority cross-binding is invalid");
       return {
         ...build,
+        sandbox_stage_capability_policy: sandboxPolicyEvidence.stage_capability_policy,
         pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
         pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
+        pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
+        pnpm_store_final_index_identity_digest: pnpmStoreFinalIndexIdentityDigest,
         sandbox_policy_digest: sha256Jcs({
           ...sandboxPolicyEvidence,
           build_work_authority_digest: authorizedBuild.authority_digest,

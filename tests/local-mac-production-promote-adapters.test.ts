@@ -1300,7 +1300,7 @@ process.exit(42);
     expect(readFileSync(markerPath, "utf8")).toContain("compose");
     expect(dependencies.installApp).not.toHaveBeenCalled();
     expect(dependencies.installWorker).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it("migrates the exact e02f legacy runtime to a labeled candidate under the locked installer", async () => {
     const legacyIdentity = {

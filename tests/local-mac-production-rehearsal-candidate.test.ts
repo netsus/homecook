@@ -11,6 +11,7 @@ import {
   readdirSync,
   realpathSync,
   renameSync,
+  rmSync,
   rmdirSync,
   symlinkSync,
   unlinkSync,
@@ -18,16 +19,19 @@ import {
 } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { createRequire } from "node:module";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildCandidateManifest,
   buildBundleAuthorityManifest,
   buildCandidateSandboxProfile,
+  buildSandboxStageCapabilityPolicy,
   buildReleaseRehearsalCandidate,
   createReleaseRehearsalCandidateAdapters,
   createSealedCandidateBundle,
@@ -80,6 +84,10 @@ import {
   EXPECTED_RELEASE_CONTEXTS,
 } from "../scripts/lib/production-release-approval-policy.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
+import {
+  createOwnedTempRegistry,
+  normalizeOwnedTempDescriptorTarget,
+} from "./helpers/owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -92,6 +100,15 @@ const RUN_TOOL_CHANGE = "00000000-0000-4000-8000-000000000003";
 const RUN_FAILED = "00000000-0000-4000-8000-000000000006";
 const RUN_FINALIZE_FAILED = "00000000-0000-4000-8000-000000000007";
 const CURRENT_MASTER_SHA = "5e9bf7929c762dc6371ff64ae288159ddb9dc317";
+const TEST_OBSERVER_TOOL = realpathSync("/usr/bin/true");
+const ownedTempRegistry = createOwnedTempRegistry();
+const {
+  cleanupOwnedTempRoot,
+  cleanupOwnedTempRoots,
+  createOwnedTempRoot,
+  registerOwnedTempAlias,
+  withOwnedTempRoot,
+} = ownedTempRegistry;
 
 const CURRENT_MASTER_CHECK_RUNS = ([
   [99_587_894_041, "accessibility", "skipped", 90_563_911_335, "2026-08-31T17:58:28Z", "2026-08-31T17:58:28Z"],
@@ -124,9 +141,181 @@ const CURRENT_MASTER_CHECK_RUNS = ([
 }));
 
 function privateRoot(prefix = "homecook-candidate-") {
-  const root = mkdtempSync(join(tmpdir(), prefix));
-  chmodSync(root, 0o700);
-  return realpathSync(root);
+  return createOwnedTempRoot(prefix);
+}
+
+afterEach(() => {
+  cleanupOwnedTempRoots();
+});
+afterAll(() => {
+  cleanupOwnedTempRoots();
+});
+
+function privateNodeClone(root: string, suffix: string) {
+  const path = join(root, `hcnode${suffix}`);
+  const result = spawnSync("/bin/cp", ["-c", "-p", process.execPath, path], {
+    encoding: "utf8",
+  });
+  if (result.error || result.signal || result.status !== 0) {
+    throw new Error(`metadata-preserving Node clone failed: ${result.stderr}`);
+  }
+  chmodSync(path, 0o500);
+  return realpathSync(path);
+}
+
+function privateNativeSandboxDenialProbe({
+  root,
+  suffix,
+  deniedPath,
+  machService,
+  nested,
+}: {
+  root: string;
+  suffix: string;
+  deniedPath: string;
+  machService: string;
+  nested: boolean;
+}) {
+  const sourcePath = join(root, `sandbox-denial-${suffix}.c`);
+  const executablePath = join(root, `hcdeny${suffix}`);
+  const resultPath = join(root, `sandbox-denial-${suffix}.result`);
+  const uniqueMarker = `${basename(root)}-${suffix}`;
+  writeFileSync(sourcePath, [
+    "#include <arpa/inet.h>",
+    "#include <errno.h>",
+    "#include <mach/mach.h>",
+    "#include <fcntl.h>",
+    "#include <netinet/in.h>",
+    "#include <servers/bootstrap.h>",
+    "#include <signal.h>",
+    "#include <stdio.h>",
+    "#include <stdlib.h>",
+    "#include <sys/socket.h>",
+    "#include <sys/types.h>",
+    "#include <sys/wait.h>",
+    "#include <unistd.h>",
+    `static const char marker[] = ${JSON.stringify(uniqueMarker)};`,
+    "int main(void) {",
+    "  (void)marker;",
+    "  pid_t child = fork();",
+    "  if (child < 0) return 71;",
+    "  if (child == 0) {",
+    ...(nested ? [
+      "    pid_t inner = fork();",
+      "    if (inner < 0) _exit(72);",
+      "    if (inner > 0) { int status = 0; waitpid(inner, &status, 0); _exit(0); }",
+      "    usleep(250000);",
+    ] : []),
+    "    errno = 0;",
+    `    int fd = open(${JSON.stringify(deniedPath)}, O_WRONLY | O_CREAT, 0600);`,
+    "    int file_errno = fd < 0 ? errno : 0;",
+    "    if (fd >= 0) close(fd);",
+    "    errno = 0;",
+    "    int socket_fd = socket(AF_INET, SOCK_STREAM, 0);",
+    "    int network_errno = socket_fd < 0 ? errno : 0;",
+    "    if (socket_fd >= 0) {",
+    "      struct sockaddr_in address = {0};",
+    "      address.sin_family = AF_INET;",
+    "      address.sin_port = htons(9);",
+    '      inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);',
+    "      errno = 0;",
+    "      int connect_result = connect(socket_fd, (struct sockaddr *)&address, sizeof(address));",
+    "      network_errno = connect_result < 0 ? errno : 0;",
+    "      close(socket_fd);",
+    "    }",
+    "    mach_port_t service_port = MACH_PORT_NULL;",
+    `    kern_return_t mach_result = bootstrap_look_up(bootstrap_port, ${JSON.stringify(machService)}, &service_port);`,
+    "    if (service_port != MACH_PORT_NULL) mach_port_deallocate(mach_task_self(), service_port);",
+    "    errno = 0;",
+    "    int signal_result = kill(1, SIGCONT);",
+    "    int signal_errno = signal_result < 0 ? errno : 0;",
+    `    int result_fd = open(${JSON.stringify(resultPath)}, O_WRONLY | O_CREAT | O_TRUNC, 0600);`,
+    "    if (result_fd >= 0) {",
+    '      dprintf(result_fd, "%d %d %d %d\\n", file_errno, network_errno, mach_result, signal_errno);',
+    "      close(result_fd);",
+    "    }",
+    "    usleep(400000);",
+    "    _exit(0);",
+    "  }",
+    "  int status = 0;",
+    "  waitpid(child, &status, 0);",
+    "  return 0;",
+    "}",
+    "",
+  ].join("\n"), { mode: 0o600 });
+  const compile = spawnSync(
+    "/Library/Developer/CommandLineTools/usr/bin/clang",
+    [
+      "-isysroot", "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      sourcePath, "-o", executablePath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (compile.error || compile.signal || compile.status !== 0) {
+    throw new Error(`native sandbox denial probe compilation failed: ${compile.stderr}`);
+  }
+  chmodSync(executablePath, 0o500);
+  return realpathSync(executablePath);
+}
+
+function privateFastNativeSandboxDenialProbe({
+  root,
+  deniedPath,
+}: {
+  root: string;
+  deniedPath: string;
+}) {
+  const token = createHash("sha256").update(root).digest("hex").slice(0, 8);
+  const sourcePath = join(root, `sub-poll-${token}.c`);
+  const executablePath = join(root, `hcnode${token}i`);
+  const resultPath = join(root, `sub-poll-${token}.result`);
+  writeFileSync(sourcePath, [
+    "#include <errno.h>",
+    "#include <fcntl.h>",
+    "#include <stdio.h>",
+    "#include <sys/types.h>",
+    "#include <sys/wait.h>",
+    "#include <time.h>",
+    "#include <unistd.h>",
+    "int main(void) {",
+    "  struct timespec started = {0}, ended = {0};",
+    "  clock_gettime(CLOCK_MONOTONIC, &started);",
+    "  pid_t child = fork();",
+    "  if (child < 0) return 71;",
+    "  if (child == 0) {",
+    "    errno = 0;",
+    `    int fd = open(${JSON.stringify(deniedPath)}, O_WRONLY | O_CREAT, 0600);`,
+    "    int denied = fd < 0 && errno == EPERM;",
+    "    if (fd >= 0) close(fd);",
+    "    _exit(denied ? 0 : 72);",
+    "  }",
+    "  int status = 0;",
+    "  waitpid(child, &status, 0);",
+    "  clock_gettime(CLOCK_MONOTONIC, &ended);",
+    "  long long elapsed_us = (ended.tv_sec - started.tv_sec) * 1000000LL + (ended.tv_nsec - started.tv_nsec) / 1000LL;",
+    `  int result_fd = open(${JSON.stringify(resultPath)}, O_WRONLY | O_CREAT | O_TRUNC, 0600);`,
+    "  if (result_fd >= 0) {",
+    '    dprintf(result_fd, "%d %lld\\n", WIFEXITED(status) ? WEXITSTATUS(status) : 73, elapsed_us);',
+    "    close(result_fd);",
+    "  }",
+    "  usleep(100000);",
+    "  return WIFEXITED(status) ? WEXITSTATUS(status) : 73;",
+    "}",
+    "",
+  ].join("\n"), { mode: 0o600 });
+  const compile = spawnSync(
+    "/Library/Developer/CommandLineTools/usr/bin/clang",
+    [
+      "-isysroot", "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      sourcePath, "-o", executablePath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (compile.error || compile.signal || compile.status !== 0) {
+    throw new Error(`fast native sandbox denial probe compilation failed: ${compile.stderr}`);
+  }
+  chmodSync(executablePath, 0o500);
+  return { executablePath: realpathSync(executablePath), resultPath };
 }
 
 function tool(name: string) {
@@ -278,10 +467,33 @@ function validManifestInput() {
     source_manifest_digest: DIGEST_A,
     compose_source_digest: DIGEST_C,
     sandbox_policy_digest: DIGEST_B,
+    sandbox_stage_capability_policy: (() => {
+      const policyText = canonicalizeJcs({
+        schema: "homecook.sandbox-stage-capability-policy-text.v1",
+        stages: [
+          { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"] },
+          { stage: "next-build", allowed_mach_lookup_global_names: [] },
+        ],
+        network_policy: "deny-all",
+        no_log_denials: ["com.apple.diagnosticd"],
+      });
+      return {
+        schema: "homecook.sandbox-stage-capability-policy.v1",
+        policy_text: policyText,
+        policy_digest: createHash("sha256").update(policyText).digest("hex"),
+        install: { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"], allow_count: 1 },
+        build: { stage: "next-build", allowed_mach_lookup_global_names: [], allow_count: 0 },
+        observed: {
+          install_audit_digest: DIGEST_A, install_denial_count: 0, install_process_attempt_count: 0,
+          build_audit_digest: DIGEST_B, build_denial_count: 0, build_process_attempt_count: 0,
+        },
+      };
+    })(),
     generated_build_inventory_digest: createHash("sha256").update(canonicalizeJcs(
       fileInventory.filter((entry) => entry.source_kind === "generated_build"),
     )).digest("hex"),
     pnpm_store_snapshot_inventory_digest: DIGEST_C,
+    pnpm_store_final_index_inventory_digest: DIGEST_A,
     build_id: `candidate-${SHA_A}`,
     sealed_bundle_digest: DIGEST_B,
     bundle_manifest_digest: DIGEST_C,
@@ -327,6 +539,329 @@ function validManifestInput() {
 }
 
 describe("release rehearsal candidate manifest", () => {
+  it("locks the authoritative release suite to the original 26 files plus both teardown files", () => {
+    const scopePath = "scripts/config/local-mac-production-release-test-scope.json";
+    expect(existsSync(scopePath)).toBe(true);
+    if (!existsSync(scopePath)) return;
+    const scope = JSON.parse(readFileSync(scopePath, "utf8"));
+    const original = [
+      "tests/github-production-release-attestation.test.ts",
+      "tests/local-mac-production-promote-adapters.test.ts",
+      "tests/local-mac-production-promote-connected.test.ts",
+      "tests/local-mac-production-promote.test.ts",
+      "tests/local-mac-production-rehearsal-adapter-factory.test.ts",
+      "tests/local-mac-production-rehearsal-candidate.test.ts",
+      "tests/local-mac-production-rehearsal-cli.test.ts",
+      "tests/local-mac-production-rehearsal-credential-issuance.test.ts",
+      "tests/local-mac-production-rehearsal-foundation.test.ts",
+      "tests/local-mac-production-rehearsal-inventory-classifier.test.ts",
+      "tests/local-mac-production-rehearsal-macos-observer.test.ts",
+      "tests/local-mac-production-rehearsal-observer-projection.test.ts",
+      "tests/local-mac-production-rehearsal-owned-probe.test.ts",
+      "tests/local-mac-production-rehearsal-postgrest-probe.test.ts",
+      "tests/local-mac-production-rehearsal-receipts.test.ts",
+      "tests/local-mac-production-rehearsal-runner-safety.test.ts",
+      "tests/local-mac-production-rehearsal-runner.test.ts",
+      "tests/local-mac-production-rehearsal-selection.test.ts",
+      "tests/local-mac-production-release.test.ts",
+      "tests/local-mac-production-verify-adapters.test.ts",
+      "tests/local-mac-production-verify.test.ts",
+      "tests/local-mac-production.test.ts",
+      "tests/production-release-rulesets-c2.test.ts",
+      "tests/production-release-rulesets.test.ts",
+      "tests/promote-local-mac-production-release-cli.test.ts",
+      "tests/release-promotion-governance.test.ts",
+    ];
+    expect(scope).toEqual({
+      schema: "homecook.local-mac-production-release-test-scope.v1",
+      original_file_count: 26,
+      files: [...original, "tests/vitest-owned-suite-temp-subprocess.test.ts", "tests/vitest-owned-suite-temp-teardown.test.ts"],
+    });
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+    expect(packageJson.scripts["test:local-mac-production-release"]).toBe(
+      "node scripts/run-local-mac-production-release-tests.mjs",
+    );
+    expect(existsSync("scripts/validate-local-mac-production-release-evidence.mjs")).toBe(true);
+    expect(packageJson.scripts["verify:local-mac-production-release-evidence"]).toBe(
+      "node scripts/validate-local-mac-production-release-evidence.mjs",
+    );
+  });
+
+  it("normalizes Linux deleted descriptor annotations without scanning sibling temp paths", () => {
+    expect(normalizeOwnedTempDescriptorTarget("/tmp/homecook-owned-fixture (deleted)"))
+      .toBe("/tmp/homecook-owned-fixture");
+    expect(() => normalizeOwnedTempDescriptorTarget("relative (deleted)"))
+      .toThrow(/absolute/iu);
+  });
+
+  it("cleans exact owned temp roots after success, intended failure, throw, skip, and interruption", async () => {
+    const ownedRoots: string[] = [];
+    const unrelatedRoot = realpathSync(mkdtempSync(join(tmpdir(), "homecook-unrelated-control-")));
+    try {
+      await expect(withOwnedTempRoot("homecook-owned-success-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "success"), "owned\n", { mode: 0o600 });
+        symlinkSync(unrelatedRoot, join(root, "unrelated-sibling-link"));
+        return "complete";
+      })).resolves.toBe("complete");
+      await expect(withOwnedTempRoot("homecook-owned-intended-failure-", async (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "intended-failure"), "owned\n", { mode: 0o600 });
+        await Promise.resolve();
+        throw new Error("simulated intended failure");
+      })).rejects.toThrow(/simulated intended failure/iu);
+      await expect(withOwnedTempRoot("homecook-owned-throw-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "throw"), "owned\n", { mode: 0o600 });
+        throw new Error("simulated test failure");
+      })).rejects.toThrow(/simulated test failure/iu);
+      await expect(withOwnedTempRoot("homecook-owned-skip-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "skip"), "owned\n", { mode: 0o600 });
+        return { status: "skipped" } as const;
+      })).resolves.toEqual({ status: "skipped" });
+      const interruption = new AbortController();
+      await expect(withOwnedTempRoot("homecook-owned-interrupted-", (root) => {
+        ownedRoots.push(root);
+        writeFileSync(join(root, "interrupted"), "owned\n", { mode: 0o600 });
+        return new Promise((_resolve, reject) => {
+          interruption.signal.addEventListener("abort", () => reject(new Error("simulated test interruption")));
+          interruption.abort();
+        });
+      })).rejects.toThrow(/simulated test interruption/iu);
+      expect(ownedRoots).toHaveLength(5);
+      expect(ownedRoots.every((path) => !existsSync(path))).toBe(true);
+      expect(existsSync(unrelatedRoot)).toBe(true);
+    } finally {
+      if (existsSync(unrelatedRoot)) rmdirSync(unrelatedRoot);
+    }
+  });
+
+  it("removes a relocated owned inode while preserving a replacement at the original name", () => {
+    const root = createOwnedTempRoot("homecook-owned-relocated-");
+    const relocated = `${root}.relocated`;
+    renameSync(root, relocated);
+    mkdirSync(root, { mode: 0o700 });
+    const replacement = lstatSync(root, { bigint: true });
+    try {
+      expect(() => cleanupOwnedTempRoot(root)).not.toThrow();
+      expect(existsSync(relocated)).toBe(false);
+      const replacementPost = lstatSync(root, { bigint: true });
+      expect(replacementPost.dev).toBe(replacement.dev);
+      expect(replacementPost.ino).toBe(replacement.ino);
+    } finally {
+      if (existsSync(root)) rmdirSync(root);
+      if (existsSync(relocated)) {
+        renameSync(relocated, root);
+        cleanupOwnedTempRoot(root);
+      }
+    }
+  });
+
+  it("atomically claims the owned inode when another process replaces its pathname during cleanup", () => {
+    let root = "";
+    let relocated = "";
+    let replacementDevice: bigint | null = null;
+    let replacementInode: bigint | null = null;
+    let raced = false;
+    const registry = createOwnedTempRegistry({
+      beforeAtomicClaim: ({ kind, path }: { kind: string, path: string }) => {
+        if (raced || kind !== "root" || path !== root) return;
+        raced = true;
+        relocated = `${root}.concurrent-owned`;
+        const replacementScript = [
+          'const { mkdirSync, renameSync } = require("node:fs");',
+          "const [owned, moved] = process.argv.slice(1);",
+          "renameSync(owned, moved);",
+          "mkdirSync(owned, { mode: 0o700 });",
+        ].join("\n");
+        const result = spawnSync(process.execPath, ["-e", replacementScript, root, relocated], {
+          encoding: "utf8",
+        });
+        expect(result.status, result.stderr).toBe(0);
+        const replacementIdentity = lstatSync(root, { bigint: true });
+        replacementDevice = replacementIdentity.dev;
+        replacementInode = replacementIdentity.ino;
+      },
+    });
+    root = registry.createOwnedTempRoot("homecook-owned-atomic-claim-");
+    writeFileSync(join(root, "owned"), "owned inode\n", { mode: 0o600 });
+    try {
+      expect(() => registry.cleanupOwnedTempRoot(root)).not.toThrow();
+      expect(raced).toBe(true);
+      expect(existsSync(relocated)).toBe(false);
+      const replacementPost = lstatSync(root, { bigint: true });
+      expect(replacementPost.dev).toBe(replacementDevice);
+      expect(replacementPost.ino).toBe(replacementInode);
+    } finally {
+      if (existsSync(root)) rmdirSync(root);
+      if (existsSync(relocated)) {
+        renameSync(relocated, root);
+        registry.cleanupOwnedTempRoot(root);
+      }
+    }
+  });
+
+  it("fails closed on a concurrent nested swap without touching the replacement or an external symlink target", () => {
+    let nested = "";
+    let relocated = "";
+    let replacementDevice: bigint | null = null;
+    let replacementInode: bigint | null = null;
+    let raced = false;
+    const external = realpathSync(mkdtempSync(join(tmpdir(), "homecook-external-nested-control-")));
+    const registry = createOwnedTempRegistry({
+      beforeAtomicClaim: ({ kind, path }: { kind: string, path: string }) => {
+        if (raced || kind !== "entry" || basename(path) !== "nested") return;
+        raced = true;
+        nested = path;
+        relocated = `${path}.relocated`;
+        renameSync(path, relocated);
+        mkdirSync(path, { mode: 0o700 });
+        symlinkSync(external, join(path, "external-link"));
+        const replacementIdentity = lstatSync(path, { bigint: true });
+        replacementDevice = replacementIdentity.dev;
+        replacementInode = replacementIdentity.ino;
+      },
+    });
+    const root = registry.createOwnedTempRoot("homecook-owned-nested-swap-");
+    nested = join(root, "nested");
+    mkdirSync(nested, { mode: 0o700 });
+    writeFileSync(join(nested, "owned"), "owned\n", { mode: 0o400 });
+    chmodSync(nested, 0o500);
+    try {
+      expect(() => registry.cleanupOwnedTempRoot(root)).toThrow(/nested|replaced|identity|entry/iu);
+      expect(raced).toBe(true);
+      nested = join(root, "nested");
+      relocated = `${nested}.relocated`;
+      const replacementPost = lstatSync(nested, { bigint: true });
+      expect(replacementPost.dev).toBe(replacementDevice);
+      expect(replacementPost.ino).toBe(replacementInode);
+      expect(existsSync(external)).toBe(true);
+    } finally {
+      if (existsSync(nested)) {
+        unlinkSync(join(nested, "external-link"));
+        rmdirSync(nested);
+      }
+      if (existsSync(relocated)) {
+        renameSync(relocated, nested);
+      }
+      try { registry.cleanupOwnedTempRoot(root); } catch { /* Exact fixture cleanup is best effort after fail-closed proof. */ }
+      if (existsSync(external)) rmdirSync(external);
+    }
+  });
+
+  it("fails closed without deleting post-claim replacements in the real descriptor cleanup helper", () => {
+    const scenarios = [
+      {
+        marker: "        # HOMECOOK_TEST_BEFORE_FINAL_FILE_REMOVE",
+        setup(root: string) { writeFileSync(join(root, "owned.txt"), "owned\n", { mode: 0o600 }); },
+        injection: [
+          '        os.rename(claimed, claimed + ".parked", src_dir_fd=parent, dst_dir_fd=parent)',
+          '        replacement_fd = os.open(claimed, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent)',
+          '        os.write(replacement_fd, b"replacement-file\\n")',
+          '        os.close(replacement_fd)',
+        ],
+        replacement: "replacement-file\n",
+      },
+      {
+        marker: "        # HOMECOOK_TEST_BEFORE_FINAL_DIRECTORY_REMOVE",
+        setup(root: string) { mkdirSync(join(root, "owned-dir"), { mode: 0o700 }); },
+        injection: [
+          '        os.rename(claimed, claimed + ".parked", src_dir_fd=parent, dst_dir_fd=parent)',
+          '        os.mkdir(claimed, 0o700, dir_fd=parent)',
+          '        replacement_fd = os.open(claimed + "/replacement.txt", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent)',
+          '        os.write(replacement_fd, b"replacement-directory\\n")',
+          '        os.close(replacement_fd)',
+        ],
+        replacement: "replacement-directory\n",
+      },
+      {
+        marker: "# HOMECOOK_TEST_BEFORE_FINAL_ROOT_REMOVE",
+        setup() {},
+        injection: [
+          'os.rename(root_name, root_name + ".parked", src_dir_fd=parent_fd, dst_dir_fd=parent_fd)',
+          'os.mkdir(root_name, 0o700, dir_fd=parent_fd)',
+          'replacement_fd = os.open(root_name + "/replacement.txt", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent_fd)',
+          'os.write(replacement_fd, b"replacement-root\\n")',
+          'os.close(replacement_fd)',
+        ],
+        replacement: "replacement-root\n",
+      },
+    ] as const;
+    for (const scenario of scenarios) {
+      let injected = false;
+      const registry = createOwnedTempRegistry({
+        transformOwnedTreeCleanupScript(script: string) {
+          expect(script).toContain(scenario.marker);
+          injected = true;
+          return script.replace(scenario.marker, scenario.injection.join("\n"));
+        },
+      } as never);
+      const root = registry.createOwnedTempRoot("homecook-real-helper-race-");
+      const parent = dirname(root);
+      const before = new Set(readdirSync(parent));
+      scenario.setup(root);
+      try {
+        expect(() => registry.cleanupOwnedTempRoot(root)).toThrow(/cleanup|identity|replaced|changed|closed/iu);
+        expect(injected).toBe(true);
+        const claimedRoots = readdirSync(parent)
+          .filter((name) => !before.has(name) && name.startsWith(".homecook-owned-root-"))
+          .map((name) => join(parent, name));
+        const retainedRoots = [...claimedRoots, ...(existsSync(root) ? [root] : [])];
+        expect(retainedRoots.length).toBeGreaterThan(0);
+        const pending = [...retainedRoots];
+        const replacementPayloads: string[] = [];
+        while (pending.length > 0) {
+          const path = pending.pop()!;
+          const stat = lstatSync(path);
+          if (stat.isDirectory()) {
+            for (const name of readdirSync(path)) pending.push(join(path, name));
+          } else if (stat.isFile()) {
+            replacementPayloads.push(readFileSync(path, "utf8"));
+          }
+        }
+        expect(replacementPayloads).toContain(scenario.replacement);
+      } finally {
+        for (const name of readdirSync(parent)) {
+          if (!before.has(name) && name.startsWith(".homecook-owned-root-")) {
+            rmSync(join(parent, name), { recursive: true, force: true });
+          }
+        }
+        if (existsSync(root)) rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("removes an exact sibling alias to an owned temp root without touching other siblings", () => {
+    const root = createOwnedTempRoot("homecook-owned-alias-");
+    const alias = `${root}-root-alias`;
+    const unregisteredAlias = `${root}-unregistered-alias`;
+    const unrelated = realpathSync(mkdtempSync(join(tmpdir(), "homecook-unrelated-alias-control-")));
+    symlinkSync(root, alias);
+    symlinkSync(root, unregisteredAlias);
+    registerOwnedTempAlias(alias, root);
+    const pathEntryExists = (path: string) => {
+      try {
+        lstatSync(path);
+        return true;
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return false;
+        throw error;
+      }
+    };
+    try {
+      cleanupOwnedTempRoot(root);
+      expect(existsSync(root)).toBe(false);
+      expect(pathEntryExists(alias)).toBe(false);
+      expect(pathEntryExists(unregisteredAlias)).toBe(true);
+      expect(existsSync(unrelated)).toBe(true);
+    } finally {
+      try { unlinkSync(alias); } catch { /* Exact alias was already cleaned. */ }
+      try { unlinkSync(unregisteredAlias); } catch { /* Unregistered alias cleanup belongs to this test. */ }
+      if (existsSync(unrelated)) rmdirSync(unrelated);
+    }
+  });
+
   it("publishes a closed JSON schema for the exact candidate manifest", () => {
     const schema = JSON.parse(readFileSync(
       "scripts/schemas/local-mac-production-rehearsal-candidate.schema.json",
@@ -346,8 +881,10 @@ describe("release rehearsal candidate manifest", () => {
         "source_manifest_digest",
         "compose_source_digest",
         "sandbox_policy_digest",
+        "sandbox_stage_capability_policy",
         "generated_build_inventory_digest",
         "pnpm_store_snapshot_inventory_digest",
+        "pnpm_store_final_index_inventory_digest",
         "sealed_bundle_digest",
         "bundle_manifest_digest",
         "toolchain",
@@ -365,6 +902,7 @@ describe("release rehearsal candidate manifest", () => {
     expect(schema.properties.toolchain.additionalProperties).toBe(false);
     expect(schema.properties.artifacts.required).toEqual(["app", "full_local", "worker"]);
     expect(schema.properties.production_guard.properties.mutation_attempt_count.const).toBe(0);
+    expect(schema.properties.sandbox_stage_capability_policy.additionalProperties).toBe(false);
   });
 
   it("builds and validates a closed RFC8785-bound candidate manifest", () => {
@@ -373,6 +911,22 @@ describe("release rehearsal candidate manifest", () => {
 
     expect(parsed).toEqual(manifest);
     expect(parsed.manifest_digest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it.each([
+    ["service", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.allowed_mach_lookup_global_names[0] = "com.apple.logd"; }],
+    ["stage", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.stage = "next-build"; }],
+    ["policy digest", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.policy_digest = DIGEST_C; }],
+    ["wildcard", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.allowed_mach_lookup_global_names.push("*"); }],
+    ["additional allow", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.allow_count = 2; }],
+  ])("rejects a resigned candidate with changed sandbox capability %s", (_label, mutate) => {
+    const manifest = structuredClone(buildCandidateManifest(validManifestInput()));
+    mutate(manifest.sandbox_stage_capability_policy);
+    delete manifest.manifest_digest;
+    manifest.manifest_digest = createHash("sha256").update(canonicalizeJcs(manifest)).digest("hex");
+
+    expect(() => parseAndValidateCandidateManifest(canonicalizeJcs(manifest)))
+      .toThrow(/capability|policy|install-only/iu);
   });
 
   it("cross-binds generated build and pnpm store snapshot inventories into candidate and bundle authority", () => {
@@ -391,6 +945,11 @@ describe("release rehearsal candidate manifest", () => {
       source_snapshot_digest: manifest.source_manifest_digest,
       pnpm_store_snapshot_inventory_digest: DIGEST_A,
     })).toThrow(/pnpm|store|inventory|cross-binding|digest/iu);
+    expect(() => validateCandidateBundleCrossBinding(manifest, {
+      ...manifest,
+      source_snapshot_digest: manifest.source_manifest_digest,
+      pnpm_store_final_index_inventory_digest: DIGEST_B,
+    })).toThrow(/pnpm|index|inventory|cross-binding|digest/iu);
     expect(manifest).not.toHaveProperty("pnpm_store_snapshot_identity_digest");
     expect(() => buildCandidateManifest({
       ...validManifestInput(),
@@ -1322,15 +1881,38 @@ try {
     }
   });
 
-  it("rejects a sandboxed child that ignores a denied network, socket, or process attempt", () => {
+  it("rejects a sandboxed child that ignores a denied network, socket, or process attempt", async () => {
+    const processTree = {
+      process_tree_complete: true,
+      root_pid: 4242,
+      root_pgid: 4242,
+      observer_tool_identity_digest: DIGEST_B,
+      process_identities: [{
+        pid: 4242,
+        ppid: 1,
+        pgid: 4242,
+        started_at: "Tue Sep  1 20:00:00 2026",
+        executable_identity_digest: DIGEST_A,
+      }],
+      audit_started_at: "2026-08-29T00:00:00.000Z",
+      audit_ended_at: "2026-08-29T00:00:01.000Z",
+      escaped_process_count: 0,
+      surviving_process_count: 0,
+      stage: "fixture",
+    };
     expect(() => validateSandboxedBuildResult({
+      ...processTree,
       status: 0,
       signal: null,
       stdout: "build continued",
       stderr: "",
-      observed_denials: [{ operation: "network-outbound", process: "node" }],
+      observed_denials: [
+        { operation: "file-write-create", process: "fixture" },
+        { operation: "network-outbound", process: "fixture" },
+      ],
     }, "fixture build")).toThrow(/sandbox|denied|network|attempt/iu);
     expect(validateSandboxedBuildResult({
+      ...processTree,
       status: 0,
       signal: null,
       stdout: "ok",
@@ -1342,35 +1924,450 @@ try {
       const root = privateRoot("homecook-observed-denial-");
       const deniedRoot = join(root, "denied");
       mkdirSync(deniedRoot, { mode: 0o700 });
+      const deniedPath = join(deniedRoot, "swallowed");
+      const probeSuffix = `${basename(root).slice(-6)}d`;
+      const probeResultPath = join(root, `sandbox-denial-${probeSuffix}.result`);
+      const auditProbe = privateNativeSandboxDenialProbe({
+        root,
+        suffix: probeSuffix,
+        deniedPath,
+        machService: "com.apple.coreservices.launchservicesd",
+        nested: false,
+      });
       const profile = buildCandidateSandboxProfile({
-        readRoots: [root, process.execPath],
+        executablePaths: [auditProbe],
+        readRoots: [root, auditProbe],
         writeRoots: [root],
         deniedPaths: [deniedRoot],
       });
-      const script = `try { require("fs").writeFileSync(${JSON.stringify(join(deniedRoot, "swallowed"))}, "x") } catch {}\ntry { const socket=require("net").connect({host:"127.0.0.1",port:9}); socket.on("error",()=>{}) } catch {}\nsetTimeout(()=>process.exit(0),100)`;
-      expect(() => runObservedSandboxCommand({
+      const enforced = spawnSync("/usr/bin/sandbox-exec", [
+        "-p", profile, auditProbe,
+      ], { cwd: root, env: { HOME: root, NODE_ENV: "test", PATH: "/usr/bin:/bin" } });
+      expect(enforced.status).not.toBe(0);
+      expect(existsSync(deniedPath)).toBe(false);
+      expect(existsSync(probeResultPath)).toBe(false);
+    }
+  }, 20_000);
+
+  it("rejects swallowed descendant and nested late denials from the sandbox process tree", async () => {
+    if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec") || !existsSync("/usr/bin/log")) return;
+    const root = privateRoot("homecook-descendant-denial-");
+    const deniedRoot = join(root, "denied");
+    mkdirSync(deniedRoot, { mode: 0o700 });
+    const deniedPath = join(deniedRoot, "descendant-created");
+    for (const stage of ["descendant", "nested-late"]) {
+      const probeSuffix = `${basename(root).slice(-6)}${stage === "descendant" ? "d" : "n"}`;
+      const probeResultPath = join(root, `sandbox-denial-${probeSuffix}.result`);
+      const auditProbe = privateNativeSandboxDenialProbe({
+        root,
+        suffix: probeSuffix,
+        deniedPath,
+        machService: stage === "descendant"
+          ? "com.apple.analyticsd"
+          : "com.apple.PowerManagement.control",
+        nested: stage === "nested-late",
+      });
+      const profile = buildCandidateSandboxProfile({
+        executablePaths: [auditProbe],
+        readRoots: [root, auditProbe],
+        writeRoots: [root],
+        deniedPaths: [deniedRoot],
+      });
+      const enforced = spawnSync("/usr/bin/sandbox-exec", [
+        "-p", profile, auditProbe,
+      ], { cwd: root, env: { HOME: root, NODE_ENV: "test", PATH: "/usr/bin:/bin" } });
+      expect(enforced.status).not.toBe(0);
+      expect(existsSync(deniedPath)).toBe(false);
+      expect(existsSync(probeResultPath)).toBe(false);
+
+      const rootPid = 4242;
+      const deniedPid = stage === "descendant" ? 4243 : 4244;
+      const processIdentities = Array.from(
+        { length: deniedPid - rootPid + 1 },
+        (_, offset) => ({
+          pid: rootPid + offset,
+          ppid: offset === 0 ? 1 : rootPid + offset - 1,
+          pgid: rootPid,
+          started_at: "Tue Sep  1 20:00:00 2026",
+          executable_identity_digest: DIGEST_A,
+        }),
+      );
+      const auditStart = Date.UTC(2026, 8, 1, 20, 0, 0);
+      await expect(runObservedSandboxCommand({
         sandboxPath: "/usr/bin/sandbox-exec",
         logPath: "/usr/bin/log",
-        profile,
-        command: process.execPath,
-        args: ["-e", script],
+        profile: "(version 1)\n(deny default)",
+        command: auditProbe,
+        args: [],
         cwd: root,
         env: { HOME: root, PATH: "/usr/bin:/bin" },
-        label: "ignored denial fixture",
-      })).toThrow(/observed|denied|sandbox|attempt/iu);
-      expect(existsSync(join(deniedRoot, "swallowed"))).toBe(false);
+        label: `${stage} deterministic denial fixture`,
+        stage,
+        observeProcessTree: vi.fn(async () => ({
+          status: 0,
+          signal: null,
+          stdout: "",
+          stderr: "",
+          pid: rootPid,
+          root_pgid: rootPid,
+          process_tree_complete: true,
+          observer_tool_identity_digest: DIGEST_B,
+          process_identities: processIdentities,
+          escaped_process_count: 0,
+          surviving_process_count: 0,
+        })),
+        runCommand: vi.fn(() => ({
+          status: 0,
+          signal: null,
+          stdout: JSON.stringify([{
+            eventMessage: `Sandbox: hcdeny(${deniedPid}) deny(1) file-write-create /fixture`,
+          }]),
+          stderr: "",
+        })),
+        now: vi.fn()
+          .mockReturnValueOnce(auditStart)
+          .mockReturnValueOnce(auditStart + 1)
+          .mockReturnValueOnce(auditStart + 2),
+        waitForAuditFlush: vi.fn(),
+      })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
     }
+  }, 35_000);
+
+  it("attributes sub-poll sandbox events by the execution-scoped process token only", async () => {
+    const command = "/private/tmp/hcnode1234abcdi";
+    const auditMessage = "homecook-sandbox-hcnode1234abcdi";
+    const executionAuditToken = "01".repeat(32);
+    const rootPid = 4242;
+    const rootProcess = {
+      status: 0,
+      signal: null,
+      stdout: "",
+      stderr: "",
+      pid: rootPid,
+      root_pgid: rootPid,
+      process_lifecycle_enforcement: "macos-sandbox-deny-process-fork",
+      process_attempt_count: 0,
+      process_tree_complete: true,
+      observer_tool_identity_digest: DIGEST_B,
+      process_identities: [{
+        pid: rootPid,
+        ppid: 1,
+        pgid: rootPid,
+        started_at: "2026-09-01T11:00:00.123456Z",
+        process_name: "hcnode1234abcdi",
+        execution_audit_token: executionAuditToken,
+        process_instance_id: DIGEST_C,
+        executable_path: command,
+        executable_identity_digest: DIGEST_A,
+      }],
+      escaped_process_count: 0,
+      surviving_process_count: 0,
+      exited_at: "2026-09-01T11:00:00.500000Z",
+    };
+    const run = (event: string | Record<string, unknown>) => runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile: [
+        "(version 1)",
+        `(deny default (with message ${JSON.stringify(auditMessage)}))`,
+        `(allow process-exec (literal ${JSON.stringify(command)}))`,
+      ].join("\n"),
+      command,
+      processExecutablePaths: [command],
+      args: [],
+      cwd: "/private/tmp",
+      env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
+      label: "sub-poll event attribution fixture",
+      stage: "offline-install",
+      observeProcessTree: vi.fn(async () => rootProcess),
+      runCommand: vi.fn(() => ({
+        status: 0,
+        signal: null,
+        stdout: JSON.stringify([typeof event === "string" ? { eventMessage: event } : event]),
+        stderr: "",
+      })),
+      now: vi.fn()
+        .mockReturnValueOnce(1_000)
+        .mockReturnValueOnce(1_001)
+        .mockReturnValueOnce(1_002),
+      waitForAuditFlush: vi.fn(),
+    });
+
+    await expect(run(`Sandbox: hcnode1234abcdi(4243) deny(1) file-write-create /fixture\n${auditMessage}`))
+      .rejects.toThrow(/observed|denied|sandbox|attempt/iu);
+    await expect(run("Sandbox: hcnode1234abcdi(9898) deny(1) file-write-create /fixture"))
+      .resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    await expect(run(`Sandbox: unrelated(9898) deny(1) file-write-create /fixture\n${auditMessage}`))
+      .resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    await expect(run(`Sandbox: unrelated(${rootPid}) deny(1) file-write-create /fixture\n${auditMessage}`))
+      .resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    await expect(run({
+      eventMessage: `Sandbox: hcnode1234abcdi(${rootPid}) deny(1) file-write-create /fixture`,
+      executionAuditToken: "02".repeat(32),
+      timestamp: "2026-09-01 11:00:00.900000+0000",
+    })).resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    await expect(run({
+      eventMessage: `Sandbox: hcnode1234abcdi(${rootPid}) deny(1) file-write-create /fixture`,
+      executionAuditToken,
+      timestamp: "2026-09-01 11:00:00.900000+0000",
+    })).resolves.toMatchObject({ audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    await expect(run({
+      eventMessage: `Sandbox: hcnode1234abcdi(${rootPid}) deny(1) file-write-create /fixture`,
+      executionAuditToken,
+    })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
   });
 
-  it("audits the full sandbox wall-clock interval and catches an early swallowed denial", () => {
+  it("rejects a real macOS denial from a child that exits within one process poll interval", async () => {
+    if (
+      process.platform !== "darwin"
+      || !existsSync("/usr/bin/sandbox-exec")
+      || !existsSync("/usr/bin/log")
+      || !existsSync("/Library/Developer/CommandLineTools/usr/bin/clang")
+    ) return;
+    const root = privateRoot("homecook-sub-poll-denial-");
+    const deniedRoot = join(root, "denied");
+    mkdirSync(deniedRoot, { mode: 0o700 });
+    const deniedPath = join(deniedRoot, "child-created");
+    const probe = privateFastNativeSandboxDenialProbe({ root, deniedPath });
+    const profile = buildCandidateSandboxProfile({
+      executablePaths: [probe.executablePath],
+      readRoots: [root, probe.executablePath],
+      writeRoots: [root],
+      deniedPaths: [deniedRoot],
+    });
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile,
+      command: probe.executablePath,
+      processExecutablePaths: [probe.executablePath],
+      args: [],
+      cwd: root,
+      env: {
+        HOME: root,
+        PATH: "/usr/bin:/bin",
+        TMPDIR: root,
+      },
+      label: "real sub-poll child denial",
+      stage: "offline-install",
+    })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
+    expect(existsSync(probe.resultPath)).toBe(false);
+    expect(existsSync(deniedPath)).toBe(false);
+  }, 20_000);
+
+  it("cleans registered descendants after root exit when full-table lookup fails without signaling reused PIDs", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const observeProcessTree = candidateModule.observeSandboxProcessTree;
+    expect(typeof observeProcessTree).toBe("function");
+    if (typeof observeProcessTree !== "function") return;
+
+    const rootPid = 4242;
+    const childPid = 4243;
+    const reusedPid = 4244;
+    const started = "Tue Sep  1 20:00:00 2026";
+    const reusedStarted = "Tue Sep  1 20:00:01 2026";
+    const rows = [
+      `${rootPid} 1 ${rootPid} S ${started} ${TEST_OBSERVER_TOOL}`,
+      `${childPid} ${rootPid} 5000 S ${started} ${TEST_OBSERVER_TOOL}`,
+      `${reusedPid} ${rootPid} 6000 S ${started} ${TEST_OBSERVER_TOOL}`,
+    ].join("\n");
+    const child = new EventEmitter() as EventEmitter & {
+      pid: number,
+      stdout: PassThrough,
+      stderr: PassThrough,
+    };
+    child.pid = rootPid;
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    const spawnProcess = vi.fn(() => {
+      setTimeout(() => child.emit("spawn"), 0);
+      setTimeout(() => child.emit("exit", 0, null), 5);
+      return child;
+    });
+    let fullTableCalls = 0;
+    let matchingChildAlive = true;
+    const pollCommand = vi.fn((_command: string, args: string[]) => {
+      if (args.includes("-axo")) {
+        fullTableCalls += 1;
+        if (fullTableCalls === 1) {
+          return { status: 0, signal: null, stdout: `${rows}\n`, stderr: "" };
+        }
+        return { status: null, signal: null, stdout: "", stderr: "lookup failed", error: { code: "EIO" } };
+      }
+      if (args.includes("-p")) {
+        const targeted = [
+          ...(matchingChildAlive
+            ? [`${childPid} ${rootPid} 5000 S ${started} ${TEST_OBSERVER_TOOL}`]
+            : []),
+          `${reusedPid} 1 6000 S ${reusedStarted} ${TEST_OBSERVER_TOOL}`,
+        ];
+        return { status: 0, signal: null, stdout: `${targeted.join("\n")}\n`, stderr: "" };
+      }
+      return { status: 1, signal: null, stdout: "", stderr: "unexpected observer command" };
+    });
+    const killProcess = vi.fn((pid: number, signal: NodeJS.Signals) => {
+      if (pid === childPid && ["SIGTERM", "SIGKILL"].includes(signal)) matchingChildAlive = false;
+    });
+
+    await expect((observeProcessTree as (options: Record<string, unknown>) => Promise<unknown>)({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      profile: "(version 1)\n(deny default)",
+      command: TEST_OBSERVER_TOOL,
+      args: [],
+      cwd: "/private/tmp",
+      env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
+      label: "post-root lookup failure fixture",
+      timeout: 1_000,
+      lsofPath: TEST_OBSERVER_TOOL,
+      psPath: TEST_OBSERVER_TOOL,
+      pollCommand,
+      spawnProcess,
+      killProcess,
+      pollIntervalMs: 20,
+    })).rejects.toThrow(/process discovery|failed closed/iu);
+    expect(killProcess).toHaveBeenCalledWith(childPid, expect.stringMatching(/^SIG/));
+    expect(killProcess.mock.calls.some(([pid]) => pid === reusedPid)).toBe(false);
+  });
+
+  it("fails closed when executable identity is unavailable after a registered child exits before lsof", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const observeProcessTree = candidateModule.observeSandboxProcessTree;
+    expect(typeof observeProcessTree).toBe("function");
+    if (typeof observeProcessTree !== "function") return;
+
+    const root = privateRoot("homecook-process-identity-race-");
+    const command = join(root, "hcnode1234abcdb");
+    copyFileSync(process.execPath, command);
+    chmodSync(command, 0o500);
+    const rootPid = 4242;
+    const childPid = 4243;
+    const started = "Tue Sep  1 20:00:00 2026";
+    const initialRows = [
+      `${rootPid} 1 ${rootPid} S ${started} ${basename(command)}`,
+      `${childPid} ${rootPid} ${rootPid} S ${started} ${basename(command)}`,
+    ].join("\n");
+    const unrelatedRows = `9898 1 9898 S ${started} ${TEST_OBSERVER_TOOL}\n`;
+    const child = new EventEmitter() as EventEmitter & {
+      pid: number,
+      stdout: PassThrough,
+      stderr: PassThrough,
+    };
+    child.pid = rootPid;
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    const spawnProcess = vi.fn(() => {
+      setTimeout(() => child.emit("spawn"), 0);
+      setTimeout(() => child.emit("exit", 0, null), 5);
+      return child;
+    });
+    let fullTableCalls = 0;
+    const pollCommand = vi.fn((_tool: string, args: string[]) => {
+      if (args.includes("-axo")) {
+        fullTableCalls += 1;
+        return {
+          status: 0,
+          signal: null,
+          stdout: fullTableCalls === 1 ? `${initialRows}\n` : unrelatedRows,
+          stderr: "",
+        };
+      }
+      if (args[0] === "-a" && args.includes("-Fn")) {
+        return { status: 0, signal: null, stdout: "", stderr: "" };
+      }
+      return { status: 1, signal: null, stdout: "", stderr: "unexpected observer command" };
+    });
+
+    await expect((observeProcessTree as (options: Record<string, unknown>) => Promise<unknown>)({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      profile: "(version 1)\n(deny default)",
+      command,
+      args: [],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin" },
+      label: "exact executable lsof race fixture",
+      timeout: 1_000,
+      lsofPath: TEST_OBSERVER_TOOL,
+      psPath: TEST_OBSERVER_TOOL,
+      pollCommand,
+      spawnProcess,
+      pollIntervalMs: 20,
+      processExecutablePaths: [command],
+    })).rejects.toThrow(/executable identity|unavailable|failed closed/iu);
+  });
+
+  it("rejects escaped process groups, post-root survivors, and unavailable discovery", async () => {
+    if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec") || !existsSync("/usr/bin/log")) return;
+    const root = privateRoot("homecook-process-tree-lifecycle-");
+    const profile = buildCandidateSandboxProfile({
+      readRoots: [root, process.execPath],
+      writeRoots: [root],
+    });
+    const escapedPidPath = join(root, "escaped.pid");
+    const sleeper = 'setTimeout(() => process.exit(0), 2000)';
+    const signalIgnoringSleeper = [
+      'process.on("SIGTERM", () => {});',
+      'setTimeout(() => process.exit(0), 30000);',
+    ].join("\n");
+    const escaped = [
+      'const { spawn } = require("node:child_process");',
+      'const { writeFileSync } = require("node:fs");',
+      `const child = spawn(process.execPath, ["-e", ${JSON.stringify(signalIgnoringSleeper)}], { detached: true, stdio: "inherit" });`,
+      `writeFileSync(${JSON.stringify(escapedPidPath)}, String(child.pid));`,
+      'setTimeout(() => process.exit(0), 500);',
+    ].join("\n");
+    const survivor = [
+      'const { spawn } = require("node:child_process");',
+      `spawn(process.execPath, ["-e", ${JSON.stringify(sleeper)}], { stdio: "inherit" });`,
+      'setTimeout(() => process.exit(0), 500);',
+    ].join("\n");
+    let escapedPid: number | undefined;
+    try {
+      for (const [stage, script] of [["escaped", escaped], ["survivor", survivor]]) {
+        await expect(runObservedSandboxCommand({
+          sandboxPath: "/usr/bin/sandbox-exec",
+          logPath: "/usr/bin/log",
+          profile,
+          command: process.execPath,
+          args: ["-e", script],
+          cwd: root,
+          env: { HOME: root, PATH: "/usr/bin:/bin" },
+          label: `${stage} process fixture`,
+          stage,
+        })).rejects.toThrow(/escaped|survivor|process tree|lifecycle|sandbox/iu);
+        if (stage === "escaped") expect(existsSync(escapedPidPath)).toBe(false);
+      }
+    } finally {
+      if (escapedPid) {
+        try { process.kill(escapedPid, "SIGKILL"); } catch { /* Already cleaned by the observer. */ }
+      }
+    }
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile,
+      command: "/bin/sleep",
+      args: ["1"],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin" },
+      label: "unavailable process discovery fixture",
+      stage: "unavailable-discovery",
+      runCommand: vi.fn(() => ({
+        status: null,
+        signal: null,
+        stdout: "",
+        stderr: "truncated",
+        error: { code: "ENOBUFS" },
+      })),
+    })).rejects.toThrow(/process discovery|truncated|failed closed/iu);
+  }, 20_000);
+
+  it("audits the full sandbox wall-clock interval and catches an early swallowed denial", async () => {
     const calls: Array<{ command: string; args: string[] }> = [];
     const start = Date.UTC(2026, 7, 29, 0, 0, 0);
     const times = [start, start + 45_999, start + 46_999];
     const runCommand = vi.fn((command: string, args: string[]) => {
       calls.push({ command, args });
-      if (command === "/usr/bin/sandbox-exec") {
-        return { status: 0, signal: null, stdout: "ok", stderr: "", pid: 4242 };
-      }
       return {
         status: 0,
         signal: null,
@@ -1384,7 +2381,26 @@ try {
         stderr: "",
       };
     });
-    expect(() => runObservedSandboxCommand({
+    const observedProcess = {
+      status: 0,
+      signal: null,
+      stdout: "ok",
+      stderr: "",
+      pid: 4242,
+      root_pgid: 4242,
+      process_tree_complete: true,
+      observer_tool_identity_digest: DIGEST_B,
+      process_identities: [{
+        pid: 4242,
+        ppid: 1,
+        pgid: 4242,
+        started_at: "Tue Sep  1 20:00:00 2026",
+        executable_identity_digest: DIGEST_A,
+      }],
+      escaped_process_count: 0,
+      surviving_process_count: 0,
+    };
+    await expect(runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
       logPath: "/usr/bin/log",
       profile: "(version 1) (deny default)",
@@ -1395,18 +2411,19 @@ try {
       label: "long fixture build",
       timeout: 60_000,
       runCommand,
+      observeProcessTree: vi.fn(async () => observedProcess),
       now: () => times.shift(),
       waitForAuditFlush: vi.fn(),
       formatAuditTime: (milliseconds: number) => new Date(milliseconds).toISOString().replace("T", " ").slice(0, 19),
-    })).toThrow(/observed|denied|sandbox|attempt/iu);
-    expect(calls[1].args).not.toContain("--last");
-    expect(calls[1].args).toEqual(expect.arrayContaining(["--start", "2026-08-28 23:59:59", "--end", "2026-08-29 00:00:48"]));
-    expect(calls[1].args.at(-1)).toContain('eventMessage CONTAINS "Sandbox: node(4242)"');
+    })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
+    expect(calls[0].args).not.toContain("--last");
+    expect(calls[0].args).toEqual(expect.arrayContaining(["--start", "2026-08-28 23:59:59", "--end", "2026-08-29 00:00:48"]));
+    expect(calls[0].args.at(-1)).toContain('eventMessage CONTAINS "Sandbox:"');
 
-    const unavailableAudit = vi.fn((command: string) => command === "/usr/bin/sandbox-exec"
-      ? { status: 0, signal: null, stdout: "ok", stderr: "", pid: 4242 }
-      : { status: null, signal: null, stdout: "", stderr: "truncated", error: { code: "ENOBUFS" } });
-    expect(() => runObservedSandboxCommand({
+    const unavailableAudit = vi.fn(() => ({
+      status: null, signal: null, stdout: "", stderr: "truncated", error: { code: "ENOBUFS" },
+    }));
+    await expect(runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
       logPath: "/usr/bin/log",
       profile: "(version 1) (deny default)",
@@ -1416,13 +2433,356 @@ try {
       env: { HOME: "/private/tmp", PATH: "/usr/bin:/bin" },
       label: "unavailable audit fixture",
       runCommand: unavailableAudit,
+      observeProcessTree: vi.fn(async () => observedProcess),
       now: vi.fn()
         .mockReturnValueOnce(start)
         .mockReturnValueOnce(start + 1)
         .mockReturnValueOnce(start + 1_501),
       waitForAuditFlush: vi.fn(),
       formatAuditTime: (milliseconds: number) => new Date(milliseconds).toISOString().replace("T", " ").slice(0, 19),
-    })).toThrow(/audit|failed closed|query/iu);
+    })).rejects.toThrow(/audit|failed closed|query/iu);
+  });
+
+  it("binds stage and complete process-tree identity into the audit digest", () => {
+    const base = {
+      status: 0,
+      signal: null,
+      stdout: "ok",
+      stderr: "",
+      observed_denials: [],
+      process_lifecycle_enforcement: "macos-sandbox-deny-process-fork",
+      process_attempt_count: 0,
+      process_tree_complete: true,
+      root_pid: 4242,
+      root_pgid: 4242,
+      observer_tool_identity_digest: DIGEST_B,
+      process_identities: [{
+        pid: 4242,
+        ppid: 1,
+        pgid: 4242,
+        started_at: "2026-09-01T11:00:00.123456Z",
+        process_name: "hcnode1234abcdi",
+        execution_audit_token: "01".repeat(32),
+        process_instance_id: DIGEST_C,
+        executable_path: "/private/tmp/hcnode1234abcdi",
+        executable_identity_digest: DIGEST_A,
+      }],
+      audit_started_at: "2026-08-29T00:00:00.000Z",
+      audit_ended_at: "2026-08-29T00:00:01.000Z",
+      escaped_process_count: 0,
+      surviving_process_count: 0,
+      stage: "install",
+    };
+    const install = validateSandboxedBuildResult(base, "install fixture");
+    const build = validateSandboxedBuildResult({ ...base, stage: "build" }, "build fixture");
+    expect(install.audit_digest).not.toBe(build.audit_digest);
+    expect(() => validateSandboxedBuildResult({
+      ...base,
+      process_tree_complete: false,
+    }, "incomplete tree fixture")).toThrow(/process tree|complete|discovery/iu);
+    expect(() => validateSandboxedBuildResult({
+      ...base,
+      observer_tool_identity_digest: undefined,
+    }, "missing observer tool fixture")).toThrow(/observer|tool|identity/iu);
+    expect(() => validateSandboxedBuildResult({
+      ...base,
+      process_identities: [{
+        ...base.process_identities[0],
+        pid: 4243,
+      }],
+    }, "missing root identity fixture")).toThrow(/process tree|root|identity/iu);
+    expect(() => validateSandboxedBuildResult({
+      ...base,
+      process_identities: [{
+        ...base.process_identities[0],
+        pgid: 9999,
+      }],
+    }, "escaped identity fixture")).toThrow(/process tree|group|identity|escaped/iu);
+    expect(() => validateSandboxedBuildResult({
+      ...base,
+      process_identities: [
+        base.process_identities[0],
+        {
+          ...base.process_identities[0],
+          pid: 4243,
+          ppid: 4242,
+          process_instance_id: DIGEST_B,
+        },
+      ],
+    }, "unproven child completeness fixture")).toThrow(/single|child|complete|lifecycle|process tree/iu);
+  });
+
+  it("uses an in-process macOS witness and denies every child creation before untrusted Node code", async () => {
+    if (
+      process.platform !== "darwin"
+      || !existsSync("/usr/bin/clang")
+      || !existsSync("/usr/bin/log")
+    ) return;
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const materializeWitness = candidateModule.materializeSandboxProcessWitness;
+    expect(typeof materializeWitness).toBe("function");
+    if (typeof materializeWitness !== "function") return;
+
+    const root = privateRoot("homecook-process-witness-");
+    const command = privateNodeClone(root, "1234abcdw");
+    const witnessPath = join(root, "sandbox-process-witness.node");
+    const witness = (materializeWitness as (options: Record<string, unknown>) => {
+      path: string;
+      identity_digest: string;
+    })({
+      clangPath: "/usr/bin/clang",
+      nodePath: process.execPath,
+      outputPath: witnessPath,
+    });
+    expect(witness.path).toBe(realpathSync(witnessPath));
+    expect(witness.identity_digest).toMatch(/^[0-9a-f]{64}$/u);
+
+    const profile = buildCandidateSandboxProfile({
+      executablePaths: [command],
+      readRoots: [root, command, witnessPath],
+      writeRoots: [root],
+    });
+    expect(profile).toContain("(deny process-fork");
+    expect(profile).not.toContain("(allow process-fork)");
+
+    const successful = await runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: witnessPath,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      processExecutablePaths: [command],
+      args: ["-e", 'process.stdout.write("witnessed\\n")'],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "witnessed no-child root",
+      stage: "witness-root",
+    } as never) as { audit_digest: string; process_instance_digest?: string };
+    expect(successful.audit_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(successful.process_instance_digest).toMatch(/^[0-9a-f]{64}$/u);
+
+    const timeoutPidPath = join(root, "timeout.pid");
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: witnessPath,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      processExecutablePaths: [command],
+      args: ["-e", `require("node:fs").writeFileSync(${JSON.stringify(timeoutPidPath)},String(process.pid));setTimeout(()=>{},30000)`],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "audit-token-bound timeout termination",
+      stage: "next-build",
+      timeout: 100,
+    } as never)).rejects.toThrow(/failed|timeout|sandbox|observed/iu);
+    const timeoutPid = Number(readFileSync(timeoutPidPath, "utf8"));
+    expect(() => process.kill(timeoutPid, 0)).toThrowError(expect.objectContaining({ code: "ESRCH" }));
+
+    const workerThreadProjection = [
+      'const { Worker } = require("node:worker_threads");',
+      'const worker = new Worker("const { parentPort } = require(\\\"node:worker_threads\\\"); parentPort.once(\\\"message\\\", value => parentPort.postMessage(value.callback === null));", { eval: true });',
+      'worker.once("message", ok => process.exit(ok ? 0 : 70));',
+      'worker.postMessage({ callback: () => null });',
+      'setTimeout(() => process.exit(71), 3000);',
+    ].join("\n");
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: witnessPath,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      processExecutablePaths: [command],
+      args: ["-e", workerThreadProjection],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "worker-thread config projection",
+      stage: "worker-thread-projection",
+    } as never)).resolves.toMatchObject({
+      audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      process_instance_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+
+    const spawnAndIgnore = [
+      'const { spawnSync } = require("node:child_process");',
+      'spawnSync(process.execPath, ["-e", "process.exit(0)"]);',
+      'process.exit(0);',
+    ].join("\n");
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: witnessPath,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      processExecutablePaths: [command],
+      args: ["-e", spawnAndIgnore],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "sub-20ms normal child attempt",
+      stage: "short-child",
+    } as never)).rejects.toThrow(/child|fork|sandbox|denied|attempt/iu);
+
+    const escapedPidPath = join(root, "escaped.pid");
+    const detachedAndNested = [
+      'const { spawn } = require("node:child_process");',
+      'const { writeFileSync } = require("node:fs");',
+      'const nested = "require(\\\"node:child_process\\\").spawn(process.execPath,[\\\"-e\\\",\\\"setTimeout(()=>{},30000)\\\"],{detached:true})";',
+      'const child = spawn(process.execPath, ["-e", nested], { detached: true, stdio: "ignore" });',
+      `if (child.pid) writeFileSync(${JSON.stringify(escapedPidPath)}, String(child.pid));`,
+      'process.exit(0);',
+    ].join("\n");
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: witnessPath,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      processExecutablePaths: [command],
+      args: ["-e", detachedAndNested],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "detached nested child before observer fallback",
+      stage: "detached-nested-child",
+    } as never)).rejects.toThrow(/child|fork|sandbox|denied|attempt/iu);
+    expect(existsSync(escapedPidPath)).toBe(false);
+  }, 30_000);
+
+  it("reaps the exact live child on every initial witness rejection branch", async () => {
+    if (process.platform !== "darwin" || !existsSync("/usr/bin/clang")) return;
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const materializeWitness = candidateModule.materializeSandboxProcessWitness;
+    const observeWitnessedRoot = candidateModule.observeWitnessedSandboxRoot;
+    expect(typeof materializeWitness).toBe("function");
+    expect(typeof observeWitnessedRoot).toBe("function");
+    if (typeof materializeWitness !== "function" || typeof observeWitnessedRoot !== "function") return;
+
+    const root = privateRoot("homecook-initial-witness-rejection-");
+    const command = privateNodeClone(root, "1234abcdj");
+    const witnessPath = join(root, "sandbox-process-witness.node");
+    (materializeWitness as (options: Record<string, unknown>) => unknown)({
+      clangPath: "/usr/bin/clang",
+      nodePath: process.execPath,
+      outputPath: witnessPath,
+    });
+    const profile = buildCandidateSandboxProfile({
+      executablePaths: [command],
+      readRoots: [root, command, witnessPath],
+      writeRoots: [root],
+    });
+    const cases = [
+      ["unavailable", () => Buffer.alloc(0), /unavailable/iu],
+      ["overflow", () => Buffer.concat([Buffer.from("{}\n"), Buffer.alloc(65 * 1024)]), /unavailable|overflow/iu],
+      ["malformed", () => Buffer.from("{malformed\n"), /malformed/iu],
+      ["mismatch", (chunk: Buffer) => {
+        const witness = JSON.parse(chunk.toString("utf8").split("\n")[0]);
+        return Buffer.from(`${JSON.stringify({ ...witness, pid: witness.pid + 1 })}\n`);
+      }, /match|instance/iu],
+    ] as const;
+    for (const [name, transformInitialWitnessChunk, message] of cases) {
+      let livePid = 0;
+      await expect((observeWitnessedRoot as (options: Record<string, unknown>) => Promise<unknown>)({
+        profile,
+        command,
+        args: ["-e", "setTimeout(() => {}, 30000)"],
+        cwd: root,
+        env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+        label: `initial witness ${name}`,
+        timeout: 10_000,
+        initialWitnessTimeout: 100,
+        sandboxWitnessPath: witnessPath,
+        transformInitialWitnessChunk,
+        afterTrustedProcessStart: (pid: number) => { livePid = pid; },
+      })).rejects.toThrow(message);
+      expect(livePid).toBeGreaterThan(0);
+      expect(() => process.kill(livePid, 0)).toThrowError(expect.objectContaining({ code: "ESRCH" }));
+    }
+  }, 30_000);
+
+  it("rejects an executable pathname swap using only run-owned Node copies", async () => {
+    if (
+      process.platform !== "darwin"
+      || !existsSync("/usr/bin/clang")
+    ) return;
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const materializeWitness = candidateModule.materializeSandboxProcessWitness;
+    const observeWitnessedRoot = candidateModule.observeWitnessedSandboxRoot;
+    expect(typeof materializeWitness).toBe("function");
+    expect(typeof observeWitnessedRoot).toBe("function");
+    if (typeof materializeWitness !== "function" || typeof observeWitnessedRoot !== "function") return;
+
+    const root = privateRoot("homecook-executable-swap-");
+    const command = privateNodeClone(root, "1234abcds");
+    const original = `${command}.original`;
+    const replacement = privateNodeClone(root, "1234abcdr");
+    const commandIdentity = lstatSync(command, { bigint: true });
+    const replacementIdentity = lstatSync(replacement, { bigint: true });
+    expect(replacementIdentity.ino).not.toBe(commandIdentity.ino);
+    const witnessPath = join(root, "sandbox-process-witness.node");
+    (materializeWitness as (options: Record<string, unknown>) => unknown)({
+      clangPath: "/usr/bin/clang",
+      nodePath: process.execPath,
+      outputPath: witnessPath,
+    });
+    const profile = buildCandidateSandboxProfile({
+      executablePaths: [command],
+      readRoots: [root, command, witnessPath],
+      writeRoots: [root],
+    });
+    let swapped = false;
+    try {
+      await expect((observeWitnessedRoot as (options: Record<string, unknown>) => Promise<unknown>)({
+        profile,
+        command,
+        args: ["-e", "setTimeout(() => process.exit(0), 100)"],
+        cwd: root,
+        env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+        label: "executable swap-and-restore fixture",
+        timeout: 5_000,
+        sandboxWitnessPath: witnessPath,
+        afterExecutableSnapshot: () => {
+          renameSync(command, original);
+          renameSync(replacement, command);
+          chmodSync(command, 0o500);
+          swapped = true;
+        },
+      })).rejects.toThrow(/executable|instance|witness|drift|mismatch/iu);
+      expect(swapped).toBe(true);
+    } finally {
+      if (swapped) {
+        unlinkSync(command);
+        renameSync(original, command);
+      }
+    }
+  }, 20_000);
+
+  it("never signals a reused PID when the witnessed process instance no longer matches", async () => {
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const signalWitnessedProcessInstance = candidateModule.signalWitnessedProcessInstance;
+    expect(typeof signalWitnessedProcessInstance).toBe("function");
+    if (typeof signalWitnessedProcessInstance !== "function") return;
+    const signalProcess = vi.fn();
+    const verifyProcessInstance = vi.fn(() => false);
+    await expect((signalWitnessedProcessInstance as (options: Record<string, unknown>) => unknown)({
+      pid: 4242,
+      signal: "SIGKILL",
+      witness: {
+        pid: 4242,
+        pidversion: 7,
+        started_at_sec: 1_788_436_000,
+        started_at_usec: 123_456,
+        executable_path: "/private/tmp/hcnode1234abcdx",
+        device: "1",
+        inode: "2",
+        size: "3",
+        ctime_sec: 4,
+        ctime_nsec: 5,
+        executable_sha256: DIGEST_A,
+      },
+      verifyProcessInstance,
+      signalProcess,
+    })).rejects.toThrow(/instance|reused|signal|failed closed/iu);
+    expect(verifyProcessInstance).toHaveBeenCalledOnce();
+    expect(signalProcess).not.toHaveBeenCalled();
   });
 
   it("loads the canonical tool lock and rejects self-reported Supabase identity without the pinned binary digest", () => {
@@ -1751,7 +3111,7 @@ describe("release rehearsal build environment FD snapshot", () => {
 
 describe("release rehearsal candidate orchestration", () => {
   it("separates portable candidate bytes from exact root-local physical authority", async () => {
-    const fixture = await createCompletedRehearsalCandidateFixture();
+    const fixture = await createCompletedRehearsalCandidateFixture(undefined, { tempRegistry: ownedTempRegistry });
     expect(readCompletedCandidateRoot(fixture.candidateRoot).manifest)
       .toEqual(fixture.manifest);
     expect(JSON.parse(readFileSync(fixture.physicalAuthorityPath, "utf8")))
@@ -1906,7 +3266,10 @@ describe("release rehearsal candidate orchestration", () => {
       || typeof buildContainerContract !== "function"
     ) return;
 
-    const fixture = await createCompletedRehearsalCandidateFixture("homecook-container-candidate-");
+    const fixture = await createCompletedRehearsalCandidateFixture(
+      "homecook-container-candidate-",
+      { tempRegistry: ownedTempRegistry },
+    );
     const containerAuthorityRoot = `${fixture.candidateRoot}.container-authority`;
     const containerAuthorityPath = join(containerAuthorityRoot, "authority.json");
     const issued = (issueContainerAuthority as (options: {
@@ -1991,7 +3354,10 @@ describe("release rehearsal candidate orchestration", () => {
     expect(typeof verifyStable).toBe("function");
     if (typeof verifyStable !== "function") return;
 
-    const fixture = await createCompletedRehearsalCandidateFixture("homecook-candidate-stable-scan-");
+    const fixture = await createCompletedRehearsalCandidateFixture(
+      "homecook-candidate-stable-scan-",
+      { tempRegistry: ownedTempRegistry },
+    );
     let fullCafsReads = 0;
     const observe = (entry: { contentVerified?: boolean; relativePath: string }) => {
       if (entry.contentVerified === true && entry.relativePath.startsWith("files/")) fullCafsReads += 1;
@@ -2026,6 +3392,7 @@ describe("release rehearsal candidate orchestration", () => {
     for (const attack of ["mutate-restore", "swap-restore"] as const) {
       const fixture = await createCompletedRehearsalCandidateFixture(
         `homecook-candidate-directory-${attack}-`,
+        { tempRegistry: ownedTempRegistry },
       );
       const bundleRoot = join(fixture.candidateRoot, "bundles", "bundle");
       const appRoot = join(bundleRoot, "app");
@@ -2131,6 +3498,7 @@ describe("release rehearsal candidate orchestration", () => {
 
     const rootAlias = join(dirname(aliasRoot), `${basename(aliasRoot)}-root-alias`);
     symlinkSync(aliasRoot, rootAlias);
+    registerOwnedTempAlias(rootAlias, aliasRoot);
     expect(() => readSealedAuthorityFile(
       rootAlias, join(rootAlias, "actual", "authority.json"), "root alias authority",
     )).toThrow(/root|canonical|symlink|alias/iu);
@@ -2329,7 +3697,57 @@ describe("release rehearsal candidate orchestration", () => {
     expect(profile).toContain(productionRoot);
     expect(profile).toContain("/var/run/docker.sock");
 
+    const exactNodePath = realpathSync("/usr/bin/true");
+    const exactExecutableProfile = buildCandidateSandboxProfile({
+      readRoots: [runRoot, exactNodePath],
+      writeRoots: [runRoot],
+      deniedWritePaths: [immutableSource],
+      deniedPaths: [productionRoot, "/var/run/docker.sock"],
+      executablePaths: [exactNodePath],
+    } as Parameters<typeof buildCandidateSandboxProfile>[0]);
+    expect(exactExecutableProfile).toContain(`(allow process-exec (literal \"${exactNodePath}\"))`);
+    expect(exactExecutableProfile).not.toContain("(allow process-exec)\n");
+    const auditNodePath = join(root, "hcnode1234abcdi");
+    copyFileSync(process.execPath, auditNodePath);
+    chmodSync(auditNodePath, 0o500);
+    const auditedProfile = buildCandidateSandboxProfile({
+      readRoots: [runRoot, auditNodePath],
+      writeRoots: [runRoot],
+      deniedWritePaths: [immutableSource],
+      deniedPaths: [productionRoot],
+      executablePaths: [auditNodePath],
+    });
+    const auditMessageRule = '(with message "homecook-sandbox-hcnode1234abcdi")';
+    expect(auditedProfile).toContain(`(deny default ${auditMessageRule})`);
+    expect(auditedProfile).toContain(`(deny network* ${auditMessageRule})`);
+    expect(auditedProfile).toContain(`(subpath "${productionRoot}") ${auditMessageRule})`);
+    expect(auditedProfile).toContain(`(subpath "${immutableSource}") ${auditMessageRule})`);
+    const unsafeExecutable = join(runRoot, "unsafe-executable");
+    writeFileSync(unsafeExecutable, "#!/bin/sh\n", { mode: 0o720 });
+    chmodSync(unsafeExecutable, 0o720);
+    expect(() => buildCandidateSandboxProfile({
+      readRoots: [runRoot],
+      writeRoots: [runRoot],
+      executablePaths: [unsafeExecutable],
+    })).toThrow(/executable|mode|unsafe/iu);
+    const nonExecutable = join(runRoot, "non-executable");
+    writeFileSync(nonExecutable, "fixture\n", { mode: 0o600 });
+    expect(() => buildCandidateSandboxProfile({
+      readRoots: [runRoot],
+      writeRoots: [runRoot],
+      executablePaths: [nonExecutable],
+    })).toThrow(/executable|mode|unsafe/iu);
+
     if (process.platform === "darwin" && existsSync("/usr/bin/sandbox-exec")) {
+      const exactNode = spawnSync("/usr/bin/sandbox-exec", [
+        "-p", exactExecutableProfile, exactNodePath,
+      ], { cwd: runRoot });
+      const otherExecutable = spawnSync("/usr/bin/sandbox-exec", [
+        "-p", exactExecutableProfile, "/usr/bin/echo", "unexpected",
+      ], { cwd: runRoot });
+      expect(exactNode.status).toBe(0);
+      expect(otherExecutable.status).not.toBe(0);
+
       const allowed = spawnSync("/usr/bin/sandbox-exec", [
         "-p", profile, "/usr/bin/touch", join(runRoot, "allowed"),
       ], { cwd: runRoot });
@@ -2337,7 +3755,12 @@ describe("release rehearsal candidate orchestration", () => {
         "-p", profile, "/usr/bin/touch", join(productionRoot, "denied"),
       ], { cwd: runRoot });
       const socketRead = spawnSync("/usr/bin/sandbox-exec", [
-        "-p", profile, "/usr/bin/stat", "/var/run/docker.sock",
+        "-p", profile, process.execPath, "-e", [
+          'const socket = require("node:net").connect("/var/run/docker.sock");',
+          'socket.once("connect", () => process.exit(0));',
+          'socket.once("error", () => process.exit(1));',
+          'setTimeout(() => process.exit(2), 1000);',
+        ].join(" "),
       ], { cwd: runRoot });
       const sourceWrite = spawnSync("/usr/bin/sandbox-exec", [
         "-p", profile, "/usr/bin/touch", join(immutableSource, "mutated"),
@@ -2356,7 +3779,7 @@ describe("release rehearsal candidate orchestration", () => {
           'setTimeout(() => process.exit(2), 2000);',
         ].join(" "),
       ], { cwd: runRoot });
-      expect(childSignal.status).toBe(0);
+      expect(childSignal.status).not.toBe(0);
       const sibling = spawn("/bin/sleep", ["30"], { stdio: "ignore" });
       try {
         const signalAttempt = spawnSync("/usr/bin/sandbox-exec", [
@@ -2376,6 +3799,462 @@ describe("release rehearsal candidate orchestration", () => {
         sibling.kill("SIGKILL");
       }
     }
+  });
+
+  it("keeps diagnosticd denied while classifying only that exact Mach lookup as platform noise", async () => {
+    if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) return;
+    const root = privateRoot("homecook-candidate-diagnosticd-deny-");
+    const pythonPath = realpathSync(
+      "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+    );
+    const lookupScript = (service: string, expectDenied: boolean) => [
+      "import ctypes,sys",
+      "lib=ctypes.CDLL(None)",
+      "port=ctypes.c_uint()",
+      'bootstrap=ctypes.c_uint.in_dll(lib,"bootstrap_port").value',
+      `result=lib.bootstrap_look_up(bootstrap,${JSON.stringify(service)}.encode(),ctypes.byref(port))`,
+      "print(result)",
+      `sys.exit(0 if ${expectDenied ? "result != 0" : "result == 0"} else 70)`,
+    ].join(";");
+    const outside = spawnSync(pythonPath, [
+      "-I", "-c", lookupScript("com.apple.diagnosticd", false),
+    ], { encoding: "utf8" });
+    expect(outside.status, outside.stderr).toBe(0);
+    expect(outside.stdout.trim()).toBe("0");
+
+    const pythonRuntimePaths = [
+      "/private/etc/localtime",
+      "/private/var/db/timezone/zoneinfo/UTC",
+      realpathSync("/private/etc/localtime"),
+      realpathSync("/private/var/db/timezone/zoneinfo/UTC"),
+    ];
+    const command = privateNodeClone(root, "1234abcdd");
+    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+    const materializeWitness = candidateModule.materializeSandboxProcessWitness;
+    expect(typeof materializeWitness).toBe("function");
+    if (typeof materializeWitness !== "function") return;
+    const sandboxWitnessPath = join(root, "sandbox-process-witness.node");
+    const sandboxWitness = (materializeWitness as (options: Record<string, unknown>) => {
+      path: string;
+      preload_path: string;
+    })({
+      clangPath: "/usr/bin/clang",
+      nodePath: process.execPath,
+      outputPath: sandboxWitnessPath,
+    });
+    const eagerNetworkDetector = join(root, "reject-eager-network-load.cjs");
+    writeFileSync(eagerNetworkDetector, [
+      'const Module = require("node:module");',
+      'const originalLoad = Module._load;',
+      'Module._load = function rejectEagerNetworkLoad(request, ...args) {',
+      '  if (request === "net" || request === "node:net") process.exit(79);',
+      '  return Reflect.apply(originalLoad, this, [request, ...args]);',
+      '};',
+    ].join("\n"), { mode: 0o400 });
+    const preloadInitialization = spawnSync(command, ["-e", 'process.stdout.write("ready")'], {
+      cwd: root,
+      env: {
+        HOME: root,
+        HOMECOOK_SANDBOX_WITNESS_MODULE: sandboxWitness.path,
+        NODE_ENV: "test",
+        NODE_OPTIONS: [
+          `--require=${eagerNetworkDetector}`,
+          `--require=${sandboxWitness.preload_path}`,
+        ].join(" "),
+        PATH: "/usr/bin:/bin",
+        TMPDIR: root,
+      },
+      encoding: "utf8",
+    });
+    expect(preloadInitialization.status, preloadInitialization.stderr).toBe(0);
+    expect(preloadInitialization.stdout).toBe("ready");
+    const witnessedLookupScript = (service: string, expectDenied: boolean) => [
+      `const witness = require(${JSON.stringify(sandboxWitness.path)});`,
+      `const result = witness.lookupMachService(${JSON.stringify(service)});`,
+      "process.stdout.write(String(result));",
+      `process.exit(${expectDenied ? "result !== 0 ? 0 : 70" : "result === 0 ? 0 : 70"});`,
+    ].join("\n");
+    const profile = buildCandidateSandboxProfile({
+      executablePaths: [command],
+      readRoots: [root, command, sandboxWitness.path, sandboxWitness.preload_path, ...new Set(pythonRuntimePaths)],
+      writeRoots: [root],
+      deniedWritePaths: [sandboxWitness.path, sandboxWitness.preload_path],
+    });
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      args: ["-e", witnessedLookupScript("com.apple.diagnosticd", true)],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "exact diagnosticd denied lookup",
+      processExecutablePaths: [command],
+      stage: "diagnosticd-deny",
+    })).resolves.toMatchObject({
+      audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+    expect(profile).toContain(
+      '(deny mach-lookup (global-name "com.apple.diagnosticd") (with no-log))',
+    );
+    expect(profile.match(/com\.apple\.diagnosticd/gu)).toHaveLength(1);
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      args: ["-e", [
+        'const dns = require("node:dns");',
+        'if (dns.ADDRCONFIG !== 1024 || typeof dns.lookup !== "function") process.exit(70);',
+      ].join("\n")],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "offline CommonJS DNS initialization",
+      processExecutablePaths: [command],
+      stage: "offline-install",
+    })).resolves.toMatchObject({
+      audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+
+    const observeWitnessedRoot = candidateModule.observeWitnessedSandboxRoot;
+    expect(typeof observeWitnessedRoot).toBe("function");
+    if (typeof observeWitnessedRoot !== "function") return;
+    const allDnsAccessors = [
+      'import dnsNode, { lookup as staticNodeLookup } from "node:dns";',
+      'import dnsBare, { lookup as staticBareLookup } from "dns";',
+      'import promisesNode, { lookup as staticNodePromiseLookup } from "node:dns/promises";',
+      'import promisesBare, { lookup as staticBarePromiseLookup } from "dns/promises";',
+      'import { createRequire } from "node:module";',
+      'const require = createRequire(import.meta.url);',
+      'const syncCalls = [',
+      '  () => require("dns").lookup("127.0.0.1", () => {}),',
+      '  () => require("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => staticNodeLookup("127.0.0.1", () => {}),',
+      '  () => staticBareLookup("127.0.0.1", () => {}),',
+      '  () => new dnsNode.Resolver(), () => new dnsBare.Resolver(),',
+      '];',
+      'for (const call of syncCalls) { try { call(); } catch {} }',
+      'const promiseModules = [',
+      '  require("dns/promises"), require("node:dns/promises"),',
+      '  process.getBuiltinModule("dns/promises"), process.getBuiltinModule("node:dns/promises"),',
+      '  promisesNode, promisesBare, await import("node:dns/promises"), await import("dns/promises"),',
+      '];',
+      'for (const dns of promiseModules) {',
+      '  try { new dns.Resolver(); } catch {}',
+      '  try { await dns.lookup("127.0.0.1"); } catch {}',
+      '}',
+      'for (const dns of [await import("node:dns"), await import("dns")]) {',
+      '  try { dns.lookup("127.0.0.1", () => {}); } catch {}',
+      '}',
+      'process.stdout.write("all-dns-accessors-attempted\\n");',
+    ].join("\n");
+    const accessResult = await (observeWitnessedRoot as (options: Record<string, unknown>) => Promise<{
+      process_attempt_count: number;
+      process_attempt_kinds: string[];
+      stdout: string;
+    }>)({
+      profile,
+      command,
+      args: ["--input-type=module", "-e", allDnsAccessors],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "all Node 22 DNS built-in accessors",
+      timeout: 10_000,
+      sandboxWitnessPath: sandboxWitness.path,
+      offlineDnsProjection: true,
+    });
+    expect(accessResult).toMatchObject({ status: 0, signal: null, stderr: "" });
+    expect(accessResult.stdout).toBe("all-dns-accessors-attempted\n");
+    expect(accessResult.process_attempt_count).toBe(26);
+    expect(new Set(accessResult.process_attempt_kinds)).toEqual(new Set(["network"]));
+
+    const workerDnsPath = join(root, "worker-dns-accessors.mjs");
+    writeFileSync(workerDnsPath, [
+      'import dnsNode, { lookup as staticNodeLookup } from "node:dns";',
+      'import dnsBare, { lookup as staticBareLookup } from "dns";',
+      'import promisesNode, { lookup as staticNodePromiseLookup } from "node:dns/promises";',
+      'import promisesBare, { lookup as staticBarePromiseLookup } from "dns/promises";',
+      'import { createRequire } from "node:module";',
+      'import { parentPort } from "node:worker_threads";',
+      'const require = createRequire(import.meta.url);',
+      'const syncCalls = [',
+      '  () => require("dns").lookup("127.0.0.1", () => {}),',
+      '  () => require("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("dns").lookup("127.0.0.1", () => {}),',
+      '  () => process.getBuiltinModule("node:dns").lookup("127.0.0.1", () => {}),',
+      '  () => staticNodeLookup("127.0.0.1", () => {}),',
+      '  () => staticBareLookup("127.0.0.1", () => {}),',
+      '  () => new dnsNode.Resolver(), () => new dnsBare.Resolver(),',
+      '];',
+      'for (const call of syncCalls) { try { call(); } catch {} }',
+      'const promiseModules = [',
+      '  require("dns/promises"), require("node:dns/promises"),',
+      '  process.getBuiltinModule("dns/promises"), process.getBuiltinModule("node:dns/promises"),',
+      '  promisesNode, promisesBare, await import("node:dns/promises"), await import("dns/promises"),',
+      '];',
+      'for (const dns of promiseModules) {',
+      '  try { new dns.Resolver(); } catch {}',
+      '  try { await dns.lookup("127.0.0.1"); } catch {}',
+      '}',
+      'for (const dns of [await import("node:dns"), await import("dns")]) {',
+      '  try { dns.lookup("127.0.0.1", () => {}); } catch {}',
+      '}',
+      'parentPort.postMessage({ value: "worker-dns-accessors-attempted", gate: process.env.HOMECOOK_OFFLINE_DNS_PROJECTION ?? null, execArgv: process.execArgv });',
+    ].join("\n"), { mode: 0o400 });
+    const workerDnsDriver = [
+      'const { Worker } = require("node:worker_threads");',
+      'process.stdout.write(`${Worker.name}\\n`);',
+      `const worker = new Worker(${JSON.stringify(workerDnsPath)}, { env: { HOME: process.env.HOME, PATH: process.env.PATH, TMPDIR: process.env.TMPDIR } });`,
+      'worker.once("message", value => { process.stdout.write(`${JSON.stringify(value)}\\n`); });',
+      'worker.once("exit", code => process.exit(code));',
+      'worker.once("error", error => { throw error; });',
+    ].join("\n");
+    const workerAccessResult = await (observeWitnessedRoot as (options: Record<string, unknown>) => Promise<{
+      process_attempt_count: number;
+      process_attempt_kinds: string[];
+      stdout: string;
+    }>)({
+      profile,
+      command,
+      args: ["-e", workerDnsDriver],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "worker-thread Node 22 DNS built-in accessors",
+      timeout: 10_000,
+      sandboxWitnessPath: sandboxWitness.path,
+      offlineDnsProjection: true,
+    });
+    expect(workerAccessResult).toMatchObject({ status: 0, signal: null });
+    expect(workerAccessResult.stdout.split("\n")[0]).toBe("HomecookOfflineDnsWorker");
+    expect(JSON.parse(workerAccessResult.stdout.split("\n")[1])).toEqual({
+      value: "worker-dns-accessors-attempted",
+      gate: null,
+      execArgv: [`--require=${sandboxWitness.preload_path}`],
+    });
+    expect(workerAccessResult.process_attempt_count).toBe(26);
+    expect(new Set(workerAccessResult.process_attempt_kinds)).toEqual(new Set(["network"]));
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      args: ["-e", 'process.getBuiltinModule("dns").lookup("127.0.0.1",()=>{})'],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "offline DNS validation failure",
+      processExecutablePaths: [command],
+      stage: "offline-install",
+    })).rejects.toThrow(/network|attempt|sandbox|failed/iu);
+
+    const applicationDnsSentinel = spawnSync(command, [
+      "-e", [
+        'const dns = require("node:dns");',
+        'dns.lookup("127.0.0.1", error => process.exit(error ? 70 : 0));',
+      ].join("\n"),
+    ], {
+      cwd: root,
+      env: {
+        HOME: root,
+        HOMECOOK_SANDBOX_WITNESS_MODULE: sandboxWitness.path,
+        NODE_OPTIONS: `--require=${sandboxWitness.preload_path}`,
+        NODE_ENV: "test",
+        PATH: "/usr/bin:/bin",
+        TMPDIR: root,
+      },
+      encoding: "utf8",
+    });
+    expect(applicationDnsSentinel.status, applicationDnsSentinel.stderr).toBe(0);
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
+      args: ["-e", witnessedLookupScript("com.apple.coreservices.launchservicesd", true)],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "adjacent Mach lookup denial",
+      processExecutablePaths: [command],
+      stage: "adjacent-mach-deny",
+    })).rejects.toThrow(/observed|denied|sandbox|attempt/iu);
+  }, 60_000);
+
+  it("allows only root metadata for the observed macOS /etc and /var aliases", () => {
+    const root = privateRoot("homecook-candidate-macos-root-aliases-");
+    const profile = buildCandidateSandboxProfile({
+      readRoots: [root, process.execPath],
+      writeRoots: [root],
+    });
+    const aliasEnv: NodeJS.ProcessEnv = {
+      HOME: root,
+      NODE_ENV: "test",
+      PATH: "/usr/bin:/bin",
+    };
+    expect(profile).toContain(
+      '(allow file-read-metadata (literal "/etc") (literal "/var"))',
+    );
+    expect(profile).not.toContain('(allow file-read-data (literal "/etc")');
+    expect(profile).not.toContain('(allow file-read-data (literal "/var")');
+    expect(profile).not.toContain('(allow file-write* (subpath "/etc")');
+    expect(profile).not.toContain('(allow file-write* (subpath "/var")');
+    expect(profile).not.toContain('(subpath "/private/etc")');
+    expect(profile).not.toContain('(subpath "/private/var/db")');
+    expect(profile).toContain('(literal "/private/var/db/timezone/zoneinfo/posixrules")');
+    expect(profile).toContain("(deny mach-lookup");
+    expect(profile).not.toContain('(global-name "com.apple.system.notification_center")');
+    expect(profile).not.toContain("com.apple.SystemConfiguration.DNSConfiguration");
+    expect(profile).not.toContain("com.apple.logd");
+    expect(profile).not.toContain("com.apple.system.opendirectoryd.libinfo");
+    expect(profile).not.toContain("apple.shm.notification_center");
+    expect(profile).not.toContain('(literal "/dev/dtracehelper") (with no-log)');
+    expect(profile).not.toContain('(literal "/private/etc/passwd") (with no-log)');
+    expect(profile.match(/\(with no-log\)/gu)).toHaveLength(1);
+    expect(profile).not.toContain("(allow mach-lookup");
+    expect(profile).not.toContain("(allow mach-lookup");
+
+    if (
+      process.platform !== "darwin"
+      || !existsSync("/usr/bin/sandbox-exec")
+      || !existsSync("/usr/bin/log")
+    ) return;
+
+    const auditStartedAt = Date.now();
+    const metadataChild = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", profile, process.execPath, "-e", [
+        'const { lstatSync } = require("node:fs");',
+        'for (const path of ["/etc", "/var"]) {',
+        '  const stat = lstatSync(path);',
+        '  if (!stat.isSymbolicLink()) process.exit(2);',
+        '}',
+      ].join("\n"),
+    ], { cwd: root, env: aliasEnv });
+    expect(metadataChild.status).toBe(0);
+    expect(metadataChild.pid).toBeGreaterThan(0);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_500);
+    const auditEndedAt = Date.now();
+    const formatAuditTime = (milliseconds: number) => {
+      const date = new Date(milliseconds);
+      const part = (value: number) => String(value).padStart(2, "0");
+      return `${date.getFullYear()}-${part(date.getMonth() + 1)}-${part(date.getDate())} ${part(date.getHours())}:${part(date.getMinutes())}:${part(date.getSeconds())}`;
+    };
+    const metadataAudit = spawnSync("/usr/bin/log", [
+      "show",
+      "--start", formatAuditTime(Math.floor((auditStartedAt - 1_000) / 1_000) * 1_000),
+      "--end", formatAuditTime(Math.ceil((auditEndedAt + 1_000) / 1_000) * 1_000),
+      "--style", "json",
+      "--predicate",
+      [
+        'process == "kernel"',
+        `eventMessage CONTAINS "Sandbox: node(${metadataChild.pid})"`,
+        '(eventMessage CONTAINS "file-read-metadata /etc" OR eventMessage CONTAINS "file-read-metadata /var")',
+      ].join(" AND "),
+    ], { cwd: root, env: aliasEnv, encoding: "utf8" });
+    expect(metadataAudit.status).toBe(0);
+    expect(JSON.parse(metadataAudit.stdout)).toEqual([]);
+
+    const deniedContentPath = join(
+      "/var/tmp",
+      `homecook-sandbox-read-${process.pid}-${Date.now()}`,
+    );
+    writeFileSync(deniedContentPath, "private fixture\n", { flag: "wx", mode: 0o600 });
+    try {
+      const deniedScripts = [
+        'require("node:fs").readdirSync("/etc")',
+        'require("node:fs").readdirSync("/var")',
+        'require("node:fs").readdirSync("/private/etc")',
+        'require("node:fs").readdirSync("/private/var/db")',
+        'require("node:fs").readFileSync("/etc/hosts")',
+        'require("node:fs").readFileSync("/private/etc/hosts")',
+        'require("node:fs").readFileSync("/var/db/timezone/zoneinfo/UTC")',
+        'require("node:fs").readFileSync("/private/var/db/timezone/zoneinfo/UTC")',
+        `require("node:fs").readFileSync(${JSON.stringify(deniedContentPath)})`,
+        `require("node:fs").writeFileSync(${JSON.stringify(join("/var/tmp", `homecook-sandbox-${process.pid}`))}, "x")`,
+      ];
+      for (const script of deniedScripts) {
+        const denied = spawnSync("/usr/bin/sandbox-exec", [
+          "-p", profile, process.execPath, "-e", script,
+        ], { cwd: root, env: aliasEnv });
+        expect(denied.status).not.toBe(0);
+      }
+    } finally {
+      unlinkSync(deniedContentPath);
+    }
+  });
+
+  it("projects exactly one install-only DNSConfiguration Mach capability and no build capability", () => {
+    const root = privateRoot("homecook-candidate-stage-capability-");
+    const installProfile = buildCandidateSandboxProfile({
+      readRoots: [root, process.execPath],
+      writeRoots: [root],
+      stage: "offline-install",
+    });
+    const buildProfile = buildCandidateSandboxProfile({
+      readRoots: [root, process.execPath],
+      writeRoots: [root],
+      stage: "next-build",
+    });
+    const exactAllow = '(allow mach-lookup (global-name "com.apple.SystemConfiguration.DNSConfiguration"))';
+
+    expect(installProfile.split("\n").filter((line) => line === exactAllow)).toHaveLength(1);
+    expect(installProfile.match(/\(allow mach-lookup/gu)).toHaveLength(1);
+    expect(buildProfile).not.toContain("(allow mach-lookup");
+    expect(buildProfile).not.toContain("com.apple.SystemConfiguration.DNSConfiguration");
+    for (const profile of [installProfile, buildProfile]) {
+      expect(profile).toContain("(deny network*)");
+      expect(profile.match(/\(with no-log\)/gu)).toHaveLength(1);
+      expect(profile).toContain(
+        '(deny mach-lookup (global-name "com.apple.diagnosticd") (with no-log))',
+      );
+      expect(exactAllow).not.toContain("with no-log");
+    }
+
+    const capability = buildSandboxStageCapabilityPolicy({
+      installProfile,
+      buildProfile,
+      installAudit: {
+        audit_digest: DIGEST_A,
+        stage: "offline-install",
+        denial_count: 0,
+        process_attempt_count: 0,
+      },
+      buildAudit: {
+        audit_digest: DIGEST_B,
+        stage: "next-build",
+        denial_count: 0,
+        process_attempt_count: 0,
+      },
+    });
+    expect(capability).toMatchObject({
+      schema: "homecook.sandbox-stage-capability-policy.v1",
+      install: {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+        allow_count: 1,
+      },
+      build: {
+        stage: "next-build",
+        allowed_mach_lookup_global_names: [],
+        allow_count: 0,
+      },
+      observed: {
+        install_audit_digest: DIGEST_A,
+        install_denial_count: 0,
+        install_process_attempt_count: 0,
+        build_audit_digest: DIGEST_B,
+        build_denial_count: 0,
+        build_process_attempt_count: 0,
+      },
+      policy_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+    expect(capability.policy_text).toContain("com.apple.SystemConfiguration.DNSConfiguration");
   });
 
   it("allows only canonical generated build-work directories and rejects adjacent or escaping writes", () => {
@@ -2435,10 +4314,13 @@ describe("release rehearsal candidate orchestration", () => {
     expect(existsSync(join(escapeRoot, "escaped"))).toBe(false);
   });
 
-  it("runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox", async () => {
+  it.skipIf(process.env.HOMECOOK_RUN_ACTUAL_RELEASE_BUILD !== "1")(
+  "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox", async () => {
     if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) return;
 
-    const root = privateRoot("homecook-candidate-real-offline-build-");
+    const root = createOwnedTempRoot("candidate-");
+    expect(dirname(root)).toBe(tmpdir());
+    try {
     const runRoot = join(root, "attempt");
     const buildRoot = join(runRoot, "build-work");
     const nodeModulesRoot = join(buildRoot, "node_modules");
@@ -2499,84 +4381,319 @@ describe("release rehearsal candidate orchestration", () => {
       privateHome,
       privateTmp,
       currentUid: process.getuid?.(),
-    }, async ({ writeRoots }) => withCandidatePnpmStoreView({
+    }, async ({ writeRoots }) => {
+      const nodeCloneSuffix = createHash("sha256").update(root).digest("hex").slice(0, 8);
+      const installAuditNode = privateNodeClone(privateHome, `${nodeCloneSuffix}i`);
+      const buildAuditNode = privateNodeClone(privateHome, `${nodeCloneSuffix}b`);
+      const sandboxWitnessPath = join(privateHome, "hcsandboxwitness.node");
+      const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
+      const materializeWitness = candidateModule.materializeSandboxProcessWitness;
+      expect(typeof materializeWitness).toBe("function");
+      if (typeof materializeWitness !== "function") return;
+      const sandboxWitness = (materializeWitness as (options: Record<string, unknown>) => {
+        path: string;
+        preload_path: string;
+      })({
+        clangPath: "/usr/bin/clang",
+        nodePath: process.execPath,
+        outputPath: sandboxWitnessPath,
+      });
+      const stageNodeDigests = new Map([installAuditNode, buildAuditNode].map((path) => [
+        path,
+        createHash("sha256").update(readFileSync(path)).digest("hex"),
+      ]));
+      return withCandidatePnpmStoreView({
       sourceStore: packageStore,
       storeRoot,
       currentUid: process.getuid?.(),
-    }, async ({ storePath: packageStoreView, writableRoots: storeWritableRoots }) => {
-    const enforcedProfile = buildCandidateSandboxProfile({
+    }, async ({
+      storePath: packageStoreView,
+      installWritableRoots,
+      sealInstallIndex,
+      verifyInstallPhaseBeforeSpawn,
+    }) => {
+    const installProfileOptions = {
       readRoots: [
         buildRoot, privateHome, privateTmp, pnpmArtifactRoot,
-        packageStoreView, process.execPath,
+        packageStoreView, installAuditNode, "/usr/bin/touch",
       ],
-      writeRoots: [...writeRoots, ...storeWritableRoots],
+      writeRoots: [...writeRoots, ...installWritableRoots],
       deniedWritePaths: [
         packageStore,
         join(packageStoreView, "files"),
-        join(packageStoreView, "index"),
+        sandboxWitness.path,
+        sandboxWitness.preload_path,
       ],
       deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
+    };
+    const installProfile = buildCandidateSandboxProfile({
+      ...installProfileOptions,
+      executablePaths: [installAuditNode],
+      stage: "offline-install",
     });
-    const profile = enforcedProfile;
+    const installProbeProfile = buildCandidateSandboxProfile({
+      ...installProfileOptions,
+      executablePaths: ["/usr/bin/touch"],
+    });
+    expect(installProfile.match(/\(allow mach-lookup/gu)).toHaveLength(1);
+    expect(installProfile).toContain(
+      '(allow mach-lookup (global-name "com.apple.SystemConfiguration.DNSConfiguration"))',
+    );
     const env: NodeJS.ProcessEnv = {
+      __CFPREFERENCES_AVOID_DAEMON: "1",
+      __CF_USER_TEXT_ENCODING: `0x${Number(process.getuid?.()).toString(16).toUpperCase()}:0:0`,
+      CFPREFERENCES_AVOID_DAEMON: "1",
       CI: "1",
+      CIRCLE_NODE_TOTAL: "2",
+      COMMAND_MODE: "unix2003",
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
       HOME: privateHome,
+      HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES: "1",
+      LANG: "C",
+      LC_ALL: "C",
+      LOGNAME: "homecook-rehearsal",
       NEXT_TELEMETRY_DISABLED: "1",
+      NODE_DISABLE_COMPILE_CACHE: "1",
       NODE_ENV: "production",
+      NODE_OPTIONS: "--no-global-search-paths",
       PATH: `${dirname(process.execPath)}:/usr/bin:/bin`,
+      TZ: "UTC0",
       TMPDIR: privateTmp,
+      USER: "homecook-rehearsal",
       npm_config_offline: "true",
     };
-    const install = spawnSync("/usr/bin/sandbox-exec", [
-      "-p", profile, process.execPath, pnpmCli,
-      "install", "--frozen-lockfile", "--offline", "--package-import-method=copy",
-      "--store-dir", packageStoreView,
-    ], { cwd: buildRoot, env, encoding: "utf8", maxBuffer: 1_048_576, timeout: 120_000 });
-    expect(install.status, JSON.stringify({
-      signal: install.signal,
-      stdout: install.stdout,
-      stderr: install.stderr,
-    })).toBe(0);
-    expect(existsSync(join(nodeModulesRoot, "next", "dist", "bin", "next"))).toBe(true);
-    const deniedStoreRootWrite = spawnSync("/usr/bin/sandbox-exec", [
-      "-p", profile, "/usr/bin/touch", join(packageStoreView, "unexpected"),
+    const machLookup = await runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile: installProfile,
+      command: installAuditNode,
+      args: ["-e", [
+        `const witness = require(${JSON.stringify(sandboxWitness.path)});`,
+        'process.exit(witness.lookupMachService("com.apple.SystemConfiguration.DNSConfiguration") === 0 ? 0 : 70);',
+      ].join("\n")],
+      cwd: buildRoot,
+      env,
+      label: "install-only DNSConfiguration lookup",
+      processExecutablePaths: [installAuditNode],
+      stage: "offline-install",
+    });
+    expect(machLookup).toMatchObject({
+      stage: "offline-install", denial_count: 0, process_attempt_count: 0,
+    });
+
+    const allowedWorkingIndexWrite = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", installProbeProfile, "/usr/bin/touch", join(packageStoreView, "index", "sandbox-phase-write.json"),
     ], { cwd: buildRoot, env });
     const deniedPrivateFilesWrite = spawnSync("/usr/bin/sandbox-exec", [
-      "-p", profile, "/usr/bin/touch", join(packageStoreView, "files", "unexpected"),
+      "-p", installProbeProfile, "/usr/bin/touch", join(packageStoreView, "files", "unexpected"),
     ], { cwd: buildRoot, env });
-    expect(deniedStoreRootWrite.status).not.toBe(0);
-    expect(deniedPrivateFilesWrite.status).not.toBe(0);
+    const deniedStoreRootWrite = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", installProbeProfile, "/usr/bin/touch", join(packageStoreView, "unexpected"),
+    ], { cwd: buildRoot, env });
+    const deniedSourceStoreWrite = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", installProbeProfile, "/usr/bin/touch", join(packageStore, "index", "unexpected"),
+    ], { cwd: buildRoot, env });
+    expect(allowedWorkingIndexWrite.status).toBe(0);
+    for (const denied of [
+      deniedPrivateFilesWrite,
+      deniedStoreRootWrite,
+      deniedSourceStoreWrite,
+    ]) expect(denied.status).not.toBe(0);
+
+    const installAudit = await runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile: installProfile,
+      command: installAuditNode,
+      args: [
+        pnpmCli,
+        "install", "--frozen-lockfile", "--offline", "--ignore-scripts",
+        "--package-import-method=copy",
+        "--store-dir", packageStoreView,
+      ],
+      cwd: buildRoot,
+      env,
+      label: "real offline pnpm 10.32.1 install",
+      processExecutablePaths: [installAuditNode],
+      stage: "offline-install",
+      timeout: 120_000,
+      beforeSpawn: verifyInstallPhaseBeforeSpawn,
+    });
+    expect(installAudit.audit_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(existsSync(join(nodeModulesRoot, "next", "dist", "bin", "next"))).toBe(true);
+    const finalIndexAuthority = sealInstallIndex();
+    expect(finalIndexAuthority.inventory_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(finalIndexAuthority.physical_identity_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(readdirSync(packageStoreView).sort()).toEqual(["files", "index"]);
+
+    const buildProfileOptions = {
+      readRoots: [
+        buildRoot, privateHome, privateTmp, pnpmArtifactRoot,
+        packageStoreView, buildAuditNode, "/usr/bin/touch",
+      ],
+      writeRoots,
+      deniedWritePaths: [
+        packageStore,
+        packageStoreView,
+        sandboxWitness.path,
+        sandboxWitness.preload_path,
+      ],
+      deniedPaths: [join(root, "production"), join(root, "authority"), "/var/run/docker.sock"],
+    };
+    const buildProfile = buildCandidateSandboxProfile({
+      ...buildProfileOptions,
+      executablePaths: [buildAuditNode],
+      stage: "next-build",
+    });
+    const buildProbeProfile = buildCandidateSandboxProfile({
+      ...buildProfileOptions,
+      executablePaths: ["/usr/bin/touch"],
+    });
+    expect(buildProfile).not.toBe(installProfile);
+    expect(buildProfile).not.toContain("(allow mach-lookup");
+    expect(buildProfile).not.toContain("com.apple.SystemConfiguration.DNSConfiguration");
+    expect(buildProfile).toMatch(/^\(deny network\*/mu);
+    const buildPassiveSentinel = await runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile: buildProfile,
+      command: buildAuditNode,
+      args: ["-e", [
+        'if (process.env.HOMECOOK_OFFLINE_DNS_PROJECTION !== undefined) process.exit(70);',
+        'if (globalThis[Symbol.for("homecook.offlineDnsProjection")] !== undefined) process.exit(71);',
+      ].join("\n")],
+      cwd: buildRoot,
+      env,
+      label: "next-build passive capability sentinel",
+      processExecutablePaths: [buildAuditNode],
+      stage: "next-build",
+    });
+    expect(buildPassiveSentinel).toMatchObject({
+      stage: "next-build", denial_count: 0, process_attempt_count: 0,
+    });
+    const reuseSpawn = vi.fn(() => ({
+      status: 0, signal: null, stdout: "[]", stderr: "", pid: 4242,
+    }));
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      logPath: "/usr/bin/log",
+      profile: installProfile,
+      command: installAuditNode,
+      args: [pnpmCli, "install"],
+      cwd: buildRoot,
+      env,
+      label: "sealed install profile reuse",
+      beforeSpawn: verifyInstallPhaseBeforeSpawn,
+      processExecutablePaths: [installAuditNode],
+      runCommand: reuseSpawn,
+    })).rejects.toThrow(/install|phase|sealed|reuse|transition/iu);
+    expect(reuseSpawn).not.toHaveBeenCalled();
+    const deniedPostSealIndexWrite = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", buildProbeProfile, "/usr/bin/touch", join(packageStoreView, "index", "post-seal"),
+    ], { cwd: buildRoot, env });
+    expect(deniedPostSealIndexWrite.status).not.toBe(0);
 
     expect(lstatSync(join(nodeModulesRoot, "next")).isSymbolicLink()).toBe(true);
     expect(readlinkSync(join(nodeModulesRoot, "next"))).toMatch(/^\.pnpm\/next@15\.5\.21_/u);
-    const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
     const withNextEntrypointAuthority = candidateModule.withCandidateNextEntrypointAuthority;
     expect(typeof withNextEntrypointAuthority).toBe("function");
     if (typeof withNextEntrypointAuthority !== "function") return;
     const nextAuthority = await (withNextEntrypointAuthority as (
       options: { buildRoot: string, currentUid: number | undefined },
       callback: (authority: { entrypointPath: string, verifyBeforeSpawn: () => void }) => unknown,
-    ) => Promise<{ authority_digest: string, value: ReturnType<typeof spawnSync> }>)(
+    ) => Promise<{ authority_digest: string, value: { audit_digest: string } }>)(
       { buildRoot, currentUid: process.getuid?.() },
       ({ entrypointPath, verifyBeforeSpawn }) => {
         verifyBeforeSpawn();
-        return spawnSync("/usr/bin/sandbox-exec", [
-          "-p", profile, process.execPath, entrypointPath, "build", "--no-lint",
-        ], { cwd: buildRoot, env, encoding: "utf8", maxBuffer: 1_048_576, timeout: 120_000 });
+        return runObservedSandboxCommand({
+          sandboxPath: "/usr/bin/sandbox-exec",
+          sandboxWitnessPath: sandboxWitness.path,
+          logPath: "/usr/bin/log",
+          profile: buildProfile,
+          command: buildAuditNode,
+          args: [entrypointPath, "build", "--no-lint"],
+          cwd: buildRoot,
+          env,
+          label: "real offline Next 15.5.21 build",
+          processExecutablePaths: [buildAuditNode],
+          stage: "next-build",
+          timeout: 120_000,
+        });
       },
     );
     const build = nextAuthority.value;
     expect(nextAuthority.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
-    expect(build.status, JSON.stringify({
-      signal: build.signal,
-      stdout: build.stdout,
-      stderr: build.stderr,
-    })).toBe(0);
+    expect(build.audit_digest).toMatch(/^[0-9a-f]{64}$/u);
+    for (const [path, digest] of stageNodeDigests) {
+      expect(lstatSync(path).mode & 0o777).toBe(0o500);
+      expect(createHash("sha256").update(readFileSync(path)).digest("hex")).toBe(digest);
+    }
     expect(readFileSync(join(nextRoot, "BUILD_ID"), "utf8").trim()).not.toBe("");
     expect(existsSync(join(nextRoot, "server", "app-paths-manifest.json"))).toBe(true);
-    }));
-  }, 120_000);
+    const blockedProbe = (source: string) => spawnSync("/usr/bin/sandbox-exec", [
+      "-p", installProfile, installAuditNode, "-e", source,
+    ], { cwd: buildRoot, env: { ...env, NODE_OPTIONS: "" }, timeout: 5_000 });
+    const egressRuns = {
+      dns_lookup_success_count: blockedProbe([
+        'require("node:dns").lookup("example.com", error => process.exit(error ? 0 : 70));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      net_connect_success_count: blockedProbe([
+        'const socket=require("node:net").connect(9,"127.0.0.1");',
+        'socket.once("connect",()=>process.exit(70)); socket.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      tls_connect_success_count: blockedProbe([
+        'const socket=require("node:tls").connect(443,"1.1.1.1");',
+        'socket.once("secureConnect",()=>process.exit(70)); socket.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      public_ip_connect_success_count: blockedProbe([
+        'const socket=require("node:net").connect(80,"1.1.1.1");',
+        'socket.once("connect",()=>process.exit(70)); socket.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      http_success_count: blockedProbe([
+        'const request=require("node:http").get("http://1.1.1.1/",()=>process.exit(70));',
+        'request.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+    };
+    expect(egressRuns).toEqual({
+      dns_lookup_success_count: 0,
+      net_connect_success_count: 0,
+      tls_connect_success_count: 0,
+      public_ip_connect_success_count: 0,
+      http_success_count: 0,
+    });
+    const stageCapabilityPolicy = buildSandboxStageCapabilityPolicy({
+      installProfile,
+      buildProfile,
+      installAudit,
+      buildAudit: build,
+    });
+    const unsignedEgressProbe = {
+      schema: "homecook.sandbox-egress-probe.v1",
+      ...egressRuns,
+    };
+    process.stdout.write(`RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+      selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+      selected_test_name: "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox",
+      stage_capability_policy: stageCapabilityPolicy,
+      egress_probe: {
+        ...unsignedEgressProbe,
+        probe_digest: createHash("sha256").update(canonicalizeJcs(unsignedEgressProbe)).digest("hex"),
+      },
+    })}\n`);
+    });
+    });
+    } finally {
+      cleanupOwnedTempRoot(root);
+    }
+  }, 240_000);
 
   it("accepts the normal pnpm Next link only inside candidate-owned node_modules/.pnpm", async () => {
     const candidateModule = await import("../scripts/lib/local-mac-production-rehearsal-candidate.mjs") as Record<string, unknown>;
@@ -3046,16 +5163,56 @@ describe("release rehearsal candidate orchestration", () => {
         root, sourceStore, privateHome, storeRoot, blobRelativePath, currentUid: process.getuid?.(),
       };
     };
+    type StoreFixture = ReturnType<typeof fixture> & {
+      cleanupRunCommand?: (command: string, args: string[], options: unknown) => unknown,
+      transitionObserver?: (event: Record<string, unknown>) => void,
+    };
     const invoke = async (
-      paths: ReturnType<typeof fixture>,
-      callback: (authority: { storePath: string, writableRoots: string[], snapshotInventoryDigest: string }) => unknown,
+      paths: StoreFixture,
+      callback: (authority: {
+        storePath: string,
+        installWritableRoots: string[],
+        snapshotInventoryDigest: string,
+        sealInstallIndex: () => {
+          inventory_digest: string,
+          physical_identity_digest: string,
+        },
+        verifyInstallPhaseBeforeSpawn: () => void,
+      }) => unknown,
     ) => (withStoreView as (
-      options: ReturnType<typeof fixture>,
-      callback: (authority: { storePath: string, writableRoots: string[], snapshotInventoryDigest: string }) => unknown,
-    ) => Promise<{ authority_digest: string, value: unknown }>)(paths, callback);
+      options: StoreFixture,
+      callback: (authority: {
+        storePath: string,
+        installWritableRoots: string[],
+        snapshotInventoryDigest: string,
+        sealInstallIndex: () => {
+          inventory_digest: string,
+          physical_identity_digest: string,
+        },
+        verifyInstallPhaseBeforeSpawn: () => void,
+      }) => unknown,
+    ) => Promise<{
+      authority_digest: string,
+      final_index_inventory_digest: string,
+      final_index_identity_digest: string,
+      value: unknown,
+    }>)(paths, callback);
 
     const allowed = fixture("homecook-pnpm-store-view-allowed-");
-    const result = await invoke(allowed, ({ storePath, writableRoots, snapshotInventoryDigest }) => {
+    const cleanupCommands: string[] = [];
+    const result = await invoke({
+      ...allowed,
+      cleanupRunCommand: (command: string, args: string[], options: unknown) => {
+        cleanupCommands.push(command);
+        return spawnSync(command, args, options as Parameters<typeof spawnSync>[2]);
+      },
+    }, ({
+      storePath,
+      installWritableRoots,
+      snapshotInventoryDigest,
+      sealInstallIndex,
+      verifyInstallPhaseBeforeSpawn,
+    }) => {
       expect(storePath).toBe(join(allowed.storeRoot, "v10"));
       expect(storePath.startsWith(`${allowed.privateHome}/`)).toBe(false);
       expect(lstatSync(storePath).mode & 0o777).toBe(0o500);
@@ -3064,29 +5221,272 @@ describe("release rehearsal candidate orchestration", () => {
       expect(lstatSync(join(storePath, allowed.blobRelativePath)).mode & 0o777).toBe(0o600);
       expect(realpathSync(join(storePath, "files"))).toBe(join(storePath, "files"));
       expect(realpathSync(join(storePath, "index"))).toBe(join(storePath, "index"));
-      expect(writableRoots).toEqual([join(storePath, "projects"), join(storePath, "tmp")]);
+      expect(lstatSync(join(storePath, "index")).mode & 0o777).toBe(0o700);
+      expect(lstatSync(join(storePath, "index", "package.json")).mode & 0o777).toBe(0o600);
+      expect(installWritableRoots).toEqual([
+        join(storePath, "projects"),
+        join(storePath, "tmp"),
+        join(storePath, "index"),
+      ]);
       expect(snapshotInventoryDigest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(verifyInstallPhaseBeforeSpawn).toBeTypeOf("function");
+      expect(() => verifyInstallPhaseBeforeSpawn()).not.toThrow();
       expect(readFileSync(join(storePath, allowed.blobRelativePath), "utf8")).toBe("package bytes\n");
       expect(readFileSync(join(storePath, "index", "package.json"), "utf8")).toBe("{}\n");
       writeFileSync(join(storePath, "projects", "candidate"), "owned\n", { mode: 0o600 });
       writeFileSync(join(storePath, "tmp", "metadata"), "scratch\n", { mode: 0o600 });
+      writeFileSync(join(storePath, "index", "candidate.json"), "{\"candidate\":true}\n", { mode: 0o600 });
+      const sealedIndex = sealInstallIndex();
+      expect(() => verifyInstallPhaseBeforeSpawn()).toThrow(/install|phase|sealed|reuse|transition/iu);
+      expect(sealedIndex.inventory_digest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(sealedIndex.physical_identity_digest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(readdirSync(storePath).sort()).toEqual(["files", "index"]);
+      expect(lstatSync(join(storePath, "index")).mode & 0o777).toBe(0o500);
+      expect(lstatSync(join(storePath, "index", "candidate.json")).mode & 0o777).toBe(0o400);
       return "ready";
     });
     expect(result.value).toBe("ready");
     expect(result.authority_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(result.final_index_inventory_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(result.final_index_identity_digest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(cleanupCommands).toEqual([
+      process.platform === "darwin"
+        ? "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+        : realpathSync("/usr/bin/python3"),
+    ]);
+    expect(readdirSync(allowed.root).filter((name) => name.startsWith(".homecook-pnpm-quarantine-")))
+      .toEqual([]);
     expect(lstatSync(join(allowed.storeRoot, "v10", allowed.blobRelativePath)).mode & 0o777).toBe(0o400);
     expect(readFileSync(join(allowed.sourceStore, allowed.blobRelativePath), "utf8")).toBe("package bytes\n");
     expect(readdirSync(join(allowed.storeRoot, "v10")).sort()).toEqual(["files", "index"]);
     expect(existsSync(join(allowed.storeRoot, "v10", "projects"))).toBe(false);
     expect(existsSync(join(allowed.storeRoot, "v10", "tmp"))).toBe(false);
 
+    const missingSeal = fixture("homecook-pnpm-store-view-missing-index-seal-");
+    await expect(invoke(missingSeal, () => "unsealed"))
+      .rejects.toThrow(/install|index|seal|transition/iu);
+
+    const postSealMutation = fixture("homecook-pnpm-store-view-post-seal-mutation-");
+    await expect(invoke(postSealMutation, ({ storePath, sealInstallIndex }) => {
+      sealInstallIndex();
+      const indexFile = join(storePath, "index", "package.json");
+      chmodSync(indexFile, 0o600);
+      writeFileSync(indexFile, "{\"mutated\":true}\n");
+      chmodSync(indexFile, 0o400);
+    })).rejects.toThrow(/index|sealed|inventory|identity|drift/iu);
+
+    const hardlinkedIndex = fixture("homecook-pnpm-store-view-hardlinked-index-");
+    await expect(invoke(hardlinkedIndex, ({ storePath, sealInstallIndex }) => {
+      linkSync(
+        join(storePath, "index", "package.json"),
+        join(storePath, "index", "hardlink.json"),
+      );
+      sealInstallIndex();
+    })).rejects.toThrow(/index|hard.?link|nlink|unsafe|seal/iu);
+
+    const symlinkedIndex = fixture("homecook-pnpm-store-view-symlinked-index-");
+    await expect(invoke(symlinkedIndex, ({ storePath, sealInstallIndex }) => {
+      symlinkSync("package.json", join(storePath, "index", "symlink.json"));
+      sealInstallIndex();
+    })).rejects.toThrow(/index|symbolic|symlink|unsafe|seal/iu);
+
+    const unexpectedChild = fixture("homecook-pnpm-store-view-unexpected-child-");
+    await expect(invoke(unexpectedChild, ({ storePath, sealInstallIndex }) => {
+      chmodSync(storePath, 0o700);
+      mkdirSync(join(storePath, "unknown"), { mode: 0o700 });
+      chmodSync(storePath, 0o500);
+      sealInstallIndex();
+    })).rejects.toThrow(/unexpected|child|store|seal/iu);
+
+    const filesMutation = fixture("homecook-pnpm-store-view-files-mutation-");
+    await expect(invoke(filesMutation, ({ storePath, sealInstallIndex }) => {
+      writeFileSync(join(storePath, filesMutation.blobRelativePath), "mutated files bytes\n");
+      sealInstallIndex();
+    })).rejects.toThrow(/files|store|inventory|identity|drift/iu);
+
+    const childSwap = fixture("homecook-pnpm-store-view-index-child-swap-");
+    const childSwapSentinel = join(childSwap.root, "external-index-sentinel");
+    writeFileSync(childSwapSentinel, "sentinel\n", { mode: 0o600 });
+    let childSwapped = false;
+    await expect(invoke({
+      ...childSwap,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (childSwapped || event.phase !== "before_entry_fchmod" || event.relativePath !== "index/package.json") return;
+        childSwapped = true;
+        const target = String(event.path);
+        renameSync(target, `${target}.original`);
+        symlinkSync(childSwapSentinel, target);
+      },
+    }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/index|entry|identity|swap|symlink|transition/iu);
+    expect(readFileSync(childSwapSentinel, "utf8")).toBe("sentinel\n");
+    expect(lstatSync(childSwapSentinel).mode & 0o777).toBe(0o600);
+
+    const scratchSwap = fixture("homecook-pnpm-store-view-scratch-swap-");
+    const scratchSwapSentinelRoot = join(scratchSwap.root, "external-scratch-sentinel");
+    mkdirSync(scratchSwapSentinelRoot, { mode: 0o700 });
+    writeFileSync(join(scratchSwapSentinelRoot, "sentinel"), "sentinel\n", { mode: 0o600 });
+    let scratchSwapped = false;
+    await expect(invoke({
+      ...scratchSwap,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (scratchSwapped || event.phase !== "before_deferred_cleanup") return;
+        scratchSwapped = true;
+        const target = join(String(event.path), "projects");
+        renameSync(target, `${target}.parked`);
+        symlinkSync(scratchSwapSentinelRoot, target);
+      },
+    }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/scratch|identity|swap|symlink|transition|deferred|cleanup/iu);
+    expect(readFileSync(join(scratchSwapSentinelRoot, "sentinel"), "utf8")).toBe("sentinel\n");
+
+    for (const targetKind of ["storeRoot", "storePath"] as const) {
+      const transientSwap = fixture(`homecook-pnpm-store-view-${targetKind}-transient-swap-`);
+      let swapped = false;
+      await expect(invoke({
+        ...transientSwap,
+        transitionObserver: (event: Record<string, unknown>) => {
+          if (swapped || event.phase !== "before_transition") return;
+          swapped = true;
+          const target = targetKind === "storeRoot"
+            ? transientSwap.storeRoot
+            : String(event.storePath);
+          const parent = dirname(target);
+          const parked = `${target}.parked`;
+          if (targetKind === "storePath") chmodSync(parent, 0o700);
+          renameSync(target, parked);
+          mkdirSync(target, { mode: 0o700 });
+          rmdirSync(target);
+          renameSync(parked, target);
+          if (targetKind === "storePath") chmodSync(parent, 0o500);
+        },
+      }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/store|identity|swap|drift|transition/iu);
+    }
+
+    const deferredRootSwap = fixture("homecook-pnpm-deferred-root-swap-");
+    const deferredRootSentinel = join(deferredRootSwap.root, "external-deferred-root");
+    mkdirSync(deferredRootSentinel, { mode: 0o700 });
+    writeFileSync(join(deferredRootSentinel, "sentinel"), "sentinel\n", { mode: 0o600 });
+    let deferredRootSwapped = false;
+    await expect(invoke({
+      ...deferredRootSwap,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (deferredRootSwapped || event.phase !== "before_deferred_cleanup") return;
+        deferredRootSwapped = true;
+        const target = String(event.path);
+        renameSync(target, `${target}.parked`);
+        symlinkSync(deferredRootSentinel, target);
+      },
+    }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/deferred|quarantine|identity|swap|cleanup/iu);
+    expect(readFileSync(join(deferredRootSentinel, "sentinel"), "utf8")).toBe("sentinel\n");
+
+    const deferredPreLedgerSwap = fixture("homecook-pnpm-deferred-pre-ledger-swap-");
+    const deferredPreLedgerSentinel = join(
+      deferredPreLedgerSwap.root,
+      "external-pre-ledger-sentinel",
+    );
+    writeFileSync(deferredPreLedgerSentinel, "sentinel\n", { mode: 0o600 });
+    await expect(invoke(deferredPreLedgerSwap, ({ sealInstallIndex }) => {
+      sealInstallIndex();
+      const quarantineName = readdirSync(deferredPreLedgerSwap.root)
+        .find((name) => name.startsWith(".homecook-pnpm-quarantine-"));
+      expect(quarantineName).toBeTypeOf("string");
+      const quarantineRoot = join(deferredPreLedgerSwap.root, quarantineName!);
+      renameSync(quarantineRoot, `${quarantineRoot}.parked`);
+      mkdirSync(quarantineRoot, { mode: 0o700 });
+      symlinkSync(deferredPreLedgerSentinel, join(quarantineRoot, "sentinel-link"));
+    })).rejects.toThrow(/deferred|quarantine|identity|swap|cleanup/iu);
+    expect(readFileSync(deferredPreLedgerSentinel, "utf8")).toBe("sentinel\n");
+
+    const deferredNestedSwap = fixture("homecook-pnpm-deferred-nested-swap-");
+    const deferredNestedSentinel = join(deferredNestedSwap.root, "external-nested-sentinel");
+    writeFileSync(deferredNestedSentinel, "sentinel\n", { mode: 0o600 });
+    let deferredNestedSwapped = false;
+    await expect(invoke({
+      ...deferredNestedSwap,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (deferredNestedSwapped || event.phase !== "before_deferred_cleanup") return;
+        deferredNestedSwapped = true;
+        const target = join(String(event.path), "projects", "nested", "owned");
+        renameSync(target, `${target}.parked`);
+        symlinkSync(deferredNestedSentinel, target);
+      },
+    }, ({ storePath, sealInstallIndex }) => {
+      mkdirSync(join(storePath, "projects", "nested"), { mode: 0o700 });
+      writeFileSync(join(storePath, "projects", "nested", "owned"), "owned\n", { mode: 0o600 });
+      sealInstallIndex();
+    })).rejects.toThrow(/deferred|nested|identity|swap|cleanup/iu);
+    expect(readFileSync(deferredNestedSentinel, "utf8")).toBe("sentinel\n");
+
+    const deferredDeleteRace = fixture("homecook-pnpm-deferred-delete-race-");
+    const racedRelativePath = join("projects", "raced.txt");
+    let racedQuarantineRoot = "";
+    const replacementBytes = "replacement inode must survive\n";
+    const cleanupRunCommand = (command: string, args: string[], options: unknown) => {
+      const raceNeedle = [
+        "    child_stat = os.stat(name, dir_fd=parent, follow_symlinks=False)",
+        "    check(child_stat, record, child_relative)",
+      ].join("\n");
+      const raceInjection = [
+        raceNeedle,
+        `    if child_relative == ${JSON.stringify(racedRelativePath)}:`,
+        "        os.rename(name, name + '.parked', src_dir_fd=parent, dst_dir_fd=parent)",
+        "        replacement_fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent)",
+        "        os.write(replacement_fd, b'replacement inode must survive\\n')",
+        "        os.close(replacement_fd)",
+      ].join("\n");
+      const racedArgs = [...args];
+      racedArgs[2] = String(racedArgs[2]).replace(raceNeedle, raceInjection);
+      expect(racedArgs[2]).not.toBe(args[2]);
+      return spawnSync(command, racedArgs, options as Parameters<typeof spawnSync>[2]);
+    };
+    await expect(invoke({
+      ...deferredDeleteRace,
+      cleanupRunCommand,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (event.phase === "before_deferred_cleanup") racedQuarantineRoot = String(event.path);
+      },
+    }, ({ storePath, sealInstallIndex }) => {
+      writeFileSync(join(storePath, racedRelativePath), "owned inode\n", { mode: 0o600 });
+      sealInstallIndex();
+    })).rejects.toThrow(/deferred|quarantine|identity|cleanup/iu);
+    const claimedRootName = readdirSync(deferredDeleteRace.root)
+      .find((name) => name.startsWith(".homecook-delete-"));
+    expect(claimedRootName).toBeTypeOf("string");
+    const residualRoot = existsSync(racedQuarantineRoot)
+      ? racedQuarantineRoot
+      : join(deferredDeleteRace.root, claimedRootName!);
+    const claimedProjectsName = readdirSync(residualRoot)
+      .find((name) => name.startsWith(".homecook-delete-"));
+    expect(claimedProjectsName).toBeTypeOf("string");
+    const racedPath = join(residualRoot, claimedProjectsName!, basename(racedRelativePath));
+    const parkedPath = `${racedPath}.parked`;
+    expect(readFileSync(parkedPath, "utf8")).toBe("owned inode\n");
+    expect(existsSync(racedPath)).toBe(true);
+    if (existsSync(racedPath)) expect(readFileSync(racedPath, "utf8")).toBe(replacementBytes);
+
+    const deferredSwapRestore = fixture("homecook-pnpm-deferred-swap-restore-");
+    let deferredRestored = false;
+    await expect(invoke({
+      ...deferredSwapRestore,
+      transitionObserver: (event: Record<string, unknown>) => {
+        if (deferredRestored || event.phase !== "before_deferred_cleanup") return;
+        deferredRestored = true;
+        const target = String(event.path);
+        const parked = `${target}.parked`;
+        renameSync(target, parked);
+        mkdirSync(target, { mode: 0o700 });
+        rmdirSync(target);
+        renameSync(parked, target);
+      },
+    }, ({ sealInstallIndex }) => sealInstallIndex())).rejects.toThrow(/deferred|quarantine|identity|swap|cleanup/iu);
+
     const sourceDrift = fixture("homecook-pnpm-store-view-source-drift-");
-    await expect(invoke(sourceDrift, ({ storePath }) => {
+    await expect(invoke(sourceDrift, ({ storePath, sealInstallIndex }) => {
       const sourceBlob = join(sourceDrift.sourceStore, sourceDrift.blobRelativePath);
       chmodSync(sourceBlob, 0o600);
       writeFileSync(sourceBlob, "mutated source bytes\n");
       chmodSync(sourceBlob, 0o400);
       expect(readFileSync(join(storePath, sourceDrift.blobRelativePath), "utf8")).toBe("package bytes\n");
+      sealInstallIndex();
     })).rejects.toThrow(/source|store|inventory|identity|drift/iu);
 
     const escaped = fixture("homecook-pnpm-store-view-escape-");
@@ -3098,12 +5498,13 @@ describe("release rehearsal candidate orchestration", () => {
     await expect(invoke(escaped, () => undefined)).rejects.toThrow(/store|symlink|canonical|identity/iu);
 
     const substituted = fixture("homecook-pnpm-store-view-substitution-");
-    await expect(invoke(substituted, () => {
+    await expect(invoke(substituted, ({ sealInstallIndex }) => {
       const parked = join(substituted.sourceStore, "index-parked");
       renameSync(join(substituted.sourceStore, "index"), parked);
       mkdirSync(join(substituted.sourceStore, "index"), { mode: 0o700 });
       rmdirSync(join(substituted.sourceStore, "index"));
       renameSync(parked, join(substituted.sourceStore, "index"));
+      sealInstallIndex();
     })).rejects.toThrow(/store|identity|substitution|drift/iu);
   });
 
@@ -3149,7 +5550,7 @@ describe("release rehearsal candidate orchestration", () => {
       sourceStore,
       storeRoot: join(root, "pnpm-store"),
       currentUid: process.getuid?.(),
-    }, () => undefined);
+    }, ({ sealInstallIndex }) => sealInstallIndex());
     const bundleRoot = join(root, "bundles", "bundle");
     mkdirSync(join(root, "bundles"), { mode: 0o700 });
     const componentSource = privateRoot("homecook-candidate-reader-components-");
@@ -3201,10 +5602,12 @@ describe("release rehearsal candidate orchestration", () => {
       release_sha: manifestInput.release_sha,
       release_tree: manifestInput.release_tree,
       sandbox_policy_digest: manifestInput.sandbox_policy_digest,
+      sandbox_stage_capability_policy: manifestInput.sandbox_stage_capability_policy,
       generated_build_inventory_digest: createHash("sha256").update(canonicalizeJcs(
         physical.file_inventory.filter((entry) => entry.source_kind === "generated_build"),
       )).digest("hex"),
       pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
+      pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
       source_manifest_digest: manifestInput.source_manifest_digest,
       builder_input_digest: manifestInput.builder_input_digest,
@@ -3238,6 +5641,7 @@ describe("release rehearsal candidate orchestration", () => {
       file_inventory: physical.file_inventory,
       generated_build_inventory_digest: bundleInput.generated_build_inventory_digest,
       pnpm_store_snapshot_inventory_digest: bundleInput.pnpm_store_snapshot_inventory_digest,
+      pnpm_store_final_index_inventory_digest: bundleInput.pnpm_store_final_index_inventory_digest,
     });
     writeFileSync(join(root, "candidate.json"), canonicalizeJcs(candidate), { mode: 0o400 });
     writeCandidateTerminalMarker(root, "complete", {
@@ -3258,6 +5662,12 @@ describe("release rehearsal candidate orchestration", () => {
     issueCompletedCandidatePhysicalAuthority({
       candidateRoot: root,
       authorityPath: originalPhysicalAuthority,
+    });
+    expect(JSON.parse(readFileSync(originalPhysicalAuthority, "utf8"))).toMatchObject({
+      schema: "homecook.local-mac-production-rehearsal-candidate-physical-authority.v2",
+      pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
+      pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,
+      pnpm_store_final_index_identity_digest: storeSnapshot.final_index_identity_digest,
     });
     expect(readCompletedCandidateRoot(root, {
       physicalAuthorityPath: originalPhysicalAuthority,
@@ -3513,8 +5923,11 @@ describe("release rehearsal candidate orchestration", () => {
         sealed_bundle_digest: DIGEST_B,
         bundle_manifest_digest: DIGEST_C,
         sandbox_policy_digest: DIGEST_B,
+        sandbox_stage_capability_policy: validManifestInput().sandbox_stage_capability_policy,
         pnpm_store_snapshot_inventory_digest: DIGEST_C,
         pnpm_store_snapshot_identity_digest: DIGEST_A,
+        pnpm_store_final_index_inventory_digest: DIGEST_A,
+        pnpm_store_final_index_identity_digest: DIGEST_B,
         build_tools: { next_cli: tool("next-cli") },
       };
     });

@@ -4,7 +4,7 @@
   "title": "Homecook local Mac production rehearsal candidate",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha", "release_tree", "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "build_tools", "toolchain_lock_digest", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest", "manifest_digest"],
+  "required": ["schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha", "release_tree", "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest", "sandbox_stage_capability_policy", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest", "pnpm_store_final_index_inventory_digest", "build_id", "sealed_bundle_digest", "bundle_manifest_digest", "toolchain", "build_tools", "toolchain_lock_digest", "images", "migration", "artifacts", "file_inventory", "environment_snapshot", "production_guard", "candidate_identity_digest", "manifest_digest"],
   "properties": {
     "schema": { "const": "homecook.local-mac-production-rehearsal-candidate.v1" },
     "canonicalization": { "const": "RFC8785-JCS+SHA256" },
@@ -29,13 +29,58 @@
     "source_manifest_digest": { "$ref": "#/$defs/sha256" },
     "compose_source_digest": { "$ref": "#/$defs/sha256" },
     "sandbox_policy_digest": { "$ref": "#/$defs/sha256" },
+    "sandbox_stage_capability_policy": {
+      "type": "object",
+      "description": "Exact install-only local Mach capability policy text/digest and zero-denial/process-attempt observations for offline-install and next-build.",
+      "additionalProperties": false,
+      "required": ["schema", "policy_text", "policy_digest", "install", "build", "observed"],
+      "properties": {
+        "schema": { "const": "homecook.sandbox-stage-capability-policy.v1" },
+        "policy_text": { "const": "{\"network_policy\":\"deny-all\",\"no_log_denials\":[\"com.apple.diagnosticd\"],\"schema\":\"homecook.sandbox-stage-capability-policy-text.v1\",\"stages\":[{\"allowed_mach_lookup_global_names\":[\"com.apple.SystemConfiguration.DNSConfiguration\"],\"stage\":\"offline-install\"},{\"allowed_mach_lookup_global_names\":[],\"stage\":\"next-build\"}]}" },
+        "policy_digest": { "const": "125fd7286f28d8d61db589c73462b4e753b722b2ef5addf9b39126d1a6ebc258" },
+        "install": {
+          "type": "object", "additionalProperties": false,
+          "required": ["stage", "allowed_mach_lookup_global_names", "allow_count"],
+          "properties": {
+            "stage": { "const": "offline-install" },
+            "allowed_mach_lookup_global_names": { "const": ["com.apple.SystemConfiguration.DNSConfiguration"] },
+            "allow_count": { "const": 1 }
+          }
+        },
+        "build": {
+          "type": "object", "additionalProperties": false,
+          "required": ["stage", "allowed_mach_lookup_global_names", "allow_count"],
+          "properties": {
+            "stage": { "const": "next-build" },
+            "allowed_mach_lookup_global_names": { "const": [] },
+            "allow_count": { "const": 0 }
+          }
+        },
+        "observed": {
+          "type": "object", "additionalProperties": false,
+          "required": ["install_audit_digest", "install_denial_count", "install_process_attempt_count", "build_audit_digest", "build_denial_count", "build_process_attempt_count"],
+          "properties": {
+            "install_audit_digest": { "$ref": "#/$defs/sha256" },
+            "install_denial_count": { "const": 0 },
+            "install_process_attempt_count": { "const": 0 },
+            "build_audit_digest": { "$ref": "#/$defs/sha256" },
+            "build_denial_count": { "const": 0 },
+            "build_process_attempt_count": { "const": 0 }
+          }
+        }
+      }
+    },
     "generated_build_inventory_digest": {
       "$ref": "#/$defs/sha256",
       "description": "SHA-256 of the exact canonical file_inventory entries whose source_kind is generated_build; the runtime additionally requires sealed .next and node_modules entries only under the app component."
     },
     "pnpm_store_snapshot_inventory_digest": {
       "$ref": "#/$defs/sha256",
-      "description": "SHA-256 of the portable candidate-owned pnpm store whose exact sealed root child set is files,index and whose entries bind path, type, mode, size, and content identity; cross-bound into candidate and bundle authority and recomputed for each completed-root copy. Build-only projects/tmp scratch is removed before seal. Root-local device, inode, owner, nlink, ctime, and mtime evidence is held only by the separate physical authority."
+      "description": "SHA-256 of the portable candidate-owned pnpm store whose exact sealed root child set is files,index and whose entries bind path, type, mode, size, and content identity; cross-bound into candidate and bundle authority and recomputed for each completed-root copy. Install-only projects/tmp scratch is removed at the working-index seal transition. Root-local device, inode, owner, nlink, ctime, and mtime evidence is held only by the separate physical authority."
+    },
+    "pnpm_store_final_index_inventory_digest": {
+      "$ref": "#/$defs/sha256",
+      "description": "SHA-256 of the fully sealed final pnpm index subtree after the offline-install working phase, binding every relative path, type, mode, size, and content identity. The builder, candidate, bundle, startup identity, completed reader, and root-local physical authority cross-bind this portable digest; location-specific physical identity is held separately by the physical authority."
     },
     "build_id": { "type": "string", "minLength": 1 },
     "sealed_bundle_digest": { "$ref": "#/$defs/sha256" },

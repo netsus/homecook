@@ -2,11 +2,8 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   mkdirSync,
-  mkdtempSync,
-  realpathSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -19,6 +16,7 @@ import {
 } from "../../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
 import { canonicalizeJcs, sha256Jcs } from "../../scripts/lib/rfc8785-jcs.mjs";
 import { EXPECTED_RELEASE_CONTEXTS } from "../../scripts/lib/production-release-approval-policy.mjs";
+import type { OwnedTempRegistry } from "./owned-temp-root";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
@@ -26,10 +24,31 @@ const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const DIGEST_C = "c".repeat(64);
 
-function privateRoot(prefix: string) {
-  const root = mkdtempSync(join(tmpdir(), prefix));
-  chmodSync(root, 0o700);
-  return realpathSync(root);
+function sandboxStageCapabilityPolicy() {
+  const policyText = canonicalizeJcs({
+    schema: "homecook.sandbox-stage-capability-policy-text.v1",
+    stages: [
+      { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"] },
+      { stage: "next-build", allowed_mach_lookup_global_names: [] },
+    ],
+    network_policy: "deny-all",
+    no_log_denials: ["com.apple.diagnosticd"],
+  });
+  return {
+    schema: "homecook.sandbox-stage-capability-policy.v1",
+    policy_text: policyText,
+    policy_digest: createHash("sha256").update(policyText).digest("hex"),
+    install: { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"], allow_count: 1 },
+    build: { stage: "next-build", allowed_mach_lookup_global_names: [], allow_count: 0 },
+    observed: {
+      install_audit_digest: DIGEST_A, install_denial_count: 0, install_process_attempt_count: 0,
+      build_audit_digest: DIGEST_B, build_denial_count: 0, build_process_attempt_count: 0,
+    },
+  };
+}
+
+function privateRoot(prefix: string, tempRegistry: OwnedTempRegistry) {
+  return tempRegistry.createOwnedTempRoot(prefix);
 }
 
 function tool(name: string) {
@@ -107,13 +126,21 @@ function storedCiEvidence(releaseSha = SHA_A) {
 
 export async function createCompletedRehearsalCandidateFixture(
   prefix = "homecook-r2-real-candidate-",
-  { releaseSha = SHA_A, releaseTree = SHA_B } = {},
+  {
+    releaseSha = SHA_A,
+    releaseTree = SHA_B,
+    tempRegistry,
+  }: {
+    releaseSha?: string;
+    releaseTree?: string;
+    tempRegistry: OwnedTempRegistry;
+  },
 ) {
-  const authorityRoot = privateRoot(prefix);
+  const authorityRoot = privateRoot(prefix, tempRegistry);
   const candidateRoot = join(authorityRoot, "candidate");
   mkdirSync(candidateRoot, { mode: 0o700 });
 
-  const sourceStore = join(privateRoot(`${prefix}store-`), "v10");
+  const sourceStore = join(privateRoot(`${prefix}store-`, tempRegistry), "v10");
   const blobBytes = Buffer.from("package bytes\n");
   const blobIntegrity = createHash("sha512").update(blobBytes).digest("hex");
   const blobRelativePath = join("files", blobIntegrity.slice(0, 2), blobIntegrity.slice(2));
@@ -131,9 +158,9 @@ export async function createCompletedRehearsalCandidateFixture(
     sourceStore,
     storeRoot: join(candidateRoot, "pnpm-store"),
     currentUid: process.getuid?.(),
-  }, () => undefined);
+  }, ({ sealInstallIndex }) => sealInstallIndex());
 
-  const componentSource = privateRoot(`${prefix}components-`);
+  const componentSource = privateRoot(`${prefix}components-`, tempRegistry);
   const componentRoots = {
     app: join(componentSource, "app"),
     full_local: join(componentSource, "full_local"),
@@ -210,8 +237,10 @@ export async function createCompletedRehearsalCandidateFixture(
     release_sha: releaseSha,
     release_tree: releaseTree,
     sandbox_policy_digest: DIGEST_B,
+    sandbox_stage_capability_policy: sandboxStageCapabilityPolicy(),
     generated_build_inventory_digest: generatedBuildInventoryDigest,
     pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,
     sealed_bundle_digest: physical.sealed_bundle_digest,
     source_manifest_digest: DIGEST_A,
     builder_input_digest: DIGEST_B,
@@ -254,8 +283,10 @@ export async function createCompletedRehearsalCandidateFixture(
     source_manifest_digest: DIGEST_A,
     compose_source_digest: DIGEST_C,
     sandbox_policy_digest: DIGEST_B,
+    sandbox_stage_capability_policy: sandboxStageCapabilityPolicy(),
     generated_build_inventory_digest: generatedBuildInventoryDigest,
     pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
+    pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,
     build_id: "build-r2",
     sealed_bundle_digest: physical.sealed_bundle_digest,
     bundle_manifest_digest: bundle.bundle_manifest_digest,

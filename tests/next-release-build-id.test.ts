@@ -17,4 +17,19 @@ describe("Next.js production release build ID", () => {
       "prod-20260828.3-8439af5f",
     );
   });
+
+  it("keeps release rehearsal builds in one OS process by using worker threads", async () => {
+    vi.stubEnv("HOMECOOK_RELEASE_REHEARSAL_NO_CHILD_PROCESSES", "1");
+    vi.resetModules();
+
+    const { default: config } = await import("../next.config");
+
+    expect(config.experimental).toMatchObject({
+      cpus: 1,
+      parallelServerBuildTraces: false,
+      parallelServerCompiles: false,
+      webpackBuildWorker: false,
+      workerThreads: true,
+    });
+  });
 });
