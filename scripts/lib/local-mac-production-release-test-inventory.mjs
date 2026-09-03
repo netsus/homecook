@@ -56,6 +56,14 @@ export function digestReleaseTestInventory(normalizedTests) {
     .digest("hex");
 }
 
+export function normalizeReleaseTestInventory(tests) {
+  return [...tests].sort((left, right) => (
+    String(left.file).localeCompare(String(right.file))
+    || String(left.name).localeCompare(String(right.name))
+    || left.occurrence - right.occurrence
+  ));
+}
+
 export function collectReleaseTestInventory({
   rootDir = process.cwd(),
   scopePath = RELEASE_TEST_SCOPE_PATH,
@@ -77,13 +85,13 @@ export function collectReleaseTestInventory({
     && candidate.occurrence === test.occurrence
   )) === index);
   const rootPrefix = `${resolve(rootDir)}${sep}`;
-  const normalizedTests = tests.map((test) => ({
+  const normalizedTests = normalizeReleaseTestInventory(tests.map((test) => ({
     file: String(test.file).startsWith(rootPrefix)
       ? String(test.file).slice(rootPrefix.length).split(sep).join("/")
       : null,
     name: test.name,
     occurrence: test.occurrence,
-  }));
+  })));
   if (
     normalizedTests.length === 0
     || normalizedTests.some((test) => (

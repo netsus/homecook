@@ -36,6 +36,7 @@ import { buildRehearsalSelection } from "../scripts/lib/local-mac-production-reh
 import { canonicalizeJcs } from "../scripts/lib/rfc8785-jcs.mjs";
 import { validateLocalMacProductionReleaseEvidence } from "../scripts/lib/local-mac-production-release-evidence.mjs";
 import * as releaseEvidenceModule from "../scripts/lib/local-mac-production-release-evidence.mjs";
+import * as releaseInventoryModule from "../scripts/lib/local-mac-production-release-test-inventory.mjs";
 
 const temporaryDirectories: string[] = [];
 const VERIFIED_ATTESTATION = () => ({ source: "test-attestation", verified: true });
@@ -578,6 +579,26 @@ describe("local Mac production release manifest", () => {
 });
 
 describe("local Mac production release evidence validation", () => {
+  it("normalizes collected release test identities into deterministic canonical order", () => {
+    const normalizeReleaseTestInventory = (
+      releaseInventoryModule as Record<string, unknown>
+    ).normalizeReleaseTestInventory;
+    expect(typeof normalizeReleaseTestInventory).toBe("function");
+    if (typeof normalizeReleaseTestInventory !== "function") return;
+    const left = [
+      { file: "tests/b.test.ts", name: "beta", occurrence: 0 },
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 1 },
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 0 },
+    ];
+    const right = [...left].reverse();
+
+    expect(normalizeReleaseTestInventory(left)).toEqual(normalizeReleaseTestInventory(right));
+    expect(normalizeReleaseTestInventory(left)).toEqual([
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 0 },
+      { file: "tests/a.test.ts", name: "alpha", occurrence: 1 },
+      { file: "tests/b.test.ts", name: "beta", occurrence: 0 },
+    ]);
+  });
   type TestReleaseCommand = {
     [key: string]: unknown;
     stdout_projection: Record<string, unknown>;
