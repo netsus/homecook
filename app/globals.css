@@ -14354,6 +14354,8 @@ button {
 .mdv2-root {
   --mdv2-brand: var(--brand-primary, #00a1ff);
   --mdv2-brand-deep: var(--brand-primary-hover, #0087d7);
+  --mdv2-action: #00689a;
+  --mdv2-action-hover: #00567f;
   --mdv2-brand-soft: var(--brand-primary-soft, rgba(0, 161, 255, 0.08));
   --mdv2-ink: #212529;
   --mdv2-text-2: var(--text-2, #495057);
@@ -14417,8 +14419,8 @@ button {
   text-align: center;
   width: 100%;
 }
-.mdv2-primary { align-self: end; background: var(--mdv2-brand); color: #fff; margin-top: auto; }
-.mdv2-primary:hover { background: var(--mdv2-brand-deep); }
+.mdv2-primary { align-self: end; background: var(--mdv2-action); color: #fff; margin-top: auto; }
+.mdv2-primary:hover { background: var(--mdv2-action-hover); }
 .mdv2-secondary { background: #fff; border-color: var(--mdv2-line); color: var(--mdv2-ink); }
 .mdv2-primary:disabled { background: #ced4da; color: #868e96; cursor: not-allowed; }
 .mdv2-primary:focus-visible, .mdv2-secondary:focus-visible, .mdv2-back:focus-visible, .mdv2-choices button:focus-visible, .mdv2-tomorrow button:focus-visible, .mdv2-form input:focus-visible, .mdv2-form button:focus-visible { outline: 3px solid #075985; outline-offset: 3px; }
@@ -14482,7 +14484,7 @@ button {
 .mdv2-week-strip { border: 1px solid var(--mdv2-line); border-radius: 12px; display: grid; grid-template-columns: repeat(7, 1fr); padding: 7px; }
 .mdv2-week-strip span { align-items: center; border-radius: 8px; display: grid; gap: 2px; justify-items: center; min-height: 43px; }
 .mdv2-week-strip small { color: var(--mdv2-text-3); font-size: 10px; }
-.mdv2-week-strip .active { background: var(--mdv2-brand); color: #fff; }
+.mdv2-week-strip .active { background: var(--mdv2-action); color: #fff; }
 .mdv2-week-strip .active small { color: #fff; }
 .mdv2-day, .mdv2-tomorrow { border: 1px solid var(--mdv2-line); border-radius: 14px; overflow: hidden; }
 .mdv2-day header, .mdv2-tomorrow header { align-items: center; background: var(--mdv2-brand-soft); display: flex; justify-content: space-between; min-height: 42px; padding: 0 13px; }
@@ -14506,7 +14508,7 @@ button {
 .mdv2-product h2 { font-size: 1.15rem; }
 .mdv2-product p { color: var(--mdv2-text-3); margin: 7px 0 12px; }
 .mdv2-product strong { color: #006da3; font-size: 13px; }
-.mdv2-badge { background: var(--mdv2-brand); border-radius: 999px; color: #fff; font-size: 11px; font-weight: 800; left: 12px; padding: 5px 9px; position: absolute; top: 12px; }
+.mdv2-badge { background: var(--mdv2-action); border-radius: 999px; color: #fff; font-size: 11px; font-weight: 800; left: 12px; padding: 5px 9px; position: absolute; top: 12px; }
 .mdv2-affiliation { color: var(--mdv2-text-3); font-size: 12px; line-height: 1.5; text-align: center; }
 
 .mdv2-invitation { align-items: center; background: #f7fbfd; border: 1px solid #dbeaf1; border-radius: 14px; display: grid; gap: 10px; grid-template-columns: minmax(100px, 38%) 1fr; padding: 16px; }
