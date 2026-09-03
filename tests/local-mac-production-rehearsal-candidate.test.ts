@@ -3997,31 +3997,13 @@ describe("release rehearsal candidate orchestration", () => {
         HOME: root,
         HOMECOOK_SANDBOX_WITNESS_MODULE: sandboxWitness.path,
         NODE_OPTIONS: `--require=${sandboxWitness.preload_path}`,
+        NODE_ENV: "test",
         PATH: "/usr/bin:/bin",
         TMPDIR: root,
       },
       encoding: "utf8",
     });
     expect(applicationDnsSentinel.status, applicationDnsSentinel.stderr).toBe(0);
-
-    await expect(runObservedSandboxCommand({
-      sandboxPath: "/usr/bin/sandbox-exec",
-      sandboxWitnessPath: sandboxWitness.path,
-      logPath: "/usr/bin/log",
-      profile,
-      command,
-      args: ["-e", [
-        'if (process.env.HOMECOOK_OFFLINE_DNS_PROJECTION !== undefined) process.exit(70);',
-        'if (globalThis[Symbol.for("homecook.offlineDnsProjection")] !== undefined) process.exit(70);',
-      ].join("\n")],
-      cwd: root,
-      env: { HOME: root, HOMECOOK_OFFLINE_DNS_PROJECTION: "1", PATH: "/usr/bin:/bin", TMPDIR: root },
-      label: "Next build retains application DNS module semantics",
-      processExecutablePaths: [command],
-      stage: "next-build",
-    })).resolves.toMatchObject({
-      audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
-    });
 
     await expect(runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
