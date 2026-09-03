@@ -1,11 +1,11 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.35.md`
-- `docs/화면정의서-v1.5.39.md`
-- `docs/유저flow맵-v1.3.37.md`
-- `docs/db설계-v1.3.37.md`
-- `docs/api문서-v1.2.42.md`
+- `docs/요구사항기준선-v1.7.36.md`
+- `docs/화면정의서-v1.5.40.md`
+- `docs/유저flow맵-v1.3.38.md`
+- `docs/db설계-v1.3.38.md`
+- `docs/api문서-v1.2.43.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
@@ -14,6 +14,26 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
+
+## 2026-09-03 contract-evolution — marketing demand validation v2
+
+사용자는 source prototype branch `feature/demand-validation-funnel-integration`, exact commit `63f8ef2a019c6d260a96a42fab9d67f727d93557`의 사용자 확정 프런트를 운영 계약으로 진화시키는 방향을 승인했다. Stage 1 작성 task는 `01a0630e-81f1-7f42-8b1b-cb259d1d5997`이며 자기 변경을 최종 승인하지 않는다.
+
+- 공식 tuple은 requirements `1.7.36`, screen `1.5.40`, Flow `1.3.38`, DB `1.3.38`, API `1.2.43`이다.
+- 퀴즈는 exact `q1 | q2 | q3 | q4` 네 문항이며 `q5`는 허용하지 않는다. 결과는 Q3 하나로만 `homecook-passer | eyeballing-master | ingredient-tracker | pro-measurer` 중 하나를 결정한다.
+- 화면 흐름은 `hero → quiz(q1..q4) → result → experience(1..5) → planner_homecook → packaged_food → planner_complete → beta_form → done`이다. 결과와 전체 체험은 이메일 전에 공개한다.
+- 익명 stage action은 `view → quiz_started → quiz_completed → result_viewed → experience_started → experience_completed → beta_form_viewed`이고 PII를 받거나 쓰지 않는다. 이메일은 별도 `lead_submitted` action만 받는다.
+- 기존 `POST /api/v1/marketing/validation`, `public.marketing_validation_sessions`, `{ success, data, error }`, local-only Supabase 경계는 보존한다. 신규 endpoint/table은 없다.
+- v2는 allowlisted `utm_*`와 resolved Hero variant인 `ad_variant=a|b|c|d|default`를 저장한다. exact mapping은 `hook_reentry→a`, `hook_cooked_weight→b`, `hook_calorie_quiz→c`, `hook_workaround→d`이며 recognized `utm_content`가 candidate `ad_variant`와 충돌하면 우선한다. unknown/direct는 `default`다. 개발용 `variant` query는 운영 API field가 아니다.
+- 기존 5문항 결과, `target_qualified`, `solution_viewed`/`intent_selected`/`followup_submitted`와 planner followup 컬럼은 historical v1 row 호환용으로만 보존한다. v2 row에서 `target_qualified`는 `null`이며 Q1/Q2/Q4로 새 적합도 규칙을 임의 발명하지 않는다.
+- normalized email duplicate와 동일 session replay는 같은 generic success를 반환한다. `consent_version=marketing-demand-validation-v2`, server-issued `consented_at`, Turnstile 검증, first-write-wins와 역순 409를 잠근다. email/consent/Turnstile field는 익명 action에서 거부한다.
+- 기존 v1 quiz/intent/stage CHECK는 `creative_key`별 조건부 CHECK로 교체한다. v1 row는 기존 의미를 보존하고 v2 row는 `target_qualified`/legacy field null, 새 stage 순서와 `beta_form_viewed_at <= lead_submitted_at`을 강제한다. migration/test/apply는 후속 Stage 2다.
+- 결과 공유는 `/beta?result=<opaque-result-key>`만 허용하며 다른 query를 제거한다. email/answers/UTM/ad variant는 공유 URL에서 금지하고 known key는 read-only preview, unknown key는 기본 Hero로 처리한다.
+- iPhone/Pixel frame, device selector와 standalone mobile runtime은 운영 범위 밖이다. `src/Prototype.tsx`, `src/prototype.css`, `public/assets/funnel/`의 app-owned 화면·스타일·최종 자산만 Next.js shell, 공용 접근성, `prefers-reduced-motion` 기준으로 포팅한다.
+- latest source commit은 뒤로가기, 결과·체험·planner·beta layout과 최종 캐릭터/영양 자산을 개선했으며 4문항·4결과·API/DB 계약은 바꾸지 않는다. 최신 visual evidence는 `evidence/design-qa/final-v4/`와 `final-v5/`다.
+- 실제 YouTube 썸네일과 제품 이미지는 공개 사용 전 권리를 확인해야 한다. 제품 이미지를 쓰면 `제품 예시`를 표시하고 제휴로 오인시키지 않는다. 권리 미확인 자산은 교체 전까지 production blocker다.
+- operator privacy data, canonical `/privacy`, Turnstile production secret/hostname, allowlisted origin, edge rate-limit evidence, campaign retention, sender domain, 실제 iOS smoke와 paid-ad 승인은 계속 Manual Only blocker다. 하나라도 없으면 lead는 fail-closed다.
+- 현재 main의 runtime·migration·분석 SQL은 아직 5문항/옛 결과 계약이다. 이 docs PR은 문서와 Stage 1 재잠금만 수행하며 제품 코드, migration apply/reset, remote/cloud/linked Supabase, release/tag/deploy를 수행하지 않는다.
 
 ## 2026-08-31 contract-evolution — marketing demand validation landing
 

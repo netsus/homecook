@@ -437,82 +437,52 @@ describe("marketing validation Stage 6 operations", () => {
     expect(requireFileText(safeOutputPath)).toContain("\"'=cmd,\n@example.com\"");
   });
 
-  it("ships an analysis SQL that excludes direct identifiers and locks the paid weekly-nutrition-v2 denominator and lead cohorts", () => {
+  it("ships a PII-free analysis SQL scoped to the v2 creative and lead cohorts", () => {
     const sql = requireFileText(analysisSqlPath);
 
     expect(sql).not.toMatch(/\bselect\s+[^;]*(email|utm_term|ip|user_agent|referrer|cookie)\b/iu);
-    expect(sql).toContain("paid_allowlisted");
-    expect(sql).toContain("weekly_nutrition_v2");
-    expect(sql).toMatch(/count\s*\(\s*distinct\s+id\s*\)/iu);
+    expect(sql).toContain("mumeok_funnel_prototype_v2");
+    expect(sql).toContain("ad_variant");
+    expect(sql).toContain("quiz_result");
     expect(sql).toContain("lead_submission_status = 'accepted'");
     expect(sql).toContain("lead_submission_status = 'duplicate'");
-    expect(sql).toMatch(
-      /where\s+lead_submission_status\s*=\s*'accepted'\s+and\s+planner_intent\s+in/iu,
-    );
+    expect(sql).not.toContain("planner_intent");
+    expect(sql).not.toContain("target_qualified");
   });
 
-  it("ships an analysis SQL that preserves the Green Yellow Red and diagnostics rollups with Wilson intervals", () => {
+  it("reports every v2 funnel stage and beta-form-to-lead conversion", () => {
     const sql = requireFileText(analysisSqlPath);
 
-    expect(sql).toContain("'Green'");
-    expect(sql).toContain("'Yellow'");
-    expect(sql).toContain("'Red'");
-    expect(sql).toContain("diagnostics");
-    expect(sql).toMatch(/wilson/iu);
-    expect(sql).toMatch(/1\.96/iu);
-    expect(sql).toContain("when unique_ad_landing_session < 100");
-    expect(sql).toContain("then '판단 보류'");
-    expect(sql).toContain("target_qualified_lead");
-    expect(sql).toContain("non_target_qualified_lead");
-    expect(sql).toContain("satisfied_control");
-    expect(sql).toContain("q1_distribution");
-    expect(sql).toContain("diagnostic_rates");
+    for (const metric of [
+      "landing_view", "quiz_start", "quiz_complete", "result_view",
+      "experience_start", "experience_complete", "beta_form_view", "accepted_lead",
+      "duplicate_submission",
+    ]) expect(sql).toContain(`'${metric}'`);
+    expect(sql).toContain("beta_form_to_lead_rate");
+    expect(sql).toMatch(/select 'accepted_lead', accepted_lead, beta_form_view from counts[\s\S]*select 'duplicate_submission', duplicate_submission, beta_form_view from counts/iu);
   });
 
-  it("keeps the analysis SQL target-qualified truth table aligned with the server rule literals", () => {
+  it("keeps the analysis SQL aligned with the Q3-only four-result rule", () => {
     const sql = requireFileText(analysisSqlPath);
-    const qualified = buildQuizOutcome({
-      q1: "시작했지만 중단함",
-      q2: "2~3일",
-      q3: "재료를 하나씩 검색해 입력",
-      q4: "집밥과 완제품을 따로 기록할 때",
-      q5: "레시피 기준 자동 계산",
-    });
-    const blocked = buildQuizOutcome({
-      q1: "시작했지만 중단함",
-      q2: "2~3일",
-      q3: "재료를 하나씩 검색해 입력",
-      q4: "특별히 불편하지 않음",
-      q5: "현재 방식으로 충분함",
-    });
-
-    expect(qualified.target_qualified).toBe(true);
-    expect(blocked.target_qualified).toBe(false);
-    expect(sql).toContain("해보려 했지만 시작하지 못함");
-    expect(sql).toContain("시작했지만 중단함");
-    expect(sql).toContain("가끔 기록 중");
-    expect(sql).toContain("2~3일");
-    expect(sql).toContain("4~7일");
-    expect(sql).toContain("특별히 불편하지 않음");
-    expect(sql).toContain("현재 방식으로 충분함");
-    expect(sql).toContain("하루 합계와 주간 흐름을 한눈에 못 볼 때");
+    const result = buildQuizOutcome({ q1: "none", q2: "none", q3: "track", q4: "none" });
+    expect(result).toEqual({ quiz_result: "ingredient-tracker", target_qualified: null });
+    for (const key of ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"]) {
+      expect(sql).toContain(`'${key}'`);
+    }
   });
 
   it("keeps every production activation blocker visible in the result-template sign-off", () => {
     const template = requireFileText(resultTemplatePath);
 
     for (const blocker of [
-      "canonical /privacy",
-      "launch-readiness PR1/2/3",
-      "production Turnstile",
+      "canonical `/privacy`",
+      "Turnstile secret / hostname / action",
       "production origin",
-      "edge rate-limit rule",
-      "MARKETING_LEAD_PROTECTION_READY=1",
-      "MARKETING_CAMPAIGN_END_AT",
+      "edge rate-limit",
+      "retention / sender domain",
       "full-local migration apply",
-      "베타 초대 발신 이메일 / 도메인",
-      "실제 iOS Safari smoke",
-      "paid ads 집행 승인",
+      "image rights / product example label",
+      "iOS Safari / paid ads approval",
     ]) {
       expect(template).toContain(blocker);
     }

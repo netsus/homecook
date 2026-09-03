@@ -35,11 +35,11 @@ function markdownTableCellsAfter(text: string, heading: string) {
 }
 
 const officialTuple = [
-  "docs/요구사항기준선-v1.7.35.md",
-  "docs/화면정의서-v1.5.39.md",
-  "docs/유저flow맵-v1.3.37.md",
-  "docs/db설계-v1.3.37.md",
-  "docs/api문서-v1.2.42.md",
+  "docs/요구사항기준선-v1.7.36.md",
+  "docs/화면정의서-v1.5.40.md",
+  "docs/유저flow맵-v1.3.38.md",
+  "docs/db설계-v1.3.38.md",
+  "docs/api문서-v1.2.43.md",
 ];
 
 function getCurrentEndpointHeading(apiDoc: string) {
@@ -91,11 +91,11 @@ describe("YouTube background extraction contract evolution", () => {
       expect(read(relativePath)).toContain("2026-08-12 contract-evolution");
     }
 
-    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.35");
-    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.39");
-    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.37");
-    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.37");
-    expect(read(officialTuple[4])).toContain("# API\\_설계\\_v1.2.42");
+    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.36");
+    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.40");
+    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.38");
+    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.38");
+    expect(read(officialTuple[4])).toContain("# API\\_설계\\_v1.2.43");
   });
 
   it("records approval, public impact, exclusions, and rejected alternatives", () => {

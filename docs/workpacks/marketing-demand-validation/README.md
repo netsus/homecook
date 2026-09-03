@@ -1,5 +1,7 @@
 # Slice: marketing-demand-validation
 
+> **Historical v1 closeout.** 이 문서의 5문항·old result·neutral intent·followup evidence는 PR #1477~#1487의 v1 이력으로 보존한다. 사용자 승인 v2 계약과 미체크 후속 Stage 항목은 `docs/workpacks/marketing-demand-validation-v2/README.md`가 담당하며 이 완료 이력을 재해석하거나 다시 열지 않는다.
+
 ## Goal
 `/beta` 수요검증 랜딩으로 광고 메시지 일치, 5문항 퀴즈 반응, 결과를 이메일 전에 공개하는 neutral funnel, 그리고 제출 뒤 주간 플래너 관심을 하나의 세로 슬라이스로 검증한다. 이 슬라이스는 수요를 호기심과 분리해서 측정하기 위해 단일 route, 단일 first-party session row, 단일 API만 사용한다. Stage 1 author와 분리된 fresh Codex internal 1.5 reviewer가 `APPROVED / FINDINGS_COUNT: 0`으로 승인했다. Claude dispatch는 금지한다.
 

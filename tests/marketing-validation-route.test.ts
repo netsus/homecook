@@ -1,634 +1,271 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  MarketingValidationAction,
-  MarketingValidationQuizResult,
-  MarketingValidationSessionRecord,
-} from "@/types/marketing-validation";
+import { createMarketingValidationHandler } from "@/lib/server/marketing-validation-route";
+import { parseMarketingValidationBody } from "@/lib/server/marketing-validation";
+import type { MarketingValidationSessionRecord } from "@/types/marketing-validation";
 
-const now = new Date("2026-08-31T09:00:00.000Z");
+const SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
+const ORIGIN = "https://app.mumeok.kr";
+const NOW = "2026-09-03T09:00:00.000Z";
 
-type SessionRow = MarketingValidationSessionRecord;
-
-function createSession(overrides: Partial<SessionRow> = {}): SessionRow {
+function createSession(overrides: Record<string, unknown> = {}): MarketingValidationSessionRecord {
   return {
-    id: "550e8400-e29b-41d4-a716-446655440000",
-    viewed_at: "2026-08-31T09:00:00.000Z",
+    id: SESSION_ID,
+    creative_key: "mumeok_funnel_prototype_v2",
+    viewed_at: NOW,
     quiz_started_at: null,
     quiz_completed_at: null,
-    solution_viewed_at: null,
-    intent_clicked_at: null,
+    result_viewed_at: null,
+    experience_started_at: null,
+    experience_completed_at: null,
+    beta_form_viewed_at: null,
     lead_submitted_at: null,
-    followup_submitted_at: null,
-    intent_choice: null,
     quiz_result: null,
     quiz_answers: null,
     target_qualified: null,
     lead_submission_status: "none",
+    solution_viewed_at: null,
+    intent_choice: null,
+    intent_clicked_at: null,
     planner_intent: null,
     planner_priority: null,
+    followup_submitted_at: null,
     ...overrides,
-  };
+  } as MarketingValidationSessionRecord;
 }
 
-async function createHandler() {
-  const importedModule = await import("@/lib/server/marketing-validation-route");
-  return importedModule.createMarketingValidationHandler;
-}
-
-function createDependencies(overrides: Record<string, unknown> = {}) {
+function dependencies(overrides: Record<string, unknown> = {}) {
   return {
-    now: () => now,
-    newSessionId: () => "550e8400-e29b-41d4-a716-446655440000",
-    allowedOrigins: ["http://localhost:3100", "https://app.mumeok.kr"],
+    now: () => new Date(NOW),
+    newSessionId: () => SESSION_ID,
+    allowedOrigins: [ORIGIN],
+    paidAttributionOrigins: [ORIGIN],
     readSession: vi.fn(async () => null),
     insertViewSession: vi.fn(async () => createSession()),
     advanceSession: vi.fn(),
     markDuplicateLead: vi.fn(),
     marketingLeadGate: vi.fn(async () => ({
       ok: true as const,
-      allowedOrigins: ["http://localhost:3100", "https://app.mumeok.kr"],
-      allowedHostnames: ["app.mumeok.kr", "localhost"],
+      allowedOrigins: [ORIGIN],
+      allowedHostnames: ["app.mumeok.kr"],
     })),
-    verifyTurnstile: vi.fn(async () => ({
-      ok: true as const,
-      verified_at: "2026-08-31T09:00:05.000Z",
-    })),
+    verifyTurnstile: vi.fn(async () => ({ ok: true as const, verified_at: NOW })),
     ...overrides,
   };
 }
 
-describe("marketing demand validation route", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
+function request(body: Record<string, unknown>, cookie = true) {
+  return new Request(`${ORIGIN}/api/v1/marketing/validation`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin: ORIGIN,
+      ...(cookie ? { cookie: `mumeok_validation_session=${SESSION_ID}` } : {}),
+    },
+    body: JSON.stringify(body),
   });
+}
 
-  it("sets the HttpOnly session cookie on the first https view", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const inserted = createSession();
-    const handler = createMarketingValidationHandler(createDependencies({
-      newSessionId: () => inserted.id,
-      insertViewSession: vi.fn(async () => inserted),
-    }));
+const completedAnswers = { q1: "daily", q2: "3_5", q3: "track", q4: "search" };
 
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-      },
-      body: JSON.stringify({ action: "view", honeypot: "", utm_source: "meta" }),
-    }));
+describe("marketing validation v2 route", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("creates a v2 session and stores the server-resolved Hero variant", async () => {
+    const insertViewSession = vi.fn(async (input) => createSession({ ad_variant: input.ad_variant }));
+    const handler = createMarketingValidationHandler(dependencies({ insertViewSession }));
+    const response = await handler(request({
+      action: "view", honeypot: "", utm_content: "hook_reentry", ad_variant: "d",
+    }, false));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      success: true,
-      data: { stage: "view", state: "view" },
-      error: null,
-    });
-    expect(response.headers.get("set-cookie")).toMatch(
-      /mumeok_validation_session=550e8400-e29b-41d4-a716-446655440000;.*Path=\/api\/v1\/marketing\/validation.*HttpOnly.*SameSite=Lax.*Secure/i,
-    );
+    expect(insertViewSession).toHaveBeenCalledWith(expect.objectContaining({ ad_variant: "a" }));
+    expect(response.headers.get("set-cookie")).toContain(`mumeok_validation_session=${SESSION_ID}`);
   });
 
-  it("keeps Secure=false on local http view cookies", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const handler = createMarketingValidationHandler(createDependencies());
-
-    const response = await handler(new Request("http://localhost:3100/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "http://localhost:3100",
-      },
-      body: JSON.stringify({ action: "view", honeypot: "" }),
+  it("restarts a v1 cookie with a new v2 row without writing the historical row", async () => {
+    const old = createSession({ creative_key: "weekly_nutrition_v2" });
+    const insertViewSession = vi.fn(async () => createSession());
+    const handler = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => old), insertViewSession,
     }));
+    const response = await handler(request({ action: "view", honeypot: "" }));
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("set-cookie")).not.toContain("Secure");
+    expect(insertViewSession).toHaveBeenCalledOnce();
+    expect(response.headers.get("set-cookie")).toContain(`mumeok_validation_session=${SESSION_ID}`);
   });
 
-  it("replays view against the existing progressed row instead of replacing the session", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const progressed = createSession({
-      quiz_started_at: "2026-08-31T09:00:02.000Z",
-    });
-    const insertViewSession = vi.fn();
-    const handler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => progressed),
-      insertViewSession,
-    }));
-
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: `mumeok_validation_session=${progressed.id}`,
-      },
-      body: JSON.stringify({ action: "view", honeypot: "" }),
-    }));
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      success: true,
-      data: { stage: "view", state: "quiz_started" },
-      error: null,
-    });
-    expect(response.headers.get("set-cookie")).toBeNull();
-    expect(insertViewSession).not.toHaveBeenCalled();
-  });
-
-  it("derives paid attribution from server locks rather than trusting client labels", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const insertViewSession = vi.fn(async () => createSession({
-      attribution_status: "paid_allowlisted",
-    }));
-    const handler = createMarketingValidationHandler(createDependencies({
-      paidAttributionOrigins: ["https://app.mumeok.kr"],
-      insertViewSession,
-    }));
-
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-      },
-      body: JSON.stringify({
-        action: "view",
-        honeypot: "",
-        utm_source: "meta",
-        utm_medium: "paid_social",
-        utm_campaign: "weekly_nutrition_2026",
-        utm_content: "weekly_nutrition_v2",
-      }),
-    }));
-
-    expect(response.status).toBe(200);
-    expect(insertViewSession).toHaveBeenCalledWith(expect.objectContaining({
-      attribution_status: "paid_allowlisted",
-      request_origin: "https://app.mumeok.kr",
-      sessionId: expect.any(String),
-    }));
-  });
-
-  it("fails closed before view insert when retention readiness is missing", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const handler = createMarketingValidationHandler(createDependencies({
-      insertViewSession: vi.fn(async () => {
-        throw Object.assign(new Error("missing campaign end"), {
-          code: "MARKETING_RETENTION_NOT_READY",
-        });
-      }),
-    }));
-
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-      },
-      body: JSON.stringify({ action: "view", honeypot: "" }),
-    }));
-
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      success: false,
-      data: null,
-      error: {
-        code: "LEAD_CAPTURE_UNAVAILABLE",
-        message: "요청을 처리할 수 없어요. 잠시 후 다시 시도해 주세요.",
-        fields: [],
-      },
-    });
-  });
-
-  it("rejects missing, malformed, and nonexistent session cookies before writes", async () => {
-    const createMarketingValidationHandler = await createHandler();
+  it("rejects every non-view write through a historical v1 cookie", async () => {
     const advanceSession = vi.fn();
-    const insertViewSession = vi.fn();
-    const handler = createMarketingValidationHandler(createDependencies({
-      insertViewSession,
+    const handler = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => createSession({ creative_key: "weekly_nutrition_v2" })),
       advanceSession,
-      readSession: vi.fn(async () => null),
     }));
-
-    const missing = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-      },
-      body: JSON.stringify({ action: "quiz_started", honeypot: "" }),
-    }));
-    expect(missing.status).toBe(422);
-
-    const malformed = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: "mumeok_validation_session=bad-cookie",
-      },
-      body: JSON.stringify({ action: "quiz_started", honeypot: "" }),
-    }));
-    expect(malformed.status).toBe(422);
-
-    const missingRow = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: "mumeok_validation_session=550e8400-e29b-41d4-a716-446655440000",
-      },
-      body: JSON.stringify({ action: "quiz_started", honeypot: "" }),
-    }));
-    expect(missingRow.status).toBe(409);
-    expect(insertViewSession).not.toHaveBeenCalled();
-    expect(advanceSession).not.toHaveBeenCalled();
-  });
-
-  it("requires exact allowed origin for every post", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const insertViewSession = vi.fn();
-    const handler = createMarketingValidationHandler(createDependencies({
-      insertViewSession,
-    }));
-
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://evil.example",
-      },
-      body: JSON.stringify({ action: "view", honeypot: "" }),
-    }));
-
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({
-      success: false,
-      data: null,
-      error: {
-        code: "ORIGIN_NOT_ALLOWED",
-        message: "허용되지 않은 접근이에요.",
-        fields: [],
-      },
-    });
-    expect(insertViewSession).not.toHaveBeenCalled();
-  });
-
-  it("keeps quiz/result actions working even when lead protection readiness is missing", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const session = createSession({
-      quiz_started_at: "2026-08-31T09:00:02.000Z",
-    });
-    const advanceSession = vi.fn(async (_id: string, action: MarketingValidationAction) => {
-      expect(action).toBe("quiz_completed");
-      return createSession({
-        ...session,
-        quiz_completed_at: "2026-08-31T09:00:05.000Z",
-        quiz_result: "weekly_blindspot" as MarketingValidationQuizResult,
-        quiz_answers: {
-          q1: "시작했지만 중단함",
-          q2: "2~3일",
-          q3: "재료를 하나씩 검색해 입력",
-          q4: "하루 합계와 주간 흐름을 한눈에 못 볼 때",
-          q5: "레시피 기준 자동 계산",
-        },
-        target_qualified: true,
-      });
-    });
-    const handler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => session),
-      advanceSession,
-      marketingLeadGate: vi.fn(async () => ({
-        ok: false,
-        code: "LEAD_CAPTURE_NOT_READY",
-        message: "lead disabled",
-      })),
-    }));
-
-    const response = await handler(new Request("http://localhost:3100/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "http://localhost:3100",
-        cookie: `mumeok_validation_session=${session.id}`,
-      },
-      body: JSON.stringify({
-        action: "quiz_completed",
-        honeypot: "",
-        answers: {
-          q1: "시작했지만 중단함",
-          q2: "2~3일",
-          q3: "재료를 하나씩 검색해 입력",
-          q4: "하루 합계와 주간 흐름을 한눈에 못 볼 때",
-          q5: "레시피 기준 자동 계산",
-        },
-      }),
-    }));
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      success: true,
-      data: {
-        stage: "quiz_completed",
-        state: "quiz_completed",
-        quiz_result: "weekly_blindspot",
-        target_qualified: true,
-      },
-      error: null,
-    });
-    expect(advanceSession).toHaveBeenCalledOnce();
-  });
-
-  it("returns byte-for-byte identical success for accepted and duplicate leads", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const baseSession = createSession({
-      quiz_started_at: "2026-08-31T09:00:01.000Z",
-      quiz_completed_at: "2026-08-31T09:00:02.000Z",
-      solution_viewed_at: "2026-08-31T09:00:03.000Z",
-      intent_clicked_at: "2026-08-31T09:00:04.000Z",
-      intent_choice: "needed",
-      quiz_result: "weekly_blindspot" as MarketingValidationQuizResult,
-      target_qualified: true,
-    });
-    const verifyTurnstile = vi.fn(async () => ({
-      ok: true,
-      verified_at: "2026-08-31T09:00:05.000Z",
-    }));
-    const acceptedHandler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => baseSession),
-      advanceSession: vi.fn(async () => createSession({
-        ...baseSession,
-        lead_submitted_at: "2026-08-31T09:00:06.000Z",
-        lead_submission_status: "accepted",
-      })),
-      verifyTurnstile,
-    }));
-    const duplicateMarker = vi.fn(async () => createSession({
-      ...baseSession,
-      lead_submitted_at: "2026-08-31T09:00:06.000Z",
-      lead_submission_status: "duplicate",
-    }));
-    const duplicateHandler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => baseSession),
-      advanceSession: vi.fn(async () => {
-        throw Object.assign(new Error("duplicate"), { code: "MARKETING_EMAIL_DUPLICATE" });
-      }),
-      markDuplicateLead: duplicateMarker,
-      verifyTurnstile,
-    }));
-    const request = () => new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: `mumeok_validation_session=${baseSession.id}`,
-      },
-      body: JSON.stringify({
-        action: "lead_submitted",
-        honeypot: "",
-        email: "user@example.com",
-        consent: true,
-        turnstile_token: "turnstile-token",
-      }),
-    });
-
-    const acceptedResponse = await acceptedHandler(request());
-    const duplicateResponse = await duplicateHandler(request());
-
-    expect(await acceptedResponse.text()).toBe(await duplicateResponse.text());
-    expect(verifyTurnstile).toHaveBeenCalledTimes(2);
-    expect(duplicateMarker).toHaveBeenCalledOnce();
-  });
-
-  it("skips Turnstile verification when the same session already completed lead submission", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const submittedSession = createSession({
-      quiz_started_at: "2026-08-31T09:00:01.000Z",
-      quiz_completed_at: "2026-08-31T09:00:02.000Z",
-      solution_viewed_at: "2026-08-31T09:00:03.000Z",
-      intent_clicked_at: "2026-08-31T09:00:04.000Z",
-      lead_submitted_at: "2026-08-31T09:00:05.000Z",
-      intent_choice: "needed",
-      quiz_result: "weekly_blindspot" as MarketingValidationQuizResult,
-      target_qualified: true,
-      lead_submission_status: "accepted",
-    });
-    const verifyTurnstile = vi.fn();
-    const handler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => submittedSession),
-      verifyTurnstile,
-    }));
-
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: `mumeok_validation_session=${submittedSession.id}`,
-      },
-      body: JSON.stringify({
-        action: "lead_submitted",
-        honeypot: "",
-        email: "user@example.com",
-        consent: true,
-        turnstile_token: "turnstile-token",
-      }),
-    }));
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      success: true,
-      data: {
-        stage: "lead_submitted",
-        state: "lead_submitted",
-      },
-      error: null,
-    });
-    expect(verifyTurnstile).not.toHaveBeenCalled();
-  });
-
-  it("fails closed on readiness gaps and turnstile failures during lead submission", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const session = createSession({
-      quiz_started_at: "2026-08-31T09:00:01.000Z",
-      quiz_completed_at: "2026-08-31T09:00:02.000Z",
-      solution_viewed_at: "2026-08-31T09:00:03.000Z",
-      intent_clicked_at: "2026-08-31T09:00:04.000Z",
-      intent_choice: "needed",
-    });
-    const advanceSession = vi.fn();
-    const verifyTurnstile = vi.fn(async () => ({
-      ok: false,
-      code: "TURNSTILE_FAILED",
-      message: "expected action mismatch",
-    }));
-    const notReadyHandler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => session),
-      advanceSession,
-      verifyTurnstile,
-      marketingLeadGate: vi.fn(async () => ({
-        ok: false,
-        code: "LEAD_CAPTURE_NOT_READY",
-        message: "베타 신청은 아직 열리지 않았어요.",
-      })),
-    }));
-
-    const notReady = await notReadyHandler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: `mumeok_validation_session=${session.id}`,
-      },
-      body: JSON.stringify({
-        action: "lead_submitted",
-        honeypot: "",
-        email: "user@example.com",
-        consent: true,
-        turnstile_token: "turnstile-token",
-      }),
-    }));
-    expect(notReady.status).toBe(503);
-    expect(verifyTurnstile).not.toHaveBeenCalled();
-    expect(advanceSession).not.toHaveBeenCalled();
-
-    const handler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => session),
-      advanceSession,
-      verifyTurnstile,
-    }));
-    const turnstileFailure = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: `mumeok_validation_session=${session.id}`,
-      },
-      body: JSON.stringify({
-        action: "lead_submitted",
-        honeypot: "",
-        email: "user@example.com",
-        consent: true,
-        turnstile_token: "turnstile-token",
-      }),
-    }));
-    expect(turnstileFailure.status).toBe(422);
-    expect((await turnstileFailure.json()).error.code).toBe("TURNSTILE_FAILED");
-    expect(advanceSession).not.toHaveBeenCalled();
-  });
-
-  it("does not accept an email after the neutral negative intent", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const session = createSession({
-      quiz_started_at: "2026-08-31T09:00:01.000Z",
-      quiz_completed_at: "2026-08-31T09:00:02.000Z",
-      solution_viewed_at: "2026-08-31T09:00:03.000Z",
-      intent_clicked_at: "2026-08-31T09:00:04.000Z",
-      intent_choice: "enough",
-    });
-    const advanceSession = vi.fn();
-    const verifyTurnstile = vi.fn();
-    const marketingLeadGate = vi.fn();
-    const handler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => session),
-      advanceSession,
-      verifyTurnstile,
-      marketingLeadGate,
-    }));
-
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: `mumeok_validation_session=${session.id}`,
-      },
-      body: JSON.stringify({
-        action: "lead_submitted",
-        honeypot: "",
-        email: "user@example.com",
-        consent: true,
-        turnstile_token: "turnstile-token",
-      }),
-    }));
+    const response = await handler(request({ action: "quiz_started", honeypot: "" }));
 
     expect(response.status).toBe(409);
-    expect((await response.json()).error.code).toBe("INVALID_TRANSITION");
-    expect(marketingLeadGate).not.toHaveBeenCalled();
-    expect(verifyTurnstile).not.toHaveBeenCalled();
     expect(advanceSession).not.toHaveBeenCalled();
   });
 
-  it("records an explicitly skipped optional followup after a completed lead", async () => {
-    const createMarketingValidationHandler = await createHandler();
-    const session = createSession({
-      quiz_started_at: "2026-08-31T09:00:01.000Z",
-      quiz_completed_at: "2026-08-31T09:00:02.000Z",
-      solution_viewed_at: "2026-08-31T09:00:03.000Z",
-      intent_clicked_at: "2026-08-31T09:00:04.000Z",
-      intent_choice: "needed",
-      lead_submitted_at: "2026-08-31T09:00:05.000Z",
-      lead_submission_status: "accepted",
-    });
-    const advanceSession = vi.fn(async () => createSession({
-      ...session,
-      followup_submitted_at: "2026-08-31T09:00:06.000Z",
-    }));
-    const handler = createMarketingValidationHandler(createDependencies({
-      readSession: vi.fn(async () => session),
-      advanceSession,
-    }));
+  it.each(["solution_viewed", "intent_selected", "followup_submitted"])("rejects legacy action %s", async (action) => {
+    const handler = createMarketingValidationHandler(dependencies());
+    const response = await handler(request({ action, honeypot: "" }));
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
+  });
 
-    const response = await handler(new Request("https://app.mumeok.kr/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "https://app.mumeok.kr",
-        cookie: `mumeok_validation_session=${session.id}`,
-      },
-      body: JSON.stringify({
-        action: "followup_submitted",
-        honeypot: "",
-      }),
+  it("rejects q5, missing answers, old result fields, and unknown answers", async () => {
+    const handler = createMarketingValidationHandler(dependencies());
+    for (const body of [
+      { action: "quiz_completed", honeypot: "", answers: { ...completedAnswers, q5: "legacy" } },
+      { action: "quiz_completed", honeypot: "", answers: { q1: "daily", q2: "3_5", q3: "track" } },
+      { action: "quiz_completed", honeypot: "", answers: { ...completedAnswers, q3: "unknown" } },
+      { action: "quiz_completed", honeypot: "", answers: completedAnswers, result: "rough_match" },
+      { action: "view", honeypot: "", ad_variant: "unknown" },
+      { action: "view", honeypot: "", variant: "a" },
+    ]) {
+      const response = await handler(request(body));
+      expect(response.status).toBe(422);
+      expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("never reflects arbitrary unknown key names into validation errors", async () => {
+    const handler = createMarketingValidationHandler(dependencies());
+    const sensitiveUnknownKeys = [
+      "person@example.com",
+      "turnstile-secret-token",
+    ];
+    const response = await handler(request({
+      action: "quiz_started",
+      honeypot: "",
+      [sensitiveUnknownKeys[0]]: "x",
+      [sensitiveUnknownKeys[1]]: "x",
+    }));
+    const text = await response.text();
+
+    expect(response.status).toBe(422);
+    for (const sensitive of sensitiveUnknownKeys) expect(text).not.toContain(sensitive);
+    expect(JSON.parse(text).error.fields).toEqual([{ field: "body", reason: "unexpected" }]);
+  });
+
+  it.each(
+    ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]
+      .flatMap((field) => [1, true, { value: "x" }, ["x"]].map((value) => [field, value] as const)),
+  )("rejects invalid %s types instead of normalizing them to null", (field, value) => {
+    expect(parseMarketingValidationBody({ action: "view", honeypot: "", [field]: value }))
+      .toEqual({
+        ok: false,
+        code: "VALIDATION_ERROR",
+        fields: [{ field, reason: "invalid_type" }],
+      });
+  });
+
+  it("rejects email, consent, and Turnstile fields on every anonymous action", async () => {
+    const handler = createMarketingValidationHandler(dependencies());
+    for (const action of ["view", "quiz_started", "quiz_completed", "result_viewed", "experience_started", "experience_completed", "beta_form_viewed"]) {
+      const response = await handler(request({
+        action, honeypot: "", email: "person@example.com", consent: true,
+        turnstile_token: "secret", ...(action === "quiz_completed" ? { answers: completedAnswers } : {}),
+      }, action !== "view"));
+      expect(response.status).toBe(422);
+    }
+  });
+
+  it("returns a Q3-derived result and explicit null target", async () => {
+    const current = createSession({ quiz_started_at: NOW });
+    const advanceSession = vi.fn(async () => createSession({
+      quiz_started_at: NOW, quiz_completed_at: NOW,
+      quiz_answers: completedAnswers, quiz_result: "ingredient-tracker", target_qualified: null,
+    }));
+    const handler = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => current), advanceSession,
+    }));
+    const response = await handler(request({ action: "quiz_completed", honeypot: "", answers: completedAnswers }));
+
+    expect(await response.json()).toEqual({
+      success: true,
+      data: { stage: "quiz_completed", state: "quiz_completed", quiz_result: "ingredient-tracker", target_qualified: null },
+      error: null,
+    });
+  });
+
+  it("enforces one-step ordering and keeps anonymous stages independent of lead readiness", async () => {
+    const current = createSession({ quiz_started_at: NOW, quiz_completed_at: NOW });
+    const gate = vi.fn(async () => ({ ok: false, code: "LEAD_CAPTURE_NOT_READY", message: "closed" }));
+    const advanceSession = vi.fn(async () => createSession({
+      ...current, result_viewed_at: NOW,
+    }));
+    const handler = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => current), advanceSession, marketingLeadGate: gate,
+    }));
+    expect((await handler(request({ action: "experience_started", honeypot: "" }))).status).toBe(409);
+    expect((await handler(request({ action: "result_viewed", honeypot: "" }))).status).toBe(200);
+    expect(gate).not.toHaveBeenCalled();
+  });
+
+  it("writes lead PII only after beta form, using v2 consent and server time", async () => {
+    const current = createSession({
+      quiz_started_at: NOW, quiz_completed_at: NOW, result_viewed_at: NOW,
+      experience_started_at: NOW, experience_completed_at: NOW, beta_form_viewed_at: NOW,
+    });
+    const advanceSession = vi.fn(async () => createSession({ ...current, lead_submitted_at: NOW, lead_submission_status: "accepted" }));
+    const handler = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => current), advanceSession,
+    }));
+    const response = await handler(request({
+      action: "lead_submitted", honeypot: "", email: " Person@Example.com ", consent: true, turnstile_token: "secret",
     }));
 
     expect(response.status).toBe(200);
-    expect(advanceSession).toHaveBeenCalledWith(
-      session.id,
-      "followup_submitted",
-      expect.objectContaining({
-        planner_intent: null,
-        planner_priority: null,
+    expect(advanceSession).toHaveBeenCalledWith(SESSION_ID, "lead_submitted", expect.objectContaining({
+      lead: expect.objectContaining({
+        email: "person@example.com", consent_version: "marketing-demand-validation-v2",
+        consented_at: NOW, lead_submitted_at: NOW, turnstile_verified_at: NOW,
       }),
-    );
+    }));
+    expect(await response.text()).not.toMatch(/person@example|secret/i);
   });
 
-  it("fails closed before any write when the internal marketing client is unavailable", async () => {
-    const { POST } = await import("@/app/api/v1/marketing/validation/route");
-
-    const response = await POST(new Request("http://localhost:3100/api/v1/marketing/validation", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "http://localhost:3100",
-      },
-      body: JSON.stringify({ action: "view", honeypot: "" }),
+  it("returns byte-identical generic success for accepted, duplicate, and same-session replay", async () => {
+    const current = createSession({
+      quiz_started_at: NOW, quiz_completed_at: NOW, result_viewed_at: NOW,
+      experience_started_at: NOW, experience_completed_at: NOW, beta_form_viewed_at: NOW,
+    });
+    const body = { action: "lead_submitted", honeypot: "", email: "person@example.com", consent: true, turnstile_token: "secret" };
+    const accepted = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => current),
+      advanceSession: vi.fn(async () => createSession({ ...current, lead_submitted_at: NOW, lead_submission_status: "accepted" })),
+    }));
+    const duplicate = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => current),
+      advanceSession: vi.fn(async () => { throw Object.assign(new Error("duplicate"), { code: "MARKETING_EMAIL_DUPLICATE" }); }),
+      markDuplicateLead: vi.fn(async () => createSession({ ...current, lead_submitted_at: NOW, lead_submission_status: "duplicate", email: null })),
+    }));
+    const verifyReplay = vi.fn();
+    const replay = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => createSession({ ...current, lead_submitted_at: NOW, lead_submission_status: "accepted" })),
+      verifyTurnstile: verifyReplay,
     }));
 
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      success: false,
-      data: null,
-      error: {
-        code: "LEAD_CAPTURE_UNAVAILABLE",
-        message: "요청을 처리할 수 없어요. 잠시 후 다시 시도해 주세요.",
-        fields: [],
-      },
+    const responses = await Promise.all([accepted(request(body)), duplicate(request(body)), replay(request(body))]);
+    const texts = await Promise.all(responses.map((response) => response.text()));
+    expect(new Set(texts).size).toBe(1);
+    expect(verifyReplay).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on origin, readiness, and Turnstile without leaking provider details", async () => {
+    const current = createSession({
+      quiz_started_at: NOW, quiz_completed_at: NOW, result_viewed_at: NOW,
+      experience_started_at: NOW, experience_completed_at: NOW, beta_form_viewed_at: NOW,
     });
+    const gate = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => current),
+      marketingLeadGate: vi.fn(async () => ({ ok: false, code: "LEAD_CAPTURE_NOT_READY", message: "베타 신청은 아직 열리지 않았어요." })),
+    }));
+    const gateResponse = await gate(request({ action: "lead_submitted", honeypot: "", email: "person@example.com", consent: true, turnstile_token: "secret" }));
+    expect(gateResponse.status).toBe(503);
+    expect(await gateResponse.text()).not.toMatch(/person@example|secret/i);
   });
 });

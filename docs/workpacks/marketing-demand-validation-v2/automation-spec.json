@@ -1,0 +1,197 @@
+{
+  "slice_id": "marketing-demand-validation-v2",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/marketing/validation"
+    ],
+    "invariants": [
+      "official-docs-first",
+      "single-first-party-session-table",
+      "single-route-handler",
+      "exact-four-question-contract",
+      "q3-only-four-result-contract",
+      "target-qualified-null-for-v2",
+      "creative-key-conditional-v1-v2-checks",
+      "v2-beta-form-before-lead-stage-order",
+      "anonymous-actions-separated-from-lead-pii",
+      "resolved-ad-variant-with-utm-precedence",
+      "opaque-result-key-only-share-deep-link",
+      "server-issued-cookie",
+      "ordered-first-write-wins",
+      "legacy-session-restarts-without-mixed-writes",
+      "duplicate-generic-success",
+      "consent-version-and-server-time-evidence",
+      "turnstile-origin-privacy-retention-fail-closed",
+      "api-and-error-envelope-compat",
+      "no-pii-in-url-response-event-or-log",
+      "full-local-only-supabase",
+      "no-extra-route-table-or-event-log"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm test:marketing:operations",
+      "pnpm verify:security-functions:isolated",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=feature/be-marketing-demand-validation-v2 pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/marketing-demand-validation-v2-contract.test.ts",
+      "tests/demand-validation.test.ts",
+      "tests/marketing-validation-route.test.ts",
+      "tests/marketing-validation-migration.test.ts"
+    ],
+    "required_tables": [
+      "public.marketing_validation_sessions"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/beta"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized-n-a",
+      "hero",
+      "quiz-q1-q4",
+      "result",
+      "experience-1-5",
+      "planner-homecook",
+      "packaged-food",
+      "planner-complete",
+      "beta-form",
+      "done",
+      "validation-error",
+      "server-error",
+      "duplicate-generic-success",
+      "turnstile-fail-closed"
+    ],
+    "required_endpoints": [
+      "POST /api/v1/marketing/validation"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
+      "pnpm test:marketing:operations",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm build",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation-v2 pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "hero-utm-content-ad-variant-default-priority",
+      "quiz-exact-q1-q4-no-q5",
+      "q3-only-four-results",
+      "result-and-experience-before-email",
+      "v1-check-fixture-preserved",
+      "v2-target-and-legacy-fields-null",
+      "v2-beta-form-before-lead-db-order",
+      "resolved-ad-variant-conflict-unknown-direct",
+      "opaque-result-key-share-query-stripping",
+      "both-planners-tomorrow-preview-read-only",
+      "single-table-single-route",
+      "anonymous-pii-boundary",
+      "duplicate-generic-success",
+      "lead-readiness-fail-closed",
+      "next-shell-without-device-frame-selector",
+      "accessibility-and-reduced-motion",
+      "image-rights-or-replacement-evidence",
+      "product-example-non-affiliation-label",
+      "stage1-generator-and-critic-artifacts",
+      "v2-result-ad-cohort-analysis-without-pii"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MARKETING_DEMAND_VALIDATION_V2"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "hero-a-b-c-d-default-320-390-desktop",
+        "quiz-q1-q4-320-390",
+        "four-results-390",
+        "experience-1-5-390",
+        "planner-homecook-393x852",
+        "planner-homecook-tomorrow-preview-393-320",
+        "packaged-food-and-planner-complete-393x852",
+        "planner-complete-tomorrow-preview-393-320",
+        "beta-form-keyboard-error-success-390",
+        "reduced-motion-and-visible-focus",
+        "turnstile-fail-closed-result-preserved",
+        "bundle-excludes-device-frame-selector-runtime"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+        "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
+        "git:63f8ef2a019c6d260a96a42fab9d67f727d93557:marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final/",
+        "git:63f8ef2a019c6d260a96a42fab9d67f727d93557:marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/",
+        "git:63f8ef2a019c6d260a96a42fab9d67f727d93557:marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v5/",
+        "git:63f8ef2a019c6d260a96a42fab9d67f727d93557:marketing/mumeok-funnel-prototype-v2/design-qa.md"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MARKETING_DEMAND_VALIDATION_V2-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:canonical-privacy-and-operator-facts-ready",
+    "manual:turnstile-secret-hostname-action-ready",
+    "manual:allowlisted-production-origin-ready",
+    "manual:edge-rate-limit-evidence-captured",
+    "manual:campaign-retention-ready",
+    "manual:full-local-migration-apply-approved-and-backed-up",
+    "manual:beta-invitation-sender-domain-ready",
+    "manual:youtube-thumbnail-rights-or-replacement-ready",
+    "manual:product-image-rights-and-example-label-ready",
+    "manual:actual-ios-safari-smoke",
+    "manual:paid-ads-execution-approved"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "old-and-new-question-result-or-action-contract-mixed",
+    "target-qualified-inferred-for-v2",
+    "anonymous-action-accepts-or-writes-pii",
+    "production-lead-enabled-without-readiness-evidence",
+    "extra-route-table-event-log-or-browser-db-access",
+    "remote-cloud-or-linked-supabase-used",
+    "stage1-generator-or-critic-artifact-missing",
+    "iphone-pixel-frame-device-selector-or-standalone-runtime-shipped",
+    "unverified-image-rights-or-missing-product-example-label",
+    "result-or-experience-gated-behind-email"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

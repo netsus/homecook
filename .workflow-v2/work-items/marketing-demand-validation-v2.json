@@ -1,0 +1,223 @@
+{
+  "id": "marketing-demand-validation-v2",
+  "title": "Marketing demand validation v2 contract and port",
+  "summary": "사용자 확정 4문항·4결과 퍼널을 single POST/single table/local-only/PII-separated/fail-closed 경계로 재잠그고 후속 backend/frontend/operations Stage를 준비한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "검증된 source prototype의 app-owned 화면을 Next.js에 안전하게 포팅하고 익명 stage와 consented lead를 분리 측정한다.",
+  "owners": {
+    "claude": "retired compatibility field; dispatch prohibited",
+    "codex": "separate stage1-docs-author, internal 1.5 reviewer, backend/frontend implementer, stage3/5/6 reviewer, final-authority tasks",
+    "workers": []
+  },
+  "dependencies": [
+    "marketing-demand-validation",
+    "feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557",
+    "docs/marketing/demand-validation-plan.md",
+    "docs/marketing/quiz-content-spec.md"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.36.md",
+      "docs/화면정의서-v1.5.40.md",
+      "docs/유저flow맵-v1.3.38.md",
+      "docs/db설계-v1.3.38.md",
+      "docs/api문서-v1.2.43.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/marketing-demand-validation-v2/README.md",
+      "docs/workpacks/marketing-demand-validation-v2/acceptance.md",
+      "docs/workpacks/marketing-demand-validation-v2/automation-spec.json",
+      "docs/marketing/demand-validation-plan.md",
+      "docs/marketing/quiz-content-spec.md",
+      "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+      "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
+      "docs/workpacks/marketing-demand-validation/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:canonical-privacy-and-operator-facts-ready",
+      "manual:turnstile-secret-hostname-action-ready",
+      "manual:allowlisted-production-origin-ready",
+      "manual:edge-rate-limit-evidence-captured",
+      "manual:campaign-retention-ready",
+      "manual:full-local-migration-apply-approved-and-backed-up",
+      "manual:beta-invitation-sender-domain-ready",
+      "manual:youtube-thumbnail-rights-or-replacement-ready",
+      "manual:product-image-rights-and-example-label-ready",
+      "manual:actual-ios-safari-smoke",
+      "manual:paid-ads-execution-approved"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
+      "pnpm test:marketing:operations",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm build",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation-v2 pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
+      "pnpm test:marketing:operations",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm build",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation-v2 pnpm validate:workpack",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-five-docs-and-csot-synchronized",
+      "exact-q1-q4-and-four-results",
+      "q3-only-result-and-target-null",
+      "single-post-single-table-local-only",
+      "anonymous-action-and-lead-pii-boundary",
+      "utm-and-ad-variant-contract",
+      "ordered-idempotency-and-duplicate-generic-success",
+      "consent-version-server-time-and-safe-errors",
+      "device-runtime-excluded",
+      "image-rights-product-example-and-lead-blockers",
+      "source-prototype-and-task-evidence-recorded"
+    ]
+  },
+  "status": {
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [
+        "ui/designs/authority/MARKETING_DEMAND_VALIDATION_V2-authority.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-final-product-design-authority.md"
+      ],
+      "actual_verification_refs": [
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage5-frontend-rereview.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-repair-publication.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-merged-exact-closeout.md",
+        "PR #1499 Ready policy template quality build smoke full-regression accessibility visual Lighthouse and security checks",
+        "PR #1499 merge commit 335886750bda3ae3b1a0f8ea7b01d3a696a80327 tree 231c2e5c5dc14d022812e6de49bc3b0bb316c6db"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "ec13cf08a3e89e62f28540269f72b900826bbbac",
+      "reviewed_head_sha": "ec13cf08a3e89e62f28540269f72b900826bbbac",
+      "merged_sha": "335886750bda3ae3b1a0f8ea7b01d3a696a80327",
+      "approval_state": "codex_approved",
+      "all_checks_green": true,
+      "auto_merge": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 2,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-09-03T09:53:02Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 5,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "stage6-merged-exact-projection-synced",
+      "evidence_sources": [
+        "GitHub PR #1499 Ready and merge evidence",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage5-frontend-rereview.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-final-product-design-authority.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-merged-exact-closeout.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-09-03T09:53:02Z",
+      "status_synced_at": "2026-09-03T09:53:02Z",
+      "pr_body_synced_at": "2026-09-03T09:53:02Z"
+    },
+    "remaining_manual_only": [
+      "canonical privacy and operator facts",
+      "production Turnstile hostname action and secret",
+      "production origin allowlist and edge rate limit",
+      "campaign retention and invitation sender domain",
+      "approved full-local migration apply and backup",
+      "YouTube thumbnail and product image rights",
+      "actual iOS Safari smoke",
+      "paid-ad execution approval"
+    ]
+  },
+  "out_of_scope": [
+    "Backend or frontend implementation in Stage 1",
+    "Migration apply or full-local reset",
+    "Remote cloud or linked Supabase",
+    "Production release tag deploy Caddy or launchd mutation",
+    "New endpoint table event log or external analytics SDK",
+    "iPhone Pixel frame device selector or standalone mobile runtime",
+    "Unapproved target qualification rule",
+    "Production asset use before rights confirmation"
+  ],
+  "open_questions": [
+    "YouTube thumbnail rights or a replacement asset remain Manual Only.",
+    "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
+    "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
+  ],
+  "notes": "Stage 1 author task 01a0630e-81f1-7f42-8b1b-cb259d1d5997 and its separate internal 1.5 reviewer completed docs PR #1497. Stage 2/3 PR #1498 merged with independent Stage 3 findings 0. Stage 5 approved the repaired product head with all five findings closed and new P0/P1/P2/P3 0/0/0/0. Final product-design authority confirmed 93/100 with blocker/major 0/0. Independent Stage 6 approved exact successor ec13cf08a3e89e62f28540269f72b900826bbbac/tree 231c2e5c5dc14d022812e6de49bc3b0bb316c6db. Ready policy, template, quality, build, smoke, full regression, accessibility, visual, Lighthouse, and security gates passed. Frontend PR #1499 squash-merged as 335886750bda3ae3b1a0f8ea7b01d3a696a80327 with the same tree, drift 0. The automated integration lifecycle is complete. All Manual Only production blockers remain fail-closed; full-local apply, production lead activation, release, and deployment remain forbidden. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:5|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1499 Ready and merge evidence,Stage 5 and final design authority reports,Stage 6 merged-exact closeout report | latest_reason_code=stage6-merged-exact-projection-synced | last_recovery_at=2026-09-03T09:53:02Z"
+}
