@@ -104,7 +104,9 @@ const OWNED_TREE_CLEANUP_SCRIPT = String.raw`
 import os, secrets, stat, sys
 
 root_fd = 3
+parent_fd = 5
 expected_uid = int(sys.argv[1])
+root_name = sys.argv[2]
 records = {}
 children = {}
 
@@ -166,14 +168,25 @@ def remove(parent, relative):
                 remove(fd, child)
             if os.listdir(fd): raise RuntimeError("owned temp cleanup residue")
         finally: os.close(fd)
+        # HOMECOOK_TEST_BEFORE_FINAL_DIRECTORY_REMOVE
+        if identity(os.stat(claimed, dir_fd=parent, follow_symlinks=False)) != expected:
+            raise RuntimeError("owned temp directory changed before final removal")
         os.rmdir(claimed, dir_fd=parent)
     else:
+        # HOMECOOK_TEST_BEFORE_FINAL_FILE_REMOVE
+        if identity(os.stat(claimed, dir_fd=parent, follow_symlinks=False)) != expected:
+            raise RuntimeError("owned temp file changed before final removal")
         os.unlink(claimed, dir_fd=parent)
 
 inventory(root_fd, "")
 roots = sorted(path for path in records if "/" not in path)
 for entry in roots: remove(root_fd, entry)
 if os.listdir(root_fd): raise RuntimeError("owned temp root cleanup residue")
+root_expected = identity(os.fstat(root_fd))
+# HOMECOOK_TEST_BEFORE_FINAL_ROOT_REMOVE
+if identity(os.stat(root_name, dir_fd=parent_fd, follow_symlinks=False)) != root_expected:
+    raise RuntimeError("owned temp root changed before final removal")
+os.rmdir(root_name, dir_fd=parent_fd)
 `;
 
 const OWNED_TREE_CLEANUP_PYTHON = process.platform === "darwin"
@@ -182,9 +195,11 @@ const OWNED_TREE_CLEANUP_PYTHON = process.platform === "darwin"
 
 export function createOwnedTempRegistry(options: {
   beforeAtomicClaim?: AtomicClaimHook;
+  transformOwnedTreeCleanupScript?: (script: string) => string;
 } = {}) {
   const hasAtomicClaimHook = options.beforeAtomicClaim !== undefined;
   const beforeAtomicClaim = options.beforeAtomicClaim ?? (() => undefined);
+  const transformOwnedTreeCleanupScript = options.transformOwnedTreeCleanupScript ?? ((script) => script);
   const ownedRoots = new Map<string, OwnedRootIdentity>();
   const ownedAliases = new Map<string, OwnedAliasIdentity>();
 
@@ -376,15 +391,32 @@ export function createOwnedTempRegistry(options: {
     try {
       fchmodSync(identity.fd, 0o700);
       if (!hasAtomicClaimHook) {
-        const cleanup = spawnSync(OWNED_TREE_CLEANUP_PYTHON, [
-          "-I", "-c", OWNED_TREE_CLEANUP_SCRIPT, String(identity.uid),
-        ], {
-          encoding: "utf8",
-          env: { NODE_ENV: "test", PATH: "/usr/bin:/bin" },
-          shell: false,
-          stdio: ["ignore", "pipe", "pipe", identity.fd],
-          timeout: 60_000,
-        });
+        const cleanupScript = transformOwnedTreeCleanupScript(OWNED_TREE_CLEANUP_SCRIPT);
+        if (typeof cleanupScript !== "string" || cleanupScript.length === 0) {
+          throw new Error("owned test temp cleanup helper source is invalid");
+        }
+        const parentFd = openSync(
+          identity.parent,
+          fsConstants.O_RDONLY | fsConstants.O_DIRECTORY | fsConstants.O_NOFOLLOW,
+        );
+        let cleanup;
+        try {
+          const parent = fstatSync(parentFd, { bigint: true });
+          if (!sameIdentity(parent, identity.parentIdentity)) {
+            throw new Error("owned test temp cleanup parent descriptor changed");
+          }
+          cleanup = spawnSync(OWNED_TREE_CLEANUP_PYTHON, [
+            "-I", "-c", cleanupScript, String(identity.uid), claimed.split("/").at(-1)!,
+          ], {
+            encoding: "utf8",
+            env: { NODE_ENV: "test", PATH: "/usr/bin:/bin" },
+            shell: false,
+            stdio: ["ignore", "pipe", "pipe", identity.fd, "ignore", parentFd],
+            timeout: 60_000,
+          });
+        } finally {
+          closeSync(parentFd);
+        }
         if (cleanup.error || cleanup.signal || cleanup.status !== 0) {
           throw new Error("owned test temp descriptor cleanup failed closed");
         }
@@ -394,9 +426,14 @@ export function createOwnedTempRegistry(options: {
           removeClaimedTree(entry.tombstone, identity);
         }
       }
-      rmdirSync(claimed);
+      if (hasAtomicClaimHook) rmdirSync(claimed);
     } catch (error) {
-      if (!lstatIfPresent(root) && lstatIfPresent(claimed)) renameSync(claimed, root);
+      const claimedStat = lstatIfPresent(claimed);
+      if (!lstatIfPresent(root) && claimedStat && sameIdentity(claimedStat, identity)) {
+        renameSync(claimed, root);
+      }
+      closeSync(identity.fd);
+      ownedRoots.delete(root);
       throw error;
     }
     if (existsSync(claimed)) throw new Error(`test temp root cleanup remained incomplete: ${claimed}`);

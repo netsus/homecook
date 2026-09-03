@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createOwnedTempRegistry } from "./owned-temp-root";
 
 const SIGNALS = ["SIGHUP", "SIGINT", "SIGTERM"] as const;
+const SIGNAL_EXIT_CODES = { SIGHUP: 129, SIGINT: 130, SIGTERM: 143 } as const;
 const ownerState = globalThis as typeof globalThis & {
   __homecookVitestSuiteTempOwner?: boolean;
 };
@@ -47,8 +48,8 @@ export function establishOwnedVitestSuiteTemp() {
       try {
         cleanup();
       } finally {
-        process.removeAllListeners(signal);
-        process.kill(process.pid, signal);
+        process.removeListener(signal, handler);
+        setImmediate(() => process.exit(SIGNAL_EXIT_CODES[signal]));
       }
     };
     process.prependOnceListener(signal, handler);

@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, rmdirSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, rmdirSync, unlinkSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { join } from "node:path";
@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 const fixture = join(process.cwd(), "tests", "vitest-owned-suite-temp-subprocess.test.ts");
 const signals = ["SIGHUP", "SIGINT", "SIGTERM"] as const;
+const signalExitCodes = { SIGHUP: 129, SIGINT: 130, SIGTERM: 143 } as const;
 
 function fixtureEnv(mode: string) {
   const env: NodeJS.ProcessEnv = { ...process.env, HOMECOOK_VITEST_TEARDOWN_FIXTURE_MODE: mode };
@@ -59,8 +60,19 @@ describe("independent Vitest suite teardown", () => {
 
   for (const signal of signals) {
     it(`removes the exact suite root after ${signal}`, async () => {
+      const env = fixtureEnv("signal");
+      const otherHandlerMarker = join(
+        process.env.HOMECOOK_VITEST_WORKER_TEMP_ROOT!,
+        `other-signal-handler-${signal}-${process.pid}`,
+      );
+      env.HOMECOOK_VITEST_TEARDOWN_SIGNAL = signal;
+      env.HOMECOOK_VITEST_TEARDOWN_OTHER_HANDLER_MARKER = otherHandlerMarker;
+      env.NODE_OPTIONS = [
+        env.NODE_OPTIONS,
+        `--require=${join(process.cwd(), "tests", "fixtures", "vitest-other-signal-handler.cjs")}`,
+      ].filter(Boolean).join(" ");
       const child = spawn(process.execPath, ["node_modules/vitest/vitest.mjs", "run", fixture], {
-        cwd: process.cwd(), env: fixtureEnv("signal"), stdio: ["ignore", "pipe", "pipe"],
+        cwd: process.cwd(), env, stdio: ["ignore", "pipe", "pipe"],
       });
       let output = "";
       child.stdout.setEncoding("utf8");
@@ -81,13 +93,16 @@ describe("independent Vitest suite teardown", () => {
       const worker = extract(output, "VITEST_TEARDOWN_WORKER");
       const sibling = extract(output, "VITEST_TEARDOWN_SIBLING");
       child.kill(signal);
-      const [, exitSignal] = await once(child, "exit");
+      const [exitCode, exitSignal] = await once(child, "exit");
       try {
-        expect(exitSignal).toBe(signal);
+        expect(exitSignal).toBeNull();
+        expect(exitCode).toBe(signalExitCodes[signal]);
+        expect(readFileSync(otherHandlerMarker, "utf8")).toBe(`${signal}:true\n`);
         expect(() => lstatSync(root)).toThrowError(expect.objectContaining({ code: "ENOENT" }));
         expect(() => lstatSync(worker)).toThrowError(expect.objectContaining({ code: "ENOENT" }));
         expect(existsSync(sibling)).toBe(true);
       } finally {
+        if (existsSync(otherHandlerMarker)) unlinkSync(otherHandlerMarker);
         removeExactDirectory(sibling);
       }
     }, 35_000);
