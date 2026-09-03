@@ -319,7 +319,7 @@ test.describe("QA visual regression", () => {
     await installMarketingDemandValidationRoutes(page);
 
     await page.goto(MARKETING_BETA_PATH);
-    await expect(page.getByRole("button", { name: "30초 식단 기록 테스트" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "테스트 시작하기" })).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-marketing-beta.png", {

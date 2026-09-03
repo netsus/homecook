@@ -1,0 +1,351 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "marketing-demand-validation-v2",
+  "generatedAt": "2026-09-03T16:35:00.000Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "Current head의 Stage 4 implementation을 기준으로 Hero A/B/C/D/default, exact q1..q4, opaque result share, five-step experience, two planner payoffs, beta form retry, reduced motion, and no-device-frame shell을 desktop/mobile/small-iOS evidence와 함께 점검했다. Focused Vitest 24/24, product-focused Vitest 37/37, marketing operations/contract 23/23, marketing Playwright 16 passed with 2 intentional skips가 현재 퍼널 계약을 고정한다. Manual Only blocker는 이미지 권리, production Turnstile/origin/privacy, sender domain, actual iOS Safari, paid ads 승인뿐이다.",
+  "findings": [],
+  "remainingRisks": [
+    "실제 YouTube 썸네일 공개 사용 권리 또는 replacement asset 확인은 Manual Only다.",
+    "제품 이미지 사용 권리와 `제품 예시` / non-affiliation 표기 최종 확인은 Manual Only다.",
+    "production Turnstile, canonical `/privacy`, allowed origin, edge rate-limit, retention, sender domain은 fail-closed 운영 blocker다.",
+    "actual iOS Safari와 paid-ads execution approval은 별도 reviewer/human verification이 필요하다."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "Vitest landing suite와 Playwright marketing flow에서 Hero→quiz→result→experience→planner→beta→done 전체 흐름을 고정했고, 결과와 체험이 beta form 전에 공개됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-2",
+      "status": "covered",
+      "notes": "Vitest landing suite와 Playwright marketing flow에서 Hero→quiz→result→experience→planner→beta→done 전체 흐름을 고정했고, 결과와 체험이 beta form 전에 공개됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-3",
+      "status": "covered",
+      "notes": "Vitest landing suite와 Playwright marketing flow에서 Hero→quiz→result→experience→planner→beta→done 전체 흐름을 고정했고, 결과와 체험이 beta form 전에 공개됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-4",
+      "status": "covered",
+      "notes": "Vitest landing suite와 Playwright marketing flow에서 Hero→quiz→result→experience→planner→beta→done 전체 흐름을 고정했고, 결과와 체험이 beta form 전에 공개됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-5",
+      "status": "covered",
+      "notes": "Vitest landing suite와 Playwright marketing flow에서 Hero→quiz→result→experience→planner→beta→done 전체 흐름을 고정했고, 결과와 체험이 beta form 전에 공개됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-6",
+      "status": "covered",
+      "notes": "Vitest landing suite와 Playwright marketing flow에서 Hero→quiz→result→experience→planner→beta→done 전체 흐름을 고정했고, 결과와 체험이 beta form 전에 공개됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-1",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-2",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-3",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-4",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-5",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-6",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-7",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-8",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-9",
+      "status": "covered",
+      "notes": "Stage 2 contract tests와 current Stage 4 landing/client-session tests로 v2 state machine, legacy restart, read-only payoff, target null 경계를 재확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "exact-question-result-contract-1",
+      "status": "covered",
+      "notes": "Q3-only four-result mapping과 old contract rejection은 shared backend tests와 current landing test에서 함께 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "exact-question-result-contract-2",
+      "status": "covered",
+      "notes": "Q3-only four-result mapping과 old contract rejection은 shared backend tests와 current landing test에서 함께 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "attribution-1",
+      "status": "covered",
+      "notes": "Hero A/B/C/D/default, utm_content 우선, unknown/default 복구는 landing tests와 screenshot evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "attribution-2",
+      "status": "covered",
+      "notes": "Hero A/B/C/D/default, utm_content 우선, unknown/default 복구는 landing tests와 screenshot evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "attribution-3",
+      "status": "covered",
+      "notes": "Hero A/B/C/D/default, utm_content 우선, unknown/default 복구는 landing tests와 screenshot evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "attribution-4",
+      "status": "covered",
+      "notes": "Hero A/B/C/D/default, utm_content 우선, unknown/default 복구는 landing tests와 screenshot evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "lead-pii-consent-1",
+      "status": "covered",
+      "notes": "lead_submitted만 email/consent/Turnstile을 쓰고 duplicate generic success와 PII redaction이 유지됨을 Stage 2+Stage 4 tests에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "lead-pii-consent-2",
+      "status": "covered",
+      "notes": "lead_submitted만 email/consent/Turnstile을 쓰고 duplicate generic success와 PII redaction이 유지됨을 Stage 2+Stage 4 tests에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "lead-pii-consent-3",
+      "status": "covered",
+      "notes": "lead_submitted만 email/consent/Turnstile을 쓰고 duplicate generic success와 PII redaction이 유지됨을 Stage 2+Stage 4 tests에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "lead-pii-consent-4",
+      "status": "covered",
+      "notes": "lead_submitted만 email/consent/Turnstile을 쓰고 duplicate generic success와 PII redaction이 유지됨을 Stage 2+Stage 4 tests에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "lead-pii-consent-5",
+      "status": "covered",
+      "notes": "lead_submitted만 email/consent/Turnstile을 쓰고 duplicate generic success와 PII redaction이 유지됨을 Stage 2+Stage 4 tests에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "loading, empty restart, validation/readiness retry, unauthorized N/A, restart/retry recovery는 current landing tests와 beta screenshots에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-2",
+      "status": "covered",
+      "notes": "loading, empty restart, validation/readiness retry, unauthorized N/A, restart/retry recovery는 current landing tests와 beta screenshots에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-3",
+      "status": "covered",
+      "notes": "loading, empty restart, validation/readiness retry, unauthorized N/A, restart/retry recovery는 current landing tests와 beta screenshots에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-4",
+      "status": "covered",
+      "notes": "loading, empty restart, validation/readiness retry, unauthorized N/A, restart/retry recovery는 current landing tests와 beta screenshots에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-5",
+      "status": "covered",
+      "notes": "loading, empty restart, validation/readiness retry, unauthorized N/A, restart/retry recovery는 current landing tests와 beta screenshots에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-6",
+      "status": "covered",
+      "notes": "loading, empty restart, validation/readiness retry, unauthorized N/A, restart/retry recovery는 current landing tests와 beta screenshots에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-1",
+      "status": "covered",
+      "notes": "single POST/single table/local-only boundary와 derived fields는 route/migration/operations tests로 유지됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-2",
+      "status": "covered",
+      "notes": "single POST/single table/local-only boundary와 derived fields는 route/migration/operations tests로 유지됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-3",
+      "status": "covered",
+      "notes": "single POST/single table/local-only boundary와 derived fields는 route/migration/operations tests로 유지됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-4",
+      "status": "covered",
+      "notes": "single POST/single table/local-only boundary와 derived fields는 route/migration/operations tests로 유지됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-1",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-2",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-3",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-4",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-5",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-6",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-7",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-8",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "frontend-port-accessibility-9",
+      "status": "covered",
+      "notes": "Next `/beta` app-owned surface, no device frame runtime, 320/390/393 evidence, reduced-motion/focus capture, disabled TomorrowPreview affordance를 Stage 4 screenshots와 Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-1",
+      "status": "covered",
+      "notes": "Current Stage 4 evidence, Vitest, Playwright, and workpack-aligned screenshots를 기준으로 covered 처리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-2",
+      "status": "covered",
+      "notes": "Current Stage 4 evidence, Vitest, Playwright, and workpack-aligned screenshots를 기준으로 covered 처리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-3",
+      "status": "covered",
+      "notes": "Current Stage 4 evidence, Vitest, Playwright, and workpack-aligned screenshots를 기준으로 covered 처리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "covered",
+      "notes": "Exploratory self-audit에서 모바일 가독성, CTA visibility, duplicate CTA 없음, hierarchy, copy sanity, placeholder polish를 current screenshots로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "Exploratory self-audit에서 모바일 가독성, CTA visibility, duplicate CTA 없음, hierarchy, copy sanity, placeholder polish를 current screenshots로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "Exploratory self-audit에서 모바일 가독성, CTA visibility, duplicate CTA 없음, hierarchy, copy sanity, placeholder polish를 current screenshots로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "Exploratory self-audit에서 모바일 가독성, CTA visibility, duplicate CTA 없음, hierarchy, copy sanity, placeholder polish를 current screenshots로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "Exploratory self-audit에서 모바일 가독성, CTA visibility, duplicate CTA 없음, hierarchy, copy sanity, placeholder polish를 current screenshots로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "Exploratory self-audit에서 모바일 가독성, CTA visibility, duplicate CTA 없음, hierarchy, copy sanity, placeholder polish를 current screenshots로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "Exploratory self-audit에서 모바일 가독성, CTA visibility, duplicate CTA 없음, hierarchy, copy sanity, placeholder polish를 current screenshots로 확인했다.",
+      "linked_findings": []
+    }
+  ]
+}

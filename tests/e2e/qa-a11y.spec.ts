@@ -403,39 +403,32 @@ test.describe("QA accessibility smoke", () => {
     await expectReadableTouchTarget(getLoginActionButton(page));
   });
 
-  test("marketing beta landing keeps hero, intent pair, and followup controls accessible @a11y-core @marketing", async ({
+  test("marketing beta landing keeps the complete v2 funnel accessible @a11y-core @marketing", async ({
     page,
   }) => {
     await installMarketingDemandValidationRoutes(page);
 
     await page.goto(MARKETING_BETA_PATH);
-    await expect(page.getByRole("button", { name: "30초 식단 기록 테스트" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "테스트 시작하기" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(
-      page.getByRole("button", { name: "30초 식단 기록 테스트" }),
+      page.getByRole("button", { name: "테스트 시작하기" }),
     );
 
     await openMarketingLeadForm(page);
-    const needed = page.getByRole("button", { name: "써보고 싶어요" });
-    const enough = page.getByRole("button", { name: "지금은 필요하지 않아요" });
-    await expectReadableTouchTarget(needed);
-    await expectReadableTouchTarget(enough);
+    await expectReadableTouchTarget(page.getByRole("button", { name: "무료 베타 초대받기" }));
     await expectNoAxeViolations(page, {
       allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
 
     await page.getByRole("textbox", { name: "이메일" }).fill("qa@example.com");
-    await page.getByRole("checkbox", {
-      name: "베타 초대와 관련 안내를 이메일로 받는 데 동의합니다.",
-    }).click();
-    await page.getByRole("button", { name: "베타 우선 초대받기" }).click();
-    await expect(page.getByRole("heading", { name: "조금만 더 알려주세요" })).toBeVisible();
-    await expectReadableTouchTarget(page.getByRole("button", { name: "건너뛰기" }));
-    await expectReadableTouchTarget(page.getByRole("button", { name: "완료" }));
+    await page.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }).click();
+    await page.getByRole("button", { name: "무료 베타 초대받기" }).click();
+    await expect(page.getByRole("heading", { name: "신청이 완료됐어요!" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,

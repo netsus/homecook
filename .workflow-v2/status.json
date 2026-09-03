@@ -1869,11 +1869,11 @@
     {
       "id": "marketing-demand-validation-v2",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-marketing-demand-validation-v2",
-      "pr_path": "https://github.com/netsus/homecook/pull/1498",
+      "branch": "feature/fe-marketing-demand-validation-v2",
+      "pr_path": null,
       "lifecycle": "in_progress",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
         "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
@@ -1887,7 +1887,10 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs PR #1497 merged at c1d43f60e427943087a7065f188d32224e739ecf after independent findings 0. Stage 2 PR #1498 is Ready but not merge-authorized. Stage 3 reviewer task 01a063fb-8d16-7842-8b81-09e863ebee18 approved reviewed implementation head b5d4ea2babcc69d13753119acbf4371f61aea317/tree d9c79898d0f695aec83ed08b20be6e394476229e with findings 0; P1-001..P1-003/P2-001..P2-003 are closed. Evidence is retained at docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage3-backend-review.md. The evidence-only successor commit requires exact-head re-review and fresh current-head checks. Merge, full-local apply, release and production mutation are forbidden."
+      "notes": "Stage 1 docs PR #1497 merged at c1d43f60e427943087a7065f188d32224e739ecf after independent findings 0. Stage 2 PR #1498 is Ready but not merge-authorized. Stage 3 reviewer task 01a063fb-8d16-7842-8b81-09e863ebee18 approved reviewed implementation head b5d4ea2babcc69d13753119acbf4371f61aea317/tree d9c79898d0f695aec83ed08b20be6e394476229e with findings 0. Stage 4 frontend port is now implemented on feature/fe-marketing-demand-validation-v2; verification passed across focused Vitest, marketing Playwright, marketing a11y/visual, Lighthouse, and workpack/authority/exploratory validators. Independent Stage 5/final authority review, current-head CI, Ready, and merge remain pending.",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "blocked_reason_code": "stage5-review-pending"
     },
     {
       "id": "auth-provider-memory-linking",

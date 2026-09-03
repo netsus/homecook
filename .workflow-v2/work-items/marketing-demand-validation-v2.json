@@ -112,12 +112,12 @@
   "status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
-    "blocked_reason_code": "stage3-review-pending"
+    "blocked_reason_code": "stage5-review-pending"
   },
   "out_of_scope": [
     "Backend or frontend implementation in Stage 1",
@@ -135,5 +135,5 @@
     "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
     "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
   ],
-  "notes": "Stage 1 author task 01a0630e-81f1-7f42-8b1b-cb259d1d5997 and internal 1.5 reviewer task 01a0636c-cdf3-74b1-8292-2d50418837a1 completed with findings 0; docs PR #1497 merged as c1d43f60e427943087a7065f188d32224e739ecf. Stage 2 PR #1498 is Ready but not merge-authorized. Stage 3 reviewer task 01a063fb-8d16-7842-8b81-09e863ebee18 approved reviewed implementation head b5d4ea2babcc69d13753119acbf4371f61aea317, tree d9c79898d0f695aec83ed08b20be6e394476229e, with findings 0 after closing P1-001..P1-003 and P2-001..P2-003. Retained evidence: docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage3-backend-review.md. The evidence-only successor commit itself requires exact-head re-review and fresh current-head checks. Manual Only production readiness, full-local apply, merge, release and production mutation remain forbidden."
+  "notes": "Stage 1 docs PR #1497 merged at c1d43f60e427943087a7065f188d32224e739ecf after independent findings 0. Stage 2 PR #1498 is Ready but not merge-authorized. Stage 3 reviewer task 01a063fb-8d16-7842-8b81-09e863ebee18 approved reviewed implementation head b5d4ea2babcc69d13753119acbf4371f61aea317/tree d9c79898d0f695aec83ed08b20be6e394476229e with findings 0. Stage 4 frontend port now lands on feature/fe-marketing-demand-validation-v2 with focused Vitest 24/24, product-focused marketing Vitest 37/37, marketing operations/contract 23/23, marketing Playwright 16 pass / 2 intentional skips, marketing a11y 3/3, marketing visual 3/3, Lighthouse 3-run PASS, authority evidence presence PASS, exploratory QA eval 100/100 PASS, and updated workpack/acceptance/evidence for pending Stage 5/final authority review. Merge, full-local apply, release and production mutation remain forbidden."
 }

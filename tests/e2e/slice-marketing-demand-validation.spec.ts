@@ -1,257 +1,207 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { expect, test, type Browser, type Page } from "@playwright/test";
+import { completeMarketingExperience, completeMarketingQuiz, installMarketingDemandValidationRoutes, MARKETING_BETA_PATH, openMarketingLeadForm } from "./helpers/marketing-demand-validation";
 
-import { expect, test, type Browser } from "@playwright/test";
+const EVIDENCE_DIR = resolve(process.cwd(), "ui/designs/evidence/marketing-demand-validation-v2");
 
-import {
-  completeMarketingQuiz,
-  installMarketingDemandValidationRoutes,
-  MARKETING_BETA_PATH,
-  MARKETING_CONTROL_ANSWERS,
-  openMarketingIntent,
-  openMarketingLeadForm,
-} from "./helpers/marketing-demand-validation";
-
-const EVIDENCE_DIR = resolve(
-  process.cwd(),
-  "ui/designs/evidence/marketing-demand-validation",
-);
-
-function leadErrorAlert(page: import("@playwright/test").Page) {
-  return page.getByRole("alert").filter({ hasText: "베타 신청은 아직 열리지 않았어요." }).first();
+async function expectNoHorizontalOverflow(page: Page) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 }
 
-async function expectInViewport(locator: import("@playwright/test").Locator) {
-  await expect(locator).toBeVisible();
-  await expect(locator).toBeInViewport();
-  const box = await locator.boundingBox();
-
-  expect(box).not.toBeNull();
-  expect(box?.y ?? 0).toBeGreaterThanOrEqual(0);
-  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
+async function capture(browser: Browser, width: number, height: number, name: string, action?: (page: Page) => Promise<void>, routePath = MARKETING_BETA_PATH) {
+  const context = await browser.newContext({ deviceScaleFactor: 1, viewport: { width, height } });
+  const page = await context.newPage();
+  await installMarketingDemandValidationRoutes(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(routePath);
+  if (action) await action(page);
+  await page.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
+  await expectNoHorizontalOverflow(page);
+  const filePath = resolve(EVIDENCE_DIR, name);
+  await page.screenshot({ path: filePath, fullPage: true });
+  await context.close();
+  return filePath;
 }
 
-async function expectVisibleInsideScrollRegion(
-  region: import("@playwright/test").Locator,
-  targetText: string,
-  position: "start" | "target",
-) {
-  const geometry = await region.evaluate((node, { position: targetPosition, text }) => {
-    const target = Array.from(node.querySelectorAll("label, legend"))
-      .find((candidate) => candidate.textContent?.trim() === text);
-    if (targetPosition === "start") {
-      node.scrollTop = 0;
-    } else if (target) {
-      const regionBefore = node.getBoundingClientRect();
-      const targetBefore = target.getBoundingClientRect();
-      node.scrollTop += targetBefore.top - regionBefore.top;
+test.describe("marketing demand validation v2 /beta", () => {
+  test("Hero variants enter the same exact q1..q4 flow @smoke-core", async ({ page }) => {
+    await installMarketingDemandValidationRoutes(page);
+    for (const [query, heading] of [["?utm_content=hook_reentry&ad_variant=d", "왜 레시피에 다 있는데"], ["?ad_variant=b", "요리 전 1,420g"], ["?ad_variant=c", "이 제육볶음 300g"], ["?ad_variant=d", "식단은 꼼꼼히 기록하는데"], ["", "집밥도 정확하게 기록할 수 있을까"]]) {
+      await page.goto(`${MARKETING_BETA_PATH}${query}`);
+      await expect(page.getByRole("heading").first()).toContainText(heading);
+      await page.getByRole("button", { name: "테스트 시작하기" }).click();
+      await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "4");
     }
-    const regionBox = node.getBoundingClientRect();
-    const targetBox = target?.getBoundingClientRect();
+  });
 
-    return {
-      found: Boolean(targetBox),
-      regionBottom: regionBox.bottom,
-      regionTop: regionBox.top,
-      scrollTop: node.scrollTop,
-      targetBottom: targetBox?.bottom ?? 0,
-      targetTop: targetBox?.top ?? 0,
-    };
-  }, { position, text: targetText });
-
-  expect(geometry.found).toBe(true);
-  expect(geometry.targetTop).toBeGreaterThanOrEqual(geometry.regionTop);
-  expect(geometry.targetBottom).toBeLessThanOrEqual(geometry.regionBottom);
-}
-
-async function assertEqualIntentButtons() {
-  return async (page: import("@playwright/test").Page) => {
-    const needed = page.getByRole("button", { name: "써보고 싶어요" });
-    const enough = page.getByRole("button", { name: "지금은 필요하지 않아요" });
-    const [neededBox, enoughBox] = await Promise.all([
-      needed.boundingBox(),
-      enough.boundingBox(),
-    ]);
-
-    expect(neededBox).not.toBeNull();
-    expect(enoughBox).not.toBeNull();
-    expect(Math.abs((neededBox?.width ?? 0) - (enoughBox?.width ?? 0))).toBeLessThanOrEqual(2);
-    expect(Math.abs((neededBox?.height ?? 0) - (enoughBox?.height ?? 0))).toBeLessThanOrEqual(2);
-  };
-}
-
-async function captureHeroAndFlow(browser: Browser) {
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-  const captures: Array<{ file: string; note: string; viewport: string }> = [];
-
-  const heroViewports = [
-    { file: "beta-hero-390.png", height: 844, label: "390x844", width: 390 },
-    { file: "beta-hero-320.png", height: 693, label: "320x693", width: 320 },
-    { file: "beta-hero-1280.png", height: 900, label: "1280x900", width: 1280 },
-  ] as const;
-
-  for (const viewport of heroViewports) {
-    const context = await browser.newContext({
-      deviceScaleFactor: 1,
-      viewport: { height: viewport.height, width: viewport.width },
-    });
-    const page = await context.newPage();
+  test("result, five experiences, planners, product, beta and done remain in order", async ({ page }) => {
     await installMarketingDemandValidationRoutes(page);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(MARKETING_BETA_PATH);
-    await expect(page.getByRole("button", { name: "30초 식단 기록 테스트" })).toBeVisible();
-    await expect(page.locator(".marketing-beta-loading")).toHaveCount(0);
-    await page.screenshot({
-      fullPage: viewport.width >= 1024,
-      path: resolve(EVIDENCE_DIR, viewport.file),
+    await completeMarketingQuiz(page);
+    await expect(page.getByRole("textbox", { name: "이메일" })).toHaveCount(0);
+    await completeMarketingExperience(page);
+    await page.getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
+    await expect(page.getByText("제품 예시")).toBeVisible();
+    await page.getByRole("button", { name: "더:단백 드링크 초코 기록하기" }).click();
+    await page.getByRole("button", { name: "무료 베타 먼저 써보기" }).click();
+    await page.getByRole("textbox", { name: "이메일" }).fill("qa@example.com");
+    await page.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }).check();
+    await page.getByRole("button", { name: "무료 베타 초대받기" }).click();
+    await expect(page.getByRole("heading", { name: "신청이 완료됐어요!" })).toBeVisible();
+  });
+
+  test("known result is read-only and canonical share strips all other query data", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "share", { configurable: true, value: (data: ShareData) => { (window as Window & { __shared?: ShareData }).__shared = data; return Promise.resolve(); } });
     });
-    captures.push({ file: viewport.file, note: "hero", viewport: viewport.label });
-    await context.close();
-  }
-
-  const flowContext = await browser.newContext({
-    deviceScaleFactor: 1,
-    viewport: { height: 844, width: 390 },
+    await page.goto("/beta?result=ingredient-tracker&utm_source=secret&email=hidden@example.com");
+    await expect(page.getByRole("heading", { name: "성분 추적러" })).toBeVisible();
+    await page.getByRole("button", { name: "내 결과 공유하기" }).click();
+    expect(await page.evaluate(() => (window as Window & { __shared?: ShareData }).__shared?.url)).toMatch(/\/beta\?result=ingredient-tracker$/);
   });
-  const flowPage = await flowContext.newPage();
-  await installMarketingDemandValidationRoutes(flowPage);
-  await flowPage.emulateMedia({ reducedMotion: "reduce" });
-  await flowPage.goto(MARKETING_BETA_PATH);
 
-  await flowPage.getByRole("button", { name: "30초 식단 기록 테스트" }).click();
-  await expect(flowPage.getByText("1/5")).toBeVisible();
-  await expectInViewport(flowPage.locator(".marketing-beta-quiz"));
-  await flowPage.screenshot({ path: resolve(EVIDENCE_DIR, "beta-quiz-390.png") });
-  captures.push({ file: "beta-quiz-390.png", note: "quiz-flow", viewport: "390x844" });
-
-  await completeMarketingQuiz(flowPage, {
-    q1: "시작했지만 중단함",
-    q2: "2~3일",
-    q3: "재료를 하나씩 검색해 입력",
-    q4: "하루 합계와 주간 흐름을 한눈에 못 볼 때",
-    q5: "레시피 기준 자동 계산",
-  });
-  await expect(flowPage.getByRole("heading", { name: "주간 흐름 실종형" })).toBeVisible();
-  await expectInViewport(flowPage.locator(".marketing-beta-result"));
-  await flowPage.screenshot({ path: resolve(EVIDENCE_DIR, "beta-result-390.png") });
-  captures.push({ file: "beta-result-390.png", note: "result-flow", viewport: "390x844" });
-
-  await flowPage.getByRole("button", { name: "이렇게 기록할 수 있다면 어떨까요?" }).click();
-  await flowPage.getByRole("button", { name: "써보고 싶어요" }).click();
-  await expect(flowPage.getByRole("textbox", { name: "이메일" })).toBeVisible();
-  await expectInViewport(flowPage.locator(".marketing-beta-email"));
-  await flowPage.screenshot({ path: resolve(EVIDENCE_DIR, "beta-email-390.png") });
-  captures.push({ file: "beta-email-390.png", note: "email-flow", viewport: "390x844" });
-
-  await flowPage.getByRole("textbox", { name: "이메일" }).fill("playwright@example.com");
-  await flowPage.getByRole("checkbox", {
-    name: "베타 초대와 관련 안내를 이메일로 받는 데 동의합니다.",
-  }).click();
-  await flowPage.getByRole("button", { name: "베타 우선 초대받기" }).click();
-  await expect(flowPage.getByRole("heading", { name: "조금만 더 알려주세요" })).toBeVisible();
-  await expectInViewport(flowPage.locator(".marketing-beta-followup"));
-  const followupScrollRegion = flowPage.getByTestId("marketing-beta-followup-scroll-region");
-  const followupCue = flowPage.getByTestId("marketing-beta-followup-scroll-cue");
-  expect(await followupScrollRegion.evaluate((node) => node.scrollTop)).toBe(0);
-  expect(await followupCue.isVisible()).toBe(true);
-  expect(await followupScrollRegion.evaluate((node) => node.scrollTop)).toBe(0);
-  await flowPage.screenshot({ path: resolve(EVIDENCE_DIR, "beta-followup-390.png") });
-  captures.push({ file: "beta-followup-390.png", note: "followup-flow", viewport: "390x844" });
-  await expectVisibleInsideScrollRegion(followupScrollRegion, "필요하지 않음", "start");
-  await expectVisibleInsideScrollRegion(followupScrollRegion, "가장 먼저 보고 싶은 정보는?", "target");
-  await flowPage.screenshot({ path: resolve(EVIDENCE_DIR, "beta-followup-scrolled-390.png") });
-  captures.push({ file: "beta-followup-scrolled-390.png", note: "followup-flow-scrolled", viewport: "390x844" });
-  await followupScrollRegion.evaluate((node) => {
-    node.scrollTop = node.scrollHeight;
-  });
-  await expect(followupCue).toBeHidden();
-  await flowPage.screenshot({ path: resolve(EVIDENCE_DIR, "beta-followup-end-390.png") });
-  captures.push({ file: "beta-followup-end-390.png", note: "followup-flow-end", viewport: "390x844" });
-  await flowContext.close();
-
-  const failClosedContext = await browser.newContext({
-    deviceScaleFactor: 1,
-    viewport: { height: 844, width: 390 },
-  });
-  const failClosedPage = await failClosedContext.newPage();
-  await installMarketingDemandValidationRoutes(failClosedPage, { leadMode: "fail_closed" });
-  await failClosedPage.emulateMedia({ reducedMotion: "reduce" });
-  await failClosedPage.goto(MARKETING_BETA_PATH);
-  await openMarketingLeadForm(failClosedPage);
-  await failClosedPage.getByRole("textbox", { name: "이메일" }).fill("retry@example.com");
-  await failClosedPage.getByRole("checkbox", {
-    name: "베타 초대와 관련 안내를 이메일로 받는 데 동의합니다.",
-  }).click();
-  await failClosedPage.getByRole("button", { name: "베타 우선 초대받기" }).click();
-  await expect(leadErrorAlert(failClosedPage)).toContainText("베타 신청은 아직 열리지 않았어요.");
-  await expectInViewport(failClosedPage.locator(".marketing-beta-email"));
-  await failClosedPage.screenshot({ path: resolve(EVIDENCE_DIR, "beta-turnstile-fail-closed-390.png") });
-  captures.push({ file: "beta-turnstile-fail-closed-390.png", note: "turnstile-fail-closed", viewport: "390x844" });
-  await failClosedContext.close();
-
-  await writeFile(
-    resolve(EVIDENCE_DIR, "pending-state-manifest.json"),
-    `${JSON.stringify({
-      captured_at: new Date().toISOString(),
-      captures,
-      generated_by: "tests/e2e/slice-marketing-demand-validation.spec.ts",
-    }, null, 2)}\n`,
-  );
-}
-
-test.describe("marketing demand validation /beta", () => {
-  test("happy path reveals result before email, keeps equal intent CTAs, and ends with optional followup @smoke-core", async ({ page }) => {
+  test("unknown result recovers to default Hero", async ({ page }) => {
     await installMarketingDemandValidationRoutes(page);
-    await page.goto(MARKETING_BETA_PATH);
-    await expect(page.getByRole("textbox", { name: "이메일" })).toHaveCount(0);
-
-    await openMarketingIntent(page);
-    await expect(page.getByRole("heading", { name: "주간 흐름 실종형" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "이메일" })).toHaveCount(0);
-    await (await assertEqualIntentButtons())(page);
-
-    await page.getByRole("button", { name: "써보고 싶어요" }).click();
-    await page.getByRole("textbox", { name: "이메일" }).fill("playwright@example.com");
-    await page.getByRole("checkbox", {
-      name: "베타 초대와 관련 안내를 이메일로 받는 데 동의합니다.",
-    }).click();
-    await page.getByRole("button", { name: "베타 우선 초대받기" }).click();
-    await expect(page.getByRole("heading", { name: "조금만 더 알려주세요" })).toBeVisible();
-    await page.getByRole("button", { name: "건너뛰기" }).click();
-    await expect(page.getByRole("heading", { name: "응답을 저장했어요." })).toBeVisible();
+    await page.goto("/beta?result=unknown");
+    await expect(page.getByRole("heading", { name: "집밥도 정확하게 기록할 수 있을까?" })).toBeVisible();
   });
 
-  test("negative path stays neutral and skips the email gate", async ({ page }) => {
-    await installMarketingDemandValidationRoutes(page);
-    await page.goto(MARKETING_BETA_PATH);
-    await openMarketingIntent(page, MARKETING_CONTROL_ANSWERS);
-    await page.getByRole("button", { name: "지금은 필요하지 않아요" }).click();
-
-    await expect(page.getByRole("heading", { name: "지금 방식도 괜찮은 편" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "이메일" })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "지금은 필요하지 않아요 응답까지 기록했어요." })).toBeVisible();
+  test("403/409/422/Turnstile/503 stay retryable without hiding prior value", async ({ browser }) => {
+    for (const leadMode of ["403", "409", "422", "turnstile", "503"] as const) {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await context.newPage();
+      await installMarketingDemandValidationRoutes(page, { leadMode });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(MARKETING_BETA_PATH);
+      await openMarketingLeadForm(page);
+      await page.getByRole("textbox", { name: "이메일" }).fill("retry@example.com");
+      await page.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }).check();
+      await page.getByRole("button", { name: "무료 베타 초대받기" }).click();
+      await expect(page.locator("#beta-error")).toContainText("다시 시도");
+      await expect(page.getByRole("textbox", { name: "이메일" })).toHaveValue("retry@example.com");
+      await context.close();
+    }
   });
 
-  test("fail-closed lead keeps the result and retryable email form", async ({ page }) => {
-    await installMarketingDemandValidationRoutes(page, { leadMode: "fail_closed" });
-    await page.goto(MARKETING_BETA_PATH);
-    await openMarketingLeadForm(page);
+  test("captures 320/390/393/desktop evidence and both read-only TomorrowPreview states", async ({ browser }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chrome", "capture once");
+    test.setTimeout(240_000);
+    await mkdir(EVIDENCE_DIR, { recursive: true });
+    const captures = [];
+    for (const variant of ["default", "a", "b", "c", "d"] as const) {
+      for (const [width, height, suffix] of [[320, 568, "320x568"], [390, 844, "390x844"], [1280, 900, "1280x900"]] as const) {
+        const query = variant === "default" ? "" : `?ad_variant=${variant}`;
+        captures.push(await capture(browser, width, height, `hero-${variant}-${suffix}.png`, undefined, `${MARKETING_BETA_PATH}${query}`));
+      }
+    }
+    captures.push(await capture(browser, 393, 852, "hero-default-393x852.png"));
+    for (const result of ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"] as const) {
+      captures.push(await capture(browser, 390, 844, `result-${result}-390x844.png`, undefined, `${MARKETING_BETA_PATH}?result=${result}`));
+    }
 
-    await page.getByRole("textbox", { name: "이메일" }).fill("retry@example.com");
-    await page.getByRole("checkbox", {
-      name: "베타 초대와 관련 안내를 이메일로 받는 데 동의합니다.",
-    }).click();
-    await page.getByRole("button", { name: "베타 우선 초대받기" }).click();
-
-    await expect(leadErrorAlert(page)).toContainText("베타 신청은 아직 열리지 않았어요.");
-    await expect(page.getByRole("heading", { name: "주간 흐름 실종형" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "이메일" })).toHaveValue("retry@example.com");
-  });
-
-  test("captures stage4 runtime evidence for 390, 320, and 1280", async ({ browser }, testInfo) => {
-    test.skip(testInfo.project.name !== "desktop-chrome", "evidence capture runs once from desktop-chrome");
-    test.setTimeout(180_000);
-
-    await captureHeroAndFlow(browser);
+    const flowContext = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 390, height: 844 } });
+    const flowPage = await flowContext.newPage();
+    await installMarketingDemandValidationRoutes(flowPage);
+    await flowPage.emulateMedia({ reducedMotion: "reduce" });
+    await flowPage.goto(MARKETING_BETA_PATH);
+    await flowPage.getByRole("button", { name: "테스트 시작하기" }).click();
+    for (const [index, answer] of ["거의 매일", "3~5끼", "먹은 양을 눈대중으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"].entries()) {
+      const quizPath = resolve(EVIDENCE_DIR, `quiz-q${index + 1}-390x844.png`);
+      await flowPage.screenshot({ path: quizPath, fullPage: true });
+      captures.push(quizPath);
+      await flowPage.getByRole("button", { name: answer }).click();
+    }
+    await expect(flowPage.getByRole("heading", { name: "눈대중 장인" })).toBeVisible();
+    const normalResult = resolve(EVIDENCE_DIR, "result-normal-eyeballing-master-390x844.png");
+    await flowPage.screenshot({ path: normalResult, fullPage: true }); captures.push(normalResult);
+    await flowPage.getByRole("button", { name: "무먹으로 20초 체험하기" }).click();
+    const experience1 = resolve(EVIDENCE_DIR, "experience-1-390x844.png");
+    await flowPage.screenshot({ path: experience1, fullPage: true }); captures.push(experience1);
+    await flowPage.getByRole("button", { name: "무먹으로 가져오기" }).click();
+    const experience2 = resolve(EVIDENCE_DIR, "experience-2-390x844.png");
+    await flowPage.screenshot({ path: experience2, fullPage: true }); captures.push(experience2);
+    await flowPage.getByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }).click();
+    await flowPage.getByRole("button", { name: "다음", exact: true }).click();
+    const experience3 = resolve(EVIDENCE_DIR, "experience-3-390x844.png");
+    await flowPage.screenshot({ path: experience3, fullPage: true }); captures.push(experience3);
+    await flowPage.getByRole("button", { name: "저울로 재보니 1,180g" }).click();
+    const experience4 = resolve(EVIDENCE_DIR, "experience-4-390x844.png");
+    await flowPage.screenshot({ path: experience4, fullPage: true }); captures.push(experience4);
+    await flowPage.getByRole("button", { name: "320g 입력하기" }).click();
+    const experience5 = resolve(EVIDENCE_DIR, "experience-5-390x844.png");
+    await flowPage.screenshot({ path: experience5, fullPage: true }); captures.push(experience5);
+    await flowPage.getByRole("button", { name: "식단에 기록하기" }).click();
+    await flowPage.getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
+    await flowPage.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
+    const packaged = resolve(EVIDENCE_DIR, "packaged-food-390x844.png");
+    await flowPage.screenshot({ path: packaged, fullPage: true }); captures.push(packaged);
+    await flowPage.getByRole("button", { name: "더:단백 드링크 초코 기록하기" }).click();
+    await flowPage.getByRole("button", { name: "무료 베타 먼저 써보기" }).click();
+    await expect(flowPage.getByRole("textbox", { name: "이메일" })).toBeVisible();
+    await flowPage.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
+    const beta = resolve(EVIDENCE_DIR, "beta-form-390x844.png");
+    await flowPage.screenshot({ path: beta, fullPage: true }); captures.push(beta);
+    await flowPage.getByRole("button", { name: "무료 베타 초대받기" }).click();
+    const betaError = resolve(EVIDENCE_DIR, "beta-form-validation-error-390x844.png");
+    await flowPage.screenshot({ path: betaError, fullPage: true }); captures.push(betaError);
+    await flowPage.getByRole("textbox", { name: "이메일" }).fill("evidence@example.com");
+    await flowPage.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }).check();
+    await flowPage.getByRole("button", { name: "무료 베타 초대받기" }).click();
+    await expect(flowPage.getByRole("heading", { name: "신청이 완료됐어요!" })).toBeVisible();
+    await flowPage.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
+    const done = resolve(EVIDENCE_DIR, "done-390x844.png");
+    await flowPage.screenshot({ path: done, fullPage: true }); captures.push(done);
+    await flowContext.close();
+    const narrowQuizContext = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 320, height: 568 } });
+    const narrowQuizPage = await narrowQuizContext.newPage();
+    await installMarketingDemandValidationRoutes(narrowQuizPage);
+    await narrowQuizPage.emulateMedia({ reducedMotion: "reduce" });
+    await narrowQuizPage.goto(MARKETING_BETA_PATH);
+    await narrowQuizPage.getByRole("button", { name: "테스트 시작하기" }).click();
+    for (const [index, answer] of ["거의 매일", "3~5끼", "먹은 양을 눈대중으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"].entries()) {
+      const narrowPath = resolve(EVIDENCE_DIR, `quiz-q${index + 1}-320x568.png`);
+      await narrowQuizPage.screenshot({ path: narrowPath, fullPage: true });
+      captures.push(narrowPath);
+      await narrowQuizPage.getByRole("button", { name: answer }).click();
+    }
+    await narrowQuizContext.close();
+    const failClosedContext = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 390, height: 844 } });
+    const failClosedPage = await failClosedContext.newPage();
+    await installMarketingDemandValidationRoutes(failClosedPage, { leadMode: "turnstile" });
+    await failClosedPage.emulateMedia({ reducedMotion: "reduce" });
+    await failClosedPage.goto(MARKETING_BETA_PATH);
+    await openMarketingLeadForm(failClosedPage);
+    await failClosedPage.getByRole("textbox", { name: "이메일" }).fill("retry@example.com");
+    await failClosedPage.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }).check();
+    await failClosedPage.getByRole("button", { name: "무료 베타 초대받기" }).click();
+    await expect(failClosedPage.locator("#beta-error")).toBeVisible();
+    const failClosedPath = resolve(EVIDENCE_DIR, "turnstile-fail-closed-390x844.png");
+    await failClosedPage.screenshot({ path: failClosedPath, fullPage: true });
+    captures.push(failClosedPath);
+    await failClosedContext.close();
+    captures.push(await capture(browser, 390, 844, "reduced-motion-and-visible-focus.png", async (page) => {
+      const startButton = page.getByRole("button", { name: "테스트 시작하기" });
+      await startButton.focus();
+      await expect(startButton).toBeFocused();
+    }));
+    for (const [width, height, suffix] of [[320, 568, "320x568"], [393, 852, "393x852"]] as const) {
+      captures.push(await capture(browser, width, height, `planner-homecook-${suffix}.png`, async (page) => {
+        await openMarketingLeadForm(page);
+        await page.getByRole("button", { name: "이전 화면" }).click();
+        await page.getByRole("button", { name: "이전 화면" }).click();
+        await page.getByRole("button", { name: "이전 화면" }).click();
+        await expect(page.getByTestId("tomorrow-preview")).toBeVisible();
+        for (const control of await page.getByRole("button", { name: /내일 .* 추가/ }).all()) await expect(control).toBeDisabled();
+      }));
+      captures.push(await capture(browser, width, height, `planner-complete-${suffix}.png`, async (page) => {
+        await openMarketingLeadForm(page);
+        await page.getByRole("button", { name: "이전 화면" }).click();
+        await expect(page.getByTestId("tomorrow-preview")).toBeVisible();
+        for (const control of await page.getByRole("button", { name: /내일 .* 추가/ }).all()) await expect(control).toBeDisabled();
+      }));
+    }
+    await writeFile(resolve(EVIDENCE_DIR, "stage4-capture-manifest.json"), `${JSON.stringify({ source_commit: "63f8ef2a019c6d260a96a42fab9d67f727d93557", captures }, null, 2)}\n`);
   });
 });
