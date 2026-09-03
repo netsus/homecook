@@ -4680,6 +4680,8 @@ describe("release rehearsal candidate orchestration", () => {
       ...egressRuns,
     };
     process.stdout.write(`RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+      selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+      selected_test_name: "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox",
       stage_capability_policy: stageCapabilityPolicy,
       egress_probe: {
         ...unsignedEgressProbe,

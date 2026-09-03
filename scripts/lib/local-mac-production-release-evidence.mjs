@@ -170,9 +170,6 @@ export function parseActualBuildOutput(source) {
   const summary = parseVitestSummary(source);
   const selectedTestFile = "tests/local-mac-production-rehearsal-candidate.test.ts";
   const selectedTestName = RELEASE_EVIDENCE_COMMANDS.get("actual-build").at(-1);
-  if (!summary.text.includes(selectedTestFile) || !summary.text.includes(selectedTestName)) {
-    throw new Error("actual build output does not identify the selected test");
-  }
   const evidenceMatches = [...summary.text.matchAll(/^RELEASE_STAGE_CAPABILITY_EVIDENCE=(.+)$/gmu)];
   if (evidenceMatches.length !== 1) {
     throw new Error("actual build output does not contain one stage capability evidence projection");
@@ -183,7 +180,13 @@ export function parseActualBuildOutput(source) {
   } catch {
     throw new Error("actual build stage capability evidence is malformed");
   }
-  assertExactKeys(capabilityEvidence, ["stage_capability_policy", "egress_probe"], "actual build capability evidence");
+  assertExactKeys(capabilityEvidence, [
+    "selected_test_file", "selected_test_name", "stage_capability_policy", "egress_probe",
+  ], "actual build capability evidence");
+  if (
+    capabilityEvidence.selected_test_file !== selectedTestFile
+    || capabilityEvidence.selected_test_name !== selectedTestName
+  ) throw new Error("actual build capability evidence does not identify the selected test");
   return Object.freeze({
     schema: "homecook.local-mac-production-release-stdout-projection.v1",
     kind: "actual-build",

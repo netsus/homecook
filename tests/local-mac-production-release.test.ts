@@ -906,10 +906,11 @@ describe("local Mac production release evidence validation", () => {
     const selected = "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox";
     const projection = parseActualBuildOutput([
       `RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+        selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+        selected_test_name: selected,
         stage_capability_policy: stageCapabilityPolicy(),
         egress_probe: egressProbe(),
       })}`,
-      ` ✓ tests/local-mac-production-rehearsal-candidate.test.ts > local Mac > ${selected} 160000ms`,
       " Test Files  1 passed (1)",
       "      Tests  1 passed (1)",
     ].join("\n"));
@@ -978,6 +979,8 @@ describe("local Mac production release evidence validation", () => {
       actualBuild: {
         stdout: [
           `RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+            selected_test_file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+            selected_test_name: selected,
             stage_capability_policy: stageCapabilityPolicy(),
             egress_probe: egressProbe(),
           })}`,
