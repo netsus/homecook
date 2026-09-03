@@ -139,13 +139,6 @@ fs.openSync = function homecookWitnessedFileOpen(...args) {
   }
 };
 
-const net = require("node:net");
-const originalSocketConnect = net.Socket.prototype.connect;
-net.Socket.prototype.connect = function homecookWitnessedNetworkAttempt(...args) {
-  witness.recordProcessAttempt("network");
-  return Reflect.apply(originalSocketConnect, this, args);
-};
-
 const workerThreads = require("node:worker_threads");
 const originalPostMessage = workerThreads.Worker.prototype.postMessage;
 function sanitizeForWorkerThread(value, seen = new WeakMap()) {

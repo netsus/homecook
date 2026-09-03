@@ -3801,6 +3801,32 @@ describe("release rehearsal candidate orchestration", () => {
       nodePath: process.execPath,
       outputPath: sandboxWitnessPath,
     });
+    const eagerNetworkDetector = join(root, "reject-eager-network-load.cjs");
+    writeFileSync(eagerNetworkDetector, [
+      'const Module = require("node:module");',
+      'const originalLoad = Module._load;',
+      'Module._load = function rejectEagerNetworkLoad(request, ...args) {',
+      '  if (request === "net" || request === "node:net") process.exit(79);',
+      '  return Reflect.apply(originalLoad, this, [request, ...args]);',
+      '};',
+    ].join("\n"), { mode: 0o400 });
+    const preloadInitialization = spawnSync(command, ["-e", 'process.stdout.write("ready")'], {
+      cwd: root,
+      env: {
+        HOME: root,
+        HOMECOOK_SANDBOX_WITNESS_MODULE: sandboxWitness.path,
+        NODE_ENV: "test",
+        NODE_OPTIONS: [
+          `--require=${eagerNetworkDetector}`,
+          `--require=${sandboxWitness.preload_path}`,
+        ].join(" "),
+        PATH: "/usr/bin:/bin",
+        TMPDIR: root,
+      },
+      encoding: "utf8",
+    });
+    expect(preloadInitialization.status, preloadInitialization.stderr).toBe(0);
+    expect(preloadInitialization.stdout).toBe("ready");
     const witnessedLookupScript = (service: string, expectDenied: boolean) => [
       `const witness = require(${JSON.stringify(sandboxWitness.path)});`,
       `const result = witness.lookupMachService(${JSON.stringify(service)});`,
