@@ -608,6 +608,59 @@ describe("local Mac production release evidence validation", () => {
   const projectionDigest = (value: unknown) => createHash("sha256")
     .update(canonicalizeJcs(value))
     .digest("hex");
+  const stageCapabilityPolicy = () => {
+    const policy = {
+      schema: "homecook.sandbox-stage-capability-policy-text.v1",
+      stages: [
+        {
+          stage: "offline-install",
+          allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+        },
+        { stage: "next-build", allowed_mach_lookup_global_names: [] },
+      ],
+      network_policy: "deny-all",
+      no_log_denials: ["com.apple.diagnosticd"],
+    };
+    const policyText = canonicalizeJcs(policy);
+    return {
+      schema: "homecook.sandbox-stage-capability-policy.v1",
+      policy_text: policyText,
+      policy_digest: createHash("sha256").update(policyText).digest("hex"),
+      install: {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+        allow_count: 1,
+      },
+      build: {
+        stage: "next-build",
+        allowed_mach_lookup_global_names: [],
+        allow_count: 0,
+      },
+      observed: {
+        install_audit_digest: "a".repeat(64),
+        install_denial_count: 0,
+        install_process_attempt_count: 0,
+        build_audit_digest: "b".repeat(64),
+        build_denial_count: 0,
+        build_process_attempt_count: 0,
+      },
+    };
+  };
+  const egressProbe = () => {
+    const unsigned = {
+      schema: "homecook.sandbox-egress-probe.v1",
+      dns_lookup_success_count: 0,
+      net_connect_success_count: 0,
+      tls_connect_success_count: 0,
+      public_ip_connect_success_count: 0,
+      http_success_count: 0,
+    };
+    return { ...unsigned, probe_digest: projectionDigest(unsigned) };
+  };
+  type CapabilityProjectionFixture = {
+    stage_capability_policy: ReturnType<typeof stageCapabilityPolicy>;
+    egress_probe: ReturnType<typeof egressProbe>;
+  };
   const resignEvidence = (evidence: TestReleaseEvidence | Record<string, unknown>) => {
     const unsigned = { ...evidence };
     delete unsigned.evidence_digest;
@@ -664,6 +717,8 @@ describe("local Mac production release evidence validation", () => {
       vitest_passed: 1,
       vitest_skipped: 0,
       vitest_failed: 0,
+      stage_capability_policy: stageCapabilityPolicy(),
+      egress_probe: egressProbe(),
     };
     const unsigned = {
       schema: "homecook.local-mac-production-release-evidence.v2",
@@ -829,6 +884,10 @@ describe("local Mac production release evidence validation", () => {
     if (typeof parseActualBuildOutput !== "function") return;
     const selected = "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox";
     const projection = parseActualBuildOutput([
+      `RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+        stage_capability_policy: stageCapabilityPolicy(),
+        egress_probe: egressProbe(),
+      })}`,
       ` ✓ tests/local-mac-production-rehearsal-candidate.test.ts > local Mac > ${selected} 160000ms`,
       " Test Files  1 passed (1)",
       "      Tests  1 passed (1)",
@@ -845,7 +904,29 @@ describe("local Mac production release evidence validation", () => {
       vitest_passed: 1,
       vitest_skipped: 0,
       vitest_failed: 0,
+      stage_capability_policy: stageCapabilityPolicy(),
+      egress_probe: egressProbe(),
     });
+  });
+
+  it.each([
+    ["service", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.allowed_mach_lookup_global_names[0] = "com.apple.logd"; }],
+    ["stage", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.stage = "next-build"; }],
+    ["policy digest", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.policy_digest = "c".repeat(64); }],
+    ["wildcard", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.allowed_mach_lookup_global_names.push("*"); }],
+    ["additional allow", (value: CapabilityProjectionFixture) => { value.stage_capability_policy.install.allow_count = 2; }],
+    ["successful egress", (value: CapabilityProjectionFixture) => { value.egress_probe.net_connect_success_count = 1; }],
+  ])("rejects changed %s capability evidence even when enclosing digests are resigned", (_label, mutate) => {
+    const evidence = createReleaseEvidence();
+    mutate(evidence.commands[1].stdout_projection as unknown as CapabilityProjectionFixture);
+    evidence.commands[1].stdout_sha256 = projectionDigest(evidence.commands[1].stdout_projection);
+    const resigned = resignEvidence(evidence);
+
+    expect(() => validateLocalMacProductionReleaseEvidence(resigned, {
+      expectedHeadSha: resigned.head_sha,
+      expectedTreeSha: resigned.tree_sha,
+      inventory,
+    })).toThrow(/capability|policy|egress|projection/iu);
   });
 
   it("builds a validator-closed note without retaining raw command output", () => {
@@ -875,6 +956,10 @@ describe("local Mac production release evidence validation", () => {
       },
       actualBuild: {
         stdout: [
+          `RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+            stage_capability_policy: stageCapabilityPolicy(),
+            egress_probe: egressProbe(),
+          })}`,
           ` ✓ tests/local-mac-production-rehearsal-candidate.test.ts > local Mac > ${selected} 160000ms`,
           " Test Files  1 passed (1)",
           "      Tests  1 passed (1)",

@@ -414,6 +414,7 @@ static napi_value lookup_mach_service(napi_env env, napi_callback_info info) {
       length == 0 || length >= sizeof(name))
     reject_witness();
   if (strcmp(name, "com.apple.diagnosticd") != 0 &&
+      strcmp(name, "com.apple.SystemConfiguration.DNSConfiguration") != 0 &&
       dprintf(process_attempt_fd, "{\"process_attempt\":\"machLookup\"}\n") <
           0) {
     reject_witness();

@@ -80,6 +80,7 @@ const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
   "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
+  "sandbox_stage_capability_policy",
   "generated_build_inventory_digest",
   "pnpm_store_snapshot_inventory_digest",
   "pnpm_store_final_index_inventory_digest",
@@ -97,6 +98,8 @@ const TOOL_IDENTITY_KEYS = [
 ];
 const EXECUTABLE_TOOL_MODES = new Set([0o500, 0o555, 0o700, 0o755]);
 const READABLE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
+const DNS_CONFIGURATION_MACH_SERVICE = "com.apple.SystemConfiguration.DNSConfiguration";
+const DIAGNOSTICD_MACH_SERVICE = "com.apple.diagnosticd";
 const requireNativeWitness = createRequire(import.meta.url);
 const pinnedSandboxWitnessControllers = new Map();
 
@@ -557,6 +560,7 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.source_manifest_digest, "source_manifest_digest");
   digest(value.compose_source_digest, "compose_source_digest");
   digest(value.sandbox_policy_digest, "sandbox_policy_digest");
+  validateSandboxStageCapabilityPolicy(value.sandbox_stage_capability_policy);
   digest(value.generated_build_inventory_digest, "generated_build_inventory_digest");
   digest(value.pnpm_store_snapshot_inventory_digest, "pnpm_store_snapshot_inventory_digest");
   digest(value.pnpm_store_final_index_inventory_digest, "pnpm_store_final_index_inventory_digest");
@@ -1351,6 +1355,7 @@ export function buildBundleAuthorityManifest(input) {
     "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
     "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
+    "sandbox_stage_capability_policy",
     "pnpm_store_final_index_inventory_digest",
     "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain", "toolchain_lock_digest",
@@ -1370,6 +1375,7 @@ export function buildBundleAuthorityManifest(input) {
     "sealed_bundle_digest", "source_manifest_digest",
     "source_snapshot_digest", "compose_source_digest", "toolchain_lock_digest", "builder_input_digest",
   ]) digest(input[field], `bundle authority ${field}`);
+  validateSandboxStageCapabilityPolicy(input.sandbox_stage_capability_policy);
   validateEnvironmentMetadata(input.environment_snapshot);
   validateFileInventory(input.file_inventory);
   if (generatedBuildInventoryDigest(input.file_inventory) !== input.generated_build_inventory_digest) {
@@ -2938,10 +2944,14 @@ export async function withCandidatePnpmStoreView({
   });
 }
 
-/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[], executablePaths?:string[]|null}} options */
+/** @param {{readRoots?:string[], writeRoots?:string[], deniedPaths?:string[], deniedWritePaths?:string[], executablePaths?:string[]|null, stage?:"offline-install"|"next-build"|null}} options */
 export function buildCandidateSandboxProfile({
   readRoots = [], writeRoots = [], deniedPaths = [], deniedWritePaths = [], executablePaths = null,
+  stage = null,
 } = {}) {
+  if (stage !== null && !["offline-install", "next-build"].includes(stage)) {
+    fail("candidate sandbox stage is invalid");
+  }
   let processExecRule = "(allow process-exec)";
   let executionAuditMessage = null;
   if (executablePaths !== null) {
@@ -3046,7 +3056,10 @@ export function buildCandidateSandboxProfile({
     `(deny process-exec ${[
       "/bin/launchctl", "/usr/bin/launchctl", "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
     ].map((path) => `(literal ${sandboxLiteral(path)})`).join(" ")}${auditMessageRule})`,
-    '(deny mach-lookup (global-name "com.apple.diagnosticd") (with no-log))',
+    `(deny mach-lookup (global-name "${DIAGNOSTICD_MACH_SERVICE}") (with no-log))`,
+    stage === "offline-install"
+      ? `(allow mach-lookup (global-name "${DNS_CONFIGURATION_MACH_SERVICE}"))`
+      : "",
     "(allow sysctl-read)",
     '(allow file-read-metadata (literal "/etc") (literal "/var"))',
     `(allow file-read-metadata ${aliasParentMetadataRules})`,
@@ -3057,6 +3070,131 @@ export function buildCandidateSandboxProfile({
     denyRules,
     denyWriteRules,
   ].filter(Boolean).join("\n");
+}
+
+export function buildSandboxStageCapabilityPolicy({
+  installProfile, buildProfile, installAudit, buildAudit,
+}) {
+  const exactInstallAllow = `(allow mach-lookup (global-name "${DNS_CONFIGURATION_MACH_SERVICE}"))`;
+  const machAllows = (profile) => String(profile).split("\n")
+    .filter((line) => line.startsWith("(allow mach-lookup"));
+  const assertProfile = (profile, stage, expectedAllows) => {
+    const allows = machAllows(profile);
+    if (canonicalizeJcs(allows) !== canonicalizeJcs(expectedAllows)) {
+      fail(`${stage} sandbox Mach capability projection is invalid`);
+    }
+    if (!String(profile).split("\n").some((line) => line.startsWith("(deny network*"))) {
+      fail(`${stage} sandbox network deny is missing`);
+    }
+    if ((String(profile).match(/\(with no-log\)/gu) ?? []).length !== 1
+      || !String(profile).split("\n").includes(
+        `(deny mach-lookup (global-name "${DIAGNOSTICD_MACH_SERVICE}") (with no-log))`,
+      )) fail(`${stage} sandbox no-log policy is invalid`);
+  };
+  assertProfile(installProfile, "offline-install", [exactInstallAllow]);
+  assertProfile(buildProfile, "next-build", []);
+  const assertAudit = (audit, stage) => {
+    if (!audit || typeof audit !== "object" || Array.isArray(audit)) {
+      fail(`${stage} capability audit is invalid`);
+    }
+    digest(audit.audit_digest, `${stage} capability audit digest`);
+    if (audit.stage !== stage || audit.denial_count !== 0 || audit.process_attempt_count !== 0) {
+      fail(`${stage} capability audit did not remain fail closed`);
+    }
+  };
+  assertAudit(installAudit, "offline-install");
+  assertAudit(buildAudit, "next-build");
+  const policy = {
+    schema: "homecook.sandbox-stage-capability-policy-text.v1",
+    stages: [
+      {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      },
+      { stage: "next-build", allowed_mach_lookup_global_names: [] },
+    ],
+    network_policy: "deny-all",
+    no_log_denials: [DIAGNOSTICD_MACH_SERVICE],
+  };
+  const policyText = canonicalizeJcs(policy);
+  return validateSandboxStageCapabilityPolicy(Object.freeze({
+    schema: "homecook.sandbox-stage-capability-policy.v1",
+    policy_text: policyText,
+    policy_digest: sha256Bytes(Buffer.from(policyText, "utf8")),
+    install: {
+      stage: "offline-install",
+      allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      allow_count: 1,
+    },
+    build: {
+      stage: "next-build",
+      allowed_mach_lookup_global_names: [],
+      allow_count: 0,
+    },
+    observed: {
+      install_audit_digest: installAudit.audit_digest,
+      install_denial_count: installAudit.denial_count,
+      install_process_attempt_count: installAudit.process_attempt_count,
+      build_audit_digest: buildAudit.audit_digest,
+      build_denial_count: buildAudit.denial_count,
+      build_process_attempt_count: buildAudit.process_attempt_count,
+    },
+  }));
+}
+
+export function validateSandboxStageCapabilityPolicy(value) {
+  exactObject(value, "sandbox stage capability policy", [
+    "schema", "policy_text", "policy_digest", "install", "build", "observed",
+  ]);
+  exactObject(value.install, "sandbox install capability", [
+    "stage", "allowed_mach_lookup_global_names", "allow_count",
+  ]);
+  exactObject(value.build, "sandbox build capability", [
+    "stage", "allowed_mach_lookup_global_names", "allow_count",
+  ]);
+  exactObject(value.observed, "sandbox capability observations", [
+    "install_audit_digest", "install_denial_count", "install_process_attempt_count",
+    "build_audit_digest", "build_denial_count", "build_process_attempt_count",
+  ]);
+  let parsedPolicy;
+  try {
+    parsedPolicy = JSON.parse(value.policy_text);
+  } catch {
+    fail("sandbox stage capability policy text is invalid");
+  }
+  const expectedPolicy = {
+    schema: "homecook.sandbox-stage-capability-policy-text.v1",
+    stages: [
+      {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      },
+      { stage: "next-build", allowed_mach_lookup_global_names: [] },
+    ],
+    network_policy: "deny-all",
+    no_log_denials: [DIAGNOSTICD_MACH_SERVICE],
+  };
+  if (
+    value.schema !== "homecook.sandbox-stage-capability-policy.v1"
+    || value.policy_text !== canonicalizeJcs(parsedPolicy)
+    || value.policy_text !== canonicalizeJcs(expectedPolicy)
+    || value.policy_digest !== sha256Bytes(Buffer.from(value.policy_text, "utf8"))
+    || canonicalizeJcs(value.install) !== canonicalizeJcs({
+      stage: "offline-install",
+      allowed_mach_lookup_global_names: [DNS_CONFIGURATION_MACH_SERVICE],
+      allow_count: 1,
+    })
+    || canonicalizeJcs(value.build) !== canonicalizeJcs({
+      stage: "next-build", allowed_mach_lookup_global_names: [], allow_count: 0,
+    })
+    || value.observed.install_denial_count !== 0
+    || value.observed.install_process_attempt_count !== 0
+    || value.observed.build_denial_count !== 0
+    || value.observed.build_process_attempt_count !== 0
+  ) fail("sandbox stage capability policy is not the exact install-only authority");
+  digest(value.observed.install_audit_digest, "sandbox install capability audit digest");
+  digest(value.observed.build_audit_digest, "sandbox build capability audit digest");
+  return value;
 }
 
 export function validateProductionGuardSnapshots(pre, post) {
@@ -3328,6 +3466,7 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["compose_source_digest", candidate.compose_source_digest, bundle.compose_source_digest],
     ["source_snapshot_digest", candidate.source_manifest_digest, bundle.source_snapshot_digest],
     ["sandbox_policy_digest", candidate.sandbox_policy_digest, bundle.sandbox_policy_digest],
+    ["sandbox_stage_capability_policy", candidate.sandbox_stage_capability_policy, bundle.sandbox_stage_capability_policy],
     ["generated_build_inventory_digest", candidate.generated_build_inventory_digest, bundle.generated_build_inventory_digest],
     ["pnpm_store_snapshot_inventory_digest", candidate.pnpm_store_snapshot_inventory_digest, bundle.pnpm_store_snapshot_inventory_digest],
     ["pnpm_store_final_index_inventory_digest", candidate.pnpm_store_final_index_inventory_digest, bundle.pnpm_store_final_index_inventory_digest],
@@ -4058,6 +4197,9 @@ export async function buildReleaseRehearsalCandidate({
       "sealed_bundle_digest",
     );
     const sandboxPolicyDigest = digest(build.sandbox_policy_digest, "sandbox policy digest");
+    const sandboxStageCapabilityPolicy = validateSandboxStageCapabilityPolicy(
+      build.sandbox_stage_capability_policy,
+    );
     const generatedInventoryDigest = generatedBuildInventoryDigest(build.file_inventory);
     const pnpmStoreSnapshotInventoryDigest = digest(
       build.pnpm_store_snapshot_inventory_digest,
@@ -4088,6 +4230,7 @@ export async function buildReleaseRehearsalCandidate({
       release_sha: releaseSha,
       release_tree: sourceEvidence.release_tree,
       sandbox_policy_digest: sandboxPolicyDigest,
+      sandbox_stage_capability_policy: sandboxStageCapabilityPolicy,
       generated_build_inventory_digest: generatedInventoryDigest,
       pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
       pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
@@ -4129,6 +4272,7 @@ export async function buildReleaseRehearsalCandidate({
       builder_input_digest: sourceEvidence.builder_input_digest,
       compose_source_digest: composeSourceDigest,
       sandbox_policy_digest: sandboxPolicyDigest,
+      sandbox_stage_capability_policy: sandboxStageCapabilityPolicy,
       generated_build_inventory_digest: generatedInventoryDigest,
       pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
       pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,
@@ -5081,6 +5225,9 @@ export function validateSandboxedBuildResult(result, label) {
     process_instance_digest: witnessedLifecycle
       ? result.process_identities[0].process_instance_id
       : sha256Jcs(result.process_identities),
+    stage: result.stage,
+    denial_count: 0,
+    process_attempt_count: witnessedLifecycle ? result.process_attempt_count : 0,
   });
 }
 
@@ -6737,6 +6884,7 @@ export function createReleaseRehearsalCandidateAdapters({
             npm_config_offline: "true",
           });
           const installSandboxProfile = buildCandidateSandboxProfile({
+            stage: "offline-install",
             executablePaths: [installStageNode.path],
             readRoots: [
               buildRoot,
@@ -6790,6 +6938,7 @@ export function createReleaseRehearsalCandidateAdapters({
           });
           const finalIndexAuthority = sealInstallIndex();
           const buildSandboxProfile = buildCandidateSandboxProfile({
+            stage: "next-build",
             executablePaths: [buildStageNode.path],
             readRoots: [
               buildRoot,
@@ -6903,6 +7052,12 @@ export function createReleaseRehearsalCandidateAdapters({
               bundle_content_digest: bundle.sealed_bundle_digest,
               migration: sealedMigration,
               sandbox_policy_evidence: {
+                stage_capability_policy: buildSandboxStageCapabilityPolicy({
+                  installProfile: installSandboxProfile,
+                  buildProfile: buildSandboxProfile,
+                  installAudit,
+                  buildAudit: nextBuildAudit,
+                }),
                 install_profile_digest: sha256Bytes(Buffer.from(installSandboxProfile, "utf8")),
                 build_profile_digest: sha256Bytes(Buffer.from(buildSandboxProfile, "utf8")),
                 deterministic_runtime_environment_digest: sha256Jcs({
@@ -6972,6 +7127,7 @@ export function createReleaseRehearsalCandidateAdapters({
       ) fail("candidate pnpm final index builder authority cross-binding is invalid");
       return {
         ...build,
+        sandbox_stage_capability_policy: sandboxPolicyEvidence.stage_capability_policy,
         pnpm_store_snapshot_inventory_digest: pnpmStoreSnapshotInventoryDigest,
         pnpm_store_snapshot_identity_digest: pnpmStoreSnapshotIdentityDigest,
         pnpm_store_final_index_inventory_digest: pnpmStoreFinalIndexInventoryDigest,

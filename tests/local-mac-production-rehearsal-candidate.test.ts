@@ -31,6 +31,7 @@ import {
   buildCandidateManifest,
   buildBundleAuthorityManifest,
   buildCandidateSandboxProfile,
+  buildSandboxStageCapabilityPolicy,
   buildReleaseRehearsalCandidate,
   createReleaseRehearsalCandidateAdapters,
   createSealedCandidateBundle,
@@ -466,6 +467,28 @@ function validManifestInput() {
     source_manifest_digest: DIGEST_A,
     compose_source_digest: DIGEST_C,
     sandbox_policy_digest: DIGEST_B,
+    sandbox_stage_capability_policy: (() => {
+      const policyText = canonicalizeJcs({
+        schema: "homecook.sandbox-stage-capability-policy-text.v1",
+        stages: [
+          { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"] },
+          { stage: "next-build", allowed_mach_lookup_global_names: [] },
+        ],
+        network_policy: "deny-all",
+        no_log_denials: ["com.apple.diagnosticd"],
+      });
+      return {
+        schema: "homecook.sandbox-stage-capability-policy.v1",
+        policy_text: policyText,
+        policy_digest: createHash("sha256").update(policyText).digest("hex"),
+        install: { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"], allow_count: 1 },
+        build: { stage: "next-build", allowed_mach_lookup_global_names: [], allow_count: 0 },
+        observed: {
+          install_audit_digest: DIGEST_A, install_denial_count: 0, install_process_attempt_count: 0,
+          build_audit_digest: DIGEST_B, build_denial_count: 0, build_process_attempt_count: 0,
+        },
+      };
+    })(),
     generated_build_inventory_digest: createHash("sha256").update(canonicalizeJcs(
       fileInventory.filter((entry) => entry.source_kind === "generated_build"),
     )).digest("hex"),
@@ -858,6 +881,7 @@ describe("release rehearsal candidate manifest", () => {
         "source_manifest_digest",
         "compose_source_digest",
         "sandbox_policy_digest",
+        "sandbox_stage_capability_policy",
         "generated_build_inventory_digest",
         "pnpm_store_snapshot_inventory_digest",
         "pnpm_store_final_index_inventory_digest",
@@ -878,6 +902,7 @@ describe("release rehearsal candidate manifest", () => {
     expect(schema.properties.toolchain.additionalProperties).toBe(false);
     expect(schema.properties.artifacts.required).toEqual(["app", "full_local", "worker"]);
     expect(schema.properties.production_guard.properties.mutation_attempt_count.const).toBe(0);
+    expect(schema.properties.sandbox_stage_capability_policy.additionalProperties).toBe(false);
   });
 
   it("builds and validates a closed RFC8785-bound candidate manifest", () => {
@@ -886,6 +911,22 @@ describe("release rehearsal candidate manifest", () => {
 
     expect(parsed).toEqual(manifest);
     expect(parsed.manifest_digest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it.each([
+    ["service", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.allowed_mach_lookup_global_names[0] = "com.apple.logd"; }],
+    ["stage", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.stage = "next-build"; }],
+    ["policy digest", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.policy_digest = DIGEST_C; }],
+    ["wildcard", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.allowed_mach_lookup_global_names.push("*"); }],
+    ["additional allow", (value: ReturnType<typeof validManifestInput>["sandbox_stage_capability_policy"]) => { value.install.allow_count = 2; }],
+  ])("rejects a resigned candidate with changed sandbox capability %s", (_label, mutate) => {
+    const manifest = structuredClone(buildCandidateManifest(validManifestInput()));
+    mutate(manifest.sandbox_stage_capability_policy);
+    delete manifest.manifest_digest;
+    manifest.manifest_digest = createHash("sha256").update(canonicalizeJcs(manifest)).digest("hex");
+
+    expect(() => parseAndValidateCandidateManifest(canonicalizeJcs(manifest)))
+      .toThrow(/capability|policy|install-only/iu);
   });
 
   it("cross-binds generated build and pnpm store snapshot inventories into candidate and bundle authority", () => {
@@ -4148,6 +4189,74 @@ describe("release rehearsal candidate orchestration", () => {
     }
   });
 
+  it("projects exactly one install-only DNSConfiguration Mach capability and no build capability", () => {
+    const root = privateRoot("homecook-candidate-stage-capability-");
+    const installProfile = buildCandidateSandboxProfile({
+      readRoots: [root, process.execPath],
+      writeRoots: [root],
+      stage: "offline-install",
+    });
+    const buildProfile = buildCandidateSandboxProfile({
+      readRoots: [root, process.execPath],
+      writeRoots: [root],
+      stage: "next-build",
+    });
+    const exactAllow = '(allow mach-lookup (global-name "com.apple.SystemConfiguration.DNSConfiguration"))';
+
+    expect(installProfile.split("\n").filter((line) => line === exactAllow)).toHaveLength(1);
+    expect(installProfile.match(/\(allow mach-lookup/gu)).toHaveLength(1);
+    expect(buildProfile).not.toContain("(allow mach-lookup");
+    expect(buildProfile).not.toContain("com.apple.SystemConfiguration.DNSConfiguration");
+    for (const profile of [installProfile, buildProfile]) {
+      expect(profile).toContain("(deny network*)");
+      expect(profile.match(/\(with no-log\)/gu)).toHaveLength(1);
+      expect(profile).toContain(
+        '(deny mach-lookup (global-name "com.apple.diagnosticd") (with no-log))',
+      );
+      expect(exactAllow).not.toContain("with no-log");
+    }
+
+    const capability = buildSandboxStageCapabilityPolicy({
+      installProfile,
+      buildProfile,
+      installAudit: {
+        audit_digest: DIGEST_A,
+        stage: "offline-install",
+        denial_count: 0,
+        process_attempt_count: 0,
+      },
+      buildAudit: {
+        audit_digest: DIGEST_B,
+        stage: "next-build",
+        denial_count: 0,
+        process_attempt_count: 0,
+      },
+    });
+    expect(capability).toMatchObject({
+      schema: "homecook.sandbox-stage-capability-policy.v1",
+      install: {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+        allow_count: 1,
+      },
+      build: {
+        stage: "next-build",
+        allowed_mach_lookup_global_names: [],
+        allow_count: 0,
+      },
+      observed: {
+        install_audit_digest: DIGEST_A,
+        install_denial_count: 0,
+        install_process_attempt_count: 0,
+        build_audit_digest: DIGEST_B,
+        build_denial_count: 0,
+        build_process_attempt_count: 0,
+      },
+      policy_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+    expect(capability.policy_text).toContain("com.apple.SystemConfiguration.DNSConfiguration");
+  });
+
   it("allows only canonical generated build-work directories and rejects adjacent or escaping writes", () => {
     if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) return;
 
@@ -4320,11 +4429,16 @@ describe("release rehearsal candidate orchestration", () => {
     const installProfile = buildCandidateSandboxProfile({
       ...installProfileOptions,
       executablePaths: [installAuditNode],
+      stage: "offline-install",
     });
     const installProbeProfile = buildCandidateSandboxProfile({
       ...installProfileOptions,
       executablePaths: ["/usr/bin/touch"],
     });
+    expect(installProfile.match(/\(allow mach-lookup/gu)).toHaveLength(1);
+    expect(installProfile).toContain(
+      '(allow mach-lookup (global-name "com.apple.SystemConfiguration.DNSConfiguration"))',
+    );
     const env: NodeJS.ProcessEnv = {
       __CFPREFERENCES_AVOID_DAEMON: "1",
       __CF_USER_TEXT_ENCODING: `0x${Number(process.getuid?.()).toString(16).toUpperCase()}:0:0`,
@@ -4348,6 +4462,26 @@ describe("release rehearsal candidate orchestration", () => {
       USER: "homecook-rehearsal",
       npm_config_offline: "true",
     };
+    const machLookup = await runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile: installProfile,
+      command: installAuditNode,
+      args: ["-e", [
+        `const witness = require(${JSON.stringify(sandboxWitness.path)});`,
+        'process.exit(witness.lookupMachService("com.apple.SystemConfiguration.DNSConfiguration") === 0 ? 0 : 70);',
+      ].join("\n")],
+      cwd: buildRoot,
+      env,
+      label: "install-only DNSConfiguration lookup",
+      processExecutablePaths: [installAuditNode],
+      stage: "offline-install",
+    });
+    expect(machLookup).toMatchObject({
+      stage: "offline-install", denial_count: 0, process_attempt_count: 0,
+    });
+
     const allowedWorkingIndexWrite = spawnSync("/usr/bin/sandbox-exec", [
       "-p", installProbeProfile, "/usr/bin/touch", join(packageStoreView, "index", "sandbox-phase-write.json"),
     ], { cwd: buildRoot, env });
@@ -4383,6 +4517,7 @@ describe("release rehearsal candidate orchestration", () => {
       env,
       label: "real offline pnpm 10.32.1 install",
       processExecutablePaths: [installAuditNode],
+      stage: "offline-install",
       timeout: 120_000,
       beforeSpawn: verifyInstallPhaseBeforeSpawn,
     });
@@ -4410,12 +4545,35 @@ describe("release rehearsal candidate orchestration", () => {
     const buildProfile = buildCandidateSandboxProfile({
       ...buildProfileOptions,
       executablePaths: [buildAuditNode],
+      stage: "next-build",
     });
     const buildProbeProfile = buildCandidateSandboxProfile({
       ...buildProfileOptions,
       executablePaths: ["/usr/bin/touch"],
     });
     expect(buildProfile).not.toBe(installProfile);
+    expect(buildProfile).not.toContain("(allow mach-lookup");
+    expect(buildProfile).not.toContain("com.apple.SystemConfiguration.DNSConfiguration");
+    expect(buildProfile).toMatch(/^\(deny network\*/mu);
+    const buildPassiveSentinel = await runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile: buildProfile,
+      command: buildAuditNode,
+      args: ["-e", [
+        'if (process.env.HOMECOOK_OFFLINE_DNS_PROJECTION !== undefined) process.exit(70);',
+        'if (globalThis[Symbol.for("homecook.offlineDnsProjection")] !== undefined) process.exit(71);',
+      ].join("\n")],
+      cwd: buildRoot,
+      env,
+      label: "next-build passive capability sentinel",
+      processExecutablePaths: [buildAuditNode],
+      stage: "next-build",
+    });
+    expect(buildPassiveSentinel).toMatchObject({
+      stage: "next-build", denial_count: 0, process_attempt_count: 0,
+    });
     const reuseSpawn = vi.fn(() => ({
       status: 0, signal: null, stdout: "[]", stderr: "", pid: 4242,
     }));
@@ -4461,6 +4619,7 @@ describe("release rehearsal candidate orchestration", () => {
           env,
           label: "real offline Next 15.5.21 build",
           processExecutablePaths: [buildAuditNode],
+          stage: "next-build",
           timeout: 120_000,
         });
       },
@@ -4474,6 +4633,59 @@ describe("release rehearsal candidate orchestration", () => {
     }
     expect(readFileSync(join(nextRoot, "BUILD_ID"), "utf8").trim()).not.toBe("");
     expect(existsSync(join(nextRoot, "server", "app-paths-manifest.json"))).toBe(true);
+    const blockedProbe = (source: string) => spawnSync("/usr/bin/sandbox-exec", [
+      "-p", installProfile, installAuditNode, "-e", source,
+    ], { cwd: buildRoot, env: { ...env, NODE_OPTIONS: "" }, timeout: 5_000 });
+    const egressRuns = {
+      dns_lookup_success_count: blockedProbe([
+        'require("node:dns").lookup("example.com", error => process.exit(error ? 0 : 70));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      net_connect_success_count: blockedProbe([
+        'const socket=require("node:net").connect(9,"127.0.0.1");',
+        'socket.once("connect",()=>process.exit(70)); socket.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      tls_connect_success_count: blockedProbe([
+        'const socket=require("node:tls").connect(443,"1.1.1.1");',
+        'socket.once("secureConnect",()=>process.exit(70)); socket.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      public_ip_connect_success_count: blockedProbe([
+        'const socket=require("node:net").connect(80,"1.1.1.1");',
+        'socket.once("connect",()=>process.exit(70)); socket.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+      http_success_count: blockedProbe([
+        'const request=require("node:http").get("http://1.1.1.1/",()=>process.exit(70));',
+        'request.once("error",()=>process.exit(0));',
+        "setTimeout(() => process.exit(0), 1500);",
+      ].join("\n")).status === 70 ? 1 : 0,
+    };
+    expect(egressRuns).toEqual({
+      dns_lookup_success_count: 0,
+      net_connect_success_count: 0,
+      tls_connect_success_count: 0,
+      public_ip_connect_success_count: 0,
+      http_success_count: 0,
+    });
+    const stageCapabilityPolicy = buildSandboxStageCapabilityPolicy({
+      installProfile,
+      buildProfile,
+      installAudit,
+      buildAudit: build,
+    });
+    const unsignedEgressProbe = {
+      schema: "homecook.sandbox-egress-probe.v1",
+      ...egressRuns,
+    };
+    process.stdout.write(`RELEASE_STAGE_CAPABILITY_EVIDENCE=${canonicalizeJcs({
+      stage_capability_policy: stageCapabilityPolicy,
+      egress_probe: {
+        ...unsignedEgressProbe,
+        probe_digest: createHash("sha256").update(canonicalizeJcs(unsignedEgressProbe)).digest("hex"),
+      },
+    })}\n`);
     });
     });
     } finally {
@@ -5388,6 +5600,7 @@ describe("release rehearsal candidate orchestration", () => {
       release_sha: manifestInput.release_sha,
       release_tree: manifestInput.release_tree,
       sandbox_policy_digest: manifestInput.sandbox_policy_digest,
+      sandbox_stage_capability_policy: manifestInput.sandbox_stage_capability_policy,
       generated_build_inventory_digest: createHash("sha256").update(canonicalizeJcs(
         physical.file_inventory.filter((entry) => entry.source_kind === "generated_build"),
       )).digest("hex"),
@@ -5708,6 +5921,7 @@ describe("release rehearsal candidate orchestration", () => {
         sealed_bundle_digest: DIGEST_B,
         bundle_manifest_digest: DIGEST_C,
         sandbox_policy_digest: DIGEST_B,
+        sandbox_stage_capability_policy: validManifestInput().sandbox_stage_capability_policy,
         pnpm_store_snapshot_inventory_digest: DIGEST_C,
         pnpm_store_snapshot_identity_digest: DIGEST_A,
         pnpm_store_final_index_inventory_digest: DIGEST_A,

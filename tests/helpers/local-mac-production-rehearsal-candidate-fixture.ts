@@ -24,6 +24,29 @@ const DIGEST_A = "a".repeat(64);
 const DIGEST_B = "b".repeat(64);
 const DIGEST_C = "c".repeat(64);
 
+function sandboxStageCapabilityPolicy() {
+  const policyText = canonicalizeJcs({
+    schema: "homecook.sandbox-stage-capability-policy-text.v1",
+    stages: [
+      { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"] },
+      { stage: "next-build", allowed_mach_lookup_global_names: [] },
+    ],
+    network_policy: "deny-all",
+    no_log_denials: ["com.apple.diagnosticd"],
+  });
+  return {
+    schema: "homecook.sandbox-stage-capability-policy.v1",
+    policy_text: policyText,
+    policy_digest: createHash("sha256").update(policyText).digest("hex"),
+    install: { stage: "offline-install", allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"], allow_count: 1 },
+    build: { stage: "next-build", allowed_mach_lookup_global_names: [], allow_count: 0 },
+    observed: {
+      install_audit_digest: DIGEST_A, install_denial_count: 0, install_process_attempt_count: 0,
+      build_audit_digest: DIGEST_B, build_denial_count: 0, build_process_attempt_count: 0,
+    },
+  };
+}
+
 function privateRoot(prefix: string, tempRegistry: OwnedTempRegistry) {
   return tempRegistry.createOwnedTempRoot(prefix);
 }
@@ -214,6 +237,7 @@ export async function createCompletedRehearsalCandidateFixture(
     release_sha: releaseSha,
     release_tree: releaseTree,
     sandbox_policy_digest: DIGEST_B,
+    sandbox_stage_capability_policy: sandboxStageCapabilityPolicy(),
     generated_build_inventory_digest: generatedBuildInventoryDigest,
     pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
     pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,
@@ -259,6 +283,7 @@ export async function createCompletedRehearsalCandidateFixture(
     source_manifest_digest: DIGEST_A,
     compose_source_digest: DIGEST_C,
     sandbox_policy_digest: DIGEST_B,
+    sandbox_stage_capability_policy: sandboxStageCapabilityPolicy(),
     generated_build_inventory_digest: generatedBuildInventoryDigest,
     pnpm_store_snapshot_inventory_digest: storeSnapshot.snapshot_inventory_digest,
     pnpm_store_final_index_inventory_digest: storeSnapshot.final_index_inventory_digest,

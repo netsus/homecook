@@ -63,6 +63,76 @@ function parseVitestSummary(source) {
   };
 }
 
+function validateStageCapabilityPolicy(value) {
+  assertExactKeys(value, [
+    "schema", "policy_text", "policy_digest", "install", "build", "observed",
+  ], "stage capability policy");
+  assertExactKeys(value.install, [
+    "stage", "allowed_mach_lookup_global_names", "allow_count",
+  ], "install stage capability");
+  assertExactKeys(value.build, [
+    "stage", "allowed_mach_lookup_global_names", "allow_count",
+  ], "build stage capability");
+  assertExactKeys(value.observed, [
+    "install_audit_digest", "install_denial_count", "install_process_attempt_count",
+    "build_audit_digest", "build_denial_count", "build_process_attempt_count",
+  ], "observed stage capability audit");
+  let parsedPolicy;
+  try {
+    parsedPolicy = JSON.parse(value.policy_text);
+  } catch {
+    throw new Error("stage capability policy text is invalid");
+  }
+  const expectedPolicy = {
+    schema: "homecook.sandbox-stage-capability-policy-text.v1",
+    stages: [
+      {
+        stage: "offline-install",
+        allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+      },
+      { stage: "next-build", allowed_mach_lookup_global_names: [] },
+    ],
+    network_policy: "deny-all",
+    no_log_denials: ["com.apple.diagnosticd"],
+  };
+  if (
+    value.schema !== "homecook.sandbox-stage-capability-policy.v1"
+    || value.policy_text !== canonicalizeJcs(parsedPolicy)
+    || value.policy_text !== canonicalizeJcs(expectedPolicy)
+    || value.policy_digest !== createHash("sha256").update(value.policy_text).digest("hex")
+    || canonicalizeJcs(value.install) !== canonicalizeJcs({
+      stage: "offline-install",
+      allowed_mach_lookup_global_names: ["com.apple.SystemConfiguration.DNSConfiguration"],
+      allow_count: 1,
+    })
+    || canonicalizeJcs(value.build) !== canonicalizeJcs({
+      stage: "next-build", allowed_mach_lookup_global_names: [], allow_count: 0,
+    })
+    || !/^[0-9a-f]{64}$/u.test(value.observed.install_audit_digest ?? "")
+    || !/^[0-9a-f]{64}$/u.test(value.observed.build_audit_digest ?? "")
+    || value.observed.install_denial_count !== 0
+    || value.observed.install_process_attempt_count !== 0
+    || value.observed.build_denial_count !== 0
+    || value.observed.build_process_attempt_count !== 0
+  ) throw new Error("stage capability policy or observed audit is invalid");
+  return value;
+}
+
+function validateEgressProbe(value) {
+  assertExactKeys(value, [
+    "schema", "dns_lookup_success_count", "net_connect_success_count",
+    "tls_connect_success_count", "public_ip_connect_success_count", "http_success_count",
+    "probe_digest",
+  ], "egress probe");
+  const { probe_digest: claimedDigest, ...unsigned } = value;
+  if (
+    value.schema !== "homecook.sandbox-egress-probe.v1"
+    || Object.entries(unsigned).some(([key, count]) => key !== "schema" && count !== 0)
+    || claimedDigest !== sha256Jcs(unsigned)
+  ) throw new Error("egress probe did not remain fail closed");
+  return value;
+}
+
 export function parseReleaseSuiteOutput(source) {
   const summary = parseVitestSummary(source);
   const header = (name) => {
@@ -103,6 +173,17 @@ export function parseActualBuildOutput(source) {
   if (!summary.text.includes(selectedTestFile) || !summary.text.includes(selectedTestName)) {
     throw new Error("actual build output does not identify the selected test");
   }
+  const evidenceMatches = [...summary.text.matchAll(/^RELEASE_STAGE_CAPABILITY_EVIDENCE=(.+)$/gmu)];
+  if (evidenceMatches.length !== 1) {
+    throw new Error("actual build output does not contain one stage capability evidence projection");
+  }
+  let capabilityEvidence;
+  try {
+    capabilityEvidence = JSON.parse(evidenceMatches[0][1]);
+  } catch {
+    throw new Error("actual build stage capability evidence is malformed");
+  }
+  assertExactKeys(capabilityEvidence, ["stage_capability_policy", "egress_probe"], "actual build capability evidence");
   return Object.freeze({
     schema: "homecook.local-mac-production-release-stdout-projection.v1",
     kind: "actual-build",
@@ -115,6 +196,8 @@ export function parseActualBuildOutput(source) {
     vitest_passed: summary.tests.passed,
     vitest_skipped: summary.tests.skipped,
     vitest_failed: summary.tests.failed,
+    stage_capability_policy: validateStageCapabilityPolicy(capabilityEvidence.stage_capability_policy),
+    egress_probe: validateEgressProbe(capabilityEvidence.egress_probe),
   });
 }
 
@@ -290,7 +373,7 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
   assertExactKeys(actualProjection, [
     "schema", "kind", "selected_test_file", "selected_test_name", "vitest_test_files",
     "vitest_test_files_passed", "vitest_test_files_failed", "vitest_tests", "vitest_passed",
-    "vitest_skipped", "vitest_failed",
+    "vitest_skipped", "vitest_failed", "stage_capability_policy", "egress_probe",
   ], "actual build stdout projection");
   if (
     actualProjection.schema !== "homecook.local-mac-production-release-stdout-projection.v1"
@@ -305,6 +388,8 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
     || actualProjection.vitest_skipped !== 0
     || actualProjection.vitest_failed !== 0
   ) throw new Error("actual build stdout projection does not prove the selected build test");
+  validateStageCapabilityPolicy(actualProjection.stage_capability_policy);
+  validateEgressProbe(actualProjection.egress_probe);
   assertExactKeys(evidence.residue, [
     "suite_roots", "homecook_system_temp", "hcv_run_roots", "actual_root_exists",
   ], "release residue");
