@@ -2,7 +2,6 @@ import { expect, type Page, type Route } from "@playwright/test";
 import type { MarketingValidationQuizAnswers, MarketingValidationQuizResult } from "@/types/marketing-validation";
 
 export const MARKETING_BETA_PATH = "/beta";
-export const MARKETING_QA_TURNSTILE_TOKEN_KEY = "homecook.marketing-beta.turnstile-token";
 export const MARKETING_HAPPY_ANSWERS: MarketingValidationQuizAnswers = { q1: "daily", q2: "3_5", q3: "track", q4: "search" };
 export const MARKETING_CONTROL_ANSWERS: MarketingValidationQuizAnswers = { q1: "none", q2: "none", q3: "pass", q4: "none" };
 
@@ -25,7 +24,24 @@ type LeadMode = "accepted" | "duplicate" | "403" | "409" | "422" | "turnstile" |
 
 export async function installMarketingDemandValidationRoutes(page: Page, { leadMode = "accepted", turnstileToken = "qa-turnstile-token" }: { leadMode?: LeadMode; turnstileToken?: string } = {}) {
   let state = "view";
-  await page.addInitScript(({ key, token }) => window.sessionStorage.setItem(key, token), { key: MARKETING_QA_TURNSTILE_TOKEN_KEY, token: turnstileToken });
+  await page.addInitScript(({ token }) => {
+    let options: {
+      callback: (value: string) => void;
+      "error-callback": () => void;
+      "expired-callback": () => void;
+    } | null = null;
+    window.turnstile = {
+      render: (_container: HTMLElement, nextOptions: typeof options & { callback: (value: string) => void }) => {
+        options = nextOptions;
+        nextOptions.callback(token);
+        return "qa-widget";
+      },
+      reset: () => {
+        options?.callback(token);
+      },
+      remove: () => {},
+    };
+  }, { token: turnstileToken });
   await page.route("**/api/v1/marketing/validation", async (route: Route) => {
     const body = JSON.parse(route.request().postData() ?? "{}") as { action?: string; answers?: MarketingValidationQuizAnswers };
     if (body.action === "quiz_completed") {

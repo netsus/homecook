@@ -4,6 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  MarketingTurnstile,
+  type MarketingTurnstileController,
+} from "@/components/marketing/marketing-turnstile";
 import { postMarketingValidation } from "@/lib/api/marketing-validation";
 import {
   enqueueMarketingQueueAction,
@@ -32,7 +36,6 @@ interface MarketingDemandValidationScreenProps {
 type ShareFeedback = { kind: "error" | "success"; message: string } | null;
 type QueueRecovery = { message: string; resume: () => void } | null;
 
-const QA_TURNSTILE_TOKEN_KEY = "homecook.marketing-beta.turnstile-token";
 const RESULT_KEYS: MarketingValidationQuizResult[] = ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"];
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 
@@ -196,11 +199,22 @@ function Packaged({ onBack, onNext }: { onBack: () => void; onNext: () => void }
   return <Frame stage="packaged-food"><Back onClick={onBack} /><h1>그리고<br /><em>편의점 음식</em>은<br />더 간단해요.</h1><article className="mdv2-product"><span className="mdv2-badge">제품 예시</span><Image src="/assets/funnel/products/the-protein-choco.png" alt="더:단백 드링크 초코 제품 예시" width={190} height={270} /><div><h2>더:단백 드링크 초코</h2><p>250ml</p><strong>105 kcal · 단백질 20g</strong></div></article><p className="mdv2-affiliation">특정 브랜드와 제휴하거나 추천하는 화면이 아닙니다.</p><button className="mdv2-primary" type="button" aria-label="+ 기록하기" onClick={onNext}>+ 기록하기</button></Frame>;
 }
 
-function BetaForm({ onBack, onSubmit, getTurnstileToken }: { onBack: () => void; onSubmit: (email: string, token: string) => Promise<string | null>; getTurnstileToken: () => Promise<TurnstileResult> }) {
+function BetaForm({ onBack, onSubmit, getTurnstileToken }: { onBack: () => void; onSubmit: (email: string, token: string) => Promise<string | null>; getTurnstileToken?: () => Promise<TurnstileResult> }) {
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const turnstileControllerRef = useRef<MarketingTurnstileController | null>(null);
+  const requestTurnstileToken = useCallback(async (): Promise<TurnstileResult> => {
+    if (getTurnstileToken) return getTurnstileToken();
+    return turnstileControllerRef.current?.getToken() ?? {
+      ok: false,
+      message: "보안 확인을 준비 중입니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }, [getTurnstileToken]);
+  const resetTurnstile = useCallback(() => {
+    if (!getTurnstileToken) turnstileControllerRef.current?.reset();
+  }, [getTurnstileToken]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting) return;
@@ -208,12 +222,12 @@ function BetaForm({ onBack, onSubmit, getTurnstileToken }: { onBack: () => void;
     if (!/^\S+@\S+\.\S+$/.test(email)) { setError("이메일 형식을 확인해 주세요."); return; }
     if (!consent) { setError("이메일 수집·이용 동의가 필요해요."); return; }
     setSubmitting(true);
-    const turnstile = await getTurnstileToken();
-    if (!turnstile.ok) { setError(turnstile.message); setSubmitting(false); return; }
+    const turnstile = await requestTurnstileToken();
+    if (!turnstile.ok) { resetTurnstile(); setError(turnstile.message); setSubmitting(false); return; }
     const message = await onSubmit(email, turnstile.token);
-    if (message) { setError(message); setSubmitting(false); }
+    if (message) { resetTurnstile(); setError(message); setSubmitting(false); }
   };
-  return <Frame stage="beta-form"><Back onClick={onBack} /><div className="mdv2-invitation"><Image src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 캐릭터" width={210} height={210} /><div><Image src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" width={210} height={80} /><h1>직접 써보고 싶나요?</h1><p>이메일을 남기면 베타가 준비되는 대로 가장 먼저 초대해드릴게요.</p></div></div><form className="mdv2-form" onSubmit={submit} noValidate><label htmlFor="beta-email">이메일</label><input id="beta-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? "beta-error" : "beta-privacy"} placeholder="email@example.com" /><label className="mdv2-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />베타 초대용 이메일 수집·이용에 동의합니다. <strong>(필수)</strong></label><p id="beta-privacy">수집: 이메일 · 목적: 베타 초대 · 보유: 베타 초대 종료 시까지 · <Link href="/privacy">개인정보처리방침</Link></p>{error ? <div className="mdv2-error" id="beta-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>다시 시도</button></div> : null}<p className="mdv2-submit-status" role="status" aria-live="polite">{submitting ? "신청 내용을 확인하고 있어요." : ""}</p><button className="mdv2-primary" type="submit" disabled={submitting}>{submitting ? "신청 중…" : "무료 베타 초대받기"}</button></form></Frame>;
+  return <Frame stage="beta-form"><Back onClick={onBack} /><div className="mdv2-invitation"><Image src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 캐릭터" width={210} height={210} /><div><Image src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" width={210} height={80} /><h1>직접 써보고 싶나요?</h1><p>이메일을 남기면 베타가 준비되는 대로 가장 먼저 초대해드릴게요.</p></div></div><form className="mdv2-form" onSubmit={submit} noValidate><label htmlFor="beta-email">이메일</label><input id="beta-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? "beta-error" : "beta-privacy"} placeholder="email@example.com" />{getTurnstileToken ? null : <MarketingTurnstile onControllerChange={(controller) => { turnstileControllerRef.current = controller; }} />}<label className="mdv2-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />베타 초대용 이메일 수집·이용에 동의합니다. <strong>(필수)</strong></label><p id="beta-privacy">수집: 이메일 · 목적: 베타 초대 · 보유: 베타 초대 종료 시까지 · <Link href="/privacy">개인정보처리방침</Link></p>{error ? <div className="mdv2-error" id="beta-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>다시 시도</button></div> : null}<p className="mdv2-submit-status" role="status" aria-live="polite">{submitting ? "신청 내용을 확인하고 있어요." : ""}</p><button className="mdv2-primary" type="submit" disabled={submitting}>{submitting ? "신청 중…" : "무료 베타 초대받기"}</button></form></Frame>;
 }
 
 function Done({ onBack, onReset }: { onBack: () => void; onReset: () => void }) {
@@ -347,10 +361,6 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
       setShareFeedback({ kind: "error", message: "공유 링크를 준비하지 못했어요. 다시 시도해 주세요." });
     }
   };
-  const defaultTurnstile = async (): Promise<TurnstileResult> => {
-    const token = window.sessionStorage.getItem(QA_TURNSTILE_TOKEN_KEY);
-    return token ? { ok: true, token } : { ok: false, message: "보안 확인을 완료한 뒤 다시 시도해 주세요." };
-  };
   const submitLead = async (email: string, token: string) => {
     const response = await postMarketingValidation({ action: "lead_submitted", email, consent: true, turnstile_token: token, honeypot: "" });
     if (!response.success) return response.error?.message ?? "신청을 처리하지 못했어요.";
@@ -371,7 +381,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
   else if (stage === "planner-homecook") content = <Planner complete={false} onBack={back} onNext={() => push("packaged-food")} />;
   else if (stage === "packaged-food") content = <Packaged onBack={back} onNext={() => push("planner-complete")} />;
   else if (stage === "planner-complete") content = <Planner complete onBack={back} onNext={async () => { const showBetaForm = () => push("beta-form"); if (await record({ action: "beta_form_viewed" })) showBetaForm(); else showQueueRecovery("신청 화면을 열지 못했어요. 다시 시도해 주세요.", showBetaForm); }} />;
-  else if (stage === "beta-form") content = <BetaForm onBack={back} onSubmit={submitLead} getTurnstileToken={getTurnstileToken ?? defaultTurnstile} />;
+  else if (stage === "beta-form") content = <BetaForm onBack={back} onSubmit={submitLead} getTurnstileToken={getTurnstileToken} />;
   else content = <Done onBack={back} onReset={reset} />;
 
   return <div className="mdv2-root"><div className="mdv2-shell">{content}</div><p className="mdv2-live" aria-live="polite">{stage === "done" ? "신청이 완료됐어요." : ""}</p></div>;
