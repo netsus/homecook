@@ -70,28 +70,42 @@
   "verification": {
     "required_checks": [
       "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
-      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
       "pnpm test:marketing:operations",
-      "pnpm verify:security-functions:isolated",
-      "pnpm verify:backend",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm build",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/be-marketing-demand-validation-v2 pnpm validate:workpack",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation-v2 pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
       "pnpm validate:omo-bookkeeping",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/marketing-demand-validation-v2-contract.test.ts",
-      "pnpm exec vitest run tests/demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm exec vitest run --config vitest.product.config.ts tests/demand-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx tests/marketing-beta-metadata.test.ts tests/ci-path-filter.test.ts",
       "pnpm test:marketing:operations",
-      "pnpm verify:security-functions:isolated",
-      "pnpm verify:backend",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm build",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/be-marketing-demand-validation-v2 pnpm validate:workpack",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation-v2 pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-v2",
       "pnpm validate:omo-bookkeeping",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
       "git diff --check"
     ],
     "evaluator_commands": [],
@@ -117,7 +131,7 @@
     "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
-    "blocked_reason_code": "stage5-review-pending"
+    "blocked_reason_code": "stage6-review-pending"
   },
   "out_of_scope": [
     "Backend or frontend implementation in Stage 1",
@@ -135,5 +149,5 @@
     "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
     "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
   ],
-  "notes": "Stage 1 author task 01a0630e-81f1-7f42-8b1b-cb259d1d5997 and separate internal 1.5 reviewer completed merged PR #1497 at c1d43f60e427943087a7065f188d32224e739ecf with findings 0. Stage 2/3 PR #1498 merged at c29d4a9bd39a8b9d4fcd89b1160bf64290ef405e; independent Stage 3 findings are 0. Stage 4 frontend port is in progress on feature/fe-marketing-demand-validation-v2 with focused RED 20/20 and current GREEN 24/24, marketing Playwright 16 pass / 2 intentional skips, scoped Product Design QA passed, and visual-verdict 93/100. Remaining automation, exploratory QA, Draft PR, CI, independent Stage 5/final authority/Stage 6, and Manual Only production blockers are not complete until fresh evidence is recorded. Merge, full-local apply, release and production mutation remain forbidden. Draft frontend PR #1499 is now open for independent Stage 5, final authority, and Stage 6 review."
+  "notes": "Stage 1 docs PR #1497 merged at c1d43f60e427943087a7065f188d32224e739ecf. Stage 2/3 PR #1498 merged at c29d4a9bd39a8b9d4fcd89b1160bf64290ef405e with independent Stage 3 findings 0. Stage 4 frontend port is on feature/fe-marketing-demand-validation-v2. The Stage 5 repair product head 4a746ad2c33710a12e0227abc59f92f771041e19/tree b47c0510b0531a2b4036ee910add4d12dbce1090 passed contract 12/12, product frontend 41/41, operations 11/11, marketing Playwright 16 pass / 2 intentional skips, a11y 3/3, visual 3/3, Lighthouse, lint, typecheck, build, validators, and exact-head Draft CI. Independent Stage 5 returned APPROVE with previous findings closed and new P0/P1/P2/P3 0/0/0/0. Final product-design authority returned CONFIRMED 93/100 with blocker/major 0/0. Fresh Stage 6 successor-head review, Ready validation, merge, and post-merge exact-tree verification remain pending. All Manual Only production blockers remain fail-closed; full-local apply, production lead activation, release, and deployment remain forbidden."
 }

@@ -133,8 +133,8 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — v2 Stage 1 재잠금
-- [x] 리뷰 대기 (pending-review) — Stage 4 구현/evidence 완료, 독립 Stage 5/final authority 대기
-- [ ] 확정 (confirmed) — Stage 5와 final authority blocker 0 후
+- [ ] 리뷰 대기 (pending-review) — Stage 4 구현/evidence 완료, 독립 Stage 5/final authority 대기
+- [x] 확정 (confirmed) — Stage 5 `APPROVE`, final authority `CONFIRMED 93/100`, blocker/major `0/0`
 - [ ] N/A — BE-only 슬라이스
 
 ## Source Links
@@ -271,4 +271,23 @@
   - authority precheck: `ui/designs/authority/MARKETING_DEMAND_VALIDATION_V2-authority.md`
   - Stage 4 captures: `ui/designs/evidence/marketing-demand-validation-v2/`
   - exploratory QA bundle: `.artifacts/qa/marketing-demand-validation-v2/2026-09-03T07-26-41-418Z/`
-- remaining gate: independent Stage 5 reviewer, final authority gate, Stage 6 closeout review, current-head CI, Ready, merge, and Manual Only production blockers.
+- Stage 5 repair increased the focused landing coverage to `20/20`, product frontend suite to `41/41`, and preserved contract `12/12`, operations `11/11`, browser `16 pass / 2 intentional skips`, a11y `3/3`, visual `3/3`, and Lighthouse three-run success.
+- exact repaired product head/tree: `4a746ad2c33710a12e0227abc59f92f771041e19` / `b47c0510b0531a2b4036ee910add4d12dbce1090`.
+
+## Stage 5 Evidence
+
+- independent reviewer task `/root/stage5_frontend_review` returned `APPROVE` on the exact repaired product head/tree.
+- all five initial findings are closed; new `P0/P1/P2/P3 = 0/0/0/0`.
+- retained report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage5-frontend-rereview.md`.
+
+## Final Product Design Authority
+
+- independent authority task `/root/final_product_design_authority` returned `CONFIRMED 93/100` with blocker/major `0/0`.
+- the A/B/C/D hook-to-hero mapping, complete funnel, characters, responsive evidence, and recovery feedback preserve the approved source direction.
+- retained report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-final-product-design-authority.md`.
+
+## Stage 6 Candidate
+
+- repair publication report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-repair-publication.md`.
+- remaining gate: fresh independent Stage 6 review of the evidence-only successor, successor-head CI, Ready validation, merge, and post-merge exact-tree verification.
+- all Manual Only production blockers remain open; no production, remote database, release, or deployment action is authorized by this candidate.
