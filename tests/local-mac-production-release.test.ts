@@ -625,6 +625,18 @@ describe("local Mac production release evidence validation", () => {
     fileCount: 28,
     testCount: 787,
     inventorySha256: "d".repeat(64),
+    tests: [
+      {
+        file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+        name: "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox",
+        occurrence: 0,
+      },
+      {
+        file: "tests/local-mac-production-rehearsal-candidate.test.ts",
+        name: "another non-selected candidate test",
+        occurrence: 0,
+      },
+    ],
   };
   const projectionDigest = (value: unknown) => createHash("sha256")
     .update(canonicalizeJcs(value))
@@ -736,9 +748,9 @@ describe("local Mac production release evidence validation", () => {
       vitest_test_files_passed: 1,
       vitest_test_files_skipped: 0,
       vitest_test_files_failed: 0,
-      vitest_tests: 1,
+      vitest_tests: 2,
       vitest_passed: 1,
-      vitest_skipped: 0,
+      vitest_skipped: 1,
       vitest_failed: 0,
       stage_capability_policy: stageCapabilityPolicy(),
       egress_probe: egressProbe(),
@@ -915,7 +927,7 @@ describe("local Mac production release evidence validation", () => {
         egress_probe: egressProbe(),
       })}`,
       " Test Files  1 passed (1)",
-      "      Tests  1 passed (1)",
+      "      Tests  1 passed | 1 skipped (2)",
     ].join("\n"));
 
     expect(projection).toMatchObject({
@@ -926,9 +938,9 @@ describe("local Mac production release evidence validation", () => {
       vitest_test_files_passed: 1,
       vitest_test_files_skipped: 0,
       vitest_test_files_failed: 0,
-      vitest_tests: 1,
+      vitest_tests: 2,
       vitest_passed: 1,
-      vitest_skipped: 0,
+      vitest_skipped: 1,
       vitest_failed: 0,
       stage_capability_policy: stageCapabilityPolicy(),
       egress_probe: egressProbe(),
@@ -990,7 +1002,7 @@ describe("local Mac production release evidence validation", () => {
           })}`,
           ` ✓ tests/local-mac-production-rehearsal-candidate.test.ts > local Mac > ${selected} 160000ms`,
           " Test Files  1 passed (1)",
-          "      Tests  1 passed (1)",
+          "      Tests  1 passed | 1 skipped (2)",
         ].join("\n"),
         stderr: "",
         status: 0,

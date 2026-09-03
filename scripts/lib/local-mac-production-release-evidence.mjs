@@ -376,6 +376,13 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
     || releaseProjection.vitest_failed !== evidence.release_suite.failed
   ) throw new Error("release suite stdout projection does not match release evidence");
   const actualProjection = commands.get("actual-build").stdout_projection;
+  const selectedTestFile = "tests/local-mac-production-rehearsal-candidate.test.ts";
+  const selectedFileTestCount = Array.isArray(inventory.tests)
+    ? inventory.tests.filter((test) => test.file === selectedTestFile).length
+    : 0;
+  if (!Number.isSafeInteger(selectedFileTestCount) || selectedFileTestCount <= 0) {
+    throw new Error("actual build selected file inventory is missing");
+  }
   assertExactKeys(actualProjection, [
     "schema", "kind", "selected_test_file", "selected_test_name", "vitest_test_files",
     "vitest_test_files_passed", "vitest_test_files_skipped", "vitest_test_files_failed", "vitest_tests", "vitest_passed",
@@ -384,15 +391,15 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
   if (
     actualProjection.schema !== "homecook.local-mac-production-release-stdout-projection.v1"
     || actualProjection.kind !== "actual-build"
-    || actualProjection.selected_test_file !== "tests/local-mac-production-rehearsal-candidate.test.ts"
+    || actualProjection.selected_test_file !== selectedTestFile
     || actualProjection.selected_test_name !== RELEASE_EVIDENCE_COMMANDS.get("actual-build").at(-1)
     || actualProjection.vitest_test_files !== 1
     || actualProjection.vitest_test_files_passed !== 1
     || actualProjection.vitest_test_files_skipped !== 0
     || actualProjection.vitest_test_files_failed !== 0
-    || actualProjection.vitest_tests !== 1
+    || actualProjection.vitest_tests !== selectedFileTestCount
     || actualProjection.vitest_passed !== 1
-    || actualProjection.vitest_skipped !== 0
+    || actualProjection.vitest_skipped !== selectedFileTestCount - 1
     || actualProjection.vitest_failed !== 0
   ) throw new Error("actual build stdout projection does not prove the selected build test");
   validateStageCapabilityPolicy(actualProjection.stage_capability_policy);
