@@ -3986,13 +3986,34 @@ describe("release rehearsal candidate orchestration", () => {
       stage: "offline-install",
     })).rejects.toThrow(/network|attempt|sandbox|failed/iu);
 
+    const applicationDnsSentinel = spawnSync(command, [
+      "-e", [
+        'const dns = require("node:dns");',
+        'dns.lookup("127.0.0.1", error => process.exit(error ? 70 : 0));',
+      ].join("\n"),
+    ], {
+      cwd: root,
+      env: {
+        HOME: root,
+        HOMECOOK_SANDBOX_WITNESS_MODULE: sandboxWitness.path,
+        NODE_OPTIONS: `--require=${sandboxWitness.preload_path}`,
+        PATH: "/usr/bin:/bin",
+        TMPDIR: root,
+      },
+      encoding: "utf8",
+    });
+    expect(applicationDnsSentinel.status, applicationDnsSentinel.stderr).toBe(0);
+
     await expect(runObservedSandboxCommand({
       sandboxPath: "/usr/bin/sandbox-exec",
       sandboxWitnessPath: sandboxWitness.path,
       logPath: "/usr/bin/log",
       profile,
       command,
-      args: ["-e", 'process.getBuiltinModule("dns").lookup("127.0.0.1",error=>process.exit(error?70:0))'],
+      args: ["-e", [
+        'if (process.env.HOMECOOK_OFFLINE_DNS_PROJECTION !== undefined) process.exit(70);',
+        'if (globalThis[Symbol.for("homecook.offlineDnsProjection")] !== undefined) process.exit(70);',
+      ].join("\n")],
       cwd: root,
       env: { HOME: root, HOMECOOK_OFFLINE_DNS_PROJECTION: "1", PATH: "/usr/bin:/bin", TMPDIR: root },
       label: "Next build retains application DNS module semantics",
