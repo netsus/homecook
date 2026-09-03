@@ -7,6 +7,7 @@ import { canonicalizeJcs } from "./lib/rfc8785-jcs.mjs";
 import { collectReleaseTestInventory } from "./lib/local-mac-production-release-test-inventory.mjs";
 import {
   RELEASE_EVIDENCE_COMMANDS,
+  buildReleaseEvidenceCommandEnv,
   buildLocalMacProductionReleaseEvidence,
 } from "./lib/local-mac-production-release-evidence.mjs";
 
@@ -28,11 +29,12 @@ if (git("status", "--porcelain") !== "") {
   throw new Error("release evidence capture requires a clean worktree");
 }
 
-const run = (argv) => new Promise((resolveRun, rejectRun) => {
+const run = (commandId) => new Promise((resolveRun, rejectRun) => {
+  const argv = RELEASE_EVIDENCE_COMMANDS.get(commandId);
   const startedAt = process.hrtime.bigint();
   const child = spawn(argv[0], argv.slice(1), {
     cwd: process.cwd(),
-    env: process.env,
+    env: buildReleaseEvidenceCommandEnv(commandId, process.env),
     stdio: ["ignore", "pipe", "pipe"],
   });
   const stdout = [];
@@ -56,11 +58,11 @@ const run = (argv) => new Promise((resolveRun, rejectRun) => {
 });
 
 const inventoryBefore = collectReleaseTestInventory();
-const releaseSuite = await run(RELEASE_EVIDENCE_COMMANDS.get("release-suite"));
+const releaseSuite = await run("release-suite");
 if (releaseSuite.status !== 0 || releaseSuite.signal !== null) {
   throw new Error("release suite failed; evidence was not created");
 }
-const actualBuild = await run(RELEASE_EVIDENCE_COMMANDS.get("actual-build"));
+const actualBuild = await run("actual-build");
 if (actualBuild.status !== 0 || actualBuild.signal !== null) {
   throw new Error("actual build failed; evidence was not created");
 }

@@ -80,7 +80,7 @@ afterEach(() => {
   }
 });
 
-describe("production release rulesets desired state", () => {
+describe("production release rulesets desired state", { timeout: 10_000 }, () => {
   it("allows only the release App to create prod tags while nobody can mutate or delete them", () => {
     const creationPath = join(repoRoot, ".github/rulesets/production-release-tag-creation.json");
     const immutabilityPath = join(

@@ -11,6 +11,24 @@ export const RELEASE_EVIDENCE_COMMANDS = Object.freeze(new Map([
     "runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox",
   ]],
 ]));
+const RELEASE_CONTROL_ENV_KEYS = Object.freeze([
+  "HOMECOOK_RUN_ACTUAL_RELEASE_BUILD",
+  "HOMECOOK_VITEST_TEARDOWN_FIXTURE_MODE",
+  "HOMECOOK_VITEST_TEARDOWN_SIGNAL",
+  "HOMECOOK_VITEST_TEARDOWN_OTHER_HANDLER_MARKER",
+  "HOMECOOK_VITEST_SUITE_TEMP_ROOT",
+  "HOMECOOK_VITEST_WORKER_TEMP_ROOT",
+]);
+
+export function buildReleaseEvidenceCommandEnv(commandId, sourceEnv) {
+  if (!RELEASE_EVIDENCE_COMMANDS.has(commandId) || !sourceEnv || typeof sourceEnv !== "object") {
+    throw new Error("release evidence command environment input is invalid");
+  }
+  const env = { ...sourceEnv };
+  for (const key of RELEASE_CONTROL_ENV_KEYS) delete env[key];
+  if (commandId === "actual-build") env.HOMECOOK_RUN_ACTUAL_RELEASE_BUILD = "1";
+  return env;
+}
 
 const keys = (value) => Object.keys(value).sort().join(",");
 
@@ -370,10 +388,15 @@ export function validateLocalMacProductionReleaseEvidence(evidence, {
     || releaseProjection.vitest_test_files_passed + releaseProjection.vitest_test_files_skipped
       !== evidence.release_suite.file_count
     || releaseProjection.vitest_test_files_failed !== 0
+    || releaseProjection.vitest_test_files_skipped !== inventory.expectedFileSkipCount
+    || releaseProjection.vitest_test_files_passed
+      !== inventory.fileCount - inventory.expectedFileSkipCount
     || releaseProjection.vitest_tests !== evidence.release_suite.test_count
     || releaseProjection.vitest_passed !== evidence.release_suite.passed
     || releaseProjection.vitest_skipped !== evidence.release_suite.skipped
     || releaseProjection.vitest_failed !== evidence.release_suite.failed
+    || releaseProjection.vitest_skipped !== inventory.expectedTestSkipCount
+    || releaseProjection.vitest_passed !== inventory.testCount - inventory.expectedTestSkipCount
   ) throw new Error("release suite stdout projection does not match release evidence");
   const actualProjection = commands.get("actual-build").stdout_projection;
   const selectedTestFile = "tests/local-mac-production-rehearsal-candidate.test.ts";

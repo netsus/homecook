@@ -622,6 +622,8 @@ describe("local Mac production release evidence validation", () => {
     evidence_digest: string;
   };
   const inventory = {
+    expectedFileSkipCount: 1,
+    expectedTestSkipCount: 2,
     fileCount: 28,
     testCount: 787,
     inventorySha256: "d".repeat(64),
@@ -843,6 +845,29 @@ describe("local Mac production release evidence validation", () => {
       expectedTreeSha: resigned.tree_sha,
       inventory,
     })).toThrow(/release.*projection|projection.*release/iu);
+    for (const [filePassed, fileSkipped, testPassed, testSkipped] of [
+      [26, 2, 785, 2],
+      [27, 1, 784, 3],
+    ]) {
+      const alternate = createReleaseEvidence();
+      Object.assign(alternate.commands[0].stdout_projection, {
+        vitest_test_files_passed: filePassed,
+        vitest_test_files_skipped: fileSkipped,
+        vitest_passed: testPassed,
+        vitest_skipped: testSkipped,
+      });
+      Object.assign(alternate.release_suite, {
+        passed: testPassed,
+        skipped: testSkipped,
+      });
+      alternate.commands[0].stdout_sha256 = projectionDigest(alternate.commands[0].stdout_projection);
+      const resignedAlternate = resignEvidence(alternate);
+      expect(() => validateLocalMacProductionReleaseEvidence(resignedAlternate, {
+        expectedHeadSha: resignedAlternate.head_sha,
+        expectedTreeSha: resignedAlternate.tree_sha,
+        inventory,
+      })).toThrow(/skip|split|projection|suite/iu);
+    }
   });
 
   it("rejects evidence captured before the current scope inventory changed", () => {
@@ -909,6 +934,24 @@ describe("local Mac production release evidence validation", () => {
       vitest_passed: 785,
       vitest_skipped: 2,
       vitest_failed: 0,
+    });
+    const buildReleaseEvidenceCommandEnv = (
+      releaseEvidenceModule as Record<string, unknown>
+    ).buildReleaseEvidenceCommandEnv;
+    expect(typeof buildReleaseEvidenceCommandEnv).toBe("function");
+    if (typeof buildReleaseEvidenceCommandEnv !== "function") return;
+    const poisoned = {
+      SAFE_VALUE: "preserved",
+      HOMECOOK_RUN_ACTUAL_RELEASE_BUILD: "poisoned",
+      HOMECOOK_VITEST_TEARDOWN_FIXTURE_MODE: "success",
+      HOMECOOK_VITEST_TEARDOWN_SIGNAL: "SIGTERM",
+      HOMECOOK_VITEST_TEARDOWN_OTHER_HANDLER_MARKER: "/tmp/marker",
+      HOMECOOK_VITEST_SUITE_TEMP_ROOT: "/tmp/stale-suite",
+      HOMECOOK_VITEST_WORKER_TEMP_ROOT: "/tmp/stale-worker",
+    };
+    expect(buildReleaseEvidenceCommandEnv("release-suite", poisoned)).toEqual({ SAFE_VALUE: "preserved" });
+    expect(buildReleaseEvidenceCommandEnv("actual-build", poisoned)).toEqual({
+      SAFE_VALUE: "preserved", HOMECOOK_RUN_ACTUAL_RELEASE_BUILD: "1",
     });
   });
 

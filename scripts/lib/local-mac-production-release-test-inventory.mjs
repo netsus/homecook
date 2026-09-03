@@ -103,6 +103,8 @@ export function collectReleaseTestInventory({
     || new Set(normalizedTests.map((test) => test.file)).size !== scope.files.length
   ) throw new Error("local Mac production release test inventory did not cover the exact scope");
   return Object.freeze({
+    expectedFileSkipCount: 1,
+    expectedTestSkipCount: 2,
     fileCount: scope.files.length,
     files: Object.freeze([...scope.files]),
     inventorySha256: digestReleaseTestInventory(normalizedTests),
