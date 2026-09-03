@@ -120,7 +120,7 @@
   - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/`
   - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v5/`
   - `marketing/mumeok-funnel-prototype-v2/design-qa.md`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - source prototype은 standalone 기준 95/100 passed지만 Next.js port의 최종 authority가 아니다.
   - latest source는 뒤로가기·결과·체험·planner·beta layout과 최종 캐릭터/영양 자산을 개선했으며 exact 4문항·4결과 계약은 유지한다.
@@ -291,3 +291,11 @@
 - repair publication report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-repair-publication.md`.
 - remaining gate: fresh independent Stage 6 review of the evidence-only successor, successor-head CI, Ready validation, merge, and post-merge exact-tree verification.
 - all Manual Only production blockers remain open; no production, remote database, release, or deployment action is authorized by this candidate.
+
+## Stage 6 Merged-Exact Closeout
+
+- independent Stage 6 reviewed successor `ec13cf08a3e89e62f28540269f72b900826bbbac` / tree `231c2e5c5dc14d022812e6de49bc3b0bb316c6db` and returned `APPROVE`, `P0/P1/P2/P3 = 0/0/0/0`.
+- Ready policy, template, quality, build, smoke, full regression, accessibility, visual, Lighthouse, and security gates passed.
+- frontend PR #1499 squash-merged as `335886750bda3ae3b1a0f8ea7b01d3a696a80327`; merge tree equals the reviewed successor tree, drift `0`.
+- retained report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-merged-exact-closeout.md`.
+- automated integration is complete; the Manual Only production and rights gates remain fail-closed and do not authorize activation or deployment.
