@@ -68,6 +68,13 @@ const EXTERNAL_CHECK_EVIDENCE_KEYS = [
 const GITHUB_CHECK_SUITE_TRUNCATION_BOUNDARY = 1_000;
 const GITHUB_WORKFLOW_RUN_TRUNCATION_BOUNDARY = 1_000;
 const GITHUB_CHECKS_PAGE_SIZE = 100;
+export const GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK = Object.freeze({
+  appId: 46_505,
+  appName: "GitGuardian",
+  appSlug: "gitguardian",
+  checkName: "GitGuardian Security Checks",
+  externalId: "",
+});
 const SUBJECT_BASE_KEYS = [
   "schema", "repository", "source_ref", "signer_workflow", "signer_digest",
   "expected_release_integration_id", "release_tag", "release_tag_object_sha",
@@ -571,7 +578,15 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
       entry.app?.id,
       `checkSuitePages entry ${index}.app.id`,
     );
-    return Object.freeze({ appId, suiteId });
+    return Object.freeze({
+      appId,
+      appName: typeof entry.app?.name === "string" ? entry.app.name : null,
+      appSlug: typeof entry.app?.slug === "string" ? entry.app.slug : null,
+      repository: typeof entry.repository?.full_name === "string"
+        ? entry.repository.full_name
+        : null,
+      suiteId,
+    });
   });
   const suiteIds = normalizedCheckSuites.map((entry) => entry.suiteId);
   if (new Set(suiteIds).size !== suiteIds.length) {
@@ -587,6 +602,9 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
       .digest("hex"),
     check_suite_app_ids: Object.freeze(Object.fromEntries(
       normalizedCheckSuites.map((entry) => [entry.suiteId, entry.appId]),
+    )),
+    check_suite_metadata: Object.freeze(Object.fromEntries(
+      normalizedCheckSuites.map((entry) => [entry.suiteId, entry]),
     )),
   });
 }
@@ -805,6 +823,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
   );
   const byKey = new Map();
   const instancesByIdentity = new Map();
+  let allowlistedExternalCheckCount = 0;
   for (const entry of normalizedCheckRuns) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error("Each production release check run must be an object.");
@@ -820,10 +839,15 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     }
     const normalized = {
       appId: Number(entry.app?.id),
+      appName: typeof entry.app?.name === "string" ? entry.app.name : null,
+      appSlug: typeof entry.app?.slug === "string" ? entry.app.slug : null,
       bucket: normalizeBucket(entry),
       checkRunId: Number(entry.id),
       checkSuiteId,
       context: contextKey(entry.name ?? entry.context, "check.context"),
+      externalId: entry.external_id === null || entry.external_id === undefined
+        ? null
+        : String(entry.external_id),
       timestamp: sortTimestamp(entry),
     };
     if (
@@ -836,9 +860,24 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
         `Production release check context must bind positive check-run and check-suite IDs: ${normalized.context}.`,
       );
     }
-    if (hasCompletePages && normalized.appId !== GITHUB_ACTIONS_APP_INTEGRATION_ID) {
+    const suiteMetadata = completeSuiteAuthority?.check_suite_metadata?.[normalized.checkSuiteId];
+    const isGitGuardian = hasCompletePages
+      && normalized.appId === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
+      && normalized.appName === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
+      && normalized.appSlug === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
+      && entry.name === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.checkName
+      && normalized.externalId === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.externalId
+      && suiteMetadata?.appId === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
+      && suiteMetadata?.appName === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
+      && suiteMetadata?.appSlug === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
+      && suiteMetadata?.repository === CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY;
+    if (
+      hasCompletePages
+      && normalized.appId !== GITHUB_ACTIONS_APP_INTEGRATION_ID
+      && !isGitGuardian
+    ) {
       throw new Error(
-        `Production release non-Actions started check is forbidden: ${normalized.context}.`,
+        `Production release non-Actions started check is not the exact allowlisted GitGuardian owner tuple: ${normalized.context}.`,
       );
     }
     const suiteAppId = completeSuiteAuthority?.check_suite_app_ids?.[normalized.checkSuiteId];
@@ -848,13 +887,29 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
       );
     }
     const workflowRun = workflowRunsBySuiteId.get(normalized.checkSuiteId) ?? null;
-    if (hasCompletePages && workflowRun === null) {
+    if (
+      hasCompletePages
+      && normalized.appId === GITHUB_ACTIONS_APP_INTEGRATION_ID
+      && workflowRun === null
+    ) {
       throw new Error(
         `Production release Actions check is missing workflow-run metadata: ${normalized.context}.`,
       );
     }
+    if (isGitGuardian) {
+      allowlistedExternalCheckCount += 1;
+      if (allowlistedExternalCheckCount !== 1) {
+        throw new Error("Production release allows exactly one GitGuardian check instance.");
+      }
+      if (normalized.bucket !== "success") {
+        throw new Error("Production release GitGuardian check must be completed success.");
+      }
+    }
     const withProvenance = workflowRun === null
-      ? normalized
+      ? Object.freeze({
+          ...normalized,
+          suiteRepository: suiteMetadata?.repository ?? null,
+        })
       : Object.freeze({
           ...normalized,
           workflowEvent: workflowRun.event,

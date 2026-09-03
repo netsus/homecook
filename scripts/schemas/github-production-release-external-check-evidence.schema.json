@@ -28,7 +28,8 @@
     },
     "all_context_check_run_instances_digest": {
       "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Binds every started check instance, including the exact allowlisted GitGuardian owner, suite repository, head, external ID, and terminal-success evidence."
     },
     "all_context_check_suite_ids": {
       "type": "array",

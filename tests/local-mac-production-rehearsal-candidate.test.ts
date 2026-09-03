@@ -365,6 +365,7 @@ function validCiEvidence() {
     completed_at: `2026-08-29T00:01:${String(index).padStart(2, "0")}Z`,
   }));
   const safeProjection = {
+    allowlisted_external_checks: [],
     repository: "netsus/homecook",
     head_sha: SHA_A,
     remote_master_sha: SHA_A,
@@ -404,12 +405,20 @@ function validCiEvidence() {
 }
 
 function storedCiManifest(projection: {
+  allowlisted_external_checks?: Array<Record<string, unknown>>,
   check_suites?: Array<{ app_id: number, id: number }>,
   check_runs: Array<{ app_id: number, check_suite_id: number, id: number }>,
   head_sha: string,
   summary: Record<string, number>,
   workflow_runs?: Array<Record<string, unknown>>,
 }) {
+  const externalChecks = projection.allowlisted_external_checks ?? [];
+  const externalByRunId = new Map(
+    externalChecks.map((entry) => [entry.check_run_id, entry]),
+  );
+  const externalBySuiteId = new Map(
+    externalChecks.map((entry) => [entry.check_suite_id, entry]),
+  );
   const workflowRuns = projection.workflow_runs ?? [];
   const workflowRunPages = [{
     total_count: workflowRuns.length,
@@ -424,16 +433,28 @@ function storedCiManifest(projection: {
       total_count: projection.check_runs.length,
       check_runs: projection.check_runs.map((entry) => ({
         ...entry,
-        app: { id: entry.app_id },
+        app: {
+          id: entry.app_id,
+          name: externalByRunId.get(entry.id)?.app_name,
+          slug: externalByRunId.get(entry.id)?.app_slug,
+        },
         check_suite: { id: entry.check_suite_id },
+        external_id: externalByRunId.get(entry.id)?.external_id ?? null,
       })),
     }],
     checkSuitePages: [{
       total_count: (projection.check_suites ?? []).length,
       check_suites: (projection.check_suites ?? []).map((entry) => ({
         id: entry.id,
-        app: { id: entry.app_id },
+        app: {
+          id: entry.app_id,
+          name: externalBySuiteId.get(entry.id)?.app_name,
+          slug: externalBySuiteId.get(entry.id)?.app_slug,
+        },
         head_sha: projection.head_sha,
+        repository: externalBySuiteId.has(entry.id)
+          ? { full_name: externalBySuiteId.get(entry.id)?.repository }
+          : undefined,
       })),
     }],
     expectedContexts: EXPECTED_RELEASE_CONTEXTS,
@@ -474,6 +495,7 @@ function withStoredCiProvenance<T extends {
   const suites = [...new Set(projection.check_runs.map((entry) => entry.check_suite_id))];
   return {
     ...projection,
+    allowlisted_external_checks: [],
     check_suites: suites.map((id) => ({
       id,
       app_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
@@ -3790,6 +3812,45 @@ describe("release rehearsal candidate orchestration", () => {
     };
 
     expect(validateStoredCiProjection(projection, storedCiManifest(projection))).toBeUndefined();
+  });
+
+  it("accepts one sealed canonical GitGuardian projection in candidate evidence", () => {
+    const projection = structuredClone(validCiEvidence().safe_projection) as Record<string, unknown>;
+    const checkRuns = projection.check_runs as Array<Record<string, unknown>>;
+    const checkSuites = projection.check_suites as Array<Record<string, unknown>>;
+    checkRuns.push({
+      id: 100_832_681_323,
+      app_id: 46_505,
+      check_suite_id: 91_635_358_541,
+      head_sha: SHA_A,
+      name: "GitGuardian Security Checks",
+      status: "completed",
+      conclusion: "success",
+      started_at: "2026-09-04T01:00:00Z",
+      completed_at: "2026-09-04T01:00:30Z",
+    });
+    checkSuites.push({ id: 91_635_358_541, app_id: 46_505, head_sha: SHA_A });
+    projection.allowlisted_external_checks = [{
+      app_id: 46_505,
+      app_name: "GitGuardian",
+      app_slug: "gitguardian",
+      check_name: "GitGuardian Security Checks",
+      check_run_id: 100_832_681_323,
+      check_suite_id: 91_635_358_541,
+      external_id: "",
+      head_sha: SHA_A,
+      repository: "netsus/homecook",
+    }];
+    projection.summary = {
+      ...(projection.summary as Record<string, number>),
+      total: EXPECTED_RELEASE_CONTEXTS.length + 1,
+      success: EXPECTED_RELEASE_CONTEXTS.length + 1,
+    };
+
+    expect(validateStoredCiProjection(
+      projection,
+      storedCiManifest(projection as Parameters<typeof storedCiManifest>[0]),
+    )).toBeUndefined();
   });
 
   it("rejects required skips and the old duplicate generic scope projection", () => {

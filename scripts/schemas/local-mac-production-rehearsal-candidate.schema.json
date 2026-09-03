@@ -19,7 +19,7 @@
     },
     "ci_snapshot_digest": {
       "$ref": "#/$defs/sha256",
-      "description": "SHA-256 of the complete stored safe CI projection, including intended skipped optional contexts."
+      "description": "SHA-256 of the complete stored safe CI projection, including intended skipped optional contexts and any exact allowlisted GitGuardian owner evidence."
     },
     "ci_suite_run_set_digest": {
       "$ref": "#/$defs/sha256",

@@ -123,6 +123,7 @@ function storedCiEvidence(releaseSha = SHA_A) {
     head_repository: "netsus/homecook",
   }));
   const projection = {
+    allowlisted_external_checks: [],
     repository: "netsus/homecook",
     head_sha: releaseSha,
     remote_master_sha: releaseSha,

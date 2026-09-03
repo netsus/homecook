@@ -34,6 +34,7 @@ import {
 } from "./local-mac-production-release.mjs";
 import {
   buildGitHubProductionReleaseExternalCheckEvidence,
+  GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK,
 } from "./github-production-release-attestation.mjs";
 import {
   EXPECTED_RELEASE_CONTEXTS,
@@ -3352,8 +3353,8 @@ export function readSealedAuthorityFile(root, path, label, { afterOpen = null, m
 
 export function validateStoredCiProjection(value, manifest) {
   exactObject(value, "candidate CI evidence", [
-    "repository", "check_runs", "check_suites", "commit_statuses", "head_sha",
-    "remote_master_sha", "summary", "workflow_runs",
+    "allowlisted_external_checks", "repository", "check_runs", "check_suites",
+    "commit_statuses", "head_sha", "remote_master_sha", "summary", "workflow_runs",
   ]);
   if (value.repository !== REPOSITORY) fail("candidate CI evidence repository is invalid");
   sha(value.head_sha, "candidate CI evidence head_sha");
@@ -3366,9 +3367,35 @@ export function validateStoredCiProjection(value, manifest) {
     !Array.isArray(value.check_runs)
     || !Array.isArray(value.check_suites)
     || !Array.isArray(value.commit_statuses)
+    || !Array.isArray(value.allowlisted_external_checks)
     || !Array.isArray(value.workflow_runs)
   ) {
     fail("candidate CI evidence check and status arrays are invalid");
+  }
+  if (value.allowlisted_external_checks.length > 1) {
+    fail("candidate CI evidence allows at most one GitGuardian check");
+  }
+  const externalByRunId = new Map();
+  const externalBySuiteId = new Map();
+  for (const [index, entry] of value.allowlisted_external_checks.entries()) {
+    exactObject(entry, `candidate CI allowlisted_external_checks[${index}]`, [
+      "app_id", "app_name", "app_slug", "check_name", "check_run_id",
+      "check_suite_id", "external_id", "head_sha", "repository",
+    ]);
+    for (const key of ["app_id", "check_run_id", "check_suite_id"]) {
+      safeInteger(entry[key], `candidate CI external check ${key}`);
+    }
+    if (
+      entry.app_id !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
+      || entry.app_name !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
+      || entry.app_slug !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
+      || entry.check_name !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.checkName
+      || entry.external_id !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.externalId
+      || entry.head_sha !== manifest.release_sha
+      || entry.repository !== REPOSITORY
+    ) fail("candidate CI external check is not the exact GitGuardian owner tuple");
+    externalByRunId.set(entry.check_run_id, entry);
+    externalBySuiteId.set(entry.check_suite_id, entry);
   }
   for (const [index, entry] of value.check_runs.entries()) {
     exactObject(entry, `candidate CI check_runs[${index}]`, [
@@ -3376,12 +3403,16 @@ export function validateStoredCiProjection(value, manifest) {
       "started_at", "status",
     ]);
     for (const key of ["id", "app_id", "check_suite_id"]) safeInteger(entry[key], `candidate CI check ${key}`);
-    if (
-      entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID
-      || entry.head_sha !== manifest.release_sha
-    ) {
+    const external = externalByRunId.get(entry.id);
+    if (entry.head_sha !== manifest.release_sha) {
       fail("candidate CI check identity is invalid");
     }
+    if (entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID && (
+      !external
+      || external.app_id !== entry.app_id
+      || external.check_suite_id !== entry.check_suite_id
+      || external.check_name !== entry.name
+    )) fail("candidate CI check is not trusted Actions or exact GitGuardian evidence");
     string(entry.name, "candidate CI check name");
     string(entry.status, "candidate CI check status");
     if (entry.conclusion !== null) string(entry.conclusion, "candidate CI check conclusion");
@@ -3395,10 +3426,23 @@ export function validateStoredCiProjection(value, manifest) {
     exactObject(entry, `candidate CI check_suites[${index}]`, ["app_id", "head_sha", "id"]);
     for (const key of ["id", "app_id"]) safeInteger(entry[key], `candidate CI suite ${key}`);
     if (entry.head_sha !== manifest.release_sha) fail("candidate CI suite head SHA is invalid");
+    if (entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID) {
+      const external = externalBySuiteId.get(entry.id);
+      const hasStartedCheck = value.check_runs.some(
+        (checkRun) => checkRun.check_suite_id === entry.id,
+      );
+      if (hasStartedCheck && (!external || external.app_id !== entry.app_id)) {
+        fail("candidate CI suite is not trusted Actions or exact GitGuardian evidence");
+      }
+    }
   }
   if (new Set(value.check_suites.map((entry) => entry.id)).size !== value.check_suites.length) {
     fail("candidate CI check suite identities are duplicated");
   }
+  if (
+    [...externalByRunId.keys()].some((id) => !value.check_runs.some((entry) => entry.id === id))
+    || [...externalBySuiteId.keys()].some((id) => !value.check_suites.some((entry) => entry.id === id))
+  ) fail("candidate CI GitGuardian evidence is orphaned");
   if (new Set(value.commit_statuses.map((entry) => entry.id)).size !== value.commit_statuses.length) {
     fail("candidate CI status identities are duplicated");
   }
@@ -3455,8 +3499,13 @@ export function validateStoredCiProjection(value, manifest) {
     recomputedEvidence = buildGitHubProductionReleaseExternalCheckEvidence({
       checkRunPages: pageCollection(value.check_runs.map((entry) => ({
         id: entry.id,
-        app: { id: entry.app_id },
+        app: {
+          id: entry.app_id,
+          name: externalByRunId.get(entry.id)?.app_name,
+          slug: externalByRunId.get(entry.id)?.app_slug,
+        },
         check_suite: { id: entry.check_suite_id },
+        external_id: externalByRunId.get(entry.id)?.external_id ?? null,
         head_sha: entry.head_sha,
         completed_at: entry.completed_at,
         conclusion: entry.conclusion,
@@ -3466,8 +3515,15 @@ export function validateStoredCiProjection(value, manifest) {
       })), "check_runs"),
       checkSuitePages: pageCollection(value.check_suites.map((entry) => ({
         id: entry.id,
-        app: { id: entry.app_id },
+        app: {
+          id: entry.app_id,
+          name: externalBySuiteId.get(entry.id)?.app_name,
+          slug: externalBySuiteId.get(entry.id)?.app_slug,
+        },
         head_sha: entry.head_sha,
+        repository: externalBySuiteId.has(entry.id)
+          ? { full_name: externalBySuiteId.get(entry.id)?.repository }
+          : undefined,
       })), "check_suites"),
       commitStatuses: value.commit_statuses,
       expectedContexts: EXPECTED_RELEASE_CONTEXTS,
@@ -6460,6 +6516,21 @@ function safeCheckSuiteProjection(entry) {
   };
 }
 
+function safeAllowlistedExternalCheckProjection(entry, checkSuite) {
+  if (!checkSuite) fail("allowlisted external check is missing its check suite");
+  return {
+    app_id: Number(entry.app?.id),
+    app_name: entry.app?.name,
+    app_slug: entry.app?.slug,
+    check_name: entry.name,
+    check_run_id: Number(entry.id),
+    check_suite_id: Number(entry.check_suite?.id),
+    external_id: entry.external_id,
+    head_sha: entry.head_sha,
+    repository: checkSuite.repository?.full_name,
+  };
+}
+
 function safeWorkflowRunProjection(entry) {
   return {
     id: Number(entry.id),
@@ -6834,7 +6905,15 @@ export function createReleaseRehearsalCandidateAdapters({
         workflowRunPages,
       });
       const summary = externalEvidence.required_check_summary;
+      const checkSuitesById = new Map(checkSuites.map((entry) => [Number(entry.id), entry]));
+      const allowlistedExternalChecks = checkRuns
+        .filter((entry) => Number(entry.app?.id) !== GITHUB_ACTIONS_APP_INTEGRATION_ID)
+        .map((entry) => safeAllowlistedExternalCheckProjection(
+          entry,
+          checkSuitesById.get(Number(entry.check_suite?.id)),
+        ));
       const safeEvidence = {
+        allowlisted_external_checks: allowlistedExternalChecks,
         repository: REPOSITORY,
         check_runs: checkRuns.map(safeCheckProjection).sort((left, right) =>
           canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),

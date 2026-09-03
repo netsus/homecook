@@ -231,6 +231,73 @@ function createCompleteCheckPageInput(
   };
 }
 
+function createGitGuardianCheckInput({
+  checkApp = {},
+  checkOverrides = {},
+  releaseSha = "a".repeat(40),
+  suiteApp = {},
+  suiteOverrides = {},
+}: {
+  checkApp?: Record<string, unknown>,
+  checkOverrides?: Record<string, unknown>,
+  releaseSha?: string,
+  suiteApp?: Record<string, unknown>,
+  suiteOverrides?: Record<string, unknown>,
+} = {}) {
+  const actionsChecks = createTrustedCheckRuns(200).map((entry) => ({
+    ...entry,
+    head_sha: releaseSha,
+  }));
+  const gitGuardianCheck = {
+    id: 100_832_681_323,
+    app: {
+      id: 46_505,
+      slug: "gitguardian",
+      name: "GitGuardian",
+      ...checkApp,
+    },
+    check_suite: { id: 91_635_358_541 },
+    external_id: "",
+    head_sha: releaseSha,
+    completed_at: "2026-09-04T01:00:30Z",
+    conclusion: "success",
+    name: "GitGuardian Security Checks",
+    started_at: "2026-09-04T01:00:00Z",
+    status: "completed",
+    ...checkOverrides,
+  };
+  const checkRuns = [...actionsChecks, gitGuardianCheck];
+  return {
+    checkRunPages: createCheckRunPages(checkRuns),
+    checkSuitePages: [{
+      total_count: 2,
+      check_suites: [
+        {
+          id: 200,
+          head_sha: releaseSha,
+          app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+        },
+        {
+          id: 91_635_358_541,
+          head_sha: releaseSha,
+          app: {
+            id: 46_505,
+            slug: "gitguardian",
+            name: "GitGuardian",
+            ...suiteApp,
+          },
+          repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+          ...suiteOverrides,
+        },
+      ],
+    }],
+    releaseSha,
+    workflowRunPages: createWorkflowRunPages(
+      createWorkflowRunsForCheckRuns(actionsChecks, releaseSha),
+    ),
+  };
+}
+
 function createTempDirectory(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
   temporaryDirectories.push(directory);
@@ -461,14 +528,14 @@ describe("GitHub production release attestation verification", () => {
     const externalStartedCheck = {
       ...changes,
       id: 70_002,
-      app: { id: 46_505 },
+      app: { id: 99_999, slug: "unknown", name: "Unknown App" },
       check_suite: { id: 202 },
-      name: "GitGuardian Security Checks",
+      name: "Unknown External Check",
     };
     expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
       ...createCompleteCheckPageInput([...checks, externalStartedCheck], releaseSha),
       releaseSha,
-    })).toThrow(/non.Actions|GitHub Actions|integration|started/iu);
+    })).toThrow(/non.Actions|allowlist|external|integration|started/iu);
   });
 
   it("preserves empty external suites in suite authority and rejects current-contract statuses", () => {
@@ -508,6 +575,100 @@ describe("GitHub production release attestation verification", () => {
       }],
       releaseSha,
     })).toThrow(/commit status|legacy|empty/iu);
+  });
+
+  it("accepts exactly one canonical successful GitGuardian check and seals its owner evidence", () => {
+    const evidence = buildGitHubProductionReleaseExternalCheckEvidence(
+      createGitGuardianCheckInput(),
+    );
+
+    expect(evidence.required_check_summary).toMatchObject({
+      total: EXPECTED_RELEASE_CONTEXTS.length + 1,
+      success: EXPECTED_RELEASE_CONTEXTS.length + 1,
+      rerun: 0,
+    });
+    expect(evidence.all_context_check_run_instances_digest)
+      .toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it.each([
+    {
+      label: "unknown app id",
+      options: { checkApp: { id: 99_999 }, suiteApp: { id: 99_999 } },
+    },
+    {
+      label: "wrong app slug",
+      options: { checkApp: { slug: "gitguardian-lookalike" }, suiteApp: { slug: "gitguardian-lookalike" } },
+    },
+    {
+      label: "wrong app name",
+      options: { checkApp: { name: "Git Guardian" }, suiteApp: { name: "Git Guardian" } },
+    },
+    {
+      label: "wrong check name",
+      options: { checkOverrides: { name: "GitGuardian Security Check" } },
+    },
+    {
+      label: "nonempty external id",
+      options: { checkOverrides: { external_id: "forged" } },
+    },
+    {
+      label: "wrong repository",
+      options: { suiteOverrides: { repository: { full_name: "attacker/homecook" } } },
+    },
+    {
+      label: "wrong check head",
+      options: { checkOverrides: { head_sha: "b".repeat(40) } },
+    },
+    {
+      label: "wrong suite head",
+      options: { suiteOverrides: { head_sha: "b".repeat(40) } },
+    },
+    {
+      label: "unknown suite id",
+      options: { checkOverrides: { check_suite: { id: 123_456 } } },
+    },
+  ])("rejects a noncanonical external check: $label", ({ options }) => {
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence(
+      createGitGuardianCheckInput(options),
+    )).toThrow(/GitGuardian|allowlist|external|repository|head|SHA|suite|App/iu);
+  });
+
+  it.each([
+    { status: "completed", conclusion: "skipped" },
+    { status: "completed", conclusion: "neutral" },
+    { status: "completed", conclusion: "failure" },
+    { status: "completed", conclusion: "cancelled" },
+    { status: "in_progress", conclusion: null },
+    { status: "queued", conclusion: null },
+  ])("rejects non-success GitGuardian state: $status/$conclusion", (checkOverrides) => {
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence(
+      createGitGuardianCheckInput({ checkOverrides }),
+    )).toThrow(/GitGuardian|success|pending|failed|cancelled|terminal/iu);
+  });
+
+  it("rejects duplicate canonical GitGuardian instances", () => {
+    const input = createGitGuardianCheckInput();
+    const externalCheck = input.checkRunPages[0].check_runs.at(-1)!;
+    const externalSuite = input.checkSuitePages[0].check_suites.at(-1)!;
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      ...input,
+      checkRunPages: createCheckRunPages([
+        ...input.checkRunPages[0].check_runs,
+        {
+          ...externalCheck,
+          id: 100_832_681_324,
+          check_suite: { id: 91_635_358_542 },
+        },
+      ]),
+      checkSuitePages: [{
+        total_count: 3,
+        check_suites: [
+          ...input.checkSuitePages[0].check_suites,
+          { ...externalSuite, id: 91_635_358_542 },
+        ],
+      }],
+    })).toThrow(/exactly one|duplicate|GitGuardian/iu);
   });
 
   it("changes sealed provenance when a legitimate workflow event changes at final refresh", () => {
