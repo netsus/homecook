@@ -124,14 +124,85 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
-    "blocked_reason_code": "stage6-review-pending"
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [
+        "ui/designs/authority/MARKETING_DEMAND_VALIDATION_V2-authority.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-final-product-design-authority.md"
+      ],
+      "actual_verification_refs": [
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage5-frontend-rereview.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-repair-publication.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-merged-exact-closeout.md",
+        "PR #1499 Ready policy template quality build smoke full-regression accessibility visual Lighthouse and security checks",
+        "PR #1499 merge commit 335886750bda3ae3b1a0f8ea7b01d3a696a80327 tree 231c2e5c5dc14d022812e6de49bc3b0bb316c6db"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "ec13cf08a3e89e62f28540269f72b900826bbbac",
+      "reviewed_head_sha": "ec13cf08a3e89e62f28540269f72b900826bbbac",
+      "merged_sha": "335886750bda3ae3b1a0f8ea7b01d3a696a80327",
+      "approval_state": "codex_approved",
+      "all_checks_green": true,
+      "auto_merge": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 2,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-09-03T09:53:02Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 5,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "stage6-merged-exact-projection-synced",
+      "evidence_sources": [
+        "GitHub PR #1499 Ready and merge evidence",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage5-frontend-rereview.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-final-product-design-authority.md",
+        "docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-merged-exact-closeout.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-09-03T09:53:02Z",
+      "status_synced_at": "2026-09-03T09:53:02Z",
+      "pr_body_synced_at": "2026-09-03T09:53:02Z"
+    },
+    "remaining_manual_only": [
+      "canonical privacy and operator facts",
+      "production Turnstile hostname action and secret",
+      "production origin allowlist and edge rate limit",
+      "campaign retention and invitation sender domain",
+      "approved full-local migration apply and backup",
+      "YouTube thumbnail and product image rights",
+      "actual iOS Safari smoke",
+      "paid-ad execution approval"
+    ]
   },
   "out_of_scope": [
     "Backend or frontend implementation in Stage 1",
@@ -149,5 +220,5 @@
     "Product image rights and the 제품 예시 non-affiliation treatment remain Manual Only.",
     "Production privacy Turnstile origin edge retention sender iOS and paid-ad readiness remain fail-closed blockers."
   ],
-  "notes": "Stage 1 author task 01a0630e-81f1-7f42-8b1b-cb259d1d5997 and its separate internal 1.5 reviewer completed docs PR #1497, merged at c1d43f60e427943087a7065f188d32224e739ecf. Stage 2/3 PR #1498 merged at c29d4a9bd39a8b9d4fcd89b1160bf64290ef405e with independent Stage 3 findings 0. Stage 4 frontend port is on feature/fe-marketing-demand-validation-v2. The Stage 5 repair product head 4a746ad2c33710a12e0227abc59f92f771041e19/tree b47c0510b0531a2b4036ee910add4d12dbce1090 passed contract 12/12, product frontend 41/41, operations 11/11, marketing Playwright 16 pass / 2 intentional skips, a11y 3/3, visual 3/3, Lighthouse, lint, typecheck, build, validators, and exact-head Draft CI. Independent Stage 5 returned APPROVE with previous findings closed and new P0/P1/P2/P3 0/0/0/0. Final product-design authority returned CONFIRMED 93/100 with blocker/major 0/0. Fresh Stage 6 successor-head review, Ready validation, merge, and post-merge exact-tree verification remain pending. All Manual Only production blockers remain fail-closed; full-local apply, production lead activation, release, and deployment remain forbidden."
+  "notes": "Stage 1 author task 01a0630e-81f1-7f42-8b1b-cb259d1d5997 and its separate internal 1.5 reviewer completed docs PR #1497. Stage 2/3 PR #1498 merged with independent Stage 3 findings 0. Stage 5 approved the repaired product head with all five findings closed and new P0/P1/P2/P3 0/0/0/0. Final product-design authority confirmed 93/100 with blocker/major 0/0. Independent Stage 6 approved exact successor ec13cf08a3e89e62f28540269f72b900826bbbac/tree 231c2e5c5dc14d022812e6de49bc3b0bb316c6db. Ready policy, template, quality, build, smoke, full regression, accessibility, visual, Lighthouse, and security gates passed. Frontend PR #1499 squash-merged as 335886750bda3ae3b1a0f8ea7b01d3a696a80327 with the same tree, drift 0. The automated integration lifecycle is complete. All Manual Only production blockers remain fail-closed; full-local apply, production lead activation, release, and deployment remain forbidden. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:5|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1499 Ready and merge evidence,Stage 5 and final design authority reports,Stage 6 merged-exact closeout report | latest_reason_code=stage6-merged-exact-projection-synced | last_recovery_at=2026-09-03T09:53:02Z"
 }
