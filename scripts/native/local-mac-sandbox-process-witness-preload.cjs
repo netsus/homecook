@@ -5,6 +5,44 @@ const witnessPath = process.env.HOMECOOK_SANDBOX_WITNESS_MODULE;
 if (!witnessPath) process.exit(125);
 const witness = require(witnessPath);
 
+const Module = require("node:module");
+const originalModuleLoad = Module._load;
+const offlineDnsError = () => {
+  witness.recordProcessAttempt("network");
+  const error = new Error("offline release build attempted DNS access");
+  error.code = "ENETUNREACH";
+  throw error;
+};
+const offlineDnsPromiseError = async () => offlineDnsError();
+class OfflineDnsResolver {
+  constructor() {
+    offlineDnsError();
+  }
+}
+const offlineDnsPromises = new Proxy(Object.freeze({ Resolver: OfflineDnsResolver }), {
+  get(target, property, receiver) {
+    if (Reflect.has(target, property)) return Reflect.get(target, property, receiver);
+    return offlineDnsPromiseError;
+  },
+});
+const offlineDns = new Proxy(Object.freeze({
+  ADDRCONFIG: 1024,
+  ALL: 256,
+  Resolver: OfflineDnsResolver,
+  V4MAPPED: 2048,
+  promises: offlineDnsPromises,
+}), {
+  get(target, property, receiver) {
+    if (Reflect.has(target, property)) return Reflect.get(target, property, receiver);
+    return offlineDnsError;
+  },
+});
+Module._load = function homecookOfflineModuleLoad(request, ...args) {
+  if (request === "dns" || request === "node:dns") return offlineDns;
+  if (request === "dns/promises" || request === "node:dns/promises") return offlineDnsPromises;
+  return Reflect.apply(originalModuleLoad, this, [request, ...args]);
+};
+
 const childProcess = require("node:child_process");
 for (const name of ["exec", "execFile", "execFileSync", "execSync", "fork", "spawn", "spawnSync"]) {
   const original = childProcess[name];

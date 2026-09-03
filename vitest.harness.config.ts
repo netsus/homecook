@@ -1,6 +1,9 @@
 import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
+import { establishOwnedVitestSuiteTemp } from "./tests/helpers/vitest-owned-suite-temp";
+
+establishOwnedVitestSuiteTemp();
 
 export default defineConfig({
   resolve: {
@@ -34,5 +37,6 @@ export default defineConfig({
       "tests/start-work-branch.test.ts",
       "tests/workflow-v2-docs.test.ts",
     ],
+    setupFiles: ["./tests/helpers/vitest-worker-temp.ts"],
   },
 });

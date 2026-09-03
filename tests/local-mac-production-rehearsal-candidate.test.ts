@@ -3554,6 +3554,25 @@ describe("release rehearsal candidate orchestration", () => {
       logPath: "/usr/bin/log",
       profile,
       command,
+      args: ["-e", [
+        'const dns = require("node:dns");',
+        'if (dns.ADDRCONFIG !== 1024 || typeof dns.lookup !== "function") process.exit(70);',
+      ].join("\n")],
+      cwd: root,
+      env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
+      label: "offline CommonJS DNS initialization",
+      processExecutablePaths: [command],
+      stage: "offline-dns-init",
+    })).resolves.toMatchObject({
+      audit_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+
+    await expect(runObservedSandboxCommand({
+      sandboxPath: "/usr/bin/sandbox-exec",
+      sandboxWitnessPath: sandboxWitness.path,
+      logPath: "/usr/bin/log",
+      profile,
+      command,
       args: ["-e", witnessedLookupScript("com.apple.coreservices.launchservicesd", true)],
       cwd: root,
       env: { HOME: root, PATH: "/usr/bin:/bin", TMPDIR: root },
@@ -3725,14 +3744,8 @@ describe("release rehearsal candidate orchestration", () => {
   it("runs offline pnpm install and a real Next production build inside the exact macOS build-work sandbox", async () => {
     if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) return;
 
-    const userCacheRoot = join(
-      process.env.HOME ?? "",
-      ".cache",
-      "homecook-candidate-real-build-tests",
-    );
-    mkdirSync(userCacheRoot, { recursive: true, mode: 0o700 });
-    chmodSync(userCacheRoot, 0o700);
-    const root = createOwnedTempRoot("candidate-", userCacheRoot);
+    const root = createOwnedTempRoot("candidate-");
+    expect(dirname(root)).toBe(tmpdir());
     try {
     const runRoot = join(root, "attempt");
     const buildRoot = join(runRoot, "build-work");

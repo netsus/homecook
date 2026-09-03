@@ -71,12 +71,18 @@ function lstatIfPresent(path: string) {
   }
 }
 
-function makeOwnedTreeDirectoriesWritable(root: string) {
-  const stat = lstatSync(root);
+function makeOwnedTreeDirectoriesWritable(
+  root: string,
+  identity: OwnedDirectoryIdentity,
+) {
+  const stat = lstatSync(root, { bigint: true });
+  if (stat.dev !== identity.device || stat.uid !== identity.uid) {
+    throw new Error(`owned test temp child escaped its device or owner: ${root}`);
+  }
   if (!stat.isDirectory() || stat.isSymbolicLink()) return;
   chmodSync(root, 0o700);
   for (const name of readdirSync(root)) {
-    makeOwnedTreeDirectoriesWritable(join(root, name));
+    makeOwnedTreeDirectoriesWritable(join(root, name), identity);
   }
 }
 
@@ -185,9 +191,12 @@ export function createOwnedTempRegistry({
   ) => {
     beforeAtomicClaim({ kind, path: registeredPath });
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const livePath = identity.fd === null
+      const registeredStat = lstatIfPresent(registeredPath);
+      const livePath = registeredStat && sameIdentity(registeredStat, identity)
         ? registeredPath
-        : currentDescriptorPath(identity.fd);
+        : identity.fd === null
+          ? registeredPath
+          : currentDescriptorPath(identity.fd);
       if (dirname(livePath) !== identity.parent) {
         throw new Error(`refusing to clean an owned test temp outside its parent: ${livePath}`);
       }
@@ -245,7 +254,7 @@ export function createOwnedTempRegistry({
       ownedRoots.delete(root);
       return;
     }
-    makeOwnedTreeDirectoriesWritable(claimed);
+    makeOwnedTreeDirectoriesWritable(claimed, identity);
     const afterChmod = lstatSync(claimed, { bigint: true });
     if (!sameIdentity(afterChmod, identity)) {
       throw new Error(`test temp root identity changed before cleanup: ${claimed}`);

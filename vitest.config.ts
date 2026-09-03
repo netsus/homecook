@@ -1,6 +1,9 @@
 import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
+import { establishOwnedVitestSuiteTemp } from "./tests/helpers/vitest-owned-suite-temp";
+
+establishOwnedVitestSuiteTemp();
 
 export default defineConfig({
   resolve: {
@@ -11,5 +14,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    setupFiles: ["./tests/helpers/vitest-worker-temp.ts"],
   },
 });

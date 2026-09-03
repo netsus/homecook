@@ -1,6 +1,9 @@
 import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
+import { establishOwnedVitestSuiteTemp } from "./tests/helpers/vitest-owned-suite-temp";
+
+establishOwnedVitestSuiteTemp();
 
 export default defineConfig({
   resolve: {
@@ -44,5 +47,6 @@ export default defineConfig({
       "tests/youtube-corpus.test.ts",
       "tests/youtube-dictionary-resolution.test.ts",
     ],
+    setupFiles: ["./tests/helpers/vitest-worker-temp.ts"],
   },
 });
