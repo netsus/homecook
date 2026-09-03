@@ -66,7 +66,7 @@ export async function openMarketingLeadForm(page: Page, answers = MARKETING_HAPP
   await completeMarketingQuiz(page, answers);
   await completeMarketingExperience(page);
   await page.getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
-  await page.getByRole("button", { name: "더:단백 드링크 초코 기록하기" }).click();
+  await page.getByRole("button", { name: "+ 기록하기" }).click();
   await page.getByRole("button", { name: "무료 베타 먼저 써보기" }).click();
   await expect(page.getByRole("textbox", { name: "이메일" })).toBeVisible();
 }

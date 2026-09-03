@@ -29,6 +29,9 @@ interface MarketingDemandValidationScreenProps {
   getTurnstileToken?: () => Promise<TurnstileResult>;
 }
 
+type ShareFeedback = { kind: "error" | "success"; message: string } | null;
+type QueueRecovery = { message: string; resume: () => void } | null;
+
 const QA_TURNSTILE_TOKEN_KEY = "homecook.marketing-beta.turnstile-token";
 const RESULT_KEYS: MarketingValidationQuizResult[] = ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"];
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
@@ -127,7 +130,7 @@ function Quiz({ index, answers, onBack, onSelect, locked }: { index: number; ans
   </Frame>;
 }
 
-function Result({ type, onBack, onNext, preview, onPreviewStart, onShare }: { type: MarketingValidationQuizResult; onBack: () => void; onNext: () => void; preview: boolean; onPreviewStart: () => void; onShare: () => void }) {
+function Result({ type, onBack, onNext, preview, onPreviewStart, onShare, shareFeedback }: { type: MarketingValidationQuizResult; onBack: () => void; onNext: () => void; preview: boolean; onPreviewStart: () => void; onShare: () => void; shareFeedback: ShareFeedback }) {
   const result = RESULTS[type];
   return <Frame stage="result">
     <Back onClick={onBack} label={preview ? "처음 화면" : "마지막 질문으로 돌아가기"} />
@@ -142,6 +145,7 @@ function Result({ type, onBack, onNext, preview, onPreviewStart, onShare }: { ty
       <button className="mdv2-primary" type="button" onClick={onNext}>무먹으로 20초 체험하기</button>
     </>}
     <button className="mdv2-secondary" type="button" onClick={onShare}>내 결과 공유하기</button>
+    {shareFeedback ? <div className={shareFeedback.kind === "error" ? "mdv2-error" : "mdv2-share-status"} role={shareFeedback.kind === "error" ? "alert" : "status"} aria-live="polite"><p>{shareFeedback.message}</p>{shareFeedback.kind === "error" ? <button type="button" onClick={onShare}>다시 시도</button> : null}</div> : null}
   </Frame>;
 }
 
@@ -189,7 +193,7 @@ function Planner({ complete, onBack, onNext }: { complete: boolean; onBack: () =
 }
 
 function Packaged({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
-  return <Frame stage="packaged-food"><Back onClick={onBack} /><h1>그리고<br /><em>편의점 음식</em>은<br />더 간단해요.</h1><article className="mdv2-product"><span className="mdv2-badge">제품 예시</span><Image src="/assets/funnel/products/the-protein-choco.png" alt="더:단백 드링크 초코 제품 예시" width={190} height={270} /><div><h2>더:단백 드링크 초코</h2><p>250ml</p><strong>105 kcal · 단백질 20g</strong></div></article><p className="mdv2-affiliation">특정 브랜드와 제휴하거나 추천하는 화면이 아닙니다.</p><button className="mdv2-primary" type="button" aria-label="더:단백 드링크 초코 기록하기" onClick={onNext}>기록하기</button></Frame>;
+  return <Frame stage="packaged-food"><Back onClick={onBack} /><h1>그리고<br /><em>편의점 음식</em>은<br />더 간단해요.</h1><article className="mdv2-product"><span className="mdv2-badge">제품 예시</span><Image src="/assets/funnel/products/the-protein-choco.png" alt="더:단백 드링크 초코 제품 예시" width={190} height={270} /><div><h2>더:단백 드링크 초코</h2><p>250ml</p><strong>105 kcal · 단백질 20g</strong></div></article><p className="mdv2-affiliation">특정 브랜드와 제휴하거나 추천하는 화면이 아닙니다.</p><button className="mdv2-primary" type="button" aria-label="+ 기록하기" onClick={onNext}>+ 기록하기</button></Frame>;
 }
 
 function BetaForm({ onBack, onSubmit, getTurnstileToken }: { onBack: () => void; onSubmit: (email: string, token: string) => Promise<string | null>; getTurnstileToken: () => Promise<TurnstileResult> }) {
@@ -200,8 +204,8 @@ function BetaForm({ onBack, onSubmit, getTurnstileToken }: { onBack: () => void;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting) return;
-    if (!email.trim()) { setError("이메일을 입력해주세요."); return; }
-    if (!/^\S+@\S+\.\S+$/.test(email)) { setError("이메일 형식을 확인해주세요."); return; }
+    if (!email.trim()) { setError("이메일을 입력해 주세요."); return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { setError("이메일 형식을 확인해 주세요."); return; }
     if (!consent) { setError("이메일 수집·이용 동의가 필요해요."); return; }
     setSubmitting(true);
     const turnstile = await getTurnstileToken();
@@ -209,7 +213,7 @@ function BetaForm({ onBack, onSubmit, getTurnstileToken }: { onBack: () => void;
     const message = await onSubmit(email, turnstile.token);
     if (message) { setError(message); setSubmitting(false); }
   };
-  return <Frame stage="beta-form"><Back onClick={onBack} /><div className="mdv2-invitation"><Image src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 캐릭터" width={210} height={210} /><div><Image src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" width={210} height={80} /><h1>직접 써보고 싶나요?</h1><p>이메일을 남기면 베타가 준비되는 대로 가장 먼저 초대해드릴게요.</p></div></div><form className="mdv2-form" onSubmit={submit} noValidate><label htmlFor="beta-email">이메일</label><input id="beta-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? "beta-error" : "beta-privacy"} placeholder="email@example.com" /><label className="mdv2-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />베타 초대용 이메일 수집·이용에 동의합니다. <strong>(필수)</strong></label><p id="beta-privacy">수집: 이메일 · 목적: 베타 초대 · 보유: 베타 초대 종료 시까지 · <Link href="/privacy">개인정보처리방침</Link></p>{error ? <div className="mdv2-error" id="beta-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>다시 시도</button></div> : null}<button className="mdv2-primary" type="submit" disabled={submitting}>{submitting ? "신청 중…" : "무료 베타 초대받기"}</button></form></Frame>;
+  return <Frame stage="beta-form"><Back onClick={onBack} /><div className="mdv2-invitation"><Image src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 캐릭터" width={210} height={210} /><div><Image src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" width={210} height={80} /><h1>직접 써보고 싶나요?</h1><p>이메일을 남기면 베타가 준비되는 대로 가장 먼저 초대해드릴게요.</p></div></div><form className="mdv2-form" onSubmit={submit} noValidate><label htmlFor="beta-email">이메일</label><input id="beta-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? "beta-error" : "beta-privacy"} placeholder="email@example.com" /><label className="mdv2-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />베타 초대용 이메일 수집·이용에 동의합니다. <strong>(필수)</strong></label><p id="beta-privacy">수집: 이메일 · 목적: 베타 초대 · 보유: 베타 초대 종료 시까지 · <Link href="/privacy">개인정보처리방침</Link></p>{error ? <div className="mdv2-error" id="beta-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>다시 시도</button></div> : null}<p className="mdv2-submit-status" role="status" aria-live="polite">{submitting ? "신청 내용을 확인하고 있어요." : ""}</p><button className="mdv2-primary" type="submit" disabled={submitting}>{submitting ? "신청 중…" : "무료 베타 초대받기"}</button></form></Frame>;
 }
 
 function Done({ onBack, onReset }: { onBack: () => void; onReset: () => void }) {
@@ -226,16 +230,26 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
   const [result, setResult] = useState<MarketingValidationQuizResult>("eyeballing-master");
   const [loading, setLoading] = useState(true);
   const [shellError, setShellError] = useState("");
+  const [queueRecovery, setQueueRecovery] = useState<QueueRecovery>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<ShareFeedback>(null);
   const transitionLocked = useRef(false);
+  const queueErrorRef = useRef("");
   const reduced = useReducedMotion();
   const preview = Boolean(entry.sharedResult && history.length === 0);
 
   const sendQueued = useCallback(async (action: MarketingValidationQueueAction) => {
     const response = await postMarketingValidation({ ...action, honeypot: "" } as MarketingValidationRequestBody);
-    return response.success ? { ok: true as const, state: response.data?.state } : { ok: false as const, retryable: true };
+    if (response.success) {
+      queueErrorRef.current = "";
+      return { ok: true as const, state: response.data?.state };
+    }
+    queueErrorRef.current = response.error?.message ?? "진행 내용을 저장하지 못했어요. 다시 시도해 주세요.";
+    return { ok: false as const, retryable: true };
   }, []);
 
   const record = useCallback(async (action: MarketingValidationQueueAction) => {
+    queueErrorRef.current = "";
     enqueueMarketingQueueAction(action);
     const flushed = await flushMarketingQueue(sendQueued);
     if (flushed.stopped !== "completed") return false;
@@ -276,6 +290,23 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
   };
+  const showQueueRecovery = (message: string, resume: () => void) => {
+    setQueueRecovery({ message: queueErrorRef.current || message, resume });
+  };
+  const retryQueue = async () => {
+    if (!queueRecovery || recovering) return;
+    setRecovering(true);
+    queueErrorRef.current = "";
+    const flushed = await flushMarketingQueue(sendQueued);
+    if (flushed.stopped === "completed") {
+      const resume = queueRecovery.resume;
+      setQueueRecovery(null);
+      resume();
+    } else {
+      setQueueRecovery((current) => current ? { ...current, message: queueErrorRef.current || current.message } : current);
+    }
+    setRecovering(false);
+  };
   const back = () => { const previous = history.at(-1); if (!previous) { setStage("hero"); return; } setHistory((current) => current.slice(0, -1)); setStage(previous); if (previous === "quiz") setQuestionIndex((current) => Math.max(0, current - 1)); };
   const start = async () => { if (await record({ action: "quiz_started" })) { setQuestionIndex(0); push("quiz"); } else setShellError("연결을 확인한 뒤 새로 시작해 주세요."); };
   const select = (id: QuestionId, value: string) => {
@@ -291,22 +322,29 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
         if (!response.success || !response.data?.quiz_result) { setShellError(response.error?.message ?? "답변을 저장하지 못했어요."); transitionLocked.current = false; return; }
         const derived = deriveResult(exact.q3);
         setResult(response.data.quiz_result === derived ? response.data.quiz_result : derived);
-        await postMarketingValidation({ action: "result_viewed", honeypot: "" });
-        setHistory((current) => [...current, "quiz"]);
-        setStage("result");
+        const showResult = () => push("result");
+        if (await record({ action: "result_viewed" })) showResult();
+        else showQueueRecovery("결과 화면을 열지 못했어요. 다시 시도해 주세요.", showResult);
       }
       transitionLocked.current = false;
     }, reduced ? 0 : 300);
   };
   const share = async () => {
+    setShareFeedback(null);
     const url = new URL("/beta", window.location.origin);
     url.searchParams.set("result", result);
     const data = { title: `무먹 집밥 기록 타입: ${RESULTS[result].title}`, text: RESULTS[result].quote.replace("\n", " "), url: url.toString() };
     try {
-      if (navigator.share) await navigator.share(data);
-      else await navigator.clipboard.writeText(`${data.title}\n${data.text}\n${data.url}`);
+      if (navigator.share) {
+        await navigator.share(data);
+        setShareFeedback({ kind: "success", message: "공유 화면을 열었어요." });
+      } else {
+        await navigator.clipboard.writeText(`${data.title}\n${data.text}\n${data.url}`);
+        setShareFeedback({ kind: "success", message: "링크를 복사해 뒀어요." });
+      }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
+      setShareFeedback({ kind: "error", message: "공유 링크를 준비하지 못했어요. 다시 시도해 주세요." });
     }
   };
   const defaultTurnstile = async (): Promise<TurnstileResult> => {
@@ -323,15 +361,16 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
 
   if (loading) return <div className="mdv2-root"><main className="mdv2-screen mdv2-loading" role="status" aria-label="테스트 불러오는 중"><Brand /><div /><div /><div /></main></div>;
   if (shellError) return <div className="mdv2-root"><Frame stage="empty"><Brand /><h1>새 테스트로 다시 시작할게요.</h1><p role="alert">{shellError}</p><button className="mdv2-primary" type="button" onClick={reset}>새로 시작하기</button></Frame></div>;
+  if (queueRecovery) return <div className="mdv2-root"><Frame stage="recovery"><Brand /><h1>잠시 연결이 끊겼어요.</h1><div className="mdv2-error" role="alert"><p>{queueRecovery.message}</p></div><button className="mdv2-primary" type="button" disabled={recovering} onClick={() => void retryQueue()}>{recovering ? "다시 연결하는 중…" : "다시 시도"}</button></Frame></div>;
 
   let content: ReactNode;
   if (stage === "hero") content = <Hero variant={entry.adVariant} onStart={() => void start()} />;
   else if (stage === "quiz") content = <Quiz index={questionIndex} answers={answers} locked={transitionLocked.current} onBack={() => questionIndex ? setQuestionIndex((current) => current - 1) : back()} onSelect={select} />;
-  else if (stage === "result") content = <Result type={result} preview={preview} onBack={back} onNext={async () => { if (await record({ action: "experience_started" })) push("experience-1"); }} onPreviewStart={reset} onShare={() => void share()} />;
-  else if (stage.startsWith("experience-")) { const step = Number(stage.at(-1)); content = <Experience step={step} reduced={reduced} onBack={back} onNext={async () => { if (step < 5) push(`experience-${step + 1}` as MarketingValidationUiStage); else { await record({ action: "experience_completed" }); push("planner-homecook"); } }} />; }
+  else if (stage === "result") content = <Result type={result} preview={preview} onBack={back} onNext={async () => { const showExperience = () => push("experience-1"); if (await record({ action: "experience_started" })) showExperience(); else showQueueRecovery("체험 화면을 열지 못했어요. 다시 시도해 주세요.", showExperience); }} onPreviewStart={reset} onShare={() => void share()} shareFeedback={shareFeedback} />;
+  else if (stage.startsWith("experience-")) { const step = Number(stage.at(-1)); content = <Experience step={step} reduced={reduced} onBack={back} onNext={async () => { if (step < 5) push(`experience-${step + 1}` as MarketingValidationUiStage); else { const showPlanner = () => push("planner-homecook"); if (await record({ action: "experience_completed" })) showPlanner(); else showQueueRecovery("식단 화면을 열지 못했어요. 다시 시도해 주세요.", showPlanner); } }} />; }
   else if (stage === "planner-homecook") content = <Planner complete={false} onBack={back} onNext={() => push("packaged-food")} />;
   else if (stage === "packaged-food") content = <Packaged onBack={back} onNext={() => push("planner-complete")} />;
-  else if (stage === "planner-complete") content = <Planner complete onBack={back} onNext={async () => { if (await record({ action: "beta_form_viewed" })) push("beta-form"); }} />;
+  else if (stage === "planner-complete") content = <Planner complete onBack={back} onNext={async () => { const showBetaForm = () => push("beta-form"); if (await record({ action: "beta_form_viewed" })) showBetaForm(); else showQueueRecovery("신청 화면을 열지 못했어요. 다시 시도해 주세요.", showBetaForm); }} />;
   else if (stage === "beta-form") content = <BetaForm onBack={back} onSubmit={submitLead} getTurnstileToken={getTurnstileToken ?? defaultTurnstile} />;
   else content = <Done onBack={back} onReset={reset} />;
 

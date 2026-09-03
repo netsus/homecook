@@ -19,6 +19,7 @@ const postMarketingValidation = vi.fn();
 vi.mock("@/lib/api/marketing-validation", () => ({ postMarketingValidation: (...args: unknown[]) => postMarketingValidation(...args) }));
 
 async function importScreen() { return import("@/components/marketing/marketing-demand-validation-screen"); }
+async function importSession() { return import("@/lib/marketing/marketing-validation-client-session"); }
 function ok(state: string, extra: Record<string, unknown> = {}) { return { success: true, data: { stage: state, state, ...extra }, error: null }; }
 function installHappyApi() {
   postMarketingValidation.mockImplementation(async (body: { action: string }) => body.action === "quiz_completed"
@@ -26,12 +27,12 @@ function installHappyApi() {
     : ok(body.action));
 }
 
-async function answerQuiz(user: ReturnType<typeof userEvent.setup>) {
+async function answerQuiz(user: ReturnType<typeof userEvent.setup>, { waitForResult = true } = {}) {
   await user.click(await screen.findByRole("button", { name: "테스트 시작하기" }));
   for (const answer of ["거의 매일", "3~5끼", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"]) {
     await user.click(screen.getByRole("button", { name: answer }));
   }
-  await screen.findByRole("heading", { name: "성분 추적러" });
+  if (waitForResult) await screen.findByRole("heading", { name: "성분 추적러" });
 }
 
 async function reachBeta(user: ReturnType<typeof userEvent.setup>) {
@@ -44,7 +45,7 @@ async function reachBeta(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
   await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
   await user.click(screen.getByRole("button", { name: "편의점 음식도 기록해보기" }));
-  await user.click(screen.getByRole("button", { name: "더:단백 드링크 초코 기록하기" }));
+  await user.click(screen.getByRole("button", { name: "+ 기록하기" }));
   await user.click(screen.getByRole("button", { name: "무료 베타 먼저 써보기" }));
   await screen.findByRole("textbox", { name: "이메일" });
 }
@@ -117,6 +118,36 @@ describe("marketing demand validation v2 landing", () => {
     expect(screen.queryByRole("textbox", { name: "이메일" })).toBeNull();
   });
 
+  it("keeps result_viewed queued, blocks result navigation, and offers retry/restart when the durable write fails", async () => {
+    const { readMarketingQueue } = await importSession();
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "quiz_completed") {
+        return ok("quiz_completed", { quiz_result: "ingredient-tracker", target_qualified: null });
+      }
+      if (body.action === "result_viewed") {
+        const resultViewedCalls = postMarketingValidation.mock.calls.filter(([payload]) => payload.action === "result_viewed").length;
+        return resultViewedCalls === 1
+          ? { success: false, data: null, error: { code: "NETWORK_ERROR", message: "결과 화면을 열지 못했어요. 다시 시도해 주세요.", fields: [] } }
+          : ok("result_viewed");
+      }
+      return ok(body.action);
+    });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+
+    await answerQuiz(user, { waitForResult: false });
+
+    expect(screen.queryByRole("heading", { name: "성분 추적러" })).toBeNull();
+    expect((await screen.findByRole("alert")).textContent).toContain("결과 화면을 열지 못했어요. 다시 시도해 주세요.");
+    expect(readMarketingQueue()).toEqual([{ action: "result_viewed" }]);
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByRole("heading", { name: "성분 추적러" })).toBeTruthy();
+    expect(readMarketingQueue()).toEqual([]);
+  });
+
   it("keeps both TomorrowPreview controls disabled and before their CTA", async () => {
     installHappyApi();
     const { MarketingDemandValidationScreen } = await importScreen();
@@ -136,7 +167,7 @@ describe("marketing demand validation v2 landing", () => {
     await user.click(screen.getByRole("button", { name: "편의점 음식도 기록해보기" }));
     expect(screen.getByText("제품 예시")).toBeTruthy();
     expect(screen.getByText(/특정 브랜드와 제휴하거나 추천하는 화면이 아닙니다/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "더:단백 드링크 초코 기록하기" }));
+    await user.click(screen.getByRole("button", { name: "+ 기록하기" }));
     expect(screen.getByTestId("tomorrow-preview")).toBeTruthy();
     for (const button of screen.getAllByRole("button", { name: /내일 .* 추가/ })) expect((button as HTMLButtonElement).disabled).toBe(true);
   });
@@ -159,14 +190,17 @@ describe("marketing demand validation v2 landing", () => {
     Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
     const { MarketingDemandValidationScreen } = await importScreen();
     const user = userEvent.setup();
-    const writeText = vi.fn().mockRejectedValue(new Error("copy blocked"));
+    const writeText = vi.fn()
+      .mockRejectedValueOnce(new Error("copy blocked"))
+      .mockResolvedValueOnce(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     render(<MarketingDemandValidationScreen />);
     await answerQuiz(user);
     await user.click(screen.getByRole("button", { name: "내 결과 공유하기" }));
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining("/beta?result=ingredient-tracker"));
-    expect(screen.getByRole("heading", { name: "성분 추적러" })).toBeTruthy();
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(await screen.findByText("공유 링크를 준비하지 못했어요. 다시 시도해 주세요.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(await screen.findByText("링크를 복사해 뒀어요.")).toBeTruthy();
   });
 
   it("validates, submits once on rapid clicks, and shows done only after generic success", async () => {
@@ -182,16 +216,54 @@ describe("marketing demand validation v2 landing", () => {
     render(<MarketingDemandValidationScreen getTurnstileToken={async () => ({ ok: true, token: "test-token" })} />);
     await reachBeta(user);
     await user.click(screen.getByRole("button", { name: "무료 베타 초대받기" }));
-    expect(screen.getByRole("alert").textContent).toContain("이메일을 입력해주세요.");
+    expect(screen.getByRole("alert").textContent).toContain("이메일을 입력해 주세요.");
     await user.type(screen.getByRole("textbox", { name: "이메일" }), "tester@example.com");
     await user.click(screen.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }));
     const submit = screen.getByRole("button", { name: "무료 베타 초대받기" });
     await user.click(submit);
     await user.click(submit);
+    expect(await screen.findByText("신청 내용을 확인하고 있어요.")).toBeTruthy();
     expect(postMarketingValidation.mock.calls.filter(([body]) => body.action === "lead_submitted")).toHaveLength(1);
     expect(screen.queryByRole("heading", { name: "신청이 완료됐어요!" })).toBeNull();
     release?.(ok("lead_submitted"));
     expect(await screen.findByRole("heading", { name: "신청이 완료됐어요!" })).toBeTruthy();
+  });
+
+  it("keeps experience_completed queued, blocks planner navigation, and offers retry/restart when the durable write fails", async () => {
+    const { readMarketingQueue } = await importSession();
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "quiz_completed") {
+        return ok("quiz_completed", { quiz_result: "ingredient-tracker", target_qualified: null });
+      }
+      if (body.action === "experience_completed") {
+        const experienceCompletedCalls = postMarketingValidation.mock.calls.filter(([payload]) => payload.action === "experience_completed").length;
+        return experienceCompletedCalls === 1
+          ? { success: false, data: null, error: { code: "NETWORK_ERROR", message: "식단 화면을 열지 못했어요. 다시 시도해 주세요.", fields: [] } }
+          : ok("experience_completed");
+      }
+      return ok(body.action);
+    });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+
+    await answerQuiz(user);
+    await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
+    await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
+    await user.click(await screen.findByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }));
+    await user.click(screen.getByRole("button", { name: "다음" }));
+    await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+    await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
+    await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
+
+    expect(screen.queryByRole("heading", { name: "이번 주 식단" })).toBeNull();
+    expect((await screen.findByRole("alert")).textContent).toContain("식단 화면을 열지 못했어요. 다시 시도해 주세요.");
+    expect(readMarketingQueue()).toEqual([{ action: "experience_completed" }]);
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByRole("heading", { name: "이번 주 식단" })).toBeTruthy();
+    expect(readMarketingQueue()).toEqual([]);
   });
 
   it.each(["ORIGIN_NOT_ALLOWED", "INVALID_TRANSITION", "VALIDATION_ERROR", "TURNSTILE_FAILED", "LEAD_CAPTURE_NOT_READY", "LEAD_CAPTURE_UNAVAILABLE"])("keeps prior value and recovery visible for %s", async (code) => {

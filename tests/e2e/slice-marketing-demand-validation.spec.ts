@@ -44,7 +44,7 @@ test.describe("marketing demand validation v2 /beta", () => {
     await completeMarketingExperience(page);
     await page.getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
     await expect(page.getByText("제품 예시")).toBeVisible();
-    await page.getByRole("button", { name: "더:단백 드링크 초코 기록하기" }).click();
+    await page.getByRole("button", { name: "+ 기록하기" }).click();
     await page.getByRole("button", { name: "무료 베타 먼저 써보기" }).click();
     await page.getByRole("textbox", { name: "이메일" }).fill("qa@example.com");
     await page.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }).check();
@@ -137,7 +137,7 @@ test.describe("marketing demand validation v2 /beta", () => {
     await flowPage.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
     const packaged = resolve(EVIDENCE_DIR, "packaged-food-390x844.png");
     await flowPage.screenshot({ path: packaged, fullPage: true }); captures.push(packaged);
-    await flowPage.getByRole("button", { name: "더:단백 드링크 초코 기록하기" }).click();
+    await flowPage.getByRole("button", { name: "+ 기록하기" }).click();
     await flowPage.getByRole("button", { name: "무료 베타 먼저 써보기" }).click();
     await expect(flowPage.getByRole("textbox", { name: "이메일" })).toBeVisible();
     await flowPage.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));

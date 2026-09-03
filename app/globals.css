@@ -14525,6 +14525,9 @@ button {
 .mdv2-form > p { color: var(--mdv2-text-3); font-size: 11px; line-height: 1.5; }
 .mdv2-error { background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 10px; color: #c92a2a; display: flex; font-size: 13px; justify-content: space-between; padding: 10px; }
 .mdv2-error button { background: transparent; color: #c92a2a; font-weight: 800; min-height: 44px; }
+.mdv2-share-status { background: var(--mdv2-brand-soft); border: 1px solid var(--mdv2-brand); border-radius: 10px; color: #006da3; font-size: 13px; padding: 10px; }
+.mdv2-submit-status { min-height: 18px; }
+[data-stage="recovery"] { align-content: center; }
 [data-stage="done"] { align-content: center; justify-items: center; text-align: center; }
 [data-stage="done"] .mdv2-back { justify-self: start; position: absolute; }
 .mdv2-success-character { height: 270px; object-fit: contain; width: min(90%, 330px); }
