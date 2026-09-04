@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), "../.."));
@@ -40,7 +40,44 @@ function runExistingHelper(relativeScript, args, { experimentalVm = false } = {}
   }
 }
 
-export function createDefaultCampaignReleaseOperations({ runHelper = runExistingHelper } = {}) {
+function unavailableFullBundleRollback() {
+  throw new Error(
+    "Full campaign bundle rollback requires the active production lock and transactional app/full-local/worker recovery adapter.",
+  );
+}
+
+function unavailableFullBundlePromotion() {
+  throw new Error(
+    "Full campaign bundle promotion requires the production lock and transactional app/full-local/worker adapter.",
+  );
+}
+
+function authorityVerifyArgs(root) {
+  const inputs = join(root, "campaign-inputs");
+  return [
+    "verify",
+    "--manifest", join(root, "campaign-manifest.json"),
+    "--attestation-authority", join(root, "campaign-attestation-authority.json"),
+    "--attestation-bundle", join(root, "attestation.jsonl"),
+    "--predicate", join(root, "campaign-predicate.json"),
+    "--check-runs", join(inputs, "check-runs.json"),
+    "--bundle", join(inputs, "bundle.tar"),
+    "--backup-archive", join(inputs, "backup.archive"),
+    "--bundle-authority", join(inputs, "bundle-authority.json"),
+    "--rehearsal-receipt", join(inputs, "rehearsal-receipt.json"),
+    "--production-snapshot", join(inputs, "production-snapshot.json"),
+    "--backup-receipt", join(inputs, "backup-receipt.json"),
+    "--approval-authority", join(inputs, "approval-authority.json"),
+    "--live-inventory", join(root, "live-production-inventory.json"),
+    "--json",
+  ];
+}
+
+export function createDefaultCampaignReleaseOperations({
+  runHelper = runExistingHelper,
+  runFullBundleRollback = unavailableFullBundleRollback,
+  runFullBundlePromotion = unavailableFullBundlePromotion,
+} = {}) {
   return Object.freeze({
     plan(options) {
       if (!/^[0-9a-f]{40}$/u.test(options.releaseSha ?? "")) {
@@ -77,17 +114,28 @@ export function createDefaultCampaignReleaseOperations({ runHelper = runExisting
         "--json",
       ]);
     },
+    verify(options) {
+      const root = requireAbsolute(options.authorityRoot, "--authority-root");
+      return runHelper(
+        "scripts/marketing-campaign-fast-release-authority.mjs",
+        authorityVerifyArgs(root),
+      );
+    },
+    promote(options, { clock }) {
+      const root = requireAbsolute(options.authorityRoot, "--authority-root");
+      const verified = runHelper(
+        "scripts/marketing-campaign-fast-release-authority.mjs",
+        authorityVerifyArgs(root),
+      );
+      return runFullBundlePromotion({ authorityRoot: root, clock, verified });
+    },
     rollback(options) {
       if (!options.activeTransaction) throw new Error("rollback requires --active-transaction.");
-      const passthrough = options.rawArgs.filter((token, index, all) => {
-        if (token === "--" || token === "--json") return false;
-        if (token === "--active-transaction" || all[index - 1] === "--active-transaction") return false;
-        if (token === "--authority-root" || all[index - 1] === "--authority-root") return false;
-        return true;
+      if (!options.authorityRoot) throw new Error("rollback requires --authority-root.");
+      return runFullBundleRollback({
+        activeTransactionPath: requireAbsolute(options.activeTransaction, "--active-transaction"),
+        authorityRoot: requireAbsolute(options.authorityRoot, "--authority-root"),
       });
-      return runHelper("scripts/youtube-extraction-worker-mac-production.mjs", [
-        "rollback", ...passthrough, "--json",
-      ]);
     },
   });
 }

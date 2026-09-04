@@ -386,6 +386,7 @@ function validateSnapshotAuthority(snapshot, releaseSha) {
   requireExact(value.complete, true, "production_snapshot.complete");
   requireExact(value.promotion_safe, true, "production_snapshot.promotion_safe");
   requireSha(value.previous_release_sha, "production_snapshot.previous_release_sha");
+  requireDigest(value.inventory_sha256, "production_snapshot.inventory_sha256");
   validateCampaignAuthorityProducer(value.producer, releaseSha);
   requireString(value.captured_at, "production_snapshot.captured_at");
   return value;
@@ -471,11 +472,15 @@ export function buildCampaignManifestFromAuthorities({
 
 /** @param {Record<string, any>} options */
 export function verifyCampaignPromotionAuthority({
-  manifest, attestation, attestationBundleBytes, ciCheckRuns, bundleBytes, backupArchiveBytes, bundle, rehearsal, snapshot, backup, approval, now = new Date(),
+  manifest, attestation, attestationBundleBytes, attestationVerifier, ciCheckRuns, bundleBytes,
+  backupArchiveBytes, bundle, rehearsal, snapshot, backup, approval, now = new Date(),
 }) {
   if (![manifest, attestation, attestationBundleBytes, ciCheckRuns, bundleBytes, backupArchiveBytes, bundle, rehearsal, snapshot, backup, approval]
     .every((value) => value !== undefined && value !== null)) {
     fail("Every campaign authority input is required for promotion.");
+  }
+  if (typeof attestationVerifier !== "function") {
+    fail("Campaign promotion requires a cryptographic attestation verifier.");
   }
   const candidate = validateCampaignManifest(manifest, { now, requireFresh: true });
   const expected = buildCampaignManifestFromAuthorities({
@@ -501,10 +506,10 @@ export function verifyCampaignPromotionAuthority({
     release_sha: candidate.release_sha,
     release_tag: candidate.release_tag,
     manifest_sha256: candidate.manifest_sha256,
-    subject_sha256: candidate.manifest_sha256,
     release_bundle_sha256: candidate.release_bundle_sha256,
     verified: true,
   })) requireExact(attestationAuthority[field], expectedValue, `attestation.${field}`);
+  requireDigest(attestationAuthority.subject_sha256, "attestation.subject_sha256");
   requireDigest(attestationAuthority.predicate_sha256, "attestation.predicate_sha256");
   requireDigest(
     attestationAuthority.github_attestation_bundle_sha256,
@@ -514,6 +519,29 @@ export function verifyCampaignPromotionAuthority({
     || sha256(attestationBundleBytes) !== attestationAuthority.github_attestation_bundle_sha256) {
     fail("GitHub attestation result bytes do not match the verified attestation authority.");
   }
+  const cryptographic = attestationVerifier({
+    attestationBundleBytes,
+    attestationAuthority,
+    manifest: candidate,
+  });
+  for (const [field, expectedValue] of Object.entries({
+    verified: true,
+    repository: REPOSITORY,
+    signer_workflow: "netsus/homecook/.github/workflows/marketing-campaign-fast-release.yml",
+    source_ref: SOURCE_REF,
+    source_digest: candidate.release_sha,
+    subject_sha256: attestationAuthority.subject_sha256,
+  })) requireExact(cryptographic?.[field], expectedValue, `cryptographic attestation.${field}`);
+  requireExact(
+    cryptographic?.predicate?.manifest_sha256,
+    candidate.manifest_sha256,
+    "cryptographic attestation predicate.manifest_sha256",
+  );
+  requireExact(
+    cryptographic?.predicate?.release_bundle_sha256,
+    candidate.release_bundle_sha256,
+    "cryptographic attestation predicate.release_bundle_sha256",
+  );
   return Object.freeze({
     verified: true,
     manifest: candidate,
@@ -750,6 +778,23 @@ export function validateCampaignRollbackRecovery(value, previousBundle) {
   return recovery;
 }
 
+function validateLiveCampaignAuthority(value, manifest) {
+  const live = requireObject(value, "Live campaign authority");
+  requireExact(live.origin_master_sha, manifest.release_sha, "Live origin/master");
+  requireExact(
+    live.required_ci_evidence_sha256,
+    manifest.required_ci_evidence_sha256,
+    "Live latest required CI evidence",
+  );
+  requireExact(
+    live.production_snapshot_sha256,
+    manifest.production_snapshot_sha256,
+    "Live production snapshot",
+  );
+  requireExact(live.attestation_verified, true, "Live attestation verification");
+  return live;
+}
+
 /** @param {{ authorityInputs: Record<string, any>, clock?: () => Date, createAdapters: Function }} options */
 export async function runCampaignPromotionTransaction({
   authorityInputs,
@@ -768,18 +813,31 @@ export async function runCampaignPromotionTransaction({
   const rollback = requireAdapter(adapters, "rollbackPreviousBundle");
   const verifyRecovery = requireAdapter(adapters, "verifyPreviousBundleRecovery");
   const releaseLock = requireAdapter(adapters, "releaseProductionLock");
+  const revalidateLiveAuthority = requireAdapter(adapters, "revalidateLiveAuthority");
+  const revalidate = async (phase) => {
+    assertFresh();
+    return validateLiveCampaignAuthority(
+      await revalidateLiveAuthority({
+        authority: verifiedAuthority,
+        assertFresh,
+        phase,
+      }),
+      verifiedAuthority.manifest,
+    );
+  };
+  await revalidate("before_lock");
   const lock = await acquireLock({ authority: verifiedAuthority, assertFresh });
   let primaryError = null;
   let result = null;
   try {
-    assertFresh();
+    await revalidate("before_install");
     const installation = await install({
       authority: verifiedAuthority,
       assertFresh,
       lock,
       manifest: verifiedAuthority.manifest,
     });
-    assertFresh();
+    await revalidate("before_postdeploy_canary");
     const verification = validateCampaignPostdeployEvidence(
       await verify({ installation, lock, manifest: verifiedAuthority.manifest, assertFresh }),
       verifiedAuthority.manifest,

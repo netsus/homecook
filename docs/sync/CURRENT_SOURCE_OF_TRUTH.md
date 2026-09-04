@@ -25,6 +25,7 @@
 - 단일 high-port isolated rehearsal에서 candidate health와 immediate previous bundle rollback을 함께 검증한다. 기존 v3의 2회 rehearsal과 전체 release test suite는 보존하지만 캠페인 lane의 blocking gate로 사용하지 않는다.
 - production snapshot, fresh encrypted backup+verify, 정확히 한 번의 `production-release-approval` human gate, annotated `prod-*` tag와 최소 manifest/attestation 뒤에만 기존 production lock과 transactional install/recovery helper를 호출한다.
 - manifest input의 digest/boolean 자기 주장은 authority가 아니다. 실제 latest-7 CI, bundle bytes, rehearsal/snapshot/backup/approval 원본과 GitHub attestation 결과를 재계산해 하나의 `release_bundle_sha256` chain으로 결합한다.
+- campaign producer와 promotion workflow는 manual dispatch only다. approval 뒤와 production 직전에 exact master/latest-7 CI/current production snapshot/expiry/cryptographic attestation을 다시 확인하고 public verify도 같은 full authority bundle을 소비한다.
 - postdeploy는 internal/HTTPS `/`, `/beta`, `/privacy`, Auth health, marketing API/state/DB analytics canary, worker identity와 app/full-local/worker bundle parity를 확인한다. 실패하면 같은 lock 아래 immediate previous bundle로 자동 rollback한다.
 - 만료 시각 이상에서는 adapter 생성, lock, Docker, LaunchAgent 접근 전에 `prepare`, `rehearse`, `promote`와 새 authority 발급을 fail closed한다. `status`, `verify`, 이미 시작된 승격의 안전 rollback만 허용한다.
 - 작성 작업은 Draft PR까지만 수행한다. author self-approval, Ready/merge, server/production/DB/Docker/LaunchAgent/tag action은 금지한다. 캠페인 종료 후 제거와 permanent v4 재설계는 별도 승인 작업으로 미룬다.

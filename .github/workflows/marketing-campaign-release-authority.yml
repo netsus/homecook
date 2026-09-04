@@ -1,0 +1,108 @@
+name: Marketing Campaign Release Authority
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact origin/master SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-campaign-release-authority
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    runs-on: [self-hosted, macOS, homecook-release-promoter]
+    timeout-minutes: 20
+    steps:
+      - name: Fail closed after campaign expiry
+        env:
+          CAMPAIGN_RELEASE_EXPIRES_AT: 2026-09-15T15:00:00.000Z
+        run: node -e 'if (Date.now() >= Date.parse(process.env.CAMPAIGN_RELEASE_EXPIRES_AT)) process.exit(1)'
+      - name: Checkout exact current master
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact current master
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: test "$RELEASE_SHA" = "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+      - name: Build the sealed candidate once
+        env:
+          PRODUCTION_ENV_AUTHORITY: ${{ vars.HOMECOOK_CAMPAIGN_PRODUCTION_ENV_AUTHORITY }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          umask 077
+          pnpm release:campaign:prepare -- \
+            --release-sha "$RELEASE_SHA" \
+            --production-env-authority "$PRODUCTION_ENV_AUTHORITY" \
+            --json > "$RUNNER_TEMP/campaign-prepare.json"
+      - name: Run the one isolated candidate and previous-bundle rollback rehearsal
+        env:
+          PRODUCTION_ENV_AUTHORITY: ${{ vars.HOMECOOK_CAMPAIGN_PRODUCTION_ENV_AUTHORITY }}
+        run: |
+          candidate_root="$(jq -er '.candidate_root' "$RUNNER_TEMP/campaign-prepare.json")"
+          pnpm release:campaign:rehearse -- \
+            --candidate "$candidate_root" \
+            --production-env-authority "$PRODUCTION_ENV_AUTHORITY" \
+            --json > "$RUNNER_TEMP/rehearsal-run.json"
+      - name: Capture production snapshot and fresh encrypted backup
+        env:
+          PRODUCTION_ENV_AUTHORITY: ${{ vars.HOMECOOK_CAMPAIGN_PRODUCTION_ENV_AUTHORITY }}
+        run: |
+          pnpm release:rehearsal:inventory -- \
+            --production-env-authority "$PRODUCTION_ENV_AUTHORITY" \
+            --json > "$RUNNER_TEMP/production-inventory.json"
+          pnpm full-local-production:platform-backup -- \
+            --config "$PRODUCTION_ENV_AUTHORITY" \
+            --output "$RUNNER_TEMP/backup.archive" \
+            > "$RUNNER_TEMP/backup-result.json"
+          pnpm full-local-production:platform-backup:verify -- \
+            --archive "$RUNNER_TEMP/backup.archive" \
+            > "$RUNNER_TEMP/backup-verification.json"
+      - name: Package exact candidate bytes
+        run: |
+          candidate_root="$(jq -er '.candidate_root' "$RUNNER_TEMP/campaign-prepare.json")"
+          /usr/bin/tar -cf "$RUNNER_TEMP/bundle.tar" -C "$candidate_root" .
+      - name: Seal producer authorities from actual helper outputs
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          node scripts/marketing-campaign-release-authority-producer.mjs \
+            --release-sha "$RELEASE_SHA" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-attempt "${{ github.run_attempt }}" \
+            --home-dir "$HOME" \
+            --candidate-result "$RUNNER_TEMP/campaign-prepare.json" \
+            --rehearsal-result "$RUNNER_TEMP/rehearsal-run.json" \
+            --production-inventory "$RUNNER_TEMP/production-inventory.json" \
+            --backup-result "$RUNNER_TEMP/backup-result.json" \
+            --backup-verification "$RUNNER_TEMP/backup-verification.json" \
+            --bundle "$RUNNER_TEMP/bundle.tar" \
+            --backup-archive "$RUNNER_TEMP/backup.archive" \
+            --output-root "$RUNNER_TEMP"
+      - name: Upload immutable producer evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: marketing-campaign-release-authority
+          path: |
+            ${{ runner.temp }}/campaign-prepare.json
+            ${{ runner.temp }}/rehearsal-run.json
+            ${{ runner.temp }}/production-inventory.json
+            ${{ runner.temp }}/backup.archive
+            ${{ runner.temp }}/backup-result.json
+            ${{ runner.temp }}/backup-verification.json
+            ${{ runner.temp }}/bundle.tar
+            ${{ runner.temp }}/bundle-authority.json
+            ${{ runner.temp }}/rehearsal-receipt.json
+            ${{ runner.temp }}/production-snapshot.json
+            ${{ runner.temp }}/backup-receipt.json
+            ${{ runner.temp }}/previous-bundle.json

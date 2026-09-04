@@ -10,6 +10,8 @@ import {
   validateCampaignManifest,
   verifyCampaignPromotionAuthority,
 } from "./lib/marketing-campaign-fast-release.mjs";
+import { verifyCampaignGitHubAttestation } from "./lib/marketing-campaign-github-attestation.mjs";
+import { validateProductionInventory } from "./lib/local-mac-production-rehearsal-inventory.mjs";
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -83,13 +85,19 @@ export function runCampaignAuthorityCli(argv, { now = () => new Date(), output =
     const manifest = validateCampaignManifest(jsonFile(options, "manifest"));
     const predicateBytes = bytesFile(options, "predicate");
     const attestationBytes = bytesFile(options, "attestation_bundle");
+    const cryptographic = verifyCampaignGitHubAttestation({
+      manifestPath: pathOption(options, "manifest"),
+      attestationBundlePath: pathOption(options, "attestation_bundle"),
+      predicatePath: pathOption(options, "predicate"),
+      releaseSha: manifest.release_sha,
+    });
     result = sealCampaignAuthorityArtifact({
       schema: "homecook.marketing-campaign-attestation-authority.v1",
       repository: "netsus/homecook",
       release_sha: manifest.release_sha,
       release_tag: manifest.release_tag,
       manifest_sha256: manifest.manifest_sha256,
-      subject_sha256: manifest.manifest_sha256,
+      subject_sha256: cryptographic.subject_sha256,
       predicate_sha256: createHash("sha256").update(predicateBytes).digest("hex"),
       release_bundle_sha256: manifest.release_bundle_sha256,
       github_attestation_bundle_sha256: createHash("sha256").update(attestationBytes).digest("hex"),
@@ -97,6 +105,13 @@ export function runCampaignAuthorityCli(argv, { now = () => new Date(), output =
     }, "attestation_sha256");
     writeCreateOnly(pathOption(options, "output"), result);
   } else if (options.command === "verify") {
+    const boundSnapshot = jsonFile(options, "production_snapshot");
+    if (options.live_inventory) {
+      const liveInventory = validateProductionInventory(jsonFile(options, "live_inventory"));
+      if (liveInventory.surface_digest !== boundSnapshot.inventory_sha256) {
+        throw new Error("Live production snapshot drifted from approved authority.");
+      }
+    }
     result = verifyCampaignPromotionAuthority({
       manifest: jsonFile(options, "manifest"),
       attestation: jsonFile(options, "attestation_authority"),
@@ -106,10 +121,16 @@ export function runCampaignAuthorityCli(argv, { now = () => new Date(), output =
       backupArchiveBytes: bytesFile(options, "backup_archive"),
       bundle: jsonFile(options, "bundle_authority"),
       rehearsal: jsonFile(options, "rehearsal_receipt"),
-      snapshot: jsonFile(options, "production_snapshot"),
+      snapshot: boundSnapshot,
       backup: jsonFile(options, "backup_receipt"),
       approval: jsonFile(options, "approval_authority"),
       now: now(),
+      attestationVerifier: () => verifyCampaignGitHubAttestation({
+        manifestPath: pathOption(options, "manifest"),
+        attestationBundlePath: pathOption(options, "attestation_bundle"),
+        predicatePath: pathOption(options, "predicate"),
+        releaseSha: jsonFile(options, "manifest").release_sha,
+      }),
     });
   } else {
     throw new Error("Campaign authority command must be seal-approval, build-manifest, seal-attestation, or verify.");

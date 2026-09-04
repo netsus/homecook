@@ -270,13 +270,17 @@ describe("marketing campaign fast release authority", () => {
     }));
   });
 
-  it("keeps the author CLI activation blocked before production adapters", async () => {
-    const createProductionAdapters = vi.fn();
+  it("routes active promotion through the full authority operation", async () => {
+    const promote = vi.fn(async () => ({ promoted: true }));
     await expect(runMarketingCampaignFastReleaseCli(
-      ["promote", "--manifest", "/private/manifest.json"],
-      { createProductionAdapters },
-    )).rejects.toThrow(/activation_blocked/u);
-    expect(createProductionAdapters).not.toHaveBeenCalled();
+      ["promote", "--authority-root", "/private/campaign-authority", "--json"],
+      {
+        clock: () => new Date("2026-09-04T00:08:00.000Z"),
+        operations: { promote },
+        output: { write: vi.fn() },
+      },
+    )).resolves.toEqual({ promoted: true });
+    expect(promote).toHaveBeenCalledTimes(1);
   });
 
   it("declares separate campaign workflows and package commands", () => {
@@ -294,13 +298,13 @@ describe("marketing campaign fast release authority", () => {
       expect(packageJson.scripts[`release:campaign:${command}`]).toBeTruthy();
     }
     expect(releaseWorkflow).toContain("production-release-approval");
-    expect(releaseWorkflow).toContain("activation_blocked");
+    expect(releaseWorkflow).not.toContain("activation_blocked");
     expect(releaseWorkflow).toContain("2026-09-15T15:00:00.000Z");
     expect(releaseWorkflow).toContain("marketing-campaign-fast-release-authority.mjs verify");
     expect(releaseWorkflow).toContain("predicate-path:");
     expect(releaseWorkflow).toContain("actions/download-artifact@");
     expect(releaseWorkflow).not.toContain("manifest_b64");
-    expect(releaseWorkflow).toContain("gh attestation verify");
+    expect(releaseWorkflow).toContain("seal-attestation");
     expect(releaseWorkflow.match(/Date\.now\(\) >= Date\.parse/g)?.length).toBeGreaterThanOrEqual(4);
     expect(assuranceWorkflow).toContain("test:local-mac-production-release");
     expect(assuranceWorkflow).toContain("schedule:");

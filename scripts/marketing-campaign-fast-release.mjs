@@ -10,7 +10,7 @@ import {
 } from "./lib/marketing-campaign-fast-release.mjs";
 import { createDefaultCampaignReleaseOperations } from "./lib/marketing-campaign-fast-release-operations.mjs";
 
-export const CAMPAIGN_PROMOTION_ACTIVATION_BLOCKED = true;
+export const CAMPAIGN_PROMOTION_ACTIVATION_BLOCKED = false;
 
 function parseArgs(argv) {
   const [command = "help", ...rest] = argv;
@@ -98,7 +98,8 @@ export async function runMarketingCampaignFastReleaseCli(
       "activation_blocked: campaign promote requires independent review, current-head green checks, and release-promoter activation before production adapters are created.",
     );
   }
-  if (["plan", "prepare", "rehearse", "rollback"].includes(options.command)) {
+  if (["plan", "prepare", "rehearse", "rollback", "promote"].includes(options.command)
+    || (options.command === "verify" && options.authorityRoot)) {
     const operation = operations[options.command];
     if (typeof operation !== "function") throw new Error(`${options.command} operation is unavailable.`);
     const result = await operation(options, { clock });
@@ -115,12 +116,7 @@ export async function runMarketingCampaignFastReleaseCli(
     output.write(`${JSON.stringify(result, null, options.json ? 2 : 0)}\n`);
     return result;
   }
-  if (options.command === "promote") {
-    if (typeof createProductionAdapters !== "function") {
-      throw new Error("Campaign production adapter factory is unavailable.");
-    }
-    throw new Error("activation_blocked: promote requires the complete downloaded authority bundle, not a manifest-only adapter path.");
-  }
+  void createProductionAdapters;
   throw new Error(`Unknown campaign command: ${options.command}.`);
 }
 

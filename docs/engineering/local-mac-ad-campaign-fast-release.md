@@ -1,6 +1,6 @@
 # Homecook 광고 캠페인 경량 release 계약
 
-상태: **canonical / implementation authoring approved / production activation blocked until independent approval**
+상태: **canonical / active workflow implementation pending independent approval**
 
 변경 유형: `docs-governance`
 
@@ -17,6 +17,7 @@
 - actual production-changing command는 independent review와 current-head checks가 닫힌 뒤 `release-promoter` task만 실행한다.
 - production human gate는 GitHub environment `production-release-approval`의 prevent-self-review approval 정확히 한 번이다. CLI confirmation은 두 번째 human approval이 아니다.
 - 기존 `release:production:promote` activation은 계속 닫혀 있다. 캠페인 lane의 activation 여부는 별도 manifest와 만료 gate로만 판단한다.
+- campaign workflow는 manual `workflow_dispatch`와 exact producer run, 한 번의 `production-release-approval` environment를 통과해야만 실행된다. PR/push/schedule event는 production promotion을 시작하지 않는다.
 
 ## 만료와 kill switch
 
@@ -90,15 +91,18 @@ Steady-state 목표는 human approval 대기 시간을 제외하고 10~20분이�
 - annotated `prod-YYYYMMDD.N` tag는 exact release SHA와 manifest digest를 기록하며 이동/삭제하지 않는다.
 - attestation subject는 exact manifest bytes이고 repository/source ref/release SHA/tag/manifest digest/approval identity를 검증한다.
 - custom attestation은 nonempty `predicate-path`와 campaign predicate type을 사용한다. 발급 뒤 `gh attestation verify` 결과와 attestation bundle SHA-256을 campaign attestation authority에 결합한 다음에만 promotion input으로 인정한다.
+- cryptographic verifier는 trusted absolute `gh` executable, exact signer workflow, signer/source digest, `refs/heads/master`, campaign predicate type, exact manifest subject SHA-256와 predicate JSON equality를 production 직전에 다시 확인한다.
 
 ## Promotion transaction과 rollback
 
 - campaign CLI가 자체 low-level mutation을 새로 구현하지 않는다. 기존 production promotion lock과 app/full-local/YouTube worker transactional install/recovery helper를 호출한다.
+- public `release:campaign:verify`는 manifest-only 검사가 아니다. authority root의 CI, bundle/backup bytes, rehearsal/snapshot/approval, predicate와 GitHub attestation bundle을 모두 다시 검증한다.
 - first mutation 직전에 expiry, exact origin/master SHA, manifest/attestation, backup freshness, rehearsal receipt, current production snapshot equality를 다시 검증한다.
 - install과 postdeploy 검증은 같은 production lock과 promotion transaction 안에서 수행한다.
 - install, readiness 또는 postdeploy 검증 중 하나라도 실패하면 candidate worker를 먼저 중지하고 previous worker/app LaunchAgent와 previous full-local `resume-current`를 복구한다. additive DB schema는 유지한다.
 - rollback 후 previous internal/public health를 다시 확인한다. rollback도 실패하면 maintenance 상태를 유지하고 `manual_recovery_required`로 종료한다.
 - rollback helper의 정상 반환만으로 복구 성공으로 보지 않는다. exact `{ recovered: true }`, previous app/full-local/worker의 release SHA/build ID/bundle digest 일치, internal/public health pass를 독립 readback으로 다시 확인한다. `false`, `undefined`, identity drift 또는 health failure는 `manual_recovery_required`다.
+- public rollback은 worker-only helper를 호출하지 않는다. active production lock과 exact transaction authority를 소비하는 full app/full-local/worker recovery adapter가 없으면 mutation 전에 실패한다.
 - 자동 backup restore와 destructive DB reset/volume delete는 이 lane에 포함하지 않는다.
 
 ## Postdeploy required checks
