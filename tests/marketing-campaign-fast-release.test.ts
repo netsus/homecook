@@ -12,7 +12,6 @@ import {
   createCampaignProductionAdapterBridge,
   prepareCampaignBundle,
   rehearseCampaignBundle,
-  runCampaignPromotionTransaction,
   selectLatestRequiredCampaignChecks,
   validateCampaignPostdeployEvidence,
   validateCampaignManifest,
@@ -22,6 +21,15 @@ import { runMarketingCampaignFastReleaseCli } from "../scripts/marketing-campaig
 const RELEASE_SHA = "1".repeat(40);
 const RELEASE_TREE = "2".repeat(40);
 const DIGEST = "a".repeat(64);
+
+function components() {
+  return ["app", "full-local", "youtube-worker"].map((component) => ({
+    component,
+    release_sha: RELEASE_SHA,
+    build_id: "campaign-build-1",
+    release_bundle_sha256: DIGEST,
+  }));
+}
 
 function successfulCheck(name: string, id: number, completedAt = "2026-09-04T00:00:00.000Z") {
   return {
@@ -50,28 +58,12 @@ function manifestInput() {
     rehearsal_receipt_sha256: "c".repeat(64),
     production_snapshot_sha256: "d".repeat(64),
     backup_receipt_sha256: "e".repeat(64),
-    previous_release_sha: "3".repeat(40),
-    approval: {
-      environment: "production-release-approval",
-      approved: true,
-      approval_count: 1,
-      prevent_self_review: true,
-      approver: "human-release-approver",
+    approval_authority_sha256: "f".repeat(64),
+    previous_bundle: {
+      release_sha: "3".repeat(40),
+      build_id: "previous-build",
+      release_bundle_sha256: "4".repeat(64),
     },
-    rehearsal: {
-      run_count: 1,
-      candidate_health: "pass",
-      previous_bundle_rollback: "pass",
-      production_guard: "unchanged",
-      cleanup: "complete",
-    },
-    backup: { fresh: true, encrypted: true, verified: true },
-    components: ["app", "full-local", "youtube-worker"].map((component) => ({
-      component,
-      release_sha: RELEASE_SHA,
-      build_id: "campaign-build-1",
-      release_bundle_sha256: DIGEST,
-    })),
     release_tag: "prod-20260904.1",
   };
 }
@@ -131,26 +123,15 @@ describe("marketing campaign fast release authority", () => {
     })).toThrow(/latest required check quality/u);
   });
 
-  it("locks one rehearsal, verified backup, one approval, and bundle parity", () => {
+  it("locks the minimal authority digest bindings", () => {
     const manifest = buildCampaignManifest(manifestInput());
     expect(validateCampaignManifest(manifest)).toEqual(manifest);
     expect(manifest.manifest_sha256).toMatch(/^[0-9a-f]{64}$/u);
 
     expect(() => buildCampaignManifest({
       ...manifestInput(),
-      rehearsal: { ...manifestInput().rehearsal, run_count: 2 },
-    })).toThrow(/run_count must be exactly 1/u);
-    expect(() => buildCampaignManifest({
-      ...manifestInput(),
-      components: manifestInput().components.map((component, index) => ({
-        ...component,
-        release_bundle_sha256: index === 2 ? "f".repeat(64) : DIGEST,
-      })),
-    })).toThrow(/bundle parity/u);
-    expect(() => buildCampaignManifest({
-      ...manifestInput(),
-      approval: { ...manifestInput().approval, approval_count: 2 },
-    })).toThrow(/approval_count must be exactly 1/u);
+      previous_bundle: { ...manifestInput().previous_bundle, release_bundle_sha256: "bad" },
+    })).toThrow(/previous_bundle.release_bundle_sha256/u);
     expect(() => buildCampaignManifest({
       ...manifestInput(),
       debug_note: "unexpected authority extension",
@@ -165,7 +146,7 @@ describe("marketing campaign fast release authority", () => {
       buildSealedBundleOnce: vi.fn(async () => ({
         build_id: "campaign-build-1",
         release_bundle_sha256: DIGEST,
-        components: manifestInput().components,
+        components: components(),
       })),
     };
     const prepared = await prepareCampaignBundle({
@@ -180,7 +161,13 @@ describe("marketing campaign fast release authority", () => {
 
   it("runs one high-port rehearsal including previous-bundle rollback", async () => {
     const adapters = {
-      reserveHighPort: vi.fn(async () => 42017),
+      reserveIsolation: vi.fn(async () => ({
+        port: 42017,
+        private_root: true,
+        unique_docker_project: true,
+        unique_volumes: true,
+        fresh_database: true,
+      })),
       snapshotProductionReadOnly: vi.fn()
         .mockResolvedValueOnce({ digest: "9".repeat(64) })
         .mockResolvedValueOnce({ digest: "9".repeat(64) }),
@@ -193,7 +180,12 @@ describe("marketing campaign fast release authority", () => {
         release_sha: RELEASE_SHA,
         build_id: "campaign-build-1",
         release_bundle_sha256: DIGEST,
-        components: manifestInput().components,
+        components: ["app", "full-local", "youtube-worker"].map((component) => ({
+          component,
+          release_sha: RELEASE_SHA,
+          build_id: "campaign-build-1",
+          release_bundle_sha256: DIGEST,
+        })),
       },
       now: new Date("2026-09-04T00:00:00.000Z"),
       adapters,
@@ -222,7 +214,7 @@ describe("marketing campaign fast release authority", () => {
 
   it("requires all internal, public, marketing, and worker postdeploy checks", () => {
     const evidence = {
-      components: manifestInput().components,
+      components: components(),
       full_local: {
         healthy_services: [
           "api-gateway", "auth", "auth-proxy", "postgres", "postgrest",
@@ -249,37 +241,6 @@ describe("marketing campaign fast release authority", () => {
       ...evidence,
       public_http: { ...evidence.public_http, privacy: 500 },
     }, manifestInput())).toThrow(/public HTTP checks failed/u);
-  });
-
-  it("rolls back the previous bundle when deploy verification fails", async () => {
-    const calls: string[] = [];
-    const adapters = {
-      acquireProductionLock: vi.fn(async () => {
-        calls.push("lock");
-        return { token: "lock-token" };
-      }),
-      installBundleTransactionally: vi.fn(async () => {
-        calls.push("install");
-        return { installed: true };
-      }),
-      verifyPostdeploy: vi.fn(async () => {
-        calls.push("verify");
-        throw new Error("public health failed");
-      }),
-      rollbackPreviousBundle: vi.fn(async () => {
-        calls.push("rollback");
-        return { recovered: true };
-      }),
-      releaseProductionLock: vi.fn(async () => {
-        calls.push("unlock");
-      }),
-    };
-    await expect(runCampaignPromotionTransaction({
-      manifest: buildCampaignManifest(manifestInput()),
-      now: new Date("2026-09-04T03:00:00.000Z"),
-      adapters,
-    })).rejects.toThrow(/deployment failed and previous bundle was restored/u);
-    expect(calls).toEqual(["lock", "install", "verify", "rollback", "unlock"]);
   });
 
   it("bridges install and readiness through the existing production adapters", async () => {
@@ -335,7 +296,12 @@ describe("marketing campaign fast release authority", () => {
     expect(releaseWorkflow).toContain("production-release-approval");
     expect(releaseWorkflow).toContain("activation_blocked");
     expect(releaseWorkflow).toContain("2026-09-15T15:00:00.000Z");
-    expect(releaseWorkflow).toContain("release:campaign:promote");
+    expect(releaseWorkflow).toContain("marketing-campaign-fast-release-authority.mjs verify");
+    expect(releaseWorkflow).toContain("predicate-path:");
+    expect(releaseWorkflow).toContain("actions/download-artifact@");
+    expect(releaseWorkflow).not.toContain("manifest_b64");
+    expect(releaseWorkflow).toContain("gh attestation verify");
+    expect(releaseWorkflow.match(/Date\.now\(\) >= Date\.parse/g)?.length).toBeGreaterThanOrEqual(4);
     expect(assuranceWorkflow).toContain("test:local-mac-production-release");
     expect(assuranceWorkflow).toContain("schedule:");
   });

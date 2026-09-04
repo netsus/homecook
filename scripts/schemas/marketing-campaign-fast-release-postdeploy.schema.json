@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.marketing-campaign-fast-release-postdeploy.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["components", "full_local", "worker_identity", "internal_readiness", "public_http", "marketing"],
+  "properties": {
+    "components": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/component" }
+    },
+    "full_local": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["healthy_services", "auth_jwks", "volume_provenance", "migration_head", "authorization_contract"],
+      "properties": {
+        "healthy_services": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": { "enum": ["api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage"] }
+        },
+        "auth_jwks": { "const": "pass" },
+        "volume_provenance": { "const": "pass" },
+        "migration_head": { "const": "pass" },
+        "authorization_contract": { "const": "pass" }
+      }
+    },
+    "worker_identity": { "const": "pass" },
+    "internal_readiness": { "const": "pass" },
+    "public_http": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "beta", "privacy", "auth_health"],
+      "properties": {
+        "root": { "const": 200 },
+        "beta": { "const": 200 },
+        "privacy": { "const": 200 },
+        "auth_health": { "const": 401 }
+      }
+    },
+    "marketing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canary_id", "api", "state", "database", "analytics_excludes_canary"],
+      "properties": {
+        "canary_id": { "type": "string", "pattern": "^release_canary_[A-Za-z0-9._-]+$" },
+        "api": { "const": "pass" },
+        "state": { "const": "pass" },
+        "database": { "const": "pass" },
+        "analytics_excludes_canary": { "const": "pass" }
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "release_sha", "build_id", "release_bundle_sha256"],
+      "properties": {
+        "component": { "enum": ["app", "full-local", "youtube-worker"] },
+        "release_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "build_id": { "type": "string", "minLength": 1 },
+        "release_bundle_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

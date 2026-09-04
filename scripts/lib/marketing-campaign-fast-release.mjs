@@ -22,28 +22,33 @@ const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const TAG_PATTERN = /^prod-[0-9]{8}\.[1-9][0-9]*$/u;
 const MUTATING_COMMANDS = new Set(["plan", "prepare", "rehearse", "promote"]);
 const READ_ONLY_COMMANDS = new Set(["status", "verify"]);
-const SECRET_KEY_PATTERN = /(?:^|_)(?:cookie|credential|env|password|private_key|secret|token)(?:_|$)/iu;
+const SECRET_KEY_PATTERN = /(?:^|_)(?:access_key|api_key|argv|cookie|credential|env|password|payload|private_key|secret|service_role_key|stderr|stdout|token)(?:_|$)/iu;
 const SECRET_VALUE_PATTERNS = [
   /authorization\s*:\s*bearer\s+\S+/iu,
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
   /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/u,
+  /\bgh[ps]_[A-Za-z0-9_]{20,}\b/u,
+  /^\//u,
 ];
 const MANIFEST_FIELDS = new Set([
   "schema", "expires_at", "repository", "source_ref", "release_sha", "release_tree",
   "build_id", "release_bundle_sha256", "required_ci_evidence_sha256",
   "rehearsal_receipt_sha256", "production_snapshot_sha256", "backup_receipt_sha256",
-  "previous_release_sha", "approval", "rehearsal", "backup", "components", "release_tag",
-  "manifest_sha256",
+  "approval_authority_sha256", "previous_bundle", "release_tag", "manifest_sha256",
 ]);
-const APPROVAL_FIELDS = new Set([
-  "environment", "approved", "approval_count", "prevent_self_review", "approver",
-]);
-const REHEARSAL_FIELDS = new Set([
-  "run_count", "candidate_health", "previous_bundle_rollback", "production_guard", "cleanup",
-]);
-const BACKUP_FIELDS = new Set(["fresh", "encrypted", "verified"]);
 const COMPONENT_FIELDS = new Set([
   "component", "release_sha", "build_id", "release_bundle_sha256",
+]);
+const PREVIOUS_BUNDLE_FIELDS = new Set(["release_sha", "build_id", "release_bundle_sha256"]);
+const POSTDEPLOY_FIELDS = new Set([
+  "components", "full_local", "worker_identity", "internal_readiness", "public_http", "marketing",
+]);
+const POSTDEPLOY_FULL_LOCAL_FIELDS = new Set([
+  "healthy_services", "auth_jwks", "volume_provenance", "migration_head", "authorization_contract",
+]);
+const POSTDEPLOY_HTTP_FIELDS = new Set(["root", "beta", "privacy", "auth_health"]);
+const POSTDEPLOY_MARKETING_FIELDS = new Set([
+  "canary_id", "api", "state", "database", "analytics_excludes_canary",
 ]);
 
 function fail(message) {
@@ -106,6 +111,29 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function authorityDigest(value, digestField) {
+  const copy = { ...requireObject(value, "Authority artifact") };
+  delete copy[digestField];
+  return sha256(canonicalJson(copy));
+}
+
+export function sealCampaignAuthorityArtifact(value, digestField) {
+  const field = requireString(digestField, "Authority digest field");
+  const payload = { ...requireObject(value, "Authority artifact") };
+  delete payload[field];
+  assertNoCampaignSecretMaterial(payload);
+  return Object.freeze({ ...payload, [field]: authorityDigest(payload, field) });
+}
+
+function verifyCampaignAuthorityArtifact(value, digestField, label) {
+  const artifact = requireObject(value, `${label} authority input`);
+  const observed = requireDigest(artifact[digestField], `${label}.${digestField}`);
+  const expected = authorityDigest(artifact, digestField);
+  if (observed !== expected) fail(`${label}.${digestField} does not match the actual authority bytes.`);
+  assertNoCampaignSecretMaterial(artifact);
+  return artifact;
+}
+
 function compareLatest(left, right) {
   const timestamp = Date.parse(left.completed_at) - Date.parse(right.completed_at);
   if (timestamp !== 0) return timestamp;
@@ -152,6 +180,28 @@ export function assertCampaignCommandAllowed({
   }
   if (typeof beforeSensitiveAccess === "function") beforeSensitiveAccess();
   return normalized;
+}
+
+export function verifyCampaignActiveTransaction(value) {
+  const transaction = verifyCampaignAuthorityArtifact(
+    value,
+    "transaction_sha256",
+    "active_transaction",
+  );
+  requireExact(
+    transaction.schema,
+    "homecook.marketing-campaign-production-transaction.v1",
+    "active_transaction.schema",
+  );
+  requireString(transaction.transaction_id, "active_transaction.transaction_id");
+  requireSha(transaction.release_sha, "active_transaction.release_sha");
+  requireSha(transaction.previous_release_sha, "active_transaction.previous_release_sha");
+  requireExact(transaction.state, "failed_deploy", "active_transaction.state");
+  const startedAt = Date.parse(transaction.started_at);
+  if (!Number.isFinite(startedAt) || startedAt >= Date.parse(CAMPAIGN_RELEASE_EXPIRES_AT)) {
+    fail("Active transaction must have started before campaign expiry.");
+  }
+  return transaction;
 }
 
 export function selectLatestRequiredCampaignChecks({ releaseSha, checkRuns }) {
@@ -209,38 +259,6 @@ export function assertNoCampaignSecretMaterial(value, path = "evidence") {
   return value;
 }
 
-function validateApproval(value) {
-  const approval = requireObject(value, "approval");
-  requireExactKeys(approval, APPROVAL_FIELDS, "approval");
-  requireExact(approval.environment, "production-release-approval", "approval.environment");
-  requireExact(approval.approved, true, "approval.approved");
-  if (approval.approval_count !== 1) fail("approval.approval_count must be exactly 1.");
-  requireExact(approval.prevent_self_review, true, "approval.prevent_self_review");
-  requireString(approval.approver, "approval.approver");
-}
-
-function validateRehearsal(value) {
-  const rehearsal = requireObject(value, "rehearsal");
-  requireExactKeys(rehearsal, REHEARSAL_FIELDS, "rehearsal");
-  if (rehearsal.run_count !== 1) fail("rehearsal.run_count must be exactly 1.");
-  requireExact(rehearsal.candidate_health, "pass", "rehearsal.candidate_health");
-  requireExact(
-    rehearsal.previous_bundle_rollback,
-    "pass",
-    "rehearsal.previous_bundle_rollback",
-  );
-  requireExact(rehearsal.production_guard, "unchanged", "rehearsal.production_guard");
-  requireExact(rehearsal.cleanup, "complete", "rehearsal.cleanup");
-}
-
-function validateBackup(value) {
-  const backup = requireObject(value, "backup");
-  requireExactKeys(backup, BACKUP_FIELDS, "backup");
-  requireExact(backup.fresh, true, "backup.fresh");
-  requireExact(backup.encrypted, true, "backup.encrypted");
-  requireExact(backup.verified, true, "backup.verified");
-}
-
 function validateComponents(value, manifest) {
   if (!Array.isArray(value) || value.length !== 3) {
     fail("components must contain exact app, full-local, and youtube-worker identities.");
@@ -259,6 +277,15 @@ function validateComponents(value, manifest) {
   }
 }
 
+function validatePreviousBundle(value) {
+  const previous = requireObject(value, "previous_bundle");
+  requireExactKeys(previous, PREVIOUS_BUNDLE_FIELDS, "previous_bundle");
+  requireSha(previous.release_sha, "previous_bundle.release_sha");
+  requireString(previous.build_id, "previous_bundle.build_id");
+  requireDigest(previous.release_bundle_sha256, "previous_bundle.release_bundle_sha256");
+  return previous;
+}
+
 export function validateCampaignManifest(value, { now = null, requireFresh = false } = {}) {
   const manifest = requireObject(value, "Campaign manifest");
   requireExactKeys(manifest, MANIFEST_FIELDS, "Campaign manifest");
@@ -275,15 +302,12 @@ export function validateCampaignManifest(value, { now = null, requireFresh = fal
     "rehearsal_receipt_sha256",
     "production_snapshot_sha256",
     "backup_receipt_sha256",
+    "approval_authority_sha256",
   ]) requireDigest(manifest[field], field);
-  requireSha(manifest.previous_release_sha, "previous_release_sha");
+  validatePreviousBundle(manifest.previous_bundle);
   if (!TAG_PATTERN.test(requireString(manifest.release_tag, "release_tag"))) {
     fail("release_tag must match prod-YYYYMMDD.N.");
   }
-  validateApproval(manifest.approval);
-  validateRehearsal(manifest.rehearsal);
-  validateBackup(manifest.backup);
-  validateComponents(manifest.components, manifest);
   assertNoCampaignSecretMaterial(manifest);
   const withoutDigest = { ...manifest };
   delete withoutDigest.manifest_sha256;
@@ -305,10 +329,208 @@ export function buildCampaignManifest(input) {
   return Object.freeze(validateCampaignManifest(manifest));
 }
 
+function validateBundleAuthority(bundle, bundleBytes) {
+  const authority = verifyCampaignAuthorityArtifact(bundle, "authority_sha256", "bundle");
+  requireExact(authority.schema, "homecook.marketing-campaign-bundle-authority.v1", "bundle.schema");
+  requireSha(authority.release_sha, "bundle.release_sha");
+  requireSha(authority.release_tree, "bundle.release_tree");
+  requireString(authority.build_id, "bundle.build_id");
+  requireDigest(authority.release_bundle_sha256, "bundle.release_bundle_sha256");
+  if (!Buffer.isBuffer(bundleBytes) || sha256(bundleBytes) !== authority.release_bundle_sha256) {
+    fail("Actual sealed bundle bytes do not match release_bundle_sha256.");
+  }
+  validateComponents(authority.components, authority);
+  validateCampaignAuthorityProducer(authority.producer, authority.release_sha);
+  return authority;
+}
+
+function validateCampaignAuthorityProducer(value, releaseSha) {
+  const producer = requireObject(value, "authority producer");
+  requireExact(producer.repository, REPOSITORY, "authority producer.repository");
+  requireExact(
+    producer.workflow_path,
+    ".github/workflows/marketing-campaign-release-authority.yml",
+    "authority producer.workflow_path",
+  );
+  requireExact(producer.workflow_head_sha, releaseSha, "authority producer.workflow_head_sha");
+  requireExact(producer.workflow_run_attempt, 1, "authority producer.workflow_run_attempt");
+  if (!Number.isInteger(producer.workflow_run_id) || producer.workflow_run_id <= 0) {
+    fail("authority producer.workflow_run_id must be a positive integer.");
+  }
+  return producer;
+}
+
+function validateRehearsalAuthority(rehearsal, bundle) {
+  const receipt = verifyCampaignAuthorityArtifact(rehearsal, "receipt_sha256", "rehearsal");
+  requireExact(receipt.schema, "homecook.marketing-campaign-rehearsal-receipt.v1", "rehearsal.schema");
+  if (receipt.release_sha !== bundle.release_sha || receipt.build_id !== bundle.build_id
+    || receipt.release_bundle_sha256 !== bundle.release_bundle_sha256) {
+    fail("Rehearsal receipt is not bound to the actual sealed bundle.");
+  }
+  validateCampaignAuthorityProducer(receipt.producer, bundle.release_sha);
+  if (receipt.run_count !== 1) fail("Rehearsal run_count must be exactly 1.");
+  for (const [field, expected] of Object.entries({
+    candidate_health: "pass", previous_bundle_rollback: "pass",
+    production_guard: "unchanged", cleanup: "complete",
+  })) requireExact(receipt[field], expected, `rehearsal.${field}`);
+  const isolation = requireObject(receipt.isolation, "rehearsal.isolation");
+  for (const field of ["private_root", "unique_docker_project", "unique_volumes", "fresh_database"]) {
+    requireExact(isolation[field], true, `rehearsal.isolation.${field}`);
+  }
+  return receipt;
+}
+
+function validateSnapshotAuthority(snapshot, releaseSha) {
+  const value = verifyCampaignAuthorityArtifact(snapshot, "snapshot_sha256", "production_snapshot");
+  requireExact(value.schema, "homecook.marketing-campaign-production-snapshot.v1", "production_snapshot.schema");
+  requireExact(value.complete, true, "production_snapshot.complete");
+  requireExact(value.promotion_safe, true, "production_snapshot.promotion_safe");
+  requireSha(value.previous_release_sha, "production_snapshot.previous_release_sha");
+  validateCampaignAuthorityProducer(value.producer, releaseSha);
+  requireString(value.captured_at, "production_snapshot.captured_at");
+  return value;
+}
+
+function validateBackupAuthority(backup, snapshot, now, backupArchiveBytes) {
+  const value = verifyCampaignAuthorityArtifact(backup, "receipt_sha256", "backup");
+  requireExact(value.schema, "homecook.marketing-campaign-backup-receipt.v1", "backup.schema");
+  requireExact(value.source_snapshot_sha256, snapshot.snapshot_sha256, "backup.source_snapshot_sha256");
+  requireDigest(value.archive_sha256, "backup.archive_sha256");
+  if (!Buffer.isBuffer(backupArchiveBytes) || sha256(backupArchiveBytes) !== value.archive_sha256) {
+    fail("Actual encrypted backup archive bytes do not match backup.archive_sha256.");
+  }
+  requireExact(value.encrypted, true, "backup.encrypted");
+  requireExact(value.verified, true, "backup.verified");
+  validateCampaignAuthorityProducer(value.producer, snapshot.producer.workflow_head_sha);
+  const createdAt = Date.parse(value.created_at);
+  const current = now instanceof Date ? now.getTime() : Date.parse(now);
+  if (!Number.isFinite(createdAt) || !Number.isFinite(current)
+    || createdAt > current || current - createdAt > 24 * 60 * 60 * 1000) {
+    fail("Campaign promotion requires a fresh backup created within 24 hours.");
+  }
+  return value;
+}
+
+function validateApprovalAuthority(approval, releaseSha) {
+  const value = verifyCampaignAuthorityArtifact(approval, "authority_sha256", "approval");
+  requireExact(value.schema, "homecook.marketing-campaign-approval-authority.v1", "approval.schema");
+  requireExact(value.environment, "production-release-approval", "approval.environment");
+  requireExact(value.reviewer_id, 57648890, "approval.reviewer_id");
+  requireExact(value.prevent_self_review, true, "approval.prevent_self_review");
+  requireExact(value.workflow_run_attempt, 1, "approval.workflow_run_attempt");
+  requireExact(value.workflow_head_sha, releaseSha, "approval.workflow_head_sha");
+  const approvedAt = Date.parse(requireString(value.approved_at, "approval.approved_at"));
+  if (!Number.isFinite(approvedAt) || approvedAt >= Date.parse(CAMPAIGN_RELEASE_EXPIRES_AT)) {
+    fail("approval.approved_at must be before campaign expiry.");
+  }
+  if (!Number.isInteger(value.workflow_run_id) || value.workflow_run_id <= 0) {
+    fail("approval.workflow_run_id must be a positive integer.");
+  }
+  return value;
+}
+
+export function buildCampaignManifestFromAuthorities({
+  releaseTag, ciCheckRuns, bundleBytes, backupArchiveBytes, bundle, rehearsal, snapshot, backup, approval, previousBundle,
+  now = new Date(),
+}) {
+  const bundleAuthority = validateBundleAuthority(bundle, bundleBytes);
+  const ci = selectLatestRequiredCampaignChecks({
+    releaseSha: bundleAuthority.release_sha,
+    checkRuns: ciCheckRuns,
+  });
+  const rehearsalAuthority = validateRehearsalAuthority(rehearsal, bundleAuthority);
+  const snapshotAuthority = validateSnapshotAuthority(snapshot, bundleAuthority.release_sha);
+  const approvalAuthority = validateApprovalAuthority(approval, bundleAuthority.release_sha);
+  const previous = validatePreviousBundle(previousBundle);
+  requireExact(snapshotAuthority.previous_release_sha, previous.release_sha, "snapshot previous release");
+  const backupAuthority = validateBackupAuthority(backup, snapshotAuthority, now, backupArchiveBytes);
+  const snapshotAt = Date.parse(snapshotAuthority.captured_at);
+  const backupAt = Date.parse(backupAuthority.created_at);
+  const approvedAt = Date.parse(approvalAuthority.approved_at);
+  if (!Number.isFinite(snapshotAt) || snapshotAt > backupAt || backupAt > approvedAt) {
+    fail("Campaign snapshot, backup, and approval authority must be ordered.");
+  }
+  return buildCampaignManifest({
+    schema: CAMPAIGN_RELEASE_SCHEMA,
+    expires_at: CAMPAIGN_RELEASE_EXPIRES_AT,
+    repository: REPOSITORY,
+    source_ref: SOURCE_REF,
+    release_sha: bundleAuthority.release_sha,
+    release_tree: bundleAuthority.release_tree,
+    build_id: bundleAuthority.build_id,
+    release_bundle_sha256: bundleAuthority.release_bundle_sha256,
+    required_ci_evidence_sha256: ci.sha256,
+    rehearsal_receipt_sha256: rehearsalAuthority.receipt_sha256,
+    production_snapshot_sha256: snapshotAuthority.snapshot_sha256,
+    backup_receipt_sha256: backupAuthority.receipt_sha256,
+    approval_authority_sha256: approvalAuthority.authority_sha256,
+    previous_bundle: previous,
+    release_tag: releaseTag,
+  });
+}
+
+/** @param {Record<string, any>} options */
+export function verifyCampaignPromotionAuthority({
+  manifest, attestation, attestationBundleBytes, ciCheckRuns, bundleBytes, backupArchiveBytes, bundle, rehearsal, snapshot, backup, approval, now = new Date(),
+}) {
+  if (![manifest, attestation, attestationBundleBytes, ciCheckRuns, bundleBytes, backupArchiveBytes, bundle, rehearsal, snapshot, backup, approval]
+    .every((value) => value !== undefined && value !== null)) {
+    fail("Every campaign authority input is required for promotion.");
+  }
+  const candidate = validateCampaignManifest(manifest, { now, requireFresh: true });
+  const expected = buildCampaignManifestFromAuthorities({
+    releaseTag: candidate.release_tag,
+    ciCheckRuns,
+    bundleBytes,
+    backupArchiveBytes,
+    bundle,
+    rehearsal,
+    snapshot,
+    backup,
+    approval,
+    previousBundle: candidate.previous_bundle,
+    now,
+  });
+  if (canonicalJson(expected) !== canonicalJson(candidate)) fail("Campaign manifest is not derived from actual authority inputs.");
+  const snapshotAuthority = validateSnapshotAuthority(snapshot, candidate.release_sha);
+  validateBackupAuthority(backup, snapshotAuthority, now, backupArchiveBytes);
+  const attestationAuthority = verifyCampaignAuthorityArtifact(attestation, "attestation_sha256", "attestation");
+  for (const [field, expectedValue] of Object.entries({
+    schema: "homecook.marketing-campaign-attestation-authority.v1",
+    repository: REPOSITORY,
+    release_sha: candidate.release_sha,
+    release_tag: candidate.release_tag,
+    manifest_sha256: candidate.manifest_sha256,
+    subject_sha256: candidate.manifest_sha256,
+    release_bundle_sha256: candidate.release_bundle_sha256,
+    verified: true,
+  })) requireExact(attestationAuthority[field], expectedValue, `attestation.${field}`);
+  requireDigest(attestationAuthority.predicate_sha256, "attestation.predicate_sha256");
+  requireDigest(
+    attestationAuthority.github_attestation_bundle_sha256,
+    "attestation.github_attestation_bundle_sha256",
+  );
+  if (!Buffer.isBuffer(attestationBundleBytes)
+    || sha256(attestationBundleBytes) !== attestationAuthority.github_attestation_bundle_sha256) {
+    fail("GitHub attestation result bytes do not match the verified attestation authority.");
+  }
+  return Object.freeze({
+    verified: true,
+    manifest: candidate,
+    release_bundle_sha256: candidate.release_bundle_sha256,
+    authority_sha256: sha256(canonicalJson({
+      manifest_sha256: candidate.manifest_sha256,
+      attestation_sha256: attestationAuthority.attestation_sha256,
+    })),
+  });
+}
+
 export function validateCampaignPostdeployEvidence(value, manifest) {
   const evidence = requireObject(value, "Postdeploy evidence");
+  requireExactKeys(evidence, POSTDEPLOY_FIELDS, "Postdeploy evidence");
   validateComponents(evidence.components, manifest);
   const fullLocal = requireObject(evidence.full_local, "Postdeploy full_local");
+  requireExactKeys(fullLocal, POSTDEPLOY_FULL_LOCAL_FIELDS, "Postdeploy full_local");
   const expectedServices = [
     "api-gateway", "auth", "auth-proxy", "postgres", "postgrest", "postgrest-probe", "storage",
   ];
@@ -323,11 +545,13 @@ export function validateCampaignPostdeployEvidence(value, manifest) {
   requireExact(evidence.worker_identity, "pass", "Postdeploy worker_identity");
   requireExact(evidence.internal_readiness, "pass", "Postdeploy internal_readiness");
   const publicHttp = requireObject(evidence.public_http, "Postdeploy public_http");
+  requireExactKeys(publicHttp, POSTDEPLOY_HTTP_FIELDS, "Postdeploy public_http");
   if (publicHttp.root !== 200 || publicHttp.beta !== 200
     || publicHttp.privacy !== 200 || publicHttp.auth_health !== 401) {
     fail("Campaign public HTTP checks failed.");
   }
   const marketing = requireObject(evidence.marketing, "Postdeploy marketing");
+  requireExactKeys(marketing, POSTDEPLOY_MARKETING_FIELDS, "Postdeploy marketing");
   if (!/^release_canary_[A-Za-z0-9._-]+$/u.test(marketing.canary_id ?? "")) {
     fail("Marketing canary_id must be PII-free and release-scoped.");
   }
@@ -441,38 +665,57 @@ export async function rehearseCampaignBundle({ prepared, now = new Date(), adapt
   requireString(bundle.build_id, "Prepared build_id");
   requireDigest(bundle.release_bundle_sha256, "Prepared release_bundle_sha256");
   validateComponents(bundle.components, bundle);
-  const reservePort = requireAdapter(adapters, "reserveHighPort");
+  const reserveIsolation = requireAdapter(adapters, "reserveIsolation");
   const snapshot = requireAdapter(adapters, "snapshotProductionReadOnly");
   const runCandidate = requireAdapter(adapters, "runCandidateHealth");
   const runRollback = requireAdapter(adapters, "runPreviousBundleRollback");
   const cleanup = requireAdapter(adapters, "cleanupOwnedResources");
-  const port = await reservePort();
+  const isolation = await reserveIsolation({ bundle });
+  const port = isolation?.port;
   if (!Number.isInteger(port) || port < 20_000 || port > 60_999
     || new Set([3000, 3100, 5432, 54321, 54322, 54323, 54324]).has(port)) {
     fail("Rehearsal port must be one isolated high port in 20000..60999.");
   }
+  for (const field of ["private_root", "unique_docker_project", "unique_volumes", "fresh_database"]) {
+    requireExact(isolation[field], true, `Rehearsal isolation.${field}`);
+  }
   const productionBefore = await snapshot({ phase: "before", readOnly: true });
-  let candidate;
-  let previous;
-  let cleanupResult;
+  /** @type {unknown[]} */
+  const failures = [];
+  let cleanupResult = null;
+  let productionAfter = null;
   try {
-    candidate = await runCandidate({ bundle, port });
+    const candidate = await runCandidate({ bundle, isolation, port });
     if (candidate?.status !== "pass") fail("Campaign candidate health failed.");
-    previous = await runRollback({ additiveMigrationHead: true, bundle, port });
+    const previous = await runRollback({ additiveMigrationHead: true, bundle, isolation, port });
     if (previous?.status !== "pass") fail("Campaign previous bundle rollback rehearsal failed.");
+  } catch (error) {
+    failures.push(error);
   } finally {
-    cleanupResult = await cleanup({ bundle, port });
+    try {
+      cleanupResult = await cleanup({ bundle, isolation, port });
+    } catch (error) {
+      failures.push(error);
+    }
+    try {
+      productionAfter = await snapshot({ phase: "after", readOnly: true });
+    } catch (error) {
+      failures.push(error);
+    }
   }
   if (cleanupResult?.status !== "complete" || cleanupResult?.residue !== 0) {
-    fail("Campaign rehearsal cleanup is incomplete.");
+    failures.push(new Error("Campaign rehearsal cleanup is incomplete."));
   }
-  const productionAfter = await snapshot({ phase: "after", readOnly: true });
   requireDigest(productionBefore?.digest, "Production pre-snapshot digest");
   requireDigest(productionAfter?.digest, "Production post-snapshot digest");
   if (productionBefore.digest !== productionAfter.digest) {
-    fail("Campaign rehearsal changed the production surface.");
+    failures.push(new Error("Campaign rehearsal changed the production surface."));
+  }
+  if (failures.length > 0) {
+    throw new AggregateError(failures, "Campaign rehearsal failed after cleanup and production equality verification.");
   }
   const receipt = {
+    schema: "homecook.marketing-campaign-rehearsal-receipt.v1",
     run_count: 1,
     port,
     release_sha: bundle.release_sha,
@@ -482,8 +725,14 @@ export async function rehearseCampaignBundle({ prepared, now = new Date(), adapt
     previous_bundle_rollback: "pass",
     production_guard: "unchanged",
     cleanup: "complete",
+    isolation: {
+      private_root: true,
+      unique_docker_project: true,
+      unique_volumes: true,
+      fresh_database: true,
+    },
   };
-  return Object.freeze({ ...receipt, receipt_sha256: sha256(canonicalJson(receipt)) });
+  return sealCampaignAuthorityArtifact(receipt, "receipt_sha256");
 }
 
 function requireAdapter(adapters, name) {
@@ -491,40 +740,94 @@ function requireAdapter(adapters, name) {
   return adapters[name];
 }
 
-/**
- * @param {{ manifest: Record<string, any>, now?: Date | string | number, adapters: Record<string, Function> }} options
- */
-export async function runCampaignPromotionTransaction({ manifest, now = new Date(), adapters }) {
-  assertCampaignCommandAllowed({ command: "promote", now });
-  const authority = validateCampaignManifest(manifest, { now, requireFresh: true });
+export function validateCampaignRollbackRecovery(value, previousBundle) {
+  const recovery = requireObject(value, "Rollback recovery");
+  requireExact(recovery.recovered, true, "Rollback recovery.recovered");
+  validateComponents(recovery.components, previousBundle);
+  requireExact(recovery.internal_health, "pass", "Rollback recovery.internal_health");
+  requireExact(recovery.public_health, "pass", "Rollback recovery.public_health");
+  assertNoCampaignSecretMaterial(recovery);
+  return recovery;
+}
+
+/** @param {{ authorityInputs: Record<string, any>, clock?: () => Date, createAdapters: Function }} options */
+export async function runCampaignPromotionTransaction({
+  authorityInputs,
+  clock = () => new Date(),
+  createAdapters,
+}) {
+  const assertFresh = () => assertCampaignCommandAllowed({ command: "promote", now: clock() });
+  const verifiedAuthority = verifyCampaignPromotionAuthority({ ...authorityInputs, now: clock() });
+  assertFresh();
+  if (typeof createAdapters !== "function") fail("Campaign production adapter factory is required.");
+  const adapters = createAdapters({ authority: verifiedAuthority, assertFresh });
+  assertFresh();
   const acquireLock = requireAdapter(adapters, "acquireProductionLock");
   const install = requireAdapter(adapters, "installBundleTransactionally");
   const verify = requireAdapter(adapters, "verifyPostdeploy");
   const rollback = requireAdapter(adapters, "rollbackPreviousBundle");
+  const verifyRecovery = requireAdapter(adapters, "verifyPreviousBundleRecovery");
   const releaseLock = requireAdapter(adapters, "releaseProductionLock");
-  const lock = await acquireLock({ manifest: authority });
-  let deploymentStarted = false;
+  const lock = await acquireLock({ authority: verifiedAuthority, assertFresh });
+  let primaryError = null;
+  let result = null;
   try {
-    deploymentStarted = true;
-    const installation = await install({ lock, manifest: authority });
+    assertFresh();
+    const installation = await install({
+      authority: verifiedAuthority,
+      assertFresh,
+      lock,
+      manifest: verifiedAuthority.manifest,
+    });
+    assertFresh();
     const verification = validateCampaignPostdeployEvidence(
-      await verify({ installation, lock, manifest: authority }),
-      authority,
+      await verify({ installation, lock, manifest: verifiedAuthority.manifest, assertFresh }),
+      verifiedAuthority.manifest,
     );
-    return { installed: true, installation, manifest: authority, verification };
+    result = { installed: true, installation, manifest: verifiedAuthority.manifest, verification };
   } catch (error) {
-    if (deploymentStarted) {
-      try {
-        await rollback({ lock, manifest: authority, previousReleaseSha: authority.previous_release_sha });
-      } catch (rollbackError) {
-        throw new Error("manual_recovery_required: deployment and previous bundle rollback failed.", {
-          cause: new AggregateError([error, rollbackError]),
-        });
-      }
-      throw new Error("Campaign deployment failed and previous bundle was restored.", { cause: error });
+    primaryError = error;
+    try {
+      const recovered = validateCampaignRollbackRecovery(
+        await rollback({
+          activeTransaction: { started_at: authorityInputs.approval.approved_at, state: "failed_deploy" },
+          lock,
+          manifest: verifiedAuthority.manifest,
+          previousBundle: verifiedAuthority.manifest.previous_bundle,
+        }),
+        verifiedAuthority.manifest.previous_bundle,
+      );
+      validateCampaignRollbackRecovery(
+        await verifyRecovery({ lock, manifest: verifiedAuthority.manifest, recovery: recovered }),
+        verifiedAuthority.manifest.previous_bundle,
+      );
+    } catch (rollbackError) {
+      primaryError = new Error(
+        `manual_recovery_required: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: new AggregateError([error, rollbackError]) },
+      );
     }
-    throw error;
-  } finally {
-    await releaseLock({ lock, manifest: authority });
   }
+  let releaseError = null;
+  try {
+    await releaseLock({ lock, manifest: verifiedAuthority.manifest });
+  } catch (error) {
+    releaseError = error;
+  }
+  if (primaryError) {
+    const primaryMessage = primaryError instanceof Error ? primaryError.message : String(primaryError);
+    const releaseMessage = releaseError
+      ? `; production_lock_release_failed: ${releaseError instanceof Error ? releaseError.message : String(releaseError)}`
+      : "";
+    const restored = primaryMessage.startsWith("manual_recovery_required:")
+      ? ""
+      : "; campaign deployment failed and previous bundle was restored";
+    throw new Error(`${primaryMessage}${restored}${releaseMessage}`, {
+      cause: new AggregateError([primaryError, ...(releaseError ? [releaseError] : [])]),
+    });
+  }
+  if (releaseError) {
+    throw new Error(`production_lock_release_failed: ${releaseError instanceof Error ? releaseError.message : String(releaseError)}`, { cause: releaseError });
+  }
+  return result;
 }

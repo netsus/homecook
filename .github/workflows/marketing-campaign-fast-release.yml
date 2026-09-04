@@ -11,8 +11,12 @@ on:
         description: New annotated prod-YYYYMMDD.N tag
         required: true
         type: string
-      manifest_b64:
-        description: Canonical secret-free campaign manifest encoded as base64
+      authority_artifact_run_id:
+        description: Workflow run containing the sealed candidate authority bundle
+        required: true
+        type: string
+      authority_artifact_name:
+        description: Sealed candidate authority artifact name
         required: true
         type: string
 
@@ -26,18 +30,21 @@ concurrency:
 jobs:
   authority:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      checks: read
+      contents: read
     steps:
       - name: Preserve author activation kill switch
         run: |
-          echo "activation_blocked: independent approval and current-head green evidence are required" >&2
+          echo "activation_blocked: live production adapter wiring still requires independent approval" >&2
           exit 1
-      - name: Fail closed after campaign expiry
+      - name: Fail closed before approval wait
         env:
           CAMPAIGN_RELEASE_EXPIRES_AT: 2026-09-15T15:00:00.000Z
-        run: |
-          test "$(date -u +%s)" -lt "$(date -u -d "$CAMPAIGN_RELEASE_EXPIRES_AT" +%s)"
-      - name: Require exact full SHA
+        run: node -e 'if (Date.now() >= Date.parse(process.env.CAMPAIGN_RELEASE_EXPIRES_AT)) process.exit(1)'
+      - name: Require exact current master
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -46,34 +53,127 @@ jobs:
           test "${{ github.ref }}" = "refs/heads/master"
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$RELEASE_SHA" = "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
-
-  promote:
-    needs: authority
-    environment: production-release-approval
-    runs-on: [self-hosted, macOS, homecook-release-promoter]
-    timeout-minutes: 25
-    permissions:
-      artifact-metadata: write
-      contents: write
-      attestations: write
-      id-token: write
-    steps:
-      - name: Checkout exact approved master SHA
+      - name: Checkout immutable current-master verifier
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Materialize and verify the secret-free manifest
+      - name: Verify immutable authority artifact producer run
         env:
-          CAMPAIGN_MANIFEST_B64: ${{ inputs.manifest_b64 }}
+          AUTHORITY_RUN_ID: ${{ inputs.authority_artifact_run_id }}
+          GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          umask 077
-          printf '%s' "$CAMPAIGN_MANIFEST_B64" | base64 --decode > "$RUNNER_TEMP/campaign-manifest.json"
-          test "$RELEASE_SHA" = "$(jq -r '.release_sha' "$RUNNER_TEMP/campaign-manifest.json")"
-          pnpm release:campaign:verify -- --manifest "$RUNNER_TEMP/campaign-manifest.json" --json
+          gh api "repos/netsus/homecook/actions/runs/$AUTHORITY_RUN_ID" > "$RUNNER_TEMP/authority-run.json"
+          jq -e --arg sha "$RELEASE_SHA" '
+            .repository.full_name == "netsus/homecook"
+            and .path == ".github/workflows/marketing-campaign-release-authority.yml"
+            and .head_sha == $sha
+            and .run_attempt == 1
+            and .status == "completed"
+            and .conclusion == "success"
+          ' "$RUNNER_TEMP/authority-run.json" > /dev/null
+      - name: Download sealed candidate authority bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.authority_artifact_name }}
+          path: ${{ runner.temp }}/campaign-inputs
+          github-token: ${{ github.token }}
+          repository: netsus/homecook
+          run-id: ${{ inputs.authority_artifact_run_id }}
+      - name: Fetch latest required checks for the exact SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=latest&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/check-run-pages.json"
+          jq '[.[].check_runs[] | . + {repository: {full_name: "netsus/homecook"}}]' "$RUNNER_TEMP/check-run-pages.json" \
+            > "$RUNNER_TEMP/campaign-inputs/check-runs.json"
+      - name: Retain exact pre-approval authority inputs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: marketing-campaign-pre-approval-authority
+          path: |
+            ${{ runner.temp }}/campaign-inputs/bundle.tar
+            ${{ runner.temp }}/campaign-inputs/bundle-authority.json
+            ${{ runner.temp }}/campaign-inputs/rehearsal-receipt.json
+            ${{ runner.temp }}/campaign-inputs/production-snapshot.json
+            ${{ runner.temp }}/campaign-inputs/backup-receipt.json
+            ${{ runner.temp }}/campaign-inputs/backup.archive
+            ${{ runner.temp }}/campaign-inputs/previous-bundle.json
+            ${{ runner.temp }}/campaign-inputs/check-runs.json
 
+  approve-and-attest:
+    needs: authority
+    environment: production-release-approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: write
+      id-token: write
+    steps:
+      - name: Recheck expiry immediately after environment approval
+        env:
+          CAMPAIGN_RELEASE_EXPIRES_AT: 2026-09-15T15:00:00.000Z
+        run: node -e 'if (Date.now() >= Date.parse(process.env.CAMPAIGN_RELEASE_EXPIRES_AT)) process.exit(1)'
+      - name: Revalidate exact current master after approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: test "$RELEASE_SHA" = "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+      - name: Checkout exact approved master verifier
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download verified pre-approval authority inputs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: marketing-campaign-pre-approval-authority
+          path: ${{ runner.temp }}/campaign-inputs
+      - name: Bind the exact environment-approved workflow run
+        run: |
+          node scripts/marketing-campaign-fast-release-authority.mjs seal-approval \
+            --approved-at "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
+            --reviewer-id 57648890 \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-attempt "${{ github.run_attempt }}" \
+            --workflow-head-sha "${{ inputs.release_sha }}" \
+            --output "$RUNNER_TEMP/campaign-inputs/approval-authority.json" \
+            --json
+      - name: Build manifest only from downloaded authority bytes
+        run: |
+          node scripts/marketing-campaign-fast-release-authority.mjs build-manifest \
+            --release-tag "${{ inputs.release_tag }}" \
+            --check-runs "$RUNNER_TEMP/campaign-inputs/check-runs.json" \
+            --bundle "$RUNNER_TEMP/campaign-inputs/bundle.tar" \
+            --backup-archive "$RUNNER_TEMP/campaign-inputs/backup.archive" \
+            --bundle-authority "$RUNNER_TEMP/campaign-inputs/bundle-authority.json" \
+            --rehearsal-receipt "$RUNNER_TEMP/campaign-inputs/rehearsal-receipt.json" \
+            --production-snapshot "$RUNNER_TEMP/campaign-inputs/production-snapshot.json" \
+            --backup-receipt "$RUNNER_TEMP/campaign-inputs/backup-receipt.json" \
+            --approval-authority "$RUNNER_TEMP/campaign-inputs/approval-authority.json" \
+            --previous-bundle "$RUNNER_TEMP/campaign-inputs/previous-bundle.json" \
+            --output "$RUNNER_TEMP/campaign-manifest.json" \
+            --json
+          jq -n --slurpfile manifest "$RUNNER_TEMP/campaign-manifest.json" '{
+            schema: "homecook.marketing-campaign-attestation-predicate.v1",
+            manifest_sha256: $manifest[0].manifest_sha256,
+            release_bundle_sha256: $manifest[0].release_bundle_sha256,
+            rehearsal_receipt_sha256: $manifest[0].rehearsal_receipt_sha256,
+            backup_receipt_sha256: $manifest[0].backup_receipt_sha256,
+            approval_authority_sha256: $manifest[0].approval_authority_sha256
+          }' > "$RUNNER_TEMP/campaign-predicate.json"
+      - name: Recheck expiry immediately before protected tag mutation
+        env:
+          CAMPAIGN_RELEASE_EXPIRES_AT: 2026-09-15T15:00:00.000Z
+        run: node -e 'if (Date.now() >= Date.parse(process.env.CAMPAIGN_RELEASE_EXPIRES_AT)) process.exit(1)'
       - name: Mint protected-tag GitHub App token
         id: app-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
@@ -83,15 +183,13 @@ jobs:
           owner: netsus
           permission-contents: write
           repositories: homecook
-
-      - name: Create immutable annotated campaign release tag
+      - name: Create exact annotated campaign tag
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           [[ "$RELEASE_TAG" =~ ^prod-[0-9]{8}\.[1-9][0-9]*$ ]]
           test "$RELEASE_SHA" = "$(git rev-parse refs/remotes/origin/master)"
-          test "$RELEASE_TAG" = "$(jq -r '.release_tag' "$RUNNER_TEMP/campaign-manifest.json")"
           manifest_sha256="$(jq -r '.manifest_sha256' "$RUNNER_TEMP/campaign-manifest.json")"
           git config user.name "homecook-release-attestation[bot]"
           git config user.email "homecook-release-attestation[bot]@users.noreply.github.com"
@@ -100,12 +198,69 @@ jobs:
           git push --porcelain \
             "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/netsus/homecook.git" \
             "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
-
-      - name: Attest exact campaign manifest bytes
+      - name: Recheck expiry immediately before attestation publication
+        env:
+          CAMPAIGN_RELEASE_EXPIRES_AT: 2026-09-15T15:00:00.000Z
+        run: node -e 'if (Date.now() >= Date.parse(process.env.CAMPAIGN_RELEASE_EXPIRES_AT)) process.exit(1)'
+      - name: Revalidate exact master immediately before attestation publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: test "$RELEASE_SHA" = "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+      - name: Attest exact manifest with the campaign predicate
+        id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: ${{ runner.temp }}/campaign-manifest.json
+          predicate-path: ${{ runner.temp }}/campaign-predicate.json
           predicate-type: https://github.com/netsus/homecook/attestations/marketing-campaign-release/v1
+      - name: Verify and bind the published attestation result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify "$RUNNER_TEMP/campaign-manifest.json" \
+            --repo netsus/homecook \
+            --bundle "${{ steps.attest.outputs.bundle-path }}"
+          node scripts/marketing-campaign-fast-release-authority.mjs seal-attestation \
+            --manifest "$RUNNER_TEMP/campaign-manifest.json" \
+            --predicate "$RUNNER_TEMP/campaign-predicate.json" \
+            --attestation-bundle "${{ steps.attest.outputs.bundle-path }}" \
+            --output "$RUNNER_TEMP/campaign-attestation-authority.json" \
+            --json
+          node scripts/marketing-campaign-fast-release-authority.mjs verify \
+            --manifest "$RUNNER_TEMP/campaign-manifest.json" \
+            --attestation-authority "$RUNNER_TEMP/campaign-attestation-authority.json" \
+            --attestation-bundle "${{ steps.attest.outputs.bundle-path }}" \
+            --check-runs "$RUNNER_TEMP/campaign-inputs/check-runs.json" \
+            --bundle "$RUNNER_TEMP/campaign-inputs/bundle.tar" \
+            --backup-archive "$RUNNER_TEMP/campaign-inputs/backup.archive" \
+            --bundle-authority "$RUNNER_TEMP/campaign-inputs/bundle-authority.json" \
+            --rehearsal-receipt "$RUNNER_TEMP/campaign-inputs/rehearsal-receipt.json" \
+            --production-snapshot "$RUNNER_TEMP/campaign-inputs/production-snapshot.json" \
+            --backup-receipt "$RUNNER_TEMP/campaign-inputs/backup-receipt.json" \
+            --approval-authority "$RUNNER_TEMP/campaign-inputs/approval-authority.json" \
+            --json
+      - name: Retain promotion authority bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: marketing-campaign-promotion-authority
+          path: |
+            ${{ runner.temp }}/campaign-inputs
+            ${{ runner.temp }}/campaign-manifest.json
+            ${{ runner.temp }}/campaign-predicate.json
+            ${{ runner.temp }}/campaign-attestation-authority.json
+            ${{ steps.attest.outputs.bundle-path }}
 
-      - name: Promote exact attested campaign bundle
-        run: pnpm release:campaign:promote -- --manifest "$RUNNER_TEMP/campaign-manifest.json" --json
+  promote:
+    needs: approve-and-attest
+    runs-on: [self-hosted, macOS, homecook-release-promoter]
+    timeout-minutes: 20
+    steps:
+      - name: Recheck expiry before production adapter, lock, or mutation access
+        env:
+          CAMPAIGN_RELEASE_EXPIRES_AT: 2026-09-15T15:00:00.000Z
+        run: node -e 'if (Date.now() >= Date.parse(process.env.CAMPAIGN_RELEASE_EXPIRES_AT)) process.exit(1)'
+      - name: Promotion remains blocked in this author PR
+        run: |
+          echo "activation_blocked: independent production-adapter activation is still required" >&2
+          exit 1

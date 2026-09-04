@@ -84,9 +84,12 @@ Steady-state 목표는 human approval 대기 시간을 제외하고 10~20분이�
 
 - promote 전 current app/full-local/worker descriptor, listener, Docker/LaunchAgent identity, migration head를 read-only snapshot으로 고정한다. mixed/unknown state는 실패한다.
 - fresh backup은 existing create-only encrypted full-local backup helper로 생성하고 별도 verify 결과를 manifest에 digest로 연결한다. 기존 backup을 덮어쓰지 않는다.
-- manifest에는 secret이 없는 최소 identity만 둔다: schema, expires_at, repository, source_ref, release_sha, release_tree, build_id, release_bundle_sha256, required CI evidence digest, rehearsal receipt digest, production snapshot digest, backup receipt digest, previous release SHA, approval identity, release tag, manifest digest.
+- manifest에는 secret이 없는 최소 identity만 둔다: schema, expires_at, repository, source_ref, release_sha, release_tree, build_id, release_bundle_sha256, required CI evidence digest, rehearsal receipt digest, production snapshot digest, backup receipt digest, approval authority digest, previous bundle identity, release tag, manifest digest. `fresh/encrypted/verified=true` 같은 manifest 자기 주장은 authority가 아니다.
+- manifest는 workflow input으로 받지 않는다. exact SHA의 GitHub Actions App `15368` 최신 필수 7 check-run, 실제 `bundle.tar` bytes와 bundle authority, 단일 rehearsal receipt, complete production snapshot, fresh encrypted+verified backup receipt, environment approval authority 원본을 내려받아 각 digest를 재계산한 뒤 생성한다.
+- promotion 직전에는 위 원본과 GitHub attestation bundle bytes를 다시 읽어 source → bundle → rehearsal → manifest/tag/attestation → promotion의 `release_bundle_sha256` 및 서로 다른 receipt digest 결합을 재검증한다. 원본이 없거나 self digest·manifest binding·actual bytes가 다르면 manifest 모양이 맞아도 authority가 아니다.
 - annotated `prod-YYYYMMDD.N` tag는 exact release SHA와 manifest digest를 기록하며 이동/삭제하지 않는다.
 - attestation subject는 exact manifest bytes이고 repository/source ref/release SHA/tag/manifest digest/approval identity를 검증한다.
+- custom attestation은 nonempty `predicate-path`와 campaign predicate type을 사용한다. 발급 뒤 `gh attestation verify` 결과와 attestation bundle SHA-256을 campaign attestation authority에 결합한 다음에만 promotion input으로 인정한다.
 
 ## Promotion transaction과 rollback
 
@@ -95,6 +98,7 @@ Steady-state 목표는 human approval 대기 시간을 제외하고 10~20분이�
 - install과 postdeploy 검증은 같은 production lock과 promotion transaction 안에서 수행한다.
 - install, readiness 또는 postdeploy 검증 중 하나라도 실패하면 candidate worker를 먼저 중지하고 previous worker/app LaunchAgent와 previous full-local `resume-current`를 복구한다. additive DB schema는 유지한다.
 - rollback 후 previous internal/public health를 다시 확인한다. rollback도 실패하면 maintenance 상태를 유지하고 `manual_recovery_required`로 종료한다.
+- rollback helper의 정상 반환만으로 복구 성공으로 보지 않는다. exact `{ recovered: true }`, previous app/full-local/worker의 release SHA/build ID/bundle digest 일치, internal/public health pass를 독립 readback으로 다시 확인한다. `false`, `undefined`, identity drift 또는 health failure는 `manual_recovery_required`다.
 - 자동 backup restore와 destructive DB reset/volume delete는 이 lane에 포함하지 않는다.
 
 ## Postdeploy required checks
