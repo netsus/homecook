@@ -373,7 +373,10 @@ function validCiEvidence() {
     check_suites: checkRuns.map((entry) => ({
       id: entry.check_suite_id,
       app_id: entry.app_id,
+      app_name: "GitHub Actions",
+      app_slug: "github-actions",
       head_sha: entry.head_sha,
+      repository: "netsus/homecook",
     })),
     commit_statuses: [],
     summary: { total: 7, success: 7, intended_skip: 0, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
@@ -406,7 +409,14 @@ function validCiEvidence() {
 
 function storedCiManifest(projection: {
   allowlisted_external_checks?: Array<Record<string, unknown>>,
-  check_suites?: Array<{ app_id: number, id: number }>,
+  check_suites?: Array<{
+    app_id: number,
+    app_name?: string,
+    app_slug?: string,
+    head_sha?: string,
+    id: number,
+    repository?: string,
+  }>,
   check_runs: Array<{ app_id: number, check_suite_id: number, id: number }>,
   head_sha: string,
   summary: Record<string, number>,
@@ -415,9 +425,6 @@ function storedCiManifest(projection: {
   const externalChecks = projection.allowlisted_external_checks ?? [];
   const externalByRunId = new Map(
     externalChecks.map((entry) => [entry.check_run_id, entry]),
-  );
-  const externalBySuiteId = new Map(
-    externalChecks.map((entry) => [entry.check_suite_id, entry]),
   );
   const workflowRuns = projection.workflow_runs ?? [];
   const workflowRunPages = [{
@@ -448,13 +455,11 @@ function storedCiManifest(projection: {
         id: entry.id,
         app: {
           id: entry.app_id,
-          name: externalBySuiteId.get(entry.id)?.app_name,
-          slug: externalBySuiteId.get(entry.id)?.app_slug,
+          name: entry.app_name,
+          slug: entry.app_slug,
         },
-        head_sha: projection.head_sha,
-        repository: externalBySuiteId.has(entry.id)
-          ? { full_name: externalBySuiteId.get(entry.id)?.repository }
-          : undefined,
+        head_sha: entry.head_sha ?? projection.head_sha,
+        repository: { full_name: entry.repository ?? "netsus/homecook" },
       })),
     }],
     expectedContexts: EXPECTED_RELEASE_CONTEXTS,
@@ -471,7 +476,11 @@ function storedCiManifest(projection: {
     ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs({
       check_suites: (projection.check_suites ?? []).map((entry) => ({
         app_id: entry.app_id,
+        app_name: entry.app_name ?? "GitHub Actions",
+        app_slug: entry.app_slug ?? "github-actions",
+        head_sha: entry.head_sha ?? projection.head_sha,
         id: entry.id,
+        repository: entry.repository ?? "netsus/homecook",
       })),
       check_runs: projection.check_runs.map((entry) => ({
         app_id: entry.app_id,
@@ -499,7 +508,10 @@ function withStoredCiProvenance<T extends {
     check_suites: suites.map((id) => ({
       id,
       app_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
+      app_name: "GitHub Actions",
+      app_slug: "github-actions",
       head_sha: projection.head_sha,
+      repository: "netsus/homecook",
     })),
     workflow_runs: suites.map((checkSuiteId, index) => ({
       id: 2_000 + index,
@@ -3714,8 +3726,9 @@ describe("release rehearsal candidate orchestration", () => {
     }));
     const rawCheckSuites = projection.check_suites.map((entry) => ({
       id: entry.id,
-      app: { id: entry.app_id },
+      app: { id: entry.app_id, name: entry.app_name, slug: entry.app_slug },
       head_sha: entry.head_sha,
+      repository: { full_name: entry.repository },
     }));
     const rawWorkflowRuns = projection.workflow_runs.map((entry) => ({
       ...entry,
@@ -3782,9 +3795,19 @@ describe("release rehearsal candidate orchestration", () => {
       ...projection.check_runs.map((entry) => ({
         id: entry.check_suite_id,
         app_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
+        app_name: "GitHub Actions",
+        app_slug: "github-actions",
         head_sha: SHA_A,
+        repository: "netsus/homecook",
       })),
-      { id: 100, app_id: 46_505, head_sha: SHA_A },
+      {
+        id: 100,
+        app_id: 46_505,
+        app_name: "GitGuardian",
+        app_slug: "gitguardian",
+        head_sha: SHA_A,
+        repository: "netsus/homecook",
+      },
     ].filter((entry, index, entries) =>
       entries.findIndex((candidate) => candidate.id === entry.id) === index);
     projection.workflow_runs = projection.check_suites
@@ -3829,7 +3852,14 @@ describe("release rehearsal candidate orchestration", () => {
       started_at: "2026-09-04T01:00:00Z",
       completed_at: "2026-09-04T01:00:30Z",
     });
-    checkSuites.push({ id: 91_635_358_541, app_id: 46_505, head_sha: SHA_A });
+    checkSuites.push({
+      id: 91_635_358_541,
+      app_id: 46_505,
+      app_name: "GitGuardian",
+      app_slug: "gitguardian",
+      head_sha: SHA_A,
+      repository: "netsus/homecook",
+    });
     projection.allowlisted_external_checks = [{
       app_id: 46_505,
       app_name: "GitGuardian",

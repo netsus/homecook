@@ -137,6 +137,7 @@ function createCheckSuitePages({
     id: suiteIdStart + index,
     head_sha: releaseSha,
     app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+    repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
   }));
   const pages = [];
   for (let index = 0; index < Math.max(1, Math.ceil(count / 100)); index += 1) {
@@ -207,6 +208,25 @@ function createWorkflowRunsForCheckRuns(
   return [...actionsSuites.values()];
 }
 
+function createWorkflowRunsForCheckSuites(
+  checkSuitePages: ReturnType<typeof createCheckSuitePages>,
+  releaseSha = "a".repeat(40),
+) {
+  return checkSuitePages.flatMap((page) => page.check_suites).map((suite, index) => ({
+    id: 30_000 + index,
+    workflow_id: 40_000 + index,
+    check_suite_id: suite.id,
+    head_sha: releaseSha,
+    event: "push",
+    run_attempt: 1,
+    status: "completed",
+    conclusion: "success",
+    path: `.github/workflows/suite-${index}.yml`,
+    repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+    head_repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+  }));
+}
+
 function createCompleteCheckPageInput(
   checkRuns: Array<Record<string, unknown>>,
   releaseSha = "a".repeat(40),
@@ -221,6 +241,7 @@ function createCompleteCheckPageInput(
         Number((entry.check_suite as { id?: unknown } | undefined)?.id) === id
       )?.app as { id?: unknown } | undefined)?.id),
     },
+    repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
   }));
   return {
     checkRunPages: createCheckRunPages(checkRuns),
@@ -276,6 +297,7 @@ function createGitGuardianCheckInput({
           id: 200,
           head_sha: releaseSha,
           app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+          repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
         },
         {
           id: 91_635_358_541,
@@ -366,6 +388,7 @@ describe("GitHub production release attestation verification", () => {
         id,
         head_sha: releaseSha,
         app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+        repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
       }));
 
     const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
@@ -406,6 +429,7 @@ describe("GitHub production release attestation verification", () => {
           id: 200,
           head_sha: releaseSha,
           app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+          repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
         }],
       }],
       releaseSha,
@@ -550,8 +574,19 @@ describe("GitHub production release attestation verification", () => {
     const checkSuitePages = [{
       total_count: 2,
       check_suites: [
-        { id: 200, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID } },
-        { id: 201, head_sha: releaseSha, app: { id: 46_505 }, latest_check_runs_count: 0 },
+        {
+          id: 200,
+          head_sha: releaseSha,
+          app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+          repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+        },
+        {
+          id: 201,
+          head_sha: releaseSha,
+          app: { id: 46_505, slug: "gitguardian", name: "GitGuardian" },
+          latest_check_runs_count: 0,
+          repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+        },
       ],
     }];
     const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
@@ -698,11 +733,12 @@ describe("GitHub production release attestation verification", () => {
   });
   it("proves a complete below-boundary 999-suite snapshot without per-suite check-run calls", () => {
     const checkRuns = createTrustedCheckRuns(200);
+    const checkSuitePages = createCheckSuitePages({ count: 999 });
     const evidence = buildGitHubProductionReleaseExternalCheckEvidence({
       checkRunPages: createCheckRunPages(checkRuns),
-      checkSuitePages: createCheckSuitePages({ count: 999 }),
+      checkSuitePages,
       workflowRunPages: createWorkflowRunPages(
-        createWorkflowRunsForCheckRuns(checkRuns),
+        createWorkflowRunsForCheckSuites(checkSuitePages),
       ),
       releaseSha: "a".repeat(40),
     });
@@ -710,6 +746,7 @@ describe("GitHub production release attestation verification", () => {
     expect(evidence).toMatchObject({
       all_check_suite_count: 999,
       all_check_suite_ids_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      all_check_suite_authority_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
       all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
       all_context_check_suite_ids: [200],
       required_check_summary: {
@@ -846,8 +883,8 @@ describe("GitHub production release attestation verification", () => {
       checkSuitePages: [{
         total_count: 2,
         check_suites: [
-          { id: 200, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID } },
-          { id: WORKFLOW_AUTHORITY.workflow_check_suite_id, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID } },
+          { id: 200, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID }, repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } },
+          { id: WORKFLOW_AUTHORITY.workflow_check_suite_id, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID }, repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } },
         ],
       }],
       workflowRunPages: createWorkflowRunPages([
@@ -887,7 +924,7 @@ describe("GitHub production release attestation verification", () => {
       checkRunPages: createCheckRunPages(externalRuns),
       checkSuitePages: [{
         total_count: 1,
-        check_suites: [{ id: 200, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID } }],
+        check_suites: [{ id: 200, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID }, repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } }],
       }],
       excludedCheckSuiteIds: [],
       releaseSha,
@@ -959,6 +996,72 @@ describe("GitHub production release attestation verification", () => {
     ] as const) {
       expect(() => invoke({ run }), label).toThrow(/workflow|run|head|ref|branch|identity/iu);
     }
+    expect(() => invoke({
+      runAttempt: 2,
+      run: { ...input.run, run_attempt: 2 },
+    })).toThrow(/attempt|exactly 1|workflow/iu);
+  });
+
+  it.each([
+    {
+      label: "reviewer orphan attacker repository",
+      repository: "attacker/homecook",
+    },
+    {
+      label: "canonical repository without workflow mapping",
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    },
+  ])("rejects an unmapped Actions zero-check suite: $label", ({ repository }) => {
+    const releaseSha = "a".repeat(40);
+    const checkRuns = createTrustedCheckRuns(200);
+    const input = createCompleteCheckPageInput(checkRuns, releaseSha);
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      ...input,
+      releaseSha,
+      checkSuitePages: [{
+        total_count: input.checkSuitePages[0].total_count + 1,
+        check_suites: [
+          ...input.checkSuitePages[0].check_suites,
+          {
+            id: 999,
+            head_sha: releaseSha,
+            app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+            repository: { full_name: repository },
+          },
+        ],
+      }],
+    })).toThrow(/Actions|workflow|map|orphan|repository/iu);
+  });
+
+  it.each([
+    {
+      label: "multiple runs mapped to one suite",
+      mutate: (runs: Array<Record<string, unknown>>) => [
+        ...runs,
+        { ...runs[0], id: Number(runs[0].id) + 1 },
+      ],
+    },
+    {
+      label: "orphan run mapped to an unknown suite",
+      mutate: (runs: Array<Record<string, unknown>>) => [
+        ...runs,
+        {
+          ...runs[0],
+          id: Number(runs[0].id) + 1,
+          check_suite_id: 999,
+        },
+      ],
+    },
+  ])("rejects non-bijective Actions workflow metadata: $label", ({ mutate }) => {
+    const releaseSha = "a".repeat(40);
+    const checkRuns = createTrustedCheckRuns(200);
+    const input = createCompleteCheckPageInput(checkRuns, releaseSha);
+    const runs = input.workflowRunPages.flatMap((page) => page.workflow_runs);
+    expect(() => buildGitHubProductionReleaseExternalCheckEvidence({
+      ...input,
+      releaseSha,
+      workflowRunPages: createWorkflowRunPages(mutate(runs)),
+    })).toThrow(/duplicate|workflow|suite|bijective|unknown|orphan/iu);
   });
 
   it("keeps tag push and attestation at zero without a fresh completion safety margin", () => {
@@ -1007,6 +1110,7 @@ describe("GitHub production release attestation verification", () => {
       signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
       all_check_suite_count: 1,
       all_check_suite_ids_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      all_check_suite_authority_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
       all_context_check_suite_ids: [200],
       all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
@@ -1018,6 +1122,7 @@ describe("GitHub production release attestation verification", () => {
       signer_digest: WORKFLOW_AUTHORITY.workflow_head_sha,
       all_check_suite_count: 1,
       all_check_suite_ids_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      all_check_suite_authority_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
       all_context_check_suite_ids: [200],
       all_context_check_run_instances_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
     });
@@ -1683,6 +1788,7 @@ describe("GitHub production release attestation verification", () => {
       required_check_summary: manifest.required_check_summary,
       all_check_suite_count: manifest.all_check_suite_count,
       all_check_suite_ids_digest: manifest.all_check_suite_ids_digest,
+      all_check_suite_authority_digest: manifest.all_check_suite_authority_digest,
       all_actions_workflow_run_provenance_digest:
         manifest.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest: manifest.all_context_check_run_instances_digest,
@@ -1750,6 +1856,7 @@ describe("GitHub production release attestation verification", () => {
                   required_check_summary: manifest.required_check_summary,
                   all_check_suite_count: manifest.all_check_suite_count,
                   all_check_suite_ids_digest: manifest.all_check_suite_ids_digest,
+                  all_check_suite_authority_digest: manifest.all_check_suite_authority_digest,
                   all_actions_workflow_run_provenance_digest:
                     manifest.all_actions_workflow_run_provenance_digest,
                   all_context_check_run_instances_digest: manifest.all_context_check_run_instances_digest,

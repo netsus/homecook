@@ -48,6 +48,7 @@
     "required_check_summary",
     "all_check_suite_count",
     "all_check_suite_ids_digest",
+    "all_check_suite_authority_digest",
     "all_actions_workflow_run_provenance_digest",
     "all_context_check_run_instances_digest",
     "all_context_check_suite_ids",
@@ -145,8 +146,7 @@
       "minimum": 1
     },
     "workflow_run_attempt": {
-      "type": "integer",
-      "minimum": 1
+      "const": 1
     },
     "workflow_check_suite_id": {
       "type": "integer",
@@ -300,6 +300,11 @@
     "all_check_suite_ids_digest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
+    },
+    "all_check_suite_authority_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Binds sorted check-suite ID, App owner tuple, canonical repository, and exact head SHA evidence."
     },
     "all_actions_workflow_run_provenance_digest": {
       "type": "string",

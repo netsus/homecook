@@ -67,7 +67,12 @@ export function createCompleteProductionCheckPageInput({
     checkRunPages: [{ total_count: allCheckRuns.length, check_runs: allCheckRuns }],
     checkSuitePages: [{
       total_count: suiteIds.length,
-      check_suites: suiteIds.map((id) => ({ id, head_sha: releaseSha, app: { id: 15368 } })),
+      check_suites: suiteIds.map((id) => ({
+        id,
+        head_sha: releaseSha,
+        app: { id: 15368 },
+        repository: { full_name: "netsus/homecook" },
+      })),
     }],
     workflowRunPages: [{ total_count: workflowRuns.length, workflow_runs: workflowRuns }],
     excludedCheckSuiteIds: selfSuiteId === null ? [] : [selfSuiteId],
@@ -134,6 +139,7 @@ export function createLocalMacProductionReleaseManifest(
     },
     all_check_suite_count: 2,
     all_check_suite_ids_digest: "4".repeat(64),
+    all_check_suite_authority_digest: "6".repeat(64),
     all_actions_workflow_run_provenance_digest: "5".repeat(64),
     all_context_check_run_instances_digest: "2".repeat(64),
     all_context_check_suite_ids: [200, 201],

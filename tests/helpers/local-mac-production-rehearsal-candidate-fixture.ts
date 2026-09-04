@@ -107,7 +107,10 @@ function storedCiEvidence(releaseSha = SHA_A) {
   const checkSuites = checkRuns.map(({ app_id, check_suite_id, head_sha }) => ({
     id: check_suite_id,
     app_id,
+    app_name: "GitHub Actions",
+    app_slug: "github-actions",
     head_sha,
+    repository: "netsus/homecook",
   }));
   const workflowRuns = checkRuns.map((entry, index) => ({
     id: 100 + index,
@@ -138,7 +141,14 @@ function storedCiEvidence(releaseSha = SHA_A) {
     snapshotDigest: sha256Jcs(projection),
     summaryDigest: sha256Jcs(summary),
     suiteRunSetDigest: sha256Jcs({
-      check_suites: checkSuites.map(({ app_id, id }) => ({ app_id, id })),
+      check_suites: checkSuites.map(({ app_id, app_name, app_slug, head_sha, id, repository }) => ({
+        app_id,
+        app_name,
+        app_slug,
+        head_sha,
+        id,
+        repository,
+      })),
       check_runs: checkRuns.map(({ app_id, check_suite_id, id }) => ({
         app_id,
         check_suite_id,

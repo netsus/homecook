@@ -1174,6 +1174,7 @@ describe("local Mac production promote adapters", () => {
       required_check_summary: artifacts.subject.required_check_summary,
       all_check_suite_count: artifacts.subject.all_check_suite_count,
       all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
+      all_check_suite_authority_digest: artifacts.subject.all_check_suite_authority_digest,
       all_actions_workflow_run_provenance_digest:
         artifacts.subject.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,

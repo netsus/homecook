@@ -14,7 +14,7 @@
     "workflow_head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "workflow_head_tree": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "workflow_run_id": { "type": "integer", "minimum": 1 },
-    "workflow_run_attempt": { "type": "integer", "minimum": 1 },
+    "workflow_run_attempt": { "const": 1 },
     "workflow_check_suite_id": { "type": "integer", "minimum": 1 }
   }
 }

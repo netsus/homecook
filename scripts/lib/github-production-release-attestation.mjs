@@ -60,7 +60,7 @@ const APPROVAL_AUTHORITY_KEYS = [
   "master_sha_at_approval", "master_tree_at_approval",
 ];
 const EXTERNAL_CHECK_EVIDENCE_KEYS = [
-  "all_check_suite_count", "all_check_suite_ids_digest",
+  "all_check_suite_count", "all_check_suite_ids_digest", "all_check_suite_authority_digest",
   "all_actions_workflow_run_provenance_digest",
   "all_context_check_run_instances_digest", "all_context_check_suite_ids",
   "all_context_commit_statuses_digest",
@@ -75,6 +75,12 @@ export const GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK = Object.freeze({
   checkName: "GitGuardian Security Checks",
   externalId: "",
 });
+const GITHUB_PRODUCTION_RELEASE_ZERO_CHECK_EXTERNAL_SUITES = Object.freeze([
+  Object.freeze({ appId: 8_329, appName: "Vercel", appSlug: "vercel" }),
+  Object.freeze({ appId: 13_473, appName: "Netlify", appSlug: "netlify" }),
+  Object.freeze({ appId: 46_505, appName: "GitGuardian", appSlug: "gitguardian" }),
+  Object.freeze({ appId: 1_236_702, appName: "Claude", appSlug: "claude" }),
+]);
 const SUBJECT_BASE_KEYS = [
   "schema", "repository", "source_ref", "signer_workflow", "signer_digest",
   "expected_release_integration_id", "release_tag", "release_tag_object_sha",
@@ -167,14 +173,18 @@ function normalizeWorkflowAuthority(value, label = "workflowAuthority") {
     throw new Error(`${label} must be an object.`);
   }
   requireExactKeys(value, WORKFLOW_AUTHORITY_KEYS, label);
+  const workflowRunAttempt = requirePositiveInteger(
+    value.workflow_run_attempt,
+    `${label}.workflow_run_attempt`,
+  );
+  if (workflowRunAttempt !== 1) {
+    throw new Error(`${label}.workflow_run_attempt must be exactly 1.`);
+  }
   return Object.freeze({
     workflow_head_sha: requireSha1(value.workflow_head_sha, `${label}.workflow_head_sha`),
     workflow_head_tree: requireSha1(value.workflow_head_tree, `${label}.workflow_head_tree`),
     workflow_run_id: requirePositiveInteger(value.workflow_run_id, `${label}.workflow_run_id`),
-    workflow_run_attempt: requirePositiveInteger(
-      value.workflow_run_attempt,
-      `${label}.workflow_run_attempt`,
-    ),
+    workflow_run_attempt: workflowRunAttempt,
     workflow_check_suite_id: requirePositiveInteger(
       value.workflow_check_suite_id,
       `${label}.workflow_check_suite_id`,
@@ -224,6 +234,10 @@ function normalizeExternalCheckEvidence(value, label = "externalCheckEvidence") 
     all_check_suite_ids_digest: requireSha256(
       value.all_check_suite_ids_digest,
       `${label}.all_check_suite_ids_digest`,
+    ),
+    all_check_suite_authority_digest: requireSha256(
+      value.all_check_suite_authority_digest,
+      `${label}.all_check_suite_authority_digest`,
     ),
     all_actions_workflow_run_provenance_digest: requireSha256(
       value.all_actions_workflow_run_provenance_digest,
@@ -578,13 +592,21 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
       entry.app?.id,
       `checkSuitePages entry ${index}.app.id`,
     );
+    const repository = typeof entry.repository?.full_name === "string"
+      ? entry.repository.full_name
+      : null;
+    if (
+      appId === GITHUB_ACTIONS_APP_INTEGRATION_ID
+      && repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY
+    ) {
+      throw new Error(`checkSuitePages entry ${index} GitHub Actions repository is not canonical.`);
+    }
     return Object.freeze({
       appId,
       appName: typeof entry.app?.name === "string" ? entry.app.name : null,
       appSlug: typeof entry.app?.slug === "string" ? entry.app.slug : null,
-      repository: typeof entry.repository?.full_name === "string"
-        ? entry.repository.full_name
-        : null,
+      headSha: normalizedReleaseSha,
+      repository,
       suiteId,
     });
   });
@@ -592,7 +614,9 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
   if (new Set(suiteIds).size !== suiteIds.length) {
     throw new Error("Production release check-suite pages contain duplicate suite IDs.");
   }
-  const sortedSuiteIds = [...suiteIds].sort((left, right) => left - right);
+  const sortedCheckSuites = [...normalizedCheckSuites]
+    .sort((left, right) => left.suiteId - right.suiteId);
+  const sortedSuiteIds = sortedCheckSuites.map((entry) => entry.suiteId);
 
   return Object.freeze({
     all_check_suite_count: totalCount,
@@ -600,11 +624,14 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
     all_check_suite_ids_digest: createHash("sha256")
       .update(JSON.stringify(sortedSuiteIds))
       .digest("hex"),
+    all_check_suite_authority_digest: createHash("sha256")
+      .update(JSON.stringify(sortedCheckSuites))
+      .digest("hex"),
     check_suite_app_ids: Object.freeze(Object.fromEntries(
-      normalizedCheckSuites.map((entry) => [entry.suiteId, entry.appId]),
+      sortedCheckSuites.map((entry) => [entry.suiteId, entry.appId]),
     )),
     check_suite_metadata: Object.freeze(Object.fromEntries(
-      normalizedCheckSuites.map((entry) => [entry.suiteId, entry]),
+      sortedCheckSuites.map((entry) => [entry.suiteId, entry]),
     )),
   });
 }
@@ -744,9 +771,12 @@ function normalizeWorkflowRunPages({
       workflowId,
     }));
   }
-  return normalized.sort((left, right) =>
-    left.runId - right.runId
-    || left.checkSuiteId - right.checkSuiteId);
+  return Object.freeze({
+    externalWorkflowRuns: Object.freeze(normalized.sort((left, right) =>
+      left.runId - right.runId
+      || left.checkSuiteId - right.checkSuiteId)),
+    mappedCheckSuiteIds: Object.freeze([...suiteIds].sort((left, right) => left - right)),
+  });
 }
 
 /**
@@ -803,7 +833,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
   if (hasCompletePages && requireCommitStatuses(commitStatuses, "commitStatuses").length > 0) {
     throw new Error("Current production release contract requires legacy commit statuses to be empty.");
   }
-  const normalizedWorkflowRuns = hasCompletePages
+  const workflowRunAuthority = hasCompletePages
     ? normalizeWorkflowRunPages({
         checkSuiteAppIds: completeSuiteAuthority.check_suite_app_ids,
         checkSuiteIdSet: new Set(completeSuiteAuthority.all_check_suite_ids),
@@ -811,10 +841,41 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
         releaseSha,
         workflowRunPages,
       })
-    : [];
+    : { externalWorkflowRuns: [], mappedCheckSuiteIds: [] };
+  const normalizedWorkflowRuns = workflowRunAuthority.externalWorkflowRuns;
+  if (hasCompletePages) {
+    const mappedSuiteIdSet = new Set(workflowRunAuthority.mappedCheckSuiteIds);
+    const unmappedActionsSuiteIds = Object.values(completeSuiteAuthority.check_suite_metadata)
+      .filter((entry) => entry.appId === GITHUB_ACTIONS_APP_INTEGRATION_ID)
+      .map((entry) => entry.suiteId)
+      .filter((suiteId) => !mappedSuiteIdSet.has(suiteId));
+    if (unmappedActionsSuiteIds.length > 0) {
+      throw new Error(
+        `GitHub Actions check suites are missing bijective workflow-run mappings: ${unmappedActionsSuiteIds.join(", ")}.`,
+      );
+    }
+  }
   const workflowRunsBySuiteId = new Map(
     normalizedWorkflowRuns.map((entry) => [entry.checkSuiteId, entry]),
   );
+  if (hasCompletePages) {
+    const externalOwnerKeys = new Set();
+    for (const suite of Object.values(completeSuiteAuthority.check_suite_metadata)) {
+      if (suite.appId === GITHUB_ACTIONS_APP_INTEGRATION_ID) continue;
+      const owner = GITHUB_PRODUCTION_RELEASE_ZERO_CHECK_EXTERNAL_SUITES.find((entry) =>
+        entry.appId === suite.appId
+        && entry.appName === suite.appName
+        && entry.appSlug === suite.appSlug);
+      if (!owner || suite.repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
+        throw new Error(`External check suite ${suite.suiteId} owner/repository is not allowlisted.`);
+      }
+      const ownerKey = `${owner.appId}:${owner.appSlug}:${owner.appName}`;
+      if (externalOwnerKeys.has(ownerKey)) {
+        throw new Error(`External zero-check suite owner is duplicated: ${ownerKey}.`);
+      }
+      externalOwnerKeys.add(ownerKey);
+    }
+  }
   const observedExcludedSuiteIds = new Set(
     completeSuiteAuthority === null
       ? []
@@ -1072,6 +1133,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     ...(completeSuiteAuthority === null ? {} : {
       all_check_suite_count: completeSuiteAuthority.all_check_suite_count,
       all_check_suite_ids_digest: completeSuiteAuthority.all_check_suite_ids_digest,
+      all_check_suite_authority_digest: completeSuiteAuthority.all_check_suite_authority_digest,
     }),
     ...(completeSuiteAuthority === null ? {} : {
       all_actions_workflow_run_provenance_digest: createHash("sha256")
@@ -1230,6 +1292,8 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     ...(normalizedRehearsalAuthority === null ? {} : {
       all_check_suite_count: externalCheckEvidence.all_check_suite_count,
       all_check_suite_ids_digest: externalCheckEvidence.all_check_suite_ids_digest,
+      all_check_suite_authority_digest:
+        externalCheckEvidence.all_check_suite_authority_digest,
       all_actions_workflow_run_provenance_digest:
         externalCheckEvidence.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest:
@@ -1275,6 +1339,8 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     ...(normalizedRehearsalAuthority === null ? {} : {
       all_check_suite_count: externalCheckEvidence.all_check_suite_count,
       all_check_suite_ids_digest: externalCheckEvidence.all_check_suite_ids_digest,
+      all_check_suite_authority_digest:
+        externalCheckEvidence.all_check_suite_authority_digest,
       all_actions_workflow_run_provenance_digest:
         externalCheckEvidence.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest:

@@ -3423,9 +3423,15 @@ export function validateStoredCiProjection(value, manifest) {
     fail("candidate CI check run identities are duplicated");
   }
   for (const [index, entry] of value.check_suites.entries()) {
-    exactObject(entry, `candidate CI check_suites[${index}]`, ["app_id", "head_sha", "id"]);
+    exactObject(entry, `candidate CI check_suites[${index}]`, [
+      "app_id", "app_name", "app_slug", "head_sha", "id", "repository",
+    ]);
     for (const key of ["id", "app_id"]) safeInteger(entry[key], `candidate CI suite ${key}`);
-    if (entry.head_sha !== manifest.release_sha) fail("candidate CI suite head SHA is invalid");
+    if (entry.head_sha !== manifest.release_sha || entry.repository !== REPOSITORY) {
+      fail("candidate CI suite head SHA or repository is invalid");
+    }
+    string(entry.app_name, "candidate CI suite app_name");
+    string(entry.app_slug, "candidate CI suite app_slug");
     if (entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID) {
       const external = externalBySuiteId.get(entry.id);
       const hasStartedCheck = value.check_runs.some(
@@ -3517,13 +3523,11 @@ export function validateStoredCiProjection(value, manifest) {
         id: entry.id,
         app: {
           id: entry.app_id,
-          name: externalBySuiteId.get(entry.id)?.app_name,
-          slug: externalBySuiteId.get(entry.id)?.app_slug,
+          name: entry.app_name,
+          slug: entry.app_slug,
         },
         head_sha: entry.head_sha,
-        repository: externalBySuiteId.has(entry.id)
-          ? { full_name: externalBySuiteId.get(entry.id)?.repository }
-          : undefined,
+        repository: { full_name: entry.repository },
       })), "check_suites"),
       commitStatuses: value.commit_statuses,
       expectedContexts: EXPECTED_RELEASE_CONTEXTS,
@@ -3554,7 +3558,11 @@ export function validateStoredCiProjection(value, manifest) {
   const suiteRunSetDigest = sha256Jcs({
     check_suites: value.check_suites.map((entry) => ({
       app_id: entry.app_id,
+      app_name: entry.app_name,
+      app_slug: entry.app_slug,
+      head_sha: entry.head_sha,
       id: entry.id,
+      repository: entry.repository,
     })),
     check_runs: value.check_runs.map((entry) => ({
       app_id: entry.app_id,
@@ -6512,7 +6520,10 @@ function safeCheckSuiteProjection(entry) {
   return {
     id: Number(entry.id),
     app_id: Number(entry.app?.id),
+    app_name: entry.app?.name,
+    app_slug: entry.app?.slug,
     head_sha: entry.head_sha,
+    repository: entry.repository?.full_name,
   };
 }
 
