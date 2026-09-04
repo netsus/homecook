@@ -15,6 +15,16 @@
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
 
+## 2026-09-04 docs-governance — release rehearsal candidate failure evidence v2
+
+서버의 sealed candidate와 isolated diagnostic candidate가 모두 `candidate_build_failed`만 남겨 최초 내부 실패 phase를 식별할 수 없던 문제를 보수한다. 공식 제품 문서 5종, public API와 DB schema 영향은 N/A다.
+
+- candidate root 예약 뒤의 실패 marker는 exact 7-field `homecook.local-mac-production-rehearsal-candidate-failed.v2`만 허용한다: `schema,status,reason_code,stage,error_code,path_digest,production_guard`.
+- `stage`는 canonical R1의 18개 phase/function-class allowlist, `error_code`는 9개 stable allowlist만 사용한다. 세부 분류는 module-private brand만 신뢰하고 raw/forged/unknown 오류는 현재 stage의 `internal_error`로 닫는다.
+- `path_digest`는 raw path를 입력으로 사용하지 않고 candidate UUID와 release head/tree의 JCS digest만 결합한다. raw error/cause/message/name/stack/code, argv, stdout/stderr, PID, path, URL, provider/env/credential data는 저장하거나 hash하지 않는다.
+- 첫 `stage/error_code`는 후속 failure guard보다 우선한다. guard가 실패하면 `production_guard=unverified`만 남긴다. cleanup, marker `wx`, mode `0400`, nlink `1`, sealed-root no-follow readback이 모두 성공한 경우에만 `failed.json`을 authority로 인정한다. cleanup/terminalization 실패의 public stderr는 exact `candidate_terminalization_failed`, 다른 bootstrap failure는 exact `candidate_build_failed`만 허용한다.
+- 이 작성 작업은 Draft PR까지만 수행한다. author self-approval, Ready/merge, server rerun, production/DB/Docker/LaunchAgent/tag mutation은 금지하며 final independent security review가 별도 task에서 필요하다.
+
 ## 2026-09-04 contract-evolution — production CI workflow-run attempt authority
 
 사용자는 같은 exact SHA의 정상 `push` QA와 후속 `schedule` QA를 context 이름 중복만으로 rerun 처리해 release candidate를 영구 차단하는 결함을 수정하도록 승인했다. 공식 제품 문서 5종, public API와 DB schema 영향은 N/A다.

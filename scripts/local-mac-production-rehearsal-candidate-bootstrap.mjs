@@ -737,7 +737,10 @@ export async function runBootstrap(argv) {
 const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
 if (isMain) {
   runBootstrap(process.argv.slice(2)).catch((error) => {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    const publicCode = error instanceof Error && error.message === "candidate_terminalization_failed"
+      ? "candidate_terminalization_failed"
+      : "candidate_build_failed";
+    process.stderr.write(`${publicCode}\n`);
     process.exitCode = 1;
   });
 }

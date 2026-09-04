@@ -59,6 +59,8 @@ import { resolveCandidateRehearsalSourceAuthority } from "./local-mac-production
 
 export const RELEASE_REHEARSAL_CANDIDATE_SCHEMA =
   "homecook.local-mac-production-rehearsal-candidate.v2";
+export const RELEASE_REHEARSAL_CANDIDATE_FAILURE_SCHEMA =
+  "homecook.local-mac-production-rehearsal-candidate-failed.v2";
 export const RELEASE_REHEARSAL_BUILD_ENV_SCHEMA =
   "homecook.release-rehearsal-build-env.v1";
 export const RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA =
@@ -67,6 +69,7 @@ export const RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA =
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const IMAGE_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const CANONICALIZATION = "RFC8785-JCS+SHA256";
 const REPOSITORY = "netsus/homecook";
 const SOURCE_REF = "refs/heads/master";
@@ -102,6 +105,25 @@ const EXECUTABLE_TOOL_MODES = new Set([0o500, 0o555, 0o700, 0o755]);
 const READABLE_TOOL_MODES = new Set([0o400, 0o444, 0o500, 0o555, 0o600, 0o644, 0o700, 0o755]);
 const DNS_CONFIGURATION_MACH_SERVICE = "com.apple.SystemConfiguration.DNSConfiguration";
 const DIAGNOSTICD_MACH_SERVICE = "com.apple.diagnosticd";
+const CANDIDATE_FAILURE_STAGES = Object.freeze([
+  "toolchain_preflight", "source_prepare", "production_guard_pre", "ci_pre",
+  "environment_read", "image_inspect", "migration_collect", "build_prepare",
+  "offline_install", "next_build", "artifact_assemble", "bundle_seal", "ci_post",
+  "production_guard_post", "toolchain_postflight", "manifest_finalize",
+  "immutable_finalize", "internal",
+]);
+const CANDIDATE_FAILURE_STAGE_SET = new Set(CANDIDATE_FAILURE_STAGES);
+const CANDIDATE_FAILURE_ERROR_CODES = Object.freeze([
+  "authority_rejected", "command_failed", "execution_limit_exceeded",
+  "sandbox_policy_rejected", "sandbox_evidence_unavailable", "artifact_rejected",
+  "production_guard_rejected", "create_only_collision", "internal_error",
+]);
+const CANDIDATE_FAILURE_ERROR_CODE_SET = new Set(CANDIDATE_FAILURE_ERROR_CODES);
+const CANDIDATE_FAILURE_KEYS = [
+  "schema", "status", "reason_code", "stage", "error_code", "path_digest",
+  "production_guard",
+];
+const candidateFailureMetadata = new WeakMap();
 const requireNativeWitness = createRequire(import.meta.url);
 const pinnedSandboxWitnessControllers = new Map();
 
@@ -135,6 +157,99 @@ function sha(value, label) {
 function digest(value, label) {
   if (!DIGEST_PATTERN.test(value ?? "")) fail(`${label} must be lowercase SHA-256`);
   return value;
+}
+
+function brandedCandidateFailure(stage, errorCode) {
+  if (!CANDIDATE_FAILURE_STAGE_SET.has(stage) || !CANDIDATE_FAILURE_ERROR_CODE_SET.has(errorCode)) {
+    throw new Error("candidate failure brand input is invalid");
+  }
+  const failure = new Error(`candidate phase failed: ${stage}/${errorCode}`);
+  candidateFailureMetadata.set(failure, Object.freeze({ stage, error_code: errorCode }));
+  return failure;
+}
+
+function sandboxCandidateFailureStage(stage) {
+  if (["install", "offline-install"].includes(stage)) return "offline_install";
+  if (["build", "next-build"].includes(stage)) return "next_build";
+  return "internal";
+}
+
+function candidateFailureClassification(error, fallbackStage) {
+  if (!CANDIDATE_FAILURE_STAGE_SET.has(fallbackStage)) {
+    return Object.freeze({ stage: "internal", error_code: "internal_error" });
+  }
+  if (error && (typeof error === "object" || typeof error === "function")) {
+    try {
+      const branded = candidateFailureMetadata.get(error);
+      if (branded) return branded;
+    } catch { /* Forged or revoked error objects remain untrusted. */ }
+  }
+  return Object.freeze({ stage: fallbackStage, error_code: "internal_error" });
+}
+
+async function runCandidateFailureBoundary(stage, errorCode, operation) {
+  try {
+    return await operation();
+  } catch (error) {
+    if (
+      error && (typeof error === "object" || typeof error === "function")
+      && candidateFailureMetadata.has(error)
+    ) throw error;
+    throw brandedCandidateFailure(stage, errorCode);
+  }
+}
+
+function candidateFailurePathDigest({ candidateUuid, releaseSha, releaseTree }) {
+  if (!UUID_V4_PATTERN.test(candidateUuid ?? "")) fail("candidate failure UUID is invalid");
+  sha(releaseSha, "candidate failure release SHA");
+  if (releaseTree !== null) sha(releaseTree, "candidate failure release tree");
+  return sha256Jcs({
+    candidate_uuid: candidateUuid,
+    release_sha: releaseSha,
+    release_tree: releaseTree,
+  });
+}
+
+export function validateCandidateFailureEvidence(value) {
+  exactObject(value, "candidate failure evidence", CANDIDATE_FAILURE_KEYS);
+  if (
+    value.schema !== RELEASE_REHEARSAL_CANDIDATE_FAILURE_SCHEMA
+    || value.status !== "failed"
+    || value.reason_code !== "candidate_build_failed"
+  ) fail("candidate failure evidence schema or status is invalid");
+  if (!CANDIDATE_FAILURE_STAGE_SET.has(value.stage)) {
+    fail("candidate failure evidence stage is invalid");
+  }
+  if (!CANDIDATE_FAILURE_ERROR_CODE_SET.has(value.error_code)) {
+    fail("candidate failure evidence error code is invalid");
+  }
+  digest(value.path_digest, "candidate failure evidence path digest");
+  if (!["verified", "unverified"].includes(value.production_guard)) {
+    fail("candidate failure evidence production guard is invalid");
+  }
+  return value;
+}
+
+export function buildCandidateFailureEvidence({
+  candidateUuid,
+  error,
+  releaseSha,
+  releaseTree,
+  stage,
+  productionGuard,
+} = {}) {
+  const classification = candidateFailureClassification(error, stage);
+  return Object.freeze(validateCandidateFailureEvidence({
+    schema: RELEASE_REHEARSAL_CANDIDATE_FAILURE_SCHEMA,
+    status: "failed",
+    reason_code: "candidate_build_failed",
+    stage: classification.stage,
+    error_code: classification.error_code,
+    path_digest: candidateFailurePathDigest({
+      candidateUuid, releaseSha, releaseTree,
+    }),
+    production_guard: productionGuard,
+  }));
 }
 
 export function buildCandidateStartupIdentity(manifest) {
@@ -3204,14 +3319,18 @@ export function validateSandboxStageCapabilityPolicy(value) {
 export function validateProductionGuardSnapshots(pre, post) {
   const schema = "homecook.local-mac-production-surface-snapshot.v1";
   for (const [label, value] of [["pre", pre], ["post", post]]) {
-    if (!value || value.schema !== schema) fail(`production ${label} snapshot schema or completeness is invalid`);
+    if (!value || value.schema !== schema) {
+      throw brandedCandidateFailure("production_guard_post", "production_guard_rejected");
+    }
     digest(value.surface_digest, `production ${label} surface digest`);
     digest(value.snapshot_digest, `production ${label} snapshot digest`);
     if (value.production_db_connection_count !== 0 || value.mutation_attempt_count !== 0) {
-      fail(`production ${label} snapshot contains mutation or DB access`);
+      throw brandedCandidateFailure("production_guard_post", "production_guard_rejected");
     }
   }
-  if (pre.surface_digest !== post.surface_digest) fail("production surface drifted during candidate build");
+  if (pre.surface_digest !== post.surface_digest) {
+    throw brandedCandidateFailure("production_guard_post", "production_guard_rejected");
+  }
   return Object.freeze({
     snapshot_schema: schema,
     production_snapshot_pre_digest: pre.surface_digest,
@@ -3256,15 +3375,15 @@ export function writeCandidateTerminalMarker(root, kind, payload) {
         candidate_identity_digest: digest(payload.candidate_identity_digest, "candidate identity digest"),
         manifest_digest: digest(payload.manifest_digest, "candidate manifest digest"),
       }
-    : {
-        schema: "homecook.local-mac-production-rehearsal-candidate-failed.v1",
-        status: "failed",
-        reason_code: string(payload.reason_code, "failure reason code"),
-        path_digest: digest(payload.path_digest, "failure path digest"),
-      };
+    : validateCandidateFailureEvidence(payload);
   const markerPath = kind === "complete" ? completePath : failedPath;
   try {
     writeFileSync(markerPath, canonicalizeJcs(value), { flag: "wx", mode: 0o400 });
+    const markerStat = lstatSync(markerPath);
+    if (
+      markerStat.isSymbolicLink() || !markerStat.isFile() || markerStat.uid !== process.getuid?.()
+      || markerStat.nlink !== 1 || modeBits(markerStat.mode) !== 0o400
+    ) fail("candidate terminal marker create-only authority is unsafe");
   } finally {
     rmSync(reservationPath, { recursive: true });
   }
@@ -3350,6 +3469,30 @@ export function readSealedAuthorityFile(root, path, label, { afterOpen = null, m
     if (fd !== undefined) closeSync(fd);
     for (const parentFd of parentFds) closeSync(parentFd);
   }
+}
+
+export function readCandidateFailureEvidence(root) {
+  if (!isAbsolute(root ?? "") || resolve(root) !== root || realpathSync(root) !== root) {
+    fail("candidate failure root path is not canonical");
+  }
+  const rootStat = lstatSync(root);
+  if (
+    rootStat.isSymbolicLink() || !rootStat.isDirectory() || rootStat.uid !== process.getuid?.()
+    || modeBits(rootStat.mode) !== 0o500
+  ) fail("candidate failure root is not sealed");
+  if (pathExists(join(root, "complete.json"))) {
+    fail("candidate failure root conflicts with a complete terminal marker");
+  }
+  const entries = readdirSync(root);
+  if (entries.length !== 1 || entries[0] !== "failed.json") {
+    fail("candidate failure root contains non-terminal residue");
+  }
+  return validateCandidateFailureEvidence(readSealedAuthorityFile(
+    root,
+    join(root, "failed.json"),
+    "candidate failure marker",
+    { maxBytes: 16 * 1024 },
+  ));
 }
 
 export function validateStoredCiProjection(value, manifest) {
@@ -4262,7 +4405,7 @@ export async function buildReleaseRehearsalCandidate({
   if (!isAbsolute(namespaceRoot ?? "")) fail("candidate namespace root must be absolute");
   if (!Number.isInteger(currentUid) || currentUid < 0) fail("current uid is unavailable");
   string(runId, "runId");
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runId)) {
+  if (!UUID_V4_PATTERN.test(runId)) {
     fail("runId must be a cryptorandom UUID v4");
   }
   if (typeof beforeComplete !== "function") fail("immutable beforeComplete guard is required");
@@ -4278,9 +4421,12 @@ export async function buildReleaseRehearsalCandidate({
   let productionPre = null;
   let productionGuard = null;
   let result;
-  let failure = null;
+  let failureSignal = null;
+  let failureStage = "toolchain_preflight";
+  let releaseTree = sourceAuthority?.release_tree ?? null;
   let physicalAuthorityCreated = false;
   try {
+    failureStage = "toolchain_preflight";
     const toolchainLock = await adapters.readToolchainLock();
     digest(toolchainLock.toolchain_lock_digest, "toolchain lock digest");
     const toolchain = validateCandidateToolchain(await adapters.collectToolchain({
@@ -4288,12 +4434,18 @@ export async function buildReleaseRehearsalCandidate({
       releaseSha,
       runRoot,
     }));
+    failureStage = "source_prepare";
     const source = await adapters.prepareSource({ releaseSha, runRoot });
     const sourceEvidence = validateCandidateSourceEvidence(source.evidence);
+    releaseTree = sourceEvidence.release_tree;
+    failureStage = "production_guard_pre";
     productionPre = await adapters.captureProductionSurface({ phase: "pre", releaseSha, runRoot });
+    failureStage = "ci_pre";
     const ciPre = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "pre", releaseSha }));
+    failureStage = "environment_read";
     const environment = await adapters.readEnvironment({ releaseSha, runRoot });
     validateEnvironmentMetadata(environment.metadata);
+    failureStage = "image_inspect";
     const imageEvidence = await adapters.collectImages({
       buildEnvironment: environment.values,
       releaseSha,
@@ -4302,6 +4454,7 @@ export async function buildReleaseRehearsalCandidate({
     exactObject(imageEvidence, "Compose image evidence", ["images", "compose_source_digest"]);
     const images = validateCandidateImages(imageEvidence.images);
     const composeSourceDigest = digest(imageEvidence.compose_source_digest, "Compose source digest");
+    failureStage = "migration_collect";
     const migration = validateMigration(await adapters.collectMigration({ releaseSha, runRoot, source }));
     const buildId = `candidate-${releaseSha}`;
     const childEnv = Object.freeze({
@@ -4311,13 +4464,16 @@ export async function buildReleaseRehearsalCandidate({
       HOMECOOK_RELEASE_TREE: sourceEvidence.release_tree,
       NODE_ENV: "production",
     });
+    failureStage = "build_prepare";
     const build = await adapters.executeBuild({
       buildId, childEnv, releaseSha, releaseTree: sourceEvidence.release_tree, runRoot, source,
     });
+    failureStage = "bundle_seal";
     const sealedMigration = validateMigration(build.migration ?? migration);
     if (sealedMigration.ordered_migration_files_digest !== migration.ordered_migration_files_digest) {
       fail("sealed migration digest differs from exact Git input");
     }
+    failureStage = "ci_post";
     const ciPost = validateCandidateCiEvidence(await adapters.collectCiEvidence({ phase: "post", releaseSha }));
     const ci = validateStableCiSnapshots(ciPre, ciPost, releaseSha, { selectionDigest });
     const evidenceRoot = join(runRoot, "evidence");
@@ -4326,13 +4482,16 @@ export async function buildReleaseRehearsalCandidate({
       flag: "wx",
       mode: 0o400,
     });
+    failureStage = "production_guard_post";
     const productionPost = await adapters.captureProductionSurface({ phase: "post", releaseSha, runRoot });
     productionGuard = validateProductionGuardSnapshots(productionPre, productionPost);
+    failureStage = "toolchain_postflight";
     validateCandidateToolchain(await adapters.collectToolchain({
       phase: "post",
       releaseSha,
       runRoot,
     }));
+    failureStage = "artifact_assemble";
     const sealedBundleDigest = digest(
       build.bundle_content_digest ?? build.sealed_bundle_digest,
       "sealed_bundle_digest",
@@ -4354,6 +4513,7 @@ export async function buildReleaseRehearsalCandidate({
     validateToolIdentity(build.build_tools.next_cli, "build tools next_cli", {
       requireExecutable: false,
     });
+    failureStage = "manifest_finalize";
     const bundleAuthorityManifest = buildBundleAuthorityManifest({
       repository: REPOSITORY,
       source_ref: SOURCE_REF,
@@ -4392,6 +4552,7 @@ export async function buildReleaseRehearsalCandidate({
       sealed_bundle_digest: sealedBundleDigest,
     });
     if (typeof adapters.finalizeBundleAddress === "function") {
+      failureStage = "bundle_seal";
       await adapters.finalizeBundleAddress({
         build,
         bundleAuthorityManifest,
@@ -4399,6 +4560,7 @@ export async function buildReleaseRehearsalCandidate({
         runRoot,
       });
     }
+    failureStage = "manifest_finalize";
     const manifest = buildCandidateManifest({
       schema: RELEASE_REHEARSAL_CANDIDATE_SCHEMA,
       canonicalization: CANONICALIZATION,
@@ -4440,6 +4602,7 @@ export async function buildReleaseRehearsalCandidate({
     sealCandidateTree(runRoot);
     chmodSync(runRoot, 0o700);
     assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
+    failureStage = "immutable_finalize";
     const completionAuthority = await beforeComplete({
       builder_input_digest: manifest.builder_input_digest,
       candidate_identity_digest: manifest.candidate_identity_digest,
@@ -4469,30 +4632,59 @@ export async function buildReleaseRehearsalCandidate({
     }
     result = { candidate_root: runRoot, manifest };
   } catch (error) {
-    failure = error;
+    const classification = candidateFailureClassification(error, failureStage);
+    failureSignal = brandedCandidateFailure(classification.stage, classification.error_code);
   }
-  if (failure && productionPre) {
+  let failureProductionGuard = "unverified";
+  if (failureSignal && productionPre) {
     try {
       const productionPost = await adapters.captureProductionSurface({ phase: "post_failure", releaseSha, runRoot });
       validateProductionGuardSnapshots(productionPre, productionPost);
-    } catch (guardError) {
-      failure = guardError;
-    }
+      failureProductionGuard = "verified";
+    } catch { /* The first failure classification remains the diagnostic authority. */ }
   }
-  if (failure) {
-    if (physicalAuthorityCreated) rmSync(physicalAuthorityPath, { force: false });
-    assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
-    makeCandidateRootWritable(runRoot);
-    for (const name of readdirSync(runRoot)) {
-      rmSync(join(runRoot, name), { force: false, recursive: true });
-    }
-    const pathDigest = sha256Jcs(runId);
-    writeCandidateTerminalMarker(runRoot, "failed", {
-      reason_code: "candidate_build_failed",
-      path_digest: pathDigest,
+  if (failureSignal) {
+    const failureEvidence = buildCandidateFailureEvidence({
+      candidateUuid: runId,
+      error: failureSignal,
+      releaseSha,
+      releaseTree,
+      stage: "internal",
+      productionGuard: failureProductionGuard,
     });
-    chmodSync(runRoot, 0o500);
-    throw new Error(`Release rehearsal candidate failed: candidate_build_failed path_digest=${pathDigest}`);
+    let markerPath = null;
+    let markerIdentity = null;
+    try {
+      if (physicalAuthorityCreated) rmSync(physicalAuthorityPath, { force: false });
+      assertRunRootIdentity(runRoot, attemptsRoot, runIdentity, currentUid);
+      makeCandidateRootWritable(runRoot);
+      for (const name of readdirSync(runRoot)) {
+        rmSync(join(runRoot, name), { force: false, recursive: true });
+      }
+      markerPath = writeCandidateTerminalMarker(runRoot, "failed", failureEvidence);
+      markerIdentity = lstatSync(markerPath, { bigint: true });
+      chmodSync(runRoot, 0o500);
+      if (canonicalizeJcs(readCandidateFailureEvidence(runRoot)) !== canonicalizeJcs(failureEvidence)) {
+        throw new Error("candidate failure marker readback mismatch");
+      }
+    } catch {
+      try {
+        if (markerPath !== null && pathExists(markerPath)) {
+          chmodSync(runRoot, 0o700);
+          const markerStat = lstatSync(markerPath, { bigint: true });
+          if (
+            markerStat.isFile() && !markerStat.isSymbolicLink()
+            && markerStat.uid === BigInt(currentUid) && markerStat.nlink === 1n
+            && markerIdentity !== null
+            && ["dev", "ino", "ctimeNs", "size", "uid", "gid", "nlink"].every(
+              (field) => markerStat[field] === markerIdentity[field],
+            )
+          ) rmSync(markerPath, { force: false });
+        }
+      } catch { /* Untrusted replacement paths are never removed. */ }
+      throw new Error("candidate_terminalization_failed");
+    }
+    throw new Error("candidate_build_failed");
   }
   if (!result) fail("candidate result was not produced");
   return /** @type {{candidate_root:string, manifest:any}} */ (result);
@@ -5274,17 +5466,18 @@ export async function observeWitnessedSandboxRoot({
 }
 
 export function validateSandboxedBuildResult(result, label) {
+  const failureStage = sandboxCandidateFailureStage(result?.stage);
   if (
     result?.process_lifecycle_enforcement === "macos-sandbox-deny-process-fork"
     && result.process_attempt_count !== 0
   ) {
-    const kinds = Array.isArray(result.process_attempt_kinds)
-      ? result.process_attempt_kinds.join(",")
-      : "unknown";
-    fail(`${label} contained a witnessed child process or signal attempt (${kinds})`);
+    throw brandedCandidateFailure(failureStage, "sandbox_policy_rejected");
   }
   if (result?.error || result?.signal || result?.status !== 0) {
-    fail(`${label} failed in the measured sandbox`);
+    throw brandedCandidateFailure(
+      failureStage,
+      result?.status === null ? "execution_limit_exceeded" : "command_failed",
+    );
   }
   if (
     result.process_tree_complete !== true
@@ -5343,9 +5536,11 @@ export function validateSandboxedBuildResult(result, label) {
     !result.process_identities.some((identity) => identity.pid === result.root_pid)
     || result.process_identities.some((identity) => identity.pgid !== result.root_pgid)
   ) fail(`${label} process tree root or process-group identity is invalid`);
-  if (!Array.isArray(result.observed_denials)) fail(`${label} lacks independent OS denial evidence`);
+  if (!Array.isArray(result.observed_denials)) {
+    throw brandedCandidateFailure(failureStage, "sandbox_evidence_unavailable");
+  }
   if (result.observed_denials.length !== 0) {
-    fail(`${label} contained an independently observed denied sandbox attempt`);
+    throw brandedCandidateFailure(failureStage, "sandbox_policy_rejected");
   }
   return Object.freeze({
     audit_digest: sha256Jcs({
@@ -6713,10 +6908,16 @@ export function createReleaseRehearsalCandidateAdapters({
 
   return Object.freeze({
     async readToolchainLock() {
-      return readToolchainLock();
+      return runCandidateFailureBoundary(
+        "toolchain_preflight", "authority_rejected", () => readToolchainLock(),
+      );
     },
 
-    async captureProductionSurface() {
+    async captureProductionSurface({ phase } = {}) {
+      return runCandidateFailureBoundary(
+        phase === "pre" ? "production_guard_pre" : "production_guard_post",
+        "production_guard_rejected",
+        async () => {
       if (!initialToolchain) fail("candidate tools must be snapshotted before production inventory");
       const tools = resolveTools();
       const inventoryAdapters = createLocalProductionInventoryAdapters({
@@ -6739,6 +6940,8 @@ export function createReleaseRehearsalCandidateAdapters({
         probeIdentity: initialToolchain.candidate_builder,
       });
       return createProductionSurfaceSnapshot(inventory);
+        },
+      );
     },
 
     async resolveSourceAuthority({ releaseSha, selection: requestedSelection }) {
@@ -6755,6 +6958,7 @@ export function createReleaseRehearsalCandidateAdapters({
     },
 
     async prepareSource({ releaseSha, runRoot }) {
+      return runCandidateFailureBoundary("source_prepare", "authority_rejected", async () => {
       const { gitPath } = resolveTools();
       const env = gitEnvironment(normalizedHome);
       runBounded(gitPath, ["-C", sourceRoot, "fetch", "--no-tags", "origin", "master"], {
@@ -6844,9 +7048,14 @@ export function createReleaseRehearsalCandidateAdapters({
           builder_input_digest: builderAuthority.builder_input_digest,
         },
       };
+      });
     },
 
-    async collectCiEvidence({ releaseSha }) {
+    async collectCiEvidence({ releaseSha, phase }) {
+      return runCandidateFailureBoundary(
+        phase === "pre" ? "ci_pre" : "ci_post",
+        "command_failed",
+        async () => {
       const { ghPath, gitPath } = resolveTools();
       const env = Object.freeze({ HOME: normalizedHome, PATH: "/usr/bin:/bin" });
       runBounded(gitPath, ["-C", sourceRoot, "fetch", "--no-tags", "origin", "master"], {
@@ -6948,11 +7157,20 @@ export function createReleaseRehearsalCandidateAdapters({
         workflow_run_provenance_digest:
           externalEvidence.all_actions_workflow_run_provenance_digest,
       };
+        },
+      );
     },
 
-    collectToolchain,
+    async collectToolchain({ phase } = {}) {
+      return runCandidateFailureBoundary(
+        phase === "post" ? "toolchain_postflight" : "toolchain_preflight",
+        "authority_rejected",
+        collectToolchain,
+      );
+    },
 
     async collectImages({ buildEnvironment }) {
+      return runCandidateFailureBoundary("image_inspect", "command_failed", async () => {
       if (!currentSource) fail("candidate source must be prepared before image inventory");
       const platform = string(buildEnvironment.FULL_LOCAL_DOCKER_PLATFORM, "FULL_LOCAL_DOCKER_PLATFORM");
       const composeBytes = readFileSync(
@@ -7000,17 +7218,26 @@ export function createReleaseRehearsalCandidateAdapters({
         images: results.sort((left, right) => left.service.localeCompare(right.service)),
         compose_source_digest: sha256Bytes(composeBytes),
       };
+      });
     },
 
     async collectMigration({ source }) {
-      return collectMigrationFromSource(source);
+      return runCandidateFailureBoundary(
+        "migration_collect", "artifact_rejected", () => collectMigrationFromSource(source),
+      );
     },
 
     async readEnvironment() {
-      return readBuildEnvironmentSnapshot(resolve(environmentSourcePath));
+      return runCandidateFailureBoundary(
+        "environment_read", "authority_rejected",
+        () => readBuildEnvironmentSnapshot(resolve(environmentSourcePath)),
+      );
     },
 
     async executeBuild({ buildId, childEnv, releaseSha, releaseTree, runRoot, source }) {
+      let diagnosticStage = "build_prepare";
+      let diagnosticErrorCode = "authority_rejected";
+      try {
       if (!currentSource || source.checkout_dir !== currentSource.checkoutDir) fail("candidate source authority changed");
       const tools = resolveTools();
       const privateHome = join(runRoot, "build-home");
@@ -7131,6 +7358,8 @@ export function createReleaseRehearsalCandidateAdapters({
               join(normalizedHome, ".docker", "run", "docker.sock"),
             ],
           });
+          diagnosticStage = "offline_install";
+          diagnosticErrorCode = "sandbox_evidence_unavailable";
           const installAudit = await runObservedSandboxCommand({
             sandboxPath: tools.sandboxPath,
             sandboxWitnessPath: sandboxWitness.path,
@@ -7152,6 +7381,7 @@ export function createReleaseRehearsalCandidateAdapters({
             timeout: 20 * 60_000,
             beforeSpawn: verifyInstallPhaseBeforeSpawn,
           });
+          diagnosticErrorCode = "artifact_rejected";
           const finalIndexAuthority = sealInstallIndex();
           const buildSandboxProfile = buildCandidateSandboxProfile({
             stage: "next-build",
@@ -7185,6 +7415,8 @@ export function createReleaseRehearsalCandidateAdapters({
               join(normalizedHome, ".docker", "run", "docker.sock"),
             ],
           });
+          diagnosticStage = "next_build";
+          diagnosticErrorCode = "authority_rejected";
           const nextEntrypointAuthority = await withCandidateNextEntrypointAuthority({
             buildRoot,
             currentUid: process.getuid?.(),
@@ -7192,6 +7424,7 @@ export function createReleaseRehearsalCandidateAdapters({
             const nextCliPre = snapshotToolFile(entrypointTarget, "next-cli@15.5.21", {
               requireExecutable: false,
             });
+            diagnosticErrorCode = "sandbox_evidence_unavailable";
             const nextBuildAudit = await runObservedSandboxCommand({
               sandboxPath: tools.sandboxPath,
               sandboxWitnessPath: sandboxWitness.path,
@@ -7208,6 +7441,7 @@ export function createReleaseRehearsalCandidateAdapters({
               timeout: 20 * 60_000,
               beforeSpawn: verifyBeforeSpawn,
             });
+            diagnosticErrorCode = "artifact_rejected";
             const nextCliPost = snapshotToolFile(entrypointTarget, "next-cli@15.5.21", {
               requireExecutable: false,
             });
@@ -7221,6 +7455,7 @@ export function createReleaseRehearsalCandidateAdapters({
               sourceManifest: source.source_manifest,
             });
             if (postSourceDigest !== currentSource.tracked.digest) fail("tracked source drifted during offline build");
+            diagnosticStage = "artifact_assemble";
             const artifactsRoot = join(runRoot, "artifacts");
             const assembled = assembleCandidateArtifacts({
               sourceRoot: source.checkout_dir,
@@ -7242,6 +7477,7 @@ export function createReleaseRehearsalCandidateAdapters({
               sourceRoot: source.checkout_dir,
               sourceManifest: source.source_manifest,
             }) !== currentSource.tracked.digest) fail("source drifted during worker artifact materialization");
+            diagnosticStage = "bundle_seal";
             const bundlesRoot = join(runRoot, "bundles");
             mkdirSync(bundlesRoot, { mode: 0o700 });
             const stagingBundleRoot = join(bundlesRoot, "bundle");
@@ -7261,6 +7497,8 @@ export function createReleaseRehearsalCandidateAdapters({
               sourceRoot: source.checkout_dir,
               sourceManifest: source.source_manifest,
             }) !== currentSource.tracked.digest) fail("source drifted during final bundle sealing");
+            diagnosticStage = "toolchain_postflight";
+            diagnosticErrorCode = "authority_rejected";
             await collectToolchain();
             return {
               ...bundle,
@@ -7307,6 +7545,8 @@ export function createReleaseRehearsalCandidateAdapters({
               staging_bundle_root: stagingBundleRoot,
             };
           });
+          diagnosticStage = "artifact_assemble";
+          diagnosticErrorCode = "artifact_rejected";
           validateCandidateNextEntrypointInventoryBinding(
             nextEntrypointAuthority.inventory_binding,
             nextEntrypointAuthority.value.file_inventory,
@@ -7319,6 +7559,8 @@ export function createReleaseRehearsalCandidateAdapters({
             },
           };
         });
+        diagnosticStage = "build_prepare";
+        diagnosticErrorCode = "artifact_rejected";
         return {
           ...storeViewBuild.value,
           pnpm_store_view_authority_digest: storeViewBuild.authority_digest,
@@ -7341,6 +7583,8 @@ export function createReleaseRehearsalCandidateAdapters({
         sandboxPolicyEvidence.final_index_inventory_digest !== pnpmStoreFinalIndexInventoryDigest
         || sandboxPolicyEvidence.final_index_physical_identity_digest !== pnpmStoreFinalIndexIdentityDigest
       ) fail("candidate pnpm final index builder authority cross-binding is invalid");
+      diagnosticStage = "artifact_assemble";
+      diagnosticErrorCode = "artifact_rejected";
       return {
         ...build,
         sandbox_stage_capability_policy: sandboxPolicyEvidence.stage_capability_policy,
@@ -7354,9 +7598,17 @@ export function createReleaseRehearsalCandidateAdapters({
           pnpm_store_view_authority_digest: pnpmStoreViewAuthorityDigest,
         }),
       };
+      } catch (error) {
+        if (
+          error && (typeof error === "object" || typeof error === "function")
+          && candidateFailureMetadata.has(error)
+        ) throw error;
+        throw brandedCandidateFailure(diagnosticStage, diagnosticErrorCode);
+      }
     },
 
     async finalizeBundleAddress({ build, bundleAuthorityManifest, candidateIdentityDigest }) {
+      return runCandidateFailureBoundary("bundle_seal", "artifact_rejected", async () => {
       const stagingBundleRoot = resolve(build.staging_bundle_root);
       const bundlesRoot = dirname(stagingBundleRoot);
       chmodSync(stagingBundleRoot, 0o700);
@@ -7375,6 +7627,7 @@ export function createReleaseRehearsalCandidateAdapters({
         { flag: "wx", mode: 0o400 },
       );
       chmodSync(bundlesRoot, 0o500);
+      });
     },
 
   });
