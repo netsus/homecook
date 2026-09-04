@@ -14,6 +14,19 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
+- 광고 캠페인 기간에만 사용하는 별도 경량 release authority는 `docs/engineering/local-mac-ad-campaign-fast-release.md`다. 이 예외는 `2026-09-15T15:00:00.000Z`에 만료되며 기존 production v3 activation을 열거나 완화하지 않는다.
+
+## 2026-09-04 contract-evolution — expiring advertising campaign release lane
+
+사용자는 광고 캠페인의 한시적 운영을 위해 기존 v3와 분리된 `release:campaign:*` lane을 `2026-09-15T15:00:00.000Z`까지 명시적으로 승인했다. 공식 제품 문서 5종, public API와 DB schema 영향은 N/A다.
+
+- source는 실행 시점 `origin/master`의 exact SHA이며 해당 SHA의 최신 필수 7 context가 모두 성공해야 한다. 정상적인 동일 SHA rerun은 최신 결과로 대체할 수 있고 all-history 수집은 이 lane의 blocker가 아니다.
+- clean isolated checkout에서 frozen offline install/build를 한 번 수행해 app/full-local/YouTube worker를 하나의 `release_bundle_sha256`으로 봉인한다. 이후 rehearsal, tag, manifest, attestation, production install은 rebuild 없이 같은 bundle을 소비한다.
+- 단일 high-port isolated rehearsal에서 candidate health와 immediate previous bundle rollback을 함께 검증한다. 기존 v3의 2회 rehearsal과 전체 release test suite는 보존하지만 캠페인 lane의 blocking gate로 사용하지 않는다.
+- production snapshot, fresh encrypted backup+verify, 정확히 한 번의 `production-release-approval` human gate, annotated `prod-*` tag와 최소 manifest/attestation 뒤에만 기존 production lock과 transactional install/recovery helper를 호출한다.
+- postdeploy는 internal/HTTPS `/`, `/beta`, `/privacy`, Auth health, marketing API/state/DB analytics canary, worker identity와 app/full-local/worker bundle parity를 확인한다. 실패하면 같은 lock 아래 immediate previous bundle로 자동 rollback한다.
+- 만료 시각 이상에서는 adapter 생성, lock, Docker, LaunchAgent 접근 전에 `prepare`, `rehearse`, `promote`와 새 authority 발급을 fail closed한다. `status`, `verify`, 이미 시작된 승격의 안전 rollback만 허용한다.
+- 작성 작업은 Draft PR까지만 수행한다. author self-approval, Ready/merge, server/production/DB/Docker/LaunchAgent/tag action은 금지한다. 캠페인 종료 후 제거와 permanent v4 재설계는 별도 승인 작업으로 미룬다.
 
 ## 2026-09-04 docs-governance — release rehearsal candidate failure evidence v2
 

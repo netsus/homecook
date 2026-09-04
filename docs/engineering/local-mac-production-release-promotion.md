@@ -6,6 +6,8 @@
 
 현재 activation: **`activation_blocked: true` for `release:production:promote`**
 
+2026-09 광고 캠페인을 위해 사용자가 승인한 별도 만료형 경량 경로는 [local-mac-ad-campaign-fast-release.md](./local-mac-ad-campaign-fast-release.md)가 단일 authority다. 그 경로는 기존 v3에 `--fast` 분기를 추가하지 않으며 이 문서의 `release:production:*` activation kill switch, 2회 rehearsal, v3 schema와 attestation 계약을 삭제하거나 활성화하지 않는다.
+
 rehearsal repeatability receipt와 GitHub attestation binding 구현이 merge되고 독립 code/security review를 통과하기 전까지 `pnpm release:production:promote`는 adapter 생성, lock 획득, Docker/LaunchAgent/DB/runtime 접근보다 먼저 무조건 fail closed한다. command가 `package.json`에 존재한다는 사실은 activation evidence가 아니다. `plan`, `prepare`, `status`, `verify`는 기존 read-only/prepare 경계에서 계속 사용할 수 있으며 이 kill switch가 불필요하게 막지 않는다.
 
 이 문서는 Homecook 서버 Mac production release를 어떻게 승인하고, 어떤 작업만 승격 authority가 수행할 수 있는지 정의한다.

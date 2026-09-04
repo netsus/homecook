@@ -27,6 +27,7 @@
 - 서버 Mac release는 `origin/master`의 exact approved SHA, annotated `prod-*` tag, release manifest, attestation이 모두 맞을 때만 승격된다.
 - `release/*` 브랜치는 안정화 용도일 수 있지만, production source of truth는 아니다.
 - only `release-promoter` role may run production-changing deployment commands.
+- 한시적 광고 캠페인 경량 경로도 source는 exact `origin/master` SHA이고 production mutation은 `release-promoter`만 수행한다. 별도 authority와 만료 규칙은 `local-mac-ad-campaign-fast-release.md`를 따른다.
 
 ## Protected Base Branch Rule
 

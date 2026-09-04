@@ -18,6 +18,7 @@
 14. workflow v2 / OMO 운영 기준 확인 시 `docs/engineering/workflow-v2/README.md`부터 읽고, 필요한 문서만 링크를 따라간다
 15. Stage 간 새 Codex 작업 생성·인수인계 시 → `docs/engineering/codex-task-handoff.md`
 16. 서버 Mac release 승격 규칙 확인 시 → `docs/engineering/local-mac-production-release-promotion.md`
+17. 2026-09-15 광고 캠페인 임시 release lane 확인 시 → `docs/engineering/local-mac-ad-campaign-fast-release.md`
 
 ## Source of Truth
 
@@ -58,6 +59,7 @@
 - `docs/engineering/qa-system.md`는 deterministic QA, exploratory QA, qa eval 실행 기준의 단일 소스다.
 - `docs/engineering/workflow-v2/*`는 현재 OMO 기본 운영 경로의 entry docs다. product slice의 stage mechanics와 change-type gate는 계속 `slice-workflow.md`, `agent-workflow-overview.md`가 구체화한다.
 - `docs/engineering/local-mac-production-release-promotion.md`는 서버 Mac release 승격의 canonical authority다. `master` merge는 통합 evidence일 뿐 deployment approval이 아니다.
+- `docs/engineering/local-mac-ad-campaign-fast-release.md`는 `2026-09-15T15:00:00.000Z`까지 명시적으로 승인된 별도 `release:campaign:*` lane의 한시적 authority다. 기존 v3 경로를 수정하거나 활성화하지 않는다.
 - canonical closeout projection / repair semantics의 기준은 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다.
 - `docs/engineering/bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface를 기록하는 compatibility note다.
 - entry doc은 하위 절차를 장문으로 재서술하지 않고 링크와 책임 경계만 남긴다.
@@ -96,6 +98,7 @@
 - docs/governance와 low-risk docs/config 변경은 `docs/engineering/agent-workflow-overview.md`의 축약 경로를 따른다.
 - 서버 Mac production release는 `release-promoter` 역할이 없는 작업이 install/restart/stop/uninstall/rollback을 실행하지 못하게 다룬다. production release는 `origin/master`의 exact approved SHA + annotated `prod-*` tag + manifest/attestation이 모두 맞아야 한다.
 - app, full-local, YouTube worker는 release bundle 하나로 본다. ordinary task는 release bundle의 production-changing command를 실행하지 않는다.
+- 캠페인 lane도 production-changing command는 `release-promoter`만 실행한다. 작성·구현 작업은 Draft PR까지만 수행하며 tag/server/production/DB/Docker/LaunchAgent mutation을 실행하지 않는다.
 - direct `/bin/launchctl` 호출, plist write, production checkout mutation은 development checkout에서 허용하지 않는다. 협조적(cooperative) boundary에서는 drift로 감지하고, OS hard boundary가 있더라도 release-promoter path 밖의 mutation은 허용하지 않는다.
 
 ## Dependency Management
