@@ -151,6 +151,10 @@ describe("marketing campaign fast release authority", () => {
       ...manifestInput(),
       approval: { ...manifestInput().approval, approval_count: 2 },
     })).toThrow(/approval_count must be exactly 1/u);
+    expect(() => buildCampaignManifest({
+      ...manifestInput(),
+      debug_note: "unexpected authority extension",
+    })).toThrow(/unknown fields: debug_note/u);
   });
 
   it("builds once from a clean isolated exact-master checkout", async () => {

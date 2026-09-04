@@ -28,6 +28,23 @@ const SECRET_VALUE_PATTERNS = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
   /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/u,
 ];
+const MANIFEST_FIELDS = new Set([
+  "schema", "expires_at", "repository", "source_ref", "release_sha", "release_tree",
+  "build_id", "release_bundle_sha256", "required_ci_evidence_sha256",
+  "rehearsal_receipt_sha256", "production_snapshot_sha256", "backup_receipt_sha256",
+  "previous_release_sha", "approval", "rehearsal", "backup", "components", "release_tag",
+  "manifest_sha256",
+]);
+const APPROVAL_FIELDS = new Set([
+  "environment", "approved", "approval_count", "prevent_self_review", "approver",
+]);
+const REHEARSAL_FIELDS = new Set([
+  "run_count", "candidate_health", "previous_bundle_rollback", "production_guard", "cleanup",
+]);
+const BACKUP_FIELDS = new Set(["fresh", "encrypted", "verified"]);
+const COMPONENT_FIELDS = new Set([
+  "component", "release_sha", "build_id", "release_bundle_sha256",
+]);
 
 function fail(message) {
   throw new Error(message);
@@ -38,6 +55,11 @@ function requireObject(value, label) {
     fail(`${label} must be an object.`);
   }
   return value;
+}
+
+function requireExactKeys(value, allowed, label) {
+  const unknown = Object.keys(value).filter((key) => !allowed.has(key)).sort();
+  if (unknown.length > 0) fail(`${label} contains unknown fields: ${unknown.join(", ")}.`);
 }
 
 function requireString(value, label) {
@@ -189,6 +211,7 @@ export function assertNoCampaignSecretMaterial(value, path = "evidence") {
 
 function validateApproval(value) {
   const approval = requireObject(value, "approval");
+  requireExactKeys(approval, APPROVAL_FIELDS, "approval");
   requireExact(approval.environment, "production-release-approval", "approval.environment");
   requireExact(approval.approved, true, "approval.approved");
   if (approval.approval_count !== 1) fail("approval.approval_count must be exactly 1.");
@@ -198,6 +221,7 @@ function validateApproval(value) {
 
 function validateRehearsal(value) {
   const rehearsal = requireObject(value, "rehearsal");
+  requireExactKeys(rehearsal, REHEARSAL_FIELDS, "rehearsal");
   if (rehearsal.run_count !== 1) fail("rehearsal.run_count must be exactly 1.");
   requireExact(rehearsal.candidate_health, "pass", "rehearsal.candidate_health");
   requireExact(
@@ -211,6 +235,7 @@ function validateRehearsal(value) {
 
 function validateBackup(value) {
   const backup = requireObject(value, "backup");
+  requireExactKeys(backup, BACKUP_FIELDS, "backup");
   requireExact(backup.fresh, true, "backup.fresh");
   requireExact(backup.encrypted, true, "backup.encrypted");
   requireExact(backup.verified, true, "backup.verified");
@@ -225,6 +250,7 @@ function validateComponents(value, manifest) {
     fail("components must contain exact app, full-local, and youtube-worker identities.");
   }
   for (const component of value) {
+    requireExactKeys(component, COMPONENT_FIELDS, `component ${component.component ?? "unknown"}`);
     if (component.release_sha !== manifest.release_sha
       || component.build_id !== manifest.build_id
       || component.release_bundle_sha256 !== manifest.release_bundle_sha256) {
@@ -235,6 +261,7 @@ function validateComponents(value, manifest) {
 
 export function validateCampaignManifest(value, { now = null, requireFresh = false } = {}) {
   const manifest = requireObject(value, "Campaign manifest");
+  requireExactKeys(manifest, MANIFEST_FIELDS, "Campaign manifest");
   requireExact(manifest.schema, CAMPAIGN_RELEASE_SCHEMA, "schema");
   requireExact(manifest.expires_at, CAMPAIGN_RELEASE_EXPIRES_AT, "expires_at");
   requireExact(manifest.repository, REPOSITORY, "repository");
