@@ -39,6 +39,8 @@ Usage:
 Excluded from this split: Docker rehearsal runner, foreground supervisor, synthetic DB/canary,
 repeatability attestation, production attestation/promotion unlock, and recovery execution.
 Current-tip compatibility: omit --selection only when --release-sha is the exact fetched origin/master tip.
+Candidate failures retain only closed homecook.local-mac-production-rehearsal-candidate-failed.v2 evidence.
+Public bootstrap stderr is candidate_build_failed or candidate_terminalization_failed; raw errors are never emitted.
 `;
 
 function parseArguments(argv) {

@@ -1216,6 +1216,24 @@ describe("release rehearsal candidate manifest", () => {
 });
 
 describe("release rehearsal candidate input gates", () => {
+  it("keeps bootstrap process stderr on a fixed allowlisted failure code", () => {
+    const bootstrapPath = realpathSync(
+      join(process.cwd(), "scripts", "local-mac-production-rehearsal-candidate-bootstrap.mjs"),
+    );
+    const privatePath = "/Users/private/operator/.homecook/build-env.json";
+    const result = spawnSync(process.execPath, [
+      bootstrapPath,
+      "--release-sha", SHA_A,
+      "--production-env-authority", privatePath,
+      "--json",
+    ], { encoding: "utf8" });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("candidate_build_failed\n");
+    expect(result.stderr).not.toContain(privatePath);
+  });
+
   it("uses current-master builder blobs while keeping a differing approved ancestor as payload data", async () => {
     const repo = privateRoot("homecook-selected-payload-repo-");
     const origin = join(privateRoot("homecook-selected-payload-origin-"), "origin.git");
@@ -2461,7 +2479,7 @@ try {
           env: { HOME: root, PATH: "/usr/bin:/bin" },
           label: `${stage} process fixture`,
           stage,
-        })).rejects.toThrow(/escaped|survivor|process tree|lifecycle|sandbox/iu);
+        })).rejects.toThrow(/escaped|survivor|process tree|lifecycle|sandbox|command_failed/iu);
         if (stage === "escaped") expect(existsSync(escapedPidPath)).toBe(false);
       }
     } finally {
@@ -3237,6 +3255,305 @@ describe("release rehearsal build environment FD snapshot", () => {
 });
 
 describe("release rehearsal candidate orchestration", () => {
+  it("publishes and enforces the exact closed candidate failure evidence schema", async () => {
+    const candidateModule = await import(
+      "../scripts/lib/local-mac-production-rehearsal-candidate.mjs"
+    ) as Record<string, unknown>;
+    const buildFailureEvidence = candidateModule.buildCandidateFailureEvidence as
+      | ((input: Record<string, unknown>) => Record<string, unknown>)
+      | undefined;
+    const validateFailureEvidence = candidateModule.validateCandidateFailureEvidence as
+      | ((input: Record<string, unknown>) => Record<string, unknown>)
+      | undefined;
+    expect(typeof buildFailureEvidence).toBe("function");
+    expect(typeof validateFailureEvidence).toBe("function");
+    if (!buildFailureEvidence || !validateFailureEvidence) return;
+
+    const schemaPath = "scripts/schemas/local-mac-production-rehearsal-candidate-failure.schema.json";
+    expect(existsSync(schemaPath)).toBe(true);
+    if (!existsSync(schemaPath)) return;
+    const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
+    expect(schema).toEqual({
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "homecook.local-mac-production-rehearsal-candidate-failed.v2",
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "schema", "status", "reason_code", "stage", "error_code", "path_digest",
+        "production_guard",
+      ],
+      properties: {
+        schema: { const: "homecook.local-mac-production-rehearsal-candidate-failed.v2" },
+        status: { const: "failed" },
+        reason_code: { const: "candidate_build_failed" },
+        stage: {
+          enum: [
+            "toolchain_preflight", "source_prepare", "production_guard_pre", "ci_pre",
+            "environment_read", "image_inspect", "migration_collect", "build_prepare",
+            "offline_install", "next_build", "artifact_assemble", "bundle_seal", "ci_post",
+            "production_guard_post", "toolchain_postflight", "manifest_finalize",
+            "immutable_finalize", "internal",
+          ],
+        },
+        error_code: {
+          enum: [
+            "authority_rejected", "command_failed", "execution_limit_exceeded",
+            "sandbox_policy_rejected", "sandbox_evidence_unavailable", "artifact_rejected",
+            "production_guard_rejected", "create_only_collision", "internal_error",
+          ],
+        },
+        path_digest: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        production_guard: { enum: ["verified", "unverified"] },
+      },
+    });
+  });
+
+  it("maps unknown injected errors to a generic allowlisted code without serializing raw input", async () => {
+    const candidateModule = await import(
+      "../scripts/lib/local-mac-production-rehearsal-candidate.mjs"
+    ) as Record<string, unknown>;
+    const buildFailureEvidence = candidateModule.buildCandidateFailureEvidence as
+      | ((input: Record<string, unknown>) => Record<string, unknown>)
+      | undefined;
+    const validateFailureEvidence = candidateModule.validateCandidateFailureEvidence as
+      | ((input: Record<string, unknown>) => Record<string, unknown>)
+      | undefined;
+    expect(typeof buildFailureEvidence).toBe("function");
+    expect(typeof validateFailureEvidence).toBe("function");
+    if (!buildFailureEvidence || !validateFailureEvidence) return;
+
+    const privatePath = "/Users/private/operator/.homecook/build-env.json";
+    const secret = "DATABASE_URL=postgres://operator:must-not-persist@127.0.0.1/db";
+    const providerPayload = '{"provider":"github","access_token":"provider-secret"}';
+    const rawCommand = "--token provider-secret https://provider.invalid/private pid=4242";
+    const injected = Object.assign(new Error(`${secret} ${privatePath} ${providerPayload} ${rawCommand}`), {
+      code: `EINJECTED:${privatePath}:${secret}:${providerPayload}:${rawCommand}`,
+    });
+    const evidence = buildFailureEvidence({
+      candidateUuid: RUN_FAILED,
+      error: injected,
+      releaseSha: SHA_A,
+      releaseTree: SHA_B,
+      stage: "build_prepare",
+      productionGuard: "unverified",
+    });
+    expect(validateFailureEvidence(evidence)).toEqual(evidence);
+    expect(evidence).toEqual({
+      schema: "homecook.local-mac-production-rehearsal-candidate-failed.v2",
+      status: "failed",
+      reason_code: "candidate_build_failed",
+      stage: "build_prepare",
+      error_code: "internal_error",
+      path_digest: createHash("sha256").update(canonicalizeJcs({
+        candidate_uuid: RUN_FAILED,
+        release_sha: SHA_A,
+        release_tree: SHA_B,
+      })).digest("hex"),
+      production_guard: "unverified",
+    });
+    const serialized = canonicalizeJcs(evidence);
+    for (const forbidden of [
+      privatePath, secret, providerPayload, rawCommand, "EINJECTED", "operator",
+      "must-not-persist", "provider-secret", "provider.invalid", "4242",
+    ]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+    for (const mutation of [
+      { ...evidence, stage: privatePath },
+      { ...evidence, error_code: secret },
+      { ...evidence, raw_error: injected.message },
+      { ...evidence, production_guard: privatePath },
+    ]) {
+      expect(() => validateFailureEvidence(mutation)).toThrow(/failure|field|stage|error|guard/iu);
+    }
+
+    const forged = Object.assign(new Error("forged"), {
+      candidate_failure_stage: "next_build",
+      candidate_failure_error_code: "command_failed",
+    });
+    expect(buildFailureEvidence({
+      candidateUuid: RUN_FAILED,
+      error: forged,
+      releaseSha: SHA_A,
+      releaseTree: SHA_B,
+      stage: "offline_install",
+      productionGuard: "verified",
+    })).toMatchObject({
+      stage: "offline_install",
+      error_code: "internal_error",
+      production_guard: "verified",
+    });
+  });
+
+  it("preserves the first build failure classification through guard cleanup and deletes secret-bearing scratch", async () => {
+    const namespaceRoot = privateRoot("homecook-rehearsal-diagnostic-failure-");
+    const unrelatedPath = join(namespaceRoot, "unrelated-preserved.txt");
+    writeFileSync(unrelatedPath, "operator-owned sibling\n", { mode: 0o600 });
+    const privatePath = "/Users/private/operator/.homecook/build-env.json";
+    const secret = "DATABASE_URL=postgres://operator:must-not-persist@127.0.0.1/db";
+    const firstFailure = Object.assign(new Error(`${secret} ${privatePath}`), { code: "ENOENT" });
+    const captureProductionSurface = vi.fn(async ({ phase }: { phase: string }) => {
+      if (phase === "post_failure") {
+        throw new Error(`guard replacement must not win: ${privatePath} ${secret}`);
+      }
+      return {
+        schema: "homecook.local-mac-production-surface-snapshot.v1",
+        surface_digest: DIGEST_A,
+        snapshot_digest: DIGEST_B,
+        production_db_connection_count: 0,
+        mutation_attempt_count: 0,
+      };
+    });
+    const adapters = {
+      readToolchainLock: vi.fn(async () => ({ toolchain_lock_digest: DIGEST_B })),
+      collectToolchain: vi.fn(() => validToolchain()),
+      prepareSource: vi.fn(() => ({
+        evidence: validateCandidateSourceEvidence({
+          requested_sha: SHA_A,
+          origin_master_sha: SHA_A,
+          selection_digest: null,
+          checkout_sha: SHA_A,
+          release_tree: SHA_B,
+          checkout_tree: SHA_B,
+          detached: true,
+          clean: true,
+          tracked_symlinks_contained: true,
+          hardlink_count: 0,
+          source_snapshot_pre_digest: DIGEST_A,
+          source_snapshot_post_digest: DIGEST_A,
+          builder_input_digest: DIGEST_B,
+        }),
+        tracked_files: new Map([["package.json", "{}\n"]]),
+      })),
+      captureProductionSurface,
+      collectCiEvidence: vi.fn(() => validateCandidateCiEvidence(validCiEvidence())),
+      readEnvironment: vi.fn(() => ({
+        values: {},
+        metadata: validManifestInput().environment_snapshot,
+      })),
+      collectImages: vi.fn(() => ({
+        images: validManifestInput().images,
+        compose_source_digest: validManifestInput().compose_source_digest,
+      })),
+      collectMigration: vi.fn(() => validManifestInput().migration),
+      executeBuild: vi.fn(({ runRoot }: { runRoot: string }) => {
+        writeFileSync(join(runRoot, "secret-bearing-scratch.txt"), `${secret}\n${privatePath}\n`, {
+          mode: 0o600,
+        });
+        throw firstFailure;
+      }),
+    };
+
+    let publicFailure: Error | null = null;
+    try {
+      await buildReleaseRehearsalCandidate({
+        releaseSha: SHA_A,
+        namespaceRoot,
+        adapters,
+        runId: RUN_FAILED,
+        beforeComplete: vi.fn(),
+      });
+    } catch (error) {
+      publicFailure = error as Error;
+    }
+    expect(publicFailure).toBeInstanceOf(Error);
+    const failedRoot = join(namespaceRoot, "attempts", RUN_FAILED);
+    const marker = JSON.parse(readFileSync(join(failedRoot, "failed.json"), "utf8"));
+    expect(marker).toMatchObject({
+      schema: "homecook.local-mac-production-rehearsal-candidate-failed.v2",
+      status: "failed",
+      reason_code: "candidate_build_failed",
+      stage: "build_prepare",
+      error_code: "internal_error",
+      path_digest: createHash("sha256").update(canonicalizeJcs({
+        candidate_uuid: RUN_FAILED,
+        release_sha: SHA_A,
+        release_tree: SHA_B,
+      })).digest("hex"),
+      production_guard: "unverified",
+    });
+    expect(Object.keys(marker).sort()).toEqual([
+      "error_code", "path_digest", "production_guard", "reason_code", "schema", "stage", "status",
+    ]);
+    expect(readdirSync(failedRoot)).toEqual(["failed.json"]);
+    expect(readFileSync(unrelatedPath, "utf8")).toBe("operator-owned sibling\n");
+    const publicSurfaces = `${publicFailure?.message ?? ""}\n${canonicalizeJcs(marker)}`;
+    for (const forbidden of [privatePath, secret, "guard replacement must not win", "must-not-persist"]) {
+      expect(publicSurfaces).not.toContain(forbidden);
+    }
+  });
+
+  it("distinguishes install and Next sandbox denial from unavailable audit evidence using private brands", async () => {
+    const candidateModule = await import(
+      "../scripts/lib/local-mac-production-rehearsal-candidate.mjs"
+    ) as Record<string, unknown>;
+    const buildFailureEvidence = candidateModule.buildCandidateFailureEvidence as
+      | ((input: Record<string, unknown>) => Record<string, unknown>)
+      | undefined;
+    expect(typeof buildFailureEvidence).toBe("function");
+    if (!buildFailureEvidence) return;
+    const base = {
+      status: 0,
+      signal: null,
+      process_lifecycle_enforcement: "macos-sandbox-deny-process-fork",
+      process_attempt_count: 0,
+      process_tree_complete: true,
+      root_pid: 4242,
+      root_pgid: 4242,
+      observer_tool_identity_digest: DIGEST_B,
+      process_identities: [{
+        pid: 4242,
+        ppid: 1,
+        pgid: 4242,
+        started_at: "2026-09-01T11:00:00.123456Z",
+        process_name: "hcnode1234abcdi",
+        execution_audit_token: "01".repeat(32),
+        process_instance_id: DIGEST_C,
+        executable_path: "/private/tmp/hcnode1234abcdi",
+        executable_identity_digest: DIGEST_A,
+      }],
+      audit_started_at: "2026-08-29T00:00:00.000Z",
+      audit_ended_at: "2026-08-29T00:00:01.000Z",
+      escaped_process_count: 0,
+      surviving_process_count: 0,
+    };
+    let installDenial: unknown;
+    let nextAuditUnavailable: unknown;
+    try {
+      validateSandboxedBuildResult({
+        ...base,
+        stage: "offline-install",
+        observed_denials: [{ event_digest: DIGEST_A }],
+      }, "install denial fixture");
+    } catch (error) {
+      installDenial = error;
+    }
+    try {
+      validateSandboxedBuildResult({
+        ...base,
+        stage: "next-build",
+        observed_denials: null,
+      }, "Next audit unavailable fixture");
+    } catch (error) {
+      nextAuditUnavailable = error;
+    }
+    const evidenceInput = {
+      candidateUuid: RUN_FAILED,
+      releaseSha: SHA_A,
+      releaseTree: SHA_B,
+      stage: "build_prepare",
+      productionGuard: "unverified",
+    };
+    expect(buildFailureEvidence({ ...evidenceInput, error: installDenial })).toMatchObject({
+      stage: "offline_install",
+      error_code: "sandbox_policy_rejected",
+    });
+    expect(buildFailureEvidence({ ...evidenceInput, error: nextAuditUnavailable })).toMatchObject({
+      stage: "next_build",
+      error_code: "sandbox_evidence_unavailable",
+    });
+  });
+
   it("separates portable candidate bytes from exact root-local physical authority", async () => {
     const fixture = await createCompletedRehearsalCandidateFixture(undefined, { tempRegistry: ownedTempRegistry });
     expect(readCompletedCandidateRoot(fixture.candidateRoot).manifest)
@@ -5942,6 +6259,97 @@ describe("release rehearsal candidate orchestration", () => {
     expect(readFileSync(join(raced, "complete.json"), "utf8")).toBe("attacker");
   });
 
+  it("seals one exact failure marker and rejects symlink, mode, hardlink, overwrite, and completed-root reuse", async () => {
+    const candidateModule = await import(
+      "../scripts/lib/local-mac-production-rehearsal-candidate.mjs"
+    ) as Record<string, unknown>;
+    const buildFailureEvidence = candidateModule.buildCandidateFailureEvidence as
+      | ((input: Record<string, unknown>) => Record<string, unknown>)
+      | undefined;
+    const readFailureEvidence = candidateModule.readCandidateFailureEvidence as
+      | ((root: string) => Record<string, unknown>)
+      | undefined;
+    expect(typeof buildFailureEvidence).toBe("function");
+    expect(typeof readFailureEvidence).toBe("function");
+    if (!buildFailureEvidence || !readFailureEvidence) return;
+
+    const parent = privateRoot("homecook-candidate-failure-terminal-");
+    const root = join(parent, RUN_FAILED);
+    mkdirSync(root, { mode: 0o700 });
+    const evidence = buildFailureEvidence({
+      candidateUuid: RUN_FAILED,
+      error: new Error("raw unknown"),
+      releaseSha: SHA_A,
+      releaseTree: SHA_B,
+      stage: "manifest_finalize",
+      productionGuard: "verified",
+    });
+    const markerPath = writeCandidateTerminalMarker(root, "failed", evidence);
+    chmodSync(root, 0o500);
+    const markerStat = lstatSync(markerPath);
+    expect(markerStat.mode & 0o7777).toBe(0o400);
+    expect(markerStat.nlink).toBe(1);
+    expect(readFailureEvidence(root)).toEqual(evidence);
+    expect(() => readCompletedCandidateRoot(root)).toThrow(/complete|failed|terminal/iu);
+    chmodSync(root, 0o700);
+    expect(() => writeCandidateTerminalMarker(root, "failed", evidence))
+      .toThrow(/terminal|collision|coexist|create-only/iu);
+    chmodSync(root, 0o500);
+
+    const alias = join(parent, "failure-root-alias");
+    symlinkSync(root, alias);
+    expect(() => readFailureEvidence(alias)).toThrow(/symlink|canonical|root/iu);
+
+    chmodSync(root, 0o700);
+    chmodSync(markerPath, 0o600);
+    chmodSync(root, 0o500);
+    expect(() => readFailureEvidence(root)).toThrow(/mode|sealed|authority/iu);
+    chmodSync(root, 0o700);
+    chmodSync(markerPath, 0o400);
+    const hardlink = join(parent, "failure-marker-hardlink.json");
+    linkSync(markerPath, hardlink);
+    chmodSync(root, 0o500);
+    expect(() => readFailureEvidence(root)).toThrow(/link|nlink|authority/iu);
+  });
+
+  it("emits no trusted marker and only a fixed error when failure cleanup cannot prove ownership", async () => {
+    const namespaceRoot = privateRoot("homecook-rehearsal-terminalization-failure-");
+    let parkedRoot = "";
+    const secret = "provider_token=must-not-persist";
+    const privatePath = "/Users/private/operator/.homecook/build-env.json";
+    const adapters = {
+      readToolchainLock: vi.fn(async () => ({ toolchain_lock_digest: DIGEST_B })),
+      collectToolchain: vi.fn(() => validToolchain()),
+      prepareSource: vi.fn(({ runRoot }: { runRoot: string }) => {
+        writeFileSync(join(runRoot, "partial-secret.txt"), `${secret}\n${privatePath}\n`, { mode: 0o600 });
+        parkedRoot = `${runRoot}.parked`;
+        renameSync(runRoot, parkedRoot);
+        mkdirSync(runRoot, { mode: 0o700 });
+        throw new Error(`${secret} ${privatePath}`);
+      }),
+    };
+
+    let terminalizationFailure: Error | null = null;
+    try {
+      await buildReleaseRehearsalCandidate({
+        releaseSha: SHA_A,
+        namespaceRoot,
+        adapters,
+        runId: RUN_FAILED,
+        beforeComplete: vi.fn(),
+      });
+    } catch (error) {
+      terminalizationFailure = error as Error;
+    }
+    expect(terminalizationFailure?.message).toBe("candidate_terminalization_failed");
+    const replacementRoot = join(namespaceRoot, "attempts", RUN_FAILED);
+    expect(existsSync(join(replacementRoot, "failed.json"))).toBe(false);
+    expect(existsSync(join(parkedRoot, "failed.json"))).toBe(false);
+    const publicSurface = terminalizationFailure?.message ?? "";
+    expect(publicSurface).not.toContain(secret);
+    expect(publicSurface).not.toContain(privatePath);
+  });
+
   it("accepts only complete roots with exact candidate and bundle authority manifests", async () => {
     const authorityRoot = privateRoot("homecook-candidate-reader-");
     const root = join(authorityRoot, "candidate");
@@ -6162,7 +6570,7 @@ describe("release rehearsal candidate orchestration", () => {
     expect(() => validateProductionGuardSnapshots(pre, { ...pre, surface_digest: DIGEST_C }))
       .toThrow(/production|surface|drift/iu);
     expect(() => validateProductionGuardSnapshots(pre, { ...pre, schema: "incomplete" }))
-      .toThrow(/schema|complete|snapshot/iu);
+      .toThrow(/schema|complete|snapshot|production_guard_rejected/iu);
   });
 
   it("seals file bytes, executable modes, and contained symlinks with path-independent digests", () => {

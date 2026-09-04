@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.local-mac-production-rehearsal-candidate-failed.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "reason_code",
+    "stage",
+    "error_code",
+    "path_digest",
+    "production_guard"
+  ],
+  "properties": {
+    "schema": { "const": "homecook.local-mac-production-rehearsal-candidate-failed.v2" },
+    "status": { "const": "failed" },
+    "reason_code": { "const": "candidate_build_failed" },
+    "stage": {
+      "enum": [
+        "toolchain_preflight",
+        "source_prepare",
+        "production_guard_pre",
+        "ci_pre",
+        "environment_read",
+        "image_inspect",
+        "migration_collect",
+        "build_prepare",
+        "offline_install",
+        "next_build",
+        "artifact_assemble",
+        "bundle_seal",
+        "ci_post",
+        "production_guard_post",
+        "toolchain_postflight",
+        "manifest_finalize",
+        "immutable_finalize",
+        "internal"
+      ]
+    },
+    "error_code": {
+      "enum": [
+        "authority_rejected",
+        "command_failed",
+        "execution_limit_exceeded",
+        "sandbox_policy_rejected",
+        "sandbox_evidence_unavailable",
+        "artifact_rejected",
+        "production_guard_rejected",
+        "create_only_collision",
+        "internal_error"
+      ]
+    },
+    "path_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "production_guard": { "enum": ["verified", "unverified"] }
+  }
+}

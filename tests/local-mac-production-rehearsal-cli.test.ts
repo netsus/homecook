@@ -129,6 +129,9 @@ describe("local Mac production rehearsal CLI", () => {
     expect(result.stdout).toMatch(/current-tip[^\n]*omit[^\n]*--selection/iu);
     expect(result.stdout).toContain("Docker rehearsal runner");
     expect(result.stdout).toContain("recovery execution");
+    expect(result.stdout).toContain("homecook.local-mac-production-rehearsal-candidate-failed.v2");
+    expect(result.stdout).toContain("candidate_build_failed");
+    expect(result.stdout).toContain("candidate_terminalization_failed");
     expect(result.stdout).not.toContain(" promote ");
   });
 
@@ -448,7 +451,7 @@ describe("local Mac production rehearsal CLI", () => {
     expect(productionCli).toContain("activation_blocked");
 
     const rehearsalRunbook = readFileSync("docs/engineering/local-mac-production-release-rehearsal.md", "utf8");
-    expect(rehearsalRunbook).toContain("상태: **canonical / bind-source and startup repair author complete / fresh independent review pending**");
+    expect(rehearsalRunbook).toContain("상태: **canonical / candidate failure diagnostic repair author complete / fresh independent review pending**");
     expect(rehearsalRunbook).toContain("generated_build_inventory_digest");
     expect(rehearsalRunbook).toContain("pnpm_store_snapshot_inventory_digest");
     expect(rehearsalRunbook).toContain("root-local physical authority");

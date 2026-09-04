@@ -14,6 +14,7 @@ const MODULE_PATHS = [
   "scripts/local-mac-production-rehearsal.mjs",
   "scripts/local-mac-production-rehearsal-run.mjs",
   "scripts/schemas/local-mac-production-rehearsal-candidate.schema.json",
+  "scripts/schemas/local-mac-production-rehearsal-candidate-failure.schema.json",
   "scripts/schemas/local-mac-production-rehearsal-inventory.schema.json",
   "scripts/schemas/local-mac-production-rehearsal-classification.schema.json",
   "scripts/schemas/local-mac-production-rehearsal-run-evidence.schema.json",
@@ -67,10 +68,13 @@ describe("local Mac production rehearsal foundation", () => {
       parseAndClassifyProductionInventory: expect.any(Function),
     });
     expect(candidate).toMatchObject({
+      buildCandidateFailureEvidence: expect.any(Function),
       buildReleaseRehearsalCandidate: expect.any(Function),
       createReleaseRehearsalCandidateAdapters: expect.any(Function),
       parseAndValidateCandidateManifest: expect.any(Function),
+      readCandidateFailureEvidence: expect.any(Function),
       readBuildEnvironmentSnapshot: expect.any(Function),
+      validateCandidateFailureEvidence: expect.any(Function),
     });
     expect(runner).toMatchObject({
       runIsolatedReleaseRehearsal: expect.any(Function),
