@@ -111,10 +111,18 @@ const CURRENT_TIP_REHEARSAL_AUTHORITY = {
   selection_digest: null,
 };
 
+function githubActionsApp() {
+  return {
+    id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
+    name: "GitHub Actions",
+    slug: "github-actions",
+  };
+}
+
 function createTrustedCheckRuns(checkSuiteId = 200) {
   return EXPECTED_RELEASE_CONTEXTS.map((name, index) => ({
     id: 1_000 + index,
-    app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+    app: githubActionsApp(),
     check_suite: { id: checkSuiteId },
     head_sha: "a".repeat(40),
     completed_at: `2026-08-26T09:00:${String(index).padStart(2, "0")}Z`,
@@ -136,7 +144,7 @@ function createCheckSuitePages({
   const suites = Array.from({ length: count }, (_, index) => ({
     id: suiteIdStart + index,
     head_sha: releaseSha,
-    app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+    app: githubActionsApp(),
     repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
   }));
   const pages = [];
@@ -233,16 +241,17 @@ function createCompleteCheckPageInput(
 ) {
   const suiteIds = [...new Set(checkRuns.map((entry) =>
     Number((entry.check_suite as { id?: unknown } | undefined)?.id)))];
-  const checkSuites = suiteIds.map((id) => ({
-    id,
-    head_sha: releaseSha,
-    app: {
-      id: Number((checkRuns.find((entry) =>
-        Number((entry.check_suite as { id?: unknown } | undefined)?.id) === id
-      )?.app as { id?: unknown } | undefined)?.id),
-    },
-    repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
-  }));
+  const checkSuites = suiteIds.map((id) => {
+    const owner = checkRuns.find((entry) =>
+      Number((entry.check_suite as { id?: unknown } | undefined)?.id) === id
+    )?.app as Record<string, unknown> | undefined;
+    return {
+      id,
+      head_sha: releaseSha,
+      app: { ...owner },
+      repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
+    };
+  });
   return {
     checkRunPages: createCheckRunPages(checkRuns),
     checkSuitePages: [{ total_count: checkSuites.length, check_suites: checkSuites }],
@@ -296,7 +305,7 @@ function createGitGuardianCheckInput({
         {
           id: 200,
           head_sha: releaseSha,
-          app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+          app: githubActionsApp(),
           repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
         },
         {
@@ -348,7 +357,7 @@ describe("GitHub production release attestation verification", () => {
     ];
     const pushRuns = uniqueNames.map((name, index) => ({
       id: 40_000 + index,
-      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      app: githubActionsApp(),
       check_suite: { id: name === "policy" ? 301 : name.startsWith("security-") ? 302 : 300 },
       head_sha: releaseSha,
       completed_at: `2026-09-04T00:01:${String(index).padStart(2, "0")}Z`,
@@ -358,7 +367,7 @@ describe("GitHub production release attestation verification", () => {
     }));
     const scheduledRuns = repeatedNames.map((name, index) => ({
       id: 50_000 + index,
-      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      app: githubActionsApp(),
       check_suite: { id: 303 },
       head_sha: releaseSha,
       completed_at: `2026-09-04T01:01:${String(index).padStart(2, "0")}Z`,
@@ -387,7 +396,7 @@ describe("GitHub production release attestation verification", () => {
       .map((id) => ({
         id,
         head_sha: releaseSha,
-        app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+        app: githubActionsApp(),
         repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
       }));
 
@@ -428,7 +437,7 @@ describe("GitHub production release attestation verification", () => {
         check_suites: [{
           id: 200,
           head_sha: releaseSha,
-          app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+          app: githubActionsApp(),
           repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
         }],
       }],
@@ -577,7 +586,7 @@ describe("GitHub production release attestation verification", () => {
         {
           id: 200,
           head_sha: releaseSha,
-          app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+          app: githubActionsApp(),
           repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY },
         },
         {
@@ -815,7 +824,7 @@ describe("GitHub production release attestation verification", () => {
       ...createTrustedCheckRuns(200),
       ...Array.from({ length: 100 }, (_, index) => ({
         id: 5_000 + index,
-        app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+        app: githubActionsApp(),
         check_suite: { id: 200 },
         completed_at: "2026-08-26T10:00:00Z",
         conclusion: "success",
@@ -869,7 +878,7 @@ describe("GitHub production release attestation verification", () => {
     }));
     const selfRun = {
       id: 9_003,
-      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      app: githubActionsApp(),
       check_suite: { id: WORKFLOW_AUTHORITY.workflow_check_suite_id },
       head_sha: releaseSha,
       name: "approve-and-tag",
@@ -883,8 +892,8 @@ describe("GitHub production release attestation verification", () => {
       checkSuitePages: [{
         total_count: 2,
         check_suites: [
-          { id: 200, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID }, repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } },
-          { id: WORKFLOW_AUTHORITY.workflow_check_suite_id, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID }, repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } },
+          { id: 200, head_sha: releaseSha, app: githubActionsApp(), repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } },
+          { id: WORKFLOW_AUTHORITY.workflow_check_suite_id, head_sha: releaseSha, app: githubActionsApp(), repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } },
         ],
       }],
       workflowRunPages: createWorkflowRunPages([
@@ -924,7 +933,7 @@ describe("GitHub production release attestation verification", () => {
       checkRunPages: createCheckRunPages(externalRuns),
       checkSuitePages: [{
         total_count: 1,
-        check_suites: [{ id: 200, head_sha: releaseSha, app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID }, repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } }],
+        check_suites: [{ id: 200, head_sha: releaseSha, app: githubActionsApp(), repository: { full_name: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY } }],
       }],
       excludedCheckSuiteIds: [],
       releaseSha,
@@ -1025,7 +1034,7 @@ describe("GitHub production release attestation verification", () => {
           {
             id: 999,
             head_sha: releaseSha,
-            app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+            app: githubActionsApp(),
             repository: { full_name: repository },
           },
         ],
@@ -1382,7 +1391,7 @@ describe("GitHub production release attestation verification", () => {
 
     const optionalCheck = {
       id: 9_999,
-      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      app: githubActionsApp(),
       check_suite: { id: 999 },
       completed_at: "2026-08-26T10:01:00Z",
       conclusion: "skipped",
@@ -1460,7 +1469,7 @@ describe("GitHub production release attestation verification", () => {
     };
     const optionalSecurityAdvisory = {
       id: 3_001,
-      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      app: githubActionsApp(),
       check_suite: { id: 301 },
       head_sha: "a".repeat(40),
       completed_at: "2026-08-26T10:00:00Z",
@@ -1588,14 +1597,14 @@ describe("GitHub production release attestation verification", () => {
     const currentSuiteId = 777;
     const priorCanonicalSuiteId = 776;
     const currentSuitePending = {
-      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      app: githubActionsApp(),
       check_suite: { id: currentSuiteId },
       name: "approve-and-tag",
       status: "in_progress",
       started_at: "2026-08-26T09:02:00Z",
     };
     const priorCanonicalSuiteFailed = {
-      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      app: githubActionsApp(),
       check_suite: { id: priorCanonicalSuiteId },
       completed_at: "2026-08-26T08:55:00Z",
       conclusion: "failure",
@@ -1624,7 +1633,7 @@ describe("GitHub production release attestation verification", () => {
           currentSuitePending,
           {
             id: 7_778,
-            app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+            app: githubActionsApp(),
             check_suite: { id: 778 },
             name: "other-pending-check",
             status: "in_progress",

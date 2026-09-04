@@ -70,7 +70,7 @@ export function createCompleteProductionCheckPageInput({
       check_suites: suiteIds.map((id) => ({
         id,
         head_sha: releaseSha,
-        app: { id: 15368 },
+        app: { id: 15368, name: "GitHub Actions", slug: "github-actions" },
         repository: { full_name: "netsus/homecook" },
       })),
     }],

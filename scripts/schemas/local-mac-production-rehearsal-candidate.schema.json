@@ -23,7 +23,7 @@
     },
     "ci_suite_run_set_digest": {
       "$ref": "#/$defs/sha256",
-      "description": "SHA-256 of the exact ordered check-suite ID/App/repository/head and started check-run identity set, including allowlisted external zero-check suites."
+      "description": "RFC8785-JCS SHA-256 of the object containing check_suites sorted by id as exact closed {app_id,app_name,app_slug,head_sha,id,repository} tuples and the ordered started check-run {app_id,check_suite_id,id} identity set, including allowlisted external zero-check suites."
     },
     "ci_workflow_run_provenance_digest": {
       "$ref": "#/$defs/sha256",

@@ -46,7 +46,7 @@ GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/
 | `expected_running_release_sha` | 승격 후 실제 돌아야 하는 SHA |
 | `all_check_suite_count` | selected release의 self-suite를 포함한 complete check-suite count. `1000` 미만이어야 함 |
 | `all_check_suite_ids_digest` | selected release의 sorted unique complete check-suite ID set SHA-256. current self-suite도 포함 |
-| `all_check_suite_authority_digest` | sorted suite ID/App owner/repository/head authority digest; Actions zero-check suite도 workflow run과 1:1 결합 |
+| `all_check_suite_authority_digest` | ID 오름차순 exact closed `{app_id,app_name,app_slug,head_sha,id,repository}` suite authority digest; Actions zero-check suite도 workflow run과 1:1 결합 |
 | `all_actions_workflow_run_provenance_digest` | self-suite를 제외한 exact-head Actions workflow run의 run/suite/workflow/path/event/attempt/repository provenance digest |
 | `all_context_check_run_instances_digest` | self-suite만 제외한 모든 external context의 sorted unique `(check_run_id, check_suite_id)` instance set digest |
 | `all_context_check_suite_ids` | 위 external instance set의 sorted unique suite IDs |

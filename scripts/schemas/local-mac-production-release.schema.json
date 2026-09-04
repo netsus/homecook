@@ -304,7 +304,7 @@
     "all_check_suite_authority_digest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$",
-      "description": "Binds sorted check-suite ID, App owner tuple, canonical repository, and exact head SHA evidence."
+      "description": "Binds check suites sorted by id as exact closed {app_id,app_name,app_slug,head_sha,id,repository} tuples with the canonical repository and exact head SHA."
     },
     "all_actions_workflow_run_provenance_digest": {
       "type": "string",

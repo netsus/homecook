@@ -580,43 +580,12 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
     throw new Error("Production release check-suite authority must be nonempty.");
   }
 
-  const normalizedCheckSuites = checkSuites.map((entry, index) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      throw new Error(`checkSuitePages entry ${index} must be an object.`);
-    }
-    const suiteId = requirePositiveInteger(entry.id, `checkSuitePages entry ${index}.id`);
-    if (requireSha1(entry.head_sha, `checkSuitePages entry ${index}.head_sha`) !== normalizedReleaseSha) {
-      throw new Error(`checkSuitePages entry ${index} does not belong to the selected release SHA.`);
-    }
-    const appId = requirePositiveInteger(
-      entry.app?.id,
-      `checkSuitePages entry ${index}.app.id`,
-    );
-    const repository = typeof entry.repository?.full_name === "string"
-      ? entry.repository.full_name
-      : null;
-    if (
-      appId === GITHUB_ACTIONS_APP_INTEGRATION_ID
-      && repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY
-    ) {
-      throw new Error(`checkSuitePages entry ${index} GitHub Actions repository is not canonical.`);
-    }
-    return Object.freeze({
-      appId,
-      appName: typeof entry.app?.name === "string" ? entry.app.name : null,
-      appSlug: typeof entry.app?.slug === "string" ? entry.app.slug : null,
-      headSha: normalizedReleaseSha,
-      repository,
-      suiteId,
-    });
+  const sortedCheckSuites = normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+    checkSuites,
+    releaseSha: normalizedReleaseSha,
+    label: "checkSuitePages entry",
   });
-  const suiteIds = normalizedCheckSuites.map((entry) => entry.suiteId);
-  if (new Set(suiteIds).size !== suiteIds.length) {
-    throw new Error("Production release check-suite pages contain duplicate suite IDs.");
-  }
-  const sortedCheckSuites = [...normalizedCheckSuites]
-    .sort((left, right) => left.suiteId - right.suiteId);
-  const sortedSuiteIds = sortedCheckSuites.map((entry) => entry.suiteId);
+  const sortedSuiteIds = sortedCheckSuites.map((entry) => entry.id);
 
   return Object.freeze({
     all_check_suite_count: totalCount,
@@ -628,12 +597,90 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
       .update(JSON.stringify(sortedCheckSuites))
       .digest("hex"),
     check_suite_app_ids: Object.freeze(Object.fromEntries(
-      sortedCheckSuites.map((entry) => [entry.suiteId, entry.appId]),
+      sortedCheckSuites.map((entry) => [entry.id, entry.app_id]),
     )),
     check_suite_metadata: Object.freeze(Object.fromEntries(
-      sortedCheckSuites.map((entry) => [entry.suiteId, entry]),
+      sortedCheckSuites.map((entry) => [entry.id, entry]),
     )),
   });
+}
+
+/**
+ * @param {{
+ *   checkSuites?: Array<{
+ *     id?: unknown,
+ *     app_id?: unknown,
+ *     app_name?: unknown,
+ *     app_slug?: unknown,
+ *     head_sha?: unknown,
+ *     repository?: string | {full_name?: unknown},
+ *     app?: {id?: unknown,name?: unknown,slug?: unknown},
+ *   }>,
+ *   releaseSha?: string,
+ *   label?: string,
+ * }} [options]
+ */
+export function normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+  checkSuites,
+  releaseSha,
+  label = "checkSuites",
+} = {}) {
+  const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
+  if (!Array.isArray(checkSuites)) {
+    throw new Error(`${label} must be an array.`);
+  }
+  const normalizedCheckSuites = checkSuites.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${label} ${index} must be an object.`);
+    }
+    const usesStoredTuple = Object.hasOwn(entry, "app_id");
+    if (usesStoredTuple) {
+      requireExactKeys(entry, [
+        "app_id", "app_name", "app_slug", "head_sha", "id", "repository",
+      ], `${label} ${index}`);
+    }
+    const suiteId = requirePositiveInteger(entry.id, `${label} ${index}.id`);
+    if (requireSha1(entry.head_sha, `${label} ${index}.head_sha`) !== normalizedReleaseSha) {
+      throw new Error(`${label} ${index} does not belong to the selected release SHA.`);
+    }
+    const appId = requirePositiveInteger(
+      entry.app_id ?? entry.app?.id,
+      `${label} ${index}.app_id`,
+    );
+    const rawAppName = usesStoredTuple ? entry.app_name : entry.app?.name;
+    const appName = requireNonEmptyString(
+      rawAppName,
+      `${label} ${index}.app_name`,
+    );
+    const rawAppSlug = usesStoredTuple ? entry.app_slug : entry.app?.slug;
+    const appSlug = requireNonEmptyString(
+      rawAppSlug,
+      `${label} ${index}.app_slug`,
+    );
+    if (appName !== rawAppName || appSlug !== rawAppSlug) {
+      throw new Error(`${label} ${index} App owner name/slug must be exact.`);
+    }
+    const repository = typeof entry.repository === "string"
+      ? entry.repository
+      : entry.repository?.full_name;
+    if (repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
+      throw new Error(`${label} ${index} repository is not canonical.`);
+    }
+    return Object.freeze({
+      app_id: appId,
+      app_name: appName,
+      app_slug: appSlug,
+      head_sha: normalizedReleaseSha,
+      id: suiteId,
+      repository,
+    });
+  });
+  const suiteIds = normalizedCheckSuites.map((entry) => entry.id);
+  if (new Set(suiteIds).size !== suiteIds.length) {
+    throw new Error(`${label} contains duplicate suite IDs.`);
+  }
+  return Object.freeze([...normalizedCheckSuites]
+    .sort((left, right) => left.id - right.id));
 }
 
 function normalizeCompleteCheckRunPages({ checkRunPages, checkSuiteIdSet, releaseSha }) {
@@ -846,8 +893,8 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
   if (hasCompletePages) {
     const mappedSuiteIdSet = new Set(workflowRunAuthority.mappedCheckSuiteIds);
     const unmappedActionsSuiteIds = Object.values(completeSuiteAuthority.check_suite_metadata)
-      .filter((entry) => entry.appId === GITHUB_ACTIONS_APP_INTEGRATION_ID)
-      .map((entry) => entry.suiteId)
+      .filter((entry) => entry.app_id === GITHUB_ACTIONS_APP_INTEGRATION_ID)
+      .map((entry) => entry.id)
       .filter((suiteId) => !mappedSuiteIdSet.has(suiteId));
     if (unmappedActionsSuiteIds.length > 0) {
       throw new Error(
@@ -861,13 +908,13 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
   if (hasCompletePages) {
     const externalOwnerKeys = new Set();
     for (const suite of Object.values(completeSuiteAuthority.check_suite_metadata)) {
-      if (suite.appId === GITHUB_ACTIONS_APP_INTEGRATION_ID) continue;
+      if (suite.app_id === GITHUB_ACTIONS_APP_INTEGRATION_ID) continue;
       const owner = GITHUB_PRODUCTION_RELEASE_ZERO_CHECK_EXTERNAL_SUITES.find((entry) =>
-        entry.appId === suite.appId
-        && entry.appName === suite.appName
-        && entry.appSlug === suite.appSlug);
+        entry.appId === suite.app_id
+        && entry.appName === suite.app_name
+        && entry.appSlug === suite.app_slug);
       if (!owner || suite.repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
-        throw new Error(`External check suite ${suite.suiteId} owner/repository is not allowlisted.`);
+        throw new Error(`External check suite ${suite.id} owner/repository is not allowlisted.`);
       }
       const ownerKey = `${owner.appId}:${owner.appSlug}:${owner.appName}`;
       if (externalOwnerKeys.has(ownerKey)) {
@@ -928,9 +975,9 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
       && normalized.appSlug === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
       && entry.name === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.checkName
       && normalized.externalId === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.externalId
-      && suiteMetadata?.appId === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
-      && suiteMetadata?.appName === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
-      && suiteMetadata?.appSlug === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
+      && suiteMetadata?.app_id === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
+      && suiteMetadata?.app_name === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
+      && suiteMetadata?.app_slug === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
       && suiteMetadata?.repository === CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY;
     if (
       hasCompletePages

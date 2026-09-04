@@ -14,6 +14,9 @@ import {
   withCandidatePnpmStoreView,
   writeCandidateTerminalMarker,
 } from "../../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
+import {
+  normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples,
+} from "../../scripts/lib/github-production-release-attestation.mjs";
 import { canonicalizeJcs, sha256Jcs } from "../../scripts/lib/rfc8785-jcs.mjs";
 import { EXPECTED_RELEASE_CONTEXTS } from "../../scripts/lib/production-release-approval-policy.mjs";
 import type { OwnedTempRegistry } from "./owned-temp-root";
@@ -141,14 +144,11 @@ function storedCiEvidence(releaseSha = SHA_A) {
     snapshotDigest: sha256Jcs(projection),
     summaryDigest: sha256Jcs(summary),
     suiteRunSetDigest: sha256Jcs({
-      check_suites: checkSuites.map(({ app_id, app_name, app_slug, head_sha, id, repository }) => ({
-        app_id,
-        app_name,
-        app_slug,
-        head_sha,
-        id,
-        repository,
-      })),
+      check_suites: normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+        checkSuites,
+        releaseSha,
+        label: "completed fixture check_suites entry",
+      }),
       check_runs: checkRuns.map(({ app_id, check_suite_id, id }) => ({
         app_id,
         check_suite_id,
@@ -176,10 +176,12 @@ function storedCiEvidence(releaseSha = SHA_A) {
 export async function createCompletedRehearsalCandidateFixture(
   prefix = "homecook-r2-real-candidate-",
   {
+    ci: ciOverride = null,
     releaseSha = SHA_A,
     releaseTree = SHA_B,
     tempRegistry,
   }: {
+    ci?: ReturnType<typeof storedCiEvidence> | null;
     releaseSha?: string;
     releaseTree?: string;
     tempRegistry: OwnedTempRegistry;
@@ -228,7 +230,7 @@ export async function createCompletedRehearsalCandidateFixture(
   const bundleRoot = join(bundlesRoot, "bundle");
   mkdirSync(bundlesRoot, { mode: 0o700 });
   const physical = createSealedCandidateBundle({ bundleRoot, componentRoots });
-  const ci = storedCiEvidence(releaseSha);
+  const ci = ciOverride ?? storedCiEvidence(releaseSha);
   const evidenceRoot = join(candidateRoot, "evidence");
   mkdirSync(evidenceRoot, { mode: 0o700 });
   writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ci.projection), { mode: 0o400 });
