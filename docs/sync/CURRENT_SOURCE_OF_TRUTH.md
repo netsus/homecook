@@ -14,6 +14,7 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
+- 2026-09-15 광고 캠페인의 exact SHA `4817b8b213b264485d75939ec764596727d1131c`에만 적용되는 일회성 수동 release-promoter 예외는 `docs/engineering/one-time-advertising-production-release-exception.md`가 canonical authority다. `2026-09-15T15:00:00Z` 이후 사용하거나 다른 release에 재사용할 수 없으며 기존 production v3 activation은 계속 blocked다.
 
 ## 2026-09-04 docs-governance — release rehearsal candidate failure evidence v2
 
