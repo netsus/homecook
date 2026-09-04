@@ -36,7 +36,7 @@ GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/
 | `master_tree_at_approval` | 승인 시점 master commit의 exact tree SHA |
 | `release_sha` | 실제 승격 대상 exact full SHA |
 | `workflow_head_sha` / `workflow_head_tree` | `GITHUB_RUN_ID`가 실행하는 workflow/verifier commit과 tree |
-| `workflow_run_id` / `workflow_run_attempt` / `workflow_check_suite_id` | current self-run control-plane authority |
+| `workflow_run_id` / `workflow_run_attempt` / `workflow_check_suite_id` | current self-run control-plane authority; `workflow_run_attempt`는 exact `1` |
 | `release_tag` | `prod-YYYYMMDD.N` 형식의 annotated tag |
 | `release_tag_object_sha` | remote readback으로 확인한 immutable annotated tag object의 exact SHA |
 | `release_tree` | tag가 가리키는 tree SHA |
@@ -46,6 +46,8 @@ GitHub release identity는 repository `netsus/homecook`, source ref `refs/heads/
 | `expected_running_release_sha` | 승격 후 실제 돌아야 하는 SHA |
 | `all_check_suite_count` | selected release의 self-suite를 포함한 complete check-suite count. `1000` 미만이어야 함 |
 | `all_check_suite_ids_digest` | selected release의 sorted unique complete check-suite ID set SHA-256. current self-suite도 포함 |
+| `all_check_suite_authority_digest` | ID 오름차순 exact closed `{app_id,app_name,app_slug,head_sha,id,repository}` suite authority digest; Actions zero-check suite도 workflow run과 1:1 결합 |
+| `all_actions_workflow_run_provenance_digest` | self-suite를 제외한 exact-head Actions workflow run의 run/suite/workflow/path/event/attempt/repository provenance digest |
 | `all_context_check_run_instances_digest` | self-suite만 제외한 모든 external context의 sorted unique `(check_run_id, check_suite_id)` instance set digest |
 | `all_context_check_suite_ids` | 위 external instance set의 sorted unique suite IDs |
 | `all_context_commit_statuses_digest` | selected release의 normalized `/statuses` 전체 digest |
@@ -55,7 +57,7 @@ current-tip 경로는 `release_sha == master_sha_at_approval`을 요구한다. a
 
 ### Rehearsal authority binding exact fields
 
-아래 field가 구현된 production manifest v2, attestation subject/predicate, annotated tag message, server verifier에 모두 exact binding되기 전에는 promote activation을 열 수 없다.
+아래 field가 구현된 production manifest v3, attestation subject/predicate v3, annotated tag message, server verifier에 모두 exact binding되기 전에는 promote activation을 열 수 없다.
 
 | field | exact comparison rule |
 | --- | --- |
@@ -272,6 +274,8 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `required_check_summary`
 - `all_check_suite_count`
 - `all_check_suite_ids_digest`
+- `all_check_suite_authority_digest`
+- `all_actions_workflow_run_provenance_digest`
 - `all_context_check_run_instances_digest`
 - `all_context_check_suite_ids`
 - `all_context_commit_statuses_digest`
@@ -282,7 +286,7 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 
 manifest와 current descriptor는 credentials, provider payload, secret path, raw backup path를 포함하지 않는다.
 
-기존 `homecook.local-mac-production-release.v1` manifest와 v1 subject/predicate/tag는 rehearsal binding field가 없으므로 prepare/read-only 참고 evidence일 수는 있어도 production promote authority가 아니다. split 4는 production manifest v2와 GitHub workflow·subject/predicate v2·canonical tag raw message·server verifier cross-binding을 같은 PR train에 구현한다. 다만 fresh independent review, current-head CI와 merge 전에는 activation kill switch를 유지한다. receipt를 바꿔 끼우거나 attestation만 다시 발급하거나 sealed bundle을 rebuild하는 repair는 금지하며 두 isolated run부터 새 authority를 만든다.
+기존 `homecook.local-mac-production-release.v1|v2` manifest와 v1/v2 subject/predicate/tag는 current workflow-run provenance binding이 없으므로 prepare/read-only 참고 evidence일 수는 있어도 production promote authority가 아니다. current authority는 production manifest v3와 GitHub workflow·subject/predicate v3·server verifier가 `all_actions_workflow_run_provenance_digest`까지 교차 결합해야 하고, canonical tag raw message의 기존 rehearsal/workflow/master binding도 그대로 만족해야 한다. fresh independent review, current-head CI와 merge 전에는 activation kill switch를 유지한다. receipt를 바꿔 끼우거나 attestation만 다시 발급하거나 sealed bundle을 rebuild하는 repair는 금지하며 두 isolated run부터 새 authority를 만든다.
 
 ## Handoff fields
 
@@ -412,9 +416,10 @@ C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 - `production-release-tag-immutability`는 update / deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. `update`가 fast-forward tag 이동까지 막으므로 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 이동하거나 삭제할 수 없다.
 - environment `production-release-approval`은 `can_admins_bypass: false`, required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다. admin bypass readback 누락 또는 `true`는 activation blocker다.
 - environment secrets는 App ID와 private key 두 개뿐이다. workflow는 `actions/create-github-app-token`으로 short-lived token을 만들고 tag App token은 `contents:write`만 요청한다. Administration permission과 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
-- workflow 승인 전, 환경 승인 직후, attestation 발급 직전의 세 snapshot은 먼저 quoted `check-suites?per_page=100` URL과 `--paginate --slurp`로 complete check-suite page authority를 읽는다. 모든 page의 `total_count`가 같고, page 수와 각 page 길이가 `per_page=100` 계산과 exact 일치하며, suite ID가 unique이고 모든 `head_sha`가 selected release SHA여야 한다. [GitHub의 commit check-runs endpoint](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference)가 최신 1,000 suite로 제한되므로 `total_count >= 1000`, page 누락/중복, count 불일치 또는 완전성 미증명은 protected tag/attestation 전에 fail closed한다.
-- suite count가 1,000 미만인 정상 경로에서만 quoted `check-runs?filter=all&per_page=100` URL을 한 번 pagination한다. check-run page도 stable `total_count`, exact page 수/길이, unique run ID를 요구하고 모든 run suite ID가 complete suite set에 속해야 한다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check는 terminal `success` 또는 exact `skipped`만 허용하고 `skipped`만 intended skip으로 기록한다. `neutral`, pending/queued, failure/cancelled는 거부하며, 모든 non-excluded context에서 unique check instance가 둘 이상이면 success→success도 rerun이므로 거부한다. 정상 경로에서 suite별 check-runs API를 N회 호출하지 않는다.
-- complete sorted suite ID set의 `all_check_suite_count`와 `all_check_suite_ids_digest`, external sorted check-run instance set의 `all_context_check_run_instances_digest`를 subject/predicate/production manifest/server readback에 exact cross-bind한다. `self-referential suite exception`은 exact `GITHUB_RUN_ID`의 current `workflow_check_suite_id` 하나뿐이다. complete suite count/digest에는 self-suite를 포함하되 external terminal-result set에서만 exact current suite를 제외한다. exact run API readback은 workflow id/path, event, master ref, repository, `workflow_head_sha`, `run_id`, `run_attempt`을 모두 검증한다. `release_sha != workflow_head_sha`이면 selected release check set에 self-suite가 없으므로 exclusion은 empty다. 과거 retry suite나 동일 context name 전체를 제외하지 않는다.
+- workflow 승인 전, 환경 승인 직후, attestation 발급 직전의 세 snapshot은 먼저 quoted `check-suites?per_page=100` URL과 `--paginate --slurp`로 complete check-suite page authority를 읽는다. 모든 page의 `total_count`가 같고, page 수와 각 page 길이가 `per_page=100` 계산과 exact 일치하며, suite ID가 unique이고 모든 `head_sha`가 selected release SHA여야 한다. 모든 GitHub Actions App `15368` suite는 started check 수와 무관하게 suite repository가 exact `netsus/homecook`이고 exact 하나의 workflow run에 1:1 결합돼야 한다. orphan/missing/multi-map/wrong-repository Actions suite는 fail closed한다. [GitHub의 commit check-runs endpoint](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference)가 최신 1,000 suite로 제한되므로 `total_count >= 1000`, page 누락/중복, count 불일치 또는 완전성 미증명은 protected tag/attestation 전에 fail closed한다.
+- suite count가 1,000 미만인 정상 경로에서 quoted `check-runs?filter=all&per_page=100`와 `actions/runs?head_sha=<release_sha>&per_page=100`를 각각 한 번 full pagination한다. check-run/workflow-run page는 stable `total_count`, exact page 수/길이와 unique ID를 요구하며 workflow-run search의 1,000-result boundary는 fail closed한다. non-excluded started check는 trusted GitHub Actions App integration `15368`이거나 exact GitGuardian tuple `(app.id=46505, app.slug=gitguardian, app.name=GitGuardian, check name=GitGuardian Security Checks)` 1개여야 한다. Actions check는 같은 App의 complete suite와 exact 하나의 workflow run에 `check_suite_id`로 결합하고 workflow run은 repository/head repository `netsus/homecook`, exact release SHA, nonempty event/path, `run_attempt=1`, terminal `success`여야 한다. GitGuardian check는 check/suite App identity, empty `external_id`, exact release head와 suite repository `netsus/homecook`, `completed/success`가 모두 일치해야 한다. duplicate GitGuardian, tuple/name/repository/SHA/suite drift, unknown non-Actions started check는 거부한다. commit statuses는 current contract에서 exact empty다. 모든 raw check instance는 terminal `success` 또는 optional context의 exact `skipped`만 허용하며 expected 7개 context의 모든 instance와 allowlisted GitGuardian은 `success`여야 한다. `neutral`, pending/queued, failure/cancelled는 거부한다.
+- 같은 context 이름의 복수 check-run은 각각 distinct check-run/suite/run ID이고, 모두 `run_attempt=1`이며, 동일한 `workflow_id + path` owner에서 나온 서로 다른 workflow run일 때만 허용한다. 따라서 같은 SHA의 정상 `push`와 후속 `schedule` first attempt는 `rerun=0`이고, 같은 run/suite 내부 중복, `run_attempt>1`, cross-workflow/path owner collision, missing/duplicate/incomplete metadata는 fail closed한다.
+- complete sorted suite ID set의 `all_check_suite_count`와 `all_check_suite_ids_digest`, suite ID/App owner/repository/head의 `all_check_suite_authority_digest`, normalized external workflow provenance의 `all_actions_workflow_run_provenance_digest`, GitGuardian owner/repository/head/state를 포함한 sorted check-run instance set의 `all_context_check_run_instances_digest`를 subject/predicate v3, production manifest v3, server readback에 exact cross-bind한다. workflow run 없이 존재할 수 있는 zero-check external suite는 canonical repository/head와 unique owner tuple이 exact `Netlify(13473/netlify)`, `GitGuardian(46505/gitguardian)`, `Vercel(8329/vercel)`, `Claude(1236702/claude)` 중 하나인 경우뿐이다. 여기서 Claude tuple은 installed GitHub App의 zero-check suite evidence일 뿐 actor 호출 권한이 아니다. 그 밖의 external suite, duplicate owner, started non-GitGuardian check는 fail closed한다. `self-referential suite exception`은 exact `GITHUB_RUN_ID`의 current `workflow_check_suite_id` 하나뿐이다. complete suite count/digest에는 self-suite를 포함하되 external terminal-result/provenance set에서만 exact current suite를 제외한다. self workflow와 manifest/schema는 `workflow_run_attempt=1`을 exact 요구한다. exact run API readback은 workflow id/path, event, master ref, repository, `workflow_head_sha`, `run_id`, `run_attempt`을 모두 검증한다. `release_sha != workflow_head_sha`이면 selected release check set에 self-suite가 없으므로 exclusion은 empty다. 과거 retry suite나 동일 context name 전체를 제외하지 않는다.
 - workflow 승인 전에는 selected release의 external check/status evidence와 current self-run control-plane evidence만 분리 보존한다. 환경 승인 직후 `master_sha_at_approval/tree`를 fresh capture한 다음에만 tag object와 subject/predicate를 만든다. tag push 직전과 attestation 발급 직전에 exact run, approval authority, external evidence, live master lineage를 각각 다시 확인한다.
 - 두 workflow job은 selected release checkout을 executable authority로 사용하지 않는다. `github.sha`와 exact run API가 함께 증명한 `workflow_head_sha/tree`를 `trusted-current-master/`에 full-history immutable checkout하고 verifier, attestation builder, desired-state reader, tag-object builder를 모두 그 bytes에서 실행한다. selected SHA/tree는 같은 repository의 verified Git object와 subject artifact로만 소비한다.
 - non-null selection은 raw canonical selection artifact를 별도 input으로 받아 digest 기반 basename/private file authority를 닫고, current master trusted verifier가 full selection field·expiry·approval과 selected→observed/current, observed→current ancestry 및 exact trees를 검증한다. protected tag push 직전과 `actions/attest` 바로 전마다 live current master ref를 readback하고 trusted checkout→live current master lineage와 full selection authority를 다시 검증한다.
@@ -430,6 +435,7 @@ attestation workflow artifact baseline은 다음 산출물이다.
 - `external-check-evidence.json`
 - `check-suite-pages.json`
 - `check-run-pages.json`
+- `workflow-run-pages.json`
 - `actions/attest@v4`가 만든 JSON bundle
 
 server-side verifier는 위 subject manifest SHA-256, repository, tag, `release_tag_object_sha`, selected release SHA/tree, workflow head/run/suite authority, approval-time master SHA/tree, complete suite count/digest, all-context instance/status digests, external suite IDs, normalized terminal summary와 complete Git lineage를 함께 다시 확인한다.

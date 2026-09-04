@@ -1091,7 +1091,7 @@ describe("production release rulesets desired state", { timeout: 10_000 }, () =>
     expect(workflow).toContain("selection_b64:");
     expect(workflow.match(/verify-production-release-rehearsal-authority\.mjs/gu)).toHaveLength(4);
     expect(workflow.match(/--rehearsal-authority-json/gu)).toHaveLength(2);
-    expect(workflow).toContain("attestations/production-release/v2");
+    expect(workflow).toContain("attestations/production-release/v3");
     for (const binding of [
       "build_id",
       "rehearsal_receipt_schema",
@@ -1136,12 +1136,15 @@ describe("production release rulesets desired state", { timeout: 10_000 }, () =>
     expect(workflow).not.toMatch(/check-suites\/\$\{?[^\s/}]+\}?\/check-runs/u);
     expect(workflow).not.toContain("--excluded-check-suite-id ");
     expect(workflow).toContain("actions/workflows/production-release-attestation.yml");
-    expect(workflow).not.toContain("head_sha=$RELEASE_SHA");
+    expect(workflow.match(/actions\/runs\?head_sha=\$RELEASE_SHA&per_page=100/gu)).toHaveLength(3);
     expect(workflow.match(/actions\/runs\/\$\{\{ github\.run_id \}\}/gu)).toHaveLength(3);
     expect(workflow).toContain("--paginate");
     expect(workflow).toContain('.path == ".github/workflows/production-release-attestation.yml"');
     expect(workflow).toContain("build-production-release-workflow-evidence.mjs");
     expect(workflow.match(/--run-attempt "\$\{\{ github\.run_attempt \}\}"/gu)).toHaveLength(3);
+    expect(workflow.match(/test "\$\{\{ github\.run_attempt \}\}" = "1"/gu)).toHaveLength(3);
+    expect(workflow.match(/--workflow-run-pages-json/gu)).toHaveLength(5);
+    expect(workflow.match(/workflow-run-pages\.json/gu)?.length ?? 0).toBeGreaterThanOrEqual(8);
     expect(workflow).toContain("release-workflow-suite-ids.json");
     expect(workflow.match(/--suite-exclusion-output/gu)).toHaveLength(3);
     expect(workflow).toMatch(
@@ -1516,6 +1519,8 @@ describe("production release rulesets desired state", { timeout: 10_000 }, () =>
     expect(runbook).toContain("다음 `prod-YYYYMMDD.N`");
     expect(runbook).toContain("self-referential suite exception");
     expect(runbook).toContain("exact `GITHUB_RUN_ID`");
-    expect(runbook).toContain("모든 non-excluded context");
+    expect(runbook).toContain("non-excluded started check");
+    expect(runbook).toContain("all_actions_workflow_run_provenance_digest");
+    expect(runbook).toContain("`run_attempt=1`");
   });
 });

@@ -25,6 +25,7 @@ try {
   const required = [
     "check_run_pages_json", "check_suite_pages_json", "commit_statuses_json",
     "excluded_check_suite_ids_json", "expected_contexts", "output", "release_sha",
+    "workflow_run_pages_json",
   ];
   for (const key of required) {
     if (!options[key]) throw new Error(`--${key.replaceAll("_", "-")} is required.`);
@@ -43,6 +44,7 @@ try {
       "expected_release_contexts",
     ),
     releaseSha: options.release_sha,
+    workflowRunPages: JSON.parse(readFileSync(options.workflow_run_pages_json, "utf8")),
   });
   writeFileSync(options.output, `${JSON.stringify(evidence, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);

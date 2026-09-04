@@ -14,6 +14,9 @@ import {
   withCandidatePnpmStoreView,
   writeCandidateTerminalMarker,
 } from "../../scripts/lib/local-mac-production-rehearsal-candidate.mjs";
+import {
+  normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples,
+} from "../../scripts/lib/github-production-release-attestation.mjs";
 import { canonicalizeJcs, sha256Jcs } from "../../scripts/lib/rfc8785-jcs.mjs";
 import { EXPECTED_RELEASE_CONTEXTS } from "../../scripts/lib/production-release-approval-policy.mjs";
 import type { OwnedTempRegistry } from "./owned-temp-root";
@@ -104,33 +107,81 @@ function storedCiEvidence(releaseSha = SHA_A) {
     queued: 0,
     rerun: 0,
   };
+  const checkSuites = checkRuns.map(({ app_id, check_suite_id, head_sha }) => ({
+    id: check_suite_id,
+    app_id,
+    app_name: "GitHub Actions",
+    app_slug: "github-actions",
+    head_sha,
+    repository: "netsus/homecook",
+  }));
+  const workflowRuns = checkRuns.map((entry, index) => ({
+    id: 100 + index,
+    workflow_id: 200 + index,
+    check_suite_id: entry.check_suite_id,
+    head_sha: releaseSha,
+    event: "push",
+    run_attempt: 1,
+    status: "completed",
+    conclusion: "success",
+    path: `.github/workflows/workflow-${index}.yml`,
+    repository: "netsus/homecook",
+    head_repository: "netsus/homecook",
+  }));
   const projection = {
+    allowlisted_external_checks: [],
     repository: "netsus/homecook",
     head_sha: releaseSha,
     remote_master_sha: releaseSha,
     check_runs: checkRuns,
+    check_suites: checkSuites,
     commit_statuses: [],
     summary,
+    workflow_runs: workflowRuns,
   };
   return {
     projection,
     snapshotDigest: sha256Jcs(projection),
     summaryDigest: sha256Jcs(summary),
-    suiteRunSetDigest: sha256Jcs(checkRuns.map(({ app_id, check_suite_id, id }) => ({
-      app_id,
-      check_suite_id,
-      id,
-    }))),
+    suiteRunSetDigest: sha256Jcs({
+      check_suites: normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+        checkSuites,
+        releaseSha,
+        label: "completed fixture check_suites entry",
+      }),
+      check_runs: checkRuns.map(({ app_id, check_suite_id, id }) => ({
+        app_id,
+        check_suite_id,
+        id,
+      })),
+    }),
+    workflowRunProvenanceDigest: createHash("sha256").update(JSON.stringify(
+      workflowRuns.map((entry) => ({
+        checkSuiteId: entry.check_suite_id,
+        conclusion: entry.conclusion,
+        event: entry.event,
+        headRepository: entry.head_repository,
+        headSha: entry.head_sha,
+        path: entry.path,
+        repository: entry.repository,
+        runAttempt: entry.run_attempt,
+        runId: entry.id,
+        status: entry.status,
+        workflowId: entry.workflow_id,
+      })),
+    )).digest("hex"),
   };
 }
 
 export async function createCompletedRehearsalCandidateFixture(
   prefix = "homecook-r2-real-candidate-",
   {
+    ci: ciOverride = null,
     releaseSha = SHA_A,
     releaseTree = SHA_B,
     tempRegistry,
   }: {
+    ci?: ReturnType<typeof storedCiEvidence> | null;
     releaseSha?: string;
     releaseTree?: string;
     tempRegistry: OwnedTempRegistry;
@@ -179,7 +230,7 @@ export async function createCompletedRehearsalCandidateFixture(
   const bundleRoot = join(bundlesRoot, "bundle");
   mkdirSync(bundlesRoot, { mode: 0o700 });
   const physical = createSealedCandidateBundle({ bundleRoot, componentRoots });
-  const ci = storedCiEvidence(releaseSha);
+  const ci = ciOverride ?? storedCiEvidence(releaseSha);
   const evidenceRoot = join(candidateRoot, "evidence");
   mkdirSync(evidenceRoot, { mode: 0o700 });
   writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ci.projection), { mode: 0o400 });
@@ -222,6 +273,7 @@ export async function createCompletedRehearsalCandidateFixture(
     ci_check_summary_digest: ci.summaryDigest,
     ci_snapshot_digest: ci.snapshotDigest,
     ci_suite_run_set_digest: ci.suiteRunSetDigest,
+    ci_workflow_run_provenance_digest: ci.workflowRunProvenanceDigest,
     environment_snapshot: environmentSnapshot,
     file_inventory: physical.file_inventory,
     images: [{
@@ -269,7 +321,7 @@ export async function createCompletedRehearsalCandidateFixture(
   chmodSync(bundlesRoot, 0o500);
 
   const candidate = buildCandidateManifest({
-    schema: "homecook.local-mac-production-rehearsal-candidate.v1",
+    schema: "homecook.local-mac-production-rehearsal-candidate.v2",
     canonicalization: "RFC8785-JCS+SHA256",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
@@ -279,6 +331,7 @@ export async function createCompletedRehearsalCandidateFixture(
     ci_check_summary_digest: ci.summaryDigest,
     ci_snapshot_digest: ci.snapshotDigest,
     ci_suite_run_set_digest: ci.suiteRunSetDigest,
+    ci_workflow_run_provenance_digest: ci.workflowRunProvenanceDigest,
     builder_input_digest: DIGEST_B,
     source_manifest_digest: DIGEST_A,
     compose_source_digest: DIGEST_C,

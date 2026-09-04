@@ -25,6 +25,7 @@ function parseArgs(argv) {
     rehearsalAuthorityPath: null,
     subjectOutputPath: null,
     workflowAuthorityPath: null,
+    workflowRunPagesPath: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -69,6 +70,8 @@ function parseArgs(argv) {
       options.subjectOutputPath = value;
     } else if (token === "--workflow-authority-json") {
       options.workflowAuthorityPath = value;
+    } else if (token === "--workflow-run-pages-json") {
+      options.workflowRunPagesPath = value;
     } else {
       throw new Error(`Unknown argument: ${token}`);
     }
@@ -86,6 +89,9 @@ try {
   if (!options.checkSuitePagesPath) {
     throw new Error("--check-suite-pages-json <path> is required.");
   }
+  if (!options.workflowRunPagesPath) {
+    throw new Error("--workflow-run-pages-json <path> is required.");
+  }
   if (!options.subjectOutputPath) {
     throw new Error("--subject-output <path> is required.");
   }
@@ -98,6 +104,7 @@ try {
 
   const checkRunPages = JSON.parse(readFileSync(options.checkRunPagesPath, "utf8"));
   const checkSuitePages = JSON.parse(readFileSync(options.checkSuitePagesPath, "utf8"));
+  const workflowRunPages = JSON.parse(readFileSync(options.workflowRunPagesPath, "utf8"));
   const checkRuns = options.checkRunsPath
     ? JSON.parse(readFileSync(options.checkRunsPath, "utf8"))
     : [];
@@ -172,6 +179,7 @@ try {
     rehearsalAuthority,
     subjectOutputPath: options.subjectOutputPath,
     workflowAuthority,
+    workflowRunPages,
   });
 
   process.stdout.write(`${JSON.stringify(artifacts, null, 2)}\n`);

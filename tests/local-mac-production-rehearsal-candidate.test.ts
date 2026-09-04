@@ -82,7 +82,12 @@ import {
 import * as candidateBootstrapModule from "../scripts/local-mac-production-rehearsal-candidate-bootstrap.mjs";
 import {
   EXPECTED_RELEASE_CONTEXTS,
+  GITHUB_ACTIONS_APP_INTEGRATION_ID,
 } from "../scripts/lib/production-release-approval-policy.mjs";
+import {
+  buildGitHubProductionReleaseExternalCheckEvidence,
+  normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples,
+} from "../scripts/lib/github-production-release-attestation.mjs";
 import { createCompletedRehearsalCandidateFixture } from "./helpers/local-mac-production-rehearsal-candidate-fixture";
 import {
   createOwnedTempRegistry,
@@ -361,12 +366,34 @@ function validCiEvidence() {
     completed_at: `2026-08-29T00:01:${String(index).padStart(2, "0")}Z`,
   }));
   const safeProjection = {
+    allowlisted_external_checks: [],
     repository: "netsus/homecook",
     head_sha: SHA_A,
     remote_master_sha: SHA_A,
     check_runs: checkRuns,
+    check_suites: checkRuns.map((entry) => ({
+      id: entry.check_suite_id,
+      app_id: entry.app_id,
+      app_name: "GitHub Actions",
+      app_slug: "github-actions",
+      head_sha: entry.head_sha,
+      repository: "netsus/homecook",
+    })),
     commit_statuses: [],
     summary: { total: 7, success: 7, intended_skip: 0, bad: 0, cancelled: 0, failed: 0, pending: 0, queued: 0, rerun: 0 },
+    workflow_runs: checkRuns.map((entry, index) => ({
+      id: 100 + index,
+      workflow_id: 200 + index,
+      check_suite_id: entry.check_suite_id,
+      head_sha: SHA_A,
+      event: "push",
+      run_attempt: 1,
+      status: "completed",
+      conclusion: "success",
+      path: `.github/workflows/workflow-${index}.yml`,
+      repository: "netsus/homecook",
+      head_repository: "netsus/homecook",
+    })),
   };
   return {
     head_sha: SHA_A,
@@ -374,6 +401,7 @@ function validCiEvidence() {
     remote_master_sha: SHA_A,
     summary_digest: DIGEST_A,
     suite_run_set_digest: DIGEST_B,
+    workflow_run_provenance_digest: DIGEST_C,
     safe_projection_digest: DIGEST_C,
     safe_projection: safeProjection,
     summary: safeProjection.summary,
@@ -381,10 +409,64 @@ function validCiEvidence() {
 }
 
 function storedCiManifest(projection: {
+  allowlisted_external_checks?: Array<Record<string, unknown>>,
+  check_suites?: Array<{
+    app_id: number,
+    app_name?: string,
+    app_slug?: string,
+    head_sha?: string,
+    id: number,
+    repository?: string,
+  }>,
   check_runs: Array<{ app_id: number, check_suite_id: number, id: number }>,
   head_sha: string,
   summary: Record<string, number>,
+  workflow_runs?: Array<Record<string, unknown>>,
 }) {
+  const externalChecks = projection.allowlisted_external_checks ?? [];
+  const externalByRunId = new Map(
+    externalChecks.map((entry) => [entry.check_run_id, entry]),
+  );
+  const workflowRuns = projection.workflow_runs ?? [];
+  const workflowRunPages = [{
+    total_count: workflowRuns.length,
+    workflow_runs: workflowRuns.map((entry) => ({
+      ...entry,
+      repository: { full_name: entry.repository },
+      head_repository: { full_name: entry.head_repository },
+    })),
+  }];
+  const workflowProvenanceDigest = buildGitHubProductionReleaseExternalCheckEvidence({
+    checkRunPages: [{
+      total_count: projection.check_runs.length,
+      check_runs: projection.check_runs.map((entry) => ({
+        ...entry,
+        app: {
+          id: entry.app_id,
+          name: externalByRunId.get(entry.id)?.app_name,
+          slug: externalByRunId.get(entry.id)?.app_slug,
+        },
+        check_suite: { id: entry.check_suite_id },
+        external_id: externalByRunId.get(entry.id)?.external_id ?? null,
+      })),
+    }],
+    checkSuitePages: [{
+      total_count: (projection.check_suites ?? []).length,
+      check_suites: (projection.check_suites ?? []).map((entry) => ({
+        id: entry.id,
+        app: {
+          id: entry.app_id,
+          name: entry.app_name,
+          slug: entry.app_slug,
+        },
+        head_sha: entry.head_sha ?? projection.head_sha,
+        repository: { full_name: entry.repository ?? "netsus/homecook" },
+      })),
+    }],
+    expectedContexts: EXPECTED_RELEASE_CONTEXTS,
+    releaseSha: projection.head_sha,
+    workflowRunPages,
+  }).all_actions_workflow_run_provenance_digest;
   return {
     release_sha: projection.head_sha,
     selection_digest: null,
@@ -392,13 +474,56 @@ function storedCiManifest(projection: {
       .update(canonicalizeJcs(projection)).digest("hex"),
     ci_check_summary_digest: createHash("sha256")
       .update(canonicalizeJcs(projection.summary)).digest("hex"),
-    ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs(
-      projection.check_runs.map((entry) => ({
+    ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs({
+      check_suites: normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+        checkSuites: projection.check_suites ?? [],
+        releaseSha: projection.head_sha,
+        label: "stored CI manifest check_suites entry",
+      }),
+      check_runs: projection.check_runs.map((entry) => ({
         app_id: entry.app_id,
         check_suite_id: entry.check_suite_id,
         id: entry.id,
       })),
-    )).digest("hex"),
+    })).digest("hex"),
+    ci_workflow_run_provenance_digest: workflowProvenanceDigest,
+  };
+}
+
+function withStoredCiProvenance<T extends {
+  check_runs: Array<{
+    app_id: number,
+    check_suite_id: number,
+    id: number,
+    [key: string]: unknown,
+  }>,
+  head_sha: string,
+}>(projection: T) {
+  const suites = [...new Set(projection.check_runs.map((entry) => entry.check_suite_id))];
+  return {
+    ...projection,
+    allowlisted_external_checks: [],
+    check_suites: suites.map((id) => ({
+      id,
+      app_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
+      app_name: "GitHub Actions",
+      app_slug: "github-actions",
+      head_sha: projection.head_sha,
+      repository: "netsus/homecook",
+    })),
+    workflow_runs: suites.map((checkSuiteId, index) => ({
+      id: 2_000 + index,
+      workflow_id: 3_000 + index,
+      check_suite_id: checkSuiteId,
+      head_sha: projection.head_sha,
+      event: "push",
+      run_attempt: 1,
+      status: "completed",
+      conclusion: "success",
+      path: `.github/workflows/workflow-${index}.yml`,
+      repository: "netsus/homecook",
+      head_repository: "netsus/homecook",
+    })),
   };
 }
 
@@ -453,7 +578,7 @@ function validManifestInput() {
     dereferenced_sha256: null,
   }];
   return {
-    schema: "homecook.local-mac-production-rehearsal-candidate.v1",
+    schema: "homecook.local-mac-production-rehearsal-candidate.v2",
     canonicalization: "RFC8785-JCS+SHA256",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
@@ -463,6 +588,7 @@ function validManifestInput() {
     ci_check_summary_digest: DIGEST_A,
     ci_snapshot_digest: DIGEST_B,
     ci_suite_run_set_digest: DIGEST_C,
+    ci_workflow_run_provenance_digest: DIGEST_A,
     builder_input_digest: DIGEST_B,
     source_manifest_digest: DIGEST_A,
     compose_source_digest: DIGEST_C,
@@ -868,7 +994,7 @@ describe("release rehearsal candidate manifest", () => {
       "utf8",
     ));
     expect(schema).toMatchObject({
-      $id: "homecook.local-mac-production-rehearsal-candidate.v1",
+      $id: "homecook.local-mac-production-rehearsal-candidate.v2",
       type: "object",
       additionalProperties: false,
       required: expect.arrayContaining([
@@ -1619,7 +1745,7 @@ try {
     const validEvidence = validCiEvidence();
     const projection = {
       ...validEvidence.safe_projection,
-      commit_statuses: [{ id: 31, sha: SHA_A, context: "external", state: "success" }],
+      commit_statuses: [],
     };
     const evidence = {
       expected_head_sha: SHA_A,
@@ -1628,6 +1754,7 @@ try {
       summary: validEvidence.summary,
       summary_digest: DIGEST_A,
       suite_run_set_digest: DIGEST_B,
+      workflow_run_provenance_digest: DIGEST_C,
       safe_projection: projection,
       safe_projection_digest: DIGEST_C,
     };
@@ -3516,6 +3643,7 @@ describe("release rehearsal candidate orchestration", () => {
       ci_snapshot_digest: createHash("sha256").update(canonicalizeJcs(projection)).digest("hex"),
       ci_check_summary_digest: createHash("sha256").update(canonicalizeJcs(projection.summary)).digest("hex"),
       ci_suite_run_set_digest: createHash("sha256").update(canonicalizeJcs([])).digest("hex"),
+      ci_workflow_run_provenance_digest: DIGEST_A,
     })).toThrow(/summary|count|runs|recompute|CI/iu);
 
     const candidate = buildCandidateManifest(validManifestInput());
@@ -3536,6 +3664,7 @@ describe("release rehearsal candidate orchestration", () => {
       ci_check_summary_digest: candidate.ci_check_summary_digest,
       ci_snapshot_digest: candidate.ci_snapshot_digest,
       ci_suite_run_set_digest: candidate.ci_suite_run_set_digest,
+      ci_workflow_run_provenance_digest: candidate.ci_workflow_run_provenance_digest,
       source_manifest_digest: candidate.source_manifest_digest,
       builder_input_digest: candidate.builder_input_digest,
       compose_source_digest: candidate.compose_source_digest,
@@ -3547,8 +3676,8 @@ describe("release rehearsal candidate orchestration", () => {
     })).toThrow(/release_sha|cross.?binding|candidate|bundle/iu);
   });
 
-  it("accepts the actual current master fixture with optional skips and unique scope contexts", async () => {
-    const projection = {
+  it("round-trips a live-shaped 10-suite/19-check adapter snapshot through stored and completed readers", async () => {
+    const baseProjection = withStoredCiProvenance({
       repository: "netsus/homecook",
       head_sha: CURRENT_MASTER_SHA,
       remote_master_sha: CURRENT_MASTER_SHA,
@@ -3565,6 +3694,99 @@ describe("release rehearsal candidate orchestration", () => {
         queued: 0,
         rerun: 0,
       },
+    });
+    const gitGuardianSuiteId = 90_563_912_001;
+    const projection = {
+      ...baseProjection,
+      check_runs: [
+        ...baseProjection.check_runs.map((entry) => ({
+          ...entry,
+          id: Number(entry.id),
+          check_suite_id: Number(entry.check_suite_id),
+          name: String(entry.name),
+          started_at: String(entry.started_at),
+          completed_at: String(entry.completed_at),
+        })),
+        {
+          id: 99_587_934_300,
+          app_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
+          check_suite_id: baseProjection.check_suites[0].id,
+          head_sha: CURRENT_MASTER_SHA,
+          name: "docs-preview",
+          status: "completed",
+          conclusion: "skipped",
+          started_at: "2026-08-31T17:58:40Z",
+          completed_at: "2026-08-31T17:58:40Z",
+        },
+        {
+          id: 100_832_681_323,
+          app_id: 46_505,
+          check_suite_id: gitGuardianSuiteId,
+          head_sha: CURRENT_MASTER_SHA,
+          name: "GitGuardian Security Checks",
+          status: "completed",
+          conclusion: "success",
+          started_at: "2026-08-31T17:58:41Z",
+          completed_at: "2026-08-31T17:58:45Z",
+        },
+      ],
+      check_suites: [
+        ...baseProjection.check_suites,
+        {
+          id: 90_563_912_000,
+          app_id: 8_329,
+          app_name: "Vercel",
+          app_slug: "vercel",
+          head_sha: CURRENT_MASTER_SHA,
+          repository: "netsus/homecook",
+        },
+        {
+          id: gitGuardianSuiteId,
+          app_id: 46_505,
+          app_name: "GitGuardian",
+          app_slug: "gitguardian",
+          head_sha: CURRENT_MASTER_SHA,
+          repository: "netsus/homecook",
+        },
+        {
+          id: 90_563_912_002,
+          app_id: 13_473,
+          app_name: "Netlify",
+          app_slug: "netlify",
+          head_sha: CURRENT_MASTER_SHA,
+          repository: "netsus/homecook",
+        },
+        {
+          id: 90_563_912_003,
+          app_id: 1_236_702,
+          app_name: "Claude",
+          app_slug: "claude",
+          head_sha: CURRENT_MASTER_SHA,
+          repository: "netsus/homecook",
+        },
+      ],
+      allowlisted_external_checks: [{
+        app_id: 46_505,
+        app_name: "GitGuardian",
+        app_slug: "gitguardian",
+        check_name: "GitGuardian Security Checks",
+        check_run_id: 100_832_681_323,
+        check_suite_id: gitGuardianSuiteId,
+        external_id: "",
+        head_sha: CURRENT_MASTER_SHA,
+        repository: "netsus/homecook",
+      }],
+      summary: {
+        total: 19,
+        success: 13,
+        intended_skip: 6,
+        bad: 0,
+        cancelled: 0,
+        failed: 0,
+        pending: 0,
+        queued: 0,
+        rerun: 0,
+      },
     };
 
     expect(validateStoredCiProjection(projection, storedCiManifest(projection))).toBeUndefined();
@@ -3572,7 +3794,7 @@ describe("release rehearsal candidate orchestration", () => {
     const hardcodedAllSuccess = structuredClone(projection);
     hardcodedAllSuccess.summary = {
       ...hardcodedAllSuccess.summary,
-      success: 17,
+      success: 19,
       intended_skip: 0,
     };
     expect(() => validateStoredCiProjection(
@@ -3582,16 +3804,35 @@ describe("release rehearsal candidate orchestration", () => {
 
     const adapterHome = privateRoot("homecook-candidate-ci-adapter-home-");
     const adapterRoot = privateRoot("homecook-candidate-ci-adapter-root-");
-    const rawCheckRuns = CURRENT_MASTER_CHECK_RUNS.map((entry) => ({
+    const externalChecksByRunId = new Map(projection.allowlisted_external_checks.map(
+      (entry) => [entry.check_run_id, entry],
+    ));
+    const rawCheckRuns = projection.check_runs.map((entry) => ({
       id: entry.id,
-      app: { id: entry.app_id },
+      app: {
+        id: entry.app_id,
+        name: externalChecksByRunId.get(entry.id)?.app_name ?? "GitHub Actions",
+        slug: externalChecksByRunId.get(entry.id)?.app_slug ?? "github-actions",
+      },
       check_suite: { id: entry.check_suite_id },
+      external_id: externalChecksByRunId.get(entry.id)?.external_id ?? null,
       head_sha: entry.head_sha,
       completed_at: entry.completed_at,
       conclusion: entry.conclusion,
       name: entry.name,
       started_at: entry.started_at,
       status: entry.status,
+    }));
+    const rawCheckSuites = projection.check_suites.map((entry) => ({
+      id: entry.id,
+      app: { id: entry.app_id, name: entry.app_name, slug: entry.app_slug },
+      head_sha: entry.head_sha,
+      repository: { full_name: entry.repository },
+    }));
+    const rawWorkflowRuns = projection.workflow_runs.map((entry) => ({
+      ...entry,
+      repository: { full_name: entry.repository },
+      head_repository: { full_name: entry.head_repository },
     }));
     const createCandidateAdapters = createReleaseRehearsalCandidateAdapters as unknown as (
       options: Record<string, unknown>,
@@ -3609,23 +3850,194 @@ describe("release rehearsal candidate orchestration", () => {
         let stdout = "";
         if (command === "/trusted/git" && args.includes("rev-parse")) {
           stdout = `${CURRENT_MASTER_SHA}\n`;
+        } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/check-suites?"))) {
+          stdout = JSON.stringify([{
+            total_count: rawCheckSuites.length,
+            check_suites: rawCheckSuites,
+          }]);
         } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/check-runs?"))) {
-          stdout = JSON.stringify([{ check_runs: rawCheckRuns }]);
+          stdout = JSON.stringify([{
+            total_count: rawCheckRuns.length,
+            check_runs: rawCheckRuns,
+          }]);
+        } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/actions/runs?"))) {
+          stdout = JSON.stringify([{
+            total_count: rawWorkflowRuns.length,
+            workflow_runs: rawWorkflowRuns,
+          }]);
         } else if (command === "/trusted/gh" && args.some((arg) => arg.includes("/statuses?"))) {
           stdout = JSON.stringify([[]]);
         }
         return { status: 0, signal: null, stdout, stderr: "" };
       },
     });
-    await expect(adapters.collectCiEvidence({ releaseSha: CURRENT_MASTER_SHA }))
-      .resolves.toMatchObject({
-        summary: projection.summary,
-        safe_projection: { summary: projection.summary },
-      });
+    const collected = await adapters.collectCiEvidence({ releaseSha: CURRENT_MASTER_SHA });
+    expect(rawCheckSuites).toHaveLength(10);
+    expect(rawCheckRuns).toHaveLength(19);
+    expect(rawWorkflowRuns).toHaveLength(6);
+    expect(collected).toMatchObject({
+      summary: projection.summary,
+      safe_projection: { summary: projection.summary },
+    });
+    const collectedProjection = collected.safe_projection as Parameters<typeof validateStoredCiProjection>[0];
+    expect(collectedProjection.check_runs).toHaveLength(19);
+    expect(collectedProjection.check_suites).toHaveLength(10);
+    expect(collectedProjection.workflow_runs).toHaveLength(6);
+    const collectedManifest = {
+      release_sha: CURRENT_MASTER_SHA,
+      selection_digest: null,
+      ci_snapshot_digest: String(collected.safe_projection_digest),
+      ci_check_summary_digest: String(collected.summary_digest),
+      ci_suite_run_set_digest: String(collected.suite_run_set_digest),
+      ci_workflow_run_provenance_digest: String(collected.workflow_run_provenance_digest),
+    };
+    expect(() => validateStoredCiProjection(
+      collectedProjection,
+      collectedManifest,
+    )).not.toThrow();
+
+    for (const [field, replacement] of [
+      ["app_id", 15_369],
+      ["app_name", "GitHub Actionz"],
+      ["app_slug", "github-actionz"],
+      ["head_sha", SHA_B],
+      ["id", 90_563_999_999],
+      ["repository", "attacker/homecook"],
+    ] as const) {
+      const tampered = structuredClone(collectedProjection);
+      Object.assign(tampered.check_suites[0], { [field]: replacement });
+      expect(() => validateStoredCiProjection(tampered, {
+        ...collectedManifest,
+        ci_snapshot_digest: createHash("sha256")
+          .update(canonicalizeJcs(tampered)).digest("hex"),
+      })).toThrow(/authority|canonical|digest|repository|suite|workflow/iu);
+    }
+
+    const completedFixture = await createCompletedRehearsalCandidateFixture(
+      "homecook-live-shaped-ci-reader-",
+      {
+        ci: {
+          projection: collectedProjection,
+          snapshotDigest: String(collected.safe_projection_digest),
+          summaryDigest: String(collected.summary_digest),
+          suiteRunSetDigest: String(collected.suite_run_set_digest),
+          workflowRunProvenanceDigest: String(collected.workflow_run_provenance_digest),
+        },
+        releaseSha: CURRENT_MASTER_SHA,
+        tempRegistry: ownedTempRegistry,
+      },
+    );
+    expect(readCompletedCandidateRoot(completedFixture.candidateRoot, {
+      physicalAuthorityPath: completedFixture.physicalAuthorityPath,
+    }).manifest.release_sha).toBe(CURRENT_MASTER_SHA);
+  });
+
+  it("accepts same-context push and scheduled first attempts only with sealed workflow provenance", () => {
+    const projection = structuredClone(validCiEvidence().safe_projection);
+    const changes = projection.check_runs.find((entry) => entry.name === "changes");
+    if (!changes) throw new Error("fixture is missing changes");
+    const scheduledSuiteId = 99;
+    projection.check_runs.push({
+      ...changes,
+      id: 99,
+      check_suite_id: scheduledSuiteId,
+      started_at: "2026-09-04T01:00:00Z",
+      completed_at: "2026-09-04T01:01:00Z",
+    });
+    projection.check_suites = [
+      ...projection.check_runs.map((entry) => ({
+        id: entry.check_suite_id,
+        app_id: GITHUB_ACTIONS_APP_INTEGRATION_ID,
+        app_name: "GitHub Actions",
+        app_slug: "github-actions",
+        head_sha: SHA_A,
+        repository: "netsus/homecook",
+      })),
+      {
+        id: 100,
+        app_id: 46_505,
+        app_name: "GitGuardian",
+        app_slug: "gitguardian",
+        head_sha: SHA_A,
+        repository: "netsus/homecook",
+      },
+    ].filter((entry, index, entries) =>
+      entries.findIndex((candidate) => candidate.id === entry.id) === index);
+    projection.workflow_runs = projection.check_suites
+      .filter((entry) => entry.app_id === GITHUB_ACTIONS_APP_INTEGRATION_ID)
+      .map((entry, index) => ({
+        id: 500 + index,
+        workflow_id: entry.id === changes.check_suite_id || entry.id === scheduledSuiteId
+          ? 700
+          : 1_000 + index,
+        check_suite_id: entry.id,
+        head_sha: SHA_A,
+        event: entry.id === scheduledSuiteId ? "schedule" : "push",
+        run_attempt: 1,
+        status: "completed",
+        conclusion: "success",
+        path: entry.id === changes.check_suite_id || entry.id === scheduledSuiteId
+          ? ".github/workflows/playwright.yml"
+          : `.github/workflows/workflow-${entry.id}.yml`,
+        repository: "netsus/homecook",
+        head_repository: "netsus/homecook",
+      }));
+    projection.summary = {
+      ...projection.summary,
+      rerun: 0,
+    };
+
+    expect(validateStoredCiProjection(projection, storedCiManifest(projection))).toBeUndefined();
+  });
+
+  it("accepts one sealed canonical GitGuardian projection in candidate evidence", () => {
+    const projection = structuredClone(validCiEvidence().safe_projection) as Record<string, unknown>;
+    const checkRuns = projection.check_runs as Array<Record<string, unknown>>;
+    const checkSuites = projection.check_suites as Array<Record<string, unknown>>;
+    checkRuns.push({
+      id: 100_832_681_323,
+      app_id: 46_505,
+      check_suite_id: 91_635_358_541,
+      head_sha: SHA_A,
+      name: "GitGuardian Security Checks",
+      status: "completed",
+      conclusion: "success",
+      started_at: "2026-09-04T01:00:00Z",
+      completed_at: "2026-09-04T01:00:30Z",
+    });
+    checkSuites.push({
+      id: 91_635_358_541,
+      app_id: 46_505,
+      app_name: "GitGuardian",
+      app_slug: "gitguardian",
+      head_sha: SHA_A,
+      repository: "netsus/homecook",
+    });
+    projection.allowlisted_external_checks = [{
+      app_id: 46_505,
+      app_name: "GitGuardian",
+      app_slug: "gitguardian",
+      check_name: "GitGuardian Security Checks",
+      check_run_id: 100_832_681_323,
+      check_suite_id: 91_635_358_541,
+      external_id: "",
+      head_sha: SHA_A,
+      repository: "netsus/homecook",
+    }];
+    projection.summary = {
+      ...(projection.summary as Record<string, number>),
+      total: EXPECTED_RELEASE_CONTEXTS.length + 1,
+      success: EXPECTED_RELEASE_CONTEXTS.length + 1,
+    };
+
+    expect(validateStoredCiProjection(
+      projection,
+      storedCiManifest(projection as Parameters<typeof storedCiManifest>[0]),
+    )).toBeUndefined();
   });
 
   it("rejects required skips and the old duplicate generic scope projection", () => {
-    const requiredSkipped = {
+    const requiredSkipped = withStoredCiProvenance({
       repository: "netsus/homecook",
       head_sha: CURRENT_MASTER_SHA,
       remote_master_sha: CURRENT_MASTER_SHA,
@@ -3642,14 +4054,14 @@ describe("release rehearsal candidate orchestration", () => {
         queued: 0,
         rerun: 0,
       },
-    };
+    });
     requiredSkipped.check_runs.find((entry) => entry.name === "build")!.conclusion = "skipped";
     expect(() => validateStoredCiProjection(
       requiredSkipped,
       storedCiManifest(requiredSkipped),
     )).toThrow(/required|expected|build|success/iu);
 
-    const duplicateGenericScope = {
+    const duplicateGenericScope = withStoredCiProvenance({
       repository: "netsus/homecook",
       head_sha: CURRENT_MASTER_SHA,
       remote_master_sha: CURRENT_MASTER_SHA,
@@ -3671,7 +4083,7 @@ describe("release rehearsal candidate orchestration", () => {
         queued: 0,
         rerun: 2,
       },
-    };
+    });
     expect(() => validateStoredCiProjection(
       duplicateGenericScope,
       storedCiManifest(duplicateGenericScope),
@@ -5573,13 +5985,9 @@ describe("release rehearsal candidate orchestration", () => {
     const ciSnapshotDigest = createHash("sha256").update(canonicalizeJcs(ciEvidence)).digest("hex");
     const ciSummaryDigest = createHash("sha256").update(canonicalizeJcs(ciEvidence.summary)).digest("hex");
     expect(ciSummaryDigest).not.toBe(ciSnapshotDigest);
-    const ciSuiteRunSetDigest = createHash("sha256").update(canonicalizeJcs(
-      ciEvidence.check_runs.map((entry) => ({
-        app_id: entry.app_id,
-        check_suite_id: entry.check_suite_id,
-        id: entry.id,
-      })),
-    )).digest("hex");
+    const ciManifest = storedCiManifest(ciEvidence);
+    const ciSuiteRunSetDigest = ciManifest.ci_suite_run_set_digest;
+    const ciWorkflowRunProvenanceDigest = ciManifest.ci_workflow_run_provenance_digest;
     const evidenceRoot = join(root, "evidence");
     mkdirSync(evidenceRoot, { mode: 0o700 });
     writeFileSync(join(evidenceRoot, "ci-evidence.json"), canonicalizeJcs(ciEvidence), { mode: 0o400 });
@@ -5594,6 +6002,7 @@ describe("release rehearsal candidate orchestration", () => {
       ci_check_summary_digest: ciSummaryDigest,
       ci_snapshot_digest: ciSnapshotDigest,
       ci_suite_run_set_digest: ciSuiteRunSetDigest,
+      ci_workflow_run_provenance_digest: ciWorkflowRunProvenanceDigest,
       environment_snapshot: manifestInput.environment_snapshot,
       file_inventory: physical.file_inventory,
       images: manifestInput.images,
@@ -5634,6 +6043,7 @@ describe("release rehearsal candidate orchestration", () => {
       ci_check_summary_digest: ciSummaryDigest,
       ci_snapshot_digest: ciSnapshotDigest,
       ci_suite_run_set_digest: ciSuiteRunSetDigest,
+      ci_workflow_run_provenance_digest: ciWorkflowRunProvenanceDigest,
       sealed_bundle_digest: physical.sealed_bundle_digest,
       bundle_manifest_digest: bundle.bundle_manifest_digest,
       candidate_identity_digest: candidateIdentityDigest,

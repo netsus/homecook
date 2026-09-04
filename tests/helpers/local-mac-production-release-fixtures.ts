@@ -17,14 +17,15 @@ export function createCompleteProductionCheckPageInput({
   releaseSha: string,
   selfSuiteId?: number | null,
 }) {
-  const allCheckRuns = selfSuiteId === null
-    ? checkRuns
+  const allCheckRuns: Array<Record<string, unknown>> = selfSuiteId === null
+    ? checkRuns.map((entry) => ({ ...entry, head_sha: releaseSha }))
     : [
-        ...checkRuns,
+        ...checkRuns.map((entry) => ({ ...entry, head_sha: releaseSha })),
         {
           id: 9_000_000 + selfSuiteId,
           app: { id: 15368 },
           check_suite: { id: selfSuiteId },
+          head_sha: releaseSha,
           name: "approve-and-tag",
           started_at: "2026-08-28T09:05:00Z",
           status: "in_progress",
@@ -32,13 +33,48 @@ export function createCompleteProductionCheckPageInput({
       ];
   const suiteIds = [...new Set(allCheckRuns.map((entry) =>
     Number((entry.check_suite as { id?: unknown } | undefined)?.id)))];
+  const externalSuiteIds = suiteIds.filter((id) => id !== selfSuiteId);
+  const workflowRuns: Array<Record<string, unknown>> = externalSuiteIds.map((checkSuiteId, index) => ({
+    id: 10_000 + checkSuiteId,
+    workflow_id: 20_000 + checkSuiteId,
+    check_suite_id: checkSuiteId,
+    head_sha: releaseSha,
+    event: "push",
+    run_attempt: 1,
+    status: "completed",
+    conclusion: "success",
+    path: `.github/workflows/workflow-${index}.yml`,
+    repository: { full_name: "netsus/homecook" },
+    head_repository: { full_name: "netsus/homecook" },
+  }));
+  if (selfSuiteId !== null) {
+    workflowRuns.push({
+      id: 9_001,
+      workflow_id: 9_000,
+      check_suite_id: selfSuiteId,
+      head_sha: releaseSha,
+      event: "workflow_dispatch",
+      run_attempt: 1,
+      status: "in_progress",
+      conclusion: null,
+      path: ".github/workflows/production-release-attestation.yml",
+      repository: { full_name: "netsus/homecook" },
+      head_repository: { full_name: "netsus/homecook" },
+    });
+  }
   return {
     checkRuns: allCheckRuns,
     checkRunPages: [{ total_count: allCheckRuns.length, check_runs: allCheckRuns }],
     checkSuitePages: [{
       total_count: suiteIds.length,
-      check_suites: suiteIds.map((id) => ({ id, head_sha: releaseSha })),
+      check_suites: suiteIds.map((id) => ({
+        id,
+        head_sha: releaseSha,
+        app: { id: 15368, name: "GitHub Actions", slug: "github-actions" },
+        repository: { full_name: "netsus/homecook" },
+      })),
     }],
+    workflowRunPages: [{ total_count: workflowRuns.length, workflow_runs: workflowRuns }],
     excludedCheckSuiteIds: selfSuiteId === null ? [] : [selfSuiteId],
   };
 }
@@ -48,7 +84,7 @@ export function createLocalMacProductionReleaseManifest(
   overrides: Record<string, unknown> = {},
 ) {
   return {
-    schema: "homecook.local-mac-production-release.v2",
+    schema: "homecook.local-mac-production-release.v3",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
@@ -103,6 +139,8 @@ export function createLocalMacProductionReleaseManifest(
     },
     all_check_suite_count: 2,
     all_check_suite_ids_digest: "4".repeat(64),
+    all_check_suite_authority_digest: "6".repeat(64),
+    all_actions_workflow_run_provenance_digest: "5".repeat(64),
     all_context_check_run_instances_digest: "2".repeat(64),
     all_context_check_suite_ids: [200, 201],
     all_context_commit_statuses_digest: "3".repeat(64),

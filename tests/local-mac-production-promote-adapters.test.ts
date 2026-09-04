@@ -49,7 +49,7 @@ import {
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
   buildProductionReleaseAnnotatedTagMessage,
-  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
+  GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V3,
 } from "../scripts/lib/github-production-release-attestation.mjs";
 import { acquireLocalMacProductionPromotionLock } from "../scripts/lib/local-mac-production-release.mjs";
 import {
@@ -1174,6 +1174,9 @@ describe("local Mac production promote adapters", () => {
       required_check_summary: artifacts.subject.required_check_summary,
       all_check_suite_count: artifacts.subject.all_check_suite_count,
       all_check_suite_ids_digest: artifacts.subject.all_check_suite_ids_digest,
+      all_check_suite_authority_digest: artifacts.subject.all_check_suite_authority_digest,
+      all_actions_workflow_run_provenance_digest:
+        artifacts.subject.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest: artifacts.subject.all_context_check_run_instances_digest,
       all_context_check_suite_ids: artifacts.subject.all_context_check_suite_ids,
       all_context_commit_statuses_digest: artifacts.subject.all_context_commit_statuses_digest,
@@ -1181,7 +1184,7 @@ describe("local Mac production promote adapters", () => {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), { mode: 0o600 });
     writeFileSync(bundlePath, "{}\n", { mode: 0o600 });
     const ghPayload = [{ verificationResult: { statement: {
-      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2,
+      predicateType: GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V3,
       predicate: artifacts.predicate,
       subject: [{ digest: { sha256: artifacts.subject_manifest_sha256 } }],
     } } }];

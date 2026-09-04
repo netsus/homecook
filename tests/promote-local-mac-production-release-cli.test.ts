@@ -77,7 +77,7 @@ function createFixtureRepo({
 
   const manifestPath = join(rootDir, "release.json");
   writeFileSync(manifestPath, JSON.stringify({
-    schema: "homecook.local-mac-production-release.v2",
+    schema: "homecook.local-mac-production-release.v3",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
@@ -132,6 +132,8 @@ function createFixtureRepo({
     },
     all_check_suite_count: 2,
     all_check_suite_ids_digest: "4".repeat(64),
+    all_check_suite_authority_digest: "6".repeat(64),
+    all_actions_workflow_run_provenance_digest: "5".repeat(64),
     all_context_check_run_instances_digest: "2".repeat(64),
     all_context_check_suite_ids: [200, 201],
     all_context_commit_statuses_digest: "3".repeat(64),

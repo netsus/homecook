@@ -33,7 +33,9 @@ import {
   sealLocalMacProductionExecutionTree,
 } from "./local-mac-production-release.mjs";
 import {
-  normalizeGitHubProductionReleaseCheckSummary,
+  buildGitHubProductionReleaseExternalCheckEvidence,
+  GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK,
+  normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples,
 } from "./github-production-release-attestation.mjs";
 import {
   EXPECTED_RELEASE_CONTEXTS,
@@ -56,7 +58,7 @@ import {
 import { resolveCandidateRehearsalSourceAuthority } from "./local-mac-production-rehearsal-selection.mjs";
 
 export const RELEASE_REHEARSAL_CANDIDATE_SCHEMA =
-  "homecook.local-mac-production-rehearsal-candidate.v1";
+  "homecook.local-mac-production-rehearsal-candidate.v2";
 export const RELEASE_REHEARSAL_BUILD_ENV_SCHEMA =
   "homecook.release-rehearsal-build-env.v1";
 export const RELEASE_REHEARSAL_STARTUP_IDENTITY_SCHEMA =
@@ -79,7 +81,7 @@ const BUILD_ENV_ALLOWED_KEYS = new Set([
 const CANDIDATE_KEYS = [
   "schema", "canonicalization", "repository", "source_ref", "selection_digest", "release_sha",
   "release_tree", "ci_check_summary_digest", "ci_snapshot_digest",
-  "ci_suite_run_set_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
+  "ci_suite_run_set_digest", "ci_workflow_run_provenance_digest", "builder_input_digest", "source_manifest_digest", "compose_source_digest", "sandbox_policy_digest",
   "sandbox_stage_capability_policy",
   "generated_build_inventory_digest",
   "pnpm_store_snapshot_inventory_digest",
@@ -556,6 +558,7 @@ function validateCandidateManifestObject(value, { verifyDigest = true } = {}) {
   digest(value.ci_check_summary_digest, "ci_check_summary_digest");
   digest(value.ci_snapshot_digest, "ci_snapshot_digest");
   digest(value.ci_suite_run_set_digest, "ci_suite_run_set_digest");
+  digest(value.ci_workflow_run_provenance_digest, "ci_workflow_run_provenance_digest");
   digest(value.builder_input_digest, "builder_input_digest");
   digest(value.source_manifest_digest, "source_manifest_digest");
   digest(value.compose_source_digest, "compose_source_digest");
@@ -1352,7 +1355,7 @@ export function createSealedCandidateBundle({ bundleRoot, componentRoots } = {})
 export function buildBundleAuthorityManifest(input) {
   exactObject(input, "bundle authority manifest input", [
     "artifacts", "build_id", "ci_check_summary_digest", "ci_snapshot_digest",
-    "ci_suite_run_set_digest", "environment_snapshot", "file_inventory", "images",
+    "ci_suite_run_set_digest", "ci_workflow_run_provenance_digest", "environment_snapshot", "file_inventory", "images",
     "migration", "production_guard", "release_sha", "release_tree",
     "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
     "sandbox_stage_capability_policy",
@@ -1370,6 +1373,7 @@ export function buildBundleAuthorityManifest(input) {
   string(input.build_id, "bundle authority build_id");
   for (const field of [
     "ci_check_summary_digest", "ci_snapshot_digest", "ci_suite_run_set_digest",
+    "ci_workflow_run_provenance_digest",
     "sandbox_policy_digest", "generated_build_inventory_digest", "pnpm_store_snapshot_inventory_digest",
     "pnpm_store_final_index_inventory_digest",
     "sealed_bundle_digest", "source_manifest_digest",
@@ -1392,8 +1396,8 @@ export function buildBundleAuthorityManifest(input) {
     requireExecutable: false,
   });
   const unsigned = {
-    schema: "homecook.local-mac-production-rehearsal-bundle-manifest.v1",
-    contract_version: "release-rehearsal-split2-v1",
+    schema: "homecook.local-mac-production-rehearsal-bundle-manifest.v2",
+    contract_version: "release-rehearsal-split2-v2",
     ...input,
   };
   return Object.freeze({
@@ -3350,7 +3354,8 @@ export function readSealedAuthorityFile(root, path, label, { afterOpen = null, m
 
 export function validateStoredCiProjection(value, manifest) {
   exactObject(value, "candidate CI evidence", [
-    "repository", "check_runs", "commit_statuses", "head_sha", "remote_master_sha", "summary",
+    "allowlisted_external_checks", "repository", "check_runs", "check_suites",
+    "commit_statuses", "head_sha", "remote_master_sha", "summary", "workflow_runs",
   ]);
   if (value.repository !== REPOSITORY) fail("candidate CI evidence repository is invalid");
   sha(value.head_sha, "candidate CI evidence head_sha");
@@ -3359,8 +3364,39 @@ export function validateStoredCiProjection(value, manifest) {
     || (manifest.selection_digest === null && value.remote_master_sha !== manifest.release_sha)) {
     fail("candidate CI evidence head or remote master SHA does not match candidate");
   }
-  if (!Array.isArray(value.check_runs) || !Array.isArray(value.commit_statuses)) {
+  if (
+    !Array.isArray(value.check_runs)
+    || !Array.isArray(value.check_suites)
+    || !Array.isArray(value.commit_statuses)
+    || !Array.isArray(value.allowlisted_external_checks)
+    || !Array.isArray(value.workflow_runs)
+  ) {
     fail("candidate CI evidence check and status arrays are invalid");
+  }
+  if (value.allowlisted_external_checks.length > 1) {
+    fail("candidate CI evidence allows at most one GitGuardian check");
+  }
+  const externalByRunId = new Map();
+  const externalBySuiteId = new Map();
+  for (const [index, entry] of value.allowlisted_external_checks.entries()) {
+    exactObject(entry, `candidate CI allowlisted_external_checks[${index}]`, [
+      "app_id", "app_name", "app_slug", "check_name", "check_run_id",
+      "check_suite_id", "external_id", "head_sha", "repository",
+    ]);
+    for (const key of ["app_id", "check_run_id", "check_suite_id"]) {
+      safeInteger(entry[key], `candidate CI external check ${key}`);
+    }
+    if (
+      entry.app_id !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
+      || entry.app_name !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
+      || entry.app_slug !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
+      || entry.check_name !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.checkName
+      || entry.external_id !== GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.externalId
+      || entry.head_sha !== manifest.release_sha
+      || entry.repository !== REPOSITORY
+    ) fail("candidate CI external check is not the exact GitGuardian owner tuple");
+    externalByRunId.set(entry.check_run_id, entry);
+    externalBySuiteId.set(entry.check_suite_id, entry);
   }
   for (const [index, entry] of value.check_runs.entries()) {
     exactObject(entry, `candidate CI check_runs[${index}]`, [
@@ -3368,12 +3404,16 @@ export function validateStoredCiProjection(value, manifest) {
       "started_at", "status",
     ]);
     for (const key of ["id", "app_id", "check_suite_id"]) safeInteger(entry[key], `candidate CI check ${key}`);
-    if (
-      entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID
-      || entry.head_sha !== manifest.release_sha
-    ) {
+    const external = externalByRunId.get(entry.id);
+    if (entry.head_sha !== manifest.release_sha) {
       fail("candidate CI check identity is invalid");
     }
+    if (entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID && (
+      !external
+      || external.app_id !== entry.app_id
+      || external.check_suite_id !== entry.check_suite_id
+      || external.check_name !== entry.name
+    )) fail("candidate CI check is not trusted Actions or exact GitGuardian evidence");
     string(entry.name, "candidate CI check name");
     string(entry.status, "candidate CI check status");
     if (entry.conclusion !== null) string(entry.conclusion, "candidate CI check conclusion");
@@ -3383,8 +3423,41 @@ export function validateStoredCiProjection(value, manifest) {
   if (new Set(value.check_runs.map((entry) => entry.id)).size !== value.check_runs.length) {
     fail("candidate CI check run identities are duplicated");
   }
+  for (const [index, entry] of value.check_suites.entries()) {
+    exactObject(entry, `candidate CI check_suites[${index}]`, [
+      "app_id", "app_name", "app_slug", "head_sha", "id", "repository",
+    ]);
+  }
+  let normalizedCheckSuites;
+  try {
+    normalizedCheckSuites = normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+      checkSuites: value.check_suites,
+      releaseSha: manifest.release_sha,
+      label: "candidate CI check_suites entry",
+    });
+  } catch (error) {
+    fail(`candidate CI suite authority tuple is invalid: ${error instanceof Error ? error.message : "unknown error"}`);
+  }
+  for (const entry of normalizedCheckSuites) {
+    if (entry.app_id !== GITHUB_ACTIONS_APP_INTEGRATION_ID) {
+      const external = externalBySuiteId.get(entry.id);
+      const hasStartedCheck = value.check_runs.some(
+        (checkRun) => checkRun.check_suite_id === entry.id,
+      );
+      if (hasStartedCheck && (!external || external.app_id !== entry.app_id)) {
+        fail("candidate CI suite is not trusted Actions or exact GitGuardian evidence");
+      }
+    }
+  }
+  if (
+    [...externalByRunId.keys()].some((id) => !value.check_runs.some((entry) => entry.id === id))
+    || [...externalBySuiteId.keys()].some((id) => !normalizedCheckSuites.some((entry) => entry.id === id))
+  ) fail("candidate CI GitGuardian evidence is orphaned");
   if (new Set(value.commit_statuses.map((entry) => entry.id)).size !== value.commit_statuses.length) {
     fail("candidate CI status identities are duplicated");
+  }
+  if (value.commit_statuses.length !== 0) {
+    fail("candidate CI legacy commit statuses must be empty");
   }
   for (const [index, entry] of value.commit_statuses.entries()) {
     exactObject(entry, `candidate CI commit_statuses[${index}]`, [
@@ -3399,36 +3472,101 @@ export function validateStoredCiProjection(value, manifest) {
     if (entry.created_at !== null) string(entry.created_at, "candidate CI status created_at");
     if (entry.updated_at !== null) string(entry.updated_at, "candidate CI status updated_at");
   }
-  let recomputedSummary;
+  for (const [index, entry] of value.workflow_runs.entries()) {
+    exactObject(entry, `candidate CI workflow_runs[${index}]`, [
+      "check_suite_id", "conclusion", "event", "head_repository", "head_sha", "id",
+      "path", "repository", "run_attempt", "status", "workflow_id",
+    ]);
+    for (const key of ["id", "workflow_id", "check_suite_id", "run_attempt"]) {
+      safeInteger(entry[key], `candidate CI workflow run ${key}`);
+    }
+    if (
+      entry.head_sha !== manifest.release_sha
+      || entry.repository !== REPOSITORY
+      || entry.head_repository !== REPOSITORY
+    ) fail("candidate CI workflow run identity is invalid");
+    for (const key of ["event", "path", "status", "conclusion"]) {
+      string(entry[key], `candidate CI workflow run ${key}`);
+    }
+  }
+  if (
+    new Set(value.workflow_runs.map((entry) => entry.id)).size !== value.workflow_runs.length
+    || new Set(value.workflow_runs.map((entry) => entry.check_suite_id)).size
+      !== value.workflow_runs.length
+  ) fail("candidate CI workflow run identities are duplicated");
+  const pageCollection = (entries, key) => {
+    const pages = [];
+    for (let index = 0; index < Math.max(1, Math.ceil(entries.length / 100)); index += 1) {
+      pages.push({
+        total_count: entries.length,
+        [key]: entries.slice(index * 100, (index + 1) * 100),
+      });
+    }
+    return pages;
+  };
+  let recomputedEvidence;
   try {
-    recomputedSummary = normalizeGitHubProductionReleaseCheckSummary({
-      checkRuns: value.check_runs.map((entry) => ({
+    recomputedEvidence = buildGitHubProductionReleaseExternalCheckEvidence({
+      checkRunPages: pageCollection(value.check_runs.map((entry) => ({
         id: entry.id,
-        app: { id: entry.app_id },
+        app: {
+          id: entry.app_id,
+          name: externalByRunId.get(entry.id)?.app_name,
+          slug: externalByRunId.get(entry.id)?.app_slug,
+        },
         check_suite: { id: entry.check_suite_id },
+        external_id: externalByRunId.get(entry.id)?.external_id ?? null,
         head_sha: entry.head_sha,
         completed_at: entry.completed_at,
         conclusion: entry.conclusion,
         name: entry.name,
         started_at: entry.started_at,
         status: entry.status,
-      })),
+      })), "check_runs"),
+      checkSuitePages: pageCollection(normalizedCheckSuites.map((entry) => ({
+        id: entry.id,
+        app: {
+          id: entry.app_id,
+          name: entry.app_name,
+          slug: entry.app_slug,
+        },
+        head_sha: entry.head_sha,
+        repository: { full_name: entry.repository },
+      })), "check_suites"),
       commitStatuses: value.commit_statuses,
       expectedContexts: EXPECTED_RELEASE_CONTEXTS,
+      releaseSha: manifest.release_sha,
+      workflowRunPages: pageCollection(value.workflow_runs.map((entry) => ({
+        id: entry.id,
+        workflow_id: entry.workflow_id,
+        check_suite_id: entry.check_suite_id,
+        head_sha: entry.head_sha,
+        event: entry.event,
+        run_attempt: entry.run_attempt,
+        status: entry.status,
+        conclusion: entry.conclusion,
+        path: entry.path,
+        repository: { full_name: entry.repository },
+        head_repository: { full_name: entry.head_repository },
+      })), "workflow_runs"),
     });
   } catch (error) {
     fail(`candidate CI canonical policy rejected stored arrays: ${error instanceof Error ? error.message : "unknown error"}`);
   }
+  const recomputedSummary = recomputedEvidence.required_check_summary;
   if (canonicalizeJcs(recomputedSummary) !== canonicalizeJcs(value.summary)) {
     fail("candidate CI stored summary differs from canonical recomputation of check/status arrays");
   }
   const evidenceDigest = sha256Jcs(value);
   const summaryDigest = sha256Jcs(value.summary);
-  const suiteRunSetDigest = sha256Jcs(value.check_runs.map((entry) => ({
-    app_id: entry.app_id,
-    check_suite_id: entry.check_suite_id,
-    id: entry.id,
-  })));
+  const suiteRunSetDigest = sha256Jcs({
+    check_suites: normalizedCheckSuites,
+    check_runs: value.check_runs.map((entry) => ({
+      app_id: entry.app_id,
+      check_suite_id: entry.check_suite_id,
+      id: entry.id,
+    })),
+  });
   validateCandidateCiEvidence({
     expected_head_sha: manifest.release_sha,
     head_sha: value.head_sha,
@@ -3439,6 +3577,8 @@ export function validateStoredCiProjection(value, manifest) {
     evidenceDigest !== manifest.ci_snapshot_digest
     || summaryDigest !== manifest.ci_check_summary_digest
     || suiteRunSetDigest !== manifest.ci_suite_run_set_digest
+    || recomputedEvidence.all_actions_workflow_run_provenance_digest
+      !== manifest.ci_workflow_run_provenance_digest
   ) fail("candidate CI evidence digest binding is invalid");
 }
 
@@ -3461,6 +3601,7 @@ export function validateCandidateBundleCrossBinding(candidate, bundle) {
     ["ci_check_summary_digest", candidate.ci_check_summary_digest, bundle.ci_check_summary_digest],
     ["ci_snapshot_digest", candidate.ci_snapshot_digest, bundle.ci_snapshot_digest],
     ["ci_suite_run_set_digest", candidate.ci_suite_run_set_digest, bundle.ci_suite_run_set_digest],
+    ["ci_workflow_run_provenance_digest", candidate.ci_workflow_run_provenance_digest, bundle.ci_workflow_run_provenance_digest],
     ["source_manifest_digest", candidate.source_manifest_digest, bundle.source_manifest_digest],
     ["builder_input_digest", candidate.builder_input_digest, bundle.builder_input_digest],
     ["compose_source_digest", candidate.compose_source_digest, bundle.compose_source_digest],
@@ -3620,8 +3761,8 @@ function readCompletedCandidatePortableRootWithIdentity(root, {
     ...bundleInput
   } = bundleManifest;
   if (
-    bundleSchema !== "homecook.local-mac-production-rehearsal-bundle-manifest.v1"
-    || contractVersion !== "release-rehearsal-split2-v1"
+    bundleSchema !== "homecook.local-mac-production-rehearsal-bundle-manifest.v2"
+    || contractVersion !== "release-rehearsal-split2-v2"
   ) fail("candidate bundle authority schema or contract version is invalid");
   const rebuiltBundleManifest = buildBundleAuthorityManifest(bundleInput);
   validateCandidateBundleCrossBinding(manifest, bundleManifest);
@@ -4223,6 +4364,7 @@ export async function buildReleaseRehearsalCandidate({
       ci_check_summary_digest: ci.summary_digest,
       ci_snapshot_digest: ci.safe_projection_digest,
       ci_suite_run_set_digest: ci.suite_run_set_digest,
+      ci_workflow_run_provenance_digest: ci.workflow_run_provenance_digest,
       environment_snapshot: environment.metadata,
       file_inventory: build.file_inventory,
       images,
@@ -4268,6 +4410,7 @@ export async function buildReleaseRehearsalCandidate({
       ci_check_summary_digest: ci.summary_digest,
       ci_snapshot_digest: ci.safe_projection_digest,
       ci_suite_run_set_digest: ci.suite_run_set_digest,
+      ci_workflow_run_provenance_digest: ci.workflow_run_provenance_digest,
       source_manifest_digest: sourceEvidence.source_snapshot_pre_digest,
       builder_input_digest: sourceEvidence.builder_input_digest,
       compose_source_digest: composeSourceDigest,
@@ -5732,6 +5875,19 @@ function parseGhPages(text, field = null) {
   });
 }
 
+function parseGhPageAuthority(text, label) {
+  try {
+    const pages = JSON.parse(text);
+    if (!Array.isArray(pages)) fail(`${label} must be an array of pages`);
+    return pages;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Release rehearsal candidate rejected:")) {
+      throw error;
+    }
+    fail(`${label} is invalid JSON`);
+  }
+}
+
 export function validateStableCiSnapshots(pre, post, releaseSha, { selectionDigest = /** @type {string | null} */ (null) } = {}) {
   validateCandidateCiEvidence(pre);
   validateCandidateCiEvidence(post);
@@ -5741,6 +5897,7 @@ export function validateStableCiSnapshots(pre, post, releaseSha, { selectionDige
     if (selectionDigest === null && value.remote_master_sha !== releaseSha) fail(`CI ${label} remote master SHA drifted`);
     digest(value.safe_projection_digest, `CI ${label} safe projection digest`);
     digest(value.suite_run_set_digest, `CI ${label} suite/run set digest`);
+    digest(value.workflow_run_provenance_digest, `CI ${label} workflow run provenance digest`);
     if (!value.safe_projection || value.safe_projection.head_sha !== releaseSha) {
       fail(`CI ${label} safe projection head SHA is invalid`);
     }
@@ -5767,6 +5924,7 @@ export function validateStableCiSnapshots(pre, post, releaseSha, { selectionDige
   if (
     pre.summary_digest !== post.summary_digest
     || pre.suite_run_set_digest !== post.suite_run_set_digest
+    || pre.workflow_run_provenance_digest !== post.workflow_run_provenance_digest
   ) fail("CI pre/post projection, suite, or run set drifted");
   if (selectionDigest === null) {
     if (pre.safe_projection_digest !== post.safe_projection_digest) {
@@ -6355,6 +6513,37 @@ function safeCheckProjection(entry) {
   };
 }
 
+function safeAllowlistedExternalCheckProjection(entry, checkSuite) {
+  if (!checkSuite) fail("allowlisted external check is missing its check suite");
+  return {
+    app_id: Number(entry.app?.id),
+    app_name: entry.app?.name,
+    app_slug: entry.app?.slug,
+    check_name: entry.name,
+    check_run_id: Number(entry.id),
+    check_suite_id: Number(entry.check_suite?.id),
+    external_id: entry.external_id,
+    head_sha: entry.head_sha,
+    repository: checkSuite.repository?.full_name,
+  };
+}
+
+function safeWorkflowRunProjection(entry) {
+  return {
+    id: Number(entry.id),
+    workflow_id: Number(entry.workflow_id),
+    check_suite_id: Number(entry.check_suite_id),
+    head_sha: entry.head_sha,
+    event: entry.event,
+    run_attempt: Number(entry.run_attempt),
+    status: entry.status,
+    conclusion: entry.conclusion,
+    path: entry.path,
+    repository: entry.repository?.full_name,
+    head_repository: entry.head_repository?.full_name,
+  };
+}
+
 function safeStatusProjection(entry) {
   return {
     id: Number(entry.id),
@@ -6685,43 +6874,68 @@ export function createReleaseRehearsalCandidateAdapters({
         selectedSourceAuthority = refreshed;
       }
       const headers = ["-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2026-03-10"];
-      const checkRuns = parseGhPages(runBounded(ghPath, [
+      const checkSuitePages = parseGhPageAuthority(runBounded(ghPath, [
+        "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
+        `/repos/${REPOSITORY}/commits/${releaseSha}/check-suites?per_page=100`,
+      ], { env, label: "trusted GitHub check-suites readback", runCommand, timeout: 120_000 }), "check-suite pages");
+      const checkRunPages = parseGhPageAuthority(runBounded(ghPath, [
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
         `/repos/${REPOSITORY}/commits/${releaseSha}/check-runs?filter=all&per_page=100`,
-      ], { env, label: "trusted GitHub check-runs readback", runCommand, timeout: 120_000 }), "check_runs");
+      ], { env, label: "trusted GitHub check-runs readback", runCommand, timeout: 120_000 }), "check-run pages");
+      const workflowRunPages = parseGhPageAuthority(runBounded(ghPath, [
+        "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
+        `/repos/${REPOSITORY}/actions/runs?head_sha=${releaseSha}&per_page=100`,
+      ], { env, label: "trusted GitHub workflow-runs readback", runCommand, timeout: 120_000 }), "workflow-run pages");
+      const checkRuns = checkRunPages.flatMap((page) => page.check_runs ?? []);
+      const checkSuites = checkSuitePages.flatMap((page) => page.check_suites ?? []);
+      const workflowRuns = workflowRunPages.flatMap((page) => page.workflow_runs ?? []);
       const commitStatuses = parseGhPages(runBounded(ghPath, [
         "api", "--hostname", "github.com", "--paginate", "--slurp", ...headers,
         `/repos/${REPOSITORY}/commits/${releaseSha}/statuses?per_page=100`,
       ], { env, label: "trusted GitHub commit-status readback", runCommand, timeout: 120_000 }));
-      if (checkRuns.some((entry) => entry.head_sha !== releaseSha)) {
-        fail("GitHub check-run head SHA does not match candidate SHA");
-      }
-      if (checkRuns.some((entry) => Number(entry.app?.id) !== GITHUB_ACTIONS_APP_INTEGRATION_ID)) {
-        fail("GitHub check-run does not use the trusted GitHub Actions integration");
-      }
-      if (commitStatuses.some((entry) => entry.sha !== releaseSha)) {
-        fail("GitHub commit-status SHA does not match candidate SHA");
-      }
-      const summary = normalizeGitHubProductionReleaseCheckSummary({
-        checkRuns,
+      const externalEvidence = buildGitHubProductionReleaseExternalCheckEvidence({
+        checkRunPages,
+        checkSuitePages,
         commitStatuses,
         expectedContexts: EXPECTED_RELEASE_CONTEXTS,
+        releaseSha,
+        workflowRunPages,
       });
+      const summary = externalEvidence.required_check_summary;
+      const normalizedCheckSuites = normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+        checkSuites,
+        releaseSha,
+        label: "candidate collector check_suites entry",
+      });
+      const checkSuitesById = new Map(checkSuites.map((entry) => [Number(entry.id), entry]));
+      const allowlistedExternalChecks = checkRuns
+        .filter((entry) => Number(entry.app?.id) !== GITHUB_ACTIONS_APP_INTEGRATION_ID)
+        .map((entry) => safeAllowlistedExternalCheckProjection(
+          entry,
+          checkSuitesById.get(Number(entry.check_suite?.id)),
+        ));
       const safeEvidence = {
+        allowlisted_external_checks: allowlistedExternalChecks,
         repository: REPOSITORY,
         check_runs: checkRuns.map(safeCheckProjection).sort((left, right) =>
           canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
+        check_suites: normalizedCheckSuites,
         commit_statuses: commitStatuses.map(safeStatusProjection).sort((left, right) =>
           canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
         head_sha: releaseSha,
         remote_master_sha: remoteMasterSha,
         summary,
+        workflow_runs: workflowRuns.map(safeWorkflowRunProjection).sort((left, right) =>
+          canonicalizeJcs(left).localeCompare(canonicalizeJcs(right))),
       };
-      const suiteRunSet = safeEvidence.check_runs.map((entry) => ({
-        app_id: entry.app_id,
-        check_suite_id: entry.check_suite_id,
-        id: entry.id,
-      }));
+      const suiteRunSet = {
+        check_suites: normalizedCheckSuites,
+        check_runs: safeEvidence.check_runs.map((entry) => ({
+          app_id: entry.app_id,
+          check_suite_id: entry.check_suite_id,
+          id: entry.id,
+        })),
+      };
       return {
         expected_head_sha: releaseSha,
         head_sha: releaseSha,
@@ -6731,6 +6945,8 @@ export function createReleaseRehearsalCandidateAdapters({
         safe_projection: safeEvidence,
         safe_projection_digest: sha256Jcs(safeEvidence),
         suite_run_set_digest: sha256Jcs(suiteRunSet),
+        workflow_run_provenance_digest:
+          externalEvidence.all_actions_workflow_run_provenance_digest,
       };
     },
 

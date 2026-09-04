@@ -49,7 +49,7 @@ function createTempDirectory(prefix: string) {
 
 function createManifest(overrides: Record<string, unknown> = {}) {
   return {
-    schema: "homecook.local-mac-production-release.v2",
+    schema: "homecook.local-mac-production-release.v3",
     repository: "netsus/homecook",
     source_ref: "refs/heads/master",
     signer_workflow: "netsus/homecook/.github/workflows/production-release-attestation.yml",
@@ -95,6 +95,8 @@ function createManifest(overrides: Record<string, unknown> = {}) {
     },
     all_check_suite_count: 2,
     all_check_suite_ids_digest: "4".repeat(64),
+    all_check_suite_authority_digest: "6".repeat(64),
+    all_actions_workflow_run_provenance_digest: "5".repeat(64),
     all_context_check_run_instances_digest: "2".repeat(64),
     all_context_check_suite_ids: [200, 201],
     all_context_commit_statuses_digest: "3".repeat(64),
@@ -181,6 +183,7 @@ describe("local Mac production release manifest", () => {
       "master_tree_at_approval",
       "all_check_suite_count",
       "all_check_suite_ids_digest",
+      "all_check_suite_authority_digest",
       "all_context_check_run_instances_digest",
       "all_context_check_suite_ids",
       "all_context_commit_statuses_digest",
@@ -199,7 +202,7 @@ describe("local Mac production release manifest", () => {
       "repeatability_receipt_digest",
       "rehearsal_receipt_valid_until",
     ]));
-    expect(schema.properties.schema).toEqual({ const: "homecook.local-mac-production-release.v2" });
+    expect(schema.properties.schema).toEqual({ const: "homecook.local-mac-production-release.v3" });
     expect(schema.properties.release_tag_object_sha).toEqual({
       type: "string",
       pattern: "^[0-9a-f]{40}$",
@@ -216,10 +219,11 @@ describe("local Mac production release manifest", () => {
       const: "netsus/homecook/.github/workflows/production-release-attestation.yml",
     });
     expect(schema.properties.expected_release_integration_id).toEqual({ const: 15368 });
+    expect(schema.properties.workflow_run_attempt).toEqual({ const: 1 });
     for (const [file, required] of [
       ["github-production-release-workflow-authority.schema.json", ["workflow_head_sha", "workflow_run_id", "workflow_check_suite_id"]],
       ["github-production-release-approval-authority.schema.json", ["master_sha_at_approval", "master_tree_at_approval"]],
-      ["github-production-release-external-check-evidence.schema.json", ["all_check_suite_count", "all_check_suite_ids_digest", "all_context_check_run_instances_digest", "all_context_check_suite_ids", "all_context_commit_statuses_digest"]],
+      ["github-production-release-external-check-evidence.schema.json", ["all_check_suite_count", "all_check_suite_ids_digest", "all_check_suite_authority_digest", "all_actions_workflow_run_provenance_digest", "all_context_check_run_instances_digest", "all_context_check_suite_ids", "all_context_commit_statuses_digest"]],
     ] as const) {
       const authoritySchema = JSON.parse(readFileSync(
         new URL(`../scripts/schemas/${file}`, import.meta.url),
@@ -227,6 +231,9 @@ describe("local Mac production release manifest", () => {
       ));
       expect(authoritySchema.additionalProperties).toBe(false);
       expect(authoritySchema.required).toEqual(expect.arrayContaining([...required]));
+      if (file === "github-production-release-workflow-authority.schema.json") {
+        expect(authoritySchema.properties.workflow_run_attempt).toEqual({ const: 1 });
+      }
     }
     const externalCheckSchema = JSON.parse(readFileSync(
       new URL(
@@ -240,6 +247,14 @@ describe("local Mac production release manifest", () => {
       success: { type: "integer", minimum: 7 },
       intended_skip: { type: "integer", minimum: 0 },
     });
+
+    const attemptTwoManifest = createManifest({ workflow_run_attempt: 2 });
+    expect(() => validateLocalMacProductionReleaseManifest({
+      manifest: attemptTwoManifest,
+      manifestPath: attemptTwoManifest.release_manifest_path,
+      readGitEvidence: () => createGitEvidence(),
+      requireAttestation: false,
+    })).toThrow(/workflow_run_attempt|attempt|exactly 1/iu);
 
     const require = createRequire(import.meta.url);
     const eslintPackage = require.resolve("@eslint/eslintrc/package.json");

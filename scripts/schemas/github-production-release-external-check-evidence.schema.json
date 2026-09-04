@@ -1,11 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "homecook.github.production-release-external-check-evidence.v1",
+  "$id": "homecook.github.production-release-external-check-evidence.v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "all_check_suite_count",
     "all_check_suite_ids_digest",
+    "all_check_suite_authority_digest",
+    "all_actions_workflow_run_provenance_digest",
     "all_context_check_run_instances_digest",
     "all_context_check_suite_ids",
     "all_context_commit_statuses_digest",
@@ -21,9 +23,19 @@
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
-    "all_context_check_run_instances_digest": {
+    "all_check_suite_authority_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Binds check suites sorted by id as exact closed {app_id,app_name,app_slug,head_sha,id,repository} tuples with the canonical repository and exact head SHA."
+    },
+    "all_actions_workflow_run_provenance_digest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
+    },
+    "all_context_check_run_instances_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Binds every started check instance, including the exact allowlisted GitGuardian owner, suite repository, head, external ID, and terminal-success evidence."
     },
     "all_context_check_suite_ids": {
       "type": "array",

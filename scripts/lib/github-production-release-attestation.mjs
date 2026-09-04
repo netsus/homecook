@@ -34,12 +34,12 @@ export const GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA =
   "homecook.github.production-release-predicate.v1";
 export const GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE =
   "https://github.com/netsus/homecook/attestations/production-release/v1";
-export const GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2 =
-  "homecook.github.production-release-manifest.v2";
-export const GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V2 =
-  "homecook.github.production-release-predicate.v2";
-export const GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2 =
-  "https://github.com/netsus/homecook/attestations/production-release/v2";
+export const GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V3 =
+  "homecook.github.production-release-manifest.v3";
+export const GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V3 =
+  "homecook.github.production-release-predicate.v3";
+export const GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V3 =
+  "https://github.com/netsus/homecook/attestations/production-release/v3";
 export const GITHUB_CLI_TRUSTED_ROOT_SHA256 =
   "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c";
 
@@ -60,12 +60,27 @@ const APPROVAL_AUTHORITY_KEYS = [
   "master_sha_at_approval", "master_tree_at_approval",
 ];
 const EXTERNAL_CHECK_EVIDENCE_KEYS = [
-  "all_check_suite_count", "all_check_suite_ids_digest",
+  "all_check_suite_count", "all_check_suite_ids_digest", "all_check_suite_authority_digest",
+  "all_actions_workflow_run_provenance_digest",
   "all_context_check_run_instances_digest", "all_context_check_suite_ids",
   "all_context_commit_statuses_digest",
 ];
 const GITHUB_CHECK_SUITE_TRUNCATION_BOUNDARY = 1_000;
+const GITHUB_WORKFLOW_RUN_TRUNCATION_BOUNDARY = 1_000;
 const GITHUB_CHECKS_PAGE_SIZE = 100;
+export const GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK = Object.freeze({
+  appId: 46_505,
+  appName: "GitGuardian",
+  appSlug: "gitguardian",
+  checkName: "GitGuardian Security Checks",
+  externalId: "",
+});
+const GITHUB_PRODUCTION_RELEASE_ZERO_CHECK_EXTERNAL_SUITES = Object.freeze([
+  Object.freeze({ appId: 8_329, appName: "Vercel", appSlug: "vercel" }),
+  Object.freeze({ appId: 13_473, appName: "Netlify", appSlug: "netlify" }),
+  Object.freeze({ appId: 46_505, appName: "GitGuardian", appSlug: "gitguardian" }),
+  Object.freeze({ appId: 1_236_702, appName: "Claude", appSlug: "claude" }),
+]);
 const SUBJECT_BASE_KEYS = [
   "schema", "repository", "source_ref", "signer_workflow", "signer_digest",
   "expected_release_integration_id", "release_tag", "release_tag_object_sha",
@@ -158,14 +173,18 @@ function normalizeWorkflowAuthority(value, label = "workflowAuthority") {
     throw new Error(`${label} must be an object.`);
   }
   requireExactKeys(value, WORKFLOW_AUTHORITY_KEYS, label);
+  const workflowRunAttempt = requirePositiveInteger(
+    value.workflow_run_attempt,
+    `${label}.workflow_run_attempt`,
+  );
+  if (workflowRunAttempt !== 1) {
+    throw new Error(`${label}.workflow_run_attempt must be exactly 1.`);
+  }
   return Object.freeze({
     workflow_head_sha: requireSha1(value.workflow_head_sha, `${label}.workflow_head_sha`),
     workflow_head_tree: requireSha1(value.workflow_head_tree, `${label}.workflow_head_tree`),
     workflow_run_id: requirePositiveInteger(value.workflow_run_id, `${label}.workflow_run_id`),
-    workflow_run_attempt: requirePositiveInteger(
-      value.workflow_run_attempt,
-      `${label}.workflow_run_attempt`,
-    ),
+    workflow_run_attempt: workflowRunAttempt,
     workflow_check_suite_id: requirePositiveInteger(
       value.workflow_check_suite_id,
       `${label}.workflow_check_suite_id`,
@@ -215,6 +234,14 @@ function normalizeExternalCheckEvidence(value, label = "externalCheckEvidence") 
     all_check_suite_ids_digest: requireSha256(
       value.all_check_suite_ids_digest,
       `${label}.all_check_suite_ids_digest`,
+    ),
+    all_check_suite_authority_digest: requireSha256(
+      value.all_check_suite_authority_digest,
+      `${label}.all_check_suite_authority_digest`,
+    ),
+    all_actions_workflow_run_provenance_digest: requireSha256(
+      value.all_actions_workflow_run_provenance_digest,
+      `${label}.all_actions_workflow_run_provenance_digest`,
     ),
     all_context_check_run_instances_digest: requireSha256(
       value.all_context_check_run_instances_digest,
@@ -553,20 +580,12 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
     throw new Error("Production release check-suite authority must be nonempty.");
   }
 
-  const suiteIds = checkSuites.map((entry, index) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      throw new Error(`checkSuitePages entry ${index} must be an object.`);
-    }
-    const suiteId = requirePositiveInteger(entry.id, `checkSuitePages entry ${index}.id`);
-    if (requireSha1(entry.head_sha, `checkSuitePages entry ${index}.head_sha`) !== normalizedReleaseSha) {
-      throw new Error(`checkSuitePages entry ${index} does not belong to the selected release SHA.`);
-    }
-    return suiteId;
+  const sortedCheckSuites = normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+    checkSuites,
+    releaseSha: normalizedReleaseSha,
+    label: "checkSuitePages entry",
   });
-  if (new Set(suiteIds).size !== suiteIds.length) {
-    throw new Error("Production release check-suite pages contain duplicate suite IDs.");
-  }
-  const sortedSuiteIds = [...suiteIds].sort((left, right) => left - right);
+  const sortedSuiteIds = sortedCheckSuites.map((entry) => entry.id);
 
   return Object.freeze({
     all_check_suite_count: totalCount,
@@ -574,10 +593,97 @@ export function buildGitHubProductionReleaseCheckSuiteAuthority({
     all_check_suite_ids_digest: createHash("sha256")
       .update(JSON.stringify(sortedSuiteIds))
       .digest("hex"),
+    all_check_suite_authority_digest: createHash("sha256")
+      .update(JSON.stringify(sortedCheckSuites))
+      .digest("hex"),
+    check_suite_app_ids: Object.freeze(Object.fromEntries(
+      sortedCheckSuites.map((entry) => [entry.id, entry.app_id]),
+    )),
+    check_suite_metadata: Object.freeze(Object.fromEntries(
+      sortedCheckSuites.map((entry) => [entry.id, entry]),
+    )),
   });
 }
 
-function normalizeCompleteCheckRunPages({ checkRunPages, checkSuiteIdSet }) {
+/**
+ * @param {{
+ *   checkSuites?: Array<{
+ *     id?: unknown,
+ *     app_id?: unknown,
+ *     app_name?: unknown,
+ *     app_slug?: unknown,
+ *     head_sha?: unknown,
+ *     repository?: string | {full_name?: unknown},
+ *     app?: {id?: unknown,name?: unknown,slug?: unknown},
+ *   }>,
+ *   releaseSha?: string,
+ *   label?: string,
+ * }} [options]
+ */
+export function normalizeGitHubProductionReleaseCheckSuiteAuthorityTuples({
+  checkSuites,
+  releaseSha,
+  label = "checkSuites",
+} = {}) {
+  const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
+  if (!Array.isArray(checkSuites)) {
+    throw new Error(`${label} must be an array.`);
+  }
+  const normalizedCheckSuites = checkSuites.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${label} ${index} must be an object.`);
+    }
+    const usesStoredTuple = Object.hasOwn(entry, "app_id");
+    if (usesStoredTuple) {
+      requireExactKeys(entry, [
+        "app_id", "app_name", "app_slug", "head_sha", "id", "repository",
+      ], `${label} ${index}`);
+    }
+    const suiteId = requirePositiveInteger(entry.id, `${label} ${index}.id`);
+    if (requireSha1(entry.head_sha, `${label} ${index}.head_sha`) !== normalizedReleaseSha) {
+      throw new Error(`${label} ${index} does not belong to the selected release SHA.`);
+    }
+    const appId = requirePositiveInteger(
+      entry.app_id ?? entry.app?.id,
+      `${label} ${index}.app_id`,
+    );
+    const rawAppName = usesStoredTuple ? entry.app_name : entry.app?.name;
+    const appName = requireNonEmptyString(
+      rawAppName,
+      `${label} ${index}.app_name`,
+    );
+    const rawAppSlug = usesStoredTuple ? entry.app_slug : entry.app?.slug;
+    const appSlug = requireNonEmptyString(
+      rawAppSlug,
+      `${label} ${index}.app_slug`,
+    );
+    if (appName !== rawAppName || appSlug !== rawAppSlug) {
+      throw new Error(`${label} ${index} App owner name/slug must be exact.`);
+    }
+    const repository = typeof entry.repository === "string"
+      ? entry.repository
+      : entry.repository?.full_name;
+    if (repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
+      throw new Error(`${label} ${index} repository is not canonical.`);
+    }
+    return Object.freeze({
+      app_id: appId,
+      app_name: appName,
+      app_slug: appSlug,
+      head_sha: normalizedReleaseSha,
+      id: suiteId,
+      repository,
+    });
+  });
+  const suiteIds = normalizedCheckSuites.map((entry) => entry.id);
+  if (new Set(suiteIds).size !== suiteIds.length) {
+    throw new Error(`${label} contains duplicate suite IDs.`);
+  }
+  return Object.freeze([...normalizedCheckSuites]
+    .sort((left, right) => left.id - right.id));
+}
+
+function normalizeCompleteCheckRunPages({ checkRunPages, checkSuiteIdSet, releaseSha }) {
   const { entries: checkRuns } = normalizePaginatedGitHubChecksCollection({
     collectionKey: "check_runs",
     label: "checkRunPages",
@@ -600,8 +706,124 @@ function normalizeCompleteCheckRunPages({ checkRunPages, checkSuiteIdSet }) {
     if (!checkSuiteIdSet.has(checkSuiteId)) {
       throw new Error("Production release check-run pages reference an unknown check-suite ID.");
     }
+    if (requireSha1(entry.head_sha, `checkRunPages entry ${index}.head_sha`) !== releaseSha) {
+      throw new Error(`checkRunPages entry ${index} does not belong to the selected release SHA.`);
+    }
   }
   return checkRuns;
+}
+
+function normalizeWorkflowRunPages({
+  checkSuiteAppIds,
+  checkSuiteIdSet,
+  excludedSuiteIdSet,
+  releaseSha,
+  workflowRunPages,
+}) {
+  const { entries: workflowRuns, totalCount } = normalizePaginatedGitHubChecksCollection({
+    collectionKey: "workflow_runs",
+    label: "workflowRunPages",
+    pages: workflowRunPages,
+  });
+  if (totalCount >= GITHUB_WORKFLOW_RUN_TRUNCATION_BOUNDARY) {
+    throw new Error(
+      `Production release workflow-run count reached the ${GITHUB_WORKFLOW_RUN_TRUNCATION_BOUNDARY} result boundary.`,
+    );
+  }
+  const runIds = new Set();
+  const suiteIds = new Set();
+  const pathsByWorkflowId = new Map();
+  const normalized = [];
+  for (const [index, entry] of workflowRuns.entries()) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`workflowRunPages entry ${index} must be an object.`);
+    }
+    const runId = requirePositiveInteger(entry.id, `workflowRunPages entry ${index}.id`);
+    const workflowId = requirePositiveInteger(
+      entry.workflow_id,
+      `workflowRunPages entry ${index}.workflow_id`,
+    );
+    const checkSuiteId = requirePositiveInteger(
+      entry.check_suite_id,
+      `workflowRunPages entry ${index}.check_suite_id`,
+    );
+    const headSha = requireSha1(entry.head_sha, `workflowRunPages entry ${index}.head_sha`);
+    const repository = requireNonEmptyString(
+      entry.repository?.full_name,
+      `workflowRunPages entry ${index}.repository.full_name`,
+    );
+    const headRepository = requireNonEmptyString(
+      entry.head_repository?.full_name,
+      `workflowRunPages entry ${index}.head_repository.full_name`,
+    );
+    const event = requireNonEmptyString(entry.event, `workflowRunPages entry ${index}.event`);
+    const path = requireNonEmptyString(entry.path, `workflowRunPages entry ${index}.path`);
+    const runAttempt = requirePositiveInteger(
+      entry.run_attempt,
+      `workflowRunPages entry ${index}.run_attempt`,
+    );
+    const status = requireNonEmptyString(
+      entry.status,
+      `workflowRunPages entry ${index}.status`,
+    ).toLowerCase();
+    const conclusion = entry.conclusion === null || entry.conclusion === undefined
+      ? null
+      : requireNonEmptyString(
+          entry.conclusion,
+          `workflowRunPages entry ${index}.conclusion`,
+        ).toLowerCase();
+    if (runIds.has(runId) || suiteIds.has(checkSuiteId)) {
+      throw new Error("Production release workflow-run metadata contains duplicate run or check-suite IDs.");
+    }
+    runIds.add(runId);
+    suiteIds.add(checkSuiteId);
+    if (
+      headSha !== releaseSha
+      || repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY
+      || headRepository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY
+    ) {
+      throw new Error("Production release workflow-run head/repository metadata is inconsistent.");
+    }
+    if (!checkSuiteIdSet.has(checkSuiteId)) {
+      throw new Error(`Production release workflow run ${runId} references an unknown check suite.`);
+    }
+    if (checkSuiteAppIds[checkSuiteId] !== GITHUB_ACTIONS_APP_INTEGRATION_ID) {
+      throw new Error(`Production release workflow run ${runId} is not owned by GitHub Actions.`);
+    }
+    if (runAttempt !== 1) {
+      throw new Error(`Production release workflow run ${runId} is an actual rerun (run_attempt=${runAttempt}).`);
+    }
+    if (excludedSuiteIdSet.has(checkSuiteId)) {
+      continue;
+    }
+    if (status !== "completed" || conclusion !== "success") {
+      throw new Error(`Production release workflow run ${runId} is not terminal success.`);
+    }
+    const knownPath = pathsByWorkflowId.get(workflowId);
+    if (knownPath !== undefined && knownPath !== path) {
+      throw new Error(`Production release workflow ${workflowId} has inconsistent path ownership.`);
+    }
+    pathsByWorkflowId.set(workflowId, path);
+    normalized.push(Object.freeze({
+      checkSuiteId,
+      conclusion,
+      event,
+      headRepository,
+      headSha,
+      path,
+      repository,
+      runAttempt,
+      runId,
+      status,
+      workflowId,
+    }));
+  }
+  return Object.freeze({
+    externalWorkflowRuns: Object.freeze(normalized.sort((left, right) =>
+      left.runId - right.runId
+      || left.checkSuiteId - right.checkSuiteId)),
+    mappedCheckSuiteIds: Object.freeze([...suiteIds].sort((left, right) => left - right)),
+  });
 }
 
 /**
@@ -613,6 +835,7 @@ function normalizeCompleteCheckRunPages({ checkRunPages, checkSuiteIdSet }) {
  *   excludedCheckSuiteIds?: number[] | null,
  *   expectedContexts?: string[],
  *   releaseSha?: string | null,
+ *   workflowRunPages?: Array<Record<string, unknown>> | null,
  * }} [options]
  */
 export function buildGitHubProductionReleaseExternalCheckEvidence({
@@ -623,6 +846,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
   excludedCheckSuiteIds = null,
   expectedContexts = EXPECTED_RELEASE_CONTEXTS,
   releaseSha = null,
+  workflowRunPages = null,
 } = {}) {
   const hasCompletePages = checkRunPages !== null || checkSuitePages !== null;
   if (hasCompletePages && (checkRunPages === null || checkSuitePages === null)) {
@@ -635,6 +859,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     ? normalizeCompleteCheckRunPages({
         checkRunPages,
         checkSuiteIdSet: new Set(completeSuiteAuthority.all_check_suite_ids),
+        releaseSha,
       })
     : checkRuns;
   if (!Array.isArray(normalizedCheckRuns)) {
@@ -649,6 +874,55 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     excludedCheckSuiteIds,
   );
   const excludedSuiteIdSet = new Set(normalizedExcludedCheckSuiteIds);
+  if (hasCompletePages && workflowRunPages === null) {
+    throw new Error("Current production release checks require complete workflow-run metadata pages.");
+  }
+  if (hasCompletePages && requireCommitStatuses(commitStatuses, "commitStatuses").length > 0) {
+    throw new Error("Current production release contract requires legacy commit statuses to be empty.");
+  }
+  const workflowRunAuthority = hasCompletePages
+    ? normalizeWorkflowRunPages({
+        checkSuiteAppIds: completeSuiteAuthority.check_suite_app_ids,
+        checkSuiteIdSet: new Set(completeSuiteAuthority.all_check_suite_ids),
+        excludedSuiteIdSet,
+        releaseSha,
+        workflowRunPages,
+      })
+    : { externalWorkflowRuns: [], mappedCheckSuiteIds: [] };
+  const normalizedWorkflowRuns = workflowRunAuthority.externalWorkflowRuns;
+  if (hasCompletePages) {
+    const mappedSuiteIdSet = new Set(workflowRunAuthority.mappedCheckSuiteIds);
+    const unmappedActionsSuiteIds = Object.values(completeSuiteAuthority.check_suite_metadata)
+      .filter((entry) => entry.app_id === GITHUB_ACTIONS_APP_INTEGRATION_ID)
+      .map((entry) => entry.id)
+      .filter((suiteId) => !mappedSuiteIdSet.has(suiteId));
+    if (unmappedActionsSuiteIds.length > 0) {
+      throw new Error(
+        `GitHub Actions check suites are missing bijective workflow-run mappings: ${unmappedActionsSuiteIds.join(", ")}.`,
+      );
+    }
+  }
+  const workflowRunsBySuiteId = new Map(
+    normalizedWorkflowRuns.map((entry) => [entry.checkSuiteId, entry]),
+  );
+  if (hasCompletePages) {
+    const externalOwnerKeys = new Set();
+    for (const suite of Object.values(completeSuiteAuthority.check_suite_metadata)) {
+      if (suite.app_id === GITHUB_ACTIONS_APP_INTEGRATION_ID) continue;
+      const owner = GITHUB_PRODUCTION_RELEASE_ZERO_CHECK_EXTERNAL_SUITES.find((entry) =>
+        entry.appId === suite.app_id
+        && entry.appName === suite.app_name
+        && entry.appSlug === suite.app_slug);
+      if (!owner || suite.repository !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY) {
+        throw new Error(`External check suite ${suite.id} owner/repository is not allowlisted.`);
+      }
+      const ownerKey = `${owner.appId}:${owner.appSlug}:${owner.appName}`;
+      if (externalOwnerKeys.has(ownerKey)) {
+        throw new Error(`External zero-check suite owner is duplicated: ${ownerKey}.`);
+      }
+      externalOwnerKeys.add(ownerKey);
+    }
+  }
   const observedExcludedSuiteIds = new Set(
     completeSuiteAuthority === null
       ? []
@@ -657,6 +931,7 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
   );
   const byKey = new Map();
   const instancesByIdentity = new Map();
+  let allowlistedExternalCheckCount = 0;
   for (const entry of normalizedCheckRuns) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error("Each production release check run must be an object.");
@@ -672,10 +947,15 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     }
     const normalized = {
       appId: Number(entry.app?.id),
+      appName: typeof entry.app?.name === "string" ? entry.app.name : null,
+      appSlug: typeof entry.app?.slug === "string" ? entry.app.slug : null,
       bucket: normalizeBucket(entry),
       checkRunId: Number(entry.id),
       checkSuiteId,
       context: contextKey(entry.name ?? entry.context, "check.context"),
+      externalId: entry.external_id === null || entry.external_id === undefined
+        ? null
+        : String(entry.external_id),
       timestamp: sortTimestamp(entry),
     };
     if (
@@ -688,6 +968,67 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
         `Production release check context must bind positive check-run and check-suite IDs: ${normalized.context}.`,
       );
     }
+    const suiteMetadata = completeSuiteAuthority?.check_suite_metadata?.[normalized.checkSuiteId];
+    const isGitGuardian = hasCompletePages
+      && normalized.appId === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
+      && normalized.appName === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
+      && normalized.appSlug === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
+      && entry.name === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.checkName
+      && normalized.externalId === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.externalId
+      && suiteMetadata?.app_id === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appId
+      && suiteMetadata?.app_name === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appName
+      && suiteMetadata?.app_slug === GITHUB_PRODUCTION_RELEASE_GITGUARDIAN_CHECK.appSlug
+      && suiteMetadata?.repository === CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY;
+    if (
+      hasCompletePages
+      && normalized.appId !== GITHUB_ACTIONS_APP_INTEGRATION_ID
+      && !isGitGuardian
+    ) {
+      throw new Error(
+        `Production release non-Actions started check is not the exact allowlisted GitGuardian owner tuple: ${normalized.context}.`,
+      );
+    }
+    const suiteAppId = completeSuiteAuthority?.check_suite_app_ids?.[normalized.checkSuiteId];
+    if (hasCompletePages && suiteAppId !== normalized.appId) {
+      throw new Error(
+        `Production release check-run/check-suite App metadata is inconsistent: ${normalized.context}.`,
+      );
+    }
+    const workflowRun = workflowRunsBySuiteId.get(normalized.checkSuiteId) ?? null;
+    if (
+      hasCompletePages
+      && normalized.appId === GITHUB_ACTIONS_APP_INTEGRATION_ID
+      && workflowRun === null
+    ) {
+      throw new Error(
+        `Production release Actions check is missing workflow-run metadata: ${normalized.context}.`,
+      );
+    }
+    if (isGitGuardian) {
+      allowlistedExternalCheckCount += 1;
+      if (allowlistedExternalCheckCount !== 1) {
+        throw new Error("Production release allows exactly one GitGuardian check instance.");
+      }
+      if (normalized.bucket !== "success") {
+        throw new Error("Production release GitGuardian check must be completed success.");
+      }
+    }
+    const withProvenance = workflowRun === null
+      ? Object.freeze({
+          ...normalized,
+          suiteRepository: suiteMetadata?.repository ?? null,
+        })
+      : Object.freeze({
+          ...normalized,
+          workflowEvent: workflowRun.event,
+          workflowHeadRepository: workflowRun.headRepository,
+          workflowHeadSha: workflowRun.headSha,
+          workflowId: workflowRun.workflowId,
+          workflowPath: workflowRun.path,
+          workflowRepository: workflowRun.repository,
+          workflowRunAttempt: workflowRun.runAttempt,
+          workflowRunId: workflowRun.runId,
+        });
     if (["pending", "queued"].includes(normalized.bucket)) {
       throw new Error(
         `Production release terminal check summary contains pending checks for ${normalized.context}.`,
@@ -701,16 +1042,16 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     const instanceIdentity = `${normalized.checkRunId}:${normalized.checkSuiteId}`;
     const existingInstance = instancesByIdentity.get(instanceIdentity);
     if (existingInstance) {
-      if (JSON.stringify(existingInstance) !== JSON.stringify(normalized)) {
+      if (JSON.stringify(existingInstance) !== JSON.stringify(withProvenance)) {
         throw new Error(
           `Production release check-run instance has conflicting evidence: ${instanceIdentity}.`,
         );
       }
       continue;
     }
-    instancesByIdentity.set(instanceIdentity, normalized);
+    instancesByIdentity.set(instanceIdentity, withProvenance);
     const bucket = byKey.get(normalized.context) ?? [];
-    bucket.push(normalized);
+    bucket.push(withProvenance);
     byKey.set(normalized.context, bucket);
   }
   const unobservedExcludedSuiteIds = normalizedExcludedCheckSuiteIds.filter(
@@ -764,18 +1105,33 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
         `Production release expected context must use trusted GitHub Actions App integration ${GITHUB_ACTIONS_APP_INTEGRATION_ID}: ${expectedContext}.`,
       );
     }
-    const latestTimestamp = Math.max(...entries.map((entry) => entry.timestamp));
-    const latestEntries = entries.filter((entry) => entry.timestamp === latestTimestamp);
-    const latestBuckets = new Set(latestEntries.map((entry) => entry.bucket));
-    if (latestBuckets.size !== 1 || !latestBuckets.has("success")) {
+    if (entries.some((entry) => entry.bucket !== "success")) {
       throw new Error(
-        `Production release latest trusted expected context must be exactly success: ${expectedContext}.`,
+        `Production release every trusted expected context instance must be exactly success: ${expectedContext}.`,
       );
     }
   }
 
-  for (const entries of byKey.values()) {
-    summary.rerun += Math.max(0, entries.length - 1);
+  for (const [context, entries] of byKey) {
+    if (entries.length <= 1) continue;
+    if (!hasCompletePages) {
+      summary.rerun += entries.length - 1;
+      continue;
+    }
+    const [owner, ...rest] = entries;
+    const distinctRunIds = new Set(entries.map((entry) => entry.workflowRunId));
+    const distinctSuiteIds = new Set(entries.map((entry) => entry.checkSuiteId));
+    if (
+      distinctRunIds.size !== entries.length
+      || distinctSuiteIds.size !== entries.length
+    ) {
+      throw new Error(`Production release context is duplicated inside one Actions run/check suite: ${context}.`);
+    }
+    if (rest.some((entry) =>
+      entry.workflowId !== owner.workflowId
+      || entry.workflowPath !== owner.workflowPath)) {
+      throw new Error(`Production release context has a cross-workflow ownership collision: ${context}.`);
+    }
   }
 
   for (const [context, entries] of statusesByContext) {
@@ -824,6 +1180,12 @@ export function buildGitHubProductionReleaseExternalCheckEvidence({
     ...(completeSuiteAuthority === null ? {} : {
       all_check_suite_count: completeSuiteAuthority.all_check_suite_count,
       all_check_suite_ids_digest: completeSuiteAuthority.all_check_suite_ids_digest,
+      all_check_suite_authority_digest: completeSuiteAuthority.all_check_suite_authority_digest,
+    }),
+    ...(completeSuiteAuthority === null ? {} : {
+      all_actions_workflow_run_provenance_digest: createHash("sha256")
+        .update(JSON.stringify(normalizedWorkflowRuns))
+        .digest("hex"),
     }),
     all_context_check_run_instances_digest: createHash("sha256")
       .update(JSON.stringify(allInstances))
@@ -858,6 +1220,7 @@ export function normalizeGitHubProductionReleaseCheckSummary(options = {}) {
  *   rehearsalAuthority?: Record<string, unknown> | null,
  *   subjectOutputPath?: string | null,
  *   workflowAuthority?: Record<string, unknown> | null,
+ *   workflowRunPages?: Array<Record<string, unknown>> | null,
  * }} [options]
  */
 export function buildGitHubProductionReleaseAttestationArtifacts({
@@ -877,6 +1240,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   rehearsalAuthority = null,
   subjectOutputPath = null,
   workflowAuthority = null,
+  workflowRunPages = null,
 } = {}) {
   const normalizedReleaseSha = requireSha1(releaseSha, "releaseSha");
   const normalizedReleaseTree = requireSha1(releaseTree, "releaseTree");
@@ -943,6 +1307,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     excludedCheckSuiteIds: normalizedExcludedCheckSuiteIds,
     expectedContexts,
     releaseSha: normalizedReleaseSha,
+    workflowRunPages,
   });
   const requiredCheckSummary = externalCheckEvidence.required_check_summary;
   if (requiredCheckSummary.rerun !== 0) {
@@ -950,7 +1315,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
   }
   const subject = {
     schema: normalizedRehearsalAuthority
-      ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2
+      ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V3
       : GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA,
     repository: requireCanonicalString(
       repository,
@@ -974,6 +1339,10 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     ...(normalizedRehearsalAuthority === null ? {} : {
       all_check_suite_count: externalCheckEvidence.all_check_suite_count,
       all_check_suite_ids_digest: externalCheckEvidence.all_check_suite_ids_digest,
+      all_check_suite_authority_digest:
+        externalCheckEvidence.all_check_suite_authority_digest,
+      all_actions_workflow_run_provenance_digest:
+        externalCheckEvidence.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest:
         externalCheckEvidence.all_context_check_run_instances_digest,
       all_context_check_suite_ids: externalCheckEvidence.all_context_check_suite_ids,
@@ -1000,7 +1369,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
 
   const predicate = {
     schema: normalizedRehearsalAuthority
-      ? GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V2
+      ? GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V3
       : GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA,
     repository: subject.repository,
     source_ref: subject.source_ref,
@@ -1017,6 +1386,10 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     ...(normalizedRehearsalAuthority === null ? {} : {
       all_check_suite_count: externalCheckEvidence.all_check_suite_count,
       all_check_suite_ids_digest: externalCheckEvidence.all_check_suite_ids_digest,
+      all_check_suite_authority_digest:
+        externalCheckEvidence.all_check_suite_authority_digest,
+      all_actions_workflow_run_provenance_digest:
+        externalCheckEvidence.all_actions_workflow_run_provenance_digest,
       all_context_check_run_instances_digest:
         externalCheckEvidence.all_context_check_run_instances_digest,
       all_context_check_suite_ids: externalCheckEvidence.all_context_check_suite_ids,
@@ -1049,13 +1422,13 @@ function validateSubjectDocument({
   if (!document || typeof document !== "object" || Array.isArray(document)) {
     throw new Error("Production release subject manifest must be a JSON object.");
   }
-  const manifestRehearsalAuthority = manifest.schema === "homecook.local-mac-production-release.v2"
+  const manifestRehearsalAuthority = manifest.schema === "homecook.local-mac-production-release.v3"
     ? normalizeRehearsalAuthority(Object.fromEntries(
         REHEARSAL_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
       ), "manifest rehearsal authority")
     : null;
   const expectedSubjectSchema = manifestRehearsalAuthority
-    ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V2
+    ? GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA_V3
     : GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA;
   if (document.schema !== expectedSubjectSchema) {
     throw new Error(
@@ -1209,13 +1582,13 @@ function validatePredicateDocument({
   if (!predicate || typeof predicate !== "object" || Array.isArray(predicate)) {
     throw new Error("Production release attestation predicate must be a JSON object.");
   }
-  const manifestRehearsalAuthority = manifest.schema === "homecook.local-mac-production-release.v2"
+  const manifestRehearsalAuthority = manifest.schema === "homecook.local-mac-production-release.v3"
     ? normalizeRehearsalAuthority(Object.fromEntries(
         REHEARSAL_AUTHORITY_KEYS.map((key) => [key, manifest[key]]),
       ), "manifest rehearsal authority")
     : null;
   const expectedPredicateSchema = manifestRehearsalAuthority
-    ? GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V2
+    ? GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA_V3
     : GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA;
   if (predicate.schema !== expectedPredicateSchema) {
     throw new Error(
@@ -1412,8 +1785,8 @@ export function verifyGitHubProductionReleaseAttestation({
   if (normalizedSignerDigest !== requireSha1(manifest.workflow_head_sha, "manifest.workflow_head_sha")) {
     throw new Error("signerDigest must equal the exact workflow head SHA.");
   }
-  const expectedPredicateType = manifest.schema === "homecook.local-mac-production-release.v2"
-    ? GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V2
+  const expectedPredicateType = manifest.schema === "homecook.local-mac-production-release.v3"
+    ? GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE_V3
     : GITHUB_PRODUCTION_RELEASE_PREDICATE_TYPE;
   const trustedRootDigest = requireSha256(
     sha256File(normalizedTrustedRootPath),

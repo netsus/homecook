@@ -82,6 +82,7 @@ jobs:
           WORKFLOW_HEAD_SHA: ${{ steps.workflow-head.outputs.workflow_head_sha }}
           WORKFLOW_HEAD_TREE: ${{ steps.workflow-head.outputs.workflow_head_tree }}
         run: |
+          test "${{ github.run_attempt }}" = "1"
           gh api repos/netsus/homecook/actions/workflows/production-release-attestation.yml \
             > "$RUNNER_TEMP/release-workflow.json"
           canonical_workflow_id="$(jq -er '.id | select(type == "number" and . > 0)' "$RUNNER_TEMP/release-workflow.json")"
@@ -191,6 +192,8 @@ jobs:
             --paginate --slurp > "$RUNNER_TEMP/check-suite-pages.json"
           gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
             --paginate --slurp > "$RUNNER_TEMP/check-run-pages.json"
+          gh api "repos/netsus/homecook/actions/runs?head_sha=$RELEASE_SHA&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/workflow-run-pages.json"
           jq '[.[].check_runs[]]' "$RUNNER_TEMP/check-run-pages.json" \
             > "$RUNNER_TEMP/check-runs.json"
         working-directory: trusted-current-master
@@ -213,6 +216,7 @@ jobs:
           node scripts/build-production-release-check-evidence.mjs \
             --check-run-pages-json "$RUNNER_TEMP/check-run-pages.json" \
             --check-suite-pages-json "$RUNNER_TEMP/check-suite-pages.json" \
+            --workflow-run-pages-json "$RUNNER_TEMP/workflow-run-pages.json" \
             --commit-statuses-json "$RUNNER_TEMP/commit-statuses.json" \
             --excluded-check-suite-ids-json "$RUNNER_TEMP/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
@@ -231,6 +235,7 @@ jobs:
             ${{ runner.temp }}/external-check-evidence.json
             ${{ runner.temp }}/check-run-pages.json
             ${{ runner.temp }}/check-suite-pages.json
+            ${{ runner.temp }}/workflow-run-pages.json
             ${{ runner.temp }}/workflow-authority.json
             ${{ runner.temp }}/workflow-evidence.json
             ${{ runner.temp }}/current-workflow-run.json
@@ -264,6 +269,7 @@ jobs:
           master_sha_at_approval="$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
           master_tree_at_approval="$(gh api "repos/netsus/homecook/git/commits/$master_sha_at_approval" --jq '.tree.sha')"
           workflow_head_tree="$(gh api "repos/netsus/homecook/git/commits/$WORKFLOW_HEAD_SHA" --jq '.tree.sha')"
+          test "${{ github.run_attempt }}" = "1"
           gh api "repos/netsus/homecook/actions/runs/${{ github.run_id }}" \
             > "$RUNNER_TEMP/current-workflow-run-at-approval.json"
           [[ "$master_sha_at_approval" =~ ^[0-9a-f]{40}$ ]]
@@ -443,6 +449,8 @@ jobs:
             --paginate --slurp > "$RUNNER_TEMP/post-approval/check-suite-pages.json"
           gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
             --paginate --slurp > "$RUNNER_TEMP/post-approval/check-run-pages.json"
+          gh api "repos/netsus/homecook/actions/runs?head_sha=$RELEASE_SHA&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/post-approval/workflow-run-pages.json"
           jq '[.[].check_runs[]]' "$RUNNER_TEMP/post-approval/check-run-pages.json" \
             > "$RUNNER_TEMP/post-approval/check-runs.json"
           gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/statuses \
@@ -452,6 +460,7 @@ jobs:
           node scripts/build-production-release-check-evidence.mjs \
             --check-run-pages-json "$RUNNER_TEMP/post-approval/check-run-pages.json" \
             --check-suite-pages-json "$RUNNER_TEMP/post-approval/check-suite-pages.json" \
+            --workflow-run-pages-json "$RUNNER_TEMP/post-approval/workflow-run-pages.json" \
             --commit-statuses-json "$RUNNER_TEMP/post-approval/commit-statuses.json" \
             --excluded-check-suite-ids-json "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
@@ -470,6 +479,7 @@ jobs:
             --check-run-pages-json "$RUNNER_TEMP/post-approval/check-run-pages.json" \
             --check-runs-json "$RUNNER_TEMP/post-approval/check-runs.json" \
             --check-suite-pages-json "$RUNNER_TEMP/post-approval/check-suite-pages.json" \
+            --workflow-run-pages-json "$RUNNER_TEMP/post-approval/workflow-run-pages.json" \
             --commit-statuses-json "$RUNNER_TEMP/post-approval/commit-statuses.json" \
             --excluded-check-suite-ids-json "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
@@ -669,6 +679,7 @@ jobs:
           jq -e '
             .path == ".github/workflows/production-release-attestation.yml"
           ' "$RUNNER_TEMP/pre-attestation/release-workflow.json" > /dev/null
+          test "${{ github.run_attempt }}" = "1"
           gh api "repos/netsus/homecook/actions/runs/${{ github.run_id }}" \
             > "$RUNNER_TEMP/pre-attestation/current-workflow-run.json"
           node scripts/build-production-release-workflow-evidence.mjs \
@@ -694,6 +705,8 @@ jobs:
             --paginate --slurp > "$RUNNER_TEMP/pre-attestation/check-suite-pages.json"
           gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
             --paginate --slurp > "$RUNNER_TEMP/pre-attestation/check-run-pages.json"
+          gh api "repos/netsus/homecook/actions/runs?head_sha=$RELEASE_SHA&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/pre-attestation/workflow-run-pages.json"
           jq '[.[].check_runs[]]' "$RUNNER_TEMP/pre-attestation/check-run-pages.json" \
             > "$RUNNER_TEMP/pre-attestation/check-runs.json"
           gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/statuses \
@@ -704,6 +717,7 @@ jobs:
           node scripts/build-production-release-check-evidence.mjs \
             --check-run-pages-json "$RUNNER_TEMP/pre-attestation/check-run-pages.json" \
             --check-suite-pages-json "$RUNNER_TEMP/pre-attestation/check-suite-pages.json" \
+            --workflow-run-pages-json "$RUNNER_TEMP/pre-attestation/workflow-run-pages.json" \
             --commit-statuses-json "$RUNNER_TEMP/pre-attestation/commit-statuses.json" \
             --excluded-check-suite-ids-json "$RUNNER_TEMP/pre-attestation/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
@@ -722,6 +736,7 @@ jobs:
             --check-run-pages-json "$RUNNER_TEMP/pre-attestation/check-run-pages.json" \
             --check-runs-json "$RUNNER_TEMP/pre-attestation/check-runs.json" \
             --check-suite-pages-json "$RUNNER_TEMP/pre-attestation/check-suite-pages.json" \
+            --workflow-run-pages-json "$RUNNER_TEMP/pre-attestation/workflow-run-pages.json" \
             --commit-statuses-json "$RUNNER_TEMP/pre-attestation/commit-statuses.json" \
             --excluded-check-suite-ids-json "$RUNNER_TEMP/pre-attestation/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
@@ -743,7 +758,7 @@ jobs:
         with:
           subject-path: ${{ runner.temp }}/pre-attestation/production-release-subject.json
           predicate-path: ${{ runner.temp }}/pre-attestation/production-release-predicate.json
-          predicate-type: https://github.com/netsus/homecook/attestations/production-release/v2
+          predicate-type: https://github.com/netsus/homecook/attestations/production-release/v3
 
       - name: Upload attestation bundle and approved artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -756,6 +771,7 @@ jobs:
             ${{ runner.temp }}/pre-attestation/check-runs.json
             ${{ runner.temp }}/pre-attestation/check-run-pages.json
             ${{ runner.temp }}/pre-attestation/check-suite-pages.json
+            ${{ runner.temp }}/pre-attestation/workflow-run-pages.json
             ${{ runner.temp }}/pre-attestation/commit-statuses.json
             ${{ runner.temp }}/pre-attestation/external-check-evidence.json
             ${{ runner.temp }}/pre-attestation/workflow-authority.json
