@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.marketing-campaign-fast-release.v1",
+  "title": "Homecook marketing campaign fast release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "expires_at", "repository", "source_ref", "release_sha", "release_tree",
+    "build_id", "release_bundle_sha256", "required_ci_evidence_sha256",
+    "rehearsal_receipt_sha256", "production_snapshot_sha256", "backup_receipt_sha256",
+    "previous_release_sha", "approval", "rehearsal", "backup", "components",
+    "release_tag", "manifest_sha256"
+  ],
+  "properties": {
+    "schema": { "const": "homecook.marketing-campaign-fast-release.v1" },
+    "expires_at": { "const": "2026-09-15T15:00:00.000Z" },
+    "repository": { "const": "netsus/homecook" },
+    "source_ref": { "const": "refs/heads/master" },
+    "release_sha": { "$ref": "#/$defs/sha" },
+    "release_tree": { "$ref": "#/$defs/sha" },
+    "build_id": { "type": "string", "minLength": 1 },
+    "release_bundle_sha256": { "$ref": "#/$defs/digest" },
+    "required_ci_evidence_sha256": { "$ref": "#/$defs/digest" },
+    "rehearsal_receipt_sha256": { "$ref": "#/$defs/digest" },
+    "production_snapshot_sha256": { "$ref": "#/$defs/digest" },
+    "backup_receipt_sha256": { "$ref": "#/$defs/digest" },
+    "previous_release_sha": { "$ref": "#/$defs/sha" },
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["environment", "approved", "approval_count", "prevent_self_review", "approver"],
+      "properties": {
+        "environment": { "const": "production-release-approval" },
+        "approved": { "const": true },
+        "approval_count": { "const": 1 },
+        "prevent_self_review": { "const": true },
+        "approver": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rehearsal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_count", "candidate_health", "previous_bundle_rollback", "production_guard", "cleanup"],
+      "properties": {
+        "run_count": { "const": 1 },
+        "candidate_health": { "const": "pass" },
+        "previous_bundle_rollback": { "const": "pass" },
+        "production_guard": { "const": "unchanged" },
+        "cleanup": { "const": "complete" }
+      }
+    },
+    "backup": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fresh", "encrypted", "verified"],
+      "properties": {
+        "fresh": { "const": true }, "encrypted": { "const": true }, "verified": { "const": true }
+      }
+    },
+    "components": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["component", "release_sha", "build_id", "release_bundle_sha256"],
+        "properties": {
+          "component": { "enum": ["app", "full-local", "youtube-worker"] },
+          "release_sha": { "$ref": "#/$defs/sha" },
+          "build_id": { "type": "string", "minLength": 1 },
+          "release_bundle_sha256": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "release_tag": { "type": "string", "pattern": "^prod-[0-9]{8}\\.[1-9][0-9]*$" },
+    "manifest_sha256": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

@@ -1,0 +1,29 @@
+name: Marketing Campaign Release Assurance
+
+on:
+  schedule:
+    - cron: "17 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-release-suite:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule != '' }}
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:local-mac-production-release
+
+  second-rehearsal-reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Second isolated server rehearsal remains non-blocking and release-promoter scheduled."

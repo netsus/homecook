@@ -1,0 +1,111 @@
+name: Marketing Campaign Fast Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact origin/master SHA
+        required: true
+        type: string
+      release_tag:
+        description: New annotated prod-YYYYMMDD.N tag
+        required: true
+        type: string
+      manifest_b64:
+        description: Canonical secret-free campaign manifest encoded as base64
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-campaign-fast-release
+  cancel-in-progress: false
+
+jobs:
+  authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Preserve author activation kill switch
+        run: |
+          echo "activation_blocked: independent approval and current-head green evidence are required" >&2
+          exit 1
+      - name: Fail closed after campaign expiry
+        env:
+          CAMPAIGN_RELEASE_EXPIRES_AT: 2026-09-15T15:00:00.000Z
+        run: |
+          test "$(date -u +%s)" -lt "$(date -u -d "$CAMPAIGN_RELEASE_EXPIRES_AT" +%s)"
+      - name: Require exact full SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          test "${{ github.repository }}" = "netsus/homecook"
+          test "${{ github.ref }}" = "refs/heads/master"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$RELEASE_SHA" = "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')"
+
+  promote:
+    needs: authority
+    environment: production-release-approval
+    runs-on: [self-hosted, macOS, homecook-release-promoter]
+    timeout-minutes: 25
+    permissions:
+      artifact-metadata: write
+      contents: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout exact approved master SHA
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Materialize and verify the secret-free manifest
+        env:
+          CAMPAIGN_MANIFEST_B64: ${{ inputs.manifest_b64 }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          umask 077
+          printf '%s' "$CAMPAIGN_MANIFEST_B64" | base64 --decode > "$RUNNER_TEMP/campaign-manifest.json"
+          test "$RELEASE_SHA" = "$(jq -r '.release_sha' "$RUNNER_TEMP/campaign-manifest.json")"
+          pnpm release:campaign:verify -- --manifest "$RUNNER_TEMP/campaign-manifest.json" --json
+
+      - name: Mint protected-tag GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.HOMECOOK_RELEASE_ATTESTATION_APP_ID }}
+          private-key: ${{ secrets.HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY }}
+          owner: netsus
+          permission-contents: write
+          repositories: homecook
+
+      - name: Create immutable annotated campaign release tag
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^prod-[0-9]{8}\.[1-9][0-9]*$ ]]
+          test "$RELEASE_SHA" = "$(git rev-parse refs/remotes/origin/master)"
+          test "$RELEASE_TAG" = "$(jq -r '.release_tag' "$RUNNER_TEMP/campaign-manifest.json")"
+          manifest_sha256="$(jq -r '.manifest_sha256' "$RUNNER_TEMP/campaign-manifest.json")"
+          git config user.name "homecook-release-attestation[bot]"
+          git config user.email "homecook-release-attestation[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" "$RELEASE_SHA" -m "release_sha: $RELEASE_SHA
+          manifest_sha256: $manifest_sha256"
+          git push --porcelain \
+            "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/netsus/homecook.git" \
+            "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+
+      - name: Attest exact campaign manifest bytes
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ runner.temp }}/campaign-manifest.json
+          predicate-type: https://github.com/netsus/homecook/attestations/marketing-campaign-release/v1
+
+      - name: Promote exact attested campaign bundle
+        run: pnpm release:campaign:promote -- --manifest "$RUNNER_TEMP/campaign-manifest.json" --json
