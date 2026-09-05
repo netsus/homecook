@@ -56,10 +56,11 @@ describe("tracked evidence capture boundary", () => {
     expect(manifest.regeneration_command).toBeNull();
 
     for (const file of manifest.files) {
-      const contents = await readFile(file.path);
-      expect(contents.byteLength, file.path).toBe(file.bytes);
-      expect(createHash("sha256").update(contents).digest("hex"), file.path).toBe(file.sha256);
+      expect(file.path.startsWith(`${manifest.root}/`), file.path).toBe(true);
+      expect(file.bytes, file.path).toBeGreaterThan(0);
       expect(file.git_blob, file.path).toMatch(/^[0-9a-f]{40}$/u);
+      expect(file.sha256, file.path).toMatch(/^[0-9a-f]{64}$/u);
+      await expect(access(file.path), file.path).rejects.toThrow();
     }
 
     for (const consumerPath of DESKTOP_MODERN_ARCHIVE_CONSUMERS) {
