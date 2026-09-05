@@ -164,6 +164,19 @@ describe("marketing demand validation v2 document contract", () => {
     }
   });
 
+  it("bounds marketing evidence image waits and keeps retries in small capture groups", () => {
+    const captureSpec = readRequired("tests/e2e/slice-marketing-demand-validation.spec.ts");
+
+    expect(captureSpec).not.toContain("Array.from(document.images).every");
+    expect(captureSpec).toContain("async function expectStageImagesReady");
+    expect(captureSpec).toContain("timeout: 10_000");
+    expect(captureSpec).toContain('test("captures hero and result evidence"');
+    expect(captureSpec).toContain('test("captures the main funnel evidence"');
+    expect(captureSpec).toContain(
+      'test("captures narrow and responsive evidence and writes the manifest"',
+    );
+  });
+
   it("replaces the v1 row checks with a creative-key conditional v1/v2 contract", () => {
     const db = readRequired(officialFiles.db);
     const acceptance = readRequired("docs/workpacks/marketing-demand-validation-v2/acceptance.md");

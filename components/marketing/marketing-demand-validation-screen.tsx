@@ -31,13 +31,16 @@ import { MARKETING_VALIDATION_RETENTION_DAYS } from "@/lib/marketing/demand-vali
 import {
   enqueueMarketingQueueAction,
   flushMarketingQueue,
+  isMarketingQueueActionCoveredByServerState,
   readMarketingClientSnapshot,
   reconcileMarketingQueueWithServerState,
   writeMarketingClientSnapshot,
   type MarketingValidationQueueAction,
   type MarketingValidationUiStage,
 } from "@/lib/marketing/marketing-validation-client-session";
+import { MARKETING_VALIDATION_ACTIONS } from "@/types/marketing-validation";
 import type {
+  MarketingValidationAction,
   MarketingValidationAdVariant,
   MarketingValidationQuizAnswers,
   MarketingValidationQuizResult,
@@ -288,7 +291,7 @@ function BetaForm({ onBack, onSubmit, getTurnstileToken }: { onBack: () => void;
     const message = await onSubmit(email, turnstile.token);
     if (message) { resetTurnstile(); setError(message); setSubmitting(false); }
   };
-  return <Frame stage="beta-form" className="beta-screen"><div className="beta-topbar"><Back onClick={onBack} /><Image className="beta-brand-wordmark" src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" width={210} height={80} /></div><div className="beta-invitation"><Image className="beta-character" src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 소금병 캐릭터" width={210} height={210} priority /><div className="beta-copy"><h1><span>무먹,</span><br />직접 써보고 싶나요?</h1><p>첫 베타테스트를 준비하고 있어요. 이메일을 남겨주시면 가장 먼저 초대드릴게요</p></div></div><form className="email-form" onSubmit={submit} noValidate><label htmlFor="beta-email">이메일</label><div className="email-input-wrap"><input id="beta-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} aria-invalid={error ? "true" : "false"} aria-describedby={error ? "beta-error" : "privacy-details"} placeholder="name@example.com" /></div>{getTurnstileToken ? null : <MarketingTurnstile onControllerChange={(controller) => { turnstileControllerRef.current = controller; }} />}<div className="consent-block"><label className="consent-row"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>[필수]</strong> 이메일 수집·이용에 동의합니다.</span></label><details className="privacy-disclosure"><summary><ChevronRightIcon aria-hidden="true" />수집 목적과 보유 기간 보기</summary><p className="privacy-details" id="privacy-details">수집: 이메일 · 목적: 베타 초대 · 보유: 캠페인 종료 후 {MARKETING_VALIDATION_RETENTION_DAYS}일 · <Link href="/privacy">개인정보처리방침</Link></p></details></div>{error ? <div className="mdv2-error" id="beta-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>다시 시도</button></div> : null}{submitting ? <p className="mdv2-submit-status" role="status" aria-live="polite">신청 내용을 확인하고 있어요.</p> : null}<button className="primary-button" type="submit" disabled={submitting}>{submitting ? "신청 중…" : "무료 베타 초대받기"}</button></form></Frame>;
+  return <Frame stage="beta-form" className="beta-screen"><div className="beta-topbar"><Back onClick={onBack} /><Image className="beta-brand-wordmark" src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" width={210} height={80} /></div><div className="beta-invitation"><Image className="beta-character" src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 소금병 캐릭터" width={210} height={210} loading="eager" /><div className="beta-copy"><h1><span>무먹,</span><br />직접 써보고 싶나요?</h1><p>첫 베타테스트를 준비하고 있어요. 이메일을 남겨주시면 가장 먼저 초대드릴게요</p></div></div><form className="email-form" onSubmit={submit} noValidate><label htmlFor="beta-email">이메일</label><div className="email-input-wrap"><input id="beta-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} aria-invalid={error ? "true" : "false"} aria-describedby={error ? "beta-error" : "privacy-details"} placeholder="name@example.com" /></div>{getTurnstileToken ? null : <MarketingTurnstile onControllerChange={(controller) => { turnstileControllerRef.current = controller; }} />}<div className="consent-block"><label className="consent-row"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span><strong>[필수]</strong> 이메일 수집·이용에 동의합니다.</span></label><details className="privacy-disclosure"><summary><ChevronRightIcon aria-hidden="true" />수집 목적과 보유 기간 보기</summary><p className="privacy-details" id="privacy-details">수집: 이메일 · 목적: 베타 초대 · 보유: 캠페인 종료 후 {MARKETING_VALIDATION_RETENTION_DAYS}일 · <Link href="/privacy">개인정보처리방침</Link></p></details></div>{error ? <div className="mdv2-error" id="beta-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>다시 시도</button></div> : null}{submitting ? <p className="mdv2-submit-status" role="status" aria-live="polite">신청 내용을 확인하고 있어요.</p> : null}<button className="primary-button" type="submit" disabled={submitting}>{submitting ? "신청 중…" : "무료 베타 초대받기"}</button></form></Frame>;
 }
 
 function Done({ onBack, onReset }: { onBack: () => void; onReset: () => void }) {
@@ -310,21 +313,29 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
   const [shareFeedback, setShareFeedback] = useState<ShareFeedback>(null);
   const transitionLocked = useRef(false);
   const queueErrorRef = useRef("");
+  const serverState = useRef<MarketingValidationAction | undefined>(undefined);
   const reduced = useReducedMotion();
   const preview = Boolean(entry.sharedResult && history.length === 0);
 
+  const rememberServerState = useCallback((next: MarketingValidationAction | undefined) => {
+    if (next && (!serverState.current || MARKETING_VALIDATION_ACTIONS.indexOf(next) > MARKETING_VALIDATION_ACTIONS.indexOf(serverState.current))) serverState.current = next;
+  }, []);
+
   const sendQueued = useCallback(async (action: MarketingValidationQueueAction) => {
+    if (serverState.current && isMarketingQueueActionCoveredByServerState(action, serverState.current)) return { ok: true as const, state: serverState.current };
     const response = await postMarketingValidation({ ...action, honeypot: "" } as MarketingValidationRequestBody);
     if (response.success) {
       queueErrorRef.current = "";
-      return { ok: true as const, state: response.data?.state };
+      rememberServerState(response.data?.state);
+      return { ok: true as const, state: serverState.current };
     }
     queueErrorRef.current = response.error?.message ?? "진행 내용을 저장하지 못했어요. 다시 시도해 주세요.";
     return { ok: false as const, retryable: true };
-  }, []);
+  }, [rememberServerState]);
 
   const record = useCallback(async (action: MarketingValidationQueueAction) => {
     queueErrorRef.current = "";
+    if (serverState.current && isMarketingQueueActionCoveredByServerState(action, serverState.current)) return true;
     enqueueMarketingQueueAction(action);
     const flushed = await flushMarketingQueue(sendQueued);
     if (flushed.stopped !== "completed") return false;
@@ -334,12 +345,14 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
   const initialize = useCallback(async () => {
     setLoading(true);
     setShellError("");
+    serverState.current = undefined;
     const response = await postMarketingValidation({ action: "view", honeypot: "", ad_variant: entry.adVariant, ...entry.attribution });
     if (!response.success || !response.data) {
       setShellError(response.error?.message ?? "진행 정보를 불러오지 못했어요.");
       setLoading(false);
       return;
     }
+    serverState.current = response.data.state;
     reconcileMarketingQueueWithServerState(response.data.state);
     const snapshot = readMarketingClientSnapshot();
     if (snapshot?.quizResult) setResult(snapshot.quizResult);
@@ -357,7 +370,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     setEntryReady(true);
   }, []);
   useEffect(() => { if (entryReady && !entry.sharedResult) void initialize(); }, [entry.sharedResult, entryReady, initialize]);
-  useEffect(() => { if (entryReady && !entry.sharedResult) writeMarketingClientSnapshot({ stage, quizAnswers: Object.keys(answers).length === 4 ? answers as MarketingValidationQuizAnswers : undefined, quizResult: stage === "hero" || stage === "quiz" ? undefined : result }); }, [answers, entry.sharedResult, entryReady, result, stage]);
+  useEffect(() => { if (entryReady && !entry.sharedResult && !loading && serverState.current) writeMarketingClientSnapshot({ stage, serverState: serverState.current, quizAnswers: Object.keys(answers).length === 4 ? answers as MarketingValidationQuizAnswers : undefined, quizResult: stage === "hero" || stage === "quiz" ? undefined : result }); }, [answers, entry.sharedResult, entryReady, loading, result, stage]);
 
   const push = (next: MarketingValidationUiStage) => {
     setHistory((current) => [...current, stage]);
@@ -382,7 +395,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     }
     setRecovering(false);
   };
-  const back = () => { const previous = history.at(-1); if (!previous) { setStage("hero"); return; } setHistory((current) => current.slice(0, -1)); setStage(previous); if (previous === "quiz") setQuestionIndex((current) => Math.max(0, current - 1)); };
+  const back = () => { const previous = history.at(-1); if (!previous) { setStage("hero"); return; } setHistory((current) => current.slice(0, -1)); setStage(previous); };
   const start = async () => { if (await record({ action: "quiz_started" })) { setQuestionIndex(0); push("quiz"); } else setShellError("연결을 확인한 뒤 새로 시작해 주세요."); };
   const select = (id: QuestionId, value: string) => {
     if (transitionLocked.current) return;
@@ -393,10 +406,14 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
       if (questionIndex < 3) setQuestionIndex((current) => current + 1);
       else {
         const exact = next as MarketingValidationQuizAnswers;
-        const response = await postMarketingValidation({ action: "quiz_completed", answers: exact, honeypot: "" });
-        if (!response.success || !response.data?.quiz_result) { setShellError(response.error?.message ?? "답변을 저장하지 못했어요."); transitionLocked.current = false; return; }
-        const derived = deriveResult(exact.q3);
-        setResult(response.data.quiz_result === derived ? response.data.quiz_result : derived);
+        const completed = serverState.current && isMarketingQueueActionCoveredByServerState({ action: "quiz_completed", answers: exact }, serverState.current);
+        // Replaying the quiz changes only the local result; the session's first answers and funnel statistics remain unchanged.
+        if (!completed) {
+          const response = await postMarketingValidation({ action: "quiz_completed", answers: exact, honeypot: "" });
+          if (!response.success || !response.data?.quiz_result) { setShellError(response.error?.message ?? "답변을 저장하지 못했어요."); transitionLocked.current = false; return; }
+          rememberServerState(response.data.state);
+        }
+        setResult(deriveResult(exact.q3));
         const showResult = () => push("result");
         if (await record({ action: "result_viewed" })) showResult();
         else showQueueRecovery("결과 화면을 열지 못했어요. 다시 시도해 주세요.", showResult);
@@ -429,7 +446,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     push("done");
     return null;
   };
-  const reset = () => { window.history.replaceState({}, "", "/beta"); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); void initialize(); };
+  const reset = () => { window.history.replaceState({}, "", "/beta"); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
 
   if (loading) return <div className="mdv2-root"><main className="mdv2-screen screen-content mdv2-loading" role="status" aria-label="테스트 불러오는 중"><Brand /><div /><div /><div /></main></div>;
   if (shellError) return <div className="mdv2-root"><Frame stage="empty" className="mdv2-state-screen"><Brand /><h1>새 테스트로 다시 시작할게요.</h1><p role="alert">{shellError}</p><button className="primary-button" type="button" onClick={reset}>새로 시작하기</button></Frame></div>;
