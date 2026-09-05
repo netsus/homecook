@@ -1,0 +1,1112 @@
+{
+  "schema_version": "1.0",
+  "kind": "historical-design-evidence-receipt",
+  "root": "ui/designs/evidence/desktop-modern-redesign",
+  "source_commit": "cbc7ede122d25d1b6a72635739a7f173151c9998",
+  "source_tree": "bdffb4c3650e35fc231b5f922f4a5beaa8a4d55e",
+  "file_count": 182,
+  "bytes": 52507552,
+  "final_decision": "archived-history-only",
+  "current_replacements": [
+    "tests/e2e/qa-visual.spec.ts-snapshots/",
+    "app/",
+    "components/"
+  ],
+  "regeneration_command": null,
+  "regeneration_note": "These captures were produced by historical manual browser traversal; no deterministic regeneration command is retained.",
+  "recovery_command": "git archive cbc7ede122d25d1b6a72635739a7f173151c9998 ui/designs/evidence/desktop-modern-redesign | tar -x",
+  "files": [
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/home-1024.png",
+      "bytes": 1430738,
+      "git_blob": "7797ebef5140e2cb349e073ff234679171035eba",
+      "sha256": "1e2b24b9ca13c2242d245f30bc4e82523b564580d51e3427334d7a9f306637d7"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/home-1280.png",
+      "bytes": 1416581,
+      "git_blob": "6928751c5ded6ea35179bed6ed99b486f2d8fc48",
+      "sha256": "24032a7cb25118120a15c4efebc7f35bfbca12a56df1e12709e657cece4e28bc"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/home-1440.png",
+      "bytes": 1302644,
+      "git_blob": "4bee48e22a4e2a6dd90ff4db38a81eaafa98c1b8",
+      "sha256": "c71e2d193800e6cb56ffdbb317b4650a7730d7e4221d8f858f5ae18c7f173242"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/planner-week-1024.png",
+      "bytes": 159112,
+      "git_blob": "7f86a613cbb7ee5913f012c4792f3b2b9ffcdb26",
+      "sha256": "4844eb6a24502f36fa8d9cf8837d3f667df8fb9ea4ee291da51ee6ca236c50c0"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/planner-week-1280.png",
+      "bytes": 204005,
+      "git_blob": "d58012b51e2b6acbfa2cc501b98d4e1222f6a7f6",
+      "sha256": "fd5a654ca26b951d5c5d34811cee13a24a866d5ffd4b9aa7fab66589ac80aee6"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/planner-week-1440.png",
+      "bytes": 226441,
+      "git_blob": "ccbb572e57932146dbde32116b93b66f043930fd",
+      "sha256": "42bc08acab504fc025b8b8c6f80dbd946a71beee556b728b26e396657e642cae"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/recipe-detail-1024.png",
+      "bytes": 810286,
+      "git_blob": "627c41e8677a2e784fc471a21ad418eccccb2b2a",
+      "sha256": "74dc7755da056669c0ec7c308ec1a586641965cef1017497d5cb03985dcbdc20"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/recipe-detail-1280.png",
+      "bytes": 743043,
+      "git_blob": "48a282088611110846b5dd17b160e59ccae36ac3",
+      "sha256": "bb1693dbfb18e868641565e8533c33342fe79c1b6dd090754cead103f4f92a95"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/recipe-detail-1440.png",
+      "bytes": 830594,
+      "git_blob": "01eadb412c2a0ff8eba64d292ec56cee9bb951cc",
+      "sha256": "8919d4d7837853807440c92c386882f420b6f45d3435e3e80ec6a30eb9527ab3"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-2/visual-qa-report.json",
+      "bytes": 9789,
+      "git_blob": "32bdf4d3afa972ac20d9d7271add659d2e62bd99",
+      "sha256": "7d32c4f2585e70cd437b7a017115563c41fca3bbe9925143be8c85b5ca147e31"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/confirm-destructive-1280.png",
+      "bytes": 320873,
+      "git_blob": "5975750e0c88d9156e4cef5343f20f2e49cc26d2",
+      "sha256": "bb543943169cf4f67c4b50ece0538350eca92f58b3482e97a85bd94092a8a66c"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/confirm-normal-1280.png",
+      "bytes": 402353,
+      "git_blob": "a93c853c4917b978e15f9cece32d50641437095e",
+      "sha256": "bd619429b57c657edd0a126552f6d774e7314cd1a39c09cd34367b6c90ac6bda"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/filter-modal-1024.png",
+      "bytes": 156264,
+      "git_blob": "5aa68bb94acd5c34a040b2c841e69554eca03b7c",
+      "sha256": "9d695deb6657294a4b94d49d855a918a884aec0e1bda8218523004a412407b2f"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/filter-modal-1280.png",
+      "bytes": 311549,
+      "git_blob": "df66e22d9eff60a49656681b6b38444f95f76535",
+      "sha256": "ae87558ecc0fee5270d2d951b9c9c5646ca053b7e55f96f1eeab1aca08a53888"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/home-after-login-1280.png",
+      "bytes": 638710,
+      "git_blob": "4fbe1c19df405d206f541f72e5ac0677d042e123",
+      "sha256": "f4ccf43226e77f9f5db8a81e5cc847f7880dbc41d02ae73ac76e1cd928145d22"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/lightbox-1280.png",
+      "bytes": 1142536,
+      "git_blob": "14b7470e0cf6b1bc5d7aa3d79d53876392b09d6e",
+      "sha256": "273ed11e5b602dc56f04369cae2fcbcf213931bec5d88d1e9954d86e9c0fae28"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/login-1024.png",
+      "bytes": 47987,
+      "git_blob": "1ae05c7483445f95d364732a347086cfbcd49481",
+      "sha256": "2bdd101a6676c31f6bad92e85550d34814145cbc655ddace95892be6608397e4"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/login-1280.png",
+      "bytes": 50432,
+      "git_blob": "2e2e862c4e23240ad74d06a8d6623906a0780591",
+      "sha256": "def661038992715dd7735a3aa80f12e0cc9c341aa1ba88d9a3252ca1fb72946a"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/login-1440.png",
+      "bytes": 53010,
+      "git_blob": "60e5d75116bc9f0e17b2ef179d7de506edfe6cad",
+      "sha256": "dffa0f2048660eae5c72830e42ee83bae38cf75511d80c3241433b84d74b4ae5"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/login-gate-planner-1024.png",
+      "bytes": 80471,
+      "git_blob": "2d3f5474487426332654bca79dba21917e545bd0",
+      "sha256": "1e46e52e9f391803657f6aa7a284b795a24fa703a1cb688a4dc4fa064aa86d0e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/login-gate-save-1024.png",
+      "bytes": 263749,
+      "git_blob": "93979ef8ffe7bbb0b8468c875538f2ccfacdada1",
+      "sha256": "444411c5d00f1ac76a4e6064a3597676e2915ab7cc87639d837aadbf6b34eec5"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/login-gate-save-1280.png",
+      "bytes": 371908,
+      "git_blob": "1dc0fb7a0475d88d087883a857a79b223dd020f8",
+      "sha256": "16b4075ce7d4618defb40cfb7cd7e8f753f939509496c51c4b748f7f40397c83"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/login-gate-save-1440.png",
+      "bytes": 532341,
+      "git_blob": "5272613d1b85552fac8d533209434f7bc7733e0c",
+      "sha256": "cb830f264c7d021fe21205b7eaaa012828c73facdd83c7162d041bdde03f4796"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/planner-add-modal-1280.png",
+      "bytes": 296080,
+      "git_blob": "ac0a187d42770c4146fc5f7a2234e5777b927588",
+      "sha256": "bd9eecbcfe0ba97a42569f41a82d3bf3b70dec7fa254048c06cd8f4de2e269b2"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/save-modal-1280.png",
+      "bytes": 281411,
+      "git_blob": "8b020b71443f58c065ae976ec5726de621b54135",
+      "sha256": "82e75e115d0beffdcae8b60356552dc3cedba5c96cb21094635e42aa0232da64"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/sort-dropdown-1280.png",
+      "bytes": 623218,
+      "git_blob": "490c509d5d9bbe44c929b9a158100ef72eee55f4",
+      "sha256": "e11ef31113ce17d8c8f1802bdfe95362ade9d91495e2b653c4347967c1ddd841"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-3/visual-qa-report.json",
+      "bytes": 5745,
+      "git_blob": "1287fe48f752bfaa80645488947afc4ad1573b53",
+      "sha256": "1eed4e6dcf2bc7f38e1223d5f78e1ef5ce081955fc709af947a68d7c8c195859"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/confirm-add-meal-1280.png",
+      "bytes": 200706,
+      "git_blob": "41fa77bb07904bca47e2093ed7036bf765380304",
+      "sha256": "84cb0f4e579922613945d38bb284c881d13abd048c8fa388cbaaeb1fdd48a6fa"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/ingredient-picker-modal-1280.png",
+      "bytes": 66087,
+      "git_blob": "a6504c467403c1fcf9a6bc2e19173c6503f02957",
+      "sha256": "139cb6c9062e20b397d2cd523cdf8347aab0a965f3c281ec2864117cf5a447c2"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/manual-create-1024.png",
+      "bytes": 39599,
+      "git_blob": "32e46e1a04643593aef34f02001d93bc8da994cc",
+      "sha256": "d597bedf6bd9a4ec94d13741df3e99d797e3d4012c53ed0244e3ae648c112d83"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/manual-create-1280.png",
+      "bytes": 43396,
+      "git_blob": "1990c28d191573bc5b46ecd731256627bfd25665",
+      "sha256": "42158fdc9ac96a444e433e647dce4fdfb1e61849ad88a42095f6d60299cc0438"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/manual-create-with-ingredients-1280.png",
+      "bytes": 41454,
+      "git_blob": "264352f3b24303e92f02fdf637f8dfa55ca92ee3",
+      "sha256": "99c6937a7c0f1f28b2c62aaac6cae598d934b692e3f0ad6de53e00e8d1f86e36"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/meal-detail-1024.png",
+      "bytes": 580290,
+      "git_blob": "8d8750246b04d61eba9c9fd3ea7574c8a5ccf3e2",
+      "sha256": "752bec4d3ff25cc58ba54f0f47e1a430e33c8f85aeb99d4375e429146256d887"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/meal-detail-1280.png",
+      "bytes": 567568,
+      "git_blob": "6a923a24d5902effafbd3afa94e0cfff20733724",
+      "sha256": "e3c2563cc7c53ef1364c42b8b009fb19f4db1daa50aafcab5e45d68bd2a3a046"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/meal-detail-1440.png",
+      "bytes": 617544,
+      "git_blob": "4785f0cebe8963429114a026829a32cb6c38b402",
+      "sha256": "2be0e2f31b420224c8c76b5b844897e8a5d24773c0952f14ee6dacdc093a2de0"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/menu-add-1024.png",
+      "bytes": 57902,
+      "git_blob": "f099d4ba6d6c989f50c978f9a9670edce343be2f",
+      "sha256": "509969b669b52a98b7f135a811264bbbe66f7e3444622b56752ffa93507d515d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/menu-add-1280.png",
+      "bytes": 57910,
+      "git_blob": "34c6becd0ee42ebd48a0efe0ddb2736614344005",
+      "sha256": "1bc615ad262598fff9867a38e16598ab9d7874f1c7625e4759d4ddc06db5bc18"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/menu-add-1440.png",
+      "bytes": 59363,
+      "git_blob": "106fb391e79b37b49cbc8965f3195e6add2f34d7",
+      "sha256": "0b0d07f2a2170aba7704ed533f9f45c35221d6d9a4e6da46ecd3ae6f445952ce"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/pantry-match-picker-1280.png",
+      "bytes": 132239,
+      "git_blob": "36d0fffe1ee50acfc1e34ca8f979f47b1d55c447",
+      "sha256": "97bb3ae4fd9f3dc776b1443d900515ddf6725d4859bacf55d04dbfcb9f0632a2"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipe-search-picker-1280.png",
+      "bytes": 973065,
+      "git_blob": "87d1825de54a336260fa57e7756f540059b550b7",
+      "sha256": "e9fcf78f920e1fabb4f0974b633688264a3cfa2d57529b765b9fa0a12daaa73f"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipe-search-picker-empty-1280.png",
+      "bytes": 31564,
+      "git_blob": "f660f0d7cb23c8b89b1c2f2a687f1f1739c07e11",
+      "sha256": "846e9b3328d4047716bb9ba155dc61fe28dab241755882ba1dfeeb0ec8782a64"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipebook-detail-picker-1280.png",
+      "bytes": 492271,
+      "git_blob": "567d8fb95999b0927b58f5d34de0c68f9ede186a",
+      "sha256": "84f5d33cbad9f6a3b0a1e2f762131898c4931d1921fb04aef5e52b8f3b4ed08c"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipebook-selector-1280.png",
+      "bytes": 102074,
+      "git_blob": "46d240d3e04493c73d3ccac4d33a174c99b7a621",
+      "sha256": "bf9d6d1d362bb4145cb337d21179b090aff60e472878b65db8f7c320fe2779fe"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/servings-confirm-modal-1280.png",
+      "bytes": 543658,
+      "git_blob": "86facf7e605033856bc4b484a5eb120f7c90e008",
+      "sha256": "20d6439b76fa050ba3d34731fa023dea001c52c9fbe318dcb3d9b8d0d044d2fe"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/visual-qa-report.json",
+      "bytes": 10905,
+      "git_blob": "27d0561144d2bfe1500de4ed93e808fc8d1a3702",
+      "sha256": "5e73e4dadfeb42251a56c9010baa74ebbb975afecb07de48bb4a61ccc7e7e7e4"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/yt-import-input-1280.png",
+      "bytes": 45407,
+      "git_blob": "b147e411387754c33d9221b44d2c637b490540a1",
+      "sha256": "94644c16f480a34baa6e16dff97b5077ce25b48297040721a0d0fd57d84c13d6"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-4/yt-import-review-1280.png",
+      "bytes": 73759,
+      "git_blob": "c6a1313cc51929a7dcbc371bb2204e82002a05fb",
+      "sha256": "b8968f2e8651d4e7db244b069a9152383d55da4a6c8839b8b4604b2d6c34c276"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/logout-modal-1280.png",
+      "bytes": 123862,
+      "git_blob": "3360e85c0a887e718b8fec20549ac31ce788920d",
+      "sha256": "2f5dd4b439a8db7e75b3318bc3e983915a51f282564bc69704da0a9a67d6b5a9"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-account-1280.png",
+      "bytes": 67406,
+      "git_blob": "0431373e3ee1b8913126f1b02d21a3e11c37cb09",
+      "sha256": "151abd89484e2950aef6c41329bd9b49fa153ad3b58889e81f99c3964553339e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-help-1280.png",
+      "bytes": 71373,
+      "git_blob": "a88eae749250872fc00a2fbe51cf7e058071185e",
+      "sha256": "6b90249a3e486f9c3d128e8f0d31fdab2a083413105ecc92cd41f64942411402"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-notif-1280.png",
+      "bytes": 65136,
+      "git_blob": "ec42fb662cedca093ae9ae32de541487791ceaa5",
+      "sha256": "217a76db74bf0c5cfaf2b987be1d6bea45352a248c2fd7d4a8fcaf0ab42113b6"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-saved-1024.png",
+      "bytes": 871573,
+      "git_blob": "bfbcc91d2e5747713becf6fbd09c01b70627a01c",
+      "sha256": "7e81b02d84b87e20e5a94bede4a09c164008011fb81b915fbce40540118477cc"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-saved-1280.png",
+      "bytes": 793927,
+      "git_blob": "a236a1d2f6e784640b5bed1da31cb985a3e82f3b",
+      "sha256": "ef736ec4647656f5a29b7beedb17bc8549249e20234d8f243f887c2785b24423"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-saved-1440.png",
+      "bytes": 961740,
+      "git_blob": "8024c1644e851734463dc8013024a98ac0cdfbf4",
+      "sha256": "d10b6746ff59fac2cf15a7c520de02fb85404b1487be5024bc1c58ac9328c6ae"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/nickname-modal-1280.png",
+      "bytes": 117222,
+      "git_blob": "aba5c6f290a136f9838b734609ca2115640af16e",
+      "sha256": "5cc51cb61e337ac5a805b2f1e568710b74a7953c1e1315b7c004bc31e3071dcb"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebook-detail-1280.png",
+      "bytes": 475198,
+      "git_blob": "981a197bfc0fe944829e04db6b75dc0ac47b0cb8",
+      "sha256": "2beda80458efdec144ec7a54d03487316e3dbc62e083419921ef4b396b1a2472"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebook-detail-delete-1280.png",
+      "bytes": 257370,
+      "git_blob": "15b0d35e2909b6e7619eaf76e210dd87c55c300b",
+      "sha256": "ea00be626c3a8e1f5abf6c25142d9153f5fa3ff126b091a1433ee1eedc58a502"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebooks-1024.png",
+      "bytes": 153931,
+      "git_blob": "9504038daad2e6245cb928a631fa4a0341479358",
+      "sha256": "289f3c483599981091a457dfda28ebcd0d69cd6401295f12868e01c021a402fd"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebooks-1280.png",
+      "bytes": 148135,
+      "git_blob": "dad21560f1e5463e15ebe500b420c2f6cbbc1400",
+      "sha256": "bc8dc84c315b06a27941d9d8923c0e73ed1c55bbfa468ad956e1e916fd95d3df"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebooks-1440.png",
+      "bytes": 196344,
+      "git_blob": "8b2d824008f6468b17d2e87c81f3e26735b6365a",
+      "sha256": "2eb4aa6c60bca1ab97fa2e6a025a6c63b70d6de9b003897334ae74df3854b955"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-1024.png",
+      "bytes": 93762,
+      "git_blob": "c08a463650a2b567fd3f1947cd6296cd375b8b0b",
+      "sha256": "25f93e22cf7fdb64fdcf7af75b71ccf809280ebcc4b900a13c29e9c5e7995f1e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-1280.png",
+      "bytes": 95961,
+      "git_blob": "ef5a2940b8ca8a418f6046a179818b8a34599414",
+      "sha256": "17e99ab2dee3abffe1e2f18ed27b8a6d73549e0175fdfea8a1b0fdc84f5a033e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-account-delete-1280.png",
+      "bytes": 129592,
+      "git_blob": "75ff0b0509a85f5388876849442e03dcf853892b",
+      "sha256": "a0559dabee9e6cdbfd4b7e8af5b17519d19d6fbbb5d96ad6eb8118a8a58db0fb"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-danger-1280.png",
+      "bytes": 45222,
+      "git_blob": "83b24cca10049f244fdef383b7d35293912e32ad",
+      "sha256": "3dd4ee4ef25d3835fe3164033da75db45903ba80468ecf0982de2c26d257466b"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-5/visual-qa-report.json",
+      "bytes": 3097,
+      "git_blob": "34f540066ff6b8860f7e01f2936a0140fb6c0440",
+      "sha256": "d252744c0e1bca52a424a86584eda8ae3c3f55e98d508600cfeb8ee02429f844"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/claude-review-phase6.md",
+      "bytes": 1587,
+      "git_blob": "8328521a839b8295abaeabea012cfb4651901ca0",
+      "sha256": "f767fb5273e206f77694c27b5317c5a301637cb835b69a9f0b16f1c24060908e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/mypage-shopping-nav-1280.png",
+      "bytes": 799865,
+      "git_blob": "98fc416337d308b84c2d15a2b090eff528402673",
+      "sha256": "ae498a5aa57f7ee72014afc5a6bc71edd64900d336def11c432ec8c8c3906ba5"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/pantry-add-modal-1280.png",
+      "bytes": 87010,
+      "git_blob": "675cdc85f9c523b45fed68b9359369d139997472",
+      "sha256": "666bcf67f61aed84d381da3200c6a54348e121f2fb80cdb62d55b920ef84abfb"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/pantry-bundle-modal-1280.png",
+      "bytes": 105061,
+      "git_blob": "9426fc19fbb35d351ce4a184035834fdae9a1ff9",
+      "sha256": "f84b9f3649b482e09c94e9b4fb66fe6e50805e66ea9bcd95ba2c0fc50db245fe"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/pantry-empty-1280.png",
+      "bytes": 48630,
+      "git_blob": "e46a0bcd3d8e6181f6f68ef298527ece0672337a",
+      "sha256": "c79970c4b07857c363b8474ea864b6ab326a717a3ee64e6d9705cdfe574dca2b"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/pantry-sauce-1280.png",
+      "bytes": 59052,
+      "git_blob": "4f4857a4a0ffdd98c3a58d325fe88817a7871aca",
+      "sha256": "3914e190e5ec7661dd6a038ceeee72655f0bd254499544335f20c58adab8f681"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/pantry-search-1280.png",
+      "bytes": 40170,
+      "git_blob": "de211e8bfe05b70cd8ad1cb94566135f576ed3a7",
+      "sha256": "df53173b004901a728e6df54e0577a39f6326739e7cf21aa8cb66059d642aa88"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/pantry-veg-1024.png",
+      "bytes": 59170,
+      "git_blob": "72a9cfd565ec5721899f2050727d659f4db0bdae",
+      "sha256": "e02f1b6f8239766980dbea9ddef7e881a58eb9eb12acc3ad36b4620307bce40e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/pantry-veg-1280.png",
+      "bytes": 60572,
+      "git_blob": "8983cddaeb5a4f57cc3c42b95d07f377b2ab03e7",
+      "sha256": "8c101dcf68fc353c25d48c1a899c17ed746e3064d497ada1a7a13c478c65fdfe"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/shopping-detail-active-1024.png",
+      "bytes": 76978,
+      "git_blob": "e8931770cff093c3467a8663f351cc7196556968",
+      "sha256": "dea441ae58b39c8d96ea3e26e53d9557ae25e3d90da8eedc9db06b962d361360"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/shopping-detail-active-1280.png",
+      "bytes": 75966,
+      "git_blob": "14d765a73c32ba0268692f972063766122a7ea42",
+      "sha256": "a36c0c1a82688b831d1f2ceb325c0bbdb84bc2e493017966f2cc2723d849286d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/shopping-detail-complete-1280.png",
+      "bytes": 50743,
+      "git_blob": "58b6dfe8f885ab43250c0df321fd6c3fcea275ac",
+      "sha256": "159f8c75607f37ecd8e832e759e91aeaa22ab64133cebe4995e9c3139f2fd3e7"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/shopping-detail-reflect-1280.png",
+      "bytes": 128145,
+      "git_blob": "f98d8b53ef8c58f8374a7f4292ef92233d0d8c69",
+      "sha256": "e804d1795208bd6ab6443a34e1e79ab13c140f81216ad0a8487f6c558083cd03"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/shopping-flow-1024.png",
+      "bytes": 71353,
+      "git_blob": "8be22f92bf26b41f4c6f5dcd34b62320677668ed",
+      "sha256": "13de2192b37bf1d91f6c8ab7dfa6e700f4bc054e5d43fe4d8d7c712f2cec36d1"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/shopping-flow-1280.png",
+      "bytes": 57865,
+      "git_blob": "6adef67a8dad850891e132766b5fe7aa15bc6ae9",
+      "sha256": "ccd83d0de61174da26f3d647cc8f83e75d6d9fe0360f8c00d6125177ce3268e7"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/shopping-lists-1280.png",
+      "bytes": 39514,
+      "git_blob": "378911c170e3ea3e637a54df3a80a08ab0fbd785",
+      "sha256": "1c68baabe49b4615d0e7d9b42576eb6e5e5722db02df071a9d0549ad671a280e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-6/visual-qa-report.json",
+      "bytes": 6096,
+      "git_blob": "5cf8097abb06697def8befae092e74e43e57a3cd",
+      "sha256": "811a929a2a76b92e815da4dee27e1684887dac7b56ad57f750bd3a6bed82ec97"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/ate-list-1280.png",
+      "bytes": 58110,
+      "git_blob": "ef0b3ca44e44db1f1839507b2f7837aba876c879",
+      "sha256": "dcea97d6c835ffaee61ee1314ce36e7ae8d1f160903aa97f87823eb5551f2706"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/ate-list-empty-1280.png",
+      "bytes": 37402,
+      "git_blob": "8e13b754bf4cdf30f2d8673473dfa8ef07123ada",
+      "sha256": "6c78f255c0f7293dd1bd01717b42c1d0009c456522188ad505e21f7f2d76ac0c"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/claude-review-phase7.md",
+      "bytes": 1871,
+      "git_blob": "1367565588230c67fb11e8df1b1d7c4569096f67",
+      "sha256": "0cf2d1255b87d18415fe17ad229588d6f3e498d4ad62f3a707b7e6b8a78039bc"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-mode-planner-1024.png",
+      "bytes": 75787,
+      "git_blob": "b3f2732ef732c4ca34c3225d6fae76fa72d5bab4",
+      "sha256": "0e225c1e0ac9018c8ecffef20bb2d6c9b104ea15eef852d4a7bdcf37606500c2"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-mode-planner-1280.png",
+      "bytes": 73641,
+      "git_blob": "e2c3a0ce8cef9e0d860096377193085d941d155d",
+      "sha256": "623f6fbbe3bbc24ca5fc504a2bccff7166ccf27b99f332c2cc48f0f960949ffe"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-mode-standalone-1280.png",
+      "bytes": 81666,
+      "git_blob": "d26af862f6c39668073f84ee9f24207183571f17",
+      "sha256": "72310bbfa1afe3af58da17bbe08b1888a6e27b81f613fb342c9177a6aa0b98e8"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-mode-standalone-recipe-1280.png",
+      "bytes": 77151,
+      "git_blob": "6e5a5debc25f4cdb033618c39fb103e598a2a178",
+      "sha256": "202f3ee4863d10a57cf66cd30f1a0859f16b459c0ed09ae5557a6c721a66f3ba"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-notice-1280.png",
+      "bytes": 169783,
+      "git_blob": "e7b5b414980ae2dc69c637319e564bb437a38a19",
+      "sha256": "1847db6e310216186c641b2cf436d8e798d92da592bb7f324a55df726bcc92c9"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-ready-empty-1280.png",
+      "bytes": 35064,
+      "git_blob": "a88f43a4d876b0d2dc296145cc8d9d1ae45810f6",
+      "sha256": "c4d774e92493447703080e2f84e2bf4626dbf4ade6f7949826d6cf99d0d66012"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-ready-list-1024.png",
+      "bytes": 126156,
+      "git_blob": "3e79bc40eff3a6df2399bcb978d6db06dcfb6fa6",
+      "sha256": "fc342e8ff05d019792c213629e792a378222f9e31e7bf4cc0e364b428f971648"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/cook-ready-list-1280.png",
+      "bytes": 125271,
+      "git_blob": "701f7640410e9bc08ae0cc604fe84c27d52fe1d8",
+      "sha256": "9eab7240fb7ef8dcd167801d4bbf5b58ccd3f5052fbea494d5925c9a83678a4d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/leftovers-1024.png",
+      "bytes": 538971,
+      "git_blob": "ee37249f686a46c9a40bbc9e11d61f46077ded68",
+      "sha256": "2be918eaed582f5733d1dd65733c0189d20ca0661fe0f82b8f13a27a4aec671f"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/leftovers-1280.png",
+      "bytes": 399846,
+      "git_blob": "d613c6cade76ffd6f4717b33f0b64bbe42da69bb",
+      "sha256": "67bae0b83037dcb091d301e647a40c24bda0037f77fc7d2ef6c4716e85affe19"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/leftovers-empty-1280.png",
+      "bytes": 35347,
+      "git_blob": "e23543280943bd7b162ce42a711cbc777a54fcc6",
+      "sha256": "27775327a0fa24cfdfbf01112ed1b1a1549c70e52899dbd73a1e911452a62808"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/mypage-cooking-nav-1280.png",
+      "bytes": 811343,
+      "git_blob": "49fa7438e23b4d01a48aff75a96597a06bf231af",
+      "sha256": "55e8f619b85f332315976452c6e268bbcf153e840cf1a39971063eac8f6e9dbe"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-7/visual-qa-report.json",
+      "bytes": 1092,
+      "git_blob": "a027c7f641c19a0f27642476eae90796ce31f3ca",
+      "sha256": "a9b1a8d896b95cf6c0d82279b74313d9757b8ef59b60aa31adb643b41d7db739"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/ate-list-1280.png",
+      "bytes": 58149,
+      "git_blob": "a8f00dcfbb6a7abb8b0b7dd24181ac84615c047b",
+      "sha256": "7eb852d0f54054af5b37b05373f27f94e6bd98c33bda468808989b22feb2add3"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/claude-review-phase8.md",
+      "bytes": 1868,
+      "git_blob": "a93d04bbc04c372513dad4a9c78b18a7b0081329",
+      "sha256": "20c2801229d0da2183fd378ce96c963b16ec81a2971ce734b2a47333efb244a7"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/cook-mode-planner-1280.png",
+      "bytes": 73643,
+      "git_blob": "11a12f960fc435d7812a3763e3a49fc6a8508294",
+      "sha256": "0604a5f674ec5796c6e2d1a142fcb173a2621fa08daa025ab436eda4b10262db"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/cook-mode-standalone-1280.png",
+      "bytes": 77151,
+      "git_blob": "6e5a5debc25f4cdb033618c39fb103e598a2a178",
+      "sha256": "202f3ee4863d10a57cf66cd30f1a0859f16b459c0ed09ae5557a6c721a66f3ba"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/cook-notice-1280.png",
+      "bytes": 170049,
+      "git_blob": "1d6ceb727fe07b34e1b3da43138e74de9c1168d4",
+      "sha256": "7c4a3bfa49fe4c37ef5e67375047831c464f129fe8a868f52a11b6e002a1e50e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/cook-ready-list-1280.png",
+      "bytes": 125268,
+      "git_blob": "fb726240d1b822bb3af536d579e3b36390e771b4",
+      "sha256": "b96caaedc4f2fc4ac1d0cef93899228dcfca62b2f79e2473a2ae4a41eab2d1bb"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/full-surface-qa-report.json",
+      "bytes": 2605,
+      "git_blob": "6948c71bcae4ff9fd612dcf8c8cd8f2daf577a19",
+      "sha256": "ffec49d4ab43c2c57fd4838315c59f435a8fc757a0114a0b5ee4c1fa434465bf"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/home-1024.png",
+      "bytes": 1430601,
+      "git_blob": "a4914d4f63f0002a4285478d299943e42e17a2ae",
+      "sha256": "0c17d865c9652b65095d923e6ca0af41c6a99f73e11a2f62f9a0cb43884dcee8"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/home-1280.png",
+      "bytes": 1416844,
+      "git_blob": "b2d65281eac5e48e135d4ccd6372311f2757b704",
+      "sha256": "724199d708c954f1df5bb8fd638f538bee3318e9f1e2f317f094f6d2c04eed3d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/home-1440.png",
+      "bytes": 1302742,
+      "git_blob": "ee585ac2804b151f5bc6841a171a384deb645ce3",
+      "sha256": "eb89658c5efa1fbadaad530bce072c43ec938c81d6f3c81c997545238703a2e2"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/home-authenticated-1280.png",
+      "bytes": 1412953,
+      "git_blob": "7f6b4676810eca2115cd8055a48b3c9ac2c50652",
+      "sha256": "e41247b5af1413f90801498e8bb41db704b65c4e3299b4ab0da0b978f122d88e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/home-baseline-1280.png",
+      "bytes": 1416844,
+      "git_blob": "b2d65281eac5e48e135d4ccd6372311f2757b704",
+      "sha256": "724199d708c954f1df5bb8fd638f538bee3318e9f1e2f317f094f6d2c04eed3d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/home-mobile-390.png",
+      "bytes": 261989,
+      "git_blob": "7a4a13509e42c55f4abcd355520e0bc983b447f5",
+      "sha256": "75d08487479f4d703f1a469eb85ad2fcde635c9742820140b6f345e64acf5ac3"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/leftovers-1280.png",
+      "bytes": 399840,
+      "git_blob": "28deb1190a7fe8612aeaf1f620a9951edf5c83f4",
+      "sha256": "fd0c1942a5c35059cbc263400cb586d231a3500c3645848ad0fcb70a0103d68e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/login-1280.png",
+      "bytes": 50432,
+      "git_blob": "2e2e862c4e23240ad74d06a8d6623906a0780591",
+      "sha256": "def661038992715dd7735a3aa80f12e0cc9c341aa1ba88d9a3252ca1fb72946a"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/manual-recipe-create-1280.png",
+      "bytes": 54315,
+      "git_blob": "abf1bbb798749834c06b0f8317243fdde3736a5e",
+      "sha256": "46908eae1bf6dd556aa2fa5ef72ded6be7f9f61d9f61b24fee7ad5dc97e5458d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/meal-detail-1280.png",
+      "bytes": 582992,
+      "git_blob": "dccb0a0d1560d74c64dd4d285f5882e9c04a1967",
+      "sha256": "f3c2ed274073036c3ffbb9f4e28aaac95e1086e9e334620e316e374039e1cd79"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/menu-add-1280.png",
+      "bytes": 65348,
+      "git_blob": "334238dc420d9f0a649f7eaf191f6e60bfe4123c",
+      "sha256": "ecb74766299c31abca2a24c666e90187a009a03f42fc33d6040f140442fdd4ef"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/mypage-1024.png",
+      "bytes": 888862,
+      "git_blob": "0527589ad1c5817944a1022cf6374be1d0ba89c3",
+      "sha256": "93ee375bd62f5d59dd5953b00dea598ed1d6cc7bfecb9d8436eae7e06ce3ae90"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/mypage-1280.png",
+      "bytes": 811343,
+      "git_blob": "49fa7438e23b4d01a48aff75a96597a06bf231af",
+      "sha256": "55e8f619b85f332315976452c6e268bbcf153e840cf1a39971063eac8f6e9dbe"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/mypage-1440.png",
+      "bytes": 979743,
+      "git_blob": "bd1da60bb9a220928a8e27722ce71b5ca15ae338",
+      "sha256": "48e47d86d8dfc538d1cfc1fc923d4c37d9cdc599040db03f2b05cb4302220335"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/mypage-mobile-390.png",
+      "bytes": 149685,
+      "git_blob": "d6a1bdd7bb08d44192330412722204d5f9ea5762",
+      "sha256": "ee33d02703c936defe59ff976c35c28226c3602302461313f70744d369589e21"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/nickname-modal-1280.png",
+      "bytes": 117493,
+      "git_blob": "4d3536afb36933ec53615a5c14a65a92c96a588b",
+      "sha256": "e2ebfa59c848860246663116b332ff57f8225c874926adbc2b2ab7d012204661"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/pantry-1280.png",
+      "bytes": 66436,
+      "git_blob": "c1580c8735b73ef153a139bfbf3af41b8fb58ed1",
+      "sha256": "6f4e00c3ff6d4cccedbaf6591f606a615d49e15c06b442e2657c900a6fcbd1b2"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/pantry-add-modal-1280.png",
+      "bytes": 93132,
+      "git_blob": "1c5bc19e8456a71b8e2576e8094d6d2e1a2ec911",
+      "sha256": "187a2628acf3798004f81bc081b087417d822e012bf3a0e11ddaa646e2c81dda"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/pantry-match-picker-1280.png",
+      "bytes": 221360,
+      "git_blob": "e114e0523965c2f60317c18bd3b92e06ad74d28e",
+      "sha256": "d8dd4b218c6b3c04e3200e07ba93d7665ae731b7173bbc96ce17aac880390c16"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/pantry-mobile-390.png",
+      "bytes": 56228,
+      "git_blob": "4c1bdf6ec20a42f3b5206ac7122f94a291aeec45",
+      "sha256": "453ea40938f42450be9e3471f8f5b83948059a11528c96b122926678a35a8373"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/planner-mobile-390.png",
+      "bytes": 61300,
+      "git_blob": "9472e578e39602bb53bc3ce818ae575c36586c96",
+      "sha256": "ddfd1d6c42ba3ac7f80d03671b49a223957c955fddc7aa840c9396d6c62f228c"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/planner-week-1024.png",
+      "bytes": 160163,
+      "git_blob": "f0c188d6b4110942f96f4cb72ee9a887fdd83355",
+      "sha256": "77f21cc2d4d4a5408bd3adeb61ac20873f5b6a06ac91da7c9add9f1586b85c87"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/planner-week-1280.png",
+      "bytes": 205108,
+      "git_blob": "3efb84c0cac2328035762563f45a5f35dcb2188e",
+      "sha256": "07d9d2cd69f9a5810259ed68b927ab48c73261b1e6da9b0929617c87b1dcc23b"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/planner-week-1440.png",
+      "bytes": 227622,
+      "git_blob": "db919ffc6f167670d0355627825fe946e4a0c96a",
+      "sha256": "b60d548cf83a51a5245f5ff8297db2b0cceee101c14e94fb0ff7e3fa44fc5a58"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/recipe-detail-1280.png",
+      "bytes": 743229,
+      "git_blob": "5e1c1e9af9f74cb8cb14a1281d701fbf7b793c9b",
+      "sha256": "350e105153ca3a57619ff291cb47737af1d5311e953460f108d72eb7bb0a36aa"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/recipe-search-picker-1280.png",
+      "bytes": 978725,
+      "git_blob": "054f8fc818ec5f5f4e9e4937f6c7c7fe7c273295",
+      "sha256": "01bd5901cffd2939ae628636678f03f4fcc60602a1078dd0813b9c8ba5a86904"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/recipebook-detail-1280.png",
+      "bytes": 483332,
+      "git_blob": "339cd11a2fa8e4282657d4866ac71030142ed77d",
+      "sha256": "381fbaa140d1d76877eb9aeea7ef50748e2f64366acfd1cbfdd3f2dd78f7643b"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/recipebook-selector-1280.png",
+      "bytes": 90193,
+      "git_blob": "bc0e3a3ca358892d7ed0a2df9bffcd144eb5fc39",
+      "sha256": "8218d82126ff4b4c98a2943d5fea84d3b8df04b456b772f1887b362867f980d3"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/recipebooks-1280.png",
+      "bytes": 154348,
+      "git_blob": "c509f00c21196f6e639df0dd2c524d464c55a968",
+      "sha256": "36cb36e9f0f148c4ea0c34c11f6902262e1aae3a089d43ef607e84077c385729"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/settings-1280.png",
+      "bytes": 95938,
+      "git_blob": "9f4b2d984eec54a0143bb2abe76da427c03aaa70",
+      "sha256": "5e597bb8d006e82831e0adff418dffd639de446f447c138f14da17049712be64"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/shopping-detail-1280.png",
+      "bytes": 75933,
+      "git_blob": "7663e3ebcb19692047e79fb48e4cf40953cbc4f3",
+      "sha256": "a1f6f7a90e0cf70f8e12f92f0a28001dc39f2aa71a98727a5184c682f07caaf9"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/shopping-flow-1280.png",
+      "bytes": 57813,
+      "git_blob": "cceb0bd4347b2b50fa21aa55ff8eefebc5e8f353",
+      "sha256": "2c6f86e8443b8e6b2f027b7b2ff8602d0bebfa613d5f596d9211af3d36a1d974"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/shopping-lists-1280.png",
+      "bytes": 39479,
+      "git_blob": "f84ee8df73299f0d0748ae5d7e5eb8d6ede34fc9",
+      "sha256": "28145c1842e7fe47d20c3722df55c44219844139d7657f2ecbb63ede4d897388"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/phase-8/yt-import-1280.png",
+      "bytes": 51587,
+      "git_blob": "1cb4110a1222190f29d961c54be38f3ff1980078",
+      "sha256": "0ef2744d20d8a63f9770e29b8f0cc93e1b2f68272b5df85ef6d3300357b30abc"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-final/claude-final-review-closeout.md",
+      "bytes": 1524,
+      "git_blob": "040a0077f4c5466e64cf3b76ef6c4cacc53c54d1",
+      "sha256": "db8a2925b495d1e850f4b21c2e3e787d3c7424d11ba5080b5053e95d4706da40"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-ate-list-1280.png",
+      "bytes": 58149,
+      "git_blob": "a8f00dcfbb6a7abb8b0b7dd24181ac84615c047b",
+      "sha256": "7eb852d0f54054af5b37b05373f27f94e6bd98c33bda468808989b22feb2add3"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-browser-smoke.json",
+      "bytes": 134,
+      "git_blob": "5ac7793cd3c3066e473ea8f833b3ea6e23d294aa",
+      "sha256": "c78b98d365d48f3aa708b35691dd6350f81287044a7833cbe299f0df922dd2df"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-home-1280.png",
+      "bytes": 1416378,
+      "git_blob": "404bb71bb97fd503562ffa0dbe202b1d331cbda4",
+      "sha256": "59d7022eac40d8f69619fe7b7570c2e2b56712c099dc6ad852c88b66e1e53431"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-leftovers-1280.png",
+      "bytes": 399840,
+      "git_blob": "28deb1190a7fe8612aeaf1f620a9951edf5c83f4",
+      "sha256": "fd0c1942a5c35059cbc263400cb586d231a3500c3645848ad0fcb70a0103d68e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-mypage-1280.png",
+      "bytes": 814707,
+      "git_blob": "4cd79de359c9d8572ee2f69fa68681958faa1fc5",
+      "sha256": "eddc92a3f5ea60a9fbd84b5d87e7d1a46717cd9f9c10d0792276108f6da27902"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-navigation-smoke-rerun.json",
+      "bytes": 62,
+      "git_blob": "0176cc62c0ee2294af0fb6a70bfd75377e881b09",
+      "sha256": "81333f6b13d22df9b3be1f084a9690688055740d20693cb5fe186f95c0c30445"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-navigation-smoke.json",
+      "bytes": 66,
+      "git_blob": "a914c4aa90277b2e478a7ee13c399f2f03029305",
+      "sha256": "b5371971cb7dd1c0dd40a24ecd0647575c3d23d5d1313d587632bda835e25149"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-recipebook-detail-1280.png",
+      "bytes": 481254,
+      "git_blob": "54a5274923cb1952a432d0ec6f7ae3aa426a3d40",
+      "sha256": "4fef401b4ae50360a09f936708fc309513389bdf8699c064063e6e3be37b4e97"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-recipebooks-1280.png",
+      "bytes": 154348,
+      "git_blob": "c509f00c21196f6e639df0dd2c524d464c55a968",
+      "sha256": "36cb36e9f0f148c4ea0c34c11f6902262e1aae3a089d43ef607e84077c385729"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-shopping-detail-1280.png",
+      "bytes": 75933,
+      "git_blob": "7663e3ebcb19692047e79fb48e4cf40953cbc4f3",
+      "sha256": "a1f6f7a90e0cf70f8e12f92f0a28001dc39f2aa71a98727a5184c682f07caaf9"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/phase0-shopping-lists-1280.png",
+      "bytes": 45554,
+      "git_blob": "ba7dae4858d21ca40536d07d8784d59465940776",
+      "sha256": "7a97db481678f963df22bf3406f60decc614826c3293722e845a24d51d4977e6"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-0/structure-gate-ledger.md",
+      "bytes": 2187,
+      "git_blob": "201ce7a237a25fa5b693b3b972848e4947fc9712",
+      "sha256": "bff7af602a9a977ed578b5cc0f5cb893b8a3cf654fd86cd51f24d0ea12e9e2dc"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-1/phase1-pantry-locked-servings-modal-1280.png",
+      "bytes": 260625,
+      "git_blob": "8a28a5ca6d5b841481f2e7125ee15aeba1280b09",
+      "sha256": "0d5c946714f771420c58241fc7eec6c4640cc7281e35a56348374aea091b2466"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-1/phase1-planner-target-smoke.json",
+      "bytes": 920,
+      "git_blob": "61c7a0f55a0cc5b1e45c778c389186e6888d5c99",
+      "sha256": "511487c19908b1f90e435b8478b605a31c9cc7f6c712ef07ea587995db9af0c1"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-1/phase1-recipebook-locked-servings-modal-1280.png",
+      "bytes": 514619,
+      "git_blob": "85e8b78c80b6f32fd11cf6b867c793a1835a3cc7",
+      "sha256": "93017008a5f0d634451ac63021f95d727188a6a7add0410f8cf0be30918582ec"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-1/phase1-search-locked-servings-modal-1280.png",
+      "bytes": 674872,
+      "git_blob": "a3a6c3e55fec3ce0324c9433b4f3e5b3b694ecc6",
+      "sha256": "917bff5f420b0e1f8d5424db52b5c85a586594ce79bcfbf52d4b6707c5192e5b"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-1/planner-target-preservation-ledger.md",
+      "bytes": 1184,
+      "git_blob": "715b40a4937bb2814746b8356dd6daeae7614d59",
+      "sha256": "c91aa3571dc3b5ff5cb3be7d57dab8698e432e8b9e53c11bbdbffccf313ef80d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-2/direct-create-import-coherence-ledger.md",
+      "bytes": 1441,
+      "git_blob": "4acf6b44318640aa390466de3a4e2c00ce336c3a",
+      "sha256": "68c4a12118fe4b85607d72df30f717393888da6b28ceed1e4a6e66caf659f60d"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-2/phase2-direct-create-import-smoke.json",
+      "bytes": 608,
+      "git_blob": "e931c6063b98e2845d2a0f05c2737dd1b11e16d1",
+      "sha256": "2a998adb78deccae2af919590185e54e51bf2aa669c365e4ef7044d71bb8a69c"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-2/phase2-manual-create-direct-planner-1280.png",
+      "bytes": 223658,
+      "git_blob": "f5e621ea1eecf71cad0b091b47afb3efdb7823f9",
+      "sha256": "409a2e80332962b791dada1581af4bf0dc66e92cc452f6c2c6bf7e7d92eaaefd"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-2/phase2-search-locked-slot-regression-1280.png",
+      "bytes": 1116994,
+      "git_blob": "5d2335e5198ffea41b382b61e0bdb79628e6378a",
+      "sha256": "6ae47a09073ea4296bbb2acfc5646502632df4cd0e7d7b723f49d2a2a79d5e45"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-2/phase2-youtube-import-direct-planner-1280.png",
+      "bytes": 237229,
+      "git_blob": "669f6935feca4508074d3947548e384065e1d850",
+      "sha256": "d04b988f1c4a3ba388a159c5c8b20d85d7801fb1b6853397b913f8067eb3612f"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-3/phase3-cook-completed-no-duplicate-modal-1280.png",
+      "bytes": 276977,
+      "git_blob": "5d60078274aacf999dc738de435cc9b36d24d436",
+      "sha256": "d538e2662b839511ba2db6e625d8eb6ec138bbb5ebba98f186247bc7e827ebd4"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-3/phase3-linked-shopping-reopen-1280.png",
+      "bytes": 74308,
+      "git_blob": "3728215d2115f55403247480868a6642551badcd",
+      "sha256": "14cf9bb94ae40fc8a247d6ef5750a956a1b34692e31b8eabe0e249fcb641b94f"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-3/phase3-shopping-completed-readonly-1280.png",
+      "bytes": 86011,
+      "git_blob": "9cbe6189c4a66894fb5a8ab0c70803590104307c",
+      "sha256": "0bcd08188dafb61801735850c6cc64fd6e06048fd4128455b0818acbe7dd2361"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-3/phase3-shopping-cook-state-smoke.json",
+      "bytes": 606,
+      "git_blob": "b379bfa3c1567cfa36bf4b76a7834a4b768cd3d2",
+      "sha256": "892f5de6dc9bc48349e6a1f8b65bd7bd2ced5c68e0c3bb0db40759ffad51d2cc"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-3/shopping-cook-state-integrity-ledger.md",
+      "bytes": 1477,
+      "git_blob": "eb1872af7b09e24ee2196ba1ca4636d7cd5270eb",
+      "sha256": "efc04a562d90044d673c9f47a27747ce7107c0ef9536a9175ea14404c49c39d4"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-4/ate-undo-restored-leftover.png",
+      "bytes": 484603,
+      "git_blob": "a2d9af98cea15a39ca4347da39c4519d448d9ef2",
+      "sha256": "696d14087b14271a3f0e8bec8f7f05dd02dfb663795b02f303082393281801da"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-4/leftover-moved-to-ate-list.png",
+      "bytes": 88226,
+      "git_blob": "e6cbeb364b39a2459c9c16293783e12a9e24124d",
+      "sha256": "ed663ad558e4d43b1029a498b83615805e4dd3945d2cd9d1cbef1c837467eda2"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-4/leftover-planner-add-modal.png",
+      "bytes": 241902,
+      "git_blob": "dd201111418b9be59d40bb8add84e8f1fe323463",
+      "sha256": "bb441638958fd08e2e10b3a04d56b83b001f99f5613912760254449b2a052fd5"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-4/phase-4-smoke-result.json",
+      "bytes": 476,
+      "git_blob": "6ed99ad3898267350d9d9931b013092714b32999",
+      "sha256": "2d38d9b91e15026c6dcb4aefcba26ccb7da566d0c90896a58c4e11dcbd586553"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-4/planner-cook-complete-created-leftover.png",
+      "bytes": 721818,
+      "git_blob": "2ab66791eb273dfa72476c8ef86aba3b73d0bfea",
+      "sha256": "c0140aa1225e1cf9d1ce63850a8aa99d272999af29d728a41a83ad9fb4639139"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/claude-review-phase5.md",
+      "bytes": 1061,
+      "git_blob": "94faf939b7eaea4bc0a39d8ec8cc5f91b271f81c",
+      "sha256": "58a4172f71a2472856b18943678f00465247a617800862e30f30f448d00dd29e"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/logout-home-signed-out.png",
+      "bytes": 1292993,
+      "git_blob": "b8597296185c4ecd67c9faac2afe921609380e20",
+      "sha256": "a61f92196b8a6408c52afa6d31420f3e9278b8b246e0dd807582ebd782a2dfa5"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/logout-retains-live-recipebook-state.png",
+      "bytes": 216268,
+      "git_blob": "7523e50637542d492f2dd69ec50944f9cfc1c2cc",
+      "sha256": "1ce9f0f6e2675aafbe0511144bfa8927c9c0a432aa2baa618ad85292c06af52c"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/phase-5-smoke-result.json",
+      "bytes": 640,
+      "git_blob": "93e7b1889f3d5a114f1b040a8c590975f61e806c",
+      "sha256": "2f36df07339f4530d17bc24aca5e398bcc2f9ad243bf1d9943a526af7bdefe83"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/recipebook-created-empty-detail.png",
+      "bytes": 38917,
+      "git_blob": "0ec1e3eabd3daf9339351846bb972f2313a0a33e",
+      "sha256": "ba48e57e988192da82ce24ba770b2ef042decf00477d11293a0ea1f262505c6b"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/recipebook-edited-title-detail.png",
+      "bytes": 40978,
+      "git_blob": "504fc56263a97347e290f324041555f3648f701c",
+      "sha256": "bcb7ef99aee7eebc59762cdd789a395060aff7508bde13e39fdc5e5e72c711ab"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/recipebook-picker-empty-state.png",
+      "bytes": 41638,
+      "git_blob": "48d0411ee3defdeb42d7387a48647a1824c6c8ce",
+      "sha256": "55122a0df4090cf28bf2eb4efe7a948db91198aabd7602626816493356ca1e8c"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/shopping-lists-retain-original-and-readd.png",
+      "bytes": 60071,
+      "git_blob": "4f490295ad54febec021aea127b6b74209ed6e1f",
+      "sha256": "105977500c6183fe331293384bc0fc9fd48269cd5ee65e653a6d69a907fd0236"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/shopping-manual-list-detail.png",
+      "bytes": 52328,
+      "git_blob": "9a67a429f7397d0c6dfe7ac5e98aa7cfd1c11be6",
+      "sha256": "d6414e7b251cbdf7346be4d356415db22c6cc49aa6a4db3d4fe4eea844b8bcba"
+    },
+    {
+      "path": "ui/designs/evidence/desktop-modern-redesign/ux-flow-fixes-phase-5/shopping-readd-list-detail.png",
+      "bytes": 55523,
+      "git_blob": "d8253840a7d3d54b1d8991da130b843eb8df305f",
+      "sha256": "a32068fef4cb777ba4712812857f3ac7f9d96df5314ee08b71b652d5f038f587"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ Date: 2026-05-14
 Target: `ui/designs/prototypes/claude-design-260512-desktop/`
 Plan: `.omx/plans/desktop-prototype-modern-webapp-redesign-ralplan-20260513.md`
 Ledger: `PHASE0_PARITY_LEDGER.md`
-Evidence: `ui/designs/evidence/desktop-modern-redesign/phase-8/`
+Archived evidence: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-8/`
 
 ## Verdict
 
@@ -16,7 +16,7 @@ Phase 8 full-surface traversal verified that all canonical ledger rows are close
 
 Source report:
 
-- `ui/designs/evidence/desktop-modern-redesign/phase-8/full-surface-qa-report.json`
+- manifest entry `phase-8/full-surface-qa-report.json` in `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`
 
 Results:
 

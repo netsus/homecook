@@ -74,9 +74,9 @@ workpack/authority documents ────> ui/designs/evidence + docs/design/ass
    - 재생성 가능성과 폴더 메모 의미를 한 번 더 확인한다.
 4. `ui/designs/evidence/desktop-modern-redesign`
    - 182개, 50.075MiB.
-   - 활성 runtime/test 직접 참조는 확인되지 않았지만 12개 파일이 참조한다. 이 중
-     handoff/phase ledger는 8개이고 자체 QA JSON 3개와 현재 porting ledger 1개가 남아 있다.
-   - final/ledger를 남기고 중간 phase와 byte-identical 파일부터 축약한다.
+   - 활성 runtime/test 직접 참조는 없고, 2차 A에서 외부 handoff/phase/porting ledger 9개를
+     `historical-manifests/desktop-modern-redesign.json`으로 전환했다.
+   - manifest 검증이 merge된 뒤 별도 삭제 PR에서 현재 tree의 182개를 제거한다.
 
 동일 Git blob은 전체 저장소에 79그룹/추가 사본 93개/9.899MiB가 있다. 대상 디자인 영역에는
 59그룹/추가 사본 62개/8.386MiB가 있다. Git object는 이미 한 번만 저장하므로 이 수치는
@@ -213,6 +213,17 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 위 두 큰 범위는 파일별 `path / bytes / dimensions / SHA-256 / blob / source commit / result /
 replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으면 삭제 후보로 승격하지
 않는다.
+
+### Desktop modern redesign archive preparation
+
+- 대상: 182파일 / 52,507,552 bytes / 50.075MiB
+- runtime/test direct consumer: 0
+- external handoff/ledger consumer 9개는 compact manifest로 전환
+- manifest: 원래 path, bytes, Git blob, SHA-256, source commit/tree, final decision,
+  recovery command 포함
+- deterministic regeneration command는 역사적 수동 캡처라 존재하지 않음을 `null`과 note로 명시
+- 이 준비 단계에서는 원본 182파일을 유지하며, manifest와 consumer 검증이 먼저 merge된 뒤에만
+  별도 삭제한다.
 
 ## 10-D closeout
 

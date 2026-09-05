@@ -7,7 +7,7 @@ Phase: 7 of 8
 Plan: `.omx/plans/desktop-prototype-modern-webapp-redesign-ralplan-20260513.md`
 Ledger: `PHASE0_PARITY_LEDGER.md`
 CSS target: `styles-phase7.css` (loaded after `styles-phase6.css`)
-Evidence target: `ui/designs/evidence/desktop-modern-redesign/phase-7/`
+Archived evidence: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-7/`
 
 Post-review correction: Phase 7 implemented pantry deduction as the reachable inline
 `CookIngredientChecklist` rail inside planner/standalone cook mode, not as a separate
@@ -1370,7 +1370,7 @@ classes in `styles-phase7.css`.
 
 ## 9. Screenshot / Visual QA Matrix
 
-### Required evidence files at `ui/designs/evidence/desktop-modern-redesign/phase-7/`
+### Historical evidence files archived under manifest prefix `phase-7/`
 
 | File | Description | Width | Key checks |
 | --- | --- | --- | --- |
@@ -1418,7 +1418,7 @@ After Phase 7 implementation and evidence capture, update `PHASE0_PARITY_LEDGER.
 Change Phase 7 row in the summary table:
 
 ```markdown
-| Phase 7 | Cooking, leftovers, ate list | 7 owner rows | Verified in Phase 7; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-7/`. |
+| Phase 7 | Cooking, leftovers, ate list | 7 owner rows | Verified in Phase 7; evidence archived under manifest prefix `phase-7/`. |
 ```
 
 ### Screen rows to update
@@ -1467,7 +1467,7 @@ Change Phase 7 row in the summary table:
 Extend the existing Phase 6 QA script pattern:
 
 1. Navigate to each new screen at 1024px and 1280px widths
-2. Capture screenshots to `ui/designs/evidence/desktop-modern-redesign/phase-7/`
+2. Historical screenshots are manifest entries with prefix `phase-7/`; do not regenerate them into the tracked tree
 3. Check for console errors and page errors
 4. Check for failed network requests
 5. Output `visual-qa-report.json` with `findings`, `pageErrors`, `failedRequests` arrays
