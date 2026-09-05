@@ -411,8 +411,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(agentWorkflowOverview, [
       "Claude는 더 이상 사용하지 않는다.",
       "## Codex 새 작업 public stage 흐름",
-      "Stage 1/2/4 작성·구현 작업은 자기 변경을 승인하지 않는다.",
-      "internal 1.5, Stage 3/5/6, final authority는 검토 대상 작업과 다른 task ID를 사용한다.",
+      "Stage actor 분리, 새 task ID, handoff evidence는 `docs/engineering/codex-task-handoff.md`가,",
+      "Stage별 사전 조건·산출물·closeout은 `docs/engineering/slice-workflow.md`가 단일 소스다.",
     ]),
     ...containsNone(agentWorkflowOverview, [
       "## Claude public stage 흐름",

@@ -92,11 +92,8 @@ Claude는 더 이상 사용하지 않는다.
 
 ## Codex 새 작업 public stage 흐름
 
-- 조정 작업은 `workpacks/<slice>/README.md + acceptance.md`와 이전 Stage evidence를 확인한다.
-- Stage마다 `docs/engineering/codex-task-handoff.md`의 역할표에 맞는 새 Codex 작업을 열고, branch/commit/PR/evidence를 handoff한다.
-- Stage 1/2/4 작성·구현 작업은 자기 변경을 승인하지 않는다.
-- internal 1.5, Stage 3/5/6, final authority는 검토 대상 작업과 다른 task ID를 사용한다.
-- 상세 읽을 것, 산출물, closeout 의무는 `docs/engineering/slice-workflow.md`를 따른다.
+Stage actor 분리, 새 task ID, handoff evidence는 `docs/engineering/codex-task-handoff.md`가,
+Stage별 사전 조건·산출물·closeout은 `docs/engineering/slice-workflow.md`가 단일 소스다.
 
 ---
 
