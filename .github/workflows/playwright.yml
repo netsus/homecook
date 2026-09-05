@@ -1,5 +1,9 @@
 name: QA
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.action == 'synchronize' && format('pr-{0}-head-updates', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.action == 'synchronize' }}
+
 on:
   workflow_dispatch:
   schedule:

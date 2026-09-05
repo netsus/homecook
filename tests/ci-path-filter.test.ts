@@ -112,7 +112,7 @@ describe("ci path filter", () => {
     ).toBe(true);
   });
 
-  it("treats beta landing route, marketing components, and evidence assets as frontend QA inputs", () => {
+  it("treats beta landing route and marketing components as frontend QA inputs", () => {
     expect(
       evaluateCiPathFilters({
         changedFiles: ["app/beta/page.tsx"],
@@ -137,18 +137,66 @@ describe("ci path filter", () => {
       smoke: true,
       visual: true,
     });
+  });
+
+  it("keeps non-runtime marketing archives, evidence, and unit tests out of browser gates", () => {
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: [
+          "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/00-hero-a.png",
+          "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-a-4x5.png",
+        ],
+        eventName: "pull_request",
+        draft: false,
+      }),
+    ).toEqual({
+      code: false,
+      dependency_audit: false,
+      security_function_authorization: false,
+      security_smoke: false,
+      smoke: false,
+      accessibility: false,
+      visual: false,
+      lighthouse: false,
+      full_regression: false,
+      complete_regression_matrix: false,
+    });
 
     expect(
       evaluateCiPathFilters({
-        changedFiles: ["ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png"],
+        changedFiles: [
+          "ui/designs/evidence/marketing-demand-validation/weekly-nutrition-ad-v2.png",
+        ],
+        eventName: "pull_request",
+        draft: false,
+      }),
+    ).toEqual({
+      code: false,
+      dependency_audit: false,
+      security_function_authorization: false,
+      security_smoke: false,
+      smoke: false,
+      accessibility: false,
+      visual: false,
+      lighthouse: false,
+      full_regression: false,
+      complete_regression_matrix: false,
+    });
+
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: ["tests/marketing-demand-validation-v2-contract.test.ts"],
         eventName: "pull_request",
         draft: false,
       }),
     ).toMatchObject({
-      accessibility: true,
-      lighthouse: true,
-      smoke: true,
-      visual: true,
+      code: true,
+      security_smoke: false,
+      smoke: false,
+      accessibility: false,
+      visual: false,
+      lighthouse: false,
+      full_regression: false,
     });
   });
 
