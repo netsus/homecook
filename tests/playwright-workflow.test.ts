@@ -55,6 +55,24 @@ describe("playwright workflow", () => {
     expect(ciRegression).not.toContain("--project=mobile-ios-small");
   });
 
+  it("keeps one-shot marketing evidence capture out of repeated regression", () => {
+    const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    const repeatedRegressionScripts = [
+      packageJson.scripts["test:e2e:regression"],
+      packageJson.scripts["test:e2e:regression:ci"],
+    ];
+    const marketingEvidence = packageJson.scripts["test:e2e:marketing:evidence"];
+
+    for (const script of repeatedRegressionScripts) {
+      expect(script).toContain("--grep-invert '@live-oauth|@evidence-capture'");
+    }
+    expect(marketingEvidence).toContain("tests/e2e/slice-marketing-demand-validation.spec.ts");
+    expect(marketingEvidence).toContain("--grep '@evidence-capture'");
+    expect(marketingEvidence).toContain("--project=desktop-chrome");
+  });
+
   it("keeps only the small iOS smoke sentinel when full regression already covers desktop and mobile Chrome", () => {
     const workflow = readFileSync(join(repoRoot, ".github/workflows/playwright.yml"), "utf8");
     const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {

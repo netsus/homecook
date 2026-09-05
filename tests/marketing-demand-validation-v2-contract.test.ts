@@ -175,11 +175,21 @@ describe("marketing demand validation v2 document contract", () => {
     expect(captureSpec).toContain("resolvedSourceUrl.origin === window.location.origin");
     expect(captureSpec).toContain('resolvedSourceUrl.pathname.startsWith("/assets/")');
     expect(captureSpec).toContain('image.removeAttribute("srcset")');
-    expect(captureSpec).toContain('test("captures hero and result evidence"');
-    expect(captureSpec).toContain('test("captures the main funnel evidence"');
     expect(captureSpec).toContain(
-      'test("captures narrow and responsive evidence and writes the manifest"',
+      'test("captures hero and result evidence @evidence-capture"',
     );
+    expect(captureSpec).toContain(
+      'test("captures the main funnel evidence @evidence-capture"',
+    );
+    expect(captureSpec).toContain(
+      'test("captures narrow and responsive evidence and writes the manifest @evidence-capture"',
+    );
+
+    const repeatedRegressionBlock = captureSpec.slice(
+      captureSpec.indexOf('test("only the result screen scrolls'),
+      captureSpec.indexOf('test("captures hero and result evidence @evidence-capture"'),
+    );
+    expect(repeatedRegressionBlock).not.toContain(".screenshot(");
   });
 
   it.each([

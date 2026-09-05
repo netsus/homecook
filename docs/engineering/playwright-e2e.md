@@ -32,6 +32,7 @@
 - `pnpm test:e2e:security`: auth/session/return-to-action security smoke
 - `pnpm test:e2e:ui`: Playwright UI 모드
 - `pnpm test:e2e:oauth`: `@live-oauth` 태그 테스트만 실행 (실제 외부 서비스 포함)
+- `pnpm test:e2e:marketing:evidence`: `@evidence-capture` 마케팅 Stage 4 증거를 desktop에서 명시적으로 재생성
 - `pnpm test:lighthouse:run`: 이미 build된 앱에서 LHCI만 실행
 - `pnpm test:all`: lint, typecheck, vitest, 전체 slice regression
 - `pnpm verify:frontend:pr`: lint, typecheck, vitest, build, core smoke/a11y/visual
@@ -65,6 +66,7 @@ npx playwright install --with-deps chromium
 - `full-regression` job은 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
 - Ready for Review와 protected branch push의 `full-regression`은 `pnpm test:e2e:regression:ci`를 사용한다.
 - nightly/manual과 `full-ci` label은 기존 complete device matrix인 `pnpm test:e2e:regression`을 사용한다.
+- 일회성 `@evidence-capture`는 반복 regression에서 제외하고 명시적인 evidence 명령으로만 실행한다.
 - Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로가 아니면 PR 본문에 `N/A` 근거를 남긴다.
 - `security smoke`는 별도 workflow에서 auth/backend/frontend security 관련 변경에만 자동 실행한다.
 - docs-only 또는 governance-only PR은 전체 Playwright gate 대신 관련 최소 검증만 보일 수 있다.
