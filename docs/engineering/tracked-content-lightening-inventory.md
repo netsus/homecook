@@ -1,6 +1,6 @@
 # Tracked Content Lightening Inventory
 
-상태: **10-A canonical inventory**
+상태: **10-A canonical inventory / 10-B safe removals complete**
 
 기준 commit: `fa2aaa1fc86ddc73bf5f8fac9f8e3b4365440ddb`
 
@@ -134,7 +134,7 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 
 - 제거 대상: `docs/design/preview*.html` 5개
 - 제거량: 154,092 bytes / 0.147MiB
-- 누적 제거 후 tracked 기준: 6,974개 / 436.155MiB
+- 누적 제거 후 tracked 기준: 6,974개 / 436.158MiB
 - 참조: exact path와 고유 basename의 runtime/test/workflow/dynamic consumer 0
 - 대체 기준: 현재 `docs/design/design-tokens.md`, `docs/design/mobile-ux-rules.md`,
   `ui/designs/BAEMIN_STYLE_DIRECTION.md`와 구현 화면
@@ -144,6 +144,19 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
   - `preview-b-photo.html`: `800c46df313ee0365f7eaa58a2fbeab454bb4722` / `f18afc33754b41fa270c4f19abccee703b8c56dcae377f8a10d6d1f6b2611001`
   - `preview-tokens.html`: `afa61ede9899c9878f4a463464e8d7267b069ce5` / `a9f7ed43df73e6d8bada54e7ca6443b2d9be0a85e06ddc0c22461ad507b7a988`
   - `preview-recipe-title.html`: `1447fbafa958e8603bf18ce6af7ceee26aaf6cb7` / `716b9747aaa21dfd70cbb1497600d69a73933941a5591e3be0f7d4bf53190073`
+
+## 10-B closeout
+
+| 항목 | 10-A 기준 | 10-B 완료 master | 변화 |
+| --- | ---: | ---: | ---: |
+| tracked 파일 | 6,981 | 6,974 | **-7 net** |
+| tracked 크기 | 451.278MiB | 436.158MiB | **-15.121MiB net** |
+| 제거한 콘텐츠 | - | 8파일 / 15.130MiB | inventory 문서 1개 추가 때문에 net 파일 수는 -7 |
+
+10-B는 runtime/test/workflow consumer가 없거나 retained source와 의미가 동일한 후보만 제거했다.
+`desktop-modern-redesign` 50.075MiB는 12개 감사·ledger 참조가 남아 미사용으로 판정하지
+않는다. 동일 blob 사본도 경로 존재 계약과 감사 의미가 섞여 있어 일괄 삭제하지 않는다.
+이 두 범위는 10-C에서 최소 manifest/checksum 전환 가능성을 먼저 감사한다.
 
 ## 재현 명령
 
