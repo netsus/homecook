@@ -234,7 +234,6 @@ test.describe("marketing demand validation v2 /beta", () => {
     }));
     expect(heroPolicy.overflowY).toBe("hidden");
     expect(heroPolicy.scrollHeight).toBeLessThanOrEqual(heroPolicy.clientHeight + 1);
-    await page.screenshot({ path: resolve(EVIDENCE_DIR, "no-scroll-hero-390x700.png") });
 
     await completeMarketingQuiz(page);
     const resultPolicy = await page.locator('[data-stage="result"]').evaluate((screen) => ({
@@ -274,7 +273,6 @@ test.describe("marketing demand validation v2 /beta", () => {
     expect(plannerPolicy.previewGap).toBeLessThanOrEqual(10);
     expect(plannerPolicy.previewClipped).toBe(true);
     expect(plannerPolicy.previewUnderCta).toBe(true);
-    await page.screenshot({ path: resolve(EVIDENCE_DIR, "no-scroll-planner-homecook-390x700.png") });
 
     await page.getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
     await page.getByRole("button", { name: "+ 기록하기" }).click();
@@ -304,7 +302,6 @@ test.describe("marketing demand validation v2 /beta", () => {
     expect(completePlannerPolicy.previewTop).toBeGreaterThan(plannerPolicy.previewTop);
     expect(completePlannerPolicy.previewClipped).toBe(true);
     expect(completePlannerPolicy.previewUnderCta).toBe(true);
-    await page.screenshot({ path: resolve(EVIDENCE_DIR, "no-scroll-planner-complete-390x700.png") });
   });
 
   test("mobile demo pages lock document scroll and keep the bottom action stationary", async ({ page }) => {
@@ -333,7 +330,7 @@ test.describe("marketing demand validation v2 /beta", () => {
     expect(after.top).toBeCloseTo(beforeTop, 0);
   });
 
-  test("captures hero and result evidence", async ({ browser }, testInfo) => {
+  test("captures hero and result evidence @evidence-capture", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "capture once");
     test.setTimeout(120_000);
     await mkdir(EVIDENCE_DIR, { recursive: true });
@@ -349,7 +346,7 @@ test.describe("marketing demand validation v2 /beta", () => {
     }
   });
 
-  test("captures the main funnel evidence", async ({ browser }, testInfo) => {
+  test("captures the main funnel evidence @evidence-capture", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "capture once");
     test.setTimeout(120_000);
     await mkdir(EVIDENCE_DIR, { recursive: true });
@@ -463,7 +460,7 @@ test.describe("marketing demand validation v2 /beta", () => {
     await flowContext.close();
   });
 
-  test("captures narrow and responsive evidence and writes the manifest", async ({ browser }, testInfo) => {
+  test("captures narrow and responsive evidence and writes the manifest @evidence-capture", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "capture once");
     test.setTimeout(120_000);
     await mkdir(EVIDENCE_DIR, { recursive: true });
