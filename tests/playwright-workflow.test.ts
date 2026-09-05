@@ -60,8 +60,14 @@ describe("playwright workflow", () => {
     const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
+    const playwrightConfig = readFileSync(join(repoRoot, "playwright.config.ts"), "utf8");
+    const normalSmoke = packageJson.scripts["test:e2e:smoke"];
     const iosSentinel = packageJson.scripts["test:e2e:smoke:ios-sentinel"];
 
+    expect(normalSmoke).not.toContain("--project=");
+    for (const projectName of ["desktop-chrome", "mobile-chrome", "mobile-ios-small"]) {
+      expect(playwrightConfig).toContain(`name: "${projectName}"`);
+    }
     expect(iosSentinel).toContain("--grep '@smoke-core'");
     expect(iosSentinel).toContain("--grep-invert '@live-oauth'");
     expect(iosSentinel).toContain("--project=mobile-ios-small");
@@ -71,7 +77,12 @@ describe("playwright workflow", () => {
     expect(workflow).toContain("name: Run core Playwright smoke suite");
     expect(workflow).toContain("if: needs.changes.outputs.full_regression != 'true'");
     expect(workflow).toContain("name: Run small iOS smoke sentinel");
-    expect(workflow).toContain("if: needs.changes.outputs.full_regression == 'true'");
+    expect(workflow).toContain(
+      "if: needs.changes.outputs.smoke == 'true' && needs.changes.outputs.complete_regression_matrix != 'true'",
+    );
+    expect(workflow).toContain(
+      "if: needs.changes.outputs.full_regression == 'true' && needs.changes.outputs.complete_regression_matrix != 'true'",
+    );
     expect(workflow).toContain("run: pnpm test:e2e:smoke:ios-sentinel");
   });
 

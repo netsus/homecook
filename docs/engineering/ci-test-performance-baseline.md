@@ -245,19 +245,20 @@ complete QA set을 실행한다.
 
 ## Step 10 implementation and local evidence
 
-full regression이 실행되는 QA run의 별도 smoke job은 `mobile-ios-small` sentinel만 실행한다.
+CI matrix full regression이 실행되는 QA run의 별도 smoke job은 `mobile-ios-small` sentinel만 실행한다.
 일반 PR smoke는 기존 `desktop-chrome`, `mobile-chrome`, `mobile-ios-small` 세 project를
 그대로 유지한다. full regression의 desktop/mobile Chrome 검출력과 별도 accessibility·visual
-suite도 변경하지 않는다.
+suite도 변경하지 않는다. nightly/manual/`full-ci`의 complete matrix는 iOS를 포함하므로
+별도 smoke job 전체를 생략한다.
 
 로컬 `mobile-ios-small` sentinel은 25 instances를 예약해 20 passed, 5 intended skipped,
 28.4초로 완료됐다. 기준선의 별도 smoke 75 instances 중 full regression과 겹치던 50개를
-제거하고 고유한 25개만 남긴 결과다. GitHub runner의 실제 wall time과 runner-time proxy는
+제거하고 CI matrix에 고유한 25개만 남긴 결과다. GitHub runner의 실제 wall time과 runner-time proxy는
 이 PR의 current-head QA와 merge 후 master run에서 다시 기록한다.
 
 고정 대기는 관찰 가능한 완료 조건이 있는 8곳만 교체했다.
 
-- shopping PATCH 세 곳은 request handler 완료를 `expect.poll`로 확인한다.
+- shopping PATCH 세 곳은 request handler 호출을 `expect.poll`로 확인한다.
 - manual/youtube 재료 검색 두 곳은 결과 checkbox locator의 auto-wait를 사용한다.
 - planner layout 세 곳은 임의 100ms 대신 연속 두 animation frame을 기다린다.
 
