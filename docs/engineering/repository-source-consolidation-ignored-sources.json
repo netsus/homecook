@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "kind": "ignored_source_like",
+  "generated_at": "2026-09-05T08:10:17Z",
+  "funnel_commit": "0aaa282552256ac9e77a5c134bb45a52e42ade33",
+  "homecook_commit": "1b008936df16dcef8f9a68a964a6ba8b4c616fce",
+  "classification_precedence": [
+    "current_duplicate",
+    "tracked_baseline_duplicate",
+    "unique"
+  ],
+  "summary": {
+    "files": 23,
+    "bytes": 31653096,
+    "by_classification": {
+      "current_duplicate": {
+        "files": 8,
+        "bytes": 11163820
+      },
+      "unique": {
+        "files": 15,
+        "bytes": 20489276
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "public/assets/funnel/hero/landing-a.png",
+      "bytes": 1291930,
+      "sha256": "e6bb00ab7a5d5289fdd795775abc4ae22754d4d5d4b48532f90e3c0058927347",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "public/assets/funnel/hero/landing-b.png",
+      "bytes": 1743665,
+      "sha256": "3daa7e27ff54aa83c26df81ddc4bdfb8482b5f9e0058e102a4618537d8cc9d3d",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "public/assets/funnel/hero/landing-c.png",
+      "bytes": 1485639,
+      "sha256": "ac0a3cb1a29fccf531ffbf6f8908bfa71eaa45d0a23e15334e7a6ebd22f1737f",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "public/assets/funnel/hero/landing-d.png",
+      "bytes": 1060676,
+      "sha256": "db5f5a3f5fca0a8aed902785bcccab8c546d57834993de771094890fc58d3241",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_1.png",
+      "bytes": 1239320,
+      "sha256": "1f1890e80f3606613d6a5adfea460752ae59af5c50c77ecbadd5babd68a60bca",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_2.png",
+      "bytes": 1742747,
+      "sha256": "86609a850964b3b2101ed1fe6d540463fd141f9b27da08583c5a580878e38f87",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_3.png",
+      "bytes": 1115854,
+      "sha256": "ee34ec250e549e7c17b52aa254db30328ecb9ee83903894164d7a467be4295d0",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_4.png",
+      "bytes": 1083659,
+      "sha256": "54d676f46b9e520eb3ab42091149407a59d3cab366f048882e1c5b80245dc92f",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_5.png",
+      "bytes": 1743665,
+      "sha256": "3daa7e27ff54aa83c26df81ddc4bdfb8482b5f9e0058e102a4618537d8cc9d3d",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_6.png",
+      "bytes": 1485639,
+      "sha256": "ac0a3cb1a29fccf531ffbf6f8908bfa71eaa45d0a23e15334e7a6ebd22f1737f",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_7.png",
+      "bytes": 1060676,
+      "sha256": "db5f5a3f5fca0a8aed902785bcccab8c546d57834993de771094890fc58d3241",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "public/assets/랜딩페이지screen1_8.png",
+      "bytes": 1291930,
+      "sha256": "e6bb00ab7a5d5289fdd795775abc4ae22754d4d5d4b48532f90e3c0058927347",
+      "classification": "current_duplicate",
+      "preservation_decision": "eligible_for_removal_only_after_active_use_is_zero_and_homecook_origin_content_is_verified"
+    },
+    {
+      "path": "눈대중장인.png",
+      "bytes": 1232691,
+      "sha256": "dcd9583bb2cf94c232d35bf7221475131013d9aa612c04322db59c4aa3c72854",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "성분추적러.png",
+      "bytes": 1105103,
+      "sha256": "bfcbad6f6254971aedea6ce322e0e36821d1869452a4107e7b3dfbe1958b9757",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "소금 눈대중장인.png",
+      "bytes": 1934002,
+      "sha256": "99f09d847b588a5759e72bf5706527e50a68d9bfc49a93dcca4f5e824f3f2a46",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "소금 성분추적러.png",
+      "bytes": 1576117,
+      "sha256": "431e76f14acf603e636acd7944fedc6a76f4b338c259d5d9f765fb91ca2316b2",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "소금 집밥패스형.png",
+      "bytes": 1765065,
+      "sha256": "8967d50813cd0927542660b658ac9710fcfdcb12143cd4b4187cd2ffeefecf12",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "소금 프로계량러.png",
+      "bytes": 1597866,
+      "sha256": "341134056674c36bef7e6ec517f94d80f8d9629114a99e6d00b611cb2a00b3c8",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "와이어프레임1.png",
+      "bytes": 1050486,
+      "sha256": "52ed0e4960ef747ab62c164c12925744525ec81344f58e59d6c4246edda5282c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "와이어프레임2.png",
+      "bytes": 1212253,
+      "sha256": "57491ce3c09e3d62993769ddc620d7e507f718559978f6640d0b87f98fd4cac6",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "와이어프레임3.png",
+      "bytes": 1119778,
+      "sha256": "1c892b6194273a756129e2cbb41285d51ead4a6bf7788a81052b77ee250f2c84",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "집밥패스형.png",
+      "bytes": 1263286,
+      "sha256": "4305b2f5d9810b51dcc35c05ae26c26aad98b22922e8354ff484dac573900ca9",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "프로계량러.png",
+      "bytes": 1451049,
+      "sha256": "106e94d740f87862cf124ec9458eaefbfdb9200c97db341c62bec83b0e8bf98b",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    }
+  ]
+}
