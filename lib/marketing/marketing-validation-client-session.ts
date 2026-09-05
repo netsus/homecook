@@ -146,7 +146,8 @@ export function isMarketingQueueActionCoveredByServerState(action: MarketingVali
 
 export function reconcileMarketingQueueWithServerState(serverState: MarketingValidationAction) {
   const current = readStoredState();
-  const queue = current.queue.filter((action) => !isMarketingQueueActionCoveredByServerState(action, serverState));
+  // A new cookie session cannot inherit pending future steps from an older session.
+  const queue = serverState === "view" ? [] : current.queue.filter((action) => !isMarketingQueueActionCoveredByServerState(action, serverState));
   const dropped = current.queue.length - queue.length;
   writeStoredState({
     queue,
@@ -169,14 +170,18 @@ export async function flushMarketingQueue(send: (action: MarketingValidationQueu
     let flushed = 0;
     while (true) {
       const current = readStoredState();
-      const [head, ...rest] = current.queue;
+      const [head] = current.queue;
       if (!head) return { flushed, pending: 0, stopped: "completed" };
       const result = await send(head);
-      if (!result.ok) return { flushed, pending: current.queue.length, stopped: "request_failed" };
+      const latest = readStoredState();
+      if (!result.ok) return { flushed, pending: latest.queue.length, stopped: "request_failed" };
+      const index = latest.queue.findIndex((action) => JSON.stringify(action) === JSON.stringify(head));
+      if (index !== -1) latest.queue.splice(index, 1);
+      const previousState = latest.snapshot?.serverState;
+      const serverState = result.state && (!previousState || actionRank(result.state) > actionRank(previousState)) ? result.state : previousState;
       writeStoredState({
-        queue: rest,
-        snapshot: current.snapshot ? { ...current.snapshot, serverState: result.state ?? current.snapshot.serverState } : null,
-        version: 2,
+        ...latest,
+        snapshot: latest.snapshot ? { ...latest.snapshot, serverState } : null,
       });
       flushed += 1;
     }

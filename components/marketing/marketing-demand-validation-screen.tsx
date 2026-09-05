@@ -31,13 +31,16 @@ import { MARKETING_VALIDATION_RETENTION_DAYS } from "@/lib/marketing/demand-vali
 import {
   enqueueMarketingQueueAction,
   flushMarketingQueue,
+  isMarketingQueueActionCoveredByServerState,
   readMarketingClientSnapshot,
   reconcileMarketingQueueWithServerState,
   writeMarketingClientSnapshot,
   type MarketingValidationQueueAction,
   type MarketingValidationUiStage,
 } from "@/lib/marketing/marketing-validation-client-session";
+import { MARKETING_VALIDATION_ACTIONS } from "@/types/marketing-validation";
 import type {
+  MarketingValidationAction,
   MarketingValidationAdVariant,
   MarketingValidationQuizAnswers,
   MarketingValidationQuizResult,
@@ -310,21 +313,29 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
   const [shareFeedback, setShareFeedback] = useState<ShareFeedback>(null);
   const transitionLocked = useRef(false);
   const queueErrorRef = useRef("");
+  const serverState = useRef<MarketingValidationAction | undefined>(undefined);
   const reduced = useReducedMotion();
   const preview = Boolean(entry.sharedResult && history.length === 0);
 
+  const rememberServerState = useCallback((next: MarketingValidationAction | undefined) => {
+    if (next && (!serverState.current || MARKETING_VALIDATION_ACTIONS.indexOf(next) > MARKETING_VALIDATION_ACTIONS.indexOf(serverState.current))) serverState.current = next;
+  }, []);
+
   const sendQueued = useCallback(async (action: MarketingValidationQueueAction) => {
+    if (serverState.current && isMarketingQueueActionCoveredByServerState(action, serverState.current)) return { ok: true as const, state: serverState.current };
     const response = await postMarketingValidation({ ...action, honeypot: "" } as MarketingValidationRequestBody);
     if (response.success) {
       queueErrorRef.current = "";
-      return { ok: true as const, state: response.data?.state };
+      rememberServerState(response.data?.state);
+      return { ok: true as const, state: serverState.current };
     }
     queueErrorRef.current = response.error?.message ?? "진행 내용을 저장하지 못했어요. 다시 시도해 주세요.";
     return { ok: false as const, retryable: true };
-  }, []);
+  }, [rememberServerState]);
 
   const record = useCallback(async (action: MarketingValidationQueueAction) => {
     queueErrorRef.current = "";
+    if (serverState.current && isMarketingQueueActionCoveredByServerState(action, serverState.current)) return true;
     enqueueMarketingQueueAction(action);
     const flushed = await flushMarketingQueue(sendQueued);
     if (flushed.stopped !== "completed") return false;
@@ -334,12 +345,14 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
   const initialize = useCallback(async () => {
     setLoading(true);
     setShellError("");
+    serverState.current = undefined;
     const response = await postMarketingValidation({ action: "view", honeypot: "", ad_variant: entry.adVariant, ...entry.attribution });
     if (!response.success || !response.data) {
       setShellError(response.error?.message ?? "진행 정보를 불러오지 못했어요.");
       setLoading(false);
       return;
     }
+    serverState.current = response.data.state;
     reconcileMarketingQueueWithServerState(response.data.state);
     const snapshot = readMarketingClientSnapshot();
     if (snapshot?.quizResult) setResult(snapshot.quizResult);
@@ -357,7 +370,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     setEntryReady(true);
   }, []);
   useEffect(() => { if (entryReady && !entry.sharedResult) void initialize(); }, [entry.sharedResult, entryReady, initialize]);
-  useEffect(() => { if (entryReady && !entry.sharedResult) writeMarketingClientSnapshot({ stage, quizAnswers: Object.keys(answers).length === 4 ? answers as MarketingValidationQuizAnswers : undefined, quizResult: stage === "hero" || stage === "quiz" ? undefined : result }); }, [answers, entry.sharedResult, entryReady, result, stage]);
+  useEffect(() => { if (entryReady && !entry.sharedResult && !loading && serverState.current) writeMarketingClientSnapshot({ stage, serverState: serverState.current, quizAnswers: Object.keys(answers).length === 4 ? answers as MarketingValidationQuizAnswers : undefined, quizResult: stage === "hero" || stage === "quiz" ? undefined : result }); }, [answers, entry.sharedResult, entryReady, loading, result, stage]);
 
   const push = (next: MarketingValidationUiStage) => {
     setHistory((current) => [...current, stage]);
@@ -382,7 +395,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     }
     setRecovering(false);
   };
-  const back = () => { const previous = history.at(-1); if (!previous) { setStage("hero"); return; } setHistory((current) => current.slice(0, -1)); setStage(previous); if (previous === "quiz") setQuestionIndex((current) => Math.max(0, current - 1)); };
+  const back = () => { const previous = history.at(-1); if (!previous) { setStage("hero"); return; } setHistory((current) => current.slice(0, -1)); setStage(previous); };
   const start = async () => { if (await record({ action: "quiz_started" })) { setQuestionIndex(0); push("quiz"); } else setShellError("연결을 확인한 뒤 새로 시작해 주세요."); };
   const select = (id: QuestionId, value: string) => {
     if (transitionLocked.current) return;
@@ -393,10 +406,14 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
       if (questionIndex < 3) setQuestionIndex((current) => current + 1);
       else {
         const exact = next as MarketingValidationQuizAnswers;
-        const response = await postMarketingValidation({ action: "quiz_completed", answers: exact, honeypot: "" });
-        if (!response.success || !response.data?.quiz_result) { setShellError(response.error?.message ?? "답변을 저장하지 못했어요."); transitionLocked.current = false; return; }
-        const derived = deriveResult(exact.q3);
-        setResult(response.data.quiz_result === derived ? response.data.quiz_result : derived);
+        const completed = serverState.current && isMarketingQueueActionCoveredByServerState({ action: "quiz_completed", answers: exact }, serverState.current);
+        // Replaying the quiz changes only the local result; the session's first answers and funnel statistics remain unchanged.
+        if (!completed) {
+          const response = await postMarketingValidation({ action: "quiz_completed", answers: exact, honeypot: "" });
+          if (!response.success || !response.data?.quiz_result) { setShellError(response.error?.message ?? "답변을 저장하지 못했어요."); transitionLocked.current = false; return; }
+          rememberServerState(response.data.state);
+        }
+        setResult(deriveResult(exact.q3));
         const showResult = () => push("result");
         if (await record({ action: "result_viewed" })) showResult();
         else showQueueRecovery("결과 화면을 열지 못했어요. 다시 시도해 주세요.", showResult);
@@ -429,7 +446,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     push("done");
     return null;
   };
-  const reset = () => { window.history.replaceState({}, "", "/beta"); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); void initialize(); };
+  const reset = () => { window.history.replaceState({}, "", "/beta"); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
 
   if (loading) return <div className="mdv2-root"><main className="mdv2-screen screen-content mdv2-loading" role="status" aria-label="테스트 불러오는 중"><Brand /><div /><div /><div /></main></div>;
   if (shellError) return <div className="mdv2-root"><Frame stage="empty" className="mdv2-state-screen"><Brand /><h1>새 테스트로 다시 시작할게요.</h1><p role="alert">{shellError}</p><button className="primary-button" type="button" onClick={reset}>새로 시작하기</button></Frame></div>;
