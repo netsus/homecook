@@ -1,5 +1,8 @@
 # Repository Source Consolidation Inventory
 
+추적 콘텐츠 전체 크기와 10-A~10-D 경량화 분류는
+[`tracked-content-lightening-inventory.md`](./tracked-content-lightening-inventory.md)를 따른다.
+
 상태: **canonical inventory / cleanup steps 4–5**
 
 기준 시각: 2026-09-05
