@@ -94,6 +94,18 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 미확정 항목은 삭제 근거로 사용하지 않는다. 10-B는 참조 0과 대체 가능한 audit pointer가
 확인된 작은 후보부터 별도 PR로 진행한다.
 
+## 10-B removal receipts
+
+### `claude-design-260510-desktop` standalone archive
+
+- 제거 대상: `homecook desktop prototype _standalone_.html` 1개
+- 제거량: 8,067,786 bytes / 7.694MiB
+- 제거 후 tracked 기준: 6,981개 / 443.591MiB
+- 직접 참조: inventory의 후보 기록 외 runtime/test/workflow exact path·filename 참조 0
+- 동적 탐색: prototype HTML을 자동 열거하는 실행 경로 0
+- 복구: Git commit `59779af90`과 현재 삭제 전 blob `0968acd11a122f5dc32c856e79d2275575dab8af`
+- 보존 경계: `public/assets/funnel`, current parity prototype, Wave1 lock, canonical marketing source는 미변경
+
 ## 재현 명령
 
 ```bash
