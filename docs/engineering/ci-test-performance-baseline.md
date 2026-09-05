@@ -271,3 +271,8 @@ stale-query 경계, toast 만료, 성능 측정, scroll debounce, visual animati
 두 시나리오는 높은 병렬도의 repeat run에서 20/20 통과했다. prepared-food loading skeleton은
 유효한 `status` role을 갖도록 보정했고, 관련 axe 두 시나리오는 10/10 통과했다. 테스트 삭제,
 retry 횟수 증가, timeout 확대는 하지 않았다.
+
+current-head full regression에서 Next image optimizer가 marketing capture의 local asset 요청을
+10초 안에 끝내지 못해 두 capture group이 실패했다. 캡처 테스트는 `/_next/image`의 local-only
+`/assets/...` source를 직접 다시 로드하고 protocol-relative URL은 거부한다. 제품 runtime은
+변경하지 않는다. 세 capture group의 높은 병렬도 repeat run은 9/9 통과했다.

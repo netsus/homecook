@@ -170,6 +170,10 @@ describe("marketing demand validation v2 document contract", () => {
     expect(captureSpec).not.toContain("Array.from(document.images).every");
     expect(captureSpec).toContain("async function expectStageImagesReady");
     expect(captureSpec).toContain("timeout: 10_000");
+    expect(captureSpec).toContain('optimizedUrl.pathname === "/_next/image"');
+    expect(captureSpec).toContain('optimizedUrl.searchParams.get("url")');
+    expect(captureSpec).toContain('!sourceUrl.startsWith("//")');
+    expect(captureSpec).toContain('image.removeAttribute("srcset")');
     expect(captureSpec).toContain('test("captures hero and result evidence"');
     expect(captureSpec).toContain('test("captures the main funnel evidence"');
     expect(captureSpec).toContain(

@@ -62,33 +62,50 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function expectStageImagesReady(page: Page) {
-  await expect.poll(async () => {
-    const images = await page.locator('[data-stage]:visible img').evaluateAll((stageImages) =>
-      stageImages.map((image) => {
-        const htmlImage = image as HTMLImageElement;
-        return {
-          alt: htmlImage.alt,
-          src: htmlImage.getAttribute("src"),
-          currentSrc: htmlImage.currentSrc,
-          complete: htmlImage.complete,
-          naturalWidth: htmlImage.naturalWidth,
-        };
-      }),
-    );
+  let images: Array<{
+    alt: string;
+    complete: boolean;
+    currentSrc: string;
+    naturalWidth: number;
+    src: string | null;
+  }> = [];
 
-    return {
-      images,
-      ready:
-        images.length > 0
-        && images.every((image) => image.complete && image.naturalWidth > 0),
-    };
-  }, {
-    message: "visible current [data-stage] images must finish loading",
-    timeout: 10_000,
-  }).toEqual({
-    images: expect.any(Array),
-    ready: true,
-  });
+  try {
+    await expect.poll(async () => {
+      images = await page.locator('[data-stage]:visible img').evaluateAll((stageImages) =>
+        stageImages.map((stageImage) => {
+          const image = stageImage as HTMLImageElement;
+          const optimizedUrl = new URL(image.currentSrc || image.src, window.location.href);
+          if (optimizedUrl.pathname === "/_next/image") {
+            const sourceUrl = optimizedUrl.searchParams.get("url");
+            if (sourceUrl?.startsWith("/") && !sourceUrl.startsWith("//")) {
+              image.removeAttribute("srcset");
+              image.src = sourceUrl;
+            }
+          }
+
+          return {
+            alt: image.alt,
+            src: image.getAttribute("src"),
+            currentSrc: image.currentSrc,
+            complete: image.complete,
+            naturalWidth: image.naturalWidth,
+          };
+        }),
+      );
+
+      return images.length > 0
+        && images.every((image) => image.complete && image.naturalWidth > 0);
+    }, {
+      message: "visible current [data-stage] images must finish loading",
+      timeout: 10_000,
+    }).toBe(true);
+  } catch (error) {
+    throw new Error(
+      `visible stage images did not become ready: ${JSON.stringify(images)}`,
+      { cause: error },
+    );
+  }
 }
 
 async function capture(browser: Browser, width: number, height: number, name: string, action?: (page: Page) => Promise<void>, routePath = MARKETING_BETA_PATH) {
