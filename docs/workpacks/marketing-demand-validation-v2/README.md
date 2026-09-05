@@ -299,3 +299,15 @@
 - frontend PR #1499 squash-merged as `335886750bda3ae3b1a0f8ea7b01d3a696a80327`; merge tree equals the reviewed successor tree, drift `0`.
 - retained report: `docs/workpacks/marketing-demand-validation-v2/evidence/2026-09-03-stage6-merged-exact-closeout.md`.
 - automated integration is complete; the Manual Only production and rights gates remain fail-closed and do not authorize activation or deployment.
+
+## 2026-09-05 Post-closeout Visual Alignment Candidate
+
+- user-approved visual successor: `mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`
+- implementation branch: `feature/fe-mumeok-funnel-final-alignment`
+- scope: app-owned `/beta` UI, motion, copy and raster assets only
+- preserved: q1~q4, Q3-only result mapping, API/DB/session/attribution/action/consent/Turnstile/fail-closed contracts
+- evidence: `ui/designs/evidence/marketing-demand-validation-v2/` and `comparisons/final-0aaa282/`
+- implementer QA: `ui/designs/evidence/marketing-demand-validation-v2/design-qa.md`, Visual Verdict `98/100`, `final result: passed`
+- verification: focused Vitest `82/82`, product Vitest `2,913 passed / 175 skipped`, marketing Playwright `16 passed / 2 intentional skips`, marketing a11y `3/3`, marketing visual `3/3`, lint, typecheck and production build
+- remaining gate: this implementation task does not self-approve or merge. A separate frontend/design reviewer must review the exact candidate head before Ready or merge.
+- mobile no-scroll successor: 집밥 유형 결과만 내부 세로 스크롤을 허용한다. Hero·quiz·experience·planner·packaged·beta·done은 viewport 스크롤을 만들지 않으며, 두 planner의 내일 card는 화면 하단에서 잘린 read-only 배경으로 두고 고정 CTA가 그 위에 겹친다. `390×700` evidence는 `no-scroll-*.png` 3장이다.

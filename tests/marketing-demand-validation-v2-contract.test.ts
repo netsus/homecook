@@ -45,6 +45,7 @@ describe("marketing demand validation v2 document contract", () => {
       readRequired(relativePath);
     }
     expect(currentSource).toContain("63f8ef2a019c6d260a96a42fab9d67f727d93557");
+    expect(currentSource).toContain("0aaa282552256ac9e77a5c134bb45a52e42ade33");
     expect(currentSource).toContain("01a0630e-81f1-7f42-8b1b-cb259d1d5997");
   });
 
@@ -88,6 +89,7 @@ describe("marketing demand validation v2 document contract", () => {
     const workItem = readRequired(".workflow-v2/work-items/marketing-demand-validation-v2.json");
 
     expect(readme).toContain("source prototype commit: `63f8ef2a019c6d260a96a42fab9d67f727d93557`");
+    expect(readme).toContain("`mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`");
     expect(readme).toContain("iPhone/Pixel frame");
     expect(readme).toContain("이미지 권리");
     expect(readme).toContain("제품 예시");

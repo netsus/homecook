@@ -409,13 +409,13 @@ test.describe("QA accessibility smoke", () => {
     await installMarketingDemandValidationRoutes(page);
 
     await page.goto(MARKETING_BETA_PATH);
-    await expect(page.getByRole("button", { name: "테스트 시작하기" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "내 집밥기록 유형 알아보기" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(
-      page.getByRole("button", { name: "테스트 시작하기" }),
+      page.getByRole("button", { name: "내 집밥기록 유형 알아보기" }),
     );
 
     await openMarketingLeadForm(page);

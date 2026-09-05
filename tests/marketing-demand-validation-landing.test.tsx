@@ -28,7 +28,7 @@ function installHappyApi() {
 }
 
 async function answerQuiz(user: ReturnType<typeof userEvent.setup>, { waitForResult = true } = {}) {
-  await user.click(await screen.findByRole("button", { name: "테스트 시작하기" }));
+  await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
   for (const answer of ["거의 매일", "3~5끼", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"]) {
     await user.click(screen.getByRole("button", { name: answer }));
   }
@@ -39,9 +39,11 @@ async function reachBeta(user: ReturnType<typeof userEvent.setup>) {
   await answerQuiz(user);
   await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
   await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
-  await user.click(await screen.findByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }));
+  await user.click(await screen.findByRole("button", { name: "다음" }));
+  await user.click(await screen.findByRole("button", { name: "돼지고기 600g → 520g" }));
   await user.click(screen.getByRole("button", { name: "다음" }));
   await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+  await user.click(await screen.findByRole("button", { name: "다음" }));
   await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
   await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
   await user.click(screen.getByRole("button", { name: "편의점 음식도 기록해보기" }));
@@ -69,10 +71,10 @@ describe("marketing demand validation v2 landing", () => {
   });
 
   it.each([
-    ["hook_reentry", "a", "왜 레시피에 다 있는데"],
-    ["hook_cooked_weight", "b", "요리 전 1,420g"],
-    ["hook_calorie_quiz", "c", "이 제육볶음 300g"],
-    ["hook_workaround", "d", "식단은 꼼꼼히 기록하는데"],
+    ["hook_reentry", "a", "레시피만 가져오면"],
+    ["hook_cooked_weight", "b", "수분 빠진 제육볶음 300g"],
+    ["hook_calorie_quiz", "c", "내 집밥에"],
+    ["hook_workaround", "d", "내가 만든 집밥을"],
   ])("uses utm_content %s ahead of candidate variant %s", async (utm, variant, title) => {
     window.history.replaceState({}, "", `/beta?utm_content=${utm}&ad_variant=d`);
     installHappyApi();
@@ -106,10 +108,10 @@ describe("marketing demand validation v2 landing", () => {
     const { MarketingDemandValidationScreen } = await importScreen();
     const user = userEvent.setup();
     render(<MarketingDemandValidationScreen />);
-    await user.click(await screen.findByRole("button", { name: "테스트 시작하기" }));
+    await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("1");
     await user.click(screen.getByRole("button", { name: "거의 매일" }));
-    expect(await screen.findByText("2 / 4")).toBeTruthy();
+    expect((await screen.findByRole("progressbar")).getAttribute("aria-valuenow")).toBe("2");
     await user.click(screen.getByRole("button", { name: "이전 질문" }));
     expect(screen.getByRole("button", { name: "거의 매일" }).getAttribute("aria-pressed")).toBe("true");
     await user.click(screen.getByRole("button", { name: "거의 매일" }));
@@ -155,10 +157,13 @@ describe("marketing demand validation v2 landing", () => {
     render(<MarketingDemandValidationScreen />);
     await answerQuiz(user);
     await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
+    expect(screen.getByRole("heading", { name: "유튜브 레시피를 가져올게요." }).classList.contains("recipe-import-title")).toBe(true);
     await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
-    await user.click(await screen.findByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }));
+    await user.click(await screen.findByRole("button", { name: "다음" }));
+    await user.click(await screen.findByRole("button", { name: "돼지고기 600g → 520g" }));
     await user.click(screen.getByRole("button", { name: "다음" }));
     await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+    await user.click(await screen.findByRole("button", { name: "다음" }));
     await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
     await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
     const firstPreview = screen.getByTestId("tomorrow-preview");
@@ -181,6 +186,7 @@ describe("marketing demand validation v2 landing", () => {
     await answerQuiz(user);
     await user.click(screen.getByRole("button", { name: "내 결과 공유하기" }));
     expect(navigator.share).toHaveBeenCalledWith(expect.objectContaining({ url: "http://localhost:3000/beta?result=ingredient-tracker" }));
+    expect(navigator.share).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("#무먹 #집밥기록 #제육볶음") }));
     expect(screen.getByRole("heading", { name: "성분 추적러" })).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -250,9 +256,11 @@ describe("marketing demand validation v2 landing", () => {
     await answerQuiz(user);
     await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
     await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
-    await user.click(await screen.findByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }));
+    await user.click(await screen.findByRole("button", { name: "다음" }));
+    await user.click(await screen.findByRole("button", { name: "돼지고기 600g → 520g" }));
     await user.click(screen.getByRole("button", { name: "다음" }));
     await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+    await user.click(await screen.findByRole("button", { name: "다음" }));
     await user.click(await screen.findByRole("button", { name: "320g 입력하기" }));
     await user.click(screen.getByRole("button", { name: "식단에 기록하기" }));
 
@@ -283,5 +291,46 @@ describe("marketing demand validation v2 landing", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("안전하게 다시 시도해 주세요.");
     expect(screen.getByDisplayValue("retry@example.com")).toBeTruthy();
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+  });
+
+  it("matches the frozen 3cf3336 interaction contract", async () => {
+    window.history.replaceState({}, "", "/beta?ad_variant=a");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+
+    expect((await screen.findByRole("heading")).textContent).toContain("레시피만 가져오면");
+    expect(screen.getByRole("button", { name: "내 집밥기록 유형 알아보기" })).toBeTruthy();
+
+    await answerQuiz(user);
+    expect(screen.getByText(/오늘도 재료를 하나씩 넣으며 앱과 씨름 중/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
+    await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
+    const completedHeading = await screen.findByRole("heading", { name: "레시피를 가져왔어요" });
+    expect(completedHeading.classList.contains("is-complete")).toBe(true);
+    expect(document.querySelector(".success-banner")).toBeNull();
+    expect(screen.getByTestId("recipe-title-check")).toBeTruthy();
+    expect(screen.getByTestId("recipe-title-sparkle")).toBeTruthy();
+    expect(screen.getByTestId("recipe-title-keyword").textContent).toBe("레시피");
+    expect(screen.getByTestId("recipe-title-copy").textContent).toBe("레시피를 가져왔어요");
+    expect(screen.getByRole("img", { name: "이 남자의 cook 채널 프로필" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "다음" }));
+    expect(screen.getByText("돼지고기 목살")).toBeTruthy();
+    expect(screen.getByText("신김치")).toBeTruthy();
+    expect(screen.getByText("외 10개 재료")).toBeTruthy();
+    expect(screen.getByText("오늘은 돼지고기를 조금 덜 넣었어요.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "돼지고기 600g → 520g" }));
+    expect(await screen.findByText("돼지고기 양을 520g으로 수정했어요")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "다음" }));
+    expect(screen.getByTestId("weight-helper").textContent).toBe("조리하면서 줄어드는 무게를고려한 예상값이에요.");
+    await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+    expect(screen.getByTestId("weight-helper").textContent).toBe("증발한 수분 무게를 뺀정확한 무게를 입력했어요");
+    expect(screen.queryByText("수분이 날아간 만큼까지 반영했어요.")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "다음" }));
+    await user.click(screen.getByRole("button", { name: "320g 입력하기" }));
+    expect(screen.getByText("제육볶음 320g")).toBeTruthy();
+    expect(screen.getByTestId("nutrition-serving-line").textContent).toContain("제육볶음 320g");
+    expect(screen.getByTestId("nutrition-serving-line").querySelector(".nutrition-calories")).toBeTruthy();
   });
 });
