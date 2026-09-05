@@ -59,3 +59,16 @@ Mac의 hosts가 공개 주소를 loopback으로 바꾸는 경우 실제 공개 D
 - #1517의 실제 Turnstile 위젯/controller, 만료·오류 후 reset, 개인정보 보유 기간 안내와 QA widget mock을 보존했다.
 - 기존 서버/API/DB/접수 활성화 설정은 변경하지 않았다.
 - 재방문 Playwright 파일을 `slice-marketing-returning-session.spec.ts`로 배치해 일반 CI 회귀 명령의 `slice-*.spec.ts` 검색에 포함한다.
+
+### 통합본 최종 검증과 독립 검토
+
+검증한 구현 head: `6d87d57a91456bdbfd54d54b83852e489cddfffb`.
+이 문서 후속 커밋은 검증한 구현 소스·테스트·설정을 변경하지 않는다.
+
+- 별도 worktree에서 `pnpm lint`, `pnpm typecheck`, `pnpm build` 통과.
+- marketing 도메인/클라이언트/서버 계약 및 공개 랜딩 알림 Vitest: 163 passed, 2 skipped.
+- localhost:3137의 Next.js QA fixture에서 기존 전체 퍼널과 재방문 회귀 Playwright: desktop/mobile 합계 31 passed, 1 intentional skip.
+- 재방문 테스트 파일명 변경 후 일반 `slice-*.spec.ts` 검색에 7개 테스트가 포함되는 것도 `playwright --list`로 확인.
+- 독립 리뷰 `/root/db_deploy_discovery`: 승인, P1/P2 없음. 최신 master의 Turnstile/lead readiness 보존 확인.
+- 실제 운영 Turnstile 키, 이메일 접수, DB 구조 및 설정은 이번 통합 검증에서 변경하지 않았다.
+- 과거 공개 서버 검증 기록은 당시 배포본에만 해당하며, 이번 통합본을 실제 서버에 배포했다고 주장하지 않는다.
