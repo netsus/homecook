@@ -71,12 +71,13 @@ workpack/authority documents ────> ui/designs/evidence + docs/design/ass
    - exact path 참조 0개인 초기 C2 비교물이다.
    - 현재 토큰/화면 기준과 시각 비교 후 제거 후보로 삼는다.
 3. `ui/designs/prototypes/claude-design-260512-desktop/project/*standalone*.html`
-   - 5.204MiB standalone bundle.
+   - 2개, 합계 5.208MiB이며 큰 standalone bundle은 5.204MiB다.
    - modular source가 현재 `REFERENCE_LOCK`이며 standalone은 직접 실행 참조가 확인되지 않았다.
    - 재생성 가능성과 폴더 메모 의미를 한 번 더 확인한다.
 4. `ui/designs/evidence/desktop-modern-redesign`
    - 182개, 50.075MiB.
-   - 활성 runtime/test 직접 참조는 확인되지 않았지만 역사 ledger 8곳이 참조한다.
+   - 활성 runtime/test 직접 참조는 확인되지 않았지만 12개 파일이 참조한다. 이 중
+     handoff/phase ledger는 8개이고 자체 QA JSON 3개와 현재 porting ledger 1개가 남아 있다.
    - final/ledger를 남기고 중간 phase와 byte-identical 파일부터 축약한다.
 
 동일 Git blob은 전체 저장소에 79그룹/추가 사본 93개/9.899MiB가 있다. 대상 디자인 영역에는
