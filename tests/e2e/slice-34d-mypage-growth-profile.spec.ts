@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -296,7 +298,7 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("주방 탐험가");
     await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.9");
     await expect(mobile390.page.getByTestId("mypage-growth-featured-badges")).toHaveCount(0);
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
@@ -304,12 +306,12 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     await mobile390.page.getByRole("button", { name: "업적 보기" }).click();
     await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
     await expect(mobile390.page.getByText("획득한 스탬프")).toBeVisible();
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "badge-shapes.png"),
     });
     await expect(mobile390.page.getByText("아직 표시할 업적이 없어요")).toBeVisible();
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "locked-badge-hints.png"),
     });
@@ -321,7 +323,7 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
       () => document.documentElement.scrollWidth > window.innerWidth,
     );
     expect(hasHorizontalOverflow).toBe(false);
-    await mobile320.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile320.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-320.png"),
     });
@@ -330,7 +332,7 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     const desktop = await openMypage(browser, { width: 1440, height: 960 });
     await expect(desktop.page.getByTestId("mypage-profile-grade-row")).toContainText("주방 탐험가");
     await expect(desktop.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.9");
-    await desktop.page.screenshot({
+    await captureTrackedEvidenceOnDemand(desktop.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "desktop-1440.png"),
     });
@@ -339,7 +341,7 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     const progressSoftFail = await openMypage(browser, { width: 390, height: 844 }, { progressError: true });
     await expect(progressSoftFail.page.getByTestId("mypage-growth-progress-error")).toBeVisible();
     await expect(progressSoftFail.page.getByText("주방 탐험가")).toBeVisible();
-    await progressSoftFail.page.screenshot({
+    await captureTrackedEvidenceOnDemand(progressSoftFail.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "soft-fail-progress.png"),
     });
@@ -348,7 +350,7 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     const gamificationSoftFail = await openMypage(browser, { width: 390, height: 844 }, { gamificationError: true });
     await expect(gamificationSoftFail.page.getByTestId("mypage-growth-gamification-error")).toBeVisible();
     await expect(gamificationSoftFail.page.getByText("Lv.9")).toBeVisible();
-    await gamificationSoftFail.page.screenshot({
+    await captureTrackedEvidenceOnDemand(gamificationSoftFail.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "soft-fail-gamification.png"),
     });

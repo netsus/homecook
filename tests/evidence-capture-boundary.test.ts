@@ -12,6 +12,14 @@ const AFFECTED_SOURCES = [
   ["tests/e2e/youtube-async-extraction-notification.spec.ts", 1],
 ] as const;
 
+const ON_DEMAND_GROWTH_SOURCES = [
+  ["tests/e2e/slice-33c-gamification.spec.ts", 5],
+  ["tests/e2e/slice-34c-growth-notification.spec.ts", 9],
+  ["tests/e2e/slice-34d-mypage-growth-profile.spec.ts", 7],
+  ["tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts", 9],
+  ["tests/e2e/slice-35c-mypage-achievement-album.spec.ts", 11],
+] as const;
+
 const DESKTOP_MODERN_ARCHIVE_CONSUMERS = [
   "ui/designs/evidence/desktop-mvp-porting/slice1/porting-ledger.md",
   "ui/designs/prototypes/claude-design-260512-desktop/PHASE0_PARITY_LEDGER.md",
@@ -139,6 +147,41 @@ describe("tracked evidence capture boundary", () => {
     expect(
       source.match(/if \(shouldUpdateTrackedEvidence\(\)\) \{\s*await page\.screenshot\(/gu),
     ).toHaveLength(4);
+  });
+
+  it("routes growth evidence screenshots through the no-op-by-default helper", async () => {
+    for (const [sourcePath, expectedCalls] of ON_DEMAND_GROWTH_SOURCES) {
+      const source = await readFile(sourcePath, "utf8");
+
+      expect(source.match(/await captureTrackedEvidenceOnDemand\(/gu), sourcePath).toHaveLength(
+        expectedCalls,
+      );
+      expect(source.match(/\.screenshot\(/gu), sourcePath).toBeNull();
+    }
+  });
+
+  it("captures tracked evidence on demand without rendering by default", async () => {
+    const helperPath = "./e2e/helpers/evidence-capture";
+    const { captureTrackedEvidenceOnDemand } = await import(
+      /* @vite-ignore */ helperPath
+    ) as {
+      captureTrackedEvidenceOnDemand: (
+        page: { screenshot(options: { path?: string }): Promise<unknown> },
+        options: { path: string },
+      ) => Promise<string | null>;
+    };
+    const page = { screenshot: vi.fn(async () => undefined) };
+
+    await expect(
+      captureTrackedEvidenceOnDemand(page, { path: "/tmp/not-written.png" }),
+    ).resolves.toBeNull();
+    expect(page.screenshot).not.toHaveBeenCalled();
+
+    vi.stubEnv("HOMECOOK_UPDATE_EVIDENCE", "1");
+    await expect(
+      captureTrackedEvidenceOnDemand(page, { path: "/tmp/written.png" }),
+    ).resolves.toBe("/tmp/written.png");
+    expect(page.screenshot).toHaveBeenCalledOnce();
   });
 
   it("keeps tracked evidence unchanged by default and updates it explicitly", async () => {
