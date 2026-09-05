@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -9,6 +8,8 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
+
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const BASE_URL =
   process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -197,7 +198,7 @@ async function captureEvidence(
   await stabilize(page);
   await prepare?.(page);
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     fullPage,
     path: path.join(EVIDENCE_DIR, filename),
   });
@@ -363,29 +364,6 @@ test.describe("account-session-generation-foundation quarantine", () => {
       testInfo.project.name !== "desktop-chrome",
       "한 프로젝트만 canonical evidence를 기록합니다.",
     );
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-    await mkdir(
-      path.join(
-        EVIDENCE_DIR,
-        "ACCOUNT_QUARANTINE-auth-present-activate-delete",
-      ),
-      { recursive: true },
-    );
-    await mkdir(
-      path.join(
-        EVIDENCE_DIR,
-        "ACCOUNT_QUARANTINE-auth-absent-support-only",
-      ),
-      { recursive: true },
-    );
-    await mkdir(
-      path.join(
-        EVIDENCE_DIR,
-        "ACCOUNT_QUARANTINE-error-pending-conflict",
-      ),
-      { recursive: true },
-    );
-
     await captureEvidence(browser, {
       filename: "ACCOUNT_QUARANTINE-mobile-390.png",
       state: "auth-present",
