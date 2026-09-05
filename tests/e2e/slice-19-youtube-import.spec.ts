@@ -19,7 +19,6 @@ function ingredientDialog(page: Page) {
 async function searchIngredient(page: Page, query: string) {
   const dialog = ingredientDialog(page);
   await dialog.getByRole("textbox", { name: "재료명으로 검색" }).fill(query);
-  await page.waitForTimeout(400);
   return dialog;
 }
 

@@ -277,8 +277,7 @@ test.describe("slice 10a: shopping detail interact", () => {
       const checkbox = page.getByRole("checkbox", { name: /양파.*구매 완료 표시/ });
       await checkbox.click();
 
-      await page.waitForTimeout(200);
-      expect(patchCalled).toBe(true);
+      await expect.poll(() => patchCalled).toBe(true);
     });
 
     test("should move item to excluded section", async ({ page }) => {
@@ -315,8 +314,7 @@ test.describe("slice 10a: shopping detail interact", () => {
       const excludeButton = page.getByRole("button", { name: /양파.*이미있음/ });
       await excludeButton.click();
 
-      await page.waitForTimeout(200);
-      expect(patchCalled).toBe(true);
+      await expect.poll(() => patchCalled).toBe(true);
     });
 
     test("should restore item from excluded section", async ({ page }) => {
@@ -352,8 +350,7 @@ test.describe("slice 10a: shopping detail interact", () => {
       const restoreButton = page.getByRole("button", { name: /간장.*되살리기/ });
       await restoreButton.click();
 
-      await page.waitForTimeout(200);
-      expect(patchCalled).toBe(true);
+      await expect.poll(() => patchCalled).toBe(true);
     });
   });
 

@@ -218,6 +218,29 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     vi.useRealTimers();
   });
 
+  it("announces the pending product list with a valid status role", () => {
+    const pendingProducts = createDeferred<{
+      items: FoodProductData[];
+      next_cursor: null;
+      has_next: false;
+    }>();
+    fetchFoodProducts.mockImplementation(() => pendingProducts.promise);
+
+    render(
+      <FoodProductPicker
+        columnId="column-1"
+        onClose={() => undefined}
+        onComplete={() => undefined}
+        planDate="2026-07-17"
+        slotName="아침"
+      />,
+    );
+
+    expect(
+      screen.getByRole("status", { name: "완제품 목록 불러오는 중" }),
+    ).toBeTruthy();
+  });
+
   it.each(["query", "source"] as const)(
     "drops an edit-return restore target when a new %s intent starts",
     async (intent) => {

@@ -913,7 +913,7 @@ export function FoodProductPicker({
 
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1" data-testid="food-product-result-scroll">
         {listState === "loading" ? (
-          <div className="grid gap-2" aria-label="완제품 목록 불러오는 중">
+          <div aria-label="완제품 목록 불러오는 중" className="grid gap-2" role="status">
             {[0, 1, 2].map((item) => <div className="h-[76px] animate-pulse rounded-[var(--radius-card)] bg-[var(--surface-fill)]" key={item} />)}
           </div>
         ) : null}
