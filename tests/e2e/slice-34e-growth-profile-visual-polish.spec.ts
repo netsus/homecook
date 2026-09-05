@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
@@ -320,8 +319,6 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
   test.setTimeout(90_000);
 
   test("captures integrated header, notification archive entry, grade marks, and soft-fail evidence", async ({ browser }) => {
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
     await expect(mobile390.page.getByTestId("mypage-growth-profile")).toContainText("김집밥");
     await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("집밥 러너");

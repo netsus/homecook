@@ -26,6 +26,11 @@ const ON_DEMAND_ACCOUNT_AND_DATA_SOURCES = [
   ["tests/e2e/slice-recipe-content-snapshot-future-propagation.spec.ts", 1],
 ] as const;
 
+const ON_DEMAND_MATRIX_SOURCES = [
+  ["tests/e2e/slice-cooked-batch-weight-ui-evidence.spec.ts", 11, 3],
+  ["tests/e2e/slice-meal-log-ui.spec.ts", 1, 2],
+] as const;
+
 const DESKTOP_MODERN_ARCHIVE_CONSUMERS = [
   "ui/designs/evidence/desktop-mvp-porting/slice1/porting-ledger.md",
   "ui/designs/prototypes/claude-design-260512-desktop/PHASE0_PARITY_LEDGER.md",
@@ -163,6 +168,7 @@ describe("tracked evidence capture boundary", () => {
         expectedCalls,
       );
       expect(source.match(/\.screenshot\(/gu), sourcePath).toBeNull();
+      expect(source.match(/\bmkdir\(/gu), sourcePath).toBeNull();
     }
   });
 
@@ -176,6 +182,44 @@ describe("tracked evidence capture boundary", () => {
       expect(source.match(/\.screenshot\(/gu), sourcePath).toBeNull();
       expect(source.match(/\bmkdir\(/gu), sourcePath).toBeNull();
     }
+  });
+
+  it("moves matrix PNG and JSON outputs behind the shared opt-in boundary", async () => {
+    for (const [sourcePath, expectedCaptures, expectedWrites] of ON_DEMAND_MATRIX_SOURCES) {
+      const source = await readFile(sourcePath, "utf8");
+
+      expect(source.match(/await captureTrackedEvidenceOnDemand\(/gu), sourcePath).toHaveLength(
+        expectedCaptures,
+      );
+      expect(source.match(/await writeTrackedEvidenceOnDemand\(/gu), sourcePath).toHaveLength(
+        expectedWrites,
+      );
+      expect(source.match(/\.screenshot\(/gu), sourcePath).toBeNull();
+      expect(source.match(/\bwriteFile\(/gu), sourcePath).toBeNull();
+      expect(source.match(/\bmkdir\(/gu), sourcePath).toBeNull();
+    }
+    const mealLog = await readFile("tests/e2e/slice-meal-log-ui.spec.ts", "utf8");
+    expect(mealLog).toContain("if (shouldUpdateTrackedEvidence()) {");
+  });
+
+  it("keeps prepared-food and nutrition tracked captures opt-in", async () => {
+    const preparedFood = await readFile(
+      "tests/e2e/slice-prepared-food-planner-entry.spec.ts",
+      "utf8",
+    );
+    const nutrition = await readFile(
+      "tests/e2e/slice-recipe-nutrition-calculation.spec.ts",
+      "utf8",
+    );
+
+    expect(preparedFood.match(/await captureTrackedEvidenceOnDemand\(/gu)).toHaveLength(10);
+    expect(preparedFood.match(/\.screenshot\(/gu)).toBeNull();
+    expect(preparedFood.match(/\bmkdir\(/gu)).toBeNull();
+    expect(preparedFood).toContain('PREPARED_FOOD_CAPTURE_BEFORE !== "1"');
+    expect(preparedFood).toContain("!shouldUpdateTrackedEvidence()");
+    expect(nutrition.match(/await captureTrackedEvidenceOnDemand\(/gu)).toHaveLength(4);
+    expect(nutrition.match(/if \(!shouldUpdateTrackedEvidence\(\)\) return;/gu)).toHaveLength(4);
+    expect(nutrition.match(/\.screenshot\(/gu)).toHaveLength(4);
   });
 
   it("captures tracked evidence on demand without rendering by default", async () => {
@@ -200,6 +244,27 @@ describe("tracked evidence capture boundary", () => {
       captureTrackedEvidenceOnDemand(page, { path: "/tmp/written.png" }),
     ).resolves.toBe("/tmp/written.png");
     expect(page.screenshot).toHaveBeenCalledOnce();
+  });
+
+  it("writes tracked JSON evidence only on explicit update", async () => {
+    const helperPath = "./e2e/helpers/evidence-capture";
+    const { writeTrackedEvidenceOnDemand } = await import(
+      /* @vite-ignore */ helperPath
+    ) as {
+      writeTrackedEvidenceOnDemand: (
+        trackedPath: string,
+        contents: string,
+      ) => Promise<boolean>;
+    };
+    const root = await mkdtemp(join(tmpdir(), "homecook-evidence-json-"));
+    const trackedPath = join(root, "nested", "manifest.json");
+
+    await expect(writeTrackedEvidenceOnDemand(trackedPath, "default")).resolves.toBe(false);
+    await expect(access(trackedPath)).rejects.toThrow();
+
+    vi.stubEnv("HOMECOOK_UPDATE_EVIDENCE", "1");
+    await expect(writeTrackedEvidenceOnDemand(trackedPath, "updated")).resolves.toBe(true);
+    await expect(readFile(trackedPath, "utf8")).resolves.toBe("updated");
   });
 
   it("keeps tracked evidence unchanged by default and updates it explicitly", async () => {

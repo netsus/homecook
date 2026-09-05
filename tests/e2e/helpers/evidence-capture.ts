@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 
 import type { Page, TestInfo } from "@playwright/test";
@@ -20,6 +20,17 @@ export async function captureTrackedEvidenceOnDemand(
   await mkdir(dirname(options.path), { recursive: true });
   await page.screenshot(options);
   return options.path;
+}
+
+export async function writeTrackedEvidenceOnDemand(
+  trackedPath: string,
+  contents: string,
+) {
+  if (!shouldUpdateTrackedEvidence()) return false;
+
+  await mkdir(dirname(trackedPath), { recursive: true });
+  await writeFile(trackedPath, contents);
+  return true;
 }
 
 export async function captureEvidenceScreenshot(
