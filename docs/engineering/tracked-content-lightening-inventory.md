@@ -225,6 +225,25 @@ replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으�
 - 남은 위험: 일부 legacy slice E2E는 기능 assertion과 evidence write가 결합돼 전체 회귀에서
   tracked 이미지를 재생성한다. 별도 전환은 각 assertion 보존 계획이 있는 후속 작업으로 제한한다.
 
+## 2차 A: historical design evidence receipts
+
+### Unreferenced HOME phase and cook-mode theme captures
+
+- 제거량: 22 PNG / 1,850,318 bytes / 1.765MiB
+- exact directory·file runtime/test/workflow 참조: 0. 내부 historical verdict의 before/after
+  pointer는 compact manifest로 교체했다.
+- 현재 visual 기준: `tests/e2e/qa-visual.spec.ts-snapshots/` 112개는 미변경
+- authority/runtime/marketing 보존 경계: `ui/designs/authority/`,
+  `ui/designs/evidence/authority/`, `public/assets/funnel/`,
+  `ui/designs/evidence/marketing-demand-validation-v2/` 미변경
+- 복구 영수증:
+  - `wave1-mobile-phase4-home-before`: commit `cd60671578a98302c3dd8e6c06e7b12ae82996bb`,
+    tree `d903989c8b1ac5eda4d0ce8b37fc4e3ed9cfcc5d`
+  - `wave1-mobile-phase4-home-after`: commit `cd60671578a98302c3dd8e6c06e7b12ae82996bb`,
+    tree `b97338728aebeaec06dc58266dd55f283c514281`
+  - `cook-mode-theme-toggle`: commit `cc64f63c3de7ee335b8c134c92798ab616cb1b0a`,
+    tree `56840e8e7c82ac85b4fb20960e38e644d6447b2e`
+
 ## 재현 명령
 
 ```bash
