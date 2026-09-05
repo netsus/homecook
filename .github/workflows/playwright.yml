@@ -52,7 +52,7 @@ jobs:
 
   smoke:
     needs: changes
-    if: needs.changes.outputs.smoke == 'true'
+    if: needs.changes.outputs.smoke == 'true' && needs.changes.outputs.complete_regression_matrix != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -76,7 +76,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run core Playwright smoke suite
+        if: needs.changes.outputs.full_regression != 'true'
         run: pnpm test:e2e:smoke
+
+      - name: Run small iOS smoke sentinel
+        if: needs.changes.outputs.full_regression == 'true' && needs.changes.outputs.complete_regression_matrix != 'true'
+        run: pnpm test:e2e:smoke:ios-sentinel
 
       - name: Upload Playwright report
         if: failure()

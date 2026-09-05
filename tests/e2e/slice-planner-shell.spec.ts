@@ -11,6 +11,14 @@ async function setAuthenticated(page: Page) {
   );
 }
 
+async function waitForSettledLayout(page: Page) {
+  await page.evaluate(
+    () => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }),
+  );
+}
+
 async function installPlannerShellRoutes(
   page: Page,
   {
@@ -590,7 +598,7 @@ test.describe("planner-shell Stage 4", () => {
     expect.soft(defaultLayout.horizontalGutters).toEqual({ left: 16, right: 16 });
 
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await page.waitForTimeout(100);
+    await waitForSettledLayout(page);
     const defaultBottomLayout = await measureLayout();
     expect.soft(defaultBottomLayout.bottomClearance ?? 0)
       .toBeGreaterThanOrEqual(16);
@@ -599,7 +607,7 @@ test.describe("planner-shell Stage 4", () => {
       document.documentElement.style.fontSize = "200%";
       window.scrollTo(0, document.documentElement.scrollHeight);
     });
-    await page.waitForTimeout(100);
+    await waitForSettledLayout(page);
 
     const scaledLayout = await measureLayout();
     expect.soft(scaledLayout.pageOverflow).toBe(false);
@@ -634,7 +642,7 @@ test.describe("planner-shell Stage 4", () => {
         await page.evaluate(
           () => window.scrollTo(0, document.documentElement.scrollHeight),
         );
-        await page.waitForTimeout(100);
+        await waitForSettledLayout(page);
         const bottomLayout = await measureLayout();
         expect.soft(bottomLayout.bottomClearance ?? 0)
           .toBeGreaterThanOrEqual(16);

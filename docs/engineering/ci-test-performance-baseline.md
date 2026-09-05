@@ -1,6 +1,6 @@
 # CI and Test Performance Baseline
 
-상태: **canonical baseline / cleanup steps 8–9**
+상태: **canonical baseline / cleanup steps 8–10**
 
 측정일: 2026-09-05
 
@@ -242,3 +242,55 @@ marketing unit/contract test는 CI `quality`에서 계속 실행한다. 실제 `
 `components/marketing/**`, API·DB·auth·migration·security·workflow·path-filter 변경은 기존
 code/security/browser/full gate를 유지한다. manual/nightly run도 archive ignore와 무관하게
 complete QA set을 실행한다.
+
+## Step 10 implementation and local evidence
+
+CI matrix full regression이 실행되는 QA run의 별도 smoke job은 `mobile-ios-small` sentinel만 실행한다.
+일반 PR smoke는 기존 `desktop-chrome`, `mobile-chrome`, `mobile-ios-small` 세 project를
+그대로 유지한다. full regression의 desktop/mobile Chrome 검출력과 별도 accessibility·visual
+suite도 변경하지 않는다. nightly/manual/`full-ci`의 complete matrix는 iOS를 포함하므로
+별도 smoke job 전체를 생략한다.
+
+로컬 `mobile-ios-small` sentinel은 25 instances를 예약해 20 passed, 5 intended skipped,
+28.4초로 완료됐다. 기준선의 별도 smoke 75 instances 중 full regression과 겹치던 50개를
+제거하고 CI matrix에 고유한 25개만 남긴 결과다. GitHub runner의 실제 wall time과 runner-time proxy는
+아래 current-head QA로 확인했다.
+
+고정 대기는 관찰 가능한 완료 조건이 있는 8곳만 교체했다.
+
+- shopping PATCH 세 곳은 request handler 호출을 `expect.poll`로 확인한다.
+- manual/youtube 재료 검색 두 곳은 결과 checkbox locator의 auto-wait를 사용한다.
+- planner layout 세 곳은 임의 100ms 대신 연속 두 animation frame을 기다린다.
+
+따라서 `waitForTimeout()`은 23곳/14.86초에서 15곳/13.16초로 감소했다. 남은 대기는
+stale-query 경계, toast 만료, 성능 측정, scroll debounce, visual animation처럼 시간 자체가
+계약이거나 명시적인 화면 증거 안정화가 필요한 경우다.
+
+최근 full regression에서 재시도된 YouTube URL 제출 두 시나리오는 입력 직후 submit
+버튼의 활성 상태를 관찰하고 hydration 경쟁이 있으면 입력을 제한 시간 안에서 다시 전달한다.
+두 시나리오는 높은 병렬도의 repeat run에서 20/20 통과했다. prepared-food loading skeleton은
+유효한 `status` role을 갖도록 보정했고, 관련 axe 두 시나리오는 10/10 통과했다. 테스트 삭제,
+retry 횟수 증가, timeout 확대는 하지 않았다.
+
+current-head full regression에서 Next image optimizer가 marketing capture의 local asset 요청을
+10초 안에 끝내지 못해 두 capture group이 실패했다. 캡처 테스트는 `/_next/image`의 local-only
+`/assets/...` source를 직접 다시 로드하고 protocol-relative URL은 거부한다. 제품 runtime은
+변경하지 않는다. 세 capture group의 높은 병렬도 repeat run은 9/9 통과했다.
+
+### Step 10 GitHub runner result
+
+PR head `199bc6604e4f867d2cd34aeb2d7b8a4ebe4442ef`의 일반 QA run
+`33971177985`와 Ready QA run `33971881369`를 비교했다.
+
+| 항목 | 일반 QA | Ready full QA | 변화 |
+| --- | ---: | ---: | ---: |
+| smoke job | 2분 47초, 75 instances | 1분 51초, 25 instances | **-56초 / -50 instances** |
+| full-regression job | skip | 17분 58초 | CI matrix 816 예약 유지 |
+| Ready QA wall time | - | 18분 19초 | 기준 exact run 18분 31초 대비 -12초 |
+| Ready QA runner-time proxy | - | 30분 07초 | 기준 32분 04초 대비 **-1분 57초(-6.1%)** |
+
+full-regression test step은 기준 17분 19초에서 약 17분으로 줄었지만 단일 표본이므로 회귀
+자체가 유의미하게 단축됐다고 판단하지 않는다. 이번 단계의 확인된 효과는 중복 50 instances와
+QA runner-time 감소다. 최종 회귀는 677 passed, 137 skipped, 2 flaky로 성공했다. 수정 대상이던
+YouTube 제출, prepared-food loading axe, marketing capture는 flaky 목록에서 사라졌고, 남은 2개는
+recipe media upload와 HOME recipe save로 별도 후속 후보다.

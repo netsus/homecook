@@ -84,6 +84,22 @@ function createReviewDraft() {
   };
 }
 
+async function fillYoutubeUrlWhenReady(page: Page) {
+  const urlInput = page.getByLabel("유튜브 URL");
+  const submitButton = page.getByRole("button", { name: "가져오기" });
+
+  await expect(async () => {
+    await urlInput.fill("");
+    await urlInput.fill(PUBLIC_RECIPE_URL);
+    await expect(submitButton).toBeEnabled({ timeout: 1_000 });
+  }).toPass({
+    intervals: [100, 250, 500],
+    timeout: 5_000,
+  });
+
+  return { submitButton, urlInput };
+}
+
 test.describe("Workpack 33: YouTube i031 direct extraction closeout", () => {
   test("blocks duplicate background submission while URL validation is pending", async ({
     page,
@@ -114,10 +130,8 @@ test.describe("Workpack 33: YouTube i031 direct extraction closeout", () => {
     );
 
     await page.goto(YOUTUBE_REVIEW_URL);
-    const urlInput = page.getByLabel("유튜브 URL");
-
-    await urlInput.fill(PUBLIC_RECIPE_URL);
-    await page.getByRole("button", { name: "가져오기" }).click();
+    const { submitButton, urlInput } = await fillYoutubeUrlWhenReady(page);
+    await submitButton.click();
     await expect(
       page.getByRole("button", { name: "확인 중..." }),
     ).toBeDisabled();
@@ -169,17 +183,16 @@ test.describe("Workpack 33: YouTube i031 direct extraction closeout", () => {
     );
 
     await page.goto(YOUTUBE_REVIEW_URL);
-    await page.getByLabel("유튜브 URL").fill(PUBLIC_RECIPE_URL);
-    await page.getByRole("button", { name: "가져오기" }).click();
+    const { submitButton, urlInput } = await fillYoutubeUrlWhenReady(page);
+    await submitButton.click();
 
     await expect(page.locator(".web-menu-add-error")).toContainText(
       "추출 대기열을 잠시 사용할 수 없어요.",
     );
-    await expect(page.getByLabel("유튜브 URL")).toHaveValue(
-      PUBLIC_RECIPE_URL,
-    );
+    await expect(urlInput).toHaveValue(PUBLIC_RECIPE_URL);
 
-    await page.getByRole("button", { name: "가져오기" }).click();
+    await expect(submitButton).toBeEnabled();
+    await submitButton.click();
 
     await expect(
       page.getByRole("heading", {
