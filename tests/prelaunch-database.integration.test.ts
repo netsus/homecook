@@ -65,10 +65,15 @@ it.skipIf(process.env.PRELAUNCH_DB_INTEGRATION !== "1")("applies on disposable p
     expect(await second.apply()).toMatchObject({ changed: false });
     const thirdFile = "20260905030000_broken.sql";
     await writeFile(path.join(migrationRoot, thirdFile), "CREATE TABLE public.must_rollback(id int); ALTER TABLE public.does_not_exist ADD COLUMN x integer;");
-    await expect(createPrelaunchDatabase(options).apply()).rejects.toThrow(/failed/);
+    await expect(createPrelaunchDatabase(options).apply()).rejects.toMatchObject({ databaseState: { changed: false, outcome: "rolled_back", applied: [], attempted: [thirdFile] } });
     expect(sql("SELECT to_regclass('public.must_rollback') IS NULL;")).toBe("t");
     expect(sql("SELECT count(*) FROM homecook_deploy.migrations;")).toBe("2");
     expect(sql("SELECT count(*) FROM public.prelaunch_example;")).toBe("1");
+    await writeFile(path.join(migrationRoot, thirdFile), "CREATE TABLE public.corrected_after_rollback(id int);");
+    const corrected = createPrelaunchDatabase(options);
+    expect(await corrected.apply()).toMatchObject({ changed: true, applied: [thirdFile], outcome: "committed" });
+    expect(await corrected.apply()).toMatchObject({ changed: false });
+    expect(sql("SELECT count(*) FROM homecook_deploy.migrations;")).toBe("3");
     await writeFile(path.join(migrationRoot, firstFile), "CREATE TABLE public.tampered(id int);");
     await expect(createPrelaunchDatabase(options).plan()).rejects.toThrow(/checksum changed/);
   } finally {

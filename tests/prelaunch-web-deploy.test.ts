@@ -7,6 +7,7 @@ import {
   runPrelaunchVerification,
   parsePrelaunchOptions,
   prepareDatabaseDeployment,
+  shouldRequireDatabaseRecovery,
   retargetPlist,
   deployTransaction,
   productionEnvironment,
@@ -132,6 +133,23 @@ describe("prelaunch web deployment", () => {
     const failure = Object.assign(new Error("private database error"), { databaseState });
     await expect(prepareDatabaseDeployment({ required: true, compatibilityConfirmed: true, open: () => ({ plan: async () => ({ migrationMode: "additive" }), apply: async () => { throw failure; }, verify: async () => {}, close: async () => {} }), gate: async () => {}, onApplied: async (value) => { recorded.push(value); } })).rejects.toBe(failure);
     expect(recorded).toEqual([{ ...databaseState, backwardCompatible: outcome === "committed" }]);
+  });
+  it.each([
+    { outcome: "rolled_back", changed: false, requiresRecovery: false, compatible: true },
+    { outcome: "uncertain", changed: true, requiresRecovery: true, compatible: false },
+  ])("keeps $outcome evidence without unnecessarily blocking the next corrected deployment", async ({ outcome, changed, requiresRecovery, compatible }) => {
+    const databaseState = { changed, applied: [], attempted: ["migration.sql"], backupPath: "/private/db-backup", outcome };
+    const failure = Object.assign(new Error("private database error"), { databaseState });
+    let savedEvidence: unknown;
+    let recoveryExists = false;
+    await expect(prepareDatabaseDeployment({ required: true, compatibilityConfirmed: true, open: () => ({ plan: async () => ({ migrationMode: "additive" }), apply: async () => { throw failure; }, verify: async () => {}, close: async () => {} }), gate: async () => {}, onApplied: async (record) => { savedEvidence = record; recoveryExists = shouldRequireDatabaseRecovery(record); } })).rejects.toBe(failure);
+    expect(savedEvidence).toEqual({ ...databaseState, backwardCompatible: compatible });
+    expect(recoveryExists).toBe(requiresRecovery);
+  });
+  it("preserves recovery policy for normal unchanged or committed database deployments", () => {
+    expect(shouldRequireDatabaseRecovery({ changed: false, applied: [], backupPath: null })).toBe(true);
+    expect(shouldRequireDatabaseRecovery({ changed: true, outcome: "committed" })).toBe(true);
+    expect(shouldRequireDatabaseRecovery({ changed: true, outcome: "rolled_back" })).toBe(true);
   });
   it("explains a missing database baseline before running a gate or applying SQL", async () => {
     await expect(prepareDatabaseDeployment({ required: true, compatibilityConfirmed: true, open: () => ({ plan: async () => ({ baselineRequired: true, migrationMode: "additive" }), close: async () => {} }), gate: async () => { throw new Error("must not run"); } })).rejects.toThrow("--db-baseline");

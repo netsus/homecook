@@ -75,6 +75,10 @@ export async function runPrelaunchVerification({ scripts, run }) {
   for (const script of scripts) await run(script);
 }
 
+export function shouldRequireDatabaseRecovery(record) {
+  return !(record.changed === false && record.outcome === "rolled_back");
+}
+
 /** @param {{required: boolean, open: () => unknown, gate?: () => Promise<void>, compatibilityConfirmed?: boolean, onApplied?: (record: Record<string, unknown>) => Promise<void>}} options */
 export async function prepareDatabaseDeployment({ required, open, gate, compatibilityConfirmed, onApplied = async () => {} }) {
   if (!required) return null;
@@ -88,7 +92,7 @@ export async function prepareDatabaseDeployment({ required, open, gate, compatib
     await gate();
     let applied;
     try { applied = await database.apply(); } catch (error) {
-      if (error.databaseState) await onApplied({ ...error.databaseState, backwardCompatible: error.databaseState.outcome === "committed" });
+      if (error.databaseState) await onApplied({ ...error.databaseState, backwardCompatible: ["committed", "rolled_back"].includes(error.databaseState.outcome) });
       throw error;
     }
     const record = { ...applied, backwardCompatible: true };

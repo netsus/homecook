@@ -127,6 +127,7 @@ pnpm deploy:dev -- \
 - 새 SQL 전체와 이력 기록은 advisory lock 아래 한 transaction으로 처리한다. SQL 실패 시 부분 적용하지 않는다.
 - DB 반영 후 웹 검증이 실패하면 DB 반영 여부·백업 위치를 보존한다. 호환성이 확인된 이전 웹만 복원하며 DB 자동 reset/restore는 실행하지 않는다.
 - DB commit 여부가 불확실하면 상태 확인 전 자동 웹 rollback을 막는다.
+- ON_ERROR_STOP SQL 오류로 transaction 롤백이 확실한 경우에는 백업·실패 기록만 보존하고 재배포를 막지 않는다. SQL을 수정한 뒤 다시 실행할 수 있다.
 - 취소 요청을 받은 뒤 새 DB transaction을 시작하지 않는다. 이미 실행 중인 동기 DB 명령은 timeout/완료까지 기다리고 실제 결과를 기록하며, 취소가 DB 복원을 의미하지 않는다.
 
 ## 검증과 적용 범위

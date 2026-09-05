@@ -7,7 +7,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
-import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist } from "./lib/prelaunch-web-deploy.mjs";
+import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist } from "./lib/prelaunch-web-deploy.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
@@ -193,7 +193,11 @@ process.exit(result.status ?? 1);`;
           required: true, compatibilityConfirmed: options.dbCompatible,
           open: () => createPrelaunchDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, baselinePath: options.dbBaseline, backupRoot: join(release, "db-backup"), logFd, checkCancelled: () => cancellation.check() }),
           gate: async () => { await logged("pnpm", ["verify:local-supabase-runtime:isolated"], buildOptions); cancellation.check(); },
-          onApplied: async (database) => { state.database = database; atomicWrite(databaseStatePath, JSON.stringify(database)); atomicWrite(recoveryPath, JSON.stringify(state)); },
+          onApplied: async (database) => {
+            state.database = database;
+            atomicWrite(databaseStatePath, JSON.stringify(database));
+            if (shouldRequireDatabaseRecovery(database)) atomicWrite(recoveryPath, JSON.stringify(state));
+          },
         });
         state.database = database;
         atomicWrite(recoveryPath, JSON.stringify(state));

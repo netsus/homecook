@@ -132,8 +132,9 @@ export function createPrelaunchDatabaseEngine({ readMigrations, adapter, readBas
         return { changed: true, applied: attempted, backupPath, outcome: "committed" };
       } catch (error) {
         // Preserve recovery evidence even if the acknowledgement or post-commit check fails.
+        const rolledBack = !committed && error?.transactionRolledBack === true;
         throw Object.assign(error instanceof Error ? error : new Error("Database migration outcome requires inspection"), {
-          databaseState: { changed: true, applied: committed ? attempted : [], attempted, backupPath, outcome: committed ? "committed" : "uncertain" },
+          databaseState: { changed: !rolledBack, applied: committed ? attempted : [], attempted, backupPath, outcome: committed ? "committed" : rolledBack ? "rolled_back" : "uncertain" },
         });
       }
     },
@@ -175,7 +176,10 @@ export function createPrelaunchDatabase({ repositoryRoot, configPath, backupRoot
   let dockerEnv;
   function run(args, options = {}) {
     const result = spawnSync("docker", args, { env: dockerEnv, encoding: "utf8", timeout: 120_000, maxBuffer: 16 * 1024 * 1024, ...options });
-    if (result.status !== 0) throw new Error(`Database ${args[0]} operation failed; database output withheld`);
+    if (result.status !== 0) throw Object.assign(new Error(`Database ${args[0]} operation failed; database output withheld`), {
+      processStatus: result.status,
+      processInterrupted: Boolean(result.error || result.signal),
+    });
     return result.stdout;
   }
   function psql(identity, sql) {
@@ -243,7 +247,13 @@ export function createPrelaunchDatabase({ repositoryRoot, configPath, backupRoot
         ...pending.flatMap((row) => [row.sql, insert(row)]),
         "NOTIFY pgrst, 'reload schema'; COMMIT;",
       ].join("\n");
-      psql(identity, sql);
+      try { psql(identity, sql); }
+      catch (error) {
+        // ON_ERROR_STOP exit 3 is a server SQL error: this single transaction's
+        // connection closes without COMMIT. Transport failures remain uncertain.
+        if (error.processStatus === 3 && error.processInterrupted === false) error.transactionRolledBack = true;
+        throw error;
+      }
     },
   };
   return createPrelaunchDatabaseEngine({ readMigrations: () => readPrelaunchMigrationFiles(repositoryRoot), adapter, checkCancelled, readBaseline: async () => {

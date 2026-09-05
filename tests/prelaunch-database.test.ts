@@ -70,6 +70,11 @@ describe("backup-before-apply orchestration", () => {
     adapter.transact = async () => { adapter.readState = async () => { throw new Error("database unavailable"); }; };
     await expect(engine.apply()).rejects.toMatchObject({ databaseState: { changed: true, outcome: "committed", applied: [a.filename], backupPath: "/private/backups/db.dump" } });
   });
+  it("records a confirmed transaction rollback without claiming changed data", async () => {
+    const { adapter, engine } = fixture();
+    adapter.transact = async () => { throw Object.assign(new Error("SQL rejected"), { transactionRolledBack: true }); };
+    await expect(engine.apply()).rejects.toMatchObject({ databaseState: { changed: false, outcome: "rolled_back", applied: [], attempted: [a.filename], backupPath: "/private/backups/db.dump" } });
+  });
   it("marks an interrupted transaction outcome uncertain with its backup", async () => {
     const { adapter, engine } = fixture();
     adapter.transact = async () => { throw new Error("connection interrupted"); };
