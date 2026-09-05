@@ -171,6 +171,17 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
   `f498bdf5454d9ce212309b3043014daf62d1ac44`, SHA-256
   `aafe66096141ef1c89fd48a774d3974b1cf2a0eb6cd27d50cd6c936814a0cad6`
 
+### Redundant cook-mode vision crops
+
+- 제거 대상: `overview-1440.png`, `mobile-layout-430.png`
+- 제거량: 398,792 bytes / 0.380MiB / 2파일
+- 직접·동적 참조: 0
+- 픽셀 동등성: retained `overview-1440-full.png`, `mobile-layout-430-full.png`의 top crop과
+  각각 pixel-for-pixel 동일하며 full 이미지가 더 넓은 세로 범위를 보존
+- 복구: commit `cc64f63c3de7ee335b8c134c92798ab616cb1b0a`
+  - overview blob `7fce8c0a5001308935e31000cd5ebcc2af85976f`, SHA-256 `801c89b26476632e21ab017b7be96d90a0e5516e287b4de7d5fdf3b3ac4db537`
+  - mobile blob `4813fcb624d15de70d9fe9dd9aadaa4d1dd4406d`, SHA-256 `d69ea214702ed320f00a131726486747444c3ddcd14129a496908a6c1749a9dd`
+
 ## 재현 명령
 
 ```bash
