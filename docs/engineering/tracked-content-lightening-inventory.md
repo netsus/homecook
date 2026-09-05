@@ -119,6 +119,19 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
   `38c62c58baf3089065cec763ad353b59c59ffe97`, SHA-256
   `45cc8f3efbf17f4fd0a7e32d6dd905babd41f4e3cd7a29e68b726d7746fff104`
 
+### `claude-design-260505` superseded Baemin prototype copy
+
+- 제거 대상: `claude-design-260505/homecook-baemin-prototype.html` 1개
+- 제거량: 2,185,389 bytes / 2.084MiB
+- 누적 제거 후 tracked 기준: 6,979개 / 436.302MiB
+- 대체 기준: `ui/designs/prototypes/homecook-baemin-prototype.html`
+- 동등성: 두 HTML의 whitespace 제거 SHA-256이
+  `7ca07209e395d80e4eabbd325eb0324b9db1c0ab406b309053b7434032b050e3`으로 동일
+- 참조 정리: byte-identical port ledger 2개를 retained top-level path로 갱신
+- 복구: commit `ff0c46847d2ac90aa2197e4720a53940bc02cadc`, blob
+  `f407442ee676a37241a90ee0982183f83ac434d7`, SHA-256
+  `52e8ad1c923b8c8f626c9c4c45145fea369038aa570f531330a004faad3f4792`
+
 ## 재현 명령
 
 ```bash
