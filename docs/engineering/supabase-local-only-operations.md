@@ -97,3 +97,16 @@ PR #1346에서 remote/linked Supabase credential 또는 remote security gate가 
 ## Verification evidence contract
 
 각 PR은 `Actual Verification`에 exact head SHA, pinned Supabase CLI/runtime, isolated 또는 controlled-local target, 실행 명령, checksum/restore/boundary 결과, remote link/credential access 0을 기록한다. remote verifier가 실행되지 않았다는 사실은 검증 누락이 아니라 이 matrix에 따른 `N/A`이며, 그 대신 대응 local gate의 성공 증거가 있어야 한다.
+
+## 출시 전 controlled migration 추가 경로 (2026-09-05 사용자 승인)
+
+고객 0명·광고 미집행 상태에서 웹/API·환경 설정·DB 변경의 빠른 배포를 요청한 사용자의 승인으로
+`prelaunch-web-deployment.md`의 추가형 DB 경로를 허용한다. 이것은 제품 계약 변경 승인이 아니다.
+기존 마이그레이션의 변경/삭제는 거부하고, 실제 이력 또는 운영자가 검증한 명시적 baseline을 사용한다.
+격리된 전체 migration replay, 로컬 target identity, owner-only full DB dump, 새 SQL+checksum ledger의
+한 transaction 및 `--db-compatible` 호환성 확인을 요구한다. `homecook_deploy.migrations`는
+배포 도구의 내부 이력이며 사용자 API로 노출하지 않는다.
+
+이 DB dump는 schema+data를 포함하는 해당 변경 직전 snapshot이다. Storage payload·off-Mac·암호화·
+전체 플랫폼 복원에 관한 위 정책을 대체하지 않는다. DB 자동 reset/restore, 원격 DB, 파괴적 SQL,
+데이터 재작성은 허용하지 않는다. 앱 실패 시 호환성이 확인된 이전 웹만 복원하며 DB는 유지한다.

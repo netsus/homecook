@@ -4,6 +4,8 @@
 범위: 서버 Mac의 `homecook` release 승격 governance
 기준 SHA: `origin/master`의 exact approved commit
 
+> 출시 전 예외: 2026-09-05 사용자가 고객 0명·광고 미집행 개발 서버의 프론트 빠른 배포를 요청했다. 웹/API·환경 설정과 백업·검증된 추가형 DB를 처리하는 `prelaunch-web-deployer` 경로는 [prelaunch-web-deployment.md](./prelaunch-web-deployment.md)를 따른다. 이 문서의 정식 promotion 잠금을 해제하거나 DB의 해당 controlled migration 이외의 작업과 worker에 예외를 전파하지 않는다.
+
 현재 activation: **`activation_blocked: true` for `release:production:promote`**
 
 rehearsal repeatability receipt와 GitHub attestation binding 구현이 merge되고 독립 code/security review를 통과하기 전까지 `pnpm release:production:promote`는 adapter 생성, lock 획득, Docker/LaunchAgent/DB/runtime 접근보다 먼저 무조건 fail closed한다. command가 `package.json`에 존재한다는 사실은 activation evidence가 아니다. `plan`, `prepare`, `status`, `verify`는 기존 read-only/prepare 경계에서 계속 사용할 수 있으며 이 kill switch가 불필요하게 막지 않는다.
