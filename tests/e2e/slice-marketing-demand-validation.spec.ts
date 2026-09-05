@@ -78,9 +78,16 @@ async function expectStageImagesReady(page: Page) {
           const optimizedUrl = new URL(image.currentSrc || image.src, window.location.href);
           if (optimizedUrl.pathname === "/_next/image") {
             const sourceUrl = optimizedUrl.searchParams.get("url");
-            if (sourceUrl?.startsWith("/") && !sourceUrl.startsWith("//")) {
+            const resolvedSourceUrl = sourceUrl
+              ? new URL(sourceUrl, window.location.href)
+              : null;
+            if (
+              resolvedSourceUrl
+              && resolvedSourceUrl.origin === window.location.origin
+              && resolvedSourceUrl.pathname.startsWith("/assets/")
+            ) {
               image.removeAttribute("srcset");
-              image.src = sourceUrl;
+              image.src = resolvedSourceUrl.href;
             }
           }
 

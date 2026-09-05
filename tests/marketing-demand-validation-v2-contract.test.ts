@@ -172,13 +172,30 @@ describe("marketing demand validation v2 document contract", () => {
     expect(captureSpec).toContain("timeout: 10_000");
     expect(captureSpec).toContain('optimizedUrl.pathname === "/_next/image"');
     expect(captureSpec).toContain('optimizedUrl.searchParams.get("url")');
-    expect(captureSpec).toContain('!sourceUrl.startsWith("//")');
+    expect(captureSpec).toContain("resolvedSourceUrl.origin === window.location.origin");
+    expect(captureSpec).toContain('resolvedSourceUrl.pathname.startsWith("/assets/")');
     expect(captureSpec).toContain('image.removeAttribute("srcset")');
     expect(captureSpec).toContain('test("captures hero and result evidence"');
     expect(captureSpec).toContain('test("captures the main funnel evidence"');
     expect(captureSpec).toContain(
       'test("captures narrow and responsive evidence and writes the manifest"',
     );
+  });
+
+  it.each([
+    ["/assets/funnel/food.png", true],
+    ["/assets/funnel/food.png?size=small", true],
+    ["//example.com/assets/food.png", false],
+    ["/\\example.com/assets/food.png", false],
+    ["https://example.com/assets/food.png", false],
+    ["/api/v1/marketing/validation", false],
+  ])("keeps optimizer fallback source %s inside the local asset boundary", (sourceUrl, allowed) => {
+    const pageUrl = new URL("http://127.0.0.1:3100/beta");
+    const resolvedSourceUrl = new URL(sourceUrl, pageUrl);
+    const isLocalAsset = resolvedSourceUrl.origin === pageUrl.origin
+      && resolvedSourceUrl.pathname.startsWith("/assets/");
+
+    expect(isLocalAsset).toBe(allowed);
   });
 
   it("replaces the v1 row checks with a creative-key conditional v1/v2 contract", () => {
