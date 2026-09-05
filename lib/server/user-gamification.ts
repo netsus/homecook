@@ -1,3 +1,4 @@
+import type { UserGamificationProjectionWriter } from "@/lib/server/user-gamification-projection";
 import {
   getUserProgressGrade,
   readUserProgress,
@@ -755,9 +756,10 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 export async function readUserGamification(
   dbClient: UserGamificationDbClient & UserProgressDbClient,
   userId: string,
+  projectionWriter?: UserGamificationProjectionWriter,
 ): Promise<{ data: UserGamificationData | null; error: QueryError | null }> {
   try {
-    const progressResult = await readUserProgress(dbClient, userId);
+    const progressResult = await readUserProgress(dbClient, userId, projectionWriter);
 
     if (progressResult.error || !progressResult.data) {
       return {
@@ -788,6 +790,7 @@ export async function readUserGamification(
       progress: progressResult.data,
       achievementCounts,
       notificationMode: "silent",
+      projectionWriter,
     });
 
     if (reconcileResult.error) {
@@ -1422,6 +1425,7 @@ async function reconcileUserGamification(
   dbClient: UserGamificationDbClient,
   input: {
     userId: string;
+    projectionWriter?: UserGamificationProjectionWriter;
     progress: UserProgressData;
     sourceEventId?: string;
     sourceActivityId?: string;
@@ -1469,7 +1473,7 @@ async function reconcileUserGamification(
       sourceEventId: input.sourceEventId ?? null,
       sourceActivityId: input.sourceActivityId ?? null,
       now,
-    });
+    }, input.projectionWriter);
 
     if (achievementResult.error) {
       return { error: achievementResult.error };
@@ -1522,7 +1526,7 @@ async function reconcileUserGamification(
       definition,
       sourceEventId: input.sourceEventId ?? null,
       now,
-    });
+    }, input.projectionWriter);
 
     if (badgeResult.error) {
       return { error: badgeResult.error };
@@ -1540,25 +1544,25 @@ async function reconcileUserGamification(
         ? "completed"
         : "active";
     const completedAt = completed ? existing?.completed_at ?? now : null;
-    const upsertResult = await dbClient
-      .from("user_quest_progress")
-      .upsert(
-        {
-          user_id: input.userId,
-          quest_key: definition.quest_key,
-          quest_type: definition.quest_type,
-          status,
-          progress_current: progressCurrent,
-          progress_target: definition.target,
-          source_event_id: input.sourceEventId ?? existing?.source_event_id ?? null,
-          completed_at: completedAt,
-          dismissed_at: dismissedAt,
-          updated_at: now,
-        },
-        { onConflict: "user_id,quest_key" },
-      )
-      .select("quest_key, quest_type, status, progress_current, progress_target, source_event_id, completed_at, dismissed_at, seen_at, updated_at")
-      .maybeSingle();
+    const payload: UserQuestProgressUpsert = {
+      user_id: input.userId,
+      quest_key: definition.quest_key,
+      quest_type: definition.quest_type,
+      status,
+      progress_current: progressCurrent,
+      progress_target: definition.target,
+      source_event_id: input.sourceEventId ?? existing?.source_event_id ?? null,
+      completed_at: completedAt,
+      dismissed_at: dismissedAt,
+      updated_at: now,
+    };
+    const upsertResult = input.projectionWriter
+      ? await input.projectionWriter.write<UserQuestProgressRow>("quest", payload)
+      : await dbClient
+          .from("user_quest_progress")
+          .upsert(payload, { onConflict: "user_id,quest_key" })
+          .select("quest_key, quest_type, status, progress_current, progress_target, source_event_id, completed_at, dismissed_at, seen_at, updated_at")
+          .maybeSingle();
 
     if (upsertResult.error || !upsertResult.data) {
       return {
@@ -1698,24 +1702,28 @@ async function insertAchievementAward(
     sourceActivityId: string | null;
     now: string;
   },
+  projectionWriter?: UserGamificationProjectionWriter,
 ): Promise<{ created: boolean; row: UserAchievementAwardRow | null; error: QueryError | null }> {
-  const result = await dbClient
-    .from("user_achievement_awards")
-    .insert({
-      user_id: input.userId,
-      achievement_key: input.definition.achievement_key,
-      category_key: input.definition.category_key,
-      track_key: input.definition.track_key,
-      target_value: input.definition.target,
-      achieved_value: input.achievedValue,
-      badge_key: input.definition.badge_key,
-      source_event_id: input.sourceEventId,
-      source_activity_id: input.sourceActivityId,
-      idempotency_key: `achievement:${input.definition.achievement_key}:${input.userId}`,
-      earned_at: input.now,
-    })
-    .select("achievement_key, category_key, track_key, target_value, achieved_value, badge_key, earned_at, seen_at")
-    .maybeSingle();
+  const payload: UserAchievementAwardInsert = {
+    user_id: input.userId,
+    achievement_key: input.definition.achievement_key,
+    category_key: input.definition.category_key,
+    track_key: input.definition.track_key,
+    target_value: input.definition.target,
+    achieved_value: input.achievedValue,
+    badge_key: input.definition.badge_key,
+    source_event_id: input.sourceEventId,
+    source_activity_id: input.sourceActivityId,
+    idempotency_key: `achievement:${input.definition.achievement_key}:${input.userId}`,
+    earned_at: input.now,
+  };
+  const result = projectionWriter
+    ? await projectionWriter.write<UserAchievementAwardRow>("achievement", payload)
+    : await dbClient
+        .from("user_achievement_awards")
+        .insert(payload)
+        .select("achievement_key, category_key, track_key, target_value, achieved_value, badge_key, earned_at, seen_at")
+        .maybeSingle();
 
   if (isDuplicateInsert(result.error)) {
     return { created: false, row: null, error: null };
@@ -1740,18 +1748,22 @@ async function insertBadgeAward(
     sourceEventId: string | null;
     now: string;
   },
+  projectionWriter?: UserGamificationProjectionWriter,
 ): Promise<{ created: boolean; error: QueryError | null }> {
-  const result = await dbClient
-    .from("user_badge_awards")
-    .insert({
-      user_id: input.userId,
-      badge_key: input.definition.badge_key,
-      source_event_id: input.sourceEventId,
-      idempotency_key: `badge:${input.definition.badge_key}:${input.userId}`,
-      earned_at: input.now,
-    })
-    .select("badge_key, earned_at, seen_at")
-    .maybeSingle();
+  const payload: UserBadgeAwardInsert = {
+    user_id: input.userId,
+    badge_key: input.definition.badge_key,
+    source_event_id: input.sourceEventId,
+    idempotency_key: `badge:${input.definition.badge_key}:${input.userId}`,
+    earned_at: input.now,
+  };
+  const result = projectionWriter
+    ? await projectionWriter.write<UserBadgeAwardRow>("badge", payload)
+    : await dbClient
+        .from("user_badge_awards")
+        .insert(payload)
+        .select("badge_key, earned_at, seen_at")
+        .maybeSingle();
 
   if (isDuplicateInsert(result.error)) {
     return { created: false, error: null };

@@ -378,6 +378,7 @@ type LocalInternalScope =
   | "auth-flow"
   | "auth-refresh"
   | "future-meal-write"
+  | "gamification-projection"
   | "marketing-validation"
   | "not-found-feedback"
   | "operational-event"
@@ -474,6 +475,10 @@ export const createCookedBatchInternalClient =
 
 export function createFutureMealWriteInternalClient() {
   return createScopedInternalRpcClient("future-meal-write");
+}
+
+export function createGamificationProjectionInternalClient() {
+  return createScopedInternalRpcClient("gamification-projection");
 }
 
 export function createShoppingCreateInternalClient() {

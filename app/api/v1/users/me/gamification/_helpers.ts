@@ -69,6 +69,7 @@ export async function createAuthedGamificationClient(fallbackMessage: string) {
 
   return {
     response: null,
+    routeClient,
     dbClient,
     user,
   };

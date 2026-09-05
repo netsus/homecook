@@ -347,6 +347,7 @@ describe("supabase server helpers", () => {
       server.createSnapshotV2SessionInternalClient();
     const futureMealClient = server.createFutureMealWriteInternalClient();
     const shoppingCreateClient = server.createShoppingCreateInternalClient();
+    const gamificationClient = server.createGamificationProjectionInternalClient();
     const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
     server.createYoutubeIngredientRegistrationInternalRpcClient();
     const youtubeExtractionClient = server.createYoutubeExtractionInternalClient();
@@ -368,6 +369,7 @@ describe("supabase server helpers", () => {
       "snapshot-v2-session",
       "future-meal-write",
       "shopping-create",
+      "gamification-projection",
       "account-lifecycle",
       "youtube-ingredient-registration",
       "youtube-extraction",
@@ -387,6 +389,7 @@ describe("supabase server helpers", () => {
     expect(snapshotV2SessionClient).toEqual({ rpc: expect.any(Function) });
     expect(futureMealClient).toEqual({ rpc: expect.any(Function) });
     expect(shoppingCreateClient).toEqual({ rpc: expect.any(Function) });
+    expect(gamificationClient).toEqual({ rpc: expect.any(Function) });
     expect(() => lifecycleClient?.from("recipes")).toThrow(
       "Internal Data scope denied table: recipes",
     );

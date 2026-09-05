@@ -1,3 +1,4 @@
+import type { UserGamificationProjectionWriter } from "@/lib/server/user-gamification-projection";
 import type {
   UserProgressData,
   UserProgressEventCounts,
@@ -466,6 +467,7 @@ export async function awardUserProgressEvent(
 export async function readUserProgress(
   dbClient: UserProgressDbClient,
   userId: string,
+  projectionWriter?: UserGamificationProjectionWriter,
 ): Promise<{ data: UserProgressData | null; error: QueryError | null }> {
   try {
     const summaryResult = await dbClient
@@ -482,7 +484,7 @@ export async function readUserProgress(
       return { data: toUserProgressData(summaryResult.data), error: null };
     }
 
-    const recalculatedResult = await recalculateUserProgressSummary(dbClient, userId);
+    const recalculatedResult = await recalculateUserProgressSummary(dbClient, userId, projectionWriter);
 
     if (recalculatedResult.error || !recalculatedResult.data) {
       return {
@@ -503,6 +505,7 @@ export async function readUserProgress(
 async function recalculateUserProgressSummary(
   dbClient: UserProgressDbClient,
   userId: string,
+  projectionWriter?: UserGamificationProjectionWriter,
 ): Promise<{ data: UserProgressSummaryRow | null; error: QueryError | null }> {
   const eventsResult = await dbClient
     .from("user_progress_events")
@@ -521,11 +524,13 @@ async function recalculateUserProgressSummary(
     events: eventsResult.data,
   });
 
-  const upsertResult = await dbClient
-    .from("user_progress_summary")
-    .upsert(summary, { onConflict: "user_id" })
-    .select("user_id, total_xp, current_level, level_curve_version, event_counts, last_event_at, last_updated_at")
-    .maybeSingle();
+  const upsertResult = projectionWriter
+    ? await projectionWriter.write<UserProgressSummaryRow>("summary", summary)
+    : await dbClient
+        .from("user_progress_summary")
+        .upsert(summary, { onConflict: "user_id" })
+        .select("user_id, total_xp, current_level, level_curve_version, event_counts, last_event_at, last_updated_at")
+        .maybeSingle();
 
   if (upsertResult.error || !upsertResult.data) {
     return {

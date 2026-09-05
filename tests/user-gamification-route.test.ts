@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createGamificationProjectionInternalClient = vi.fn();
+const readVerifiedAccountGenerationSession = vi.fn();
+const projectionRpc = vi.fn();
+const sessionAuthority = {
+  ownerUuid: "user-1", authIdentityCreatedAt: "2026-09-01T00:00:00Z",
+  sessionIssuedAt: "2026-09-06T00:00:00Z", sessionKeyHash: "hash", hmacKeyVersion: 1,
+};
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -18,6 +25,11 @@ const dismissUserGamificationTutorialQuest = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createGamificationProjectionInternalClient,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -55,6 +67,9 @@ describe("user gamification routes", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
+    createGamificationProjectionInternalClient.mockReset().mockReturnValue({ rpc: projectionRpc });
+    projectionRpc.mockReset();
+    readVerifiedAccountGenerationSession.mockReset().mockResolvedValue({ ok: true, sessionAuthority });
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
@@ -179,7 +194,40 @@ describe("user gamification routes", () => {
       },
       error: null,
     });
-    expect(readUserGamification).toHaveBeenCalledWith(routeClient, "user-1");
+    expect(readUserGamification).toHaveBeenCalledWith(routeClient, "user-1", { write: expect.any(Function) });
+    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledWith(routeClient);
+  });
+
+  it.each([
+    { ok: false },
+    { ok: true, sessionAuthority: { ...sessionAuthority, ownerUuid: "other-owner" } },
+  ])("rejects unverified or mismatched sessions before creating a projection writer: %j", async (verified) => {
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) } });
+    readVerifiedAccountGenerationSession.mockResolvedValue(verified);
+    const { GET } = await importReadRoute();
+    const response = await GET();
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("ACCOUNT_SESSION_STALE");
+    expect(createGamificationProjectionInternalClient).not.toHaveBeenCalled();
+    expect(projectionRpc).not.toHaveBeenCalled();
+    expect(readUserGamification).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when no internal projection client is available", async () => {
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) } });
+    createGamificationProjectionInternalClient.mockReturnValue(null);
+    const { GET } = await importReadRoute();
+    expect((await GET()).status).toBe(500);
+    expect(readUserGamification).not.toHaveBeenCalled();
+  });
+
+  it("returns the existing failure envelope when projection fails", async () => {
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) } });
+    readUserGamification.mockResolvedValue({ data: null, error: { code: "42501", message: "projection denied" } });
+    const { GET } = await importReadRoute();
+    const response = await GET();
+    expect(response.status).toBe(500);
+    expect((await response.json()).error.code).toBe("INTERNAL_ERROR");
   });
 
   it("rejects malformed notification seen bodies", async () => {
