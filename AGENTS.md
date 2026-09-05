@@ -84,6 +84,13 @@
 - 상태 전이, 권한 경계, read-only, 에러 시나리오는 테스트로 고정한다.
 - 제품 규칙 완화 제안에는 반드시 대체 안전장치 또는 완화 불가 근거가 있어야 한다.
 
+## 출시 전 개발 배포 예외 (2026-09-05 사용자 승인)
+
+- 사용자가 `app.mumeok.kr`을 고객 0명·광고 미집행 개발 서버로 명시하고 프론트 빠른 배포를 요청했다.
+- 이 기간의 웹 UI·웹 API·환경 설정·추가형 DB 배포는 `docs/engineering/prelaunch-web-deployment.md`의 `prelaunch-web-deployer` 경로를 적용한다. 해당 명령 안에서 웹 앱 전용 plist 교체·재시작·복원, 비공개 환경 병합, 검증·백업된 호환 DB 마이그레이션을 허용한다.
+- 아래 정식 production release의 전체 bundle/tag/attestation/role 제한은 이 한정된 출시 전 경로를 막지 않는다. 정식 promote kill switch는 유지한다. DB reset/자동 restore, 파괴적·데이터 재작성 SQL, worker·Docker 구성·네트워크 변경은 이 예외 범위 밖이다.
+- 고객 유입 또는 광고 집행 전에 이 예외를 재검토한다.
+
 ## Branch And Delivery
 
 - 브랜치, 커밋, worktree, PR 크기 규칙의 단일 기준은 `docs/engineering/git-workflow.md`다.
