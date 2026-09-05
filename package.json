@@ -144,6 +144,7 @@
     "test:e2e:regression": "playwright test tests/e2e/slice-*.spec.ts --grep-invert '@live-oauth'",
     "test:e2e:regression:ci": "playwright test tests/e2e/slice-*.spec.ts --grep-invert '@live-oauth' --project=desktop-chrome --project=mobile-chrome",
     "test:e2e:smoke": "playwright test tests/e2e/slice-*.spec.ts --grep '@smoke-core' --grep-invert '@live-oauth'",
+    "test:e2e:smoke:ios-sentinel": "playwright test tests/e2e/slice-*.spec.ts --grep '@smoke-core' --grep-invert '@live-oauth' --project=mobile-ios-small",
     "test:e2e:a11y": "playwright test tests/e2e/qa-a11y.spec.ts",
     "test:e2e:a11y:core": "playwright test tests/e2e/qa-a11y.spec.ts --grep '@a11y-core'",
     "test:e2e:visual": "playwright test tests/e2e/qa-visual.spec.ts",

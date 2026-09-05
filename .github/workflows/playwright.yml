@@ -76,7 +76,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run core Playwright smoke suite
+        if: needs.changes.outputs.full_regression != 'true'
         run: pnpm test:e2e:smoke
+
+      - name: Run small iOS smoke sentinel
+        if: needs.changes.outputs.full_regression == 'true'
+        run: pnpm test:e2e:smoke:ios-sentinel
 
       - name: Upload Playwright report
         if: failure()
