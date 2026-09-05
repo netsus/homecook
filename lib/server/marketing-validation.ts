@@ -146,6 +146,7 @@ interface MarketingValidationHandlerDependencies {
   verifyTurnstile: (
     token: string,
     allowedHostnames: readonly string[],
+    expectedHostname: string,
   ) => Promise<TurnstileVerificationResult>;
 }
 
@@ -465,6 +466,7 @@ export function createTurnstileVerifierFromEnv() {
   return async (
     token: string,
     allowedHostnames: readonly string[],
+    expectedHostname: string,
   ): Promise<TurnstileVerificationResult> => {
     const secret = readEnvValue(
       "MARKETING_TURNSTILE_SECRET",
@@ -510,6 +512,7 @@ export function createTurnstileVerifierFromEnv() {
         data.success !== true
         || typeof data.hostname !== "string"
         || !allowedHostnames.includes(data.hostname)
+        || data.hostname !== expectedHostname
         || data.action !== MARKETING_VALIDATION_TURNSTILE_ACTION
       ) {
         return {
@@ -915,6 +918,7 @@ export function createMarketingValidationHandler(
           const verification = await dependencies.verifyTurnstile(
             value.turnstile_token,
             gate.allowedHostnames,
+            new URL(requestOrigin).hostname,
           );
           if (!verification.ok) {
             return fail(verification.code, verification.message, 422);

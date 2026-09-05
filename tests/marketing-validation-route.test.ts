@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMarketingValidationHandler } from "@/lib/server/marketing-validation-route";
+import {
+  createMarketingValidationHandler,
+  createTurnstileVerifierFromEnv,
+} from "@/lib/server/marketing-validation-route";
 import { parseMarketingValidationBody } from "@/lib/server/marketing-validation";
 import type { MarketingValidationSessionRecord } from "@/types/marketing-validation";
 
@@ -60,6 +63,18 @@ function request(body: Record<string, unknown>, cookie = true) {
     headers: {
       "content-type": "application/json",
       origin: ORIGIN,
+      ...(cookie ? { cookie: `mumeok_validation_session=${SESSION_ID}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+function requestAt(url: string, origin: string, body: Record<string, unknown>, cookie = true) {
+  return new Request(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin,
       ...(cookie ? { cookie: `mumeok_validation_session=${SESSION_ID}` } : {}),
     },
     body: JSON.stringify(body),
@@ -228,6 +243,57 @@ describe("marketing validation v2 route", () => {
     expect(await response.text()).not.toMatch(/person@example|secret/i);
   });
 
+  it("binds successful Turnstile verification to the exact request origin hostname", async () => {
+    const current = createSession({
+      quiz_started_at: NOW,
+      quiz_completed_at: NOW,
+      result_viewed_at: NOW,
+      experience_started_at: NOW,
+      experience_completed_at: NOW,
+      beta_form_viewed_at: NOW,
+    });
+    const verifyTurnstile = vi.fn(async (
+      token: string,
+      allowedHostnames: readonly string[],
+      expectedHostname?: string,
+    ) => (
+      token === "secret"
+      && allowedHostnames.includes("beta-preview.mumeok.kr")
+      && expectedHostname === "app.mumeok.kr"
+        ? { ok: true as const, verified_at: NOW }
+        : { ok: false as const, code: "TURNSTILE_FAILED" as const, message: "보안 확인에 실패했어요. 다시 시도해 주세요." }
+    ));
+    const handler = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => current),
+      marketingLeadGate: vi.fn(async () => ({
+        ok: true as const,
+        allowedOrigins: [ORIGIN, "https://beta-preview.mumeok.kr"],
+        allowedHostnames: ["app.mumeok.kr", "beta-preview.mumeok.kr"],
+      })),
+      verifyTurnstile,
+      advanceSession: vi.fn(async () => createSession({
+        ...current,
+        lead_submitted_at: NOW,
+        lead_submission_status: "accepted",
+      })),
+    }));
+
+    const response = await handler(request({
+      action: "lead_submitted",
+      honeypot: "",
+      email: "person@example.com",
+      consent: true,
+      turnstile_token: "secret",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(verifyTurnstile).toHaveBeenCalledWith(
+      "secret",
+      ["app.mumeok.kr", "beta-preview.mumeok.kr"],
+      "app.mumeok.kr",
+    );
+  });
+
   it("returns byte-identical generic success for accepted, duplicate, and same-session replay", async () => {
     const current = createSession({
       quiz_started_at: NOW, quiz_completed_at: NOW, result_viewed_at: NOW,
@@ -267,5 +333,46 @@ describe("marketing validation v2 route", () => {
     const gateResponse = await gate(request({ action: "lead_submitted", honeypot: "", email: "person@example.com", consent: true, turnstile_token: "secret" }));
     expect(gateResponse.status).toBe(503);
     expect(await gateResponse.text()).not.toMatch(/person@example|secret/i);
+  });
+
+  it("rejects a Turnstile token solved for a different allowlisted preview hostname", async () => {
+    vi.stubEnv("MARKETING_TURNSTILE_SECRET", "preview-secret");
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      success: true,
+      hostname: "beta-preview.mumeok.kr",
+      action: "marketing_validation_lead_submit",
+      challenge_ts: NOW,
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const verifyTurnstile = createTurnstileVerifierFromEnv();
+    const result = await verifyTurnstile(
+      "secret",
+      ["app.mumeok.kr", "beta-preview.mumeok.kr"],
+      "app.mumeok.kr",
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      code: "TURNSTILE_FAILED",
+      message: "보안 확인에 실패했어요. 다시 시도해 주세요.",
+    });
+  });
+
+  it("documents that Secure cookies follow request.url protocol, not the Origin header", async () => {
+    const insertViewSession = vi.fn(async () => createSession());
+    const handler = createMarketingValidationHandler(dependencies({ insertViewSession }));
+    const response = await handler(requestAt(
+      "http://127.0.0.1:3000/api/v1/marketing/validation",
+      ORIGIN,
+      { action: "view", honeypot: "" },
+      false,
+    ));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).not.toContain("Secure");
   });
 });
