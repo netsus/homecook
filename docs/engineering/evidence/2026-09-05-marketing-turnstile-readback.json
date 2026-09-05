@@ -1,0 +1,14 @@
+{
+  "schema": "homecook.marketing-turnstile-readback.v1",
+  "provider": "cloudflare",
+  "widget_name": "Mumeok Beta Signup",
+  "site_key": "0x4AAAAAAEo_Lx27a0M_yHd6",
+  "configured_hostname": "mumeok.kr",
+  "application_hostname": "app.mumeok.kr",
+  "widget_mode": "managed",
+  "pre_clearance": false,
+  "secret_rotated_after_creation": true,
+  "secret_storage": "cloudflare-account-only",
+  "observed_at": "2026-09-05T09:56:26Z",
+  "observation": "Cloudflare dashboard readback; no secret value recorded"
+}

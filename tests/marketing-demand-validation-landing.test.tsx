@@ -244,6 +244,7 @@ describe("marketing demand validation v2 landing", () => {
     render(<MarketingDemandValidationScreen />);
 
     await reachBeta(user);
+    expect(screen.getByText(/보유: 캠페인 종료 후 180일/)).toBeTruthy();
     await user.type(screen.getByRole("textbox", { name: "이메일" }), "tester@example.com");
     await user.click(screen.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }));
     await user.click(screen.getByRole("button", { name: "무료 베타 초대받기" }));
