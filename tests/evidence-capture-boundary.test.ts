@@ -132,9 +132,18 @@ describe("tracked evidence capture boundary", () => {
     }
   });
 
+  it("keeps auth-provider evidence writes behind the explicit update switch", async () => {
+    const source = await readFile("tests/e2e/slice-auth-provider-memory-linking.spec.ts", "utf8");
+
+    expect(source.match(/page\.screenshot\(/gu)).toHaveLength(4);
+    expect(
+      source.match(/if \(shouldUpdateTrackedEvidence\(\)\) \{\s*await page\.screenshot\(/gu),
+    ).toHaveLength(4);
+  });
+
   it("keeps tracked evidence unchanged by default and updates it explicitly", async () => {
     const helperPath = "./e2e/helpers/evidence-capture";
-    const { captureEvidenceScreenshot } = await import(
+    const { captureEvidenceScreenshot, shouldUpdateTrackedEvidence } = await import(
       /* @vite-ignore */ helperPath
     ) as {
       captureEvidenceScreenshot: (
@@ -145,6 +154,7 @@ describe("tracked evidence capture boundary", () => {
         },
         trackedPath: string,
       ) => Promise<string>;
+      shouldUpdateTrackedEvidence: () => boolean;
     };
     const root = await mkdtemp(join(tmpdir(), "homecook-evidence-boundary-"));
     const trackedPath = join(root, "tracked.png");
@@ -161,6 +171,8 @@ describe("tracked evidence capture boundary", () => {
       outputPath: (name: string) => join(outputRoot, name),
     };
 
+    expect(shouldUpdateTrackedEvidence()).toBe(false);
+
     const verificationPath = await captureEvidenceScreenshot(
       page,
       testInfo,
@@ -172,6 +184,7 @@ describe("tracked evidence capture boundary", () => {
     expect(testInfo.attach).toHaveBeenCalledOnce();
 
     vi.stubEnv("HOMECOOK_UPDATE_EVIDENCE", "1");
+    expect(shouldUpdateTrackedEvidence()).toBe(true);
     await captureEvidenceScreenshot(page, testInfo, trackedPath);
 
     expect(await readFile(trackedPath, "utf8")).toBe("captured");

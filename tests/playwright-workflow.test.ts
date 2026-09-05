@@ -73,6 +73,16 @@ describe("playwright workflow", () => {
     expect(marketingEvidence).toContain("--project=desktop-chrome");
   });
 
+  it("exposes one explicit command for updating tracked E2E evidence", () => {
+    const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(packageJson.scripts["test:e2e:evidence:update"]).toBe(
+      "HOMECOOK_UPDATE_EVIDENCE=1 playwright test",
+    );
+  });
+
   it("keeps only the small iOS smoke sentinel when full regression already covers desktop and mobile Chrome", () => {
     const workflow = readFileSync(join(repoRoot, ".github/workflows/playwright.yml"), "utf8");
     const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {

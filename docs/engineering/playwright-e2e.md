@@ -33,6 +33,7 @@
 - `pnpm test:e2e:ui`: Playwright UI 모드
 - `pnpm test:e2e:oauth`: `@live-oauth` 태그 테스트만 실행 (실제 외부 서비스 포함)
 - `pnpm test:e2e:marketing:evidence`: `@evidence-capture` 마케팅 Stage 4 증거를 desktop에서 명시적으로 재생성
+- `pnpm test:e2e:evidence:update <spec> --project=<project>`: opt-in E2E evidence를 tracked 경로에 명시적으로 재생성
 - `pnpm test:lighthouse:run`: 이미 build된 앱에서 LHCI만 실행
 - `pnpm test:all`: lint, typecheck, vitest, 전체 slice regression
 - `pnpm verify:frontend:pr`: lint, typecheck, vitest, build, core smoke/a11y/visual

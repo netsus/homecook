@@ -7,13 +7,17 @@ type ScreenshotOptions = NonNullable<Parameters<Page["screenshot"]>[0]>;
 
 const UPDATE_EVIDENCE_ENV = "HOMECOOK_UPDATE_EVIDENCE";
 
+export function shouldUpdateTrackedEvidence() {
+  return process.env[UPDATE_EVIDENCE_ENV] === "1";
+}
+
 export async function captureEvidenceScreenshot(
   page: Pick<Page, "screenshot">,
   testInfo: Pick<TestInfo, "attach" | "outputPath">,
   trackedPath: string,
   options: Omit<ScreenshotOptions, "path"> = {},
 ) {
-  const updateTrackedEvidence = process.env[UPDATE_EVIDENCE_ENV] === "1";
+  const updateTrackedEvidence = shouldUpdateTrackedEvidence();
   const targetPath = updateTrackedEvidence
     ? trackedPath
     : testInfo.outputPath(`evidence-${basename(trackedPath)}`);

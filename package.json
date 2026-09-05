@@ -157,6 +157,7 @@
     "test:e2e:oauth": "playwright test --grep '@live-oauth'",
     "test:e2e:marketing": "playwright test tests/e2e/slice-marketing-demand-validation.spec.ts",
     "test:e2e:marketing:evidence": "playwright test tests/e2e/slice-marketing-demand-validation.spec.ts --grep '@evidence-capture' --project=desktop-chrome",
+    "test:e2e:evidence:update": "HOMECOOK_UPDATE_EVIDENCE=1 playwright test",
     "test:e2e:marketing:visual": "playwright test tests/e2e/qa-visual.spec.ts --grep '@marketing'",
     "test:e2e:marketing:a11y": "playwright test tests/e2e/qa-a11y.spec.ts --grep '@marketing'",
     "smoke:youtube-real-app-route": "node scripts/youtube-real-app-route-smoke.mjs",
