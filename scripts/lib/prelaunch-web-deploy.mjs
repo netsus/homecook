@@ -67,7 +67,10 @@ export function prelaunchVerificationScripts(scope, manifest, verifyScript) {
 }
 
 export function prelaunchVerificationEnvironment(script, environment) {
-  return script === "test" || script.startsWith("test:") ? { ...environment, NODE_ENV: "test" } : { ...environment };
+  if (script !== "test" && !script.startsWith("test:")) return { ...environment };
+  const execution = Object.fromEntries(["HOME", "PATH", "TMPDIR", "LANG", "LC_ALL", "USER", "LOGNAME", "SHELL", "CI"]
+    .filter((key) => environment[key] !== undefined).map((key) => [key, environment[key]]));
+  return { ...execution, NODE_ENV: "test" };
 }
 
 /** @param {{scripts: string[], run: (script: string) => Promise<void>}} options */

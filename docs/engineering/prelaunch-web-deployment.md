@@ -57,8 +57,8 @@ pnpm deploy:dev -- --verify-script test:product
 ```
 
 `test:*`, `verify:*`, `marketing:preview:*`, `marketing:production:*` 중 대상 package.json에
-실제 정의된 키만 사용할 수 있다. 추가 셸 인수는 받지 않는다. test 명령은 NODE_ENV=test,
-운영 검증은 운영 환경으로 실행한다. 실제 외부 기능을 검사하는 스크립트는 그 스크립트의 준비 조건을 따른다.
+실제 정의된 키만 사용할 수 있다. 추가 셸 인수는 받지 않는다. test 명령은 OS 실행 기본값과 CI만 전달받아 NODE_ENV=test로 실행하고, verify/marketing 운영 검증은 실제 운영 환경을 유지한다.
+실제 외부 기능을 검사하는 스크립트는 그 스크립트의 준비 조건을 따른다.
 
 ## 웹 보안키·환경 설정
 
