@@ -253,7 +253,15 @@
     "validate:pr-ready": "node scripts/validate-pr-ready.mjs",
     "validate:omo-bookkeeping": "node scripts/validate-omo-bookkeeping.mjs",
     "validate:production-data-quality": "node scripts/validate-production-data-quality.mjs",
-    "validate:closeout-sync": "node scripts/validate-closeout-sync.mjs"
+    "validate:closeout-sync": "node scripts/validate-closeout-sync.mjs",
+    "deploy:dev:landing": "node scripts/deploy-prelaunch-web.mjs deploy",
+    "deploy:dev:status": "node scripts/deploy-prelaunch-web.mjs status",
+    "deploy:dev:rollback": "node scripts/deploy-prelaunch-web.mjs rollback",
+    "deploy:dev": "node scripts/deploy-prelaunch-web.mjs deploy",
+    "deploy:dev:plan": "node scripts/deploy-prelaunch-web.mjs plan",
+    "deploy:dev:install": "node scripts/install-dev-deploy.mjs",
+    "test:dev-deploy": "vitest run tests/prelaunch-web-deploy.test.ts tests/prelaunch-environment.test.ts tests/prelaunch-database.test.ts tests/dev-deploy-launcher.test.ts",
+    "test:dev-deploy:db": "PRELAUNCH_DB_INTEGRATION=1 vitest run tests/prelaunch-database.integration.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-icons": "1.3.2",

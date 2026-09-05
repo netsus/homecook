@@ -73,3 +73,10 @@ CI는 pinned Supabase CLI로 fresh local stack을 시작해 migration 전체를 
 `down.sql` 파일은 사용하지 않는다.
 
 예: 테이블 추가를 롤백하려면 `DROP TABLE` 구문이 담긴 새 마이그레이션 파일을 추가한다.
+
+## 출시 전 빠른 적용
+
+사용자 승인 기반 `pnpm deploy:dev -- --db-config <private-config> --db-baseline <verified-baseline> --db-compatible`
+경로는 `prelaunch-web-deployment.md`를 따른다. 기본 baseline은 최초 한 번 검증하며 이후에는 실제
+checksum ledger를 사용한다. 격리 검증·백업·transaction 적용을 자동화하되 기존 SQL 수정, destructive
+reset/restore, DROP/데이터 재작성과 호환성 미확인 변경은 처리하지 않는다.
