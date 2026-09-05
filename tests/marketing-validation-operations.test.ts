@@ -180,6 +180,72 @@ function makeSessionRows() {
         followup_submitted_at: null,
         retention_until: "2026-08-18T00:00:00.000Z",
       },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440004",
+        campaign_key: "weekly_nutrition_2026",
+        creative_key: "mumeok_funnel_prototype_v2",
+        audience_key: "weekly_nutrition_beta_interest",
+        ad_variant: "a",
+        attribution_status: "paid_allowlisted",
+        viewed_at: "2026-09-02T00:00:00.000Z",
+        quiz_started_at: "2026-09-02T00:00:05.000Z",
+        quiz_completed_at: "2026-09-02T00:01:00.000Z",
+        result_viewed_at: "2026-09-02T00:01:05.000Z",
+        experience_started_at: "2026-09-02T00:01:10.000Z",
+        experience_completed_at: "2026-09-02T00:01:20.000Z",
+        beta_form_viewed_at: "2026-09-02T00:01:30.000Z",
+        quiz_result: "ingredient-tracker",
+        quiz_answers: {
+          q1: "daily",
+          q2: "3_5",
+          q3: "track",
+          q4: "ingredients",
+        },
+        target_qualified: null,
+        email: "v2-accepted@example.com",
+        consent_version: "marketing-demand-validation-v2",
+        consented_at: "2026-09-02T00:01:35.000Z",
+        turnstile_verified_at: "2026-09-02T00:01:34.000Z",
+        lead_submitted_at: "2026-09-02T00:01:36.000Z",
+        lead_submission_status: "accepted",
+        planner_intent: null,
+        planner_priority: null,
+        followup_submitted_at: null,
+        retention_until: "2026-09-09T00:00:00.000Z",
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440005",
+        campaign_key: "weekly_nutrition_2026",
+        creative_key: "mumeok_funnel_prototype_v2",
+        audience_key: "weekly_nutrition_beta_interest",
+        ad_variant: "b",
+        attribution_status: "paid_allowlisted",
+        viewed_at: "2026-09-03T00:00:00.000Z",
+        quiz_started_at: "2026-09-03T00:00:05.000Z",
+        quiz_completed_at: "2026-09-03T00:01:00.000Z",
+        result_viewed_at: "2026-09-03T00:01:05.000Z",
+        experience_started_at: "2026-09-03T00:01:10.000Z",
+        experience_completed_at: "2026-09-03T00:01:20.000Z",
+        beta_form_viewed_at: "2026-09-03T00:01:30.000Z",
+        quiz_result: "pro-measurer",
+        quiz_answers: {
+          q1: "daily",
+          q2: "6_plus",
+          q3: "measure",
+          q4: "weight",
+        },
+        target_qualified: null,
+        email: null,
+        consent_version: "marketing-demand-validation-v2",
+        consented_at: "2026-09-03T00:01:35.000Z",
+        turnstile_verified_at: "2026-09-03T00:01:34.000Z",
+        lead_submitted_at: "2026-09-03T00:01:36.000Z",
+        lead_submission_status: "duplicate",
+        planner_intent: null,
+        planner_priority: null,
+        followup_submitted_at: null,
+        retention_until: "2026-09-10T00:00:00.000Z",
+      },
     ],
   };
 }
@@ -437,6 +503,87 @@ describe("marketing validation Stage 6 operations", () => {
     expect(requireFileText(safeOutputPath)).toContain("\"'=cmd,\n@example.com\"");
   });
 
+  it("keeps the legacy v1 export default while allowing an explicit v2 cohort export with duplicate counts only in summary", () => {
+    const sandbox = mkdtempSync(path.join(tmpdir(), "marketing-validation-export-v2-"));
+    const inputPath = path.join(sandbox, "marketing-validation-sessions.json");
+    const safeOutputPath = path.join(safeOutputRoot, "test-marketing-validation-export-v2.csv");
+
+    writeJson(inputPath, makeSessionRows());
+
+    const v1Default = runNodeScript(exportScriptPath, [
+      "--mock-db-export",
+      inputPath,
+      "--output",
+      safeOutputPath,
+    ]);
+    expect(v1Default.status).toBe(0);
+
+    const v1Summary = JSON.parse(v1Default.stdout) as {
+      accepted_count?: number;
+      duplicate_count?: number;
+      exported_count?: number;
+      output_path?: string;
+    };
+    expect(v1Summary).toEqual({
+      accepted_count: 1,
+      duplicate_count: 1,
+      exported_count: 1,
+      output_path: ".artifacts/marketing-validation/test-marketing-validation-export-v2.csv",
+    });
+
+    const v1Csv = requireFileText(safeOutputPath);
+    expect(v1Csv).toContain("accepted@example.com,marketing-demand-validation-v1");
+    expect(v1Csv).not.toContain("v2-accepted@example.com");
+
+    const v2Export = runNodeScript(exportScriptPath, [
+      "--mock-db-export",
+      inputPath,
+      "--campaign-key",
+      "weekly_nutrition_2026",
+      "--creative-key",
+      "mumeok_funnel_prototype_v2",
+      "--consent-version",
+      "marketing-demand-validation-v2",
+      "--output",
+      safeOutputPath,
+    ]);
+
+    expect(v2Export.status).toBe(0);
+    expect(v2Export.stdout).not.toContain("v2-accepted@example.com");
+    expect(v2Export.stdout).not.toContain("550e8400-e29b-41d4-a716-446655440004");
+    expect(v2Export.stdout).not.toContain("550e8400-e29b-41d4-a716-446655440005");
+
+    const v2Summary = JSON.parse(v2Export.stdout) as {
+      accepted_count?: number;
+      duplicate_count?: number;
+      exported_count?: number;
+      output_path?: string;
+    };
+    expect(v2Summary).toEqual({
+      accepted_count: 1,
+      duplicate_count: 1,
+      exported_count: 1,
+      output_path: ".artifacts/marketing-validation/test-marketing-validation-export-v2.csv",
+    });
+
+    const v2Csv = requireFileText(safeOutputPath);
+    expect(v2Csv).toContain("v2-accepted@example.com,marketing-demand-validation-v2");
+    expect(v2Csv).not.toContain("accepted@example.com,marketing-demand-validation-v1");
+    expect(v2Csv).not.toContain("550e8400-e29b-41d4-a716-446655440005");
+    expect(v2Csv).not.toContain("duplicate");
+
+    const invalidFilter = runNodeScript(exportScriptPath, [
+      "--mock-db-export",
+      inputPath,
+      "--creative-key",
+      " ",
+      "--output",
+      safeOutputPath,
+    ]);
+    expect(invalidFilter.status).toBe(1);
+    expect(`${invalidFilter.stdout}\n${invalidFilter.stderr}`).toMatch(/--creative-key/u);
+  });
+
   it("ships a PII-free analysis SQL scoped to the v2 creative and lead cohorts", () => {
     const sql = requireFileText(analysisSqlPath);
 
@@ -448,6 +595,7 @@ describe("marketing validation Stage 6 operations", () => {
     expect(sql).toContain("lead_submission_status = 'duplicate'");
     expect(sql).not.toContain("planner_intent");
     expect(sql).not.toContain("target_qualified");
+    expect(sql).not.toMatch(/\bselect\s+[^;]*\bquiz_answers\b(?!\s*->>)/iu);
   });
 
   it("reports every v2 funnel stage and beta-form-to-lead conversion", () => {
@@ -460,6 +608,38 @@ describe("marketing validation Stage 6 operations", () => {
     ]) expect(sql).toContain(`'${metric}'`);
     expect(sql).toContain("beta_form_to_lead_rate");
     expect(sql).toMatch(/select 'accepted_lead', accepted_lead, beta_form_view from counts[\s\S]*select 'duplicate_submission', duplicate_submission, beta_form_view from counts/iu);
+  });
+
+  it("reports per-ad-variant funnel conversion for a b c d and default", () => {
+    const sql = requireFileText(analysisSqlPath);
+
+    expect(sql).toContain("'ad_variant_funnel'");
+    expect(sql).toMatch(/values\s*\('a'\),\s*\('b'\),\s*\('c'\),\s*\('d'\),\s*\('default'\)/iu);
+    expect(sql).toContain("ad_variant_stage_counts as (");
+    expect(sql).toContain("coalesce(stage_counts.landing_view, 0)::bigint");
+    expect(sql).toContain("select ad_variant, 'landing_view'::text as metric, landing_view as numerator, landing_view as denominator from ad_variant_stage_counts");
+    expect(sql).toContain("select ad_variant, 'accepted_lead', accepted_lead, beta_form_view from ad_variant_stage_counts");
+    expect(sql).toContain("select ad_variant, 'duplicate_submission', duplicate_submission, beta_form_view from ad_variant_stage_counts");
+  });
+
+  it("reports exact q1..q4 answer distributions without exposing raw payloads", () => {
+    const sql = requireFileText(analysisSqlPath);
+
+    for (const key of ["'q1'", "'q2'", "'q3'", "'q4'"]) {
+      expect(sql).toContain(key);
+    }
+    for (const answer of [
+      "'daily'", "'3_5'", "'1_2'", "'none'", "'6_plus'",
+      "'pass'", "'eyeball'", "'track'", "'measure'",
+      "'ingredients'", "'weight'", "'search'",
+    ]) {
+      expect(sql).toContain(answer);
+    }
+    expect(sql).toContain("quiz_answers ->> 'q1'");
+    expect(sql).toContain("quiz_answers ->> 'q2'");
+    expect(sql).toContain("quiz_answers ->> 'q3'");
+    expect(sql).toContain("quiz_answers ->> 'q4'");
+    expect(sql).toContain("question_response_share");
   });
 
   it("keeps the analysis SQL aligned with the Q3-only four-result rule", () => {
@@ -486,6 +666,18 @@ describe("marketing validation Stage 6 operations", () => {
     ]) {
       expect(template).toContain(blocker);
     }
+  });
+
+  it("keeps the result template aligned with v2 ad and question cohort reporting", () => {
+    const template = requireFileText(resultTemplatePath);
+
+    expect(template).toContain("landing → accepted");
+    expect(template).toContain("duplicate submissions");
+    expect(template).toContain("legacy backward-compat row only");
+    for (const questionKey of ["q1", "q2", "q3", "q4"]) {
+      expect(template).toContain(`## 5.${questionKey === "q1" ? "1" : questionKey === "q2" ? "2" : questionKey === "q3" ? "3" : "4"}. \`${questionKey}\``);
+    }
+    expect(template).toContain("exact enum aggregate만 기록");
   });
 
   it("adds exact export and purge internal scopes without broadening the public marketing route scope", () => {
