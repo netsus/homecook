@@ -52,3 +52,10 @@ Mac의 hosts가 공개 주소를 loopback으로 바꾸는 경우 실제 공개 D
 
 수정 소스는 `fix/beta-returning-session-flow`에 커밋했으며 아직 master에 병합하지 않았다.
 배포는 고객 0명·광고 미집행의 출시 전 개발 경로에서 검토한 정확한 수정 commit으로 수행했다.
+
+## 최신 master 통합
+
+- 최신 기반: `a882404d` (PR #1517). 위 공개 서버 검증은 과거 배포 head의 기록이며 이번 통합본의 실서버 검증으로 재사용하지 않는다.
+- #1517의 실제 Turnstile 위젯/controller, 만료·오류 후 reset, 개인정보 보유 기간 안내와 QA widget mock을 보존했다.
+- 기존 서버/API/DB/접수 활성화 설정은 변경하지 않았다.
+- 재방문 Playwright 파일을 `slice-marketing-returning-session.spec.ts`로 배치해 일반 CI 회귀 명령의 `slice-*.spec.ts` 검색에 포함한다.
