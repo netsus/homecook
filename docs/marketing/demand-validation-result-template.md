@@ -27,27 +27,82 @@
 | experience_complete | `[작성]` | `[작성]` | `[작성]` |  |
 | beta_form_view | `[작성]` | `[작성]` | `[작성]` |  |
 | accepted_lead | `[작성]` | `[작성]` | `[작성]` | beta form view 기준 |
+| duplicate_submission | `[작성]` | `[작성]` | `[작성]` | beta form view 기준 |
 
 ## 3. Hero `ad_variant` cohort
 
-| ad_variant | sessions | beta form views | accepted leads | beta form → lead |
-| --- | ---: | ---: | ---: | ---: |
-| a | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
-| b | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
-| c | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
-| d | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
-| default | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| ad_variant | sessions | beta form views | accepted leads | duplicate submissions | beta form → lead |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| a | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| b | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| c | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| d | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| default | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+
+- `d`는 legacy backward-compat row only다. 신규 spend 판단은 `a / b / c` 중심으로 적고, `d`는 historical tail 여부만 본다.
+
+### 3.1 광고별 단계 전환
+
+- `landing → accepted` 해석은 전체 단계별 전환표와 `beta_form_view → accepted_lead`를 함께 읽고, duplicate submissions는 별도 열로 분리해 본다.
+
+| ad_variant | landing → quiz_start | quiz_start → quiz_complete | quiz_complete → result_view | result_view → experience_start | experience_start → experience_complete | experience_complete → beta_form_view | beta_form_view → accepted_lead |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| a | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| b | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| c | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| d | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| default | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
 
 ## 4. Result cohort
 
-| result key | sessions | beta form views | accepted leads | beta form → lead |
-| --- | ---: | ---: | ---: | ---: |
-| homecook-passer | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
-| eyeballing-master | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
-| ingredient-tracker | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
-| pro-measurer | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| result key | sessions | beta form views | accepted leads | duplicate submissions | beta form → lead |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| homecook-passer | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| eyeballing-master | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| ingredient-tracker | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
+| pro-measurer | `[작성]` | `[작성]` | `[작성]` | `[작성]` | `[작성]` |
 
-## 5. Lead와 개인정보
+## 5. 문항 분포
+
+- exact enum aggregate만 기록한다. free-text 재구성, 원문 payload 복사, row-level 예시는 넣지 않는다.
+
+### 5.1. `q1`
+
+| answer key | responses | share |
+| --- | ---: | ---: |
+| daily | `[작성]` | `[작성]` |
+| 3_5 | `[작성]` | `[작성]` |
+| 1_2 | `[작성]` | `[작성]` |
+| none | `[작성]` | `[작성]` |
+
+### 5.2. `q2`
+
+| answer key | responses | share |
+| --- | ---: | ---: |
+| none | `[작성]` | `[작성]` |
+| 1_2 | `[작성]` | `[작성]` |
+| 3_5 | `[작성]` | `[작성]` |
+| 6_plus | `[작성]` | `[작성]` |
+
+### 5.3. `q3`
+
+| answer key | responses | share |
+| --- | ---: | ---: |
+| pass | `[작성]` | `[작성]` |
+| eyeball | `[작성]` | `[작성]` |
+| track | `[작성]` | `[작성]` |
+| measure | `[작성]` | `[작성]` |
+
+### 5.4. `q4`
+
+| answer key | responses | share |
+| --- | ---: | ---: |
+| ingredients | `[작성]` | `[작성]` |
+| weight | `[작성]` | `[작성]` |
+| search | `[작성]` | `[작성]` |
+| none | `[작성]` | `[작성]` |
+
+## 6. Lead와 개인정보
 
 | 유형 | 수 | 처리 |
 | --- | ---: | --- |
@@ -58,14 +113,14 @@
 - 직접 식별자가 분석 결과·로그·URL에 없는지: `[확인자/evidence]`
 - retention 종료와 purge evidence: `[작성]`
 
-## 6. 결론
+## 7. 결론
 
 - 관찰한 내용: `[작성]`
 - 아직 말할 수 없는 내용: `[작성]`
 - 다음 실험에서 바꿀 한 변수: `[광고 훅 / 타깃 / Hero 메시지 중 하나]`
 - 그대로 유지할 계약: `q1..q4, Q3-only result, result/experience before email`
 
-## 7. Manual Only readiness
+## 8. Manual Only readiness
 
 | 항목 | 상태 | evidence |
 | --- | --- | --- |
