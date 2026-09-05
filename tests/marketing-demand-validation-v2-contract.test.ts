@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -89,7 +90,9 @@ describe("marketing demand validation v2 document contract", () => {
     const workItem = readRequired(".workflow-v2/work-items/marketing-demand-validation-v2.json");
 
     expect(readme).toContain("source prototype commit: `63f8ef2a019c6d260a96a42fab9d67f727d93557`");
-    expect(readme).toContain("`mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`");
+    expect(readme).toContain(
+      "`ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/`",
+    );
     expect(readme).toContain("iPhone/Pixel frame");
     expect(readme).toContain("이미지 권리");
     expect(readme).toContain("제품 예시");
@@ -97,6 +100,68 @@ describe("marketing demand validation v2 document contract", () => {
     expect(automation).toContain("marketing-demand-validation-v2");
     expect(workItem).toContain("01a0630e-81f1-7f42-8b1b-cb259d1d5997");
     expect(workItem).toContain("internal 1.5");
+  });
+
+  it("keeps the final visual source in a repository-owned canonical archive", () => {
+    const manifest = JSON.parse(
+      readRequired(
+        "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/manifest.json",
+      ),
+    ) as {
+      source_commit: string;
+      source_tree: string;
+      files: Array<{ path: string; bytes: number; sha256: string }>;
+    };
+
+    expect(manifest.source_commit).toBe("0aaa282552256ac9e77a5c134bb45a52e42ade33");
+    expect(manifest.source_tree).toBe("27052a41ee4a097ff8bcb29751238c07aa408861");
+    expect(manifest.files).toHaveLength(53);
+
+    for (const file of manifest.files) {
+      expect(isAbsolute(file.path), `${file.path} must be repository-relative`).toBe(false);
+      const absolutePath = resolve(rootDir, file.path);
+      expect(
+        relative(rootDir, absolutePath).startsWith(".."),
+        `${file.path} must stay inside the repository`,
+      ).toBe(false);
+      expect(existsSync(absolutePath), `${file.path} must exist`).toBe(true);
+      expect(statSync(absolutePath).size, `${file.path} byte size`).toBe(file.bytes);
+      expect(
+        createHash("sha256").update(readFileSync(absolutePath)).digest("hex"),
+        `${file.path} SHA-256`,
+      ).toBe(file.sha256);
+    }
+
+    const canonicalDocs = [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/marketing-demand-validation-v2/README.md",
+      "ui/designs/MARKETING_DEMAND_VALIDATION_V2.md",
+      "ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md",
+      "ui/designs/evidence/marketing-demand-validation-v2/design-qa.md",
+    ].map(readRequired).join("\n");
+
+    expect(canonicalDocs).toContain(
+      "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/",
+    );
+    expect(canonicalDocs).not.toContain("/Users/shj/2025/2026/mumeok-funnel");
+
+    const captureSpec = readRequired("tests/e2e/slice-marketing-demand-validation.spec.ts");
+    expect(captureSpec).toContain("relative(process.cwd(), capturePath)");
+
+    const captureManifest = JSON.parse(
+      readRequired(
+        "ui/designs/evidence/marketing-demand-validation-v2/stage4-capture-manifest.json",
+      ),
+    ) as { captures: string[] };
+    for (const capturePath of captureManifest.captures) {
+      expect(isAbsolute(capturePath), `${capturePath} must be repository-relative`).toBe(false);
+      const absolutePath = resolve(rootDir, capturePath);
+      expect(
+        relative(rootDir, absolutePath).startsWith(".."),
+        `${capturePath} must stay inside the repository`,
+      ).toBe(false);
+      expect(existsSync(absolutePath), `${capturePath} must exist`).toBe(true);
+    }
   });
 
   it("replaces the v1 row checks with a creative-key conditional v1/v2 contract", () => {

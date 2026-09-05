@@ -1,0 +1,277 @@
+import { mkdir, readFile } from "node:fs/promises";
+import { chromium } from "@playwright/test";
+import { ArrowRightIcon, CheckCircledIcon, MagnifyingGlassIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+const projectRoot = new URL("../", import.meta.url);
+const assetRoot = new URL("public/assets/funnel/", projectRoot);
+const adRoot = new URL("ads/", assetRoot);
+await mkdir(adRoot, { recursive: true });
+
+const toDataUrl = async (url) => {
+  const bytes = await readFile(url);
+  return `data:image/png;base64,${bytes.toString("base64")}`;
+};
+
+const logo = await toDataUrl(new URL("brand/mumeok-logo-horizontal.png", assetRoot));
+const cookingStages = await toDataUrl(new URL("source/b-cooking-stages.png", assetRoot));
+const jeyuk = await toDataUrl(new URL("food/jeyuk-on-scale.png", assetRoot));
+const recipeJeyuk = await toDataUrl(new URL("food/jeyuk-recipe-clean.png", assetRoot));
+const doodleB = await toDataUrl(new URL("decor/doodle-b-cooking-weight.png", assetRoot));
+const doodleC = await toDataUrl(new URL("decor/doodle-c-nutrition-sparkle.png", assetRoot));
+
+const browser = await chromium.launch();
+const renderIcon = (Icon, className) => renderToStaticMarkup(createElement(Icon, { className, "aria-hidden": true }));
+const searchIcon = renderIcon(MagnifyingGlassIcon, "search-icon");
+const loadingIcon = renderIcon(ReloadIcon, "loading-icon");
+const nextIcon = renderIcon(ArrowRightIcon, "screen-hop-icon");
+const doneIcon = renderIcon(CheckCircledIcon, "done-icon");
+
+const transferVisual = `
+  <div class="transfer-visual">
+    <section class="recipe-panel">
+      <span class="panel-label">제육볶음 레시피</span>
+      <div class="recipe-photo"><img src="${recipeJeyuk}" alt=""></div>
+      <div class="recipe-ingredients">
+        <strong>돼지고기 <em>600g</em></strong>
+        <span>· 양파 <em>200g</em> · 대파 <em>100g</em></span>
+      </div>
+    </section>
+    <div class="screen-hop" aria-hidden="true">${nextIcon}</div>
+    <section class="search-panel">
+      <span class="panel-label">식단 기록</span>
+      <div class="search-stack">
+        <div class="search-field">${searchIcon}<b>돼지고기 검색...</b></div>
+        <div class="search-field">${searchIcon}<b>양파 검색...</b></div>
+        <div class="search-field">${searchIcon}<b>대파 검색...</b></div>
+        <div class="search-loading">${loadingIcon}</div>
+      </div>
+    </section>
+  </div>`;
+
+const weightVisual = `
+  <div class="weight-visual">
+    <img src="${cookingStages}" alt="">
+    <div class="stage-label stage-label--raw"><span>요리 전 재료</span><strong>1,420g</strong></div>
+    <div class="stage-label stage-label--cooked"><span>요리 후 완성</span><strong>1,083g</strong></div>
+    <div class="stage-label stage-label--portion"><span>내가 먹은 양</span><strong>300g</strong></div>
+    <span class="display-weight display-weight--raw">1,420<small>g</small></span>
+    <span class="display-weight display-weight--cooked">1,083<small>g</small></span>
+    <span class="display-weight display-weight--portion">300<small>g</small></span>
+  </div>`;
+
+const nutritionVisual = `
+  <div class="nutrition-visual">
+    <div class="nutrition-photo">
+      <img src="${jeyuk}" alt="">
+      <span class="scale-readout">320g</span>
+    </div>
+    <div class="nutrition-card">
+      <span>내 집밥 320g</span>
+      <strong>487 <small>kcal</small></strong>
+      <div class="macro-row macro-row--carb"><b>탄수화물</b><em>31g</em></div>
+      <div class="macro-row macro-row--protein"><b>단백질</b><em>39g</em></div>
+      <div class="macro-row macro-row--fat"><b>지방</b><em>22g</em></div>
+      <p>내 레시피 기준</p>
+    </div>
+  </div>`;
+
+const landingAVisual = `
+  <div class="solution-grid solution-a">
+    <section class="solution-card recipe-panel">
+      <span class="panel-label">제육볶음 레시피</span>
+      <div class="solution-photo"><img src="${recipeJeyuk}" alt=""></div>
+      <div class="recipe-ingredients">
+        <strong>돼지고기 <em>600g</em></strong>
+        <span>· 양파 <em>200g</em> · 대파 <em>100g</em></span>
+      </div>
+    </section>
+    <div class="screen-hop" aria-hidden="true">${nextIcon}</div>
+    <section class="solution-card auto-panel">
+      <span class="panel-label">자동 정리 완료 ${doneIcon}</span>
+      <div class="auto-stack">
+        <div><b>돼지고기</b><strong>600g</strong>${doneIcon}</div>
+        <div><b>양파</b><strong>200g</strong>${doneIcon}</div>
+        <div><b>대파</b><strong>100g</strong>${doneIcon}</div>
+      </div>
+      <p>영양성분 계산 준비 완료</p>
+    </section>
+  </div>`;
+
+const landingBVisual = `
+  <div class="solution-grid solution-b">
+    <section class="solution-card cooked-card">
+      <span class="panel-label">완성 무게 1,083g</span>
+      <div class="solution-photo"><img src="${jeyuk}" alt=""><span class="solution-scale-readout">1,083<small>g</small></span></div>
+      <strong class="portion-chip">먹은 양 300g</strong>
+    </section>
+    <div class="screen-hop" aria-hidden="true">${nextIcon}</div>
+    <section class="solution-card calc-panel">
+      <span class="panel-label">조리 후 무게 반영 ${doneIcon}</span>
+      <div class="calc-stack">
+        <div><span>요리 전 재료</span><strong>1,420g</strong></div>
+        <div><span>요리 후 완성</span><strong>1,083g</strong></div>
+        <div><span>내가 먹은 양</span><strong>300g</strong></div>
+      </div>
+      <p>300g 기준으로 다시 계산</p>
+    </section>
+  </div>`;
+
+const landingCVisual = `
+  <div class="solution-grid solution-c">
+    <section class="solution-card own-recipe-card">
+      <span class="panel-label">내 제육볶음 레시피</span>
+      <div class="solution-photo"><img src="${recipeJeyuk}" alt=""></div>
+      <div class="recipe-ingredients">
+        <strong>돼지고기 · 양파 · 대파</strong>
+        <span>내가 사용한 재료와 양</span>
+      </div>
+    </section>
+    <div class="screen-hop" aria-hidden="true">${nextIcon}</div>
+    <section class="solution-card landing-nutrition-card">
+      <span>내 집밥 320g</span>
+      <strong>487 <small>kcal</small></strong>
+      <div class="macro-row macro-row--carb"><b>탄수화물</b><em>31g</em></div>
+      <div class="macro-row macro-row--protein"><b>단백질</b><em>39g</em></div>
+      <div class="macro-row macro-row--fat"><b>지방</b><em>22g</em></div>
+      <p>내 레시피 기준 ${doneIcon}</p>
+    </section>
+  </div>`;
+
+const landingVisuals = {
+  a: landingAVisual,
+  b: landingBVisual,
+  c: landingCVisual,
+};
+
+const variants = {
+  a: {
+    title: "레시피에 다 있는데<br>왜 <em>또 입력</em>하지?",
+    body: "재료를 하나씩 다시 찾아<br>입력하고 있진 않나요?",
+    visual: transferVisual,
+    accent: "#ff6547",
+    accentSoft: "#fff0eb",
+  },
+  b: {
+    title: "제육볶음 300g,<br>정확히 <em>몇 kcal</em>?",
+    body: "조리 후 <em>달라진 무게</em>,<br>칼로리는 어떻게 계산할까?",
+    visual: weightVisual,
+    decorated: true,
+    doodle: doodleB,
+    accent: "#009fc2",
+    accentSoft: "#e8faff",
+  },
+  c: {
+    title: "내 집밥에도<br><em>영양성분표</em>가 있다면?",
+    body: "완제품처럼 쉽게,<br><em>내 레시피 기준</em>으로.",
+    visual: nutritionVisual,
+    decorated: true,
+    doodle: doodleC,
+    accent: "#7c4dff",
+    accentSoft: "#f5f0ff",
+  },
+};
+
+const styles = `
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden}
+  body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:#202832;background:#fff}
+  .creative{width:100%;height:100%;padding:62px 72px 48px;display:flex;flex-direction:column;background:radial-gradient(circle at 92% 4%,var(--accent-soft) 0,transparent 25%),linear-gradient(180deg,#fff 0%,#fbfcff 100%)}
+  .brand{width:250px;height:auto;object-fit:contain;object-position:left center}
+  h1{margin:46px 0 0;font-size:65px;line-height:1.12;letter-spacing:-.055em;font-weight:950}
+  h1 em{color:var(--accent);font-style:normal}
+  .creative--b h1 em,.creative--b .body em{background:linear-gradient(100deg,#087f98 0%,#00b8e6 100%);background-clip:text;-webkit-background-clip:text;color:#009fc2;-webkit-text-fill-color:transparent}
+  .creative--bc:not(.is-story){padding-top:30px;padding-bottom:47px}
+  .creative--bc:not(.is-story) .brand{width:434px;height:119px;margin-left:-23px;object-fit:fill}
+  .creative--bc:not(.is-story) h1{margin-top:10px;font-size:108px;line-height:1.12}
+  .creative--a h1 em{text-decoration-line:underline;text-decoration-style:wavy;text-decoration-thickness:3px;text-decoration-color:rgba(255,101,71,.5);text-underline-offset:10px}
+  .body{margin:22px 0 25px;color:#576572;font-size:30px;line-height:1.38;font-weight:680;letter-spacing:-.035em}.body em{color:var(--accent);font-style:normal;font-weight:920}
+  .body-decor{position:relative;min-height:104px;margin:18px 0 12px;padding-left:138px;display:flex;align-items:center}.body-decor .body{margin:0;font-size:34px;line-height:1.28}.body-doodle{position:absolute;left:4px;top:50%;width:108px;height:112px;transform:translateY(-50%);object-fit:contain}.body-doodle--c{left:0;width:124px;height:104px}
+  .creative--bc:not(.is-story) .body-decor{min-height:110px;margin:32px 0 12px;padding-left:160px}.creative--bc:not(.is-story) .body-decor .body{font-size:40px;line-height:1.38}
+  .visual{height:505px;display:flex;align-items:center;justify-content:center;margin:auto 0 24px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+  .creative--a .visual{height:600px;margin:55px 0 24px}.creative--a .transfer-visual section{height:560px}.creative--a .recipe-photo{height:290px}.creative--a .recipe-ingredients{min-height:213px}.creative--a .search-stack{height:503px}
+  .hero-canvas.hero-canvas--a .transfer-visual{grid-template-columns:1fr 82px 1fr}.hero-canvas.hero-canvas--a .transfer-visual section{height:560px}.hero-canvas.hero-canvas--a .panel-label{font-size:25px}.hero-canvas.hero-canvas--a .recipe-photo{height:290px}.hero-canvas.hero-canvas--a .recipe-ingredients{min-height:213px;font-size:22px}.hero-canvas.hero-canvas--a .recipe-ingredients strong{font-size:25px}.hero-canvas.hero-canvas--a .screen-hop-icon{width:48px;height:48px}.hero-canvas.hero-canvas--a .search-stack{height:503px;padding:24px 18px;gap:15px}.hero-canvas.hero-canvas--a .search-field{padding:0 21px;gap:17px}.hero-canvas.hero-canvas--a .search-field b{font-size:25px}.hero-canvas.hero-canvas--a .search-icon{width:31px;height:31px}.hero-canvas.hero-canvas--a .loading-icon{width:36px;height:36px}
+  .creative--b .visual{height:500px;margin:17px -36px auto}
+  .creative--c .visual{height:530px;margin:17px -20px auto}
+  .cta{height:102px;border-radius:24px;background:#00a1ff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:900;letter-spacing:-.04em;box-shadow:0 16px 34px rgba(0,161,255,.24)}
+  .creative--bc:not(.is-story) .cta{height:113px;margin-right:14px;margin-left:-6px;border-radius:24px;font-size:44px}.foot{margin:18px 0 0;text-align:center;color:#74818d;font-size:24px;font-weight:720;word-spacing:10px}.creative--bc:not(.is-story) .foot{margin-top:22px;font-size:29px;letter-spacing:-.05em}
+
+  .transfer-visual{width:100%;height:100%;display:grid;grid-template-columns:1fr 76px 1fr;align-items:center;gap:0}
+  .transfer-visual section{height:450px;border:1px solid #e3e8ec;border-radius:25px;background:#fff;overflow:hidden;box-shadow:0 12px 30px rgba(29,52,67,.08)}
+  .panel-label{display:block;padding:15px 19px;color:#626f79;background:#f6f8f9;font-size:22px;font-weight:900;text-align:center}.recipe-panel .panel-label{color:#fff;background:#00a1ff}
+  .recipe-photo{width:100%;height:240px;overflow:hidden}.recipe-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}
+  .recipe-ingredients{min-height:159px;padding:20px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:19px;letter-spacing:-.03em}.recipe-ingredients strong{font-size:21px}.recipe-ingredients em{color:#008ee6;font-style:normal;font-weight:950}
+  .screen-hop{display:flex;align-items:center;justify-content:center}.screen-hop-icon{width:42px;height:42px;color:#00a1ff;stroke-width:1.8}
+  .search-stack{height:399px;padding:20px 16px;display:grid;grid-template-rows:repeat(4,1fr);gap:13px}.search-field,.search-loading{border-radius:15px;background:#f6f8fb;display:flex;align-items:center}.search-field{padding:0 18px;gap:15px}.search-icon{width:27px;height:27px;flex:0 0 auto;color:#00a1ff}.search-field b{font-size:21px}.search-loading{justify-content:center}.loading-icon{width:31px;height:31px;color:#aab5bf;animation:search-spin 1.2s linear infinite}@keyframes search-spin{to{transform:rotate(360deg)}}
+
+  .solution-grid{width:100%;height:100%;padding:18px 0;display:grid;grid-template-columns:44% 10% 46%;align-items:stretch}
+  .solution-card{position:relative;border:1px solid #e3e8ec;border-radius:24px;background:#fff;overflow:hidden;box-shadow:0 12px 30px rgba(29,52,67,.08)}
+  .solution-card .panel-label{color:#31566f;background:#eef8ff}.solution-card .panel-label .done-icon{width:22px;height:22px;margin-left:5px;color:#20a879;vertical-align:-4px}
+  .solution-photo{position:relative;height:270px;overflow:hidden}.solution-photo img{display:block;width:100%;height:100%;object-fit:cover}.solution-a .solution-photo,.solution-c .solution-photo{height:250px}.solution-a .recipe-ingredients,.solution-c .recipe-ingredients{min-height:160px}
+  .solution-scale-readout{position:absolute;left:50%;bottom:6%;width:108px;height:37px;transform:translateX(-50%);border:2px solid rgba(16,43,80,.55);border-radius:4px;background:#63a9eb;color:#102b50;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:24px;font-weight:900;letter-spacing:-.06em;box-shadow:inset 0 1px 3px rgba(7,38,72,.34)}.solution-scale-readout small{margin:7px 0 0 2px;font-size:10px}
+  .auto-stack{padding:22px 18px 10px;display:grid;gap:13px}.auto-stack>div{min-height:68px;padding:0 14px;border-radius:13px;background:#f6f9fb;display:grid;grid-template-columns:1fr auto 24px;align-items:center;gap:9px;font-size:22px}.auto-stack strong{color:#ff6547;font-size:23px}.auto-stack .done-icon{width:22px;height:22px;color:#20a879}.auto-panel>p,.calc-panel>p{margin:12px 20px 0;color:#007dbd;font-size:21px;font-weight:900;text-align:center}
+  .portion-chip{position:absolute;right:20px;bottom:18px;padding:12px 18px;border-radius:999px;background:#fff;color:#009fc2;font-size:24px;box-shadow:0 8px 22px rgba(23,39,52,.16)}
+  .calc-stack{padding:22px 24px 10px;display:grid;gap:9px}.calc-stack>div{padding:14px 0;border-bottom:1px solid #e2edf2;display:flex;align-items:center;justify-content:space-between}.calc-stack span{color:#66717c;font-size:20px;font-weight:750}.calc-stack strong{font-size:28px}.calc-stack>div:first-child strong{color:#bc6900}.calc-stack>div:nth-child(2) strong{color:#009fc2}.calc-stack>div:last-child strong{color:#f05235}
+  .landing-nutrition-card{padding:30px 32px;background:#f8f5ff}.landing-nutrition-card>span{color:#7c4dff;font-size:31px;font-weight:950}.landing-nutrition-card>strong{display:block;margin:8px 0 18px;font-size:66px}.landing-nutrition-card>strong small{font-size:28px}.landing-nutrition-card .macro-row{font-size:24px}.landing-nutrition-card>p{margin:25px 0 0;color:#7c4dff;font-size:21px;font-weight:900;text-align:right}.landing-nutrition-card .done-icon{width:22px;height:22px;vertical-align:-5px}
+
+  .weight-visual{position:relative;width:100%;height:auto;aspect-ratio:2/1;overflow:hidden;border-radius:26px;background:#fff}
+  .weight-visual>img{width:100%;height:100%;object-fit:contain}
+  .stage-label{position:absolute;top:18px;width:27%;padding:11px 14px;border-radius:15px;background:rgba(255,255,255,.96);text-align:center;box-shadow:0 8px 22px rgba(23,39,52,.12)}.stage-label span,.stage-label strong{display:block}.stage-label span{font-size:21px;font-weight:850}.stage-label strong{margin-top:4px;font-size:32px}.stage-label--raw{left:3%;color:#bc6900}.stage-label--cooked{left:36.5%;color:#009fc2}.stage-label--portion{right:3%;color:#f05235}
+  .display-weight{position:absolute;top:80.2%;width:106px;height:36px;transform:translate(-50%,-50%);border:2px solid rgba(16,43,80,.55);border-radius:4px;background:linear-gradient(180deg,#79b9f4 0%,#4e97df 100%);color:#102b50;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:23px;font-weight:900;letter-spacing:-.06em;text-shadow:0 1px 0 rgba(255,255,255,.3);box-shadow:inset 0 1px 3px rgba(7,38,72,.34)}.display-weight small{margin:7px 0 0 2px;font-size:10px;font-weight:850}.display-weight--raw{left:16.55%}.display-weight--cooked{left:50%}.display-weight--portion{left:83.45%}
+  .creative--b .stage-label span{font-size:24px}.creative--b .stage-label strong{font-size:39px}.creative--b .display-weight{width:116px;height:40px;font-size:26px}.creative--b .display-weight small{font-size:11px}
+  .nutrition-visual{width:100%;height:100%;display:grid;grid-template-columns:52% 48%;align-items:stretch;gap:22px}
+  .nutrition-photo{position:relative;overflow:hidden;border-radius:26px;background:#fff}.nutrition-photo img{width:100%;height:100%;object-fit:cover;object-position:center}
+  .scale-readout{position:absolute;left:50%;top:73.4%;transform:translate(-50%,-50%);color:#e9fdff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:27px;font-weight:950;letter-spacing:-.06em;text-shadow:0 0 8px #18dff2}
+  .nutrition-card{padding:27px 29px;border:0;border-radius:26px;background:linear-gradient(160deg,#fff 0%,#f5f0ff 100%);display:flex;flex-direction:column;box-shadow:0 12px 30px rgba(77,52,164,.1)}
+  .nutrition-card>span{color:#7c4dff;font-size:32px;font-weight:950;letter-spacing:-.04em}.nutrition-card>strong{margin:7px 0 17px;font-size:66px;letter-spacing:-.05em}.nutrition-card>strong small{font-size:29px}.macro-row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-top:1px solid #ded9f2;font-size:25px}.macro-row b{font-weight:790}.macro-row em{font-style:normal;font-size:30px;font-weight:950}.macro-row--carb em{color:#c27c00}.macro-row--protein em{color:#f05248}.macro-row--fat em{color:#7c4dff}.nutrition-card p{margin:auto 0 0;padding-top:13px;color:#7c4dff;font-size:23px;font-weight:900;text-align:right}
+  .creative--c .nutrition-card>span{font-size:38px}.creative--c .nutrition-card>strong{font-size:76px}.creative--c .nutrition-card>strong small{font-size:33px}.creative--c .macro-row{font-size:29px}.creative--c .macro-row em{font-size:36px}.creative--c .nutrition-card p{font-size:26px}.creative--c .scale-readout{font-size:32px}
+
+  .creative.is-story{position:relative;padding:270px 78px 672px}
+  .creative.is-story .brand{width:245px}
+  .creative.is-story h1{margin-top:30px;font-size:60px;line-height:1.08}
+  .creative.is-story .body{margin:18px 0 0;font-size:28px;line-height:1.34}
+  .creative--bc.is-story h1{font-size:64px}.creative--bc.is-story .body-decor{min-height:80px;margin:12px 0 6px;padding-left:96px}.creative--bc.is-story .body-decor .body{font-size:30px}.creative--bc.is-story .body-doodle{left:2px;width:74px;height:82px}.creative--bc.is-story .body-doodle--c{left:0;width:86px;height:76px}
+  .creative.is-story .visual{height:380px;margin:24px 0 18px}
+  .creative--a.is-story .visual,.creative--b.is-story .visual,.creative--c.is-story .visual{height:380px;margin:24px 0 18px}
+  .creative--a.is-story .transfer-visual section{height:350px}.creative--a.is-story .recipe-photo{height:170px}.creative--a.is-story .recipe-ingredients{min-height:123px;padding:12px;font-size:17px}.creative--a.is-story .recipe-ingredients strong{font-size:19px}.creative--a.is-story .search-stack{height:293px;padding:14px 12px;gap:9px}.creative--a.is-story .search-field{padding:0 13px;gap:10px}.creative--a.is-story .search-field b{font-size:18px}.creative--a.is-story .search-icon{width:23px;height:23px}.creative--a.is-story .loading-icon{width:28px;height:28px}
+  .creative--b.is-story .weight-visual{width:760px}.creative--c.is-story .nutrition-visual{height:380px}
+  .creative.is-story .cta{position:absolute;left:78px;top:1050px;width:924px;height:78px;border-radius:18px;font-size:30px}
+  .creative.is-story .foot{position:absolute;left:78px;top:1138px;width:924px;margin:0;font-size:19px}
+  .creative.is-story .stage-label{top:14px;padding:10px}.creative.is-story .stage-label span{font-size:18px}.creative.is-story .stage-label strong{font-size:28px}.creative.is-story .display-weight{width:90px;height:31px;font-size:21px}.creative.is-story .display-weight small{font-size:9px}
+  .creative.is-story .nutrition-card{padding:22px}.creative.is-story .nutrition-card>span{font-size:27px}.creative.is-story .nutrition-card>strong{font-size:58px}.creative.is-story .nutrition-card>strong small{font-size:26px}.creative.is-story .macro-row{font-size:22px;padding:11px 0}.creative.is-story .macro-row em{font-size:28px}.creative.is-story .nutrition-card p{font-size:20px}.creative.is-story .scale-readout{font-size:26px}
+  .creative--bc.is-story .stage-label span{font-size:20px}.creative--bc.is-story .stage-label strong{font-size:31px}.creative--bc.is-story .nutrition-card>span{font-size:30px}.creative--bc.is-story .nutrition-card>strong{font-size:64px}.creative--bc.is-story .macro-row{font-size:24px}.creative--bc.is-story .macro-row em{font-size:31px}
+`;
+
+for (const [variant, visual] of Object.entries(landingVisuals)) {
+  const page = await browser.newPage({ viewport: { width: 1000, height: 600 }, deviceScaleFactor: 1 });
+  const accent = variants[variant].accent;
+  const accentSoft = variants[variant].accentSoft;
+  await page.setContent(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${styles}
+    body{padding:24px;background:#fff}.hero-canvas{width:100%;height:100%;--accent:${accent};--accent-soft:${accentSoft};display:flex;align-items:center}
+    .hero-canvas .stage-label{top:24px;padding:14px}.hero-canvas .stage-label span{font-size:23px}.hero-canvas .stage-label strong{font-size:35px}.hero-canvas .display-weight{width:108px;height:37px;font-size:24px}.hero-canvas .display-weight small{font-size:10px}
+    .hero-canvas .nutrition-card{padding:37px}.hero-canvas .nutrition-card>span{font-size:38px}.hero-canvas .nutrition-card>strong{font-size:81px}.hero-canvas .nutrition-card>strong small{font-size:35px}.hero-canvas .macro-row{font-size:29px;padding:18px 0}.hero-canvas .macro-row em{font-size:37px}.hero-canvas .nutrition-card p{font-size:27px}.hero-canvas .scale-readout{font-size:36px}
+  </style></head><body><main class="hero-canvas hero-canvas--${variant}">${visual}</main></body></html>`);
+  await page.screenshot({ path: new URL(`hero/hero-${variant}-solution.png`, assetRoot).pathname });
+  await page.close();
+}
+
+for (const [variant, content] of Object.entries(variants)) {
+  for (const format of [
+    { suffix: "4x5", width: 1080, height: 1350, className: "" },
+    { suffix: "9x16", width: 1080, height: 1920, className: "is-story" },
+  ]) {
+    if (variant === "a" && format.suffix === "4x5") continue;
+    const page = await browser.newPage({ viewport: { width: format.width, height: format.height }, deviceScaleFactor: 1 });
+    const familyClass = content.decorated ? "creative--bc" : "";
+    const body = content.decorated
+      ? `<div class="body-decor"><img class="body-doodle body-doodle--${variant}" src="${content.doodle}" alt=""><p class="body">${content.body}</p></div>`
+      : `<p class="body">${content.body}</p>`;
+    await page.setContent(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${styles}</style></head><body><main class="creative creative--${variant} ${familyClass} ${format.className}" style="--accent:${content.accent};--accent-soft:${content.accentSoft}"><img class="brand" src="${logo}" alt=""><h1>${content.title}</h1>${body}<div class="visual">${content.visual}</div><div class="cta">30초 집밥 기록 테스트&nbsp; →</div><p class="foot">4문항 · 로그인 없이 · 결과 바로 확인</p></main></body></html>`);
+    await page.screenshot({ path: new URL(`ad-${variant}-${format.suffix}.png`, adRoot).pathname });
+    await page.close();
+  }
+}
+
+await browser.close();
+console.log(new URL(".", adRoot).pathname);

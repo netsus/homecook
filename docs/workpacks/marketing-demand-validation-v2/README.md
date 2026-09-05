@@ -116,10 +116,13 @@
   - `ui/designs/MARKETING_DEMAND_VALIDATION_V2.md`
   - `ui/designs/critiques/MARKETING_DEMAND_VALIDATION_V2-critique.md`
   - source prototype commit `63f8ef2a019c6d260a96a42fab9d67f727d93557`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final/`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v5/`
-  - `marketing/mumeok-funnel-prototype-v2/design-qa.md`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v5/`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/design-qa.md`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/manifest.json`
+  - `docs/marketing/assets/campaign/0aaa282/`
+  - `docs/marketing/assets/source/0aaa282/`
 - Authority status: `reviewed`
 - Notes:
   - source prototype은 standalone 기준 95/100 passed지만 Next.js port의 최종 authority가 아니다.
@@ -149,7 +152,9 @@
 - `docs/marketing/demand-validation-plan.md`
 - `docs/workpacks/marketing-demand-validation/README.md` — historical v1 closeout
 - source prototype commit: `63f8ef2a019c6d260a96a42fab9d67f727d93557`
-- source handoff: `marketing/mumeok-funnel-prototype-v2/INTEGRATION.md`
+- source handoff: `marketing/mumeok-funnel-prototype-v2/INTEGRATION.md` at the historical source prototype commit above
+- repository-owned visual/source archive: `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/`
+- repository-owned campaign/source archives: `docs/marketing/assets/campaign/0aaa282/`, `docs/marketing/assets/source/0aaa282/`
 
 ## QA / Test Data Plan
 
@@ -302,7 +307,7 @@
 
 ## 2026-09-05 Post-closeout Visual Alignment Candidate
 
-- user-approved visual successor: `mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`
+- user-approved visual successor: `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/` (provenance `0aaa282552256ac9e77a5c134bb45a52e42ade33`)
 - implementation branch: `feature/fe-mumeok-funnel-final-alignment`
 - scope: app-owned `/beta` UI, motion, copy and raster assets only
 - preserved: q1~q4, Q3-only result mapping, API/DB/session/attribution/action/consent/Turnstile/fail-closed contracts

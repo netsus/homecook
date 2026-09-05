@@ -17,11 +17,15 @@
 
 ## 2026-09-05 marketing-demand-validation-v2 visual successor
 
-사용자는 기존 v2 API·DB·4문항 계약을 유지하면서 `mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`의 최종 app-owned UI와 동작을 운영 `/beta`에 정렬하도록 승인했다.
+사용자는 기존 v2 API·DB·4문항 계약을 유지하면서 저장소 소유 기준
+`ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/`의 최종 app-owned UI와 동작을
+운영 `/beta`에 정렬하도록 승인했다. 이 기준의 provenance는 독립 저장소의 역사적 exact commit
+`0aaa282552256ac9e77a5c134bb45a52e42ade33`이다.
 
 - 이 successor는 Hero·결과 copy, live proof UI, 체험 1~3 수동 확인, 최신 YouTube 예시·재료, planner animation/layout, beta/done visual을 갱신한다.
 - q1~q4, Q3-only result, attribution, action 순서, single API/table, consent·Turnstile·fail-closed 계약은 변경하지 않는다.
 - prototype-only device frame/status/keyboard는 운영 bundle에 넣지 않고, `390×844` safe-area를 보존한다. 집밥 유형 결과만 세로 스크롤을 허용하고 나머지 화면은 viewport 안에 고정한다. 두 planner는 내일 card를 화면 하단에서 잘라 CTA 뒤 배경처럼만 노출한다.
+- visual/source 53개 파일의 provenance와 SHA-256은 `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/manifest.json`이 고정한다. 광고 deliverable은 `docs/marketing/assets/campaign/0aaa282/`, generator·test·source/decor 원본은 `docs/marketing/assets/source/0aaa282/`에 보존한다.
 - 구현 기준 branch는 `feature/fe-mumeok-funnel-final-alignment`, 비교 evidence는 `ui/designs/evidence/marketing-demand-validation-v2/comparisons/final-0aaa282/`다.
 - 이 항목은 feature branch 구현 authority이며 master merge, 서버 release, production lead activation을 승인하지 않는다. 기존 Manual Only blocker와 독립 frontend/design review가 계속 필요하다.
 
@@ -73,7 +77,7 @@
 - 기존 v1 quiz/intent/stage CHECK는 `creative_key`별 조건부 CHECK로 교체한다. v1 row는 기존 의미를 보존하고 v2 row는 `target_qualified`/legacy field null, 새 stage 순서와 `beta_form_viewed_at <= lead_submitted_at`을 강제한다. migration/test/apply는 후속 Stage 2다.
 - 결과 공유는 `/beta?result=<opaque-result-key>`만 허용하며 다른 query를 제거한다. email/answers/UTM/ad variant는 공유 URL에서 금지하고 known key는 read-only preview, unknown key는 기본 Hero로 처리한다.
 - iPhone/Pixel frame, device selector와 standalone mobile runtime은 운영 범위 밖이다. `src/Prototype.tsx`, `src/prototype.css`, `public/assets/funnel/`의 app-owned 화면·스타일·최종 자산만 Next.js shell, 공용 접근성, `prefers-reduced-motion` 기준으로 포팅한다.
-- latest source commit은 뒤로가기, 결과·체험·planner·beta layout과 최종 캐릭터/영양 자산을 개선했으며 4문항·4결과·API/DB 계약은 바꾸지 않는다. 최신 visual evidence는 `evidence/design-qa/final-v4/`와 `final-v5/`다.
+- latest source commit은 뒤로가기, 결과·체험·planner·beta layout과 최종 캐릭터/영양 자산을 개선했으며 4문항·4결과·API/DB 계약은 바꾸지 않는다. 최신 visual evidence는 `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/`와 `final-v5/`다.
 - 실제 YouTube 썸네일과 제품 이미지는 공개 사용 전 권리를 확인해야 한다. 제품 이미지를 쓰면 `제품 예시`를 표시하고 제휴로 오인시키지 않는다. 권리 미확인 자산은 교체 전까지 production blocker다.
 - operator privacy data, canonical `/privacy`, Turnstile production secret/hostname, allowlisted origin, edge rate-limit evidence, campaign retention, sender domain, 실제 iOS smoke와 paid-ad 승인은 계속 Manual Only blocker다. 하나라도 없으면 lead는 fail-closed다.
 - 현재 main의 runtime·migration·분석 SQL은 아직 5문항/옛 결과 계약이다. 이 docs PR은 문서와 Stage 1 재잠금만 수행하며 제품 코드, migration apply/reset, remote/cloud/linked Supabase, release/tag/deploy를 수행하지 않는다.
