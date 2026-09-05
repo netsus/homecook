@@ -74,6 +74,17 @@ describe("prelaunch web deployment", () => {
     expect(classifyPrelaunchScope(files, basePackage, basePackage).support).toEqual(files);
     for (const file of ["scripts/full-local-production-runtime.mjs", "scripts/worker-start.mjs", "scripts/lib/start-production-runtime.mjs"]) expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow();
   });
+  it("allows the CI path filter alongside web changes without treating it as runtime code", () => {
+    expect(classifyPrelaunchScope(["app/beta/page.tsx", "scripts/ci-path-filter.mjs"], basePackage, basePackage)).toEqual({
+      web: ["app/beta/page.tsx"],
+      database: [],
+      support: ["scripts/ci-path-filter.mjs"],
+      api: [],
+    });
+  });
+  it.each(["scripts/ci-path-filter-extra.mjs", "scripts/lib/ci-path-filter.mjs", "scripts/arbitrary.mjs"])("does not extend the CI exception to %s", (file) => {
+    expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow("허용");
+  });
   it("defaults to origin/master and rejects ambiguous, duplicate or unknown options", () => {
     expect(parsePrelaunchOptions([])).toEqual({ ref: "origin/master", refOption: "--ref" });
     expect(parsePrelaunchOptions(["--env-file", "/private/env", "--ref", "abc", "--db-config", "/private/db", "--db-baseline", "/private/baseline.json"])).toEqual({ ref: "abc", refOption: "--ref", envFile: "/private/env", dbConfig: "/private/db", dbBaseline: "/private/baseline.json" });

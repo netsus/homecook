@@ -5,7 +5,7 @@ export class DeploymentError extends Error {}
 
 export function classifyPrelaunchScope(files, before, after) {
   const scope = { web: [], database: [], support: [], api: [] };
-  const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/)|^(?:AGENTS|CLAUDE|README)\.md$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
+  const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/)|^(?:AGENTS|CLAUDE|README)\.md$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
   const web = /^(?:app|components|lib|stores|types|hooks|public)\/|^(?:middleware\.[cm]?[jt]s|next\.config\.[cm]?[jt]s|tsconfig\.json|postcss\.config\.[cm]?js|package\.json|pnpm-lock\.yaml|\.env\.example)$/u;
   const denied = [];
   for (const file of files) {
