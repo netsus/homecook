@@ -156,6 +156,31 @@ describe("marketing validation external preview smoke", () => {
     ]));
   });
 
+  it("requires the exact case-sensitive marketing cookie name and path value", async () => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      if (url.pathname === "/beta") return response(200, { "content-type": "text/html" });
+      if (url.pathname === "/api/v1/marketing/validation") {
+        if (new Headers(init?.headers).get("origin") === "https://attacker.invalid") return response(403);
+        return response(200, {
+          "set-cookie": "MUMEOK_VALIDATION_SESSION=id; Path=/API/V1/MARKETING/VALIDATION; HttpOnly; SameSite=Lax; Secure",
+        });
+      }
+      return response(404);
+    });
+
+    const summary = await collectMarketingValidationPreviewSmoke({
+      previewOrigin: PREVIEW_ORIGIN,
+      fetchImpl,
+    });
+
+    expect(summary.ready).toBe(false);
+    expect(summary.blockers).toEqual(expect.arrayContaining([
+      "SESSION_COOKIE_NAME_MISSING",
+      "SESSION_COOKIE_PATH_INVALID",
+    ]));
+  });
+
   it("turns network failures into a redacted fail-closed summary", async () => {
     const summary = await collectMarketingValidationPreviewSmoke({
       previewOrigin: PREVIEW_ORIGIN,

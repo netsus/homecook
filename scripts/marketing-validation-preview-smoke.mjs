@@ -70,17 +70,27 @@ function cookieAttributes(setCookie) {
   const sessionCookie = typeof setCookie === "string"
     ? setCookie
       .split(/,(?=\s*[^=;,]+=[^;,]*)/u)
-      .find((cookie) => /^\s*mumeok_validation_session=/iu.test(cookie))
+      .find((cookie) => /^\s*mumeok_validation_session=/u.test(cookie))
     : undefined;
-  const attributes = sessionCookie
-    ? sessionCookie.split(";").map((part) => part.trim().toLowerCase())
-    : [];
+  const parts = sessionCookie ? sessionCookie.split(";").map((part) => part.trim()) : [];
+  const attributes = parts.slice(1);
+  const hasFlag = (name) => attributes.some((attribute) => attribute.toLowerCase() === name);
+  const hasAttribute = (name, expectedValue, { caseSensitiveValue = false } = {}) => (
+    attributes.some((attribute) => {
+      const separator = attribute.indexOf("=");
+      if (separator < 1 || attribute.slice(0, separator).trim().toLowerCase() !== name) return false;
+      const value = attribute.slice(separator + 1).trim();
+      return caseSensitiveValue
+        ? value === expectedValue
+        : value.toLowerCase() === expectedValue.toLowerCase();
+    })
+  );
   return {
     expected_name: Boolean(sessionCookie),
-    expected_path: attributes.includes("path=/api/v1/marketing/validation"),
-    http_only: attributes.includes("httponly"),
-    same_site_lax: attributes.includes("samesite=lax"),
-    secure: attributes.includes("secure"),
+    expected_path: hasAttribute("path", "/api/v1/marketing/validation", { caseSensitiveValue: true }),
+    http_only: hasFlag("httponly"),
+    same_site_lax: hasAttribute("samesite", "lax"),
+    secure: hasFlag("secure"),
   };
 }
 
