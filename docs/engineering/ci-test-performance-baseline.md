@@ -1,6 +1,6 @@
 # CI and Test Performance Baseline
 
-상태: **canonical baseline / cleanup steps 8–9**
+상태: **canonical baseline / cleanup steps 8–10**
 
 측정일: 2026-09-05
 
@@ -242,3 +242,31 @@ marketing unit/contract test는 CI `quality`에서 계속 실행한다. 실제 `
 `components/marketing/**`, API·DB·auth·migration·security·workflow·path-filter 변경은 기존
 code/security/browser/full gate를 유지한다. manual/nightly run도 archive ignore와 무관하게
 complete QA set을 실행한다.
+
+## Step 10 implementation and local evidence
+
+full regression이 실행되는 QA run의 별도 smoke job은 `mobile-ios-small` sentinel만 실행한다.
+일반 PR smoke는 기존 `desktop-chrome`, `mobile-chrome`, `mobile-ios-small` 세 project를
+그대로 유지한다. full regression의 desktop/mobile Chrome 검출력과 별도 accessibility·visual
+suite도 변경하지 않는다.
+
+로컬 `mobile-ios-small` sentinel은 25 instances를 예약해 20 passed, 5 intended skipped,
+28.4초로 완료됐다. 기준선의 별도 smoke 75 instances 중 full regression과 겹치던 50개를
+제거하고 고유한 25개만 남긴 결과다. GitHub runner의 실제 wall time과 runner-time proxy는
+이 PR의 current-head QA와 merge 후 master run에서 다시 기록한다.
+
+고정 대기는 관찰 가능한 완료 조건이 있는 8곳만 교체했다.
+
+- shopping PATCH 세 곳은 request handler 완료를 `expect.poll`로 확인한다.
+- manual/youtube 재료 검색 두 곳은 결과 checkbox locator의 auto-wait를 사용한다.
+- planner layout 세 곳은 임의 100ms 대신 연속 두 animation frame을 기다린다.
+
+따라서 `waitForTimeout()`은 23곳/14.86초에서 15곳/13.16초로 감소했다. 남은 대기는
+stale-query 경계, toast 만료, 성능 측정, scroll debounce, visual animation처럼 시간 자체가
+계약이거나 명시적인 화면 증거 안정화가 필요한 경우다.
+
+최근 full regression에서 재시도된 YouTube URL 제출 두 시나리오는 입력 직후 submit
+버튼의 활성 상태를 관찰하고 hydration 경쟁이 있으면 입력을 제한 시간 안에서 다시 전달한다.
+두 시나리오는 높은 병렬도의 repeat run에서 20/20 통과했다. prepared-food loading skeleton은
+유효한 `status` role을 갖도록 보정했고, 관련 axe 두 시나리오는 10/10 통과했다. 테스트 삭제,
+retry 횟수 증가, timeout 확대는 하지 않았다.
