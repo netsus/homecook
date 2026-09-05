@@ -121,7 +121,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [templates/work-item.example.json](./templates/work-item.example.json): 예시 work item
 - [templates/workflow-status.example.json](./templates/workflow-status.example.json): 예시 상태 보드
 - [templates/promotion-evidence.example.json](./templates/promotion-evidence.example.json): 예시 승격 evidence ledger
-- [migration.md](./migration.md): v1 -> v2 점진 전환 경로
+- [migration.md](./migration.md): 완료된 v1 -> v2 전환의 역사 영수증
 - [opencode.json](../../../opencode.json): repo-local OpenCode instructions + direct agent/default bindings
 - [.opencode/README.md](../../../.opencode/README.md): repo-local OMO 운영 메모
 - [.opencode/omo-provider.json](../../../.opencode/omo-provider.json): legacy provider compatibility snapshot. 신규 Stage dispatch source로 사용 금지

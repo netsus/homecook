@@ -55,6 +55,18 @@ describe("workflow v2 docs", () => {
     }
   });
 
+  it("keeps the completed v1 to v2 migration as a historical receipt", () => {
+    const migration = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/migration.md"),
+      "utf8",
+    );
+
+    expect(migration).toContain("상태: **완료된 역사 기록**");
+    expect(migration).toContain("2cd535a6429012c64f279d50ed0024d4a823b376");
+    expect(migration).toContain("docs/engineering/workflow-v2/README.md");
+    expect(migration).not.toContain("운영 기본값은 계속 v1이다");
+  });
+
   it("keeps work item example aligned with the schema enums and required fields", () => {
     const schema = readJson("docs/engineering/workflow-v2/schemas/work-item.schema.json");
     const example = readJson("docs/engineering/workflow-v2/templates/work-item.example.json");

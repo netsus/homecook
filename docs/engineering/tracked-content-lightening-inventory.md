@@ -1,6 +1,6 @@
 # Tracked Content Lightening Inventory
 
-상태: **10-A canonical inventory / 10-B safe removals complete**
+상태: **10-A inventory / 10-B safe removals / 10-C audited cleanup complete**
 
 기준 commit: `fa2aaa1fc86ddc73bf5f8fac9f8e3b4365440ddb`
 
@@ -181,6 +181,38 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 - 복구: commit `cc64f63c3de7ee335b8c134c92798ab616cb1b0a`
   - overview blob `7fce8c0a5001308935e31000cd5ebcc2af85976f`, SHA-256 `801c89b26476632e21ab017b7be96d90a0e5516e287b4de7d5fdf3b3ac4db537`
   - mobile blob `4813fcb624d15de70d9fe9dd9aadaa4d1dd4406d`, SHA-256 `d69ea214702ed320f00a131726486747444c3ddcd14129a496908a6c1749a9dd`
+
+### Workflow rule and migration prose
+
+- `agent-workflow-overview.md`의 중복 Stage 절차를 canonical SOP 링크로 축약했다.
+- fail-closed validator와 회귀 테스트가 `slice-workflow.md`, `codex-task-handoff.md`의 Stage 독립성 및
+  자기 승인 금지 규칙을 계속 고정한다.
+- `workflow-v2/migration.md`는 76줄의 완료 전 계획에서 27줄의 역사 영수증으로 축약했다.
+- 기존 경로와 foundation/promotion/Codex 전환 commit을 남겨 감사 및 복구 가능성을 보존했다.
+- 현재 운영 기준은 `workflow-v2/README.md`, `slice-workflow.md`,
+  `agent-workflow-overview.md`, `codex-task-handoff.md`로만 연결한다.
+
+## 10-C closeout
+
+| 항목 | 10-B 완료 master | 10-C 완료 | 변화 |
+| --- | ---: | ---: | ---: |
+| tracked 파일 | 6,974 | 6,971 | **-3** |
+| tracked 크기 | 457,344,497 bytes | 456,933,428 bytes | **-411,069 bytes / -0.392MiB** |
+| 전체 10-A 대비 | 473,199,624 bytes | 456,933,428 bytes | **-16,266,196 bytes / -15.513MiB** |
+
+10-C는 참조가 없는 one-shot helper 1개와 retained full screenshot의 exact top crop 2개를 제거했다.
+운영 규칙은 삭제하지 않고 canonical 문서로 위임했으며, 완료 전 migration prose는 Git commit을
+가리키는 역사 영수증으로 바꿨다.
+
+다음 범위는 삭제하지 않았다.
+
+- 공식 버전 문서 220개/23.151MiB: 다수의 역사 문서가 현재 저장소에서 직접 참조됨
+- `ui/designs/evidence/desktop-modern-redesign` 182개/50.075MiB: 감사·phase·porting ledger 참조가 남음
+- 동일 Git blob 사본: object 저장 공간은 이미 deduplicate되며 일부 경로는 감사 계약임
+
+위 두 큰 범위는 파일별 `path / bytes / dimensions / SHA-256 / blob / source commit / result /
+replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으면 삭제 후보로 승격하지
+않는다.
 
 ## 재현 명령
 
