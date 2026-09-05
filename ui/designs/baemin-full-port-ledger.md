@@ -23,7 +23,7 @@ Wave 0의 범위는 추적표 확정이며, 런타임 UI, API, DB, route, compon
 - `ui/designs/prototypes/claude-design-260505/HANDOFF.md`
 - `ui/designs/prototypes/claude-design-260505/app.jsx`
 - `ui/designs/prototypes/claude-design-260505/screens/`
-- `ui/designs/prototypes/claude-design-260505/homecook-baemin-prototype.html`
+- `ui/designs/prototypes/homecook-baemin-prototype.html`
 - `ui/designs/prototypes/claude-design-260505/uploads/DESIGN.md`
 - `ui/designs/prototypes/claude-design-260505/uploads/DESIGN-9313df29.md`
 

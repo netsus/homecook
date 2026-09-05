@@ -67,9 +67,7 @@ workpack/authority documents ────> ui/designs/evidence + docs/design/ass
    - 역사적 archive이지만 현재 runtime/test/canonical 계약은 발견되지 않았다.
    - 첫 소형 삭제 PR 후보이며 신뢰도는 높다.
 2. `docs/design/preview*.html`
-   - HTML 5개, 약 0.15MiB.
-   - exact path 참조 0개인 초기 C2 비교물이다.
-   - 현재 토큰/화면 기준과 시각 비교 후 제거 후보로 삼는다.
+   - 10-B에서 exact 참조 0인 초기 C2 비교물 5개를 제거했다.
 3. `ui/designs/prototypes/claude-design-260512-desktop/project/*standalone*.html`
    - 10-B에서 큰 standalone bundle 1개를 제거하고 5.5KiB generation source는 보존한다.
    - modular source가 현재 `REFERENCE_LOCK`이며 standalone은 직접 실행 참조가 확인되지 않았다.
@@ -118,6 +116,34 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 - 복구: commit `45dade473902b49d85fc975d7edb6e925fb0c6cc`, blob
   `38c62c58baf3089065cec763ad353b59c59ffe97`, SHA-256
   `45cc8f3efbf17f4fd0a7e32d6dd905babd41f4e3cd7a29e68b726d7746fff104`
+
+### `claude-design-260505` superseded Baemin prototype copy
+
+- 제거 대상: `claude-design-260505/homecook-baemin-prototype.html` 1개
+- 제거량: 2,185,389 bytes / 2.084MiB
+- 누적 제거 후 tracked 기준: 6,979개 / 436.302MiB
+- 대체 기준: `ui/designs/prototypes/homecook-baemin-prototype.html`
+- 동등성: 두 HTML의 whitespace 제거 SHA-256이
+  `7ca07209e395d80e4eabbd325eb0324b9db1c0ab406b309053b7434032b050e3`으로 동일
+- 참조 정리: byte-identical port ledger 2개를 retained top-level path로 갱신
+- 복구: commit `ff0c46847d2ac90aa2197e4720a53940bc02cadc`, blob
+  `f407442ee676a37241a90ee0982183f83ac434d7`, SHA-256
+  `52e8ad1c923b8c8f626c9c4c45145fea369038aa570f531330a004faad3f4792`
+
+### Initial C2 design preview HTML set
+
+- 제거 대상: `docs/design/preview*.html` 5개
+- 제거량: 154,092 bytes / 0.147MiB
+- 누적 제거 후 tracked 기준: 6,974개 / 436.155MiB
+- 참조: exact path와 고유 basename의 runtime/test/workflow/dynamic consumer 0
+- 대체 기준: 현재 `docs/design/design-tokens.md`, `docs/design/mobile-ux-rules.md`,
+  `ui/designs/BAEMIN_STYLE_DIRECTION.md`와 구현 화면
+- 복구: commit `68904d804`; 삭제 전 blob/SHA-256은 다음과 같다.
+  - `preview.html`: `444c999953b29231c00d13d36f17d2e27a461274` / `36442d03de177dd44d71d41625b772970a9a09d244f12cce6463e61879f22620`
+  - `preview-b.html`: `db9ad80efa829a3dbdedff6e08b8ac74a456724e` / `bf6d835af30a7a71c43eb30187c58127b5721b739b6eaa357c661b40c94604e0`
+  - `preview-b-photo.html`: `800c46df313ee0365f7eaa58a2fbeab454bb4722` / `f18afc33754b41fa270c4f19abccee703b8c56dcae377f8a10d6d1f6b2611001`
+  - `preview-tokens.html`: `afa61ede9899c9878f4a463464e8d7267b069ce5` / `a9f7ed43df73e6d8bada54e7ca6443b2d9be0a85e06ddc0c22461ad507b7a988`
+  - `preview-recipe-title.html`: `1447fbafa958e8603bf18ce6af7ceee26aaf6cb7` / `716b9747aaa21dfd70cbb1497600d69a73933941a5591e3be0f7d4bf53190073`
 
 ## 재현 명령
 
