@@ -1,76 +1,27 @@
-# Workflow V2 Migration Plan
+# Workflow V2 Migration Receipt
 
-## Strategy
+상태: **완료된 역사 기록**
 
-v2는 `병행 운영 -> 파일럿 -> 승격` 순서로 도입한다.
-v1 문서를 즉시 덮어쓰지 않고, 작은 PR 여러 개로 옮긴다.
+이 경로는 기존 링크와 감사 추적을 보존하기 위해 남긴다. 현재 운영 규칙이나 다음 작업을
+정하는 문서가 아니다.
 
-## Recommended PR Sequence
+## Retained Milestones
 
-### Phase 1. Foundation Docs And Schema
+- foundation 시작: commit `2cd535a6429012c64f279d50ed0024d4a823b376`
+- promotion evidence 도입: commit `59051df7bb42126bf943f94b137aa9836735bbd1`
+- Claude Stage를 독립 Codex 작업으로 전환: commit
+  `6dcb5bd9dbc2e1f41ee11583f8d1395daf1e8e52`
 
-- 목표:
-  - charter, core, presets, approval-and-loops, profile, migration 문서 추가
-  - machine-readable schema와 example 추가
-- 완료 기준:
-  - v2 디렉터리와 entry-point 링크 존재
-  - targeted test 통과
+초기 계획은 foundation 문서와 schema, validator, CI 연동, docs/product pilot,
+promotion 판단의 6단계였다. 해당 계획은 Git 이력의 foundation commit에서 복원할 수 있다.
 
-### Phase 2. Validation MVP
+## Current Authority
 
-- 목표:
-  - work item / status example validation script
-  - schema drift를 막는 test 추가
-  - preset 선택 기준을 검증 가능한 형태로 정리
-- 완료 기준:
-  - 로컬에서 `validate:workflow-v2` 성격의 명령 가능
+- 운영 entry point: `docs/engineering/workflow-v2/README.md`
+- product Stage 절차: `docs/engineering/slice-workflow.md`
+- 변경 유형별 gate: `docs/engineering/agent-workflow-overview.md`
+- Codex 작업 인수인계: `docs/engineering/codex-task-handoff.md`
+- promotion 판정: `docs/engineering/workflow-v2/promotion-readiness.md`와
+  `.workflow-v2/promotion-evidence.json`
 
-### Phase 3. CI And PR Integration
-
-- 목표:
-  - PR body와 work item/status의 기본 정합성 검증
-  - dual-approval artifact 존재 여부 확인
-  - preset별 required checks 매핑
-  - current head 기준 started PR checks merge gate 규칙 반영
-- 완료 기준:
-  - docs-governance 파일럿 PR에서 gate로 사용 가능
-  - `.workflow-v2/work-items/*.json` + `.workflow-v2/status.json`이 저장소에 실제로 존재
-
-### Phase 4. Docs-Governance Pilot
-
-- 목표:
-  - 실제 workflow/engineering 변경을 v2로 한 번 수행
-  - handoff, stalled, verification 기록을 수집
-- 완료 기준:
-  - one-cycle retrospective 문서화
-
-### Phase 5. Product-Light Pilot
-
-- 목표:
-  - small bugfix 또는 light product change를 v2 preset으로 수행
-  - external smoke와 dual-approval flow 점검
-- 완료 기준:
-  - product-light 한 건 이상 merge
-
-### Phase 6. Promotion Decision
-
-- 목표:
-  - v1 유지 범위와 v2 승격 범위 결정
-  - 필요 시 `slice-workflow.md`와 `agent-workflow-overview.md`를 v2 기준으로 재작성
-- 완료 기준:
-  - 승격 공지 또는 파일럿 연장 결정
-  - `promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`이 같은 결론을 가리킴
-
-## Promotion Exit Criteria
-
-- `docs/engineering/workflow-v2/promotion-readiness.md`의 documentation gate와 pilot gate가 모두 충족된다.
-- `.workflow-v2/promotion-evidence.json`의 `promotion_gate.status`가 최소 `candidate`다.
-- medium/high risk 작업에서 dual-approval artifact가 일관되게 남는다.
-- work item/status 파일과 PR 상태의 해석이 크게 어긋나지 않는다.
-- small bugfix의 리드타임이 v1보다 과도하게 늘지 않는다.
-- stalled/blocker 처리 규칙이 실제로 작동한다.
-
-## Current State
-
-이 문서 추가 시점은 `Phase 1` 완료와 `Phase 2`의 최소 validator 초안까지를 포함하는 foundation 작업이다.
-CI 연동과 preset 강제는 아직 후속 단계이며, 운영 기본값은 계속 v1이다.
+이 문서의 과거 단계나 문장을 현재 운영 근거로 사용하지 않는다.
