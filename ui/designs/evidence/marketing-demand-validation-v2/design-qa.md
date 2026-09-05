@@ -1,11 +1,11 @@
 # MARKETING_DEMAND_VALIDATION_V2 최종 디자인 정렬 QA
 
-> 이 문서는 `mumeok-funnel` 최종 기준을 Next.js 운영 `/beta`로 옮긴 구현 QA다. 독립 Stage 5·최종 디자인 authority·Stage 6 승인을 대신하지 않는다.
+> 이 문서는 저장소 소유 `source-0aaa282/` 최종 기준을 Next.js 운영 `/beta`로 옮긴 구현 QA다. 독립 Stage 5·최종 디자인 authority·Stage 6 승인을 대신하지 않는다.
 
 ## 비교 대상
 
-- source visual truth: `mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`
-- source screenshots: `/Users/shj/2025/2026/mumeok-funnel/docs/design-baseline/3cf3336/`
+- source visual truth: `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/` (provenance `0aaa282552256ac9e77a5c134bb45a52e42ade33`)
+- source screenshots: `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/`
 - implementation: `components/marketing/marketing-demand-validation-screen.tsx`
 - implementation screenshots: `ui/designs/evidence/marketing-demand-validation-v2/`
 - viewport: source·implementation CSS `390×844`, screenshot `390×844`, DPR 1

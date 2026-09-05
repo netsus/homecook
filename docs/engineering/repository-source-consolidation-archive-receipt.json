@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-05T08:40:00Z",
+  "source": {
+    "repository": "mumeok-funnel",
+    "head": "0aaa282552256ac9e77a5c134bb45a52e42ade33",
+    "tree": "27052a41ee4a097ff8bcb29751238c07aa408861",
+    "remote_configured": false,
+    "active_at_capture": true
+  },
+  "archive_directory_label": "mumeok-funnel-0aaa282-20260905",
+  "artifacts": [
+    {
+      "name": "mumeok-funnel-all.bundle",
+      "bytes": 78178681,
+      "sha256": "40a8f6ff3d21d5f2d90b74f7dedf329f7cb86a7204651acf73fcf789816b60fc",
+      "contents": "all Git refs and complete history"
+    },
+    {
+      "name": "mumeok-funnel-ignored-unique.tar.gz",
+      "bytes": 57711478,
+      "sha256": "840763a848696dc1d606730e5c65661e796e008a6abe4f31a2128f45aa563a15",
+      "contents": {
+        "files": 161,
+        "uncompressed_bytes": 58598286,
+        "classification": "ignored unique source and evidence"
+      }
+    },
+    {
+      "name": "repository-source-consolidation-ignored-sources.json",
+      "bytes": 8374,
+      "sha256": "d46383c6c0c31e4e0627f8e7e62ad54adb03a5cf7b2f9b838019798f60778fa7"
+    },
+    {
+      "name": "repository-source-consolidation-ignored-evidence.json",
+      "bytes": 55920,
+      "sha256": "54b5eff2100ca26e121b391275aa60c39646b265cb333ed13cf501a70bea40bb"
+    }
+  ],
+  "git_refs": {
+    "refs/heads/feature/ad-hero-alignment": "0aaa282552256ac9e77a5c134bb45a52e42ade33",
+    "refs/heads/feature/sites-mobile-landing-baseline": "41796f0259b53c0470dd13e4caf606cfc47b84f8"
+  },
+  "verification": {
+    "git_bundle_verify": "pass_complete_history",
+    "restore_clone": "pass",
+    "git_fsck_full_strict": "pass_with_dangling_unreferenced_trees",
+    "restored_head_match": true,
+    "ignored_archive_manifest_match": {
+      "files": 161,
+      "bytes": 58598286,
+      "result": "pass"
+    }
+  },
+  "deletion_gate": {
+    "independent_repository_deleted": false,
+    "reason": "active tasks and processes still use the source repository",
+    "required_before_reconsideration": [
+      "Homecook canonical import merged to origin",
+      "active task and process count is zero",
+      "archive artifact SHA-256 values still match",
+      "bundle restore clone and git fsck still pass"
+    ]
+  }
+}

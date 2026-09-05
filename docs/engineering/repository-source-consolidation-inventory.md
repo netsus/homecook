@@ -1,8 +1,11 @@
 # Repository Source Consolidation Inventory
 
-상태: **canonical inventory / cleanup step 4**  
-기준 시각: 2026-09-05  
-Homecook 기준: `origin/master@1b008936df16dcef8f9a68a964a6ba8b4c616fce`  
+상태: **canonical inventory / cleanup steps 4–5**
+
+기준 시각: 2026-09-05
+
+Homecook 기준: `origin/master@1b008936df16dcef8f9a68a964a6ba8b4c616fce`
+
 독립 funnel 기준: `feature/ad-hero-alignment@0aaa282552256ac9e77a5c134bb45a52e42ade33`
 
 ## 목적과 cleanup plan
@@ -116,6 +119,35 @@ step 5의 완료 조건은 다음과 같다.
 - active task와 해당 경로를 사용하는 process가 0이다.
 
 마지막 두 조건을 만족하지 못하면 독립 저장소는 삭제하지 않고 archive candidate로 유지한다.
+
+## Step 5 보존 및 전환 결정
+
+고유 파일은 Homecook이 소유하는 다음 canonical 위치로 먼저 복사하고, 파일별 bytes와 SHA-256은
+`ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/manifest.json`에 고정한다.
+
+- final source, visual baseline, prototype code와 설계 판단:
+  `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/`
+- 광고 deliverable: `docs/marketing/assets/campaign/0aaa282/`
+- 광고 generator·test·source/decor 원본: `docs/marketing/assets/source/0aaa282/`
+
+Homecook 문서와 Stage 4 capture manifest는 위 tracked 경로만 사용한다. 역사적 제품 계약의
+source prototype commit `63f8ef2a019c6d260a96a42fab9d67f727d93557` 참조는 provenance로
+유지하며, 현재 visual authority는 독립 폴더 위치가 아니라 repository-owned
+`source-0aaa282/`와 그 manifest다.
+
+독립 저장소의 remote-less Git history와 ignored 고유 원본은 저장소 밖 복구 archive로
+보존했다. 비밀이나 archive 실경로를 문서에 넣지 않고
+`docs/engineering/repository-source-consolidation-archive-receipt.json`에 다음 digest와 검증
+결과만 기록한다.
+
+- complete Git bundle: `40a8f6ff3d21d5f2d90b74f7dedf329f7cb86a7204651acf73fcf789816b60fc`
+- ignored unique archive: `840763a848696dc1d606730e5c65661e796e008a6abe4f31a2128f45aa563a15`
+- 검증: `git bundle verify`, restore clone, `git fsck --full --strict`, ignored manifest match 통과
+
+receipt capture 시 독립 저장소를 사용하는 active task와 process가 남아 있었다. 따라서
+독립 `mumeok-funnel` 저장소는 **삭제·이동·archive 전환하지 않고 현재 위치에 유지**한다.
+canonical import가 origin에 merge되고 active task/process가 0이며 위 archive digest와 restore
+검증을 다시 통과하기 전에는 삭제를 재검토하지 않는다.
 
 ## Rollback 기준
 

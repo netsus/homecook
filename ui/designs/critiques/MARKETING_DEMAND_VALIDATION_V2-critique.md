@@ -19,12 +19,12 @@
 ## 검토 근거와 시각 증거 한계
 
 - source commit의 최신 393×852 캡처 중 result, demo 2, demo 5, planner, beta, done을 확인했다.
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/03-result-393x852.png`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/04-demo-2-393x852.png`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/06-demo-5-393x852.png`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v4/07-planner-homecook-393x852.png`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v5/10-beta-393x852.png`
-  - `marketing/mumeok-funnel-prototype-v2/evidence/design-qa/final-v5/11-success-393x852.png`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/03-result-393x852.png`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/04-demo-2-393x852.png`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/06-demo-5-393x852.png`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/07-planner-homecook-393x852.png`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v5/10-beta-393x852.png`
+  - `ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v5/11-success-393x852.png`
 - source 캡처의 iPhone frame/status runtime은 운영 포팅 대상이 아니다. app-owned viewport 안의 위계·밀도·CTA 위치만 참고했다.
 - source prototype은 내부 좌표가 고정된 phone runtime이므로 320px 운영 증거가 아니다. 설계는 320×568, 200% text zoom, keyboard occlusion, page overflow와 touch target을 Stage 4 필수 evidence로 정확히 이관했다.
 
