@@ -103,10 +103,11 @@ function useReducedMotion() {
   return reduced;
 }
 
-function useCountUp(target: number, active: boolean, duration = 520, start = 0) {
+function useCountUp(target: number, active: boolean, duration = 520, start = 0, reduced = false) {
   const [value, setValue] = useState(active ? target : start);
   useEffect(() => {
     if (!active) { setValue(start); return; }
+    if (reduced || duration <= 0) { setValue(target); return; }
     const startedAt = window.performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -116,8 +117,8 @@ function useCountUp(target: number, active: boolean, duration = 520, start = 0) 
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [active, duration, start, target]);
-  return value;
+  }, [active, duration, reduced, start, target]);
+  return reduced && active ? target : value;
 }
 
 function renderBodyHighlights(text: string, highlights: HeroBodyHighlight[]) {
@@ -216,12 +217,12 @@ function Experience({ step, onBack, onNext, reduced }: { step: number; onBack: (
   const [adjusted, setAdjusted] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const displayedPorkWeight = useCountUp(520, adjusted, 720, 600);
-  const displayedWeight = useCountUp(1180, confirmed, 720, 1200);
-  const calories = useCountUp(487, step === 5);
-  const carbs = useCountUp(31, step === 5);
-  const protein = useCountUp(39, step === 5);
-  const fat = useCountUp(22, step === 5);
+  const displayedPorkWeight = useCountUp(520, adjusted, 720, 600, reduced);
+  const displayedWeight = useCountUp(1180, confirmed, 720, 1200, reduced);
+  const calories = useCountUp(487, step === 5, 520, 0, reduced);
+  const carbs = useCountUp(31, step === 5, 520, 0, reduced);
+  const protein = useCountUp(39, step === 5, 520, 0, reduced);
+  const fat = useCountUp(22, step === 5, 520, 0, reduced);
   if (step === 1) return <Frame stage="experience-1" className="demo-screen"><DemoHeader step={1} label="레시피 가져오기" onBack={onBack} /><div className="demo-title"><h1 className={`recipe-import-title ${status === "done" ? "is-complete" : ""}`} data-state={status === "done" ? "complete" : status} aria-label={status === "done" ? "레시피를 가져왔어요" : "유튜브 레시피를 가져올게요."}>{status === "done" ? <span className="recipe-title-success"><CheckCircledIcon data-testid="recipe-title-check" aria-hidden="true" /><span className="recipe-title-copy" data-testid="recipe-title-copy"><strong data-testid="recipe-title-keyword">레시피</strong>를 가져왔어요</span><span className="recipe-title-sparkle" data-testid="recipe-title-sparkle" aria-hidden="true">✨</span></span> : <>유튜브 레시피를 <span>가져올게요.</span></>}</h1></div><div className={`recipe-card ${status !== "idle" ? "is-importing" : ""}`}><div className="recipe-media"><Image className="recipe-thumbnail" src="/assets/funnel/food/recipe-jeyuk-thumbnail.png" alt="유튜브 제육볶음 레시피 썸네일" width={480} height={360} priority /><span className="youtube-play" aria-hidden="true"><PlayIcon /></span>{status === "loading" ? <div className="recipe-loading" role="status"><ReloadIcon /><span>레시피를 가져오는 중…</span></div> : null}</div><h2 className="recipe-name">대표요리가 되는 제육볶음</h2><div className="recipe-channel"><Image className="recipe-channel-avatar" src="/assets/funnel/food/lee-man-cook-channel-avatar.jpg" alt="이 남자의 cook 채널 프로필" width={36} height={36} /><div><strong>이 남자의 cook</strong><span>YouTube · 조회수 904만회</span></div></div></div><button className="primary-button screen-bottom-button" type="button" disabled={status === "loading"} onClick={() => { if (status === "done") { onNext(); return; } if (status !== "idle") return; setStatus("loading"); window.setTimeout(() => setStatus("done"), reduced ? 0 : 520); }}>{status === "loading" ? "가져오는 중…" : status === "done" ? <>다음 <ArrowRightIcon /></> : "무먹으로 가져오기"}</button></Frame>;
   if (step === 2) return <Frame stage="experience-2" className="demo-screen demo-two-screen"><DemoHeader step={2} label="재료 확인" onBack={onBack} /><div className="demo-title"><h1>영상 속 레시피를<br /><span>자동으로 정리</span>했어요.</h1></div><div className="ingredient-list">{INGREDIENTS.map(({ name, amount, emoji }, index) => <div key={name}><span className="ingredient-emoji" aria-hidden="true">{emoji}</span><span>{name}</span><strong data-testid={index === 0 ? "pork-amount" : undefined} className={index === 0 && adjusted ? "amount-updated" : ""}>{index === 0 ? `${displayedPorkWeight}g` : amount}</strong></div>)}<div className="ingredient-more"><span className="ingredient-more-dots" aria-hidden="true">•••</span><span>외 10개 재료</span><strong>생략</strong></div></div><div className="adjustment-card is-visible" role={adjusted ? "status" : undefined}><CheckCircledIcon /><span>{adjusted ? "돼지고기 양을 520g으로 수정했어요" : "오늘은 돼지고기를 조금 덜 넣었어요."}</span></div>{adjusted ? <button className="primary-button screen-bottom-button" type="button" onClick={onNext}>다음 <ArrowRightIcon /></button> : <button className="primary-button change-weight-button screen-bottom-button" type="button" aria-label="돼지고기 600g → 520g" disabled={transitioning} onClick={() => { if (adjusted || transitioning) return; setTransitioning(true); window.setTimeout(() => { setAdjusted(true); setTransitioning(false); }, reduced ? 0 : 420); }}>돼지고기 <span className="primary-button-number">600g</span> <span className="primary-button-symbol" aria-hidden="true">→</span> <span className="primary-button-number">520g</span></button>}</Frame>;
   if (step === 3) return <Frame stage="experience-3" className="demo-screen demo-weight-screen"><DemoHeader step={3} label="완성 무게" onBack={onBack} /><div className="demo-title"><h1>요리가 완성됐어요.</h1></div><strong className={`hero-metric ${confirmed ? "is-confirmed" : ""}`} data-testid="cooked-weight-metric">{displayedWeight.toLocaleString("ko-KR")}g</strong><p className={`metric-helper ${confirmed ? "is-confirmed" : ""}`} data-testid="weight-helper" aria-live="polite">{confirmed ? <>증발한 수분 무게를 뺀<br /><strong>정확한 무게</strong>를 <strong>입력</strong>했어요</> : <>조리하면서 줄어드는 무게를<br />고려한 예상값이에요.</>}</p><div className="cooked-scale-visual"><Image className="cooked-scale-image" src="/assets/funnel/food/jeyuk-on-scale.png" alt="완성된 제육볶음이 올라간 디지털 주방저울" width={500} height={500} priority /><output className="cooked-scale-display" aria-label="완성 무게 1180g">1,180g</output></div><button className="primary-button screen-bottom-button strong-action-button" type="button" onClick={confirmed ? onNext : () => setConfirmed(true)}>{confirmed ? <>다음 <ArrowRightIcon /></> : <>저울로 재보니 <span className="primary-button-number">1,180g</span></>}</button></Frame>;
@@ -248,7 +249,7 @@ function TomorrowPreview() { const tomorrow = getKoreanToday(); tomorrow.setDate
 function Planner({ complete, onBack, onNext, reduced }: { complete: boolean; onBack: () => void; onNext: () => void; reduced: boolean }) {
   const [entered, setEntered] = useState(false); const [metricsReady, setMetricsReady] = useState(false);
   useEffect(() => { const entry = window.setTimeout(() => setEntered(true), reduced ? 0 : 200); const metrics = window.setTimeout(() => setMetricsReady(true), reduced ? 0 : complete ? 1250 : 1400); return () => { window.clearTimeout(entry); window.clearTimeout(metrics); }; }, [complete, reduced]);
-  const calories = useCountUp(complete ? 1712 : 1607, metricsReady, complete ? 1150 : 1250, complete ? 1607 : 1120); const carbs = useCountUp(complete ? 184 : 177, metricsReady, 1250, complete ? 177 : 146); const protein = useCountUp(complete ? 131 : 111, metricsReady, 1250, complete ? 111 : 72); const fat = useCountUp(complete ? 61 : 60, metricsReady, 1250, complete ? 60 : 38);
+  const calories = useCountUp(complete ? 1712 : 1607, metricsReady, complete ? 1150 : 1250, complete ? 1607 : 1120, reduced); const carbs = useCountUp(complete ? 184 : 177, metricsReady, 1250, complete ? 177 : 146, reduced); const protein = useCountUp(complete ? 131 : 111, metricsReady, 1250, complete ? 111 : 72, reduced); const fat = useCountUp(complete ? 61 : 60, metricsReady, 1250, complete ? 60 : 38, reduced);
   const today = getKoreanToday();
   return <Frame stage={complete ? "planner-complete" : "planner-homecook"} className="planner-screen"><div className="planner-topline"><Back onClick={onBack} /><div className="planner-heading"><CalendarIcon /><h1>이번 주 식단</h1></div></div><WeekStrip /><section className="meal-day-card"><header><strong>오늘 · {formatKoreanDate(today)}</strong><span>{complete || entered ? "3 / 3" : "2 / 3"}</span></header><PlannerSummary calories={calories} carbs={carbs} protein={protein} fat={fat} highlight={metricsReady ? complete ? "product" : "meal" : undefined} /><PlannerMealRow label="아침" foods={[BREAKFAST]} /><PlannerMealRow label="점심" foods={[LUNCH]} /><PlannerMealRow label="저녁" foods={complete ? entered ? [HOMECOOK, DRINK] : [HOMECOOK] : entered ? [HOMECOOK] : []} animateLast={entered} highlight={entered ? complete ? "product" : "meal" : undefined} /></section><TomorrowPreview /><button className="primary-button planner-floating-cta strong-action-button" type="button" onClick={onNext}>{complete ? "무료 베타 먼저 써보기" : "편의점 음식도 기록해보기"} <ArrowRightIcon /></button></Frame>;
 }

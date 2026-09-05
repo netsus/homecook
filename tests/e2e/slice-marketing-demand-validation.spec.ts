@@ -53,6 +53,35 @@ test.describe("marketing demand validation v2 /beta", () => {
     await expect(page.getByRole("heading", { name: "신청이 완료됐어요!" })).toBeVisible();
   });
 
+  test("reduced motion presents final demo and planner values without count-up transitions", async ({ page }) => {
+    await installMarketingDemandValidationRoutes(page);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(MARKETING_BETA_PATH);
+    await completeMarketingQuiz(page);
+
+    await page.getByRole("button", { name: "무먹으로 20초 체험하기" }).click();
+    await page.getByRole("button", { name: "무먹으로 가져오기" }).click();
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: "돼지고기 600g → 520g" }).click();
+    await expect(page.getByRole("button", { name: "다음", exact: true })).toBeVisible();
+    expect(await page.getByTestId("pork-amount").textContent()).toBe("520g");
+
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: "저울로 재보니 1,180g" }).click();
+    expect(await page.getByTestId("cooked-weight-metric").textContent()).toBe("1,180g");
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: "320g 입력하기" }).click();
+    await page.getByRole("button", { name: "식단에 기록하기" }).click();
+
+    await expect(page.getByTestId("planner-summary")).toHaveAttribute("data-highlight", "meal");
+    expect(await page.getByTestId("planner-summary").textContent()).toContain("1,607 kcal");
+
+    await page.getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
+    await page.getByRole("button", { name: "+ 기록하기" }).click();
+    await expect(page.getByTestId("planner-summary")).toHaveAttribute("data-highlight", "product");
+    expect(await page.getByTestId("planner-summary").textContent()).toContain("1,712 kcal");
+  });
+
   test("known result is read-only and canonical share strips all other query data", async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, "share", { configurable: true, value: (data: ShareData) => { (window as Window & { __shared?: ShareData }).__shared = data; return Promise.resolve(); } });
