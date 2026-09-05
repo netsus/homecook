@@ -22,6 +22,8 @@ Claude는 더 이상 사용하지 않는다.
 
 ---
 
+출시 전 랜딩 웹 앱 배포 도구와 운영 예외는 `docs-governance` engineering 작업으로 관리하고, 적용 범위·최소 검증·복원 기준은 [prelaunch-web-deployment.md](./prelaunch-web-deployment.md)를 따른다.
+
 ## Change Type Matrix
 
 | `change_type` | 대상 예시 | `required_checks` | `optional_reviews` | `N/A allowed fields` | 기본 PR 경로 |

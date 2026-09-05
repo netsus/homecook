@@ -23,6 +23,9 @@
 
 ## Release Promotion
 
+출시 전 고객 0명·광고 미집행 서버의 한정된 웹 앱 교체 예외는 `AGENTS.md`와 `prelaunch-web-deployment.md`를 따른다. 아래는 정식 production promotion 기준이다.
+
+
 - `master` merge는 통합 evidence다. production deployment approval은 아니다.
 - 서버 Mac release는 `origin/master`의 exact approved SHA, annotated `prod-*` tag, release manifest, attestation이 모두 맞을 때만 승격된다.
 - `release/*` 브랜치는 안정화 용도일 수 있지만, production source of truth는 아니다.
