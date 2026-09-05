@@ -3,9 +3,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const PRODUCTION_ORIGINS = new Set([
-  "https://app.mumeok.kr",
-  "https://auth.mumeok.kr",
+const PRODUCTION_HOSTNAMES = new Set([
+  "app.mumeok.kr",
+  "auth.mumeok.kr",
 ]);
 const DIRECT_SERVICE_PATHS = [
   "/rest/v1/marketing_validation_sessions?select=id&limit=1",
@@ -19,18 +19,20 @@ function pushBlocker(blockers, code) {
   if (!blockers.includes(code)) blockers.push(code);
 }
 
-function emptySummary(previewOrigin = null) {
+function emptySummary() {
   return {
     schema: "homecook.marketing-validation-preview-smoke",
     version: 1,
     ready: false,
-    preview_origin: previewOrigin,
+    preview_origin: null,
     blockers: [],
     checks: {
       landing: { ok: false, status: null },
       marketing_api: { ok: false, status: null },
       session_cookie: {
         ok: false,
+        expected_name: false,
+        expected_path: false,
         http_only: false,
         same_site_lax: false,
         secure: false,
@@ -57,17 +59,25 @@ function parsePreviewOrigin(rawOrigin, summary) {
   if (parsed.protocol !== "https:") {
     pushBlocker(summary.blockers, "PREVIEW_HTTPS_REQUIRED");
   }
-  if (PRODUCTION_ORIGINS.has(parsed.origin)) {
+  const normalizedHostname = parsed.hostname.toLowerCase().replace(/\.+$/u, "");
+  if (PRODUCTION_HOSTNAMES.has(normalizedHostname)) {
     pushBlocker(summary.blockers, "PRODUCTION_ORIGIN_FORBIDDEN");
   }
   return parsed;
 }
 
 function cookieAttributes(setCookie) {
-  const attributes = typeof setCookie === "string"
-    ? setCookie.split(";").map((part) => part.trim().toLowerCase())
+  const sessionCookie = typeof setCookie === "string"
+    ? setCookie
+      .split(/,(?=\s*[^=;,]+=[^;,]*)/u)
+      .find((cookie) => /^\s*mumeok_validation_session=/iu.test(cookie))
+    : undefined;
+  const attributes = sessionCookie
+    ? sessionCookie.split(";").map((part) => part.trim().toLowerCase())
     : [];
   return {
+    expected_name: Boolean(sessionCookie),
+    expected_path: attributes.includes("path=/api/v1/marketing/validation"),
     http_only: attributes.includes("httponly"),
     same_site_lax: attributes.includes("samesite=lax"),
     secure: attributes.includes("secure"),
@@ -87,8 +97,9 @@ export async function collectMarketingValidationPreviewSmoke({
   previewOrigin,
   fetchImpl = fetch,
 }) {
-  const summary = emptySummary(typeof previewOrigin === "string" ? previewOrigin : null);
+  const summary = emptySummary();
   const parsed = parsePreviewOrigin(previewOrigin, summary);
+  if (parsed) summary.preview_origin = parsed.origin;
   if (!parsed || summary.blockers.length > 0) return summary;
 
   try {
@@ -115,7 +126,13 @@ export async function collectMarketingValidationPreviewSmoke({
 
     const cookie = cookieAttributes(apiResponse.headers.get("set-cookie"));
     Object.assign(summary.checks.session_cookie, cookie);
-    summary.checks.session_cookie.ok = cookie.http_only && cookie.same_site_lax && cookie.secure;
+    summary.checks.session_cookie.ok = cookie.expected_name
+      && cookie.expected_path
+      && cookie.http_only
+      && cookie.same_site_lax
+      && cookie.secure;
+    if (!cookie.expected_name) pushBlocker(summary.blockers, "SESSION_COOKIE_NAME_MISSING");
+    if (!cookie.expected_path) pushBlocker(summary.blockers, "SESSION_COOKIE_PATH_INVALID");
     if (!cookie.http_only) pushBlocker(summary.blockers, "SESSION_COOKIE_HTTP_ONLY_MISSING");
     if (!cookie.same_site_lax) pushBlocker(summary.blockers, "SESSION_COOKIE_SAME_SITE_MISSING");
     if (!cookie.secure) pushBlocker(summary.blockers, "SESSION_COOKIE_SECURE_MISSING");

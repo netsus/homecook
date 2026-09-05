@@ -34,6 +34,7 @@ const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const EMAIL_PATTERN =
   /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/iu;
+const MARKETING_EDGE_EVIDENCE_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
 type ParsedBody =
   | {
@@ -438,7 +439,7 @@ export function createMarketingLeadGateFromEnv() {
       "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE",
       "MARKETING_EDGE_RULE_EVIDENCE",
     );
-    if (!secret || !rawHostnames || !edgeEvidence) {
+    if (!secret || !rawHostnames || !MARKETING_EDGE_EVIDENCE_PATTERN.test(edgeEvidence)) {
       return {
         ok: false,
         code: "LEAD_CAPTURE_NOT_READY",

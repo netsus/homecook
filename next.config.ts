@@ -49,6 +49,7 @@ function joinDirective(name: string, sources: string[]) {
 }
 
 function buildContentSecurityPolicy() {
+  const turnstileOrigin = "https://challenges.cloudflare.com";
   const supabaseOrigin = getOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const appOrigin = getOrigin(process.env.NEXT_PUBLIC_APP_URL);
 
@@ -82,6 +83,7 @@ function buildContentSecurityPolicy() {
       // Static App Router CSP needs inline scripts until a nonce/hash policy is
       // split into a dynamic-rendering follow-up.
       "'unsafe-inline'",
+      turnstileOrigin,
       isProduction ? null : "'unsafe-eval'",
     ])),
     joinDirective("style-src", ["'self'", "'unsafe-inline'"]),
@@ -98,10 +100,11 @@ function buildContentSecurityPolicy() {
       "'self'",
       supabaseOrigin,
       toWebSocketOrigin(supabaseOrigin),
+      turnstileOrigin,
       ...devConnectSources,
     ])),
     joinDirective("media-src", ["'self'", "data:", "blob:"]),
-    joinDirective("frame-src", ["'none'"]),
+    joinDirective("frame-src", [turnstileOrigin]),
     joinDirective("worker-src", ["'self'", "blob:"]),
     joinDirective("manifest-src", ["'self'"]),
     isProduction ? "upgrade-insecure-requests" : null,

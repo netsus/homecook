@@ -49,6 +49,8 @@ describe("marketing validation external preview smoke", () => {
         landing: { ok: true, status: 200 },
         marketing_api: { ok: true, status: 200 },
         session_cookie: {
+          expected_name: true,
+          expected_path: true,
           http_only: true,
           ok: true,
           same_site_lax: true,
@@ -70,16 +72,34 @@ describe("marketing validation external preview smoke", () => {
       previewOrigin: "http://beta-preview.mumeok.kr",
       fetchImpl,
     });
-    const production = await collectMarketingValidationPreviewSmoke({
-      previewOrigin: "https://app.mumeok.kr",
-      fetchImpl,
-    });
+    const productionOrigins = [
+      "https://app.mumeok.kr",
+      "https://app.mumeok.kr:444",
+      "https://app.mumeok.kr.",
+      "https://auth.mumeok.kr:444",
+    ];
+    const productionResults = await Promise.all(productionOrigins.map((previewOrigin) => (
+      collectMarketingValidationPreviewSmoke({ previewOrigin, fetchImpl })
+    )));
 
     expect(insecure.ready).toBe(false);
     expect(insecure.blockers).toContain("PREVIEW_HTTPS_REQUIRED");
-    expect(production.ready).toBe(false);
-    expect(production.blockers).toContain("PRODUCTION_ORIGIN_FORBIDDEN");
+    for (const production of productionResults) {
+      expect(production.ready).toBe(false);
+      expect(production.blockers).toContain("PRODUCTION_ORIGIN_FORBIDDEN");
+    }
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("does not echo credentials from an invalid preview origin", async () => {
+    const summary = await collectMarketingValidationPreviewSmoke({
+      previewOrigin: "https://operator:private-token@beta-preview.mumeok.kr",
+      fetchImpl: passingFetch(),
+    });
+
+    expect(summary.ready).toBe(false);
+    expect(summary.preview_origin).toBeNull();
+    expect(JSON.stringify(summary)).not.toContain("private-token");
   });
 
   it("fails closed when the external response loses Secure or exposes an internal service path", async () => {
@@ -109,6 +129,31 @@ describe("marketing validation external preview smoke", () => {
       "SESSION_COOKIE_SECURE_MISSING",
     ]));
     expect(summary.checks.direct_service_paths.exposed).toContain("/rest/v1/marketing_validation_sessions?select=id&limit=1");
+  });
+
+  it("does not accept an unrelated secure cookie in place of the marketing session cookie", async () => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      if (url.pathname === "/beta") return response(200, { "content-type": "text/html" });
+      if (url.pathname === "/api/v1/marketing/validation") {
+        if (new Headers(init?.headers).get("origin") === "https://attacker.invalid") return response(403);
+        return response(200, {
+          "set-cookie": "unrelated_session=id; Path=/api/v1/marketing/validation; HttpOnly; SameSite=Lax; Secure",
+        });
+      }
+      return response(404);
+    });
+
+    const summary = await collectMarketingValidationPreviewSmoke({
+      previewOrigin: PREVIEW_ORIGIN,
+      fetchImpl,
+    });
+
+    expect(summary.ready).toBe(false);
+    expect(summary.blockers).toEqual(expect.arrayContaining([
+      "SESSION_COOKIE_NAME_MISSING",
+      "SESSION_COOKIE_PATH_INVALID",
+    ]));
   });
 
   it("turns network failures into a redacted fail-closed summary", async () => {

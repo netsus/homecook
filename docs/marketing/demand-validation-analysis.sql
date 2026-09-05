@@ -24,7 +24,8 @@ cohort as (
     lead_submitted_at,
     lead_submission_status
   from public.marketing_validation_sessions, params
-  where creative_key = 'mumeok_funnel_prototype_v2'
+  where campaign_key = 'weekly_nutrition_2026'
+    and creative_key = 'mumeok_funnel_prototype_v2'
     and viewed_at >= params.campaign_start
     and viewed_at < params.campaign_end
 ),
@@ -85,7 +86,8 @@ cohort as (
     lead_submitted_at,
     lead_submission_status
   from public.marketing_validation_sessions, params
-  where creative_key = 'mumeok_funnel_prototype_v2'
+  where campaign_key = 'weekly_nutrition_2026'
+    and creative_key = 'mumeok_funnel_prototype_v2'
     and viewed_at >= params.campaign_start
     and viewed_at < params.campaign_end
 ),
@@ -170,7 +172,8 @@ cohort as (
     lead_submitted_at,
     lead_submission_status
   from public.marketing_validation_sessions, params
-  where creative_key = 'mumeok_funnel_prototype_v2'
+  where campaign_key = 'weekly_nutrition_2026'
+    and creative_key = 'mumeok_funnel_prototype_v2'
     and viewed_at >= params.campaign_start
     and viewed_at < params.campaign_end
 ),
@@ -269,7 +272,8 @@ cohort as (
     quiz_answers ->> 'q3' as q3,
     quiz_answers ->> 'q4' as q4
   from public.marketing_validation_sessions, params
-  where creative_key = 'mumeok_funnel_prototype_v2'
+  where campaign_key = 'weekly_nutrition_2026'
+    and creative_key = 'mumeok_funnel_prototype_v2'
     and viewed_at >= params.campaign_start
     and viewed_at < params.campaign_end
     and quiz_completed_at is not null

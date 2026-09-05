@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { assertExactLoopbackHttpOrigin } from "./lib/local-only-supabase-operator-env.mjs";
 import {
   evaluateMarketingPreviewContract,
+  isValidMarketingEdgeEvidence,
   PREVIEW_TURNSTILE_ACTION,
   redactPreviewSecrets,
 } from "./lib/marketing-validation-preview-contract.mjs";
@@ -147,6 +148,8 @@ function mapContractErrorToBlockers(blockers, error) {
     "MARKETING_CAMPAIGN_END_AT:required": "CAMPAIGN_END_MISSING",
     "MARKETING_CAMPAIGN_END_AT:invalid_date": "CAMPAIGN_END_INVALID",
     "MARKETING_CAMPAIGN_END_AT:campaign_closed": "CAMPAIGN_CLOSED",
+    "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE:required": "LEAD_GATE_EDGE_EVIDENCE_MISSING",
+    "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE:invalid_evidence": "LEAD_GATE_EDGE_EVIDENCE_INVALID",
     "MARKETING_TURNSTILE_ACTION:required": "TURNSTILE_ACTION_MISSING",
     "MARKETING_TURNSTILE_ACTION:invalid_turnstile_action": "TURNSTILE_ACTION_INVALID",
     "MARKETING_TURNSTILE_ALLOWED_HOSTNAMES:required": "LEAD_GATE_TURNSTILE_HOSTNAMES_MISSING",
@@ -192,7 +195,12 @@ function mapContractErrorToBlockers(blockers, error) {
 }
 
 function isReservedOrigin(origin) {
-  return RESERVED_PRODUCTION_ORIGINS.includes(origin);
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase().replace(/\.+$/u, "");
+    return RESERVED_PRODUCTION_HOSTNAMES.includes(hostname);
+  } catch {
+    return false;
+  }
 }
 
 function isExternalListenerHost(host) {
@@ -383,10 +391,8 @@ export function collectMarketingValidationPreviewPreflight({
 
   const edgeEvidence = readEnvValue(env, "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE")
     || readEnvValue(env, "MARKETING_EDGE_RULE_EVIDENCE");
+  const edgeEvidenceValid = isValidMarketingEdgeEvidence(edgeEvidence);
   const leadGateEnabled = readEnvValue(env, "MARKETING_LEAD_PROTECTION_READY") === "1";
-  if (leadGateEnabled && !edgeEvidence) {
-    pushBlocker(blockers, "LEAD_GATE_EDGE_EVIDENCE_MISSING");
-  }
 
   const previewAppPort = parsePort(
     readEnvValue(normalizedEnv, "HOMECOOK_PREVIEW_APP_PORT"),
@@ -445,8 +451,10 @@ export function collectMarketingValidationPreviewPreflight({
         site_key_configured: readEnvValue(env, "NEXT_PUBLIC_MARKETING_TURNSTILE_SITE_KEY").length > 0,
         turnstile_hostnames_configured: contract.turnstileAllowedHostnames.length > 0,
         preview_hostname_covered: previewOriginUrl !== null
-          && contract.turnstileAllowedHostnames.includes(previewOriginUrl.hostname.toLowerCase()),
-        edge_evidence_configured: edgeEvidence.length > 0,
+          && contract.turnstileAllowedHostnames.includes(
+            previewOriginUrl.hostname.toLowerCase().replace(/\.+$/u, ""),
+          ),
+        edge_evidence_configured: edgeEvidenceValid,
         approved_action: readEnvValue(normalizedEnv, "MARKETING_TURNSTILE_ACTION")
           === PREVIEW_TURNSTILE_ACTION,
       },

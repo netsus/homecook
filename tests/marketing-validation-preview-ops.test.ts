@@ -30,6 +30,7 @@ function validEnv(overrides: Record<string, string | undefined> = {}) {
     HOMECOOK_PREVIEW_COMPOSE_PROJECT: "marketing-validation-preview",
     HOMECOOK_PREVIEW_DB_VOLUME: "marketing-validation-preview-postgres",
     HOMECOOK_PREVIEW_STORAGE_VOLUME: "marketing-validation-preview-storage",
+    MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE: `sha256:${"a".repeat(64)}`,
     ...overrides,
   };
 }
@@ -193,5 +194,19 @@ describe("marketing validation preview ops contract", () => {
       expect.objectContaining({ field: "DATA_SUPABASE_SECRET_KEY", code: "placeholder_value" }),
       expect.objectContaining({ field: "NEXT_PUBLIC_MARKETING_TURNSTILE_SITE_KEY", code: "placeholder_value" }),
     ]));
+  });
+
+  it("requires content-addressed edge rule evidence before opening lead capture", () => {
+    const placeholder = evaluate(validEnv({
+      MARKETING_LEAD_PROTECTION_READY: "1",
+      MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE: "replace-with-reviewed-edge-rule-evidence",
+    }));
+
+    expect(placeholder.ok).toBe(false);
+    expect(placeholder.leadGateOpen).toBe(false);
+    expect(placeholder.errors).toContainEqual(expect.objectContaining({
+      field: "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE",
+      code: "invalid_evidence",
+    }));
   });
 });

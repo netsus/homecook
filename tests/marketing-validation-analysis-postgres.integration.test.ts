@@ -59,6 +59,17 @@ insert into public.marketing_validation_sessions (
     'homecook-passer', '2026-09-04T02:00:03Z', '2026-09-04T02:00:04Z',
     '2026-09-04T02:00:05Z', '2026-09-04T02:00:06Z', null,
     null, null, null, null, null, 'none', '2027-03-03T02:00:00Z'
+  ),
+  (
+    '31000000-0000-4000-8000-000000000004', 'other_campaign_2026',
+    'mumeok_funnel_prototype_v2', 'preview-fixture', 'a', 'organic',
+    '2026-09-04T03:00:00Z', '2026-09-04T03:00:01Z', '2026-09-04T03:00:02Z',
+    '{"q1":"daily","q2":"3_5","q3":"track","q4":"search"}'::jsonb,
+    'ingredient-tracker', '2026-09-04T03:00:03Z', '2026-09-04T03:00:04Z',
+    '2026-09-04T03:00:05Z', '2026-09-04T03:00:06Z', null,
+    'wrong-campaign@example.invalid', 'marketing-demand-validation-v2',
+    '2026-09-04T03:00:07Z', '2026-09-04T03:00:07Z',
+    '2026-09-04T03:00:08Z', 'accepted', '2027-03-03T03:00:00Z'
   );
 
 \i ${analysisSqlPath}
@@ -97,5 +108,6 @@ rollback;
     expect(result.stdout).toMatch(/^q3\|track\|1\|3\|0\.3+/mu);
     expect(result.stdout).toMatch(/^q4\|weight\|1\|3\|0\.3+/mu);
     expect(result.stdout).not.toContain("preview-accepted@example.invalid");
+    expect(result.stdout).not.toContain("wrong-campaign@example.invalid");
   });
 });

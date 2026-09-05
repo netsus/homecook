@@ -33,7 +33,7 @@ function baseEnvironment(overrides = {}) {
     HOMECOOK_PREVIEW_SUPABASE_STUDIO_PORT: "55433",
     LOCAL_SUPABASE_INTERNAL_URL: "http://127.0.0.1:55481",
     MARKETING_CAMPAIGN_END_AT: "2026-09-30T00:00:00.000Z",
-    MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE: "ops/preview/edge-rate-limit.json",
+    MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE: `sha256:${"a".repeat(64)}`,
     MARKETING_LEAD_PROTECTION_READY: "1",
     MARKETING_PAID_ATTRIBUTION_ORIGINS: "https://beta-preview.mumeok.kr",
     MARKETING_TURNSTILE_ACTION: "marketing_validation_lead_submit",
@@ -159,6 +159,25 @@ describe("marketing validation preview preflight", () => {
       "LEAD_GATE_EDGE_EVIDENCE_MISSING",
       "LEAD_GATE_PREVIEW_HOSTNAME_NOT_ALLOWED",
     ]));
+  });
+
+  it("rejects placeholder edge evidence and redacts credential-bearing data URLs", () => {
+    const summary = collectMarketingValidationPreviewPreflight({
+      env: baseEnvironment({
+        DATA_SUPABASE_URL: "http://operator:private-token@127.0.0.1:55431/?access_token=private-token",
+        MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE: "replace-with-reviewed-edge-rule-evidence",
+      }),
+      now: NOW,
+      listenerInventory: [],
+    });
+
+    expect(summary.ready).toBe(false);
+    expect(summary.blockers).toEqual(expect.arrayContaining([
+      "LEAD_GATE_EDGE_EVIDENCE_INVALID",
+      "SUPABASE_URL_INVALID",
+    ]));
+    expect(summary.checks.redacted_env.DATA_SUPABASE_URL).toBe("[redacted]");
+    expect(JSON.stringify(summary)).not.toContain("private-token");
   });
 
   it("rejects operating compose, volume, and reserved port reuse", () => {

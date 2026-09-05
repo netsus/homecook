@@ -31,6 +31,7 @@ const RESERVED_NAMESPACE_FRAGMENT = /\b(?:master|production|prod|cwj)\b/iu;
 const HOSTNAME_PATTERN = /^(?!-)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/u;
 const PREVIEW_TURNSTILE_ACTION = "marketing_validation_lead_submit";
 const PLACEHOLDER_VALUE_PATTERN = /^(?:change-me|changeme|replace-with-|todo\b|<)/iu;
+const EDGE_EVIDENCE_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
 function pushError(errors, field, code, message) {
   if (!errors.some((error) => error.field === field && error.code === code)) {
@@ -123,15 +124,34 @@ function isLoopbackHostname(hostname) {
   return hostname === "127.0.0.1" || hostname === "localhost";
 }
 
+function normalizeHostname(hostname) {
+  return hostname.toLowerCase().replace(/\.+$/u, "");
+}
+
 export function redactPreviewSecrets(values) {
   return Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      key,
-      SECRET_KEYS.has(key) && typeof value === "string" && value.length > 0
-        ? "[redacted]"
-        : value,
-    ]),
+    Object.entries(values).map(([key, value]) => {
+      if (SECRET_KEYS.has(key) && typeof value === "string" && value.length > 0) {
+        return [key, "[redacted]"];
+      }
+      if (key === "DATA_SUPABASE_URL" && typeof value === "string" && value.length > 0) {
+        try {
+          const parsed = new URL(value);
+          if (parsed.username || parsed.password || parsed.pathname !== "/" || parsed.search || parsed.hash) {
+            return [key, "[redacted]"];
+          }
+          return [key, parsed.origin];
+        } catch {
+          return [key, "[redacted]"];
+        }
+      }
+      return [key, value];
+    }),
   );
+}
+
+export function isValidMarketingEdgeEvidence(value) {
+  return typeof value === "string" && EDGE_EVIDENCE_PATTERN.test(value.trim());
 }
 
 /**
@@ -267,7 +287,7 @@ export function evaluateMarketingPreviewContract({
     ["MARKETING_PAID_ATTRIBUTION_ORIGINS", paidOrigins],
   ]) {
     for (const origin of origins) {
-      const hostname = new URL(origin).hostname.toLowerCase();
+      const hostname = normalizeHostname(new URL(origin).hostname);
       if (hostname === "app.mumeok.kr" || hostname === "auth.mumeok.kr") {
         pushError(
           errors,
@@ -283,6 +303,22 @@ export function evaluateMarketingPreviewContract({
   if (dataSupabaseUrl) {
     try {
       const parsed = new URL(dataSupabaseUrl);
+      if (
+        !["http:", "https:"].includes(parsed.protocol)
+        || parsed.username
+        || parsed.password
+        || parsed.pathname !== "/"
+        || parsed.search
+        || parsed.hash
+        || parsed.origin !== dataSupabaseUrl
+      ) {
+        pushError(
+          errors,
+          "DATA_SUPABASE_URL",
+          "invalid_url",
+          "Preview Supabase URL must be an exact credential-free origin.",
+        );
+      }
       if (!isLoopbackHostname(parsed.hostname)) {
         pushError(
           errors,
@@ -345,6 +381,26 @@ export function evaluateMarketingPreviewContract({
   }
 
   const leadReady = safeEnv.MARKETING_LEAD_PROTECTION_READY?.trim() === "1";
+  const edgeEvidence = (
+    safeEnv.MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE
+    ?? safeEnv.MARKETING_EDGE_RULE_EVIDENCE
+    ?? ""
+  ).trim();
+  if (leadReady && !edgeEvidence) {
+    pushError(
+      errors,
+      "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE",
+      "required",
+      "A reviewed edge rule evidence digest is required before lead capture.",
+    );
+  } else if (leadReady && !isValidMarketingEdgeEvidence(edgeEvidence)) {
+    pushError(
+      errors,
+      "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE",
+      "invalid_evidence",
+      "Edge rule evidence must be a reviewed SHA-256 digest.",
+    );
+  }
   const turnstileAction = safeEnv.MARKETING_TURNSTILE_ACTION?.trim() ?? "";
   if (turnstileAction && turnstileAction !== PREVIEW_TURNSTILE_ACTION) {
     pushError(
@@ -364,7 +420,7 @@ export function evaluateMarketingPreviewContract({
       );
     }
   }
-  if (parsedPreviewOrigin && hostnames.length > 0 && !hostnames.includes(parsedPreviewOrigin.hostname.toLowerCase())) {
+  if (parsedPreviewOrigin && hostnames.length > 0 && !hostnames.includes(normalizeHostname(parsedPreviewOrigin.hostname))) {
     pushError(
       errors,
       "MARKETING_TURNSTILE_ALLOWED_HOSTNAMES",

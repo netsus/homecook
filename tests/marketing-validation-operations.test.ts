@@ -587,6 +587,7 @@ describe("marketing validation Stage 6 operations", () => {
   it("ships a PII-free analysis SQL scoped to the v2 creative and lead cohorts", () => {
     const sql = requireFileText(analysisSqlPath);
 
+    expect(sql.match(/campaign_key = 'weekly_nutrition_2026'/gu)).toHaveLength(4);
     expect(sql).not.toMatch(/\bselect\s+[^;]*(email|utm_term|ip|user_agent|referrer|cookie)\b/iu);
     expect(sql).toContain("mumeok_funnel_prototype_v2");
     expect(sql).toContain("ad_variant");

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createMarketingLeadGateFromEnv,
   createMarketingValidationHandler,
   createTurnstileVerifierFromEnv,
 } from "@/lib/server/marketing-validation-route";
@@ -84,7 +85,10 @@ function requestAt(url: string, origin: string, body: Record<string, unknown>, c
 const completedAnswers = { q1: "daily", q2: "3_5", q3: "track", q4: "search" };
 
 describe("marketing validation v2 route", () => {
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
 
   it("creates a v2 session and stores the server-resolved Hero variant", async () => {
     const insertViewSession = vi.fn(async (input) => createSession({ ad_variant: input.ad_variant }));
@@ -333,6 +337,26 @@ describe("marketing validation v2 route", () => {
     const gateResponse = await gate(request({ action: "lead_submitted", honeypot: "", email: "person@example.com", consent: true, turnstile_token: "secret" }));
     expect(gateResponse.status).toBe(503);
     expect(await gateResponse.text()).not.toMatch(/person@example|secret/i);
+  });
+
+  it("keeps the environment lead gate closed until edge evidence is content-addressed", async () => {
+    vi.stubEnv("MARKETING_LEAD_PROTECTION_READY", "1");
+    vi.stubEnv("MARKETING_TURNSTILE_SECRET", "preview-secret");
+    vi.stubEnv("MARKETING_TURNSTILE_ALLOWED_HOSTNAMES", "app.mumeok.kr");
+    vi.stubEnv("ALLOWED_MARKETING_ORIGINS", ORIGIN);
+    vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", "replace-with-reviewed-edge-rule-evidence");
+
+    await expect(createMarketingLeadGateFromEnv()()).resolves.toMatchObject({
+      ok: false,
+      code: "LEAD_CAPTURE_NOT_READY",
+    });
+
+    vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", `sha256:${"a".repeat(64)}`);
+    await expect(createMarketingLeadGateFromEnv()()).resolves.toMatchObject({
+      ok: true,
+      allowedOrigins: [ORIGIN],
+      allowedHostnames: ["app.mumeok.kr"],
+    });
   });
 
   it("rejects a Turnstile token solved for a different allowlisted preview hostname", async () => {
