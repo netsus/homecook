@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "source_repository": "mumeok-funnel",
+  "source_commit": "0aaa282552256ac9e77a5c134bb45a52e42ade33",
+  "source_tree": "27052a41ee4a097ff8bcb29751238c07aa408861",
+  "imported_files": 53,
+  "files": [
+    {
+      "path": "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-a-4x5-v7.png",
+      "source_path": "public/assets/funnel/ads/ad-a-4x5-v7.png",
+      "bytes": 1790555,
+      "sha256": "11aa9df40a1b8f7ed0cb93437ed8a9d6a7f762824f77e16d7942cc6fa720dd9b"
+    },
+    {
+      "path": "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-a-4x5.png",
+      "source_path": "public/assets/funnel/ads/ad-a-4x5.png",
+      "bytes": 1912446,
+      "sha256": "e34f7e8a3f10ba1d4f76c805a9814f2024393a21d96808d90750810cb3c1cbd6"
+    },
+    {
+      "path": "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-a-9x16.png",
+      "source_path": "public/assets/funnel/ads/ad-a-9x16.png",
+      "bytes": 293117,
+      "sha256": "4d9b1b247e247b901e63c1e1ead8f3558a25a523db1f4c59989159f92df1b805"
+    },
+    {
+      "path": "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-b-4x5.png",
+      "source_path": "public/assets/funnel/ads/ad-b-4x5.png",
+      "bytes": 812470,
+      "sha256": "9fc0ef89e6e1f0cc312852b9bfa9b62366a1d360304c32f7df3c438320ab512a"
+    },
+    {
+      "path": "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-b-9x16.png",
+      "source_path": "public/assets/funnel/ads/ad-b-9x16.png",
+      "bytes": 531589,
+      "sha256": "d734e36af2203601edc5b5927095e8eaf7c4a3cd03e05e05555133f7e7ff9cb5"
+    },
+    {
+      "path": "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-c-4x5.png",
+      "source_path": "public/assets/funnel/ads/ad-c-4x5.png",
+      "bytes": 539023,
+      "sha256": "a4fb5fa7aca59f0b1a3849bf3dea3183b05303c1ab988f3a444cae1e39c62d99"
+    },
+    {
+      "path": "docs/marketing/assets/campaign/0aaa282/public/assets/funnel/ads/ad-c-9x16.png",
+      "source_path": "public/assets/funnel/ads/ad-c-9x16.png",
+      "bytes": 464961,
+      "sha256": "fe4c113035fdce30c6202df38ded0e56f0097609afae2bf83d0fba54b75cd158"
+    },
+    {
+      "path": "docs/marketing/assets/source/0aaa282/public/assets/funnel/decor/doodle-b-cooking-weight.png",
+      "source_path": "public/assets/funnel/decor/doodle-b-cooking-weight.png",
+      "bytes": 370331,
+      "sha256": "73eda87b8c2faffc8431616885c2e7c47b709f881313506b7cc282581ba4dbfa"
+    },
+    {
+      "path": "docs/marketing/assets/source/0aaa282/public/assets/funnel/decor/doodle-b-steam-weight.png",
+      "source_path": "public/assets/funnel/decor/doodle-b-steam-weight.png",
+      "bytes": 101702,
+      "sha256": "0dd839db4fbc1299e8a6e889b0a88b1c438eddacb1bee0cc6903ad0418241a46"
+    },
+    {
+      "path": "docs/marketing/assets/source/0aaa282/public/assets/funnel/decor/doodle-c-nutrition-sparkle.png",
+      "source_path": "public/assets/funnel/decor/doodle-c-nutrition-sparkle.png",
+      "bytes": 284811,
+      "sha256": "ba6d900b66e5d6204dca07ec65821e275c6a8fa3ff346cb007969d4b45f93ce4"
+    },
+    {
+      "path": "docs/marketing/assets/source/0aaa282/public/assets/funnel/source/b-cooking-stages.png",
+      "source_path": "public/assets/funnel/source/b-cooking-stages.png",
+      "bytes": 2055918,
+      "sha256": "d07ad1ce078e31ac137f7893ed81dff8822d5a8e58afe7d856d3a52ac337d8e9"
+    },
+    {
+      "path": "docs/marketing/assets/source/0aaa282/scripts/generate-ad-creatives.mjs.txt",
+      "source_path": "scripts/generate-ad-creatives.mjs",
+      "bytes": 24609,
+      "sha256": "6e9642ddd0aa3ad83d50a97cb6d5107cb9989d9fbc09856283177c29fa2d74e3"
+    },
+    {
+      "path": "docs/marketing/assets/source/0aaa282/tests/ad-a-creative.spec.ts.txt",
+      "source_path": "tests/ad-a-creative.spec.ts",
+      "bytes": 2785,
+      "sha256": "4514666bdb07a4a2dfca5ef3e9195efade09f43c72191bfcce71aad7c5a92426"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/design-qa.md",
+      "source_path": "design-qa.md",
+      "bytes": 57249,
+      "sha256": "534788a779aac249a47691f55a1725a75f2a945bf97ca0a456adf7718dce272b"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/00-hero-a.png",
+      "source_path": "docs/design-baseline/3cf3336/00-hero-a.png",
+      "bytes": 88616,
+      "sha256": "4459246f82e54bfc4c9ae2d8691c6e24da9b7fbf6602c86236d26b352ea159ee"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/00-hero-b.png",
+      "source_path": "docs/design-baseline/3cf3336/00-hero-b.png",
+      "bytes": 88442,
+      "sha256": "202d0aaf1b192a303170a5d6a9c357f2964eba450f67becc4fca825a28729c79"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/00-hero-c.png",
+      "source_path": "docs/design-baseline/3cf3336/00-hero-c.png",
+      "bytes": 85202,
+      "sha256": "fcdca418669bf0fd0215ec590137e1cfd81eb10ea3da8c5ab29391f649632ad7"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/00-hero-d.png",
+      "source_path": "docs/design-baseline/3cf3336/00-hero-d.png",
+      "bytes": 71952,
+      "sha256": "1030438932bd32ecc63044200b5b5e17eb88b6708946c1f1c4fc19bcbef76e63"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/01-hero.png",
+      "source_path": "docs/design-baseline/3cf3336/01-hero.png",
+      "bytes": 177385,
+      "sha256": "d3d087026ff4eace5eef9120eff5b8ed48f168a7b9fe0794c6d8e4bc5dc531d4"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/02-question-1.png",
+      "source_path": "docs/design-baseline/3cf3336/02-question-1.png",
+      "bytes": 24944,
+      "sha256": "8cdaacff6d8f0ea4c0c7d5b68cee63f0abbe810114f9fa0fa2cbc846e88ae14d"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/03-result-eyeballing.png",
+      "source_path": "docs/design-baseline/3cf3336/03-result-eyeballing.png",
+      "bytes": 128795,
+      "sha256": "125762da160d9f608cd61375eabe8817dab8b4d5c77f0172af1bf3976007b517"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/03a-demo-1.png",
+      "source_path": "docs/design-baseline/3cf3336/03a-demo-1.png",
+      "bytes": 185909,
+      "sha256": "1ef445f02d1b8af43e386c730f2becf2779a8316457cc8a3f33f53e8e5c214eb"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/03b-demo-1-loading.png",
+      "source_path": "docs/design-baseline/3cf3336/03b-demo-1-loading.png",
+      "bytes": 138161,
+      "sha256": "441a5f3ead5480ffc970f1f0a1a788536f8eb9f32637c2e16528e7d2632943fb"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/03c-demo-1-done.png",
+      "source_path": "docs/design-baseline/3cf3336/03c-demo-1-done.png",
+      "bytes": 189990,
+      "sha256": "fb5eba90dd530c71381150d19434529f3f9693e2313ff13f067c578678a52168"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/04-demo-2.png",
+      "source_path": "docs/design-baseline/3cf3336/04-demo-2.png",
+      "bytes": 44657,
+      "sha256": "e28db7261288fa2e759b5a1d9a1bad4b9c59d8421a15eb457c6d8e6fd6888e2d"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/04b-demo-2-adjusted.png",
+      "source_path": "docs/design-baseline/3cf3336/04b-demo-2-adjusted.png",
+      "bytes": 36040,
+      "sha256": "8f89fa436d2db0c2f765c3d01ced1048bbe04a44a839833c66e4c7eea7d3cfcb"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/04c-demo-3.png",
+      "source_path": "docs/design-baseline/3cf3336/04c-demo-3.png",
+      "bytes": 89636,
+      "sha256": "0471bc44c8d574a41724555320eaaceacd87f521127234313a111adacdc708c8"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/04d-demo-3-confirmed.png",
+      "source_path": "docs/design-baseline/3cf3336/04d-demo-3-confirmed.png",
+      "bytes": 86148,
+      "sha256": "7bfb2d75917b4a062dd81d2ce270ccea6863e02b6f0c3134cb59eb674d82c560"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/05-demo-4.png",
+      "source_path": "docs/design-baseline/3cf3336/05-demo-4.png",
+      "bytes": 155929,
+      "sha256": "e5101a95a53a621584bf0eacb399c54531b99a72f1f46a16f34bfedc6d785a81"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/06-demo-5.png",
+      "source_path": "docs/design-baseline/3cf3336/06-demo-5.png",
+      "bytes": 37008,
+      "sha256": "163242cc11d4e9b7fd67542afaf3c663ea35d27ca1ebcbc53ffa42a22c1681dd"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/07-planner-homecook.png",
+      "source_path": "docs/design-baseline/3cf3336/07-planner-homecook.png",
+      "bytes": 68417,
+      "sha256": "c8b7f7be3599739e7f0c9f8fa1d7acdc255722a73eaa61e997609ef8cb0ca2b6"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/08-packaged-food.png",
+      "source_path": "docs/design-baseline/3cf3336/08-packaged-food.png",
+      "bytes": 44162,
+      "sha256": "402e1d0f583d5c9c81c409c14d4e1915f074d295778178568175fed535f2dac8"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/09-planner-complete.png",
+      "source_path": "docs/design-baseline/3cf3336/09-planner-complete.png",
+      "bytes": 72342,
+      "sha256": "8c19e64b9dcaf4c6c5ee7820e66cc2360f25fd35f71b4e191e4880dc2ac70064"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/09a-planner-complete-initial.png",
+      "source_path": "docs/design-baseline/3cf3336/09a-planner-complete-initial.png",
+      "bytes": 63361,
+      "sha256": "7bc0d100e0343a21b6ea78cdda023286553f902272d47ea4e2e25cc072dcb02c"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/10-beta.png",
+      "source_path": "docs/design-baseline/3cf3336/10-beta.png",
+      "bytes": 53530,
+      "sha256": "316d2621cd92a671e26386bea05f29c4cee22eed3f84cbb6c9d8af52152c314f"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/10b-beta-email-focus.png",
+      "source_path": "docs/design-baseline/3cf3336/10b-beta-email-focus.png",
+      "bytes": 54322,
+      "sha256": "905a890f27a1f3ce64d604288affbe59ae94e015a340e5cab0f2dcc525e0ded8"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/11-success.png",
+      "source_path": "docs/design-baseline/3cf3336/11-success.png",
+      "bytes": 82661,
+      "sha256": "29cd89e1f913fbdbaec611b0bde365ad24e03dc9446381b39a52f22cefaf32b2"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/design-baseline/3cf3336/README.md",
+      "source_path": "docs/design-baseline/3cf3336/README.md",
+      "bytes": 1364,
+      "sha256": "ebd6837c1a66bba8daf01d9443a4ca4413c6beea80ef5a92d018f11ddf2e14c2"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/docs/product-decisions.md",
+      "source_path": "docs/product-decisions.md",
+      "bytes": 29867,
+      "sha256": "faf3849bbfddce56766d01f621232913ea800ac8893a81ec0d92833ea0c64921"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/03-result-393x852.png",
+      "source_path": "evidence/design-qa/final-v4/03-result-393x852.png",
+      "bytes": 222357,
+      "sha256": "9d198e2acdd8797f93e47f3280b7ea81ec52369a7e30b50bdcd8d9c7c49451ef"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/04-demo-2-393x852.png",
+      "source_path": "evidence/design-qa/final-v4/04-demo-2-393x852.png",
+      "bytes": 120481,
+      "sha256": "32c961ae8609fa32e10132818394e8ab4f02d678c2d5af49edd0e4d6c14a115a"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/06-demo-5-393x852.png",
+      "source_path": "evidence/design-qa/final-v4/06-demo-5-393x852.png",
+      "bytes": 108435,
+      "sha256": "41d136018e9db5d3028cd9dd7cc433e71b0860c8c8d9d9b51f3c0f67ade939db"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v4/07-planner-homecook-393x852.png",
+      "source_path": "evidence/design-qa/final-v4/07-planner-homecook-393x852.png",
+      "bytes": 169674,
+      "sha256": "782e9f9dff9ae2437c1b44f9cfd34f2170925fa9ef673405891bc3ba5ee14a40"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v5/10-beta-393x852.png",
+      "source_path": "evidence/design-qa/final-v5/10-beta-393x852.png",
+      "bytes": 113457,
+      "sha256": "9172b3008baea0a4e18e2d49a53aef5906b381f9278aac73e77ae8db3be37f35"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/evidence/design-qa/final-v5/11-success-393x852.png",
+      "source_path": "evidence/design-qa/final-v5/11-success-393x852.png",
+      "bytes": 124747,
+      "sha256": "9ae1aaca2855d83bc476b781ba6ca6af39ed937d9a383f7362c61160a2a935db"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/public/assets/funnel/hero/hero-a-solution.png",
+      "source_path": "public/assets/funnel/hero/hero-a-solution.png",
+      "bytes": 190692,
+      "sha256": "42fd826c00403ebbc269c9d23de1aa081a80d3f9c0132dac4eea52dd92abf365"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/public/assets/funnel/hero/hero-a-visual.png",
+      "source_path": "public/assets/funnel/hero/hero-a-visual.png",
+      "bytes": 204550,
+      "sha256": "bfbd088337e498fff6ad3927d3f9fe8fb54652dfd31c47283f738554dfbce0d6"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/public/assets/funnel/hero/hero-b-solution.png",
+      "source_path": "public/assets/funnel/hero/hero-b-solution.png",
+      "bytes": 209299,
+      "sha256": "1f2105a8966b644df8b1ea173642c87a2bca669b0642338c1d200bfbbee6b38f"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/public/assets/funnel/hero/hero-b-visual.png",
+      "source_path": "public/assets/funnel/hero/hero-b-visual.png",
+      "bytes": 575062,
+      "sha256": "0d6469bdd53e3c2488c0a4c19ce71688c05a1d560153297512b4acefe8be494b"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/public/assets/funnel/hero/hero-c-solution.png",
+      "source_path": "public/assets/funnel/hero/hero-c-solution.png",
+      "bytes": 192244,
+      "sha256": "290f9130fb269682ac4d0a2b7d2e3f5643b05d589ce89f235e91926f6441b447"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/public/assets/funnel/hero/hero-c-visual.png",
+      "source_path": "public/assets/funnel/hero/hero-c-visual.png",
+      "bytes": 398130,
+      "sha256": "519e366d26f2ed61e9a4b05806a375c22cb1cf8662712b3b5ce11fde0f0bb98c"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/src/Prototype.tsx.txt",
+      "source_path": "src/Prototype.tsx",
+      "bytes": 53681,
+      "sha256": "2df62ddf265c757f7faff48c307126b03d8146348b00916731f61b7b7e59e367"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-v2/source-0aaa282/src/prototype.css",
+      "source_path": "src/prototype.css",
+      "bytes": 50973,
+      "sha256": "31ff1e1c57f7939a75414852fc46bcd8fd7230aa503cf00fb61f28d5833cdf21"
+    }
+  ]
+}

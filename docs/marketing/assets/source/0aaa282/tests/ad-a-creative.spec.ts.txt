@@ -1,0 +1,38 @@
+import { existsSync, readFileSync } from "node:fs";
+import { expect, test } from "@playwright/test";
+
+test("A 광고는 레시피 재료를 식단에서 세 번 다시 검색하는 장면을 사용한다", () => {
+  const generator = readFileSync("scripts/generate-ad-creatives.mjs", "utf8");
+
+  expect(generator).toContain("제육볶음 레시피");
+  expect(generator).toContain("돼지고기 검색...");
+  expect(generator).toContain("양파 검색...");
+  expect(generator).toContain("대파 검색...");
+  expect(generator).toContain('class="search-loading"');
+  expect(generator).toContain("jeyuk-recipe-clean.png");
+  expect(generator).toContain('title: "레시피에 다 있는데<br>왜 <em>또 입력</em>하지?"');
+  expect(generator).toContain('body: "재료를 하나씩 다시 찾아<br>입력하고 있진 않나요?"');
+  expect(generator).toContain('if (variant === "a" && format.suffix === "4x5") continue;');
+  expect(existsSync("public/assets/funnel/food/jeyuk-recipe-clean.png")).toBe(true);
+  expect(existsSync("public/assets/funnel/ads/ad-a-4x5-v7.png")).toBe(true);
+  expect(generator).not.toContain("search-task");
+});
+
+test("B와 C 광고는 A의 로고·제목·CTA 규격과 손그림 강조를 공유한다", () => {
+  const generator = readFileSync("scripts/generate-ad-creatives.mjs", "utf8");
+
+  expect(generator).toContain("doodle-b-cooking-weight.png");
+  expect(generator).toContain("doodle-c-nutrition-sparkle.png");
+  expect(generator).toContain('body: "조리 후 <em>달라진 무게</em>,<br>칼로리는 어떻게 계산할까?"');
+  expect(generator).toContain("linear-gradient(100deg,#087f98 0%,#00b8e6 100%)");
+  expect(generator).toContain('body: "완제품처럼 쉽게,<br><em>내 레시피 기준</em>으로."');
+  expect(generator).toContain(".creative--bc:not(.is-story) .brand{width:434px;height:119px;margin-left:-23px");
+  expect(generator).toContain(".creative--bc:not(.is-story){padding-top:30px;padding-bottom:47px}");
+  expect(generator).toContain(".creative--bc:not(.is-story) h1{margin-top:10px;font-size:108px;line-height:1.12}");
+  expect(generator).toContain(".creative--bc:not(.is-story) .cta{height:113px;margin-right:14px;margin-left:-6px;border-radius:24px;font-size:44px}");
+  expect(generator).toContain(".creative--bc:not(.is-story) .foot{margin-top:22px;font-size:29px;letter-spacing:-.05em}");
+  expect(generator).toContain(".creative.is-story .brand{width:245px}");
+  expect(generator).toContain(".creative.is-story .cta{position:absolute;left:78px;top:1050px;width:924px;height:78px;border-radius:18px;font-size:30px}");
+  expect(existsSync("public/assets/funnel/decor/doodle-b-cooking-weight.png")).toBe(true);
+  expect(existsSync("public/assets/funnel/decor/doodle-c-nutrition-sparkle.png")).toBe(true);
+});

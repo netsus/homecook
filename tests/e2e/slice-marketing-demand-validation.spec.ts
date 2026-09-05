@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { completeMarketingExperience, completeMarketingQuiz, installMarketingDemandValidationRoutes, MARKETING_BETA_PATH, openMarketingLeadForm } from "./helpers/marketing-demand-validation";
 
@@ -401,6 +401,12 @@ test.describe("marketing demand validation v2 /beta", () => {
         for (const control of await page.getByRole("button", { name: /내일 .* 추가/ }).all()) await expect(control).toBeDisabled();
       }));
     }
-    await writeFile(resolve(EVIDENCE_DIR, "stage4-capture-manifest.json"), `${JSON.stringify({ source_commit: "0aaa282552256ac9e77a5c134bb45a52e42ade33", captures }, null, 2)}\n`);
+    const repositoryCaptures = captures.map((capturePath) =>
+      relative(process.cwd(), capturePath).replaceAll("\\", "/"),
+    );
+    await writeFile(
+      resolve(EVIDENCE_DIR, "stage4-capture-manifest.json"),
+      `${JSON.stringify({ source_commit: "0aaa282552256ac9e77a5c134bb45a52e42ade33", captures: repositoryCaptures }, null, 2)}\n`,
+    );
   });
 });

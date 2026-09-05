@@ -1,0 +1,1194 @@
+import {
+  ArrowRightIcon,
+  CalendarIcon,
+  CheckCircledIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Cross2Icon,
+  FileTextIcon,
+  LightningBoltIcon,
+  LockClosedIcon,
+  PlayIcon,
+  PlusIcon,
+  QuoteIcon,
+  ReloadIcon,
+  Share2Icon,
+  StarFilledIcon,
+} from "@radix-ui/react-icons";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  FlowStack,
+  MobileScroll,
+  type FlowControls,
+  type FlowScreen,
+  useKeyboard,
+} from "./mobile";
+
+type HeroVariant = "a" | "b" | "c" | "d" | "default";
+type QuestionId = "q1" | "q2" | "q3" | "q4";
+type Answers = Partial<Record<QuestionId, string>>;
+type ResultType = "homecook-passer" | "eyeballing-master" | "ingredient-tracker" | "pro-measurer";
+
+type Choice = { label: string; value: string };
+type Question = { id: QuestionId; helper?: string; prompt: string; choices: Choice[] };
+type ResultContent = { title: string; quote: string; description: string; asset: string; checks?: string[] };
+type HeroBodyHighlight = { text: string; tone: "a" | "b" | "negative" | "positive" };
+
+function formatKoreanDate(date: Date, { includeYear = true, includeWeekday = true } = {}) {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  return includeYear
+    ? `${year}년 ${month}월 ${day}일${includeWeekday ? ` ${weekday}요일` : ""}`
+    : `${month}/${day}${includeWeekday ? ` (${weekday})` : ""}`;
+}
+
+function getKoreanToday() {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date());
+  const numberPart = (type: "year" | "month" | "day") => Number(parts.find((part) => part.type === type)?.value ?? 1);
+  return new Date(numberPart("year"), numberPart("month") - 1, numberPart("day"), 12);
+}
+
+function useCountUp(target: number, active: boolean, duration = 520, start = 0) {
+  const [value, setValue] = useState(active ? target : start);
+
+  useEffect(() => {
+    if (!active) {
+      setValue(start);
+      return;
+    }
+
+    const startedAt = window.performance.now();
+    let frame = 0;
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const next = start + (target - start) * progress;
+      setValue(Math.round(next));
+      if (progress < 1) frame = window.requestAnimationFrame(tick);
+    };
+
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [active, duration, start, target]);
+
+  return value;
+}
+
+const questions: Question[] = [
+  {
+    id: "q1",
+    prompt: "평소 칼로리나 탄단지를\n얼마나 자주 기록하나요?",
+    choices: [
+      { value: "daily", label: "거의 매일" },
+      { value: "3_5", label: "주 3~5일" },
+      { value: "1_2", label: "주 1~2일" },
+      { value: "none", label: "거의 안 함 / 안 함" },
+    ],
+  },
+  {
+    id: "q2",
+    prompt: "일주일에 집밥을\n몇 끼 정도 먹나요?",
+    helper: "직접 만들거나 가족이 만든 음식 모두 포함",
+    choices: [
+      { value: "none", label: "거의 안 먹음" },
+      { value: "1_2", label: "1~2끼" },
+      { value: "3_5", label: "3~5끼" },
+      { value: "6_plus", label: "6끼 이상" },
+    ],
+  },
+  {
+    id: "q3",
+    prompt: "집밥은 주로\n어떻게 기록하나요?",
+    choices: [
+      { value: "pass", label: "집밥은 기록하지 않음" },
+      { value: "eyeball", label: "먹은 양을 눈대중으로 기록" },
+      { value: "track", label: "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록" },
+      { value: "measure", label: "재료와 음식 무게까지 재서 기록" },
+    ],
+  },
+  {
+    id: "q4",
+    prompt: "집밥을 기록할 때\n가장 불편한 것은?",
+    choices: [
+      { value: "ingredients", label: "재료와 양을 하나씩 입력하는 것" },
+      { value: "weight", label: "완성된 음식과 먹은 양을 재는 것" },
+      { value: "search", label: "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것" },
+      { value: "none", label: "별로 불편하지 않음" },
+    ],
+  },
+];
+
+const results: Record<ResultType, ResultContent> = {
+  "homecook-passer": {
+    title: "집밥 패스형",
+    quote: "닭가슴살까지는 기록했는데\n김치찌개에서 앱을 닫는 타입.",
+    description: "재료가 7개를 넘는 순간,\n인간의 영역이 아니라고 판단해요.",
+    asset: "/assets/funnel/characters/homecook-passer.png",
+  },
+  "eyeballing-master": {
+    title: "눈대중 장인",
+    quote: "칼로리는 과학이지만\n내 눈도 꽤 정확하다고 믿는 편.",
+    description: "문제는 오늘 제육볶음이\n검색한 제육볶음과 같진 않다는 것.",
+    asset: "/assets/funnel/characters/eyeballing-master.png",
+  },
+  "ingredient-tracker": {
+    title: "성분 추적러",
+    quote: "고추장 17g도\n그냥 넘어가지 않는 사람.",
+    description: "오늘도 재료를 하나씩 넣으며 앱과 씨름 중.\n필요한 건 의지보다 자동화일지도.",
+    asset: "/assets/funnel/characters/ingredient-tracker.png",
+  },
+  "pro-measurer": {
+    title: "프로 계량러",
+    quote: "완성 음식까지 저울에 올렸다면\n당신은 이미 상위 기록러.",
+    description: "문제는 이걸 매번 계산하느라\n밥보다 기록이 늦게 끝난다는 것.",
+    asset: "/assets/funnel/characters/pro-measurer.png",
+    checks: ["재료 무게", "완성 무게", "먹은 무게"],
+  },
+};
+
+const ingredients = [
+  { name: "돼지고기 목살", amount: "600g", emoji: "🥩" },
+  { name: "신김치", amount: "200g", emoji: "🥬" },
+  { name: "양파", amount: "100g", emoji: "🧅" },
+  { name: "고추장", amount: "100g", emoji: "🥣" },
+  { name: "고춧가루", amount: "21g", emoji: "🌶️" },
+];
+
+const heroCopy: Record<HeroVariant, { eyebrow: string; title: string; emphasis: string; body: string; bodyHighlights?: HeroBodyHighlight[]; reference?: string }> = {
+  default: { eyebrow: "집밥 기록 30초 테스트", title: "집밥도 정확하게 기록할 수 있을까?", emphasis: "정확하게", body: "30초 테스트로 나의 집밥 기록 타입을 알아보세요." },
+  a: { eyebrow: "집밥 기록 30초 테스트", title: "레시피만 가져오면\n영양성분 계산까지!", emphasis: "영양성분", body: "집밥도 편하게\n식단 기록해요.", bodyHighlights: [{ text: "편하게", tone: "a" }] },
+  b: { eyebrow: "집밥 기록 30초 테스트", title: "수분 빠진 제육볶음 300g,\n칼로리가 달라져요.", emphasis: "칼로리", body: "집밥도 정확하게\n식단 기록해요.", bodyHighlights: [{ text: "정확하게", tone: "b" }] },
+  c: { eyebrow: "집밥 기록 30초 테스트", title: "내 집밥에\n영양성분표를 딱!", emphasis: "영양성분표", body: "제육볶음 검색 대신\n내 레시피로 기록해요.", bodyHighlights: [{ text: "검색", tone: "negative" }, { text: "내 레시피", tone: "positive" }] },
+  d: { eyebrow: "집밥 기록 30초 테스트", title: "내가 만든 집밥을\n왜 다른 음식으로 기록하지?", emphasis: "다른 음식", body: "검색해서 고른 남의 음식 대신 내 레시피로 기록해요.", reference: "/assets/funnel/hero/hero-d-visual.png" },
+};
+
+function renderBodyHighlights(text: string, highlights: HeroBodyHighlight[]) {
+  if (highlights.length === 0) return text;
+  const escaped = highlights.map(({ text: highlight }) => highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const parts = text.split(new RegExp(`(${escaped.join("|")})`, "g"));
+  return parts.map((part, index) => {
+    const highlight = highlights.find(({ text: highlightedText }) => highlightedText === part);
+    if (!highlight) return part;
+    return (
+      <span className={`hero-body-emphasis hero-body-emphasis--${highlight.tone}`} key={`${part}-${index}`}>
+        {part}
+        {highlight.tone === "a" ? <StarFilledIcon className="hero-body-doodle hero-body-doodle--star" aria-hidden="true" /> : null}
+        {highlight.tone === "b" ? <StarFilledIcon className="hero-body-doodle hero-body-doodle--star" aria-hidden="true" /> : null}
+        {highlight.tone === "negative" ? <Cross2Icon className="hero-body-doodle hero-body-doodle--cross" aria-hidden="true" /> : null}
+        {highlight.tone === "positive" ? <><img className="hero-body-circle-doodle" src="/assets/funnel/annotations/circle-doodle-violet.png" alt="" aria-hidden="true" draggable={false} /><StarFilledIcon className="hero-body-doodle hero-body-doodle--star" aria-hidden="true" /></> : null}
+      </span>
+    );
+  });
+}
+
+function readHeroVariant(): HeroVariant {
+  const params = new URLSearchParams(window.location.search);
+  const content = params.get("utm_content");
+  if (content === "hook_reentry") return "a";
+  if (content === "hook_cooked_weight") return "b";
+  if (content === "hook_calorie_quiz") return "c";
+  if (content === "hook_workaround") return "d";
+  const variant = params.get("ad_variant") ?? params.get("variant");
+  return variant === "a" || variant === "b" || variant === "c" || variant === "d" ? variant : "default";
+}
+
+function deriveResult(q3: string | undefined): ResultType {
+  if (q3 === "pass") return "homecook-passer";
+  if (q3 === "track") return "ingredient-tracker";
+  if (q3 === "measure") return "pro-measurer";
+  return "eyeballing-master";
+}
+
+function readSharedResult(): ResultType | null {
+  const result = new URLSearchParams(window.location.search).get("result");
+  const match = (Object.entries(results) as Array<[ResultType, ResultContent]>).find(([, content]) => content.title === result);
+  return match?.[0] ?? null;
+}
+
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setPrefersReducedMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return prefersReducedMotion;
+}
+
+function scheduleAdvance(prefersReducedMotion: boolean, callback: () => void, delay: number) {
+  window.setTimeout(callback, prefersReducedMotion ? 0 : delay);
+}
+
+function ScreenFrame({ children, className = "", testId, dataAttributes = {} }: { children: ReactNode; className?: string; testId: string; dataAttributes?: Record<string, string> }) {
+  const contentRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const resetScroll = () => {
+      const scroll = contentRef.current?.closest(".mobile-scroll");
+      if (scroll instanceof HTMLElement) scroll.scrollTop = 0;
+      const deviceScreen = contentRef.current?.closest(".device-screen");
+      if (deviceScreen instanceof HTMLElement) deviceScreen.scrollTop = 0;
+    };
+    const immediateTimer = window.setTimeout(resetScroll, 0);
+    const settledTimer = window.setTimeout(resetScroll, 420);
+    return () => {
+      window.clearTimeout(immediateTimer);
+      window.clearTimeout(settledTimer);
+    };
+  }, [testId]);
+  return (
+    <MobileScroll className="app-screen">
+      <main ref={contentRef} className={`screen-content ${className}`} data-testid={testId} {...dataAttributes}>
+        {children}
+      </main>
+    </MobileScroll>
+  );
+}
+
+function BrandMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`brand-mark ${compact ? "is-compact" : ""}`}>
+      <img src="/assets/funnel/brand/mumeok-symbol.png" alt="무먹" />
+      <span>무엇을 먹든</span>
+    </div>
+  );
+}
+
+function HeroFlowArrow() {
+  return <ArrowRightIcon className="hero-live-arrow" aria-hidden="true" />;
+}
+
+function HeroLiveVisual({ variant }: { variant: "a" | "b" | "c" }) {
+  if (variant === "a") {
+    return (
+      <div className="hero-live-visual hero-live-visual--a" data-testid="hero-live-visual">
+        <section className="hero-ui-card hero-recipe-card" data-testid="hero-ui-card">
+          <header data-testid="hero-card-label">YouTube 레시피</header>
+          <div className="hero-live-photo hero-live-photo--youtube">
+            <img data-testid="hero-food-image" src="/assets/funnel/food/recipe-jeyuk-thumbnail.png" alt="유튜브 제육볶음 레시피 영상" />
+            <span className="hero-youtube-play" aria-hidden="true"><PlayIcon /></span>
+          </div>
+        </section>
+        <div className="hero-extract-step" aria-label="재료와 양 자동 추출">
+          <span>재료·양</span>
+          <strong>자동 추출</strong>
+          <ArrowRightIcon aria-hidden="true" />
+        </div>
+        <section className="hero-ui-card hero-facts-card hero-facts-card--a" data-testid="hero-ui-card">
+          <header className="hero-facts-header" data-testid="hero-card-label">
+            <strong>영양성분</strong>
+            <span>1인분 320g 기준</span>
+          </header>
+          <div className="hero-facts-calories">
+            <span>열량</span>
+            <strong>487 <small>kcal</small></strong>
+          </div>
+          <div className="hero-facts-rows" data-testid="hero-card-detail">
+            <div><span>탄수화물</span><strong>31g</strong></div>
+            <div><span>단백질</span><strong>39g</strong></div>
+            <div><span>지방</span><strong>22g</strong></div>
+          </div>
+          <strong className="hero-facts-payoff">자동 계산 완료 <CheckCircledIcon /></strong>
+        </section>
+      </div>
+    );
+  }
+
+  if (variant === "b") {
+    return (
+      <div className="hero-live-visual hero-live-visual--b" data-testid="hero-live-visual">
+        <section className="hero-ui-card hero-weight-card" data-testid="hero-ui-card" aria-label="완성 무게 1083g 저울">
+          <div className="hero-live-photo hero-live-photo--scale" data-testid="hero-card-detail">
+            <img data-testid="hero-food-image" src="/assets/funnel/food/jeyuk-on-scale.png" alt="저울 위 제육볶음" />
+            <output className="hero-live-scale-readout" aria-label="완성 무게 1083g">1,083<small>g</small></output>
+          </div>
+        </section>
+        <HeroFlowArrow />
+        <section className="hero-ui-card hero-calc-card" data-testid="hero-ui-card">
+          <div className="hero-calc-story" data-testid="hero-card-detail">
+            <div className="hero-weight-shift" aria-label="조리 전 1420g에서 조리 후 1083g으로 변화">
+              <div><span>조리 전</span><strong>1,420g</strong></div>
+              <ArrowRightIcon aria-hidden="true" />
+              <div><span>조리 후</span><strong>1,083g</strong></div>
+            </div>
+            <p className="hero-water-loss"><strong>총 칼로리는 그대로</strong></p>
+            <div className="hero-calorie-result">
+              <span>먹은 300g</span>
+              <strong>457 <small>kcal</small></strong>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hero-live-visual hero-live-visual--c" data-testid="hero-live-visual">
+      <section className="hero-ui-card hero-own-recipe-card" data-testid="hero-ui-card">
+        <div className="hero-live-photo hero-live-photo--plate">
+          <img data-testid="hero-food-image" src="/assets/funnel/food/jeyuk-recipe-clean.png" alt="내 레시피로 만든 제육볶음" />
+        </div>
+        <header data-testid="hero-card-label">내 제육볶음 레시피</header>
+      </section>
+      <HeroFlowArrow />
+      <section className="hero-ui-card hero-facts-card hero-facts-card--c" data-testid="hero-ui-card">
+        <header className="hero-facts-header" data-testid="hero-card-label">
+          <strong>영양성분</strong>
+          <span>내 집밥 320g</span>
+        </header>
+        <div className="hero-facts-calories">
+          <span>열량</span>
+          <strong>487 <small data-testid="hero-kcal-unit">kcal</small></strong>
+        </div>
+        <div className="hero-facts-rows" data-testid="hero-card-detail">
+          <div><span>탄수화물</span><strong>31g</strong></div>
+          <div><span>단백질</span><strong>39g</strong></div>
+          <div><span>지방</span><strong>22g</strong></div>
+        </div>
+        <strong className="hero-facts-payoff">내 레시피 기준 <CheckCircledIcon /></strong>
+      </section>
+    </div>
+  );
+}
+
+function BackButton({ flow, label = "이전 화면", fallback }: { flow: FlowControls; label?: string; fallback?: () => void }) {
+  return (
+    <button className="icon-button back-button" type="button" onClick={flow.canGoBack ? flow.pop : fallback} aria-label={label}>
+      <ChevronLeftIcon />
+    </button>
+  );
+}
+
+function HeroProblemVisual({ variant }: { variant: HeroVariant }) {
+  if (variant === "a" || variant === "b" || variant === "c") {
+    return <HeroLiveVisual variant={variant} />;
+  }
+  const reference = heroCopy[variant].reference;
+  if (reference) {
+    return (
+      <div className={`hero-visual hero-reference hero-reference--${variant}`} data-testid="hero-reference" data-hero-variant={variant}>
+        <img src={reference} alt={`${heroCopy[variant].eyebrow} 랜딩 시각`} />
+      </div>
+    );
+  }
+  return (
+    <div className="hero-visual hero-visual--default">
+      <img src="/assets/funnel/food/recipe-jeyuk-thumbnail.png" alt="팬에서 조리 중인 제육볶음" />
+      <div>
+        <BrandMark compact />
+        <span>집밥도 빠르게, 내 레시피대로</span>
+      </div>
+    </div>
+  );
+}
+
+function HeroScreen({ variant, onStart }: { variant: HeroVariant; onStart: () => void }) {
+  const copy = heroCopy[variant];
+  const [titleBefore, titleAfter] = copy.title.split(copy.emphasis);
+  useEffect(() => {
+    document.title = "무먹 집밥 기록 테스트";
+    setShareMeta("og:title", "무먹 집밥 기록 테스트");
+    setShareMeta("og:description", "집밥 기록 타입을 확인하고 무먹의 기록 흐름을 체험해보세요.");
+    setShareMeta("og:image", new URL("/assets/funnel/share/og-share.png", window.location.origin).toString());
+  }, []);
+  return (
+    <ScreenFrame className={`hero-screen hero-screen--${variant}`} testId="screen-hero">
+      <BrandMark />
+      <div className="hero-copy-block">
+        <p className="eyebrow">{copy.eyebrow}</p>
+        <h1>{titleBefore}<span className="hero-title-accent">{copy.emphasis}</span>{titleAfter}</h1>
+        {copy.body ? <p>{renderBodyHighlights(copy.body, copy.bodyHighlights ?? [])}</p> : null}
+      </div>
+      <HeroProblemVisual variant={variant} />
+      <div className="screen-actions hero-actions">
+        <button className="primary-button" type="button" onClick={onStart}>
+          내 집밥기록 유형 알아보기 <ArrowRightIcon />
+        </button>
+        <p className="trust-line">
+          <span><FileTextIcon aria-hidden="true" />4문항</span>
+          <span><LockClosedIcon aria-hidden="true" />로그인 없이</span>
+          <span><LightningBoltIcon aria-hidden="true" />결과 바로 확인</span>
+        </p>
+      </div>
+    </ScreenFrame>
+  );
+}
+
+function QuizScreen({ flow, index, selected, onSelect }: { flow: FlowControls; index: number; selected?: string; onSelect: (value: string) => void }) {
+  const question = questions[index];
+  return (
+    <ScreenFrame className="quiz-screen" testId={`screen-question-${index + 1}`}>
+      <UnifiedProgressHeader flow={flow} current={index + 1} total={4} backLabel={index > 0 ? "이전 질문" : "이전 화면"} ariaLabel={`${index + 1} / 4 진행`} />
+      <div className={`question-copy ${question.helper ? "has-helper" : "no-helper"}`}>
+        <h2 data-testid="question-prompt">
+          {question.prompt.split("\n").map((line, lineIndex) => <span key={line}>{lineIndex ? <br /> : null}{line}</span>)}
+        </h2>
+        {question.helper ? <p>{question.helper}</p> : null}
+      </div>
+      <div className="choice-list" aria-label={question.prompt}>
+        {question.choices.map((choice) => {
+          const active = selected === choice.value;
+          return (
+            <button
+              data-testid="quiz-option"
+              className={`choice-button ${active ? "is-selected" : ""}`}
+              type="button"
+              aria-pressed={active}
+              key={choice.value}
+              onClick={() => onSelect(choice.value)}
+            >
+              <span>{choice.label}</span>
+              <span className="choice-indicator" aria-hidden="true">
+                {active ? <CheckIcon /> : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </ScreenFrame>
+  );
+}
+
+async function shareResult(content: ResultContent, setStatus: (value: string) => void) {
+  const shareUrl = new URL(window.location.href);
+  shareUrl.searchParams.set("result", content.title);
+  const hashtags = ["#무먹", "#집밥기록", "#제육볶음"];
+  const shareData = {
+    title: `무먹 집밥 기록 타입: ${content.title}`,
+    text: `${content.quote}\n\n${hashtags.join(" ")}`,
+    url: shareUrl.toString(),
+  };
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      setStatus("공유 화면을 열었어요.");
+      return;
+    }
+    await navigator.clipboard.writeText(`${shareData.title}\n${content.quote}\n${hashtags.join(" ")}\n${shareData.url}`);
+    setStatus("결과 링크를 복사했어요.");
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    setStatus("공유 링크를 복사하지 못했어요.");
+  }
+}
+
+function setShareMeta(property: string, content: string) {
+  let meta = document.head.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.setAttribute("property", property);
+    document.head.append(meta);
+  }
+  meta.content = content;
+}
+
+function ResultScreen({ flow, type, onExperience }: { flow: FlowControls; type: ResultType; onExperience: () => void }) {
+  const result = results[type];
+  const [shareStatus, setShareStatus] = useState("");
+  const [titleLead, ...titleAccent] = result.title.split(" ");
+  useEffect(() => {
+    document.title = `${result.title} | 무먹 집밥 기록 테스트`;
+    setShareMeta("og:title", `나의 집밥 기록 타입은 ${result.title}`);
+    setShareMeta("og:description", result.quote.replace("\n", " "));
+    setShareMeta("og:image", new URL("/assets/funnel/share/og-share.png", window.location.origin).toString());
+  }, [result]);
+  return (
+    <ScreenFrame className="result-screen" testId="screen-result" dataAttributes={{ "data-result-type": type }}>
+      <BackButton
+        flow={flow}
+        label="마지막 질문으로 돌아가기"
+        fallback={() => window.location.assign(window.location.pathname)}
+      />
+      <p className="result-kicker">당신의 집밥 기록 타입은…</p>
+      <h1>
+        <span>{titleLead}</span>
+        {titleAccent.length ? <> <em>{titleAccent.join(" ")}</em></> : null}
+      </h1>
+      <div className="result-character-stage">
+        <div className="result-celebration" data-testid="result-celebration" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, index) => <StarFilledIcon key={index} />)}
+        </div>
+        <img data-testid="result-character" className="result-character" src={result.asset} alt={`${result.title} 캐릭터`} />
+      </div>
+      <QuoteIcon className="result-quote-icon" data-testid="result-quote-icon" aria-hidden="true" />
+      <blockquote data-testid="result-quote-lines">
+        {result.quote.split("\n").map((line, lineIndex, lines) => (
+          <span key={line}>{lineIndex < lines.length - 1 ? `${line} ` : line}</span>
+        ))}
+      </blockquote>
+      {result.checks ? (
+        <div className="result-checks">
+          {result.checks.map((check) => (
+            <span key={check}>
+              <CheckCircledIcon />
+              {check}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <p className="result-description" data-testid="result-description">
+        {result.description.split("\n").map((line) => <span key={line}>{line}</span>)}
+      </p>
+      <div className="conversion-block">
+        <p>그런데 집밥 기록이</p>
+        <h2 data-testid="conversion-headline">20초 만에 끝난다면?</h2>
+        <span>직접 한 번 기록해보세요.</span>
+      </div>
+      <button className="primary-button" type="button" onClick={onExperience}>
+        무먹으로 20초 체험하기 <ArrowRightIcon />
+      </button>
+      <button className="share-button" type="button" onClick={() => void shareResult(result, setShareStatus)}>
+        <Share2Icon /> 내 결과 공유하기
+      </button>
+      {shareStatus ? <p className="share-status" role="status">{shareStatus}</p> : null}
+    </ScreenFrame>
+  );
+}
+
+function UnifiedProgressHeader({ flow, current, total, backLabel = "이전 화면", ariaLabel }: { flow: FlowControls; current: number; total: number; backLabel?: string; ariaLabel: string }) {
+  return (
+    <div className="unified-progress-header">
+      <BackButton flow={flow} label={backLabel} />
+      <div className="unified-progress-segments" role="progressbar" aria-valuemin={1} aria-valuemax={total} aria-valuenow={current} aria-label={ariaLabel}>
+        {Array.from({ length: total }, (_, index) => index + 1).map((item) => (
+          <span className={item < current ? "is-complete" : item === current ? "is-current" : ""} key={item} />
+        ))}
+      </div>
+      <span className="unified-progress-count"><strong>{current}</strong> / {total}</span>
+    </div>
+  );
+}
+
+function DemoHeader({ flow, step, label }: { flow: FlowControls; step: number; label: string }) {
+  return <UnifiedProgressHeader flow={flow} current={step} total={5} ariaLabel={`체험 ${step} / 5 · ${label}`} />;
+}
+
+function DemoOne({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
+  const start = () => {
+    if (status !== "idle") return;
+    setStatus("loading");
+    scheduleAdvance(prefersReducedMotion, () => {
+      setStatus("done");
+    }, 520);
+  };
+  const handlePrimaryAction = () => {
+    if (status === "done") {
+      onNext();
+      return;
+    }
+    start();
+  };
+
+  return (
+    <ScreenFrame className="demo-screen" testId="screen-demo-1">
+      <DemoHeader flow={flow} step={1} label="레시피 가져오기" />
+      <div className="demo-title">
+        <h1>
+          유튜브 레시피를
+          <br />
+          <span>가져올게요.</span>
+        </h1>
+      </div>
+      <div className={`recipe-card ${status !== "idle" ? "is-importing" : ""}`}>
+        <div className="recipe-media">
+          <img
+            data-testid="recipe-thumbnail"
+            className="recipe-thumbnail"
+            src="/assets/funnel/food/recipe-jeyuk-thumbnail.png"
+            alt="유튜브 제육볶음 레시피 썸네일"
+          />
+          <span className="youtube-play" data-testid="youtube-play-icon" aria-hidden="true">
+            <PlayIcon />
+          </span>
+          {status === "loading" ? <div className="recipe-loading" role="status"><ReloadIcon /><span>레시피를 가져오는 중…</span></div> : null}
+        </div>
+        <h2 className="recipe-name">대표요리가 되는 제육볶음</h2>
+        <p className="recipe-channel" data-testid="recipe-channel">YouTube · 이 남자의 cook · 조회수 904만회</p>
+      </div>
+      {status === "done" ? (
+        <div className="success-banner" role="status" data-testid="recipe-success">
+          <CheckCircledIcon /><span>레시피를 가져왔어요</span><span className="success-sparkle" aria-hidden="true">✨</span>
+        </div>
+      ) : null}
+      <button className="primary-button screen-bottom-button" type="button" onClick={handlePrimaryAction} disabled={status === "loading"}>
+        {status === "loading" ? "가져오는 중…" : status === "done" ? <>다음 <ArrowRightIcon /></> : "무먹으로 가져오기"}
+      </button>
+    </ScreenFrame>
+  );
+}
+
+function DemoTwo({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [noteVisible, setNoteVisible] = useState(false);
+  const [adjusted, setAdjusted] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const displayedPorkWeight = useCountUp(520, adjusted, 720, 600);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setNoteVisible(true), prefersReducedMotion ? 0 : 380);
+    return () => window.clearTimeout(timer);
+  }, [prefersReducedMotion]);
+
+  const confirmWeight = () => {
+    if (adjusted || transitioning) return;
+    setTransitioning(true);
+    scheduleAdvance(prefersReducedMotion, () => {
+      setAdjusted(true);
+      setTransitioning(false);
+    }, 420);
+  };
+
+  return (
+    <ScreenFrame className="demo-screen demo-two-screen" testId="screen-demo-2">
+      <DemoHeader flow={flow} step={2} label="재료 확인" />
+      <div className="demo-title">
+        <h1>
+          영상 속 레시피를
+          <br />
+          <span>자동으로 정리</span>했어요.
+        </h1>
+      </div>
+      <div className="ingredient-list">
+        {ingredients.map(({ name, amount, emoji }, index) => (
+          <div key={name}>
+            <span className="ingredient-emoji" data-testid="ingredient-emoji" aria-hidden="true">{emoji}</span>
+            <span>{name}</span>
+            <strong data-testid={index === 0 ? "pork-amount" : undefined} className={index === 0 && adjusted ? "amount-updated" : ""}>{index === 0 ? `${displayedPorkWeight}g` : amount}</strong>
+          </div>
+        ))}
+        <div className="ingredient-more" data-testid="ingredient-more">
+          <span className="ingredient-more-dots" aria-hidden="true">•••</span>
+          <span>외 10개 재료</span>
+          <strong>생략</strong>
+        </div>
+      </div>
+      <div className={`adjustment-card ${noteVisible ? "is-visible" : ""} ${adjusted ? "is-completed" : ""}`} aria-hidden={!noteVisible || adjusted}>
+        <CheckCircledIcon />
+        <span>오늘은 돼지고기를 조금 덜 넣었어요.</span>
+      </div>
+      {adjusted ? (
+        <button className="primary-button screen-bottom-button" type="button" onClick={onNext}>
+          다음 <ArrowRightIcon />
+        </button>
+      ) : (
+        <button className="change-weight-button screen-bottom-button" type="button" aria-label="돼지고기 양을 520g으로 바꾸기" onClick={confirmWeight} disabled={transitioning}>
+          <strong>600g → 520g</strong>
+        </button>
+      )}
+    </ScreenFrame>
+  );
+}
+
+function DemoThree({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  const [confirmed, setConfirmed] = useState(false);
+  const displayedWeight = useCountUp(1180, confirmed, 720, 1200);
+  const confirm = () => {
+    if (confirmed) return;
+    setConfirmed(true);
+  };
+  return (
+    <ScreenFrame className="demo-screen demo-weight-screen" testId="screen-demo-3">
+      <DemoHeader flow={flow} step={3} label="완성 무게" />
+      <div className="demo-title">
+        <h1>요리가 완성됐어요.</h1>
+      </div>
+      <strong className={`hero-metric ${confirmed ? "is-confirmed" : ""}`} data-testid="cooked-weight-metric">{displayedWeight.toLocaleString("ko-KR")}g</strong>
+      <p className="metric-helper" data-testid="metric-helper">조리하면서 줄어드는 무게를<br />고려한 예상값이에요.</p>
+      <div className="cooked-scale-visual">
+        <img data-testid="cooked-scale-image" className="cooked-scale-image" src="/assets/funnel/food/jeyuk-on-scale.png" alt="완성된 제육볶음이 올라간 디지털 주방저울" />
+        <output className="cooked-scale-display" data-testid="cooked-scale-display" aria-label="완성 무게 1180g">1,180g</output>
+      </div>
+      <div className="demo-weight-feedback-slot">
+        {confirmed ? (
+          <div className="inline-feedback inline-feedback--plain" role="status">
+            <CheckCircledIcon /> 수분이 날아간 만큼까지 반영했어요.
+          </div>
+        ) : null}
+      </div>
+      <button className="primary-button screen-bottom-button strong-action-button" type="button" onClick={confirmed ? onNext : confirm}>
+        {confirmed ? <>다음 <ArrowRightIcon /></> : "저울로 재보니 1,180g"}
+      </button>
+    </ScreenFrame>
+  );
+}
+
+function DemoFour({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  return (
+    <ScreenFrame className="demo-screen portion-screen" testId="screen-demo-4">
+      <DemoHeader flow={flow} step={4} label="먹은 양" />
+      <div className="demo-title">
+        <h1>1,180g 중 얼마나 드셨나요?</h1>
+      </div>
+      <div className="portion-visual">
+        <img data-testid="portion-image" className="portion-image" src="/assets/funnel/food/jeyuk-on-scale.png" alt="흰 접시의 제육볶음이 올라간 디지털 주방저울" />
+        <output className="scale-display" data-testid="scale-display" aria-label="저울 표시 320g">320g</output>
+      </div>
+      <button className="primary-button screen-bottom-button strong-action-button" type="button" onClick={onNext}>
+        320g 입력하기
+      </button>
+    </ScreenFrame>
+  );
+}
+
+function DemoFive({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  const calories = useCountUp(487, true);
+  const carbs = useCountUp(31, true);
+  const protein = useCountUp(39, true);
+  const fat = useCountUp(22, true);
+  return (
+    <ScreenFrame className="demo-screen nutrition-screen" testId="screen-demo-5">
+      <DemoHeader flow={flow} step={5} label="영양 계산 완료" />
+      <div className="demo-title demo-title--nutrition">
+        <div className="nutrition-confetti" data-testid="nutrition-confetti" aria-hidden="true">
+          {Array.from({ length: 7 }, (_, index) => <StarFilledIcon key={index} />)}
+        </div>
+        <h1>계산 완료!</h1>
+        <p>제육볶음 320g</p>
+      </div>
+      <strong className="nutrition-calories">
+        <span>{calories}</span>{" "}
+        <small>kcal</small>
+      </strong>
+      <div className="macro-grid">
+        <div className="macro-card macro-card--carb">
+          <span>탄수화물</span>
+          <img className="macro-image" data-testid="macro-image" src="/assets/funnel/food/macro-carb-wheat.png" alt="황금빛 밀 이삭" />
+          <strong>{carbs}g</strong>
+        </div>
+        <div className="macro-card macro-card--protein">
+          <span>단백질</span>
+          <img className="macro-image" data-testid="macro-image" src="/assets/funnel/food/macro-protein-arm.png" alt="힘을 준 팔" />
+          <strong>{protein}g</strong>
+        </div>
+        <div className="macro-card macro-card--fat">
+          <span>지방</span>
+          <img className="macro-image" data-testid="macro-image" src="/assets/funnel/food/macro-fat-drop.png" alt="황금빛 기름 방울" />
+          <strong>{fat}g</strong>
+        </div>
+      </div>
+      <button className="primary-button screen-bottom-button" type="button" onClick={onNext}>
+        식단에 기록하기 <ArrowRightIcon />
+      </button>
+    </ScreenFrame>
+  );
+}
+
+function getWeekDays(reference: Date) {
+  const monday = new Date(reference);
+  const day = reference.getDay() || 7;
+  monday.setDate(reference.getDate() - day + 1);
+  return Array.from({ length: 7 }, (_, index) => {
+    const current = new Date(monday);
+    current.setDate(monday.getDate() + index);
+    return current;
+  });
+}
+
+function WeekStrip() {
+  const today = getKoreanToday();
+  const days = getWeekDays(today);
+  return (
+    <div className="week-strip" aria-label="이번 주 식단">
+      {days.map((day) => {
+        const isToday = day.toDateString() === today.toDateString();
+        const weekdayIndex = day.getDay() === 0 ? 6 : day.getDay() - 1;
+        return (
+          <span className={isToday ? "is-today" : ""} key={day.toISOString()}>
+            <small>{["월", "화", "수", "목", "금", "토", "일"][weekdayIndex]}</small>
+            <strong>{day.getDate()}</strong>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function PlannerSummary({ calories, carbs, protein, fat, highlight, testId = "planner-summary" }: { calories: number; carbs: number; protein: number; fat: number; highlight?: "meal" | "product"; testId?: string }) {
+  return (
+    <div className={`planner-summary ${highlight ? "is-updating" : ""}`} data-testid={testId} data-highlight={highlight}>
+      <div>
+        <span>칼로리</span>
+        <strong>{calories.toLocaleString("ko-KR")}<small className="planner-summary-unit"> kcal</small></strong>
+      </div>
+      <div>
+        <span>탄수화물</span>
+        <strong>{carbs.toLocaleString("ko-KR")}<small className="planner-summary-unit"> g</small></strong>
+      </div>
+      <div>
+        <span>단백질</span>
+        <strong>{protein.toLocaleString("ko-KR")}<small className="planner-summary-unit"> g</small></strong>
+      </div>
+      <div>
+        <span>지방</span>
+        <strong>{fat.toLocaleString("ko-KR")}<small className="planner-summary-unit"> g</small></strong>
+      </div>
+    </div>
+  );
+}
+
+type PlannerFood = { name: string; detail: string; image: string; product?: boolean };
+
+function PlannerMealRow({ label, foods, animateLast = false, highlight, testId, ariaPrefix }: { label: string; foods: PlannerFood[]; animateLast?: boolean; highlight?: "meal" | "product"; testId?: string; ariaPrefix?: string }) {
+  return (
+    <div className={`meal-row ${foods.length > 1 ? "has-multiple-foods" : ""} ${highlight ? `is-highlighted is-highlighted--${highlight}` : ""}`} data-testid={testId} data-highlight={highlight}>
+      <span className="meal-row-label">{label}</span>
+      <div className="meal-foods">
+        {foods.map((food, index) => (
+          <div className={`meal-food ${animateLast && index === foods.length - 1 ? "is-entering" : ""}`} key={food.name}>
+            <img className={food.product ? "product-thumb" : ""} src={food.image} alt="" />
+            <div><strong>{food.name}</strong><span>{food.detail}</span></div>
+          </div>
+        ))}
+      </div>
+      <button className="meal-add-button" type="button" aria-label={`${ariaPrefix ? `${ariaPrefix} ` : ""}${label} 음식 추가`}>+</button>
+    </div>
+  );
+}
+
+const breakfastFood: PlannerFood = { name: "그릭요거트 볼", detail: "420 kcal · 단백질 22g", image: "/assets/funnel/food/greek-yogurt-bowl.png" };
+const lunchFood: PlannerFood = { name: "닭가슴살 현미밥", detail: "700 kcal · 단백질 50g", image: "/assets/funnel/food/chicken-brown-rice-bowl.png" };
+const homecookFood: PlannerFood = { name: "제육볶음 320g", detail: "487 kcal · 단백질 39g", image: "/assets/funnel/food/recipe-jeyuk-thumbnail.png" };
+const drinkFood: PlannerFood = { name: "더:단백 드링크 초코", detail: "105 kcal · 단백질 20g", image: "/assets/funnel/products/the-protein-choco.png", product: true };
+
+function TomorrowPreview() {
+  const tomorrow = getKoreanToday();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return (
+    <section className="next-day-preview" data-testid="next-day-preview">
+      <header>
+        <strong>내일 · {formatKoreanDate(tomorrow, { includeYear: false })}</strong>
+        <span>0 / 3</span>
+      </header>
+      <PlannerSummary calories={0} carbs={0} protein={0} fat={0} testId="tomorrow-summary" />
+      {(["아침", "점심", "저녁"] as const).map((label) => <PlannerMealRow label={label} foods={[]} ariaPrefix="내일" key={label} />)}
+    </section>
+  );
+}
+
+function PlannerHomecook({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [entered, setEntered] = useState(false);
+  const [metricsReady, setMetricsReady] = useState(false);
+  const today = getKoreanToday();
+  const todayLabel = formatKoreanDate(today, { includeYear: false });
+
+  useEffect(() => {
+    const mealTimer = window.setTimeout(() => setEntered(true), prefersReducedMotion ? 0 : 950);
+    const metricsTimer = window.setTimeout(() => setMetricsReady(true), prefersReducedMotion ? 0 : 2350);
+    return () => { window.clearTimeout(mealTimer); window.clearTimeout(metricsTimer); };
+  }, [prefersReducedMotion]);
+
+  const calories = useCountUp(1607, metricsReady, 1250, 1120);
+  const carbs = useCountUp(177, metricsReady, 1250, 146);
+  const protein = useCountUp(111, metricsReady, 1250, 72);
+  const fat = useCountUp(60, metricsReady, 1250, 38);
+
+  return (
+    <ScreenFrame className="planner-screen" testId="screen-planner-homecook" dataAttributes={{ "data-meal-entered": entered ? "true" : "false" }}>
+      <div className="planner-topline">
+        <BackButton flow={flow} />
+        <div className="planner-heading">
+          <CalendarIcon />
+          <h1>이번 주 식단</h1>
+        </div>
+      </div>
+      <WeekStrip />
+      <section className="meal-day-card">
+        <header>
+          <strong>오늘 · {todayLabel}</strong>
+          <span>{entered ? "3 / 3" : "2 / 3"}</span>
+        </header>
+        <PlannerSummary calories={calories} carbs={carbs} protein={protein} fat={fat} highlight={metricsReady ? "meal" : undefined} />
+        <PlannerMealRow label="아침" foods={[breakfastFood]} />
+        <PlannerMealRow label="점심" foods={[lunchFood]} />
+        <PlannerMealRow label="저녁" foods={entered ? [homecookFood] : []} animateLast={entered} highlight={entered ? "meal" : undefined} testId="dinner-foods" />
+      </section>
+      <TomorrowPreview />
+      <button className="primary-button planner-floating-cta strong-action-button" type="button" onClick={onNext}>
+        편의점 음식도 기록해보기 <ArrowRightIcon />
+      </button>
+    </ScreenFrame>
+  );
+}
+
+function PackagedFood({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  return (
+    <ScreenFrame className="packaged-screen" testId="screen-packaged-food">
+      <BackButton flow={flow} />
+      <div className="demo-title">
+        <h1>
+          그리고
+          <br />
+          <span>편의점 음식</span>은
+          <br />
+          더 간단해요.
+        </h1>
+      </div>
+      <div className="product-card" data-testid="product-card">
+        <span className="example-badge">제품 예시</span>
+        <span className="product-sparkle product-sparkle--left" aria-hidden="true">✨</span>
+        <span className="product-sparkle product-sparkle--right" aria-hidden="true">✨</span>
+        <img src="/assets/funnel/products/the-protein-choco.png" alt="더:단백 드링크 초코 제품" />
+        <div>
+          <h2>더:단백 드링크 초코</h2>
+          <p>250ml</p>
+          <div className="product-stat"><span aria-hidden="true">🔥</span><strong>105 kcal</strong></div>
+          <div className="product-stat"><span aria-hidden="true">💪</span><strong>단백질 20g</strong></div>
+        </div>
+      </div>
+      <button className="primary-button screen-bottom-button strong-action-button" type="button" aria-label="더:단백 드링크 초코 + 기록하기" onClick={onNext}>
+        <PlusIcon /> 기록하기
+      </button>
+    </ScreenFrame>
+  );
+}
+
+function PlannerComplete({ flow, onNext }: { flow: FlowControls; onNext: () => void }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [drinkEntered, setDrinkEntered] = useState(false);
+  const [metricsReady, setMetricsReady] = useState(false);
+
+  useEffect(() => {
+    const drinkTimer = window.setTimeout(() => setDrinkEntered(true), prefersReducedMotion ? 0 : 950);
+    const metricsTimer = window.setTimeout(() => setMetricsReady(true), prefersReducedMotion ? 0 : 2200);
+    return () => {
+      window.clearTimeout(drinkTimer);
+      window.clearTimeout(metricsTimer);
+    };
+  }, [prefersReducedMotion]);
+
+  const calories = useCountUp(1712, metricsReady, 1150, 1607);
+  const carbs = useCountUp(184, metricsReady, 1150, 177);
+  const protein = useCountUp(131, metricsReady, 1150, 111);
+  const fat = useCountUp(61, metricsReady, 1150, 60);
+
+  return (
+    <ScreenFrame className="planner-screen" testId="screen-planner-complete" dataAttributes={{ "data-product-entered": drinkEntered ? "true" : "false" }}>
+      <div className="planner-topline">
+        <BackButton flow={flow} />
+        <div className="planner-heading"><CalendarIcon /><h1>이번 주 식단</h1></div>
+      </div>
+      <WeekStrip />
+      <section className="meal-day-card">
+        <header>
+          <strong>오늘 · {formatKoreanDate(getKoreanToday(), { includeYear: false })}</strong>
+          <span>3 / 3</span>
+        </header>
+        <PlannerSummary calories={calories} carbs={carbs} protein={protein} fat={fat} highlight={metricsReady ? "product" : undefined} />
+        <PlannerMealRow label="아침" foods={[breakfastFood]} />
+        <PlannerMealRow label="점심" foods={[lunchFood]} />
+        <PlannerMealRow label="저녁" foods={drinkEntered ? [homecookFood, drinkFood] : [homecookFood]} animateLast={drinkEntered} highlight={drinkEntered ? "product" : undefined} testId="dinner-foods" />
+      </section>
+      <TomorrowPreview />
+      <button className="primary-button planner-floating-cta strong-action-button" type="button" onClick={onNext}>
+        무료 베타 먼저 써보기 <ArrowRightIcon />
+      </button>
+    </ScreenFrame>
+  );
+}
+
+function BetaScreen({ flow, onSuccess }: { flow: FlowControls; onSuccess: () => void }) {
+  const keyboard = useKeyboard();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [consent, setConsent] = useState(false);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (submitting) return;
+    if (!email.trim()) {
+      setError("이메일을 입력해주세요.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setError("이메일 형식을 확인해주세요.");
+      return;
+    }
+    if (!consent) {
+      setError("이메일 수집·이용 동의가 필요해요.");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    keyboard.hide();
+    scheduleAdvance(prefersReducedMotion, onSuccess, 500);
+  };
+
+  return (
+    <ScreenFrame className="beta-screen" testId="screen-beta">
+      <div className="beta-topbar">
+        <BackButton flow={flow} />
+        <img className="beta-brand-wordmark" src="/assets/funnel/brand/mumeok-logo-horizontal.png" alt="무먹 무엇을 먹든" />
+      </div>
+      <div className="beta-invitation">
+        <img className="beta-character" data-testid="beta-character" src="/assets/funnel/characters/beta-invitation-mascot.png" alt="파란 초대장을 든 무먹 소금병 캐릭터" />
+        <div className="beta-copy">
+          <h1><span>무먹,</span><br />직접 써보고 싶나요?</h1>
+          <p>첫 베타테스트를 준비하고 있어요. 이메일을 남겨주시면 가장 먼저 초대드릴게요</p>
+        </div>
+      </div>
+      <form className="email-form" onSubmit={submit} noValidate>
+        <label htmlFor="beta-email">이메일</label>
+        <div className="email-input-wrap">
+          <input
+            id="beta-email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="name@example.com"
+            value={email}
+            aria-invalid={error ? "true" : "false"}
+            aria-describedby={error ? "email-error" : "privacy-details"}
+            onChange={(event) => setEmail(event.target.value)}
+            onFocus={() => setError("")}
+          />
+        </div>
+        <div className="consent-block" data-testid="consent-block">
+          <label className="consent-row">
+            <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
+            <span><strong>[필수]</strong> 이메일 수집·이용에 동의합니다.</span>
+          </label>
+          <details className="privacy-disclosure">
+            <summary><ChevronRightIcon aria-hidden="true" />수집 목적과 보유 기간 보기</summary>
+            <p className="privacy-details" id="privacy-details">수집: 이메일 · 목적: 베타 초대 · 보유: 베타 초대 종료 시까지</p>
+          </details>
+        </div>
+        {error ? (
+          <p className="form-error" id="email-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button className="primary-button" type="submit" disabled={submitting}>
+          {submitting ? "신청 중…" : "무료 베타 초대받기"}
+        </button>
+      </form>
+    </ScreenFrame>
+  );
+}
+
+function SuccessScreen({ flow, onReset }: { flow: FlowControls; onReset: () => void }) {
+  return (
+    <ScreenFrame className="success-screen" testId="screen-success">
+      <BackButton flow={flow} />
+      <div className="success-character-wrap">
+        <div className="success-celebration" data-testid="success-celebration" aria-hidden="true">
+          {Array.from({ length: 8 }, (_, index) => <StarFilledIcon key={index} />)}
+        </div>
+        <img data-testid="success-character" className="success-character" src="/assets/funnel/characters/beta-success-mascot.png" alt="파란 하트와 함께 반기는 무먹 소금병 캐릭터" />
+      </div>
+      <h1>신청이 완료됐어요!</h1>
+      <p>
+        베타가 준비되면
+        <br />
+        이메일로 알려드릴게요.
+      </p>
+      <button className="primary-button screen-bottom-button" type="button" onClick={onReset}>
+        처음으로 돌아가기
+      </button>
+    </ScreenFrame>
+  );
+}
+
+export default function Prototype() {
+  const [, setAnswers] = useState<Answers>({});
+  const [flowVersion, setFlowVersion] = useState(0);
+  const answersRef = useRef<Answers>({});
+  const transitionLocked = useRef(false);
+  const [variant] = useState<HeroVariant>(() => readHeroVariant());
+  const [sharedResult] = useState<ResultType | null>(() => readSharedResult());
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const setAnswer = (id: QuestionId, value: string) => {
+    const next = { ...answersRef.current, [id]: value };
+    answersRef.current = next;
+    setAnswers(next);
+  };
+
+  function heroScreen(): FlowScreen {
+    return { id: "hero", render: (flow) => <HeroScreen variant={variant} onStart={() => flow.push(questionScreen(0))} /> };
+  }
+
+  function questionScreen(index: number): FlowScreen {
+    const question = questions[index];
+    return {
+      id: `question-${index + 1}`,
+      render: (flow) => (
+        <QuizScreen
+          flow={flow}
+          index={index}
+          selected={answersRef.current[question.id]}
+          onSelect={(value) => {
+            if (transitionLocked.current) return;
+            transitionLocked.current = true;
+            setAnswer(question.id, value);
+            scheduleAdvance(prefersReducedMotion, () => {
+              transitionLocked.current = false;
+              if (index < questions.length - 1) flow.push(questionScreen(index + 1));
+              else flow.push(resultScreen());
+            }, 300);
+          }}
+        />
+      ),
+    };
+  }
+
+  function resultScreen(forcedType?: ResultType): FlowScreen {
+    const type = forcedType ?? deriveResult(answersRef.current.q3);
+    return { id: "result", render: (flow) => <ResultScreen flow={flow} type={type} onExperience={() => flow.push(demoOneScreen())} /> };
+  }
+
+  function demoOneScreen(): FlowScreen {
+    return { id: "demo-1", render: (flow) => <DemoOne flow={flow} onNext={() => flow.push(demoTwoScreen())} /> };
+  }
+  function demoTwoScreen(): FlowScreen {
+    return { id: "demo-2", render: (flow) => <DemoTwo flow={flow} onNext={() => flow.push(demoThreeScreen())} /> };
+  }
+  function demoThreeScreen(): FlowScreen {
+    return { id: "demo-3", render: (flow) => <DemoThree flow={flow} onNext={() => flow.push(demoFourScreen())} /> };
+  }
+  function demoFourScreen(): FlowScreen {
+    return { id: "demo-4", render: (flow) => <DemoFour flow={flow} onNext={() => flow.push(demoFiveScreen())} /> };
+  }
+  function demoFiveScreen(): FlowScreen {
+    return { id: "demo-5", render: (flow) => <DemoFive flow={flow} onNext={() => flow.push(plannerHomecookScreen())} /> };
+  }
+  function plannerHomecookScreen(): FlowScreen {
+    return { id: "planner-homecook", render: (flow) => <PlannerHomecook flow={flow} onNext={() => flow.push(packagedFoodScreen())} /> };
+  }
+  function packagedFoodScreen(): FlowScreen {
+    return { id: "packaged-food", render: (flow) => <PackagedFood flow={flow} onNext={() => flow.push(plannerCompleteScreen())} /> };
+  }
+  function plannerCompleteScreen(): FlowScreen {
+    return { id: "planner-complete", render: (flow) => <PlannerComplete flow={flow} onNext={() => flow.push(betaScreen())} /> };
+  }
+  function betaScreen(): FlowScreen {
+    return { id: "beta", render: (flow) => <BetaScreen flow={flow} onSuccess={() => flow.push(successScreen())} /> };
+  }
+  function successScreen(): FlowScreen {
+    return {
+      id: "success",
+      render: (flow) => <SuccessScreen flow={flow} onReset={() => {
+        answersRef.current = {};
+        setAnswers({});
+        setFlowVersion((current) => current + 1);
+      }} />,
+    };
+  }
+
+  return <FlowStack key={flowVersion} initial={sharedResult ? resultScreen(sharedResult) : heroScreen()} />;
+}
