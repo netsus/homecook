@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -16,6 +17,44 @@ afterEach(() => {
 });
 
 describe("tracked evidence capture boundary", () => {
+  it("keeps removed historical captures recoverable through a compact manifest", async () => {
+    const manifestPath =
+      "ui/designs/evidence/historical-manifests/unreferenced-wave1-home-and-cook-mode-theme.json";
+    const manifestSource = await readFile(manifestPath, "utf8");
+    const manifest = JSON.parse(manifestSource) as {
+      capture_sets: Array<{
+        bytes: number;
+        file_count: number;
+        files: Array<{ git_blob: string; path: string; sha256: string }>;
+        source_commit: string;
+        tree: string;
+      }>;
+      recovery_command: string;
+    };
+    const verdict = JSON.parse(
+      await readFile("ui/designs/evidence/wave1-mobile-phase4-home/visual-verdict.json", "utf8"),
+    ) as { historical_evidence_manifest?: string };
+
+    expect(verdict.historical_evidence_manifest).toBe(manifestPath);
+    expect(createHash("sha256").update(manifestSource).digest("hex")).toBe(
+      "d36554daa1dc89fb1ff9dadbf93eec1b1bb0ba1950da0bac3d077eebde7250f2",
+    );
+    expect(manifest.capture_sets.reduce((sum, set) => sum + set.file_count, 0)).toBe(22);
+    expect(manifest.capture_sets.reduce((sum, set) => sum + set.bytes, 0)).toBe(1_850_318);
+    expect(manifest.recovery_command).toContain("git archive");
+
+    for (const captureSet of manifest.capture_sets) {
+      expect(captureSet.source_commit).toMatch(/^[0-9a-f]{40}$/u);
+      expect(captureSet.tree).toMatch(/^[0-9a-f]{40}$/u);
+      expect(captureSet.files).toHaveLength(captureSet.file_count);
+      for (const file of captureSet.files) {
+        expect(file.git_blob).toMatch(/^[0-9a-f]{40}$/u);
+        expect(file.sha256).toMatch(/^[0-9a-f]{64}$/u);
+        await expect(access(file.path)).rejects.toThrow();
+      }
+    }
+  });
+
   it("routes all affected evidence screenshots through the opt-in helper", async () => {
     for (const [sourcePath, expectedCalls] of AFFECTED_SOURCES) {
       const source = await readFile(sourcePath, "utf8");

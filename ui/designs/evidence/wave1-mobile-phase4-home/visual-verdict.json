@@ -5,8 +5,7 @@
   "score": 86,
   "verdict": "revise",
   "category_match": true,
-  "evidence_after_dir": "ui/designs/evidence/wave1-mobile-phase4-home-after",
-  "evidence_before_dir": "ui/designs/evidence/wave1-mobile-phase4-home-before",
+  "historical_evidence_manifest": "ui/designs/evidence/historical-manifests/unreferenced-wave1-home-and-cook-mode-theme.json",
   "reference_dir": "ui/designs/reference/wave1-fixed-prototype",
   "differences": [
     "HOME initial mobile viewports now closely match the prototype, with intentional darker text/mint values and 44px ingredient chips for accessibility gates.",

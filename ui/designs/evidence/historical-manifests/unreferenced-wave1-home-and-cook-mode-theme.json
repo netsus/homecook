@@ -1,0 +1,181 @@
+{
+  "schema_version": "1.0",
+  "kind": "historical-design-evidence-receipt",
+  "note": "Git history recovery only; these captures are not current runtime, authority, or visual-regression inputs.",
+  "capture_sets": [
+    {
+      "root": "ui/designs/evidence/wave1-mobile-phase4-home-before",
+      "source_commit": "cd60671578a98302c3dd8e6c06e7b12ae82996bb",
+      "tree": "d903989c8b1ac5eda4d0ce8b37fc4e3ed9cfcc5d",
+      "file_count": 3,
+      "bytes": 824423,
+      "final_decision": {
+        "verdict": "revise",
+        "score": 86,
+        "source": "ui/designs/evidence/wave1-mobile-phase4-home/visual-verdict.json"
+      },
+      "files": [
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-before/390-HOME-initial-current.png",
+          "bytes": 276300,
+          "git_blob": "bb83a2016eb94db4c7c603712d6b0b7ec50fbe3b",
+          "sha256": "cb17254ba6af9b8a0b877cf8d5ed8b068eb89e3c455493018f2082220b090371"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-before/390-HOME-scrolled-to-recipes-entry-current.png",
+          "bytes": 270568,
+          "git_blob": "9ff8cf8ee850b731f71358645f79f644a0f07a89",
+          "sha256": "1bcfb41da6cb8791baac0e8294c3b9152a56505885c4d8f245dc00c5aa9f0698"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-before/390-HOME-sort-open-current.png",
+          "bytes": 277555,
+          "git_blob": "95729e5269494c21c8134dc35bc2715fd051fa8f",
+          "sha256": "1a4bf647508aa833a7c07709448f168ca2439604593b18f210402932b4a31830"
+        }
+      ]
+    },
+    {
+      "root": "ui/designs/evidence/wave1-mobile-phase4-home-after",
+      "source_commit": "cd60671578a98302c3dd8e6c06e7b12ae82996bb",
+      "tree": "b97338728aebeaec06dc58266dd55f283c514281",
+      "file_count": 14,
+      "bytes": 792708,
+      "final_decision": {
+        "verdict": "revise",
+        "score": 86,
+        "source": "ui/designs/evidence/wave1-mobile-phase4-home/visual-verdict.json"
+      },
+      "files": [
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/320-HOME-empty-after.png",
+          "bytes": 43472,
+          "git_blob": "d0a6b0560b8c12c01f96060db390dcde1d716818",
+          "sha256": "69526dacf0f6fff6d643410e966bdcc4edd61b68854e8b851326a0b83a067216"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/320-HOME-error-after.png",
+          "bytes": 31699,
+          "git_blob": "f260df47c7b124ba67810ba3e5e36ad22714d742",
+          "sha256": "b4ca20230b8a5ab25daed190b398287619b92d128f30011b6e23b3a4b51695c1"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/320-HOME-filter-active-after.png",
+          "bytes": 56906,
+          "git_blob": "b2c14ab83f032966be0d62341052c9d59694694d",
+          "sha256": "7fbcf25123ae61015250f87715286d233a36eae98e7bcddd9792d6eb3918cbcb"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/320-HOME-initial-after.png",
+          "bytes": 42551,
+          "git_blob": "68bf19f24573fbeb6be5dbc198703424f65fd927",
+          "sha256": "535b97d08af0b2e747d85a180a013ffaab58f444ac1916188840798ba5a3dcd4"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/320-HOME-loading-after.png",
+          "bytes": 17299,
+          "git_blob": "0eff979d0bd13dc6aa7d0e860cc2da91d3402afd",
+          "sha256": "da51bcf264f6e6f4997f5094f5d8b1c7766848e6e7ac94655be83b9ffb3ff82e"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/320-HOME-scrolled-to-recipes-entry-after.png",
+          "bytes": 55571,
+          "git_blob": "64a5dd205c00dc9db0ae1c401c2f225fbc01b0dc",
+          "sha256": "8544f8047121949161a1ad75502c3af3d4bef01bec5b99306003c4190bcfc2d9"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/320-HOME-sort-open-after.png",
+          "bytes": 40011,
+          "git_blob": "e952e8a88ad891c5a9a31a81dd14397ca80654a6",
+          "sha256": "bf17d574f620d8777e0ae57064e6b35ef75cebabfc90dcf6978d4a3a3275c198"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/390-HOME-empty-after.png",
+          "bytes": 57993,
+          "git_blob": "051a0fdf8bbc02c9c3b7a36dfbe2b68df759e1fd",
+          "sha256": "a6d465baf690975cf7c5e7d55594c407655ae1a398a95a3ae455e8fc2016a9db"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/390-HOME-error-after.png",
+          "bytes": 53256,
+          "git_blob": "67f8f6545bcbd338ab627bc737c79d15afff8479",
+          "sha256": "0ef99ff6b6d09ad4069f6ab5585f3449a943b2a9e14b92b130161c56b616566d"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/390-HOME-filter-active-after.png",
+          "bytes": 93892,
+          "git_blob": "c066b66b2e49e3352792fcdd72ec89f378b023a1",
+          "sha256": "fae27a95f51d21821d8add1ad3ad502d0d06b3913b507adcde316a392801c7c9"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/390-HOME-initial-after.png",
+          "bytes": 93901,
+          "git_blob": "304c8c1c2d695f9fdd35979e3f9f5bb8b877f520",
+          "sha256": "abcbbd20d52ceab8403fa12903445f6cc7e92c2248e18a402d354022224ad3ae"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/390-HOME-loading-after.png",
+          "bytes": 19249,
+          "git_blob": "9c95f4d6383f59405a0d0c9a9f2c7f05f6b7415f",
+          "sha256": "630584db6eb275c44d264c1d26aea6ec0d8b2ec46885fc9b749e77817382ba55"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/390-HOME-scrolled-to-recipes-entry-after.png",
+          "bytes": 94040,
+          "git_blob": "956f7884bb3d960f1de340fcd9cf5c19d43046b6",
+          "sha256": "06ed57fd77e8d518968cdaf7271fd7513ac510756b8c2f4e5b18ff6c6a936f64"
+        },
+        {
+          "path": "ui/designs/evidence/wave1-mobile-phase4-home-after/390-HOME-sort-open-after.png",
+          "bytes": 92868,
+          "git_blob": "2de961d4dfa1c79db0535fcf2ba2154f17dad8f1",
+          "sha256": "632bfde7f6e1a8dbf1a581e191c2e893343b5aa00057fb4b3e87f50b6f1283ae"
+        }
+      ]
+    },
+    {
+      "root": "ui/designs/evidence/cook-mode-theme-toggle",
+      "source_commit": "cc64f63c3de7ee335b8c134c92798ab616cb1b0a",
+      "tree": "56840e8e7c82ac85b4fb20960e38e644d6447b2e",
+      "file_count": 5,
+      "bytes": 233187,
+      "final_decision": {
+        "verdict": "retired-unreferenced",
+        "source": "docs/engineering/tracked-content-lightening-inventory.md"
+      },
+      "files": [
+        {
+          "path": "ui/designs/evidence/cook-mode-theme-toggle/desktop-dark-nav.png",
+          "bytes": 56091,
+          "git_blob": "744ce9c95ae765c7456ed264f2acfa784f1c3203",
+          "sha256": "ee9ee9d8387db10389f187c923c7f89c3c2dbc8d0eab40a9865b909d43f80ad1"
+        },
+        {
+          "path": "ui/designs/evidence/cook-mode-theme-toggle/desktop-dark.png",
+          "bytes": 55805,
+          "git_blob": "86a34c9dea567038f3d7261c16af5ab8cfdcd369",
+          "sha256": "48d7d84734fa815f9f0ffb9d34882b35b5d3106b210db139ce730a7ea5672b50"
+        },
+        {
+          "path": "ui/designs/evidence/cook-mode-theme-toggle/desktop-light.png",
+          "bytes": 53058,
+          "git_blob": "cab9697d6b2f8fffa47dc6e7ff4d0abf843c9390",
+          "sha256": "7d4b16dd6ec48fa47bd0bc9be91e5149aa41b38342216bbbc685af792103e0ed"
+        },
+        {
+          "path": "ui/designs/evidence/cook-mode-theme-toggle/mobile-dark.png",
+          "bytes": 35354,
+          "git_blob": "ce6a419c53895d09d5e8e3e4678526dbfdc5c875",
+          "sha256": "8dbb2bcac1d8236eafc9d57f11ccafb38a5a4aa277f77b936c8b4eeda4b4c5df"
+        },
+        {
+          "path": "ui/designs/evidence/cook-mode-theme-toggle/mobile-light.png",
+          "bytes": 32879,
+          "git_blob": "f10ea0ac47486fd0f6c1fc31ae624c580bf6fb8d",
+          "sha256": "9202f7839c22bbb64e176a35dbb40d7c23e6947a84a5cbe7e499de5dbc7d6fd6"
+        }
+      ]
+    }
+  ],
+  "recovery_command": "git archive <source_commit> <capture_set.root> | tar -x"
+}
