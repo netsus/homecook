@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -202,7 +203,14 @@ function appendUniqueItems(
   return [...byId.values()];
 }
 
-export function YoutubeExtractionNotificationCenter({
+export function YoutubeExtractionNotificationCenter(props: YoutubeExtractionNotificationCenterProps = {}) {
+  const pathname = usePathname();
+  // The public funnel does not consume private recipe notifications.
+  if (pathname === "/beta") return null;
+  return <YoutubeExtractionNotificationRuntime {...props} />;
+}
+
+function YoutubeExtractionNotificationRuntime({
   initialAuthenticated = true,
   presentationMode = "standalone",
   resolveAuthenticatedOnClient = false,

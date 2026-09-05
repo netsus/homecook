@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MARKETING_VALIDATION_ACTIONS, type MarketingValidationAction } from "@/types/marketing-validation";
 
 vi.mock("next/image", () => ({
   default: ({ alt = "", priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
@@ -61,6 +62,77 @@ describe("marketing demand validation v2 landing", () => {
   });
   afterEach(cleanup);
 
+  it.each(["result_viewed", "beta_form_viewed", "lead_submitted"] as const)("replays a returning %s session through all four questions and beta without resending covered events", async (initialState) => {
+    let serverState: MarketingValidationAction = initialState;
+    postMarketingValidation.mockImplementation(async (body: { action: MarketingValidationAction }) => {
+      if (body.action === "view") return ok(serverState);
+      if (MARKETING_VALIDATION_ACTIONS.indexOf(body.action) <= MARKETING_VALIDATION_ACTIONS.indexOf(serverState)) {
+        return { success: false, data: null, error: { code: "INVALID_TRANSITION", message: "이미 진행한 단계예요.", fields: [] } };
+      }
+      serverState = body.action;
+      return ok(serverState);
+    });
+    const { writeMarketingClientSnapshot, readMarketingClientSnapshot } = await importSession();
+    writeMarketingClientSnapshot({ stage: "result", serverState: initialState, quizResult: "homecook-passer" });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    const mounted = render(<MarketingDemandValidationScreen />);
+    await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" });
+    mounted.unmount();
+    render(<MarketingDemandValidationScreen />);
+    await reachBeta(user);
+    const actions = postMarketingValidation.mock.calls.map(([body]) => body.action);
+    expect(actions).toEqual(initialState === "result_viewed"
+      ? ["view", "view", "experience_started", "experience_completed", "beta_form_viewed"]
+      : ["view", "view"]);
+    expect(readMarketingClientSnapshot()?.serverState).toBe(serverState);
+  });
+
+  it("replays the final question after going back from the result without rewriting answers on the server", async () => {
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await answerQuiz(user);
+    await user.click(screen.getByRole("button", { name: "마지막 질문으로 돌아가기" }));
+    // Return to Q3 and choose a different type during the local replay.
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("4");
+    await user.click(screen.getByRole("button", { name: "이전 질문" }));
+    await user.click(screen.getByRole("button", { name: "집밥은 기록하지 않음" }));
+    await user.click(screen.getByRole("button", { name: "별로 불편하지 않음" }));
+    expect(await screen.findByRole("heading", { name: "집밥 패스형" })).toBeTruthy();
+    expect(postMarketingValidation.mock.calls.filter(([body]) => body.action === "quiz_completed")).toHaveLength(1);
+    expect(postMarketingValidation.mock.calls.filter(([body]) => body.action === "result_viewed")).toHaveLength(1);
+  });
+
+  it("preserves the existing snapshot while session initialization is pending", async () => {
+    const { writeMarketingClientSnapshot, readMarketingClientSnapshot } = await importSession();
+    const snapshot = { stage: "result", serverState: "result_viewed", quizResult: "homecook-passer" } as const;
+    writeMarketingClientSnapshot(snapshot);
+    let resolveView!: (value: ReturnType<typeof ok>) => void;
+    postMarketingValidation.mockImplementation(() => new Promise((resolve) => { resolveView = resolve; }));
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+    const pendingSnapshot = readMarketingClientSnapshot();
+    await act(async () => resolveView(ok("result_viewed")));
+    expect(pendingSnapshot).toEqual(snapshot);
+  });
+
+  it("retries a failed start without ignoring server errors", async () => {
+    let starts = 0;
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "quiz_started" && ++starts === 1) return { success: false, data: null, error: { code: "NETWORK_ERROR", message: "연결을 확인해 주세요.", fields: [] } };
+      return ok(body.action);
+    });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    await user.click(await screen.findByRole("button", { name: "새로 시작하기" }));
+    await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("1");
+  });
+
   it("shows loading and recovers a missing session through the empty restart state", async () => {
     postMarketingValidation.mockResolvedValue({ success: false, data: null, error: { code: "SESSION_NOT_FOUND", message: "진행 정보를 찾지 못했어요.", fields: [] } });
     const { MarketingDemandValidationScreen } = await importScreen();
@@ -101,6 +173,19 @@ describe("marketing demand validation v2 landing", () => {
     expect(await screen.findByRole("heading", { name: "프로 계량러" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "나도 테스트하기" })).toBeTruthy();
     expect(postMarketingValidation).not.toHaveBeenCalled();
+  });
+
+  it("leaves shared-result preview with one initialization and resumes session snapshots", async () => {
+    window.history.replaceState({}, "", "/beta?result=pro-measurer");
+    installHappyApi();
+    const { readMarketingClientSnapshot } = await importSession();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await user.click(await screen.findByRole("button", { name: "나도 테스트하기" }));
+    await answerQuiz(user);
+    expect(postMarketingValidation.mock.calls.filter(([body]) => body.action === "view")).toHaveLength(1);
+    expect(readMarketingClientSnapshot()).toMatchObject({ stage: "result", serverState: "result_viewed", quizResult: "ingredient-tracker" });
   });
 
   it("shows four-question progress, preserves back answers, and exposes result before email", async () => {

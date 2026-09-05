@@ -3,7 +3,7 @@ import { relative, resolve } from "node:path";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { completeMarketingExperience, completeMarketingQuiz, installMarketingDemandValidationRoutes, MARKETING_BETA_PATH, openMarketingLeadForm } from "./helpers/marketing-demand-validation";
 
-const EVIDENCE_DIR = resolve(process.cwd(), "ui/designs/evidence/marketing-demand-validation-v2");
+const EVIDENCE_DIR = resolve(process.env.HOMECOOK_MARKETING_EVIDENCE_DIR ?? "ui/designs/evidence/marketing-demand-validation-v2");
 
 async function expectNoHorizontalOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

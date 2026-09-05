@@ -1,4 +1,5 @@
 import { expect, type Page, type Route } from "@playwright/test";
+import { MARKETING_VALIDATION_ACTIONS } from "@/types/marketing-validation";
 import type { MarketingValidationQuizAnswers, MarketingValidationQuizResult } from "@/types/marketing-validation";
 
 export const MARKETING_BETA_PATH = "/beta";
@@ -24,6 +25,7 @@ type LeadMode = "accepted" | "duplicate" | "403" | "409" | "422" | "turnstile" |
 
 export async function installMarketingDemandValidationRoutes(page: Page, { leadMode = "accepted", turnstileToken = "qa-turnstile-token" }: { leadMode?: LeadMode; turnstileToken?: string } = {}) {
   let state = "view";
+  let firstResult: MarketingValidationQuizResult | undefined;
   await page.addInitScript(({ token }) => {
     let options: {
       callback: (value: string) => void;
@@ -44,9 +46,20 @@ export async function installMarketingDemandValidationRoutes(page: Page, { leadM
   }, { token: turnstileToken });
   await page.route("**/api/v1/marketing/validation", async (route: Route) => {
     const body = JSON.parse(route.request().postData() ?? "{}") as { action?: string; answers?: MarketingValidationQuizAnswers };
+    if (body.action === "view") {
+      await route.fulfill({ json: success(state) });
+      return;
+    }
+    const currentIndex = MARKETING_VALIDATION_ACTIONS.findIndex((action) => action === state);
+    const requestedIndex = MARKETING_VALIDATION_ACTIONS.findIndex((action) => action === body.action);
+    if (requestedIndex !== currentIndex && requestedIndex !== currentIndex + 1) {
+      await route.fulfill({ status: 409, json: { success: false, data: null, error: { code: "INVALID_TRANSITION", message: "순서를 다시 확인해 주세요.", fields: [] } } });
+      return;
+    }
     if (body.action === "quiz_completed") {
       state = body.action;
-      await route.fulfill({ json: success(state, { quiz_result: resultFor(body.answers?.q3 ?? "eyeball"), target_qualified: null }) });
+      firstResult ??= resultFor(body.answers?.q3 ?? "eyeball");
+      await route.fulfill({ json: success(state, { quiz_result: firstResult, target_qualified: null }) });
       return;
     }
     if (body.action === "lead_submitted" && leadMode !== "accepted" && leadMode !== "duplicate") {
