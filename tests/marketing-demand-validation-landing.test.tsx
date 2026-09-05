@@ -321,6 +321,7 @@ describe("marketing demand validation v2 landing", () => {
   });
 
   it("fails closed without a configured Turnstile site key and does not submit a lead", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKETING_TURNSTILE_SITE_KEY", "");
     vi.unstubAllEnvs();
     vi.resetModules();
     installHappyApi();

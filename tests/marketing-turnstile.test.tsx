@@ -25,6 +25,7 @@ describe("marketing turnstile widget", () => {
   });
 
   it("fails closed without a configured site key", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKETING_TURNSTILE_SITE_KEY", "");
     const { MarketingTurnstile, TURNSTILE_SCRIPT_URL } = await importTurnstile();
     let controller: MarketingTurnstileController | null = null;
 
