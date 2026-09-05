@@ -1,0 +1,11 @@
+{
+  "schema": "homecook.marketing-validation-campaign.v1",
+  "campaignEndAt": "2026-09-15T15:00:00.000Z",
+  "edgeRateLimitEvidenceDigest": "sha256:66c79a94d2175a3219fb1ec324ffde7ee5ad673738d247caeafe1613d6104394",
+  "retentionDays": 180,
+  "turnstileMode": "managed",
+  "turnstilePreClearance": false,
+  "turnstileReadbackDigest": "sha256:915fe93d4a79dbb871fceb538973e00e584d4004d53897b505577d39ed588b23",
+  "turnstileSiteKey": "0x4AAAAAAEo_Lx27a0M_yHd6",
+  "turnstileWidgetHostname": "mumeok.kr"
+}

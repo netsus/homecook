@@ -8,6 +8,7 @@ import type {
   MarketingValidationSessionRecord,
 } from "@/types/marketing-validation";
 import { MARKETING_VALIDATION_ACTIONS } from "@/types/marketing-validation";
+import campaignContract from "@/lib/marketing/marketing-validation-campaign.json";
 
 export { MARKETING_VALIDATION_ACTIONS } from "@/types/marketing-validation";
 
@@ -17,6 +18,10 @@ export const MARKETING_VALIDATION_COOKIE_TTL_SECONDS = 60 * 60 * 24 * 7;
 export const MARKETING_VALIDATION_MAX_BODY_BYTES = 16 * 1024;
 export const MARKETING_VALIDATION_TURNSTILE_ACTION = "marketing_validation_lead_submit";
 export const MARKETING_VALIDATION_CONSENT_VERSION = "marketing-demand-validation-v2";
+export const MARKETING_VALIDATION_CAMPAIGN_END_AT = campaignContract.campaignEndAt;
+export const MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST = campaignContract.edgeRateLimitEvidenceDigest;
+export const MARKETING_VALIDATION_RETENTION_DAYS = campaignContract.retentionDays;
+export const MARKETING_VALIDATION_TURNSTILE_SITE_KEY = campaignContract.turnstileSiteKey;
 export const MARKETING_VALIDATION_CAMPAIGN_KEY = "weekly_nutrition_2026";
 export const MARKETING_VALIDATION_CREATIVE_KEY = "mumeok_funnel_prototype_v2";
 export const MARKETING_VALIDATION_AUDIENCE_KEY = "weekly_nutrition_beta_interest";

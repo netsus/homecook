@@ -91,6 +91,16 @@ describe("launch readiness legal and SEO routes", () => {
     expect(css).toContain(".legal-document-nav {");
   });
 
+  it("discloses beta invitation email purpose and the exact 180-day retention policy", async () => {
+    const page = await importWithSiteEnv(() => import("@/app/privacy/page"));
+    const html = renderToStaticMarkup(React.createElement(page.default));
+
+    expect(html).toContain("베타 초대 신청 정보");
+    expect(html).toContain("베타테스트 초대 안내");
+    expect(html).toContain("베타 초대 신청 이메일");
+    expect(html).toContain("캠페인 종료 후 180일");
+  });
+
   it("leaves unknown legal facts blank instead of publishing placeholder copy", async () => {
     vi.resetModules();
     delete process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME;
