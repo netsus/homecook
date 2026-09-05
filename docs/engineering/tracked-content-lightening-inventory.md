@@ -1,6 +1,6 @@
 # Tracked Content Lightening Inventory
 
-상태: **10-A canonical inventory**
+상태: **10-A inventory / 10-B safe removals / 10-C audited cleanup complete**
 
 기준 commit: `fa2aaa1fc86ddc73bf5f8fac9f8e3b4365440ddb`
 
@@ -134,7 +134,7 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 
 - 제거 대상: `docs/design/preview*.html` 5개
 - 제거량: 154,092 bytes / 0.147MiB
-- 누적 제거 후 tracked 기준: 6,974개 / 436.155MiB
+- 누적 제거 후 tracked 기준: 6,974개 / 436.158MiB
 - 참조: exact path와 고유 basename의 runtime/test/workflow/dynamic consumer 0
 - 대체 기준: 현재 `docs/design/design-tokens.md`, `docs/design/mobile-ux-rules.md`,
   `ui/designs/BAEMIN_STYLE_DIRECTION.md`와 구현 화면
@@ -144,6 +144,75 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
   - `preview-b-photo.html`: `800c46df313ee0365f7eaa58a2fbeab454bb4722` / `f18afc33754b41fa270c4f19abccee703b8c56dcae377f8a10d6d1f6b2611001`
   - `preview-tokens.html`: `afa61ede9899c9878f4a463464e8d7267b069ce5` / `a9f7ed43df73e6d8bada54e7ca6443b2d9be0a85e06ddc0c22461ad507b7a988`
   - `preview-recipe-title.html`: `1447fbafa958e8603bf18ce6af7ceee26aaf6cb7` / `716b9747aaa21dfd70cbb1497600d69a73933941a5591e3be0f7d4bf53190073`
+
+## 10-B closeout
+
+| 항목 | 10-A 기준 | 10-B 완료 master | 변화 |
+| --- | ---: | ---: | ---: |
+| tracked 파일 | 6,981 | 6,974 | **-7 net** |
+| tracked 크기 | 451.278MiB | 436.158MiB | **-15.121MiB net** |
+| 제거한 콘텐츠 | - | 8파일 / 15.130MiB | inventory 문서 1개 추가 때문에 net 파일 수는 -7 |
+
+10-B는 runtime/test/workflow consumer가 없거나 retained source와 의미가 동일한 후보만 제거했다.
+`desktop-modern-redesign` 50.075MiB는 12개 감사·ledger 참조가 남아 미사용으로 판정하지
+않는다. 동일 blob 사본도 경로 존재 계약과 감사 의미가 섞여 있어 일괄 삭제하지 않는다.
+이 두 범위는 10-C에서 최소 manifest/checksum 전환 가능성을 먼저 감사한다.
+
+## 10-C cleanup receipts
+
+### One-shot brand icon edge generator
+
+- 제거 대상: `scripts/generate-mumeok-icon-edges.mjs` 1개
+- 제거량: 16,171 bytes / 15.792KiB
+- runtime/package/workflow/test/runbook/import 참조: 0
+- 보존: 생성 결과인 `ui/designs/brand/mumeok/exports`, `public/brand`, `app/favicon.ico`,
+  관련 baseline fixture와 visual evidence 전체
+- 복구: commit `ca4a4b4d2c138045373055bb117035380ddf9bd0`, blob
+  `f498bdf5454d9ce212309b3043014daf62d1ac44`, SHA-256
+  `aafe66096141ef1c89fd48a774d3974b1cf2a0eb6cd27d50cd6c936814a0cad6`
+
+### Redundant cook-mode vision crops
+
+- 제거 대상: `overview-1440.png`, `mobile-layout-430.png`
+- 제거량: 398,792 bytes / 0.380MiB / 2파일
+- 직접·동적 참조: 0
+- 픽셀 동등성: retained `overview-1440-full.png`, `mobile-layout-430-full.png`의 top crop과
+  각각 pixel-for-pixel 동일하며 full 이미지가 더 넓은 세로 범위를 보존
+- 복구: commit `cc64f63c3de7ee335b8c134c92798ab616cb1b0a`
+  - overview blob `7fce8c0a5001308935e31000cd5ebcc2af85976f`, SHA-256 `801c89b26476632e21ab017b7be96d90a0e5516e287b4de7d5fdf3b3ac4db537`
+  - mobile blob `4813fcb624d15de70d9fe9dd9aadaa4d1dd4406d`, SHA-256 `d69ea214702ed320f00a131726486747444c3ddcd14129a496908a6c1749a9dd`
+
+### Workflow rule and migration prose
+
+- `agent-workflow-overview.md`의 중복 Stage 절차를 canonical SOP 링크로 축약했다.
+- fail-closed validator와 회귀 테스트가 `slice-workflow.md`, `codex-task-handoff.md`의 Stage 독립성 및
+  자기 승인 금지 규칙을 계속 고정한다.
+- `workflow-v2/migration.md`는 76줄의 완료 전 계획에서 27줄의 역사 영수증으로 축약했다.
+- 기존 경로와 foundation/promotion/Codex 전환 commit을 남겨 감사 및 복구 가능성을 보존했다.
+- 현재 운영 기준은 `workflow-v2/README.md`, `slice-workflow.md`,
+  `agent-workflow-overview.md`, `codex-task-handoff.md`로만 연결한다.
+
+## 10-C closeout
+
+| 항목 | 10-B 완료 master | 10-C 완료 | 변화 |
+| --- | ---: | ---: | ---: |
+| tracked 파일 | 6,974 | 6,971 | **-3** |
+| tracked 크기 | 457,344,497 bytes | 456,933,428 bytes | **-411,069 bytes / -0.392MiB** |
+| 전체 10-A 대비 | 473,199,624 bytes | 456,933,428 bytes | **-16,266,196 bytes / -15.513MiB** |
+
+10-C는 참조가 없는 one-shot helper 1개와 retained full screenshot의 exact top crop 2개를 제거했다.
+운영 규칙은 삭제하지 않고 canonical 문서로 위임했으며, 완료 전 migration prose는 Git commit을
+가리키는 역사 영수증으로 바꿨다.
+
+다음 범위는 삭제하지 않았다.
+
+- 공식 버전 문서 220개/23.151MiB: 다수의 역사 문서가 현재 저장소에서 직접 참조됨
+- `ui/designs/evidence/desktop-modern-redesign` 182개/50.075MiB: 감사·phase·porting ledger 참조가 남음
+- 동일 Git blob 사본: object 저장 공간은 이미 deduplicate되며 일부 경로는 감사 계약임
+
+위 두 큰 범위는 파일별 `path / bytes / dimensions / SHA-256 / blob / source commit / result /
+replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으면 삭제 후보로 승격하지
+않는다.
 
 ## 재현 명령
 

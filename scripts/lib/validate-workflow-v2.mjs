@@ -385,6 +385,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(codexTaskHandoff, [
       "Homecook의 모든 신규 작업은 Claude를 사용하지 않는다.",
       "별도 ChatGPT/Codex 작업(새 task ID, 새 세션)",
+      "작성 작업은 자기 변경을 최종 승인하지 않는다.",
       "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
       "같은 작업 안의 서브에이전트는 탐색·테스트·보조 리뷰에는 쓸 수 있지만, 독립 Stage 승인자 역할을 대신하지 않는다.",
     ]),
@@ -411,8 +412,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(agentWorkflowOverview, [
       "Claude는 더 이상 사용하지 않는다.",
       "## Codex 새 작업 public stage 흐름",
-      "Stage 1/2/4 작성·구현 작업은 자기 변경을 승인하지 않는다.",
-      "internal 1.5, Stage 3/5/6, final authority는 검토 대상 작업과 다른 task ID를 사용한다.",
+      "Stage actor 분리, 새 task ID, handoff evidence는 `docs/engineering/codex-task-handoff.md`가,",
+      "Stage별 사전 조건·산출물·closeout은 `docs/engineering/slice-workflow.md`가 단일 소스다.",
     ]),
     ...containsNone(agentWorkflowOverview, [
       "## Claude public stage 흐름",

@@ -55,6 +55,18 @@ describe("workflow v2 docs", () => {
     }
   });
 
+  it("keeps the completed v1 to v2 migration as a historical receipt", () => {
+    const migration = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/migration.md"),
+      "utf8",
+    );
+
+    expect(migration).toContain("상태: **완료된 역사 기록**");
+    expect(migration).toContain("2cd535a6429012c64f279d50ed0024d4a823b376");
+    expect(migration).toContain("docs/engineering/workflow-v2/README.md");
+    expect(migration).not.toContain("운영 기본값은 계속 v1이다");
+  });
+
   it("keeps work item example aligned with the schema enums and required fields", () => {
     const schema = readJson("docs/engineering/workflow-v2/schemas/work-item.schema.json");
     const example = readJson("docs/engineering/workflow-v2/templates/work-item.example.json");
@@ -120,6 +132,31 @@ describe("workflow v2 docs", () => {
       const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
         "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
         "같은 작업에서 검토할 수 있다.",
+      );
+      writeFileSync(handoffPath, driftedHandoff, "utf8");
+
+      const handoffResult = validateWorkflowV2DocContract({ rootDir: fixtureRoot })
+        .find((result) => result.name === "workflow-v2-doc-contract:codex-task-handoff");
+
+      expect(handoffResult?.errors.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(fixtureRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("fails the workflow validator when the canonical self-approval guard drifts", () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-self-approval-"));
+
+    try {
+      cpSync(join(repoRoot, "docs"), join(fixtureRoot, "docs"), { recursive: true });
+      mkdirSync(join(fixtureRoot, ".opencode"), { recursive: true });
+      cpSync(join(repoRoot, ".opencode/README.md"), join(fixtureRoot, ".opencode/README.md"));
+      cpSync(join(repoRoot, "CLAUDE.md"), join(fixtureRoot, "CLAUDE.md"));
+
+      const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
+      const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
+        "작성 작업은 자기 변경을 최종 승인하지 않는다.",
+        "작성 작업이 자기 변경을 승인할 수 있다.",
       );
       writeFileSync(handoffPath, driftedHandoff, "utf8");
 
