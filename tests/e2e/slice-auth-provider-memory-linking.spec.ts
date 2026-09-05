@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
+import { shouldUpdateTrackedEvidence } from "./helpers/evidence-capture";
 import { installAccountLibraryVisualRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
 
 const evidenceDir = join(process.cwd(), "ui/designs/evidence/auth-provider-memory-linking/after");
@@ -50,17 +51,23 @@ test("captures deterministic recent-provider, safe-error, and linked-provider ev
   await expect(recentProviderButton.getByText("최근 로그인")).toBeVisible();
   await expect(recentProviderButton).toHaveAttribute("data-recent-provider", "true");
   await expect(recentProviderButton).not.toHaveClass(/ring-2/);
-  await page.screenshot({ path: join(evidenceDir, `LOGIN-recent-provider-${width}.png`), fullPage: true });
+  if (shouldUpdateTrackedEvidence()) {
+    await page.screenshot({ path: join(evidenceDir, `LOGIN-recent-provider-${width}.png`), fullPage: true });
+  }
   await page.getByRole("button", { name: "네이버로 시작하기" }).click();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   for (const action of await page.getByRole("dialog").getByRole("button").all()) {
     expect((await action.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
-  await page.screenshot({ path: join(evidenceDir, `LOGIN-dialog-${width}.png`), fullPage: true });
+  if (shouldUpdateTrackedEvidence()) {
+    await page.screenshot({ path: join(evidenceDir, `LOGIN-dialog-${width}.png`), fullPage: true });
+  }
 
   await page.goto("/login?authError=account_conflict");
   await expect(page.getByTestId("login-web-card")).toContainText("현재 계정으로 로그인할 수 없어요");
-  await page.screenshot({ path: join(evidenceDir, `LOGIN-safe-error-${width}.png`), fullPage: true });
+  if (shouldUpdateTrackedEvidence()) {
+    await page.screenshot({ path: join(evidenceDir, `LOGIN-safe-error-${width}.png`), fullPage: true });
+  }
 
   await setE2EAuthOverride(page);
   await installAccountLibraryVisualRoutes(page);
@@ -73,7 +80,9 @@ test("captures deterministic recent-provider, safe-error, and linked-provider ev
   await expect(page.getByRole("region", { name: "연결된 로그인 방법" })).toBeVisible();
   await expect(page.getByText("Google 연결됨")).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: join(evidenceDir, `MYPAGE-linked-error-${width}.png`), fullPage: true });
+  if (shouldUpdateTrackedEvidence()) {
+    await page.screenshot({ path: join(evidenceDir, `MYPAGE-linked-error-${width}.png`), fullPage: true });
+  }
 });
 
 test("shows link outcomes and clears provider memory only after account deletion succeeds", async ({ page }) => {
