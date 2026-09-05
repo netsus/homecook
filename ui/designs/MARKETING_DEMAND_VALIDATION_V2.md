@@ -2,7 +2,8 @@
 
 > 기준 문서: 요구사항기준선 v1.7.36 / 화면정의서 v1.5.40 / 유저 Flow맵 v1.3.38
 > 관련 명세: `docs/marketing/quiz-content-spec.md`, `docs/marketing/demand-validation-plan.md`
-> source prototype: `feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557`
+> contract source prototype: `feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557`
+> approved visual successor: `mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`
 > 생성일: 2026-09-03
 > Design Status: `temporary` — high-risk 신규 화면. Stage 4 구현 스크린샷과 독립 Stage 5/final authority 전에는 `confirmed` 금지
 

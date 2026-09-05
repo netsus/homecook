@@ -15,6 +15,16 @@
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
 
+## 2026-09-05 marketing-demand-validation-v2 visual successor
+
+사용자는 기존 v2 API·DB·4문항 계약을 유지하면서 `mumeok-funnel@0aaa282552256ac9e77a5c134bb45a52e42ade33`의 최종 app-owned UI와 동작을 운영 `/beta`에 정렬하도록 승인했다.
+
+- 이 successor는 Hero·결과 copy, live proof UI, 체험 1~3 수동 확인, 최신 YouTube 예시·재료, planner animation/layout, beta/done visual을 갱신한다.
+- q1~q4, Q3-only result, attribution, action 순서, single API/table, consent·Turnstile·fail-closed 계약은 변경하지 않는다.
+- prototype-only device frame/status/keyboard는 운영 bundle에 넣지 않고, `390×844` safe-area를 보존한다. 집밥 유형 결과만 세로 스크롤을 허용하고 나머지 화면은 viewport 안에 고정한다. 두 planner는 내일 card를 화면 하단에서 잘라 CTA 뒤 배경처럼만 노출한다.
+- 구현 기준 branch는 `feature/fe-mumeok-funnel-final-alignment`, 비교 evidence는 `ui/designs/evidence/marketing-demand-validation-v2/comparisons/final-0aaa282/`다.
+- 이 항목은 feature branch 구현 authority이며 master merge, 서버 release, production lead activation을 승인하지 않는다. 기존 Manual Only blocker와 독립 frontend/design review가 계속 필요하다.
+
 ## 2026-09-04 docs-governance — release rehearsal candidate failure evidence v2
 
 서버의 sealed candidate와 isolated diagnostic candidate가 모두 `candidate_build_failed`만 남겨 최초 내부 실패 phase를 식별할 수 없던 문제를 보수한다. 공식 제품 문서 5종, public API와 DB schema 영향은 N/A다.

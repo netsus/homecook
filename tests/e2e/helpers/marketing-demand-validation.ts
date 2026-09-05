@@ -45,7 +45,7 @@ export async function installMarketingDemandValidationRoutes(page: Page, { leadM
 }
 
 export async function completeMarketingQuiz(page: Page, answers = MARKETING_HAPPY_ANSWERS) {
-  await page.getByRole("button", { name: "테스트 시작하기" }).click();
+  await page.getByRole("button", { name: "내 집밥기록 유형 알아보기" }).click();
   for (const key of ["q1", "q2", "q3", "q4"] as const) {
     await page.getByRole("button", { name: LABELS[key][answers[key]], exact: true }).click();
   }
@@ -55,9 +55,11 @@ export async function completeMarketingQuiz(page: Page, answers = MARKETING_HAPP
 export async function completeMarketingExperience(page: Page) {
   await page.getByRole("button", { name: "무먹으로 20초 체험하기" }).click();
   await page.getByRole("button", { name: "무먹으로 가져오기" }).click();
-  await page.getByRole("button", { name: "돼지고기 양을 520g으로 바꾸기" }).click();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "돼지고기 600g → 520g" }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "저울로 재보니 1,180g" }).click();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "320g 입력하기" }).click();
   await page.getByRole("button", { name: "식단에 기록하기" }).click();
 }
