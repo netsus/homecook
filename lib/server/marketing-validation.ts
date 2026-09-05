@@ -7,13 +7,16 @@ import {
   MARKETING_VALIDATION_ACTIONS,
   MARKETING_VALIDATION_AUDIENCE_KEY,
   MARKETING_VALIDATION_CAMPAIGN_KEY,
+  MARKETING_VALIDATION_CAMPAIGN_END_AT,
   MARKETING_VALIDATION_CONSENT_VERSION,
   MARKETING_VALIDATION_COOKIE,
   MARKETING_VALIDATION_COOKIE_PATH,
   MARKETING_VALIDATION_COOKIE_TTL_SECONDS,
   MARKETING_VALIDATION_CREATIVE_KEY,
+  MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST,
   MARKETING_VALIDATION_MAX_BODY_BYTES,
   MARKETING_VALIDATION_MAX_UTM_LENGTH,
+  MARKETING_VALIDATION_RETENTION_DAYS,
   MARKETING_VALIDATION_TURNSTILE_ACTION,
   normalizeAllowedOrigins,
   readMarketingValidationState,
@@ -34,7 +37,6 @@ const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const EMAIL_PATTERN =
   /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/iu;
-const MARKETING_EDGE_EVIDENCE_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
 type ParsedBody =
   | {
@@ -404,7 +406,7 @@ function readAllowedOriginsFromEnv() {
 
 function computeRetentionUntilIso() {
   const raw = readEnvValue("MARKETING_CAMPAIGN_END_AT");
-  if (!raw) {
+  if (!raw || raw !== MARKETING_VALIDATION_CAMPAIGN_END_AT) {
     const error = new Error("MARKETING_CAMPAIGN_END_AT 환경 변수가 필요해요.");
     (error as Error & { code: string }).code = "MARKETING_RETENTION_NOT_READY";
     throw error;
@@ -415,11 +417,13 @@ function computeRetentionUntilIso() {
     (error as Error & { code: string }).code = "MARKETING_RETENTION_NOT_READY";
     throw error;
   }
-  campaignEndAt.setUTCDate(campaignEndAt.getUTCDate() + 180);
+  campaignEndAt.setUTCDate(campaignEndAt.getUTCDate() + MARKETING_VALIDATION_RETENTION_DAYS);
   return campaignEndAt.toISOString();
 }
 
-export function createMarketingLeadGateFromEnv() {
+export function createMarketingLeadGateFromEnv({
+  now = () => new Date(),
+}: { now?: () => Date } = {}) {
   return async (): Promise<LeadGateResult> => {
     if (process.env.MARKETING_LEAD_PROTECTION_READY !== "1") {
       return {
@@ -439,7 +443,16 @@ export function createMarketingLeadGateFromEnv() {
       "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE",
       "MARKETING_EDGE_RULE_EVIDENCE",
     );
-    if (!secret || !rawHostnames || !MARKETING_EDGE_EVIDENCE_PATTERN.test(edgeEvidence)) {
+    const rawCampaignEndAt = readEnvValue("MARKETING_CAMPAIGN_END_AT");
+    const campaignEndAt = new Date(rawCampaignEndAt);
+    if (
+      !secret
+      || !rawHostnames
+      || edgeEvidence !== MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST
+      || rawCampaignEndAt !== MARKETING_VALIDATION_CAMPAIGN_END_AT
+      || Number.isNaN(campaignEndAt.getTime())
+      || campaignEndAt.getTime() <= now().getTime()
+    ) {
       return {
         ok: false,
         code: "LEAD_CAPTURE_NOT_READY",

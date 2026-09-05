@@ -2,6 +2,7 @@ import React from "react";
 
 import { LegalDocumentPage } from "@/components/legal/legal-document-page";
 import { getLegalInfo } from "@/lib/legal-info";
+import { MARKETING_VALIDATION_RETENTION_DAYS } from "@/lib/marketing/demand-validation";
 import { defaultOpenGraphImagePath } from "@/lib/seo/default-social-image";
 
 export const metadata = {
@@ -49,13 +50,17 @@ export default function PrivacyPage() {
             <dt>자동으로 생성되는 정보</dt>
             <dd>로그인 쿠키와 세션 정보, 접속 경로, 브라우저 정보, 오류 및 운영 기록</dd>
           </div>
+          <div>
+            <dt>베타 초대 신청 정보</dt>
+            <dd>이메일</dd>
+          </div>
         </dl>
       </section>
       <section>
         <h2>처리 목적</h2>
         <p>
           계정 식별, 식단과 레시피 저장, 장보기 목록 생성, 사용자 설정 유지,
-          오류 확인, 부정 이용 방지를 위해 개인정보를 처리합니다.
+          오류 확인, 부정 이용 방지와 베타테스트 초대 안내를 위해 개인정보를 처리합니다.
         </p>
       </section>
       <section>
@@ -71,7 +76,7 @@ export default function PrivacyPage() {
           </div>
           <div>
             <dt>별도 동의가 필요한 처리</dt>
-            <dd />
+            <dd>베타 초대 신청 이메일은 신청 화면에서 별도 동의를 받은 뒤 처리합니다.</dd>
           </div>
         </dl>
       </section>
@@ -89,6 +94,10 @@ export default function PrivacyPage() {
           <div>
             <dt>오류, 운영 및 보안 기록</dt>
             <dd />
+          </div>
+          <div>
+            <dt>베타 초대 신청 이메일</dt>
+            <dd>캠페인 종료 후 {MARKETING_VALIDATION_RETENTION_DAYS}일</dd>
           </div>
           <div>
             <dt>법령에 따라 별도 보존하는 기록과 기간</dt>

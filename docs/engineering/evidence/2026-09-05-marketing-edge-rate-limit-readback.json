@@ -1,0 +1,17 @@
+{
+  "schema": "homecook.marketing-edge-rate-limit-readback.v1",
+  "provider": "cloudflare",
+  "zone": "mumeok.kr",
+  "rule_id": "b434c63b474242569e16e25002428852",
+  "rule_name": "Mumeok beta API rate limit",
+  "expression": "(http.request.uri.path wildcard r\"/api/v1/marketing/validation\")",
+  "characteristic": "IP",
+  "requests_per_period": 20,
+  "period_seconds": 10,
+  "action": "block",
+  "mitigation_timeout_seconds": 10,
+  "execution_order": "first",
+  "status": "active",
+  "observed_at": "2026-09-05T09:56:26Z",
+  "observation": "Cloudflare dashboard readback after deployment"
+}

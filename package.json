@@ -196,6 +196,7 @@
     "marketing:leads:export": "node scripts/export-marketing-leads.mjs",
     "marketing:preview:preflight": "node scripts/marketing-validation-preview-preflight.mjs --json",
     "marketing:preview:smoke": "node scripts/marketing-validation-preview-smoke.mjs",
+    "marketing:production:readiness": "node scripts/marketing-validation-production-readiness.mjs",
     "marketing:retention:purge": "node scripts/purge-expired-marketing-validation.mjs",
     "test:marketing:operations": "vitest run --config vitest.product.config.ts tests/marketing-validation-operations.test.ts",
     "test:lighthouse": "pnpm build && pnpm test:lighthouse:run",

@@ -3,9 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createMarketingLeadGateFromEnv,
   createMarketingValidationHandler,
+  createMarketingValidationSupabaseAdapter,
   createTurnstileVerifierFromEnv,
 } from "@/lib/server/marketing-validation-route";
 import { parseMarketingValidationBody } from "@/lib/server/marketing-validation";
+import {
+  MARKETING_VALIDATION_CAMPAIGN_END_AT,
+  MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST,
+} from "@/lib/marketing/demand-validation";
 import type { MarketingValidationSessionRecord } from "@/types/marketing-validation";
 
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -344,6 +349,7 @@ describe("marketing validation v2 route", () => {
     vi.stubEnv("MARKETING_TURNSTILE_SECRET", "preview-secret");
     vi.stubEnv("MARKETING_TURNSTILE_ALLOWED_HOSTNAMES", "app.mumeok.kr");
     vi.stubEnv("ALLOWED_MARKETING_ORIGINS", ORIGIN);
+    vi.stubEnv("MARKETING_CAMPAIGN_END_AT", MARKETING_VALIDATION_CAMPAIGN_END_AT);
     vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", "replace-with-reviewed-edge-rule-evidence");
 
     await expect(createMarketingLeadGateFromEnv()()).resolves.toMatchObject({
@@ -351,11 +357,107 @@ describe("marketing validation v2 route", () => {
       code: "LEAD_CAPTURE_NOT_READY",
     });
 
-    vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", `sha256:${"a".repeat(64)}`);
+    vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST);
     await expect(createMarketingLeadGateFromEnv()()).resolves.toMatchObject({
       ok: true,
       allowedOrigins: [ORIGIN],
       allowedHostnames: ["app.mumeok.kr"],
+    });
+  });
+
+  it("closes lead capture after the configured campaign end", async () => {
+    vi.stubEnv("MARKETING_LEAD_PROTECTION_READY", "1");
+    vi.stubEnv("MARKETING_TURNSTILE_SECRET", "production-secret");
+    vi.stubEnv("MARKETING_TURNSTILE_ALLOWED_HOSTNAMES", "app.mumeok.kr");
+    vi.stubEnv("ALLOWED_MARKETING_ORIGINS", ORIGIN);
+    vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST);
+    vi.stubEnv("MARKETING_CAMPAIGN_END_AT", "2026-09-15T15:00:00.000Z");
+
+    const closed = createMarketingLeadGateFromEnv({
+      now: () => new Date("2026-09-15T15:00:00.000Z"),
+    });
+    const open = createMarketingLeadGateFromEnv({
+      now: () => new Date("2026-09-15T14:59:59.999Z"),
+    });
+
+    await expect(closed()).resolves.toMatchObject({
+      ok: false,
+      code: "LEAD_CAPTURE_NOT_READY",
+    });
+    await expect(open()).resolves.toMatchObject({ ok: true });
+  });
+
+  it("rejects an unapproved future campaign end in both the lead gate and persistence adapter", async () => {
+    vi.stubEnv("MARKETING_LEAD_PROTECTION_READY", "1");
+    vi.stubEnv("MARKETING_TURNSTILE_SECRET", "production-secret");
+    vi.stubEnv("MARKETING_TURNSTILE_ALLOWED_HOSTNAMES", "app.mumeok.kr");
+    vi.stubEnv("ALLOWED_MARKETING_ORIGINS", ORIGIN);
+    vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST);
+    vi.stubEnv("MARKETING_CAMPAIGN_END_AT", "2099-09-15T15:00:00.000Z");
+
+    await expect(createMarketingLeadGateFromEnv({
+      now: () => new Date("2026-09-05T00:00:00.000Z"),
+    })()).resolves.toMatchObject({
+      ok: false,
+      code: "LEAD_CAPTURE_NOT_READY",
+    });
+
+    const insert = vi.fn();
+    const client = {
+      from: vi.fn(() => ({ insert })),
+    };
+    const persistence = createMarketingValidationSupabaseAdapter(client as never);
+    await expect(persistence.insertViewSession({
+      action: "view",
+      honeypot: "",
+      sessionId: SESSION_ID,
+      viewed_at: NOW,
+      request_origin: ORIGIN,
+      attribution_status: "organic",
+      utm_campaign: null,
+      utm_content: null,
+      utm_medium: null,
+      utm_source: null,
+      utm_term: null,
+      ad_variant: "default",
+    })).rejects.toMatchObject({ code: "MARKETING_RETENTION_NOT_READY" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("persists the shared campaign retention through the real adapter path", async () => {
+    vi.stubEnv("MARKETING_CAMPAIGN_END_AT", MARKETING_VALIDATION_CAMPAIGN_END_AT);
+    let inserted: Record<string, unknown> | null = null;
+    const client = {
+      from: vi.fn(() => ({
+        insert: vi.fn((payload: Record<string, unknown>) => {
+          inserted = payload;
+          return {
+            select: () => ({
+              single: async () => ({ data: payload, error: null }),
+            }),
+          };
+        }),
+      })),
+    };
+    const persistence = createMarketingValidationSupabaseAdapter(client as never);
+
+    await persistence.insertViewSession({
+      action: "view",
+      honeypot: "",
+      sessionId: SESSION_ID,
+      viewed_at: NOW,
+      request_origin: ORIGIN,
+      attribution_status: "organic",
+      utm_campaign: null,
+      utm_content: null,
+      utm_medium: null,
+      utm_source: null,
+      utm_term: null,
+      ad_variant: "default",
+    });
+
+    expect(inserted).toMatchObject({
+      retention_until: "2027-03-14T15:00:00.000Z",
     });
   });
 
