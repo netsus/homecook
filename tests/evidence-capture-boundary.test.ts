@@ -20,6 +20,12 @@ const ON_DEMAND_GROWTH_SOURCES = [
   ["tests/e2e/slice-35c-mypage-achievement-album.spec.ts", 11],
 ] as const;
 
+const ON_DEMAND_ACCOUNT_AND_DATA_SOURCES = [
+  ["tests/e2e/slice-account-session-generation-foundation.spec.ts", 1],
+  ["tests/e2e/slice-community-prepared-food-catalog.spec.ts", 7],
+  ["tests/e2e/slice-recipe-content-snapshot-future-propagation.spec.ts", 1],
+] as const;
+
 const DESKTOP_MODERN_ARCHIVE_CONSUMERS = [
   "ui/designs/evidence/desktop-mvp-porting/slice1/porting-ledger.md",
   "ui/designs/prototypes/claude-design-260512-desktop/PHASE0_PARITY_LEDGER.md",
@@ -157,6 +163,18 @@ describe("tracked evidence capture boundary", () => {
         expectedCalls,
       );
       expect(source.match(/\.screenshot\(/gu), sourcePath).toBeNull();
+    }
+  });
+
+  it("keeps account and data-integrity screenshots outside the default write path", async () => {
+    for (const [sourcePath, expectedCalls] of ON_DEMAND_ACCOUNT_AND_DATA_SOURCES) {
+      const source = await readFile(sourcePath, "utf8");
+
+      expect(source.match(/await captureTrackedEvidenceOnDemand\(/gu), sourcePath).toHaveLength(
+        expectedCalls,
+      );
+      expect(source.match(/\.screenshot\(/gu), sourcePath).toBeNull();
+      expect(source.match(/\bmkdir\(/gu), sourcePath).toBeNull();
     }
   });
 

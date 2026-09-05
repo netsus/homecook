@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -550,7 +550,7 @@ async function captureViewportEvidence(
   const page = await context.newPage();
   await gotoPickerReady(page);
   await expectNoHorizontalOverflow(page);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `food-product-picker-${viewport.suffix}.png`),
     scale: "css",
   });
@@ -561,7 +561,7 @@ async function captureViewportEvidence(
   await expect(quantityInput).toBeVisible();
   await expect(addCta).toBeVisible();
   await expect(addCta).toBeInViewport();
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `food-product-selected-${viewport.suffix}.png`),
     scale: "css",
   });
@@ -574,7 +574,7 @@ async function captureViewportEvidence(
 
   await openCreateForm(page);
   await expectNoHorizontalOverflow(page);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `food-product-create-${viewport.suffix}.png`),
     scale: "css",
   });
@@ -582,13 +582,13 @@ async function captureViewportEvidence(
   await page.goto(SETTINGS_PATH);
   await expect(page.getByText("계정 삭제하기")).toBeVisible();
   await expectNoHorizontalOverflow(page);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `settings-${viewport.suffix}.png`),
     scale: "css",
   });
   await page.getByText("계정 삭제하기").click();
   await expect(page.getByRole("alertdialog")).toBeVisible();
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `settings-delete-dialog-${viewport.suffix}.png`),
     scale: "css",
   });
@@ -610,7 +610,7 @@ async function captureViewportEvidence(
   await expectNoHorizontalOverflow(page);
   await page.keyboard.press("Home");
   expect(await page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(1);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `planner-week-after-${viewport.suffix}.png`),
     scale: "css",
   });
@@ -623,7 +623,7 @@ async function captureViewportEvidence(
     expect(productRowBox).not.toBeNull();
     expect(productRowBox?.y ?? 0).toBeGreaterThanOrEqual(52);
     expect((productRowBox?.y ?? 0) + (productRowBox?.height ?? 0)).toBeLessThanOrEqual(viewport.height - 76);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       path: path.join(EVIDENCE_DIR, `planner-week-row-after-${viewport.suffix}.png`),
       scale: "css",
     });
@@ -852,8 +852,6 @@ test.describe("community prepared food catalog Stage 4", () => {
 
   test("keeps 320/390/1280 surfaces overflow-safe and 44px targets, and captures new community evidence", async ({ browser, page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "exact viewport matrix runs once");
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-
     for (const viewport of [
       { suffix: "390", width: 390, height: 844 },
       { suffix: "320", width: 320, height: 568 },
