@@ -1,6 +1,6 @@
 # Tracked Content Lightening Inventory
 
-상태: **10-A inventory / 10-B safe removals / 10-C audited cleanup complete**
+상태: **10-A inventory / 10-B safe removals / 10-C audited cleanup / 10-D test consolidation complete**
 
 기준 commit: `fa2aaa1fc86ddc73bf5f8fac9f8e3b4365440ddb`
 
@@ -213,6 +213,17 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 위 두 큰 범위는 파일별 `path / bytes / dimensions / SHA-256 / blob / source commit / result /
 replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으면 삭제 후보로 승격하지
 않는다.
+
+## 10-D closeout
+
+- CI-matrix regression 목록: 816개 -> 810개. `@evidence-capture` 3개는 삭제하지 않고 명시적
+  desktop 명령으로 분리했다.
+- 캡처 격리 실측: 변경 전 46.13초, 전용 명령 45.33초. 반복 회귀 예상 절감은 약 46초다.
+- 변경 후 전체 로컬 CI-matrix: 676 pass / 134 intended skip / 0 fail, 412.87초(6분 53초).
+- `tests/` tracked 파일: 968개 -> 966개, test/spec 파일: 794개 -> 792개.
+- recipe image 보안 계약 6개와 removed cooking-ready 공식 문서 계약 1개는 그대로 유지했다.
+- 남은 위험: 일부 legacy slice E2E는 기능 assertion과 evidence write가 결합돼 전체 회귀에서
+  tracked 이미지를 재생성한다. 별도 전환은 각 assertion 보존 계획이 있는 후속 작업으로 제한한다.
 
 ## 재현 명령
 

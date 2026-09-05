@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -51,6 +51,25 @@ describe("source of truth sync validator", () => {
       db: { basename: "db설계-v1.3.1.md" },
       api: { basename: "api문서-v1.2.2.md" },
     });
+  });
+
+  it("keeps the removed planner cooking-ready flow out of the current official tuple", () => {
+    const rootDir = process.cwd();
+    const result = readCurrentSourceOfTruth({ rootDir });
+    const officialFiles = Object.values(result.officialFiles ?? {}) as Array<{ path: string }>;
+    const removedScreenId = ["COOK", "READY", "LIST"].join("_");
+    const removedRoute = ["/cooking", "ready"].join("/");
+    const removedKoreanName = ["요리하기", " 준비", " 리스트"].join("");
+
+    expect(result.errors).toEqual([]);
+    expect(officialFiles).toHaveLength(5);
+    for (const officialFile of officialFiles) {
+      const body = readFileSync(join(rootDir, officialFile.path), "utf8");
+
+      expect(body, officialFile.path).not.toContain(removedScreenId);
+      expect(body, officialFile.path).not.toContain(removedRoute);
+      expect(body, officialFile.path).not.toContain(removedKoreanName);
+    }
   });
 
   it("fails when governing files reference stale official doc versions", () => {
