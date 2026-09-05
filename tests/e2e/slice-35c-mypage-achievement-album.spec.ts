@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -411,7 +413,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await expect(mobile.page.getByRole("button", { name: "알림 보기" })).toBeVisible();
     await expect(mobile.page.getByText("760 / 4,000 XP")).toBeVisible();
     await expect(mobile.page.getByTestId("mypage-growth-featured-badges")).toHaveCount(0);
-    await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-390-profile.png") });
+    await captureTrackedEvidenceOnDemand(mobile.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-390-profile.png") });
 
     await mobile.page.getByRole("button", { name: "등급 보기" }).click();
     const gradeDialog = mobile.page.getByRole("dialog", { name: "전체 등급" });
@@ -423,7 +425,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
         .slice(0, 5)
         .every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0),
     );
-    await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-grade-modal.png") });
+    await captureTrackedEvidenceOnDemand(mobile.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-grade-modal.png") });
     await gradeDialog.getByRole("button", { exact: true, name: "닫기" }).click();
 
     await mobile.page.getByRole("button", { name: "업적 보기" }).click();
@@ -435,7 +437,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await expect(mobile.page.getByTestId("achievement-track-tutorial")).toContainText("2 / 7");
     await expect(mobile.page.getByTestId("achievement-track-tutorial")).toContainText("완료");
     await expect(mobile.page.getByTestId("achievement-badge-row-tutorial").locator("> *")).toHaveCount(7);
-    await mobile.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-achievement-tutorial-category.png"),
     });
@@ -448,7 +450,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     );
     await expect(mobile.page.getByTestId("growth-badge-image-cooking_completed_300")).toBeVisible();
     await expect(mobile.page.getByTestId("achievement-stamp-cooking_completed_300")).toHaveCount(0);
-    await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-achievement-modal.png") });
+    await captureTrackedEvidenceOnDemand(mobile.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-achievement-modal.png") });
     await achievementDialog.getByRole("button", { exact: true, name: "닫기" }).click();
 
     await mobile.page.getByRole("button", { name: "알림 보기" }).click();
@@ -459,7 +461,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await notificationDialog.getByRole("tab", { name: "업적" }).click();
     await expect(notificationDialog.getByText("업적 달성!")).toBeVisible();
     await expect(notificationDialog.getByText("+120 XP 획득")).toHaveCount(0);
-    await mobile.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-notification-archive-modal.png"),
     });
@@ -470,30 +472,30 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
       () => document.documentElement.scrollWidth > window.innerWidth,
     );
     expect(overflow).toBe(false);
-    await mobile320.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-320-profile.png") });
+    await captureTrackedEvidenceOnDemand(mobile320.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-320-profile.png") });
     await mobile320.context.close();
 
     const desktop = await openMypage(browser, { width: 1440, height: 960 });
     await expect(desktop.page.getByLabel("마이페이지 통계")).toContainText("요리기록");
     await expect(desktop.page.getByRole("button", { name: "알림 보기" })).toBeVisible();
     await expect(desktop.page.getByTestId("growth-archive-surface")).toHaveCount(0);
-    await desktop.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1440-profile.png") });
+    await captureTrackedEvidenceOnDemand(desktop.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1440-profile.png") });
     await desktop.context.close();
 
     const wideDesktop = await openMypage(browser, { width: 1920, height: 1080 });
     await expect(wideDesktop.page.getByTestId("mypage-profile-grade-row")).toContainText("다이아");
     await expect(wideDesktop.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.46");
-    await wideDesktop.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1920-profile.png") });
+    await captureTrackedEvidenceOnDemand(wideDesktop.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1920-profile.png") });
     await wideDesktop.context.close();
 
     const progressSoftFail = await openMypage(browser, { width: 390, height: 844 }, { progressError: true });
     await expect(progressSoftFail.page.getByTestId("mypage-growth-progress-error")).toBeVisible();
-    await progressSoftFail.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "soft-fail-progress.png") });
+    await captureTrackedEvidenceOnDemand(progressSoftFail.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "soft-fail-progress.png") });
     await progressSoftFail.context.close();
 
     const gamificationSoftFail = await openMypage(browser, { width: 390, height: 844 }, { gamificationError: true });
     await expect(gamificationSoftFail.page.getByTestId("mypage-growth-gamification-error")).toBeVisible();
-    await gamificationSoftFail.page.screenshot({
+    await captureTrackedEvidenceOnDemand(gamificationSoftFail.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "soft-fail-gamification.png"),
     });
@@ -502,7 +504,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     const archiveSoftFail = await openMypage(browser, { width: 390, height: 844 }, { archiveError: true });
     await archiveSoftFail.page.getByRole("button", { name: "알림 보기" }).click();
     await expect(archiveSoftFail.page.getByTestId("mypage-notification-archive-error")).toBeVisible();
-    await archiveSoftFail.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "soft-fail-archive.png") });
+    await captureTrackedEvidenceOnDemand(archiveSoftFail.page, { fullPage: true, path: path.join(EVIDENCE_DIR, "soft-fail-archive.png") });
     await archiveSoftFail.context.close();
   });
 });

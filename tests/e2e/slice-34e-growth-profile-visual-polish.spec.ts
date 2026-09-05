@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -326,14 +328,14 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
     await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.6");
     await expect(mobile390.page.getByTestId("mypage-growth-featured-badges")).toHaveCount(0);
     await expect(mobile390.page.getByRole("button", { name: "업적 보기" })).toBeVisible();
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
 
     await mobile390.page.getByRole("button", { name: "업적 보기" }).click();
     await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "badge-guide-polished.png"),
     });
@@ -344,7 +346,7 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
       () => document.documentElement.scrollWidth > window.innerWidth,
     );
     expect(hasHorizontalOverflow).toBe(false);
-    await mobile320.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile320.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-320.png"),
     });
@@ -362,14 +364,14 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
     });
     expect(layout.profileTop).toBeLessThan(180);
     expect(layout.profileHeight).toBeLessThan(520);
-    await desktop.page.screenshot({
+    await captureTrackedEvidenceOnDemand(desktop.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "desktop-1440.png"),
     });
     await desktop.context.close();
 
     const wide = await openMypage(browser, { width: 1920, height: 1080 });
-    await wide.page.screenshot({
+    await captureTrackedEvidenceOnDemand(wide.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "desktop-1920.png"),
     });
@@ -380,7 +382,7 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
       "data-grade-motif",
       "bowl-motion-timer",
     );
-    await runner.page.screenshot({
+    await captureTrackedEvidenceOnDemand(runner.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "runner-grade-no-footwear.png"),
     });
@@ -395,7 +397,7 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
 
     const progressSoftFail = await openMypage(browser, { width: 390, height: 844 }, { progressError: true });
     await expect(progressSoftFail.page.getByTestId("mypage-growth-progress-error")).toBeVisible();
-    await progressSoftFail.page.screenshot({
+    await captureTrackedEvidenceOnDemand(progressSoftFail.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "soft-fail-progress.png"),
     });
@@ -403,7 +405,7 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
 
     const gamificationSoftFail = await openMypage(browser, { width: 390, height: 844 }, { gamificationError: true });
     await expect(gamificationSoftFail.page.getByTestId("mypage-growth-gamification-error")).toBeVisible();
-    await gamificationSoftFail.page.screenshot({
+    await captureTrackedEvidenceOnDemand(gamificationSoftFail.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "soft-fail-gamification.png"),
     });
@@ -413,7 +415,7 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
     await archiveSoftFail.page.getByRole("button", { name: "알림 보기" }).click();
     await expect(archiveSoftFail.page.getByTestId("mypage-notification-archive-error")).toBeVisible();
     await expect(archiveSoftFail.page.getByTestId("mypage-growth-profile")).toContainText("집밥 러너");
-    await archiveSoftFail.page.screenshot({
+    await captureTrackedEvidenceOnDemand(archiveSoftFail.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "soft-fail-archive.png"),
     });

@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -498,7 +500,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
@@ -506,7 +508,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
       .getByRole("button", { name: "업적 보기" })
       .click();
     await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "achievement-album-modal.png"),
     });
@@ -516,14 +518,14 @@ test.describe("33c gamification frontend @smoke-core", () => {
     await mobile390.context.close();
 
     const mobile320 = await openMypage(browser, { width: 320, height: 568 });
-    await mobile320.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile320.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-320.png"),
     });
     await mobile320.context.close();
 
     const desktop = await openMypage(browser, { width: 1440, height: 960 });
-    await desktop.page.screenshot({
+    await captureTrackedEvidenceOnDemand(desktop.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "desktop-1440.png"),
     });
@@ -543,7 +545,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
       .getByTestId("growth-toast")
       .filter({ hasText: "요리 완료 +50 XP" });
     await expect(xpToast).toBeVisible();
-    await toastPage.page.screenshot({
+    await captureTrackedEvidenceOnDemand(toastPage.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "xp-toast.png"),
     });

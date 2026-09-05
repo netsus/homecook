@@ -11,6 +11,17 @@ export function shouldUpdateTrackedEvidence() {
   return process.env[UPDATE_EVIDENCE_ENV] === "1";
 }
 
+export async function captureTrackedEvidenceOnDemand(
+  page: Pick<Page, "screenshot">,
+  options: ScreenshotOptions & { path: string },
+) {
+  if (!shouldUpdateTrackedEvidence()) return null;
+
+  await mkdir(dirname(options.path), { recursive: true });
+  await page.screenshot(options);
+  return options.path;
+}
+
 export async function captureEvidenceScreenshot(
   page: Pick<Page, "screenshot">,
   testInfo: Pick<TestInfo, "attach" | "outputPath">,

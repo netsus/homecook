@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -543,7 +545,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
-    await mobile390.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
@@ -551,21 +553,21 @@ test.describe("34c growth notification UI @smoke-core", () => {
 
     const mobile320 = await openMypage(browser, { width: 320, height: 568 });
     await showToastStack(mobile320.page);
-    await mobile320.page.screenshot({
+    await captureTrackedEvidenceOnDemand(mobile320.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-320.png"),
     });
     await mobile320.context.close();
 
     const desktop = await openMypage(browser, { width: 1440, height: 960 });
-    await desktop.page.screenshot({
+    await captureTrackedEvidenceOnDemand(desktop.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "desktop-1440.png"),
     });
     await desktop.page.getByRole("button", { name: "알림 보기" }).click();
     const desktopArchive = desktop.page.getByRole("dialog", { name: "알림 기록" });
     await expect(desktopArchive).toBeVisible();
-    await desktopArchive.screenshot({
+    await captureTrackedEvidenceOnDemand(desktopArchive, {
       path: path.join(EVIDENCE_DIR, "archive-modal.png"),
     });
     await desktop.context.close();
@@ -574,14 +576,14 @@ test.describe("34c growth notification UI @smoke-core", () => {
     await archiveEmpty.page.getByRole("button", { name: "알림 보기" }).click();
     const emptyArchive = archiveEmpty.page.getByRole("dialog", { name: "알림 기록" });
     await expect(emptyArchive.getByText("아직 표시할 알림 기록이 없어요.")).toBeVisible();
-    await emptyArchive.screenshot({
+    await captureTrackedEvidenceOnDemand(emptyArchive, {
       path: path.join(EVIDENCE_DIR, "archive-empty.png"),
     });
     await archiveEmpty.context.close();
 
     const toastMobile = await openMypage(browser, { width: 390, height: 844 });
     await showToastStack(toastMobile.page);
-    await toastMobile.page.screenshot({
+    await captureTrackedEvidenceOnDemand(toastMobile.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "toast-stack-mobile.png"),
     });
@@ -589,7 +591,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
 
     const toastDesktop = await openMypage(browser, { width: 1440, height: 960 });
     await showToastStack(toastDesktop.page);
-    await toastDesktop.page.screenshot({
+    await captureTrackedEvidenceOnDemand(toastDesktop.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "toast-stack-desktop.png"),
     });
@@ -599,7 +601,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
       notifications: [priorityNotifications[0], priorityNotifications[3]],
     });
     await showToastStack(levelup.page);
-    await levelup.page.screenshot({
+    await captureTrackedEvidenceOnDemand(levelup.page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "toast-levelup.png"),
     });
@@ -617,7 +619,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
     await expect(shoppingPage.getByTestId("shopping-multi-meal-hint").first()).toBeVisible({
       timeout: 15_000,
     });
-    await shoppingPage.screenshot({
+    await captureTrackedEvidenceOnDemand(shoppingPage, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "shopping-copy.png"),
     });
