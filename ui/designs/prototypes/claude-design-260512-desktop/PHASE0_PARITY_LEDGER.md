@@ -5,6 +5,7 @@ Date: 2026-05-13
 Target prototype: `ui/designs/prototypes/claude-design-260512-desktop/`
 Plan: `.omx/plans/desktop-prototype-modern-webapp-redesign-ralplan-20260513.md`
 Phase 1 merge: PR #441, merge commit `bcc02854a43439d8e5acc5840177df4b8046fde4`
+Historical evidence manifest: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`
 
 ## Purpose
 
@@ -64,13 +65,13 @@ These overrides intentionally differ from older ledgers:
 | --- | --- | ---: | --- |
 | Phase 0 | Contract and ledger lock | all rows | This document owns the lock. |
 | Phase 1 | Desktop shell, primitives, LoginGate foundation | 8 foundation overlays | Merged as foundation in PR #441; these rows still keep their later full-parity owner phases. |
-| Phase 2 | Anchor screens | 3 owner rows | Verified in Phase 2; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-2/`. |
-| Phase 3 | Auth, gates, cross-cutting modals | 9 owner rows | Verified in Phase 3; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-3/`. |
-| Phase 4 | Planner, meal, menu add, pickers | 10 owner rows | Verified in Phase 4; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-4/`. |
-| Phase 5 | Recipebook, MyPage, settings | 13 owner rows | Verified in Phase 5; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-5/`. |
-| Phase 6 | Pantry and shopping | 11 owner rows | Verified in Phase 6; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-6/`. |
-| Phase 7 | Cooking, leftovers, ate list | 7 owner rows | Verified in Phase 7; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-7/`. |
-| Phase 8 | Full-surface QA | all rows | Verified in Phase 8; final evidence at `ui/designs/evidence/desktop-modern-redesign/phase-8/`. |
+| Phase 2 | Anchor screens | 3 owner rows | Verified in Phase 2; archived as manifest entries with prefix `phase-2/`. |
+| Phase 3 | Auth, gates, cross-cutting modals | 9 owner rows | Verified in Phase 3; archived as manifest entries with prefix `phase-3/`. |
+| Phase 4 | Planner, meal, menu add, pickers | 10 owner rows | Verified in Phase 4; archived as manifest entries with prefix `phase-4/`. |
+| Phase 5 | Recipebook, MyPage, settings | 13 owner rows | Verified in Phase 5; archived as manifest entries with prefix `phase-5/`. |
+| Phase 6 | Pantry and shopping | 11 owner rows | Verified in Phase 6; archived as manifest entries with prefix `phase-6/`. |
+| Phase 7 | Cooking, leftovers, ate list | 7 owner rows | Verified in Phase 7; archived as manifest entries with prefix `phase-7/`. |
+| Phase 8 | Full-surface QA | all rows | Verified in Phase 8; final evidence is archived as manifest entries with prefix `phase-8/`. |
 
 ## Screen Rows
 
@@ -167,7 +168,7 @@ Each row owner phase must fill evidence before marking a row `verified`:
 
 Suggested evidence root:
 
-`ui/designs/evidence/desktop-modern-redesign/phase-<n>/`
+`ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-<n>/`
 
 ## Phase 0 Exit Criteria
 

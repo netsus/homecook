@@ -54,7 +54,7 @@ Claude verdict: `READY_FOR_CODEX`
 
 Visual QA evidence will be written to:
 
-`ui/designs/evidence/desktop-modern-redesign/phase-3/`
+Archived evidence: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-3/`
 
 The Phase 0 ledger should only be marked `verified` after:
 

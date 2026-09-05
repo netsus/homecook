@@ -2,7 +2,7 @@
 
 Date: 2026-05-14 KST
 Target: `ui/designs/prototypes/claude-design-260512-desktop/`
-Evidence: `ui/designs/evidence/desktop-modern-redesign/phase-4/`
+Archived evidence: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-4/`
 Claude design spec: `.omx/artifacts/claude-delegate-c18117b4-d57a-4e67-8f2a-115df7704e63-phase4-planner-menu-design-spec-response-20260514T000000Z.md`
 
 ## Scope Closed

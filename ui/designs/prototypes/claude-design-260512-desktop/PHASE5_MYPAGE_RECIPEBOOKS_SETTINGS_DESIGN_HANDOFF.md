@@ -7,7 +7,7 @@ Phase: 5 of 8
 Plan: `.omx/plans/desktop-prototype-modern-webapp-redesign-ralplan-20260513.md`
 Ledger: `PHASE0_PARITY_LEDGER.md`
 CSS target: `styles-phase5.css` (loaded after `styles-phase4.css`)
-Evidence target: `ui/designs/evidence/desktop-modern-redesign/phase-5/`
+Archived evidence: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-5/`
 
 ## 1. Phase 5 Rows To Close (13 rows)
 
@@ -1260,7 +1260,7 @@ All new interactive elements use:
 
 ### Required evidence files
 
-All evidence should go to: `ui/designs/evidence/desktop-modern-redesign/phase-5/`
+Historical evidence is retained as manifest entries with prefix `phase-5/`; do not regenerate it into the tracked tree.
 
 | Evidence file | Surface | What to verify |
 | --- | --- | --- |

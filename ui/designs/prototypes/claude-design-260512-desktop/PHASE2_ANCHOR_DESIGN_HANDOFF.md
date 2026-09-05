@@ -60,7 +60,7 @@ The accepted approach was to keep Phase 1 primitives intact and add a reversible
 
 ## Evidence
 
-Evidence root: `ui/designs/evidence/desktop-modern-redesign/phase-2/`
+Archived evidence: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-2/`
 
 - `home-1024.png`
 - `home-1280.png`

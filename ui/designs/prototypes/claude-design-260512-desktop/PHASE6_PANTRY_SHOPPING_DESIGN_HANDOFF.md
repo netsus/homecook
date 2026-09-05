@@ -7,7 +7,7 @@ Phase: 6 of 8
 Plan: `.omx/plans/desktop-prototype-modern-webapp-redesign-ralplan-20260513.md`
 Ledger: `PHASE0_PARITY_LEDGER.md`
 CSS target: `styles-phase6.css` (loaded after `styles-phase5.css`)
-Evidence target: `ui/designs/evidence/desktop-modern-redesign/phase-6/`
+Archived evidence: `ui/designs/evidence/historical-manifests/desktop-modern-redesign.json`, entry prefix `phase-6/`
 
 ## 1. Phase 6 Rows To Close (11 rows)
 
@@ -845,7 +845,7 @@ All three modals already use `Dialog` which handles:
 
 ## 10. Screenshot / Visual QA Matrix
 
-### Required evidence files at `ui/designs/evidence/desktop-modern-redesign/phase-6/`
+### Historical evidence files archived under manifest prefix `phase-6/`
 
 | File | Description | Width | Key checks |
 | --- | --- | --- | --- |
