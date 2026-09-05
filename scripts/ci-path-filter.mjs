@@ -115,8 +115,18 @@ const SECURITY_SMOKE_PATTERNS = [
   ...TRUSTED_CONTEXT_WORKFLOW_PATTERNS,
 ];
 
+const NON_RUNTIME_MARKETING_PATTERNS = [
+  "docs/marketing/assets/**",
+  "ui/designs/evidence/marketing-demand-validation/**",
+  "ui/designs/evidence/marketing-demand-validation-v2/source-*/**",
+];
+
 const BROWSER_QA_IGNORED_PATTERNS = [
   "lib/server/recipe-extraction-lab/**",
+  "tests/demand-validation.test.ts",
+  "tests/marketing-*.test.ts",
+  "tests/marketing-*.test.tsx",
+  ...NON_RUNTIME_MARKETING_PATTERNS,
 ];
 
 const PLAYWRIGHT_SHARED_PATTERNS = [
@@ -268,6 +278,12 @@ function withoutBrowserQaIgnoredFiles(changedFiles) {
   );
 }
 
+function withoutCodeIgnoredFiles(changedFiles) {
+  return changedFiles.filter(
+    (filePath) => !matchesAnyPath(filePath, NON_RUNTIME_MARKETING_PATTERNS),
+  );
+}
+
 /**
  * @param {Array<string | CiLabel>} labels
  */
@@ -295,6 +311,7 @@ export function evaluateCiPathFilters(input = {}) {
     forceFullRun = false,
   } = input;
   const files = [...new Set(changedFiles.map(normalizeFilePath).filter(Boolean))];
+  const codeFiles = withoutCodeIgnoredFiles(files);
   const browserQaFiles = withoutBrowserQaIgnoredFiles(files);
   const labelNames = normalizeLabels(labels);
   const isFullRun = forceFullRun
@@ -315,7 +332,7 @@ export function evaluateCiPathFilters(input = {}) {
   const lighthouse = isFullRun || (!draft && (hasFullCiLabel || lighthousePathChanged));
 
   return {
-    code: isFullRun || hasAnyMatch(files, CODE_PATTERNS),
+    code: isFullRun || hasAnyMatch(codeFiles, CODE_PATTERNS),
     dependency_audit:
       isFullRun || hasAnyMatch(files, DEPENDENCY_AUDIT_PATTERNS),
     security_function_authorization:

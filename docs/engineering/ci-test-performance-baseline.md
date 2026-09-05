@@ -1,6 +1,6 @@
 # CI and Test Performance Baseline
 
-상태: **canonical baseline / cleanup step 8**
+상태: **canonical baseline / cleanup steps 8–9**
 
 측정일: 2026-09-05
 
@@ -207,3 +207,38 @@ step 9와 10 완료 뒤에는 같은 분류 기준으로 최소 다음을 다시
 - full regression과 core smoke 중복 test 수
 - `waitForTimeout()` 위치 수와 flaky test 수
 - 7개 release context와 security N/A/failure semantics 보존 여부
+
+## Step 9 implementation contract
+
+PR의 새 commit을 뜻하는 `synchronize` event가 같은 workflow의 이전 `synchronize` run을
+대체할 때만 `cancel-in-progress`를 사용한다. 이때만 workflow 이름과 PR 번호 기반
+`head-updates` group을 사용한다. `opened`, `reopened`, `edited`, `ready_for_review`, `labeled`와
+`push`, `schedule`, `workflow_dispatch`는 run ID별 고유 group을 쓰고 취소하지 않는다.
+따라서 같은 head에서 약한 metadata event가 이미 시작된 강한 gate를 취소하지 않는다.
+`production-release-attestation.yml`에는 cancellation을 추가하지 않는다.
+
+다음 workflow가 이 PR-only 정책을 사용한다.
+
+- CI
+- QA
+- Policy
+- PR Governance
+- QA Eval
+- Security Review
+- Security Smoke
+
+path scope는 required workflow 자체를 `paths-ignore`로 생략하지 않고 기존 job-level resolver에서
+계속 계산한다. 따라서 N/A 성공 context와 scope-resolution 실패의 fail-closed context가 모두
+남는다.
+
+비실행 marketing archive와 생성 evidence만 runtime/browser scope에서 제외한다.
+
+- `docs/marketing/assets/**`
+- `ui/designs/evidence/marketing-demand-validation/**`
+- `ui/designs/evidence/marketing-demand-validation-v2/source-*/**`
+- browser QA에 한해 `tests/demand-validation.test.ts`, `tests/marketing-*.test.ts(x)`
+
+marketing unit/contract test는 CI `quality`에서 계속 실행한다. 실제 `/beta` route,
+`components/marketing/**`, API·DB·auth·migration·security·workflow·path-filter 변경은 기존
+code/security/browser/full gate를 유지한다. manual/nightly run도 archive ignore와 무관하게
+complete QA set을 실행한다.
