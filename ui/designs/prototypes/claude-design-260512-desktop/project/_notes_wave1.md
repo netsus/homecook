@@ -2,7 +2,10 @@
 
 ## Existing prototype files
 - index html: `homecook desktop prototype.html` (root files: app.jsx, components.jsx, data.jsx, data-standalone.jsx, modals.jsx, screens-1.jsx, screens-2.jsx, styles.css, styles-patch.css)
-- standalone bundled: `homecook desktop prototype (standalone).html`
+- standalone source retained: `homecook-standalone-src.html`
+- generated 5.2MiB standalone bundle removed during repository lightening; recover from
+  commit `45dade473902b49d85fc975d7edb6e925fb0c6cc` or blob
+  `38c62c58baf3089065cec763ad353b59c59ffe97` when a single-file archive is explicitly needed
 
 ## Wave1 desktop screens to mirror (already-built functions)
 - DesktopHome (theme carousel + sort + 모든 레시피 grid + 재료로 검색 button)
@@ -23,5 +26,7 @@
 - T.mint, T.mintDeep, T.mintSoft, T.ink, T.text1/2/3/4, T.border, T.surfaceFill, T.surfaceSubtle, T.red, T.shadowDeep, T.shadowNatural, T.shadowSharp, T.shadowCrisp, T.fontBrand, T.fontUI
 - mealAddBg/mealAddBorder/mealAddFg, cookDoneBg/Fg, shoppingDoneBg/Fg
 
-## Plan for current standalone HTML
-The existing file is large. Since context is tight, I'll rebuild incrementally by editing the source `homecook desktop prototype.html` if it loads external scripts, or directly edit the standalone copy.
+## Prototype editing path
+
+Edit `homecook desktop prototype.html` and its modular imports. Use
+`homecook-standalone-src.html` only as the retained single-file generation entry point.

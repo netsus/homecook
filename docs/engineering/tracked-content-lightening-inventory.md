@@ -71,7 +71,7 @@ workpack/authority documents ────> ui/designs/evidence + docs/design/ass
    - exact path 참조 0개인 초기 C2 비교물이다.
    - 현재 토큰/화면 기준과 시각 비교 후 제거 후보로 삼는다.
 3. `ui/designs/prototypes/claude-design-260512-desktop/project/*standalone*.html`
-   - 2개, 합계 5.208MiB이며 큰 standalone bundle은 5.204MiB다.
+   - 10-B에서 큰 standalone bundle 1개를 제거하고 5.5KiB generation source는 보존한다.
    - modular source가 현재 `REFERENCE_LOCK`이며 standalone은 직접 실행 참조가 확인되지 않았다.
    - 재생성 가능성과 폴더 메모 의미를 한 번 더 확인한다.
 4. `ui/designs/evidence/desktop-modern-redesign`
@@ -105,6 +105,19 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 - 동적 탐색: prototype HTML을 자동 열거하는 실행 경로 0
 - 복구: Git commit `59779af90`과 현재 삭제 전 blob `0968acd11a122f5dc32c856e79d2275575dab8af`
 - 보존 경계: `public/assets/funnel`, current parity prototype, Wave1 lock, canonical marketing source는 미변경
+
+### `claude-design-260512-desktop` generated standalone bundle
+
+- 제거 대상: `homecook desktop prototype (standalone).html` 1개
+- 제거량: 5,457,164 bytes / 5.204MiB
+- 누적 제거 후 tracked 기준: 6,980개 / 438.386MiB
+- 현재 authority: `components/web/REFERENCE_LOCK.md`가 modular HTML/CSS를 지정하고 README도
+  `homecook desktop prototype.html`과 imports를 primary source로 지정
+- 직접 실행 참조: runtime/test/workflow/capture에서 0; chat와 `_notes_wave1.md`의 역사 언급만 존재
+- 보존: `homecook-standalone-src.html`, modular sources, handoff/phase ledger 전체
+- 복구: commit `45dade473902b49d85fc975d7edb6e925fb0c6cc`, blob
+  `38c62c58baf3089065cec763ad353b59c59ffe97`, SHA-256
+  `45cc8f3efbf17f4fd0a7e32d6dd905babd41f4e3cd7a29e68b726d7746fff104`
 
 ## 재현 명령
 
