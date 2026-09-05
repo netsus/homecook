@@ -385,6 +385,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(codexTaskHandoff, [
       "Homecook의 모든 신규 작업은 Claude를 사용하지 않는다.",
       "별도 ChatGPT/Codex 작업(새 task ID, 새 세션)",
+      "작성 작업은 자기 변경을 최종 승인하지 않는다.",
       "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
       "같은 작업 안의 서브에이전트는 탐색·테스트·보조 리뷰에는 쓸 수 있지만, 독립 Stage 승인자 역할을 대신하지 않는다.",
     ]),

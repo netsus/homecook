@@ -132,6 +132,31 @@ describe("workflow v2 docs", () => {
     }
   });
 
+  it("fails the workflow validator when the canonical self-approval guard drifts", () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-self-approval-"));
+
+    try {
+      cpSync(join(repoRoot, "docs"), join(fixtureRoot, "docs"), { recursive: true });
+      mkdirSync(join(fixtureRoot, ".opencode"), { recursive: true });
+      cpSync(join(repoRoot, ".opencode/README.md"), join(fixtureRoot, ".opencode/README.md"));
+      cpSync(join(repoRoot, "CLAUDE.md"), join(fixtureRoot, "CLAUDE.md"));
+
+      const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
+      const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
+        "작성 작업은 자기 변경을 최종 승인하지 않는다.",
+        "작성 작업이 자기 변경을 승인할 수 있다.",
+      );
+      writeFileSync(handoffPath, driftedHandoff, "utf8");
+
+      const handoffResult = validateWorkflowV2DocContract({ rootDir: fixtureRoot })
+        .find((result) => result.name === "workflow-v2-doc-contract:codex-task-handoff");
+
+      expect(handoffResult?.errors.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(fixtureRoot, { force: true, recursive: true });
+    }
+  });
+
   it("keeps repo-local independent Codex agent descriptions aligned", () => {
     const opencodeConfig = readJson("opencode.json");
     const ohMyOpencodeConfig = readJson(".opencode/oh-my-opencode.json");
