@@ -254,7 +254,7 @@ suite도 변경하지 않는다. nightly/manual/`full-ci`의 complete matrix는 
 로컬 `mobile-ios-small` sentinel은 25 instances를 예약해 20 passed, 5 intended skipped,
 28.4초로 완료됐다. 기준선의 별도 smoke 75 instances 중 full regression과 겹치던 50개를
 제거하고 CI matrix에 고유한 25개만 남긴 결과다. GitHub runner의 실제 wall time과 runner-time proxy는
-이 PR의 current-head QA와 merge 후 master run에서 다시 기록한다.
+아래 current-head QA로 확인했다.
 
 고정 대기는 관찰 가능한 완료 조건이 있는 8곳만 교체했다.
 
@@ -276,3 +276,21 @@ current-head full regression에서 Next image optimizer가 marketing capture의 
 10초 안에 끝내지 못해 두 capture group이 실패했다. 캡처 테스트는 `/_next/image`의 local-only
 `/assets/...` source를 직접 다시 로드하고 protocol-relative URL은 거부한다. 제품 runtime은
 변경하지 않는다. 세 capture group의 높은 병렬도 repeat run은 9/9 통과했다.
+
+### Step 10 GitHub runner result
+
+PR head `199bc6604e4f867d2cd34aeb2d7b8a4ebe4442ef`의 일반 QA run
+`33971177985`와 Ready QA run `33971881369`를 비교했다.
+
+| 항목 | 일반 QA | Ready full QA | 변화 |
+| --- | ---: | ---: | ---: |
+| smoke job | 2분 47초, 75 instances | 1분 51초, 25 instances | **-56초 / -50 instances** |
+| full-regression job | skip | 17분 58초 | CI matrix 816 예약 유지 |
+| Ready QA wall time | - | 18분 19초 | 기준 exact run 18분 31초 대비 -12초 |
+| Ready QA runner-time proxy | - | 30분 07초 | 기준 32분 04초 대비 **-1분 57초(-6.1%)** |
+
+full-regression test step은 기준 17분 19초에서 약 17분으로 줄었지만 단일 표본이므로 회귀
+자체가 유의미하게 단축됐다고 판단하지 않는다. 이번 단계의 확인된 효과는 중복 50 instances와
+QA runner-time 감소다. 최종 회귀는 677 passed, 137 skipped, 2 flaky로 성공했다. 수정 대상이던
+YouTube 제출, prepared-food loading axe, marketing capture는 flaky 목록에서 사라졌고, 남은 2개는
+recipe media upload와 HOME recipe save로 별도 후속 후보다.
