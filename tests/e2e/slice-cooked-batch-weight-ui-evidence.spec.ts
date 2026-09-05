@@ -1,9 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Browser, type Page } from "@playwright/test";
+
+import {
+  captureTrackedEvidenceOnDemand,
+  writeTrackedEvidenceOnDemand,
+} from "./helpers/evidence-capture";
 
 import {
   installAccountLibraryVisualRoutes,
@@ -245,8 +249,6 @@ function maxRgbChannelDelta(left: string, right: string) {
 test.describe("cooked-batch-weight-ui", () => {
 test("captures the pre-Stage-4 COOK_MODE and LEFTOVERS state", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome", "한 프로젝트에서 exact viewport를 직접 설정한다.");
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   for (const [width, height, suffix] of [[390, 844, "mobile-default-390"], [320, 568, "mobile-narrow-320"]] as const) {
     const cook = await preparePage(browser, width, height);
     await cook.page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => {
@@ -256,7 +258,7 @@ test("captures the pre-Stage-4 COOK_MODE and LEFTOVERS state", async ({ browser 
     await cook.page.getByRole("button", { name: "요리 완료" }).click();
     await expect(cook.page.getByRole("dialog", { name: "요리 완료" })).toBeVisible();
     await stabilize(cook.page);
-    await cook.page.screenshot({ path: resolve(EVIDENCE_DIR, `COOK_MODE-before-${suffix}.png`) });
+    await captureTrackedEvidenceOnDemand(cook.page, { path: resolve(EVIDENCE_DIR, `COOK_MODE-before-${suffix}.png`) });
     await cook.context.close();
 
     const leftovers = await preparePage(browser, width, height);
@@ -264,7 +266,7 @@ test("captures the pre-Stage-4 COOK_MODE and LEFTOVERS state", async ({ browser 
     await leftovers.page.goto("/leftovers");
     await expect(leftovers.page.getByTestId("leftovers-screen")).toBeVisible();
     await stabilize(leftovers.page);
-    await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, `LEFTOVERS-before-${suffix}.png`) });
+    await captureTrackedEvidenceOnDemand(leftovers.page, { path: resolve(EVIDENCE_DIR, `LEFTOVERS-before-${suffix}.png`) });
     await leftovers.context.close();
   }
 });
@@ -272,7 +274,6 @@ test("captures the pre-Stage-4 COOK_MODE and LEFTOVERS state", async ({ browser 
 test("captures and verifies the Stage-4 viewport, state, and accessibility matrix", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome", "한 프로젝트에서 exact viewport를 직접 설정한다.");
   test.setTimeout(120_000);
-  await mkdir(EVIDENCE_DIR, { recursive: true });
   const files: string[] = [
     "COOK_MODE-before-mobile-default-390.png",
     "COOK_MODE-before-mobile-narrow-320.png",
@@ -365,7 +366,7 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
     const knownName = width >= 1024
       ? "COOK_MODE-desktop-state-matrix.png"
       : `COOK_MODE-${suffix}-known.png`;
-    await cooked.page.screenshot({ path: resolve(EVIDENCE_DIR, knownName), fullPage: width >= 1024 });
+    await captureTrackedEvidenceOnDemand(cooked.page, { path: resolve(EVIDENCE_DIR, knownName), fullPage: width >= 1024 });
     files.push(knownName);
     runtime.scopedNewUiSeriousOrCritical += (await expectNoSeriousAxeViolations(
       cooked.page,
@@ -378,11 +379,11 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       await dialog.getByRole("spinbutton", { name: "빈 용기 무게" }).fill("320");
       await expect(dialog.getByRole("status", { name: "계산한 음식만 무게" })).toContainText("1,480g");
       const helperName = "COOK_MODE-mobile-default-390-container-helper.png";
-      await cooked.page.screenshot({ path: resolve(EVIDENCE_DIR, helperName) });
+      await captureTrackedEvidenceOnDemand(cooked.page, { path: resolve(EVIDENCE_DIR, helperName) });
       files.push(helperName);
       await dialog.getByRole("radio", { name: "나중에 입력" }).click();
       const laterName = "COOK_MODE-mobile-default-390-weigh-later.png";
-      await cooked.page.screenshot({ path: resolve(EVIDENCE_DIR, laterName) });
+      await captureTrackedEvidenceOnDemand(cooked.page, { path: resolve(EVIDENCE_DIR, laterName) });
       files.push(laterName);
       await cooked.page.keyboard.press("Escape");
       await expect(opener).toBeFocused();
@@ -416,7 +417,7 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       expect(errorFooter.tops[0]).toBeLessThan(errorFooter.tops[1]);
       expect(errorFooter.bottoms.every((bottom) => bottom <= errorFooter.viewport.height)).toBe(true);
       const errorName = "COOK_MODE-mobile-narrow-320-pending-error-replay.png";
-      await cooked.page.screenshot({ path: resolve(EVIDENCE_DIR, errorName) });
+      await captureTrackedEvidenceOnDemand(cooked.page, { path: resolve(EVIDENCE_DIR, errorName) });
       files.push(errorName);
       await dialog.getByRole("button", { name: "완료 저장" }).click();
       await expect(dialog).toHaveCount(0);
@@ -468,7 +469,7 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
         '[data-testid="cooked-batch-action-sheet"]',
       )).length;
       await stabilize(leftovers.page);
-      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName), fullPage: true });
+      await captureTrackedEvidenceOnDemand(leftovers.page, { path: resolve(EVIDENCE_DIR, stateName), fullPage: true });
       files.push(stateName);
       await leftovers.page.keyboard.press("Escape");
       await expect(closeOpener).toBeFocused();
@@ -477,7 +478,7 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       await expect(leftovers.page.getByText("무게 없이 다 먹음")).toBeVisible();
       const depletedName = "LEFTOVERS-mobile-default-390-legacy-null-depleted.png";
       await stabilize(leftovers.page);
-      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, depletedName), fullPage: true });
+      await captureTrackedEvidenceOnDemand(leftovers.page, { path: resolve(EVIDENCE_DIR, depletedName), fullPage: true });
       files.push(depletedName);
     } else if (width === 320) {
       const weightOpener = leftovers.page.getByRole("button", { name: /현미 채소볶음 완성 중량 입력/ });
@@ -545,7 +546,7 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       runtime.leftoversFooterViewportContained = true;
       runtime.leftoversFooterViewports.push(width);
       await stabilize(leftovers.page);
-      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName) });
+      await captureTrackedEvidenceOnDemand(leftovers.page, { path: resolve(EVIDENCE_DIR, stateName) });
       files.push(stateName);
       await actionDialog.getByRole("button", { name: "버림 기록" }).click();
       const alert = actionDialog.getByRole("alert");
@@ -573,14 +574,14 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       )).length;
       const errorName = "LEFTOVERS-mobile-narrow-320-pending-error.png";
       await stabilize(leftovers.page);
-      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, errorName) });
+      await captureTrackedEvidenceOnDemand(leftovers.page, { path: resolve(EVIDENCE_DIR, errorName) });
       files.push(errorName);
       await leftovers.page.keyboard.press("Escape");
       await expect(actionOpener).toBeFocused();
       runtime.focusRestored = true;
     } else {
       await stabilize(leftovers.page);
-      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName), fullPage: true });
+      await captureTrackedEvidenceOnDemand(leftovers.page, { path: resolve(EVIDENCE_DIR, stateName), fullPage: true });
       files.push(stateName);
       let releaseMutation!: () => void;
       const mutationGate = new Promise<void>((resolveMutation) => {
@@ -650,7 +651,7 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
   expect(runtime.leftoversFooterViewportContained).toBe(true);
   expect(runtime.leftoversFooterViewports).toEqual([390, 320]);
   expect(runtime.unweighedCloseConsequencesConfirmed).toBe(true);
-  await writeFile(resolve(EVIDENCE_DIR, "runtime-focus-keyboard-overflow.json"), `${JSON.stringify({
+  await writeTrackedEvidenceOnDemand(resolve(EVIDENCE_DIR, "runtime-focus-keyboard-overflow.json"), `${JSON.stringify({
     confirmation_back_retained: runtime.confirmationBackRetained,
     cook_footer_320_primary_first_dom: runtime.cookFooter320PrimaryFirstDom,
     cook_footer_320_primary_first_visual: runtime.cookFooter320PrimaryFirstVisual,
@@ -680,13 +681,13 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
     virtual_keyboard: "Manual Only — automated viewport does not prove a physical keyboard",
   }, null, 2)}\n`);
   files.push("runtime-focus-keyboard-overflow.json");
-  await writeFile(resolve(EVIDENCE_DIR, "runtime-axe-wcag.json"), `${JSON.stringify({
+  await writeTrackedEvidenceOnDemand(resolve(EVIDENCE_DIR, "runtime-axe-wcag.json"), `${JSON.stringify({
     existing_cook_mode_full_page_contrast_residual_nodes: runtime.existingCookModeFullPageContrastResidualNodes,
     scope_boundary: "The two full-page residual nodes predate #11 and are outside Stage 4 ownership; the new completion sheet and cooked-batch section are scoped separately.",
     scoped_new_ui_serious_or_critical: runtime.scopedNewUiSeriousOrCritical,
   }, null, 2)}\n`);
   files.push("runtime-axe-wcag.json");
-  await writeFile(resolve(EVIDENCE_DIR, "manifest.json"), `${JSON.stringify({
+  await writeTrackedEvidenceOnDemand(resolve(EVIDENCE_DIR, "manifest.json"), `${JSON.stringify({
     accessibility_scope: {
       existing_cook_mode_full_page_contrast_residual_nodes: 2,
       new_stage4_sheet_and_section_scoped_serious_or_critical: 0,
