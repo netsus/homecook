@@ -158,6 +158,19 @@ checkout 파일 수와 검색 컨텍스트 감소 후보이며 Git object 용량
 않는다. 동일 blob 사본도 경로 존재 계약과 감사 의미가 섞여 있어 일괄 삭제하지 않는다.
 이 두 범위는 10-C에서 최소 manifest/checksum 전환 가능성을 먼저 감사한다.
 
+## 10-C cleanup receipts
+
+### One-shot brand icon edge generator
+
+- 제거 대상: `scripts/generate-mumeok-icon-edges.mjs` 1개
+- 제거량: 16,171 bytes / 15.792KiB
+- runtime/package/workflow/test/runbook/import 참조: 0
+- 보존: 생성 결과인 `ui/designs/brand/mumeok/exports`, `public/brand`, `app/favicon.ico`,
+  관련 baseline fixture와 visual evidence 전체
+- 복구: commit `ca4a4b4d2c138045373055bb117035380ddf9bd0`, blob
+  `f498bdf5454d9ce212309b3043014daf62d1ac44`, SHA-256
+  `aafe66096141ef1c89fd48a774d3974b1cf2a0eb6cd27d50cd6c936814a0cad6`
+
 ## 재현 명령
 
 ```bash
