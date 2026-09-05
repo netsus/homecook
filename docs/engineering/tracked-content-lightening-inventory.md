@@ -1,6 +1,6 @@
 # Tracked Content Lightening Inventory
 
-상태: **10-A inventory / 10-B safe removals / 10-C audited cleanup / 10-D test consolidation complete**
+상태: **1차 10-A~D / 2차 A historical evidence archive complete**
 
 기준 commit: `fa2aaa1fc86ddc73bf5f8fac9f8e3b4365440ddb`
 
@@ -222,8 +222,7 @@ replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으�
 - manifest: 원래 path, bytes, Git blob, SHA-256, source commit/tree, final decision,
   recovery command 포함
 - deterministic regeneration command는 역사적 수동 캡처라 존재하지 않음을 `null`과 note로 명시
-- 이 준비 단계에서는 원본 182파일을 유지하며, manifest와 consumer 검증이 먼저 merge된 뒤에만
-  별도 삭제한다.
+- manifest와 consumer 전환을 먼저 merge한 뒤 별도 삭제 PR에서 원본 182파일을 제거했다.
 
 ## 10-D closeout
 
@@ -254,6 +253,27 @@ replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으�
     tree `b97338728aebeaec06dc58266dd55f283c514281`
   - `cook-mode-theme-toggle`: commit `cc64f63c3de7ee335b8c134c92798ab616cb1b0a`,
     tree `56840e8e7c82ac85b4fb20960e38e644d6447b2e`
+
+### Desktop modern redesign archive deletion
+
+- 제거량: 182파일 / 52,507,552 bytes / 50.075MiB
+- current tree 보존물: `historical-manifests/desktop-modern-redesign.json` 1개
+- external consumer 9개는 merge된 manifest entry/prefix만 참조하며 old active path는 0
+- manifest SHA-256: `623834354dcdbef6515dd53783efd1d7cc0c1206cd810ee376b8e5be116caa2f`
+- 복구: `cbc7ede122d25d1b6a72635739a7f173151c9998`의 tree
+  `bdffb4c3650e35fc231b5f922f4a5beaa8a4d55e`
+
+### 2차 A closeout
+
+| 항목 | 2차 시작 | A 완료 | 변화 |
+| --- | ---: | ---: | ---: |
+| 전체 tracked 파일 | 6,969 | 6,767 | **-202** |
+| `ui/designs/evidence` 파일 | 1,389 | 1,187 | **-202** |
+| `ui/designs/evidence` 크기 | 156.069MiB | 104.285MiB | **-51.784MiB** |
+
+현재 visual baseline 112개/9.070MiB, authority 문서와 evidence, `public/assets/funnel`,
+진행 중 marketing canonical은 모두 보존했다. `desktop-mvp-porting` 등 capture writer가 남은
+증거 root는 2차 B에서 일반 regression의 tracked write를 먼저 분리하기 전에는 삭제하지 않는다.
 
 ## 재현 명령
 
