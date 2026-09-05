@@ -1,0 +1,1211 @@
+{
+  "schema_version": 1,
+  "kind": "ignored_evidence",
+  "generated_at": "2026-09-05T08:10:17Z",
+  "funnel_commit": "0aaa282552256ac9e77a5c134bb45a52e42ade33",
+  "homecook_commit": "1b008936df16dcef8f9a68a964a6ba8b4c616fce",
+  "classification_precedence": [
+    "current_duplicate",
+    "tracked_baseline_duplicate",
+    "unique"
+  ],
+  "summary": {
+    "files": 169,
+    "bytes": 40176619,
+    "by_classification": {
+      "unique": {
+        "files": 146,
+        "bytes": 38109010
+      },
+      "tracked_baseline_duplicate": {
+        "files": 23,
+        "bytes": 2067609
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "evidence/design-qa/01-hero-393x852.jpg",
+      "bytes": 70292,
+      "sha256": "577026dc5a3d6173455f934836d25fbf05eb95afa6ada045b218c9d0af0021a7",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/01-hero.png",
+      "bytes": 19106,
+      "sha256": "1404765dc3174cf040375d20ed2b3ead2073c0c754ff85222978b125e711c73f",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/02-question-1-393x852.jpg",
+      "bytes": 70397,
+      "sha256": "45c04d55a9349bcd3263a53b5b155e760e7fcf808c04b38955e4715aa2331277",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/02-question-1-full.jpg",
+      "bytes": 65168,
+      "sha256": "67b538e3a081edf0a506227d644ef751172762f1860338b7321fb6ba67aaabf9",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/03-result-eyeballing-393x852.jpg",
+      "bytes": 67118,
+      "sha256": "3f16687c7b4ef2e61493fe8ce8a58dba4d6c601163f5595287322879f7e79fdf",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/03-result-eyeballing-full.jpg",
+      "bytes": 64494,
+      "sha256": "223c332e6b809c183f398693373432b3558e43b77978096da944248a94575c72",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/04-demo-2-393x852.jpg",
+      "bytes": 48658,
+      "sha256": "65be3852a6ae2975b544c8352005f6a7444455c86cef93b5dbcb75940ca0fa30",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/04-demo-2-full.jpg",
+      "bytes": 50119,
+      "sha256": "471a5d29fb39b184e1e41c8e45b72cc30ac1118e57915911e9617142bd4a5c16",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/05-demo-4-393x852.jpg",
+      "bytes": 56565,
+      "sha256": "57e1d4f37f9a2bb3509ac7a83ce775f832abe38d371c225f82c4405ccf5f8766",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/05-demo-4-full.jpg",
+      "bytes": 55988,
+      "sha256": "374adb95f753203a08160dc804ce5962e8d1a2040a8e0344c4634e00ff25af6c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/06-demo-5-393x852.jpg",
+      "bytes": 43750,
+      "sha256": "6616f2e1ae2eb0bdc168e97830393bba0ec967f92af0810db427fdd2fa0f13a5",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/06-demo-5-full.jpg",
+      "bytes": 46278,
+      "sha256": "d4fb64e0f53e0b87443046ac0c9b063ce2db6d10d7ba7557a9ffebf2a05267b7",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/07-planner-homecook-393x852.jpg",
+      "bytes": 43787,
+      "sha256": "7dd257a3b4c43915fe74605649e5a9c5eec336816addd9d62299a50a998bfbd0",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/07-planner-homecook-full.jpg",
+      "bytes": 47088,
+      "sha256": "7e2ef91f86632080ef8bb39e8e183f54dcf2e0e6da3a4b23c4b1f295cbf66944",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/08-packaged-food-393x852.jpg",
+      "bytes": 40652,
+      "sha256": "bdeb2a312c46af943d653938143b1182e506a8dc320a4b0f40ced42d73089557",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/08-packaged-food-full.jpg",
+      "bytes": 44899,
+      "sha256": "257c9711da57453299e8506f39a049d03103c5badf281826cb56458d2e1fbc41",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/09-planner-complete-393x852.jpg",
+      "bytes": 49424,
+      "sha256": "cb187450568b0eb3f830f079279f7ce8b4270459363ac53e41f02b72b4dcc987",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/09-planner-complete-full.jpg",
+      "bytes": 50359,
+      "sha256": "3cdb60e5b72bb6e16be19d84daced68b8709886b69956c59c2e01600230270ef",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/10-beta-393x852.jpg",
+      "bytes": 45612,
+      "sha256": "f2382353d1c3469fbd36c85966d8528b0b79c8b55d81cd02c4564bf3041af844",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/10-beta-full.jpg",
+      "bytes": 48758,
+      "sha256": "e4f5ded2840662c1b1f0bedf5e982c1baa926ddf6fb1ec64079cabc699a3c100",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/11-success-393x852.jpg",
+      "bytes": 34467,
+      "sha256": "98ae51d24274d07d53ecace025b36f994675d1fe3d9ae0af34270f74f15a04cc",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/11-success-full.jpg",
+      "bytes": 40420,
+      "sha256": "f6caa3c5ab55a7b1141e6e2fa0c9eaf71ddf65f8fa43098fe4f72f4ba31ff22a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-a-brand-sync/v7-to-brand-blue.png",
+      "bytes": 3082034,
+      "sha256": "de0af522771943356bac76281173354155868be89a7c65c53fd1ab2347460d25",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-compare/color-detail.png",
+      "bytes": 119428,
+      "sha256": "763d675b4bf660c8e1a2563bab36c6e9427f0afdf6b328624b37abd1056aa224",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-compare/full-v2.png",
+      "bytes": 612092,
+      "sha256": "f08395cc020dc76c54167d713607a8e5aa94c486233b92712dc4d529c6528ae7",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-compare/full.png",
+      "bytes": 703273,
+      "sha256": "3626aee7adf212b67637804b446db08fd5f690bd70d247d01ae2f516c167ca41",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-match/bottom-round-1.png",
+      "bytes": 611460,
+      "sha256": "8a7a595d43113059a2196d4c1ce4d5573cc2dead23d5b4bb1788ac3116f963cb",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-match/bottom-round-2.png",
+      "bytes": 611465,
+      "sha256": "a7000b3098d0784e54046a4dd7fa1652176709ac11f62c8bb0107c7984580d3c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-match/full-round-1.png",
+      "bytes": 4062883,
+      "sha256": "b341cd9a748e797d4e923e453132412a196d851ea0e083ae901dceffed52e5b0",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-match/full-round-2.png",
+      "bytes": 4061072,
+      "sha256": "5fd6bdebe84377e10d7b99c718933f7db1e5b56936f70232ee5e256353c02740",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-match/top-round-1.png",
+      "bytes": 1906063,
+      "sha256": "de29b2c051caecbdb078de95bceec61b9f3c82e587228fdebab6b75810225b77",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-abc-match/top-round-2.png",
+      "bytes": 1905485,
+      "sha256": "332d3bc7a861cbc9b282f64487a016b0aec6321708943c66d41c92e3698a524c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-landing/a-ad-to-landing.png",
+      "bytes": 150418,
+      "sha256": "4402641e61eb53d80d074e273931b29e6ac1564088070936e762bf7d528224e4",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-landing/b-ad-to-landing.png",
+      "bytes": 213689,
+      "sha256": "b3c905f81e4690f120c1d631a469cfecc88f5ad578bab9e847ee928a6145874b",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-landing/c-ad-to-landing.png",
+      "bytes": 175147,
+      "sha256": "6fdac2c885300c778193ed72970ce3952427758e609c765d22e9e6b11a59d429",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-shared-chrome-effect/b-effect-before-after.png",
+      "bytes": 56958,
+      "sha256": "2073aaf4bd6178eaec76537fa7d39402fe428ebb9769f1e1fca0cb9ee9d16dfe",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-shared-chrome-effect/full-final.png",
+      "bytes": 3874094,
+      "sha256": "27b894c9581aa0b85ee4a717a35e8751c567ed33a50a7111d540cc194d17b72f",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-shared-chrome-effect/shared-button.png",
+      "bytes": 93985,
+      "sha256": "e4a0291fc386ad1d622aa630d04fbe34a116dd9c249a1ccfc5f87f837213fa70",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-shared-chrome-effect/shared-logo.png",
+      "bytes": 50718,
+      "sha256": "8417d9cd87fef220bac43234b194ea6b00308913101336912285b081f3d10757",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/ad-shared-chrome-effect/story-final.png",
+      "bytes": 1681533,
+      "sha256": "aaae9c7dd593de158c5b713fd0740538d09be6d331abbd7cb2c7bea29c90b834",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale-before/04c-demo-3.png",
+      "bytes": 57435,
+      "sha256": "e4a357975276a0d08b8eda878ed191ffabce7f892529c9a3b4af7728e4d56aed",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale-before/04d-demo-3-confirmed.png",
+      "bytes": 53846,
+      "sha256": "a312aa64888437c953fe5698eb24e9d17f212a2708b76328631aa1c8a4b83926",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale-before/05-demo-4.png",
+      "bytes": 157734,
+      "sha256": "e4becabf12fd3ee84909b81661dd609cb23cab3aecc2684aa74ab95180be3321",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale-before/07-planner-homecook.png",
+      "bytes": 68104,
+      "sha256": "32c6166fe73a1f3ffb5a9d29797b10ec367f52530054fc86ea2a9a55c7c5c948",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale-before/09-planner-complete.png",
+      "bytes": 73096,
+      "sha256": "f0344d32793d5c7f56752d7b63ef30baf46a2cb1c1bcc104b530b01f6d321107",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale-before/11-success.png",
+      "bytes": 76751,
+      "sha256": "5ca03eaa3c47c5b6b66bf99ed52f9740acd561067641d3d61f3da2f4a226d7ce",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale/demo-3-before-after.png",
+      "bytes": 125285,
+      "sha256": "7c03120131bf4c9cf6afdb13cbe884e5f91249b531d22eb5acf82df0082f4709",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale/demo-4-before-after.png",
+      "bytes": 167142,
+      "sha256": "0eac04f84402e416fd92fc84fe0bff3108ecadf84e50d0f6cc5ad427d2d2d20b",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale/planner-before-after.png",
+      "bytes": 98877,
+      "sha256": "5f75c1dabae341e3bea4778ab107bbee17566333a1af212a0228b307b495c81a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/celebration-scale/success-before-after.png",
+      "bytes": 138198,
+      "sha256": "401d157abc5e0406bda722ba577f117ac0b7c070a95976ce6ae26eaab70b8471",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/doodle-rays-blue-white.png",
+      "bytes": 31518,
+      "sha256": "0a535c4a267adcd6f414fbbdcb79da93c4bfe2fa7130bc70b80215037ef4650a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/doodle-scribble-black-white.png",
+      "bytes": 74391,
+      "sha256": "702a996ef643d49e689a054b40a121d7fe4627332f3a5765af9ace11c28182b1",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-result-393x852.jpg",
+      "bytes": 43471,
+      "sha256": "c8f42c78cb50c02afd00b489661b27e4f7dc062206793bc45cbefb54d08e33ff",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-result-full-1680x1440.jpg",
+      "bytes": 44425,
+      "sha256": "8bd2cd8bfea6edb74b847a7615111daaf5c224fcd07330951eadc4555777370a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/03-result-393x852.png",
+      "bytes": 222357,
+      "sha256": "9d198e2acdd8797f93e47f3280b7ea81ec52369a7e30b50bdcd8d9c7c49451ef",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/03-result-iab.png",
+      "bytes": 38717,
+      "sha256": "d73919a65aa5f0359d543d5676919c990424cbae5041bfce7ddfc1004c90296c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/04-demo-2-393x852.png",
+      "bytes": 120481,
+      "sha256": "32c961ae8609fa32e10132818394e8ab4f02d678c2d5af49edd0e4d6c14a115a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/04-demo-2-iab.png",
+      "bytes": 30952,
+      "sha256": "cff043b9657465261fd6df4d0d33309b9c884c944c287d1304ab8c87b69bdeb2",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/06-demo-5-393x852.png",
+      "bytes": 108435,
+      "sha256": "41d136018e9db5d3028cd9dd7cc433e71b0860c8c8d9d9b51f3c0f67ade939db",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/06-demo-5-iab.png",
+      "bytes": 26833,
+      "sha256": "55efa0fcdce6ffeead999b3fd31e45946e5da948b8f2d2d8039cecb54d9813a9",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/07-planner-homecook-393x852.png",
+      "bytes": 169674,
+      "sha256": "782e9f9dff9ae2437c1b44f9cfd34f2170925fa9ef673405891bc3ba5ee14a40",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/07-planner-homecook-iab.png",
+      "bytes": 34991,
+      "sha256": "34e948f402e2806cdd12ba39e9611abb8cf7e550cf560b5bd9fae544140c49d3",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/10-beta-393x852.png",
+      "bytes": 114700,
+      "sha256": "07c20398e4e865f4442d9c987296cb430d3da0b4245f765b3c51714139dbce9d",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/10-beta-iab.png",
+      "bytes": 27888,
+      "sha256": "6462fe85a98448e6af9f9d17f90f34526ea50f82f4e53b1701cd28806977566b",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/11-success-393x852.png",
+      "bytes": 128101,
+      "sha256": "5dd8ed231502c1455f140ac39fee2d977583472cfc83f33602b725040722061a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/11-success-iab.png",
+      "bytes": 27655,
+      "sha256": "829ef0d2c06968fae7dadb54053fe0d8bfb2b73281584769e9f2ca47309660e8",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/comparison-character.png",
+      "bytes": 367193,
+      "sha256": "1f2b9717ebcb55213cca4fc426d82491763c3c94ea3cc1842f305631178f6869",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/comparison-consent.png",
+      "bytes": 112609,
+      "sha256": "c36fffef10667ea28a7e9af713bd797e975e908754d9b3adeeb4440d31d44039",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/comparison-macros.png",
+      "bytes": 101577,
+      "sha256": "eb64fe5bb7605c58e805ec1c9d596c41bc5f33c4a8f115c5b70bd7abf396adda",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/comparison-planner.png",
+      "bytes": 245132,
+      "sha256": "442a463d1348768f008d4636f6a649e52894ebcff3c0e4d09d0b10e59ada1f33",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/comparison-result.png",
+      "bytes": 556686,
+      "sha256": "971e5bb19ada002a17ab53b0c753d32da84179e4be222b00e090a80eb0b01420",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/debug-large-full.png",
+      "bytes": 46847,
+      "sha256": "7f04df7b5f1960fe0511f4002f6aeaeddae776f38b7ba45917342441dc738713",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/full-03-result.png",
+      "bytes": 64170,
+      "sha256": "7f7a8776ecd60916d4c47b491313459c39a675d86ced4d8bdf70f5e9edbd813e",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/full-04-demo-2.png",
+      "bytes": 51026,
+      "sha256": "505fc6d019efaf0323270e920dac4d93894002412e52a2a35ea6011fe5908be4",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/full-06-demo-5.png",
+      "bytes": 45266,
+      "sha256": "88d1bb59c7fcf936bf98dd15e249fe9c1ab0a01b96baccbcd687a879becfa906",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/full-07-planner-homecook.png",
+      "bytes": 59269,
+      "sha256": "93d8a0770bbe885b4932479d3a7a450a08ef182c8654e8c74166e02a12f0b01e",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/full-10-beta.png",
+      "bytes": 46966,
+      "sha256": "5f88ccabb7bf99a237c3dfe38100a829f7715e127688bea2ca752ba6d7a43c13",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v4/full-11-success.png",
+      "bytes": 46818,
+      "sha256": "adb7ae5f3e7b0b01f9111671e71c94d4e4a4335b2479c9b8df8fa07f56018c23",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v5/10-beta-393x852.png",
+      "bytes": 113457,
+      "sha256": "9172b3008baea0a4e18e2d49a53aef5906b381f9278aac73e77ae8db3be37f35",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v5/11-success-393x852.png",
+      "bytes": 124747,
+      "sha256": "9ae1aaca2855d83bc476b781ba6ca6af39ed937d9a383f7362c61160a2a935db",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v5/full-10-beta.png",
+      "bytes": 46822,
+      "sha256": "8f5249346751012fdf30070e59ae486b94d4f208a49d4b0c83102cf155e215e3",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final-v5/full-11-success.png",
+      "bytes": 46164,
+      "sha256": "2112b631471869a6b72a73f16114e74954dba5fd8295e6ee07d05cdacee555a1",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final/00-hero-a.png",
+      "bytes": 88616,
+      "sha256": "4459246f82e54bfc4c9ae2d8691c6e24da9b7fbf6602c86236d26b352ea159ee",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/00-hero-b.png",
+      "bytes": 88442,
+      "sha256": "202d0aaf1b192a303170a5d6a9c357f2964eba450f67becc4fca825a28729c79",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/00-hero-c.png",
+      "bytes": 85202,
+      "sha256": "fcdca418669bf0fd0215ec590137e1cfd81eb10ea3da8c5ab29391f649632ad7",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/00-hero-d.png",
+      "bytes": 71952,
+      "sha256": "1030438932bd32ecc63044200b5b5e17eb88b6708946c1f1c4fc19bcbef76e63",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/01-hero.png",
+      "bytes": 177385,
+      "sha256": "d3d087026ff4eace5eef9120eff5b8ed48f168a7b9fe0794c6d8e4bc5dc531d4",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/02-question-1.png",
+      "bytes": 24944,
+      "sha256": "8cdaacff6d8f0ea4c0c7d5b68cee63f0abbe810114f9fa0fa2cbc846e88ae14d",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/03-result-eyeballing-393x852.png",
+      "bytes": 161413,
+      "sha256": "344374ff736ef33a314497773bbdc8512223fda73f213c78031b9272a4bf0b8a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/final/03-result-eyeballing.png",
+      "bytes": 128795,
+      "sha256": "125762da160d9f608cd61375eabe8817dab8b4d5c77f0172af1bf3976007b517",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/03a-demo-1.png",
+      "bytes": 185909,
+      "sha256": "1ef445f02d1b8af43e386c730f2becf2779a8316457cc8a3f33f53e8e5c214eb",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/03b-demo-1-loading.png",
+      "bytes": 138161,
+      "sha256": "441a5f3ead5480ffc970f1f0a1a788536f8eb9f32637c2e16528e7d2632943fb",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/03c-demo-1-done.png",
+      "bytes": 189990,
+      "sha256": "fb5eba90dd530c71381150d19434529f3f9693e2313ff13f067c578678a52168",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/04-demo-2.png",
+      "bytes": 44657,
+      "sha256": "e28db7261288fa2e759b5a1d9a1bad4b9c59d8421a15eb457c6d8e6fd6888e2d",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/04b-demo-2-adjusted.png",
+      "bytes": 36040,
+      "sha256": "8f89fa436d2db0c2f765c3d01ced1048bbe04a44a839833c66e4c7eea7d3cfcb",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/04c-demo-3.png",
+      "bytes": 89636,
+      "sha256": "0471bc44c8d574a41724555320eaaceacd87f521127234313a111adacdc708c8",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/04d-demo-3-confirmed.png",
+      "bytes": 86148,
+      "sha256": "7bfb2d75917b4a062dd81d2ce270ccea6863e02b6f0c3134cb59eb674d82c560",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/05-demo-4.png",
+      "bytes": 155929,
+      "sha256": "e5101a95a53a621584bf0eacb399c54531b99a72f1f46a16f34bfedc6d785a81",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/06-demo-5.png",
+      "bytes": 37008,
+      "sha256": "163242cc11d4e9b7fd67542afaf3c663ea35d27ca1ebcbc53ffa42a22c1681dd",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/07-planner-homecook.png",
+      "bytes": 68417,
+      "sha256": "c8b7f7be3599739e7f0c9f8fa1d7acdc255722a73eaa61e997609ef8cb0ca2b6",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/08-packaged-food.png",
+      "bytes": 44162,
+      "sha256": "402e1d0f583d5c9c81c409c14d4e1915f074d295778178568175fed535f2dac8",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/09-planner-complete.png",
+      "bytes": 72342,
+      "sha256": "8c19e64b9dcaf4c6c5ee7820e66cc2360f25fd35f71b4e191e4880dc2ac70064",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/09a-planner-complete-initial.png",
+      "bytes": 63361,
+      "sha256": "7bc0d100e0343a21b6ea78cdda023286553f902272d47ea4e2e25cc072dcb02c",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/10-beta.png",
+      "bytes": 53530,
+      "sha256": "316d2621cd92a671e26386bea05f29c4cee22eed3f84cbb6c9d8af52152c314f",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/10b-beta-email-focus.png",
+      "bytes": 54322,
+      "sha256": "905a890f27a1f3ce64d604288affbe59ae94e015a340e5cab0f2dcc525e0ded8",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/final/11-success.png",
+      "bytes": 82661,
+      "sha256": "29cd89e1f913fbdbaec611b0bde365ad24e03dc9446381b39a52f22cefaf32b2",
+      "classification": "tracked_baseline_duplicate",
+      "preservation_decision": "preserve_until_tracked_baseline_is_imported_to_homecook_and_merged_to_origin"
+    },
+    {
+      "path": "evidence/design-qa/full-browser-1400x1200.jpg",
+      "bytes": 65869,
+      "sha256": "ea53f62cbd0d5320ca9fdadc42096ed025ef2a6c9a39ce997d09ced231b51a04",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live-before/00-hero-a.png",
+      "bytes": 65148,
+      "sha256": "2fef4ce134277bc60b6ab73dfd1061217636deed01944d3eab1977b279c74a7a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live-before/00-hero-b.png",
+      "bytes": 71840,
+      "sha256": "f7d00387d749b19917611ce4d3428f0744e042709e12e4ea72a6dd6cfb82439b",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live-before/00-hero-c.png",
+      "bytes": 65131,
+      "sha256": "99d45818f26f62445930c576f8ad35ec6394e827d21c777373667a22b1ad5c0f",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live/a-before-after.png",
+      "bytes": 124898,
+      "sha256": "c3faec43630dd5df9b5e7efd340c2a36864e8fb3d913ce1ebc2d018c41f4f4fd",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live/a-focused.png",
+      "bytes": 101228,
+      "sha256": "492ed00afad8288986b2346dc2e130aa5ff57d052f6d85dbea15b19a2310e891",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live/b-before-after.png",
+      "bytes": 135989,
+      "sha256": "ea5bd86715e4b1d87e47eb681e4f45812537172a8206f317aabdce3fe04dd8b2",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live/b-focused.png",
+      "bytes": 108378,
+      "sha256": "89da5737a6461b74d21a66ac3c4dc2caae69d353d2435cf1890a02ab7b215af5",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live/c-before-after.png",
+      "bytes": 125404,
+      "sha256": "6df346d567f661f0de96605b64ca2ad447e11fec2775def9cb386d663be7f3fe",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/hero-live/c-focused.png",
+      "bytes": 100905,
+      "sha256": "e6430fd3ce007f2b5b71de640dbaec08ee6930a362f67f3b4ae95df2aefbfc20",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/iab-result-472x1022.jpg",
+      "bytes": 13634,
+      "sha256": "fbb02bbcb2bf7a9529188ee0b6353e3b834b7b1a91824dc04eb6661282f4e567",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish-before/00-hero-a.png",
+      "bytes": 59445,
+      "sha256": "0c5b7d1eaef79310138275716b441b66b41c973c8ed6e6275440ccf14ee7fe89",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish-before/04c-demo-3.png",
+      "bytes": 69283,
+      "sha256": "304d19a8eb9c0486d120c6b70d3b0eac48ef183236da938b747f5776edcaf003",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish-before/07-planner-homecook.png",
+      "bytes": 68070,
+      "sha256": "f5c835ef37e4dd0d2e02fc494ff7bd4c59e789810920d38bd1cd6e2793f7665f",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish-before/09-planner-complete.png",
+      "bytes": 72755,
+      "sha256": "abf27f7bea8aca07f7a82c95773a996845493dc086bd81cab93bea5f3aaeaaea",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish-before/10-beta.png",
+      "bytes": 54057,
+      "sha256": "a0cd4ab27f6de2e0e61c6ddc5b06bdf3447bcf604ba0e6dc4c6ff68fad587fd0",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish/demo-3-before-after.png",
+      "bytes": 138961,
+      "sha256": "81deb79df5ef1621db257fcc01cd86724545f67b92918aca901269033829135a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish/email-focus-before-after.png",
+      "bytes": 108012,
+      "sha256": "2b91cd314e820a2f42129733bb81e79a28a0fef631b0d1e9cb355ad875712f7a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish/hero-a-before-after.png",
+      "bytes": 116684,
+      "sha256": "9214789f696f8f9146ea0277c068ff0bd68f0a8d0f1936298b7648a18b32af0c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish/planner-homecook-before-after.png",
+      "bytes": 143120,
+      "sha256": "97e9c1eea11417594f40d6011e697b83f741abf65220ef1fb57c3932bce0ff35",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/landing-polish/planner-product-before-after.png",
+      "bytes": 152950,
+      "sha256": "8d60ebe48f462475e8b86f6b446d64321a09a33f73aaea2b99fa049d5b0a4f68",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability-before/03a-demo-1.png",
+      "bytes": 165278,
+      "sha256": "901ff5462300dae9baa81f75d0dc63c4c7990f391ce5016e52f77c927dad5c4a",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability-before/04-demo-2.png",
+      "bytes": 40907,
+      "sha256": "cc182f7df62b13b0b66b4e1c3c93bdda637323b2719f70411b9fdab3c238d8be",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability-before/04d-demo-3-confirmed.png",
+      "bytes": 53882,
+      "sha256": "a997d66e024ea07a5be09568cd1d843a3968c4ec117ae6c39773c90ae710b90c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability-before/09-planner-complete.png",
+      "bytes": 74281,
+      "sha256": "40c685bd0949b6cbebf3617f7bb3acae05701e5316a67e7b873662ac4f42b4a6",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability-before/10-beta.png",
+      "bytes": 53458,
+      "sha256": "0bf4b04ba5da9380fd794ac751975c7dd33e18f6cede808172ee78846e7da8bc",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability/beta-before-after.png",
+      "bytes": 106589,
+      "sha256": "080dbed73987f3835e8464d138d813f91add84b3a8d12ba416ebe5783f3e2e6e",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability/demo-2-before-after.png",
+      "bytes": 48173,
+      "sha256": "296459906db726ad423f4ef964dc1412f8fc304e5273cebb7b7ca6bb0dcd962c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability/demo-3-before-after.png",
+      "bytes": 66837,
+      "sha256": "4e812fbcfd1f70b4b864f7ec799302af7220aa87efb812bbddbb370f5a661293",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability/demo-nav-before-after.png",
+      "bytes": 170453,
+      "sha256": "e8a242d6fee8817e3476872c751bc1fdfa224bd8cf5b55ede844b32814d8e7ad",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/layout-stability/planner-product-before-after.png",
+      "bytes": 94144,
+      "sha256": "68c56fc89b13437d9621a1c421d65313908e15a531628f22d18149cdf8180608",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/03b-demo-1-loading.png",
+      "bytes": 170233,
+      "sha256": "31803abb1152fa4113bd7307b82a116a06ab1f17a66e8a21f4e90afb827cb186",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/04-demo-2.png",
+      "bytes": 44428,
+      "sha256": "11127f8c5691894be2466dafa5f66d14466f25ca24272bd9381ffebd45da87f4",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/04b-demo-2-adjusted.png",
+      "bytes": 36519,
+      "sha256": "2c50a71d8bc2d2546b5ad199ad65ca8a2cb3d5fc323941b5d3eef451babfc023",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/04d-demo-3-confirmed.png",
+      "bytes": 71068,
+      "sha256": "300f5fa04351d297a72cb15817e55ba85012e8177aed30e31afb30f646fb4438",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/06-demo-5.png",
+      "bytes": 38825,
+      "sha256": "8f3d3a2b012a5c000f445a6f320377693deb138c69c654e836670b3042fe288c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/07-planner-homecook.png",
+      "bytes": 73591,
+      "sha256": "59e32df5e7ce28501e02fdd386585b38cb64c7fba4f45d20e35399d2de3fc95f",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/09-planner-complete.png",
+      "bytes": 78726,
+      "sha256": "daa44a0737a26fe2545b08629daaf0d5110b064d6c37c1e2b03035f252de380f",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation-before/10-beta.png",
+      "bytes": 52495,
+      "sha256": "6f3f990b2d4dc6b54a8e9601ab1c7ac551e038ccc32dbe8b7c1e8a110c16e168",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation/beta-consent-reference.png",
+      "bytes": 32524,
+      "sha256": "50fbf41305f4ca42e9f3c8eae6d73b267a6c9105c5a1a4e0d8238b299e17218c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation/beta-layout-reference.png",
+      "bytes": 249136,
+      "sha256": "4f359fbc516357509ba4f10e987191ad441d93073fea0ca9aba441189c4ade8b",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation/demo-2-initial-before-after.png",
+      "bytes": 56268,
+      "sha256": "3e131e8ef058243f0c984194a21c613dbc71ec3d06a5bfe3a063246986b300af",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation/demo-3-confirmed-before-after.png",
+      "bytes": 123435,
+      "sha256": "32ee5292e72bff4b4a54b4d6cb928042864518bfaafc1e496209bbce80734e13",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation/demo-5-before-after.png",
+      "bytes": 66733,
+      "sha256": "655efb093e79ba376ce35180af5ba47a390df75461c11833e0bea6b5cd46d58c",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/manual-confirmation/planner-homecook-before-after.png",
+      "bytes": 139667,
+      "sha256": "496050699285bf7f8bdc0cc8ac21984ca865a1ba5296575af2c2c20bff77baec",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll-before/02-question-1.png",
+      "bytes": 24659,
+      "sha256": "e23e5a7fde9e81713070040a9b0f16e644cd0628d1b75b271d77cfbce27108cf",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll-before/03a-demo-1.png",
+      "bytes": 168130,
+      "sha256": "94b603f6b4e7dada7d25d3d5d156116598d56307a1eda05992d72e661dcbf8a0",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll-before/04-demo-2.png",
+      "bytes": 43259,
+      "sha256": "b54c4a191d96fdb389a36817bd0fe217b766ac7892c176307a588fbc26d03dc8",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll-before/07-planner-homecook.png",
+      "bytes": 68673,
+      "sha256": "506bf86e257168f61132d692fcb970586263ea55f83ddd4a96091d05cb9dbda3",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll-before/09-planner-complete.png",
+      "bytes": 73521,
+      "sha256": "afdf85a9a18f19ff0aef37346505e8cfc26af2132ce2e35b3da97b82cd891775",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll-before/10-beta.png",
+      "bytes": 61167,
+      "sha256": "652dc9b73c0898b47565cfc0809416a24344b180a270e1186effdeff58a3eaa2",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll-before/11-success.png",
+      "bytes": 84076,
+      "sha256": "375ca9e80f89adadcc56eba301a171a485c30f6c0990b1f9415540aca5697bf5",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll/beta-before-after.png",
+      "bytes": 113488,
+      "sha256": "9532a6ac781ecb1d762800e0d09956a30b81fdbdf6f3b0570390b286399709e7",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll/demo-2-before-after.png",
+      "bytes": 80823,
+      "sha256": "13a21b8208fcda94b1c2cec9fa61a2b1af534854f9f2f2ea83ab64b808499e27",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll/demo-header-before-after.png",
+      "bytes": 323092,
+      "sha256": "fae526723f11e31af7cf89e70b26075aa7abfeee87126a7c48c21452af58960d",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll/planner-before-after.png",
+      "bytes": 133100,
+      "sha256": "924af79c1b55be7ebb637d37c838af4104071f796594a71fda695c487a0c833d",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll/planner-cta-fixed.png",
+      "bytes": 102586,
+      "sha256": "9c6b48d86538df2292fee83ed4051e1ae1d70c25172936cac56339338694e2f5",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll/question-before-after.png",
+      "bytes": 39699,
+      "sha256": "6726ff4f18fd944c3add9289e541d61318c8bdf478ff4d56ade7f0f0dc6e9b20",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/no-scroll/success-before-after.png",
+      "bytes": 155965,
+      "sha256": "27b9f9f2b24f16bcc901b7862fad1671cc971640d52cac7f27032211edd34341",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/result-comparison-v3.jpg",
+      "bytes": 46381,
+      "sha256": "50a36da621b3a9e1ef09c1ba10a0b7d5ece6802059bbadeca26614a2338b0db7",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/design-qa/result-comparison.jpg",
+      "bytes": 45065,
+      "sha256": "d2edcee68e52e0269e7b973ada1190457729e85296a7e71f12fd45f728c0ee78",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/imagegen/welcome-mascot-checkerboard-v1.png",
+      "bytes": 1455227,
+      "sha256": "cc9c192ea56c1dab86fe79163ea4f077f964d33bd2c7bcddf09c6fe6bf956b94",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    },
+    {
+      "path": "evidence/imagegen/welcome-mascot-checkerboard-v2.png",
+      "bytes": 1448273,
+      "sha256": "579abe0f06b92e9d3bb46abc8d1a31fd0ac18a28827b92b86ffa624387808203",
+      "classification": "unique",
+      "preservation_decision": "must_import_to_homecook_or_place_in_verified_archive_before_removal"
+    }
+  ]
+}
