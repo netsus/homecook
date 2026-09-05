@@ -16,6 +16,11 @@ const EXPORT_COLUMNS = [
   "consent_version",
   "consented_at",
 ];
+const DEFAULT_EXPORT_FILTERS = {
+  campaignKey: "weekly_nutrition_2026",
+  consentVersion: "marketing-demand-validation-v1",
+  creativeKey: "weekly_nutrition_v2",
+};
 
 export class MarketingValidationOperationError extends Error {}
 
@@ -221,15 +226,41 @@ function renderLeadCsv(rows) {
   return `${lines.join("\n")}\n`;
 }
 
-async function loadAcceptedLeadRows({ client, fixtureRows }) {
+function parseLeadExportFilters(args) {
+  const filters = {
+    campaignKey: (args.campaign_key ?? DEFAULT_EXPORT_FILTERS.campaignKey).trim(),
+    consentVersion: (args.consent_version ?? DEFAULT_EXPORT_FILTERS.consentVersion).trim(),
+    creativeKey: (args.creative_key ?? DEFAULT_EXPORT_FILTERS.creativeKey).trim(),
+  };
+  for (const [flag, value] of [
+    ["--campaign-key", filters.campaignKey],
+    ["--consent-version", filters.consentVersion],
+    ["--creative-key", filters.creativeKey],
+  ]) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,127}$/u.test(value)) {
+      throw new MarketingValidationOperationError(
+        `${flag}는 1~128자의 소문자 영문, 숫자, 밑줄, 하이픈만 사용할 수 있어요.`,
+      );
+    }
+  }
+  return filters;
+}
+
+function matchesLeadExportFilter(row, filters) {
+  return (
+    row.campaign_key === filters.campaignKey
+    && row.creative_key === filters.creativeKey
+    && row.consent_version === filters.consentVersion
+    && typeof row.consented_at === "string"
+    && row.consented_at.length > 0
+  );
+}
+
+async function loadAcceptedLeadRows({ client, fixtureRows, filters }) {
   if (fixtureRows) {
     return fixtureRows.filter((row) => (
-      row.campaign_key === "weekly_nutrition_2026"
-      && row.creative_key === "weekly_nutrition_v2"
+      matchesLeadExportFilter(row, filters)
       && row.lead_submission_status === "accepted"
-      && row.consent_version === "marketing-demand-validation-v1"
-      && typeof row.consented_at === "string"
-      && row.consented_at.length > 0
       && typeof row.email === "string"
       && row.email.length > 0
     ));
@@ -244,10 +275,10 @@ async function loadAcceptedLeadRows({ client, fixtureRows }) {
       .select("id,email,consent_version,consented_at,lead_submitted_at", {
         count: "exact",
       })
-      .eq("campaign_key", "weekly_nutrition_2026")
-      .eq("creative_key", "weekly_nutrition_v2")
+      .eq("campaign_key", filters.campaignKey)
+      .eq("creative_key", filters.creativeKey)
       .eq("lead_submission_status", "accepted")
-      .eq("consent_version", "marketing-demand-validation-v1")
+      .eq("consent_version", filters.consentVersion)
       .not("consented_at", "is", null)
       .not("email", "is", null)
       .order("lead_submitted_at", { ascending: true })
@@ -268,24 +299,57 @@ async function loadAcceptedLeadRows({ client, fixtureRows }) {
   return rows;
 }
 
+async function countDuplicateLeadRows({ client, fixtureRows, filters }) {
+  if (fixtureRows) {
+    return fixtureRows.filter((row) => (
+      matchesLeadExportFilter(row, filters)
+      && row.lead_submission_status === "duplicate"
+    )).length;
+  }
+
+  const { count, error } = await client
+    .from(TABLE)
+    .select("id", { count: "exact" })
+    .eq("campaign_key", filters.campaignKey)
+    .eq("creative_key", filters.creativeKey)
+    .eq("lead_submission_status", "duplicate")
+    .eq("consent_version", filters.consentVersion)
+    .not("consented_at", "is", null)
+    .limit(1);
+  if (error || !Number.isSafeInteger(count) || count < 0) {
+    throw new MarketingValidationOperationError("duplicate lead 집계 조회에 실패했어요.");
+  }
+  return count;
+}
+
 export async function runMarketingLeadExport({
   argv = process.argv.slice(2),
   cwd = REPO_ROOT,
   env = process.env,
 } = {}) {
-  const args = parseArgs(argv, new Set(["--mock-db-export", "--output"]));
+  const args = parseArgs(argv, new Set([
+    "--campaign-key",
+    "--consent-version",
+    "--creative-key",
+    "--mock-db-export",
+    "--output",
+  ]));
   const outputPath = await resolveSafeArtifactPath(args.output, cwd, {
     extension: ".csv",
     flagName: "--output",
   });
+  const filters = parseLeadExportFilters(args);
   const fixtureRows = await readFixtureRows(args.mock_db_export);
   const client = fixtureRows
     ? null
     : createOperatorClient(env, "marketing-validation-export");
-  const rows = await loadAcceptedLeadRows({ client, fixtureRows });
+  const rows = await loadAcceptedLeadRows({ client, fixtureRows, filters });
+  const duplicateCount = await countDuplicateLeadRows({ client, fixtureRows, filters });
   await writePrivateFile(outputPath, renderLeadCsv(rows));
 
   return {
+    accepted_count: rows.length,
+    duplicate_count: duplicateCount,
     exported_count: rows.length,
     output_path: path.relative(cwd, outputPath),
   };

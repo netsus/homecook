@@ -34,6 +34,7 @@ const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const EMAIL_PATTERN =
   /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/iu;
+const MARKETING_EDGE_EVIDENCE_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
 type ParsedBody =
   | {
@@ -146,6 +147,7 @@ interface MarketingValidationHandlerDependencies {
   verifyTurnstile: (
     token: string,
     allowedHostnames: readonly string[],
+    expectedHostname: string,
   ) => Promise<TurnstileVerificationResult>;
 }
 
@@ -437,7 +439,7 @@ export function createMarketingLeadGateFromEnv() {
       "MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE",
       "MARKETING_EDGE_RULE_EVIDENCE",
     );
-    if (!secret || !rawHostnames || !edgeEvidence) {
+    if (!secret || !rawHostnames || !MARKETING_EDGE_EVIDENCE_PATTERN.test(edgeEvidence)) {
       return {
         ok: false,
         code: "LEAD_CAPTURE_NOT_READY",
@@ -465,6 +467,7 @@ export function createTurnstileVerifierFromEnv() {
   return async (
     token: string,
     allowedHostnames: readonly string[],
+    expectedHostname: string,
   ): Promise<TurnstileVerificationResult> => {
     const secret = readEnvValue(
       "MARKETING_TURNSTILE_SECRET",
@@ -510,6 +513,7 @@ export function createTurnstileVerifierFromEnv() {
         data.success !== true
         || typeof data.hostname !== "string"
         || !allowedHostnames.includes(data.hostname)
+        || data.hostname !== expectedHostname
         || data.action !== MARKETING_VALIDATION_TURNSTILE_ACTION
       ) {
         return {
@@ -915,6 +919,7 @@ export function createMarketingValidationHandler(
           const verification = await dependencies.verifyTurnstile(
             value.turnstile_token,
             gate.allowedHostnames,
+            new URL(requestOrigin).hostname,
           );
           if (!verification.ok) {
             return fail(verification.code, verification.message, 422);
