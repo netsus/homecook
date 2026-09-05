@@ -74,6 +74,17 @@ describe("prelaunch web deployment", () => {
     expect(classifyPrelaunchScope(files, basePackage, basePackage).support).toEqual(files);
     for (const file of ["scripts/full-local-production-runtime.mjs", "scripts/worker-start.mjs", "scripts/lib/start-production-runtime.mjs"]) expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow();
   });
+  it("allows the CI path filter alongside web changes without treating it as runtime code", () => {
+    expect(classifyPrelaunchScope(["app/beta/page.tsx", "scripts/ci-path-filter.mjs"], basePackage, basePackage)).toEqual({
+      web: ["app/beta/page.tsx"],
+      database: [],
+      support: ["scripts/ci-path-filter.mjs"],
+      api: [],
+    });
+  });
+  it.each(["scripts/ci-path-filter-extra.mjs", "scripts/lib/ci-path-filter.mjs", "scripts/arbitrary.mjs"])("does not extend the CI exception to %s", (file) => {
+    expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow("허용");
+  });
   it("defaults to origin/master and rejects ambiguous, duplicate or unknown options", () => {
     expect(parsePrelaunchOptions([])).toEqual({ ref: "origin/master", refOption: "--ref" });
     expect(parsePrelaunchOptions(["--env-file", "/private/env", "--ref", "abc", "--db-config", "/private/db", "--db-baseline", "/private/baseline.json"])).toEqual({ ref: "abc", refOption: "--ref", envFile: "/private/env", dbConfig: "/private/db", dbBaseline: "/private/baseline.json" });
@@ -95,11 +106,20 @@ describe("prelaunch web deployment", () => {
     for (const hook of ["test:missing", "test:product; echo secret", "marketing:retention:purge", "test:product --flag"]) expect(() => prelaunchVerificationScripts(api, manifest, hook)).toThrow();
     expect(parsePrelaunchOptions(["--verify-script", "test:product"]).verifyScript).toBe("test:product");
   });
-  it("runs unit tests with React test mode while preserving production settings for operational verification", () => {
-    const environment = { NODE_ENV: "production", MARKETING_TURNSTILE_SECRET: "private-value", HOMECOOK_AUTH_AUTHORITY: "local" };
-    for (const script of ["test", "test:product", "test:harness"]) expect(prelaunchVerificationEnvironment(script, environment)).toEqual({ ...environment, NODE_ENV: "test" });
-    for (const script of ["verify:production-domain-contract", "marketing:preview:preflight"]) expect(prelaunchVerificationEnvironment(script, environment)).toEqual(environment);
+  it("isolates unit tests from deployment settings while retaining only OS and CI execution values", () => {
+    const execution = { HOME: "/home/test", PATH: "/usr/bin", TMPDIR: "/tmp", LANG: "en_US.UTF-8", LC_ALL: "C", USER: "tester", LOGNAME: "tester", SHELL: "/bin/sh", CI: "true" };
+    const environment = Object.freeze({ ...execution, NODE_ENV: "production", NEXT_PUBLIC_MARKETING_TURNSTILE_SITE_KEY: "public-test-key", MARKETING_TURNSTILE_SECRET: "private-test-value", MARKETING_LEAD_PROTECTION_READY: "true", HOMECOOK_AUTH_AUTHORITY: "local", ARBITRARY_SETTING: "test-value" });
+    for (const script of ["test", "test:product", "test:harness"]) expect(prelaunchVerificationEnvironment(script, environment)).toEqual({ ...execution, NODE_ENV: "test" });
+    expect(prelaunchVerificationEnvironment("test:product", {})).toEqual({ NODE_ENV: "test" });
     expect(environment.NODE_ENV).toBe("production");
+  });
+  it("preserves production settings for operational verification without mutating its input", () => {
+    const environment = Object.freeze({ NODE_ENV: "production", MARKETING_TURNSTILE_SECRET: "private-test-value", HOMECOOK_AUTH_AUTHORITY: "local" });
+    for (const script of ["verify:production-domain-contract", "marketing:preview:preflight", "marketing:production:readiness"]) {
+      const result = prelaunchVerificationEnvironment(script, environment);
+      expect(result).toEqual(environment);
+      expect(result).not.toBe(environment);
+    }
   });
   it("never mutates the running web after a required API verification fails", async () => {
     const actions: string[] = [];
