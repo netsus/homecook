@@ -7,6 +7,10 @@ export function fetchPrelaunchLanding(origin) {
   return fetch(`${origin}/beta?ad_variant=a`, { redirect: "error", signal: AbortSignal.timeout(2500) });
 }
 
+export function prelaunchChangedFiles(git, from, to) {
+  return git(["diff", "--name-only", "--no-renames", "-z", from, to]).split("\0").filter(Boolean);
+}
+
 export function classifyPrelaunchScope(files, before, after) {
   const scope = { web: [], database: [], support: [], api: [] };
   const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/)|^(?:AGENTS|CLAUDE|README)\.md$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
