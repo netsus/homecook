@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createServer } from "node:http";
 import {
   assertFrontendScope,
   classifyPrelaunchScope,
@@ -17,6 +18,7 @@ import {
   parsePrelaunchArgs,
   restartLaunchAgent,
   prelaunchSourceAncestry,
+  fetchPrelaunchLanding,
 } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const basePackage = { scripts: { build: "next build" }, dependencies: { next: "15.0.0" } };
@@ -29,6 +31,31 @@ const plist = {
 };
 
 describe("prelaunch web deployment", () => {
+  it.each([false, true])("requests the canonical landing directly and rejects redirects (redirect=%s)", async (redirectCanonical) => {
+    const requests: string[] = [];
+    const server = createServer((request, response) => {
+      requests.push(request.url ?? "");
+      if (request.url === "/beta?ad_variant=a" && !redirectCanonical) {
+        response.writeHead(200, { "Content-Type": "text/html" });
+        response.end("<main>Landing ready</main>");
+      } else {
+        response.writeHead(307, { Location: "/beta?ad_variant=a" });
+        response.end();
+      }
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Missing test server address");
+      const result = fetchPrelaunchLanding(`http://127.0.0.1:${address.port}`);
+      if (redirectCanonical) await expect(result).rejects.toThrow();
+      else expect(await (await result).text()).toBe("<main>Landing ready</main>");
+      expect(requests).toEqual(["/beta?ad_variant=a"]);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
   it("allows web server and shared component changes", () => {
     expect(() => assertFrontendScope(["lib/marketing/marketing-validation-client-session.ts", "components/youtube-extraction/youtube-extraction-notification-center.tsx"], basePackage, basePackage)).not.toThrow();
     expect(() => assertFrontendScope(["lib/marketing/marketing-validation-session.ts"], basePackage, basePackage)).not.toThrow();

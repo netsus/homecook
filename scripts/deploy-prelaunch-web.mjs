@@ -7,7 +7,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
-import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist } from "./lib/prelaunch-web-deploy.mjs";
+import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist, fetchPrelaunchLanding } from "./lib/prelaunch-web-deploy.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
@@ -112,7 +112,7 @@ async function smoke(port, cwd, buildId, recovering = false) {
     try {
       const origin = `http://127.0.0.1:${port}`;
       const get = (path) => fetch(`${origin}${path}`, { redirect: "error", signal: AbortSignal.timeout(2500) });
-      const page = await get("/beta");
+      const page = await fetchPrelaunchLanding(origin);
       if (!page.ok) throw new Error();
       const html = await page.text();
       const manifest = await get(manifestPath);
