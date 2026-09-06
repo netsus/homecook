@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createServer } from "node:http";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   assertFrontendScope,
   classifyPrelaunchScope,
@@ -19,6 +23,7 @@ import {
   restartLaunchAgent,
   prelaunchSourceAncestry,
   fetchPrelaunchLanding,
+  prelaunchChangedFiles,
 } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const basePackage = { scripts: { build: "next build" }, dependencies: { next: "15.0.0" } };
@@ -31,6 +36,32 @@ const plist = {
 };
 
 describe("prelaunch web deployment", () => {
+  it("preserves Korean and newline-containing Git paths without broadening the deploy scope", () => {
+    const repository = mkdtempSync(join(tmpdir(), "prelaunch-paths-"));
+    const git = (args: string[]) => execFileSync("git", ["-C", repository, ...args], { encoding: "utf8" });
+    try {
+      git(["init", "--quiet"]);
+      git(["-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--allow-empty", "--quiet", "-m", "Base"]);
+      const paths = ["docs/화면정의서.md", "docs/줄\n바꿈.md"];
+      mkdirSync(join(repository, "docs"));
+      for (const path of paths) writeFileSync(join(repository, path), "fixture");
+      git(["add", "--", ...paths]);
+      git(["-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Documents"]);
+      const files = prelaunchChangedFiles(git, "HEAD~1", "HEAD");
+      expect([...files].sort()).toEqual([...paths].sort());
+      expect(classifyPrelaunchScope(files, basePackage, basePackage).support.sort()).toEqual([...paths].sort());
+
+      const denied = " scripts\nworker.mjs";
+      writeFileSync(join(repository, denied), "fixture");
+      git(["add", "--", denied]);
+      git(["-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Unsupported path"]);
+      const unsupported = prelaunchChangedFiles(git, "HEAD~1", "HEAD");
+      expect(unsupported).toEqual([denied]);
+      expect(() => classifyPrelaunchScope(unsupported, basePackage, basePackage)).toThrow("허용");
+    } finally {
+      rmSync(repository, { recursive: true, force: true });
+    }
+  });
   it.each([false, true])("requests the canonical landing directly and rejects redirects (redirect=%s)", async (redirectCanonical) => {
     const requests: string[] = [];
     const server = createServer((request, response) => {
