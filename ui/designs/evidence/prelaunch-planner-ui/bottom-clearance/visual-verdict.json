@@ -1,0 +1,13 @@
+{
+  "score": 97,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "가변 하단 spacer와 추가 최소높이 제거",
+    "계획 약355px/기록64px 공백을 약12px로 축소"
+  ],
+  "suggestions": [],
+  "reasoning": "모바일3크기하단검사6개와날짜동일성8개통과. 마지막카드가하단탭에가려지지않음.",
+  "next_actions": [],
+  "evidence_dir": "ui/designs/evidence/prelaunch-planner-ui/bottom-clearance"
+}

@@ -551,3 +551,11 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 - complete, partial/minimum, unavailable, mixed, loading, error/retry, empty/no-entry, stale-range guard를 포함한다.
 - 같은 viewport의 before/after를 나란히 비교해 first viewport day overview, week controls, primary CTA, localized scroll, page overflow를 판정한다.
 - 최종 authority report 전까지 이 addendum은 `temporary`이며 구현 pass나 `confirmed`를 의미하지 않는다.
+
+## 2026-09-06 사용자 승인 회귀 복구 기준
+
+사용자는 위 selected-day 중심 구현에서 잃은 기존 조작을 되살리도록 명시적으로 요청했다. 이번 수정은 `2a32d20b`의 날짜 이동·모바일 7일 카드·데스크톱 날짜×끼니 표·빈/채운 끼니 추가 경로를 기준으로 한다. 요리 계획/식사 기록 탭, 실제 섭취량 집계, 현재 권한·오류 상태, legacy 완제품 읽기/삭제는 보존한다. 계획 영양 합계·새 완제품 계획은 되살리지 않는다. 이 범위에서 기존 추가 CTA 유보와 selected-day-only 설명을 대체한다. 새 screenshot/동작 검증이 필요하며 과거 authority pass를 자동 승계하지 않는다.
+
+## 2026-09-06 추가 사용자 시각 기준
+
+`ui/designs/evidence/prelaunch-planner-ui/reference-mobile.png`가 이번 카드/날짜 줄 기준이다. 공개 예시와 로그인 액션, 작은 desktop 탭, 단일 상태 요약, 큰 음식명/개별 kcal·단백질/작은 파란 +를 반영했다. 데이터 권한과 기존 주간 탐색을 유지한다. 새 로컬 캡처/검증은 같은 evidence 디렉터리와 workpack prelaunch-ui-verification 문서를 따르며 과거 authority confirmed를 이번 배포 승인으로 승계하지 않는다.

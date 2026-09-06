@@ -316,3 +316,11 @@
 - verification: focused Vitest `82/82`, product Vitest `2,913 passed / 175 skipped`, marketing Playwright `16 passed / 2 intentional skips`, marketing a11y `3/3`, marketing visual `3/3`, lint, typecheck and production build
 - remaining gate: this implementation task does not self-approve or merge. A separate frontend/design reviewer must review the exact candidate head before Ready or merge.
 - mobile no-scroll successor: 집밥 유형 결과만 내부 세로 스크롤을 허용한다. Hero·quiz·experience·planner·packaged·beta·done은 viewport 스크롤을 만들지 않으며, 두 planner의 내일 card는 화면 하단에서 잘린 read-only 배경으로 두고 고정 CTA가 그 위에 겹친다. `390×700` evidence는 `no-scroll-*.png` 3장이다.
+
+## 2026-09-06 사용자 승인 — 랜딩 a·b·c 세 가지로 통합
+
+- 신규 공개 Hero는 `ad_variant=a|b|c` 세 가지로 운영한다. `/beta` 기본 진입, `d`, `default`, 알 수 없는 variant는 기본 `a`로 연결한다. 위 attribution/Manual QA의 5가지 Hero 운영 기준을 이번 범위에서 대체한다.
+- recognized `utm_content` 우선순위는 유지하며 `hook_reentry→a`, `hook_cooked_weight→b`, `hook_calorie_quiz→c`, 기존 `hook_workaround→a`로 해석한다. redirect는 원래 UTM·return query의 값과 중복 값을 보존한다. `ad_variant`만 실제 표시될 a/b/c로 정규화한다.
+- 신규 `view`의 resolved variant도 동일한 a/b/c로 정규화한다. 기존 API의 historical enum(`d|default` 포함), DB schema, 이전 session/lead/attribution 원천 row는 변경·삭제하지 않는다. 기존 session의 first-write-wins와 resume도 유지한다.
+- `/beta?result=<known-key>`는 독립 Hero가 아닌 기존 read-only 공유 결과이므로 redirect하지 않는다. 공유 URL에 UTM 또는 ad_variant를 새로 삽입하지 않는다.
+- 질문·체험·리드·동의·Turnstile·권한·배포 계약은 동일하다. 로컬 구현/검증만 승인하며 운영 배포는 포함하지 않는다.
