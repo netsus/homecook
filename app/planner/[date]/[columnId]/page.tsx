@@ -7,6 +7,7 @@ import { resolveNextPath } from "@/lib/auth/callback";
 import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
 import { readRecipeSnapshotUiMode } from
   "@/lib/server/recipe-snapshot-entrypoint";
+import { loadPlannerMealNutritionForServer } from "@/lib/server/planner-meal-nutrition-view";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
@@ -70,6 +71,10 @@ export default async function MealScreenPage({
     redirect(`/login?next=${encodeURIComponent(returnPath)}`);
   }
 
+  const initialMealNutrition = initialAuthenticated
+    ? await loadPlannerMealNutritionForServer({ startDate: date, endDate: date })
+    : {};
+
   return (
     <AppShell
       bottomTabsMode="hidden"
@@ -80,6 +85,7 @@ export default async function MealScreenPage({
       <MealScreen
         columnId={columnId}
         initialAuthenticated={initialAuthenticated}
+        initialMealNutrition={initialMealNutrition}
         planDate={date}
         recipeSnapshotUiMode={recipeSnapshotUiMode}
         slotName={slot ?? ""}

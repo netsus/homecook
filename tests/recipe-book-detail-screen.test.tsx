@@ -1230,7 +1230,7 @@ describe("RecipeBookDetailScreen", () => {
     const globalNav = screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" });
     expect(globalNav).toBeTruthy();
     expect(
-      within(globalNav).getByRole("link", { name: "마이페이지" }).getAttribute("aria-current"),
+      screen.getByRole("link", { name: "내 프로필" }).getAttribute("aria-current"),
     ).toBe("page");
     expect(screen.queryByLabelText("뒤로 가기")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();

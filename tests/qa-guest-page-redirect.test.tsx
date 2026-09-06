@@ -59,6 +59,7 @@ async function importYoutubeImportPage() {
 
 describe("explicit QA guest page redirects without Supabase env", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
     vi.resetModules();
     getServerAuthUser.mockReset();
     hasSupabasePublicEnv.mockReset();
@@ -67,6 +68,15 @@ describe("explicit QA guest page redirects without Supabase env", () => {
     redirect.mockClear();
     hasSupabasePublicEnv.mockReturnValue(false);
     vi.stubGlobal("React", React);
+  });
+
+  it("allows guests to see the YouTube preparation notice without authentication", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    readE2EAuthOverrideCookie.mockReturnValue("guest");
+    const { default: Page } = await importYoutubeImportPage();
+    await expect(Page({ searchParams: Promise.resolve({}) })).resolves.toBeTruthy();
+    expect(redirect).not.toHaveBeenCalled();
+    expect(getServerAuthUser).not.toHaveBeenCalled();
   });
 
   it("redirects the meal screen QA guest while preserving the return path", async () => {

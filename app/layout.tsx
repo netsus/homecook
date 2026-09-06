@@ -1,3 +1,4 @@
+import { PrelaunchNotice, ServiceNotificationBoundary } from "@/components/shared/prelaunch-notice";
 import type { Metadata } from "next";
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import { ProviderMemorySync } from "@/components/auth/provider-memory-sync";
@@ -76,8 +77,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        <PrelaunchNotice />
         {children}
         <ProviderMemorySync />
+        <ServiceNotificationBoundary>
         <GlobalToastPresentationProvider>
           <GlobalToastPresentationSlot />
           <GrowthToastStack
@@ -91,6 +94,7 @@ export default function RootLayout({
             resolveAuthenticatedOnClient
           />
         </GlobalToastPresentationProvider>
+        </ServiceNotificationBoundary>
         <QaFixtureToolbar />
       </body>
     </html>

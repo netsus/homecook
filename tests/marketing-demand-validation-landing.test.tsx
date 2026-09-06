@@ -142,11 +142,21 @@ describe("marketing demand validation v2 landing", () => {
     expect(screen.getByRole("button", { name: "새로 시작하기" })).toBeTruthy();
   });
 
+  it("uses a compact brand-free loading state while the initial request is pending", async () => {
+    postMarketingValidation.mockImplementation(() => new Promise(() => {}));
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+    const loading = screen.getByRole("status", { name: "테스트 불러오는 중" });
+    expect(loading.textContent).toContain("테스트를 불러오고 있어요.");
+    expect(loading.querySelector("img")).toBeNull();
+    expect(loading.querySelector(".brand")).toBeNull();
+  });
+
   it.each([
     ["hook_reentry", "a", "레시피만 가져오면"],
     ["hook_cooked_weight", "b", "수분 빠진 제육볶음 300g"],
     ["hook_calorie_quiz", "c", "내 집밥에"],
-    ["hook_workaround", "d", "내가 만든 집밥을"],
+    ["hook_workaround", "a", "레시피만 가져오면"],
   ])("uses utm_content %s ahead of candidate variant %s", async (utm, variant, title) => {
     window.history.replaceState({}, "", `/beta?utm_content=${utm}&ad_variant=d`);
     installHappyApi();
@@ -156,13 +166,13 @@ describe("marketing demand validation v2 landing", () => {
     expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({ action: "view", ad_variant: variant, utm_content: utm }));
   });
 
-  it("falls back to default Hero for unknown result and preserves allowlisted attribution", async () => {
+  it("falls back to Hero a for unknown result and preserves allowlisted attribution", async () => {
     window.history.replaceState({}, "", "/beta?result=not-real&utm_source=campaign&ad_variant=z");
     installHappyApi();
     const { MarketingDemandValidationScreen } = await importScreen();
     render(<MarketingDemandValidationScreen />);
-    expect(await screen.findByRole("heading", { name: "집밥도 정확하게 기록할 수 있을까?" })).toBeTruthy();
-    expect(postMarketingValidation).toHaveBeenCalledWith({ action: "view", honeypot: "", ad_variant: "default", utm_source: "campaign" });
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith({ action: "view", honeypot: "", ad_variant: "a", utm_source: "campaign" });
   });
 
   it("renders a known opaque result as read-only without recording quiz events", async () => {
@@ -173,6 +183,36 @@ describe("marketing demand validation v2 landing", () => {
     expect(await screen.findByRole("heading", { name: "프로 계량러" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "나도 테스트하기" })).toBeTruthy();
     expect(postMarketingValidation).not.toHaveBeenCalled();
+  });
+
+  it.each([["", "a"], ["b", "b"], ["d", "a"]])("starts a new test from shared variant %s at the canonical %s URL", async (candidate, variant) => {
+    window.history.replaceState({}, "", `/beta?result=pro-measurer&ad_variant=${candidate}&utm_source=shared-source&email=must-not-stay`);
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await user.click(await screen.findByRole("button", { name: "나도 테스트하기" }));
+    await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" });
+    expect(window.location.pathname + window.location.search).toBe(`/beta?ad_variant=${variant}`);
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({ action: "view", ad_variant: variant, utm_source: "shared-source" }));
+  });
+
+  it("initializes a session before starting the quiz after leaving a shared result via the back button", async () => {
+    window.history.replaceState({}, "", "/beta?result=pro-measurer&ad_variant=b");
+    let viewed = false;
+    postMarketingValidation.mockImplementation(async (body: { action: string }) => {
+      if (body.action === "view") viewed = true;
+      if (!viewed) return { success: false, data: null, error: { code: "SESSION_NOT_FOUND", message: "진행 정보를 찾지 못했어요.", fields: [] } };
+      return ok(body.action);
+    });
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await user.click(await screen.findByRole("button", { name: "처음 화면" }));
+    await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect((await screen.findByRole("progressbar")).getAttribute("aria-valuenow")).toBe("1");
+    expect(window.location.pathname + window.location.search).toBe("/beta?ad_variant=b");
+    expect(postMarketingValidation.mock.calls.map(([body]) => body.action)).toEqual(["view", "quiz_started"]);
   });
 
   it("leaves shared-result preview with one initialization and resumes session snapshots", async () => {

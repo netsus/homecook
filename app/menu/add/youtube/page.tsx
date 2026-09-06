@@ -1,3 +1,5 @@
+import { YoutubePreparationNotice } from "@/components/shared/prelaunch-notice";
+import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
@@ -29,12 +31,18 @@ interface YoutubeImportPageProps {
 }
 
 export default async function YoutubeImportPage({ searchParams }: YoutubeImportPageProps) {
+  const { date, columnId, extractionId, restore, returnSurface, returnTo, slot, youtubeUrl } =
+    await searchParams;
+
+  if (isPrelaunchUiEnabled() && !extractionId) {
+    return <main><YoutubePreparationNotice backHref={date ? `/planner?date=${encodeURIComponent(date)}` : "/planner"} /></main>;
+  }
+
   if (!isYoutubeImportEnabled()) {
     notFound();
   }
 
-  const { date, columnId, extractionId, restore, returnSurface, returnTo, slot, youtubeUrl } =
-    await searchParams;
+
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
   const user =

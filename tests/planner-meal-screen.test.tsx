@@ -37,6 +37,7 @@ const isCookingApiError = vi.fn(
 const mockRouterBack = vi.fn();
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
+const mockRouterRefresh = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
 }));
@@ -104,6 +105,7 @@ vi.mock("next/navigation", () => ({
     back: mockRouterBack,
     push: mockRouterPush,
     replace: mockRouterReplace,
+    refresh: mockRouterRefresh,
   }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));
@@ -297,6 +299,7 @@ describe("MealScreen", () => {
     mockRouterBack.mockReset();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
+    mockRouterRefresh.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     window.sessionStorage.clear();
@@ -779,6 +782,48 @@ describe("MealScreen", () => {
     expect(card.className).toContain("web-meal-row-card");
     expect(list.querySelectorAll(".web-meal-row-card")).toHaveLength(1);
     expect(card.querySelector(".web-meal-list-actions-panel")).toBeTruthy();
+  });
+
+  it.each([false, true])("shows each pinned meal's nutrition and hides stale servings until RSC refresh (desktop=%s)", async (desktop) => {
+    setDesktopViewport(desktop);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [
+      buildMeal({ id: "meal-1", recipe_title: "김치찌개", planned_servings: 2 }),
+      buildMeal({ id: "meal-2", recipe_title: "된장국", planned_servings: 1 }),
+    ] });
+    updateMealServings.mockResolvedValue({ id: "meal-1", planned_servings: 3, status: "registered" });
+    const nutrition = (plannedServings: number, kcal: number, protein: number) => ({
+      plannedServings, values: {
+        energy_kcal: { amount: kcal, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+        protein_g: { amount: protein, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      },
+    });
+    const initialMealNutrition = { "meal-1": nutrition(2, 450, 24), "meal-2": nutrition(1, 90, 5) };
+    const user = userEvent.setup();
+    const { rerender } = render(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={initialMealNutrition} />);
+    const firstNutrition = await screen.findByRole("region", { name: "김치찌개 계획 영양정보" });
+    const secondNutrition = screen.getByRole("region", { name: "된장국 계획 영양정보" });
+    expect(within(firstNutrition).getByText("450 kcal")).toBeTruthy();
+    expect(within(firstNutrition).getByText("24 g")).toBeTruthy();
+    expect(within(secondNutrition).getByText("90 kcal")).toBeTruthy();
+    expect(within(secondNutrition).queryByText("450 kcal")).toBeNull();
+
+    const card = desktop
+      ? screen.getByLabelText("김치찌개 끼니 음식")
+      : screen.getByLabelText("김치찌개 식사 카드");
+    await user.click(within(card).getByRole("button", { name: "인분 증가" }));
+    await waitFor(() => expect(updateMealServings).toHaveBeenCalledWith("meal-1", 3));
+    await waitFor(() => expect(mockRouterRefresh).toHaveBeenCalledOnce());
+    expect(within(firstNutrition).queryByText("450 kcal")).toBeNull();
+    expect(within(firstNutrition).getByText("영양 정보를 다시 확인하고 있어요.")).toBeTruthy();
+    expect(within(secondNutrition).getByText("90 kcal")).toBeTruthy();
+
+    rerender(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={{
+      ...initialMealNutrition, "meal-1": nutrition(3, 640, 35),
+    }} />);
+    expect(within(firstNutrition).getByText("640 kcal")).toBeTruthy();
+    expect(within(firstNutrition).getByText("35 g")).toBeTruthy();
+    expect(within(firstNutrition).queryByText("450 kcal")).toBeNull();
   });
 
   // ── Stepper — registered (no modal) ────────────────────────────────────

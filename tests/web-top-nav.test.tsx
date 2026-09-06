@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WebTopNav } from "@/components/web/web-top-nav";
 
@@ -51,5 +51,23 @@ describe("WebTopNav service name", () => {
       "/brand/mumeok-symbol-192.png",
     );
     expect(symbol?.getAttribute("alt")).toBe("");
+  });
+});
+
+
+describe("planner destinations", () => {
+  afterEach(cleanup);
+  it("keeps both dated planner destinations and delegates in-screen segment changes", () => {
+    const onSelect = vi.fn();
+    render(<WebTopNav activeId="planner" plannerDate="2026-09-06" plannerSegment="log" onPlannerSegmentSelect={onSelect} />);
+    const plan = screen.getByRole("link", { name: "요리 계획" });
+    const log = screen.getByRole("link", { name: "식사 기록" });
+    expect(plan.getAttribute("href")).toBe("/planner?date=2026-09-06");
+    expect(log.getAttribute("href")).toBe("/planner?date=2026-09-06&segment=log");
+    expect(log.getAttribute("aria-current")).toBe("page");
+    expect(plan.getAttribute("aria-current")).toBeNull();
+    expect(screen.queryByRole("link", { name: "마이페이지" })).toBeNull();
+    fireEvent.click(plan);
+    expect(onSelect).toHaveBeenCalledWith("plan");
   });
 });

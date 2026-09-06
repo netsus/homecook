@@ -76,6 +76,7 @@ describe("login screen", () => {
   const replace = vi.fn();
 
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
     hasSupabasePublicEnv.mockReset();
     getSession.mockReset();
     onAuthStateChange.mockReset();
@@ -101,8 +102,17 @@ describe("login screen", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     cleanup();
     Reflect.deleteProperty(window, "matchMedia");
+  });
+
+  it("explains preparation mode with a public planner exit", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    render(<LoginScreen nextPath="/planner" />);
+    expect(screen.getByRole("heading", { name: "정식 출시를 준비하고 있어요" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "플래너 둘러보기" }).getAttribute("href")).toBe("/planner");
+    expect(screen.queryByText(/로그인 전에/)).toBeNull();
   });
 
   it("shows safe OAuth failure copy", () => {

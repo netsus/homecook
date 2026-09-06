@@ -1480,7 +1480,7 @@ describe("MypageScreen", () => {
     expect(within(skeleton).queryAllByTestId("mypage-loading-panel-card")).toHaveLength(0);
     expect(container.querySelector(".web-mypage-panel")).toBeNull();
     expect(container.querySelectorAll('[data-testid="mypage-loading-profile-shell"]')).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" })).toBeTruthy();
   });
 

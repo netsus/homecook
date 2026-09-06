@@ -107,6 +107,28 @@ describe("marketing validation v2 route", () => {
     expect(response.headers.get("set-cookie")).toContain(`mumeok_validation_session=${SESSION_ID}`);
   });
 
+  it.each(["d", "default"] as const)("keeps an existing %s session unchanged on a normalized view", async (variant) => {
+    const historicalSession = createSession({ ad_variant: variant });
+    const insertViewSession = vi.fn();
+    const advanceSession = vi.fn();
+    const handler = createMarketingValidationHandler(dependencies({
+      readSession: vi.fn(async () => historicalSession), insertViewSession, advanceSession,
+    }));
+    const response = await handler(request({ action: "view", honeypot: "", ad_variant: "a" }));
+    expect(response.status).toBe(200);
+    expect(insertViewSession).not.toHaveBeenCalled();
+    expect(advanceSession).not.toHaveBeenCalled();
+    expect(historicalSession.ad_variant).toBe(variant);
+  });
+
+  it("normalizes retired campaign views while preserving their raw UTM content", async () => {
+    const insertViewSession = vi.fn(async (input) => createSession({ ad_variant: input.ad_variant }));
+    const handler = createMarketingValidationHandler(dependencies({ insertViewSession }));
+    const response = await handler(request({ action: "view", honeypot: "", ad_variant: "d", utm_content: "hook_workaround" }, false));
+    expect(response.status).toBe(200);
+    expect(insertViewSession).toHaveBeenCalledWith(expect.objectContaining({ ad_variant: "a", utm_content: "hook_workaround" }));
+  });
+
   it("restarts a v1 cookie with a new v2 row without writing the historical row", async () => {
     const old = createSession({ creative_key: "weekly_nutrition_v2" });
     const insertViewSession = vi.fn(async () => createSession());

@@ -20,7 +20,7 @@ test.describe("service about guide", () => {
     await page.getByRole("link", { name: "무먹 가이드" }).click();
 
     await expect(page).toHaveURL(/\/about$/);
-    await expect(page.getByRole("heading", { level: 1, name: "무엇을 먹든, 계획은 한곳에서" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "만들 계획부터, 먹은 기록까지" })).toBeVisible();
     await expect(page.locator('a[aria-current="page"][href="/about"]')).toBeVisible();
 
     await page.goto("/privacy");
@@ -30,7 +30,7 @@ test.describe("service about guide", () => {
     await page.goto("/about");
     await page.getByRole("link", { name: "플래너 시작하기" }).click();
     await expect(page).toHaveURL(/\/planner$/);
-    await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
+    await expect(page.getByRole("button", { name: "달력에서 날짜 선택" })).toBeVisible();
 
     await page.goto("/about");
     await page.getByRole("link", { name: "레시피 둘러보기" }).first().click();
@@ -147,7 +147,7 @@ test.describe("service about guide", () => {
     await page.goto("/mypage?tab=help");
 
     await expect(page).toHaveURL(/\/about#faq$/);
-    const trigger = page.getByRole("button", { name: "‘이미있음’은 무엇인가요?" });
+    const trigger = page.getByRole("button", { name: "장보기와 팬트리는 어떻게 연결되나요?" });
     await trigger.focus();
     await page.keyboard.press("Enter");
     await expect(trigger).toHaveAttribute("aria-expanded", "true");

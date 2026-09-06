@@ -134,7 +134,7 @@ async function capture(browser: Browser, width: number, height: number, name: st
 test.describe("marketing demand validation v2 /beta", () => {
   test("Hero variants enter the same exact q1..q4 flow @smoke-core", async ({ page }) => {
     await installMarketingDemandValidationRoutes(page);
-    for (const [query, heading] of [["?utm_content=hook_reentry&ad_variant=d", "레시피만 가져오면"], ["?ad_variant=b", "수분 빠진 제육볶음 300g"], ["?ad_variant=c", "내 집밥에"], ["?ad_variant=d", "내가 만든 집밥을"], ["", "집밥도 정확하게 기록할 수 있을까"]]) {
+    for (const [query, heading] of [["?utm_content=hook_reentry&ad_variant=d", "레시피만 가져오면"], ["?ad_variant=b", "수분 빠진 제육볶음 300g"], ["?ad_variant=c", "내 집밥에"], ["?ad_variant=d", "레시피만 가져오면"], ["", "레시피만 가져오면"]]) {
       await page.goto(`${MARKETING_BETA_PATH}${query}`);
       await expect(page.getByRole("heading").first()).toContainText(heading);
       await page.getByRole("button", { name: "내 집밥기록 유형 알아보기" }).click();
@@ -198,10 +198,10 @@ test.describe("marketing demand validation v2 /beta", () => {
     expect(await page.evaluate(() => (window as Window & { __shared?: ShareData }).__shared?.url)).toMatch(/\/beta\?result=ingredient-tracker$/);
   });
 
-  test("unknown result recovers to default Hero", async ({ page }) => {
+  test("unknown result recovers to Hero a", async ({ page }) => {
     await installMarketingDemandValidationRoutes(page);
     await page.goto("/beta?result=unknown");
-    await expect(page.getByRole("heading", { name: "집밥도 정확하게 기록할 수 있을까?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /레시피만 가져오면/ })).toBeVisible();
   });
 
   test("403/409/422/Turnstile/503 stay retryable without hiding prior value", async ({ browser }) => {

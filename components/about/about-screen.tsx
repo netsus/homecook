@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -42,19 +43,29 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
 
       <main className="about-page">
         <section aria-labelledby="about-title" className="about-hero">
-          <p className="about-hero-line">무먹 가이드</p>
-          <h1 id="about-title">무엇을 먹든, 계획은 한곳에서</h1>
-          <p className="about-hero-description">
-            오늘 만들 메뉴를 찾고 식단에 담으면, 장보기부터 요리와 남은 음식 기록까지
-            한 흐름으로 이어져요.
-          </p>
-          <div className="about-hero-actions">
-            <Link className="about-button about-button-primary" href="/">
-              레시피 둘러보기
-            </Link>
-            <Link className="about-button about-button-secondary" href="#how-to">
-              사용법부터 보기
-            </Link>
+          <div className="about-hero-copy">
+            <p className="about-hero-line">무먹 가이드</p>
+            <h1 id="about-title">
+              <span>만들 계획부터,</span>{" "}
+              <span>먹은 기록까지</span>
+            </h1>
+            <p className="about-hero-description">
+              만들 계획과 먹은 기록을 함께. 한 번에 넉넉히 요리하고,
+              나눠 먹은 만큼 영양정보를 확인해요.
+            </p>
+            <div className="about-hero-actions">
+              <Link className="about-button about-button-primary" href="/">
+                레시피 둘러보기
+              </Link>
+              <Link className="about-button about-button-secondary" href="#how-to">
+                사용법부터 보기
+              </Link>
+            </div>
+          </div>
+          <div className="about-character-scene">
+            <Image alt="웃고 있는 당근 친구" className="about-character-main" height={224} sizes="202px" src="/assets/plush-v2/carrot.webp" width={224} />
+            <Image alt="" className="about-character-small" height={112} sizes="116px" src="/assets/plush-v2/broccoli.webp" width={112} />
+            <span>오늘도 잘 챙겨 먹어요!</span>
           </div>
         </section>
 
@@ -66,8 +77,22 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
         </nav>
 
         <section className="about-section" id="how-to">
+          <Link aria-label="집밥 기록 테스트 해보기" className="about-landing-banner" href="/beta?ad_variant=a">
+            <Image alt="나의 집밥 기록 타입 테스트" height={630} sizes="(min-width: 1024px) 560px, 100vw" src="/assets/funnel/share/og-share.png" width={1200} />
+            <div>
+              <span className="about-section-eyebrow">30초 집밥 기록 테스트</span>
+              <strong>나는 어떤 집밥 기록 타입일까?</strong>
+              <p>결과를 확인하고 무먹의 기록 흐름을 미리 체험해 보세요.</p>
+              <span className="about-landing-link">테스트 해보기 <span aria-hidden="true">↗</span></span>
+            </div>
+          </Link>
+          <aside className="about-availability" aria-label="현재 이용 안내">
+            <strong>천천히 둘러보고 시작해요</strong>
+            <p>예시 화면은 로그인 없이 볼 수 있어요. 내 계획과 식사를 추가하려면 로그인해 주세요.</p>
+            <p>YouTube 레시피 추출과 식사 상세·수정은 준비 중이에요.</p>
+          </aside>
           <SectionHeading
-            description="레시피를 고르는 순간부터 남은 음식까지, 다섯 단계가 자연스럽게 연결돼요."
+            description="만들 계획부터 실제 먹은 양까지, 다섯 단계로 이어져요."
             eyebrow="HOW IT WORKS"
             title="한 끼는 이렇게 이어져요"
           />
@@ -86,7 +111,7 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
 
         <section className="about-section" id="features">
           <SectionHeading
-            description="필요한 재료와 기록을 흩어 두지 않고, 실제 집밥 순서에 맞춰 정리해요."
+            description="한 번 만든 요리를 여러 끼에 나눠 먹어도, 계획과 기록을 구분해서 볼 수 있어요."
             eyebrow="WHY IT WORKS"
             title="끼니 계획이 편해지는 이유"
           />
@@ -116,7 +141,7 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
 
         <section className="about-section" id="faq">
           <SectionHeading
-            description="장보기와 플래너를 쓰면서 자주 궁금해하는 내용을 모았어요."
+            description="요리 계획과 식사 기록을 시작하며 궁금한 내용을 모았어요."
             eyebrow="FAQ"
             title="자주 묻는 질문"
           />
@@ -155,7 +180,7 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
 
         <section aria-labelledby="about-final-title" className="about-final-cta">
           <p>오늘 한 끼부터 시작해 보세요</p>
-          <h2 id="about-final-title">계획하면 장보기와 요리가 가벼워져요</h2>
+          <h2 id="about-final-title">만들 계획부터 먹은 기록까지, 무먹에서</h2>
           <div className="about-hero-actions">
             <Link className="about-button about-button-primary" href="/">
               레시피 둘러보기

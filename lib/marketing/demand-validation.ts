@@ -1,6 +1,5 @@
 import type {
   MarketingValidationAction,
-  MarketingValidationAdVariant,
   MarketingValidationLegacyQuizAnswers,
   MarketingValidationLegacyQuizResult,
   MarketingValidationQuizAnswers,
@@ -62,11 +61,13 @@ const RESULT_BY_Q3: Record<MarketingValidationQuizAnswers["q3"], MarketingValida
   measure: "pro-measurer",
 };
 
-const VARIANT_BY_UTM_CONTENT: Record<string, MarketingValidationAdVariant> = {
+export type ActiveMarketingAdVariant = "a" | "b" | "c";
+
+const VARIANT_BY_UTM_CONTENT: Record<string, ActiveMarketingAdVariant> = {
   hook_reentry: "a",
   hook_cooked_weight: "b",
   hook_calorie_quiz: "c",
-  hook_workaround: "d",
+  hook_workaround: "a",
 };
 
 type StageTimestampColumn =
@@ -129,9 +130,13 @@ export function buildLegacyQuizOutcome(answers: MarketingValidationLegacyQuizAns
 
 export function resolveMarketingAdVariant(
   utmContent: string | null,
-  candidate: MarketingValidationAdVariant | null,
-): MarketingValidationAdVariant {
-  return (utmContent ? VARIANT_BY_UTM_CONTENT[utmContent] : undefined) ?? candidate ?? "default";
+  candidate: string | null,
+): ActiveMarketingAdVariant {
+  const mapped = utmContent && Object.hasOwn(VARIANT_BY_UTM_CONTENT, utmContent)
+    ? VARIANT_BY_UTM_CONTENT[utmContent]
+    : undefined;
+  if (mapped) return mapped;
+  return candidate === "a" || candidate === "b" || candidate === "c" ? candidate : "a";
 }
 
 export function readMarketingValidationState(

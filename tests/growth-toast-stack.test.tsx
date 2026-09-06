@@ -203,6 +203,7 @@ function dispatchRefresh() {
 
 describe("GrowthToastStack", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
     mockFetchArchive.mockReset();
     mockFetchUserGamification.mockReset();
     mockMarkSeen.mockReset();
@@ -216,6 +217,24 @@ describe("GrowthToastStack", () => {
   afterEach(() => {
     vi.useRealTimers();
     cleanup();
+  });
+
+  it("suppresses tutorial reminders in preparation mode while preserving earned notifications", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    const data = makeGamificationWithTutorialStep({ achievementKey: "tutorial_recipe_saved", title: "첫 저장" });
+    mockFetchUserGamification.mockResolvedValue({
+      ...data,
+      notifications: { unseen: [], priority_unseen: [
+        makeNotification({ id: "earned", title: "새 배지 획득", notification_type: "badge_unlocked" }),
+        makeNotification({ id: "guide", title: "튜토리얼 안내", payload: { tutorial_guide: true } }),
+      ] },
+    });
+    render(<GrowthToastStack />);
+    await waitFor(() => expect(screen.getByText("새 배지 획득")).toBeTruthy());
+    expect(screen.queryByText("튜토리얼 안내")).toBeNull();
+    dispatchRefresh();
+    await waitFor(() => expect(mockFetchUserGamification).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("튜토리얼 안내")).toBeNull();
   });
 
   it("renders priority_unseen toasts in server order without reordering", async () => {

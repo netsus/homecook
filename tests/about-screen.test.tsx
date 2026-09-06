@@ -37,7 +37,7 @@ describe("AboutScreen", () => {
   it("renders the public guide hierarchy and approved destinations", () => {
     const { container } = render(<AboutScreen contactEmail="help@zipbap.example" />);
 
-    expect(screen.getAllByRole("heading", { level: 1, name: "무엇을 먹든, 계획은 한곳에서" })).toHaveLength(1);
+    expect(screen.getAllByRole("heading", { level: 1, name: "만들 계획부터, 먹은 기록까지" })).toHaveLength(1);
     expect(screen.getByText("한 끼는 이렇게 이어져요")).toBeTruthy();
     expect(screen.getByText("끼니 계획이 편해지는 이유")).toBeTruthy();
     expect(screen.getByText("WHY IT WORKS")).toBeTruthy();
@@ -49,6 +49,15 @@ describe("AboutScreen", () => {
     expect(screen.getByRole("link", { name: "플래너 시작하기" }).getAttribute("href")).toBe("/planner");
     expect(screen.queryByRole("navigation", { name: "홈 하단 탭" })).toBeNull();
     expect(screen.getByRole("contentinfo")).toBeTruthy();
+  });
+
+  it("links the shared landing artwork to the active campaign and explains preview boundaries", () => {
+    render(<AboutScreen />);
+    expect(screen.getByRole("link", { name: /집밥 기록 테스트 해보기/ }).getAttribute("href")).toBe("/beta?ad_variant=a");
+    expect(screen.getByAltText("나의 집밥 기록 타입 테스트").getAttribute("src")).toContain("og-share.png");
+    expect(screen.getByAltText("웃고 있는 당근 친구")).toBeTruthy();
+    expect(screen.getByText(/예시 화면은 로그인 없이/)).toBeTruthy();
+    expect(screen.getByText(/YouTube 레시피 추출과 식사 상세/)).toBeTruthy();
   });
 
   it("uses real accordion buttons with connected ARIA panels", async () => {

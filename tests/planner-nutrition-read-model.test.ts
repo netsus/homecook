@@ -5,6 +5,8 @@ import {
   type PlannerNutritionDbClient,
 } from "@/lib/server/planner-nutrition-summary";
 
+import { readPlannerMealNutrition } from "@/lib/server/planner-meal-nutrition-view";
+
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const SNAPSHOT_ID = "550e8400-e29b-41d4-a716-446655440001";
 const COLUMN_A = "550e8400-e29b-41d4-a716-446655440002";
@@ -318,5 +320,77 @@ describe("planner nutrition bounded read model", () => {
       startDate: "2026-07-17",
       endDate: "2026-07-17",
     })).rejects.toThrow("PLANNER_NUTRITION_READ_FAILED");
+  });
+});
+
+
+describe("planner per-meal nutrition view", () => {
+  it("keeps different pins in the same column separate and scales the planned servings", async () => {
+    const secondPin = "second-nutrition-pin";
+    const meals = thenableQuery({ data: [
+      { id: "meal-a", plan_date: "2026-07-17", column_id: COLUMN_A,
+        planned_servings: 4, recipe_content_snapshot_id: "content-a",
+        recipe_content_snapshots: { recipe_nutrition_snapshot_id: SNAPSHOT_ID },
+        recipe_nutrition_snapshot_id: "stale-legacy-pin" },
+      { id: "meal-b", plan_date: "2026-07-17", column_id: COLUMN_A,
+        planned_servings: 1, recipe_content_snapshot_id: null,
+        recipe_content_snapshots: null, recipe_nutrition_snapshot_id: secondPin },
+      { id: "meal-unknown", plan_date: "2026-07-17", column_id: COLUMN_A,
+        planned_servings: 2, recipe_content_snapshot_id: "content-no-nutrition",
+        recipe_content_snapshots: { recipe_nutrition_snapshot_id: null },
+        recipe_nutrition_snapshot_id: SNAPSHOT_ID },
+    ], error: null });
+    const snapshots = thenableQuery({ data: [recipeSnapshot(), {
+      ...recipeSnapshot(), id: secondPin,
+      scalable_values_json: { ...recipeSnapshot().scalable_values_json, energy_kcal: 200 },
+      nutrient_status_json: { ...recipeSnapshot().nutrient_status_json,
+        energy_kcal: { amount: 220, known_amount: null, status: "complete", display_mode: "total" } },
+    }], error: null });
+    const db = {
+      from: vi.fn((table: string) => ({ select: vi.fn(() => {
+        if (table === "meals") return meals;
+        if (table === "recipe_nutrition_snapshots") return snapshots;
+        throw new Error("Only owner meals and their exact snapshots may be read");
+      }) })),
+      rpc: vi.fn(),
+    } as unknown as PlannerNutritionDbClient;
+    const result = await readPlannerMealNutrition(db, USER_ID, {
+      startDate: "2026-07-13", endDate: "2026-07-19",
+    });
+    expect(result["meal-a"]).toMatchObject({ plannedServings: 4, values: {
+      energy_kcal: { amount: 180, status: "complete" },
+      protein_g: { amount: 18, status: "complete" },
+    } });
+    expect(result["meal-b"]).toMatchObject({ plannedServings: 1, values: {
+      energy_kcal: { amount: 120, status: "complete" },
+    } });
+    expect(result["meal-unknown"]).toEqual({ plannedServings: 2, totalWeightGrams: null, values: {} });
+    expect(Object.keys(result)).toEqual(["meal-a", "meal-b", "meal-unknown"]);
+    expect(Object.keys(result["meal-a"]!)).toEqual(["plannedServings", "totalWeightGrams", "values"]);
+    expect(meals.calls.slice(0, 3)).toEqual([
+      ["eq:user_id", USER_ID], ["gte:plan_date", "2026-07-13"], ["lte:plan_date", "2026-07-19"],
+    ]);
+    expect(snapshots.in).toHaveBeenCalledWith("id", [SNAPSHOT_ID, secondPin]);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { startDate: "2026-02-30", endDate: "2026-03-01" },
+    { startDate: "2026-07-20", endDate: "2026-07-19" },
+    { startDate: "2026-07-13", endDate: "2026-07-20" },
+    { startDate: "invalid", endDate: "2026-07-19" },
+  ])("rejects an invalid or longer-than-week range before reading: %j", async (range) => {
+    const db = { from: vi.fn(), rpc: vi.fn() } as unknown as PlannerNutritionDbClient;
+    await expect(readPlannerMealNutrition(db, USER_ID, range))
+      .rejects.toThrow("PLANNER_NUTRITION_READ_FAILED");
+    expect(db.from).not.toHaveBeenCalled();
+  });
+
+  it("requires an owner before reading", async () => {
+    const db = { from: vi.fn(), rpc: vi.fn() } as unknown as PlannerNutritionDbClient;
+    await expect(readPlannerMealNutrition(db, "", {
+      startDate: "2026-07-17", endDate: "2026-07-17",
+    })).rejects.toThrow("PLANNER_NUTRITION_READ_FAILED");
+    expect(db.from).not.toHaveBeenCalled();
   });
 });

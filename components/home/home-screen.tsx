@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   useCallback,
@@ -17,6 +18,7 @@ import { RecipeCard } from "@/components/home/recipe-card";
 import { useHomeRecipeSaveFlow } from "@/components/home/use-home-recipe-save-flow";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { SaveModal } from "@/components/recipe/save-modal";
+import { YoutubeExtractionNotificationTrigger } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
@@ -100,7 +102,7 @@ const HOME_QUICK_LINKS = [
   },
   {
     description: "영상 링크로 등록",
-    href: "/menu/add/youtube",
+    href: "/recipes/new/youtube",
     icon: "youtube",
     label: "유튜브 가져오기",
   },
@@ -855,12 +857,7 @@ export function HomeScreen() {
         }
       >
         <div className="flex min-h-screen w-full flex-col bg-[var(--surface)] pb-[calc(86px+env(safe-area-inset-bottom))]">
-          <HomeAppBar
-            gamification={gamification}
-            isAuthenticated={isAuthenticated}
-            profile={profile}
-            progress={progress}
-          />
+          <HomeAppBar />
 
           <div className="pb-[100px]">
             {/* Hero greeting */}
@@ -1675,17 +1672,7 @@ function HomeShortcutIcon({
   );
 }
 
-function HomeAppBar({
-  gamification,
-  isAuthenticated,
-  profile,
-  progress,
-}: {
-  gamification: UserGamificationData | null;
-  isAuthenticated: boolean;
-  profile: UserProfileData | null;
-  progress: UserProgressData | null;
-}) {
+function HomeAppBar() {
   return (
     <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center justify-between border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
       <h1
@@ -1698,13 +1685,7 @@ function HomeAppBar({
           <span className="home-app-brand-supporting">무엇을 먹든</span>
         </span>
       </h1>
-      <ProfileSummaryButton
-        gamification={gamification}
-        isAuthenticated={isAuthenticated}
-        profile={profile}
-        progress={progress}
-        variant="mobile"
-      />
+      <YoutubeExtractionNotificationTrigger />
     </header>
   );
 }
@@ -1883,12 +1864,17 @@ function HomeGuideCard() {
       onClick={rememberAboutReturn}
     >
       <span className="home-mobile-guide-graphic" aria-hidden="true">
-        <GuidePathIcon />
+        <Image
+          alt=""
+          src="/assets/funnel/share/og-share.png"
+          width={1200}
+          height={630}
+          sizes="(max-width: 414px) 58vw, 240px"
+          className="h-full w-full object-contain"
+        />
       </span>
       <span className="home-mobile-guide-copy">
-        <span className="home-mobile-guide-badge">가이드</span>
         <strong>무먹 가이드</strong>
-        <small>레시피부터 장보기까지 5단계</small>
       </span>
     </Link>
   );
@@ -2002,17 +1988,6 @@ function HomeDiscoveryRailSkeleton() {
         ))}
       </div>
     </section>
-  );
-}
-
-function GuidePathIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 56 56">
-      <circle cx="12" cy="42" r="5" fill="currentColor" opacity="0.34" />
-      <circle cx="43" cy="13" r="5" fill="currentColor" />
-      <path d="M16 39c5-4 4-11 10-13s8 0 13-7" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />
-      <path d="m34 17 6 2-1-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-    </svg>
   );
 }
 

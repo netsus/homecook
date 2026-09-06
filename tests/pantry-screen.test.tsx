@@ -327,7 +327,7 @@ describe("PantryScreen", () => {
     expect(screen.getByRole("searchbox", { name: "팬트리 재료 검색" })).toBeTruthy();
     expect(screen.getByTestId("web-pantry-inline-loading")).toBeTruthy();
     expect(screen.queryByTestId("pantry-skeleton")).toBeNull();
-    expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "마이" })).toBeNull();
   });
 

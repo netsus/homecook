@@ -1,11 +1,10 @@
 import * as React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-
-type BottomTabId = "home" | "planner" | "pantry" | "mypage";
+import type { PrimaryMobileTabId } from "@/lib/navigation/app-nav";
 
 interface BottomTabsProps {
-  currentTab: BottomTabId;
+  currentTab: PrimaryMobileTabId;
 }
 
 export function BottomTabs({

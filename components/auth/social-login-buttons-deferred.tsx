@@ -3,6 +3,8 @@
 import React from "react";
 import dynamic from "next/dynamic";
 
+import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import type { SocialLoginButtonsProps } from "@/components/auth/social-login-buttons";
 
 function SocialLoginButtonsFallback() {
@@ -28,5 +30,15 @@ const SocialLoginButtons = dynamic(
 );
 
 export function SocialLoginButtonsDeferred(props: SocialLoginButtonsProps) {
+  if (isPrelaunchUiEnabled()) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm leading-6 text-[var(--text-2)]">
+          로그인과 회원가입은 정식 출시 후 열립니다.
+        </p>
+        <LocalDevLoginPanel {...props} />
+      </div>
+    );
+  }
   return <SocialLoginButtons {...props} />;
 }

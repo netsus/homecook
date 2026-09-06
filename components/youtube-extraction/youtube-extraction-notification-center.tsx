@@ -316,13 +316,20 @@ function YoutubeExtractionNotificationRuntime({
   useEffect(() => setAuthenticated(authenticated), [authenticated, setAuthenticated]);
 
   useEffect(() => {
-    const update = () => setHasHeaderTrigger(Boolean(
-      document.querySelector("[data-youtube-extraction-trigger='header']"),
-    ));
+    const update = () => setHasHeaderTrigger(
+      Array.from(document.querySelectorAll<HTMLElement>("[data-youtube-extraction-trigger='header']")).some((trigger) => {
+        for (let element: HTMLElement | null = trigger; element; element = element.parentElement) {
+          const style = window.getComputedStyle(element);
+          if (style.display === "none" || style.visibility === "hidden") return false;
+        }
+        return true;
+      }),
+    );
     update();
     const observer = new MutationObserver(update);
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    window.addEventListener("resize", update);
+    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
   }, []);
 
   const refresh = useCallback(async (

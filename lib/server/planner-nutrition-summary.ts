@@ -410,11 +410,12 @@ function dateStrings(startDate: string, endDate: string) {
   return dates;
 }
 
-export async function readPlannerNutritionSummary(
-  dbClient: PlannerNutritionDbClient,
+/** Shared owner-scoped recipe projection for aggregate and RSC-only meal views. */
+export async function readPlannerRecipeNutritionEntries(
+  dbClient: Pick<PlannerNutritionDbClient, "from">,
   userId: string,
   range: { startDate: string; endDate: string },
-): Promise<PlannerNutritionData> {
+) {
   const mealsResult = await dbClient
     .from("meals")
     .select(
@@ -450,6 +451,20 @@ export async function readPlannerNutritionSummary(
     for (const snapshot of snapshotsResult.data) snapshotMap.set(snapshot.id, snapshot);
   }
 
+  return dedupedMeals.map((meal) => ({
+    mealId: meal.id,
+    plannedServings: meal.planned_servings,
+    entry: projectRecipeMeal(meal, snapshotMap),
+  }));
+}
+
+export async function readPlannerNutritionSummary(
+  dbClient: PlannerNutritionDbClient,
+  userId: string,
+  range: { startDate: string; endDate: string },
+): Promise<PlannerNutritionData> {
+  const recipes = await readPlannerRecipeNutritionEntries(dbClient, userId, range);
+  const recipeEntries = dedupeByStorageKey(recipes.map((recipe) => recipe.entry));
   const productResult = await dbClient.rpc("list_product_planner_entries", {
     p_user_id: userId,
     p_start_date: range.startDate,
@@ -460,9 +475,6 @@ export async function readPlannerNutritionSummary(
     throw new PlannerNutritionReadError();
   }
 
-  const recipeEntries = dedupeByStorageKey(
-    dedupedMeals.map((meal) => projectRecipeMeal(meal, snapshotMap)),
-  );
   const productEntries = dedupeByStorageKey(
     (productResult.data as ProductPlannerEntryData[])
       .filter((entry) => isRecord(entry) && typeof entry.id === "string" &&

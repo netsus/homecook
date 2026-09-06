@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { YoutubePreparationNotice } from "@/components/shared/prelaunch-notice";
+import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -2655,7 +2657,14 @@ function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, 
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export function YoutubeImportScreen({
+export function YoutubeImportScreen(props: YoutubeImportScreenProps) {
+  if (isPrelaunchUiEnabled() && !props.initialExtractionId) {
+    return <YoutubePreparationNotice onBack={props.onRequestClose} backHref={props.entryContext === "standalone" ? "/" : props.planDate ? `/planner?date=${encodeURIComponent(props.planDate)}` : "/planner"} />;
+  }
+  return <ActiveYoutubeImportScreen {...props} />;
+}
+
+function ActiveYoutubeImportScreen({
   entryContext = "planner",
   initialExtractionId = "",
   initialYoutubeUrl = "",

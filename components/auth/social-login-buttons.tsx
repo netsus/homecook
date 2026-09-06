@@ -3,6 +3,7 @@
 import React from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
 import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import {
   cancelServerAuthFlow,
@@ -62,7 +63,8 @@ export function SocialLoginButtons({
     : localDevAuthEnabled && !localGoogleOAuthEnabled
       ? []
       : enabledProviders;
-  const providers = availableProviders;
+  const prelaunch = isPrelaunchUiEnabled();
+  const providers = prelaunch ? [] : availableProviders;
 
   useEffect(() => { setRecentProvider(readLastAuthProvider() ?? lastProvider); }, [lastProvider]);
 
@@ -97,6 +99,7 @@ export function SocialLoginButtons({
   }
 
   const handleSignIn = (provider: AuthProviderId) => {
+    if (isPrelaunchUiEnabled()) return;
     startTransition(async () => {
       let flowStarted = false;
       try {
@@ -157,6 +160,11 @@ export function SocialLoginButtons({
 
   return (
     <div className="space-y-3">
+      {prelaunch ? (
+        <p className="text-sm leading-6 text-[var(--text-2)]">
+          로그인과 회원가입은 정식 출시 후 열립니다.
+        </p>
+      ) : null}
       {providers.map((providerId) => {
         const provider = AUTH_PROVIDER_META[providerId];
         const highlighted = recentProvider === providerId;
@@ -193,7 +201,7 @@ export function SocialLoginButtons({
           </button>
         );
       })}
-      {recentProvider ? (
+      {!prelaunch && recentProvider ? (
         <p className="rounded-md bg-[var(--surface-fill)] px-3 py-2 text-left text-xs font-semibold leading-5 text-[var(--text-2)]">
           최근 이 브라우저에서 {getAuthProviderDisplayName(recentProvider)}로 로그인했어요.
         </p>
@@ -216,14 +224,14 @@ export function SocialLoginButtons({
           pendingAction={pendingAction}
         />
       ) : null}
-      {localDevAuthEnabled && localGoogleOAuthEnabled && !qaFixtureMode ? (
+      {!prelaunch && localDevAuthEnabled && localGoogleOAuthEnabled && !qaFixtureMode ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
           local Supabase에서 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있어요.
           신규 유저 bootstrap/manual OAuth는 Google로, 데모 데이터와 소유권 확인은 로컬
           테스트 계정을 사용하세요.
         </p>
       ) : null}
-      {localDevAuthEnabled && !localGoogleOAuthEnabled && !qaFixtureMode ? (
+      {!prelaunch && localDevAuthEnabled && !localGoogleOAuthEnabled && !qaFixtureMode ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
           local Supabase에서 Google OAuth도 쓰려면
           `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`와

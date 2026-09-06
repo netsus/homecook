@@ -27,7 +27,7 @@ import {
   type MarketingTurnstileController,
 } from "@/components/marketing/marketing-turnstile";
 import { postMarketingValidation } from "@/lib/api/marketing-validation";
-import { MARKETING_VALIDATION_RETENTION_DAYS } from "@/lib/marketing/demand-validation";
+import { MARKETING_VALIDATION_RETENTION_DAYS, resolveMarketingAdVariant, type ActiveMarketingAdVariant } from "@/lib/marketing/demand-validation";
 import {
   enqueueMarketingQueueAction,
   flushMarketingQueue,
@@ -41,7 +41,6 @@ import {
 import { MARKETING_VALIDATION_ACTIONS } from "@/types/marketing-validation";
 import type {
   MarketingValidationAction,
-  MarketingValidationAdVariant,
   MarketingValidationQuizAnswers,
   MarketingValidationQuizResult,
   MarketingValidationRequestBody,
@@ -76,24 +75,17 @@ const RESULTS: Record<MarketingValidationQuizResult, { title: string; quote: str
   "pro-measurer": { title: "프로 계량러", quote: "완성 음식까지 저울에 올렸다면\n당신은 이미 상위 기록러.", description: "문제는 이걸 매번 계산하느라\n밥보다 기록이 늦게 끝난다는 것.", asset: "/assets/funnel/characters/pro-measurer.png", checks: ["재료 무게", "완성 무게", "먹은 무게"] },
 };
 
-const HERO_COPY: Record<MarketingValidationAdVariant, { title: string; emphasis: string; body: string; bodyHighlights?: HeroBodyHighlight[]; image?: string }> = {
-  default: { title: "집밥도 정확하게 기록할 수 있을까?", emphasis: "정확하게", body: "30초 테스트로 나의 집밥 기록 타입을 알아보세요." },
+const HERO_COPY: Record<ActiveMarketingAdVariant, { title: string; emphasis: string; body: string; bodyHighlights?: HeroBodyHighlight[] }> = {
   a: { title: "레시피만 가져오면\n영양성분 계산까지!", emphasis: "영양성분", body: "집밥도 편하게\n식단 기록해요.", bodyHighlights: [{ text: "편하게", tone: "a" }] },
   b: { title: "수분 빠진 제육볶음 300g,\n칼로리가 달라져요.", emphasis: "칼로리", body: "집밥도 정확하게\n식단 기록해요.", bodyHighlights: [{ text: "정확하게", tone: "b" }] },
   c: { title: "내 집밥에\n영양성분표를 딱!", emphasis: "영양성분표", body: "제육볶음 검색 대신\n내 레시피로 기록해요.", bodyHighlights: [{ text: "검색", tone: "negative" }, { text: "내 레시피", tone: "positive" }] },
-  d: { title: "내가 만든 집밥을\n왜 다른 음식으로 기록하지?", emphasis: "다른 음식", body: "검색해서 고른 남의 음식 대신 내 레시피로 기록해요.", image: "/assets/funnel/hero/hero-d-visual.png" },
 };
 
 function resolveEntry() {
   const params = new URLSearchParams(window.location.search);
   const result = params.get("result");
   const sharedResult = RESULT_KEYS.includes(result as MarketingValidationQuizResult) ? result as MarketingValidationQuizResult : null;
-  const mapping: Record<string, MarketingValidationAdVariant> = { hook_reentry: "a", hook_cooked_weight: "b", hook_calorie_quiz: "c", hook_workaround: "d" };
-  const content = params.get("utm_content");
-  const candidate = params.get("ad_variant");
-  const adVariant = content && mapping[content]
-    ? mapping[content]
-    : (["a", "b", "c", "d", "default"].includes(candidate ?? "") ? candidate as MarketingValidationAdVariant : "default");
+  const adVariant = resolveMarketingAdVariant(params.get("utm_content"), params.get("ad_variant"));
   const attribution = Object.fromEntries(UTM_KEYS.flatMap((key) => params.get(key) ? [[key, params.get(key)]] : []));
   return { adVariant, attribution, sharedResult };
 }
@@ -189,13 +181,13 @@ function HeroLiveVisual({ variant }: { variant: "a" | "b" | "c" }) {
   </div>;
 }
 
-function Hero({ variant, onStart }: { variant: MarketingValidationAdVariant; onStart: () => void }) {
+function Hero({ variant, onStart }: { variant: ActiveMarketingAdVariant; onStart: () => void }) {
   const copy = HERO_COPY[variant];
   const [before, after] = copy.title.split(copy.emphasis);
   return <Frame stage="hero" className={`hero-screen hero-screen--${variant}`}>
     <Brand />
     <div className="hero-copy-block"><p className="eyebrow">집밥 기록 30초 테스트</p><h1>{before}<span className="hero-title-accent">{copy.emphasis}</span>{after}</h1><p>{renderBodyHighlights(copy.body, copy.bodyHighlights ?? [])}</p></div>
-    {variant === "a" || variant === "b" || variant === "c" ? <HeroLiveVisual variant={variant} /> : copy.image ? <div className={`hero-visual hero-reference hero-reference--${variant}`} data-hero-variant={variant}><Image src={copy.image} alt="집밥 기록 테스트 소개" width={1000} height={700} priority /></div> : <div className="hero-visual hero-visual--default"><Image src="/assets/funnel/food/recipe-jeyuk-thumbnail.png" alt="팬에서 조리 중인 제육볶음" width={480} height={360} priority /><div><Brand compact /><span>집밥도 빠르게, 내 레시피대로</span></div></div>}
+    <HeroLiveVisual variant={variant} />
     <div className="screen-actions hero-actions"><button className="primary-button" type="button" onClick={onStart}>내 집밥기록 유형 알아보기 <ArrowRightIcon /></button><p className="trust-line"><span><FileTextIcon aria-hidden="true" />4문항</span><span><LockClosedIcon aria-hidden="true" />로그인 없이</span><span><LightningBoltIcon aria-hidden="true" />결과 바로 확인</span></p></div>
   </Frame>;
 }
@@ -299,7 +291,7 @@ function Done({ onBack, onReset }: { onBack: () => void; onReset: () => void }) 
 }
 
 export function MarketingDemandValidationScreen({ getTurnstileToken }: MarketingDemandValidationScreenProps) {
-  const [entry, setEntry] = useState<{ adVariant: MarketingValidationAdVariant; attribution: Record<string, string | null>; sharedResult: MarketingValidationQuizResult | null }>({ adVariant: "default", attribution: {}, sharedResult: null });
+  const [entry, setEntry] = useState<{ adVariant: ActiveMarketingAdVariant; attribution: Record<string, string | null>; sharedResult: MarketingValidationQuizResult | null }>({ adVariant: "a", attribution: {}, sharedResult: null });
   const [entryReady, setEntryReady] = useState(false);
   const [stage, setStage] = useState<MarketingValidationUiStage>("hero");
   const [history, setHistory] = useState<MarketingValidationUiStage[]>([]);
@@ -446,16 +438,16 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     push("done");
     return null;
   };
-  const reset = () => { window.history.replaceState({}, "", "/beta"); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
+  const reset = () => { window.history.replaceState({}, "", `/beta?ad_variant=${entry.adVariant}`); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
 
-  if (loading) return <div className="mdv2-root"><main className="mdv2-screen screen-content mdv2-loading" role="status" aria-label="테스트 불러오는 중"><Brand /><div /><div /><div /></main></div>;
+  if (loading) return <div className="mdv2-root"><main className="mdv2-screen screen-content mdv2-loading" role="status" aria-label="테스트 불러오는 중"><span className="mdv2-loading-dot" aria-hidden="true" /><p>테스트를 불러오고 있어요.</p></main></div>;
   if (shellError) return <div className="mdv2-root"><Frame stage="empty" className="mdv2-state-screen"><Brand /><h1>새 테스트로 다시 시작할게요.</h1><p role="alert">{shellError}</p><button className="primary-button" type="button" onClick={reset}>새로 시작하기</button></Frame></div>;
   if (queueRecovery) return <div className="mdv2-root"><Frame stage="recovery" className="mdv2-state-screen"><Brand /><h1>잠시 연결이 끊겼어요.</h1><div className="mdv2-error" role="alert"><p>{queueRecovery.message}</p></div><button className="primary-button" type="button" disabled={recovering} onClick={() => void retryQueue()}>{recovering ? "다시 연결하는 중…" : "다시 시도"}</button></Frame></div>;
 
   let content: ReactNode;
   if (stage === "hero") content = <Hero variant={entry.adVariant} onStart={() => void start()} />;
   else if (stage === "quiz") content = <Quiz index={questionIndex} answers={answers} locked={transitionLocked.current} onBack={() => questionIndex ? setQuestionIndex((current) => current - 1) : back()} onSelect={select} />;
-  else if (stage === "result") content = <Result type={result} preview={preview} onBack={back} onNext={async () => { const showExperience = () => push("experience-1"); if (await record({ action: "experience_started" })) showExperience(); else showQueueRecovery("체험 화면을 열지 못했어요. 다시 시도해 주세요.", showExperience); }} onPreviewStart={reset} onShare={() => void share()} shareFeedback={shareFeedback} />;
+  else if (stage === "result") content = <Result type={result} preview={preview} onBack={preview ? reset : back} onNext={async () => { const showExperience = () => push("experience-1"); if (await record({ action: "experience_started" })) showExperience(); else showQueueRecovery("체험 화면을 열지 못했어요. 다시 시도해 주세요.", showExperience); }} onPreviewStart={reset} onShare={() => void share()} shareFeedback={shareFeedback} />;
   else if (stage.startsWith("experience-")) { const step = Number(stage.at(-1)); content = <Experience step={step} reduced={reduced} onBack={back} onNext={async () => { if (step < 5) push(`experience-${step + 1}` as MarketingValidationUiStage); else { const showPlanner = () => push("planner-homecook"); if (await record({ action: "experience_completed" })) showPlanner(); else showQueueRecovery("식단 화면을 열지 못했어요. 다시 시도해 주세요.", showPlanner); } }} />; }
   else if (stage === "planner-homecook") content = <Planner complete={false} reduced={reduced} onBack={back} onNext={() => push("packaged-food")} />;
   else if (stage === "packaged-food") content = <Packaged onBack={back} onNext={() => push("planner-complete")} />;
