@@ -107,11 +107,11 @@ export function PlannerDateControls({ date, today, onDateSelect, actions }: Plan
   return <>
     <div className="mx-auto flex max-w-7xl items-center justify-between gap-1 px-4 py-2 lg:py-3">
       <div className="flex shrink-0 items-center gap-1">
-        <button aria-label="달력에서 날짜 선택" aria-haspopup="dialog" aria-expanded={open} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-sky-100 bg-white px-2 text-xs font-bold text-slate-800 focus-visible:ring-2 focus-visible:ring-sky-400 sm:px-3 sm:text-sm" onClick={() => { setPendingDate(null); setOpen(true); }} type="button">
+        <button aria-label="달력에서 날짜 선택" aria-haspopup="dialog" aria-expanded={open} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 bg-white shadow-sm px-2 text-xs font-bold text-slate-800 focus-visible:ring-2 focus-visible:ring-sky-400 sm:px-3 sm:text-sm" onClick={() => { setPendingDate(null); setOpen(true); }} type="button">
           <svg aria-hidden="true" className="h-4 w-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18" /></svg>
           <span>{Number(date.slice(5, 7))}월 {Number(date.slice(8))}일</span><span aria-hidden="true" className="text-slate-400">⌄</span>
         </button>
-        <button className="min-h-11 min-w-11 rounded-xl border border-sky-200 bg-white px-3 text-xs font-bold text-sky-700 hover:bg-sky-50" onClick={() => onDateSelect(today)} type="button">오늘</button>
+        <button className="min-h-11 min-w-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#25adff]" onClick={() => onDateSelect(today)} type="button">오늘</button>
       </div>
       {actions}
     </div>

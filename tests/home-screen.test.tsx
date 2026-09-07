@@ -314,12 +314,10 @@ describe("home screen", () => {
       name: "무먹, 무엇을 먹든",
     });
     expect(mobileBrand.className).toContain("home-app-brand-lockup");
-    expect(within(mobileBrand).getByText("무먹").className).toContain(
-      "home-app-brand-primary",
+    expect(mobileBrand.querySelector("img")?.getAttribute("src")).toContain(
+      "/brand/mumeok-logo-horizontal.png",
     );
-    expect(within(mobileBrand).getByText("무엇을 먹든").className).toContain(
-      "home-app-brand-supporting",
-    );
+    expect(mobileBrand.textContent).toBe("");
     expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
@@ -367,6 +365,8 @@ describe("home screen", () => {
     const guideLink = screen.getByRole("link", { name: "무먹 가이드 보기" });
     expect(guideLink.getAttribute("href")).toBe("/about#how-to");
     expect(guideLink.hasAttribute("aria-pressed")).toBe(false);
+    expect(within(guideLink).queryByText("무먹 가이드")).toBeNull();
+    expect(guideLink.querySelector("img")?.className).toContain("object-contain");
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
   });
 
@@ -422,7 +422,7 @@ describe("home screen", () => {
     expect(ruleBody(".web-home-aside-top .web-theme-card-title")).toContain("font-size: 15px;");
   });
 
-  it("moves the web recommended tags and weekly themes up beside the search row", async () => {
+  it("keeps desktop search centered and places recommendations beside recipes", async () => {
     installMatchMedia(true);
 
     render(<HomeScreen />);
@@ -437,15 +437,16 @@ describe("home screen", () => {
     expect(contentGrid?.contains(sideRail)).toBe(true);
     expect(screen.getAllByRole("heading", { level: 2, name: "추천 태그" })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2, name: "이번 주 추천 테마" })).toHaveLength(1);
-    expect(ruleBody(".web-discovery-search-layout")).toContain(
-      "grid-template-columns: minmax(0, 880px);",
+    expect(ruleBody(".web-discovery-primary-row")).toContain(
+      "grid-template-columns: minmax(180px, 1fr) minmax(520px, 700px) minmax(180px, 1fr);",
     );
+    expect(ruleBody(".web-discovery-search-layout")).toContain("margin-top: 0;");
     expect(ruleBody(".web-discovery-search-layout .web-discovery-search-row")).toContain("margin-top: 0;");
     expect(ruleBody(".web-home-content-grid")).toContain('grid-template-areas: "recipes aside";');
     expect(ruleBody(".web-home-content-grid")).toContain(
       "grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);",
     );
-    expect(ruleBody(".web-home-aside-top")).toContain("margin-top: -166px;");
+    expect(ruleBody(".web-home-aside-top")).toContain("margin-top: 0;");
   });
 
   it("keeps the mobile search controls sticky under the app bar", () => {

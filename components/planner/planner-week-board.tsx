@@ -58,9 +58,9 @@ function WeekMeal({
     ? `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(nutrition.totalWeightGrams)} g`
     : "무게 계산 준비 중";
   const macros = [
-    { code: "carbohydrate_g", short: "탄", label: "탄수화물", factor: 4, color: "#38bdf8" },
-    { code: "protein_g", short: "단", label: "단백질", factor: 4, color: "#34c7a2" },
-    { code: "fat_g", short: "지", label: "지방", factor: 9, color: "#f8b84e" },
+    { code: "carbohydrate_g", short: "탄", label: "탄수화물", factor: 4, color: "#F4D35E" },
+    { code: "protein_g", short: "단", label: "단백질", factor: 4, color: "#FF8811" },
+    { code: "fat_g", short: "지", label: "지방", factor: 9, color: "#1E555C" },
   ] as const;
   // A partial amount is a minimum, not a proportional share of the whole dish.
   const completeMacros = macros.every(({ code }) => {
@@ -190,7 +190,7 @@ export function PlannerWeekBoard({
               aria-labelledby={`planner-day-heading-${dateKey}`}
               className={[
                 "min-w-0 scroll-mt-[calc(var(--planner-sticky-height,180px)+12px)] overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] lg:rounded-none lg:border-x-0 lg:border-t-0 lg:last:border-b-0",
-                isSelected ? "border-[var(--brand)]" : "border-[var(--line-strong)]",
+                isSelected ? "border-[var(--brand)] lg:border-[var(--line-strong)]" : "border-[var(--line-strong)]",
               ].join(" ")}
               data-testid={`planner-day-card-${dateKey}`}
               key={dateKey}
@@ -200,9 +200,10 @@ export function PlannerWeekBoard({
                 <h2
                   className={[
                     "flex min-h-14 items-center gap-1 border-b border-[var(--surface-subtle)] px-4 py-2 text-base font-extrabold lg:flex-col lg:justify-center lg:gap-1 lg:border-b-0 lg:border-r lg:px-2 lg:text-sm",
-                    isToday || isSelected ? "bg-[var(--brand-soft)]" : "bg-[var(--surface)] lg:bg-[var(--surface-fill)]",
+                    isToday ? "bg-[var(--brand-soft)]" : isSelected ? "bg-[var(--brand-soft)] lg:bg-[var(--surface-fill)]" : "bg-[var(--surface)] lg:bg-[var(--surface-fill)]",
                   ].join(" ")}
                   id={`planner-day-heading-${dateKey}`}
+                  aria-current={isToday ? "date" : undefined}
                   tabIndex={-1}
                 >
                   {isToday ? <span className="text-xs font-bold text-sky-700">오늘</span> : null}
@@ -228,7 +229,7 @@ export function PlannerWeekBoard({
                       ) : null}
                       <button
                         aria-label={`${formatKoreaCompactDate(dateKey)} ${column.name} 식사 추가`}
-                        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-xl font-semibold text-sky-700 hover:bg-sky-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
+                        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm hover:border-[var(--brand)] hover:bg-[var(--surface-fill)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
                         disabled={disabled}
                         onClick={() => onAdd(dateKey, column)}
                         type="button"

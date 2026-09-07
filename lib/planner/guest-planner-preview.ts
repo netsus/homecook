@@ -4,9 +4,9 @@ import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition
 
 // Public, illustrative content from the landing experience. Never written to a user's store or API.
 const EXAMPLES = [
-  { name: "그릭요거트 볼", slot: "아침", grams: 250, calories: 420, carbs: 48, protein: 22, fat: 16, sodium: 140, image: "/assets/funnel/food/greek-yogurt-bowl.png" },
-  { name: "닭가슴살 현미밥", slot: "점심", grams: 400, calories: 700, carbs: 98, protein: 50, fat: 22, sodium: 760, image: "/assets/funnel/food/chicken-brown-rice-bowl.png" },
-  { name: "제육볶음", slot: "저녁", grams: 320, calories: 487, carbs: 31, protein: 39, fat: 22, sodium: 680, image: "/assets/funnel/food/recipe-jeyuk-thumbnail.png" },
+  { name: "그릭요거트 볼", slot: "아침", grams: 250, calories: 420, carbs: 48, protein: 22, fat: 16, sodium: 140, image: "/assets/funnel/food/greek-yogurt-bowl.webp" },
+  { name: "닭가슴살 현미밥", slot: "점심", grams: 400, calories: 700, carbs: 98, protein: 50, fat: 22, sodium: 760, image: "/assets/funnel/food/chicken-brown-rice-bowl.webp" },
+  { name: "제육볶음", slot: "저녁", grams: 320, calories: 487, carbs: 31, protein: 39, fat: 22, sodium: 680, image: "/assets/funnel/food/recipe-jeyuk-thumbnail.webp" },
 ] as const;
 
 function columns() {

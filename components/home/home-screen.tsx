@@ -12,7 +12,7 @@ import {
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
-import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
+import { MumeokHorizontalLogo } from "@/components/brand/mumeok-horizontal-logo";
 import { IngredientFilterModal } from "@/components/home/ingredient-filter-modal";
 import { RecipeCard } from "@/components/home/recipe-card";
 import { useHomeRecipeSaveFlow } from "@/components/home/use-home-recipe-save-flow";
@@ -1184,7 +1184,6 @@ function HomeWebScreen({
     <WebShell className="web-home" wide>
       <WebTopNav
         activeId="home"
-        brandSupportingLabel="무엇을 먹든"
         rightSlot={
           <ProfileSummaryButton
             gamification={gamification}
@@ -1198,58 +1197,56 @@ function HomeWebScreen({
       <div className="web-screen">
         <section className="web-discovery">
           <p className="web-discovery-kicker">{mealGreeting}</p>
-          <h1 className="web-discovery-title">오늘 뭐 먹지?</h1>
-          <p className="web-discovery-sub">
-            레시피 제목으로 검색하거나, 재료로 좁혀 보세요.
-          </p>
-
-          <div
-            className="web-discovery-search-layout"
-            data-testid="web-discovery-search-layout"
-          >
-            <div className="web-discovery-search-main">
-              <div className="web-discovery-search-row">
-                <label className="web-search-bar">
-                  <SearchIcon />
-                  <span className="visually-hidden">레시피 제목 검색</span>
-                  <input
-                    onChange={(event) => {
-                      setQuery(event.target.value);
-                      clearTagFilter();
-                    }}
-                    placeholder="레시피 제목 검색"
-                    value={query}
-                  />
-                </label>
-                <WebButton
-                  className="web-discovery-filter-button"
-                  onClick={onOpenIngredientModal}
-                  variant="secondary"
-                >
-                  <SearchSmallIcon color="currentColor" />
-                  재료로 검색
-                </WebButton>
-              </div>
-
-              {appliedIngredientIds.length > 0 ? (
-                <div className="web-filter-chip-row">
-                  <WebChip active onClick={onOpenIngredientModal}>
-                    <SearchSmallIcon color="currentColor" />
-                    재료 {appliedIngredientIds.length}개
-                  </WebChip>
+          <div className="web-discovery-primary-row">
+            <h1 className="web-discovery-title">오늘 뭐 먹지?</h1>
+            <div
+              className="web-discovery-search-layout"
+              data-testid="web-discovery-search-layout"
+            >
+              <div className="web-discovery-search-main">
+                <div className="web-discovery-search-row">
+                  <label className="web-search-bar">
+                    <SearchIcon />
+                    <span className="visually-hidden">레시피 제목 검색</span>
+                    <input
+                      onChange={(event) => {
+                        setQuery(event.target.value);
+                        clearTagFilter();
+                      }}
+                      placeholder="레시피 제목 검색"
+                      value={query}
+                    />
+                  </label>
                   <WebButton
-                    onClick={clearIngredientFilters}
-                    size="sm"
-                    variant="ghost"
+                    className="web-discovery-filter-button"
+                    onClick={onOpenIngredientModal}
+                    variant="secondary"
                   >
-                    초기화
+                    <SearchSmallIcon color="currentColor" />
+                    재료로 검색
                   </WebButton>
                 </div>
-              ) : null}
 
-              {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
+                {appliedIngredientIds.length > 0 ? (
+                  <div className="web-filter-chip-row">
+                    <WebChip active onClick={onOpenIngredientModal}>
+                      <SearchSmallIcon color="currentColor" />
+                      재료 {appliedIngredientIds.length}개
+                    </WebChip>
+                    <WebButton
+                      onClick={clearIngredientFilters}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      초기화
+                    </WebButton>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
+          {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
+          <HomeDesktopLandingBanner />
         </section>
 
         <div className="web-home-content-grid">
@@ -1679,11 +1676,7 @@ function HomeAppBar() {
         aria-label="무먹, 무엇을 먹든"
         className="home-app-brand-lockup"
       >
-        <MumeokBrandSymbol size={32} />
-        <span aria-hidden="true" className="home-app-brand-copy">
-          <span className="home-app-brand-primary">무먹</span>
-          <span className="home-app-brand-supporting">무엇을 먹든</span>
-        </span>
+        <MumeokHorizontalLogo />
       </h1>
       <YoutubeExtractionNotificationTrigger />
     </header>
@@ -1873,8 +1866,34 @@ function HomeGuideCard() {
           className="h-full w-full object-contain"
         />
       </span>
-      <span className="home-mobile-guide-copy">
-        <strong>무먹 가이드</strong>
+    </Link>
+  );
+}
+
+function HomeDesktopLandingBanner() {
+  return (
+    <Link
+      aria-label="30초 식단 기록 테스트 체험하기"
+      className="web-home-landing-banner"
+      href="/beta?ad_variant=a"
+    >
+      <span className="web-home-landing-banner-image" aria-hidden="true">
+        <Image
+          alt=""
+          height={1314}
+          priority
+          sizes="120px"
+          src="/assets/funnel/characters/beta-invitation-mascot.png"
+          width={1197}
+        />
+      </span>
+      <span className="web-home-landing-banner-copy">
+        <small>30초 식단 기록 테스트</small>
+        <strong>나는 어떤 집밥 기록 타입일까?</strong>
+        <span>간단한 체험으로 나에게 맞는 기록 방식을 확인해 보세요.</span>
+      </span>
+      <span className="web-home-landing-banner-action">
+        체험하기 <span aria-hidden="true">→</span>
       </span>
     </Link>
   );

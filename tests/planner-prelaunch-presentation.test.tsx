@@ -48,6 +48,12 @@ function props() {
 afterEach(cleanup);
 
 describe("planner prelaunch meal presentation", () => {
+  it("keeps today identified independently from the date followed while scrolling", () => {
+    render(<PlannerWeekBoard {...props()} dateKeys={["2026-09-05", "2026-09-06"]} selectedDate="2026-09-05" />);
+    expect(screen.getByRole("heading", { name: /오늘.*9\/6/ }).getAttribute("aria-current")).toBe("date");
+    expect(screen.getByRole("heading", { name: "9/5 (토)" }).getAttribute("aria-current")).toBeNull();
+  });
+
   it.each(["registered", "shopping_done", "cook_done"] as const)(
     "keeps a single meal-detail action without redundant controls for %s",
     (status) => {

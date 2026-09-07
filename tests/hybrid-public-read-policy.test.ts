@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createClient } from "@supabase/supabase-js";
 
 import { isAnonymousHybridPublicReadRequest } from
   "@/lib/server/hybrid-auth/public-read-policy";
@@ -8,6 +9,61 @@ function isAllowed(input: Record<string, unknown>) {
 }
 
 describe("hybrid anonymous public read policy", () => {
+  it.each(["view_count", "like_count", "save_count", "plan_count", "cook_count", "created_at"])(
+    "allows actual SDK recipe ordering by %s, including the next page",
+    async (sort) => {
+      const requests: URL[] = [];
+      const client = createClient("http://127.0.0.1:54321", "public-test-key", {
+        auth: { persistSession: false },
+        global: { fetch: async (input) => {
+          requests.push(new URL(String(input)));
+          return new Response("[]", { headers: { "content-type": "application/json" } });
+        } },
+      });
+      const id = "00000000-0000-4000-8000-000000000001";
+      const value = sort === "created_at" ? "2026-09-06T00:00:00Z" : "10";
+      const query = () => client.from("recipes")
+        .select("id,title,thumbnail_url,tags,base_servings,view_count,like_count,save_count,plan_count,cook_count,created_at,source_type")
+        .eq("visibility", "public").is("deleted_at", null).limit(21)
+        .order(sort, { ascending: false })
+        .order("id", { ascending: sort !== "created_at" });
+      await query();
+      await query().or(`${sort}.lt.${value},and(${sort}.eq.${value},id.${sort === "created_at" ? "lt" : "gt"}.${id})`);
+      expect(requests).toHaveLength(2);
+      for (const url of requests) {
+        expect(isAllowed({ scope: "recipes", method: "GET", path: "/recipes", search: url.search })).toBe(true);
+        for (const [key, invalid] of [
+          ["visibility", "eq.private"],
+          ["deleted_at", "not.is.null"],
+          ["select", "*"],
+          ["order", `${sort}.desc,id.asc,title.asc`],
+          ["order", "title.desc,id.asc"],
+        ]) {
+          const search = new URLSearchParams(url.search);
+          search.set(key, invalid);
+          expect(isAllowed({ scope: "recipes", method: "GET", path: "/recipes", search: search.toString() })).toBe(false);
+        }
+        expect(isAllowed({ scope: "recipes", method: "PATCH", path: "/recipes", search: url.search })).toBe(false);
+      }
+    },
+  );
+
+  it("allows actual SDK public home theme ordering", async () => {
+    let allowed = false;
+    const client = createClient("http://127.0.0.1:54321", "public-test-key", {
+      auth: { persistSession: false },
+      global: { fetch: async (input) => {
+        allowed = isAllowed({ scope: "recipe-themes", method: "GET", path: "/recipes", search: new URL(String(input)).search });
+        return new Response("[]", { headers: { "content-type": "application/json" } });
+      } },
+    });
+    await client.from("recipes")
+      .select("id,title,thumbnail_url,tags,base_servings,view_count,like_count,save_count,source_type")
+      .eq("visibility", "public").is("deleted_at", null).limit(80)
+      .order("view_count", { ascending: false }).order("id", { ascending: true });
+    expect(allowed).toBe(true);
+  });
+
   it.each([
     [
       "ingredients",

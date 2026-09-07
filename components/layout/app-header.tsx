@@ -1,7 +1,7 @@
 import Link from "next/link";
 import * as React from "react";
 
-import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
+import { MumeokHorizontalLogo } from "@/components/brand/mumeok-horizontal-logo";
 import { YoutubeExtractionNotificationTrigger } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 
@@ -16,12 +16,11 @@ export function AppHeader({
 }: AppHeaderProps) {
   const brandLink = (
     <Link
-      aria-label="무먹 홈"
-      className="inline-flex items-center gap-2 text-[22px] font-bold leading-none transition-opacity hover:opacity-80"
+      aria-label="무먹, 무엇을 먹든"
+      className="inline-flex items-center leading-none transition-opacity hover:opacity-80"
       href="/"
     >
-      <MumeokBrandSymbol size={32} />
-      <span className="text-[var(--wave1-mint-contrast)]">무먹</span>
+      <MumeokHorizontalLogo />
     </Link>
   );
 
@@ -42,8 +41,8 @@ export function AppHeader({
                 className={[
                   "rounded-[var(--radius-full)] px-4 py-2 text-sm font-semibold transition",
                   active
-                    ? "bg-[var(--brand-soft)] text-[var(--brand-deep)]"
-                    : "text-[var(--muted)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]",
+                    ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)]"
+                    : "text-[var(--muted)] hover:rounded-[var(--radius-full)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]",
                 ].join(" ")}
                 href={item.href}
                 key={item.id}

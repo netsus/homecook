@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,48 +11,45 @@ import { WebTopNav } from "@/components/web/web-top-nav";
 describe("WebTopNav service name", () => {
   afterEach(cleanup);
 
-  it("keeps the default non-HOME brand on the short service name only", () => {
+  it("uses the same canonical horizontal logo on non-HOME navigation", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<WebTopNav activeId="planner" />);
 
-    const brand = screen.getByRole("link", { name: "무먹" });
-    expect(brand.textContent).toBe("무먹");
-    expect(screen.queryByText("무엇을 먹든")).toBeNull();
+    const brand = screen.getByRole("link", { name: "무먹, 무엇을 먹든" });
+    expect(brand.textContent).toBe("");
 
-    const symbol = brand.querySelector("img");
-    expect(symbol).not.toBeNull();
-    expect(symbol?.getAttribute("src")).toContain(
-      "/brand/mumeok-symbol-192.png",
+    const logo = brand.querySelector("img");
+    expect(logo).not.toBeNull();
+    expect(logo?.getAttribute("src")).toContain(
+      "/brand/mumeok-logo-horizontal.png",
     );
-    expect(symbol?.getAttribute("alt")).toBe("");
-    expect(symbol?.getAttribute("aria-hidden")).toBe("true");
+    expect(logo?.getAttribute("alt")).toBe("");
+    expect(logo?.getAttribute("aria-hidden")).toBe("true");
+    expect(within(screen.getByRole("banner")).getByLabelText("서비스 준비 안내"))
+      .toBeTruthy();
   });
 
-  it("renders an optional supporting service name below the primary name", () => {
-    render(
-      <WebTopNav
-        activeId="home"
-        brandSupportingLabel="무엇을 먹든"
-      />,
-    );
+  it("uses the same canonical horizontal logo on HOME navigation", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    render(<WebTopNav activeId="home" />);
 
     const brand = screen.getByRole("link", {
       name: "무먹, 무엇을 먹든",
     });
-    const primary = within(brand).getByText("무먹");
-    const supporting = within(brand).getByText("무엇을 먹든");
-
-    expect(primary.className).toContain("web-topnav-brand-primary");
-    expect(supporting.className).toContain("web-topnav-brand-supporting");
-    expect(
-      primary.compareDocumentPosition(supporting) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-
-    const symbol = brand.querySelector("img");
-    expect(symbol).not.toBeNull();
-    expect(symbol?.getAttribute("src")).toContain(
-      "/brand/mumeok-symbol-192.png",
+    const logo = brand.querySelector("img");
+    expect(logo).not.toBeNull();
+    expect(logo?.getAttribute("src")).toContain(
+      "/brand/mumeok-logo-horizontal.png",
     );
-    expect(symbol?.getAttribute("alt")).toBe("");
+    expect(logo?.getAttribute("alt")).toBe("");
+  });
+
+  it("uses a pill background without a bottom-line selected state", () => {
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    const activeRule = css.match(/\.web-topnav-tab-active \{[^}]+\}/)?.[0] ?? "";
+
+    expect(activeRule).toContain("border-radius: var(--web-r-pill)");
+    expect(activeRule).not.toContain("box-shadow");
   });
 });
 

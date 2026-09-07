@@ -122,11 +122,17 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
       const brand = viewport.kind === "desktop"
         ? page.getByRole("link", { exact: true, name: "무먹, 무엇을 먹든" })
         : page.getByRole("heading", { exact: true, level: 1, name: "무먹, 무엇을 먹든" });
-      const symbol = brand.locator("img.mumeok-brand-symbol");
-      await expect(symbol).toBeVisible();
-      await expect(symbol).toHaveAttribute("alt", "");
-      await expect(symbol).toHaveAttribute("src", /mumeok-symbol-192\.png/);
-      expect(await symbol.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBe(192);
+      const image = brand.locator(
+        "img.mumeok-horizontal-logo",
+      );
+      await expect(image).toBeVisible();
+      await expect(image).toHaveAttribute("alt", "");
+      await expect(image).toHaveAttribute(
+        "src",
+        /mumeok-logo-horizontal\.png/,
+      );
+      expect(await image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+        .toBe(1040);
     }
 
     await page.screenshot({
@@ -145,8 +151,10 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
   }
 
   const before = JSON.parse(await readFile(BEFORE_GEOMETRY_PATH, "utf8")) as typeof geometries;
-  expect(geometries["1280"].nav).toEqual(before["1280"].nav);
-  expect(geometries["1280"].firstTab).toEqual(before["1280"].firstTab);
+  const desktopGap = (geometries["1280"].firstTab?.left ?? 0)
+    - ((geometries["1280"].brand?.left ?? 0) + (geometries["1280"].brand?.width ?? 0));
+  expect(geometries["1280"].nav?.height).toBe(72);
+  expect(desktopGap).toBeGreaterThanOrEqual(36);
 
   const nonHome = await browser.newContext({
     deviceScaleFactor: 1,
@@ -155,15 +163,15 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
   const nonHomePage = await nonHome.newPage();
   await nonHomePage.goto(`${BASE_URL}/about`);
   const nonHomeNav = nonHomePage.locator(".web-topnav");
-  const nonHomeBrand = nonHomeNav.getByRole("link", { exact: true, name: "무먹" });
-  await expect(nonHomeBrand.locator("img.mumeok-brand-symbol")).toBeVisible();
-  await expect(nonHomeNav.getByText("무엇을 먹든", { exact: true })).toHaveCount(0);
+  const nonHomeBrand = nonHomeNav.getByRole("link", { exact: true, name: "무먹, 무엇을 먹든" });
+  await expect(nonHomeBrand.locator("img.mumeok-horizontal-logo")).toBeVisible();
   await nonHome.close();
 
   for (const [route, contentType] of [
     ["/favicon.ico", "image/x-icon"],
     ["/brand/favicon-32.png", "image/png"],
     ["/brand/mumeok-symbol-192.png", "image/png"],
+    ["/brand/mumeok-logo-horizontal.png", "image/png"],
     ["/brand/app-icon-192.png", "image/png"],
     ["/brand/app-icon-512.png", "image/png"],
     ["/brand/apple-touch-icon-180.png", "image/png"],
@@ -183,11 +191,13 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
         before,
         checks: {
           accessibleNameNoDuplicate: true,
-          canonicalSymbolNaturalWidth: 192,
-          desktopNavGeometryPreserved: true,
-          homeNameHierarchyPreserved: true,
+          canonicalHorizontalLogoNaturalWidth: 1040,
+          desktopLogoTabGap: desktopGap,
+          desktopNavHeight: 72,
+          desktopTabsShareHorizontalLogo: true,
+          mobileHorizontalLogo: true,
           mobileOverflowZero: true,
-          nonHomeShortNameOnly: true,
+          nonHomeLogoUnified: true,
         },
         phase: "after",
         result: "pass",

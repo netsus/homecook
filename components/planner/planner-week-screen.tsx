@@ -788,8 +788,8 @@ export function PlannerWeekScreen({
           dateBarRef={stickyHeaderRef}
           dateAnchorRef={dateAnchorRef}
           actions={activeSegment === "plan" ? <div className="ml-auto flex items-center gap-1">
-            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-sky-200 bg-white px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-sky-700 hover:bg-sky-100" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
-            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-[var(--text-2)] hover:bg-white" href="/leftovers">남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
+            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 bg-white shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-sky-700 hover:bg-slate-50" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
+            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 bg-white shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-[var(--text-2)] hover:bg-white" href="/leftovers">남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
           </div> : null}
         />
 

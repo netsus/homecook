@@ -14,8 +14,18 @@ export function PrelaunchNotice() {
   const pathname = usePathname();
   if (!isPrelaunchUiEnabled() || isMarketingPath(pathname)) return null;
 
+  return <PrelaunchNoticeContent className="service-prelaunch-notice-mobile" />;
+}
+
+export function DesktopPrelaunchNotice() {
+  if (!isPrelaunchUiEnabled()) return null;
+
+  return <PrelaunchNoticeContent className="service-prelaunch-notice-desktop" />;
+}
+
+function PrelaunchNoticeContent({ className }: { className: string }) {
   return (
-    <aside aria-label="서비스 준비 안내" className="service-prelaunch-notice flex flex-wrap items-center justify-center gap-x-2 gap-y-0 border-b border-sky-100 bg-sky-50 px-4 py-1.5 text-center text-[11px] leading-5 text-slate-600 sm:text-xs">
+    <aside aria-label="서비스 준비 안내" className={`service-prelaunch-notice ${className} flex flex-wrap items-center justify-center gap-x-2 gap-y-0 border-b border-sky-100 bg-sky-50 px-4 py-1.5 text-center text-[11px] leading-5 text-slate-600 sm:text-xs`}>
       <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold leading-5 text-sky-700"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-sky-400" />서비스 준비 중</span>
       <span className="leading-5">더 편한 식생활을 위해 하나씩 채워가고 있어요.</span>
     </aside>

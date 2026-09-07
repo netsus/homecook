@@ -13,13 +13,15 @@ function tokenValue(tokenName: string) {
 }
 
 describe("planner app colors", () => {
-  it("aligns app brand tokens with the desktop web brand blue", () => {
-    expect(tokenValue("--brand-primary")).toBe("#00A1FF");
-    expect(tokenValue("--brand-primary-hover")).toBe("#0087d7");
-    expect(tokenValue("--brand-primary-accessible")).toBe("#0072bd");
-    expect(tokenValue("--brand-primary-soft")).toBe("rgba(0, 161, 255, 0.08)");
-    expect(tokenValue("--brand-primary-border")).toBe("#8BD2FF");
-    expect(tokenValue("--brand-primary-rgb")).toBe("0, 161, 255");
+  it("uses the legible brand blue for controls and the bright blue for accents", () => {
+    expect(tokenValue("--brand-primary")).toBe("#0879cf");
+    expect(tokenValue("--brand-accent")).toBe("#00A1FF");
+    expect(tokenValue("--brand-primary-hover")).toBe("#0665ad");
+    expect(tokenValue("--brand-primary-text")).toBe("#075c9e");
+    expect(tokenValue("--brand-primary-accessible")).toBe("#0867b0");
+    expect(tokenValue("--brand-primary-soft")).toBe("#f0f5fa");
+    expect(tokenValue("--brand-primary-border")).toBe("#b7cbdc");
+    expect(tokenValue("--brand-primary-rgb")).toBe("8, 121, 207");
     expect(tokenValue("--brand-contrast")).toBe(
       "var(--brand-primary-accessible)",
     );

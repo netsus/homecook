@@ -7,14 +7,15 @@
    * Keep typography separate: Jua brand font is intentionally not restored.
    */
   /* ── 앱 브랜드 조절 토큰 ── */
-  --brand-primary: #00A1FF;
-  --brand-primary-hover: #0087d7;
-  --brand-primary-text: #0072bd;
-  --brand-primary-accessible: #0072bd;
-  --brand-primary-accessible-hover: #0066a8;
-  --brand-primary-soft: rgba(0, 161, 255, 0.08);
-  --brand-primary-border: #8BD2FF;
-  --brand-primary-rgb: 0, 161, 255;
+  --brand-primary: #0879cf;
+  --brand-accent: #00A1FF;
+  --brand-primary-hover: #0665ad;
+  --brand-primary-text: #075c9e;
+  --brand-primary-accessible: #0867b0;
+  --brand-primary-accessible-hover: #07548f;
+  --brand-primary-soft: #f0f5fa;
+  --brand-primary-border: #b7cbdc;
+  --brand-primary-rgb: 8, 121, 207;
   --brand-primary-shadow-color: rgba(var(--brand-primary-rgb), 0.18);
   --brand-primary-shadow-color-strong: rgba(var(--brand-primary-rgb), 0.22);
   --brand-alpha-05: rgba(var(--brand-primary-rgb), 0.05);
@@ -1027,6 +1028,13 @@
   flex: 0 0 auto;
 }
 
+.mumeok-horizontal-logo {
+  display: block;
+  width: 138px;
+  height: auto;
+  flex: 0 0 auto;
+}
+
 .home-app-brand-copy {
   display: flex;
   flex-direction: column;
@@ -1610,27 +1618,9 @@
 
 .home-mobile-guide-graphic {
   position: absolute;
-  inset: 0 0 34px;
+  inset: 0;
   display: block;
   background: #f3faff;
-}
-
-.home-mobile-guide-copy {
-  position: absolute;
-  inset: auto 13px 8px;
-  display: grid;
-  min-width: 0;
-  gap: 3px;
-}
-
-.home-mobile-guide-copy strong {
-  overflow: hidden;
-  color: var(--foreground);
-  font-size: 16px;
-  font-weight: 850;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .home-mobile-guide-card-placeholder {
@@ -2913,11 +2903,17 @@ button {
 }
 
 .bottom-tab-active-icon {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  color: var(--brand-primary-text);
+  padding: 0;
+  box-shadow: none;
   transform-origin: center;
 }
 
 .bottom-tab-icon {
-  transition: opacity 160ms ease-out;
+  transition: opacity 160ms ease-out, background 160ms ease-out, color 160ms ease-out;
 }
 
 .bottom-tab-link:active .bottom-tab-icon {
@@ -2925,7 +2921,13 @@ button {
 }
 
 .bottom-tab-active-link {
+  min-height: 48px;
+  align-self: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--brand-accent) 12%, white);
   color: var(--brand-primary-text);
+  margin: 0 2px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 18%, transparent);
 }
 
 .recipe-overview-compact {
@@ -3275,11 +3277,11 @@ button {
 
 @media (min-width: 1024px) {
   :root {
-    --web-brand: #00A1FF;
-    --web-brand-deep: #0085db;
-    --web-brand-accessible: #0072bd;
+    --web-brand: var(--brand-primary);
+    --web-brand-deep: var(--brand-primary-hover);
+    --web-brand-accessible: var(--brand-primary-accessible);
     --web-brand-light: #5bb8ff;
-    --web-brand-wash: rgba(0, 161, 255, 0.06);
+    --web-brand-wash: var(--brand-primary-soft);
     --web-bg: #ffffff;
     --web-bg-alt: #f7f9fa;
     --web-surface: #ffffff;
@@ -3315,7 +3317,8 @@ button {
     --web-s-20: 80px;
     --web-content-max: 1200px;
     --web-content-wide: 1440px;
-    --web-nav-h: 64px;
+    --web-nav-h: 72px;
+    --web-prelaunch-notice-h: 32px;
     --web-font: var(--font-body);
   }
 
@@ -3345,11 +3348,12 @@ button {
     padding-top: var(--web-nav-h);
   }
 
-  /* The notice keeps its flow space and paints inside the fixed nav's page offset. */
-  body:has(.web-topnav:not(.web-topnav-flow)) > .service-prelaunch-notice {
-    position: relative;
-    top: var(--web-nav-h);
-    z-index: 1;
+  body:has(.web-topnav .service-prelaunch-notice-desktop) .web-page {
+    padding-top: calc(var(--web-nav-h) + var(--web-prelaunch-notice-h));
+  }
+
+  body > .service-prelaunch-notice-mobile {
+    display: none;
   }
 
   .web-container {
@@ -3385,6 +3389,23 @@ button {
     z-index: 30;
   }
 
+  .web-topnav.web-topnav-flow:has(.service-prelaunch-notice-desktop) {
+    height: calc(var(--web-nav-h) + var(--web-prelaunch-notice-h));
+  }
+
+  .web-topnav.web-topnav-flow:has(.service-prelaunch-notice-desktop) .web-topnav-inner {
+    height: var(--web-nav-h);
+  }
+
+  .web-topnav .service-prelaunch-notice-desktop {
+    position: absolute;
+    top: var(--web-nav-h);
+    right: 0;
+    left: 0;
+    display: flex;
+    min-height: var(--web-prelaunch-notice-h);
+  }
+
   .web-topnav-actions {
     display: flex;
     flex-shrink: 0;
@@ -3398,7 +3419,7 @@ button {
     height: 100%;
     max-width: var(--web-content-wide);
     align-items: center;
-    gap: 14px;
+    gap: 0;
     margin: 0 auto;
     padding: 0 32px;
   }
@@ -3406,45 +3427,25 @@ button {
   .web-topnav-brand {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    color: var(--brand-primary-text);
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.4px;
-    line-height: 1;
+    flex: 0 0 auto;
   }
 
-  .web-topnav-brand-copy {
-    position: relative;
+  .mumeok-horizontal-logo {
     display: block;
-    transform: translateY(-6.5px);
-  }
-
-  .web-topnav-brand-primary {
-    line-height: 1;
-  }
-
-  .web-topnav-brand-supporting {
-    position: absolute;
-    top: calc(100% + 2px);
-    left: 0;
-    color: var(--web-text-2);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: -0.2px;
-    line-height: 1;
-    white-space: nowrap;
+    width: 174px;
+    height: auto;
   }
 
   .web-topnav-tabs {
     display: flex;
     flex: 1;
     gap: 4px;
+    margin-left: 40px;
   }
 
   .web-topnav-tab {
     white-space: nowrap;
-    border-radius: var(--web-r-sm);
+    border-radius: var(--web-r-pill);
     padding: 10px 16px;
     color: var(--web-text-2);
     font-size: 15px;
@@ -3459,9 +3460,15 @@ button {
   }
 
   .web-topnav-tab-active {
-    background: #eef8ff;
-    color: var(--brand-primary-text);
+    background: var(--brand-primary);
+    border-radius: var(--web-r-pill);
+    color: #ffffff;
     font-weight: 700;
+  }
+
+  .web-topnav-tab-active:hover {
+    background: var(--brand-primary-hover);
+    color: #ffffff;
   }
 
   .web-page-header {
@@ -4014,6 +4021,28 @@ button {
 
   .web-screen {
     padding: 48px 0 96px;
+  }
+
+  .web-auth-gate-shell,
+  .web-auth-gate-shell .web-page {
+    min-height: 100dvh;
+    background: linear-gradient(180deg, #eef8ff 0%, #f7fbfe 52%, #ffffff 100%);
+  }
+
+  .web-auth-gate-shell .web-container,
+  .web-auth-gate-shell .web-container-wide {
+    max-width: none;
+    padding: 0;
+  }
+
+  .web-auth-gate-screen {
+    min-height: calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h));
+    padding: 0;
+  }
+
+  .web-auth-gate-screen > [data-state-tone="gate"] {
+    min-height: calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h));
+    background: transparent;
   }
 
   .web-home .web-screen {
@@ -5246,6 +5275,80 @@ button {
     text-align: left;
   }
 
+  .web-home-landing-banner {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 520px) 130px;
+    min-height: 128px;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--brand-accent) 24%, white);
+    border-radius: 18px;
+    background: #eef8ff;
+    margin-top: 20px;
+    padding: 0 28px;
+    color: var(--web-text-1);
+    transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .web-home-landing-banner:hover {
+    border-color: color-mix(in srgb, var(--brand-accent) 50%, white);
+    box-shadow: 0 10px 26px rgba(var(--brand-primary-rgb), 0.12);
+    transform: translateY(-1px);
+  }
+
+  .web-home-landing-banner-image {
+    display: grid;
+    width: 132px;
+    height: 128px;
+    place-items: center;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  .web-home-landing-banner-image img {
+    width: 118px;
+    height: 118px;
+    object-fit: contain;
+    transform: translateY(5px);
+  }
+
+  .web-home-landing-banner-copy {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .web-home-landing-banner-copy small {
+    color: var(--brand-primary-text);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .web-home-landing-banner-copy strong {
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .web-home-landing-banner-copy > span {
+    color: var(--web-text-3);
+    font-size: 14px;
+  }
+
+  .web-home-landing-banner-action {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--web-r-pill);
+    background: var(--brand-primary);
+    padding: 0 18px;
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
   .web-discovery-kicker {
     margin: 0;
     color: var(--web-brand-accessible);
@@ -5262,6 +5365,13 @@ button {
     line-height: 1.28;
   }
 
+  .web-discovery-primary-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(520px, 700px) minmax(180px, 1fr);
+    align-items: center;
+    gap: 32px;
+  }
+
   .web-discovery-sub {
     margin: -8px 0 0;
     color: var(--web-text-3);
@@ -5272,16 +5382,14 @@ button {
   .web-discovery-search-row {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 16px;
     margin-top: 6px;
   }
 
   .web-discovery-search-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 880px);
-    align-items: start;
-    margin-top: 6px;
+    min-width: 0;
+    margin-top: 0;
   }
 
   .web-discovery-search-main {
@@ -5296,7 +5404,7 @@ button {
 
   .web-search-bar {
     display: flex;
-    width: min(560px, 100%);
+    width: 100%;
     height: 52px;
     align-items: center;
     gap: 12px;
@@ -5525,7 +5633,7 @@ button {
     position: static;
     top: auto;
     gap: 12px;
-    margin-top: -166px;
+    margin-top: 0;
   }
 
   .web-home-aside-top .web-home-aside-section {
@@ -14802,7 +14910,7 @@ body:has(.mdv2-root) {
 }
 
 .mdv2-root .hero-screen--a .hero-title-accent {
-  color: #ff6547;
+  color: #d04a32;
 }
 
 .mdv2-root .hero-screen--b .hero-title-accent {
@@ -14904,7 +15012,7 @@ body:has(.mdv2-root) {
 }
 
 .mdv2-root .hero-screen--a {
-  --hero-body-emphasis-color: #ff6547;
+  --hero-body-emphasis-color: #d04a32;
 }
 
 .mdv2-root .hero-screen--b {
@@ -15014,7 +15122,7 @@ body:has(.mdv2-root) {
   min-height: 34px;
   padding: 0 7px;
   background: #eaf7ff;
-  color: #31566f;
+  color: #294d66;
   font-size: 12.5px;
   line-height: 1.2;
   font-weight: 900;
@@ -15123,7 +15231,7 @@ body:has(.mdv2-root) {
 .mdv2-root .hero-extract-step {
   align-self: center;
   justify-self: center;
-  color: #ff6547;
+  color: #94311f;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -15170,7 +15278,7 @@ body:has(.mdv2-root) {
 }
 
 .mdv2-root .hero-auto-rows strong {
-  color: #ff6547;
+  color: #94311f;
   font-size: 12.8px;
   font-weight: 950;
 }
@@ -15403,7 +15511,7 @@ body:has(.mdv2-root) {
 }
 
 .mdv2-root .hero-facts-card {
-  --hero-facts-accent: #ff6547;
+  --hero-facts-accent: #94311f;
   padding: 10px 10px 8px;
   border: 1.5px solid #27313a;
   border-radius: 12px;
@@ -15433,7 +15541,7 @@ body:has(.mdv2-root) {
 
 .mdv2-root .hero-facts-header > span {
   padding-bottom: 1px;
-  color: #5d6670;
+  color: #414a54;
   font-size: 8.5px;
   line-height: 1.1;
   font-weight: 800;

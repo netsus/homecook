@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MARKETING_VALIDATION_ACTIONS, type MarketingValidationAction } from "@/types/marketing-validation";
 
 vi.mock("next/image", () => ({
-  default: ({ alt = "", priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
+  default: ({ alt = "", priority, unoptimized, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean; unoptimized?: boolean }) => {
     void priority;
+    void unoptimized;
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img {...props} alt={alt} />
@@ -435,6 +436,32 @@ describe("marketing demand validation v2 landing", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("안전하게 다시 시도해 주세요.");
     expect(screen.getByDisplayValue("retry@example.com")).toBeTruthy();
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+  });
+
+  it("loads the scale and meal examples before their screens and never floats a readout without its scale", async () => {
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+    await answerQuiz(user);
+    await user.click(screen.getByRole("button", { name: "무먹으로 20초 체험하기" }));
+    for (const asset of ["jeyuk-on-scale", "greek-yogurt-bowl", "chicken-brown-rice-bowl", "recipe-jeyuk-thumbnail"]) {
+      expect(document.head.querySelector(`link[rel="preload"][as="image"][href="/assets/funnel/food/${asset}.webp"]`)).not.toBeNull();
+    }
+    await user.click(screen.getByRole("button", { name: "무먹으로 가져오기" }));
+    await user.click(await screen.findByRole("button", { name: "다음" }));
+    await user.click(screen.getByRole("button", { name: "돼지고기 600g → 520g" }));
+    await user.click(await screen.findByRole("button", { name: "다음" }));
+    const scale = screen.getByRole("img", { name: "완성된 제육볶음이 올라간 디지털 주방저울" });
+    const readout = screen.getByLabelText("완성 무게 1180g");
+    expect(readout.style.visibility).toBe("hidden");
+    fireEvent.error(scale);
+    expect(readout.style.visibility).toBe("hidden");
+    fireEvent.load(scale);
+    expect(readout.style.visibility).toBe("visible");
+    await user.click(screen.getByRole("button", { name: "저울로 재보니 1,180g" }));
+    await user.click(screen.getByRole("button", { name: "다음" }));
+    expect(screen.getByLabelText("저울 표시 320g").style.visibility).toBe("visible");
   });
 
   it("matches the frozen 3cf3336 interaction contract", async () => {

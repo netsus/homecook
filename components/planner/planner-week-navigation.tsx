@@ -88,11 +88,15 @@ export function PlannerWeekNavigation({
                   aria-current={page === 1 && date === selectedDate ? "date" : undefined}
                   aria-label={`${formatKoreaCompactDate(date)} ${formatKoreaWeekday(date, "short")}${isLog ? "요일" : ""} 선택${isLog && recordedDates.includes(date) ? ", 기록 있음" : ""}`}
                   className={[
-                    "relative flex h-12 w-full flex-col items-center justify-center rounded-lg text-sm font-extrabold focus-visible:outline-2 focus-visible:outline-[var(--brand)]",
+                    "relative flex h-12 w-full flex-col items-center justify-center rounded-lg text-sm font-normal focus-visible:outline-2 focus-visible:outline-[var(--brand)]",
                     date === selectedDate
-                      ? "bg-[var(--brand-primary)] text-white"
+                      ? isLog || date === today
+                        ? "bg-[var(--brand-accent)] text-white"
+                        : "bg-[var(--brand-accent)] text-white lg:bg-[var(--surface)] lg:text-[var(--text-2)]"
                       : date === today
-                        ? "bg-sky-50 text-sky-700"
+                        ? isLog
+                          ? "text-[var(--brand-primary-text)] ring-1 ring-inset ring-[var(--brand-border)]"
+                          : "text-[var(--brand-primary-text)] ring-1 ring-inset ring-[var(--brand-accent)] lg:bg-[var(--brand-accent)] lg:text-white lg:ring-0"
                         : "bg-[var(--surface)] text-[var(--text-2)]",
                   ].join(" ")}
                   onClick={() => { if (page === 1) onDateSelect(date); }}
@@ -106,8 +110,8 @@ export function PlannerWeekNavigation({
                   tabIndex={page === 1 && (!isLog || date === selectedDate) ? 0 : -1}
                   type="button"
                 >
-                  <span className="text-[10px] font-semibold">{date === today ? "오늘" : formatKoreaWeekday(date, "short")}</span>
-                  <span className="text-sm">{Number(date.slice(8))}</span>
+                  <span className="text-[10px] font-normal">{date === today ? "오늘" : formatKoreaWeekday(date, "short")}</span>
+                  <span className="text-sm font-extrabold">{Number(date.slice(8))}</span>
                 </button>
               </li>
             ))}

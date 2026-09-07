@@ -564,28 +564,39 @@ export function PantryScreen({
   }
 
   if (authState === "unauthorized") {
+    const gate = (
+      <ContentState
+        description="보유 재료를 등록하면 장보기 목록에서 자동으로 제외돼요."
+        eyebrow="팬트리 접근"
+        safeBottomPadding
+        title="이 화면은 로그인이 필요해요"
+        tone="gate"
+      >
+        <div className="space-y-3">
+          <SocialLoginButtons nextPath="/pantry" />
+          <Link
+            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+            href="/"
+          >
+            홈으로 돌아가기
+          </Link>
+        </div>
+      </ContentState>
+    );
+
+    if (!isMobileViewport) {
+      return (
+        <WebShell className="web-pantry-shell web-auth-gate-shell" footer={false}>
+          <WebTopNav activeId="pantry" />
+          <div className="web-screen web-auth-gate-screen">{gate}</div>
+        </WebShell>
+      );
+    }
+
     return (
       <>
-        <ContentState
-          description="보유 재료를 등록하면 장보기 목록에서 자동으로 제외돼요."
-          eyebrow="팬트리 접근"
-          safeBottomPadding
-          title="이 화면은 로그인이 필요해요"
-          tone="gate"
-        >
-          <div className="space-y-3">
-            <SocialLoginButtons nextPath="/pantry" />
-            <Link
-              className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-              href="/"
-            >
-              홈으로 돌아가기
-            </Link>
-          </div>
-        </ContentState>
-        {isMobileViewport ? (
-          <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
-        ) : null}
+        {gate}
+        <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
       </>
     );
   }

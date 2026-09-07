@@ -1689,28 +1689,39 @@ export function MypageScreen({
   }
 
   if (authState === "unauthorized") {
+    const gate = (
+      <ContentState
+        description="레시피북, 장보기 기록 등 나만의 데이터를 로그인 후 확인할 수 있어요."
+        eyebrow="마이페이지 접근"
+        safeBottomPadding
+        title="이 화면은 로그인이 필요해요"
+        tone="gate"
+      >
+        <div className="space-y-3">
+          <SocialLoginButtons nextPath="/mypage" />
+          <Link
+            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+            href="/"
+          >
+            홈으로 돌아가기
+          </Link>
+        </div>
+      </ContentState>
+    );
+
+    if (!shouldUseMobileViewport) {
+      return (
+        <WebShell className="web-mypage-shell web-auth-gate-shell" footer={false} wide>
+          <WebTopNav activeId="mypage" />
+          <div className="web-screen web-auth-gate-screen">{gate}</div>
+        </WebShell>
+      );
+    }
+
     return (
       <>
-        <ContentState
-          description="레시피북, 장보기 기록 등 나만의 데이터를 로그인 후 확인할 수 있어요."
-          eyebrow="마이페이지 접근"
-          safeBottomPadding
-          title="이 화면은 로그인이 필요해요"
-          tone="gate"
-        >
-          <div className="space-y-3">
-            <SocialLoginButtons nextPath="/mypage" />
-            <Link
-              className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-              href="/"
-            >
-              홈으로 돌아가기
-            </Link>
-          </div>
-        </ContentState>
-        {shouldUseMobileViewport ? (
-          <Wave1MobileBottomTab ariaLabel="마이페이지 하단 탭" currentTab="mypage" />
-        ) : null}
+        {gate}
+        <Wave1MobileBottomTab ariaLabel="마이페이지 하단 탭" currentTab="mypage" />
       </>
     );
   }

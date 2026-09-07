@@ -4,6 +4,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, expect, it, vi } from "vitest";
 import { PlannerDateControls } from "@/components/planner/planner-date-controls";
 afterEach(cleanup);
+it("uses the bright official brand accent for the today action", () => {
+  render(<PlannerDateControls date="2026-09-01" today="2026-09-06" onDateSelect={vi.fn()} />);
+  expect(screen.getByRole("button", { name: "오늘" }).className)
+    .toContain("bg-[var(--brand-accent)]");
+  expect(screen.getByRole("button", { name: "오늘" }).className)
+    .toContain("text-white");
+});
 it("selects a previous month day immediately and closes without a native input or confirmation", async () => {
   const onDateSelect=vi.fn();
   render(<PlannerDateControls date="2026-09-06" today="2026-09-06" onDateSelect={onDateSelect} />);

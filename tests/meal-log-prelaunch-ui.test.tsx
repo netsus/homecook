@@ -27,7 +27,7 @@ describe("prelaunch meal log presentation", () => {
     const chip = await screen.findByRole("radio", { name: /9\/7 월요일 선택, 기록 있음/ });
     expect(within(chip).queryByText("700 kcal")).toBeNull();
     const summary = selectedSummary();
-    expect(within(summary).getByText("700")).toBeTruthy();
+    expect(within(summary).getByText("700").className).toContain("text-[var(--brand-accent)]");
     expect(within(summary.querySelector("dl")!).getByText("40")).toBeTruthy();
     expect(within(summary.querySelector("dl")!).getByText("25")).toBeTruthy();
     expect(within(summary.querySelector("dl")!).getByText("10")).toBeTruthy();
@@ -56,6 +56,17 @@ describe("prelaunch meal log presentation", () => {
     expect(within(row).queryByRole("img", { name: /탄단지 열량 비율/ })).toBeNull();
     expect(within(row).getByRole("button", { name: /식사 기록 삭제/ }).textContent).toBe("");
     expect(within(row).getAllByRole("button")).toHaveLength(2);
+  });
+  it("keeps consumed quantity and calories directly with the food name", async () => {
+    render(<MealLogScreen {...props} />);
+    const food = await screen.findByRole("button", { name: /식사 기록 상세/ });
+    expect(within(food).getByText("나의 비공개 닭고기 덮밥")).toBeTruthy();
+    expect(within(food).getByLabelText("먹은 양 125g")).toBeTruthy();
+    expect(within(food).getByText("350 kcal")).toBeTruthy();
+    expect(within(food).getByText("350 kcal").className).toContain("text-[var(--brand-accent)]");
+    expect(screen.getByText("25g").className).toContain("text-[var(--brand-accent)]");
+    expect(screen.getAllByLabelText("먹은 양 125g")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /식사 기록 상세/, description: /125g.*350 kcal/ })).toBeTruthy();
   });
   it.each([
     ["complete", 0, 0, 0, 0, false],

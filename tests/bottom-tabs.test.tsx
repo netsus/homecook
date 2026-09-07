@@ -57,7 +57,7 @@ describe("BottomTabs", () => {
     const activeTab = screen.getByRole("link", { current: "page" });
     expect(activeTab.textContent).toContain("팬트리");
     expect(activeTab.className).toContain("bottom-tab-link");
-    expect(activeTab.className).toContain("text-[var(--brand-primary-text)]");
+    expect(activeTab.className).toContain("text-[var(--brand-accent)]");
     expect(screen.getByTestId("bottom-tab-icon-pantry-fridge")).toBeTruthy();
   });
 

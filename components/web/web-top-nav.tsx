@@ -3,7 +3,8 @@
 import Link from "next/link";
 import * as React from "react";
 
-import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
+import { MumeokHorizontalLogo } from "@/components/brand/mumeok-horizontal-logo";
+import { DesktopPrelaunchNotice } from "@/components/shared/prelaunch-notice";
 import { YoutubeExtractionNotificationTrigger } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import { cn } from "@/components/web/utils";
 import {
@@ -14,8 +15,6 @@ import {
 export interface WebTopNavProps {
   activeId?: PrimaryWebNavId | "login";
   brandHref?: string;
-  brandLabel?: string;
-  brandSupportingLabel?: string;
   className?: string;
   onNavigate?: (
     href: string,
@@ -30,8 +29,6 @@ export interface WebTopNavProps {
 export function WebTopNav({
   activeId,
   brandHref = "/",
-  brandLabel = "무먹",
-  brandSupportingLabel,
   className,
   onNavigate,
   rightSlot,
@@ -43,26 +40,12 @@ export function WebTopNav({
     <header className={cn("web-topnav", className)}>
       <div className="web-topnav-inner">
         <Link
-          aria-label={
-            brandSupportingLabel
-              ? `${brandLabel}, ${brandSupportingLabel}`
-              : undefined
-          }
+          aria-label="무먹, 무엇을 먹든"
           className="web-topnav-brand"
           href={brandHref}
           onClick={(event) => onNavigate?.(brandHref, event)}
         >
-          <MumeokBrandSymbol size={32} />
-          {brandSupportingLabel ? (
-            <span aria-hidden="true" className="web-topnav-brand-copy">
-              <span className="web-topnav-brand-primary">{brandLabel}</span>
-              <span className="web-topnav-brand-supporting">
-                {brandSupportingLabel}
-              </span>
-            </span>
-          ) : (
-            <span>{brandLabel}</span>
-          )}
+          <MumeokHorizontalLogo />
         </Link>
         <nav aria-label="데스크탑 주요 메뉴" className="web-topnav-tabs">
           {PRIMARY_WEB_NAV_ITEMS.map((item) => {
@@ -119,6 +102,7 @@ export function WebTopNav({
           )}
         </div>
       </div>
+      <DesktopPrelaunchNotice />
     </header>
   );
 }

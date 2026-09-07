@@ -224,7 +224,7 @@ async function installPlannerShellRoutes(
 }
 
 test.describe("planner-shell Stage 4", () => {
-  test("planner-shell preserves segment/date history, roving focus, and the two-day overview @smoke-core", async ({
+  test("planner-shell preserves segment/date history and the weekly plan @smoke-core", async ({
     page,
   }) => {
     await setAuthenticated(page);
@@ -232,23 +232,16 @@ test.describe("planner-shell Stage 4", () => {
 
     await page.goto(`/planner?date=${PLAN_DATE}`);
 
-    const planTab = page.getByRole("tab", { name: "요리 계획" });
-    const logTab = page.getByRole("tab", { name: "식사 기록" });
-    await expect(planTab).toHaveAttribute("aria-selected", "true");
-    await expect(planTab).toHaveAttribute("tabindex", "0");
-    await expect(logTab).toHaveAttribute("tabindex", "-1");
+    const planTab = page.getByRole("link", { name: "요리 계획", exact: true }).first();
+    const logTab = page.getByRole("link", { name: "식사 기록", exact: true }).first();
+    await expect(planTab).toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("planner-week-date-rail").locator("li"))
-      .toHaveCount(7);
-    await expect(page.getByTestId("planner-two-day-overview").locator(":scope > div"))
-      .toHaveCount(2);
+      .toHaveCount(21);
     await expect(page.getByText("김치찌개", { exact: true })).toBeVisible();
-    await expect(page.getByText("비어 있음", { exact: true })).toBeVisible();
     await expect(page.getByText(/계획 영양/)).toHaveCount(0);
 
-    await planTab.focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(logTab).toBeFocused();
-    await expect(logTab).toHaveAttribute("aria-selected", "true");
+    await logTab.click();
+    await expect(logTab).toHaveAttribute("aria-current", "page");
     await expect(page).toHaveURL(/segment=log/);
     await expect(
       page.getByRole("heading", { name: "7월 23일 목요일 식사 기록" }),
@@ -256,7 +249,7 @@ test.describe("planner-shell Stage 4", () => {
     expect(requests.mealLog).toBe(7);
 
     await page.goBack();
-    await expect(planTab).toHaveAttribute("aria-selected", "true");
+    await expect(planTab).toHaveAttribute("aria-current", "page");
     await expect(page).toHaveURL(new RegExp(`date=${PLAN_DATE}`));
     expect(requests.nutrition).toBe(0);
     expect(requests.productMethods).toEqual([]);
@@ -267,7 +260,7 @@ test.describe("planner-shell Stage 4", () => {
     expect(pageHasHorizontalOverflow).toBe(false);
   });
 
-  test("legacy-product-compat guest keeps the requested segment/date for login @smoke-core", async ({
+  test("legacy-product-compat guest keeps the requested segment/date in the preview @smoke-core", async ({
     page,
   }) => {
     await page.addInitScript(
@@ -277,13 +270,12 @@ test.describe("planner-shell Stage 4", () => {
     await page.goto(`/planner?segment=log&date=${PLAN_DATE}`);
 
     await expect(
-      page.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+      page.getByRole("heading", { name: "식사 기록", exact: true }).first(),
     ).toBeVisible();
+    await expect(page.getByText(/예시 플래너/)).toBeVisible();
     await expect(page).toHaveURL(
       new RegExp(`segment=log.*date=${PLAN_DATE}`),
     );
-    await expect(page.getByRole("button", { name: "Google로 시작하기" }))
-      .toBeVisible();
   });
 
   test("planner-shell reloads the originating week on browser Back without duplicating history @smoke-core", async ({
@@ -294,13 +286,15 @@ test.describe("planner-shell Stage 4", () => {
     const requests = await installPlannerShellRoutes(page);
 
     await page.goto(`/planner?date=${PLAN_DATE}`);
-    await expect(page.getByRole("heading", { name: "목 7월 23일" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "7/23 목 선택" }))
+      .toHaveAttribute("aria-current", "date");
     await expect.poll(() => requests.plannerRanges).toEqual([
       "2026-07-20:2026-07-26",
     ]);
     const initialHistoryLength = await page.evaluate(() => window.history.length);
 
-    await page.getByRole("button", { name: "다음 주" }).click();
+    await page.getByTestId("planner-week-date-rail").focus();
+    await page.keyboard.press("ArrowRight");
     await expect(page).toHaveURL(/date=2026-07-27/);
     await expect.poll(() => requests.plannerRanges).toEqual([
       "2026-07-20:2026-07-26",
@@ -319,7 +313,8 @@ test.describe("planner-shell Stage 4", () => {
 
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`date=${PLAN_DATE}`));
-    await expect(page.getByRole("heading", { name: "목 7월 23일" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "7/23 목 선택" }))
+      .toHaveAttribute("aria-current", "date");
     await expect.poll(() => requests.plannerRanges).toEqual([
       "2026-07-20:2026-07-26",
       "2026-07-27:2026-08-02",

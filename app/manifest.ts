@@ -21,6 +21,6 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "무엇을 먹든",
     short_name: "무먹",
     start_url: "/",
-    theme_color: "#00a1ff",
+    theme_color: "#0879cf",
   };
 }

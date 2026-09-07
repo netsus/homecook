@@ -46,6 +46,15 @@ describe("planner week navigation restoration", () => {
     expect(props.onDateSelect).toHaveBeenCalledWith("2026-03-26");
   });
 
+  it("uses the bright official brand accent for the selected planner date", () => {
+    render(<PlannerWeekNavigation {...createProps()} />);
+
+    expect(screen.getByRole("button", { name: "3/24 화 선택" }).className)
+      .toContain("bg-[var(--brand-accent)]");
+    expect(screen.getByRole("button", { name: "3/24 화 선택" }).className)
+      .toContain("text-white");
+  });
+
   it.each([
     [0, -7],
     [2, 7],

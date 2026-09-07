@@ -21,7 +21,6 @@ const VIEWPORTS = [
 ] as const;
 
 type Geometry = Awaited<ReturnType<typeof readGeometry>>;
-type Rect = NonNullable<Geometry["nav"]>;
 
 async function openHome(
   browser: Browser,
@@ -98,6 +97,7 @@ async function readGeometry(page: Page, kind: "desktop" | "mobile") {
         : ".home-app-brand-supporting",
     );
     const firstTab = document.querySelector(".web-topnav-tab");
+    const logo = document.querySelector(".mumeok-horizontal-logo");
     const search = document.querySelector<HTMLInputElement>(
       'input[placeholder="레시피 제목 검색"]',
     );
@@ -106,6 +106,7 @@ async function readGeometry(page: Page, kind: "desktop" | "mobile") {
       accessibleName: brand?.getAttribute("aria-label") ?? brand?.textContent?.trim() ?? null,
       brand: rect(brand),
       firstTab: rect(firstTab),
+      logo: rect(logo),
       nav: rect(nav),
       overflowX:
         document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -145,41 +146,6 @@ async function assertBeforeEvidenceDoesNotExist() {
   }
 }
 
-function parseRgb(color: string) {
-  const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
-  if (!channels || channels.length !== 3) return null;
-  return channels;
-}
-
-function contrastRatio(foreground: string, background: string) {
-  const toLuminance = (color: string) => {
-    const channels = parseRgb(color);
-    if (!channels) return null;
-    const normalized = channels.map((channel) => {
-      const value = channel / 255;
-      return value <= 0.03928
-        ? value / 12.92
-        : ((value + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * normalized[0] + 0.7152 * normalized[1] + 0.0722 * normalized[2];
-  };
-  const foregroundLuminance = toLuminance(foreground);
-  const backgroundLuminance = toLuminance(background);
-  if (foregroundLuminance === null || backgroundLuminance === null) return null;
-  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
-  const darker = Math.min(foregroundLuminance, backgroundLuminance);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-function maxRectDelta(first: Rect | null, second: Rect | null) {
-  if (!first || !second) return Number.POSITIVE_INFINITY;
-  return Math.max(
-    ...Object.keys(first).map((key) =>
-      Math.abs(first[key as keyof Rect] - second[key as keyof Rect]),
-    ),
-  );
-}
-
 test("captures and audits the HOME service-name lockup", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome", "one deterministic evidence pass");
   expect(["before", "after"]).toContain(EVIDENCE_PHASE);
@@ -209,22 +175,24 @@ test("captures and audits the HOME service-name lockup", async ({ browser }, tes
         const brand = page.getByRole("link", { exact: true, name: accessibleName });
         await expect(brand).toBeVisible();
         await expect(brand).toHaveAttribute("href", "/");
+        await expect(brand.locator("img.mumeok-horizontal-logo")).toHaveAttribute(
+          "src",
+          /mumeok-logo-horizontal\.png/,
+        );
       } else {
+        const brand = page.getByRole(
+          "heading",
+          { exact: true, level: 1, name: accessibleName },
+        );
         await expect(
           page.getByRole("heading", { exact: true, level: 1, name: accessibleName }),
         ).toBeVisible();
+        await expect(brand.locator("img.mumeok-horizontal-logo")).toHaveAttribute(
+          "src",
+          /mumeok-logo-horizontal\.png/,
+        );
       }
-
-      const current = geometry[viewport.key];
-      expect(current.primary.rect?.bottom).toBeLessThanOrEqual(
-        current.supporting.rect?.top ?? -1,
-      );
-      expect(current.primary.style?.fontSize).toBeGreaterThan(
-        current.supporting.style?.fontSize ?? Number.POSITIVE_INFINITY,
-      );
-      expect(current.supporting.rect?.height).toBeLessThanOrEqual(
-        (current.supporting.style?.lineHeight ?? 0) + 0.5,
-      );
+      expect(geometry[viewport.key].logo?.width).toBeGreaterThan(130);
     }
 
     await page.screenshot({
@@ -250,38 +218,21 @@ test("captures and audits the HOME service-name lockup", async ({ browser }, tes
   await nonHomePage.goto(`${BASE_URL}/about`);
   const nonHomeNav = nonHomePage.locator(".web-topnav");
   await expect(
-    nonHomeNav.getByRole("link", { exact: true, name: "무먹" }),
+    nonHomeNav.getByRole("link", { exact: true, name: "무먹, 무엇을 먹든" }),
   ).toBeVisible();
-  await expect(nonHomeNav.getByText("무엇을 먹든", { exact: true })).toHaveCount(0);
+  await expect(nonHomeNav.locator("img.mumeok-horizontal-logo")).toHaveAttribute(
+    "src",
+    /mumeok-logo-horizontal\.png/,
+  );
   await nonHome.close();
 
   const before = JSON.parse(await readFile(BEFORE_GEOMETRY_PATH, "utf8")) as Record<
     string,
     Geometry
   >;
-  const supportingContrast = Object.fromEntries(
-    Object.entries(geometry).map(([key, value]) => {
-      const style = value.supporting.style;
-      const ratio = style
-        ? contrastRatio(style.color, style.backgroundColor === "rgba(0, 0, 0, 0)" ? "rgb(255, 255, 255)" : style.backgroundColor)
-        : null;
-      expect(ratio).not.toBeNull();
-      expect(ratio ?? 0).toBeGreaterThanOrEqual(4.5);
-      return [key, ratio];
-    }),
-  );
-
-  const geometryTolerancePx = 0;
-  const desktopNavMaxDeltaPx = maxRectDelta(
-    geometry["1280"].nav,
-    before["1280"].nav,
-  );
-  const desktopTabMaxDeltaPx = maxRectDelta(
-    geometry["1280"].firstTab,
-    before["1280"].firstTab,
-  );
-  expect(desktopNavMaxDeltaPx).toBeLessThanOrEqual(geometryTolerancePx);
-  expect(desktopTabMaxDeltaPx).toBeLessThanOrEqual(geometryTolerancePx);
+  const desktopGap = (geometry["1280"].firstTab?.left ?? 0) - (geometry["1280"].brand?.right ?? 0);
+  expect(geometry["1280"].nav?.height).toBe(72);
+  expect(desktopGap).toBeGreaterThanOrEqual(36);
 
   await writeFile(
     outputPath("HOME-accessibility-geometry-audit.json"),
@@ -290,18 +241,13 @@ test("captures and audits the HOME service-name lockup", async ({ browser }, tes
         accessibleName: "무먹, 무엇을 먹든",
         before,
         checks: {
-          desktopNavHeightPreserved: desktopNavMaxDeltaPx <= geometryTolerancePx,
-          desktopNavMaxDeltaPx,
-          desktopTabGeometryPreserved: desktopTabMaxDeltaPx <= geometryTolerancePx,
-          desktopTabMaxDeltaPx,
+          desktopHorizontalLogo: true,
+          desktopLogoTabGap: desktopGap,
           firstViewportSearchVisible: true,
-          geometryTolerancePx,
-          nonHomeShortNameOnly: true,
+          nonHomeLogoUnified: true,
           noDuplicateAccessibleName: true,
           noPageOverflow: true,
-          supportingNameContrastAA: supportingContrast,
-          supportingNameSingleLine: true,
-          verticalHierarchy: true,
+          mobileHorizontalLogo: true,
         },
         phase: "after",
         result: "pass",
