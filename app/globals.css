@@ -8846,13 +8846,13 @@ button {
   }
 
   .web-cook-whole-screen {
-    min-height: calc(100dvh - var(--web-nav-h));
+    min-height: calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h));
     padding: 16px 0 24px;
   }
 
   .web-cook-whole-board {
     display: grid;
-    height: max(640px, calc(100dvh - var(--web-nav-h) - 40px));
+    height: max(560px, calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h) - 40px));
     min-height: 0;
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;

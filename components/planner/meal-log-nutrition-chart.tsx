@@ -31,12 +31,12 @@ export function MealLogNutritionChart({ nutrition }: { nutrition: MealLogNutriti
                 return <circle key={macro.label} cx="60" cy="60" fill="none" pathLength="100" r="49" stroke={macro.color} strokeDasharray={`${Math.max(0, share - 1)} ${100 - Math.max(0, share - 1)}`} strokeDashoffset={-start} strokeWidth="10" transform="rotate(-90 60 60)" />;
               })}
               <text x="60" y="51" textAnchor="middle" fontSize="9" fill="#64748b">{nutrition.calculation_status === "partial" ? "확인된 열량" : "총 섭취 열량"}</text>
-              <text x="60" y="70" textAnchor="middle" fontSize="13" fontWeight="800" fill="#00A1FF">{calorieLabel}</text>
+              <text x="60" y="70" textAnchor="middle" fontSize="13" fontWeight="800" fill="#075c9e">{calorieLabel}</text>
             </svg>
-          ) : <div className="flex min-h-28 flex-col justify-center rounded-full bg-sky-50 px-2"><span className="text-[11px] text-slate-500">총 섭취 열량</span><p className="mt-1 text-base font-extrabold text-[var(--brand-accent)]">{calorieLabel}</p></div>}
+          ) : <div className="flex min-h-28 flex-col justify-center rounded-full bg-sky-50 px-2"><span className="text-[11px] text-slate-500">총 섭취 열량</span><p className="mt-1 text-base font-extrabold text-[var(--brand-primary-text)]">{calorieLabel}</p></div>}
         </div>
         <dl className="min-w-0 flex-1 space-y-3 text-xs sm:text-sm lg:grid lg:grid-cols-3 lg:divide-x lg:divide-slate-100 lg:space-y-0">
-          {macros.map((macro) => <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 lg:flex-col lg:justify-center lg:gap-2 lg:px-2" key={macro.label}><dt className="flex items-center gap-2 text-slate-600"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />{macro.label}</dt><dd className="font-extrabold tabular-nums text-[var(--brand-accent)] lg:text-2xl">{macro.value === null ? <span className="text-xs font-medium">정보 준비 중</span> : `${format(macro.value)}g`}</dd></div>)}
+          {macros.map((macro) => <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 lg:flex-col lg:justify-center lg:gap-2 lg:px-2" key={macro.label}><dt className="flex items-center gap-2 text-slate-600"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />{macro.label}</dt><dd className="font-extrabold tabular-nums text-[var(--brand-primary-text)] lg:text-2xl">{macro.value === null ? <span className="text-xs font-medium">정보 준비 중</span> : `${format(macro.value)}g`}</dd></div>)}
         </dl>
       </div>
       {available && energy > 0 ? <p className="mt-2 text-[11px] text-slate-500">그래프는 탄수화물·단백질·지방의 열량 비율이에요.</p> : <p className="mt-3 text-xs text-slate-500">{available ? "먹은 음식이 기록되면 탄단지 비율을 보여드릴게요." : "영양 정보가 준비되면 그래프를 보여드릴게요."}</p>}

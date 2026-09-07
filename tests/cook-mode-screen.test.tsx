@@ -709,10 +709,10 @@ describe("CookModeScreen", () => {
 
   it("keeps cooking mode density rules viewport-driven in CSS", () => {
     expect(GLOBAL_CSS).toContain(
-      ".web-cook-whole-screen {\n    min-height: calc(100dvh - var(--web-nav-h));",
+      ".web-cook-whole-screen {\n    min-height: calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h));",
     );
     expect(GLOBAL_CSS).toContain(
-      "height: max(640px, calc(100dvh - var(--web-nav-h) - 40px));",
+      "height: max(560px, calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h) - 40px));",
     );
     expect(GLOBAL_CSS).toContain(
       ".cook-whole-board-mobile .cook-whole-ingredients {\n  display: flex;",

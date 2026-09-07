@@ -1,5 +1,5 @@
 import { YoutubePreparationNotice } from "@/components/shared/prelaunch-notice";
-import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
@@ -34,7 +34,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
   const { date, columnId, extractionId, restore, returnSurface, returnTo, slot, youtubeUrl } =
     await searchParams;
 
-  if (isPrelaunchUiEnabled() && !extractionId) {
+  if (isPrelaunchFeatureLocked() && !extractionId) {
     return <main><YoutubePreparationNotice backHref={date ? `/planner?date=${encodeURIComponent(date)}` : "/planner"} /></main>;
   }
 

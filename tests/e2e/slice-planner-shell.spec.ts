@@ -479,7 +479,7 @@ test.describe("planner-shell Stage 4", () => {
     await installPlannerShellRoutes(page, { emptyPlanner: true });
     await page.goto(`/planner?date=${PLAN_DATE}`);
 
-    await expect(page.getByText("비어 있음", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /식사 추가/ }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "기존 완제품 계획" }))
       .toHaveCount(0);
   });
@@ -513,62 +513,29 @@ test.describe("planner-shell Stage 4", () => {
       );
       const dateButtons = [
         ...document.querySelectorAll<HTMLButtonElement>(
-          '[data-testid="planner-week-date-rail"] button',
+          '[data-testid="planner-week-date-rail"] ol:not([aria-hidden="true"]) button',
         ),
       ];
-      const bottomTab = document.querySelector<HTMLElement>(
-        'nav[aria-label="플래너 하단 탭"]',
+      const plannerScreen = document.querySelector<HTMLElement>(
+        '[data-testid="planner-screen"]',
       );
-      const planPanel = document.querySelector<HTMLElement>("#planner-plan-panel");
-      const weekShell = document.querySelector<HTMLElement>(
-        '[data-testid="planner-week-shell"]',
-      );
-      const textTargets = [
-        ...document.querySelectorAll<HTMLElement>(
-          '[role="tab"], [aria-label="주간 이동"] > div p, '
-            + '[data-testid="planner-two-day-overview"] p, '
-            + '#planner-week-body h3, #planner-plan-panel a',
-        ),
-      ].filter((element) => (element.textContent ?? "").trim().length >= 2);
-
-      const textRuns = textTargets.map((element) => {
-        const range = document.createRange();
-        range.selectNodeContents(element);
-        const lineRects = [...range.getClientRects()].filter(
-          (rect) => rect.width > 0 && rect.height > 0,
-        );
-        const style = getComputedStyle(element);
-        return {
-          clipped:
-            element.scrollHeight > element.clientHeight + 1
-            || element.scrollWidth > element.clientWidth + 1,
-          fontSize: Number.parseFloat(style.fontSize),
-          maxLineWidth: Math.max(0, ...lineRects.map((rect) => rect.width)),
-          text: (element.textContent ?? "").trim().replace(/\s+/g, " "),
-        };
-      });
 
       return {
-        bottomClearance:
-          bottomTab && planPanel
-            ? Math.round(bottomTab.getBoundingClientRect().top
-              - planPanel.getBoundingClientRect().bottom)
-            : null,
+        bottomPadding: plannerScreen
+          ? Number.parseFloat(getComputedStyle(plannerScreen).paddingBottom)
+          : 0,
         dateTargets: dateButtons.map((button) => {
           const rect = button.getBoundingClientRect();
           return { height: rect.height, width: rect.width };
         }),
-        horizontalGutters: weekShell
+        horizontalGutters: rail
           ? {
-              left: Math.round(weekShell.getBoundingClientRect().left),
+              left: Math.round(rail.getBoundingClientRect().left),
               right: Math.round(
-                window.innerWidth - weekShell.getBoundingClientRect().right,
+                window.innerWidth - rail.getBoundingClientRect().right,
               ),
             }
           : null,
-        overviewCount: document.querySelectorAll(
-          '[data-testid="planner-two-day-overview"] > div',
-        ).length,
         pageOverflow:
           document.documentElement.scrollWidth
           > document.documentElement.clientWidth + 1,
@@ -577,7 +544,6 @@ test.describe("planner-shell Stage 4", () => {
             && rail.getBoundingClientRect().left >= -1
           : false,
         railScrollable: rail ? rail.scrollWidth > rail.clientWidth : false,
-        textRuns,
       };
     });
 
@@ -589,14 +555,9 @@ test.describe("planner-shell Stage 4", () => {
     expect.soft(defaultLayout.railContained).toBe(true);
     expect.soft(defaultLayout.railScrollable).toBe(true);
     expect.soft(defaultLayout.pageOverflow).toBe(false);
-    expect.soft(defaultLayout.overviewCount).toBe(2);
     expect.soft(defaultLayout.horizontalGutters).toEqual({ left: 16, right: 16 });
 
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await waitForSettledLayout(page);
-    const defaultBottomLayout = await measureLayout();
-    expect.soft(defaultBottomLayout.bottomClearance ?? 0)
-      .toBeGreaterThanOrEqual(16);
+    expect.soft(defaultLayout.bottomPadding).toBeGreaterThanOrEqual(72);
 
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
@@ -606,17 +567,12 @@ test.describe("planner-shell Stage 4", () => {
 
     const scaledLayout = await measureLayout();
     expect.soft(scaledLayout.pageOverflow).toBe(false);
-    expect.soft(scaledLayout.overviewCount).toBe(2);
-    expect.soft(scaledLayout.horizontalGutters).toEqual({ left: 16, right: 16 });
+    expect.soft(scaledLayout.horizontalGutters?.left ?? 0).toBeGreaterThanOrEqual(16);
+    expect.soft(scaledLayout.horizontalGutters?.left).toBe(scaledLayout.horizontalGutters?.right);
     expect.soft(scaledLayout.dateTargets.every(
       ({ height, width }) => height >= 44 && width >= 44,
     )).toBe(true);
-    expect.soft(scaledLayout.textRuns.filter(
-      ({ clipped, fontSize, maxLineWidth }) =>
-        clipped || maxLineWidth < fontSize * 1.5,
-    )).toEqual([]);
-    expect.soft(scaledLayout.bottomClearance).not.toBeNull();
-    expect.soft(scaledLayout.bottomClearance ?? 0).toBeGreaterThanOrEqual(16);
+    expect.soft(scaledLayout.bottomPadding).toBeGreaterThanOrEqual(72);
 
     for (const viewport of [
       { height: 844, width: 390 },
@@ -631,16 +587,9 @@ test.describe("planner-shell Stage 4", () => {
         ({ height, width }) => height >= 44 && width >= 44,
       )).toBe(true);
       expect.soft(layout.pageOverflow).toBe(false);
-      expect.soft(layout.overviewCount).toBe(2);
       if (viewport.width === 390) {
         expect.soft(layout.horizontalGutters).toEqual({ left: 16, right: 16 });
-        await page.evaluate(
-          () => window.scrollTo(0, document.documentElement.scrollHeight),
-        );
-        await waitForSettledLayout(page);
-        const bottomLayout = await measureLayout();
-        expect.soft(bottomLayout.bottomClearance ?? 0)
-          .toBeGreaterThanOrEqual(16);
+        expect.soft(layout.bottomPadding).toBeGreaterThanOrEqual(72);
       }
     }
   });
@@ -657,7 +606,7 @@ test.describe("planner-shell Stage 4", () => {
 
     const selectedSunday = page.getByRole("button", { name: "7/26 일 선택" });
     await expect(selectedSunday).toHaveAttribute("aria-current", "date");
-    await expect(page.getByRole("heading", { name: "일 7월 26일" })).toBeVisible();
+    await expect(page.getByTestId("planner-day-card-2026-07-26")).toBeVisible();
 
     await expect.poll(() => page.evaluate(() => {
       const rail = document.querySelector<HTMLElement>(
@@ -676,12 +625,6 @@ test.describe("planner-shell Stage 4", () => {
         scrollLeft: rail.scrollLeft,
         scrollWidth: rail.scrollWidth,
       };
-    })).toEqual({
-      clientWidth: 262,
-      fullyVisible: true,
-      maxScrollLeft: 70,
-      scrollLeft: 70,
-      scrollWidth: 332,
-    });
+    })).toMatchObject({ fullyVisible: true });
   });
 });

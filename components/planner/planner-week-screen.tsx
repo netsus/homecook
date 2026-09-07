@@ -759,6 +759,7 @@ export function PlannerWeekScreen({
   return (
     <div
       className="min-h-screen overflow-x-clip bg-[var(--surface-fill)] pb-[calc(72px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:pb-12"
+      data-testid="planner-screen"
       style={{ "--planner-sticky-height": `${stickyHeight}px` } as React.CSSProperties}
     >
       <div className="hidden lg:block">

@@ -3,6 +3,15 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react"
 
 const SETTLE_MS = 180;
 
+function pageOffset(rail: HTMLElement, index: number) {
+  const page = rail.children.item(index) as HTMLElement | null;
+  if (!page) return rail.clientWidth * index;
+  // jsdom has no layout and reports every offsetLeft as zero.
+  return index > 0 && page.offsetLeft === 0
+    ? rail.clientWidth * index
+    : page.offsetLeft;
+}
+
 function addDays(date: string, days: number) {
   const value = new Date(`${date}T00:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() + days);
@@ -26,7 +35,7 @@ export function useWeekSwipePager(startDate: string, onShiftWeek: (days: number)
   const recenter = useCallback(() => {
     clearTimer();
     const rail = railRef.current;
-    if (rail && rail.clientWidth > 0) rail.scrollLeft = rail.clientWidth;
+    if (rail && rail.children.length > 1) rail.scrollLeft = pageOffset(rail, 1);
     committingRef.current = false;
   }, [clearTimer]);
 
@@ -51,11 +60,17 @@ export function useWeekSwipePager(startDate: string, onShiftWeek: (days: number)
       timerRef.current = null;
       const rail = railRef.current;
       if (!rail || rail.clientWidth <= 0 || interactingRef.current || committingRef.current) return;
-      const page = Math.round(rail.scrollLeft / rail.clientWidth);
+      const pages = [...rail.children] as HTMLElement[];
+      const page = pages.reduce((closest, _item, index) => (
+        Math.abs(pageOffset(rail, index) - rail.scrollLeft)
+          < Math.abs(pageOffset(rail, closest) - rail.scrollLeft)
+          ? index
+          : closest
+      ), 0);
       if (page === 1) return;
       committingRef.current = true;
       // Reset the physical page before loading. The reset's scroll event is not another gesture.
-      rail.scrollLeft = rail.clientWidth;
+      rail.scrollLeft = pageOffset(rail, 1);
       const result = onShiftRef.current(page > 1 ? 7 : -7);
       if (result && typeof result.then === "function") {
         // A rejected load may leave the range unchanged. It must not lock out the next gesture.

@@ -4,7 +4,7 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppBottomSheet } from "@/components/shared/app-overlay";
-import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogNutritionChart } from "@/components/planner/meal-log-nutrition-chart";
@@ -303,6 +303,7 @@ function EntryDialog({
   onEdit,
   mutationEnabled,
   onUnauthorized,
+  returnFocusTarget,
 }: {
   day: MealLogDayData;
   fallbackFocusRef: React.RefObject<HTMLElement | null>;
@@ -312,6 +313,7 @@ function EntryDialog({
   onEdit: () => void;
   mutationEnabled: boolean;
   onUnauthorized: (context: MealLogReturnContext) => void;
+  returnFocusTarget: () => HTMLElement | null;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
@@ -340,6 +342,9 @@ function EntryDialog({
     initialFocusRef: requiresColumnSelection ? selectorRef : cancelRef,
     onClose,
   });
+  useEffect(() => {
+    setReturnFocusTarget(returnFocusTarget);
+  }, [returnFocusTarget, setReturnFocusTarget]);
   useEffect(() => {
     if (!error) return;
     requestAnimationFrame(() => errorRef.current?.focus());
@@ -510,7 +515,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
   const dialogMutationEnabled = !guest && Boolean(dialogDay) && !loading && !failedDates.has(dialogDate);
   function openDialog(next: Exclude<DialogState, null>, targetDate: string) {
     setDialogDate(targetDate);
-    if (next.type === "detail" && isPrelaunchUiEnabled()) {
+    if (next.type === "detail" && isPrelaunchFeatureLocked()) {
       if (guest) (onFoodLoginRequired ?? onLoginRequired ?? onUnauthorized)(targetDate);
       else setDetailPreparationOpen(true);
       return;
@@ -683,7 +688,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       return;
     }
     restoredContextRef.current = true;
-    if (context.action === "edit" && isPrelaunchUiEnabled()) {
+    if (context.action === "edit" && isPrelaunchFeatureLocked()) {
       // Keep the unsaved draft for later; preparation mode never opens the editor.
       document.getElementById(returnInvokerId(context))?.focus();
       setDetailPreparationOpen(true);
@@ -733,7 +738,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
                     { label: "지방", value: cardDay.day_total.fat_g, unit: "g" },
                   ].map((metric) => <div className="min-w-0 rounded-lg border border-slate-200 px-1 py-2 text-center" key={metric.label}>
                     <dt className="text-[11px] font-bold text-slate-700">{metric.label}</dt>
-                    <dd className="mt-1 text-xs font-bold tabular-nums text-slate-700">{metric.value === null ? <span className="text-[10px]">정보 없음</span> : <><strong className="text-sm font-[900] text-[var(--brand-accent)]">{number(metric.value, "")}</strong> {metric.unit}</>}</dd>
+                    <dd className="mt-1 text-xs font-bold tabular-nums text-slate-700">{metric.value === null ? <span className="text-[10px]">정보 없음</span> : <><strong className="text-sm font-[900] text-[var(--brand-primary-text)]">{number(metric.value, "")}</strong> {metric.unit}</>}</dd>
                   </div>)}
                 </dl>
                 {cardDay.day_total.incomplete_count > 0 ? <p className="mt-2 text-xs text-slate-500">일부 정보 없음 {cardDay.day_total.incomplete_count}건 · 확인된 영양만 표시해요.</p> : null}
@@ -750,7 +755,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       </div>
 
       {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
-      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onEdit={editDetail} onUnauthorized={loseAuthorization} state={dialog} /> : null}
+      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onEdit={editDetail} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
       {detailPreparationOpen && !guest ? <DetailPreparationNotice onClose={() => setDetailPreparationOpen(false)} /> : null}
     </main>
     </>

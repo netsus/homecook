@@ -3,7 +3,7 @@
 import React from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
-import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import {
   cancelServerAuthFlow,
@@ -63,7 +63,7 @@ export function SocialLoginButtons({
     : localDevAuthEnabled && !localGoogleOAuthEnabled
       ? []
       : enabledProviders;
-  const prelaunch = isPrelaunchUiEnabled();
+  const prelaunch = isPrelaunchFeatureLocked();
   const providers = prelaunch ? [] : availableProviders;
 
   useEffect(() => { setRecentProvider(readLastAuthProvider() ?? lastProvider); }, [lastProvider]);
@@ -99,7 +99,7 @@ export function SocialLoginButtons({
   }
 
   const handleSignIn = (provider: AuthProviderId) => {
-    if (isPrelaunchUiEnabled()) return;
+    if (isPrelaunchFeatureLocked()) return;
     startTransition(async () => {
       let flowStarted = false;
       try {

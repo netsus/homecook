@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { fail, ok } from "@/lib/api/response";
 import { AUTH_FLOW_COOKIE_NAME } from "@/lib/server/full-local-auth/flow-ledger";
 import {
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 400);
   }
 
-  if (body.flow_kind === "login" && isPrelaunchUiEnabled()) {
+  if (body.flow_kind === "login" && isPrelaunchFeatureLocked()) {
     return fail("AUTH_FLOW_UNAVAILABLE", "로그인과 회원가입은 정식 출시 후 열립니다.", 503);
   }
 

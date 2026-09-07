@@ -275,7 +275,7 @@ export function AccountQuarantineScreen({
 
   return (
     <main
-      className="min-h-screen overflow-x-hidden bg-[var(--surface-fill)] px-4 pb-[calc(var(--space-8)+env(safe-area-inset-bottom))] pt-[calc(var(--space-6)+env(safe-area-inset-top))] text-[var(--foreground)] sm:px-6"
+      className="min-h-screen overflow-x-hidden bg-[var(--surface-fill)] px-4 pb-[calc(var(--space-8)+env(safe-area-inset-bottom))] pt-[calc(var(--space-6)+env(safe-area-inset-top))] text-[var(--foreground)] max-[360px]:pt-[calc(12px+env(safe-area-inset-top))] sm:px-6"
       data-screen-id="ACCOUNT_QUARANTINE"
     >
       <div
@@ -285,7 +285,7 @@ export function AccountQuarantineScreen({
         inert={deleteReviewOpen || undefined}
       >
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <section className="min-w-0 rounded-[var(--radius-card)] border border-[var(--warning-border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] sm:p-6">
+          <section className="min-w-0 rounded-[var(--radius-card)] border border-[var(--warning-border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] max-[360px]:p-3 sm:p-6">
             <span className="inline-flex min-h-8 items-center rounded-[var(--radius-full)] bg-[var(--warning-soft)] px-3 text-xs font-extrabold text-[var(--foreground)]">
               계정 보호
             </span>

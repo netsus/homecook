@@ -1058,7 +1058,7 @@ test.describe("Slice 19: YouTube Import", () => {
 });
 
 test.describe("Slice 19: YouTube Import desktop embedded", () => {
-  test("embedded entry shows the prelaunch preparation state @smoke-core", async ({
+  test("embedded review keeps the final register action visible @smoke-core", async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "desktop embedded flow");
@@ -1071,9 +1071,28 @@ test.describe("Slice 19: YouTube Import desktop embedded", () => {
     await installRegisterRoute(page);
 
     await page.goto(YOUTUBE_IMPORT_EMBEDDED_URL);
+    const embeddedImport = page.getByTestId("youtube-import-embedded");
+    await expect(embeddedImport).toBeVisible();
+
+    await embeddedImport
+      .locator('input[type="url"]')
+      .fill("https://www.youtube.com/watch?v=recipe12345");
+    await embeddedImport.getByRole("button", { name: "가져오기" }).click();
+
     await expect(
-      page.getByRole("heading", { name: "준비 중인 기능이에요" }),
-    ).toBeVisible();
-    await expect(page.getByText("유튜브 레시피 가져오기")).toBeVisible();
+      embeddedImport.getByRole("heading", { name: "추출 결과를 확인해 주세요" }),
+    ).toBeVisible({ timeout: 10000 });
+
+    const registerButton = embeddedImport.getByRole("button", {
+      name: "등록",
+      exact: true,
+    });
+    await expect(registerButton).toBeVisible();
+    await expect(registerButton).toBeEnabled();
+
+    await registerButton.click();
+    await expect(embeddedImport.getByText("레시피가 등록됐어요")).toBeVisible({
+      timeout: 5000,
+    });
   });
 });

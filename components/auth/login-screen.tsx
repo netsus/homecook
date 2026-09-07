@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
-import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { ContentState } from "@/components/shared/content-state";
 import { useViewMode } from "@/components/shared/use-view-mode";
 import type { AuthProviderId } from "@/lib/auth/providers";
@@ -59,7 +59,7 @@ export function LoginScreen({
   lastProvider = null,
   nextPath = "/",
 }: LoginScreenProps) {
-  const prelaunch = isPrelaunchUiEnabled();
+  const prelaunch = isPrelaunchFeatureLocked();
   const localPasswordBootstrapPendingRef = useRef(false);
   const safeErrorCopy: Record<string, string> = {
     oauth_failed: "로그인에 실패했어요. 다시 시도해 주세요.",

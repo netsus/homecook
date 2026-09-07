@@ -31,6 +31,19 @@ export function PlannerWeekNavigation({
   const dateRefs = React.useRef(new Map<string, HTMLButtonElement>());
   const isLog = mode === "log";
 
+  React.useLayoutEffect(() => {
+    const rail = railRef.current;
+    const selected = dateRefs.current.get(selectedDate);
+    if (!rail || !selected) return;
+    const railRect = rail.getBoundingClientRect();
+    const selectedRect = selected.getBoundingClientRect();
+    if (selectedRect.left < railRect.left) {
+      rail.scrollLeft -= railRect.left - selectedRect.left + 4;
+    } else if (selectedRect.right > railRect.right) {
+      rail.scrollLeft += selectedRect.right - railRect.right + 4;
+    }
+  }, [railRef, selectedDate, startDate]);
+
   function handleDateKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
     if (!isLog || !["ArrowLeft", "ArrowRight", "Home", "End", " ", "Enter"].includes(event.key)) return;
     event.preventDefault();
@@ -80,7 +93,7 @@ export function PlannerWeekNavigation({
         tabIndex={0}
       >
         {weeks.map((dates, page) => (
-          <ol aria-hidden={page !== 1 ? true : undefined} aria-label={page === 1 ? (isLog ? "식사 기록 날짜 선택" : "주간 날짜") : undefined} className="grid w-full shrink-0 snap-center snap-always grid-cols-7 gap-1 p-1" key={page} role={isLog ? "radiogroup" : undefined}>
+          <ol aria-hidden={page !== 1 ? true : undefined} aria-label={page === 1 ? (isLog ? "식사 기록 날짜 선택" : "주간 날짜") : undefined} className="grid w-full min-w-[340px] shrink-0 snap-center snap-always grid-cols-7 gap-[4px] p-[4px]" key={page} role={isLog ? "radiogroup" : undefined}>
             {dates.map((date, index) => (
               <li className="min-w-0" key={date} role={isLog ? "none" : undefined}>
                 <button

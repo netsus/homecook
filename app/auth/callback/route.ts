@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { buildSameAppRedirectUrl } from "@/lib/auth/redirect-origin";
 import {
@@ -156,7 +156,7 @@ export async function GET(request: Request) {
     requestUrl.searchParams.get("next")
       ?? parsePostAuthNextCookie(cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value),
   );
-  if (isPrelaunchUiEnabled()) {
+  if (isPrelaunchFeatureLocked()) {
     const loginUrl = buildSameAppRedirectUrl("/login", requestUrl);
     loginUrl.searchParams.set("next", nextPath);
     // End only this pending OAuth flow; an already signed-in session stays intact.

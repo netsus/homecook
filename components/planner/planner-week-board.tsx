@@ -98,8 +98,11 @@ function WeekMeal({
             {meal.recipe_title}
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs leading-snug text-[var(--text-2)]">
+            <span className="whitespace-nowrap">{meal.planned_servings}인분</span>
+            <span aria-hidden="true">·</span>
             <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: status.color }} />
-            <span className="sr-only" id={statusId}>{status.label}</span>
+            <span className="whitespace-nowrap" id={statusId}>{status.label}</span>
+            <span aria-hidden="true">·</span>
             <span className="whitespace-nowrap">{totalWeight}</span>
             <span aria-hidden="true">·</span>
             <span className="whitespace-nowrap font-semibold text-slate-800">{totalEnergy}</span>

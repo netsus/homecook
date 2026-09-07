@@ -3,7 +3,7 @@
 import React from "react";
 import dynamic from "next/dynamic";
 
-import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import type { SocialLoginButtonsProps } from "@/components/auth/social-login-buttons";
 
@@ -30,7 +30,7 @@ const SocialLoginButtons = dynamic(
 );
 
 export function SocialLoginButtonsDeferred(props: SocialLoginButtonsProps) {
-  if (isPrelaunchUiEnabled()) {
+  if (isPrelaunchFeatureLocked()) {
     return (
       <div className="space-y-3">
         <p className="text-sm leading-6 text-[var(--text-2)]">

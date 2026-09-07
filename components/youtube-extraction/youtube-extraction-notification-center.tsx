@@ -160,7 +160,7 @@ function NotificationRow({
       {destination || item.can_retry ? (
         <div className="col-span-2 flex min-w-0 flex-wrap gap-2 sm:col-start-2 sm:col-end-3">
           {destination ? (
-            <Link className="inline-flex min-h-11 w-full min-w-0 items-center justify-center whitespace-normal break-keep rounded-full bg-[var(--brand-primary)] px-4 py-2 text-center text-sm font-bold leading-5 text-[var(--foreground)] sm:w-auto" href={destination}>
+            <Link className="inline-flex min-h-11 w-full min-w-0 items-center justify-center whitespace-normal break-keep rounded-full bg-[var(--brand-primary)] px-4 py-2 text-center text-sm font-bold leading-5 text-white sm:w-auto" href={destination}>
               {item.result?.review_path ? "결과 확인" : "레시피 보기"}
             </Link>
           ) : null}
@@ -748,7 +748,7 @@ function YoutubeExtractionNotificationRuntime({
           </div>
           <button aria-label="로그인 안내 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setAuthExpired(false)} type="button">×</button>
         </div>
-        <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-[var(--foreground)]" href={`/login?next=${encodeURIComponent(returnPath)}`}>
+        <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-white" href={`/login?next=${encodeURIComponent(returnPath)}`}>
           로그인하고 돌아오기
         </Link>
       </aside>

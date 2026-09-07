@@ -77,13 +77,13 @@ describe("planner prelaunch meal presentation", () => {
     expect(boardProps.onAdd).toHaveBeenCalledWith("2026-09-06", boardProps.columns[0]);
   });
 
-  it("shows total weight and planned total nutrition without per-serving labels", () => {
+  it("shows servings context with planned total nutrition", () => {
     render(<PlannerWeekBoard {...props()} nutritionByMeal={nutritionByMeal} />);
     expect(screen.getByRole("link", { name: meal.recipe_title }).getAttribute("title")).toContain("500 g · 420 kcal · 탄수화물 46 g · 단백질 22 g · 지방 14 g");
     expect(screen.getByText("500 g")).toBeTruthy();
     expect(screen.getByText("420 kcal")).toBeTruthy();
-    expect(screen.queryByText(/인분/)).toBeNull();
-    expect(screen.getByText("등록").className).toContain("sr-only");
+    expect(screen.getByText("2인분")).toBeTruthy();
+    expect(screen.getByText("등록").className).not.toContain("sr-only");
     const bar = screen.getByRole("img", { name: /탄단지 열량 비율/ });
     const portions = Array.from(bar.children).map((child) => Number.parseFloat((child as HTMLElement).style.width));
     expect(portions[0]).toBeCloseTo(46 * 4 / (46 * 4 + 22 * 4 + 14 * 9) * 100);

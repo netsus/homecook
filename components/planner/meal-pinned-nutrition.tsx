@@ -11,7 +11,7 @@ export function MealPinnedNutrition({ nutrition, servings, title }: {
   const matches = nutrition?.plannedServings === servings;
   return (
     <section aria-label={`${title} 계획 영양정보`} className="mt-3 rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] p-3">
-      <h3 className="text-sm font-extrabold">레시피 영양정보</h3>
+      <h2 className="text-sm font-extrabold">레시피 영양정보</h2>
       <p className="mt-1 text-xs text-[var(--text-2)]">등록한 계획 기준 · {servings}인분 · 예상 영양</p>
       {!matches ? <p className="mt-3 text-sm text-[var(--text-2)]">{nutrition ? "영양 정보를 다시 확인하고 있어요." : "영양 정보 준비 중"}</p> : (
         <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
