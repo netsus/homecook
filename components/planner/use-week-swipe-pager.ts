@@ -12,6 +12,18 @@ function pageOffset(rail: HTMLElement, index: number) {
     : page.offsetLeft;
 }
 
+function revealSelectedDate(rail: HTMLElement) {
+  const selected = rail.querySelector<HTMLElement>('[aria-current="date"]');
+  if (!selected) return;
+  const railRect = rail.getBoundingClientRect();
+  const selectedRect = selected.getBoundingClientRect();
+  if (selectedRect.left < railRect.left) {
+    rail.scrollLeft -= railRect.left - selectedRect.left + 4;
+  } else if (selectedRect.right > railRect.right) {
+    rail.scrollLeft += selectedRect.right - railRect.right + 4;
+  }
+}
+
 function addDays(date: string, days: number) {
   const value = new Date(`${date}T00:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() + days);
@@ -35,7 +47,10 @@ export function useWeekSwipePager(startDate: string, onShiftWeek: (days: number)
   const recenter = useCallback(() => {
     clearTimer();
     const rail = railRef.current;
-    if (rail && rail.children.length > 1) rail.scrollLeft = pageOffset(rail, 1);
+    if (rail && rail.children.length > 1) {
+      rail.scrollLeft = pageOffset(rail, 1);
+      revealSelectedDate(rail);
+    }
     committingRef.current = false;
   }, [clearTimer]);
 
