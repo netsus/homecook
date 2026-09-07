@@ -1015,12 +1015,13 @@ export function HomeScreen() {
 
                 {consumerScreenState === "ready" && displayedRecipes.length ? (
                   <div className="grid grid-cols-1 gap-4 px-4">
-                    {displayedRecipes.map((recipe) => (
+                    {displayedRecipes.map((recipe, index) => (
                       <RecipeCard
                         isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
                         key={recipe.id}
                         onOpen={() => incrementRecipeViewCount(recipe.id)}
                         onSave={homeSaveFlow.openRecipeSaveModal}
+                        priority={index === 0}
                         recipe={recipe}
                       />
                     ))}
