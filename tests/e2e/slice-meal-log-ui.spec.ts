@@ -1,8 +1,13 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Route } from "@playwright/test";
+
+import {
+  captureTrackedEvidenceOnDemand,
+  shouldUpdateTrackedEvidence,
+  writeTrackedEvidenceOnDemand,
+} from "./helpers/evidence-capture";
 
 import {
   installAccountLibraryVisualRoutes,
@@ -298,10 +303,11 @@ test.describe("meal-log-ui Stage 4", () => {
     test.setTimeout(360_000);
     const implementationHead = process.env.HOMECOOK_PLAYWRIGHT_CLEAN_HEAD ?? "";
     const implementationTree = process.env.HOMECOOK_PLAYWRIGHT_CLEAN_TREE ?? "";
-    expect(implementationHead, "canonical meal-log evidence requires Playwright to start from a clean worktree").not.toBe("");
-    expect(implementationHead).toMatch(/^[0-9a-f]{40}$/u);
-    expect(implementationTree).toMatch(/^[0-9a-f]{40}$/u);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
+    if (shouldUpdateTrackedEvidence()) {
+      expect(implementationHead, "canonical meal-log evidence requires Playwright to start from a clean worktree").not.toBe("");
+      expect(implementationHead).toMatch(/^[0-9a-f]{40}$/u);
+      expect(implementationTree).toMatch(/^[0-9a-f]{40}$/u);
+    }
     const captured: Array<{ file: string; state: FixtureState; viewport: string; captured_at: string }> = [];
     const runtime: {
       axeSeriousOrCritical: number;
@@ -452,7 +458,7 @@ test.describe("meal-log-ui Stage 4", () => {
 
         await stabilize(page);
         const file = `MEAL_LOG-${viewport.label}-${state}.png`;
-        await page.screenshot({
+        await captureTrackedEvidenceOnDemand(page, {
           path: resolve(EVIDENCE_DIR, file),
           fullPage: viewport.label === "desktop",
         });
@@ -470,8 +476,8 @@ test.describe("meal-log-ui Stage 4", () => {
 
     expect(captured).toHaveLength(51);
     const capturedAt = new Date().toISOString();
-    await writeFile(resolve(EVIDENCE_DIR, "runtime-accessibility-layout.json"), `${JSON.stringify(runtime, null, 2)}\n`);
-    await writeFile(resolve(EVIDENCE_DIR, "manifest.json"), `${JSON.stringify({ captured_at: capturedAt, generated_by: "tests/e2e/slice-meal-log-ui.spec.ts", implementation_head: implementationHead, implementation_tree: implementationTree, viewport_matrix: viewports, required_states: states, captures: captured, limitations: ["Deterministic local mocked routes only.", "Mobile PNGs are viewport-bound captures; desktop PNGs use full-page capture.", "Physical device, screen reader, virtual keyboard, server-Mac, OAuth, AT, R/R+1/R+2 and production remain pending."] }, null, 2)}\n`);
+    await writeTrackedEvidenceOnDemand(resolve(EVIDENCE_DIR, "runtime-accessibility-layout.json"), `${JSON.stringify(runtime, null, 2)}\n`);
+    await writeTrackedEvidenceOnDemand(resolve(EVIDENCE_DIR, "manifest.json"), `${JSON.stringify({ captured_at: capturedAt, generated_by: "tests/e2e/slice-meal-log-ui.spec.ts", implementation_head: implementationHead, implementation_tree: implementationTree, viewport_matrix: viewports, required_states: states, captures: captured, limitations: ["Deterministic local mocked routes only.", "Mobile PNGs are viewport-bound captures; desktop PNGs use full-page capture.", "Physical device, screen reader, virtual keyboard, server-Mac, OAuth, AT, R/R+1/R+2 and production remain pending."] }, null, 2)}\n`);
     expect(runtime).toEqual({ axeSeriousOrCritical: 0, axeViolations: [], horizontalOverflow: 0, targetsBelow44: 0, replayKeyReused: true });
   });
 });

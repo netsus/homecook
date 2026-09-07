@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
@@ -401,8 +400,6 @@ async function openMypage(
 
 test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
   test("opens grade, achievement, and notification panels from the integrated profile", async ({ browser }) => {
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-
     const mobile = await openMypage(browser, { width: 390, height: 844 });
     await expect(mobile.page.getByTestId("mypage-profile-grade-row").getByText("다이아")).toBeVisible();
     await expect(mobile.page.getByTestId("mypage-profile-grade-row").getByText("Lv.46")).toBeVisible();

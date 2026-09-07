@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
@@ -497,8 +496,6 @@ test.describe("33c gamification frontend @smoke-core", () => {
 
   test("renders MYPAGE badges, quests, guide, soft-fail, and XP toast evidence", async ({ browser }) => {
     test.setTimeout(60_000);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
     await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,

@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
@@ -542,8 +541,6 @@ test.describe("34c growth notification UI @smoke-core", () => {
       testInfo.project.name !== "desktop-chrome",
       "evidence capture is deterministic in one project only",
     );
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
     await captureTrackedEvidenceOnDemand(mobile390.page, {
       fullPage: true,

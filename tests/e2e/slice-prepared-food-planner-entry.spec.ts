@@ -1,8 +1,12 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+
+import {
+  captureTrackedEvidenceOnDemand,
+  shouldUpdateTrackedEvidence,
+} from "./helpers/evidence-capture";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const AUTH_KEY = "homecook.e2e-auth-override";
@@ -1027,8 +1031,10 @@ test.describe("prepared-food-planner-entry", () => {
   });
 
   test("captures same-fixture pre-Stage4 evidence from the explicit base server", async ({ browser }) => {
-    test.skip(process.env.PREPARED_FOOD_CAPTURE_BEFORE !== "1", "base-server evidence only");
-    await mkdir(BEFORE_EVIDENCE_DIR, { recursive: true });
+    test.skip(
+      process.env.PREPARED_FOOD_CAPTURE_BEFORE !== "1" || !shouldUpdateTrackedEvidence(),
+      "base-server evidence only",
+    );
     const evidenceBrowser = process.env.PREPARED_FOOD_DISABLE_GPU === "1"
       ? await browser.browserType().launch({ headless: true, args: ["--disable-gpu"] })
       : browser;
@@ -1051,15 +1057,15 @@ test.describe("prepared-food-planner-entry", () => {
       await beforePage.goto(`/planner?date=${PLAN_DATE}`);
       await expect(beforePage.getByText("김치찌개", { exact: true }).filter({ visible: true }).first()).toBeVisible();
       await stabilize(beforePage);
-      await beforePage.screenshot({ path: path.join(BEFORE_EVIDENCE_DIR, `PLANNER_WEEK-${viewport.suffix}.png`), scale: "css" });
+      await captureTrackedEvidenceOnDemand(beforePage, { path: path.join(BEFORE_EVIDENCE_DIR, `PLANNER_WEEK-${viewport.suffix}.png`), scale: "css" });
 
       await beforePage.goto(MEAL_PATH);
       await expect(beforePage.getByText("김치찌개", { exact: true }).filter({ visible: true }).first()).toBeVisible();
-      await beforePage.screenshot({ path: path.join(BEFORE_EVIDENCE_DIR, `MEAL_SCREEN-${viewport.suffix}.png`), scale: "css" });
+      await captureTrackedEvidenceOnDemand(beforePage, { path: path.join(BEFORE_EVIDENCE_DIR, `MEAL_SCREEN-${viewport.suffix}.png`), scale: "css" });
 
       await beforePage.goto(MENU_PATH);
       await expect(beforePage.getByRole("heading", { name: "식사 추가" }).filter({ visible: true }).first()).toBeVisible();
-      await beforePage.screenshot({ path: path.join(BEFORE_EVIDENCE_DIR, `MENU_ADD-${viewport.suffix}.png`), scale: "css" });
+      await captureTrackedEvidenceOnDemand(beforePage, { path: path.join(BEFORE_EVIDENCE_DIR, `MENU_ADD-${viewport.suffix}.png`), scale: "css" });
       await context.close();
     }
     if (evidenceBrowser !== browser) await evidenceBrowser.close();
@@ -1068,7 +1074,6 @@ test.describe("prepared-food-planner-entry", () => {
   test("prepared-food-search-relevance: 390·320·desktop Stage 4 evidence와 unauthorized return을 남긴다", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "exact evidence matrix runs once");
     test.setTimeout(180_000);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
     const evidenceBrowser = process.env.PREPARED_FOOD_DISABLE_GPU === "1"
       ? await browser.browserType().launch({ headless: true, args: ["--disable-gpu"] })
       : browser;
@@ -1102,7 +1107,7 @@ test.describe("prepared-food-planner-entry", () => {
         await expect(evidencePage.getByText("플레인 요거트", { exact: true }).filter({ visible: true })).toBeVisible();
         await stabilize(evidencePage);
         await expectNoHorizontalOverflow(evidencePage);
-        await evidencePage.screenshot({ path: path.join(EVIDENCE_DIR, `PLANNER_WEEK-${viewport.suffix}.png`), scale: "css" });
+        await captureTrackedEvidenceOnDemand(evidencePage, { path: path.join(EVIDENCE_DIR, `PLANNER_WEEK-${viewport.suffix}.png`), scale: "css" });
         await context.close();
       }
 
@@ -1112,7 +1117,7 @@ test.describe("prepared-food-planner-entry", () => {
         await expect(evidencePage.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true })).toBeVisible({ timeout: 15_000 });
         await stabilize(evidencePage);
         await expectNoHorizontalOverflow(evidencePage);
-        await evidencePage.screenshot({ path: path.join(EVIDENCE_DIR, `MEAL_SCREEN-mixed-entry-${viewport.suffix}.png`), scale: "css" });
+        await captureTrackedEvidenceOnDemand(evidencePage, { path: path.join(EVIDENCE_DIR, `MEAL_SCREEN-mixed-entry-${viewport.suffix}.png`), scale: "css" });
         await context.close();
       }
 
@@ -1122,7 +1127,7 @@ test.describe("prepared-food-planner-entry", () => {
         await expect(evidencePage.getByTestId("menu-add-option-product").filter({ visible: true })).toBeVisible();
         await stabilize(evidencePage);
         await expectNoHorizontalOverflow(evidencePage);
-        await evidencePage.screenshot({ path: path.join(EVIDENCE_DIR, `MENU_ADD-product-entry-${viewport.suffix}.png`), scale: "css" });
+        await captureTrackedEvidenceOnDemand(evidencePage, { path: path.join(EVIDENCE_DIR, `MENU_ADD-product-entry-${viewport.suffix}.png`), scale: "css" });
         await context.close();
       }
 
@@ -1132,7 +1137,7 @@ test.describe("prepared-food-planner-entry", () => {
         await expect(evidencePage.getByRole("heading", { name: "완제품 추가" }).filter({ visible: true })).toBeVisible();
         await stabilize(evidencePage);
         await expectNoHorizontalOverflow(evidencePage);
-        await evidencePage.screenshot({ path: path.join(EVIDENCE_DIR, `FOOD_PRODUCT_PICKER-${viewport.suffix}.png`), scale: "css" });
+        await captureTrackedEvidenceOnDemand(evidencePage, { path: path.join(EVIDENCE_DIR, `FOOD_PRODUCT_PICKER-${viewport.suffix}.png`), scale: "css" });
         await context.close();
       }
 
@@ -1142,7 +1147,7 @@ test.describe("prepared-food-planner-entry", () => {
         await openCreateFromEmpty(evidencePage);
         await expect(evidencePage.getByRole("heading", { name: "완제품 직접 등록" }).filter({ visible: true })).toBeVisible();
         await expectNoHorizontalOverflow(evidencePage);
-        await evidencePage.screenshot({ path: path.join(EVIDENCE_DIR, `FOOD_PRODUCT_CREATE-${viewport.suffix}.png`), scale: "css" });
+        await captureTrackedEvidenceOnDemand(evidencePage, { path: path.join(EVIDENCE_DIR, `FOOD_PRODUCT_CREATE-${viewport.suffix}.png`), scale: "css" });
         await context.close();
       }
     }
@@ -1155,7 +1160,7 @@ test.describe("prepared-food-planner-entry", () => {
     await mismatchPage.getByText("플레인 요거트", { exact: true }).filter({ visible: true }).click();
     await mismatchPage.getByRole("button", { name: "아침에 완제품 추가" }).click();
     await expect(mismatchPage.getByText("이 기준으로는 수량을 바꿀 수 없어요", { exact: true })).toBeVisible();
-    await mismatchPage.screenshot({ path: path.join(EVIDENCE_DIR, "FOOD_PRODUCT_PICKER-basis-mismatch.png"), scale: "css" });
+    await captureTrackedEvidenceOnDemand(mismatchPage, { path: path.join(EVIDENCE_DIR, "FOOD_PRODUCT_PICKER-basis-mismatch.png"), scale: "css" });
     await mismatchContext.close();
 
     const unauthorizedContext = await evidenceBrowser.newContext({ deviceScaleFactor: 1, viewport: { width: 390, height: 844 } });
@@ -1175,7 +1180,7 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(unauthorizedPage.getByTestId("food-product-quantity-step")).toContainText("두부 스낵 수량");
     await expect(unauthorizedPage.getByLabel("완제품 수량", { exact: true })).toHaveValue("2.5");
     await expect(unauthorizedPage.getByLabel("완제품 수량", { exact: true })).toBeFocused();
-    await unauthorizedPage.screenshot({ path: path.join(EVIDENCE_DIR, "FOOD_PRODUCT_PICKER-unauthorized-return.png"), scale: "css" });
+    await captureTrackedEvidenceOnDemand(unauthorizedPage, { path: path.join(EVIDENCE_DIR, "FOOD_PRODUCT_PICKER-unauthorized-return.png"), scale: "css" });
     await unauthorizedContext.close();
     if (evidenceBrowser !== browser) await evidenceBrowser.close();
   });

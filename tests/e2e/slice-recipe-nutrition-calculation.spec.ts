@@ -15,6 +15,10 @@ import {
   RECIPE_PATH,
   STANDALONE_COOK_MODE_VISUAL_PATH,
 } from "./helpers/mock-routes";
+import {
+  captureTrackedEvidenceOnDemand,
+  shouldUpdateTrackedEvidence,
+} from "./helpers/evidence-capture";
 
 const EVIDENCE_DIR = path.join(
   process.cwd(),
@@ -396,7 +400,7 @@ test.describe("recipe-nutrition-calculation", () => {
     await expect(page.getByTestId("recipe-nutrition-card-web")).toBeVisible();
     await expect(page.getByText("400 kcal")).toBeVisible();
     await expectNoPageOverflow(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "recipe-detail-after-desktop.png"),
       scale: "css",
@@ -558,10 +562,11 @@ async function captureFeatureViewportDirect(
   await expect(servingHeading).toBeInViewport();
   await expect(card).toBeInViewport();
   await expect(page.locator(".wave1-recipe-cta-bar")).toBeVisible();
+  if (!shouldUpdateTrackedEvidence()) return;
   await waitForSettledPaint(page);
   await page.screenshot({ scale: "css" });
   await waitForSettledPaint(page);
-  await page.screenshot({ path: screenshotPath, scale: "css" });
+  await captureTrackedEvidenceOnDemand(page, { path: screenshotPath, scale: "css" });
 }
 
 function isMobileEvidenceProject(projectName: string) {
@@ -623,6 +628,7 @@ async function captureIsolatedElement(
   locator: Locator,
   screenshotPath: string,
 ) {
+  if (!shouldUpdateTrackedEvidence()) return;
   const overlays = page.locator(
     '.wave1-recipe-cta-bar, nav[aria-label="레시피 상세 하단 탭"], [role="tablist"][aria-label="레시피 상세 탭"], .web-topnav, .web-recipe-bottom-cta',
   );
@@ -673,20 +679,22 @@ async function captureDesktopStateViewportDirect(
   await expect(page.getByRole("heading", { name: "만들기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
   await expect(page.getByRole("button", { name: "요리하기" })).toBeVisible();
+  if (!shouldUpdateTrackedEvidence()) return;
   await waitForSettledPaint(page);
   await page.screenshot({ scale: "css" });
   await waitForSettledPaint(page);
-  await page.screenshot({ path: screenshotPath, scale: "css" });
+  await captureTrackedEvidenceOnDemand(page, { path: screenshotPath, scale: "css" });
 }
 
 async function captureStableViewport(page: Page, screenshotPath: string) {
+  if (!shouldUpdateTrackedEvidence()) return;
   await waitForSettledPaint(page);
   await freezeViewportLayersForCapture(page);
 
   try {
     await page.screenshot({ scale: "css" });
     await waitForSettledPaint(page);
-    await page.screenshot({ path: screenshotPath, scale: "css" });
+    await captureTrackedEvidenceOnDemand(page, { path: screenshotPath, scale: "css" });
   } finally {
     await restoreViewportLayersAfterCapture(page);
   }

@@ -1,6 +1,6 @@
-import { mkdir } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import { installCookingVisualRoutes, installMealDetailRoutes, installRecipeDetailRoutes, MEAL_VISUAL_PATH, RECIPE_PATH, setE2EAuthOverride } from "./helpers/mock-routes";
 
 const evidence = resolve("ui/designs/evidence/recipe-content-snapshot-future-propagation");
@@ -14,8 +14,7 @@ const immutableSnapshotRecipe = {
 async function capture(page: Page, width: 390 | 320, name: string) {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 568 });
   const path = resolve(evidence, name);
-  await mkdir(dirname(path), { recursive: true });
-  await page.screenshot({ fullPage: false, path });
+  await captureTrackedEvidenceOnDemand(page, { fullPage: false, path });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(overflow).toBe(false);
 }
