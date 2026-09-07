@@ -1,67 +1,94 @@
-# COOK_MODE cooked-batch-weight-ledger Stage 4 Design QA
-
-> 이 문서는 Stage 4 저자의 내부 구현 QA다. 독립 Stage 5, product-design-authority, Stage 6 승인이나 Design Status `confirmed`를 대신하지 않는다.
+# 데스크톱 공통 가로 로고·준비 배너 Design QA
 
 ## 비교 대상
 
 - source visual truth
-  - `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-default-390.png`
-  - `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png`
+  - `/var/folders/c1/gv7thy6n54d76f_rvnxdwlzm0000gn/T/codex-clipboard-961bfce4-3953-4436-9993-8fb64508cb25.png`
+  - `/var/folders/c1/gv7thy6n54d76f_rvnxdwlzm0000gn/T/codex-clipboard-0e369079-f5ec-419e-af1e-45431c6c1082.png`
+  - canonical asset: `ui/designs/brand/mumeok/exports/logo/mumeok-logo-horizontal-light.png`
 - implementation screenshot
-  - `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png`
-  - `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png`
-  - `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png`
-- state: snapshot-v2 COOK_MODE completion sheet open, initial pantry selection 0, weight action unselected, completion CTA disabled
-- runtime viewport / density
-  - desktop: CSS `1280 x 900`, screenshot `1280 x 900`, device scale factor `1`
-  - default: CSS `390 x 844`, screenshot `390 x 844`, device scale factor `1`
-  - narrow: CSS `320 x 568`, screenshot `320 x 568`, device scale factor `1`
-- source pixels
-  - default state montage: `390 x 3949`
-  - narrow state montage: `320 x 5158`
+  - Codex in-app Browser의 `http://localhost:3000/` 1280px header capture
+  - 같은 capture를 JPEG data hash로 포함한 session-local
+    `http://127.0.0.1:3001/comparison.html#<implementation-jpeg>`
+- viewport: CSS `1280 x 900`, browser capture density 약 `1.3`; focused header는 CSS `700 x 112`로 잘라 비교
+- state: 비로그인 출시 전 준비 모드, HOME 탭 선택
 
-Stage 1 PNG는 여러 상태를 세로로 이어 붙인 정적 보드라서 전체 이미지의 높이와 sheet y 좌표를 실제 viewport 높이로 해석하지 않았다. 전체 보드와 실제 runtime 원본을 한 비교 입력에서 열고, default 상태 구간은 390px 폭과 844px 높이로 정규화해 구성·위계·간격·상태를 비교했다.
+## Full-view comparison evidence
 
-## Full-view comparison
+- in-app Browser에서 HOME, PLANNER plan/log, PANTRY gate, MYPAGE gate, ABOUT를 직접 열었다.
+- 모든 데스크톱 공통 header가 `/brand/mumeok-logo-horizontal.png`를 사용했다.
+- HOME/ABOUT/PANTRY/MYPAGE의 navigation 높이는 72px, 준비 배너 top은 72px다.
+- flow header인 PLANNER의 전체 높이는 배너를 포함해 104px이며, 내부 navigation 72px와
+  배너 top 72px는 다른 탭과 같다.
+- 모든 확인 화면의 가로 overflow는 0이다. PANTRY/MYPAGE 비로그인 gate에도 header를 보강했다.
+- 모바일 CSS 390px에서는 기존 심볼+2단 이름과 root 준비 배너 1개를 유지하고 overflow는 0이다.
 
-- 정보 구조: whole-board 위 familiar bottom sheet, 제목/설명, no-guess 안내, 재료별 exact row, exact-one weight action, 고정 footer 순서가 유지된다.
-- 반응형: 390px에서는 세 row와 weight action이 읽히고, 320px에서는 본문만 내부 스크롤하며 footer가 계속 보인다. 좁은 화면의 weight action은 `scrollIntoViewIfNeeded()` 후 실제로 접근 가능함을 검사했다.
-- 가로 overflow: 390px/320px 모두 `documentElement.scrollWidth <= clientWidth`다.
+## Focused region comparison evidence
 
-## Focused region comparison
-
-- typography: 저장소의 기존 한국어 앱 타이포와 weight/section 위계를 재사용했다. 320px 설명과 안내 문구는 잘리지 않고 줄바꿈된다.
-- spacing/layout rhythm: 승인 시안과 모바일 규칙의 좌우 16px를 #8 sheet에만 적용했다. row target은 44px 이상이며 section/row 간격은 기존 token과 16px 리듬을 따른다.
-- colors/tokens: 새 색상 값을 만들지 않고 global CSS token만 사용했다. 안내 상자의 12px 파란 글자 대비 3.53:1 결함은 진한 본문 token으로 교체해 serious/critical axe 위반 0건으로 닫았다.
-- image quality/assets: 이 sheet에는 새 raster asset이 없다. 기존 공용 ModalHeader의 닫기 아이콘과 공용 overlay shell을 그대로 재사용했다.
-- copy/content: 완성 직후 음식 전체 중량, 용기·그릇 제외, 현재 남은 양 아님, 나중에 입력, 실제 사용 row만 선택 문구가 공식 #8 의미를 보존한다.
+- 사용자 제공 header crop과 로컬 HOME header crop을 같은 comparison 화면에서 열어 확인했다.
+- typography/copy: runtime에서 글자를 재조판하지 않고 공식 가로 로고 이미지 안의
+  `무먹 무엇을 먹든` 글자를 그대로 사용한다.
+- spacing/layout rhythm: 로고 표시 박스는 약 `174 x 67px`, 첫 탭은 로고 오른쪽에서
+  정확히 40px 뒤에 시작한다. navigation은 72px, 배너는 약 33px다.
+- colors/tokens: 공식 로고의 파랑·남색·흰색을 재착색하지 않았다. 기존 선택 탭과 준비 배너 색은 유지했다.
+- image quality/assets: canonical 1600x480 PNG에서 빈 캔버스만 잘라 1040x400 PNG로 만들었다.
+  글자, 색상, 비율, 모서리와 픽셀은 다시 그리지 않았다.
+- copy/content: 탭 이름과 준비 안내 문구는 바꾸지 않았다. 로고 link는 이미지의 글자를
+  중복 낭독하지 않고 `무먹, 무엇을 먹든` 접근성 이름 하나를 제공한다.
 
 ## Comparison history
 
-1. P2 — 실제 사용 row 안내 누락
-   - fix: 동일 원재료의 제품/팬트리 row가 다를 수 있으며 실제 사용 row만 선택하라는 안내를 추가했다.
-   - post-fix evidence: final 390px/320px implementation PNG.
-2. P1 — 안내 상자 WCAG AA 대비 부족
-   - evidence: axe `color-contrast`, 3.53:1, required 4.5:1.
-   - fix: 배경은 유지하고 foreground를 `--wave1-ink`로 교체했다.
-   - post-fix evidence: canonical Playwright grep에서 serious/critical axe violation 0.
-3. P2 — runtime 좌우 여백 20px와 승인 시안 16px 불일치
-   - fix: 공용 overlay 기본값은 보존하고 #8 sheet에만 `px-4`를 주입했다.
-   - post-fix evidence: runtime heading x 좌표가 16px임을 Playwright로 고정했다.
-4. P3 — programmatic title focus의 브라우저 기본 outline 노출
-   - fix: 비상호작용 heading의 focus announcement는 유지하고 공용 title에 `outline-none`을 적용했다.
-   - post-fix evidence: final implementation PNG에서 불필요한 파란 사각 outline이 없다.
+1. P1 — 최초 CSS hot reload가 이전 64px header 규칙을 유지해 로고가 크게 넘쳤다.
+   - fix: 로컬 dev server를 재시작해 현재 CSS bundle을 다시 생성했다.
+   - post-fix: logo `174 x 67`, nav `72`, overflow `0` 실측.
+2. P1 — PANTRY/MYPAGE 비로그인 gate가 공통 header를 렌더하지 않아 탭 이동 시 로고와 배너가 사라졌다.
+   - fix: 데스크톱 unauthorized branch를 WebShell/WebTopNav 안에 배치했다. 모바일 gate는 유지했다.
+   - post-fix: 두 route 모두 공식 horizontal logo, visible notice 1, notice top 72, overflow 0 확인.
 
 ## Findings
 
-- 남은 actionable P0/P1/P2: 없음.
-- Contract Evolution Candidate, 구현하지 않음: Stage 1 정적 예시의 `냉장고`/`냉동실` 같은 저장 위치는 공식 `pantry_candidates`에 public field가 없다. runtime은 실제 제품명·브랜드와 같은 원재료 그룹 안의 행 순번만 표시하며 raw UUID나 저장 위치를 추측하지 않는다. 위치 문구가 반드시 필요하다면 별도 공식 계약 승인이 선행되어야 한다.
-- source montage의 y 위치와 runtime bottom-sheet y 위치 차이는 정적 다중상태 보드와 실제 viewport의 차이이므로 visual defect로 분류하지 않았다.
+- 남은 P0/P1/P2: 없음.
+- P3: 사용자 제공 두 번째 crop은 header 전체 viewport가 아니어서 로고의 절대 화면 크기를
+  1:1 수치로 비교할 수 없다. 공식 원본 비율과 현재 navigation 밀도를 기준으로 174px 너비를 사용했다.
 
 ## Runtime checks
 
-- primary interactions: open, exact row select, known weight, weigh later, 409 retry, pending lock, Escape close/lock, focus trap, opener focus restore, terminal replay single close
-- accessibility: 44px targets, dialog semantics, focus isolation, body lock, no horizontal overflow, serious/critical axe violation 0
-- browser console errors: canonical capture test에서 0건을 요구한다.
+- primary interactions: HOME/요리 계획/식사 기록/팬트리/마이/가이드 route 이동과 현재 탭 표시
+- accessibility: 공통 link name 1개, 장식 이미지 `alt=""`, 모바일/데스크톱 overflow 0
+- browser console: 이번 header route 확인에서 사용자 흐름을 막는 화면 오류 없음
+- deterministic checks: 관련 Vitest 113개 및 기존 header/홈/플래너 묶음 통과, ESLint/typecheck 통과
+
+## 2026-09-07 모바일 후속 비교
+
+- source visual truth: 같은 공식 가로형 canonical asset과 사용자 요청.
+- implementation: in-app Browser `http://localhost:3000/`, `/planner`, `/planner?segment=log`.
+- viewport: CSS `390 x 844`, density는 in-app Browser 기본값.
+- mobile logo: `138 x 53px`, 공식 가로형 runtime asset, overflow 0.
+- HOME guide card: 내부 제목 text 0, `og-share.png`가 `226 x 144px` 카드 전체를 `object-cover`로 채움.
+- planner/log point: 현재 하단 탭과 선택 날짜의 computed color/background가 exact
+  `rgb(0, 161, 255)`이며 날짜 글자는 `rgb(16, 37, 54)`다.
+- desktop planner current tab: 밝은 blue wash, 진한 blue text, inset `#00A1FF` 표시선으로
+  바뀌어 이전 navy 면을 제거했다. overflow 0.
+- 후속 deterministic verification: 관련 Vitest 214개, ESLint, typecheck, production build 통과.
+- 남은 actionable P0/P1/P2: 없음.
+
+## 2026-09-07 데스크톱 auth gate 배경 후속 비교
+
+- source: 사용자 제공 1920x1050 PANTRY unauthorized screenshot.
+- implementation: in-app Browser `http://localhost:3000/pantry`, `http://localhost:3000/mypage`.
+- viewport: CSS `1280 x 900`.
+- PANTRY/MYPAGE 모두 banner bottom 약 105px, full-width gate top 약 104px로 1px border에서 맞닿는다.
+- gate width 1280px, horizontal overflow 0. page background는 `#eef8ff → #f7fbfe → white`의
+  연속 gradient이고 가운데 ContentState의 중복 background는 transparent다.
+- mobile CSS 390px는 desktop gate class를 사용하지 않고 기존 하단 탭과 gate를 유지한다.
+- 남은 actionable P0/P1/P2: 없음.
+
+## 2026-09-07 플래너 선택 text·영양 숫자·desktop tab 후속 비교
+
+- mobile MEAL_LOG CSS 390x844: selected date/today text `rgb(255,255,255)`, overflow 0.
+- daily calorie/macro와 food calorie/macro 숫자는 모두 `rgb(0,161,255)`로 실측했다.
+- desktop MEAL_LOG CSS 1280x900: current tab radius `9999px`, box-shadow `none`, 연한 blue fill.
+- current tab의 `aria-current=page`, date radio semantics와 keyboard navigation은 유지한다.
+- 관련 Vitest 79개 통과. 남은 actionable P0/P1/P2 없음.
 
 final result: passed

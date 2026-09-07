@@ -1,5 +1,75 @@
 # 출시 전 UI 정리 — 사용자 승인 2026-09-06
 
+## 2026-09-07 데스크톱 공통 로고·배너 후속 승인
+
+- 공식 가로형 원본 `ui/designs/brand/mumeok/exports/logo/mumeok-logo-horizontal-light.png`의
+  실제 로고 영역만 손실 없이 잘라 runtime header 자산으로 사용한다.
+- HOME/요리 계획/식사 기록/팬트리/가이드 등 `WebTopNav`를 쓰는 데스크톱 화면은 모두
+  같은 가로형 로고와 접근성 이름을 사용한다.
+- `서비스 준비 중` 배너는 fixed/flow 차이 없이 항상 데스크톱 navigation 바로 아래에 둔다.
+- 로고와 첫 탭 사이 여백은 40px 안팎으로 넓힌다. 모바일 header·하단 탭은 유지한다.
+- 1280px HOME/요리 계획/식사 기록/팬트리/가이드를 비교하고 로고 일치, 배너 위치,
+  콘텐츠 비가림, navigation 동작을 확인한다. merge·배포는 별도다.
+
+## 2026-09-07 모바일 로고·가이드 카드·플래너 색상 후속 승인
+
+- 모바일 HOME/AppHeader도 공식 가로형 로고 파생본 하나를 사용한다.
+- HOME `무먹 둘러보기` 가이드 카드 안의 제목을 제거하고 기존 `og-share.png`를 카드 전체에 키운다.
+- 요리 계획·식사 기록의 현재 탭, 선택 날짜와 오늘 action point는 `#00A1FF`로 밝힌다.
+- 390px/320px에서 로고, 가이드 카드, 날짜 선택과 하단 탭, overflow 0을 확인한다.
+
+## 2026-09-07 데스크톱 로그인 안내 배경 후속 승인
+
+- PANTRY/MYPAGE의 desktop unauthorized shell은 준비 배너 바로 아래부터 화면 끝까지 같은
+  연한 brand background를 사용한다.
+- 안내 block의 별도 배경과 container 바깥 흰 여백을 제거하되 중앙 정렬·copy·action은 보존한다.
+- 1280px 두 route에서 배너 bottom과 gate background top이 맞닿고 가로 overflow가 0인지 확인한다.
+
+## 2026-09-07 플래너 선택 text·영양 숫자·desktop tab 후속 승인
+
+- 선택 날짜와 오늘 button text를 white로 표시한다.
+- MEAL_LOG daily/food calorie·carbohydrate·protein·fat 숫자를 brand blue `#00A1FF`로 표시한다.
+- desktop current tab의 bottom line을 제거하고 pill background를 사용한다.
+
+## 2026-09-07 날짜·entry 영양 위계 후속 승인
+
+- 두 planner date rail의 weekday는 regular, day number만 bold로 표시한다.
+- MEAL_LOG daily summary 숫자는 current brand blue 강조를 유지한다.
+- food calorie·macro는 number `#0D3B66`, unit/label은 기존 보조 text color로 분리한다.
+- 이번 이후 UI 반복 수정은 먼저 반영해 로컬에서 확인하고, 사용자 수정이 끝난 뒤 검증을 한 번 실행한다.
+
+## 2026-09-07 desktop current tab contrast 후속 승인
+
+- current tab은 `#0879CF` pill background와 white text를 사용한다.
+- active/inactive hover background는 동일한 pill radius를 유지한다.
+
+## 2026-09-07 desktop HOME layout 후속 승인
+
+- `오늘 뭐 먹지?` desktop supporting text를 제거한다.
+- search input과 ingredient search button은 title 오른쪽 같은 row로 이동한다.
+- 추천 tag/theme rail은 `모든 레시피` 오른쪽으로 내려 같은 top line에서 시작한다.
+
+## 배포 후 로컬 반복 수정 — 2026-09-06 후속 요청
+
+사용자는 `fix/restore-planner-interactions`에서 다음 항목을 계속 수정하고 로컬에서
+즉시 확인하도록 요청했다. 배포 기준 `fix/prelaunch-planner-release-20260906`과
+master merge, 추가 배포는 별도다. 기존 하늘색 면 중심 방향을 아래처럼 보완한다.
+
+- `/beta` 체험 3·4 저울과 식사 예시 이미지는 작은 WebP 파생본으로 제공하고
+  체험 초반에 미리 불러온다. 저울 숫자는 이미지 로드 뒤 표시한다.
+- 공개 홈 레시피의 정렬·다음 페이지 요청은 SDK의 실제 URL 형식을 인식한다.
+  기존 public/deleted/select/method 제한을 보존한다.
+- 현재 탭은 진한 배경/흰 글씨 또는 진한 아이콘/상단 표시, 버튼은 명확한 대비와 테두리를 사용한다.
+- 데스크톱 요리 계획은 스크롤에 따른 날짜 면·하단 테두리 강조를 없애고 오늘만 구별한다.
+  모바일 선택일, 키보드 이동, 스크롤 동기화는 보존한다.
+- 등록·장보기 상태의 파랑·초록을 유지하고 탄수화물/단백질/지방을 황토/보라/코랄로 구별한다.
+- 데스크톱 식사 기록의 하루 영양은 최대 576px, 끼니 묶음은 최대 1024px로 제한한다.
+  빈 끼니에도 테두리를 표시하고 양/kcal를 음식명 바로 아래 둔다.
+
+검증 순서: 실제 오류 재현과 회귀 테스트 → 최소 수정 → 관련 테스트·lint·typecheck·build
+→ 1280px 데스크톱과 375/320px 모바일 실화면 확인. 독립 Stage 승인이나 실제 계정의
+쓰기 동작 검증을 의미하지 않는다. 로컬 개발 설정은 기존 loopback Supabase만 사용한다.
+
 ## 승인 범위
 
 사용자는 배포 전에 UI만 정리하고 로컬에서 계속 확인하도록 요청했다.

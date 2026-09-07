@@ -13,6 +13,56 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
+
+## 2026-09-07 사용자 승인 — 데스크톱 공통 로고·배너
+
+데스크톱 주요 탭의 header는 공식 가로형 `무먹 무엇을 먹든` 로고 파생본 하나로 통일한다.
+`서비스 준비 중` 배너는 모든 탭에서 navigation 바로 아래에 두고, 로고와 첫 탭 사이 간격을
+넓힌다. 공식 요구사항/화면정의서의 같은 날짜 addendum과 planner-shell의 로컬 UI 계획을 따른다.
+모바일 header, navigation 동작, API/DB/권한은 변경하지 않는다.
+
+## 2026-09-07 사용자 승인 — 모바일 로고·가이드 카드·플래너 point
+
+모바일 header도 공식 가로형 로고로 통일한다. HOME 가이드 카드는 내부 제목을 제거하고 기존
+공식 이미지를 카드 전체에 키워 표시한다. 요리 계획·식사 기록의 현재 탭·선택일·오늘 action은
+밝은 공식 브랜드 블루 `#00A1FF`를 point로 사용한다. 접근성 이름, 이동, API/DB/권한은 유지한다.
+
+## 2026-09-07 사용자 승인 — 데스크톱 로그인 안내 배경
+
+데스크톱 PANTRY/MYPAGE 로그인 필요 화면은 준비 배너 아래부터 viewport 끝까지 연속된 연한
+배경을 사용한다. 기존 안내 내용·action, 모바일 화면, 인증·권한 계약은 유지한다.
+
+## 2026-09-07 사용자 승인 — 플래너 선택·영양·현재 탭 style
+
+선택 날짜와 오늘 button은 흰 text, MEAL_LOG calorie·macro 숫자는 `#00A1FF`를 사용한다.
+desktop current tab은 underline을 제거하고 pill background로 표시한다.
+
+## 2026-09-07 사용자 승인 — 날짜·음식별 영양 위계
+
+가로 날짜 줄은 숫자만 bold로 표시한다. MEAL_LOG daily summary는 brand blue를 유지하고, entry 영양은
+숫자 `#0D3B66`과 일반 보조색 단위로 분리한다. 검증은 로컬 UI 수정 완료 뒤 한 번에 수행한다.
+
+## 2026-09-07 사용자 승인 — 데스크톱 current tab
+
+데스크톱 current tab은 `#0879CF` pill과 white text, 모든 tab hover는 같은 pill radius를 사용한다.
+
+## 2026-09-07 사용자 승인 — desktop HOME 상단 배치
+
+desktop HOME의 title 아래 설명을 제거하고 search를 title 오른쪽으로 옮긴다. 추천 tag/theme은
+`모든 레시피` 오른쪽 시작선에 맞춘다. mobile HOME은 유지한다.
+
+## 2026-09-07 사용자 승인 — desktop HOME search 중앙 정렬
+
+desktop HOME title row의 search 묶음을 page content 중앙에 배치한다.
+
+## 2026-09-07 사용자 승인 — HOME landing banner·mobile guide fit
+
+desktop HOME의 네 개 빠른 이동 menu 아래에 `/beta?ad_variant=a` banner를 추가한다. mobile guide theme의 공식 이미지는
+내부 글자가 잘리지 않도록 전체 image를 표시한다.
+
+## 2026-09-07 사용자 승인 — mobile bottom tab current state
+
+현재 탭은 icon+label 전체를 soft blue capsule로 묶어 표시한다. inactive는 gray를 유지한다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
 
 ## 2026-09-06 사용자 승인 — 출시 전 Planner UI 정리
