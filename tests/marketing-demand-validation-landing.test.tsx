@@ -137,20 +137,36 @@ describe("marketing demand validation v2 landing", () => {
   it("shows loading and recovers a missing session through the empty restart state", async () => {
     postMarketingValidation.mockResolvedValue({ success: false, data: null, error: { code: "SESSION_NOT_FOUND", message: "진행 정보를 찾지 못했어요.", fields: [] } });
     const { MarketingDemandValidationScreen } = await importScreen();
-    render(<MarketingDemandValidationScreen />);
-    expect(screen.getByRole("status", { name: "테스트 불러오는 중" })).toBeTruthy();
+    render(<MarketingDemandValidationScreen initialAdVariant="a" />);
+    expect(screen.getByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /내 집밥기록 유형 알아보기/ })).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "새 테스트로 다시 시작할게요." })).toBeTruthy();
     expect(screen.getByRole("button", { name: "새로 시작하기" })).toBeTruthy();
   });
 
-  it("uses a compact brand-free loading state while the initial request is pending", async () => {
+  it("renders the server-selected Hero immediately while session initialization is pending", async () => {
+    window.history.replaceState({}, "", "/beta?ad_variant=b");
     postMarketingValidation.mockImplementation(() => new Promise(() => {}));
     const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen initialAdVariant="b" />);
+    expect(screen.getByRole("heading", { name: /수분 빠진 제육볶음 300g/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /내 집밥기록 유형 알아보기/ }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByTestId("screen-loading")).toBeNull();
+  });
+
+  it("warms later journey images only after the visitor starts the quiz", async () => {
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
     render(<MarketingDemandValidationScreen />);
-    const loading = screen.getByRole("status", { name: "테스트 불러오는 중" });
-    expect(loading.textContent).toContain("테스트를 불러오고 있어요.");
-    expect(loading.querySelector("img")).toBeNull();
-    expect(loading.querySelector(".brand")).toBeNull();
+    await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" });
+
+    await user.click(screen.getByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect(document.head.querySelector('link[rel="preload"][href="/assets/funnel/food/macro-protein-arm.webp"]')).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "거의 매일" }));
+    await user.click(await screen.findByRole("button", { name: "3~5끼" }));
+    await user.click(await screen.findByRole("button", { name: "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록" }));
+    expect(document.head.querySelector('link[rel="preload"][href="/assets/funnel/characters/ingredient-tracker.webp"]')).not.toBeNull();
   });
 
   it.each([

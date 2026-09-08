@@ -1884,7 +1884,8 @@ function HomeDesktopLandingBanner() {
           height={1314}
           priority
           sizes="120px"
-          src="/assets/funnel/characters/beta-invitation-mascot.png"
+          src="/assets/funnel/characters/beta-invitation-mascot.webp"
+          unoptimized
           width={1197}
         />
       </span>

@@ -331,3 +331,10 @@
 - 두 링크 모두 Hero A를 사용하지만 URL에 `ad_variant=a`를 삽입하지 않는다. 광고 a/b/c와 프로필 플랫폼은 각각 variant와 내부 UTM으로 별도 분석한다.
 - 프로필 view의 기존 UTM은 exact `instagram|facebook / social_profile / weekly_nutrition_2026 / profile_link`다. 새 API field·DB column·Hero variant는 추가하지 않는다.
 - reset은 원래 profile URL과 attribution을 유지한다. result 공유 링크, 기존 a/b/c redirect, historical row는 변경하지 않는다.
+
+## 2026-09-08 사용자 승인 — in-app browser 이미지 성능
+
+- resolved Hero/result를 server HTML에 포함하고 첫 `view` API와 화면 표시를 분리한다. 연결 중에는 Hero CTA만 잠근다.
+- 큰 PNG runtime transform 대신 display size WebP를 사용한다. core journey 10개는 각 250KiB 미만·합계 1MiB 미만이다.
+- 이후 화면 asset preload는 첫 화면에서 시작하지 않고 사용자가 quiz를 시작한 뒤 low priority로 수행한다.
+- API action, attribution, cookie, retry, lead/Turnstile contract는 변경하지 않는다.

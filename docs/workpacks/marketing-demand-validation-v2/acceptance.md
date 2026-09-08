@@ -134,3 +134,11 @@
 - [x] profile link reset은 원래 clean URL과 attribution을 보존하고 result 공유 링크는 profile view를 만들지 않는다.
 - [x] 기존 광고 `ad_variant=a|b|c`, d/default/unknown 정규화, recognized `utm_content` 우선순위는 회귀하지 않는다.
 - [x] 분석 SQL은 Instagram profile, Facebook profile, paid/other를 분리해 각 funnel 전환을 보여 주며 PII를 선택하지 않는다.
+
+## 2026-09-08 in-app browser 성능 acceptance
+
+- [x] cold `/beta` HTML에 resolved Hero heading과 visible Hero image가 있고 API 응답 전에도 렌더된다.
+- [x] session 연결 전 CTA는 disabled/aria-busy이고 성공 후 활성화되며, API failure recovery와 action 순서는 유지된다.
+- [x] 핵심 journey WebP 10개는 각 250KiB 미만, 합계 1MiB 미만이고 해당 화면은 원본 PNG를 요청하지 않는다.
+- [x] 이후 화면 preload는 quiz 시작 뒤 실행되어 initial Hero LCP network와 경쟁하지 않는다.
+- [ ] 동일 조건 Lighthouse 3회 median과 실제 in-app browser에 가까운 cold-load network evidence를 전후 비교한다.

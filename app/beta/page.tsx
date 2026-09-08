@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import {
+  buildMarketingProfileAttribution,
   isMarketingProfileSource,
   resolveMarketingAdVariant,
+  type MarketingProfileSource,
 } from "@/lib/marketing/demand-validation";
+import type { MarketingValidationQuizResult } from "@/types/marketing-validation";
 
 import { MarketingDemandValidationScreen } from "@/components/marketing/marketing-demand-validation-screen";
 
@@ -32,21 +35,25 @@ export const metadata: Metadata = {
 };
 
 type BetaSearchParams = Record<string, string | string[] | undefined>;
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 
 export default async function BetaPage({ searchParams }: { searchParams: Promise<BetaSearchParams> }) {
   const query = await searchParams;
   const first = (key: string) => Array.isArray(query[key]) ? query[key][0] : query[key];
-  const sharedResult = ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"].includes(first("result") ?? "");
+  const requestedResult = first("result") ?? "";
+  const sharedResult = ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"].includes(requestedResult)
+    ? requestedResult as MarketingValidationQuizResult
+    : null;
   const queryKeys = Object.keys(query);
   const profileSource = first("profile_source") ?? null;
-  const profileEntry = !sharedResult && (
+  const profileEntry = sharedResult === null && (
     queryKeys.length === 0
     || (queryKeys.length === 1 && !Array.isArray(query.profile_source) && isMarketingProfileSource(profileSource))
   );
   const variant = resolveMarketingAdVariant(first("utm_content") ?? null, first("ad_variant") ?? null);
   // Shared results keep their privacy-preserving URL and never create a view event.
   // Exact profile links render Hero A but keep their clean platform URL for attribution.
-  if (!sharedResult && !profileEntry && (first("ad_variant") !== variant || Array.isArray(query.ad_variant))) {
+  if (sharedResult === null && !profileEntry && (first("ad_variant") !== variant || Array.isArray(query.ad_variant))) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined) continue;
@@ -55,5 +62,23 @@ export default async function BetaPage({ searchParams }: { searchParams: Promise
     params.set("ad_variant", variant);
     redirect(`/beta?${params.toString()}`);
   }
-  return <MarketingDemandValidationScreen />;
+  const initialProfileSource: MarketingProfileSource | null = profileEntry
+    ? isMarketingProfileSource(profileSource) ? profileSource : "instagram"
+    : null;
+  const queryAttribution: Record<string, string | null> = {};
+  for (const key of UTM_KEYS) {
+    const value = first(key);
+    if (value) queryAttribution[key] = value;
+  }
+  const initialAttribution = initialProfileSource
+    ? buildMarketingProfileAttribution(initialProfileSource)
+    : queryAttribution;
+  return (
+    <MarketingDemandValidationScreen
+      initialAdVariant={variant}
+      initialAttribution={initialAttribution}
+      initialProfileSource={initialProfileSource}
+      initialSharedResult={sharedResult}
+    />
+  );
 }

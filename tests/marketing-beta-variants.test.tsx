@@ -35,7 +35,9 @@ describe("three active landing variants", () => {
   });
 
   it.each(["a", "b", "c"])("keeps %s without a redirect", async (variant) => {
-    expect(await BetaPage({ searchParams: Promise.resolve({ ad_variant: variant }) })).toBeTruthy();
+    const page = await BetaPage({ searchParams: Promise.resolve({ ad_variant: variant }) });
+    expect(page).toBeTruthy();
+    expect(page.props.initialAdVariant).toBe(variant);
     expect(redirect).not.toHaveBeenCalled();
   });
 
@@ -45,7 +47,10 @@ describe("three active landing variants", () => {
   });
 
   it("keeps shared results read-only without injecting an ad variant", async () => {
-    expect(await BetaPage({ searchParams: Promise.resolve({ result: "pro-measurer" }) })).toBeTruthy();
+    const page = await BetaPage({ searchParams: Promise.resolve({ result: "pro-measurer", utm_source: "shared-source" }) });
+    expect(page).toBeTruthy();
+    expect(page.props.initialSharedResult).toBe("pro-measurer");
+    expect(page.props.initialAttribution).toEqual({ utm_source: "shared-source" });
     expect(redirect).not.toHaveBeenCalled();
   });
 
