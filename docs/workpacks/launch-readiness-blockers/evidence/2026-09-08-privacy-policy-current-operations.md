@@ -40,3 +40,13 @@
 - Chromium 375px·1280px에서 PRIVACY와 TERMS의 빈 dd 0, 가로 overflow 0을 확인했다. Cloudflare 전체 request transit, Naver 문의메일, 영구 최소 hash tombstone 표시와 구현되지 않은 아동 age gate 문구 제거도 확인했다.
 - 보조 독립 리뷰의 Cloudflare 처리범위·영구 tombstone·TERMS 빈 row·age gate·Naver 보유기간 findings를 수정했고, 재검토에서 P1/P2 0을 확인했다. 이는 정식 final authority가 아니다.
 - 로컬 화면 증거: /tmp/privacy-final-375.png, /tmp/privacy-final-1280.png.
+
+## 출시 전 운영 배포
+
+- 배포 exact SHA: `f79e23acd20968b44b884ad2bf801ece34300c8e`.
+- build ID: `prelaunch-f79e23acd209-Pt7wB3`.
+- 서버 자체 product test 3,091개 통과 뒤 production build, 임시 port와 asset 확인 후 웹 교체 성공.
+- 최종 상태: loaded=true, rollbackAvailable=true, recoveryPending=false, database=null.
+- Environment files, LaunchAgent values, and Caddy configuration hashes were unchanged.
+- MARKETING_LEAD_PROTECTION_READY remained 0; no database, worker, Docker, or network changes were made.
+- Public Chromium checks at 375px and 1280px returned HTTP 200 with empty dd 0 and horizontal overflow 0. No API requests, database test rows, or email submissions were created.
