@@ -621,6 +621,7 @@ describe("marketing validation Stage 6 operations", () => {
     expect(sql).toContain("select ad_variant, 'landing_view'::text as metric, landing_view as numerator, landing_view as denominator from ad_variant_stage_counts");
     expect(sql).toContain("select ad_variant, 'accepted_lead', accepted_lead, beta_form_view from ad_variant_stage_counts");
     expect(sql).toContain("select ad_variant, 'duplicate_submission', duplicate_submission, beta_form_view from ad_variant_stage_counts");
+    expect(sql).toMatch(/not\s+coalesce\(\(\s*utm_source in \('instagram', 'facebook'\)[\s\S]*utm_medium = 'social_profile'[\s\S]*utm_campaign = 'weekly_nutrition_2026'[\s\S]*utm_content = 'profile_link'\s*\), false\)/iu);
   });
 
   it("reports Instagram and Facebook profile funnels separately from paid or other traffic", () => {

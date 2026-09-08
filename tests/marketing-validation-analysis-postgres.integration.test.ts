@@ -72,6 +72,16 @@ insert into public.marketing_validation_sessions (
     '2026-09-04T03:00:08Z', 'accepted', '2027-03-03T03:00:00Z'
   );
 
+insert into public.marketing_validation_sessions (
+  id, campaign_key, creative_key, audience_key, ad_variant, attribution_status,
+  utm_source, utm_medium, utm_campaign, utm_content, viewed_at, retention_until
+) values (
+  '31000000-0000-4000-8000-000000000005', 'weekly_nutrition_2026',
+  'mumeok_funnel_prototype_v2', 'preview-fixture', 'a', 'unverified',
+  'instagram', 'social_profile', 'weekly_nutrition_2026', 'profile_link',
+  '2026-09-04T04:00:00Z', '2027-03-03T04:00:00Z'
+);
+
 \i ${analysisSqlPath}
 rollback;
 `;
@@ -97,12 +107,14 @@ rollback;
     );
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toMatch(/^landing_view\|3\|3\|1(?:\.0+)?$/mu);
-    expect(result.stdout).toMatch(/^accepted_lead\|1\|3\|0\.3+/mu);
-    expect(result.stdout).toMatch(/^duplicate_submission\|1\|3\|0\.3+/mu);
+    expect(result.stdout).toMatch(/^landing_view\|4\|4\|1(?:\.0+)?$/mu);
+    expect(result.stdout).toMatch(/^accepted_lead\|1\|4\|0\.25(?:0+)?$/mu);
+    expect(result.stdout).toMatch(/^duplicate_submission\|1\|4\|0\.25(?:0+)?$/mu);
     expect(result.stdout).toMatch(/^ad_variant_funnel\|a\|accepted_lead\|1\|1\|1(?:\.0+)?$/mu);
+    expect(result.stdout).toMatch(/^ad_variant_funnel\|a\|landing_view\|1\|1\|1(?:\.0+)?$/mu);
     expect(result.stdout).toMatch(/^ad_variant_funnel\|b\|duplicate_submission\|1\|1\|1(?:\.0+)?$/mu);
     expect(result.stdout).toMatch(/^ad_variant_funnel\|d\|landing_view\|0\|0\|$/mu);
+    expect(result.stdout).toMatch(/^profile_source_funnel\|instagram_profile\|landing_view\|1\|1\|1(?:\.0+)?$/mu);
     expect(result.stdout).toMatch(/^q1\|daily\|1\|3\|0\.3+/mu);
     expect(result.stdout).toMatch(/^q2\|6_plus\|1\|3\|0\.3+/mu);
     expect(result.stdout).toMatch(/^q3\|track\|1\|3\|0\.3+/mu);

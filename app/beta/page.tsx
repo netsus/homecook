@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 
 import {
   buildMarketingProfileAttribution,
-  isMarketingProfileSource,
   resolveMarketingAdVariant,
+  resolveMarketingProfileSource,
   type MarketingProfileSource,
 } from "@/lib/marketing/demand-validation";
 import type { MarketingValidationQuizResult } from "@/types/marketing-validation";
@@ -44,26 +44,22 @@ export default async function BetaPage({ searchParams }: { searchParams: Promise
   const sharedResult = ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"].includes(requestedResult)
     ? requestedResult as MarketingValidationQuizResult
     : null;
-  const queryKeys = Object.keys(query);
-  const profileSource = first("profile_source") ?? null;
-  const profileEntry = sharedResult === null && (
-    queryKeys.length === 0
-    || (queryKeys.length === 1 && !Array.isArray(query.profile_source) && isMarketingProfileSource(profileSource))
-  );
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) continue;
+    for (const item of Array.isArray(value) ? value : [value]) params.append(key, item);
+  }
+  const profileSource = resolveMarketingProfileSource(params);
+  const profileEntry = sharedResult === null && profileSource !== null;
   const variant = resolveMarketingAdVariant(first("utm_content") ?? null, first("ad_variant") ?? null);
   // Shared results keep their privacy-preserving URL and never create a view event.
-  // Exact profile links render Hero A but keep their clean platform URL for attribution.
+  // Profile links render Hero A and retain harmless platform-added query decoration.
   if (sharedResult === null && !profileEntry && (first("ad_variant") !== variant || Array.isArray(query.ad_variant))) {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (value === undefined) continue;
-      for (const item of Array.isArray(value) ? value : [value]) params.append(key, item);
-    }
     params.set("ad_variant", variant);
     redirect(`/beta?${params.toString()}`);
   }
   const initialProfileSource: MarketingProfileSource | null = profileEntry
-    ? isMarketingProfileSource(profileSource) ? profileSource : "instagram"
+    ? profileSource
     : null;
   const queryAttribution: Record<string, string | null> = {};
   for (const key of UTM_KEYS) {

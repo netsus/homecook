@@ -42,6 +42,26 @@ export function buildMarketingProfileAttribution(source: MarketingProfileSource)
   } as const;
 }
 
+const MARKETING_EXPLICIT_ATTRIBUTION_QUERY_KEYS = [
+  "result",
+  "ad_variant",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
+
+export function resolveMarketingProfileSource(
+  params: Pick<URLSearchParams, "getAll" | "has">,
+): MarketingProfileSource | null {
+  if (MARKETING_EXPLICIT_ATTRIBUTION_QUERY_KEYS.some((key) => params.has(key))) return null;
+  const candidates = params.getAll("profile_source");
+  if (candidates.length > 1) return null;
+  if (candidates.length === 0) return "instagram";
+  return isMarketingProfileSource(candidates[0]) ? candidates[0] : null;
+}
+
 export const QUIZ_Q1_OPTIONS = ["daily", "3_5", "1_2", "none"] as const;
 export const QUIZ_Q2_OPTIONS = ["none", "1_2", "3_5", "6_plus"] as const;
 export const QUIZ_Q3_OPTIONS = ["pass", "eyeball", "track", "measure"] as const;

@@ -30,9 +30,9 @@ import {
 import { postMarketingValidation } from "@/lib/api/marketing-validation";
 import {
   buildMarketingProfileAttribution,
-  isMarketingProfileSource,
   MARKETING_VALIDATION_RETENTION_DAYS,
   resolveMarketingAdVariant,
+  resolveMarketingProfileSource,
   type ActiveMarketingAdVariant,
   type MarketingProfileSource,
 } from "@/lib/marketing/demand-validation";
@@ -117,12 +117,9 @@ function resolveEntry() {
   const params = new URLSearchParams(window.location.search);
   const result = params.get("result");
   const sharedResult = RESULT_KEYS.includes(result as MarketingValidationQuizResult) ? result as MarketingValidationQuizResult : null;
-  const candidateProfileSource = params.get("profile_source");
-  const profileSource: MarketingProfileSource | null = !sharedResult && params.size === 0
-    ? "instagram"
-    : !sharedResult && params.size === 1 && isMarketingProfileSource(candidateProfileSource)
-      ? candidateProfileSource
-      : null;
+  const profileSource: MarketingProfileSource | null = !sharedResult
+    ? resolveMarketingProfileSource(params)
+    : null;
   const adVariant = resolveMarketingAdVariant(params.get("utm_content"), params.get("ad_variant"));
   const attribution = profileSource
     ? buildMarketingProfileAttribution(profileSource)

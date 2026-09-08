@@ -90,6 +90,12 @@ cohort as (
     and creative_key = 'mumeok_funnel_prototype_v2'
     and viewed_at >= params.campaign_start
     and viewed_at < params.campaign_end
+    and not coalesce((
+      utm_source in ('instagram', 'facebook')
+      and utm_medium = 'social_profile'
+      and utm_campaign = 'weekly_nutrition_2026'
+      and utm_content = 'profile_link'
+    ), false)
 ),
 ad_variant_stage_counts as (
   select
@@ -259,6 +265,10 @@ cohort as (
   select
     coalesce(ad_variant, 'default') as ad_variant,
     quiz_result,
+    utm_source,
+    utm_medium,
+    utm_campaign,
+    utm_content,
     beta_form_viewed_at,
     lead_submitted_at,
     lead_submission_status
@@ -289,6 +299,12 @@ segments as (
         where lead_submission_status = 'duplicate' and lead_submitted_at is not null
       )::bigint as duplicate_submissions
     from cohort
+    where not coalesce((
+      utm_source in ('instagram', 'facebook')
+      and utm_medium = 'social_profile'
+      and utm_campaign = 'weekly_nutrition_2026'
+      and utm_content = 'profile_link'
+    ), false)
     group by ad_variant
   ) as segment_counts on segment_counts.ad_variant = variants.variant
   union all

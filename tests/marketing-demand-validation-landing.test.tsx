@@ -263,6 +263,36 @@ describe("marketing demand validation v2 landing", () => {
     expect(window.location.pathname + window.location.search).toBe("/beta?profile_source=facebook");
   });
 
+  it("keeps Facebook profile attribution when the in-app browser appends fbclid", async () => {
+    window.history.replaceState({}, "", "/beta?profile_source=facebook&fbclid=opaque-click-id");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "facebook",
+    }));
+  });
+
+  it("keeps Instagram profile attribution when its in-app browser decorates the bare link", async () => {
+    window.history.replaceState({}, "", "/beta?igsh=opaque-share-id");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "instagram",
+    }));
+  });
+
   it("renders a known opaque result as read-only without recording quiz events", async () => {
     window.history.replaceState({}, "", "/beta?result=pro-measurer&utm_source=must-go");
     installHappyApi();
