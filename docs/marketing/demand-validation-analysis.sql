@@ -145,6 +145,97 @@ select
 from ad_variant_funnel
 order by cohort_value, metric;
 
+-- Instagram/Facebook profile links both render Hero A. Keep their demand
+-- separate from paid variant A by reporting the exact internal UTM tuple.
+with params as (
+  select
+    :'campaign_start'::timestamptz as campaign_start,
+    :'campaign_end'::timestamptz as campaign_end
+),
+entry_sources as (
+  select entry_source
+  from (values ('instagram_profile'), ('facebook_profile'), ('paid_or_other'))
+    as entry_sources(entry_source)
+),
+cohort as (
+  select
+    case
+      when utm_source in ('instagram', 'facebook')
+        and utm_medium = 'social_profile'
+        and utm_campaign = 'weekly_nutrition_2026'
+        and utm_content = 'profile_link'
+        then utm_source || '_profile'
+      else 'paid_or_other'
+    end as entry_source,
+    viewed_at,
+    quiz_started_at,
+    quiz_completed_at,
+    result_viewed_at,
+    experience_started_at,
+    experience_completed_at,
+    beta_form_viewed_at,
+    lead_submitted_at,
+    lead_submission_status
+  from public.marketing_validation_sessions, params
+  where campaign_key = 'weekly_nutrition_2026'
+    and creative_key = 'mumeok_funnel_prototype_v2'
+    and viewed_at >= params.campaign_start
+    and viewed_at < params.campaign_end
+),
+profile_source_stage_counts as (
+  select
+    entry_sources.entry_source,
+    coalesce(stage_counts.landing_view, 0)::bigint as landing_view,
+    coalesce(stage_counts.quiz_start, 0)::bigint as quiz_start,
+    coalesce(stage_counts.quiz_complete, 0)::bigint as quiz_complete,
+    coalesce(stage_counts.result_view, 0)::bigint as result_view,
+    coalesce(stage_counts.experience_start, 0)::bigint as experience_start,
+    coalesce(stage_counts.experience_complete, 0)::bigint as experience_complete,
+    coalesce(stage_counts.beta_form_view, 0)::bigint as beta_form_view,
+    coalesce(stage_counts.accepted_lead, 0)::bigint as accepted_lead,
+    coalesce(stage_counts.duplicate_submission, 0)::bigint as duplicate_submission
+  from entry_sources
+  left join (
+    select
+      entry_source,
+      count(*)::bigint as landing_view,
+      count(*) filter (where quiz_started_at is not null)::bigint as quiz_start,
+      count(*) filter (where quiz_completed_at is not null)::bigint as quiz_complete,
+      count(*) filter (where result_viewed_at is not null)::bigint as result_view,
+      count(*) filter (where experience_started_at is not null)::bigint as experience_start,
+      count(*) filter (where experience_completed_at is not null)::bigint as experience_complete,
+      count(*) filter (where beta_form_viewed_at is not null)::bigint as beta_form_view,
+      count(*) filter (
+        where lead_submission_status = 'accepted' and lead_submitted_at is not null
+      )::bigint as accepted_lead,
+      count(*) filter (
+        where lead_submission_status = 'duplicate' and lead_submitted_at is not null
+      )::bigint as duplicate_submission
+    from cohort
+    group by entry_source
+  ) as stage_counts on stage_counts.entry_source = entry_sources.entry_source
+),
+profile_source_funnel as (
+  select entry_source, 'landing_view'::text as metric, landing_view as numerator, landing_view as denominator from profile_source_stage_counts
+  union all select entry_source, 'quiz_start', quiz_start, landing_view from profile_source_stage_counts
+  union all select entry_source, 'quiz_complete', quiz_complete, quiz_start from profile_source_stage_counts
+  union all select entry_source, 'result_view', result_view, quiz_complete from profile_source_stage_counts
+  union all select entry_source, 'experience_start', experience_start, result_view from profile_source_stage_counts
+  union all select entry_source, 'experience_complete', experience_complete, experience_start from profile_source_stage_counts
+  union all select entry_source, 'beta_form_view', beta_form_view, experience_complete from profile_source_stage_counts
+  union all select entry_source, 'accepted_lead', accepted_lead, beta_form_view from profile_source_stage_counts
+  union all select entry_source, 'duplicate_submission', duplicate_submission, beta_form_view from profile_source_stage_counts
+)
+select
+  'profile_source_funnel'::text as cohort_type,
+  entry_source as cohort_value,
+  metric,
+  numerator,
+  denominator,
+  numerator::numeric / nullif(denominator, 0) as rate
+from profile_source_funnel
+order by cohort_value, metric;
+
 with params as (
   select
     :'campaign_start'::timestamptz as campaign_start,

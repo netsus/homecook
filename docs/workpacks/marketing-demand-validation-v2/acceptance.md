@@ -126,3 +126,11 @@
 - 신규 `view`의 resolved variant도 동일한 a/b/c로 정규화한다. 기존 API의 historical enum(`d|default` 포함), DB schema, 이전 session/lead/attribution 원천 row는 변경·삭제하지 않는다. 기존 session의 first-write-wins와 resume도 유지한다.
 - `/beta?result=<known-key>`는 독립 Hero가 아닌 기존 read-only 공유 결과이므로 redirect하지 않는다. 공유 URL에 UTM 또는 ad_variant를 새로 삽입하지 않는다.
 - 질문·체험·리드·동의·Turnstile·권한·배포 계약은 동일하다. 로컬 구현/검증만 승인하며 운영 배포는 포함하지 않는다.
+
+## 2026-09-08 프로필 링크 유입 acceptance
+
+- [x] bare `/beta`는 redirect 없이 Hero A를 표시하고 첫 view에 Instagram profile UTM과 `ad_variant=a`를 기록한다.
+- [x] `/beta?profile_source=facebook`은 redirect 없이 Hero A를 표시하고 Facebook profile UTM을 기록한다. `profile_source=instagram`도 같은 Instagram attribution을 사용한다.
+- [x] profile link reset은 원래 clean URL과 attribution을 보존하고 result 공유 링크는 profile view를 만들지 않는다.
+- [x] 기존 광고 `ad_variant=a|b|c`, d/default/unknown 정규화, recognized `utm_content` 우선순위는 회귀하지 않는다.
+- [x] 분석 SQL은 Instagram profile, Facebook profile, paid/other를 분리해 각 funnel 전환을 보여 주며 PII를 선택하지 않는다.

@@ -28,7 +28,14 @@ import {
   type MarketingTurnstileController,
 } from "@/components/marketing/marketing-turnstile";
 import { postMarketingValidation } from "@/lib/api/marketing-validation";
-import { MARKETING_VALIDATION_RETENTION_DAYS, resolveMarketingAdVariant, type ActiveMarketingAdVariant } from "@/lib/marketing/demand-validation";
+import {
+  buildMarketingProfileAttribution,
+  isMarketingProfileSource,
+  MARKETING_VALIDATION_RETENTION_DAYS,
+  resolveMarketingAdVariant,
+  type ActiveMarketingAdVariant,
+  type MarketingProfileSource,
+} from "@/lib/marketing/demand-validation";
 import {
   enqueueMarketingQueueAction,
   flushMarketingQueue,
@@ -86,9 +93,17 @@ function resolveEntry() {
   const params = new URLSearchParams(window.location.search);
   const result = params.get("result");
   const sharedResult = RESULT_KEYS.includes(result as MarketingValidationQuizResult) ? result as MarketingValidationQuizResult : null;
+  const candidateProfileSource = params.get("profile_source");
+  const profileSource: MarketingProfileSource | null = !sharedResult && params.size === 0
+    ? "instagram"
+    : !sharedResult && params.size === 1 && isMarketingProfileSource(candidateProfileSource)
+      ? candidateProfileSource
+      : null;
   const adVariant = resolveMarketingAdVariant(params.get("utm_content"), params.get("ad_variant"));
-  const attribution = Object.fromEntries(UTM_KEYS.flatMap((key) => params.get(key) ? [[key, params.get(key)]] : []));
-  return { adVariant, attribution, sharedResult };
+  const attribution = profileSource
+    ? buildMarketingProfileAttribution(profileSource)
+    : Object.fromEntries(UTM_KEYS.flatMap((key) => params.get(key) ? [[key, params.get(key)]] : []));
+  return { adVariant, attribution, profileSource, sharedResult };
 }
 
 function useReducedMotion() {
@@ -299,7 +314,7 @@ function Done({ onBack, onReset }: { onBack: () => void; onReset: () => void }) 
 }
 
 export function MarketingDemandValidationScreen({ getTurnstileToken }: MarketingDemandValidationScreenProps) {
-  const [entry, setEntry] = useState<{ adVariant: ActiveMarketingAdVariant; attribution: Record<string, string | null>; sharedResult: MarketingValidationQuizResult | null }>({ adVariant: "a", attribution: {}, sharedResult: null });
+  const [entry, setEntry] = useState<{ adVariant: ActiveMarketingAdVariant; attribution: Record<string, string | null>; profileSource: MarketingProfileSource | null; sharedResult: MarketingValidationQuizResult | null }>({ adVariant: "a", attribution: {}, profileSource: null, sharedResult: null });
   const [entryReady, setEntryReady] = useState(false);
   const [stage, setStage] = useState<MarketingValidationUiStage>("hero");
   const [history, setHistory] = useState<MarketingValidationUiStage[]>([]);
@@ -446,7 +461,7 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     push("done");
     return null;
   };
-  const reset = () => { window.history.replaceState({}, "", `/beta?ad_variant=${entry.adVariant}`); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
+  const reset = () => { const resetUrl = entry.profileSource === "instagram" ? "/beta" : entry.profileSource === "facebook" ? "/beta?profile_source=facebook" : `/beta?ad_variant=${entry.adVariant}`; window.history.replaceState({}, "", resetUrl); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
 
   if (loading) return <div className="mdv2-root"><main className="mdv2-screen screen-content mdv2-loading" role="status" aria-label="테스트 불러오는 중"><span className="mdv2-loading-dot" aria-hidden="true" /><p>테스트를 불러오고 있어요.</p></main></div>;
   if (shellError) return <div className="mdv2-root"><Frame stage="empty" className="mdv2-state-screen"><Brand /><h1>새 테스트로 다시 시작할게요.</h1><p role="alert">{shellError}</p><button className="primary-button" type="button" onClick={reset}>새로 시작하기</button></Frame></div>;

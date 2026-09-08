@@ -4,6 +4,10 @@
 담당자: 킴실장
 날짜: 9월 3일
 
+> **2026-09-08 contract-evolution — 프로필 링크 attribution**
+>
+> 공개 endpoint·request schema는 변경하지 않는다. frontend는 bare `/beta`를 Instagram, `/beta?profile_source=instagram|facebook`을 해당 프로필 유입으로 해석하고 첫 `view`의 기존 optional UTM field에 exact `utm_source=instagram|facebook`, `utm_medium=social_profile`, `utm_campaign=weekly_nutrition_2026`, `utm_content=profile_link`, `ad_variant=a`를 보낸다. 서버는 기존 validation·first-write-wins·cookie·PII 경계를 그대로 적용한다. `profile_source`는 API field가 아니며 enum 밖 값은 프로필 attribution으로 신뢰하지 않는다.
+
 > **2026-09-03 contract-evolution — 마케팅 수요검증 v2 단일 Route Handler**
 >
 > source prototype은 `feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557`, Stage 1 작성 task는 `01a0630e-81f1-7f42-8b1b-cb259d1d5997`이다. 공개 endpoint는 기존 `POST /api/v1/marketing/validation` 하나를 유지하며 endpoint 총계는 v1.2.42와 같은 109개다.

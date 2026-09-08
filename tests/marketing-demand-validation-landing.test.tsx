@@ -176,6 +176,77 @@ describe("marketing demand validation v2 landing", () => {
     expect(postMarketingValidation).toHaveBeenCalledWith({ action: "view", honeypot: "", ad_variant: "a", utm_source: "campaign" });
   });
 
+  it("records a bare beta visit as the Instagram profile cohort while rendering Hero a", async () => {
+    window.history.replaceState({}, "", "/beta");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(window.location.pathname + window.location.search).toBe("/beta");
+    expect(postMarketingValidation).toHaveBeenCalledWith({
+      action: "view",
+      honeypot: "",
+      ad_variant: "a",
+      utm_campaign: "weekly_nutrition_2026",
+      utm_content: "profile_link",
+      utm_medium: "social_profile",
+      utm_source: "instagram",
+    });
+  });
+
+  it("records the explicit Instagram profile link with the same clean cohort", async () => {
+    window.history.replaceState({}, "", "/beta?profile_source=instagram");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "instagram",
+    }));
+  });
+
+  it("keeps the bare profile URL and cohort when restarting the test", async () => {
+    window.history.replaceState({}, "", "/beta");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect(window.location.pathname + window.location.search).toBe("/beta");
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "instagram",
+    }));
+  });
+
+  it("records and preserves the Facebook profile cohort independently", async () => {
+    window.history.replaceState({}, "", "/beta?profile_source=facebook");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_campaign: "weekly_nutrition_2026",
+      utm_content: "profile_link",
+      utm_medium: "social_profile",
+      utm_source: "facebook",
+    }));
+    await user.click(screen.getByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect(window.location.pathname + window.location.search).toBe("/beta?profile_source=facebook");
+  });
+
   it("renders a known opaque result as read-only without recording quiz events", async () => {
     window.history.replaceState({}, "", "/beta?result=pro-measurer&utm_source=must-go");
     installHappyApi();

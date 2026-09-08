@@ -11,7 +11,17 @@ import BetaPage from "@/app/beta/page";
 describe("three active landing variants", () => {
   beforeEach(() => { redirect.mockClear(); vi.stubGlobal("React", React); });
 
-  it.each([undefined, "d", "default", "invalid"])("redirects %s to a while retaining query values", async (variant) => {
+  it("keeps the bare beta profile link without redirecting it into paid variant a", async () => {
+    expect(await BetaPage({ searchParams: Promise.resolve({}) })).toBeTruthy();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it.each(["instagram", "facebook"])("keeps the explicit %s profile link without an ad-variant redirect", async (profileSource) => {
+    expect(await BetaPage({ searchParams: Promise.resolve({ profile_source: profileSource }) })).toBeTruthy();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, "d", "default", "invalid"])("redirects attributed %s to a while retaining query values", async (variant) => {
     await expect(Promise.resolve().then(() => BetaPage({ searchParams: Promise.resolve({
       ...(variant ? { ad_variant: variant } : {}),
       utm_source: ["first source", "second"],

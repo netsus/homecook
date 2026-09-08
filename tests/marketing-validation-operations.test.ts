@@ -587,7 +587,7 @@ describe("marketing validation Stage 6 operations", () => {
   it("ships a PII-free analysis SQL scoped to the v2 creative and lead cohorts", () => {
     const sql = requireFileText(analysisSqlPath);
 
-    expect(sql.match(/campaign_key = 'weekly_nutrition_2026'/gu)).toHaveLength(4);
+    expect(sql.match(/campaign_key = 'weekly_nutrition_2026'/gu)).toHaveLength(5);
     expect(sql).not.toMatch(/\bselect\s+[^;]*(email|utm_term|ip|user_agent|referrer|cookie)\b/iu);
     expect(sql).toContain("mumeok_funnel_prototype_v2");
     expect(sql).toContain("ad_variant");
@@ -621,6 +621,17 @@ describe("marketing validation Stage 6 operations", () => {
     expect(sql).toContain("select ad_variant, 'landing_view'::text as metric, landing_view as numerator, landing_view as denominator from ad_variant_stage_counts");
     expect(sql).toContain("select ad_variant, 'accepted_lead', accepted_lead, beta_form_view from ad_variant_stage_counts");
     expect(sql).toContain("select ad_variant, 'duplicate_submission', duplicate_submission, beta_form_view from ad_variant_stage_counts");
+  });
+
+  it("reports Instagram and Facebook profile funnels separately from paid or other traffic", () => {
+    const sql = requireFileText(analysisSqlPath);
+
+    expect(sql).toContain("'profile_source_funnel'");
+    expect(sql).toMatch(/values\s*\('instagram_profile'\),\s*\('facebook_profile'\),\s*\('paid_or_other'\)/iu);
+    expect(sql).toContain("utm_medium = 'social_profile'");
+    expect(sql).toContain("utm_content = 'profile_link'");
+    expect(sql).toContain("utm_source in ('instagram', 'facebook')");
+    expect(sql).toContain("select entry_source, 'accepted_lead', accepted_lead, beta_form_view from profile_source_stage_counts");
   });
 
   it("reports exact q1..q4 answer distributions without exposing raw payloads", () => {

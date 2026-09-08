@@ -4,6 +4,10 @@
 담당자: 채실장
 날짜: 9월 3일
 
+> **2026-09-08 contract-evolution — 프로필 유입 흐름**
+>
+> Instagram profile `/beta` 또는 `/beta?profile_source=instagram`, Facebook profile `/beta?profile_source=facebook` → Hero A → 기존 q1..lead 흐름을 사용한다. 첫 view에만 `instagram|facebook / social_profile / weekly_nutrition_2026 / profile_link` attribution과 `ad_variant=a`를 저장한다. reset 후에도 profile URL과 attribution을 보존한다. known result 공유 링크는 view를 만들지 않으므로 profile cohort에 포함하지 않는다.
+
 > **2026-09-03 contract-evolution — 마케팅 수요검증 v2 흐름**
 >
 > 승인 source는 `feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557`, 작성 task는 `01a0630e-81f1-7f42-8b1b-cb259d1d5997`이다.

@@ -324,3 +324,10 @@
 - 신규 `view`의 resolved variant도 동일한 a/b/c로 정규화한다. 기존 API의 historical enum(`d|default` 포함), DB schema, 이전 session/lead/attribution 원천 row는 변경·삭제하지 않는다. 기존 session의 first-write-wins와 resume도 유지한다.
 - `/beta?result=<known-key>`는 독립 Hero가 아닌 기존 read-only 공유 결과이므로 redirect하지 않는다. 공유 URL에 UTM 또는 ad_variant를 새로 삽입하지 않는다.
 - 질문·체험·리드·동의·Turnstile·권한·배포 계약은 동일하다. 로컬 구현/검증만 승인하며 운영 배포는 포함하지 않는다.
+
+## 2026-09-08 사용자 승인 — Instagram·Facebook 프로필 링크 분리
+
+- `/beta`는 Instagram 프로필 기본 링크, `/beta?profile_source=facebook`은 Facebook 프로필 링크다. `profile_source=instagram` 명시 링크도 허용한다.
+- 두 링크 모두 Hero A를 사용하지만 URL에 `ad_variant=a`를 삽입하지 않는다. 광고 a/b/c와 프로필 플랫폼은 각각 variant와 내부 UTM으로 별도 분석한다.
+- 프로필 view의 기존 UTM은 exact `instagram|facebook / social_profile / weekly_nutrition_2026 / profile_link`다. 새 API field·DB column·Hero variant는 추가하지 않는다.
+- reset은 원래 profile URL과 attribution을 유지한다. result 공유 링크, 기존 a/b/c redirect, historical row는 변경하지 않는다.

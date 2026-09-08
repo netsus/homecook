@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { resolveMarketingAdVariant } from "@/lib/marketing/demand-validation";
+import {
+  isMarketingProfileSource,
+  resolveMarketingAdVariant,
+} from "@/lib/marketing/demand-validation";
 
 import { MarketingDemandValidationScreen } from "@/components/marketing/marketing-demand-validation-screen";
 
@@ -34,9 +37,16 @@ export default async function BetaPage({ searchParams }: { searchParams: Promise
   const query = await searchParams;
   const first = (key: string) => Array.isArray(query[key]) ? query[key][0] : query[key];
   const sharedResult = ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"].includes(first("result") ?? "");
+  const queryKeys = Object.keys(query);
+  const profileSource = first("profile_source") ?? null;
+  const profileEntry = !sharedResult && (
+    queryKeys.length === 0
+    || (queryKeys.length === 1 && !Array.isArray(query.profile_source) && isMarketingProfileSource(profileSource))
+  );
   const variant = resolveMarketingAdVariant(first("utm_content") ?? null, first("ad_variant") ?? null);
   // Shared results keep their privacy-preserving URL and never create a view event.
-  if (!sharedResult && (first("ad_variant") !== variant || Array.isArray(query.ad_variant))) {
+  // Exact profile links render Hero A but keep their clean platform URL for attribution.
+  if (!sharedResult && !profileEntry && (first("ad_variant") !== variant || Array.isArray(query.ad_variant))) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined) continue;
