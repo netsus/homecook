@@ -28,6 +28,12 @@ describe("launch readiness legal and SEO routes", () => {
     delete process.env.NEXT_PUBLIC_SITE_URL;
     delete process.env.NEXT_PUBLIC_SERVICE_CONTACT_EMAIL;
     delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    delete process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME;
+    delete process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE;
+    delete process.env.NEXT_PUBLIC_PRIVACY_OFFICER_NAME;
+    delete process.env.NEXT_PUBLIC_PRIVACY_OFFICER_CONTACT;
+    delete process.env.NEXT_PUBLIC_PRIVACY_COMPLAINT_DEPARTMENT;
+    delete process.env.NEXT_PUBLIC_PRIVACY_COMPLAINT_CONTACT;
   });
 
   it("uses the Vercel production domain when the explicit public URL is absent", async () => {
@@ -99,6 +105,27 @@ describe("launch readiness legal and SEO routes", () => {
     expect(html).toContain("베타테스트 초대 안내");
     expect(html).toContain("베타 초대 신청 이메일");
     expect(html).toContain("캠페인 종료 후 180일");
+  });
+
+  it("renders the approved individual operator and email-only privacy contact without claiming a phone number", async () => {
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME = "조원준";
+    process.env.NEXT_PUBLIC_SERVICE_CONTACT_EMAIL = "mumeok@naver.com";
+    process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE = "2026-09-08";
+    process.env.NEXT_PUBLIC_PRIVACY_OFFICER_NAME = "개인정보 보호 담당";
+    process.env.NEXT_PUBLIC_PRIVACY_OFFICER_CONTACT = "mumeok@naver.com";
+    process.env.NEXT_PUBLIC_PRIVACY_COMPLAINT_DEPARTMENT = "개인정보 보호 담당";
+    process.env.NEXT_PUBLIC_PRIVACY_COMPLAINT_CONTACT = "mumeok@naver.com";
+
+    const page = await import("@/app/privacy/page");
+    const html = renderToStaticMarkup(React.createElement(page.default));
+
+    expect(html).toContain("조원준");
+    expect(html).toContain("2026-09-08");
+    expect(html).toContain("개인정보 보호 담당");
+    expect(html).toContain("mumeok@naver.com");
+    expect(html).toContain("<dt>담당</dt>");
+    expect(html).not.toContain("<dt>전화번호</dt>");
   });
 
   it("leaves unknown legal facts blank instead of publishing placeholder copy", async () => {

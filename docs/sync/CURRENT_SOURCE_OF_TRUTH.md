@@ -18,6 +18,10 @@
 
 광고 a/b/c Hero는 유지한다. `/beta`는 Instagram 프로필 기본 링크, `/beta?profile_source=facebook`은 Facebook 프로필 링크로 사용하고 둘 다 Hero A를 보여 준다. 프로필 유입은 URL에 UTM을 노출하지 않고 첫 view의 기존 UTM field에 플랫폼·`social_profile`·`profile_link`를 기록하여 광고 A 데이터와 분리한다. API/DB field를 추가하지 않으며 자세한 계약은 공식 문서 4종과 `marketing-demand-validation-v2` workpack의 2026-09-08 addendum을 따른다.
 
+## 2026-09-08 사용자 확인 — 개인정보처리방침 운영자 연락처
+
+개인 운영자 `조원준`, 개인정보/고충처리 담당 `개인정보 보호 담당`, 공개 이메일 `mumeok@naver.com`, 시행일 `2026-09-08`을 실제 공개값으로 사용한다. 현재 공개 전화번호는 없으므로 임의 값이나 개인 휴대전화번호를 표시하지 않는다. 이 확인은 운영자 연락처 항목만 닫으며 위탁·국외이전 등 다른 빈 운영 사실은 별도 확인 대상이다.
+
 ## 2026-09-07 사용자 승인 — 데스크톱 공통 로고·배너
 
 데스크톱 주요 탭의 header는 공식 가로형 `무먹 무엇을 먹든` 로고 파생본 하나로 통일한다.

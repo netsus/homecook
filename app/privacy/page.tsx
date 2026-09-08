@@ -166,7 +166,7 @@ export default function PrivacyPage() {
         <h2>개인정보 보호책임자</h2>
         <dl className="legal-facts">
           <div>
-            <dt>이름</dt>
+            <dt>담당</dt>
             <dd>{legal.privacyOfficerName}</dd>
           </div>
           <div>

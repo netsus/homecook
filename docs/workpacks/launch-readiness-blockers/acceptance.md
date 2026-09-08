@@ -89,6 +89,7 @@
 ### Manual Only
 
 - [ ] 실제 운영자/개인정보 보호책임자/문의처/위탁/국외이전 정보 최종 확인
+  - 2026-09-08 사용자 확인값: 개인 운영자 `조원준`, 담당/고충처리 부서 `개인정보 보호 담당`, 공개 연락처 `mumeok@naver.com`, 시행일 `2026-09-08`. 공개 전화번호는 현재 없으며 임의 값을 표시하지 않는다. 위탁·국외이전 등 나머지 실제 운영정보 확인은 계속 미완료다.
 - [ ] human legal/operator review
 - [ ] production deployment 후 Search Console 제출 전 robots/sitemap fetch 확인
 - [ ] production DB migration application and count query evidence if local DB cannot mirror production exactly
