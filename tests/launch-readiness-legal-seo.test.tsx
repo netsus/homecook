@@ -56,15 +56,14 @@ describe("launch readiness legal and SEO routes", () => {
       title: "개인정보처리방침",
     });
     expect(html).toContain("개인정보처리방침");
-    expect(html).toContain("수집하는 개인정보");
-    expect(html).toContain("보유 및 이용 기간");
-    expect(html).toContain("개인정보 처리의 법적 근거");
+    expect(html).toContain("처리 항목·목적·보유기간과 법적 근거");
     expect(html).toContain("제3자 제공");
     expect(html).toContain("개인정보 처리위탁");
     expect(html).toContain("개인정보의 국외 이전");
-    expect(html).toContain("만 14세 미만 아동의 개인정보");
+    expect(html).toContain("권리 행사와 개인정보 문의");
     expect(html).toContain("권익침해 구제방법");
     expect(html).toContain("help@zipbap.example");
+    expect(html).not.toContain("<strong></strong>");
   });
 
   it("renders the terms page with required service terms sections", async () => {
@@ -128,14 +127,53 @@ describe("launch readiness legal and SEO routes", () => {
     expect(html).not.toContain("<dt>전화번호</dt>");
   });
 
-  it("leaves unknown legal facts blank instead of publishing placeholder copy", async () => {
+  it("shows only current processing facts and never renders empty legal rows", async () => {
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME = "조원준";
+    process.env.NEXT_PUBLIC_SERVICE_CONTACT_EMAIL = "mumeok@naver.com";
+    process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE = "2026-09-08";
+    process.env.NEXT_PUBLIC_PRIVACY_OFFICER_NAME = "개인정보 보호 담당";
+    process.env.NEXT_PUBLIC_PRIVACY_OFFICER_CONTACT = "mumeok@naver.com";
+    process.env.NEXT_PUBLIC_PRIVACY_COMPLAINT_DEPARTMENT = "개인정보 보호 담당";
+    process.env.NEXT_PUBLIC_PRIVACY_COMPLAINT_CONTACT = "mumeok@naver.com";
+
+    const page = await import("@/app/privacy/page");
+    const html = renderToStaticMarkup(React.createElement(page.default));
+
+    expect(html).not.toContain("<dd></dd>");
+    expect(html).not.toContain("회원탈퇴 시 Supabase Auth 계정 처리 기준");
+    expect(html).not.toContain("작성자가 탈퇴한 직접 등록 레시피 처리 기준");
+    expect(html).toContain("개인정보를 제3자에게 제공하지 않습니다");
+    expect(html).toContain("Cloudflare, Inc.");
+    expect(html).toContain("네이버 주식회사");
+    expect(html).toContain("미국, 유럽경제지역, 영국, 호주, 일본, 캐나다, 싱가포르");
+    expect(html).toContain("아랍에미리트, 인도, 멕시코, 말레이시아와 스위스");
+    expect(html).toContain("https://www.cloudflare.com/gdpr/subprocessors/cloudflare-services/");
+    expect(html).toContain("이용자가 전송하는 요청 내용");
+
+    expect(html).toContain("이전 거부 방법과 영향");
+    expect(html).toContain("거부하면 서비스를 이용할 수 없습니다");
+    expect(html).toContain("최소 식별자와 비가역 해시 기록은 영구 보관");
+    expect(html).toContain("직접 식별정보를 제거");
+    expect(html).not.toContain("현재 만 14세 미만의 회원가입을 받지 않습니다");
+    expect(html).not.toContain("백업 교체 주기");
+  });
+
+  it("does not leave an empty retention row in the terms page", async () => {
+    const page = await importWithSiteEnv(() => import("@/app/terms/page"));
+    const html = renderToStaticMarkup(React.createElement(page.default));
+
+    expect(html).not.toContain("<dd></dd>");
+    expect(html).not.toContain("서비스 가입 가능 연령");
+    expect(html).toContain("최소 식별자와 비가역 해시 기록");
+  });
+
+  it("keeps only operator-controlled public legal values in the environment contract", async () => {
     vi.resetModules();
     delete process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME;
     delete process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE;
     delete process.env.NEXT_PUBLIC_PRIVACY_OFFICER_NAME;
     delete process.env.NEXT_PUBLIC_PRIVACY_OFFICER_CONTACT;
-    delete process.env.NEXT_PUBLIC_LEGAL_PROCESSING_CONSIGNMENT;
-    delete process.env.NEXT_PUBLIC_LEGAL_OVERSEAS_TRANSFER_RECIPIENT;
 
     const { getLegalInfo } = await import("@/lib/legal-info");
     const legal = getLegalInfo();
@@ -143,8 +181,16 @@ describe("launch readiness legal and SEO routes", () => {
     expect(legal.operatorName).toBe("");
     expect(legal.effectiveDate).toBe("");
     expect(legal.privacyOfficerName).toBe("");
-    expect(legal.processingConsignment).toBe("");
-    expect(legal.overseasTransferRecipient).toBe("");
+    expect(Object.keys(legal).sort()).toEqual([
+      "complaintDepartment",
+      "complaintDepartmentContact",
+      "contactEmail",
+      "effectiveDate",
+      "operatorName",
+      "privacyOfficerContact",
+      "privacyOfficerName",
+      "serviceName",
+    ]);
     expect(Object.values(legal)).not.toContain("운영 정보 확인 필요");
   });
 
