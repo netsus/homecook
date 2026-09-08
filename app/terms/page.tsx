@@ -60,8 +60,14 @@ export default function TermsPage() {
           있습니다.
         </p>
         <dl className="legal-facts">
-          <div><dt>서비스 가입 가능 연령</dt><dd>{legal.childAccountPolicy}</dd></div>
-          <div><dt>탈퇴 후 별도 보관 또는 잔존 데이터</dt><dd /></div>
+          <div>
+            <dt>탈퇴 후 남는 최소 정보</dt>
+            <dd>
+              공개·공유 콘텐츠는 작성자와 분리되어 남을 수 있습니다. 재가입
+              세대 구분과 삭제 재처리·부정 이용 방지에 필요한 최소 식별자와
+              비가역 해시 기록은 영구 보관됩니다.
+            </dd>
+          </div>
         </dl>
       </section>
       <section>

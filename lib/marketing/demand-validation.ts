@@ -25,6 +25,42 @@ export const MARKETING_VALIDATION_CAMPAIGN_KEY = "weekly_nutrition_2026";
 export const MARKETING_VALIDATION_CREATIVE_KEY = "mumeok_funnel_prototype_v2";
 export const MARKETING_VALIDATION_AUDIENCE_KEY = "weekly_nutrition_beta_interest";
 export const MARKETING_VALIDATION_MAX_UTM_LENGTH = 120;
+export const MARKETING_PROFILE_SOURCES = ["instagram", "facebook"] as const;
+
+export type MarketingProfileSource = typeof MARKETING_PROFILE_SOURCES[number];
+
+export function isMarketingProfileSource(value: string | null): value is MarketingProfileSource {
+  return value === "instagram" || value === "facebook";
+}
+
+export function buildMarketingProfileAttribution(source: MarketingProfileSource) {
+  return {
+    utm_campaign: MARKETING_VALIDATION_CAMPAIGN_KEY,
+    utm_content: "profile_link",
+    utm_medium: "social_profile",
+    utm_source: source,
+  } as const;
+}
+
+const MARKETING_EXPLICIT_ATTRIBUTION_QUERY_KEYS = [
+  "result",
+  "ad_variant",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
+
+export function resolveMarketingProfileSource(
+  params: Pick<URLSearchParams, "getAll" | "has">,
+): MarketingProfileSource | null {
+  if (MARKETING_EXPLICIT_ATTRIBUTION_QUERY_KEYS.some((key) => params.has(key))) return null;
+  const candidates = params.getAll("profile_source");
+  if (candidates.length > 1) return null;
+  if (candidates.length === 0) return "instagram";
+  return isMarketingProfileSource(candidates[0]) ? candidates[0] : null;
+}
 
 export const QUIZ_Q1_OPTIONS = ["daily", "3_5", "1_2", "none"] as const;
 export const QUIZ_Q2_OPTIONS = ["none", "1_2", "3_5", "6_plus"] as const;

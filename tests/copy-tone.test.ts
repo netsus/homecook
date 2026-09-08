@@ -10,6 +10,9 @@ const excludedFiles = new Set([
   // These files intentionally handle external/user-generated recipe text and parser patterns.
   "lib/recipio-youtube-import.ts",
   "lib/server/youtube-description-parser.ts",
+  // Public legal documents use precise formal language instead of the product UI tone.
+  "app/privacy/page.tsx",
+  "app/terms/page.tsx",
 ]);
 
 function collectSourceFiles(relativeRoot: string): string[] {

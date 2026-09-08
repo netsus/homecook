@@ -14,6 +14,22 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
+## 2026-09-08 사용자 승인 — Instagram·Facebook 프로필 링크 유입 분리
+
+광고 a/b/c Hero는 유지한다. `/beta`는 Instagram 프로필 기본 링크, `/beta?profile_source=facebook`은 Facebook 프로필 링크로 사용하고 둘 다 Hero A를 보여 준다. 프로필 유입은 URL에 UTM을 노출하지 않고 첫 view의 기존 UTM field에 플랫폼·`social_profile`·`profile_link`를 기록하여 광고 A 데이터와 분리한다. API/DB field를 추가하지 않으며 자세한 계약은 공식 문서 4종과 `marketing-demand-validation-v2` workpack의 2026-09-08 addendum을 따른다.
+
+## 2026-09-08 사용자 승인 — `/beta` in-app browser 성능
+
+Instagram/Facebook cold visit에서 API session 연결보다 resolved Hero를 먼저 표시한다. visible Hero image만 초기 우선 요청하고 큰 journey raster는 optimized WebP로 교체한 뒤 quiz 시작 시 low priority preload한다. action/attribution/privacy/lead 계약은 유지하며 공식 요구사항·화면·Flow와 workpack 성능 acceptance를 따른다.
+
+## 2026-09-08 사용자 확인 — 개인정보처리방침 운영자 연락처
+
+개인 운영자 `조원준`, 개인정보/고충처리 담당 `개인정보 보호 담당`, 공개 이메일 `mumeok@naver.com`, 시행일 `2026-09-08`을 실제 공개값으로 사용한다. 현재 공개 전화번호는 없으므로 임의 값이나 개인 휴대전화번호를 표시하지 않는다. 이 확인은 운영자 연락처 항목만 닫으며 위탁·국외이전 등 다른 빈 운영 사실은 별도 확인 대상이다.
+
+## 2026-09-08 사용자 승인 — 개인정보처리방침 빈 항목 제거
+
+빈 placeholder와 중복 연락처를 제거하고 현재 운영에 필요한 사실만 남긴다. 제3자 제공은 없음, 처리위탁은 Cloudflare와 네이버 문의메일, 국외 처리는 Cloudflare를 통과하는 접속·보안 metadata와 request 내용으로 공개한다. 탈퇴 후 직접 식별정보 제거와 최소 영구 hash tombstone, 수집·목적·기간·근거, 파기, 권리, 쿠키, 안전조치와 구제방법을 하나의 간결한 현재 운영 문서로 정리한다. 공식 요구사항·화면정의서의 같은 날짜 addendum과 launch-readiness evidence를 따른다.
+
 ## 2026-09-07 사용자 승인 — 데스크톱 공통 로고·배너
 
 데스크톱 주요 탭의 header는 공식 가로형 `무먹 무엇을 먹든` 로고 파생본 하나로 통일한다.

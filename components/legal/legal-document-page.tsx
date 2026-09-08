@@ -28,6 +28,10 @@ export function LegalDocumentPage({
   meta,
   title,
 }: LegalDocumentPageProps) {
+  const visibleMeta = meta.filter(
+    (item) => item.value !== null && item.value !== undefined && item.value !== "",
+  );
+
   return (
     <WebShell className="legal-shell" wide>
       <WebTopNav className="legal-desktop-nav" />
@@ -59,7 +63,7 @@ export function LegalDocumentPage({
         </section>
         <div className="legal-layout">
           <aside className="legal-meta" aria-label="문서 기본 정보">
-            {meta.map((item) => (
+            {visibleMeta.map((item) => (
               <div className="legal-meta-row" key={item.label}>
                 <span>{item.label}</span>
                 <strong>{item.value}</strong>

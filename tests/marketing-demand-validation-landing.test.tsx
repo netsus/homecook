@@ -137,20 +137,36 @@ describe("marketing demand validation v2 landing", () => {
   it("shows loading and recovers a missing session through the empty restart state", async () => {
     postMarketingValidation.mockResolvedValue({ success: false, data: null, error: { code: "SESSION_NOT_FOUND", message: "진행 정보를 찾지 못했어요.", fields: [] } });
     const { MarketingDemandValidationScreen } = await importScreen();
-    render(<MarketingDemandValidationScreen />);
-    expect(screen.getByRole("status", { name: "테스트 불러오는 중" })).toBeTruthy();
+    render(<MarketingDemandValidationScreen initialAdVariant="a" />);
+    expect(screen.getByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /내 집밥기록 유형 알아보기/ })).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "새 테스트로 다시 시작할게요." })).toBeTruthy();
     expect(screen.getByRole("button", { name: "새로 시작하기" })).toBeTruthy();
   });
 
-  it("uses a compact brand-free loading state while the initial request is pending", async () => {
+  it("renders the server-selected Hero immediately while session initialization is pending", async () => {
+    window.history.replaceState({}, "", "/beta?ad_variant=b");
     postMarketingValidation.mockImplementation(() => new Promise(() => {}));
     const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen initialAdVariant="b" />);
+    expect(screen.getByRole("heading", { name: /수분 빠진 제육볶음 300g/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /내 집밥기록 유형 알아보기/ }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByTestId("screen-loading")).toBeNull();
+  });
+
+  it("warms later journey images only after the visitor starts the quiz", async () => {
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
     render(<MarketingDemandValidationScreen />);
-    const loading = screen.getByRole("status", { name: "테스트 불러오는 중" });
-    expect(loading.textContent).toContain("테스트를 불러오고 있어요.");
-    expect(loading.querySelector("img")).toBeNull();
-    expect(loading.querySelector(".brand")).toBeNull();
+    await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" });
+
+    await user.click(screen.getByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect(document.head.querySelector('link[rel="preload"][href="/assets/funnel/food/macro-protein-arm.webp"]')).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "거의 매일" }));
+    await user.click(await screen.findByRole("button", { name: "3~5끼" }));
+    await user.click(await screen.findByRole("button", { name: "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록" }));
+    expect(document.head.querySelector('link[rel="preload"][href="/assets/funnel/characters/ingredient-tracker.webp"]')).not.toBeNull();
   });
 
   it.each([
@@ -174,6 +190,107 @@ describe("marketing demand validation v2 landing", () => {
     render(<MarketingDemandValidationScreen />);
     expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
     expect(postMarketingValidation).toHaveBeenCalledWith({ action: "view", honeypot: "", ad_variant: "a", utm_source: "campaign" });
+  });
+
+  it("records a bare beta visit as the Instagram profile cohort while rendering Hero a", async () => {
+    window.history.replaceState({}, "", "/beta");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(window.location.pathname + window.location.search).toBe("/beta");
+    expect(postMarketingValidation).toHaveBeenCalledWith({
+      action: "view",
+      honeypot: "",
+      ad_variant: "a",
+      utm_campaign: "weekly_nutrition_2026",
+      utm_content: "profile_link",
+      utm_medium: "social_profile",
+      utm_source: "instagram",
+    });
+  });
+
+  it("records the explicit Instagram profile link with the same clean cohort", async () => {
+    window.history.replaceState({}, "", "/beta?profile_source=instagram");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "instagram",
+    }));
+  });
+
+  it("keeps the bare profile URL and cohort when restarting the test", async () => {
+    window.history.replaceState({}, "", "/beta");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect(window.location.pathname + window.location.search).toBe("/beta");
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "instagram",
+    }));
+  });
+
+  it("records and preserves the Facebook profile cohort independently", async () => {
+    window.history.replaceState({}, "", "/beta?profile_source=facebook");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_campaign: "weekly_nutrition_2026",
+      utm_content: "profile_link",
+      utm_medium: "social_profile",
+      utm_source: "facebook",
+    }));
+    await user.click(screen.getByRole("button", { name: "내 집밥기록 유형 알아보기" }));
+    expect(window.location.pathname + window.location.search).toBe("/beta?profile_source=facebook");
+  });
+
+  it("keeps Facebook profile attribution when the in-app browser appends fbclid", async () => {
+    window.history.replaceState({}, "", "/beta?profile_source=facebook&fbclid=opaque-click-id");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "facebook",
+    }));
+  });
+
+  it("keeps Instagram profile attribution when its in-app browser decorates the bare link", async () => {
+    window.history.replaceState({}, "", "/beta?igsh=opaque-share-id");
+    installHappyApi();
+    const { MarketingDemandValidationScreen } = await importScreen();
+    render(<MarketingDemandValidationScreen />);
+
+    expect(await screen.findByRole("heading", { name: /레시피만 가져오면/ })).toBeTruthy();
+    expect(postMarketingValidation).toHaveBeenCalledWith(expect.objectContaining({
+      action: "view",
+      ad_variant: "a",
+      utm_content: "profile_link",
+      utm_source: "instagram",
+    }));
   });
 
   it("renders a known opaque result as read-only without recording quiz events", async () => {

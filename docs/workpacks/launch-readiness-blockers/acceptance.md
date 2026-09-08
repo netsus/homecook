@@ -22,6 +22,7 @@
 - [ ] 로그인 및 개인 데이터 route는 robots 또는 page metadata/header로 검색 색인에서 제외된다 <!-- omo:id=accept-private-routes-noindex;stage=4;scope=frontend;review=6 -->
 - [ ] `support@homecook.local`, `@homecook` fake contact 문자열이 repo와 production 화면에 남지 않는다 <!-- omo:id=accept-fake-contact-removed;stage=4;scope=frontend;review=5,6 -->
 - [ ] 개인정보처리방침에는 처리 항목, 목적, 보유기간, 파기, 제3자 제공, 위탁, 국외 이전, 권리 행사, 보호책임자/연락처, 자동수집/쿠키, 안전조치가 실제 운영정보 기준으로 들어간다 <!-- omo:id=accept-privacy-real-facts;stage=4;scope=frontend;review=5,6 -->
+  - 2026-09-08 구현 후보는 빈 row를 제거하고 Cloudflare·네이버 문의메일·제3자 제공 없음·탈퇴 식별정보 제거를 현재 운영 기준으로 채웠다. 독립 authority/final review 전에는 이 acceptance를 완료 처리하지 않는다.
 - [ ] 이용약관에는 서비스 범위, 계정/탈퇴, 금지행위, 책임 제한, 문의, 시행일이 들어간다 <!-- omo:id=accept-terms-real-facts;stage=4;scope=frontend;review=5,6 -->
 - [ ] `/privacy`, `/terms` mobile 320/390 and desktop screenshot evidence가 있고 텍스트 overflow가 없다 <!-- omo:id=accept-legal-screenshots;stage=4;scope=frontend;review=5,6 -->
 - [ ] legal/operator human review 필요 여부와 현재 상태가 PR body에 명시되어 있다 <!-- omo:id=accept-human-legal-review-status;stage=4;scope=frontend;review=6 -->
@@ -89,6 +90,7 @@
 ### Manual Only
 
 - [ ] 실제 운영자/개인정보 보호책임자/문의처/위탁/국외이전 정보 최종 확인
+  - 2026-09-08 사용자 확인값: 개인 운영자 `조원준`, 담당/고충처리 부서 `개인정보 보호 담당`, 공개 연락처 `mumeok@naver.com`, 시행일 `2026-09-08`. 공개 전화번호는 현재 없으며 임의 값을 표시하지 않는다. 위탁·국외이전 등 나머지 실제 운영정보 확인은 계속 미완료다.
 - [ ] human legal/operator review
 - [ ] production deployment 후 Search Console 제출 전 robots/sitemap fetch 확인
 - [ ] production DB migration application and count query evidence if local DB cannot mirror production exactly
