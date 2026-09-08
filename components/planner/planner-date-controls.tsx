@@ -64,26 +64,26 @@ function CalendarSheet({ date, today, onSelect, onClose }: {
   const nextLabel = view === "days" ? "다음 달" : view === "months" ? "다음 해" : "다음 연도 범위";
   return <AppBottomSheet ariaLabelledBy="planner-calendar-title" title="날짜 선택" panelRef={panelRef} onClose={onClose} panelClassName="sm:max-w-sm" bodyClassName="pb-[calc(16px+env(safe-area-inset-bottom))]">
     <div className="mb-3 flex items-center justify-between">
-      <button aria-label={previousLabel} className="h-11 w-11 rounded-xl text-xl outline-none focus-visible:ring-2 focus-visible:ring-sky-400 hover:bg-sky-50" onClick={() => shift(-1)} type="button">‹</button>
-      <button aria-label={view === "days" ? "월 선택" : view === "months" ? "연도 선택" : "월 선택으로 돌아가기"} className="min-h-11 rounded-xl px-3 text-base font-extrabold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-sky-400 hover:bg-sky-50" ref={headingRef} onClick={() => setView(view === "days" ? "months" : view === "months" ? "years" : "months")} type="button">
-        {view === "days" ? `${year}년 ${month + 1}월` : view === "months" ? `${year}년` : `${yearStart}–${yearStart + 11}년`} <span aria-hidden="true" className="text-slate-400">⌄</span>
+      <button aria-label={previousLabel} className="h-11 w-11 rounded-xl text-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)] hover:bg-[var(--ui-sky-50)]" onClick={() => shift(-1)} type="button">‹</button>
+      <button aria-label={view === "days" ? "월 선택" : view === "months" ? "연도 선택" : "월 선택으로 돌아가기"} className="min-h-11 rounded-xl px-3 text-base font-extrabold text-[var(--ui-slate-800)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)] hover:bg-[var(--ui-sky-50)]" ref={headingRef} onClick={() => setView(view === "days" ? "months" : view === "months" ? "years" : "months")} type="button">
+        {view === "days" ? `${year}년 ${month + 1}월` : view === "months" ? `${year}년` : `${yearStart}–${yearStart + 11}년`} <span aria-hidden="true" className="text-[var(--ui-slate-400)]">⌄</span>
       </button>
-      <button aria-label={nextLabel} className="h-11 w-11 rounded-xl text-xl outline-none focus-visible:ring-2 focus-visible:ring-sky-400 hover:bg-sky-50" onClick={() => shift(1)} type="button">›</button>
+      <button aria-label={nextLabel} className="h-11 w-11 rounded-xl text-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)] hover:bg-[var(--ui-sky-50)]" onClick={() => shift(1)} type="button">›</button>
     </div>
     {view === "days" ? <>
-      <div aria-hidden="true" className="mb-1 grid grid-cols-7 text-center text-xs text-slate-400">{WEEKDAYS.map(day => <span className="py-2" key={day}>{day}</span>)}</div>
+      <div aria-hidden="true" className="mb-1 grid grid-cols-7 text-center text-xs text-[var(--ui-slate-400)]">{WEEKDAYS.map(day => <span className="py-2" key={day}>{day}</span>)}</div>
       <div className="grid grid-cols-7 gap-y-1" aria-label={`${year}년 ${month + 1}월 날짜`}>
         {Array.from({ length: offset }, (_, index) => <span key={`blank-${index}`} />)}
         {Array.from({ length: days }, (_, index) => {
           const day = index + 1; const key = dateKey(calendarDate(year, month, day));
-          return <button aria-label={`${year}년 ${month + 1}월 ${day}일`} aria-pressed={key === date} aria-current={key === today ? "date" : undefined} className={`min-h-11 rounded-xl text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${key === date ? "bg-sky-100 text-sky-800" : key === today ? "font-extrabold text-sky-700 underline decoration-sky-400 underline-offset-4" : "text-slate-700 hover:bg-sky-50"}`} key={key} ref={node => { if (node) dayRefs.current.set(key, node); else dayRefs.current.delete(key); }} onKeyDown={event => moveDay(event, key)} onClick={() => onSelect(key)} type="button">{day}</button>;
+          return <button aria-label={`${year}년 ${month + 1}월 ${day}일`} aria-pressed={key === date} aria-current={key === today ? "date" : undefined} className={`min-h-11 rounded-xl text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)] ${key === date ? "bg-[var(--ui-sky-100)] text-[var(--ui-sky-800)]" : key === today ? "font-extrabold text-[var(--ui-sky-700)] underline decoration-[var(--ui-sky-400)] underline-offset-4" : "text-[var(--ui-slate-700)] hover:bg-[var(--ui-sky-50)]"}`} key={key} ref={node => { if (node) dayRefs.current.set(key, node); else dayRefs.current.delete(key); }} onKeyDown={event => moveDay(event, key)} onClick={() => onSelect(key)} type="button">{day}</button>;
         })}
       </div>
     </> : <div className="grid grid-cols-3 gap-2">
       {Array.from({ length: 12 }, (_, index) => {
         const value = view === "months" ? index : yearStart + index;
         const selected = view === "months" ? value === month : value === year;
-        return <button className={`min-h-12 rounded-xl text-base font-semibold outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${selected ? "bg-sky-100 text-sky-800" : "text-slate-700 hover:bg-sky-50"}`} disabled={view === "years" && (value < 1 || value > 9999)} key={value} onClick={() => {
+        return <button className={`min-h-12 rounded-xl text-base font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)] ${selected ? "bg-[var(--ui-sky-100)] text-[var(--ui-sky-800)]" : "text-[var(--ui-slate-700)] hover:bg-[var(--ui-sky-50)]"}`} disabled={view === "years" && (value < 1 || value > 9999)} key={value} onClick={() => {
           setCursor(view === "months" ? { year, month: value } : { year: value, month });
           setView(view === "months" ? "days" : "months");
           headingRef.current?.focus({ preventScroll: true });
@@ -107,11 +107,11 @@ export function PlannerDateControls({ date, today, onDateSelect, actions }: Plan
   return <>
     <div className="mx-auto flex max-w-7xl items-center justify-between gap-1 px-4 py-2 lg:py-3">
       <div className="flex shrink-0 items-center gap-1">
-        <button aria-label="달력에서 날짜 선택" aria-haspopup="dialog" aria-expanded={open} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 bg-white shadow-sm px-2 text-xs font-bold text-slate-800 focus-visible:ring-2 focus-visible:ring-sky-400 sm:px-3 sm:text-sm" onClick={() => { setPendingDate(null); setOpen(true); }} type="button">
-          <svg aria-hidden="true" className="h-4 w-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18" /></svg>
-          <span>{Number(date.slice(5, 7))}월 {Number(date.slice(8))}일</span><span aria-hidden="true" className="text-slate-400">⌄</span>
+        <button aria-label="달력에서 날짜 선택" aria-haspopup="dialog" aria-expanded={open} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-xs font-bold text-[var(--ui-slate-800)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)] sm:px-3 sm:text-sm" onClick={() => { setPendingDate(null); setOpen(true); }} type="button">
+          <svg aria-hidden="true" className="h-4 w-4 text-[var(--ui-sky-600)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18" /></svg>
+          <span>{Number(date.slice(5, 7))}월 {Number(date.slice(8))}일</span><span aria-hidden="true" className="text-[var(--ui-slate-400)]">⌄</span>
         </button>
-        <button className="min-h-11 min-w-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#25adff]" onClick={() => onDateSelect(today)} type="button">오늘</button>
+        <button className="min-h-11 min-w-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-xs font-bold text-[var(--text-inverse)] shadow-sm hover:bg-[var(--brand-accent-hover)]" onClick={() => onDateSelect(today)} type="button">오늘</button>
       </div>
       {actions}
     </div>

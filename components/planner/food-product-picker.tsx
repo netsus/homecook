@@ -929,7 +929,7 @@ export function FoodProductPicker({
           <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-[var(--surface-fill)] p-5 text-center">
             <p className="text-sm font-bold text-[var(--foreground)]">검색 결과가 없어요</p>
             <p className="mt-1 text-xs text-[var(--text-3)]">포장지의 영양정보로 사용자 등록 완제품을 만들 수 있어요.</p>
-            <button className="mt-4 min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-white" onClick={() => { setCreateDirty(false); setIsCreating(true); }} type="button">새 완제품 등록</button>
+            <button className="mt-4 min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)]" onClick={() => { setCreateDirty(false); setIsCreating(true); }} type="button">새 완제품 등록</button>
           </div>
         ) : null}
 
@@ -1063,7 +1063,7 @@ export function FoodProductPicker({
               {isRefreshingSelection ? "최신 영양정보 확인 중…" : "최신 영양정보로 새로고침"}
             </button>
           ) : null}
-          <button className="mt-3 min-h-12 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-white disabled:opacity-50" disabled={isSubmitting} onClick={() => void handleSubmit()} type="button">{isSubmitting ? "플래너에 추가 중…" : `${slotName || "플래너"}에 완제품 추가`}</button>
+          <button className="mt-3 min-h-12 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-50" disabled={isSubmitting} onClick={() => void handleSubmit()} type="button">{isSubmitting ? "플래너에 추가 중…" : `${slotName || "플래너"}에 완제품 추가`}</button>
         </div>
       ) : null}
 
@@ -1119,7 +1119,7 @@ export function FoodProductPicker({
             {reportError ? <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-sm font-semibold text-[var(--danger)]" role="alert">{reportError}</p> : null}
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--foreground)]" disabled={isReporting} onClick={closeReportDialog} type="button">취소</button>
-              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-3 text-sm font-bold text-white disabled:opacity-50" disabled={isReporting} onClick={() => void handleReportSubmit()} type="button">{isReporting ? "신고 중…" : "신고 보내기"}</button>
+              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-3 text-sm font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={isReporting} onClick={() => void handleReportSubmit()} type="button">{isReporting ? "신고 중…" : "신고 보내기"}</button>
             </div>
           </div>
         </div>

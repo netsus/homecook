@@ -774,7 +774,7 @@ export function PlannerWeekScreen({
       </div>
       <div className="mx-auto max-w-7xl px-4 pt-3" data-testid="planner-shell-header">
         <div className="flex min-h-11 items-center justify-between lg:sr-only"><h1 id={`planner-${activeSegment}-tab`} className="text-xl font-extrabold">{activeSegment === "plan" ? "요리 계획" : "식사 기록"}</h1><div className="lg:hidden"><YoutubeExtractionNotificationTrigger /></div></div>
-        {guest ? <p className="pt-2 text-[11px] text-[var(--text-2)]"><span className="font-bold text-sky-700">예시 플래너</span> · 로그인하면 내 기록을 남길 수 있어요.</p> : null}
+        {guest ? <p className="pt-2 text-[11px] text-[var(--text-2)]"><span className="font-bold text-[var(--ui-sky-700)]">예시 플래너</span> · 로그인하면 내 기록을 남길 수 있어요.</p> : null}
       </div>
         <PlannerWeekNavigation
           mode={activeSegment}
@@ -789,8 +789,8 @@ export function PlannerWeekScreen({
           dateBarRef={stickyHeaderRef}
           dateAnchorRef={dateAnchorRef}
           actions={activeSegment === "plan" ? <div className="ml-auto flex items-center gap-1">
-            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 bg-white shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-sky-700 hover:bg-slate-50" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
-            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-slate-300 bg-white shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-[var(--text-2)] hover:bg-white" href="/leftovers">남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
+            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-[var(--ui-sky-700)] hover:bg-[var(--ui-slate-50)]" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
+            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-[var(--text-2)] hover:bg-[var(--ui-white)]" href="/leftovers">남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
           </div> : null}
         />
 
@@ -848,7 +848,7 @@ export function PlannerWeekScreen({
               <span>캘린더 보기</span>
             </Link>
           ) : null}
-          {shoppingLists.length ? <ul aria-label="장보기 기록" className="mb-3 flex flex-wrap gap-x-4 gap-y-1">{shoppingLists.map((list) => <li key={list.id}><Link className="inline-flex min-h-11 items-center text-sm font-semibold text-sky-700" href={`/shopping/lists/${list.id}`}>{list.title}</Link></li>)}</ul> : null}
+          {shoppingLists.length ? <ul aria-label="장보기 기록" className="mb-3 flex flex-wrap gap-x-4 gap-y-1">{shoppingLists.map((list) => <li key={list.id}><Link className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--ui-sky-700)]" href={`/shopping/lists/${list.id}`}>{list.title}</Link></li>)}</ul> : null}
           <div className="min-w-0">
             <section
               aria-busy={isRefreshing}

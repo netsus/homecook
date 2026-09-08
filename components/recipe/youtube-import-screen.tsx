@@ -1067,11 +1067,11 @@ function ExtractionSessionStatus({
         {recipePath ? "등록된 레시피에서 내용을 확인해 주세요." : error}
       </p>
       {recipePath ? (
-        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-white" href={recipePath}>
+        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-[var(--text-inverse)]" href={recipePath}>
           레시피 보기
         </Link>
       ) : (
-        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-white" href="/menu/add/youtube">
+        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-[var(--text-inverse)]" href="/menu/add/youtube">
           다시 추출
         </Link>
       )}

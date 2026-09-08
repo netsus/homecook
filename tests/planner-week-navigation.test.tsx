@@ -52,7 +52,7 @@ describe("planner week navigation restoration", () => {
     expect(screen.getByRole("button", { name: "3/24 화 선택" }).className)
       .toContain("bg-[var(--brand-accent)]");
     expect(screen.getByRole("button", { name: "3/24 화 선택" }).className)
-      .toContain("text-white");
+      .toContain("text-[var(--text-inverse)]");
   });
 
   it.each([

@@ -317,7 +317,7 @@ export function ProfileSummaryButton({
             }}
             summary={summary}
           />
-          <Link className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-sky-50 text-sm font-bold text-sky-700" href="/mypage">마이페이지</Link>
+          <Link className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-[var(--ui-sky-50)] text-sm font-bold text-[var(--ui-sky-700)]" href="/mypage">마이페이지</Link>
         </section>
       ) : null}
       {isNotificationDialogOpen ? (

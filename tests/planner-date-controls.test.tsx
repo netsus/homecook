@@ -9,7 +9,7 @@ it("uses the bright official brand accent for the today action", () => {
   expect(screen.getByRole("button", { name: "오늘" }).className)
     .toContain("bg-[var(--brand-accent)]");
   expect(screen.getByRole("button", { name: "오늘" }).className)
-    .toContain("text-white");
+    .toContain("text-[var(--text-inverse)]");
 });
 it("selects a previous month day immediately and closes without a native input or confirmation", async () => {
   const onDateSelect=vi.fn();

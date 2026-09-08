@@ -27,10 +27,12 @@ describe("app shell", () => {
       </AppShell>,
     );
 
-    const brandLink = screen.getByRole("link", { name: "무먹 홈" });
+    const brandLink = screen.getByRole("link", { name: "무먹, 무엇을 먹든" });
     expect(brandLink.getAttribute("href")).toBe("/");
-    expect(brandLink.textContent).toBe("무먹");
-    expect(brandLink.className).toContain("text-[22px]");
+    expect(brandLink.querySelector("img")?.getAttribute("src")).toContain(
+      "/brand/mumeok-logo-horizontal.png",
+    );
+    expect(brandLink.textContent).toBe("");
     expect(brandLink.className).not.toContain("uppercase");
     expect(screen.queryByText("오늘 집밥 메뉴를 찾는 주방")).toBeNull();
     expect(screen.queryByText("MVP Slice 01")).toBeNull();

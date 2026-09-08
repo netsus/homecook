@@ -111,7 +111,7 @@ describe("manual UI/UX layout policy", () => {
     expect(stepCopyRule).toContain("line-height: 1.42");
     expect(ingredientHighlightRule).toContain("color: var(--brand)");
     expect(ingredientHighlightRule).toContain("font-weight: 850");
-    expect(webBoardRule).toContain("height: max(640px, calc(100dvh - var(--web-nav-h) - 40px))");
+    expect(webBoardRule).toContain("height: max(560px, calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h) - 40px))");
     expect(webBoardRule).toContain("overflow: hidden");
     expect(webGridRule).toContain("min-height: 0");
     expect(webGridRule).toContain("padding: 16px");

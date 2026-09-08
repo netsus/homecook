@@ -58,9 +58,9 @@ function WeekMeal({
     ? `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(nutrition.totalWeightGrams)} g`
     : "무게 계산 준비 중";
   const macros = [
-    { code: "carbohydrate_g", short: "탄", label: "탄수화물", factor: 4, color: "#F4D35E" },
-    { code: "protein_g", short: "단", label: "단백질", factor: 4, color: "#FF8811" },
-    { code: "fat_g", short: "지", label: "지방", factor: 9, color: "#1E555C" },
+    { code: "carbohydrate_g", short: "탄", label: "탄수화물", factor: 4, color: "var(--nutrition-carbohydrate)" },
+    { code: "protein_g", short: "단", label: "단백질", factor: 4, color: "var(--planner-macro-protein)" },
+    { code: "fat_g", short: "지", label: "지방", factor: 9, color: "var(--planner-macro-fat)" },
   ] as const;
   // A partial amount is a minimum, not a proportional share of the whole dish.
   const completeMacros = macros.every(({ code }) => {
@@ -105,18 +105,18 @@ function WeekMeal({
             <span aria-hidden="true">·</span>
             <span className="whitespace-nowrap">{totalWeight}</span>
             <span aria-hidden="true">·</span>
-            <span className="whitespace-nowrap font-semibold text-slate-800">{totalEnergy}</span>
+            <span className="whitespace-nowrap font-semibold text-[var(--ui-slate-800)]">{totalEnergy}</span>
             {meal.is_leftover ? <span>· 남은 요리</span> : null}
           </span>
         </span>
       </span>
-      <span aria-label="전체 탄수화물·단백질·지방" className="block rounded-lg bg-slate-50 px-2 py-2">
+      <span aria-label="전체 탄수화물·단백질·지방" className="block rounded-lg bg-[var(--ui-slate-50)] px-2 py-2">
         {macroEnergy > 0 ? (
-          <span aria-label={`탄단지 열량 비율 · ${macros.map(({ code, label }) => `${label} ${totalValue(code)}`).join(" · ")}`} className="mb-1.5 flex h-1.5 overflow-hidden rounded-full bg-slate-200" role="img">
+          <span aria-label={`탄단지 열량 비율 · ${macros.map(({ code, label }) => `${label} ${totalValue(code)}`).join(" · ")}`} className="mb-1.5 flex h-1.5 overflow-hidden rounded-full bg-[var(--ui-slate-200)]" role="img">
             {macros.map(({ code, factor, color }) => <span key={code} style={{ backgroundColor: color, width: `${values![code].amount! * factor / macroEnergy * 100}%` }} />)}
           </span>
         ) : null}
-        <span className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] leading-relaxed text-slate-700">
+        <span className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] leading-relaxed text-[var(--ui-slate-700)]">
           {macros.map(({ code, short, label, color }) => (
             <span aria-label={`${label} ${totalValue(code)}`} className="whitespace-nowrap" key={code}>
               <span aria-hidden="true" className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -209,7 +209,7 @@ export function PlannerWeekBoard({
                   aria-current={isToday ? "date" : undefined}
                   tabIndex={-1}
                 >
-                  {isToday ? <span className="text-xs font-bold text-sky-700">오늘</span> : null}
+                  {isToday ? <span className="text-xs font-bold text-[var(--ui-sky-700)]">오늘</span> : null}
                   <span className="whitespace-nowrap">{formatKoreaCompactDate(dateKey)} <span className="font-semibold text-[var(--text-2)]">({formatKoreaWeekday(dateKey)})</span></span>
                 </h2>
                 {columns.map((column) => {
@@ -232,7 +232,7 @@ export function PlannerWeekBoard({
                       ) : null}
                       <button
                         aria-label={`${formatKoreaCompactDate(dateKey)} ${column.name} 식사 추가`}
-                        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm hover:border-[var(--brand)] hover:bg-[var(--surface-fill)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
+                        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm hover:border-[var(--brand)] hover:bg-[var(--surface-fill)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
                         disabled={disabled}
                         onClick={() => onAdd(dateKey, column)}
                         type="button"

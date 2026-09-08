@@ -104,12 +104,12 @@ export function PlannerWeekNavigation({
                     "relative flex h-12 w-full flex-col items-center justify-center rounded-lg text-sm font-normal focus-visible:outline-2 focus-visible:outline-[var(--brand)]",
                     date === selectedDate
                       ? isLog || date === today
-                        ? "bg-[var(--brand-accent)] text-white"
-                        : "bg-[var(--brand-accent)] text-white lg:bg-[var(--surface)] lg:text-[var(--text-2)]"
+                        ? "bg-[var(--brand-accent)] text-[var(--text-inverse)]"
+                        : "bg-[var(--brand-accent)] text-[var(--text-inverse)] lg:bg-[var(--surface)] lg:text-[var(--text-2)]"
                       : date === today
                         ? isLog
                           ? "text-[var(--brand-primary-text)] ring-1 ring-inset ring-[var(--brand-border)]"
-                          : "text-[var(--brand-primary-text)] ring-1 ring-inset ring-[var(--brand-accent)] lg:bg-[var(--brand-accent)] lg:text-white lg:ring-0"
+                          : "text-[var(--brand-primary-text)] ring-1 ring-inset ring-[var(--brand-accent)] lg:bg-[var(--brand-accent)] lg:text-[var(--text-inverse)] lg:ring-0"
                         : "bg-[var(--surface)] text-[var(--text-2)]",
                   ].join(" ")}
                   onClick={() => { if (page === 1) onDateSelect(date); }}
