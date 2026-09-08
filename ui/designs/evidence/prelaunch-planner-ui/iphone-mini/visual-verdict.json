@@ -1,0 +1,14 @@
+{
+  "score": 94,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "상단 segment와 기간·화살표행을 제거하고 하단5탭으로 통합",
+    "375px 장보기/남은요리/달력/오늘이 줄바꿈 없이 한행",
+    "음식별영양을 펼치고 반복 문구 제거"
+  ],
+  "suggestions": [],
+  "reasoning": "Chromium/WebKit 320/375/1280, 터치 주넘김과 날짜점프 검증. 실제 iPhone 네이티브 날짜 팝업 자체는 OS 수동확인 범위.",
+  "next_actions": [],
+  "evidence_dir": "ui/designs/evidence/prelaunch-planner-ui/iphone-mini"
+}

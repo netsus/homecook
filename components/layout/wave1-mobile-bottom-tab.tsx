@@ -3,13 +3,14 @@
 import Link from "next/link";
 import React from "react";
 
-import { PRIMARY_MOBILE_TAB_ITEMS } from "@/lib/navigation/app-nav";
+import { PRIMARY_MOBILE_TAB_ITEMS, type PrimaryMobileTabId } from "@/lib/navigation/app-nav";
 
-type Wave1MobileBottomTabId = "home" | "planner" | "pantry" | "mypage";
+type Wave1MobileBottomTabId = PrimaryMobileTabId;
 
 interface Wave1MobileBottomTabProps {
   currentTab: Wave1MobileBottomTabId;
   ariaLabel: string;
+  plannerDate?: string;
   onTabClick?: (
     tabId: Wave1MobileBottomTabId,
     event: React.MouseEvent<HTMLAnchorElement>,
@@ -26,6 +27,7 @@ const items: Array<{
   icon: (active: boolean) => {
     if (item.id === "home") return <HomeIcon active={active} />;
     if (item.id === "planner") return <CalendarIcon active={active} />;
+    if (item.id === "meal-log") return <MealLogIcon active={active} />;
     if (item.id === "pantry") return <PantryIcon active={active} />;
     return <UserIcon active={active} />;
   },
@@ -35,6 +37,7 @@ export function Wave1MobileBottomTab({
   ariaLabel,
   currentTab,
   onTabClick,
+  plannerDate,
 }: Wave1MobileBottomTabProps) {
   return (
     <nav
@@ -42,7 +45,7 @@ export function Wave1MobileBottomTab({
       className="fixed inset-x-0 bottom-[calc(8px+env(safe-area-inset-bottom))] z-30 px-4 lg:hidden"
     >
       <div
-        className="mx-auto grid h-16 max-w-[360px] grid-cols-4 rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-2 shadow-[0_14px_36px_var(--foreground-alpha-16)]"
+        className="mx-auto grid h-16 max-w-[360px] grid-cols-5 rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-2 shadow-[0_14px_36px_var(--foreground-alpha-16)]"
         data-slot="bottom-tab-container"
       >
         {items.map((item) => {
@@ -57,12 +60,16 @@ export function Wave1MobileBottomTab({
                   ? "bottom-tab-active-link font-extrabold text-[var(--brand-primary-text)]"
                   : "font-semibold text-[var(--wave1-text-3)] hover:text-[var(--wave1-text-2)]",
               ].join(" ")}
-              href={item.href}
+              href={
+                plannerDate && (item.id === "planner" || item.id === "meal-log")
+                  ? `/planner?date=${encodeURIComponent(plannerDate)}${item.id === "meal-log" ? "&segment=log" : ""}`
+                  : item.href
+              }
               key={item.id}
               onClick={(event) => onTabClick?.(item.id, event)}
             >
               {item.icon(active)}
-              <span>{item.label}</span>
+              <span className="whitespace-nowrap">{item.label}</span>
             </Link>
           );
         })}
@@ -117,6 +124,25 @@ function CalendarIcon({ active }: { active: boolean }) {
       ) : (
         <line x1="4" x2="20" y1="8" y2="8" />
       )}
+    </svg>
+  );
+}
+
+function MealLogIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={active ? "bottom-tab-icon bottom-tab-active-icon h-6 w-6" : "bottom-tab-icon h-6 w-6"}
+      data-testid="bottom-tab-icon-meal-log"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="15" r="4" fill={active ? "currentColor" : "none"} />
+      <path d="M3 3v5a2 2 0 0 0 4 0V3M5 3v18M21 3v18M21 3c-3 2-3 8 0 8" />
     </svg>
   );
 }

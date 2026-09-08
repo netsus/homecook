@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { ContentState } from "@/components/shared/content-state";
 import { useViewMode } from "@/components/shared/use-view-mode";
 import type { AuthProviderId } from "@/lib/auth/providers";
@@ -58,6 +59,7 @@ export function LoginScreen({
   lastProvider = null,
   nextPath = "/",
 }: LoginScreenProps) {
+  const prelaunch = isPrelaunchFeatureLocked();
   const localPasswordBootstrapPendingRef = useRef(false);
   const safeErrorCopy: Record<string, string> = {
     oauth_failed: "로그인에 실패했어요. 다시 시도해 주세요.",
@@ -116,15 +118,15 @@ export function LoginScreen({
   const gateBody = (
     <ContentState
       className="web-login-gate"
-      description={gateContext.description}
-      eyebrow={gateContext.eyebrow}
+      description={prelaunch ? "요리 계획과 식사 기록 예시를 먼저 둘러보세요." : gateContext.description}
+      eyebrow={prelaunch ? "서비스 준비 중" : gateContext.eyebrow}
       safeBottomPadding
-      title="이 화면은 로그인이 필요해요"
+      title={prelaunch ? "정식 출시를 준비하고 있어요" : "이 화면은 로그인이 필요해요"}
       titleLevel={1}
       tone="gate"
     >
       <div className="space-y-3">
-        {errorCopy ? (
+        {!prelaunch && errorCopy ? (
           <div
             className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger-strong)]"
             data-testid="login-web-card"
@@ -142,17 +144,27 @@ export function LoginScreen({
             }
           />
         </div>
-        <p className="text-center text-xs leading-5 text-[var(--text-3)]">
-          로그인 전에{" "}
-          <Link className="font-semibold underline underline-offset-2" href="/terms">
-            이용약관
+        {!prelaunch ? (
+          <p className="text-center text-xs leading-5 text-[var(--text-3)]">
+            로그인 전에{" "}
+            <Link className="font-semibold underline underline-offset-2" href="/terms">
+              이용약관
+            </Link>
+            과{" "}
+            <Link className="font-semibold underline underline-offset-2" href="/privacy">
+              개인정보처리방침
+            </Link>
+            을 확인해 주세요.
+          </p>
+        ) : null}
+        {prelaunch ? (
+          <Link
+            className="inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] px-5 py-3 text-sm font-bold text-[var(--brand-primary-accessible)]"
+            href="/planner"
+          >
+            플래너 둘러보기
           </Link>
-          과{" "}
-          <Link className="font-semibold underline underline-offset-2" href="/privacy">
-            개인정보처리방침
-          </Link>
-          을 확인해 주세요.
-        </p>
+        ) : null}
         <Link
           className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
           href="/"

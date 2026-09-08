@@ -13,7 +13,61 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
+
+## 2026-09-07 사용자 승인 — 데스크톱 공통 로고·배너
+
+데스크톱 주요 탭의 header는 공식 가로형 `무먹 무엇을 먹든` 로고 파생본 하나로 통일한다.
+`서비스 준비 중` 배너는 모든 탭에서 navigation 바로 아래에 두고, 로고와 첫 탭 사이 간격을
+넓힌다. 공식 요구사항/화면정의서의 같은 날짜 addendum과 planner-shell의 로컬 UI 계획을 따른다.
+모바일 header, navigation 동작, API/DB/권한은 변경하지 않는다.
+
+## 2026-09-07 사용자 승인 — 모바일 로고·가이드 카드·플래너 point
+
+모바일 header도 공식 가로형 로고로 통일한다. HOME 가이드 카드는 내부 제목을 제거하고 기존
+공식 이미지를 카드 전체에 키워 표시한다. 요리 계획·식사 기록의 현재 탭·선택일·오늘 action은
+밝은 공식 브랜드 블루 `#00A1FF`를 point로 사용한다. 접근성 이름, 이동, API/DB/권한은 유지한다.
+
+## 2026-09-07 사용자 승인 — 데스크톱 로그인 안내 배경
+
+데스크톱 PANTRY/MYPAGE 로그인 필요 화면은 준비 배너 아래부터 viewport 끝까지 연속된 연한
+배경을 사용한다. 기존 안내 내용·action, 모바일 화면, 인증·권한 계약은 유지한다.
+
+## 2026-09-07 사용자 승인 — 플래너 선택·영양·현재 탭 style
+
+선택 날짜와 오늘 button은 흰 text, MEAL_LOG calorie·macro 숫자는 `#00A1FF`를 사용한다.
+desktop current tab은 underline을 제거하고 pill background로 표시한다.
+
+## 2026-09-07 사용자 승인 — 날짜·음식별 영양 위계
+
+가로 날짜 줄은 숫자만 bold로 표시한다. MEAL_LOG daily summary는 brand blue를 유지하고, entry 영양은
+숫자 `#0D3B66`과 일반 보조색 단위로 분리한다. 검증은 로컬 UI 수정 완료 뒤 한 번에 수행한다.
+
+## 2026-09-07 사용자 승인 — 데스크톱 current tab
+
+데스크톱 current tab은 `#0879CF` pill과 white text, 모든 tab hover는 같은 pill radius를 사용한다.
+
+## 2026-09-07 사용자 승인 — desktop HOME 상단 배치
+
+desktop HOME의 title 아래 설명을 제거하고 search를 title 오른쪽으로 옮긴다. 추천 tag/theme은
+`모든 레시피` 오른쪽 시작선에 맞춘다. mobile HOME은 유지한다.
+
+## 2026-09-07 사용자 승인 — desktop HOME search 중앙 정렬
+
+desktop HOME title row의 search 묶음을 page content 중앙에 배치한다.
+
+## 2026-09-07 사용자 승인 — HOME landing banner·mobile guide fit
+
+desktop HOME의 네 개 빠른 이동 menu 아래에 `/beta?ad_variant=a` banner를 추가한다. mobile guide theme의 공식 이미지는
+내부 글자가 잘리지 않도록 전체 image를 표시한다.
+
+## 2026-09-07 사용자 승인 — mobile bottom tab current state
+
+현재 탭은 icon+label 전체를 soft blue capsule로 묶어 표시한다. inactive는 gray를 유지한다.
 - 서버 Mac의 untagged exact-SHA candidate, isolated rehearsal, repeatability receipt와 mixed-state read-only classification 기준은 `docs/engineering/local-mac-production-release-rehearsal.md`다. production tag/attestation과 실제 승격 authority는 계속 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
+
+## 2026-09-06 사용자 승인 — 출시 전 Planner UI 정리
+
+사용자는 공개 예시 플래너/로그인 액션 게이트, YouTube 신규 시작 준비 안내, 튜토리얼 팝업 억제, 랜딩 이미지 기반 카드·날짜 바, 식사 기록 영양 표시와 개별 계획의 pin 영양 조회를 UI 범위로 승인했다. 공식 요구사항/화면/Flow의 같은 날짜 addendum과 `docs/workpacks/planner-shell/evidence/2026-09-06-prelaunch-ui-plan.md`를 따른다. 공개 예시에 개인 데이터를 사용하지 않으며 API/DB/소유권/도메인 상태·실제 합계 authority는 변경하지 않는다. 준비 flag 해제와 운영 배포/activation은 이번 로컬 UI 작업에 포함하지 않는다.
 
 ## 2026-09-05 marketing-demand-validation-v2 visual successor
 
@@ -1132,3 +1186,31 @@
 
 > 이 변경은 H5 modal-system-direction Stage 1 사용자 승인(2026-04-17, D1~D6)을 기반으로 한 contract-evolution이다.
 > h5 modal system redesign FE 구현(`feature/fe-h5-modal-system-redesign`)은 이 문서 갱신 이후에 시작할 수 있다.
+
+### 2026-09-06 후속 UI 재배치 승인
+
+사용자 실기기 피드백에 따라 밝은 포인트, 모바일 날짜 줄만 고정, 데스크톱 두 플래너 상단 메뉴, 계획 카드의 인분·상태 중심 표시, 항상 보이는 식사 영양 그래프와 중복 조작 제거를 적용한다. 구체 범위는 `docs/workpacks/planner-shell/evidence/2026-09-06-prelaunch-ui-plan.md`의 후속 승인 항목이다. 기존 개인 데이터 권한·실제 합계·API/DB 계약은 유지한다.
+
+### 2026-09-06 iPhone 13 mini 후속 승인
+
+사용자는 5개 모바일 하단 탭(홈/요리 계획/식사 기록/팬트리/마이), 상단 중복 segment 제거, 두 플래너 날짜 줄 swipe 주이동과 native 달력 날짜 점프, 기존 화살표·기간행 제거를 요청했다. 계획 카드는 색점+계획인분+1인분당 예상 kcal(전체 pinned 영양÷계획 인분, partial/minimum 및 unknown 보존), 식사기록의 음식별 영양은 상시 표시하며 ‘먹은 양’/‘요리한 음식’ 반복 문구를 제거한다. 인분/섭취량/영양의 원천·권한·API/DB는 유지한다. 375px Safari 계열과 320px 검증을 포함한다.
+
+### 2026-09-06 달력 즉시선택·음식 상세 후속 승인
+
+사용자 실기기 피드백: native 날짜 선택의 확인단계·확대현상을 없애기 위해 앱 내부 버튼형 달력에서 날짜를 누르면 즉시 선택/닫힘으로 교체한다. 월·연도 직접 선택과 주 swipe는 유지한다. 식사 카드의 수정은 음식 상세 sheet로 옮기고 삭제는 이름있는 아이콘으로 표시한다. 목록은 양/kcal/탄단지 그래프, 나트륨은 상세에서만 표시한다. 기존 식사 데이터·수정삭제 API/권한/계산을 재사용하며 새로운 route/API/DB는 만들지 않는다. 홈 무먹 가이드 이미지는 랜딩의 실제 공유 OG 자산을 사용한다.
+
+### 2026-09-06 상세 보류·계획 영양·가이드·랜딩 운영 승인
+
+사용자는 현재 준비 모드에서 식사 이름의 상세 진입을 보류하고 비로그인은 로그인 페이지, 로그인 사용자는 준비 안내로 막도록 요청했다. 상세 구현과 준비 모드 해제는 추후 개발/검증 대상이며 기존 API·복귀 보호 코드는 유지한다. 계획 카드에는 인분과 1인분 기준 칼로리·탄단지를 표시한다. 가이드에는 실제 기능/준비 상태, 랜딩 체험 연결, 기존 귀여운 이미지 자산을 반영한다. 랜딩의 신규 유입/화면은 a·b·c만 운영하고 기본/d/잘못된 값은 a로 정규화하되 UTM과 과거 세션·DB 기록은 보존한다. 공유 결과의 읽기 전용 경로는 별도 Hero 버전이 아니며 그대로 보존한다.
+
+### 2026-09-06 날짜 영역 통일
+
+사용자 요청에 따라 두 플래너의 달력·오늘·주간 날짜 줄을 공통 구성으로 통일한다. 선택된 날짜, 날짜 줄의 위치·크기·색상은 탭 왕복 중 유지하고, 모바일에서 고정된 날짜 줄도 같은 위치에 남긴다. 각 본문의 기존 스크롤과 주간 이동·키보드·개인 데이터 권한은 보존한다. API/DB 변경은 없다.
+
+### 2026-09-06 주간 식사 기록·출시 전 가입 차단
+
+사용자 승인: 식사 기록을 주간 세로 날짜 카드로 표시하고 최초 진입 시 선택일(기본 오늘)에 맞춘다. 날짜별 합계는 숫자가 파란 4개 영양 타일, 개별 식사는 양/kcal/탄단지 텍스트로 표시한다. 계획은 전체 kcal/탄단지와 막대를 표시한다. 완성 무게는 추후 수율 기반 예상값·실측 덮어쓰기를 개발할 예정이며 지금 알고리즘/DB 쓰기를 추가하지 않는다. 정보가 없는 계획은 ‘무게 계산 준비 중’으로 표시한다.
+
+선택 날짜는 테두리 없는 파랑/흰 글씨, 오늘은 별도 라벨로 구분한다. 오늘·장보기·남은요리는 버튼 형태로 보강하고 상단 준비 배너를 한 줄 기준선으로 정렬한다. 홈 YouTube 진입의 복귀는 홈이다.
+
+출시 전 소셜 로그인 버튼과 앱 로그인 시작/콜백을 차단한다. 시작은 기존 AUTH_FLOW_UNAVAILABLE/503, 콜백은 교환 전에 준비 안내로 반환한다. 기존 세션·로컬 password QA·인증된 계정 연결은 보존한다. Supabase 외부 직접 인증 API 설정을 변경하는 것은 범위 밖이다. 로컬 랜딩은 허용 origin·공식 캠페인 기간 설정 누락을 로컬 전용으로 보완하고 실제 저장 인증 오류와 구분한다. 새 계정/리드 저장 성공을 가짜로 처리하지 않는다.

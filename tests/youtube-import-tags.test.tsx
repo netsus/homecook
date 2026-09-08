@@ -144,6 +144,7 @@ function mockYoutubeDraft(tags = ["유튜브레시피", "디저트"]) {
 
 describe("YoutubeImportScreen tag review", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
     installMatchMedia(false);
     mockRouterReplace.mockReset();
     vi.mocked(fetchCookingMethods).mockResolvedValue({

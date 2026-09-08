@@ -8,6 +8,17 @@ Source prototype:
 
 These primitives lock the desktop `1024px+` visual system for the MVP port. Later slices must reuse these primitives instead of hand-tuning one-off variants.
 
+## Approved Prelaunch Overrides (2026-09-07)
+
+The current implementation and official screen contract override the original prototype in these shared areas:
+
+- Legible control blue: `#0879cf`; hover: `#0665ad`; bright accent: `#00A1FF`.
+- Navigation height: `72px`, followed by the `32px` service preparation notice.
+- Brand lockup: `/brand/mumeok-logo-horizontal.png`, rendered at `174px` wide on desktop.
+- Brand-to-tab spacing: `40px`.
+- Active desktop navigation: pill radius, legible control-blue background, white text, and no underline.
+- Hovered active navigation keeps the same pill shape and uses the darker control blue.
+
 ## Shared Tokens
 
 - Brand: `#00A1FF`

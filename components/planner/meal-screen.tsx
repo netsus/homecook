@@ -1,5 +1,8 @@
 "use client";
 
+import { MealPinnedNutrition } from "@/components/planner/meal-pinned-nutrition";
+import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
+
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -94,6 +97,7 @@ export interface MealScreenProps {
   columnId: string;
   slotName: string;
   initialAuthenticated: boolean;
+  initialMealNutrition?: PlannerMealNutritionViewMap;
   recipeSnapshotUiMode?: RecipeSnapshotUiMode;
 }
 
@@ -330,6 +334,7 @@ function LoadingSkeleton() {
 // ─── Meal card ────────────────────────────────────────────────────────────────
 
 interface MealCardProps {
+  nutrition?: PlannerMealNutritionViewMap[string];
   meal: MealListItemData;
   conflictError: string | null;
   isPending: boolean;
@@ -343,6 +348,7 @@ interface MealCardProps {
 
 function MealCard({
   meal,
+  nutrition,
   conflictError,
   isPending,
   onCreateShopping,
@@ -512,6 +518,7 @@ function MealCard({
           {conflictError}
         </p>
       ) : null}
+      <MealPinnedNutrition nutrition={nutrition} servings={meal.planned_servings} title={meal.recipe_title} />
     </article>
   );
 }
@@ -586,6 +593,7 @@ function MealWebListCard({
   conflictError,
   isPending,
   meal,
+  nutrition,
   onCreateShopping,
   onDelete,
   onRecipeClick,
@@ -596,6 +604,7 @@ function MealWebListCard({
   conflictError: string | null;
   isPending: boolean;
   meal: MealListItemData;
+  nutrition?: PlannerMealNutritionViewMap[string];
   onCreateShopping: () => void;
   onDelete: () => void;
   onRecipeClick: () => void;
@@ -723,6 +732,8 @@ function MealWebListCard({
         </div>
       </div>
 
+      <MealPinnedNutrition nutrition={nutrition} servings={meal.planned_servings} title={meal.recipe_title} />
+
       {conflictError ? (
         <p className="web-meal-conflict" role="alert">
           {conflictError}
@@ -833,6 +844,7 @@ function MealWebView({
   conflictErrors,
   errorMessage,
   meals,
+  mealNutrition,
   productEntries,
   onAddMeal,
   onBack,
@@ -859,6 +871,7 @@ function MealWebView({
   conflictErrors: Record<string, string>;
   errorMessage: string | null;
   meals: MealListItemData[];
+  mealNutrition: PlannerMealNutritionViewMap;
   productEntries: MealProductPlannerEntryData[];
   onAddMeal: () => void;
   onBack: () => void;
@@ -959,6 +972,7 @@ function MealWebView({
                     isPending={pendingMealIds.has(meal.id)}
                     key={meal.id}
                     meal={meal}
+                    nutrition={mealNutrition[meal.id]}
                     onCreateShopping={() => onCreateShopping(meal)}
                     onDelete={() => onDelete(meal)}
                     onRecipeClick={() => onRecipeClick(meal)}
@@ -1168,6 +1182,7 @@ export function MealScreen({
   columnId,
   slotName,
   initialAuthenticated,
+  initialMealNutrition = {},
   recipeSnapshotUiMode = "legacy_v1",
 }: MealScreenProps) {
   const router = useRouter();
@@ -1417,6 +1432,7 @@ export function MealScreen({
         ),
       );
       void nutritionRequest.retry();
+      router.refresh();
     } catch (error) {
       if (isMealApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
@@ -1888,6 +1904,7 @@ export function MealScreen({
             conflictErrors={conflictErrors}
             errorMessage={errorMessage}
             meals={displayedMeals}
+            mealNutrition={initialMealNutrition}
             productEntries={displayedProductEntries}
             onAddMeal={() => router.push(addMealHref)}
             onBack={navigateToPlanner}
@@ -1991,6 +2008,7 @@ export function MealScreen({
                       conflictError={conflictErrors[meal.id] ?? null}
                       isPending={pendingMealIds.has(meal.id)}
                       meal={meal}
+                      nutrition={initialMealNutrition[meal.id]}
                       onCreateShopping={() => void createShoppingForMeal(meal)}
                       onDelete={() => handleDeleteTap(meal.id)}
                       onRecipeClick={() => router.push(`/recipe/${meal.recipe_id}`)}

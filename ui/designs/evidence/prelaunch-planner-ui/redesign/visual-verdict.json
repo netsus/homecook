@@ -1,0 +1,14 @@
+{
+  "score": 93,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "큰 고정 영역은 모바일70/68px로 축소됐고 desktop는 없어짐",
+    "기존 어두운 fill을 옅은 하늘색 면으로 변경",
+    "계획은 인분·상태, 식사기록은 실제영양 중심으로 분리"
+  ],
+  "suggestions": [],
+  "reasoning": "320/390/1280에서 겹침과 날짜 잘림 없이 확인. 주이동/날짜선택/로그인게이트와 그래프 가시성 통과. 로컬 시각검토이며 정식 Stage authority는 아님.",
+  "next_actions": [],
+  "evidence_dir": "ui/designs/evidence/prelaunch-planner-ui/redesign"
+}

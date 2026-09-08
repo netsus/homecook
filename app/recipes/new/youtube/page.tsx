@@ -1,3 +1,5 @@
+import { YoutubePreparationNotice } from "@/components/shared/prelaunch-notice";
+import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
@@ -24,6 +26,10 @@ interface YoutubeImportPageProps {
 export default async function YoutubeImportPage({
   searchParams,
 }: YoutubeImportPageProps) {
+  if (isPrelaunchFeatureLocked()) {
+    return <main><YoutubePreparationNotice backHref="/" /></main>;
+  }
+
   if (!isYoutubeImportEnabled()) {
     notFound();
   }

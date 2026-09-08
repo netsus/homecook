@@ -8,17 +8,18 @@ import {
 } from "@/lib/navigation/app-nav";
 
 describe("app navigation chrome rules", () => {
-  it("keeps the guide web-only while mobile remains four tabs", () => {
+  it("keeps the guide web-only while mobile has five direct destinations", () => {
     expect(PRIMARY_WEB_NAV_ITEMS.map((item) => [item.label, item.href])).toEqual([
       ["홈", "/"],
-      ["플래너", "/planner"],
+      ["요리 계획", "/planner"],
+      ["식사 기록", "/planner?segment=log"],
       ["팬트리", "/pantry"],
-      ["마이페이지", "/mypage"],
       ["무먹 가이드", "/about"],
     ]);
     expect(PRIMARY_MOBILE_TAB_ITEMS.map((item) => item.href)).toEqual([
       "/",
       "/planner",
+      "/planner?segment=log",
       "/pantry",
       "/mypage",
     ]);
@@ -50,7 +51,7 @@ describe("app navigation chrome rules", () => {
     const validMobileIds = new Set(PRIMARY_MOBILE_TAB_ITEMS.map((item) => item.id));
 
     for (const rule of Object.values(SURFACE_CHROME_RULES)) {
-      expect(validWebIds.has(rule.primaryNavId)).toBe(true);
+      expect(rule.primaryNavId === "mypage" || validWebIds.has(rule.primaryNavId)).toBe(true);
       expect(validMobileIds.has(rule.mobileBottomTab)).toBe(true);
 
       if (rule.showBack) {

@@ -61,8 +61,23 @@ describe("recipe card", () => {
     const { container } = render(<RecipeCard recipe={recipe} />);
     const imageLayer = container.querySelector("[data-slot='recipe-card-image-layer']");
 
-    expect(imageLayer?.getAttribute("style")).toContain(resolveRecipeImage(recipe));
+    expect(imageLayer?.getAttribute("src")).toBe(resolveRecipeImage(recipe));
     expect(imageLayer?.textContent?.trim()).toBe("");
+  });
+
+  it("loads only a priority card eagerly", () => {
+    const { container, rerender } = render(
+      <RecipeCard priority recipe={MOCK_RECIPE_CARD} />,
+    );
+    let image = container.querySelector("[data-slot='recipe-card-image-layer']");
+
+    expect(image?.getAttribute("loading")).toBe("eager");
+    expect(image?.getAttribute("fetchpriority")).toBe("high");
+
+    rerender(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
+    image = container.querySelector("[data-slot='recipe-card-image-layer']");
+    expect(image?.getAttribute("loading")).toBe("lazy");
+    expect(image?.getAttribute("fetchpriority")).toBe("auto");
   });
 
   it("calls the card save action without navigating the detail link", async () => {

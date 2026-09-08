@@ -199,12 +199,19 @@ describe("PantryScreen", () => {
   });
 
   it("shows the unauthorized gate when not authenticated", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<PantryScreen initialAuthenticated={false} />);
 
     expect(
       screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
     ).toBeTruthy();
     expect(screen.getByText(/보유 재료를 등록하면 장보기 목록에서 자동으로 제외/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "무먹, 무엇을 먹든" })).toBeTruthy();
+    expect(screen.getByLabelText("서비스 준비 안내")).toBeTruthy();
+    const gate = screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
+      .closest("[data-state-tone='gate']");
+    expect(gate?.closest(".web-auth-gate-shell")).toBeTruthy();
+    expect(gate?.parentElement?.className).toContain("web-auth-gate-screen");
   });
 
   it("keeps the mobile bottom tab visible on the unauthorized gate", async () => {
@@ -327,7 +334,7 @@ describe("PantryScreen", () => {
     expect(screen.getByRole("searchbox", { name: "팬트리 재료 검색" })).toBeTruthy();
     expect(screen.getByTestId("web-pantry-inline-loading")).toBeTruthy();
     expect(screen.queryByTestId("pantry-skeleton")).toBeNull();
-    expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "마이" })).toBeNull();
   });
 

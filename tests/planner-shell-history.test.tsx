@@ -4,7 +4,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PlannerSegmentTabs } from "@/components/planner/planner-shell-segments";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   buildPlannerShellHref,
   readPlannerShellLocation,
@@ -41,24 +41,24 @@ describe("planner shell history contract", () => {
     ).toEqual({ date: "2026-07-20", segment: "plan" });
   });
 
-  it("moves focus and selection with Arrow, Home, and End keys", () => {
-    const onSelect = vi.fn();
-    render(<PlannerSegmentTabs activeSegment="plan" onSelect={onSelect} />);
-
-    const planTab = screen.getByRole("tab", { name: "요리 계획" });
-    const logTab = screen.getByRole("tab", { name: "식사 기록" });
-    planTab.focus();
-
-    fireEvent.keyDown(planTab, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(logTab);
-    expect(onSelect).toHaveBeenLastCalledWith("log");
-
-    fireEvent.keyDown(logTab, { key: "Home" });
-    expect(document.activeElement).toBe(planTab);
-    expect(onSelect).toHaveBeenLastCalledWith("plan");
-
-    fireEvent.keyDown(planTab, { key: "End" });
-    expect(document.activeElement).toBe(logTab);
-    expect(onSelect).toHaveBeenLastCalledWith("log");
+  it("keeps direct plan and log links on the selected date and delegates only an explicit click", () => {
+    const onTabClick = vi.fn((_tabId, event) => event.preventDefault());
+    const view = render(
+      <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" plannerDate="2026-07-23" onTabClick={onTabClick} />,
+    );
+    const planLink = screen.getByRole("link", { name: "요리 계획" });
+    const logLink = screen.getByRole("link", { name: "식사 기록" });
+    expect(planLink.getAttribute("href")).toBe("/planner?date=2026-07-23");
+    expect(logLink.getAttribute("href")).toBe("/planner?date=2026-07-23&segment=log");
+    expect(screen.getByRole("link", { current: "page" })).toBe(planLink);
+    logLink.focus();
+    expect(onTabClick).not.toHaveBeenCalled();
+    fireEvent.click(logLink);
+    expect(onTabClick).toHaveBeenCalledWith("meal-log", expect.objectContaining({ defaultPrevented: true }));
+    view.rerender(
+      <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="meal-log" plannerDate="2026-07-23" onTabClick={onTabClick} />,
+    );
+    expect(screen.getByRole("link", { current: "page" })).toBe(logLink);
+    expect(planLink.hasAttribute("aria-current")).toBe(false);
   });
 });

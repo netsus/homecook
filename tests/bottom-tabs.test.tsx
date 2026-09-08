@@ -3,17 +3,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BottomTabs } from "@/components/layout/bottom-tabs";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 
 afterEach(() => {
   cleanup();
 });
 
 describe("BottomTabs", () => {
-  it("renders the shared Wave1 four-tab mobile navigation", () => {
+  it("renders the shared Wave1 five-tab mobile navigation", () => {
     const { container } = render(<BottomTabs currentTab="planner" />);
 
     const nav = container.querySelector("nav");
@@ -27,11 +28,27 @@ describe("BottomTabs", () => {
     expect(container.querySelector(".glass-panel")).toBeNull();
 
     expect(screen.getByRole("link", { name: "홈" }).getAttribute("href")).toBe("/");
-    expect(screen.getByRole("link", { name: "플래너" }).getAttribute("href")).toBe("/planner");
+    expect(screen.getByRole("link", { name: "요리 계획" }).getAttribute("href")).toBe("/planner");
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
+    expect(screen.getByRole("link", { name: "식사 기록" }).getAttribute("href")).toBe("/planner?segment=log");
+    expect(screen.getAllByRole("link")).toHaveLength(5);
     expect(screen.queryByText("현재")).toBeNull();
     expect(screen.queryByText("준비중")).toBeNull();
+  });
+
+  it("preserves the selected date and delegates segment navigation without marking both tabs active", () => {
+    const onTabClick = vi.fn((_id, event) => event.preventDefault());
+    render(<Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="meal-log" plannerDate="2026-08-04" onTabClick={onTabClick} />);
+    const plan = screen.getByRole("link", { name: "요리 계획" });
+    const log = screen.getByRole("link", { name: "식사 기록" });
+    expect(plan.getAttribute("href")).toBe("/planner?date=2026-08-04");
+    expect(log.getAttribute("href")).toBe("/planner?date=2026-08-04&segment=log");
+    expect(screen.getByRole("link", { current: "page" })).toBe(log);
+    expect(plan.hasAttribute("aria-current")).toBe(false);
+    fireEvent.click(plan);
+    expect(onTabClick).toHaveBeenCalledWith("planner", expect.objectContaining({ defaultPrevented: true }));
+    expect(screen.getByTestId("bottom-tab-icon-meal-log")).toBeTruthy();
   });
 
   it("marks the active tab with the shared token selected state", () => {

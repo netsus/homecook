@@ -111,6 +111,7 @@ describe("service brand image assets", () => {
     const social = source("lib/seo/default-social-image.tsx");
     const home = source("components/home/home-screen.tsx");
     const brandSymbol = source("components/brand/mumeok-brand-symbol.tsx");
+    const horizontalLogo = source("components/brand/mumeok-horizontal-logo.tsx");
 
     expect(layout).toContain("url: defaultOpenGraphImagePath");
     expect(layout).toContain("images: [defaultTwitterImagePath]");
@@ -128,6 +129,7 @@ describe("service brand image assets", () => {
     );
     expect(brandSymbol).toContain('src="/brand/mumeok-symbol-192.png"');
     expect(brandSymbol).toContain('"mumeok-brand-symbol"');
-    expect(home).toContain("<MumeokBrandSymbol size={32} />");
+    expect(horizontalLogo).toContain('src="/brand/mumeok-logo-horizontal.png"');
+    expect(home).toContain("<MumeokHorizontalLogo />");
   });
 });

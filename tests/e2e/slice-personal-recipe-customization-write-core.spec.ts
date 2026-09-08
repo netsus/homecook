@@ -1065,11 +1065,15 @@ test.describe("personal-recipe-customization-write-core", () => {
     await expect(
       page.getByRole("heading", { name: "8월 21일 금요일 식사 기록" }),
     ).toBeVisible();
-    await expect(page.getByText("삭제된 끼니의 기록 · 저녁")).toBeVisible();
-    await expect(page.getByText(PINNED_TITLE, { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("1그릇 · 요리한 음식")).toBeVisible();
+    const mealLogDay = page.getByRole("region", {
+      name: "8월 21일 금요일 식사 기록",
+    });
+    await expect(mealLogDay.getByText("삭제된 끼니의 기록 · 저녁")).toBeVisible();
+    await expect(mealLogDay.getByText(PINNED_TITLE, { exact: true })).toBeVisible();
+    await expect(mealLogDay.getByLabel("먹은 양 1그릇")).toBeVisible();
+    await expect(mealLogDay.getByText("410").first()).toBeVisible();
     await expect(
-      page.getByRole("button", { name: `저녁의 ${PINNED_TITLE} 식사 기록 수정` }),
+      mealLogDay.getByRole("button", { name: `저녁의 ${PINNED_TITLE} 식사 기록 상세` }),
     ).toBeVisible();
   });
 

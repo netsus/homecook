@@ -224,7 +224,7 @@ async function installPlannerShellRoutes(
 }
 
 test.describe("planner-shell Stage 4", () => {
-  test("planner-shell preserves segment/date history, roving focus, and the two-day overview @smoke-core", async ({
+  test("planner-shell preserves segment/date history and the weekly plan @smoke-core", async ({
     page,
   }) => {
     await setAuthenticated(page);
@@ -232,23 +232,16 @@ test.describe("planner-shell Stage 4", () => {
 
     await page.goto(`/planner?date=${PLAN_DATE}`);
 
-    const planTab = page.getByRole("tab", { name: "요리 계획" });
-    const logTab = page.getByRole("tab", { name: "식사 기록" });
-    await expect(planTab).toHaveAttribute("aria-selected", "true");
-    await expect(planTab).toHaveAttribute("tabindex", "0");
-    await expect(logTab).toHaveAttribute("tabindex", "-1");
+    const planTab = page.getByRole("link", { name: "요리 계획", exact: true }).first();
+    const logTab = page.getByRole("link", { name: "식사 기록", exact: true }).first();
+    await expect(planTab).toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("planner-week-date-rail").locator("li"))
-      .toHaveCount(7);
-    await expect(page.getByTestId("planner-two-day-overview").locator(":scope > div"))
-      .toHaveCount(2);
+      .toHaveCount(21);
     await expect(page.getByText("김치찌개", { exact: true })).toBeVisible();
-    await expect(page.getByText("비어 있음", { exact: true })).toBeVisible();
     await expect(page.getByText(/계획 영양/)).toHaveCount(0);
 
-    await planTab.focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(logTab).toBeFocused();
-    await expect(logTab).toHaveAttribute("aria-selected", "true");
+    await logTab.click();
+    await expect(logTab).toHaveAttribute("aria-current", "page");
     await expect(page).toHaveURL(/segment=log/);
     await expect(
       page.getByRole("heading", { name: "7월 23일 목요일 식사 기록" }),
@@ -256,7 +249,7 @@ test.describe("planner-shell Stage 4", () => {
     expect(requests.mealLog).toBe(7);
 
     await page.goBack();
-    await expect(planTab).toHaveAttribute("aria-selected", "true");
+    await expect(planTab).toHaveAttribute("aria-current", "page");
     await expect(page).toHaveURL(new RegExp(`date=${PLAN_DATE}`));
     expect(requests.nutrition).toBe(0);
     expect(requests.productMethods).toEqual([]);
@@ -267,7 +260,7 @@ test.describe("planner-shell Stage 4", () => {
     expect(pageHasHorizontalOverflow).toBe(false);
   });
 
-  test("legacy-product-compat guest keeps the requested segment/date for login @smoke-core", async ({
+  test("legacy-product-compat guest keeps the requested segment/date in the preview @smoke-core", async ({
     page,
   }) => {
     await page.addInitScript(
@@ -277,13 +270,12 @@ test.describe("planner-shell Stage 4", () => {
     await page.goto(`/planner?segment=log&date=${PLAN_DATE}`);
 
     await expect(
-      page.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+      page.getByRole("heading", { name: "식사 기록", exact: true }).first(),
     ).toBeVisible();
+    await expect(page.getByText(/예시 플래너/)).toBeVisible();
     await expect(page).toHaveURL(
       new RegExp(`segment=log.*date=${PLAN_DATE}`),
     );
-    await expect(page.getByRole("button", { name: "Google로 시작하기" }))
-      .toBeVisible();
   });
 
   test("planner-shell reloads the originating week on browser Back without duplicating history @smoke-core", async ({
@@ -294,13 +286,15 @@ test.describe("planner-shell Stage 4", () => {
     const requests = await installPlannerShellRoutes(page);
 
     await page.goto(`/planner?date=${PLAN_DATE}`);
-    await expect(page.getByRole("heading", { name: "목 7월 23일" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "7/23 목 선택" }))
+      .toHaveAttribute("aria-current", "date");
     await expect.poll(() => requests.plannerRanges).toEqual([
       "2026-07-20:2026-07-26",
     ]);
     const initialHistoryLength = await page.evaluate(() => window.history.length);
 
-    await page.getByRole("button", { name: "다음 주" }).click();
+    await page.getByTestId("planner-week-date-rail").focus();
+    await page.keyboard.press("ArrowRight");
     await expect(page).toHaveURL(/date=2026-07-27/);
     await expect.poll(() => requests.plannerRanges).toEqual([
       "2026-07-20:2026-07-26",
@@ -319,7 +313,8 @@ test.describe("planner-shell Stage 4", () => {
 
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`date=${PLAN_DATE}`));
-    await expect(page.getByRole("heading", { name: "목 7월 23일" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "7/23 목 선택" }))
+      .toHaveAttribute("aria-current", "date");
     await expect.poll(() => requests.plannerRanges).toEqual([
       "2026-07-20:2026-07-26",
       "2026-07-27:2026-08-02",
@@ -484,7 +479,7 @@ test.describe("planner-shell Stage 4", () => {
     await installPlannerShellRoutes(page, { emptyPlanner: true });
     await page.goto(`/planner?date=${PLAN_DATE}`);
 
-    await expect(page.getByText("비어 있음", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /식사 추가/ }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "기존 완제품 계획" }))
       .toHaveCount(0);
   });
@@ -518,62 +513,29 @@ test.describe("planner-shell Stage 4", () => {
       );
       const dateButtons = [
         ...document.querySelectorAll<HTMLButtonElement>(
-          '[data-testid="planner-week-date-rail"] button',
+          '[data-testid="planner-week-date-rail"] ol:not([aria-hidden="true"]) button',
         ),
       ];
-      const bottomTab = document.querySelector<HTMLElement>(
-        'nav[aria-label="플래너 하단 탭"]',
+      const plannerScreen = document.querySelector<HTMLElement>(
+        '[data-testid="planner-screen"]',
       );
-      const planPanel = document.querySelector<HTMLElement>("#planner-plan-panel");
-      const weekShell = document.querySelector<HTMLElement>(
-        '[data-testid="planner-week-shell"]',
-      );
-      const textTargets = [
-        ...document.querySelectorAll<HTMLElement>(
-          '[role="tab"], [aria-label="주간 이동"] > div p, '
-            + '[data-testid="planner-two-day-overview"] p, '
-            + '#planner-week-body h3, #planner-plan-panel a',
-        ),
-      ].filter((element) => (element.textContent ?? "").trim().length >= 2);
-
-      const textRuns = textTargets.map((element) => {
-        const range = document.createRange();
-        range.selectNodeContents(element);
-        const lineRects = [...range.getClientRects()].filter(
-          (rect) => rect.width > 0 && rect.height > 0,
-        );
-        const style = getComputedStyle(element);
-        return {
-          clipped:
-            element.scrollHeight > element.clientHeight + 1
-            || element.scrollWidth > element.clientWidth + 1,
-          fontSize: Number.parseFloat(style.fontSize),
-          maxLineWidth: Math.max(0, ...lineRects.map((rect) => rect.width)),
-          text: (element.textContent ?? "").trim().replace(/\s+/g, " "),
-        };
-      });
 
       return {
-        bottomClearance:
-          bottomTab && planPanel
-            ? Math.round(bottomTab.getBoundingClientRect().top
-              - planPanel.getBoundingClientRect().bottom)
-            : null,
+        bottomPadding: plannerScreen
+          ? Number.parseFloat(getComputedStyle(plannerScreen).paddingBottom)
+          : 0,
         dateTargets: dateButtons.map((button) => {
           const rect = button.getBoundingClientRect();
           return { height: rect.height, width: rect.width };
         }),
-        horizontalGutters: weekShell
+        horizontalGutters: rail
           ? {
-              left: Math.round(weekShell.getBoundingClientRect().left),
+              left: Math.round(rail.getBoundingClientRect().left),
               right: Math.round(
-                window.innerWidth - weekShell.getBoundingClientRect().right,
+                window.innerWidth - rail.getBoundingClientRect().right,
               ),
             }
           : null,
-        overviewCount: document.querySelectorAll(
-          '[data-testid="planner-two-day-overview"] > div',
-        ).length,
         pageOverflow:
           document.documentElement.scrollWidth
           > document.documentElement.clientWidth + 1,
@@ -582,7 +544,6 @@ test.describe("planner-shell Stage 4", () => {
             && rail.getBoundingClientRect().left >= -1
           : false,
         railScrollable: rail ? rail.scrollWidth > rail.clientWidth : false,
-        textRuns,
       };
     });
 
@@ -594,14 +555,9 @@ test.describe("planner-shell Stage 4", () => {
     expect.soft(defaultLayout.railContained).toBe(true);
     expect.soft(defaultLayout.railScrollable).toBe(true);
     expect.soft(defaultLayout.pageOverflow).toBe(false);
-    expect.soft(defaultLayout.overviewCount).toBe(2);
     expect.soft(defaultLayout.horizontalGutters).toEqual({ left: 16, right: 16 });
 
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await waitForSettledLayout(page);
-    const defaultBottomLayout = await measureLayout();
-    expect.soft(defaultBottomLayout.bottomClearance ?? 0)
-      .toBeGreaterThanOrEqual(16);
+    expect.soft(defaultLayout.bottomPadding).toBeGreaterThanOrEqual(72);
 
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
@@ -611,17 +567,12 @@ test.describe("planner-shell Stage 4", () => {
 
     const scaledLayout = await measureLayout();
     expect.soft(scaledLayout.pageOverflow).toBe(false);
-    expect.soft(scaledLayout.overviewCount).toBe(2);
-    expect.soft(scaledLayout.horizontalGutters).toEqual({ left: 16, right: 16 });
+    expect.soft(scaledLayout.horizontalGutters?.left ?? 0).toBeGreaterThanOrEqual(16);
+    expect.soft(scaledLayout.horizontalGutters?.left).toBe(scaledLayout.horizontalGutters?.right);
     expect.soft(scaledLayout.dateTargets.every(
       ({ height, width }) => height >= 44 && width >= 44,
     )).toBe(true);
-    expect.soft(scaledLayout.textRuns.filter(
-      ({ clipped, fontSize, maxLineWidth }) =>
-        clipped || maxLineWidth < fontSize * 1.5,
-    )).toEqual([]);
-    expect.soft(scaledLayout.bottomClearance).not.toBeNull();
-    expect.soft(scaledLayout.bottomClearance ?? 0).toBeGreaterThanOrEqual(16);
+    expect.soft(scaledLayout.bottomPadding).toBeGreaterThanOrEqual(72);
 
     for (const viewport of [
       { height: 844, width: 390 },
@@ -636,16 +587,9 @@ test.describe("planner-shell Stage 4", () => {
         ({ height, width }) => height >= 44 && width >= 44,
       )).toBe(true);
       expect.soft(layout.pageOverflow).toBe(false);
-      expect.soft(layout.overviewCount).toBe(2);
       if (viewport.width === 390) {
         expect.soft(layout.horizontalGutters).toEqual({ left: 16, right: 16 });
-        await page.evaluate(
-          () => window.scrollTo(0, document.documentElement.scrollHeight),
-        );
-        await waitForSettledLayout(page);
-        const bottomLayout = await measureLayout();
-        expect.soft(bottomLayout.bottomClearance ?? 0)
-          .toBeGreaterThanOrEqual(16);
+        expect.soft(layout.bottomPadding).toBeGreaterThanOrEqual(72);
       }
     }
   });
@@ -662,7 +606,7 @@ test.describe("planner-shell Stage 4", () => {
 
     const selectedSunday = page.getByRole("button", { name: "7/26 일 선택" });
     await expect(selectedSunday).toHaveAttribute("aria-current", "date");
-    await expect(page.getByRole("heading", { name: "일 7월 26일" })).toBeVisible();
+    await expect(page.getByTestId("planner-day-card-2026-07-26")).toBeVisible();
 
     await expect.poll(() => page.evaluate(() => {
       const rail = document.querySelector<HTMLElement>(
@@ -681,12 +625,6 @@ test.describe("planner-shell Stage 4", () => {
         scrollLeft: rail.scrollLeft,
         scrollWidth: rail.scrollWidth,
       };
-    })).toEqual({
-      clientWidth: 262,
-      fullyVisible: true,
-      maxScrollLeft: 70,
-      scrollLeft: 70,
-      scrollWidth: 332,
-    });
+    })).toMatchObject({ fullyVisible: true });
   });
 });

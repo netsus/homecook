@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-06",
+  "kind": "local-prelaunch-ui-verification",
+  "reference": "reference-mobile.png",
+  "source_branch": "fix/restore-planner-interactions",
+  "public_examples": true,
+  "deployment": false,
+  "api_schema_changes": false,
+  "database_schema_changes": false,
+  "checks": {
+    "focused_tests": 267,
+    "typecheck": "passed",
+    "lint": "passed",
+    "source_of_truth_sync": "passed",
+    "production_build": "passed; isolated source copy; lint separately passed"
+  },
+  "browser": {
+    "plan_mobile_width": 320,
+    "meal_log_mobile_width": 390,
+    "desktop_dom_width": 1280,
+    "desktop_body_width": 1280,
+    "desktop_tabs_width": 227.109375,
+    "desktop_top_summary": "display:none",
+    "status_dots": [
+      "rgb(0,161,255)",
+      "rgb(33,195,107)",
+      "rgb(233,75,95)"
+    ],
+    "guest_plan_add_login_gate": true,
+    "guest_log_edit_login_gate": true,
+    "daily_chart_server_calories": 1607,
+    "youtube_preparation_dom": true,
+    "beta_popup_boundary_unit_test": "passed",
+    "beta_full_hero_browser": "not verified: isolated preview marketing API unavailable"
+  },
+  "notes": [
+    "Desktop full-page image is content-layout proof; the capture mechanism omits sticky preparation banner. Banner geometry was separately verified as visible at top0/height37.",
+    "A resized/cropped 390px plan capture was rejected; 320px plan and 390px meal-log captures retained.",
+    "Example rows are explicitly labelled and do not represent a real account.",
+    "No deployed-account end-to-end test or operation was performed."
+  ],
+  "artifacts": [
+    {
+      "file": "reference-tutorial-issue.png",
+      "sha256": "1b66ce40065ff3ff6d83abc33e43d126f75a6bc6d288f4614b05d1ea684af065"
+    },
+    {
+      "file": "plan-320.jpg",
+      "sha256": "6b2f0e4cf03cd537a50f0d43b87c3caabf91f489029f220757327a43e744642a"
+    },
+    {
+      "file": "meal-log-390.jpg",
+      "sha256": "3a885e30656fb6f6e7cfc3615a1beb29c48967e03589ce55fffd1dfa11d294d9"
+    },
+    {
+      "file": "reference-mobile.png",
+      "sha256": "babe5664983626f28731eca6ae394dc933a9b59a2ff8eeccb3b8d36ebca4cb6b"
+    },
+    {
+      "file": "login-required.jpg",
+      "sha256": "6b17cee057565470bc8957889a9c838bd802566a306559bb14c138d44ec7a505"
+    },
+    {
+      "file": "plan-desktop.jpg",
+      "sha256": "37d2a796de285a9cce625e6a873bb9dc4fa824c5bc4f46ec33332d686f7b31a5"
+    },
+    {
+      "file": "meal-log-chart.jpg",
+      "sha256": "1c958a099f7109b0c8ce7910757970a74e793a3bdc32e681fcdb98ece107b9cb"
+    }
+  ]
+}

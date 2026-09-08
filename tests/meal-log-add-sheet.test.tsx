@@ -64,6 +64,17 @@ describe("MEAL_LOG add sheet", () => {
     expect(screen.getByText("남은 양 80g 이하로 입력해 주세요.")).toBeTruthy();
   });
 
+  it("keeps cooked food quantities in grams instead of accepting an incompatible unit", async () => {
+    const user = userEvent.setup();
+    renderMealLogShell({ includeCookedBatch: true });
+    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
+    const unit = screen.getByRole("textbox", { name: "단위" }) as HTMLInputElement;
+    expect(unit.value).toBe("g");
+    expect(unit.readOnly).toBe(true);
+    expect(screen.getByText("먹은 양을 g(그램) 단위로 입력해 주세요.")).toBeTruthy();
+  });
+
   it("appends each server-ordered source with its single opaque cursor", async () => {
     const user = userEvent.setup();
     const { fetchMock } = renderMealLogShell({ paginatedSources: true });

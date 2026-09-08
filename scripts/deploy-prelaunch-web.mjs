@@ -7,7 +7,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
-import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist } from "./lib/prelaunch-web-deploy.mjs";
+import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist, fetchPrelaunchLanding, prelaunchChangedFiles } from "./lib/prelaunch-web-deploy.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
@@ -25,9 +25,11 @@ const cancellation = createCancellation();
 const say = (message) => process.stdout.write(`${message}\n`);
 
 function command(bin, args, options = {}) {
-  const result = spawnSync(bin, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, ...options });
+  const { trimOutput = true, ...spawnOptions } = options;
+  const result = spawnSync(bin, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, ...spawnOptions });
   if (result.status !== 0) throw new DeploymentError(`명령 실패: ${bin === "git" ? "git" : "로컬 배포 도구"}. 비공개 로그를 확인하세요.`);
-  return result.stdout?.trim() ?? "";
+  const output = result.stdout ?? "";
+  return trimOutput ? output.trim() : output;
 }
 const git = (args, cwd = repository) => command("git", ["-C", cwd, ...args]);
 const parsePlist = (bytes) => JSON.parse(command("/usr/bin/plutil", ["-convert", "json", "-o", "-", "--", "-"], { input: bytes }));
@@ -54,7 +56,7 @@ function plan(ref, live, option = "--ref", verifyScript) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
   git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
-  const files = git(["diff", "--name-only", "--no-renames", live.ref, target]).split("\n").filter(Boolean);
+  const files = prelaunchChangedFiles((args) => command("git", ["-C", repository, ...args], { trimOutput: false }), live.ref, target);
   const manifest = (sha) => JSON.parse(git(["show", `${sha}:package.json`]));
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target));
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript);
@@ -112,7 +114,7 @@ async function smoke(port, cwd, buildId, recovering = false) {
     try {
       const origin = `http://127.0.0.1:${port}`;
       const get = (path) => fetch(`${origin}${path}`, { redirect: "error", signal: AbortSignal.timeout(2500) });
-      const page = await get("/beta");
+      const page = await fetchPrelaunchLanding(origin);
       if (!page.ok) throw new Error();
       const html = await page.text();
       const manifest = await get(manifestPath);

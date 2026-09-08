@@ -1,0 +1,15 @@
+{
+  "score": 95,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "확인버튼 없는 즉시선택 달력",
+    "기본 입력창 없는 달력으로 선택후 배율1 유지",
+    "식사 양/kcal/탄단지 시각요약, 수정과 나트륨은상세",
+    "홈가이드 실제OG전체이미지"
+  ],
+  "suggestions": [],
+  "reasoning": "Chromium/WebKit3203751280의12조합에서 달력닫기, 날짜이동, 배율1, scrollunlock, 상세/로그인보호를 검증했고 홈OG로딩/contain도확인.",
+  "next_actions": [],
+  "evidence_dir": "ui/designs/evidence/prelaunch-planner-ui/calendar-and-food"
+}

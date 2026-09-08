@@ -62,9 +62,13 @@ function resolveNextScreenState(
   return meals.length > 0 || productEntries.length > 0 ? "ready" : "empty";
 }
 
+// Resetting or starting a newer request invalidates every older private response.
+let plannerRequestGeneration = 0;
+
 export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
   ...buildInitialState(),
   loadPlanner: async (rangeOverride) => {
+    const requestGeneration = ++plannerRequestGeneration;
     const {
       columns,
       meals,
@@ -88,6 +92,7 @@ export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
 
     try {
       const data = await fetchPlanner(requestedRange.startDate, requestedRange.endDate);
+      if (requestGeneration !== plannerRequestGeneration) return;
       set({
         columns: data.columns,
         meals: data.meals,
@@ -99,6 +104,7 @@ export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
         errorMessage: null,
       });
     } catch (error) {
+      if (requestGeneration !== plannerRequestGeneration) return;
       if (isPlannerApiError(error) && error.status === 401) {
         set({ isRefreshing: false });
         throw error;
@@ -139,5 +145,6 @@ export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
 }));
 
 export function resetPlannerStore() {
+  plannerRequestGeneration += 1;
   usePlannerStore.setState(buildInitialState());
 }

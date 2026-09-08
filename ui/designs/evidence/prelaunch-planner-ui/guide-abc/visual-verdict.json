@@ -1,0 +1,15 @@
+{
+  "score": 95,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "현행 요리계획/먹은기록 가이드와 체험 배너",
+    "기존 귀여운 당근·브로콜리 자산 재사용",
+    "계획 인분과 1인분 칼로리·탄단지 표시",
+    "a/b/c Hero만 남김"
+  ],
+  "suggestions": [],
+  "reasoning": "3203751280에서 가로넘침 없음. 음식명로그인·가이드링크·변형정규화의 실제브라우저흐름확인. 랜딩UI는테스트API로시각검증.",
+  "next_actions": [],
+  "evidence_dir": "ui/designs/evidence/prelaunch-planner-ui/guide-abc"
+}

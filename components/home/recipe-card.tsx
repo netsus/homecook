@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
@@ -9,11 +10,14 @@ interface RecipeCardProps {
   isSaved?: boolean;
   onOpen?: (recipe: RecipeCardItem) => void;
   onSave?: (recipe: RecipeCardItem) => void;
+  priority?: boolean;
   recipe: RecipeCardItem;
 }
 
-export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCardProps) {
+export function RecipeCard({ isSaved = false, onOpen, onSave, priority = false, recipe }: RecipeCardProps) {
   const imageSrc = resolveRecipeImage(recipe);
+  const canOptimizeImage = imageSrc.startsWith("/")
+    || imageSrc.startsWith("https://www.foodsafetykorea.go.kr/uploadimg/");
   const badgeLabel =
     recipe.save_count > 100 ? "인기" : formatRecipeSourceLabel(recipe.source_type);
 
@@ -28,13 +32,37 @@ export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCa
           className="relative overflow-hidden"
           style={{ aspectRatio: "16/9" }}
         >
+          {canOptimizeImage ? (
+            <Image
+              alt=""
+              className="object-cover transition-transform duration-300 ease-out group-hover:scale-105 group-active:scale-105"
+              data-slot="recipe-card-image-layer"
+              fill
+              priority={priority}
+              sizes="(max-width: 1023px) calc(100vw - 32px), 380px"
+              src={imageSrc}
+            />
+          ) : (
+            <>
+              {/* Arbitrary recipe hosts stay on the browser loader; the first card
+                  still receives explicit priority while later cards load on demand. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 group-active:scale-105"
+                data-slot="recipe-card-image-layer"
+                decoding="async"
+                fetchPriority={priority ? "high" : "auto"}
+                loading={priority ? "eager" : "lazy"}
+                src={imageSrc}
+              />
+            </>
+          )}
           <div
-            className="absolute inset-0 transition-transform duration-300 ease-out group-hover:scale-105 group-active:scale-105"
-            data-slot="recipe-card-image-layer"
+            aria-hidden="true"
+            className="absolute inset-0"
             style={{
-              backgroundImage: `linear-gradient(var(--foreground-alpha-03),var(--foreground-alpha-18)),url(${imageSrc})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
+              backgroundImage: "linear-gradient(var(--foreground-alpha-03),var(--foreground-alpha-18))",
             }}
           />
           <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[var(--radius-badge)] bg-[var(--surface-alpha-92)] px-2 text-center text-[11px] font-bold leading-none text-[var(--brand)] shadow-[0_1px_4px_var(--shadow-color-medium)]">

@@ -326,6 +326,11 @@ describe("YouTube extraction notification center", () => {
     );
   });
 
+  it("retains a floating trigger when the desktop header is hidden", async () => {
+    render(<><div style={{ display: "none" }}><button data-youtube-extraction-trigger="header" type="button">데스크탑 알림</button></div><YoutubeExtractionNotificationCenter initialAuthenticated /></>);
+    expect(await screen.findByRole("button", { name: /YouTube 추출 알림/ })).toBeTruthy();
+  });
+
   it("preserves the user's current focus when the closed center first mounts", async () => {
     const view = render(
       <>

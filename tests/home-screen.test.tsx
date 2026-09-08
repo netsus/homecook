@@ -314,12 +314,10 @@ describe("home screen", () => {
       name: "무먹, 무엇을 먹든",
     });
     expect(mobileBrand.className).toContain("home-app-brand-lockup");
-    expect(within(mobileBrand).getByText("무먹").className).toContain(
-      "home-app-brand-primary",
+    expect(mobileBrand.querySelector("img")?.getAttribute("src")).toContain(
+      "/brand/mumeok-logo-horizontal.png",
     );
-    expect(within(mobileBrand).getByText("무엇을 먹든").className).toContain(
-      "home-app-brand-supporting",
-    );
+    expect(mobileBrand.textContent).toBe("");
     expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
@@ -336,7 +334,7 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: /식단 짜기/ }).getAttribute("href")).toBe("/planner");
     expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
     expect(screen.getByRole("link", { name: /레시피북/ }).getAttribute("href")).toBe("/mypage?tab=recipebooks");
-    expect(screen.getByRole("link", { name: /유튜브 가져오기/ }).getAttribute("href")).toBe("/menu/add/youtube");
+    expect(screen.getByRole("link", { name: /유튜브 가져오기/ }).getAttribute("href")).toBe("/recipes/new/youtube");
     expect(screen.queryByRole("link", { name: /성장 보기/ })).toBeNull();
     expect(screen.getByRole("navigation", { name: "홈 하단 탭" })).toBeTruthy();
     await waitFor(() => {
@@ -367,6 +365,8 @@ describe("home screen", () => {
     const guideLink = screen.getByRole("link", { name: "무먹 가이드 보기" });
     expect(guideLink.getAttribute("href")).toBe("/about#how-to");
     expect(guideLink.hasAttribute("aria-pressed")).toBe(false);
+    expect(within(guideLink).queryByText("무먹 가이드")).toBeNull();
+    expect(guideLink.querySelector("img")?.className).toContain("object-contain");
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
   });
 
@@ -422,7 +422,7 @@ describe("home screen", () => {
     expect(ruleBody(".web-home-aside-top .web-theme-card-title")).toContain("font-size: 15px;");
   });
 
-  it("moves the web recommended tags and weekly themes up beside the search row", async () => {
+  it("keeps desktop search centered and places recommendations beside recipes", async () => {
     installMatchMedia(true);
 
     render(<HomeScreen />);
@@ -437,15 +437,16 @@ describe("home screen", () => {
     expect(contentGrid?.contains(sideRail)).toBe(true);
     expect(screen.getAllByRole("heading", { level: 2, name: "추천 태그" })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2, name: "이번 주 추천 테마" })).toHaveLength(1);
-    expect(ruleBody(".web-discovery-search-layout")).toContain(
-      "grid-template-columns: minmax(0, 880px);",
+    expect(ruleBody(".web-discovery-primary-row")).toContain(
+      "grid-template-columns: minmax(180px, 1fr) minmax(520px, 700px) minmax(180px, 1fr);",
     );
+    expect(ruleBody(".web-discovery-search-layout")).toContain("margin-top: 0;");
     expect(ruleBody(".web-discovery-search-layout .web-discovery-search-row")).toContain("margin-top: 0;");
     expect(ruleBody(".web-home-content-grid")).toContain('grid-template-areas: "recipes aside";');
     expect(ruleBody(".web-home-content-grid")).toContain(
       "grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);",
     );
-    expect(ruleBody(".web-home-aside-top")).toContain("margin-top: -166px;");
+    expect(ruleBody(".web-home-aside-top")).toContain("margin-top: 0;");
   });
 
   it("keeps the mobile search controls sticky under the app bar", () => {
@@ -844,12 +845,12 @@ describe("home screen", () => {
     expect(
       screen.getAllByRole("button", { name: /재료로 검색/ }),
     ).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "플래너" }).getAttribute("href")).toBe("/planner");
+    expect(screen.getByRole("link", { name: "요리 계획" }).getAttribute("href")).toBe("/planner");
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(screen.getByRole("navigation", { name: "홈 빠른 이동" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
-    expect(screen.getByRole("link", { name: /유튜브 가져오기/ }).getAttribute("href")).toBe("/menu/add/youtube");
+    expect(screen.getByRole("link", { name: /유튜브 가져오기/ }).getAttribute("href")).toBe("/recipes/new/youtube");
     expect(screen.queryByRole("link", { name: /성장 보기/ })).toBeNull();
     expect(
       screen.queryByRole("navigation", { name: "홈 하단 탭" }),
@@ -1860,24 +1861,13 @@ describe("home screen", () => {
     expect(searchBlock?.contains(moreButton)).toBe(true);
   });
 
-  it("opens a mobile profile summary with records, level, notifications, and tutorial quest", async () => {
+  it("keeps mobile profile access in the bottom navigation instead of the app bar", async () => {
     window.localStorage.setItem(E2E_AUTH_OVERRIDE_KEY, "authenticated");
     mockAuthedProfileFetch();
-
-    const user = userEvent.setup();
     render(<HomeScreen />);
-
-    await user.click(await screen.findByRole("button", { name: "김집밥 프로필 요약 열기" }));
-    const summary = await screen.findByRole("dialog", { name: "마이페이지 요약" });
-
-    expect(within(summary).getByText("김집밥")).toBeTruthy();
-    expect(within(summary).getByText("새싹 집밥러")).toBeTruthy();
-    expect(within(summary).getByText("Lv.3")).toBeTruthy();
-    expect(within(summary).getByText("요리기록")).toBeTruthy();
-    expect(within(summary).getByText("플래너기록")).toBeTruthy();
-    expect(within(summary).getByText("장보기기록")).toBeTruthy();
-    expect(within(summary).getByText("튜토리얼 안내")).toBeTruthy();
-    expect(within(summary).getByText("첫 레시피 저장")).toBeTruthy();
+    await screen.findByPlaceholderText("레시피 제목 검색");
+    expect(screen.queryByTestId("mobile-profile-summary-button")).toBeNull();
+    expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
   });
 
   it("opens the web profile summary from the fixed top navigation avatar", async () => {
@@ -1893,6 +1883,6 @@ describe("home screen", () => {
 
     expect(within(summary).getByText("요리기록")).toBeTruthy();
     expect(within(summary).getByRole("button", { name: "알림 기록 보기" })).toBeTruthy();
-    expect(within(summary).queryByRole("link", { name: "마이페이지로 이동" })).toBeNull();
+    expect(within(summary).getByRole("link", { name: "마이페이지" }).getAttribute("href")).toBe("/mypage");
   });
 });

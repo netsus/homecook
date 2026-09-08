@@ -491,7 +491,7 @@ describe("ShoppingDetailScreen", () => {
     });
     const activeLink = nav.querySelector('a[aria-current="page"]');
 
-    expect(activeLink?.textContent).toContain("플래너");
+    expect(activeLink?.textContent).toContain("요리 계획");
   });
 
   it("keeps planner active in desktop shopping detail navigation", async () => {
@@ -508,10 +508,10 @@ describe("ShoppingDetailScreen", () => {
       .getByRole("navigation", { name: "데스크탑 주요 메뉴" })
       .querySelector('a[aria-current="page"]');
 
-    expect(activeLink?.textContent).toContain("플래너");
+    expect(activeLink?.textContent).toContain("요리 계획");
   });
 
-  it("keeps mypage active when shopping detail is opened from mypage history", async () => {
+  it("keeps mypage accessible through the profile menu when opened from mypage history", async () => {
     setMatchMedia(false);
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
 
@@ -527,11 +527,10 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
     });
 
-    const activeLink = screen
-      .getByRole("navigation", { name: "데스크탑 주요 메뉴" })
-      .querySelector('a[aria-current="page"]');
-
-    expect(activeLink?.textContent).toContain("마이페이지");
+    expect(screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" })
+      .querySelector('a[aria-current="page"]')).toBeNull();
+    await userEvent.setup().click(screen.getByRole("button", { name: /프로필 요약 열기/ }));
+    expect(screen.getByRole("link", { name: "마이페이지" }).getAttribute("href")).toBe("/mypage");
   });
 
   it("switches to read-only mode when update returns 409 conflict", async () => {

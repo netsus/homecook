@@ -663,12 +663,19 @@ describe("MypageScreen", () => {
   });
 
   it("shows the unauthorized gate when not authenticated", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<MypageScreen initialAuthenticated={false} />);
 
     expect(
       screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
     ).toBeTruthy();
     expect(screen.getByText(/나만의 데이터를 로그인 후 확인/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "무먹, 무엇을 먹든" })).toBeTruthy();
+    expect(screen.getByLabelText("서비스 준비 안내")).toBeTruthy();
+    const gate = screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
+      .closest("[data-state-tone='gate']");
+    expect(gate?.closest(".web-auth-gate-shell")).toBeTruthy();
+    expect(gate?.parentElement?.className).toContain("web-auth-gate-screen");
   });
 
   it("keeps the mobile bottom tab visible on the unauthorized gate", async () => {
@@ -1480,7 +1487,7 @@ describe("MypageScreen", () => {
     expect(within(skeleton).queryAllByTestId("mypage-loading-panel-card")).toHaveLength(0);
     expect(container.querySelector(".web-mypage-panel")).toBeNull();
     expect(container.querySelectorAll('[data-testid="mypage-loading-profile-shell"]')).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" })).toBeTruthy();
   });
 

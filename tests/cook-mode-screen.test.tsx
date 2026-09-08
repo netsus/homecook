@@ -484,7 +484,7 @@ describe("CookModeScreen", () => {
 
     expect(screen.getByRole("heading", { name: "전체 재료" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "전체 조리순서" })).toBeTruthy();
-    expect(screen.getAllByText("무먹")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "무먹, 무엇을 먹든" })).toBeTruthy();
     expect(within(ingredientList).getByText("배추김치")).toBeTruthy();
     expect(within(ingredientList).getByText("300g")).toBeTruthy();
     expect(within(ingredientList).getByText("돼지고기")).toBeTruthy();
@@ -709,10 +709,10 @@ describe("CookModeScreen", () => {
 
   it("keeps cooking mode density rules viewport-driven in CSS", () => {
     expect(GLOBAL_CSS).toContain(
-      ".web-cook-whole-screen {\n    min-height: calc(100dvh - var(--web-nav-h));",
+      ".web-cook-whole-screen {\n    min-height: calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h));",
     );
     expect(GLOBAL_CSS).toContain(
-      "height: max(640px, calc(100dvh - var(--web-nav-h) - 40px));",
+      "height: max(560px, calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h) - 40px));",
     );
     expect(GLOBAL_CSS).toContain(
       ".cook-whole-board-mobile .cook-whole-ingredients {\n  display: flex;",

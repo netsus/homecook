@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { isPrelaunchUiEnabled } from "@/lib/prelaunch";
 import { usePathname } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -324,7 +325,8 @@ function selectToastSource(
     : sourceNotifications;
 
   return compactGrowthNotificationsForDisplay(
-    source.filter(isVisibleGrowthToastNotification),
+    source.filter((notification) => isVisibleGrowthToastNotification(notification)
+      && !(isPrelaunchUiEnabled() && notification.payload?.tutorial_guide === true)),
   );
 }
 
@@ -551,7 +553,7 @@ export function GrowthToastStack({
         const nextGamification = await fetchUserGamification();
         setGamification(nextGamification);
         const source = selectToastSource(nextGamification, {
-          includeTutorialGuide: !isNicknameOnboardingPath(pathnameRef.current),
+          includeTutorialGuide: !isPrelaunchUiEnabled() && !isNicknameOnboardingPath(pathnameRef.current),
         });
         if (source.length > 0) {
           // priority_unseen is already server ordered.

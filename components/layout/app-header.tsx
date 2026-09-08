@@ -1,7 +1,7 @@
 import Link from "next/link";
 import * as React from "react";
 
-import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
+import { MumeokHorizontalLogo } from "@/components/brand/mumeok-horizontal-logo";
 import { YoutubeExtractionNotificationTrigger } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 
@@ -16,12 +16,11 @@ export function AppHeader({
 }: AppHeaderProps) {
   const brandLink = (
     <Link
-      aria-label="무먹 홈"
-      className="inline-flex items-center gap-2 text-[22px] font-bold leading-none transition-opacity hover:opacity-80"
+      aria-label="무먹, 무엇을 먹든"
+      className="inline-flex items-center leading-none transition-opacity hover:opacity-80"
       href="/"
     >
-      <MumeokBrandSymbol size={32} />
-      <span className="text-[var(--wave1-mint-contrast)]">무먹</span>
+      <MumeokHorizontalLogo />
     </Link>
   );
 
@@ -42,8 +41,8 @@ export function AppHeader({
                 className={[
                   "rounded-[var(--radius-full)] px-4 py-2 text-sm font-semibold transition",
                   active
-                    ? "bg-[var(--brand-soft)] text-[var(--brand-deep)]"
-                    : "text-[var(--muted)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]",
+                    ? "bg-[var(--brand-primary)] text-[var(--text-inverse)] hover:bg-[var(--brand-primary-hover)]"
+                    : "text-[var(--muted)] hover:rounded-[var(--radius-full)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]",
                 ].join(" ")}
                 href={item.href}
                 key={item.id}
@@ -53,7 +52,12 @@ export function AppHeader({
             );
           })}
         </nav>
-        <YoutubeExtractionNotificationTrigger />
+        <div className="flex items-center gap-2">
+          <YoutubeExtractionNotificationTrigger />
+          <Link aria-label="마이페이지" className="hidden h-11 w-11 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--ui-sky-50)] lg:inline-flex" href="/mypage">
+            <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 20 20" width="20"><circle cx="10" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.6" /><path d="M4.75 17c.65-2.65 2.46-4 5.25-4s4.6 1.35 5.25 4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" /></svg>
+          </Link>
+        </div>
       </div>
     </header>
   );

@@ -423,8 +423,8 @@ async function readEnvFile(filePath) {
 
 function mergeEnv(fileEnv) {
   return {
-    ...process.env,
     ...fileEnv,
+    ...process.env,
     HOMECOOK_ENABLE_YOUTUBE_IMPORT:
       process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT ??
       fileEnv.HOMECOOK_ENABLE_YOUTUBE_IMPORT ??

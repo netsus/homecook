@@ -9,19 +9,18 @@ import { AppHeader } from "@/components/layout/app-header";
 describe("AppHeader service name", () => {
   afterEach(cleanup);
 
-  it("keeps non-HOME shared headers on the short service name only", () => {
+  it("uses the same official horizontal logo as desktop navigation", () => {
     render(<AppHeader currentTab="planner" />);
 
-    const brand = screen.getByRole("link", { name: "무먹 홈" });
-    expect(brand.textContent).toBe("무먹");
-    expect(screen.queryByText("무엇을 먹든")).toBeNull();
+    const brand = screen.getByRole("link", { name: "무먹, 무엇을 먹든" });
+    expect(brand.textContent).toBe("");
 
-    const symbol = brand.querySelector("img");
-    expect(symbol).not.toBeNull();
-    expect(symbol?.getAttribute("src")).toContain(
-      "/brand/mumeok-symbol-192.png",
+    const logo = brand.querySelector("img");
+    expect(logo).not.toBeNull();
+    expect(logo?.getAttribute("src")).toContain(
+      "/brand/mumeok-logo-horizontal.png",
     );
-    expect(symbol?.getAttribute("alt")).toBe("");
-    expect(symbol?.getAttribute("aria-hidden")).toBe("true");
+    expect(logo?.getAttribute("alt")).toBe("");
+    expect(logo?.getAttribute("aria-hidden")).toBe("true");
   });
 });

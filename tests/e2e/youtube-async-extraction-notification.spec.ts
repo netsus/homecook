@@ -891,7 +891,7 @@ test("accepted retry uses quota copy and projects the replacement job before exi
 test("duplicate active work is explicit on desktop", async ({ page }, testInfo) => {
   await openImport(page, "duplicate", 1280, 800, "standalone");
   await expect(page.getByRole("link", { name: "홈" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("link", { name: "플래너" })).not.toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: "요리 계획" })).not.toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { name: "이미 추출 중이에요" })).toBeVisible();
   await expect(page.getByText("같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요.")).toBeVisible();
   const [bellBox, backBox] = await Promise.all([

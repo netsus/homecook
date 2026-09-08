@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
@@ -316,6 +317,7 @@ export function ProfileSummaryButton({
             }}
             summary={summary}
           />
+          <Link className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-[var(--ui-sky-50)] text-sm font-bold text-[var(--ui-sky-700)]" href="/mypage">마이페이지</Link>
         </section>
       ) : null}
       {isNotificationDialogOpen ? (

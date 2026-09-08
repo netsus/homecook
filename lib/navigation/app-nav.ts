@@ -1,19 +1,20 @@
 export const PRIMARY_WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "planner", href: "/planner", label: "요리 계획" },
+  { id: "meal-log", href: "/planner?segment=log", label: "식사 기록" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
   { id: "about", href: "/about", label: "무먹 가이드" },
 ] as const;
 
 export const PRIMARY_MOBILE_TAB_ITEMS = [
   { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "planner", href: "/planner", label: "요리 계획" },
+  { id: "meal-log", href: "/planner?segment=log", label: "식사 기록" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이" },
 ] as const;
 
-export type PrimaryWebNavId = (typeof PRIMARY_WEB_NAV_ITEMS)[number]["id"];
+export type PrimaryWebNavId = (typeof PRIMARY_WEB_NAV_ITEMS)[number]["id"] | "mypage";
 export type PrimaryMobileTabId = (typeof PRIMARY_MOBILE_TAB_ITEMS)[number]["id"];
 
 export interface SurfaceChromeRule {

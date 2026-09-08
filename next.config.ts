@@ -193,6 +193,13 @@ const nextConfig: NextConfig = {
   images: {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 512],
     qualities: [75, 95],
+    remotePatterns: [
+      {
+        hostname: "www.foodsafetykorea.go.kr",
+        pathname: "/uploadimg/**",
+        protocol: "https",
+      },
+    ],
   },
   poweredByHeader: false,
   ...(isReleaseRehearsalNoChildProcesses

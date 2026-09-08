@@ -419,7 +419,7 @@ describe("shopping flow screen", () => {
       const activeLink = screen
         .getByRole("navigation", { name: "데스크탑 주요 메뉴" })
         .querySelector('a[aria-current="page"]');
-      expect(activeLink?.textContent).toContain("플래너");
+      expect(activeLink?.textContent).toContain("요리 계획");
     });
 
     it("should toggle meal selection when clicking the recipe card", async () => {
@@ -1019,7 +1019,7 @@ describe("shopping flow screen", () => {
       });
 
       expect(screen.getByRole("heading", { name: "장보기 준비" })).toBeTruthy();
-      expect(screen.queryByText(/식사/)).toBeNull();
+      expect(screen.queryByText(/식사/, { selector: "main *" })).toBeNull();
       expect(screen.queryByText(/장보기 대기/)).toBeNull();
       expect(screen.getByText("아침 · 2인분")).toBeTruthy();
       expect(screen.getByText("저녁 · 2인분")).toBeTruthy();

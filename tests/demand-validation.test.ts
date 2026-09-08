@@ -70,9 +70,9 @@ describe("marketing demand validation v2 rules", () => {
 
   it.each([
     ["hook_reentry", "d", "a"], ["hook_cooked_weight", "a", "b"],
-    ["hook_calorie_quiz", "b", "c"], ["hook_workaround", "c", "d"],
-    ["unknown", "b", "b"], [null, "c", "c"],
-    ["unknown", null, "default"], [null, null, "default"],
+    ["hook_calorie_quiz", "b", "c"], ["hook_workaround", "c", "a"],
+    ["unknown", "b", "b"], ["__proto__", "b", "b"], ["constructor", null, "a"], [null, "c", "c"],
+    ["unknown", null, "a"], [null, null, "a"],
   ] as const)("resolves utm_content=%s candidate=%s to %s", (utmContent, candidate, expected) => {
     expect(resolveMarketingAdVariant(utmContent, candidate)).toBe(expected);
   });

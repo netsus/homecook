@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -30,15 +30,14 @@ describe("MEAL_LOG day-first screen", () => {
     expect(screen.getByRole("alert").textContent).toContain("날짜 표시를 확인하지 못했어요");
   });
 
-  it("shows the contracted empty state without fake zero nutrition totals", async () => {
+  it("shows the empty state with the server-confirmed zero daily totals", async () => {
     renderMealLogShell({ empty: true });
 
-    expect(await screen.findByText("이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요."))
-      .toBeTruthy();
-    expect(screen.queryByText("0 kcal")).toBeNull();
-    expect(screen.queryByText(/탄수화물 0g/u)).toBeNull();
-    expect(screen.queryByText(/단백질 0g/u)).toBeNull();
-    expect(screen.queryByText(/지방 0g/u)).toBeNull();
+    const card = within(await screen.findByRole("region", { name: "8월 10일 월요일 식사 기록" }));
+    expect(await card.findByText("이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.")).toBeTruthy();
+    const summary = card.getByRole("region", { name: "하루 영양" });
+    expect(within(summary).getAllByText("0")).toHaveLength(4);
+    expect(within(summary).queryByRole("img", { name: /탄단지/ })).toBeNull();
   });
 
   it("exposes one selected date radio with roving keyboard navigation and no edge wrapping", async () => {

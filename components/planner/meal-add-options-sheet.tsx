@@ -20,6 +20,8 @@ interface MealAddOptionsSheetProps {
   onPickerSelect: (mode: MealAddPickerMode) => void;
   routeHrefFor: (mode: MealAddRouteMode) => string;
   testId?: string;
+  showProductOption?: boolean;
+  onRouteSelect?: (mode: MealAddRouteMode) => void;
 }
 
 const PICKER_OPTIONS: Array<{
@@ -87,6 +89,8 @@ export function MealAddOptionsSheet({
   onPickerSelect,
   routeHrefFor,
   testId,
+  showProductOption = true,
+  onRouteSelect,
 }: MealAddOptionsSheetProps) {
   return (
     <AppBottomSheet
@@ -124,20 +128,20 @@ export function MealAddOptionsSheet({
           />
         ))}
 
-        <Link
+        {showProductOption ? <Link
           className={OPTION_TILE_CLASS}
           data-testid="meal-add-option-product"
           href={routeHrefFor("product")}
-          onClick={onClose}
+          onClick={() => { onClose(); onRouteSelect?.("product"); }}
         >
           <span className={OPTION_LABEL_CLASS}>완제품</span>
-        </Link>
+        </Link> : null}
 
         <Link
           className={OPTION_TILE_CLASS}
           data-testid="meal-add-option-youtube"
           href={routeHrefFor("youtube")}
-          onClick={onClose}
+          onClick={() => { onClose(); onRouteSelect?.("youtube"); }}
         >
           <span className="text-[20px]" aria-hidden="true">
             🎬
@@ -149,7 +153,7 @@ export function MealAddOptionsSheet({
           className={OPTION_TILE_CLASS}
           data-testid="meal-add-option-manual"
           href={routeHrefFor("manual")}
-          onClick={onClose}
+          onClick={() => { onClose(); onRouteSelect?.("manual"); }}
         >
           <span className="text-[20px]" aria-hidden="true">
             ✏️

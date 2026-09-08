@@ -583,12 +583,13 @@ export function MealLogAddSheet({
         {selection ? (
           <footer className="border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
             <p className="font-bold">{selection.name}</p>
+            <p className="mt-1 text-sm text-[var(--text-2)]">{selection.unit === "g" ? "먹은 양을 g(그램) 단위로 입력해 주세요." : `먹은 양은 ${selection.unit} 기준이에요. g 입력은 정확한 환산 정보가 있는 음식만 지원해요.`}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-sm font-bold">실제 양
                 <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onChange={(event) => { setSelection({ ...selection, amount: Number(event.target.value) }); setSuggestionConfirmed(true); }} step="any" type="number" value={selection.amount} />
               </label>
               <label className="text-sm font-bold">단위
-                <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onBlur={() => setSuggestionConfirmed(true)} onChange={(event) => { setSelection({ ...selection, unit: event.target.value }); setSuggestionConfirmed(true); }} value={selection.unit} />
+                <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onBlur={() => setSuggestionConfirmed(true)} onChange={(event) => { setSelection({ ...selection, unit: event.target.value }); setSuggestionConfirmed(true); }} readOnly={selection.type === "cooked_batch"} value={selection.unit} />
               </label>
             </div>
             {!suggestionConfirmed ? <p className="mt-2 text-sm font-bold">제안된 양을 확인해 주세요.</p> : null}

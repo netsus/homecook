@@ -1,0 +1,14 @@
+{
+  "score": 97,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "달력/오늘/날짜 줄을 한 구성으로 통합",
+    "날짜 버튼 높이48px와 글꼴/선택ring 통일",
+    "탭 왕복에서 상단과 고정상태의 날짜 영역 좌표 일치"
+  ],
+  "suggestions": [],
+  "reasoning": "320/375/1280에서 날짜7개와달력/오늘좌표·크기·style 비교8흐름통과. 빠른다른달탭왕복은선택날짜유지회귀추가.",
+  "next_actions": [],
+  "evidence_dir": "ui/designs/evidence/prelaunch-planner-ui/date-parity"
+}

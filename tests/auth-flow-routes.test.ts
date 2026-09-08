@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   cancelAuthFlowAttempt,
@@ -28,18 +28,35 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 describe("auth flow routes", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     cancelAuthFlowAttempt.mockReset();
     cookieGet.mockReset();
     getUser.mockReset();
     startAuthFlowAttempt.mockReset();
     vi.unstubAllEnvs();
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
     startAuthFlowAttempt.mockResolvedValue({
       cookieValue: "signed-flow-cookie",
       expiresAt: "2026-08-01T12:15:00.000Z",
       maxAge: 900,
     });
     cancelAuthFlowAttempt.mockResolvedValue({ ok: true });
+  });
+
+  it("blocks prelaunch social login without reading or writing the auth ledger", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    const { POST } = await import("@/app/auth/flow/start/route");
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://app.mumeok.kr" },
+      body: JSON.stringify({ flow_kind: "login", provider: "google" }),
+    }));
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("AUTH_FLOW_UNAVAILABLE");
+    expect(startAuthFlowAttempt).not.toHaveBeenCalled();
+    expect(cancelAuthFlowAttempt).not.toHaveBeenCalled();
+    expect(getUser).not.toHaveBeenCalled();
   });
 
   it("rejects a cross-site start before touching the ledger", async () => {
@@ -160,7 +177,21 @@ describe("auth flow routes", () => {
     expect(startAuthFlowAttempt).not.toHaveBeenCalled();
   });
 
+  it("retains authenticated account linking in preparation mode", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    getUser.mockResolvedValue({ data: { user: { id: "existing-user" } }, error: null });
+    const { POST } = await import("@/app/auth/flow/start/route");
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://app.mumeok.kr" },
+      body: JSON.stringify({ flow_kind: "link", provider: "google" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(startAuthFlowAttempt).toHaveBeenCalledWith({ flowKind: "link", provider: "google" });
+  });
+
   it("requires an authenticated user before starting a link flow", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     getUser.mockResolvedValue({ data: { user: null }, error: null });
     const { POST } = await import("@/app/auth/flow/start/route");
     const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {

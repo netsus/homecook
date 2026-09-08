@@ -17,11 +17,13 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
   it("hides private day data and shows the existing login return gate when a read returns 401", async () => {
     renderMealLogShell({ unauthorized: "read" });
 
-    expect(await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "로그인이 필요해요" })).toBeTruthy();
     expect(screen.queryByText("달걀")).toBeNull();
-    expect(screen.queryByRole("dialog")).toBeNull();
-    const gate = screen.getByTestId("meal-log-auth-gate-login");
-    expect(gate.getAttribute("data-next-path")).toBe("/planner?segment=log&date=2026-08-10");
+    expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "먹은 음식 추가" })).toBeNull();
+    const gate = screen.getByRole("dialog", { name: "로그인이 필요해요" });
+    expect(within(gate).getByRole("link", { name: "로그인" }).getAttribute("href"))
+      .toBe(`/login?next=${encodeURIComponent("/planner?segment=log&date=2026-08-10")}`);
   });
 
   it("preserves the selected date, meal, confirmed add draft, and add invoker across a create 401", async () => {
@@ -35,7 +37,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     await user.tab();
     await user.click(screen.getByRole("button", { name: "기록 저장" }));
 
-    expect(await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "로그인이 필요해요" })).toBeTruthy();
     expect(screen.queryByText("달걀")).toBeNull();
     expect(JSON.parse(window.sessionStorage.getItem(RETURN_CONTEXT_KEY) ?? "null")).toMatchObject({
       action: "add",
@@ -63,7 +65,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
     await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
     await user.click(screen.getByRole("button", { name: "기록 저장" }));
-    await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" });
+    await screen.findByRole("dialog", { name: "로그인이 필요해요" });
 
     const context = JSON.parse(window.sessionStorage.getItem(RETURN_CONTEXT_KEY) ?? "null") as {
       draft: { amount: number; maxAmount: number; name: string };
@@ -328,14 +330,15 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const user = userEvent.setup();
     const first = renderMealLogShell({ unauthorized: "edit" });
 
-    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 수정/u }));
+    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
     const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
     const amount = within(dialog).getByRole("spinbutton", { name: "실제 양" });
     await user.clear(amount);
     await user.type(amount, "3");
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
 
-    expect(await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "로그인이 필요해요" })).toBeTruthy();
     expect(screen.queryByText("달걀")).toBeNull();
     expect(JSON.parse(window.sessionStorage.getItem(RETURN_CONTEXT_KEY) ?? "null")).toMatchObject({
       action: "edit",
@@ -349,7 +352,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     renderMealLogShell();
     const restored = await screen.findByRole("dialog", { name: "식사 기록 수정" });
     expect((within(restored).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("3");
-    const restoredInvoker = screen.getByRole("button", { hidden: true, name: /아침의 달걀 식사 기록 수정/u });
+    const restoredInvoker = screen.getByRole("button", { hidden: true, name: /아침의 달걀 식사 기록 상세/u });
     await user.click(within(restored).getByRole("button", { name: "수정 저장" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(restoredInvoker));
@@ -363,7 +366,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     await user.click(within(screen.getByRole("alertdialog", { name: "식사 기록 삭제 확인" }))
       .getByRole("button", { name: "삭제" }));
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "로그인이 필요해요" })).toBeTruthy());
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(screen.queryByText("달걀")).toBeNull();
     expect(JSON.parse(window.sessionStorage.getItem(RETURN_CONTEXT_KEY) ?? "null")).toMatchObject({
@@ -386,23 +389,24 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const user = userEvent.setup();
     const first = renderMealLogShell({ unauthorized: "edit" });
 
-    await user.click(await screen.findByRole("button", { name: /간식의 플레인 요거트 식사 기록 수정/u }));
+    await user.click(await screen.findByRole("button", { name: /간식의 플레인 요거트 식사 기록 상세/u }));
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
     const initialDialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
     await user.selectOptions(
       within(initialDialog).getByRole("combobox", { name: "옮길 끼니 (필수)" }),
       "20000000-0000-4000-8000-000000000002",
     );
     await user.click(within(initialDialog).getByRole("button", { name: "수정 저장" }));
-    await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" });
+    await screen.findByRole("dialog", { name: "로그인이 필요해요" });
 
     first.unmount();
     renderMealLogShell({ applyMutationRefresh: true });
     const restored = await screen.findByRole("dialog", { name: "식사 기록 수정" });
-    const originalInvoker = screen.getByRole("button", { hidden: true, name: /간식의 플레인 요거트 식사 기록 수정/u });
+    const originalInvoker = screen.getByRole("button", { hidden: true, name: /간식의 플레인 요거트 식사 기록 상세/u });
     await user.click(within(restored).getByRole("button", { name: "수정 저장" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
-    const currentInvoker = screen.getByRole("button", { name: /점심의 플레인 요거트 식사 기록 수정/u });
+    const currentInvoker = screen.getByRole("button", { name: /점심의 플레인 요거트 식사 기록 상세/u });
     expect(originalInvoker.isConnected).toBe(false);
     expect(currentInvoker.isConnected).toBe(true);
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "점심" })));

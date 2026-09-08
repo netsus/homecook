@@ -625,7 +625,7 @@ test.describe("SETTINGS screen", () => {
       await page.getByRole("link", { name: /마이페이지/ }).first().click();
     }
 
-    await page.waitForURL("/mypage");
+    await page.waitForURL(/\/mypage(?:\?tab=preferences)?$/u);
   });
 
   test("MYPAGE environment settings opens in the right surface", async ({ page }) => {

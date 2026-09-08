@@ -163,6 +163,7 @@ function mockVisualQuantityExtract(ingredientOverrides = {}) {
 
 describe("MenuAddScreen", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES", "1");
     installMatchMedia(false);
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
@@ -283,6 +284,7 @@ describe("MenuAddScreen", () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
   it("opens the mobile YouTube import screen from the option tile", async () => {

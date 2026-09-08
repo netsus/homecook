@@ -1,6 +1,9 @@
 import React from "react";
 import { render } from "@testing-library/react";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
+
+// These fixtures protect retained editing flows independently of the prelaunch gate.
+afterEach(() => vi.unstubAllEnvs());
 
 import { PlannerWeekScreen } from "@/components/planner/planner-week-screen";
 
@@ -162,6 +165,7 @@ export function renderMealLogShell({
   deferredBatchCursors?: Array<string | null>;
   paginatedSources?: boolean;
 } = {}) {
+  vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
   navigationMocks.push.mockReset();
   navigationMocks.replace.mockReset();
   let currentHref = "/planner?segment=log&date=2026-08-10";
@@ -374,7 +378,9 @@ export function renderMealLogShell({
       : path.includes("/meal-log/entries")
         ? { entry }
         : path.includes("/meal-log?")
-          ? empty
+          ? url.searchParams.get("date") !== day.date
+            ? { ...day, date: url.searchParams.get("date"), active_sections: [], deleted_column_sections: [], entries: [], day_total: { calculation_status: "complete", calories_kcal: 0, carbohydrate_g: 0, protein_g: 0, fat_g: 0, sodium_mg: 0, incomplete_count: 0 } }
+            : empty
             ? {
                 ...day,
                 active_sections: day.active_sections.map((section) => ({

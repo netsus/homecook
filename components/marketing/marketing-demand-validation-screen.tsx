@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { preload } from "react-dom";
 import {
   ArrowRightIcon,
   CalendarIcon,
@@ -27,7 +28,7 @@ import {
   type MarketingTurnstileController,
 } from "@/components/marketing/marketing-turnstile";
 import { postMarketingValidation } from "@/lib/api/marketing-validation";
-import { MARKETING_VALIDATION_RETENTION_DAYS } from "@/lib/marketing/demand-validation";
+import { MARKETING_VALIDATION_RETENTION_DAYS, resolveMarketingAdVariant, type ActiveMarketingAdVariant } from "@/lib/marketing/demand-validation";
 import {
   enqueueMarketingQueueAction,
   flushMarketingQueue,
@@ -41,7 +42,6 @@ import {
 import { MARKETING_VALIDATION_ACTIONS } from "@/types/marketing-validation";
 import type {
   MarketingValidationAction,
-  MarketingValidationAdVariant,
   MarketingValidationQuizAnswers,
   MarketingValidationQuizResult,
   MarketingValidationRequestBody,
@@ -76,24 +76,17 @@ const RESULTS: Record<MarketingValidationQuizResult, { title: string; quote: str
   "pro-measurer": { title: "프로 계량러", quote: "완성 음식까지 저울에 올렸다면\n당신은 이미 상위 기록러.", description: "문제는 이걸 매번 계산하느라\n밥보다 기록이 늦게 끝난다는 것.", asset: "/assets/funnel/characters/pro-measurer.png", checks: ["재료 무게", "완성 무게", "먹은 무게"] },
 };
 
-const HERO_COPY: Record<MarketingValidationAdVariant, { title: string; emphasis: string; body: string; bodyHighlights?: HeroBodyHighlight[]; image?: string }> = {
-  default: { title: "집밥도 정확하게 기록할 수 있을까?", emphasis: "정확하게", body: "30초 테스트로 나의 집밥 기록 타입을 알아보세요." },
+const HERO_COPY: Record<ActiveMarketingAdVariant, { title: string; emphasis: string; body: string; bodyHighlights?: HeroBodyHighlight[] }> = {
   a: { title: "레시피만 가져오면\n영양성분 계산까지!", emphasis: "영양성분", body: "집밥도 편하게\n식단 기록해요.", bodyHighlights: [{ text: "편하게", tone: "a" }] },
   b: { title: "수분 빠진 제육볶음 300g,\n칼로리가 달라져요.", emphasis: "칼로리", body: "집밥도 정확하게\n식단 기록해요.", bodyHighlights: [{ text: "정확하게", tone: "b" }] },
   c: { title: "내 집밥에\n영양성분표를 딱!", emphasis: "영양성분표", body: "제육볶음 검색 대신\n내 레시피로 기록해요.", bodyHighlights: [{ text: "검색", tone: "negative" }, { text: "내 레시피", tone: "positive" }] },
-  d: { title: "내가 만든 집밥을\n왜 다른 음식으로 기록하지?", emphasis: "다른 음식", body: "검색해서 고른 남의 음식 대신 내 레시피로 기록해요.", image: "/assets/funnel/hero/hero-d-visual.png" },
 };
 
 function resolveEntry() {
   const params = new URLSearchParams(window.location.search);
   const result = params.get("result");
   const sharedResult = RESULT_KEYS.includes(result as MarketingValidationQuizResult) ? result as MarketingValidationQuizResult : null;
-  const mapping: Record<string, MarketingValidationAdVariant> = { hook_reentry: "a", hook_cooked_weight: "b", hook_calorie_quiz: "c", hook_workaround: "d" };
-  const content = params.get("utm_content");
-  const candidate = params.get("ad_variant");
-  const adVariant = content && mapping[content]
-    ? mapping[content]
-    : (["a", "b", "c", "d", "default"].includes(candidate ?? "") ? candidate as MarketingValidationAdVariant : "default");
+  const adVariant = resolveMarketingAdVariant(params.get("utm_content"), params.get("ad_variant"));
   const attribution = Object.fromEntries(UTM_KEYS.flatMap((key) => params.get(key) ? [[key, params.get(key)]] : []));
   return { adVariant, attribution, sharedResult };
 }
@@ -173,12 +166,12 @@ function HeroArrow() { return <ArrowRightIcon className="hero-live-arrow" aria-h
 
 function HeroLiveVisual({ variant }: { variant: "a" | "b" | "c" }) {
   if (variant === "a") return <div className="hero-live-visual hero-live-visual--a" data-testid="hero-live-visual">
-    <section className="hero-ui-card hero-recipe-card" data-testid="hero-ui-card"><header data-testid="hero-card-label">YouTube 레시피</header><div className="hero-live-photo hero-live-photo--youtube"><Image data-testid="hero-food-image" src="/assets/funnel/food/recipe-jeyuk-thumbnail.png" alt="유튜브 제육볶음 레시피 영상" width={480} height={360} priority /><span className="hero-youtube-play" aria-hidden="true"><PlayIcon /></span></div></section>
+    <section className="hero-ui-card hero-recipe-card" data-testid="hero-ui-card"><header data-testid="hero-card-label">YouTube 레시피</header><div className="hero-live-photo hero-live-photo--youtube"><Image data-testid="hero-food-image" unoptimized src="/assets/funnel/food/recipe-jeyuk-thumbnail.webp" alt="유튜브 제육볶음 레시피 영상" width={480} height={360} priority /><span className="hero-youtube-play" aria-hidden="true"><PlayIcon /></span></div></section>
     <div className="hero-extract-step" aria-label="재료와 양 자동 추출"><span>재료·양</span><strong>자동 추출</strong><ArrowRightIcon aria-hidden="true" /></div>
     <section className="hero-ui-card hero-facts-card hero-facts-card--a" data-testid="hero-ui-card"><header className="hero-facts-header" data-testid="hero-card-label"><strong>영양성분</strong><span>1인분 320g 기준</span></header><div className="hero-facts-calories"><span>열량</span><strong>487 <small>kcal</small></strong></div><div className="hero-facts-rows" data-testid="hero-card-detail"><div><span>탄수화물</span><strong>31g</strong></div><div><span>단백질</span><strong>39g</strong></div><div><span>지방</span><strong>22g</strong></div></div><strong className="hero-facts-payoff">자동 계산 완료 <CheckCircledIcon /></strong></section>
   </div>;
   if (variant === "b") return <div className="hero-live-visual hero-live-visual--b" data-testid="hero-live-visual">
-    <section className="hero-ui-card hero-weight-card" data-testid="hero-ui-card" aria-label="완성 무게 1083g 저울"><div className="hero-live-photo hero-live-photo--scale" data-testid="hero-card-detail"><Image data-testid="hero-food-image" src="/assets/funnel/food/jeyuk-on-scale.png" alt="저울 위 제육볶음" width={500} height={500} priority /><output className="hero-live-scale-readout" aria-label="완성 무게 1083g">1,083<small>g</small></output></div></section>
+    <section className="hero-ui-card hero-weight-card" data-testid="hero-ui-card" aria-label="완성 무게 1083g 저울"><div className="hero-live-photo hero-live-photo--scale" data-testid="hero-card-detail"><Image data-testid="hero-food-image" unoptimized src="/assets/funnel/food/jeyuk-on-scale.webp" alt="저울 위 제육볶음" width={500} height={500} priority /><output className="hero-live-scale-readout" aria-label="완성 무게 1083g">1,083<small>g</small></output></div></section>
     <HeroArrow />
     <section className="hero-ui-card hero-calc-card" data-testid="hero-ui-card"><div className="hero-calc-story" data-testid="hero-card-detail"><div className="hero-weight-shift" aria-label="조리 전 1420g에서 조리 후 1083g으로 변화"><div><span>조리 전</span><strong>1,420g</strong></div><ArrowRightIcon aria-hidden="true" /><div><span>조리 후</span><strong>1,083g</strong></div></div><p className="hero-water-loss"><strong>총 칼로리는 그대로</strong></p><div className="hero-calorie-result"><span>먹은 300g</span><strong>457 <small>kcal</small></strong></div></div></section>
   </div>;
@@ -189,13 +182,13 @@ function HeroLiveVisual({ variant }: { variant: "a" | "b" | "c" }) {
   </div>;
 }
 
-function Hero({ variant, onStart }: { variant: MarketingValidationAdVariant; onStart: () => void }) {
+function Hero({ variant, onStart }: { variant: ActiveMarketingAdVariant; onStart: () => void }) {
   const copy = HERO_COPY[variant];
   const [before, after] = copy.title.split(copy.emphasis);
   return <Frame stage="hero" className={`hero-screen hero-screen--${variant}`}>
     <Brand />
     <div className="hero-copy-block"><p className="eyebrow">집밥 기록 30초 테스트</p><h1>{before}<span className="hero-title-accent">{copy.emphasis}</span>{after}</h1><p>{renderBodyHighlights(copy.body, copy.bodyHighlights ?? [])}</p></div>
-    {variant === "a" || variant === "b" || variant === "c" ? <HeroLiveVisual variant={variant} /> : copy.image ? <div className={`hero-visual hero-reference hero-reference--${variant}`} data-hero-variant={variant}><Image src={copy.image} alt="집밥 기록 테스트 소개" width={1000} height={700} priority /></div> : <div className="hero-visual hero-visual--default"><Image src="/assets/funnel/food/recipe-jeyuk-thumbnail.png" alt="팬에서 조리 중인 제육볶음" width={480} height={360} priority /><div><Brand compact /><span>집밥도 빠르게, 내 레시피대로</span></div></div>}
+    <HeroLiveVisual variant={variant} />
     <div className="screen-actions hero-actions"><button className="primary-button" type="button" onClick={onStart}>내 집밥기록 유형 알아보기 <ArrowRightIcon /></button><p className="trust-line"><span><FileTextIcon aria-hidden="true" />4문항</span><span><LockClosedIcon aria-hidden="true" />로그인 없이</span><span><LightningBoltIcon aria-hidden="true" />결과 바로 확인</span></p></div>
   </Frame>;
 }
@@ -224,16 +217,23 @@ function Experience({ step, onBack, onNext, reduced }: { step: number; onBack: (
   const [adjusted, setAdjusted] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [scaleReady, setScaleReady] = useState(false);
+  useEffect(() => {
+    // These small static assets are reused later; warm them while the user imports the recipe.
+    for (const asset of ["jeyuk-on-scale", "greek-yogurt-bowl", "chicken-brown-rice-bowl", "recipe-jeyuk-thumbnail"]) {
+      preload(`/assets/funnel/food/${asset}.webp`, { as: "image", fetchPriority: "low" });
+    }
+  }, []);
   const displayedPorkWeight = useCountUp(520, adjusted, 720, 600, reduced);
   const displayedWeight = useCountUp(1180, confirmed, 720, 1200, reduced);
   const calories = useCountUp(487, step === 5, 520, 0, reduced);
   const carbs = useCountUp(31, step === 5, 520, 0, reduced);
   const protein = useCountUp(39, step === 5, 520, 0, reduced);
   const fat = useCountUp(22, step === 5, 520, 0, reduced);
-  if (step === 1) return <Frame stage="experience-1" className="demo-screen"><DemoHeader step={1} label="레시피 가져오기" onBack={onBack} /><div className="demo-title"><h1 className={`recipe-import-title ${status === "done" ? "is-complete" : ""}`} data-state={status === "done" ? "complete" : status} aria-label={status === "done" ? "레시피를 가져왔어요" : "유튜브 레시피를 가져올게요."}>{status === "done" ? <span className="recipe-title-success"><CheckCircledIcon data-testid="recipe-title-check" aria-hidden="true" /><span className="recipe-title-copy" data-testid="recipe-title-copy"><strong data-testid="recipe-title-keyword">레시피</strong>를 가져왔어요</span><span className="recipe-title-sparkle" data-testid="recipe-title-sparkle" aria-hidden="true">✨</span></span> : <>유튜브 레시피를 <span>가져올게요.</span></>}</h1></div><div className={`recipe-card ${status !== "idle" ? "is-importing" : ""}`}><div className="recipe-media"><Image className="recipe-thumbnail" src="/assets/funnel/food/recipe-jeyuk-thumbnail.png" alt="유튜브 제육볶음 레시피 썸네일" width={480} height={360} priority /><span className="youtube-play" aria-hidden="true"><PlayIcon /></span>{status === "loading" ? <div className="recipe-loading" role="status"><ReloadIcon /><span>레시피를 가져오는 중…</span></div> : null}</div><h2 className="recipe-name">대표요리가 되는 제육볶음</h2><div className="recipe-channel"><Image className="recipe-channel-avatar" src="/assets/funnel/food/lee-man-cook-channel-avatar.jpg" alt="이 남자의 cook 채널 프로필" width={36} height={36} /><div><strong>이 남자의 cook</strong><span>YouTube · 조회수 904만회</span></div></div></div><button className="primary-button screen-bottom-button" type="button" disabled={status === "loading"} onClick={() => { if (status === "done") { onNext(); return; } if (status !== "idle") return; setStatus("loading"); window.setTimeout(() => setStatus("done"), reduced ? 0 : 520); }}>{status === "loading" ? "가져오는 중…" : status === "done" ? <>다음 <ArrowRightIcon /></> : "무먹으로 가져오기"}</button></Frame>;
+  if (step === 1) return <Frame stage="experience-1" className="demo-screen"><DemoHeader step={1} label="레시피 가져오기" onBack={onBack} /><div className="demo-title"><h1 className={`recipe-import-title ${status === "done" ? "is-complete" : ""}`} data-state={status === "done" ? "complete" : status} aria-label={status === "done" ? "레시피를 가져왔어요" : "유튜브 레시피를 가져올게요."}>{status === "done" ? <span className="recipe-title-success"><CheckCircledIcon data-testid="recipe-title-check" aria-hidden="true" /><span className="recipe-title-copy" data-testid="recipe-title-copy"><strong data-testid="recipe-title-keyword">레시피</strong>를 가져왔어요</span><span className="recipe-title-sparkle" data-testid="recipe-title-sparkle" aria-hidden="true">✨</span></span> : <>유튜브 레시피를 <span>가져올게요.</span></>}</h1></div><div className={`recipe-card ${status !== "idle" ? "is-importing" : ""}`}><div className="recipe-media"><Image className="recipe-thumbnail" unoptimized src="/assets/funnel/food/recipe-jeyuk-thumbnail.webp" alt="유튜브 제육볶음 레시피 썸네일" width={480} height={360} priority /><span className="youtube-play" aria-hidden="true"><PlayIcon /></span>{status === "loading" ? <div className="recipe-loading" role="status"><ReloadIcon /><span>레시피를 가져오는 중…</span></div> : null}</div><h2 className="recipe-name">대표요리가 되는 제육볶음</h2><div className="recipe-channel"><Image className="recipe-channel-avatar" src="/assets/funnel/food/lee-man-cook-channel-avatar.jpg" alt="이 남자의 cook 채널 프로필" width={36} height={36} /><div><strong>이 남자의 cook</strong><span>YouTube · 조회수 904만회</span></div></div></div><button className="primary-button screen-bottom-button" type="button" disabled={status === "loading"} onClick={() => { if (status === "done") { onNext(); return; } if (status !== "idle") return; setStatus("loading"); window.setTimeout(() => setStatus("done"), reduced ? 0 : 520); }}>{status === "loading" ? "가져오는 중…" : status === "done" ? <>다음 <ArrowRightIcon /></> : "무먹으로 가져오기"}</button></Frame>;
   if (step === 2) return <Frame stage="experience-2" className="demo-screen demo-two-screen"><DemoHeader step={2} label="재료 확인" onBack={onBack} /><div className="demo-title"><h1>영상 속 레시피를<br /><span>자동으로 정리</span>했어요.</h1></div><div className="ingredient-list">{INGREDIENTS.map(({ name, amount, emoji }, index) => <div key={name}><span className="ingredient-emoji" aria-hidden="true">{emoji}</span><span>{name}</span><strong data-testid={index === 0 ? "pork-amount" : undefined} className={index === 0 && adjusted ? "amount-updated" : ""}>{index === 0 ? `${displayedPorkWeight}g` : amount}</strong></div>)}<div className="ingredient-more"><span className="ingredient-more-dots" aria-hidden="true">•••</span><span>외 10개 재료</span><strong>생략</strong></div></div><div className="adjustment-card is-visible" role={adjusted ? "status" : undefined}><CheckCircledIcon /><span>{adjusted ? "돼지고기 양을 520g으로 수정했어요" : "오늘은 돼지고기를 조금 덜 넣었어요."}</span></div>{adjusted ? <button className="primary-button screen-bottom-button" type="button" onClick={onNext}>다음 <ArrowRightIcon /></button> : <button className="primary-button change-weight-button screen-bottom-button" type="button" aria-label="돼지고기 600g → 520g" disabled={transitioning} onClick={() => { if (adjusted || transitioning) return; setTransitioning(true); window.setTimeout(() => { setAdjusted(true); setTransitioning(false); }, reduced ? 0 : 420); }}>돼지고기 <span className="primary-button-number">600g</span> <span className="primary-button-symbol" aria-hidden="true">→</span> <span className="primary-button-number">520g</span></button>}</Frame>;
-  if (step === 3) return <Frame stage="experience-3" className="demo-screen demo-weight-screen"><DemoHeader step={3} label="완성 무게" onBack={onBack} /><div className="demo-title"><h1>요리가 완성됐어요.</h1></div><strong className={`hero-metric ${confirmed ? "is-confirmed" : ""}`} data-testid="cooked-weight-metric">{displayedWeight.toLocaleString("ko-KR")}g</strong><p className={`metric-helper ${confirmed ? "is-confirmed" : ""}`} data-testid="weight-helper" aria-live="polite">{confirmed ? <>증발한 수분 무게를 뺀<br /><strong>정확한 무게</strong>를 <strong>입력</strong>했어요</> : <>조리하면서 줄어드는 무게를<br />고려한 예상값이에요.</>}</p><div className="cooked-scale-visual"><Image className="cooked-scale-image" src="/assets/funnel/food/jeyuk-on-scale.png" alt="완성된 제육볶음이 올라간 디지털 주방저울" width={500} height={500} priority /><output className="cooked-scale-display" aria-label="완성 무게 1180g">1,180g</output></div><button className="primary-button screen-bottom-button strong-action-button" type="button" onClick={confirmed ? onNext : () => setConfirmed(true)}>{confirmed ? <>다음 <ArrowRightIcon /></> : <>저울로 재보니 <span className="primary-button-number">1,180g</span></>}</button></Frame>;
-  if (step === 4) return <Frame stage="experience-4" className="demo-screen portion-screen"><DemoHeader step={4} label="먹은 양" onBack={onBack} /><div className="demo-title"><h1>1,180g 중 얼마나 드셨나요?</h1></div><div className="portion-visual"><Image className="portion-image" src="/assets/funnel/food/jeyuk-on-scale.png" alt="흰 접시의 제육볶음이 올라간 디지털 주방저울" width={500} height={500} priority /><output className="scale-display" aria-label="저울 표시 320g">320g</output></div><button className="primary-button screen-bottom-button strong-action-button" type="button" onClick={onNext}><span className="primary-button-number">320g</span> 입력하기</button></Frame>;
+  if (step === 3) return <Frame stage="experience-3" className="demo-screen demo-weight-screen"><DemoHeader step={3} label="완성 무게" onBack={onBack} /><div className="demo-title"><h1>요리가 완성됐어요.</h1></div><strong className={`hero-metric ${confirmed ? "is-confirmed" : ""}`} data-testid="cooked-weight-metric">{displayedWeight.toLocaleString("ko-KR")}g</strong><p className={`metric-helper ${confirmed ? "is-confirmed" : ""}`} data-testid="weight-helper" aria-live="polite">{confirmed ? <>증발한 수분 무게를 뺀<br /><strong>정확한 무게</strong>를 <strong>입력</strong>했어요</> : <>조리하면서 줄어드는 무게를<br />고려한 예상값이에요.</>}</p><div className="cooked-scale-visual"><Image onLoad={() => setScaleReady(true)} className="cooked-scale-image" unoptimized src="/assets/funnel/food/jeyuk-on-scale.webp" alt="완성된 제육볶음이 올라간 디지털 주방저울" width={500} height={500} priority /><output style={{ visibility: scaleReady ? "visible" : "hidden" }} className="cooked-scale-display" aria-label="완성 무게 1180g">1,180g</output></div><button className="primary-button screen-bottom-button strong-action-button" type="button" onClick={confirmed ? onNext : () => setConfirmed(true)}>{confirmed ? <>다음 <ArrowRightIcon /></> : <>저울로 재보니 <span className="primary-button-number">1,180g</span></>}</button></Frame>;
+  if (step === 4) return <Frame stage="experience-4" className="demo-screen portion-screen"><DemoHeader step={4} label="먹은 양" onBack={onBack} /><div className="demo-title"><h1>1,180g 중 얼마나 드셨나요?</h1></div><div className="portion-visual"><Image onLoad={() => setScaleReady(true)} className="portion-image" unoptimized src="/assets/funnel/food/jeyuk-on-scale.webp" alt="흰 접시의 제육볶음이 올라간 디지털 주방저울" width={500} height={500} priority /><output style={{ visibility: scaleReady ? "visible" : "hidden" }} className="scale-display" aria-label="저울 표시 320g">320g</output></div><button className="primary-button screen-bottom-button strong-action-button" type="button" onClick={onNext}><span className="primary-button-number">320g</span> 입력하기</button></Frame>;
   return <Frame stage="experience-5" className="demo-screen nutrition-screen"><DemoHeader step={5} label="영양 계산 완료" onBack={onBack} /><div className="demo-title demo-title--nutrition"><div className="nutrition-confetti" aria-hidden="true">{Array.from({ length: 7 }, (_, index) => <StarFilledIcon key={index} />)}</div><h1>계산 완료!</h1><div className="nutrition-serving-line" data-testid="nutrition-serving-line"><p>제육볶음 320g</p><strong className="nutrition-calories"><span>{calories}</span> <small>kcal</small></strong></div></div><div className="macro-grid">{[["탄수화물", `${carbs}g`, "/assets/funnel/food/macro-carb-wheat.png", "황금빛 밀 이삭"], ["단백질", `${protein}g`, "/assets/funnel/food/macro-protein-arm.png", "힘을 준 팔"], ["지방", `${fat}g`, "/assets/funnel/food/macro-fat-drop.png", "황금빛 기름 방울"]].map(([label, value, image, alt]) => <div key={label}><span>{label}</span><Image className="macro-image" src={image} alt={alt} width={74} height={74} /><strong>{value}</strong></div>)}</div><button className="primary-button screen-bottom-button" type="button" onClick={onNext}>식단에 기록하기 <ArrowRightIcon /></button></Frame>;
 }
 
@@ -244,12 +244,12 @@ function WeekStrip() { const today = getKoreanToday(); return <div className="we
 function PlannerSummary({ calories, carbs, protein, fat, highlight, testId = "planner-summary" }: { calories: number; carbs: number; protein: number; fat: number; highlight?: "meal" | "product"; testId?: string }) { return <div className={`planner-summary ${highlight ? "is-updating" : ""}`} data-testid={testId} data-highlight={highlight}>{[["칼로리", calories, "kcal"], ["탄수화물", carbs, "g"], ["단백질", protein, "g"], ["지방", fat, "g"]].map(([label, value, unit]) => <div key={label}><span>{label}</span><strong>{Number(value).toLocaleString("ko-KR")}<small className="planner-summary-unit"> {unit}</small></strong></div>)}</div>; }
 
 type PlannerFood = { name: string; detail: string; image: string; product?: boolean };
-const BREAKFAST: PlannerFood = { name: "그릭요거트 볼", detail: "420 kcal · 단백질 22g", image: "/assets/funnel/food/greek-yogurt-bowl.png" };
-const LUNCH: PlannerFood = { name: "닭가슴살 현미밥", detail: "700 kcal · 단백질 50g", image: "/assets/funnel/food/chicken-brown-rice-bowl.png" };
-const HOMECOOK: PlannerFood = { name: "제육볶음 320g", detail: "487 kcal · 단백질 39g", image: "/assets/funnel/food/recipe-jeyuk-thumbnail.png" };
+const BREAKFAST: PlannerFood = { name: "그릭요거트 볼", detail: "420 kcal · 단백질 22g", image: "/assets/funnel/food/greek-yogurt-bowl.webp" };
+const LUNCH: PlannerFood = { name: "닭가슴살 현미밥", detail: "700 kcal · 단백질 50g", image: "/assets/funnel/food/chicken-brown-rice-bowl.webp" };
+const HOMECOOK: PlannerFood = { name: "제육볶음 320g", detail: "487 kcal · 단백질 39g", image: "/assets/funnel/food/recipe-jeyuk-thumbnail.webp" };
 const DRINK: PlannerFood = { name: "더:단백 드링크 초코", detail: "105 kcal · 단백질 20g", image: "/assets/funnel/products/the-protein-choco.png", product: true };
 
-function PlannerMealRow({ label, foods, animateLast, highlight, ariaPrefix }: { label: string; foods: PlannerFood[]; animateLast?: boolean; highlight?: "meal" | "product"; ariaPrefix?: string }) { return <div className={`meal-row ${foods.length > 1 ? "has-multiple-foods" : ""} ${highlight ? `is-highlighted is-highlighted--${highlight}` : ""}`}><span className="meal-row-label">{label}</span><div className="meal-foods">{foods.map((food, index) => <div className={`meal-food ${animateLast && index === foods.length - 1 ? "is-entering" : ""}`} key={food.name}><Image className={food.product ? "product-thumb" : ""} src={food.image} alt="" width={46} height={46} /><div><strong>{food.name}</strong><span>{food.detail}</span></div></div>)}</div><button className="meal-add-button" type="button" disabled={Boolean(ariaPrefix)} aria-label={`${ariaPrefix ? `${ariaPrefix} ` : "오늘 "}${label} 음식 추가`}>+</button></div>; }
+function PlannerMealRow({ label, foods, animateLast, highlight, ariaPrefix }: { label: string; foods: PlannerFood[]; animateLast?: boolean; highlight?: "meal" | "product"; ariaPrefix?: string }) { return <div className={`meal-row ${foods.length > 1 ? "has-multiple-foods" : ""} ${highlight ? `is-highlighted is-highlighted--${highlight}` : ""}`}><span className="meal-row-label">{label}</span><div className="meal-foods">{foods.map((food, index) => <div className={`meal-food ${animateLast && index === foods.length - 1 ? "is-entering" : ""}`} key={food.name}><Image className={food.product ? "product-thumb" : ""} unoptimized={food.image.endsWith(".webp")} loading="eager" src={food.image} alt="" width={46} height={46} /><div><strong>{food.name}</strong><span>{food.detail}</span></div></div>)}</div><button className="meal-add-button" type="button" disabled={Boolean(ariaPrefix)} aria-label={`${ariaPrefix ? `${ariaPrefix} ` : "오늘 "}${label} 음식 추가`}>+</button></div>; }
 
 function TomorrowPreview() { const tomorrow = getKoreanToday(); tomorrow.setDate(tomorrow.getDate() + 1); return <section className="next-day-preview" data-testid="tomorrow-preview"><header><strong>내일 · {formatKoreanDate(tomorrow)}</strong><span>0 / 3</span></header><PlannerSummary calories={0} carbs={0} protein={0} fat={0} testId="tomorrow-summary" />{["아침", "점심", "저녁"].map((label) => <PlannerMealRow label={label} foods={[]} ariaPrefix="내일" key={label} />)}</section>; }
 
@@ -299,7 +299,7 @@ function Done({ onBack, onReset }: { onBack: () => void; onReset: () => void }) 
 }
 
 export function MarketingDemandValidationScreen({ getTurnstileToken }: MarketingDemandValidationScreenProps) {
-  const [entry, setEntry] = useState<{ adVariant: MarketingValidationAdVariant; attribution: Record<string, string | null>; sharedResult: MarketingValidationQuizResult | null }>({ adVariant: "default", attribution: {}, sharedResult: null });
+  const [entry, setEntry] = useState<{ adVariant: ActiveMarketingAdVariant; attribution: Record<string, string | null>; sharedResult: MarketingValidationQuizResult | null }>({ adVariant: "a", attribution: {}, sharedResult: null });
   const [entryReady, setEntryReady] = useState(false);
   const [stage, setStage] = useState<MarketingValidationUiStage>("hero");
   const [history, setHistory] = useState<MarketingValidationUiStage[]>([]);
@@ -446,16 +446,16 @@ export function MarketingDemandValidationScreen({ getTurnstileToken }: Marketing
     push("done");
     return null;
   };
-  const reset = () => { window.history.replaceState({}, "", "/beta"); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
+  const reset = () => { window.history.replaceState({}, "", `/beta?ad_variant=${entry.adVariant}`); setAnswers({}); setHistory([]); setQuestionIndex(0); setResult("eyeballing-master"); setStage("hero"); setQueueRecovery(null); setRecovering(false); setShareFeedback(null); transitionLocked.current = false; queueErrorRef.current = ""; setLoading(true); setEntry((current) => ({ ...current, sharedResult: null })); };
 
-  if (loading) return <div className="mdv2-root"><main className="mdv2-screen screen-content mdv2-loading" role="status" aria-label="테스트 불러오는 중"><Brand /><div /><div /><div /></main></div>;
+  if (loading) return <div className="mdv2-root"><main className="mdv2-screen screen-content mdv2-loading" role="status" aria-label="테스트 불러오는 중"><span className="mdv2-loading-dot" aria-hidden="true" /><p>테스트를 불러오고 있어요.</p></main></div>;
   if (shellError) return <div className="mdv2-root"><Frame stage="empty" className="mdv2-state-screen"><Brand /><h1>새 테스트로 다시 시작할게요.</h1><p role="alert">{shellError}</p><button className="primary-button" type="button" onClick={reset}>새로 시작하기</button></Frame></div>;
   if (queueRecovery) return <div className="mdv2-root"><Frame stage="recovery" className="mdv2-state-screen"><Brand /><h1>잠시 연결이 끊겼어요.</h1><div className="mdv2-error" role="alert"><p>{queueRecovery.message}</p></div><button className="primary-button" type="button" disabled={recovering} onClick={() => void retryQueue()}>{recovering ? "다시 연결하는 중…" : "다시 시도"}</button></Frame></div>;
 
   let content: ReactNode;
   if (stage === "hero") content = <Hero variant={entry.adVariant} onStart={() => void start()} />;
   else if (stage === "quiz") content = <Quiz index={questionIndex} answers={answers} locked={transitionLocked.current} onBack={() => questionIndex ? setQuestionIndex((current) => current - 1) : back()} onSelect={select} />;
-  else if (stage === "result") content = <Result type={result} preview={preview} onBack={back} onNext={async () => { const showExperience = () => push("experience-1"); if (await record({ action: "experience_started" })) showExperience(); else showQueueRecovery("체험 화면을 열지 못했어요. 다시 시도해 주세요.", showExperience); }} onPreviewStart={reset} onShare={() => void share()} shareFeedback={shareFeedback} />;
+  else if (stage === "result") content = <Result type={result} preview={preview} onBack={preview ? reset : back} onNext={async () => { const showExperience = () => push("experience-1"); if (await record({ action: "experience_started" })) showExperience(); else showQueueRecovery("체험 화면을 열지 못했어요. 다시 시도해 주세요.", showExperience); }} onPreviewStart={reset} onShare={() => void share()} shareFeedback={shareFeedback} />;
   else if (stage.startsWith("experience-")) { const step = Number(stage.at(-1)); content = <Experience step={step} reduced={reduced} onBack={back} onNext={async () => { if (step < 5) push(`experience-${step + 1}` as MarketingValidationUiStage); else { const showPlanner = () => push("planner-homecook"); if (await record({ action: "experience_completed" })) showPlanner(); else showQueueRecovery("식단 화면을 열지 못했어요. 다시 시도해 주세요.", showPlanner); } }} />; }
   else if (stage === "planner-homecook") content = <Planner complete={false} reduced={reduced} onBack={back} onNext={() => push("packaged-food")} />;
   else if (stage === "packaged-food") content = <Packaged onBack={back} onNext={() => push("planner-complete")} />;

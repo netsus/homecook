@@ -114,6 +114,7 @@ const LIB_FILE_OWNER_SCOPE = {
   "lib/server/recipe-image-stale-scanner.ts": "system",
   "lib/server/recipe-nutrition-snapshot.ts": "system",
   "lib/server/user-bootstrap.ts": "authenticated-user",
+  "lib/server/user-gamification-projection.ts": "authenticated-user",
   "lib/server/user-gamification.ts": "authenticated-user",
   "lib/server/user-growth-activity.ts": "authenticated-user",
   "lib/server/user-progress.ts": "authenticated-user",

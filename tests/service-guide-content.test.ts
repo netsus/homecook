@@ -14,7 +14,7 @@ describe("service guide content", () => {
       "계획하기",
       "장보기",
       "요리하기",
-      "남은요리 활용",
+      "먹은 만큼 기록",
     ]);
   });
 
@@ -22,6 +22,16 @@ describe("service guide content", () => {
     expect(SERVICE_GUIDE_FEATURES).toHaveLength(4);
     expect(SERVICE_GUIDE_GUIDES).toHaveLength(6);
     expect(SERVICE_GUIDE_FAQS).toHaveLength(8);
+  });
+
+  it("explains actual intake separately from plans and does not promise unfinished detail editing", () => {
+    const content = JSON.stringify([SERVICE_GUIDE_STEPS, SERVICE_GUIDE_FEATURES, SERVICE_GUIDE_GUIDES, SERVICE_GUIDE_FAQS]);
+    expect(content).toContain("완성된 음식의 전체 무게");
+    expect(content).toContain("g(그램)");
+    expect(content).toContain("요리 계획에 담는 것만으로 식사 기록이 생기지는 않아요");
+    expect(content).toContain("식사 상세와 수정 기능은 준비 중");
+    expect(content).toContain("YouTube");
+    expect(content).toContain("확인할 수 없는 값");
   });
 
   it("uses unique ids and only internal guide links", () => {

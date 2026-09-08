@@ -594,7 +594,7 @@ export function FoodProductCreateForm({
           목록으로
         </button>
         <button
-          className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-[var(--foreground)] disabled:opacity-50"
+          className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-50"
           disabled={isSubmitting}
           type="submit"
         >

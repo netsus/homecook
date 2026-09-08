@@ -320,7 +320,8 @@ test.describe("slice 12a: shopping complete", () => {
       await expect(
         completedMeal.getByRole("link", { name: "김치찌개" }),
       ).toBeVisible();
-      await expect(completedMeal).toContainText("4인분 · 장보기 완료");
+      await expect(completedMeal).toContainText("4인분");
+      await expect(completedMeal).toContainText("장보기 완료");
     });
 
     test("should handle 401 error by redirecting to login", async ({ page }) => {

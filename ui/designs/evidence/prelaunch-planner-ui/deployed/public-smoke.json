@@ -1,0 +1,82 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "width": 375,
+      "weeklyLog": true,
+      "brandAndWeight": [
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        },
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        },
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        },
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        }
+      ],
+      "planNutrition": true,
+      "banner": true
+    },
+    {
+      "width": 1280,
+      "weeklyLog": true,
+      "brandAndWeight": [
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        },
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        },
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        },
+        {
+          "weight": "900",
+          "color": "rgb(0, 161, 255)"
+        }
+      ],
+      "planNutrition": true,
+      "banner": true
+    },
+    {
+      "socialSignupClosed": true,
+      "status": 503
+    },
+    {
+      "landing": "a",
+      "status": 200,
+      "url": "https://app.mumeok.kr/beta?ad_variant=a"
+    },
+    {
+      "landing": "b",
+      "status": 200,
+      "url": "https://app.mumeok.kr/beta?ad_variant=b"
+    },
+    {
+      "landing": "c",
+      "status": 200,
+      "url": "https://app.mumeok.kr/beta?ad_variant=c"
+    },
+    {
+      "canonical": "/beta",
+      "status": 307,
+      "location": "/beta?ad_variant=a"
+    },
+    {
+      "canonical": "/beta?ad_variant=d",
+      "status": 307,
+      "location": "/beta?ad_variant=a"
+    }
+  ]
+}

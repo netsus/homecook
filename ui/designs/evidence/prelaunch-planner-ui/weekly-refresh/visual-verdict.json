@@ -1,0 +1,16 @@
+{
+  "score": 96,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "일주일 세로 식사 기록과 파란 숫자 합계 타일",
+    "계획 전체 영양 막대와 명시 무게/미확인 안내",
+    "선택 날짜 파랑·흰글씨와 별도 오늘 라벨",
+    "빈날짜 반복 안내/여백 제거",
+    "로고 스켈레톤 제거와 배너 정렬"
+  ],
+  "suggestions": [],
+  "reasoning": "모바일320375·데스크톱1280 브라우저21개검사통과. WebKit 날짜동기화/홈복귀와배너두문구top6px height20px 확인. 실DB초기화 JWT오류는 별도환경제약으로 기록.",
+  "next_actions": [],
+  "evidence_dir": "ui/designs/evidence/prelaunch-planner-ui/weekly-refresh"
+}

@@ -1,0 +1,27 @@
+{
+  "finalGeometry": {
+    "headerBottom": 249,
+    "pageWidth": 320,
+    "selectedCardTop": 261,
+    "url": "http://127.0.0.1:3212/planner?date=2026-09-12",
+    "viewport": {
+      "height": 844,
+      "width": 320
+    }
+  },
+  "checks": {
+    "swipeNextWeek": true,
+    "weekRecenters": true,
+    "stickyOnScroll": true,
+    "dateSelectionUnobscured": true,
+    "emptySlotOpensMenu": true,
+    "productNewPlanOptionAbsent": true,
+    "recipeSelectionAndCreate": true,
+    "createdMealDetailDate": "2026-09-07",
+    "createdMealDetailSlot": "점심",
+    "desktopRows": 7,
+    "desktopPageWidth": 1280,
+    "mobile320PageWidth": 320
+  },
+  "fixture": "isolated QA copy; mockRecipeId replaced with the fixture existing dbSmokeRecipeId; no real account/database mutation"
+}

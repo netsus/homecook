@@ -80,6 +80,7 @@ function renderImport(props: {
 
 describe("YT_IMPORT async extraction", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
     window.sessionStorage.clear();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -131,6 +132,15 @@ describe("YT_IMPORT async extraction", () => {
     vi.mocked(asyncApi.fetchYoutubeExtractionSession).mockReset();
     vi.mocked(syncApi.extractYoutubeRecipe).mockReset();
     routerReplace.mockReset();
+  });
+
+  it("blocks new extraction in preparation mode without invoking extraction APIs", () => {
+    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    render(<YoutubeImportScreen columnId="" planDate="2026-09-07" slotName="" initialYoutubeUrl="https://www.youtube.com/watch?v=example" />);
+    expect(screen.getByText("준비 중인 기능이에요")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "돌아가기" }).getAttribute("href")).toBe("/planner?date=2026-09-07");
+    expect(asyncApi.enqueueYoutubeExtraction).not.toHaveBeenCalled();
+    expect(syncApi.validateYoutubeUrl).not.toHaveBeenCalled();
   });
 
   afterEach(() => cleanup());
@@ -448,7 +458,7 @@ describe("YT_IMPORT async extraction", () => {
     renderImport({ entryContext: "standalone" });
 
     expect(screen.getByRole("link", { name: "홈" }).getAttribute("aria-current")).toBe("page");
-    expect(screen.getByRole("link", { name: "플래너" }).getAttribute("aria-current")).toBeNull();
+    expect(screen.getByRole("link", { name: "요리 계획" }).getAttribute("aria-current")).toBeNull();
     expect(screen.queryByText("Planner")).toBeNull();
   });
 

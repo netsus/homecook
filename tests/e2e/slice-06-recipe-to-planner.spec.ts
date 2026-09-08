@@ -229,7 +229,7 @@ test.describe("Slice 06 recipe-to-planner", () => {
     await page.goto("/planner");
 
     await expect(
-      page.getByRole("heading", { name: "플래너" }),
+      page.getByRole("heading", { name: "요리 계획" }),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: new RegExp(RECIPE_TITLE) }).first(),
