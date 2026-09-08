@@ -141,4 +141,4 @@
 - [x] session 연결 전 CTA는 disabled/aria-busy이고 성공 후 활성화되며, API failure recovery와 action 순서는 유지된다.
 - [x] 핵심 journey WebP 10개는 각 250KiB 미만, 합계 1MiB 미만이고 해당 화면은 원본 PNG를 요청하지 않는다.
 - [x] 이후 화면 preload는 quiz 시작 뒤 실행되어 initial Hero LCP network와 경쟁하지 않는다.
-- [ ] 동일 조건 Lighthouse 3회 median과 실제 in-app browser에 가까운 cold-load network evidence를 전후 비교한다.
+- [x] public Instagram·Facebook URL을 각각 cold mobile Lighthouse 3회 측정하고, API 지연과 화면 표시 분리 evidence를 확인한다.
