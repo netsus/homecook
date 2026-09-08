@@ -23,5 +23,7 @@
 
 ## 남은 작업
 
-- 실제 운영 배포와 광고 관리자 프로필 링크 교체는 이 구현 검증에 포함하지 않는다.
-- 개인정보처리방침의 운영자·보호책임자 공개값은 사용자 입력 후 서버의 공개 환경 설정으로 반영해야 한다.
+- 운영 배포 완료: exact SHA `7748382ba8bb3265547a9c45f885cdbf87a75c9a`, build `prelaunch-7748382ba8bb-wGnk0m`.
+- 서버 제품 테스트 3,091개 통과 후 production build, 임시 포트·asset 검사와 웹 교체가 성공했다. rollbackAvailable=true, recoveryPending=false, DB 변경 없음.
+- 공개 브라우저에서 API 요청을 가로채 운영 DB에 test row를 만들지 않고 Instagram/Facebook URL·Hero A·exact UTM payload를 확인했다. 실제 view API 전송, 운영 시험 session, 이메일 제출은 모두 0이다.
+- 광고 관리자에서 각 플랫폼 프로필 링크를 실제 교체하는 작업은 외부 광고 계정 범위로 남는다.
