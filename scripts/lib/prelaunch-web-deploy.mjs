@@ -14,11 +14,18 @@ export function prelaunchChangedFiles(git, from, to) {
 export function classifyPrelaunchScope(files, before, after) {
   const scope = { web: [], database: [], support: [], api: [] };
   const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/)|^(?:AGENTS|CLAUDE|README)\.md$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
+  const exactSupport = new Set([
+    "design-qa.md",
+    "scripts/generate-mumeok-icon-edges.mjs",
+    "scripts/lib/validate-workflow-v2.mjs",
+    "scripts/validate-account-session-generation-inventory.mjs",
+    "scripts/youtube-real-app-route-smoke.mjs",
+  ]);
   const web = /^(?:app|components|lib|stores|types|hooks|public)\/|^(?:middleware\.[cm]?[jt]s|next\.config\.[cm]?[jt]s|tsconfig\.json|postcss\.config\.[cm]?js|package\.json|pnpm-lock\.yaml|\.env\.example)$/u;
   const denied = [];
   for (const file of files) {
     if (/^supabase\/migrations\/\d+_[^/]+\.sql$/u.test(file)) scope.database.push(file);
-    else if (support.test(file)) scope.support.push(file);
+    else if (support.test(file) || exactSupport.has(file)) scope.support.push(file);
     else if (web.test(file)) scope.web.push(file);
     else denied.push(file);
   }

@@ -140,6 +140,19 @@ describe("prelaunch web deployment", () => {
       api: [],
     });
   });
+  it("permits exact UI QA and validation helpers without broadening runtime script access", () => {
+    const files = [
+      "design-qa.md",
+      "scripts/generate-mumeok-icon-edges.mjs",
+      "scripts/lib/validate-workflow-v2.mjs",
+      "scripts/validate-account-session-generation-inventory.mjs",
+      "scripts/youtube-real-app-route-smoke.mjs",
+    ];
+    expect(classifyPrelaunchScope(files, basePackage, basePackage).support).toEqual(files);
+    for (const file of ["scripts/generate-production-icon-edges.mjs", "scripts/lib/validate-production-runtime.mjs", "scripts/youtube-worker-route.mjs"]) {
+      expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow("허용");
+    }
+  });
   it.each(["scripts/ci-path-filter-extra.mjs", "scripts/lib/ci-path-filter.mjs", "scripts/arbitrary.mjs"])("does not extend the CI exception to %s", (file) => {
     expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow("허용");
   });
