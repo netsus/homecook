@@ -100,12 +100,12 @@ describe("dependency security overrides", () => {
     if (Array.isArray(allowBuilds)) {
       expect(allowBuilds).toEqual([
         "esbuild@0.28.1",
-        "unrs-resolver@1.11.1",
+        "unrs-resolver@1.12.2",
       ]);
     } else {
       expect(allowBuilds).toEqual({
         "esbuild@0.28.1": true,
-        "unrs-resolver@1.11.1": true,
+        "unrs-resolver@1.12.2": true,
       });
     }
   });
