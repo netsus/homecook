@@ -292,7 +292,7 @@ export function AccountQuarantineScreen({
 
             {isAuthPresent ? (
               <>
-                <h1 className="mt-4 text-[24px] font-extrabold leading-[1.35]">
+                <h1 className="mt-4 text-[24px] font-extrabold leading-[1.35] max-[360px]:mt-3">
                   계정 보호 중
                 </h1>
                 <p className="mt-2 text-sm font-semibold leading-6 text-[var(--text-2)]">
@@ -302,14 +302,14 @@ export function AccountQuarantineScreen({
                   본인 확인 후 복구하거나 삭제를 검토할 수 있어요.
                 </p>
 
-                <div className="mt-5 rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
+                <div className="mt-5 rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface-fill)] p-4 max-[360px]:mt-3">
                   <p className="text-sm font-bold">본인 확인</p>
                   <p className="mt-1 text-xs leading-5 text-[var(--text-3)]">
                     로그인 상태와 계정 연결을 안전하게 다시 확인해요.
                   </p>
                 </div>
 
-                <div className="mt-4 rounded-[var(--radius-panel)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-4">
+                <div className="mt-4 rounded-[var(--radius-panel)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-4 max-[360px]:mt-3">
                   <label
                     className="text-sm font-bold"
                     htmlFor="account-quarantine-nickname"
@@ -345,7 +345,7 @@ export function AccountQuarantineScreen({
                     </p>
                   ) : null}
                   <button
-                    className="mt-4 flex min-h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 text-[15px] font-extrabold text-[var(--text-inverse)]"
+                    className="mt-4 flex min-h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 text-[15px] font-extrabold text-[var(--text-inverse)] max-[360px]:mt-3"
                     data-variant="primary"
                     onClick={() => void submitRecovery()}
                     type="button"

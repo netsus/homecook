@@ -1865,6 +1865,8 @@ function HomeGuideCard() {
           height={630}
           sizes="(max-width: 414px) 58vw, 240px"
           className="h-full w-full object-contain"
+          fetchPriority="high"
+          priority
         />
       </span>
     </Link>
