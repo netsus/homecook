@@ -20,7 +20,7 @@ describe("WebTopNav service name", () => {
 
     const logo = brand.querySelector("img");
     expect(logo).not.toBeNull();
-    expect(logo?.getAttribute("src")).toContain(
+    expect(decodeURIComponent(logo?.getAttribute("src") ?? "")).toContain(
       "/brand/mumeok-logo-horizontal.png",
     );
     expect(logo?.getAttribute("alt")).toBe("");
@@ -38,7 +38,7 @@ describe("WebTopNav service name", () => {
     });
     const logo = brand.querySelector("img");
     expect(logo).not.toBeNull();
-    expect(logo?.getAttribute("src")).toContain(
+    expect(decodeURIComponent(logo?.getAttribute("src") ?? "")).toContain(
       "/brand/mumeok-logo-horizontal.png",
     );
     expect(logo?.getAttribute("alt")).toBe("");

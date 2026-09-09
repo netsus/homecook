@@ -29,7 +29,7 @@ describe("app shell", () => {
 
     const brandLink = screen.getByRole("link", { name: "무먹, 무엇을 먹든" });
     expect(brandLink.getAttribute("href")).toBe("/");
-    expect(brandLink.querySelector("img")?.getAttribute("src")).toContain(
+    expect(decodeURIComponent(brandLink.querySelector("img")?.getAttribute("src") ?? "")).toContain(
       "/brand/mumeok-logo-horizontal.png",
     );
     expect(brandLink.textContent).toBe("");

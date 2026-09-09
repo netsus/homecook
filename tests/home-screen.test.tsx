@@ -314,7 +314,7 @@ describe("home screen", () => {
       name: "무먹, 무엇을 먹든",
     });
     expect(mobileBrand.className).toContain("home-app-brand-lockup");
-    expect(mobileBrand.querySelector("img")?.getAttribute("src")).toContain(
+    expect(decodeURIComponent(mobileBrand.querySelector("img")?.getAttribute("src") ?? "")).toContain(
       "/brand/mumeok-logo-horizontal.png",
     );
     expect(mobileBrand.textContent).toBe("");
