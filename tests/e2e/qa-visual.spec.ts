@@ -526,9 +526,11 @@ test.describe("QA visual regression", () => {
       }),
     ).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-youtube-import-accepted.png", {
+    const acceptedScreenshot = await page.screenshot({
       animations: "disabled",
       fullPage: true,
+    });
+    expect(acceptedScreenshot).toMatchSnapshot("qa-youtube-import-accepted.png", {
       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
   });
