@@ -331,9 +331,10 @@ git grep -I -n -- '<exact path or filename>' origin/master -- \
 - PostgreSQL 영양 통합: 14 pass. build / lint / typecheck 통과.
 - dependency audit high 통과. Next.js 15.5.24, sharp 0.35.4,
   js-yaml 3.15.2/4.3.2의 신규 보안 하한을 고정했다.
-- current-head GitHub full visual이 드러낸 #1544 이후의 오래된 Linux desktop 기준 33개는
+- current-head GitHub full visual이 드러낸 #1544 이후의 오래된 Linux desktop 기준 30개는
   Playwright 1.58.2 Noble 컨테이너에서 재생성하고 대표 8화면을 원본 크기로 확인했다.
-  screenshot assertion과 허용치는 변경하지 않았으며 재비교는 exit 0이었다.
+  GitHub runner에 이미 맞춘 core 3개는 컨테이너의 글꼴 raster 차이를 반영하지 않고
+  보존했다. screenshot assertion과 허용치는 변경하지 않았다.
 - 준비 안내 landmark를 중첩 `aside`에서 이름 있는 `status`로 고치고, 비활성 funnel CTA도
   흰 글자의 대비가 유지되도록 진한 브랜드 파랑을 사용했다. 플래너 제목과 우측 프로필
   요약으로 바뀐 현재 desktop 구조에 accessibility readiness assertion도 동기화했다.
