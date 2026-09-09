@@ -366,7 +366,9 @@ describe("home screen", () => {
     expect(guideLink.getAttribute("href")).toBe("/about#how-to");
     expect(guideLink.hasAttribute("aria-pressed")).toBe(false);
     expect(within(guideLink).queryByText("무먹 가이드")).toBeNull();
-    expect(guideLink.querySelector("img")?.className).toContain("object-contain");
+    const guideImage = guideLink.querySelector("img");
+    expect(guideImage?.className).toContain("object-contain");
+    expect(guideImage?.getAttribute("fetchpriority")).toBe("high");
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
   });
 
