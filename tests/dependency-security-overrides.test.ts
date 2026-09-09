@@ -82,15 +82,16 @@ describe("dependency security overrides", () => {
       ?? readPnpmConfig("onlyBuiltDependencies");
 
     expect(overrides).toMatchObject({
-      "@eslint/eslintrc>js-yaml": "4.3.1",
+      "@eslint/eslintrc>js-yaml": "4.3.2",
       "@lhci/cli>lighthouse": "13.4.1",
       "@lhci/utils>lighthouse": "13.4.1",
-      "@lhci/utils>js-yaml": "3.15.1",
+      "@lhci/utils>js-yaml": "3.15.2",
       "minimatch@3.1.5>brace-expansion": "5.0.9",
       "minimatch@10.2.5>brace-expansion": "5.0.9",
       postcss: "8.5.18",
       "postcss>nanoid": "3.3.18",
       "socks>ip-address": "10.3.1",
+      "next>sharp": "0.35.4",
       undici: "7.29.0",
     });
     expect(patchedDependencies).toEqual({
@@ -126,11 +127,16 @@ describe("dependency security overrides", () => {
 
     expect(
       (eslintRequire("js-yaml/package.json") as { version: string }).version,
-    ).toBe("4.3.1");
+    ).toBe("4.3.2");
     expect(
       (lhciUtilsRequire("js-yaml/package.json") as { version: string })
         .version,
-    ).toBe("3.15.1");
+    ).toBe("3.15.2");
+    const nextRequire = createDependencyRequire("next");
+    expect(readResolvedPackageVersion(require.resolve("next"), "next"))
+      .toBe("15.5.24");
+    expect(readResolvedPackageVersion(nextRequire.resolve("sharp"), "sharp"))
+      .toBe("0.35.4");
     expect(
       (postcssRequire("nanoid/package.json") as { version: string }).version,
     ).toBe("3.3.18");
