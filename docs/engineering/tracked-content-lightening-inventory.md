@@ -283,3 +283,67 @@ git -c core.quotePath=false ls-tree -r \
 git grep -I -n -- '<exact path or filename>' origin/master -- \
   app components lib public tests scripts .github .workflow-v2 docs ui
 ```
+
+
+## 2차 B5 — legacy evidence writer 전환 (병합 보류)
+
+정리 계획: 직접 쓰기 전수 분류 → 기존 기능 assertion을 유지하는 경계 테스트 RED →
+공통 helper 재사용 → 기본/갱신/전체 회귀 확인 → 독립 리뷰 및 current-head CI.
+
+- 시작 기준: `458ce2daab6cdd91a70504657ce5981a4d4acf3c` (PR #1546까지 포함한 최신 master).
+- 변경: E2E spec 24개. 공통 `evidence-capture.ts`는 수정 없이 재사용했다.
+- tracked sink 전환: PNG 108곳 + JSON 5곳 = 113곳. JSON 4곳은 브랜드별 wrapper 2개로 묶었다.
+- direct mkdir 제거: 26곳. assertion / 기존 skip / viewport / 출력 파일명은 보존했다.
+- 독립 AST 비교: 변경 spec의 `expect`, `test.skip`, `test.fixme` 호출 1,379개 내용·순서 동일.
+- 경계 검사: source-local TypeScript AST로 import 별칭, const 경로·옵션 변수, spread,
+  문자열 `path` 키를 검사한다. imported 경로 상수의 파일 간 추적은 범위 밖이다.
+- TDD: 최초 경계 RED 3 fail / 11 pass → 오탐·별칭 fixture RED 2 fail → 최종 경계 16 pass.
+
+### 직접 쓰기 전수 분류
+
+| 분류 | 처리 |
+| --- | --- |
+| `qa-*-evidence.spec.ts` 17개 / PNG 80곳 | 공통 opt-in helper, mkdir 17곳 제거 |
+| auth-provider / personal-editor / nutrition | PNG 6곳 전환, 개인 환경변수를 공통 명령으로 통일 |
+| marketing demand validation | PNG 20곳 + JSON 1곳 전환, 기존 마케팅 갱신 alias도 opt-in |
+| service-brand 2개 | tracked PNG 2곳 + JSON 4곳 전환; 기존 report 출력과 before 보호 유지 |
+| youtube-async-extraction notification | 불필요한 tracked mkdir 3곳만 제거; 기존 report helper 보존 |
+| `cml14-ui-quality-repair`, `marketing-public-flow` | 원래 testInfo output 경로인 진단 캡처 보존 |
+| nutrition의 buffer 3곳 / product-ingredient-link의 buffer 1곳 | 메모리 검증·첨부 보존 |
+| 공통 helper의 testInfo fallback / qa-visual toHaveScreenshot | 기존 untracked report 및 visual baseline 보존 |
+
+### 현재 검증 결과
+
+- 관련 Vitest: 경계·marketing 계약·brand source guard 39 pass. 명령 전달 `--list` 확인.
+- 기본 집중 실행: 104 pass / 29 intended skip / 27 fail, 183.14초. tracked evidence diff 0.
+- 전체 CI matrix: **674 pass / 134 intended skip / 2 fail**, 357.46초. tracked evidence diff 0.
+- 비교 기준 B4: 676 pass / 134 skip / 0 fail, 380.21초. 이번 실행은 실패가 있어 22.75초
+  차이를 성능 개선량으로 판단하지 않는다. 회귀 목록 810개와 intended skip 수는 동일하다.
+- 기본 집중 실패가 발생한 원본 master spec 10개 재현: 69 pass / 4 skip / 25 fail,
+  192.18초. 현재 실패 27개 중 24개가 같은 test/project에서 재현됐다.
+- 원본 재현 중 변경된 tracked PNG 42개는 검증 직후 원래 bytes로 복원했다.
+- opt-in 집중 실행: 105 pass / 29 intended skip / 26 fail, 183.10초. 기존 159개 경로를
+  갱신하고 기존 writer가 지정한 미추적 PNG 9개를 생성했다. 총 168개 경로 모두 원상 복원,
+  최종 evidence diff 0. 추가 PNG 9개는 nutrition의 candidate/iteration 경로로 후속 정리 후보다.
+- 전체 Vitest: 8,309 pass / 509 skip / 4 timeout(3개 파일), 398.01초. timeout 단독 재실행은 4 pass / 0 fail(17.77초).
+- build / lint / typecheck 통과. current-head GitHub CI는 해당 Draft PR에서 확인한다.
+  로컬 전체 회귀의 재현된 2 fail 때문에 CI 상태와 별개로 B5 병합은 보류한다.
+- 독립 code review: blocker/major 0. 실행 gate가 통과했다는 의미는 아니다.
+
+### 병합 차단 및 후속 후보
+
+1. 전체 회귀의 두 실패는 B5에서 변경하지 않은 spec이다. #1544의 planner 날짜 rail이
+   `Home`을 주간 탐색 명령으로 소비하면서 기존 community evidence setup의 document
+   scroll 가정과 충돌한다. 완제품 등록 CTA는 상단 영역이 40px 증가한 뒤 하단이
+   y=936.34로 900px 첫 화면을 벗어난다. 두 실패는 단독 worker 재실행에서도 재현됐다.
+   runtime 수정이나 assertion 완화는 B5에 포함하지 않는다.
+2. 구형 desktop slice6/7, Wave1 account-library-leftovers/pantry/planner-meal-add/
+   recipebook-detail/settings-core/shopping-cooking 캡처의 과거 문구·선택자 재검토가 필요하다.
+3. YouTube 알림의 중복 button/사라진 global trigger/좁은 viewport 배치 및 marketing
+   evidence focus 초기화 검사도 현재 화면에 맞는 별도 QA 정비 후보다. skip을 추가하지 않는다.
+4. legacy root의 historical PNG archive 여부는 별도 consumer/복구 감사 후 판단한다.
+   이번 B5는 PNG/JSON 삭제·archive를 수행하지 않는다.
+
+현재 visual baseline 112개, `ui/designs/authority`, 진행 중 marketing canonical 및 public/runtime
+assets는 보존한다. 제품 runtime, DB, 서버 배포, Cloudflare, 운영 env 변경은 0이다.
+실패 gate가 해소될 때까지 merge 및 완료 Discord 알림을 수행하지 않는다.
