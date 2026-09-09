@@ -204,6 +204,23 @@ test.describe("personal-recipe-editor-decoupling local fixtures", () => {
     );
     await useRequiredMobileViewport(page, testInfo.project.name);
     await setAuthenticated(page);
+    // Keep the authenticated editor fixture independent of the live notification API.
+    await page.route(
+      (url) => url.pathname === "/api/v1/users/me/youtube-extraction-jobs",
+      async (route) => {
+        if (route.request().method() !== "GET") {
+          await route.continue();
+          return;
+        }
+        await route.fulfill({
+          json: {
+            success: true,
+            data: { items: [], next_cursor: null },
+            error: null,
+          },
+        });
+      },
+    );
   });
 
   test("personal-recipe-editor-decoupling keeps RECIPE_DETAIL capability-off without disturbing primary actions", async ({
@@ -277,9 +294,12 @@ test.describe("personal-recipe-editor-decoupling local fixtures", () => {
 
     await page.getByRole("button", { name: "+ 재료 추가하기" }).click();
     const ingredientDialog = page.getByRole("dialog", { name: "재료로 검색" });
-    await ingredientDialog
-      .getByRole("checkbox", { name: "김치", exact: true })
-      .click({ force: true });
+    const kimchiCheckbox = ingredientDialog.getByRole("checkbox", {
+      name: "김치",
+      exact: true,
+    });
+    await ingredientDialog.locator("label").filter({ hasText: /^김치$/u }).click();
+    await expect(kimchiCheckbox).toBeChecked();
     await ingredientDialog
       .getByRole("button", { name: "선택한 재료 1개 추가" })
       .click();

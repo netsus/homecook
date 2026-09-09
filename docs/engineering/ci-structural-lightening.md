@@ -206,3 +206,19 @@ scope의 single-file sparse checkout은 pinned [actions/checkout 구현](https:/
 - 작업 산출물은 `chore/ci-structural-lightening`의 로컬 변경이며, PR·merge·배포는 하지 않았다.
   원본 복구는 과거 Git commit에 의존한다. 향후 history rewrite를 하려면 원본을 별도 검증된
   보관소로 옮긴 뒤 receipt의 복구 경로부터 갱신해야 한다.
+
+## PR #1549 출고 검증 보수
+
+사용자가 커밋·PR·전체 검사·병합을 승인했다. 서버 배포는 별도이며 실행하지 않는다.
+첫 GitHub HEAD `31f3b059`에서 quality/build/security/visual은 통과했고, HOME LCP와 편집기 fixture가 실패했다.
+
+- HOME LCP는 가이드 이미지였으며 초기 로고가 표시138px에 비해1040px 원본135KB로 전송됐다.
+  로고 원본·CSS·접근성은 유지하고 기존 Next image optimizer에 표시 폭 `138px/174px`을 전달했다.
+  로컬 로고 응답은3,359bytes이며 Lighthouse HOME3회는3,691.61/4,326.81/3,722.40ms로 기존4,500ms 기준 통과.
+  관련 unit64 passed, build/lint 및 core visual15 passed. 이미지 원본·snapshot 기준·성능 예산은 변경하지 않았다.
+- 편집기 CI trace에서 mock하지 않은 알림 목록 GET이401을 반환해 로그인 안내가 재료 체크박스를 가렸다.
+  해당 spec의 정상 인증 fixture에 빈 알림 목록을 명시하고 force 클릭을 실제 label 클릭+checked 확인으로 바꿨다.
+  모든 기기에서 해당 spec은12 passed/6 기존 skipped, retry0으로 통과했다. 제품 인증 로직은 불변이다.
+- 추가 수정 별도 review: 발견0. 새 HEAD의 GitHub 전체 검사 완료 후에만 병합한다.
+- 초기회귀 shard 시간은320/459/462초였고, 마지막 shard는위 fixture실패를 포함했다.
+  최종 성공실행의 시간과 구분하며, 이 실패실행을 출고증거로 재사용하지 않는다.
