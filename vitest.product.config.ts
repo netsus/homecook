@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
+import { ALL_TEST_PATTERNS, HARNESS_TEST_FILES } from "./tests/helpers/vitest-suite-patterns";
 import { establishOwnedVitestSuiteTemp } from "./tests/helpers/vitest-owned-suite-temp";
 
 establishOwnedVitestSuiteTemp();
@@ -13,40 +14,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: [
-      "tests/*.backend.test.ts",
-      "tests/auth-*.test.ts",
-      "tests/*cook*.test.tsx",
-      "tests/dev-local-*.test.ts",
-      "tests/demand-validation.test.ts",
-      "tests/home-screen.test.tsx",
-      "tests/local-dev-*.test.ts",
-      "tests/local-dev-*.test.tsx",
-      "tests/local-google-oauth-env.test.ts",
-      "tests/local-supabase-env.test.ts",
-      "tests/login-screen.test.tsx",
-      "tests/marketing-*.test.ts",
-      "tests/marketing-*.test.tsx",
-      "tests/meal-*.test.ts",
-      "tests/meals-*.test.ts",
-      "tests/mypage-*.test.tsx",
-      "tests/pantry-*.test.tsx",
-      "tests/pending-action.test.ts",
-      "tests/planner-*.test.ts",
-      "tests/planner-*.test.tsx",
-      "tests/qa-fixture-*.test.ts",
-      "tests/qa-fixture-*.test.tsx",
-      "tests/recipe-*.test.ts",
-      "tests/recipe-*.test.tsx",
-      "tests/settings-*.test.tsx",
-      "tests/shopping-*.test.tsx",
-      "tests/slice-*-performance-fixture.test.ts",
-      "tests/social-login-buttons.test.tsx",
-      "tests/supabase-server.test.ts",
-      "tests/user-bootstrap.test.ts",
-      "tests/youtube-corpus.test.ts",
-      "tests/youtube-dictionary-resolution.test.ts",
-    ],
+    include: ALL_TEST_PATTERNS,
+    exclude: [...configDefaults.exclude, ...HARNESS_TEST_FILES],
     setupFiles: ["./tests/helpers/vitest-worker-temp.ts"],
   },
 });

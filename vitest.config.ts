@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
+import { ALL_TEST_PATTERNS } from "./tests/helpers/vitest-suite-patterns";
 import { establishOwnedVitestSuiteTemp } from "./tests/helpers/vitest-owned-suite-temp";
 
 establishOwnedVitestSuiteTemp();
@@ -13,7 +14,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    include: ALL_TEST_PATTERNS,
     setupFiles: ["./tests/helpers/vitest-worker-temp.ts"],
   },
 });
