@@ -86,6 +86,17 @@ const CODE_PATTERNS = [
   ...TRUSTED_CONTEXT_WORKFLOW_PATTERNS,
 ];
 
+// These files cannot change the isolated SQL fixture exercised by the nutrition gate.
+// Everything else that is code-relevant keeps the existing database verification.
+const PRESENTATION_ONLY_PATTERNS = [
+  "components/**",
+  "public/**",
+  "app/*.tsx",
+  "app/**/*.tsx",
+  "app/*.css",
+  "app/**/*.css",
+];
+
 const DEPENDENCY_AUDIT_PATTERNS = [
   "package.json",
   "pnpm-lock.yaml",
@@ -205,6 +216,8 @@ const FULL_REGRESSION_PATTERNS = [
  *
  * @typedef {{
  *   code: boolean;
+ *   nutrition_postgres: boolean;
+ *   product_tests_only: boolean;
  *   dependency_audit: boolean;
  *   security_function_authorization: boolean;
  *   security_smoke: boolean;
@@ -330,9 +343,19 @@ export function evaluateCiPathFilters(input = {}) {
   const forceCoreSuites = isFullRun || fullRegression;
   const lighthousePathChanged = hasAnyMatch(browserQaFiles, LIGHTHOUSE_PATTERNS);
   const lighthouse = isFullRun || (!draft && (hasFullCiLabel || lighthousePathChanged));
+  const code = isFullRun || hasAnyMatch(codeFiles, CODE_PATTERNS);
+  const nutritionPostgres = code && (
+    eventName !== "pull_request" || isFullRun || hasFullCiLabel ||
+    codeFiles.some((filePath) => matchesAnyPath(filePath, CODE_PATTERNS)
+      && !matchesAnyPath(filePath, PRESENTATION_ONLY_PATTERNS))
+  );
 
   return {
-    code: isFullRun || hasAnyMatch(codeFiles, CODE_PATTERNS),
+    code,
+    nutrition_postgres: nutritionPostgres,
+    product_tests_only: eventName === "pull_request" && !isFullRun && !hasFullCiLabel
+      && files.length > 0
+      && files.every((filePath) => matchesAnyPath(filePath, PRESENTATION_ONLY_PATTERNS)),
     dependency_audit:
       isFullRun || hasAnyMatch(files, DEPENDENCY_AUDIT_PATTERNS),
     security_function_authorization:

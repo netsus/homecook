@@ -45,6 +45,8 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          sparse-checkout: scripts/ci-path-filter.mjs
+          sparse-checkout-cone-mode: false
 
       - name: Resolve QA path filters
         id: filter
@@ -160,13 +162,9 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run visual web core suite
+      - name: Run visual core suite
         if: needs.changes.outputs.full_regression != 'true'
-        run: pnpm test:e2e:visual:web-core
-
-      - name: Run visual app core suite
-        if: needs.changes.outputs.full_regression != 'true'
-        run: pnpm test:e2e:visual:app-core
+        run: pnpm test:e2e:visual:core
 
       - name: Run visual full suite
         if: needs.changes.outputs.full_regression == 'true'
@@ -227,6 +225,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.full_regression == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -250,17 +252,17 @@ jobs:
 
       - name: Run full Playwright slice regression complete matrix
         if: needs.changes.outputs.complete_regression_matrix == 'true'
-        run: pnpm test:e2e:regression
+        run: pnpm test:e2e:regression --shard=${{ matrix.shard }}/3
 
       - name: Run full Playwright slice regression CI matrix
         if: needs.changes.outputs.complete_regression_matrix != 'true'
-        run: pnpm test:e2e:regression:ci
+        run: pnpm test:e2e:regression:ci --shard=${{ matrix.shard }}/3
 
       - name: Upload full regression report
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: playwright-full-regression-report
+          name: playwright-full-regression-report-${{ matrix.shard }}
           path: |
             playwright-report
             test-results

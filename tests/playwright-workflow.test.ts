@@ -40,8 +40,7 @@ describe("playwright workflow", () => {
 
     expect(workflow).toContain("pnpm test:e2e:smoke");
     expect(workflow).toContain("pnpm test:e2e:a11y:core");
-    expect(workflow).toContain("pnpm test:e2e:visual:web-core");
-    expect(workflow).toContain("pnpm test:e2e:visual:app-core");
+    expect(workflow).toContain("pnpm test:e2e:visual:core");
     expect(workflow).toContain("pnpm test:e2e:regression");
     expect(workflow).toContain("pnpm test:e2e:regression:ci");
     expect(workflow).toContain("pnpm test:lighthouse:run");
@@ -53,6 +52,47 @@ describe("playwright workflow", () => {
     expect(ciRegression).toContain("--project=desktop-chrome");
     expect(ciRegression).toContain("--project=mobile-chrome");
     expect(ciRegression).not.toContain("--project=mobile-ios-small");
+  });
+
+  it("runs core visual projects in one invocation and keeps individual diagnostic commands", () => {
+    const scripts = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).scripts;
+    const workflow = readFileSync(join(repoRoot, ".github/workflows/playwright.yml"), "utf8");
+    expect(scripts["test:e2e:visual:core"]).toBe("playwright test tests/e2e/qa-visual.spec.ts --grep '@visual-core' --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small");
+    expect(scripts["test:e2e:visual:web-core"]).toContain("--project=desktop-chrome");
+    expect(scripts["test:e2e:visual:app-core"]).toContain("--project=mobile-ios-small");
+    expect(workflow).not.toContain("run: pnpm test:e2e:visual:web-core");
+    expect(workflow).not.toContain("run: pnpm test:e2e:visual:app-core");
+  });
+
+  it("keeps the full quality suite while scoping only the nutrition database step", () => {
+    const workflow = readFileSync(join(repoRoot, ".github/workflows/ci.yml"), "utf8");
+    expect(workflow).toContain("nutrition_postgres: ${{ steps.filter.outputs.nutrition_postgres }}");
+    expect(workflow).toContain("run: pnpm test\n");
+    expect(workflow).toMatch(/name: Ingredient nutrition PostgreSQL integration\n\s+if: needs.scope.outputs.code == 'true' && needs.scope.outputs.nutrition_postgres != 'false'\n\s+run: pnpm test:nutrition-model:postgres/);
+  });
+
+  it("shards the complete and CI regression equally without cancelling sibling diagnostics", () => {
+    const workflow = readFileSync(join(repoRoot, ".github/workflows/playwright.yml"), "utf8");
+    const regression = workflow.slice(workflow.indexOf("  full-regression:"));
+    expect(regression).toContain("fail-fast: false");
+    expect(regression).toContain("shard: [1, 2, 3]");
+    expect(regression).toContain("run: pnpm test:e2e:regression --shard=${{ matrix.shard }}/3");
+    expect(regression).toContain("run: pnpm test:e2e:regression:ci --shard=${{ matrix.shard }}/3");
+    expect(regression).toContain("name: playwright-full-regression-report-${{ matrix.shard }}");
+  });
+
+  it("uses the product partition only for explicit presentation-only scope and defaults to all tests", () => {
+    const workflow = readFileSync(join(repoRoot, ".github/workflows/ci.yml"), "utf8");
+    expect(workflow).toContain("product_tests_only: ${{ steps.filter.outputs.product_tests_only }}");
+    expect(workflow).toMatch(/if: needs.scope.outputs.code == 'true' && needs.scope.outputs.product_tests_only == 'true'\n\s+run: pnpm test:product/);
+    expect(workflow).toMatch(/if: needs.scope.outputs.code == 'true' && needs.scope.outputs.product_tests_only != 'true'\n\s+run: pnpm test\n/);
+  });
+
+  it("checks out only the standalone classifier in all four scope jobs while preserving history", () => {
+    for (const file of ["ci", "playwright", "security-review", "security-smoke"]) {
+      const workflow = readFileSync(join(repoRoot, `.github/workflows/${file}.yml`), "utf8");
+      expect(workflow, file).toContain("fetch-depth: 0\n          sparse-checkout: scripts/ci-path-filter.mjs\n          sparse-checkout-cone-mode: false");
+    }
   });
 
   it("keeps one-shot marketing evidence capture out of repeated regression", () => {

@@ -1,7 +1,7 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -55,6 +55,72 @@ afterEach(() => {
 });
 
 describe("ci path filter", () => {
+  it("resolves the same push scope from a checkout containing only the classifier", () => {
+    const root = mkdtempSync(join(tmpdir(), "homecook-sparse-scope-"));
+    temporaryDirectories.push(root);
+    const git = (...args: string[]) => execFileSync("git", ["-c", "core.hooksPath=/dev/null", "-C", root, ...args], { encoding: "utf8" }).trim();
+    git("init", "-q");
+    git("config", "user.name", "Scope fixture");
+    git("config", "user.email", "scope@example.invalid");
+    mkdirSync(join(root, "scripts"));
+    mkdirSync(join(root, "components"));
+    writeFileSync(join(root, "scripts/ci-path-filter.mjs"), readFileSync("scripts/ci-path-filter.mjs"));
+    writeFileSync(join(root, "components/page.tsx"), "before");
+    git("add", ".");
+    git("commit", "-qm", "before");
+    const before = git("rev-parse", "HEAD");
+    writeFileSync(join(root, "components/page.tsx"), "after");
+    git("commit", "-qam", "after");
+    const after = git("rev-parse", "HEAD");
+    git("sparse-checkout", "set", "--no-cone", "/scripts/ci-path-filter.mjs");
+    expect(git("ls-files", "-t").split("\n").filter((line) => line.startsWith("H "))).toEqual(["H scripts/ci-path-filter.mjs"]);
+    const eventPath = join(root, ".git", "event.json");
+    writeFileSync(eventPath, JSON.stringify({ before, after }));
+    const env: NodeJS.ProcessEnv = { ...process.env, GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: eventPath };
+    delete env.CI_CHANGED_FILES;
+    const output = execFileSync(process.execPath, ["scripts/ci-path-filter.mjs"], { cwd: root, env, encoding: "utf8" });
+    const flags = Object.fromEntries(output.split("\n").filter((line) => /^[a-z_]+=(true|false)$/.test(line)).map((line) => {
+      const [key, value] = line.split("=");
+      return [key, value === "true"];
+    }));
+    expect(flags).toEqual(evaluateCiPathFilters({ changedFiles: ["components/page.tsx"], eventName: "push" }));
+  });
+
+  it("selects product tests only when every changed path is presentation-only on a PR", () => {
+    const ui = ["components/home/home-screen.tsx", "public/logo.svg", "app/page.tsx", "app/planner/page.tsx", "app/globals.css"];
+    expect(evaluateCiPathFilters({ changedFiles: ui }).product_tests_only).toBe(true);
+    for (const path of ["docs/README.md", "AGENTS.md", ".workflow-v2/a.json", ".agents/skills/a/SKILL.md", "unknown-file", "tests/home-screen.test.tsx", "scripts/ci-path-filter.mjs", "lib/server/a.ts", "package.json"]) {
+      expect(evaluateCiPathFilters({ changedFiles: [...ui, path] }).product_tests_only, path).toBe(false);
+    }
+    for (const eventName of ["push", "schedule", "workflow_dispatch"]) {
+      expect(evaluateCiPathFilters({ changedFiles: ui, eventName }).product_tests_only).toBe(false);
+    }
+    expect(evaluateCiPathFilters({ changedFiles: ui, labels: [{ name: "full-ci" }] }).product_tests_only).toBe(false);
+    expect(evaluateCiPathFilters({ changedFiles: ui, forceFullRun: true }).product_tests_only).toBe(false);
+    expect(evaluateCiPathFilters({ changedFiles: [] }).product_tests_only).toBe(false);
+  });
+
+  it("skips nutrition PostgreSQL only for presentation-only PRs", () => {
+    for (const path of ["components/home/home-screen.tsx", "public/logo.svg", "app/page.tsx", "app/planner/page.tsx", "app/globals.css"]) {
+      expect(evaluateCiPathFilters({ changedFiles: [path, "docs/note.md"] })).toMatchObject({
+        code: true, nutrition_postgres: false,
+      });
+      expect(evaluateCiPathFilters({ changedFiles: [path], eventName: "push" }).nutrition_postgres).toBe(true);
+      expect(evaluateCiPathFilters({ changedFiles: [path], labels: ["full-ci"] }).nutrition_postgres).toBe(true);
+    }
+  });
+
+  it("retains nutrition PostgreSQL for mixed, backend, migration, test, and tooling changes", () => {
+    for (const path of ["supabase/migrations/new.sql", "app/api/recipes/route.ts", "lib/server/nutrition.ts", "tests/ingredient-nutrition-postgres.integration.test.ts", "tests/helpers/vitest-worker-temp.ts", "scripts/new-tool.mjs", "types/api.ts", "stores/planner.ts", "hooks/use-recipe.ts", "package.json", "pnpm-lock.yaml", "vitest.config.ts", ".github/workflows/ci.yml", "scripts/ci-path-filter.mjs"]) {
+      expect(evaluateCiPathFilters({ changedFiles: ["components/home/home-screen.tsx", path] }).nutrition_postgres, path).toBe(true);
+    }
+    for (const eventName of ["schedule", "workflow_dispatch"]) {
+      expect(evaluateCiPathFilters({ eventName }).nutrition_postgres).toBe(true);
+    }
+    expect(evaluateCiPathFilters({ forceFullRun: true }).nutrition_postgres).toBe(true);
+    expect(evaluateCiPathFilters({ changedFiles: ["docs/note.md"] }).nutrition_postgres).toBe(false);
+  });
+
   it("matches repository-style glob patterns", () => {
     expect(matchesPathPattern("components/home/home-screen.tsx", "components/home/**")).toBe(
       true,
@@ -151,6 +217,8 @@ describe("ci path filter", () => {
       }),
     ).toEqual({
       code: false,
+      nutrition_postgres: false,
+      product_tests_only: false,
       dependency_audit: false,
       security_function_authorization: false,
       security_smoke: false,
@@ -172,6 +240,8 @@ describe("ci path filter", () => {
       }),
     ).toEqual({
       code: false,
+      nutrition_postgres: false,
+      product_tests_only: false,
       dependency_audit: false,
       security_function_authorization: false,
       security_smoke: false,
@@ -233,6 +303,8 @@ describe("ci path filter", () => {
 
     expect(result).toEqual({
       code: true,
+      nutrition_postgres: true,
+      product_tests_only: false,
       dependency_audit: false,
       security_function_authorization: false,
       security_smoke: true,
@@ -265,6 +337,8 @@ describe("ci path filter", () => {
       }),
     ).toEqual({
       code: true,
+      nutrition_postgres: true,
+      product_tests_only: false,
       dependency_audit: true,
       security_function_authorization: true,
       security_smoke: true,
@@ -283,6 +357,8 @@ describe("ci path filter", () => {
       }),
     ).toEqual({
       code: true,
+      nutrition_postgres: true,
+      product_tests_only: false,
       dependency_audit: true,
       security_function_authorization: true,
       security_smoke: true,
@@ -303,6 +379,8 @@ describe("ci path filter", () => {
       }),
     ).toMatchObject({
       code: false,
+      nutrition_postgres: false,
+      product_tests_only: false,
       dependency_audit: false,
       security_function_authorization: false,
       security_smoke: false,

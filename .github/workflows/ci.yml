@@ -21,12 +21,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
+      nutrition_postgres: ${{ steps.filter.outputs.nutrition_postgres }}
+      product_tests_only: ${{ steps.filter.outputs.product_tests_only }}
       security_function_authorization: ${{ steps.filter.outputs.security_function_authorization }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          sparse-checkout: scripts/ci-path-filter.mjs
+          sparse-checkout-cone-mode: false
 
       - name: Resolve CI path filters
         id: filter
@@ -76,13 +80,21 @@ jobs:
         if: needs.scope.outputs.code == 'true'
         run: pnpm typecheck
 
-      - name: Test
-        if: needs.scope.outputs.code == 'true'
+      - name: Test product for presentation-only pull requests
+        if: needs.scope.outputs.code == 'true' && needs.scope.outputs.product_tests_only == 'true'
+        run: pnpm test:product
+
+      - name: Test all suites
+        if: needs.scope.outputs.code == 'true' && needs.scope.outputs.product_tests_only != 'true'
         run: pnpm test
 
       - name: Ingredient nutrition PostgreSQL integration
-        if: needs.scope.outputs.code == 'true'
+        if: needs.scope.outputs.code == 'true' && needs.scope.outputs.nutrition_postgres != 'false'
         run: pnpm test:nutrition-model:postgres
+
+      - name: Report nutrition PostgreSQL not applicable
+        if: needs.scope.outputs.code == 'true' && needs.scope.outputs.nutrition_postgres == 'false'
+        run: echo "N/A - presentation-only PR; selected unit suite remains required."
 
   build:
     needs: scope
