@@ -608,7 +608,7 @@ async function captureViewportEvidence(
   await expect(plannerProductRow).toBeVisible();
   expect(plannerNutritionRequests).toBe(0);
   await expectNoHorizontalOverflow(page);
-  await page.keyboard.press("Home");
+  await page.evaluate(() => window.scrollTo(0, 0));
   expect(await page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(1);
   await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `planner-week-after-${viewport.suffix}.png`),

@@ -202,7 +202,12 @@ async function installMypageGrowthA11yRoutes(page: Page) {
 async function expectDesktopMypageNavLabel(page: Page) {
   const nav = page.getByRole("navigation", { name: "데스크탑 주요 메뉴" });
 
-  await expect(nav.getByRole("link", { name: "마이페이지" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /프로필 요약 열기/ }),
+  ).toBeVisible();
+  await expect(
+    nav.getByRole("link", { name: "마이페이지" }),
+  ).toHaveCount(0);
   await expect(
     nav.getByRole("link", { exact: true, name: "마이" }),
   ).toHaveCount(0);
@@ -469,9 +474,10 @@ test.describe("QA accessibility smoke", () => {
     await installMealDetailRoutes(page);
 
     await page.goto("/planner");
+    await expect(page.getByTestId("planner-screen")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "플래너", exact: true }),
-    ).toBeVisible();
+      page.getByRole("heading", { name: "요리 계획", exact: true }),
+    ).toHaveCount(1);
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });

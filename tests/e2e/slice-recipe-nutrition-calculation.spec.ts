@@ -640,7 +640,7 @@ async function captureIsolatedElement(
 
   try {
     await waitForSettledPaint(page);
-    await locator.screenshot({ path: screenshotPath, scale: "css" });
+    await captureTrackedEvidenceOnDemand(locator, { path: screenshotPath, scale: "css" });
   } finally {
     await overlays.evaluateAll((elements) => {
       for (const element of elements) {

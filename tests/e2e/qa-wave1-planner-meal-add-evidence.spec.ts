@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   installRecipeDetailRoutes,
   RECIPE_ID,
@@ -667,8 +667,6 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     "Evidence capture writes deterministic Chromium screenshots once.",
   );
 
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   {
     const { context, page } = await preparePage(browser, viewports.mobile);
     await setFixedDate(page);
@@ -677,7 +675,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.goto(`${BASE_URL}/planner`);
     await expect(page.getByRole("heading", { name: "플래너" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planner-mobile-default.png"),
     });
@@ -685,7 +683,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.getByRole("button", { name: "다음 주" }).click();
     await expect(page.getByText(/다음주에요/)).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planner-week-navigation.png"),
     });
@@ -700,7 +698,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.goto(`${BASE_URL}/planner`);
     await expect(page.getByRole("heading", { name: "플래너" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planner-mobile-narrow.png"),
     });
@@ -716,7 +714,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.getByRole("button", { name: "+ 식사 추가" }).first().click();
     await expect(page.getByTestId("planner-meal-add-sheet")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planner-meal-add-sheet.png"),
     });
@@ -732,7 +730,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.getByRole("button", { name: "+ 식사 추가" }).first().click();
     await expect(page.getByTestId("planner-meal-add-sheet")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planner-meal-add-sheet-narrow.png"),
     });
@@ -747,7 +745,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "검색으로 추가" })).toBeVisible();
     await expect(page.getByText("김치볶음밥")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-search-picker.png"),
     });
@@ -755,7 +753,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.getByRole("button", { name: /김치볶음밥/ }).click();
     await expect(page.getByRole("dialog", { name: "플래너에 추가" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planned-servings-input.png"),
     });
@@ -770,7 +768,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "검색으로 추가" })).toBeVisible();
     await expect(page.getByText("김치볶음밥")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-search-picker-narrow.png"),
     });
@@ -778,7 +776,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.getByRole("button", { name: /김치볶음밥/ }).click();
     await expect(page.getByRole("dialog", { name: "플래너에 추가" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planned-servings-input-narrow.png"),
     });
@@ -793,7 +791,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "레시피북에서 추가" })).toBeVisible();
     await expect(page.getByText("좋아요").first()).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-book-selector.png"),
     });
@@ -802,7 +800,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "평일 저녁 빠른요리" })).toBeVisible();
     await expect(page.getByText("된장찌개")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-book-detail-picker.png"),
     });
@@ -817,7 +815,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "레시피북에서 추가" })).toBeVisible();
     await expect(page.getByText("좋아요").first()).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-book-selector-narrow.png"),
     });
@@ -826,7 +824,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "평일 저녁 빠른요리" })).toBeVisible();
     await expect(page.getByText("된장찌개")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-book-detail-picker-narrow.png"),
     });
@@ -841,7 +839,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "팬트리 기반 추천" })).toBeVisible();
     await expect(page.getByText("김치볶음밥")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-match-picker.png"),
     });
@@ -856,7 +854,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await expect(page.getByRole("heading", { name: "팬트리 기반 추천" })).toBeVisible();
     await expect(page.getByText("김치볶음밥")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-match-picker-narrow.png"),
     });
@@ -870,7 +868,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.goto(`${BASE_URL}${MANUAL_CREATE_PATH}`);
     await expect(page.getByRole("heading", { name: "직접 등록" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "manual-recipe-create.png"),
     });
@@ -879,7 +877,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     const dialog = page.getByRole("dialog").last();
     await expect(dialog).toBeVisible();
     await stabilize(page);
-    await dialog.screenshot({
+    await captureTrackedEvidenceOnDemand(dialog, {
       path: path.join(EVIDENCE_DIR, "manual-create-ingredient-modal.png"),
     });
     await context.close();
@@ -892,7 +890,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.goto(`${BASE_URL}${MANUAL_CREATE_PATH}`);
     await expect(page.getByRole("heading", { name: "직접 등록" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "manual-recipe-create-narrow.png"),
     });
@@ -906,7 +904,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.goto(`${BASE_URL}${MEAL_SCREEN_PATH}`);
     await expect(page.getByTestId("meal-recipe-link-meal-1")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "meal-screen-default.png"),
     });
@@ -920,7 +918,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.goto(`${BASE_URL}${MEAL_SCREEN_PATH}`);
     await expect(page.getByTestId("meal-recipe-link-meal-1")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "meal-screen-narrow.png"),
     });
@@ -936,7 +934,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await page.getByTestId("meal-recipe-link-meal-2").click();
     await expect(page.getByRole("heading", { name: "집밥 김치찌개" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "meal-screen-recipe-click.png"),
     });

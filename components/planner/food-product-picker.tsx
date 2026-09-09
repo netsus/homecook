@@ -821,7 +821,7 @@ export function FoodProductPicker({
   return (
     <section
       aria-labelledby="food-product-picker-title"
-      className="relative mx-auto flex h-[calc(100dvh-2rem)] max-h-[760px] min-h-0 w-full max-w-3xl flex-col overflow-hidden"
+      className="relative mx-auto flex max-h-[760px] min-h-0 w-full max-w-3xl flex-col overflow-hidden"
       data-testid="food-product-picker"
       onKeyDownCapture={(event) => {
         if (event.key !== "Escape") return;
@@ -829,6 +829,9 @@ export function FoodProductPicker({
         event.preventDefault();
         event.stopPropagation();
         onClose();
+      }}
+      style={{
+        height: "calc(100dvh - 2rem - var(--mobile-prelaunch-notice-offset, 0px))",
       }}
     >
       <div className="mb-4 flex shrink-0 items-start justify-between gap-3">

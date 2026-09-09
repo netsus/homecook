@@ -40,6 +40,14 @@
 - `pnpm verify:frontend`: lint, typecheck, vitest, build, 전체 regression/a11y/visual/security, Lighthouse
 - `pnpm verify:backend`: lint, typecheck, vitest, build, auth/session security smoke
 
+구형 Wave1/desktop 및 개인 레시피 편집기 캡처도 같은 `HOMECOOK_UPDATE_EVIDENCE=1`
+경계를 사용한다. 별도 `HOMECOOK_CAPTURE_PERSONAL_EDITOR_EVIDENCE`,
+`BRAND_IMAGE_EVIDENCE_WRITE`, `HOME_LOCKUP_EVIDENCE_WRITE` 대신 위 공통 갱신 명령을 쓴다.
+브랜드의 before/after phase 선택과 immutable before 보호는 유지한다. 일반 실행에서는
+기능 assertion을 계속 실행하며, 기존 `testInfo.outputPath()` 진단 출력과 visual baseline은
+이 경계와 독립적이다. 역사적 화면을 전제로 한 오래된 QA spec의 assertion 실패는 현재 제품
+회귀와 구분해 확인하며, evidence 갱신을 위해 assertion을 생략하지 않는다.
+
 `docs-governance`와 `low-risk docs/config`는 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix에 따라 E2E를 생략할 수 있다.
 
 기본 동작:

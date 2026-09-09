@@ -1,13 +1,19 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
+
+import {
+  captureTrackedEvidenceOnDemand,
+  shouldUpdateTrackedEvidence,
+  writeTrackedEvidenceOnDemand,
+} from "./helpers/evidence-capture";
 
 import { installDiscoveryRoutes } from "./helpers/mock-routes";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const EVIDENCE_PHASE = process.env.BRAND_IMAGE_EVIDENCE_PHASE ?? "after";
-const WRITE_TRACKED_EVIDENCE = process.env.BRAND_IMAGE_EVIDENCE_WRITE === "1";
+const WRITE_TRACKED_EVIDENCE = shouldUpdateTrackedEvidence();
 const EVIDENCE_DIR = path.resolve(
   process.cwd(),
   "ui/designs/evidence/service-brand-image-assets",
@@ -104,12 +110,16 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
   expect(["before", "after"]).toContain(EVIDENCE_PHASE);
 
   const phase = EVIDENCE_PHASE as "after" | "before";
-  if (WRITE_TRACKED_EVIDENCE) {
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-    if (phase === "before") await refuseBeforeOverwrite();
+  if (WRITE_TRACKED_EVIDENCE && phase === "before") {
+    await refuseBeforeOverwrite();
   }
-  const outputPath = (name: string) =>
-    WRITE_TRACKED_EVIDENCE ? path.join(EVIDENCE_DIR, name) : testInfo.outputPath(name);
+  const writeEvidence = async (name: string, contents: string) => {
+    if (WRITE_TRACKED_EVIDENCE) {
+      await writeTrackedEvidenceOnDemand(path.join(EVIDENCE_DIR, name), contents);
+    } else {
+      await writeFile(testInfo.outputPath(name), contents);
+    }
+  };
   const geometries: Record<string, Awaited<ReturnType<typeof geometry>>> = {};
 
   for (const viewport of VIEWPORTS) {
@@ -135,16 +145,23 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
         .toBe(1040);
     }
 
-    await page.screenshot({
-      fullPage: false,
-      path: outputPath(screenshotName(phase, viewport)),
-    });
+    if (WRITE_TRACKED_EVIDENCE) {
+      await captureTrackedEvidenceOnDemand(page, {
+        fullPage: false,
+        path: path.join(EVIDENCE_DIR, screenshotName(phase, viewport)),
+      });
+    } else {
+      await page.screenshot({
+        fullPage: false,
+        path: testInfo.outputPath(screenshotName(phase, viewport)),
+      });
+    }
     await context.close();
   }
 
   if (phase === "before") {
-    await writeFile(
-      outputPath("HOME-before-geometry.json"),
+    await writeEvidence(
+      "HOME-before-geometry.json",
       `${JSON.stringify(geometries, null, 2)}\n`,
     );
     return;
@@ -184,8 +201,8 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
     expect(response.headers()["content-type"], route).toContain(contentType);
   }
 
-  await writeFile(
-    outputPath("accessibility-geometry-audit.json"),
+  await writeEvidence(
+    "accessibility-geometry-audit.json",
     `${JSON.stringify(
       {
         before,

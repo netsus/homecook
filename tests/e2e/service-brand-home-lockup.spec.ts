@@ -1,13 +1,19 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
+
+import {
+  captureTrackedEvidenceOnDemand,
+  shouldUpdateTrackedEvidence,
+  writeTrackedEvidenceOnDemand,
+} from "./helpers/evidence-capture";
 
 import { installDiscoveryRoutes } from "./helpers/mock-routes";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const EVIDENCE_PHASE = process.env.HOME_LOCKUP_EVIDENCE_PHASE ?? "after";
-const WRITE_TRACKED_EVIDENCE = process.env.HOME_LOCKUP_EVIDENCE_WRITE === "1";
+const WRITE_TRACKED_EVIDENCE = shouldUpdateTrackedEvidence();
 const EVIDENCE_DIR = path.resolve(
   process.cwd(),
   "ui/designs/evidence/service-brand-home-lockup",
@@ -151,16 +157,16 @@ test("captures and audits the HOME service-name lockup", async ({ browser }, tes
   expect(["before", "after"]).toContain(EVIDENCE_PHASE);
 
   const phase = EVIDENCE_PHASE as "after" | "before";
-  if (WRITE_TRACKED_EVIDENCE) {
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-    if (phase === "before") {
-      await assertBeforeEvidenceDoesNotExist();
-    }
+  if (WRITE_TRACKED_EVIDENCE && phase === "before") {
+    await assertBeforeEvidenceDoesNotExist();
   }
-  const outputPath = (filename: string) =>
-    WRITE_TRACKED_EVIDENCE
-      ? path.join(EVIDENCE_DIR, filename)
-      : testInfo.outputPath(filename);
+  const writeEvidence = async (name: string, contents: string) => {
+    if (WRITE_TRACKED_EVIDENCE) {
+      await writeTrackedEvidenceOnDemand(path.join(EVIDENCE_DIR, name), contents);
+    } else {
+      await writeFile(testInfo.outputPath(name), contents);
+    }
+  };
   const geometry: Record<string, Geometry> = {};
 
   for (const viewport of VIEWPORTS) {
@@ -195,16 +201,23 @@ test("captures and audits the HOME service-name lockup", async ({ browser }, tes
       expect(geometry[viewport.key].logo?.width).toBeGreaterThan(130);
     }
 
-    await page.screenshot({
-      fullPage: false,
-      path: outputPath(screenshotName(phase, viewport)),
-    });
+    if (WRITE_TRACKED_EVIDENCE) {
+      await captureTrackedEvidenceOnDemand(page, {
+        fullPage: false,
+        path: path.join(EVIDENCE_DIR, screenshotName(phase, viewport)),
+      });
+    } else {
+      await page.screenshot({
+        fullPage: false,
+        path: testInfo.outputPath(screenshotName(phase, viewport)),
+      });
+    }
     await context.close();
   }
 
   if (phase === "before") {
-    await writeFile(
-      outputPath("HOME-before-geometry.json"),
+    await writeEvidence(
+      "HOME-before-geometry.json",
       `${JSON.stringify(geometry, null, 2)}\n`,
     );
     return;
@@ -234,8 +247,8 @@ test("captures and audits the HOME service-name lockup", async ({ browser }, tes
   expect(geometry["1280"].nav?.height).toBe(72);
   expect(desktopGap).toBeGreaterThanOrEqual(36);
 
-  await writeFile(
-    outputPath("HOME-accessibility-geometry-audit.json"),
+  await writeEvidence(
+    "HOME-accessibility-geometry-audit.json",
     `${JSON.stringify(
       {
         accessibleName: "무먹, 무엇을 먹든",

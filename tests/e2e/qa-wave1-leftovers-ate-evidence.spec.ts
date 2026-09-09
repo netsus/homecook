@@ -1,7 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
+
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -156,7 +157,7 @@ async function capture(
   await page.goto(`${BASE_URL}${routePath}`);
   await stabilize(page);
   await prepareSurface(page);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     fullPage: false,
     path: path.join(EVIDENCE_DIR, filename),
   });
@@ -166,8 +167,6 @@ async function capture(
 test("capture Wave1 leftovers and ate-list authority evidence", async ({
   browser,
 }) => {
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   await capture(browser, viewports.mobile, "/leftovers", "leftovers-default.png", async (page) => {
     await expect(page.getByRole("heading", { exact: true, name: "남은 요리" })).toBeVisible();
     await expect(page.getByText("된장찌개")).toBeVisible();

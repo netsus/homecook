@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   installBulkIngredientRoutes,
   openBulkReview,
@@ -20,7 +20,6 @@ test.describe("Slice 25 YouTube bulk ingredient registration evidence", () => {
   test.beforeEach(async ({ page }) => {
     await setYoutubeIngredientRegistrationAuth(page);
     await installBulkIngredientRoutes(page);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
   });
 
   test("captures mobile default bulk registration states", async ({ page }, testInfo) => {
@@ -28,7 +27,7 @@ test.describe("Slice 25 YouTube bulk ingredient registration evidence", () => {
 
     await openBulkReview(page);
     await expect(page.getByTestId("bulk-register-cta")).toContainText("5건 일괄 등록");
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       path: join(EVIDENCE_DIR, "YT_IMPORT-bulk-cta-mobile.png"),
       fullPage: false,
     });
@@ -36,14 +35,14 @@ test.describe("Slice 25 YouTube bulk ingredient registration evidence", () => {
     await page.getByTestId("bulk-register-cta").click();
     const sheet = page.getByTestId("bulk-register-sheet");
     await expect(sheet).toBeVisible();
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       path: join(EVIDENCE_DIR, "YT_IMPORT-bulk-sheet-mobile.png"),
       fullPage: false,
     });
 
     await sheet.getByRole("button", { name: /일괄 등록/ }).click();
     await expect(sheet.getByText("5건 성공")).toBeVisible();
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       path: join(EVIDENCE_DIR, "YT_IMPORT-bulk-success-mobile.png"),
       fullPage: false,
     });
@@ -55,7 +54,7 @@ test.describe("Slice 25 YouTube bulk ingredient registration evidence", () => {
     await openBulkReview(page);
     await page.getByTestId("bulk-register-cta").click();
     await expect(page.getByTestId("bulk-register-sheet")).toBeVisible();
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       path: join(EVIDENCE_DIR, "YT_IMPORT-bulk-sheet-mobile-narrow.png"),
       fullPage: false,
     });

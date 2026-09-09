@@ -1,7 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
+
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -291,8 +292,6 @@ async function installPantryRoutes(
 }
 
 test("capture Wave1 pantry authority evidence", async ({ browser }) => {
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   {
     const { context, page } = await preparePage(browser, viewports.mobile);
     await setAuthOverride(page);
@@ -300,7 +299,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     await page.goto(`${BASE_URL}/pantry`);
     await expect(page.getByText(/13\s*\/\s*29개/)).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-default.png"),
     });
@@ -314,7 +313,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     await page.goto(`${BASE_URL}/pantry`);
     await expect(page.getByText(/13\s*\/\s*29개/)).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-narrow.png"),
     });
@@ -331,7 +330,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     await page.getByRole("checkbox", { name: "양파 선택" }).click();
     await expect(page.getByRole("button", { name: "제거하기 (1)" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-select-delete.png"),
     });
@@ -345,7 +344,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     await page.goto(`${BASE_URL}/pantry`);
     await expect(page.getByText("아직 등록한 재료가 없어요")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-empty.png"),
     });
@@ -361,7 +360,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     await page.getByRole("button", { name: /재료 추가/ }).first().click();
     await expect(page.getByRole("dialog", { name: "재료 추가" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-add-sheet.png"),
     });
@@ -377,7 +376,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     await page.getByRole("button", { name: /재료 추가/ }).first().click();
     await expect(page.getByRole("dialog", { name: "재료 추가" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-add-sheet-narrow.png"),
     });
@@ -396,7 +395,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     ).toBeVisible();
     await expect(page.getByText("한식 기본 양념")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-bundle-picker.png"),
     });
@@ -415,7 +414,7 @@ test("capture Wave1 pantry authority evidence", async ({ browser }) => {
     ).toBeVisible();
     await expect(page.getByText("한식 기본 양념")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "pantry-bundle-picker-narrow.png"),
     });

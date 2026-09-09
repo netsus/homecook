@@ -283,3 +283,82 @@ git -c core.quotePath=false ls-tree -r \
 git grep -I -n -- '<exact path or filename>' origin/master -- \
   app components lib public tests scripts .github .workflow-v2 docs ui
 ```
+
+
+## 2차 B5 — legacy evidence writer 전환
+
+정리 계획: 직접 쓰기 전수 분류 → 기존 기능 assertion을 유지하는 경계 테스트 RED →
+공통 helper 재사용 → 기본/갱신/전체 회귀 확인 → 독립 리뷰 및 current-head CI.
+
+- 시작 기준: `458ce2daab6cdd91a70504657ce5981a4d4acf3c` (PR #1546까지 포함한 최신 master).
+- 변경: E2E spec 24개. 공통 `evidence-capture.ts`는 수정 없이 재사용했다.
+- tracked sink 전환: PNG 108곳 + JSON 5곳 = 113곳. JSON 4곳은 브랜드별 wrapper 2개로 묶었다.
+- direct mkdir 제거: 26곳. assertion / 기존 skip / viewport / 출력 파일명은 보존했다.
+- 독립 AST 비교: 변경 spec의 `expect`, `test.skip`, `test.fixme` 호출 1,379개 내용·순서 동일.
+- 경계 검사: source-local TypeScript AST로 import 별칭, const 경로·옵션 변수, spread,
+  문자열 `path` 키를 검사한다. imported 경로 상수의 파일 간 추적은 범위 밖이다.
+- TDD: 최초 경계 RED 3 fail / 11 pass → 오탐·별칭 fixture RED 2 fail → 최종 경계 16 pass.
+
+### 직접 쓰기 전수 분류
+
+| 분류 | 처리 |
+| --- | --- |
+| `qa-*-evidence.spec.ts` 17개 / PNG 80곳 | 공통 opt-in helper, mkdir 17곳 제거 |
+| auth-provider / personal-editor / nutrition | PNG 6곳 전환, 개인 환경변수를 공통 명령으로 통일 |
+| marketing demand validation | PNG 20곳 + JSON 1곳 전환, 기존 마케팅 갱신 alias도 opt-in |
+| service-brand 2개 | tracked PNG 2곳 + JSON 4곳 전환; 기존 report 출력과 before 보호 유지 |
+| youtube-async-extraction notification | 불필요한 tracked mkdir 3곳만 제거; 기존 report helper 보존 |
+| `cml14-ui-quality-repair`, `marketing-public-flow` | 원래 testInfo output 경로인 진단 캡처 보존 |
+| nutrition의 buffer 3곳 / product-ingredient-link의 buffer 1곳 | 메모리 검증·첨부 보존 |
+| 공통 helper의 testInfo fallback / qa-visual toHaveScreenshot | 기존 untracked report 및 visual baseline 보존 |
+
+### 현재 검증 결과
+
+- 관련 Vitest: 경계·marketing 계약·brand source guard 39 pass. 명령 전달 `--list` 확인.
+- 기본 집중 실행: 104 pass / 29 intended skip / 27 fail, 183.14초. tracked evidence diff 0.
+- 최초 전체 CI matrix: **674 pass / 134 intended skip / 2 fail**, 357.46초. tracked evidence diff 0.
+- 상류 UI 회귀와 신규 의존성 보안 공지를 반영한 최종 전체 CI matrix:
+  **676 pass / 134 intended skip / 0 fail**, 약 6분. 회귀 목록 810개와 intended skip 수는 동일하다.
+- 비교 기준 B4: 676 pass / 134 skip / 0 fail, 380.21초. 최종 실행은 같은 기능 검출력을
+  유지했으며 환경 차이가 있어 실행시간 개선 수치로 과장하지 않는다.
+- 기본 집중 실패가 발생한 원본 master spec 10개 재현: 69 pass / 4 skip / 25 fail,
+  192.18초. 현재 실패 27개 중 24개가 같은 test/project에서 재현됐다.
+- 원본 재현 중 변경된 tracked PNG 42개는 검증 직후 원래 bytes로 복원했다.
+- opt-in 집중 실행: 105 pass / 29 intended skip / 26 fail, 183.10초. 기존 159개 경로를
+  갱신하고 기존 writer가 지정한 미추적 PNG 9개를 생성했다. 총 168개 경로 모두 원상 복원,
+  최종 evidence diff 0. 추가 PNG 9개는 nutrition의 candidate/iteration 경로로 후속 정리 후보다.
+- 최종 전체 Vitest: **8,313 pass / 509 skip / 0 fail**, 335.26초.
+- PostgreSQL 영양 통합: 14 pass. build / lint / typecheck 통과.
+- dependency audit high 통과. Next.js 15.5.24, sharp 0.35.4,
+  js-yaml 3.15.2/4.3.2의 신규 보안 하한을 고정했다.
+- current-head GitHub full visual이 드러낸 #1544 이후의 오래된 Linux desktop 기준 30개는
+  Playwright 1.58.2 Noble 컨테이너에서 재생성하고 대표 8화면을 원본 크기로 확인했다.
+  GitHub runner에 이미 맞춘 core 3개는 컨테이너의 글꼴 raster 차이를 반영하지 않고
+  보존했다. screenshot assertion과 허용치는 변경하지 않았다.
+- 준비 안내 landmark를 중첩 `aside`에서 이름 있는 `status`로 고치고, 비활성 funnel CTA도
+  흰 글자의 대비가 유지되도록 진한 브랜드 파랑을 사용했다. 플래너 제목과 우측 프로필
+  요약으로 바뀐 현재 desktop 구조에 accessibility readiness assertion도 동기화했다.
+  최종 full accessibility는 21 pass / 15 intended skip / 0 fail이다.
+- B5 writer 전환 독립 code review: blocker/major 0. 상류 회귀·보안 패치가 포함된 최종 diff는
+  current-head CI 전 별도 재검토한다.
+
+### 상류 회귀 해소 및 후속 후보
+
+1. #1544의 주간 날짜 rail이 `Home`을 주간 탐색 명령으로 소비하는 현재 키보드 계약은
+   유지하고, community E2E의 문서 스크롤 준비를 명시적 `window.scrollTo`로 교체했다.
+2. 준비 안내 높이를 모바일 완제품 picker의 viewport 계산에 반영하고 데스크톱 식사 추가
+   상단 여백을 압축해 320×568 CTA와 1280×900 등록 CTA를 모두 첫 화면 안으로 복구했다.
+3. 2026-09-08 공개된 Next.js/sharp/js-yaml 보안 공지에 맞춰 patch release와 transitive
+   override를 갱신했고 dependency audit의 critical/high 항목을 0으로 만들었다.
+4. #1544가 바꾼 `요리 계획` heading과 profile-summary 진입점을 full accessibility 검사가
+   현재 구조로 확인하도록 맞췄다. axe rule은 끄거나 완화하지 않았다.
+5. 구형 desktop slice6/7, Wave1 account-library-leftovers/pantry/planner-meal-add/
+   recipebook-detail/settings-core/shopping-cooking 캡처의 과거 문구·선택자 재검토가 필요하다.
+6. YouTube 알림의 중복 button/사라진 global trigger/좁은 viewport 배치 및 marketing
+   evidence focus 초기화 검사도 현재 화면에 맞는 별도 QA 정비 후보다. skip을 추가하지 않는다.
+7. legacy root의 historical PNG archive 여부는 별도 consumer/복구 감사 후 판단한다.
+   이번 B5는 PNG/JSON 삭제·archive를 수행하지 않는다.
+
+현재 visual baseline 112개, `ui/designs/authority`, 진행 중 marketing canonical 및 public/runtime
+assets는 보존한다. 제품 runtime, DB, 서버 배포, Cloudflare, 운영 env 변경은 0이다.
+current-head GitHub CI와 최종 merge가 끝난 뒤에만 B5 완료 Discord 알림을 수행한다.

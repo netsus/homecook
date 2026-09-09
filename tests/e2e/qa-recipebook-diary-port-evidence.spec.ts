@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   installAccountLibraryVisualRoutes,
   MYPAGE_VISUAL_PATH,
@@ -73,7 +73,7 @@ async function capture(
 ) {
   await stabilize(page);
   await expectNoHorizontalOverflow(page);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     fullPage: options.fullPage ?? false,
     path: path.join(EVIDENCE_DIR, filename),
   });
@@ -85,7 +85,6 @@ test("capture recipebook diary service evidence", async ({ page }, testInfo) => 
     "Evidence capture sets its own desktop/mobile viewport sizes and writes shared screenshot artifacts.",
   );
 
-  await mkdir(EVIDENCE_DIR, { recursive: true });
   await setE2EAuthOverride(page);
   await installAccountLibraryVisualRoutes(page);
 

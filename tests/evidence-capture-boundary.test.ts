@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
-import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+
+import ts from "typescript";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -47,7 +49,158 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+// Source-local guard: resolve const aliases, but keep unknown sinks in a tracked
+// source conservative. It intentionally does not analyze imported path constants.
+function directTrackedWriters(source: string) {
+  if (!/ui[\s\S]*designs[\s\S]*evidence/u.test(source)) return [];
+  const ast = ts.createSourceFile("capture.ts", source, ts.ScriptTarget.Latest, true);
+  const compilerOptions = { noLib: true, noResolve: true, types: [] };
+  const host = ts.createCompilerHost(compilerOptions);
+  host.getSourceFile = (name) => name === "capture.ts" ? ast : undefined;
+  const checker = ts.createProgram(["capture.ts"], compilerOptions, host).getTypeChecker();
+  const violations: string[] = [];
+  const resolve = (node: ts.Expression, seen = new Set<ts.Node>()): ts.Expression => {
+    if (seen.has(node)) return node;
+    seen.add(node);
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node)) {
+      return resolve(node.expression, seen);
+    }
+    if (ts.isIdentifier(node)) {
+      const declaration = checker.getSymbolAtLocation(node)?.valueDeclaration;
+      if (declaration && ts.isVariableDeclaration(declaration) && declaration.initializer &&
+          (declaration.parent.flags & ts.NodeFlags.Const)) {
+        return resolve(declaration.initializer, seen);
+      }
+    }
+    return node;
+  };
+  const callName = (node: ts.Expression) => {
+    if (ts.isIdentifier(node)) {
+      const declaration = checker.getSymbolAtLocation(node)?.declarations?.[0];
+      if (declaration && ts.isImportSpecifier(declaration)) {
+        return (declaration.propertyName ?? declaration.name).text;
+      }
+    }
+    return node.getText(ast).split(".").at(-1);
+  };
+  const pathText = (input: ts.Expression, seen = new Set<ts.Node>()): string | undefined => {
+    const node = resolve(input);
+    if (seen.has(node)) return undefined;
+    const next = new Set(seen).add(node);
+    if (ts.isStringLiteralLike(node)) return node.text;
+    if (ts.isCallExpression(node)) {
+      if (node.expression.getText(ast) === "testInfo.outputPath") return "test-results";
+      if (["join", "resolve", "dirname"].includes(callName(node.expression) ?? "")) {
+        const parts = node.arguments.map((argument) => pathText(argument, next));
+        if (parts.every((part) => part !== undefined)) return parts.join("/");
+      }
+    }
+    return undefined;
+  };
+  const unsafePath = (path: ts.Expression) => {
+    const value = pathText(path);
+    return value === undefined || /(?:^|[/\\])ui[/\\]designs[/\\]evidence(?:[/\\]|$)/u.test(value);
+  };
+  const unsafeScreenshot = (input: ts.Expression, seen = new Set<ts.Node>()): boolean => {
+    const options = resolve(input);
+    if (seen.has(options) || !ts.isObjectLiteralExpression(options)) return true;
+    const next = new Set(seen).add(options);
+    return options.properties.some((property) => {
+      if (ts.isSpreadAssignment(property)) return unsafeScreenshot(property.expression, next);
+      const name = property.name && (ts.isStringLiteralLike(property.name) ? property.name.text : property.name.getText(ast));
+      if (name !== "path") return false;
+      if (ts.isPropertyAssignment(property)) return unsafePath(property.initializer);
+      if (ts.isShorthandPropertyAssignment(property)) return unsafePath(property.name);
+      return true;
+    });
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node)) {
+      const name = callName(node.expression);
+      const argument = node.arguments[0];
+      if (argument && (
+        (["mkdir", "mkdirSync", "writeFile", "writeFileSync"].includes(name ?? "") && unsafePath(argument)) ||
+        (name === "screenshot" && unsafeScreenshot(argument))
+      )) violations.push(node.getText(ast));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return violations;
+}
+
 describe("tracked evidence capture boundary", () => {
+  it("rejects direct tracked writers throughout E2E sources", async () => {
+    const violations: Record<string, string[]> = {};
+    for (const relativePath of await readdir("tests/e2e", { recursive: true })) {
+      if (!relativePath.endsWith(".ts") || relativePath === "helpers/evidence-capture.ts") continue;
+      const sourcePath = join("tests/e2e", relativePath);
+      const found = directTrackedWriters(await readFile(sourcePath, "utf8"));
+      if (found.length) violations[sourcePath] = found;
+    }
+    expect(violations).toEqual({});
+  });
+
+  it("distinguishes tracked writers from report artifacts and buffer assertions", () => {
+    const root = 'const root = join("ui", "designs", "evidence", "legacy");';
+    expect(directTrackedWriters(`${root}
+      await mkdir(root); await writeFile(join(root, "audit.json"), "{}");
+      await page.screenshot({ path: join(root, "page.png") });
+      await locator.screenshot({ path: join(root, "crop.png") });
+    `)).toHaveLength(4);
+    expect(directTrackedWriters(`${root}
+      await page.screenshot({ path: testInfo.outputPath("failure.png") });
+      await writeFile(testInfo.outputPath("diagnostic.json"), "{}");
+      await page.screenshot({ scale: "css" });
+      await expect(page).toHaveScreenshot("baseline.png");
+    `)).toEqual([]);
+    expect(directTrackedWriters('await writeFile("test-results/debug.json", "{}");')).toEqual([]);
+  });
+
+  it("allows untracked diagnostics alongside a tracked evidence root", () => {
+    expect(directTrackedWriters(`
+      const root = join("ui", "designs", "evidence", "legacy");
+      const reportPath = testInfo.outputPath("failure.png");
+      const reportOptions = { path: reportPath };
+      const diagnostics = join("test-results", "debug.json");
+      await mkdir("test-results", { recursive: true });
+      await writeFile("test-results/debug.json", "{}");
+      await writeFile(diagnostics, "{}");
+      await page.screenshot({ path: reportPath });
+      await locator.screenshot(reportOptions);
+      await page.screenshot({ ...reportOptions, scale: "css" });
+      await page.screenshot({ scale: "css" });
+      await expect(page).toHaveScreenshot("baseline.png");
+    `)).toEqual([]);
+  });
+
+  it("rejects aliased filesystem imports and tracked screenshot options", () => {
+    expect(directTrackedWriters(`
+      import { writeFile as save, mkdir as createDirectory } from "node:fs/promises";
+      const root = join("ui", "designs", "evidence", "legacy");
+      const destination = join(root, "capture.png");
+      const options = { path: destination };
+      await createDirectory(root);
+      await save(join(root, "audit.json"), "{}");
+      await page.screenshot(options);
+      await locator.screenshot({ ...options });
+      await page.screenshot({ "path": destination });
+    `)).toHaveLength(5);
+  });
+
+  it("creates no directory, image or JSON when capture is disabled", async () => {
+    vi.stubEnv("HOMECOOK_UPDATE_EVIDENCE", "0");
+    const helperPath = "./e2e/helpers/evidence-capture";
+    const { captureTrackedEvidenceOnDemand, writeTrackedEvidenceOnDemand } = await import(/* @vite-ignore */ helperPath);
+    const root = await mkdtemp(join(tmpdir(), "homecook-no-evidence-"));
+    const destination = join(root, "must-not-exist");
+    const page = { screenshot: vi.fn() };
+    await captureTrackedEvidenceOnDemand(page, { path: join(destination, "page.png") });
+    await writeTrackedEvidenceOnDemand(join(destination, "audit.json"), "{}");
+    expect(page.screenshot).not.toHaveBeenCalled();
+    await expect(access(destination)).rejects.toThrow();
+  });
+
   it("moves desktop redesign history behind one verified archive manifest", async () => {
     const manifestPath =
       "ui/designs/evidence/historical-manifests/desktop-modern-redesign.json";
@@ -154,10 +307,8 @@ describe("tracked evidence capture boundary", () => {
   it("keeps auth-provider evidence writes behind the explicit update switch", async () => {
     const source = await readFile("tests/e2e/slice-auth-provider-memory-linking.spec.ts", "utf8");
 
-    expect(source.match(/page\.screenshot\(/gu)).toHaveLength(4);
-    expect(
-      source.match(/if \(shouldUpdateTrackedEvidence\(\)\) \{\s*await page\.screenshot\(/gu),
-    ).toHaveLength(4);
+    expect(source.match(/captureTrackedEvidenceOnDemand\(/gu)).toHaveLength(4);
+    expect(source.match(/page\.screenshot\(/gu)).toBeNull();
   });
 
   it("routes growth evidence screenshots through the no-op-by-default helper", async () => {
@@ -217,9 +368,9 @@ describe("tracked evidence capture boundary", () => {
     expect(preparedFood.match(/\bmkdir\(/gu)).toBeNull();
     expect(preparedFood).toContain('PREPARED_FOOD_CAPTURE_BEFORE !== "1"');
     expect(preparedFood).toContain("!shouldUpdateTrackedEvidence()");
-    expect(nutrition.match(/await captureTrackedEvidenceOnDemand\(/gu)).toHaveLength(4);
+    expect(nutrition.match(/await captureTrackedEvidenceOnDemand\(/gu)).toHaveLength(5);
     expect(nutrition.match(/if \(!shouldUpdateTrackedEvidence\(\)\) return;/gu)).toHaveLength(4);
-    expect(nutrition.match(/\.screenshot\(/gu)).toHaveLength(4);
+    expect(nutrition.match(/\.screenshot\(/gu)).toHaveLength(3);
   });
 
   it("captures tracked evidence on demand without rendering by default", async () => {
