@@ -285,7 +285,7 @@ git grep -I -n -- '<exact path or filename>' origin/master -- \
 ```
 
 
-## 2차 B5 — legacy evidence writer 전환 (병합 보류)
+## 2차 B5 — legacy evidence writer 전환
 
 정리 계획: 직접 쓰기 전수 분류 → 기존 기능 assertion을 유지하는 경계 테스트 RED →
 공통 helper 재사용 → 기본/갱신/전체 회귀 확인 → 독립 리뷰 및 current-head CI.
@@ -316,34 +316,39 @@ git grep -I -n -- '<exact path or filename>' origin/master -- \
 
 - 관련 Vitest: 경계·marketing 계약·brand source guard 39 pass. 명령 전달 `--list` 확인.
 - 기본 집중 실행: 104 pass / 29 intended skip / 27 fail, 183.14초. tracked evidence diff 0.
-- 전체 CI matrix: **674 pass / 134 intended skip / 2 fail**, 357.46초. tracked evidence diff 0.
-- 비교 기준 B4: 676 pass / 134 skip / 0 fail, 380.21초. 이번 실행은 실패가 있어 22.75초
-  차이를 성능 개선량으로 판단하지 않는다. 회귀 목록 810개와 intended skip 수는 동일하다.
+- 최초 전체 CI matrix: **674 pass / 134 intended skip / 2 fail**, 357.46초. tracked evidence diff 0.
+- 상류 UI 회귀와 신규 의존성 보안 공지를 반영한 최종 전체 CI matrix:
+  **676 pass / 134 intended skip / 0 fail**, 약 6분. 회귀 목록 810개와 intended skip 수는 동일하다.
+- 비교 기준 B4: 676 pass / 134 skip / 0 fail, 380.21초. 최종 실행은 같은 기능 검출력을
+  유지했으며 환경 차이가 있어 실행시간 개선 수치로 과장하지 않는다.
 - 기본 집중 실패가 발생한 원본 master spec 10개 재현: 69 pass / 4 skip / 25 fail,
   192.18초. 현재 실패 27개 중 24개가 같은 test/project에서 재현됐다.
 - 원본 재현 중 변경된 tracked PNG 42개는 검증 직후 원래 bytes로 복원했다.
 - opt-in 집중 실행: 105 pass / 29 intended skip / 26 fail, 183.10초. 기존 159개 경로를
   갱신하고 기존 writer가 지정한 미추적 PNG 9개를 생성했다. 총 168개 경로 모두 원상 복원,
   최종 evidence diff 0. 추가 PNG 9개는 nutrition의 candidate/iteration 경로로 후속 정리 후보다.
-- 전체 Vitest: 8,309 pass / 509 skip / 4 timeout(3개 파일), 398.01초. timeout 단독 재실행은 4 pass / 0 fail(17.77초).
-- build / lint / typecheck 통과. current-head GitHub CI는 해당 Draft PR에서 확인한다.
-  로컬 전체 회귀의 재현된 2 fail 때문에 CI 상태와 별개로 B5 병합은 보류한다.
-- 독립 code review: blocker/major 0. 실행 gate가 통과했다는 의미는 아니다.
+- 최종 전체 Vitest: **8,313 pass / 509 skip / 0 fail**, 335.26초.
+- PostgreSQL 영양 통합: 14 pass. build / lint / typecheck 통과.
+- dependency audit high 통과. Next.js 15.5.24, sharp 0.35.4,
+  js-yaml 3.15.2/4.3.2의 신규 보안 하한을 고정했다.
+- B5 writer 전환 독립 code review: blocker/major 0. 상류 회귀·보안 패치가 포함된 최종 diff는
+  current-head CI 전 별도 재검토한다.
 
-### 병합 차단 및 후속 후보
+### 상류 회귀 해소 및 후속 후보
 
-1. 전체 회귀의 두 실패는 B5에서 변경하지 않은 spec이다. #1544의 planner 날짜 rail이
-   `Home`을 주간 탐색 명령으로 소비하면서 기존 community evidence setup의 document
-   scroll 가정과 충돌한다. 완제품 등록 CTA는 상단 영역이 40px 증가한 뒤 하단이
-   y=936.34로 900px 첫 화면을 벗어난다. 두 실패는 단독 worker 재실행에서도 재현됐다.
-   runtime 수정이나 assertion 완화는 B5에 포함하지 않는다.
-2. 구형 desktop slice6/7, Wave1 account-library-leftovers/pantry/planner-meal-add/
+1. #1544의 주간 날짜 rail이 `Home`을 주간 탐색 명령으로 소비하는 현재 키보드 계약은
+   유지하고, community E2E의 문서 스크롤 준비를 명시적 `window.scrollTo`로 교체했다.
+2. 준비 안내 높이를 모바일 완제품 picker의 viewport 계산에 반영하고 데스크톱 식사 추가
+   상단 여백을 압축해 320×568 CTA와 1280×900 등록 CTA를 모두 첫 화면 안으로 복구했다.
+3. 2026-09-08 공개된 Next.js/sharp/js-yaml 보안 공지에 맞춰 patch release와 transitive
+   override를 갱신했고 dependency audit의 critical/high 항목을 0으로 만들었다.
+4. 구형 desktop slice6/7, Wave1 account-library-leftovers/pantry/planner-meal-add/
    recipebook-detail/settings-core/shopping-cooking 캡처의 과거 문구·선택자 재검토가 필요하다.
-3. YouTube 알림의 중복 button/사라진 global trigger/좁은 viewport 배치 및 marketing
+5. YouTube 알림의 중복 button/사라진 global trigger/좁은 viewport 배치 및 marketing
    evidence focus 초기화 검사도 현재 화면에 맞는 별도 QA 정비 후보다. skip을 추가하지 않는다.
-4. legacy root의 historical PNG archive 여부는 별도 consumer/복구 감사 후 판단한다.
+6. legacy root의 historical PNG archive 여부는 별도 consumer/복구 감사 후 판단한다.
    이번 B5는 PNG/JSON 삭제·archive를 수행하지 않는다.
 
 현재 visual baseline 112개, `ui/designs/authority`, 진행 중 marketing canonical 및 public/runtime
 assets는 보존한다. 제품 runtime, DB, 서버 배포, Cloudflare, 운영 env 변경은 0이다.
-실패 gate가 해소될 때까지 merge 및 완료 Discord 알림을 수행하지 않는다.
+current-head GitHub CI와 최종 merge가 끝난 뒤에만 B5 완료 Discord 알림을 수행한다.
