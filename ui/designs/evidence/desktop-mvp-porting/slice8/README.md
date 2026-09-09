@@ -1,5 +1,7 @@
 # Slice 8 Desktop MVP Porting Evidence
 
+> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
+
 Scope:
 
 - `/leftovers`
@@ -8,14 +10,14 @@ Scope:
 
 Captured MVP evidence:
 
-- `screenshots/leftovers-1024.png`
-- `screenshots/leftovers-1280.png`
-- `screenshots/leftovers-1440.png`
-- `screenshots/leftovers-empty-1280.png`
-- `screenshots/ate-list-1024.png`
-- `screenshots/ate-list-1280.png`
-- `screenshots/ate-list-1440.png`
-- `screenshots/ate-list-empty-1280.png`
+- [archive: slice8/screenshots/leftovers-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice8/screenshots/leftovers-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice8/screenshots/leftovers-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice8/screenshots/leftovers-empty-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice8/screenshots/ate-list-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice8/screenshots/ate-list-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice8/screenshots/ate-list-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice8/screenshots/ate-list-empty-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
 - `claude-presignoff.md`
 - `claude-postreview.md`
 

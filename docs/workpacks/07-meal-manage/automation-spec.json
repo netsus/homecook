@@ -20,9 +20,8 @@
       "pnpm verify:backend"
     ],
     "required_test_targets": [
-      "tests/meal-list-route.test.ts",
-      "tests/meal-update-route.test.ts",
-      "tests/meal-delete-route.test.ts"
+      "tests/meals-route.test.ts",
+      "tests/meal-detail-route.test.ts"
     ]
   },
   "frontend": {

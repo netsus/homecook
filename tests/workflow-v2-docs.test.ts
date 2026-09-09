@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -16,6 +16,40 @@ const repoRoot = process.cwd();
 
 function readJson(relativePath: string) {
   return JSON.parse(readFileSync(join(repoRoot, relativePath), "utf8")) as Record<string, unknown>;
+}
+
+// Copy only the text inputs consumed by validateWorkflowV2DocContract.
+// The positive assertion below catches missing inputs before injecting document drift.
+function copyDocContractFixture(fixtureRoot: string) {
+  const inputs = [
+    "docs/engineering/codex-task-handoff.md",
+    "docs/engineering/slice-workflow.md",
+    "docs/engineering/agent-workflow-overview.md",
+    "docs/engineering/workflow-v2/README.md",
+    "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
+    "docs/engineering/workflow-v2/omo-session-orchestrator.md",
+    "docs/engineering/workflow-v2/omo-lite-architecture.md",
+    "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+    "docs/engineering/workflow-v2/omo-claude-cli-provider.md",
+    "CLAUDE.md",
+    "docs/workpacks/README.md",
+    "docs/workpacks/_template/README.md",
+    "docs/engineering/design-consultant-sop.md",
+    ".opencode/README.md",
+    "docs/engineering/workflow-v2/promotion-readiness.md",
+    "docs/engineering/workflow-v2/omo-auditor-reset-requirements.md",
+    "docs/engineering/workflow-v2/omo-replay-acceptance.md",
+    "docs/engineering/workflow-v2/omo-canonical-closeout-state.md",
+    "docs/engineering/bookkeeping-authority-matrix.md",
+  ];
+  for (const relativePath of inputs) {
+    const destination = join(fixtureRoot, relativePath);
+    mkdirSync(dirname(destination), { recursive: true });
+    cpSync(join(repoRoot, relativePath), destination);
+  }
+  const baseline = validateWorkflowV2DocContract({ rootDir: fixtureRoot });
+  expect(baseline.length).toBeGreaterThan(0);
+  expect(baseline.flatMap((result) => result.errors)).toEqual([]);
 }
 
 describe("workflow v2 docs", () => {
@@ -123,10 +157,7 @@ describe("workflow v2 docs", () => {
     const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-handoff-"));
 
     try {
-      cpSync(join(repoRoot, "docs"), join(fixtureRoot, "docs"), { recursive: true });
-      mkdirSync(join(fixtureRoot, ".opencode"), { recursive: true });
-      cpSync(join(repoRoot, ".opencode/README.md"), join(fixtureRoot, ".opencode/README.md"));
-      cpSync(join(repoRoot, "CLAUDE.md"), join(fixtureRoot, "CLAUDE.md"));
+      copyDocContractFixture(fixtureRoot);
 
       const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
       const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
@@ -148,10 +179,7 @@ describe("workflow v2 docs", () => {
     const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-self-approval-"));
 
     try {
-      cpSync(join(repoRoot, "docs"), join(fixtureRoot, "docs"), { recursive: true });
-      mkdirSync(join(fixtureRoot, ".opencode"), { recursive: true });
-      cpSync(join(repoRoot, ".opencode/README.md"), join(fixtureRoot, ".opencode/README.md"));
-      cpSync(join(repoRoot, "CLAUDE.md"), join(fixtureRoot, "CLAUDE.md"));
+      copyDocContractFixture(fixtureRoot);
 
       const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
       const driftedHandoff = readFileSync(handoffPath, "utf8").replace(

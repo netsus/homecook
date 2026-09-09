@@ -1,5 +1,7 @@
 # Slice 5 Desktop MVP Porting Evidence
 
+> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
+
 Scope:
 
 - `/pantry`
@@ -12,13 +14,13 @@ Scope:
 
 Captured MVP evidence:
 
-- `screenshots/pantry-1280.png`
-- `screenshots/pantry-add-modal-1280.png`
-- `screenshots/pantry-bundle-modal-1280.png`
-- `screenshots/shopping-flow-1280.png`
-- `screenshots/shopping-detail-active-1280.png`
-- `screenshots/shopping-detail-reflect-1280.png`
-- `screenshots/shopping-detail-complete-1280.png`
+- [archive: slice5/screenshots/pantry-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice5/screenshots/pantry-add-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice5/screenshots/pantry-bundle-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice5/screenshots/shopping-flow-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice5/screenshots/shopping-detail-active-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice5/screenshots/shopping-detail-reflect-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice5/screenshots/shopping-detail-complete-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
 - `claude-presignoff.md`
 - `claude-postreview.md`
 

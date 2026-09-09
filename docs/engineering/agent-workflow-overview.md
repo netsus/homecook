@@ -50,6 +50,12 @@ Claude는 더 이상 사용하지 않는다.
 - `required_checks`는 로컬/PR 준비 단계의 최소 검증 세트다. merge gate는 별도로 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 확인한다.
 - GitHub Actions workflow는 required-check deadlock을 막기 위해 PR/protected-branch event에서 항상 시작한다. lightweight scope job이 `scripts/ci-path-filter.mjs`로 변경 범위를 판정하고, 무거운 `quality`, `build`, `security-function-authorization`, `security-smoke`, `dependency-audit` job은 job-level `if`로 실행 또는 intended skip을 보고한다. 내부 job ID와 `needs.scope` 참조는 `scope`를 유지하되 표시 context는 workflow 간 고유해야 하며, CI는 `ci-scope`, Security Review는 `security-review-scope`, Security Smoke는 `security-smoke-scope`를 사용한다. 이 required context workflow에 workflow-level `paths`/`paths-ignore`를 두지 않는다. policy/PR governance는 항상 실행하고, frontend QA·qa eval은 각 문서의 관련 범위 규칙을 따른다.
 - Frontend QA는 `scripts/ci-path-filter.mjs`의 job-level path filter를 따른다. 일반 디자인 PR은 core smoke/a11y/visual만 blocker로 두고, 전체 slice regression과 전체 visual/a11y는 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
+- `quality`는 lint·typecheck를 유지하며 기본적으로 전체 Vitest를 실행한다. 변경 목록이 비어 있지 않고
+  **모든** 파일이 components/public 또는 app TSX/CSS인 PR만 `product_tests_only`로 제품 모음을
+  실행한다. 문서·미분류 경로가 섞이거나 push / `full-ci`, 출력 누락이면 전체를 실행한다.
+  모음의 완전 분류는 [Vitest 운영](./tdd-vitest.md)을 따른다. 영양 PostgreSQL의 `nutrition_postgres`
+  조건은 별도로 유지하며 scope 실패는 기존대로 실패한다. 근거·측정은
+  [B5 이후 경량화](./ci-structural-lightening.md)를 따른다.
 - Slice regression의 device matrix 강도는 `docs/engineering/playwright-e2e.md`가 정한다. Ready for Review/protected branch push는 CI matrix, `full-ci`/nightly/manual은 complete matrix를 사용한다.
 - Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로 변경이 없으면 PR 본문 Performance 섹션에 `N/A: 성능 관련 경로 변경 없음`처럼 근거를 남긴다.
 

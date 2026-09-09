@@ -14,8 +14,8 @@ export function MumeokHorizontalLogo({ className }: MumeokHorizontalLogoProps) {
       draggable={false}
       height={400}
       priority
+      sizes="(min-width: 1024px) 174px, 138px"
       src="/brand/mumeok-logo-horizontal.png"
-      unoptimized
       width={1040}
     />
   );

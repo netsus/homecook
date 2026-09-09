@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { basename, dirname } from "node:path";
+import { dirname } from "node:path";
 
-import type { Page, TestInfo } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 type ScreenshotOptions = NonNullable<Parameters<Page["screenshot"]>[0]>;
 
@@ -31,25 +31,4 @@ export async function writeTrackedEvidenceOnDemand(
   await mkdir(dirname(trackedPath), { recursive: true });
   await writeFile(trackedPath, contents);
   return true;
-}
-
-export async function captureEvidenceScreenshot(
-  page: Pick<Page, "screenshot">,
-  testInfo: Pick<TestInfo, "attach" | "outputPath">,
-  trackedPath: string,
-  options: Omit<ScreenshotOptions, "path"> = {},
-) {
-  const updateTrackedEvidence = shouldUpdateTrackedEvidence();
-  const targetPath = updateTrackedEvidence
-    ? trackedPath
-    : testInfo.outputPath(`evidence-${basename(trackedPath)}`);
-  await mkdir(dirname(targetPath), { recursive: true });
-  await page.screenshot({ ...options, path: targetPath });
-  if (!updateTrackedEvidence) {
-    await testInfo.attach(`evidence:${basename(trackedPath)}`, {
-      contentType: "image/png",
-      path: targetPath,
-    });
-  }
-  return targetPath;
 }

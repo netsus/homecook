@@ -7,7 +7,7 @@ import {
   installDiscoveryRoutes,
   setE2EAuthOverride as setBaseE2EAuthOverride,
 } from "./helpers/mock-routes";
-import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const EVIDENCE_ROOT = path.resolve(
   process.cwd(),
@@ -483,7 +483,7 @@ async function openImport(
 
 async function captureEvidence(page: Page, testInfo: TestInfo, filePath: string, fullPage = false) {
   if (testInfo.project.name !== "desktop-chrome") return;
-  await captureEvidenceScreenshot(page, testInfo, filePath, { fullPage });
+  await captureTrackedEvidenceOnDemand(page, { path: filePath, fullPage });
 }
 
 function rectanglesAreDisjoint(

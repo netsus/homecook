@@ -150,7 +150,7 @@
     "test:e2e:visual": "playwright test tests/e2e/qa-visual.spec.ts",
     "test:e2e:visual:app-core": "playwright test tests/e2e/qa-visual.spec.ts --grep '@visual-core' --project=mobile-chrome --project=mobile-ios-small",
     "test:e2e:visual:web-core": "playwright test tests/e2e/qa-visual.spec.ts --grep '@visual-core' --project=desktop-chrome",
-    "test:e2e:visual:core": "pnpm test:e2e:visual:web-core && pnpm test:e2e:visual:app-core",
+    "test:e2e:visual:core": "playwright test tests/e2e/qa-visual.spec.ts --grep '@visual-core' --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
     "test:e2e:visual:update": "playwright test tests/e2e/qa-visual.spec.ts --update-snapshots",
     "test:e2e:security": "playwright test tests/e2e/qa-security.spec.ts",
     "test:e2e:ui": "playwright test --ui",

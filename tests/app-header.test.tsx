@@ -17,9 +17,11 @@ describe("AppHeader service name", () => {
 
     const logo = brand.querySelector("img");
     expect(logo).not.toBeNull();
-    expect(logo?.getAttribute("src")).toContain(
+    expect(decodeURIComponent(logo?.getAttribute("src") ?? "")).toContain(
       "/brand/mumeok-logo-horizontal.png",
     );
+    expect(logo?.getAttribute("srcset")).toContain("256w");
+    expect(logo?.getAttribute("sizes")).toBe("(min-width: 1024px) 174px, 138px");
     expect(logo?.getAttribute("alt")).toBe("");
     expect(logo?.getAttribute("aria-hidden")).toBe("true");
   });

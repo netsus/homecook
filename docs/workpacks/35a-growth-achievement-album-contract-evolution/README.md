@@ -1,5 +1,7 @@
 # 35a Growth Achievement Album Contract Evolution
 
+> 고해상도 원본과 과거 concept board는 [복구 기록](../../../ui/designs/evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)에 보관한다. 현재 등급 이미지는 `public/assets/growth/grades/`를 따른다.
+
 ## Goal
 
 slice34 성장 시스템을 바탕으로 퀘스트/배지/등급 구조를 다시 정리한다. 퀘스트는 신규 사용자의 튜토리얼 용도로 축소하고, 장기 목표는 카테고리별 업적 앨범과 stamp 수집 경험으로 전환한다. MYPAGE는 별도 성장 카드가 아니라 프로필 header 안에 등급/레벨/XP/action buttons를 통합하고, 등급/업적/알림은 버튼으로 여는 modal 또는 bottom sheet로 표시한다. 튜토리얼은 별도 MYPAGE 버튼이 아니라 업적 앨범의 `tutorial` 카테고리로 진입한다.
@@ -106,13 +108,13 @@ slice34 성장 시스템을 바탕으로 퀘스트/배지/등급 구조를 다�
 
 | Grade | Character asset | Icon asset |
 | --- | --- | --- |
-| Clay | `docs/design/assets/spoon-grade-characters/characters/clay-spoon.png` | `docs/design/assets/spoon-grade-characters/badge-icons/clay-spoon-badge.png` |
-| Wood | `docs/design/assets/spoon-grade-characters/characters/wood-spoon.png` | `docs/design/assets/spoon-grade-characters/badge-icons/wood-spoon-badge.png` |
-| Steel | `docs/design/assets/spoon-grade-characters/characters/steel-spoon.png` | `docs/design/assets/spoon-grade-characters/badge-icons/steel-spoon-badge.png` |
-| Silver | `docs/design/assets/spoon-grade-characters/characters/silver-spoon.png` | `docs/design/assets/spoon-grade-characters/badge-icons/silver-spoon-badge.png` |
-| Gold | `docs/design/assets/spoon-grade-characters/characters/gold-spoon.png` | `docs/design/assets/spoon-grade-characters/badge-icons/gold-spoon-badge.png` |
-| Diamond | `docs/design/assets/spoon-grade-characters/characters/diamond-spoon.png` | `docs/design/assets/spoon-grade-characters/badge-icons/diamond-spoon-badge.png` |
-| Titanium | `docs/design/assets/spoon-grade-characters/characters/titanium-spoon.png` | `docs/design/assets/spoon-grade-characters/badge-icons/titanium-spoon-badge.png` |
+| Clay | `public/assets/growth/grades/clay-spoon.png` | `public/assets/growth/grades/clay-spoon-badge.png` |
+| Wood | `public/assets/growth/grades/wood-spoon.png` | `public/assets/growth/grades/wood-spoon-badge.png` |
+| Steel | `public/assets/growth/grades/steel-spoon.png` | `public/assets/growth/grades/steel-spoon-badge.png` |
+| Silver | `public/assets/growth/grades/silver-spoon.png` | `public/assets/growth/grades/silver-spoon-badge.png` |
+| Gold | `public/assets/growth/grades/gold-spoon.png` | `public/assets/growth/grades/gold-spoon-badge.png` |
+| Diamond | `public/assets/growth/grades/diamond-spoon.png` | `public/assets/growth/grades/diamond-spoon-badge.png` |
+| Titanium | `public/assets/growth/grades/titanium-spoon.png` | `public/assets/growth/grades/titanium-spoon-badge.png` |
 
 ## Backend First Contract
 
@@ -144,8 +146,8 @@ slice34 성장 시스템을 바탕으로 퀘스트/배지/등급 구조를 다�
 - UI risk: `high-risk`
 - Anchor screen: `MYPAGE`
 - Reference concept board:
-  - `docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype.png`
-  - `docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype-v1.png`
+  - [archive: mypage-achievement-album-prototype.png](../../../ui/designs/evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)
+  - [archive: mypage-achievement-album-prototype-v1.png](../../../ui/designs/evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)
 - Source design doc:
   - `ui/designs/MYPAGE_ACHIEVEMENT_ALBUM.md`
 - Critique:

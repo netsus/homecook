@@ -1,5 +1,7 @@
 # MYPAGE Achievement Album
 
+> 고해상도 원본과 과거 concept board는 [복구 기록](evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)에 보관한다. 현재 등급 이미지는 `public/assets/growth/grades/`를 따른다.
+
 ## Purpose
 
 MYPAGE 상단을 "내 집밥 성장 프로필"처럼 보이게 한다. 사용자는 첫 화면에서 현재 등급, 레벨, XP, 주요 기록을 한 번에 보고, 자세한 내용은 `등급`, `업적`, `튜토리얼`, `알림` 버튼으로 들어간다.
@@ -7,24 +9,24 @@ MYPAGE 상단을 "내 집밥 성장 프로필"처럼 보이게 한다. 사용자
 ## Reference Assets
 
 - Concept board:
-  - `docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype.png`
-  - `docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype-v1.png`
+  - [archive: mypage-achievement-album-prototype.png](evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)
+  - [archive: mypage-achievement-album-prototype-v1.png](evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)
 - Grade character images:
-  - `docs/design/assets/spoon-grade-characters/characters/clay-spoon.png`
-  - `docs/design/assets/spoon-grade-characters/characters/wood-spoon.png`
-  - `docs/design/assets/spoon-grade-characters/characters/steel-spoon.png`
-  - `docs/design/assets/spoon-grade-characters/characters/silver-spoon.png`
-  - `docs/design/assets/spoon-grade-characters/characters/gold-spoon.png`
-  - `docs/design/assets/spoon-grade-characters/characters/diamond-spoon.png`
-  - `docs/design/assets/spoon-grade-characters/characters/titanium-spoon.png`
+  - `public/assets/growth/grades/clay-spoon.png`
+  - `public/assets/growth/grades/wood-spoon.png`
+  - `public/assets/growth/grades/steel-spoon.png`
+  - `public/assets/growth/grades/silver-spoon.png`
+  - `public/assets/growth/grades/gold-spoon.png`
+  - `public/assets/growth/grades/diamond-spoon.png`
+  - `public/assets/growth/grades/titanium-spoon.png`
 - Grade badge icons:
-  - `docs/design/assets/spoon-grade-characters/badge-icons/clay-spoon-badge.png`
-  - `docs/design/assets/spoon-grade-characters/badge-icons/wood-spoon-badge.png`
-  - `docs/design/assets/spoon-grade-characters/badge-icons/steel-spoon-badge.png`
-  - `docs/design/assets/spoon-grade-characters/badge-icons/silver-spoon-badge.png`
-  - `docs/design/assets/spoon-grade-characters/badge-icons/gold-spoon-badge.png`
-  - `docs/design/assets/spoon-grade-characters/badge-icons/diamond-spoon-badge.png`
-  - `docs/design/assets/spoon-grade-characters/badge-icons/titanium-spoon-badge.png`
+  - `public/assets/growth/grades/clay-spoon-badge.png`
+  - `public/assets/growth/grades/wood-spoon-badge.png`
+  - `public/assets/growth/grades/steel-spoon-badge.png`
+  - `public/assets/growth/grades/silver-spoon-badge.png`
+  - `public/assets/growth/grades/gold-spoon-badge.png`
+  - `public/assets/growth/grades/diamond-spoon-badge.png`
+  - `public/assets/growth/grades/titanium-spoon-badge.png`
 
 ## Screen Structure
 

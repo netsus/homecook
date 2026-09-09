@@ -1,5 +1,7 @@
 # Slice: 35c-mypage-achievement-album-ui
 
+> 고해상도 원본과 과거 concept board는 [복구 기록](../../../ui/designs/evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)에 보관한다. 현재 등급 이미지는 `public/assets/growth/grades/`를 따른다.
+
 ## Goal
 
 35a/35b에서 잠근 성장/업적 앨범 계약을 MYPAGE production UI로 연결한다. 사용자는 프로필 header 안에서 현재 등급, 레벨, XP, 주요 기록, 상세 진입 버튼을 한 덩어리로 보고, 등급/업적/알림은 modal 또는 bottom sheet로 확인한다. 튜토리얼은 업적 앨범의 `튜토리얼` 카테고리 안에서 확인한다.
@@ -86,11 +88,11 @@
 - UI risk: `high-risk`
 - Anchor screen dependency: `MYPAGE`
 - Visual artifact:
-  - `docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype.png`
-  - `docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype-v1.png`
+  - [archive: mypage-achievement-album-prototype.png](../../../ui/designs/evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)
+  - [archive: mypage-achievement-album-prototype-v1.png](../../../ui/designs/evidence/historical-manifests/retired-assets-20260910.md#spoon-grade-characters)
 - Authority status: `required`
 - Notes:
-  - 등급 이미지는 `docs/design/assets/spoon-grade-characters/`의 source asset을 production 크기로 안전하게 사용하거나, equivalent CSS/SVG component로 대체할 수 있다.
+  - 등급 이미지는 `public/assets/growth/grades/`의 runtime asset을 사용하거나, equivalent CSS/SVG component로 대체할 수 있다.
   - 화면 톤은 집밥/수집 앨범 방향이며 전투 rank, 경쟁 rank, gacha처럼 보이면 실패다.
 
 ## Design Status
