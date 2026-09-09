@@ -2136,7 +2136,7 @@
 }
 
 body:has(> .service-prelaunch-notice-mobile) {
-  --mobile-prelaunch-notice-offset: 2rem;
+  --mobile-prelaunch-notice-offset: 33px;
 }
 
 @media (max-width: 640px) {
