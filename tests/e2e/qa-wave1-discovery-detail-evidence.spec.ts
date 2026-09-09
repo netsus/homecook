@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   installDiscoveryRoutes,
   installRecipeDetailRoutes,
@@ -114,15 +114,13 @@ async function installRecipeBookRoutes(page: Page) {
 }
 
 test("capture Wave1 discovery/detail authority evidence", async ({ browser }) => {
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   {
     const { context, page } = await preparePage(browser, viewports.mobile);
     await installDiscoveryRoutes(page);
     await page.goto(`${BASE_URL}/`);
     await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "home-mobile-default.png"),
     });
@@ -130,7 +128,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await page.getByRole("button", { name: /정렬 기준/i }).click();
     await expect(page.getByRole("listbox")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "home-sort-dropdown-open.png"),
     });
@@ -143,7 +141,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/`);
     await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "home-mobile-narrow.png"),
     });
@@ -156,13 +154,14 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}${RECIPE_PATH}`);
     await expect(page.getByRole("heading", { name: "집밥 김치찌개" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-detail-mobile-default.png"),
     });
-    await page.locator(".recipe-overview-metrics-compact").screenshot({
-      path: path.join(EVIDENCE_DIR, "recipe-detail-hero-stats.png"),
-    });
+    await captureTrackedEvidenceOnDemand(
+      page.locator(".recipe-overview-metrics-compact"),
+      { path: path.join(EVIDENCE_DIR, "recipe-detail-hero-stats.png") },
+    );
     await context.close();
   }
 
@@ -172,7 +171,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}${RECIPE_PATH}`);
     await expect(page.getByRole("heading", { name: "집밥 김치찌개" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "recipe-detail-mobile-narrow.png"),
     });
@@ -197,7 +196,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     const dialog = page.getByRole("dialog", { name: "레시피 저장" });
     await expect(dialog).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "save-modal.png"),
     });
@@ -221,7 +220,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await page.getByRole("button", { name: "저장" }).click();
     await expect(page.getByRole("dialog", { name: "레시피 저장" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "save-modal-narrow.png"),
     });
@@ -235,7 +234,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await expect(googleLoginButton).toBeVisible();
     await googleLoginButton.scrollIntoViewIfNeeded();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "login-screen.png"),
     });
@@ -249,7 +248,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await expect(googleLoginButton).toBeVisible();
     await googleLoginButton.scrollIntoViewIfNeeded();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "login-screen-narrow.png"),
     });
@@ -266,7 +265,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
       page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
     ).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "login-gate-modal.png"),
     });
@@ -283,7 +282,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
       page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
     ).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "login-gate-modal-narrow.png"),
     });

@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   ATE_LIST_VISUAL_PATH,
   installLeftoversVisualRoutes,
@@ -80,7 +80,7 @@ async function capture(
   await page.goto(`${BASE_URL}${routePath}`);
   await assertReady(page);
   await stabilize(page);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     fullPage: true,
     path: path.join(EVIDENCE_DIR, filename),
   });
@@ -88,8 +88,6 @@ async function capture(
 }
 
 test("capture Slice 8 desktop leftovers prototype-port evidence", async ({ browser }) => {
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   for (const viewportName of Object.keys(viewports) as Array<keyof typeof viewports>) {
     const width = viewports[viewportName].width;
 

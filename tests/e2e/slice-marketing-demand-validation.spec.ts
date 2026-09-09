@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { captureTrackedEvidenceOnDemand, writeTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import { relative, resolve } from "node:path";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { completeMarketingExperience, completeMarketingQuiz, installMarketingDemandValidationRoutes, MARKETING_BETA_PATH, openMarketingLeadForm } from "./helpers/marketing-demand-validation";
@@ -126,7 +126,7 @@ async function capture(browser: Browser, width: number, height: number, name: st
   await page.evaluate(() => new Promise<void>((resolveFrame) => requestAnimationFrame(() => requestAnimationFrame(() => resolveFrame()))));
   await expectNoHorizontalOverflow(page);
   const filePath = resolve(EVIDENCE_DIR, name);
-  await page.screenshot({ path: filePath, fullPage: true });
+  await captureTrackedEvidenceOnDemand(page, { path: filePath, fullPage: true });
   await context.close();
   return filePath;
 }
@@ -333,7 +333,6 @@ test.describe("marketing demand validation v2 /beta", () => {
   test("captures hero and result evidence @evidence-capture", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "capture once");
     test.setTimeout(120_000);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
     for (const variant of ["default", "a", "b", "c", "d"] as const) {
       for (const [width, height, suffix] of [[320, 568, "320x568"], [390, 844, "390x844"], [1280, 900, "1280x900"]] as const) {
         const query = variant === "default" ? "" : `?ad_variant=${variant}`;
@@ -349,7 +348,6 @@ test.describe("marketing demand validation v2 /beta", () => {
   test("captures the main funnel evidence @evidence-capture", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "capture once");
     test.setTimeout(120_000);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
     const flowContext = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 390, height: 844 } });
     const flowPage = await flowContext.newPage();
     await installMarketingDemandValidationRoutes(flowPage);
@@ -358,20 +356,20 @@ test.describe("marketing demand validation v2 /beta", () => {
     for (const [index, answer] of ["거의 매일", "3~5끼", "먹은 양을 눈대중으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"].entries()) {
       await expect(flowPage.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(index + 1));
       const quizPath = resolve(EVIDENCE_DIR, `quiz-q${index + 1}-390x844.png`);
-      await flowPage.screenshot({ path: quizPath, fullPage: true });
+      await captureTrackedEvidenceOnDemand(flowPage, { path: quizPath, fullPage: true });
       await flowPage.getByRole("button", { name: answer }).click();
     }
     await expect(flowPage.getByRole("heading", { name: "눈대중 장인" })).toBeVisible();
     await flowPage.waitForTimeout(760);
     const normalResult = resolve(EVIDENCE_DIR, "result-normal-eyeballing-master-390x844.png");
-    await flowPage.screenshot({ path: normalResult, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: normalResult, fullPage: true });
     await flowPage.getByRole("button", { name: "무먹으로 20초 체험하기" }).click();
     await expect(flowPage.getByRole("button", { name: "무먹으로 가져오기" })).toBeVisible();
     const experience1 = resolve(EVIDENCE_DIR, "experience-1-390x844.png");
-    await flowPage.screenshot({ path: experience1, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience1, fullPage: true });
     await flowPage.getByRole("button", { name: "무먹으로 가져오기" }).click();
     const experience1Loading = resolve(EVIDENCE_DIR, "experience-1-loading-390x844.png");
-    await flowPage.screenshot({ path: experience1Loading, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience1Loading, fullPage: true });
     await expect(flowPage.getByRole("button", { name: "다음", exact: true })).toBeVisible();
     const completedImportHeading = flowPage.getByRole("heading", { name: "레시피를 가져왔어요" });
     await expect(completedImportHeading).toBeVisible();
@@ -395,60 +393,60 @@ test.describe("marketing demand validation v2 /beta", () => {
     await expect(flowPage.getByRole("img", { name: "이 남자의 cook 채널 프로필" })).toBeVisible();
     await expect(flowPage.locator(".success-banner")).toHaveCount(0);
     const experience1Done = resolve(EVIDENCE_DIR, "experience-1-done-390x844.png");
-    await flowPage.screenshot({ path: experience1Done, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience1Done, fullPage: true });
     await flowPage.getByRole("button", { name: "다음", exact: true }).click();
     const experience2 = resolve(EVIDENCE_DIR, "experience-2-390x844.png");
     expect(Number(await flowPage.getByRole("heading", { name: "영상 속 레시피를 자동으로 정리했어요." }).evaluate((element) => getComputedStyle(element).fontWeight))).toBeGreaterThanOrEqual(800);
     await expect(flowPage.getByText("오늘은 돼지고기를 조금 덜 넣었어요.")).toBeVisible();
-    await flowPage.screenshot({ path: experience2, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience2, fullPage: true });
     await flowPage.getByRole("button", { name: "돼지고기 600g → 520g" }).click();
     await expect(flowPage.getByRole("button", { name: "다음", exact: true })).toBeVisible();
     await expect(flowPage.getByText("돼지고기 양을 520g으로 수정했어요")).toBeVisible();
     await expect(flowPage.getByTestId("pork-amount")).toHaveText("520g");
     await flowPage.waitForTimeout(600);
     const experience2Adjusted = resolve(EVIDENCE_DIR, "experience-2-adjusted-390x844.png");
-    await flowPage.screenshot({ path: experience2Adjusted, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience2Adjusted, fullPage: true });
     await flowPage.getByRole("button", { name: "다음", exact: true }).click();
     const experience3 = resolve(EVIDENCE_DIR, "experience-3-390x844.png");
     await expect(flowPage.getByTestId("weight-helper")).toHaveText("조리하면서 줄어드는 무게를고려한 예상값이에요.");
-    await flowPage.screenshot({ path: experience3, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience3, fullPage: true });
     await flowPage.getByRole("button", { name: "저울로 재보니 1,180g" }).click();
     await expect(flowPage.getByTestId("weight-helper")).toHaveText("증발한 수분 무게를 뺀정확한 무게를 입력했어요");
     await expect(flowPage.getByText("수분이 날아간 만큼까지 반영했어요.")).toHaveCount(0);
     await flowPage.waitForTimeout(760);
     const experience3Confirmed = resolve(EVIDENCE_DIR, "experience-3-confirmed-390x844.png");
-    await flowPage.screenshot({ path: experience3Confirmed, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience3Confirmed, fullPage: true });
     await flowPage.getByRole("button", { name: "다음", exact: true }).click();
     const experience4 = resolve(EVIDENCE_DIR, "experience-4-390x844.png");
-    await flowPage.screenshot({ path: experience4, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience4, fullPage: true });
     await flowPage.getByRole("button", { name: "320g 입력하기" }).click();
     await flowPage.waitForTimeout(600);
     const experience5 = resolve(EVIDENCE_DIR, "experience-5-390x844.png");
-    await flowPage.screenshot({ path: experience5, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: experience5, fullPage: true });
     await flowPage.getByRole("button", { name: "식단에 기록하기" }).click();
     await expect(flowPage.getByRole("button", { name: "편의점 음식도 기록해보기" })).toBeVisible();
     await flowPage.waitForFunction(() => document.querySelector('[data-stage="planner-homecook"] .planner-summary')?.getAttribute("data-highlight") === "meal");
     await flowPage.waitForTimeout(570);
     const plannerHomecook = resolve(EVIDENCE_DIR, "planner-homecook-390x844.png");
-    await flowPage.screenshot({ path: plannerHomecook, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: plannerHomecook, fullPage: true });
     await flowPage.getByRole("button", { name: "편의점 음식도 기록해보기" }).click();
     await expectStageImagesReady(flowPage);
     const packaged = resolve(EVIDENCE_DIR, "packaged-food-390x844.png");
-    await flowPage.screenshot({ path: packaged, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: packaged, fullPage: true });
     await flowPage.getByRole("button", { name: "+ 기록하기" }).click();
     await expect(flowPage.getByRole("button", { name: "무료 베타 먼저 써보기" })).toBeVisible();
     await flowPage.waitForFunction(() => document.querySelector('[data-stage="planner-complete"] .planner-summary')?.getAttribute("data-highlight") === "product");
     await flowPage.waitForTimeout(570);
     const plannerComplete = resolve(EVIDENCE_DIR, "planner-complete-390x844.png");
-    await flowPage.screenshot({ path: plannerComplete, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: plannerComplete, fullPage: true });
     await flowPage.getByRole("button", { name: "무료 베타 먼저 써보기" }).click();
     await expect(flowPage.getByRole("textbox", { name: "이메일" })).toBeVisible();
     await expectStageImagesReady(flowPage);
     const beta = resolve(EVIDENCE_DIR, "beta-form-390x844.png");
-    await flowPage.screenshot({ path: beta, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: beta, fullPage: true });
     await flowPage.getByRole("button", { name: "무료 베타 초대받기" }).click();
     const betaError = resolve(EVIDENCE_DIR, "beta-form-validation-error-390x844.png");
-    await flowPage.screenshot({ path: betaError, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: betaError, fullPage: true });
     await flowPage.getByRole("textbox", { name: "이메일" }).fill("evidence@example.com");
     await flowPage.getByRole("checkbox", { name: /이메일 수집·이용에 동의/ }).check();
     await flowPage.getByRole("button", { name: "무료 베타 초대받기" }).click();
@@ -456,14 +454,13 @@ test.describe("marketing demand validation v2 /beta", () => {
     await expectStageImagesReady(flowPage);
     await flowPage.waitForTimeout(900);
     const done = resolve(EVIDENCE_DIR, "done-390x844.png");
-    await flowPage.screenshot({ path: done, fullPage: true });
+    await captureTrackedEvidenceOnDemand(flowPage, { path: done, fullPage: true });
     await flowContext.close();
   });
 
   test("captures narrow and responsive evidence and writes the manifest @evidence-capture", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "capture once");
     test.setTimeout(120_000);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
     const narrowQuizContext = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 320, height: 568 } });
     const narrowQuizPage = await narrowQuizContext.newPage();
     await installMarketingDemandValidationRoutes(narrowQuizPage);
@@ -473,7 +470,7 @@ test.describe("marketing demand validation v2 /beta", () => {
     for (const [index, answer] of ["거의 매일", "3~5끼", "먹은 양을 눈대중으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"].entries()) {
       await expect(narrowQuizPage.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(index + 1));
       const narrowPath = resolve(EVIDENCE_DIR, `quiz-q${index + 1}-320x568.png`);
-      await narrowQuizPage.screenshot({ path: narrowPath, fullPage: true });
+      await captureTrackedEvidenceOnDemand(narrowQuizPage, { path: narrowPath, fullPage: true });
       await narrowQuizPage.getByRole("button", { name: answer }).click();
     }
     await narrowQuizContext.close();
@@ -488,7 +485,7 @@ test.describe("marketing demand validation v2 /beta", () => {
     await failClosedPage.getByRole("button", { name: "무료 베타 초대받기" }).click();
     await expect(failClosedPage.locator("#beta-error")).toBeVisible();
     const failClosedPath = resolve(EVIDENCE_DIR, "turnstile-fail-closed-390x844.png");
-    await failClosedPage.screenshot({ path: failClosedPath, fullPage: true });
+    await captureTrackedEvidenceOnDemand(failClosedPage, { path: failClosedPath, fullPage: true });
     await failClosedContext.close();
     await capture(browser, 390, 844, "reduced-motion-and-visible-focus.png", async (page) => {
       const startButton = page.getByRole("button", { name: "내 집밥기록 유형 알아보기" });
@@ -515,7 +512,7 @@ test.describe("marketing demand validation v2 /beta", () => {
       const capturePath = resolve(EVIDENCE_DIR, captureName);
       return relative(process.cwd(), capturePath).replaceAll("\\", "/");
     });
-    await writeFile(
+    await writeTrackedEvidenceOnDemand(
       resolve(EVIDENCE_DIR, "stage4-capture-manifest.json"),
       `${JSON.stringify({ source_commit: "0aaa282552256ac9e77a5c134bb45a52e42ade33", captures: repositoryCaptures }, null, 2)}\n`,
     );

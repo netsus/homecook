@@ -1,7 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
+
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -592,8 +593,6 @@ async function installCookingRoutes(page: Page) {
 }
 
 test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) => {
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   {
     const { context, page } = await preparePage(browser, viewports.mobile);
     await setAuthOverride(page);
@@ -601,14 +600,14 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/shopping/flow`);
     await expect(page.getByText("제육볶음")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-flow-preview.png"),
     });
     await page.getByRole("button", { name: "장보기 목록 만들기" }).click();
     await expect(page.getByText("STEP 2 / 2")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-flow-review.png"),
     });
@@ -622,14 +621,14 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/shopping/flow`);
     await expect(page.getByText("제육볶음")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-flow-narrow.png"),
     });
     await page.getByRole("button", { name: "장보기 목록 만들기" }).click();
     await expect(page.getByText("STEP 2 / 2")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-flow-review-narrow.png"),
     });
@@ -643,7 +642,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/shopping/lists/list-1`);
     await expect(page.getByText("이번 주 평일 저녁")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-detail-default.png"),
     });
@@ -653,7 +652,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
       page.getByRole("dialog", { name: /팬트리에 (추가|반영)할까요\?/ }),
     ).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-complete-pantry.png"),
     });
@@ -667,7 +666,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/shopping/lists/list-1`);
     await expect(page.getByText("이번 주 평일 저녁")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-detail-narrow.png"),
     });
@@ -677,7 +676,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
       page.getByRole("dialog", { name: /팬트리에 (추가|반영)할까요\?/ }),
     ).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-complete-pantry-narrow.png"),
     });
@@ -691,7 +690,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/shopping/lists/list-completed`);
     await expect(page.getByRole("heading", { name: "완료된 장보기" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-detail-readonly.png"),
     });
@@ -705,7 +704,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/cooking/sessions/session-abc/cook-mode`);
     await expect(page.getByTestId("step-list")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "cook-mode-scroll.png"),
     });
@@ -713,7 +712,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.getByTestId("complete-button").click();
     await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "cook-mode-complete.png"),
     });
@@ -727,7 +726,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/cooking/sessions/session-abc/cook-mode`);
     await expect(page.getByTestId("step-list")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "cook-mode-narrow.png"),
     });
@@ -735,7 +734,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.getByTestId("complete-button").click();
     await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "cook-mode-complete-narrow.png"),
     });
@@ -749,7 +748,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/cooking/recipes/recipe-1/cook-mode?servings=2`);
     await expect(page.getByTestId("step-list")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "standalone-cook-mode-scroll.png"),
     });
@@ -763,7 +762,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.goto(`${BASE_URL}/cooking/recipes/recipe-1/cook-mode?servings=2`);
     await expect(page.getByTestId("step-list")).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "standalone-cook-mode-narrow.png"),
     });

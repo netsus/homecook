@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   E2E_APP_ORIGIN,
   E2E_AUTH_OVERRIDE_KEY,
@@ -387,7 +387,7 @@ async function capture(
   await expect(page.getByText("채실장")).toBeVisible();
   await prepareSurface?.(page);
   await stabilize(page);
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     fullPage: false,
     path: path.join(EVIDENCE_DIR, filename),
   });
@@ -395,8 +395,6 @@ async function capture(
 }
 
 test("capture Wave1 mypage core authority evidence", async ({ browser }) => {
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   await capture(browser, viewports.mobile, "mypage-default.png");
   await capture(browser, viewports.narrow, "mypage-narrow.png");
 

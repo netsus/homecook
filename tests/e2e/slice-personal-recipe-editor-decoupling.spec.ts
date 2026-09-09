@@ -1,7 +1,9 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
+
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 import {
   E2E_APP_ORIGIN,
@@ -48,12 +50,7 @@ async function captureEvidence(
   projectName: string,
   stem: string,
 ) {
-  if (process.env.HOMECOOK_CAPTURE_PERSONAL_EDITOR_EVIDENCE !== "1") {
-    return;
-  }
-
-  mkdirSync(EVIDENCE_DIRECTORY, { recursive: true });
-  await page.screenshot({
+  await captureTrackedEvidenceOnDemand(page, {
     animations: "disabled",
     fullPage: false,
     path: evidencePath(projectName, stem),

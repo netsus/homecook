@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
@@ -497,12 +496,6 @@ function rectanglesAreDisjoint(
     || first.y >= second.y + second.height
     || first.y + first.height <= second.y;
 }
-
-test.beforeAll(async () => {
-  await mkdir(IMPORT_EVIDENCE, { recursive: true });
-  await mkdir(SHELL_EVIDENCE, { recursive: true });
-  await mkdir(TRUTHFUL_PROGRESS_EVIDENCE, { recursive: true });
-});
 
 test("import initial and submitting states are visually explicit", async ({ page }, testInfo) => {
   const controls = await openImport(page, "submitting", 390, 844);

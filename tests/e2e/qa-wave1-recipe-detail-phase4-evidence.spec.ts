@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   installRecipeDetailRoutes,
   RECIPE_ID,
@@ -293,8 +293,6 @@ test("capture Wave1 recipe detail Phase 4 mobile evidence", async ({ browser }, 
     "Evidence capture writes shared PNG files and only needs one browser project.",
   );
 
-  await mkdir(EVIDENCE_DIR, { recursive: true });
-
   for (const [name, viewport] of Object.entries(viewports)) {
     const { context, page } = await preparePage(browser, viewport);
     await installRecipeDetailRoutes(page, {
@@ -304,7 +302,7 @@ test("capture Wave1 recipe detail Phase 4 mobile evidence", async ({ browser }, 
     await page.goto(`${BASE_URL}${RECIPE_PATH}`);
     await expect(page.getByRole("heading", { name: "제육볶음" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, `recipe-detail-${name}.png`),
     });
@@ -323,7 +321,7 @@ test("capture Wave1 recipe detail Phase 4 mobile evidence", async ({ browser }, 
     await page.getByRole("button", { name: "플래너에 추가" }).click();
     await expect(page.getByRole("dialog", { name: "플래너에 추가" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "planner-add-popup-mobile.png"),
     });
@@ -342,7 +340,7 @@ test("capture Wave1 recipe detail Phase 4 mobile evidence", async ({ browser }, 
     await page.getByRole("button", { name: "저장" }).click();
     await expect(page.getByRole("dialog", { name: "레시피 저장" })).toBeVisible();
     await stabilize(page);
-    await page.screenshot({
+    await captureTrackedEvidenceOnDemand(page, {
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "save-popup-mobile.png"),
     });
