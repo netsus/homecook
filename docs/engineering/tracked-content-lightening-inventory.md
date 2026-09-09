@@ -331,6 +331,13 @@ git grep -I -n -- '<exact path or filename>' origin/master -- \
 - PostgreSQL 영양 통합: 14 pass. build / lint / typecheck 통과.
 - dependency audit high 통과. Next.js 15.5.24, sharp 0.35.4,
   js-yaml 3.15.2/4.3.2의 신규 보안 하한을 고정했다.
+- current-head GitHub full visual이 드러낸 #1544 이후의 오래된 Linux desktop 기준 33개는
+  Playwright 1.58.2 Noble 컨테이너에서 재생성하고 대표 8화면을 원본 크기로 확인했다.
+  screenshot assertion과 허용치는 변경하지 않았으며 재비교는 exit 0이었다.
+- 준비 안내 landmark를 중첩 `aside`에서 이름 있는 `status`로 고치고, 비활성 funnel CTA도
+  흰 글자의 대비가 유지되도록 진한 브랜드 파랑을 사용했다. 플래너 제목과 우측 프로필
+  요약으로 바뀐 현재 desktop 구조에 accessibility readiness assertion도 동기화했다.
+  최종 full accessibility는 21 pass / 15 intended skip / 0 fail이다.
 - B5 writer 전환 독립 code review: blocker/major 0. 상류 회귀·보안 패치가 포함된 최종 diff는
   current-head CI 전 별도 재검토한다.
 
@@ -342,11 +349,13 @@ git grep -I -n -- '<exact path or filename>' origin/master -- \
    상단 여백을 압축해 320×568 CTA와 1280×900 등록 CTA를 모두 첫 화면 안으로 복구했다.
 3. 2026-09-08 공개된 Next.js/sharp/js-yaml 보안 공지에 맞춰 patch release와 transitive
    override를 갱신했고 dependency audit의 critical/high 항목을 0으로 만들었다.
-4. 구형 desktop slice6/7, Wave1 account-library-leftovers/pantry/planner-meal-add/
+4. #1544가 바꾼 `요리 계획` heading과 profile-summary 진입점을 full accessibility 검사가
+   현재 구조로 확인하도록 맞췄다. axe rule은 끄거나 완화하지 않았다.
+5. 구형 desktop slice6/7, Wave1 account-library-leftovers/pantry/planner-meal-add/
    recipebook-detail/settings-core/shopping-cooking 캡처의 과거 문구·선택자 재검토가 필요하다.
-5. YouTube 알림의 중복 button/사라진 global trigger/좁은 viewport 배치 및 marketing
+6. YouTube 알림의 중복 button/사라진 global trigger/좁은 viewport 배치 및 marketing
    evidence focus 초기화 검사도 현재 화면에 맞는 별도 QA 정비 후보다. skip을 추가하지 않는다.
-6. legacy root의 historical PNG archive 여부는 별도 consumer/복구 감사 후 판단한다.
+7. legacy root의 historical PNG archive 여부는 별도 consumer/복구 감사 후 판단한다.
    이번 B5는 PNG/JSON 삭제·archive를 수행하지 않는다.
 
 현재 visual baseline 112개, `ui/designs/authority`, 진행 중 marketing canonical 및 public/runtime
