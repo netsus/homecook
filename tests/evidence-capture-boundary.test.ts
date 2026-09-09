@@ -298,9 +298,22 @@ describe("tracked evidence capture boundary", () => {
   it("routes all affected evidence screenshots through the opt-in helper", async () => {
     for (const [sourcePath, expectedCalls] of AFFECTED_SOURCES) {
       const source = await readFile(sourcePath, "utf8");
-      expect(source.match(/captureEvidenceScreenshot\(/gu)).toHaveLength(
-        expectedCalls,
-      );
+      const ast = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, true);
+      const calls: ts.CallExpression[] = [];
+      const retiredReferences: ts.Identifier[] = [];
+      const visit = (node: ts.Node) => {
+        if (ts.isIdentifier(node) && node.text === "captureEvidenceScreenshot") {
+          retiredReferences.push(node);
+        }
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+            node.expression.text === "captureTrackedEvidenceOnDemand") {
+          calls.push(node);
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(ast);
+      expect(retiredReferences, sourcePath).toEqual([]);
+      expect(calls, sourcePath).toHaveLength(expectedCalls);
     }
   });
 
@@ -418,52 +431,32 @@ describe("tracked evidence capture boundary", () => {
     await expect(readFile(trackedPath, "utf8")).resolves.toBe("updated");
   });
 
-  it("keeps tracked evidence unchanged by default and updates it explicitly", async () => {
+  it("keeps only opt-in screenshot output and preserves existing tracked evidence", async () => {
     const helperPath = "./e2e/helpers/evidence-capture";
-    const { captureEvidenceScreenshot, shouldUpdateTrackedEvidence } = await import(
-      /* @vite-ignore */ helperPath
-    ) as {
-      captureEvidenceScreenshot: (
-        page: { screenshot(options: { path?: string }): Promise<unknown> },
-        testInfo: {
-          attach(name: string, options: { path: string }): Promise<void>;
-          outputPath(name: string): string;
-        },
-        trackedPath: string,
-      ) => Promise<string>;
-      shouldUpdateTrackedEvidence: () => boolean;
-    };
+    const helpers = await import(/* @vite-ignore */ helperPath);
+    expect(helpers).not.toHaveProperty("captureEvidenceScreenshot");
+    const { captureTrackedEvidenceOnDemand } = helpers;
     const root = await mkdtemp(join(tmpdir(), "homecook-evidence-boundary-"));
     const trackedPath = join(root, "tracked.png");
-    const outputRoot = join(root, "test-output");
     await writeFile(trackedPath, "baseline");
     const page = {
-      screenshot: vi.fn(async ({ path }: { path?: string }) => {
-        if (!path) throw new Error("screenshot path missing");
+      screenshot: vi.fn(async ({ path }: { path: string }) => {
         await writeFile(path, "captured");
       }),
     };
-    const testInfo = {
-      attach: vi.fn(async () => undefined),
-      outputPath: (name: string) => join(outputRoot, name),
-    };
 
-    expect(shouldUpdateTrackedEvidence()).toBe(false);
-
-    const verificationPath = await captureEvidenceScreenshot(
-      page,
-      testInfo,
-      trackedPath,
-    );
-
+    await expect(
+      captureTrackedEvidenceOnDemand(page, { path: trackedPath }),
+    ).resolves.toBeNull();
     expect(await readFile(trackedPath, "utf8")).toBe("baseline");
-    expect(await readFile(verificationPath, "utf8")).toBe("captured");
-    expect(testInfo.attach).toHaveBeenCalledOnce();
+    expect(page.screenshot).not.toHaveBeenCalled();
+    expect(await readdir(root)).toEqual(["tracked.png"]);
 
     vi.stubEnv("HOMECOOK_UPDATE_EVIDENCE", "1");
-    expect(shouldUpdateTrackedEvidence()).toBe(true);
-    await captureEvidenceScreenshot(page, testInfo, trackedPath);
-
+    await expect(
+      captureTrackedEvidenceOnDemand(page, { path: trackedPath }),
+    ).resolves.toBe(trackedPath);
+    expect(page.screenshot).toHaveBeenCalledExactlyOnceWith({ path: trackedPath });
     expect(await readFile(trackedPath, "utf8")).toBe("captured");
   });
 });

@@ -8,7 +8,7 @@ import {
   installCompletedYoutubeExtractionRoutes,
   installEmptyYoutubeNotificationRoutes,
 } from "./helpers/youtube-background-extraction";
-import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -366,11 +366,10 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       await youtube.page.getByRole("button", { name: "가져오기" }).click();
       await expect(youtube.page.getByTestId("youtube-draft-thumbnail")).toBeVisible();
       await expect(youtube.page.getByTestId("youtube-draft-tags")).toContainText("한식");
-      await captureEvidenceScreenshot(
+      await captureTrackedEvidenceOnDemand(
         youtube.page,
-        testInfo,
-        path.join(EVIDENCE_DIR, "YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png"),
         {
+          path: path.join(EVIDENCE_DIR, "YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png"),
           fullPage: true,
         },
       );
@@ -402,11 +401,10 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
         });
       await expect(manual.page.getByTestId("manual-image-preview")).toBeVisible();
       await expect(manual.page.getByTestId("manual-image-replace-button")).toBeVisible();
-      await captureEvidenceScreenshot(
+      await captureTrackedEvidenceOnDemand(
         manual.page,
-        testInfo,
-        path.join(EVIDENCE_DIR, "MANUAL_RECIPE_CREATE-image-upload-mobile-screenshot.png"),
         {
+          path: path.join(EVIDENCE_DIR, "MANUAL_RECIPE_CREATE-image-upload-mobile-screenshot.png"),
           fullPage: true,
         },
       );
@@ -432,11 +430,10 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       await stabilize(detail.page);
       await expect(detail.page.locator('[data-testid="recipe-youtube-source-note"]:visible')).toBeVisible();
       await expect(detail.page.locator('[data-testid="recipe-detail-tags"]:visible')).toContainText("한식");
-      await captureEvidenceScreenshot(
+      await captureTrackedEvidenceOnDemand(
         detail.page,
-        testInfo,
-        path.join(EVIDENCE_DIR, "RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png"),
         {
+          path: path.join(EVIDENCE_DIR, "RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png"),
           fullPage: true,
         },
       );
@@ -450,11 +447,10 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       await narrow.page.goto("/recipe/recipe-31-youtube");
       await stabilize(narrow.page);
       await expect(narrow.page.locator('[data-testid="recipe-youtube-source-note"]:visible')).toBeVisible();
-      await captureEvidenceScreenshot(
+      await captureTrackedEvidenceOnDemand(
         narrow.page,
-        testInfo,
-        path.join(EVIDENCE_DIR, "RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png"),
         {
+          path: path.join(EVIDENCE_DIR, "RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png"),
           fullPage: true,
         },
       );

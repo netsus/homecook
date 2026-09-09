@@ -1,6 +1,6 @@
 # Tracked Content Lightening Inventory
 
-상태: **1차 10-A~D / 2차 A historical evidence archive complete**
+상태: **1차 10-A~D / 2차 A·B5 / 2026-09-10 전반 효율화 로컬 검증 완료**
 
 기준 commit: `fa2aaa1fc86ddc73bf5f8fac9f8e3b4365440ddb`
 
@@ -273,7 +273,8 @@ replacement` manifest와 모든 consumer migration이 먼저 merge되지 않으�
 
 현재 visual baseline 112개/9.070MiB, authority 문서와 evidence, `public/assets/funnel`,
 진행 중 marketing canonical은 모두 보존했다. `desktop-mvp-porting` 등 capture writer가 남은
-증거 root는 2차 B에서 일반 regression의 tracked write를 먼저 분리하기 전에는 삭제하지 않는다.
+당시 증거 root는 2차 B에서 일반 regression의 tracked write를 분리하기 전 삭제 보류였다.
+아래 B5에서 writer 분리가 완료됐지만, 파일 삭제는 여전히 consumer·복구 감사가 필요하다.
 
 ## 재현 명령
 
@@ -362,3 +363,33 @@ git grep -I -n -- '<exact path or filename>' origin/master -- \
 현재 visual baseline 112개, `ui/designs/authority`, 진행 중 marketing canonical 및 public/runtime
 assets는 보존한다. 제품 runtime, DB, 서버 배포, Cloudflare, 운영 env 변경은 0이다.
 current-head GitHub CI와 최종 merge가 끝난 뒤에만 B5 완료 Discord 알림을 수행한다.
+
+## B5 후속 측정 (2026-09-10)
+
+`b499f704` 기준 evidence는 1,256파일 / 112,970,987 bytes(107.738MiB)다.
+2차 A receipt보다 69파일 / 약 3.453MiB 증가했다. 동일 Git blob 28그룹에 추가 사본 29개,
+3,329,340 bytes가 있다. Git object 저장은 이미 중복 제거되므로 이는 checkout 기준 절감 후보다.
+가장 큰 marketing-v2(14.431MB), baemin-style(10.534MB), desktop-mvp-porting(8.649MB)은
+현재 source manifest·authority·porting ledger가 참조한다. 이번에는 이미지 삭제 없이
+[후속 진단·계획](./ci-structural-lightening.md)에 보존 이유와 실행 비용 개선을 기록한다.
+
+## 2026-09-10 확정 미사용·완료 이미지 정리
+
+사용자의 전반 효율화 요청에 따라 원본이 이미 GitHub `b499f704`에 보존된 154 PNG를 정리했다.
+실행·검증 전체 결과는 [CI·저장소 효율화](./ci-structural-lightening.md)의 마지막 절을 따른다.
+
+| 범위 | 삭제 파일 | 원본 bytes | 보존·대체 |
+| --- | ---: | ---: | --- |
+| public/assets/plush | 66 | 26,054,425 | 참조 0, 현재 plush-v2와 pantry manifest 유지 |
+| docs/design/assets/spoon-grade-characters | 16 | 26,884,516 | 고해상도 원본 archive, runtime grade 파일 유지 |
+| ui/designs/evidence/desktop-mvp-porting의 PNG | 72 | 8,540,064 | 완료 문서 22개·53행 ledger 유지, 재캡처는 .artifacts |
+| 합계 | **154** | **61,479,005** | 현행 runtime/source 1,144파일 hash 무변경 |
+
+모든 삭제 파일의 Git blob·SHA-256·크기·PNG 해상도와 `git archive` 복구 결과가 일치한다.
+[receipt](../../ui/designs/evidence/historical-manifests/retired-assets-20260910.json)와
+[복구 방법](../../ui/designs/evidence/historical-manifests/retired-assets-20260910.md)에 저장했고,
+문서 consumer 14개를 이관했다. 활성 baemin authority·canonical source·visual baseline은 유지한다.
+
+현재 tree는 약 **407.4MB → 346.1MB**, 파일은 **6,909 → 6,758**로 줄었다.
+이는 삭제와 새 복구 기록·검증 코드까지 포함한 working-tree 측정이며, symlink는 링크 자체의
+bytes로 계산한다. Git 과거 object나 node_modules 크기 감소로 합산하지 않는다.

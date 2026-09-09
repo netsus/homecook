@@ -1,5 +1,7 @@
 # Slice 6 Desktop MVP Porting Evidence
 
+> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
+
 Scope:
 
 - `/login`
@@ -13,31 +15,31 @@ Scope:
 
 Captured MVP evidence:
 
-- `screenshots/login-1024.png`
-- `screenshots/login-1280.png`
-- `screenshots/login-1440.png`
-- `screenshots/mypage-saved-1024.png`
-- `screenshots/mypage-saved-1280.png`
-- `screenshots/mypage-saved-1440.png`
-- `screenshots/recipebooks-1024.png`
-- `screenshots/recipebooks-1280.png`
-- `screenshots/recipebooks-1440.png`
-- `screenshots/recipebook-detail-1024.png`
-- `screenshots/recipebook-detail-1280.png`
-- `screenshots/recipebook-detail-1440.png`
-- `screenshots/mypage-shopping-history-1024.png`
-- `screenshots/mypage-shopping-history-1280.png`
-- `screenshots/mypage-shopping-history-1440.png`
-- `screenshots/settings-1024.png`
-- `screenshots/settings-1280.png`
-- `screenshots/settings-1440.png`
-- `screenshots/mypage-account-1280.png`
-- `screenshots/mypage-notifications-1280.png`
-- `screenshots/mypage-help-1280.png`
-- `screenshots/settings-nickname-modal-1280.png`
-- `screenshots/settings-logout-modal-1280.png`
-- `screenshots/settings-account-delete-modal-1280.png`
-- `screenshots/recipebook-delete-modal-1280.png`
+- [archive: slice6/screenshots/login-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/login-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/login-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-saved-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-saved-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-saved-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/recipebooks-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/recipebooks-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/recipebooks-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/recipebook-detail-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/recipebook-detail-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/recipebook-detail-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-shopping-history-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-shopping-history-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-shopping-history-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/settings-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/settings-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/settings-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-account-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-notifications-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/mypage-help-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/settings-nickname-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/settings-logout-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/settings-account-delete-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice6/screenshots/recipebook-delete-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
 - `claude-presignoff.md`
 - `claude-postreview.md`
 

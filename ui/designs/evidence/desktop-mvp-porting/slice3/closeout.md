@@ -1,5 +1,7 @@
 # Slice 3 Closeout
 
+> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
+
 Plan: `.omx/plans/desktop-mvp-prototype-porting-ralplan-20260518.md`
 Branch: `feature/desktop-mvp-port-slice3-planner-meal`
 Rows: `screen:PLANNER_WEEK`, `screen:MEAL`, `modal:GLOBAL::ConfirmDialog`
@@ -15,14 +17,14 @@ Status: Claude final `SIGNOFF`
 
 ## Evidence
 
-- Prototype planner: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-planner-week-1280.png`
-- MVP planner: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-planner-week-1280.png`
-- Prototype meal: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-meal-detail-1280.png`
-- MVP meal: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-meal-detail-1280.png`
-- Prototype confirm normal: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-confirm-dialog-normal-1280.png`
-- MVP confirm normal: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-confirm-dialog-normal-1280.png`
-- Prototype confirm destructive: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-confirm-dialog-destructive-1280.png`
-- MVP confirm destructive: `ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-confirm-dialog-destructive-1280.png`
+- Prototype planner: [archive: slice3/screenshots/prototype-planner-week-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- MVP planner: [archive: slice3/screenshots/mvp-planner-week-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- Prototype meal: [archive: slice3/screenshots/prototype-meal-detail-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- MVP meal: [archive: slice3/screenshots/mvp-meal-detail-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- Prototype confirm normal: [archive: slice3/screenshots/prototype-confirm-dialog-normal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- MVP confirm normal: [archive: slice3/screenshots/mvp-confirm-dialog-normal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- Prototype confirm destructive: [archive: slice3/screenshots/prototype-confirm-dialog-destructive-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- MVP confirm destructive: [archive: slice3/screenshots/mvp-confirm-dialog-destructive-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
 - Visual verdict: `.omx/state/desktop-mvp-porting-slice3/ralph-progress.json`
 - Claude pre-signoff: `ui/designs/evidence/desktop-mvp-porting/slice3/claude-presignoff.md`
 - Claude post-review summary: `ui/designs/evidence/desktop-mvp-porting/slice3/claude-postreview.md`

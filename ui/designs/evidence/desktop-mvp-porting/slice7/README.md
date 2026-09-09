@@ -1,5 +1,7 @@
 # Slice 7 Desktop MVP Porting Evidence
 
+> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
+
 Scope:
 
 - `/cooking/ready`
@@ -10,16 +12,16 @@ Scope:
 
 Captured MVP evidence:
 
-- `screenshots/cook-ready-list-1024.png`
-- `screenshots/cook-ready-list-1280.png`
-- `screenshots/cook-ready-list-1440.png`
-- `screenshots/cook-mode-planner-1024.png`
-- `screenshots/cook-mode-planner-1280.png`
-- `screenshots/cook-mode-planner-1440.png`
-- `screenshots/cook-mode-standalone-1024.png`
-- `screenshots/cook-mode-standalone-1280.png`
-- `screenshots/cook-mode-standalone-1440.png`
-- `screenshots/cook-notice-modal-1280.png`
+- [archive: slice7/screenshots/cook-ready-list-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-ready-list-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-ready-list-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-mode-planner-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-mode-planner-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-mode-planner-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-mode-standalone-1024.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-mode-standalone-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-mode-standalone-1440.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice7/screenshots/cook-notice-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
 - `claude-presignoff.md`
 - `claude-postreview.md`
 

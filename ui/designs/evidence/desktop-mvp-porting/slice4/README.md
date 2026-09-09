@@ -1,5 +1,7 @@
 # Slice 4 Desktop MVP Porting Evidence
 
+> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
+
 Scope:
 
 - `/menu-add`
@@ -10,15 +12,15 @@ Scope:
 
 Captured MVP evidence:
 
-- `screenshots/menu-add-search-1280.png`
-- `screenshots/planned-servings-input-1280.png`
-- `screenshots/recipebook-selector-1280.png`
-- `screenshots/recipebook-detail-picker-1280.png`
-- `screenshots/pantry-match-picker-1280.png`
-- `screenshots/manual-recipe-create-1280.png`
-- `screenshots/ingredient-picker-modal-1280.png`
-- `screenshots/yt-import-url-1280.png`
-- `screenshots/yt-import-review-1280.png`
+- [archive: slice4/screenshots/menu-add-search-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/planned-servings-input-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/recipebook-selector-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/recipebook-detail-picker-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/pantry-match-picker-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/manual-recipe-create-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/ingredient-picker-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/yt-import-url-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- [archive: slice4/screenshots/yt-import-review-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
 
 Local verification:
 

@@ -13,7 +13,7 @@ import {
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const EVIDENCE_DIR = path.resolve(
   process.cwd(),
-  "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots",
+  ".artifacts/desktop-mvp-porting/slice8/screenshots",
 );
 
 const viewports = {

@@ -3,7 +3,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { installCompletedYoutubeExtractionRoutes } from "./helpers/youtube-background-extraction";
-import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
+import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -229,7 +229,7 @@ function createVisualQuantityDraft() {
 }
 
 test.describe("Slice 32: YouTube visual quantity enrichment", () => {
-  test("review screen shows quantity provenance and registers confirmed suggestions", async ({ page }, testInfo) => {
+  test("review screen shows quantity provenance and registers confirmed suggestions", async ({ page }) => {
     const registerBodies: unknown[] = [];
     await page.route("**/api/v1/recipes/youtube/register", async (route) => {
       registerBodies.push(await route.request().postDataJSON());
@@ -244,11 +244,10 @@ test.describe("Slice 32: YouTube visual quantity enrichment", () => {
 
     await openYoutubeReview(page);
 
-    await captureEvidenceScreenshot(
+    await captureTrackedEvidenceOnDemand(
       page,
-      testInfo,
-      path.join(EVIDENCE_DIR, "review-quantity-confirm-desktop.png"),
       {
+        path: path.join(EVIDENCE_DIR, "review-quantity-confirm-desktop.png"),
         fullPage: true,
       },
     );

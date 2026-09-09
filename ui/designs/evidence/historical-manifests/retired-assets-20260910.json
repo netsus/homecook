@@ -1,0 +1,1730 @@
+{
+  "schema_version": "1.0",
+  "kind": "historical-design-evidence-receipt",
+  "note": "Retired PNG originals and completed historical captures. Current runtime assets, authority reports, and visual regression baselines remain in the checkout.",
+  "source_commit": "b499f704b046823075f9bf02bdd27359438ec24c",
+  "file_count": 154,
+  "bytes": 61479005,
+  "recovery_command": "git archive b499f704b046823075f9bf02bdd27359438ec24c -- public/assets/plush docs/design/assets/spoon-grade-characters ui/designs/evidence/desktop-mvp-porting | tar -x -C \"$recovery_dir\"",
+  "regeneration_command": null,
+  "capture_sets": [
+    {
+      "root": "public/assets/plush",
+      "tree": "7d7a32aafccbf07d902ed4d4417b73bbbd4a36de",
+      "file_count": 66,
+      "bytes": 26054425,
+      "files": [
+        {
+          "path": "public/assets/plush/acorn-jelly.png",
+          "bytes": 379965,
+          "git_blob": "a3b137e37ded7d4e7a0f96ca4787c4916400db6b",
+          "sha256": "f35aae1a03adbe899baee20fc5a2eed37d218dfe36bdc9b724d0939ac448eef9",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/acorn-jelly.webp"
+        },
+        {
+          "path": "public/assets/plush/adlay.png",
+          "bytes": 379924,
+          "git_blob": "872e53394eb5f5375f42c949f6d7b83fa52f7d58",
+          "sha256": "9eb818272fb6f0ce698b81026905c82a86c846daf335595122e6f55c10ebe9df",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/adlay.webp"
+        },
+        {
+          "path": "public/assets/plush/aloe.png",
+          "bytes": 436625,
+          "git_blob": "6e3bfa48e85a28a505df363cd6e4ac6a31dfa140",
+          "sha256": "01185392f0d4407cb913409ecc8e4382b411c5b820bd066d54bb2246d448ba58",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/aloe.webp"
+        },
+        {
+          "path": "public/assets/plush/asparagus.png",
+          "bytes": 362539,
+          "git_blob": "63b6632fd06a1fc0f31513bb09015bef93b20014",
+          "sha256": "eb9a1a8c17c61ddfef26b5d2ddb53e511a9e7ffd77058b1b87b0a98457b22e5b",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/asparagus.webp"
+        },
+        {
+          "path": "public/assets/plush/avocado.png",
+          "bytes": 397466,
+          "git_blob": "734f6a95d446aa65b1135fb1f67356fcbf27de77",
+          "sha256": "23932b7666b34ae8d25c061d6ee77b5f4984ead353b40b4812a1161e3a304a98",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/avocado.webp"
+        },
+        {
+          "path": "public/assets/plush/barley.png",
+          "bytes": 429881,
+          "git_blob": "52a6461837f61d31c98904df16d42edf9ccfc5c7",
+          "sha256": "62d9fc3beb24bb4a5ede30525c9153ecc36076d91323b568110c1ae89f3302ec",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/barley.webp"
+        },
+        {
+          "path": "public/assets/plush/bitter-melon.png",
+          "bytes": 349186,
+          "git_blob": "fe95342e4a897d04fdd337f1310b0ddf234bd736",
+          "sha256": "a99fa392c587b6ee4784671b27f40fc5c101c7e84e05f2ee84cf5a9478a20311",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/bitter-melon.webp"
+        },
+        {
+          "path": "public/assets/plush/black-soybeans.png",
+          "bytes": 416374,
+          "git_blob": "b1d81e92b5b9cdf6c064c1dc628126314dde6066",
+          "sha256": "c6f852f6a2ce897f7ea42b615ab079020e8273f0d7fd153d9ce0d913e4f9ada8",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/black-soybeans.webp"
+        },
+        {
+          "path": "public/assets/plush/bottle-gourd.png",
+          "bytes": 296422,
+          "git_blob": "a9668290b71a36ff836038fc49d52255ed5e6926",
+          "sha256": "192a24f442e111e941777ad5f845db21705c5acc2862ca9dd015c0aaaff5dc71",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/bottle-gourd.webp"
+        },
+        {
+          "path": "public/assets/plush/broad-beans.png",
+          "bytes": 414097,
+          "git_blob": "5b5ed1d5f9fd6b5e7936ee4eea83da3669fa7789",
+          "sha256": "01de197dc0e7fce013451dce9a056aac00266516236309184006f05d88c07f45",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/broad-beans.webp"
+        },
+        {
+          "path": "public/assets/plush/broccoli.png",
+          "bytes": 443414,
+          "git_blob": "7a06c705ac28d2128634946c5e210e62e5cfcb4b",
+          "sha256": "142052a7e7a846800f849927fa4a0d85eb864adbb1eb1971c7baf7ca284e5b2d",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/broccoli.webp"
+        },
+        {
+          "path": "public/assets/plush/buckwheat-jelly.png",
+          "bytes": 374409,
+          "git_blob": "18846b9abc81e8eb31013add93e726d45920d2fb",
+          "sha256": "3f72b33715d354314420ca9ebceb182a75d33cdc3b0b9ad1155279b4670d73b7",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/buckwheat-jelly.webp"
+        },
+        {
+          "path": "public/assets/plush/cactus.png",
+          "bytes": 397473,
+          "git_blob": "0bca5ca895d3d0eff9206a9b4cbff11cdd93cd74",
+          "sha256": "466b32016e5e0dedd4353772071b51faeda514de72bb9157a7be3a96b3673d5a",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/cactus.webp"
+        },
+        {
+          "path": "public/assets/plush/candied-ginger.png",
+          "bytes": 435557,
+          "git_blob": "4978b6684d7bd2d4a0a6e06f479dbd2029bf8aec",
+          "sha256": "8285f37fe124cbc74ee1fd0e16eac920816e6ad8ae7b70d847436aaf7590d207",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/candied-ginger.webp"
+        },
+        {
+          "path": "public/assets/plush/castor-bean.png",
+          "bytes": 428371,
+          "git_blob": "054a670532b4e5397a35917755ef760d9dc10c4c",
+          "sha256": "6bae48870fa206f8ea660f534a0fec7e91c20729c7d63c6916aad2e737841572",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/castor-bean.webp"
+        },
+        {
+          "path": "public/assets/plush/chickpeas.png",
+          "bytes": 410790,
+          "git_blob": "d83a7e3b8229b8c501bd8da8b6a022f71d414355",
+          "sha256": "425d4591e164b359d2d9806e747f8b9cee45b9c8d75676d2b79e50a83b70c611",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/chickpeas.webp"
+        },
+        {
+          "path": "public/assets/plush/chinese-milk-vetch.png",
+          "bytes": 422183,
+          "git_blob": "5adfae9174c627ada3c3106e3406fc00d022973c",
+          "sha256": "87ae58cdfb8dde677d4ca35ea45c6d7f8b3d1066e1d172df8e085a19e86c037c",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/chinese-milk-vetch.webp"
+        },
+        {
+          "path": "public/assets/plush/chrysanthemum-flower.png",
+          "bytes": 425666,
+          "git_blob": "ba25fadb104640ccf12125aa77ffd2147465e312",
+          "sha256": "19d9ef642b756c6cfcca5650305ce0eeb2e747796e8d89403e47c11718db14eb",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/chrysanthemum-flower.webp"
+        },
+        {
+          "path": "public/assets/plush/cooked-rice.png",
+          "bytes": 329488,
+          "git_blob": "38580da6a6db137cf347af9169f438ef0ca083a8",
+          "sha256": "a88be25928939d55bb5bd2d5cdad9b50979c2f26271553673bc3839984f5d2cf",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/cooked-rice.webp"
+        },
+        {
+          "path": "public/assets/plush/corn-jelly.png",
+          "bytes": 387372,
+          "git_blob": "1bce103016979fd3ff9c902e86cbccac064021f7",
+          "sha256": "bae9f5699640da579e3464d4d620e6e133589404bdec8f273a86cdd3ace32c5d",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/corn-jelly.webp"
+        },
+        {
+          "path": "public/assets/plush/corn-kernels.png",
+          "bytes": 409971,
+          "git_blob": "09a6d51265024c7c921cc08e8cd211511f8aed10",
+          "sha256": "4f256e3f3f30c108270d9d311b9e65a00d01f886408f724b0620fd620640f216",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/corn-kernels.webp"
+        },
+        {
+          "path": "public/assets/plush/corn.png",
+          "bytes": 381101,
+          "git_blob": "ce9e1d1c6187d2e40cb16d299352d8e3ced309e7",
+          "sha256": "7daeec5b5c44e531c3a1dad8834c19ca3c7ff962d4f4e1523d48b0417d9a911b",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/corn.webp"
+        },
+        {
+          "path": "public/assets/plush/cowpeas.png",
+          "bytes": 407269,
+          "git_blob": "452827289b85c23d50480ec2848dee8b0469196b",
+          "sha256": "dc4092b9dfb298e675cd0b69ceb4423c731b9e538173c98d242ef0a72a5bfec5",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/cowpeas.webp"
+        },
+        {
+          "path": "public/assets/plush/cudrania.png",
+          "bytes": 405235,
+          "git_blob": "50850325fc15b47ff8fd589edaf0218eaf27e5a2",
+          "sha256": "71df1365c2f656234306f31725e9f3ee62bc9cfb604a91d59e22f4b0ba6627f0",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/cudrania.webp"
+        },
+        {
+          "path": "public/assets/plush/daylily.png",
+          "bytes": 432250,
+          "git_blob": "32a0bebf7730837609f8357a823c32f9b205cb59",
+          "sha256": "7ca5944a643ea04f09e84eb78ba0618877ccdd9ed80bd3d363d8f6d1f02af1de",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/daylily.webp"
+        },
+        {
+          "path": "public/assets/plush/dried-gourd-strips.png",
+          "bytes": 440746,
+          "git_blob": "58354f9b4e055919ab464858925ecc7da43c1f7e",
+          "sha256": "44dbf8e26180dcf8a2ac10a006d90f720f426440ddce369d7473c8a5efe8b529",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/dried-gourd-strips.webp"
+        },
+        {
+          "path": "public/assets/plush/foxtail-millet.png",
+          "bytes": 424425,
+          "git_blob": "87e55e85b68f4cbb249cf4885b839785182c3637",
+          "sha256": "d7b860fd855bf88d5a635a599ecafbfdf50f6995b2abd238307158b38dd690a0",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/foxtail-millet.webp"
+        },
+        {
+          "path": "public/assets/plush/fried-tofu.png",
+          "bytes": 412429,
+          "git_blob": "4f61eb6de19af26ec002082de256e9b945d66862",
+          "sha256": "7f7dd69ea520cc3dbb85c1b5d5a255c75588b9be12bd5a836f9ed14065830b0f",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/fried-tofu.webp"
+        },
+        {
+          "path": "public/assets/plush/goji-berry.png",
+          "bytes": 399734,
+          "git_blob": "342943ac2ba8fc681c219d62712c766da99559ec",
+          "sha256": "3221d303296228e2d19dc96eb96bdc69890bd17c4b8f89ae305266eba6fa1aaf",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/goji-berry.webp"
+        },
+        {
+          "path": "public/assets/plush/instant-rice.png",
+          "bytes": 346131,
+          "git_blob": "4ca97b962feceb00ddd1677bddf0aea91c1485bc",
+          "sha256": "282c4242ea8935f374e3ff60cc94134866f8e6bd468225c2b3ba82d8f8dfa9ff",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/instant-rice.webp"
+        },
+        {
+          "path": "public/assets/plush/jwinuni-beans.png",
+          "bytes": 422255,
+          "git_blob": "ba9d14344b24c708c5acf12d0121f97bfade950c",
+          "sha256": "fd37a9755a1bb5e6f7a474ca1f8cb455e49a49ee0d0f51fcb83745e7fc954bf2",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/jwinuni-beans.webp"
+        },
+        {
+          "path": "public/assets/plush/kabocha-squash.png",
+          "bytes": 393667,
+          "git_blob": "f64adf26e9d7fd8c3e19d7e243aa25bc5ddc65b1",
+          "sha256": "f1561b73efcca0c2064f2f6b191033025b179267f47cf1ee6b6a7f7cece534b2",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/kabocha-squash.webp"
+        },
+        {
+          "path": "public/assets/plush/lentils.png",
+          "bytes": 442646,
+          "git_blob": "748b857e49698630cbaf6d2b5a069889e947dc50",
+          "sha256": "004d9dc68105c8b7e80a8ff3dc90d5c28f0ac088b3485a3ddca3c93fe2c8d060",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/lentils.webp"
+        },
+        {
+          "path": "public/assets/plush/lima-beans.png",
+          "bytes": 423712,
+          "git_blob": "0cce8f1b891e262d92fb3f2debe82285c2c2a69f",
+          "sha256": "6a2e1e41b277050dc6af16e7180449752ea790d3af1b41c1fb9b2ca45e47ffde",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/lima-beans.webp"
+        },
+        {
+          "path": "public/assets/plush/mature-pumpkin.png",
+          "bytes": 377386,
+          "git_blob": "e0baa8a6ef3cc886ca693ca98bc93bf9b01e5954",
+          "sha256": "a6ed9a4f46f0d7bc3bcf0b49878d95232b4b4f200d515e7ef9e91930b63d44a3",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/mature-pumpkin.webp"
+        },
+        {
+          "path": "public/assets/plush/mixed-grains.png",
+          "bytes": 425119,
+          "git_blob": "19e7b81ac016b888ec3f6db2db25cbdb9795c2d7",
+          "sha256": "a9af8983c75410dd785ed906d354091c9c3c332e76fd61c206e09cccac232200",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/mixed-grains.webp"
+        },
+        {
+          "path": "public/assets/plush/mung-bean-jelly.png",
+          "bytes": 342143,
+          "git_blob": "0f73f46ab6f5ab9db5b219e68a86e8914b8fdc71",
+          "sha256": "6d552b5b95355b68967ec5fe7e4e191ab07ef71cd3e484b2c7a247b27baaaed4",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/mung-bean-jelly.webp"
+        },
+        {
+          "path": "public/assets/plush/oat-rice.png",
+          "bytes": 379413,
+          "git_blob": "ad24a01e2523f9da6a4a123e89bf86975873e957",
+          "sha256": "e0efcac29329e4da6745fe44cb9ff78b872c87928aa7d7e9f3ca17018a929cb8",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/oat-rice.webp"
+        },
+        {
+          "path": "public/assets/plush/oats.png",
+          "bytes": 392348,
+          "git_blob": "3a3ae97188c063c9f15a34cf9d1936a7c3c24830",
+          "sha256": "e98a4d15a83f69c52f502836c79f3bc82a791a0cfcbffe9b7746c3f9359456a8",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/oats.webp"
+        },
+        {
+          "path": "public/assets/plush/okara.png",
+          "bytes": 404861,
+          "git_blob": "c3e95e1cba8c6a71f1ac9a33f89decf3c48b0f1f",
+          "sha256": "ec73f9d78cc7e938d6920032d8ca990d18d1d3490b0c4549874906f552898755",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/okara.webp"
+        },
+        {
+          "path": "public/assets/plush/okra.png",
+          "bytes": 341761,
+          "git_blob": "783713692bdfa041ca3d60e8bf5b150416939bad",
+          "sha256": "4bd41c39449569dca3edba845d3c28cb953f9fb85e6dcb0e1af36b28ffbc2aaa",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/okra.webp"
+        },
+        {
+          "path": "public/assets/plush/olbanggae-jelly.png",
+          "bytes": 358602,
+          "git_blob": "8ab2c1c92df808281a29b73127ce67846bd95de8",
+          "sha256": "6c9d768b43df02387fbf6138088333eca69c1b285d76b1e034841122c688c463",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/olbanggae-jelly.webp"
+        },
+        {
+          "path": "public/assets/plush/peas.png",
+          "bytes": 443698,
+          "git_blob": "4a1c79cf9e33bbb809dccf079a6f4a72a4c8877a",
+          "sha256": "44c459c1ae9b7646ddd0cf88ea7e2937a923cc4c9709283d022996b73a376cec",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/peas.webp"
+        },
+        {
+          "path": "public/assets/plush/proso-millet.png",
+          "bytes": 393639,
+          "git_blob": "ccb55a4d21824d2bfb6cf3a8eeeac6a3463e5fe2",
+          "sha256": "f14a1e532b5e91b611f6aa4e50771708647a5310c003c568a36bfbbc4c6e6dce",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/proso-millet.webp"
+        },
+        {
+          "path": "public/assets/plush/pumpkin.png",
+          "bytes": 378571,
+          "git_blob": "ecb9123908a7d29483ffdc525fbdd5a37f708093",
+          "sha256": "aca2d826577a52d68a2549201e3ab72eb4bbee009b38ded815270a04dfdf1c8c",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/pumpkin.webp"
+        },
+        {
+          "path": "public/assets/plush/quinoa.png",
+          "bytes": 434227,
+          "git_blob": "6d9f196fc3daa5d95c877544885a03865c6a328c",
+          "sha256": "258f68648d7a3ea12a0e6de3daff84e674d77bf2fe315d0b147f09df4b9325cd",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/quinoa.webp"
+        },
+        {
+          "path": "public/assets/plush/rakkyo.png",
+          "bytes": 325579,
+          "git_blob": "7839ca8a4613163ec557959fe60f44916b5e3004",
+          "sha256": "fe47961fda98e59917c0163a304475bbdd4340eada6067015b6ab5b358b10cf5",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/rakkyo.webp"
+        },
+        {
+          "path": "public/assets/plush/ramie-leaf.png",
+          "bytes": 428602,
+          "git_blob": "4ca70af68ba356af7db28c7f56a1f49d549f9f4b",
+          "sha256": "e7dee65c17eddc9335d2bd8051e857281269c7c40df3287d44b4831b48a5e772",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/ramie-leaf.webp"
+        },
+        {
+          "path": "public/assets/plush/red-bean-paste.png",
+          "bytes": 410383,
+          "git_blob": "c6c292108be37371506f9dcf06160e7c220ac535",
+          "sha256": "2b0698be80f7fd12efd16e869cb3eb7ba9b8f08615916d8927410dfbe77d8bfc",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/red-bean-paste.webp"
+        },
+        {
+          "path": "public/assets/plush/red-beans.png",
+          "bytes": 427612,
+          "git_blob": "343c837adb1488bdded628ed74c384f15424c117",
+          "sha256": "3b360a405b8932cd30d6f693616617c68915771f681afbcc5a243643de8de230",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/red-beans.webp"
+        },
+        {
+          "path": "public/assets/plush/roasted-soybean-powder.png",
+          "bytes": 429751,
+          "git_blob": "0793ded087480bf7ba29121f304a623c93e6460d",
+          "sha256": "e0676ea400a94a609f08d71292ac747b8128a45bcf1b510424785bc48015ce42",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/roasted-soybean-powder.webp"
+        },
+        {
+          "path": "public/assets/plush/safflower.png",
+          "bytes": 437619,
+          "git_blob": "8f75d2b18b062af960628b393916366e2753f8da",
+          "sha256": "4f9519b4b7ecd5b4f201f8aab2134c07453fa6c5b69cd9c0150d13100e0a3cc1",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/safflower.webp"
+        },
+        {
+          "path": "public/assets/plush/scorched-rice.png",
+          "bytes": 438183,
+          "git_blob": "d77b0efee7749f5f46051534122356a3bffdb357",
+          "sha256": "13890ece50696cb8d6f0863db29538daad98e3d1757ee11b431485e6e7909840",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/scorched-rice.webp"
+        },
+        {
+          "path": "public/assets/plush/short-grain-rice.png",
+          "bytes": 364786,
+          "git_blob": "0a8442a218f54507fb8bcc1d9471e6b098f9e559",
+          "sha256": "e12343a3ab5c623dbc56ffbfbab75efc412bcfe02c8301f9c35e56aa4e08e541",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/short-grain-rice.webp"
+        },
+        {
+          "path": "public/assets/plush/silken-tofu.png",
+          "bytes": 374585,
+          "git_blob": "197110f4c2bd8ffe55f73a1e70a94bdb1c03e94a",
+          "sha256": "76b432002ba7125f118d2b7c763c6c225035d1581fa916603105c0d1be89bce3",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/silken-tofu.webp"
+        },
+        {
+          "path": "public/assets/plush/soft-tofu.png",
+          "bytes": 331947,
+          "git_blob": "8ab1a24fcc6b88c72434ed31dff5f7eadce1e41d",
+          "sha256": "50e79a7c3c11b0dc4cc822c3f2228e51435079e384a299064b47f3bd6b0d133d",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/soft-tofu.webp"
+        },
+        {
+          "path": "public/assets/plush/sorghum.png",
+          "bytes": 433205,
+          "git_blob": "06e8e6f4d761320a9101ad017c406105c782beb8",
+          "sha256": "0a5255c65e371d22c2c9727b63dc7949fceac7237f3090db6e9006a060d5443b",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/sorghum.webp"
+        },
+        {
+          "path": "public/assets/plush/soy-broth.png",
+          "bytes": 347124,
+          "git_blob": "ecae09fd3ece52e7280bb10216470c0fc014f1c4",
+          "sha256": "2c7d2e4733f610022a67452481df49942b48307fd6903edf3363d601a42f2914",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/soy-broth.webp"
+        },
+        {
+          "path": "public/assets/plush/soy-flour.png",
+          "bytes": 424747,
+          "git_blob": "a8e30f05895423dd71c9251acbece6e70f2163c3",
+          "sha256": "5efe0240ce901ccffcc45ab810ce7ab3ec23f35a6f1d7a696f9dfc896615e63b",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/soy-flour.webp"
+        },
+        {
+          "path": "public/assets/plush/soy-meat.png",
+          "bytes": 411026,
+          "git_blob": "ee2c960e101a76e081c6199432b3c09d08f9413d",
+          "sha256": "f75c123d56732e3161820c33f99902648883f4722a29e52ab72bf9ab98bcdabc",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/soy-meat.webp"
+        },
+        {
+          "path": "public/assets/plush/soy-milk.png",
+          "bytes": 347730,
+          "git_blob": "d173ea46c258f2c7516c4d4457246916878ad5bc",
+          "sha256": "091a51d46099f8be833147e6dc3afc9eb7a4b6247492341a5fa92ec39b9151d4",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/soy-milk.webp"
+        },
+        {
+          "path": "public/assets/plush/soybeans.png",
+          "bytes": 406183,
+          "git_blob": "a36bcb9aa12774e496175902371ba17df5452419",
+          "sha256": "532c33c7abba208e97dcc5b4e6d18380746bd015f3fe34b8862051b727318026",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/soybeans.webp"
+        },
+        {
+          "path": "public/assets/plush/sugarcane.png",
+          "bytes": 379601,
+          "git_blob": "cebf0ff37e37b1edd4f6ebbc9100486bf4c5f2f9",
+          "sha256": "509a9da607a9c79db9245e369c8b464902f27d23fd38536cc473ca2fcf74066e",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/sugarcane.webp"
+        },
+        {
+          "path": "public/assets/plush/winged-bean.png",
+          "bytes": 361701,
+          "git_blob": "4bd0df24aa002839d137dac5329dcba6b8268bf6",
+          "sha256": "415c8ec16d725aaab86e61c24b7f9fd2544bac6cdf8259ec88f417abf04ddf02",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/winged-bean.webp"
+        },
+        {
+          "path": "public/assets/plush/winter-melon.png",
+          "bytes": 322615,
+          "git_blob": "1dfe44572e8144b08055d232c8a605ecdff21bf4",
+          "sha256": "fa635a3cd8b42fcc8d1dea1984dd725d0b1a45a1b45c440eac527c9a1d00a9f1",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/winter-melon.webp"
+        },
+        {
+          "path": "public/assets/plush/zucchini.png",
+          "bytes": 320905,
+          "git_blob": "a83d58a00b3e40e57c3b40eeb49277debe6ccef4",
+          "sha256": "a02b1b8a061866a6537402ce56023397b9d005819379144674d8c428adcdab39",
+          "dimensions": {
+            "width": 512,
+            "height": 512
+          },
+          "replacement": "public/assets/plush-v2/zucchini.webp"
+        }
+      ]
+    },
+    {
+      "root": "docs/design/assets/spoon-grade-characters",
+      "tree": "828211428ba4ab1399cd20f60f945b2179f7a8b6",
+      "file_count": 16,
+      "bytes": 26884516,
+      "files": [
+        {
+          "path": "docs/design/assets/spoon-grade-characters/badge-icons/clay-spoon-badge.png",
+          "bytes": 1706526,
+          "git_blob": "18ee0ef34fa02e7e77cb67a0b62f320b6184890b",
+          "sha256": "798a2fd0acd0c65b48f4a17be41496afd595d41b67f3b3232e1feaff5bd86f11",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/clay-spoon-badge.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/badge-icons/diamond-spoon-badge.png",
+          "bytes": 1747929,
+          "git_blob": "45880bc8e2ed55aedf9b47f7676ea60e2f7055f9",
+          "sha256": "c80eb8ec3c246008ca1cb4489914a15738e7d4246f00c738d45c3ae68c8dfec9",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/diamond-spoon-badge.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/badge-icons/gold-spoon-badge.png",
+          "bytes": 1817385,
+          "git_blob": "59c7db41411570297fb3eb3b7cb321ed41b33c26",
+          "sha256": "106d1bbdb3aaf04e79bbf8ebb54c6a299e0b8131b5158d6d02ac82c0d2a41bd9",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/gold-spoon-badge.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/badge-icons/silver-spoon-badge.png",
+          "bytes": 1696417,
+          "git_blob": "5728569bea93499c19beb0c432cbe137db903ba3",
+          "sha256": "5098a6351b3dff7c1021a8f7a08571450ba33987d3e62e5fe082d39e20bc4c10",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/silver-spoon-badge.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/badge-icons/steel-spoon-badge.png",
+          "bytes": 1789522,
+          "git_blob": "48c7540c9f88d952482e608e0e6760435b68fe9d",
+          "sha256": "172a71b083c05650681029c4952db59cc5afc3f42bc96fcf4533cf4559f32a85",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/steel-spoon-badge.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/badge-icons/titanium-spoon-badge.png",
+          "bytes": 2154395,
+          "git_blob": "7dfeabd4225e9af0c17612a66c8217d0306fc2c8",
+          "sha256": "238d9588f9921e1c03d3259afd18b3160f9fead960ceb2dcf470e60aac133626",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/titanium-spoon-badge.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/badge-icons/wood-spoon-badge.png",
+          "bytes": 1395647,
+          "git_blob": "57fb35b8d333cc0b133418bb2fe083d75b1c91c9",
+          "sha256": "74c80087e4ef9c4763ce5dd6e197515c0ad93a3d5f4965b138df7c8669dee6b3",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/wood-spoon-badge.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/characters/clay-spoon.png",
+          "bytes": 1626273,
+          "git_blob": "cab6d45cbaf4b3a35382a3ce146405ba3a9f69e5",
+          "sha256": "e148ca29860a6bfe3261d6c0e641657cb484a072223fe738fdcbd3b5d77a1b68",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/clay-spoon.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/characters/diamond-spoon.png",
+          "bytes": 1629926,
+          "git_blob": "2b1c985cd1ee6d63c1132cec7a55ac4df8a60613",
+          "sha256": "f8276e80c7d1764de551e7b7a6334bf391e02d7a438c819a76dca772a3405f2e",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/diamond-spoon.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/characters/gold-spoon.png",
+          "bytes": 1734265,
+          "git_blob": "fb9d35ab896ad8cd47ff1c858e33f1394eac0df7",
+          "sha256": "31760ca540eb6d7a6f6d0e2e5bdeb1600266ff94c732e115223ea659fa5b6735",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/gold-spoon.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/characters/silver-spoon.png",
+          "bytes": 1435159,
+          "git_blob": "07775fd4ae89ac3314f92f662629ba36f13d436e",
+          "sha256": "9db61ecbea9eb9b680ffba60befc5e75ebd6bf5e73899626cd5d491309acd0cf",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/silver-spoon.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/characters/steel-spoon.png",
+          "bytes": 1560068,
+          "git_blob": "a141781b7057a7381db547b394be78734192c5aa",
+          "sha256": "6bc297dffd2ea3f787426e1b2953bc8c9d5a18f6cd14f1027ab366c5e532f0a0",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/steel-spoon.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/characters/titanium-spoon.png",
+          "bytes": 1808347,
+          "git_blob": "722ba1d15e617edba2c076be11d046f58316d025",
+          "sha256": "8162e82e5492f7fa34de4608ea7cb650c1a3582342826dc7fa12c3fd7961ad23",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/titanium-spoon.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/characters/wood-spoon.png",
+          "bytes": 1583506,
+          "git_blob": "89d5eb1c4cfcd1fbce86e7a2d4df4542e6a8cc85",
+          "sha256": "fac70b30979b940a43bf4b08bb4187bb43e0f2d2ca9a2784e86b87e0a2e48643",
+          "dimensions": {
+            "width": 1254,
+            "height": 1254
+          },
+          "replacement": "public/assets/growth/grades/wood-spoon.png"
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype-v1.png",
+          "bytes": 1639563,
+          "git_blob": "a5893dfbf30cc26d7eb66200373636ece92b4a9f",
+          "sha256": "9957778b0184e9a66e03a4a7c1880ee52f9c162e820294b3d75d948004427582",
+          "dimensions": {
+            "width": 1536,
+            "height": 1024
+          },
+          "replacement": null
+        },
+        {
+          "path": "docs/design/assets/spoon-grade-characters/concept-boards/mypage-achievement-album-prototype.png",
+          "bytes": 1559588,
+          "git_blob": "e7436adcc63ec115346f07e020e379ff1958bf53",
+          "sha256": "1b843f8f9478419ae6648c2973362fdfd5b01a5e83ca6f0bd2bb5ae86c5a21c8",
+          "dimensions": {
+            "width": 1536,
+            "height": 1024
+          },
+          "replacement": null
+        }
+      ]
+    },
+    {
+      "root": "ui/designs/evidence/desktop-mvp-porting",
+      "tree": "a3913af307f5c4545a86a188225a923079ebf385",
+      "file_count": 72,
+      "bytes": 8540064,
+      "files": [
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/mvp-home-1280.png",
+          "bytes": 258193,
+          "git_blob": "0e202f34c1b465181694ce10966faf25f581edcd",
+          "sha256": "34345b6397205877e67d78ef436dec3f779272b48f7ac6397915e969159e7fd7",
+          "dimensions": {
+            "width": 1280,
+            "height": 1394
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/mvp-ingredient-modal-1280.png",
+          "bytes": 37793,
+          "git_blob": "e6fc6e5573ad84a5dbcc8197ec8ff49babee4ca7",
+          "sha256": "cef262386d1f106381d6fd4873bda2d8264f3ce31c246aada220305d22246d36",
+          "dimensions": {
+            "width": 720,
+            "height": 586
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/mvp-recipe-1280.png",
+          "bytes": 259053,
+          "git_blob": "acdbe571a506e149b20895ff58de80a1d2dfe0b2",
+          "sha256": "7468d076480d3a90cfa97e90ab1ba2b43ac694bb1db67d89097c8adef7a7d261",
+          "dimensions": {
+            "width": 1280,
+            "height": 2046
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/prototype-home-1280.png",
+          "bytes": 84314,
+          "git_blob": "f40e569bba25640d2072d5dbfe8ac1534988d062",
+          "sha256": "0fe1c081932895c3eb52585de7ca02a9e2c9374224d24db6e7caffb124f5cf06",
+          "dimensions": {
+            "width": 1280,
+            "height": 1482
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/prototype-recipe-1280.png",
+          "bytes": 119540,
+          "git_blob": "985b9c48ee47c3ec8c35135197a37329b66a3c06",
+          "sha256": "2258300e2298a8b21d2da2a12091408e4bfdad866e063da8d4139981d8e404a4",
+          "dimensions": {
+            "width": 1280,
+            "height": 2213
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-confirm-dialog-destructive-1280.png",
+          "bytes": 8379,
+          "git_blob": "804bb4358f4066f6d4f7be96c312c41e0f68e430",
+          "sha256": "202486ee5136bd497ff6eeca70c1636f67d695f93e0e06c0ca6ad548ff1cd1d7",
+          "dimensions": {
+            "width": 440,
+            "height": 242
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-confirm-dialog-normal-1280.png",
+          "bytes": 13438,
+          "git_blob": "49973cf3706d3dbca3ea279d5ca1c6681fba6fb5",
+          "sha256": "991d131d548b1b88dadc8ad588ef9cdf683f52fe0b3d431e6b894d91931e1ba7",
+          "dimensions": {
+            "width": 440,
+            "height": 252
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-meal-detail-1280.png",
+          "bytes": 279331,
+          "git_blob": "d25fa11e418ed07e261582b915e27fc306bff313",
+          "sha256": "f7a4eeeea36408580652ba88fb9fda633a165d20dc9631c1ea01a8922950d807",
+          "dimensions": {
+            "width": 1280,
+            "height": 1567
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/mvp-planner-week-1280.png",
+          "bytes": 108277,
+          "git_blob": "cc63bd4d3ccb789da95eb1cad5be440d0f6c66ca",
+          "sha256": "006c2085bed4663f9a2192da55932e031489560a3504a83a752effb87fbd2f64",
+          "dimensions": {
+            "width": 1280,
+            "height": 1221
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-confirm-dialog-destructive-1280.png",
+          "bytes": 320873,
+          "git_blob": "5975750e0c88d9156e4cef5343f20f2e49cc26d2",
+          "sha256": "bb543943169cf4f67c4b50ece0538350eca92f58b3482e97a85bd94092a8a66c",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-confirm-dialog-normal-1280.png",
+          "bytes": 402353,
+          "git_blob": "a93c853c4917b978e15f9cece32d50641437095e",
+          "sha256": "bd619429b57c657edd0a126552f6d774e7314cd1a39c09cd34367b6c90ac6bda",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-meal-detail-1280.png",
+          "bytes": 582992,
+          "git_blob": "dccb0a0d1560d74c64dd4d285f5882e9c04a1967",
+          "sha256": "f3c2ed274073036c3ffbb9f4e28aaac95e1086e9e334620e316e374039e1cd79",
+          "dimensions": {
+            "width": 1280,
+            "height": 1167
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice3/screenshots/prototype-planner-week-1280.png",
+          "bytes": 205108,
+          "git_blob": "3efb84c0cac2328035762563f45a5f35dcb2188e",
+          "sha256": "07d9d2cd69f9a5810259ed68b927ab48c73261b1e6da9b0929617c87b1dcc23b",
+          "dimensions": {
+            "width": 1280,
+            "height": 1221
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/ingredient-picker-modal-1280.png",
+          "bytes": 26170,
+          "git_blob": "c4be32c592aa8d042341461e39c087f6cfd55b5c",
+          "sha256": "f9ff53ad5eac5d7c56bef8dccaa4462b1540b2f51ec822fcd14b6dea7b64b1c9",
+          "dimensions": {
+            "width": 820,
+            "height": 452
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/manual-recipe-create-1280.png",
+          "bytes": 63224,
+          "git_blob": "6e54bf88ae4db09fe8086ccf8f0d7decc5ea3fc1",
+          "sha256": "43d66041c32dcdde05fa22eadd258424a447f8ada422a92dee9ba79810891177",
+          "dimensions": {
+            "width": 1280,
+            "height": 963
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/menu-add-search-1280.png",
+          "bytes": 86570,
+          "git_blob": "7b2697c0c472df03d81211cd8156e7b665b1c165",
+          "sha256": "7f4dd5f28ad48caeb14c8d359ea6d0a1cf25d8db67a2072420b6265905a53bab",
+          "dimensions": {
+            "width": 1280,
+            "height": 925
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/pantry-match-picker-1280.png",
+          "bytes": 108538,
+          "git_blob": "95ef3070f97e80b2008c98bdff262d0f3d7a8b0f",
+          "sha256": "0d4e2b003613806ffc8641374af2cce699f4f09780712599c821feba44bb2202",
+          "dimensions": {
+            "width": 1280,
+            "height": 865
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/planned-servings-input-1280.png",
+          "bytes": 9915,
+          "git_blob": "85f75dc08b1536401a0aa2ef093105ec67aeffe4",
+          "sha256": "bf309111ef96582da3d03a6fc70923c9a15bc11d623fa53f346bc72c1f8cece4",
+          "dimensions": {
+            "width": 440,
+            "height": 296
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/recipebook-detail-picker-1280.png",
+          "bytes": 91382,
+          "git_blob": "965f1dda59ff1ae7f364ad547ecc399ae589120c",
+          "sha256": "0cc98e2b5776440540b0808129e02ccea6f1826bfdb4616ad82cd9fe3f308a31",
+          "dimensions": {
+            "width": 1280,
+            "height": 833
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/recipebook-selector-1280.png",
+          "bytes": 91329,
+          "git_blob": "d8b43c1f69ade94da128601e749b0cc7466d4b12",
+          "sha256": "0dd82190ce7d820bbcfb6fdcca7ec914c460fa41dfed133944a3fac19cfb66eb",
+          "dimensions": {
+            "width": 1280,
+            "height": 737
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/yt-import-review-1280.png",
+          "bytes": 91568,
+          "git_blob": "ca11f8057d62bad4a1a31d35fa8fadd9b361b66a",
+          "sha256": "ebbf4283ad48256cbba152c35cf248887a106d50f6bf46425cb7bd26217eaf64",
+          "dimensions": {
+            "width": 1280,
+            "height": 1381
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice4/screenshots/yt-import-url-1280.png",
+          "bytes": 53245,
+          "git_blob": "e37c478a86fb55c15996034f2f4ea10047a47de8",
+          "sha256": "3d545f34e7bedbe0e41e5810cce0187851be2ccd1c6042b0bb14fe374fcdc8b1",
+          "dimensions": {
+            "width": 1280,
+            "height": 720
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice5/screenshots/pantry-1280.png",
+          "bytes": 70574,
+          "git_blob": "a8e6ed9cd0bf456ca86d046ab609f929725f1914",
+          "sha256": "48f7f2bbb874e6dbbd0e519ee8eca0a33a1994607b82e7cb44cf9e856e31e732",
+          "dimensions": {
+            "width": 1280,
+            "height": 1087
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice5/screenshots/pantry-add-modal-1280.png",
+          "bytes": 39627,
+          "git_blob": "7b73411874075fbddbed939d71c7e293206e5ca7",
+          "sha256": "01a395dea0b222bc67e4c09ce570726649304248774bc65c9732ad22e566db4e",
+          "dimensions": {
+            "width": 720,
+            "height": 630
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice5/screenshots/pantry-bundle-modal-1280.png",
+          "bytes": 29551,
+          "git_blob": "ff6f31de55527e4bfae5bd7ad60d1887b8061635",
+          "sha256": "69541135ecfe3f103a14c60d1470c01e27c79b647fdc50c2200db7af87fe608b",
+          "dimensions": {
+            "width": 560,
+            "height": 456
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice5/screenshots/shopping-detail-active-1280.png",
+          "bytes": 58547,
+          "git_blob": "923a061382fce44d89c5f6e7dc18a93da0c3dc57",
+          "sha256": "932019dfc8a43e606733362a12ef4965fda0daaef132b6c005855ff5b783f95e",
+          "dimensions": {
+            "width": 1280,
+            "height": 811
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice5/screenshots/shopping-detail-complete-1280.png",
+          "bytes": 56130,
+          "git_blob": "2fc8c94090c09063d66db6c40fcf8d474f83b985",
+          "sha256": "e3f2f484db0ca31921b429260cbd911f0d9f2b4007fc36cf1e4da7a5389875d1",
+          "dimensions": {
+            "width": 1280,
+            "height": 823
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice5/screenshots/shopping-detail-reflect-1280.png",
+          "bytes": 27139,
+          "git_blob": "0536c127028c52df1d5bf37141698dbca4685b72",
+          "sha256": "816f2ec19f7f0035a452c1247cd14d78abcdf88bb6091815ab10b02df88241a1",
+          "dimensions": {
+            "width": 520,
+            "height": 442
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice5/screenshots/shopping-flow-1280.png",
+          "bytes": 100218,
+          "git_blob": "2863a3f08429ce9d0f7ca3142bf850ced6dbd364",
+          "sha256": "32301593a379010f34c8b147d1cd9bf401cf7a5dca0f5c8df2fd59fe9a65e2be",
+          "dimensions": {
+            "width": 1280,
+            "height": 1034
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/login-1024.png",
+          "bytes": 40327,
+          "git_blob": "f449f17d0480dcb0079096af65d78ebbf089bdfd",
+          "sha256": "2bece7c51a61b54c46db8f13c214bcb420d3b2ec4fdc897026b7b7b6ccde85fc",
+          "dimensions": {
+            "width": 1024,
+            "height": 904
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/login-1280.png",
+          "bytes": 41986,
+          "git_blob": "bdfde6dc05c7de1465505dda4fe6e6a2934cdb82",
+          "sha256": "2d54cad6fadcf4715aeb4f6d441163fe2e42690ab1b9b1817f50d88a50908021",
+          "dimensions": {
+            "width": 1280,
+            "height": 1036
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/login-1440.png",
+          "bytes": 44210,
+          "git_blob": "315e931a26f208641b9d471b30a8af56fe71f1a1",
+          "sha256": "3b52e7e2e25b01030913f5af4ffa9b6c47e6abc5c5dcf957e83229b947126abd",
+          "dimensions": {
+            "width": 1440,
+            "height": 1096
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-account-1280.png",
+          "bytes": 65058,
+          "git_blob": "2d78666147ca5a73d7c1e90391cd7b6598964998",
+          "sha256": "e264ebf4f4c7280ae9540b1d0f3a70cbcab1123dac68809734b3970491726b30",
+          "dimensions": {
+            "width": 1280,
+            "height": 1240
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-help-1280.png",
+          "bytes": 69659,
+          "git_blob": "96733d8597cd74f79e1b9c84dddbe32763877c5e",
+          "sha256": "cf60edbb7edcd62bcb8e27763a5e2b5cae1729dece503c9b3cc8b8e5c6194716",
+          "dimensions": {
+            "width": 1280,
+            "height": 1190
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-notifications-1280.png",
+          "bytes": 65576,
+          "git_blob": "c002e1c8f994e6b14c9a934b3c57731537503317",
+          "sha256": "11eab849611bc70c44417d7eb061433deb7965c2bacbbd97177a8dfa079eed0f",
+          "dimensions": {
+            "width": 1280,
+            "height": 1096
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-saved-1024.png",
+          "bytes": 493917,
+          "git_blob": "3af04bd5df4f3905abc04df488042082b40af8e0",
+          "sha256": "e73ecb8adbd6e5cc92c24d0838add82e442ef580c1866cbac95be3b21309886d",
+          "dimensions": {
+            "width": 1024,
+            "height": 1702
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-saved-1280.png",
+          "bytes": 730635,
+          "git_blob": "f49924f9541134c72e9bb88067f92552716da575",
+          "sha256": "c18aa45e139248a6598f78dcec295cc8036e43198fb96a387fbff0c7cc4d533a",
+          "dimensions": {
+            "width": 1280,
+            "height": 1768
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-saved-1440.png",
+          "bytes": 737369,
+          "git_blob": "434a628277373d82d03ea9152e8f4b5c5e4c6ad8",
+          "sha256": "2b26398dfe84b567e81b9655cb3d4cebddaf1ad517e2e17846f085c8ad2727bc",
+          "dimensions": {
+            "width": 1440,
+            "height": 1768
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-shopping-history-1024.png",
+          "bytes": 49673,
+          "git_blob": "00b90ace166c48f45d0ce87b944f80fa8ad35d30",
+          "sha256": "ab57543d2e6a7524d37ddb99161c8a47a4b2805ba08ab32d5a5d79a5f87b2c8e",
+          "dimensions": {
+            "width": 1024,
+            "height": 1002
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-shopping-history-1280.png",
+          "bytes": 48692,
+          "git_blob": "9241054feafdb1184113cf06249215ec8d98fd40",
+          "sha256": "b11e33dedf7348e806e5f06f25147b4677cc5d6da4f3853eec7c1ffd3c6e225b",
+          "dimensions": {
+            "width": 1280,
+            "height": 1036
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/mypage-shopping-history-1440.png",
+          "bytes": 50930,
+          "git_blob": "18617887d964a3c8375b1a75b973d47a7ec04529",
+          "sha256": "feb24159759ed0dcfcf2b559e626a6933bf22de932fdb626acdce6b79a305bac",
+          "dimensions": {
+            "width": 1440,
+            "height": 1096
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/recipebook-delete-modal-1280.png",
+          "bytes": 116526,
+          "git_blob": "1d37a4ad2134fc2b478be2397eed20410f428cf9",
+          "sha256": "49b2be425603cad44387b85a412375591c0eb28570db16c6d9a44f08c4b9a98d",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/recipebook-detail-1024.png",
+          "bytes": 33871,
+          "git_blob": "a34537e13e2f8d14e439b5fd362beba6bfe8e222",
+          "sha256": "8a95bf8b4a5900f9c3563d6a2cc6662545cdc05daeb16f8de761c58ec4126047",
+          "dimensions": {
+            "width": 1024,
+            "height": 904
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/recipebook-detail-1280.png",
+          "bytes": 35190,
+          "git_blob": "7f040e2583a74e11e219c8f9595a0ab21083676f",
+          "sha256": "8f2f58408f8f7dae341af0fe0dd0512a77ab78cabf66dc0f8f205f07722a7413",
+          "dimensions": {
+            "width": 1280,
+            "height": 1036
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/recipebook-detail-1440.png",
+          "bytes": 36510,
+          "git_blob": "27afd66ed6b134eea4d76ef224d5fde2373b9537",
+          "sha256": "3576ceadd9ca16df8cad82c6bbbe68d9d82ba388020792ff470a9042f1de2c17",
+          "dimensions": {
+            "width": 1440,
+            "height": 1096
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/recipebooks-1024.png",
+          "bytes": 124826,
+          "git_blob": "2538f7336b9ca1b1f779ff67f207d1a9e46e54a0",
+          "sha256": "637b6b42e301ca589842a681c7d6218607667b276564490287f9e74aa2c76787",
+          "dimensions": {
+            "width": 1024,
+            "height": 1497
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/recipebooks-1280.png",
+          "bytes": 128522,
+          "git_blob": "f97a3b9af342165d6a4978e0f5fd9833db06d06c",
+          "sha256": "2046088a179fa618d48f9e270eb92283665126a585d630de815a1fc14986a62c",
+          "dimensions": {
+            "width": 1280,
+            "height": 1497
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/recipebooks-1440.png",
+          "bytes": 129692,
+          "git_blob": "dacb40e7d2e96e0314351853e1d97a5e409172d8",
+          "sha256": "cf13ad32cb38206d549c2a691e0ca7bfe8245b0c62288d8ad6918f3fa65b58ae",
+          "dimensions": {
+            "width": 1440,
+            "height": 1497
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/settings-1024.png",
+          "bytes": 98921,
+          "git_blob": "9cd7753bf6d83933a02910fb6ad422a09b250e52",
+          "sha256": "a4f0dae21441938993d3568096155ae00f94db24906751a2dfebd35bc96e1a58",
+          "dimensions": {
+            "width": 1024,
+            "height": 2031
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/settings-1280.png",
+          "bytes": 101347,
+          "git_blob": "e52fb0b51e7b4d99a0f749d95705525ae53a455a",
+          "sha256": "ecf753b2a51817dd0bfca0bd45937f393c66fd7033eec7e2a86102791f667a2d",
+          "dimensions": {
+            "width": 1280,
+            "height": 2031
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/settings-1440.png",
+          "bytes": 103846,
+          "git_blob": "0c9b72a408ffda58fcb73ce8bcc8b119cfadae24",
+          "sha256": "690781bdc4011289bea914971804dff2df60f4f52385a32e6d1dbd0fbd550a41",
+          "dimensions": {
+            "width": 1440,
+            "height": 2031
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/settings-account-delete-modal-1280.png",
+          "bytes": 82297,
+          "git_blob": "1721366a280837cdb2522010c32896ec7766266f",
+          "sha256": "83435efaa4f8ba7ab645920d0ce8b5c2a141382b55c2baa9855a948e0ad82632",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/settings-logout-modal-1280.png",
+          "bytes": 76649,
+          "git_blob": "c67a6d438957eeecc7da1165f7c802af40a00ab1",
+          "sha256": "93ea76e65d087e5cb011f8e7e4477a99ace9c358d013bfe11076f9f98ed78dfc",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice6/screenshots/settings-nickname-modal-1280.png",
+          "bytes": 78219,
+          "git_blob": "127ef4ce03809944121f5a779446fd59743ef60f",
+          "sha256": "ff3133a2438bb5958278b75e34bb2be21e965282f0b09513d0b835644ee2721d",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-mode-planner-1024.png",
+          "bytes": 75724,
+          "git_blob": "9c26db596ac0f9ee58a6424fde70702cdbbdff34",
+          "sha256": "782c25eb2e4b13f0c48908dad14cdef567e1efd409c37bb339736daa1b847def",
+          "dimensions": {
+            "width": 1024,
+            "height": 1603
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-mode-planner-1280.png",
+          "bytes": 73171,
+          "git_blob": "3ef8b60bb8c9849325a90c64c39cfc8037df93ad",
+          "sha256": "9cd2cb75f843593a6aa99ab930b14737d199e411be7410fe57877376066b9135",
+          "dimensions": {
+            "width": 1280,
+            "height": 1051
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-mode-planner-1440.png",
+          "bytes": 74929,
+          "git_blob": "89c5a4340421f22f490f76679c1e87099a47f2cb",
+          "sha256": "32fe4aadc5ee428cbe251c6501c0ac920774c0afc9b9973951f445804c188447",
+          "dimensions": {
+            "width": 1440,
+            "height": 1055
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-mode-standalone-1024.png",
+          "bytes": 83015,
+          "git_blob": "b10bb44c528fd9e2de374c0c62f08149a3c9e5e8",
+          "sha256": "923a72805c81be8cb51c86400f3c017ab59bc2021c1d8f5f8b1eea74eae31fb4",
+          "dimensions": {
+            "width": 1024,
+            "height": 1670
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-mode-standalone-1280.png",
+          "bytes": 80374,
+          "git_blob": "0c54f9334a6b2664df8ada3c4ff82fbd4668e5bd",
+          "sha256": "65ba3497d7f0a744e56368d0784302b0914749a25205eb863944c944e29bc817",
+          "dimensions": {
+            "width": 1280,
+            "height": 1119
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-mode-standalone-1440.png",
+          "bytes": 82035,
+          "git_blob": "bd0ad5f0601e4f4c37f2547ca0b1bd716dee2080",
+          "sha256": "ea64648bf14fc58e5e980d702bdfd4a3f71388c7d1bc608df766ef97c2dec830",
+          "dimensions": {
+            "width": 1440,
+            "height": 1123
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-notice-modal-1280.png",
+          "bytes": 119589,
+          "git_blob": "24c887c759521faf1326cb0e407256d0b3566dbc",
+          "sha256": "91b709c040da8923afa1e0c9fa4885792007c1d728e32c55954c9ac15d5393a0",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-ready-list-1024.png",
+          "bytes": 67715,
+          "git_blob": "30e2fcb056ed3b4454a15b2f6dd0c5413e97272e",
+          "sha256": "b3a871ac1af0ad754e1b59dcef1707dd3b4d0d0dac1bde7afd56edf81b85e635",
+          "dimensions": {
+            "width": 1024,
+            "height": 1297
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-ready-list-1280.png",
+          "bytes": 66530,
+          "git_blob": "4220f93e97bfdf9d2b9ed4a2d0f38e12c42ceeed",
+          "sha256": "f508123fa1b36eef0f19ad123b6c0d3cb6766c6721429e418c9dd28f6e2ddb64",
+          "dimensions": {
+            "width": 1280,
+            "height": 1025
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots/cook-ready-list-1440.png",
+          "bytes": 68001,
+          "git_blob": "6a3d57aac49be248f2ba3e988c54353367807e62",
+          "sha256": "bc3c58d28bef410a85e74651b2b8c018b658274b896af5c6a2bb61eda006b7ef",
+          "dimensions": {
+            "width": 1440,
+            "height": 1025
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/ate-list-1024.png",
+          "bytes": 36792,
+          "git_blob": "89d13470c4d9a674e611b2358da71a47ae64e1f1",
+          "sha256": "cd389fa22c6438677b4ab7f89a8823c203b6a25552312f54b807972b21fb7e08",
+          "dimensions": {
+            "width": 1024,
+            "height": 768
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/ate-list-1280.png",
+          "bytes": 38092,
+          "git_blob": "7e3ba1dfd86f580a48f9bbf3690fa957279ad354",
+          "sha256": "8277b449b710469508c9c52d9adba9472d8b2e7abb379c82d437904d22fa8ae0",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/ate-list-1440.png",
+          "bytes": 39306,
+          "git_blob": "1a610c7c38c5d068a0286811cf8742ef6fd8a0d1",
+          "sha256": "695eaf96beab337f59258d00a61fc3ae88477db3542d7234e428d3ede92cec14",
+          "dimensions": {
+            "width": 1440,
+            "height": 960
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/ate-list-empty-1280.png",
+          "bytes": 37238,
+          "git_blob": "4bcaef873a48ad1d1b60069cfc9fdd5321a16e18",
+          "sha256": "cbabba3d2848cc019f9762f5037c21b68a75f9166e99c7ff07e1c09da996d9c9",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/leftovers-1024.png",
+          "bytes": 106959,
+          "git_blob": "0348f58665bc59c44c9fbfcd0bdca8fe7460a34f",
+          "sha256": "8ec9280282fc77f1a5da1abd8e7755893c92f4508c94ad298e578626c0cbbb96",
+          "dimensions": {
+            "width": 1024,
+            "height": 1200
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/leftovers-1280.png",
+          "bytes": 92725,
+          "git_blob": "6f998a9de3e96ca38dac29c81cfc33a0042047f9",
+          "sha256": "70625e0b86bdd89aae55bfb4909bdb53ae247cfb668bfe4e2bd41c49cf3a9ecb",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/leftovers-1440.png",
+          "bytes": 95360,
+          "git_blob": "fe4a7091454149e76f4608015708d70106e2fc0b",
+          "sha256": "21b9458e7ead63db6a0fece52bd1c5ae8f180ae762f46baf865549c85b313625",
+          "dimensions": {
+            "width": 1440,
+            "height": 960
+          },
+          "replacement": null
+        },
+        {
+          "path": "ui/designs/evidence/desktop-mvp-porting/slice8/screenshots/leftovers-empty-1280.png",
+          "bytes": 34690,
+          "git_blob": "cc5584c8217ff43a40110804f543cedfa2b7c719",
+          "sha256": "841c8a69229923fcb11d15500aa30f99de08445cbd5744cd678ea493cc0fc167",
+          "dimensions": {
+            "width": 1280,
+            "height": 900
+          },
+          "replacement": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 I now have complete data from all 18 prototype screenshots, 6 component files, 3 route files, the RALPLAN, ledger, and locked primitives. Here is the signoff.
 
+> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
+
 ---
 
 # Slice 5 Pre-Implementation Authority Signoff
