@@ -21,4 +21,13 @@ describe("configured r2 endpoint", () => {
     }
     expect(client).not.toHaveBeenCalled();
   });
+  it("keeps the actual loopback preview POST disabled without any real collector access", async () => {
+    vi.stubEnv("MUMEOK_ROUND2_ENABLED", "true");
+    vi.stubEnv("MUMEOK_ROUND2_LOCAL_PREVIEW", "true");
+    const { POST } = await import("@/app/api/v1/marketing/round2/route");
+    const response = await POST(new Request("http://localhost:3000/api/v1/marketing/round2", { method: "POST", headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": "application/json" }, body: "{}" }));
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("ROUND2_DISABLED");
+    expect(client).not.toHaveBeenCalled();
+  });
 });

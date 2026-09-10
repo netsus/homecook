@@ -1,6 +1,6 @@
 import { Round2Error } from "@/lib/marketing-round2";
 import { createMarketingRound2Handler, round2Failure } from "@/lib/server/marketing-round2";
-import { assertRound2Secrets, checkRound2LeadReadiness, readRound2RuntimeConfig, resolveRound2TrustedIp } from "@/lib/server/marketing-round2-runtime";
+import { assertRound2Secrets, checkRound2LeadReadiness, isRound2LocalPreview, readRound2RuntimeConfig, resolveRound2TrustedIp } from "@/lib/server/marketing-round2-runtime";
 import { createRound2FileStorage } from "@/lib/server/marketing-round2-storage";
 import { createRound2TurnstileVerifier } from "@/lib/server/marketing-round2-turnstile";
 import { createMarketingRound2InternalClient } from "@/lib/supabase/server";
@@ -10,7 +10,11 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const config = readRound2RuntimeConfig();
+    const settings = readRound2RuntimeConfig();
+    const url = new URL(request.url);
+    // Loopback preview still follows the HTTP boundary, then exits before every collector dependency.
+    const preview = request.headers.get("host") === url.host && ["http:", "https:"].includes(url.protocol) && isRound2LocalPreview(url.host, settings);
+    const config = preview ? { ...settings, origin: url.origin } : settings;
     const storage = createRound2FileStorage({ ...config, rateSecret: config.secrets.rate });
     return await createMarketingRound2Handler({
       config,
