@@ -145,7 +145,8 @@ local preview는 explicit flag+exact loopback에서만 메모리 mock, 모든 �
 - Generator/critic: [설계 방향](../../../ui/designs/R2_DESIGN_DIRECTION.md), [화면별 인계](../../../ui/designs/R2_DESIGN_HANDOFF.md), 해당 `ui/designs/R2_<STATE>.md`와 `ui/designs/critiques/R2_<STATE>-critique.md`.
 - 첫 MENU는 알림 primary/예시 secondary/의견 tertiary, 세 DONE은 종료 안내 후 메뉴 primary/다른 활동 optional이다. 0/3 강요·자동복귀 없음.
 - Visual artifact: [recording390](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_recording_390.png), [recording320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_recording_320.png), [homeflow390](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_homeflow_390.png), [homeflow320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_homeflow_320.png), [완료보존320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_completed-state-variants_320.png).
-- Authority status: **required / pending**. 정적 도면은 브라우저 screenshot이 아니며 독립 authority pass가 아니다. 보조 critic 결과는 mapping 및 각 report의 최신 메모를 따른다.
+- Authority status: required
+- Review progress: pending. `automation-spec.json`의 `authority_report_paths`는 각 공통 화면의 두 topic을 다룰 예정 경로다. Stage4 실제 화면 검토 전에는 보고서 생성·승인 완료를 의미하지 않는다. 정적 도면은 브라우저 screenshot이 아니며 독립 authority pass가 아니다. 보조 critic 결과는 mapping 및 각 report의 최신 메모를 따른다.
 - Stage 4 evidence: canonical16 ID마다 320×568/390×844/393×852 및 desktop, initial/scroll/오류/해당 키보드/200%/reduced-motion/복원 캡처. Stage4와 다른 reviewer precheck, Stage5, 별도 final authority 순서다.
 
 ## Design Status
