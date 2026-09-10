@@ -1900,6 +1900,30 @@
       "blocked_reason_code": null
     },
     {
+      "id": "marketing-demand-validation-round2",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/marketing-demand-validation-round2",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/marketing-demand-validation-round2 pnpm validate:workpack -- --slice marketing-demand-validation-round2",
+        "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-round2",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm validate:exploratory-qa-evidence",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 lock item for `/beta/r2/recording` and `/beta/r2/homeflow` before implementation can start. docs branch is documented in `.workflow-v2/work-items/marketing-demand-validation-round2.json`. closeout_phase=collecting closeout_recovery=manual_patch:0|manual_handoff:false|stale_lock:0|ci_resync:0 closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:none last_recovery_at=2026-09-11T00:00:00+09:00 closeout_sync=not_started",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
       "id": "auth-provider-memory-linking",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-auth-provider-memory-linking",

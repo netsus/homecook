@@ -1,0 +1,158 @@
+{
+  "slice_id": "marketing-demand-validation-round2",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/marketing/validation"
+    ],
+    "invariants": [
+      "official-docs-first",
+      "single-first-party-session-table",
+      "single-route-handler",
+      "round-subject-partitioning",
+      "menu-driven-entry-preserves-v2-linear-quiz-result-path",
+      "anonymous-actions-and-lead-actions-have-separate-write-boundaries",
+      "direct_apply-path-writes-lead-only-at-beta_form_viewed",
+      "exact-four-question-contract",
+      "exact-four-result-contract",
+      "lead-result-separation-preserved-without-question-completion",
+      "round2-separate-cookie-and-row-bootstrap",
+      "legacy-v1-cookies-do-not-replay-into-r2-state",
+      "ordered-first-write-wins",
+      "invalid-transition-409",
+      "server-issued-cookie-only",
+      "origin-turnstile-privacy-readiness-fail-closed",
+      "authorization-and-pii-redaction-boundary",
+      "error-envelope-compatible",
+      "no-extra-route-table-or-event-log"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/marketing-validation.test.ts tests/marketing-client-session.test.ts tests/marketing-demand-validation-landing.test.tsx",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/marketing-demand-validation-round2 pnpm validate:workpack -- --slice marketing-demand-validation-round2",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-round2",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/marketing-validation.test.ts",
+      "tests/marketing-client-session.test.ts",
+      "tests/marketing-demand-validation-landing.test.tsx"
+    ],
+    "required_tables": [
+      "public.marketing_validation_sessions"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/beta/r2/recording",
+      "/beta/r2/homeflow"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "menu",
+      "hero",
+      "quiz",
+      "result",
+      "experience1",
+      "experience2",
+      "experience3",
+      "experience4",
+      "experience5",
+      "planner_homecook",
+      "packaged_food",
+      "planner_complete",
+      "opinion",
+      "beta_form",
+      "done",
+      "validation-error",
+      "duplicate-generic-success",
+      "turnstile-fail-closed"
+    ],
+    "required_endpoints": [
+      "POST /api/v1/marketing/validation"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/marketing-demand-validation.test.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts",
+      "pnpm test:e2e:marketing",
+      "pnpm test:e2e:marketing:a11y",
+      "pnpm test:e2e:marketing:visual",
+      "pnpm test:lighthouse:marketing",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm build",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=feature/fe-marketing-demand-validation-round2 pnpm validate:workpack -- --slice marketing-demand-validation-round2",
+      "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-round2",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "round2-route-path-separation",
+      "menu-and-direct-apply-separation",
+      "same-browser-v2-round2-cookie-bootstrap",
+      "action-sequence-quiz-or-direct-lead",
+      "first-write-wins-and-invalid-transition-409",
+      "lead-readiness-fail-closed-in-read-only-mode",
+      "error-envelope-consistent-across-paths",
+      "pii-boundary-redaction-in-response-event-log"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "mumeok_r2_stage2_menu_routing"
+      ],
+      "generator_required": true,
+      "generator_artifact": "/Users/cwj/.codex/visualizations/2026/09/05/01a07316-265c-7f22-b0af-fa22b7fb2b8a/mumeok-r2-stage-handoff.md",
+      "critic_required": true,
+      "critic_artifact": "/Users/cwj/.codex/visualizations/2026/09/05/01a07316-265c-7f22-b0af-fa22b7fb2b8a/mumeok-r2-landing-diagnosis.md",
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:canonical-privacy-and-operator-facts-ready",
+    "manual:turnstile-secret-hostname-action-ready",
+    "manual:allowlisted-production-origin-ready",
+    "manual:edge-rate-limit-evidence-captured",
+    "manual:campaign-retention-ready",
+    "manual:full-local-migration-apply-approved-and-backed-up",
+    "manual:marketing-stage2-product-image-rights-or-replacement-ready",
+    "manual:profile-platform-read-only-routing-proof",
+    "manual:actual-ios-safari-smoke",
+    "manual:paid-ads-execution-approved"
+  ],
+  "blocked_conditions": [
+    "legacy-and-round2-contract-mixed",
+    "v1-cookie-reused-in-round2-row",
+    "menu-action-without-explicit-transition-boundary",
+    "anonymous-action-writing-pii",
+    "direct-apply-bypasses-result-or-experience-when-forbidden",
+    "production-lead-enabled-without-readiness-evidence",
+    "extra-route-table-event-log-or-browser-db-access",
+    "remote-cloud-or-linked-supabase-used",
+    "stage1-generator-or-critic-artifact-missing",
+    "result-or-experience-gated-behind-email",
+    "opinion-path-blocking-lead-idempotency"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
