@@ -1,86 +1,89 @@
-# R2 설계 방향과 검토 범위
+# R2 설계 방향 · 승인 r2.1 동기화
 
-작성일: 2026-09-11. Design Status: `draft`. 독립 디자인 authority: `pending`.
-이 문서는 Stage 1의 병렬 설계 보조 산출물이다. #1551 공식 계약은 미병합이며 #1550 재잠금, Stage 1 완료, 구현 준비 승인 근거가 아니다.
+Design Status: draft
+Authority: pending
+Role: design-generator 보조
+Contract: r2.1, PR #1551 병합 완료
+Merged: `7f00e62c13572b5b2c0d54c997fe628f7a56567e`
+Reviewed: `24093c94ebf53676050353088f173ef7f6315445`
+Workspace integration: `b9601841` (리더 제공)
+
+공식 기준은 [r2.1 상세 계약](../../docs/marketing-demand-validation-r2-contract.md) §2~4·8이다. 위 SHA는 사용자·리더가 제공한 병합 출처다. 원문 상단의 과거 '독립 검토 전 Draft'와 '미병합 Draft'는 작성 당시 문구이며 현재 계약 승인 상태로 오인하지 않는다. **계약은 승인·병합됐지만 디자인 확정과 독립 authority는 pending**이다.
 
 ## 선택한 방향
 
-흰 바탕의 간결한 메뉴와 같은 틀의 세 완료 화면을 사용한다. 사용자 이미지의 자유 선택 구조를 유지하며 첫 선택은 `베타 오픈 알림 받기`, 다음은 `사용 예시 먼저 보기`, 마지막은 `의견만 남기기 · 4문항`이다. 레퍼런스의 같은 크기 대형 카드 셋은 행동 우선순위가 흐려지고 320폭에서 길어져 채택하지 않았다. 대형 캐릭터 대신 작은 기존 음식 이미지로 주제를 설명하고, 완료 화면에만 작은 기존 캐릭터를 쓴다.
+흰 메뉴와 세 완료 화면을 같은 틀로 사용한다. 초기 MENU는 알림 primary/예시 secondary/의견 text, 세 DONE은 메뉴 primary로 통일한다. 완료한 알림·설문은 접수 확인만, 예시는 다시 보기를 제공한다. 하나만 해도 종료할 수 있고 자동 복귀나 전체 활동 카운터는 없다.
 
-완료 화면은 성공 설명, `여기서 마쳐도 괜찮아요.`, 선택적 다른 활동 순서로 통일한다. 알림 접수는 메일 발송 완료가 아니다. 다른 활동은 어느 순서로든 선택할 수 있고 하나만 해도 종료할 수 있다. 자동 복귀·활동 전체 진행률·완료 강요는 없다.
+사용자 레퍼런스의 세 활동 자유 선택을 유지하고 동일 무게 대형 카드·대형 캐릭터는 작은 음식 띠와 완료 mascot으로 줄였다. 미검증 시간 약속·계량 없는 자동 기록·정확 영양 보장은 사용하지 않는다. 기존 v2는 브랜드/음식/수치 fixture의 출처만 제공하고 순차 퍼널·질문·API·DB 제약의 권위가 아니다.
 
-critic 정합 검토 후 세 완료 화면은 모두 `메뉴로 돌아가기`를 blue+ink 주버튼으로 둔다. 알림·예시·의견은 선택적 보조 행동이다. 초기 MENU의 알림 우선과, 활동을 마친 DONE의 메뉴 우선은 서로 다른 맥락이다. EXAMPLE 그림은 흐름 요약이며 구체적인 마지막 결과 장면을 대신하지 않는다.
+공통 값은 이 문서와 [화면 매핑](R2_SCREEN_MAPPING.md)을 따른다. 문서와 정적 도면은 [동일 내용 JSON](evidence/marketing-demand-validation-round2/R2_design-content.json)에서 생성해 줄바꿈을 제외한 카피를 맞춘다. 계약은 source r2.1에서 읽고 SVG의 새 데이터 구조는 정적 레이아웃 정보일 뿐 공개 계약이 아니다.
 
-## 입력 근거와 권위
+## 공통 시각·접근성 기준
 
-- 사용자 이미지: `/Users/cwj/.codex/attachments/b3fa24a0-a944-4f19-ad74-f6bf19cc1d2c/codex-clipboard-1e8ed358-8f8f-4c70-a85a-8c6c3b7c71a7.png`를 직접 확인했다.
-- 진단: `/Users/cwj/.codex/visualizations/2026/09/05/01a07316-265c-7f22-b0af-fa22b7fb2b8a/mumeok-r2-landing-diagnosis.md`. 시작 미관측을 버튼 잘림의 인과관계로 해석하지 않는다.
-- UI 계약 입력: `/Users/cwj/.codex/worktrees/9540/homecook/docs/marketing-demand-validation-r2-contract.md` §2–3의 작업 시점 초안. 질문·선택지·복원·저장·동의 상세는 승인 후 다시 맞춘다.
-- 기존 `MARKETING_DEMAND_VALIDATION_V2.md`는 자산과 화면 재료의 참고다. 순차 설문·유형 결과·시간 약속·자동 다음 이동을 R2 계약으로 가져오지 않는다.
-- `docs/design/design-tokens.md`, `docs/design/mobile-ux-rules.md`, `docs/design/anchor-screens.md`, `docs/engineering/product-design-authority.md`를 따른다. 제품 HOME/PLANNER 등 실제 anchor를 바꾸지 않는다.
-
-## 치수와 시각 재료
-
-| 요소 | 390폭 | 320폭 |
+| 요소 | 390px | 320px |
 | --- | --- | --- |
-| 본문 좌우 여백 | 20px | 16px |
-| 제목 | 24px / 행간 32px | 22px / 행간 30px |
-| 본문 | 16px / 24px | 16px / 24px |
-| 안내 | 14px / 22px | 14px / 22px |
-| 주 버튼 | 52px, 둥글기 8px | 동일 |
-| 보조 버튼 | 48px | 동일 |
-| 텍스트 행동 | 최소 44px | 동일 |
-| 메뉴 음식 띠 | 높이 72px | 동일 |
-| 완료 캐릭터 | 64×72px 안에 비율 유지 | 동일 |
+| 좌우 여백 / 내용 폭 | 20 / 350px | 16 / 288px |
+| 제목 / 행간 | 24 / 32px, 700 | 22 / 30px, 700 |
+| 본문·입력 / 행간 | 16 / 24px | 16 / 24px |
+| 부가 안내 / 행간 | 14 / 22px | 14 / 22px |
+| primary / secondary / text | 최소 52 / 48 / 44px | 최소 52 / 48 / 44px |
+| 컨트롤 / 카드 radius | 8 / 10px | 8 / 10px |
+| 완료 mascot | 56×56px | 48×48px |
 
-기존 브랜드 `#00A1FF`, 흰 surface, 본문 `#495057`, ink `#212529`를 재사용한다. 밝은 블루의 일반 크기 흰 글자는 대비가 부족하여 주 버튼에 기존 ink를 쓴다. 로고 자체의 브랜드 그림과 버튼 글자의 접근성 판단을 구분한다. 선택과 오류는 색 외에도 체크·설명·테두리로 식별한다. 런타임 토큰을 수정하지 않는다.
+primary CTA(주 행동): MENU는 베타 오픈 알림 받기, 세 DONE은 메뉴로 돌아가기, EXAMPLE은 다음 장면/예시 확인 완료, SURVEY는 다음 문항/의견 보내기, LEAD는 베타 오픈 알림 신청하기, RECOVERY는 다시 시도다. 52px blue+ink 위계로 구분한다.
 
-자산은 `public/assets/funnel/brand/mumeok-logo-horizontal.png`, `food/jeyuk-recipe-clean.webp`, `characters/beta-success-mascot.webp`를 그대로 참조한다. PNG 캐릭터는 녹색 배경이 있으므로 투명 WebP를 사용한다. WebP에도 일부 녹색 가장자리가 남아 있어 실제 크기에서 후속 검토한다. 새 캐릭터나 외부 음식 이미지를 추가하지 않는다.
+scroll containment(스크롤 영역): 독립 캠페인 문서 본문 하나에서만 자연스러운 세로 스크롤을 허용한다. 페이지 가로 스크롤과 중첩 세로 스크롤, 고정 CTA로 입력을 가리는 구조를 금지한다.
 
-## 화면별 산출
+흰 배경, 기존 blue `#00A1FF`, ink `#212529`, 본문 `#495057`를 재사용한다. primary는 blue 위 ink, secondary는 흰 면·진한 outline, text 행동은 진한 글자와 밑줄이다. 기존 Avenir Next/Pretendard 계열을 유지하며 새 폰트·패키지·전역 토큰을 추가하지 않는다. 로고는 기존 가로형을 112×32px 안에 contain, 음식은 72px 띠 또는 작은 장면 이미지로 표시한다.
 
-| 화면 | 설계 문서 | critic 문서 |
+[디자인 토큰](../../docs/design/design-tokens.md), [모바일 UX 규칙](../../docs/design/mobile-ux-rules.md), [anchor 기준](../../docs/design/anchor-screens.md), [generator 체크리스트](../../.codex/agents/design-generator.toml)를 따른다. 과거 역할 파일의 주황색·375px·앱 4탭 예시는 이번 독립 캠페인 메뉴의 기준이 아니다. 기존 제품 anchor 구조를 변경하지 않는다.
+
+본문 하나만 자연스러운 세로 스크롤을 사용한다. 화면 고정 높이·내부 중첩 스크롤·sticky CTA·가로 페이지 스크롤을 만들지 않는다. 긴 동의·질문은 그대로 이어 읽으며 200% 글자에서 줄이거나 자르지 않는다. 하단 여백은 24px + safe-area다. 키보드가 열려도 필드·오류·동의·제출까지 같은 문서에서 도달한다.
+
+모든 조작은 최소 44×44px, 보이는 focus 2px + 간격 2px, DOM/Tab 순서는 시각 순서다. 화면 진입은 제목에 초점, 입력 중 비동기 상태 변화는 초점을 빼앗지 않는다. 질문은 fieldset/legend와 native radio, 선택 label 전체를 조작 영역으로 쓴다. 오류는 aria-describedby/aria-invalid로 연결하고 제출 시 첫 오류로 이동한다. 서버 완료 알림은 aria-live=polite로 한 번 전달하며 중복 읽음을 검토한다. 준비된 이미지의 중복 설명은 alt를 비우고 의미 이미지에는 설명을 둔다. 자동재생·자동 이동 없이 줄어든 모션 설정을 따른다.
+
+## 완료·복원과 개인정보 경계
+
+세 활동은 자유 순서이며 하나만 마쳐도 충분하다. 활동 0/3 카운터·전체 완료 보상·자동 메뉴 복귀가 없다. 서버가 확인한 완료만 배지로 표시하며 로컬 읽음·선택·미확인 응답을 완료로 꾸미지 않는다. 낮은 revision 응답이 기존 완료를 지우지 않는다. 같은 참여의 알림/설문 완료 후에는 '알림 접수 확인'/'의견 접수 확인'으로 해당 DONE만 열며 이메일 재입력·답변 수정·재제출을 제공하지 않는다. 예시는 다시 본다. 미확인 상태에는 재신청을 권하지 않고 서버 상태를 먼저 확인한다.
+
+승인 r2.1의 cookie_resume은 유효한 해당 주제 서명 쿠키로 기존 참여를 복원하는 경로다. 저장소 차단이어도 복원에 성공하면 그 참여의 예시·설문·신청을 진행한다. 대기 event_id와 draft는 탭 메모리에 유지되므로 reload 때 미제출 값·미확인 요청은 사라질 수 있다. 쿠키도 없고 저장소도 사용할 수 없으면 예시·설문 draft 열기만 허용한다. 새 참여의 메모리 전용 fallback이나 인증 없는 제출은 금지하며 저장소 복구 후 재시도를 안내한다.
+
+설문 선택·비PII 대기 이벤트는 r2 전용 IndexedDB에서 최대 30일, 서버 expiry 또는 철회 인지 중 먼저인 시점까지다. 대기 이벤트는 최대 50개이며 초과는 재시도 안내로 처리한다. 이메일·동의는 같은 탭 메모리만 사용하며 reload/탭 종료 시 버린다. Turnstile 토큰도 메모리 전용이며 제출 즉시 제거한다. URL·로그·분석·설문 draft에 개인정보/보안 토큰을 넣지 않는다. 동일 참여 요청은 직렬화하고 알림 제출은 사용자 명시 재시도만 허용한다.
+
+참여 만료 410은 해당 주제 key/draft/outbox/로컬 완료 정리와 쿠키 만료 후 '새 참여 시작' 명시 행동으로만 재시작한다. 다른 주제는 지우지 않고 과거 완료·동의·출처를 새 참여에 복사하지 않는다. 저장소 차단 상태의 새 참여는 복구 후에만 가능하다. 동의 세대가 달라진 409 CONSENT_REFRESH_REQUIRED는 체크·토큰을 해제하고 새 동의문·명시 동의를 받되 이미 확인된 서버 완료를 지우지 않는다. 캠페인 종료와 페이지 문맥 만료를 참여 삭제로 오인하지 않는다.
+
+## 구체화한 사용 예시
+
+recording은 제육볶음 320g의 487kcal와 탄수화물31g/단백질39g/지방22g을 기존 fixture에서 가져와 모두 예시·추정치로 표시한다. 재료/양 확인, 완성 1,180g과 먹은 320g 직접 입력, 결과 기록을 세 장면으로 그린다. homeflow는 같은 재료를 구매/보유 제외로 구분하고 요리 완료·남은 제육의 다음 식사 연결을 보여준다. homeflow 분류는 준비된 정적 배치이지 저장된 사용자 데이터가 아니다.
+
+Q1의 가족·동거인/끼니 범위, Q2 전체 옵션, Q4 직접 입력 안내와 동의 label·2026-11-30 표시 보관일을 축약하지 않았다. 모든 설문 문항과 장면은 보조 보드로 제공한다. 긴 폼은 cell 높이를 늘려 전체 스크롤 내용을 표현하며 844px 고정 UI가 아니다.
+
+## 증거와 재현
+
+| 정적 보드 | 파일 | 범위 |
 | --- | --- | --- |
-| MENU | R2_MENU.md | critiques/R2_MENU-critique.md |
-| LEAD_DONE | R2_LEAD_DONE.md | critiques/R2_LEAD_DONE-critique.md |
-| EXAMPLE_DONE | R2_EXAMPLE_DONE.md | critiques/R2_EXAMPLE_DONE-critique.md |
-| SURVEY_DONE | R2_SURVEY_DONE.md | critiques/R2_SURVEY_DONE-critique.md |
-| EXAMPLE | R2_EXAMPLE.md | critiques/R2_EXAMPLE-critique.md |
-| SURVEY | R2_SURVEY.md | critiques/R2_SURVEY-critique.md |
-| LEAD | R2_LEAD.md | critiques/R2_LEAD-critique.md |
-| RECOVERY | R2_RECOVERY.md | critiques/R2_RECOVERY-critique.md |
+| R2_recording_390 | [PNG](evidence/marketing-demand-validation-round2/R2_recording_390.png) / [SVG](evidence/marketing-demand-validation-round2/R2_recording_390.svg) | 4열, 8개 cell |
+| R2_recording_survey_390 | [PNG](evidence/marketing-demand-validation-round2/R2_recording_survey_390.png) / [SVG](evidence/marketing-demand-validation-round2/R2_recording_survey_390.svg) | 4열, 4개 cell |
+| R2_recording_320 | [PNG](evidence/marketing-demand-validation-round2/R2_recording_320.png) / [SVG](evidence/marketing-demand-validation-round2/R2_recording_320.svg) | 4열, 8개 cell |
+| R2_recording_survey_320 | [PNG](evidence/marketing-demand-validation-round2/R2_recording_survey_320.png) / [SVG](evidence/marketing-demand-validation-round2/R2_recording_survey_320.svg) | 4열, 4개 cell |
+| R2_homeflow_390 | [PNG](evidence/marketing-demand-validation-round2/R2_homeflow_390.png) / [SVG](evidence/marketing-demand-validation-round2/R2_homeflow_390.svg) | 4열, 8개 cell |
+| R2_homeflow_survey_390 | [PNG](evidence/marketing-demand-validation-round2/R2_homeflow_survey_390.png) / [SVG](evidence/marketing-demand-validation-round2/R2_homeflow_survey_390.svg) | 4열, 4개 cell |
+| R2_homeflow_320 | [PNG](evidence/marketing-demand-validation-round2/R2_homeflow_320.png) / [SVG](evidence/marketing-demand-validation-round2/R2_homeflow_320.svg) | 4열, 8개 cell |
+| R2_homeflow_survey_320 | [PNG](evidence/marketing-demand-validation-round2/R2_homeflow_survey_320.png) / [SVG](evidence/marketing-demand-validation-round2/R2_homeflow_survey_320.svg) | 4열, 4개 cell |
+| R2_completed-state-variants_320 | [PNG](evidence/marketing-demand-validation-round2/R2_completed-state-variants_320.png) / [SVG](evidence/marketing-demand-validation-round2/R2_completed-state-variants_320.svg) | 4열, 8개 cell |
+| R2_example-scenes_390 | [PNG](evidence/marketing-demand-validation-round2/R2_example-scenes_390.png) / [SVG](evidence/marketing-demand-validation-round2/R2_example-scenes_390.svg) | 3열, 6개 cell |
+| R2_example-scenes_320 | [PNG](evidence/marketing-demand-validation-round2/R2_example-scenes_320.png) / [SVG](evidence/marketing-demand-validation-round2/R2_example-scenes_320.svg) | 3열, 6개 cell |
 
-각 문서에 recording/homeflow 변형을 둔다. 설문 첫 장면은 공통 문항 예시이며 나머지 질문은 각 설계 문서의 계약 동기화 범위를 따른다. 도면의 동의·보관 문구와 보안 영역은 검토자용 자리표시다. 이 상태로 사용자에게 제공하지 않는다.
+정적 재생성은 저장소 루트에서 `node ui/designs/evidence/marketing-demand-validation-round2/R2_render-static-boards.cjs` 후 `node ui/designs/evidence/marketing-demand-validation-round2/R2_sync-design-docs.cjs`다. renderer는 기존 프로젝트/Next.js의 sharp를 먼저 찾고, 없으면 NODE_PATH 또는 R2_SHARP_MODULE을 소비한다. 다른 Mac에서는 load_workspace_dependencies가 반환한 Node.js packages를 NODE_PATH로 지정한다. 개인 절대 경로를 소스에 박거나 새 의존성을 설치하지 않는다. 검사는 `node ui/designs/evidence/marketing-demand-validation-round2/R2_check-designs.cjs`다.
 
-## 시각 근거의 구분
+## Stage 4 증거 계획과 미검증
 
-`ui/designs/evidence/marketing-demand-validation-round2/`:
+두 주제 × 8상태 × 320/390폭을 실제 구현에서 캡처한다. 높이 844 및 568/600, 첫 화면·중간·하단 스크롤, 200% 글자, 긴 질문/이메일/동의, 키보드 열림과 safe-area, focus·터치·색 대비·오류 연결·screen reader를 확인한다. 메뉴 세 행동은 기본 글자에서 하단 y≤600을 목표로 실측하며 확대 글자에서는 읽기와 스크롤을 우선한다.
 
-- `R2_four-screen-family-concept-v1.png`: ImageGen 구상 보드. 첫 메뉴+세 완료 화면, 두 주제. 흰 CTA 글자와 캐릭터 크기가 설계 지시와 달라 참고용으로만 보존한다.
-- `R2_recording_390.png`, `R2_recording_320.png`, `R2_homeflow_390.png`, `R2_homeflow_320.png`: SVG 정적 도면. 각 보드 첫 줄에 공통 4화면 세트, 두 번째 줄에 나머지 활동·복구 4화면을 배치한다.
-- 같은 이름의 `.svg`: 편집 가능한 정적 도면. 기존 자산은 원본 이미지 바이트를 포함하며 재생성·수정하지 않는다.
-- `R2_completed-state-variants_320.png` / `.svg`: 서버가 완료를 확인한 메뉴와 세 완료 화면. 두 주제 모두 알림·의견은 접수 확인으로, 예시는 다시 보기로 연결한다.
-- `R2_render-static-boards.cjs`: 위 정적 SVG/PNG를 만드는 증거용 도구. 제품 코드나 클릭 가능한 웹 프로토타입이 아니다. 실행 중 서비스/API/브라우저를 사용하지 않는다.
-- `R2_static-geometry.json`: 지정 좌표와 색 대비 계산. 브라우저 실측이나 접근성 동작 시험 결과가 아니다.
+저장 지연/실패/응답 유실, 처음·부분·모두 완료, 뒤로/메뉴/새로고침, 같은 탭·두 탭·두 주제, 낮은 revision, cookie_resume 복원 성공/실패, 저장소 차단, 410 명시 재시작, 동의 갱신, 재제출 차단을 승인된 격리 fixture로 검증한다. 실제 메일·광고·운영 DB에 시험 요청을 보내지 않는다. Stage 4 스크린샷은 `ui/designs/evidence/marketing-demand-validation-round2/stage4/` 아래 생성 예정이며 지금 존재하는 증거가 아니다.
 
-SVG rasterizer의 WebP 미표시를 해결하기 위해 임베드 시에만 PNG로 형식 변환한다. 원본 WebP 파일과 시각 내용은 유지한다. `R2_visual-verdict-v1.json`은 수정 전 보조 판정이며, 쓰기 소유권 제한에 맞춰 `.omx/state` 대신 이 증거 폴더에 둔다.
+현재 자료는 정적 SVG/PNG·지정 좌표 검사다. 런타임 동작·보안 challenge·브라우저 글꼴·접근성을 실측한 결과가 아니다. 새 광고 영상과의 장면 일치도 미검증이다. 계약 동기화와 static 보완을 독립 Stage 완료·디자인 확정·운영 activation 승인으로 주장하지 않는다.
 
-고정 도면은 줄바꿈·배치·행동 우선순위를 검토하는 자료다. 자동 레이아웃, 확대 글자, 키보드, screen reader, 저장 성공 여부는 이 이미지로 증명할 수 없다. 정적 그림에 다른 활동이 미완료인 경우를 표현했지만 실제 메뉴는 확인된 완료 상태를 유지해야 한다. 완료한 알림을 재입력 폼으로 보내거나 제출된 설문을 다시 열어서는 안 된다.
+## 보조 검토 경계
 
-## Stage 4 실제 화면 검증 계획
-
-두 주제 × 8상태 × 320/390폭을 기본 캡처한다. 뷰포트 높이는 844와 짧은 600을 포함하고 메뉴 세 행동의 도달 가능성, 세로 스크롤 시작/중간/하단을 확인한다. 200% 글자 확대에서 버튼을 줄이지 않고 자연스럽게 스크롤하도록 한다. 고정 높이로 내용을 자르거나 가로 스크롤을 만들지 않는다.
-
-LEAD/SURVEY는 키보드 열림, focus 이동, 긴 이메일, inline 오류, 동의 미선택, 보안 대기/실패, 429·연결 끊김을 캡처한다. 제출은 문서 흐름 안에 두고 safe-area 하단 여백을 확보한다. 오류와 입력은 `aria-describedby`, 질문은 `fieldset/legend`, 상태는 `aria-live=polite`로 연결한다. focus 표시 2px와 간격 2px를 확보하고 터치 영역 44×44px 이상을 실측한다.
-
-MENU bootstrap 지연/오류에서도 설명과 세 활동 진입은 보인다. 서버 완료는 응답 전에 단정하지 않는다. 저장 실패는 해당 행동 옆에 안내하며 메뉴를 덮지 않는다. 복구 때 기존 완료를 지우지 않고 입력을 보존하되, 이메일은 같은 탭의 메모리만 사용하고 새로고침 이후 보존을 약속하지 않는다. 완료 저장 응답 지연, 재시도, 뒤로가기, 새로고침, 두 탭, 두 주제, 이미 신청/설문 완료 상태를 별도로 검증한다.
-
-EXAMPLE은 준비된 장면만 표시한다. 이전/다음과 명시적 완료 버튼을 구분한다. 계량·사용자 확인 필요, 추정 영양, 보유 재료 직접 제외를 설명한다. `30초`, 계량 없는 자동 기록, 영양 정확 보장은 사용하지 않는다.
-
-## 검토와 남은 조건
-
-generator 보조: `01a08ccc-c405-7001-82e2-de2db1b51550`.
-critic 보조: `01a08ccf-0736-7241-92e1-a3d9449570da`.
-둘은 역할 보조이며 독립 Stage 1.5/Stage 5/final authority 승인을 대신하지 않는다.
-
-최종 설문 카피·선택지, 보관 종료일·동의 문구, API 기반 복원 세부는 #1551 승인본으로 동기화해야 한다. 신규 집밥 영상과 장면 일치 여부도 미확인이다. 공식 계약 병합과 별도 재잠금 지시 이후 README/acceptance/metadata를 처리하며, 현재 문서들만으로 디자인 잠금이나 구현 준비를 선언하지 않는다.
+generator 보조와 Volta critic은 독립 Stage 승인자가 아니다. critiques는 Volta 소유이며 이번 동기화에서 변경하지 않는다. ImageGen 구상과 visual-verdict-v1/v2는 수정 전 이력으로 보존한다. 신규 도면의 확인·검사 범위는 [인계](R2_DESIGN_HANDOFF.md)와 [정적 검사 기록](evidence/marketing-demand-validation-round2/R2_static-checks.json)을 따른다. README/acceptance/index/PR/metadata 재잠금은 리더 작업이다.

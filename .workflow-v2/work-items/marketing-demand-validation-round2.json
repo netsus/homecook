@@ -1,25 +1,23 @@
 {
   "id": "marketing-demand-validation-round2",
   "title": "Marketing demand validation round 2",
-  "summary": "`/beta/r2/recording`, `/beta/r2/homeflow` 메뉴형 라우트와 direct_apply 분기를 기존 single API/single table과 분리해 lock하고, r2 회차/주제 분기와 v1/v2/legacy 경계도 Stage 1에서 고정한다.",
+  "summary": "Stage 1 Draft 문서 재잠금. docs/marketing-demand-validation-r2-contract.md의 공식 r2.1 계약 source SHA 7f00e62c13572b5b2c0d54c997fe628f7a56567e를 소비한다. 조정자가 확인한 local merge b9601841에 반영되었으며 internal 1.5 독립 검토와 Stage 1 병합은 대기 중이다. 제품 Stage 2/4는 미착수다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
   "risk": "high",
   "preset": "vertical-slice-strict",
-  "goal": "4문항·4결과 funnel는 보존하면서 메뉴/직접 신청 경로와 round=2·subject 분기 동작을 단일 엔드포인트·단일 테이블 계약 아래 lock한다.",
+  "goal": "두 주제의 예시·설문·알림 신청을 각각 단독 완료하거나 자유 순서로 수행하도록 공식 r2 전용 POST, 추가형 3테이블, 서버 전용 RPC, 버전별 네 질문, 복원·동의·제어·제한기·보관 계약을 후속 Stage 2/4 입력으로 재잠근다.",
   "owners": {
     "claude": "retired compatibility field; dispatch prohibited",
-    "codex": "separate stage1-docs-author, internal-1.5 reviewer, backend/frontend implementer, stage3/5/6 reviewer, final-authority tasks",
+    "codex": "Stage 1 docs author; separate Codex task IDs for internal 1.5 docs reviewer, Stage 2 backend author, Stage 3 reviewer, Stage 4 frontend author, Stage 5 design reviewer, final product-design-authority and Stage 6 closeout reviewer; author and role helpers cannot self-approve",
     "workers": []
   },
   "dependencies": [
     "marketing-demand-validation",
     "marketing-demand-validation-v2",
-    "feature/be-marketing-demand-validation-round2",
-    "feature/fe-marketing-demand-validation-round2",
-    "/Users/cwj/.codex/visualizations/2026/09/05/01a07316-265c-7f22-b0af-fa22b7fb2b8a/mumeok-r2-stage-handoff.md",
-    "/Users/cwj/.codex/visualizations/2026/09/05/01a07316-265c-7f22-b0af-fa22b7fb2b8a/mumeok-r2-landing-diagnosis.md"
+    "docs/marketing-demand-validation-r2-contract.md",
+    "ui/designs/R2_SCREEN_MAPPING.md"
   ],
   "docs_refs": {
     "source_of_truth": [
@@ -28,32 +26,54 @@
       "docs/화면정의서-v1.5.40.md",
       "docs/유저flow맵-v1.3.38.md",
       "docs/db설계-v1.3.38.md",
-      "docs/api문서-v1.2.43.md"
+      "docs/api문서-v1.2.43.md",
+      "docs/marketing-demand-validation-r2-contract.md"
     ],
     "governing_docs": [
       "docs/workpacks/marketing-demand-validation-round2/README.md",
       "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
       "docs/workpacks/marketing-demand-validation-round2/automation-spec.json",
-      "docs/workpacks/marketing-demand-validation/README.md",
-      "docs/workpacks/marketing-demand-validation-v2/README.md",
       "docs/engineering/slice-workflow.md",
       "docs/engineering/agent-workflow-overview.md",
-      "docs/engineering/qa-system.md"
+      "docs/engineering/codex-task-handoff.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/supabase-local-only-operations.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-canonical-closeout-state.md",
+      "ui/designs/R2_SCREEN_MAPPING.md",
+      "ui/designs/R2_DESIGN_DIRECTION.md",
+      "ui/designs/R2_MENU.md",
+      "ui/designs/R2_EXAMPLE.md",
+      "ui/designs/R2_EXAMPLE_DONE.md",
+      "ui/designs/R2_SURVEY.md",
+      "ui/designs/R2_SURVEY_DONE.md",
+      "ui/designs/R2_LEAD.md",
+      "ui/designs/R2_LEAD_DONE.md",
+      "ui/designs/R2_RECOVERY.md",
+      "ui/designs/critiques/R2_MENU-critique.md",
+      "ui/designs/critiques/R2_EXAMPLE-critique.md",
+      "ui/designs/critiques/R2_EXAMPLE_DONE-critique.md",
+      "ui/designs/critiques/R2_SURVEY-critique.md",
+      "ui/designs/critiques/R2_SURVEY_DONE-critique.md",
+      "ui/designs/critiques/R2_LEAD-critique.md",
+      "ui/designs/critiques/R2_LEAD_DONE-critique.md",
+      "ui/designs/critiques/R2_RECOVERY-critique.md"
     ]
   },
   "workflow": {
     "plan_loop": "skipped",
     "review_loop": "required",
     "external_smokes": [
-      "manual:canonical-privacy-and-operator-facts-ready",
-      "manual:turnstile-secret-hostname-action-ready",
-      "manual:allowlisted-production-origin-ready",
-      "manual:edge-rate-limit-evidence-captured",
-      "manual:campaign-retention-ready",
-      "manual:full-local-migration-apply-approved-and-backed-up",
-      "manual:marketing-stage2-product-image-rights-or-replacement-ready",
-      "manual:ios-safari-marketing-smoke-ready",
-      "manual:paid-ads-execution-approved"
+      "manual:approved-public-privacy-operator-consent-and-retention-facts",
+      "manual:production-origin-turnstile-hostname-action-and-secret-provisioning",
+      "manual:production-control-rate-path-ownership-and-orphan-recovery-runbook",
+      "manual:approved-backed-up-full-local-additive-migration-and-disabled-rollout",
+      "manual:production-retention-withdrawal-and-export-deletion-operations",
+      "manual:video-fixture-image-rights-and-claim-approval",
+      "manual:actual-provider-and-profile-platform-routing-proof",
+      "manual:physical-ios-safari-and-in-app-browser-smoke",
+      "manual:paid-ads-and-beta-notice-delivery-authorization"
     ],
     "execution_mode": "manual",
     "evaluator_profile": "vertical-slice-strict",
@@ -67,37 +87,36 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation-round2 pnpm validate:workpack -- --slice marketing-demand-validation-round2",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-round2",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'marketing-demand-validation-round2' }); console.log(JSON.stringify(result, null, 2)); if (result.outcome !== 'pass') process.exit(1);\"",
       "pnpm validate:omo-bookkeeping",
-      "pnpm validate:authority-evidence-presence",
-      "pnpm validate:exploratory-qa-evidence",
-      "git diff --check"
+      "pnpm validate:closeout-sync -- --slice marketing-demand-validation-round2",
+      "node docs/workpacks/marketing-demand-validation-round2/stage1-static-check.mjs"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/marketing-demand-validation-round2 pnpm validate:workpack -- --slice marketing-demand-validation-round2",
       "node scripts/validate-automation-spec.mjs --slice marketing-demand-validation-round2",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'marketing-demand-validation-round2' }); console.log(JSON.stringify(result, null, 2)); if (result.outcome !== 'pass') process.exit(1);\"",
       "pnpm validate:omo-bookkeeping",
-      "pnpm validate:authority-evidence-presence",
-      "pnpm validate:exploratory-qa-evidence",
-      "git diff --check"
+      "pnpm validate:closeout-sync -- --slice marketing-demand-validation-round2",
+      "node docs/workpacks/marketing-demand-validation-round2/stage1-static-check.mjs"
     ],
     "evaluator_commands": [],
     "artifact_assertions": [
-      "single-route-single-table-contract",
-      "round2-route-separation",
-      "menu-direct-lead-boundary",
-      "v1-cookie-isolation-boundary",
-      "first-write-wins-replay",
-      "error-envelope-standardized",
-      "pii-boundary-redaction",
-      "server-readiness-failclosed"
+      "exact-contract-source:docs/marketing-demand-validation-r2-contract.md@7f00e62c13572b5b2c0d54c997fe628f7a56567e",
+      "stage1-draft-relock-internal1.5-independent-review-pending-no-self-signoff",
+      "product-stage2-stage4-not-started-delivery-and-acceptance-unchecked",
+      "r2-endpoint-three-tables-server-only-rpc-and-independent-activity-contract-consumed",
+      "versioned-four-question-topic-enums-cookie-control-limiter-preview-idempotency-retention-consumed",
+      "eight-shared-generator-critic-screens-with-two-topic-mapping-and-static-reference-only",
+      "automated-functional-db-and-flow-tests-separate-from-external-manual-only-gates",
+      "stage5-final-runtime-authority-and-stage6-independent-tasks-pending",
+      "canonical-closeout-collecting-design-temporary-authority-pending-no-claimed-current-head-approval"
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -123,7 +142,7 @@
       "actual_verification_refs": []
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "current_head_sha": "pending",
       "approval_state": "not_started",
       "all_checks_green": false
     },
@@ -133,7 +152,7 @@
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": "2026-09-11T00:00:00+09:00"
+      "last_recovery_at": "not_started"
     },
     "repair_summary": {
       "codex_repairable_count": 0,
@@ -145,21 +164,24 @@
       "evidence_sources": []
     },
     "projection_state": {
-      "docs_synced_at": "2026-09-11T00:00:00+09:00",
-      "status_synced_at": "2026-09-11T00:00:00+09:00",
-      "pr_body_synced_at": "2026-09-11T00:00:00+09:00"
+      "docs_synced_at": "2026-09-10T20:06:58.414Z",
+      "status_synced_at": "2026-09-10T20:06:58.414Z",
+      "pr_body_synced_at": "pending"
     }
   },
   "out_of_scope": [
-    "v2 contract와 무관한 /beta 5문항 확장",
-    "DB/table/event-log 추가",
-    "remote/supabase cloud/linked 실행 환경 변경",
-    "production 리릭스/프로덕션 릴리즈",
-    "기기 프레임/픽셀 스크린 선택기 UI",
-    "실제 광고 집행 직전 운영 승인 없는 배포"
+    "현재 Stage 1에서 제품 Stage 2/4 구현·migration 실행·운영 DB 접근·배포·광고·메일 발송",
+    "기존 v1/v2 endpoint/table/cookie/질문/유형/선형 상태/retention 변경 또는 기존 데이터 재작성",
+    "공식 r2 계약 외 endpoint/table/RPC/필드 추가, 신규 런타임 의존성",
+    "Supabase Cloud/linked/remote 운영 또는 운영 full-local을 테스트 대상으로 사용",
+    "정적 도면을 실제 화면 검증으로 취급하거나 작성자·동일 작업 보조의 검토를 독립 승인으로 기록"
   ],
   "open_questions": [
-    "이미지 권리/예시 자산 계약과 라벨 표기 최종 판단은 Manual Only"
-  ],
-  "notes": "Stage 1 docs-only 작업. 구현은 이 문서와 automation-spec lock 이후 단계적으로 backend/frontend에서 이어 진행한다. v1 contract와 v2 core funnel 계약(4문항/4결과, target_qualified=null, single route/table)을 절대 재해석하지 않는다."
+    "internal 1.5 독립 reviewer는 exact 재잠금 head의 README/acceptance/automation/design mapping을 검토해야 한다. 현재 승인·signoff는 없다.",
+    "Bohr의 R2_SCREEN_MAPPING.md와 공통 방향/8개 generator/8개 critic 공식 계약 동기화는 완료되었다. 독립 검토는 대기 중이며 현재 Design Status는 temporary다.",
+    "현 package.json에는 r2 전용 isolated RPC 통합 runner가 없다. Stage 2는 기존 테스트 실행체계에서 실제 자동 테스트와 runner를 잠그고 Stage 3에 증거를 넘겨야 한다. 기존 marketing 회귀 통과만으로 r2 검증 완료를 주장하지 않는다.",
+    "Stage 4는 r2 실제 화면/오류/복원/접근성 검증을 추가하고 별도 Stage 5·final authority·Stage 6를 거친다. 현재 runtime authority는 pending이다.",
+    "외부 운영·권리·실제 provider·실기기 항목만 Manual Only이며 일반 오류/DB 원자성/활동 흐름 테스트는 자동 검증 대상으로 남긴다.",
+    "pnpm validate:workpack -- --slice marketing-demand-validation-round2는 origin/master의 Stage 1 병합 선행 검사다. 병합 전 예상 실패는 Stage 1 문서검증 N/A 사유이며, docs branch 기본 no-op 통과도 local document-content 검증 성공이 아니다."
+  ]
 }

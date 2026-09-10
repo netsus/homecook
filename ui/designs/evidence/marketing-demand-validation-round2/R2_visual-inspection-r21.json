@@ -1,6 +1,7 @@
 {
-  "scope": "static-design-evidence-only",
   "authority": "pending",
+  "design_status": "draft",
+  "kind": "static_design_not_runtime",
   "provenance": {
     "contract": "docs/marketing-demand-validation-r2-contract.md",
     "version": "r2.1",
@@ -13,31 +14,21 @@
     "authority": "pending",
     "evidence_kind": "static_design_not_runtime"
   },
-  "designChecks": {
-    "total": 1070,
-    "failures": []
-  },
-  "relativeLinks": {
-    "total": 260,
-    "failures": []
-  },
-  "actualFiles": {
-    "total": 38,
-    "failures": []
-  },
-  "calculated_srgb_contrast": {
-    "ink_on_blue": 5.54,
-    "white_on_blue": 2.78,
-    "body_on_white": 8.18
-  },
-  "menu_last_choice_bottom_px": {
-    "recording_390": 512,
-    "recording_320": 508,
-    "homeflow_390": 512,
-    "homeflow_320": 508
-  },
-  "minimum_control_height_px": 44,
-  "artifacts": [
+  "directly_viewed_final_pngs": [
+    "R2_recording_390.png",
+    "R2_recording_survey_390.png",
+    "R2_recording_320.png",
+    "R2_recording_survey_320.png",
+    "R2_homeflow_390.png",
+    "R2_homeflow_survey_390.png",
+    "R2_homeflow_320.png",
+    "R2_homeflow_survey_320.png",
+    "R2_completed-state-variants_320.png",
+    "R2_example-scenes_390.png",
+    "R2_example-scenes_320.png"
+  ],
+  "svg_inspection": "All 11 SVG files were structurally checked for canonical IDs and rendered to the viewed PNG files; not browser captures.",
+  "final_artifact_sha256": [
     {
       "file": "R2_recording_390.svg",
       "sha256": "9dae77b39ccbd67fcb04b72ade5b38d4324c6621c2af7176bcb044e1f8d517a7"
@@ -127,14 +118,55 @@
       "sha256": "0d4c234d9d41272fb8c9d01f2ca8c6398053e5ad9584efeca201c5bae3daefd2"
     }
   ],
-  "not_verified": [
-    "runtime layout",
-    "keyboard",
-    "focus",
-    "screen reader",
-    "real server restoration",
-    "Turnstile",
-    "privacy publication",
-    "new video parity"
+  "author_observations": [
+    "두 topic의 초기 메뉴는 알림 primary, 세 DONE은 메뉴 primary로 표시됨",
+    "확정 Q1 범위와 전체 Q2 옵션, Q4 직접 입력 조건이 네 문항 보드에 표시됨",
+    "정확 동의문·보관일·만14세·미동의 대안이 긴 세로 폼에 표시됨",
+    "recording 마지막 장면은 기존 제육320g/487kcal와 영양 예시·추정치를 표시",
+    "homeflow 마지막 장면은 구매/보유제외 재료와 요리 완료→남은 제육→다음 식사 결과를 표시",
+    "320 설문 안내와 다음 버튼의 간격을 보완한 최종본을 직접 확인",
+    "완료 변형은 알림/의견 접수 확인과 예시 다시 보기만 제공"
+  ],
+  "lint": {
+    "command": "pnpm exec eslint R2_render-static-boards.cjs R2_sync-design-docs.cjs R2_check-designs.cjs (all paths under owned evidence directory)",
+    "exit_code": 0
+  },
+  "doc_gate": {
+    "function": "evaluateDocGate",
+    "slice": "marketing-demand-validation-round2",
+    "outcome": "pass",
+    "findings": []
+  },
+  "static_checks": {
+    "designChecks": 1070,
+    "relativeLinks": 260,
+    "actualFiles": 38,
+    "failures": 0,
+    "menu_bottom_px": {
+      "recording_390": 512,
+      "recording_320": 508,
+      "homeflow_390": 512,
+      "homeflow_320": 508
+    },
+    "min_control_height_px": 44,
+    "contrast": {
+      "ink_on_blue": 5.54,
+      "white_on_blue": 2.78,
+      "body_on_white": 8.18
+    }
+  },
+  "critic_handoff": "기존 문서/도면 카피 차이와 EXAMPLE 구체적 결과 major의 보완을 제공했다. 해결 판단은 Volta의 최신 artifact 재검토에 맡기며 self-pass 없음.",
+  "remaining": [
+    "독립 critic/Stage/authority 검토",
+    "브라우저 실제 폰트·200% 확대·scroll·keyboard·focus·screen reader",
+    "서버 접수·복원·부분완료·두 탭·cookie_resume·410·동의갱신",
+    "privacy 공개 반영·독립 개인정보 검토·Turnstile/readiness",
+    "새 광고 영상과 장면 일치"
+  ],
+  "limitations": [
+    "SVG 줄바꿈은 glyph 폭 근사이며 실제 브라우저 폰트 배치와 다를 수 있음",
+    "셀 높이는 전체 내용에 맞춘 정적 도면이며 844px viewport screenshot이 아님",
+    "수치 fixture는 기존 설명용 예시이며 새로운 영양 계산 검증 아님",
+    "homeflow 보유 여부·식사 배치는 정적 설명이며 저장된 사용자 데이터 아님"
   ]
 }
