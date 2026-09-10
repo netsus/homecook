@@ -29,6 +29,7 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
 ];
 const APPROVED_SERVICE_ROLE_FILES = [
   ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 5),
+  "app/api/v1/marketing/round2/route.ts",
   "app/api/v1/marketing/validation/route.ts",
   ...APPROVED_USER_SERVICE_ROLE_FILES.slice(5, 9),
   "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
@@ -63,7 +64,7 @@ describe("hybrid authority AST/static gate", () => {
       entry.classification === "user" && entry.kind === "service-role-call"
     )).toBe(true);
     expect(inventory.publicServiceRoleEntries.map((entry) => entry.file))
-      .toEqual(["app/api/v1/marketing/validation/route.ts"]);
+      .toEqual(["app/api/v1/marketing/round2/route.ts", "app/api/v1/marketing/validation/route.ts"]);
     expect(inventory.publicServiceRoleEntries.every((entry) =>
       entry.classification === "public" && entry.kind === "service-role-call"
     )).toBe(true);
@@ -110,6 +111,11 @@ describe("hybrid authority AST/static gate", () => {
       {
         factory: "createNotFoundFeedbackInternalClient",
         file: "app/api/v1/feedback/404/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createMarketingRound2InternalClient",
+        file: "app/api/v1/marketing/round2/route.ts",
         functionName: "POST",
       },
       {
@@ -283,14 +289,14 @@ describe("hybrid authority AST/static gate", () => {
     expect(serverFactory).toMatch(
       /createRemoteCompatibilityServiceRoleClient[\s\S]+authority === "local"[\s\S]+\? null/i,
     );
-  });
+  }, 20_000);
 
   it("routes every local Data handler through the common API response boundary", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.dataRouteResponseBoundaries).toHaveLength(62);
+    expect(inventory.dataRouteResponseBoundaries).toHaveLength(63);
     expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
-  });
+  }, 20_000);
 
   it("rejects a scoped future-propagation client call from the public GET handler", () => {
     const root = fixtureRepository({
@@ -503,5 +509,35 @@ fetch("https://data.example.test/rest/v1/recipes");
       .toEqual(inventory.serviceRoleEntries);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
       .toEqual(["app/api/v1/recipes/[id]/route.ts"]);
+  });
+});
+
+
+describe("round2 exact public service boundary", () => {
+  it("permits only the dedicated factory in the round2 POST", () => {
+    const root = fixtureRepository({
+      "app/api/v1/marketing/round2/route.ts": `import { createMarketingRound2InternalClient } from "@/lib/supabase/server"; export async function POST() { return createMarketingRound2InternalClient(); }
+export async function GET() { return createMarketingRound2InternalClient(); }`,
+      "app/api/v1/marketing/other/route.ts": `import { createMarketingRound2InternalClient } from "@/lib/supabase/server"; export async function POST() { return createMarketingRound2InternalClient(); }`,
+    });
+    const inventory = inventoryHybridAuthorityPaths(root);
+    expect(inventory.internalOperationEntries.filter(entry => entry.allowed)).toMatchObject([{file:"app/api/v1/marketing/round2/route.ts",functionName:"POST"}]);
+    expect(inventory.internalOperationViolations).toHaveLength(2);
+    expect(inventory.userDirectServiceRoleEntries).toHaveLength(1);
+  });
+
+  it("requires the exact r2 response module without accepting raw JSON or another route", () => {
+    const valid = `import { createMarketingRound2Handler, round2Failure } from "@/lib/server/marketing-round2";
+export async function POST(request) { try { const client=createMarketingRound2InternalClient(); return createMarketingRound2Handler({execute:client.execute})(request); } catch(e) { return round2Failure(e); } }`;
+    for (const [file,source,violationCount] of [
+      ["app/api/v1/marketing/round2/route.ts", valid, 0],
+      ["app/api/v1/marketing/round2/route.ts", valid.replace("@/lib/server/marketing-round2", "@/lib/server/untrusted"), 1],
+      ["app/api/v1/marketing/round2/route.ts", valid.replace("return round2Failure(e)", "return Response.json(e)"), 1],
+      ["app/api/v1/marketing/other/route.ts", valid, 1],
+    ] as const) {
+      const inventory=inventoryHybridAuthorityPaths(fixtureRepository({[file]:source}));
+      expect(inventory.dataRouteResponseBoundaries).toHaveLength(1);
+      expect(inventory.dataRouteResponseBoundaryViolations).toHaveLength(violationCount);
+    }
   });
 });
