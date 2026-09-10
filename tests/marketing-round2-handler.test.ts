@@ -145,6 +145,12 @@ describe("r2 authoritative apply and lost responses", () => {
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("secret@example.com");
   });
+  it("does not treat a non-success RPC HTTP status as a successful commit", async () => {
+    const { handle, deps } = setup();
+    deps.execute.mockImplementation(async command => ({ status: 503, error: null, data: command.op === "inspect" ? inspected : { kind: "applied", data, cookie_claims: null } }));
+    expect((await handle(request(body, { cookie: cookieHeader() }))).status).toBe(503);
+    expect(deps.acquireControlLease).not.toHaveBeenCalled();
+  });
   it("keeps rate failures public and bounded without dispatch", async () => {
     const { handle, deps } = setup({ consumeRate: vi.fn(async () => { throw new Round2Error("RATE_LIMITED", [], 42); }) });
     const response = await handle(request(body, { cookie: cookieHeader() }));

@@ -134,7 +134,7 @@ export function createMarketingRound2Handler(dependencies: Round2HandlerDependen
       }
       const command = buildCommand(value, cookie, config, controlSnapshot(control, config, value, now()), now());
       const result = await dependencies.execute(structuredClone(command));
-      if (result.error) throw rpcError(result, lead);
+      if (result.error || result.status !== 200) throw rpcError(result, lead);
       const inspection = validateInspection(result.data, command);
       if (!cookie && inspection.data) await dependencies.consumeRate({ ip, participationId: inspection.data.participation_id, buckets: ["participation"] });
       if (value.action === "bootstrap" && value.bootstrap_intent === "cookie_resume") {
@@ -156,7 +156,7 @@ export function createMarketingRound2Handler(dependencies: Round2HandlerDependen
         command.op = "apply";
         dispatched = true;
         const appliedResult = await dependencies.execute(command);
-        if (appliedResult.error) { definitive = knownRollback(appliedResult); throw rpcError(appliedResult, lead); }
+        if (appliedResult.error || appliedResult.status !== 200) { definitive = knownRollback(appliedResult); throw rpcError(appliedResult, lead); }
         const applied = validateApplied(appliedResult.data, command);
         if (applied.cookie_claims) {
           try { readRound2Cookie(serializeRound2Cookie(applied.cookie_claims, config.secrets.cookie, Math.floor(now() / 1000)).split(";")[0], topic, config.secrets.cookie, Math.floor(now() / 1000)); }
@@ -171,7 +171,7 @@ export function createMarketingRound2Handler(dependencies: Round2HandlerDependen
           try {
             const recovery = { ...command, op: "inspect" as const, control: controlSnapshot(await lease.readControl(), config, value, now()), lead: command.lead ? { ...command.lead, turnstile_verified_at: null } : null };
             const proof = await dependencies.execute(recovery);
-            if (!proof.error && validateInspection(proof.data, recovery).replay === "same") definitive = true;
+            if (!proof.error && proof.status === 200 && validateInspection(proof.data, recovery).replay === "same") definitive = true;
           } catch { /* An absent event or unreadable result is not rollback evidence. Keep the lease. */ }
         }
         throw error;
