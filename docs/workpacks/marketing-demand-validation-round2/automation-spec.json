@@ -185,7 +185,16 @@
         "Keep preview mock, isolated integration, actual provider and physical-device evidence separately identified.",
         "Use distinct Codex task IDs for Stage 4 author, Stage 5 reviewer, final product-design-authority and Stage 6 reviewer; static boards are not runtime authority."
       ],
-      "authority_report_paths": []
+      "authority_report_paths": [
+        "ui/designs/authority/R2_MENU-authority.md",
+        "ui/designs/authority/R2_EXAMPLE-authority.md",
+        "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+        "ui/designs/authority/R2_SURVEY-authority.md",
+        "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+        "ui/designs/authority/R2_LEAD-authority.md",
+        "ui/designs/authority/R2_LEAD_DONE-authority.md",
+        "ui/designs/authority/R2_RECOVERY-authority.md"
+      ]
     }
   },
   "external_smokes": [
