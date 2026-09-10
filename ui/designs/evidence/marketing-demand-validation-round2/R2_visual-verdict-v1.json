@@ -1,0 +1,16 @@
+{
+  "score": 78,
+  "verdict": "revise",
+  "category_match": true,
+  "differences": [
+    "ImageGen 보드: 밝은 블루 위 흰 CTA 글자, 과도한 캐릭터, 완료 상태 변형 누락",
+    "정적 도면 첫 렌더: WebP 음식과 캐릭터가 SVG rasterizer에서 표시되지 않음",
+    "homeflow 예시 완료 요약에 보유 재료를 빼고 장보기라는 설명 보강 필요"
+  ],
+  "suggestions": [
+    "기존 WebP를 메모리에서 PNG로 형식 변환하여 SVG에 임베드하고 원본 자산은 유지",
+    "완료 상태를 확인하는 별도 메뉴와 완료 화면 도면 추가",
+    "homeflow 예시 완료 요약 보강 후 정적 도면을 직접 확인"
+  ],
+  "reasoning": "78점은 critic의 ImageGen 초안 보조 평가다. 정적 도면의 첫 렌더에서도 이미지 미표시가 확인되어 보완한다. 실제 브라우저 검증이나 독립 authority 판정이 아니다."
+}
