@@ -5,7 +5,10 @@
 
 ## Happy Path
 
-- [ ] 두 exact 경로에서 서버 topic/r2.1을 고정하고 잘못된 경로404·trailing slash canonical 이동을 검증한다 <!-- omo:id=accept-r2-routes;stage=2;scope=backend;review=3,6 -->
+- [ ] 두 exact 경로에서 서버 topic/r2.1을 고정하고 잘못된 경로404·trailing slash canonical 이동을 검증한다 <!-- omo:id=accept-r2-routes;stage=4;scope=frontend;review=5,6 -->
+
+`accept-r2-routes`는 실제 Next 웹 경로 결합·404·canonical redirect를 Stage4에서 검증하는 항목이다. 백엔드의 topic/path resolver·서명·API 권한 검증은 기존 Stage2 항목과 테스트에 그대로 남으며, 검증 요구나 테스트를 면제하지 않는다.
+
 - [ ] MENU의 알림/예시/의견 세 선택지와 베타 준비·사용 예시 안내를 두 topic에 표시한다 <!-- omo:id=accept-r2-menu;stage=4;scope=frontend;review=5,6 -->
 - [ ] direct lead 단독, example 단독, survey 단독과 세 활동 완료 순서6개가 모두 성공하고 나머지 활동을 가짜 완료하지 않는다 <!-- omo:id=accept-r2-independent-paths;stage=4;scope=frontend;review=5,6 -->
 - [ ] 모든 성공200/failure envelope·receipt·revision·PII 없는 exact 응답을 §5와 맞춘다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
