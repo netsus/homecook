@@ -4,6 +4,11 @@
 담당자: 킴실장
 날짜: 9월 3일
 
+> **2026-09-11 contract-evolution — POST marketing/round2 (r2.1)**
+>
+> `POST /api/v1/marketing/round2` 하나를 추가한다. exact action은 bootstrap/activity_start/example_complete/survey_submit/lead_submit/menu_return이다. 공개 익명 경로지만 bootstrap 외 요청은 r2 전용 서명 쿠키로 참여를 검증한다. 요청/응답 union·enum/길이·JSON 예시·status/code·상태행렬·멱등 영수증·보안 순서는 [r2 상세 계약](marketing-demand-validation-r2-contract.md) §4~6·8~9가 규범이다. 성공 `{success,data,error}`, 오류 `{code,message,fields[]}`를 유지한다.
+> 기존 `POST /api/v1/marketing/validation`·v2 session/cookie/table 계약은 불변이다. UTM을 주제 권한으로 사용하지 않으며 lead 신규/기존 이메일 존재 정보는 응답하지 않는다. r2/lead 전용 gate는 비활성 기본값이고 성공 재시도도 현재 보안/승인 경계를 우회하지 않는다.
+
 > **2026-09-08 contract-evolution — 프로필 링크 attribution**
 >
 > 공개 endpoint·request schema는 변경하지 않는다. frontend는 bare `/beta`를 Instagram, `/beta?profile_source=instagram|facebook`을 해당 프로필 유입으로 해석하고 첫 `view`의 기존 optional UTM field에 exact `utm_source=instagram|facebook`, `utm_medium=social_profile`, `utm_campaign=weekly_nutrition_2026`, `utm_content=profile_link`, `ad_variant=a`를 보낸다. 서버는 기존 validation·first-write-wins·cookie·PII 경계를 그대로 적용한다. `profile_source`는 API field가 아니며 enum 밖 값은 프로필 attribution으로 신뢰하지 않는다.
@@ -5609,8 +5614,9 @@ POST /api/v1/admin/page-view
 | 16-19    | DELETE     | /meal-log/entries/{id}                 | MEAL_LOG                 | 🔒     | v1.2.27 soft delete+reversal     |
 | 16-20    | GET        | /food-catalog/search                   | MEAL_LOG / recipe editor | 🔒     | v1.2.27 typed union search       |
 | 17-1     | POST       | /api/v1/marketing/validation           | MARKETING_DEMAND_VALIDATION | 🔓  | v1.2.42 신규                     |
+| 17-2     | POST       | /api/v1/marketing/round2               | MARKETING_DEMAND_VALIDATION_ROUND2 | 🔓  | v1.2.43 신규                     |
 
-> **v1.2.42 총계**: 109개 (`POST /api/v1/marketing/validation` 1개 추가. active 108개 + 삭제된 `2-4` tombstone 1개. internal worker/credential RPC와 maintenance endpoint는 제외)
+> **v1.2.43 총계**: 110개 (`POST /api/v1/marketing/round2` 1개 추가. active 109개 + 삭제된 `2-4` tombstone 1개. internal worker/credential RPC와 maintenance endpoint는 제외)
 >
 > **v1.2.39 총계**: 108개 (Supabase local-only 내부 운영 authority만 교정하며 신규 endpoint/status/error/field는 없다. active 107개 + 삭제된 `2-4` tombstone 1개. internal worker/credential RPC와 maintenance endpoint는 제외)
 >

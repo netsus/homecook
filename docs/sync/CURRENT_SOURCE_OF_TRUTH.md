@@ -14,6 +14,14 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
+## 2026-09-11 사용자 승인 contract-evolution — 무먹 r2 독립 활동
+
+공식 5종은 현재 파일 버전을 유지하면서 같은 날짜의 r2.1 addendum으로 동기화한다. 새 페이지는 `/beta/r2/recording`, `/beta/r2/homeflow`, 새 API는 `POST /api/v1/marketing/round2`, 추가형 테이블은 `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests`다. 기존 v2 `/beta`·API·table·cookie·질문/유형/선형 상태는 불변이다.
+
+[r2 상세 계약](../marketing-demand-validation-r2-contract.md)은 공식 5종의 위임 명세다. §2~3은 화면/자유 순서/두 주제 각4문항, §4~6은 주제 권한/첫 attribution/복원/정확한 요청·응답/멱등·상태, §7은 exact DB schema, §8~10은 동의/보관·집계 한계/비활성 gate/isolated 검증·runbook을 잠근다. API active 109개(+삭제 tombstone 1개), table 79개다.
+
+이 작성 작업은 Draft 계약 PR까지만 소유한다. 독립 검토·병합 후 별도 Stage 1이 `marketing-demand-validation-round2` README/acceptance를 exact 계약 SHA로 재잠근다. PR #1550은 그 전까지 보류이며 authority가 아니다. 이 선행 PR에서는 조정자의 명시적 분리 지시에 따라 workpack sync를 후속 Stage 1에 위임한다. 구현·배포·운영 활성화를 승인하지 않는다.
+
 ## 2026-09-08 사용자 승인 — Instagram·Facebook 프로필 링크 유입 분리
 
 광고 a/b/c Hero는 유지한다. `/beta`는 Instagram 프로필 기본 링크, `/beta?profile_source=facebook`은 Facebook 프로필 링크로 사용하고 둘 다 Hero A를 보여 준다. 프로필 유입은 URL에 UTM을 노출하지 않고 첫 view의 기존 UTM field에 플랫폼·`social_profile`·`profile_link`를 기록하여 광고 A 데이터와 분리한다. API/DB field를 추가하지 않으며 자세한 계약은 공식 문서 4종과 `marketing-demand-validation-v2` workpack의 2026-09-08 addendum을 따른다.

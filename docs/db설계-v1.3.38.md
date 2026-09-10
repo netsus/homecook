@@ -4,6 +4,11 @@
 담당자: 채실장
 날짜: 9월 3일
 
+> **2026-09-11 contract-evolution — 무먹 r2 추가형 3테이블 (r2.1)**
+>
+> `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests`를 추가한다. 기존 `public.marketing_validation_sessions`·v2 row/권한/제약/보관 의미는 불변이다. [r2 상세 계약](marketing-demand-validation-r2-contract.md) §7은 모든 column의 SQL type/null/default/PK/FK/unique/check/index/RLS와 deferred consistency trigger의 규범 명세다.
+> 참여의 독립 상태·비PII event·성공 lead 영수증을 원자 commit한다. event_id 충돌, bootstrap unique, 주제별 normalized-email unique와 전체 연락처 관측, 동시 legacy/삭제메일의 신규 집계 한계, 일괄 삭제는 §4·6·8을 따른다. 추가형 migration은 후속 Stage 2의 isolated local 테스트에서만 작성·검증하며 이 문서 PR은 DB에 접속하지 않는다.
+
 > **2026-09-03 contract-evolution — 마케팅 수요검증 v2 단일 row evolution**
 >
 > source prototype은 `feature/demand-validation-funnel-integration@63f8ef2a019c6d260a96a42fab9d67f727d93557`, Stage 1 작성 task는 `01a0630e-81f1-7f42-8b1b-cb259d1d5997`이다. 신규 table은 만들지 않고 `public.marketing_validation_sessions` 1개를 유지한다. 전체 table 수는 76개로 유지한다.
@@ -3333,8 +3338,11 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 | 74 | private.youtube_extraction_current_policy | YouTube current release policy singleton, non-secret `v1.3.33` |
 | 75 | private.youtube_extraction_progress_stage_events | YouTube 실제 단계 진입 시각, attempt당 최대 5행 `v1.3.36` |
 | 76 | marketing_validation_sessions | `/beta` 수요검증 first-party session·lead·retention `v1.3.37` |
+| 77 | marketing_round2_participations | r2 주제별 참여·독립 상태·최초 attribution `v1.3.38` |
+| 78 | marketing_round2_events | r2 비PII event·멱등성·원자 상태변경 `v1.3.38` |
+| 79 | marketing_round2_lead_requests | r2 성공 신청 영수증·동의·주제별 연락처 `v1.3.38` |
 
-> **v1.3.37 총계**: 76개. v1.3.36의 75개에 `public.marketing_validation_sessions` 1개만 additive 추가한다.
+> **v1.3.38 총계**: 79개. v1.3.37의 76개에 `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests` 3개를 additive 추가한다.
 
 ---
 
