@@ -4,6 +4,12 @@
 담당자: 채실장
 날짜: 9월 3일
 
+> **2026-09-11 contract-evolution — 무먹 r2 자유 순서 flow (r2.1)**
+>
+> `/beta/r2/{recording|homeflow}` → MENU → EXAMPLE 또는 SURVEY 또는 LEAD → 각 DONE → 선택적 MENU/다른 활동이다. 단독 활동 완료와 세 활동의 순서 6가지를 모두 허용하며 메뉴 복귀가 새 참여를 만들지 않는다. 서버 참여는 topic/version별로 분리하고 완료 상태를 복원한다.
+> [r2 상세 계약](marketing-demand-validation-r2-contract.md) §2·4~6의 bootstrap 유실/동시 탭·action별 허용 행렬·오류 복구가 세부 authority다. 설문 시작/제출 때의 서버 체험 상태를 기록하며 직접 신청이 예시/설문 완료로 전이되지 않는다. 기존 v2 선형8단계·4유형·쿠키/API/table은 불변이며 r2에 강제하지 않는다.
+> 2026-09-11 독립 검토 수정: 상세 계약 §6.1~6.3의 서버 전용 `marketing_round2_apply(jsonb)` RPC 원자 저장·권한/제어 lease, §4.3의 삭제 쿠키 만료·명시 재시작과 cookie_resume, §3·5·7의 Q1 집밥 범위/Q2 재사용·직접 미관리·기타 선택지를 함께 적용한다. 공개 endpoint/table 수와 기존 v2 계약은 불변이다.
+
 > **2026-09-08 contract-evolution — `/beta` fast-entry flow**
 >
 > navigation → server-rendered resolved Hero → background `view` session 연결 → CTA enable → q1 흐름이다. 사용자가 CTA를 누르면 q1 전환과 함께 이후 journey image를 low priority로 warm한다. `view`가 실패하면 Hero에서 error recovery로 전환하며 session 없이 q1 event를 먼저 보내지 않는다. action 순서와 DB row 의미는 변경하지 않는다.
