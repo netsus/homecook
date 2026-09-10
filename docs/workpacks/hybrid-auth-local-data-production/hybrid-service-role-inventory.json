@@ -209,7 +209,7 @@
       "classification": "public",
       "file": "app/api/v1/marketing/round2/route.ts",
       "column": 24,
-      "line": 24,
+      "line": 28,
       "allowed": true,
       "factory": "createMarketingRound2InternalClient",
       "functionName": "POST",
@@ -561,7 +561,7 @@
       "classification": "public",
       "file": "app/api/v1/marketing/round2/route.ts",
       "column": 24,
-      "line": 24,
+      "line": 28,
       "kind": "service-role-call"
     },
     {
