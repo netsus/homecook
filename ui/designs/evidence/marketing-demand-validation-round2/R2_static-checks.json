@@ -1,0 +1,56 @@
+{
+  "date": "2026-09-11",
+  "scope": "static-design-evidence-only",
+  "authority": "pending",
+  "design_documents": {
+    "count": 8,
+    "all_draft": true,
+    "all_authority_pending": true,
+    "all_include_both_topics": true,
+    "all_include_320_and_390": true,
+    "all_include_stage4_plan": true
+  },
+  "directly_viewed_final_boards": [
+    "R2_recording_320.png",
+    "R2_recording_390.png",
+    "R2_homeflow_320.png",
+    "R2_homeflow_390.png",
+    "R2_completed-state-variants_320.png"
+  ],
+  "static_control_geometry": {
+    "count": 128,
+    "minimum_height_px": 44,
+    "out_of_panel_count": 0,
+    "menu_last_choice_bottom_px": {
+      "recording_390": 480,
+      "recording_320": 500,
+      "homeflow_390": 504,
+      "homeflow_320": 500
+    }
+  },
+  "calculated_srgb_contrast": {
+    "ink_on_brand_blue": 5.54,
+    "white_on_brand_blue_rejected": 2.78,
+    "body_on_white": 8.18
+  },
+  "not_verified": [
+    "browser layout",
+    "font enlargement",
+    "keyboard",
+    "screen reader",
+    "focus",
+    "scroll behavior",
+    "form submission",
+    "security challenge",
+    "server completion restoration",
+    "advertising video parity"
+  ],
+  "limitations": [
+    "Static SVG text wrapping approximates glyph width; some Korean words and punctuation split awkwardly.",
+    "Completed-state board external labels are crowded; these labels are reviewer annotations, not product copy.",
+    "SURVEY board shows a provisional first question, not all questions or approved copy.",
+    "Consent, retention date and security verification areas are reviewer placeholders, not publishable UI.",
+    "The coordinate checks do not establish WCAG conformance or runtime correctness."
+  ],
+  "followup": "Completion buttons now prioritize menu; recovery discloses refresh loss; example board is a flow summary, concrete final scene remains pending. Leader directly viewed updated homeflow320 and completed variants; other final regenerated boards retain prior direct-view coverage, not a repeated final visual check."
+}
