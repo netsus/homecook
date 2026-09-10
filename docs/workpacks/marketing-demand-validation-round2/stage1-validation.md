@@ -68,3 +68,9 @@ r2.1 동기화 후 design-critic 보조가 8개 화면을 모두 green/필수 �
 `corepack pnpm --version`은 **10.32.1**이다. 이 실행기로 typecheck, 증거용 도구4개 eslint, workflow-v2, source-of-truth-sync, closeout-sync, 게시용 PR body validation을 재실행해 모두 exit0을 확인했다. automation-spec Node 검사, Stage1 7범주 정적 검사, 디자인1070/링크260/실재파일38 검사도 재실행하여 실패0이었다. lint 경고도 없었다.
 
 JSON 비교로 `.workflow-v2/status.json`의 r2 외 데이터가 `b9601841`과 같음을 확인했다. working diff는 지정한 workpack/index/workflow/R2 design·critic·evidence 경로뿐이며 `git diff --check`가 통과했다. 사용자 root 대시보드나 사용자 삭제 파일을 staging하지 않는다.
+
+## PR 본문 갱신 전후 CI 기록
+
+재잠금 commit `8c8d0ff270e2423d0a7e7555f5f824c818284322`를 push할 때 synchronize 이벤트가 이전의 불완전한 PR 본문을 캡처했다. run `34524991954`의 template-check는 필수 섹션 누락으로 실패했다. 본문 갱신 후 edited 이벤트 run `34525078231`의 같은 검사는 성공했다. `.github/workflows/pr-governance.yml`이 이벤트 시점의 `github.event.pull_request.body`를 검사함을 확인했다.
+
+8c8d0ff2의 rollup에는 성공과 이전 실패가 함께 남았다. 이를 현재 head 전체 통과라고 보고하지 않고 이 검증 기록을 추가 commit하여, 이미 게시된 완전한 본문으로 새 head의 checks가 시작되게 한다. 이전 실패와 수정 경위는 이 기록 및 GitHub run에 보존한다. 최종 head/전체 check 결과는 PR 본문과 조정자 인계에서 보고한다.
