@@ -8,6 +8,7 @@
 >
 > `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests`를 추가한다. 기존 `public.marketing_validation_sessions`·v2 row/권한/제약/보관 의미는 불변이다. [r2 상세 계약](marketing-demand-validation-r2-contract.md) §7은 모든 column의 SQL type/null/default/PK/FK/unique/check/index/RLS와 deferred consistency trigger의 규범 명세다.
 > 참여의 독립 상태·비PII event·성공 lead 영수증을 원자 commit한다. event_id 충돌, bootstrap unique, 주제별 normalized-email unique와 전체 연락처 관측, 동시 legacy/삭제메일의 신규 집계 한계, 일괄 삭제는 §4·6·8을 따른다. 추가형 migration은 후속 Stage 2의 isolated local 테스트에서만 작성·검증하며 이 문서 PR은 DB에 접속하지 않는다.
+> 2026-09-11 독립 검토 수정: 상세 계약 §6.1~6.3의 서버 전용 `marketing_round2_apply(jsonb)` RPC 원자 저장·권한/제어 lease, §4.3의 삭제 쿠키 만료·명시 재시작과 cookie_resume, §3·5·7의 Q1 집밥 범위/Q2 재사용·직접 미관리·기타 선택지를 함께 적용한다. 공개 endpoint/table 수와 기존 v2 계약은 불변이다.
 
 > **2026-09-03 contract-evolution — 마케팅 수요검증 v2 단일 row evolution**
 >

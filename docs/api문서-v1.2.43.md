@@ -8,6 +8,7 @@
 >
 > `POST /api/v1/marketing/round2` 하나를 추가한다. exact action은 bootstrap/activity_start/example_complete/survey_submit/lead_submit/menu_return이다. 공개 익명 경로지만 bootstrap 외 요청은 r2 전용 서명 쿠키로 참여를 검증한다. 요청/응답 union·enum/길이·JSON 예시·status/code·상태행렬·멱등 영수증·보안 순서는 [r2 상세 계약](marketing-demand-validation-r2-contract.md) §4~6·8~9가 규범이다. 성공 `{success,data,error}`, 오류 `{code,message,fields[]}`를 유지한다.
 > 기존 `POST /api/v1/marketing/validation`·v2 session/cookie/table 계약은 불변이다. UTM을 주제 권한으로 사용하지 않으며 lead 신규/기존 이메일 존재 정보는 응답하지 않는다. r2/lead 전용 gate는 비활성 기본값이고 성공 재시도도 현재 보안/승인 경계를 우회하지 않는다.
+> 2026-09-11 독립 검토 수정: 상세 계약 §6.1~6.3의 서버 전용 `marketing_round2_apply(jsonb)` RPC 원자 저장·권한/제어 lease, §4.3의 삭제 쿠키 만료·명시 재시작과 cookie_resume, §3·5·7의 Q1 집밥 범위/Q2 재사용·직접 미관리·기타 선택지를 함께 적용한다. 공개 endpoint/table 수와 기존 v2 계약은 불변이다.
 
 > **2026-09-08 contract-evolution — 프로필 링크 attribution**
 >
