@@ -1,0 +1,140 @@
+{
+  "scope": "static-design-evidence-only",
+  "authority": "pending",
+  "provenance": {
+    "contract": "docs/marketing-demand-validation-r2-contract.md",
+    "version": "r2.1",
+    "pr": 1551,
+    "merged": "7f00e62c13572b5b2c0d54c997fe628f7a56567e",
+    "reviewed": "24093c94ebf53676050353088f173ef7f6315445",
+    "workspace_merge": "b9601841",
+    "source": "User-provided merged provenance; source header Draft is historical",
+    "design_status": "draft",
+    "authority": "pending",
+    "evidence_kind": "static_design_not_runtime"
+  },
+  "designChecks": {
+    "total": 1070,
+    "failures": []
+  },
+  "relativeLinks": {
+    "total": 260,
+    "failures": []
+  },
+  "actualFiles": {
+    "total": 38,
+    "failures": []
+  },
+  "calculated_srgb_contrast": {
+    "ink_on_blue": 5.54,
+    "white_on_blue": 2.78,
+    "body_on_white": 8.18
+  },
+  "menu_last_choice_bottom_px": {
+    "recording_390": 512,
+    "recording_320": 508,
+    "homeflow_390": 512,
+    "homeflow_320": 508
+  },
+  "minimum_control_height_px": 44,
+  "artifacts": [
+    {
+      "file": "R2_recording_390.svg",
+      "sha256": "9dae77b39ccbd67fcb04b72ade5b38d4324c6621c2af7176bcb044e1f8d517a7"
+    },
+    {
+      "file": "R2_recording_390.png",
+      "sha256": "6f3de6985e1bbc8394263472ade061d07818fe4034948ceecc50e06dd5d210af"
+    },
+    {
+      "file": "R2_recording_survey_390.svg",
+      "sha256": "1e5cb98ac413fd14e1d151f970d749ca6304f29ec8352e876b1fbbd6a1b635c0"
+    },
+    {
+      "file": "R2_recording_survey_390.png",
+      "sha256": "58a1c34c6e6d013ec5a4821677050023cecd438657c1333e713f1a2c963474fd"
+    },
+    {
+      "file": "R2_recording_320.svg",
+      "sha256": "cf0a82ab05cc649c852ea0e1d69084bf83cd095044ae43d29f44cbe451ccf6fc"
+    },
+    {
+      "file": "R2_recording_320.png",
+      "sha256": "0e5d8b7324740ddae4f928f3e0268e841191753eb509bc39091be89e0298363b"
+    },
+    {
+      "file": "R2_recording_survey_320.svg",
+      "sha256": "000b083cbce47c69a4eed0bf8300901058363979598a81871f77c078f9c42166"
+    },
+    {
+      "file": "R2_recording_survey_320.png",
+      "sha256": "c2345142adf6573972bbbc154f3fe367b706c58797338a7deb17e0b6a232c990"
+    },
+    {
+      "file": "R2_homeflow_390.svg",
+      "sha256": "9e5347d2a32209ee87442cd0cc7960f768fb0ced4483376515ec0b468fd4e442"
+    },
+    {
+      "file": "R2_homeflow_390.png",
+      "sha256": "c1f94471c30fed716f2b6d29b9641f265bdc65c20fd656b407c96ee5ad13245f"
+    },
+    {
+      "file": "R2_homeflow_survey_390.svg",
+      "sha256": "6da432663e46169b20457a67941d951a559c8bf7cb67254b515818ac2affae14"
+    },
+    {
+      "file": "R2_homeflow_survey_390.png",
+      "sha256": "511ce93b4b272ca5995783cab1a813e92cf48abaa30a57bfb69290fe9910b680"
+    },
+    {
+      "file": "R2_homeflow_320.svg",
+      "sha256": "65c4d40204c711a3a616e81cc1477e091425e91cbe06d9da986ecd40f156967d"
+    },
+    {
+      "file": "R2_homeflow_320.png",
+      "sha256": "0a5a8c5997d900b7eccee9defab5a62fa30d13d479c736af0022b92f637dbd1d"
+    },
+    {
+      "file": "R2_homeflow_survey_320.svg",
+      "sha256": "f8162fb20b6c8e88203184d0c253c7afd2f8f00f6760af7a127ae51cb6619519"
+    },
+    {
+      "file": "R2_homeflow_survey_320.png",
+      "sha256": "51646110908e28304e4c48aca064bd6e7c1fec04e28855abf1e8db80a81aa507"
+    },
+    {
+      "file": "R2_completed-state-variants_320.svg",
+      "sha256": "0ff055451441335d766f4ce6b88457c3bfbe93b86112001fdc414c5cb31a3be9"
+    },
+    {
+      "file": "R2_completed-state-variants_320.png",
+      "sha256": "91017f9ba9ef0149c4277147794dea886a9449ce8a94ad94a6ac6575f1ec7852"
+    },
+    {
+      "file": "R2_example-scenes_390.svg",
+      "sha256": "979e37fce17ea672478ea96a3239167e4c2f2e9b60568d516a7cccb13c297e86"
+    },
+    {
+      "file": "R2_example-scenes_390.png",
+      "sha256": "e18601539cc05c20764290ad3bbe5476509dbf89f791be787d2c59d2392ac138"
+    },
+    {
+      "file": "R2_example-scenes_320.svg",
+      "sha256": "0a7305cd64324f81cef1cf6319430abe785dcc4a9a2da8d2fe944d7b238a0b1b"
+    },
+    {
+      "file": "R2_example-scenes_320.png",
+      "sha256": "0d4c234d9d41272fb8c9d01f2ca8c6398053e5ad9584efeca201c5bae3daefd2"
+    }
+  ],
+  "not_verified": [
+    "runtime layout",
+    "keyboard",
+    "focus",
+    "screen reader",
+    "real server restoration",
+    "Turnstile",
+    "privacy publication",
+    "new video parity"
+  ]
+}

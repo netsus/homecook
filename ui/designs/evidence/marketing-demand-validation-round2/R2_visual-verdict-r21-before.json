@@ -1,0 +1,14 @@
+{
+  "score": 86,
+  "verdict": "revise",
+  "category_match": true,
+  "differences": [
+    "새 r2.1 320 설문 도면에서 다음 문항 버튼과 이메일 불필요 안내 사이 간격이 좁음",
+    "첫 제목과 준비 상태 사이 간격을 보강할 필요"
+  ],
+  "suggestions": [
+    "설문 버튼 뒤 본문 baseline을 16px 더 띄움",
+    "첫 제목 baseline을 12px 아래로 이동"
+  ],
+  "reasoning": "320 두 주제와 완료 변형 PNG를 직접 확인한 작성자 보조 관찰이다. 독립 authority 또는 runtime 판정이 아니다."
+}
