@@ -114,4 +114,4 @@ Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhe
 
 실제 전체 실행 명령은 `--lead-edit`를 포함했다. 이후 최종 runner는 기본 선택도 같은28분기를 쓰도록 바꿨고, recovery/zoom/focused 선택 보존과 동등성을 단위검사했다. 무옵션 전체 명령을 직접 실행한 결과로 표현하지 않는다. 정식 `verify:frontend:pr`의 기존7,827 PASS는 과거 수정본의 근거이며 새 코드의 검증/현재 head CI와 분리한다. 기존 whole frontend 실패4+10개는 여전히 open이다.
 
-원문 재현 소스5개는 실행 제품 코드와 구분한 `.cjs.txt` 보관본으로 이동했다. 내용과 해시는 유지했고, same-reviewer의 직접 링크3곳 revision을 보존했다. lint 규칙이나 검증기는 바꾸지 않았다. 별도 docs PR1556의 evidence 형식 변경은 안정된 작성자 변경을 기록한 뒤 base로 통합한다. 최종 independent Stage5 재검토·final authority·Stage6·Ready·merge·배포는 계속 대기한다.
+원문 재현 소스5개는 실행 제품 코드와 구분한 `.cjs.txt` 보관본으로 이동했다. 내용과 해시는 유지했고, same-reviewer의 직접 링크3곳 revision을 보존했다. lint 규칙이나 검증기는 바꾸지 않았다. 별도 docs PR1556의 승인 base `8c6573bf594fa15613205ce97e4435d751c7d87c`를 merge commit `57236f26fb1665693733f78eeb7237c6c99df663`로 통합했다. 제품/검증 소스는 코드 commit과 같다. strict 검사에는 독립 보고서의6JSON 참조 누락6건만 남아 있으며, 파일의 실제 근거를 검토한 같은 reviewer가 연결한다. 작성자가 보고서를 자기 승인하지 않았다. 최종 independent Stage5 재검토·final authority·Stage6·Ready·merge·배포는 계속 대기한다.

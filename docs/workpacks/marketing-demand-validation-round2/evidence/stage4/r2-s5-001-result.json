@@ -5,6 +5,9 @@
   "reviewed_broken_head": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
   "author_status": "fixed-and-verified-awaiting-independent-recheck",
   "code_commit": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "approved_evidence_format_base": "8c6573bf594fa15613205ce97e4435d751c7d87c",
+  "base_integration_commit": "57236f26fb1665693733f78eeb7237c6c99df663",
+  "post_base_product_and_harness_diff": "none relative to code_commit",
   "public_stage5": "request_changes; independent exact-fix-head re-review pending",
   "contract_impact": "No public API, field, state or consent policy change. Existing same-event tokenless receipt lookup and consent-generation rules only.",
   "repair": [
@@ -34,7 +37,7 @@
   "source_parity": "Executed product files match code_commit by SHA256. Full-run scenario/helper unchanged; captured runner and final default dispatch differ only as preserved in default-dispatch.diff.",
   "verification_logs": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-s5-001-checks",
   "remaining_boundaries": {
-    "authority_format": "Independent report format-v1 reduces strict errors from14 to6; six prose requirements remain a separate Stage1 docs change.",
+    "authority_format": "Approved PR1556 base integrated. Strict validation still reports6 missing report artifact refs: six actual JSON files exist, but the independent reviewer must review their contents and link them from the reports. Author has not changed reviewer evidence blocks.",
     "historical_flow_traces": "Prior783 detailed chronological observations remain not-retained; final fresh full28 now has separately retained actual chronological observations and captures.",
     "unrelated_baseline": "Four narrow-screen and ten desktop visual failures remain separately documented; meal-detail visual identity remains unclassified.",
     "real_provider": "not_run",

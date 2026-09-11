@@ -1,0 +1,12 @@
+
+> homecook@0.1.0 validate:authority-evidence-presence /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/validate-authority-evidence-presence.mjs -- --slice marketing-demand-validation-round2
+
+authority evidence presence validation failed for authority-evidence-presence:marketing-demand-validation-round2
+- authority_report_paths:evidence: Authority reports are missing required artifact evidence: docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json
+- authority_report_paths:evidence: Authority reports are missing required artifact evidence: docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json
+- authority_report_paths:evidence: Authority reports are missing required artifact evidence: docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json
+- authority_report_paths:evidence: Authority reports are missing required artifact evidence: docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json
+- authority_report_paths:evidence: Authority reports are missing required artifact evidence: docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json
+- authority_report_paths:evidence: Authority reports are missing required artifact evidence: docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json
+ ELIFECYCLE  Command failed with exit code 1.
