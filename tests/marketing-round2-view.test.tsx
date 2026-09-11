@@ -7,7 +7,7 @@ import { ROUND2_SURVEYS, ROUND2_LEAD_COPY } from "@/lib/marketing/round2-survey"
 vi.mock("@/components/marketing/round2/round2.module.css",()=>({default:{}}));
 
 afterEach(cleanup);
-const actions = () => ({ getState: vi.fn(), openActivity: vi.fn(), returnToMenu: vi.fn(), completeExample: vi.fn(async () => false), saveSurveyDraft: vi.fn(), submitSurvey: vi.fn(async () => false), setLeadForm: vi.fn(), setTurnstileToken: vi.fn(), submitLead: vi.fn(async () => false), retry: vi.fn(async () => false), restart: vi.fn(async () => false) });
+const actions = () => ({ getState: vi.fn(), openActivity: vi.fn(), returnToMenu: vi.fn(), completeExample: vi.fn(async () => false), saveSurveyDraft: vi.fn(), submitSurvey: vi.fn(async () => false), setLeadForm: vi.fn(), setTurnstileToken: vi.fn(), restoreLeadAttempt: vi.fn(), submitLead: vi.fn(async () => false), retry: vi.fn(async () => false), restart: vi.fn(async () => false) });
 function props(topic: "recording" | "homeflow" = "recording") {
   return { topic, preview: false, leadReady: false, turnstileSiteKey: "", state: { snapshot: null, connection: "connecting" as const, busy: true, error: null, draft: {}, leadForm: {email:"",consent:false},tokenReady:false,storageBlocked:false,preview:false,challengeEpoch:0 }, actions:actions() };
 }

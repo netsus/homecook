@@ -8,6 +8,7 @@ import { createServer as httpsServer } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createServer as tcpServer } from 'node:net';
 import {
   createIsolatedSupabaseProject, readPinnedLocalDockerTarget, assertNoIsolatedDockerResources,
   assertOwnedDockerResources, assertPinnedSupabaseCliVersion, buildSupabaseCliArgs,
@@ -83,11 +84,20 @@ async function serveNext() {
   process.on('SIGTERM', async () => { server.close(); dataProxy.close(); await app.close(); process.exit(0); });
 }
 
+export function selectUiScenarioModes(args) {
+  const recoveryZoom = args.includes('--recovery-zoom-only');
+  const recoveryOnly = recoveryZoom || args.includes('--recovery-only');
+  const leadEditOnly = args.includes('--lead-edit-only');
+  const leadEdit = !recoveryOnly || leadEditOnly || args.includes('--lead-edit');
+  return { recoveryZoom, recoveryOnly, leadEditOnly, leadEdit };
+}
+
 async function main() {
-  const root = process.cwd(); const recoveryZoom = process.argv.includes('--recovery-zoom-only');
-  const recoveryOnly = recoveryZoom || process.argv.includes('--recovery-only');
-  const artifacts = join(root, '.omx/artifacts/r2-stage4', recoveryZoom ? 'real-ui-recovery-zoom' : recoveryOnly ? 'real-ui-recovery' : 'real-ui');
+  const root = process.cwd();
+  const { recoveryZoom, recoveryOnly, leadEditOnly, leadEdit } = selectUiScenarioModes(process.argv);
+  const artifacts = leadEdit ? join(root, '.omx/artifacts/r2-s5-001/actual-ui', new Date().toISOString().replace(/[:.]/g, '-')) : join(root, '.omx/artifacts/r2-stage4', recoveryZoom ? 'real-ui-recovery-zoom' : recoveryOnly ? 'real-ui-recovery' : 'real-ui');
   await mkdir(artifacts, { recursive: true });
+  await new Promise((accept, reject) => { const probe = tcpServer(); probe.once('error', () => reject(new Error('Port 3443 is occupied; refusing to disturb existing server'))); probe.listen(3443, '127.0.0.1', () => probe.close(accept)); });
   const target = readPinnedLocalDockerTarget(); const isolated = await createIsolatedSupabaseProject(root);
   const env = await isolated.buildCommandEnv(process.env, { dockerHost: target.docker_host });
   const owned = await realpath(await mkdtemp(join(tmpdir(), 'r2-ui-next-')));
@@ -142,19 +152,20 @@ async function main() {
     await fingerprint(copied);
     const baselineHead = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, env, encoding: 'utf8' }).stdout.trim();
     const harnessFiles = {};
-    for (const name of ['scripts/verify-marketing-round2-ui-isolated.mjs', 'tests/marketing-round2-ui-isolated.scenarios.mjs', 'tests/helpers/marketing-round2-recovery-evidence.mjs']) harnessFiles[name] = createHash('sha256').update(await readFile(join(root, name))).digest('hex');
+    for (const name of ['scripts/verify-marketing-round2-ui-isolated.mjs', 'tests/marketing-round2-ui-isolated.scenarios.mjs', 'tests/helpers/marketing-round2-recovery-evidence.mjs', 'tests/helpers/marketing-round2-ui-trace.mjs']) harnessFiles[name] = createHash('sha256').update(await readFile(join(root, name))).digest('hex');
     await writeFile(join(artifacts, 'source-manifest.json'), JSON.stringify({ baselineHead, capturedAt: new Date().toISOString(), snapshotFiles, harnessFiles }, null, 2));
     await writeFile(join(owned, 'openssl.cnf'), '[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=localhost\n[ext]\nsubjectAltName=DNS:localhost\n', { mode: 0o600 });
     run('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', join(owned, 'key.pem'), '-out', join(owned, 'cert.pem'), '-days', '1', '-config', join(owned, 'openssl.cnf')]);
     child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--serve-next'], { cwd: copied, env: { ...env, NODE_ENV: 'test', NEXT_TELEMETRY_DISABLED: '1', R2_UI_OWNED_ROOT: owned, R2_UI_IDENTITY: JSON.stringify(identity), R2_UI_SERVICE_KEY: token }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
     let logs = ''; child.stdout.on('data', data => { logs += data; }); child.stderr.on('data', data => { logs += data; });
-    const ready = await new Promise((accept, reject) => { const timer = setTimeout(() => reject(new Error('Next fixture readiness timeout')), 120000); child.once('exit', () => { clearTimeout(timer); reject(new Error('Next fixture exited before ready')); }); child.once('message', message => { clearTimeout(timer); accept(message); }); }).catch(async error => { await writeFile(join(artifacts, 'next-runtime.log'), logs.replaceAll(token, '[REDACTED]')); throw error; });
+    const saveRuntimeSummary = () => writeFile(join(artifacts, 'next-runtime-summary.json'), JSON.stringify({ rawLogRetained: false, reason: 'exclude unstructured payload/credential leakage', observedOutputBytes: Buffer.byteLength(logs), httpStatusObservations: [...logs.matchAll(/(?:GET|POST) \/api\/v1\/marketing\/round2 (\d{3})/g)].map(match => Number(match[1])) }, null, 2));
+    const ready = await new Promise((accept, reject) => { const timer = setTimeout(() => reject(new Error('Next fixture readiness timeout')), 120000); child.once('exit', () => { clearTimeout(timer); reject(new Error('Next fixture exited before ready')); }); child.once('message', message => { clearTimeout(timer); accept(message); }); }).catch(async error => { await saveRuntimeSummary(); throw error; });
     console.warn(JSON.stringify({ phase: 'next-ready', projectId: identity.projectId }));
     const { chromium } = await import('@playwright/test'); browser = await chromium.launch({ headless: true });
     const { runRealUiScenarios } = await import('../tests/marketing-round2-ui-isolated.scenarios.mjs');
     let result;
-    try { result = await runRealUiScenarios({ browser, origin: 'https://localhost:3443', sql, fixture: ready.fixture, artifacts, recoveryOnly, recoveryZoom }); }
-    finally { await writeFile(join(artifacts, 'next-runtime.log'), logs.replaceAll(token, '[REDACTED]')); }
+    try { result = await runRealUiScenarios({ browser, origin: 'https://localhost:3443', sql, fixture: ready.fixture, artifacts, recoveryOnly, recoveryZoom, leadEdit, leadEditOnly }); }
+    finally { await saveRuntimeSummary(); }
     const stats = await new Promise(accept => { child.once('message', accept); child.send('stats'); });
     const afterLegacy = sql("select md5(coalesce(string_agg(row_to_json(v)::text,',' order by id),'')) from public.marketing_validation_sessions v");
     if (beforeLegacy !== afterLegacy) throw new Error('Legacy table changed');
@@ -162,12 +173,24 @@ async function main() {
     console.warn(JSON.stringify({ result: 'PASS', checks: result.checks.length, path: join(artifacts, 'result.json') }));
   } finally {
     await browser?.close();
-    if (child && child.exitCode === null) { child.kill('SIGTERM'); await new Promise(accept => { child.once('exit', accept); setTimeout(() => { if (child.exitCode === null) child.kill('SIGKILL'); accept(); }, 10000).unref(); }); }
+    if (child && child.exitCode === null && child.signalCode === null) {
+      await new Promise((accept, reject) => {
+        let hardDeadline;
+        const deadline = setTimeout(() => {
+          child.kill('SIGKILL');
+          hardDeadline = setTimeout(() => reject(new Error('Owned Next child did not exit; cleanup requires attention')), 5000);
+        }, 10000);
+        child.once('exit', () => { clearTimeout(deadline); clearTimeout(hardDeadline); accept(); });
+        child.kill('SIGTERM');
+      });
+    }
+    if (child && child.exitCode === null && child.signalCode === null) throw new Error('Owned server exit was not confirmed');
     if (started) removeIsolatedDockerResources(isolated.projectId, { env });
     assertNoIsolatedDockerResources(isolated.projectId, { env }); await isolated.removeFiles(); await rm(owned, { recursive: true, force: true });
+    await writeFile(join(artifacts, 'cleanup.json'), JSON.stringify({ projectId: isolated.projectId, ownedDockerResourcesRemoved: true, ownedFilesRemoved: true, ownedServerStopped: true, protectedUntouchedPorts: [3100, 3118, 3124], completedAt: new Date().toISOString() }, null, 2));
   }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try { if (process.argv.includes('--serve-next')) await serveNext(); else await main(); }
-  catch (error) { console.error(error.message); process.exitCode = 1; }
+  catch { console.error('R2 isolated UI verification failed. Inspect sanitized artifacts; raw error details are not logged.'); process.exitCode = 1; }
 }

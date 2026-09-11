@@ -2,23 +2,48 @@ import { expect } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { assertRecoveryZoomCombinations } from './helpers/marketing-round2-recovery-evidence.mjs';
+import { projectUiTrace } from './helpers/marketing-round2-ui-trace.mjs';
 
 /** Browser clicks use real Next pages, API and disposable DB. Only the challenge provider is mocked. */
-export async function runRealUiScenarios({ browser, origin, sql, fixture, artifacts, recoveryOnly = false, recoveryZoom = false }) {
+export async function runRealUiScenarios({ browser, origin, sql, fixture, artifacts, recoveryOnly = false, recoveryZoom = false, leadEdit = false, leadEditOnly = false }) {
   const checks = []; const envelopes = []; const externalRequests = []; const recoveryScreenshots = []; let pageErrors = []; let apiWarmed = false;
   const recoveryZoomGeometry = [];
+  const observedTrace = []; const screenshots = []; const additionalChecks = [];
+  let caseId = 'shared-initial'; let tabCounter = 0;
+  const firstEvents = new Map();
+  function observe(value) { observedTrace.push(projectUiTrace({ ...value, at: new Date().toISOString(), caseId, sequence: observedTrace.length + 1 })); }
+  async function screenshot(current, name) {
+    await current.screenshot({ path: join(artifacts, name), fullPage: true, mask: [current.locator('input[type="email"]'), current.getByText(/@/, { exact: false })] });
+    screenshots.push(name);
+  }
   const route = '/api/v1/marketing/round2';
   const labels = { example: '사용 예시 먼저 보기', survey: '의견만 남기기 · 4문항', lead: '베타 오픈 알림 받기' };
   const completedLabels = { example: '사용 예시 다시 보기', survey: '의견 접수 확인', lead: '알림 접수 확인' };
   const orders = [['example', 'survey', 'lead'], ['example', 'lead', 'survey'], ['survey', 'example', 'lead'], ['survey', 'lead', 'example'], ['lead', 'example', 'survey'], ['lead', 'survey', 'example']];
   let context; let page;
-  async function fresh() {
+  async function fresh(nextCase = 'recovery-default') {
+    if (page && !page.isClosed()) { await screenshot(page, `${caseId}-end.png`); observe({ kind: 'ui', actionType: 'case-end' }); }
     await context?.close();
+    caseId = nextCase; observe({ kind: 'ui', actionType: 'case-start' });
     // Independent test case boundary, no browser or request remains. Reset only this owned fixture's counters.
     await writeFile(join(fixture, 'rate/state.json'), JSON.stringify({ version: 1, counters: {} }), { mode: 0o600 });
     context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 390, height: 844 } });
     context.setDefaultTimeout(15000);
     context.setDefaultNavigationTimeout(60000);
+    await context.exposeBinding('__r2Observe', ({ page: current }, observation) => observe({ ...observation, kind: 'ui', tab: current.__r2TraceTab }));
+    await context.addInitScript(() => {
+      const send = value => window.__r2Observe(value).catch(() => {});
+      for (const actionType of ['click', 'change']) document.addEventListener(actionType, event => {
+        const target = event.target;
+        send({ actionType, element: target.tagName?.toLowerCase(), inputType: target.type, screen: target.closest?.('[data-screen-id]')?.getAttribute('data-screen-id') });
+      }, true);
+      let previous = '';
+      new MutationObserver(() => {
+        const screens = [...document.querySelectorAll('[data-screen-id]')].map(node => node.getAttribute('data-screen-id'));
+        const next = screens.join(',');
+        if (next !== previous) { previous = next; for (const screen of screens) send({ actionType: 'screen', screen }); }
+      }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-screen-id'] });
+    });
     if (!apiWarmed) {
       // Compile the real route using its read-only method rejection, not a synthetic POST or test bypass.
       expect((await context.request.get(origin + route)).status()).toBe(405);
@@ -33,10 +58,24 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
       await intercepted.continue();
     });
     context.on('page', current => {
+      current.__r2TraceTab = ++tabCounter;
+      current.on('domcontentloaded', async () => {
+        try {
+          const navigationType = await current.evaluate(() => performance.getEntriesByType('navigation')[0]?.type);
+          const topic = new URL(current.url()).pathname.match(/^\/beta\/r2\/(recording|homeflow)$/)?.[1];
+          observe({ kind: 'ui', actionType: 'navigation', navigationType, topic, tab: current.__r2TraceTab });
+        } catch { /* a deliberately closed page has no navigation observation */ }
+      });
+      current.on('request', request => {
+        if (request.url() !== origin + route || request.method() !== 'POST') return;
+        const body = request.postDataJSON(); const key = `${caseId}:${body.topic}:${body.action}`;
+        if (!firstEvents.has(key)) firstEvents.set(key, body.event_id);
+        observe({ kind: 'request', tab: current.__r2TraceTab, action: body.action, activity: body.activity ?? body.from_activity, bootstrapIntent: body.bootstrap_intent, topic: body.topic, sameEvent: firstEvents.get(key) === body.event_id, tokenPresent: Boolean(body.turnstile_token), consent: body.consent });
+      });
       current.on('pageerror', error => pageErrors.push(error.message));
       current.on('response', async response => {
         if (response.url() !== origin + route) return;
-        try { const result = await response.json(); const request = response.request().postDataJSON(); envelopes.push({ action: request.action, topic: request.topic, bootstrapIntent: request.bootstrap_intent, status: response.status(), data: result.data, error: result.error?.code }); } catch { /* aborted response is explicitly tested */ }
+        try { const result = await response.json(); const request = response.request().postDataJSON(); envelopes.push({ action: request.action, topic: request.topic, bootstrapIntent: request.bootstrap_intent, status: response.status(), data: result.data, error: result.error?.code }); observe({ kind: 'response', tab: current.__r2TraceTab, action: request.action, topic: request.topic, status: response.status(), error: result.error?.code, revision: result.data?.revision, receipt: result.data?.receipt?.status, example: result.data?.state?.example, survey: result.data?.state?.survey, lead: result.data?.state?.lead }); } catch { /* aborted response is explicitly tested */ }
       });
     });
     page = await context.newPage();
@@ -88,7 +127,7 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
           : { lastScenePreserved: await page.getByText('사용 예시 3/3', { exact: true }).count() === 1, prematureDoneAbsent: await page.locator('[data-screen-id="R2_HOMEFLOW_EXAMPLE_DONE"]').count() === 0 };
         recoveryZoomGeometry.push({ topic, condition: topic === 'recording' ? 'actual-409-consent-refresh' : 'actual-commit-response-loss', normalRootSize, normalRecoveryTextSize, ...geometry, retryButton: button, inputOrScene: state, fullPageScreenshot: file, viewportScreenshot: file.replace('.png', '-cta-viewport.png') });
         await writeFile(join(artifacts, 'recovery-zoom-geometry.json'), JSON.stringify(recoveryZoomGeometry, null, 2));
-        await page.screenshot({ path: join(artifacts, file.replace('.png', '-cta-viewport.png')), fullPage: false });
+        await page.screenshot({ path: join(artifacts, file.replace('.png', '-cta-viewport.png')), fullPage: false, mask: [page.locator('input[type="email"]'), page.getByText(/@/, { exact: false })] });
         expect(geometry.rootFontSize).toBe(normalRootSize * 2);
         expect(geometry.recoveryTextSize).toBe(normalRecoveryTextSize * 2);
         expect(geometry.pageWidth).toBeLessThanOrEqual(width);
@@ -99,7 +138,7 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
         expect(Object.values(state).every(Boolean)).toBe(true);
       }
       // Diagnostic capture of an injected API failure, requested by the Stage4 coordinator.
-      await page.screenshot({ path: join(artifacts, file), fullPage: true });
+      await screenshot(page, file);
       recoveryScreenshots.push(file);
     }
     await zoomStyle?.evaluate(element => element.remove());
@@ -112,6 +151,7 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     // Development compilation is not a page-performance measurement.
     await expect(current.getByText('아직 완료한 활동이 없어요', { exact: true })).toBeVisible({ timeout: 30000 });
     expect(await current.getByText('로컬 미리보기 · 저장되지 않아요', { exact: true }).count()).toBe(0);
+    await screenshot(current, `${caseId}-menu.png`);
   }
   async function complete(topic, activity, current = page) {
     let completion;
@@ -148,16 +188,19 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     // State is measured from committed DB, not from the UI's own local state.
     const completionColumn = activity === 'survey' ? 'survey_submitted_at' : `${activity}_completed_at`;
     expect(sql(`select ${completionColumn} is not null from public.marketing_round2_participations where id='${completion.participation_id}'`)).toBe('t');
+    observe({ kind: 'assertion', actionType: 'db-receipt', topic, completed: true });
+    await screenshot(current, `${caseId}-${activity}-done.png`);
     const returned = current.waitForResponse(response => response.url() === origin + route && response.request().postDataJSON().action === 'menu_return');
     await current.getByRole('button', { name: '메뉴로 돌아가기', exact: true }).click();
     const returnedResponse = await returned; expect(returnedResponse.status()).toBe(200); await returnedResponse.finished();
     await expect(current.getByRole('button', { name: new RegExp(completedLabels[activity]) })).toBeVisible();
   }
   try {
+    if (!leadEditOnly) {
     if (!recoveryOnly) {
     for (const topic of ['recording', 'homeflow']) {
       for (const activity of ['example', 'survey', 'lead']) {
-        await fresh(); await open(topic); await complete(topic, activity);
+        await fresh(`${topic}-solo-${activity}`); await open(topic); await complete(topic, activity);
         const id = envelopes.filter(item => item.topic === topic && item.status === 200).at(-1).data.participation_id;
         await page.reload();
         await expect(page.getByRole('button', { name: new RegExp(completedLabels[activity]) })).toBeVisible();
@@ -166,14 +209,14 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
         checks.push(`${topic} ${activity} solo, actual receipt/DB and reload`); console.warn(JSON.stringify({ check: checks.at(-1) }));
       }
       for (const order of orders) {
-        await fresh(); await open(topic);
+        await fresh(`${topic}-order-${order.join('-')}`); await open(topic);
         for (const activity of order) await complete(topic, activity);
         await page.reload();
         for (const activity of order) await expect(page.getByRole('button', { name: new RegExp(completedLabels[activity]) })).toBeVisible();
         checks.push(`${topic} order ${order.join('→')} real DB`); console.warn(JSON.stringify({ check: checks.at(-1) }));
       }
     }
-    await fresh(); await open('recording'); await complete('recording', 'example');
+    await fresh('shared-tabs-topics'); await open('recording'); await complete('recording', 'example');
     const recordingId = envelopes.filter(item => item.topic === 'recording' && item.status === 200).at(-1).data.participation_id;
     const second = await context.newPage(); await second.goto(`${origin}/beta/r2/recording`);
     await expect(second.getByRole('button', { name: /사용 예시 다시 보기/ })).toBeVisible();
@@ -197,7 +240,7 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     checks.push('actual 410 after isolated participation deletion, explicit restart and other-topic cookie preserved');
     }
 
-    await fresh(); await open('recording');
+    await fresh('recording-consent-generation'); await open('recording');
     await page.getByRole('button', { name: labels.lead, exact: true }).click();
     await page.getByLabel('이메일', { exact: true }).fill('preview@example.com');
     await page.getByRole('checkbox').check();
@@ -218,7 +261,7 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     await expect(page.locator('[data-screen-id="R2_RECORDING_LEAD_DONE"]')).toBeVisible();
     checks.push('actual 409 consent generation advance, email retained, fresh explicit consent and receipt');
 
-    await fresh(); await open('homeflow');
+    await fresh('homeflow-example-response-loss'); await open('homeflow');
     await page.getByRole('button', { name: labels.example, exact: true }).click();
     await page.getByRole('button', { name: '다음 장면', exact: true }).click();
     await page.getByRole('button', { name: '다음 장면', exact: true }).click();
@@ -241,7 +284,7 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     checks.push('actual commit with browser response loss, no premature DONE, explicit retry same event/no duplicate');
 
     if (!recoveryOnly) {
-    await fresh(); await open('recording');
+    await fresh('rate-cooldown-storage'); await open('recording');
     const limit = await page.evaluate(async endpoint => {
       for (let index = 0; index < 100; index++) {
         const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'menu_return', topic: 'recording', round_version: 'r2.1', event_id: crypto.randomUUID(), honeypot: '', from_activity: 'example' }) });
@@ -270,18 +313,70 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     expect(resumed.bootstrapIntent).toBe('cookie_resume'); expect(resumed.data.participation_id).toBe(resumeId);
     checks.push('blocked IndexedDB reload restores actual valid cookie participation and completion');
     }
+    }
+    if (leadEdit) for (const topic of ['recording', 'homeflow']) for (const mode of ['lost', 'unreceived']) {
+      await fresh(`${topic}-s5-${mode}`); await open(topic);
+      await page.getByRole('button', { name: labels.lead, exact: true }).click();
+      const originalEmail = `original-${topic}-${mode}@example.test`;
+      await page.getByLabel('이메일', { exact: true }).fill(originalEmail);
+      await page.getByRole('checkbox').check();
+      let original; const attempts = []; let interceptOnce = true;
+      await context.route(origin + route, async intercepted => {
+        const request = intercepted.request().postDataJSON();
+        if (request.action !== 'lead_submit') { await intercepted.fallback(); return; }
+        original ??= request;
+        attempts.push({ sameEvent: request.event_id === original.event_id, sameEmail: request.email === original.email, tokenPresent: Boolean(request.turnstile_token) });
+        observe({ kind: 'assertion', topic, action: 'lead_submit', ...attempts.at(-1) });
+        if (interceptOnce) {
+          interceptOnce = false;
+          if (mode === 'lost') { const response = await intercepted.fetch(); expect(response.status()).toBe(200); observe({ kind: 'response', topic, action: 'lead_submit', status: response.status(), actionType: 'intercepted-commit' }); }
+          else observe({ kind: 'assertion', topic, actionType: 'intercepted-unreceived' });
+          await intercepted.abort('failed');
+        } else await intercepted.fallback();
+      });
+      await page.getByRole('button', { name: '베타 오픈 알림 신청하기', exact: true }).click();
+      await expect(page.locator(`[data-screen-id="R2_${topic.toUpperCase()}_RECOVERY"]`)).toBeVisible();
+      const count = () => Number(sql(`select count(*) from public.marketing_round2_lead_requests where request_id='${original.event_id}'`));
+      expect(count()).toBe(mode === 'lost' ? 1 : 0);
+      await page.getByLabel('이메일', { exact: true }).fill('edited@example.test');
+      await page.getByRole('checkbox').uncheck();
+      await screenshot(page, `${caseId}-edited-recovery.png`);
+      const receiptResponse = page.waitForResponse(response => response.url() === origin + route && response.request().postDataJSON().action === 'lead_submit');
+      await page.getByRole('button', { name: '이전 신청 접수 확인', exact: true }).click();
+      expect((await receiptResponse).status()).toBe(mode === 'lost' ? 200 : 422);
+      expect(attempts[1]).toEqual({ sameEvent: true, sameEmail: true, tokenPresent: false });
+      expect(count()).toBe(mode === 'lost' ? 1 : 0);
+      observe({ kind: 'assertion', actionType: 'db-receipt', topic, leadRows: count(), noNewWrite: true });
+      if (mode === 'unreceived') {
+        await expect(page.locator(`[data-screen-id="R2_${topic.toUpperCase()}_LEAD_DONE"]`)).toHaveCount(0);
+        await page.getByRole('button', { name: '편집 취소하고 이전 입력으로 돌아가기', exact: true }).click();
+        await expect(page.getByLabel('이메일', { exact: true })).toHaveValue(originalEmail);
+        await expect(page.getByRole('checkbox')).not.toBeChecked();
+        await page.getByRole('checkbox').check();
+        await page.getByRole('button', { name: '다시 시도', exact: true }).click();
+      }
+      await expect(page.locator(`[data-screen-id="R2_${topic.toUpperCase()}_LEAD_DONE"]`)).toBeVisible();
+      if (mode === 'unreceived') expect(attempts.at(-1)).toEqual({ sameEvent: true, sameEmail: true, tokenPresent: true });
+      expect(count()).toBe(1);
+      expect(sql(`select count(*) from public.marketing_round2_events where event_id='${original.event_id}'`)).toBe('1');
+      observe({ kind: 'assertion', actionType: 'db-receipt', topic, completed: true, leadRows: 1, eventRows: 1, sameEvent: true, sameEmail: true });
+      await screenshot(page, `${caseId}-done.png`);
+      additionalChecks.push(`${topic} S5-001 ${mode}: edited draft, original immutable event/payload, tokenless receipt, ${mode === 'lost' ? 'no new write' : 'explicit restore/reconsent/new challenge, same-event real DB commit'}`);
+      console.warn(JSON.stringify({ additionalCheck: additionalChecks.at(-1) }));
+    }
     expect(externalRequests).toEqual([]); expect(pageErrors).toEqual([]);
     if (recoveryZoom) {
       const persisted = JSON.parse(await readFile(join(artifacts, 'recovery-zoom-geometry.json'), 'utf8'));
       assertRecoveryZoomCombinations(persisted);
       expect(persisted).toEqual(recoveryZoomGeometry);
     }
-    const summary = { scenarioSelection: recoveryZoom ? 'recovery-zoom-only' : recoveryOnly ? 'recovery-only' : 'complete', checks, apiRequests: envelopes.length, committedRows: sql("select count(*) from public.marketing_round2_participations"), externalRequests, pageErrors, recoveryScreenshots, ...(recoveryZoom ? { zoomCaseCount: recoveryZoomGeometry.length, zoomScope: 'two actual error conditions across four viewports; not eight distinct errors', geometryArtifact: 'recovery-zoom-geometry.json' } : {}), apiPrewarm: 'actual GET method rejection 405, no database mutation', fixtureCounterReset: 'between closed independent browser cases', unexecuted: [] };
+    await screenshot(page, `${caseId}-end.png`); observe({ kind: 'ui', actionType: 'case-end' });
+    const summary = { scenarioSelection: leadEditOnly ? 'lead-edit-only' : recoveryZoom ? 'recovery-zoom-only' : recoveryOnly ? 'recovery-only' : 'complete', checks, additionalChecks, apiRequests: envelopes.length, apiRequestsMeaning: 'observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded', traceArtifact: 'observed-ui-trace.json', traceObservations: observedTrace.length, screenshots, committedRows: sql("select count(*) from public.marketing_round2_participations"), externalRequests, pageErrors, recoveryScreenshots, ...(recoveryZoom ? { zoomCaseCount: recoveryZoomGeometry.length, zoomScope: 'two actual error conditions across four viewports; not eight distinct errors', geometryArtifact: 'recovery-zoom-geometry.json' } : {}), apiPrewarm: 'actual GET method rejection 405, no database mutation', fixtureCounterReset: 'between closed independent browser cases', unexecuted: leadEditOnly ? ['original 24 conditions excluded by explicit focused selection'] : [] };
     await writeFile(join(artifacts, 'scenario-result.json'), JSON.stringify(summary, null, 2));
     return summary;
   } catch (error) {
-    if (page && !page.isClosed()) { await page.screenshot({ path: join(artifacts, 'failure.png'), fullPage: true }); await writeFile(join(artifacts, 'failure-page.txt'), await page.locator('body').innerText()); }
-    await writeFile(join(artifacts, 'scenario-failure.json'), JSON.stringify({ checks, error: error.message, pageErrors, externalRequests, recentResponses: envelopes.slice(-8).map(({ action, topic, status, error }) => ({ action, topic, status, error })) }, null, 2));
+    if (page && !page.isClosed()) await screenshot(page, 'failure.png');
+    await writeFile(join(artifacts, 'scenario-failure.json'), JSON.stringify({ checks, additionalChecks, failure: 'scenario assertion failed; inspect sanitized trace and masked capture', recentResponses: envelopes.slice(-8).map(value => projectUiTrace({ ...value, kind: 'response' })) }, null, 2));
     throw error;
-  } finally { await context?.close(); }
+  } finally { await context?.close(); await writeFile(join(artifacts, 'observed-ui-trace.json'), JSON.stringify({ schema: 'r2-observed-ui-trace-v1', scope: 'actual browser actions/screens and allowlisted API observations; no raw request/response bodies or identity values', observations: observedTrace }, null, 2)); }
 }

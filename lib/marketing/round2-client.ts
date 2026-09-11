@@ -6,6 +6,7 @@ export type Round2ClientState = {
   snapshot: Round2SuccessData | null; connection: "idle" | "connecting" | "ready" | "error" | "restart_required" | "campaign_ended";
   busy: boolean; error: Round2ClientError | null; draft: Round2SurveyDraft; leadForm: { email: string; consent: boolean };
   tokenReady: boolean; challengeEpoch: number; storageBlocked: boolean; preview: boolean;
+  pendingLead?: { email: string; edited: boolean } | null;
 };
 export type Round2ClientOptions = { topic: Round2Topic; pageContext: string; attribution: Round2Attribution; preview: boolean; leadReady: boolean; hostname?: string; indexedDB?: IDBFactory | null; fetch?: typeof fetch; now?: () => number; tabId?: string };
 export type Round2Client = {
@@ -13,7 +14,7 @@ export type Round2Client = {
   connect(): Promise<boolean>; openActivity(activity: Round2Activity): Promise<boolean>; returnToMenu(activity: Round2Activity): Promise<boolean>;
   completeExample(): Promise<boolean>; saveSurveyDraft(answers: Round2SurveyDraft): Promise<boolean>; submitSurvey(answers: Round2SurveyDraft): Promise<boolean>;
   setLeadForm(patch: Partial<Round2ClientState["leadForm"]>): void; setTurnstileToken(token: string | null): void;
-  submitLead(): Promise<boolean>; retry(): Promise<boolean>; restart(): Promise<boolean>; dispose(): void;
+  restoreLeadAttempt(): void; submitLead(): Promise<boolean>; retry(): Promise<boolean>; restart(): Promise<boolean>; dispose(): void;
 };
 import {
   CAMPAIGN_END, RETENTION_UNTIL, ROUND2_CONSENT_VERSION, ROUND2_PURPOSE, ROUND2_VERSION, ROUND2_ERRORS, ROUND2_UUID_PATTERN,
@@ -42,7 +43,18 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
   const storageOptions = () => ({ topic: options.topic, nowMs: now(), ...(Object.hasOwn(options, "indexedDB") ? { indexedDB: options.indexedDB } : {}) });
   const bootstrapOptions = () => ({ ...storageOptions(), attribution: options.attribution });
   const activityOptions = () => ({ ...storageOptions(), ...(preparation?.kind === "key" ? { bootstrapKey: preparation.bootstrap_key } : {}) });
-  const update = (patch: Partial<Round2ClientState>) => { if (disposed) return; state = { ...state, ...patch }; listeners.forEach(listener => listener()); };
+  function leadDraftEdited() {
+    if (!leadAttempt) return false;
+    if (!state.leadForm.consent) return true;
+    try { return normalizeRound2Email(state.leadForm.email) !== leadAttempt.email; }
+    catch { return true; }
+  }
+  const update = (patch: Partial<Round2ClientState>) => {
+    if (disposed) return;
+    state = { ...state, ...patch };
+    state.pendingLead = leadAttempt ? { email: leadAttempt.email, edited: leadDraftEdited() } : null;
+    listeners.forEach(listener => listener());
+  };
   function error(code: Round2ClientError["code"], fields: string[] = [], retryAt: number | null = null) {
     const messages = { STORAGE_BLOCKED: "브라우저 저장소를 허용한 뒤 다시 연결해 주세요. 기존 참여는 쿠키로 복원할 수 있어요.", QUEUE_FULL: "대기 중인 기록이 많아요. 기록 재시도 후 계속해 주세요.", NETWORK_ERROR: "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.", PREVIEW_ONLY: "로컬 미리보기는 이 컴퓨터에서만 열 수 있어요." };
     update({ error: { code, message: code in ROUND2_ERRORS ? ROUND2_ERRORS[code as Round2ErrorCode][1] : messages[code as keyof typeof messages], fields, retryAt } });
@@ -270,14 +282,23 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
     return result;
   }
   async function submitLead(explicitRetry: boolean, submittedToken: string | null): Promise<boolean> {
+    const previousAttempt = leadAttempt;
     if (!await ensure() || !await resumeStarts() || !await flush()) return false;
+    if (previousAttempt && leadAttempt !== previousAttempt) return false;
     if (!options.leadReady) { error("LEAD_CAPTURE_NOT_READY"); return false; }
     if (state.snapshot?.state.lead === "completed") return true;
-    if (!state.leadForm.consent) { error("VALIDATION_ERROR", ["consent"]); return false; }
-    if (!options.preview && !submittedToken && !explicitRetry) { error("TURNSTILE_FAILED", ["turnstile_token"]); return false; }
-    const email = options.preview ? "preview@example.com" : normalizeRound2Email(state.leadForm.email);
-    if (!leadAttempt || !explicitRetry) leadAttempt = { ...common(), action: "lead_submit", email, consent: true, consent_version: ROUND2_CONSENT_VERSION, purpose: ROUND2_PURPOSE, consent_generation: state.snapshot!.consent_generation };
-    const request = { ...leadAttempt, ...(submittedToken ? { turnstile_token: submittedToken } : {}) };
+    // An edited draft cannot replace an uncertain request. Omitting the token
+    // only checks its existing receipt; an absent receipt cannot create a lead.
+    const receiptOnly = leadDraftEdited();
+    if (!receiptOnly) {
+      if (!state.leadForm.consent) { error("VALIDATION_ERROR", ["consent"]); return false; }
+      if (!options.preview && !submittedToken && !explicitRetry) { error("TURNSTILE_FAILED", ["turnstile_token"]); return false; }
+    }
+    if (!leadAttempt) {
+      const email = options.preview ? "preview@example.com" : normalizeRound2Email(state.leadForm.email);
+      leadAttempt = { ...common(), action: "lead_submit", email, consent: true, consent_version: ROUND2_CONSENT_VERSION, purpose: ROUND2_PURPOSE, consent_generation: state.snapshot!.consent_generation };
+    }
+    const request = { ...leadAttempt, ...(!receiptOnly && submittedToken ? { turnstile_token: submittedToken } : {}) };
     const result = await post(request);
     delete request.turnstile_token;
     if (result) { leadAttempt = null; update({ leadForm: { email: options.preview ? "preview@example.com" : "", consent: false } }); }
@@ -306,8 +327,13 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
     submitSurvey: answers => run(() => nonPii(parseRound2Request(JSON.stringify({ ...common(), action: "survey_submit", survey_version: `${ROUND2_VERSION}-${options.topic}`, answers })) as Round2NonPiiRequest)),
     setLeadForm(patch) {
       const next = { ...state.leadForm, ...patch, ...(options.preview ? { email: "preview@example.com" } : {}) };
-      if (next.email !== state.leadForm.email || next.consent !== state.leadForm.consent) { leadAttempt = null; token = null; update({ tokenReady: false, challengeEpoch: state.challengeEpoch + 1 }); }
+      if (next.email !== state.leadForm.email || next.consent !== state.leadForm.consent) { token = null; update({ tokenReady: false, challengeEpoch: state.challengeEpoch + 1 }); }
       update({ leadForm: next });
+    },
+    restoreLeadAttempt() {
+      if (!leadAttempt || state.busy) return;
+      token = null;
+      update({ leadForm: { email: leadAttempt.email, consent: false }, tokenReady: false, challengeEpoch: state.challengeEpoch + 1 });
     },
     setTurnstileToken(value) { token = value; update({ tokenReady: !!value }); },
     submitLead() { const submittedToken = takeToken(); return run(() => submitLead(!!leadAttempt, submittedToken)); },
@@ -326,7 +352,7 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
       update({ connection: "idle", error: null });
       return run(async () => { await refreshContext(); return connect(true); });
     },
-    dispose() { disposed = true; releaseTab?.(); token = null; leadAttempt = null; outbox = []; requestedStarts.clear(); listeners.clear(); state = { ...state, leadForm: { email: "", consent: false }, tokenReady: false }; },
+    dispose() { disposed = true; releaseTab?.(); token = null; leadAttempt = null; outbox = []; requestedStarts.clear(); listeners.clear(); state = { ...state, leadForm: { email: "", consent: false }, tokenReady: false, pendingLead: null }; },
   };
   return client;
 }
