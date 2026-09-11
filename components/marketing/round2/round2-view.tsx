@@ -7,7 +7,7 @@ import type { Round2Client, Round2ClientState } from "@/lib/marketing/round2-cli
 import { Round2Turnstile } from "./round2-turnstile";
 import styles from "./round2.module.css";
 type Screen = "menu" | Round2Activity | "example_done" | "survey_done" | "lead_done";
-type Actions = Pick<Round2Client, "getState" | "openActivity" | "returnToMenu" | "completeExample" | "saveSurveyDraft" | "submitSurvey" | "setLeadForm" | "setTurnstileToken" | "submitLead" | "retry" | "restart">;
+type Actions = Pick<Round2Client, "getState" | "openActivity" | "returnToMenu" | "completeExample" | "saveSurveyDraft" | "submitSurvey" | "setLeadForm" | "setTurnstileToken" | "submitLead" | "retry" | "restart" | "restoreLeadAttempt">;
 export type Round2ViewProps = {
     topic: Round2Topic;
     preview: boolean;
@@ -247,10 +247,11 @@ export function Round2View({ topic, preview, leadReady, turnstileSiteKey, state,
             setScreen("lead_done");
     }
     const error = state.error;
-    const recovery = error && <section className={styles.recovery} aria-label="참여 복구" data-screen-id={`R2_${topic.toUpperCase()}_RECOVERY`}>
+    const editedLead = active === "lead" && state.pendingLead?.edited;
+    const recovery = (error || editedLead) && <section className={styles.recovery} aria-label="참여 복구" data-screen-id={`R2_${topic.toUpperCase()}_RECOVERY`}>
     <p role="alert" id="r2-server-error">
-      <strong>{error.code === "NETWORK_ERROR" ? (active === "lead" ? "접수 여부를 확인하지 못했어요" : "저장 여부를 확인하지 못했어요") : error.code === "CAMPAIGN_ENDED" ? "이번 참여 기간이 끝났어요." : "아직 저장되지 않았어요."}</strong>
-      <br />{error.message}</p>{state.storageBlocked && <p>브라우저 저장소를 사용할 수 없어요. 기존 참여가 연결되면 계속할 수 있어요. 미제출 답변과 확인되지 않은 요청은 새로고침하면 사라질 수 있어요.</p>}{active === "lead" && <p>이메일과 동의 입력은 이 탭을 열어 둔 동안만 유지돼요. 새로고침하면 지워져요.</p>}{state.connection === "restart_required" ? <button className={styles.primary} type="button" disabled={state.busy} onClick={() => void actions.restart()}>새 참여 시작</button> : state.connection !== "campaign_ended" && <button className={styles.primary} type="button" disabled={state.busy || cooldown > 0} onClick={() => void retry()}>{cooldown > 0 ? `${cooldown}초 후 다시 시도` : "다시 시도"}</button>}</section>;
+      <strong>{editedLead || error?.code === "NETWORK_ERROR" ? (active === "lead" ? "접수 여부를 확인하지 못했어요" : "저장 여부를 확인하지 못했어요") : error?.code === "CAMPAIGN_ENDED" ? "이번 참여 기간이 끝났어요." : "아직 저장되지 않았어요."}</strong>
+      <br />{error?.message}</p>{state.storageBlocked && <p>브라우저 저장소를 사용할 수 없어요. 기존 참여가 연결되면 계속할 수 있어요. 미제출 답변과 확인되지 않은 요청은 새로고침하면 사라질 수 있어요.</p>}{active === "lead" && <p>이메일과 동의 입력은 이 탭을 열어 둔 동안만 유지돼요. 새로고침하면 지워져요.</p>}{editedLead && <p>이전 신청 이메일: {state.pendingLead?.email}<br />편집한 이메일로는 아직 보내지 않았어요. 이전 신청의 접수 여부를 확인하거나, 편집을 취소하고 동의와 보안 확인을 다시 진행해 주세요.</p>}{state.connection === "restart_required" ? <button className={styles.primary} type="button" disabled={state.busy} onClick={() => void actions.restart()}>새 참여 시작</button> : state.connection !== "campaign_ended" && <button className={styles.primary} type="button" disabled={state.busy || cooldown > 0} onClick={() => void retry()}>{cooldown > 0 ? `${cooldown}초 후 다시 시도` : editedLead ? "이전 신청 접수 확인" : "다시 시도"}</button>}{editedLead && <button className={styles.secondary} type="button" disabled={state.busy} onClick={() => { actions.restoreLeadAttempt(); setFieldError(null); }}>편집 취소하고 이전 입력으로 돌아가기</button>}</section>;
     const connectionStatus = !error && state.connection !== "ready" && <p role="status" className={styles.notice}>참여 정보를 연결 중이에요. 예시와 질문은 먼저 볼 수 있어요.</p>;
     const q = ROUND2_SURVEYS[topic].questions[question];
     const title = screen === "menu" ? copy.title : isDone ? DONE_TITLE[active!] : copy[active ?? "example"];
@@ -315,7 +316,7 @@ export function Round2View({ topic, preview, leadReady, turnstileSiteKey, state,
                 }} onError={message => {
                     setChallengeError(message);
                     actions.setTurnstileToken(null);
-                }}/>}{challengeError && <div><p role="alert" className={styles.fieldError}>{challengeError}</p><button type="button" className={styles.secondary} onClick={()=>{setChallengeError(null);actions.setTurnstileToken(null);setChallengeRetry(value=>value+1);}}>보안 확인 다시 시도</button></div>}{fieldError && <p id="r2-form-error" role="alert" className={styles.fieldError}>{fieldError}</p>}{recovery}{connectionStatus}{!error && <button className={styles.primary} type="submit" disabled={waiting || !leadReady}>베타 오픈 알림 신청하기</button>}
+                }}/>}{challengeError && <div><p role="alert" className={styles.fieldError}>{challengeError}</p><button type="button" className={styles.secondary} onClick={()=>{setChallengeError(null);actions.setTurnstileToken(null);setChallengeRetry(value=>value+1);}}>보안 확인 다시 시도</button></div>}{fieldError && <p id="r2-form-error" role="alert" className={styles.fieldError}>{fieldError}</p>}{recovery}{connectionStatus}{!error && !editedLead && <button className={styles.primary} type="submit" disabled={waiting || !leadReady}>베타 오픈 알림 신청하기</button>}
         </form>
       </>}
       {screen !== "menu" && !isDone && <button className={styles.text} onClick={menu}>메뉴로 돌아가기</button>}{screen === "menu" && <footer>
