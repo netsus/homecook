@@ -27,7 +27,6 @@ const INVENTORY_PATH = process.env.SECURITY_FUNCTION_INVENTORY_PATH
 const ADDITIVE_SOURCES = [
   {
     manifestPath: path.join(REPO_ROOT, "docs/security/marketing-round2-security-function-authorization-manifest.json"),
-    migrationPath: path.join(REPO_ROOT, "supabase/migrations/20260911100000_marketing_round2.sql"),
   },
   {
     manifestPath: path.join(

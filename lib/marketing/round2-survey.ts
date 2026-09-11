@@ -2,7 +2,9 @@ import {
   RETENTION_UNTIL,
   ROUND2_CONSENT_VERSION,
   ROUND2_PURPOSE,
+  LINEAR_HOMEFLOW_SURVEY_VERSION,
   type Round2HomeflowAnswers,
+  type Round2LinearHomeflowAnswers,
   type Round2RecordingAnswers,
 } from "../marketing-round2";
 
@@ -114,6 +116,54 @@ export const ROUND2_SURVEYS = {
     ],
   } satisfies Round2Survey<Round2HomeflowAnswers, "r2.1-homeflow">,
 } as const;
+
+/** The approved linear homeflow survey has different meanings from r2.1. */
+export const LINEAR_HOMEFLOW_SURVEY = {
+  version: LINEAR_HOMEFLOW_SURVEY_VERSION,
+  questions: [
+    {
+      id: "q1",
+      label: "지난 7일 동안, 요리한 날은 며칠인가요?",
+      options: [
+        { value: "none", label: "0일" },
+        { value: "one_two", label: "1~2일" },
+        { value: "three_four", label: "3~4일" },
+        { value: "five_seven", label: "5~7일" },
+      ],
+    },
+    {
+      id: "q2",
+      label: "최근 4주 동안, 유튜브 레시피를 보고 요리한 횟수는?",
+      options: [
+        { value: "none", label: "0회" },
+        { value: "once", label: "1회" },
+        { value: "two_three", label: "2~3회" },
+        { value: "four_plus", label: "4회 이상" },
+      ],
+    },
+    {
+      id: "q3",
+      label: "집밥은 보통 어떻게 계획하나요?",
+      noticeAfter: "가장 가까운 방식 하나 선택",
+      options: [
+        { value: "spontaneous", label: "계획 없이 그때그때 정함" },
+        { value: "mental", label: "미리 정하고 머릿속에 기억" },
+        { value: "memo", label: "메모·캡처로 대략 정리" },
+        { value: "scheduled", label: "날짜별 메뉴까지 정리" },
+      ],
+    },
+    {
+      id: "q4",
+      label: "집밥을 준비할 때 가장 불편한 것은?",
+      options: [
+        { value: "planning", label: "집밥 계획 세우기" },
+        { value: "shopping", label: "집에 있는 재료 빼고 장보기 목록 만들기" },
+        { value: "video", label: "요리하면서 레시피 영상 다시 보기" },
+        { value: "none", label: "별로 불편하지 않음" },
+      ],
+    },
+  ],
+} as const satisfies Round2Survey<Round2LinearHomeflowAnswers, typeof LINEAR_HOMEFLOW_SURVEY_VERSION>;
 
 /** The existing privacy route/operator facts are supplied by the page; no new operational facts are invented. */
 export const ROUND2_LEAD_COPY = {

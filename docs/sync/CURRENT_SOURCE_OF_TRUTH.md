@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-11 로컬 구현 후보 — 집밥흐름 선형 랜딩
+
+사용자가 PRD v0.5와 v4 시안대로 빠른 로컬 구현을 승인하고 배포·master 머지를 금지했다. [로컬 구현 계약](../marketing/homeflow-linear-implementation-contract.md)이 이번 homeflow UI와 `r2.2-homeflow` 설문 추가 범위의 기준이다. 기존 r2.1/recording 자료·API·보안 보호를 보존한다. 아래 병합된 r2.1 독립 활동 설명은 기존 버전 기준이며 새 로컬 homeflow UI의 승인·검증 완료를 뜻하지 않는다.
+
 ## Official Files
 - `docs/요구사항기준선-v1.7.36.md`
 - `docs/화면정의서-v1.5.40.md`

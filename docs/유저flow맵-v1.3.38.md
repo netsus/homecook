@@ -1,6 +1,8 @@
 # 유저 Flow맵 v1.3.38
 
 상태: 공식문서
+
+> 2026-09-11 사용자 승인 로컬 후보: [집밥흐름 선형 구현 계약](marketing/homeflow-linear-implementation-contract.md)의 `/beta/r2/homeflow` 선형 UI와 `r2.2-homeflow` 설문을 추가한다. 기존 r2.1/recording·API envelope·권한·동의·보관·중복 보호는 보존한다. 배포·master 머지·독립 Stage 완료는 이 로컬 작성 범위에 포함하지 않는다.
 담당자: 채실장
 날짜: 9월 3일
 

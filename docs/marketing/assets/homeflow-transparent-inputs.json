@@ -1,0 +1,37 @@
+[
+  {
+    "key": "hero-ad",
+    "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-dc316313-4418-4566-ad0c-e69b89d3289b.png",
+    "output": "public/assets/funnel/homeflow/characters/hero-ad-transparent.webp"
+  },
+  {
+    "key": "spontaneous",
+    "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-47430662-4245-4255-af31-3c46aba9f889.png",
+    "output": "public/assets/funnel/homeflow/characters/spontaneous-transparent.webp"
+  },
+  {
+    "key": "mental",
+    "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-d4f681fa-05ca-4269-9de3-6b7b55ec9c9b.png",
+    "output": "public/assets/funnel/homeflow/characters/mental-transparent.webp"
+  },
+  {
+    "key": "memo",
+    "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-35b729d6-1d9c-4369-99f7-34471a526d40.png",
+    "output": "public/assets/funnel/homeflow/characters/memo-transparent.webp"
+  },
+  {
+    "key": "scheduled",
+    "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-a6e67658-90fe-489b-bc26-77708e0504f5.png",
+    "output": "public/assets/funnel/homeflow/characters/scheduled-transparent.webp"
+  },
+  {
+    "key": "invitation",
+    "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-b2b3955b-811e-47ba-90d3-ad1fc19ea94f.png",
+    "output": "public/assets/funnel/homeflow/characters/invitation-transparent.webp"
+  },
+  {
+    "key": "success",
+    "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-249c66e0-1475-4273-bfba-630d9ebaf280.png",
+    "output": "public/assets/funnel/homeflow/characters/success-transparent.webp"
+  }
+]

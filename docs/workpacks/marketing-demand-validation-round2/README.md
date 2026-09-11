@@ -1,5 +1,11 @@
 # Slice: marketing-demand-validation-round2
 
+## 사용자 승인 로컬 후보 — 선형 homeflow
+
+로컬 작성·검증 결과는 [집밥흐름 로컬 구현 인수](../../marketing/homeflow-local-implementation.md)에 남긴다. 기존 Stage 완료 상태는 변경하지 않는다.
+
+2026-09-11 최신 요청으로 [현재 PRD](../../marketing/homecook-flow-round2-prd.md)와 [로컬 구현 계약](../../marketing/homeflow-linear-implementation-contract.md)의 선형 homeflow 화면·새 설문 버전을 작성/검증한다. 기존 아래 r2.1 문항·독립 활동은 이전 버전의 보존 기준이다. 이번 변경은 배포·master 머지 없이 작업 브랜치에 남기며, 기존 checked 항목을 새 버전의 통과나 독립 Stage 승인으로 재사용하지 않는다.
+
 ## Goal
 
 두 영상의 주제와 일치하는 랜딩에서 방문자가 베타 오픈 알림, 사용 예시, 네 문항 의견 중 원하는 활동을 자유롭게 선택한다. 하나만 마쳐도 참여를 끝낼 수 있고, 다른 활동으로 이동하거나 돌아와도 서버가 확인한 완료는 유지한다. 기존 `/beta` 수집과 데이터를 보존하면서 R2 참여·주제 관심을 별도로 기록한다.
