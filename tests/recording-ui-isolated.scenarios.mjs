@@ -158,21 +158,21 @@ export async function runRecordingUiScenarios({ browser, origin, sql, fixture, a
       return body.action === action && (!activity || body.activity === activity);
     }, { timeout: 60000 });
   }
-  async function acknowledge(response) {
+  async function acknowledge(response, expectedTopic = 'recording') {
     expect(response.status()).toBe(200);
     const envelope = await response.json();
     const request = response.request().postDataJSON();
     expect(envelope.success).toBe(true);
     expect(envelope.data.event_id).toBe(request.event_id);
-    expect(envelope.data.topic).toBe('recording');
+    expect(envelope.data.topic).toBe(expectedTopic);
     expect(envelope.data.round_version).toBe('r2.1');
     uuid(envelope.data.participation_id);
     return { request, data: envelope.data };
   }
-  async function clickAndAcknowledge(name, action, activity) {
+  async function clickAndAcknowledge(name, action, activity, topic = 'recording') {
     const pending = responseFor(action, activity);
     await button(name).click();
-    return acknowledge(await pending);
+    return acknowledge(await pending, topic);
   }
   async function nextStage(name, next) {
     await button(name).click();
@@ -352,6 +352,52 @@ export async function runRecordingUiScenarios({ browser, origin, sql, fixture, a
     expect(eventCount(recovery.participation_id, 'activity_start', 'survey')).toBe(1);
     await capture('retried-question-2');
     checks.push('Lost actual start ACK preserves Q1; 320/390 error and retry are visibly inside viewport; explicit same-event retry reaches Q2 with one committed start');
+
+    // One normal homeflow case closes the other real landing; no additional recovery/design matrix.
+    await fresh('homeflow-normal');
+    const homeflowBootstrap = responseFor('bootstrap');
+    expect((await page.goto(`${origin}/beta/r2/homeflow`)).status()).toBe(200);
+    await expect(page.locator('[data-homeflow-main] [data-screen="hero"]')).toBeVisible();
+    const { data: homeflow } = await acknowledge(await homeflowBootstrap, 'homeflow');
+    const homeflowId = homeflow.participation_id;
+    const homeflowAnswers = { q1: 'one_two', q2: 'once', q3: 'mental', q4: 'shopping' };
+    await capture('hero');
+    await clickAndAcknowledge('4문항 테스트하기', 'activity_start', 'survey', 'homeflow');
+    for (const answer of ['1~2일', '1회', '미리 정하고 머릿속에 기억']) await button(answer).click();
+    const homeflowSurvey = await clickAndAcknowledge('집에 있는 재료 빼고 장보기 목록 만들기', 'survey_submit', undefined, 'homeflow');
+    expect(homeflowSurvey.request.survey_version).toBe('r2.2-homeflow');
+    expect(homeflowSurvey.request.answers).toEqual(homeflowAnswers);
+    await expect(page.getByRole('heading', { name: '머릿속 플래너형', exact: true })).toBeVisible();
+    expect(JSON.parse(sql(`select json_build_object('version',survey_version,'answers',answers) from public.marketing_round2_participations where id='${homeflowId}'`))).toEqual({ version: 'r2.2-homeflow', answers: homeflowAnswers });
+    await capture('result');
+    await clickAndAcknowledge('무먹 체험하러 가기', 'activity_start', 'example', 'homeflow');
+    await page.getByRole('button', { name: /요리 계획에 추가하기/ }).click();
+    await page.getByRole('button', { name: /장보기 목록 만들기/ }).click();
+    for (const name of ['삼겹살', '대파', '잘 익은 김치', '즉석밥', '버터', '계란']) {
+      const checkbox = page.getByRole('checkbox', { name: `${name} 구매`, exact: true });
+      if (!await checkbox.isChecked()) await checkbox.check();
+    }
+    await page.getByRole('button', { name: /체크하고 장보기 완료하기/ }).click();
+    await page.getByRole('button', { name: /요리하기/ }).click();
+    await button('요리완료! 식단기록하기').click();
+    await expect(page.getByText('300g · 608 kcal', { exact: true })).toBeVisible();
+    expect(eventCount(homeflowId, 'example_complete')).toBe(0);
+    await capture('sixth-experience');
+    await clickAndAcknowledge('무료 베타 초대받기', 'example_complete', undefined, 'homeflow');
+    await expect(page.getByRole('textbox', { name: '이메일 주소', exact: true })).toBeVisible();
+    expect(eventCount(homeflowId, 'example_complete')).toBe(1);
+    expect(eventCount(homeflowId, 'activity_start', 'lead')).toBe(1);
+    await page.getByRole('textbox', { name: '이메일 주소', exact: true }).fill('homeflow-preview@example.com');
+    await page.getByRole('checkbox', { name: /이메일 수집·이용에 동의/ }).check();
+    const homeflowLead = await clickAndAcknowledge('베타오픈 신청하기', 'lead_submit', undefined, 'homeflow');
+    expect(homeflowLead.data.receipt).toEqual({ status: 'received', event_id: homeflowLead.request.event_id });
+    await expect(page.getByRole('heading', { name: '신청이 완료됐어요!', exact: true })).toBeVisible();
+    expect(sql(`select lead_completed_at is not null from public.marketing_round2_participations where id='${homeflowId}'`)).toBe('t');
+    expect(sql(`select count(*) from public.marketing_round2_lead_requests where participation_id='${homeflowId}' and request_id='${uuid(homeflowLead.request.event_id)}' and turnstile_verified_at is not null`)).toBe('1');
+    expect(countRequests('survey_submit')).toBe(1);
+    expect(countRequests('lead_submit')).toBe(1);
+    await capture('done');
+    checks.push('Homeflow normal 390px: real Hero → four r2.2 answers → Q3 result → six experiences → lead/receipt, exact answers and one submission committed to actual DB');
     await Promise.allSettled(responseTasks);
     expect(externalRequests).toEqual([]);
     expect(legacyRequests).toEqual([]);

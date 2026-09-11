@@ -66,7 +66,7 @@ async function serveNext() {
     MUMEOK_ROUND2_PROFILE: 'isolated', MUMEOK_ROUND2_ENABLED: 'true', MUMEOK_ROUND2_LEADS_ENABLED: 'true',
     MUMEOK_ROUND2_RATE_STATE_DIR: rate, MUMEOK_ROUND2_CONTROL_PATH: control,
     MUMEOK_ROUND2_ISOLATED_IDENTITY_PATH: join(fixture, 'identity.json'), MUMEOK_ROUND2_TURNSTILE_SECRET_KEY: randomBytes(32).toString('base64url'),
-    MUMEOK_ROUND2_TURNSTILE_SITE_KEY: 'isolated-fixture-site-key', DATA_SUPABASE_URL: dataOrigin,
+    MUMEOK_ROUND2_TURNSTILE_SITE_KEY: 'isolated-fixture-site-key', NEXT_PUBLIC_MUMEOK_ROUND2_TURNSTILE_SITE_KEY: 'isolated-fixture-site-key', DATA_SUPABASE_URL: dataOrigin,
     DATA_SUPABASE_PUBLISHABLE_KEY: 'isolated-fixture-anon', DATA_SUPABASE_SECRET_KEY: process.env.R2_UI_SERVICE_KEY,
     HOMECOOK_DATA_AUTHORITY: 'local', NEXT_TELEMETRY_DISABLED: '1',
   });
