@@ -11,7 +11,7 @@ import { parseFullLocalProductionConfig, selectFullLocalProductionResources } fr
 import { deployTransaction } from "./prelaunch-web-deploy.mjs";
 
 export const RECORDING_PREDECESSOR = "458ce2daab6cdd91a70504657ce5981a4d4acf3c";
-export const RECORDING_SOURCE_ANCHOR = "8731b3859cdc4611e83680d6a94bd4aaa919dda3";
+export const RECORDING_SOURCE_ANCHOR = "838c126e81b4018d464f11ab7b2f763504305896";
 export const RECORDING_OWN_PATHS = Object.freeze([
   "scripts/deploy-marketing-round2-reviewed.mjs","scripts/lib/marketing-round2-controlled-deploy.mjs",
   "tests/marketing-round2-controlled-deploy.test.ts","tests/marketing-round2-controlled-deploy.integration.test.ts",

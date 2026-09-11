@@ -98,7 +98,7 @@ it.skipIf(process.env.R2_CONTROLLED_DB_INTEGRATION !== "1")("full snapshot backu
     run(["exec","-i",container,"pg_restore","-U","supabase_admin","-d","r2_backup_restore","--exit-on-error"],{input:await readFile(backup.path)});
     expect(run(["exec","-i",container,"psql","-U","postgres","-d","r2_backup_restore","-XAtq"],{input:LEGACY_ROWS_SQL})).toBe(legacyBefore);
     expect(run(["exec","-i",container,"psql","-U","postgres","-d","r2_backup_restore","-XAtq"],{input:ABSENCE_SQL})).toBe("t");
-    await writeFile(".omx/artifacts/r22-controlled-deploy/isolated-evidence.json",JSON.stringify({projectId:isolated.projectId,originalCheckHash,postimage,prestateHash:manifest.prestateHash,fullRawBackupRestored:true,restoreRole:"supabase_admin",rolesRestore:"existing roles in same fresh isolated cluster",sqlFaults:[1,2,3,"ledger"],shareFenceBlocksWrites:true,shareFenceAllowsReads:true,lostCommitReconciled:true,legacyPreserved:true,productionAccess:0})+"\n");
+    await writeFile(".omx/artifacts/r22-controlled-deploy/isolated-evidence.json",JSON.stringify({projectId:isolated.projectId,originalCheckHash,postimage,prestate,prestateHash:manifest.prestateHash,fullRawBackupRestored:true,restoreRole:"supabase_admin",rolesRestore:"existing roles in same fresh isolated cluster",sqlFaults:[1,2,3,"ledger"],shareFenceBlocksWrites:true,shareFenceAllowsReads:true,lostCommitReconciled:true,legacyPreserved:true,productionAccess:0})+"\n");
   }finally{
     if(started)removeIsolatedDockerResources(isolated.projectId,{env});
     assertNoIsolatedDockerResources(isolated.projectId,{env});await isolated.removeFiles();await rm(directory,{recursive:true,force:true});
