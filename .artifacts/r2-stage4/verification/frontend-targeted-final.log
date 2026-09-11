@@ -1,0 +1,13 @@
+
+> homecook@0.1.0 test:marketing-round2:frontend /Users/cwj/.codex/worktrees/f2a2/homecook
+> vitest run --config vitest.product.config.ts tests/marketing-round2-view.test.tsx tests/marketing-round2-landing.test.tsx tests/marketing-round2-client.test.ts tests/marketing-round2-client-storage.test.ts tests/marketing-round2-page.test.ts tests/marketing-round2-page-route.test.tsx tests/marketing-round2-path-guard.test.ts tests/marketing-round2-provider-boundary.test.tsx tests/marketing-round2-widget.test.tsx tests/marketing-round2-ui-isolated.test.ts
+
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-xYYDRU
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+
+ Test Files  10 passed (10)
+      Tests  117 passed | 1 skipped (118)
+   Start at  11:30:13
+   Duration  4.80s (transform 2.57s, setup 595ms, import 6.49s, tests 4.87s, environment 6.75s)

@@ -133,3 +133,14 @@ scroll containment(스크롤 영역): 독립 캠페인 문서 본문 하나에�
 판단: 조건·입력·오류를 가까이 배치하고 필요한 정보를 생략하지 않는다. 공식 r2.1의 카피·보존·동의·복원 경계를 소비한 작성자 제안이다.
 
 보완 요청: [해당 critique](critiques/R2_RECOVERY-critique.md) 소유자가 최신 도면·문서를 재검토한다. 기존 critique와 수정 전 점수는 변경하지 않았다. 정적 보완은 author 작업이며 self-pass를 부여하지 않는다. 실서비스 검증·독립 Stage/authority가 완료될 때까지 draft/pending이다.
+
+## Stage 4 실제 구현 체크포인트 (2026-09-11)
+
+구현은 `components/marketing/round2/round2-view.tsx`와 기존 r2.1 공용 계약을 소비한다. [Stage 4 인수 기록](../../docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md)의 모드·검증 한계를 함께 읽는다. 독립 authority는 pending이며 정적 도면을 실행 증거로 바꾸지 않는다.
+
+- [recording 320x568 실제 API 오류](evidence/marketing-demand-validation-round2/stage4/real-recovery/R2_RECORDING_RECOVERY-320x568.png)
+- [recording 390x844 실제 API 오류](evidence/marketing-demand-validation-round2/stage4/real-recovery/R2_RECORDING_RECOVERY-390x844.png)
+- [homeflow 320x568 실제 API 오류](evidence/marketing-demand-validation-round2/stage4/real-recovery/R2_HOMEFLOW_RECOVERY-320x568.png)
+- [homeflow 390x844 실제 API 오류](evidence/marketing-demand-validation-round2/stage4/real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png)
+
+recording은 실제 409 동의 갱신, homeflow는 실제 commit 응답 유실 뒤 원래 장면 보존 캡처다. 개발 도구 N 표시는 제품 UI가 아니다. 그 밖의 429·410·cookie_resume은 실제 isolated runner의 별도 실행 기록을 따른다.

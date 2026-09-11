@@ -1,0 +1,45 @@
+{
+  "scope": "Stage1 documents only",
+  "approved_contract": "7f00e62c13572b5b2c0d54c997fe628f7a56567e",
+  "canonical_screens": 16,
+  "checks": [
+    {
+      "name": "approved-contract-provenance",
+      "outcome": "pass"
+    },
+    {
+      "name": "official-delegation-and-json-examples",
+      "outcome": "pass"
+    },
+    {
+      "name": "workpack-contract-and-five-ui-states",
+      "outcome": "pass"
+    },
+    {
+      "name": "automation-and-no-author-self-approval",
+      "outcome": "pass"
+    },
+    {
+      "name": "canonical-screen-mapping-and-artifacts",
+      "outcome": "pass"
+    },
+    {
+      "name": "relative-markdown-links-and-whitespace",
+      "outcome": "pass"
+    },
+    {
+      "name": "stage1-checklist-metadata-and-design-gate",
+      "outcome": "pass"
+    }
+  ],
+  "failures": [],
+  "outcome": "pass",
+  "not_run": [
+    "product behavior",
+    "DB",
+    "provider",
+    "deployment",
+    "runtime authority",
+    "independent internal1.5 approval"
+  ]
+}

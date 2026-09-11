@@ -1,0 +1,754 @@
+{
+  "mode": "production-build-loopback-memory-preview",
+  "evidence_run": "2026-09-11T02-19-32-625Z",
+  "screenshots": [
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD-actual-200-percent-320px",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-LEAD-actual-200-percent-320px.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--497b5--percent-text-remain-usable/LEAD-actual-200-percent-320px.png",
+      "sha256": "095943411a9e93610e9409cbed35c13fa3d762fd5cd6d005e22b329dbf1ff211"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD_DONE-actual-200-percent-320px",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-LEAD_DONE-actual-200-percent-320px.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--497b5--percent-text-remain-usable/LEAD_DONE-actual-200-percent-320px.png",
+      "sha256": "a9a653ee9d8054d3b40d64931dc5853a2f037c33e4501c9ff60454bb31635d50"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "b6cee3ff3dfe6fc973aa2d61f78d8634c251751a6e57e2c29d94bafc06094b15"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "b1d5785b810b5d95fcd88257f526eca3cf7597423f79dd7d6d978eeb59aef0da"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/LEAD.png",
+      "sha256": "163c99b2ab36aca702e4dd27cd540caf955dfdaea3b13368f9a50c2afb5c288d"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "b10b756be71b360b4a134568114ac0bd00aff6d2825b7287e99cf02d10c54f25"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/MENU.png",
+      "sha256": "fad5c2f6604418182492acc4b7ba2b631dfe0b8069fee04f3b455b65491d0c32"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "e20fdbbc3ede8169221cc8dc1946d3e89fb15dcd9112f2017a6a75bcfdd0bdb3"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/SURVEY.png",
+      "sha256": "1a6ab0569de378f47de943c4ba054fb9bb5647bd0c872e8abae276e0a587950c"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-1280x900-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--6d44f-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "8c8317d57913c9dd3ed126ac6c94b8651bcb8cef49dd5db533b7207bfe021bb7"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "dae4439922b2fe1e21d582ad09a541465b05b84dab245b738564c8b77611c680"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "1eae79757da4d747628c9264cbc42de2b784bca497e5c2d60abd8e471713d603"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/LEAD.png",
+      "sha256": "5aa9ea227e454c2915866d821f49d178ec3f7d0c6d00766ab498f2b9eab16760"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "68cd5c0df77424196dc1f7232f97959c4350c1cf8c74c98f833435bc7fda1cb3"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/MENU.png",
+      "sha256": "c151008e63928b60e20dd47a3cfcacbebca843c29c80e7c32baaac622639d2d7"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "c4caa76f2d5565315eb072691da1710327dd73e7dc1ab6aa4199562f36424467"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/SURVEY.png",
+      "sha256": "3981169e50850f77ba8321e76edb81dec2f476edefbcd239604451b505c69f61"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--804de-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "50c4918850371705331b305f3cc6b58b2f9e8c90707cb87b0ab57c96683a9c26"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "a070e92eed9598cebb1d0a7b8d89114cbbed9fc43f72ee6e54a6fa41ce21e46e"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "4daa104986ce2a30952c5e2ca290929c928fe3615a9818571456e31ee77918fa"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/LEAD.png",
+      "sha256": "8847a5bfec4c06008d1bba097f3593d2b36fde53e0ace511cafc7c8d57e7ca06"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "6354ee6563186e71723b136eb35c3b171cec62c4f2c447a372b2e5bb325eecac"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/MENU.png",
+      "sha256": "a902232f6515a12236c81e9df5c7c6f76bda2b81874467d62bff1fb95ac54cfc"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "e23d29a4e7e2ea86710e79813bc49923c78caf5370f3499c6c52e78a88f8b4a6"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/SURVEY.png",
+      "sha256": "d167ef19bd32b81343e595fc7ecd0d8fbe39d388c3f81821a6fd97a7272d6c62"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-393x852-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--986d4-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "ffb9d0563fa4e2e41f846957041b4091047b69add1e6e316ad8abccefe5fa646"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "6ae78c39dec39c16e704ca59fd380adb55eea850779b4efaaa95b4a5a3003ba7"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "88340de8bbec6534a1892496f3f4e9f4e070f6bdd5cbee725b01ca42d1177a3f"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/LEAD.png",
+      "sha256": "5d0574601cbd5918c31b35c99f86b5fddd5b334d2e705df21fd3230f4e2da188"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "d67b2a2afcfc57956da17d042127a2192bfca2b07ffe855fddb4ffbdc6d11ad6"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/MENU.png",
+      "sha256": "ae6d4bf869ae357cb67426257bfaf046e2563333aa63cb6546a83d15e99279dc"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "ce24c20d90e5ff7c27e7a1e283507eb8d399d7e1dff3a91037f0bba508d7060b"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/SURVEY.png",
+      "sha256": "9571c6ac17b120c6c1f9b76eb195ea5855ab1e7b896130e98bb9bb914fafa31f"
+    },
+    {
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-homeflow--c7e05-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "9bcffa72bbedc30ec3224825ff92444119cd262fad5557e95366899a5c90e344"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "5635a8a010b24fecd95b3f8d2bcf2c05072d4cb9cf49a4e562e187c0adeaf1ba"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "3251f51a2da38f02ad6c7b7a6bcb646e4a06100f52e1ebe116a3a087fb42f201"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/LEAD.png",
+      "sha256": "b29dd138db29cd5ae3c34237b1082480e523eec95c84f71bbfe49765d302e1c1"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "275eb0473077c28224f7d89b2f5b5db97ca0178b5143540d82aa04e2b1217fbe"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/MENU.png",
+      "sha256": "72c4082732e4d76c4a7eb954e1c8804bb726613368deb61bb0b2735ae6f8b85a"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "259d369ccce34aa0ef9516c357ee4b9f22d1ccdc390d9731512b795b9c19e121"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/SURVEY.png",
+      "sha256": "e872f7c7922974d2e047f113eceba0beec3170b359b17283a65e125c7ef30d39"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-1ad37-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "2f63427734a172fd97627374d004327e6d9ee0aa3c8e9af2ea2132e901815f65"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "b9ee0706c4a592c10ce9f5cebac18e5b1f9d906c64907ad0235aac927cf0a7cd"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "a1d9a8c0cc50ca0907b642745de8205b944ce28707761826ce124669d208c916"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/LEAD.png",
+      "sha256": "72b50143aa375125dea678d5a0eb79672d47fe2b5be442a8d723a6c4fb86ecfb"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "cb5e4a204bd3806bf516c7737693b200b42a5703ef524a89d31379bb9a8d28d7"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/MENU.png",
+      "sha256": "3b5f0fab186d8fc663a1f249e5a537dd771530671c46490d24b07f0a915fdcf7"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "414bcf769245d27f9d14bbc3718324b9e436818daa08e1c1340664361e334219"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/SURVEY.png",
+      "sha256": "1ac38df4191a4f59c92e78254b538086f11c6c189248b57518d2458d26a53c03"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-1280x900-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-670f2-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "0af959c729eb959d12337114e54089de639bc7470f611d10a627e54485c9c25d"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "3fa24d7c4649454981e905008214498338d4f567554ae485c044f30b4ef1c009"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "e5162ee23d808c71e7ccf38db82bafc41e506cdb8be1e4fce30ce0f0d1b53f32"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/LEAD.png",
+      "sha256": "c33e6339af4590236a72c201806cff4f42651fabd5ea665f37fafeb0c07cc45c"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "c2a85c43d4afac7a10dda794c26f5d8dc84e9ac13990a321373bc3e850510277"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/MENU.png",
+      "sha256": "c2a51f0f24c9a59ce03bf2cee0ec70f52b0012d61603057a8c8ac57ef33a87ab"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "250581febc2dfd150c520ee42c95ad8b6a3f42d5168ffb7e5ac7c17c2bc2f0a2"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/SURVEY.png",
+      "sha256": "0943fe441db75872461fb1b6a690b40e963076329cb707b7d7c8b5d3b30875ad"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-393x852-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-8c4ad-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "da8b71800fcdea0dd541c5ec221390579e44d8bec0a8752010846788a4ae3253"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "EXAMPLE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-EXAMPLE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/EXAMPLE.png",
+      "sha256": "4d11cbce86e1e42243783d74ddc7d9e298061fb30781730c97c56c0411e48cab"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "EXAMPLE_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-EXAMPLE_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/EXAMPLE_DONE.png",
+      "sha256": "efbaad961a762af931c5b188440b2c917160b6d7017dad1017b1916ec8868e75"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-LEAD.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/LEAD.png",
+      "sha256": "25ebe6cd13bd73f82ade854355e7c3806d62f7693cc280ea5345e6b6f1797183"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-LEAD_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/LEAD_DONE.png",
+      "sha256": "e1c0945dc51e27c653754fef1e23f81dc4aabf0c8b8a3cce52478a1310c0517b"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "MENU",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-MENU.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/MENU.png",
+      "sha256": "4139568b5cc84c1c3bdec8a667a62e0eda737c4b47b8dd1813fd5699688e8db7"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "RECOVERY-local-consent-validation-not-server-error",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-RECOVERY-local-consent-validation-not-server-error.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/RECOVERY-local-consent-validation-not-server-error.png",
+      "sha256": "050c791fb8b556c5b4b5b5b5b3c05a1aac3b7621c986f46f899777bf9edb6891"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "SURVEY",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-SURVEY.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/SURVEY.png",
+      "sha256": "f063ad1f88a258b1ca29d37d4b51a3fd7a2f778639012c562b9b40ff5e1d4afb"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "SURVEY_DONE",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-SURVEY_DONE.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-9efa8-al-form-validation-evidence/SURVEY_DONE.png",
+      "sha256": "6809dbba92f3b023dab905f4cc74bf7b0016fd9d6f7fd530105fbbefc051d728"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD-actual-200-percent-320px",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-LEAD-actual-200-percent-320px.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-c8ed8--percent-text-remain-usable/LEAD-actual-200-percent-320px.png",
+      "sha256": "6198475607393358d9038b74a88d1c693d36fff1772191e38b5f05a0c272edd6"
+    },
+    {
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "state": "LEAD_DONE-actual-200-percent-320px",
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-LEAD_DONE-actual-200-percent-320px.png",
+      "source_path": ".omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z/results/marketing-round2-recording-c8ed8--percent-text-remain-usable/LEAD_DONE-actual-200-percent-320px.png",
+      "sha256": "9f7f6ad3b20774d3cf5b4bc58b40f661ee9d42bdc7fd4728089dfd9185d59778"
+    }
+  ]
+}

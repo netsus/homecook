@@ -1,0 +1,25 @@
+✅  .lighthouseci/ directory writable
+✅  Configuration file found
+✅  Chrome installation found
+⚠️   GitHub token not set
+Healthcheck passed!
+
+Started a web server with "corepack pnpm start --hostname 127.0.0.1 --port 3120"...
+Running Lighthouse 3 time(s) on http://127.0.0.1:3120/
+Run #1...done.
+Run #2...done.
+Run #3...done.
+Running Lighthouse 3 time(s) on http://127.0.0.1:3120/recipe/mock-kimchi-jjigae
+Run #1...done.
+Run #2...done.
+Run #3...done.
+Done running Lighthouse!
+
+Checking assertions against 2 URL(s), 6 total run(s)
+
+All results processed!
+
+Dumping 6 reports to disk at /Users/cwj/.codex/worktrees/f2a2/homecook/.omx/artifacts/r2-stage4/lighthouse-isolated...
+Done writing reports to disk.
+
+Done running autorun.

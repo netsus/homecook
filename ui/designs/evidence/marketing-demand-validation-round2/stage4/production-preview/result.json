@@ -1,0 +1,29 @@
+{
+  "stats": {
+    "startTime": "2026-09-11T02:19:32.631Z",
+    "duration": 42220.683,
+    "expected": 29,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "run": "/Users/cwj/.codex/worktrees/f2a2/homecook/.omx/artifacts/r2-stage4/preview-browser/runs/2026-09-11T02-19-32-625Z",
+  "images": 68,
+  "buildId": "iHCryywnANwRzlb0qaw8l",
+  "compiledPageSha256": "6a2442a4586a4b32ddba6a98c0eb1eb7f4ad6e5c81d76d5b44e1e06e0c636230",
+  "sourceHashesUnchanged": true,
+  "sourceSha256": {
+    "components/marketing/round2/round2-view.tsx": "bfcc863c15f5737972c993a00ccef40c116a52b805bc285d003381baae753775",
+    "components/marketing/round2/round2.module.css": "61e93e03d2fe4ac7b29ed9ad54ae5a13ce47f4bd02aa456ab721a84a04793086",
+    "components/marketing/round2/round2-landing.tsx": "914a743cbb123280051f4df07a8e96316a92f611cfe483ab5eb03df4ac6f8992",
+    "components/marketing/round2/round2-turnstile.tsx": "08c30af9f5d5ae74f825c604bd054223ea5c2d849a3b68e161f7f341cd5d566b",
+    "lib/marketing/round2-client.ts": "65f894000993c9a2e0b6c2b4f01aa8c74193161ae2741016c8a927719ca804f4",
+    "lib/server/marketing-round2-page.ts": "c0c5e11f93efb99df44c2226f5f10f539b9bbda7907127c1a2a4207aa6ad6c41",
+    "middleware.ts": "ab4409afe19e9eb1259cc18db00afe7c904f5a8c5aff58b79eb57ce8b41beb0d"
+  },
+  "urls": [
+    "http://127.0.0.1:3117/beta/r2/recording",
+    "http://127.0.0.1:3117/beta/r2/homeflow"
+  ],
+  "serverKeptForAuthorizedHandoff": true
+}

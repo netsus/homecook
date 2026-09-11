@@ -1,0 +1,14 @@
+
+Running 2 tests using 1 worker
+
+(node:8437) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:8437) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/2] tests/e2e/marketing-round2.spec.ts:101:7 › recording: browser Back and Forward preserve independent activity navigation
+[2/2] tests/e2e/marketing-round2.spec.ts:101:7 › homeflow: browser Back and Forward preserve independent activity navigation
+  2 passed (4.9s)

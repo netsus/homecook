@@ -1,0 +1,30 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-0l8OO1
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-client-storage.test.ts (8 tests | 1 failed) 1149ms
+   × real two-tab IDB enforces a shared 50 cap, persists drafts and removes expired records 1144ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-client-storage.test.ts > real two-tab IDB enforces a shared 50 cap, persists drafts and removes expired records
+AssertionError: expected 'key' to be 'queue_full' // Object.is equality
+
+Expected: "queue_full"
+Received: "key"
+
+ ❯ tests/marketing-round2-client-storage.test.ts:59:27
+     57|       const session = window.r2Session; return session.prepareRound2Bo…
+     58|     }, args);
+     59|     expect(overflow.kind).toBe("queue_full");
+       |                           ^
+     60|     const tabId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+     61|     await a.evaluate(async options => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  10:56:24
+   Duration  2.09s (transform 163ms, setup 25ms, import 810ms, tests 1.15s, environment 0ms)

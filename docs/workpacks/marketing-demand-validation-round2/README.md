@@ -151,8 +151,8 @@ local preview는 explicit flag+exact loopback에서만 메모리 mock, 모든 �
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — **상태 분류**이며 Stage4 구현 완료 체크가 아님.
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary) — Stage 1 설계 시점 이력.
+- [x] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [ ] N/A (BE-only에만 해당하므로 선택하지 않음)
 
@@ -202,6 +202,10 @@ bootstrap storage/cookie 실패, body/권한/멱등, RPC/control lease, retentio
 
 현재 백엔드 구현·검증 범위와 Stage 4/운영 인수 조건은 [Stage 2 인수 기록](stage2-backend-handoff.md)을 따른다. 아래 checked는 실제 검증한 Stage 2 범위만 의미하며 독립 Stage 3 승인·화면 완료·배포 완료가 아니다. 실제 페이지 경로 통합은 Stage 4 화면 작업에 남긴다.
 
+## Stage 4 실행 기록
+
+[프론트엔드 인수 기록](stage4-frontend-handoff.md)을 따른다. UI/연결/실제 격리 검증을 수행했고 독립 authority·Stage 5·Stage 6는 pending이다. 앞선 Stage 1 Draft·미착수 문구는 당시 이력이며 승인된 선행 merge를 되돌리지 않는다. 전체 서비스에서 기준 SHA에도 재현되는 4개 좁은 화면 실패는 R2 통과와 분리해 보존한다. Ready·merge·배포는 승인하지 않는다.
+
 ## Delivery Checklist
 
 현재 Stage1은 아래 Stage2/4 완료 항목을 체크하지 않는다. 독립 3/5/6 review는 metadata와 별도 task를 따른다.
@@ -209,10 +213,10 @@ bootstrap storage/cookie 실패, body/권한/멱등, RPC/control lease, retentio
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] loading / empty / error / read-only / unauthorized 상태 검증 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 실제 QA와 Manual Only 운영 인수 조건 분리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] loading / empty / error / read-only / unauthorized 상태 검증 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 실제 QA와 Manual Only 운영 인수 조건 분리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

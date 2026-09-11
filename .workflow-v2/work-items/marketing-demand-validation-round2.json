@@ -1,7 +1,7 @@
 {
   "id": "marketing-demand-validation-round2",
   "title": "Marketing demand validation round 2",
-  "summary": "Stage 1 Draft 문서 재잠금. docs/marketing-demand-validation-r2-contract.md의 공식 r2.1 계약 source SHA 7f00e62c13572b5b2c0d54c997fe628f7a56567e를 소비한다. 조정자가 확인한 local merge b9601841에 반영되었으며 internal 1.5 독립 검토와 Stage 1 병합은 대기 중이다. 제품 Stage 2/4는 미착수다.",
+  "summary": "Stage 4 프론트엔드 Draft 체크포인트. 승인 r2.1/Stage1/백엔드 PR1552의 독립 Stage3 merge7312a0cc를 소비한다. 구현·실제UI/API/격리DB 근거와 기존base재현실패를 stage4-frontend-handoff.md에 기록했다. 독립authority/Stage5/Stage6와전체head CI는pending,Ready/병합/배포승인없음.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -105,14 +105,13 @@
     "evaluator_commands": [],
     "artifact_assertions": [
       "exact-contract-source:docs/marketing-demand-validation-r2-contract.md@7f00e62c13572b5b2c0d54c997fe628f7a56567e",
-      "stage1-draft-relock-internal1.5-independent-review-pending-no-self-signoff",
-      "product-stage2-stage4-not-started-delivery-and-acceptance-unchecked",
       "r2-endpoint-three-tables-server-only-rpc-and-independent-activity-contract-consumed",
       "versioned-four-question-topic-enums-cookie-control-limiter-preview-idempotency-retention-consumed",
       "eight-shared-generator-critic-screens-with-two-topic-mapping-and-static-reference-only",
       "automated-functional-db-and-flow-tests-separate-from-external-manual-only-gates",
       "stage5-final-runtime-authority-and-stage6-independent-tasks-pending",
-      "canonical-closeout-collecting-design-temporary-authority-pending-no-claimed-current-head-approval"
+      "stage4-structured-author-evidence-and-review-pending-design-no-self-signoff",
+      "canonical-closeout-collecting-authority-pending-no-claimed-current-head-approval"
     ]
   },
   "status": {
@@ -129,7 +128,7 @@
     "phase": "collecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
+      "design_status": "pending-review",
       "delivery_checklist": "pending",
       "design_authority": "pending",
       "acceptance": "pending",
@@ -139,7 +138,10 @@
       "required_checks": "pending",
       "external_smokes": "pending",
       "authority_reports": [],
-      "actual_verification_refs": []
+      "actual_verification_refs": [
+        "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/stage4-result.json"
+      ]
     },
     "merge_gate_projection": {
       "current_head_sha": "pending",
@@ -164,7 +166,7 @@
       "evidence_sources": []
     },
     "projection_state": {
-      "docs_synced_at": "2026-09-10T20:06:58.414Z",
+      "docs_synced_at": "2026-09-11T02:47:49.005884Z",
       "status_synced_at": "2026-09-10T20:06:58.414Z",
       "pr_body_synced_at": "pending"
     }

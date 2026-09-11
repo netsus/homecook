@@ -1,0 +1,224 @@
+[WebServer] (node:31465) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:31470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:31613) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:31635) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 4 tests using 1 worker
+
+(node:31665) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:31665) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/4] [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+  1) [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 480
+    Received:    509.4375
+
+      91 |   expect
+      92 |     .soft(geometry.target.bottom, JSON.stringify(geometry))
+    > 93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+         |      ^
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+      95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+      96 | }
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:93:6)
+        at /Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:351:5
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+    > 95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+         |                                                                  ^
+      96 | }
+      97 |
+      98 | async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:95:66)
+        at /Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:351:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-83e96-tion-removes-item-from-list-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-83e96-tion-removes-item-from-list-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-16-leftovers-LEFTOVE-83e96-tion-removes-item-from-list-mobile-ios-small/error-context.md
+
+
+(node:31734) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:31734) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/4] [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+  2) [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 480
+    Received:    509.4375
+
+      91 |   expect
+      92 |     .soft(geometry.target.bottom, JSON.stringify(geometry))
+    > 93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+         |      ^
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+      95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+      96 | }
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:93:6)
+        at /Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:369:5
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+    > 95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+         |                                                                  ^
+      96 | }
+      97 |
+      98 | async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:95:66)
+        at /Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:369:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-4ce44-hen-all-leftovers-are-eaten-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-4ce44-hen-all-leftovers-are-eaten-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-16-leftovers-LEFTOVE-4ce44-hen-all-leftovers-are-eaten-mobile-ios-small/error-context.md
+
+
+(node:31960) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:31960) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/4] [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+  3) [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":112},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 480
+    Received:    509.4375
+
+      91 |   expect
+      92 |     .soft(geometry.target.bottom, JSON.stringify(geometry))
+    > 93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+         |      ^
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+      95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+      96 | }
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:93:6)
+        at /Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:383:5
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":112},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+    > 95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+         |                                                                  ^
+      96 | }
+      97 |
+      98 | async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:95:66)
+        at /Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-16-leftovers.spec.ts:383:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVERS-screen-planner-add-opens-sheet-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVERS-screen-planner-add-opens-sheet-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-16-leftovers-LEFTOVERS-screen-planner-add-opens-sheet-mobile-ios-small/error-context.md
+
+
+(node:32001) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:32001) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/4] [mobile-ios-small] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe
+  4) [mobile-ios-small] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 569
+    Received:    572
+
+      970 |     await expect(actions).toHaveCSS("position", "sticky");
+      971 |     const actionBox = await actions.boundingBox();
+    > 972 |     expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+          |                                              ^
+      973 |   });
+      974 |
+      975 |   test("desktop FOOD_PRODUCT_CREATE의 등록 CTA가 1280×900 첫 화면 안에 보인다", async ({ browser }, testInfo) => {
+        at /Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook/tests/e2e/slice-prepared-food-planner-entry.spec.ts:972:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-prepared-food-planne-d25d3-ESC-and-sticky-actions-safe-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-prepared-food-planne-d25d3-ESC-and-sticky-actions-safe-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-prepared-food-planne-d25d3-ESC-and-sticky-actions-safe-mobile-ios-small/error-context.md
+
+
+  4 failed
+    [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+    [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+    [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+    [mobile-ios-small] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe

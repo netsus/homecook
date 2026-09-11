@@ -1,0 +1,252 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-SlJtlS
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-view.test.tsx (9 tests | 1 failed) 2048ms
+     × offers an explicit security retry after the provider script fails 1035ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > offers an explicit security retry after the provider script fails
+TestingLibraryElementError: Unable to find role="button" and name "보안 확인 다시 시도"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div>
+      <main
+        data-screen-id="R2_RECORDING_LEAD"
+      >
+        <header>
+          <span>
+            <img
+              alt="무먹 무엇을 먹든"
+              data-nimg="1"
+              decoding="async"
+              height="34"
+              src="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75"
+              srcset="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=128&q=75 1x, /_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75 2x"
+              style="color: transparent;"
+              width="112"
+            />
+          </span>
+          <button
+            type="button"
+          >
+            메뉴로
+          </button>
+        </header>
+        <p>
+          베타 준비 중
+        </p>
+        <span />
+        <h1
+          tabindex="-1"
+        >
+          집밥 기록, 베타 소식 받기
+        </h1>
+        <p>
+          내 레시피와 먹은 분량을 잇는 기록 기능을 준비 중이에요.
+        </p>
+        <form
+          novalidate=""
+        >
+          <label
+            for="r2-email"
+          >
+            이메일
+          </label>
+          <input
+            autocapitalize="none"
+            autocomplete="email"
+            autocorrect="off"
+            id="r2-email"
+            maxlength="254"
+            placeholder="이메일 주소 입력"
+            spellcheck="false"
+            type="email"
+            value=""
+          />
+          <p>
+            개인정보 수집·이용 동의 (필수)
+          </p>
+          <label>
+            <input
+              id="r2-consent"
+              type="checkbox"
+            />
+            <span>
+              무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.
+            </span>
+          </label>
+          <p>
+            동의하지 않아도 예시와 의견 남기기를 이용할 수 있어요
+          </p>
+          <p>
+            만 14세 이상인 경우에만 신청해 주세요
+          </p>
+          <a
+            href="/privacy"
+            rel="noreferrer"
+            target="_blank"
+          >
+            개인정보처리방침
+          </a>
+          <div
+            data-testid="round2-turnstile"
+          >
+            <div />
+            <p
+              aria-live="polite"
+              role="status"
+            >
+              보안 확인을 준비하지 못했어요. 다시 시도해 주세요.
+            </p>
+          </div>
+          <p
+            role="alert"
+          >
+            보안 확인을 준비하지 못했어요. 다시 시도해 주세요.
+          </p>
+          <button
+            type="submit"
+          >
+            베타 오픈 알림 신청하기
+          </button>
+        </form>
+        <button>
+          메뉴로 돌아가기
+        </button>
+      </main>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div>
+      <main
+        data-screen-id="R2_RECORDING_LEAD"
+      >
+        <header>
+          <span>
+            <img
+              alt="무먹 무엇을 먹든"
+              data-nimg="1"
+              decoding="async"
+              height="34"
+              src="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75"
+              srcset="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=128&q=75 1x, /_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75 2x"
+              style="color: transparent;"
+              width="112"
+            />
+          </span>
+          <button
+            type="button"
+          >
+            메뉴로
+          </button>
+        </header>
+        <p>
+          베타 준비 중
+        </p>
+        <span />
+        <h1
+          tabindex="-1"
+        >
+          집밥 기록, 베타 소식 받기
+        </h1>
+        <p>
+          내 레시피와 먹은 분량을 잇는 기록 기능을 준비 중이에요.
+        </p>
+        <form
+          novalidate=""
+        >
+          <label
+            for="r2-email"
+          >
+            이메일
+          </label>
+          <input
+            autocapitalize="none"
+            autocomplete="email"
+            autocorrect="off"
+            id="r2-email"
+            maxlength="254"
+            placeholder="이메일 주소 입력"
+            spellcheck="false"
+            type="email"
+            value=""
+          />
+          <p>
+            개인정보 수집·이용 동의 (필수)
+          </p>
+          <label>
+            <input
+              id="r2-consent"
+              type="checkbox"
+            />
+            <span>
+              무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.
+            </span>
+          </label>
+          <p>
+            동의하지 않아도 예시와 의견 남기기를 이용할 수 있어요
+          </p>
+          <p>
+            만 14세 이상인 경우에만 신청해 주세요
+          </p>
+          <a
+            href="/privacy"
+            rel="noreferrer"
+            target="_blank"
+          >
+            개인정보처리방침
+          </a>
+          <div
+            data-testid="round2-turnstile"
+          >
+            <div />
+            <p
+              aria-live="polite"
+              role="status"
+            >
+              보안 확인을 준비하지 못했어요. 다시 시도해 주세요.
+            </p>
+          </div>
+          <p
+            role="alert"
+          >
+            보안 확인을 준비하지 못했어요. 다시 시도해 주세요.
+          </p>
+          <button
+            type="submit"
+          >
+            베타 오픈 알림 신청하기
+          </button>
+        </form>
+        <button>
+          메뉴로 돌아가기
+        </button>
+      </main>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ tests/marketing-round2-view.test.tsx:77:34
+     75|     await vi.waitFor(()=>expect(document.querySelector('script[src*="c…
+     76|     await act(async()=>document.querySelector('script[src*="challenges…
+     77|     fireEvent.click(await screen.findByRole("button",{name:"보안 확인 다시 시…
+       |                                  ^
+     78|     await vi.waitFor(()=>expect(document.querySelector('script[src*="c…
+     79|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  11:13:07
+   Duration  3.43s (transform 139ms, setup 52ms, import 267ms, tests 2.05s, environment 916ms)

@@ -1,0 +1,5 @@
+
+> homecook@0.1.0 validate:source-of-truth-sync /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/validate-source-of-truth-sync.mjs
+
+source-of-truth sync validation passed

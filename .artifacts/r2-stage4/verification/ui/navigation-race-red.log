@@ -1,0 +1,281 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-9tGXNU
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-view.test.tsx (8 tests | 1 failed) 993ms
+     × does not pull the user back from the menu when an earlier completion response arrives 154ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > does not pull the user back from the menu when an earlier completion response arrives
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "의견만 남기기 · 4문항"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  <main
+    data-screen-id="R2_RECORDING_EXAMPLE_DONE"
+  />
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  <header />
+
+  --------------------------------------------------
+  img:
+
+  Name "무먹 무엇을 먹든":
+  <img
+    alt="무먹 무엇을 먹든"
+    data-nimg="1"
+    decoding="async"
+    height="34"
+    src="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75"
+    srcset="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=128&q=75 1x, /_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75 2x"
+    style="color: transparent;"
+    width="112"
+  />
+
+  Name "준비된 제육볶음 예시":
+  <img
+    alt="준비된 제육볶음 예시"
+    data-nimg="1"
+    decoding="async"
+    height="160"
+    loading="lazy"
+    src="http://localhost:3000/_next/image?url=%2Fassets%2Ffunnel%2Ffood%2Fjeyuk-recipe-clean.webp&w=750&q=75"
+    srcset="/_next/image?url=%2Fassets%2Ffunnel%2Ffood%2Fjeyuk-recipe-clean.webp&w=384&q=75 1x, /_next/image?url=%2Fassets%2Ffunnel%2Ffood%2Fjeyuk-recipe-clean.webp&w=750&q=75 2x"
+    style="color: transparent;"
+    width="350"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "메뉴로":
+  <button
+    type="button"
+  />
+
+  Name "예시 확인 완료":
+  <button />
+
+  Name "이전 장면":
+  <button />
+
+  Name "베타 오픈 알림 받기":
+  <button
+    type="button"
+  />
+
+  Name "메뉴로 돌아가기":
+  <button />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p />
+
+  --------------------------------------------------
+  heading:
+
+  Name "내 레시피에서 영양 기록까지":
+  <h1
+    tabindex="-1"
+  />
+
+  Name "내 레시피 · 제육볶음 기록 예시":
+  <h2 />
+
+  --------------------------------------------------
+  term:
+
+  Name "":
+  <dt />
+
+  Name "":
+  <dt />
+
+  Name "":
+  <dt />
+
+  --------------------------------------------------
+  definition:
+
+  Name "":
+  <dd />
+
+  Name "":
+  <dd />
+
+  Name "":
+  <dd />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div>
+      <main
+        data-screen-id="R2_RECORDING_EXAMPLE_DONE"
+      >
+        <header>
+          <span>
+            <img
+              alt="무먹 무엇을 먹든"
+              data-nimg="1"
+              decoding="async"
+              height="34"
+              src="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75"
+              srcset="/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=128&q=75 1x, /_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&w=256&q=75 2x"
+              style="color: transparent;"
+              width="112"
+            />
+          </span>
+          <button
+            type="button"
+          >
+            메뉴로
+          </button>
+        </header>
+        <p>
+          베타 준비 중
+           · 사용 예시
+        </p>
+        <span />
+        <h1
+          tabindex="-1"
+        >
+          내 레시피에서 영양 기록까지
+        </h1>
+        <p>
+          실제 서비스가 아닌 준비된 예시예요.
+        </p>
+        <p>
+          사용 예시
+          3
+          /3
+        </p>
+        <div>
+          <img
+            alt="준비된 제육볶음 예시"
+            data-nimg="1"
+            decoding="async"
+            height="160"
+            loading="lazy"
+            src="http://localhost:3000/_next/image?url=%2Fassets%2Ffunnel%2Ffood%2Fjeyuk-recipe-clean.webp&w=750&q=75"
+            srcset="/_next/image?url=%2Fassets%2Ffunnel%2Ffood%2Fjeyuk-recipe-clean.webp&w=384&q=75 1x, /_next/image?url=%2Fassets%2Ffunnel%2Ffood%2Fjeyuk-recipe-clean.webp&w=750&q=75 2x"
+            style="color: transparent;"
+            width="350"
+          />
+          <h2>
+            내 레시피 · 제육볶음 기록 예시
+          </h2>
+          <p>
+            완성한 요리 1,180g 중 먹은 양 320g
+          </p>
+          <p>
+            487 kcal
+          </p>
+          <p>
+            예시·추정치
+          </p>
+          <dl>
+            <div>
+              <dt>
+                탄수화물
+              </dt>
+              <dd>
+                31g
+              </dd>
+            </div>
+            <div>
+              <dt>
+                단백질
+              </dt>
+              <dd>
+                39g
+              </dd>
+            </div>
+            <div>
+              <dt>
+                지방
+              </dt>
+              <dd>
+                22g
+              </dd>
+            </div>
+          </dl>
+          <p>
+            영양 값 전체가 예시·추정치예요.
+          </p>
+        </div>
+        <p>
+          레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.
+        </p>
+        <div>
+          <button>
+            예시 확인 완료
+          </button>
+          <button>
+            이전 장면
+          </button>
+          <button
+            type="button"
+          >
+            베타 오픈 알림 받기
+          </button>
+        </div>
+        <button>
+          메뉴로 돌아가기
+        </button>
+      </main>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/marketing-round2-view.test.tsx:70:19
+     68|     fireEvent.click(screen.getByRole("button",{name:"메뉴로"}));
+     69|     await act(async()=>resolve(true));
+     70|     expect(screen.getByRole("button",{name:"의견만 남기기 · 4문항"})).toBeTrut…
+       |                   ^
+     71|   });
+     72| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  11:11:23
+   Duration  1.96s (transform 115ms, setup 41ms, import 215ms, tests 993ms, environment 578ms)

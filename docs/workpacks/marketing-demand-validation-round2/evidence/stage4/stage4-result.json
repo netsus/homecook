@@ -1,0 +1,136 @@
+{
+  "stage": 4,
+  "role": "frontend-implementer",
+  "author_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "phase": "draft-checkpoint",
+  "verdict": "in_progress",
+  "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "checklist_updates": [
+    {
+      "id": "accept-r2-routes",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-menu",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-independent-paths",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-backend-frontend-types",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-screen-contract",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-read-only",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-done-choice",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-revision",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-loading",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-empty",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-error",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-unauthorized",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-conflict",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-storage",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-fixture-baseline",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-playwright-flow",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-a11y-visual",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-playwright-live-split",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-ui-connection",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-test-split",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-state-ui",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-manual-qa-handoff",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    }
+  ],
+  "independent_authority": "pending",
+  "aggregate_frontend_gate": "failed-existing-baseline-under-review",
+  "ready": false,
+  "deployment": false,
+  "proposed_closeout_projection": {
+    "design_status": "pending-review",
+    "design_authority": "pending",
+    "required_checks": "pending",
+    "approval_state": "not_started",
+    "all_checks_green": false
+  },
+  "code_commit": "a5079881f118c2b7dc00119a949b8c7e8b03b86a",
+  "known_failures": [
+    "complete regression four mobile-ios-small geometry cases reproduced identically on exact base",
+    "ten full visual desktop detailed snapshot failures; base comparison pending"
+  ]
+}

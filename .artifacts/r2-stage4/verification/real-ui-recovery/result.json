@@ -1,0 +1,44 @@
+{
+  "result": "PASS",
+  "identity": {
+    "projectId": "hcg_25223_d08c58",
+    "dataApiUrl": "http://127.0.0.1:58312",
+    "cliVersion": "2.110.0",
+    "migrationSha256": "6e04722b44718c0f3e62579dd5617370b68a4a813d3164c816952079b009d3c8"
+  },
+  "scenarioSelection": "recovery-only",
+  "checks": [
+    "actual 409 consent generation advance, email retained, fresh explicit consent and receipt",
+    "actual commit with browser response loss, no premature DONE, explicit retry same event/no duplicate"
+  ],
+  "apiRequests": 8,
+  "committedRows": "2",
+  "externalRequests": [],
+  "pageErrors": [],
+  "recoveryScreenshots": [
+    "R2_RECORDING_RECOVERY-320x568.png",
+    "R2_RECORDING_RECOVERY-390x844.png",
+    "R2_RECORDING_RECOVERY-393x852.png",
+    "R2_RECORDING_RECOVERY-1280x900.png",
+    "R2_HOMEFLOW_RECOVERY-320x568.png",
+    "R2_HOMEFLOW_RECOVERY-390x844.png",
+    "R2_HOMEFLOW_RECOVERY-393x852.png",
+    "R2_HOMEFLOW_RECOVERY-1280x900.png"
+  ],
+  "apiPrewarm": "actual GET method rejection 405, no database mutation",
+  "fixtureCounterReset": "between closed independent browser cases",
+  "unexecuted": [],
+  "providerMockCalls": 1,
+  "actualNextPages": true,
+  "actualNextApi": true,
+  "actualDatabase": true,
+  "externalProviderRequests": 0,
+  "productionWrites": 0,
+  "legacyChecksumUnchanged": true,
+  "legacyFixtureRows": 1,
+  "manualOnly": [
+    "real provider",
+    "real device",
+    "production activation"
+  ]
+}

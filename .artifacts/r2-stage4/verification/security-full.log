@@ -1,0 +1,71 @@
+
+> homecook@0.1.0 test:e2e:security /Users/cwj/.codex/worktrees/f2a2/homecook
+> playwright test tests/e2e/qa-security.spec.ts
+
+[WebServer] (node:40858) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:40861) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:40874) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:40896) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 12 tests using 3 workers
+
+(node:40922) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:40924) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:40923) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:40924) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:40923) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:40922) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/12] [mobile-ios-small] › tests/e2e/qa-security.spec.ts:19:7 › QA auth and session security smoke › guest-only write APIs reject unauthenticated requests with the contract envelope
+[2/12] [mobile-chrome] › tests/e2e/qa-security.spec.ts:19:7 › QA auth and session security smoke › guest-only write APIs reject unauthenticated requests with the contract envelope
+[3/12] [desktop-chrome] › tests/e2e/qa-security.spec.ts:19:7 › QA auth and session security smoke › guest-only write APIs reject unauthenticated requests with the contract envelope
+[WebServer] (node:40975) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[4/12] [mobile-chrome] › tests/e2e/qa-security.spec.ts:53:7 › QA auth and session security smoke › auth callback sanitizes external return targets
+[5/12] [desktop-chrome] › tests/e2e/qa-security.spec.ts:53:7 › QA auth and session security smoke › auth callback sanitizes external return targets
+[6/12] [mobile-ios-small] › tests/e2e/qa-security.spec.ts:53:7 › QA auth and session security smoke › auth callback sanitizes external return targets
+[WebServer] HOMECOOK_OPERATIONAL_EVENT_WRITE_FAILED { event_type: 'auth_failure', source: 'auth' }
+
+[WebServer] HOMECOOK_OPERATIONAL_EVENT_WRITE_FAILED { event_type: 'auth_failure', source: 'auth' }
+
+[WebServer] HOMECOOK_OPERATIONAL_EVENT_WRITE_FAILED { event_type: 'auth_failure', source: 'auth' }
+
+[7/12] [desktop-chrome] › tests/e2e/qa-security.spec.ts:70:7 › QA auth and session security smoke › guest users hit the login gate before protected actions run
+[8/12] [mobile-chrome] › tests/e2e/qa-security.spec.ts:70:7 › QA auth and session security smoke › guest users hit the login gate before protected actions run
+[9/12] [mobile-ios-small] › tests/e2e/qa-security.spec.ts:70:7 › QA auth and session security smoke › guest users hit the login gate before protected actions run
+[WebServer] (node:41131) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[10/12] [mobile-ios-small] › tests/e2e/qa-security.spec.ts:87:7 › QA auth and session security smoke › applies launch security headers to representative routes
+[11/12] [desktop-chrome] › tests/e2e/qa-security.spec.ts:87:7 › QA auth and session security smoke › applies launch security headers to representative routes
+[12/12] [mobile-chrome] › tests/e2e/qa-security.spec.ts:87:7 › QA auth and session security smoke › applies launch security headers to representative routes
+[WebServer] (node:41153) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+  12 passed (14.6s)
