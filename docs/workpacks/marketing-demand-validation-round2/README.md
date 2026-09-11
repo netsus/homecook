@@ -198,17 +198,21 @@ bootstrap storage/cookie 실패, body/권한/멱등, RPC/control lease, retentio
 3. 서버 확인 뒤 해당 DONE에서 접수/확인 내용을 읽고 참여를 끝낸다.
 4. 원하면 메뉴나 다른 활동으로 이동한다. 이미 접수한 알림/의견은 확인 화면으로, 예시는 다시 보기로 열며 완료를 보존한다.
 
+## Stage 2 실행 기록
+
+현재 백엔드 구현·검증 범위와 Stage 4/운영 인수 조건은 [Stage 2 인수 기록](stage2-backend-handoff.md)을 따른다. 아래 checked는 실제 검증한 Stage 2 범위만 의미하며 독립 Stage 3 승인·화면 완료·배포 완료가 아니다. 실제 페이지 경로 통합은 Stage 4 화면 작업에 남긴다.
+
 ## Delivery Checklist
 
 현재 Stage1은 아래 Stage2/4 완료 항목을 체크하지 않는다. 독립 3/5/6 review는 metadata와 별도 task를 따른다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] loading / empty / error / read-only / unauthorized 상태 검증 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 실제 QA와 Manual Only 운영 인수 조건 분리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
