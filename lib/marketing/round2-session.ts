@@ -72,7 +72,7 @@ function open(factory: IDBFactory): Promise<IDBDatabase> {
   });
 }
 /** No awaits inside the read callback: key generation and write share the same active transaction. */
-async function transaction<T>(topic: Round2Topic, options: StorageOptions, mutate: (current: Session | RestartMarker | undefined, save: (next: Session | RestartMarker) => void) => T): Promise<T> {
+async function transaction<T>(topic: Round2Topic, options: StorageOptions, mutate: (current: Session | RestartMarker | undefined, save: (next: Session | RestartMarker) => void, activityPending: number) => T): Promise<T> {
   const db = await open(storage(options));
   try {
     return await new Promise<T>((resolve, reject) => {
@@ -80,11 +80,22 @@ async function transaction<T>(topic: Round2Topic, options: StorageOptions, mutat
       const store = tx.objectStore(STORE);
       const key = `${ROUND2_VERSION}:${topic}`;
       const read = store.get(key);
+      const activities = store.get(`${key}:activity`);
       let result: T;
       tx.oncomplete = () => resolve(result);
       tx.onabort = tx.onerror = () => reject(new Error("Bootstrap storage transaction failed"));
-      read.onsuccess = () => {
-        try { result = mutate(session(read.result), next => { store.put(next, key); }); }
+      activities.onsuccess = () => {
+        try {
+          const activity = activities.result;
+          const now = options.nowMs ?? Date.now();
+          const expired = isRecord(activity) && typeof activity.expires_at === "number" && activity.expires_at <= now;
+          if (expired) store.delete(`${key}:activity`);
+          const activityPending = !activity || expired ? 0 : isRecord(activity) && Array.isArray(activity.outbox) ? activity.outbox.length : MAX_PENDING;
+          result = mutate(session(read.result), next => {
+            store.put(next, key);
+            if (next.status === "restart_required") store.delete(`${key}:activity`);
+          }, activityPending);
+        }
         catch { tx.abort(); }
       };
     });
@@ -107,7 +118,7 @@ async function prepare(options: Round2BootstrapOptions, explicitRestart: boolean
   if (!Number.isSafeInteger(now) || now < START) return { kind: "restart_required", topic: options.topic };
   if (now >= END) fallbackEvents.delete(options.topic);
   try {
-    return await transaction(options.topic, options, (stored, save) => {
+    return await transaction(options.topic, options, (stored, save, activityPending) => {
       if (now >= END) { save(restartMarker()); return { kind: "restart_required", topic: options.topic }; }
       let current = stored;
       if (current?.status === "restart_required" || (current && current.expires_at <= now)) {
@@ -119,7 +130,7 @@ async function prepare(options: Round2BootstrapOptions, explicitRestart: boolean
       const initial = canonicalRound2Json(current.first_attribution) === serialized;
       let eventId = initial ? current.event_id : current.pending.find(item => canonicalRound2Json(item.attribution) === serialized)?.event_id;
       if (!eventId) {
-        if (current.pending.length >= MAX_PENDING) return { kind: "queue_full", topic: options.topic };
+        if (current.pending.length + activityPending >= MAX_PENDING) return { kind: "queue_full", topic: options.topic };
         eventId = globalThis.crypto.randomUUID();
         current.pending.push({ event_id: eventId, attribution: semantic });
         save(current);
@@ -150,6 +161,13 @@ export async function confirmRound2Bootstrap(options: StorageOptions & { topic: 
       return true;
     });
   } catch { return false; }
+}
+/** Check the current key without creating a capability or observation event. */
+export async function checkRound2BootstrapOwnership(options: StorageOptions & { topic: Round2Topic; bootstrapKey: string }): Promise<boolean | null> {
+  try {
+    return await transaction(options.topic, options, current => !!current && current.status !== "restart_required" &&
+      current.bootstrap_key === options.bootstrapKey && current.expires_at > (options.nowMs ?? Date.now()));
+  } catch { return null; }
 }
 /** A persisted marker clears capabilities but prevents reload from silently creating a new participation. */
 export async function markRound2ParticipationExpired(options: StorageOptions & { topic: Round2Topic; bootstrapKey?: string }): Promise<boolean> {
