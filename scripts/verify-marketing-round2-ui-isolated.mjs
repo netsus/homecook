@@ -93,7 +93,7 @@ export function selectUiScenarioModes(args) {
 }
 
 export async function stageUiRound2Migrations(rootDir) {
-  const paths = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql', '20260911120000_marketing_round2_linear_recording.sql']
+  const paths = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql', '20260911120000_marketing_round2_linear_recording.sql', '20260911130000_marketing_round2_scope_compat.sql']
     .map(name => join(rootDir, 'supabase/migrations', name));
   // Read the complete dependency chain before changing the owned fixture.
   const sources = await Promise.all(paths.map(path => readFile(path, 'utf8')));

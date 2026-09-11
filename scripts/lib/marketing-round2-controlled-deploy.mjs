@@ -12,6 +12,7 @@ import { deployTransaction } from "./prelaunch-web-deploy.mjs";
 
 export const RECORDING_PREDECESSOR = "458ce2daab6cdd91a70504657ce5981a4d4acf3c";
 export const RECORDING_SOURCE_ANCHOR = "838c126e81b4018d464f11ab7b2f763504305896";
+export const PREDECESSOR_SCOPE_SHA = "a176e56ed522ed1f75fa0e3a9bfa89f2c6f90c0dba30133a76046e1ae7c9d7ea";
 export const RECORDING_OWN_PATHS = Object.freeze([
   "scripts/deploy-marketing-round2-reviewed.mjs","scripts/lib/marketing-round2-controlled-deploy.mjs",
   "tests/marketing-round2-controlled-deploy.test.ts","tests/marketing-round2-controlled-deploy.integration.test.ts",
@@ -36,6 +37,7 @@ const SPECS = [
   ["20260911100000_marketing_round2.sql",41684,"1a783932ef81041414828e336b1f8c9a75666db44180583add72a4f326324ff8","4ec3982dd76957185ddf6bedfada315932d6916f77391413df0471d5b5978eb0"],
   ["20260911110000_marketing_round2_linear_homeflow.sql",3669,"8487ec85f9f55230d4eb9ec995781efbc22bec6aee4155cf6e1af79b95cdfe0b","83e5843ebce996a1ec8806fa263cd482c6259818e248de85beba3fca09896016"],
   ["20260911120000_marketing_round2_linear_recording.sql",1726,"d0c1a9918e624dd24f97cd355283bbf9cdd12440386846f6f3dce4a0cb8fdcf9","8edfcd54d17d0e4eb4b016da6518c79a8582d22d06fe6dbb796121a1600f846e"],
+  ["20260911130000_marketing_round2_scope_compat.sql",2579,"202a663a6ef2ee5fa3e6b61ec4334aeb244b6c30f659ebc51b9968da5d6e8d3d","450a384116c67e0f0f280f3d7e68023a9be8b579d1af7d755b4561380ec4328c"],
 ];
 const LEDGER_SQL = `CREATE SCHEMA marketing_round2_deploy AUTHORIZATION postgres;
 REVOKE ALL ON SCHEMA marketing_round2_deploy FROM PUBLIC, anon, authenticated, service_role;
@@ -56,6 +58,7 @@ export function readRecordingDeploymentBundle(repositoryRoot) {
 }
 export function classifyRecordingOutcome(expected, observed) {
   if (!same(expected.target,observed.target) || observed.active !== false) return "unknown";
+  if (!SHA.test(expected.immutableScopeHash) || expected.immutableScopeHash !== observed.immutableScopeHash) return "unknown";
   if (same(observed.ledger,expected) && observed.postimage === expected.postimage) return "committed";
   if (observed.ledger === null && observed.prestateMatches === true) return "not-applied";
   return "unknown";
@@ -109,10 +112,10 @@ export function validateRecordingManifest(manifest,bundle) {
   requireValue(manifest.bundleSha256 === bundle.bundleSha256 && same(manifest.migrations,bundle.migrations.map(({filename,rawSha256,payloadSha256}) => ({filename,rawSha256,payloadSha256}))), "Reviewed bundle mismatch");
   requireValue(same(manifest.limits,RECORDING_LIMITS), "Fixed 5s lock / 120s pause budget required");
   requireValue(manifest.target?.composeProject === "homecook-full-local-isolated" && manifest.target.postgresVolumeName === "homecook-full-local-postgres", "Wrong production target");
-  requireValue(SHA.test(manifest.prestateHash) && SHA.test(manifest.postimage) && SHA.test(manifest.originalCheckHash), "Exact pre/post/check fingerprints required");
+  requireValue(SHA.test(manifest.prestateHash) && SHA.test(manifest.postimage) && SHA.test(manifest.originalCheckHash) && SHA.test(manifest.immutableScopeHash), "Exact pre/post/check/immutable fingerprints required");
   requireValue(Array.isArray(manifest.changes) && manifest.changes.length > 0 && manifest.changes.every(row => typeof row.path === "string" && (row.before === null || SHA.test(row.before)) && (row.after === null || SHA.test(row.after))), "Reviewed exact diff required");
   const sqlChanges = manifest.changes.filter(row => row.path.startsWith("supabase/"));
-  requireValue(same(sqlChanges.map(row => row.path).sort(),SPECS.map(([name]) => `supabase/migrations/${name}`).sort()) && sqlChanges.every(row => row.before === null), "Only three added SQL files allowed");
+  requireValue(same(sqlChanges.map(row => row.path).sort(),SPECS.map(([name]) => `supabase/migrations/${name}`).sort()) && sqlChanges.every(row => row.before === null), "Only four exact added SQL files allowed");
   requireValue(manifest.changes.every(row => !/^(infra\/|scripts\/lib\/(?:prelaunch-|full-local-)|scripts\/deploy-prelaunch-web)/.test(row.path)), "Infrastructure/generic deploy changes forbidden");
   for (const name of ["review","isolated","oldWebCompatibility"]) requireValue(typeof manifest.evidence?.[name]?.path === "string" && SHA.test(manifest.evidence[name].sha256), "Required exact evidence missing");
   for (const name of ["operationDirectory","configPath","controlPath","envPath","preparedCheckout"]) requireValue(isAbsolute(manifest[name] ?? ""), "Private/exact operational paths required");
@@ -143,12 +146,15 @@ const tableState = predicate => `(SELECT coalesce(jsonb_agg(jsonb_build_array(n.
  ) ORDER BY n.nspname,c.relname),'[]'::jsonb) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p') AND ${predicate})`;
 export const LEGACY_CATALOG_SQL = `SELECT ${digestSql(tableState("n.nspname='public' AND c.relname='marketing_validation_sessions'"))};`;
 export const LEGACY_ROWS_SQL = `SELECT jsonb_build_object('count',count(*),'sha256',${digestSql("coalesce(jsonb_agg(to_jsonb(t) ORDER BY id),'[]'::jsonb)")}) FROM public.marketing_validation_sessions t;`;
-export const SHARED_SQL = `SELECT ${digestSql(functionState("n.nspname='private' AND p.proname IN ('verify_full_local_internal_scope','verify_full_local_internal_scope_pre_legacy_compat')"))};`;
+export const SHARED_SQL = `SELECT ${digestSql(functionState("n.nspname='private' AND p.proname='verify_full_local_internal_scope'"))};`;
+// The deployed inner delegate differs from fresh fixtures: preserve its complete catalog fingerprint separately.
+export const IMMUTABLE_SCOPE_SQL = `SELECT ${digestSql(functionState("n.nspname='private' AND p.proname='verify_full_local_internal_scope_pre_legacy_compat'"))};`;
+export const PREDECESSOR_SCOPE_SQL = `SELECT encode(sha256(convert_to(prosrc,'UTF8')),'hex') FROM pg_proc WHERE oid='private.verify_full_local_internal_scope()'::regprocedure;`;
 export const ORIGINAL_CHECK_SQL = `SELECT CASE WHEN count(*)=1 THEN ${digestSql("coalesce(jsonb_agg(jsonb_build_array(pg_get_constraintdef(c.oid),c.convalidated,c.condeferrable,c.condeferred,(SELECT coalesce(jsonb_agg(jsonb_build_array(d.deptype,pg_describe_object(d.refclassid,d.refobjid,d.refobjsubid)) ORDER BY d.deptype,pg_describe_object(d.refclassid,d.refobjid,d.refobjsubid)),'[]'::jsonb) FROM pg_depend d WHERE d.classid='pg_constraint'::regclass AND d.objid=c.oid)) ORDER BY c.conname),'[]'::jsonb)")} ELSE 'invalid' END FROM pg_constraint c WHERE c.conrelid='public.marketing_round2_participations'::regclass AND c.contype='c' AND pg_get_constraintdef(c.oid) LIKE '%marketing_round2_answers%' AND pg_get_constraintdef(c.oid) LIKE '%survey_version%';`;
-export const POSTIMAGE_SQL = `SELECT ${digestSql(`jsonb_build_array(${tableState("n.nspname='public' AND c.relname IN ('marketing_round2_participations','marketing_round2_events','marketing_round2_lead_requests')")},${functionState("n.nspname IN ('public','private') AND (p.proname LIKE 'marketing_round2_%' OR p.proname IN ('verify_full_local_internal_scope','verify_full_local_internal_scope_pre_legacy_compat'))")})`)};`;
+export const POSTIMAGE_SQL = `SELECT ${digestSql(`jsonb_build_array(${tableState("n.nspname='public' AND c.relname IN ('marketing_round2_participations','marketing_round2_events','marketing_round2_lead_requests')")},${functionState("n.nspname IN ('public','private') AND (p.proname LIKE 'marketing_round2_%' OR p.proname='verify_full_local_internal_scope')")})`)};`;
 export const ABSENCE_SQL = `SELECT NOT EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('private','public') AND p.proname LIKE 'marketing_round2_%') AND NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('marketing_round2_participations','marketing_round2_events','marketing_round2_lead_requests')) AND NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='marketing_round2_deploy');`;
 export async function recordingPrestate(query) {
-  const result = { absent: await query(ABSENCE_SQL), legacy: await query(LEGACY_CATALOG_SQL), shared: await query(SHARED_SQL), history: [] };
+  const result = { absent: await query(ABSENCE_SQL), legacy: await query(LEGACY_CATALOG_SQL), shared: await query(SHARED_SQL), immutableScope: await query(IMMUTABLE_SCOPE_SQL), outerSourceSha: await query(PREDECESSOR_SCOPE_SQL), history: [] };
   for (const table of ["homecook_deploy.migrations","supabase_migrations.schema_migrations"]) {
     const exists = await query(`SELECT to_regclass('${table}') IS NOT NULL;`);
     result.history.push(exists === "t" ? await query(`SELECT ${digestSql("coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)")} FROM ${table} t;`) : "absent");
@@ -201,6 +207,7 @@ export async function applyRecordingDatabase({ manifest, bundle, adapter, journa
   requireValue(same(target,manifest.target),"Database identity drift");
   const prestate=await recordingPrestate(sql => adapter.query(sql));
   requireValue(prestate.absent === "t" && hash(JSON.stringify(prestate)) === manifest.prestateHash,"Database prestate drift or already applied");
+  requireValue(prestate.outerSourceSha===PREDECESSOR_SCOPE_SHA && prestate.immutableScope===manifest.immutableScopeHash,"Exact deployed outer/immutable inner required");
   const planHash=hash(JSON.stringify(manifest));
   const applicationName=`r2-deploy-${manifest.operationId}`;
   await journal({state:"dispatching",planHash,target,applicationName,prestate});
@@ -226,8 +233,9 @@ export async function applyRecordingDatabase({ manifest, bundle, adapter, journa
     requireValue(await query(LEGACY_ROWS_SQL)===legacyRows && await query(LEGACY_CATALOG_SQL)===prestate.legacy,"Legacy rows/catalog changed");
     const after=await recordingPrestate(query);
     requireValue(same(after.history,prestate.history),"Generic migration history changed");
+    requireValue(after.immutableScope===prestate.immutableScope,"Immutable inner scope changed");
     requireValue(await query(POSTIMAGE_SQL)===manifest.postimage,"R2 schema/authority postimage mismatch");
-    expected={planHash,target,postimage:manifest.postimage,operationId:manifest.operationId,candidateSha:manifest.candidateSha,toolSha:manifest.toolSha,bundleSha256:bundle.bundleSha256,migrations:manifest.migrations,backup,legacyRowsHash:hash(legacyRows),legacyCatalog:prestate.legacy};
+    expected={planHash,target,postimage:manifest.postimage,immutableScopeHash:prestate.immutableScope,operationId:manifest.operationId,candidateSha:manifest.candidateSha,toolSha:manifest.toolSha,bundleSha256:bundle.bundleSha256,migrations:manifest.migrations,backup,legacyRowsHash:hash(legacyRows),legacyCatalog:prestate.legacy};
     await query(`${LEDGER_SQL}\nINSERT INTO marketing_round2_deploy.receipt(singleton,operation_id,plan_hash,receipt) VALUES(true,${literal(manifest.operationId)}::uuid,${literal(planHash)},${literal(JSON.stringify(expected))}::jsonb);`);
     requireValue(await query(LEDGER_VALID_SQL)==="t","Ledger authority mismatch");
     await journal({state:"commit-dispatched",planHash,target,applicationName,prestate,expected});
@@ -330,7 +338,7 @@ export async function createRecordingDockerAdapter({configPath,backupDirectory})
       const exists=query("SELECT to_regclass('marketing_round2_deploy.receipt') IS NOT NULL;")==="t";
       if(exists) requireValue(query(LEDGER_VALID_SQL)==="t","Ledger authority drift");
       const ledger=exists?JSON.parse(query("SELECT receipt FROM marketing_round2_deploy.receipt WHERE singleton;")):null;
-      return {target,active,ledger,postimage:ledger?query(POSTIMAGE_SQL):null,prestateMatches:!ledger && same(await recordingPrestate(sql=>this.query(sql)),prestate)};
+      return {target,active,ledger,immutableScopeHash:query(IMMUTABLE_SCOPE_SQL),postimage:ledger?query(POSTIMAGE_SQL):null,prestateMatches:!ledger && same(await recordingPrestate(sql=>this.query(sql)),prestate)};
     },
   };
 }

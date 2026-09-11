@@ -1,7 +1,7 @@
 # 2026-09-12 R2 한정 controlled DB·웹 배포 계획
 
-상태: 사용자 승인 범위의 **설계/인수 runbook**, 실제 실행·독립 승인 완료 아님.
-범위는 **두 topic / 검토된3 SQL bundle / 아래1개 live target / 한 전용 배포 브랜치**다. 일반 배포 framework나 SQL allowlist를 확장하지 않는다.
+상태: 사용자 승인 범위의 **검증 완료·실행 전 runbook**, 실제 운영 적용 전.
+범위는 **두 topic / 검토된 4 SQL bundle / 아래 1개 live target / 한 전용 배포 브랜치**다. 일반 배포 framework나 SQL allowlist를 확장하지 않는다.
 
 ## 1. 이번 승인과 고정 대상
 
@@ -40,7 +40,7 @@ live package.json의 next/eslint-config-next 15.5.21과 packageManager pnpm10.32
 
 [일반 prelaunch](prelaunch-web-deployment.md)의 `validatePrelaunchMigrationSql`은 DO/함수/RLS 등의 이번 SQL을 거부한다. 그 guard나 전체 migration ordered-prefix 규칙은 그대로 둔다. 최초 파일이 거부되는 것은 우회할 오류가 아니다.
 
-전용 경로는 이번 manifest의 exact 파일만 처리하는 작은 runner/adapter로 구현·검토한다. BE 설계 예시는 `scripts/deploy-marketing-round2-reviewed.mjs`와 제한된 helper이지만 **아직 이 문서가 실행 가능한 명령을 설치한 것은 아니다**. `plan → apply-db → reconcile-db → activate-web`의 범위만 필요하다. 실제 entrypoint/인수/tool SHA는 구현 검토 때 고정한다. 임의 SQL 경로/glob/함수명/추가 옵션을 받지 않는다.
+전용 경로는 이번 manifest의 exact 파일만 처리하는 `scripts/deploy-marketing-round2-reviewed.mjs`와 제한된 helper로 구현·검증됐다. 실행 순서는 `plan → prepare-web → apply-db`(결과 불명 시 `reconcile-db`) `→ stage-web → enable`이다. 임의 SQL 경로/glob/함수명/추가 옵션을 받지 않는다.
 
 현재 일반 CLI에 `--reviewed-ref`는 있지만 `--nomaster`나 이 전용 receipt 소비 옵션은 없다. DB를 먼저 적용했다고 일반 `deploy-prelaunch-web.mjs`가 migration diff를 자동 인정하는 것도 아니다. fake baseline, filtered scope, 거짓 `migrationMode=additive`, SQL guard 비활성으로 일반 CLI를 통과시키지 않는다.
 
@@ -48,28 +48,31 @@ live package.json의 next/eslint-config-next 15.5.21과 packageManager pnpm10.32
 
 ## 4. 정확한 SQL 목록과 payload 변환
 
-현재 문서에서 확인한 원본은 다음2개다. 순서는 첫 R2 생성 → homeflow 버전 추가 → recording 버전 추가다. **세 번째 파일이 실제로 존재하고 독립 검토된 raw/payload hash가 잠기기 전에는 이 계획은 apply 불가**다.
+검토된 원본 순서는 첫 R2 생성 → homeflow 버전 추가 → recording 버전 추가 → 운영 shared scope 호환 보존이다. 네 번째 파일은 기존 3개 파일을 수정하지 않고 운영의 기존 outer 권한과 inner delegate를 보존하면서 R2 scope만 추가한다.
 
 | 순서 | immutable source / 파일 | raw SHA256 |
 | --- | --- | --- |
 | 1 | `8c6573bf594fa15613205ce97e4435d751c7d87c` / `20260911100000_marketing_round2.sql` | `1a783932ef81041414828e336b1f8c9a75666db44180583add72a4f326324ff8` |
 | 2 | `f692ec738db53569d0e54acd9846700e3a4877f6` / `20260911110000_marketing_round2_linear_homeflow.sql` | `8487ec85f9f55230d4eb9ec995781efbc22bec6aee4155cf6e1af79b95cdfe0b` |
-| 3 | 별도 r2.2-recording 증분 SQL: 구현 담당자의 실제 파일명·source SHA·검토 입력 필요 | 미제공, 허용 목록에 가짜 hash를 넣지 않음 |
+| 3 | `20260911120000_marketing_round2_linear_recording.sql` | `d0c1a9918e624dd24f97cd355283bbf9cdd12440386846f6f3dce4a0cb8fdcf9` |
+| 4 | `20260911130000_marketing_round2_scope_compat.sql` | `202a663a6ef2ee5fa3e6b61ec4334aeb244b6c30f659ebc51b9968da5d6e8d3d` |
 
-두 알려진 파일은 자체 `begin;`/`commit;`을 포함한다. 외부 BEGIN 안에 원본을 그대로 이어 붙이면 내부 COMMIT으로 ledger 원자성이 깨진다. 검토할 변환은 **raw hash 검증 뒤 아래 exact byte span 두 개만 제거**하는 것이다. BOM/개행 변환/trim/범용 SQL sanitizer/본문 정규식 치환은 없다. 원본 파일은 보존한다.
+네 파일은 자체 `begin;`/`commit;`을 포함한다. 외부 BEGIN 안에 원본을 그대로 이어 붙이면 내부 COMMIT으로 ledger 원자성이 깨진다. 검토한 변환은 **raw hash 검증 뒤 각 파일의 첫 7 bytes와 마지막 8 bytes만 제거**하는 것이다. BOM/개행 변환/trim/범용 SQL sanitizer/본문 정규식 치환은 없다. 원본 파일은 보존한다.
 
 | 파일 | 원본 bytes / 제거 span (0-based, UTF-8 bytes) | 검토용 실행 payload SHA256 / bytes |
 | --- | --- | --- |
 | 110000 | 41684; `[0,7)`=`begin;\n`, `[41676,41684)`=`commit;\n` | `4ec3982dd76957185ddf6bedfada315932d6916f77391413df0471d5b5978eb0` /41669 |
 | 111000 | 3669; `[0,7)`=`begin;\n`, `[3661,3669)`=`commit;\n` | `83e5843ebce996a1ec8806fa263cd482c6259818e248de85beba3fca09896016` /3654 |
+| 112000 | 1726; `[0,7)`=`begin;\n`, `[1718,1726)`=`commit;\n` | `8edfcd54d17d0e4eb4b016da6518c79a8582d22d06fe6dbb796121a1600f846e` /1711 |
+| 113000 | 2579; `[0,7)`=`begin;\n`, `[2571,2579)`=`commit;\n` | `450a384116c67e0f0f280f3d7e68023a9be8b579d1af7d755b4561380ec4328c` /2564 |
 
-이 hash는 Git 원본에서 정적으로 계산한 **변환 검토 입력**이지 실행 승인/적용 증거가 아니다. 새3번째 파일도 원본 구조를 직접 읽고 exact 변환 또는 wrapper 없는 고정 payload를 별도 검토한다. 고정 outer transaction/검증/ledger SQL와 세 payload를 조립한 최종 bundle bytes/hash까지 독립 검토하며 예상 외 transaction control/psql meta command는 거부한다.
+이 hash는 Git 원본에서 정적으로 계산한 **변환 검토 입력**이지 운영 적용 증거가 아니다. 고정 outer transaction/검증/ledger SQL와 네 payload를 조립한 bundle SHA는 `b36a0db141e1265e23b5d7d233028dec135bee0405d41a8c9784bdaf3e66665f`이며, 예상 외 transaction control/psql meta command는 거부한다.
 
 111000의 CHECK 선택은 두 LIKE와 개수1 조건을 사용한다. preflight에서 대상 CHECK의 exact definition/dependency hash까지 승인된 baseline과 비교한다. 이름/개수만 맞는 다른 CHECK를 덮어쓰지 않는다. 기존2인자 r2.1 answers 함수는 보존하고3인자 함수는 version+topic을 엄격히 분리한다. 첫2개만으로 r2.2-recording 저장이 된다고 주장하지 않는다.
 
 ## 5. 실행 전 반드시 잠글 입력
 
-하나의 private manifest에 operation ID, candidate fullSHA/tree, tool fullSHA, live predecessor, 원본 export/통합 provenance, 위 **3개** filename/raw/payload SHA와 bundle SHA, security patch old/new/lock delta, 독립 review refs, target identity, backup refs, 유한 timeout을 결합한다. 미기입/placeholder/unknown SQL/해시변경/무관 diff는 fail closed다.
+하나의 private manifest에 operation ID, candidate fullSHA/tree, tool fullSHA, live predecessor, 원본 export/통합 provenance, 위 **4개** filename/raw/payload SHA와 bundle SHA, security patch old/new/lock delta, 독립 review refs, target identity, backup refs, 유한 timeout을 결합한다. 미기입/placeholder/unknown SQL/해시변경/무관 diff는 fail closed다.
 
 target은 운영자가 제공한 외부0600 config와 로컬 Unix Docker socket으로 확인한다. exact Compose/container ID/image digest·실제 image identity·volume labels·PGDATA mount·health, PG system_identifier/DB명/서버 major/role을 실행 직전에 고정한다. 현재 운영 이름이나 과거 identity 관측만으로 선택하지 않는다. Docker 첫 항목/`--local` fallback/Cloud·linked·remote DB는 없다.
 
@@ -83,7 +86,7 @@ target은 운영자가 제공한 외부0600 config와 로컬 Unix Docker socket�
 2. 하나의 지속 `BEGIN ISOLATION LEVEL READ COMMITTED` transaction에서 기존 deploy advisory lock `(104230921,77101)`과 legacy `marketing_validation_sessions` SHARE lock을 얻는다. lock 전에 얻은 오래된 snapshot을 기준으로 쓰지 않는다. R2 lease만으로 v2 writer가 멈춘다고 가정하지 않는다.
 3. 기존 writer 완료/lock 확보 후 legacy fingerprint를 기록하고 `pg_export_snapshot()`을 발행한다. exporter transaction을 유지한 채 같은 snapshot의 `pg_dump -Fc --snapshot`을 별도 연결에서 완료한다. DB 전체의 non-system schema/data/large object를 보존하며 table filter/sanitize/data-only/schema-only를 쓰지 않는다. roles는 `--no-role-passwords`와 기존 비밀 저장소 복구 근거를 분리한다.
 4. 새 외부0700 directory/0600 exclusive 파일에 dump를 저장하고 fsync, SHA256, target/tool/candidate/snapshot 시각·bytes를 기록한다. archive TOC/list와 전체 archive 읽기/해독을 확인하고, 별도 진짜 isolated restore/replay의 실제 수행 범위를 기록한다. `pg_restore --list`만으로 전체 복원 PASS라고 하지 않는다. 기존 백업을 덮어쓰거나 자동 삭제하지 않는다.
-5. 같은 fence에서 prestate/3SQL hashes/ledger를 재확인하고 고정 payload를 실행한다. 모든 schema 변경·invariant 검사·R2 전용 ledger 기록은 같은 transaction 안에 둔다. 첫2파일의 내부 BEGIN/COMMIT이 섞이면 실행 전에 거부한다.
+5. 같은 fence에서 prestate/4SQL hashes/ledger를 재확인하고 고정 payload를 실행한다. 모든 schema 변경·invariant 검사·R2 전용 ledger 기록은 같은 transaction 안에 둔다. 네 파일의 내부 BEGIN/COMMIT이 섞이면 실행 전에 거부한다.
 6. commit 직전 legacy의 PK순 전체 column row digest/count와 column/default/constraint/index/trigger/RLS/policy/ACL catalog hash가 동일한지 확인한다. 이메일/개별 row/row별digest는 공개 출력하지 않는다. 의도된 shared scope wrapper 변경은 별도 승인된 유일한 definition delta로 검사하며 몰래 불변 대상에서 제외하지 않는다. 다른 table의 정상 동시 DML까지 불변이라고 주장하지 않는다.
 7. R2 exact3table/RPC/helpers/권한/버전 CHECK와 ledger가 맞으면 COMMIT한다. 별도 read-only 연결로 동일 operation의 완전한 ledger/postimage/target을 재확인한 뒤에만 committed receipt를 발행한다. 이후 승인된 PostgREST schema reload/읽기 확인을 수행한다.
 
@@ -95,7 +98,7 @@ PostgreSQL의 [snapshot export](https://www.postgresql.org/docs/17/functions-adm
 
 R2 전용 운영 내부 ledger를 사용한다. 제품 public3테이블과 별개이며 PUBLIC/anon/authenticated/service_role 직접 접근을 허용하지 않는다. ledger DDL 자체도 검토된 고정 bundle에 포함한다. operation/candidate/tool/filename/raw+payload+bundle hash/target/backup digest/실제 적용시각을 결합하고 SQL과 원자 commit한다.
 
-일반 `homecook_deploy.migrations`는 전체 ordered prefix를 의미한다. R23개만 적용하고 나머지 migration을 applied로 넣거나 Supabase history를 조작하지 않는다. 일반 ledger는 그대로 보존한다. 후속 일반 배포는 전체 이력을 실제로 조사·독립 reconcile하기 전 prefix가 맞는다고 가정하지 않고 차단한다. 이번 전용 receipt를 일반 ledger의 대체 신뢰값으로 주입하지 않는다.
+일반 `homecook_deploy.migrations`는 전체 ordered prefix를 의미한다. R2 4개만 적용하고 나머지 migration을 applied로 넣거나 Supabase history를 조작하지 않는다. 일반 ledger는 그대로 보존한다. 후속 일반 배포는 전체 이력을 실제로 조사·독립 reconcile하기 전 prefix가 맞는다고 가정하지 않고 차단한다. 이번 전용 receipt를 일반 ledger의 대체 신뢰값으로 주입하지 않는다.
 
 dispatch 전 owner-only journal을 fsync하고 lease를 보존한다. timeout/통신 단절/psql exit/COMMIT 뒤 검사 실패는 rollback 증거가 아니다. 상태는 다음처럼 구분한다.
 
@@ -121,7 +124,7 @@ candidate loopback의 두 exact GET/SSR topic/질문·version/404/canonical/cach
 
 ## 9. 전용 receipt를 소비하는 exactSHA 웹 교체
 
-전용 activate-web은 receipt 파일hash뿐 아니라 승인 plan/candidate/tool/live predecessor/target/SQL ledger/postimage를 **다시 읽어** 일치시킨다. candidate의 DB diff가 검토된3SQL과 완전히 같고 실제 applied hashes가 같을 때만 이미 적용된 R2 bundle로 인정한다. 관련 없는 DB 파일이 하나라도 있으면 중단한다. 일반 CLI가 해당 receipt를 지원한다고 가정하거나 fake scope/baseline으로 호출하지 않는다.
+전용 웹 교체는 receipt 파일hash뿐 아니라 승인 plan/candidate/tool/live predecessor/target/SQL ledger/postimage/immutable scope hash를 **다시 읽어** 일치시킨다. candidate의 DB diff가 검토된 4SQL과 완전히 같고 실제 applied hashes가 같을 때만 이미 적용된 R2 bundle로 인정한다. 관련 없는 DB 파일이 하나라도 있으면 중단한다. 일반 CLI가 해당 receipt를 지원한다고 가정하거나 fake scope/baseline으로 호출하지 않는다.
 
 같은 operation lease와 기존 웹 plist/build identity fence 아래 기존 prepare/build/별도포트확인/switch/verify protocol을 제한적으로 재사용한다. 변경할 웹/환경/고유 build ID/원복본은 manifest와 결합한다. `--reviewed-ref`가 요구하는 live descendant도 검증한다. master merge나 remote master update를 수행하지 않는다. worker/Docker/volume/network 구성을 이 경로로 교체하지 않는다.
 
@@ -132,11 +135,11 @@ candidate loopback의 두 exact GET/SSR topic/질문·version/404/canonical/cach
 | 검증 | 반드시 증명할 결과 |
 | --- | --- |
 | scope/identity | 다른SQL/bytes/candidate/tool/target/운영volume를 격리target으로 선택/무관패키지 delta 전부거부 |
-| payload | 원본hash·exactspan·payload/bundlehash검증; 내부COMMIT/추가transaction/임의SQL 없이3SQL+ledger 원자성 |
+| payload | 원본hash·exactspan·payload/bundlehash검증; 내부COMMIT/추가transaction/임의SQL 없이4SQL+ledger 원자성 |
 | backup/fence | 원본전체dump·같은snapshot·archive검증·실제isolated복원범위,legacy DML경쟁·timeout시무적용,원본PII공개0 |
 | schema/legacy | 실제live458ce 의존 baseline replay,두r2.1+두r2.2 교차거부·기존row/함수의미보존·sharedwrapper정확delta·legacycatalog/datahash동일 |
-| fault/retry | SQL1/2/3·ledger실패 rollback,commit응답유실/after-commit오류 unknown보존,완전ledger+postimage만no-op |
+| fault/retry | SQL1/2/3/4·ledger실패 rollback,commit응답유실/after-commit오류 unknown보존,완전ledger+postimage+immutableScopeHash만no-op |
 | readiness/web | 가짜/과거SHA/fingerprint/proof/receipt거부,일반guard유지,DBunknown교체0,두landing실제연결·기존v2회귀·웹만원복 |
 | security patch | 명시package/oldnew/lockdelta별도검토,audit/build/회귀;무관업데이트·새package·major0 |
 
-정적 원본/변환 hash 계산은 이 문서 작성에서 했지만 위 runtime/DB/복원/provider 테스트는 하지 않았다. 다음 담당자는 실제 runner/3번째SQL/target·유한예산·backup/readiness/정확한웹교체 entrypoint를 구현·검증하고 독립 reviewer에 제출한다. 문서 자체와 이전 PASS를 그 실행 증거로 대체하지 않는다.
+정적 원본/변환 hash와 격리 runtime/DB/복원 검증은 기존 PASS 증거로 잠겼다. 실제 운영 apply와 provider/ingress readiness는 이 문서나 기존 PASS로 대체하지 않고 배포 operation에서 직접 확인한다.

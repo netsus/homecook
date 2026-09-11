@@ -262,7 +262,7 @@ async function main(){
   }else{
     const record=await readPrivateJson(journalPath);requireValue(record.planHash===planHash,"Journal belongs to another manifest");
     if(action==="reconcile-db"){
-      const expected=record.expected??{planHash,target:manifest.target,postimage:manifest.postimage};
+      const expected=record.expected??{planHash,target:manifest.target,postimage:manifest.postimage,immutableScopeHash:manifest.immutableScopeHash};
       const observed=await adapter.observe({...record,expected});
       const state=classifyRecordingOutcome(expected,observed);
       requireValue(state!=="unknown","Outcome unknown; leases remain held");

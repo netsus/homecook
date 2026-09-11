@@ -30,7 +30,7 @@ let started = false;
 try {
   const version = assertPinnedSupabaseCliVersion(cli(['--version']));
   assertNoIsolatedDockerResources(isolated.projectId, { env });
-  const migrationNames = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql', '20260911120000_marketing_round2_linear_recording.sql'];
+  const migrationNames = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql', '20260911120000_marketing_round2_linear_recording.sql', '20260911130000_marketing_round2_scope_compat.sql'];
   const migrationSources = [];
   for (const migrationName of migrationNames) {
     migrationSources.push(await readFile(`${isolated.rootDir}/supabase/migrations/${migrationName}`, 'utf8'));
@@ -43,14 +43,14 @@ try {
   console.warn(JSON.stringify({ phase: 'migration-replay', cliVersion: version, migrationSha256: isolated.migrationSha256, projectId: isolated.projectId }));
   for (const migrationSource of migrationSources.slice(0, 2)) sql(migrationSource);
   sql("select 'public.marketing_round2_apply(jsonb)'::regprocedure;");
-  await runAssertions({ isolated, env, sql, run, recordingMigration: migrationSources[2] });
+  await runAssertions({ isolated, env, sql, run, recordingMigration: migrationSources[2], scopeCompatMigration: migrationSources[3] });
   console.warn(JSON.stringify({ result: 'PASS', projectId: isolated.projectId, productionWrites: 0, remoteAccess: 0 }));
 } finally {
   if (started) removeIsolatedDockerResources(isolated.projectId, { env });
   assertNoIsolatedDockerResources(isolated.projectId, { env });
   await isolated.removeFiles();
 }
-async function runAssertions({ isolated, env, sql, run, recordingMigration }) {
+async function runAssertions({ isolated, env, sql, run, recordingMigration, scopeCompatMigration }) {
   const checks = [];
   function assert(value, name) { if (!value) throw new Error(`Assertion failed: ${name}`); checks.push(name); }
   function equal(actual, expected, name) { assert(isDeepStrictEqual(actual, expected), name); }
@@ -463,6 +463,11 @@ async function runAssertions({ isolated, env, sql, run, recordingMigration }) {
   const databaseLogs=run('docker',['logs',`supabase_db_${isolated.projectId}`]);
   assert(!databaseLogs.includes('preview@example.com')&&!databaseLogs.includes('parallel@example.com')&&!databaseLogs.includes('lookup@example.com'),'real backend logs omit fixture PII');
   assertOwnedDockerResources(isolated.projectId,{env});
+  // Preserve the recording increment's independent digest checks before the scope fix.
+  const beforeScopeCompat = { rows: rowDigests(), boundary: tableBoundary() };
+  sql(scopeCompatMigration);
+  equal(rowDigests(), beforeScopeCompat.rows, 'scope compatibility preserves every legacy/R2 row and event digest');
+  equal(tableBoundary(), beforeScopeCompat.boundary, 'scope compatibility preserves legacy/R2 table identity and permissions');
   const reportPath=`${root}/.omx/artifacts/r2-stage2/http-integration.json`;
   const test=spawnSync('corepack',['pnpm','exec','vitest','run','tests/marketing-round2-http.integration.test.ts','--maxWorkers=1','--reporter=json',`--outputFile=${reportPath}`],{cwd:root,env:{...env,R2_HTTP_INTEGRATION:'1',R2_HTTP_DATA_URL:isolated.dataApiUrl,R2_HTTP_SERVICE_ROLE_KEY:token,R2_HTTP_EXPECTED_DB_NAMESPACE:isolated.projectId,R2_HTTP_TARGET_IDENTITY_JSON:JSON.stringify({projectId:isolated.projectId,dataApiUrl:isolated.dataApiUrl,cliVersion:'2.110.0',migrationSha256:isolated.migrationSha256})},encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});
   await writeFile(`${root}/.omx/artifacts/r2-stage2/http-integration.log`,String(test.stdout)+String(test.stderr));

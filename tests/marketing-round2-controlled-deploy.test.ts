@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,14 +12,15 @@ import { readRound2RuntimeConfig } from "@/lib/server/marketing-round2-runtime";
 import { preflightIngressDigest, verifyPreflightIngressPair } from "@/lib/server/marketing-round2-preflight";
 
 describe("reviewed R2 bundle", () => {
-  it("locks exactly three raw files and removes only their transaction wrapper bytes", () => {
+  it("locks exactly four raw files and removes only their transaction wrapper bytes", () => {
     expect(deploy).toHaveProperty("readRecordingDeploymentBundle");
     const bundle = deploy.readRecordingDeploymentBundle(process.cwd());
-    expect(bundle.migrations).toHaveLength(3);
+    expect(bundle.migrations).toHaveLength(4);
     expect(bundle.migrations.map((m: { payloadSha256: string }) => m.payloadSha256)).toEqual([
       "4ec3982dd76957185ddf6bedfada315932d6916f77391413df0471d5b5978eb0",
       "83e5843ebce996a1ec8806fa263cd482c6259818e248de85beba3fca09896016",
       "8edfcd54d17d0e4eb4b016da6518c79a8582d22d06fe6dbb796121a1600f846e",
+      "450a384116c67e0f0f280f3d7e68023a9be8b579d1af7d755b4561380ec4328c",
     ]);
     for (const migration of bundle.migrations) {
       const raw = readFileSync(`supabase/migrations/${migration.filename}`);
@@ -29,15 +31,31 @@ describe("reviewed R2 bundle", () => {
   });
   it("refuses partial or ambiguous outcomes; only exact receipt and postimage is committed", () => {
     expect(deploy).toHaveProperty("classifyRecordingOutcome");
-    const expected = { planHash: "a".repeat(64), postimage: "b".repeat(64), target: { id: "expected" } };
-    expect(deploy.classifyRecordingOutcome(expected, { target: expected.target, ledger: expected, postimage: expected.postimage, active: false, prestateMatches: false })).toBe("committed");
-    expect(deploy.classifyRecordingOutcome(expected, { target: expected.target, ledger: null, postimage: null, active: false, prestateMatches: true })).toBe("not-applied");
+    const expected = { planHash: "a".repeat(64), postimage: "b".repeat(64), target: { id: "expected" }, immutableScopeHash: "c".repeat(64) };
+    expect(deploy.classifyRecordingOutcome(expected, { target: expected.target, ledger: expected, postimage: expected.postimage, immutableScopeHash: expected.immutableScopeHash, active: false, prestateMatches: false })).toBe("committed");
+    expect(deploy.classifyRecordingOutcome(expected, { target: expected.target, ledger: null, postimage: null, immutableScopeHash: expected.immutableScopeHash, active: false, prestateMatches: true })).toBe("not-applied");
     for (const observed of [
       { target: expected.target, ledger: null, active: true, prestateMatches: true },
       { target: expected.target, ledger: null, active: false, prestateMatches: false },
       { target: {}, ledger: expected, postimage: expected.postimage, active: false },
       { target: expected.target, ledger: { ...expected, planHash: "c".repeat(64) }, postimage: expected.postimage, active: false },
     ]) expect(deploy.classifyRecordingOutcome(expected, observed)).toBe("unknown");
+  });
+  it("keeps a changed preserved inner function unknown even when the mutable postimage and ledger match",()=>{
+    const expected={planHash:"a".repeat(64),postimage:"b".repeat(64),target:{id:"expected"},immutableScopeHash:"c".repeat(64)};
+    expect(deploy.classifyRecordingOutcome(expected,{target:expected.target,ledger:expected,postimage:expected.postimage,immutableScopeHash:"d".repeat(64),active:false,prestateMatches:false})).toBe("unknown");
+  });
+  it("adds only the R2 exact branch to the immutable deployed outer source",()=>{
+    const source=execFileSync("git",["show","6abe9f0aa63668515bffbeb82afaae5c4ba55234:supabase/migrations/20260906020000_meal_log_runtime_authority.sql"],{encoding:"utf8"});
+    const original=source.split("as $function$")[1].split("$function$")[0];
+    expect(deploy.hash(original)).toBe(deploy.PREDECESSOR_SCOPE_SHA);
+    const sql=readFileSync("supabase/migrations/20260911130000_marketing_round2_scope_compat.sql","utf8");
+    const body=sql.split("as $function$")[1].split("$function$")[0];
+    const branch="  if v_scope = 'marketing-round2' and v_method = 'POST'\n    and v_path = '/rpc/marketing_round2_apply' then return; end if;\n";
+    expect(body.split(branch)).toHaveLength(2);expect(body.replace(branch,"")).toBe(original);
+    expect(sql).not.toMatch(/alter function public\.|create or replace function private\.verify_full_local_internal_scope_pre_legacy_compat/i);
+    expect(deploy.POSTIMAGE_SQL).not.toContain("verify_full_local_internal_scope_pre_legacy_compat");
+    expect(deploy.IMMUTABLE_SCOPE_SQL).toContain("verify_full_local_internal_scope_pre_legacy_compat");
   });
   it("rejects arbitrary app/lib paths outside the exact approved source inventory", () => {
     const allowed=["app/beta/r2/homeflow/page.tsx","lib/marketing-round2.ts"];
@@ -52,7 +70,7 @@ describe("reviewed R2 bundle", () => {
     const operationId="11111111-1111-4111-8111-111111111111";
     const manifest={schema:"homecook.r2-controlled.v1",operationId,predecessor:deploy.RECORDING_PREDECESSOR,candidateSha:"a".repeat(40),candidateTree:"b".repeat(40),toolSha:"c".repeat(40),bundleSha256:bundle.bundleSha256,
       migrations:bundle.migrations.map(({filename,rawSha256,payloadSha256})=>({filename,rawSha256,payloadSha256})),limits:deploy.RECORDING_LIMITS,
-      target:{composeProject:"homecook-full-local-isolated",postgresVolumeName:"homecook-full-local-postgres"},prestateHash:"d".repeat(64),postimage:"e".repeat(64),originalCheckHash:"f".repeat(64),
+      target:{composeProject:"homecook-full-local-isolated",postgresVolumeName:"homecook-full-local-postgres"},prestateHash:"d".repeat(64),postimage:"e".repeat(64),originalCheckHash:"f".repeat(64),immutableScopeHash:"c".repeat(64),
       changes:bundle.migrations.map(m=>({path:`supabase/migrations/${m.filename}`,before:null,after:m.rawSha256})),
       evidence:Object.fromEntries(["review","isolated","oldWebCompatibility"].map(name=>[name,{path:`/private/${name}`,sha256:"f".repeat(64)}])),
       operationDirectory:join(homedir(),".homecook/prelaunch-web/r2-operations",operationId),preparedCheckout:join(homedir(),".homecook/prelaunch-web/releases",`r2-${operationId}`,"checkout"),
