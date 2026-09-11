@@ -178,12 +178,12 @@
       "critic_artifact": "ui/designs/R2_SCREEN_MAPPING.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "Follow ui/designs/R2_SCREEN_MAPPING.md for R2_RECORDING_* and R2_HOMEFLOW_* variants, eight generator docs and eight R2_*-critique.md inputs.",
-        "Capture actual implemented routes in both topics and all eight screens; include 320x568, 390x844, 393x852 and desktop.",
-        "Retain browser traces, request/response assertions and screenshots for solo activities, all six orders, reload, two tabs, two topics and completed-state preservation.",
-        "Retain keyboard, focus, safe-area, scroll, reduced-motion, text enlargement and loading/error/empty/read-only evidence.",
-        "Keep preview mock, isolated integration, actual provider and physical-device evidence separately identified.",
-        "Use distinct Codex task IDs for Stage 4 author, Stage 5 reviewer, final product-design-authority and Stage 6 reviewer; static boards are not runtime authority."
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json"
       ],
       "authority_report_paths": [
         "ui/designs/authority/R2_MENU-authority.md",
