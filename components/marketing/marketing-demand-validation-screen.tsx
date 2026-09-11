@@ -1,19 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import { Brand, Frame, MarketingDemandValidationHero as Hero } from "./marketing-demand-validation-hero";
+import { Back, UnifiedProgressHeader, MarketingDemandValidationQuiz as Quiz } from "./marketing-demand-validation-quiz";
 import Link from "next/link";
 import { preload } from "react-dom";
 import {
   ArrowRightIcon,
   CalendarIcon,
   CheckCircledIcon,
-  CheckIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
-  Cross2Icon,
-  FileTextIcon,
-  LightningBoltIcon,
-  LockClosedIcon,
   PlayIcon,
   PlusIcon,
   QuoteIcon,
@@ -68,17 +64,10 @@ interface MarketingDemandValidationScreenProps {
 
 type ShareFeedback = { kind: "error" | "success"; message: string } | null;
 type QueueRecovery = { message: string; resume: () => void } | null;
-type HeroBodyHighlight = { text: string; tone: "a" | "b" | "negative" | "positive" };
 
 const RESULT_KEYS: MarketingValidationQuizResult[] = ["homecook-passer", "eyeballing-master", "ingredient-tracker", "pro-measurer"];
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 
-const QUESTIONS = [
-  { id: "q1", prompt: "평소 칼로리나 탄단지를\n얼마나 자주 기록하나요?", choices: [["daily", "거의 매일"], ["3_5", "주 3~5일"], ["1_2", "주 1~2일"], ["none", "거의 안 함 / 안 함"]] },
-  { id: "q2", prompt: "일주일에 집밥을\n몇 끼 정도 먹나요?", helper: "직접 만들거나 가족이 만든 음식 모두 포함", choices: [["none", "거의 안 먹음"], ["1_2", "1~2끼"], ["3_5", "3~5끼"], ["6_plus", "6끼 이상"]] },
-  { id: "q3", prompt: "집밥은 주로\n어떻게 기록하나요?", choices: [["pass", "집밥은 기록하지 않음"], ["eyeball", "먹은 양을 눈대중으로 기록"], ["track", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록"], ["measure", "재료와 음식 무게까지 재서 기록"]] },
-  { id: "q4", prompt: "집밥을 기록할 때\n가장 불편한 것은?", choices: [["ingredients", "재료와 양을 하나씩 입력하는 것"], ["weight", "완성된 음식과 먹은 양을 재는 것"], ["search", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"], ["none", "별로 불편하지 않음"]] },
-] as const;
 
 const RESULTS: Record<MarketingValidationQuizResult, { title: string; quote: string; description: string; asset: string; checks?: string[] }> = {
   "homecook-passer": { title: "집밥 패스형", quote: "닭가슴살까지는 기록했는데\n김치찌개에서 앱을 닫는 타입.", description: "재료가 7개를 넘는 순간,\n인간의 영역이 아니라고 판단해요.", asset: "/assets/funnel/characters/homecook-passer.webp" },
@@ -107,11 +96,6 @@ function preloadJourneyAssets() {
   }
 }
 
-const HERO_COPY: Record<ActiveMarketingAdVariant, { title: string; emphasis: string; body: string; bodyHighlights?: HeroBodyHighlight[] }> = {
-  a: { title: "레시피만 가져오면\n영양성분 계산까지!", emphasis: "영양성분", body: "집밥도 편하게\n식단 기록해요.", bodyHighlights: [{ text: "편하게", tone: "a" }] },
-  b: { title: "수분 빠진 제육볶음 300g,\n칼로리가 달라져요.", emphasis: "칼로리", body: "집밥도 정확하게\n식단 기록해요.", bodyHighlights: [{ text: "정확하게", tone: "b" }] },
-  c: { title: "내 집밥에\n영양성분표를 딱!", emphasis: "영양성분표", body: "제육볶음 검색 대신\n내 레시피로 기록해요.", bodyHighlights: [{ text: "검색", tone: "negative" }, { text: "내 레시피", tone: "positive" }] },
-};
 
 function resolveEntry() {
   const params = new URLSearchParams(window.location.search);
@@ -157,20 +141,6 @@ function useCountUp(target: number, active: boolean, duration = 520, start = 0, 
   return reduced && active ? target : value;
 }
 
-function renderBodyHighlights(text: string, highlights: HeroBodyHighlight[]) {
-  if (!highlights.length) return text;
-  const escaped = highlights.map(({ text: highlight }) => highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  return text.split(new RegExp(`(${escaped.join("|")})`, "g")).map((part, index) => {
-    const highlight = highlights.find(({ text: candidate }) => candidate === part);
-    if (!highlight) return part;
-    return <span className={`hero-body-emphasis hero-body-emphasis--${highlight.tone}`} key={`${part}-${index}`}>
-      {part}
-      {highlight.tone === "a" || highlight.tone === "b" ? <StarFilledIcon className="hero-body-doodle hero-body-doodle--star" aria-hidden="true" /> : null}
-      {highlight.tone === "negative" ? <Cross2Icon className="hero-body-doodle hero-body-doodle--cross" aria-hidden="true" /> : null}
-      {highlight.tone === "positive" ? <><Image className="hero-body-circle-doodle" unoptimized src="/assets/funnel/annotations/circle-doodle-violet.webp" alt="" width={82} height={42} aria-hidden="true" /><StarFilledIcon className="hero-body-doodle hero-body-doodle--star" aria-hidden="true" /></> : null}
-    </span>;
-  });
-}
 
 function formatKoreanDate(date: Date) {
   return `${date.getMonth() + 1}/${date.getDate()} (${["일", "월", "화", "수", "목", "금", "토"][date.getDay()]})`;
@@ -186,57 +156,7 @@ function deriveResult(q3: MarketingValidationQuizAnswers["q3"]): MarketingValida
   return { pass: "homecook-passer", eyeball: "eyeballing-master", track: "ingredient-tracker", measure: "pro-measurer" }[q3] as MarketingValidationQuizResult;
 }
 
-function Frame({ children, stage, className = "" }: { children: ReactNode; stage: string; className?: string }) {
-  return <main className={`mdv2-screen screen-content ${className}`} data-stage={stage} data-testid={`screen-${stage}`}>{children}</main>;
-}
 
-function Brand({ compact = false }: { compact?: boolean }) {
-  return <div className={`brand-mark ${compact ? "is-compact" : ""}`}><Image unoptimized src="/assets/funnel/brand/mumeok-symbol.webp" alt="무먹" width={42} height={42} priority /><span>무엇을 먹든</span></div>;
-}
-
-function Back({ onClick, label = "이전 화면" }: { onClick: () => void; label?: string }) {
-  return <button className="icon-button back-button" type="button" onClick={onClick} aria-label={label}><ChevronLeftIcon /></button>;
-}
-
-function HeroArrow() { return <ArrowRightIcon className="hero-live-arrow" aria-hidden="true" />; }
-
-function HeroLiveVisual({ variant }: { variant: "a" | "b" | "c" }) {
-  if (variant === "a") return <div className="hero-live-visual hero-live-visual--a" data-testid="hero-live-visual">
-    <section className="hero-ui-card hero-recipe-card" data-testid="hero-ui-card"><header data-testid="hero-card-label">YouTube 레시피</header><div className="hero-live-photo hero-live-photo--youtube"><Image data-testid="hero-food-image" unoptimized src="/assets/funnel/food/recipe-jeyuk-thumbnail.webp" alt="유튜브 제육볶음 레시피 영상" width={480} height={360} priority /><span className="hero-youtube-play" aria-hidden="true"><PlayIcon /></span></div></section>
-    <div className="hero-extract-step" aria-label="재료와 양 자동 추출"><span>재료·양</span><strong>자동 추출</strong><ArrowRightIcon aria-hidden="true" /></div>
-    <section className="hero-ui-card hero-facts-card hero-facts-card--a" data-testid="hero-ui-card"><header className="hero-facts-header" data-testid="hero-card-label"><strong>영양성분</strong><span>1인분 320g 기준</span></header><div className="hero-facts-calories"><span>열량</span><strong>487 <small>kcal</small></strong></div><div className="hero-facts-rows" data-testid="hero-card-detail"><div><span>탄수화물</span><strong>31g</strong></div><div><span>단백질</span><strong>39g</strong></div><div><span>지방</span><strong>22g</strong></div></div><strong className="hero-facts-payoff">자동 계산 완료 <CheckCircledIcon /></strong></section>
-  </div>;
-  if (variant === "b") return <div className="hero-live-visual hero-live-visual--b" data-testid="hero-live-visual">
-    <section className="hero-ui-card hero-weight-card" data-testid="hero-ui-card" aria-label="완성 무게 1083g 저울"><div className="hero-live-photo hero-live-photo--scale" data-testid="hero-card-detail"><Image data-testid="hero-food-image" unoptimized src="/assets/funnel/food/jeyuk-on-scale.webp" alt="저울 위 제육볶음" width={500} height={500} priority /><output className="hero-live-scale-readout" aria-label="완성 무게 1083g">1,083<small>g</small></output></div></section>
-    <HeroArrow />
-    <section className="hero-ui-card hero-calc-card" data-testid="hero-ui-card"><div className="hero-calc-story" data-testid="hero-card-detail"><div className="hero-weight-shift" aria-label="조리 전 1420g에서 조리 후 1083g으로 변화"><div><span>조리 전</span><strong>1,420g</strong></div><ArrowRightIcon aria-hidden="true" /><div><span>조리 후</span><strong>1,083g</strong></div></div><p className="hero-water-loss"><strong>총 칼로리는 그대로</strong></p><div className="hero-calorie-result"><span>먹은 300g</span><strong>457 <small>kcal</small></strong></div></div></section>
-  </div>;
-  return <div className="hero-live-visual hero-live-visual--c" data-testid="hero-live-visual">
-    <section className="hero-ui-card hero-own-recipe-card" data-testid="hero-ui-card"><div className="hero-live-photo hero-live-photo--plate"><Image data-testid="hero-food-image" unoptimized src="/assets/funnel/food/jeyuk-recipe-clean.webp" alt="내 레시피로 만든 제육볶음" width={600} height={400} priority /></div><header data-testid="hero-card-label">내 제육볶음 레시피</header></section>
-    <HeroArrow />
-    <section className="hero-ui-card hero-facts-card hero-facts-card--c" data-testid="hero-ui-card"><header className="hero-facts-header" data-testid="hero-card-label"><strong>영양성분</strong><span>내 집밥 320g</span></header><div className="hero-facts-calories"><span>열량</span><strong>487 <small data-testid="hero-kcal-unit">kcal</small></strong></div><div className="hero-facts-rows" data-testid="hero-card-detail"><div><span>탄수화물</span><strong>31g</strong></div><div><span>단백질</span><strong>39g</strong></div><div><span>지방</span><strong>22g</strong></div></div><strong className="hero-facts-payoff">내 레시피 기준 <CheckCircledIcon /></strong></section>
-  </div>;
-}
-
-function Hero({ variant, onStart, pending = false }: { variant: ActiveMarketingAdVariant; onStart: () => void; pending?: boolean }) {
-  const copy = HERO_COPY[variant];
-  const [before, after] = copy.title.split(copy.emphasis);
-  return <Frame stage="hero" className={`hero-screen hero-screen--${variant}`}>
-    <Brand />
-    <div className="hero-copy-block"><p className="eyebrow">집밥 기록 30초 테스트</p><h1>{before}<span className="hero-title-accent">{copy.emphasis}</span>{after}</h1><p>{renderBodyHighlights(copy.body, copy.bodyHighlights ?? [])}</p></div>
-    <HeroLiveVisual variant={variant} />
-    <div className="screen-actions hero-actions"><button aria-busy={pending} className="primary-button" disabled={pending} type="button" onClick={onStart}>내 집밥기록 유형 알아보기 <ArrowRightIcon /></button>{pending ? <p className="funnel-sr-only" role="status">방문 기록을 연결하고 있어요.</p> : null}<p className="trust-line"><span><FileTextIcon aria-hidden="true" />4문항</span><span><LockClosedIcon aria-hidden="true" />로그인 없이</span><span><LightningBoltIcon aria-hidden="true" />결과 바로 확인</span></p></div>
-  </Frame>;
-}
-
-function UnifiedProgressHeader({ current, total, onBack, backLabel = "이전 화면", ariaLabel }: { current: number; total: number; onBack: () => void; backLabel?: string; ariaLabel: string }) {
-  return <div className="unified-progress-header"><Back onClick={onBack} label={backLabel} /><div className="unified-progress-segments" role="progressbar" aria-valuemin={1} aria-valuemax={total} aria-valuenow={current} aria-label={ariaLabel}>{Array.from({ length: total }, (_, index) => index + 1).map((item) => <span className={item < current ? "is-complete" : item === current ? "is-current" : ""} key={item} />)}</div><span className="unified-progress-count"><strong>{current}</strong> / {total}</span></div>;
-}
-
-function Quiz({ index, answers, onBack, onSelect, locked }: { index: number; answers: Answers; onBack: () => void; onSelect: (id: QuestionId, value: string) => void; locked: boolean }) {
-  const question = QUESTIONS[index];
-  return <Frame stage={`question-${index + 1}`} className="quiz-screen"><UnifiedProgressHeader current={index + 1} total={4} onBack={onBack} backLabel={index ? "이전 질문" : "이전 화면"} ariaLabel={`${index + 1} / 4 진행`} /><div className={`question-copy ${"helper" in question ? "has-helper" : "no-helper"}`}><h2>{question.prompt.split("\n").map((line, lineIndex) => <span key={line}>{lineIndex ? <br /> : null}{line}</span>)}</h2>{"helper" in question ? <p>{question.helper}</p> : null}</div><div className="choice-list" aria-label={question.prompt}>{question.choices.map(([value, label]) => { const active = answers[question.id] === value; return <button className={`choice-button ${active ? "is-selected" : ""}`} key={value} type="button" aria-pressed={active} disabled={locked} onClick={() => onSelect(question.id, value)}><span>{label}</span><span className="choice-indicator" aria-hidden="true">{active ? <CheckIcon /> : null}</span></button>; })}</div></Frame>;
-}
 
 function Result({ type, onBack, onNext, preview, onPreviewStart, onShare, shareFeedback }: { type: MarketingValidationQuizResult; onBack: () => void; onNext: () => void; preview: boolean; onPreviewStart: () => void; onShare: () => void; shareFeedback: ShareFeedback }) {
   const result = RESULTS[type];
