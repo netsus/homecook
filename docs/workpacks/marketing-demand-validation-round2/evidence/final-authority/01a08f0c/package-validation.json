@@ -1,0 +1,10 @@
+{
+  "task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+  "product_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "metadata_sha": "1a51971262e758896e725af31f104f42424cff78",
+  "mode": "temporary regular-file projection using real evidence; no live OMO runtime; no product execution",
+  "strict_errors": [],
+  "active_report_link_errors": [],
+  "shape_errors": [],
+  "verdict": "pass"
+}

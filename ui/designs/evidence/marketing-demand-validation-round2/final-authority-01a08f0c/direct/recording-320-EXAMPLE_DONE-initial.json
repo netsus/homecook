@@ -1,0 +1,55 @@
+{
+  "screen": "R2_RECORDING_EXAMPLE_DONE",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n사용 예시를 확인했어요\n\n내 레시피에서 먹은 분량의 추정 영양 기록으로 이어지는 예시를 보셨어요.\n\n실제 서비스가 아닌 사용 예시예요.\n\n여기서 마쳐도 괜찮아요.\n원하시면 다른 활동도 살펴보세요.\n\n메뉴로 돌아가기\n알림 접수 확인\n의견만 남기기 · 4문항\n사용 예시 다시 보기",
+  "width": 320,
+  "scrollWidth": 320,
+  "scrollY": 0,
+  "active": "사용 예시를 확인했어요",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 52,
+      "top": 455.625,
+      "bottom": 507.625,
+      "disabled": false
+    },
+    {
+      "label": "알림 접수 확인",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 50,
+      "top": 517.625,
+      "bottom": 567.625,
+      "disabled": false
+    },
+    {
+      "label": "의견만 남기기 · 4문항",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 577.625,
+      "bottom": 625.625,
+      "disabled": false
+    },
+    {
+      "label": "사용 예시 다시 보기",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 635.625,
+      "bottom": 683.625,
+      "disabled": false
+    }
+  ]
+}

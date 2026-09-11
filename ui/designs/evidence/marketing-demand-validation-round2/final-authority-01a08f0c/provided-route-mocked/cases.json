@@ -1,0 +1,2114 @@
+[
+  {
+    "topic": "recording",
+    "failure": "NETWORK_ERROR",
+    "edit": "email",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:10:51.503Z",
+    "leadRequestCount": 4,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "PASS",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": true,
+      "restoreExplicitAndUnchecked": true,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:50.531Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:50.627Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:50.652Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:50.678Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:50.835Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:51.368Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:51.410Z",
+        "action": "편집 취소하고 이전 입력으로 돌아가기",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:51.437Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:51.459Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:51.476Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:50.506Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:10:50.586Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:10:50.591Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:10:50.690Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:10:50.695Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:10:50.726Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:10:50.846Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:10:50.850Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:10:51.379Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 10,
+        "observedAt": "2026-09-11T05:10:51.384Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 422,
+        "responseError": "VALIDATION_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 11,
+        "observedAt": "2026-09-11T05:10:51.487Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 12,
+        "observedAt": "2026-09-11T05:10:51.491Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "recording",
+    "failure": "NETWORK_ERROR",
+    "edit": "consent",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:10:52.456Z",
+    "leadRequestCount": 3,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "not-run",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": false,
+      "restoreExplicitAndUnchecked": false,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:52.113Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.202Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.226Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.242Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.285Z",
+        "action": "consent-checkbox",
+        "consentChecked": false,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.310Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.334Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.361Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.401Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:52.427Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:52.094Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:10:52.164Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:10:52.169Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:10:52.254Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:10:52.258Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:10:52.373Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:10:52.377Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:10:52.438Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:10:52.443Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "recording",
+    "failure": "LEAD_CAPTURE_UNAVAILABLE",
+    "edit": "email",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:10:53.898Z",
+    "leadRequestCount": 4,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "PASS",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": true,
+      "restoreExplicitAndUnchecked": true,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:53.072Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.160Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.185Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.201Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.443Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.575Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.710Z",
+        "action": "편집 취소하고 이전 입력으로 돌아가기",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.736Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.759Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:53.776Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:53.056Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:10:53.123Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:10:53.127Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:10:53.212Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:10:53.216Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:10:53.339Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:10:53.454Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:10:53.459Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:10:53.587Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 10,
+        "observedAt": "2026-09-11T05:10:53.592Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 422,
+        "responseError": "VALIDATION_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 11,
+        "observedAt": "2026-09-11T05:10:53.788Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 12,
+        "observedAt": "2026-09-11T05:10:53.792Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "recording",
+    "failure": "LEAD_CAPTURE_UNAVAILABLE",
+    "edit": "consent",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:10:55.013Z",
+    "leadRequestCount": 3,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "not-run",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": false,
+      "restoreExplicitAndUnchecked": false,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:54.512Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.593Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.619Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.643Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.768Z",
+        "action": "consent-checkbox",
+        "consentChecked": false,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.792Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.818Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.834Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.877Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:54.893Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:54.496Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:10:54.559Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:10:54.564Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:10:54.654Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:10:54.658Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:10:54.846Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:10:54.851Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:10:54.904Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:10:54.909Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "homeflow",
+    "failure": "NETWORK_ERROR",
+    "edit": "email",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:10:56.896Z",
+    "leadRequestCount": 4,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "PASS",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": true,
+      "restoreExplicitAndUnchecked": true,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:55.584Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:55.669Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:55.692Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:55.709Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:55.960Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:56.568Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:56.701Z",
+        "action": "편집 취소하고 이전 입력으로 돌아가기",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:56.726Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:56.751Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:56.777Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:55.565Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:10:55.636Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:10:55.640Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:10:55.721Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:10:55.725Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:10:55.850Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:10:55.972Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:10:55.977Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:10:56.578Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 10,
+        "observedAt": "2026-09-11T05:10:56.582Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 422,
+        "responseError": "VALIDATION_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 11,
+        "observedAt": "2026-09-11T05:10:56.788Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 12,
+        "observedAt": "2026-09-11T05:10:56.793Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "homeflow",
+    "failure": "NETWORK_ERROR",
+    "edit": "consent",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:10:58.073Z",
+    "leadRequestCount": 3,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "not-run",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": false,
+      "restoreExplicitAndUnchecked": false,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:57.467Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.551Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.576Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.593Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.726Z",
+        "action": "consent-checkbox",
+        "consentChecked": false,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.751Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.775Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.793Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.926Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:57.951Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:57.450Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:10:57.519Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:10:57.523Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:10:57.605Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:10:57.610Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:10:57.805Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:10:57.808Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:10:57.963Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:10:57.968Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "homeflow",
+    "failure": "LEAD_CAPTURE_UNAVAILABLE",
+    "edit": "email",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:10:59.370Z",
+    "leadRequestCount": 4,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "PASS",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": true,
+      "restoreExplicitAndUnchecked": true,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:58.644Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:58.726Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:58.751Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:58.768Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:59.009Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:59.142Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:59.275Z",
+        "action": "편집 취소하고 이전 입력으로 돌아가기",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:59.301Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:59.326Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:10:59.343Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:58.628Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:10:58.694Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:10:58.698Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:10:58.779Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:10:58.783Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:10:58.905Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:10:59.020Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:10:59.024Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:10:59.154Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 10,
+        "observedAt": "2026-09-11T05:10:59.159Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 422,
+        "responseError": "VALIDATION_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 11,
+        "observedAt": "2026-09-11T05:10:59.354Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 12,
+        "observedAt": "2026-09-11T05:10:59.358Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "homeflow",
+    "failure": "LEAD_CAPTURE_UNAVAILABLE",
+    "edit": "consent",
+    "committedReceipt": false,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:11:00.477Z",
+    "leadRequestCount": 3,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "not-run",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": false,
+      "restoreExplicitAndUnchecked": false,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:10:59.986Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.069Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.093Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.109Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.244Z",
+        "action": "consent-checkbox",
+        "consentChecked": false,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.268Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.291Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.308Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.434Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:00.451Z",
+        "action": "다시 시도",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:10:59.969Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:11:00.036Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:11:00.040Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:11:00.120Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:11:00.125Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:11:00.320Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:11:00.323Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 503,
+        "responseError": "LEAD_CAPTURE_UNAVAILABLE",
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:11:00.461Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:11:00.466Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "recording",
+    "failure": "NETWORK_ERROR",
+    "edit": "email",
+    "committedReceipt": true,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:11:01.640Z",
+    "leadRequestCount": 3,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "PASS",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": true,
+      "restoreExplicitAndUnchecked": false,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:11:01.094Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:01.185Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:01.210Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:01.235Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:01.484Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:01.524Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:11:01.076Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:11:01.145Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:11:01.149Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:11:01.246Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:11:01.250Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:11:01.372Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:11:01.496Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:11:01.500Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:11:01.536Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 10,
+        "observedAt": "2026-09-11T05:11:01.541Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  },
+  {
+    "topic": "homeflow",
+    "failure": "NETWORK_ERROR",
+    "edit": "email",
+    "committedReceipt": true,
+    "result": "PASS",
+    "observedAt": "2026-09-11T05:11:02.820Z",
+    "leadRequestCount": 3,
+    "immutableEmailAndEvent": true,
+    "reconnectWithoutBackgroundLead": "PASS",
+    "uiAssertions": {
+      "initialFailureRecoveryVisible": true,
+      "editDidNotSubmit": true,
+      "receiptCheckRetainedDraft": true,
+      "restoreExplicitAndUnchecked": false,
+      "confirmedDoneVisible": true
+    },
+    "uiTrace": [
+      {
+        "observedAt": "2026-09-11T05:11:02.197Z",
+        "action": "베타 오픈 알림 받기",
+        "consentChecked": null,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:02.284Z",
+        "action": "consent-checkbox",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:02.309Z",
+        "action": "테스트 보안 확인",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:02.324Z",
+        "action": "베타 오픈 알림 신청하기",
+        "consentChecked": true,
+        "recoveryVisible": false,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:02.568Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      },
+      {
+        "observedAt": "2026-09-11T05:11:02.700Z",
+        "action": "이전 신청 접수 확인",
+        "consentChecked": true,
+        "recoveryVisible": true,
+        "doneVisible": false
+      }
+    ],
+    "observations": [
+      {
+        "sequence": 1,
+        "observedAt": "2026-09-11T05:11:02.180Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 2,
+        "observedAt": "2026-09-11T05:11:02.245Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "not_started"
+      },
+      {
+        "sequence": 3,
+        "observedAt": "2026-09-11T05:11:02.249Z",
+        "action": "activity_start",
+        "activity": "lead",
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 4,
+        "observedAt": "2026-09-11T05:11:02.336Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 5,
+        "observedAt": "2026-09-11T05:11:02.340Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": true,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 6,
+        "observedAt": "2026-09-11T05:11:02.459Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 7,
+        "observedAt": "2026-09-11T05:11:02.580Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 8,
+        "observedAt": "2026-09-11T05:11:02.586Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": "network-aborted",
+        "responseError": "NETWORK_ERROR",
+        "leadState": "started"
+      },
+      {
+        "sequence": 9,
+        "observedAt": "2026-09-11T05:11:02.712Z",
+        "action": "bootstrap",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": null,
+        "immutableLead": null,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "started"
+      },
+      {
+        "sequence": 10,
+        "observedAt": "2026-09-11T05:11:02.716Z",
+        "action": "lead_submit",
+        "activity": null,
+        "tokenPresent": false,
+        "emailFixture": "original-fixture",
+        "immutableLead": true,
+        "responseStatus": 200,
+        "responseError": null,
+        "leadState": "completed"
+      }
+    ]
+  }
+]

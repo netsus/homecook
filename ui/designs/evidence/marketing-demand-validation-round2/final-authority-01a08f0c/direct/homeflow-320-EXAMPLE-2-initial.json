@@ -1,0 +1,55 @@
+{
+  "screen": "R2_HOMEFLOW_EXAMPLE",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n계획부터 남은 요리까지\n\n실제 서비스가 아닌 준비된 예시예요.\n\n사용 예시 2/3\n\n구매할 재료 · 예시\n구매할 재료\n\n돼지고기 목살 · 신김치\n\n집에 있어 제외한 재료 · 예시\n\n양파 · 고추장 · 고춧가루\n\n보유 재료는 직접 확인해요.\n\n먹을 요리를 고르고, 집에 있는 재료를 직접 확인하며, 요리 완료와 남은 요리 상태를 표시하는 방식이에요. 보유 재료가 자동으로 감지되지는 않아요.\n\n다음 장면\n이전 장면\n알림 접수 확인\n메뉴로 돌아가기",
+  "width": 320,
+  "scrollWidth": 320,
+  "scrollY": 0,
+  "active": "계획부터 남은 요리까지",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "다음 장면",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 52,
+      "top": 665.953125,
+      "bottom": 717.953125,
+      "disabled": false
+    },
+    {
+      "label": "이전 장면",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 727.953125,
+      "bottom": 775.953125,
+      "disabled": false
+    },
+    {
+      "label": "알림 접수 확인",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 50,
+      "top": 785.953125,
+      "bottom": 835.953125,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 855.953125,
+      "bottom": 903.953125,
+      "disabled": false
+    }
+  ]
+}

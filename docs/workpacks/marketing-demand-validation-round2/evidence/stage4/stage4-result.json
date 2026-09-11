@@ -2,7 +2,7 @@
   "stage": 4,
   "role": "frontend-implementer",
   "author_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
-  "phase": "stage5-approved-awaiting-final-authority",
+  "phase": "design-confirmed-stage6-held-for-global-verification",
   "verdict": "in_progress",
   "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
   "checklist_updates": [
@@ -115,9 +115,14 @@
       "id": "delivery-manual-qa-handoff",
       "checked": true,
       "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-authority",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json"
     }
   ],
-  "independent_authority": "pending",
+  "independent_authority": "pass",
   "authority_precheck": {
     "status": "complete",
     "verdict": "pass",
@@ -133,7 +138,7 @@
   "ready": false,
   "deployment": false,
   "proposed_closeout_projection": {
-    "design_status": "pending-review",
+    "design_status": "confirmed",
     "design_authority": "pending",
     "required_checks": "pending",
     "approval_state": "not_started",
@@ -162,7 +167,7 @@
     "R2-QA-001"
   ],
   "author_scope_complete": true,
-  "stage4_overall_approval": "historical-precheck-complete; repair-author-verified; independent-stage5-approved; final-authority-pending",
+  "stage4_overall_approval": "independent-stage5-and-final-design-approved; aggregate-frontend-verification-open; stage6-not-started",
   "stage5_recheck": {
     "verdict": "approve",
     "required_fix_count": 0,
@@ -186,5 +191,14 @@
       "independent_recheck": "passed-in-authority-precheck-at-783ae392",
       "evidence_ref": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/author-result.json"
     }
-  ]
+  ],
+  "final_authority": {
+    "verdict": "approve",
+    "authority_verdict": "pass",
+    "required_fix_count": 0,
+    "actor_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+    "reviewed_metadata_sha": "1a51971262e758896e725af31f104f42424cff78",
+    "direct_product_head": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "evidence": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json"
+  }
 }

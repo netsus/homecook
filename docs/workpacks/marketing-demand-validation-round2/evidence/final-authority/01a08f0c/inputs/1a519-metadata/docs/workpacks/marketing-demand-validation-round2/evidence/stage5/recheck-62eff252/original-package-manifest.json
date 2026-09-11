@@ -1,0 +1,165 @@
+{
+  "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "ecc31ccddc3a4d402d14587e49057c3dc62a8c18f2db658522f8244d5b076027",
+      "bytes": 1144
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/archive-relocations.json",
+      "sha256": "66655e4c7725edb067a545e3d0e6789a1f8669741cee26e802b65e1bb58fd95a",
+      "bytes": 1016
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/authority-report-link-revision.json",
+      "sha256": "6314d2cb5cab41ae81629209ff908527c1a54d97678072db89f0776a6090dade",
+      "bytes": 7703
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/checklist-review.json",
+      "sha256": "c370ad47f33e69ec34da7fa67942365aa4c3a0f5c4737a8760fc51470a2c5a66",
+      "bytes": 6426
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/input-manifest.json",
+      "sha256": "c800970485e8792d9b4061e660d9f93df5c2e8a025783f4dbfebb51dd8c800e4",
+      "bytes": 2018
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/browser-source-check.json",
+      "sha256": "c2dc8dbbe7a76d14e7611b1add41e52dfa40ef2c9c5ecb0fe1916efcdf82a449",
+      "bytes": 1096
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/six-json-reference-check.json",
+      "sha256": "36efb3f718dc9d96988469d6443d771e8daa5055f34953f5d4754719b6f6db40",
+      "bytes": 833
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/six-json-semantic-check.json",
+      "sha256": "2b5066d0fcd804f090dd2cabd865cf3a133029d0c376e38dad7754cbae704058",
+      "bytes": 3842
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/stable-preview-author-readme.md",
+      "sha256": "396409ac91778589bf90c2d44a91c4afa756dd3e7dd12e194fa3d0983985b3ca",
+      "bytes": 3206
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/homeflow-390-lead-done.ax.txt",
+      "sha256": "9fcb74840aaf65e6ce436346f3cd6172af1a349a807638a2cecfd98c693f612e",
+      "bytes": 986
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/homeflow-390-lead-done.png",
+      "sha256": "526aa00a38edbb8c148c9fad681fd862ff670afc48996083adc803d8765ee4fa",
+      "bytes": 25390
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/homeflow-390-menu.png",
+      "sha256": "6c6302ab07a5fc6933758441b98024f573e2ca29c3e9fc223ad4d0d3329d98ef",
+      "bytes": 35636
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/recording-320-lead-done.png",
+      "sha256": "c47a8556d5a4bedfef9aa41a9ac6c405807d91a45003e09da859f3617127c58b",
+      "bytes": 18309
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/recording-320-lead.png",
+      "sha256": "6b03c7f2239f86b61091ebd6388862424c19ee1d0b358ff2b3e6fb1d4dee9279",
+      "bytes": 24836
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/recording-320-menu-after-lead.ax.txt",
+      "sha256": "d6592ab36e6a3532acf6c057d9b5ffe6f756e750ab0306ab0d93661ce4ad276d",
+      "bytes": 268
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/lead-edit-repro-result.json",
+      "sha256": "56c18b27bd1af2d1c7af320936c0c6f0fdf9503babee7bd3dbe6e0945294e972",
+      "bytes": 11720
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/receipt-boundary-result.json",
+      "sha256": "91faf5c63a39960384e9250a3d8bf92a7b646804f530a835e01544dca514135d",
+      "bytes": 15184
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/reproduce-lead-edit.cjs.txt",
+      "sha256": "ebc9918fc8e4930f30031b73f45e2a6c95074296624319d85341639030e0303e",
+      "bytes": 5110
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/reproduce-receipt-boundaries.cjs.txt",
+      "sha256": "91210393e103f5dc4e22ef9a94f32a85c1885e6022e4eae28d32f9ffb5d1d247",
+      "bytes": 7591
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/restore-boundary-result.json",
+      "sha256": "bd7d97eb6d2f7062f2d1639d1c2f155616771197fbf7a3bc41b293a1e3a748dc",
+      "bytes": 9167
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/restore-boundary.cjs.txt",
+      "sha256": "443d6d49866c087eb28268a9788910418776bd77f52e9047b2255636e2cdc38a",
+      "bytes": 5720
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-report.md",
+      "sha256": "b30b11c544e6472a871c85fefbb184f1eb17054727f22aa686daea8e4dc39224",
+      "bytes": 7726
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c",
+      "bytes": 23656
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/strict-evidence-validation.json",
+      "sha256": "10607517f89e71016f801c7d25782474a36633cc344693671737ef36d4f53444",
+      "bytes": 173
+    },
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d",
+      "bytes": 9411
+    },
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499",
+      "bytes": 9416
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD-authority.md",
+      "sha256": "4fcb186ac114b7d16513342fcbe3ecf1de155e808853c920d893943d9fa1e08a",
+      "bytes": 11428
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799",
+      "bytes": 9340
+    },
+    {
+      "path": "ui/designs/authority/R2_MENU-authority.md",
+      "sha256": "1cd467adface962e183a365d7df716e519f593e28736944993a19976d315865d",
+      "bytes": 14388
+    },
+    {
+      "path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "sha256": "32e8099efca404323d2fef1b66f1e554a03f57f00f7e4da7a9db707a43cbdb6f",
+      "bytes": 16760
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772",
+      "bytes": 9341
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458",
+      "bytes": 9371
+    }
+  ]
+}

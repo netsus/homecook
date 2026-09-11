@@ -44,7 +44,8 @@
     "unrelated_baseline": "Four narrow-screen and ten desktop visual failures remain separately documented; meal-detail visual identity remains unclassified.",
     "real_provider": "not_run",
     "physical_device": "not_run",
-    "final_authority": "pending",
+    "final_authority": "Independent approve/pass required0; see evidence/final-authority/01a08f0c/final-authority-result.json",
+    "stage6": "not_started; existing full frontend gate failures and scope decision remain open",
     "ready_merge_deploy": false
   }
 }

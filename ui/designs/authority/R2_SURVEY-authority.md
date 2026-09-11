@@ -1,85 +1,52 @@
-# R2_SURVEY — 독립 authority_precheck 재검토
+# R2_SURVEY — 독립 final authority
 
 - verdict: **pass**
-- actor/task: `01a08e8f-6c04-7233-a12c-b256f460e6cb`, design-reviewer; Stage4author`01a08e24-2609-77e2-b303-3fb8bd6223e8`와다른실제task.
-- review_scope: authority_precheck only. publicStage5/finalauthority아님.
-- reviewed SHA: `783ae392c648ed43d481e2166c6f42f0cc0a7912`; product`2fa7547557554ad96b029b6fc00907fe7f350baa`; base`7312a0cc9cfe1f500d896eb806e4d533a4f068b9`; PR#1555 Draft.
-- canonical: `R2_RECORDING_SURVEY` / `R2_HOMEFLOW_SURVEY`.
-- 이전검토SHA: `3d1054b39c615fccd6a1541aad6256e45ec18f28`. 제품차이는MENU foodStrip한줄이며나머지렌더/상태코드는동일.
-- 전달Source: Stage4handoff SHA256`fa9c93841051b70f3da806f5c9787fbe61b2bec1a31163b91cc9df4c9b25788d`, source29manifest`f0b8781f9686c938825dbfa7a06f53dfcf9b5c630d906ce8d2aaca4c64f8ad88`(29/29확인).
+- actor/task: `01a08f0c-bbbb-74b1-ac9b-20feb1ac085f`, product-design-authority
+- review_scope: `final_authority_gate` only
+- 최종 metadata 검토 head: `1a51971262e758896e725af31f104f42424cff78`; 제품·테스트·harness 변화0 확인.
+- 제품/브라우저 head: `62eff252cdd537c9a849caf1881ac490687abac3`; 제품 commit `7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77`
+- base: `8c6573bf594fa15613205ce97e4435d751c7d87c`; PR #1555 Draft
+- canonical: `R2_RECORDING_SURVEY` / `R2_HOMEFLOW_SURVEY`
+- Stage4 author `01a08e24-2609-77e2-b303-3fb8bd6223e8`, Stage5 reviewer `01a08e8f-6c04-7233-a12c-b256f460e6cb`와 다른 실제 task다.
 
 > evidence:
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-SURVEY-Q2.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-SURVEY-Q2.png`
-> recording mobile default (390×844, 전체 문서): [runtime/recording-390-SURVEY-Q2.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-SURVEY-Q2.png)
-> recording mobile narrow (320×568, 전체 문서): [runtime/recording-320-SURVEY-Q2.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-SURVEY-Q2.png)
-> homeflow mobile default (390×844, 전체 문서): [runtime/homeflow-390-SURVEY-Q2.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-SURVEY-Q2.png)
-> homeflow mobile narrow (320×568, 전체 문서): [runtime/homeflow-320-SURVEY-Q2.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-SURVEY-Q2.png)
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-SURVEY-1-full.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-SURVEY-1-full.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-SURVEY-2-full.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-SURVEY-4-full.png`
 
-> 위100%기본/좁은원본은이전SHA의직접검토/제공실제오류다. 현재SHA의제품diff와아래새확대실행으로연속성을확인했다. 서버RECOVERY확대는최종783ae392의고정제공근거8조합으로별도보완했다.
+## 화면 판정과 근거
 
-## 4. 화면 판정
+네 문항을 두 주제에서 직접 진행했다. Q1 가족·동거인과 끼니 포함/제외, Q2 기타·미관리/재사용 선택, Q3 없음과 Q4 입력조건·부정 응답이 보존된다. 하나씩 선택하는 질문과 이전/다음·최종 보내기 구분이 명확하다. 긴 안내와 선택지가 같은 문서에서 자연스럽게 이어진다.
 
-두 주제 네 문항의 Q1범위·Q2여섯선택지·Q3없음·Q4직접입력 조건과 부정응답을 포함해200%전체진행을 확인했다. 긴label은 높이가늘어나며단일radio조작·이전선택보존·미선택오류·제출까지한문서스크롤로진행한다.
-
-## 현재3124의200% evidence
-
-- recording: [320px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-SURVEY-Q2.png) · [390px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-SURVEY-Q2.png) · [393px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-SURVEY-Q2.png) · [1280px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-SURVEY-Q2.png)
-- homeflow: [320px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-SURVEY-Q2.png) · [390px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-SURVEY-Q2.png) · [393px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-SURVEY-Q2.png) · [1280px200%](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-SURVEY-Q2.png)
-
-[확대직접실행결과](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-result.json): 두topic×4폭,112상태snapshot(정상7화면56조합+예시/설문substep+완료MENU+로컬동의오류),axe104회위반0,페이지가로overflow0,중첩scroll0,타겟최소높이48px,외부/쓰기요청/페이지오류0. 정상7화면56조합은reviewer직접preview이고RECOVERY8조합은아래고정제공근거다.합계64대표canonical×viewport의200%근거가있지만모든오류/모든순서의전수PASS주장은아니다.
+기본390×844·narrow320×568 직접 캡처는 built-in memory preview이다. RECOVERY는 제공 route-mocked와 실제 API 원자료를 검토했으며 직접 오류 재현은 하지 않았다. 제공 확대자료는 실제 글자200%이며 screenshot 확대가 아니다. 각 근거의 환경 차이는 [통합 보고서](../../../docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-report.md)에 명시한다.
 
 ## Scorecard
 
-확인된시각범위의정성평가(/5).5매우명확,4사용가능,3수정필요.근거누락을임의제품결함점수로바꾸지않는다.작성자visual95/QA99와별개다.
+정성 평가 /5: 5는 매우 명확, 4는 사용 가능한 범위이며 4점을 미해결 결함으로 세지 않는다. 픽셀 일치율/전체 접근성 인증이 아니다.
 
 | 축 | 점수 |
 | --- | --- |
-| mobile_ux | 4/5 |
-| interaction_clarity | 5/5 |
-| visual_hierarchy | 4/5 |
-| color_material_fit | 5/5 |
-| familiar_app_pattern_fit | 5/5 |
+| mobile UX | 4/5 |
+| interaction clarity | 5/5 |
+| visual hierarchy | 4/5 |
+| color/material fit | 5/5 |
+| familiar app pattern fit | 5/5 |
 
-## Findings
+## Findings / 다음 단계
 
-- blocker: 0
-- major open: 0
-- minor: 0
+- blocker 0 / major 0 / minor 0; required_fix_ids: []
+- R2 범위 final design gate는 pass. coordinator가 입력 SHA·실제 결과·원문 hash 이력을 보존해 반영하고 Stage6를 별도 작업으로 진행한다.
+- 원 Stage5/precheck 보고서를 새 판정으로 덮어 읽지 않는다. [불변 입력과 hash](../../../docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/input-preservation.json)에 두 버전을 별도 보존했다. 본 보고서는 새 actor의 판정이다.
+- 기존 전체 gate의 mobile geometry4·desktop visual10 실패 및 meal-detail 후보PNG 미보존/미분류는 미해결이다. 이 pass는 면제나 Ready/merge 승인으로 쓰지 않는다.
+- 실제 provider/메일·실기기/인앱·공개 개인정보 검토·운영 activation은 Manual Only다. confirmed/Stage6/Ready/merge/배포를 이 작업에서 실행하지 않았다.
 
+## 대표 화면
 
+![recording-390-SURVEY-1-full.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-SURVEY-1-full.png)
 
-## 범위와 다음조치
+![recording-320-SURVEY-1-full.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-SURVEY-1-full.png)
 
-실제키보드/iOS/인앱/전체WCAG/스크린리더발화/실Turnstile·메일은미검증이다.실제API24조건·429/410/storage/revision의제공자료를이번직접재실행으로표현하지않는다. 이캠페인에는앱anchor/Wave1exactparity/앱하단탭을요구하지않는다.
+![homeflow-390-SURVEY-2-full.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-SURVEY-2-full.png)
 
-Globalgeometry4baseline실패·visual10실패(9동일수치,meal-detail후보65,906px/기준63,377px차이미분류와candidatePNG미보존)는여전히남는다. 전체gatePASS·면제·Ready·merge·confirmed승인을하지않는다. 제품코드/GHreview/DB/배포변경0.
-
-이화면과종합authority_precheck는명시된범위통과다. publicStage5는조정자의별도지시를기다린다.
-
-## 최종 고정 출처 확인
-
-최종SHA`783ae392c648ed43d481e2166c6f42f0cc0a7912`에서fd9대비제품변경0. R2-AP-002manifest35/35,현재source29/29와finalharness4/4해시일치.해시manifest의5개log는gitignored인작성자retained파일을읽고committedhash와대조했으며본패키지에포함했다. 캡처16PNG는이미직접시각검토한16PNG와byte동일하다. 캡처당시harness와최종8uniqueguard차이는명시적으로분리하며guard추가후UI/DB재실행으로표현하지않는다.
-
-[최종출처검사](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/final-source-verification.json) · [작성자고정설명](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/README.md). `apiRequests:8`은유실응답을제외한관측응답수이며전체송신요청수로일반화하지않는다.
-
-## 최초기본/좁은화면근거
-
-![recording 390 SURVEY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-SURVEY-Q2.png)
-
-![recording 320 SURVEY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-SURVEY-Q2.png)
-
-![homeflow 390 SURVEY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-SURVEY-Q2.png)
-
-![homeflow 320 SURVEY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-SURVEY-Q2.png)
-
+![homeflow-320-SURVEY-4-full.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-SURVEY-4-full.png)

@@ -1,0 +1,20 @@
+[
+  {
+    "original": "/Users/cwj/.codex/visualizations/2026/09/11/01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-stage5/evidence-crosscheck-7bfe/reproduce-lead-edit.cjs",
+    "retained": "reproductions/reproduce-lead-edit.cjs.txt",
+    "sha256": "ebc9918fc8e4930f30031b73f45e2a6c95074296624319d85341639030e0303e",
+    "bytes_unchanged": true
+  },
+  {
+    "original": "/Users/cwj/.codex/visualizations/2026/09/11/01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-stage5/evidence-crosscheck-7bfe/reproduce-receipt-boundaries.cjs",
+    "retained": "reproductions/reproduce-receipt-boundaries.cjs.txt",
+    "sha256": "91210393e103f5dc4e22ef9a94f32a85c1885e6022e4eae28d32f9ffb5d1d247",
+    "bytes_unchanged": true
+  },
+  {
+    "original": "/Users/cwj/.codex/visualizations/2026/09/11/01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-s5-fix-prereview/restore-boundary.cjs",
+    "retained": "reproductions/restore-boundary.cjs.txt",
+    "sha256": "443d6d49866c087eb28268a9788910418776bd77f52e9047b2255636e2cdc38a",
+    "bytes_unchanged": true
+  }
+]

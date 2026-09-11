@@ -1,0 +1,55 @@
+{
+  "screen": "R2_RECORDING_EXAMPLE",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n내 레시피에서 영양 기록까지\n\n실제 서비스가 아닌 준비된 예시예요.\n\n사용 예시 2/3\n\n직접 입력하는 양 · 예시\n완성한 요리 무게\n1,180g\n먹은 양\n320g\n\n저울로 확인한 무게를 입력해요.\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n다음 장면\n이전 장면\n알림 접수 확인\n메뉴로 돌아가기",
+  "width": 390,
+  "scrollWidth": 390,
+  "scrollY": 0,
+  "active": "내 레시피에서 영양 기록까지",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "다음 장면",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 52,
+      "top": 705.875,
+      "bottom": 757.875,
+      "disabled": false
+    },
+    {
+      "label": "이전 장면",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 767.875,
+      "bottom": 815.875,
+      "disabled": false
+    },
+    {
+      "label": "알림 접수 확인",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 50,
+      "top": 825.875,
+      "bottom": 875.875,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 895.875,
+      "bottom": 943.875,
+      "disabled": false
+    }
+  ]
+}

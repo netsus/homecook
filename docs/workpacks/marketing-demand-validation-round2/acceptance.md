@@ -63,7 +63,7 @@ Stage 2 체크 근거: [백엔드 인수 기록](stage2-backend-handoff.md). `ac
 
 ## Manual QA
 
-- verifier: Stage4 구현자와 다른 Stage5/6 reviewer, final authority는 별도 task. 현재 배정/실행 대기.
+- verifier: 독립 Stage5 `01a08e8f-6c04-7233-a12c-b256f460e6cb`와 별도 final authority `01a08f0c-bbbb-74b1-ac9b-20feb1ac085f` 승인 원문을 확보했다. Stage6는 전체 gate 보류로 미시작이다.
 - environment: preview 또는 승인된 pinned isolated 테스트. 운영 full-local/Cloud/실제 신청 데이터는 사용하지 않는다.
 - scenarios: 두topic×16화면mapping, 세활동단독·순서6개·교차중단·완료복귀·재보기, 320×568/390×844/393×852·desktop·키보드·200%·reduced-motion, 초기연결/저장실패/응답유실/동시탭/쿠키저장차단. 자동화 가능한 항목은 아래 Playwright/단위·DB gate에도 포함한다.
 
@@ -79,7 +79,9 @@ Stage 2 체크 근거: [백엔드 인수 기록](stage2-backend-handoff.md). `ac
 - [x] 두topic/16ID/단독·자유순서·done보존·unauthorized·error·preview차단을R2전용테스트로 고정한다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] 모바일 폭·짧은높이·자연세로scroll·safe-area·keyboard·44px터치·대비·focus·fieldset/legend·inlineerror·aria-live·reducedmotion을검증한다 <!-- omo:id=accept-r2-a11y-visual;stage=4;scope=frontend;review=5,6 -->
 - [x] actualprovider/실기기/운영승인만ManualOnly로나누고mock통과를실제발송·실서비스검증이라고보고하지않는다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
-- [ ] independent design precheck/Stage5/finalauthority와exploratoryQA/eval evidence를확보하기전confirmed로올리지않는다 <!-- omo:id=accept-r2-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] independent design precheck/Stage5/finalauthority와exploratoryQA/eval evidence를확보하기전confirmed로올리지않는다 <!-- omo:id=accept-r2-authority;stage=4;scope=frontend;review=5,6 -->
+
+디자인 승인 근거는 [독립 최종 보고서](evidence/final-authority/01a08f0c/final-authority-report.md)다. 이 체크는 전체 서비스 verification·Manual Only·Stage6·Ready·merge·배포 완료가 아니다. 기존 전체 UI 실패와 사용자 범위 결정 대기는 유지한다.
 
 ### Manual Only
 

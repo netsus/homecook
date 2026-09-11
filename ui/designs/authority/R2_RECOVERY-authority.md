@@ -1,122 +1,56 @@
-# R2_RECOVERY — 독립 authority_precheck 재검토
+# R2_RECOVERY — 독립 final authority
 
 - verdict: **pass**
-- actor/task: `01a08e8f-6c04-7233-a12c-b256f460e6cb`, design-reviewer; Stage4author`01a08e24-2609-77e2-b303-3fb8bd6223e8`와다른실제task.
-- review_scope: authority_precheck only. publicStage5/finalauthority아님.
-- reviewed SHA: `783ae392c648ed43d481e2166c6f42f0cc0a7912`; product`2fa7547557554ad96b029b6fc00907fe7f350baa`; base`7312a0cc9cfe1f500d896eb806e4d533a4f068b9`; PR#1555 Draft.
-- canonical: `R2_RECORDING_RECOVERY` / `R2_HOMEFLOW_RECOVERY`.
-- 이전검토SHA: `3d1054b39c615fccd6a1541aad6256e45ec18f28`. 제품차이는MENU foodStrip한줄이며나머지렌더/상태코드는동일.
-- 전달Source: Stage4handoff SHA256`fa9c93841051b70f3da806f5c9787fbe61b2bec1a31163b91cc9df4c9b25788d`, source29manifest`f0b8781f9686c938825dbfa7a06f53dfcf9b5c630d906ce8d2aaca4c64f8ad88`(29/29확인).
+- actor/task: `01a08f0c-bbbb-74b1-ac9b-20feb1ac085f`, product-design-authority
+- review_scope: `final_authority_gate` only
+- 최종 metadata 검토 head: `1a51971262e758896e725af31f104f42424cff78`; 제품·테스트·harness 변화0 확인.
+- 제품/브라우저 head: `62eff252cdd537c9a849caf1881ac490687abac3`; 제품 commit `7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77`
+- base: `8c6573bf594fa15613205ce97e4435d751c7d87c`; PR #1555 Draft
+- canonical: `R2_RECORDING_RECOVERY` / `R2_HOMEFLOW_RECOVERY`
+- Stage4 author `01a08e24-2609-77e2-b303-3fb8bd6223e8`, Stage5 reviewer `01a08e8f-6c04-7233-a12c-b256f460e6cb`와 다른 실제 task다.
 
 > evidence:
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-200-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-200-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-200-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-200-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-390x844.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-320x568.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-320x568.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent-cta-viewport.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent-cta-viewport.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent-cta-viewport.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent-cta-viewport.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent-cta-viewport.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent-cta-viewport.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent-cta-viewport.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent-cta-viewport.png`
-> recording mobile default (390×844, 전체 문서): [provided-real-recovery/R2_RECORDING_RECOVERY-390x844.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-390x844.png)
-> recording mobile narrow (320×568, 전체 문서): [provided-real-recovery/R2_RECORDING_RECOVERY-320x568.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-320x568.png)
-> homeflow mobile default (390×844, 전체 문서): [provided-real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png)
-> homeflow mobile narrow (320×568, 전체 문서): [provided-real-recovery/R2_HOMEFLOW_RECOVERY-320x568.png](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-320x568.png)
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-390-100-edited-recovery.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-320-100-edited-recovery.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-390-100-edited-recovery.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-320-100-edited-recovery.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-390-200-edited-recovery-cta.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-320-200-edited-recovery-cta.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-390-200-edited-recovery-cta.png`
+> - `ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-320-200-edited-recovery-cta.png`
 
-> 위100%기본/좁은원본은이전SHA의직접검토/제공실제오류다. 현재SHA의제품diff와아래새확대실행으로연속성을확인했다. 서버RECOVERY확대는최종783ae392의고정제공근거8조합으로별도보완했다.
+## 화면 판정과 근거
 
-## 8. 화면 판정
+현재 제공 실제 오류 화면과 route-mocked320/390×100/200%를 직접 읽었다. 접수 미확인 제목, 편집 주소 미전송 안내, 이전 신청 접수 확인, 편집 취소하고 이전 입력으로 돌아가기 두 행동이 구분된다. 좁은200%에서 버튼 문구가 여러 줄이 되지만 끝까지 보이며 제공 geometry의 hit/overflow/clipping 결과와 일치한다. 마스킹으로 가려진 원 이메일/문장은 원문 코드와 별도 덜 가려진 route-mocked 자료로 대조했다. 이 상태를3126 미리보기에서 재현했다고 주장하지 않는다.
 
-실제recording409동의갱신은이메일을보존하고동의체크를해제한다. 실제homeflowcommit응답유실은예시3/3내용을보존하고저장미확인과같은요청재시도를명확히구분한다. 두주제각4폭200%의전체8장과CTA viewport8장을직접열어정적본문잘림·겹침·버튼가림없음을확인했다. 재시도는하나이고다른저장CTA와중복되지않는다.
-
-## 현재200% evidence
-
-- RECORDING 320x568: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent-cta-viewport.png)
-- RECORDING 390x844: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent-cta-viewport.png)
-- RECORDING 393x852: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent-cta-viewport.png)
-- RECORDING 1280x900: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent-cta-viewport.png)
-- HOMEFLOW 320x568: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent-cta-viewport.png)
-- HOMEFLOW 390x844: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent-cta-viewport.png)
-- HOMEFLOW 393x852: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent-cta-viewport.png)
-- HOMEFLOW 1280x900: [전체](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent.png) · [CTA viewport](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent-cta-viewport.png)
+기본390×844·narrow320×568 직접 캡처는 built-in memory preview이다. RECOVERY는 제공 route-mocked와 실제 API 원자료를 검토했으며 직접 오류 재현은 하지 않았다. 제공 확대자료는 실제 글자200%이며 screenshot 확대가 아니다. 각 근거의 환경 차이는 [통합 보고서](../../../docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-report.md)에 명시한다.
 
 ## Scorecard
 
-확인된시각범위의정성평가(/5).5매우명확,4사용가능,3수정필요.근거누락을임의제품결함점수로바꾸지않는다.작성자visual95/QA99와별개다.
+정성 평가 /5: 5는 매우 명확, 4는 사용 가능한 범위이며 4점을 미해결 결함으로 세지 않는다. 픽셀 일치율/전체 접근성 인증이 아니다.
 
 | 축 | 점수 |
 | --- | --- |
-| mobile_ux | 4/5 |
-| interaction_clarity | 4/5 |
-| visual_hierarchy | 4/5 |
-| color_material_fit | 5/5 |
-| familiar_app_pattern_fit | 5/5 |
+| mobile UX | 4/5 |
+| interaction clarity | 4/5 |
+| visual hierarchy | 4/5 |
+| color/material fit | 5/5 |
+| familiar app pattern fit | 5/5 |
 
-## Findings
+## Findings / 다음 단계
 
-- blocker: 0
-- major open: 0
-- minor: 0
+- blocker 0 / major 0 / minor 0; required_fix_ids: []
+- R2 범위 final design gate는 pass. coordinator가 입력 SHA·실제 결과·원문 hash 이력을 보존해 반영하고 Stage6를 별도 작업으로 진행한다.
+- 원 Stage5/precheck 보고서를 새 판정으로 덮어 읽지 않는다. [불변 입력과 hash](../../../docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/input-preservation.json)에 두 버전을 별도 보존했다. 본 보고서는 새 actor의 판정이다.
+- 기존 전체 gate의 mobile geometry4·desktop visual10 실패 및 meal-detail 후보PNG 미보존/미분류는 미해결이다. 이 pass는 면제나 Ready/merge 승인으로 쓰지 않는다.
+- 실제 provider/메일·실기기/인앱·공개 개인정보 검토·운영 activation은 Manual Only다. confirmed/Stage6/Ready/merge/배포를 이 작업에서 실행하지 않았다.
 
-## R2-AP-002 · closed
+## 대표 화면
 
-최초의실제RECOVERY200%근거누락을최종고정패키지로해소했다. 두조건×4폭8unique측정에서root16→32px/RECOVERY본문14→28px,정적textclip0,가로overflow0,재시도74px높이·화면안bounds·center/lowerhit모두true다. recording4조합은email유지/consent해제,homeflow4조합은마지막장면유지/prematureDONE없음을제공실측에서확인했다.
+![recording-390-100-edited-recovery.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-390-100-edited-recovery.png)
 
-처음진행중자료를읽을때recording4행만있었던현상은작성중시점차이이력으로보존한다. 그4행원문/hash를재구성하지않았고최종8unique파일로다시대조했다. 첫완료run도제공패키지에별도보존한다.
+![recording-320-100-edited-recovery.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-320-100-edited-recovery.png)
 
-작성자실행은고유isolated`hcg_92245_74eb5e`,관측응답8/참여2/mockprovider1이며실provider/운영write0이다. Reviewer는DB/API를재실행하지않고,원형API실행근거와저장16PNG/8측정/최종hash를검토했다. 최종uniqueguard는저장8개read-only검사와RED3→GREEN4/기존10test제공기록이며guard후UI/DB재실행을주장하지않는다.
+![homeflow-390-100-edited-recovery.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-390-100-edited-recovery.png)
 
-[측정8조합](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/recovery-zoom-geometry.json) · [실행결과](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/result.json) · [최종readback](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/final-readback-validation.json).
-
-## 범위와 다음조치
-
-실제키보드/iOS/인앱/전체WCAG/스크린리더발화/실Turnstile·메일은미검증이다.실제API24조건·429/410/storage/revision의제공자료를이번직접재실행으로표현하지않는다. 이캠페인에는앱anchor/Wave1exactparity/앱하단탭을요구하지않는다.
-
-Globalgeometry4baseline실패·visual10실패(9동일수치,meal-detail후보65,906px/기준63,377px차이미분류와candidatePNG미보존)는여전히남는다. 전체gatePASS·면제·Ready·merge·confirmed승인을하지않는다. 제품코드/GHreview/DB/배포변경0.
-
-R2-AP-002는닫혔고필수수정0이다. publicStage5는조정자의별도지시를기다린다.
-
-## 최종 고정 출처 확인
-
-최종SHA`783ae392c648ed43d481e2166c6f42f0cc0a7912`에서fd9대비제품변경0. R2-AP-002manifest35/35,현재source29/29와finalharness4/4해시일치.해시manifest의5개log는gitignored인작성자retained파일을읽고committedhash와대조했으며본패키지에포함했다. 캡처16PNG는이미직접시각검토한16PNG와byte동일하다. 캡처당시harness와최종8uniqueguard차이는명시적으로분리하며guard추가후UI/DB재실행으로표현하지않는다.
-
-[최종출처검사](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/final-source-verification.json) · [작성자고정설명](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/README.md). `apiRequests:8`은유실응답을제외한관측응답수이며전체송신요청수로일반화하지않는다.
-
-## 최초기본/좁은화면근거
-
-![recording 390 RECOVERY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-390x844.png)
-
-![recording 320 RECOVERY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-320x568.png)
-
-![homeflow 390 RECOVERY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png)
-
-![homeflow 320 RECOVERY](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-320x568.png)
-
-
-
-## Stage5 수리 재검토 추가 근거 — 62eff252
-
-이전 본문은783ae392의시각precheck원문으로보존한다. 현재수리제품7bfe0d3b/검토head62eff252cdd537c9a849caf1881ac490687abac3에서는원신청과편집draft를분리하고,명시tokenless영수증확인·원입력복원·재동의/새challenge후같은event재시도가작동한다. R2-S5-001의최종Stage5판정은별도recheck결과를따르며precheck원문을새실행으로재명명하지않는다.
-
-추가한이미지는실제client/view/CSS에페이지props·API응답·challenge만가짜로제공한브라우저의320/390×100/200%8조합이다. 이메일부분은촬영단계에마스킹했다. 새실제API/DB실행은별도28조건자료와sourcehash로확인했고reviewer가DB를재실행한것이아니다. 실제4폭200%전체원표는historical fd9/AP002이며새편집복구변형4폭전부를새로확대검증했다고주장하지않는다.
-
-[현재 Stage5 재검토 결과](../../../docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json). finalauthority/confirmed/Stage6/Ready/merge/배포승인은포함하지않는다.
+![homeflow-320-100-edited-recovery.png](../../../ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-320-100-edited-recovery.png)

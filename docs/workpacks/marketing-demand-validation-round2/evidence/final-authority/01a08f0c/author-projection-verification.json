@@ -1,0 +1,18 @@
+{
+  "role": "stage4-author metadata projection only",
+  "actor_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "independent_final_actor_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+  "independent_result_sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+  "reviewed_metadata_sha": "1a51971262e758896e725af31f104f42424cff78",
+  "direct_product_preview_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "code_commit": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "product_test_harness_diff": "none",
+  "authorized_projection": { "design_status": "confirmed", "accept-r2-authority": true },
+  "preservation": "Prior Stage5 reports match immutable external-stage5 input bytes; prior request_changes/prelink/recheck are retained. Final reviewer text and direct/provided scope unchanged.",
+  "checks": { "unique_hash_refs": 425, "json_pointers": 251, "index_hash_matches": 425, "lint_exit_code": 0, "strict_exit_code": 0, "workpack_exit_code": 0, "closeout_current_stage_exit_code": 0, "bookkeeping_exit_code": 0, "workflow_schema_exit_code": 0 },
+  "closeout_phase": "collecting",
+  "whole_verification_passed": false,
+  "stage6": "not_started",
+  "ready_merge_deploy": false,
+  "remaining": ["Existing full frontend geometry4/visual10 failures and unclassified meal-detail comparison", "User scope decision for those failures", "Stage6 and Manual Only gates", "Current metadata head CI tracked separately from successful retry of1a519"]
+}

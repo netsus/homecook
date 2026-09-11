@@ -1,0 +1,100 @@
+{
+  "screen": "R2_HOMEFLOW_SURVEY",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 관리에 대한 의견\n\n문항 2/4\n\n현재 집밥 준비를 주로 어떻게 관리하나요?\n그날그날 생각해서 준비해요\n메모나 장보기 목록을 써요\n레시피·장보기 앱을 따로 써요\n가족과 계획이나 목록을 공유해요\n직접 준비를 관리하지 않아요·해당 없어요\n다른 방식으로 관리해요\n다음 문항\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+  "width": 390,
+  "scrollWidth": 390,
+  "scrollY": 0,
+  "active": "집밥 관리에 대한 의견",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-0",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 322.546875,
+      "bottom": 342.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-1",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 382.546875,
+      "bottom": 402.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-2",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 442.546875,
+      "bottom": 462.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-3",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 502.546875,
+      "bottom": 522.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-4",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 562.546875,
+      "bottom": 582.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-5",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 622.546875,
+      "bottom": 642.546875,
+      "disabled": false
+    },
+    {
+      "label": "다음 문항",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 52,
+      "top": 697.546875,
+      "bottom": 749.546875,
+      "disabled": false
+    },
+    {
+      "label": "이전 문항",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 759.546875,
+      "bottom": 807.546875,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 861.65625,
+      "bottom": 909.65625,
+      "disabled": false
+    }
+  ]
+}

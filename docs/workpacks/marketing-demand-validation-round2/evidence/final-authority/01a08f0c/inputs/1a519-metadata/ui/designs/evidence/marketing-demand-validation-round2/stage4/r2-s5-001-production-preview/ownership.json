@@ -1,0 +1,28 @@
+{
+  "wrapperPid": 66451,
+  "childPid": 66453,
+  "owned": "/var/folders/3z/y96spzj121b8vg6xflzxfyww0000gn/T/r2-s5-production-0JV9l2",
+  "host": "127.0.0.1",
+  "port": 3126,
+  "startedAt": "2026-09-11T05:45:10.972Z",
+  "head": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "buildId": "ojaiIGyjDlOMvWFrlUvf9",
+  "sourceTreeSha256": "ad80ffc80d83bf017391eaf3a2da825b59bf069a3d7cc1976bddc0498f0c79ed",
+  "compiledTreeSha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+  "keepRunning": true,
+  "flags": {
+    "PATH": "/Users/cwj/.opencode/bin:/opt/homebrew/opt/postgresql@15/bin:/Users/cwj/.nvm/versions/node/v22.19.0/bin:/Users/cwj/.nvm/versions/node/v22.19.0/bin:/Users/cwj/.bun/bin:/Users/cwj/.local/bin:/Users/cwj/.pyenv/shims:/opt/homebrew/bin:/Users/cwj/.local/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Users/cwj/.codex/tmp/arg0/codex-arg0ZDNpeh:/Users/cwj/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/cwj/.opencode/bin:/opt/homebrew/opt/postgresql@15/bin:/Users/cwj/.nvm/versions/node/v22.19.0/bin:/Users/cwj/.bun/bin:/Users/cwj/.local/bin:/Users/cwj/miniconda3/bin:/Users/cwj/miniconda3/condabin:/opt/homebrew/bin:/Users/cwj/.cargo/bin:/Library/Java/JavaVirtualMachines/zulu-15.jdk/Contents/Home/bin:/Users/cwj/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Library/Java/JavaVirtualMachines/zulu-15.jdk/Contents/Home/bin",
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "MUMEOK_ROUND2_LOCAL_PREVIEW": "true",
+    "MUMEOK_ROUND2_ENABLED": "false",
+    "MUMEOK_ROUND2_LEADS_ENABLED": "false",
+    "MUMEOK_ROUND2_PROFILE": "production",
+    "NEXT_PUBLIC_APP_URL": "http://127.0.0.1:3126"
+  },
+  "otherServersUntouched": [
+    3100,
+    3118,
+    3124
+  ]
+}

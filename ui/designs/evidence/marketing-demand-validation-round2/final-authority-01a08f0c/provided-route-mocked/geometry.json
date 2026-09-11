@@ -1,0 +1,258 @@
+[
+  {
+    "topic": "recording",
+    "width": 320,
+    "height": 568,
+    "zoom": 100,
+    "pageWidth": 320,
+    "rootFontSize": 16,
+    "recoveryTextSize": 14,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 337.3125,
+        "bottom": 389.3125,
+        "width": 254,
+        "height": 52,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 389.3125,
+        "bottom": 463.3125,
+        "width": 254,
+        "height": 74,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "recording-320-100-edited-recovery.png",
+    "viewportScreenshot": "recording-320-100-edited-recovery-cta.png"
+  },
+  {
+    "topic": "recording",
+    "width": 320,
+    "height": 568,
+    "zoom": 200,
+    "pageWidth": 320,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 223.1875,
+        "bottom": 345.1875,
+        "width": 254,
+        "height": 122,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 345.1875,
+        "bottom": 515.1875,
+        "width": 254,
+        "height": 170,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "recording-320-200-edited-recovery.png",
+    "viewportScreenshot": "recording-320-200-edited-recovery-cta.png"
+  },
+  {
+    "topic": "recording",
+    "width": 390,
+    "height": 844,
+    "zoom": 100,
+    "pageWidth": 390,
+    "rootFontSize": 16,
+    "recoveryTextSize": 14,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 637.140625,
+        "bottom": 689.140625,
+        "width": 316,
+        "height": 52,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 689.140625,
+        "bottom": 739.140625,
+        "width": 316,
+        "height": 50,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "recording-390-100-edited-recovery.png",
+    "viewportScreenshot": "recording-390-100-edited-recovery-cta.png"
+  },
+  {
+    "topic": "recording",
+    "width": 390,
+    "height": 844,
+    "zoom": 200,
+    "pageWidth": 390,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 518.671875,
+        "bottom": 592.671875,
+        "width": 316,
+        "height": 74,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 592.671875,
+        "bottom": 714.671875,
+        "width": 316,
+        "height": 122,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "recording-390-200-edited-recovery.png",
+    "viewportScreenshot": "recording-390-200-edited-recovery-cta.png"
+  },
+  {
+    "topic": "homeflow",
+    "width": 320,
+    "height": 568,
+    "zoom": 100,
+    "pageWidth": 320,
+    "rootFontSize": 16,
+    "recoveryTextSize": 14,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 337.3125,
+        "bottom": 389.3125,
+        "width": 254,
+        "height": 52,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 389.3125,
+        "bottom": 463.3125,
+        "width": 254,
+        "height": 74,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "homeflow-320-100-edited-recovery.png",
+    "viewportScreenshot": "homeflow-320-100-edited-recovery-cta.png"
+  },
+  {
+    "topic": "homeflow",
+    "width": 320,
+    "height": 568,
+    "zoom": 200,
+    "pageWidth": 320,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 223.1875,
+        "bottom": 345.1875,
+        "width": 254,
+        "height": 122,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 345.1875,
+        "bottom": 515.1875,
+        "width": 254,
+        "height": 170,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "homeflow-320-200-edited-recovery.png",
+    "viewportScreenshot": "homeflow-320-200-edited-recovery-cta.png"
+  },
+  {
+    "topic": "homeflow",
+    "width": 390,
+    "height": 844,
+    "zoom": 100,
+    "pageWidth": 390,
+    "rootFontSize": 16,
+    "recoveryTextSize": 14,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 637.140625,
+        "bottom": 689.140625,
+        "width": 316,
+        "height": 52,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 689.140625,
+        "bottom": 739.140625,
+        "width": 316,
+        "height": 50,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "homeflow-390-100-edited-recovery.png",
+    "viewportScreenshot": "homeflow-390-100-edited-recovery-cta.png"
+  },
+  {
+    "topic": "homeflow",
+    "width": 390,
+    "height": 844,
+    "zoom": 200,
+    "pageWidth": 390,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "controls": [
+      {
+        "name": "이전 신청 접수 확인",
+        "top": 518.671875,
+        "bottom": 592.671875,
+        "width": 316,
+        "height": 74,
+        "centerHit": true,
+        "lowerHit": true
+      },
+      {
+        "name": "편집 취소하고 이전 입력으로 돌아가기",
+        "top": 592.671875,
+        "bottom": 714.671875,
+        "width": 316,
+        "height": 122,
+        "centerHit": true,
+        "lowerHit": true
+      }
+    ],
+    "screenshot": "homeflow-390-200-edited-recovery.png",
+    "viewportScreenshot": "homeflow-390-200-edited-recovery-cta.png"
+  }
+]

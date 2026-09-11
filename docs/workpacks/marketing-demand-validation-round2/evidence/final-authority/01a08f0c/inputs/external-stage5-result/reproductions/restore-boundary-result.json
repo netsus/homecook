@@ -1,0 +1,314 @@
+{
+  "reviewedSha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "method": "exact Git blobs in-memory transpile with local injected transport, no server/network/DB",
+  "sources": [
+    {
+      "path": "lib/marketing/round2-client.ts",
+      "sha256": "8c7d17aa75981146e6a1cf9e59b0ee9fb478f50bf38ee240cd6d0c7194218efc"
+    },
+    {
+      "path": "lib/marketing-round2.ts",
+      "sha256": "9300aa427fec71dab589d194e7b94e42bad2e7a8cebec6013a9fb67c9aee7128"
+    },
+    {
+      "path": "lib/marketing/round2-session.ts",
+      "sha256": "b0dc08faae1c78d586881a2db2c8820c93994084db014c251ec38a8dc4092c2e"
+    },
+    {
+      "path": "lib/marketing/round2-client-storage.ts",
+      "sha256": "39476ebc6a575f507aaff05d84e85f5d055864b667e7d83cb1f4b441f97c6bcc"
+    },
+    {
+      "path": "lib/marketing/round2-survey.ts",
+      "sha256": "8547fe9285aedc329efad22f87a868c1cd9aa726bb7ba24efedadfcd52bf854f"
+    }
+  ],
+  "results": [
+    {
+      "topic": "recording",
+      "original": {
+        "event_id": "a1b22c45-b97c-4644-a41e-1050350fb094",
+        "topic": "recording",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1,
+        "turnstile_token": "initial-challenge"
+      },
+      "editedReceipt": {
+        "event_id": "a1b22c45-b97c-4644-a41e-1050350fb094",
+        "topic": "recording",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1
+      },
+      "beforeRestore": {
+        "posts": 7,
+        "leads": 2,
+        "writes": 0,
+        "leadForm": {
+          "email": "corrected@example.com",
+          "consent": true
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": true
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "afterRestore": {
+        "posts": 7,
+        "leads": 2,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": false
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": true
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "retryBeforeConsent": false,
+      "afterPreConsentRetry": {
+        "posts": 9,
+        "leads": 3,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": false
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": true
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "preConsentRequest": {
+        "event_id": "a1b22c45-b97c-4644-a41e-1050350fb094",
+        "topic": "recording",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1
+      },
+      "beforeNoChallenge": {
+        "posts": 9,
+        "leads": 3,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": true
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": false
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "retryNoChallenge": false,
+      "afterNoChallenge": {
+        "posts": 11,
+        "leads": 4,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": true
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": false
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "retryFresh": true,
+      "afterFresh": {
+        "posts": 13,
+        "leads": 5,
+        "writes": 1,
+        "leadForm": {
+          "email": "",
+          "consent": false
+        },
+        "pendingLead": null,
+        "tokenReady": false
+      },
+      "last": {
+        "event_id": "a1b22c45-b97c-4644-a41e-1050350fb094",
+        "topic": "recording",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1,
+        "turnstile_token": "fresh-after-reconsent"
+      },
+      "conclusion": "restore action POST0; explicit prior-receipt check before reconsent sends tokenless original POST (no newlead in model); consent plus fresh challenge submits sameevent original payload"
+    },
+    {
+      "topic": "homeflow",
+      "original": {
+        "event_id": "0db7f0d5-a8b8-4e9f-bab8-309a602170b6",
+        "topic": "homeflow",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1,
+        "turnstile_token": "initial-challenge"
+      },
+      "editedReceipt": {
+        "event_id": "0db7f0d5-a8b8-4e9f-bab8-309a602170b6",
+        "topic": "homeflow",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1
+      },
+      "beforeRestore": {
+        "posts": 7,
+        "leads": 2,
+        "writes": 0,
+        "leadForm": {
+          "email": "corrected@example.com",
+          "consent": true
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": true
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "afterRestore": {
+        "posts": 7,
+        "leads": 2,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": false
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": true
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "retryBeforeConsent": false,
+      "afterPreConsentRetry": {
+        "posts": 9,
+        "leads": 3,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": false
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": true
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "preConsentRequest": {
+        "event_id": "0db7f0d5-a8b8-4e9f-bab8-309a602170b6",
+        "topic": "homeflow",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1
+      },
+      "beforeNoChallenge": {
+        "posts": 9,
+        "leads": 3,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": true
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": false
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "retryNoChallenge": false,
+      "afterNoChallenge": {
+        "posts": 11,
+        "leads": 4,
+        "writes": 0,
+        "leadForm": {
+          "email": "first@example.com",
+          "consent": true
+        },
+        "pendingLead": {
+          "email": "first@example.com",
+          "edited": false
+        },
+        "tokenReady": false,
+        "error": "VALIDATION_ERROR"
+      },
+      "retryFresh": true,
+      "afterFresh": {
+        "posts": 13,
+        "leads": 5,
+        "writes": 1,
+        "leadForm": {
+          "email": "",
+          "consent": false
+        },
+        "pendingLead": null,
+        "tokenReady": false
+      },
+      "last": {
+        "event_id": "0db7f0d5-a8b8-4e9f-bab8-309a602170b6",
+        "topic": "homeflow",
+        "round_version": "r2.1",
+        "honeypot": "",
+        "action": "lead_submit",
+        "email": "first@example.com",
+        "consent": true,
+        "consent_version": "mumeok-r2-beta-notice-20260911",
+        "purpose": "beta_open_notice",
+        "consent_generation": 1,
+        "turnstile_token": "fresh-after-reconsent"
+      },
+      "conclusion": "restore action POST0; explicit prior-receipt check before reconsent sends tokenless original POST (no newlead in model); consent plus fresh challenge submits sameevent original payload"
+    }
+  ]
+}

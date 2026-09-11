@@ -1,0 +1,5 @@
+
+> homecook@0.1.0 validate:authority-evidence-presence /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/validate-authority-evidence-presence.mjs -- --slice marketing-demand-validation-round2
+
+authority evidence presence validation passed

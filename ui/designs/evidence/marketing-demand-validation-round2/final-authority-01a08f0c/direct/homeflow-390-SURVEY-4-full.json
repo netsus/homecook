@@ -1,0 +1,82 @@
+{
+  "screen": "R2_HOMEFLOW_SURVEY",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 관리에 대한 의견\n\n문항 4/4\n\n먹을 요리를 고르고, 집에 있는 재료를 직접 확인하며, 요리 완료와 남은 요리 상태를 표시하는 방식이에요. 보유 재료가 자동으로 감지되지는 않아요.\n\n이 방식의 집밥 관리 기능을 사용해 보고 싶나요?\n사용해 보고 싶어요\n상황에 따라 써볼 것 같아요\n사용할 의향이 없어요\n아직 모르겠어요\n의견 보내기\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+  "width": 390,
+  "scrollWidth": 390,
+  "scrollY": 0,
+  "active": "집밥 관리에 대한 의견",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-0",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 425.71875,
+      "bottom": 445.71875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-1",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 485.71875,
+      "bottom": 505.71875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-2",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 545.71875,
+      "bottom": 565.71875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-3",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 605.71875,
+      "bottom": 625.71875,
+      "disabled": false
+    },
+    {
+      "label": "의견 보내기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 52,
+      "top": 680.71875,
+      "bottom": 732.71875,
+      "disabled": false
+    },
+    {
+      "label": "이전 문항",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 742.71875,
+      "bottom": 790.71875,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 844.828125,
+      "bottom": 892.828125,
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "screen": "R2_RECORDING_SURVEY",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 1/4\n\n최근 7일 동안 본인이나 가족·동거인이 집에서 조리한 식사를 몇 번 먹었나요?\n\n본인이 직접 만들지 않아도 가족·동거인이 집에서 조리한 식사를 포함해요. 집에서 조리한 주된 음식이 있는 한 끼를 1번으로 세며, 배달·포장 음식이나 완제품을 데우기만 한 끼니와 간식은 제외해요.\n\n0번\n1~2번\n3~5번\n6번 이상\n다음 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+  "width": 390,
+  "scrollWidth": 390,
+  "scrollY": 0,
+  "active": "집밥 기록에 대한 의견",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q1-0",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 449.984375,
+      "bottom": 469.984375,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q1-1",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 509.984375,
+      "bottom": 529.984375,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q1-2",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 569.984375,
+      "bottom": 589.984375,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q1-3",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 629.984375,
+      "bottom": 649.984375,
+      "disabled": false
+    },
+    {
+      "label": "다음 문항",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 52,
+      "top": 704.984375,
+      "bottom": 756.984375,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 811.09375,
+      "bottom": 859.09375,
+      "disabled": false
+    }
+  ]
+}

@@ -125,3 +125,11 @@ Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhe
 source62eff의 GitHub 검사19개는16 SUCCESS/3의도된 SKIP로 전부 종료했다. 이후 근거 문서만 바뀐 최종 head의 CI는 해당 head에서 별도로 확인한다. 검토/미리보기 이후 제품·테스트·harness 변경은 없다.
 
 조정 작업 `01a07316-265c-7f22-b0af-fa22b7fb2b8a`는 별도의 최종 화면 승인 작업 `01a08f0c-bbbb-74b1-ac9b-20feb1ac085f`를 실제 배정했다. 현재 검토 중이며 최종 판정은 작성자 작업에서 생성하지 않는다. Stage6는 아직 미배정이다. Design Status는 pending-review, 전체 authority acceptance·Ready·merge·배포와 기존 전체 UI 실패 처리도 대기한다.
+
+## 최종 디자인 승인과 남은 전체 검증
+
+별도 실제 작업 `01a08f0c-bbbb-74b1-ac9b-20feb1ac085f`의 [최종 화면 승인](evidence/final-authority/01a08f0c/final-authority-report.md)은 approve/pass·필수수정0이다. 직접 제품/브라우저 검토는62eff, 마지막 metadata 검토는1a519로 구분하며 code7bfe와 제품 차이0을 유지했다. 8공통/16canonical 판정을 소비해 Design Status confirmed와 `accept-r2-authority` 체크만 허용 범위대로 반영했다. 새 보고서8개는 원문 그대로이며 이전 Stage5 보고서8개는 제공된 불변 input에 보존했다. 여섯 JSON은 과거 해시를 바꾸지 않고 새 final 항목을 별도로 추가했다.
+
+전체 `verify:frontend`의 기존 geometry4/visual10 실패, meal-detail 비교 미분류와 사용자 수리 범위 결정은 남아 있다. canonical closeout은 collecting, 전체 검증/승인은 미완료, auto-merge는 false이며 Stage6는 시작하지 않았다. 디자인 승인으로 전체 검증을 PASS로 바꾸지 않는다. 운영 DB/실제 공급자/실기기/activation/배포는 이전 Manual Only 경계를 유지한다.
+
+1a519 CI에서 변경하지 않은 `personal-recipe-editor-full-local-verifier.test.ts`의 한 조건이5000ms에 시간 초과했다. 같은 파일의 현재 소스 개별17개는 통과했지만 이것만으로 원인을 확정하지 않는다. 원문 실패·개별 결과·동일 head failed-job1회 재실행과 후속 metadata head CI는 구분한다. timeout/skip/제품/테스트/harness는 변경하지 않았다. 고정 미리보기3126과 이전 서버는 유지한다.

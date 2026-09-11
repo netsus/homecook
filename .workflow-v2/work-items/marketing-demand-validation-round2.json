@@ -1,7 +1,7 @@
 {
   "id": "marketing-demand-validation-round2",
   "title": "Marketing demand validation round 2",
-  "summary": "Stage 4 작성자 구현·검증 자료 및 Draft PR1555 인계 준비 완료. Stage4 전체 승인은 authority_precheck 대기다. 공식 r2.1/선행 Stage3 merge7312a0cc를 소비하고정식frontend PR빠른gate와실제UI/API/새isolatedDB,탐색QA/eval99를확인했다. complete regression/visual의exactbase재현실패는open으로보존. 독립authority/Stage5/Stage6와현재headCI판정은pending이며Ready/병합/배포승인없음.",
+  "summary": "R2 수리 제품7bfe와metadata1a519를독립Stage5 및최종화면승인에서approve/required0으로확인했다. 디자인confirmed만반영하며closeout은collecting,Stage6는미시작이다. 기존전체frontend geometry4/visual10실패와CI timeout재실행을분리보존하고전체verification/Ready/merge/배포승인은하지않는다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -128,21 +128,32 @@
     "phase": "collecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
-      "design_status": "pending-review",
+      "design_status": "confirmed",
       "delivery_checklist": "pending",
-      "design_authority": "pending",
+      "design_authority": "passed",
       "acceptance": "pending",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
       "required_checks": "pending",
       "external_smokes": "pending",
-      "authority_reports": [],
+      "authority_reports": [
+        "ui/designs/authority/R2_MENU-authority.md",
+        "ui/designs/authority/R2_EXAMPLE-authority.md",
+        "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+        "ui/designs/authority/R2_SURVEY-authority.md",
+        "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+        "ui/designs/authority/R2_LEAD-authority.md",
+        "ui/designs/authority/R2_LEAD_DONE-authority.md",
+        "ui/designs/authority/R2_RECOVERY-authority.md"
+      ],
       "actual_verification_refs": [
         "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md",
         "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/stage4-result.json",
         ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploratory-report.json",
-        ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/eval-result.json"
+        ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/eval-result.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json"
       ]
     },
     "merge_gate_projection": {

@@ -1,0 +1,11 @@
+{
+  "result": "PASS",
+  "checkedFiles": 830,
+  "mismatches": [],
+  "compiledTreeSha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+  "buildId": "ojaiIGyjDlOMvWFrlUvf9",
+  "serverSessionId": 48056,
+  "wrapperPid": 66451,
+  "childPid": 66453,
+  "listening": "127.0.0.1:3126"
+}

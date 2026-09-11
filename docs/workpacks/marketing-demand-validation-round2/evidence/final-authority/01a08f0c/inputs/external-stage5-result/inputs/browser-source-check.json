@@ -1,0 +1,42 @@
+{
+  "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "files": [
+    {
+      "path": "lib/marketing/round2-client.ts",
+      "matches_head": true,
+      "fixture_page_exception": false
+    },
+    {
+      "path": "components/marketing/round2/round2-view.tsx",
+      "matches_head": true,
+      "fixture_page_exception": false
+    },
+    {
+      "path": "components/marketing/round2/round2-landing.tsx",
+      "matches_head": true,
+      "fixture_page_exception": false
+    },
+    {
+      "path": "components/marketing/round2/round2-turnstile.tsx",
+      "matches_head": true,
+      "fixture_page_exception": false
+    },
+    {
+      "path": "components/marketing/round2/round2.module.css",
+      "matches_head": true,
+      "fixture_page_exception": false
+    },
+    {
+      "path": "app/globals.css",
+      "matches_head": true,
+      "fixture_page_exception": false
+    },
+    {
+      "path": "app/beta/r2/[topic]/page.tsx",
+      "matches_head": false,
+      "fixture_page_exception": true
+    }
+  ],
+  "page_fixture_not_actual_api": true,
+  "stable_old_previews_not_reused": true
+}
