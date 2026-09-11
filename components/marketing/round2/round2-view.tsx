@@ -283,7 +283,7 @@ export function Round2View({ topic, preview, leadReady, turnstileSiteKey, state,
           <p className={styles.notice}>실제 서비스가 아닌 준비된 예시예요.</p>
           <p className={styles.progress}>사용 예시 {scene + 1}/3</p>
           <ExampleScene topic={topic} scene={scene}/>
-          <p className={styles.notice}>{ROUND2_SURVEYS[topic].questions[3].noticeBefore}</p>{recovery}{connectionStatus}<div className={styles.actions}>{scene < 2 ? <button className={styles.primary} onClick={() => setScene(scene + 1)}>다음 장면</button> : <button className={styles.primary} disabled={!completed("example") && waiting} onClick={() => void finishExample()}>{completed("example") ? "확인 완료 화면 보기" : "예시 확인 완료"}</button>}{scene > 0 && <button className={styles.text} onClick={() => setScene(scene - 1)}>이전 장면</button>}{activityButton("lead", "secondary")}</div>
+          <p className={styles.notice}>{ROUND2_SURVEYS[topic].questions[3].noticeBefore}</p>{recovery}{connectionStatus}<div className={styles.actions}>{scene < 2 ? <button className={styles.primary} onClick={() => setScene(scene + 1)}>다음 장면</button> : error && !completed("example") ? null : <button className={styles.primary} disabled={!completed("example") && waiting} onClick={() => void finishExample()}>{completed("example") ? "확인 완료 화면 보기" : "예시 확인 완료"}</button>}{scene > 0 && <button className={styles.text} onClick={() => setScene(scene - 1)}>이전 장면</button>}{activityButton("lead", "secondary")}</div>
         </> : active === "survey" ? <>
           <p className={styles.progress}>문항 {question + 1}/4</p>{"noticeBefore" in q && <p className={styles.condition}>{q.noticeBefore}</p>}<fieldset className={styles.question} aria-describedby={fieldError ? "r2-question-error" : undefined}>
             <legend>{q.label}</legend>{"noticeAfter" in q && <p className={styles.notice}>{q.noticeAfter}</p>}<div className={styles.options}>{q.options.map((option, index) => <label key={option.value} className={styles.option}>
@@ -292,7 +292,7 @@ export function Round2View({ topic, preview, leadReady, turnstileSiteKey, state,
                     void actions.saveSurveyDraft({ ...state.draft, [q.id]: option.value });
                 }}/>{option.label}</label>)}</div>
           </fieldset>{fieldError && <p id="r2-question-error" role="alert" className={styles.fieldError}>{fieldError}</p>}{recovery}{connectionStatus}<div className={styles.actions}>
-            <button className={styles.primary} disabled={question === 3 && waiting} onClick={() => void surveyNext()}>{question === 3 ? "의견 보내기" : "다음 문항"}</button>{question > 0 && <button className={styles.text} onClick={() => {
+            {(question < 3 || !error) && <button className={styles.primary} disabled={question === 3 && waiting} onClick={() => void surveyNext()}>{question === 3 ? "의견 보내기" : "다음 문항"}</button>}{question > 0 && <button className={styles.text} onClick={() => {
                     setFieldError(null);
                     setQuestion(question - 1);
                 }}>이전 문항</button>}</div>
@@ -315,7 +315,7 @@ export function Round2View({ topic, preview, leadReady, turnstileSiteKey, state,
                 }} onError={message => {
                     setChallengeError(message);
                     actions.setTurnstileToken(null);
-                }}/>}{challengeError && <div><p role="alert" className={styles.fieldError}>{challengeError}</p><button type="button" className={styles.secondary} onClick={()=>{setChallengeError(null);actions.setTurnstileToken(null);setChallengeRetry(value=>value+1);}}>보안 확인 다시 시도</button></div>}{fieldError && <p id="r2-form-error" role="alert" className={styles.fieldError}>{fieldError}</p>}{recovery}{connectionStatus}<button className={styles.primary} type="submit" disabled={waiting || !leadReady}>베타 오픈 알림 신청하기</button>
+                }}/>}{challengeError && <div><p role="alert" className={styles.fieldError}>{challengeError}</p><button type="button" className={styles.secondary} onClick={()=>{setChallengeError(null);actions.setTurnstileToken(null);setChallengeRetry(value=>value+1);}}>보안 확인 다시 시도</button></div>}{fieldError && <p id="r2-form-error" role="alert" className={styles.fieldError}>{fieldError}</p>}{recovery}{connectionStatus}{!error && <button className={styles.primary} type="submit" disabled={waiting || !leadReady}>베타 오픈 알림 신청하기</button>}
         </form>
       </>}
       {screen !== "menu" && !isDone && <button className={styles.text} onClick={menu}>메뉴로 돌아가기</button>}{screen === "menu" && <footer>
