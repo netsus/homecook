@@ -1,0 +1,14 @@
+{
+  "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "failed": 10,
+  "skipped": 1,
+  "passed": 0,
+  "exit": 1,
+  "same_failure_screen_count": 10,
+  "same_dimension_and_pixel_count": 9,
+  "different_pixel_count": [
+    "qa-meal-detail.png"
+  ],
+  "source_snapshot_changed": false,
+  "waiver": false
+}

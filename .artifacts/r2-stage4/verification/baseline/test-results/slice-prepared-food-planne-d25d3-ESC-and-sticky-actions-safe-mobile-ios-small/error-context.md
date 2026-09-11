@@ -1,0 +1,92 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - status "서비스 준비 안내" [ref=e2]:
+    - generic [ref=e3]: 서비스 준비 중
+    - generic [ref=e5]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+  - main [ref=e6]:
+    - region "완제품 직접 등록" [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: FOOD PRODUCT CREATE
+          - heading "완제품 직접 등록" [level=2] [ref=e14]
+        - button "완제품 등록 닫기" [ref=e15] [cursor=pointer]: ×
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - paragraph [ref=e19]: 사용자 등록 공동 제품
+            - paragraph [ref=e20]: 다른 로그인 사용자도 검색하고 식단에 추가할 수 있어요.
+            - paragraph [ref=e21]: 등록자만 수정·삭제할 수 있고, 다른 사용자는 읽기와 추가만 가능해요.
+          - generic [ref=e22]:
+            - generic [ref=e23]:
+              - text: 제품명
+              - generic [ref=e24]: 필수
+              - textbox "제품명 필수 제품명을 입력해 주세요." [active] [ref=e25]:
+                - /placeholder: "예: 플레인 요거트"
+              - generic [ref=e26]: 제품명을 입력해 주세요.
+            - generic [ref=e27]:
+              - text: 업체/브랜드
+              - generic [ref=e28]: 선택
+              - textbox "업체/브랜드 선택" [ref=e29]:
+                - /placeholder: "예: 무먹 식품"
+          - group "영양 계산 기준량" [ref=e30]:
+            - generic [ref=e31]: 영양 계산 기준량
+            - generic [ref=e32]:
+              - generic [ref=e33]:
+                - text: 기준량
+                - spinbutton "기준량" [ref=e34]: "100"
+              - generic [ref=e35]:
+                - text: 단위
+                - combobox "단위" [ref=e36]:
+                  - option "g" [selected]
+                  - option "mL"
+            - generic [ref=e37]:
+              - text: 원 라벨 기준량
+              - generic [ref=e38]: 선택
+              - textbox "원 라벨 기준량 선택" [ref=e39]:
+                - /placeholder: "예: 1회(40g), 1병(190mL)"
+          - group "영양성분" [ref=e40]:
+            - generic [ref=e41]: 영양성분
+            - generic [ref=e42]:
+              - text: 열량 (kcal)
+              - generic [ref=e43]: 필수
+              - spinbutton "열량 (kcal) 필수" [ref=e44]
+            - paragraph [ref=e45]: 입력하지 않은 영양성분은 0이 아니라 정보 없음으로 표시돼요.
+            - generic [ref=e46]:
+              - generic [ref=e47]:
+                - text: 탄수화물 (g)
+                - generic [ref=e48]: 선택
+                - spinbutton "탄수화물 (g) 선택" [ref=e49]
+              - generic [ref=e50]:
+                - text: 단백질 (g)
+                - generic [ref=e51]: 선택
+                - spinbutton "단백질 (g) 선택" [ref=e52]
+              - generic [ref=e53]:
+                - text: 지방 (g)
+                - generic [ref=e54]: 선택
+                - spinbutton "지방 (g) 선택" [ref=e55]
+              - generic [ref=e56]:
+                - text: 나트륨 (mg)
+                - generic [ref=e57]: 선택
+                - spinbutton "나트륨 (mg) 선택" [ref=e58]
+              - generic [ref=e59]:
+                - text: 당류 (g)
+                - generic [ref=e60]: 선택
+                - spinbutton "당류 (g) 선택" [ref=e61]
+              - generic [ref=e62]:
+                - text: 포화지방 (g)
+                - generic [ref=e63]: 선택
+                - spinbutton "포화지방 (g) 선택" [ref=e64]
+              - generic [ref=e65]:
+                - text: 식이섬유 (g)
+                - generic [ref=e66]: 선택
+                - spinbutton "식이섬유 (g) 선택" [ref=e67]
+        - generic [ref=e68]:
+          - button "목록으로" [ref=e69] [cursor=pointer]
+          - button "등록하고 선택" [ref=e70] [cursor=pointer]
+  - region "새 알림"
+  - alert [ref=e71]
+  - button "YouTube 추출 알림 없음" [ref=e73] [cursor=pointer]:
+    - img [ref=e74]
+```

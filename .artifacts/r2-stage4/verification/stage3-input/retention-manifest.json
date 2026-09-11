@@ -1,0 +1,80 @@
+{
+  "reviewer_task": "01a08d65-e8dc-74c0-8d0e-3c8a96c1ac00",
+  "reviewed_sha": "09413ba38ee6d1c69925b1c479ce44e03e6885cd",
+  "records": [
+    {
+      "path": ".artifacts/r2-stage4/verification/stage3-input/stage3-review.md",
+      "source_sha256": "4988a5bbf230a38a37dc2e427479a650f2fd60a77b89b76c77a7916d8a89cc25",
+      "retained_sha256": "08538bc4998aefcb4538a55d253599dfe917c44edfaa5859a086d90b8c40ad95"
+    },
+    {
+      "path": ".artifacts/r2-stage4/verification/stage3-input/stage3-result.json",
+      "source_sha256": "bf146c25f271c01f3dfe0c79c514732838bf2d7f506f2ed204c92f6ecafd34c0",
+      "retained_sha256": "bf146c25f271c01f3dfe0c79c514732838bf2d7f506f2ed204c92f6ecafd34c0"
+    },
+    {
+      "path": ".artifacts/r2-stage4/verification/stage3-input/source-manifest.json",
+      "source_sha256": "ee1b7f725b5248ea3d6846347884cf90768e98f418dfe9eb416d04ff56d82d14",
+      "retained_sha256": "ee1b7f725b5248ea3d6846347884cf90768e98f418dfe9eb416d04ff56d82d14"
+    },
+    {
+      "path": ".artifacts/r2-stage4/verification/stage3-input/browser-result.json",
+      "source_sha256": "dd748b903623a02e695f7257bb14c1a06160ef2b2f5f9207d2cd0a358097c417",
+      "retained_sha256": "dd748b903623a02e695f7257bb14c1a06160ef2b2f5f9207d2cd0a358097c417"
+    },
+    {
+      "path": ".artifacts/r2-stage4/verification/stage3-input/http-integration.json",
+      "source_sha256": "88e20abeb9a96efed729f9acc0b111b8eba5b0c4536750bc84583b4bbab0b494",
+      "retained_sha256": "88e20abeb9a96efed729f9acc0b111b8eba5b0c4536750bc84583b4bbab0b494"
+    }
+  ],
+  "backend_byte_comparison": [
+    {
+      "path": "lib/marketing-round2.ts",
+      "unchanged": true,
+      "sha256": "9300aa427fec71dab589d194e7b94e42bad2e7a8cebec6013a9fb67c9aee7128"
+    },
+    {
+      "path": "lib/marketing/round2-survey.ts",
+      "unchanged": true,
+      "sha256": "8547fe9285aedc329efad22f87a868c1cd9aa726bb7ba24efedadfcd52bf854f"
+    },
+    {
+      "path": "lib/server/marketing-round2.ts",
+      "unchanged": true,
+      "sha256": "edeca662d78104f289009948e7422cd8e1e00302f734e9b7b764f9fc731b5b75"
+    },
+    {
+      "path": "lib/server/marketing-round2-runtime.ts",
+      "unchanged": true,
+      "sha256": "ed456c9a0f53ebc9f71a12eb5d796e61ff1a03cf9527238915b28c604ce466da"
+    },
+    {
+      "path": "lib/server/marketing-round2-storage.ts",
+      "unchanged": true,
+      "sha256": "42b9e93f82414b49b30c899b079385a0d60113114b61c236f8dcf59568ca3e09"
+    },
+    {
+      "path": "lib/server/marketing-round2-context.ts",
+      "unchanged": true,
+      "sha256": "4c252f5dbf82572d38d6d09d1492a2a961a0ec79a06d34a847779edd9951bea2"
+    },
+    {
+      "path": "lib/server/marketing-round2-turnstile.ts",
+      "unchanged": true,
+      "sha256": "5682324627112d72b31ce5118e7f0ac5e0d906188700bf20e20eabd17478205b"
+    },
+    {
+      "path": "app/api/v1/marketing/round2/route.ts",
+      "unchanged": true,
+      "sha256": "a657802db4203ff485f4a305c7f5a0fbafb49e1389b87b2fb8ec266308daf002"
+    },
+    {
+      "path": "supabase/migrations/20260911100000_marketing_round2.sql",
+      "unchanged": true,
+      "sha256": "1a783932ef81041414828e336b1f8c9a75666db44180583add72a4f326324ff8"
+    }
+  ],
+  "changed_shared_helper": "lib/marketing/round2-session.ts reverified separately in Stage4; not represented as unchanged",
+  "purpose": "선행 독립 검토 사본. Stage4가396 SQL검증을 다시실행했다고 주장하지 않는다."
+}

@@ -2,7 +2,7 @@
   "stage": 4,
   "role": "frontend-implementer",
   "author_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
-  "phase": "draft-checkpoint",
+  "phase": "ready-for-authority-precheck",
   "verdict": "in_progress",
   "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
   "checklist_updates": [
@@ -128,9 +128,28 @@
     "approval_state": "not_started",
     "all_checks_green": false
   },
-  "code_commit": "a5079881f118c2b7dc00119a949b8c7e8b03b86a",
+  "code_commit": "c00fa23f53cb18550424abb96c2964a46796e3dc",
   "known_failures": [
     "complete regression four mobile-ios-small geometry cases reproduced identically on exact base",
-    "ten full visual desktop detailed snapshot failures; base comparison pending"
-  ]
+    "ten full visual desktop detailed snapshots also fail on exact base; nine exact dimensions/pixels and one same height but differing pixel count"
+  ],
+  "scope": "Stage4 author implementation, verification evidence, exploratory QA/eval and Draft PR handoff only",
+  "pr_url": "https://github.com/netsus/homecook/pull/1555",
+  "fast_gate": "passed",
+  "complete_gate": "failed-known-baseline-preserved",
+  "qa_eval": {
+    "score": 99,
+    "pass": true,
+    "covered": 42,
+    "blocked_independent_review": 1
+  },
+  "fixed_findings": [
+    "R2FE-AUX-001",
+    "R2FE-AUX-002",
+    "R2FE-AUX-003",
+    "stale-participation-writes",
+    "R2-QA-001"
+  ],
+  "author_scope_complete": true,
+  "stage4_overall_approval": "pending-independent-authority-precheck"
 }

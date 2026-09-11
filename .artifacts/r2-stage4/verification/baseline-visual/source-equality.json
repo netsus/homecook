@@ -1,0 +1,135 @@
+[
+  {
+    "path": "app/globals.css",
+    "base_sha256": "4f3d29a526c278bf81580f7e215845d505da36fc49a37902a920a907322f3151",
+    "candidate_sha256": "4f3d29a526c278bf81580f7e215845d505da36fc49a37902a920a907322f3151",
+    "baseline_sha256": "4f3d29a526c278bf81580f7e215845d505da36fc49a37902a920a907322f3151",
+    "identical": true
+  },
+  {
+    "path": "app/layout.tsx",
+    "base_sha256": "55e4aee2ee3a1bde12fd609b8279dd500810cce2d36ad37fbfd85083b13d87b3",
+    "candidate_sha256": "55e4aee2ee3a1bde12fd609b8279dd500810cce2d36ad37fbfd85083b13d87b3",
+    "baseline_sha256": "55e4aee2ee3a1bde12fd609b8279dd500810cce2d36ad37fbfd85083b13d87b3",
+    "identical": true
+  },
+  {
+    "path": "components/layout/app-shell.tsx",
+    "base_sha256": "36b3ec896fdaa524601e4028156f71d17f4e7598cd4390b37bdb1a32cb0097cb",
+    "candidate_sha256": "36b3ec896fdaa524601e4028156f71d17f4e7598cd4390b37bdb1a32cb0097cb",
+    "baseline_sha256": "36b3ec896fdaa524601e4028156f71d17f4e7598cd4390b37bdb1a32cb0097cb",
+    "identical": true
+  },
+  {
+    "path": "components/layout/app-header.tsx",
+    "base_sha256": "322f4d8219f263279c0ceda4ecf880954c90a6b9bf4bcf0888cb1370c789c255",
+    "candidate_sha256": "322f4d8219f263279c0ceda4ecf880954c90a6b9bf4bcf0888cb1370c789c255",
+    "baseline_sha256": "322f4d8219f263279c0ceda4ecf880954c90a6b9bf4bcf0888cb1370c789c255",
+    "identical": true
+  },
+  {
+    "path": "components/layout/bottom-tabs.tsx",
+    "base_sha256": "871345d718d25c32c09cf44dcda0c82edf016b4baae4331a42d4d31fb22fd253",
+    "candidate_sha256": "871345d718d25c32c09cf44dcda0c82edf016b4baae4331a42d4d31fb22fd253",
+    "baseline_sha256": "871345d718d25c32c09cf44dcda0c82edf016b4baae4331a42d4d31fb22fd253",
+    "identical": true
+  },
+  {
+    "path": "components/layout/wave1-mobile-bottom-tab.tsx",
+    "base_sha256": "c2113e00764b552ad242f84d78adb73f8f3dfde55d707b2881ba2338e3e768e4",
+    "candidate_sha256": "c2113e00764b552ad242f84d78adb73f8f3dfde55d707b2881ba2338e3e768e4",
+    "baseline_sha256": "c2113e00764b552ad242f84d78adb73f8f3dfde55d707b2881ba2338e3e768e4",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts",
+    "base_sha256": "f15e48c7e2733025fe3dc056b8e8fc3f2fd516308e2df852c7347b2fd24357ab",
+    "candidate_sha256": "f15e48c7e2733025fe3dc056b8e8fc3f2fd516308e2df852c7347b2fd24357ab",
+    "baseline_sha256": "f15e48c7e2733025fe3dc056b8e8fc3f2fd516308e2df852c7347b2fd24357ab",
+    "identical": true
+  },
+  {
+    "path": "playwright.config.ts",
+    "base_sha256": "1cafc2913d3141b465c48eaa5b54174ec61cf75928ff837f253902aebd8b1958",
+    "candidate_sha256": "1cafc2913d3141b465c48eaa5b54174ec61cf75928ff837f253902aebd8b1958",
+    "baseline_sha256": "1cafc2913d3141b465c48eaa5b54174ec61cf75928ff837f253902aebd8b1958",
+    "identical": true
+  },
+  {
+    "path": "pnpm-lock.yaml",
+    "base_sha256": "50e9635e535d378a47b491b6b177f809a5060cc66c93097eace2dd5dcc77d216",
+    "candidate_sha256": "50e9635e535d378a47b491b6b177f809a5060cc66c93097eace2dd5dcc77d216",
+    "baseline_sha256": "50e9635e535d378a47b491b6b177f809a5060cc66c93097eace2dd5dcc77d216",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-cook-mode-planner-desktop-chrome-darwin.png",
+    "base_sha256": "6f1abc6a42467916fff0dd7e39f9a9b2952c75ee2ebb8d4e59bd65d618f52c4f",
+    "candidate_sha256": "6f1abc6a42467916fff0dd7e39f9a9b2952c75ee2ebb8d4e59bd65d618f52c4f",
+    "baseline_sha256": "6f1abc6a42467916fff0dd7e39f9a9b2952c75ee2ebb8d4e59bd65d618f52c4f",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-empty-desktop-chrome-darwin.png",
+    "base_sha256": "edad91b9b576a893312567bb00701ceb0412b16722298427e8571cd04d2c750c",
+    "candidate_sha256": "edad91b9b576a893312567bb00701ceb0412b16722298427e8571cd04d2c750c",
+    "baseline_sha256": "edad91b9b576a893312567bb00701ceb0412b16722298427e8571cd04d2c750c",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-ready-desktop-chrome-darwin.png",
+    "base_sha256": "130c9888fb62c27d11b4dfe15a9ba602b5fdcaf9e1ff64aa7162effe0c1eb829",
+    "candidate_sha256": "130c9888fb62c27d11b4dfe15a9ba602b5fdcaf9e1ff64aa7162effe0c1eb829",
+    "baseline_sha256": "130c9888fb62c27d11b4dfe15a9ba602b5fdcaf9e1ff64aa7162effe0c1eb829",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-manual-recipe-create-desktop-chrome-darwin.png",
+    "base_sha256": "eff80feab029fabddc95568d2ae45c70e7b577ca78f048a25e9290b6ec12d878",
+    "candidate_sha256": "eff80feab029fabddc95568d2ae45c70e7b577ca78f048a25e9290b6ec12d878",
+    "baseline_sha256": "eff80feab029fabddc95568d2ae45c70e7b577ca78f048a25e9290b6ec12d878",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-meal-detail-desktop-chrome-darwin.png",
+    "base_sha256": "ff1be3bc063268b245d7dd7d9f015cc9274af5d185d714274f26e1f121d8188a",
+    "candidate_sha256": "ff1be3bc063268b245d7dd7d9f015cc9274af5d185d714274f26e1f121d8188a",
+    "baseline_sha256": "ff1be3bc063268b245d7dd7d9f015cc9274af5d185d714274f26e1f121d8188a",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-menu-add-search-desktop-chrome-darwin.png",
+    "base_sha256": "2248d5259d4502fe7da5b92034df7d9d9a9e2cca34d169c31a07c50ab1f704a5",
+    "candidate_sha256": "2248d5259d4502fe7da5b92034df7d9d9a9e2cca34d169c31a07c50ab1f704a5",
+    "baseline_sha256": "2248d5259d4502fe7da5b92034df7d9d9a9e2cca34d169c31a07c50ab1f704a5",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-mypage-saved-desktop-chrome-darwin.png",
+    "base_sha256": "4d76a60a38a328ae3e93c57f0eabd7c0e67fdf2135ce7d40dd2a55142406bab0",
+    "candidate_sha256": "4d76a60a38a328ae3e93c57f0eabd7c0e67fdf2135ce7d40dd2a55142406bab0",
+    "baseline_sha256": "4d76a60a38a328ae3e93c57f0eabd7c0e67fdf2135ce7d40dd2a55142406bab0",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-pantry-desktop-chrome-darwin.png",
+    "base_sha256": "9afb06d552fff875e2b0737acf77606948956dcc5796a17b66753b38fc966e9e",
+    "candidate_sha256": "9afb06d552fff875e2b0737acf77606948956dcc5796a17b66753b38fc966e9e",
+    "baseline_sha256": "9afb06d552fff875e2b0737acf77606948956dcc5796a17b66753b38fc966e9e",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-shopping-flow-desktop-chrome-darwin.png",
+    "base_sha256": "5df8631b82d0d59663b4f67b9b4d423fef29737f67d0f9e6b232ee60ffc5b37a",
+    "candidate_sha256": "5df8631b82d0d59663b4f67b9b4d423fef29737f67d0f9e6b232ee60ffc5b37a",
+    "baseline_sha256": "5df8631b82d0d59663b4f67b9b4d423fef29737f67d0f9e6b232ee60ffc5b37a",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/qa-visual.spec.ts-snapshots/qa-youtube-import-url-desktop-chrome-darwin.png",
+    "base_sha256": "72271c85033a51fb31f509b0799dfa916012bf5796847d69c0f3465ed9b15b6c",
+    "candidate_sha256": "72271c85033a51fb31f509b0799dfa916012bf5796847d69c0f3465ed9b15b6c",
+    "baseline_sha256": "72271c85033a51fb31f509b0799dfa916012bf5796847d69c0f3465ed9b15b6c",
+    "identical": true
+  }
+]

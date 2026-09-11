@@ -1,7 +1,7 @@
 {
   "id": "marketing-demand-validation-round2",
   "title": "Marketing demand validation round 2",
-  "summary": "Stage 4 프론트엔드 Draft 체크포인트. 승인 r2.1/Stage1/백엔드 PR1552의 독립 Stage3 merge7312a0cc를 소비한다. 구현·실제UI/API/격리DB 근거와 기존base재현실패를 stage4-frontend-handoff.md에 기록했다. 독립authority/Stage5/Stage6와전체head CI는pending,Ready/병합/배포승인없음.",
+  "summary": "Stage 4 작성자 구현·검증 자료 및 Draft PR1555 인계 준비 완료. Stage4 전체 승인은 authority_precheck 대기다. 공식 r2.1/선행 Stage3 merge7312a0cc를 소비하고정식frontend PR빠른gate와실제UI/API/새isolatedDB,탐색QA/eval99를확인했다. complete regression/visual의exactbase재현실패는open으로보존. 독립authority/Stage5/Stage6와현재headCI판정은pending이며Ready/병합/배포승인없음.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -140,7 +140,9 @@
       "authority_reports": [],
       "actual_verification_refs": [
         "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md",
-        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/stage4-result.json"
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/stage4-result.json",
+        ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploratory-report.json",
+        ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/eval-result.json"
       ]
     },
     "merge_gate_projection": {

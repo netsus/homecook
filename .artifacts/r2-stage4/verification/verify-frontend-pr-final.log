@@ -1,0 +1,578 @@
+
+> homecook@0.1.0 verify:frontend:pr /Users/cwj/.codex/worktrees/f2a2/homecook
+> pnpm lint && pnpm typecheck && pnpm test:product && pnpm build && pnpm test:e2e:smoke && pnpm test:e2e:a11y:core && pnpm test:e2e:visual:core
+
+
+> homecook@0.1.0 lint /Users/cwj/.codex/worktrees/f2a2/homecook
+> eslint . --ignore-pattern '.agents/**' --ignore-pattern '.omx/**'
+
+
+> homecook@0.1.0 typecheck /Users/cwj/.codex/worktrees/f2a2/homecook
+> tsc --noEmit
+
+
+> homecook@0.1.0 test:product /Users/cwj/.codex/worktrees/f2a2/homecook
+> vitest run --config vitest.product.config.ts
+
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-PazeGK
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+{
+  "promoted": false,
+  "expected_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+
+ Test Files  649 passed | 39 skipped (688)
+      Tests  7827 passed | 516 skipped (8343)
+   Start at  12:13:56
+   Duration  112.56s (transform 39.14s, setup 7.56s, import 85.76s, tests 710.76s, environment 82.04s)
+
+
+> homecook@0.1.0 build /Users/cwj/.codex/worktrees/f2a2/homecook
+> next build
+
+   ▲ Next.js 15.5.24
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 58s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/87) ...
+   Generating static pages (21/87)
+   Generating static pages (43/87)
+   Generating static pages (65/87)
+ ✓ Generating static pages (87/87)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                               Size  First Load JS  Revalidate  Expire
+┌ ○ /                                                                  19.4 kB         227 kB
+├ ○ /_not-found                                                          374 B         103 kB
+├ ○ /about                                                             5.82 kB         130 kB
+├ ƒ /account-quarantine                                                 1.8 kB         112 kB
+├ ƒ /admin                                                             3.72 kB         110 kB
+├ ƒ /admin/audit-logs                                                  4.67 kB         111 kB
+├ ƒ /admin/events                                                      5.18 kB         111 kB
+├ ƒ /admin/feedback                                                     4.5 kB         110 kB
+├ ƒ /admin/users                                                       4.39 kB         110 kB
+├ ƒ /api/auth/oauth-userinfo/kakao                                       374 B         103 kB
+├ ƒ /api/auth/oauth-userinfo/naver                                       374 B         103 kB
+├ ƒ /api/v1/admin/audit-logs                                             374 B         103 kB
+├ ƒ /api/v1/admin/operational-events                                     374 B         103 kB
+├ ƒ /api/v1/admin/page-view                                              374 B         103 kB
+├ ƒ /api/v1/admin/users                                                  374 B         103 kB
+├ ƒ /api/v1/auth/logout                                                  374 B         103 kB
+├ ƒ /api/v1/cooked-batches                                               374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/adjust                                   374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/close-unweighed                          374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/discard                                  374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/weight                                   374 B         103 kB
+├ ƒ /api/v1/cooking-methods                                              374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts                                     374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts/[id]/cancel                         374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts/[id]/complete                       374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts/[id]/cook-mode                      374 B         103 kB
+├ ƒ /api/v1/cooking/sessions                                             374 B         103 kB
+├ ƒ /api/v1/cooking/sessions/[session_id]/cancel                         374 B         103 kB
+├ ƒ /api/v1/cooking/sessions/[session_id]/complete                       374 B         103 kB
+├ ƒ /api/v1/cooking/sessions/[session_id]/cook-mode                      374 B         103 kB
+├ ƒ /api/v1/cooking/standalone-complete                                  374 B         103 kB
+├ ƒ /api/v1/feedback/404                                                 374 B         103 kB
+├ ƒ /api/v1/food-catalog/search                                          374 B         103 kB
+├ ƒ /api/v1/food-products                                                374 B         103 kB
+├ ƒ /api/v1/food-products/[product_id]                                   374 B         103 kB
+├ ƒ /api/v1/food-products/[product_id]/report                            374 B         103 kB
+├ ƒ /api/v1/ingredients                                                  374 B         103 kB
+├ ƒ /api/v1/leftovers                                                    374 B         103 kB
+├ ƒ /api/v1/leftovers/[leftover_id]/eat                                  374 B         103 kB
+├ ƒ /api/v1/leftovers/[leftover_id]/keep                                 374 B         103 kB
+├ ƒ /api/v1/leftovers/[leftover_id]/uneat                                374 B         103 kB
+├ ƒ /api/v1/marketing/round2                                             374 B         103 kB
+├ ƒ /api/v1/marketing/validation                                         374 B         103 kB
+├ ƒ /api/v1/meal-log                                                     374 B         103 kB
+├ ƒ /api/v1/meal-log/entries                                             374 B         103 kB
+├ ƒ /api/v1/meal-log/entries/[id]                                        374 B         103 kB
+├ ƒ /api/v1/meal-log/recent                                              374 B         103 kB
+├ ƒ /api/v1/meals                                                        374 B         103 kB
+├ ƒ /api/v1/meals/[meal_id]                                              374 B         103 kB
+├ ƒ /api/v1/pantry                                                       374 B         103 kB
+├ ƒ /api/v1/pantry/bundles                                               374 B         103 kB
+├ ƒ /api/v1/planner                                                      374 B         103 kB
+├ ƒ /api/v1/planner/columns                                              374 B         103 kB
+├ ƒ /api/v1/planner/columns/[column_id]                                  374 B         103 kB
+├ ƒ /api/v1/planner/nutrition                                            374 B         103 kB
+├ ƒ /api/v1/product-planner-entries                                      374 B         103 kB
+├ ƒ /api/v1/product-planner-entries/[entry_id]                           374 B         103 kB
+├ ƒ /api/v1/recipe-books                                                 374 B         103 kB
+├ ƒ /api/v1/recipe-books/[book_id]                                       374 B         103 kB
+├ ƒ /api/v1/recipe-books/[book_id]/recipes                               374 B         103 kB
+├ ƒ /api/v1/recipe-books/[book_id]/recipes/[recipe_id]                   374 B         103 kB
+├ ƒ /api/v1/recipes                                                      374 B         103 kB
+├ ƒ /api/v1/recipes/[id]                                                 374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/cook-mode                                       374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/future-plan-impact                              374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/like                                            374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/save                                            374 B         103 kB
+├ ƒ /api/v1/recipes/images                                               374 B         103 kB
+├ ƒ /api/v1/recipes/images/[image_object_id]/cancel                      374 B         103 kB
+├ ƒ /api/v1/recipes/pantry-match                                         374 B         103 kB
+├ ƒ /api/v1/recipes/tag-suggestions                                      374 B         103 kB
+├ ƒ /api/v1/recipes/themes                                               374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/candidate-drafts                             374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extract                                      374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extraction-jobs                              374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extraction-jobs/[job_id]                     374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extractions/[extraction_id]                  374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/ingredient-registration                      374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/recipio/check                                374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/register                                     374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/validate                                     374 B         103 kB
+├ ƒ /api/v1/shopping/lists                                               374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]                                     374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/complete                            374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/items/[item_id]                     374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/items/bulk                          374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/items/reorder                       374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/share-text                          374 B         103 kB
+├ ƒ /api/v1/shopping/preview                                             374 B         103 kB
+├ ƒ /api/v1/tags                                                         374 B         103 kB
+├ ƒ /api/v1/users/me                                                     374 B         103 kB
+├ ƒ /api/v1/users/me/cutover-quarantine-resolution                       374 B         103 kB
+├ ƒ /api/v1/users/me/gamification                                        374 B         103 kB
+├ ƒ /api/v1/users/me/gamification/archive                                374 B         103 kB
+├ ƒ /api/v1/users/me/gamification/notifications/seen                     374 B         103 kB
+├ ƒ /api/v1/users/me/gamification/tutorial-quests/[quest_key]/dismiss    374 B         103 kB
+├ ƒ /api/v1/users/me/progress                                            374 B         103 kB
+├ ƒ /api/v1/users/me/settings                                            374 B         103 kB
+├ ƒ /api/v1/users/me/youtube-extraction-jobs                             374 B         103 kB
+├ ƒ /api/v1/users/me/youtube-extraction-jobs/delivered                   374 B         103 kB
+├ ƒ /api/v1/users/me/youtube-extraction-jobs/seen                        374 B         103 kB
+├ ƒ /auth/callback                                                       374 B         103 kB
+├ ƒ /auth/flow/cancel                                                    374 B         103 kB
+├ ƒ /auth/flow/start                                                     374 B         103 kB
+├ ƒ /auth/link/callback                                                  374 B         103 kB
+├ ƒ /auth/logout                                                         374 B         103 kB
+├ ƒ /beta                                                              20.3 kB         132 kB
+├ ƒ /beta/r2/[topic]                                                     18 kB         126 kB
+├ ƒ /cooking/recipes/[recipe_id]/cook-mode                             2.79 kB         207 kB
+├ ƒ /cooking/session-attempts/[session_id]/cook-mode                   6.84 kB         141 kB
+├ ƒ /cooking/sessions/[session_id]/cook-mode                           3.67 kB         208 kB
+├ ƒ /internal/account-maintenance/tick                                   374 B         103 kB
+├ ƒ /leftovers                                                         18.8 kB         213 kB
+├ ƒ /leftovers/ate                                                     8.79 kB         195 kB
+├ ƒ /login                                                             5.86 kB         169 kB
+├ ○ /manifest.webmanifest                                                374 B         103 kB
+├ ƒ /menu-add                                                          15.6 kB         209 kB
+├ ƒ /menu/add/manual                                                   2.97 kB         160 kB
+├ ƒ /menu/add/youtube                                                  1.24 kB         162 kB
+├ ƒ /mypage                                                            36.4 kB         284 kB
+├ ƒ /mypage/recipe-books/[book_id]                                     2.28 kB         219 kB
+├ ƒ /onboarding/nickname                                               3.94 kB         129 kB
+├ ƒ /pantry                                                            29.5 kB         251 kB
+├ ƒ /planner                                                           32.9 kB         254 kB
+├ ƒ /planner/[date]/[columnId]                                         17.5 kB         246 kB
+├ ○ /privacy                                                           1.74 kB         123 kB
+├ ƒ /recipe/[id]                                                       28.4 kB         250 kB
+├ ƒ /recipes/new/youtube                                               1.24 kB         162 kB
+├ ○ /robots.txt                                                          374 B         103 kB
+├ ƒ /settings                                                          17.6 kB         204 kB
+├ ƒ /shopping/flow                                                     8.34 kB         150 kB
+├ ƒ /shopping/lists/[list_id]                                          2.44 kB         154 kB
+├ ○ /sitemap.xml                                                         374 B         103 kB          1h      1y
+└ ○ /terms                                                             1.74 kB         123 kB
++ First Load JS shared by all                                           103 kB
+  ├ chunks/4974-f9e5be3879e76616.js                                    46.3 kB
+  ├ chunks/b4df6a91-32a7f77bb489ae9f.js                                54.2 kB
+  └ other shared chunks (total)                                           2 kB
+
+
+ƒ Middleware                                                           32.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> homecook@0.1.0 test:e2e:smoke /Users/cwj/.codex/worktrees/f2a2/homecook
+> playwright test tests/e2e/slice-*.spec.ts --grep '@smoke-core' --grep-invert '@live-oauth'
+
+[WebServer] (node:9456) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:9459) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:9469) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:9496) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 75 tests using 5 workers
+
+(node:9660) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9659) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9663) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9662) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9661) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9663) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9659) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9662) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9660) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:9661) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/75] [desktop-chrome] › tests/e2e/slice-17a-mypage.spec.ts:498:7 › MYPAGE screen › shows profile and recipe books when authenticated @smoke-core
+[2/75] [desktop-chrome] › tests/e2e/slice-06-recipe-to-planner.spec.ts:170:7 › Slice 06 recipe-to-planner › authenticated user can add recipe to planner and see it in PLANNER_WEEK @smoke-core
+[3/75] [desktop-chrome] › tests/e2e/slice-10a-shopping-detail-interact.spec.ts:228:9 › slice 10a: shopping detail interact › happy path › should render list detail with purchase and excluded sections @smoke-core
+[4/75] [desktop-chrome] › tests/e2e/slice-01-basic.spec.ts:21:7 › Slice 01 basic flow › HOME shows list, supports search, and updates sort state @smoke-core
+[5/75] [desktop-chrome] › tests/e2e/slice-19-youtube-import.spec.ts:1061:7 › Slice 19: YouTube Import desktop embedded › embedded review keeps the final register action visible @smoke-core
+[6/75] [desktop-chrome] › tests/e2e/slice-01-basic.spec.ts:87:7 › Slice 01 basic flow › Recipe detail route shows key sections @smoke-core
+[WebServer] (node:9819) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:9822) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[7/75] [desktop-chrome] › tests/e2e/slice-22-youtube-ingredient-registration.spec.ts:10:7 › Slice 22: YouTube ingredient registration › unresolved ingredient can be user-registered and then saved @smoke-core
+[8/75] [desktop-chrome] › tests/e2e/slice-25-youtube-bulk-ingredient-registration.spec.ts:12:7 › Slice 25: YouTube bulk ingredient registration › bulk CTA visible with 5 eligible rows, sheet opens and bulk registers all @smoke-core
+[9/75] [desktop-chrome] › tests/e2e/slice-01-basic.spec.ts:163:7 › Slice 01 basic flow › Not found page accepts inline feedback without blocking recovery links @smoke-core
+[10/75] [desktop-chrome] › tests/e2e/slice-33c-gamification.spec.ts:497:7 › 33c gamification frontend @smoke-core › renders MYPAGE badges, quests, guide, soft-fail, and XP toast evidence
+[11/75] [desktop-chrome] › tests/e2e/slice-25-youtube-bulk-ingredient-registration.spec.ts:100:7 › Slice 25: YouTube bulk ingredient registration › existing single-row registration flow still works (regression) @smoke-core
+[12/75] [desktop-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:466:7 › 34c growth notification UI @smoke-core › keeps server order, visible max, and seen boundaries
+[13/75] [desktop-chrome] › tests/e2e/slice-01-basic.spec.ts:235:7 › Slice 01 basic flow › Protected action opens login gate and modal can close with button, ESC, and backdrop @smoke-core
+[14/75] [desktop-chrome] › tests/e2e/slice-34d-mypage-growth-profile.spec.ts:293:7 › 34d MYPAGE growth profile assets @smoke-core › captures profile integration, badge shapes, locked hints, and soft-fail evidence
+[15/75] [desktop-chrome] › tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts:321:7 › 34e growth profile visual polish @smoke-core › captures integrated header, notification archive entry, grade marks, and soft-fail evidence
+[16/75] [desktop-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:508:7 › 34c growth notification UI @smoke-core › opens the notification archive from the profile while excluding silent rows
+[WebServer] (node:10006) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[17/75] [desktop-chrome] › tests/e2e/slice-35c-mypage-achievement-album.spec.ts:402:7 › 35c MYPAGE achievement album UI @smoke-core › opens grade, achievement, and notification panels from the integrated profile
+[18/75] [desktop-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:526:7 › 34c growth notification UI @smoke-core › renders exact shopping multi-meal guidance copy
+[19/75] [desktop-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:539:7 › 34c growth notification UI @smoke-core › captures design authority evidence
+[20/75] [desktop-chrome] › tests/e2e/slice-33c-gamification.spec.ts:559:7 › 33c gamification frontend @smoke-core › covers loading, empty, and unauthorized state boundaries
+[21/75] [desktop-chrome] › tests/e2e/slice-community-prepared-food-catalog.spec.ts:635:7 › community prepared food catalog Stage 4 › prepared-food-standard-basis-ux shows source filter and badges, keeps 100g/100mL defaults, and avoids legacy inference @smoke-core
+[22/75] [desktop-chrome] › tests/e2e/slice-marketing-demand-validation.spec.ts:135:7 › marketing demand validation v2 /beta › Hero variants enter the same exact q1..q4 flow @smoke-core
+[23/75] [desktop-chrome] › tests/e2e/slice-planner-shell.spec.ts:227:7 › planner-shell Stage 4 › planner-shell preserves segment/date history and the weekly plan @smoke-core
+[24/75] [desktop-chrome] › tests/e2e/slice-planner-shell.spec.ts:263:7 › planner-shell Stage 4 › legacy-product-compat guest keeps the requested segment/date in the preview @smoke-core
+(node:10265) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:10265) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[25/75] [desktop-chrome] › tests/e2e/slice-planner-shell.spec.ts:281:7 › planner-shell Stage 4 › planner-shell reloads the originating week on browser Back without duplicating history @smoke-core
+(node:10279) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[26/75] [mobile-chrome] › tests/e2e/slice-01-basic.spec.ts:21:7 › Slice 01 basic flow › HOME shows list, supports search, and updates sort state @smoke-core
+(node:10279) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[27/75] [mobile-chrome] › tests/e2e/slice-06-recipe-to-planner.spec.ts:170:7 › Slice 06 recipe-to-planner › authenticated user can add recipe to planner and see it in PLANNER_WEEK @smoke-core
+(node:10338) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:10348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:10338) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[28/75] [mobile-chrome] › tests/e2e/slice-10a-shopping-detail-interact.spec.ts:228:9 › slice 10a: shopping detail interact › happy path › should render list detail with purchase and excluded sections @smoke-core
+(node:10405) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[WebServer] (node:10372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[29/75] [mobile-chrome] › tests/e2e/slice-01-basic.spec.ts:87:7 › Slice 01 basic flow › Recipe detail route shows key sections @smoke-core
+(node:10348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[30/75] [mobile-chrome] › tests/e2e/slice-17a-mypage.spec.ts:498:7 › MYPAGE screen › shows profile and recipe books when authenticated @smoke-core
+(node:10405) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[31/75] [mobile-chrome] › tests/e2e/slice-22-youtube-ingredient-registration.spec.ts:10:7 › Slice 22: YouTube ingredient registration › unresolved ingredient can be user-registered and then saved @smoke-core
+[WebServer] (node:10507) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[32/75] [mobile-chrome] › tests/e2e/slice-19-youtube-import.spec.ts:1061:7 › Slice 19: YouTube Import desktop embedded › embedded review keeps the final register action visible @smoke-core
+[33/75] [mobile-chrome] › tests/e2e/slice-01-basic.spec.ts:163:7 › Slice 01 basic flow › Not found page accepts inline feedback without blocking recovery links @smoke-core
+[WebServer] (node:10546) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[34/75] [mobile-chrome] › tests/e2e/slice-25-youtube-bulk-ingredient-registration.spec.ts:12:7 › Slice 25: YouTube bulk ingredient registration › bulk CTA visible with 5 eligible rows, sheet opens and bulk registers all @smoke-core
+[35/75] [mobile-chrome] › tests/e2e/slice-33c-gamification.spec.ts:497:7 › 33c gamification frontend @smoke-core › renders MYPAGE badges, quests, guide, soft-fail, and XP toast evidence
+[36/75] [mobile-chrome] › tests/e2e/slice-33c-gamification.spec.ts:559:7 › 33c gamification frontend @smoke-core › covers loading, empty, and unauthorized state boundaries
+[37/75] [mobile-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:466:7 › 34c growth notification UI @smoke-core › keeps server order, visible max, and seen boundaries
+[38/75] [mobile-chrome] › tests/e2e/slice-34d-mypage-growth-profile.spec.ts:293:7 › 34d MYPAGE growth profile assets @smoke-core › captures profile integration, badge shapes, locked hints, and soft-fail evidence
+[39/75] [mobile-chrome] › tests/e2e/slice-01-basic.spec.ts:235:7 › Slice 01 basic flow › Protected action opens login gate and modal can close with button, ESC, and backdrop @smoke-core
+[40/75] [mobile-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:508:7 › 34c growth notification UI @smoke-core › opens the notification archive from the profile while excluding silent rows
+[41/75] [mobile-chrome] › tests/e2e/slice-25-youtube-bulk-ingredient-registration.spec.ts:100:7 › Slice 25: YouTube bulk ingredient registration › existing single-row registration flow still works (regression) @smoke-core
+[WebServer] (node:10587) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[42/75] [mobile-chrome] › tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts:321:7 › 34e growth profile visual polish @smoke-core › captures integrated header, notification archive entry, grade marks, and soft-fail evidence
+[43/75] [mobile-chrome] › tests/e2e/slice-35c-mypage-achievement-album.spec.ts:402:7 › 35c MYPAGE achievement album UI @smoke-core › opens grade, achievement, and notification panels from the integrated profile
+[44/75] [mobile-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:526:7 › 34c growth notification UI @smoke-core › renders exact shopping multi-meal guidance copy
+[45/75] [mobile-chrome] › tests/e2e/slice-community-prepared-food-catalog.spec.ts:635:7 › community prepared food catalog Stage 4 › prepared-food-standard-basis-ux shows source filter and badges, keeps 100g/100mL defaults, and avoids legacy inference @smoke-core
+[46/75] [mobile-chrome] › tests/e2e/slice-34c-growth-notification.spec.ts:539:7 › 34c growth notification UI @smoke-core › captures design authority evidence
+[47/75] [mobile-chrome] › tests/e2e/slice-marketing-demand-validation.spec.ts:135:7 › marketing demand validation v2 /beta › Hero variants enter the same exact q1..q4 flow @smoke-core
+[48/75] [mobile-chrome] › tests/e2e/slice-planner-shell.spec.ts:227:7 › planner-shell Stage 4 › planner-shell preserves segment/date history and the weekly plan @smoke-core
+(node:10772) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[49/75] [mobile-chrome] › tests/e2e/slice-planner-shell.spec.ts:263:7 › planner-shell Stage 4 › legacy-product-compat guest keeps the requested segment/date in the preview @smoke-core
+(node:10772) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[50/75] [mobile-ios-small] › tests/e2e/slice-01-basic.spec.ts:21:7 › Slice 01 basic flow › HOME shows list, supports search, and updates sort state @smoke-core
+[51/75] [mobile-chrome] › tests/e2e/slice-planner-shell.spec.ts:281:7 › planner-shell Stage 4 › planner-shell reloads the originating week on browser Back without duplicating history @smoke-core
+[52/75] [mobile-ios-small] › tests/e2e/slice-01-basic.spec.ts:87:7 › Slice 01 basic flow › Recipe detail route shows key sections @smoke-core
+(node:10841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:10841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[WebServer] (node:10852) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:10860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[53/75] [mobile-ios-small] › tests/e2e/slice-01-basic.spec.ts:163:7 › Slice 01 basic flow › Not found page accepts inline feedback without blocking recovery links @smoke-core
+[54/75] [mobile-ios-small] › tests/e2e/slice-06-recipe-to-planner.spec.ts:170:7 › Slice 06 recipe-to-planner › authenticated user can add recipe to planner and see it in PLANNER_WEEK @smoke-core
+(node:10882) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:10860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[55/75] [mobile-ios-small] › tests/e2e/slice-10a-shopping-detail-interact.spec.ts:228:9 › slice 10a: shopping detail interact › happy path › should render list detail with purchase and excluded sections @smoke-core
+[56/75] [mobile-ios-small] › tests/e2e/slice-01-basic.spec.ts:235:7 › Slice 01 basic flow › Protected action opens login gate and modal can close with button, ESC, and backdrop @smoke-core
+(node:10882) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[57/75] [mobile-ios-small] › tests/e2e/slice-17a-mypage.spec.ts:498:7 › MYPAGE screen › shows profile and recipe books when authenticated @smoke-core
+[WebServer] (node:10918) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:10935) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[58/75] [mobile-ios-small] › tests/e2e/slice-22-youtube-ingredient-registration.spec.ts:10:7 › Slice 22: YouTube ingredient registration › unresolved ingredient can be user-registered and then saved @smoke-core
+[WebServer] (node:10958) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:10935) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[59/75] [mobile-ios-small] › tests/e2e/slice-19-youtube-import.spec.ts:1061:7 › Slice 19: YouTube Import desktop embedded › embedded review keeps the final register action visible @smoke-core
+[60/75] [mobile-ios-small] › tests/e2e/slice-25-youtube-bulk-ingredient-registration.spec.ts:12:7 › Slice 25: YouTube bulk ingredient registration › bulk CTA visible with 5 eligible rows, sheet opens and bulk registers all @smoke-core
+[61/75] [mobile-ios-small] › tests/e2e/slice-33c-gamification.spec.ts:497:7 › 33c gamification frontend @smoke-core › renders MYPAGE badges, quests, guide, soft-fail, and XP toast evidence
+[62/75] [mobile-ios-small] › tests/e2e/slice-33c-gamification.spec.ts:559:7 › 33c gamification frontend @smoke-core › covers loading, empty, and unauthorized state boundaries
+[63/75] [mobile-ios-small] › tests/e2e/slice-34c-growth-notification.spec.ts:466:7 › 34c growth notification UI @smoke-core › keeps server order, visible max, and seen boundaries
+[64/75] [mobile-ios-small] › tests/e2e/slice-34d-mypage-growth-profile.spec.ts:293:7 › 34d MYPAGE growth profile assets @smoke-core › captures profile integration, badge shapes, locked hints, and soft-fail evidence
+[65/75] [mobile-ios-small] › tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts:321:7 › 34e growth profile visual polish @smoke-core › captures integrated header, notification archive entry, grade marks, and soft-fail evidence
+[66/75] [mobile-ios-small] › tests/e2e/slice-25-youtube-bulk-ingredient-registration.spec.ts:100:7 › Slice 25: YouTube bulk ingredient registration › existing single-row registration flow still works (regression) @smoke-core
+[67/75] [mobile-ios-small] › tests/e2e/slice-34c-growth-notification.spec.ts:508:7 › 34c growth notification UI @smoke-core › opens the notification archive from the profile while excluding silent rows
+[68/75] [mobile-ios-small] › tests/e2e/slice-35c-mypage-achievement-album.spec.ts:402:7 › 35c MYPAGE achievement album UI @smoke-core › opens grade, achievement, and notification panels from the integrated profile
+[69/75] [mobile-ios-small] › tests/e2e/slice-community-prepared-food-catalog.spec.ts:635:7 › community prepared food catalog Stage 4 › prepared-food-standard-basis-ux shows source filter and badges, keeps 100g/100mL defaults, and avoids legacy inference @smoke-core
+[70/75] [mobile-ios-small] › tests/e2e/slice-marketing-demand-validation.spec.ts:135:7 › marketing demand validation v2 /beta › Hero variants enter the same exact q1..q4 flow @smoke-core
+[71/75] [mobile-ios-small] › tests/e2e/slice-34c-growth-notification.spec.ts:526:7 › 34c growth notification UI @smoke-core › renders exact shopping multi-meal guidance copy
+[72/75] [mobile-ios-small] › tests/e2e/slice-34c-growth-notification.spec.ts:539:7 › 34c growth notification UI @smoke-core › captures design authority evidence
+[73/75] [mobile-ios-small] › tests/e2e/slice-planner-shell.spec.ts:227:7 › planner-shell Stage 4 › planner-shell preserves segment/date history and the weekly plan @smoke-core
+[74/75] [mobile-ios-small] › tests/e2e/slice-planner-shell.spec.ts:263:7 › planner-shell Stage 4 › legacy-product-compat guest keeps the requested segment/date in the preview @smoke-core
+[75/75] [mobile-ios-small] › tests/e2e/slice-planner-shell.spec.ts:281:7 › planner-shell Stage 4 › planner-shell reloads the originating week on browser Back without duplicating history @smoke-core
+  10 skipped
+  65 passed (1.2m)
+
+> homecook@0.1.0 test:e2e:a11y:core /Users/cwj/.codex/worktrees/f2a2/homecook
+> playwright test tests/e2e/qa-a11y.spec.ts --grep '@a11y-core'
+
+[WebServer] (node:11410) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:11413) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:11425) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:11448) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 12 tests using 3 workers
+
+(node:11468) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:11470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:11469) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:11469) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:11470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:11468) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/12] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:330:7 › QA accessibility smoke › home and recipe detail are axe-clean @a11y-core
+[2/12] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:330:7 › QA accessibility smoke › home and recipe detail are axe-clean @a11y-core
+[3/12] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:330:7 › QA accessibility smoke › home and recipe detail are axe-clean @a11y-core
+[WebServer] (node:11699) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[4/12] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:376:7 › QA accessibility smoke › ingredient filter and login gate dialogs are axe-clean @a11y-core
+[5/12] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:376:7 › QA accessibility smoke › ingredient filter and login gate dialogs are axe-clean @a11y-core
+[6/12] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:376:7 › QA accessibility smoke › ingredient filter and login gate dialogs are axe-clean @a11y-core
+[WebServer] (node:11745) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[7/12] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:411:7 › QA accessibility smoke › marketing beta landing keeps the complete v2 funnel accessible @a11y-core @marketing
+[WebServer] (node:11755) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[8/12] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:411:7 › QA accessibility smoke › marketing beta landing keeps the complete v2 funnel accessible @a11y-core @marketing
+[9/12] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:411:7 › QA accessibility smoke › marketing beta landing keeps the complete v2 funnel accessible @a11y-core @marketing
+[10/12] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:644:7 › QA accessibility smoke › shopping mobile controls keep 44px touch targets @a11y-core
+[11/12] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:644:7 › QA accessibility smoke › shopping mobile controls keep 44px touch targets @a11y-core
+[12/12] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:644:7 › QA accessibility smoke › shopping mobile controls keep 44px touch targets @a11y-core
+[WebServer] (node:11972) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+  1 skipped
+  11 passed (24.8s)
+
+> homecook@0.1.0 test:e2e:visual:core /Users/cwj/.codex/worktrees/f2a2/homecook
+> playwright test tests/e2e/qa-visual.spec.ts --grep '@visual-core' --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small
+
+[WebServer] (node:12057) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:12060) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:12071) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:12198) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 15 tests using 3 workers
+
+(node:12218) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:12219) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:12217) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:12218) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:12219) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:12217) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/15] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:234:7 › QA visual regression › home default shell matches the visual baseline @visual-core
+[2/15] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:234:7 › QA visual regression › home default shell matches the visual baseline @visual-core
+[3/15] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:234:7 › QA visual regression › home default shell matches the visual baseline @visual-core
+[4/15] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:249:7 › QA visual regression › home sort menu open matches the visual baseline @visual-core
+[5/15] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:249:7 › QA visual regression › home sort menu open matches the visual baseline @visual-core
+[6/15] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:269:7 › QA visual regression › ingredient filter modal matches the visual baseline @visual-core
+[7/15] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:249:7 › QA visual regression › home sort menu open matches the visual baseline @visual-core
+[8/15] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:269:7 › QA visual regression › ingredient filter modal matches the visual baseline @visual-core
+[9/15] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:286:7 › QA visual regression › recipe detail and login gate match the visual baseline @visual-core
+[10/15] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:269:7 › QA visual regression › ingredient filter modal matches the visual baseline @visual-core
+[11/15] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:286:7 › QA visual regression › recipe detail and login gate match the visual baseline @visual-core
+[WebServer] (node:12479) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[12/15] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:286:7 › QA visual regression › recipe detail and login gate match the visual baseline @visual-core
+[WebServer] (node:12493) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[13/15] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:316:7 › QA visual regression › marketing beta landing matches the visual baseline @visual-core @marketing
+[14/15] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:316:7 › QA visual regression › marketing beta landing matches the visual baseline @visual-core @marketing
+[15/15] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:316:7 › QA visual regression › marketing beta landing matches the visual baseline @visual-core @marketing
+  15 passed (16.2s)

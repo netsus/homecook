@@ -1,0 +1,337 @@
+{
+  "stage": 3,
+  "role": "backend-reviewer",
+  "task_id": "01a08d65-e8dc-74c0-8d0e-3c8a96c1ac00",
+  "author_task_id": "01a08d06-6589-72f0-ab20-2da7a6b91e08",
+  "coordinator_task_id": "01a07316-265c-7f22-b0af-fa22b7fb2b8a",
+  "verdict": "approve",
+  "review_completion": "complete",
+  "approval_scope": "backend Stage3 review of exact SHA only; no UI/production/GitHub approval action",
+  "reviewed_sha": "09413ba38ee6d1c69925b1c479ce44e03e6885cd",
+  "base_sha": "16444fe86eab374c2a1468f73d5c25b94a51e546",
+  "tree": "d96853f4fc01c216fc31cc14d408f2ef29b29cfc",
+  "previous_reviewed_sha": "97502417e66a46dda29933f4bbe01be5e275884f",
+  "pr_url": "https://github.com/netsus/homecook/pull/1552",
+  "resolved_required_fix_ids": [
+    "R2-S3-001",
+    "R2-S3-002"
+  ],
+  "required_fix_ids": [],
+  "required_remaining": [],
+  "required_remaining_count": 0,
+  "required_zero": true,
+  "findings": [
+    {
+      "id": "R2-S3-001",
+      "status": "resolved",
+      "priority": "P2",
+      "required": true,
+      "file": "lib/server/marketing-round2.ts",
+      "line": 121,
+      "closure": "검증된 schema/topiccookie에서 식별한 bucket을 단일consumeRate로 처리. 기본rate가 JSON/schema/cookie 오류에 우선하고 부정cookie PID는 사용하지 않음. 실제file regression 최장3570초/미초과counter증가/무RPC 확인. Cookie-less bootstrap은 기본rate뒤 inspect로확인한참여만추가차감하여 DB경계보존.",
+      "evidence": [
+        "unit.log",
+        "isolated.log",
+        "http-integration.json"
+      ]
+    },
+    {
+      "id": "R2-S3-002",
+      "status": "resolved",
+      "priority": "P2",
+      "required": true,
+      "file": "lib/marketing/round2-session.ts",
+      "line": 107,
+      "closure": "END후 IDB transaction에서 비식별marker로대체, memoryfallback삭제. 정상/explicitrestart/storagefailure에서 newkey/event/cookie_resume0. END전1ms/정각/후1ms/retention후/quota후복구를 실제Chromium검증.",
+      "evidence": [
+        "unit.log",
+        "browser-result.json",
+        "browser.log"
+      ]
+    }
+  ],
+  "unconfirmed_nonblocking_candidates": [
+    {
+      "id": "R2-S3-C01",
+      "status": "unconfirmed_not_required",
+      "reason": "provider-issued r2 Turnstile secret와 7HMAC의교차중복차단은 기존후보. 7HMAC간/legacykey간독립검사는 유지됨. 실제계약위반/권한우회확증없어 required로승격하지않음. 이번수정및승인에새키계약요구추가없음."
+    }
+  ],
+  "reviewed_checklist_ids": [
+    "delivery-backend-contract",
+    "delivery-api-adapter",
+    "delivery-types",
+    "delivery-state-policy-tests",
+    "delivery-fixture-smoke-split",
+    "delivery-bootstrap-readiness",
+    "accept-api-envelope",
+    "accept-r2-survey-copy",
+    "accept-state-transition",
+    "accept-idempotency",
+    "accept-r2-survey-state",
+    "accept-r2-errors",
+    "accept-owner-guard",
+    "accept-invalid-input",
+    "accept-r2-bootstrap",
+    "accept-r2-expiry-restart",
+    "accept-r2-rpc-atomicity",
+    "accept-r2-rpc-authority",
+    "accept-derived-fields",
+    "accept-r2-control-lease",
+    "accept-r2-limiter",
+    "accept-r2-contact-dedup",
+    "accept-r2-pii",
+    "accept-r2-retention",
+    "accept-r2-legacy-regression",
+    "accept-real-db-ready",
+    "accept-bootstrap-owning-flow",
+    "accept-r2-additive-migration",
+    "accept-vitest-split",
+    "accept-vitest-regression"
+  ],
+  "checklist": [
+    {
+      "id": "delivery-backend-contract",
+      "status": "reviewed_satisfied",
+      "evidence": "공식 r2.1 §2–10/workpack 대조 및 두 finding closure. 기존 v2/Stage4 소유 경계 유지."
+    },
+    {
+      "id": "delivery-api-adapter",
+      "status": "reviewed_satisfied",
+      "evidence": "exact Next POST→handler→execute-only scoped SDK→단일 RPC. SDK107 회귀 기록 및 current HTTPS6."
+    },
+    {
+      "id": "delivery-types",
+      "status": "reviewed_satisfied",
+      "evidence": "공개 union/내부 command·result/nullable와 topic 설문 상수 일치. R2 201 및 prior 정적 검토."
+    },
+    {
+      "id": "delivery-state-policy-tests",
+      "status": "reviewed_satisfied",
+      "evidence": "실제 상태·오류·멱등/동시성 검증396. 같은key/pid와 inspect/apply 공백 해소."
+    },
+    {
+      "id": "delivery-fixture-smoke-split",
+      "status": "reviewed_satisfied",
+      "evidence": "unit/file/Chromium/실제SQL·HTTPS 분리. provider fixture 및 운영·UI 미검증 표시."
+    },
+    {
+      "id": "delivery-bootstrap-readiness",
+      "status": "reviewed_satisfied",
+      "evidence": "최초 parent1/event1/revision1/lead0, cookie_resume no-op, IDB21과 END정리 직접 통과."
+    },
+    {
+      "id": "accept-api-envelope",
+      "status": "reviewed_satisfied",
+      "evidence": "exact response projection, fixed errors/headers/receipt 및 실제 HTTPS6 확인."
+    },
+    {
+      "id": "accept-r2-survey-copy",
+      "status": "reviewed_satisfied",
+      "evidence": "네문항 label/API/SQL enums와 Q1/Q2/부정응답 공용 상수·검증 일치."
+    },
+    {
+      "id": "accept-state-transition",
+      "status": "reviewed_satisfied",
+      "evidence": "두주제 단독3활동·6순서, 선행없는complete409, 다른상태를 가짜완료하지 않음."
+    },
+    {
+      "id": "accept-idempotency",
+      "status": "reviewed_satisfied",
+      "evidence": "same-key bootstrap same/differentevent, same-pid lead same/differentevent 병렬잠금대기 확인; revision/receipt/row수 직접검증."
+    },
+    {
+      "id": "accept-r2-survey-state",
+      "status": "reviewed_satisfied",
+      "evidence": "시작/제출 server example snapshot, sameanswers no-op/different409, inspect뒤 경쟁survey commit 재검사 통과."
+    },
+    {
+      "id": "accept-r2-errors",
+      "status": "reviewed_satisfied",
+      "evidence": "고정 오류표/fields와 rate+JSON/schema/cookie 우선순위 회귀 통과. R2-S3-001 최장3570초 확인."
+    },
+    {
+      "id": "accept-owner-guard",
+      "status": "reviewed_satisfied",
+      "evidence": "서명topiccookie/context/exactorigin/scope 및 모든replay gate/generation 유지. 합성rate 수정검증."
+    },
+    {
+      "id": "accept-invalid-input",
+      "status": "reviewed_satisfied",
+      "evidence": "exactparser/unknown·duplicatekeys/8KiB/UTF8/enums/email/token/동의 검증201."
+    },
+    {
+      "id": "accept-r2-bootstrap",
+      "status": "reviewed_satisfied",
+      "evidence": "실제Chromium 원자IDB/동시탭/별attribution/reload/confirmed와 실제DB 동일key 경쟁 검증."
+    },
+    {
+      "id": "accept-r2-expiry-restart",
+      "status": "reviewed_satisfied",
+      "evidence": "서명확인410 matchingcookie만삭제, IDB restartmarker; END정각/이후/retention이후 newkey/event0. R2-S3-002종결."
+    },
+    {
+      "id": "accept-r2-rpc-atomicity",
+      "status": "reviewed_satisfied",
+      "evidence": "실제3경계fault rollback0, 같은pidlead경쟁, staleinspect→survey/leadcommit→apply409 및 losingevent미선점."
+    },
+    {
+      "id": "accept-r2-rpc-authority",
+      "status": "reviewed_satisfied",
+      "evidence": "실제owner/searchpath/timeout/FORCERLS/anon·auth·service직접tabledeny/wrongscope·role·method·path; 9함수manifest불변."
+    },
+    {
+      "id": "accept-derived-fields",
+      "status": "reviewed_satisfied",
+      "evidence": "deferred revision=applied수/시간/survey·leadprojection/deadline/일부event삭제deny/cascade 실제 검증."
+    },
+    {
+      "id": "accept-r2-control-lease",
+      "status": "reviewed_satisfied",
+      "evidence": "실제HTTPS commit응답유실→sameevent proof와 unknown→lease유지/controlwriter차단. 단위gate갱신검증."
+    },
+    {
+      "id": "accept-r2-limiter",
+      "status": "reviewed_satisfied",
+      "evidence": "실제filestorage 다중bucket 한lock/최장retry/미초과증가 및 오류우선순위. 기존owner/symlink/orphan/clock/persist실패 테스트 통과."
+    },
+    {
+      "id": "accept-r2-contact-dedup",
+      "status": "reviewed_satisfied",
+      "evidence": "같은email 20pid/양topic unique와repeatNULL/legacy accepted·expiry·lookuperror 확인. provisional한계 유지."
+    },
+    {
+      "id": "accept-r2-pii",
+      "status": "reviewed_satisfied",
+      "evidence": "실제backendlog와event/public projection PII배제, safeSQLSTATE 변환. 실제운영log승인은 별도."
+    },
+    {
+      "id": "accept-r2-retention",
+      "status": "reviewed_satisfied",
+      "evidence": "deferreddeadline/expiry·withdrawal matching모든topic cascade/export삭제/generation 실제fixture. END local정리 보강. 운영purge와구분."
+    },
+    {
+      "id": "accept-r2-legacy-regression",
+      "status": "reviewed_satisfied",
+      "evidence": "prior legacy+SDK107 직접검증 및 currentisolated legacychecksum 불변; author전체7708와CI 참조."
+    },
+    {
+      "id": "accept-real-db-ready",
+      "status": "reviewed_satisfied",
+      "evidence": "고유 hcg_14862_6dfdfa/CLI2.110.0/고정migrationbundle/HTTPS3443직렬, 실제exit0 및ownedcleanup."
+    },
+    {
+      "id": "accept-bootstrap-owning-flow",
+      "status": "reviewed_satisfied",
+      "evidence": "실제DB 신규parent/event/revision/lead수와기존cookie_resume 관측event/상태불변 확인."
+    },
+    {
+      "id": "accept-r2-additive-migration",
+      "status": "reviewed_satisfied",
+      "evidence": "SQL SHA1a783932 불변. 신규3table/constraints/index/FK/RLS/trigger/RPC추가와기존wrapper보존 검토·replay."
+    },
+    {
+      "id": "accept-vitest-split",
+      "status": "reviewed_satisfied",
+      "evidence": "current 직접R2 201, SQL396assertions, HTTPS6/0skip, Chromium21로 구분. UI는Stage4."
+    },
+    {
+      "id": "accept-vitest-regression",
+      "status": "reviewed_satisfied",
+      "evidence": "rate/END 회귀와신규6경쟁52assertions 직접검증. authorbackend7708/515환경skip과테스트소유분리."
+    }
+  ],
+  "new_required_findings": [],
+  "direct_current_head_verification": {
+    "pnpm": "10.32.1",
+    "unit_tests": 201,
+    "unit_exit": 0,
+    "isolated_assertions": 396,
+    "isolated_exit": 0,
+    "new_concurrency_scenarios": 6,
+    "new_concurrency_assertions": 52,
+    "observed_waiting_barriers": 4,
+    "https_passed": 6,
+    "https_failed": 0,
+    "https_skipped": 0,
+    "browser_scenarios": 21,
+    "browser_exit": 0,
+    "browser_public_posts": 0,
+    "browser_external_requests": 0,
+    "browser_server_db_access": 0,
+    "isolated_project": "hcg_14862_6dfdfa",
+    "supabase_cli": "2.110.0",
+    "migration_bundle_sha256": "6e04722b44718c0f3e62579dd5617370b68a4a813d3164c816952079b009d3c8",
+    "sql_sha256": "1a783932ef81041414828e336b1f8c9a75666db44180583add72a4f326324ff8",
+    "owned_cleanup": "existing runner finally + no-owned-resources assertion complete, exit0",
+    "provider": "fixture only; SQL/PostgREST/SDK/HTTPS/file/Chromium actual"
+  },
+  "reused_evidence": {
+    "prior_reviewer_legacy_sdk_passed": 107,
+    "prior_reviewer_legacy_sdk_sha": "97502417e66a46dda29933f4bbe01be5e275884f",
+    "prior_static_review": "../resume-checkpoint.json",
+    "author_backend_head": "f09a85c8fe7afd4c952f17cd0e19a00749d5b0d3",
+    "author_product_passed": 7708,
+    "author_environment_skipped": 515,
+    "author_security_e2e_passed": 12,
+    "author_backend_exit": 0,
+    "author_backend_scope": "lint/typecheck/product/build/securityE2E",
+    "f09_to_reviewed_delta": "only existing isolated runner fixture freshcontrol one line; app/lib/tests/types/supabase/package/lock identical",
+    "author_source_hashes_match_current": true,
+    "author_evidence": [
+      {
+        "path": "/Users/cwj/.codex/worktrees/c7d7/homecook/.omx/artifacts/r2-stage3-repair/repair-result.json",
+        "sha256": "f84469c13b7e3bc32889cceec5014857c79be06898d9c19436deeeb94f5ad542"
+      },
+      {
+        "path": "/Users/cwj/.codex/worktrees/c7d7/homecook/.omx/artifacts/r2-stage3-repair/backend-final-head.log",
+        "sha256": "5502f6ed4574b3eb20e2adc329f398a77e86a83e3e21ef420a0f587778236d45"
+      },
+      {
+        "path": "/Users/cwj/.codex/worktrees/c7d7/homecook/.omx/artifacts/r2-stage3-repair/isolated-final-head.log",
+        "sha256": "13cb53768a2e8568c8b35229174a4282e31357d1173e4aa45fb91850cf520869"
+      },
+      {
+        "path": "/Users/cwj/.codex/worktrees/c7d7/homecook/.omx/artifacts/r2-stage3-repair/concurrency-result.json",
+        "sha256": "485d9f85eef72b723f6a42c71fd0093cdcd510a84121cdce3279314d9b0b6e68"
+      },
+      {
+        "path": "/Users/cwj/.codex/worktrees/c7d7/homecook/.omx/artifacts/r2-stage3-repair/rate-red.log",
+        "sha256": "509482a6631e197c62a218a7d9fd6a61e54f9a60780a31c32eaa731a85a6da29"
+      },
+      {
+        "path": "/Users/cwj/.codex/worktrees/c7d7/homecook/.omx/artifacts/r2-stage3-repair/session-unit-red.log",
+        "sha256": "b74ec0cfd36f56e0f96e96648d3ee8975b480e67e9de702b244b42ecb54d60bf"
+      }
+    ]
+  },
+  "ci": {
+    "checks": 22,
+    "pending": 0,
+    "failed": 0,
+    "all_completed_success_or_intentional_skipped": true,
+    "non_draft": true,
+    "head": "09413ba38ee6d1c69925b1c479ce44e03e6885cd",
+    "body_unchanged_during_review": true,
+    "snapshot": "pr-final.json"
+  },
+  "not_tested": [
+    "Actual Turnstile/live provider, physical-device/in-app browsers, Stage4 pages/UI/queue/design authority.",
+    "Production ingress/readiness/key provisioning/privacy publication/activation and actual retention/withdrawal/export operations.",
+    "Reviewer did not rerun full verify:backend or global security-functions gate after repair; author/currentCI + unchangedSQL/manifest + directfocusedgates reused.",
+    "IDB unavailable/write-failure cannot guarantee physical cleanup until storage recovers; closed campaign creates no replacement capability and retries cleanup on recovery."
+  ],
+  "remaining_manual_risks": [
+    "Single-host file lease/control: orphan/unknown outcomes intentionally fail closed until approved recovery.",
+    "Legacy concurrent writer and deletion/reentry mean new_observed remains provisional, not unique lifetime people.",
+    "C01 remains unconfirmed/nonblocking; no speculative contract expansion."
+  ],
+  "source_files_changed_by_reviewer": [],
+  "tracked_worktree_clean": true,
+  "operational_db_access": 0,
+  "production_mutations": 0,
+  "github_review_or_merge_actions": 0,
+  "blocked_custom_repro_rerun": false,
+  "platform_security_restriction_recurred": false,
+  "saved_at": "2026-09-11T01:42:42.211566+00:00"
+}

@@ -1,0 +1,60 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-y5cBvp
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-view.test.tsx (11 tests | 2 failed) 1072ms
+     × shows a single saving action after a failed lead request 43ms
+     × keeps the last example scene and one retry action after uncertain completion 80ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > shows a single saving action after a failed lead request
+AssertionError: expected <button type="submit" disabled></button> to be null
+
+- Expected:
+null
+
++ Received:
+<button
+  disabled=""
+  type="submit"
+>
+  베타 오픈 알림 신청하기
+</button>
+
+ ❯ tests/marketing-round2-view.test.tsx:84:65
+     82|     fireEvent.click(screen.getByRole("button",{name:"베타 오픈 알림 받기"}));
+     83|     expect(screen.getByRole("button",{name:"다시 시도"})).toBeTruthy();
+     84|     expect(screen.queryByRole("button",{name:"베타 오픈 알림 신청하기"})).toBeNu…
+       |                                                                 ^
+     85|   });
+     86|   it("keeps the last example scene and one retry action after uncertai…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > keeps the last example scene and one retry action after uncertain completion
+AssertionError: expected <button></button> to be null
+
+- Expected:
+null
+
++ Received:
+<button>
+  예시 확인 완료
+</button>
+
+ ❯ tests/marketing-round2-view.test.tsx:92:60
+     90|     expect(screen.getByText("사용 예시 3/3")).toBeTruthy();
+     91|     expect(screen.getByRole("button",{name:"다시 시도"})).toBeTruthy();
+     92|     expect(screen.queryByRole("button",{name:"예시 확인 완료"})).toBeNull();
+       |                                                            ^
+     93|   });
+     94| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 passed (11)
+   Start at  12:07:16
+   Duration  1.95s (transform 88ms, setup 28ms, import 188ms, tests 1.07s, environment 549ms)

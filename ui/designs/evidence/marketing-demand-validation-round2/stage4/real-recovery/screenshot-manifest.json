@@ -1,0 +1,75 @@
+{
+  "phase": "after-layer2",
+  "fullPage": true,
+  "viewSourceSha256": "d0fb62f7052f08221ecad1edce64974641f4f962acce85dcf65244fdb6e07b04",
+  "sourceManifestSha256": "8f6298ac9934b8beba41660469bd86f1dfaa39f4f8ced9c992e630acab017b6f",
+  "resultSha256": "a0884a1de85510fab37885e6d3b4858974d71428f6fb06eefeae166ae50d5f93",
+  "singleRetryActionAssertions": "passed in both topics",
+  "diagnosticOnlyOverlay": "Next development indicator may be visible",
+  "images": [
+    {
+      "file": "R2_RECORDING_RECOVERY-320x568.png",
+      "caption": "실제 409 동의 갱신: 이메일 보존, 동의 해제, 원래 신청 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "12aa4d7f30bf5e4c345f2797ac1755f9cb19f9d1744a977a38a2396c114b6161",
+      "imageSha256": "a77c17aede8245eea979157d71bac822c635a6fc7b88fad4615d51018b342ab0",
+      "width": 320,
+      "fullPageHeight": 964
+    },
+    {
+      "file": "R2_RECORDING_RECOVERY-390x844.png",
+      "caption": "실제 409 동의 갱신: 이메일 보존, 동의 해제, 원래 신청 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "12aa4d7f30bf5e4c345f2797ac1755f9cb19f9d1744a977a38a2396c114b6161",
+      "imageSha256": "ef5d310198da8586e0c5b58b347c28508583e7bcbc077ca22869f7ad5ea40431",
+      "width": 390,
+      "fullPageHeight": 925
+    },
+    {
+      "file": "R2_RECORDING_RECOVERY-393x852.png",
+      "caption": "실제 409 동의 갱신: 이메일 보존, 동의 해제, 원래 신청 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "12aa4d7f30bf5e4c345f2797ac1755f9cb19f9d1744a977a38a2396c114b6161",
+      "imageSha256": "5ba2767f9b9425c14b13383d0b9423aa08f79a461f6a7db20dc7b7bb8423aa5c",
+      "width": 393,
+      "fullPageHeight": 925
+    },
+    {
+      "file": "R2_RECORDING_RECOVERY-1280x900.png",
+      "caption": "실제 409 동의 갱신: 이메일 보존, 동의 해제, 원래 신청 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "12aa4d7f30bf5e4c345f2797ac1755f9cb19f9d1744a977a38a2396c114b6161",
+      "imageSha256": "79dcadc5053a59dd2591f786268dea2047dd93579b6df023edfa169a6202d406",
+      "width": 1280,
+      "fullPageHeight": 900
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-320x568.png",
+      "caption": "실제 commit 응답 유실: 예시 3/3 보존, 원래 완료 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "e425dc65d2ad105f735ef2bfc6afef08648c36e0b0317b3b521941eac37137b8",
+      "imageSha256": "c805a81a09f4222f1e9ee29ddc655f2a34d39e11495b3aa02c35fd37541b46b1",
+      "width": 320,
+      "fullPageHeight": 1099
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-390x844.png",
+      "caption": "실제 commit 응답 유실: 예시 3/3 보존, 원래 완료 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "e425dc65d2ad105f735ef2bfc6afef08648c36e0b0317b3b521941eac37137b8",
+      "imageSha256": "3901a8520ae4d699ca077aa552f67467ef939f0873db77dc33ade6fe1df10651",
+      "width": 390,
+      "fullPageHeight": 1105
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-393x852.png",
+      "caption": "실제 commit 응답 유실: 예시 3/3 보존, 원래 완료 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "e425dc65d2ad105f735ef2bfc6afef08648c36e0b0317b3b521941eac37137b8",
+      "imageSha256": "ff1b8418132e96dc1b7896d5e4b6e3c4f4ed2fbbce0e3191d90398cdfcf48b58",
+      "width": 393,
+      "fullPageHeight": 1105
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-1280x900.png",
+      "caption": "실제 commit 응답 유실: 예시 3/3 보존, 원래 완료 버튼 없음, 재시도 버튼 1개",
+      "captionSha256": "e425dc65d2ad105f735ef2bfc6afef08648c36e0b0317b3b521941eac37137b8",
+      "imageSha256": "7f0f87bfe30e2a90a15b11f1bac366503c500b2e7e35a89d51ee94652e5be08d",
+      "width": 1280,
+      "fullPageHeight": 1125
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+{
+  "mode": "production-build exact source; loopback unsaved preview",
+  "runAt": "2026-09-11T03:05:08.333Z",
+  "results": [
+    {
+      "device": "desktop-chrome",
+      "topic": "recording",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "headers": {
+        "cache": "private, no-store",
+        "referrer": "no-referrer"
+      },
+      "menuImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-recording-menu.png",
+      "surveyImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-recording-negative-survey.png",
+      "checks": [
+        "Q2 interrupted draft preserved",
+        "negative survey same completion",
+        "independent survey-example-lead navigation",
+        "explicit example completion",
+        "missing consent moves focus",
+        "read-only receipt after completion",
+        "no horizontal overflow",
+        "no provider iframe",
+        "zero external/write/pageerror"
+      ],
+      "external": [],
+      "writes": [],
+      "errors": []
+    },
+    {
+      "device": "desktop-chrome",
+      "topic": "homeflow",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "headers": {
+        "cache": "private, no-store",
+        "referrer": "no-referrer"
+      },
+      "menuImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-homeflow-menu.png",
+      "surveyImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-homeflow-negative-survey.png",
+      "checks": [
+        "Q2 interrupted draft preserved",
+        "negative survey same completion",
+        "independent survey-example-lead navigation",
+        "explicit example completion",
+        "missing consent moves focus",
+        "read-only receipt after completion",
+        "no horizontal overflow",
+        "no provider iframe",
+        "zero external/write/pageerror"
+      ],
+      "external": [],
+      "writes": [],
+      "errors": []
+    },
+    {
+      "device": "mobile-chrome",
+      "topic": "recording",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "headers": {
+        "cache": "private, no-store",
+        "referrer": "no-referrer"
+      },
+      "menuImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-recording-menu.png",
+      "surveyImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-recording-negative-survey.png",
+      "checks": [
+        "Q2 interrupted draft preserved",
+        "negative survey same completion",
+        "independent survey-example-lead navigation",
+        "explicit example completion",
+        "missing consent moves focus",
+        "read-only receipt after completion",
+        "no horizontal overflow",
+        "no provider iframe",
+        "zero external/write/pageerror"
+      ],
+      "external": [],
+      "writes": [],
+      "errors": []
+    },
+    {
+      "device": "mobile-chrome",
+      "topic": "homeflow",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "headers": {
+        "cache": "private, no-store",
+        "referrer": "no-referrer"
+      },
+      "menuImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-homeflow-menu.png",
+      "surveyImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-homeflow-negative-survey.png",
+      "checks": [
+        "Q2 interrupted draft preserved",
+        "negative survey same completion",
+        "independent survey-example-lead navigation",
+        "explicit example completion",
+        "missing consent moves focus",
+        "read-only receipt after completion",
+        "no horizontal overflow",
+        "no provider iframe",
+        "zero external/write/pageerror"
+      ],
+      "external": [],
+      "writes": [],
+      "errors": []
+    },
+    {
+      "device": "mobile-ios-small",
+      "topic": "recording",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "headers": {
+        "cache": "private, no-store",
+        "referrer": "no-referrer"
+      },
+      "menuImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-recording-menu.png",
+      "surveyImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-recording-negative-survey.png",
+      "checks": [
+        "Q2 interrupted draft preserved",
+        "negative survey same completion",
+        "independent survey-example-lead navigation",
+        "explicit example completion",
+        "missing consent moves focus",
+        "read-only receipt after completion",
+        "no horizontal overflow",
+        "no provider iframe",
+        "zero external/write/pageerror"
+      ],
+      "external": [],
+      "writes": [],
+      "errors": []
+    },
+    {
+      "device": "mobile-ios-small",
+      "topic": "homeflow",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "headers": {
+        "cache": "private, no-store",
+        "referrer": "no-referrer"
+      },
+      "menuImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-homeflow-menu.png",
+      "surveyImage": ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-homeflow-negative-survey.png",
+      "checks": [
+        "Q2 interrupted draft preserved",
+        "negative survey same completion",
+        "independent survey-example-lead navigation",
+        "explicit example completion",
+        "missing consent moves focus",
+        "read-only receipt after completion",
+        "no horizontal overflow",
+        "no provider iframe",
+        "zero external/write/pageerror"
+      ],
+      "external": [],
+      "writes": [],
+      "errors": []
+    }
+  ]
+}

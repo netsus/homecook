@@ -1,0 +1,8 @@
+
+> homecook@0.1.0 qa:explore /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/qa-explore.mjs -- --slice marketing-demand-validation-round2 --base-url http://127.0.0.1:3117 --output-dir .artifacts/qa/marketing-demand-validation-round2/stage4-20260911
+
+Exploratory QA bundle created for marketing-demand-validation-round2
+- checklist: .artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploratory-checklist.json
+- report: .artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploratory-report.json
+- instructions: .artifacts/qa/marketing-demand-validation-round2/stage4-20260911/README.md

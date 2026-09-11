@@ -1,0 +1,131 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - status "서비스 준비 안내" [ref=e2]:
+    - generic [ref=e3]: 서비스 준비 중
+    - generic [ref=e5]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - link "뒤로 가기" [ref=e11] [cursor=pointer]:
+          - /url: /planner
+          - img [ref=e12]
+        - heading "남은 요리" [level=1] [ref=e14]
+        - link "다먹은 요리" [ref=e15] [cursor=pointer]:
+          - /url: /leftovers/ate?returnTo=%2Fleftovers%3FreturnTo%3D%252Fplanner%26returnSurface%3Dleftovers.list&returnSurface=leftovers.list
+      - generic [ref=e16]:
+        - heading "남은요리 관리" [level=2] [ref=e17]
+        - heading "남은 요리 2개" [level=3] [ref=e18]
+        - paragraph [ref=e19]: 요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.
+      - generic [ref=e21]:
+        - paragraph [ref=e22]: 오래 보관한 남은 요리가 있어요
+        - paragraph [ref=e23]: 2개 항목을 확인해 주세요. 먹었다면 다먹음으로 정리하고, 아직 보관 중이면 계속 보관을 눌러 주세요.
+      - generic [ref=e24]:
+        - article [ref=e25]:
+          - generic [ref=e26]:
+            - img [ref=e28]
+            - generic [ref=e30]:
+              - link "김치찌개" [ref=e31] [cursor=pointer]:
+                - /url: /recipe/recipe-1
+              - paragraph [ref=e32]: 4/28 요리 · 저녁 · 2인분
+          - generic [ref=e33]:
+            - paragraph [ref=e34]: 보관한 지 135일이 지났어요
+            - generic [ref=e35]:
+              - paragraph [ref=e36]: 아직 보관 중이면 안내를 숨겨 주세요.
+              - button "계속 보관" [ref=e37] [cursor=pointer]
+          - generic [ref=e38]:
+            - button "플래너에 추가" [active] [ref=e39] [cursor=pointer]:
+              - generic [ref=e40]: 플래너에 추가
+            - button "다먹음" [ref=e41] [cursor=pointer]
+        - article [ref=e42]:
+          - generic [ref=e43]:
+            - img [ref=e45]
+            - generic [ref=e47]:
+              - link "된장찌개" [ref=e48] [cursor=pointer]:
+                - /url: /recipe/recipe-2
+              - paragraph [ref=e49]: 4/27 요리 · 점심 · 1인분
+          - generic [ref=e50]:
+            - paragraph [ref=e51]: 보관한 지 136일이 지났어요
+            - generic [ref=e52]:
+              - paragraph [ref=e53]: 아직 보관 중이면 안내를 숨겨 주세요.
+              - button "계속 보관" [ref=e54] [cursor=pointer]
+          - generic [ref=e55]:
+            - button "플래너에 추가" [ref=e56] [cursor=pointer]:
+              - generic [ref=e57]: 플래너에 추가
+            - button "다먹음" [ref=e58] [cursor=pointer]
+      - region "중량·잔량 기록" [ref=e59]:
+        - heading "중량·잔량 기록" [level=2] [ref=e60]
+        - paragraph [ref=e61]: 요리 직후 음식 무게와 현재 남은 양을 따로 관리해요.
+        - paragraph [ref=e62]: 중량·잔량 기록이 없어요.
+      - dialog "플래너에 추가" [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - heading "플래너에 추가" [level=2] [ref=e71]
+              - paragraph [ref=e72]: 날짜와 끼니를 선택해 주세요
+            - button "닫기" [ref=e73] [cursor=pointer]:
+              - img [ref=e75]
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - paragraph [ref=e79]: 날짜
+              - group "날짜 선택" [ref=e80]:
+                - button "금 9/11" [pressed] [ref=e81] [cursor=pointer]
+                - button "토 9/12" [ref=e82] [cursor=pointer]
+                - button "일 9/13" [ref=e83] [cursor=pointer]
+                - button "월 9/14" [ref=e84] [cursor=pointer]
+                - button "화 9/15" [ref=e85] [cursor=pointer]
+                - button "수 9/16" [ref=e86] [cursor=pointer]
+                - button "목 9/17" [ref=e87] [cursor=pointer]
+                - button "금 9/18" [ref=e88] [cursor=pointer]
+                - button "토 9/19" [ref=e89] [cursor=pointer]
+                - button "일 9/20" [ref=e90] [cursor=pointer]
+                - button "월 9/21" [ref=e91] [cursor=pointer]
+                - button "화 9/22" [ref=e92] [cursor=pointer]
+                - button "수 9/23" [ref=e93] [cursor=pointer]
+                - button "목 9/24" [ref=e94] [cursor=pointer]
+            - generic [ref=e95]:
+              - paragraph [ref=e96]: 끼니
+              - group "끼니 선택" [ref=e97]:
+                - button "아침" [pressed] [ref=e98] [cursor=pointer]
+                - button "점심" [ref=e99] [cursor=pointer]
+            - generic [ref=e100]:
+              - paragraph [ref=e101]: 계획 인분
+              - generic [ref=e102]:
+                - generic [ref=e103]: 몇 인분 계획할까요?
+                - generic [ref=e104]:
+                  - button "인분 줄이기" [disabled] [ref=e105] [cursor=pointer]:
+                    - generic [ref=e106]: −
+                  - generic "1인분" [ref=e107]: "1"
+                  - button "인분 늘리기" [ref=e108] [cursor=pointer]:
+                    - generic [ref=e109]: +
+            - generic [ref=e111]:
+              - button "취소" [ref=e112] [cursor=pointer]
+              - button "날짜 끼니에 추가" [ref=e113] [cursor=pointer]
+      - navigation "남은 요리 하단 탭" [ref=e114]:
+        - generic [ref=e115]:
+          - link "홈" [ref=e116] [cursor=pointer]:
+            - /url: /
+            - img [ref=e117]
+            - generic [ref=e119]: 홈
+          - link "요리 계획" [ref=e120] [cursor=pointer]:
+            - /url: /planner
+            - img [ref=e121]
+            - generic [ref=e124]: 요리 계획
+          - link "식사 기록" [ref=e125] [cursor=pointer]:
+            - /url: /planner?segment=log
+            - img [ref=e126]
+            - generic [ref=e129]: 식사 기록
+          - link "팬트리" [ref=e130] [cursor=pointer]:
+            - /url: /pantry
+            - img [ref=e131]
+            - generic [ref=e133]: 팬트리
+          - link "마이" [ref=e134] [cursor=pointer]:
+            - /url: /mypage
+            - img [ref=e135]
+            - generic [ref=e138]: 마이
+  - region "새 알림"
+  - alert [ref=e139]
+  - button "YouTube 추출 알림 없음" [ref=e141] [cursor=pointer]:
+    - img [ref=e142]
+```

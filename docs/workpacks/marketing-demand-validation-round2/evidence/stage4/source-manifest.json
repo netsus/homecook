@@ -1,5 +1,5 @@
 {
-  "code_commit": "a5079881f118c2b7dc00119a949b8c7e8b03b86a",
+  "code_commit": "c00fa23f53cb18550424abb96c2964a46796e3dc",
   "base_commit": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
   "files": [
     {
@@ -20,7 +20,7 @@
     },
     {
       "path": "components/marketing/round2/round2-view.tsx",
-      "sha256": "bfcc863c15f5737972c993a00ccef40c116a52b805bc285d003381baae753775"
+      "sha256": "d0fb62f7052f08221ecad1edce64974641f4f962acce85dcf65244fdb6e07b04"
     },
     {
       "path": "components/marketing/round2/round2.module.css",
@@ -96,7 +96,7 @@
     },
     {
       "path": "tests/marketing-round2-ui-isolated.scenarios.mjs",
-      "sha256": "a5ecb657b9d127c3da9ae9bdbc11dd5134407c434378dbf36f29dec1a069ae2b"
+      "sha256": "2b41c31f2050030df3c13146f59e6edf79b417ca798b9f129eb35a94d585c9e9"
     },
     {
       "path": "tests/marketing-round2-ui-isolated.test.ts",
@@ -104,7 +104,7 @@
     },
     {
       "path": "tests/marketing-round2-view.test.tsx",
-      "sha256": "52fc99ceda5e85a4b603920a19e34759d0c877480390e8d95d172c5c54da35b0"
+      "sha256": "a3864e71f19f3af9d78e1c411375634b35f83ec827304d62875e6c79ed4fe8be"
     },
     {
       "path": "tests/marketing-round2-widget.test.tsx",

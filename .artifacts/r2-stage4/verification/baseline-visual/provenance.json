@@ -1,0 +1,10 @@
+{
+  "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "candidate_root": "/Users/cwj/.codex/worktrees/f2a2/homecook",
+  "temporary_parent": "/Users/cwj/.codex/worktrees/homecook-r2-visual-base-wli_1nc1",
+  "baseline_worktree": "/Users/cwj/.codex/worktrees/homecook-r2-visual-base-wli_1nc1/homecook",
+  "runtime": "APFS clone of existing root node_modules; no install",
+  "base_url": "http://127.0.0.1:3122",
+  "reuse_existing_server": false,
+  "candidate_results_copied": 0
+}

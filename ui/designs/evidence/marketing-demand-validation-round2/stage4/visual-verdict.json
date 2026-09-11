@@ -1,0 +1,18 @@
+{
+  "score": 93,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "실제오류진단 캡처의 Next 개발 도구 표시가 일부 남아 있고 제품 UI가 아니다."
+  ],
+  "suggestions": [
+    "이 실제 오류 evidence와 production 미리보기 evidence를 함께 독립 authority에 전달한다."
+  ],
+  "reasoning": "실제409와commit응답유실 모두 입력/장면을 유지하고 저장 재시도버튼 하나만 표시한다. 재시도 뒤 DONE 및 중복0을 실제 API/DB로 확인했다.",
+  "next_actions": [
+    "독립 authority precheck 인계"
+  ],
+  "threshold": 90,
+  "reference": "ui/designs/evidence/marketing-demand-validation-round2/R2_recording_320.png",
+  "generated_screenshot": "ui/designs/evidence/marketing-demand-validation-round2/stage4/real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png"
+}

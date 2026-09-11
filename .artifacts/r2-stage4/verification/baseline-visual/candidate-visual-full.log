@@ -1,0 +1,696 @@
+
+> homecook@0.1.0 test:e2e:visual /Users/cwj/.codex/worktrees/f2a2/homecook
+> playwright test tests/e2e/qa-visual.spec.ts
+
+[WebServer] (node:38674) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:38679) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:38695) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:38848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 48 tests using 3 workers
+
+(node:38877) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:38878) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:38876) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:38877) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:38878) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:38876) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:234:7 › QA visual regression › home default shell matches the visual baseline @visual-core
+[2/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:234:7 › QA visual regression › home default shell matches the visual baseline @visual-core
+[3/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:234:7 › QA visual regression › home default shell matches the visual baseline @visual-core
+[4/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:249:7 › QA visual regression › home sort menu open matches the visual baseline @visual-core
+[5/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:249:7 › QA visual regression › home sort menu open matches the visual baseline @visual-core
+[6/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:249:7 › QA visual regression › home sort menu open matches the visual baseline @visual-core
+[7/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:269:7 › QA visual regression › ingredient filter modal matches the visual baseline @visual-core
+[8/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:269:7 › QA visual regression › ingredient filter modal matches the visual baseline @visual-core
+[9/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:269:7 › QA visual regression › ingredient filter modal matches the visual baseline @visual-core
+[10/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:286:7 › QA visual regression › recipe detail and login gate match the visual baseline @visual-core
+[11/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:286:7 › QA visual regression › recipe detail and login gate match the visual baseline @visual-core
+[12/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:286:7 › QA visual regression › recipe detail and login gate match the visual baseline @visual-core
+[WebServer] (node:39127) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[13/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:316:7 › QA visual regression › marketing beta landing matches the visual baseline @visual-core @marketing
+[14/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:316:7 › QA visual regression › marketing beta landing matches the visual baseline @visual-core @marketing
+[15/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:316:7 › QA visual regression › marketing beta landing matches the visual baseline @visual-core @marketing
+[16/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:332:7 › QA visual regression › planner week desktop shell matches the visual baseline
+[17/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:332:7 › QA visual regression › planner week desktop shell matches the visual baseline
+[18/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:357:7 › QA visual regression › meal desktop detail and confirm dialogs match the visual baseline
+[19/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:332:7 › QA visual regression › planner week desktop shell matches the visual baseline
+[20/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:357:7 › QA visual regression › meal desktop detail and confirm dialogs match the visual baseline
+[21/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:404:7 › QA visual regression › menu add desktop pickers match the visual baseline
+[22/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:357:7 › QA visual regression › meal desktop detail and confirm dialogs match the visual baseline
+[23/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:470:7 › QA visual regression › manual recipe desktop screen and ingredient modal match the visual baseline
+[24/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:404:7 › QA visual regression › menu add desktop pickers match the visual baseline
+[25/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:500:7 › QA visual regression › youtube import desktop flow matches the visual baseline
+[26/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:539:7 › QA visual regression › pantry desktop screen and modals match the visual baseline
+[27/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:470:7 › QA visual regression › manual recipe desktop screen and ingredient modal match the visual baseline
+[28/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:581:7 › QA visual regression › shopping desktop flow and detail states match the visual baseline
+[29/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:500:7 › QA visual regression › youtube import desktop flow matches the visual baseline
+[30/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:635:7 › QA visual regression › login, mypage, recipebooks, settings desktop screens match the visual baseline
+[31/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:539:7 › QA visual regression › pantry desktop screen and modals match the visual baseline
+[32/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:743:7 › QA visual regression › cooking desktop cook modes match the visual baseline
+[33/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:581:7 › QA visual regression › shopping desktop flow and detail states match the visual baseline
+[34/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:774:7 › QA visual regression › leftovers desktop ready states match the visual baseline
+[35/48] [mobile-ios-small] › tests/e2e/qa-visual.spec.ts:803:7 › QA visual regression › leftovers desktop empty states match the visual baseline
+[36/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:635:7 › QA visual regression › login, mypage, recipebooks, settings desktop screens match the visual baseline
+[37/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:743:7 › QA visual regression › cooking desktop cook modes match the visual baseline
+[WebServer] (node:39300) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[38/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:774:7 › QA visual regression › leftovers desktop ready states match the visual baseline
+[39/48] [mobile-chrome] › tests/e2e/qa-visual.spec.ts:803:7 › QA visual regression › leftovers desktop empty states match the visual baseline
+  1) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:357:7 › QA visual regression › meal desktop detail and confirm dialogs match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 937px, received 1280px by 1197px. 65906 pixels (ratio 0.05 of all image pixels) are different.
+
+      Snapshot: qa-meal-detail.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-meal-detail.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 937px, received 1280px by 1197px. 65906 pixels (ratio 0.05 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 937px, received 1280px by 1197px. 65906 pixels (ratio 0.05 of all image pixels) are different.
+
+
+      368 |
+      369 |     await stabilizeVisualSnapshot(page);
+    > 370 |     await expect(page).toHaveScreenshot("qa-meal-detail.png", {
+          |                        ^
+      371 |       animations: "disabled",
+      372 |       fullPage: true,
+      373 |       maxDiffPixels: MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:370:24
+
+    attachment #1: qa-meal-detail (image/png) ──────────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-meal-detail-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/qa-meal-detail-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/qa-meal-detail-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39354) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39354) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[40/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:404:7 › QA visual regression › menu add desktop pickers match the visual baseline
+  2) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:404:7 › QA visual regression › menu add desktop pickers match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      10178 pixels (ratio 0.01 of all image pixels) are different.
+
+      Snapshot: qa-menu-add-search.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-menu-add-search.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 10178 pixels (ratio 0.01 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - 10178 pixels (ratio 0.01 of all image pixels) are different.
+
+
+      416 |
+      417 |     await stabilizeVisualSnapshot(page);
+    > 418 |     await expect(page).toHaveScreenshot("qa-menu-add-search.png", {
+          |                        ^
+      419 |       animations: "disabled",
+      420 |       fullPage: true,
+      421 |       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:418:24
+
+    attachment #1: qa-menu-add-search (image/png) ──────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-menu-add-search-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/qa-menu-add-search-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/qa-menu-add-search-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39402) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39402) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[41/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:470:7 › QA visual regression › manual recipe desktop screen and ingredient modal match the visual baseline
+  3) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:470:7 › QA visual regression › manual recipe desktop screen and ingredient modal match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 1495px, received 1280px by 1535px. 86670 pixels (ratio 0.05 of all image pixels) are different.
+
+      Snapshot: qa-manual-recipe-create.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-manual-recipe-create.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 1495px, received 1280px by 1535px. 86670 pixels (ratio 0.05 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 1495px, received 1280px by 1535px. 86670 pixels (ratio 0.05 of all image pixels) are different.
+
+
+      480 |     ).toBeVisible();
+      481 |     await stabilizeVisualSnapshot(page);
+    > 482 |     await expect(page).toHaveScreenshot("qa-manual-recipe-create.png", {
+          |                        ^
+      483 |       animations: "disabled",
+      484 |       fullPage: true,
+      485 |       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:482:24
+
+    attachment #1: qa-manual-recipe-create (image/png) ─────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-manual-recipe-create-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/qa-manual-recipe-create-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/qa-manual-recipe-create-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39454) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39454) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[42/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:500:7 › QA visual regression › youtube import desktop flow matches the visual baseline
+  4) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:500:7 › QA visual regression › youtube import desktop flow matches the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      27342 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: qa-youtube-import-url.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-youtube-import-url.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 27342 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - 27342 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      511 |     ).toBeVisible();
+      512 |     await stabilizeVisualSnapshot(page);
+    > 513 |     await expect(page).toHaveScreenshot("qa-youtube-import-url.png", {
+          |                        ^
+      514 |       animations: "disabled",
+      515 |       fullPage: true,
+      516 |       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:513:24
+
+    attachment #1: qa-youtube-import-url (image/png) ───────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-youtube-import-url-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/qa-youtube-import-url-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/qa-youtube-import-url-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39605) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39605) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[43/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:539:7 › QA visual regression › pantry desktop screen and modals match the visual baseline
+  5) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:539:7 › QA visual regression › pantry desktop screen and modals match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 1528px, received 1280px by 1568px. 51868 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: qa-pantry.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-pantry.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 1528px, received 1280px by 1568px. 50956 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 1528px, received 1280px by 1568px. 51868 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      548 |
+      549 |     await stabilizeVisualSnapshot(page);
+    > 550 |     await expect(page).toHaveScreenshot("qa-pantry.png", {
+          |                        ^
+      551 |       animations: "disabled",
+      552 |       fullPage: true,
+      553 |       maxDiffPixels: PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:550:24
+
+    attachment #1: qa-pantry (image/png) ───────────────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-pantry-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/qa-pantry-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/qa-pantry-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39658) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39658) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[44/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:581:7 › QA visual regression › shopping desktop flow and detail states match the visual baseline
+  6) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:581:7 › QA visual regression › shopping desktop flow and detail states match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 898px, received 1280px by 938px. 60595 pixels (ratio 0.06 of all image pixels) are different.
+
+      Snapshot: qa-shopping-flow.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-shopping-flow.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 898px, received 1280px by 938px. 61211 pixels (ratio 0.06 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 898px, received 1280px by 938px. 60595 pixels (ratio 0.06 of all image pixels) are different.
+
+
+      591 |     ).toBeVisible();
+      592 |     await stabilizeVisualSnapshot(page);
+    > 593 |     await expect(page).toHaveScreenshot("qa-shopping-flow.png", {
+          |                        ^
+      594 |       animations: "disabled",
+      595 |       fullPage: true,
+      596 |       maxDiffPixels: PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:593:24
+
+    attachment #1: qa-shopping-flow (image/png) ────────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-shopping-flow-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/qa-shopping-flow-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/qa-shopping-flow-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39705) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39705) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[45/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:635:7 › QA visual regression › login, mypage, recipebooks, settings desktop screens match the visual baseline
+  7) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:635:7 › QA visual regression › login, mypage, recipebooks, settings desktop screens match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 1113px, received 1280px by 1153px. 31315 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: qa-mypage-saved.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-mypage-saved.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 1113px, received 1280px by 1153px. 31377 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 1113px, received 1280px by 1153px. 31315 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      658 |     ).toBeVisible();
+      659 |     await stabilizeVisualSnapshot(page);
+    > 660 |     await expect(page).toHaveScreenshot("qa-mypage-saved.png", {
+          |                        ^
+      661 |       animations: "disabled",
+      662 |       fullPage: true,
+      663 |       maxDiffPixels: MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:660:24
+
+    attachment #1: qa-mypage-saved (image/png) ─────────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-mypage-saved-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/qa-mypage-saved-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/qa-mypage-saved-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39868) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39868) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[46/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:743:7 › QA visual regression › cooking desktop cook modes match the visual baseline
+[WebServer] (node:39921) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+  8) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:743:7 › QA visual regression › cooking desktop cook modes match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 744px, received 1280px by 720px. 112029 pixels (ratio 0.12 of all image pixels) are different.
+
+      Snapshot: qa-cook-mode-planner.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-cook-mode-planner.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 744px, received 1280px by 720px. 112029 pixels (ratio 0.12 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 744px, received 1280px by 720px. 112029 pixels (ratio 0.12 of all image pixels) are different.
+
+
+      752 |     await expect(page.getByTestId("ingredient-list")).toBeVisible();
+      753 |     await stabilizeVisualSnapshot(page);
+    > 754 |     await expect(page).toHaveScreenshot("qa-cook-mode-planner.png", {
+          |                        ^
+      755 |       animations: "disabled",
+      756 |       fullPage: true,
+      757 |       maxDiffPixels: COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:754:24
+
+    attachment #1: qa-cook-mode-planner (image/png) ────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-cook-mode-planner-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/qa-cook-mode-planner-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/qa-cook-mode-planner-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39934) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39934) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[47/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:774:7 › QA visual regression › leftovers desktop ready states match the visual baseline
+  9) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:774:7 › QA visual regression › leftovers desktop ready states match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 1416px, received 1280px by 1456px. 52258 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: qa-leftovers-ready.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-leftovers-ready.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 1416px, received 1280px by 1456px. 52258 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 1416px, received 1280px by 1456px. 52258 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      784 |     await expect(page.getByTestId("leftover-list")).toBeVisible();
+      785 |     await stabilizeVisualSnapshot(page);
+    > 786 |     await expect(page).toHaveScreenshot("qa-leftovers-ready.png", {
+          |                        ^
+      787 |       animations: "disabled",
+      788 |       fullPage: true,
+      789 |       maxDiffPixels: LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:786:24
+
+    attachment #1: qa-leftovers-ready (image/png) ──────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-ready-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-ready-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-ready-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+(node:39983) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:39983) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[48/48] [desktop-chrome] › tests/e2e/qa-visual.spec.ts:803:7 › QA visual regression › leftovers desktop empty states match the visual baseline
+  10) [desktop-chrome] › tests/e2e/qa-visual.spec.ts:803:7 › QA visual regression › leftovers desktop empty states match the visual baseline
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      Expected an image 1280px by 970px, received 1280px by 1010px. 19338 pixels (ratio 0.02 of all image pixels) are different.
+
+      Snapshot: qa-leftovers-empty.png
+
+    Call log:
+      - Expect "toHaveScreenshot(qa-leftovers-empty.png)" with timeout 5000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - Expected an image 1280px by 970px, received 1280px by 1010px. 19338 pixels (ratio 0.02 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - Expected an image 1280px by 970px, received 1280px by 1010px. 19338 pixels (ratio 0.02 of all image pixels) are different.
+
+
+      816 |     await expect(page.getByText("남은 요리가 없어요")).toBeVisible();
+      817 |     await stabilizeVisualSnapshot(page);
+    > 818 |     await expect(page).toHaveScreenshot("qa-leftovers-empty.png", {
+          |                        ^
+      819 |       animations: "disabled",
+      820 |       fullPage: true,
+      821 |       maxDiffPixels: LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/qa-visual.spec.ts:818:24
+
+    attachment #1: qa-leftovers-empty (image/png) ──────────────────────────────────────────────────
+    Expected: tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-empty-desktop-chrome-darwin.png
+    Received: test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-empty-actual.png
+    Diff:     test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-empty-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/error-context.md
+
+
+  10 failed
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:357:7 › QA visual regression › meal desktop detail and confirm dialogs match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:404:7 › QA visual regression › menu add desktop pickers match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:470:7 › QA visual regression › manual recipe desktop screen and ingredient modal match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:500:7 › QA visual regression › youtube import desktop flow matches the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:539:7 › QA visual regression › pantry desktop screen and modals match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:581:7 › QA visual regression › shopping desktop flow and detail states match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:635:7 › QA visual regression › login, mypage, recipebooks, settings desktop screens match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:743:7 › QA visual regression › cooking desktop cook modes match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:774:7 › QA visual regression › leftovers desktop ready states match the visual baseline
+    [desktop-chrome] › tests/e2e/qa-visual.spec.ts:803:7 › QA visual regression › leftovers desktop empty states match the visual baseline
+  23 skipped
+  15 passed (53.5s)
+ ELIFECYCLE  Command failed with exit code 1.

@@ -1,0 +1,140 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - link "무먹, 무엇을 먹든" [ref=e10] [cursor=pointer]:
+              - /url: /
+              - img [ref=e11]
+            - navigation "데스크탑 주요 메뉴" [ref=e12]:
+              - link "홈" [ref=e13] [cursor=pointer]:
+                - /url: /
+              - link "요리 계획" [ref=e14] [cursor=pointer]:
+                - /url: /planner
+              - link "식사 기록" [ref=e15] [cursor=pointer]:
+                - /url: /planner?segment=log
+              - link "팬트리" [ref=e16] [cursor=pointer]:
+                - /url: /pantry
+              - link "무먹 가이드" [ref=e17] [cursor=pointer]:
+                - /url: /about
+            - generic [ref=e18]:
+              - button "YouTube 추출 알림 없음" [ref=e19] [cursor=pointer]:
+                - img [ref=e20]
+              - link "내 프로필" [ref=e22] [cursor=pointer]:
+                - /url: /mypage
+                - img [ref=e23]
+          - status "서비스 준비 안내" [ref=e26]:
+            - generic [ref=e27]: 서비스 준비 중
+            - generic [ref=e29]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - heading "식사 추가" [level=1] [ref=e33]
+              - paragraph [ref=e34]: 5/20 점심
+            - button "플래너로 돌아가기" [ref=e35] [cursor=pointer]
+          - generic [ref=e36]:
+            - region "추가 방법" [ref=e37]:
+              - generic [ref=e38]:
+                - button "레시피 검색" [ref=e39] [cursor=pointer]:
+                  - generic [ref=e40]: 🔍
+                  - generic [ref=e42]: 레시피 검색
+                - button "레시피북" [ref=e43] [cursor=pointer]:
+                  - generic [ref=e44]: 📖
+                  - generic [ref=e46]: 레시피북
+                - button "팬트리에서 찾기" [ref=e47] [cursor=pointer]:
+                  - generic [ref=e48]: 🧊
+                  - generic [ref=e50]: 팬트리에서 찾기
+                - button "남은 요리" [ref=e51] [cursor=pointer]:
+                  - generic [ref=e52]: 🍱
+                  - generic [ref=e54]: 남은 요리
+                - button "완제품" [ref=e55] [cursor=pointer]:
+                  - generic [ref=e57]: 완제품
+                - button "유튜브" [ref=e58] [cursor=pointer]:
+                  - generic [ref=e59]: 🎬
+                  - generic [ref=e61]: 유튜브
+                - button "직접 등록" [ref=e62] [cursor=pointer]:
+                  - generic [ref=e63]: ✏️
+                  - generic [ref=e65]: 직접 등록
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - heading "레시피 검색" [level=2] [ref=e69]
+                - generic [ref=e70]:
+                  - img [ref=e71]
+                  - generic [ref=e74]: 5/20 점심
+              - generic [ref=e75]:
+                - generic [ref=e76]:
+                  - img [ref=e78]
+                  - textbox "레시피 검색" [ref=e81]:
+                    - /placeholder: 레시피 이름으로 검색
+                  - button "검색" [ref=e82] [cursor=pointer]
+                - generic [ref=e83]:
+                  - button "김치볶음밥 선택" [ref=e84] [cursor=pointer]:
+                    - generic [ref=e85]:
+                      - img "김치볶음밥" [ref=e87]
+                      - generic [ref=e88]:
+                        - generic [ref=e89]: 김치볶음밥
+                        - generic [ref=e90]:
+                          - generic [ref=e91]: 기본 1인분
+                          - generic [ref=e92]: 저장 154
+                    - generic [ref=e93]: 선택
+                  - button "된장찌개 선택" [ref=e94] [cursor=pointer]:
+                    - generic [ref=e95]:
+                      - img "된장찌개" [ref=e97]
+                      - generic [ref=e98]:
+                        - generic [ref=e99]: 된장찌개
+                        - generic [ref=e100]:
+                          - generic [ref=e101]: 기본 2인분
+                          - generic [ref=e102]: 저장 98
+                    - generic [ref=e103]: 선택
+                  - button "닭가슴살 샐러드 선택" [ref=e104] [cursor=pointer]:
+                    - generic [ref=e105]:
+                      - img "닭가슴살 샐러드" [ref=e107]
+                      - generic [ref=e108]:
+                        - generic [ref=e109]: 닭가슴살 샐러드
+                        - generic [ref=e110]:
+                          - generic [ref=e111]: 기본 1인분
+                          - generic [ref=e112]: 저장 62
+                    - generic [ref=e113]: 선택
+                  - button "제육볶음 선택" [ref=e114] [cursor=pointer]:
+                    - generic [ref=e115]:
+                      - img "제육볶음" [ref=e117]
+                      - generic [ref=e118]:
+                        - generic [ref=e119]: 제육볶음
+                        - generic [ref=e120]:
+                          - generic [ref=e121]: 기본 2인분
+                          - generic [ref=e122]: 저장 120
+                    - generic [ref=e123]: 선택
+                  - button "연어 스테이크 선택" [ref=e124] [cursor=pointer]:
+                    - generic [ref=e125]:
+                      - img "연어 스테이크" [ref=e127]
+                      - generic [ref=e128]:
+                        - generic [ref=e129]: 연어 스테이크
+                        - generic [ref=e130]:
+                          - generic [ref=e131]: 기본 2인분
+                          - generic [ref=e132]: 저장 66
+                    - generic [ref=e133]: 선택
+                  - button "감자 수제비 선택" [ref=e134] [cursor=pointer]:
+                    - generic [ref=e135]:
+                      - img "감자 수제비" [ref=e137]
+                      - generic [ref=e138]:
+                        - generic [ref=e139]: 감자 수제비
+                        - generic [ref=e140]:
+                          - generic [ref=e141]: 기본 2인분
+                          - generic [ref=e142]: 저장 52
+                    - generic [ref=e143]: 선택
+      - generic [ref=e145]:
+        - generic [ref=e146]:
+          - strong [ref=e147]: 무엇을 먹든
+          - generic [ref=e148]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e149]:
+          - link "개인정보처리방침" [ref=e150] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e151] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e152]
+```

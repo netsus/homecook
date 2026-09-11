@@ -1,0 +1,30 @@
+{
+  "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "result": "same_baseline_failures_reproduced",
+  "test_exit_code": 1,
+  "selected": 4,
+  "failed": 4,
+  "passed": 0,
+  "project": "mobile-ios-small",
+  "browser": "Chromium iPhone SE emulation (official config)",
+  "leftovers": {
+    "cases": [
+      344,
+      360,
+      376
+    ],
+    "target_bottom": 509.4375,
+    "expected_maximum_bottom": 480,
+    "lower_hit_target": false
+  },
+  "prepared_food": {
+    "case": 915,
+    "actual_sticky_bottom": 572,
+    "expected_maximum_bottom": 569
+  },
+  "baseline_tracked_diff_empty": true,
+  "permission": "diagnostic only, no gate waiver/PASS/N/A",
+  "startup_first_attempt": "external node_modules symlink rejected by Turbopack before tests; no test outcome",
+  "runtime_fallback": "APFS clone copy; no install",
+  "port_3122_closed": true
+}

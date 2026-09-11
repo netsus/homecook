@@ -1,0 +1,57 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - status "서비스 준비 안내" [ref=e2]:
+    - generic [ref=e3]: 서비스 준비 중
+    - generic [ref=e5]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - link "뒤로 가기" [ref=e11] [cursor=pointer]:
+          - /url: /planner
+          - img [ref=e12]
+        - heading "남은 요리" [level=1] [ref=e14]
+        - link "다먹은 요리" [ref=e15] [cursor=pointer]:
+          - /url: /leftovers/ate?returnTo=%2Fleftovers%3FreturnTo%3D%252Fplanner%26returnSurface%3Dleftovers.list&returnSurface=leftovers.list
+      - status [ref=e16]: 다먹음 처리됐어요
+      - generic [ref=e17]:
+        - heading "남은요리 관리" [level=2] [ref=e18]
+        - heading "남은 요리 0개" [level=3] [ref=e19]
+        - paragraph [ref=e20]: 요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.
+      - generic [ref=e23]:
+        - generic [ref=e25]: 비어 있어요
+        - heading "남은 요리가 없어요" [level=2] [ref=e26]
+        - paragraph [ref=e27]: 요리를 완료하면 여기에 저장돼요
+        - button "이전 화면으로 돌아가기" [ref=e29] [cursor=pointer]
+      - region "중량·잔량 기록" [ref=e30]:
+        - heading "중량·잔량 기록" [level=2] [ref=e31]
+        - paragraph [ref=e32]: 요리 직후 음식 무게와 현재 남은 양을 따로 관리해요.
+        - paragraph [ref=e33]: 중량·잔량 기록이 없어요.
+      - navigation "남은 요리 하단 탭" [ref=e34]:
+        - generic [ref=e35]:
+          - link "홈" [ref=e36] [cursor=pointer]:
+            - /url: /
+            - img [ref=e37]
+            - generic [ref=e39]: 홈
+          - link "요리 계획" [ref=e40] [cursor=pointer]:
+            - /url: /planner
+            - img [ref=e41]
+            - generic [ref=e44]: 요리 계획
+          - link "식사 기록" [ref=e45] [cursor=pointer]:
+            - /url: /planner?segment=log
+            - img [ref=e46]
+            - generic [ref=e49]: 식사 기록
+          - link "팬트리" [ref=e50] [cursor=pointer]:
+            - /url: /pantry
+            - img [ref=e51]
+            - generic [ref=e53]: 팬트리
+          - link "마이" [ref=e54] [cursor=pointer]:
+            - /url: /mypage
+            - img [ref=e55]
+            - generic [ref=e58]: 마이
+  - region "새 알림"
+  - alert [ref=e59]
+  - button "YouTube 추출 알림 없음" [ref=e61] [cursor=pointer]:
+    - img [ref=e62]
+```
