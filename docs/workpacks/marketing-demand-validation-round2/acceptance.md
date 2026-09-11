@@ -23,7 +23,7 @@
 - [ ] 각R2경로의허용result key만공유하고유일resultquery외PII/답변/attribution/key를제거한다. sharedview POST/bootstrap0,명시테스트후recording정상Q1,기존1차/beta역유입0을검증한다 <!-- omo:id=accept-r22-shared-readonly;stage=4;scope=frontend;review=5,6 -->
 - [ ] 두topic의Q3전용유형과승인직렬흐름(recording기존체험·식단/homeflowHero·6체험),동의/오류/receipt를실제R2 API에연결하고새field/action/다른활동완료선행조건이없음을검증한다 <!-- omo:id=accept-r22-linear-storage;stage=4;scope=frontend;review=5,6 -->
 - [ ] version별draft/participation/expiry를대조하고r2.1값을새질문으로재해석하지않으며답변없는완료복원은유형추정·재제출없이진행한다. cookie_resume/410/lead완료·두탭/두topic보존도확인한다 <!-- omo:id=accept-r22-versioned-recovery;stage=4;scope=frontend;review=5,6 -->
-- [ ] 실제release branch의live458ce대비R2-only diff와비R2코드/동작·package/lock/Next15.5.21불변을증명하고새UI의모바일·키보드·200%·reduced-motion·일반/preview격리증거를구분한다 <!-- omo:id=accept-r22-release-parity;stage=4;scope=frontend;review=5,6 -->
+- [ ] 실제 release branch의 live458ce 대비 R2·사용자 승인 PR #1557·명시된 최소 보안 패치와 필수 lock 변경만 포함됐는지 확인한다. 나머지 동작은 보존하며 audit·build·회귀, 새 UI의 모바일·키보드·200%·reduced-motion·일반/preview 격리 증거를 구분한다 <!-- omo:id=accept-r22-release-parity;stage=4;scope=frontend;review=5,6 -->
 
 운영 controlled apply/backup/중단/복구/실제provider 증거는 후속 runbook의 별도 담당 범위다. 위 단위·SQL·브라우저 자동 검증을 운영 Manual Only로 옮겨 생략하지 않는다. 이번 문서 commit은 실행/독립승인 PASS가 아니다.
 

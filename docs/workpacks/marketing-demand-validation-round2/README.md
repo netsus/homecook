@@ -11,7 +11,7 @@
 
 새 survey_version은 `r2.2-recording`/`r2.2-homeflow`, round_version은 `r2.1`이다. 원문4문항, version+topic exact parser/SQL, recording의 render-start금지·첫 실제 답변 start, 완료 readonly·버전별draft·유형없는복원을 검증한다. 결과/체험 view 때문에 v2 API/action이나 임의 공개field를 추가하지 않는다. 현재 stage4 machine evidence/그림/테스트의 이전 UI 기준을 새 직렬 UI에 맞춰 적용하는 일은 통합 구현자의 인수 항목이며, 과거 PASS를 새 UI PASS로 복사하지 않는다.
 
-이번 배포 통합은 `release/mumeok-r2-only-20260912`에서 live `458ce2daab6cdd91a70504657ce5981a4d4acf3c` 기반 R2 change-only로 진행한다. 원격 master0·비R2동작동일·Next15.5.21 및 의존성 업그레이드0을 확인한다. 일반 SQL guard를 넓히지 않는 전용 controlled runbook은 같은 docs 작업의 후속commit `docs/engineering/marketing-round2-controlled-prelaunch.md`로 인수한다. 이 문서 작성의 push/merge/제품/DB/배포 실행은 없다.
+이번 배포 통합은 `release/mumeok-r2-only-20260912`에서 live `458ce2daab6cdd91a70504657ce5981a4d4acf3c` 기반 R2 변경과 사용자가 추가 승인한 PR #1557의 정확한 3파일 수정만 포함한다. 원격 master0이며 그 밖의 비R2 동작은 보존한다. 확인된 보안 경고 해소에 필요한 next/eslint-config-next 15.5.24, sharp 0.35.4, postcss 8.5.23 및 이에 필수인 lock 변경만 audit·build·회귀 검증 후 허용하고 무관한 업데이트는 제외한다. 일반 SQL guard를 넓히지 않는 전용 controlled runbook은 `docs/engineering/marketing-round2-controlled-prelaunch.md`로 인수한다. 이 문구는 실제 배포 성공을 의미하지 않는다.
 
 순서: 이 후속 계약의 독립 검토 → 두 버전/저장 연결 및 R2-only 통합 검증 → exact3SQL/백업/identity/실제readiness를 갖춘 controlled DB·웹 절차 검토 → 해당 승인 범위 실행이다. 같은 사용자 승인을 재질문하거나 새로운 전역 workflow를 만들지 않는다.
 

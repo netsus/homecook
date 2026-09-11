@@ -564,7 +564,7 @@ migration artifact는 새 세 테이블·index·CHECK·FK·RLS·consistency trig
 
 사용자는 2026-09-12 이번 광고 집행 전 예외를 재승인하고, **master 머지 없이 두 랜딩을 배포**하며 기존 데이터를 백업·보존하는 R2 전용 DB 적용 절차 준비·검증·두 랜딩 저장 연결 완성 뒤 배포하는 범위에 `진행`을 명시했다. 이 문서는 그 범위의 계약/배포 계획이며 실제 코드·DB·운영·광고를 변경하거나 자기 승인을 기록하지 않는다.
 
-문서 기준은 `8c6573bf594fa15613205ce97e4435d751c7d87c`다. 배포 통합은 현재 운영 `458ce2daab6cdd91a70504657ce5981a4d4acf3c`에서 시작한 `release/mumeok-r2-only-20260912`, 작업 위치 `/Users/cwj/.codex/worktrees/r2-prelaunch-20260912/homecook`에 승인된 R2 change-only commit을 옮긴다. 원격 master 변경0, 기존 비R2 동작 동일, 의존성 업그레이드0이 인수 조건이다. 8c 전체나 그 밖의 통합 head를 그대로 배포하지 않는다. 이번에 한해서 계약/구현의 master 선행 머지 규칙을 전용 배포 브랜치의 exact commit 독립 검토·검증으로 대체하며, 다른 릴리즈의 규칙이나 정식 production promote kill switch는 유지한다.
+문서 기준은 `8c6573bf594fa15613205ce97e4435d751c7d87c`다. 배포 통합은 현재 운영 `458ce2daab6cdd91a70504657ce5981a4d4acf3c`에서 시작한 `release/mumeok-r2-only-20260912`, 작업 위치 `/Users/cwj/.codex/worktrees/r2-prelaunch-20260912/homecook`에 승인된 R2 변경을 옮긴다. 사용자가 추가 승인한 PR #1557(`d8af99269b0b66f3fd4f5fbbe108bec335df5fd1`)의 공개 레시피 조회 복구 3파일과, 보안 경고에 대응하는 next/eslint-config-next 15.5.24·sharp 0.35.4·postcss 8.5.23 및 필수 lock 변경만 별도 검증하여 포함한다. 원격 master는 변경하지 않고 그 밖의 비R2 동작·무관한 의존성은 보존한다. 8c 전체나 그 밖의 통합 head를 그대로 배포하지 않는다. 이번에 한해서 계약/구현의 master 선행 머지 규칙을 전용 배포 브랜치의 exact commit 검토·검증으로 대체하며, 다른 릴리즈의 규칙이나 정식 production promote kill switch는 유지한다.
 
 두 경로는 `/beta/r2/recording` / `/beta/r2/homeflow`, 공개 API는 `POST /api/v1/marketing/round2`, public 제품 테이블은 기존3개, `round_version`은 `r2.1`이다. §2의 자유 선택 메뉴/공통3장면/유형 없음은 이전 설문 버전의 UI 기준으로 보존하고, **이번 두 r2.2 설문의 기본 표시 흐름**은 아래 직렬 흐름으로 대체한다. 서버에 survey→example→lead 전체 순서를 강제하는 새 선행 조건은 추가하지 않는다. 각각 자기 활동의 start 선행·멱등·완료 보호는 그대로다.
 
@@ -572,7 +572,7 @@ migration artifact는 새 세 테이블·index·CHECK·FK·RLS·consistency trig
 
 ### 12.2 recording: 기존 질문 원문과 첫 실제 답변 시작
 
-권위 입력은 사용자가 지정한 `f2a2/components/marketing/marketing-demand-validation-quiz.tsx`와 `marketing-demand-validation-screen.tsx`다. 읽은 working bytes SHA256은 각각 `ca21721a6641f42073cdcad794bc85ee84a4b30da9c04f94a3785563cf027ec0`, `a83bf7589800cdb97315311d5afe2356b85398259fc8378de42e5f32016fc87f`다. 원본 파일은 이 문서 작업에서 수정하지 않았다.
+권위 입력은 보존 커밋 `84e412b4c41fd905d80589bf00c9a38fd3c0f3bf`의 `components/marketing/marketing-demand-validation-quiz.tsx`와 `components/marketing/marketing-demand-validation-screen.tsx` blob이다. SHA256은 각각 `ca21721a6641f42073cdcad794bc85ee84a4b30da9c04f94a3785563cf027ec0`, `a83bf7589800cdb97315311d5afe2356b85398259fc8378de42e5f32016fc87f`다. 현재 작업 폴더의 변경 중인 파일 대신 이 불변 원본을 대조한다.
 
 `topic=recording`, `survey_version=r2.2-recording`. 신규 진입은 별도 소개 Hero/선택 메뉴 없이 Q1을 즉시 표시한다. 작은 브랜드/베타 준비 상태와 4문항 진행 표시는 유지할 수 있지만 설문 시작을 별도 소개 버튼 뒤로 미루지 않는다. 다음 JSON의 줄바꿈·값·표시 문구·순서를 원문 그대로 사용한다.
 
