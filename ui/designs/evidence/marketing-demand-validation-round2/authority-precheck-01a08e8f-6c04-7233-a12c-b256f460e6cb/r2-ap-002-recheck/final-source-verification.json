@@ -1,0 +1,29 @@
+{
+  "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "product_unchanged_from_fd9": true,
+  "ap002_manifest_verified": 35,
+  "local_files_matched_git_manifest": [
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/evidence-guard-green.log",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/evidence-guard-red.log",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/final-run.log",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/lint-final.log",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/runner-guard-tests.log"
+  ],
+  "geometry_unique": 8,
+  "full_page_and_cta_png_identical_to_visually_reviewed": 16,
+  "captured_source_manifest_unchanged_since_1869_git_files_verification": true,
+  "captured_generated_untracked": [
+    "next-env.d.ts"
+  ],
+  "final_harness_hashes_verified": 4,
+  "final_source_manifest_hashes_verified": 29,
+  "sha256": {
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/manifest.json": "19a012427484b7777c3019eac8cf11434e84c4d7cc959ff8eb73868f8e9a499a",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/source-manifest.json": "845d209025a9547179e50c90faf46d0fee1ed7d8e67596ca7e709a9c169cfbe9",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/recovery-zoom-geometry.json": "c24684aa962d2adfaa80cc2a3ba7bc122991653f94a83e645190a2f32cfd110e",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/author-result.json": "290e055b8e6ec15654c2c372f6b9c0a8cf70cf2378eeedddb9e7ef28ed5a1d1d",
+    "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md": "fa9c93841051b70f3da806f5c9787fbe61b2bec1a31163b91cc9df4c9b25788d",
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/source-manifest.json": "f0b8781f9686c938825dbfa7a06f53dfcf9b5c630d906ce8d2aaca4c64f8ad88"
+  },
+  "actual_ui_db_reexecuted_by_reviewer": false
+}

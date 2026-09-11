@@ -1,0 +1,44 @@
+{
+  "operation": "byte-preserving import of independent authority_precheck",
+  "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+  "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "source_manifest_sha256": "cd4f182ea8e68f9419a70ef2e578a26b8abf1d063e05f921e96baa799fcd247f",
+  "source_files_verified_and_copied": 1046,
+  "source_bytes": 55559681,
+  "reports": 8,
+  "canonical_screen_ids": 16,
+  "report_relative_links_verified": 180,
+  "reviewed_commit_source_hashes_verified": 6,
+  "verification_time_scope": "Initial byte-preserving import before the documented independent format revision and archive relocations",
+  "current_relocation_overrides": {
+    "ui/designs/authority/": "Original bytes now retained under this metadata directory original-authority/; original paths hold independent format-v1 reports",
+    "archived_reproduction_sources": "archive-relocations.json; five original .cjs paths are retained as .cjs.txt with unchanged bytes and SHA256"
+  },
+  "post_relocation_original_manifest_recheck": { "verified_files": 1046, "hash_mismatches": 0 },
+  "source_to_repo_mapping": {
+    "ui/designs/authority/": "same repository-relative path",
+    "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/": "same repository-relative path",
+    "README.md": "original-package-README.txt in this metadata directory; bytes unchanged, source-package-relative links preserved as original text",
+    "precheck-result.json": "same filename in this metadata directory",
+    "visual-verdict.json": "same filename in this metadata directory",
+    "artifact-manifest.json": "same filename in this metadata directory; original manifest unchanged",
+    ".omx/state/marketing-demand-validation-round2-authority-precheck/ralph-progress.json": "source-runtime-projection.json in this metadata directory; not imported into active execution state"
+  },
+  "independent_precheck_verdict": "pass",
+  "required_fix_ids": [],
+  "authority_evidence_presence": {
+    "default_draft_exit_code": 0,
+    "default_draft_inspected_reports": false,
+    "strict_non_draft_read_only_exit_code": 1,
+    "strict_error_count": 14,
+    "reason": "Eight report evidence blocks use labeled Markdown relative links rather than parser-supported quoted bullets; six stage4_evidence_requirements are prose rather than parser-compatible refs/tokens.",
+    "reports_or_validator_rewritten": false
+  },
+  "product_changes": false,
+  "preview_changes": false,
+  "public_stage5": "Subsequent independent result: request_changes R2-S5-001; see evidence/stage5/stage5-result.json",
+  "final_authority": "pending",
+  "confirmed": false,
+  "ready_or_merge": false,
+  "commit_push": "deferred for batching with Stage5 result"
+}

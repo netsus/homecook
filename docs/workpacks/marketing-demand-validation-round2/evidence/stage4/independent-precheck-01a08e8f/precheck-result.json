@@ -1,0 +1,640 @@
+{
+  "schema": "homecook.independent-design-precheck.v1",
+  "review_scope": "authority_precheck",
+  "status": "complete",
+  "authority_verdict": "pass",
+  "actor_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+  "stage4_author_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "product_code_sha": "2fa7547557554ad96b029b6fc00907fe7f350baa",
+  "pr_url": "https://github.com/netsus/homecook/pull/1555",
+  "created_at": "2026-09-11T04:38:24.515833+00:00",
+  "source_hashes": {
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/manifest.json": "19a012427484b7777c3019eac8cf11434e84c4d7cc959ff8eb73868f8e9a499a",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/source-manifest.json": "845d209025a9547179e50c90faf46d0fee1ed7d8e67596ca7e709a9c169cfbe9",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/recovery-zoom-geometry.json": "c24684aa962d2adfaa80cc2a3ba7bc122991653f94a83e645190a2f32cfd110e",
+    "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/author-result.json": "290e055b8e6ec15654c2c372f6b9c0a8cf70cf2378eeedddb9e7ef28ed5a1d1d",
+    "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md": "fa9c93841051b70f3da806f5c9787fbe61b2bec1a31163b91cc9df4c9b25788d",
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/source-manifest.json": "f0b8781f9686c938825dbfa7a06f53dfcf9b5c630d906ce8d2aaca4c64f8ad88"
+  },
+  "screens": [
+    {
+      "screen_id": "R2_MENU",
+      "canonical_screen_ids": [
+        "R2_RECORDING_MENU",
+        "R2_HOMEFLOW_MENU"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 4,
+        "interaction_clarity": 5,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_MENU-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-MENU.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-MENU.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "closed_finding_ids": [
+        "R2-AP-001"
+      ],
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+    },
+    {
+      "screen_id": "R2_EXAMPLE",
+      "canonical_screen_ids": [
+        "R2_RECORDING_EXAMPLE",
+        "R2_HOMEFLOW_EXAMPLE"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 4,
+        "interaction_clarity": 5,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-EXAMPLE-3.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-EXAMPLE-3.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+    },
+    {
+      "screen_id": "R2_EXAMPLE_DONE",
+      "canonical_screen_ids": [
+        "R2_RECORDING_EXAMPLE_DONE",
+        "R2_HOMEFLOW_EXAMPLE_DONE"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 5,
+        "interaction_clarity": 5,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-EXAMPLE_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-EXAMPLE_DONE.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+    },
+    {
+      "screen_id": "R2_SURVEY",
+      "canonical_screen_ids": [
+        "R2_RECORDING_SURVEY",
+        "R2_HOMEFLOW_SURVEY"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 4,
+        "interaction_clarity": 5,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-SURVEY-Q2.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-SURVEY-Q2.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+    },
+    {
+      "screen_id": "R2_SURVEY_DONE",
+      "canonical_screen_ids": [
+        "R2_RECORDING_SURVEY_DONE",
+        "R2_HOMEFLOW_SURVEY_DONE"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 5,
+        "interaction_clarity": 5,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-SURVEY_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-SURVEY_DONE.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+    },
+    {
+      "screen_id": "R2_LEAD",
+      "canonical_screen_ids": [
+        "R2_RECORDING_LEAD",
+        "R2_HOMEFLOW_LEAD"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 4,
+        "interaction_clarity": 5,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_LEAD-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-LEAD.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-LEAD.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+    },
+    {
+      "screen_id": "R2_LEAD_DONE",
+      "canonical_screen_ids": [
+        "R2_RECORDING_LEAD_DONE",
+        "R2_HOMEFLOW_LEAD_DONE"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 5,
+        "interaction_clarity": 5,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-LEAD_DONE.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-LEAD_DONE.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+    },
+    {
+      "screen_id": "R2_RECOVERY",
+      "canonical_screen_ids": [
+        "R2_RECORDING_RECOVERY",
+        "R2_HOMEFLOW_RECOVERY"
+      ],
+      "verdict": "pass",
+      "scorecard": {
+        "mobile_ux": 4,
+        "interaction_clarity": 4,
+        "visual_hierarchy": 4,
+        "color_material_fit": 5,
+        "familiar_app_pattern_fit": 5
+      },
+      "blocker_count": 0,
+      "major_count": 0,
+      "minor_count": 0,
+      "finding_ids": [],
+      "authority_report_path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-390x844.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-320x568.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-320x568.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent-cta-viewport.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent-cta-viewport.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent-cta-viewport.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent-cta-viewport.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent-cta-viewport.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent-cta-viewport.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent-cta-viewport.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent-cta-viewport.png"
+      ],
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "extended_zoom_evidence_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "closed_finding_ids": [
+        "R2-AP-002"
+      ]
+    }
+  ],
+  "reviewed_screen_ids": [
+    "R2_RECORDING_MENU",
+    "R2_HOMEFLOW_MENU",
+    "R2_RECORDING_EXAMPLE",
+    "R2_HOMEFLOW_EXAMPLE",
+    "R2_RECORDING_EXAMPLE_DONE",
+    "R2_HOMEFLOW_EXAMPLE_DONE",
+    "R2_RECORDING_SURVEY",
+    "R2_HOMEFLOW_SURVEY",
+    "R2_RECORDING_SURVEY_DONE",
+    "R2_HOMEFLOW_SURVEY_DONE",
+    "R2_RECORDING_LEAD",
+    "R2_HOMEFLOW_LEAD",
+    "R2_RECORDING_LEAD_DONE",
+    "R2_HOMEFLOW_LEAD_DONE",
+    "R2_RECORDING_RECOVERY",
+    "R2_HOMEFLOW_RECOVERY"
+  ],
+  "authority_report_paths": [
+    "ui/designs/authority/R2_MENU-authority.md",
+    "ui/designs/authority/R2_EXAMPLE-authority.md",
+    "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+    "ui/designs/authority/R2_SURVEY-authority.md",
+    "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+    "ui/designs/authority/R2_LEAD-authority.md",
+    "ui/designs/authority/R2_LEAD_DONE-authority.md",
+    "ui/designs/authority/R2_RECOVERY-authority.md"
+  ],
+  "blocker_count": 0,
+  "major_count": 0,
+  "minor_count": 0,
+  "required_fix_ids": [],
+  "findings": [
+    {
+      "id": "R2-AP-001",
+      "severity": "major",
+      "status": "closed",
+      "closed_at_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "file": "components/marketing/round2/round2.module.css",
+      "line": 16,
+      "verification": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/recheck-result.json",
+      "cases": 8,
+      "clipping": 0
+    },
+    {
+      "id": "R2-AP-002",
+      "severity": "major",
+      "status": "closed",
+      "type": "required-evidence-gap-not-confirmed-product-defect",
+      "screen_ids": [
+        "R2_RECORDING_RECOVERY",
+        "R2_HOMEFLOW_RECOVERY"
+      ],
+      "source_requirement": "docs/workpacks/marketing-demand-validation-round2/README.md:150 and automation-spec.json frontend design_authority stage4_evidence_requirements",
+      "next_action": "No required precheck fix remains; publicStage5 only by separate coordinator instruction.",
+      "closed_at_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "verification": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/final-source-verification.json",
+      "resolution": "Provided actual RECOVERY two scenarios × four viewports200percent, fullpage8 plus CTA8; all16 visually reviewed and byte-identical to final retained PNGs; geometry8unique validated and source pinned.",
+      "previous_missing": [
+        {
+          "topic": "recording",
+          "scenario": "409 consent refresh",
+          "viewport": "320x568",
+          "root_text_percent": 200
+        },
+        {
+          "topic": "recording",
+          "scenario": "409 consent refresh",
+          "viewport": "390x844",
+          "root_text_percent": 200
+        },
+        {
+          "topic": "recording",
+          "scenario": "409 consent refresh",
+          "viewport": "393x852",
+          "root_text_percent": 200
+        },
+        {
+          "topic": "recording",
+          "scenario": "409 consent refresh",
+          "viewport": "1280x900",
+          "root_text_percent": 200
+        },
+        {
+          "topic": "homeflow",
+          "scenario": "committed response loss",
+          "viewport": "320x568",
+          "root_text_percent": 200
+        },
+        {
+          "topic": "homeflow",
+          "scenario": "committed response loss",
+          "viewport": "390x844",
+          "root_text_percent": 200
+        },
+        {
+          "topic": "homeflow",
+          "scenario": "committed response loss",
+          "viewport": "393x852",
+          "root_text_percent": 200
+        },
+        {
+          "topic": "homeflow",
+          "scenario": "committed response loss",
+          "viewport": "1280x900",
+          "root_text_percent": 200
+        }
+      ]
+    }
+  ],
+  "direct_validation": {
+    "ap001": {
+      "contexts": 8,
+      "initial_completed": true,
+      "two_topics": true,
+      "widths": [
+        320,
+        390
+      ],
+      "text_percent": [
+        100,
+        200
+      ],
+      "clip_top_bottom": 0,
+      "normal_strip_height": 72,
+      "enlarged_strip_heights": {
+        "320": 142,
+        "390": 100
+      },
+      "enlarged_text_heights": {
+        "320": 126,
+        "390": 84
+      },
+      "axe_runs": 8,
+      "axe_violations": 0
+    },
+    "extended_zoom": {
+      "contexts": 8,
+      "two_topics": true,
+      "widths": [
+        320,
+        390,
+        393,
+        1280
+      ],
+      "root_text_percent": 200,
+      "normal_shared_screens": 7,
+      "canonical_normal_states": 14,
+      "normal_screen_viewport_combinations": 56,
+      "snapshots_with_substeps_completed_menu_and_local_validation": 112,
+      "axe_runs": 104,
+      "axe_violations": 0,
+      "minimum_control_height": 48,
+      "page_horizontal_overflow": 0,
+      "nested_scroll": 0,
+      "writes": 0,
+      "external": 0,
+      "page_errors": 0,
+      "final_storage_empty": true,
+      "actual_server_recovery_included": false,
+      "physical_keyboard_included": false,
+      "visual_review_ownership": "Parent personally reviewed320/390all12types and MENUall4widths; same-task helper reviewed393/1280remaining48screens (not independentStageapproval).",
+      "file": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-result.json"
+    },
+    "previous_normal_validation": {
+      "sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "retained": true,
+      "file": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime-result.json"
+    },
+    "ap002_artifact_review": {
+      "actual_ui_db_reexecuted_by_reviewer": false,
+      "images_personally_reviewed": 16,
+      "final_manifest_hashes_verified": 35,
+      "final_source_matches_product_fd9": true,
+      "geometry_font_and_clip_and_hit_assertions_readback_validated": 8,
+      "source_generated_untracked": "next-env.d.ts; 1869 tracked captured source hashes matched fd9, final product diff0",
+      "file": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/final-source-verification.json"
+    }
+  },
+  "provided_evidence_validation": {
+    "source27": {
+      "verified": 27,
+      "total": 27
+    },
+    "verification": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/final-source-verification.json",
+    "production_png": {
+      "verified": 68,
+      "total": 68
+    },
+    "real_recovery_png": {
+      "verified": 8,
+      "total": 8
+    },
+    "real_recovery_scenarios": 2,
+    "real_recovery_direct_visual_inspections": 4,
+    "other_real_recovery_pngs": "hash and mapping only",
+    "actual_ui_db": "provided24conditions194requests23participations15mockprovider; not rerun",
+    "qa": "provided42covered/1blocked; eval99 coverage score not authority score",
+    "new_source27_verified": 27,
+    "ap001_manifest_entries_verified": 45,
+    "ap001_png_hashes_verified": 32,
+    "normal100_byte_identical_pairs": 8,
+    "author_red_cases": 8,
+    "author_green_log_tests": 39,
+    "author_log_source": "4 ignored logs read-only from author checkout; hashes match manifest at reviewed SHA; full39 not rerun by reviewer",
+    "actual_recovery_200_available": true,
+    "final_source_manifest_verified": 29,
+    "ap002_manifest_files_verified": 35,
+    "ap002_manifest_git_files": 30,
+    "ap002_manifest_author_local_logs_with_matching_committed_hash": 5,
+    "ap002_geometry_unique_cases": 8,
+    "ap002_fullpage_visually_reviewed": 8,
+    "ap002_cta_viewport_visually_reviewed": 8,
+    "ap002_final_pngs_identical_to_reviewed": 16,
+    "ap002_final_identity": "hcg_92245_74eb5e",
+    "ap002_observed_response_count": 8,
+    "ap002_observed_response_count_note": "Legacy apiRequests field counts observed responses and excludes lost response; do not call this total outbound requests.",
+    "ap002_participations": 2,
+    "ap002_mock_provider_calls": 1,
+    "final_harness_hashes_verified": 4,
+    "harness_capture_vs_final": "Captured harness hashes in source-manifest differ from final unique-combination guard revision. New guard applied read-only to stored8; no UI/DB rerun after guard. GuardRED3→GREEN4 and existing10 tests are provided logs, not reviewer reruns."
+  },
+  "known_global_gate": {
+    "geometry_failures": 4,
+    "geometry_base_identical": true,
+    "visual_failures": 10,
+    "visual_same_numeric_base": 9,
+    "meal_detail": {
+      "candidate_pixels": 65906,
+      "base_pixels": 63377,
+      "height_delta_each": 260,
+      "classification": "unclassified; candidate actual PNG unavailable in retained comparison"
+    },
+    "full_gate_pass": false,
+    "waiver_granted": false
+  },
+  "not_tested": [
+    "full WCAG or screen-reader speech",
+    "physical iOS/in-app/virtual keyboard and Web Locks",
+    "actual Turnstile/provider/email delivery",
+    "new live DB/429/410/consent generation server rerun",
+    "global complete-suite baseline resolution and unpreserved meal-detail candidate PNG"
+  ],
+  "design_status": "pending-review",
+  "public_stage5_performed": false,
+  "final_authority_approved": false,
+  "ready_or_merge_approved": false,
+  "deployment_performed": false,
+  "product_files_changed": [],
+  "next_action": "Coordinator may schedule public Stage5 separately. This task stops at completed authority_precheck; no automatic Stage5/confirmed/Ready/merge/deploy.",
+  "revision": 3,
+  "previous_reviewed_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+  "product_delta_from_previous": "No product app/components/lib/middleware/config changes from fd9; only test harness guards and evidence/docs changed.",
+  "product_diff_code_commit_to_reviewed": 0,
+  "completed_at": "2026-09-11T04:38:24.515833+00:00",
+  "harness_commit": "5d58f6e2eb48011e1b97cac3a56f116c516488bd",
+  "precheck_only": true,
+  "review_history": [
+    {
+      "revision": 1,
+      "sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "verdict": "hold",
+      "open_ids": [
+        "R2-AP-001"
+      ]
+    },
+    {
+      "revision": 2,
+      "sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "verdict": "hold",
+      "closed_ids": [
+        "R2-AP-001"
+      ],
+      "open_ids": [
+        "R2-AP-002"
+      ]
+    },
+    {
+      "revision": 3,
+      "sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "verdict": "pass",
+      "closed_ids": [
+        "R2-AP-001",
+        "R2-AP-002"
+      ],
+      "open_ids": []
+    }
+  ],
+  "zoom_coverage": {
+    "normal": {
+      "shared_screens": 7,
+      "topics": 2,
+      "viewports": 4,
+      "combinations": 56,
+      "mode": "reviewer direct memory-preview; allEXAMPLE3/SURVEY4substeps also rendered"
+    },
+    "recovery": {
+      "shared_screens": 1,
+      "topics": 2,
+      "viewports": 4,
+      "combinations": 8,
+      "conditions": 2,
+      "mode": "author actual isolatedAPI/DB screenshots and readback, reviewer visual/hash review"
+    },
+    "total_representative_canonical_viewport_combinations": 64,
+    "not_claimed": "Not everypossibleerror/permutation nor physical keyboard/device/provider or complete WCAG certification."
+  }
+}

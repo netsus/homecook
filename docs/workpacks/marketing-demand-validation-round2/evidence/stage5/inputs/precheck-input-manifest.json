@@ -1,0 +1,38 @@
+{
+  "package_source": "/Users/cwj/.codex/visualizations/2026/09/11/01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-final-precheck/handoff",
+  "precheck_result_sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+  "authority_reports": [
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "sha256": "dce3ab895d66bbfd6f5433657e7261deb63609febc05bce82e9f8207fecca382"
+    },
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "sha256": "6084d4fb437115839f122218a46bc13caa3deeedd74575d3bec74723e2b643bc"
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD-authority.md",
+      "sha256": "46aef761d85ec22e7a555c3c0491fd4a89d7fcd67dcb31319a36df054bd491ba"
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "sha256": "13813b0e065e288a52ce94f1db88c3a32f4819b856db39a1b9ff7f164fbd4fb8"
+    },
+    {
+      "path": "ui/designs/authority/R2_MENU-authority.md",
+      "sha256": "3ee5ca18edf0336b602a9eca14a70456b242f144533c9769307daeaf4af9ce7b"
+    },
+    {
+      "path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "sha256": "d498f95ca77d6011c5d40d653462c4f610f915249a98e48869c548e0b7fdd68a"
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "sha256": "ac9e027c478f84bd9422268813e80e1d4ad80d4b3facede1ce269b17e1a62807"
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "sha256": "d77b668e4677d12225334808ad35906fd8532d2ffea5f6c4a0359c8bbde06a3b"
+    }
+  ]
+}

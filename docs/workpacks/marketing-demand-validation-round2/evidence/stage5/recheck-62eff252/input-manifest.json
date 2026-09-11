@@ -1,0 +1,45 @@
+{
+  "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "files": [
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-s5-001-result.json",
+      "sha256": "943a67e81161e7a87a810c0927862b116541da67fc85d4a1d3bafce64b132007"
+    },
+    {
+      "path": "components/marketing/round2/round2-view.tsx",
+      "sha256": "a31bbcc1a8e0ef72e9177856cbd2da898d12b8510f1ea20464e857376a84709c"
+    },
+    {
+      "path": "lib/marketing/round2-client.ts",
+      "sha256": "8c7d17aa75981146e6a1cf9e59b0ee9fb478f50bf38ee240cd6d0c7194218efc"
+    },
+    {
+      "path": "tests/marketing-round2-lead-edit.test.tsx",
+      "sha256": "22007fa6e5d2a2c06e1194a1cb25a887bbbfe7cffff02806eef4ba45275abda8"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+      "sha256": "1ecad9a3eaa4d48893ab744c227c5629bf15a36397e99fd919895f61f8e87866"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+      "sha256": "73a9ee96b943df699c7a4234520536ad3862e4334cf1650308a78e074ff73627"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+      "sha256": "5bd613169919f67d93c48f2b429e511b29e68f68c4a09ed9f7c029ac4864264a"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+      "sha256": "b1ba924c7815e810d1ce4e1356e274624ac910d315f445c1ad43b8e0e20cdb43"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+      "sha256": "2505481b14968090b46cb787e2b72dd61a63663d7c2b2bd02f5e3ca5537bf11e"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json",
+      "sha256": "e48c0d7f844f1b15290a983babc747ee90fa0f9cd379064f719de8b6f9d337e5"
+    }
+  ]
+}

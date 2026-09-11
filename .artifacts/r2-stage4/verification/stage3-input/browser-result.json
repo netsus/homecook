@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "scenarios": [
+    "https_secure_context",
+    "simultaneous_two_tabs_same_key_and_event",
+    "lost_response_reload",
+    "different_attribution_distinct_event",
+    "pending_attribution_replay",
+    "confirmed_resume",
+    "topic_separation",
+    "server_expiry",
+    "30_day_pending_expiry",
+    "persisted_restart_fence",
+    "explicit_new_key",
+    "stale_confirmation",
+    "stale_410",
+    "cookie_resume_fallback",
+    "quota_abort_preserves_fence",
+    "bounded_50_pending_no_eviction",
+    "campaign_end_before_retains_session",
+    "campaign_end_exact_clears_capabilities",
+    "campaign_end_after_clears_capabilities",
+    "retention_end_after_clears_capabilities",
+    "closed_campaign_storage_failure_no_new_event_or_key"
+  ],
+  "publicPosts": 0,
+  "externalRequests": 0,
+  "database": "browser IndexedDB only; no server DB",
+  "origin": "https://localhost:3443",
+  "productionAccess": 0,
+  "serverDatabaseAccess": 0
+}

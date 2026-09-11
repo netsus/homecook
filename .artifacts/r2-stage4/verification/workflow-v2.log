@@ -1,0 +1,5 @@
+
+> homecook@0.1.0 validate:workflow-v2 /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/validate-workflow-v2.mjs
+
+workflow-v2 validation passed

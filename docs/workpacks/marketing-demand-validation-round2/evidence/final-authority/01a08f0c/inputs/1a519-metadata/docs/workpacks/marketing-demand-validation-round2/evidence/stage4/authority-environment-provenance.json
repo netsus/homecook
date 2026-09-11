@@ -1,0 +1,730 @@
+{
+  "schema": "homecook.stage4.authority-evidence-projection.v1",
+  "work_item_id": "marketing-demand-validation-round2",
+  "prepared_by_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "assembly_scope": "기존 원문 관찰을 연결한 작성자 자료이며 새 실행·독립 승인 결과가 아니다.",
+  "historical_precheck": {
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "completed_at": "2026-09-11T04:38:24.515833+00:00",
+    "verdict": "pass",
+    "scope": "authority_precheck only",
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+      "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+    }
+  },
+  "current_review_boundary": {
+    "public_stage5": "approve",
+    "status": "complete",
+    "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "reviewed_at": "2026-09-11T05:49:31.343976+00:00",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "required_fix_ids": [],
+    "closed_finding_ids": [
+      "R2-S5-001"
+    ],
+    "stage5_result": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c"
+    },
+    "repair_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "final_product_design_authority": "pending",
+    "stage6": "pending",
+    "design_status": "pending-review",
+    "ready_or_merge_approved": false,
+    "activation_or_deployment_approved": false
+  },
+  "applicability": "기존783 precheck·request_changes 이력과62eff Stage5 approve를 별도원문으로 연결한다. finalauthority/Stage6/Ready는 대기다.",
+  "evidence_kind": "environment-provenance",
+  "preview_runs": [
+    {
+      "mode": "author production-build loopback memory preview",
+      "code_sha": "c00fa23f53cb18550424abb96c2964a46796e3dc",
+      "build_id": "GDqNrPtQfgXeRgRDuMMUP",
+      "origin": "http://127.0.0.1:3118",
+      "result": {
+        "path": ".artifacts/r2-stage4/verification/final-production-preview/result.json",
+        "sha256": "e5f7ff4a0a70490423ab7f6c07a5658d23c36416e48d49bb152d98af85571114"
+      },
+      "compiled_tree_file_count": 680,
+      "compiled_tree_hash": "69e8b90e32ad94ed0aa9e74bba5f2e21f7ece81c8808fefb432e72f86cb1d384",
+      "database": "not_used",
+      "provider": "not_used",
+      "storage": "memory; local/session/IDB empty in asserted contexts"
+    },
+    {
+      "mode": "independent-local-memory-preview",
+      "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+      "reviewed_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "origin": "http://127.0.0.1:3124",
+      "result": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-result.json",
+        "sha256": "2403283f53800552387286db67d15557c603b43a4193b3ee7c3324d78b2d5ffd"
+      },
+      "writes": 0,
+      "external_requests": 0,
+      "page_errors": 0,
+      "contexts": 8,
+      "all_contexts_storage_empty": true
+    }
+  ],
+  "isolated_runs": [
+    {
+      "run_id": "hcg_13130_15b262",
+      "identity": {
+        "projectId": "hcg_13130_15b262",
+        "dataApiUrl": "http://127.0.0.1:58222",
+        "cliVersion": "2.110.0",
+        "migrationSha256": "6e04722b44718c0f3e62579dd5617370b68a4a813d3164c816952079b009d3c8"
+      },
+      "captured_at": "2026-09-11T02:32:00.566Z",
+      "mode": "actual UI/API/SDK/RPC/isolatedDB, fixture provider",
+      "result": {
+        "path": ".artifacts/r2-stage4/verification/real-ui/result.json",
+        "sha256": "b1c4f10429660f4399e0576ace5a22aaf0b6a1ca89c1ff2210add59d567441b0"
+      },
+      "source": {
+        "path": ".artifacts/r2-stage4/verification/real-ui/source-manifest.json",
+        "sha256": "184ef376d2a75eae24d987d836c5210c50c1687719611a34118996200363ef21"
+      },
+      "real_provider_requests": 0,
+      "production_writes": 0
+    },
+    {
+      "run_id": "hcg_92245_74eb5e",
+      "identity": {
+        "projectId": "hcg_92245_74eb5e",
+        "dataApiUrl": "http://127.0.0.1:58283",
+        "cliVersion": "2.110.0",
+        "migrationSha256": "6e04722b44718c0f3e62579dd5617370b68a4a813d3164c816952079b009d3c8"
+      },
+      "captured_at": "2026-09-11T04:21:56.720Z",
+      "mode": "actual recovery-zoom-only; two conditions/four viewports",
+      "result": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/result.json",
+        "sha256": "1c5c3a751e0bbd9f06f4a7cd59d463c4c110c2bc869ffc22186481be05707348"
+      },
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/source-manifest.json",
+        "sha256": "845d209025a9547179e50c90faf46d0fee1ed7d8e67596ca7e709a9c169cfbe9"
+      },
+      "author_result": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/author-result.json",
+        "sha256": "290e055b8e6ec15654c2c372f6b9c0a8cf70cf2378eeedddb9e7ef28ed5a1d1d"
+      },
+      "cleanup": {
+        "runner_exit_code": 0,
+        "owned_resource_cleanup_assertion": "passed",
+        "port3443_after": "no listener"
+      },
+      "real_provider_requests": 0,
+      "production_writes": 0,
+      "capture_final_harness_difference": "source-manifest.json preserves exact hashes used for the final UI run, before adding the final completeness guard",
+      "guard": "RED 3 invalid fixtures -> GREEN 4 guard tests; existing isolated guard10 also passed. Applied read-only to completed observed geometry8. No extra UI/DB rerun after coordinator correction."
+    }
+  ],
+  "retention": {
+    "import": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/import-verification.json",
+      "sha256": "e4de92b8b50216799874ef1b1ea84f193d2ecabcab6566c60dc7e2beed9144a0"
+    },
+    "original_manifest": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/artifact-manifest.json",
+      "sha256": "cd4f182ea8e68f9419a70ef2e578a26b8abf1d063e05f921e96baa799fcd247f"
+    },
+    "files_copied_verified": 1046,
+    "reports": 8,
+    "relative_links_verified": 180,
+    "byte_preserving": true,
+    "git_tree": "Parent final commit must include referenced ignored logs explicitly; filesystem presence alone is not final-tree verification.",
+    "format_revision": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/inputs/format-revision.json",
+      "sha256": "f2cfaabdceae86aee58823388a5e362a3ed5649e46395a31ca1b02efb55fd261"
+    },
+    "original_reports": "The eight pre-format report bytes remain in docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/; current authority reports are independently authored format-only revisions.",
+    "active_report_revision": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/authority-report-link-revision.json",
+      "sha256": "6314d2cb5cab41ae81629209ff908527c1a54d97678072db89f0776a6090dade"
+    },
+    "pre_link_archive": "Immutable previous active report bytes: docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/"
+  },
+  "global_gate_failures": {
+    "geometry_failures": 4,
+    "geometry_base_identical": true,
+    "visual_failures": 10,
+    "visual_same_numeric_base": 9,
+    "meal_detail": {
+      "candidate_pixels": 65906,
+      "base_pixels": 63377,
+      "height_delta_each": 260,
+      "classification": "unclassified; candidate actual PNG unavailable in retained comparison"
+    },
+    "full_gate_pass": false,
+    "waiver_granted": false,
+    "geometry_evidence": {
+      "path": ".artifacts/r2-stage4/verification/baseline/baseline-review.md",
+      "sha256": "0bbe3f7a2d4ee2e9f60e0606b92ceb1ebf9cd570a41fb46dfc877678b42baf24"
+    },
+    "visual_evidence": {
+      "path": ".artifacts/r2-stage4/verification/baseline-visual/baseline-visual-review.md",
+      "sha256": "3b0274ac4fcfde0f9b8e29eeb86ccddb931b0332a3c54b7d84e2e1f6ccd3be94"
+    },
+    "candidate_capture_inventory": {
+      "path": ".artifacts/r2-stage4/verification/baseline-visual/candidate-capture.json",
+      "sha256": "29993a19c55a822d4ee8429bb994cdef5d432c910f2bf8d31e4a07defdf0b7f9"
+    },
+    "candidate_actual_png": "not_retained; numeric65906 vs63377 does not prove visual equivalence"
+  },
+  "actual_provider": {
+    "status": "not_run"
+  },
+  "physical_device": {
+    "status": "not_run"
+  },
+  "production_activation": {
+    "status": "not_run"
+  },
+  "deployment": {
+    "status": "not_run"
+  },
+  "limits": [
+    "Full-local production project/volume is not an evidence assembly target.",
+    "Complete-suite baseline failures remain open; no waiver or threshold change.",
+    "Historical precheck/CI does not cover next modified head automatically."
+  ],
+  "stage5_reproduction_environment": {
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "method": "Exact Git blobs transpiled in memory without source edits. Injected fake transport only; no network, DB, server or provider.",
+    "direct_reproduction_topic": "recording",
+    "external_requests": 0,
+    "database_execution": 0,
+    "provider_requests": 0,
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/reproduction/lead-edit-repro-result.json",
+      "sha256": "af492a44cfb6c4a81056a8fae053bd5449faac6f2fd41b821cd5e146ba653024"
+    },
+    "reviewer_mode_summary": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401",
+      "json_pointer": "/evidence_modes"
+    }
+  },
+  "requirement_id": 5,
+  "source_requirement": "Keep preview mock, isolated integration, actual provider and physical-device evidence separately identified.",
+  "subject_head_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "producer_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "subject_head_scope": "Independent Stage5 reviewed62eff; repair code7bfe source parity and earlier dirty capture baselines retained separately. Current changes are metadata only, not another product execution.",
+  "format_requirement_source": {
+    "git_commit": "8c6573bf594fa15613205ce97e4435d751c7d87c",
+    "repository_path": "docs/workpacks/marketing-demand-validation-round2/stage4-evidence-format.md",
+    "read_method": "git show origin/master:path"
+  },
+  "not_run": [
+    "actual-provider",
+    "physical-device",
+    "final authority",
+    "Stage6"
+  ],
+  "limitations": [
+    "과거783 precheck와 request_changes 원문을 덮어쓰지 않았다.",
+    "독립 Stage5 approve는 exact62eff의 판정이며 이 metadata-only 후속 projection과 구분한다.",
+    "final authority/Stage6/전체 gate/Ready/merge/배포 승인은 여전히 미완료다.",
+    "실제provider·실기기 미실행과 globalbaseline 실패·meal-detail candidatePNG 공백은 계속 보존한다."
+  ],
+  "source_runs": [
+    {
+      "run_id": "precheck-final783",
+      "command": "independent authority_precheck evidence review",
+      "captured_at": "2026-09-11T04:38:24.515833+00:00",
+      "environment": "review of preview-mock and provided isolated-integration",
+      "subject_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "result": "historical pass precheck only",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+      }
+    },
+    {
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "command": "node tests/marketing-round2-lead-edit.browser.mjs",
+      "captured_at": "2026-09-11T05:10:43.874Z",
+      "environment": "preview-mock",
+      "submode": "route-mocked actual client/view; fixture server page props",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "captured_source_identity": "uncommitted source hashes in source-manifest; not exact783 product bytes",
+      "result": "PASS",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/source-manifest.json",
+        "sha256": "62cfc0f7bfdfe96a2e5fe9a8f523b6632115bcd09f006048ebf6acea4031df3d"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+        "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386"
+      },
+      "geometry_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/geometry.json",
+        "sha256": "30ac3738ae4c3aad42e542e71c7853acf74979a5b2b72aecc593b0f7700fcbce"
+      },
+      "limitations": [
+        "실제 API/DB/provider 실행 아님",
+        "server page fixture 변경; client/view/CSS 원형",
+        "독립 reviewer 재검토 pending"
+      ]
+    },
+    {
+      "run_id": "hcg_74053_7748de",
+      "artifact_directory": "2026-09-11T05-19-39-943Z",
+      "command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+      "captured_at": "2026-09-11T05:20:15.542Z",
+      "completed_at": "2026-09-11T05:23:22.816Z",
+      "environment": "isolated-integration",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "source_identity": "At capture: baseline783 plus uncommitted file hashes. Later compared to code commit; not execution of that later commit.",
+      "matched_later_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+      "result": "PASS",
+      "checks": 28,
+      "case_groups": 26,
+      "trace_observations": 1316,
+      "screenshot_records": 115,
+      "unique_png_files": 113,
+      "parsed_response_envelopes": 208,
+      "count_meaning": "observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/source-manifest.json",
+        "sha256": "f901898dc98fcdf0b0d7dff848af31efc786c4cdd2395bb508668cc03552cc03"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+        "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+        "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+      },
+      "manifest": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/artifact-manifest.json",
+        "sha256": "06be0cd9347e87ad2818315f686149f938ae4c3b7b3e07dc7864d8f2cf6af8dc"
+      },
+      "cleanup": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/cleanup.json",
+        "sha256": "e454e6933bd3cfc70c8572c75efa329a8791dddc92e8367e99a3c82c76eafafb"
+      },
+      "parity": {
+        "verification": "read-only SHA256 comparison of captured snapshotFiles with git cat-file at exact later code commit",
+        "tracked_files_compared": 1869,
+        "mismatches": 0,
+        "generated_not_tracked": [
+          "next-env.d.ts"
+        ],
+        "captured_snapshot_total": 1870,
+        "harness_caveat": "scenario/helper hash match. Runner changed only default option dispatch after capture; full invocation used explicit --lead-edit.",
+        "dispatch_diff": {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/default-dispatch.diff",
+          "sha256": "3628cd7f0e0c75d17828df3f5653bd69d9492562c6d9e948d66dfcb0518a95c1"
+        },
+        "dispatch_unit_log": {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/verification.log",
+          "sha256": "a471ecc69f590023cf98e33410fb1b821c951e2008b9eecd670040fe690f80be"
+        }
+      },
+      "limitations": [
+        "실제503/provider장애 주입 아님: unreceived 첫 송신을 브라우저에서 중단; 이후422/200/DB는 실제",
+        "mock provider19; 실제 provider/실기기/운영activation 미실행",
+        "115 screenshot records contain two repeated names;113 unique retained PNG.",
+        "독립 Stage5/final authority approval pending"
+      ]
+    },
+    {
+      "run_id": "r2-s5-production-preview-62eff252",
+      "environment": "preview-mock",
+      "submode": "fixed production build, memory-only, unmodified actual server page",
+      "command": "author owned-copy production build and local preview verification; archived scripts retained as .mjs.txt",
+      "captured_source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "checked_at": "2026-09-11T05:47:01.871Z",
+      "build_id": "ojaiIGyjDlOMvWFrlUvf9",
+      "source_file_count": 2465,
+      "source_tree_sha256": "ad80ffc80d83bf017391eaf3a2da825b59bf069a3d7cc1976bddc0498f0c79ed",
+      "compiled_file_count": 830,
+      "compiled_tree_sha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+      "compiled_tree_mismatches_after_browser": 0,
+      "result": "PASS",
+      "cases": 6,
+      "post_requests": 0,
+      "local_session_indexeddb_entries": 0,
+      "external_requests": 0,
+      "page_errors": 0,
+      "db_calls": 0,
+      "provider_calls": 0,
+      "actual_server_page": true,
+      "fixture_page_override": false,
+      "origin": "http://127.0.0.1:3126",
+      "origin_status": "author-maintained preview; this metadata task did not restart or probe server",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/source-manifest.json",
+        "sha256": "92cb4fa5b9b255b3c7e14fe47862bb33ff117d6e1fcfdd82fe117db575b4129b"
+      },
+      "build_result": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/build-result.json",
+        "sha256": "9096e3f51a2a969e4e4f6ee4c5e0bf34c6e63c5b97e74371e693feaf22c82943"
+      },
+      "verification": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/verification.json",
+        "sha256": "bc719e85929501e13426c3e04066944bcaa44a57d3198b344dae19193c65c84b"
+      },
+      "headers": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/headers.json",
+        "sha256": "26530628ff7e707d4a2158140d26410778e30eeb9475179a75f1ee43435c9c7f"
+      },
+      "compiled_parity": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/compiled-tree-after-browser.json",
+        "sha256": "87badcd818204a259a698a32e4b702539b3d75b7c4d76a47cbdf74f1d7d7821c"
+      },
+      "import": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/IMPORT.md",
+        "sha256": "d9ca9c86b6c11a540ec26a207dde4560df86078cc489a2d86a09a11fe96feaff"
+      },
+      "instructions": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/README.md",
+        "sha256": "396409ac91778589bf90c2d44a91c4afa756dd3e7dd12e194fa3d0983985b3ca"
+      },
+      "limits": [
+        "각3활동×2topic 단독 완료는 memory-only이며 reload시초기화",
+        "uncertain receipt/편집복원은 이 preview에서 실행하지 않음; route-mocked10/actual28과 별도",
+        "실제 API/DB/provider/물리기기/운영activation 근거가 아님",
+        "이후 metadata commit에서 제품을 재빌드했다고 주장하지 않음"
+      ]
+    }
+  ],
+  "archive_relocations": {
+    "precheck_scripts": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/archive-relocations.json",
+      "sha256": "cf892c0bed99ddff9fa57670e2d83ab258f73372b4c43647c5fd83d6a0636eb1"
+    },
+    "stage5_report_paths": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/path-relocation/path-relocation-manifest.json",
+      "sha256": "97c9e619fc5fb7700683d347bf101d958c9502da1cf21246190954ea7cdd0fd3"
+    },
+    "effect": "Executable extensions changed to archival text; original bytes/Stage5 request_changes verdict preserved."
+  },
+  "author_fix_browser_overlay": {
+    "scope": "R2-S5-001 only; not full actual integration",
+    "run": {
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "command": "node tests/marketing-round2-lead-edit.browser.mjs",
+      "captured_at": "2026-09-11T05:10:43.874Z",
+      "environment": "preview-mock",
+      "submode": "route-mocked actual client/view; fixture server page props",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "captured_source_identity": "uncommitted source hashes in source-manifest; not exact783 product bytes",
+      "result": "PASS",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/source-manifest.json",
+        "sha256": "62cfc0f7bfdfe96a2e5fe9a8f523b6632115bcd09f006048ebf6acea4031df3d"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+        "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386"
+      },
+      "geometry_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/geometry.json",
+        "sha256": "30ac3738ae4c3aad42e542e71c7853acf74979a5b2b72aecc593b0f7700fcbce"
+      },
+      "limitations": [
+        "실제 API/DB/provider 실행 아님",
+        "server page fixture 변경; client/view/CSS 원형",
+        "독립 reviewer 재검토 pending"
+      ]
+    },
+    "conditions": 10,
+    "clicks": 92,
+    "request_response_observations": 104,
+    "geometry_conditions": 8,
+    "text_100_percent_conditions": 4,
+    "text_200_percent_conditions": 4,
+    "masked_pngs": 16,
+    "capture_mask": "email fixture field covered only in screenshots; no product/measurement change",
+    "independent_review": "pending"
+  },
+  "observations": [
+    {
+      "environment": "preview-mock",
+      "expected": "비저장 preview와 실제 통합 분리",
+      "observed": "기존 memory preview 및 새 route-mocked client/view10조건; 실제 API/DB 아님",
+      "result": "observed",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+        "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+      }
+    },
+    {
+      "environment": "isolated-integration",
+      "expected": "새 고유 isolated만 사용",
+      "observed": "최종 hcg_74053_7748de single full28 PASS,1316정제trace,115캡처기록/113고유PNG,208관측응답,27참여/mock19,외부0,cleanup확인. 첫fullFAIL과targeted4PASS는 별도 이력.",
+      "result": "actual final run PASS; independent review pending",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+        "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+      },
+      "trace": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+        "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+      }
+    },
+    {
+      "environment": "actual-provider",
+      "expected": "승인된 후속운영gate",
+      "observed": "미실행",
+      "result": "not_run"
+    },
+    {
+      "environment": "physical-device",
+      "expected": "별도 실기기검증",
+      "observed": "미실행",
+      "result": "not_run"
+    },
+    {
+      "environment": "preview-mock",
+      "expected": "고정62eff production build의 비저장6활동",
+      "observed": "actual server page/no fixture page, POST/storage/external0, compiled830파일 hash유지",
+      "result": "PASS limited memory preview",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/verification.json",
+        "sha256": "bc719e85929501e13426c3e04066944bcaa44a57d3198b344dae19193c65c84b"
+      }
+    }
+  ],
+  "current_actual_run": {
+    "run_id": "hcg_74053_7748de",
+    "artifact_directory": "2026-09-11T05-19-39-943Z",
+    "command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+    "captured_at": "2026-09-11T05:20:15.542Z",
+    "completed_at": "2026-09-11T05:23:22.816Z",
+    "environment": "isolated-integration",
+    "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "captured_source_sha": null,
+    "source_identity": "At capture: baseline783 plus uncommitted file hashes. Later compared to code commit; not execution of that later commit.",
+    "matched_later_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "result": "PASS",
+    "checks": 28,
+    "case_groups": 26,
+    "trace_observations": 1316,
+    "screenshot_records": 115,
+    "unique_png_files": 113,
+    "parsed_response_envelopes": 208,
+    "count_meaning": "observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded",
+    "source": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/source-manifest.json",
+      "sha256": "f901898dc98fcdf0b0d7dff848af31efc786c4cdd2395bb508668cc03552cc03"
+    },
+    "result_ref": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+      "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+    },
+    "observations_ref": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+      "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+    },
+    "manifest": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/artifact-manifest.json",
+      "sha256": "06be0cd9347e87ad2818315f686149f938ae4c3b7b3e07dc7864d8f2cf6af8dc"
+    },
+    "cleanup": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/cleanup.json",
+      "sha256": "e454e6933bd3cfc70c8572c75efa329a8791dddc92e8367e99a3c82c76eafafb"
+    },
+    "parity": {
+      "verification": "read-only SHA256 comparison of captured snapshotFiles with git cat-file at exact later code commit",
+      "tracked_files_compared": 1869,
+      "mismatches": 0,
+      "generated_not_tracked": [
+        "next-env.d.ts"
+      ],
+      "captured_snapshot_total": 1870,
+      "harness_caveat": "scenario/helper hash match. Runner changed only default option dispatch after capture; full invocation used explicit --lead-edit.",
+      "dispatch_diff": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/default-dispatch.diff",
+        "sha256": "3628cd7f0e0c75d17828df3f5653bd69d9492562c6d9e948d66dfcb0518a95c1"
+      },
+      "dispatch_unit_log": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/verification.log",
+        "sha256": "a471ecc69f590023cf98e33410fb1b821c951e2008b9eecd670040fe690f80be"
+      }
+    },
+    "limitations": [
+      "실제503/provider장애 주입 아님: unreceived 첫 송신을 브라우저에서 중단; 이후422/200/DB는 실제",
+      "mock provider19; 실제 provider/실기기/운영activation 미실행",
+      "115 screenshot records contain two repeated names;113 unique retained PNG.",
+      "독립 Stage5/final authority approval pending"
+    ]
+  },
+  "actual_run_history": [
+    {
+      "run_id": "hcg_62361_25ba35",
+      "directory": "2026-09-11T05-12-03-095Z",
+      "result": "FAIL",
+      "original_conditions_completed": 24,
+      "additional_conditions_completed": 1,
+      "cause": "harness missing await before request observation; not whole-run PASS",
+      "failure": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-12-03-095Z/scenario-failure.json",
+        "sha256": "d09524cd8af833b7e47e14d79fb5242b85cda231e5d6e53dbe563b7d3ce59d07"
+      },
+      "trace": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-12-03-095Z/observed-ui-trace.json",
+        "sha256": "f914be0d7499e0f7af6bc8b5c2347a0377f5ef946ed425411ff5b386e17fd9d8"
+      },
+      "cleanup": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-12-03-095Z/cleanup.json",
+        "sha256": "3eb52781019e7ae8a8d675cfbbbb283f918f38378c1173af5764efdf7626ed34"
+      }
+    },
+    {
+      "run_id": "hcg_70927_a2354a",
+      "directory": "2026-09-11T05-17-43-601Z",
+      "result": "PASS focused4 only",
+      "original_conditions_executed": 0,
+      "additional_conditions_completed": 4,
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-17-43-601Z/result.json",
+        "sha256": "072a6b2fb719d089e89b6ba021247b879840aa0b9f2a9932b6c975dd53fa967a"
+      },
+      "cleanup": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-17-43-601Z/cleanup.json",
+        "sha256": "641ce4acc2787502469aae70d6a20c026ed52bbf46228ff6e38f811ad216f23d"
+      }
+    }
+  ],
+  "actual_current_counts": {
+    "participations": 27,
+    "mock_provider_calls": 19,
+    "external_provider_requests": 0,
+    "production_writes": 0,
+    "legacy_checksum_unchanged": true
+  },
+  "historical_review_boundary_before_recheck": {
+    "public_stage5": "request_changes",
+    "required_finding": "R2-S5-001",
+    "finding_reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "finding_source": "독립 Stage5 원작성 결과를 repo-local로 이식한 원문",
+    "repair_reverification": "author route-mocked10 and actual28 PASS; independent exact-head recheck pending",
+    "final_product_design_authority": "pending",
+    "stage6": "pending",
+    "design_status": "pending-review",
+    "ready_or_merge_approved": false,
+    "activation_or_deployment_approved": false,
+    "stage5_result": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401"
+    },
+    "stage5_reviewed_at": "2026-09-11T04:49:03.871510+00:00",
+    "requested_repair_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77"
+  },
+  "stage5_recheck": {
+    "verdict": "approve",
+    "required_fix_ids": [],
+    "scope": "public_stage5 only",
+    "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c"
+    },
+    "report": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-report.md",
+      "sha256": "b30b11c544e6472a871c85fefbb184f1eb17054727f22aa686daea8e4dc39224"
+    },
+    "input_six_json_content_review": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c",
+      "json_pointer": "/six_json_review"
+    },
+    "historical_reviewed_input_sha256": "2505481b14968090b46cb787e2b72dd61a63663d7c2b2bd02f5e3ca5537bf11e",
+    "current_projection_delta": "이 JSON은 검토 완료 후 역사경로·판정연결·고정미리보기 출처만 갱신했다. 검토받은 input bytes와 동일하다고 주장하지 않는다.",
+    "strict_presence_validation": {
+      "result": "pass",
+      "scope": "reviewer isolated report/file-presence fixture, not live OMO runtime",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/strict-evidence-validation.json",
+        "sha256": "10607517f89e71016f801c7d25782474a36633cc344693671737ef36d4f53444"
+      }
+    },
+    "original_request_changes_preserved": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401"
+    }
+  },
+  "observation_review_timing": "기존 관찰행과 run의 review pending 문구는 당시 수집 상태를 보존한다. 현재 Stage5 판정은 current_review_boundary/stage5_recheck만 가리키며 finalauthority 승인으로 확대하지 않는다.",
+  "stable_production_preview": {
+    "run_id": "r2-s5-production-preview-62eff252",
+    "environment": "preview-mock",
+    "submode": "fixed production build, memory-only, unmodified actual server page",
+    "command": "author owned-copy production build and local preview verification; archived scripts retained as .mjs.txt",
+    "captured_source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "checked_at": "2026-09-11T05:47:01.871Z",
+    "build_id": "ojaiIGyjDlOMvWFrlUvf9",
+    "source_file_count": 2465,
+    "source_tree_sha256": "ad80ffc80d83bf017391eaf3a2da825b59bf069a3d7cc1976bddc0498f0c79ed",
+    "compiled_file_count": 830,
+    "compiled_tree_sha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+    "compiled_tree_mismatches_after_browser": 0,
+    "result": "PASS",
+    "cases": 6,
+    "post_requests": 0,
+    "local_session_indexeddb_entries": 0,
+    "external_requests": 0,
+    "page_errors": 0,
+    "db_calls": 0,
+    "provider_calls": 0,
+    "actual_server_page": true,
+    "fixture_page_override": false,
+    "origin": "http://127.0.0.1:3126",
+    "origin_status": "author-maintained preview; this metadata task did not restart or probe server",
+    "source": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/source-manifest.json",
+      "sha256": "92cb4fa5b9b255b3c7e14fe47862bb33ff117d6e1fcfdd82fe117db575b4129b"
+    },
+    "build_result": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/build-result.json",
+      "sha256": "9096e3f51a2a969e4e4f6ee4c5e0bf34c6e63c5b97e74371e693feaf22c82943"
+    },
+    "verification": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/verification.json",
+      "sha256": "bc719e85929501e13426c3e04066944bcaa44a57d3198b344dae19193c65c84b"
+    },
+    "headers": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/headers.json",
+      "sha256": "26530628ff7e707d4a2158140d26410778e30eeb9475179a75f1ee43435c9c7f"
+    },
+    "compiled_parity": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/compiled-tree-after-browser.json",
+      "sha256": "87badcd818204a259a698a32e4b702539b3d75b7c4d76a47cbdf74f1d7d7821c"
+    },
+    "import": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/IMPORT.md",
+      "sha256": "d9ca9c86b6c11a540ec26a207dde4560df86078cc489a2d86a09a11fe96feaff"
+    },
+    "instructions": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/README.md",
+      "sha256": "396409ac91778589bf90c2d44a91c4afa756dd3e7dd12e194fa3d0983985b3ca"
+    },
+    "limits": [
+      "각3활동×2topic 단독 완료는 memory-only이며 reload시초기화",
+      "uncertain receipt/편집복원은 이 preview에서 실행하지 않음; route-mocked10/actual28과 별도",
+      "실제 API/DB/provider/물리기기/운영activation 근거가 아님",
+      "이후 metadata commit에서 제품을 재빌드했다고 주장하지 않음"
+    ]
+  }
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "snapshot": "qa-meal-detail.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:357:7 \u203a QA visual regression \u203a meal desktop detail and confirm dialogs match the visual baseline",
+      "metric": "Expected an image 1280px by 937px, received 1280px by 1197px. 65906 pixels (ratio 0.05 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:357:7 \u203a QA visual regression \u203a meal desktop detail and confirm dialogs match the visual baseline",
+      "metric": "Expected an image 1280px by 937px, received 1280px by 1197px. 63377 pixels (ratio 0.05 of all image pixels) are different."
+    },
+    "same_metric": false
+  },
+  {
+    "snapshot": "qa-menu-add-search.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:404:7 \u203a QA visual regression \u203a menu add desktop pickers match the visual baseline",
+      "metric": "10178 pixels (ratio 0.01 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:404:7 \u203a QA visual regression \u203a menu add desktop pickers match the visual baseline",
+      "metric": "10178 pixels (ratio 0.01 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-manual-recipe-create.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:470:7 \u203a QA visual regression \u203a manual recipe desktop screen and ingredient modal match the visual baseline",
+      "metric": "Expected an image 1280px by 1495px, received 1280px by 1535px. 86670 pixels (ratio 0.05 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:470:7 \u203a QA visual regression \u203a manual recipe desktop screen and ingredient modal match the visual baseline",
+      "metric": "Expected an image 1280px by 1495px, received 1280px by 1535px. 86670 pixels (ratio 0.05 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-youtube-import-url.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:500:7 \u203a QA visual regression \u203a youtube import desktop flow matches the visual baseline",
+      "metric": "27342 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:500:7 \u203a QA visual regression \u203a youtube import desktop flow matches the visual baseline",
+      "metric": "27342 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-pantry.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:539:7 \u203a QA visual regression \u203a pantry desktop screen and modals match the visual baseline",
+      "metric": "Expected an image 1280px by 1528px, received 1280px by 1568px. 51868 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:539:7 \u203a QA visual regression \u203a pantry desktop screen and modals match the visual baseline",
+      "metric": "Expected an image 1280px by 1528px, received 1280px by 1568px. 51868 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-shopping-flow.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:581:7 \u203a QA visual regression \u203a shopping desktop flow and detail states match the visual baseline",
+      "metric": "Expected an image 1280px by 898px, received 1280px by 938px. 60595 pixels (ratio 0.06 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:581:7 \u203a QA visual regression \u203a shopping desktop flow and detail states match the visual baseline",
+      "metric": "Expected an image 1280px by 898px, received 1280px by 938px. 60595 pixels (ratio 0.06 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-mypage-saved.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:635:7 \u203a QA visual regression \u203a login, mypage, recipebooks, settings desktop screens match the visual baseline",
+      "metric": "Expected an image 1280px by 1113px, received 1280px by 1153px. 31315 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:635:7 \u203a QA visual regression \u203a login, mypage, recipebooks, settings desktop screens match the visual baseline",
+      "metric": "Expected an image 1280px by 1113px, received 1280px by 1153px. 31315 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-cook-mode-planner.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:743:7 \u203a QA visual regression \u203a cooking desktop cook modes match the visual baseline",
+      "metric": "Expected an image 1280px by 744px, received 1280px by 720px. 112029 pixels (ratio 0.12 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:743:7 \u203a QA visual regression \u203a cooking desktop cook modes match the visual baseline",
+      "metric": "Expected an image 1280px by 744px, received 1280px by 720px. 112029 pixels (ratio 0.12 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-leftovers-ready.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:774:7 \u203a QA visual regression \u203a leftovers desktop ready states match the visual baseline",
+      "metric": "Expected an image 1280px by 1416px, received 1280px by 1456px. 52258 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:774:7 \u203a QA visual regression \u203a leftovers desktop ready states match the visual baseline",
+      "metric": "Expected an image 1280px by 1416px, received 1280px by 1456px. 52258 pixels (ratio 0.03 of all image pixels) are different."
+    },
+    "same_metric": true
+  },
+  {
+    "snapshot": "qa-leftovers-empty.png",
+    "candidate": {
+      "test": "tests/e2e/qa-visual.spec.ts:803:7 \u203a QA visual regression \u203a leftovers desktop empty states match the visual baseline",
+      "metric": "Expected an image 1280px by 970px, received 1280px by 1010px. 19338 pixels (ratio 0.02 of all image pixels) are different."
+    },
+    "baseline": {
+      "test": "tests/e2e/qa-visual.spec.ts:803:7 \u203a QA visual regression \u203a leftovers desktop empty states match the visual baseline",
+      "metric": "Expected an image 1280px by 970px, received 1280px by 1010px. 19338 pixels (ratio 0.02 of all image pixels) are different."
+    },
+    "same_metric": true
+  }
+]

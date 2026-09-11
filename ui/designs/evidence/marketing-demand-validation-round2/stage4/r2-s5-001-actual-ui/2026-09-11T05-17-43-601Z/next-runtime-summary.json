@@ -1,0 +1,24 @@
+{
+  "rawLogRetained": false,
+  "reason": "exclude unstructured payload/credential leakage",
+  "observedOutputBytes": 1133,
+  "httpStatusObservations": [
+    405,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    422,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    422,
+    200
+  ]
+}

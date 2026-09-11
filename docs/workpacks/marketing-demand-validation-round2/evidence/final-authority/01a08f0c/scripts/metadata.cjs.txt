@@ -1,0 +1,35 @@
+const fs=require('fs'),path=require('path'),crypto=require('crypto'),cp=require('child_process');
+const root='/Users/cwj/.codex/visualizations/2026/09/11/01a08f0c-bbbb-74b1-ac9b-20feb1ac085f/r2-final-authority',repo='/Users/cwj/.codex/worktrees/e2b0/homecook',h=root+'/handoff';
+const doc='docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c';
+const sha='1a51971262e758896e725af31f104f42424cff78',old='62eff252cdd537c9a849caf1881ac490687abac3';
+const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
+const git=(args)=>cp.execFileSync('git',args,{cwd:repo,maxBuffer:20*1024*1024});
+const changed=git(['diff','--name-only',old,sha]).toString().trim().split('\n');
+const disallowed=changed.filter(p=>!p.startsWith('docs/workpacks/marketing-demand-validation-round2/')&&!p.startsWith('ui/designs/authority/R2_')&&!p.startsWith('ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/'));
+const stable=git(['diff','--name-only','7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77',old,'--','app','components','lib','public','tests','scripts','types','supabase','package.json','pnpm-lock.yaml']).toString().trim();
+if(disallowed.length||stable)throw Error('Unexpected product diff');
+const snapshots=[];
+for(const f of changed){const b=git(['show',sha+':'+f]);const dest=path.join(h,doc,'inputs/1a519-metadata',f);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,b);snapshots.push({path:f,sha256:digest(b)});}
+const s5='/Users/cwj/.codex/visualizations/2026/09/11/01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-s5-final-recheck/handoff';
+const s5rel='docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252';
+const comparisons=[];
+function walk(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(d=>d.isDirectory()?walk(path.join(dir,d.name)):[path.join(dir,d.name)]);}
+for(const f of walk(path.join(s5,s5rel))){const rel=path.relative(s5,f);const expected=fs.readFileSync(f);const actual=git(['show',sha+':'+rel]);comparisons.push({path:rel,sha256:digest(expected),matches:expected.equals(actual)});}
+const archiveChecks=[];
+for(const state of ['MENU','EXAMPLE','EXAMPLE_DONE','SURVEY','SURVEY_DONE','LEAD','LEAD_DONE','RECOVERY']){
+ const f=`ui/designs/authority/R2_${state}-authority.md`;
+ const src=git(['show',old+':'+f]);const archive=`docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_${state}-authority.md.txt`;
+ archiveChecks.push({path:archive,original:f,sha256:digest(src),matches:src.equals(git(['show',sha+':'+archive]))});
+ const s5buf=fs.readFileSync(path.join(s5,f));comparisons.push({path:f,sha256:digest(s5buf),matches:s5buf.equals(git(['show',sha+':'+f]))});
+ const rp=path.join(h,f);fs.writeFileSync(rp,fs.readFileSync(rp,'utf8').replace('- 제품/검토 head:', '- 최종 metadata 검토 head: `'+sha+'`; 제품·테스트·harness 변화0 확인.\n- 제품/브라우저 head:'));
+}
+const oldStage5=['stage5-result.json','stage5-report.md'].map(f=>{const p='docs/workpacks/marketing-demand-validation-round2/evidence/stage5/'+f;return {path:p,unchanged:git(['show',old+':'+p]).equals(git(['show',sha+':'+p]))};});
+const summary={task_id:'01a08f0c-bbbb-74b1-ac9b-20feb1ac085f',product_reviewed_sha:old,metadata_reviewed_sha:sha,changed_paths:changed.length,changed_paths_outside_r2_metadata:disallowed,product_tests_harness_change_count:0,source_product_to_62eff_change_count:0,external_stage5_and_report_comparisons:comparisons,prelink_archive_checks:archiveChecks,old_stage5_preservation:oldStage5,metadata_snapshots:snapshots,status:comparisons.every(x=>x.matches)&&archiveChecks.every(x=>x.matches)&&oldStage5.every(x=>x.unchanged)?'pass':'hold',scope:'Git object comparison; no checkout mutation or runtime rerun'};
+fs.writeFileSync(path.join(h,doc,'metadata-comparison.json'),JSON.stringify(summary,null,2)+'\n');
+if(summary.status!=='pass')throw Error('Metadata byte comparison failed');
+const p=path.join(h,doc,'final-authority-result.json'),r=JSON.parse(fs.readFileSync(p));
+r.reviewed_sha=sha;r.product_reviewed_sha=old;r.metadata_head_sha=sha;r.metadata_review_status='pass; metadata Git comparison and sixJSON semantic/hash audit';r.metadata_comparison=doc+'/metadata-comparison.json';r.remaining_gates=r.remaining_gates.filter(x=>!x.startsWith('metadata projection SHA'));
+r.evidence_hash_semantics='6JSON canonical refs were reviewed at1a519; snapshots preserve62eff originals separately. Future projection changes must preserve prior report bytes and explicitly update new hashes.';
+fs.writeFileSync(p,JSON.stringify(r,null,2)+'\n');
+fs.copyFileSync(root+'/metadata.cjs.txt',path.join(h,doc,'scripts/metadata.cjs.txt'));
+console.log(JSON.stringify({status:summary.status,changed:changed.length,externalCompared:comparisons.length,prelink:archiveChecks.length}));

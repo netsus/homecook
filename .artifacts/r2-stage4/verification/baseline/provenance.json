@@ -1,0 +1,11 @@
+{
+  "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "candidate_root": "/Users/cwj/.codex/worktrees/f2a2/homecook",
+  "temporary_parent": "/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s",
+  "baseline_worktree": "/Users/cwj/.codex/worktrees/homecook-r2-baseline-xn37636s/homecook",
+  "node_modules_target": "/Users/cwj/.codex/worktrees/f2a2/homecook/node_modules",
+  "base_url": "http://127.0.0.1:3122",
+  "reuse_existing_server": false,
+  "source_edits": false,
+  "runtime_fallback": "APFS clone copy after Turbopack refused external symlink; no install/source/config modification"
+}

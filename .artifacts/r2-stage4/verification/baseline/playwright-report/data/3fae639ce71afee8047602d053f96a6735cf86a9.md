@@ -1,0 +1,71 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - status "서비스 준비 안내" [ref=e2]:
+    - generic [ref=e3]: 서비스 준비 중
+    - generic [ref=e5]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - link "뒤로 가기" [ref=e11] [cursor=pointer]:
+          - /url: /planner
+          - img [ref=e12]
+        - heading "남은 요리" [level=1] [ref=e14]
+        - link "다먹은 요리" [ref=e15] [cursor=pointer]:
+          - /url: /leftovers/ate?returnTo=%2Fleftovers%3FreturnTo%3D%252Fplanner%26returnSurface%3Dleftovers.list&returnSurface=leftovers.list
+      - status [ref=e16]: 다먹음 처리됐어요
+      - generic [ref=e17]:
+        - heading "남은요리 관리" [level=2] [ref=e18]
+        - heading "남은 요리 1개" [level=3] [ref=e19]
+        - paragraph [ref=e20]: 요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.
+      - generic [ref=e22]:
+        - paragraph [ref=e23]: 오래 보관한 남은 요리가 있어요
+        - paragraph [ref=e24]: 1개 항목을 확인해 주세요. 먹었다면 다먹음으로 정리하고, 아직 보관 중이면 계속 보관을 눌러 주세요.
+      - article [ref=e26]:
+        - generic [ref=e27]:
+          - img [ref=e29]
+          - generic [ref=e31]:
+            - link "된장찌개" [ref=e32] [cursor=pointer]:
+              - /url: /recipe/recipe-2
+            - paragraph [ref=e33]: 4/27 요리 · 점심 · 1인분
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: 보관한 지 136일이 지났어요
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: 아직 보관 중이면 안내를 숨겨 주세요.
+            - button "계속 보관" [ref=e38] [cursor=pointer]
+        - generic [ref=e39]:
+          - button "플래너에 추가" [ref=e40] [cursor=pointer]:
+            - generic [ref=e41]: 플래너에 추가
+          - button "다먹음" [ref=e42] [cursor=pointer]
+      - region "중량·잔량 기록" [ref=e43]:
+        - heading "중량·잔량 기록" [level=2] [ref=e44]
+        - paragraph [ref=e45]: 요리 직후 음식 무게와 현재 남은 양을 따로 관리해요.
+        - paragraph [ref=e46]: 중량·잔량 기록이 없어요.
+      - navigation "남은 요리 하단 탭" [ref=e47]:
+        - generic [ref=e48]:
+          - link "홈" [ref=e49] [cursor=pointer]:
+            - /url: /
+            - img [ref=e50]
+            - generic [ref=e52]: 홈
+          - link "요리 계획" [ref=e53] [cursor=pointer]:
+            - /url: /planner
+            - img [ref=e54]
+            - generic [ref=e57]: 요리 계획
+          - link "식사 기록" [ref=e58] [cursor=pointer]:
+            - /url: /planner?segment=log
+            - img [ref=e59]
+            - generic [ref=e62]: 식사 기록
+          - link "팬트리" [ref=e63] [cursor=pointer]:
+            - /url: /pantry
+            - img [ref=e64]
+            - generic [ref=e66]: 팬트리
+          - link "마이" [ref=e67] [cursor=pointer]:
+            - /url: /mypage
+            - img [ref=e68]
+            - generic [ref=e71]: 마이
+  - region "새 알림"
+  - alert [ref=e72]
+  - button "YouTube 추출 알림 없음" [ref=e74] [cursor=pointer]:
+    - img [ref=e75]
+```

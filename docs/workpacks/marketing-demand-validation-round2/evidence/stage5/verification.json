@@ -1,0 +1,9 @@
+{
+  "reproduction_source_hashes_verified": 5,
+  "stalled_cases_confirmed": 4,
+  "control_cases_confirmed": 2,
+  "method": "Read exact-source fake-transport result plus productionclient/view code, no browser/provider/DB execution fornewfinding",
+  "repo_product_changes": [],
+  "whole_regression_rerun": false,
+  "precheck_reused": true
+}

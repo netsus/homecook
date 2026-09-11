@@ -1,0 +1,5 @@
+
+> homecook@0.1.0 validate:omo-bookkeeping /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/validate-omo-bookkeeping.mjs
+
+omo bookkeeping validation passed

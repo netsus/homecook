@@ -1,0 +1,5 @@
+
+> homecook@0.1.0 validate:workpack /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/check-workpack-docs.mjs -- --slice marketing-demand-validation-round2
+
+Workpack docs OK for slice 'marketing-demand-validation-round2' (base: master)

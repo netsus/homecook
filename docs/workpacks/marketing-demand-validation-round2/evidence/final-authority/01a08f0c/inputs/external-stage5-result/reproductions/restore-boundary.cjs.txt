@@ -1,0 +1,50 @@
+const ts = require('/Users/cwj/.codex/worktrees/f2a2/homecook/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript');
+const cp = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const sha = '7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77';
+const cwd = '/Users/cwj/.codex/worktrees/145f/homecook';
+const cache = new Map(), sources = [];
+function load(p) {
+  let source;
+  for (const candidate of [p, p + '.ts', p + '/index.ts']) {
+    try { source = cp.execFileSync('git', ['show', sha + ':' + candidate], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); p = candidate; break; } catch {}
+  }
+  if (source === undefined) throw Error(p);
+  if (cache.has(p)) return cache.get(p).exports;
+  sources.push({ path: p, sha256: crypto.createHash('sha256').update(source).digest('hex') });
+  const m = { exports: {} }; cache.set(p, m);
+  const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
+  new Function('require', 'module', 'exports', compiled)(id => id.startsWith('.') ? load(path.posix.normalize(path.posix.join(path.posix.dirname(p), id))) : require(id), m, m.exports);
+  return m.exports;
+}
+async function main(){
+ const {createRound2Client}=load('lib/marketing/round2-client.ts');const {RETENTION_UNTIL}=load('lib/marketing-round2.ts');const results=[];
+ for(const topic of ['recording','homeflow']){
+  const requests=[];let failing=true, committed=false,receiptId=null,writes=0;
+  const client=createRound2Client({topic,pageContext:'',attribution:{first_channel:'direct',utm_source:null,utm_medium:null,utm_campaign:null,utm_content:null},preview:false,leadReady:true,indexedDB:null,now:()=>Date.parse('2026-09-11T00:00:00Z'),fetch:async(_url,init)=>{
+   const q=JSON.parse(init.body);requests.push(q);
+   if(q.action==='lead_submit'){
+    if(failing)throw Error('fixture response lost');
+    if(!committed&&!q.turnstile_token)return Response.json({success:false,data:null,error:{code:'VALIDATION_ERROR',message:'fixture',fields:['turnstile_token']}},{status:422});
+    if(!committed){committed=true;writes++;receiptId=q.event_id;}
+   }
+   return Response.json({success:true,error:null,data:{round_version:'r2.1',topic,participation_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',event_id:q.event_id,revision:committed?3:2,consent_generation:1,state:{example:'not_started',survey:'not_started',lead:committed?'completed':'started'},receipt:committed?{event_id:receiptId,status:'received'}:null,participation_expires_at:'2026-10-10T00:00:00Z',retention_until:RETENTION_UNTIL}});
+  }});
+  const observe=()=>({posts:requests.length,leads:requests.filter(q=>q.action==='lead_submit').length,writes,leadForm:client.getState().leadForm,pendingLead:client.getState().pendingLead,tokenReady:client.getState().tokenReady,error:client.getState().error?.code});
+  await client.connect();await client.openActivity('lead');client.setLeadForm({email:'first@example.com',consent:true});client.setTurnstileToken('initial-challenge');await client.submitLead();
+  const original=requests.find(q=>q.action==='lead_submit');client.setLeadForm({email:'corrected@example.com'});client.setTurnstileToken('must-not-send-edited-token');failing=false;
+  await client.retry();const editedReceipt=requests.filter(q=>q.action==='lead_submit').at(-1);const beforeRestore=observe();client.restoreLeadAttempt();const afterRestore=observe();
+  const retryBeforeConsent=await client.retry();const afterPreConsentRetry=observe();const preConsentRequest=requests.filter(q=>q.action==='lead_submit').at(-1);
+  client.setLeadForm({consent:true});const beforeNoChallenge=observe();const retryNoChallenge=await client.retry();const afterNoChallenge=observe();
+  client.setTurnstileToken('fresh-after-reconsent');const retryFresh=await client.retry();const afterFresh=observe();const last=requests.filter(q=>q.action==='lead_submit').at(-1);
+  const invariant=q=>q.event_id===original.event_id&&q.email===original.email&&q.consent_generation===original.consent_generation;
+  if(![editedReceipt,preConsentRequest,last].every(invariant)||editedReceipt.turnstile_token||preConsentRequest.turnstile_token)throw Error('identity/token guard failed');
+  if(afterRestore.posts!==beforeRestore.posts||afterRestore.leadForm.consent||afterRestore.tokenReady)throw Error('restore not inert/unchecked');
+  if(afterPreConsentRetry.writes!==0||afterNoChallenge.writes!==0||!retryFresh||afterFresh.writes!==1)throw Error('write gating failed');
+  results.push({topic,original,editedReceipt,beforeRestore,afterRestore,retryBeforeConsent,afterPreConsentRetry,preConsentRequest,beforeNoChallenge,retryNoChallenge,afterNoChallenge,retryFresh,afterFresh,last,conclusion:'restore action POST0; explicit prior-receipt check before reconsent sends tokenless original POST (no newlead in model); consent plus fresh challenge submits sameevent original payload'});client.dispose();
+ }
+ const report={reviewedSha:sha,method:'exact Git blobs in-memory transpile with local injected transport, no server/network/DB',sources,results};fs.writeFileSync(path.join(__dirname,'restore-boundary-result.json'),JSON.stringify(report,null,2));console.log(results.map(r=>({topic:r.topic,restoreAdditionalPosts:r.afterRestore.posts-r.beforeRestore.posts,explicitPreConsentReceiptAdditionalPosts:r.afterPreConsentRetry.posts-r.afterRestore.posts,newWritesBeforeConsent:r.afterPreConsentRetry.writes,newWritesWithoutChallenge:r.afterNoChallenge.writes,sameEvent:r.last.event_id===r.original.event_id,newWritesAfterFreshChallenge:r.afterFresh.writes})));
+}
+main().catch(e=>{console.error(e);process.exitCode=1;});

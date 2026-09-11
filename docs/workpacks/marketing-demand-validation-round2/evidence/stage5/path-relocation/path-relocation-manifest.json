@@ -1,0 +1,48 @@
+{
+  "revision": "mechanical-path-relocation-v1",
+  "actor_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+  "created_at": "2026-09-11T05:14:07.177653+00:00",
+  "scope": "Only three retained-script reference strings; no source/verdict/finding/reproduction-result change.",
+  "original_package": "/Users/cwj/.codex/visualizations/2026/09/11/01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-stage5/handoff",
+  "original_to_retained": {
+    "original": "reproduction/reproduce-lead-edit.cjs",
+    "retained": "reproduction/reproduce-lead-edit.cjs.txt",
+    "sha256": "48a580b0ac1e6a4fa99eeab1b66a111d10e732b619ec3a843c1541f2f16fe0ed",
+    "bytes_equal": true,
+    "verified_retained_path": "/Users/cwj/.codex/worktrees/f2a2/homecook/docs/workpacks/marketing-demand-validation-round2/evidence/stage5/reproduction/reproduce-lead-edit.cjs.txt"
+  },
+  "replacement_files": [
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-report.md",
+      "original_sha256": "fa5d34f5527950d1b92d7f58e289a6acef48f454f2e95a5594d3dcd23b92e82c",
+      "relocated_sha256": "cc98722c9bdf261246eb6b7f94a49f7b34b7c4346b5666248ad4611de497d7c5",
+      "replacements": 1,
+      "all_other_bytes_unchanged": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/findings.json",
+      "original_sha256": "afe19c821bfea5a75c168f0b43c449a6e9d3404965f28108a0063540602bf733",
+      "relocated_sha256": "0132bdc62630b2a321e62e6b9516f563cd6674ff76ebd47b10814bf95ea0e88d",
+      "replacements": 1,
+      "all_other_bytes_unchanged": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "original_sha256": "4fb8656b060dd62b456fe6448338982f0de7820538492684bc959f66fa20a563",
+      "relocated_sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401",
+      "replacements": 1,
+      "all_other_bytes_unchanged": true
+    }
+  ],
+  "preserved": {
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "status": "request_changes",
+    "required_fix_ids": [
+      "R2-S5-001"
+    ],
+    "historical_stacktrace_strings_edited": false,
+    "other_four_precheck_scripts_edited": false,
+    "original_package_modified": false
+  },
+  "apply": "Replace only the three replacement_files paths. Retained .cjs.txt is already supplied by FEauthor; do not copy the old .cjs back into product repo."
+}

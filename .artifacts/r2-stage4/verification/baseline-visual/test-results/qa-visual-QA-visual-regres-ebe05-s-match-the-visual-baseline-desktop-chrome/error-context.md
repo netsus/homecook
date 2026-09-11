@@ -1,0 +1,98 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e6]:
+      - banner [ref=e7]:
+        - generic [ref=e8]:
+          - link "무먹, 무엇을 먹든" [ref=e9] [cursor=pointer]:
+            - /url: /
+            - img [ref=e10]
+          - navigation "데스크탑 주요 메뉴" [ref=e11]:
+            - link "홈" [ref=e12] [cursor=pointer]:
+              - /url: /
+            - link "요리 계획" [ref=e13] [cursor=pointer]:
+              - /url: /planner
+            - link "식사 기록" [ref=e14] [cursor=pointer]:
+              - /url: /planner?segment=log
+            - link "팬트리" [ref=e15] [cursor=pointer]:
+              - /url: /pantry
+            - link "무먹 가이드" [ref=e16] [cursor=pointer]:
+              - /url: /about
+          - generic [ref=e17]:
+            - button "YouTube 추출 알림 없음" [ref=e18] [cursor=pointer]:
+              - img [ref=e19]
+            - button "집밥러 프로필 요약 열기" [ref=e22] [cursor=pointer]:
+              - generic [ref=e23]: 집
+        - status "서비스 준비 안내" [ref=e24]:
+          - generic [ref=e25]: 서비스 준비 중
+          - generic [ref=e27]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+      - main [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - paragraph [ref=e31]: 장보기
+            - heading "장보기 준비" [level=1] [ref=e32]
+            - paragraph [ref=e33]: 같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.
+          - generic "장보기 보조 메뉴" [ref=e34]:
+            - button "지난 장보기" [ref=e35] [cursor=pointer]
+            - button "팬트리 보기" [ref=e36] [cursor=pointer]
+        - generic [ref=e37]:
+          - region "어떤 끼니의 재료를 살까요?" [ref=e38]:
+            - generic [ref=e39]:
+              - heading "어떤 끼니의 재료를 살까요?" [level=2] [ref=e41]
+              - checkbox "전체 선택" [checked] [ref=e43] [cursor=pointer]:
+                - generic [ref=e44]: ✓
+                - text: 전체 선택
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - heading "5월 18일 월요일" [level=3] [ref=e47]
+                - article [ref=e49] [cursor=pointer]:
+                  - button "제육볶음 선택 해제" [ref=e50]: ✓
+                  - generic [ref=e52]:
+                    - heading "제육볶음" [level=3] [ref=e54]:
+                      - link "제육볶음" [ref=e55]:
+                        - /url: /planner/2026-05-18/column-breakfast?returnTo=%2Fshopping%2Fflow
+                    - generic [ref=e56]:
+                      - generic [ref=e57]: 아침
+                      - generic [ref=e58]: 2인분
+              - generic [ref=e59]:
+                - heading "5월 19일 화요일" [level=3] [ref=e60]
+                - article [ref=e62] [cursor=pointer]:
+                  - button "감자 수제비 선택 해제" [ref=e63]: ✓
+                  - generic [ref=e65]:
+                    - heading "감자 수제비" [level=3] [ref=e67]:
+                      - link "감자 수제비" [ref=e68]:
+                        - /url: /planner/2026-05-19/column-dinner?returnTo=%2Fshopping%2Fflow
+                    - generic [ref=e69]:
+                      - generic [ref=e70]: 저녁
+                      - generic [ref=e71]: 2인분
+              - generic [ref=e72]:
+                - heading "5월 20일 수요일" [level=3] [ref=e73]
+                - article [ref=e75] [cursor=pointer]:
+                  - button "닭가슴살 샐러드 선택 해제" [ref=e76]: ✓
+                  - generic [ref=e78]:
+                    - heading "닭가슴살 샐러드" [level=3] [ref=e80]:
+                      - link "닭가슴살 샐러드" [ref=e81]:
+                        - /url: /planner/2026-05-20/column-lunch?returnTo=%2Fshopping%2Fflow
+                    - generic [ref=e82]:
+                      - generic [ref=e83]: 점심
+                      - generic [ref=e84]: 1인분
+          - complementary "장보기 요약" [ref=e85]:
+            - heading "선택한 식사" [level=2] [ref=e86]
+            - strong [ref=e87]: 3개 · 5인분
+            - paragraph [ref=e88]: 장보기 목록으로 만들어요.
+            - button "장보기 목록 만들기" [ref=e89] [cursor=pointer]
+    - contentinfo [ref=e90]:
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - strong [ref=e93]: 무엇을 먹든
+          - generic [ref=e94]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e95]:
+          - link "개인정보처리방침" [ref=e96] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e97] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e98]
+```

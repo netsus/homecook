@@ -1,0 +1,137 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]:
+            - link "무먹, 무엇을 먹든" [ref=e11] [cursor=pointer]:
+              - /url: /
+              - img [ref=e12]
+            - navigation "데스크탑 주요 메뉴" [ref=e13]:
+              - link "홈" [ref=e14] [cursor=pointer]:
+                - /url: /
+              - link "요리 계획" [ref=e15] [cursor=pointer]:
+                - /url: /planner
+              - link "식사 기록" [ref=e16] [cursor=pointer]:
+                - /url: /planner?segment=log
+              - link "팬트리" [ref=e17] [cursor=pointer]:
+                - /url: /pantry
+              - link "무먹 가이드" [ref=e18] [cursor=pointer]:
+                - /url: /about
+            - generic [ref=e19]:
+              - button "YouTube 추출 알림 없음" [ref=e20] [cursor=pointer]:
+                - img [ref=e21]
+              - button "내 프로필 요약 열기" [ref=e24] [cursor=pointer]:
+                - img [ref=e25]
+          - status "서비스 준비 안내" [ref=e28]:
+            - generic [ref=e29]: 서비스 준비 중
+            - generic [ref=e31]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - paragraph [ref=e34]: 끼니 화면
+            - heading "5월 18일 저녁 식사" [level=1] [ref=e35]
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - generic [ref=e38]:
+                - paragraph [ref=e39]: 계획 영양
+                - paragraph [ref=e40]: 직접값과 환산값 혼합 · 예상치
+              - generic [ref=e41]: 1개 확인 필요
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - term [ref=e44]: 열량
+                - definition [ref=e45]: 520 kcal
+              - generic [ref=e46]:
+                - term [ref=e47]: 탄수화물
+                - definition [ref=e48]: 최소 65 g
+              - generic [ref=e49]:
+                - term [ref=e50]: 단백질
+                - definition [ref=e51]: 21 g
+              - generic [ref=e52]:
+                - term [ref=e53]: 지방
+                - definition [ref=e54]: 12 g
+              - generic [ref=e55]:
+                - term [ref=e56]: 나트륨
+                - definition [ref=e57]: 936 mg
+            - button "확인 필요 안내 1개 보기" [ref=e58] [cursor=pointer]: 확인 필요 안내 보기
+          - generic [ref=e59]:
+            - region "끼니 음식 목록" [ref=e60]:
+              - generic [ref=e61]:
+                - article "김치찌개 끼니 음식" [ref=e62]:
+                  - generic [ref=e63]:
+                    - generic [ref=e65]:
+                      - generic [ref=e67]: 장보기 완료
+                      - button "김치찌개" [ref=e68] [cursor=pointer]
+                      - generic [ref=e69]:
+                        - generic [ref=e70]: 2인분
+                        - generic [ref=e71]: ·25분
+                    - generic [ref=e72]:
+                      - button "김치찌개 삭제" [ref=e74] [cursor=pointer]:
+                        - img [ref=e75]
+                      - group "인분 조절" [ref=e78]:
+                        - button "인분 감소" [ref=e79] [cursor=pointer]:
+                          - generic [ref=e80]: −
+                        - generic "2인분" [ref=e81]
+                        - button "인분 증가" [ref=e82] [cursor=pointer]:
+                          - generic [ref=e83]: +
+                      - button "김치찌개 요리하기" [ref=e85] [cursor=pointer]:
+                        - img [ref=e86]
+                        - text: 요리하기
+                  - region "김치찌개 계획 영양정보" [ref=e88]:
+                    - heading "레시피 영양정보" [level=2] [ref=e89]
+                    - paragraph [ref=e90]: 등록한 계획 기준 · 2인분 · 예상 영양
+                    - paragraph [ref=e91]: 영양 정보 준비 중
+                - article "미역국 끼니 음식" [ref=e92]:
+                  - generic [ref=e93]:
+                    - generic [ref=e95]:
+                      - generic [ref=e97]: 등록
+                      - button "미역국" [ref=e98] [cursor=pointer]
+                      - generic [ref=e99]:
+                        - generic [ref=e100]: 3인분
+                        - generic [ref=e101]: ·20분
+                    - generic [ref=e102]:
+                      - button "미역국 삭제" [ref=e104] [cursor=pointer]:
+                        - img [ref=e105]
+                      - group "인분 조절" [ref=e108]:
+                        - button "인분 감소" [ref=e109] [cursor=pointer]:
+                          - generic [ref=e110]: −
+                        - generic "3인분" [ref=e111]
+                        - button "인분 증가" [ref=e112] [cursor=pointer]:
+                          - generic [ref=e113]: +
+                      - button "장보기" [ref=e115] [cursor=pointer]:
+                        - img [ref=e116]
+                        - text: 장보기
+                  - region "미역국 계획 영양정보" [ref=e119]:
+                    - heading "레시피 영양정보" [level=2] [ref=e120]
+                    - paragraph [ref=e121]: 등록한 계획 기준 · 3인분 · 예상 영양
+                    - paragraph [ref=e122]: 영양 정보 준비 중
+            - complementary [ref=e123]:
+              - generic [ref=e124]:
+                - generic [ref=e125]:
+                  - paragraph [ref=e126]: 끼니 요약
+                  - heading "5월 18일 저녁" [level=1] [ref=e127]
+                - generic [ref=e128]:
+                  - generic [ref=e129]:
+                    - generic [ref=e130]: 음식
+                    - strong [ref=e131]: 2개
+                  - generic [ref=e132]:
+                    - generic [ref=e133]: 총 인분
+                    - strong [ref=e134]: 5인분
+                - link "식사 추가" [ref=e135] [cursor=pointer]:
+                  - /url: /menu-add?columnId=col-dinner&date=2026-05-18&slot=%EC%A0%80%EB%85%81&returnTo=%2Fplanner%3FcolumnId%3Dcol-dinner%26date%3D2026-05-18%26slot%3D%25EC%25A0%2580%25EB%2585%2581&returnSurface=planner.meal-add-modal&restore=meal-add-modal
+                  - img [ref=e136]
+                  - text: 식사 추가
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - strong [ref=e141]: 무엇을 먹든
+          - generic [ref=e142]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e143]:
+          - link "개인정보처리방침" [ref=e144] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e145] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e146]
+```

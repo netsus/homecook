@@ -1,0 +1,5 @@
+
+> homecook@0.1.0 validate:closeout-sync /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/validate-closeout-sync.mjs -- --slice marketing-demand-validation-round2
+
+closeout sync validation passed

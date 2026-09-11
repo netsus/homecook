@@ -1,0 +1,122 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - link "무먹, 무엇을 먹든" [ref=e10] [cursor=pointer]:
+              - /url: /
+              - img [ref=e11]
+            - navigation "데스크탑 주요 메뉴" [ref=e12]:
+              - link "홈" [ref=e13] [cursor=pointer]:
+                - /url: /
+              - link "요리 계획" [ref=e14] [cursor=pointer]:
+                - /url: /planner
+              - link "식사 기록" [ref=e15] [cursor=pointer]:
+                - /url: /planner?segment=log
+              - link "팬트리" [ref=e16] [cursor=pointer]:
+                - /url: /pantry
+              - link "무먹 가이드" [ref=e17] [cursor=pointer]:
+                - /url: /about
+            - generic [ref=e18]:
+              - button "YouTube 추출 알림 없음" [ref=e19] [cursor=pointer]:
+                - img [ref=e20]
+              - generic [ref=e22]: JY
+          - status "서비스 준비 안내" [ref=e23]:
+            - generic [ref=e24]: 서비스 준비 중
+            - generic [ref=e26]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - heading "남은 요리 3개" [level=1] [ref=e30]
+              - paragraph [ref=e31]: 요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.
+            - link "다먹은 요리" [ref=e33] [cursor=pointer]:
+              - /url: /leftovers/ate?returnTo=%2Fleftovers%3FreturnTo%3D%252Fplanner%26returnSurface%3Dleftovers.list&returnSurface=leftovers.list
+          - region "남은요리 관리" [ref=e34]:
+            - heading "남은요리 관리" [level=2] [ref=e35]
+            - paragraph [ref=e36]: 기존 남은 요리 기록이에요. 중량·잔량 기록과 섞지 않고 따로 보여드려요.
+          - generic [ref=e37]:
+            - text: "!"
+            - generic [ref=e38]:
+              - strong [ref=e39]: 오래 보관한 남은 요리가 있어요
+              - generic [ref=e40]: 3개 항목을 확인해 주세요. 먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 계속 보관을 눌러 주세요.
+          - generic [ref=e41]:
+            - generic [ref=e44]:
+              - generic [ref=e45]:
+                - link "김치볶음밥" [ref=e46] [cursor=pointer]:
+                  - /url: /recipe/mock-kimchi-jjigae
+                - generic [ref=e47]: 남은 요리
+              - paragraph [ref=e48]: 5월 13일 · 저녁 · 2인분
+              - generic [ref=e49]:
+                - generic [ref=e50]:
+                  - strong [ref=e51]: 보관한 지 39일이 지났어요
+                  - generic [ref=e52]: 먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 안내를 숨겨 주세요.
+                - button "계속 보관" [ref=e53] [cursor=pointer]
+              - generic [ref=e54]:
+                - button "플래너에 추가" [ref=e55] [cursor=pointer]
+                - button "다 먹었어요" [ref=e56] [cursor=pointer]
+            - generic [ref=e59]:
+              - generic [ref=e60]:
+                - link "순두부찌개" [ref=e61] [cursor=pointer]:
+                  - /url: /recipe/recipe-soondubu
+                - generic [ref=e62]: 남은 요리
+              - paragraph [ref=e63]: 5월 12일 · 점심 · 1인분
+              - generic [ref=e64]:
+                - generic [ref=e65]:
+                  - strong [ref=e66]: 보관한 지 40일이 지났어요
+                  - generic [ref=e67]: 먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 안내를 숨겨 주세요.
+                - button "계속 보관" [ref=e68] [cursor=pointer]
+              - generic [ref=e69]:
+                - button "플래너에 추가" [ref=e70] [cursor=pointer]
+                - button "다 먹었어요" [ref=e71] [cursor=pointer]
+            - generic [ref=e74]:
+              - generic [ref=e75]:
+                - link "비빔밥" [ref=e76] [cursor=pointer]:
+                  - /url: /recipe/recipe-bibimbap
+                - generic [ref=e77]: 남은 요리
+              - paragraph [ref=e78]: 5월 11일 · 직접 기록 · 2인분
+              - generic [ref=e79]:
+                - generic [ref=e80]:
+                  - strong [ref=e81]: 보관한 지 41일이 지났어요
+                  - generic [ref=e82]: 먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 안내를 숨겨 주세요.
+                - button "계속 보관" [ref=e83] [cursor=pointer]
+              - generic [ref=e84]:
+                - button "플래너에 추가" [ref=e85] [cursor=pointer]
+                - button "다 먹었어요" [ref=e86] [cursor=pointer]
+          - region "중량·잔량 기록" [ref=e87]:
+            - heading "중량·잔량 기록" [level=2] [ref=e88]
+            - paragraph [ref=e89]: 요리 직후 음식 무게와 현재 남은 양을 따로 관리해요.
+            - article "중량·잔량 기록 김치볶음밥" [ref=e91]:
+              - generic [ref=e92]:
+                - img [ref=e94]
+                - generic [ref=e97]:
+                  - generic [ref=e98]:
+                    - heading "김치볶음밥" [level=3] [ref=e99]
+                    - generic [ref=e100]: 남은 요리
+                  - paragraph [ref=e101]: 6/20 요리 · 2인분
+              - generic [ref=e102]:
+                - paragraph [ref=e103]:
+                  - text: 완성 중량
+                  - strong [ref=e104]: 720g
+                - paragraph [ref=e105]:
+                  - text: 남은 양
+                  - strong [ref=e106]: 420g
+              - paragraph [ref=e107]: 영양 계산 가능
+              - generic [ref=e108]:
+                - button "김치볶음밥 양 조정" [ref=e109] [cursor=pointer]: 양 조정
+                - button "김치볶음밥 버림" [ref=e110] [cursor=pointer]: 버림
+      - generic [ref=e112]:
+        - generic [ref=e113]:
+          - strong [ref=e114]: 무엇을 먹든
+          - generic [ref=e115]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e116]:
+          - link "개인정보처리방침" [ref=e117] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e118] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e119]
+```

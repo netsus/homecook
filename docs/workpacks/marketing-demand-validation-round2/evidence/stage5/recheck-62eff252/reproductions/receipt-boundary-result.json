@@ -1,0 +1,552 @@
+{
+  "reviewedSha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "method": "Exact Git client in memory; fake receipt store/transport follows token-required-on-absence contract. No real handler, RPC, DB or provider execution. Store write counts are fixture observations only.",
+  "sources": [
+    {
+      "path": "lib/marketing/round2-client.ts",
+      "sha256": "8c7d17aa75981146e6a1cf9e59b0ee9fb478f50bf38ee240cd6d0c7194218efc"
+    },
+    {
+      "path": "lib/marketing-round2.ts",
+      "sha256": "9300aa427fec71dab589d194e7b94e42bad2e7a8cebec6013a9fb67c9aee7128"
+    },
+    {
+      "path": "lib/marketing/round2-session.ts",
+      "sha256": "b0dc08faae1c78d586881a2db2c8820c93994084db014c251ec38a8dc4092c2e"
+    },
+    {
+      "path": "lib/marketing/round2-client-storage.ts",
+      "sha256": "39476ebc6a575f507aaff05d84e85f5d055864b667e7d83cb1f4b441f97c6bcc"
+    },
+    {
+      "path": "lib/marketing/round2-survey.ts",
+      "sha256": "8547fe9285aedc329efad22f87a868c1cd9aa726bb7ba24efedadfcd52bf854f"
+    }
+  ],
+  "results": [
+    {
+      "mode": "receipt-present",
+      "passed": true,
+      "trace": [
+        {
+          "label": "initial-failure",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "first@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": false
+          },
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 1
+        },
+        {
+          "label": "edited-no-request",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": true
+          },
+          "tokenReady": true,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 1
+        },
+        {
+          "label": "explicit-receipt-retry",
+          "error": null,
+          "connection": "ready",
+          "form": {
+            "email": "",
+            "consent": false
+          },
+          "pendingLead": null,
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "completed",
+          "posts": 7,
+          "leadPosts": 2,
+          "writes": 1
+        }
+      ],
+      "requests": [
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "activity_start",
+          "event_id": "c59d6208-12ac-4947-9495-9f26d39714d7",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "843764dd-c02a-46ce-b166-e4e142389c62",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": true
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "843764dd-c02a-46ce-b166-e4e142389c62",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": false
+        }
+      ]
+    },
+    {
+      "mode": "receipt-absent",
+      "passed": true,
+      "trace": [
+        {
+          "label": "initial-failure",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "first@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": false
+          },
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 0
+        },
+        {
+          "label": "edited-no-request",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": true
+          },
+          "tokenReady": true,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 0
+        },
+        {
+          "label": "explicit-receipt-retry",
+          "error": "VALIDATION_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": true
+          },
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "started",
+          "posts": 7,
+          "leadPosts": 2,
+          "writes": 0
+        },
+        {
+          "label": "restored-without-request",
+          "error": "VALIDATION_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "first@example.com",
+            "consent": false
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": true
+          },
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "started",
+          "posts": 7,
+          "leadPosts": 2,
+          "writes": 0
+        },
+        {
+          "label": "reconsented-explicit-retry",
+          "error": null,
+          "connection": "ready",
+          "form": {
+            "email": "",
+            "consent": false
+          },
+          "pendingLead": null,
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "completed",
+          "posts": 9,
+          "leadPosts": 3,
+          "writes": 1
+        }
+      ],
+      "requests": [
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "activity_start",
+          "event_id": "55f51387-cb58-4b6a-ba64-58c7a828ae1a",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "f3c61257-f3b7-4521-83a9-be939aed1e9f",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": true
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "f3c61257-f3b7-4521-83a9-be939aed1e9f",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "f3c61257-f3b7-4521-83a9-be939aed1e9f",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": true
+        }
+      ]
+    },
+    {
+      "mode": "cookie-generation-advance",
+      "passed": true,
+      "trace": [
+        {
+          "label": "initial-failure",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "first@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": false
+          },
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 0
+        },
+        {
+          "label": "edited-no-request",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": true
+          },
+          "tokenReady": true,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 0
+        },
+        {
+          "label": "explicit-receipt-retry",
+          "error": "CONSENT_REFRESH_REQUIRED",
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": false
+          },
+          "pendingLead": null,
+          "tokenReady": false,
+          "generation": 2,
+          "lead": "started",
+          "posts": 6,
+          "leadPosts": 1,
+          "writes": 0
+        },
+        {
+          "label": "generation-2-explicit-submit",
+          "error": null,
+          "connection": "ready",
+          "form": {
+            "email": "",
+            "consent": false
+          },
+          "pendingLead": null,
+          "tokenReady": false,
+          "generation": 2,
+          "lead": "completed",
+          "posts": 8,
+          "leadPosts": 2,
+          "writes": 1
+        }
+      ],
+      "requests": [
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "activity_start",
+          "event_id": "58ac521c-ae3a-4b04-a9ad-a6359872bd84",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "7859a9cd-f1fd-4b4f-9156-83837ad19512",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": true
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "c2c10be3-5259-4232-8cdc-1c7dd25b63b5",
+          "email": "corrected@example.com",
+          "consent_generation": 2,
+          "hasToken": true
+        }
+      ]
+    },
+    {
+      "mode": "server-409-generation",
+      "passed": true,
+      "trace": [
+        {
+          "label": "initial-failure",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "first@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": false
+          },
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 0
+        },
+        {
+          "label": "edited-no-request",
+          "error": "NETWORK_ERROR",
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": true
+          },
+          "pendingLead": {
+            "email": "first@example.com",
+            "edited": true
+          },
+          "tokenReady": true,
+          "generation": 1,
+          "lead": "started",
+          "posts": 5,
+          "leadPosts": 1,
+          "writes": 0
+        },
+        {
+          "label": "explicit-receipt-retry",
+          "error": "CONSENT_REFRESH_REQUIRED",
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": false
+          },
+          "pendingLead": null,
+          "tokenReady": false,
+          "generation": 1,
+          "lead": "started",
+          "posts": 7,
+          "leadPosts": 2,
+          "writes": 0
+        },
+        {
+          "label": "fresh-generation-connected-no-lead-write",
+          "error": null,
+          "connection": "ready",
+          "form": {
+            "email": "corrected@example.com",
+            "consent": false
+          },
+          "pendingLead": null,
+          "tokenReady": false,
+          "generation": 2,
+          "lead": "started",
+          "posts": 8,
+          "leadPosts": 2,
+          "writes": 0
+        },
+        {
+          "label": "generation-2-explicit-submit",
+          "error": null,
+          "connection": "ready",
+          "form": {
+            "email": "",
+            "consent": false
+          },
+          "pendingLead": null,
+          "tokenReady": false,
+          "generation": 2,
+          "lead": "completed",
+          "posts": 10,
+          "leadPosts": 3,
+          "writes": 1
+        }
+      ],
+      "requests": [
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "activity_start",
+          "event_id": "87ef021f-8d70-4902-91ea-20f0be534bbf",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "11f317cf-5ff0-4141-8854-1ad635490d00",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": true
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "11f317cf-5ff0-4141-8854-1ad635490d00",
+          "email": "first@example.com",
+          "consent_generation": 1,
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "bootstrap",
+          "event_id": "2b08b734-fc48-4495-8691-574de65d782d",
+          "hasToken": false
+        },
+        {
+          "action": "lead_submit",
+          "event_id": "fe6f49a2-6649-4111-b86e-dfba01f0f223",
+          "email": "corrected@example.com",
+          "consent_generation": 2,
+          "hasToken": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-hQRT0t
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-view.test.tsx (6 tests | 6 failed) 139ms
+     × shows all recording menu actions during bootstrap and opens examples immediately 94ms
+     × shows all homeflow menu actions during bootstrap and opens examples immediately 12ms
+     × requires explicit last-scene confirmation and keeps the scene when saving fails 9ms
+     × uses every exact recording survey option and input notice 7ms
+     × uses every exact homeflow survey option and input notice 10ms
+     × keeps exact consent unchecked and offers the form directly without other activities 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > shows all recording menu actions during bootstrap and opens examples immediately
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > shows all homeflow menu actions during bootstrap and opens examples immediately
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "베타 오픈 알림 받기"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+<body>
+  <div />
+</body>
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/marketing-round2-view.test.tsx:16:19
+     14|   it.each(["recording","homeflow"] as const)("shows all %s menu action…
+     15|     const p=props(topic);render(<Round2View {...p}/>);
+     16|     expect(screen.getByRole("button",{name:"베타 오픈 알림 받기"})).toBeTruthy…
+       |                   ^
+     17|     expect(screen.queryByText("아직 완료한 활동이 없어요")).toBeNull();
+     18|     fireEvent.click(screen.getByRole("button",{name:"사용 예시 먼저 보기"}));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > requires explicit last-scene confirmation and keeps the scene when saving fails
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "사용 예시 먼저 보기"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+<body>
+  <div />
+</body>
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/marketing-round2-view.test.tsx:24:28
+     22|   it("requires explicit last-scene confirmation and keeps the scene wh…
+     23|     const p=props();render(<Round2View {...p}/>);
+     24|     fireEvent.click(screen.getByRole("button",{name:"사용 예시 먼저 보기"}));
+       |                            ^
+     25|     fireEvent.click(screen.getByRole("button",{name:"다음 장면"}));
+     26|     fireEvent.click(screen.getByRole("button",{name:"다음 장면"}));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > uses every exact recording survey option and input notice
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > uses every exact homeflow survey option and input notice
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "의견만 남기기 · 4문항"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+<body>
+  <div />
+</body>
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/marketing-round2-view.test.tsx:33:28
+     31|   it.each(["recording","homeflow"] as const)("uses every exact %s surv…
+     32|     const p=props(topic);p.state.draft={q1:"none",q2:"other",q3:"none"…
+     33|     fireEvent.click(screen.getByRole("button",{name:"의견만 남기기 · 4문항"}));
+       |                            ^
+     34|     for(const [index,q] of ROUND2_SURVEYS[topic].questions.entries()){
+     35|       expect(screen.getByRole("group",{name:q.label})).toBeTruthy();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/marketing-round2-view.test.tsx > R2 independent activity screens > keeps exact consent unchecked and offers the form directly without other activities
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "베타 오픈 알림 받기"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+<body>
+  <div />
+</body>
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/marketing-round2-view.test.tsx:45:28
+     43|   it("keeps exact consent unchecked and offers the form directly witho…
+     44|     const p=props();render(<Round2View {...p}/>);
+     45|     fireEvent.click(screen.getByRole("button",{name:"베타 오픈 알림 받기"}));
+       |                            ^
+     46|     expect(screen.getByRole("textbox",{name:"이메일"})).toBeTruthy();
+     47|     expect((screen.getByRole("checkbox",{name:ROUND2_LEAD_COPY.consent…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  10:50:29
+   Duration  744ms (transform 55ms, setup 25ms, import 139ms, tests 139ms, environment 338ms)

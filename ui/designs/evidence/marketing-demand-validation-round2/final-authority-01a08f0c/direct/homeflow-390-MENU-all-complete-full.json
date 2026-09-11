@@ -1,0 +1,46 @@
+{
+  "screen": "R2_HOMEFLOW_MENU",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n베타 준비 중 · 사용 예시\n\n뭐 먹을지 정한 다음, 장보기부터 남은 요리까지\n\n요리 계획에 필요한 재료를 모으고, 집에 있는 재료를 빼서 장보고, 남은 요리를 다음 식사로 이어가요.\n\n요리 계획 → 장보기 → 남은 요리\n알림 접수 확인\n완료\n사용 예시 다시 보기\n완료\n의견 접수 확인\n완료\n\n현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n\n하나만 해도 괜찮아요. 순서는 자유예요.\n\n완료한 활동은 위에서 다시 확인할 수 있어요.\n\n개인정보처리방침",
+  "width": 390,
+  "scrollWidth": 390,
+  "scrollY": 0,
+  "active": "의견 접수 확인완료",
+  "controls": [
+    {
+      "label": "알림 접수 확인완료",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 52,
+      "top": 399.703125,
+      "bottom": 451.703125,
+      "disabled": false
+    },
+    {
+      "label": "사용 예시 다시 보기완료",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 50,
+      "top": 461.703125,
+      "bottom": 511.703125,
+      "disabled": false
+    },
+    {
+      "label": "의견 접수 확인완료",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 521.703125,
+      "bottom": 569.703125,
+      "disabled": false
+    },
+    {
+      "label": "개인정보처리방침",
+      "tag": "A",
+      "width": 350,
+      "height": 48,
+      "top": 714.140625,
+      "bottom": 762.140625,
+      "disabled": false
+    }
+  ]
+}

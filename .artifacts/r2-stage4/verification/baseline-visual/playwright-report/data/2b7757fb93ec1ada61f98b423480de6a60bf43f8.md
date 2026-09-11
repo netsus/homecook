@@ -1,0 +1,122 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - link "무먹, 무엇을 먹든" [ref=e10] [cursor=pointer]:
+              - /url: /
+              - img [ref=e11]
+            - navigation "데스크탑 주요 메뉴" [ref=e12]:
+              - link "홈" [ref=e13] [cursor=pointer]:
+                - /url: /
+              - link "요리 계획" [ref=e14] [cursor=pointer]:
+                - /url: /planner
+              - link "식사 기록" [ref=e15] [cursor=pointer]:
+                - /url: /planner?segment=log
+              - link "팬트리" [ref=e16] [cursor=pointer]:
+                - /url: /pantry
+              - link "무먹 가이드" [ref=e17] [cursor=pointer]:
+                - /url: /about
+            - generic [ref=e18]:
+              - button "YouTube 추출 알림 없음" [ref=e19] [cursor=pointer]:
+                - img [ref=e20]
+              - button "집밥러 프로필 요약 열기" [ref=e23] [cursor=pointer]:
+                - generic [ref=e24]: 집
+          - status "서비스 준비 안내" [ref=e25]:
+            - generic [ref=e26]: 서비스 준비 중
+            - generic [ref=e28]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - paragraph [ref=e32]: 팬트리
+              - heading "나의 팬트리 10개" [level=1] [ref=e33]
+              - paragraph [ref=e34]: 팬트리에 있는 재료는 장보기에서 자동 제외돼요.
+            - generic [ref=e35]:
+              - button "팬트리 추천" [ref=e36] [cursor=pointer]
+              - button "묶음으로 추가" [ref=e37] [cursor=pointer]: 묶음 추가
+              - button "재료 추가하기" [ref=e38] [cursor=pointer]: + 재료 추가
+          - generic [ref=e39]:
+            - tablist [ref=e40]:
+              - tab "전체" [selected] [ref=e41] [cursor=pointer]: 전체 10
+              - tab "곡류/면/떡" [ref=e42] [cursor=pointer]: 곡류/면/떡 1
+              - tab "채소/버섯" [ref=e43] [cursor=pointer]: 채소/버섯 3
+              - tab "과일/견과" [ref=e44] [cursor=pointer]: 과일/견과 0
+              - tab "단백질" [ref=e45] [cursor=pointer]: 단백질 1
+              - tab "해산물" [ref=e46] [cursor=pointer]: 해산물 1
+              - tab "유제품/대체유" [ref=e47] [cursor=pointer]: 유제품/대체유 1
+              - tab "양념/조미" [ref=e48] [cursor=pointer]: 양념/조미 2
+              - tab "가공/기타" [ref=e49] [cursor=pointer]: 가공/기타 1
+            - generic [ref=e50]:
+              - generic [ref=e51]:
+                - img [ref=e52]
+                - searchbox "팬트리 재료 검색" [ref=e55]
+              - generic [ref=e56]:
+                - generic [ref=e57]: 10개 재료 표시
+                - button "편집" [ref=e58] [cursor=pointer]
+            - generic [ref=e59]:
+              - generic [ref=e60]:
+                - generic [ref=e61]:
+                  - heading "곡류/면/떡" [level=2] [ref=e62]
+                  - generic [ref=e63]: 1개
+                - article "쌀 재료" [ref=e65]:
+                  - strong [ref=e68]: 쌀
+              - generic [ref=e69]:
+                - generic [ref=e70]:
+                  - heading "채소/버섯" [level=2] [ref=e71]
+                  - generic [ref=e72]: 3개
+                - generic [ref=e73]:
+                  - article "김치 재료" [ref=e74]:
+                    - strong [ref=e77]: 김치
+                  - article "대파 재료" [ref=e78]:
+                    - strong [ref=e81]: 대파
+                  - article "양파 재료" [ref=e82]:
+                    - strong [ref=e85]: 양파
+              - generic [ref=e86]:
+                - generic [ref=e87]:
+                  - heading "단백질" [level=2] [ref=e88]
+                  - generic [ref=e89]: 1개
+                - article "돼지고기 재료" [ref=e91]:
+                  - strong [ref=e94]: 돼지고기
+              - generic [ref=e95]:
+                - generic [ref=e96]:
+                  - heading "해산물" [level=2] [ref=e97]
+                  - generic [ref=e98]: 1개
+                - article "멸치 재료" [ref=e100]:
+                  - strong [ref=e103]: 멸치
+              - generic [ref=e104]:
+                - generic [ref=e105]:
+                  - heading "유제품/대체유" [level=2] [ref=e106]
+                  - generic [ref=e107]: 1개
+                - article "버터 재료" [ref=e109]:
+                  - strong [ref=e112]: 버터
+              - generic [ref=e113]:
+                - generic [ref=e114]:
+                  - heading "양념/조미" [level=2] [ref=e115]
+                  - generic [ref=e116]: 2개
+                - generic [ref=e117]:
+                  - article "고추장 재료" [ref=e118]:
+                    - strong [ref=e121]: 고추장
+                  - article "다진 마늘 재료" [ref=e122]:
+                    - strong [ref=e125]: 다진 마늘
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - heading "가공/기타" [level=2] [ref=e128]
+                  - generic [ref=e129]: 1개
+                - article "두부 재료" [ref=e131]:
+                  - strong [ref=e134]: 두부
+      - generic [ref=e136]:
+        - generic [ref=e137]:
+          - strong [ref=e138]: 무엇을 먹든
+          - generic [ref=e139]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e140]:
+          - link "개인정보처리방침" [ref=e141] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e142] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e143]
+```

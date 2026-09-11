@@ -151,3 +151,12 @@ scroll containment(스크롤 영역): 독립 캠페인 문서 본문 하나에�
 판단: 조건·입력·오류를 가까이 배치하고 필요한 정보를 생략하지 않는다. 공식 r2.1의 카피·보존·동의·복원 경계를 소비한 작성자 제안이다.
 
 보완 요청: [해당 critique](critiques/R2_SURVEY-critique.md) 소유자가 최신 도면·문서를 재검토한다. 기존 critique와 수정 전 점수는 변경하지 않았다. 정적 보완은 author 작업이며 self-pass를 부여하지 않는다. 실서비스 검증·독립 Stage/authority가 완료될 때까지 draft/pending이다.
+
+## Stage 4 실제 구현 체크포인트 (2026-09-11)
+
+구현은 `components/marketing/round2/round2-view.tsx`와 기존 r2.1 공용 계약을 소비한다. [Stage 4 인수 기록](../../docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md)의 모드·검증 한계를 함께 읽는다. 독립 authority는 pending이며 정적 도면을 실행 증거로 바꾸지 않는다.
+
+- [recording 320x568 production build 로컬 미리보기](evidence/marketing-demand-validation-round2/stage4/production-preview/recording-320x568-SURVEY.png)
+- [recording 390x844 production build 로컬 미리보기](evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-SURVEY.png)
+- [homeflow 320x568 production build 로컬 미리보기](evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-SURVEY.png)
+- [homeflow 390x844 production build 로컬 미리보기](evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-SURVEY.png)

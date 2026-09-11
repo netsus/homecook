@@ -1,0 +1,40 @@
+{
+  "role": "stage4-author metadata projection verification",
+  "actor_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "reviewed_input_head": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "code_commit": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "product_tests_harness_diff": "none",
+  "original_stage5_request_changes": "preserved unchanged",
+  "prelink_reports": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252",
+  "current_stage5_verdict": "approve/required0 from separate independent result",
+  "checks": {
+    "hash_refs_unique": 347,
+    "json_pointers": 217,
+    "index_hash_matches": 347,
+    "strict_exit_code": 0,
+    "workpack_exit_code": 0,
+    "lint_exit_code": 0
+  },
+  "projection_changes": [
+    "Past report path references now point to unchanged immutable archives",
+    "Independent recheck and report-link revision are explicit new sources",
+    "Stable non-storing production preview provenance added",
+    "Assigned final-authority task recorded without final verdict"
+  ],
+  "source_json_sha256": {
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json": "90e36a29a7bc8f2f9ee1cec80366cf8d72ccda0bd2a838f30dc5080939018afc",
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json": "646741076e232d009c718433d1e4360713c695791e6796f542610e8ce334637e",
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json": "16dfdfb8b87ec6943b36bd2cefa950f31f1bc799662352de985f600fa1979554",
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json": "293a1a016843c95b96ab00f4486fef7400a0617bf11f7b2cdb22c6a2662f01ad",
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json": "99a880f79c515900072595bc46ec41e7d3ddc3473f55aed622a3cd58d4a0927e",
+    "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json": "0a96e3879a6a27cc3e42d23f661ee3a653c4d63887ab5bbc2e7bb529c20a4281"
+  },
+  "not_approved": [
+    "final authority",
+    "Stage6",
+    "confirmed",
+    "Ready",
+    "merge",
+    "deployment"
+  ]
+}

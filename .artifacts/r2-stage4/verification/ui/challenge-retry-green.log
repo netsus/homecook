@@ -1,0 +1,9 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-bEN2pd
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  11:13:26
+   Duration  2.23s (transform 199ms, setup 63ms, import 439ms, tests 1.46s, environment 1.53s)

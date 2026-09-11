@@ -1,0 +1,1338 @@
+{
+  "generatedAt": "2026-09-11T05:25:11.653Z",
+  "runs": [
+    {
+      "directory": "2026-09-11T05-12-03-095Z",
+      "overall": "FAIL",
+      "originalChecksCompleted": 24,
+      "additionalChecksCompleted": 1,
+      "observations": 1208,
+      "navigationObservations": 0,
+      "reloadObservations": 0,
+      "cookieResumeRequests": 0,
+      "allCapturedProductFilesMatchFinal": true,
+      "capturedRunnerSha256": "88d5450db63cbcded1023cf4ea271acba48e3b6ee98125f03d9b765139467aab",
+      "currentRunnerSha256": "e333a1adea8f255abd083a2842f5df38021480eb5aa5dbc4821b12369590799a",
+      "traceAllowlistAndIdentityScan": "PASS"
+    },
+    {
+      "directory": "2026-09-11T05-17-43-601Z",
+      "overall": "PASS",
+      "originalChecksCompleted": 0,
+      "additionalChecksCompleted": 4,
+      "observations": 128,
+      "navigationObservations": 0,
+      "reloadObservations": 0,
+      "cookieResumeRequests": 0,
+      "allCapturedProductFilesMatchFinal": true,
+      "capturedRunnerSha256": "b059583ff50129b2e1db5e7932fad55b3b1a9b932894639d101ac1b43d4edcd2",
+      "currentRunnerSha256": "e333a1adea8f255abd083a2842f5df38021480eb5aa5dbc4821b12369590799a",
+      "traceAllowlistAndIdentityScan": "PASS"
+    },
+    {
+      "directory": "2026-09-11T05-19-39-943Z",
+      "overall": "PASS",
+      "originalChecksCompleted": 24,
+      "additionalChecksCompleted": 4,
+      "observations": 1316,
+      "navigationObservations": 50,
+      "reloadObservations": 21,
+      "cookieResumeRequests": 1,
+      "allCapturedProductFilesMatchFinal": true,
+      "capturedRunnerSha256": "b059583ff50129b2e1db5e7932fad55b3b1a9b932894639d101ac1b43d4edcd2",
+      "currentRunnerSha256": "e333a1adea8f255abd083a2842f5df38021480eb5aa5dbc4821b12369590799a",
+      "traceAllowlistAndIdentityScan": "PASS"
+    }
+  ],
+  "finalSources": {
+    "scripts/verify-marketing-round2-ui-isolated.mjs": "e333a1adea8f255abd083a2842f5df38021480eb5aa5dbc4821b12369590799a",
+    "tests/marketing-round2-ui-isolated.scenarios.mjs": "360e064d087f635e7deb315b955ca2216318c19b60cc94772eb950ed8eb04641",
+    "tests/helpers/marketing-round2-ui-trace.mjs": "28c76bb64e643e6158c7c0e2ea6d18ab962006bbe27d08808444b0498761dddb",
+    "tests/marketing-round2-ui-trace.test.ts": "cb3a604e03a3533f2c53460413a503d0a07f75e749bea044d6a5a3b326dd4b35",
+    "tests/marketing-round2-ui-selection.test.ts": "b41eaa4264591a4a9994ec6ff51c88300681ea08b516cdf8c6f0d6f0c506b886",
+    "lib/marketing/round2-client.ts": "8c7d17aa75981146e6a1cf9e59b0ee9fb478f50bf38ee240cd6d0c7194218efc",
+    "components/marketing/round2/round2-view.tsx": "a31bbcc1a8e0ef72e9177856cbd2da898d12b8510f1ea20464e857376a84709c"
+  },
+  "entries": [
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_HOMEFLOW_RECOVERY-1280x900.png",
+      "bytes": 89573,
+      "sha256": "7f0f87bfe30e2a90a15b11f1bac366503c500b2e7e35a89d51ee94652e5be08d"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_HOMEFLOW_RECOVERY-320x568.png",
+      "bytes": 78043,
+      "sha256": "c805a81a09f4222f1e9ee29ddc655f2a34d39e11495b3aa02c35fd37541b46b1"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_HOMEFLOW_RECOVERY-390x844.png",
+      "bytes": 79838,
+      "sha256": "3901a8520ae4d699ca077aa552f67467ef939f0873db77dc33ade6fe1df10651"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_HOMEFLOW_RECOVERY-393x852.png",
+      "bytes": 79801,
+      "sha256": "ff1b8418132e96dc1b7896d5e4b6e3c4f4ed2fbbce0e3191d90398cdfcf48b58"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_RECORDING_RECOVERY-1280x900.png",
+      "bytes": 79676,
+      "sha256": "01cec74be6a2b0d7774559e7e0a4dbb001a09a00432f5abf2197e9769f397a9c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_RECORDING_RECOVERY-320x568.png",
+      "bytes": 70182,
+      "sha256": "dbad1e3d9e542b5e30210c1fe3bfdc72048d9d3ba105b1f0a45284074ac7af56"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_RECORDING_RECOVERY-390x844.png",
+      "bytes": 71510,
+      "sha256": "d4241cd815ad9f4136cfac4a662977e65734773c454d0af7e17179038d49f922"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/R2_RECORDING_RECOVERY-393x852.png",
+      "bytes": 71697,
+      "sha256": "adf96d1a5cde32944b7591766ef7c9a699a777f2d2fe5c8bed371f2d347440ad"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/cleanup.json",
+      "bytes": 246,
+      "sha256": "3eb52781019e7ae8a8d675cfbbbb283f918f38378c1173af5764efdf7626ed34"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/failure.png",
+      "bytes": 71292,
+      "sha256": "4e7a9f9ba3e06d6a912253631f645fa2250e07bbea395f8df299d6b30c89de04"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-example-response-loss-end.png",
+      "bytes": 51600,
+      "sha256": "e03fe308fd34f2713fa7f444479409976fa1fe5844afd043aa1406a0786b454e"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-example-response-loss-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-lead-survey-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-lead-survey-example-done.png",
+      "bytes": 51800,
+      "sha256": "e521d9b9bb727605c3c26678e5e9903b429f290075ea6c51ece7c36f73618b11"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-lead-survey-lead-done.png",
+      "bytes": 43095,
+      "sha256": "b345d2d7dcb463142fd1b2f3b4fc19d3c3ad70c3e66ce8dbad2776580e07368b"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-lead-survey-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-lead-survey-survey-done.png",
+      "bytes": 45621,
+      "sha256": "f2e71f2c02920d98c6c9b4b546f722c3e6b4fc03f7fd379fc77c6eec7d3b03f4"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-survey-lead-end.png",
+      "bytes": 64785,
+      "sha256": "6561e3a9233b4e43af8b2f988d384c7afb7d7732d385ab0e8c74c4a17ba7b4bb"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-survey-lead-example-done.png",
+      "bytes": 51600,
+      "sha256": "e03fe308fd34f2713fa7f444479409976fa1fe5844afd043aa1406a0786b454e"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-survey-lead-lead-done.png",
+      "bytes": 42631,
+      "sha256": "a49be059717bb660908f6e17e00ad922c4c1b264b89d3c7723d8bcbc1fd6aab5"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-survey-lead-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-example-survey-lead-survey-done.png",
+      "bytes": 45809,
+      "sha256": "53a902a6e89a99cc1be882ef2b01dcd2f2845254afc659b092637ba3fc2ab4b0"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-example-survey-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-example-survey-example-done.png",
+      "bytes": 51617,
+      "sha256": "909386c64478e0b4f7ca79ccb188efcbd7b1b8d401ac921a4ba6bb2bb1a6f681"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-example-survey-lead-done.png",
+      "bytes": 43426,
+      "sha256": "2d4d8cda953433ff4a5c1cb8279b31402cd6458003c73c4f4ee62d57d6b06c25"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-example-survey-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-example-survey-survey-done.png",
+      "bytes": 45621,
+      "sha256": "f2e71f2c02920d98c6c9b4b546f722c3e6b4fc03f7fd379fc77c6eec7d3b03f4"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-survey-example-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-survey-example-example-done.png",
+      "bytes": 51159,
+      "sha256": "58d127c6f766eb62b978c676a92c108a9516ed3f95f039cdb4e6193dfbcce8e0"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-survey-example-lead-done.png",
+      "bytes": 43426,
+      "sha256": "2d4d8cda953433ff4a5c1cb8279b31402cd6458003c73c4f4ee62d57d6b06c25"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-survey-example-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-lead-survey-example-survey-done.png",
+      "bytes": 45950,
+      "sha256": "d0f9093376f4e585ee9109a8ce3dee524d974bafa0e4d4391cdd73a91f062311"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-example-lead-end.png",
+      "bytes": 64785,
+      "sha256": "6561e3a9233b4e43af8b2f988d384c7afb7d7732d385ab0e8c74c4a17ba7b4bb"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-example-lead-example-done.png",
+      "bytes": 51353,
+      "sha256": "159dacca169e88dc4b5edd08a43d47d42517db91f5b6f2bbca989e4c9f74ff0a"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-example-lead-lead-done.png",
+      "bytes": 42631,
+      "sha256": "a49be059717bb660908f6e17e00ad922c4c1b264b89d3c7723d8bcbc1fd6aab5"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-example-lead-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-example-lead-survey-done.png",
+      "bytes": 46138,
+      "sha256": "bffd5a5a3de135afc0e719066c73f8bc5072c4fdedd35a68730e17f7e6b1b83f"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-lead-example-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-lead-example-example-done.png",
+      "bytes": 51159,
+      "sha256": "58d127c6f766eb62b978c676a92c108a9516ed3f95f039cdb4e6193dfbcce8e0"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-lead-example-lead-done.png",
+      "bytes": 42960,
+      "sha256": "9adb2635e6a16987b73356931a9cb454fa62389c6217c1251bb5cf62701ceb88"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-lead-example-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-order-survey-lead-example-survey-done.png",
+      "bytes": 46138,
+      "sha256": "bffd5a5a3de135afc0e719066c73f8bc5072c4fdedd35a68730e17f7e6b1b83f"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-example-end.png",
+      "bytes": 64124,
+      "sha256": "b8b174fa0d51a564d9d71846eb111ab83f4491fddec59e6b76fba835c06fa013"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-example-example-done.png",
+      "bytes": 51800,
+      "sha256": "e521d9b9bb727605c3c26678e5e9903b429f290075ea6c51ece7c36f73618b11"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-example-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-lead-end.png",
+      "bytes": 64102,
+      "sha256": "c3a095963f89e6adc87e10ca47effb0c98b99cc845b8f90e606c63a24ae7d22b"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-lead-lead-done.png",
+      "bytes": 43426,
+      "sha256": "2d4d8cda953433ff4a5c1cb8279b31402cd6458003c73c4f4ee62d57d6b06c25"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-lead-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-survey-end.png",
+      "bytes": 63798,
+      "sha256": "cc2f3563c0857e764719a3ebbc502610e663dfac715339f179238d04f2563ecd"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-survey-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/homeflow-solo-survey-survey-done.png",
+      "bytes": 46138,
+      "sha256": "bffd5a5a3de135afc0e719066c73f8bc5072c4fdedd35a68730e17f7e6b1b83f"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/next-runtime-summary.json",
+      "bytes": 2633,
+      "sha256": "1533176223dae72445bb8d09bb4d0782fca7e66a6b66dcf61694e4711dc00a59"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/observed-ui-trace.json",
+      "bytes": 340790,
+      "sha256": "f914be0d7499e0f7af6bc8b5c2347a0377f5ef946ed425411ff5b386e17fd9d8"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/rate-cooldown-storage-end.png",
+      "bytes": 63853,
+      "sha256": "6e828cb329f8345fb721089bd6a7be71cc2784bf35f15b5c7c01cee96485da41"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/rate-cooldown-storage-example-done.png",
+      "bytes": 49856,
+      "sha256": "56f53f9965f4cbced6904299f9e2659d49b3139227dc41841f4f0cebca376163"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/rate-cooldown-storage-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-consent-generation-end.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-consent-generation-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-lead-survey-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-lead-survey-example-done.png",
+      "bytes": 50078,
+      "sha256": "0f016bffceed15a574daae1d0260f5692026b4e465eda2aeb654627669a32f7a"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-lead-survey-lead-done.png",
+      "bytes": 42911,
+      "sha256": "aa79d727988fe86c0967ad19aaa4db5dafef6498a5f593795469be67e15c027d"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-lead-survey-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-lead-survey-survey-done.png",
+      "bytes": 44836,
+      "sha256": "b477a45baf81492b513b37a33013e830bdadd8da0ef03c8a4691e7cad233b0b3"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-survey-lead-end.png",
+      "bytes": 64523,
+      "sha256": "d8eb7576c6c6214c6f13c85bd0203080b9c49885a49cb1a13d3e4ec1a8409e4c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-survey-lead-example-done.png",
+      "bytes": 50078,
+      "sha256": "0f016bffceed15a574daae1d0260f5692026b4e465eda2aeb654627669a32f7a"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-survey-lead-lead-done.png",
+      "bytes": 42447,
+      "sha256": "bb1701eabca5e479d2c362a65d7b97208ce66379a7fc5cab9dc6897a7419dffd"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-survey-lead-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-example-survey-lead-survey-done.png",
+      "bytes": 45024,
+      "sha256": "ff9df4df22c92bcd479570ddaec16992f3cb10e85fd586884e5ea3ebc4329409"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-example-survey-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-example-survey-example-done.png",
+      "bytes": 49872,
+      "sha256": "9919f00c9189bdc303dfbfebf0f1cea982be934f7de34548c13dcb3eea3dd4d6"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-example-survey-lead-done.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-example-survey-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-example-survey-survey-done.png",
+      "bytes": 44836,
+      "sha256": "b477a45baf81492b513b37a33013e830bdadd8da0ef03c8a4691e7cad233b0b3"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-survey-example-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-survey-example-example-done.png",
+      "bytes": 49464,
+      "sha256": "3cccda56ad65b670095e970ef58ba394fe0ba30d38cc68fef6edcdaf40339ff0"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-survey-example-lead-done.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-survey-example-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-lead-survey-example-survey-done.png",
+      "bytes": 45166,
+      "sha256": "eb62b260c51f71df5df4bac50946e26bc6f3eda36dc20672783060b668323fb3"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-example-lead-end.png",
+      "bytes": 64523,
+      "sha256": "d8eb7576c6c6214c6f13c85bd0203080b9c49885a49cb1a13d3e4ec1a8409e4c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-example-lead-example-done.png",
+      "bytes": 49630,
+      "sha256": "0689160ee041082b843e83e0526266f2625811091c86d015b3dc9cb0e8ebd96c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-example-lead-lead-done.png",
+      "bytes": 42447,
+      "sha256": "bb1701eabca5e479d2c362a65d7b97208ce66379a7fc5cab9dc6897a7419dffd"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-example-lead-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-example-lead-survey-done.png",
+      "bytes": 45366,
+      "sha256": "3a4e0514259bbbc4426ae443e051ce50f93ee1d153a843bf563600f27d550a66"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-lead-example-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-lead-example-example-done.png",
+      "bytes": 49464,
+      "sha256": "3cccda56ad65b670095e970ef58ba394fe0ba30d38cc68fef6edcdaf40339ff0"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-lead-example-lead-done.png",
+      "bytes": 42775,
+      "sha256": "d94d59d858e2825f00cb159da792af4773a2751bd86688101b04930e4079c29c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-lead-example-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-order-survey-lead-example-survey-done.png",
+      "bytes": 45366,
+      "sha256": "3a4e0514259bbbc4426ae443e051ce50f93ee1d153a843bf563600f27d550a66"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-s5-lost-done.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-s5-lost-edited-recovery.png",
+      "bytes": 82535,
+      "sha256": "560c90864b88252ad7e3250fb87e0d623f2812797cdbdef5fdcd0710413768ca"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-s5-lost-end.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-s5-lost-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-s5-unreceived-edited-recovery.png",
+      "bytes": 82536,
+      "sha256": "21d0fb246b808d0185aa45784c6dd8f045ced5076500fc7d9cce5ce8b8b07d34"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-s5-unreceived-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-example-end.png",
+      "bytes": 63853,
+      "sha256": "6e828cb329f8345fb721089bd6a7be71cc2784bf35f15b5c7c01cee96485da41"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-example-example-done.png",
+      "bytes": 50078,
+      "sha256": "0f016bffceed15a574daae1d0260f5692026b4e465eda2aeb654627669a32f7a"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-example-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-lead-end.png",
+      "bytes": 63844,
+      "sha256": "2d315fbd48f3e1b7b1c1451d0cd47cc64d79cbea18ff1303cba450d2e1f4f3e5"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-lead-lead-done.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-lead-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-survey-end.png",
+      "bytes": 63532,
+      "sha256": "f9df5998fcdc009e471ac0fa7c805729cb78f25c17fbe37ad73a404740ec5241"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-survey-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/recording-solo-survey-survey-done.png",
+      "bytes": 45366,
+      "sha256": "3a4e0514259bbbc4426ae443e051ce50f93ee1d153a843bf563600f27d550a66"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/scenario-failure.json",
+      "bytes": 2817,
+      "sha256": "d09524cd8af833b7e47e14d79fb5242b85cda231e5d6e53dbe563b7d3ce59d07"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/shared-tabs-topics-end.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/shared-tabs-topics-example-done.png",
+      "bytes": 51800,
+      "sha256": "e521d9b9bb727605c3c26678e5e9903b429f290075ea6c51ece7c36f73618b11"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/shared-tabs-topics-menu.png",
+      "bytes": 62155,
+      "sha256": "48e2ce2b786180b8b2b9c69ac9c470341e8ddc70ca78471283c0a60c0b906841"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/shared-tabs-topics-survey-done.png",
+      "bytes": 45024,
+      "sha256": "ff9df4df22c92bcd479570ddaec16992f3cb10e85fd586884e5ea3ebc4329409"
+    },
+    {
+      "path": "2026-09-11T05-12-03-095Z/source-manifest.json",
+      "bytes": 223169,
+      "sha256": "66d57cf3a78d2c0be177d1a4dfaec4b03cf4b54b754b772f318b1bb79c613f97"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/cleanup.json",
+      "bytes": 245,
+      "sha256": "641ce4acc2787502469aae70d6a20c026ed52bbf46228ff6e38f811ad216f23d"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-lost-done.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-lost-edited-recovery.png",
+      "bytes": 82669,
+      "sha256": "b8ac267d19f21c09ddb74c15fc68204e6d821a396023bde655b12ead43ade9e6"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-lost-end.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-lost-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-unreceived-done.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-unreceived-edited-recovery.png",
+      "bytes": 82670,
+      "sha256": "ed490191cddd9704daac685ef3a4563504736d0add9aa2b6e55c6a78f20f7b39"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-unreceived-end.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/homeflow-s5-unreceived-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/next-runtime-summary.json",
+      "bytes": 310,
+      "sha256": "45c84611870d7212bad98b6f915b497b779f2b74aa341e8f8d3d965502e5c026"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/observed-ui-trace.json",
+      "bytes": 34206,
+      "sha256": "76ce32e01dd5177197773c149473027b6512a06fcb8928fac68bbcaf2645d712"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-lost-done.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-lost-edited-recovery.png",
+      "bytes": 82535,
+      "sha256": "560c90864b88252ad7e3250fb87e0d623f2812797cdbdef5fdcd0710413768ca"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-lost-end.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-lost-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-unreceived-done.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-unreceived-edited-recovery.png",
+      "bytes": 82536,
+      "sha256": "21d0fb246b808d0185aa45784c6dd8f045ced5076500fc7d9cce5ce8b8b07d34"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-unreceived-end.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/recording-s5-unreceived-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/result.json",
+      "bytes": 2426,
+      "sha256": "072a6b2fb719d089e89b6ba021247b879840aa0b9f2a9932b6c975dd53fa967a"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/scenario-result.json",
+      "bytes": 1871,
+      "sha256": "5002c9d0ba9bf7f3e5f580926a8c3e95c6e5803b5d8eb50287b8644ad2744dfd"
+    },
+    {
+      "path": "2026-09-11T05-17-43-601Z/source-manifest.json",
+      "bytes": 223169,
+      "sha256": "f809b8f6a5d675b531d841322dff70255334fe9cc9ffbae9b71c22c3455a0f21"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_HOMEFLOW_RECOVERY-1280x900.png",
+      "bytes": 89573,
+      "sha256": "7f0f87bfe30e2a90a15b11f1bac366503c500b2e7e35a89d51ee94652e5be08d"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_HOMEFLOW_RECOVERY-320x568.png",
+      "bytes": 78043,
+      "sha256": "c805a81a09f4222f1e9ee29ddc655f2a34d39e11495b3aa02c35fd37541b46b1"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_HOMEFLOW_RECOVERY-390x844.png",
+      "bytes": 79838,
+      "sha256": "3901a8520ae4d699ca077aa552f67467ef939f0873db77dc33ade6fe1df10651"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_HOMEFLOW_RECOVERY-393x852.png",
+      "bytes": 79801,
+      "sha256": "ff1b8418132e96dc1b7896d5e4b6e3c4f4ed2fbbce0e3191d90398cdfcf48b58"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_RECORDING_RECOVERY-1280x900.png",
+      "bytes": 79676,
+      "sha256": "01cec74be6a2b0d7774559e7e0a4dbb001a09a00432f5abf2197e9769f397a9c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_RECORDING_RECOVERY-320x568.png",
+      "bytes": 70182,
+      "sha256": "dbad1e3d9e542b5e30210c1fe3bfdc72048d9d3ba105b1f0a45284074ac7af56"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_RECORDING_RECOVERY-390x844.png",
+      "bytes": 71510,
+      "sha256": "d4241cd815ad9f4136cfac4a662977e65734773c454d0af7e17179038d49f922"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/R2_RECORDING_RECOVERY-393x852.png",
+      "bytes": 71697,
+      "sha256": "adf96d1a5cde32944b7591766ef7c9a699a777f2d2fe5c8bed371f2d347440ad"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/cleanup.json",
+      "bytes": 245,
+      "sha256": "e454e6933bd3cfc70c8572c75efa329a8791dddc92e8367e99a3c82c76eafafb"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-example-response-loss-end.png",
+      "bytes": 51600,
+      "sha256": "e03fe308fd34f2713fa7f444479409976fa1fe5844afd043aa1406a0786b454e"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-example-response-loss-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-lead-survey-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-lead-survey-example-done.png",
+      "bytes": 51800,
+      "sha256": "e521d9b9bb727605c3c26678e5e9903b429f290075ea6c51ece7c36f73618b11"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-lead-survey-lead-done.png",
+      "bytes": 43095,
+      "sha256": "b345d2d7dcb463142fd1b2f3b4fc19d3c3ad70c3e66ce8dbad2776580e07368b"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-lead-survey-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-lead-survey-survey-done.png",
+      "bytes": 45621,
+      "sha256": "f2e71f2c02920d98c6c9b4b546f722c3e6b4fc03f7fd379fc77c6eec7d3b03f4"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-survey-lead-end.png",
+      "bytes": 64785,
+      "sha256": "6561e3a9233b4e43af8b2f988d384c7afb7d7732d385ab0e8c74c4a17ba7b4bb"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-survey-lead-example-done.png",
+      "bytes": 51800,
+      "sha256": "e521d9b9bb727605c3c26678e5e9903b429f290075ea6c51ece7c36f73618b11"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-survey-lead-lead-done.png",
+      "bytes": 42631,
+      "sha256": "a49be059717bb660908f6e17e00ad922c4c1b264b89d3c7723d8bcbc1fd6aab5"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-survey-lead-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-example-survey-lead-survey-done.png",
+      "bytes": 45809,
+      "sha256": "53a902a6e89a99cc1be882ef2b01dcd2f2845254afc659b092637ba3fc2ab4b0"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-example-survey-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-example-survey-example-done.png",
+      "bytes": 51617,
+      "sha256": "909386c64478e0b4f7ca79ccb188efcbd7b1b8d401ac921a4ba6bb2bb1a6f681"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-example-survey-lead-done.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-example-survey-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-example-survey-survey-done.png",
+      "bytes": 45621,
+      "sha256": "f2e71f2c02920d98c6c9b4b546f722c3e6b4fc03f7fd379fc77c6eec7d3b03f4"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-survey-example-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-survey-example-example-done.png",
+      "bytes": 51159,
+      "sha256": "58d127c6f766eb62b978c676a92c108a9516ed3f95f039cdb4e6193dfbcce8e0"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-survey-example-lead-done.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-survey-example-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-lead-survey-example-survey-done.png",
+      "bytes": 45950,
+      "sha256": "d0f9093376f4e585ee9109a8ce3dee524d974bafa0e4d4391cdd73a91f062311"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-example-lead-end.png",
+      "bytes": 64785,
+      "sha256": "6561e3a9233b4e43af8b2f988d384c7afb7d7732d385ab0e8c74c4a17ba7b4bb"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-example-lead-example-done.png",
+      "bytes": 51353,
+      "sha256": "159dacca169e88dc4b5edd08a43d47d42517db91f5b6f2bbca989e4c9f74ff0a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-example-lead-lead-done.png",
+      "bytes": 42631,
+      "sha256": "a49be059717bb660908f6e17e00ad922c4c1b264b89d3c7723d8bcbc1fd6aab5"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-example-lead-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-example-lead-survey-done.png",
+      "bytes": 46138,
+      "sha256": "bffd5a5a3de135afc0e719066c73f8bc5072c4fdedd35a68730e17f7e6b1b83f"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-lead-example-end.png",
+      "bytes": 64870,
+      "sha256": "6ad87c4605cdea86032209087f831a8fe62a62585d2ce8c1bf84b14b06dc6a1b"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-lead-example-example-done.png",
+      "bytes": 51159,
+      "sha256": "58d127c6f766eb62b978c676a92c108a9516ed3f95f039cdb4e6193dfbcce8e0"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-lead-example-lead-done.png",
+      "bytes": 42960,
+      "sha256": "9adb2635e6a16987b73356931a9cb454fa62389c6217c1251bb5cf62701ceb88"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-lead-example-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-order-survey-lead-example-survey-done.png",
+      "bytes": 46138,
+      "sha256": "bffd5a5a3de135afc0e719066c73f8bc5072c4fdedd35a68730e17f7e6b1b83f"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-lost-done.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-lost-edited-recovery.png",
+      "bytes": 82669,
+      "sha256": "b8ac267d19f21c09ddb74c15fc68204e6d821a396023bde655b12ead43ade9e6"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-lost-end.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-lost-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-unreceived-done.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-unreceived-edited-recovery.png",
+      "bytes": 82670,
+      "sha256": "ed490191cddd9704daac685ef3a4563504736d0add9aa2b6e55c6a78f20f7b39"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-unreceived-end.png",
+      "bytes": 43422,
+      "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-s5-unreceived-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-example-end.png",
+      "bytes": 64124,
+      "sha256": "b8b174fa0d51a564d9d71846eb111ab83f4491fddec59e6b76fba835c06fa013"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-example-example-done.png",
+      "bytes": 51800,
+      "sha256": "e521d9b9bb727605c3c26678e5e9903b429f290075ea6c51ece7c36f73618b11"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-example-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-lead-end.png",
+      "bytes": 64102,
+      "sha256": "c3a095963f89e6adc87e10ca47effb0c98b99cc845b8f90e606c63a24ae7d22b"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-lead-lead-done.png",
+      "bytes": 43426,
+      "sha256": "2d4d8cda953433ff4a5c1cb8279b31402cd6458003c73c4f4ee62d57d6b06c25"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-lead-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-survey-end.png",
+      "bytes": 63798,
+      "sha256": "cc2f3563c0857e764719a3ebbc502610e663dfac715339f179238d04f2563ecd"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-survey-menu.png",
+      "bytes": 62122,
+      "sha256": "f1c29023fa09fcf679685621456217924879a4d9ba2fb11025f0fc54bf765c23"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/homeflow-solo-survey-survey-done.png",
+      "bytes": 46138,
+      "sha256": "bffd5a5a3de135afc0e719066c73f8bc5072c4fdedd35a68730e17f7e6b1b83f"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/next-runtime-summary.json",
+      "bytes": 2606,
+      "sha256": "a40ef80754ac80f79d30e1dee420dc1e3b2a101ce9a5547700a28d8264fe5cb6"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+      "bytes": 374894,
+      "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/rate-cooldown-storage-end.png",
+      "bytes": 63853,
+      "sha256": "6e828cb329f8345fb721089bd6a7be71cc2784bf35f15b5c7c01cee96485da41"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/rate-cooldown-storage-example-done.png",
+      "bytes": 50078,
+      "sha256": "0f016bffceed15a574daae1d0260f5692026b4e465eda2aeb654627669a32f7a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/rate-cooldown-storage-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-consent-generation-end.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-consent-generation-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-lead-survey-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-lead-survey-example-done.png",
+      "bytes": 50078,
+      "sha256": "0f016bffceed15a574daae1d0260f5692026b4e465eda2aeb654627669a32f7a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-lead-survey-lead-done.png",
+      "bytes": 42911,
+      "sha256": "aa79d727988fe86c0967ad19aaa4db5dafef6498a5f593795469be67e15c027d"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-lead-survey-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-lead-survey-survey-done.png",
+      "bytes": 44836,
+      "sha256": "b477a45baf81492b513b37a33013e830bdadd8da0ef03c8a4691e7cad233b0b3"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-survey-lead-end.png",
+      "bytes": 64523,
+      "sha256": "d8eb7576c6c6214c6f13c85bd0203080b9c49885a49cb1a13d3e4ec1a8409e4c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-survey-lead-example-done.png",
+      "bytes": 50078,
+      "sha256": "0f016bffceed15a574daae1d0260f5692026b4e465eda2aeb654627669a32f7a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-survey-lead-lead-done.png",
+      "bytes": 42447,
+      "sha256": "bb1701eabca5e479d2c362a65d7b97208ce66379a7fc5cab9dc6897a7419dffd"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-survey-lead-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-example-survey-lead-survey-done.png",
+      "bytes": 45024,
+      "sha256": "ff9df4df22c92bcd479570ddaec16992f3cb10e85fd586884e5ea3ebc4329409"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-example-survey-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-example-survey-example-done.png",
+      "bytes": 49872,
+      "sha256": "9919f00c9189bdc303dfbfebf0f1cea982be934f7de34548c13dcb3eea3dd4d6"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-example-survey-lead-done.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-example-survey-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-example-survey-survey-done.png",
+      "bytes": 44836,
+      "sha256": "b477a45baf81492b513b37a33013e830bdadd8da0ef03c8a4691e7cad233b0b3"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-survey-example-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-survey-example-example-done.png",
+      "bytes": 49237,
+      "sha256": "63edec7cc719ca77ebf565266a322d364ea283810f30aaa079f271b09b1d7251"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-survey-example-lead-done.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-survey-example-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-lead-survey-example-survey-done.png",
+      "bytes": 45166,
+      "sha256": "eb62b260c51f71df5df4bac50946e26bc6f3eda36dc20672783060b668323fb3"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-example-lead-end.png",
+      "bytes": 64523,
+      "sha256": "d8eb7576c6c6214c6f13c85bd0203080b9c49885a49cb1a13d3e4ec1a8409e4c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-example-lead-example-done.png",
+      "bytes": 49630,
+      "sha256": "0689160ee041082b843e83e0526266f2625811091c86d015b3dc9cb0e8ebd96c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-example-lead-lead-done.png",
+      "bytes": 42447,
+      "sha256": "bb1701eabca5e479d2c362a65d7b97208ce66379a7fc5cab9dc6897a7419dffd"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-example-lead-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-example-lead-survey-done.png",
+      "bytes": 45366,
+      "sha256": "3a4e0514259bbbc4426ae443e051ce50f93ee1d153a843bf563600f27d550a66"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-lead-example-end.png",
+      "bytes": 64609,
+      "sha256": "9036a231067820459d89846f906c0c5773b7f572b9ca74f17ca6cb0a27ae01da"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-lead-example-example-done.png",
+      "bytes": 49464,
+      "sha256": "3cccda56ad65b670095e970ef58ba394fe0ba30d38cc68fef6edcdaf40339ff0"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-lead-example-lead-done.png",
+      "bytes": 42775,
+      "sha256": "d94d59d858e2825f00cb159da792af4773a2751bd86688101b04930e4079c29c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-lead-example-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-order-survey-lead-example-survey-done.png",
+      "bytes": 45366,
+      "sha256": "3a4e0514259bbbc4426ae443e051ce50f93ee1d153a843bf563600f27d550a66"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-lost-done.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-lost-edited-recovery.png",
+      "bytes": 82535,
+      "sha256": "560c90864b88252ad7e3250fb87e0d623f2812797cdbdef5fdcd0710413768ca"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-lost-end.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-lost-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-unreceived-done.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-unreceived-edited-recovery.png",
+      "bytes": 82536,
+      "sha256": "21d0fb246b808d0185aa45784c6dd8f045ced5076500fc7d9cce5ce8b8b07d34"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-unreceived-end.png",
+      "bytes": 43238,
+      "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-s5-unreceived-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-example-end.png",
+      "bytes": 63853,
+      "sha256": "6e828cb329f8345fb721089bd6a7be71cc2784bf35f15b5c7c01cee96485da41"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-example-example-done.png",
+      "bytes": 50078,
+      "sha256": "0f016bffceed15a574daae1d0260f5692026b4e465eda2aeb654627669a32f7a"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-example-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-lead-end.png",
+      "bytes": 63844,
+      "sha256": "2d315fbd48f3e1b7b1c1451d0cd47cc64d79cbea18ff1303cba450d2e1f4f3e5"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-lead-lead-done.png",
+      "bytes": 43242,
+      "sha256": "0ee4a553230e546d1b843c60c1238cb3261c34da4b0a74076c0627f3b1db5e4e"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-lead-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-survey-end.png",
+      "bytes": 63532,
+      "sha256": "f9df5998fcdc009e471ac0fa7c805729cb78f25c17fbe37ad73a404740ec5241"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-survey-menu.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/recording-solo-survey-survey-done.png",
+      "bytes": 45366,
+      "sha256": "3a4e0514259bbbc4426ae443e051ce50f93ee1d153a843bf563600f27d550a66"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/result.json",
+      "bytes": 9132,
+      "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/scenario-result.json",
+      "bytes": 8576,
+      "sha256": "ee137822a5faf494d2c4b760dcf62c06acc7b908bc77deccf441d7913df8f9df"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/shared-tabs-topics-end.png",
+      "bytes": 61851,
+      "sha256": "71c1cb580ff38b41e2ddf4439d8ac5f6f7041e48eca38f190a7d6c60fb05104c"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/shared-tabs-topics-example-done.png",
+      "bytes": 51800,
+      "sha256": "e521d9b9bb727605c3c26678e5e9903b429f290075ea6c51ece7c36f73618b11"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/shared-tabs-topics-menu.png",
+      "bytes": 62155,
+      "sha256": "48e2ce2b786180b8b2b9c69ac9c470341e8ddc70ca78471283c0a60c0b906841"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/shared-tabs-topics-survey-done.png",
+      "bytes": 45024,
+      "sha256": "ff9df4df22c92bcd479570ddaec16992f3cb10e85fd586884e5ea3ebc4329409"
+    },
+    {
+      "path": "2026-09-11T05-19-39-943Z/source-manifest.json",
+      "bytes": 223169,
+      "sha256": "f901898dc98fcdf0b0d7dff848af31efc786c4cdd2395bb508668cc03552cc03"
+    },
+    {
+      "path": "default-dispatch.diff",
+      "bytes": 1732,
+      "sha256": "3628cd7f0e0c75d17828df3f5653bd69d9492562c6d9e948d66dfcb0518a95c1"
+    },
+    {
+      "path": "lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "navigation-red.log",
+      "bytes": 1059,
+      "sha256": "419dd8a20cb8fbdc26639ebfc71834c7786976bbda5bb08f85a2e491ae7a1784"
+    },
+    {
+      "path": "runner-before-default-dispatch.mjs.txt",
+      "bytes": 18582,
+      "sha256": "b059583ff50129b2e1db5e7932fad55b3b1a9b932894639d101ac1b43d4edcd2"
+    },
+    {
+      "path": "selection-red.log",
+      "bytes": 2845,
+      "sha256": "4711c8ad31fb92830e66c60226c89e2e9fbdea8cf7a58440ccb2e1c4e2b75388"
+    },
+    {
+      "path": "verification.log",
+      "bytes": 282,
+      "sha256": "a471ecc69f590023cf98e33410fb1b821c951e2008b9eecd670040fe690f80be"
+    }
+  ]
+}

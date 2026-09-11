@@ -1,0 +1,357 @@
+[
+  {
+    "path": "expected/qa-cook-mode-planner-desktop-chrome-darwin.png",
+    "sha256": "6f1abc6a42467916fff0dd7e39f9a9b2952c75ee2ebb8d4e59bd65d618f52c4f",
+    "bytes": 71939
+  },
+  {
+    "path": "expected/qa-leftovers-empty-desktop-chrome-darwin.png",
+    "sha256": "edad91b9b576a893312567bb00701ceb0412b16722298427e8571cd04d2c750c",
+    "bytes": 61503
+  },
+  {
+    "path": "expected/qa-leftovers-ready-desktop-chrome-darwin.png",
+    "sha256": "130c9888fb62c27d11b4dfe15a9ba602b5fdcaf9e1ff64aa7162effe0c1eb829",
+    "bytes": 164713
+  },
+  {
+    "path": "expected/qa-manual-recipe-create-desktop-chrome-darwin.png",
+    "sha256": "eff80feab029fabddc95568d2ae45c70e7b577ca78f048a25e9290b6ec12d878",
+    "bytes": 79923
+  },
+  {
+    "path": "expected/qa-meal-detail-desktop-chrome-darwin.png",
+    "sha256": "ff1be3bc063268b245d7dd7d9f015cc9274af5d185d714274f26e1f121d8188a",
+    "bytes": 118291
+  },
+  {
+    "path": "expected/qa-menu-add-search-desktop-chrome-darwin.png",
+    "sha256": "2248d5259d4502fe7da5b92034df7d9d9a9e2cca34d169c31a07c50ab1f704a5",
+    "bytes": 78337
+  },
+  {
+    "path": "expected/qa-mypage-saved-desktop-chrome-darwin.png",
+    "sha256": "4d76a60a38a328ae3e93c57f0eabd7c0e67fdf2135ce7d40dd2a55142406bab0",
+    "bytes": 73495
+  },
+  {
+    "path": "expected/qa-pantry-desktop-chrome-darwin.png",
+    "sha256": "9afb06d552fff875e2b0737acf77606948956dcc5796a17b66753b38fc966e9e",
+    "bytes": 120285
+  },
+  {
+    "path": "expected/qa-shopping-flow-desktop-chrome-darwin.png",
+    "sha256": "5df8631b82d0d59663b4f67b9b4d423fef29737f67d0f9e6b232ee60ffc5b37a",
+    "bytes": 73891
+  },
+  {
+    "path": "expected/qa-youtube-import-url-desktop-chrome-darwin.png",
+    "sha256": "72271c85033a51fb31f509b0799dfa916012bf5796847d69c0f3465ed9b15b6c",
+    "bytes": 45759
+  },
+  {
+    "path": "test-results/.last-run.json",
+    "sha256": "3fad1fd4e60b3118b0c4dc6f5ab395f1f7b9eea764c1e5d9b2c1eaa5f0c99472",
+    "bytes": 537
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "1ab4c4988a156ed29885b61577a9dcdf439df7331fb9191385c9d1c3342822b0",
+    "bytes": 6620
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-ready-actual.png",
+    "sha256": "2a126199906bd18dae7bc39ef412280e21beaf1f1af3aafa19c773bd080a6a96",
+    "bytes": 180704
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-ready-diff.png",
+    "sha256": "6b4a5667f7b5e1493fa5620938bd3026f1dca0f4184379b8b4e32900a6ad4835",
+    "bytes": 136669
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-ready-expected.png",
+    "sha256": "130c9888fb62c27d11b4dfe15a9ba602b5fdcaf9e1ff64aa7162effe0c1eb829",
+    "bytes": 164713
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "f031c2ec2bc83ea5b287733cfef20327965556916d146a5ee4dd15b89cb07693",
+    "bytes": 115721
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-00ce0-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "139f3665f295a7b4e7dcfbbc9b6ce51c673d0d49d0004582784539768ecc46db",
+    "bytes": 98669
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "29b8c7fc493b181d5e765f6b8b482d9d7c6ac7ba79092260e858ee8f2bdf24fd",
+    "bytes": 3170
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-empty-actual.png",
+    "sha256": "93626550eca52aef75ca1c8fb01488358d3d1972c821425fdf698becaa92542c",
+    "bytes": 76032
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-empty-diff.png",
+    "sha256": "24d338fc3fbbbd278389f9d24b6b4a499513c3c9d529ad06e9df26f494077b66",
+    "bytes": 58752
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/qa-leftovers-empty-expected.png",
+    "sha256": "edad91b9b576a893312567bb00701ceb0412b16722298427e8571cd04d2c750c",
+    "bytes": 61503
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "e40c465728f4f40a0fe6da74cefde3c8b01b90db914ad731f57f354d29b496ec",
+    "bytes": 63676
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-0c41f-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "99571174b16134e619f6d959f9d6255bbcefb05a48b96fdf77be1246513e1476",
+    "bytes": 93368
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "6899bef6e732d1972a8a03a461f025477f5f10e1794258460d1098d295fcf9ee",
+    "bytes": 6970
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/qa-meal-detail-actual.png",
+    "sha256": "c4705ccaacc21efa7229fd3df0801a39d12f4946ff29c003c0095f170ebdfedf",
+    "bytes": 141601
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/qa-meal-detail-diff.png",
+    "sha256": "1a90772fb71cf5d0aca8f6acb44924391f24d0140360a882d864fb6ee210f09c",
+    "bytes": 78170
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/qa-meal-detail-expected.png",
+    "sha256": "ff1be3bc063268b245d7dd7d9f015cc9274af5d185d714274f26e1f121d8188a",
+    "bytes": 118291
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "cbcc2e76676cb599f4ebb03fc3672e526475501fbf37f4d7338539a41a7dba26",
+    "bytes": 101602
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-24e75-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "a35394f17d448bc6ff90d52f0a5dd80f74a95668d7630dc233950a541fdecc44",
+    "bytes": 91403
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "829337a8f4582ce08515ac82faae5127141097062ec70c7821881798a825e57e",
+    "bytes": 4120
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/qa-cook-mode-planner-actual.png",
+    "sha256": "c72ca978ed93db9823efdf34794b23bd94c0a27d2ed01811aa50d7938fc64f57",
+    "bytes": 87965
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/qa-cook-mode-planner-diff.png",
+    "sha256": "4017e477bd96fba9ad84e218dc432d5b1d24ffdc57d9bfb9cd6120f918882da3",
+    "bytes": 68021
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/qa-cook-mode-planner-expected.png",
+    "sha256": "6f1abc6a42467916fff0dd7e39f9a9b2952c75ee2ebb8d4e59bd65d618f52c4f",
+    "bytes": 71939
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "c72ca978ed93db9823efdf34794b23bd94c0a27d2ed01811aa50d7938fc64f57",
+    "bytes": 87965
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3c4f1-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "2f0d58a2572e1db7c11c423e71fe60215aa9e2f1d85303a524877c5865cc4f7d",
+    "bytes": 64425
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "d1240f5ba5100101948d2616c0ff77403a3470bcf80121b7ada04601accee2e4",
+    "bytes": 3083
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/qa-youtube-import-url-actual.png",
+    "sha256": "caad7958e07fbaeca5eed0c90d0f5532b71e39bcf68679872413a2707d05d6f5",
+    "bytes": 63799
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/qa-youtube-import-url-diff.png",
+    "sha256": "b9c573896f88995123c946be5db63a199bff4fc7765987dbde54b9d42499cbec",
+    "bytes": 43902
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/qa-youtube-import-url-expected.png",
+    "sha256": "72271c85033a51fb31f509b0799dfa916012bf5796847d69c0f3465ed9b15b6c",
+    "bytes": 45759
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "caad7958e07fbaeca5eed0c90d0f5532b71e39bcf68679872413a2707d05d6f5",
+    "bytes": 63799
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-3caf4-matches-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "c2f4e04f203b990d7ce2a48f0ed2a98c3da140ca2c222caa7234c952ea9e35ee",
+    "bytes": 56639
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "070939aa6eee9cbb02d11c800c59cf73580d98058a5951a38dea5ea84fae946b",
+    "bytes": 6935
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/qa-menu-add-search-actual.png",
+    "sha256": "735835aa7c044e351554c7a9118f143d8b95beee547f7030739abeb4d56df701",
+    "bytes": 94860
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/qa-menu-add-search-diff.png",
+    "sha256": "f9afbda49490d16c9cace0dd08470552e9215e9142d7180eddfe3d03a96c3cd0",
+    "bytes": 70549
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/qa-menu-add-search-expected.png",
+    "sha256": "2248d5259d4502fe7da5b92034df7d9d9a9e2cca34d169c31a07c50ab1f704a5",
+    "bytes": 78337
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "cb5db1b4934d5f995f5b83d7e6d717a4b5d043a73461103751051b53e2636ff6",
+    "bytes": 73896
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-acc6b-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "3f76bb6d03b7ac99b5809d509ab71d1cbfe276fd2768521bb65eaa736c316801",
+    "bytes": 88916
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "988c6367d695728fe867b2b8f42050b149b2ab6c9fa9ffae433309ff823233d7",
+    "bytes": 7675
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/qa-mypage-saved-actual.png",
+    "sha256": "19d8a1e277274d9db6a82f6e80c40f95506b93cf42b0709b1152f3025286cab2",
+    "bytes": 90554
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/qa-mypage-saved-diff.png",
+    "sha256": "93db505873c1e6466dfbe1aeb854f2fcc88676c3ff4d3502a9e4ef69da9872e9",
+    "bytes": 68235
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/qa-mypage-saved-expected.png",
+    "sha256": "4d76a60a38a328ae3e93c57f0eabd7c0e67fdf2135ce7d40dd2a55142406bab0",
+    "bytes": 73495
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "01e06926160551fcf8095e04d264ef1fa69f18392f86bd3e65e1da70adab071f",
+    "bytes": 70120
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-b2f08-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "1fb37c98b1eeaab2f3422d84ad5e3c19eea52520fddc8cbce24a71dcc248ba04",
+    "bytes": 116952
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "e60f041531cccf59887ce2a29e6a47f5f14049db3c042d537fb29b435818146e",
+    "bytes": 5796
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/qa-manual-recipe-create-actual.png",
+    "sha256": "16c6e0470a2ccc988c4f23e7f292708bcb8cb2be322323d016315284cba0a310",
+    "bytes": 97283
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/qa-manual-recipe-create-diff.png",
+    "sha256": "ce422d7abb77a3ab72d1a69cb6a0770767804eedf5158fb18ce89209d05345a4",
+    "bytes": 75340
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/qa-manual-recipe-create-expected.png",
+    "sha256": "eff80feab029fabddc95568d2ae45c70e7b577ca78f048a25e9290b6ec12d878",
+    "bytes": 79923
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "065c449cdc8effeca35a34431eed8eb6a1cbe8ca043155b4132fb727bea70343",
+    "bytes": 53789
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-e4733-l-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "79de3fcbce1133932e59ffc9d3c339a5c36081eee4b464ce58b9f4ecbaabe2d9",
+    "bytes": 103498
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "5dc3362b240cd5695fef6f5f37f2b3780a8166036ee24456aa8bc2544eab2cfc",
+    "bytes": 4917
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/qa-shopping-flow-actual.png",
+    "sha256": "6cb87796192e74526e8d04929a36e2e6d25d11542f4dcf9a77f05f6e83495f4b",
+    "bytes": 91681
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/qa-shopping-flow-diff.png",
+    "sha256": "7697ebe868c5f9adddcca91a167ad2f212cf43ecb4c4bf04abe125e49c4ca7ca",
+    "bytes": 62609
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/qa-shopping-flow-expected.png",
+    "sha256": "5df8631b82d0d59663b4f67b9b4d423fef29737f67d0f9e6b232ee60ffc5b37a",
+    "bytes": 73891
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "cc51aefe05f889f328f58437ac6ad7889cd9a398b79c9d0269115cf4271e8fe4",
+    "bytes": 82485
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-ebe05-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "84a713f72a2efa3794c8b8a4725592410c51f4ef7b5307075904ce721f9c6fa8",
+    "bytes": 133065
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/error-context.md",
+    "sha256": "efaf9848d5b0550fb3c592906904b56d6a577a6871dcbb853422798a5d1f95d5",
+    "bytes": 5916
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/qa-pantry-actual.png",
+    "sha256": "a06a6c13c299edccb476d454bda9aebdced71ca7f5094f0c350faf6a945ace3c",
+    "bytes": 138070
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/qa-pantry-diff.png",
+    "sha256": "8f7cd5af044d643683b8602118d2420f47dc3019f67acf05047fc9235f010b47",
+    "bytes": 85966
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/qa-pantry-expected.png",
+    "sha256": "9afb06d552fff875e2b0737acf77606948956dcc5796a17b66753b38fc966e9e",
+    "bytes": 120285
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/test-failed-1.png",
+    "sha256": "6fa8495b11685a7f013408dfb93642e44a612db273b0f507eff187374cc121c2",
+    "bytes": 80413
+  },
+  {
+    "path": "test-results/qa-visual-QA-visual-regres-f4e18-s-match-the-visual-baseline-desktop-chrome/video.webm",
+    "sha256": "ef4853b61923ec697fb91c9972de254b4b967f93dac1eb742f9e198ba11c8fcf",
+    "bytes": 102662
+  }
+]

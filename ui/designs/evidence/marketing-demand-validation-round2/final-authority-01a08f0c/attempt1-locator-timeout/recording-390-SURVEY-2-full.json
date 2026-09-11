@@ -1,0 +1,100 @@
+{
+  "screen": "R2_RECORDING_SURVEY",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 2/4\n\n현재 집밥 식단을 주로 어떻게 기록하나요?\n따로 기록하지 않아요\n사진이나 메모로 남겨요\n앱에서 비슷한 음식을 찾아요\n재료와 양을 직접 입력해요\n저장한 레시피·음식이나 이전 기록을 불러와요\n다른 방식으로 기록해요\n다음 문항\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+  "width": 390,
+  "scrollWidth": 390,
+  "scrollY": 0,
+  "active": "집밥 기록에 대한 의견",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-0",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 322.546875,
+      "bottom": 342.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-1",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 382.546875,
+      "bottom": 402.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-2",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 442.546875,
+      "bottom": 462.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-3",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 502.546875,
+      "bottom": 522.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-4",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 562.546875,
+      "bottom": 582.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q2-5",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 622.546875,
+      "bottom": 642.546875,
+      "disabled": false
+    },
+    {
+      "label": "다음 문항",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 52,
+      "top": 697.546875,
+      "bottom": 749.546875,
+      "disabled": false
+    },
+    {
+      "label": "이전 문항",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 759.546875,
+      "bottom": 807.546875,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 861.65625,
+      "bottom": 909.65625,
+      "disabled": false
+    }
+  ]
+}

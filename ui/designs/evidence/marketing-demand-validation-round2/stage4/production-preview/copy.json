@@ -1,0 +1,18 @@
+{
+  "copiedAt": "2026-09-11T03:22:06.187Z",
+  "sourceRoot": "/Users/cwj/.codex/worktrees/f2a2/homecook",
+  "temp": "/var/folders/3z/y96spzj121b8vg6xflzxfyww0000gn/T/r2-stage4-prod-rQSHWv",
+  "buildId": "GDqNrPtQfgXeRgRDuMMUP",
+  "pageSha256": "7720ff3a44f281c0eaaad92677eaaa09b6328eeb08c572a14beeae149430160c",
+  "head": "c00fa23f53cb18550424abb96c2964a46796e3dc",
+  "sourceSha256": {
+    "components/marketing/round2/round2-view.tsx": "d0fb62f7052f08221ecad1edce64974641f4f962acce85dcf65244fdb6e07b04",
+    "components/marketing/round2/round2.module.css": "61e93e03d2fe4ac7b29ed9ad54ae5a13ce47f4bd02aa456ab721a84a04793086",
+    "components/marketing/round2/round2-landing.tsx": "914a743cbb123280051f4df07a8e96316a92f611cfe483ab5eb03df4ac6f8992",
+    "components/marketing/round2/round2-turnstile.tsx": "08c30af9f5d5ae74f825c604bd054223ea5c2d849a3b68e161f7f341cd5d566b",
+    "lib/marketing/round2-client.ts": "e6555b6657b2435d31d6ac92765b938b948cc06c9d3041770f56ec4011125362",
+    "lib/server/marketing-round2-page.ts": "c0c5e11f93efb99df44c2226f5f10f539b9bbda7907127c1a2a4207aa6ad6c41",
+    "middleware.ts": "ab4409afe19e9eb1259cc18db00afe7c904f5a8c5aff58b79eb57ce8b41beb0d"
+  },
+  "cacheCopied": false
+}

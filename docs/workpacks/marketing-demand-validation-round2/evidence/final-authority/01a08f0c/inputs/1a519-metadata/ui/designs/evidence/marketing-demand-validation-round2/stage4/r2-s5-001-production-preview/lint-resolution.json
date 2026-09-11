@@ -1,0 +1,11 @@
+{
+  "standaloneLint": "PASS",
+  "exitCode": 0,
+  "files": ["components/marketing/round2/round2-view.tsx", "lib/marketing/round2-client.ts"],
+  "scope": "별도 복사본의 두 수정 파일. 저장소 전체 lint와 구분한다.",
+  "resolution": "NODE_PATH로 이미 설치된 eslint-config-next의 pnpm node_modules 디렉터리를 명시했다.",
+  "dependenciesInstalled": false,
+  "productOrEslintConfigChanged": false,
+  "originalFailureLog": "build-second-copy-lint-resolution.log",
+  "originalCopyIncompleteLog": "build-first-copy-missing-imports.log"
+}

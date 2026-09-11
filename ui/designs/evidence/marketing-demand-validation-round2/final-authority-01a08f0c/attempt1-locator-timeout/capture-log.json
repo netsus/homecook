@@ -1,0 +1,1571 @@
+{
+  "task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+  "source_head": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "environment": "provided production build, built-in memory preview",
+  "started_at": "2026-09-11T06:04:08.988Z",
+  "requests": [
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/beta/r2/recording",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/css/2324af1b3cfda27d.css",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/css/4b552258f83c1e9c.css",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/webpack-528b7f87d666b5ff.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/521622b1-bf0f3a92eb99b341.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/5537-cd54b214d18fc64b.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/main-app-9ae98390ab9e21ef.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/1781-f19098c9838c5e8e.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/6437-367c2b900b08ed9a.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/3068-588d71cf29bbddb8.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/3591-e94b563559759271.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/322-438f950e0906e426.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/app/layout-c3082343e1817d44.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/app/not-found-757fd46ad9340341.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/1794-314a9ab404e28dc7.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/6274-d5af383e086ad80d.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/4582-85852ec1457d465f.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/6784-8cae56015ff59597.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/6782-5f6783eaf94c0e43.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/app/page-ee0473a7619093c6.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/static/chunks/app/beta/r2/%5Btopic%5D/page-79427a1676f31f7d.js",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "method": "GET",
+      "path": "/_next/image",
+      "origin": "http://127.0.0.1:3126"
+    }
+  ],
+  "blocked": [],
+  "console": [],
+  "pageerrors": [],
+  "captures": [
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "MENU",
+      "position": "initial",
+      "file": "recording-390-MENU-initial.png",
+      "screen": "R2_RECORDING_MENU",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n베타 준비 중 · 사용 예시\n\n내 레시피로 만든 집밥, 먹은 만큼 영양 기록\n\n레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n\n내 레시피 → 먹은 분량 추정 영양 기록\n베타 오픈 알림 받기\n사용 예시 먼저 보기\n의견만 남기기 · 4문항\n\n현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n\n하나만 해도 괜찮아요. 순서는 자유예요.\n\n아직 완료한 활동이 없어요\n\n개인정보처리방침",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "로컬 미리보기 · 저장되지 않아요베타 준비 중 · 사용 예시내 레시피로 만든 집밥, 먹은 만큼 영양 기록레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.내 레시피 → 먹은 분량 추정 영양 기록베타 오픈 알림 받기사용 예시 먼저 보기의견만 남기기 · 4문항현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.하나만 해도 괜찮아요. 순서는 자유예요.아직 완료한 활동이 없어요개인정보처리방침requestAnimationFrame(function(){$RT=performance.now()});$RB=[];$RV=function(a){$RT=performance.now();for(var b=0;b<a.length;b+=2){var c=a[b],e=a[b+1];null!==e.parentNode&&e.parentNode.removeChild(e);var f=c.parentNode;if(f){var g=c.previousSibling,h=0;do{if(c&&8===c.nodeType){var d=c.data;if(\"/$\"===d||\"/&\"===d)if(0===h)break;else h--;else\"$\"!==d&&\"$?\"!==d&&\"$~\"!==d&&\"$!\"!==d&&\"&\"!==d||h++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;e.firstChild;)f.insertBefore(e.firstChild,c);g.data=\"$\";g._reactRetry&&requestAnimationFrame(g._reactRetry)}}a.length=0};\n$RC=function(a,b){if(b=document.getElementById(b))(a=document.getElementById(a))?(a.previousSibling.data=\"$~\",$RB.push(a,b),2===$RB.length&&(\"number\"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};$RC(\"B:1\",\"S:1\")내 레시피로 만든 집밥, 먹은 만큼 영양 기록 | 무엇을 먹든document.querySelectorAll('body link[rel=\"icon\"], body link[rel=\"apple-touch-icon\"]').forEach(el => document.head.appendChild(el))$RC(\"B:0\",\"S:0\")(self.__next_f=self.__next_f||[]).push([0])self.__next_f.push([1,\"1:\\\"$Sreact.fragment\\\"\\n2:I[5619,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"PrelaunchNotice\\\"]\\n3:I[3508,[],\\\"\\\"]\\n4:I[5426,[],\\\"\\\"]\\n5:I[2173,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"4345\\\",\\\"static/chunks/app/not-found-757fd46ad9340341.js\\\"],\\\"WebTopNav\\\"]\\n6:I[1781,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"1794\\\",\\\"static/chunks/1794-314a9ab404e28dc7.js\\\",\\\"6274\\\",\\\"static/chunks/6274-d5af383e086ad80d.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"4582\\\",\\\"static/chunks/4582-85852ec1457d465f.js\\\",\\\"6784\\\",\\\"static/chunks/6784-8cae56015ff59597.js\\\",\\\"6782\\\",\\\"static/chunks/6782-5f6783eaf94c0e43.js\\\",\\\"8974\\\",\\\"static/chunks/app/page-ee0473a7619093c6.js\\\"],\\\"\\\"]\\n7:I[4950,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"4345\\\",\\\"static/chunks/app/not-found-757fd46ad9340341.js\\\"],\\\"NotFoundFeedbackForm\\\"]\\n8:I[26,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"1794\\\",\\\"static/chunks/1794-314a9ab404e28dc7.js\\\",\\\"6274\\\",\\\"static/chunks/6274-d5af383e086ad80d.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"4582\\\",\\\"static/chunks/4582-85852ec1457d465f.js\\\",\\\"6784\\\",\\\"static/chunks/6784-8cae56015ff59597.js\\\",\\\"6782\\\",\\\"static/chunks/6782-5f6783eaf94c0e43.js\\\",\\\"8974\\\",\\\"static/chunks/app/page-ee0473a7619093c6.js\\\"],\\\"Wave1MobileBottomTab\\\"]\\n9:I[4084,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\"])self.__next_f.push([1,\"\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"ProviderMemorySync\\\"]\\na:I[5619,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"ServiceNotificationBoundary\\\"]\\nb:I[2677,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"GlobalToastPresentationProvider\\\"]\\nc:I[2677,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"GlobalToastPresentationSlot\\\"]\\nd:I[4532,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"GrowthToastStack\\\"]\\ne:I[2117,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"1794\\\",\\\"static/chunks/1794-314a9ab404e28dc7.js\\\",\\\"6274\\\",\\\"static/chunks/6274-d5af383e086ad80d.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"4582\\\",\\\"static/chunks/4582-85852ec1457d465f.js\\\",\\\"6784\\\",\\\"static/chunks/6784-8cae56015ff59597.js\\\",\\\"6782\\\",\\\"static/chunks/6782-5f6783eaf94c0e43.js\\\",\\\"8974\\\",\\\"st\"])self.__next_f.push([1,\"atic/chunks/app/page-ee0473a7619093c6.js\\\"],\\\"YoutubeExtractionNotificationCenter\\\"]\\nf:I[7075,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"QaFixtureToolbar\\\"]\\n11:I[1473,[],\\\"OutletBoundary\\\"]\\n13:I[5276,[],\\\"AsyncMetadataOutlet\\\"]\\n15:I[1473,[],\\\"ViewportBoundary\\\"]\\n17:I[1473,[],\\\"MetadataBoundary\\\"]\\n18:\\\"$Sreact.suspense\\\"\\n1a:I[1296,[],\\\"\\\"]\\n1b:I[5569,[\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"6570\\\",\\\"static/chunks/app/beta/r2/%5Btopic%5D/page-79427a1676f31f7d.js\\\"],\\\"Round2Landing\\\"]\\n1c:I[7604,[],\\\"IconMark\\\"]\\n:HL[\\\"/_next/static/css/2324af1b3cfda27d.css\\\",\\\"style\\\"]\\n:HL[\\\"/_next/static/css/4b552258f83c1e9c.css\\\",\\\"style\\\"]\\n\"])self.__next_f.push([1,\"0:{\\\"P\\\":null,\\\"b\\\":\\\"ojaiIGyjDlOMvWFrlUvf9\\\",\\\"p\\\":\\\"\\\",\\\"c\\\":[\\\"\\\",\\\"beta\\\",\\\"r2\\\",\\\"recording\\\"],\\\"i\\\":false,\\\"f\\\":[[[\\\"\\\",{\\\"children\\\":[\\\"beta\\\",{\\\"children\\\":[\\\"r2\\\",{\\\"children\\\":[[\\\"topic\\\",\\\"recording\\\",\\\"d\\\"],{\\\"children\\\":[\\\"__PAGE__\\\",{}]}]}]}]},\\\"$undefined\\\",\\\"$undefined\\\",true],[\\\"\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[[[\\\"$\\\",\\\"link\\\",\\\"0\\\",{\\\"rel\\\":\\\"stylesheet\\\",\\\"href\\\":\\\"/_next/static/css/2324af1b3cfda27d.css\\\",\\\"precedence\\\":\\\"next\\\",\\\"crossOrigin\\\":\\\"$undefined\\\",\\\"nonce\\\":\\\"$undefined\\\"}]],[\\\"$\\\",\\\"html\\\",null,{\\\"lang\\\":\\\"ko\\\",\\\"children\\\":[\\\"$\\\",\\\"body\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L2\\\",null,{}],[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-shell web-not-found-shell\\\",\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-page\\\",\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-container-wide\\\",\\\"children\\\":[[\\\"$\\\",\\\"$L5\\\",null,{\\\"activeId\\\":\\\"home\\\",\\\"className\\\":\\\"not-found-desktop-nav\\\"}],[\\\"$\\\",\\\"main\\\",null,{\\\"className\\\":\\\"not-found-screen\\\",\\\"children\\\":[[\\\"$\\\",\\\"p\\\",null,{\\\"className\\\":\\\"not-found-kicker\\\",\\\"children\\\":\\\"404\\\"}],[\\\"$\\\",\\\"h1\\\",null,{\\\"children\\\":\\\"페이지를 찾을 수 없어요\\\"}],[\\\"$\\\",\\\"p\\\",null,{\\\"children\\\":\\\"주소가 바뀌었어요. 홈에서 다시 찾아보세요.\\\"}],[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"not-found-actions\\\",\\\"children\\\":[[\\\"$\\\",\\\"$L6\\\",null,{\\\"className\\\":\\\"web-button web-button-primary\\\",\\\"href\\\":\\\"/\\\",\\\"children\\\":\\\"홈으로\\\"}],[\\\"$\\\",\\\"$L6\\\",null,{\\\"className\\\":\\\"web-button web-button-secondary\\\",\\\"href\\\":\\\"/planner\\\",\\\"children\\\":\\\"플래너로\\\"}]]}],[\\\"$\\\",\\\"$L7\\\",null,{}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"not-found-mobile-tabs\\\",\\\"children\\\":[\\\"$\\\",\\\"$L8\\\",null,{\\\"ariaLabel\\\":\\\"하단 탭\\\",\\\"currentTab\\\":\\\"home\\\"}]}]]}]}],[\\\"$\\\",\\\"footer\\\",null,{\\\"className\\\":\\\"web-footer\\\",\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-footer-inner\\\",\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"strong\\\",null,{\\\"children\\\":\\\"무엇을 먹든\\\"}],[\\\"$\\\",\\\"span\\\",null,{\\\"children\\\":\\\"레시피부터 장보기, 요리 기록까지\\\"}]]}],[\\\"$\\\",\\\"nav\\\",null,{\\\"aria-label\\\":\\\"서비스 정보\\\",\\\"className\\\":\\\"web-footer-links\\\",\\\"children\\\":[[\\\"$\\\",\\\"$L6\\\",null,{\\\"href\\\":\\\"/privacy\\\",\\\"children\\\":\\\"개인정보처리방침\\\"}],[\\\"$\\\",\\\"$L6\\\",null,{\\\"href\\\":\\\"/terms\\\",\\\"children\\\":\\\"이용약관\\\"}]]}]]}]}]]}],[]],\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}],[\\\"$\\\",\\\"$L9\\\",null,{}],[\\\"$\\\",\\\"$La\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$Lb\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$Lc\\\",null,{}],[\\\"$\\\",\\\"$Ld\\\",null,{\\\"initialAuthenticated\\\":false,\\\"presentationMode\\\":\\\"shared\\\",\\\"resolveAuthenticatedOnClient\\\":true}],[\\\"$\\\",\\\"$Le\\\",null,{\\\"initialAuthenticated\\\":false,\\\"presentationMode\\\":\\\"shared\\\",\\\"resolveAuthenticatedOnClient\\\":true}]]}]}],[\\\"$\\\",\\\"$Lf\\\",null,{}]]}]}]]}],{\\\"children\\\":[\\\"beta\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[null,[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":\\\"$undefined\\\",\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}]]}],{\\\"children\\\":[\\\"r2\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[null,[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":\\\"$undefined\\\",\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}]]}],{\\\"children\\\":[[\\\"topic\\\",\\\"recording\\\",\\\"d\\\"],[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[null,[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":\\\"$undefined\\\",\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}]]}],{\\\"children\\\":[\\\"__PAGE__\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[\\\"$L10\\\",[[\\\"$\\\",\\\"link\\\",\\\"0\\\",{\\\"rel\\\":\\\"stylesheet\\\",\\\"href\\\":\\\"/_next/static/css/4b552258f83c1e9c.css\\\",\\\"precedence\\\":\\\"next\\\",\\\"crossOrigin\\\":\\\"$undefined\\\",\\\"nonce\\\":\\\"$undefined\\\"}]],[\\\"$\\\",\\\"$L11\\\",null,{\\\"children\\\":[\\\"$L12\\\",[\\\"$\\\",\\\"$L13\\\",null,{\\\"promise\\\":\\\"$@14\\\"}]]}]]}],{},null,false]},null,false]},null,false]},null,false]},null,false],[\\\"$\\\",\\\"$1\\\",\\\"h\\\",{\\\"children\\\":[null,[[\\\"$\\\",\\\"$L15\\\",null,{\\\"children\\\":\\\"$L16\\\"}],null],[\\\"$\\\",\\\"$L17\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"hidden\\\":true,\\\"children\\\":[\\\"$\\\",\\\"$18\\\",null,{\\\"fallback\\\":null,\\\"children\\\":\\\"$L19\\\"}]}]}]]}],false]],\\\"m\\\":\\\"$undefined\\\",\\\"G\\\":[\\\"$1a\\\",[]],\\\"s\\\":false,\\\"S\\\":false}\\n\"])self.__next_f.push([1,\"10:[[\\\"$\\\",\\\"meta\\\",null,{\\\"name\\\":\\\"mumeok-r2-page-context\\\",\\\"content\\\":\\\"\\\"}],[\\\"$\\\",\\\"meta\\\",null,{\\\"name\\\":\\\"mumeok-r2-topic\\\",\\\"content\\\":\\\"recording\\\"}],[\\\"$\\\",\\\"$L1b\\\",null,{\\\"topic\\\":\\\"recording\\\",\\\"attribution\\\":{\\\"first_channel\\\":\\\"direct\\\",\\\"utm_source\\\":null,\\\"utm_medium\\\":null,\\\"utm_campaign\\\":null,\\\"utm_content\\\":null},\\\"preview\\\":true,\\\"pageContext\\\":\\\"\\\",\\\"leadReady\\\":true,\\\"turnstileSiteKey\\\":\\\"\\\"}]]\\n16:[[\\\"$\\\",\\\"meta\\\",\\\"0\\\",{\\\"charSet\\\":\\\"utf-8\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"1\\\",{\\\"name\\\":\\\"viewport\\\",\\\"content\\\":\\\"width=device-width, initial-scale=1\\\"}]]\\n12:null\\n\"])self.__next_f.push([1,\"14:{\\\"metadata\\\":[[\\\"$\\\",\\\"title\\\",\\\"0\\\",{\\\"children\\\":\\\"내 레시피로 만든 집밥, 먹은 만큼 영양 기록 | 무엇을 먹든\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"1\\\",{\\\"name\\\":\\\"description\\\",\\\"content\\\":\\\"현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"2\\\",{\\\"name\\\":\\\"application-name\\\",\\\"content\\\":\\\"무엇을 먹든\\\"}],[\\\"$\\\",\\\"link\\\",\\\"3\\\",{\\\"rel\\\":\\\"manifest\\\",\\\"href\\\":\\\"/manifest.webmanifest\\\",\\\"crossOrigin\\\":\\\"$undefined\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"4\\\",{\\\"name\\\":\\\"referrer\\\",\\\"content\\\":\\\"no-referrer\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"5\\\",{\\\"name\\\":\\\"robots\\\",\\\"content\\\":\\\"noindex, nofollow\\\"}],[\\\"$\\\",\\\"link\\\",\\\"6\\\",{\\\"rel\\\":\\\"canonical\\\",\\\"href\\\":\\\"http://127.0.0.1:3126/beta/r2/recording\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"7\\\",{\\\"property\\\":\\\"og:title\\\",\\\"content\\\":\\\"내 레시피로 만든 집밥, 먹은 만큼 영양 기록\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"8\\\",{\\\"property\\\":\\\"og:description\\\",\\\"content\\\":\\\"현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"9\\\",{\\\"property\\\":\\\"og:url\\\",\\\"content\\\":\\\"http://127.0.0.1:3126/beta/r2/recording\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"10\\\",{\\\"property\\\":\\\"og:type\\\",\\\"content\\\":\\\"website\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"11\\\",{\\\"name\\\":\\\"twitter:card\\\",\\\"content\\\":\\\"summary_large_image\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"12\\\",{\\\"name\\\":\\\"twitter:title\\\",\\\"content\\\":\\\"무엇을 먹든\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"13\\\",{\\\"name\\\":\\\"twitter:description\\\",\\\"content\\\":\\\"레시피 찾기, 식단 계획, 장보기, 요리 기록까지 이어지는 무엇을 먹든 서비스\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"14\\\",{\\\"name\\\":\\\"twitter:image\\\",\\\"content\\\":\\\"http://127.0.0.1:3126/brand/twitter-image-1200x630.png\\\"}],[\\\"$\\\",\\\"link\\\",\\\"15\\\",{\\\"rel\\\":\\\"icon\\\",\\\"href\\\":\\\"/favicon.ico\\\",\\\"type\\\":\\\"image/x-icon\\\",\\\"sizes\\\":\\\"16x16\\\"}],[\\\"$\\\",\\\"link\\\",\\\"16\\\",{\\\"rel\\\":\\\"icon\\\",\\\"href\\\":\\\"/brand/favicon-32.png\\\",\\\"sizes\\\":\\\"32x32\\\",\\\"type\\\":\\\"image/png\\\"}],[\\\"$\\\",\\\"link\\\",\\\"17\\\",{\\\"rel\\\":\\\"apple-touch-icon\\\",\\\"href\\\":\\\"/brand/apple-touch-icon-180.png\\\",\\\"sizes\\\":\\\"180x180\\\",\\\"type\\\":\\\"image/png\\\"}],[\\\"$\\\",\\\"$L1c\\\",\\\"18\\\",{}]],\\\"error\\\":null,\\\"digest\\\":\\\"$undefined\\\"}\\n\"])self.__next_f.push([1,\"19:\\\"$14:metadata\\\"\\n\"])",
+      "controls": [
+        {
+          "label": "베타 오픈 알림 받기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 399.703125,
+          "bottom": 451.703125,
+          "disabled": false
+        },
+        {
+          "label": "사용 예시 먼저 보기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 461.703125,
+          "bottom": 511.703125,
+          "disabled": false
+        },
+        {
+          "label": "의견만 남기기 · 4문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 521.703125,
+          "bottom": 569.703125,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 714.140625,
+          "bottom": 762.140625,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "MENU",
+      "position": "full",
+      "file": "recording-390-MENU-full.png",
+      "screen": "R2_RECORDING_MENU",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n베타 준비 중 · 사용 예시\n\n내 레시피로 만든 집밥, 먹은 만큼 영양 기록\n\n레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n\n내 레시피 → 먹은 분량 추정 영양 기록\n베타 오픈 알림 받기\n사용 예시 먼저 보기\n의견만 남기기 · 4문항\n\n현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n\n하나만 해도 괜찮아요. 순서는 자유예요.\n\n아직 완료한 활동이 없어요\n\n개인정보처리방침",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "로컬 미리보기 · 저장되지 않아요베타 준비 중 · 사용 예시내 레시피로 만든 집밥, 먹은 만큼 영양 기록레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.내 레시피 → 먹은 분량 추정 영양 기록베타 오픈 알림 받기사용 예시 먼저 보기의견만 남기기 · 4문항현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.하나만 해도 괜찮아요. 순서는 자유예요.아직 완료한 활동이 없어요개인정보처리방침requestAnimationFrame(function(){$RT=performance.now()});$RB=[];$RV=function(a){$RT=performance.now();for(var b=0;b<a.length;b+=2){var c=a[b],e=a[b+1];null!==e.parentNode&&e.parentNode.removeChild(e);var f=c.parentNode;if(f){var g=c.previousSibling,h=0;do{if(c&&8===c.nodeType){var d=c.data;if(\"/$\"===d||\"/&\"===d)if(0===h)break;else h--;else\"$\"!==d&&\"$?\"!==d&&\"$~\"!==d&&\"$!\"!==d&&\"&\"!==d||h++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;e.firstChild;)f.insertBefore(e.firstChild,c);g.data=\"$\";g._reactRetry&&requestAnimationFrame(g._reactRetry)}}a.length=0};\n$RC=function(a,b){if(b=document.getElementById(b))(a=document.getElementById(a))?(a.previousSibling.data=\"$~\",$RB.push(a,b),2===$RB.length&&(\"number\"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};$RC(\"B:1\",\"S:1\")내 레시피로 만든 집밥, 먹은 만큼 영양 기록 | 무엇을 먹든document.querySelectorAll('body link[rel=\"icon\"], body link[rel=\"apple-touch-icon\"]').forEach(el => document.head.appendChild(el))$RC(\"B:0\",\"S:0\")(self.__next_f=self.__next_f||[]).push([0])self.__next_f.push([1,\"1:\\\"$Sreact.fragment\\\"\\n2:I[5619,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"PrelaunchNotice\\\"]\\n3:I[3508,[],\\\"\\\"]\\n4:I[5426,[],\\\"\\\"]\\n5:I[2173,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"4345\\\",\\\"static/chunks/app/not-found-757fd46ad9340341.js\\\"],\\\"WebTopNav\\\"]\\n6:I[1781,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"1794\\\",\\\"static/chunks/1794-314a9ab404e28dc7.js\\\",\\\"6274\\\",\\\"static/chunks/6274-d5af383e086ad80d.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"4582\\\",\\\"static/chunks/4582-85852ec1457d465f.js\\\",\\\"6784\\\",\\\"static/chunks/6784-8cae56015ff59597.js\\\",\\\"6782\\\",\\\"static/chunks/6782-5f6783eaf94c0e43.js\\\",\\\"8974\\\",\\\"static/chunks/app/page-ee0473a7619093c6.js\\\"],\\\"\\\"]\\n7:I[4950,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"4345\\\",\\\"static/chunks/app/not-found-757fd46ad9340341.js\\\"],\\\"NotFoundFeedbackForm\\\"]\\n8:I[26,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"1794\\\",\\\"static/chunks/1794-314a9ab404e28dc7.js\\\",\\\"6274\\\",\\\"static/chunks/6274-d5af383e086ad80d.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"4582\\\",\\\"static/chunks/4582-85852ec1457d465f.js\\\",\\\"6784\\\",\\\"static/chunks/6784-8cae56015ff59597.js\\\",\\\"6782\\\",\\\"static/chunks/6782-5f6783eaf94c0e43.js\\\",\\\"8974\\\",\\\"static/chunks/app/page-ee0473a7619093c6.js\\\"],\\\"Wave1MobileBottomTab\\\"]\\n9:I[4084,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\"])self.__next_f.push([1,\"\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"ProviderMemorySync\\\"]\\na:I[5619,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"ServiceNotificationBoundary\\\"]\\nb:I[2677,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"GlobalToastPresentationProvider\\\"]\\nc:I[2677,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"GlobalToastPresentationSlot\\\"]\\nd:I[4532,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"GrowthToastStack\\\"]\\ne:I[2117,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"1794\\\",\\\"static/chunks/1794-314a9ab404e28dc7.js\\\",\\\"6274\\\",\\\"static/chunks/6274-d5af383e086ad80d.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"4582\\\",\\\"static/chunks/4582-85852ec1457d465f.js\\\",\\\"6784\\\",\\\"static/chunks/6784-8cae56015ff59597.js\\\",\\\"6782\\\",\\\"static/chunks/6782-5f6783eaf94c0e43.js\\\",\\\"8974\\\",\\\"st\"])self.__next_f.push([1,\"atic/chunks/app/page-ee0473a7619093c6.js\\\"],\\\"YoutubeExtractionNotificationCenter\\\"]\\nf:I[7075,[\\\"1781\\\",\\\"static/chunks/1781-f19098c9838c5e8e.js\\\",\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"3068\\\",\\\"static/chunks/3068-588d71cf29bbddb8.js\\\",\\\"3591\\\",\\\"static/chunks/3591-e94b563559759271.js\\\",\\\"322\\\",\\\"static/chunks/322-438f950e0906e426.js\\\",\\\"7177\\\",\\\"static/chunks/app/layout-c3082343e1817d44.js\\\"],\\\"QaFixtureToolbar\\\"]\\n11:I[1473,[],\\\"OutletBoundary\\\"]\\n13:I[5276,[],\\\"AsyncMetadataOutlet\\\"]\\n15:I[1473,[],\\\"ViewportBoundary\\\"]\\n17:I[1473,[],\\\"MetadataBoundary\\\"]\\n18:\\\"$Sreact.suspense\\\"\\n1a:I[1296,[],\\\"\\\"]\\n1b:I[5569,[\\\"6437\\\",\\\"static/chunks/6437-367c2b900b08ed9a.js\\\",\\\"6570\\\",\\\"static/chunks/app/beta/r2/%5Btopic%5D/page-79427a1676f31f7d.js\\\"],\\\"Round2Landing\\\"]\\n1c:I[7604,[],\\\"IconMark\\\"]\\n:HL[\\\"/_next/static/css/2324af1b3cfda27d.css\\\",\\\"style\\\"]\\n:HL[\\\"/_next/static/css/4b552258f83c1e9c.css\\\",\\\"style\\\"]\\n\"])self.__next_f.push([1,\"0:{\\\"P\\\":null,\\\"b\\\":\\\"ojaiIGyjDlOMvWFrlUvf9\\\",\\\"p\\\":\\\"\\\",\\\"c\\\":[\\\"\\\",\\\"beta\\\",\\\"r2\\\",\\\"recording\\\"],\\\"i\\\":false,\\\"f\\\":[[[\\\"\\\",{\\\"children\\\":[\\\"beta\\\",{\\\"children\\\":[\\\"r2\\\",{\\\"children\\\":[[\\\"topic\\\",\\\"recording\\\",\\\"d\\\"],{\\\"children\\\":[\\\"__PAGE__\\\",{}]}]}]}]},\\\"$undefined\\\",\\\"$undefined\\\",true],[\\\"\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[[[\\\"$\\\",\\\"link\\\",\\\"0\\\",{\\\"rel\\\":\\\"stylesheet\\\",\\\"href\\\":\\\"/_next/static/css/2324af1b3cfda27d.css\\\",\\\"precedence\\\":\\\"next\\\",\\\"crossOrigin\\\":\\\"$undefined\\\",\\\"nonce\\\":\\\"$undefined\\\"}]],[\\\"$\\\",\\\"html\\\",null,{\\\"lang\\\":\\\"ko\\\",\\\"children\\\":[\\\"$\\\",\\\"body\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L2\\\",null,{}],[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-shell web-not-found-shell\\\",\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-page\\\",\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-container-wide\\\",\\\"children\\\":[[\\\"$\\\",\\\"$L5\\\",null,{\\\"activeId\\\":\\\"home\\\",\\\"className\\\":\\\"not-found-desktop-nav\\\"}],[\\\"$\\\",\\\"main\\\",null,{\\\"className\\\":\\\"not-found-screen\\\",\\\"children\\\":[[\\\"$\\\",\\\"p\\\",null,{\\\"className\\\":\\\"not-found-kicker\\\",\\\"children\\\":\\\"404\\\"}],[\\\"$\\\",\\\"h1\\\",null,{\\\"children\\\":\\\"페이지를 찾을 수 없어요\\\"}],[\\\"$\\\",\\\"p\\\",null,{\\\"children\\\":\\\"주소가 바뀌었어요. 홈에서 다시 찾아보세요.\\\"}],[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"not-found-actions\\\",\\\"children\\\":[[\\\"$\\\",\\\"$L6\\\",null,{\\\"className\\\":\\\"web-button web-button-primary\\\",\\\"href\\\":\\\"/\\\",\\\"children\\\":\\\"홈으로\\\"}],[\\\"$\\\",\\\"$L6\\\",null,{\\\"className\\\":\\\"web-button web-button-secondary\\\",\\\"href\\\":\\\"/planner\\\",\\\"children\\\":\\\"플래너로\\\"}]]}],[\\\"$\\\",\\\"$L7\\\",null,{}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"not-found-mobile-tabs\\\",\\\"children\\\":[\\\"$\\\",\\\"$L8\\\",null,{\\\"ariaLabel\\\":\\\"하단 탭\\\",\\\"currentTab\\\":\\\"home\\\"}]}]]}]}],[\\\"$\\\",\\\"footer\\\",null,{\\\"className\\\":\\\"web-footer\\\",\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"className\\\":\\\"web-footer-inner\\\",\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"strong\\\",null,{\\\"children\\\":\\\"무엇을 먹든\\\"}],[\\\"$\\\",\\\"span\\\",null,{\\\"children\\\":\\\"레시피부터 장보기, 요리 기록까지\\\"}]]}],[\\\"$\\\",\\\"nav\\\",null,{\\\"aria-label\\\":\\\"서비스 정보\\\",\\\"className\\\":\\\"web-footer-links\\\",\\\"children\\\":[[\\\"$\\\",\\\"$L6\\\",null,{\\\"href\\\":\\\"/privacy\\\",\\\"children\\\":\\\"개인정보처리방침\\\"}],[\\\"$\\\",\\\"$L6\\\",null,{\\\"href\\\":\\\"/terms\\\",\\\"children\\\":\\\"이용약관\\\"}]]}]]}]}]]}],[]],\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}],[\\\"$\\\",\\\"$L9\\\",null,{}],[\\\"$\\\",\\\"$La\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$Lb\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$Lc\\\",null,{}],[\\\"$\\\",\\\"$Ld\\\",null,{\\\"initialAuthenticated\\\":false,\\\"presentationMode\\\":\\\"shared\\\",\\\"resolveAuthenticatedOnClient\\\":true}],[\\\"$\\\",\\\"$Le\\\",null,{\\\"initialAuthenticated\\\":false,\\\"presentationMode\\\":\\\"shared\\\",\\\"resolveAuthenticatedOnClient\\\":true}]]}]}],[\\\"$\\\",\\\"$Lf\\\",null,{}]]}]}]]}],{\\\"children\\\":[\\\"beta\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[null,[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":\\\"$undefined\\\",\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}]]}],{\\\"children\\\":[\\\"r2\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[null,[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":\\\"$undefined\\\",\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}]]}],{\\\"children\\\":[[\\\"topic\\\",\\\"recording\\\",\\\"d\\\"],[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[null,[\\\"$\\\",\\\"$L3\\\",null,{\\\"parallelRouterKey\\\":\\\"children\\\",\\\"error\\\":\\\"$undefined\\\",\\\"errorStyles\\\":\\\"$undefined\\\",\\\"errorScripts\\\":\\\"$undefined\\\",\\\"template\\\":[\\\"$\\\",\\\"$L4\\\",null,{}],\\\"templateStyles\\\":\\\"$undefined\\\",\\\"templateScripts\\\":\\\"$undefined\\\",\\\"notFound\\\":\\\"$undefined\\\",\\\"forbidden\\\":\\\"$undefined\\\",\\\"unauthorized\\\":\\\"$undefined\\\"}]]}],{\\\"children\\\":[\\\"__PAGE__\\\",[\\\"$\\\",\\\"$1\\\",\\\"c\\\",{\\\"children\\\":[\\\"$L10\\\",[[\\\"$\\\",\\\"link\\\",\\\"0\\\",{\\\"rel\\\":\\\"stylesheet\\\",\\\"href\\\":\\\"/_next/static/css/4b552258f83c1e9c.css\\\",\\\"precedence\\\":\\\"next\\\",\\\"crossOrigin\\\":\\\"$undefined\\\",\\\"nonce\\\":\\\"$undefined\\\"}]],[\\\"$\\\",\\\"$L11\\\",null,{\\\"children\\\":[\\\"$L12\\\",[\\\"$\\\",\\\"$L13\\\",null,{\\\"promise\\\":\\\"$@14\\\"}]]}]]}],{},null,false]},null,false]},null,false]},null,false]},null,false],[\\\"$\\\",\\\"$1\\\",\\\"h\\\",{\\\"children\\\":[null,[[\\\"$\\\",\\\"$L15\\\",null,{\\\"children\\\":\\\"$L16\\\"}],null],[\\\"$\\\",\\\"$L17\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"hidden\\\":true,\\\"children\\\":[\\\"$\\\",\\\"$18\\\",null,{\\\"fallback\\\":null,\\\"children\\\":\\\"$L19\\\"}]}]}]]}],false]],\\\"m\\\":\\\"$undefined\\\",\\\"G\\\":[\\\"$1a\\\",[]],\\\"s\\\":false,\\\"S\\\":false}\\n\"])self.__next_f.push([1,\"10:[[\\\"$\\\",\\\"meta\\\",null,{\\\"name\\\":\\\"mumeok-r2-page-context\\\",\\\"content\\\":\\\"\\\"}],[\\\"$\\\",\\\"meta\\\",null,{\\\"name\\\":\\\"mumeok-r2-topic\\\",\\\"content\\\":\\\"recording\\\"}],[\\\"$\\\",\\\"$L1b\\\",null,{\\\"topic\\\":\\\"recording\\\",\\\"attribution\\\":{\\\"first_channel\\\":\\\"direct\\\",\\\"utm_source\\\":null,\\\"utm_medium\\\":null,\\\"utm_campaign\\\":null,\\\"utm_content\\\":null},\\\"preview\\\":true,\\\"pageContext\\\":\\\"\\\",\\\"leadReady\\\":true,\\\"turnstileSiteKey\\\":\\\"\\\"}]]\\n16:[[\\\"$\\\",\\\"meta\\\",\\\"0\\\",{\\\"charSet\\\":\\\"utf-8\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"1\\\",{\\\"name\\\":\\\"viewport\\\",\\\"content\\\":\\\"width=device-width, initial-scale=1\\\"}]]\\n12:null\\n\"])self.__next_f.push([1,\"14:{\\\"metadata\\\":[[\\\"$\\\",\\\"title\\\",\\\"0\\\",{\\\"children\\\":\\\"내 레시피로 만든 집밥, 먹은 만큼 영양 기록 | 무엇을 먹든\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"1\\\",{\\\"name\\\":\\\"description\\\",\\\"content\\\":\\\"현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"2\\\",{\\\"name\\\":\\\"application-name\\\",\\\"content\\\":\\\"무엇을 먹든\\\"}],[\\\"$\\\",\\\"link\\\",\\\"3\\\",{\\\"rel\\\":\\\"manifest\\\",\\\"href\\\":\\\"/manifest.webmanifest\\\",\\\"crossOrigin\\\":\\\"$undefined\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"4\\\",{\\\"name\\\":\\\"referrer\\\",\\\"content\\\":\\\"no-referrer\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"5\\\",{\\\"name\\\":\\\"robots\\\",\\\"content\\\":\\\"noindex, nofollow\\\"}],[\\\"$\\\",\\\"link\\\",\\\"6\\\",{\\\"rel\\\":\\\"canonical\\\",\\\"href\\\":\\\"http://127.0.0.1:3126/beta/r2/recording\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"7\\\",{\\\"property\\\":\\\"og:title\\\",\\\"content\\\":\\\"내 레시피로 만든 집밥, 먹은 만큼 영양 기록\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"8\\\",{\\\"property\\\":\\\"og:description\\\",\\\"content\\\":\\\"현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"9\\\",{\\\"property\\\":\\\"og:url\\\",\\\"content\\\":\\\"http://127.0.0.1:3126/beta/r2/recording\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"10\\\",{\\\"property\\\":\\\"og:type\\\",\\\"content\\\":\\\"website\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"11\\\",{\\\"name\\\":\\\"twitter:card\\\",\\\"content\\\":\\\"summary_large_image\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"12\\\",{\\\"name\\\":\\\"twitter:title\\\",\\\"content\\\":\\\"무엇을 먹든\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"13\\\",{\\\"name\\\":\\\"twitter:description\\\",\\\"content\\\":\\\"레시피 찾기, 식단 계획, 장보기, 요리 기록까지 이어지는 무엇을 먹든 서비스\\\"}],[\\\"$\\\",\\\"meta\\\",\\\"14\\\",{\\\"name\\\":\\\"twitter:image\\\",\\\"content\\\":\\\"http://127.0.0.1:3126/brand/twitter-image-1200x630.png\\\"}],[\\\"$\\\",\\\"link\\\",\\\"15\\\",{\\\"rel\\\":\\\"icon\\\",\\\"href\\\":\\\"/favicon.ico\\\",\\\"type\\\":\\\"image/x-icon\\\",\\\"sizes\\\":\\\"16x16\\\"}],[\\\"$\\\",\\\"link\\\",\\\"16\\\",{\\\"rel\\\":\\\"icon\\\",\\\"href\\\":\\\"/brand/favicon-32.png\\\",\\\"sizes\\\":\\\"32x32\\\",\\\"type\\\":\\\"image/png\\\"}],[\\\"$\\\",\\\"link\\\",\\\"17\\\",{\\\"rel\\\":\\\"apple-touch-icon\\\",\\\"href\\\":\\\"/brand/apple-touch-icon-180.png\\\",\\\"sizes\\\":\\\"180x180\\\",\\\"type\\\":\\\"image/png\\\"}],[\\\"$\\\",\\\"$L1c\\\",\\\"18\\\",{}]],\\\"error\\\":null,\\\"digest\\\":\\\"$undefined\\\"}\\n\"])self.__next_f.push([1,\"19:\\\"$14:metadata\\\"\\n\"])",
+      "controls": [
+        {
+          "label": "베타 오픈 알림 받기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 399.703125,
+          "bottom": 451.703125,
+          "disabled": false
+        },
+        {
+          "label": "사용 예시 먼저 보기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 461.703125,
+          "bottom": 511.703125,
+          "disabled": false
+        },
+        {
+          "label": "의견만 남기기 · 4문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 521.703125,
+          "bottom": 569.703125,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 714.140625,
+          "bottom": 762.140625,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "LEAD",
+      "position": "initial",
+      "file": "recording-390-LEAD-initial.png",
+      "screen": "R2_RECORDING_LEAD",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록, 베타 소식 받기\n\n내 레시피와 먹은 분량을 잇는 기록 기능을 준비 중이에요.\n\n이메일\n\n개인정보 수집·이용 동의 (필수)\n\n무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.\n\n동의하지 않아도 예시와 의견 남기기를 이용할 수 있어요\n\n만 14세 이상인 경우에만 신청해 주세요\n\n개인정보처리방침\n\n예시 이메일 preview@example.com만 사용해요. 실제 보안 확인이나 신청은 하지 않아요.\n\n베타 오픈 알림 신청하기\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "집밥 기록, 베타 소식 받기",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "r2-email",
+          "tag": "INPUT",
+          "width": 350,
+          "height": 52,
+          "top": 311.546875,
+          "bottom": 363.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-consent",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 426.546875,
+          "bottom": 446.546875,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 608.140625,
+          "bottom": 656.140625,
+          "disabled": false
+        },
+        {
+          "label": "베타 오픈 알림 신청하기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 724.359375,
+          "bottom": 776.359375,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 776.359375,
+          "bottom": 824.359375,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "LEAD",
+      "position": "full",
+      "file": "recording-390-LEAD-full.png",
+      "screen": "R2_RECORDING_LEAD",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록, 베타 소식 받기\n\n내 레시피와 먹은 분량을 잇는 기록 기능을 준비 중이에요.\n\n이메일\n\n개인정보 수집·이용 동의 (필수)\n\n무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.\n\n동의하지 않아도 예시와 의견 남기기를 이용할 수 있어요\n\n만 14세 이상인 경우에만 신청해 주세요\n\n개인정보처리방침\n\n예시 이메일 preview@example.com만 사용해요. 실제 보안 확인이나 신청은 하지 않아요.\n\n베타 오픈 알림 신청하기\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "집밥 기록, 베타 소식 받기",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "r2-email",
+          "tag": "INPUT",
+          "width": 350,
+          "height": 52,
+          "top": 311.546875,
+          "bottom": 363.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-consent",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 426.546875,
+          "bottom": 446.546875,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 608.140625,
+          "bottom": 656.140625,
+          "disabled": false
+        },
+        {
+          "label": "베타 오픈 알림 신청하기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 724.359375,
+          "bottom": 776.359375,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 776.359375,
+          "bottom": 824.359375,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "LEAD",
+      "position": "cta",
+      "file": "recording-390-LEAD-cta.png",
+      "screen": "R2_RECORDING_LEAD",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록, 베타 소식 받기\n\n내 레시피와 먹은 분량을 잇는 기록 기능을 준비 중이에요.\n\n이메일\n\n개인정보 수집·이용 동의 (필수)\n\n무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.\n\n동의하지 않아도 예시와 의견 남기기를 이용할 수 있어요\n\n만 14세 이상인 경우에만 신청해 주세요\n\n개인정보처리방침\n\n예시 이메일 preview@example.com만 사용해요. 실제 보안 확인이나 신청은 하지 않아요.\n\n베타 오픈 알림 신청하기\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 4,
+      "active": "집밥 기록, 베타 소식 받기",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 65,
+          "bottom": 109,
+          "disabled": false
+        },
+        {
+          "label": "r2-email",
+          "tag": "INPUT",
+          "width": 350,
+          "height": 52,
+          "top": 307.546875,
+          "bottom": 359.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-consent",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 422.546875,
+          "bottom": 442.546875,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 604.140625,
+          "bottom": 652.140625,
+          "disabled": false
+        },
+        {
+          "label": "베타 오픈 알림 신청하기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 720.359375,
+          "bottom": 772.359375,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 772.359375,
+          "bottom": 820.359375,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "LEAD-validation",
+      "position": "full",
+      "file": "recording-390-LEAD-validation-full.png",
+      "screen": "R2_RECORDING_LEAD",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록, 베타 소식 받기\n\n내 레시피와 먹은 분량을 잇는 기록 기능을 준비 중이에요.\n\n이메일\n\n개인정보 수집·이용 동의 (필수)\n\n무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.\n\n동의하지 않아도 예시와 의견 남기기를 이용할 수 있어요\n\n만 14세 이상인 경우에만 신청해 주세요\n\n개인정보처리방침\n\n예시 이메일 preview@example.com만 사용해요. 실제 보안 확인이나 신청은 하지 않아요.\n\n개인정보 수집·이용에 동의해 주세요.\n\n베타 오픈 알림 신청하기\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 17,
+      "active": "",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 52,
+          "bottom": 96,
+          "disabled": false
+        },
+        {
+          "label": "r2-email",
+          "tag": "INPUT",
+          "width": 350,
+          "height": 52,
+          "top": 294.546875,
+          "bottom": 346.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-consent",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 409.546875,
+          "bottom": 429.546875,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 591.140625,
+          "bottom": 639.140625,
+          "disabled": false
+        },
+        {
+          "label": "베타 오픈 알림 신청하기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 740.359375,
+          "bottom": 792.359375,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 792.359375,
+          "bottom": 840.359375,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "LEAD_DONE",
+      "position": "initial",
+      "file": "recording-390-LEAD_DONE-initial.png",
+      "screen": "R2_RECORDING_LEAD_DONE",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n베타 오픈 알림 신청을 접수했어요\n\n집밥 기록 기능의 베타 오픈 알림 신청이 접수됐어요.\n\n여기서 마쳐도 괜찮아요.\n원하시면 다른 활동도 살펴보세요.\n\n메뉴로 돌아가기\n사용 예시 먼저 보기\n의견만 남기기 · 4문항",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "베타 오픈 알림 신청을 접수했어요",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 408.796875,
+          "bottom": 460.796875,
+          "disabled": false
+        },
+        {
+          "label": "사용 예시 먼저 보기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 470.796875,
+          "bottom": 520.796875,
+          "disabled": false
+        },
+        {
+          "label": "의견만 남기기 · 4문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 530.796875,
+          "bottom": 578.796875,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "MENU-lead-complete",
+      "position": "initial",
+      "file": "recording-390-MENU-lead-complete-initial.png",
+      "screen": "R2_RECORDING_MENU",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n베타 준비 중 · 사용 예시\n\n내 레시피로 만든 집밥, 먹은 만큼 영양 기록\n\n레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n\n내 레시피 → 먹은 분량 추정 영양 기록\n알림 접수 확인\n완료\n사용 예시 먼저 보기\n의견만 남기기 · 4문항\n\n현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n\n하나만 해도 괜찮아요. 순서는 자유예요.\n\n완료한 활동은 위에서 다시 확인할 수 있어요.\n\n개인정보처리방침",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "알림 접수 확인완료",
+      "controls": [
+        {
+          "label": "알림 접수 확인완료",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 399.703125,
+          "bottom": 451.703125,
+          "disabled": false
+        },
+        {
+          "label": "사용 예시 먼저 보기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 461.703125,
+          "bottom": 511.703125,
+          "disabled": false
+        },
+        {
+          "label": "의견만 남기기 · 4문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 521.703125,
+          "bottom": 569.703125,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 714.140625,
+          "bottom": 762.140625,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "EXAMPLE-1",
+      "position": "initial",
+      "file": "recording-390-EXAMPLE-1-initial.png",
+      "screen": "R2_RECORDING_EXAMPLE",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n내 레시피에서 영양 기록까지\n\n실제 서비스가 아닌 준비된 예시예요.\n\n사용 예시 1/3\n\n재료와 양 확인\n돼지고기 목살\n600g → 520g\n신김치\n200g\n양파\n100g\n\n재료와 양을 직접 확인·수정해요.\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n다음 장면\n알림 접수 확인\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "내 레시피에서 영양 기록까지",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "다음 장면",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 739.875,
+          "bottom": 791.875,
+          "disabled": false
+        },
+        {
+          "label": "알림 접수 확인",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 801.875,
+          "bottom": 851.875,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 871.875,
+          "bottom": 919.875,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "EXAMPLE-2",
+      "position": "initial",
+      "file": "recording-390-EXAMPLE-2-initial.png",
+      "screen": "R2_RECORDING_EXAMPLE",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n내 레시피에서 영양 기록까지\n\n실제 서비스가 아닌 준비된 예시예요.\n\n사용 예시 2/3\n\n직접 입력하는 양 · 예시\n완성한 요리 무게\n1,180g\n먹은 양\n320g\n\n저울로 확인한 무게를 입력해요.\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n다음 장면\n이전 장면\n알림 접수 확인\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "내 레시피에서 영양 기록까지",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "다음 장면",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 705.875,
+          "bottom": 757.875,
+          "disabled": false
+        },
+        {
+          "label": "이전 장면",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 767.875,
+          "bottom": 815.875,
+          "disabled": false
+        },
+        {
+          "label": "알림 접수 확인",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 825.875,
+          "bottom": 875.875,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 895.875,
+          "bottom": 943.875,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "EXAMPLE-3",
+      "position": "full",
+      "file": "recording-390-EXAMPLE-3-full.png",
+      "screen": "R2_RECORDING_EXAMPLE",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n내 레시피에서 영양 기록까지\n\n실제 서비스가 아닌 준비된 예시예요.\n\n사용 예시 3/3\n\n내 레시피 · 제육볶음 기록 예시\n\n완성한 요리 1,180g 중 먹은 양 320g\n\n487 kcal\n\n예시·추정치\n\n탄수화물\n31g\n단백질\n39g\n지방\n22g\n\n영양 값 전체가 예시·추정치예요.\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n예시 확인 완료\n이전 장면\n알림 접수 확인\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "내 레시피에서 영양 기록까지",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "예시 확인 완료",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 867.875,
+          "bottom": 919.875,
+          "disabled": false
+        },
+        {
+          "label": "이전 장면",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 929.875,
+          "bottom": 977.875,
+          "disabled": false
+        },
+        {
+          "label": "알림 접수 확인",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 987.875,
+          "bottom": 1037.875,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 1057.875,
+          "bottom": 1105.875,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "EXAMPLE-3",
+      "position": "cta",
+      "file": "recording-390-EXAMPLE-3-cta.png",
+      "screen": "R2_RECORDING_EXAMPLE",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n내 레시피에서 영양 기록까지\n\n실제 서비스가 아닌 준비된 예시예요.\n\n사용 예시 3/3\n\n내 레시피 · 제육볶음 기록 예시\n\n완성한 요리 1,180g 중 먹은 양 320g\n\n487 kcal\n\n예시·추정치\n\n탄수화물\n31g\n단백질\n39g\n지방\n22g\n\n영양 값 전체가 예시·추정치예요.\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n예시 확인 완료\n이전 장면\n알림 접수 확인\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 286,
+      "active": "내 레시피에서 영양 기록까지",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": -217,
+          "bottom": -173,
+          "disabled": false
+        },
+        {
+          "label": "예시 확인 완료",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 581.875,
+          "bottom": 633.875,
+          "disabled": false
+        },
+        {
+          "label": "이전 장면",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 643.875,
+          "bottom": 691.875,
+          "disabled": false
+        },
+        {
+          "label": "알림 접수 확인",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 701.875,
+          "bottom": 751.875,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 771.875,
+          "bottom": 819.875,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "EXAMPLE_DONE",
+      "position": "initial",
+      "file": "recording-390-EXAMPLE_DONE-initial.png",
+      "screen": "R2_RECORDING_EXAMPLE_DONE",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n사용 예시를 확인했어요\n\n내 레시피에서 먹은 분량의 추정 영양 기록으로 이어지는 예시를 보셨어요.\n\n실제 서비스가 아닌 사용 예시예요.\n\n여기서 마쳐도 괜찮아요.\n원하시면 다른 활동도 살펴보세요.\n\n메뉴로 돌아가기\n알림 접수 확인\n의견만 남기기 · 4문항\n사용 예시 다시 보기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "사용 예시를 확인했어요",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 474.90625,
+          "bottom": 526.90625,
+          "disabled": false
+        },
+        {
+          "label": "알림 접수 확인",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 536.90625,
+          "bottom": 586.90625,
+          "disabled": false
+        },
+        {
+          "label": "의견만 남기기 · 4문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 596.90625,
+          "bottom": 644.90625,
+          "disabled": false
+        },
+        {
+          "label": "사용 예시 다시 보기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 654.90625,
+          "bottom": 702.90625,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "SURVEY-1",
+      "position": "full",
+      "file": "recording-390-SURVEY-1-full.png",
+      "screen": "R2_RECORDING_SURVEY",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 1/4\n\n최근 7일 동안 본인이나 가족·동거인이 집에서 조리한 식사를 몇 번 먹었나요?\n\n본인이 직접 만들지 않아도 가족·동거인이 집에서 조리한 식사를 포함해요. 집에서 조리한 주된 음식이 있는 한 끼를 1번으로 세며, 배달·포장 음식이나 완제품을 데우기만 한 끼니와 간식은 제외해요.\n\n0번\n1~2번\n3~5번\n6번 이상\n다음 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "집밥 기록에 대한 의견",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q1-0",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 449.984375,
+          "bottom": 469.984375,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q1-1",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 509.984375,
+          "bottom": 529.984375,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q1-2",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 569.984375,
+          "bottom": 589.984375,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q1-3",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 629.984375,
+          "bottom": 649.984375,
+          "disabled": false
+        },
+        {
+          "label": "다음 문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 704.984375,
+          "bottom": 756.984375,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 811.09375,
+          "bottom": 859.09375,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "SURVEY-2",
+      "position": "full",
+      "file": "recording-390-SURVEY-2-full.png",
+      "screen": "R2_RECORDING_SURVEY",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 2/4\n\n현재 집밥 식단을 주로 어떻게 기록하나요?\n따로 기록하지 않아요\n사진이나 메모로 남겨요\n앱에서 비슷한 음식을 찾아요\n재료와 양을 직접 입력해요\n저장한 레시피·음식이나 이전 기록을 불러와요\n다른 방식으로 기록해요\n다음 문항\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "집밥 기록에 대한 의견",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q2-0",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 322.546875,
+          "bottom": 342.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q2-1",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 382.546875,
+          "bottom": 402.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q2-2",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 442.546875,
+          "bottom": 462.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q2-3",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 502.546875,
+          "bottom": 522.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q2-4",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 562.546875,
+          "bottom": 582.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q2-5",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 622.546875,
+          "bottom": 642.546875,
+          "disabled": false
+        },
+        {
+          "label": "다음 문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 697.546875,
+          "bottom": 749.546875,
+          "disabled": false
+        },
+        {
+          "label": "이전 문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 759.546875,
+          "bottom": 807.546875,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 861.65625,
+          "bottom": 909.65625,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "SURVEY-3",
+      "position": "full",
+      "file": "recording-390-SURVEY-3-full.png",
+      "screen": "R2_RECORDING_SURVEY",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 3/4\n\n이 중 가장 기대되는 기능은 무엇인가요?\n레시피 재료 정보를 기록에 다시 쓰기\n먹은 분량에 맞춘 추정 영양 보기\n집밥 기록을 모아 보기\n기대되는 기능이 없어요\n다음 문항\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "집밥 기록에 대한 의견",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q3-0",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 322.546875,
+          "bottom": 342.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q3-1",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 382.546875,
+          "bottom": 402.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q3-2",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 442.546875,
+          "bottom": 462.546875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q3-3",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 502.546875,
+          "bottom": 522.546875,
+          "disabled": false
+        },
+        {
+          "label": "다음 문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 577.546875,
+          "bottom": 629.546875,
+          "disabled": false
+        },
+        {
+          "label": "이전 문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 639.546875,
+          "bottom": 687.546875,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 741.65625,
+          "bottom": 789.65625,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "SURVEY-4",
+      "position": "full",
+      "file": "recording-390-SURVEY-4-full.png",
+      "screen": "R2_RECORDING_SURVEY",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 4/4\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n이 방식의 집밥 기록 기능을 사용해 보고 싶나요?\n사용해 보고 싶어요\n상황에 따라 써볼 것 같아요\n사용할 의향이 없어요\n아직 모르겠어요\n의견 보내기\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "집밥 기록에 대한 의견",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q4-0",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 425.71875,
+          "bottom": 445.71875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q4-1",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 485.71875,
+          "bottom": 505.71875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q4-2",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 545.71875,
+          "bottom": 565.71875,
+          "disabled": false
+        },
+        {
+          "label": "r2-option-q4-3",
+          "tag": "INPUT",
+          "width": 20,
+          "height": 20,
+          "top": 605.71875,
+          "bottom": 625.71875,
+          "disabled": false
+        },
+        {
+          "label": "의견 보내기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 680.71875,
+          "bottom": 732.71875,
+          "disabled": false
+        },
+        {
+          "label": "이전 문항",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 742.71875,
+          "bottom": 790.71875,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 844.828125,
+          "bottom": 892.828125,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "SURVEY_DONE",
+      "position": "initial",
+      "file": "recording-390-SURVEY_DONE-initial.png",
+      "screen": "R2_RECORDING_SURVEY_DONE",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n의견을 남겨주셔서 감사해요\n\n집밥 기록에 대한 의견을 접수했어요.\n\n접수한 답변은 지금 변경하거나 다시 제출할 수 없어요.\n\n여기서 마쳐도 괜찮아요.\n원하시면 다른 활동도 살펴보세요.\n\n메뉴로 돌아가기\n알림 접수 확인\n사용 예시 다시 보기",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "의견을 남겨주셔서 감사해요",
+      "controls": [
+        {
+          "label": "메뉴로",
+          "tag": "BUTTON",
+          "width": 60,
+          "height": 44,
+          "top": 69,
+          "bottom": 113,
+          "disabled": false
+        },
+        {
+          "label": "메뉴로 돌아가기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 450.90625,
+          "bottom": 502.90625,
+          "disabled": false
+        },
+        {
+          "label": "알림 접수 확인",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 512.90625,
+          "bottom": 562.90625,
+          "disabled": false
+        },
+        {
+          "label": "사용 예시 다시 보기",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 572.90625,
+          "bottom": 620.90625,
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "state": "MENU-all-complete",
+      "position": "full",
+      "file": "recording-390-MENU-all-complete-full.png",
+      "screen": "R2_RECORDING_MENU",
+      "text": "로컬 미리보기 · 저장되지 않아요\n\n베타 준비 중 · 사용 예시\n\n내 레시피로 만든 집밥, 먹은 만큼 영양 기록\n\n레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n\n내 레시피 → 먹은 분량 추정 영양 기록\n알림 접수 확인\n완료\n사용 예시 다시 보기\n완료\n의견 접수 확인\n완료\n\n현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n\n하나만 해도 괜찮아요. 순서는 자유예요.\n\n완료한 활동은 위에서 다시 확인할 수 있어요.\n\n개인정보처리방침",
+      "scrollWidth": 390,
+      "scrollY": 0,
+      "active": "의견 접수 확인완료",
+      "controls": [
+        {
+          "label": "알림 접수 확인완료",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 52,
+          "top": 399.703125,
+          "bottom": 451.703125,
+          "disabled": false
+        },
+        {
+          "label": "사용 예시 다시 보기완료",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 50,
+          "top": 461.703125,
+          "bottom": 511.703125,
+          "disabled": false
+        },
+        {
+          "label": "의견 접수 확인완료",
+          "tag": "BUTTON",
+          "width": 350,
+          "height": 48,
+          "top": 521.703125,
+          "bottom": 569.703125,
+          "disabled": false
+        },
+        {
+          "label": "개인정보처리방침",
+          "tag": "A",
+          "width": 350,
+          "height": 48,
+          "top": 714.140625,
+          "bottom": 762.140625,
+          "disabled": false
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "topic": "recording",
+      "width": 390,
+      "status": 200,
+      "cache": "private, no-store",
+      "referrer": "no-referrer",
+      "setCookie": false
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "베타 오픈 알림 받기",
+      "screen": "R2_RECORDING_MENU"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "베타 오픈 알림 신청하기",
+      "screen": "R2_RECORDING_LEAD"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "베타 오픈 알림 신청하기",
+      "screen": "R2_RECORDING_LEAD"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "메뉴로 돌아가기",
+      "screen": "R2_RECORDING_LEAD_DONE"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "사용 예시 먼저 보기",
+      "screen": "R2_RECORDING_MENU"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "다음 장면",
+      "screen": "R2_RECORDING_EXAMPLE"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "다음 장면",
+      "screen": "R2_RECORDING_EXAMPLE"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "예시 확인 완료",
+      "screen": "R2_RECORDING_EXAMPLE"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "메뉴로 돌아가기",
+      "screen": "R2_RECORDING_EXAMPLE_DONE"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "의견만 남기기 · 4문항",
+      "screen": "R2_RECORDING_MENU"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "다음 문항",
+      "screen": "R2_RECORDING_SURVEY"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "다음 문항",
+      "screen": "R2_RECORDING_SURVEY"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "다음 문항",
+      "screen": "R2_RECORDING_SURVEY"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "의견 보내기",
+      "screen": "R2_RECORDING_SURVEY"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "메뉴로 돌아가기",
+      "screen": "R2_RECORDING_SURVEY_DONE"
+    },
+    {
+      "topic": "recording",
+      "width": 390,
+      "action": "알림 접수 확인",
+      "screen": "R2_RECORDING_MENU"
+    }
+  ],
+  "storage": [],
+  "browser": "145.0.7632.6",
+  "finished_at": "2026-09-11T06:04:41.417Z"
+}

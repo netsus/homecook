@@ -1,0 +1,2705 @@
+{
+  "schema": "homecook.stage4.authority-evidence-projection.v1",
+  "work_item_id": "marketing-demand-validation-round2",
+  "prepared_by_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "assembly_scope": "기존 원문 관찰을 연결한 작성자 자료이며 새 실행·독립 승인 결과가 아니다.",
+  "historical_precheck": {
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "completed_at": "2026-09-11T04:38:24.515833+00:00",
+    "verdict": "pass",
+    "scope": "authority_precheck only",
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+      "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+    }
+  },
+  "current_review_boundary": {
+    "public_stage5": "approve",
+    "status": "complete",
+    "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "reviewed_at": "2026-09-11T05:49:31.343976+00:00",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "required_fix_ids": [],
+    "closed_finding_ids": [
+      "R2-S5-001"
+    ],
+    "stage5_result": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c"
+    },
+    "repair_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "final_product_design_authority": "passed",
+    "stage6": "pending/not_started",
+    "design_status": "confirmed",
+    "ready_or_merge_approved": false,
+    "activation_or_deployment_approved": false,
+    "final_authority_task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+    "final_authority_result": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+      "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679"
+    },
+    "final_authority_reviewed_metadata_sha": "1a51971262e758896e725af31f104f42424cff78",
+    "accept_r2_authority": true,
+    "full_verification_passed": false,
+    "remaining_global_failures": "geometry4/visual10 and unclassified meal-detail candidatePNG gap; Stage6/user decision pending"
+  },
+  "applicability": "과거783 precheck/request_changes,62eff Stage5 approve,1a519 final authority pass를 각각 독립 원문으로 보존한다. 조정자 허용 범위로 디자인 confirmed·accept-r2-authority만 반영하며 Stage6/전체검증/Ready/merge는 미완료다.",
+  "evidence_kind": "screen-coverage",
+  "mapping_source": {
+    "path": "ui/designs/R2_SCREEN_MAPPING.md",
+    "sha256": "e8d6d6b25ae988de6eba63d805ef1f32dcecac1f65b7ac7a4451a95c9dd6afe0"
+  },
+  "observed_canonical_count": 16,
+  "shared_report_count": 8,
+  "scope_notes": [
+    "설계와 critique는 정적 입력이며 runtime PASS를 대신하지 않는다.",
+    "RECOVERY는 recording 동의409·homeflow 예시 commit 응답 유실의 실제 두 조건이다.",
+    "보고서 원문의 서식 revision은 독립 reviewer 소유다."
+  ],
+  "report_format_revision": {
+    "revision": "evidence-syntax-v1",
+    "actor_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/inputs/format-revision.json",
+      "sha256": "f2cfaabdceae86aee58823388a5e362a3ed5649e46395a31ca1b02efb55fd261"
+    },
+    "scope": "지원되는 evidence bullet/backtick 참조만 추가. 원문 판정·관찰은 precheck783 이력으로 보존한다.",
+    "reports": [
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_MENU-authority.md.txt",
+          "sha256": "aede1b50c673757d80eadd7dc651a42af4063caf2920f7a9149fc4f6bdd0c1ac"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_MENU-authority.md",
+          "sha256": "3ee5ca18edf0336b602a9eca14a70456b242f144533c9769307daeaf4af9ce7b"
+        },
+        "rest_byte_identical": true
+      },
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE-authority.md.txt",
+          "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_EXAMPLE-authority.md",
+          "sha256": "dce3ab895d66bbfd6f5433657e7261deb63609febc05bce82e9f8207fecca382"
+        },
+        "rest_byte_identical": true
+      },
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE_DONE-authority.md.txt",
+          "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_EXAMPLE_DONE-authority.md",
+          "sha256": "6084d4fb437115839f122218a46bc13caa3deeedd74575d3bec74723e2b643bc"
+        },
+        "rest_byte_identical": true
+      },
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY-authority.md.txt",
+          "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_SURVEY-authority.md",
+          "sha256": "ac9e027c478f84bd9422268813e80e1d4ad80d4b3facede1ce269b17e1a62807"
+        },
+        "rest_byte_identical": true
+      },
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY_DONE-authority.md.txt",
+          "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_SURVEY_DONE-authority.md",
+          "sha256": "d77b668e4677d12225334808ad35906fd8532d2ffea5f6c4a0359c8bbde06a3b"
+        },
+        "rest_byte_identical": true
+      },
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD-authority.md.txt",
+          "sha256": "ce0f1495da722fa1e06e77a003234a829e5e3e3e1c66186d0af967d3f5b92eff"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_LEAD-authority.md",
+          "sha256": "46aef761d85ec22e7a555c3c0491fd4a89d7fcd67dcb31319a36df054bd491ba"
+        },
+        "rest_byte_identical": true
+      },
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD_DONE-authority.md.txt",
+          "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_LEAD_DONE-authority.md",
+          "sha256": "13813b0e065e288a52ce94f1db88c3a32f4819b856db39a1b9ff7f164fbd4fb8"
+        },
+        "rest_byte_identical": true
+      },
+      {
+        "historical_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_RECOVERY-authority.md.txt",
+          "sha256": "f79689130fa79125fff17cceb54ff8de40037df49d7be600e331091c3225a0e9"
+        },
+        "original_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/original-authority/R2_RECOVERY-authority.md",
+          "sha256": "d498f95ca77d6011c5d40d653462c4f610f915249a98e48869c548e0b7fdd68a"
+        },
+        "rest_byte_identical": true
+      }
+    ],
+    "six_json_reviewed_by_stage5": false
+  },
+  "requirement_id": 1,
+  "source_requirement": "Follow ui/designs/R2_SCREEN_MAPPING.md for R2_RECORDING_* and R2_HOMEFLOW_* variants, eight generator docs and eight R2_*-critique.md inputs.",
+  "subject_head_sha": "1a51971262e758896e725af31f104f42424cff78",
+  "producer_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "subject_head_scope": "Final authority reviewed metadata1a519; direct browser product62eff/code7bfe and earlier captured baselines are separately retained. Current metadata projection is not a new product execution.",
+  "format_requirement_source": {
+    "git_commit": "8c6573bf594fa15613205ce97e4435d751c7d87c",
+    "repository_path": "docs/workpacks/marketing-demand-validation-round2/stage4-evidence-format.md",
+    "read_method": "git show origin/master:path"
+  },
+  "not_run": [
+    "actual-provider",
+    "physical-device",
+    "Stage6"
+  ],
+  "limitations": [
+    "과거 precheck/Stage5 보고서 bytes와 hash는 불변 archive로 보존했다.",
+    "Final authority pass와조정자 confirmed허용은 R2디자인범위만 해당한다.",
+    "Stage6미착수·global geometry4/visual10·meal-detail candidatePNG미보존/미분류로 전체검증/Ready/merge는false다.",
+    "실제provider·실기기·공개개인정보/운영activation은ManualOnly이며 미실행이다."
+  ],
+  "source_runs": [
+    {
+      "run_id": "precheck-final783",
+      "command": "independent authority_precheck evidence review",
+      "captured_at": "2026-09-11T04:38:24.515833+00:00",
+      "environment": "review of preview-mock and provided isolated-integration",
+      "subject_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "result": "historical pass precheck only",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+      }
+    },
+    {
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "command": "node tests/marketing-round2-lead-edit.browser.mjs",
+      "captured_at": "2026-09-11T05:10:43.874Z",
+      "environment": "preview-mock",
+      "submode": "route-mocked actual client/view; fixture server page props",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "captured_source_identity": "uncommitted source hashes in source-manifest; not exact783 product bytes",
+      "result": "PASS",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/source-manifest.json",
+        "sha256": "62cfc0f7bfdfe96a2e5fe9a8f523b6632115bcd09f006048ebf6acea4031df3d"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+        "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386"
+      },
+      "geometry_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/geometry.json",
+        "sha256": "30ac3738ae4c3aad42e542e71c7853acf74979a5b2b72aecc593b0f7700fcbce"
+      },
+      "limitations": [
+        "실제 API/DB/provider 실행 아님",
+        "server page fixture 변경; client/view/CSS 원형",
+        "독립 reviewer 재검토 pending"
+      ]
+    },
+    {
+      "run_id": "hcg_74053_7748de",
+      "artifact_directory": "2026-09-11T05-19-39-943Z",
+      "command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+      "captured_at": "2026-09-11T05:20:15.542Z",
+      "completed_at": "2026-09-11T05:23:22.816Z",
+      "environment": "isolated-integration",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "source_identity": "At capture: baseline783 plus uncommitted file hashes. Later compared to code commit; not execution of that later commit.",
+      "matched_later_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+      "result": "PASS",
+      "checks": 28,
+      "case_groups": 26,
+      "trace_observations": 1316,
+      "screenshot_records": 115,
+      "unique_png_files": 113,
+      "parsed_response_envelopes": 208,
+      "count_meaning": "observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/source-manifest.json",
+        "sha256": "f901898dc98fcdf0b0d7dff848af31efc786c4cdd2395bb508668cc03552cc03"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+        "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+        "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+      },
+      "manifest": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/artifact-manifest.json",
+        "sha256": "06be0cd9347e87ad2818315f686149f938ae4c3b7b3e07dc7864d8f2cf6af8dc"
+      },
+      "cleanup": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/cleanup.json",
+        "sha256": "e454e6933bd3cfc70c8572c75efa329a8791dddc92e8367e99a3c82c76eafafb"
+      },
+      "parity": {
+        "verification": "read-only SHA256 comparison of captured snapshotFiles with git cat-file at exact later code commit",
+        "tracked_files_compared": 1869,
+        "mismatches": 0,
+        "generated_not_tracked": [
+          "next-env.d.ts"
+        ],
+        "captured_snapshot_total": 1870,
+        "harness_caveat": "scenario/helper hash match. Runner changed only default option dispatch after capture; full invocation used explicit --lead-edit.",
+        "dispatch_diff": {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/default-dispatch.diff",
+          "sha256": "3628cd7f0e0c75d17828df3f5653bd69d9492562c6d9e948d66dfcb0518a95c1"
+        },
+        "dispatch_unit_log": {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/verification.log",
+          "sha256": "a471ecc69f590023cf98e33410fb1b821c951e2008b9eecd670040fe690f80be"
+        }
+      },
+      "limitations": [
+        "실제503/provider장애 주입 아님: unreceived 첫 송신을 브라우저에서 중단; 이후422/200/DB는 실제",
+        "mock provider19; 실제 provider/실기기/운영activation 미실행",
+        "115 screenshot records contain two repeated names;113 unique retained PNG.",
+        "독립 Stage5/final authority approval pending"
+      ]
+    },
+    {
+      "run_id": "r2-s5-production-preview-62eff252",
+      "environment": "preview-mock",
+      "submode": "fixed production build, memory-only, unmodified actual server page",
+      "command": "author owned-copy production build and local preview verification; archived scripts retained as .mjs.txt",
+      "captured_source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "checked_at": "2026-09-11T05:47:01.871Z",
+      "build_id": "ojaiIGyjDlOMvWFrlUvf9",
+      "source_file_count": 2465,
+      "source_tree_sha256": "ad80ffc80d83bf017391eaf3a2da825b59bf069a3d7cc1976bddc0498f0c79ed",
+      "compiled_file_count": 830,
+      "compiled_tree_sha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+      "compiled_tree_mismatches_after_browser": 0,
+      "result": "PASS",
+      "cases": 6,
+      "post_requests": 0,
+      "local_session_indexeddb_entries": 0,
+      "external_requests": 0,
+      "page_errors": 0,
+      "db_calls": 0,
+      "provider_calls": 0,
+      "actual_server_page": true,
+      "fixture_page_override": false,
+      "origin": "http://127.0.0.1:3126",
+      "origin_status": "author-maintained preview; this metadata task did not restart or probe server",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/source-manifest.json",
+        "sha256": "92cb4fa5b9b255b3c7e14fe47862bb33ff117d6e1fcfdd82fe117db575b4129b"
+      },
+      "build_result": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/build-result.json",
+        "sha256": "9096e3f51a2a969e4e4f6ee4c5e0bf34c6e63c5b97e74371e693feaf22c82943"
+      },
+      "verification": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/verification.json",
+        "sha256": "bc719e85929501e13426c3e04066944bcaa44a57d3198b344dae19193c65c84b"
+      },
+      "headers": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/headers.json",
+        "sha256": "26530628ff7e707d4a2158140d26410778e30eeb9475179a75f1ee43435c9c7f"
+      },
+      "compiled_parity": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/compiled-tree-after-browser.json",
+        "sha256": "87badcd818204a259a698a32e4b702539b3d75b7c4d76a47cbdf74f1d7d7821c"
+      },
+      "import": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/IMPORT.md",
+        "sha256": "d9ca9c86b6c11a540ec26a207dde4560df86078cc489a2d86a09a11fe96feaff"
+      },
+      "instructions": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/README.md",
+        "sha256": "396409ac91778589bf90c2d44a91c4afa756dd3e7dd12e194fa3d0983985b3ca"
+      },
+      "limits": [
+        "각3활동×2topic 단독 완료는 memory-only이며 reload시초기화",
+        "uncertain receipt/편집복원은 이 preview에서 실행하지 않음; route-mocked10/actual28과 별도",
+        "실제 API/DB/provider/물리기기/운영activation 근거가 아님",
+        "이후 metadata commit에서 제품을 재빌드했다고 주장하지 않음"
+      ]
+    },
+    {
+      "run_id": "final-authority-01a08f0c-direct",
+      "actor_task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+      "command": "Independent reviewer capture script against provided fixed3126 preview; this projection did not execute browser",
+      "environment": "preview-mock",
+      "submode": "provided production build, built-in memory preview",
+      "started_at": "2026-09-11T06:05:53.917Z",
+      "finished_at": "2026-09-11T06:06:04.143Z",
+      "captured_source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "metadata_reviewed_sha": "1a51971262e758896e725af31f104f42424cff78",
+      "product_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+      "build_id": "ojaiIGyjDlOMvWFrlUvf9",
+      "compiled_tree_sha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+      "compiled_provenance": "provided author attestation; not recomputed by final authority",
+      "result": "completed reviewer direct capture; design verdict recorded separately",
+      "captures": 88,
+      "representative_images_visually_reviewed_by_authority": 28,
+      "get_requests": 238,
+      "post_requests": 0,
+      "external_requests": 0,
+      "storage_cookie_entries": 0,
+      "pageerrors": 0,
+      "browser": "145.0.7632.6",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/capture-log.json",
+        "sha256": "e6f84c36d8ee013e45624e77a671ddc9dd7b80960062a0129bc575eb2bbe8e75"
+      },
+      "authority_scope": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/direct_evidence"
+      },
+      "limits": [
+        "lead→example→survey 한 순서/topic/width, lead단독·완료재열람. 전체6순서 또는 실제저장 재실행 아님",
+        "RECOVERY는 제공route-mocked/actual자료 검토; reviewer 직접오류/DB 재실행 아님",
+        "최종authority는 compiled tree hash를 재계산하지 않고 제공 attestation을 검토",
+        "메타데이터만 갱신한 현재 작업의 새캡처가 아님"
+      ]
+    }
+  ],
+  "archive_relocations": {
+    "precheck_scripts": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/archive-relocations.json",
+      "sha256": "cf892c0bed99ddff9fa57670e2d83ab258f73372b4c43647c5fd83d6a0636eb1"
+    },
+    "stage5_report_paths": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/path-relocation/path-relocation-manifest.json",
+      "sha256": "97c9e619fc5fb7700683d347bf101d958c9502da1cf21246190954ea7cdd0fd3"
+    },
+    "effect": "Executable extensions changed to archival text; original bytes/Stage5 request_changes verdict preserved."
+  },
+  "author_fix_browser_overlay": {
+    "scope": "R2-S5-001 only; not full actual integration",
+    "run": {
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "command": "node tests/marketing-round2-lead-edit.browser.mjs",
+      "captured_at": "2026-09-11T05:10:43.874Z",
+      "environment": "preview-mock",
+      "submode": "route-mocked actual client/view; fixture server page props",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "captured_source_identity": "uncommitted source hashes in source-manifest; not exact783 product bytes",
+      "result": "PASS",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/source-manifest.json",
+        "sha256": "62cfc0f7bfdfe96a2e5fe9a8f523b6632115bcd09f006048ebf6acea4031df3d"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+        "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386"
+      },
+      "geometry_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/geometry.json",
+        "sha256": "30ac3738ae4c3aad42e542e71c7853acf74979a5b2b72aecc593b0f7700fcbce"
+      },
+      "limitations": [
+        "실제 API/DB/provider 실행 아님",
+        "server page fixture 변경; client/view/CSS 원형",
+        "독립 reviewer 재검토 pending"
+      ]
+    },
+    "conditions": 10,
+    "clicks": 92,
+    "request_response_observations": 104,
+    "geometry_conditions": 8,
+    "text_100_percent_conditions": 4,
+    "text_200_percent_conditions": 4,
+    "masked_pngs": 16,
+    "capture_mask": "email fixture field covered only in screenshots; no product/measurement change",
+    "independent_review": "pending"
+  },
+  "observations": [
+    {
+      "canonical_screen_id": "R2_RECORDING_MENU",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_MENU",
+      "design_input": {
+        "path": "ui/designs/R2_MENU.md",
+        "sha256": "b8bc0279667fde74deaf0d5a92a154e3886b7444194a7e7fe2836c939b5914d8"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_MENU-critique.md",
+        "sha256": "c8e1054c4d3d03507795c61619f32a894da0e75ee32c6ad49182f9d76f71f84f"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_MENU-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/0"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-MENU.png",
+          "sha256": "72c4082732e4d76c4a7eb954e1c8804bb726613368deb61bb0b2735ae6f8b85a"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-MENU.png",
+          "sha256": "4139568b5cc84c1c3bdec8a667a62e0eda737c4b47b8dd1813fd5699688e8db7"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-MENU.png",
+          "sha256": "1e666a7c89c4346660afc817bd3994a5c1a80668a78b57837783b4e4c0728371"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-MENU.png",
+          "sha256": "c7efda47f2d7940a0573d7897a853c5e964b3f859ee5a4f057b891186f44c421"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-MENU.png",
+          "sha256": "e8902409588e9e3df3b80fefc36c16b43ccbff5a14d6dd43cfa2201a926b49be"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-MENU.png",
+          "sha256": "e12fb9d5d7e5ae1943223534877730e4ba568b9cedb05c6e3073c88cf7cf81c6"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_MENU",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_MENU",
+      "design_input": {
+        "path": "ui/designs/R2_MENU.md",
+        "sha256": "b8bc0279667fde74deaf0d5a92a154e3886b7444194a7e7fe2836c939b5914d8"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_MENU-critique.md",
+        "sha256": "c8e1054c4d3d03507795c61619f32a894da0e75ee32c6ad49182f9d76f71f84f"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_MENU-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/0"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-MENU.png",
+          "sha256": "ae6d4bf869ae357cb67426257bfaf046e2563333aa63cb6546a83d15e99279dc"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-MENU.png",
+          "sha256": "c151008e63928b60e20dd47a3cfcacbebca843c29c80e7c32baaac622639d2d7"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-MENU.png",
+          "sha256": "136ac485ca7356c9d9c2a8e91df33832b890b6758028b1e42ea3769c1364941a"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-MENU.png",
+          "sha256": "1db6d371312924ec8a201bcdb1416272fb00e0c06f0ef748b3691a1e936e4a33"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-MENU.png",
+          "sha256": "4da65b2ed5a7108aee45c3c7a0acf3c05db2f39c438f9885bf8e390b87353683"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-MENU.png",
+          "sha256": "507889f1b478a6aa65c0096b8f7c4bce3e0612d24433230e287396611a441885"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_EXAMPLE",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_EXAMPLE",
+      "design_input": {
+        "path": "ui/designs/R2_EXAMPLE.md",
+        "sha256": "da6f5355da711107c9422f2f70d17ff009c584f54825c3d1e50b48573735d5b5"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_EXAMPLE-critique.md",
+        "sha256": "5bf9834c17ca40bca3d5a0f1408defb2b8854a295989a0fcbadace0ce328f084"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/1"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-EXAMPLE-3.png",
+          "sha256": "9831dc1910780b96c4ea6c083df9a8c992d32125428b6b0cdbdb1040b4911321"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-EXAMPLE-3.png",
+          "sha256": "a126e816f57a73adb31e2bc6c5b0b0588bf6100c8926ae74fc6376e8911be639"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-EXAMPLE-3.png",
+          "sha256": "7f7dc8a729d3ada33a6510f5dc14bc02e1439390486d22ab6dd9537cb17c5bfd"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-EXAMPLE-3.png",
+          "sha256": "6928c7aca7f686fefcc8163b09c03717795e3310918cb95a85acf667c9ecb9eb"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-EXAMPLE-3.png",
+          "sha256": "94879f309bad7321ac022b21b3350a6f8c5f46aa18626c4179a2f819c666b419"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-EXAMPLE-3.png",
+          "sha256": "9af1751ba57f7e9e9020f402ad5d772fc2caf8dfede0519212b8e73af2f020c9"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_EXAMPLE",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_EXAMPLE",
+      "design_input": {
+        "path": "ui/designs/R2_EXAMPLE.md",
+        "sha256": "da6f5355da711107c9422f2f70d17ff009c584f54825c3d1e50b48573735d5b5"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_EXAMPLE-critique.md",
+        "sha256": "5bf9834c17ca40bca3d5a0f1408defb2b8854a295989a0fcbadace0ce328f084"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/1"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-EXAMPLE-3.png",
+          "sha256": "fa517f17de0cd3d97628265ca19ed6eef0907a1e0e26219c1229e671be3f8acf"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-EXAMPLE-3.png",
+          "sha256": "f5c65628d66573979ab5b1392c388997fe280f6b1c2334d57a6ce5dd5401b3f0"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-EXAMPLE-3.png",
+          "sha256": "5cdba5982c9b4deb64fb16ce61af0110f45d0851df3f38bb77cc2ee88248eebe"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-EXAMPLE-3.png",
+          "sha256": "5ce0265ca084b6daed095c0ad3d22eed3cd7c4ee8da80ecb3cfe61780ca7760c"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-EXAMPLE-3.png",
+          "sha256": "ff08386b621e2f867d311be58e7d105c08bde24e36280dc465756106f65e2f3c"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-EXAMPLE-3.png",
+          "sha256": "68a2bfbb34b187182ecb4ca140cf20505205ac6b4ae3cb8eceb81adf516d79f1"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_EXAMPLE_DONE",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_EXAMPLE_DONE",
+      "design_input": {
+        "path": "ui/designs/R2_EXAMPLE_DONE.md",
+        "sha256": "5ba759ecefdbfbac6301af57aeea7f63f05a24f6ce30125e44114aa924ac1561"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_EXAMPLE_DONE-critique.md",
+        "sha256": "cd1df9842ace905d65fc47d985857f519080c107e1c0d655511742fd42f71798"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE_DONE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/2"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-EXAMPLE_DONE.png",
+          "sha256": "caab991dc820140ebc0fe82a7e256326d78426fafb0972a9e930099cc248af13"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-EXAMPLE_DONE.png",
+          "sha256": "c89d689e9178791d06c2e646f85933718c406a98e6ef467b29bd752330920cd5"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-EXAMPLE_DONE.png",
+          "sha256": "8059f94cf3d715aaaaf22a897732492bc2e659876e2c0beccddd84f8258cb2f4"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-EXAMPLE_DONE.png",
+          "sha256": "c9279a67d85c27dd54192a2fb93b86ce9db1c6fda8b5e605f82052d110b640f0"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-EXAMPLE_DONE.png",
+          "sha256": "52de558ecff57a6cd9efb5039cbb9c04a2e786dbe985ab5a05dd34ed48133c07"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-EXAMPLE_DONE.png",
+          "sha256": "2b6ae5f06f4134d01adf273cdf822d21c323f98e3bdea90291728179c12fafa9"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_EXAMPLE_DONE",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_EXAMPLE_DONE",
+      "design_input": {
+        "path": "ui/designs/R2_EXAMPLE_DONE.md",
+        "sha256": "5ba759ecefdbfbac6301af57aeea7f63f05a24f6ce30125e44114aa924ac1561"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_EXAMPLE_DONE-critique.md",
+        "sha256": "cd1df9842ace905d65fc47d985857f519080c107e1c0d655511742fd42f71798"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE_DONE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/2"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-EXAMPLE_DONE.png",
+          "sha256": "d378da8bad850863698dce240705e1f47b89a24e206d4014b58d884874ae6de8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-EXAMPLE_DONE.png",
+          "sha256": "e9d618170a6af3cbc22a7808bd1bdb7a63dfe0f223670b75f0efda95d64e5e84"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-EXAMPLE_DONE.png",
+          "sha256": "db28c680979f699a6451045f6e9466fc6549aa07d32f95d00fdb71abb6137b32"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-EXAMPLE_DONE.png",
+          "sha256": "7f953c048a5f5dd2ef59b0673ad94346b065b75a5fac7f4069c9ddce30a9d9e4"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-EXAMPLE_DONE.png",
+          "sha256": "403b6bb50b14d9fc2e01d5c5690b3acfb6bb6d089d6af025abb4a5897cdbef2f"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-EXAMPLE_DONE.png",
+          "sha256": "744d0e0e6dde2281f0c4fa2e55a9c5ee1630870d1e63ace0a6412c4208d0a9f6"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_SURVEY",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_SURVEY",
+      "design_input": {
+        "path": "ui/designs/R2_SURVEY.md",
+        "sha256": "87029f66a2b2d32bcc0660a780dc6dcc39117f990be0f647bb0a5239b909024e"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_SURVEY-critique.md",
+        "sha256": "2564b118126630f556f0ada48b691290f57e8905341f019546823260273f44ba"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/3"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-SURVEY-Q2.png",
+          "sha256": "2bb6797c3a94ea860122e74a6cd39022c981eac72e5d42d380df51e999854029"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-SURVEY-Q2.png",
+          "sha256": "f69e17cf63985a561ec8cc1b10f1ebe87ce621b1ac33f9962e89bacd9590f170"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-SURVEY-Q2.png",
+          "sha256": "71110400203f9cecd6a238e31aa6ef870507c92a9d10799ae60205f33ec4d14f"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-SURVEY-Q2.png",
+          "sha256": "4a85ab6b4b3e3854fa5b195953fa5b51b7d545921635c8f4f0554f7910854c2c"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-SURVEY-Q2.png",
+          "sha256": "23ee66069a3b52eda0adbaee3afda258eab483075c08fa9475c496359f34c2cc"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-SURVEY-Q2.png",
+          "sha256": "dad606c606dea418fd2a2746df8455180fc102692d8c9216fbdcf9157cf7bb6c"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_SURVEY",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_SURVEY",
+      "design_input": {
+        "path": "ui/designs/R2_SURVEY.md",
+        "sha256": "87029f66a2b2d32bcc0660a780dc6dcc39117f990be0f647bb0a5239b909024e"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_SURVEY-critique.md",
+        "sha256": "2564b118126630f556f0ada48b691290f57e8905341f019546823260273f44ba"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/3"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-SURVEY-Q2.png",
+          "sha256": "19cddb62afef29a103deecc461405967ef8d0dcac12604d4ec4043f24f276730"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-SURVEY-Q2.png",
+          "sha256": "5d21b388c2ea1dffca1769d0e68789f2b00b3b932f8306d5c4368e91564f30c1"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-SURVEY-Q2.png",
+          "sha256": "ef7359e60eac16ce86709375086d7ff531beabda23d17dd99c3e34ff302bdcde"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-SURVEY-Q2.png",
+          "sha256": "755f2e1f015897bfe82a8a72f5b65bd2a85be5a103e31964fc384efda6d88780"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-SURVEY-Q2.png",
+          "sha256": "b3860b1b2462ad37ab48694ad9586733c6be3f0bb9d3f4952fcfdf56486d85fb"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-SURVEY-Q2.png",
+          "sha256": "73e798eb228b87ebc1cb2b7b1ad97c55f8a322db16b6d0a4ba42af5df532895c"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_SURVEY_DONE",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_SURVEY_DONE",
+      "design_input": {
+        "path": "ui/designs/R2_SURVEY_DONE.md",
+        "sha256": "435c44cdc5f4f2f92ae263a3594fdb594742eb47af1fd117db4abb8218513f28"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_SURVEY_DONE-critique.md",
+        "sha256": "76aa75cf3fdd873fabb621157d08008b753a4f34305047a24188ea2f60a0df08"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY_DONE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/4"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-SURVEY_DONE.png",
+          "sha256": "4e845a2068a801d0b0fb44e07b90c8235ae76187538d635febf12fac6461ba81"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-SURVEY_DONE.png",
+          "sha256": "27b60687dd8bfd2c110d8f4927d96b3bcae3b995e751233e7d5b0465bd385b39"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-SURVEY_DONE.png",
+          "sha256": "db9818144c7ed74d31e6fdb2b6b53f4805e1058d93fdf277269a7d2d8f3fda38"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-SURVEY_DONE.png",
+          "sha256": "fb78147f9d7a3257af33622c70713c30a74b9f03aae15f454c9526f70c3410e1"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-SURVEY_DONE.png",
+          "sha256": "4d3ace0142c96c57782bdb9a9aaded022daa3caf21d0f2416fec5e36cbb7449d"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-SURVEY_DONE.png",
+          "sha256": "0a20fc4f7a577cc84f6637edee42b1c5f82f7b21dee3d928a02a647240ff3b1e"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_SURVEY_DONE",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_SURVEY_DONE",
+      "design_input": {
+        "path": "ui/designs/R2_SURVEY_DONE.md",
+        "sha256": "435c44cdc5f4f2f92ae263a3594fdb594742eb47af1fd117db4abb8218513f28"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_SURVEY_DONE-critique.md",
+        "sha256": "76aa75cf3fdd873fabb621157d08008b753a4f34305047a24188ea2f60a0df08"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY_DONE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/4"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-SURVEY_DONE.png",
+          "sha256": "c2ea2a3bd979fcdc1aa7af7032010349296e48a065fbaf394fb83031e7a64e46"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-SURVEY_DONE.png",
+          "sha256": "e2ba9d812163175f35162cfd6ca56ad483b05b131568712e24a342855583e4ba"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-SURVEY_DONE.png",
+          "sha256": "0f88615db9dd79793efaf3d6a3ad4c2a4b0b99637d86b189875f56546b5281a4"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-SURVEY_DONE.png",
+          "sha256": "22f4ee42a036ca5a25919156f0c0203823b42a90f3354f17146c7b54fc5dd749"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-SURVEY_DONE.png",
+          "sha256": "c936762611b3b3996401ed836d67a86126036d3037de0d20285e2aba82e4a241"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-SURVEY_DONE.png",
+          "sha256": "e2a0067d056ea43e4b2e8edf6b6d3ac7bf55c82179a4e58e092e4979fb218107"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_LEAD",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_LEAD",
+      "design_input": {
+        "path": "ui/designs/R2_LEAD.md",
+        "sha256": "76e6962abeca13f99bf2986ce044da171c8395dc4e6d72bef7bf07bf04bd08bd"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_LEAD-critique.md",
+        "sha256": "a1701ba7e4c8fc3138c1621d5db87a74b42c6cfe723f1e86ef5a8482c39faf8e"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/5"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-LEAD.png",
+          "sha256": "8eec6bd863ed7588e31439fd692ba507789997249cb27f99448b7934f57f6a9d"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-LEAD.png",
+          "sha256": "2a3ba8b28649e22cca39a8df85e108ee2b73ba70649d904bcda85b1a96232c8d"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-LEAD.png",
+          "sha256": "6198475607393358d9038b74a88d1c693d36fff1772191e38b5f05a0c272edd6"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-LEAD.png",
+          "sha256": "a3a9a4bf5c1ad76e5815209f2f63a083dfa2da133db51e1249a3c5844e2c3f85"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-LEAD.png",
+          "sha256": "6be4df88e4162655db1bc5383b281268b766d9160618bbc2be7c60672df686f8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-LEAD.png",
+          "sha256": "80a22517c04117a200ac984e56d5c933dbacfdc68e37cbb5042f0f353d069cf0"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_LEAD",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_LEAD",
+      "design_input": {
+        "path": "ui/designs/R2_LEAD.md",
+        "sha256": "76e6962abeca13f99bf2986ce044da171c8395dc4e6d72bef7bf07bf04bd08bd"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_LEAD-critique.md",
+        "sha256": "a1701ba7e4c8fc3138c1621d5db87a74b42c6cfe723f1e86ef5a8482c39faf8e"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/5"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-LEAD.png",
+          "sha256": "7fa07eeca445b60c27fb749da06c95975843a558e5057efd549beb7eda3182e4"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-LEAD.png",
+          "sha256": "4de6c3df6e4e1258876fed3ee5646be1105c89b88e6355f61f5ccf6be3d7ecbd"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-LEAD.png",
+          "sha256": "095943411a9e93610e9409cbed35c13fa3d762fd5cd6d005e22b329dbf1ff211"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-LEAD.png",
+          "sha256": "76f0a33ffaed4bc1908b6f733dedbe1171682e5ae5b3c2e589d3826cccaa96d0"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-LEAD.png",
+          "sha256": "e9307796e4c6677e1ae80f78f58b249687e1dbc0cac3c2ec0576beefbb6afa9e"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-LEAD.png",
+          "sha256": "a92f4170726ea241438b1aa62a7e6b9e8a14b3d056eb5b9593bd5ba41de4ac5a"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_LEAD_DONE",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_LEAD_DONE",
+      "design_input": {
+        "path": "ui/designs/R2_LEAD_DONE.md",
+        "sha256": "c1b055a89b8942d060242b79b40cb716d81b04d867600537758d27d7064fc41b"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_LEAD_DONE-critique.md",
+        "sha256": "d5edac25367d2f0a6b2c02fedaef4527483f05bd86f23a35fa1bafb5a6cd7082"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD_DONE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/6"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-LEAD_DONE.png",
+          "sha256": "a72574642aaa298aeab3de3af69433a8f2db3997267d75245ca007c7d6c3736a"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-LEAD_DONE.png",
+          "sha256": "02a47c01a7cb426e3b1c6d999b205804221b9f8979f0ede85869134936018cc6"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-320-LEAD_DONE.png",
+          "sha256": "9f7f6ad3b20774d3cf5b4bc58b40f661ee9d42bdc7fd4728089dfd9185d59778"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-390-LEAD_DONE.png",
+          "sha256": "6ccad1ff9f4ce04c95a680951c7f5ad75c2328002effa3df6041118b498d1aa1"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-393-LEAD_DONE.png",
+          "sha256": "12cec71823da83c8c1dd770f56c3d536b6d95973c1f7648abc61eeb169f99cfa"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/recording-1280-LEAD_DONE.png",
+          "sha256": "c310f9f9c7d9cb3099b69e481fe602bb1278f149f88b0fe8efaf9d845b27ae1e"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_LEAD_DONE",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_LEAD_DONE",
+      "design_input": {
+        "path": "ui/designs/R2_LEAD_DONE.md",
+        "sha256": "c1b055a89b8942d060242b79b40cb716d81b04d867600537758d27d7064fc41b"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_LEAD_DONE-critique.md",
+        "sha256": "d5edac25367d2f0a6b2c02fedaef4527483f05bd86f23a35fa1bafb5a6cd7082"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD_DONE-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/6"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+      "runtime_mode": "reviewer direct local memory preview",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-LEAD_DONE.png",
+          "sha256": "a776736b31b0ba8005080fc21507de7ef16c5324096f167fa25a84d8ae60ff13"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-LEAD_DONE.png",
+          "sha256": "f9ca795907a1612ba92cce3b031eb4cdad85d84caa3444b6386cc0691b30bd8c"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-320-LEAD_DONE.png",
+          "sha256": "a9a653ee9d8054d3b40d64931dc5853a2f037c33e4501c9ff60454bb31635d50"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-390-LEAD_DONE.png",
+          "sha256": "270f7a434e5b846dd5d5b5c86c99d52272ab5999d1f8e8961dad8ab9268064e8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-393-LEAD_DONE.png",
+          "sha256": "30b7eda1eddb8deaef79aec17c053c627fbaecc20e3169fc224418cdd68c81d8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-runtime/homeflow-1280-LEAD_DONE.png",
+          "sha256": "ed65e4df3c2f9e7ebb0ef69dba250669478e9780ee9665e5ef9f1284034ad864"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_RECOVERY",
+      "route": "/beta/r2/recording",
+      "shared_screen_id": "R2_RECOVERY",
+      "design_input": {
+        "path": "ui/designs/R2_RECOVERY.md",
+        "sha256": "563b56dd728bec9d2573085876e4f6f4a434253ae1f943df0b2832325866db0a"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_RECOVERY-critique.md",
+        "sha256": "c0e9733d8ffde417465a919d3df8e71dcf6491cd45071294b9bad3766c9673c7"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_RECOVERY-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/7"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "runtime_mode": "author actual isolated API/DB; reviewer visual/hash review",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-390x844.png",
+          "sha256": "ef5d310198da8586e0c5b58b347c28508583e7bcbc077ca22869f7ad5ea40431"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_RECORDING_RECOVERY-320x568.png",
+          "sha256": "a77c17aede8245eea979157d71bac822c635a6fc7b88fad4615d51018b342ab0"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent.png",
+          "sha256": "24715dfa2dbb91b7ab5e12830704ecba3efb3f66c053a110d468f63d3adf71ef"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent-cta-viewport.png",
+          "sha256": "ceb8bea1798c8771f0e0096e191c03aa908446f04de459ddb4926da2ec3ddf6e"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent.png",
+          "sha256": "558b92f41bafae19e55fab17ddb99686625ce7e55da6400a86bd0c257069a80f"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent-cta-viewport.png",
+          "sha256": "fdd075f3959c902bdc2e341fda7dd7d775c94fd4613df39d427ed98d7368417e"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent.png",
+          "sha256": "4ad746ea1325a7f38d7344c21daab484edd99256f534fab4a996f618912ee202"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent-cta-viewport.png",
+          "sha256": "d4158b9252c4fe5d0f5c6510197cd4bb97f7d115203a98b7e2a3b366feaeaebd"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent.png",
+          "sha256": "ad8f3a549ccb21363fa53639c846faa897975b5a6b3c217fe0a434457bd7c27c"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent-cta-viewport.png",
+          "sha256": "6060aaeae5aabb30672ae4c51529e167f6208a4a39f000f80ae5e7facf0307c5"
+        }
+      ],
+      "topic": "recording",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_RECOVERY",
+      "route": "/beta/r2/homeflow",
+      "shared_screen_id": "R2_RECOVERY",
+      "design_input": {
+        "path": "ui/designs/R2_RECOVERY.md",
+        "sha256": "563b56dd728bec9d2573085876e4f6f4a434253ae1f943df0b2832325866db0a"
+      },
+      "critique_input": {
+        "path": "ui/designs/critiques/R2_RECOVERY-critique.md",
+        "sha256": "c0e9733d8ffde417465a919d3df8e71dcf6491cd45071294b9bad3766c9673c7"
+      },
+      "independent_report_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_RECOVERY-authority.md.txt",
+      "historical_report_observation": "pass",
+      "report_record": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+        "json_pointer": "/screens/7"
+      },
+      "normal_evidence_sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+      "enlarged_evidence_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "runtime_mode": "author actual isolated API/DB; reviewer visual/hash review",
+      "capture_refs": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png",
+          "sha256": "3901a8520ae4d699ca077aa552f67467ef939f0873db77dc33ade6fe1df10651"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/provided-real-recovery/R2_HOMEFLOW_RECOVERY-320x568.png",
+          "sha256": "c805a81a09f4222f1e9ee29ddc655f2a34d39e11495b3aa02c35fd37541b46b1"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent.png",
+          "sha256": "d00411f1e19b0e4b31a5cb0cb8a144f8b4a93d7cd2d1f4ad1318bbefc7d6fdd5"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent-cta-viewport.png",
+          "sha256": "05f825b7e19bda8719e1150f0fa5a4893d051e512580deac0a1edb1bd115f814"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent.png",
+          "sha256": "3049b9a76cb3c79b09a44d914016e811115a18376b5b830a1f3a26250f59876a"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent-cta-viewport.png",
+          "sha256": "f9f11ca1c2d7c3a89f679995117b355f41e62aad7a867522f92403dd196bb00d"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent.png",
+          "sha256": "318acb35b5d3a03d6d62f5238448f5422fdc06be8f42abd7ce0b91dd1272dba5"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent-cta-viewport.png",
+          "sha256": "1dad9862c098a6e5ecff5c69117f71e1bb79cd3a8fbfe3bacdc2db9dc89ad6e3"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent.png",
+          "sha256": "e02ef937681f7f0d9b5352b35c6fd76d2ee42c9916ae9fe43b891e3c1358fb3e"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-002-recheck/provided-r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent-cta-viewport.png",
+          "sha256": "6291dce6650b5eda64d1fa6718be61772b52e64a5f83813ee9d812a2a8535be8"
+        }
+      ],
+      "topic": "homeflow",
+      "expected": "해당 canonical 화면에 도달하여 승인 정보구조를 표시",
+      "observed": "원 precheck의 실제 캡처와 상태 관찰 참조",
+      "result": "historical precheck pass"
+    }
+  ],
+  "fix_screen_observations": [
+    {
+      "topic": "recording",
+      "failure": "NETWORK_ERROR",
+      "edit": "email",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "PASS",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": true,
+          "restoreExplicitAndUnchecked": true,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 12
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/0"
+      }
+    },
+    {
+      "topic": "recording",
+      "failure": "NETWORK_ERROR",
+      "edit": "consent",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "not-run",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": false,
+          "restoreExplicitAndUnchecked": false,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 9
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/1"
+      }
+    },
+    {
+      "topic": "recording",
+      "failure": "LEAD_CAPTURE_UNAVAILABLE",
+      "edit": "email",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "PASS",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": true,
+          "restoreExplicitAndUnchecked": true,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 12
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/2"
+      }
+    },
+    {
+      "topic": "recording",
+      "failure": "LEAD_CAPTURE_UNAVAILABLE",
+      "edit": "consent",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "not-run",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": false,
+          "restoreExplicitAndUnchecked": false,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 9
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/3"
+      }
+    },
+    {
+      "topic": "homeflow",
+      "failure": "NETWORK_ERROR",
+      "edit": "email",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "PASS",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": true,
+          "restoreExplicitAndUnchecked": true,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 12
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/4"
+      }
+    },
+    {
+      "topic": "homeflow",
+      "failure": "NETWORK_ERROR",
+      "edit": "consent",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "not-run",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": false,
+          "restoreExplicitAndUnchecked": false,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 9
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/5"
+      }
+    },
+    {
+      "topic": "homeflow",
+      "failure": "LEAD_CAPTURE_UNAVAILABLE",
+      "edit": "email",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "PASS",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": true,
+          "restoreExplicitAndUnchecked": true,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 12
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/6"
+      }
+    },
+    {
+      "topic": "homeflow",
+      "failure": "LEAD_CAPTURE_UNAVAILABLE",
+      "edit": "consent",
+      "committed_receipt": false,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "not-run",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": false,
+          "restoreExplicitAndUnchecked": false,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 10,
+        "request_response_observations": 9
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/7"
+      }
+    },
+    {
+      "topic": "recording",
+      "failure": "NETWORK_ERROR",
+      "edit": "email",
+      "committed_receipt": true,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "PASS",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": true,
+          "restoreExplicitAndUnchecked": false,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 6,
+        "request_response_observations": 10
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/8"
+      }
+    },
+    {
+      "topic": "homeflow",
+      "failure": "NETWORK_ERROR",
+      "edit": "email",
+      "committed_receipt": true,
+      "expected": "원 요청 불변·편집 draft 분리·명시 접수 확인/복원·확정 응답 후 완료",
+      "observed": {
+        "immutable_email_and_event": true,
+        "reconnect_without_background_lead": "PASS",
+        "ui_assertions": {
+          "initialFailureRecoveryVisible": true,
+          "editDidNotSubmit": true,
+          "receiptCheckRetainedDraft": true,
+          "restoreExplicitAndUnchecked": false,
+          "confirmedDoneVisible": true
+        },
+        "clicks": 6,
+        "request_response_observations": 10
+      },
+      "result": "PASS",
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386",
+        "json_pointer": "/9"
+      }
+    }
+  ],
+  "current_actual_run": {
+    "run_id": "hcg_74053_7748de",
+    "artifact_directory": "2026-09-11T05-19-39-943Z",
+    "command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+    "captured_at": "2026-09-11T05:20:15.542Z",
+    "completed_at": "2026-09-11T05:23:22.816Z",
+    "environment": "isolated-integration",
+    "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "captured_source_sha": null,
+    "source_identity": "At capture: baseline783 plus uncommitted file hashes. Later compared to code commit; not execution of that later commit.",
+    "matched_later_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "result": "PASS",
+    "checks": 28,
+    "case_groups": 26,
+    "trace_observations": 1316,
+    "screenshot_records": 115,
+    "unique_png_files": 113,
+    "parsed_response_envelopes": 208,
+    "count_meaning": "observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded",
+    "source": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/source-manifest.json",
+      "sha256": "f901898dc98fcdf0b0d7dff848af31efc786c4cdd2395bb508668cc03552cc03"
+    },
+    "result_ref": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+      "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+    },
+    "observations_ref": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+      "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+    },
+    "manifest": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/artifact-manifest.json",
+      "sha256": "06be0cd9347e87ad2818315f686149f938ae4c3b7b3e07dc7864d8f2cf6af8dc"
+    },
+    "cleanup": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/cleanup.json",
+      "sha256": "e454e6933bd3cfc70c8572c75efa329a8791dddc92e8367e99a3c82c76eafafb"
+    },
+    "parity": {
+      "verification": "read-only SHA256 comparison of captured snapshotFiles with git cat-file at exact later code commit",
+      "tracked_files_compared": 1869,
+      "mismatches": 0,
+      "generated_not_tracked": [
+        "next-env.d.ts"
+      ],
+      "captured_snapshot_total": 1870,
+      "harness_caveat": "scenario/helper hash match. Runner changed only default option dispatch after capture; full invocation used explicit --lead-edit.",
+      "dispatch_diff": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/default-dispatch.diff",
+        "sha256": "3628cd7f0e0c75d17828df3f5653bd69d9492562c6d9e948d66dfcb0518a95c1"
+      },
+      "dispatch_unit_log": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/verification.log",
+        "sha256": "a471ecc69f590023cf98e33410fb1b821c951e2008b9eecd670040fe690f80be"
+      }
+    },
+    "limitations": [
+      "실제503/provider장애 주입 아님: unreceived 첫 송신을 브라우저에서 중단; 이후422/200/DB는 실제",
+      "mock provider19; 실제 provider/실기기/운영activation 미실행",
+      "115 screenshot records contain two repeated names;113 unique retained PNG.",
+      "독립 Stage5/final authority approval pending"
+    ]
+  },
+  "current_actual_changed_screen_observations": [
+    {
+      "topic": "recording",
+      "canonical_screen_ids": [
+        "R2_RECORDING_LEAD",
+        "R2_RECORDING_LEAD_DONE",
+        "R2_RECORDING_RECOVERY"
+      ],
+      "expected": "편집 draft와 이전 요청을 분리하고 명시복원/접수확인 후 확정 완료",
+      "observed": "실제 미접수422→명시복원→같은event200와 이미commit된응답유실→접수200 경로",
+      "result": "author actual PASS; independent review pending",
+      "run_id": "hcg_74053_7748de",
+      "trace": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+        "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+      },
+      "case_id_filters": [
+        "recording-s5-lost",
+        "recording-s5-unreceived"
+      ],
+      "captures": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/recording-s5-lost-edited-recovery.png",
+          "sha256": "560c90864b88252ad7e3250fb87e0d623f2812797cdbdef5fdcd0710413768ca"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/recording-s5-lost-done.png",
+          "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/recording-s5-unreceived-edited-recovery.png",
+          "sha256": "21d0fb246b808d0185aa45784c6dd8f045ced5076500fc7d9cce5ce8b8b07d34"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/recording-s5-unreceived-done.png",
+          "sha256": "3f2a127835c57260ae05e96586db324f7f2138f2de061e336394239297ce609a"
+        }
+      ]
+    },
+    {
+      "topic": "homeflow",
+      "canonical_screen_ids": [
+        "R2_HOMEFLOW_LEAD",
+        "R2_HOMEFLOW_LEAD_DONE",
+        "R2_HOMEFLOW_RECOVERY"
+      ],
+      "expected": "편집 draft와 이전 요청을 분리하고 명시복원/접수확인 후 확정 완료",
+      "observed": "실제 미접수422→명시복원→같은event200와 이미commit된응답유실→접수200 경로",
+      "result": "author actual PASS; independent review pending",
+      "run_id": "hcg_74053_7748de",
+      "trace": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+        "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+      },
+      "case_id_filters": [
+        "homeflow-s5-lost",
+        "homeflow-s5-unreceived"
+      ],
+      "captures": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/homeflow-s5-lost-edited-recovery.png",
+          "sha256": "b8ac267d19f21c09ddb74c15fc68204e6d821a396023bde655b12ead43ade9e6"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/homeflow-s5-lost-done.png",
+          "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/homeflow-s5-unreceived-edited-recovery.png",
+          "sha256": "ed490191cddd9704daac685ef3a4563504736d0add9aa2b6e55c6a78f20f7b39"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/homeflow-s5-unreceived-done.png",
+          "sha256": "84e08a2a1044d13f5b09e2b03758d1198a3a56832335be4eae0b1c2cc761eab1"
+        }
+      ]
+    }
+  ],
+  "historical_review_boundary_before_recheck": {
+    "public_stage5": "request_changes",
+    "required_finding": "R2-S5-001",
+    "finding_reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "finding_source": "독립 Stage5 원작성 결과를 repo-local로 이식한 원문",
+    "repair_reverification": "author route-mocked10 and actual28 PASS; independent exact-head recheck pending",
+    "final_product_design_authority": "pending",
+    "stage6": "pending",
+    "design_status": "pending-review",
+    "ready_or_merge_approved": false,
+    "activation_or_deployment_approved": false,
+    "stage5_result": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401"
+    },
+    "stage5_reviewed_at": "2026-09-11T04:49:03.871510+00:00",
+    "requested_repair_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77"
+  },
+  "stage5_recheck": {
+    "verdict": "approve",
+    "required_fix_ids": [],
+    "scope": "public_stage5 only",
+    "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c"
+    },
+    "report": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-report.md",
+      "sha256": "b30b11c544e6472a871c85fefbb184f1eb17054727f22aa686daea8e4dc39224"
+    },
+    "input_six_json_content_review": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c",
+      "json_pointer": "/six_json_review"
+    },
+    "historical_reviewed_input_sha256": "1ecad9a3eaa4d48893ab744c227c5629bf15a36397e99fd919895f61f8e87866",
+    "current_projection_delta": "이 JSON은 검토 완료 후 역사경로·판정연결·고정미리보기 출처만 갱신했다. 검토받은 input bytes와 동일하다고 주장하지 않는다.",
+    "strict_presence_validation": {
+      "result": "pass",
+      "scope": "reviewer isolated report/file-presence fixture, not live OMO runtime",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/strict-evidence-validation.json",
+        "sha256": "10607517f89e71016f801c7d25782474a36633cc344693671737ef36d4f53444"
+      }
+    },
+    "original_request_changes_preserved": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401"
+    }
+  },
+  "observation_review_timing": "기존 관찰행/run의 pending문구는 당시 수집상태다. 현재 final authority 판정은 current_review_boundary/final_authority를 따른다. 기존전체gate실패와ManualOnly는 변경하지 않는다.",
+  "stable_production_preview": {
+    "run_id": "r2-s5-production-preview-62eff252",
+    "environment": "preview-mock",
+    "submode": "fixed production build, memory-only, unmodified actual server page",
+    "command": "author owned-copy production build and local preview verification; archived scripts retained as .mjs.txt",
+    "captured_source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "checked_at": "2026-09-11T05:47:01.871Z",
+    "build_id": "ojaiIGyjDlOMvWFrlUvf9",
+    "source_file_count": 2465,
+    "source_tree_sha256": "ad80ffc80d83bf017391eaf3a2da825b59bf069a3d7cc1976bddc0498f0c79ed",
+    "compiled_file_count": 830,
+    "compiled_tree_sha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+    "compiled_tree_mismatches_after_browser": 0,
+    "result": "PASS",
+    "cases": 6,
+    "post_requests": 0,
+    "local_session_indexeddb_entries": 0,
+    "external_requests": 0,
+    "page_errors": 0,
+    "db_calls": 0,
+    "provider_calls": 0,
+    "actual_server_page": true,
+    "fixture_page_override": false,
+    "origin": "http://127.0.0.1:3126",
+    "origin_status": "author-maintained preview; this metadata task did not restart or probe server",
+    "source": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/source-manifest.json",
+      "sha256": "92cb4fa5b9b255b3c7e14fe47862bb33ff117d6e1fcfdd82fe117db575b4129b"
+    },
+    "build_result": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/build-result.json",
+      "sha256": "9096e3f51a2a969e4e4f6ee4c5e0bf34c6e63c5b97e74371e693feaf22c82943"
+    },
+    "verification": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/verification.json",
+      "sha256": "bc719e85929501e13426c3e04066944bcaa44a57d3198b344dae19193c65c84b"
+    },
+    "headers": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/headers.json",
+      "sha256": "26530628ff7e707d4a2158140d26410778e30eeb9475179a75f1ee43435c9c7f"
+    },
+    "compiled_parity": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/compiled-tree-after-browser.json",
+      "sha256": "87badcd818204a259a698a32e4b702539b3d75b7c4d76a47cbdf74f1d7d7821c"
+    },
+    "import": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/IMPORT.md",
+      "sha256": "d9ca9c86b6c11a540ec26a207dde4560df86078cc489a2d86a09a11fe96feaff"
+    },
+    "instructions": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/README.md",
+      "sha256": "396409ac91778589bf90c2d44a91c4afa756dd3e7dd12e194fa3d0983985b3ca"
+    },
+    "limits": [
+      "각3활동×2topic 단독 완료는 memory-only이며 reload시초기화",
+      "uncertain receipt/편집복원은 이 preview에서 실행하지 않음; route-mocked10/actual28과 별도",
+      "실제 API/DB/provider/물리기기/운영activation 근거가 아님",
+      "이후 metadata commit에서 제품을 재빌드했다고 주장하지 않음"
+    ]
+  },
+  "historical_review_boundary_before_final_authority": {
+    "public_stage5": "approve",
+    "status": "complete",
+    "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "reviewed_at": "2026-09-11T05:49:31.343976+00:00",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "required_fix_ids": [],
+    "closed_finding_ids": [
+      "R2-S5-001"
+    ],
+    "stage5_result": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c"
+    },
+    "repair_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "final_product_design_authority": "pending",
+    "stage6": "pending",
+    "design_status": "pending-review",
+    "ready_or_merge_approved": false,
+    "activation_or_deployment_approved": false
+  },
+  "final_authority": {
+    "task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+    "review_scope": "final_authority_gate",
+    "reviewed_metadata_sha": "1a51971262e758896e725af31f104f42424cff78",
+    "reviewed_product_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "product_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "reviewed_at": "2026-09-11T06:11:23.931Z",
+    "verdict": "approve",
+    "authority_verdict": "pass",
+    "required_fix_ids": [],
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+      "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679"
+    },
+    "report": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-report.md",
+      "sha256": "bae54fee4abae04ad4e0b78d48433821152e170ae272e3272b57f387a1700fa3"
+    },
+    "metadata_comparison": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/metadata-comparison.json",
+      "sha256": "573fb95403ee26567cfdc4ad5e99bb0c626cb5b8ea2ed7b75c2e718b3eb9901b"
+    },
+    "metadata_hash_audit": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/metadata-helper-result.json",
+      "sha256": "b7de3ac6f5f0e81b86f57daebfe01dcbb7a4b4359469b2f0b112a8e519b5829d"
+    },
+    "package_validation": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/package-validation.json",
+      "sha256": "b7acd97d1f12e191ed822c1d30debbcb3c93db2c789f254884ff6d9421587a7c"
+    },
+    "authorization_projection": "조정자가 final authority pass를 확인하고 Design Status confirmed 및 accept-r2-authority checked만 명시 허용했다.",
+    "current_projection_note": "이후6JSON은 역사경로/새판정/캡처출처만 갱신. 검토받은1a519 input bytes와 동일하다는 주장이나 새제품실행/전체gate면제는 없다.",
+    "remaining_gates": [
+      "global mobile geometry4 failures",
+      "global desktop visual10 failures",
+      "meal-detail pixel difference unclassified and candidatePNG not retained",
+      "separate Stage6",
+      "physical device/in-app keyboard/screenreader",
+      "actual provider/email",
+      "public privacy review and operating activation"
+    ]
+  },
+  "final_authority_direct_capture": {
+    "run_id": "final-authority-01a08f0c-direct",
+    "actor_task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+    "command": "Independent reviewer capture script against provided fixed3126 preview; this projection did not execute browser",
+    "environment": "preview-mock",
+    "submode": "provided production build, built-in memory preview",
+    "started_at": "2026-09-11T06:05:53.917Z",
+    "finished_at": "2026-09-11T06:06:04.143Z",
+    "captured_source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "metadata_reviewed_sha": "1a51971262e758896e725af31f104f42424cff78",
+    "product_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "build_id": "ojaiIGyjDlOMvWFrlUvf9",
+    "compiled_tree_sha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+    "compiled_provenance": "provided author attestation; not recomputed by final authority",
+    "result": "completed reviewer direct capture; design verdict recorded separately",
+    "captures": 88,
+    "representative_images_visually_reviewed_by_authority": 28,
+    "get_requests": 238,
+    "post_requests": 0,
+    "external_requests": 0,
+    "storage_cookie_entries": 0,
+    "pageerrors": 0,
+    "browser": "145.0.7632.6",
+    "source": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/capture-log.json",
+      "sha256": "e6f84c36d8ee013e45624e77a671ddc9dd7b80960062a0129bc575eb2bbe8e75"
+    },
+    "authority_scope": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+      "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+      "json_pointer": "/direct_evidence"
+    },
+    "limits": [
+      "lead→example→survey 한 순서/topic/width, lead단독·완료재열람. 전체6순서 또는 실제저장 재실행 아님",
+      "RECOVERY는 제공route-mocked/actual자료 검토; reviewer 직접오류/DB 재실행 아님",
+      "최종authority는 compiled tree hash를 재계산하지 않고 제공 attestation을 검토",
+      "메타데이터만 갱신한 현재 작업의 새캡처가 아님"
+    ]
+  },
+  "historical_stage5_authority_report_revision": {
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/authority-report-link-revision.json",
+      "sha256": "6314d2cb5cab41ae81629209ff908527c1a54d97678072db89f0776a6090dade"
+    },
+    "reviewed_input_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "revision_scope": "reviewer added sixJSON links and explicit Stage5 addenda; historical bodies retained",
+    "reports": [
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_MENU-authority.md",
+          "sha256": "1cd467adface962e183a365d7df716e519f593e28736944993a19976d315865d"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_MENU-authority.md.txt",
+          "sha256": "aede1b50c673757d80eadd7dc651a42af4063caf2920f7a9149fc4f6bdd0c1ac"
+        },
+        "added_refs": [
+          "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+          "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+          "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+          "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+          "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+          "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json"
+        ],
+        "stage5_addendum": true
+      },
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_EXAMPLE-authority.md",
+          "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE-authority.md.txt",
+          "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d"
+        },
+        "added_refs": [],
+        "stage5_addendum": false
+      },
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+          "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE_DONE-authority.md.txt",
+          "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499"
+        },
+        "added_refs": [],
+        "stage5_addendum": false
+      },
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_SURVEY-authority.md",
+          "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY-authority.md.txt",
+          "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772"
+        },
+        "added_refs": [],
+        "stage5_addendum": false
+      },
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_SURVEY_DONE-authority.md",
+          "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY_DONE-authority.md.txt",
+          "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458"
+        },
+        "added_refs": [],
+        "stage5_addendum": false
+      },
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_LEAD-authority.md",
+          "sha256": "4fcb186ac114b7d16513342fcbe3ecf1de155e808853c920d893943d9fa1e08a"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD-authority.md.txt",
+          "sha256": "ce0f1495da722fa1e06e77a003234a829e5e3e3e1c66186d0af967d3f5b92eff"
+        },
+        "added_refs": [
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-200-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-200-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-200-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-200-edited-recovery.png"
+        ],
+        "stage5_addendum": true
+      },
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_LEAD_DONE-authority.md",
+          "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD_DONE-authority.md.txt",
+          "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799"
+        },
+        "added_refs": [],
+        "stage5_addendum": false
+      },
+      {
+        "active_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_RECOVERY-authority.md",
+          "sha256": "32e8099efca404323d2fef1b66f1e554a03f57f00f7e4da7a9db707a43cbdb6f"
+        },
+        "immutable_pre_link_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_RECOVERY-authority.md.txt",
+          "sha256": "f79689130fa79125fff17cceb54ff8de40037df49d7be600e331091c3225a0e9"
+        },
+        "added_refs": [
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-200-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-200-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-200-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-100-edited-recovery.png",
+          "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-200-edited-recovery.png"
+        ],
+        "stage5_addendum": true
+      }
+    ]
+  },
+  "current_authority_report_revision": {
+    "actor_task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+    "scope": "new independent final authority reports; previousStage5 originals retained",
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+      "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679"
+    },
+    "reports": [
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_MENU-authority.md",
+          "sha256": "f78a320521504524217da8a9c980e7ea8c25d8345d2bfe0a44b94ee175afe4d1"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_MENU-authority.md",
+          "sha256": "1cd467adface962e183a365d7df716e519f593e28736944993a19976d315865d"
+        }
+      },
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+          "sha256": "ac730e6555fa9a7c05ea79a7f1441e16dc5a47978f1acd9e4e7b281665457957"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_EXAMPLE-authority.md",
+          "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d"
+        }
+      },
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+          "sha256": "2cf54bda416eed88ec01ffd48a6218c7bee22ba69162025653308468801a24a5"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+          "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499"
+        }
+      },
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_SURVEY-authority.md",
+          "sha256": "afab1998879c515105876a9407a583fb4b0f7f00d45013555c7ccfc26389fe09"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_SURVEY-authority.md",
+          "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772"
+        }
+      },
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+          "sha256": "9b0f967b90a19cd5dc9182fddb319fcacb27d6a96bd003db4e088d37558a9b6e"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_SURVEY_DONE-authority.md",
+          "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458"
+        }
+      },
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_LEAD-authority.md",
+          "sha256": "69dedc94ca9c0bf28ee7626ebf304662c1c182f113a879fdd1f83beffb4bf0db"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_LEAD-authority.md",
+          "sha256": "4fcb186ac114b7d16513342fcbe3ecf1de155e808853c920d893943d9fa1e08a"
+        }
+      },
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+          "sha256": "a76d2735bc501cc7d8c9aa16985a23411fa3b67a23c8ea2b467a208f18a62366"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_LEAD_DONE-authority.md",
+          "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799"
+        }
+      },
+      {
+        "active_final_report": {
+          "path": "ui/designs/authority/R2_RECOVERY-authority.md",
+          "sha256": "21af50ec1eb6fb39b7c5b1d499a3eb2da9e2c72354edd744c44ff698cd03b06b"
+        },
+        "immutable_previous_stage5_report": {
+          "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_RECOVERY-authority.md",
+          "sha256": "32e8099efca404323d2fef1b66f1e554a03f57f00f7e4da7a9db707a43cbdb6f"
+        }
+      }
+    ]
+  },
+  "final_authority_screen_observations": [
+    {
+      "canonical_screen_id": "R2_RECORDING_MENU",
+      "topic": "recording",
+      "shared_screen_id": "R2_MENU",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/0"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-MENU-initial.png",
+          "sha256": "72c4082732e4d76c4a7eb954e1c8804bb726613368deb61bb0b2735ae6f8b85a"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-MENU-initial.png",
+          "sha256": "f6eb15653fe8c90dcf3b9cfefc2214f055652683f9fd6adebc444aa53aa2b2b1"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-MENU-initial.json",
+          "sha256": "0ac95ba2f25100ff006111064027d758179c1597d80dfbc8d50059f17f7ccd2c"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-MENU-initial.json",
+          "sha256": "2e82b16815589143ccd3575f74fefd41a4777339d3003411676539eacc547eb0"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_MENU",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_MENU",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/0"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-MENU-initial.png",
+          "sha256": "ae6d4bf869ae357cb67426257bfaf046e2563333aa63cb6546a83d15e99279dc"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-MENU-initial.png",
+          "sha256": "4735ff59c775c6d38b84053ac4d8b6a3ff85768c0cb33016ef49e171d061b2d4"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-MENU-initial.json",
+          "sha256": "79011265c736a0caa0f0f857da7468809ac6bde2934513241c17159cef9071c8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-MENU-initial.json",
+          "sha256": "e0c282a7019fec4e2e310c90373e7967fda47797dc5972ab19fcafb5fd3f356d"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_EXAMPLE",
+      "topic": "recording",
+      "shared_screen_id": "R2_EXAMPLE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/1"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-EXAMPLE-3-full.png",
+          "sha256": "9831dc1910780b96c4ea6c083df9a8c992d32125428b6b0cdbdb1040b4911321"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-EXAMPLE-3-full.png",
+          "sha256": "a126e816f57a73adb31e2bc6c5b0b0588bf6100c8926ae74fc6376e8911be639"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-EXAMPLE-3-full.json",
+          "sha256": "58428662a3fb40f5ea4c6326fa5c5d1c1838892eb16b86d421d43dd8cac7acea"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-EXAMPLE-3-full.json",
+          "sha256": "2e38c1c812c887cb4f6ea4d8cfbebc0882808a92cdfb29003f05bfb32379b598"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_EXAMPLE",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_EXAMPLE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/1"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-EXAMPLE-3-full.png",
+          "sha256": "fa517f17de0cd3d97628265ca19ed6eef0907a1e0e26219c1229e671be3f8acf"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-EXAMPLE-3-full.png",
+          "sha256": "f5c65628d66573979ab5b1392c388997fe280f6b1c2334d57a6ce5dd5401b3f0"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-EXAMPLE-3-full.json",
+          "sha256": "427fc76f451d265483e67a377f0869ebe5013b425e10eb32f5ae02bac4a85d42"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-EXAMPLE-3-full.json",
+          "sha256": "2bff91f8a0f2e43000469ef29f5d47c8416628359934d245e5594c87fb87dfeb"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_EXAMPLE_DONE",
+      "topic": "recording",
+      "shared_screen_id": "R2_EXAMPLE_DONE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/2"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-EXAMPLE_DONE-initial.png",
+          "sha256": "caab991dc820140ebc0fe82a7e256326d78426fafb0972a9e930099cc248af13"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-EXAMPLE_DONE-initial.png",
+          "sha256": "884d0a93bc15816a460fb70e0f7be4af3667160d0711c3cdfea554d4dcf57235"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-EXAMPLE_DONE-initial.json",
+          "sha256": "f8d48e9b90ed937c0bb493d83e187677e0af88c96f1316efc4788f88fa22a6e8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-EXAMPLE_DONE-initial.json",
+          "sha256": "4f7a8d42a28ac6d2f51afb1127f920103c57c204d9ad691efedc876600661a28"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_EXAMPLE_DONE",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_EXAMPLE_DONE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/2"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-EXAMPLE_DONE-initial.png",
+          "sha256": "d378da8bad850863698dce240705e1f47b89a24e206d4014b58d884874ae6de8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-EXAMPLE_DONE-initial.png",
+          "sha256": "16590f786da30024dbe83b70ea25f326c1d5bdc8c4012f527ae7b1adbd9590b1"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-EXAMPLE_DONE-initial.json",
+          "sha256": "46d14f6b0ecbd1aef8ee2c8a5f3cdfdf1c35d19b30ce5f5d494fed8380d998a8"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-EXAMPLE_DONE-initial.json",
+          "sha256": "70f5f0b5a04d3f251b6b2b968efea0a6600770b1604d75ce53b7342f713a6893"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_SURVEY",
+      "topic": "recording",
+      "shared_screen_id": "R2_SURVEY",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/3"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-SURVEY-1-full.png",
+          "sha256": "e872f7c7922974d2e047f113eceba0beec3170b359b17283a65e125c7ef30d39"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-SURVEY-1-full.png",
+          "sha256": "f063ad1f88a258b1ca29d37d4b51a3fd7a2f778639012c562b9b40ff5e1d4afb"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-SURVEY-1-full.json",
+          "sha256": "bb86a1674978a3df187276b78b58a60b3974ebe92d65fc38526913713a4da9e5"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-SURVEY-1-full.json",
+          "sha256": "3cfc1e135da25fd4751e76d59f71ca986c9e93a5b401f4aac78faf748637deaf"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_SURVEY",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_SURVEY",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/3"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-SURVEY-2-full.png",
+          "sha256": "19cddb62afef29a103deecc461405967ef8d0dcac12604d4ec4043f24f276730"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-SURVEY-4-full.png",
+          "sha256": "6b4d272c28a684ec366056f4ad9eadb301586f3c777a522712ff61fac5e2bfd3"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-SURVEY-2-full.json",
+          "sha256": "543204588b6d33e20c46b93c3a0e565a2d196000893b37711d2b3e11dea23d33"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-SURVEY-4-full.json",
+          "sha256": "5e93b9cb801308add6e21b853a47e4de268ea0844b71682e648090f2cee1a26c"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_SURVEY_DONE",
+      "topic": "recording",
+      "shared_screen_id": "R2_SURVEY_DONE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/4"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-SURVEY_DONE-initial.png",
+          "sha256": "4e845a2068a801d0b0fb44e07b90c8235ae76187538d635febf12fac6461ba81"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-SURVEY_DONE-initial.png",
+          "sha256": "3f34bf22c829457e3e2fd3de5c596e1a7365a34fe957ea8431278723b5fa34a5"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-SURVEY_DONE-initial.json",
+          "sha256": "18898fe819f0ecaee8e265c1cb7535d5f774b2497ab061591744d84411cc75e4"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-SURVEY_DONE-initial.json",
+          "sha256": "884cfc19ee3d978abc3c771a9399d5f80c007cffd7c375f5b78f34a6fa9136e1"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_SURVEY_DONE",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_SURVEY_DONE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/4"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-SURVEY_DONE-initial.png",
+          "sha256": "c2ea2a3bd979fcdc1aa7af7032010349296e48a065fbaf394fb83031e7a64e46"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-SURVEY_DONE-initial.png",
+          "sha256": "c8822db06ca8a14173fb7bcebdfc223ff6331bb8c57ba6d84a88bbbe88e40e60"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-SURVEY_DONE-initial.json",
+          "sha256": "a760a482f340c7e05de89bf094dcbdbdf9c9c90b2c445c8582a6658a7f71d748"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-SURVEY_DONE-initial.json",
+          "sha256": "79c33a3c9312752bd24d55e9513a6b6f6ca03bb395ff9620abc4ccb3470330f5"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_LEAD",
+      "topic": "recording",
+      "shared_screen_id": "R2_LEAD",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/5"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-LEAD-full.png",
+          "sha256": "b29dd138db29cd5ae3c34237b1082480e523eec95c84f71bbfe49765d302e1c1"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-LEAD-full.png",
+          "sha256": "25ebe6cd13bd73f82ade854355e7c3806d62f7693cc280ea5345e6b6f1797183"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-LEAD-full.json",
+          "sha256": "19582f0018f11bded0fb92dbc7a4a62ff2be0590f293af9bf6e1a94347120990"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-LEAD-full.json",
+          "sha256": "adbbd1c974e407754c9ab8bf1151f4650bdf61abd67c50544df3d36dd4bb4b5d"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_LEAD",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_LEAD",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/5"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-LEAD-full.png",
+          "sha256": "5d0574601cbd5918c31b35c99f86b5fddd5b334d2e705df21fd3230f4e2da188"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-LEAD-full.png",
+          "sha256": "5aa9ea227e454c2915866d821f49d178ec3f7d0c6d00766ab498f2b9eab16760"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-LEAD-full.json",
+          "sha256": "4bade8a4321e5994c7970e980de9c670f41de406111c0f9e8cf06ee46399c917"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-LEAD-full.json",
+          "sha256": "02808de509abb7e6bc4897fd4e1844d4937b52511d27cab2cee2ca30f1bd9676"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_LEAD_DONE",
+      "topic": "recording",
+      "shared_screen_id": "R2_LEAD_DONE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/6"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-LEAD_DONE-initial.png",
+          "sha256": "a72574642aaa298aeab3de3af69433a8f2db3997267d75245ca007c7d6c3736a"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-LEAD_DONE-initial.png",
+          "sha256": "609b865065bb319d9ba5f2d19873209d6b71c3493418b6a712e816f23599d176"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-390-LEAD_DONE-initial.json",
+          "sha256": "50b97801ec46e49135cda5a8d922ba101a71bb086576219f2fa8f4388cea6241"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/recording-320-LEAD_DONE-initial.json",
+          "sha256": "d7f36ff9c505b30a7dc2e2089a556587c5c8f40a61074e4691d3d78212ddd100"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_LEAD_DONE",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_LEAD_DONE",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "독립 final authority 직접 memory-preview 관찰",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/6"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-LEAD_DONE-initial.png",
+          "sha256": "a776736b31b0ba8005080fc21507de7ef16c5324096f167fa25a84d8ae60ff13"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-LEAD_DONE-initial.png",
+          "sha256": "83f84e9388c16d3a421f156a1dd1f7db6045a6238f136f789c1b50bf8bc97374"
+        }
+      ],
+      "metrics": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-390-LEAD_DONE-initial.json",
+          "sha256": "be677cf025688800db9907f651849cf1c136cb145015e21474282177cc309b3b"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct/homeflow-320-LEAD_DONE-initial.json",
+          "sha256": "fcca79673278b0cb0f0bc74f89d9498d76294ba4f10c0cd9d42915ec4f308b92"
+        }
+      ]
+    },
+    {
+      "canonical_screen_id": "R2_RECORDING_RECOVERY",
+      "topic": "recording",
+      "shared_screen_id": "R2_RECOVERY",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "제공 route-mocked 복구 PNG/측정과 실제API 자료를 독립 authority가 검토; 직접DB 재실행 아님",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/7"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-390-100-edited-recovery.png",
+          "sha256": "315ead1417ece7384a6a3a5043faa2be60064efa6002c732d4803a1ada183eeb"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-320-100-edited-recovery.png",
+          "sha256": "01f83b9ea0a3d17072d65741db34ebfe048e04cb5b8a1e16c81ec1c7d34553bb"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-390-200-edited-recovery-cta.png",
+          "sha256": "0e431bb2e84a9dd79de323038cf620e78125aff8df8955ff5b670f204d2f1366"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/recording-320-200-edited-recovery-cta.png",
+          "sha256": "6846d6acc82193844f49df54946e91c8d8ab3c376773e5b8e29df0825913cad9"
+        }
+      ],
+      "metrics": []
+    },
+    {
+      "canonical_screen_id": "R2_HOMEFLOW_RECOVERY",
+      "topic": "homeflow",
+      "shared_screen_id": "R2_RECOVERY",
+      "expected": "승인 R2 설계의 실제화면·상태·시각위계 확인",
+      "observed": "제공 route-mocked 복구 PNG/측정과 실제API 자료를 독립 authority가 검토; 직접DB 재실행 아님",
+      "result": "pass",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json",
+        "sha256": "3123d3014fd32c6fcea77644057e1a8db4fa2d9b230210b30824ef4bd97c3679",
+        "json_pointer": "/screen_results/7"
+      },
+      "screenshots": [
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-390-100-edited-recovery.png",
+          "sha256": "b3c34cd6a8aaa8466002ae7a0c49fa51a4995a5fc78a7a4ca668a52d3fc907b7"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-320-100-edited-recovery.png",
+          "sha256": "90c35d321a6187cf98bed65a0d201d6a534f2cfce89a3202bed0b74811de076f"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-390-200-edited-recovery-cta.png",
+          "sha256": "0e431bb2e84a9dd79de323038cf620e78125aff8df8955ff5b670f204d2f1366"
+        },
+        {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/provided-route-mocked/homeflow-320-200-edited-recovery-cta.png",
+          "sha256": "6846d6acc82193844f49df54946e91c8d8ab3c376773e5b8e29df0825913cad9"
+        }
+      ],
+      "metrics": []
+    }
+  ]
+}

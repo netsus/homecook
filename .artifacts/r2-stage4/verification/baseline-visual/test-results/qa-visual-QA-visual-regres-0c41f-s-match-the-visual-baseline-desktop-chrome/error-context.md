@@ -1,0 +1,62 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - link "무먹, 무엇을 먹든" [ref=e10] [cursor=pointer]:
+              - /url: /
+              - img [ref=e11]
+            - navigation "데스크탑 주요 메뉴" [ref=e12]:
+              - link "홈" [ref=e13] [cursor=pointer]:
+                - /url: /
+              - link "요리 계획" [ref=e14] [cursor=pointer]:
+                - /url: /planner
+              - link "식사 기록" [ref=e15] [cursor=pointer]:
+                - /url: /planner?segment=log
+              - link "팬트리" [ref=e16] [cursor=pointer]:
+                - /url: /pantry
+              - link "무먹 가이드" [ref=e17] [cursor=pointer]:
+                - /url: /about
+            - generic [ref=e18]:
+              - button "YouTube 추출 알림 없음" [ref=e19] [cursor=pointer]:
+                - img [ref=e20]
+              - generic [ref=e22]: JY
+          - status "서비스 준비 안내" [ref=e23]:
+            - generic [ref=e24]: 서비스 준비 중
+            - generic [ref=e26]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - heading "남은 요리 0개" [level=1] [ref=e30]
+              - paragraph [ref=e31]: 요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.
+            - link "다먹은 요리" [ref=e33] [cursor=pointer]:
+              - /url: /leftovers/ate?returnTo=%2Fleftovers%3FreturnTo%3D%252Fplanner%26returnSurface%3Dleftovers.list&returnSurface=leftovers.list
+          - region "남은요리 관리" [ref=e34]:
+            - heading "남은요리 관리" [level=2] [ref=e35]
+            - paragraph [ref=e36]: 기존 남은 요리 기록이에요. 중량·잔량 기록과 섞지 않고 따로 보여드려요.
+          - generic [ref=e37]:
+            - generic [ref=e39]: □
+            - heading "남은 요리가 없어요" [level=2] [ref=e40]
+            - generic [ref=e41]: 요리를 완료하면 여기에 저장돼요
+            - link "이전 화면으로 돌아가기" [ref=e43] [cursor=pointer]:
+              - /url: /planner
+          - region "중량·잔량 기록" [ref=e44]:
+            - heading "중량·잔량 기록" [level=2] [ref=e45]
+            - paragraph [ref=e46]: 요리 직후 음식 무게와 현재 남은 양을 따로 관리해요.
+            - paragraph [ref=e47]: 중량·잔량 기록이 없어요.
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - strong [ref=e51]: 무엇을 먹든
+          - generic [ref=e52]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e53]:
+          - link "개인정보처리방침" [ref=e54] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e55] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e56]
+```

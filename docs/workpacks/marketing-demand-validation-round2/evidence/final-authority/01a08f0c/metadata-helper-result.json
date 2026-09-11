@@ -1,0 +1,396 @@
+{
+  "role": "read-only evidence helper; not final authority approval",
+  "root_task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+  "helper_agent_path": "/root/evidence_audit",
+  "reviewed_metadata_sha": "1a51971262e758896e725af31f104f42424cff78",
+  "immutable_source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "method": "git show exact metadata SHA blobs only, no working-tree reference validation",
+  "files": [
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+      "sha256": "90e36a29a7bc8f2f9ee1cec80366cf8d72ccda0bd2a838f30dc5080939018afc",
+      "reference_occurrences": 97,
+      "checks": {
+        "current_stage5_approve": true,
+        "stage5_reviewed_62eff": true,
+        "required_fix_empty": true,
+        "final_verdict_pending": true,
+        "stage6_pending": true,
+        "design_pending": true,
+        "ready_merge_false": true,
+        "activation_deploy_false": true,
+        "historical_boundary_semantically_preserved": true,
+        "old_input_hash_preserved": true,
+        "requirement_preserved": true
+      }
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+      "sha256": "646741076e232d009c718433d1e4360713c695791e6796f542610e8ce334637e",
+      "reference_occurrences": 72,
+      "checks": {
+        "current_stage5_approve": true,
+        "stage5_reviewed_62eff": true,
+        "required_fix_empty": true,
+        "final_verdict_pending": true,
+        "stage6_pending": true,
+        "design_pending": true,
+        "ready_merge_false": true,
+        "activation_deploy_false": true,
+        "historical_boundary_semantically_preserved": true,
+        "old_input_hash_preserved": true,
+        "requirement_preserved": true
+      }
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+      "sha256": "16dfdfb8b87ec6943b36bd2cefa950f31f1bc799662352de985f600fa1979554",
+      "reference_occurrences": 296,
+      "checks": {
+        "current_stage5_approve": true,
+        "stage5_reviewed_62eff": true,
+        "required_fix_empty": true,
+        "final_verdict_pending": true,
+        "stage6_pending": true,
+        "design_pending": true,
+        "ready_merge_false": true,
+        "activation_deploy_false": true,
+        "historical_boundary_semantically_preserved": true,
+        "old_input_hash_preserved": true,
+        "requirement_preserved": true
+      }
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json",
+      "sha256": "293a1a016843c95b96ab00f4486fef7400a0617bf11f7b2cdb22c6a2662f01ad",
+      "reference_occurrences": 66,
+      "checks": {
+        "current_stage5_approve": true,
+        "stage5_reviewed_62eff": true,
+        "required_fix_empty": true,
+        "final_verdict_pending": true,
+        "stage6_pending": true,
+        "design_pending": true,
+        "ready_merge_false": true,
+        "activation_deploy_false": true,
+        "historical_boundary_semantically_preserved": true,
+        "old_input_hash_preserved": true,
+        "requirement_preserved": true
+      }
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+      "sha256": "99a880f79c515900072595bc46ec41e7d3ddc3473f55aed622a3cd58d4a0927e",
+      "reference_occurrences": 254,
+      "checks": {
+        "current_stage5_approve": true,
+        "stage5_reviewed_62eff": true,
+        "required_fix_empty": true,
+        "final_verdict_pending": true,
+        "stage6_pending": true,
+        "design_pending": true,
+        "ready_merge_false": true,
+        "activation_deploy_false": true,
+        "historical_boundary_semantically_preserved": true,
+        "old_input_hash_preserved": true,
+        "requirement_preserved": true
+      }
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+      "sha256": "0a96e3879a6a27cc3e42d23f661ee3a653c4d63887ab5bbc2e7bb529c20a4281",
+      "reference_occurrences": 219,
+      "checks": {
+        "current_stage5_approve": true,
+        "stage5_reviewed_62eff": true,
+        "required_fix_empty": true,
+        "final_verdict_pending": true,
+        "stage6_pending": true,
+        "design_pending": true,
+        "ready_merge_false": true,
+        "activation_deploy_false": true,
+        "historical_boundary_semantically_preserved": true,
+        "old_input_hash_preserved": true,
+        "requirement_preserved": true
+      }
+    }
+  ],
+  "reference_errors": [],
+  "pointer_errors": [],
+  "semantic_errors": [],
+  "reference_occurrences": 1004,
+  "unique_path_hashes": 347,
+  "json_pointer_occurrences": 217,
+  "external_stage5_comparison": [
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/archive-relocations.json",
+      "external_sha256": "66655e4c7725edb067a545e3d0e6789a1f8669741cee26e802b65e1bb58fd95a",
+      "git_sha256": "66655e4c7725edb067a545e3d0e6789a1f8669741cee26e802b65e1bb58fd95a",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/authority-report-link-revision.json",
+      "external_sha256": "6314d2cb5cab41ae81629209ff908527c1a54d97678072db89f0776a6090dade",
+      "git_sha256": "6314d2cb5cab41ae81629209ff908527c1a54d97678072db89f0776a6090dade",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/checklist-review.json",
+      "external_sha256": "c370ad47f33e69ec34da7fa67942365aa4c3a0f5c4737a8760fc51470a2c5a66",
+      "git_sha256": "c370ad47f33e69ec34da7fa67942365aa4c3a0f5c4737a8760fc51470a2c5a66",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/input-manifest.json",
+      "external_sha256": "c800970485e8792d9b4061e660d9f93df5c2e8a025783f4dbfebb51dd8c800e4",
+      "git_sha256": "c800970485e8792d9b4061e660d9f93df5c2e8a025783f4dbfebb51dd8c800e4",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/browser-source-check.json",
+      "external_sha256": "c2dc8dbbe7a76d14e7611b1add41e52dfa40ef2c9c5ecb0fe1916efcdf82a449",
+      "git_sha256": "c2dc8dbbe7a76d14e7611b1add41e52dfa40ef2c9c5ecb0fe1916efcdf82a449",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/six-json-reference-check.json",
+      "external_sha256": "36efb3f718dc9d96988469d6443d771e8daa5055f34953f5d4754719b6f6db40",
+      "git_sha256": "36efb3f718dc9d96988469d6443d771e8daa5055f34953f5d4754719b6f6db40",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/six-json-semantic-check.json",
+      "external_sha256": "2b5066d0fcd804f090dd2cabd865cf3a133029d0c376e38dad7754cbae704058",
+      "git_sha256": "2b5066d0fcd804f090dd2cabd865cf3a133029d0c376e38dad7754cbae704058",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/inputs/stable-preview-author-readme.md",
+      "external_sha256": "396409ac91778589bf90c2d44a91c4afa756dd3e7dd12e194fa3d0983985b3ca",
+      "git_sha256": "396409ac91778589bf90c2d44a91c4afa756dd3e7dd12e194fa3d0983985b3ca",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/homeflow-390-lead-done.ax.txt",
+      "external_sha256": "9fcb74840aaf65e6ce436346f3cd6172af1a349a807638a2cecfd98c693f612e",
+      "git_sha256": "9fcb74840aaf65e6ce436346f3cd6172af1a349a807638a2cecfd98c693f612e",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/homeflow-390-lead-done.png",
+      "external_sha256": "526aa00a38edbb8c148c9fad681fd862ff670afc48996083adc803d8765ee4fa",
+      "git_sha256": "526aa00a38edbb8c148c9fad681fd862ff670afc48996083adc803d8765ee4fa",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/homeflow-390-menu.png",
+      "external_sha256": "6c6302ab07a5fc6933758441b98024f573e2ca29c3e9fc223ad4d0d3329d98ef",
+      "git_sha256": "6c6302ab07a5fc6933758441b98024f573e2ca29c3e9fc223ad4d0d3329d98ef",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/recording-320-lead-done.png",
+      "external_sha256": "c47a8556d5a4bedfef9aa41a9ac6c405807d91a45003e09da859f3617127c58b",
+      "git_sha256": "c47a8556d5a4bedfef9aa41a9ac6c405807d91a45003e09da859f3617127c58b",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/recording-320-lead.png",
+      "external_sha256": "6b03c7f2239f86b61091ebd6388862424c19ee1d0b358ff2b3e6fb1d4dee9279",
+      "git_sha256": "6b03c7f2239f86b61091ebd6388862424c19ee1d0b358ff2b3e6fb1d4dee9279",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/live-preview/recording-320-menu-after-lead.ax.txt",
+      "external_sha256": "d6592ab36e6a3532acf6c057d9b5ffe6f756e750ab0306ab0d93661ce4ad276d",
+      "git_sha256": "d6592ab36e6a3532acf6c057d9b5ffe6f756e750ab0306ab0d93661ce4ad276d",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/lead-edit-repro-result.json",
+      "external_sha256": "56c18b27bd1af2d1c7af320936c0c6f0fdf9503babee7bd3dbe6e0945294e972",
+      "git_sha256": "56c18b27bd1af2d1c7af320936c0c6f0fdf9503babee7bd3dbe6e0945294e972",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/receipt-boundary-result.json",
+      "external_sha256": "91faf5c63a39960384e9250a3d8bf92a7b646804f530a835e01544dca514135d",
+      "git_sha256": "91faf5c63a39960384e9250a3d8bf92a7b646804f530a835e01544dca514135d",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/reproduce-lead-edit.cjs.txt",
+      "external_sha256": "ebc9918fc8e4930f30031b73f45e2a6c95074296624319d85341639030e0303e",
+      "git_sha256": "ebc9918fc8e4930f30031b73f45e2a6c95074296624319d85341639030e0303e",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/reproduce-receipt-boundaries.cjs.txt",
+      "external_sha256": "91210393e103f5dc4e22ef9a94f32a85c1885e6022e4eae28d32f9ffb5d1d247",
+      "git_sha256": "91210393e103f5dc4e22ef9a94f32a85c1885e6022e4eae28d32f9ffb5d1d247",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/restore-boundary-result.json",
+      "external_sha256": "bd7d97eb6d2f7062f2d1639d1c2f155616771197fbf7a3bc41b293a1e3a748dc",
+      "git_sha256": "bd7d97eb6d2f7062f2d1639d1c2f155616771197fbf7a3bc41b293a1e3a748dc",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/reproductions/restore-boundary.cjs.txt",
+      "external_sha256": "443d6d49866c087eb28268a9788910418776bd77f52e9047b2255636e2cdc38a",
+      "git_sha256": "443d6d49866c087eb28268a9788910418776bd77f52e9047b2255636e2cdc38a",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-report.md",
+      "external_sha256": "b30b11c544e6472a871c85fefbb184f1eb17054727f22aa686daea8e4dc39224",
+      "git_sha256": "b30b11c544e6472a871c85fefbb184f1eb17054727f22aa686daea8e4dc39224",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+      "external_sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c",
+      "git_sha256": "e92a12d0a913bfc4f86bba18607b7ad37265f64390278dd8fd5693e8c554134c",
+      "identical": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/strict-evidence-validation.json",
+      "external_sha256": "10607517f89e71016f801c7d25782474a36633cc344693671737ef36d4f53444",
+      "git_sha256": "10607517f89e71016f801c7d25782474a36633cc344693671737ef36d4f53444",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "external_sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d",
+      "git_sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "external_sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499",
+      "git_sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD-authority.md",
+      "external_sha256": "4fcb186ac114b7d16513342fcbe3ecf1de155e808853c920d893943d9fa1e08a",
+      "git_sha256": "4fcb186ac114b7d16513342fcbe3ecf1de155e808853c920d893943d9fa1e08a",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "external_sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799",
+      "git_sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_MENU-authority.md",
+      "external_sha256": "1cd467adface962e183a365d7df716e519f593e28736944993a19976d315865d",
+      "git_sha256": "1cd467adface962e183a365d7df716e519f593e28736944993a19976d315865d",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "external_sha256": "32e8099efca404323d2fef1b66f1e554a03f57f00f7e4da7a9db707a43cbdb6f",
+      "git_sha256": "32e8099efca404323d2fef1b66f1e554a03f57f00f7e4da7a9db707a43cbdb6f",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "external_sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772",
+      "git_sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772",
+      "identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "external_sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458",
+      "git_sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458",
+      "identical": true
+    }
+  ],
+  "external_stage5_files": 31,
+  "external_stage5_mismatches": [],
+  "approval": "No final verdict supplied by helper; metadata reference and bounded semantic review only.",
+  "excluded_packaging_files": [
+    {
+      "path": "artifact-manifest.json",
+      "reason": "External handoff packaging inventory, not a repo-relative deliverable; excluded from imported-file parity."
+    },
+    {
+      "path": "README.md",
+      "reason": "External handoff packaging entrypoint, not a repo-relative deliverable."
+    }
+  ],
+  "external_stage5_result_package_files": 23,
+  "external_stage5_authority_reports": 8,
+  "prelink_preservation": [
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_MENU-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_MENU-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "aede1b50c673757d80eadd7dc651a42af4063caf2920f7a9149fc4f6bdd0c1ac"
+    },
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d"
+    },
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_EXAMPLE_DONE-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499"
+    },
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772"
+    },
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_SURVEY_DONE-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458"
+    },
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_LEAD-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "ce0f1495da722fa1e06e77a003234a829e5e3e3e1c66186d0af967d3f5b92eff"
+    },
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_LEAD_DONE-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799"
+    },
+    {
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "original_path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "metadata_archive_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/pre-link-62eff252/R2_RECOVERY-authority.md.txt",
+      "byte_identical": true,
+      "sha256": "f79689130fa79125fff17cceb54ff8de40037df49d7be600e331091c3225a0e9"
+    }
+  ],
+  "historical_request_changes_bytes_preserved": true,
+  "semantic_review_notes": [
+    "All six current boundaries explicitly record external Stage5 approve at exact62eff; historical prior current boundaries preserved semantically and old request_changes result bytes remain unchanged.",
+    "All six original requirement IDs and strings preserved. stage5_recheck historical input hashes match exact62eff original JSONs.",
+    "Current report links retarget active reviewer-revised bytes and prelink report references retarget exact62eff byte-preserving archives.",
+    "Final authority assignment names root task01a08f0c-bbbb-74b1-ac9b-20feb1ac085f only as assigned/in_progress; verdict/report pending. Stage6/pending-review/Ready/merge/deployment remain unapproved.",
+    "Historical source-run review pending phrases are retained with explicit observation_review_timing explanation; not interpreted as current Stage5 failure.",
+    "Stable production preview source62eff/build identity remains separate from route-mocked repair10 and actual28; no new metadata-head product execution is claimed."
+  ],
+  "bounded_metadata_review_result": "pass; no reference/provenance inconsistency found, not final design approval",
+  "findings": []
+}

@@ -1,0 +1,15 @@
+import { readFile,writeFile,open } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import { resolve,join } from 'node:path';
+const out=resolve('.omx/artifacts/r2-s5-001/production-preview');
+const info=JSON.parse(await readFile(join(out,'build-result.json'),'utf8'));
+if(info.result!=='PASS'||await readFile(join(info.owned,'.r2-owned'),'utf8')!=='R2-S5-001-production-preview-62eff252')throw Error('Missing owned successful build');
+await new Promise((ok,no)=>{const s=createServer();s.once('error',no);s.listen(3126,'127.0.0.1',()=>s.close(ok));});
+const log=await open(join(out,'server.log'),'a');
+const env={PATH:process.env.PATH,NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1',MUMEOK_ROUND2_LOCAL_PREVIEW:'true',MUMEOK_ROUND2_ENABLED:'false',MUMEOK_ROUND2_LEADS_ENABLED:'false',MUMEOK_ROUND2_PROFILE:'production',NEXT_PUBLIC_APP_URL:'http://127.0.0.1:3126'};
+const child=spawn(process.execPath,[join(info.owned,'node_modules/next/dist/bin/next'),'start','--hostname','127.0.0.1','--port','3126'],{cwd:info.owned,env,stdio:['ignore',log.fd,log.fd]});
+await writeFile(join(out,'ownership.json'),JSON.stringify({wrapperPid:process.pid,childPid:child.pid,owned:info.owned,host:'127.0.0.1',port:3126,startedAt:new Date().toISOString(),head:info.head,buildId:info.buildId,sourceTreeSha256:info.sourceTreeSha256,compiledTreeSha256:info.compiledTreeSha256,keepRunning:true,flags:env,otherServersUntouched:[3100,3118,3124]},null,2));
+process.stdout.write(`Owned non-storing preview wrapper ${process.pid}, child ${child.pid}, port 3126\n`);
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>child.kill('SIGTERM'));
+child.once('exit',async(code,signal)=>{await log.close();await writeFile(join(out,'stopped.json'),JSON.stringify({stoppedAt:new Date().toISOString(),code,signal}));process.exitCode=code??0;});

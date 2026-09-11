@@ -1,0 +1,26 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-uDosf7
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-provider-boundary.test.tsx (6 tests | 1 failed) 24ms
+   × starts ordinary service sync after leaving R2 without a document reload and pauses on return 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-provider-boundary.test.tsx > starts ordinary service sync after leaving R2 without a document reload and pauses on return
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ tests/marketing-round2-provider-boundary.test.tsx:17:22
+     15|   expect(getSession).not.toHaveBeenCalled();
+     16|   window.history.replaceState({},"","/privacy");view.rerender(<Provide…
+     17|   expect(getSession).toHaveBeenCalledTimes(1);
+       |                      ^
+     18|   window.history.replaceState({},"","/planner");view.rerender(<Provide…
+     19|   expect(getSession).toHaveBeenCalledTimes(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  11:21:48
+   Duration  940ms (transform 64ms, setup 30ms, import 155ms, tests 24ms, environment 598ms)

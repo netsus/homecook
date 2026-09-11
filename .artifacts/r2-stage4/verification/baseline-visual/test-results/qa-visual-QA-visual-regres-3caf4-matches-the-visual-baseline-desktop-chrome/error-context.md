@@ -1,0 +1,73 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e8]:
+            - link "무먹, 무엇을 먹든" [ref=e9] [cursor=pointer]:
+              - /url: /
+              - img [ref=e10]
+            - navigation "데스크탑 주요 메뉴" [ref=e11]:
+              - link "홈" [ref=e12] [cursor=pointer]:
+                - /url: /
+              - link "요리 계획" [ref=e13] [cursor=pointer]:
+                - /url: /planner
+              - link "식사 기록" [ref=e14] [cursor=pointer]:
+                - /url: /planner?segment=log
+              - link "팬트리" [ref=e15] [cursor=pointer]:
+                - /url: /pantry
+              - link "무먹 가이드" [ref=e16] [cursor=pointer]:
+                - /url: /about
+            - generic [ref=e17]:
+              - button "YouTube 추출 알림 없음" [ref=e18] [cursor=pointer]:
+                - img [ref=e19]
+              - link "내 프로필" [ref=e21] [cursor=pointer]:
+                - /url: /mypage
+                - img [ref=e22]
+          - status "서비스 준비 안내" [ref=e25]:
+            - generic [ref=e26]: 서비스 준비 중
+            - generic [ref=e28]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - paragraph [ref=e31]: 유튜브 가져오기
+            - heading "영상 링크에서 레시피를 추출해요" [level=1] [ref=e32]
+            - paragraph [ref=e33]: 링크 입력부터 결과 검토까지 한 화면 흐름으로 이어집니다.
+          - button "뒤로" [ref=e35] [cursor=pointer]
+        - generic [ref=e36]:
+          - generic "유튜브 가져오기 단계" [ref=e37]:
+            - generic [ref=e38]:
+              - generic [ref=e39]: "1"
+              - text: 링크 입력
+            - generic [ref=e40]:
+              - generic [ref=e41]: "2"
+              - text: 미리보기
+            - generic [ref=e42]:
+              - generic [ref=e43]: "3"
+              - text: 분석
+            - generic [ref=e44]:
+              - generic [ref=e45]: "4"
+              - text: 검토
+            - generic [ref=e46]:
+              - generic [ref=e47]: "5"
+              - text: 완료
+          - generic [ref=e48]:
+            - generic [ref=e49]:
+              - generic [ref=e50]: 유튜브 URL
+              - textbox "유튜브 URL" [ref=e51]:
+                - /placeholder: https://www.youtube.com/watch?v=...
+            - button "가져오기" [disabled] [ref=e53]
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - strong [ref=e57]: 무엇을 먹든
+          - generic [ref=e58]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e59]:
+          - link "개인정보처리방침" [ref=e60] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e61] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e62]
+```

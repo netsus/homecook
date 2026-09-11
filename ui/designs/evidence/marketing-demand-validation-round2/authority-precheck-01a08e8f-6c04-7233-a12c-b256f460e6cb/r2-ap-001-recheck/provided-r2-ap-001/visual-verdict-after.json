@@ -1,0 +1,10 @@
+{
+  "score": 95,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
+  "suggestions": [
+    "같은 독립 precheck reviewer에게 R2-AP-001 범위 재검토를 요청한다."
+  ],
+  "reasoning": "두 topic320/390의initial/completed MENU200%8조합에서실제상하잘림0을확인했고100%8캡처는수정전과byte동일하다. 이판정은해당수정의작성자시각QA이며전체화면확대검증이나독립authority승인이아니다."
+}

@@ -1,0 +1,144 @@
+{
+  "task_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+  "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "entries": [
+    {
+      "original_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "sha256": "1ecad9a3eaa4d48893ab744c227c5629bf15a36397e99fd919895f61f8e87866",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+      "meaning": "immutable input; do not overwrite future projection"
+    },
+    {
+      "original_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "sha256": "73a9ee96b943df699c7a4234520536ad3862e4334cf1650308a78e074ff73627",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+      "meaning": "immutable input; do not overwrite future projection"
+    },
+    {
+      "original_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "sha256": "5bd613169919f67d93c48f2b429e511b29e68f68c4a09ed9f7c029ac4864264a",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+      "meaning": "immutable input; do not overwrite future projection"
+    },
+    {
+      "original_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "sha256": "b1ba924c7815e810d1ce4e1356e274624ac910d315f445c1ad43b8e0e20cdb43",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+      "meaning": "immutable input; do not overwrite future projection"
+    },
+    {
+      "original_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "sha256": "2505481b14968090b46cb787e2b72dd61a63663d7c2b2bd02f5e3ca5537bf11e",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+      "meaning": "immutable input; do not overwrite future projection"
+    },
+    {
+      "original_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json",
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "sha256": "e48c0d7f844f1b15290a983babc747ee90fa0f9cd379064f719de8b6f9d337e5",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json",
+      "meaning": "immutable input; do not overwrite future projection"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_MENU-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "aede1b50c673757d80eadd7dc651a42af4063caf2920f7a9149fc4f6bdd0c1ac",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_MENU-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_MENU-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "1cd467adface962e183a365d7df716e519f593e28736944993a19976d315865d",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_MENU-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_EXAMPLE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "5836955542f3a70aaace2818dfb3fb58294b91f9e231a669d91f6f0b29a1f14d",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_EXAMPLE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_EXAMPLE_DONE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "563eaea447d81574675fe35868345192563534cba6e5f5c46fc49db353412499",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_EXAMPLE_DONE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_SURVEY-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "9266e4b52670f7b97735d494ddeaaaeb59a88c717a547f319c104fae2e048772",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_SURVEY-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_SURVEY_DONE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "be73a56323d8443de02b24e4eae3f0a6ef19e193debebff75a7777511f488458",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_SURVEY_DONE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_LEAD-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "ce0f1495da722fa1e06e77a003234a829e5e3e3e1c66186d0af967d3f5b92eff",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_LEAD-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_LEAD-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "4fcb186ac114b7d16513342fcbe3ecf1de155e808853c920d893943d9fa1e08a",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_LEAD-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_LEAD_DONE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "17cdfa899c374921832280bcbba8bbe16c2cebc67225a6258c7ab8594c2e1799",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_LEAD_DONE-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "input_kind": "62eff-source",
+      "sha256": "f79689130fa79125fff17cceb54ff8de40037df49d7be600e331091c3225a0e9",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/62eff-source/ui/designs/authority/R2_RECOVERY-authority.md"
+    },
+    {
+      "original_path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "input_kind": "external-stage5",
+      "sha256": "32e8099efca404323d2fef1b66f1e554a03f57f00f7e4da7a9db707a43cbdb6f",
+      "preserved_path": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/inputs/external-stage5/ui/designs/authority/R2_RECOVERY-authority.md"
+    }
+  ]
+}

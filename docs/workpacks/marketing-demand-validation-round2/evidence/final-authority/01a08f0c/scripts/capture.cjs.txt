@@ -1,0 +1,43 @@
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+const out = '/Users/cwj/.codex/visualizations/2026/09/11/01a08f0c-bbbb-74b1-ac9b-20feb1ac085f/r2-final-authority/handoff/ui/designs/evidence/marketing-demand-validation-round2/final-authority-01a08f0c/direct';
+const log = {task_id:'01a08f0c-bbbb-74b1-ac9b-20feb1ac085f',source_head:'62eff252cdd537c9a849caf1881ac490687abac3',environment:'provided production build, built-in memory preview',started_at:new Date().toISOString(),requests:[],blocked:[],console:[],pageerrors:[],captures:[],actions:[],storage:[]};
+(async()=>{
+ const browser = await chromium.launch({headless:true,executablePath:'/Users/cwj/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell'});
+ log.browser = browser.version();
+ try {
+ for(const topic of ['recording','homeflow']) for(const width of [390,320]) {
+  const context = await browser.newContext({viewport:{width,height:width===390?844:568},deviceScaleFactor:1,isMobile:true,hasTouch:true,serviceWorkers:'block',reducedMotion:'reduce'});
+  await context.route('**/*',route=>{ const req=route.request(),u=new URL(req.url());const item={topic,width,method:req.method(),path:u.pathname,origin:u.origin};log.requests.push(item); if(u.origin!=='http://127.0.0.1:3126'||req.method()!=='GET'){log.blocked.push(item);return route.abort();}return route.continue(); });
+  const page=await context.newPage();
+  page.on('console',m=>{if(m.type()==='error'||m.type()==='warning')log.console.push({topic,width,type:m.type(),text:m.text()});});page.on('pageerror',e=>log.pageerrors.push({topic,width,message:e.message}));
+  async function capture(state,position='initial') {
+   await page.locator('main').waitFor();await page.evaluate(()=>document.fonts.ready);await page.evaluate(()=>Promise.all(Array.from(document.images).map(i=>i.complete?null:new Promise(r=>{i.onload=r;i.onerror=r;}))));
+   if(position==='initial')await page.evaluate(()=>window.scrollTo(0,0));
+   if(position==='cta')await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
+   const name=`${topic}-${width}-${state}-${position}.png`;
+   await page.screenshot({path:path.join(out,name),fullPage:position==='full'});
+   const observed=await page.evaluate(()=>({screen:document.querySelector('main').dataset.screenId,text:document.querySelector('main').innerText,width:innerWidth,scrollWidth:document.documentElement.scrollWidth,scrollY,active:document.activeElement?.textContent,controls:Array.from(document.querySelectorAll('button,input,a')).map(e=>{const r=e.getBoundingClientRect();return {label:e.textContent||e.getAttribute('aria-label')||e.id,tag:e.tagName,width:r.width,height:r.height,top:r.top,bottom:r.bottom,disabled:e.disabled||false};})}));
+   log.captures.push({topic,width,state,position,file:name,...observed});fs.writeFileSync(path.join(out,name.replace('.png','.json')),JSON.stringify(observed,null,2));
+  }
+  async function click(label){const current=await page.locator('main').innerText();if(!current.includes(label))throw Error('Missing visible action '+label);log.actions.push({topic,width,action:label,screen:await page.locator('main').getAttribute('data-screen-id')});const labels=await page.getByRole('button').allTextContents(); const full=labels.find(x=>x===label)||labels.find(x=>x===label+'완료');if(!full)throw Error('Missing exact button '+label);await page.getByRole('button').nth(labels.indexOf(full)).click();}
+  const response=await page.goto(`http://127.0.0.1:3126/beta/r2/${topic}`,{waitUntil:'networkidle'});
+  log.actions.push({topic,width,status:response.status(),cache:response.headers()['cache-control'],referrer:response.headers()['referrer-policy'],setCookie:!!response.headers()['set-cookie']});
+  await capture('MENU');await capture('MENU','full');
+  await click('베타 오픈 알림 받기');await capture('LEAD');await capture('LEAD','full');await capture('LEAD','cta');
+  await click('베타 오픈 알림 신청하기');await capture('LEAD-validation','full');
+  await page.getByRole('checkbox').check();await click('베타 오픈 알림 신청하기');await page.locator('[data-screen-id$="LEAD_DONE"]').waitFor();await capture('LEAD_DONE');
+  await click('메뉴로 돌아가기');await capture('MENU-lead-complete');
+  await click('사용 예시 먼저 보기');await capture('EXAMPLE-1');await click('다음 장면');await capture('EXAMPLE-2');await click('다음 장면');await capture('EXAMPLE-3','full');await capture('EXAMPLE-3','cta');await click('예시 확인 완료');await page.locator('[data-screen-id$="EXAMPLE_DONE"]').waitFor();await capture('EXAMPLE_DONE');
+  await click('메뉴로 돌아가기');await click('의견만 남기기 · 4문항');
+  for(let q=1;q<=4;q++){await capture('SURVEY-'+q,'full');const radios=page.getByRole('radio');await radios.last().check();await click(q===4?'의견 보내기':'다음 문항');}
+  await page.locator('[data-screen-id$="SURVEY_DONE"]').waitFor();await capture('SURVEY_DONE');await click('메뉴로 돌아가기');await capture('MENU-all-complete','full');
+  await click('알림 접수 확인');await capture('LEAD_DONE-readonly');await click('메뉴로 돌아가기');await click('의견 접수 확인');await capture('SURVEY_DONE-readonly');
+  const storage=await page.evaluate(async()=>({localStorage:localStorage.length,sessionStorage:sessionStorage.length,indexedDB:(await indexedDB.databases()).length}));log.storage.push({topic,width,...storage,cookies:(await context.cookies()).length});
+  await page.reload({waitUntil:'networkidle'});await capture('MENU-after-reload');
+  await context.close();
+ }
+ }finally{await browser.close();log.finished_at=new Date().toISOString();fs.writeFileSync(path.join(out,'capture-log.json'),JSON.stringify(log,null,2));}
+ console.log(JSON.stringify({captures:log.captures.length,requests:log.requests.length,blocked:log.blocked,errors:log.pageerrors,storage:log.storage}));
+})().catch(e=>{console.error(e);process.exitCode=1;});

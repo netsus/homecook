@@ -1,0 +1,155 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - link "무먹, 무엇을 먹든" [ref=e10] [cursor=pointer]:
+              - /url: /
+              - img [ref=e11]
+            - navigation "데스크탑 주요 메뉴" [ref=e12]:
+              - link "홈" [ref=e13] [cursor=pointer]:
+                - /url: /
+              - link "요리 계획" [ref=e14] [cursor=pointer]:
+                - /url: /planner
+              - link "식사 기록" [ref=e15] [cursor=pointer]:
+                - /url: /planner?segment=log
+              - link "팬트리" [ref=e16] [cursor=pointer]:
+                - /url: /pantry
+              - link "무먹 가이드" [ref=e17] [cursor=pointer]:
+                - /url: /about
+            - generic [ref=e18]:
+              - button "YouTube 추출 알림 없음" [ref=e19] [cursor=pointer]:
+                - img [ref=e20]
+              - button "집밥러 프로필 요약 열기" [ref=e23] [cursor=pointer]:
+                - generic [ref=e24]: 집
+          - status "서비스 준비 안내" [ref=e25]:
+            - generic [ref=e26]: 서비스 준비 중
+            - generic [ref=e28]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+        - generic [ref=e29]:
+          - heading "마이페이지" [level=1] [ref=e30]
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - generic [ref=e36]:
+                - 'button "닉네임 변경, 현재 닉네임: 집밥러" [ref=e37] [cursor=pointer]':
+                  - generic "프로필 이니셜" [ref=e38]: 집
+                  - generic [ref=e40]: 집밥러
+                - generic [ref=e42]:
+                  - img [ref=e44]
+                  - generic [ref=e50]:
+                    - generic [ref=e51]: 집밥 러너
+                    - generic [ref=e52]: Lv.6
+              - generic "성장 상세 메뉴" [ref=e53]:
+                - button "등급 보기" [ref=e54] [cursor=pointer]:
+                  - img [ref=e55]
+                  - generic [ref=e58]: 등급
+                - button "업적 보기" [ref=e59] [cursor=pointer]:
+                  - img [ref=e60]
+                  - generic [ref=e62]: 업적
+                - button "알림 보기" [ref=e63] [cursor=pointer]:
+                  - img [ref=e64]
+                  - generic [ref=e66]: 알림
+            - generic [ref=e67]:
+              - generic [ref=e68]:
+                - paragraph [ref=e69]: 다음 레벨까지 130 XP
+                - button "경험치 안내" [ref=e70] [cursor=pointer]
+              - generic [ref=e72]:
+                - progressbar "Lv.6, 다음 레벨까지 130 XP, 진행률 13%" [ref=e73]:
+                  - generic [ref=e75]: 13%
+                - paragraph [ref=e76]: 20 / 150 XP
+              - generic "마이페이지 통계" [ref=e78]:
+                - generic "요리기록 1회" [ref=e79]:
+                  - img [ref=e81]
+                  - generic [ref=e86]:
+                    - generic [ref=e87]: 요리기록
+                    - strong [ref=e88]: "1"
+                - generic "플래너기록 3회" [ref=e89]:
+                  - img [ref=e92]
+                  - generic [ref=e95]:
+                    - generic [ref=e96]: 플래너기록
+                    - strong [ref=e97]: "3"
+                - generic "장보기기록 1회" [ref=e98]:
+                  - img [ref=e101]
+                  - generic [ref=e104]:
+                    - generic [ref=e105]: 장보기기록
+                    - strong [ref=e106]: "1"
+          - tablist [ref=e107]:
+            - tab "저장한 레시피" [selected] [ref=e108] [cursor=pointer]:
+              - img [ref=e110]
+              - text: 저장한 레시피
+            - tab "레시피북" [ref=e112] [cursor=pointer]:
+              - img [ref=e114]
+              - text: 레시피북
+            - tab "장보기 기록" [ref=e116] [cursor=pointer]:
+              - img [ref=e118]
+              - text: 장보기 기록
+            - tab "남은 요리" [ref=e122] [cursor=pointer]:
+              - img [ref=e124]
+              - text: 남은 요리
+            - tab "다먹은 요리" [ref=e127] [cursor=pointer]:
+              - img [ref=e129]
+              - text: 다먹은 요리
+            - tab "환경설정" [ref=e131] [cursor=pointer]:
+              - img [ref=e133]
+              - text: 환경설정
+          - tabpanel [ref=e136]:
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - heading "저장한 레시피" [level=2] [ref=e139]
+                - paragraph [ref=e140]: 5개의 레시피를 저장했어요.
+              - list [ref=e141]:
+                - listitem [ref=e142]:
+                  - link "된장찌개 된장찌개 한식 · 찌개 · 35분 · 2인분" [ref=e143] [cursor=pointer]:
+                    - /url: /recipe/recipe-doenjang?returnTo=%2Fmypage%3Ftab%3Dsaved
+                    - generic [ref=e144]:
+                      - img "된장찌개" [ref=e146]
+                      - generic [ref=e147]:
+                        - generic [ref=e149]:
+                          - text: 된장찌개
+                          - img [ref=e151]
+                        - generic [ref=e153]: 한식 · 찌개 · 35분 · 2인분
+                - listitem [ref=e154]:
+                  - link "김치볶음밥 김치볶음밥 한식 · 20분 · 1인분" [ref=e155] [cursor=pointer]:
+                    - /url: /recipe/recipe-kimchi-rice?returnTo=%2Fmypage%3Ftab%3Dsaved
+                    - generic [ref=e156]:
+                      - img "김치볶음밥" [ref=e158]
+                      - generic [ref=e159]:
+                        - generic [ref=e161]:
+                          - text: 김치볶음밥
+                          - img [ref=e163]
+                        - generic [ref=e165]: 한식 · 20분 · 1인분
+                - listitem [ref=e166]:
+                  - link "제육볶음 제육볶음 한식 · 볶음 · 25분 · 2인분" [ref=e167] [cursor=pointer]:
+                    - /url: /recipe/recipe-jeyuk?returnTo=%2Fmypage%3Ftab%3Dsaved
+                    - generic [ref=e168]:
+                      - img "제육볶음" [ref=e170]
+                      - generic [ref=e171]:
+                        - generic [ref=e173]:
+                          - text: 제육볶음
+                          - img [ref=e175]
+                        - generic [ref=e177]: 한식 · 볶음 · 25분 · 2인분
+                - listitem [ref=e178]:
+                  - link "연어 스테이크 연어 스테이크 양식 · 구이 · 22분 · 2인분" [ref=e179] [cursor=pointer]:
+                    - /url: /recipe/recipe-salmon-steak?returnTo=%2Fmypage%3Ftab%3Dsaved
+                    - generic [ref=e180]:
+                      - img "연어 스테이크" [ref=e182]
+                      - generic [ref=e183]:
+                        - generic [ref=e185]:
+                          - text: 연어 스테이크
+                          - img [ref=e187]
+                        - generic [ref=e189]: 양식 · 구이 · 22분 · 2인분
+      - generic [ref=e191]:
+        - generic [ref=e192]:
+          - strong [ref=e193]: 무엇을 먹든
+          - generic [ref=e194]: 레시피부터 장보기, 요리 기록까지
+        - navigation "서비스 정보" [ref=e195]:
+          - link "개인정보처리방침" [ref=e196] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=e197] [cursor=pointer]:
+            - /url: /terms
+  - region "새 알림"
+  - alert [ref=e198]
+```

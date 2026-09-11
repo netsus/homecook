@@ -1,0 +1,92 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - link "무먹, 무엇을 먹든" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e8]
+        - navigation "데스크탑 주요 메뉴" [ref=e9]:
+          - link "홈" [ref=e10] [cursor=pointer]:
+            - /url: /
+          - link "요리 계획" [ref=e11] [cursor=pointer]:
+            - /url: /planner
+          - link "식사 기록" [ref=e12] [cursor=pointer]:
+            - /url: /planner?segment=log
+          - link "팬트리" [ref=e13] [cursor=pointer]:
+            - /url: /pantry
+          - link "무먹 가이드" [ref=e14] [cursor=pointer]:
+            - /url: /about
+        - generic [ref=e15]:
+          - button "YouTube 추출 알림 없음" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+          - generic [ref=e19]: JY
+      - status "서비스 준비 안내" [ref=e20]:
+        - generic [ref=e21]: 서비스 준비 중
+        - generic [ref=e23]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+    - main [ref=e24]:
+      - heading "요리모드" [level=1] [ref=e25]
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic "김치볶음밥" [ref=e29]
+            - generic [ref=e30]: 요리모드 · 2인분 · 플래너 요리
+          - generic [ref=e31]:
+            - button "취소" [ref=e32] [cursor=pointer]
+            - button "요리 완료" [ref=e33] [cursor=pointer]
+        - generic [ref=e34]:
+          - region "전체 재료" [ref=e35]:
+            - heading "전체 재료" [level=2] [ref=e36]
+            - list [ref=e37]:
+              - listitem [ref=e38]:
+                - generic [ref=e39]:
+                  - generic [ref=e40]: 쌀
+                  - strong [ref=e41]: 1 공기
+              - listitem [ref=e42]:
+                - generic [ref=e43]:
+                  - generic [ref=e44]: 배추김치
+                  - strong [ref=e45]: 100 g
+              - listitem [ref=e46]:
+                - generic [ref=e47]:
+                  - generic [ref=e48]: 계란
+                  - strong [ref=e49]: 1 개
+              - listitem [ref=e50]:
+                - generic [ref=e51]:
+                  - generic [ref=e52]: 대파
+                  - strong [ref=e53]: 0.5 대
+              - listitem [ref=e54]:
+                - generic [ref=e55]:
+                  - generic [ref=e56]: 참기름
+                  - strong [ref=e57]: 1 작은술
+              - listitem [ref=e58]:
+                - generic [ref=e59]:
+                  - generic [ref=e60]: 간장
+                  - strong [ref=e61]: 1 작은술
+          - region "전체 조리순서" [ref=e62]:
+            - heading "전체 조리순서" [level=2] [ref=e63]
+            - list "전체 조리순서 목록" [ref=e64]:
+              - listitem [ref=e65]:
+                - generic "팬/기름 조리 · 볶기" [ref=e68]: 볶기
+                - generic [ref=e69]:
+                  - generic "1단계" [ref=e70]: "1"
+                  - paragraph [ref=e72]: 팬에 김치를 잘게 썰어 강불에 충분히 볶습니다.
+              - listitem [ref=e73]:
+                - generic "팬/기름 조리 · 볶기" [ref=e76]: 볶기
+                - generic [ref=e77]:
+                  - generic "2단계" [ref=e78]: "2"
+                  - paragraph [ref=e80]: 밥을 넣고 김치와 잘 섞어가며 2분 더 볶습니다.
+              - listitem [ref=e81]:
+                - generic "물/수분 조리 · 굽기" [ref=e84]: 굽기
+                - generic [ref=e85]:
+                  - generic "3단계" [ref=e86]: "3"
+                  - paragraph [ref=e88]: 옆에 계란 후라이를 부쳐 올립니다.
+              - listitem [ref=e89]:
+                - generic "혼합/조림 · 무치기" [ref=e92]: 무치기
+                - generic [ref=e93]:
+                  - generic "4단계" [ref=e94]: "4"
+                  - paragraph [ref=e96]: 참기름과 다진 파로 마무리합니다.
+  - region "새 알림"
+  - alert [ref=e97]
+```

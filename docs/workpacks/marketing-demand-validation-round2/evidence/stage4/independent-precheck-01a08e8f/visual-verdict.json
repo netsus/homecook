@@ -1,0 +1,10 @@
+{
+  "score": 94,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
+  "suggestions": [
+    "publicStage5는조정자의별도지시후진행한다."
+  ],
+  "reasoning": "MENU200%잘림은수정재검증했고실제RECOVERY200%8조합의화면·측정·최종출처누락도해소했다. 명시된authority_precheck범위필수지적0이며실기기/전체WCAG/운영/최종authority승인으로확대하지않는다."
+}

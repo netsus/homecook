@@ -1,0 +1,363 @@
+[WebServer] (node:29663) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:29666) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:29781) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:29811) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 24 tests using 5 workers
+
+(node:29837) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29839) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29838) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29836) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29838) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29837) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29839) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29836) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/24] [desktop-chrome] › tests/e2e/slice-07-meal-manage.spec.ts:341:7 › Slice 07 meal manage — MEAL_SCREEN › shopping_done meal starts direct cook mode with a meal-screen return path
+[2/24] [desktop-chrome] › tests/e2e/slice-community-prepared-food-catalog.spec.ts:855:7 › community prepared food catalog Stage 4 › keeps 320/390/1280 surfaces overflow-safe and 44px targets, and captures new community evidence
+[3/24] [desktop-chrome] › tests/e2e/slice-19-youtube-import.spec.ts:1034:7 › Slice 19: YouTube Import › complete without plan context: no meal-add button
+[4/24] [desktop-chrome] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+[5/24] [desktop-chrome] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe
+(node:29905) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29905) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[6/24] [mobile-chrome] › tests/e2e/slice-07-meal-manage.spec.ts:341:7 › Slice 07 meal manage — MEAL_SCREEN › shopping_done meal starts direct cook mode with a meal-screen return path
+(node:29959) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:29959) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/24] [mobile-chrome] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+[WebServer] (node:29995) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[8/24] [desktop-chrome] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+(node:30061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[9/24] [mobile-chrome] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+[10/24] [desktop-chrome] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+(node:30061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[11/24] [mobile-chrome] › tests/e2e/slice-19-youtube-import.spec.ts:1034:7 › Slice 19: YouTube Import › complete without plan context: no meal-add button
+[12/24] [mobile-chrome] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+[13/24] [desktop-chrome] › tests/e2e/slice-16-leftovers.spec.ts:445:7 › ATE_LIST screen › uneat action removes item from eaten list
+[WebServer] (node:30194) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[14/24] [mobile-chrome] › tests/e2e/slice-community-prepared-food-catalog.spec.ts:855:7 › community prepared food catalog Stage 4 › keeps 320/390/1280 surfaces overflow-safe and 44px targets, and captures new community evidence
+[15/24] [mobile-chrome] › tests/e2e/slice-16-leftovers.spec.ts:445:7 › ATE_LIST screen › uneat action removes item from eaten list
+[WebServer] (node:30200) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:30216) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[WebServer] (node:30219) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:30222) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:30216) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:30230) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[16/24] [mobile-chrome] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe
+(node:30222) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[17/24] [mobile-ios-small] › tests/e2e/slice-07-meal-manage.spec.ts:341:7 › Slice 07 meal manage — MEAL_SCREEN › shopping_done meal starts direct cook mode with a meal-screen return path
+(node:30230) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[18/24] [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+(node:30292) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[WebServer] (node:30296) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:30292) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[19/24] [mobile-ios-small] › tests/e2e/slice-19-youtube-import.spec.ts:1034:7 › Slice 19: YouTube Import › complete without plan context: no meal-add button
+(node:30326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  1) [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 480
+    Received:    509.4375
+
+      91 |   expect
+      92 |     .soft(geometry.target.bottom, JSON.stringify(geometry))
+    > 93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+         |      ^
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+      95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+      96 | }
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:93:6)
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:351:5
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+    > 95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+         |                                                                  ^
+      96 | }
+      97 |
+      98 | async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:95:66)
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:351:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-83e96-tion-removes-item-from-list-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-83e96-tion-removes-item-from-list-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-16-leftovers-LEFTOVE-83e96-tion-removes-item-from-list-mobile-ios-small/error-context.md
+
+
+[WebServer] (node:30328) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[20/24] [mobile-ios-small] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe
+(node:30330) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:30326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[WebServer] (node:30367) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[21/24] [mobile-ios-small] › tests/e2e/slice-community-prepared-food-catalog.spec.ts:855:7 › community prepared food catalog Stage 4 › keeps 320/390/1280 surfaces overflow-safe and 44px targets, and captures new community evidence
+(node:30330) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[22/24] [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+  2) [mobile-ios-small] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 569
+    Received:    572
+
+      970 |     await expect(actions).toHaveCSS("position", "sticky");
+      971 |     const actionBox = await actions.boundingBox();
+    > 972 |     expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+          |                                              ^
+      973 |   });
+      974 |
+      975 |   test("desktop FOOD_PRODUCT_CREATE의 등록 CTA가 1280×900 첫 화면 안에 보인다", async ({ browser }, testInfo) => {
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-prepared-food-planner-entry.spec.ts:972:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-prepared-food-planne-d25d3-ESC-and-sticky-actions-safe-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-prepared-food-planne-d25d3-ESC-and-sticky-actions-safe-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-prepared-food-planne-d25d3-ESC-and-sticky-actions-safe-mobile-ios-small/error-context.md
+
+
+  3) [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 480
+    Received:    509.4375
+
+      91 |   expect
+      92 |     .soft(geometry.target.bottom, JSON.stringify(geometry))
+    > 93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+         |      ^
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+      95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+      96 | }
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:93:6)
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:369:5
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":82},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+    > 95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+         |                                                                  ^
+      96 | }
+      97 |
+      98 | async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:95:66)
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:369:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-4ce44-hen-all-leftovers-are-eaten-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVE-4ce44-hen-all-leftovers-are-eaten-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-16-leftovers-LEFTOVE-4ce44-hen-all-leftovers-are-eaten-mobile-ios-small/error-context.md
+
+
+(node:30509) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:30509) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[23/24] [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+  4) [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":112},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 480
+    Received:    509.4375
+
+      91 |   expect
+      92 |     .soft(geometry.target.bottom, JSON.stringify(geometry))
+    > 93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+         |      ^
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+      95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+      96 | }
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:93:6)
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:383:5
+
+    Error: {"centerHitTarget":true,"lowerHitTarget":false,"target":{"bottom":509.4375,"height":44,"top":465.4375,"width":112},"tab":{"top":496},"requiredMaximumBottom":480}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      93 |     .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+      94 |   expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+    > 95 |   expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+         |                                                                  ^
+      96 | }
+      97 |
+      98 | async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+        at expectMobileActionClearOfBottomTab (/Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:95:66)
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/slice-16-leftovers.spec.ts:383:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVERS-screen-planner-add-opens-sheet-mobile-ios-small/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/slice-16-leftovers-LEFTOVERS-screen-planner-add-opens-sheet-mobile-ios-small/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/slice-16-leftovers-LEFTOVERS-screen-planner-add-opens-sheet-mobile-ios-small/error-context.md
+
+
+(node:30549) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:30549) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[24/24] [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:445:7 › ATE_LIST screen › uneat action removes item from eaten list
+  4 failed
+    [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:344:7 › LEFTOVERS screen › eat action removes item from list
+    [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:360:7 › LEFTOVERS screen › shows empty state when all leftovers are eaten
+    [mobile-ios-small] › tests/e2e/slice-16-leftovers.spec.ts:376:7 › LEFTOVERS screen › planner add opens sheet
+    [mobile-ios-small] › tests/e2e/slice-prepared-food-planner-entry.spec.ts:915:7 › prepared-food-planner-entry › picker/create keeps scroll, focus, 44px controls, dirty ESC, and sticky actions safe
+  3 skipped
+  17 passed (28.9s)

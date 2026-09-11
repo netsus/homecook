@@ -1,0 +1,34 @@
+{
+  "scope": "Route-mocked browser diagnostic, not public Stage5 or real API/DB authority",
+  "matrix": [
+    "recording/homeflow",
+    "network abort/503",
+    "email edit/consent off-on"
+  ],
+  "controls": [
+    "submit",
+    "edited receipt-only check",
+    "restore original unchecked input",
+    "fresh challenge",
+    "explicit retry"
+  ],
+  "claims": [
+    "original event/email immutable",
+    "edited draft never POSTed",
+    "no false completion",
+    "receipt-only omits token",
+    "new consent/challenge needed after restore",
+    "no background lead on reconnect"
+  ],
+  "exploratory": [
+    "422 absent receipt remains recoverable",
+    "lost committed receipt confirmed tokenless"
+  ],
+  "visual": [
+    "320x568 and 390x844 at 100%/200% text",
+    "page overflow",
+    "static text clipping",
+    "CTA center/bottom hit targets",
+    "full-page and CTA screenshots"
+  ]
+}

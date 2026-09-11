@@ -1,0 +1,29 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import cp from 'node:child_process';
+import {validateAuthorityEvidencePresence} from '/Users/cwj/.codex/worktrees/e2b0/homecook/scripts/lib/validate-authority-evidence-presence.mjs';
+const repo='/Users/cwj/.codex/worktrees/e2b0/homecook';
+const root='/Users/cwj/.codex/visualizations/2026/09/11/01a08f0c-bbbb-74b1-ac9b-20feb1ac085f/r2-final-authority';
+const h=root+'/handoff',doc='docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c';
+const v=fs.mkdtempSync(path.join(os.tmpdir(),'r2-final-authority-format-'));
+fs.cpSync(h+'/ui',v+'/ui',{recursive:true});
+const spec='docs/workpacks/marketing-demand-validation-round2/automation-spec.json';
+const b=cp.execFileSync('git',['show','1a51971262e758896e725af31f104f42424cff78:'+spec],{cwd:repo});
+fs.mkdirSync(path.dirname(v+'/'+spec),{recursive:true});fs.writeFileSync(v+'/'+spec,b);
+const d=JSON.parse(b).frontend.design_authority;
+for(const p of d.stage4_evidence_requirements){fs.mkdirSync(path.dirname(v+'/'+p),{recursive:true});fs.writeFileSync(v+'/'+p,cp.execFileSync('git',['show','1a51971262e758896e725af31f104f42424cff78:'+p],{cwd:repo}));}
+const errors=validateAuthorityEvidencePresence({rootDir:v,env:{BRANCH_NAME:'feature/fe-marketing-demand-validation-round2',PR_IS_DRAFT:'false'}});
+const linkErrors=[];
+for(const f of [...d.authority_report_paths,doc+'/final-authority-report.md','README.md']){
+ const s=fs.readFileSync(h+'/'+f,'utf8');
+ for(const m of s.matchAll(/\]\(([^)]+)\)/g)){const ref=m[1];if(ref.startsWith('http')||ref.startsWith('#'))continue;const absolute=path.resolve(path.dirname(h+'/'+f),ref.split('#')[0]);if(!absolute.startsWith(h+'/')||!fs.existsSync(absolute))linkErrors.push({file:f,ref});}
+}
+const result=JSON.parse(fs.readFileSync(h+'/'+doc+'/final-authority-result.json','utf8'));
+const shapeErrors=[];
+if(result.reviewed_screen_ids.length!==16||new Set(result.reviewed_screen_ids).size!==16||result.screen_results.length!==8||result.required_fix_ids.length)shapeErrors.push('canonical shape');
+const output={task_id:result.task_id,product_sha:result.product_reviewed_sha,metadata_sha:result.metadata_head_sha,mode:'temporary regular-file projection using real evidence; no live OMO runtime; no product execution',strict_errors:errors,active_report_link_errors:linkErrors,shape_errors:shapeErrors,verdict:errors.length+linkErrors.length+shapeErrors.length===0?'pass':'fail'};
+fs.writeFileSync(h+'/'+doc+'/package-validation.json',JSON.stringify(output,null,2)+'\n');
+fs.copyFileSync(root+'/validate.mjs.txt',h+'/'+doc+'/scripts/validate.mjs.txt');
+console.log(JSON.stringify(output));
+if(output.verdict!=='pass')process.exitCode=1;

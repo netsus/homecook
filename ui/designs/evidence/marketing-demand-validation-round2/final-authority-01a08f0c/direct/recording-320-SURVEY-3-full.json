@@ -1,0 +1,82 @@
+{
+  "screen": "R2_RECORDING_SURVEY",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 3/4\n\n이 중 가장 기대되는 기능은 무엇인가요?\n레시피 재료 정보를 기록에 다시 쓰기\n먹은 분량에 맞춘 추정 영양 보기\n집밥 기록을 모아 보기\n기대되는 기능이 없어요\n다음 문항\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+  "width": 320,
+  "scrollWidth": 320,
+  "scrollY": 0,
+  "active": "집밥 기록에 대한 의견",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q3-0",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 316.515625,
+      "bottom": 336.515625,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q3-1",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 376.515625,
+      "bottom": 396.515625,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q3-2",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 436.515625,
+      "bottom": 456.515625,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q3-3",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 496.515625,
+      "bottom": 516.515625,
+      "disabled": false
+    },
+    {
+      "label": "다음 문항",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 52,
+      "top": 571.515625,
+      "bottom": 623.515625,
+      "disabled": false
+    },
+    {
+      "label": "이전 문항",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 633.515625,
+      "bottom": 681.515625,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 735.625,
+      "bottom": 783.625,
+      "disabled": false
+    }
+  ]
+}

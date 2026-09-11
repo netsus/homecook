@@ -1,0 +1,120 @@
+{
+  "error_conditions": 2,
+  "viewport_combinations": 8,
+  "full_page_captures": 8,
+  "same_case_viewport_details": 8,
+  "images": [
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 1280,
+      "height": 900,
+      "sha256": "6291dce6650b5eda64d1fa6718be61772b52e64a5f83813ee9d812a2a8535be8"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-1280x900-200percent.png",
+      "kind": "full-page",
+      "width": 1280,
+      "height": 2109,
+      "sha256": "e02ef937681f7f0d9b5352b35c6fd76d2ee42c9916ae9fe43b891e3c1358fb3e"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 320,
+      "height": 568,
+      "sha256": "05f825b7e19bda8719e1150f0fa5a4893d051e512580deac0a1edb1bd115f814"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-320x568-200percent.png",
+      "kind": "full-page",
+      "width": 320,
+      "height": 2355,
+      "sha256": "d00411f1e19b0e4b31a5cb0cb8a144f8b4a93d7cd2d1f4ad1318bbefc7d6fdd5"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 390,
+      "height": 844,
+      "sha256": "f9f11ca1c2d7c3a89f679995117b355f41e62aad7a867522f92403dd196bb00d"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-390x844-200percent.png",
+      "kind": "full-page",
+      "width": 390,
+      "height": 2185,
+      "sha256": "3049b9a76cb3c79b09a44d914016e811115a18376b5b830a1f3a26250f59876a"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 393,
+      "height": 852,
+      "sha256": "1dad9862c098a6e5ecff5c69117f71e1bb79cd3a8fbfe3bacdc2db9dc89ad6e3"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_HOMEFLOW_RECOVERY-393x852-200percent.png",
+      "kind": "full-page",
+      "width": 393,
+      "height": 2185,
+      "sha256": "318acb35b5d3a03d6d62f5238448f5422fdc06be8f42abd7ce0b91dd1272dba5"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 1280,
+      "height": 900,
+      "sha256": "6060aaeae5aabb30672ae4c51529e167f6208a4a39f000f80ae5e7facf0307c5"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-1280x900-200percent.png",
+      "kind": "full-page",
+      "width": 1280,
+      "height": 1699,
+      "sha256": "ad8f3a549ccb21363fa53639c846faa897975b5a6b3c217fe0a434457bd7c27c"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 320,
+      "height": 568,
+      "sha256": "ceb8bea1798c8771f0e0096e191c03aa908446f04de459ddb4926da2ec3ddf6e"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-320x568-200percent.png",
+      "kind": "full-page",
+      "width": 320,
+      "height": 2072,
+      "sha256": "24715dfa2dbb91b7ab5e12830704ecba3efb3f66c053a110d468f63d3adf71ef"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 390,
+      "height": 844,
+      "sha256": "fdd075f3959c902bdc2e341fda7dd7d775c94fd4613df39d427ed98d7368417e"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-390x844-200percent.png",
+      "kind": "full-page",
+      "width": 390,
+      "height": 1864,
+      "sha256": "558b92f41bafae19e55fab17ddb99686625ce7e55da6400a86bd0c257069a80f"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent-cta-viewport.png",
+      "kind": "same-case-CTA-viewport-detail",
+      "width": 393,
+      "height": 852,
+      "sha256": "d4158b9252c4fe5d0f5c6510197cd4bb97f7d115203a98b7e2a3b366feaeaebd"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/R2_RECORDING_RECOVERY-393x852-200percent.png",
+      "kind": "full-page",
+      "width": 393,
+      "height": 1864,
+      "sha256": "4ad746ea1325a7f38d7344c21daab484edd99256f534fab4a996f618912ee202"
+    }
+  ]
+}

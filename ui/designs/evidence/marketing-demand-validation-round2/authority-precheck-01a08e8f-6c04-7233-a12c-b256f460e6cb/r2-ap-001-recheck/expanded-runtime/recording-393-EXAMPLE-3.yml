@@ -1,0 +1,25 @@
+- main:
+  - paragraph: 로컬 미리보기 · 저장되지 않아요
+  - img "무먹 무엇을 먹든"
+  - button "메뉴로"
+  - paragraph: 베타 준비 중 · 사용 예시
+  - heading "내 레시피에서 영양 기록까지" [level=1]
+  - paragraph: 실제 서비스가 아닌 준비된 예시예요.
+  - paragraph: 사용 예시 3/3
+  - img "준비된 제육볶음 예시"
+  - heading "내 레시피 · 제육볶음 기록 예시" [level=2]
+  - paragraph: 완성한 요리 1,180g 중 먹은 양 320g
+  - paragraph: 487 kcal
+  - paragraph: 예시·추정치
+  - term: 탄수화물
+  - definition: 31g
+  - term: 단백질
+  - definition: 39g
+  - term: 지방
+  - definition: 22g
+  - paragraph: 영양 값 전체가 예시·추정치예요.
+  - paragraph: 레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.
+  - button "예시 확인 완료"
+  - button "이전 장면"
+  - button "알림 접수 확인"
+  - button "메뉴로 돌아가기"

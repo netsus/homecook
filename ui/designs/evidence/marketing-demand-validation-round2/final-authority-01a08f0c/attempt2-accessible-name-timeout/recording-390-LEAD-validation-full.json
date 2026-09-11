@@ -1,0 +1,64 @@
+{
+  "screen": "R2_RECORDING_LEAD",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록, 베타 소식 받기\n\n내 레시피와 먹은 분량을 잇는 기록 기능을 준비 중이에요.\n\n이메일\n\n개인정보 수집·이용 동의 (필수)\n\n무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.\n\n동의하지 않아도 예시와 의견 남기기를 이용할 수 있어요\n\n만 14세 이상인 경우에만 신청해 주세요\n\n개인정보처리방침\n\n예시 이메일 preview@example.com만 사용해요. 실제 보안 확인이나 신청은 하지 않아요.\n\n개인정보 수집·이용에 동의해 주세요.\n\n베타 오픈 알림 신청하기\n메뉴로 돌아가기",
+  "width": 390,
+  "scrollWidth": 390,
+  "scrollY": 17,
+  "active": "",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 52,
+      "bottom": 96,
+      "disabled": false
+    },
+    {
+      "label": "r2-email",
+      "tag": "INPUT",
+      "width": 350,
+      "height": 52,
+      "top": 294.546875,
+      "bottom": 346.546875,
+      "disabled": false
+    },
+    {
+      "label": "r2-consent",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 409.546875,
+      "bottom": 429.546875,
+      "disabled": false
+    },
+    {
+      "label": "개인정보처리방침",
+      "tag": "A",
+      "width": 350,
+      "height": 48,
+      "top": 591.140625,
+      "bottom": 639.140625,
+      "disabled": false
+    },
+    {
+      "label": "베타 오픈 알림 신청하기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 52,
+      "top": 740.359375,
+      "bottom": 792.359375,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 350,
+      "height": 48,
+      "top": 792.359375,
+      "bottom": 840.359375,
+      "disabled": false
+    }
+  ]
+}

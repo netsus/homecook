@@ -1,0 +1,32 @@
+import { spawn, execFileSync } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, writeFile, symlink, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join,dirname } from 'node:path';
+import {createRequire} from 'node:module';
+const root=process.cwd(),out=join(root,'.omx/artifacts/r2-s5-001/production-preview');
+const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+if(head!=='62eff252cdd537c9a849caf1881ac490687abac3')throw Error('Expected approved preview source HEAD');
+await new Promise((ok,no)=>{const s=createServer();s.once('error',no);s.listen(3126,'127.0.0.1',()=>s.close(ok));});
+await mkdir(out,{recursive:true});const reuse=process.argv.find(arg=>arg.startsWith('--reuse-owned='))?.slice('--reuse-owned='.length);
+if(reuse&&await readFile(join(reuse,'.r2-owned'),'utf8')!=='R2-S5-001-production-preview-62eff252')throw Error('Missing reuse ownership');
+const owned=reuse??await mkdtemp(join(tmpdir(),'r2-s5-production-'));
+await writeFile(join(owned,'.r2-owned'),'R2-S5-001-production-preview-62eff252');
+const candidates=['app','components','lib','types','hooks','stores','public','scripts','qa','next.config.ts','next-env.d.ts','tsconfig.json','postcss.config.mjs','package.json','pnpm-lock.yaml','middleware.ts','eslint.config.mjs'];
+const paths=candidates.filter(path=>execFileSync('git',['ls-files',path],{encoding:'utf8'}).trim());
+if(!reuse){const archive=spawn('git',['archive','--format=tar',head,...paths],{cwd:root,stdio:['ignore','pipe','inherit']});
+const extract=spawn('tar',['-x','-C',owned],{stdio:['pipe','inherit','inherit']});archive.stdout.pipe(extract.stdin);
+await Promise.all([archive,extract].map(child=>new Promise((ok,no)=>child.once('exit',code=>code===0?ok():no(Error('Exact source extraction failed'))))));}
+const files=execFileSync('git',['ls-files','-z',...paths],{encoding:'utf8'}).split('\0').filter(Boolean),sourceHashes={};
+for(const file of files){const bytes=await readFile(join(owned,file));const original=execFileSync('git',['show',`${head}:${file}`],{maxBuffer:32*1024*1024});if(!bytes.equals(original))throw Error(`Exact source parity failed: ${file}`);sourceHashes[file]=createHash('sha256').update(bytes).digest('hex');}
+if(!reuse)await symlink(join(root,'node_modules'),join(owned,'node_modules'));
+const evidence={head,owned,sourceFileCount:files.length,sourceTreeSha256:createHash('sha256').update(JSON.stringify(sourceHashes)).digest('hex'),sourceHashes,actualSourceParity:true,noFixturePageOverride:true,nodeModules:'existing repository dependencies symlink',flags:{MUMEOK_ROUND2_LOCAL_PREVIEW:'true',MUMEOK_ROUND2_ENABLED:'false',MUMEOK_ROUND2_LEADS_ENABLED:'false'},builtAt:new Date().toISOString()};
+await writeFile(join(out,'source-manifest.json'),JSON.stringify(evidence,null,2));
+const env={PATH:process.env.PATH,NODE_PATH:dirname(dirname(createRequire(import.meta.url).resolve('eslint-config-next'))),NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1',MUMEOK_ROUND2_LOCAL_PREVIEW:'true',MUMEOK_ROUND2_ENABLED:'false',MUMEOK_ROUND2_LEADS_ENABLED:'false',MUMEOK_ROUND2_PROFILE:'production',NEXT_PUBLIC_APP_URL:'http://127.0.0.1:3126'};
+const child=spawn(process.execPath,[join(owned,'node_modules/next/dist/bin/next'),'build'],{cwd:owned,env,stdio:['ignore','pipe','pipe']});let log='';child.stdout.on('data',data=>{log+=data;process.stdout.write(data)});child.stderr.on('data',data=>{log+=data;process.stderr.write(data)});
+const code=await new Promise(ok=>child.once('exit',ok));await writeFile(join(out,'build.log'),log);if(code!==0||log.includes('⨯ ESLint'))throw Error('Owned production build or embedded lint failed');
+const compiled={};async function tree(dir,prefix=''){for(const item of(await readdir(dir,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){if(item.name==='cache')continue;const name=prefix+item.name;if(item.isDirectory())await tree(join(dir,item.name),name+'/');else if(item.isFile())compiled[name]=createHash('sha256').update(await readFile(join(dir,item.name))).digest('hex');}}
+await tree(join(owned,'.next'));
+await writeFile(join(out,'build-result.json'),JSON.stringify({result:'PASS',head,owned,buildId:(await readFile(join(owned,'.next/BUILD_ID'),'utf8')).trim(),compiledTreeSha256:createHash('sha256').update(JSON.stringify(compiled)).digest('hex'),compiledFileCount:Object.keys(compiled).length,sourceTreeSha256:evidence.sourceTreeSha256,compiledFiles:compiled,cacheExcluded:true,rootNextUntouched:true},null,2));
+process.stdout.write(JSON.stringify({result:'PASS',owned,head})+'\n');

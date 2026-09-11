@@ -1,0 +1,74 @@
+
+> homecook@0.1.0 verify:frontend:pr /Users/cwj/.codex/worktrees/f2a2/homecook
+> pnpm lint && pnpm typecheck && pnpm test:product && pnpm build && pnpm test:e2e:smoke && pnpm test:e2e:a11y:core && pnpm test:e2e:visual:core
+
+
+> homecook@0.1.0 lint /Users/cwj/.codex/worktrees/f2a2/homecook
+> eslint . --ignore-pattern '.agents/**' --ignore-pattern '.omx/**'
+
+
+> homecook@0.1.0 typecheck /Users/cwj/.codex/worktrees/f2a2/homecook
+> tsc --noEmit
+
+
+> homecook@0.1.0 test:product /Users/cwj/.codex/worktrees/f2a2/homecook
+> vitest run --config vitest.product.config.ts
+
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-PjAjqb
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+{
+  "promoted": false,
+  "expected_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+ ❯ tests/personal-recipe-editor-shell.test.tsx (11 tests | 1 failed) 1520ms
+     × releases the submit latch when the async adapter rejects before submitting 174ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/personal-recipe-editor-shell.test.tsx > personal recipe editor shell > releases the submit latch when the async adapter rejects before submitting
+AssertionError: expected <button …(2)>…(1)</button> to be <div …(3)></div> // Object.is equality
+
+- Expected
++ Received
+
+- <div
+-   class="rounded-[var(--radius-md)] border border-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,white)] p-3 text-sm text-[var(--foreground)] outline-none"
+-   role="alert"
+-   tabindex="-1"
++ <button
++   class="relative inline-flex items-center justify-center rounded-[var(--radius-control)] font-bold transition-colors h-[var(--control-height-lg)] px-5 text-base w-full bg-[var(--wave1-mint-contrast)] text-[var(--wave1-surface)] hover:bg-[var(--wave1-mint-contrast-deep)] hover:shadow-[var(--wave1-shadow-deep)] active:bg-[var(--wave1-mint-contrast-deep)] active:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--wave1-ink)_6%,transparent)]"
++   type="button"
++ >
++   <span
++     class=""
+    >
+-   save failed
+- </div>
++     내 레시피로 저장
++   </span>
++ </button>
+
+ ❯ tests/personal-recipe-editor-shell.test.tsx:339:36
+    337|     const alert = screen.getByRole("alert");
+    338|     expect(alert.textContent).toContain("save failed");
+    339|     expect(document.activeElement).toBe(alert);
+       |                                    ^
+    340|   });
+    341|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 648 passed | 39 skipped (688)
+      Tests  1 failed | 7826 passed | 516 skipped (8343)
+   Start at  12:09:24
+   Duration  128.89s (transform 41.38s, setup 9.23s, import 98.64s, tests 819.07s, environment 102.86s)
+
+ ELIFECYCLE  Command failed with exit code 1.
+ ELIFECYCLE  Command failed with exit code 1.

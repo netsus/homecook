@@ -1,0 +1,17 @@
+diff --git a/package.json b/package.json
+index 6fd7ee0f..6d4f5871 100644
+--- a/package.json
++++ b/package.json
+@@ -268,7 +268,11 @@
+     "test:marketing-round2": "vitest run --config vitest.product.config.ts tests/marketing-round2-protocol.test.ts tests/marketing-round2-context.test.ts tests/marketing-round2-storage.test.ts tests/marketing-round2-runtime.test.ts tests/marketing-round2-handler.test.ts tests/marketing-round2-route.test.ts tests/marketing-round2-turnstile.test.ts tests/marketing-round2-security.test.ts tests/marketing-round2-session.test.ts tests/marketing-round2-survey.test.ts",
+     "verify:marketing-round2:isolated": "node scripts/verify-marketing-round2-isolated.mjs",
+     "verify:marketing-round2:browser-storage": "node scripts/verify-marketing-round2-browser-storage.mjs",
+-    "verify:marketing-round2": "pnpm test:marketing-round2 && pnpm verify:marketing-round2:isolated && pnpm verify:marketing-round2:browser-storage"
++    "verify:marketing-round2": "pnpm test:marketing-round2 && pnpm verify:marketing-round2:isolated && pnpm verify:marketing-round2:browser-storage",
++    "test:marketing-round2:frontend": "vitest run --config vitest.product.config.ts tests/marketing-round2-view.test.tsx tests/marketing-round2-landing.test.tsx tests/marketing-round2-client.test.ts tests/marketing-round2-client-storage.test.ts tests/marketing-round2-page.test.ts tests/marketing-round2-page-route.test.tsx tests/marketing-round2-path-guard.test.ts tests/marketing-round2-provider-boundary.test.tsx tests/marketing-round2-widget.test.tsx tests/marketing-round2-ui-isolated.test.ts",
++    "test:marketing-round2:client-browser": "R2_CLIENT_BROWSER=1 vitest run --config vitest.product.config.ts tests/marketing-round2-client.test.ts tests/marketing-round2-client-storage.test.ts tests/marketing-round2-session.test.ts",
++    "test:e2e:marketing-round2": "HOMECOOK_ROUND2_PREVIEW_E2E=1 playwright test --config=playwright.marketing-round2.config.ts",
++    "verify:marketing-round2:ui-isolated": "node scripts/verify-marketing-round2-ui-isolated.mjs"
+   },
+   "dependencies": {
+     "@radix-ui/react-icons": "1.3.2",

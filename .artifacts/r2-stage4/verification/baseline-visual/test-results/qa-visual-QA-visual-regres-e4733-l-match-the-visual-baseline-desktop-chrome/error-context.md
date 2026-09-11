@@ -1,0 +1,118 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - region "플래너용 레시피 등록" [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e7]:
+          - generic [ref=e8]:
+            - generic [ref=e9]:
+              - link "무먹, 무엇을 먹든" [ref=e10] [cursor=pointer]:
+                - /url: /
+                - img [ref=e11]
+              - navigation "데스크탑 주요 메뉴" [ref=e12]:
+                - link "홈" [ref=e13] [cursor=pointer]:
+                  - /url: /
+                - link "요리 계획" [ref=e14] [cursor=pointer]:
+                  - /url: /planner
+                - link "식사 기록" [ref=e15] [cursor=pointer]:
+                  - /url: /planner?segment=log
+                - link "팬트리" [ref=e16] [cursor=pointer]:
+                  - /url: /pantry
+                - link "무먹 가이드" [ref=e17] [cursor=pointer]:
+                  - /url: /about
+              - generic [ref=e18]:
+                - button "YouTube 추출 알림 없음" [ref=e19] [cursor=pointer]:
+                  - img [ref=e20]
+                - link "내 프로필" [ref=e22] [cursor=pointer]:
+                  - /url: /mypage
+                  - img [ref=e23]
+            - status "서비스 준비 안내" [ref=e26]:
+              - generic [ref=e27]: 서비스 준비 중
+              - generic [ref=e29]: 더 편한 식생활을 위해 하나씩 채워가고 있어요.
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - paragraph [ref=e32]: 직접 등록
+              - heading "새 레시피 직접 등록" [level=1] [ref=e33]
+              - paragraph [ref=e34]: 요리 이름, 재료, 만들기를 입력해 저장해요.
+            - button "취소" [ref=e36] [cursor=pointer]
+          - generic [ref=e37]:
+            - generic [ref=e38]:
+              - heading "기본 정보" [level=2] [ref=e40]
+              - generic [ref=e41]:
+                - generic [ref=e42]:
+                  - generic [ref=e43]: 요리 이름
+                  - textbox "요리 이름" [ref=e44]:
+                    - /placeholder: "예: 김치찌개"
+                - generic [ref=e45]:
+                  - generic [ref=e46]: 기준 수량
+                  - group "기준 인분 조절" [ref=e47]:
+                    - generic [ref=e48]:
+                      - button "기준 인분 줄이기" [ref=e49] [cursor=pointer]:
+                        - generic [ref=e50]: −
+                      - generic [ref=e51]: 2인분
+                      - button "기준 인분 늘리기" [ref=e52] [cursor=pointer]:
+                        - generic [ref=e53]: +
+            - generic [ref=e54]:
+              - generic [ref=e55]:
+                - heading "이미지" [level=2] [ref=e56]
+                - generic [ref=e57]: 선택사항
+              - button "사진 선택" [ref=e58] [cursor=pointer]:
+                - generic [ref=e59]: 사진 선택
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - heading "태그" [level=2] [ref=e62]
+                - generic [ref=e63]: 선택사항
+              - generic [ref=e64]:
+                - generic [ref=e66]: 태그 없음
+                - generic [ref=e67]:
+                  - generic [ref=e68]:
+                    - generic [ref=e69]: 태그 추가
+                    - textbox "태그 추가" [ref=e70]:
+                      - /placeholder: "예: 한식"
+                  - button "태그 추가하기" [disabled] [ref=e71] [cursor=pointer]: 추가
+            - generic [ref=e72]:
+              - generic [ref=e73]:
+                - heading "재료" [level=2] [ref=e74]
+                - generic [ref=e75]: 0개 선택됨
+              - paragraph [ref=e76]: 재료를 1개 이상 추가해 주세요.
+              - button "+ 재료 추가하기" [ref=e77] [cursor=pointer]
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - heading "만들기" [level=2] [ref=e80]
+                - generic [ref=e81]: 0단계
+              - paragraph [ref=e82]: 만들기를 추가해 주세요.
+              - generic [ref=e83]:
+                - generic [ref=e84]:
+                  - generic [ref=e85]: 1단계 입력
+                  - generic [ref=e86]: 조리방법을 먼저 골라 주세요
+                - group "조리방법 선택" [ref=e87]:
+                  - generic [ref=e88]:
+                    - generic [ref=e89]:
+                      - paragraph [ref=e90]: 준비/손질
+                      - button "손질" [ref=e92] [cursor=pointer]
+                    - generic [ref=e93]:
+                      - paragraph [ref=e94]: 물/수분 조리
+                      - button "끓이기" [ref=e96] [cursor=pointer]
+                    - generic [ref=e97]:
+                      - paragraph [ref=e98]: 팬/기름 조리
+                      - button "볶기" [ref=e100] [cursor=pointer]
+                - generic [ref=e101]:
+                  - generic [ref=e102]: 만들기 설명
+                  - textbox "만들기 1 설명" [ref=e103]:
+                    - /placeholder: 만들기 설명을 입력하세요
+                - button "+ 만들기 추가" [disabled] [ref=e104] [cursor=pointer]
+            - button "저장" [ref=e106] [cursor=pointer]
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - strong [ref=e110]: 무엇을 먹든
+            - generic [ref=e111]: 레시피부터 장보기, 요리 기록까지
+          - navigation "서비스 정보" [ref=e112]:
+            - link "개인정보처리방침" [ref=e113] [cursor=pointer]:
+              - /url: /privacy
+            - link "이용약관" [ref=e114] [cursor=pointer]:
+              - /url: /terms
+  - region "새 알림"
+  - alert [ref=e115]
+```

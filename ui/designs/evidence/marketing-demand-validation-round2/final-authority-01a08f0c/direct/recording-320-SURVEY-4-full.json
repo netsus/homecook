@@ -1,0 +1,82 @@
+{
+  "screen": "R2_RECORDING_SURVEY",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중\n\n집밥 기록에 대한 의견\n\n문항 4/4\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n이 방식의 집밥 기록 기능을 사용해 보고 싶나요?\n사용해 보고 싶어요\n상황에 따라 써볼 것 같아요\n사용할 의향이 없어요\n아직 모르겠어요\n의견 보내기\n이전 문항\n\n이메일 없이 의견만 남길 수 있어요.\n\n메뉴로 돌아가기",
+  "width": 320,
+  "scrollWidth": 320,
+  "scrollY": 0,
+  "active": "집밥 기록에 대한 의견",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": 69,
+      "bottom": 113,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-0",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 446.6875,
+      "bottom": 466.6875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-1",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 506.6875,
+      "bottom": 526.6875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-2",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 566.6875,
+      "bottom": 586.6875,
+      "disabled": false
+    },
+    {
+      "label": "r2-option-q4-3",
+      "tag": "INPUT",
+      "width": 20,
+      "height": 20,
+      "top": 626.6875,
+      "bottom": 646.6875,
+      "disabled": false
+    },
+    {
+      "label": "의견 보내기",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 52,
+      "top": 701.6875,
+      "bottom": 753.6875,
+      "disabled": false
+    },
+    {
+      "label": "이전 문항",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 763.6875,
+      "bottom": 811.6875,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 865.796875,
+      "bottom": 913.796875,
+      "disabled": false
+    }
+  ]
+}

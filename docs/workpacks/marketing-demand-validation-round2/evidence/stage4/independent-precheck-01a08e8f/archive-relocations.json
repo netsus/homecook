@@ -1,0 +1,31 @@
+{
+  "reason": "Independent source artifacts retained as non-executable text; no product/test import references; no lint rule changes",
+  "content_changed": false,
+  "files": [
+    {
+      "original_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/audit.cjs",
+      "retained_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/audit.cjs.txt",
+      "sha256": "259dd40a7737fd1edeff99f05807839faa92dfe6595c524e367e747b8d0f21a4"
+    },
+    {
+      "original_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-audit.cjs",
+      "retained_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/expanded-audit.cjs.txt",
+      "sha256": "b1a2371b473dbee08810227daafaffa299a55b0942d26d90940c23fc99d05ddd"
+    },
+    {
+      "original_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/recheck.cjs",
+      "retained_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-ap-001-recheck/recheck.cjs.txt",
+      "sha256": "ac6db74ac35e02d640282dda7153eae20fee7765896b4d23235c108c77cc1bd5"
+    },
+    {
+      "original_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/zoom-check.cjs",
+      "retained_path": "ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/zoom-check.cjs.txt",
+      "sha256": "03f4b85a229926d8b6d041db638833985bf2d016575db654514f6c9b0de1f524"
+    },
+    {
+      "original_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/reproduction/reproduce-lead-edit.cjs",
+      "retained_path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/reproduction/reproduce-lead-edit.cjs.txt",
+      "sha256": "48a580b0ac1e6a4fa99eeab1b66a111d10e732b619ec3a843c1541f2f16fe0ed"
+    }
+  ]
+}

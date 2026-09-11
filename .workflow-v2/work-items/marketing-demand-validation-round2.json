@@ -1,7 +1,7 @@
 {
   "id": "marketing-demand-validation-round2",
   "title": "Marketing demand validation round 2",
-  "summary": "Stage 1 Draft 문서 재잠금. docs/marketing-demand-validation-r2-contract.md의 공식 r2.1 계약 source SHA 7f00e62c13572b5b2c0d54c997fe628f7a56567e를 소비한다. 조정자가 확인한 local merge b9601841에 반영되었으며 internal 1.5 독립 검토와 Stage 1 병합은 대기 중이다. 제품 Stage 2/4는 미착수다.",
+  "summary": "R2 수리 제품7bfe와metadata1a519를독립Stage5 및최종화면승인에서approve/required0으로확인했다. 디자인confirmed만반영하며closeout은collecting,Stage6는미시작이다. 기존전체frontend geometry4/visual10실패와CI timeout재실행을분리보존하고전체verification/Ready/merge/배포승인은하지않는다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -105,14 +105,13 @@
     "evaluator_commands": [],
     "artifact_assertions": [
       "exact-contract-source:docs/marketing-demand-validation-r2-contract.md@7f00e62c13572b5b2c0d54c997fe628f7a56567e",
-      "stage1-draft-relock-internal1.5-independent-review-pending-no-self-signoff",
-      "product-stage2-stage4-not-started-delivery-and-acceptance-unchecked",
       "r2-endpoint-three-tables-server-only-rpc-and-independent-activity-contract-consumed",
       "versioned-four-question-topic-enums-cookie-control-limiter-preview-idempotency-retention-consumed",
       "eight-shared-generator-critic-screens-with-two-topic-mapping-and-static-reference-only",
       "automated-functional-db-and-flow-tests-separate-from-external-manual-only-gates",
       "stage5-final-runtime-authority-and-stage6-independent-tasks-pending",
-      "canonical-closeout-collecting-design-temporary-authority-pending-no-claimed-current-head-approval"
+      "stage4-structured-author-evidence-and-review-pending-design-no-self-signoff",
+      "canonical-closeout-collecting-authority-pending-no-claimed-current-head-approval"
     ]
   },
   "status": {
@@ -129,17 +128,33 @@
     "phase": "collecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
+      "design_status": "confirmed",
       "delivery_checklist": "pending",
-      "design_authority": "pending",
+      "design_authority": "passed",
       "acceptance": "pending",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
       "required_checks": "pending",
       "external_smokes": "pending",
-      "authority_reports": [],
-      "actual_verification_refs": []
+      "authority_reports": [
+        "ui/designs/authority/R2_MENU-authority.md",
+        "ui/designs/authority/R2_EXAMPLE-authority.md",
+        "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+        "ui/designs/authority/R2_SURVEY-authority.md",
+        "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+        "ui/designs/authority/R2_LEAD-authority.md",
+        "ui/designs/authority/R2_LEAD_DONE-authority.md",
+        "ui/designs/authority/R2_RECOVERY-authority.md"
+      ],
+      "actual_verification_refs": [
+        "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/stage4-result.json",
+        ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploratory-report.json",
+        ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/eval-result.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+        "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json"
+      ]
     },
     "merge_gate_projection": {
       "current_head_sha": "pending",
@@ -164,7 +179,7 @@
       "evidence_sources": []
     },
     "projection_state": {
-      "docs_synced_at": "2026-09-10T20:06:58.414Z",
+      "docs_synced_at": "2026-09-11T02:47:49.005884Z",
       "status_synced_at": "2026-09-10T20:06:58.414Z",
       "pr_body_synced_at": "pending"
     }

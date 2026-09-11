@@ -1,0 +1,55 @@
+{
+  "screen": "R2_RECORDING_EXAMPLE",
+  "text": "로컬 미리보기 · 저장되지 않아요\n\n메뉴로\n\n베타 준비 중 · 사용 예시\n\n내 레시피에서 영양 기록까지\n\n실제 서비스가 아닌 준비된 예시예요.\n\n사용 예시 3/3\n\n내 레시피 · 제육볶음 기록 예시\n\n완성한 요리 1,180g 중 먹은 양 320g\n\n487 kcal\n\n예시·추정치\n\n탄수화물\n31g\n단백질\n39g\n지방\n22g\n\n영양 값 전체가 예시·추정치예요.\n\n레시피의 재료와 양을 확인·수정하고, 완성한 요리의 무게와 먹은 양을 직접 입력하는 방식이에요. 영양 정보는 추정치예요.\n\n예시 확인 완료\n이전 장면\n알림 접수 확인\n메뉴로 돌아가기",
+  "width": 320,
+  "scrollWidth": 320,
+  "scrollY": 578,
+  "active": "내 레시피에서 영양 기록까지",
+  "controls": [
+    {
+      "label": "메뉴로",
+      "tag": "BUTTON",
+      "width": 60,
+      "height": 44,
+      "top": -509,
+      "bottom": -465,
+      "disabled": false
+    },
+    {
+      "label": "예시 확인 완료",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 52,
+      "top": 305.953125,
+      "bottom": 357.953125,
+      "disabled": false
+    },
+    {
+      "label": "이전 장면",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 367.953125,
+      "bottom": 415.953125,
+      "disabled": false
+    },
+    {
+      "label": "알림 접수 확인",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 50,
+      "top": 425.953125,
+      "bottom": 475.953125,
+      "disabled": false
+    },
+    {
+      "label": "메뉴로 돌아가기",
+      "tag": "BUTTON",
+      "width": 288,
+      "height": 48,
+      "top": 495.953125,
+      "bottom": 543.953125,
+      "disabled": false
+    }
+  ]
+}

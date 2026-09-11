@@ -1,0 +1,8 @@
+
+> homecook@0.1.0 verify:marketing-round2:ui-isolated /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/verify-marketing-round2-ui-isolated.mjs -- --recovery-zoom-only
+
+{"phase":"starting-fresh-isolated","projectId":"hcg_92245_74eb5e","dataApiUrl":"http://127.0.0.1:58283","cliVersion":"2.110.0","migrationSha256":"6e04722b44718c0f3e62579dd5617370b68a4a813d3164c816952079b009d3c8"}
+{"phase":"isolated-migration-replayed","projectId":"hcg_92245_74eb5e"}
+{"phase":"next-ready","projectId":"hcg_92245_74eb5e"}
+{"result":"PASS","checks":2,"path":"/Users/cwj/.codex/worktrees/f2a2/homecook/.omx/artifacts/r2-stage4/real-ui-recovery-zoom/result.json"}

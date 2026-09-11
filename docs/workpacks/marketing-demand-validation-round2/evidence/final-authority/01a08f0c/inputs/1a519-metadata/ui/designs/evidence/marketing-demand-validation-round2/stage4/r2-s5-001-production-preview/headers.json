@@ -1,0 +1,50 @@
+[
+  {
+    "topic": "recording",
+    "activity": "example",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "referrerPolicy": "no-referrer",
+    "setCookiePresent": false
+  },
+  {
+    "topic": "recording",
+    "activity": "survey",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "referrerPolicy": "no-referrer",
+    "setCookiePresent": false
+  },
+  {
+    "topic": "recording",
+    "activity": "lead",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "referrerPolicy": "no-referrer",
+    "setCookiePresent": false
+  },
+  {
+    "topic": "homeflow",
+    "activity": "example",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "referrerPolicy": "no-referrer",
+    "setCookiePresent": false
+  },
+  {
+    "topic": "homeflow",
+    "activity": "survey",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "referrerPolicy": "no-referrer",
+    "setCookiePresent": false
+  },
+  {
+    "topic": "homeflow",
+    "activity": "lead",
+    "status": 200,
+    "cacheControl": "private, no-store",
+    "referrerPolicy": "no-referrer",
+    "setCookiePresent": false
+  }
+]

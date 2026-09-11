@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-09-11T05:10:43.874Z",
+  "baselineHead": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "sourceHashes": {
+    "lib/marketing/round2-client.ts": "8c7d17aa75981146e6a1cf9e59b0ee9fb478f50bf38ee240cd6d0c7194218efc",
+    "components/marketing/round2/round2-view.tsx": "a31bbcc1a8e0ef72e9177856cbd2da898d12b8510f1ea20464e857376a84709c",
+    "components/marketing/round2/round2-landing.tsx": "914a743cbb123280051f4df07a8e96316a92f611cfe483ab5eb03df4ac6f8992",
+    "components/marketing/round2/round2-turnstile.tsx": "08c30af9f5d5ae74f825c604bd054223ea5c2d849a3b68e161f7f341cd5d566b",
+    "components/marketing/round2/round2.module.css": "497e1271454542d818942bd797ccaad37fd3ce304f27ad20a1d9f9dc58ab403c",
+    "app/globals.css": "4f3d29a526c278bf81580f7e215845d505da36fc49a37902a920a907322f3151",
+    "app/beta/r2/[topic]/page.tsx": "478441008b76f606f663151951b4a668f9d65599197cdfb6d87af686b8d80a67"
+  },
+  "fixturePageOnly": true,
+  "temporaryRoot": "/var/folders/3z/y96spzj121b8vg6xflzxfyww0000gn/T/r2-s5-browser-cZ0ZTs",
+  "origin": "http://127.0.0.1:3126",
+  "realNext": true,
+  "actualApi": false,
+  "actualDatabase": false
+}

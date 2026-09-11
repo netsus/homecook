@@ -1,0 +1,3 @@
+Browser tab: 3, Title: "내 레시피로 만든 집밥, 먹은 만큼 영양 기록 | 무엇을 먹든", URL: "http://127.0.0.1:3126/beta/r2/recording".
+There has been no change in the accessibility tree.
+The focused UI element is 11 button 알림 접수 확인 완료

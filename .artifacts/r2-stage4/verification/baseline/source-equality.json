@@ -1,0 +1,100 @@
+[
+  {
+    "path": "app/globals.css",
+    "base_sha256": "4f3d29a526c278bf81580f7e215845d505da36fc49a37902a920a907322f3151",
+    "candidate_sha256": "4f3d29a526c278bf81580f7e215845d505da36fc49a37902a920a907322f3151",
+    "baseline_sha256": "4f3d29a526c278bf81580f7e215845d505da36fc49a37902a920a907322f3151",
+    "identical": true
+  },
+  {
+    "path": "app/layout.tsx",
+    "base_sha256": "55e4aee2ee3a1bde12fd609b8279dd500810cce2d36ad37fbfd85083b13d87b3",
+    "candidate_sha256": "55e4aee2ee3a1bde12fd609b8279dd500810cce2d36ad37fbfd85083b13d87b3",
+    "baseline_sha256": "55e4aee2ee3a1bde12fd609b8279dd500810cce2d36ad37fbfd85083b13d87b3",
+    "identical": true
+  },
+  {
+    "path": "app/leftovers/page.tsx",
+    "base_sha256": "614d83d27140cb2fbf2c84a119aad8d192c155ebb6b19ffca7884788683eef74",
+    "candidate_sha256": "614d83d27140cb2fbf2c84a119aad8d192c155ebb6b19ffca7884788683eef74",
+    "baseline_sha256": "614d83d27140cb2fbf2c84a119aad8d192c155ebb6b19ffca7884788683eef74",
+    "identical": true
+  },
+  {
+    "path": "components/leftovers/leftovers-screen.tsx",
+    "base_sha256": "9129e9be81741ac40a73fd14178cd12fbc03360e872294b12da227ffc5c4363e",
+    "candidate_sha256": "9129e9be81741ac40a73fd14178cd12fbc03360e872294b12da227ffc5c4363e",
+    "baseline_sha256": "9129e9be81741ac40a73fd14178cd12fbc03360e872294b12da227ffc5c4363e",
+    "identical": true
+  },
+  {
+    "path": "components/layout/app-shell.tsx",
+    "base_sha256": "36b3ec896fdaa524601e4028156f71d17f4e7598cd4390b37bdb1a32cb0097cb",
+    "candidate_sha256": "36b3ec896fdaa524601e4028156f71d17f4e7598cd4390b37bdb1a32cb0097cb",
+    "baseline_sha256": "36b3ec896fdaa524601e4028156f71d17f4e7598cd4390b37bdb1a32cb0097cb",
+    "identical": true
+  },
+  {
+    "path": "components/layout/bottom-tabs.tsx",
+    "base_sha256": "871345d718d25c32c09cf44dcda0c82edf016b4baae4331a42d4d31fb22fd253",
+    "candidate_sha256": "871345d718d25c32c09cf44dcda0c82edf016b4baae4331a42d4d31fb22fd253",
+    "baseline_sha256": "871345d718d25c32c09cf44dcda0c82edf016b4baae4331a42d4d31fb22fd253",
+    "identical": true
+  },
+  {
+    "path": "components/layout/wave1-mobile-bottom-tab.tsx",
+    "base_sha256": "c2113e00764b552ad242f84d78adb73f8f3dfde55d707b2881ba2338e3e768e4",
+    "candidate_sha256": "c2113e00764b552ad242f84d78adb73f8f3dfde55d707b2881ba2338e3e768e4",
+    "baseline_sha256": "c2113e00764b552ad242f84d78adb73f8f3dfde55d707b2881ba2338e3e768e4",
+    "identical": true
+  },
+  {
+    "path": "components/planner/food-product-picker.tsx",
+    "base_sha256": "0420b987d90af5938eb2d55f5ce94a618bbaa07c3a56913730a4e3d44c04e70d",
+    "candidate_sha256": "0420b987d90af5938eb2d55f5ce94a618bbaa07c3a56913730a4e3d44c04e70d",
+    "baseline_sha256": "0420b987d90af5938eb2d55f5ce94a618bbaa07c3a56913730a4e3d44c04e70d",
+    "identical": true
+  },
+  {
+    "path": "components/planner/food-product-create-form.tsx",
+    "base_sha256": "b4e3e04a9efa104e45d2519557fc81e8368cf7352da8a1250380d40febb580a6",
+    "candidate_sha256": "b4e3e04a9efa104e45d2519557fc81e8368cf7352da8a1250380d40febb580a6",
+    "baseline_sha256": "b4e3e04a9efa104e45d2519557fc81e8368cf7352da8a1250380d40febb580a6",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/slice-16-leftovers.spec.ts",
+    "base_sha256": "268ebea0055fd717f6e2cc450c1b1b2367d67ec37b9d0c779cb8d1f0287a09d5",
+    "candidate_sha256": "268ebea0055fd717f6e2cc450c1b1b2367d67ec37b9d0c779cb8d1f0287a09d5",
+    "baseline_sha256": "268ebea0055fd717f6e2cc450c1b1b2367d67ec37b9d0c779cb8d1f0287a09d5",
+    "identical": true
+  },
+  {
+    "path": "tests/e2e/slice-prepared-food-planner-entry.spec.ts",
+    "base_sha256": "7d0d712d075f7be5c0d4a1adce0e4e68099aa11d32dcf9e644be3d5cd19a775a",
+    "candidate_sha256": "7d0d712d075f7be5c0d4a1adce0e4e68099aa11d32dcf9e644be3d5cd19a775a",
+    "baseline_sha256": "7d0d712d075f7be5c0d4a1adce0e4e68099aa11d32dcf9e644be3d5cd19a775a",
+    "identical": true
+  },
+  {
+    "path": "playwright.config.ts",
+    "base_sha256": "1cafc2913d3141b465c48eaa5b54174ec61cf75928ff837f253902aebd8b1958",
+    "candidate_sha256": "1cafc2913d3141b465c48eaa5b54174ec61cf75928ff837f253902aebd8b1958",
+    "baseline_sha256": "1cafc2913d3141b465c48eaa5b54174ec61cf75928ff837f253902aebd8b1958",
+    "identical": true
+  },
+  {
+    "path": "package.json",
+    "base_sha256": "d826eeaba327be1169769146c2045270dbe658b7b810e3aaa719d82090a1dd7e",
+    "candidate_sha256": "adb5c26f6a91206bb3dee2b473bb5e4021a6c0a662a8d1afd66d115e0c7edc47",
+    "baseline_sha256": "d826eeaba327be1169769146c2045270dbe658b7b810e3aaa719d82090a1dd7e",
+    "identical": false
+  },
+  {
+    "path": "pnpm-lock.yaml",
+    "base_sha256": "50e9635e535d378a47b491b6b177f809a5060cc66c93097eace2dd5dcc77d216",
+    "candidate_sha256": "50e9635e535d378a47b491b6b177f809a5060cc66c93097eace2dd5dcc77d216",
+    "baseline_sha256": "50e9635e535d378a47b491b6b177f809a5060cc66c93097eace2dd5dcc77d216",
+    "identical": true
+  }
+]

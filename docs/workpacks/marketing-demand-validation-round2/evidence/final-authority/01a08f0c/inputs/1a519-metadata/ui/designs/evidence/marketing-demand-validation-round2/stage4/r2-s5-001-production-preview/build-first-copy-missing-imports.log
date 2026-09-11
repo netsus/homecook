@@ -1,0 +1,40 @@
+   ▲ Next.js 15.5.24
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./lib/mock/qa-fixtures.ts
+Module not found: Can't resolve '@/qa/fixtures/slices-01-05.json'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/mock/recipes.ts
+./app/api/v1/auth/logout/route.ts
+
+./lib/server/recipe-content-snapshot-future-propagation.ts
+Module not found: Can't resolve '@/scripts/lib/recipe-nutrition-predecessor.mjs'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/api/v1/cooking/session-attempts/route.ts
+
+./lib/server/recipe-nutrition-service.ts
+Module not found: Can't resolve '@/scripts/lib/recipe-nutrition-predecessor.mjs'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/api/v1/recipes/route.ts
+
+./lib/server/youtube-async-extraction-routes.ts
+Module not found: Can't resolve '@/scripts/lib/youtube-extraction-worker-artifact.mjs'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/api/v1/recipes/youtube/extraction-jobs/route.ts
+
+
+> Build failed because of webpack errors

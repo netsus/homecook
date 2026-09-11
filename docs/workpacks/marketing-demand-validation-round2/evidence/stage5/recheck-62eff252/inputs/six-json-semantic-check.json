@@ -1,0 +1,109 @@
+{
+  "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "artifact_manifest_entries": 256,
+  "artifact_mismatches": [],
+  "captured_snapshot_files": 1870,
+  "product_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "tracked_compared": 1869,
+  "source_mismatches": [],
+  "untracked_generated": [
+    "next-env.d.ts"
+  ],
+  "final_source_hash_mismatches": [],
+  "trace_total": 1316,
+  "trace_kinds": {
+    "ui": 767,
+    "request": 273,
+    "response": 210,
+    "assertion": 66
+  },
+  "parsed_response_envelopes": 208,
+  "intercepted_commit_response_entries": 2,
+  "navigation": 50,
+  "reload": 21,
+  "cookie_resume_requests": 1,
+  "case_groups": 26,
+  "condition_rows": 28,
+  "projection_count_or_index_errors": [],
+  "screenshot_records": 115,
+  "unique_screenshots": 113,
+  "repeated_screenshots": {
+    "shared-tabs-topics-menu.png": 2,
+    "shared-tabs-topics-example-done.png": 2
+  },
+  "missing_canonical": [],
+  "missing_200_percent_matrix": [],
+  "original_report_preservation": [
+    {
+      "path": "ui/designs/authority/R2_MENU-authority.md",
+      "rest_byte_identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE-authority.md",
+      "rest_byte_identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+      "rest_byte_identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY-authority.md",
+      "rest_byte_identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+      "rest_byte_identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD-authority.md",
+      "rest_byte_identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_LEAD_DONE-authority.md",
+      "rest_byte_identical": true
+    },
+    {
+      "path": "ui/designs/authority/R2_RECOVERY-authority.md",
+      "rest_byte_identical": true
+    }
+  ],
+  "limitations": [
+    "Source/metadata read-only verification; no runtime/DB/provider run.",
+    "208 is parsed envelopes. Trace response kind has210 entries including2 intercepted-commit markers.",
+    "Final runner includes default option helper extraction plus default selection behavior change; final no-option DB command was not rerun.",
+    "Current new repair geometry covers 320/390 at100/200%; full4-width200% matrix is explicitly historical fd9/AP002, not new7bfe all-state capture.",
+    "Historical Stage5 request_changes and future final authority/Stage6/Ready remain pending in six JSON."
+  ],
+  "six_requirement_strings": [
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+      "exact_original_requirement_preserved": true,
+      "requirement_id_correct": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+      "exact_original_requirement_preserved": true,
+      "requirement_id_correct": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+      "exact_original_requirement_preserved": true,
+      "requirement_id_correct": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+      "exact_original_requirement_preserved": true,
+      "requirement_id_correct": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+      "exact_original_requirement_preserved": true,
+      "requirement_id_correct": true
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json",
+      "exact_original_requirement_preserved": true,
+      "requirement_id_correct": true
+    }
+  ]
+}

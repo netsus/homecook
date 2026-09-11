@@ -145,15 +145,15 @@ local preview는 explicit flag+exact loopback에서만 메모리 mock, 모든 �
 - Generator/critic: [설계 방향](../../../ui/designs/R2_DESIGN_DIRECTION.md), [화면별 인계](../../../ui/designs/R2_DESIGN_HANDOFF.md), 해당 `ui/designs/R2_<STATE>.md`와 `ui/designs/critiques/R2_<STATE>-critique.md`.
 - 첫 MENU는 알림 primary/예시 secondary/의견 tertiary, 세 DONE은 종료 안내 후 메뉴 primary/다른 활동 optional이다. 0/3 강요·자동복귀 없음.
 - Visual artifact: [recording390](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_recording_390.png), [recording320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_recording_320.png), [homeflow390](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_homeflow_390.png), [homeflow320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_homeflow_320.png), [완료보존320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_completed-state-variants_320.png).
-- Authority status: required
-- Review progress: pending. `automation-spec.json`의 `authority_report_paths`는 각 공통 화면의 두 topic을 다룰 예정 경로다. Stage4 실제 화면 검토 전에는 보고서 생성·승인 완료를 의미하지 않는다. 정적 도면은 브라우저 screenshot이 아니며 독립 authority pass가 아니다. 보조 critic 결과는 mapping 및 각 report의 최신 메모를 따른다.
+- Authority status: reviewed
+- Review progress: 독립 `authority_precheck`는 exact `783ae392c648ed43d481e2166c6f42f0cc0a7912`에서 pass/required0이며 R2-AP-001/002가 닫혔다. [원본 결과와 이식 근거](evidence/stage4/independent-precheck-01a08e8f/IMPORT.md)를 따른다. 보고서8개는 두 topic의16canonical을 다루며 원본 hash와 독립 서식 revision을 보존했다. 후속 [public Stage5의 원 수정 요청](evidence/stage5/stage5-report.md)을 보존했고, [독립62eff 재검토](evidence/stage5/recheck-62eff252/stage5-report.md)에서 R2-S5-001 해결·approve/required0을 확인했다. [별도 최종 화면 승인](evidence/final-authority/01a08f0c/final-authority-report.md)도 approve/pass·required0이다. 이 독립 근거에 한해 confirmed와 `accept-r2-authority` 완료를 반영한다. 전체 frontend 검증·Stage6·Ready·merge·배포 완료는 아니다. 정적 도면은 실제 브라우저 증거의 대체물이 아니다.
 - Stage 4 evidence: canonical16 ID마다 320×568/390×844/393×852 및 desktop, initial/scroll/오류/해당 키보드/200%/reduced-motion/복원 캡처. Stage4와 다른 reviewer precheck, Stage5, 별도 final authority 순서다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — **상태 분류**이며 Stage4 구현 완료 체크가 아님.
+- [ ] 임시 UI (temporary) — Stage 1 설계 시점 이력.
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A (BE-only에만 해당하므로 선택하지 않음)
 
 ## Source Links
@@ -202,6 +202,10 @@ bootstrap storage/cookie 실패, body/권한/멱등, RPC/control lease, retentio
 
 현재 백엔드 구현·검증 범위와 Stage 4/운영 인수 조건은 [Stage 2 인수 기록](stage2-backend-handoff.md)을 따른다. 아래 checked는 실제 검증한 Stage 2 범위만 의미하며 독립 Stage 3 승인·화면 완료·배포 완료가 아니다. 실제 페이지 경로 통합은 Stage 4 화면 작업에 남긴다.
 
+## Stage 4 실행 기록
+
+[프론트엔드 인수 기록](stage4-frontend-handoff.md)을 따른다. UI/연결/실제 격리 검증과 독립 precheck를 수행했고, Stage 5는 R2-S5-001 수리 후 독립 approve/required0을 받았다. 별도 final authority도 approve/pass·required0이며 디자인만 confirmed다. 기존 전체 검증 실패 때문에 Stage6는 미시작이다. 앞선 Stage 1 Draft·미착수 문구는 당시 이력이며 승인된 선행 merge를 되돌리지 않는다. 전체 서비스에서 기준 SHA에도 재현되는 4개 좁은 화면 실패는 R2 통과와 분리해 보존한다. Ready·merge·배포는 승인하지 않는다.
+
 ## Delivery Checklist
 
 현재 Stage1은 아래 Stage2/4 완료 항목을 체크하지 않는다. 독립 3/5/6 review는 metadata와 별도 task를 따른다.
@@ -209,10 +213,10 @@ bootstrap storage/cookie 실패, body/권한/멱등, RPC/control lease, retentio
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] loading / empty / error / read-only / unauthorized 상태 검증 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 실제 QA와 Manual Only 운영 인수 조건 분리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] loading / empty / error / read-only / unauthorized 상태 검증 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 실제 QA와 Manual Only 운영 인수 조건 분리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

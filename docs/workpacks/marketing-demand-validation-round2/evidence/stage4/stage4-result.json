@@ -1,0 +1,204 @@
+{
+  "stage": 4,
+  "role": "frontend-implementer",
+  "author_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "phase": "design-confirmed-stage6-held-for-global-verification",
+  "verdict": "in_progress",
+  "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "checklist_updates": [
+    {
+      "id": "accept-r2-routes",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-menu",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-independent-paths",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-backend-frontend-types",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-screen-contract",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-read-only",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-done-choice",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-revision",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-loading",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-empty",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-error",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-unauthorized",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-conflict",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-storage",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-fixture-baseline",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-playwright-flow",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-a11y-visual",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-playwright-live-split",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-ui-connection",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-test-split",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-state-ui",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "delivery-manual-qa-handoff",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/stage4-frontend-handoff.md"
+    },
+    {
+      "id": "accept-r2-authority",
+      "checked": true,
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json"
+    }
+  ],
+  "independent_authority": "pass",
+  "authority_precheck": {
+    "status": "complete",
+    "verdict": "pass",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "required_fix_ids": [],
+    "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+    "import_verification_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/import-verification.json",
+    "public_stage5": "request_changes; R2-S5-001 required1; independent re-review pending",
+    "final_authority": "pending"
+  },
+  "aggregate_frontend_gate": "failed-existing-baseline-under-review",
+  "ready": false,
+  "deployment": false,
+  "proposed_closeout_projection": {
+    "design_status": "confirmed",
+    "design_authority": "pending",
+    "required_checks": "pending",
+    "approval_state": "not_started",
+    "all_checks_green": false
+  },
+  "code_commit": "2fa7547557554ad96b029b6fc00907fe7f350baa",
+  "known_failures": [
+    "complete regression four mobile-ios-small geometry cases reproduced identically on exact base",
+    "ten full visual desktop detailed snapshots also fail on exact base; nine exact dimensions/pixels and one same height but differing pixel count"
+  ],
+  "scope": "Stage4 author implementation, verification evidence, exploratory QA/eval and Draft PR handoff only",
+  "pr_url": "https://github.com/netsus/homecook/pull/1555",
+  "fast_gate": "passed",
+  "complete_gate": "failed-known-baseline-preserved",
+  "qa_eval": {
+    "score": 99,
+    "pass": true,
+    "covered": 42,
+    "blocked_independent_review": 1
+  },
+  "fixed_findings": [
+    "R2FE-AUX-001",
+    "R2FE-AUX-002",
+    "R2FE-AUX-003",
+    "stale-participation-writes",
+    "R2-QA-001"
+  ],
+  "author_scope_complete": true,
+  "stage4_overall_approval": "independent-stage5-and-final-design-approved; aggregate-frontend-verification-open; stage6-not-started",
+  "stage5_recheck": {
+    "verdict": "approve",
+    "required_fix_count": 0,
+    "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "evidence": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json",
+    "historical_request_changes_preserved": true
+  },
+  "stage5_repair_evidence": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-s5-001-result.json",
+  "precheck_repairs": [
+    {
+      "id": "R2-AP-001",
+      "author_fixed": true,
+      "independent_recheck": "passed-in-authority-precheck-at-783ae392",
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-ap-001-result.json"
+    },
+    {
+      "id": "R2-AP-002",
+      "author_evidence_complete": true,
+      "product_changes": false,
+      "independent_recheck": "passed-in-authority-precheck-at-783ae392",
+      "evidence_ref": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/author-result.json"
+    }
+  ],
+  "final_authority": {
+    "verdict": "approve",
+    "authority_verdict": "pass",
+    "required_fix_count": 0,
+    "actor_id": "01a08f0c-bbbb-74b1-ac9b-20feb1ac085f",
+    "reviewed_metadata_sha": "1a51971262e758896e725af31f104f42424cff78",
+    "direct_product_head": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "evidence": "docs/workpacks/marketing-demand-validation-round2/evidence/final-authority/01a08f0c/final-authority-result.json"
+  }
+}

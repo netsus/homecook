@@ -1,0 +1,48 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-23dpvK
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-client-storage.test.ts (8 tests | 1 failed) 1474ms
+   × real two-tab IDB enforces a shared 50 cap, persists drafts and removes expired records 1467ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-client-storage.test.ts > real two-tab IDB enforces a shared 50 cap, persists drafts and removes expired records
+AssertionError: expected null to deeply equal { version: 1, …(5) }
+
+- Expected:
+{
+  "created_at": 1789084800000,
+  "drafts": {
+    "ffffffff-ffff-4fff-8fff-fffffffffff1": {
+      "q1": "six_plus",
+    },
+  },
+  "expires_at": 1791590400000,
+  "outbox": [
+    {
+      "action": "activity_start",
+      "activity": "survey",
+      "event_id": "d96aff25-eeff-4b21-9a57-0fae81e9c870",
+      "honeypot": "",
+      "round_version": "r2.1",
+      "topic": "homeflow",
+    },
+  ],
+  "participation_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+  "version": 1,
+}
+
++ Received:
+null
+
+ ❯ tests/marketing-round2-client-storage.test.ts:140:37
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  11:12:21
+   Duration  2.87s (transform 248ms, setup 30ms, import 1.23s, tests 1.47s, environment 0ms)

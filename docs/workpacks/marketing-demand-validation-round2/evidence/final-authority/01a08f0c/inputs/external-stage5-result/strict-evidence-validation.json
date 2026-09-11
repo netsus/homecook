@@ -1,0 +1,5 @@
+{
+  "mode": "isolated exact-input report/file-presence validation, no live OMO runtime state",
+  "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "errors": []
+}

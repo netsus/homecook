@@ -1,0 +1,57 @@
+const {createRequire}=require('module');
+const req=createRequire('/Users/cwj/.codex/worktrees/f2a2/homecook/package.json');
+const {chromium,expect}=req('@playwright/test');
+const AxeBuilder=req('@axe-core/playwright').default;
+const fs=require('fs/promises');const path=require('path');
+const root=__dirname, out=path.join(root,'runtime');
+const report={mode:'independent-local-memory-preview',origin:'http://127.0.0.1:3118',reviewedSha:'3d1054b39c615fccd6a1541aad6256e45ec18f28',cases:[],errors:[],writes:[],external:[]};
+const names={lead:'베타 오픈 알림 받기',example:'사용 예시 먼저 보기',survey:'의견만 남기기 · 4문항'};
+(async()=>{await fs.mkdir(out,{recursive:true});const browser=await chromium.launch({headless:true});
+try{for(const topic of ['recording','homeflow']) for(const width of [390,320]) {
+ const height=width===390?844:568; const context=await browser.newContext({viewport:{width,height},reducedMotion:'reduce'});
+ await context.route('**/*',r=>{const q=r.request();const u=new URL(q.url());if(u.origin!==report.origin){report.external.push(u.origin);return r.abort();}if(!['GET','HEAD','OPTIONS'].includes(q.method())){report.writes.push(q.method()+' '+u.pathname);return r.abort();}return r.continue();});
+ const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
+ const entry={topic,width,height,states:[],checks:[]};report.cases.push(entry);
+ const button=n=>page.getByRole('button',{name:n,exact:true});
+ const capture=async(name,axe=true)=>{
+  await page.evaluate(()=>window.scrollTo(0,0)); await page.evaluate(()=>document.fonts.ready);
+  const prefix=topic+'-'+width+'-'+name;
+  await page.screenshot({path:path.join(out,prefix+'-top.png')});
+  await page.screenshot({path:path.join(out,prefix+'.png'),fullPage:true});
+  const dom=await page.locator('main').ariaSnapshot();await fs.writeFile(path.join(out,prefix+'.yml'),dom);
+  const metrics=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,scrollY,
+   heading:{text:document.querySelector('h1').textContent,size:getComputedStyle(document.querySelector('h1')).fontSize},
+   targets:[...document.querySelectorAll('main button,main a,main label:has(input),main input[type=email]')].map(e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return {text:e.textContent.trim(),x:r.x,y:r.y,w:r.width,h:r.height,color:s.color,bg:s.backgroundColor,outline:s.outline}}),
+   nestedScroll:[...document.querySelectorAll('main *')].filter(e=>e.scrollHeight>e.clientHeight+1&&['auto','scroll'].includes(getComputedStyle(e).overflowY)).map(e=>e.tagName),
+   focus:document.activeElement?.outerHTML?.slice(0,500)}));
+  const violations=axe?(await new AxeBuilder({page}).include('main').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations:[];
+  entry.states.push({name,prefix,metrics,violations:violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>n.target)}))});
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(width);expect(metrics.nestedScroll).toEqual([]);
+  expect(metrics.targets.filter(t=>t.w<44||t.h<44)).toEqual([]);expect(violations).toEqual([]);
+  if(metrics.scrollHeight>height){await page.evaluate(()=>window.scrollTo(0,(document.documentElement.scrollHeight-innerHeight)/2));await page.screenshot({path:path.join(out,prefix+'-middle.png')});await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));await page.screenshot({path:path.join(out,prefix+'-bottom.png')});}
+ };
+ await page.goto(report.origin+'/beta/r2/'+topic);await expect(button(names.lead)).toBeVisible();await capture('MENU');
+ await page.keyboard.press('Tab');expect(await button(names.lead).evaluate(e=>e===document.activeElement)).toBe(true);entry.checks.push({name:'keyboard-menu-focus',outline:await button(names.lead).evaluate(e=>getComputedStyle(e).outline)});
+ await page.keyboard.press('Enter');await expect(page.getByRole('heading',{level:1})).toBeFocused();
+ await expect(page.getByRole('checkbox')).not.toBeChecked();await capture('LEAD');
+ await button('베타 오픈 알림 신청하기').click();await expect(page.locator('main').getByRole('alert')).toContainText('동의해 주세요');await expect(page.getByRole('textbox',{name:'이메일',exact:true})).toHaveValue('preview@example.com');
+ entry.checks.push({name:'consent-error-preserves-email',focused:await page.locator(':focus').getAttribute('id'),invalid:await page.getByRole('checkbox').getAttribute('aria-invalid'),describedby:await page.getByRole('checkbox').getAttribute('aria-describedby')});
+ await capture('RECOVERY-local-consent');await page.getByRole('checkbox').check();await button('베타 오픈 알림 신청하기').click();await expect(page.getByRole('heading',{level:1})).toHaveText('베타 오픈 알림 신청을 접수했어요');await capture('LEAD_DONE');
+ await button('메뉴로 돌아가기').click();expect(await page.locator('nav').getByText('완료',{exact:true}).count()).toBe(1);entry.checks.push({name:'lead-solo-only-one-complete',passed:true});
+ await page.getByRole('button',{name:/알림 접수 확인/}).click();expect(await page.getByRole('textbox').count()).toBe(0);await button(names.example).click();
+ for(let s=1;s<=3;s++){await expect(page.getByText('사용 예시 '+s+'/3',{exact:true})).toBeVisible();await capture('EXAMPLE-'+s);await button(s===3?'예시 확인 완료':'다음 장면').click();}
+ await capture('EXAMPLE_DONE');await button('메뉴로 돌아가기').click();await button(names.survey).click();
+ for(let q=1;q<=4;q++){
+  await expect(page.getByText('문항 '+q+'/4',{exact:true})).toBeVisible();
+  if(q===1){await button('다음 문항').click();await expect(page.locator('main').getByRole('alert')).toBeVisible();entry.checks.push({name:'survey-missing-answer-error',text:await page.locator('main').getByRole('alert').innerText()});}
+  await capture('SURVEY-Q'+q);await page.getByRole('radio').last().check();
+  if(q===2){await button('이전 문항').click();expect(await page.getByRole('radio').last().isChecked()).toBe(true);await button('다음 문항').click();expect(await page.getByRole('radio').last().isChecked()).toBe(true);entry.checks.push({name:'survey-back-preserves-selections',passed:true});}
+  await button(q===4?'의견 보내기':'다음 문항').click();
+ }
+ await capture('SURVEY_DONE');await button('메뉴로 돌아가기').click();expect(await page.locator('nav').getByText('완료',{exact:true}).count()).toBe(3);await capture('MENU-complete',false);
+ await page.getByRole('button',{name:/의견 접수 확인/}).click();expect(await page.getByRole('radio').count()).toBe(0);await button('메뉴로 돌아가기').click();await page.getByRole('button',{name:/예시 다시 보기/}).click();await button('다음 장면').click();await button('다음 장면').click();await expect(button('확인 완료 화면 보기')).toBeVisible();entry.checks.push({name:'done-read-only-and-example-replay',passed:true});
+ await page.reload();await button(names.lead).click();await expect(page.getByRole('checkbox')).not.toBeChecked();entry.checks.push({name:'reload-clears-preview-consent',passed:true});
+ if(width===320){const before=await page.locator('h1').evaluate(e=>parseFloat(getComputedStyle(e).fontSize));await page.addStyleTag({content:'html{font-size:200%!important}'});const after=await page.locator('h1').evaluate(e=>parseFloat(getComputedStyle(e).fontSize));expect(after).toBe(before*2);entry.checks.push({name:'200percent-text',before,after});await capture('LEAD-200percent');await page.getByRole('checkbox').check();await button('베타 오픈 알림 신청하기').click();await capture('LEAD_DONE-200percent');await button('메뉴로 돌아가기').click();await capture('MENU-200percent');await button(names.survey).click();await capture('SURVEY-200percent');}
+ entry.storage=await page.evaluate(async()=>({local:localStorage.length,session:sessionStorage.length,idb:(await indexedDB.databases()).map(d=>d.name)}));expect(entry.storage).toEqual({local:0,session:0,idb:[]});await context.close();console.log(topic,width,'complete');
+ }}catch(e){report.failure=String(e.stack);console.error(e.stack);process.exitCode=1;}finally{await fs.writeFile(path.join(root,'runtime-result.json'),JSON.stringify(report,null,2));await browser.close();}
+})();

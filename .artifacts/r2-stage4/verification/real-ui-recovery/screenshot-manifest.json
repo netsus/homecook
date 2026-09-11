@@ -1,0 +1,55 @@
+{
+  "fullPage": true,
+  "runtime": "actual Next development server",
+  "diagnosticOnlyOverlay": "Next development indicator may be visible; not a product component",
+  "images": [
+    {
+      "file": "R2_RECORDING_RECOVERY-320x568.png",
+      "width": 320,
+      "fullPageHeight": 1028,
+      "sha256": "bc4c910106b2393ed555db0d1d0d44eca2f0cf1ea944dfbed3424995a4dc9dc1"
+    },
+    {
+      "file": "R2_RECORDING_RECOVERY-390x844.png",
+      "width": 390,
+      "fullPageHeight": 989,
+      "sha256": "f6d0e9dec32577963acd79213b18d675b32baa2019a08dbe14d93996fe4e96f6"
+    },
+    {
+      "file": "R2_RECORDING_RECOVERY-393x852.png",
+      "width": 393,
+      "fullPageHeight": 989,
+      "sha256": "bd744e71ec4d9b7403ee97b687c939234ef54b13b775c6f6261e1ca07b965264"
+    },
+    {
+      "file": "R2_RECORDING_RECOVERY-1280x900.png",
+      "width": 1280,
+      "fullPageHeight": 962,
+      "sha256": "ecb90b1c92f8e328918420b4be3100cb921a97c08435d056f74ed8f4dabde675"
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-320x568.png",
+      "width": 320,
+      "fullPageHeight": 1161,
+      "sha256": "cfdde6fa82bf3cf24365cb15bcfe1b95c213b6dc3c6be0685ff42fed32ec7d2a"
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-390x844.png",
+      "width": 390,
+      "fullPageHeight": 1167,
+      "sha256": "49a2e4b7841c0add35f754e5cef6ab9d6aacd7007289968583ef3163ffc02f9b"
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-393x852.png",
+      "width": 393,
+      "fullPageHeight": 1167,
+      "sha256": "9800dd98a7f9bcacae7f8f05f30d2ed0c0027a8cd98404ee0e3a278a2a233ecf"
+    },
+    {
+      "file": "R2_HOMEFLOW_RECOVERY-1280x900.png",
+      "width": 1280,
+      "fullPageHeight": 1187,
+      "sha256": "27ec7177d646e6dbec86e871289b9af6575a58674589232d8358403d98de3364"
+    }
+  ]
+}

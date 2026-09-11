@@ -1,0 +1,111 @@
+
+> homecook@0.1.0 test:e2e:a11y /Users/cwj/.codex/worktrees/f2a2/homecook
+> playwright test tests/e2e/qa-a11y.spec.ts
+
+[WebServer] (node:33343) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:33346) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:33356) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:33385) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 36 tests using 3 workers
+
+(node:33415) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:33413) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:33414) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:33415) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:33413) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:33414) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:330:7 › QA accessibility smoke › home and recipe detail are axe-clean @a11y-core
+[2/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:330:7 › QA accessibility smoke › home and recipe detail are axe-clean @a11y-core
+[3/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:330:7 › QA accessibility smoke › home and recipe detail are axe-clean @a11y-core
+[WebServer] (node:33631) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[4/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:376:7 › QA accessibility smoke › ingredient filter and login gate dialogs are axe-clean @a11y-core
+[5/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:376:7 › QA accessibility smoke › ingredient filter and login gate dialogs are axe-clean @a11y-core
+[6/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:376:7 › QA accessibility smoke › ingredient filter and login gate dialogs are axe-clean @a11y-core
+[WebServer] (node:33677) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[7/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:411:7 › QA accessibility smoke › marketing beta landing keeps the complete v2 funnel accessible @a11y-core @marketing
+[WebServer] (node:33691) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[8/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:411:7 › QA accessibility smoke › marketing beta landing keeps the complete v2 funnel accessible @a11y-core @marketing
+[9/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:411:7 › QA accessibility smoke › marketing beta landing keeps the complete v2 funnel accessible @a11y-core @marketing
+[10/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:443:7 › QA accessibility smoke › home toolbar and ingredient dialog controls keep design lock metrics
+[11/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:443:7 › QA accessibility smoke › home toolbar and ingredient dialog controls keep design lock metrics
+[12/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:470:7 › QA accessibility smoke › planner and meal desktop screens are axe-clean
+[13/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:443:7 › QA accessibility smoke › home toolbar and ingredient dialog controls keep design lock metrics
+[14/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:470:7 › QA accessibility smoke › planner and meal desktop screens are axe-clean
+[15/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:505:7 › QA accessibility smoke › menu add desktop slice screens are axe-clean
+[16/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:549:7 › QA accessibility smoke › youtube import desktop flow is axe-clean
+[17/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:576:7 › QA accessibility smoke › pantry and shopping desktop slice screens are axe-clean
+[18/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:644:7 › QA accessibility smoke › shopping mobile controls keep 44px touch targets @a11y-core
+[19/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:470:7 › QA accessibility smoke › planner and meal desktop screens are axe-clean
+[20/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:505:7 › QA accessibility smoke › menu add desktop slice screens are axe-clean
+[21/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:549:7 › QA accessibility smoke › youtube import desktop flow is axe-clean
+[22/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:576:7 › QA accessibility smoke › pantry and shopping desktop slice screens are axe-clean
+[23/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:644:7 › QA accessibility smoke › shopping mobile controls keep 44px touch targets @a11y-core
+[WebServer] (node:33940) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:33943) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[24/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:680:7 › QA accessibility smoke › login, mypage, recipebooks, and settings desktop slice screens are axe-clean
+[25/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:680:7 › QA accessibility smoke › login, mypage, recipebooks, and settings desktop slice screens are axe-clean
+[26/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:744:7 › QA accessibility smoke › cooking desktop cook modes are axe-clean
+[27/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:744:7 › QA accessibility smoke › cooking desktop cook modes are axe-clean
+[28/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:505:7 › QA accessibility smoke › menu add desktop slice screens are axe-clean
+[29/36] [mobile-ios-small] › tests/e2e/qa-a11y.spec.ts:764:7 › QA accessibility smoke › leftovers desktop ready and empty states are axe-clean
+[30/36] [mobile-chrome] › tests/e2e/qa-a11y.spec.ts:764:7 › QA accessibility smoke › leftovers desktop ready and empty states are axe-clean
+[31/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:549:7 › QA accessibility smoke › youtube import desktop flow is axe-clean
+[32/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:576:7 › QA accessibility smoke › pantry and shopping desktop slice screens are axe-clean
+[WebServer] (node:34188) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:34203) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[33/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:644:7 › QA accessibility smoke › shopping mobile controls keep 44px touch targets @a11y-core
+[34/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:680:7 › QA accessibility smoke › login, mypage, recipebooks, and settings desktop slice screens are axe-clean
+[WebServer] (node:34362) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[35/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:744:7 › QA accessibility smoke › cooking desktop cook modes are axe-clean
+[WebServer] (node:34398) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:34440) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[36/36] [desktop-chrome] › tests/e2e/qa-a11y.spec.ts:764:7 › QA accessibility smoke › leftovers desktop ready and empty states are axe-clean
+  15 skipped
+  21 passed (51.0s)
