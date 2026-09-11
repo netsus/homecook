@@ -41,6 +41,10 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
   }
   async function captureRecovery(topic) {
     await expect(page.locator(`[data-screen-id="R2_${topic.toUpperCase()}_RECOVERY"]`)).toBeVisible();
+    const originalSavingLabel = topic === 'recording' ? '베타 오픈 알림 신청하기' : '예시 확인 완료';
+    await expect(page.getByRole('button', { name: originalSavingLabel, exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '다시 시도', exact: true })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: '다시 시도', exact: true })).toBeVisible();
     for (const [width, height] of [[320, 568], [390, 844], [393, 852], [1280, 900]]) {
       await page.setViewportSize({ width, height });
       const file = `R2_${topic.toUpperCase()}_RECOVERY-${width}x${height}.png`;

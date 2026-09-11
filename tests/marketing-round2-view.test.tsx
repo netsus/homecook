@@ -77,4 +77,18 @@ describe("R2 independent activity screens", () => {
     fireEvent.click(await screen.findByRole("button",{name:"보안 확인 다시 시도"}));
     await vi.waitFor(()=>expect(document.querySelector('script[src*="challenges.cloudflare.com"]')).toBeTruthy());
   });
+  it("shows a single saving action after a failed lead request",()=>{
+    const p=props();render(<Round2View {...p} state={{...p.state,busy:false,connection:"ready",error:{code:"NETWORK_ERROR",message:"저장 결과를 확인하지 못했어요.",fields:[],retryAt:null}}}/>);
+    fireEvent.click(screen.getByRole("button",{name:"베타 오픈 알림 받기"}));
+    expect(screen.getByRole("button",{name:"다시 시도"})).toBeTruthy();
+    expect(screen.queryByRole("button",{name:"베타 오픈 알림 신청하기"})).toBeNull();
+  });
+  it("keeps the last example scene and one retry action after uncertain completion",()=>{
+    const p=props();render(<Round2View {...p} state={{...p.state,busy:false,connection:"ready",error:{code:"NETWORK_ERROR",message:"저장 결과를 확인하지 못했어요.",fields:[],retryAt:null}}}/>);
+    fireEvent.click(screen.getByRole("button",{name:"사용 예시 먼저 보기"}));
+    fireEvent.click(screen.getByRole("button",{name:"다음 장면"}));fireEvent.click(screen.getByRole("button",{name:"다음 장면"}));
+    expect(screen.getByText("사용 예시 3/3")).toBeTruthy();
+    expect(screen.getByRole("button",{name:"다시 시도"})).toBeTruthy();
+    expect(screen.queryByRole("button",{name:"예시 확인 완료"})).toBeNull();
+  });
 });
