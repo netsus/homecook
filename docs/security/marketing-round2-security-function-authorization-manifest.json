@@ -2,6 +2,10 @@
   "schema_version": 1,
   "slice": "marketing-demand-validation-round2",
   "migration": "supabase/migrations/20260911100000_marketing_round2.sql",
+  "migrations": [
+    "supabase/migrations/20260911100000_marketing_round2.sql",
+    "supabase/migrations/20260911110000_marketing_round2_linear_homeflow.sql"
+  ],
   "deployment_state": "pre-deployment",
   "baseline_application_contract_count": 74,
   "functions": [
@@ -20,6 +24,19 @@
     },
     {
       "signature": "private.marketing_round2_answers(text, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_answers(text, text, jsonb)",
       "control_class": "application-controlled",
       "effect": "read-only",
       "exposure": "service-internal",

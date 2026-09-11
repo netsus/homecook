@@ -30,15 +30,18 @@ let started = false;
 try {
   const version = assertPinnedSupabaseCliVersion(cli(['--version']));
   assertNoIsolatedDockerResources(isolated.projectId, { env });
-  const migrationName = '20260911100000_marketing_round2.sql';
-  const migrationSource=await readFile(`${isolated.rootDir}/supabase/migrations/${migrationName}`,'utf8');
-  await unlink(`${isolated.rootDir}/supabase/migrations/${migrationName}`);
+  const migrationNames = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql'];
+  const migrationSources = [];
+  for (const migrationName of migrationNames) {
+    migrationSources.push(await readFile(`${isolated.rootDir}/supabase/migrations/${migrationName}`, 'utf8'));
+    await unlink(`${isolated.rootDir}/supabase/migrations/${migrationName}`);
+  }
   started = true;
   console.warn(JSON.stringify({ phase:'starting-isolated', projectId:isolated.projectId }));
   run('corepack', ['pnpm', ...buildIsolatedSupabaseStartArgs(isolated.rootDir)]);
   assertOwnedDockerResources(isolated.projectId, { env });
   console.warn(JSON.stringify({ phase: 'migration-replay', cliVersion: version, migrationSha256: isolated.migrationSha256, projectId: isolated.projectId }));
-  sql(migrationSource);
+  for (const migrationSource of migrationSources) sql(migrationSource);
   sql("select 'public.marketing_round2_apply(jsonb)'::regprocedure;");
   await runAssertions({ isolated, env, sql, run });
   console.warn(JSON.stringify({ result: 'PASS', projectId: isolated.projectId, productionWrites: 0, remoteAccess: 0 }));
@@ -309,6 +312,36 @@ async function runAssertions({ isolated, env, sql, run }) {
     equal(current.data.state,expectedState,`${topic} ${activities.join(' -> ')} independent states`);
     equal(current.data.revision,1+2*activities.length,`${topic} ${activities.join(' -> ')} exact applied revision`);
   }
+  // The new linear content shares the collector, never the old survey semantics.
+  const linearBootstrap = await ok(command({ topic: 'homeflow' }), 'linear homeflow bootstrap');
+  const linearPid = linearBootstrap.data.participation_id;
+  const linearAction = (action, activity, payload = {}) => command({ action, activity, payload, topic: 'homeflow', pid: linearPid });
+  const linearAnswers = { q1: 'three_four', q2: 'two_three', q3: 'mental', q4: 'shopping' };
+  const linearPayload = { survey_version: 'r2.2-homeflow', answers: linearAnswers };
+  await denied(linearAction('survey_submit', 'survey', linearPayload), 'INVALID_TRANSITION', 'linear survey still requires start');
+  await ok(linearAction('activity_start', 'survey'), 'linear survey start');
+  for (const [key, value] of [['q1', 'three_five'], ['q2', 'on_the_day'], ['q3', 'meal_plan'], ['q4', 'yes']]) {
+    const beforeInvalid = count();
+    await denied(linearAction('survey_submit', 'survey', { ...linearPayload, answers: { ...linearAnswers, [key]: value } }), 'VALIDATION_ERROR', `linear rejects old ${key} enum`);
+    equal(count(), beforeInvalid, `linear wrong ${key} writes nothing`);
+  }
+  await denied(command({ action: 'survey_submit', activity: 'survey', payload: linearPayload, pid }), 'VALIDATION_ERROR', 'recording rejects homeflow version');
+  const linearSurvey = linearAction('survey_submit', 'survey', linearPayload);
+  const linearDone = await ok(linearSurvey, 'linear survey commits');
+  equal(JSON.parse(sql(`select jsonb_build_object('survey_version',survey_version,'answers',answers) from public.marketing_round2_participations where id='${linearPid}'`)), linearPayload, 'linear version and exact answers persisted');
+  equal((await ok(linearSurvey, 'linear same-event replay')).data, linearDone.data, 'linear same-event receipt stable');
+  equal((await ok({ ...linearSurvey, event_id: randomUUID() }, 'linear equivalent submission no-op')).data.revision, linearDone.data.revision, 'linear no-op keeps revision');
+  await denied(linearAction('survey_submit', 'survey', { ...linearPayload, answers: { ...linearAnswers, q3: 'memo' } }), 'ACTIVITY_ALREADY_COMPLETED', 'linear answers immutable');
+  await denied(linearAction('survey_submit', 'survey', { survey_version: 'r2.1-homeflow', answers: { q1: 'none', q2: 'on_the_day', q3: 'meal_plan', q4: 'yes' } }), 'ACTIVITY_ALREADY_COMPLETED', 'linear version immutable');
+  await ok(linearAction('activity_start', 'example'), 'linear example start after survey');
+  equal((await ok(linearAction('example_complete', 'example'), 'linear example complete')).data.state, { survey: 'completed', example: 'completed', lead: 'not_started' }, 'linear collector preserves independent activity states');
+  for (const principal of ['public', 'anon', 'authenticated', 'service_role']) {
+    if (principal === 'public') {
+      equal(sql("select not exists(select 1 from pg_proc p cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid='private.marketing_round2_answers(text,text,jsonb)'::regprocedure and a.grantee=0 and a.privilege_type='EXECUTE')"), 't', 'linear helper PUBLIC execute denied');
+    } else {
+      equal(sql(`select has_function_privilege('${principal}','private.marketing_round2_answers(text,text,jsonb)','EXECUTE')`), 'f', `linear helper ${principal} execute denied`);
+    }
+  }
   // Approved-maintenance mechanics only, in this disposable fixture: remove every topic and repeat for one email.
   const withdrawalEmail='withdrawal-fixture@example.com'; const withdrawalKey=digest(withdrawalEmail); const withdrawn=[];
   for(const topic of ['recording','recording','homeflow','homeflow']) {
@@ -362,6 +395,6 @@ async function runAssertions({ isolated, env, sql, run }) {
   const test=spawnSync('corepack',['pnpm','exec','vitest','run','tests/marketing-round2-http.integration.test.ts','--maxWorkers=1','--reporter=json',`--outputFile=${reportPath}`],{cwd:root,env:{...env,R2_HTTP_INTEGRATION:'1',R2_HTTP_DATA_URL:isolated.dataApiUrl,R2_HTTP_SERVICE_ROLE_KEY:token,R2_HTTP_EXPECTED_DB_NAMESPACE:isolated.projectId,R2_HTTP_TARGET_IDENTITY_JSON:JSON.stringify({projectId:isolated.projectId,dataApiUrl:isolated.dataApiUrl,cliVersion:'2.110.0',migrationSha256:isolated.migrationSha256})},encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});
   await writeFile(`${root}/.omx/artifacts/r2-stage2/http-integration.log`,String(test.stdout)+String(test.stderr));
   const report=JSON.parse(await readFile(reportPath,'utf8'));
-  assert(test.status===0 && report.numPassedTests===6 && report.numPendingTests===0,'six actual HTTPS handler SDK/DB tests executed');
+  assert(test.status===0 && report.numPassedTests===7 && report.numPendingTests===0,'seven actual HTTPS handler SDK/DB tests executed');
   console.warn(JSON.stringify({ checks:checks.length, passed:checks }));
 }

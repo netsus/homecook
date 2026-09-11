@@ -1,5 +1,17 @@
 # Acceptance Checklist
 
+## 2026-09-11 선형 homeflow 로컬 후보
+
+이번 사용자 승인 변경은 [로컬 구현 계약](../../marketing/homeflow-linear-implementation-contract.md)과 [PRD 인수 조건 C01~C22](../../marketing/homecook-flow-round2-prd.md#14-구현-인수-조건)을 따른다. 아래 기존 r2.1 체크는 보존된 evidence이며 새 버전 통과를 의미하지 않는다.
+
+- [x] 새 `r2.2-homeflow` 요청·SQL 검증은 기존 버전과 분리되고 기존 자료를 재작성하지 않는다.
+- [x] 네 질문·Q3 유형·선형 6개 체험 결과·초대 신청이 승인 시안과 일치한다.
+- [x] 실제 R2 API의 서버 완료·멱등성·동의·실패 복구를 사용하고 preview는 loopback에서만 비저장이다.
+- [x] 클라이언트 캐시 유실·참여 불일치·낮은 revision·재시도가 성공을 위조하거나 이전 답변을 덮어쓰지 않는다.
+- [x] 로컬 테스트·브라우저 결과를 기록하며 배포·master 머지·독립 Stage 승인으로 주장하지 않는다.
+
+로컬 근거: [구현 인수와 검증 기록](../../marketing/homeflow-local-implementation.md). 독립 Stage 승인·배포·master 머지는 수행하지 않았다.
+
 공식 계약: [r2.1](../../marketing-demand-validation-r2-contract.md) @ `7f00e62c13572b5b2c0d54c997fe628f7a56567e`, 독립 reviewed head `24093c94ebf53676050353088f173ef7f6315445`.
 현재는 Stage1 문서 재잠금이며 제품 구현/독립 internal1.5/디자인 authority 승인이 아니다. 아래 non-manual은 해당 Stage2/4에서 실제 evidence 후 체크한다. 계약 전문의 exact 필드·타입·message·DB constraint는 README 요약보다 우선한다.
 

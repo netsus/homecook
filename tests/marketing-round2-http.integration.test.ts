@@ -223,6 +223,27 @@ describe.skipIf(!enabled)("r2 actual HTTPS + isolated SDK RPC + file control", (
     expect(providerCalls).toBe(1);
   }, 30000);
 
+  it("persists the linear homeflow version through HTTPS and rejects answer changes after completion", async () => {
+    const { cookie } = await bootstrap("homeflow");
+    expect((await send(action("homeflow", "activity_start", { activity: "survey" }), cookie)).status).toBe(200);
+    const answers = { q1: "three_four", q2: "two_three", q3: "mental", q4: "shopping" };
+    const survey = action("homeflow", "survey_submit", { survey_version: "r2.2-homeflow", answers });
+    const invalid = await send({ ...survey, answers: { ...answers, q1: "three_five" } }, cookie);
+    expect(invalid.status).toBe(422);
+    const completed = await send(survey, cookie);
+    expect(completed.status, completed.json.error?.code).toBe(200);
+    expect(completed.json.data.state.survey).toBe("completed");
+    expect((await send(survey, cookie)).json.data).toEqual(completed.json.data);
+    const changed = await send({ ...survey, event_id: randomUUID(), answers: { ...answers, q3: "memo" } }, cookie);
+    expect(changed.status).toBe(409);
+    expect(changed.json.error?.code).toBe("ACTIVITY_ALREADY_COMPLETED");
+    const resumed = await send(action("homeflow", "bootstrap", { bootstrap_intent: "cookie_resume" }), cookie);
+    expect(resumed.json.data.state.survey).toBe("completed");
+    expect(resumed.json.data.participation_id).toBe(completed.json.data.participation_id);
+    expect(resumed.text).not.toMatch(/answers|survey_version|digest/);
+    expect(providerCalls).toBe(0);
+  }, 30000);
+
   it("reconciles a genuinely committed apply after its response is lost and releases only with matching event proof", async () => {
     const { cookie } = await bootstrap("recording");
     const body = action("recording", "activity_start", { activity: "example" });
