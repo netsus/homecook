@@ -66,5 +66,13 @@ export function RecordingLanding(props: RecordingLandingProps) {
   }
 
   const example = ["experience", "planner", "packaged", "payoff"].includes(state.screen);
-  return <div className="mdv2-root"><div className="mdv2-shell" inert={state.core.busy || undefined}>{content}</div>{example && <p style={{ maxWidth: 480, margin: "12px auto", padding: "0 20px", fontSize: 12, lineHeight: 1.5 }}>베타 준비 중 · 준비된 사용 예시예요. 영양정보는 체험용 추정 예시이며 실제 레시피나 식단을 변경하지 않아요.</p>}{props.preview && <p role="status" style={{ textAlign: "center", fontSize: 12 }}>미리보기 · 실제 저장과 신청은 하지 않아요.</p>}{error && state.screen !== "lead" && <div className="mdv2-error" role="alert" style={{ maxWidth: 480, margin: "12px auto", padding: 20 }}><p>{error}</p><button type="button" disabled={state.core.busy} onClick={() => { void client.retry(); }}>다시 시도</button>{state.core.connection === "restart_required" && <button type="button" onClick={client.restartLocal}>로컬 설문 다시 시작</button>}</div>}{state.core.busy && <p role="status" className="mdv2-submit-status">진행 내용을 확인하고 있어요.</p>}</div>;
+  const recoveryScroll = !!error && state.screen !== "lead";
+  const footerStyle: React.CSSProperties = { flex: "0 0 auto", width: "min(100%, 390px)", margin: "0 auto", padding: "8px 24px", fontSize: 12, lineHeight: 1.5, background: "#fff" };
+  return <div className="mdv2-root" style={{ display: "flex", flexDirection: "column" }}>
+    <div className="mdv2-shell" style={{ flex: "1 1 0", height: "auto", overflowY: recoveryScroll ? "auto" : undefined }} inert={state.core.busy || undefined}>{recoveryScroll ? <div style={{ height: "100dvh" }}>{content}</div> : content}</div>
+    {example && <p style={footerStyle}>베타 준비 중 · 준비된 사용 예시예요. 영양정보는 체험용 추정 예시이며 실제 레시피나 식단을 변경하지 않아요.</p>}
+    {props.preview && <p role="status" style={{ ...footerStyle, textAlign: "center" }}>미리보기 · 실제 저장과 신청은 하지 않아요.</p>}
+    {error && state.screen !== "lead" && <div className="mdv2-error" role="alert" style={{ ...footerStyle, maxHeight: "40dvh", overflowY: "auto" }}><p>{error}</p><button type="button" disabled={state.core.busy} onClick={() => { void client.retry(); }}>다시 시도</button>{state.core.connection === "restart_required" && <button type="button" onClick={client.restartLocal}>로컬 설문 다시 시작</button>}</div>}
+    {state.core.busy && <p role="status" className="mdv2-submit-status" style={footerStyle}>진행 내용을 확인하고 있어요.</p>}
+  </div>;
 }

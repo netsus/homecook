@@ -5,7 +5,7 @@ import { RETENTION_UNTIL, parseRound2Request, type Round2Request, type Round2Suc
 const now = Date.parse("2026-09-12T00:00:00Z");
 const pid = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const answers = { q1: "daily", q2: "3_5", q3: "track", q4: "search" } as const;
-function harness(options: { sharedResult?: "homecook-passer"; preview?: boolean; completed?: boolean; conflict?: boolean; failStart?: boolean; failSubmit?: boolean } = {}) {
+function harness(options: { sharedResult?: "homecook-passer"; preview?: boolean; completed?: boolean; conflict?: boolean; failStart?: boolean; failSubmit?: boolean; defaultStorage?: boolean } = {}) {
   const requests: Round2Request[] = [];
   const records = new Map<string, string>();
   const storage = { getItem: vi.fn((key: string) => records.get(key) ?? null), setItem: vi.fn((key: string, value: string) => { records.set(key, value); }), removeItem: vi.fn((key: string) => { records.delete(key); }) };
@@ -36,7 +36,7 @@ function harness(options: { sharedResult?: "homecook-passer"; preview?: boolean;
   });
   const make = () => createRecordingClient({ topic: "recording", pageContext: "", preview: !!options.preview, hostname: "localhost", leadReady: true,
     attribution: { first_channel: "direct", utm_source: null, utm_medium: null, utm_campaign: null, utm_content: null },
-    sharedResult: options.sharedResult, indexedDB: null, now: () => now, fetch: fetcher, storage });
+    sharedResult: options.sharedResult, indexedDB: null, now: () => now, fetch: fetcher, ...(options.defaultStorage ? {} : { storage }) });
   return { client: make(), make, requests, records, storage, fetcher, activities };
 }
 async function answerAll(client: ReturnType<typeof createRecordingClient>) {
@@ -129,11 +129,28 @@ describe("recording serial connection with the real R2 parser", () => {
     expect(client.getState()).toMatchObject({ screen: "result", result: "ingredient-tracker" });
     expect(requests).toEqual([]); expect(storage.setItem).not.toHaveBeenCalled();
   });
+  it("acquires the normal UI cache only after explicitly leaving a shared result", async () => {
+    const { client, storage, records } = harness({ sharedResult: "homecook-passer", defaultStorage: true });
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      await client.connect(); expect(storage.getItem).not.toHaveBeenCalled();
+      client.startTest(); await answerAll(client);
+      expect(records.has(RECORDING_CACHE_KEY)).toBe(true);
+    } finally { vi.unstubAllGlobals(); }
+  });
   it("never persists email, consent or tokens in its UI cache", async () => {
     const { client, records } = harness(); await answerAll(client);
     client.setLeadForm({ email: "private@example.com", consent: true }); client.setTurnstileToken("secret-token");
     const value = records.get(RECORDING_CACHE_KEY)!;
     expect(value).not.toMatch(/private@example|secret-token|email|consent|token|pageContext|bootstrap/);
+  });
+  it("restores a started lead form with confirmed result but no private draft", async () => {
+    const { client, make, requests } = harness(); await answerAll(client); await client.next();
+    for (let i = 0; i < 8; i++) await client.next();
+    client.setLeadForm({ email: "private@example.com", consent: true }); client.dispose();
+    const resumed = make(); const count = requests.length; await resumed.connect();
+    expect(resumed.getState()).toMatchObject({ screen: "lead", result: "ingredient-tracker", core: { leadForm: { email: "", consent: false } } });
+    expect(requests.slice(count).every(r => r.action === "bootstrap")).toBe(true);
   });
   it("lets a completed applicant revisit the result and examples without another email or event", async () => {
     const { client, requests } = harness(); await answerAll(client);

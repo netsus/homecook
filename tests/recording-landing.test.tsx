@@ -3,6 +3,8 @@
 import React, { StrictMode } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
+import { chromium } from "@playwright/test";
 import { RecordingLanding } from "@/components/marketing/recording-landing";
 const fake = vi.hoisted(() => ({ state: {} as Record<string, unknown>, connect: vi.fn(), selectAnswer: vi.fn(), next: vi.fn(), back: vi.fn(), retry: vi.fn(), restartLocal: vi.fn(), startTest: vi.fn(), dispose: vi.fn(), setLeadForm: vi.fn(), setTurnstileToken: vi.fn(), restoreLeadAttempt: vi.fn(), submitLead: vi.fn() }));
 vi.mock("@/lib/marketing/recording-client", async importOriginal => ({ ...await importOriginal<object>(), createRecordingClient: () => ({ ...fake, getState: () => fake.state, subscribe: () => () => {} }) }));
@@ -55,3 +57,21 @@ it("never presents an actual receipt or lead form in local preview", () => {
   expect(screen.queryByRole("textbox", { name: "이메일" })).toBeNull();
   expect(screen.getByRole("heading", { name: "체험 예시를 모두 확인했어요" })).toBeTruthy();
 });
+it("keeps the failed Q1 heading above its selected answer in a real 320px CSS viewport", async () => {
+  fake.state = { ...fake.state, core: { ...(fake.state.core as object), error: { message: "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요." } }, answers: { q1: "daily" } };
+  const { container } = render(<RecordingLanding {...props} />);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 320, height: 568 } });
+    await page.route("**/*", route => route.abort());
+    await page.setContent(`<style>${await readFile("app/globals.css", "utf8")}</style>${container.innerHTML}`, { waitUntil: "domcontentloaded" });
+    const bounds = await page.evaluate(() => {
+      const heading = document.querySelector("h2")!.getBoundingClientRect();
+      const answer = document.querySelector(".choice-button")!.getBoundingClientRect();
+      const retry = document.querySelector('[role="alert"] button')!.getBoundingClientRect();
+      return { headingBottom: heading.bottom, answerTop: answer.top, retryBottom: retry.bottom, height: innerHeight };
+    });
+    expect(bounds.headingBottom).toBeLessThanOrEqual(bounds.answerTop);
+    expect(bounds.retryBottom).toBeLessThanOrEqual(bounds.height);
+  } finally { await browser.close(); }
+}, 15000);

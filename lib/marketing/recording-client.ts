@@ -103,7 +103,7 @@ export function createRecordingClient(options: Round2ClientOptions & { sharedRes
     initialized = true;
     if (completedScreen()) {
       if (cache && state.result && ["experience", "planner", "packaged", "payoff"].includes(cache.screen) && snapshot.state.lead !== "completed") emit({ screen: cache.screen });
-      else if (snapshot.state.example === "completed" && snapshot.state.lead !== "completed") emit({ screen: "returning" });
+      else if (cache?.screen === "lead" && state.result && snapshot.state.example === "completed" && snapshot.state.lead === "started") emit({ screen: "lead" });
     } else if (cacheBlocked || (!cache && Object.keys(core.getState().draft).length)) {
       cacheBlocked = true;
       emit({ screen: "legacy", answers: {}, question: 0, message: "이전에 시작한 설문을 새 질문에 섞어 복원할 수 없어요. 이 화면에서 설문을 다시 시작해 주세요. 기존 참여 기록은 유지돼요." });
@@ -218,6 +218,9 @@ export function createRecordingClient(options: Round2ClientOptions & { sharedRes
     },
     startTest() {
       if (!state.shared) return;
+      if (!Object.hasOwn(options, "storage") && !options.preview) {
+        try { storage = globalThis.sessionStorage ?? null; } catch { /* The normal path can still recover through its cookie. */ }
+      }
       emit({ shared: false, screen: "quiz", result: null, answers: {}, question: 0 });
       // Explicitly returning to Q1 does not itself connect or start the survey.
     },

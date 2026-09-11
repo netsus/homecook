@@ -92,10 +92,20 @@ export function selectUiScenarioModes(args) {
   return { recoveryZoom, recoveryOnly, leadEditOnly, leadEdit };
 }
 
+export async function stageUiRound2Migrations(rootDir) {
+  const paths = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql', '20260911120000_marketing_round2_linear_recording.sql']
+    .map(name => join(rootDir, 'supabase/migrations', name));
+  // Read the complete dependency chain before changing the owned fixture.
+  const sources = await Promise.all(paths.map(path => readFile(path, 'utf8')));
+  for (const path of paths) await unlink(path);
+  return sources;
+}
+
 async function main() {
   const root = process.cwd();
+  const recordingOnly = process.argv.includes('--recording-linear-only');
   const { recoveryZoom, recoveryOnly, leadEditOnly, leadEdit } = selectUiScenarioModes(process.argv);
-  const artifacts = leadEdit ? join(root, '.omx/artifacts/r2-s5-001/actual-ui', new Date().toISOString().replace(/[:.]/g, '-')) : join(root, '.omx/artifacts/r2-stage4', recoveryZoom ? 'real-ui-recovery-zoom' : recoveryOnly ? 'real-ui-recovery' : 'real-ui');
+  const artifacts = recordingOnly ? join(root, '.omx/artifacts/r22-recording-connection', new Date().toISOString().replace(/[:.]/g, '-')) : leadEdit ? join(root, '.omx/artifacts/r2-s5-001/actual-ui', new Date().toISOString().replace(/[:.]/g, '-')) : join(root, '.omx/artifacts/r2-stage4', recoveryZoom ? 'real-ui-recovery-zoom' : recoveryOnly ? 'real-ui-recovery' : 'real-ui');
   await mkdir(artifacts, { recursive: true });
   await new Promise((accept, reject) => { const probe = tcpServer(); probe.once('error', () => reject(new Error('Port 3443 is occupied; refusing to disturb existing server'))); probe.listen(3443, '127.0.0.1', () => probe.close(accept)); });
   const target = readPinnedLocalDockerTarget(); const isolated = await createIsolatedSupabaseProject(root);
@@ -114,10 +124,10 @@ async function main() {
     const identity = { projectId: isolated.projectId, dataApiUrl: isolated.dataApiUrl, cliVersion: version, migrationSha256: isolated.migrationSha256 };
     assertUiIsolatedTarget(identity);
     console.warn(JSON.stringify({ phase: 'starting-fresh-isolated', ...identity }));
-    const migration = join(isolated.rootDir, 'supabase/migrations/20260911100000_marketing_round2.sql');
-    const source = await readFile(migration, 'utf8'); await unlink(migration);
+    const sources = await stageUiRound2Migrations(isolated.rootDir);
     started = true; run('corepack', ['pnpm', ...buildIsolatedSupabaseStartArgs(isolated.rootDir)]);
-    assertOwnedDockerResources(isolated.projectId, { env }); sql(source);
+    assertOwnedDockerResources(isolated.projectId, { env });
+    for (const source of sources) sql(source);
     console.warn(JSON.stringify({ phase: 'isolated-migration-replayed', projectId: identity.projectId }));
     sql(`insert into public.marketing_validation_sessions(id,campaign_key,creative_key,audience_key,attribution_status,viewed_at,quiz_started_at,quiz_completed_at,quiz_result,quiz_answers,target_qualified,solution_viewed_at,intent_choice,intent_clicked_at,email,consent_version,consented_at,turnstile_verified_at,lead_submitted_at,lead_submission_status,retention_until)
       select gen_random_uuid(),'isolated_legacy_fixture','legacy_fixture','fixture','organic',t,t,t,'ingredient_reentry','{}'::jsonb,true,t,'needed',t,'legacy@example.com','fixture',t,t,t,'accepted',clock_timestamp()+interval '1 day' from (select clock_timestamp()-interval '1 hour' as t) at;`);
@@ -153,6 +163,7 @@ async function main() {
     const baselineHead = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, env, encoding: 'utf8' }).stdout.trim();
     const harnessFiles = {};
     for (const name of ['scripts/verify-marketing-round2-ui-isolated.mjs', 'tests/marketing-round2-ui-isolated.scenarios.mjs', 'tests/helpers/marketing-round2-recovery-evidence.mjs', 'tests/helpers/marketing-round2-ui-trace.mjs']) harnessFiles[name] = createHash('sha256').update(await readFile(join(root, name))).digest('hex');
+    if (recordingOnly) harnessFiles['tests/recording-ui-isolated.scenarios.mjs'] = createHash('sha256').update(await readFile(join(root, 'tests/recording-ui-isolated.scenarios.mjs'))).digest('hex');
     await writeFile(join(artifacts, 'source-manifest.json'), JSON.stringify({ baselineHead, capturedAt: new Date().toISOString(), snapshotFiles, harnessFiles }, null, 2));
     await writeFile(join(owned, 'openssl.cnf'), '[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=localhost\n[ext]\nsubjectAltName=DNS:localhost\n', { mode: 0o600 });
     run('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', join(owned, 'key.pem'), '-out', join(owned, 'cert.pem'), '-days', '1', '-config', join(owned, 'openssl.cnf')]);
@@ -162,7 +173,7 @@ async function main() {
     const ready = await new Promise((accept, reject) => { const timer = setTimeout(() => reject(new Error('Next fixture readiness timeout')), 120000); child.once('exit', () => { clearTimeout(timer); reject(new Error('Next fixture exited before ready')); }); child.once('message', message => { clearTimeout(timer); accept(message); }); }).catch(async error => { await saveRuntimeSummary(); throw error; });
     console.warn(JSON.stringify({ phase: 'next-ready', projectId: identity.projectId }));
     const { chromium } = await import('@playwright/test'); browser = await chromium.launch({ headless: true });
-    const { runRealUiScenarios } = await import('../tests/marketing-round2-ui-isolated.scenarios.mjs');
+    const runRealUiScenarios = recordingOnly ? (await import('../tests/recording-ui-isolated.scenarios.mjs')).runRecordingUiScenarios : (await import('../tests/marketing-round2-ui-isolated.scenarios.mjs')).runRealUiScenarios;
     let result;
     try { result = await runRealUiScenarios({ browser, origin: 'https://localhost:3443', sql, fixture: ready.fixture, artifacts, recoveryOnly, recoveryZoom, leadEdit, leadEditOnly }); }
     finally { await saveRuntimeSummary(); }
