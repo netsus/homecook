@@ -31,6 +31,17 @@ export type Round2LinearHomeflowAnswers = {
   q3: (typeof LINEAR_HOMEFLOW_PLANNING_METHODS)[number];
   q4: (typeof LINEAR_HOMEFLOW_DIFFICULTIES)[number];
 };
+export const LINEAR_RECORDING_SURVEY_VERSION = "r2.2-recording" as const;
+const LINEAR_RECORDING_FREQUENCIES = ["daily", "3_5", "1_2", "none"] as const;
+const LINEAR_RECORDING_HOME_MEALS = ["none", "1_2", "3_5", "6_plus"] as const;
+const LINEAR_RECORDING_METHODS = ["pass", "eyeball", "track", "measure"] as const;
+const LINEAR_RECORDING_DIFFICULTIES = ["ingredients", "weight", "search", "none"] as const;
+export type Round2LinearRecordingAnswers = {
+  q1: (typeof LINEAR_RECORDING_FREQUENCIES)[number];
+  q2: (typeof LINEAR_RECORDING_HOME_MEALS)[number];
+  q3: (typeof LINEAR_RECORDING_METHODS)[number];
+  q4: (typeof LINEAR_RECORDING_DIFFICULTIES)[number];
+};
 type Common = { event_id: string; topic: Round2Topic; round_version: typeof ROUND2_VERSION; honeypot: "" };
 export type Round2Request = Common & (
   | { action: "bootstrap"; bootstrap_intent: "create_or_resume" | "resume"; bootstrap_key: string; page_context: string }
@@ -40,6 +51,7 @@ export type Round2Request = Common & (
   | { action: "survey_submit"; topic: "recording"; survey_version: "r2.1-recording"; answers: Round2RecordingAnswers }
   | { action: "survey_submit"; topic: "homeflow"; survey_version: "r2.1-homeflow"; answers: Round2HomeflowAnswers }
   | { action: "survey_submit"; topic: "homeflow"; survey_version: typeof LINEAR_HOMEFLOW_SURVEY_VERSION; answers: Round2LinearHomeflowAnswers }
+  | { action: "survey_submit"; topic: "recording"; survey_version: typeof LINEAR_RECORDING_SURVEY_VERSION; answers: Round2LinearRecordingAnswers }
   | { action: "lead_submit"; email: string; consent: true; consent_version: typeof ROUND2_CONSENT_VERSION; purpose: typeof ROUND2_PURPOSE; consent_generation: number; turnstile_token?: string }
   | { action: "menu_return"; from_activity: Round2Activity }
 );
@@ -206,15 +218,16 @@ export function parseRound2Request(raw: string): Round2Request {
   } else if (value.action === "survey_submit") {
     keys.push("survey_version", "answers");
     const linearHomeflow = value.topic === "homeflow" && value.survey_version === LINEAR_HOMEFLOW_SURVEY_VERSION;
-    check("survey_version", value.survey_version === `${ROUND2_VERSION}-${value.topic}` || linearHomeflow);
+    const linearRecording = value.topic === "recording" && value.survey_version === LINEAR_RECORDING_SURVEY_VERSION;
+    check("survey_version", value.survey_version === `${ROUND2_VERSION}-${value.topic}` || linearHomeflow || linearRecording);
     if (!value.answers || typeof value.answers !== "object" || Array.isArray(value.answers)) invalid.push("answers");
     else {
       const answers = value.answers as Record<string, unknown>;
       if (Object.keys(answers).some(key => !["q1", "q2", "q3", "q4"].includes(key))) throw new Round2Error("VALIDATION_ERROR");
-      check("answers.q1", member(answers.q1, linearHomeflow ? LINEAR_HOMEFLOW_COOKING_DAYS : ROUND2_FREQUENCIES));
-      check("answers.q2", member(answers.q2, linearHomeflow ? LINEAR_HOMEFLOW_YOUTUBE_FREQUENCIES : value.topic === "recording" ? ROUND2_RECORDING_METHODS : ROUND2_HOMEFLOW_METHODS));
-      check("answers.q3", member(answers.q3, linearHomeflow ? LINEAR_HOMEFLOW_PLANNING_METHODS : value.topic === "recording" ? ROUND2_RECORDING_FEATURES : ROUND2_HOMEFLOW_FEATURES));
-      check("answers.q4", member(answers.q4, linearHomeflow ? LINEAR_HOMEFLOW_DIFFICULTIES : ROUND2_INTENTS));
+      check("answers.q1", member(answers.q1, linearRecording ? LINEAR_RECORDING_FREQUENCIES : linearHomeflow ? LINEAR_HOMEFLOW_COOKING_DAYS : ROUND2_FREQUENCIES));
+      check("answers.q2", member(answers.q2, linearRecording ? LINEAR_RECORDING_HOME_MEALS : linearHomeflow ? LINEAR_HOMEFLOW_YOUTUBE_FREQUENCIES : value.topic === "recording" ? ROUND2_RECORDING_METHODS : ROUND2_HOMEFLOW_METHODS));
+      check("answers.q3", member(answers.q3, linearRecording ? LINEAR_RECORDING_METHODS : linearHomeflow ? LINEAR_HOMEFLOW_PLANNING_METHODS : value.topic === "recording" ? ROUND2_RECORDING_FEATURES : ROUND2_HOMEFLOW_FEATURES));
+      check("answers.q4", member(answers.q4, linearRecording ? LINEAR_RECORDING_DIFFICULTIES : linearHomeflow ? LINEAR_HOMEFLOW_DIFFICULTIES : ROUND2_INTENTS));
     }
   } else if (value.action === "lead_submit") {
     keys.push("email", "consent", "consent_version", "purpose", "consent_generation", "turnstile_token");

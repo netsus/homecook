@@ -30,7 +30,7 @@ let started = false;
 try {
   const version = assertPinnedSupabaseCliVersion(cli(['--version']));
   assertNoIsolatedDockerResources(isolated.projectId, { env });
-  const migrationNames = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql'];
+  const migrationNames = ['20260911100000_marketing_round2.sql', '20260911110000_marketing_round2_linear_homeflow.sql', '20260911120000_marketing_round2_linear_recording.sql'];
   const migrationSources = [];
   for (const migrationName of migrationNames) {
     migrationSources.push(await readFile(`${isolated.rootDir}/supabase/migrations/${migrationName}`, 'utf8'));
@@ -41,16 +41,16 @@ try {
   run('corepack', ['pnpm', ...buildIsolatedSupabaseStartArgs(isolated.rootDir)]);
   assertOwnedDockerResources(isolated.projectId, { env });
   console.warn(JSON.stringify({ phase: 'migration-replay', cliVersion: version, migrationSha256: isolated.migrationSha256, projectId: isolated.projectId }));
-  for (const migrationSource of migrationSources) sql(migrationSource);
+  for (const migrationSource of migrationSources.slice(0, 2)) sql(migrationSource);
   sql("select 'public.marketing_round2_apply(jsonb)'::regprocedure;");
-  await runAssertions({ isolated, env, sql, run });
+  await runAssertions({ isolated, env, sql, run, recordingMigration: migrationSources[2] });
   console.warn(JSON.stringify({ result: 'PASS', projectId: isolated.projectId, productionWrites: 0, remoteAccess: 0 }));
 } finally {
   if (started) removeIsolatedDockerResources(isolated.projectId, { env });
   assertNoIsolatedDockerResources(isolated.projectId, { env });
   await isolated.removeFiles();
 }
-async function runAssertions({ isolated, env, sql, run }) {
+async function runAssertions({ isolated, env, sql, run, recordingMigration }) {
   const checks = [];
   function assert(value, name) { if (!value) throw new Error(`Assertion failed: ${name}`); checks.push(name); }
   function equal(actual, expected, name) { assert(isDeepStrictEqual(actual, expected), name); }
@@ -342,6 +342,78 @@ async function runAssertions({ isolated, env, sql, run }) {
       equal(sql(`select has_function_privilege('${principal}','private.marketing_round2_answers(text,text,jsonb)','EXECUTE')`), 'f', `linear helper ${principal} execute denied`);
     }
   }
+  // Apply the increment only after real r2.1/r2.2-homeflow fixtures exist.
+  // This proves the forward migration preserves rows/events and existing boundaries.
+  const preservedTables = [
+    ['marketing_validation_sessions','id'], ['marketing_round2_participations','id'],
+    ['marketing_round2_events','event_id'], ['marketing_round2_lead_requests','request_id'],
+  ];
+  const rowDigests = () => preservedTables.map(([table, key]) => sql(`select count(*) || ':' || md5(coalesce(string_agg(row_to_json(t)::text,',' order by ${key}),'')) from public.${table} t`));
+  const tableBoundary = () => sql("select md5(string_agg(jsonb_build_array(c.oid,c.relname,c.relrowsecurity,c.relforcerowsecurity,c.relacl,c.relowner)::text,',' order by c.oid)) from pg_class c where c.oid in ('public.marketing_validation_sessions'::regclass,'public.marketing_round2_participations'::regclass,'public.marketing_round2_events'::regclass,'public.marketing_round2_lead_requests'::regclass)");
+  const preservedFunctions = () => sql("select md5(string_agg(pg_get_functiondef(p.oid),',' order by p.oid)) from pg_proc p where p.oid in ('private.marketing_round2_answers(text,jsonb)'::regprocedure,'private.marketing_round2_payload(text,text,text,jsonb)'::regprocedure,'public.marketing_round2_apply(jsonb)'::regprocedure)");
+  const beforeRecordingMigration = { rows: rowDigests(), boundary: tableBoundary(), functions: preservedFunctions() };
+  sql(recordingMigration);
+  equal(rowDigests(), beforeRecordingMigration.rows, 'recording increment preserves every existing legacy/R2 row and event digest');
+  equal(tableBoundary(), beforeRecordingMigration.boundary, 'recording increment preserves legacy/R2 table identity grants and FORCE RLS');
+  equal(preservedFunctions(), beforeRecordingMigration.functions, 'recording increment preserves original validator payload helper and public RPC');
+  equal(sql("select proowner::regrole::text='postgres' and not prosecdef and provolatile='i' and proconfig=array['search_path=pg_catalog, pg_temp'] from pg_proc where oid='private.marketing_round2_answers(text,text,jsonb)'::regprocedure"), 't', 'recording validator owner invoker immutability and safe search path');
+  equal(sql("select not exists(select 1 from pg_proc p cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid='private.marketing_round2_answers(text,text,jsonb)'::regprocedure and a.grantee=0 and a.privilege_type='EXECUTE')"), 't', 'recording validator PUBLIC execute denied');
+  for (const principal of ['anon','authenticated','service_role']) equal(sql(`select has_function_privilege('${principal}','private.marketing_round2_answers(text,text,jsonb)','EXECUTE')`), 'f', `recording validator ${principal} execute denied`);
+  // Pin every topic/version independently, including all answer choices and mixed-version negatives.
+  const recordingAnswers = { q1: 'daily', q2: '6_plus', q3: 'track', q4: 'ingredients' };
+  const recordingPayload = { survey_version: 'r2.2-recording', answers: recordingAnswers };
+  const surveyCases = [
+    { topic: 'recording', version: 'r2.2-recording', answers: recordingAnswers,
+      choices: { q1: ['daily','3_5','1_2','none'], q2: ['none','1_2','3_5','6_plus'], q3: ['pass','eyeball','track','measure'], q4: ['ingredients','weight','search','none'] } },
+    { topic: 'recording', version: 'r2.1-recording', answers: { q1: 'none', q2: 'reuse_saved', q3: 'none', q4: 'no' } },
+    { topic: 'homeflow', version: 'r2.1-homeflow', answers: { q1: 'none', q2: 'on_the_day', q3: 'meal_plan', q4: 'yes' } },
+    { topic: 'homeflow', version: 'r2.2-homeflow', answers: linearAnswers,
+      choices: { q1: ['none','one_two','three_four','five_seven'], q2: ['none','once','two_three','four_plus'], q3: ['spontaneous','mental','memo','scheduled'], q4: ['planning','shopping','video','none'] } },
+  ];
+  const validSql = (topic, version, answers) => sql(`select private.marketing_round2_answers('${topic}','${version}','${JSON.stringify(answers)}'::jsonb)`);
+  for (const fixture of surveyCases) {
+    equal(validSql(fixture.topic, fixture.version, fixture.answers), 't', `${fixture.version} exact tuple accepted`);
+    equal(validSql(fixture.topic === 'recording' ? 'homeflow' : 'recording', fixture.version, fixture.answers), 'f', `${fixture.version} wrong topic denied`);
+    equal(validSql(fixture.topic, fixture.version, { ...fixture.answers, extra: 'leak' }), 'f', `${fixture.version} extra answer denied`);
+    for (const key of ['q1','q2','q3','q4']) {
+      const missing = { ...fixture.answers }; delete missing[key];
+      equal(validSql(fixture.topic, fixture.version, missing), 'f', `${fixture.version} missing ${key} denied`);
+      equal(validSql(fixture.topic, fixture.version, { ...fixture.answers, [key]: 'unknown' }), 'f', `${fixture.version} unknown ${key} denied`);
+      equal(validSql(fixture.topic, fixture.version, { ...fixture.answers, [key]: null }), 'f', `${fixture.version} null ${key} denied`);
+      for (const value of fixture.choices?.[key] ?? []) equal(validSql(fixture.topic, fixture.version, { ...fixture.answers, [key]: value }), 't', `${fixture.version} ${key}=${value} accepted`);
+    }
+  }
+  equal(validSql('recording', 'r2.2-recording', { ...recordingAnswers, q3: 'none' }), 'f', 'recording old answer mixed into new version denied');
+  equal(validSql('recording', 'r2.2-recording', { ...recordingAnswers, q2: 'two_three' }), 'f', 'homeflow answer mixed into recording denied');
+  equal(validSql('recording', 'r2.1-recording', recordingAnswers), 'f', 'new recording answers never reinterpret old version');
+  equal(validSql('recording', 'r2.3-recording', recordingAnswers), 'f', 'unknown recording version denied');
+  const recordingBootstrap = await ok(command(), 'linear recording bootstrap');
+  const recordingPid = recordingBootstrap.data.participation_id;
+  const recordingAction = (payload, event = randomUUID()) => command({ action: 'survey_submit', activity: 'survey', pid: recordingPid, payload, event });
+  await denied(recordingAction(recordingPayload), 'INVALID_TRANSITION', 'linear recording requires survey start');
+  await ok(command({ action: 'activity_start', activity: 'survey', pid: recordingPid, payload: {} }), 'linear recording survey start');
+  const recordingBefore = count();
+  await denied(recordingAction({ ...recordingPayload, answers: { ...recordingAnswers, q3: 'none' } }), 'VALIDATION_ERROR', 'RPC rejects mixed old recording answer');
+  await denied(command({ action: 'survey_submit', activity: 'survey', topic: 'homeflow', pid: linearPid, payload: recordingPayload }), 'VALIDATION_ERROR', 'homeflow RPC rejects recording version');
+  equal(count(), recordingBefore, 'invalid recording RPC writes zero');
+  const recordingSurvey = recordingAction(recordingPayload);
+  const recordingDone = await ok(recordingSurvey, 'linear recording survey commits');
+  equal(JSON.parse(sql(`select jsonb_build_object('survey_version',survey_version,'answers',answers) from public.marketing_round2_participations where id='${recordingPid}'`)), recordingPayload, 'linear recording exact version and answers persisted');
+  equal((await ok(recordingSurvey, 'linear recording event replay')).data, recordingDone.data, 'linear recording replay receipt stable');
+  equal((await ok(recordingAction(recordingPayload), 'linear recording equivalent no-op')).data.revision, recordingDone.data.revision, 'linear recording no-op revision unchanged');
+  const persistedRecording = () => sql(`select md5(row_to_json(p)::text || (select string_agg(row_to_json(e)::text,',' order by event_id) from public.marketing_round2_events e where e.participation_id=p.id)) from public.marketing_round2_participations p where p.id='${recordingPid}'`);
+  const beforeConflict = persistedRecording();
+  await denied(recordingAction({ ...recordingPayload, answers: { ...recordingAnswers, q3: 'pass' } }, recordingSurvey.event_id), 'EVENT_CONFLICT', 'same recording event changed answers conflicts');
+  const oldRecordingPayload = { survey_version: 'r2.1-recording', answers: surveyCases[1].answers };
+  await denied(recordingAction(oldRecordingPayload, recordingSurvey.event_id), 'EVENT_CONFLICT', 'same recording event changed version conflicts');
+  await denied(recordingAction(oldRecordingPayload), 'ACTIVITY_ALREADY_COMPLETED', 'completed recording version immutable');
+  await denied(action('survey_submit', 'survey', recordingPayload), 'ACTIVITY_ALREADY_COMPLETED', 'completed old recording cannot be upgraded');
+  await denied(recordingAction({ ...recordingPayload, answers: { ...recordingAnswers, q3: 'measure' } }), 'ACTIVITY_ALREADY_COMPLETED', 'completed recording answers immutable');
+  equal(persistedRecording(), beforeConflict, 'recording immutable row and event digest preserved');
+  for (const invalidAnswers of [{ ...recordingAnswers, q3: 'none' }, { ...recordingAnswers, q2: 'two_three' }, { ...recordingAnswers, extra: 'leak' }]) {
+    equal(sql(`do $$ begin begin update public.marketing_round2_participations set answers='${JSON.stringify(invalidAnswers)}'::jsonb where id='${recordingPid}'; raise exception 'TEST_CHECK_ACCEPTED_INVALID_ANSWERS'; exception when check_violation then null; end; end $$;`), 'DO', 'participation CHECK rejects mixed or extra recording answers');
+  }
+  equal(persistedRecording(), beforeConflict, 'failed participation CHECK leaves row and event digest unchanged');
   // Approved-maintenance mechanics only, in this disposable fixture: remove every topic and repeat for one email.
   const withdrawalEmail='withdrawal-fixture@example.com'; const withdrawalKey=digest(withdrawalEmail); const withdrawn=[];
   for(const topic of ['recording','recording','homeflow','homeflow']) {
@@ -395,6 +467,6 @@ async function runAssertions({ isolated, env, sql, run }) {
   const test=spawnSync('corepack',['pnpm','exec','vitest','run','tests/marketing-round2-http.integration.test.ts','--maxWorkers=1','--reporter=json',`--outputFile=${reportPath}`],{cwd:root,env:{...env,R2_HTTP_INTEGRATION:'1',R2_HTTP_DATA_URL:isolated.dataApiUrl,R2_HTTP_SERVICE_ROLE_KEY:token,R2_HTTP_EXPECTED_DB_NAMESPACE:isolated.projectId,R2_HTTP_TARGET_IDENTITY_JSON:JSON.stringify({projectId:isolated.projectId,dataApiUrl:isolated.dataApiUrl,cliVersion:'2.110.0',migrationSha256:isolated.migrationSha256})},encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});
   await writeFile(`${root}/.omx/artifacts/r2-stage2/http-integration.log`,String(test.stdout)+String(test.stderr));
   const report=JSON.parse(await readFile(reportPath,'utf8'));
-  assert(test.status===0 && report.numPassedTests===7 && report.numPendingTests===0,'seven actual HTTPS handler SDK/DB tests executed');
+  assert(test.status===0 && report.numPassedTests===8 && report.numPendingTests===0,'eight actual HTTPS handler SDK/DB tests executed');
   console.warn(JSON.stringify({ checks:checks.length, passed:checks }));
 }
