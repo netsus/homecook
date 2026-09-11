@@ -6,6 +6,11 @@
 담당자: 킴실장
 날짜: 9월 3일
 
+> **2026-09-12 후속 사용자 승인 — R2 두 r2.2 survey union 추가**
+>
+> `POST /api/v1/marketing/round2`의 action/field/Success/Failure와 round_version=r2.1은 그대로다. [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4의 recording/r2.2-recording, homeflow/r2.2-homeflow 조합을 survey_submit에 추가하고 기존r2.1 조합은 보존한다. version+topic별4답변 exact enum을 parser/SQL/RPC에서 일치시킨다. 잘못된 조합422, 기존 완료의 다른version/답변409다.
+> 유형은 확정 로컬 Q3로 계산하며 public result/step/answers 응답 필드를 새로 추가하지 않는다. recording 첫 답변은 기존activity_start를 재사용하고 UI직렬 순서를 새 서버 선행조건으로 만들지 않는다. API active109개와 기존권한·멱등·동의·보관경계는 불변이다.
+
 > **2026-09-11 contract-evolution — POST marketing/round2 (r2.1)**
 >
 > `POST /api/v1/marketing/round2` 하나를 추가한다. exact action은 bootstrap/activity_start/example_complete/survey_submit/lead_submit/menu_return이다. 공개 익명 경로지만 bootstrap 외 요청은 r2 전용 서명 쿠키로 참여를 검증한다. 요청/응답 union·enum/길이·JSON 예시·status/code·상태행렬·멱등 영수증·보안 순서는 [r2 상세 계약](marketing-demand-validation-r2-contract.md) §4~6·8~9가 규범이다. 성공 `{success,data,error}`, 오류 `{code,message,fields[]}`를 유지한다.

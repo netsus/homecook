@@ -5,6 +5,15 @@
 로컬 작성·검증 결과는 [집밥흐름 로컬 구현 인수](../../marketing/homeflow-local-implementation.md)에 남긴다. 기존 Stage 완료 상태는 변경하지 않는다.
 
 2026-09-11 최신 요청으로 [현재 PRD](../../marketing/homecook-flow-round2-prd.md)와 [로컬 구현 계약](../../marketing/homeflow-linear-implementation-contract.md)의 선형 homeflow 화면·새 설문 버전을 작성/검증한다. 기존 아래 r2.1 문항·독립 활동은 이전 버전의 보존 기준이다. 이번 변경은 배포·master 머지 없이 작업 브랜치에 남기며, 기존 checked 항목을 새 버전의 통과나 독립 Stage 승인으로 재사용하지 않는다.
+## 2026-09-12 후속 계약 인수: 두 r2.2 직렬 UI
+
+최신 사용자 승인과 정확한 질문·유형·버전·복원은 [위임 계약 §12](../../marketing-demand-validation-r2-contract.md)를 따른다. 아래 Stage1/r2.1/Stage2 기록과 이미 얻은 승인·테스트 증거는 보존하며 새 r2.2 UI의 완료 증거로 재사용하지 않는다. recording 기본 진입의 메뉴/소개 대신 Q1, homeflow 승인 export의 Hero/직렬6체험이 이번 UI 기준이다. 기존 메뉴·UI 자유6순서·유형없음·3장면 요구는 이전 UI의 역사 범위로 남고, 서버 독립3활동·단독/6순서 API 및 권한 검증은 계속 유지한다.
+
+새 survey_version은 `r2.2-recording`/`r2.2-homeflow`, round_version은 `r2.1`이다. 원문4문항, version+topic exact parser/SQL, recording의 render-start금지·첫 실제 답변 start, 완료 readonly·버전별draft·유형없는복원을 검증한다. 결과/체험 view 때문에 v2 API/action이나 임의 공개field를 추가하지 않는다. 현재 stage4 machine evidence/그림/테스트의 이전 UI 기준을 새 직렬 UI에 맞춰 적용하는 일은 통합 구현자의 인수 항목이며, 과거 PASS를 새 UI PASS로 복사하지 않는다.
+
+이번 배포 통합은 `release/mumeok-r2-only-20260912`에서 live `458ce2daab6cdd91a70504657ce5981a4d4acf3c` 기반 R2 change-only로 진행한다. 원격 master0·비R2동작동일·Next15.5.21 및 의존성 업그레이드0을 확인한다. 일반 SQL guard를 넓히지 않는 전용 controlled runbook은 같은 docs 작업의 후속commit `docs/engineering/marketing-round2-controlled-prelaunch.md`로 인수한다. 이 문서 작성의 push/merge/제품/DB/배포 실행은 없다.
+
+순서: 이 후속 계약의 독립 검토 → 두 버전/저장 연결 및 R2-only 통합 검증 → exact3SQL/백업/identity/실제readiness를 갖춘 controlled DB·웹 절차 검토 → 해당 승인 범위 실행이다. 같은 사용자 승인을 재질문하거나 새로운 전역 workflow를 만들지 않는다.
 
 ## Goal
 

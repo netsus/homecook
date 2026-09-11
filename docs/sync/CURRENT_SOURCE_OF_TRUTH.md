@@ -18,6 +18,12 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
+## 2026-09-12 사용자 승인 — R2 직렬 UI·두 r2.2 설문·이번 배포 예외
+
+[r2 위임 계약](../marketing-demand-validation-r2-contract.md) §12가 이번 두 랜딩의 최신 표시/설문 기준이다. recording은 기존v2 정확한4문항을 Q1부터 바로 표시하고 실제 첫 답변에서 survey start, homeflow는 승인 export `f692ec738db53569d0e54acd9846700e3a4877f6`의 Hero→4문항/Q3유형→6체험→신청이다. `survey_version=r2.2-recording|r2.2-homeflow`를 추가하되 `round_version=r2.1`, endpoint·public3테이블·기존r2.1/기존v2 의미와 서버 독립 활동 보호는 유지한다. API active109/table79 총계는 그대로다.
+
+사용자는 이번 광고 집행 전 R2 한정 예외와 기존 DB 백업·보존/저장 연결 검증 후 두 랜딩 배포를 재승인했다. 원격 master 변경 없이 live `458ce2daab6cdd91a70504657ce5981a4d4acf3c` 기반 `release/mumeok-r2-only-20260912`에서 R2 change-only를 독립 검토·검증한다. 비R2 기능·의존성 업그레이드0, 일반 SQL guard·정식 promotion kill switch·독립 리뷰는 유지한다. 이 작성은 문서/계획이며 운영 실행·자기 승인이 아니다. runbook은 같은 작업의 후속 문서 commit에서 인수한다. 아래 과거 승인/검토 기록은 삭제하지 않는다.
+
 ## 2026-09-11 사용자 승인 contract-evolution — 무먹 r2 독립 활동
 
 공식 5종은 현재 파일 버전을 유지하면서 같은 날짜의 r2.1 addendum으로 동기화한다. 새 페이지는 `/beta/r2/recording`, `/beta/r2/homeflow`, 새 API는 `POST /api/v1/marketing/round2`, 추가형 테이블은 `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests`다. 기존 v2 `/beta`·API·table·cookie·질문/유형/선형 상태는 불변이다.

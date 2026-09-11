@@ -6,6 +6,11 @@
 담당자: 채실장
 날짜: 9월 3일
 
+> **2026-09-12 후속 사용자 승인 — R2 직렬 UI와 독립 서버 처리 분리**
+>
+> 새 recording 기본 경로는 Q1→Q2→Q3→Q4→Q3유형→기존v2스타일 체험/식단→신청→접수, homeflow는 Hero→4문항→Q3유형→6체험→신청→접수다. recording의 최초 실제 Q1 답변만 `activity_start(activity=survey)`를 일으킨다. homeflow의 기존 Hero 테스트 버튼 의미는 보존한다.
+> [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12의 버전·완료·draft 복원을 적용한다. 서버3활동은 계속 자기 start만 선행 조건으로 갖고 다른 활동 완료를 강제하지 않는다. 처음/뒤로/공유 이동으로 완료를 삭제하거나 새 참여를 자동 생성하지 않는다. r2.1/v2 과거 흐름과 데이터 의미는 보존한다.
+
 > **2026-09-11 contract-evolution — 무먹 r2 자유 순서 flow (r2.1)**
 >
 > `/beta/r2/{recording|homeflow}` → MENU → EXAMPLE 또는 SURVEY 또는 LEAD → 각 DONE → 선택적 MENU/다른 활동이다. 단독 활동 완료와 세 활동의 순서 6가지를 모두 허용하며 메뉴 복귀가 새 참여를 만들지 않는다. 서버 참여는 topic/version별로 분리하고 완료 상태를 복원한다.

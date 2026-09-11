@@ -11,6 +11,21 @@
 - [x] 로컬 테스트·브라우저 결과를 기록하며 배포·master 머지·독립 Stage 승인으로 주장하지 않는다.
 
 로컬 근거: [구현 인수와 검증 기록](../../marketing/homeflow-local-implementation.md). 독립 Stage 승인·배포·master 머지는 수행하지 않았다.
+## 2026-09-12 후속 r2.2 계약 테스트 계획
+
+[위임 계약 §12](../../marketing-demand-validation-r2-contract.md)가 이번 두 랜딩의 새 UI/설문 기준이다. 아래 기존 체크와 증거는 과거 범위 그대로 보존한다. 기존UI 메뉴·직접선택/6순서·3장면/유형없음은 이전UI 기준이고 이번 직렬UI에 동시에 강요하지 않는다. 반면 서버3활동 독립·각단독/6순서·권한·멱등·보관 검증은 새UI와 무관하게 계속 필수다. 다음 항목은 실제 새버전 증거 전에는 미완료다.
+
+- [ ] 기존두r2.1+새두r2.2 조합의 parser/SQL/payload/CHECK를 version+topic으로 검증하고 교차버전/교차topic/추가key/누락을422 또는DB거부로 고정한다 <!-- omo:id=accept-r22-version-dispatch;stage=2;scope=backend;review=3,6 -->
+- [ ] 기존2인자r2.1함수/기존완료행/event 불변, 다른version재제출409·같은event변경409·동일재시도보존 및3인자helper권한을 검증한다 <!-- omo:id=accept-r22-history-preservation;stage=2;scope=backend;review=3,6 -->
+- [ ] recording 원문Q1..Q4의순서/줄바꿈/보기/보조문구를지정source bytes와대조하고Q1즉시진입을검증한다 <!-- omo:id=accept-r22-recording-copy;stage=4;scope=frontend;review=5,6 -->
+- [ ] recording mount/render/effect/StrictMode/첫노출에서survey start0,첫선택메모리보존→bootstrap+start ACK후Q2,실패동일event명시retry/Q1선택유지·중복클릭·뒤로가기보호를검증한다 <!-- omo:id=accept-r22-first-answer-start;stage=4;scope=frontend;review=5,6 -->
+- [ ] Q4 submit ACK+원답변tuple만유형근거로쓰고,5체험중간에는완료0·최종planner payoff끝에서만example_complete ACK후lead시작이며기존v2 default HTML/controller가불변임을검증한다 <!-- omo:id=accept-r22-ack-boundaries;stage=4;scope=frontend;review=5,6 -->
+- [ ] 각R2경로의허용result key만공유하고유일resultquery외PII/답변/attribution/key를제거한다. sharedview POST/bootstrap0,명시테스트후recording정상Q1,기존1차/beta역유입0을검증한다 <!-- omo:id=accept-r22-shared-readonly;stage=4;scope=frontend;review=5,6 -->
+- [ ] 두topic의Q3전용유형과승인직렬흐름(recording기존체험·식단/homeflowHero·6체험),동의/오류/receipt를실제R2 API에연결하고새field/action/다른활동완료선행조건이없음을검증한다 <!-- omo:id=accept-r22-linear-storage;stage=4;scope=frontend;review=5,6 -->
+- [ ] version별draft/participation/expiry를대조하고r2.1값을새질문으로재해석하지않으며답변없는완료복원은유형추정·재제출없이진행한다. cookie_resume/410/lead완료·두탭/두topic보존도확인한다 <!-- omo:id=accept-r22-versioned-recovery;stage=4;scope=frontend;review=5,6 -->
+- [ ] 실제release branch의live458ce대비R2-only diff와비R2코드/동작·package/lock/Next15.5.21불변을증명하고새UI의모바일·키보드·200%·reduced-motion·일반/preview격리증거를구분한다 <!-- omo:id=accept-r22-release-parity;stage=4;scope=frontend;review=5,6 -->
+
+운영 controlled apply/backup/중단/복구/실제provider 증거는 후속 runbook의 별도 담당 범위다. 위 단위·SQL·브라우저 자동 검증을 운영 Manual Only로 옮겨 생략하지 않는다. 이번 문서 commit은 실행/독립승인 PASS가 아니다.
 
 공식 계약: [r2.1](../../marketing-demand-validation-r2-contract.md) @ `7f00e62c13572b5b2c0d54c997fe628f7a56567e`, 독립 reviewed head `24093c94ebf53676050353088f173ef7f6315445`.
 현재는 Stage1 문서 재잠금이며 제품 구현/독립 internal1.5/디자인 authority 승인이 아니다. 아래 non-manual은 해당 Stage2/4에서 실제 evidence 후 체크한다. 계약 전문의 exact 필드·타입·message·DB constraint는 README 요약보다 우선한다.

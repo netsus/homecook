@@ -6,6 +6,11 @@
 담당자: 채실장
 날짜: 9월 3일
 
+> **2026-09-12 후속 사용자 승인 — R2 설문 버전별 검증**
+>
+> [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4~12.5의 두 r2.2 설문을 추가한다. public3테이블/column/round_version=r2.1은 유지하고 답변·event payload·participation CHECK를 `(topic,survey_version)`로 정확히 판별한다. 기존2인자 r2.1 답변 함수는 보존하고 export의3인자 내부 함수 경로를 확장한다. topic만 보고 enum을 OR로 넓히지 않는다.
+> 기존 완료 답변/version/event는 재작성하지 않고 다른 version 재제출409를 유지한다. 새 recording 증분 SQL은 실제 파일/해시·독립 검토가 필요하다. 이번 운영 적용은 별도 R2 controlled 절차의 백업/identity/isolated replay/transaction+ledger를 전제로 하며, 이 문서 작업은 SQL/DB를 실행하지 않는다. 운영 내부 ledger는 public 제품 테이블 총계에 포함하지 않는다.
+
 > **2026-09-11 contract-evolution — 무먹 r2 추가형 3테이블 (r2.1)**
 >
 > `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests`를 추가한다. 기존 `public.marketing_validation_sessions`·v2 row/권한/제약/보관 의미는 불변이다. [r2 상세 계약](marketing-demand-validation-r2-contract.md) §7은 모든 column의 SQL type/null/default/PK/FK/unique/check/index/RLS와 deferred consistency trigger의 규범 명세다.
