@@ -236,7 +236,7 @@ const sourceEvidence = {
   recipe_delete_handler_count: 1,
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
-  public_service_role_entry_count: 1,
+  public_service_role_entry_count: 2,
   user_direct_service_role_count: 11,
   user_service_role_violation_count: 0,
 };
@@ -329,6 +329,7 @@ function createSourceEvidenceFixtureRepository(extraFiles: Record<string, string
     "app/api/v1/cooking/session-attempts/route.ts",
     "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
     "app/api/v1/cooking/standalone-complete/route.ts",
+    "app/api/v1/marketing/round2/route.ts",
     "app/api/v1/marketing/validation/route.ts",
     "app/api/v1/meals/[meal_id]/route.ts",
     "app/api/v1/meals/route.ts",
@@ -644,7 +645,8 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, recipe_collection_personal_origin_field_count: 6 },
       { ...sourceEvidence, recipe_collection_personal_origin_field_count: 8 },
       { ...sourceEvidence, public_service_role_entry_count: 0 },
-      { ...sourceEvidence, public_service_role_entry_count: 2 },
+      { ...sourceEvidence, public_service_role_entry_count: 1 },
+      { ...sourceEvidence, public_service_role_entry_count: 3 },
       { ...sourceEvidence, extra: 0 },
     ]) {
       expect(() => assertPersonalRecipeEditorSourceEvidence(evidence)).toThrow(
@@ -988,4 +990,17 @@ function __testExtraDerivedCreateInternalClientCall() {
       }),
     ).not.toThrow();
   });
+});
+
+
+it("keeps a second round2 service-role call outside the exact approved count",()=>{
+  const file="app/api/v1/marketing/round2/route.ts";
+  const source=readFileSync(file,"utf8");
+  const root=createSourceEvidenceFixtureRepository({[file]:`${source}\nexport async function unapprovedExtraRound2Call() { return createMarketingRound2InternalClient(); }`});
+  try {
+    const evidence=collectPersonalRecipeEditorSourceEvidence(root);
+    expect(evidence.public_service_role_entry_count).toBe(2);
+    expect(evidence.user_service_role_violation_count).toBeGreaterThan(0);
+    expect(()=>assertPersonalRecipeEditorSourceEvidence(evidence)).toThrow(/failed closed/i);
+  } finally { rmSync(root,{recursive:true,force:true}); }
 });

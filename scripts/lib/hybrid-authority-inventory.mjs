@@ -15,6 +15,7 @@ const SCAN_ROOTS = ["app", "components", "lib"];
 
 const PUBLIC_ALLOWLIST_FILES = new Set([
   "app/api/v1/feedback/404/route.ts",
+  "app/api/v1/marketing/round2/route.ts",
   "app/api/v1/marketing/validation/route.ts",
   ...HYBRID_PUBLIC_ROUTE_CONTRACTS.map((contract) => contract.file),
 ]);
@@ -54,6 +55,10 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   [
     "createNotFoundFeedbackInternalClient",
     new Set(["app/api/v1/feedback/404/route.ts"]),
+  ],
+  [
+    "createMarketingRound2InternalClient",
+    new Set(["app/api/v1/marketing/round2/route.ts"]),
   ],
   [
     "createMarketingValidationInternalClient",
@@ -200,6 +205,10 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
     ]),
   ],
   [
+    "createMarketingRound2InternalClient",
+    new Map([["app/api/v1/marketing/round2/route.ts", new Set(["POST"])]]),
+  ],
+  [
     "createMarketingValidationInternalClient",
     new Map([
       [
@@ -244,6 +253,7 @@ const SERVICE_ROLE_FACTORY_NAMES = new Set([
   "createServiceRoleClient",
   "createLocalDevSessionBootstrapInternalClient",
   "createFutureMealWriteInternalClient",
+  "createMarketingRound2InternalClient",
   "createMarketingValidationInternalClient",
   "createShoppingCreateInternalClient",
   "createSnapshotV2SessionInternalClient",
@@ -545,6 +555,31 @@ function isClientModule(sourceFile) {
   return false;
 }
 
+// r2 has contractually exact string fields[]; only its dedicated POST may use
+// the tested r2 envelope instead of the account API field-object envelope.
+function usesRound2ResponseBoundary(relativeFile, sourceFile) {
+  if (relativeFile !== "app/api/v1/marketing/round2/route.ts") return false;
+  const required = new Set(["createMarketingRound2Handler", "round2Failure"]);
+  const imported = new Set();
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || importModuleName(statement) !== "@/lib/server/marketing-round2") continue;
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+    for (const binding of bindings.elements) {
+      if (required.has(importedBindingName(binding)) && binding.name.text === importedBindingName(binding)) imported.add(binding.name.text);
+    }
+  }
+  const called = new Set();
+  function visit(node) {
+    if (ts.isCallExpression(node) && getEnclosingFunctionName(node) === "POST") {
+      for (const name of required) if (isNamedCall(node, name)) called.add(name);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  return [...required].every(name => imported.has(name) && called.has(name));
+}
+
 function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   const serviceRoleEntries = [];
   const remoteCompatibilityEntries = [];
@@ -651,6 +686,7 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
           isNamedCall(node, "createRouteHandlerClient")
           || isNamedCall(node, "createDataRouteHandlerClient")
           || isNamedCall(node, "authorizeCookedBatchRequest")
+          || isNamedCall(node, "createMarketingRound2InternalClient")
         )
       ) {
         usesDataRouteClient = true;
@@ -885,7 +921,9 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         file: relativeFile,
         importsCommonResponseBoundary:
           source.includes("@/lib/api/response"),
-        bypassesCommonResponseBoundary: source.includes("NextResponse.json"),
+        usesRound2ResponseBoundary: usesRound2ResponseBoundary(relativeFile, sourceFile),
+        bypassesCommonResponseBoundary: source.includes("NextResponse.json")
+          || (relativeFile === "app/api/v1/marketing/round2/route.ts" && source.includes("Response.json")),
       });
     }
   }
@@ -925,7 +963,7 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         left.file.localeCompare(right.file)),
     dataRouteResponseBoundaryViolations: dataRouteResponseBoundaries.filter(
       (entry) =>
-        !entry.importsCommonResponseBoundary
+        (!entry.importsCommonResponseBoundary && !entry.usesRound2ResponseBoundary)
         || entry.bypassesCommonResponseBoundary,
     ),
     internalAllowlistFiles: [...INTERNAL_ALLOWLIST_FILES].sort(),

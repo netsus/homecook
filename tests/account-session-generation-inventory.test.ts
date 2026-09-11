@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -273,4 +273,29 @@ describe("account session generation inventory", () => {
       await rm(tempDirectory, { force: true, recursive: true });
     }
   });
+});
+
+
+it("registers only r2 anonymous POST/RPC as outside account-session generation",async()=>{
+  const inventory=JSON.parse(await readFile(INVENTORY_PATH,"utf8"));
+  expect(inventory.route_inventory.filter((entry:RouteInventoryEntry)=>entry.route==="/api/v1/marketing/round2")).toMatchObject([{
+    method:"POST",owner_scope:"public",persists_personal_state:false,guard_mode:"not_applicable",expected_generation:"not_applicable",
+  }]);
+  expect(inventory.write_inventory.filter((entry:WriteInventoryEntry)=>entry.target==="marketing_round2_apply")).toMatchObject([{
+    source_file:"lib/supabase/server.ts",kind:"rpc",owner_scope:"public",persists_personal_state:false,guard_mode:"not_applicable",expected_generation:"not_applicable",
+  }]);
+});
+
+
+it("rejects a round2 RPC call from any unregistered source file",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"round2-account-inventory-"));
+  try {
+    await mkdir(join(root,"app"));
+    await mkdir(join(root,"lib"));
+    await mkdir(join(root,"supabase","migrations"),{recursive:true});
+    await writeFile(join(root,"lib","unknown.ts"),'client.rpc("marketing_round2_apply", {});');
+    const result=spawnSync(process.execPath,[join(process.cwd(),VALIDATOR_PATH)],{cwd:root,encoding:"utf8"});
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("unclassified round2 RPC caller: lib/unknown.ts");
+  } finally { await rm(root,{recursive:true,force:true}); }
 });

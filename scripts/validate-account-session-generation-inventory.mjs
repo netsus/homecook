@@ -42,6 +42,8 @@ const ROUTE_METADATA_BY_KEY = {
   "POST /api/v1/cooked-batches/[id]/adjust": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/cooked-batches/[id]/close-unweighed": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/feedback/404": { owner_scope: "public", persists_personal_state: false },
+  // Anonymous participation PII is fenced by r2 signed cookies/consent generation, not account-session generation.
+  "POST /api/v1/marketing/round2": { owner_scope: "public", persists_personal_state: false },
   "POST /api/v1/marketing/validation": { owner_scope: "public", persists_personal_state: false },
   "POST /api/v1/food-products": { owner_scope: "authenticated-user", persists_personal_state: true },
   "PATCH /api/v1/food-products/[product_id]": { owner_scope: "authenticated-user", persists_personal_state: true },
@@ -304,18 +306,22 @@ function collectMutatingRpcEntries(source, sourceFile) {
 
   for (const { match, helper } of matches) {
     const target = match[1];
-    const isMutation = helper === "cooked-batch"
+    const isRound2 = target === "marketing_round2_apply";
+    const isMutation = isRound2 || (helper === "cooked-batch"
       ? !COOKED_BATCH_READ_RPC_TARGETS.has(target)
-      : MUTATING_RPC_PATTERN.test(target);
+      : MUTATING_RPC_PATTERN.test(target));
     if (!isMutation) {
       continue;
     }
 
     ordinal += 1;
-    const ownership = ownerScopeForWrite(
-      sourceFile,
-      routeMethodAtIndex(source, match.index),
-    );
+    const relativeFile = normalizePath(path.relative(REPO_ROOT, sourceFile));
+    if (isRound2 && relativeFile !== "lib/supabase/server.ts") {
+      throw new Error(`unclassified round2 RPC caller: ${relativeFile}`);
+    }
+    const ownership = isRound2
+      ? { source_file: relativeFile, route: null, owner_scope: "public", persists_personal_state: false }
+      : ownerScopeForWrite(sourceFile, routeMethodAtIndex(source, match.index));
     entries.push({
       key: `rpc|${ownership.source_file}|${target}|${ordinal}`,
       kind: "rpc",

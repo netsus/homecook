@@ -76,6 +76,22 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 describe("supabase server helpers", () => {
+  it("exposes only the r2 command executor over the scoped SDK RPC", async () => {
+    getSupabaseEnv.mockReturnValue({ url: "http://127.0.0.1:54321", anonKey: "fixture" });
+    getServiceRoleKey.mockReturnValue("fixture-service-role");
+    const abortSignal = vi.fn().mockResolvedValue({ data: { kind: "inspected" }, error: null, status: 200 });
+    const rpc = vi.fn().mockReturnValue({ abortSignal });
+    createClient.mockReturnValue({ rpc });
+    const server = await import("@/lib/supabase/server");
+    expect(server).toHaveProperty("createMarketingRound2InternalClient");
+    const client = server.createMarketingRound2InternalClient();
+    expect(Object.keys(client!)).toEqual(["execute"]);
+    const command = { op: "inspect" } as import("@/types/marketing-round2").Round2Command;
+    expect(await client!.execute(command)).toEqual({ data: { kind: "inspected" }, error: null, status: 200 });
+    expect(rpc).toHaveBeenCalledWith("marketing_round2_apply", { p_command: command });
+    expect(abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(createClient.mock.calls[0][2].global.headers).toEqual({ "x-homecook-internal-scope": "marketing-round2" });
+  });
   beforeEach(() => {
     vi.resetModules();
     cookies.mockReset();

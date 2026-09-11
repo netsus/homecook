@@ -454,6 +454,17 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "POST /api/v1/marketing/round2",
+      "route": "/api/v1/marketing/round2",
+      "source_file": "app/api/v1/marketing/round2/route.ts",
+      "method": "POST",
+      "owner_scope": "public",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "POST /api/v1/marketing/validation",
       "route": "/api/v1/marketing/validation",
       "source_file": "app/api/v1/marketing/validation/route.ts",
@@ -2284,6 +2295,20 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "rpc|lib/supabase/server.ts|marketing_round2_apply|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "marketing_round2_apply",
+      "line": 799,
+      "source_file": "lib/supabase/server.ts",
+      "route": null,
+      "owner_scope": "public",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "service_external_write|app/api/v1/recipes/images/route.ts|recipe-images|upload|1",
       "kind": "service_external_write",
       "operation": "upload",
@@ -2321,6 +2346,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-09-08T06:16:07.632Z",
-  "checksum": "163a6781d76d7409a8f6aedce3f552a83fd1259dc39319427eb3fbddb6a09322"
+  "generated_at": "2026-09-10T20:59:54.558Z",
+  "checksum": "8eceae4a9e8a1c415b83a254004e06694e534f982f544b6ccadb781af218b970"
 }

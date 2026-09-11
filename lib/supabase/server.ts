@@ -42,6 +42,7 @@ import {
   getDataSupabaseEnv,
 } from "@/lib/supabase/env";
 import type { MarketingValidationPersistenceClient } from "@/types/marketing-validation";
+import type { MarketingRound2InternalClient } from "@/types/marketing-round2";
 
 function requireHmacSecret(name: string) {
   const value = process.env[name]?.trim() ?? "";
@@ -380,6 +381,7 @@ type LocalInternalScope =
   | "future-meal-write"
   | "gamification-projection"
   | "marketing-validation"
+  | "marketing-round2"
   | "not-found-feedback"
   | "operational-event"
   | "recipe-future-propagation"
@@ -785,6 +787,18 @@ export function createMarketingValidationInternalClient(): MarketingValidationPe
           };
         },
       };
+    },
+  };
+}
+
+export function createMarketingRound2InternalClient(): MarketingRound2InternalClient | null {
+  const client = createScopedDataServiceRoleClient("marketing-round2");
+  if (!client) return null;
+  return {
+    async execute(command) {
+      const result = await client.rpc("marketing_round2_apply", { p_command: command })
+        .abortSignal(AbortSignal.timeout(12_000));
+      return { data: result.data, error: result.error ? { code: result.error.code, message: result.error.message } : null, status: result.status };
     },
   };
 }

@@ -17,6 +17,9 @@
     "createNotFoundFeedbackInternalClient": [
       "app/api/v1/feedback/404/route.ts"
     ],
+    "createMarketingRound2InternalClient": [
+      "app/api/v1/marketing/round2/route.ts"
+    ],
     "createMarketingValidationInternalClient": [
       "app/api/v1/marketing/validation/route.ts"
     ],
@@ -114,6 +117,11 @@
         "POST"
       ]
     },
+    "createMarketingRound2InternalClient": {
+      "app/api/v1/marketing/round2/route.ts": [
+        "POST"
+      ]
+    },
     "createMarketingValidationInternalClient": {
       "app/api/v1/marketing/validation/route.ts": [
         "POST"
@@ -194,6 +202,16 @@
       "line": 106,
       "allowed": true,
       "factory": "createNotFoundFeedbackInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/marketing/round2/route.ts",
+      "column": 24,
+      "line": 28,
+      "allowed": true,
+      "factory": "createMarketingRound2InternalClient",
       "functionName": "POST",
       "kind": "internal-operation-call"
     },
@@ -461,7 +479,7 @@
       "classification": "internal",
       "file": "lib/supabase/server.ts",
       "column": 26,
-      "line": 70,
+      "line": 71,
       "allowed": true,
       "factory": "createAuthRefreshInternalDataClient",
       "functionName": "createAuthServerClient",
@@ -481,6 +499,7 @@
     "app/api/v1/cooking-methods/route.ts",
     "app/api/v1/feedback/404/route.ts",
     "app/api/v1/ingredients/route.ts",
+    "app/api/v1/marketing/round2/route.ts",
     "app/api/v1/marketing/validation/route.ts",
     "app/api/v1/recipes/[id]/cook-mode/route.ts",
     "app/api/v1/recipes/[id]/route.ts",
@@ -536,6 +555,13 @@
       "file": "app/api/v1/cooking/standalone-complete/route.ts",
       "column": 25,
       "line": 94,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/marketing/round2/route.ts",
+      "column": 24,
+      "line": 28,
       "kind": "service-role-call"
     },
     {

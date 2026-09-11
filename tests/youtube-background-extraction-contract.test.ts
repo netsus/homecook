@@ -43,7 +43,7 @@ const officialTuple = [
 ];
 
 function getCurrentEndpointHeading(apiDoc: string) {
-  const heading = apiDoc.match(/^## 엔드포인트 전체 목록 \(109개\) `v1\.2\.\d+`$/m)?.[0];
+  const heading = apiDoc.match(/^## 엔드포인트 전체 목록 \(\d+개\) `v1\.2\.\d+`$/m)?.[0];
   expect(heading).toBeTruthy();
   return heading ?? "";
 }
@@ -165,7 +165,7 @@ describe("YouTube background extraction contract evolution", () => {
     expect(api).toContain("standalone 공개 화면의 async UI 전환은 2026-08-15 사용자 승인으로 활성화했다");
     expect(api).toContain("자동 등록하지 않는다");
     expect(api).toContain(endpointHeading);
-    expect(api).toContain("active 108개 + 삭제된 `2-4` tombstone 1개");
+    expect(api).toContain("active 109개 + 삭제된 `2-4` tombstone 1개");
   });
 
   it("parses the official API and DB inventory tables instead of trusting their labels", () => {
@@ -176,11 +176,11 @@ describe("YouTube background extraction contract evolution", () => {
     );
     const dbRows = markdownTableBodyRowsAfter(
       read(officialTuple[3]),
-      "# 17. 전체 테이블 목록 (76개)",
+      read(officialTuple[3]).match(/^# 17\. 전체 테이블 목록 \(\d+개\)$/m)?.[0] ?? "MISSING_TABLE_INVENTORY",
     );
 
-    expect(apiRows).toHaveLength(109);
-    expect(dbRows).toHaveLength(76);
+    expect(apiRows).toHaveLength(110);
+    expect(dbRows).toHaveLength(79);
   });
 
   it("locks retry enqueue as an exact union and exposes one exact retry action projection", () => {

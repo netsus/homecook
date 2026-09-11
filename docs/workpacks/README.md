@@ -233,7 +233,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `35c-mypage-achievement-album-ui` | in-progress | MYPAGE profile header 안에 성장 상태를 통합하고 등급/업적/튜토리얼/알림을 modal/bottom sheet로 제공 |
 | `marketing-demand-validation` | merged | PR #1477·#1478·#1479·#1480·#1482·#1487로 Stage 1~6 비수동 범위와 운영 안전 보완을 완료했다. `/beta` 광고-일치 funnel, PII-safe 분석, 최소 연락 export, exact-count retention purge, full-local 제한을 검증했으며 production lead activation은 Manual Only blocker 해제 전까지 금지한다 |
 | `marketing-demand-validation-v2` | merged | PR #1497·#1498·#1499로 v2 계약, backend, app-owned frontend 통합을 완료하고 Stage 3/5/6과 final design authority findings 0을 확보했다. 이미지 권리와 production lead readiness는 Manual Only fail-closed blocker다 |
-| `marketing-demand-validation-round2` | docs | PR #1551 merge `7f00e62c`의 r2.1 계약으로 Stage 1 재잠금 중. 두 topic·독립 3활동·직접 알림 신청·각4문항, 새 round2 endpoint·3테이블·서버 전용 apply RPC. 기존 v2 불변, 독립 internal1.5·디자인 authority pending |
+| `marketing-demand-validation-round2` | in-progress | Stage 1 #1550 merge `fa784892` 이후 Stage 2 백엔드 구현·격리 검증 진행. r2.1 독립 3활동·새 RPC/3테이블, 기존 v2 불변. Stage 3 독립 검토·Stage 4 화면·운영 activation 미완료 |
 | `36a-recipe-tags-contract-evolution` | docs | 레시피 태그를 서버 추천 + 사용자 검수 기능으로 승격하고 `tags`/`recipe_tags` 정규화 모델, 검색, HOME theme seed, P0 의미 태그 목록을 공식 계약으로 잠금 |
 | `36b-recipe-tags-model-write` | merged | `tags`/`recipe_tags` additive migration, P0 seed, tag normalization, YouTube/manual write path, `recipes.tags` projection writer 구현 |
 | `36c-recipe-tags-search-themes` | merged | `GET /recipes?tag=`, 제목+승인 태그 검색, `GET /tags`, HOME theme generation을 cursor-stable dedupe 전략으로 구현 |

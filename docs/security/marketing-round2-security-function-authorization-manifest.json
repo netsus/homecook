@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "slice": "marketing-demand-validation-round2",
+  "migration": "supabase/migrations/20260911100000_marketing_round2.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "private.marketing_round2_keys(jsonb, text[])",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_answers(text, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_attribution(text, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_email(text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_payload(text, text, text, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_state(timestamp with time zone, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_digest_equal(bytea, bytea)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.marketing_round2_check_consistency()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "public.marketing_round2_apply(jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    }
+  ]
+}

@@ -46,6 +46,7 @@
     ],
     "verify_commands": [
       "pnpm validate:workpack -- --slice marketing-demand-validation-round2",
+      "pnpm verify:marketing-round2",
       "pnpm exec vitest run --config vitest.product.config.ts tests/marketing-validation-route.test.ts tests/marketing-validation-migration.test.ts tests/marketing-demand-validation-v2-contract.test.ts tests/marketing-validation-operations.test.ts",
       "pnpm verify:backend",
       "pnpm verify:security-functions:isolated",
@@ -61,7 +62,18 @@
       "tests/marketing-validation-route.test.ts",
       "tests/marketing-validation-migration.test.ts",
       "tests/marketing-demand-validation-v2-contract.test.ts",
-      "tests/marketing-validation-operations.test.ts"
+      "tests/marketing-validation-operations.test.ts",
+      "tests/marketing-round2-protocol.test.ts",
+      "tests/marketing-round2-context.test.ts",
+      "tests/marketing-round2-storage.test.ts",
+      "tests/marketing-round2-runtime.test.ts",
+      "tests/marketing-round2-handler.test.ts",
+      "tests/marketing-round2-route.test.ts",
+      "tests/marketing-round2-turnstile.test.ts",
+      "tests/marketing-round2-security.test.ts",
+      "tests/marketing-round2-session.test.ts",
+      "tests/marketing-round2-survey.test.ts",
+      "tests/marketing-round2-http.integration.test.ts"
     ]
   },
   "frontend": {
