@@ -158,6 +158,13 @@
       "author_fixed": true,
       "independent_recheck": "pending",
       "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-ap-001-result.json"
+    },
+    {
+      "id": "R2-AP-002",
+      "author_evidence_complete": true,
+      "product_changes": false,
+      "independent_recheck": "pending",
+      "evidence_ref": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/author-result.json"
     }
   ]
 }

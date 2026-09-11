@@ -1,0 +1,15 @@
+{
+  "mode": "post-capture validation of unchanged observed geometry; no new UI/DB run",
+  "combinations": [
+    "homeflow:1280x900",
+    "homeflow:320x568",
+    "homeflow:390x844",
+    "homeflow:393x852",
+    "recording:1280x900",
+    "recording:320x568",
+    "recording:390x844",
+    "recording:393x852"
+  ],
+  "count": 8,
+  "result": "PASS"
+}

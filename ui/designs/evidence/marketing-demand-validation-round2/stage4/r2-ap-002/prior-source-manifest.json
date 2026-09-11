@@ -1,5 +1,5 @@
 {
-  "code_commit": "5d58f6e2eb48011e1b97cac3a56f116c516488bd",
+  "code_commit": "2fa7547557554ad96b029b6fc00907fe7f350baa",
   "base_commit": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
   "files": [
     {
@@ -60,7 +60,7 @@
     },
     {
       "path": "scripts/verify-marketing-round2-ui-isolated.mjs",
-      "sha256": "b24cc98f8cd8bea5dd2f6ec06a2a25ea51c9a706380f2ae2a44badc3e552a9a2"
+      "sha256": "a57c53d160c71a0c1164dafb52cda7795951c977095d10d9e8d0a64df974b854"
     },
     {
       "path": "tests/e2e/marketing-round2.spec.ts",
@@ -96,7 +96,7 @@
     },
     {
       "path": "tests/marketing-round2-ui-isolated.scenarios.mjs",
-      "sha256": "7e7c2f37eaff23851c10c363ae091b30cd8c662847d5b9a7741e7e2df68f39ad"
+      "sha256": "2b41c31f2050030df3c13146f59e6edf79b417ca798b9f129eb35a94d585c9e9"
     },
     {
       "path": "tests/marketing-round2-ui-isolated.test.ts",
@@ -109,17 +109,8 @@
     {
       "path": "tests/marketing-round2-widget.test.tsx",
       "sha256": "b56026ea3a2a9f7b8b94c782989309dd99c48cf23c0fead909434ba472535267"
-    },
-    {
-      "path": "tests/helpers/marketing-round2-recovery-evidence.mjs",
-      "sha256": "8ec14c92adf6ea8b953b3e69cf83e6ce2bd3caa7065ebb299cecf3b1b0806c31"
-    },
-    {
-      "path": "tests/marketing-round2-recovery-evidence.test.ts",
-      "sha256": "af64bb7784e78ee01d9ae7bb7090b26c4a8b820034941b71a5543e409aa2d5d9"
     }
   ],
-  "prior_code_commit": "2fa7547557554ad96b029b6fc00907fe7f350baa",
-  "repair": "R2-AP-002 harness/evidence only",
-  "product_source_unchanged_from": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+  "prior_code_commit": "c00fa23f53cb18550424abb96c2964a46796e3dc",
+  "repair": "R2-AP-001 only: CSS min-height and browser geometry regression"
 }

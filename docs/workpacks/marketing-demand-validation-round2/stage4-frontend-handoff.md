@@ -52,7 +52,7 @@ R2 전용 Turnstile은 topic별 action·서버 제공 site key, 150×140 compact
 ## 최종 QA와 source 연결
 
 - [QA 보고서](../../../.artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploratory-report.json), [QA eval](../../../.artifacts/qa/marketing-demand-validation-round2/stage4-20260911/eval-result.json), [직접탐색관찰](../../../.artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploration-observations.json).
-- [제품source27파일](evidence/stage4/source-manifest.json), [작성자stage-result](evidence/stage4/stage4-result.json).
+- [구현·검증 source 파일](evidence/stage4/source-manifest.json), [작성자stage-result](evidence/stage4/stage4-result.json).
 - [기존geometry 기준재현](../../../.artifacts/r2-stage4/verification/baseline/baseline-review.md), [기존visual 기준재현](../../../.artifacts/r2-stage4/verification/baseline-visual/baseline-visual-review.md).
 - [선행Stage3 retained사본](../../../.artifacts/r2-stage4/verification/stage3-input/retention-manifest.json). 서버·공용계약·SQL9파일이exact reviewed09413과같음을확인했으며396 SQL assertion을Stage4에서재실행했다고말하지않는다.
 - 초기PR template reference표기오류는본문의exact work-item JSON경로로수정했다. 최초실패이력과최신current-head CI는구분한다.
@@ -96,3 +96,7 @@ Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhe
 - 수정본은 별도소유루프백3124에서 제공한다. 독립reviewer가사용중인3118동결복사본은재시작하거나변경하지않았다.
 
 확대 검증 범위: 기존68PNG 전체가200%였던것이아니다. 100%4폭매트릭스64장(7정상상태와로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. 이번에MENU initial/completed의두topic320/390px 200%8조합을추가했다. 그외화면·폭의200%전수PASS는주장하지않는다. 이전QA보고서와평가원문은repair폴더에보존하고현재QA보고서에같은범위를정정했다. 전체독립precheck는진행중이며이수정의작성자검증이승인을대신하지않는다.
+
+## R2-AP-002 실제 오류 확대 근거
+
+제품fd9c4827을변경하지않고 실제409동의갱신/commit응답유실2조건×4폭의200%8조합을추가했다. [고정패키지](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/README.md)에full-page8장·같은조합CTA상세8장, geometry8개,캡처소스hash·최종guard차이·cleanup을보존했다. 정적텍스트clipping/가로overflow0, CTA실제hit-test와입력/장면보존을확인했다. 마지막완전성guard는저장된실측에직접적용했고불필요한UI/DB재실행은하지않았다. 3118/3124는유지하며전체독립리뷰승인은계속대기다.

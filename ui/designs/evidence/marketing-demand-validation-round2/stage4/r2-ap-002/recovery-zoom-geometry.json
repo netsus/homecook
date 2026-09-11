@@ -1,0 +1,226 @@
+[
+  {
+    "topic": "recording",
+    "condition": "actual-409-consent-refresh",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "pageWidth": 320,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 365.1875,
+      "bottom": 439.1875,
+      "width": 254,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "emailPreserved": true,
+      "consentCleared": true
+    },
+    "fullPageScreenshot": "R2_RECORDING_RECOVERY-320x568-200percent.png",
+    "viewportScreenshot": "R2_RECORDING_RECOVERY-320x568-200percent-cta-viewport.png"
+  },
+  {
+    "topic": "recording",
+    "condition": "actual-409-consent-refresh",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "pageWidth": 390,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 640.671875,
+      "bottom": 714.671875,
+      "width": 316,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "emailPreserved": true,
+      "consentCleared": true
+    },
+    "fullPageScreenshot": "R2_RECORDING_RECOVERY-390x844-200percent.png",
+    "viewportScreenshot": "R2_RECORDING_RECOVERY-390x844-200percent-cta-viewport.png"
+  },
+  {
+    "topic": "recording",
+    "condition": "actual-409-consent-refresh",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 393,
+      "height": 852
+    },
+    "pageWidth": 393,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 648.671875,
+      "bottom": 722.671875,
+      "width": 319,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "emailPreserved": true,
+      "consentCleared": true
+    },
+    "fullPageScreenshot": "R2_RECORDING_RECOVERY-393x852-200percent.png",
+    "viewportScreenshot": "R2_RECORDING_RECOVERY-393x852-200percent-cta-viewport.png"
+  },
+  {
+    "topic": "recording",
+    "condition": "actual-409-consent-refresh",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "pageWidth": 1280,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 697.484375,
+      "bottom": 771.484375,
+      "width": 356,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "emailPreserved": true,
+      "consentCleared": true
+    },
+    "fullPageScreenshot": "R2_RECORDING_RECOVERY-1280x900-200percent.png",
+    "viewportScreenshot": "R2_RECORDING_RECOVERY-1280x900-200percent-cta-viewport.png"
+  },
+  {
+    "topic": "homeflow",
+    "condition": "actual-commit-response-loss",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "pageWidth": 320,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 247.203125,
+      "bottom": 321.203125,
+      "width": 254,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "lastScenePreserved": true,
+      "prematureDoneAbsent": true
+    },
+    "fullPageScreenshot": "R2_HOMEFLOW_RECOVERY-320x568-200percent.png",
+    "viewportScreenshot": "R2_HOMEFLOW_RECOVERY-320x568-200percent-cta-viewport.png"
+  },
+  {
+    "topic": "homeflow",
+    "condition": "actual-commit-response-loss",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "pageWidth": 390,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 461.0625,
+      "bottom": 535.0625,
+      "width": 316,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "lastScenePreserved": true,
+      "prematureDoneAbsent": true
+    },
+    "fullPageScreenshot": "R2_HOMEFLOW_RECOVERY-390x844-200percent.png",
+    "viewportScreenshot": "R2_HOMEFLOW_RECOVERY-390x844-200percent-cta-viewport.png"
+  },
+  {
+    "topic": "homeflow",
+    "condition": "actual-commit-response-loss",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 393,
+      "height": 852
+    },
+    "pageWidth": 393,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 469.0625,
+      "bottom": 543.0625,
+      "width": 319,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "lastScenePreserved": true,
+      "prematureDoneAbsent": true
+    },
+    "fullPageScreenshot": "R2_HOMEFLOW_RECOVERY-393x852-200percent.png",
+    "viewportScreenshot": "R2_HOMEFLOW_RECOVERY-393x852-200percent-cta-viewport.png"
+  },
+  {
+    "topic": "homeflow",
+    "condition": "actual-commit-response-loss",
+    "normalRootSize": 16,
+    "normalRecoveryTextSize": 14,
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "pageWidth": 1280,
+    "rootFontSize": 32,
+    "recoveryTextSize": 28,
+    "clippedText": [],
+    "retryButton": {
+      "top": 517.0625,
+      "bottom": 591.0625,
+      "width": 356,
+      "height": 74,
+      "centerHit": true,
+      "lowerHit": true
+    },
+    "inputOrScene": {
+      "lastScenePreserved": true,
+      "prematureDoneAbsent": true
+    },
+    "fullPageScreenshot": "R2_HOMEFLOW_RECOVERY-1280x900-200percent.png",
+    "viewportScreenshot": "R2_HOMEFLOW_RECOVERY-1280x900-200percent-cta-viewport.png"
+  }
+]

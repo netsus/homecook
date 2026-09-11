@@ -1,0 +1,72 @@
+{
+  "finding": "R2-AP-002",
+  "input_head": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+  "harness_commit": "5d58f6e2eb48011e1b97cac3a56f116c516488bd",
+  "author_status": "evidence-ready-awaiting-independent-review",
+  "product_changed_paths": [],
+  "final_harness_files": [
+    {
+      "path": "scripts/verify-marketing-round2-ui-isolated.mjs",
+      "sha256": "b24cc98f8cd8bea5dd2f6ec06a2a25ea51c9a706380f2ae2a44badc3e552a9a2"
+    },
+    {
+      "path": "tests/marketing-round2-ui-isolated.scenarios.mjs",
+      "sha256": "7e7c2f37eaff23851c10c363ae091b30cd8c662847d5b9a7741e7e2df68f39ad"
+    },
+    {
+      "path": "tests/helpers/marketing-round2-recovery-evidence.mjs",
+      "sha256": "8ec14c92adf6ea8b953b3e69cf83e6ce2bd3caa7065ebb299cecf3b1b0806c31"
+    },
+    {
+      "path": "tests/marketing-round2-recovery-evidence.test.ts",
+      "sha256": "af64bb7784e78ee01d9ae7bb7090b26c4a8b820034941b71a5543e409aa2d5d9"
+    }
+  ],
+  "captured_harness": "source-manifest.json preserves exact hashes used for the final UI run, before adding the final completeness guard",
+  "completeness_guard": "RED 3 invalid fixtures -> GREEN 4 guard tests; existing isolated guard10 also passed. Applied read-only to completed observed geometry8. No extra UI/DB rerun after coordinator correction.",
+  "geometry_sha256": "c24684aa962d2adfaa80cc2a3ba7bc122991653f94a83e645190a2f32cfd110e",
+  "scope": {
+    "conditions": 2,
+    "viewports": [
+      [
+        320,
+        568
+      ],
+      [
+        390,
+        844
+      ],
+      [
+        393,
+        852
+      ],
+      [
+        1280,
+        900
+      ]
+    ],
+    "combinations": 8,
+    "root_text_px": [
+      16,
+      32
+    ],
+    "recovery_text_px": [
+      14,
+      28
+    ],
+    "static_text_clipping": 0,
+    "page_horizontal_overflow": 0,
+    "retry_cta_all_in_view_and_hit_test": true,
+    "input_scene_preserved": true
+  },
+  "native_input_limit": "Editable single-line input value is verified separately, not treated as a static DOM text node; its internal horizontal scrolling is not a page overflow claim.",
+  "cleanup": {
+    "runner_exit_code": 0,
+    "owned_resource_cleanup_assertion": "passed",
+    "port3443_after": "no listener"
+  },
+  "production_writes": 0,
+  "external_provider_requests": 0,
+  "previews_3118_3124": "unchanged",
+  "independent_precheck": "pending"
+}
