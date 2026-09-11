@@ -109,6 +109,43 @@ for (const topic of ["recording", "homeflow"] as const) {
     await expect(page.getByRole("textbox",{name:"이메일",exact:true})).toBeVisible();
     await expect(page.getByRole("checkbox")).not.toBeChecked();
   });
+  for (const width of [320, 390]) for (const completed of [false, true]) {
+    test(`R2-AP-001 ${topic} ${width} ${completed ? "completed" : "initial"} MENU keeps 200 percent text inside its strip`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
+      await ready(page, topic);
+      if (completed) {
+        for (const activity of ["example", "survey", "lead"] as const) {
+          await open(page, activity); await submit(page, activity); await menu(page);
+        }
+      }
+      const text = page.getByText(topic === "recording" ? "내 레시피 → 먹은 분량 추정 영양 기록" : "요리 계획 → 장보기 → 남은 요리", { exact: true });
+      const measure = () => text.evaluate(element => {
+        const strip = element.parentElement!.getBoundingClientRect();
+        const span = element.getBoundingClientRect();
+        const range = document.createRange(); range.selectNodeContents(element);
+        const glyphs = range.getBoundingClientRect();
+        return {
+          strip: { top: strip.top, bottom: strip.bottom, height: strip.height },
+          text: { top: span.top, bottom: span.bottom, height: span.height },
+          fontSize: parseFloat(getComputedStyle(element).fontSize),
+          clipTop: Math.max(0, strip.top - Math.min(span.top, glyphs.top)),
+          clipBottom: Math.max(0, Math.max(span.bottom, glyphs.bottom) - strip.bottom),
+        };
+      });
+      const normal = await measure();
+      expect(normal.strip.height).toBe(72);
+      expect(normal.clipTop).toBe(0); expect(normal.clipBottom).toBe(0);
+      await page.screenshot({ path: info.outputPath("MENU-100percent.png"), fullPage: true });
+      await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+      const enlarged = await measure();
+      await info.attach("strip-geometry", { body: JSON.stringify({ topic, width, completed, normal, enlarged }), contentType: "application/json" });
+      await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+      expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      await checkLayout(page);
+    });
+  }
 }
 
 test("SSR menu, canonical slash, encoded aliases and privacy headers", async ({ request }) => {
