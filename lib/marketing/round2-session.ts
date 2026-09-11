@@ -104,9 +104,11 @@ function newSession(firstAttribution: Round2Attribution, now: number): Session {
 async function prepare(options: Round2BootstrapOptions, explicitRestart: boolean): Promise<Round2BootstrapPreparation> {
   const semantic = attribution(options.attribution);
   const now = options.nowMs ?? Date.now();
-  if (!Number.isSafeInteger(now) || now < START || now >= END) return { kind: "restart_required", topic: options.topic };
+  if (!Number.isSafeInteger(now) || now < START) return { kind: "restart_required", topic: options.topic };
+  if (now >= END) fallbackEvents.delete(options.topic);
   try {
     return await transaction(options.topic, options, (stored, save) => {
+      if (now >= END) { save(restartMarker()); return { kind: "restart_required", topic: options.topic }; }
       let current = stored;
       if (current?.status === "restart_required" || (current && current.expires_at <= now)) {
         if (!explicitRestart) { save(restartMarker()); return { kind: "restart_required", topic: options.topic }; }
@@ -124,7 +126,7 @@ async function prepare(options: Round2BootstrapOptions, explicitRestart: boolean
       }
       return { kind: "key", topic: options.topic, bootstrap_key: current.bootstrap_key, event_id: eventId, bootstrap_intent: current.status === "confirmed" ? "resume" : "create_or_resume", attribution: semantic, created_at: current.created_at };
     });
-  } catch { return cookieResume(options.topic); }
+  } catch { return now >= END ? { kind: "restart_required", topic: options.topic } : cookieResume(options.topic); }
 }
 export function prepareRound2Bootstrap(options: Round2BootstrapOptions): Promise<Round2BootstrapPreparation> {
   return prepare(options, false);

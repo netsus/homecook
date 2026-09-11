@@ -1,7 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
+import { createHmac } from "node:crypto";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createMarketingRound2Handler } from "@/lib/server/marketing-round2";
+import { createRound2FileStorage, type Round2RateBucket } from "@/lib/server/marketing-round2-storage";
 import { createRound2PageContext, serializeRound2Cookie } from "@/lib/server/marketing-round2-context";
-import { Round2Error } from "@/lib/marketing-round2";
+import { Round2Error, canonicalRound2Json } from "@/lib/marketing-round2";
 import type { MarketingRound2InternalClient } from "@/types/marketing-round2";
 
 const origin = "https://localhost:3443";
@@ -202,7 +207,91 @@ describe("r2 lead receipts still obey current gates", () => {
     const response = await handle(request(leadBody, { cookie: cookieHeader() }));
     expect(response.status).toBe(409);
     expect((await response.json()).error.code).toBe("CONSENT_REFRESH_REQUIRED");
-    expect(deps.consumeRate).toHaveBeenCalledWith({ ip: "127.0.0.1", participationId: pid, buckets: ["lead_ip", "lead_participation"] });
+    expect(deps.consumeRate).toHaveBeenCalledWith({ ip: "127.0.0.1", participationId: pid, buckets: ["ip", "participation", "lead_ip", "lead_participation"] });
     expect(deps.execute).not.toHaveBeenCalled();
+  });
+});
+
+describe("R2-S3-001: complete request limits against real files", () => {
+  const clock = Date.parse("2026-09-11T01:00:30Z");
+  const ip = "127.0.0.1";
+  const buckets: Round2RateBucket[] = ["ip", "bootstrap", "participation", "lead_ip", "lead_participation"];
+  const leadBody = { ...body, action: "lead_submit", email: "preview@example.com", consent: true, consent_version: "mumeok-r2-beta-notice-20260911", purpose: "beta_open_notice", consent_generation: 1 };
+  const counterKey = (bucket: Round2RateBucket) => createHmac("sha256", secrets.rate).update(canonicalRound2Json({ day: "2026-09-11", bucket, subject: bucket.includes("participation") ? pid : ip })).digest("hex");
+  async function withFile(seed: Partial<Record<Round2RateBucket, number>>, run: (fixture: {
+    handle: ReturnType<typeof createMarketingRound2Handler>;
+    deps: ReturnType<typeof setup>["deps"];
+    rate: Mock<ReturnType<typeof createRound2FileStorage>["consumeRate"]>;
+    counts(): Promise<Partial<Record<Round2RateBucket, number>>>;
+  }) => Promise<void>) {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "r2-handler-rate-")));
+    const statePath = join(root, "state.json");
+    try {
+      // The documented fixed-window file is the restart fixture; all reads and updates use real storage.
+      const counters = Object.fromEntries(Object.entries(seed).map(([name, count]) => [counterKey(name as Round2RateBucket), { count, window_end: Date.parse(name.startsWith("lead_") ? "2026-09-11T02:00:00Z" : "2026-09-11T01:01:00Z") / 1000 }]));
+      await writeFile(statePath, JSON.stringify({ version: 1, counters }), { mode: 0o600 });
+      await writeFile(join(root, "control.json"), JSON.stringify({ version: 1, collection_enabled: true, lead_enabled: true, consent_generation: 1 }), { mode: 0o600 });
+      const storage = createRound2FileStorage({ rateStateDir: root, controlPath: join(root, "control.json"), repositoryRoot: process.cwd(), rateSecret: secrets.rate, now: () => clock });
+      const rate = vi.fn(storage.consumeRate);
+      const { deps } = setup();
+      deps.config.leadsEnabled = true;
+      const handle = createMarketingRound2Handler({ ...deps, now: () => clock, readControl: storage.readControl, consumeRate: rate });
+      await run({ handle, deps, rate, counts: async () => {
+        const current = JSON.parse(await readFile(statePath, "utf8")).counters as Record<string, { count: number }>;
+        return Object.fromEntries(buckets.filter(bucket => current[counterKey(bucket)]).map(bucket => [bucket, current[counterKey(bucket)].count]));
+      } });
+    } finally { await rm(root, { recursive: true, force: true }); }
+  }
+
+  it("returns 3570 seconds for simultaneous minute/hour exhaustion and increments the available bucket", async () => {
+    await withFile({ ip: 60, lead_ip: 10, lead_participation: 5 }, async ({ handle, deps, rate, counts }) => {
+      const response = await handle(request(leadBody, { cookie: cookieHeader() }));
+      expect(response.status).toBe(429);
+      expect(response.headers.get("retry-after")).toBe("3570");
+      expect(await counts()).toEqual({ ip: 60, participation: 1, lead_ip: 10, lead_participation: 5 });
+      expect(rate).toHaveBeenCalledExactlyOnceWith({ ip, participationId: pid, buckets: ["ip", "participation", "lead_ip", "lead_participation"] });
+      expect(deps.execute).not.toHaveBeenCalled();
+      expect(deps.verifyTurnstile).not.toHaveBeenCalled();
+    });
+  });
+  it("persists the remaining lead counters even when the participation minute is full", async () => {
+    await withFile({ participation: 60 }, async ({ handle, counts }) => {
+      const response = await handle(request(leadBody, { cookie: cookieHeader() }));
+      expect(response.headers.get("retry-after")).toBe("30");
+      expect(await counts()).toEqual({ ip: 1, participation: 60, lead_ip: 1, lead_participation: 1 });
+    });
+  });
+  it("processes bootstrap and verified-cookie counters when the IP is full", async () => {
+    await withFile({ ip: 60 }, async ({ handle, deps, counts }) => {
+      expect((await handle(request({ ...body, action: "bootstrap", bootstrap_intent: "cookie_resume" }, { cookie: cookieHeader() }))).status).toBe(429);
+      expect(await counts()).toEqual({ ip: 60, bootstrap: 1, participation: 1 });
+      expect(deps.execute).not.toHaveBeenCalled();
+    });
+  });
+  it.each([false, true])("preserves JSON error priority and never trusts a cookie in invalid JSON (IP full=%s)", async full => {
+    await withFile(full ? { ip: 60 } : {}, async ({ handle, deps, counts }) => {
+      const response = await handle(request("{", { cookie: cookieHeader() }));
+      expect(response.status).toBe(full ? 429 : 400);
+      expect(await counts()).toEqual({ ip: full ? 60 : 1 });
+      expect(deps.execute).not.toHaveBeenCalled();
+    });
+  });
+  it.each([false, true])("preserves cookie error priority without charging an unauthenticated participation (IP full=%s)", async full => {
+    await withFile(full ? { ip: 60 } : {}, async ({ handle, deps, counts }) => {
+      const response = await handle(request(leadBody, { cookie: "__Secure-mumeok_r2_recording=invalid" }));
+      expect(response.status).toBe(full ? 429 : 401);
+      expect(await counts()).toEqual({ ip: full ? 60 : 1 });
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(deps.execute).not.toHaveBeenCalled();
+      expect(deps.verifyTurnstile).not.toHaveBeenCalled();
+    });
+  });
+  it.each([false, true])("rejects invalid schema before a bad cookie while keeping the base rate priority (IP full=%s)", async full => {
+    await withFile(full ? { ip: 60 } : {}, async ({ handle, deps, counts }) => {
+      const response = await handle(request({ ...leadBody, consent: false }, { cookie: "__Secure-mumeok_r2_recording=invalid" }));
+      expect(response.status).toBe(full ? 429 : 422);
+      expect(await counts()).toEqual({ ip: full ? 60 : 1 });
+      expect(deps.execute).not.toHaveBeenCalled();
+    });
   });
 });

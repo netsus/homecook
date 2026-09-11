@@ -1,11 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { CAMPAIGN_END, RETENTION_UNTIL } from "@/lib/marketing-round2";
 import { createRound2PageContext } from "@/lib/server/marketing-round2-context";
-import { buildRound2BootstrapRequest, prepareRound2Bootstrap, round2BootstrapContextUrl, type Round2BootstrapPreparation } from "@/lib/marketing/round2-session";
+import { buildRound2BootstrapRequest, prepareRound2Bootstrap, restartRound2Bootstrap, round2BootstrapContextUrl, type Round2BootstrapPreparation } from "@/lib/marketing/round2-session";
 const now = Date.parse("2026-09-11T00:00:00Z");
 const secret = "fixture-session-context-" + "x".repeat(32);
 const direct = { first_channel: "direct" as const, utm_source: null, utm_medium: null, utm_campaign: null, utm_content: null };
 const prepared: Round2BootstrapPreparation = { kind: "key", topic: "recording", bootstrap_key: "A".repeat(43), event_id: "11111111-1111-4111-8111-111111111111", bootstrap_intent: "create_or_resume", attribution: direct, created_at: now };
 describe("r2 bootstrap handoff without UI or network", () => {
+  it.each([Date.parse(CAMPAIGN_END), Date.parse(CAMPAIGN_END) + 1, Date.parse(RETENTION_UNTIL) + 1])("attempts expired storage cleanup at %s and never falls back to a new event", async nowMs => {
+    const open = vi.fn(() => { throw new Error("fixture storage unavailable"); });
+    const indexedDB = { open } as unknown as IDBFactory;
+    const event = vi.spyOn(globalThis.crypto, "randomUUID");
+    const key = vi.spyOn(globalThis.crypto, "getRandomValues");
+    try {
+      for (const prepare of [prepareRound2Bootstrap, restartRound2Bootstrap]) {
+        expect(await prepare({ topic: "homeflow", attribution: direct, nowMs, indexedDB })).toEqual({ kind: "restart_required", topic: "homeflow" });
+      }
+      expect(open).toHaveBeenCalledTimes(2);
+      expect(event).not.toHaveBeenCalled();
+      expect(key).not.toHaveBeenCalled();
+    } finally { event.mockRestore(); key.mockRestore(); }
+  });
   it("falls back to cookie_resume without creating a memory bootstrap key", async () => {
     const first = await prepareRound2Bootstrap({ topic: "recording", attribution: direct, nowMs: now, indexedDB: null });
     const again = await prepareRound2Bootstrap({ topic: "recording", attribution: direct, nowMs: now, indexedDB: null });

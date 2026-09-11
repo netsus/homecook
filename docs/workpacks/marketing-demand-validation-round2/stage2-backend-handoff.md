@@ -74,3 +74,17 @@ rate counter는 요청 시 만료분을 제거한다. 무요청·collector 중�
 - 새 SQL SHA256 `1a783932ef81041414828e336b1f8c9a75666db44180583add72a4f326324ff8`. 전체 migration bundle SHA256 `6e04722b44718c0f3e62579dd5617370b68a4a813d3164c816952079b009d3c8`.
 - 모든 6순서와 각 단독 활동은 두 주제 각각 실행했다. 파일 export 수명은 승인 runbook 절차의 fixture 검증이며 운영 exporter/자동 purge를 구현·실행했다는 뜻이 아니다.
 - 보관 종료일의 실제 달력상 운영 실행, 실제 provider·모바일 화면·운영 승인·배포는 별도 인수 범위다.
+
+## Stage 3 필수 수정 인수 — R2-S3-001 / R2-S3-002
+
+독립 검토 입력은 `97502417e66a46dda29933f4bbe01be5e275884f`다. 아래는 작성자의 수정·검증 기록이며 Stage 3 승인이나 검토 완료가 아니다. 미확정 후보 `R2-S3-C01`은 변경하지 않았다.
+
+- **R2-S3-001**: 유효한 schema와 서명 쿠키로 식별한 IP/참여/lead bucket을 하나의 `consumeRate` 호출로 묶는다. 실제 파일 adapter가 같은 lock 안에서 모든 카운터를 반영하고, 여러 제한이 겹치면 가장 긴 `Retry-After`를 반환한다. 내부 입력 검사는 bucket 식별에만 쓰며, 기본 rate 오류가 JSON/schema/쿠키 오류보다 먼저 반환되는 기존 우선순위를 유지한다. 유효하지 않은 쿠키의 참여 ID는 카운터에 쓰지 않는다. 이 기본 batch에서 제한된 요청은 RPC·Turnstile·control lease에 도달하지 않는다.
+- 쿠키 없는 key bootstrap은 기존 경계를 유지한다. 먼저 IP/bootstrap 제한을 통과해야 read-only inspect를 수행하고, 거기서 기존 참여가 확인된 경우에만 참여 bucket을 적용한다. 제한된 요청을 위한 추가 DB 조회나 인증 없는 참여 ID 추정을 도입하지 않았다.
+- 실제 file state를 사용하는 기존 handler 테스트에서 세 실패를 먼저 확인했다. 분당 IP와 시간당 lead가 동시에 포화되면 기존 30초 대신 3,570초를 반환하며, 여유 있는 참여/lead/bootstrap 카운터도 증가해야 한다. 수정 후 해당 회귀 및 JSON/schema/쿠키 오류 우선순위 검사를 통과했다.
+- **R2-S3-002**: campaign END 이후에도 기존 IndexedDB transaction으로 capability를 비식별 `{version:1,status:"restart_required"}` marker로 바꾼다. 새 key/event/cookie_resume/POST를 만들지 않는다. END 직전·정각·이후·보관 종료 이후를 기존 HTTPS Chromium runner로 검증했다. 저장소가 열리지 않거나 쓰기가 실패하는 동안 실제 삭제를 보장한다고 주장하지 않으며, 재발급을 막고 복구 후 정리를 다시 시도한다.
+- 이전 reviewer 임시 재현 스크립트는 사용하지 않았다. 프로젝트의 Vitest와 기존 browser-storage/isolated runner만 사용한다. 플랫폼 보안 제한이 다시 발생하면 그 실행을 중단하고 원문 사유를 보고한다. 모델·환경을 바꾸는 우회는 하지 않는다.
+
+현재 수정 증거는 작성 task의 `.omx/artifacts/r2-stage3-repair/`에 보관한다. `rate-red.log`, `targeted-green.log`, `session-unit-red.log`, `session-browser-red.log`, `session-browser-green.json`이 두 수정의 직접 근거다. 최종 head·전체 gate·CI 결과는 갱신된 PR 본문과 Stage 2 result를 따른다. SQL·schema·storage adapter·runtime secret 코드는 변경하지 않는다.
+
+조정자가 추가로 허용한 검증 공백은 기존 isolated runner에만 회귀를 추가한다. 기존 순차 bootstrap replay와 서로 다른 20개 참여의 동일 이메일 경쟁은 same-key bootstrap/same-pid lead의 동시 요청 증거가 아니며, 순차 receipt 재전송도 inspect 이후 경쟁 상태의 재검사를 대체하지 않는다. 추가 시나리오는 같은 key의 same/different event 동시 bootstrap, 같은 pid의 same/different event 동시 lead, inspect 이후 설문·lead 경쟁 commit을 분리한다. 이 추가 검증은 기존 제품 동작의 coverage이며 신규 제품 수정의 RED→GREEN으로 확대하지 않는다. runner의 assertion 합계와 독립 시나리오 수, 실제 HTTPS 테스트 수를 구분한다.

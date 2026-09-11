@@ -120,8 +120,68 @@ export async function runRound2StorageScenarios(browser, baseURL) {
     assert.equal(fullRecord.pending.length, 50);
     assert.deepEqual(Object.keys(fullRecord).sort(), ["bootstrap_key", "created_at", "event_id", "expires_at", "first_attribution", "pending", "status", "version"]);
     assert.equal((await prepare(a)).bootstrap_key, final.bootstrap_key, "queue overflow leaves the same participation and first event usable");
+    const campaignEnd = Date.parse("2026-10-31T15:00:00Z");
+    const retentionEnd = Date.parse("2026-11-30T15:00:00Z");
+    for (const at of [campaignEnd - 1, campaignEnd, campaignEnd + 1, retentionEnd + 1]) {
+      const seeded = await a.evaluate(async input => (await import("/session.js")).restartRound2Bootstrap(input), { ...options, nowMs: campaignEnd - 86400000 });
+      assert.equal(seeded.kind, "key");
+      await prepare(b, { ...options, attribution: shared, nowMs: campaignEnd - 86400000 });
+      const before = await inspect(a);
+      assert.equal(before.pending.length, 2, "expiry fixture includes the key, event and both pending attributions");
+      const result = await a.evaluate(async input => {
+        const clientSession = await import("/session.js");
+        const uuid = crypto.randomUUID;
+        const random = crypto.getRandomValues;
+        let eventCalls = 0;
+        let keyCalls = 0;
+        crypto.randomUUID = function () { eventCalls++; return uuid.call(this); };
+        crypto.getRandomValues = function (array) { keyCalls++; return random.call(this, array); };
+        try {
+          const prepared = await clientSession.prepareRound2Bootstrap(input);
+          const restarted = await clientSession.restartRound2Bootstrap(input);
+          return { prepared, restarted, eventCalls, keyCalls };
+        } finally { crypto.randomUUID = uuid; crypto.getRandomValues = random; }
+      }, { ...options, nowMs: at });
+      assert.equal(result.eventCalls, 0, "campaign boundary must not issue an event");
+      assert.equal(result.keyCalls, 0, "campaign boundary must not issue a capability");
+      if (at < campaignEnd) {
+        assert.equal(result.prepared.bootstrap_key, seeded.bootstrap_key);
+        assert.deepEqual(await inspect(a), before, "one millisecond before END retains the unexpired session");
+      } else {
+        assert.deepEqual(result.prepared, { kind: "restart_required", topic: "recording" });
+        assert.deepEqual(result.restarted, result.prepared, "explicit restart cannot reopen a closed campaign");
+        assert.deepEqual(await inspect(a), { version: 1, status: "restart_required" }, `campaign boundary ${at} erases all stored capabilities and attribution`);
+        await a.reload();
+        assert.equal((await prepare(a, { ...options, nowMs: at })).kind, "restart_required");
+      }
+    }
+    await a.evaluate(async input => (await import("/session.js")).restartRound2Bootstrap(input), { ...options, nowMs: campaignEnd - 86400000 });
+    const beforeFailedCleanup = await inspect(a);
+    const closedStorageFailure = await a.evaluate(async input => {
+      const clientSession = await import("/session.js");
+      const originalPut = IDBObjectStore.prototype.put;
+      const uuid = crypto.randomUUID;
+      const random = crypto.getRandomValues;
+      let eventCalls = 0;
+      let keyCalls = 0;
+      let writeAttempts = 0;
+      crypto.randomUUID = function () { eventCalls++; return uuid.call(this); };
+      crypto.getRandomValues = function (array) { keyCalls++; return random.call(this, array); };
+      IDBObjectStore.prototype.put = function () { writeAttempts++; throw new DOMException("fixture storage full", "QuotaExceededError"); };
+      try {
+        return {
+          quota: await clientSession.prepareRound2Bootstrap(input),
+          unavailable: await clientSession.restartRound2Bootstrap({ ...input, indexedDB: null }),
+          eventCalls, keyCalls, writeAttempts,
+        };
+      } finally { IDBObjectStore.prototype.put = originalPut; crypto.randomUUID = uuid; crypto.getRandomValues = random; }
+    }, { ...options, nowMs: campaignEnd });
+    assert.deepEqual(closedStorageFailure, { quota: { kind: "restart_required", topic: "recording" }, unavailable: { kind: "restart_required", topic: "recording" }, eventCalls: 0, keyCalls: 0, writeAttempts: 1 });
+    assert.deepEqual(await inspect(a), beforeFailedCleanup, "failed IDB writes cannot claim persisted cleanup");
+    assert.equal((await prepare(a, { ...options, nowMs: campaignEnd })).kind, "restart_required");
+    assert.deepEqual(await inspect(a), { version: 1, status: "restart_required" }, "storage recovery retries cleanup without issuing a new capability");
     assert.equal(postRequests, 0);
     assert.equal(blockedExternalRequests, 0);
-    return { passed: true, scenarios: ["https_secure_context", "simultaneous_two_tabs_same_key_and_event", "lost_response_reload", "different_attribution_distinct_event", "pending_attribution_replay", "confirmed_resume", "topic_separation", "server_expiry", "30_day_pending_expiry", "persisted_restart_fence", "explicit_new_key", "stale_confirmation", "stale_410", "cookie_resume_fallback", "quota_abort_preserves_fence", "bounded_50_pending_no_eviction"], publicPosts: postRequests, externalRequests: blockedExternalRequests, database: "browser IndexedDB only; no server DB" };
+    return { passed: true, scenarios: ["https_secure_context", "simultaneous_two_tabs_same_key_and_event", "lost_response_reload", "different_attribution_distinct_event", "pending_attribution_replay", "confirmed_resume", "topic_separation", "server_expiry", "30_day_pending_expiry", "persisted_restart_fence", "explicit_new_key", "stale_confirmation", "stale_410", "cookie_resume_fallback", "quota_abort_preserves_fence", "bounded_50_pending_no_eviction", "campaign_end_before_retains_session", "campaign_end_exact_clears_capabilities", "campaign_end_after_clears_capabilities", "retention_end_after_clears_capabilities", "closed_campaign_storage_failure_no_new_event_or_key"], publicPosts: postRequests, externalRequests: blockedExternalRequests, database: "browser IndexedDB only; no server DB" };
   } finally { await context.close(); }
 }

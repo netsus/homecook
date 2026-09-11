@@ -169,6 +169,83 @@ async function runAssertions({ isolated, env, sql, run }) {
   const parallel=await Promise.all(contenders.map(c=>rpc({...c,control:control()})));
   assert(parallel.every(r=>r.data?.kind==='applied'&&!r.error),'twenty concurrent lead transactions');
   equal(sql("select count(*)||':'||count(email_normalized)||':'||count(*) filter(where topic_status='new_topic') from public.marketing_round2_lead_requests where email_key=decode('"+digest('parallel@example.com')+"','hex')"),'20:1:1','parallel uniqueness and repeat email NULL');
+  // Hold only this fresh fixture's table until both SDK requests are observed waiting.
+  // This establishes overlapping transactions without relying on request-start timing.
+  async function concurrentApply(commands,name) {
+    const relation='public.marketing_round2_participations';
+    const holder=spawn('docker',['exec','-i',`supabase_db_${isolated.projectId}`,'psql','-U','postgres','-d','postgres','-X','-v','ON_ERROR_STOP=1'],{env,stdio:['pipe','ignore','ignore']});
+    const closed=new Promise((resolve,reject)=>{holder.once('exit',code=>code===0?resolve():reject(new Error('isolated concurrency barrier failed')));holder.once('error',reject);});
+    holder.stdin.write(`begin; lock table ${relation} in access exclusive mode;\n`);
+    async function waitForLock(condition,label) {
+      for(let attempt=0;attempt<50;attempt++) {
+        // Same-key bootstrap serializes on its advisory lock before reading the table.
+        if(sql(`select ${condition} from pg_locks where relation='${relation}'::regclass or (locktype='advisory' and pid in (select pid from pg_stat_activity where query like '%marketing_round2_apply%'))`)==='t') return;
+        await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      throw new Error(`Isolated concurrency barrier not reached: ${label}`);
+    }
+    let pending;
+    try {
+      await waitForLock("count(*) filter(where mode='AccessExclusiveLock' and granted)=1",name);
+      pending=Promise.all(commands.map(cmd=>rpc({...cmd,control:control()})));
+      await waitForLock(`count(distinct pid) filter(where not granted)>=${commands.length}`,name);
+      assert(true,`${name}: both RPC transactions observed waiting`);
+    } finally {
+      holder.stdin.end('commit;\n');
+      await closed;
+    }
+    return pending;
+  }
+  for(const sameEvent of [true,false]) {
+    const label=`same-key bootstrap concurrent ${sameEvent?'same':'different'} event`;
+    const first=command();
+    const second=sameEvent?{...first}:command({bootstrap_digest:first.bootstrap_digest,payload:{...attribution,first_channel:'unknown'}});
+    const responses=await concurrentApply([first,second],label);
+    assert(responses.every(response=>!response.error&&response.data?.kind==='applied'),`${label}: both succeed`);
+    const concurrentPid=responses[0].data.data.participation_id;
+    equal(responses[1].data.data.participation_id,concurrentPid,`${label}: one identity`);
+    equal(responses.map(response=>response.data.data.revision),[1,1],`${label}: revision stays one`);
+    equal(responses[0].data.cookie_claims,responses[1].data.cookie_claims,`${label}: fixed cookie claims`);
+    equal(sql(`select count(*) from public.marketing_round2_participations where bootstrap_digest=decode('${first.bootstrap_digest}','hex')`),'1',`${label}: one parent`);
+    equal(sql(`select count(*)||':'||count(*) filter(where applied) from public.marketing_round2_events where participation_id='${concurrentPid}'`),sameEvent?'1:1':'2:1',`${label}: exactly one applied event`);
+    assert(sql(`select p.first_channel=e.payload->>'first_channel' from public.marketing_round2_participations p join public.marketing_round2_events e on e.participation_id=p.id where p.id='${concurrentPid}' and e.applied`)==='t',`${label}: winner attribution retained`);
+  }
+  for(const sameEvent of [true,false]) {
+    const label=`same-participant lead concurrent ${sameEvent?'same':'different'} event`;
+    const created=await ok(command(),`${label}: bootstrap`); const concurrentPid=created.data.participation_id;
+    await ok(command({action:'activity_start',activity:'lead',payload:{},pid:concurrentPid}),`${label}: start`);
+    const first=leadCommand(concurrentPid,'recording',`same-participant-${randomUUID()}@example.com`);
+    const second={...first,event_id:sameEvent?first.event_id:randomUUID()};
+    const responses=await concurrentApply([first,second],label);
+    const successes=responses.filter(response=>response.data?.kind==='applied'&&!response.error);
+    equal(successes.length,sameEvent?2:1,`${label}: success count`);
+    if(sameEvent) equal(successes[0].data.data.receipt,successes[1].data.data.receipt,`${label}: same receipt`);
+    else equal(responses.filter(response=>response.error).map(response=>[response.error.code,response.error.message]),[['PT409','ACTIVITY_ALREADY_COMPLETED']],`${label}: second event rejected`);
+    const receipt=successes[0].data.data.receipt;
+    equal(sql(`select revision||':'||(select count(*) from public.marketing_round2_events where participation_id=p.id)||':'||(select count(*) from public.marketing_round2_lead_requests where participation_id=p.id) from public.marketing_round2_participations p where id='${concurrentPid}'`),'3:3:1',`${label}: one atomic completion`);
+    equal(sql(`select request_id::text from public.marketing_round2_lead_requests where participation_id='${concurrentPid}'`),receipt.event_id,`${label}: winning receipt persisted`);
+  }
+  for(const activity of ['survey','lead']) {
+    const label=`inspect then competing ${activity} commit`;
+    const created=await ok(command(),`${label}: bootstrap`); const racePid=created.data.participation_id;
+    await ok(command({action:'activity_start',activity,payload:{},pid:racePid}),`${label}: start`);
+    const pending=activity==='survey'
+      ?command({action:'survey_submit',activity,pid:racePid,payload:{survey_version:'r2.1-recording',answers:{q1:'none',q2:'other',q3:'none',q4:'no'}}})
+      :leadCommand(racePid,'recording',`inspect-race-${randomUUID()}@example.com`);
+    const beforeInspect=count();
+    const inspected=await ok({...pending,op:'inspect',lead:pending.lead?{...pending.lead,turnstile_verified_at:null}:null},`${label}: inspect succeeds`);
+    equal(count(),beforeInspect,`${label}: inspect writes zero`);
+    equal(inspected.replay,'absent',`${label}: no prior event`);
+    const winner=activity==='survey'
+      ?command({action:'survey_submit',activity,pid:racePid,payload:{...pending.payload,answers:{...pending.payload.answers,q4:'yes'}}})
+      :{...pending,event_id:randomUUID()};
+    const committed=await ok({...winner,control:control()},`${label}: competing request commits`);
+    const afterWinner=count();
+    await denied({...pending,control:control()},'ACTIVITY_ALREADY_COMPLETED',`${label}: apply rechecks current state`);
+    equal(count(),afterWinner,`${label}: losing apply writes zero`);
+    equal(sql(`select count(*) from public.marketing_round2_events where event_id='${pending.event_id}'`),'0',`${label}: losing ID not reserved`);
+    equal((await ok({...winner,control:control()},`${label}: winner replay`)).data,committed.data,`${label}: winning completion preserved`);
+  }
   // Deferred consistency rejects partial edits even by a maintenance owner with a deadline.
   function rejectedSql(body,name) { let failed=false; try {sql(body);} catch {failed=true;} assert(failed,name); }
   rejectedSql(`begin; update public.marketing_round2_participations set revision=revision+1 where id='${pid}'; commit;`,'direct state mutation without GUC denied');

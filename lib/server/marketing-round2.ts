@@ -118,19 +118,32 @@ export function createMarketingRound2Handler(dependencies: Round2HandlerDependen
       if (!control.collection_enabled) throw new Round2Error("ROUND2_DISABLED");
       if (now() < Date.parse(CAMPAIGN_START) || now() >= Date.parse(CAMPAIGN_END)) throw new Round2Error("CAMPAIGN_ENDED");
       const ip = await dependencies.trustedIp(request);
-      await dependencies.consumeRate({ ip, buckets: ["ip"] });
-      const value = parseRound2Request(raw);
+      let value: Round2Request;
+      try { value = parseRound2Request(raw); } catch (error) {
+        // Preserve the basic rate error's priority without trusting an invalid request's fields.
+        await dependencies.consumeRate({ ip, buckets: ["ip"] });
+        throw error;
+      }
       topic = value.topic;
       lead = value.action === "lead_submit";
-      if (value.action === "bootstrap") await dependencies.consumeRate({ ip, buckets: ["bootstrap"] });
-      const cookie = readRound2Cookie(request.headers.get("cookie") ?? "", topic, config.secrets.cookie, Math.floor(now() / 1000));
-      if (!cookie && (value.action !== "bootstrap" || value.bootstrap_intent === "cookie_resume")) throw new Round2Error("PARTICIPATION_REQUIRED");
-      if (cookie) await dependencies.consumeRate({ ip, participationId: cookie.pid, buckets: ["participation"] });
+      let cookie: Round2CookieClaims | null = null;
+      let cookieError: unknown;
+      try {
+        cookie = readRound2Cookie(request.headers.get("cookie") ?? "", topic, config.secrets.cookie, Math.floor(now() / 1000));
+        if (!cookie && (value.action !== "bootstrap" || value.bootstrap_intent === "cookie_resume")) throw new Round2Error("PARTICIPATION_REQUIRED");
+      } catch (error) { cookieError = error; }
+      // Identify only authenticated buckets, then persist them together before returning any rate error.
+      const buckets: RateInput["buckets"] = ["ip"];
+      if (value.action === "bootstrap") buckets.push("bootstrap");
+      if (cookie) {
+        buckets.push("participation");
+        if (lead) buckets.push("lead_ip", "lead_participation");
+      }
+      await dependencies.consumeRate({ ip, ...(cookie ? { participationId: cookie.pid } : {}), buckets });
+      if (cookieError) throw cookieError;
       if (lead) {
-        let gateError: unknown;
-        try { controlSnapshot(control, config, value, now()); await dependencies.leadReadiness(); } catch (error) { gateError = error; }
-        await dependencies.consumeRate({ ip, participationId: cookie!.pid, buckets: ["lead_ip", "lead_participation"] });
-        if (gateError) throw gateError;
+        controlSnapshot(control, config, value, now());
+        await dependencies.leadReadiness();
       }
       const command = buildCommand(value, cookie, config, controlSnapshot(control, config, value, now()), now());
       const result = await dependencies.execute(structuredClone(command));
