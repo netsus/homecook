@@ -256,7 +256,7 @@ async function runAssertions({ isolated, env, sql, run }) {
   rejectedSql(`begin; select set_config('homecook.r2_valid_until',(clock_timestamp()+interval '30 milliseconds')::text,true); update public.marketing_round2_participations set revision=revision where id='${pid}'; select pg_sleep(0.06); commit;`,'deferred deadline expires during transaction');
   sql(`delete from public.marketing_round2_participations where id='${newHome.data.participation_id}';`);
   equal(sql(`select (select count(*) from public.marketing_round2_events where participation_id='${newHome.data.participation_id}')||':'||(select count(*) from public.marketing_round2_lead_requests where participation_id='${newHome.data.participation_id}')`),'0:0','parent retention deletion cascades without GUC');
-  await denied({...homeLead,lead:{...homeLead.lead,turnstile_verified_at:null}},'PARTICIPATION_EXPIRED','deleted cookie participation 410');
+  await denied({...homeLead,control:control(),lead:{...homeLead.lead,turnstile_verified_at:null}},'PARTICIPATION_EXPIRED','deleted cookie participation 410');
   // Role/scope authority is enforced both before and inside SECURITY DEFINER.
   for(const role of ['anon','authenticated','service_role']) for(const table of ['marketing_round2_participations','marketing_round2_events','marketing_round2_lead_requests']) {
     assert(sql(`select has_table_privilege('${role}','public.${table}','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')`) === 'f', `${role} ${table} no direct grants`);
