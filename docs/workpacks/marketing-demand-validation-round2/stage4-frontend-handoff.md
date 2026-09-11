@@ -2,9 +2,13 @@
 
 작성 작업: `01a08e24-2609-77e2-b303-3fb8bd6223e8`, frontend-implementer.
 조정 작업: `01a07316-265c-7f22-b0af-fa22b7fb2b8a`.
-현재 상태: **Stage 4 작성자 구현·검증 자료 인계 준비 완료, Draft 유지**. 최신 R2-AP-001 수정 code commit은 `2fa7547557554ad96b029b6fc00907fe7f350baa`다. 이전 동결 인계 head는 `3d1054b39c615fccd6a1541aad6256e45ec18f28`이다. Stage 4 전체 승인, 독립 authority·Stage 5·Stage 6 승인, Ready, 병합, 배포를 뜻하지 않는다.
+이 문서는 단계별 실행·검토 이력이다. 아래의 과거 결과와 대기 표시는 해당 기록 시점의 상태이며 현재 상태로 해석하지 않는다. 최신 상태는 [README](README.md#design-status)와 [최종 디자인 승인과 남은 전체 검증](#최종-디자인-승인과-남은-전체-검증)을 따른다.
 
-## 선행 입력과 소유 범위
+현재 요약: 제품 수리 code commit은 `7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77`이며, 독립 Stage5·최종 화면 승인에 따라 디자인은 **confirmed**다. 기존 전체 검증 실패 때문에 **Stage6 미시작·Ready·병합·배포 보류**이며 PR은 **Draft**로 유지한다.
+
+초기 Stage4 당시 인계 상태: 작성자 구현·검증 자료 인계 준비 완료, Draft 유지. 당시 R2-AP-001 수정 code commit은 `2fa7547557554ad96b029b6fc00907fe7f350baa`, 이전 동결 인계 head는 `3d1054b39c615fccd6a1541aad6256e45ec18f28`이었다. 당시 기록은 Stage4 전체·독립 검토·Ready·병합·배포 승인을 뜻하지 않았다.
+
+## 초기 Stage4 당시 기록: 선행 입력과 소유 범위
 
 - 공식 r2.1 계약: `7f00e62c13572b5b2c0d54c997fe628f7a56567e` / PR #1551.
 - Stage 1 merge: `fa7848924442df2790592b14875ccb6148e0c6ba` / PR #1550.
@@ -12,7 +16,7 @@
 - 이 문서보다 앞선 README/metadata의 Stage 1 Draft·미착수 표현은 당시 작성 이력이다. 선행 단계를 다시 시작하지 않았다.
 - 이번 작업은 두 경로의 화면·브라우저 연결·검증과 Draft 인계만 소유한다. 운영 DB, 배포, 광고, 실제 provider/메일, Discord, 독립 Stage 승인은 실행하지 않는다.
 
-## 구현
+## 초기 Stage4 당시 기록: 구현
 
 `app/beta/r2/[topic]/page.tsx`는 exact 주제·비활성 404·서명 문맥을 기존 서버 helper로 연결한다. GET은 DB를 호출하지 않는다. `middleware.ts`는 beta 경로 안에서 R2의 인코딩 별칭과 잘못된 경로만 거부하며 기존 v2 동작을 유지한다.
 
@@ -28,9 +32,9 @@ R2 전용 Turnstile은 topic별 action·서버 제공 site key, 150×140 compact
 
 전역 CSS·기존 `/beta` 계약·DB schema·쿠키·설문 상수는 변경하지 않았다. 새 의존성도 없다.
 
-## 최종 Stage 4 검증
+## 초기 Stage4 당시 기록: 검증 결과
 
-| 검증 | 현재 근거 |
+| 검증 | 당시 근거 |
 | --- | --- |
 | TDD | 메뉴/설문/직접 신청, 지연 완료의 화면 이동, provider 재시도, 인증 경계, IDB 합계50·탭 복제·stale 삭제/쓰기의 RED→GREEN 원문 보존 |
 | 정식 PR 빠른 gate | 마지막 수정 후 `verify:frontend:pr` exit0. lint/typecheck, 제품7,827 PASS/516 환경별 skip, build, core smoke65 PASS/10 skip, core a11y11 PASS/4 skip, core visual15 PASS. 3기기 축소 없음 |
@@ -45,11 +49,11 @@ R2 전용 Turnstile은 topic별 action·서버 제공 site key, 150×140 compact
 | 기존 전체 회귀 | 1,019 PASS / 189 skip / 7 fail. 선택 재실행 17 PASS / 3 skip / 기존 좁은 화면 geometry4 fail. exact base7312a0에서도 같은4건·같은수치 재현. PASS나 N/A로 바꾸지 않음 |
 | 전체 추가 gate | 접근성21 PASS/15 skip, security12 PASS. 전체 visual15 PASS/23 skip/10개 desktop 상세snapshot 실패. exact base에도같은10실패,9건은크기·픽셀수동일,meal detail은높이+260px동일/픽셀수차이보존 |
 | 탐색 QA/eval | 정식빠른gate green뒤2topic×3viewport6경로직접탐색. R2-QA-001 중복저장CTA 해결, actualAPI오류2조건/8캡처 재확인. 보고서coverage평가99 PASS(42/43 covered, 독립검토1 blocked 유지). 디자인authority점수가 아님 |
-| 독립 검토 | authority_precheck/Stage5/finalauthority/Stage6 pending. complete gate의baseline실패는open으로유지하고영향분류를독립reviewer에위임 |
+| 독립 검토 | 초기 인계 당시 authority_precheck/Stage5/finalauthority/Stage6는 모두 pending이었다. 당시 complete gate의baseline실패는open으로유지하고영향분류를독립reviewer에위임했다 |
 
 검증 상세와 실행 예외는 [retained evidence](../../../.artifacts/r2-stage4/verification/manifest.json) 및 [실행 예외](../../../.artifacts/r2-stage4/verification/verification-exceptions.md)를 따른다. 초기 고정3100 Lighthouse가 기존 개발 배포 서버를 읽은 결과는 이번 candidate 증거에서 제외했다. 기존 서버를 종료·변경하지 않았고, 이후 모든 검증은 비어 있는 별도 포트에서 재사용 없이 실행했다. Next dev의 Cache-Control 덮어쓰기와 실제 production의 `private, no-store` / `no-referrer`도 구분한다.
 
-## 최종 QA와 source 연결
+## 초기 Stage4 당시 기록: QA와 source 연결
 
 - [QA 보고서](../../../.artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploratory-report.json), [QA eval](../../../.artifacts/qa/marketing-demand-validation-round2/stage4-20260911/eval-result.json), [직접탐색관찰](../../../.artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploration-observations.json).
 - [구현·검증 source 파일](evidence/stage4/source-manifest.json), [작성자stage-result](evidence/stage4/stage4-result.json).
@@ -58,15 +62,15 @@ R2 전용 Turnstile은 topic별 action·서버 제공 site key, 150×140 compact
 - 초기PR template reference표기오류는본문의exact work-item JSON경로로수정했다. 최초실패이력과최신current-head CI는구분한다.
 - 중간전체제품실행의기존personal-recipe-editor focus실패1회는수정없이동일정식빠른gate전체를재실행해7827 PASS를확인했다. 실패원문과재실행을모두보존하며원인을단정하지않는다.
 
-## 화면 근거
+## 초기 Stage4 당시 기록: 화면 근거
 
 - [production build 미리보기 68장](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/manifest.json)
 - [기록 메뉴](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/recording-390x844-MENU.png), [집밥 흐름 좁은 메뉴](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-320x568-MENU.png)
 - [실제 오류 화면](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/real-recovery/)
 
-정적 설계와 실제 실행은 다른 근거다. preview의 local consent validation 이미지는 실제 서버 오류의 대체물이 아니다. Full-page 캡처의 이미지 높이는 자연 스크롤 전체이며 실행 viewport는 manifest에 기록한다. 일부 실제 오류 캡처의 Next dev N 표시는 개발 도구다. 모든 runtime authority는 독립 검토 대기다.
+정적 설계와 실제 실행은 다른 근거다. preview의 local consent validation 이미지는 실제 서버 오류의 대체물이 아니다. Full-page 캡처의 이미지 높이는 자연 스크롤 전체이며 실행 viewport는 manifest에 기록한다. 일부 실제 오류 캡처의 Next dev N 표시는 개발 도구다. 초기 기록 시점에는 모든 runtime authority가 독립 검토 대기였다.
 
-## 재현
+## 초기 Stage4 당시 기록: 재현
 
 패키지 매니저는 `corepack pnpm` 10.32.1, 기존 3443 runner는 직렬 실행한다.
 
@@ -79,9 +83,9 @@ R2 전용 Turnstile은 topic별 action·서버 제공 site key, 150×140 compact
 
 미리보기 자동화는 호출자가 소유한 서버만 사용하며 다른 프로세스를 종료하거나 암묵적으로 재사용하지 않는다. 실제 통합 runner는 `.env`를 복사하지 않고 새 UUID isolated DB·rate/control·테스트키만 생성한다. 실제 운영 project `homecook-full-local-isolated`와 volume `homecook-full-local-postgres`는 테스트 대상으로 선택하지 않는다.
 
-## 독립 검토·운영 인수
+## 초기 Stage4 당시 기록: 독립 검토·운영 인수
 
-Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhead/CI는GitHub의현재head와마지막인계메시지를기준으로확인한다. Design Status는 pending-review다. 작성자와 native 보조는 독립 authority/Stage 5/Stage 6를 대신하지 않는다. 조정자가 별도 reviewer에게 정확한 PR head와 retained evidence를 전달한다. 새 작업을 직접 만들거나 merge-ready·confirmed를 자기 승인하지 않는다.
+Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhead/CI는GitHub의현재head와마지막인계메시지를기준으로확인한다. 초기 인계 당시 Design Status는 pending-review였으며 최신 상태는 상단 링크를 따른다. 작성자와 native 보조는 독립 authority/Stage 5/Stage 6를 대신하지 않는다. 조정자가 별도 reviewer에게 정확한 PR head와 retained evidence를 전달한다. 새 작업을 직접 만들거나 merge-ready·confirmed를 자기 승인하지 않는다.
 
 실제 provider·실기기 인앱/키보드·이미지/영상 사용권·공개 개인정보 운영 준비·운영 activation/DB 적용/배포/메일은 Manual Only다. 테스트의 mock provider 성공을 실제 발송이나 이메일 소유 확인으로 표현하지 않는다. Web Locks 미지원 브라우저의 탭 간 동작은 실제 기기 확인 범위에 남긴다.
 
