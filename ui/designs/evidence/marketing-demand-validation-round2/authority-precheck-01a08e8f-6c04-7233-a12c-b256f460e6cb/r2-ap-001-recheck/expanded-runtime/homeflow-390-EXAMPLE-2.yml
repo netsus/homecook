@@ -1,0 +1,19 @@
+- main:
+  - paragraph: 로컬 미리보기 · 저장되지 않아요
+  - img "무먹 무엇을 먹든"
+  - button "메뉴로"
+  - paragraph: 베타 준비 중 · 사용 예시
+  - heading "계획부터 남은 요리까지" [level=1]
+  - paragraph: 실제 서비스가 아닌 준비된 예시예요.
+  - paragraph: 사용 예시 2/3
+  - heading "구매할 재료 · 예시" [level=2]
+  - strong: 구매할 재료
+  - paragraph: 돼지고기 목살 · 신김치
+  - strong: 집에 있어 제외한 재료 · 예시
+  - paragraph: 양파 · 고추장 · 고춧가루
+  - paragraph: 보유 재료는 직접 확인해요.
+  - paragraph: 먹을 요리를 고르고, 집에 있는 재료를 직접 확인하며, 요리 완료와 남은 요리 상태를 표시하는 방식이에요. 보유 재료가 자동으로 감지되지는 않아요.
+  - button "다음 장면"
+  - button "이전 장면"
+  - button "알림 접수 확인"
+  - button "메뉴로 돌아가기"

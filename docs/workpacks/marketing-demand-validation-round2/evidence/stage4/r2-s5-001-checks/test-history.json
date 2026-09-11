@@ -1,0 +1,8 @@
+{
+  "initial_red": { "failed": 10, "passed_controls": 2, "raw_local_log_sha256": "edaf9433f22feedf0a3ba93eee12a1e0c75202018fb9cabe38f025851f8f71cf", "raw_log_retained_in_git": false, "reason": "The jsdom failure dump contains full DOM and synthetic email values; retain counts/hash and independent reproducible failure evidence instead." },
+  "independent_broken_behavior": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/reproduction/lead-edit-repro-result.json",
+  "final_round2": { "passed": 345, "skipped": 7, "failed": 0, "log": "final-round2.log" },
+  "final_lint": { "exit_code": 0, "log": "final-lint.log" },
+  "final_typecheck": { "exit_code": 0, "log": "final-typecheck.log" },
+  "scope": "Current repair and R2 harness verification; historical whole frontend gate7827 and baseline failures remain separately scoped."
+}

@@ -1,0 +1,334 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "marketing-demand-validation-round2",
+  "generatedAt": "2026-09-11T03:19:47.275388Z",
+  "baseUrl": "http://127.0.0.1:3118",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "정식 PR 빠른 gate 전체 green 뒤 두 topic×3브라우저 viewport에서 중단한 설문 복원, 부정 응답, 독립 완료, 재접수 read-only, 동의 오류 focus와 외부/쓰기0을 직접 탐색했다(6경로). 실제 API 오류 캡처에서 중복 저장 CTA 1건을 찾아 수정했고 실제409·commit응답유실 재검증2건/8캡처로 해결 확인했다. 기존 backend 세부검증은 선행 독립Stage3 retained보고서와 서버9파일 byte동일성, 현재201회귀를 검토한 것으로 구분하며 SQL396을 Stage4가 다시 실행했다고 주장하지 않는다. 이 보고서는 독립authority승인이 아니다.",
+  "findings": [
+    {
+      "id": "R2-QA-001",
+      "category": "ux",
+      "severity": "minor",
+      "title": "해결: 저장 오류의 중복 주 버튼",
+      "expected": "원래 입력/장면을 유지하고 동일 요청 재시도 한 개를 주 행동으로 표시한다.",
+      "actual": "수정 전 실제409/응답유실 화면에 다시 시도와 원래 신청/완료 버튼이 모두 파란 주 버튼으로 표시됐다. 수정 뒤 기존 제출 버튼은 숨기고 단일재시도로 DONE까지 복구했다.",
+      "repro_steps": [
+        "실제 isolated 랜딩의 lead 동의 generation을 바꾸거나 example_complete의 commit 응답을 유실시킨다.",
+        "원화면 RECOVERY에서 두 저장 버튼이 같이 나타나는지 확인한 뒤 수정 버전에서 단일 재시도와 입력/장면 보존을 확인한다."
+      ],
+      "evidence_paths": [
+        "ui/designs/evidence/marketing-demand-validation-round2/stage4/real-recovery-before-layer2/R2_RECORDING_RECOVERY-320x568.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/stage4/real-recovery/R2_RECORDING_RECOVERY-320x568.png",
+        "ui/designs/evidence/marketing-demand-validation-round2/stage4/real-recovery/R2_HOMEFLOW_RECOVERY-390x844.png",
+        ".artifacts/r2-stage4/verification/real-ui-recovery-after/result.json"
+      ],
+      "tags": [
+        "resolved",
+        "recovery",
+        "duplicate-cta",
+        "actual-isolated-api"
+      ],
+      "status": "resolved",
+      "remaining_risk": "실제 provider·실기기 UX 및 독립 authority는 별도 검토 대기다."
+    }
+  ],
+  "remainingRisks": [
+    "complete regression의기존mobile-ios-small4실패와fullvisual의기존desktop10실패는exactbase에서도재현되며PASS/N/A로면제하지않았다. 독립reviewer가영향을판정한다.",
+    "실제 provider/실기기 in-app·키보드·이미지권리·공개개인정보운영준비·운영activation/배포는ManualOnly.",
+    "Web Locks 미지원 브라우저의탭간동작은실기기확인이필요하다.",
+    "독립 authority/Stage5/finalauthority/Stage6는작성자와다른task에서수행한다.",
+    "200%확대는위 zoom_evidence_scope에나열한화면·폭만직접확인했다. 그외확대상태와전체독립precheck는검토중이다."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-2",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-3",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-4",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-5",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-6",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-7",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-1",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-2",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-3",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-4",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-5",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-6",
+      "status": "covered",
+      "notes": "현재 client/storage 실제Chromium55PASS, frontend117PASS, real-ui24조건 및 실제오류2조건으로확인했다. .artifacts/r2-stage4/verification/{client/stale-writes-final-green.log,frontend-targeted-final.log,real-ui/result.json,real-ui-recovery-after/result.json}. 인증없는신규참여/오래된참여쓰기/낮은revision/자동lead재전송을허용하지않는다. fixture와실제provider를구분한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-2",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-3",
+      "status": "covered",
+      "notes": "실제409/응답유실에서이메일/동의generation/원예시장면을보존하고오류를원화면에표시했다. R2-QA-001수정뒤재시도만주행동으로보인다. 실제 API 오류8캡처와real-ui-recovery-after/result.json.",
+      "linked_findings": [
+        "R2-QA-001"
+      ]
+    },
+    {
+      "item_id": "error-permission-4",
+      "status": "covered",
+      "notes": "현재 client/storage 실제Chromium55PASS, frontend117PASS, real-ui24조건 및 실제오류2조건으로확인했다. .artifacts/r2-stage4/verification/{client/stale-writes-final-green.log,frontend-targeted-final.log,real-ui/result.json,real-ui-recovery-after/result.json}. 인증없는신규참여/오래된참여쓰기/낮은revision/자동lead재전송을허용하지않는다. fixture와실제provider를구분한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-5",
+      "status": "covered",
+      "notes": "현재 client/storage 실제Chromium55PASS, frontend117PASS, real-ui24조건 및 실제오류2조건으로확인했다. .artifacts/r2-stage4/verification/{client/stale-writes-final-green.log,frontend-targeted-final.log,real-ui/result.json,real-ui-recovery-after/result.json}. 인증없는신규참여/오래된참여쓰기/낮은revision/자동lead재전송을허용하지않는다. fixture와실제provider를구분한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-6",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다. 변경된client helper는현재 client/stale-writes-final-green.log의55PASS 및 legacy-browser-storage.log의21시나리오로다시확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-7",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-8",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-1",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다. 변경된client helper는현재 client/stale-writes-final-green.log의55PASS 및 legacy-browser-storage.log의21시나리오로다시확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-2",
+      "status": "covered",
+      "notes": "현재 client/storage 실제Chromium55PASS, frontend117PASS, real-ui24조건 및 실제오류2조건으로확인했다. .artifacts/r2-stage4/verification/{client/stale-writes-final-green.log,frontend-targeted-final.log,real-ui/result.json,real-ui-recovery-after/result.json}. 인증없는신규참여/오래된참여쓰기/낮은revision/자동lead재전송을허용하지않는다. fixture와실제provider를구분한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-3",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다. 변경된client helper는현재 client/stale-writes-final-green.log의55PASS 및 legacy-browser-storage.log의21시나리오로다시확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-4",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-5",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-6",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-7",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-8",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-9",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-10",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-11",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-12",
+      "status": "covered",
+      "notes": "선행 독립Stage3 보고서의 해당 checklist를 직접 읽고 서버/계약/SQL9파일이 reviewed09413과 byte동일함을 확인했다. .artifacts/r2-stage4/verification/stage3-input/{stage3-review.md,retention-manifest.json}, 현재 backend-regression.log 201PASS. 이것은 선행 검증검토이며 Stage4 SQL396재실행 주장이 아니다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-1",
+      "status": "blocked",
+      "notes": "독립 Stage5/6/finalauthority는미실행이며이Stage4보고서로대체하지않는다. reviewer task배정은coordinator소유다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-2",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-3",
+      "status": "covered",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다. 200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "covered",
+      "notes": "320/390과desktop 실제 캡처를읽고 native radio/설명/CTA를확인했다. 공용문구를줄이지않고 자연스크롤하며 원본로고여백과제목balance를보완했다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest. 200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "320x568에서주CTA가읽히고세선택지/긴폼은가림없이스크롤로도달한다. 정식31preview검사와200%글자/44px/overflow검사근거를함께검토했다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest. 200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "실제서버오류에서중복저장CTA를찾아R2-QA-001로수정, 단일재시도와성공복구를실제API로재확인했다. 상단메뉴링크/하단메뉴복귀는설계상각역할을유지한다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest.",
+      "linked_findings": [
+        "R2-QA-001"
+      ]
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "메뉴알림primary/예시secondary/설문text, 세DONE의메뉴primary/선택적활동, 오류의재시도primary를실제캡처와동작으로확인했다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "두topic승인제목·설명·4문항·입력조건·동의문구를읽었다. 기록마지막단어고립은balance로보완했고 영양/실서비스/메일발송과소유확인을과장하지않는다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "서버미확인과확인된미완료를구분한다. 설문중단복원/부정응답/완료read-only를직접탐색했고오류는입력보존·명시재시도로복구한다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "실제확인한기존로고·음식·완료캐릭터를재사용하고준비된예시를상시표시한다. 테스트용deviceframe/가짜제품mutation은없다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest.",
+      "linked_findings": []
+    }
+  ],
+  "evidence_paths": [
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/exploration-observations.json",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-homeflow-menu.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-homeflow-negative-survey.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-recording-negative-survey.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-recording-menu.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-recording-menu.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-homeflow-menu.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-homeflow-negative-survey.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/desktop-chrome-recording-negative-survey.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-homeflow-negative-survey.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-recording-menu.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-ios-small-recording-negative-survey.png",
+    ".artifacts/qa/marketing-demand-validation-round2/stage4-20260911/mobile-chrome-homeflow-menu.png"
+  ],
+  "author_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "verification_modes": [
+    "author browser exploration: production-build memory preview",
+    "actual Next/API/isolated DB integration: backend helper",
+    "prior Stage3 exact-source retained evidence review",
+    "independent authority pending"
+  ],
+  "zoom_evidence_scope": "200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다."
+}

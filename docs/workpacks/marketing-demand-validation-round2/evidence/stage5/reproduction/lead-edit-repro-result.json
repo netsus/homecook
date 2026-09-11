@@ -1,0 +1,370 @@
+{
+  "reviewedSha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "method": "Exact Git blobs transpiled in memory without source edits. Injected fake transport only; no network, DB, server or provider.",
+  "sources": [
+    {
+      "path": "lib/marketing/round2-client.ts",
+      "sha256": "e6555b6657b2435d31d6ac92765b938b948cc06c9d3041770f56ec4011125362"
+    },
+    {
+      "path": "lib/marketing-round2.ts",
+      "sha256": "9300aa427fec71dab589d194e7b94e42bad2e7a8cebec6013a9fb67c9aee7128"
+    },
+    {
+      "path": "lib/marketing/round2-session.ts",
+      "sha256": "b0dc08faae1c78d586881a2db2c8820c93994084db014c251ec38a8dc4092c2e"
+    },
+    {
+      "path": "lib/marketing/round2-client-storage.ts",
+      "sha256": "39476ebc6a575f507aaff05d84e85f5d055864b667e7d83cb1f4b441f97c6bcc"
+    },
+    {
+      "path": "lib/marketing/round2-survey.ts",
+      "sha256": "8547fe9285aedc329efad22f87a868c1cd9aa726bb7ba24efedadfcd52bf854f"
+    }
+  ],
+  "results": [
+    {
+      "failure": "LEAD_CAPTURE_UNAVAILABLE",
+      "modification": "none-control",
+      "submitResult": false,
+      "afterFailure": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "afterEdit": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "retryResults": [
+        false,
+        false
+      ],
+      "afterRetry": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 9,
+        "leadPostCount": 3
+      },
+      "newPostsAfterEdit": 4,
+      "sameLeadEventOnRetry": true,
+      "leadAttemptEvidence": "Not directly inspected: repeat lead_submit event_id proves retained attempt."
+    },
+    {
+      "failure": "LEAD_CAPTURE_UNAVAILABLE",
+      "modification": "email",
+      "submitResult": false,
+      "afterFailure": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "afterEdit": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "corrected@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "retryResults": [
+        true,
+        true
+      ],
+      "afterRetry": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "corrected@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "newPostsAfterEdit": 0,
+      "sameLeadEventOnRetry": true,
+      "leadAttemptEvidence": "Not directly inspected: exact source setLeadForm line309 assigns leadAttempt=null; zero later lead_submit observed."
+    },
+    {
+      "failure": "LEAD_CAPTURE_UNAVAILABLE",
+      "modification": "consent",
+      "submitResult": false,
+      "afterFailure": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "afterEdit": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "retryResults": [
+        true,
+        true
+      ],
+      "afterRetry": {
+        "error": {
+          "code": "LEAD_CAPTURE_UNAVAILABLE",
+          "message": "신청을 확인하지 못했어요. 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "newPostsAfterEdit": 0,
+      "sameLeadEventOnRetry": true,
+      "leadAttemptEvidence": "Not directly inspected: exact source setLeadForm line309 assigns leadAttempt=null; zero later lead_submit observed."
+    },
+    {
+      "failure": "NETWORK_ERROR",
+      "modification": "none-control",
+      "submitResult": false,
+      "afterFailure": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "afterEdit": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "retryResults": [
+        false,
+        false
+      ],
+      "afterRetry": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 9,
+        "leadPostCount": 3
+      },
+      "newPostsAfterEdit": 4,
+      "sameLeadEventOnRetry": true,
+      "leadAttemptEvidence": "Not directly inspected: repeat lead_submit event_id proves retained attempt."
+    },
+    {
+      "failure": "NETWORK_ERROR",
+      "modification": "email",
+      "submitResult": false,
+      "afterFailure": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "afterEdit": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "corrected@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "retryResults": [
+        true,
+        true
+      ],
+      "afterRetry": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "corrected@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "newPostsAfterEdit": 0,
+      "sameLeadEventOnRetry": true,
+      "leadAttemptEvidence": "Not directly inspected: exact source setLeadForm line309 assigns leadAttempt=null; zero later lead_submit observed."
+    },
+    {
+      "failure": "NETWORK_ERROR",
+      "modification": "consent",
+      "submitResult": false,
+      "afterFailure": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "afterEdit": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "retryResults": [
+        true,
+        true
+      ],
+      "afterRetry": {
+        "error": {
+          "code": "NETWORK_ERROR",
+          "message": "저장 결과를 확인하지 못했어요. 연결을 확인한 뒤 같은 요청을 다시 시도해 주세요.",
+          "fields": [],
+          "retryAt": null
+        },
+        "connection": "ready",
+        "leadState": "started",
+        "revision": 1,
+        "email": "first@example.com",
+        "consent": true,
+        "postCount": 5,
+        "leadPostCount": 1
+      },
+      "newPostsAfterEdit": 0,
+      "sameLeadEventOnRetry": true,
+      "leadAttemptEvidence": "Not directly inspected: exact source setLeadForm line309 assigns leadAttempt=null; zero later lead_submit observed."
+    }
+  ]
+}

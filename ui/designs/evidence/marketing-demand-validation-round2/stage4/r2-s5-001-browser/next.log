@@ -1,0 +1,21 @@
+   ▲ Next.js 15.5.24
+   - Local:        http://127.0.0.1:3126
+   - Network:      http://127.0.0.1:3126
+
+ ✓ Starting...
+ ✓ Ready in 1560ms
+ ✓ Compiled /middleware in 176ms (158 modules)
+ ○ Compiling /beta/r2/[topic] ...
+ ✓ Compiled /beta/r2/[topic] in 1808ms (933 modules)
+ GET /beta/r2/recording 200 in 2648ms
+ GET /beta/r2/recording 200 in 74ms
+ GET /beta/r2/recording 200 in 75ms
+ GET /beta/r2/recording 200 in 67ms
+ GET /beta/r2/recording 200 in 72ms
+ GET /beta/r2/homeflow 200 in 73ms
+ GET /beta/r2/homeflow 200 in 61ms
+ GET /beta/r2/homeflow 200 in 60ms
+ GET /beta/r2/homeflow 200 in 60ms
+ GET /beta/r2/recording 200 in 105ms
+ GET /beta/r2/homeflow 200 in 56ms
+[?25h

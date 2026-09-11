@@ -2,7 +2,7 @@
   "stage": 4,
   "role": "frontend-implementer",
   "author_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
-  "phase": "ready-for-authority-precheck",
+  "phase": "stage5-repair-verified-awaiting-independent-recheck",
   "verdict": "in_progress",
   "base_sha": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
   "checklist_updates": [
@@ -118,6 +118,17 @@
     }
   ],
   "independent_authority": "pending",
+  "authority_precheck": {
+    "status": "complete",
+    "verdict": "pass",
+    "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "required_fix_ids": [],
+    "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+    "import_verification_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/import-verification.json",
+    "public_stage5": "request_changes; R2-S5-001 required1; independent re-review pending",
+    "final_authority": "pending"
+  },
   "aggregate_frontend_gate": "failed-existing-baseline-under-review",
   "ready": false,
   "deployment": false,
@@ -151,19 +162,20 @@
     "R2-QA-001"
   ],
   "author_scope_complete": true,
-  "stage4_overall_approval": "pending-independent-authority-precheck",
+  "stage4_overall_approval": "historical-precheck-complete; repair-author-verified; public-stage5-recheck-and-final-authority-pending",
+  "stage5_repair_evidence": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-s5-001-result.json",
   "precheck_repairs": [
     {
       "id": "R2-AP-001",
       "author_fixed": true,
-      "independent_recheck": "pending",
+      "independent_recheck": "passed-in-authority-precheck-at-783ae392",
       "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-ap-001-result.json"
     },
     {
       "id": "R2-AP-002",
       "author_evidence_complete": true,
       "product_changes": false,
-      "independent_recheck": "pending",
+      "independent_recheck": "passed-in-authority-precheck-at-783ae392",
       "evidence_ref": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/author-result.json"
     }
   ]

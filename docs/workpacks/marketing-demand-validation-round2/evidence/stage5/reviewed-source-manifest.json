@@ -1,0 +1,150 @@
+{
+  "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "files": [
+    {
+      "path": "app/beta/r2/[topic]/page.tsx",
+      "sha256": "fbd1e7dd7fcbdeab5b272fe2e8b56dc73c0478b4cd19ff89c06017cbd9e17424"
+    },
+    {
+      "path": "components/auth/provider-memory-sync.tsx",
+      "sha256": "913753e51826b32b1c45b1e0dd7350a184a7f09c96df6a64fa06a24e4ff72c6b"
+    },
+    {
+      "path": "components/marketing/round2/round2-landing.tsx",
+      "sha256": "914a743cbb123280051f4df07a8e96316a92f611cfe483ab5eb03df4ac6f8992"
+    },
+    {
+      "path": "components/marketing/round2/round2-turnstile.tsx",
+      "sha256": "08c30af9f5d5ae74f825c604bd054223ea5c2d849a3b68e161f7f341cd5d566b"
+    },
+    {
+      "path": "components/marketing/round2/round2-view.tsx",
+      "sha256": "d0fb62f7052f08221ecad1edce64974641f4f962acce85dcf65244fdb6e07b04"
+    },
+    {
+      "path": "components/marketing/round2/round2.module.css",
+      "sha256": "497e1271454542d818942bd797ccaad37fd3ce304f27ad20a1d9f9dc58ab403c"
+    },
+    {
+      "path": "docs/design/anchor-screens.md",
+      "sha256": "117949ec92744a317296ae10bcc394713d3341b1e4d42158dddd8fe44eeeb8c2"
+    },
+    {
+      "path": "docs/design/design-tokens.md",
+      "sha256": "7f37e5705b180c125a22a3cf3656a9a77a9f77c68150be58b9bf1d0538b595e7"
+    },
+    {
+      "path": "docs/design/mobile-ux-rules.md",
+      "sha256": "4a2b8ccc6c87e5181f99a28fb3837635bc4737a81ecaf81b28676850401f1ce0"
+    },
+    {
+      "path": "docs/engineering/codex-task-handoff.md",
+      "sha256": "7ba57388c5cb8f43ce7d65a44ecf0685d32dd9bfa45250d966089ffa13a8f79d"
+    },
+    {
+      "path": "docs/engineering/slice-workflow.md",
+      "sha256": "e9af738adf65f8df641a68ac7b9b5e80ebef916bf3dc80b2a469b939682ec390"
+    },
+    {
+      "path": "docs/marketing-demand-validation-r2-contract.md",
+      "sha256": "e726f5abc985302a30070d49f1eaaba908b14240306285b11fa58b8982cc4da1"
+    },
+    {
+      "path": "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "sha256": "27f2a887a131f24510abad70b900068dc1c7c1e63067b6e5f66b54cd5368c9f6"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/README.md",
+      "sha256": "b0b503cd6081e1ed75c6067d806c19c6c6c2ee54830698d2459a861701f54930"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "sha256": "f12f910c6965bc304a1cc4d9e113e4fb4bc2235a55a5c8896c118d7ebe832b29"
+    },
+    {
+      "path": "docs/workpacks/marketing-demand-validation-round2/automation-spec.json",
+      "sha256": "ba43fe284d74da1cb22e421c25d037b4ccf71bf43de61b7c2313e849ade51e4f"
+    },
+    {
+      "path": "docs/화면정의서-v1.5.40.md",
+      "sha256": "25dae8ac3f7681651f52992900cc6d9efb2c0f89eb0f6965464e033b832808b7"
+    },
+    {
+      "path": "lib/marketing/round2-client-storage.ts",
+      "sha256": "39476ebc6a575f507aaff05d84e85f5d055864b667e7d83cb1f4b441f97c6bcc"
+    },
+    {
+      "path": "lib/marketing/round2-client.ts",
+      "sha256": "e6555b6657b2435d31d6ac92765b938b948cc06c9d3041770f56ec4011125362"
+    },
+    {
+      "path": "lib/marketing/round2-session.ts",
+      "sha256": "b0dc08faae1c78d586881a2db2c8820c93994084db014c251ec38a8dc4092c2e"
+    },
+    {
+      "path": "lib/marketing/round2-survey.ts",
+      "sha256": "8547fe9285aedc329efad22f87a868c1cd9aa726bb7ba24efedadfcd52bf854f"
+    },
+    {
+      "path": "lib/server/marketing-round2-page.ts",
+      "sha256": "c0c5e11f93efb99df44c2226f5f10f539b9bbda7907127c1a2a4207aa6ad6c41"
+    },
+    {
+      "path": "middleware.ts",
+      "sha256": "ab4409afe19e9eb1259cc18db00afe7c904f5a8c5aff58b79eb57ce8b41beb0d"
+    },
+    {
+      "path": "tests/marketing-round2-client.test.ts",
+      "sha256": "181da35dcb5ca019de207e86349674ba72cb9e22400daf274e11755ec734ef38"
+    },
+    {
+      "path": "tests/marketing-round2-view.test.tsx",
+      "sha256": "a3864e71f19f3af9d78e1c411375634b35f83ec827304d62875e6c79ed4fe8be"
+    },
+    {
+      "path": "tests/marketing-round2-widget.test.tsx",
+      "sha256": "b56026ea3a2a9f7b8b94c782989309dd99c48cf23c0fead909434ba472535267"
+    },
+    {
+      "path": "ui/designs/R2_DESIGN_DIRECTION.md",
+      "sha256": "997e0dc0392c742a9c0bdaba3e3aa815fef5f42766983cd49b636595b06c8f4b"
+    },
+    {
+      "path": "ui/designs/R2_EXAMPLE.md",
+      "sha256": "da6f5355da711107c9422f2f70d17ff009c584f54825c3d1e50b48573735d5b5"
+    },
+    {
+      "path": "ui/designs/R2_EXAMPLE_DONE.md",
+      "sha256": "5ba759ecefdbfbac6301af57aeea7f63f05a24f6ce30125e44114aa924ac1561"
+    },
+    {
+      "path": "ui/designs/R2_LEAD.md",
+      "sha256": "76e6962abeca13f99bf2986ce044da171c8395dc4e6d72bef7bf07bf04bd08bd"
+    },
+    {
+      "path": "ui/designs/R2_LEAD_DONE.md",
+      "sha256": "c1b055a89b8942d060242b79b40cb716d81b04d867600537758d27d7064fc41b"
+    },
+    {
+      "path": "ui/designs/R2_MENU.md",
+      "sha256": "b8bc0279667fde74deaf0d5a92a154e3886b7444194a7e7fe2836c939b5914d8"
+    },
+    {
+      "path": "ui/designs/R2_RECOVERY.md",
+      "sha256": "563b56dd728bec9d2573085876e4f6f4a434253ae1f943df0b2832325866db0a"
+    },
+    {
+      "path": "ui/designs/R2_SCREEN_MAPPING.md",
+      "sha256": "e8d6d6b25ae988de6eba63d805ef1f32dcecac1f65b7ac7a4451a95c9dd6afe0"
+    },
+    {
+      "path": "ui/designs/R2_SURVEY.md",
+      "sha256": "87029f66a2b2d32bcc0660a780dc6dcc39117f990be0f647bb0a5239b909024e"
+    },
+    {
+      "path": "ui/designs/R2_SURVEY_DONE.md",
+      "sha256": "435c44cdc5f4f2f92ae263a3594fdb594742eb47af1fd117db4abb8218513f28"
+    }
+  ],
+  "read_scope_note": "Whole relevant files/chunks or currentr2addendum only for globalofficialscreen docs; unchangeddesign/tokens reused from precheck reading. Files listed as context not fullsecurity/backendcertification."
+}

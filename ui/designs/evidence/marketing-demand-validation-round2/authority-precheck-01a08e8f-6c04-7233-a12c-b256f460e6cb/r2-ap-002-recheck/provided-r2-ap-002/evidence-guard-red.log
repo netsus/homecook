@@ -1,0 +1,52 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-SjkR78
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-recovery-evidence.test.ts (4 tests | 3 failed) 5ms
+     × rejects the in-progress recording-only four-row snapshot 2ms
+     × rejects eight rows if a duplicate replaces one required combination 0ms
+     × rejects a mislabeled viewport even when the row count is eight 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-recovery-evidence.test.ts > R2-AP-002 finalized recovery evidence > rejects the in-progress recording-only four-row snapshot
+AssertionError: expected [Function] to throw an error
+ ❯ tests/marketing-round2-recovery-evidence.test.ts:12:67
+     10|   });
+     11|   it("rejects the in-progress recording-only four-row snapshot", () =>…
+     12|     expect(() => assertRecoveryZoomCombinations(rows.slice(0,4))).toTh…
+       |                                                                   ^
+     13|   });
+     14|   it("rejects eight rows if a duplicate replaces one required combinat…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/marketing-round2-recovery-evidence.test.ts > R2-AP-002 finalized recovery evidence > rejects eight rows if a duplicate replaces one required combination
+AssertionError: expected [Function] to throw an error
+ ❯ tests/marketing-round2-recovery-evidence.test.ts:15:80
+     13|   });
+     14|   it("rejects eight rows if a duplicate replaces one required combinat…
+     15|     expect(() => assertRecoveryZoomCombinations([...rows.slice(0,7),ro…
+       |                                                                                ^
+     16|   });
+     17|   it("rejects a mislabeled viewport even when the row count is eight",…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/marketing-round2-recovery-evidence.test.ts > R2-AP-002 finalized recovery evidence > rejects a mislabeled viewport even when the row count is eight
+AssertionError: expected [Function] to throw an error
+ ❯ tests/marketing-round2-recovery-evidence.test.ts:18:124
+     16|   });
+     17|   it("rejects a mislabeled viewport even when the row count is eight",…
+     18|     expect(() => assertRecoveryZoomCombinations([...rows.slice(0,7),{t…
+       |                                                                                                                            ^
+     19|   });
+     20| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+   Start at  13:25:28
+   Duration  161ms (transform 28ms, setup 25ms, import 14ms, tests 5ms, environment 0ms)

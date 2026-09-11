@@ -100,3 +100,18 @@ Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhe
 ## R2-AP-002 실제 오류 확대 근거
 
 제품fd9c4827을변경하지않고 실제409동의갱신/commit응답유실2조건×4폭의200%8조합을추가했다. [고정패키지](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-002/README.md)에full-page8장·같은조합CTA상세8장, geometry8개,캡처소스hash·최종guard차이·cleanup을보존했다. 정적텍스트clipping/가로overflow0, CTA실제hit-test와입력/장면보존을확인했다. 마지막완전성guard는저장된실측에직접적용했고불필요한UI/DB재실행은하지않았다. 3118/3124는유지하며전체독립리뷰승인은계속대기다.
+
+## 독립 authority_precheck 원본 이식
+
+검토자 `01a08e8f-6c04-7233-a12c-b256f460e6cb`가 exact `783ae392c648ed43d481e2166c6f42f0cc0a7912`에서 precheck PASS/required0, R2-AP-001/002 closed를 반환했다. [원본 결과](evidence/stage4/independent-precheck-01a08e8f/precheck-result.json)와 [이식 검증](evidence/stage4/independent-precheck-01a08e8f/import-verification.json)을 보존했고 보고서8개/evidence subtree는 byte그대로 복사했다. 원본 판정을 작성자가 수정하지 않았다. 검증기의 엄격한 비초안 검사에서 발견한 evidence 표기/서술형 요구사항 호환 문제는 같은 이식 기록에 남겼으며 임의 수정하지 않았다. 완료 표시는 precheck에만 한정한다. public Stage5·final authority·confirmed·전체 acceptance·Ready·merge는 대기하며, Stage5 결과와 함께 commit/push할 예정이다.
+
+
+## Stage5 R2-S5-001 수정과 최종 재검토 인계
+
+독립 Stage5는 exact783ae392에서 이메일/동의 편집 후 재시도가 실제 요청 없이 성공을 반환하는 required finding을 발견했다. [독립 원문과 재현](evidence/stage5/stage5-report.md)은 request_changes로 보존한다. 작성자는 원래 신청과 편집 초안을 분리하고, 원래 접수 확인·명시적 편집 취소·동의/보안 재확인 경로를 추가했다. 공개 API나 동의 계약은 바꾸지 않았다.
+
+[수정 결과](evidence/stage4/r2-s5-001-result.json), [주소를 가린 브라우저 관측](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/README.md), [실제 API/DB 전체28 검증](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/README.md)을 따른다. 과거 precheck PASS는 이번 수정본의 독립 승인으로 승계하지 않는다. 코드 `7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77`의 제품 파일은 실제 실행 snapshot과 해시가 같다. 현재 R2 단위345 PASS/7환경skip, 전체 lint/typecheck가 통과했다. 전체28은 원래24와 추가복구4를 같은 격리 실행에서 검증했고, 앞선 테스트 대기 누락 FAIL과 focused4 PASS는 별도 보존했다. 1,316개 시간순 관측·208개 파싱 응답·115회 캡처 기록(고유 PNG113개)을 구분한다.
+
+실제 전체 실행 명령은 `--lead-edit`를 포함했다. 이후 최종 runner는 기본 선택도 같은28분기를 쓰도록 바꿨고, recovery/zoom/focused 선택 보존과 동등성을 단위검사했다. 무옵션 전체 명령을 직접 실행한 결과로 표현하지 않는다. 정식 `verify:frontend:pr`의 기존7,827 PASS는 과거 수정본의 근거이며 새 코드의 검증/현재 head CI와 분리한다. 기존 whole frontend 실패4+10개는 여전히 open이다.
+
+원문 재현 소스5개는 실행 제품 코드와 구분한 `.cjs.txt` 보관본으로 이동했다. 내용과 해시는 유지했고, same-reviewer의 직접 링크3곳 revision을 보존했다. lint 규칙이나 검증기는 바꾸지 않았다. 별도 docs PR1556의 evidence 형식 변경은 안정된 작성자 변경을 기록한 뒤 base로 통합한다. 최종 independent Stage5 재검토·final authority·Stage6·Ready·merge·배포는 계속 대기한다.

@@ -1,0 +1,168 @@
+{
+  "mode": "independent-local-memory-preview",
+  "origin": "http://127.0.0.1:3118",
+  "reviewedSha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+  "cases": [
+    {
+      "topic": "recording",
+      "width": 390,
+      "height": 844,
+      "states": [
+        {
+          "name": "MENU",
+          "prefix": "recording-390-MENU",
+          "metrics": {
+            "viewport": {
+              "width": 390,
+              "height": 844
+            },
+            "scrollWidth": 390,
+            "scrollHeight": 844,
+            "scrollY": 0,
+            "heading": {
+              "text": "내 레시피로 만든 집밥, 먹은 만큼 영양 기록",
+              "size": "24px"
+            },
+            "targets": [
+              {
+                "text": "베타 오픈 알림 받기",
+                "x": 20,
+                "y": 399.703125,
+                "w": 350,
+                "h": 52,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgb(0, 161, 255)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "사용 예시 먼저 보기",
+                "x": 20,
+                "y": 461.703125,
+                "w": 350,
+                "h": 50,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgb(255, 255, 255)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "의견만 남기기 · 4문항",
+                "x": 20,
+                "y": 521.703125,
+                "w": 350,
+                "h": 48,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgba(0, 0, 0, 0)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "개인정보처리방침",
+                "x": 20,
+                "y": 714.140625,
+                "w": 350,
+                "h": 48,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgba(0, 0, 0, 0)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              }
+            ],
+            "nestedScroll": [],
+            "focus": "<body><div hidden=\"\"><!--$~--><template id=\"B:0\"></template><!--/$--></div><div class=\"round2_surface__r1mnv\"><main class=\"round2_page__UcJuQ\" data-screen-id=\"R2_RECORDING_MENU\"><p class=\"round2_preview__zvj0e\">로컬 미리보기 · 저장되지 않아요</p><header class=\"round2_header__PSd7l\"><span class=\"round2_logo__Y4pm4\"><img alt=\"무먹 무엇을 먹든\" width=\"112\" height=\"34\" decoding=\"async\" data-nimg=\"1\" style=\"color:transparent\" srcset=\"/_next/image?url=%2Fassets%2Ffunnel%2Fbrand%2Fmumeok-logo-horizontal.webp&amp;w=128&amp"
+          },
+          "violations": []
+        },
+        {
+          "name": "LEAD",
+          "prefix": "recording-390-LEAD",
+          "metrics": {
+            "viewport": {
+              "width": 390,
+              "height": 844
+            },
+            "scrollWidth": 390,
+            "scrollHeight": 848,
+            "scrollY": 0,
+            "heading": {
+              "text": "집밥 기록, 베타 소식 받기",
+              "size": "24px"
+            },
+            "targets": [
+              {
+                "text": "메뉴로",
+                "x": 310,
+                "y": 69,
+                "w": 60,
+                "h": 44,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgba(0, 0, 0, 0)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "",
+                "x": 20,
+                "y": 311.546875,
+                "w": 350,
+                "h": 52,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgb(255, 255, 255)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "무먹 베타 오픈 알림을 이메일로 받기 위해 이메일 주소와 신청 주제·동의 기록을 수집·이용하는 데 동의해요. 보관 기간은 2026년 11월 30일까지이며, 철회하면 해당 정보를 삭제해요.",
+                "x": 20,
+                "y": 411.546875,
+                "w": 350,
+                "h": 116.375,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgba(0, 0, 0, 0)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "개인정보처리방침",
+                "x": 20,
+                "y": 608.140625,
+                "w": 350,
+                "h": 48,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgba(0, 0, 0, 0)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "베타 오픈 알림 신청하기",
+                "x": 20,
+                "y": 724.359375,
+                "w": 350,
+                "h": 52,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgb(0, 161, 255)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              },
+              {
+                "text": "메뉴로 돌아가기",
+                "x": 20,
+                "y": 776.359375,
+                "w": 350,
+                "h": 48,
+                "color": "rgb(33, 37, 41)",
+                "bg": "rgba(0, 0, 0, 0)",
+                "outline": "rgb(33, 37, 41) none 0px"
+              }
+            ],
+            "nestedScroll": [],
+            "focus": "<h1 tabindex=\"-1\" class=\"round2_title__limhy\">집밥 기록, 베타 소식 받기</h1>"
+          },
+          "violations": []
+        }
+      ],
+      "checks": [
+        {
+          "name": "keyboard-menu-focus",
+          "outline": "rgb(33, 37, 41) solid 2px"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "writes": [],
+  "external": [],
+  "failure": "Error: expect(locator).toContainText(expected) failed\n\nLocator: getByRole('alert')\nExpected substring: \"동의해 주세요\"\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <p role=\"alert\" id=\"r2-form-error\" class=\"round2_fieldError__U9gxO\">개인정보 수집·이용에 동의해 주세요.</p> aka getByText('개인정보 수집·이용에 동의해 주세요')\n    2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')\n\nCall log:\n  - Expect \"to.have.text\" with timeout 5000ms\n  - waiting for getByRole('alert')\n\n    at Proxy.<anonymous> (/Users/cwj/.codex/worktrees/f2a2/homecook/node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/matchers/expect.js:213:24)\n    at /Users/cwj/.codex/visualizations/2026/09/11/01a08e8f-6c04-7233-a12c-b256f460e6cb/r2-precheck/audit.cjs:37:78"
+}

@@ -1,0 +1,4 @@
+
+> homecook@0.1.0 lint /Users/cwj/.codex/worktrees/f2a2/homecook
+> eslint . --ignore-pattern '.agents/**' --ignore-pattern '.omx/**'
+

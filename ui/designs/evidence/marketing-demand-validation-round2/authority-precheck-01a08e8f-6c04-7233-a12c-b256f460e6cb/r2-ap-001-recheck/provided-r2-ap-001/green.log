@@ -1,0 +1,51 @@
+
+Running 39 tests using 1 worker
+
+(node:62935) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:62935) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/39] tests/e2e/marketing-round2.spec.ts:61:41 › recording 320x568: seven states and local form validation evidence
+[2/39] tests/e2e/marketing-round2.spec.ts:61:41 › recording 390x844: seven states and local form validation evidence
+[3/39] tests/e2e/marketing-round2.spec.ts:61:41 › recording 393x852: seven states and local form validation evidence
+[4/39] tests/e2e/marketing-round2.spec.ts:61:41 › recording 1280x900: seven states and local form validation evidence
+[5/39] tests/e2e/marketing-round2.spec.ts:76:70 › recording: example independently completes without prerequisites
+[6/39] tests/e2e/marketing-round2.spec.ts:76:70 › recording: survey independently completes without prerequisites
+[7/39] tests/e2e/marketing-round2.spec.ts:76:70 › recording: lead independently completes without prerequisites
+[8/39] tests/e2e/marketing-round2.spec.ts:82:35 › recording: free order example-survey-lead
+[9/39] tests/e2e/marketing-round2.spec.ts:82:35 › recording: free order example-lead-survey
+[10/39] tests/e2e/marketing-round2.spec.ts:82:35 › recording: free order survey-example-lead
+[11/39] tests/e2e/marketing-round2.spec.ts:82:35 › recording: free order survey-lead-example
+[12/39] tests/e2e/marketing-round2.spec.ts:82:35 › recording: free order lead-example-survey
+[13/39] tests/e2e/marketing-round2.spec.ts:82:35 › recording: free order lead-survey-example
+[14/39] tests/e2e/marketing-round2.spec.ts:87:7 › recording: keyboard, reduced motion and actual 200 percent text remain usable
+[15/39] tests/e2e/marketing-round2.spec.ts:101:7 › recording: browser Back and Forward preserve independent activity navigation
+[16/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 initial MENU keeps 200 percent text inside its strip
+[17/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 completed MENU keeps 200 percent text inside its strip
+[18/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 initial MENU keeps 200 percent text inside its strip
+[19/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 completed MENU keeps 200 percent text inside its strip
+[20/39] tests/e2e/marketing-round2.spec.ts:61:41 › homeflow 320x568: seven states and local form validation evidence
+[21/39] tests/e2e/marketing-round2.spec.ts:61:41 › homeflow 390x844: seven states and local form validation evidence
+[22/39] tests/e2e/marketing-round2.spec.ts:61:41 › homeflow 393x852: seven states and local form validation evidence
+[23/39] tests/e2e/marketing-round2.spec.ts:61:41 › homeflow 1280x900: seven states and local form validation evidence
+[24/39] tests/e2e/marketing-round2.spec.ts:76:70 › homeflow: example independently completes without prerequisites
+[25/39] tests/e2e/marketing-round2.spec.ts:76:70 › homeflow: survey independently completes without prerequisites
+[26/39] tests/e2e/marketing-round2.spec.ts:76:70 › homeflow: lead independently completes without prerequisites
+[27/39] tests/e2e/marketing-round2.spec.ts:82:35 › homeflow: free order example-survey-lead
+[28/39] tests/e2e/marketing-round2.spec.ts:82:35 › homeflow: free order example-lead-survey
+[29/39] tests/e2e/marketing-round2.spec.ts:82:35 › homeflow: free order survey-example-lead
+[30/39] tests/e2e/marketing-round2.spec.ts:82:35 › homeflow: free order survey-lead-example
+[31/39] tests/e2e/marketing-round2.spec.ts:82:35 › homeflow: free order lead-example-survey
+[32/39] tests/e2e/marketing-round2.spec.ts:82:35 › homeflow: free order lead-survey-example
+[33/39] tests/e2e/marketing-round2.spec.ts:87:7 › homeflow: keyboard, reduced motion and actual 200 percent text remain usable
+[34/39] tests/e2e/marketing-round2.spec.ts:101:7 › homeflow: browser Back and Forward preserve independent activity navigation
+[35/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 initial MENU keeps 200 percent text inside its strip
+[36/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 completed MENU keeps 200 percent text inside its strip
+[37/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 initial MENU keeps 200 percent text inside its strip
+[38/39] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 completed MENU keeps 200 percent text inside its strip
+[39/39] tests/e2e/marketing-round2.spec.ts:151:5 › SSR menu, canonical slash, encoded aliases and privacy headers
+  39 passed (43.3s)

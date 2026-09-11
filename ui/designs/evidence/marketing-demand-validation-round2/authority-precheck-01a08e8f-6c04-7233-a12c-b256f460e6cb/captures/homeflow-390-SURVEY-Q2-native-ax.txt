@@ -1,0 +1,3 @@
+Browser tab: 1, Title: "뭐 먹을지 정한 다음, 장보기부터 남은 요리까지 | 무엇을 먹든", URL: "http://127.0.0.1:3118/beta/r2/homeflow".
+There has been no change in the accessibility tree.
+The focused UI element is 6 heading 집밥 관리에 대한 의견, Value: 1

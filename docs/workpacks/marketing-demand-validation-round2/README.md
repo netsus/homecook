@@ -146,7 +146,7 @@ local preview는 explicit flag+exact loopback에서만 메모리 mock, 모든 �
 - 첫 MENU는 알림 primary/예시 secondary/의견 tertiary, 세 DONE은 종료 안내 후 메뉴 primary/다른 활동 optional이다. 0/3 강요·자동복귀 없음.
 - Visual artifact: [recording390](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_recording_390.png), [recording320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_recording_320.png), [homeflow390](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_homeflow_390.png), [homeflow320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_homeflow_320.png), [완료보존320](../../../ui/designs/evidence/marketing-demand-validation-round2/R2_completed-state-variants_320.png).
 - Authority status: required
-- Review progress: pending. `automation-spec.json`의 `authority_report_paths`는 각 공통 화면의 두 topic을 다룰 예정 경로다. Stage4 실제 화면 검토 전에는 보고서 생성·승인 완료를 의미하지 않는다. 정적 도면은 브라우저 screenshot이 아니며 독립 authority pass가 아니다. 보조 critic 결과는 mapping 및 각 report의 최신 메모를 따른다.
+- Review progress: 독립 `authority_precheck`는 exact `783ae392c648ed43d481e2166c6f42f0cc0a7912`에서 pass/required0이며 R2-AP-001/002가 닫혔다. [원본 결과와 이식 근거](evidence/stage4/independent-precheck-01a08e8f/IMPORT.md)를 따른다. 보고서8개는 두 topic의16canonical을 다루며 원본 hash와 독립 서식 revision을 보존했다. 후속 [public Stage5](evidence/stage5/stage5-report.md)는 R2-S5-001 required1로 request_changes다. 작성자 수정 후 독립 재검토와 final authority가 필요하며 confirmed와 `accept-r2-authority` 전체완료를 뜻하지 않는다. 정적 도면은 실제 브라우저 증거의 대체물이 아니다.
 - Stage 4 evidence: canonical16 ID마다 320×568/390×844/393×852 및 desktop, initial/scroll/오류/해당 키보드/200%/reduced-motion/복원 캡처. Stage4와 다른 reviewer precheck, Stage5, 별도 final authority 순서다.
 
 ## Design Status
@@ -204,7 +204,7 @@ bootstrap storage/cookie 실패, body/권한/멱등, RPC/control lease, retentio
 
 ## Stage 4 실행 기록
 
-[프론트엔드 인수 기록](stage4-frontend-handoff.md)을 따른다. UI/연결/실제 격리 검증을 수행했고 독립 authority·Stage 5·Stage 6는 pending이다. 앞선 Stage 1 Draft·미착수 문구는 당시 이력이며 승인된 선행 merge를 되돌리지 않는다. 전체 서비스에서 기준 SHA에도 재현되는 4개 좁은 화면 실패는 R2 통과와 분리해 보존한다. Ready·merge·배포는 승인하지 않는다.
+[프론트엔드 인수 기록](stage4-frontend-handoff.md)을 따른다. UI/연결/실제 격리 검증과 독립 precheck를 수행했고, Stage 5는 R2-S5-001 수정 후 독립 재검토를 기다린다. final authority·Stage 6는 pending이다. 앞선 Stage 1 Draft·미착수 문구는 당시 이력이며 승인된 선행 merge를 되돌리지 않는다. 전체 서비스에서 기준 SHA에도 재현되는 4개 좁은 화면 실패는 R2 통과와 분리해 보존한다. Ready·merge·배포는 승인하지 않는다.
 
 ## Delivery Checklist
 

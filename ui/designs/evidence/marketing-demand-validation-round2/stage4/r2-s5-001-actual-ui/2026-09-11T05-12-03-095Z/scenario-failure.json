@@ -1,0 +1,83 @@
+{
+  "checks": [
+    "recording example solo, actual receipt/DB and reload",
+    "recording survey solo, actual receipt/DB and reload",
+    "recording lead solo, actual receipt/DB and reload",
+    "recording order example→survey→lead real DB",
+    "recording order example→lead→survey real DB",
+    "recording order survey→example→lead real DB",
+    "recording order survey→lead→example real DB",
+    "recording order lead→example→survey real DB",
+    "recording order lead→survey→example real DB",
+    "homeflow example solo, actual receipt/DB and reload",
+    "homeflow survey solo, actual receipt/DB and reload",
+    "homeflow lead solo, actual receipt/DB and reload",
+    "homeflow order example→survey→lead real DB",
+    "homeflow order example→lead→survey real DB",
+    "homeflow order survey→example→lead real DB",
+    "homeflow order survey→lead→example real DB",
+    "homeflow order lead→example→survey real DB",
+    "homeflow order lead→survey→example real DB",
+    "two tabs, two topics, cookies and confirmed completions preserved",
+    "actual 410 after isolated participation deletion, explicit restart and other-topic cookie preserved",
+    "actual 409 consent generation advance, email retained, fresh explicit consent and receipt",
+    "actual commit with browser response loss, no premature DONE, explicit retry same event/no duplicate",
+    "actual API 429, disabled retry countdown and explicit recovery after server window",
+    "blocked IndexedDB reload restores actual valid cookie participation and completion"
+  ],
+  "additionalChecks": [
+    "recording S5-001 lost: edited draft, original immutable event/payload, tokenless receipt, no new write"
+  ],
+  "failure": "scenario assertion failed; inspect sanitized trace and masked capture",
+  "recentResponses": [
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "menu_return",
+      "status": 200
+    },
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "bootstrap",
+      "status": 200
+    },
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "bootstrap",
+      "status": 200
+    },
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "activity_start",
+      "status": 200
+    },
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "lead_submit",
+      "status": 200
+    },
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "bootstrap",
+      "status": 200
+    },
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "activity_start",
+      "status": 200
+    },
+    {
+      "kind": "response",
+      "topic": "recording",
+      "action": "lead_submit",
+      "error": "VALIDATION_ERROR",
+      "status": 422
+    }
+  ]
+}

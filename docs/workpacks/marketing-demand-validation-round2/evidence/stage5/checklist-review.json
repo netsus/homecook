@@ -1,0 +1,206 @@
+[
+  {
+    "id": "delivery-ui-connection",
+    "source": "docs/workpacks/marketing-demand-validation-round2/README.md",
+    "line": 216,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "delivery-test-split",
+    "source": "docs/workpacks/marketing-demand-validation-round2/README.md",
+    "line": 218,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "delivery-state-ui",
+    "source": "docs/workpacks/marketing-demand-validation-round2/README.md",
+    "line": 221,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "request_changes",
+    "finding_ids": [
+      "R2-S5-001"
+    ],
+    "note": "입력편집후lead복구무동작/해당회귀누락"
+  },
+  {
+    "id": "accept-r2-routes",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 11,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-r2-menu",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 15,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-r2-independent-paths",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 16,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-screen-contract",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 20,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-read-only",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 27,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-r2-done-choice",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 28,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-r2-revision",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 29,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-loading",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 33,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-empty",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 34,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-error",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 35,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "request_changes",
+    "finding_ids": [
+      "R2-S5-001"
+    ],
+    "note": "입력편집후lead복구무동작/해당회귀누락"
+  },
+  {
+    "id": "accept-unauthorized",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 36,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-r2-storage",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 45,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-playwright-flow",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 79,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "request_changes",
+    "finding_ids": [
+      "R2-S5-001"
+    ],
+    "note": "입력편집후lead복구무동작/해당회귀누락"
+  },
+  {
+    "id": "accept-r2-a11y-visual",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 80,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "pass",
+    "finding_ids": [],
+    "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+  },
+  {
+    "id": "accept-r2-authority",
+    "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "line": 82,
+    "stage_owner": 4,
+    "scope": "frontend",
+    "review": 5,
+    "review_result": "downstream_gate_pending",
+    "finding_ids": [],
+    "note": "final authority 미실행 / pending-review 유지; Stage5 단독으로 닫지 않음"
+  }
+]

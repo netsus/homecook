@@ -1,0 +1,12 @@
+
+> homecook@0.1.0 validate:authority-evidence-presence /Users/cwj/.codex/worktrees/f2a2/homecook
+> node scripts/validate-authority-evidence-presence.mjs -- --slice marketing-demand-validation-round2
+
+authority evidence presence validation failed for authority-evidence-presence:marketing-demand-validation-round2
+- authority_report_paths:evidence: Unsupported authority evidence artifact requirement; expected a repo-relative .json path: Follow ui/designs/R2_SCREEN_MAPPING.md for R2_RECORDING_* and R2_HOMEFLOW_* variants, eight generator docs and eight R2_*-critique.md inputs.
+- authority_report_paths:evidence: Authority reports are missing required Capture actual implemented routes in both topics and all eight screens; include 320x568, 390x844, 393x852 and desktop. visual evidence.
+- authority_report_paths:evidence: Unsupported authority evidence artifact requirement; expected a repo-relative .json path: Retain browser traces, request/response assertions and screenshots for solo activities, all six orders, reload, two tabs, two topics and completed-state preservation.
+- authority_report_paths:evidence: Unsupported authority evidence artifact requirement; expected a repo-relative .json path: Retain keyboard, focus, safe-area, scroll, reduced-motion, text enlargement and loading/error/empty/read-only evidence.
+- authority_report_paths:evidence: Authority reports are missing required Keep preview mock, isolated integration, actual provider and physical-device evidence separately identified. visual evidence.
+- authority_report_paths:evidence: Authority reports are missing required Use distinct Codex task IDs for Stage 4 author, Stage 5 reviewer, final product-design-authority and Stage 6 reviewer; static boards are not runtime authority. visual evidence.
+ ELIFECYCLE  Command failed with exit code 1.

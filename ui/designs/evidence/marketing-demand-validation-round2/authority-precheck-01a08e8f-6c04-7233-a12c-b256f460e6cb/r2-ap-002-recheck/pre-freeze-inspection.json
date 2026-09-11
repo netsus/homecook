@@ -1,0 +1,61 @@
+{
+  "actor": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+  "finding": "R2-AP-002",
+  "status": "visual-review-complete-awaiting-final-head-and-retained-hash",
+  "examined_at": "2026-09-11T04:25:05.541233+00:00",
+  "provided_live_path": "/Users/cwj/.codex/worktrees/f2a2/homecook/.omx/artifacts/r2-stage4/real-ui-recovery-zoom",
+  "direct_reviewer_server_execution": false,
+  "visual_reviewed_fullpage": 8,
+  "visual_reviewed_cta_viewport": 8,
+  "confirmed_visible_defects": [],
+  "provided_geometry_verified": {
+    "cases": 8,
+    "unique_cases": 8,
+    "font_root": "16→32",
+    "recovery_font": "14→28",
+    "clipped_text": 0,
+    "retry_height": 74,
+    "page_horizontal_overflow": 0,
+    "center_and_lower_hit": true,
+    "recording_email_preserved_and_consent_cleared": 4,
+    "homeflow_last_scene_preserved_no_premature_done": 4
+  },
+  "source_provenance": {
+    "baseline": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+    "tracked_files_hash_match": 1869,
+    "untracked_generated": [
+      "next-env.d.ts"
+    ],
+    "harness_files": "two separately recorded hashes, verify at final head"
+  },
+  "initial_read_note": "First tool read saw4recording geometry while author package was still being assembled; subsequent copied source contains8unique complete cases. No fixed-manifest defect inferred. Rehash at final handoff required.",
+  "files_sha256": {
+    "R2_HOMEFLOW_RECOVERY-1280x900-200percent-cta-viewport.png": "6291dce6650b5eda64d1fa6718be61772b52e64a5f83813ee9d812a2a8535be8",
+    "R2_HOMEFLOW_RECOVERY-1280x900-200percent.png": "e02ef937681f7f0d9b5352b35c6fd76d2ee42c9916ae9fe43b891e3c1358fb3e",
+    "R2_HOMEFLOW_RECOVERY-320x568-200percent-cta-viewport.png": "05f825b7e19bda8719e1150f0fa5a4893d051e512580deac0a1edb1bd115f814",
+    "R2_HOMEFLOW_RECOVERY-320x568-200percent.png": "d00411f1e19b0e4b31a5cb0cb8a144f8b4a93d7cd2d1f4ad1318bbefc7d6fdd5",
+    "R2_HOMEFLOW_RECOVERY-390x844-200percent-cta-viewport.png": "f9f11ca1c2d7c3a89f679995117b355f41e62aad7a867522f92403dd196bb00d",
+    "R2_HOMEFLOW_RECOVERY-390x844-200percent.png": "3049b9a76cb3c79b09a44d914016e811115a18376b5b830a1f3a26250f59876a",
+    "R2_HOMEFLOW_RECOVERY-393x852-200percent-cta-viewport.png": "1dad9862c098a6e5ecff5c69117f71e1bb79cd3a8fbfe3bacdc2db9dc89ad6e3",
+    "R2_HOMEFLOW_RECOVERY-393x852-200percent.png": "318acb35b5d3a03d6d62f5238448f5422fdc06be8f42abd7ce0b91dd1272dba5",
+    "R2_RECORDING_RECOVERY-1280x900-200percent-cta-viewport.png": "6060aaeae5aabb30672ae4c51529e167f6208a4a39f000f80ae5e7facf0307c5",
+    "R2_RECORDING_RECOVERY-1280x900-200percent.png": "ad8f3a549ccb21363fa53639c846faa897975b5a6b3c217fe0a434457bd7c27c",
+    "R2_RECORDING_RECOVERY-320x568-200percent-cta-viewport.png": "ceb8bea1798c8771f0e0096e191c03aa908446f04de459ddb4926da2ec3ddf6e",
+    "R2_RECORDING_RECOVERY-320x568-200percent.png": "24715dfa2dbb91b7ab5e12830704ecba3efb3f66c053a110d468f63d3adf71ef",
+    "R2_RECORDING_RECOVERY-390x844-200percent-cta-viewport.png": "fdd075f3959c902bdc2e341fda7dd7d775c94fd4613df39d427ed98d7368417e",
+    "R2_RECORDING_RECOVERY-390x844-200percent.png": "558b92f41bafae19e55fab17ddb99686625ce7e55da6400a86bd0c257069a80f",
+    "R2_RECORDING_RECOVERY-393x852-200percent-cta-viewport.png": "d4158b9252c4fe5d0f5c6510197cd4bb97f7d115203a98b7e2a3b366feaeaebd",
+    "R2_RECORDING_RECOVERY-393x852-200percent.png": "4ad746ea1325a7f38d7344c21daab484edd99256f534fab4a996f618912ee202",
+    "next-runtime.log": "f374a8f5cc9abb43c59d771c5d16e4588f7805f1682035da07d9a969c1509735",
+    "recovery-zoom-geometry.json": "c24684aa962d2adfaa80cc2a3ba7bc122991653f94a83e645190a2f32cfd110e",
+    "result.json": "1c5c3a751e0bbd9f06f4a7cd59d463c4c110c2bc869ffc22186481be05707348",
+    "scenario-result.json": "3fbe0554b68ea8c998fc04b6806eef9edfd7558ec3da6850a190d6cfc68c864a",
+    "source-manifest.json": "845d209025a9547179e50c90faf46d0fee1ed7d8e67596ca7e709a9c169cfbe9"
+  },
+  "next": "Wait for coordinator final exact SHA/retained manifest, rehash; then update complete eight-report package.",
+  "limits": [
+    "No real provider/email/device/WCAG overall claim",
+    "No Stage5/finalauthority/Ready/merge/deploy approval",
+    "Global baseline failures preserved"
+  ]
+}

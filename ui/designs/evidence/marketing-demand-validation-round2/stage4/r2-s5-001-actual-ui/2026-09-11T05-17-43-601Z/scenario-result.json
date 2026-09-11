@@ -1,0 +1,41 @@
+{
+  "scenarioSelection": "lead-edit-only",
+  "checks": [],
+  "additionalChecks": [
+    "recording S5-001 lost: edited draft, original immutable event/payload, tokenless receipt, no new write",
+    "recording S5-001 unreceived: edited draft, original immutable event/payload, tokenless receipt, explicit restore/reconsent/new challenge, same-event real DB commit",
+    "homeflow S5-001 lost: edited draft, original immutable event/payload, tokenless receipt, no new write",
+    "homeflow S5-001 unreceived: edited draft, original immutable event/payload, tokenless receipt, explicit restore/reconsent/new challenge, same-event real DB commit"
+  ],
+  "apiRequests": 14,
+  "apiRequestsMeaning": "observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded",
+  "traceArtifact": "observed-ui-trace.json",
+  "traceObservations": 128,
+  "screenshots": [
+    "recording-s5-lost-menu.png",
+    "recording-s5-lost-edited-recovery.png",
+    "recording-s5-lost-done.png",
+    "recording-s5-lost-end.png",
+    "recording-s5-unreceived-menu.png",
+    "recording-s5-unreceived-edited-recovery.png",
+    "recording-s5-unreceived-done.png",
+    "recording-s5-unreceived-end.png",
+    "homeflow-s5-lost-menu.png",
+    "homeflow-s5-lost-edited-recovery.png",
+    "homeflow-s5-lost-done.png",
+    "homeflow-s5-lost-end.png",
+    "homeflow-s5-unreceived-menu.png",
+    "homeflow-s5-unreceived-edited-recovery.png",
+    "homeflow-s5-unreceived-done.png",
+    "homeflow-s5-unreceived-end.png"
+  ],
+  "committedRows": "4",
+  "externalRequests": [],
+  "pageErrors": [],
+  "recoveryScreenshots": [],
+  "apiPrewarm": "actual GET method rejection 405, no database mutation",
+  "fixtureCounterReset": "between closed independent browser cases",
+  "unexecuted": [
+    "original 24 conditions excluded by explicit focused selection"
+  ]
+}

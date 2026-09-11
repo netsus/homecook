@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "conditions": 10,
+  "geometryConditions": 8,
+  "actualClientAndView": true,
+  "pagePropsFixture": true,
+  "actualApi": false,
+  "actualDatabase": false,
+  "realProvider": false,
+  "externalRequests": [],
+  "pageErrors": [],
+  "productionWrites": 0,
+  "temporaryRoot": "/var/folders/3z/y96spzj121b8vg6xflzxfyww0000gn/T/r2-s5-browser-cZ0ZTs",
+  "port": 3126,
+  "serverStopped": true
+}

@@ -1,0 +1,905 @@
+{
+  "reviewedSha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+  "origin": "http://127.0.0.1:3124",
+  "cases": [
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 299.640625,
+          "bottom": 371.640625,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 42,
+          "top": 314.640625,
+          "bottom": 356.640625,
+          "fontSize": 14,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 316.640625,
+          "bottom": 354.640625
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 288,
+            "h": 52,
+            "bottom": 443.640625
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 288,
+            "h": 50,
+            "bottom": 503.640625
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 288,
+            "h": 48,
+            "bottom": 561.640625
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 48,
+            "bottom": 754.078125
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 142,
+          "top": 649.59375,
+          "bottom": 791.59375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 126,
+          "top": 657.59375,
+          "bottom": 783.59375,
+          "fontSize": 28,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 661.59375,
+          "bottom": 778.59375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 288,
+            "h": 74,
+            "bottom": 885.59375
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 288,
+            "h": 74,
+            "bottom": 969.59375
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 288,
+            "h": 120,
+            "bottom": 1099.59375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 72,
+            "bottom": 1493
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "recording",
+      "width": 320,
+      "completed": false,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"내 레시피로 만든 집밥, 먹은 만큼 영양 기록\" [level=1]\n  - paragraph: 레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 내 레시피 → 먹은 분량 추정 영양 기록\n  - navigation \"원하는 활동 선택\":\n    - button \"베타 오픈 알림 받기\"\n    - button \"사용 예시 먼저 보기\"\n    - button \"의견만 남기기 · 4문항\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 아직 완료한 활동이 없어요\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    },
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 299.640625,
+          "bottom": 371.640625,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 42,
+          "top": 314.640625,
+          "bottom": 356.640625,
+          "fontSize": 14,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 316.640625,
+          "bottom": 354.640625
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 288,
+            "h": 52,
+            "bottom": 443.640625
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 288,
+            "h": 50,
+            "bottom": 503.640625
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 288,
+            "h": 48,
+            "bottom": 561.640625
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 48,
+            "bottom": 754.078125
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 142,
+          "top": 649.59375,
+          "bottom": 791.59375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 126,
+          "top": 657.59375,
+          "bottom": 783.59375,
+          "fontSize": 28,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 661.59375,
+          "bottom": 778.59375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 288,
+            "h": 74,
+            "bottom": 885.59375
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 288,
+            "h": 122,
+            "bottom": 1017.59375
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 288,
+            "h": 72,
+            "bottom": 1099.59375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 72,
+            "bottom": 1537.234375
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "recording",
+      "width": 320,
+      "completed": true,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"내 레시피로 만든 집밥, 먹은 만큼 영양 기록\" [level=1]\n  - paragraph: 레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 내 레시피 → 먹은 분량 추정 영양 기록\n  - navigation \"원하는 활동 선택\":\n    - button \"알림 접수 확인 완료\"\n    - button \"사용 예시 다시 보기 완료\"\n    - button \"의견 접수 확인 완료\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 완료한 활동은 위에서 다시 확인할 수 있어요.\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    },
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 307.703125,
+          "bottom": 379.703125,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 21,
+          "top": 333.203125,
+          "bottom": 354.203125,
+          "fontSize": 14,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 335.203125,
+          "bottom": 352.203125
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 350,
+            "h": 52,
+            "bottom": 451.703125
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 350,
+            "h": 50,
+            "bottom": 511.703125
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 350,
+            "h": 48,
+            "bottom": 569.703125
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 48,
+            "bottom": 762.140625
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 100,
+          "top": 665.734375,
+          "bottom": 765.734375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 84,
+          "top": 673.734375,
+          "bottom": 757.734375,
+          "fontSize": 28,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 677.734375,
+          "bottom": 752.734375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 350,
+            "h": 74,
+            "bottom": 859.734375
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 350,
+            "h": 74,
+            "bottom": 943.734375
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 350,
+            "h": 72,
+            "bottom": 1025.734375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 72,
+            "bottom": 1419.140625
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "recording",
+      "width": 390,
+      "completed": false,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"내 레시피로 만든 집밥, 먹은 만큼 영양 기록\" [level=1]\n  - paragraph: 레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 내 레시피 → 먹은 분량 추정 영양 기록\n  - navigation \"원하는 활동 선택\":\n    - button \"베타 오픈 알림 받기\"\n    - button \"사용 예시 먼저 보기\"\n    - button \"의견만 남기기 · 4문항\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 아직 완료한 활동이 없어요\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    },
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 307.703125,
+          "bottom": 379.703125,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 21,
+          "top": 333.203125,
+          "bottom": 354.203125,
+          "fontSize": 14,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 335.203125,
+          "bottom": 352.203125
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 350,
+            "h": 52,
+            "bottom": 451.703125
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 350,
+            "h": 50,
+            "bottom": 511.703125
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 350,
+            "h": 48,
+            "bottom": 569.703125
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 48,
+            "bottom": 762.140625
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 100,
+          "top": 665.734375,
+          "bottom": 765.734375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 84,
+          "top": 673.734375,
+          "bottom": 757.734375,
+          "fontSize": 28,
+          "copy": "내 레시피 → 먹은 분량 추정 영양 기록"
+        },
+        "glyphs": {
+          "top": 677.734375,
+          "bottom": 752.734375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 350,
+            "h": 74,
+            "bottom": 859.734375
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 350,
+            "h": 74,
+            "bottom": 943.734375
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 350,
+            "h": 72,
+            "bottom": 1025.734375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 72,
+            "bottom": 1463.375
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "recording",
+      "width": 390,
+      "completed": true,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"내 레시피로 만든 집밥, 먹은 만큼 영양 기록\" [level=1]\n  - paragraph: 레시피의 재료 정보를 가져와 확인하고, 완성한 요리와 먹은 분량을 기록으로 연결해요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 내 레시피 → 먹은 분량 추정 영양 기록\n  - navigation \"원하는 활동 선택\":\n    - button \"알림 접수 확인 완료\"\n    - button \"사용 예시 다시 보기 완료\"\n    - button \"의견 접수 확인 완료\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 완료한 활동은 위에서 다시 확인할 수 있어요.\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    },
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 323.640625,
+          "bottom": 395.640625,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 21,
+          "top": 349.140625,
+          "bottom": 370.140625,
+          "fontSize": 14,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 351.140625,
+          "bottom": 368.140625
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 288,
+            "h": 52,
+            "bottom": 467.640625
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 288,
+            "h": 50,
+            "bottom": 527.640625
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 288,
+            "h": 48,
+            "bottom": 585.640625
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 48,
+            "bottom": 778.078125
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 142,
+          "top": 697.59375,
+          "bottom": 839.59375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 126,
+          "top": 705.59375,
+          "bottom": 831.59375,
+          "fontSize": 28,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 709.59375,
+          "bottom": 826.59375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 288,
+            "h": 74,
+            "bottom": 933.59375
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 288,
+            "h": 74,
+            "bottom": 1017.59375
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 288,
+            "h": 120,
+            "bottom": 1147.59375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 72,
+            "bottom": 1541
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "homeflow",
+      "width": 320,
+      "completed": false,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"뭐 먹을지 정한 다음, 장보기부터 남은 요리까지\" [level=1]\n  - paragraph: 요리 계획에 필요한 재료를 모으고, 집에 있는 재료를 빼서 장보고, 남은 요리를 다음 식사로 이어가요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 요리 계획 → 장보기 → 남은 요리\n  - navigation \"원하는 활동 선택\":\n    - button \"베타 오픈 알림 받기\"\n    - button \"사용 예시 먼저 보기\"\n    - button \"의견만 남기기 · 4문항\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 아직 완료한 활동이 없어요\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    },
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 323.640625,
+          "bottom": 395.640625,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 21,
+          "top": 349.140625,
+          "bottom": 370.140625,
+          "fontSize": 14,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 351.140625,
+          "bottom": 368.140625
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 288,
+            "h": 52,
+            "bottom": 467.640625
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 288,
+            "h": 50,
+            "bottom": 527.640625
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 288,
+            "h": 48,
+            "bottom": 585.640625
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 48,
+            "bottom": 778.078125
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 142,
+          "top": 697.59375,
+          "bottom": 839.59375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 126,
+          "top": 705.59375,
+          "bottom": 831.59375,
+          "fontSize": 28,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 709.59375,
+          "bottom": 826.59375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 320,
+        "viewportWidth": 320,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 288,
+            "h": 74,
+            "bottom": 933.59375
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 288,
+            "h": 122,
+            "bottom": 1065.59375
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 288,
+            "h": 72,
+            "bottom": 1147.59375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 288,
+            "h": 72,
+            "bottom": 1585.234375
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "homeflow",
+      "width": 320,
+      "completed": true,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"뭐 먹을지 정한 다음, 장보기부터 남은 요리까지\" [level=1]\n  - paragraph: 요리 계획에 필요한 재료를 모으고, 집에 있는 재료를 빼서 장보고, 남은 요리를 다음 식사로 이어가요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 요리 계획 → 장보기 → 남은 요리\n  - navigation \"원하는 활동 선택\":\n    - button \"알림 접수 확인 완료\"\n    - button \"사용 예시 다시 보기 완료\"\n    - button \"의견 접수 확인 완료\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 완료한 활동은 위에서 다시 확인할 수 있어요.\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    },
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 307.703125,
+          "bottom": 379.703125,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 21,
+          "top": 333.203125,
+          "bottom": 354.203125,
+          "fontSize": 14,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 335.203125,
+          "bottom": 352.203125
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 350,
+            "h": 52,
+            "bottom": 451.703125
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 350,
+            "h": 50,
+            "bottom": 511.703125
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 350,
+            "h": 48,
+            "bottom": 569.703125
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 48,
+            "bottom": 762.140625
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 100,
+          "top": 665.734375,
+          "bottom": 765.734375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 84,
+          "top": 673.734375,
+          "bottom": 757.734375,
+          "fontSize": 28,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 677.734375,
+          "bottom": 752.734375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "베타 오픈 알림 받기",
+            "w": 350,
+            "h": 74,
+            "bottom": 859.734375
+          },
+          {
+            "text": "사용 예시 먼저 보기",
+            "w": 350,
+            "h": 74,
+            "bottom": 943.734375
+          },
+          {
+            "text": "의견만 남기기 · 4문항",
+            "w": 350,
+            "h": 72,
+            "bottom": 1025.734375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 72,
+            "bottom": 1419.140625
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "homeflow",
+      "width": 390,
+      "completed": false,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"뭐 먹을지 정한 다음, 장보기부터 남은 요리까지\" [level=1]\n  - paragraph: 요리 계획에 필요한 재료를 모으고, 집에 있는 재료를 빼서 장보고, 남은 요리를 다음 식사로 이어가요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 요리 계획 → 장보기 → 남은 요리\n  - navigation \"원하는 활동 선택\":\n    - button \"베타 오픈 알림 받기\"\n    - button \"사용 예시 먼저 보기\"\n    - button \"의견만 남기기 · 4문항\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 아직 완료한 활동이 없어요\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    },
+    {
+      "100": {
+        "strip": {
+          "height": 72,
+          "top": 307.703125,
+          "bottom": 379.703125,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 21,
+          "top": 333.203125,
+          "bottom": 354.203125,
+          "fontSize": 14,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 335.203125,
+          "bottom": 352.203125
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 350,
+            "h": 52,
+            "bottom": 451.703125
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 350,
+            "h": 50,
+            "bottom": 511.703125
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 350,
+            "h": 48,
+            "bottom": 569.703125
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 48,
+            "bottom": 762.140625
+          }
+        ],
+        "nested": 0
+      },
+      "200": {
+        "strip": {
+          "height": 100,
+          "top": 665.734375,
+          "bottom": 765.734375,
+          "minHeight": "72px"
+        },
+        "text": {
+          "height": 84,
+          "top": 673.734375,
+          "bottom": 757.734375,
+          "fontSize": 28,
+          "copy": "요리 계획 → 장보기 → 남은 요리"
+        },
+        "glyphs": {
+          "top": 677.734375,
+          "bottom": 752.734375
+        },
+        "clipTop": 0,
+        "clipBottom": 0,
+        "pageWidth": 390,
+        "viewportWidth": 390,
+        "controls": [
+          {
+            "text": "알림 접수 확인완료",
+            "w": 350,
+            "h": 74,
+            "bottom": 859.734375
+          },
+          {
+            "text": "사용 예시 다시 보기완료",
+            "w": 350,
+            "h": 74,
+            "bottom": 943.734375
+          },
+          {
+            "text": "의견 접수 확인완료",
+            "w": 350,
+            "h": 72,
+            "bottom": 1025.734375
+          },
+          {
+            "text": "개인정보처리방침",
+            "w": 350,
+            "h": 72,
+            "bottom": 1463.375
+          }
+        ],
+        "nested": 0
+      },
+      "topic": "homeflow",
+      "width": 390,
+      "completed": true,
+      "axe": [],
+      "dom": "- main:\n  - paragraph: 로컬 미리보기 · 저장되지 않아요\n  - img \"무먹 무엇을 먹든\"\n  - paragraph: 베타 준비 중 · 사용 예시\n  - heading \"뭐 먹을지 정한 다음, 장보기부터 남은 요리까지\" [level=1]\n  - paragraph: 요리 계획에 필요한 재료를 모으고, 집에 있는 재료를 빼서 장보고, 남은 요리를 다음 식사로 이어가요.\n  - img \"준비된 제육볶음 예시\"\n  - text: 요리 계획 → 장보기 → 남은 요리\n  - navigation \"원하는 활동 선택\":\n    - button \"알림 접수 확인 완료\"\n    - button \"사용 예시 다시 보기 완료\"\n    - button \"의견 접수 확인 완료\"\n  - paragraph: 현재는 사용 예시를 확인할 수 있어요. 실제 서비스는 베타 오픈 후 안내드려요.\n  - paragraph: 하나만 해도 괜찮아요. 순서는 자유예요.\n  - paragraph: 완료한 활동은 위에서 다시 확인할 수 있어요.\n  - link \"개인정보처리방침\":\n    - /url: /privacy",
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": []
+      }
+    }
+  ],
+  "writes": [],
+  "external": [],
+  "errors": []
+}

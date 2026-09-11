@@ -1,0 +1,12 @@
+{
+  "root": "/var/folders/3z/y96spzj121b8vg6xflzxfyww0000gn/T/r2-s5-browser-cZ0ZTs",
+  "port": 3126,
+  "childPid": 60613,
+  "exitCode": 0,
+  "signalCode": null,
+  "otherServersUntouched": [
+    3100,
+    3118,
+    3124
+  ]
+}

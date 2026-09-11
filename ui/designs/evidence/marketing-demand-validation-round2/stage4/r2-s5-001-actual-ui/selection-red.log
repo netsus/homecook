@@ -1,0 +1,66 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-E7jJqE
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-ui-selection.test.ts (4 tests | 4 failed) 3ms
+   × uses the observed full 24 plus 4 branch with either no option or explicit lead edit 2ms
+   × preserves the recovery-only selection 0ms
+   × preserves the recovery zoom selection 0ms
+   × preserves the focused four lead-edit conditions 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-ui-selection.test.ts > uses the observed full 24 plus 4 branch with either no option or explicit lead edit
+TypeError: selectUiScenarioModes is not a function
+ ❯ tests/marketing-round2-ui-selection.test.ts:5:10
+      3|
+      4| it('uses the observed full 24 plus 4 branch with either no option or e…
+      5|   expect(selectUiScenarioModes([])).toEqual(selectUiScenarioModes(['--…
+       |          ^
+      6|   expect(selectUiScenarioModes([])).toEqual({ recoveryZoom: false, rec…
+      7| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/marketing-round2-ui-selection.test.ts > preserves the recovery-only selection
+TypeError: selectUiScenarioModes is not a function
+ ❯ tests/marketing-round2-ui-selection.test.ts:9:10
+      7| });
+      8| it('preserves the recovery-only selection', () => {
+      9|   expect(selectUiScenarioModes(['--recovery-only'])).toEqual({ recover…
+       |          ^
+     10| });
+     11| it('preserves the recovery zoom selection', () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/marketing-round2-ui-selection.test.ts > preserves the recovery zoom selection
+TypeError: selectUiScenarioModes is not a function
+ ❯ tests/marketing-round2-ui-selection.test.ts:12:10
+     10| });
+     11| it('preserves the recovery zoom selection', () => {
+     12|   expect(selectUiScenarioModes(['--recovery-zoom-only'])).toEqual({ re…
+       |          ^
+     13| });
+     14| it('preserves the focused four lead-edit conditions', () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/marketing-round2-ui-selection.test.ts > preserves the focused four lead-edit conditions
+TypeError: selectUiScenarioModes is not a function
+ ❯ tests/marketing-round2-ui-selection.test.ts:15:10
+     13| });
+     14| it('preserves the focused four lead-edit conditions', () => {
+     15|   expect(selectUiScenarioModes(['--lead-edit-only'])).toEqual({ recove…
+       |          ^
+     16| });
+     17|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  14:23:56
+   Duration  203ms (transform 57ms, setup 24ms, import 61ms, tests 3ms, environment 0ms)
+

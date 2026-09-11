@@ -1,0 +1,63 @@
+const ts = require('/Users/cwj/.codex/worktrees/f2a2/homecook/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript');
+const cp = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const sha = '783ae392c648ed43d481e2166c6f42f0cc0a7912';
+const cwd = '/Users/cwj/.codex/worktrees/145f/homecook';
+const cache = new Map(), sources = [];
+function load(p) {
+  let source;
+  for (const candidate of [p, p + '.ts', p + '/index.ts']) {
+    try { source = cp.execFileSync('git', ['show', sha + ':' + candidate], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); p = candidate; break; } catch {}
+  }
+  if (source === undefined) throw Error(p);
+  if (cache.has(p)) return cache.get(p).exports;
+  sources.push({ path: p, sha256: crypto.createHash('sha256').update(source).digest('hex') });
+  const m = { exports: {} }; cache.set(p, m);
+  const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
+  new Function('require', 'module', 'exports', compiled)(id => id.startsWith('.') ? load(path.posix.normalize(path.posix.join(path.posix.dirname(p), id))) : require(id), m, m.exports);
+  return m.exports;
+}
+async function main() {
+  const { createRound2Client } = load('lib/marketing/round2-client.ts');
+  const { RETENTION_UNTIL } = load('lib/marketing-round2.ts');
+  const results = [];
+  for (const failure of ['LEAD_CAPTURE_UNAVAILABLE', 'NETWORK_ERROR']) {
+    for (const modification of ['none-control', 'email', 'consent']) {
+      const requests = [];
+      let leadCalls = 0;
+      const client = createRound2Client({
+        topic: 'recording', pageContext: '', attribution: { first_channel: 'direct', utm_source: null, utm_medium: null, utm_campaign: null, utm_content: null },
+        preview: false, leadReady: true, indexedDB: null, now: () => Date.parse('2026-09-11T00:00:00Z'),
+        fetch: async (_url, init) => {
+          const r = JSON.parse(init.body); requests.push({ action: r.action, event_id: r.event_id });
+          if (r.action === 'lead_submit') {
+            leadCalls++;
+            if (failure === 'NETWORK_ERROR') throw Error('fixture connection loss');
+            return new Response(JSON.stringify({ success: false, data: null, error: { code: failure, message: 'fixture', fields: [] } }), { status: 503 });
+          }
+          return new Response(JSON.stringify({ success: true, error: null, data: {
+            round_version: 'r2.1', topic: 'recording', participation_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', event_id: r.event_id, revision: 1, consent_generation: 1,
+            state: { example: 'not_started', survey: 'not_started', lead: 'started' }, receipt: null, participation_expires_at: '2026-10-10T00:00:00Z', retention_until: RETENTION_UNTIL,
+          } }));
+        },
+      });
+      const observe = () => { const s = client.getState(); return { error: s.error, connection: s.connection, leadState: s.snapshot?.state.lead, revision: s.snapshot?.revision, email: s.leadForm.email, consent: s.leadForm.consent, postCount: requests.length, leadPostCount: leadCalls }; };
+      await client.connect(); await client.openActivity('lead');
+      client.setLeadForm({ email: 'first@example.com', consent: true }); client.setTurnstileToken('fixture');
+      const submitResult = await client.submitLead(), afterFailure = observe();
+      if (modification === 'email') client.setLeadForm({ email: 'corrected@example.com' });
+      if (modification === 'consent') { client.setLeadForm({ consent: false }); client.setLeadForm({ consent: true }); }
+      client.setTurnstileToken('fresh');
+      const afterEdit = observe(), retryResults = [await client.retry(), await client.retry()], afterRetry = observe();
+      const leadIds = requests.filter(r => r.action === 'lead_submit').map(r => r.event_id);
+      results.push({ failure, modification, submitResult, afterFailure, afterEdit, retryResults, afterRetry, newPostsAfterEdit: afterRetry.postCount - afterEdit.postCount, sameLeadEventOnRetry: new Set(leadIds).size === 1, leadAttemptEvidence: modification === 'none-control' ? 'Not directly inspected: repeat lead_submit event_id proves retained attempt.' : 'Not directly inspected: exact source setLeadForm line309 assigns leadAttempt=null; zero later lead_submit observed.' });
+      client.dispose();
+    }
+  }
+  const report = { reviewedSha: sha, method: 'Exact Git blobs transpiled in memory without source edits. Injected fake transport only; no network, DB, server or provider.', sources, results };
+  fs.writeFileSync(path.join(__dirname, 'lead-edit-repro-result.json'), JSON.stringify(report, null, 2) + '\n');
+  console.log(JSON.stringify(results.map(r => ({ failure: r.failure, modification: r.modification, retryResults: r.retryResults, newPostsAfterEdit: r.newPostsAfterEdit, remainingError: r.afterRetry.error.code, sameLeadEventOnRetry: r.sameLeadEventOnRetry }))));
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

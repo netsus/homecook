@@ -1,0 +1,14 @@
+- main:
+  - paragraph: 로컬 미리보기 · 저장되지 않아요
+  - img "무먹 무엇을 먹든"
+  - button "메뉴로"
+  - paragraph: 베타 준비 중 · 사용 예시
+  - heading "사용 예시를 확인했어요" [level=1]
+  - status: 내 레시피에서 먹은 분량의 추정 영양 기록으로 이어지는 예시를 보셨어요.
+  - paragraph: 실제 서비스가 아닌 사용 예시예요.
+  - paragraph: 여기서 마쳐도 괜찮아요. 원하시면 다른 활동도 살펴보세요.
+  - navigation "완료 후 선택":
+    - button "메뉴로 돌아가기"
+    - button "알림 접수 확인"
+    - button "의견만 남기기 · 4문항"
+    - button "사용 예시 다시 보기"

@@ -1,0 +1,45 @@
+{
+  "finding": "R2-S5-001",
+  "author_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "reviewer_task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+  "reviewed_broken_head": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "author_status": "fixed-and-verified-awaiting-independent-recheck",
+  "code_commit": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "public_stage5": "request_changes; independent exact-fix-head re-review pending",
+  "contract_impact": "No public API, field, state or consent policy change. Existing same-event tokenless receipt lookup and consent-generation rules only.",
+  "repair": [
+    "Retain the original in-memory lead request when its editable email/consent draft changes.",
+    "An edited draft exposes explicit tokenless receipt lookup for the original event and email, never posting the edited address under the original event.",
+    "Explicit draft cancellation restores the original email with consent unchecked and challenge cleared; resubmission uses original event after renewed consent/challenge.",
+    "A newer consent generation invalidates the pending attempt before an old request can be sent; explicit new consent/challenge permits a new event.",
+    "Reconnect alone cannot send a lead or remove the edited request recovery controls."
+  ],
+  "tests": {
+    "initial_red": { "failed": 10, "passed_controls": 2 },
+    "client_view_and_new_regression": { "passed": 62, "failed": 0 },
+    "round2_suite": { "passed": 345, "skipped": 7, "failed": 0 },
+    "typecheck": "passed",
+    "workpack_validation": "passed",
+    "integrated_lint": "passed after five byte-preserved independent reproduction sources were relocated to .cjs.txt archives; no rules relaxed",
+    "route_mocked_browser": "10 conditions and 8 viewport/text-enlargement conditions passed; 92 clicks,104 request/response observations,16 address-masked PNGs retained",
+    "actual_api_db_with_observed_traces": "PASS/exit0 in one complete run: original24 plus additional4,1316 chronological observations,115 capture records referencing113 unique masked PNG files,208 parsed response envelopes",
+    "actual_command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+    "final_default_dispatch": "Equivalent complete28 selection verified by unit tests after capture; final no-option command was not executed",
+    "harness_guards_trace_and_selection": { "passed": 22, "failed": 0 }
+  },
+  "route_mocked_browser_evidence": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/README.md",
+  "actual_api_db_evidence": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/README.md",
+  "actual_final_run": "2026-09-11T05-19-39-943Z; hcg_74053_7748de",
+  "actual_run_history": "First full run failed due to test synchronization after24+1; focused4 passed; final complete24+4 passed separately. All three runs retained.",
+  "source_parity": "Executed product files match code_commit by SHA256. Full-run scenario/helper unchanged; captured runner and final default dispatch differ only as preserved in default-dispatch.diff.",
+  "verification_logs": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-s5-001-checks",
+  "remaining_boundaries": {
+    "authority_format": "Independent report format-v1 reduces strict errors from14 to6; six prose requirements remain a separate Stage1 docs change.",
+    "historical_flow_traces": "Prior783 detailed chronological observations remain not-retained; final fresh full28 now has separately retained actual chronological observations and captures.",
+    "unrelated_baseline": "Four narrow-screen and ten desktop visual failures remain separately documented; meal-detail visual identity remains unclassified.",
+    "real_provider": "not_run",
+    "physical_device": "not_run",
+    "final_authority": "pending",
+    "ready_merge_deploy": false
+  }
+}

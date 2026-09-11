@@ -1,0 +1,125 @@
+{
+  "code_commit": "5d58f6e2eb48011e1b97cac3a56f116c516488bd",
+  "base_commit": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
+  "files": [
+    {
+      "path": "app/beta/r2/[topic]/page.tsx",
+      "sha256": "fbd1e7dd7fcbdeab5b272fe2e8b56dc73c0478b4cd19ff89c06017cbd9e17424"
+    },
+    {
+      "path": "components/auth/provider-memory-sync.tsx",
+      "sha256": "913753e51826b32b1c45b1e0dd7350a184a7f09c96df6a64fa06a24e4ff72c6b"
+    },
+    {
+      "path": "components/marketing/round2/round2-landing.tsx",
+      "sha256": "914a743cbb123280051f4df07a8e96316a92f611cfe483ab5eb03df4ac6f8992"
+    },
+    {
+      "path": "components/marketing/round2/round2-turnstile.tsx",
+      "sha256": "08c30af9f5d5ae74f825c604bd054223ea5c2d849a3b68e161f7f341cd5d566b"
+    },
+    {
+      "path": "components/marketing/round2/round2-view.tsx",
+      "sha256": "d0fb62f7052f08221ecad1edce64974641f4f962acce85dcf65244fdb6e07b04"
+    },
+    {
+      "path": "components/marketing/round2/round2.module.css",
+      "sha256": "497e1271454542d818942bd797ccaad37fd3ce304f27ad20a1d9f9dc58ab403c"
+    },
+    {
+      "path": "lib/marketing/round2-client-storage.ts",
+      "sha256": "39476ebc6a575f507aaff05d84e85f5d055864b667e7d83cb1f4b441f97c6bcc"
+    },
+    {
+      "path": "lib/marketing/round2-client.ts",
+      "sha256": "e6555b6657b2435d31d6ac92765b938b948cc06c9d3041770f56ec4011125362"
+    },
+    {
+      "path": "lib/marketing/round2-session.ts",
+      "sha256": "b0dc08faae1c78d586881a2db2c8820c93994084db014c251ec38a8dc4092c2e"
+    },
+    {
+      "path": "lib/server/marketing-round2-page.ts",
+      "sha256": "c0c5e11f93efb99df44c2226f5f10f539b9bbda7907127c1a2a4207aa6ad6c41"
+    },
+    {
+      "path": "middleware.ts",
+      "sha256": "ab4409afe19e9eb1259cc18db00afe7c904f5a8c5aff58b79eb57ce8b41beb0d"
+    },
+    {
+      "path": "next.config.ts",
+      "sha256": "bce9c140832112e84de0fa3c09db8ee2a32223e061a1468fe4bcf0f6f5bb9f50"
+    },
+    {
+      "path": "package.json",
+      "sha256": "adb5c26f6a91206bb3dee2b473bb5e4021a6c0a662a8d1afd66d115e0c7edc47"
+    },
+    {
+      "path": "playwright.marketing-round2.config.ts",
+      "sha256": "98ed04999a66510ea0b7c5f0f6d3ff08dbf7c33b06f0ad8941db5a0d3ed10673"
+    },
+    {
+      "path": "scripts/verify-marketing-round2-ui-isolated.mjs",
+      "sha256": "b24cc98f8cd8bea5dd2f6ec06a2a25ea51c9a706380f2ae2a44badc3e552a9a2"
+    },
+    {
+      "path": "tests/e2e/marketing-round2.spec.ts",
+      "sha256": "d59776b13a268fbb967e6e5f62eeca035cc087f35f75687d36e1e15bf734ef56"
+    },
+    {
+      "path": "tests/marketing-round2-client-storage.test.ts",
+      "sha256": "c6f05ef93885ad77496fa92451f30c98e1ad0729420acc9a7ea42af53b9cd065"
+    },
+    {
+      "path": "tests/marketing-round2-client.test.ts",
+      "sha256": "181da35dcb5ca019de207e86349674ba72cb9e22400daf274e11755ec734ef38"
+    },
+    {
+      "path": "tests/marketing-round2-landing.test.tsx",
+      "sha256": "03a4d10b0647a655b4f4449fe6f7330e5926dc05610f6ec5126b2dec5d2164bf"
+    },
+    {
+      "path": "tests/marketing-round2-page-route.test.tsx",
+      "sha256": "c8f164519ff04169e2738ecb6b93d970f49afe0fec19fd3f97ce9ce86f9b07a8"
+    },
+    {
+      "path": "tests/marketing-round2-page.test.ts",
+      "sha256": "7d89b04cf36857da3894a0a9cd57e2a1d3db81c785a08315a78b6a88fdec6bb7"
+    },
+    {
+      "path": "tests/marketing-round2-path-guard.test.ts",
+      "sha256": "85e106766ceaed1a01409143efbfcaa5b2aa0edcbe2e65f98881e436d81d9a68"
+    },
+    {
+      "path": "tests/marketing-round2-provider-boundary.test.tsx",
+      "sha256": "93ffcf4dd41db144aa64d3d0c9001848a8cf7c2cb60f3e887d6757bb6cc59a62"
+    },
+    {
+      "path": "tests/marketing-round2-ui-isolated.scenarios.mjs",
+      "sha256": "7e7c2f37eaff23851c10c363ae091b30cd8c662847d5b9a7741e7e2df68f39ad"
+    },
+    {
+      "path": "tests/marketing-round2-ui-isolated.test.ts",
+      "sha256": "aa4e63c6cdf88270c9e1636d6118d3b0830d977bf45f748b297600f2d4342c0c"
+    },
+    {
+      "path": "tests/marketing-round2-view.test.tsx",
+      "sha256": "a3864e71f19f3af9d78e1c411375634b35f83ec827304d62875e6c79ed4fe8be"
+    },
+    {
+      "path": "tests/marketing-round2-widget.test.tsx",
+      "sha256": "b56026ea3a2a9f7b8b94c782989309dd99c48cf23c0fead909434ba472535267"
+    },
+    {
+      "path": "tests/helpers/marketing-round2-recovery-evidence.mjs",
+      "sha256": "8ec14c92adf6ea8b953b3e69cf83e6ce2bd3caa7065ebb299cecf3b1b0806c31"
+    },
+    {
+      "path": "tests/marketing-round2-recovery-evidence.test.ts",
+      "sha256": "af64bb7784e78ee01d9ae7bb7090b26c4a8b820034941b71a5543e409aa2d5d9"
+    }
+  ],
+  "prior_code_commit": "2fa7547557554ad96b029b6fc00907fe7f350baa",
+  "repair": "R2-AP-002 harness/evidence only",
+  "product_source_unchanged_from": "fd9c4827cafdfe708f1ceff33ff74269a80753c9"
+}

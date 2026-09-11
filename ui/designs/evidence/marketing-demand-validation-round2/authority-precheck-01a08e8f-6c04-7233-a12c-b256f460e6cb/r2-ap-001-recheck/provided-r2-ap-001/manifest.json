@@ -1,0 +1,186 @@
+{
+  "finding": "R2-AP-001",
+  "code_commit": "2fa7547557554ad96b029b6fc00907fe7f350baa",
+  "artifacts": [
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/build.log",
+      "sha256": "27918b9e5a1d2f4bf14fe2d9ae94355e03ba569b19361ddac67cd2ca89c513cd"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/geometry-green.json",
+      "sha256": "568c731df7e4e0aba0ed644dd97f7d50eb29de6483849ec566789df6dbf4223b"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/geometry-red.json",
+      "sha256": "4279d2e788328b0c44087a81a4919223de28f867d8530481825114a171ca4929"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/green.log",
+      "sha256": "786c2406e5c2d0836fdd298224ba65cbf23adb24abd6d6d2f1e8ee58b06e6d79"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-completed-after-100percent.png",
+      "sha256": "e0fea7879a56fc048ba5866f14154ca50f617877b897c3d64f8b2bb123f30ec1"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-completed-after-200percent.png",
+      "sha256": "966ff21fb07ea7f6d5a58231af88bd4ca0e0fca43094aee1561b1862d024cae7"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-completed-before-100percent.png",
+      "sha256": "e0fea7879a56fc048ba5866f14154ca50f617877b897c3d64f8b2bb123f30ec1"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-completed-before-200percent.png",
+      "sha256": "754d811e12f217fd4001e873f62bc1bea2f482f27395f65860c54ae00344866d"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-initial-after-100percent.png",
+      "sha256": "c151008e63928b60e20dd47a3cfcacbebca843c29c80e7c32baaac622639d2d7"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-initial-after-200percent.png",
+      "sha256": "136ac485ca7356c9d9c2a8e91df33832b890b6758028b1e42ea3769c1364941a"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-initial-before-100percent.png",
+      "sha256": "c151008e63928b60e20dd47a3cfcacbebca843c29c80e7c32baaac622639d2d7"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-320-initial-before-200percent.png",
+      "sha256": "8beada59b30747126d9b870f897d4b673c739a486042be9b26f7b14a4debf5a4"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-completed-after-100percent.png",
+      "sha256": "cce900124d921b5b46502c1ce1d20543b5096c45e378604499fa318818e5852a"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-completed-after-200percent.png",
+      "sha256": "3ffe453e61e561fb98c841d532c247584ee280e7039668581d2b658c8b287156"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-completed-before-100percent.png",
+      "sha256": "cce900124d921b5b46502c1ce1d20543b5096c45e378604499fa318818e5852a"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-completed-before-200percent.png",
+      "sha256": "4a90767b0b86d445498333266e8a5ace7032225e869e3e9f88acb20fe21b1e0d"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-initial-after-100percent.png",
+      "sha256": "ae6d4bf869ae357cb67426257bfaf046e2563333aa63cb6546a83d15e99279dc"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-initial-after-200percent.png",
+      "sha256": "1db6d371312924ec8a201bcdb1416272fb00e0c06f0ef748b3691a1e936e4a33"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-initial-before-100percent.png",
+      "sha256": "ae6d4bf869ae357cb67426257bfaf046e2563333aa63cb6546a83d15e99279dc"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/homeflow-390-initial-before-200percent.png",
+      "sha256": "1d04ce38eaf486d545f2b6af8cc3cae0eb5896db8ae19aacb5dc243f9a0a846d"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/lint-targeted.log",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/prior-eval-result.json",
+      "sha256": "f97c509572a0be9c611caae9c99eea36dedb250386ed6e1bfaf7055300feaa37"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/prior-exploratory-report.json",
+      "sha256": "3f92e8d4f2b0808272ab08ac760350d59634b8b9efd8aa823be945f6bfda6431"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/prior-source-manifest.json",
+      "sha256": "68446c656543281600aedd0acf951ada386ae54d7cbaaa5f945d5d1b45ed9510"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-completed-after-100percent.png",
+      "sha256": "588b7dd722488823c3aff99c2760e0732fb06df7541f3bd8a9f2c1b157d34449"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-completed-after-200percent.png",
+      "sha256": "b7ff3bd30f55a8923add478501264843a06c847eb421d9696f7c930722ad2727"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-completed-before-100percent.png",
+      "sha256": "588b7dd722488823c3aff99c2760e0732fb06df7541f3bd8a9f2c1b157d34449"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-completed-before-200percent.png",
+      "sha256": "06149e21bf694a9b0f3d8b4e5f9bd57495aa7f19e394176688615700163c05f5"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-initial-after-100percent.png",
+      "sha256": "4139568b5cc84c1c3bdec8a667a62e0eda737c4b47b8dd1813fd5699688e8db7"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-initial-after-200percent.png",
+      "sha256": "1e666a7c89c4346660afc817bd3994a5c1a80668a78b57837783b4e4c0728371"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-initial-before-100percent.png",
+      "sha256": "4139568b5cc84c1c3bdec8a667a62e0eda737c4b47b8dd1813fd5699688e8db7"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-320-initial-before-200percent.png",
+      "sha256": "421948a739b697c3c74d725682ad3ba091fb5647186ba2fc4f9a362adf2e5a05"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-completed-after-100percent.png",
+      "sha256": "6a6c7e567b5cd1d4cd3cfeb0ffdb9912eb3481e3b98748014757f1ae399fcfbb"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-completed-after-200percent.png",
+      "sha256": "92d4fd0965a55c29cbcad54eaf7f3cc793a178b1720509946ff54c08e3e6e865"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-completed-before-100percent.png",
+      "sha256": "6a6c7e567b5cd1d4cd3cfeb0ffdb9912eb3481e3b98748014757f1ae399fcfbb"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-completed-before-200percent.png",
+      "sha256": "9c5d48ad693f7cc8ce9c9b95f5b4ca3aa2e04fa6b62679d6a7db087687b75c58"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-initial-after-100percent.png",
+      "sha256": "72c4082732e4d76c4a7eb954e1c8804bb726613368deb61bb0b2735ae6f8b85a"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-initial-after-200percent.png",
+      "sha256": "c7efda47f2d7940a0573d7897a853c5e964b3f859ee5a4f057b891186f44c421"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-initial-before-100percent.png",
+      "sha256": "72c4082732e4d76c4a7eb954e1c8804bb726613368deb61bb0b2735ae6f8b85a"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/recording-390-initial-before-200percent.png",
+      "sha256": "c644eaddd783523c528d7a7562ee19712e09794dc2ec388ad605b2bd7def6296"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/red.log",
+      "sha256": "7b8b07bf597a614d316bca54eceda1c2f6fdcace0bd9e9a6dc02a7f6dc830bbd"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/reviewer-zoom-clipping.json",
+      "sha256": "8aeedbdd41f8fc1a5c6a95ff30da7de7997a1bd5cbb3fb45b9b10d0052f66cf0"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/screenshots.json",
+      "sha256": "9484fd43e06bf9c429691aa62cb9c2aa13272f2bf6f0527f7cbb2013ab12bf0b"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/visual-verdict-after.json",
+      "sha256": "a56117a2bf78f413b8a9c17590d01c6fa1bd4597c7032c99b7fa6b3286099449"
+    },
+    {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/visual-verdict-before.json",
+      "sha256": "551d48c1bcd8e41efcaecaec80895018c575e8630f432b5c5d71197c7621a4dc"
+    }
+  ]
+}

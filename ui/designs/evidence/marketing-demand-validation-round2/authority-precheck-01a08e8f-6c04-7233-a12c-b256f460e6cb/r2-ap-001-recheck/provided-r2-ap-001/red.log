@@ -1,0 +1,556 @@
+
+Running 8 tests using 1 worker
+
+(node:57609) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57609) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 initial MENU keeps 200 percent text inside its strip
+  1) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 initial MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 126
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-6b27f-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-6b27f-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-6b27f-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-6b27f-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:57636) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57636) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 completed MENU keeps 200 percent text inside its strip
+  2) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 completed MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 126
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-dad08-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-dad08-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-dad08-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-dad08-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:57764) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57764) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 initial MENU keeps 200 percent text inside its strip
+  3) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 initial MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 84
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-46eef-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-46eef-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-46eef-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-46eef-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:57790) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57790) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 completed MENU keeps 200 percent text inside its strip
+  4) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 completed MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 84
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-31201-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-31201-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-31201-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-31201-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:57817) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57817) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[5/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 initial MENU keeps 200 percent text inside its strip
+  5) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 initial MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 126
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-78db1-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-78db1-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-78db1-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-78db1-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:57841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[6/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 completed MENU keeps 200 percent text inside its strip
+  6) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 completed MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 27
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 126
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-d7cd3-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-d7cd3-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-d7cd3-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-d7cd3-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:57868) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57868) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 initial MENU keeps 200 percent text inside its strip
+  7) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 initial MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 84
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-65150-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-65150-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-65150-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-65150-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:57992) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:57992) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/8] tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 completed MENU keeps 200 percent text inside its strip
+  8) tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 completed MENU keeps 200 percent text inside its strip
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                     ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:37
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 6
+
+      142 |       await page.screenshot({ path: info.outputPath("MENU-200percent.png"), fullPage: true });
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+    > 144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+          |                                                                               ^
+      145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+      146 |       await checkLayout(page);
+      147 |     });
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:144:79
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 84
+    Received:    72
+
+      143 |       expect(enlarged.fontSize).toBe(normal.fontSize * 2);
+      144 |       expect.soft(enlarged.clipTop).toBe(0); expect.soft(enlarged.clipBottom).toBe(0);
+    > 145 |       expect.soft(enlarged.strip.height).toBeGreaterThanOrEqual(enlarged.text.height);
+          |                                          ^
+      146 |       await checkLayout(page);
+      147 |     });
+      148 |   }
+        at /Users/cwj/.codex/worktrees/f2a2/homecook/tests/e2e/marketing-round2.spec.ts:145:42
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-afe50-rcent-text-inside-its-strip/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-afe50-rcent-text-inside-its-strip/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-afe50-rcent-text-inside-its-strip/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .omx/artifacts/r2-stage4/preview-browser/runs/r2-ap-001-red/results/marketing-round2-R2-AP-001-afe50-rcent-text-inside-its-strip/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  8 failed
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 initial MENU keeps 200 percent text inside its strip
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 320 completed MENU keeps 200 percent text inside its strip
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 initial MENU keeps 200 percent text inside its strip
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 recording 390 completed MENU keeps 200 percent text inside its strip
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 initial MENU keeps 200 percent text inside its strip
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 320 completed MENU keeps 200 percent text inside its strip
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 initial MENU keeps 200 percent text inside its strip
+    tests/e2e/marketing-round2.spec.ts:113:9 › R2-AP-001 homeflow 390 completed MENU keeps 200 percent text inside its strip

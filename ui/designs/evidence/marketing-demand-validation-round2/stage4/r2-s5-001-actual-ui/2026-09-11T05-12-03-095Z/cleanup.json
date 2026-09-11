@@ -1,0 +1,12 @@
+{
+  "projectId": "hcg_62361_25ba35",
+  "ownedDockerResourcesRemoved": true,
+  "ownedFilesRemoved": true,
+  "ownedServerStopped": true,
+  "preservedExistingServers": [
+    3100,
+    3118,
+    3124
+  ],
+  "completedAt": "2026-09-11T05:16:13.640Z"
+}

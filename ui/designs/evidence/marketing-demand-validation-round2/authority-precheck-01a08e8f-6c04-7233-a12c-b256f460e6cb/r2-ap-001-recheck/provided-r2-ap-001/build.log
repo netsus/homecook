@@ -1,0 +1,163 @@
+
+> homecook@0.1.0 build /Users/cwj/.codex/worktrees/f2a2/homecook
+> next build
+
+   ▲ Next.js 15.5.24
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 60s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/87) ...
+   Generating static pages (21/87)
+   Generating static pages (43/87)
+   Generating static pages (65/87)
+ ✓ Generating static pages (87/87)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                               Size  First Load JS  Revalidate  Expire
+┌ ○ /                                                                  19.4 kB         227 kB
+├ ○ /_not-found                                                          374 B         103 kB
+├ ○ /about                                                             5.82 kB         130 kB
+├ ƒ /account-quarantine                                                 1.8 kB         112 kB
+├ ƒ /admin                                                             3.72 kB         110 kB
+├ ƒ /admin/audit-logs                                                  4.67 kB         111 kB
+├ ƒ /admin/events                                                      5.18 kB         111 kB
+├ ƒ /admin/feedback                                                     4.5 kB         110 kB
+├ ƒ /admin/users                                                       4.39 kB         110 kB
+├ ƒ /api/auth/oauth-userinfo/kakao                                       374 B         103 kB
+├ ƒ /api/auth/oauth-userinfo/naver                                       374 B         103 kB
+├ ƒ /api/v1/admin/audit-logs                                             374 B         103 kB
+├ ƒ /api/v1/admin/operational-events                                     374 B         103 kB
+├ ƒ /api/v1/admin/page-view                                              374 B         103 kB
+├ ƒ /api/v1/admin/users                                                  374 B         103 kB
+├ ƒ /api/v1/auth/logout                                                  374 B         103 kB
+├ ƒ /api/v1/cooked-batches                                               374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/adjust                                   374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/close-unweighed                          374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/discard                                  374 B         103 kB
+├ ƒ /api/v1/cooked-batches/[id]/weight                                   374 B         103 kB
+├ ƒ /api/v1/cooking-methods                                              374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts                                     374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts/[id]/cancel                         374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts/[id]/complete                       374 B         103 kB
+├ ƒ /api/v1/cooking/session-attempts/[id]/cook-mode                      374 B         103 kB
+├ ƒ /api/v1/cooking/sessions                                             374 B         103 kB
+├ ƒ /api/v1/cooking/sessions/[session_id]/cancel                         374 B         103 kB
+├ ƒ /api/v1/cooking/sessions/[session_id]/complete                       374 B         103 kB
+├ ƒ /api/v1/cooking/sessions/[session_id]/cook-mode                      374 B         103 kB
+├ ƒ /api/v1/cooking/standalone-complete                                  374 B         103 kB
+├ ƒ /api/v1/feedback/404                                                 374 B         103 kB
+├ ƒ /api/v1/food-catalog/search                                          374 B         103 kB
+├ ƒ /api/v1/food-products                                                374 B         103 kB
+├ ƒ /api/v1/food-products/[product_id]                                   374 B         103 kB
+├ ƒ /api/v1/food-products/[product_id]/report                            374 B         103 kB
+├ ƒ /api/v1/ingredients                                                  374 B         103 kB
+├ ƒ /api/v1/leftovers                                                    374 B         103 kB
+├ ƒ /api/v1/leftovers/[leftover_id]/eat                                  374 B         103 kB
+├ ƒ /api/v1/leftovers/[leftover_id]/keep                                 374 B         103 kB
+├ ƒ /api/v1/leftovers/[leftover_id]/uneat                                374 B         103 kB
+├ ƒ /api/v1/marketing/round2                                             374 B         103 kB
+├ ƒ /api/v1/marketing/validation                                         374 B         103 kB
+├ ƒ /api/v1/meal-log                                                     374 B         103 kB
+├ ƒ /api/v1/meal-log/entries                                             374 B         103 kB
+├ ƒ /api/v1/meal-log/entries/[id]                                        374 B         103 kB
+├ ƒ /api/v1/meal-log/recent                                              374 B         103 kB
+├ ƒ /api/v1/meals                                                        374 B         103 kB
+├ ƒ /api/v1/meals/[meal_id]                                              374 B         103 kB
+├ ƒ /api/v1/pantry                                                       374 B         103 kB
+├ ƒ /api/v1/pantry/bundles                                               374 B         103 kB
+├ ƒ /api/v1/planner                                                      374 B         103 kB
+├ ƒ /api/v1/planner/columns                                              374 B         103 kB
+├ ƒ /api/v1/planner/columns/[column_id]                                  374 B         103 kB
+├ ƒ /api/v1/planner/nutrition                                            374 B         103 kB
+├ ƒ /api/v1/product-planner-entries                                      374 B         103 kB
+├ ƒ /api/v1/product-planner-entries/[entry_id]                           374 B         103 kB
+├ ƒ /api/v1/recipe-books                                                 374 B         103 kB
+├ ƒ /api/v1/recipe-books/[book_id]                                       374 B         103 kB
+├ ƒ /api/v1/recipe-books/[book_id]/recipes                               374 B         103 kB
+├ ƒ /api/v1/recipe-books/[book_id]/recipes/[recipe_id]                   374 B         103 kB
+├ ƒ /api/v1/recipes                                                      374 B         103 kB
+├ ƒ /api/v1/recipes/[id]                                                 374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/cook-mode                                       374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/future-plan-impact                              374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/like                                            374 B         103 kB
+├ ƒ /api/v1/recipes/[id]/save                                            374 B         103 kB
+├ ƒ /api/v1/recipes/images                                               374 B         103 kB
+├ ƒ /api/v1/recipes/images/[image_object_id]/cancel                      374 B         103 kB
+├ ƒ /api/v1/recipes/pantry-match                                         374 B         103 kB
+├ ƒ /api/v1/recipes/tag-suggestions                                      374 B         103 kB
+├ ƒ /api/v1/recipes/themes                                               374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/candidate-drafts                             374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extract                                      374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extraction-jobs                              374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extraction-jobs/[job_id]                     374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/extractions/[extraction_id]                  374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/ingredient-registration                      374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/recipio/check                                374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/register                                     374 B         103 kB
+├ ƒ /api/v1/recipes/youtube/validate                                     374 B         103 kB
+├ ƒ /api/v1/shopping/lists                                               374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]                                     374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/complete                            374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/items/[item_id]                     374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/items/bulk                          374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/items/reorder                       374 B         103 kB
+├ ƒ /api/v1/shopping/lists/[list_id]/share-text                          374 B         103 kB
+├ ƒ /api/v1/shopping/preview                                             374 B         103 kB
+├ ƒ /api/v1/tags                                                         374 B         103 kB
+├ ƒ /api/v1/users/me                                                     374 B         103 kB
+├ ƒ /api/v1/users/me/cutover-quarantine-resolution                       374 B         103 kB
+├ ƒ /api/v1/users/me/gamification                                        374 B         103 kB
+├ ƒ /api/v1/users/me/gamification/archive                                374 B         103 kB
+├ ƒ /api/v1/users/me/gamification/notifications/seen                     374 B         103 kB
+├ ƒ /api/v1/users/me/gamification/tutorial-quests/[quest_key]/dismiss    374 B         103 kB
+├ ƒ /api/v1/users/me/progress                                            374 B         103 kB
+├ ƒ /api/v1/users/me/settings                                            374 B         103 kB
+├ ƒ /api/v1/users/me/youtube-extraction-jobs                             374 B         103 kB
+├ ƒ /api/v1/users/me/youtube-extraction-jobs/delivered                   374 B         103 kB
+├ ƒ /api/v1/users/me/youtube-extraction-jobs/seen                        374 B         103 kB
+├ ƒ /auth/callback                                                       374 B         103 kB
+├ ƒ /auth/flow/cancel                                                    374 B         103 kB
+├ ƒ /auth/flow/start                                                     374 B         103 kB
+├ ƒ /auth/link/callback                                                  374 B         103 kB
+├ ƒ /auth/logout                                                         374 B         103 kB
+├ ƒ /beta                                                              20.3 kB         132 kB
+├ ƒ /beta/r2/[topic]                                                     18 kB         126 kB
+├ ƒ /cooking/recipes/[recipe_id]/cook-mode                             2.79 kB         207 kB
+├ ƒ /cooking/session-attempts/[session_id]/cook-mode                   6.84 kB         141 kB
+├ ƒ /cooking/sessions/[session_id]/cook-mode                           3.67 kB         208 kB
+├ ƒ /internal/account-maintenance/tick                                   374 B         103 kB
+├ ƒ /leftovers                                                         18.8 kB         213 kB
+├ ƒ /leftovers/ate                                                      8.8 kB         195 kB
+├ ƒ /login                                                             5.86 kB         169 kB
+├ ○ /manifest.webmanifest                                                374 B         103 kB
+├ ƒ /menu-add                                                          15.6 kB         209 kB
+├ ƒ /menu/add/manual                                                   2.97 kB         160 kB
+├ ƒ /menu/add/youtube                                                  1.24 kB         162 kB
+├ ƒ /mypage                                                            36.3 kB         284 kB
+├ ƒ /mypage/recipe-books/[book_id]                                     2.28 kB         219 kB
+├ ƒ /onboarding/nickname                                               3.94 kB         129 kB
+├ ƒ /pantry                                                            29.5 kB         251 kB
+├ ƒ /planner                                                           32.9 kB         254 kB
+├ ƒ /planner/[date]/[columnId]                                         17.5 kB         246 kB
+├ ○ /privacy                                                           1.74 kB         123 kB
+├ ƒ /recipe/[id]                                                       28.4 kB         250 kB
+├ ƒ /recipes/new/youtube                                               1.24 kB         162 kB
+├ ○ /robots.txt                                                          374 B         103 kB
+├ ƒ /settings                                                          17.6 kB         204 kB
+├ ƒ /shopping/flow                                                     8.34 kB         150 kB
+├ ƒ /shopping/lists/[list_id]                                          2.44 kB         154 kB
+├ ○ /sitemap.xml                                                         374 B         103 kB          1h      1y
+└ ○ /terms                                                             1.74 kB         123 kB
++ First Load JS shared by all                                           103 kB
+  ├ chunks/4974-f9e5be3879e76616.js                                    46.3 kB
+  ├ chunks/b4df6a91-32a7f77bb489ae9f.js                                54.2 kB
+  └ other shared chunks (total)                                           2 kB
+
+
+ƒ Middleware                                                           32.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

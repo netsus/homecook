@@ -1,0 +1,503 @@
+{
+  "schema": "homecook.stage4.authority-evidence-projection.v1",
+  "work_item_id": "marketing-demand-validation-round2",
+  "prepared_by_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "assembly_scope": "기존 원문 관찰을 연결한 작성자 자료이며 새 실행·독립 승인 결과가 아니다.",
+  "historical_precheck": {
+    "scope": "authority_precheck",
+    "verdict": "pass",
+    "required_fix_ids": [],
+    "closed_findings": [
+      "R2-AP-001",
+      "R2-AP-002"
+    ],
+    "history": [
+      {
+        "revision": 1,
+        "sha": "3d1054b39c615fccd6a1541aad6256e45ec18f28",
+        "verdict": "hold",
+        "open_ids": [
+          "R2-AP-001"
+        ]
+      },
+      {
+        "revision": 2,
+        "sha": "fd9c4827cafdfe708f1ceff33ff74269a80753c9",
+        "verdict": "hold",
+        "closed_ids": [
+          "R2-AP-001"
+        ],
+        "open_ids": [
+          "R2-AP-002"
+        ]
+      },
+      {
+        "revision": 3,
+        "sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+        "verdict": "pass",
+        "closed_ids": [
+          "R2-AP-001",
+          "R2-AP-002"
+        ],
+        "open_ids": []
+      }
+    ],
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+      "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+    }
+  },
+  "current_review_boundary": {
+    "public_stage5": "request_changes",
+    "required_finding": "R2-S5-001",
+    "finding_reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "finding_source": "독립 Stage5 원작성 결과를 repo-local로 이식한 원문",
+    "repair_reverification": "author route-mocked10 and actual28 PASS; independent exact-head recheck pending",
+    "final_product_design_authority": "pending",
+    "stage6": "pending",
+    "design_status": "pending-review",
+    "ready_or_merge_approved": false,
+    "activation_or_deployment_approved": false,
+    "stage5_result": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401"
+    },
+    "stage5_reviewed_at": "2026-09-11T04:49:03.871510+00:00",
+    "requested_repair_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77"
+  },
+  "applicability": "과거783 precheck/Stage5 원문과 새 수정본 작성자 실행을 구분한다. 수정본은 later code7bfe0d3b와 source parity로 연결하며 독립 재검토 pending이다.",
+  "evidence_kind": "review-independence",
+  "roles": [
+    {
+      "role": "Stage4 frontend-implementer",
+      "task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+      "status": "author repair in progress; no self approval"
+    },
+    {
+      "role": "authority_precheck design-reviewer",
+      "task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+      "status": "historical pass",
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+      }
+    },
+    {
+      "role": "public Stage5 reviewer",
+      "task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+      "status": "request_changes; repair re-review pending",
+      "required_finding": "R2-S5-001",
+      "repo_local_final_report": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-report.md",
+        "sha256": "cc98722c9bdf261246eb6b7f94a49f7b34b7c4346b5666248ad4611de497d7c5"
+      },
+      "result": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+        "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401"
+      }
+    },
+    {
+      "role": "final product-design-authority",
+      "task_id": null,
+      "status": "pending; distinct task ID/evidence not finalized here"
+    },
+    {
+      "role": "Stage6 reviewer",
+      "task_id": null,
+      "status": "pending; distinct task ID/evidence not finalized here"
+    },
+    {
+      "role": "coordinator",
+      "task_id": "01a07316-265c-7f22-b0af-fa22b7fb2b8a",
+      "status": "assignment coordination, not independent stage approval"
+    }
+  ],
+  "verified_distinction": {
+    "stage4_differs_from_precheck": true,
+    "stage4_differs_from_assigned_stage5": true,
+    "all_required_stage_ids_finalized": false
+  },
+  "evidence_ownership": {
+    "normal200percent56": "reviewer direct memory-preview; same-task helper supported393/1280 visual readback, not independent approval",
+    "recovery200percent8": "author actual isolated run; reviewer personally reviewed16PNG and validated8geometry/hash; did not rerun DB",
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+      "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29",
+      "json_pointer": "/direct_validation"
+    }
+  },
+  "open_stage5": {
+    "id": "R2-S5-001",
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "status": "request_changes",
+    "reported_cases": 4,
+    "controls": 2,
+    "observation": "503 LEAD_CAPTURE_UNAVAILABLE/NETWORK_ERROR followed by email edit or consent off/on loses leadAttempt while error persists; retry true without another POST. No-edit controls retried same event.",
+    "source_kind": "독립 reviewer 원문 repo-local 이식 결과",
+    "repair_green_claimed": false,
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401",
+      "json_pointer": "/findings/0"
+    },
+    "reproduction": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/reproduction/lead-edit-repro-result.json",
+      "sha256": "af492a44cfb6c4a81056a8fae053bd5449faac6f2fd41b821cd5e146ba653024"
+    },
+    "direct_reproduction_topic": "recording",
+    "homeflow_scope": "공유 코드 근거 영향 판단; Stage5 최초 동적 재현 미실행",
+    "author_fix_evidence": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+      "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+    },
+    "repair_note": "작성자 browser10/actual28 PASS와 독립 Stage5 재검토/closure를 구분한다. 최종 reviewer 결과 대기.",
+    "author_actual_fix_evidence": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+      "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+    }
+  },
+  "pending": [
+    "confirmed design status",
+    "accept-r2-authority complete",
+    "final authority",
+    "Stage6",
+    "Ready/merge",
+    "deployment/activation"
+  ],
+  "static_boards_are_runtime_authority": false,
+  "stage5_checklist_summary": {
+    "reviewed": 18,
+    "pass": 14,
+    "request_changes": 3,
+    "downstream_gate_pending": 1,
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401",
+      "json_pointer": "/checklist_results"
+    }
+  },
+  "format_revision_scope": {
+    "source": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/inputs/format-revision.json",
+      "sha256": "f2cfaabdceae86aee58823388a5e362a3ed5649e46395a31ca1b02efb55fd261"
+    },
+    "six_author_json_approved": false,
+    "source_record": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+      "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401",
+      "json_pointer": "/format_compatibility_revision"
+    }
+  },
+  "requirement_id": 6,
+  "source_requirement": "Use distinct Codex task IDs for Stage 4 author, Stage 5 reviewer, final product-design-authority and Stage 6 reviewer; static boards are not runtime authority.",
+  "subject_head_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "producer_task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "subject_head_scope": "Later code commit bound by1869 captured tracked-source hashes. Historical783 precheck/Stage5 and dirty capture baselines remain individually recorded; future evidence commit not invented.",
+  "format_requirement_source": {
+    "git_commit": "8c6573bf594fa15613205ce97e4435d751c7d87c",
+    "repository_path": "docs/workpacks/marketing-demand-validation-round2/stage4-evidence-format.md",
+    "read_method": "git show origin/master:path"
+  },
+  "not_run": [
+    "actual-provider",
+    "physical-device",
+    "independent repaired-head Stage5 recheck",
+    "final authority",
+    "Stage6"
+  ],
+  "limitations": [
+    "과거783 precheck PASS는 수정본 승인으로 승계하지 않는다.",
+    "현재 JSON은 작성자 근거 projection이며 판정 권한은 독립 reviewer에게 있다.",
+    "새 actual28 trace/capture 근거는 보존했으나 독립 Stage5 exact-head 재검토·전체gate 승인을 대신하지 않는다."
+  ],
+  "source_runs": [
+    {
+      "run_id": "precheck-final783",
+      "command": "independent authority_precheck evidence review",
+      "captured_at": "2026-09-11T04:38:24.515833+00:00",
+      "environment": "review of preview-mock and provided isolated-integration",
+      "subject_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "result": "historical pass precheck only",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+      }
+    },
+    {
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "command": "node tests/marketing-round2-lead-edit.browser.mjs",
+      "captured_at": "2026-09-11T05:10:43.874Z",
+      "environment": "preview-mock",
+      "submode": "route-mocked actual client/view; fixture server page props",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "captured_source_identity": "uncommitted source hashes in source-manifest; not exact783 product bytes",
+      "result": "PASS",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/source-manifest.json",
+        "sha256": "62cfc0f7bfdfe96a2e5fe9a8f523b6632115bcd09f006048ebf6acea4031df3d"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+        "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386"
+      },
+      "geometry_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/geometry.json",
+        "sha256": "30ac3738ae4c3aad42e542e71c7853acf74979a5b2b72aecc593b0f7700fcbce"
+      },
+      "limitations": [
+        "실제 API/DB/provider 실행 아님",
+        "server page fixture 변경; client/view/CSS 원형",
+        "독립 reviewer 재검토 pending"
+      ]
+    },
+    {
+      "run_id": "hcg_74053_7748de",
+      "artifact_directory": "2026-09-11T05-19-39-943Z",
+      "command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+      "captured_at": "2026-09-11T05:20:15.542Z",
+      "completed_at": "2026-09-11T05:23:22.816Z",
+      "environment": "isolated-integration",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "source_identity": "At capture: baseline783 plus uncommitted file hashes. Later compared to code commit; not execution of that later commit.",
+      "matched_later_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+      "result": "PASS",
+      "checks": 28,
+      "case_groups": 26,
+      "trace_observations": 1316,
+      "screenshot_records": 115,
+      "unique_png_files": 113,
+      "parsed_response_envelopes": 208,
+      "count_meaning": "observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/source-manifest.json",
+        "sha256": "f901898dc98fcdf0b0d7dff848af31efc786c4cdd2395bb508668cc03552cc03"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+        "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+        "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+      },
+      "manifest": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/artifact-manifest.json",
+        "sha256": "06be0cd9347e87ad2818315f686149f938ae4c3b7b3e07dc7864d8f2cf6af8dc"
+      },
+      "cleanup": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/cleanup.json",
+        "sha256": "e454e6933bd3cfc70c8572c75efa329a8791dddc92e8367e99a3c82c76eafafb"
+      },
+      "parity": {
+        "verification": "read-only SHA256 comparison of captured snapshotFiles with git cat-file at exact later code commit",
+        "tracked_files_compared": 1869,
+        "mismatches": 0,
+        "generated_not_tracked": [
+          "next-env.d.ts"
+        ],
+        "captured_snapshot_total": 1870,
+        "harness_caveat": "scenario/helper hash match. Runner changed only default option dispatch after capture; full invocation used explicit --lead-edit.",
+        "dispatch_diff": {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/default-dispatch.diff",
+          "sha256": "3628cd7f0e0c75d17828df3f5653bd69d9492562c6d9e948d66dfcb0518a95c1"
+        },
+        "dispatch_unit_log": {
+          "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/verification.log",
+          "sha256": "a471ecc69f590023cf98e33410fb1b821c951e2008b9eecd670040fe690f80be"
+        }
+      },
+      "limitations": [
+        "실제503/provider장애 주입 아님: unreceived 첫 송신을 브라우저에서 중단; 이후422/200/DB는 실제",
+        "mock provider19; 실제 provider/실기기/운영activation 미실행",
+        "115 screenshot records contain two repeated names;113 unique retained PNG.",
+        "독립 Stage5/final authority approval pending"
+      ]
+    }
+  ],
+  "archive_relocations": {
+    "precheck_scripts": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/archive-relocations.json",
+      "sha256": "cf892c0bed99ddff9fa57670e2d83ab258f73372b4c43647c5fd83d6a0636eb1"
+    },
+    "stage5_report_paths": {
+      "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/path-relocation/path-relocation-manifest.json",
+      "sha256": "97c9e619fc5fb7700683d347bf101d958c9502da1cf21246190954ea7cdd0fd3"
+    },
+    "effect": "Executable extensions changed to archival text; original bytes/Stage5 request_changes verdict preserved."
+  },
+  "author_fix_browser_overlay": {
+    "scope": "R2-S5-001 only; not full actual integration",
+    "run": {
+      "run_id": "r2-s5-browser-2026-09-11T05:10:43.874Z",
+      "command": "node tests/marketing-round2-lead-edit.browser.mjs",
+      "captured_at": "2026-09-11T05:10:43.874Z",
+      "environment": "preview-mock",
+      "submode": "route-mocked actual client/view; fixture server page props",
+      "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "captured_source_sha": null,
+      "captured_source_identity": "uncommitted source hashes in source-manifest; not exact783 product bytes",
+      "result": "PASS",
+      "source": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/source-manifest.json",
+        "sha256": "62cfc0f7bfdfe96a2e5fe9a8f523b6632115bcd09f006048ebf6acea4031df3d"
+      },
+      "result_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/result.json",
+        "sha256": "542027ee4f9afe1a1ac462a3df99b59d0a409a87b3e08f27f07a291d5b54364d"
+      },
+      "observations_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/cases.json",
+        "sha256": "a956103c893dc6b8e894637003bb078fd2126549e5b79c47134a6d5766e21386"
+      },
+      "geometry_ref": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/geometry.json",
+        "sha256": "30ac3738ae4c3aad42e542e71c7853acf74979a5b2b72aecc593b0f7700fcbce"
+      },
+      "limitations": [
+        "실제 API/DB/provider 실행 아님",
+        "server page fixture 변경; client/view/CSS 원형",
+        "독립 reviewer 재검토 pending"
+      ]
+    },
+    "conditions": 10,
+    "clicks": 92,
+    "request_response_observations": 104,
+    "geometry_conditions": 8,
+    "text_100_percent_conditions": 4,
+    "text_200_percent_conditions": 4,
+    "masked_pngs": 16,
+    "capture_mask": "email fixture field covered only in screenshots; no product/measurement change",
+    "independent_review": "pending"
+  },
+  "observations": [
+    {
+      "role": "Stage4 frontend-implementer",
+      "task_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+      "status": "author repair in progress; no self approval",
+      "expected": "독립 Stage 소유 task와 exact대상/원문 근거",
+      "observed": "author repair in progress; no self approval",
+      "result": "historical role provenance recorded"
+    },
+    {
+      "role": "authority_precheck design-reviewer",
+      "task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+      "status": "historical pass",
+      "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+      "source": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/independent-precheck-01a08e8f/precheck-result.json",
+        "sha256": "ca4aa04db895a590cf935ffb165dd80cf081214536a03ccefa313b02e10d5a29"
+      },
+      "expected": "독립 Stage 소유 task와 exact대상/원문 근거",
+      "observed": "historical pass",
+      "result": "historical role provenance recorded"
+    },
+    {
+      "role": "public Stage5 reviewer",
+      "task_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+      "status": "request_changes; repair re-review pending",
+      "required_finding": "R2-S5-001",
+      "repo_local_final_report": {
+        "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-report.md",
+        "sha256": "cc98722c9bdf261246eb6b7f94a49f7b34b7c4346b5666248ad4611de497d7c5"
+      },
+      "result": "historical role provenance recorded",
+      "expected": "독립 Stage 소유 task와 exact대상/원문 근거",
+      "observed": "request_changes; repair re-review pending"
+    },
+    {
+      "role": "final product-design-authority",
+      "task_id": null,
+      "status": "pending; distinct task ID/evidence not finalized here",
+      "expected": "독립 Stage 소유 task와 exact대상/원문 근거",
+      "observed": "pending; distinct task ID/evidence not finalized here",
+      "result": "pending"
+    },
+    {
+      "role": "Stage6 reviewer",
+      "task_id": null,
+      "status": "pending; distinct task ID/evidence not finalized here",
+      "expected": "독립 Stage 소유 task와 exact대상/원문 근거",
+      "observed": "pending; distinct task ID/evidence not finalized here",
+      "result": "pending"
+    },
+    {
+      "role": "coordinator",
+      "task_id": "01a07316-265c-7f22-b0af-fa22b7fb2b8a",
+      "status": "assignment coordination, not independent stage approval",
+      "expected": "독립 Stage 소유 task와 exact대상/원문 근거",
+      "observed": "assignment coordination, not independent stage approval",
+      "result": "historical role provenance recorded"
+    }
+  ],
+  "current_actual_run": {
+    "run_id": "hcg_74053_7748de",
+    "artifact_directory": "2026-09-11T05-19-39-943Z",
+    "command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+    "captured_at": "2026-09-11T05:20:15.542Z",
+    "completed_at": "2026-09-11T05:23:22.816Z",
+    "environment": "isolated-integration",
+    "baseline_head_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "captured_source_sha": null,
+    "source_identity": "At capture: baseline783 plus uncommitted file hashes. Later compared to code commit; not execution of that later commit.",
+    "matched_later_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+    "result": "PASS",
+    "checks": 28,
+    "case_groups": 26,
+    "trace_observations": 1316,
+    "screenshot_records": 115,
+    "unique_png_files": 113,
+    "parsed_response_envelopes": 208,
+    "count_meaning": "observed successfully parsed browser response envelopes, not total outbound requests; intentionally lost responses excluded",
+    "source": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/source-manifest.json",
+      "sha256": "f901898dc98fcdf0b0d7dff848af31efc786c4cdd2395bb508668cc03552cc03"
+    },
+    "result_ref": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/result.json",
+      "sha256": "07d11fb39f1fcb3e49a4668acee3beacefb33eb5681a1a0b2651c4b36c4daa57"
+    },
+    "observations_ref": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/observed-ui-trace.json",
+      "sha256": "84775d1585cc65d4016b1a83303a4755531f49671d58e978a53919b8ab5f4953"
+    },
+    "manifest": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/artifact-manifest.json",
+      "sha256": "06be0cd9347e87ad2818315f686149f938ae4c3b7b3e07dc7864d8f2cf6af8dc"
+    },
+    "cleanup": {
+      "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/2026-09-11T05-19-39-943Z/cleanup.json",
+      "sha256": "e454e6933bd3cfc70c8572c75efa329a8791dddc92e8367e99a3c82c76eafafb"
+    },
+    "parity": {
+      "verification": "read-only SHA256 comparison of captured snapshotFiles with git cat-file at exact later code commit",
+      "tracked_files_compared": 1869,
+      "mismatches": 0,
+      "generated_not_tracked": [
+        "next-env.d.ts"
+      ],
+      "captured_snapshot_total": 1870,
+      "harness_caveat": "scenario/helper hash match. Runner changed only default option dispatch after capture; full invocation used explicit --lead-edit.",
+      "dispatch_diff": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/default-dispatch.diff",
+        "sha256": "3628cd7f0e0c75d17828df3f5653bd69d9492562c6d9e948d66dfcb0518a95c1"
+      },
+      "dispatch_unit_log": {
+        "path": "ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-actual-ui/verification.log",
+        "sha256": "a471ecc69f590023cf98e33410fb1b821c951e2008b9eecd670040fe690f80be"
+      }
+    },
+    "limitations": [
+      "실제503/provider장애 주입 아님: unreceived 첫 송신을 브라우저에서 중단; 이후422/200/DB는 실제",
+      "mock provider19; 실제 provider/실기기/운영activation 미실행",
+      "115 screenshot records contain two repeated names;113 unique retained PNG.",
+      "독립 Stage5/final authority approval pending"
+    ]
+  }
+}

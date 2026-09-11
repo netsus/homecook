@@ -1,0 +1,54 @@
+[
+  {
+    "id": "R2-S5-001",
+    "severity": "major",
+    "status": "open",
+    "title": "신청 실패 뒤 폼을 수정하면 현재폼의 재시도가 아무 요청도 보내지 않음",
+    "locations": [
+      {
+        "file": "lib/marketing/round2-client.ts",
+        "start": 307,
+        "end": 321
+      },
+      {
+        "file": "components/marketing/round2/round2-view.tsx",
+        "start": 318,
+        "end": 318
+      }
+    ],
+    "direct_reproduction_topic": "recording",
+    "affected_topics": [
+      "recording",
+      "homeflow"
+    ],
+    "affected_topics_note": "homeflow영향은같은client/view공유경로로판단;새동적재현은recording만수행",
+    "screen_ids": [
+      "R2_RECORDING_LEAD",
+      "R2_HOMEFLOW_LEAD",
+      "R2_RECORDING_RECOVERY",
+      "R2_HOMEFLOW_RECOVERY"
+    ],
+    "reproduction": [
+      "validexistingcookieparticipation으로lead시작",
+      "LEAD_CAPTURE_UNAVAILABLE503또는NETWORK_ERROR실패",
+      "email변경또는consent해제·재선택",
+      "freshmocktoken설정뒤retry두번"
+    ],
+    "observed": "4failure/editcombinations:retrytrue,true/additionalPOST0/errorretained/leadstarted. Unedited2controls retain event and attempt transportagain.",
+    "cause": "setLeadForm nulls leadAttempt but retains error. View hides ordinarysubmit onerror. retry sees readyconnection/noattempt/emptyqueue and returns true without clearingerror or submitting.",
+    "impact": "현재폼복구동작이멈추며메일오타수정이나동의재선택뒤사용자가진행할수없음. 메뉴왕복·페이지재연결같은우회가가능할수있으므로영구계정차단이라고표현하지않음.",
+    "acceptance": [
+      "실패후email편집및consentoff/on에서도현재폼에서명시적으로복구가능",
+      "결과불명의원래event_id와원payload보호;변경draft와동일요청재시도구분",
+      "동일event에다른email payload사용금지,자동lead재전송금지",
+      "실제미실행retry를성공으로끝내고staleerror남기는경로제거",
+      "두topic에수정/무수정·503/NETWORK_ERROR·서버이미commit된응답유실·동의세대갱신을고정하는client+view회귀",
+      "수정후sourceSHA와관련최소검증/실제오류화면근거로Stage5재검토"
+    ],
+    "evidence": [
+      "reproduction/lead-edit-repro-result.json",
+      "reproduction/reproduce-lead-edit.cjs.txt",
+      "verification.json"
+    ]
+  }
+]

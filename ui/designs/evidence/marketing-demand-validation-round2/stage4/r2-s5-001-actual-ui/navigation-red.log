@@ -1,0 +1,34 @@
+VITEST_SUITE_TEMP_ROOT=/Users/cwj/.cache/hcv/r-yxgFSk
+
+ RUN  v4.1.8 /Users/cwj/.codex/worktrees/f2a2/homecook
+
+ ❯ tests/marketing-round2-ui-trace.test.ts (4 tests | 1 failed) 6ms
+   × preserves enumerated reload and cookie-resume evidence without retaining URL or cookie values 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/marketing-round2-ui-trace.test.ts > preserves enumerated reload and cookie-resume evidence without retaining URL or cookie values
+AssertionError: expected { kind: 'ui' } to deeply equal { kind: 'ui', …(4) }
+
+- Expected
++ Received
+
+  {
+-   "actionType": "navigation",
+-   "activity": "lead",
+-   "bootstrapIntent": "cookie_resume",
+    "kind": "ui",
+-   "navigationType": "reload",
+  }
+
+ ❯ tests/marketing-round2-ui-trace.test.ts:21:179
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  14:19:05
+   Duration  154ms (transform 29ms, setup 23ms, import 16ms, tests 6ms, environment 0ms)
+
