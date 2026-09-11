@@ -41,8 +41,7 @@
     "complete regression의기존mobile-ios-small4실패와fullvisual의기존desktop10실패는exactbase에서도재현되며PASS/N/A로면제하지않았다. 독립reviewer가영향을판정한다.",
     "실제 provider/실기기 in-app·키보드·이미지권리·공개개인정보운영준비·운영activation/배포는ManualOnly.",
     "Web Locks 미지원 브라우저의탭간동작은실기기확인이필요하다.",
-    "독립 authority/Stage5/finalauthority/Stage6는작성자와다른task에서수행한다.",
-    "200%확대는위 zoom_evidence_scope에나열한화면·폭만직접확인했다. 그외확대상태와전체독립precheck는검토중이다."
+    "독립 authority/Stage5/finalauthority/Stage6는작성자와다른task에서수행한다."
   ],
   "checklistCoverage": [
     {
@@ -260,19 +259,19 @@
     {
       "item_id": "manual-qa-3",
       "status": "covered",
-      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다. 200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다.",
+      "notes": "직접탐색6경로의exploration-observations.json과device별12PNG, 두topic31preview흐름·68전수캡처·actualNextAPI/DB24조건결과로확인했다. 실제복원/오류는preview로대체하지않고 .artifacts/r2-stage4/verification/real-ui/result.json 및real-ui-recovery-after/result.json에분리했다.",
       "linked_findings": []
     },
     {
       "item_id": "heuristic-mobile-readability",
       "status": "covered",
-      "notes": "320/390과desktop 실제 캡처를읽고 native radio/설명/CTA를확인했다. 공용문구를줄이지않고 자연스크롤하며 원본로고여백과제목balance를보완했다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest. 200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다.",
+      "notes": "320/390과desktop 실제 캡처를읽고 native radio/설명/CTA를확인했다. 공용문구를줄이지않고 자연스크롤하며 원본로고여백과제목balance를보완했다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest.",
       "linked_findings": []
     },
     {
       "item_id": "heuristic-small-viewport-cta",
       "status": "covered",
-      "notes": "320x568에서주CTA가읽히고세선택지/긴폼은가림없이스크롤로도달한다. 정식31preview검사와200%글자/44px/overflow검사근거를함께검토했다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest. 200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다.",
+      "notes": "320x568에서주CTA가읽히고세선택지/긴폼은가림없이스크롤로도달한다. 정식31preview검사와200%글자/44px/overflow검사근거를함께검토했다. 근거: exploration-observations.json 및각device-topic PNG, production-preview manifest.",
       "linked_findings": []
     },
     {
@@ -329,6 +328,5 @@
     "actual Next/API/isolated DB integration: backend helper",
     "prior Stage3 exact-source retained evidence review",
     "independent authority pending"
-  ],
-  "zoom_evidence_scope": "200% 실행 범위 정정: 기존68PNG는100%64장(두topic×4폭×7정상상태+로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. MENU 확대는당시미검증이었다. R2-AP-001에서두topic의320/390px initial/completed MENU200%8조합을추가했고strip/span/글자영역잘림0을확인했다. 그외화면/폭의200%전수PASS는주장하지않는다."
+  ]
 }

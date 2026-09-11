@@ -128,7 +128,7 @@
     "approval_state": "not_started",
     "all_checks_green": false
   },
-  "code_commit": "c00fa23f53cb18550424abb96c2964a46796e3dc",
+  "code_commit": "2fa7547557554ad96b029b6fc00907fe7f350baa",
   "known_failures": [
     "complete regression four mobile-ios-small geometry cases reproduced identically on exact base",
     "ten full visual desktop detailed snapshots also fail on exact base; nine exact dimensions/pixels and one same height but differing pixel count"
@@ -151,5 +151,13 @@
     "R2-QA-001"
   ],
   "author_scope_complete": true,
-  "stage4_overall_approval": "pending-independent-authority-precheck"
+  "stage4_overall_approval": "pending-independent-authority-precheck",
+  "precheck_repairs": [
+    {
+      "id": "R2-AP-001",
+      "author_fixed": true,
+      "independent_recheck": "pending",
+      "evidence_ref": "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/r2-ap-001-result.json"
+    }
+  ]
 }

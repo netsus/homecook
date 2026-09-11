@@ -2,7 +2,7 @@
 
 작성 작업: `01a08e24-2609-77e2-b303-3fb8bd6223e8`, frontend-implementer.
 조정 작업: `01a07316-265c-7f22-b0af-fa22b7fb2b8a`.
-현재 상태: **Stage 4 작성자 구현·검증 자료 인계 준비 완료, Draft 유지**. 최종 제품 code commit은 `c00fa23f53cb18550424abb96c2964a46796e3dc`다. Stage 4 전체 승인, 독립 authority·Stage 5·Stage 6 승인, Ready, 병합, 배포를 뜻하지 않는다.
+현재 상태: **Stage 4 작성자 구현·검증 자료 인계 준비 완료, Draft 유지**. 최신 R2-AP-001 수정 code commit은 `2fa7547557554ad96b029b6fc00907fe7f350baa`다. 이전 동결 인계 head는 `3d1054b39c615fccd6a1541aad6256e45ec18f28`이다. Stage 4 전체 승인, 독립 authority·Stage 5·Stage 6 승인, Ready, 병합, 배포를 뜻하지 않는다.
 
 ## 선행 입력과 소유 범위
 
@@ -38,7 +38,7 @@ R2 전용 Turnstile은 topic별 action·서버 제공 site key, 150×140 compact
 | 백엔드 회귀 | 기존 R2 단위 201 PASS, 기존 HTTPS 브라우저 저장소 회귀 PASS |
 | 실제 UI·DB | 원형 Next GET/POST → 기존 SDK/RPC → 새 isolated DB의 24조건 PASS. 194 API 요청, 23참여, fixture provider15회, 외부0·page error0, 기존 accepted fixture1row checksum 보존 |
 | 실제 오류 | 409 동의 갱신, 410 명시 재시작, commit 응답 유실의 동일 event 재시도, 실제 429 대기, cookie_resume. 두 topic×4폭 RECOVERY8장 |
-| 최종 production preview | code c00fa23f에서 단독 build→680개 compiled tree 동일 복사,31/31 PASS,68캡처·axe·44px·가로overflow·200%글자·keyboard·reduced-motion. POST/외부/IndexedDB/local/session storage0. 최신loopback3118 |
+| 최종 production preview | code c00fa23f에서 단독 build→680개 compiled tree 동일 복사,31/31 PASS,68캡처(100%64장+320px LEAD/LEAD_DONE200%4장)·axe·44px·가로overflow·keyboard·reduced-motion. POST/외부/IndexedDB/local/session storage0. 최신loopback3118 |
 | 브라우저 뒤로/앞으로 | 두 topic 실제 Back/Forward 2 PASS, 최종31개 preview 검사에 포함 |
 | 보조 리뷰 | 지연 응답 이동·stale 참여 삭제/쓰기·보안 재시도 수정 후 71 PASS / skip0, 추가 수정 요구0. 독립 Stage 승인이 아님 |
 | 공통 성능 | 안전한 빈 포트3120에서 기존 설정·budget 그대로 3회×2URL PASS |
@@ -84,3 +84,15 @@ R2 전용 Turnstile은 topic별 action·서버 제공 site key, 150×140 compact
 Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhead/CI는GitHub의현재head와마지막인계메시지를기준으로확인한다. Design Status는 pending-review다. 작성자와 native 보조는 독립 authority/Stage 5/Stage 6를 대신하지 않는다. 조정자가 별도 reviewer에게 정확한 PR head와 retained evidence를 전달한다. 새 작업을 직접 만들거나 merge-ready·confirmed를 자기 승인하지 않는다.
 
 실제 provider·실기기 인앱/키보드·이미지/영상 사용권·공개 개인정보 운영 준비·운영 activation/DB 적용/배포/메일은 Manual Only다. 테스트의 mock provider 성공을 실제 발송이나 이메일 소유 확인으로 표현하지 않는다. Web Locks 미지원 브라우저의 탭 간 동작은 실제 기기 확인 범위에 남긴다.
+
+## 독립 precheck 수정 R2-AP-001 (2026-09-11)
+
+음식 띠의 고정 높이가 200% MENU 설명을 잘랐다. CSS의 `height:72px` 한 속성을 `min-height:72px`로 바꿨다. 승인 문구·글자 크기·정보 구조·CTA 순서는 그대로다. 100% 8개 메뉴 캡처는 수정 전후 byte동일이며 200%에서는 320폭의띠142px,390폭100px로늘어나 실제상하clipping0이다.
+
+- [수정 결과와 source/build 정보](evidence/stage4/r2-ap-001-result.json)
+- [before/after 32캡처와 hash](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/screenshots.json)
+- [실측 RED](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/geometry-red.json), [실측 GREEN](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-ap-001/geometry-green.json)
+- 두topic × 320/390 × initial/completed MENU: 200%8조합 RED→GREEN. 기존31개와함께39/39브라우저PASS, production build·타입·lint통과.
+- 수정본은 별도소유루프백3124에서 제공한다. 독립reviewer가사용중인3118동결복사본은재시작하거나변경하지않았다.
+
+확대 검증 범위: 기존68PNG 전체가200%였던것이아니다. 100%4폭매트릭스64장(7정상상태와로컬동의오류)과320px LEAD/LEAD_DONE200%4장이었다. 이번에MENU initial/completed의두topic320/390px 200%8조합을추가했다. 그외화면·폭의200%전수PASS는주장하지않는다. 이전QA보고서와평가원문은repair폴더에보존하고현재QA보고서에같은범위를정정했다. 전체독립precheck는진행중이며이수정의작성자검증이승인을대신하지않는다.

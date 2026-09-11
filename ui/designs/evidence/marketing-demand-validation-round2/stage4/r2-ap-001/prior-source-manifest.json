@@ -1,5 +1,5 @@
 {
-  "code_commit": "2fa7547557554ad96b029b6fc00907fe7f350baa",
+  "code_commit": "c00fa23f53cb18550424abb96c2964a46796e3dc",
   "base_commit": "7312a0cc9cfe1f500d896eb806e4d533a4f068b9",
   "files": [
     {
@@ -24,7 +24,7 @@
     },
     {
       "path": "components/marketing/round2/round2.module.css",
-      "sha256": "497e1271454542d818942bd797ccaad37fd3ce304f27ad20a1d9f9dc58ab403c"
+      "sha256": "61e93e03d2fe4ac7b29ed9ad54ae5a13ce47f4bd02aa456ab721a84a04793086"
     },
     {
       "path": "lib/marketing/round2-client-storage.ts",
@@ -64,7 +64,7 @@
     },
     {
       "path": "tests/e2e/marketing-round2.spec.ts",
-      "sha256": "d59776b13a268fbb967e6e5f62eeca035cc087f35f75687d36e1e15bf734ef56"
+      "sha256": "817e3e37c8922cc0fb076987c9e371bd47cd85deaa637242a383c3170e1b1e8f"
     },
     {
       "path": "tests/marketing-round2-client-storage.test.ts",
@@ -110,7 +110,5 @@
       "path": "tests/marketing-round2-widget.test.tsx",
       "sha256": "b56026ea3a2a9f7b8b94c782989309dd99c48cf23c0fead909434ba472535267"
     }
-  ],
-  "prior_code_commit": "c00fa23f53cb18550424abb96c2964a46796e3dc",
-  "repair": "R2-AP-001 only: CSS min-height and browser geometry regression"
+  ]
 }

@@ -135,3 +135,7 @@ scroll containment(스크롤 영역): 독립 캠페인 문서 본문 하나에�
 - [homeflow 390x844 production build 로컬 미리보기](evidence/marketing-demand-validation-round2/stage4/production-preview/homeflow-390x844-MENU.png)
 
 문구와 CTA 순서를 유지하고 `text-wrap: balance`로 제목을 배치한다. 기존 로고 내부 여백을 112px CSS 프레임 안에서 조정했으며 원본 자산은 변경하지 않았다. R2 범위의 브랜드색은 승인 `#00A1FF`로 고정해 기존 전역 변수의 진한 색 상속에 따른 대비 문제를 방지한다.
+
+## R2-AP-001 확대 글자 보완
+
+음식 띠는 정상100%에서72px이며, 고정높이대신최소72px를사용해확대글자에맞게높이가늘어난다. 두topic의320/390px initial/completed MENU200%8조합에서실제잘림0을확인했다. 글자크기나문구를줄이지않았다. [전후근거](evidence/marketing-demand-validation-round2/stage4/r2-ap-001/screenshots.json). 이항목은작성자수정기록이고같은독립reviewer의재검토는pending이다.

@@ -1,0 +1,12 @@
+{
+  "score": 75,
+  "verdict": "revise",
+  "category_match": true,
+  "differences": [
+    "200% MENU에서72px고정높이음식띠가두topic320px의본문을상하27px,390px의본문을상하6px자른다."
+  ],
+  "suggestions": [
+    "승인문구와글자크기를유지하고72px를최소높이로바꿔본문높이에맞게늘린다."
+  ],
+  "reasoning": "200% 글자 확대에서 정보 일부가 보이지 않아 접근성을 충족하지 못한다. 정상100% 배치는 보존하면서 내용 높이를 수용해야 한다."
+}
