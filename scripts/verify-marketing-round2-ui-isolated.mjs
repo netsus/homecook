@@ -84,8 +84,9 @@ async function serveNext() {
 }
 
 async function main() {
-  const root = process.cwd(); const recoveryOnly = process.argv.includes('--recovery-only');
-  const artifacts = join(root, '.omx/artifacts/r2-stage4', recoveryOnly ? 'real-ui-recovery' : 'real-ui');
+  const root = process.cwd(); const recoveryZoom = process.argv.includes('--recovery-zoom-only');
+  const recoveryOnly = recoveryZoom || process.argv.includes('--recovery-only');
+  const artifacts = join(root, '.omx/artifacts/r2-stage4', recoveryZoom ? 'real-ui-recovery-zoom' : recoveryOnly ? 'real-ui-recovery' : 'real-ui');
   await mkdir(artifacts, { recursive: true });
   const target = readPinnedLocalDockerTarget(); const isolated = await createIsolatedSupabaseProject(root);
   const env = await isolated.buildCommandEnv(process.env, { dockerHost: target.docker_host });
@@ -140,7 +141,9 @@ async function main() {
     }
     await fingerprint(copied);
     const baselineHead = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, env, encoding: 'utf8' }).stdout.trim();
-    await writeFile(join(artifacts, 'source-manifest.json'), JSON.stringify({ baselineHead, capturedAt: new Date().toISOString(), snapshotFiles }, null, 2));
+    const harnessFiles = {};
+    for (const name of ['scripts/verify-marketing-round2-ui-isolated.mjs', 'tests/marketing-round2-ui-isolated.scenarios.mjs', 'tests/helpers/marketing-round2-recovery-evidence.mjs']) harnessFiles[name] = createHash('sha256').update(await readFile(join(root, name))).digest('hex');
+    await writeFile(join(artifacts, 'source-manifest.json'), JSON.stringify({ baselineHead, capturedAt: new Date().toISOString(), snapshotFiles, harnessFiles }, null, 2));
     await writeFile(join(owned, 'openssl.cnf'), '[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=localhost\n[ext]\nsubjectAltName=DNS:localhost\n', { mode: 0o600 });
     run('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', join(owned, 'key.pem'), '-out', join(owned, 'cert.pem'), '-days', '1', '-config', join(owned, 'openssl.cnf')]);
     child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--serve-next'], { cwd: copied, env: { ...env, NODE_ENV: 'test', NEXT_TELEMETRY_DISABLED: '1', R2_UI_OWNED_ROOT: owned, R2_UI_IDENTITY: JSON.stringify(identity), R2_UI_SERVICE_KEY: token }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
@@ -150,7 +153,7 @@ async function main() {
     const { chromium } = await import('@playwright/test'); browser = await chromium.launch({ headless: true });
     const { runRealUiScenarios } = await import('../tests/marketing-round2-ui-isolated.scenarios.mjs');
     let result;
-    try { result = await runRealUiScenarios({ browser, origin: 'https://localhost:3443', sql, fixture: ready.fixture, artifacts, recoveryOnly }); }
+    try { result = await runRealUiScenarios({ browser, origin: 'https://localhost:3443', sql, fixture: ready.fixture, artifacts, recoveryOnly, recoveryZoom }); }
     finally { await writeFile(join(artifacts, 'next-runtime.log'), logs.replaceAll(token, '[REDACTED]')); }
     const stats = await new Promise(accept => { child.once('message', accept); child.send('stats'); });
     const afterLegacy = sql("select md5(coalesce(string_agg(row_to_json(v)::text,',' order by id),'')) from public.marketing_validation_sessions v");

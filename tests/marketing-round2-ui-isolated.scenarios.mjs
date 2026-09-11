@@ -1,10 +1,12 @@
 import { expect } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { assertRecoveryZoomCombinations } from './helpers/marketing-round2-recovery-evidence.mjs';
 
 /** Browser clicks use real Next pages, API and disposable DB. Only the challenge provider is mocked. */
-export async function runRealUiScenarios({ browser, origin, sql, fixture, artifacts, recoveryOnly = false }) {
+export async function runRealUiScenarios({ browser, origin, sql, fixture, artifacts, recoveryOnly = false, recoveryZoom = false }) {
   const checks = []; const envelopes = []; const externalRequests = []; const recoveryScreenshots = []; let pageErrors = []; let apiWarmed = false;
+  const recoveryZoomGeometry = [];
   const route = '/api/v1/marketing/round2';
   const labels = { example: '사용 예시 먼저 보기', survey: '의견만 남기기 · 4문항', lead: '베타 오픈 알림 받기' };
   const completedLabels = { example: '사용 예시 다시 보기', survey: '의견 접수 확인', lead: '알림 접수 확인' };
@@ -45,13 +47,62 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     await expect(page.getByRole('button', { name: originalSavingLabel, exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '다시 시도', exact: true })).toHaveCount(1);
     await expect(page.getByRole('button', { name: '다시 시도', exact: true })).toBeVisible();
+    const normalRootSize = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+    const normalRecoveryTextSize = await page.locator('[data-screen-id$="_RECOVERY"] p').first().evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+    const zoomStyle = recoveryZoom ? await page.addStyleTag({ content: 'html { font-size: 200% !important; }' }) : null;
     for (const [width, height] of [[320, 568], [390, 844], [393, 852], [1280, 900]]) {
       await page.setViewportSize({ width, height });
-      const file = `R2_${topic.toUpperCase()}_RECOVERY-${width}x${height}.png`;
+      const file = `R2_${topic.toUpperCase()}_RECOVERY-${width}x${height}${recoveryZoom ? '-200percent' : ''}.png`;
+      if (recoveryZoom) {
+        const recovery = page.locator(`[data-screen-id="R2_${topic.toUpperCase()}_RECOVERY"]`);
+        const retry = recovery.getByRole('button', { name: '다시 시도', exact: true });
+        await retry.scrollIntoViewIfNeeded();
+        const geometry = await page.locator('main').evaluate(main => {
+          const clippedText = [];
+          const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+          while (walker.nextNode()) {
+            const text = walker.currentNode;
+            if (!text.textContent.trim()) continue;
+            const range = document.createRange(); range.selectNodeContents(text);
+            if (!range.getClientRects().length) continue;
+            const bounds = range.getBoundingClientRect();
+            for (let parent = text.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+              const style = getComputedStyle(parent); const rect = parent.getBoundingClientRect();
+              const clipX = ['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowX);
+              const clipY = ['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowY);
+              const x = clipX ? Math.max(0, rect.left - bounds.left, bounds.right - rect.right) : 0;
+              const y = clipY ? Math.max(0, rect.top - bounds.top, bounds.bottom - rect.bottom) : 0;
+              if (x > 0 || y > 0) clippedText.push({ element: parent.tagName, text: text.textContent, x, y });
+              if (parent === main) break;
+            }
+          }
+          return { viewport: { width: innerWidth, height: innerHeight }, pageWidth: document.documentElement.scrollWidth, rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize), recoveryTextSize: parseFloat(getComputedStyle(main.querySelector('[data-screen-id$="_RECOVERY"] p')).fontSize), clippedText };
+        });
+        const button = await retry.evaluate(element => {
+          const r = element.getBoundingClientRect();
+          const hit = y => { const target = document.elementFromPoint(r.left + r.width / 2, y); return element === target || element.contains(target); };
+          return { top: r.top, bottom: r.bottom, width: r.width, height: r.height, centerHit: hit(r.top + r.height / 2), lowerHit: hit(r.bottom - 4) };
+        });
+        const state = topic === 'recording'
+          ? { emailPreserved: await page.getByLabel('이메일', { exact: true }).inputValue() === 'preview@example.com', consentCleared: !await page.getByRole('checkbox').isChecked() }
+          : { lastScenePreserved: await page.getByText('사용 예시 3/3', { exact: true }).count() === 1, prematureDoneAbsent: await page.locator('[data-screen-id="R2_HOMEFLOW_EXAMPLE_DONE"]').count() === 0 };
+        recoveryZoomGeometry.push({ topic, condition: topic === 'recording' ? 'actual-409-consent-refresh' : 'actual-commit-response-loss', normalRootSize, normalRecoveryTextSize, ...geometry, retryButton: button, inputOrScene: state, fullPageScreenshot: file, viewportScreenshot: file.replace('.png', '-cta-viewport.png') });
+        await writeFile(join(artifacts, 'recovery-zoom-geometry.json'), JSON.stringify(recoveryZoomGeometry, null, 2));
+        await page.screenshot({ path: join(artifacts, file.replace('.png', '-cta-viewport.png')), fullPage: false });
+        expect(geometry.rootFontSize).toBe(normalRootSize * 2);
+        expect(geometry.recoveryTextSize).toBe(normalRecoveryTextSize * 2);
+        expect(geometry.pageWidth).toBeLessThanOrEqual(width);
+        expect(geometry.clippedText).toEqual([]);
+        expect(button.top).toBeGreaterThanOrEqual(0); expect(button.bottom).toBeLessThanOrEqual(height);
+        expect(button.width).toBeGreaterThanOrEqual(44); expect(button.height).toBeGreaterThanOrEqual(44);
+        expect(button.centerHit).toBe(true); expect(button.lowerHit).toBe(true);
+        expect(Object.values(state).every(Boolean)).toBe(true);
+      }
       // Diagnostic capture of an injected API failure, requested by the Stage4 coordinator.
       await page.screenshot({ path: join(artifacts, file), fullPage: true });
       recoveryScreenshots.push(file);
     }
+    await zoomStyle?.evaluate(element => element.remove());
     await page.setViewportSize({ width: 390, height: 844 });
   }
   async function open(topic, current = page) {
@@ -220,7 +271,12 @@ export async function runRealUiScenarios({ browser, origin, sql, fixture, artifa
     checks.push('blocked IndexedDB reload restores actual valid cookie participation and completion');
     }
     expect(externalRequests).toEqual([]); expect(pageErrors).toEqual([]);
-    const summary = { scenarioSelection: recoveryOnly ? 'recovery-only' : 'complete', checks, apiRequests: envelopes.length, committedRows: sql("select count(*) from public.marketing_round2_participations"), externalRequests, pageErrors, recoveryScreenshots, apiPrewarm: 'actual GET method rejection 405, no database mutation', fixtureCounterReset: 'between closed independent browser cases', unexecuted: [] };
+    if (recoveryZoom) {
+      const persisted = JSON.parse(await readFile(join(artifacts, 'recovery-zoom-geometry.json'), 'utf8'));
+      assertRecoveryZoomCombinations(persisted);
+      expect(persisted).toEqual(recoveryZoomGeometry);
+    }
+    const summary = { scenarioSelection: recoveryZoom ? 'recovery-zoom-only' : recoveryOnly ? 'recovery-only' : 'complete', checks, apiRequests: envelopes.length, committedRows: sql("select count(*) from public.marketing_round2_participations"), externalRequests, pageErrors, recoveryScreenshots, ...(recoveryZoom ? { zoomCaseCount: recoveryZoomGeometry.length, zoomScope: 'two actual error conditions across four viewports; not eight distinct errors', geometryArtifact: 'recovery-zoom-geometry.json' } : {}), apiPrewarm: 'actual GET method rejection 405, no database mutation', fixtureCounterReset: 'between closed independent browser cases', unexecuted: [] };
     await writeFile(join(artifacts, 'scenario-result.json'), JSON.stringify(summary, null, 2));
     return summary;
   } catch (error) {
