@@ -1,0 +1,92 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-09-11T05:47:01.871Z",
+  "head": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "buildId": "ojaiIGyjDlOMvWFrlUvf9",
+  "sourceTreeSha256": "ad80ffc80d83bf017391eaf3a2da825b59bf069a3d7cc1976bddc0498f0c79ed",
+  "compiledTreeSha256": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+  "checks": [
+    {
+      "topic": "recording",
+      "activity": "example",
+      "result": "PASS",
+      "independentCompletion": true,
+      "memoryOnlyResetOnReload": true,
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": 0
+      }
+    },
+    {
+      "topic": "recording",
+      "activity": "survey",
+      "result": "PASS",
+      "independentCompletion": true,
+      "memoryOnlyResetOnReload": true,
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": 0
+      }
+    },
+    {
+      "topic": "recording",
+      "activity": "lead",
+      "result": "PASS",
+      "independentCompletion": true,
+      "memoryOnlyResetOnReload": true,
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": 0
+      }
+    },
+    {
+      "topic": "homeflow",
+      "activity": "example",
+      "result": "PASS",
+      "independentCompletion": true,
+      "memoryOnlyResetOnReload": true,
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": 0
+      }
+    },
+    {
+      "topic": "homeflow",
+      "activity": "survey",
+      "result": "PASS",
+      "independentCompletion": true,
+      "memoryOnlyResetOnReload": true,
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": 0
+      }
+    },
+    {
+      "topic": "homeflow",
+      "activity": "lead",
+      "result": "PASS",
+      "independentCompletion": true,
+      "memoryOnlyResetOnReload": true,
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "idb": 0
+      }
+    }
+  ],
+  "pageErrors": [],
+  "writes": [],
+  "external": [],
+  "postCount": 0,
+  "dbCalls": 0,
+  "providerCalls": 0,
+  "actualServerPage": true,
+  "fixturePageOverride": false,
+  "memoryPreview": true,
+  "publicStage5Approval": false
+}

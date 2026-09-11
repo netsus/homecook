@@ -9,12 +9,6 @@
 - 전달Source: Stage4handoff SHA256`fa9c93841051b70f3da806f5c9787fbe61b2bec1a31163b91cc9df4c9b25788d`, source29manifest`f0b8781f9686c938825dbfa7a06f53dfcf9b5c630d906ce8d2aaca4c64f8ad88`(29/29확인).
 
 > evidence:
-> - `docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json`
-> - `docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json`
-> - `docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json`
-> - `docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json`
-> - `docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json`
-> - `docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json`
 > - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-MENU.png`
 > - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-MENU.png`
 > - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-MENU.png`
@@ -103,8 +97,3 @@ Globalgeometry4baseline실패·visual10실패(9동일수치,meal-detail후보65,
 
 ![homeflow 320 MENU](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-MENU.png)
 
-
-
-## Stage5 근거 JSON 연결 — 62eff252
-
-첫 evidence 블록에 추가한6JSON은62eff252cdd537c9a849caf1881ac490687abac3의내용·참조·hash를검토했다. 기존precheck본문의783ae392검토와새수리7bfe/실제28조건/가짜응답10조건을구분한다. 이연결은과거화면검토를현재실행으로바꾸거나미래finalauthority를승인하지않는다. Stage5결과는별도[재검토 결과](../../../docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json)를따른다.

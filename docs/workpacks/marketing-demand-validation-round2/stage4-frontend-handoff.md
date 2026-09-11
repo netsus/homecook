@@ -115,3 +115,13 @@ Draft PR은 [#1555](https://github.com/netsus/homecook/pull/1555)다. 최종PRhe
 실제 전체 실행 명령은 `--lead-edit`를 포함했다. 이후 최종 runner는 기본 선택도 같은28분기를 쓰도록 바꿨고, recovery/zoom/focused 선택 보존과 동등성을 단위검사했다. 무옵션 전체 명령을 직접 실행한 결과로 표현하지 않는다. 정식 `verify:frontend:pr`의 기존7,827 PASS는 과거 수정본의 근거이며 새 코드의 검증/현재 head CI와 분리한다. 기존 whole frontend 실패4+10개는 여전히 open이다.
 
 원문 재현 소스5개는 실행 제품 코드와 구분한 `.cjs.txt` 보관본으로 이동했다. 내용과 해시는 유지했고, same-reviewer의 직접 링크3곳 revision을 보존했다. lint 규칙이나 검증기는 바꾸지 않았다. 별도 docs PR1556의 승인 base `8c6573bf594fa15613205ce97e4435d751c7d87c`를 merge commit `57236f26fb1665693733f78eeb7237c6c99df663`로 통합했다. 제품/검증 소스는 코드 commit과 같다. strict 검사에는 독립 보고서의6JSON 참조 누락6건만 남아 있으며, 파일의 실제 근거를 검토한 같은 reviewer가 연결한다. 작성자가 보고서를 자기 승인하지 않았다. 최종 independent Stage5 재검토·final authority·Stage6·Ready·merge·배포는 계속 대기한다.
+
+## 독립 Stage5 승인과 고정 미리보기
+
+같은 독립 검토자가 exact `62eff252cdd537c9a849caf1881ac490687abac3`에서 R2-S5-001 해결, approve/required0, 체크리스트17개 통과와 final authority 대기1개를 확정했다. [별도 재검토 원문](evidence/stage5/recheck-62eff252/stage5-report.md)을 이식했으며 이전 request_changes 원문을 덮어쓰지 않았다. 보고서8개는 reviewer가 제공한 revision만 적용했다. 교체 전 보고서의 원문/해시를 불변 보관본으로 연결하고, 새 재검토는 별도 명시했다. 제공된 근거 연결 뒤 strict 검사는 exit0이며 내용·해시·pointer 점검과 구분한다.
+
+[고정 비저장 미리보기](../../../ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-production-preview/README.md)는 source62eff의 실제 페이지와 production build를 사용한다. [집밥 기록](http://127.0.0.1:3126/beta/r2/recording), [집밥 관리](http://127.0.0.1:3126/beta/r2/homeflow)를 유지하며 source2,465파일/compiled830파일 해시 일치, 빌드·내장 lint/typecheck와 독립 활동6조건을 확인했다. POST·브라우저 저장소·외부 요청은0이고 새로고침하면 완료가 초기화된다. 실제 접수/복구 증거는 앞의 별도 API/DB28 실행을 따른다. 빌드 복사 범위·의존성 경로 오류였던 앞선 두 시도도 분리 보존했다. 제품·Next/ESLint 설정·skip flag는 바꾸지 않았다.
+
+source62eff의 GitHub 검사19개는16 SUCCESS/3의도된 SKIP로 전부 종료했다. 이후 근거 문서만 바뀐 최종 head의 CI는 해당 head에서 별도로 확인한다. 검토/미리보기 이후 제품·테스트·harness 변경은 없다.
+
+조정 작업 `01a07316-265c-7f22-b0af-fa22b7fb2b8a`는 별도의 최종 화면 승인 작업 `01a08f0c-bbbb-74b1-ac9b-20feb1ac085f`를 실제 배정했다. 현재 검토 중이며 최종 판정은 작성자 작업에서 생성하지 않는다. Stage6는 아직 미배정이다. Design Status는 pending-review, 전체 authority acceptance·Ready·merge·배포와 기존 전체 UI 실패 처리도 대기한다.

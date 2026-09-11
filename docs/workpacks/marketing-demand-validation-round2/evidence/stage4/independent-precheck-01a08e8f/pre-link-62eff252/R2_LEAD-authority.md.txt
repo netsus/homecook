@@ -9,14 +9,6 @@
 - 전달Source: Stage4handoff SHA256`fa9c93841051b70f3da806f5c9787fbe61b2bec1a31163b91cc9df4c9b25788d`, source29manifest`f0b8781f9686c938825dbfa7a06f53dfcf9b5c630d906ce8d2aaca4c64f8ad88`(29/29확인).
 
 > evidence:
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-320-200-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/recording-390-200-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-320-200-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-100-edited-recovery.png`
-> - `ui/designs/evidence/marketing-demand-validation-round2/stage4/r2-s5-001-browser/homeflow-390-200-edited-recovery.png`
 > - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-390-LEAD.png`
 > - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/recording-320-LEAD.png`
 > - `ui/designs/evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-390-LEAD.png`
@@ -91,12 +83,3 @@ Globalgeometry4baseline실패·visual10실패(9동일수치,meal-detail후보65,
 
 ![homeflow 320 LEAD](../evidence/marketing-demand-validation-round2/authority-precheck-01a08e8f-6c04-7233-a12c-b256f460e6cb/runtime/homeflow-320-LEAD.png)
 
-
-
-## Stage5 수리 재검토 추가 근거 — 62eff252
-
-이전 본문은783ae392의시각precheck원문으로보존한다. 현재수리제품7bfe0d3b/검토head62eff252cdd537c9a849caf1881ac490687abac3에서는원신청과편집draft를분리하고,명시tokenless영수증확인·원입력복원·재동의/새challenge후같은event재시도가작동한다. R2-S5-001의최종Stage5판정은별도recheck결과를따르며precheck원문을새실행으로재명명하지않는다.
-
-추가한이미지는실제client/view/CSS에페이지props·API응답·challenge만가짜로제공한브라우저의320/390×100/200%8조합이다. 이메일부분은촬영단계에마스킹했다. 새실제API/DB실행은별도28조건자료와sourcehash로확인했고reviewer가DB를재실행한것이아니다. 실제4폭200%전체원표는historical fd9/AP002이며새편집복구변형4폭전부를새로확대검증했다고주장하지않는다.
-
-[현재 Stage5 재검토 결과](../../../docs/workpacks/marketing-demand-validation-round2/evidence/stage5/recheck-62eff252/stage5-result.json). finalauthority/confirmed/Stage6/Ready/merge/배포승인은포함하지않는다.

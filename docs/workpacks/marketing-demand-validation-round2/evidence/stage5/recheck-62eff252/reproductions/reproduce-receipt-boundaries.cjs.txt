@@ -1,0 +1,76 @@
+const ts = require('/Users/cwj/.codex/worktrees/f2a2/homecook/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript');
+const cp = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const sha = '7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77';
+const cwd = '/Users/cwj/.codex/worktrees/145f/homecook';
+const cache = new Map(), sources = [];
+function load(p) {
+  let source;
+  for (const candidate of [p, p + '.ts', p + '/index.ts']) {
+    try { source = cp.execFileSync('git', ['show', sha + ':' + candidate], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); p = candidate; break; } catch {}
+  }
+  if (source === undefined) throw Error(p);
+  if (cache.has(p)) return cache.get(p).exports;
+  sources.push({ path: p, sha256: crypto.createHash('sha256').update(source).digest('hex') });
+  const m = { exports: {} }; cache.set(p, m);
+  const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
+  new Function('require', 'module', 'exports', compiled)(id => id.startsWith('.') ? load(path.posix.normalize(path.posix.join(path.posix.dirname(p), id))) : require(id), m, m.exports);
+  return m.exports;
+}
+const assert = require('assert/strict');
+async function main() {
+  const { createRound2Client } = load('lib/marketing/round2-client.ts');
+  const { RETENTION_UNTIL } = load('lib/marketing-round2.ts');
+  const results = [];
+  for (const mode of ['receipt-present', 'receipt-absent', 'cookie-generation-advance', 'server-409-generation']) {
+    let generation = 1, cookieGeneration = 1, row = null, writes = 0, initial = true;
+    const requests = [], trace = [];
+    const rejection = (code, status, fields = []) => Response.json({ success: false, data: null, error: { code, message: 'fixture', fields } }, { status });
+    const client = createRound2Client({ topic: 'recording', pageContext: '', attribution: { first_channel: 'direct', utm_source: null, utm_medium: null, utm_campaign: null, utm_content: null }, preview: false, leadReady: true, indexedDB: null, now: () => Date.parse('2026-09-11T00:00:00Z'), fetch: async (_url, init) => {
+      const r = JSON.parse(init.body); requests.push(r);
+      if (r.action === 'lead_submit') {
+        if (initial) { initial = false; if (mode === 'receipt-present') { row = { ...r }; delete row.turnstile_token; writes++; } throw Error('fixture response lost'); }
+        if (r.consent_generation !== generation) return rejection('CONSENT_REFRESH_REQUIRED', 409);
+        const identity = { ...r }; delete identity.turnstile_token;
+        if (row) assert.deepEqual(identity, row, 'receipt lookup must preserve all original fields');
+        else if (!r.turnstile_token) return rejection('VALIDATION_ERROR', 422, ['turnstile_token']);
+        else { row = identity; writes++; }
+      }
+      return Response.json({ success: true, error: null, data: { round_version: 'r2.1', topic: 'recording', participation_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', event_id: r.event_id, revision: row ? 3 : 2, consent_generation: r.action === 'bootstrap' ? cookieGeneration : generation, state: { example: 'not_started', survey: 'not_started', lead: row ? 'completed' : 'started' }, receipt: row ? { status: 'received', event_id: row.event_id } : null, participation_expires_at: '2026-10-10T00:00:00Z', retention_until: RETENTION_UNTIL } });
+    } });
+    const observe = label => { const s = client.getState(); trace.push({ label, error: s.error?.code ?? null, connection: s.connection, form: s.leadForm, pendingLead: s.pendingLead, tokenReady: s.tokenReady, generation: s.snapshot?.consent_generation, lead: s.snapshot?.state.lead, posts: requests.length, leadPosts: requests.filter(r => r.action === 'lead_submit').length, writes }); };
+    await client.connect(); await client.openActivity('lead'); client.setLeadForm({ email: 'first@example.com', consent: true }); client.setTurnstileToken('initial');
+    assert.equal(await client.submitLead(), false); observe('initial-failure');
+    const original = requests.find(r => r.action === 'lead_submit');
+    client.setLeadForm({ email: 'corrected@example.com' }); client.setTurnstileToken('must-not-send-edited-token'); observe('edited-no-request');
+    if (mode === 'cookie-generation-advance') generation = cookieGeneration = 2;
+    if (mode === 'server-409-generation') generation = 2;
+    const retry = await client.retry(); observe('explicit-receipt-retry');
+    if (mode === 'receipt-present') {
+      assert.equal(retry, true); assert.equal(writes, 1);
+      const last = requests.filter(r => r.action === 'lead_submit').at(-1); assert.equal(last.event_id, original.event_id); assert.equal(last.email, original.email); assert.equal(last.turnstile_token, undefined);
+      assert.equal(client.getState().snapshot.state.lead, 'completed');
+    } else if (mode === 'receipt-absent') {
+      assert.equal(retry, false); assert.equal(writes, 0);
+      const last = requests.filter(r => r.action === 'lead_submit').at(-1); assert.equal(last.event_id, original.event_id); assert.equal(last.email, original.email); assert.equal(last.turnstile_token, undefined);
+      const n = requests.length; client.restoreLeadAttempt(); observe('restored-without-request');
+      assert.equal(requests.length, n); assert.deepEqual(client.getState().leadForm, { email: 'first@example.com', consent: false }); assert.equal(client.getState().tokenReady, false);
+      client.setLeadForm({ consent: true }); client.setTurnstileToken('fresh-explicit'); assert.equal(requests.length, n);
+      assert.equal(await client.retry(), true); observe('reconsented-explicit-retry');
+      assert.equal(writes, 1); assert.equal(row.event_id, original.event_id); assert.equal(row.email, original.email);
+    } else {
+      assert.equal(retry, false); assert.equal(writes, 0); assert.equal(client.getState().pendingLead, null); assert.equal(client.getState().leadForm.consent, false); assert.equal(client.getState().tokenReady, false);
+      if (mode === 'cookie-generation-advance') assert.equal(requests.filter(r => r.action === 'lead_submit').length, 1);
+      if (mode === 'server-409-generation') { assert.equal(client.getState().error.code, 'CONSENT_REFRESH_REQUIRED'); cookieGeneration = 2; await client.retry(); observe('fresh-generation-connected-no-lead-write'); }
+      client.setLeadForm({ consent: true }); client.setTurnstileToken('generation-2-explicit'); assert.equal(await client.submitLead(), true); observe('generation-2-explicit-submit');
+      assert.equal(writes, 1); assert.notEqual(row.event_id, original.event_id); assert.equal(row.email, 'corrected@example.com'); assert.equal(row.consent_generation, 2);
+    }
+    results.push({ mode, passed: true, trace, requests: requests.map(r => ({ action: r.action, event_id: r.event_id, email: r.email, consent_generation: r.consent_generation, hasToken: Object.hasOwn(r, 'turnstile_token') })) }); client.dispose();
+  }
+  const report = { reviewedSha: sha, method: 'Exact Git client in memory; fake receipt store/transport follows token-required-on-absence contract. No real handler, RPC, DB or provider execution. Store write counts are fixture observations only.', sources, results };
+  fs.writeFileSync(path.join(__dirname, 'receipt-boundary-result.json'), JSON.stringify(report, null, 2) + '\n');
+  console.log(JSON.stringify(results.map(r => ({ mode: r.mode, passed: r.passed, final: r.trace.at(-1) }))));
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

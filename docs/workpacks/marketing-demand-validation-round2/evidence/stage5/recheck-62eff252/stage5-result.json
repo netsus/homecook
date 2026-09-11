@@ -1,0 +1,594 @@
+{
+  "schema": "homecook.independent-design-stage5.v1",
+  "stage": 5,
+  "review_scope": "public_stage5",
+  "role": "design-reviewer",
+  "actor_id": "01a08e8f-6c04-7233-a12c-b256f460e6cb",
+  "stage4_author_id": "01a08e24-2609-77e2-b303-3fb8bd6223e8",
+  "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+  "base_sha": "8c6573bf594fa15613205ce97e4435d751c7d87c",
+  "pr_url": "https://github.com/netsus/homecook/pull/1555",
+  "reviewed_at": "2026-09-11T05:49:31.343976+00:00",
+  "status": "complete",
+  "verdict": "approve",
+  "authority_verdict": "pass",
+  "input_precheck_authority_verdict": "pass",
+  "input_precheck_reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+  "required_fix_ids": [],
+  "blocker_count": 0,
+  "major_count": 0,
+  "minor_count": 0,
+  "reviewed_checklist_ids": [
+    "delivery-ui-connection",
+    "delivery-test-split",
+    "delivery-state-ui",
+    "accept-r2-routes",
+    "accept-r2-menu",
+    "accept-r2-independent-paths",
+    "accept-screen-contract",
+    "accept-read-only",
+    "accept-r2-done-choice",
+    "accept-r2-revision",
+    "accept-loading",
+    "accept-empty",
+    "accept-error",
+    "accept-unauthorized",
+    "accept-r2-storage",
+    "accept-playwright-flow",
+    "accept-r2-a11y-visual",
+    "accept-r2-authority"
+  ],
+  "checklist_results": [
+    {
+      "id": "delivery-ui-connection",
+      "source": "docs/workpacks/marketing-demand-validation-round2/README.md",
+      "line": 216,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "delivery-test-split",
+      "source": "docs/workpacks/marketing-demand-validation-round2/README.md",
+      "line": 218,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "delivery-state-ui",
+      "source": "docs/workpacks/marketing-demand-validation-round2/README.md",
+      "line": 221,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "Sameformrecovery verified in exactcode/fake transports and providedactualUI evidence; oldrequest_changes preserved.",
+      "closed_finding_ids": [
+        "R2-S5-001"
+      ]
+    },
+    {
+      "id": "accept-r2-routes",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 11,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-r2-menu",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 15,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-r2-independent-paths",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 16,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-screen-contract",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 20,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-read-only",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 27,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-r2-done-choice",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 28,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-r2-revision",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 29,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-loading",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 33,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-empty",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 34,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-error",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 35,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "Sameformrecovery verified in exactcode/fake transports and providedactualUI evidence; oldrequest_changes preserved.",
+      "closed_finding_ids": [
+        "R2-S5-001"
+      ]
+    },
+    {
+      "id": "accept-unauthorized",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 36,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-r2-storage",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 45,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-playwright-flow",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 79,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "Sameformrecovery verified in exactcode/fake transports and providedactualUI evidence; oldrequest_changes preserved.",
+      "closed_finding_ids": [
+        "R2-S5-001"
+      ]
+    },
+    {
+      "id": "accept-r2-a11y-visual",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 80,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "pass",
+      "finding_ids": [],
+      "note": "코드대조와이전direct/precheck·제공evidence범위에서일치"
+    },
+    {
+      "id": "accept-r2-authority",
+      "source": "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+      "line": 82,
+      "stage_owner": 4,
+      "scope": "frontend",
+      "review": 5,
+      "review_result": "downstream_gate_pending",
+      "finding_ids": [],
+      "note": "final authority 미실행 / pending-review 유지; Stage5 단독으로 닫지 않음"
+    }
+  ],
+  "reviewed_files": [
+    "app/beta/r2/[topic]/page.tsx",
+    "components/auth/provider-memory-sync.tsx",
+    "components/marketing/round2/round2-landing.tsx",
+    "components/marketing/round2/round2-turnstile.tsx",
+    "components/marketing/round2/round2-view.tsx",
+    "components/marketing/round2/round2.module.css",
+    "docs/design/anchor-screens.md",
+    "docs/design/design-tokens.md",
+    "docs/design/mobile-ux-rules.md",
+    "docs/engineering/codex-task-handoff.md",
+    "docs/engineering/slice-workflow.md",
+    "docs/marketing-demand-validation-r2-contract.md",
+    "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+    "docs/workpacks/marketing-demand-validation-round2/README.md",
+    "docs/workpacks/marketing-demand-validation-round2/acceptance.md",
+    "docs/workpacks/marketing-demand-validation-round2/automation-spec.json",
+    "docs/화면정의서-v1.5.40.md",
+    "lib/marketing/round2-client-storage.ts",
+    "lib/marketing/round2-client.ts",
+    "lib/marketing/round2-session.ts",
+    "lib/marketing/round2-survey.ts",
+    "lib/server/marketing-round2-page.ts",
+    "middleware.ts",
+    "tests/marketing-round2-client.test.ts",
+    "tests/marketing-round2-view.test.tsx",
+    "tests/marketing-round2-widget.test.tsx",
+    "ui/designs/R2_DESIGN_DIRECTION.md",
+    "ui/designs/R2_EXAMPLE.md",
+    "ui/designs/R2_EXAMPLE_DONE.md",
+    "ui/designs/R2_LEAD.md",
+    "ui/designs/R2_LEAD_DONE.md",
+    "ui/designs/R2_MENU.md",
+    "ui/designs/R2_RECOVERY.md",
+    "ui/designs/R2_SCREEN_MAPPING.md",
+    "ui/designs/R2_SURVEY.md",
+    "ui/designs/R2_SURVEY_DONE.md"
+  ],
+  "reviewed_shared_screen_ids": [
+    "R2_MENU",
+    "R2_EXAMPLE",
+    "R2_EXAMPLE_DONE",
+    "R2_SURVEY",
+    "R2_SURVEY_DONE",
+    "R2_LEAD",
+    "R2_LEAD_DONE",
+    "R2_RECOVERY"
+  ],
+  "reviewed_screen_ids": [
+    "R2_RECORDING_MENU",
+    "R2_RECORDING_EXAMPLE",
+    "R2_RECORDING_EXAMPLE_DONE",
+    "R2_RECORDING_SURVEY",
+    "R2_RECORDING_SURVEY_DONE",
+    "R2_RECORDING_LEAD",
+    "R2_RECORDING_LEAD_DONE",
+    "R2_RECORDING_RECOVERY",
+    "R2_HOMEFLOW_MENU",
+    "R2_HOMEFLOW_EXAMPLE",
+    "R2_HOMEFLOW_EXAMPLE_DONE",
+    "R2_HOMEFLOW_SURVEY",
+    "R2_HOMEFLOW_SURVEY_DONE",
+    "R2_HOMEFLOW_LEAD",
+    "R2_HOMEFLOW_LEAD_DONE",
+    "R2_HOMEFLOW_RECOVERY"
+  ],
+  "authority_report_paths": [
+    "ui/designs/authority/R2_MENU-authority.md",
+    "ui/designs/authority/R2_EXAMPLE-authority.md",
+    "ui/designs/authority/R2_EXAMPLE_DONE-authority.md",
+    "ui/designs/authority/R2_SURVEY-authority.md",
+    "ui/designs/authority/R2_SURVEY_DONE-authority.md",
+    "ui/designs/authority/R2_LEAD-authority.md",
+    "ui/designs/authority/R2_LEAD_DONE-authority.md",
+    "ui/designs/authority/R2_RECOVERY-authority.md"
+  ],
+  "screen_results": [
+    {
+      "shared_id": "R2_MENU",
+      "canonical": [
+        "R2_RECORDING_MENU",
+        "R2_HOMEFLOW_MENU"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    },
+    {
+      "shared_id": "R2_EXAMPLE",
+      "canonical": [
+        "R2_RECORDING_EXAMPLE",
+        "R2_HOMEFLOW_EXAMPLE"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    },
+    {
+      "shared_id": "R2_EXAMPLE_DONE",
+      "canonical": [
+        "R2_RECORDING_EXAMPLE_DONE",
+        "R2_HOMEFLOW_EXAMPLE_DONE"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    },
+    {
+      "shared_id": "R2_SURVEY",
+      "canonical": [
+        "R2_RECORDING_SURVEY",
+        "R2_HOMEFLOW_SURVEY"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    },
+    {
+      "shared_id": "R2_SURVEY_DONE",
+      "canonical": [
+        "R2_RECORDING_SURVEY_DONE",
+        "R2_HOMEFLOW_SURVEY_DONE"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    },
+    {
+      "shared_id": "R2_LEAD",
+      "canonical": [
+        "R2_RECORDING_LEAD",
+        "R2_HOMEFLOW_LEAD"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    },
+    {
+      "shared_id": "R2_LEAD_DONE",
+      "canonical": [
+        "R2_RECORDING_LEAD_DONE",
+        "R2_HOMEFLOW_LEAD_DONE"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    },
+    {
+      "shared_id": "R2_RECOVERY",
+      "canonical": [
+        "R2_RECORDING_RECOVERY",
+        "R2_HOMEFLOW_RECOVERY"
+      ],
+      "code_review": "pass",
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "R2-S5-001",
+      "severity": "major",
+      "status": "closed",
+      "title": "신청 실패 뒤 폼을 수정하면 현재폼의 재시도가 아무 요청도 보내지 않음",
+      "locations": [
+        {
+          "file": "lib/marketing/round2-client.ts",
+          "start": 307,
+          "end": 321
+        },
+        {
+          "file": "components/marketing/round2/round2-view.tsx",
+          "start": 318,
+          "end": 318
+        }
+      ],
+      "direct_reproduction_topic": "recording",
+      "affected_topics": [
+        "recording",
+        "homeflow"
+      ],
+      "affected_topics_note": "homeflow영향은같은client/view공유경로로판단;새동적재현은recording만수행",
+      "screen_ids": [
+        "R2_RECORDING_LEAD",
+        "R2_HOMEFLOW_LEAD",
+        "R2_RECORDING_RECOVERY",
+        "R2_HOMEFLOW_RECOVERY"
+      ],
+      "reproduction": [
+        "validexistingcookieparticipation으로lead시작",
+        "LEAD_CAPTURE_UNAVAILABLE503또는NETWORK_ERROR실패",
+        "email변경또는consent해제·재선택",
+        "freshmocktoken설정뒤retry두번"
+      ],
+      "observed": "4failure/editcombinations:retrytrue,true/additionalPOST0/errorretained/leadstarted. Unedited2controls retain event and attempt transportagain.",
+      "cause": "setLeadForm nulls leadAttempt but retains error. View hides ordinarysubmit onerror. retry sees readyconnection/noattempt/emptyqueue and returns true without clearingerror or submitting.",
+      "impact": "현재폼복구동작이멈추며메일오타수정이나동의재선택뒤사용자가진행할수없음. 메뉴왕복·페이지재연결같은우회가가능할수있으므로영구계정차단이라고표현하지않음.",
+      "acceptance": [
+        "실패후email편집및consentoff/on에서도현재폼에서명시적으로복구가능",
+        "결과불명의원래event_id와원payload보호;변경draft와동일요청재시도구분",
+        "동일event에다른email payload사용금지,자동lead재전송금지",
+        "실제미실행retry를성공으로끝내고staleerror남기는경로제거",
+        "두topic에수정/무수정·503/NETWORK_ERROR·서버이미commit된응답유실·동의세대갱신을고정하는client+view회귀",
+        "수정후sourceSHA와관련최소검증/실제오류화면근거로Stage5재검토"
+      ],
+      "closed_at_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "repair_code_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+      "resolution": "Immutable original attempt separated from editable draft; edited path checks original receipt without token; explicit restore clearsconsent/token and newconsent/challenge retries sameevent. Highergeneration clearsoldattempt.",
+      "original_evidence": [
+        "reproduction/lead-edit-repro-result.json",
+        "reproduction/reproduce-lead-edit.cjs.txt",
+        "verification.json"
+      ],
+      "closure_evidence": [
+        "reproductions/lead-edit-repro-result.json",
+        "reproductions/receipt-boundary-result.json",
+        "reproductions/restore-boundary-result.json",
+        "inputs/six-json-semantic-check.json"
+      ]
+    }
+  ],
+  "style_review": {
+    "spacing_typography": "scopedCSSmodule,remtype/44+targets/safe-area/single-document-scroll matchapprovedR2direction",
+    "color_hierarchy": "#00A1FF + #212529 mainCTA;whiteoutlinedsecondary;texttertiary;scopeoverride keepslegacyglobalsunchanged",
+    "component_consistency": "sharedactivityButton/ExampleScene/Food/Donebranch across2topics;newfixedfoodStripminheight",
+    "aria_focus": "Prior native semantics/focus review retained. New explicit receipt/restore controls and explanation read in16 currentmasked100/200 images, no clipping/occlusion seen; no live provider/device certification.",
+    "official_copy": "topiccopy/threeactivities/exact4questions/consentconstants consumed;no v2linearflow orappanchorparity imposed"
+  },
+  "evidence_modes": {
+    "direct_prior_precheck": "Same-task historical783/fd9in-app/freshChromium normal/error screenshots preserved; unchanged styles and scope mapping reused",
+    "direct_fixed_code_probes": "Parent2topicrestoreboundary +same-taskhelper4originalstalls/2controls+4receipt/generationfixtures exact7bfeGitblobs; code/harnessidentical62eff. No real network/server/DB.",
+    "provided_new_mock_browser": "Actualclient/view/CSS,fixturepage/API/challenge.10conditions,8geometryconditions,16maskedPNGpersonallyread.6non-pagehashesmatch62;fixturepageexceptionexplicit.",
+    "provided_actual_ui_db": "Onefull28runhcg_74053_7748de,26casegroups,1316observations,115capturerecords113uniquePNG,208parsedresponses.8newfixcapturefilesread/hashchecked(6uniquevisuals); no reviewerDBrerun.",
+    "physical_device_or_real_provider": "not_run",
+    "stale_previews": "3118/3124notusedforrepair;3126notstartedormodifiedbyreviewer",
+    "direct_final_stable_preview": {
+      "origin": "http://127.0.0.1:3126",
+      "source_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+      "source_identity_kind": "author-fixed production build, unmodified real page; source/build identity provided and README read",
+      "build_id": "ojaiIGyjDlOMvWFrlUvf9",
+      "source_tree_hash": "ad80ffc80d83bf017391eaf3a2da825b59bf069a3d7cc1976bddc0498f0c79ed",
+      "compiled_tree_hash": "bb836c65288d4a57917d3ee96788a177e9442df2987a287567ad757b0cc56c9c",
+      "direct_observation": "Codex in-app:recording320lead→done→menu(onebadge),homeflow390initialclean→lead→done,heading/menu focus. Native screenshots/AX retained.",
+      "not_proven_by_this_preview": "Uncertain result/receipt-only/actualDB/realprovider; memory-only preview cannot simulate those failures.",
+      "owner_server_untouched": true
+    }
+  },
+  "known_global_gate": {
+    "geometry_failures": 4,
+    "geometry_base_identical": true,
+    "visual_failures": 10,
+    "visual_same_numeric_base": 9,
+    "meal_detail": {
+      "candidate_pixels": 65906,
+      "base_pixels": 63377,
+      "height_delta_each": 260,
+      "classification": "unclassified; candidate actual PNG unavailable in retained comparison"
+    },
+    "full_gate_pass": false,
+    "waiver_granted": false
+  },
+  "design_status_before": "pending-review",
+  "design_status_after": "pending-review",
+  "confirmed_approved": false,
+  "final_authority_performed": false,
+  "stage6_performed": false,
+  "ready_or_merge_approved": false,
+  "deployment_performed": false,
+  "product_files_changed": [],
+  "repo_projection_performed": false,
+  "downstream_gate": "Stage5approve complete; distinct finalproduct-design-authority required beforeconfirmed, plus separateStage6/CIreadiness. Globalbaselinefailuresremainopen.",
+  "next_action": "Coordinator preserves pre-link/history source bytes and imports explicit report/metadata revisions, then schedules distinct final product-design-authority. No Stage6/Ready/merge/deploy approval here.",
+  "revision": 2,
+  "code_prereviewed_sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
+  "product_and_harness_delta_code_to_reviewed": "none; git diff app/components/lib/tests/scripts/middleware empty",
+  "input_stage5": {
+    "reviewed_sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
+    "verdict": "request_changes",
+    "required_fix_ids": [
+      "R2-S5-001"
+    ],
+    "path": "docs/workpacks/marketing-demand-validation-round2/evidence/stage5/stage5-result.json",
+    "sha256": "70ac877f843fd378d23a11b951032e91c1aab76f84256aaf7dacc2c34d4c6401",
+    "preserved_without_overwrite": true
+  },
+  "checklist_summary": {
+    "reviewed": 18,
+    "pass": 17,
+    "downstream_gate_pending": 1,
+    "required_fix_ids": []
+  },
+  "validation": {
+    "old_four_stalls_and_two_controls": "allretryagain withsameevent;stalledzero-POSTsuccessremoved",
+    "new_fake_boundary_cases": 4,
+    "parent_restore_cases": 2,
+    "restore_action_additional_posts": 0,
+    "explicit_preconsent_receipt_lookup": "allowed tokenless original leadlookup; modeled additionalPOST2(bootstrap+lead), newlead0",
+    "newlead_without_renewed_consent_and_challenge": 0,
+    "renewed_consent_fresh_challenge": "sameoriginaleventandpayload",
+    "generation": "oldrequestinvalidated/consentunchecked;explicitnewconsent/challenge/newgenerationusesnewevent",
+    "six_json_reference_occurrences": 850,
+    "unique_path_hashes_verified": 328,
+    "actual_artifacts_verified": 256,
+    "captured_tracked_sources_verified": 1869,
+    "generated_untracked": [
+      "next-env.d.ts"
+    ],
+    "source_matrix": "historical4width20064representativecells; repair100/200only320/390. No allvariantnew4width200claim.",
+    "author_unit_result": "provided345pass7skip; not rerun",
+    "author_mock_browser": "provided10pass8geometry; not reviewernewbrowserexecution",
+    "actual_full_command": "node scripts/verify-marketing-round2-ui-isolated.mjs --lead-edit",
+    "final_no_option_full_DB_rerun": false,
+    "dispatch_delta": "defaultoptionhelperextractionandselectionchange; explicitdiff/unit22provided. Not described as literal1line or a rerun."
+  },
+  "six_json_review": {
+    "status": "content_and_provenance_reviewed_at_exact_input",
+    "reviewed_sha": "62eff252cdd537c9a849caf1881ac490687abac3",
+    "refs": [
+      "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-screen-coverage.json",
+      "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-viewport-coverage.json",
+      "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-flow-traces.json",
+      "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-accessibility-observations.json",
+      "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-environment-provenance.json",
+      "docs/workpacks/marketing-demand-validation-round2/evidence/stage4/authority-review-independence.json"
+    ],
+    "findings": [],
+    "notes": [
+      "all6originalrequirementstrings/IDs preserved",
+      "16canonical/3solo/6orders/reload/topic/tabactualreferences match",
+      "rawsource/privacyandcountlimits preserve",
+      "futurefinalauthority/Stage6/Ready/activationremainpending",
+      "JSONsstillrecordpre-reviewhistoricalStage5request_changes; thisnewindependentresultisaseparaterevision,not authorrewritinghistory"
+    ],
+    "evidence_ref_linking": "sixJSONbacktickbulletsaddedtoR2_MENUfirstblock;unionofeightreportsincludesexact6;existingvisualrefsretained",
+    "projection_followup": "inputJSONcurrent_reporthashesrefer62prelinkbytes; author/coordinator retainsimmutableprelinkcopies andexplicitlyretargets/updatesmetadataafterimport. Futuredelta notimplicitlyapproved.",
+    "strict_snapshot_validation": {
+      "result": "pass",
+      "unique_evidence_refs": 118,
+      "json_refs": 6,
+      "errors": [],
+      "scope": "isolated report/file-presence fixture using exact62eff spec/JSON/images, no live OMO runtime state; content verified separately",
+      "artifact": "strict-evidence-validation.json"
+    }
+  },
+  "not_run": [
+    "actualDB/server/provider byreviewer",
+    "physicaliOS/in-app/virtualkeyboard/fullscreenreaderspeech/fullWCAG",
+    "wholeCI/build/regressions byreviewer",
+    "finalauthority",
+    "Stage6",
+    "Ready/merge/deploy"
+  ]
+}
