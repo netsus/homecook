@@ -8,7 +8,12 @@ export type Round2ClientState = {
   tokenReady: boolean; challengeEpoch: number; storageBlocked: boolean; preview: boolean;
   pendingLead?: { email: string; edited: boolean } | null;
 };
-export type Round2ClientOptions = { topic: Round2Topic; pageContext: string; attribution: Round2Attribution; preview: boolean; leadReady: boolean; hostname?: string; indexedDB?: IDBFactory | null; fetch?: typeof fetch; now?: () => number; tabId?: string };
+export type Round2ClientOptions = {
+  topic: Round2Topic; pageContext: string; attribution: Round2Attribution; preview: boolean; leadReady: boolean;
+  hostname?: string; indexedDB?: IDBFactory | null; fetch?: typeof fetch; now?: () => number; tabId?: string;
+  surveyVersion?: Extract<Round2Request, { action: "survey_submit" }>["survey_version"];
+  onSurveyConfirmed?: (request: Extract<Round2Request, { action: "survey_submit" }>, data: Round2SuccessData) => void;
+};
 export type Round2Client = {
   getState(): Round2ClientState; subscribe(listener: () => void): () => void;
   connect(): Promise<boolean>; openActivity(activity: Round2Activity): Promise<boolean>; returnToMenu(activity: Round2Activity): Promise<boolean>;
@@ -187,7 +192,12 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
       payload = await response.json().catch(() => null);
     } catch { error("NETWORK_ERROR"); return false; }
     finally { clearTimeout(timeout); }
-    if (response.ok && payload?.success === true && payload.error === null) return accept(payload.data, request);
+    if (response.ok && payload?.success === true && payload.error === null) {
+      const accepted = accept(payload.data, request);
+      // A completed bootstrap or a recovered 409 is not proof of this tuple.
+      if (accepted && request.action === "survey_submit") options.onSurveyConfirmed?.(request, payload.data);
+      return accepted;
+    }
     const candidate = payload?.error?.code;
     const code: Round2ErrorCode = typeof candidate === "string" && Object.hasOwn(ROUND2_ERRORS, candidate) ? candidate as Round2ErrorCode : "ROUND2_UNAVAILABLE";
     if (code === "CONTEXT_EXPIRED" && request.action === "bootstrap" && !refreshed && await refreshContext()) return post(buildRound2BootstrapRequest(preparation!, pageContext), true);
@@ -324,7 +334,7 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
         catch (caught) { if (caught instanceof Round2Error) throw caught; cookieValidated = false; update({ storageBlocked: true }); return true; }
       });
     },
-    submitSurvey: answers => run(() => nonPii(parseRound2Request(JSON.stringify({ ...common(), action: "survey_submit", survey_version: `${ROUND2_VERSION}-${options.topic}`, answers })) as Round2NonPiiRequest)),
+    submitSurvey: answers => run(() => nonPii(parseRound2Request(JSON.stringify({ ...common(), action: "survey_submit", survey_version: options.surveyVersion ?? `${ROUND2_VERSION}-${options.topic}`, answers })) as Round2NonPiiRequest)),
     setLeadForm(patch) {
       const next = { ...state.leadForm, ...patch, ...(options.preview ? { email: "preview@example.com" } : {}) };
       if (next.email !== state.leadForm.email || next.consent !== state.leadForm.consent) { token = null; update({ tokenReady: false, challengeEpoch: state.challengeEpoch + 1 }); }
