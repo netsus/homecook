@@ -13,7 +13,7 @@
 .title { font-size: 1.5rem; font-weight: 700; line-height: 1.34; letter-spacing: -.025em; margin: 0 0 12px; word-break: keep-all; text-wrap: balance; }
 .description { color: #495057; margin: 0 0 20px; }
 .notice { font-size: .875rem; line-height: 1.58; color: #495057; margin: 12px 0; }
-.foodStrip { display: flex; align-items: center; gap: 12px; padding: 8px; font-size: .875rem; font-weight: 650; height: 72px; margin: 0 0 16px; overflow: hidden; border-radius: var(--radius-card); background: var(--surface-fill); }
+.foodStrip { display: flex; align-items: center; gap: 12px; padding: 8px; font-size: .875rem; font-weight: 650; min-height: 72px; margin: 0 0 16px; overflow: hidden; border-radius: var(--radius-card); background: var(--surface-fill); }
 .foodStrip .food { width: 72px; height: 56px; object-fit: contain; flex-shrink: 0; }
 .food { width: 100%; height: 150px; object-fit: contain; background: white; border-radius: var(--radius-control); }
 .foodFallback { min-height: 72px; padding: 20px; margin: 0; background: var(--surface-fill); }
