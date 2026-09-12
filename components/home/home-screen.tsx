@@ -1901,7 +1901,9 @@ function HomeMobileR2Banner({
 
 function HomeDesktopLandingBanner() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const isPaused = isHovered || hasFocus;
 
   useEffect(() => {
     if (isPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1921,11 +1923,11 @@ function HomeDesktopLandingBanner() {
       className="web-home-landing-carousel"
       data-active-index={activeIndex}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
+        if (!event.currentTarget.contains(event.relatedTarget)) setHasFocus(false);
       }}
-      onFocus={() => setIsPaused(true)}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setHasFocus(true)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div
         className="web-home-landing-track"

@@ -60,6 +60,7 @@ import type { PantryMatchRecipeItem } from "@/types/recipe";
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 const TOAST_DURATION_MS = 3000;
+const NO_PRODUCT_ITEMS: PantryProductItem[] = [];
 const GUEST_PANTRY_ITEMS: PantryItem[] = [
   { id: "guest-onion", ingredient_id: "guest-onion", standard_name: "양파", category: "채소", category_group_code: "vegetable_mushroom", created_at: "2026-09-12T00:00:00Z" },
   { id: "guest-green-onion", ingredient_id: "guest-green-onion", standard_name: "대파", category: "채소", category_group_code: "vegetable_mushroom", created_at: "2026-09-12T00:00:01Z" },
@@ -108,7 +109,7 @@ export function PantryScreen({
   const isMobileViewport = useIsMobileViewport();
   const isGuestPreview = authState === "unauthorized";
   const visiblePantryItems = isGuestPreview ? GUEST_PANTRY_ITEMS : items;
-  const visibleProductItems = isGuestPreview ? [] : productItems;
+  const visibleProductItems = isGuestPreview ? NO_PRODUCT_ITEMS : productItems;
 
   const allDisplayItems = useMemo(
     () =>
@@ -575,7 +576,7 @@ export function PantryScreen({
     );
   }
 
-  if (viewState === "error") {
+  if (!isGuestPreview && viewState === "error") {
     return (
       <>
         <div className="flex flex-col items-center justify-center px-4 py-16">
