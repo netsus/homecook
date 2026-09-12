@@ -8005,6 +8005,32 @@ button {
     background: rgba(8, 12, 16, 0.96);
   }
 
+  .web-cooking-shell-dark .web-topnav-brand {
+    overflow: hidden;
+    border: 1px solid rgba(139, 210, 255, 0.18);
+    border-radius: 13px;
+    background: #102d45;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  }
+
+  .web-cooking-shell-dark .mumeok-horizontal-logo-dark {
+    width: 184px;
+  }
+
+  .web-cooking-shell-dark .web-topnav-tab:hover,
+  .web-cooking-shell-dark .web-topnav-tab:focus-visible {
+    background: rgba(0, 161, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(83, 190, 255, 0.48);
+    color: #f4fbff;
+  }
+
+  .web-cooking-shell-dark .web-topnav-tab-active:hover,
+  .web-cooking-shell-dark .web-topnav-tab-active:focus-visible {
+    background: var(--brand-primary-hover);
+    box-shadow: none;
+    color: #ffffff;
+  }
+
   .web-pantry-screen,
   .web-shopping-flow-screen,
   .web-shopping-detail-screen {

@@ -495,6 +495,7 @@ function StandaloneCookModeDesktopLoading({
   return (
     <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
       <WebTopNav
+        brandTone="dark"
         rightSlot={<div className="web-profile-button">◎</div>}
       />
       <main

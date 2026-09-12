@@ -130,6 +130,7 @@ describe("service brand image assets", () => {
     expect(brandSymbol).toContain('src="/brand/mumeok-symbol-192.png"');
     expect(brandSymbol).toContain('"mumeok-brand-symbol"');
     expect(horizontalLogo).toContain('src="/brand/mumeok-logo-horizontal.png"');
+    expect(horizontalLogo).toContain('src="/brand/mumeok-logo-horizontal-dark.webp"');
     expect(home).toContain("<MumeokHorizontalLogo />");
   });
 });

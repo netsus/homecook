@@ -743,6 +743,7 @@ describe("StandaloneCookModeScreen", () => {
     await screen.findByTestId("cook-mode-whole-board");
     const screenRoot = screen.getByTestId("standalone-cook-mode-screen");
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
+    expect(screen.getByRole("link", { name: "무먹, 무엇을 먹든" }).querySelector("img")?.getAttribute("src")).toContain("/brand/mumeok-logo-horizontal-dark.webp");
     expect(screen.queryByTestId("cook-mode-theme-toggle")).toBeNull();
   });
 

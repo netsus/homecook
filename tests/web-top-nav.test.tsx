@@ -44,6 +44,17 @@ describe("WebTopNav service name", () => {
     expect(logo?.getAttribute("alt")).toBe("");
   });
 
+  it("uses the dark logo and visible hover treatment when requested by cook mode", () => {
+    render(<WebTopNav activeId="planner" brandTone="dark" />);
+
+    const logo = screen.getByRole("link", { name: "무먹, 무엇을 먹든" }).querySelector("img");
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    expect(logo?.getAttribute("src")).toContain("/brand/mumeok-logo-horizontal-dark.webp");
+    expect(css).toContain(".web-cooking-shell-dark .web-topnav-tab:hover");
+    expect(css).toContain("background: rgba(0, 161, 255, 0.18);");
+    expect(css).toContain("color: #f4fbff;");
+  });
+
   it("uses a pill background without a bottom-line selected state", () => {
     const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
     const activeRule = css.match(/\.web-topnav-tab-active \{[^}]+\}/)?.[0] ?? "";
