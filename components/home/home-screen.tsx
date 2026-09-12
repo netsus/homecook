@@ -51,7 +51,6 @@ import {
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import { rememberAboutReturn } from "@/lib/navigation/about-return";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type {
@@ -77,6 +76,28 @@ const WEB_HOME_MAX_VISIBLE_TAGS = 3;
 const WEB_HOME_TAG_ROW_UNIT_LIMIT = 10;
 const WEB_HOME_TAG_GAP_UNITS = 1;
 const HOME_MEAL_GREETING_FALLBACK = "오늘도,";
+const HOME_R2_BANNERS = [
+  {
+    ariaLabel: "집밥 기록 유형 테스트 바로가기",
+    description: "먹은 양과 영양 기록을 직접 체험해 보세요.",
+    eyebrow: "4문항 · 결과 바로 확인",
+    href: "/beta/r2/recording",
+    imageAlt: "주방저울과 함께 기록하는 무먹 캐릭터",
+    imageSrc: "/assets/funnel/characters/pro-measurer.webp",
+    key: "recording",
+    title: "나는 어떤 집밥 기록 타입일까?",
+  },
+  {
+    ariaLabel: "집밥 흐름 유형 테스트 바로가기",
+    description: "레시피부터 장보기와 요리까지 먼저 둘러보세요.",
+    eyebrow: "4문항 · 6가지 무먹 체험",
+    href: "/beta/r2/homeflow",
+    imageAlt: "테스트 안내를 가리키는 무먹 캐릭터",
+    imageSrc: "/assets/funnel/homeflow/characters/hero-ad-pointing-transparent.webp",
+    key: "homeflow",
+    title: "나에게 맞는 집밥 흐름은 뭘까?",
+  },
+] as const;
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
 type AsyncState = "loading" | "ready" | "error";
@@ -1829,12 +1850,11 @@ function HomeDiscoveryRail({
         ) : null}
       </div>
       <div
-        className={[
-          "home-mobile-theme-rail scrollbar-hide",
-          themes.length === 0 ? "home-mobile-theme-rail-guide-only" : "",
-        ].join(" ")}
+        className="home-mobile-theme-rail scrollbar-hide"
       >
-        <HomeGuideCard />
+        {HOME_R2_BANNERS.map((banner) => (
+          <HomeMobileR2Banner banner={banner} key={banner.key} />
+        ))}
         {themes.map((theme, index) => (
           <ThemeCarouselCard
             isActive={activeThemeId === theme.id}
@@ -1849,22 +1869,30 @@ function HomeDiscoveryRail({
   );
 }
 
-function HomeGuideCard() {
+function HomeMobileR2Banner({
+  banner,
+}: {
+  banner: (typeof HOME_R2_BANNERS)[number];
+}) {
   return (
     <Link
-      aria-label="무먹 가이드 보기"
-      className="home-mobile-theme-card home-mobile-guide-card"
-      href="/about#how-to"
-      onClick={rememberAboutReturn}
+      aria-label={banner.ariaLabel}
+      className={`home-mobile-theme-card home-mobile-r2-card home-mobile-r2-card-${banner.key}`}
+      href={banner.href}
     >
-      <span className="home-mobile-guide-graphic" aria-hidden="true">
+      <span className="home-mobile-r2-copy">
+        <small>{banner.eyebrow}</small>
+        <strong>{banner.title}</strong>
+        <span>바로 체험하기 <span aria-hidden="true">→</span></span>
+      </span>
+      <span className="home-mobile-r2-graphic" aria-hidden="true">
         <Image
           alt=""
-          src="/assets/funnel/share/og-share.png"
-          width={1200}
-          height={630}
+          src={banner.imageSrc}
+          width={720}
+          height={720}
           sizes="(max-width: 414px) 58vw, 240px"
-          className="h-full w-full object-contain"
+          className="home-mobile-r2-image"
         />
       </span>
     </Link>
@@ -1872,32 +1900,80 @@ function HomeGuideCard() {
 }
 
 function HomeDesktopLandingBanner() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (isPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % HOME_R2_BANNERS.length);
+    }, 5_000);
+
+    return () => window.clearInterval(interval);
+  }, [isPaused]);
+
   return (
-    <Link
-      aria-label="30초 식단 기록 테스트 체험하기"
-      className="web-home-landing-banner"
-      href="/beta?ad_variant=a"
+    <section
+      aria-label="무먹 R2 광고 체험"
+      className="web-home-landing-carousel"
+      data-active-index={activeIndex}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
+      }}
+      onFocus={() => setIsPaused(true)}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
     >
-      <span className="web-home-landing-banner-image" aria-hidden="true">
-        <Image
-          alt=""
-          height={1314}
-          priority
-          sizes="120px"
-          src="/assets/funnel/characters/beta-invitation-mascot.webp"
-          unoptimized
-          width={1197}
-        />
-      </span>
-      <span className="web-home-landing-banner-copy">
-        <small>30초 식단 기록 테스트</small>
-        <strong>나는 어떤 집밥 기록 타입일까?</strong>
-        <span>간단한 체험으로 나에게 맞는 기록 방식을 확인해 보세요.</span>
-      </span>
-      <span className="web-home-landing-banner-action">
-        체험하기 <span aria-hidden="true">→</span>
-      </span>
-    </Link>
+      <div
+        className="web-home-landing-track"
+        style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+      >
+        {HOME_R2_BANNERS.map((banner, index) => (
+          <Link
+            aria-hidden={index !== activeIndex}
+            aria-label={banner.ariaLabel}
+            className={`web-home-landing-banner web-home-landing-banner-${banner.key}`}
+            href={banner.href}
+            key={banner.key}
+            tabIndex={index === activeIndex ? 0 : -1}
+          >
+            <span className="web-home-landing-banner-image" aria-hidden="true">
+              <Image
+                alt=""
+                height={720}
+                priority={index === 0}
+                sizes="120px"
+                src={banner.imageSrc}
+                unoptimized
+                width={720}
+              />
+            </span>
+            <span className="web-home-landing-banner-copy">
+              <small>{banner.eyebrow}</small>
+              <strong>{banner.title}</strong>
+              <span>{banner.description}</span>
+            </span>
+            <span className="web-home-landing-banner-action">
+              체험하기 <span aria-hidden="true">→</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+      <div aria-label="광고 배너 선택" className="web-home-landing-dots" role="group">
+        {HOME_R2_BANNERS.map((banner, index) => (
+          <button
+            aria-label={`${index + 1}번째 배너: ${banner.title}`}
+            aria-pressed={activeIndex === index}
+            key={banner.key}
+            onClick={() => setActiveIndex(index)}
+            type="button"
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -2000,11 +2076,10 @@ function HomeDiscoveryRailSkeleton() {
         <Skeleton className="h-6 w-36 rounded-full" />
       </div>
       <div className="home-mobile-theme-rail overflow-hidden">
-        <Skeleton className="home-mobile-theme-card home-mobile-guide-card-placeholder" />
-        {Array.from({ length: 2 }).map((_, index) => (
+        {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton
             key={index}
-            className="home-mobile-theme-card"
+            className="home-mobile-theme-card home-mobile-r2-card-placeholder"
           />
         ))}
       </div>

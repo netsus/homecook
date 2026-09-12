@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-12 사용자 승인 — HOME R2 광고 배너 연결
+
+desktop HOME의 기존 `/beta` promotion banner는 `/beta/r2/recording`과 `/beta/r2/homeflow` 두 배너가 5초마다 옆으로 전환되는 carousel로 교체한다. mobile HOME의 `무먹 둘러보기` 첫 가이드 카드는 같은 두 R2 direct link 카드로 교체하고, 각 카드 전체를 누르면 해당 랜딩으로 바로 이동한다. desktop carousel은 hover·keyboard focus 중 자동 전환을 멈추고 `prefers-reduced-motion`에서는 자동 전환하지 않는다. 기존 테마 필터, `/about` direct/web navigation, R2 API·DB·권한·수집 계약은 유지하며 이번 변경은 아직 배포하지 않는다.
+
 ## 2026-09-11 로컬 구현 후보 — 집밥흐름 선형 랜딩
 
 사용자가 PRD v0.5와 v4 시안대로 빠른 로컬 구현을 승인하고 배포·master 머지를 금지했다. [로컬 구현 계약](../marketing/homeflow-linear-implementation-contract.md)이 이번 homeflow UI와 `r2.2-homeflow` 설문 추가 범위의 기준이다. 기존 r2.1/recording 자료·API·보안 보호를 보존한다. 아래 병합된 r2.1 독립 활동 설명은 기존 버전 기준이며 새 로컬 homeflow UI의 승인·검증 완료를 뜻하지 않는다.

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
 import { renderToString } from "react-dom/server";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -362,12 +362,34 @@ describe("home screen", () => {
       themeHeading.compareDocumentPosition(recipeHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    const guideLink = screen.getByRole("link", { name: "무먹 가이드 보기" });
-    expect(guideLink.getAttribute("href")).toBe("/about#how-to");
-    expect(guideLink.hasAttribute("aria-pressed")).toBe(false);
-    expect(within(guideLink).queryByText("무먹 가이드")).toBeNull();
-    expect(guideLink.querySelector("img")?.className).toContain("object-contain");
+    expect(screen.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" }).getAttribute("href")).toBe("/beta/r2/recording");
+    expect(screen.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" }).getAttribute("href")).toBe("/beta/r2/homeflow");
+    expect(screen.queryByRole("link", { name: "무먹 가이드 보기" })).toBeNull();
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
+  });
+
+  it("rotates the two desktop R2 banners and keeps both direct landing links", async () => {
+    vi.useFakeTimers();
+    installMatchMedia(true);
+
+    render(<HomeScreen />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const carousel = screen.getByRole("region", { name: "무먹 R2 광고 체험" });
+    const links = Array.from(carousel.querySelectorAll("a"));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/beta/r2/recording",
+      "/beta/r2/homeflow",
+    ]);
+    expect(carousel.getAttribute("data-active-index")).toBe("0");
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+    expect(carousel.getAttribute("data-active-index")).toBe("1");
   });
 
   it("keeps the first HOME greeting render deterministic across SSR and hydration", () => {
@@ -749,7 +771,7 @@ describe("home screen", () => {
       level: 2,
       name: "무먹 둘러보기",
     });
-    const guideLink = screen.getByRole("link", { name: "무먹 가이드 보기" });
+    const recordingBanner = screen.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" });
     const themeButton = screen.getByRole("button", { name: /중간 인기 테마/ });
 
     expect(
@@ -757,7 +779,7 @@ describe("home screen", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      guideLink.compareDocumentPosition(themeButton) &
+      recordingBanner.compareDocumentPosition(themeButton) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
@@ -1632,7 +1654,8 @@ describe("home screen", () => {
     expect(
       screen.queryByRole("heading", { name: "레시피를 불러오지 못했어요" }),
     ).toBeNull();
-    expect(screen.getByRole("link", { name: "무먹 가이드 보기" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" })).toBeTruthy();
   });
 
   it("shows ready recipes while the discovery themes are still loading", async () => {

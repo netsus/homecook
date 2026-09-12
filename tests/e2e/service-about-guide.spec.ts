@@ -37,7 +37,7 @@ test.describe("service about guide", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("mobile HOME exposes a compact guide-first discovery rail", async ({
+  test("mobile HOME exposes two direct R2 banners before theme filters", async ({
     page,
   }, testInfo) => {
     test.skip(!isMobile(testInfo.project.use.viewport?.width), "mobile HOME only");
@@ -48,11 +48,13 @@ test.describe("service about guide", () => {
     await page.goto("/");
     const quickLinks = page.getByRole("navigation", { name: "홈 빠른 이동" });
     const rail = page.getByRole("region", { name: "무먹 둘러보기" });
-    const guide = page.getByRole("link", { name: "무먹 가이드 보기" });
+    const recordingBanner = page.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" });
+    const homeflowBanner = page.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" });
 
     await expect(quickLinks).toBeVisible();
     await expect(rail).toBeVisible();
-    await expect(guide).toHaveAttribute("href", "/about#how-to");
+    await expect(recordingBanner).toHaveAttribute("href", "/beta/r2/recording");
+    await expect(homeflowBanner).toHaveAttribute("href", "/beta/r2/homeflow");
     await expect(rail.getByRole("button").first()).toHaveAttribute("aria-pressed", "false");
 
     const geometry = await rail.evaluate((element) => {
@@ -91,13 +93,11 @@ test.describe("service about guide", () => {
     await expect(quickLinks).toBeVisible();
     await expect(rail).toBeVisible();
 
-    await guide.click();
-    await expect(page).toHaveURL(/\/about#how-to$/);
-    await page.getByRole("button", { name: "뒤로 가기" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await recordingBanner.click();
+    await expect(page).toHaveURL(/\/beta\/r2\/recording$/);
   });
 
-  test("mobile HOME keeps the guide when themes are empty or fail", async ({
+  test("mobile HOME keeps both R2 banners when themes are empty or fail", async ({
     page,
   }, testInfo) => {
     test.skip(!isMobile(testInfo.project.use.viewport?.width), "mobile HOME only");
@@ -111,7 +111,8 @@ test.describe("service about guide", () => {
     await page.goto("/");
 
     const emptyRail = page.getByRole("region", { name: "무먹 둘러보기" });
-    await expect(emptyRail.getByRole("link", { name: "무먹 가이드 보기" })).toBeVisible();
+    await expect(emptyRail.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" })).toBeVisible();
+    await expect(emptyRail.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" })).toBeVisible();
     await expect(emptyRail.getByRole("button")).toHaveCount(0);
 
     await page.unroute("**/api/v1/recipes/themes");
@@ -128,7 +129,8 @@ test.describe("service about guide", () => {
     await page.reload();
 
     const errorRail = page.getByRole("region", { name: "무먹 둘러보기" });
-    await expect(errorRail.getByRole("link", { name: "무먹 가이드 보기" })).toBeVisible();
+    await expect(errorRail.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" })).toBeVisible();
+    await expect(errorRail.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" })).toBeVisible();
     await expect(errorRail.getByRole("button")).toHaveCount(0);
   });
 

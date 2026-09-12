@@ -1063,14 +1063,13 @@ HOME (홈)
 ### 진입 경로
 
 - desktop web: 공통 상단 `무먹 가이드`
-- mobile HOME initial state: `빠른 이동` → `무먹 둘러보기` 첫 가이드 카드
 - direct URL: `/about`, `/about#how-to`, `/about#faq`
 - legacy: `/mypage?tab=help` → `/about#faq`
 
 ### 플로우
 
 ```text
-공통 웹 내비게이션 / HOME 가이드 카드 / direct URL
+공통 웹 내비게이션 / direct URL
   │
   ▼
 ABOUT_SERVICE_GUIDE (/about)
@@ -1080,6 +1079,14 @@ ABOUT_SERVICE_GUIDE (/about)
   ├─ 기능별 가이드 / FAQ accordion 확인
   ├─ [레시피 둘러보기] → HOME
   └─ [플래너 시작하기] → 기존 PLANNER_WEEK 인증 flow
+```
+
+### HOME R2 광고 진입
+
+```text
+desktop HOME 자동 전환 banner / mobile HOME 무먹 둘러보기 R2 카드
+  ├─ [집밥 기록 유형] → /beta/r2/recording
+  └─ [집밥 흐름 유형] → /beta/r2/homeflow
 ```
 
 ### 상태 / 회복
