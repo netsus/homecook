@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-12 사용자 승인 — 비로그인 PANTRY 예시 체험
+
+비로그인 PANTRY는 전체 화면 gate 대신 `로그인 전 예시`로 명시한 기본 재료 몇 개를 client-only로 표시한다. `재료 추가`는 공개 ingredient 검색을 사용하는 기존 modal까지 열어 선택할 수 있지만 최종 `팬트리에 추가` 전에 로그인 필요 modal을 띄우고 `POST /pantry`를 호출하지 않는다. 삭제·추천·묶음 추가 같은 다른 개인화 action도 비로그인 mutation/API를 만들지 않는다. 로그인 사용자는 기존 본인 pantry CRUD를 그대로 사용하고 API·DB 소유권·401 계약은 변경하지 않으며 배포는 보류한다.
+
 ## 2026-09-12 사용자 승인 — 데스크톱 요리모드 내비게이션 대비
 
 dark COOK_MODE의 `WebTopNav`는 흰 배경이 포함된 light logo 대신 공식 monochrome dark auxiliary logo를 사용해 header 배경과 이어지게 표시한다. 요리모드의 inactive tab hover·keyboard focus는 밝은 글자, 반투명 brand-blue fill, 얇은 blue border로 명확히 구분한다. 다른 밝은 화면의 공통 logo/tab style, navigation 항목·동작, COOK_MODE 내용과 API·DB는 변경하지 않으며 배포는 보류한다.

@@ -13,6 +13,8 @@
 
 > 결과 이후 이동 문구는 recording `그런데 무먹에서는 집밥을 어떻게 기록할까요?` → `무먹 체험하기`, homeflow `무먹에서 집밥 어떻게 하는지 알아볼까요?` → `무먹 체험하기`다. recording 체험 하단의 반복 준비 문장은 제거한다. 신청 화면의 간결화는 표시만 바꾸며 동의 true·Turnstile·목적·보관·철회와 서버 전이 조건을 그대로 유지한다. 공유 deep link는 결과 key만 보존하고 각 경로의 전용 social image를 사용한다.
 
+> 비로그인 PANTRY 흐름은 `예시 재료 확인 → 재료 추가 modal → 공개 재료 선택 → 팬트리에 추가 → 로그인 필요 modal`이다. 로그인 전에는 pantry 조회·추가·삭제 API와 개인 추천을 호출하지 않으며 로그인 뒤 `/pantry`로 돌아와 기존 본인 데이터 흐름을 사용한다.
+
 > **2026-09-11 contract-evolution — 무먹 r2 자유 순서 flow (r2.1)**
 >
 > `/beta/r2/{recording|homeflow}` → MENU → EXAMPLE 또는 SURVEY 또는 LEAD → 각 DONE → 선택적 MENU/다른 활동이다. 단독 활동 완료와 세 활동의 순서 6가지를 모두 허용하며 메뉴 복귀가 새 참여를 만들지 않는다. 서버 참여는 topic/version별로 분리하고 완료 상태를 복원한다.

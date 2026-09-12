@@ -39,6 +39,7 @@ interface PantryAddSheetProps {
   existingProductItems: PantryProductInput[];
   onAdd: (addedCount: number) => void;
   onClose: () => void;
+  onRequireAuth?: () => void;
 }
 
 export function PantryAddSheet({
@@ -46,6 +47,7 @@ export function PantryAddSheet({
   existingProductItems,
   onAdd,
   onClose,
+  onRequireAuth,
 }: PantryAddSheetProps) {
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [products, setProducts] = useState<FoodProductData[]>([]);
@@ -290,6 +292,10 @@ export function PantryAddSheet({
 
   const handleAdd = useCallback(async () => {
     if (selectedCount === 0 || isAdding) return;
+    if (onRequireAuth) {
+      onRequireAuth();
+      return;
+    }
 
     const mutationSequence = mutationSequenceRef.current + 1;
     mutationSequenceRef.current = mutationSequence;
@@ -338,6 +344,7 @@ export function PantryAddSheet({
     isAdding,
     onAdd,
     onClose,
+    onRequireAuth,
     selectedCount,
     selectedIds,
     selectedProducts,

@@ -1,5 +1,7 @@
 # Slice: 13-pantry-core
 
+> 2026-09-12 guest-preview successor: 사용자 승인에 따라 비로그인 PANTRY entry gate를 client-only 기본 재료 예시로 대체한다. 직접 추가 modal까지는 공개 재료 검색으로 체험하고 최종 추가에서 로그인 modal을 표시한다. pantry API/DB는 계속 로그인 필수이며 아래 기존 Stage evidence는 역사 기록이다. 새 UI 검증은 배포 직전 누적 테스트에서 닫는다.
+
 ## Goal
 
 사용자가 집에 보유한 재료를 팬트리에서 관리(조회 / 직접 추가 / 묶음 추가 / 삭제)할 수 있도록 한다. 팬트리는 수량이 아닌 보유 여부만 저장하며, 장보기 완료 시 반영된 팬트리 항목을 이 화면에서 확인하고 관리할 수 있다.

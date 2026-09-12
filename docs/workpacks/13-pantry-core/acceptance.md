@@ -1,5 +1,12 @@
 # Acceptance Checklist
 
+## 2026-09-12 guest-preview successor — 배포 전 검증 대기
+
+- [ ] 비로그인 PANTRY가 개인 API를 호출하지 않고 기본 재료 예시를 표시한다.
+- [ ] 비로그인 사용자가 재료 추가 modal에서 공개 재료를 검색·선택할 수 있다.
+- [ ] 최종 팬트리 추가는 로그인 필요 modal을 표시하고 `POST /pantry`를 호출하지 않는다.
+- [ ] 로그인 사용자의 기존 조회·추가·삭제 흐름은 그대로 유지된다.
+
 > README의 `Contract Evolution Candidates`는 사용자 승인과 공식 문서 갱신 전까지 acceptance 범위에 포함하지 않는다.
 > acceptance는 living closeout 문서다. 체크는 테스트, exploratory QA, real DB smoke, 실제 브라우저 확인처럼 evidence가 생긴 뒤에만 한다.
 > Stage 6 merge 시점에는 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.
