@@ -31,7 +31,7 @@ async function quiz(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("heading", { name: "머릿속 플래너형" });
 }
 async function experience(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "무먹 체험하러 가기" }));
+  await user.click(screen.getByRole("button", { name: "무먹 체험하기" }));
   await user.click(await screen.findByRole("button", { name: /요리 계획에 추가하기/ }));
   await user.click(screen.getByRole("button", { name: /장보기 목록 만들기/ }));
   for (const name of ["삼겹살", "대파", "잘 익은 김치", "즉석밥", "버터", "계란"]) { const checkbox = screen.getByRole("checkbox", { name: `${name} 구매` }) as HTMLInputElement; if (!checkbox.checked) await user.click(checkbox); }
@@ -48,7 +48,9 @@ describe("homeflow linear landing", () => {
   it("runs the complete preview without API requests, persistent storage or real email collection", async () => {
     const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
     const user = userEvent.setup(); render(<HomeflowLanding preview pageContext={null} attribution={direct} sharedResult={null} />);
-    await quiz(user); await experience(user);
+    await quiz(user);
+    expect(screen.getByText("무먹에서 집밥 어떻게 하는지 알아볼까요?")).toBeTruthy();
+    await experience(user);
     expect((screen.getByRole("textbox", { name: "이메일 주소" }) as HTMLInputElement).value).toBe("preview@example.com");
     expect(screen.queryByRole("link", { name: "개인정보 처리방침" })).toBeNull();
     expect(screen.queryByText(/만 14세/)).toBeNull();

@@ -618,6 +618,10 @@ Q3 보조 설명은 화면에서 숨기는 승인안을 유지한다. 각4개 �
 
 homeflow 동의는 `[필수] 이메일 수집·이용에 동의해요.`와 `수집 목적과 보유 기간 보기`의 펼침 UI를 사용한다. export의 사용자 승인에 따라 homeflow 화면의 별도 개인정보 링크/14세 안내를 제거한 표시를 보존하되 수집 항목·목적·보관·철회·동의 field는 변경하지 않는다. 다른 R2 화면의 공용 동의 문구는 바꾸지 않는다. 공개 개인정보 반영과 독립 개인정보 검토는 실제 lead readiness의 기존 필수 조건이며, UI 승인만으로 법적/운영 준비 완료를 주장하지 않는다.
 
+2026-09-12 후속 사용자 승인에 따라 recording도 `[필수] 이메일 수집·이용에 동의해요.`만 상시 표시하고 수집 목적·항목·보유기간·철회 안내를 `수집 목적과 보유 기간 보기` 펼침 UI에 둔다. 별도 `동의하지 않아도…`, `만 14세…`, 개인정보처리방침 link 문장은 recording form에서 제거한다. 이는 표시 간결화이며 `consent=true`, exact purpose, 2026-11-30 보관 종료, 철회 삭제와 readiness gate를 완화하지 않는다.
+
+같은 승인으로 recording 결과 CTA 위 문구는 `그런데 무먹에서는 집밥을 어떻게 기록할까요?`만 표시하고 `준비된 예시로 확인해보세요.`와 체험 화면 하단 `베타 준비 중` 안내는 제거한다. homeflow 결과는 모든 유형에 `무먹에서 집밥 어떻게 하는지 알아볼까요?`를 표시하고 CTA를 `무먹 체험하기`로 통일하며 결과 제목·인용문과 반짝이 motion의 시각 위계를 높인다. 두 경로의 Open Graph/Twitter 이미지는 각 랜딩 전용 1200×630 정적 카드로 사용한다.
+
 공유는 기존 결과 화면의 버튼을 보존하면서 R2 경로로 격리한다. homeflow는 `/beta/r2/homeflow?result=<spontaneous|mental|memo|scheduled>`, recording은 `/beta/r2/recording?result=<homecook-passer|eyeballing-master|ingredient-tracker|pro-measurer>`의 허용 key만 사용한다. 공유 URL은 해당 경로와 **유일한 result query**로 새로 구성하여 PII/답변/attribution/참여 key/그 밖의 query를 제거한다. recording을 기존1차 `/beta`로 보내지 않는다.
 
 공유 결과는 읽기 전용이며 **shared view의 POST/bootstrap은0**이다. 서버 참여/설문 완료나 실제 제출 유형을 주장하지 않는다. 사용자가 명시적으로 테스트 시작을 선택한 뒤에만 정상 경로로 전환한다. recording은 정상 Q1으로만 진입하고 실제 첫 답변 전에는 survey start가 없다. homeflow는 export의 정상 Hero/설문 진입 경계를 유지한다. 허용하지 않은 결과 key로 다른 topic의 유형을 표시하지 않는다. 이는 기존 공유 버튼의 canonical 경로 분리이며 새 API field/action·추가 활동·사업 기능이 아니다.

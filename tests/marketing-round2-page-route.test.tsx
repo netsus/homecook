@@ -22,7 +22,7 @@ describe("R2 server route", () => {
   });
   it("has query-free canonical metadata for both exact topics", async () => {
     const { generateMetadata } = await import("@/app/beta/r2/[topic]/page");
-    for (const topic of ["recording", "homeflow"]) expect(await generateMetadata({ params: Promise.resolve({ topic }) })).toMatchObject({ alternates: { canonical: `/beta/r2/${topic}` }, robots: { index: false, follow: false }, referrer: "no-referrer" });
+    for (const topic of ["recording", "homeflow"]) expect(await generateMetadata({ params: Promise.resolve({ topic }) })).toMatchObject({ alternates: { canonical: `/beta/r2/${topic}` }, robots: { index: false, follow: false }, referrer: "no-referrer", openGraph: { images: [{ url: `/assets/funnel/share/r2-${topic}-og.webp`, width: 1200, height: 630, type: "image/webp" }] }, twitter: { images: [`/assets/funnel/share/r2-${topic}-og.webp`] } });
     await expect(generateMetadata({ params: Promise.resolve({ topic: "unknown" }) })).rejects.toThrow("NOT_FOUND");
   });
 });

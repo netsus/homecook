@@ -16178,6 +16178,15 @@ body:has(.mdv2-root) {
   white-space: nowrap;
 }
 
+.mdv2-root .conversion-block-recording h2 {
+  max-width: 350px;
+  margin: 0 auto;
+  font-size: 27px;
+  line-height: 1.28;
+  white-space: normal;
+  word-break: keep-all;
+}
+
 .mdv2-root .conversion-block span {
   display: block;
   margin-top: 8px;

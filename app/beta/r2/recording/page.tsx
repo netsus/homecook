@@ -8,12 +8,23 @@ import { readRound2RuntimeConfig } from "@/lib/server/marketing-round2-runtime";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+const title = "나의 집밥 기록 유형 · 무먹";
+const description = "4문항으로 집밥 기록 유형을 알아보고 준비된 무먹 예시를 체험해보세요.";
+const socialImage = "/assets/funnel/share/r2-recording-og.webp";
 export const metadata: Metadata = {
-  title: "나의 집밥 기록 유형 · 무먹",
-  description: "4문항으로 집밥 기록 유형을 알아보고 준비된 무먹 예시를 체험해보세요.",
+  title,
+  description,
   robots: { index: false, follow: false },
   referrer: "no-referrer",
   alternates: { canonical: "/beta/r2/recording" },
+  openGraph: {
+    title,
+    description,
+    url: "/beta/r2/recording",
+    type: "website",
+    images: [{ url: socialImage, width: 1200, height: 630, type: "image/webp", alt: "무먹 집밥 기록 유형 테스트" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: [socialImage] },
 };
 
 export default async function RecordingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

@@ -12,6 +12,7 @@ export const runtime = "nodejs";
 type RouteParams = { topic: string };
 type SearchParams = Record<string, string | string[] | undefined>;
 const titles = { recording: "내 레시피로 만든 집밥, 먹은 만큼 영양 기록", homeflow: "뭐 먹을지 정한 다음, 장보기부터 남은 요리까지" };
+const socialImages = { recording: "/assets/funnel/share/r2-recording-og.webp", homeflow: "/assets/funnel/share/r2-homeflow-og.webp" };
 
 export async function generateMetadata({ params }: { params: Promise<RouteParams> }): Promise<Metadata> {
   const { topic: segment } = await params;
@@ -24,7 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
     alternates: { canonical },
     robots: { index: false, follow: false },
     referrer: "no-referrer",
-    openGraph: { title: titles[topic], url: canonical, type: "website" },
+    openGraph: { title: titles[topic], url: canonical, type: "website", images: [{ url: socialImages[topic], width: 1200, height: 630, type: "image/webp" }] },
+    twitter: { card: "summary_large_image", title: titles[topic], images: [socialImages[topic]] },
   };
 }
 

@@ -41,7 +41,7 @@ test.describe("@evidence-capture homeflow local linear preview", () => {
       }
       await expect(page.getByRole("heading", { name: "오늘의 감각형" })).toBeVisible();
       await capture("result");
-      await page.getByRole("button", { name: "무먹 체험하러 가기" }).click();
+      await page.getByRole("button", { name: "무먹 체험하기" }).click();
       await expect(page.getByRole("heading", { name: "유튜브에서 레시피를 가져왔어요" })).toBeVisible();
       await capture("01-recipe");
       await page.getByRole("button", { name: "외 4가지 재료" }).click();

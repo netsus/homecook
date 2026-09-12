@@ -65,12 +65,10 @@ export function RecordingLanding(props: RecordingLandingProps) {
     content = <Frame stage={state.screen} className="mdv2-state-screen"><Brand /><h1>{legacy ? "이전 설문을 확인해 주세요" : returning ? "이미 의견을 남겨주셨어요" : props.preview ? "체험 예시를 모두 확인했어요" : "알림 신청 준비 중이에요"}</h1><p>{legacy ? "이전 버전의 답변은 새 설문에 섞지 않아요. 로컬 설문을 다시 시작해 주세요." : returning ? "이 기기에서 확인할 수 있는 유형 정보가 없어 체험으로 이어갈게요." : props.preview ? "미리보기에서는 실제 의견이나 이메일 신청을 접수하지 않아요." : "준비가 완료되면 이메일로 베타 오픈 알림을 신청할 수 있어요."}</p>{legacy ? <button type="button" className="primary-button" onClick={client.restartLocal}>로컬 설문 다시 시작</button> : returning ? <button type="button" className="primary-button" onClick={next}>체험 이어가기</button> : <button type="button" className="primary-button" onClick={client.back}>이전 화면</button>}</Frame>;
   }
 
-  const example = ["experience", "planner", "packaged", "payoff"].includes(state.screen);
   const recoveryScroll = !!error && state.screen !== "lead";
   const footerStyle: React.CSSProperties = { flex: "0 0 auto", width: "min(100%, 390px)", margin: "0 auto", padding: "8px 24px", fontSize: 12, lineHeight: 1.5, background: "#fff" };
   return <div className="mdv2-root" style={{ display: "flex", flexDirection: "column" }}>
     <div className="mdv2-shell" style={{ flex: "1 1 0", height: "auto", overflowY: recoveryScroll ? "auto" : undefined }} inert={state.core.busy || undefined}>{recoveryScroll ? <div style={{ height: "100dvh" }}>{content}</div> : content}</div>
-    {example && <p style={footerStyle}>베타 준비 중 · 준비된 사용 예시예요. 영양정보는 체험용 추정 예시이며 실제 레시피나 식단을 변경하지 않아요.</p>}
     {props.preview && <p role="status" style={{ ...footerStyle, textAlign: "center" }}>미리보기 · 실제 저장과 신청은 하지 않아요.</p>}
     {error && state.screen !== "lead" && <div className="mdv2-error" role="alert" style={{ ...footerStyle, maxHeight: "40dvh", overflowY: "auto" }}><p>{error}</p><button type="button" disabled={state.core.busy} onClick={() => { void client.retry(); }}>다시 시도</button>{state.core.connection === "restart_required" && <button type="button" onClick={client.restartLocal}>로컬 설문 다시 시작</button>}</div>}
     {state.core.busy && <p role="status" className="mdv2-submit-status" style={footerStyle}>진행 내용을 확인하고 있어요.</p>}

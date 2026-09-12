@@ -44,13 +44,14 @@
 .options i{font-style:normal;display:grid;place-items:center;width:22px;height:22px;flex:none;border:1px solid #cdd8e1;border-radius:50%;color:white;font-size:14px}
 .options button[aria-pressed=true] i{background:var(--blue);border-color:var(--blue)}
 .resultEyebrow{text-align:center;font-size:12px;font-weight:700;color:#748291;margin:0}
-.screen .resultTitle{text-align:center;font-size:29px;color:#028cdc}
+.screen .resultTitle{text-align:center;font-size:34px;line-height:1.18;color:#028cdc}
 .characterScene{position:relative;isolation:isolate;display:grid;place-items:center;margin:0 auto;width:clamp(150px,29svh,240px);height:clamp(150px,29svh,240px);flex:none}
 .characterImage{width:100%;height:100%;object-fit:contain;border-radius:22px;animation:characterAppear .65s cubic-bezier(.18,.85,.24,1.2) both}
 .sparkles{position:absolute;inset:-8px;pointer-events:none}
 .sparkles span{position:absolute;color:#00a1ff;font-size:19px;opacity:0;animation:sparklePulse 1.7s ease-in-out .2s 3}
 .sparkles span:nth-child(1){left:3%;top:12%}.sparkles span:nth-child(2){right:0;top:33%;color:#f6c74d;animation-delay:.45s}.sparkles span:nth-child(3){left:0;bottom:18%;animation-delay:.7s}.sparkles span:nth-child(4){right:12%;top:0;color:#f6c74d;animation-delay:.1s}.sparkles span:nth-child(5){right:0;bottom:5%;animation-delay:.85s}.sparkles span:nth-child(6){left:21%;bottom:-1%;color:#f6c74d;animation-delay:.35s}
-.screen blockquote{margin:0;text-align:center;font-weight:800;font-size:19px;line-height:1.45;letter-spacing:-.5px;word-break:keep-all}
+.resultCharacter .sparkles span{font-size:22px;animation-duration:1.8s;animation-iteration-count:infinite}
+.screen blockquote{margin:0;text-align:center;font-weight:850;font-size:22px;line-height:1.4;letter-spacing:-.6px;word-break:keep-all}
 .resultBody{font-size:14px;line-height:1.6;margin:0;color:#647184;text-align:center;white-space:pre-line;word-break:keep-all}
 .bridge{margin:0;padding:9px 10px;background:#f2faff;border-radius:11px;font-size:12px;line-height:1.5;color:#486e86;text-align:center;word-break:keep-all}
 .textButton{border:0;background:transparent;color:#0689d8;min-height:38px;font-size:13px}

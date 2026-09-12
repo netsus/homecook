@@ -64,9 +64,6 @@ export async function runRecordingUiScenarios({ browser, origin, sql, fixture, a
     const bounds = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, pageWidth: document.documentElement.scrollWidth }));
     geometry.push({ caseId, name, ...bounds });
     expect(bounds.pageWidth).toBeLessThanOrEqual(bounds.width);
-    if (await page.locator('main[data-stage^="experience-"], main[data-stage^="planner-"], main[data-stage="packaged-food"]').count()) {
-      await visibleInViewport(page.getByText('베타 준비 중 · 준비된 사용 예시예요. 영양정보는 체험용 추정 예시이며 실제 레시피나 식단을 변경하지 않아요.', { exact: true }), `${name}-example-notice`);
-    }
   }
   async function fresh(nextCase) {
     await context?.close();
@@ -316,7 +313,7 @@ export async function runRecordingUiScenarios({ browser, origin, sql, fixture, a
       }
       checks.push(`${result} shared result: correct read-only type, POST/bootstrap 0, generated share URL has result only`);
     }
-    checks.push('Prepared-example notice intersects the viewport and is visibly hit-testable throughout experience, planner and packaged scenes');
+    checks.push('Prepared recording experience scenes omit the repeated beta-preparation footer');
 
     await fresh('recording-start-recovery');
     const recoveryBootstrap = responseFor('bootstrap');
@@ -370,7 +367,7 @@ export async function runRecordingUiScenarios({ browser, origin, sql, fixture, a
     await expect(page.getByRole('heading', { name: '머릿속 플래너형', exact: true })).toBeVisible();
     expect(JSON.parse(sql(`select json_build_object('version',survey_version,'answers',answers) from public.marketing_round2_participations where id='${homeflowId}'`))).toEqual({ version: 'r2.2-homeflow', answers: homeflowAnswers });
     await capture('result');
-    await clickAndAcknowledge('무먹 체험하러 가기', 'activity_start', 'example', 'homeflow');
+    await clickAndAcknowledge('무먹 체험하기', 'activity_start', 'example', 'homeflow');
     await page.getByRole('button', { name: /요리 계획에 추가하기/ }).click();
     await page.getByRole('button', { name: /장보기 목록 만들기/ }).click();
     for (const name of ['삼겹살', '대파', '잘 익은 김치', '즉석밥', '버터', '계란']) {

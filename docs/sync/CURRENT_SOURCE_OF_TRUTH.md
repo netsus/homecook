@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-12 사용자 승인 — R2 결과·동의·공유 카드 후속 조정
+
+recording 결과 CTA 위 문구는 `그런데 무먹에서는 집밥을 어떻게 기록할까요?` 한 문장으로 바꾸고 보조 문구와 체험 화면 하단 `베타 준비 중` 안내를 제거한다. recording 신청 동의는 `[필수] 이메일 수집·이용에 동의해요.`만 상시 표시하고 수집 목적·항목·보유기간·철회 안내는 펼침 UI로 이동하며 별도 미동의/14세/privacy link 문장은 제거한다. homeflow 결과는 모든 유형에서 `무먹에서 집밥 어떻게 하는지 알아볼까요?` bridge와 `무먹 체험하기` CTA를 사용하고, 제목·인용문 위계와 결과 반짝이 motion을 강화한다. 두 R2 경로의 Open Graph/Twitter 이미지는 각 랜딩 전용 1200×630 카드로 분리한다. API·DB·동의 필수값·수집 목적·보유기간·공유 URL privacy는 변경하지 않으며 배포는 보류한다.
+
 ## 2026-09-12 사용자 승인 — HOME R2 광고 배너 연결
 
 desktop HOME의 기존 `/beta` promotion banner는 `/beta/r2/recording`과 `/beta/r2/homeflow` 두 배너가 5초마다 옆으로 전환되는 carousel로 교체한다. mobile HOME의 `무먹 둘러보기` 첫 가이드 카드는 같은 두 R2 direct link 카드로 교체하고, 각 카드 전체를 누르면 해당 랜딩으로 바로 이동한다. desktop carousel은 hover·keyboard focus 중 자동 전환을 멈추고 `prefers-reduced-motion`에서는 자동 전환하지 않는다. 기존 테마 필터, `/about` direct/web navigation, R2 API·DB·권한·수집 계약은 유지하며 이번 변경은 아직 배포하지 않는다.

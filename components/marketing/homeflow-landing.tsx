@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ChevronLeftIcon, CheckIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 import { HomeflowExperience } from "@/components/marketing/homeflow-experience";
 import { MarketingTurnstile, type MarketingTurnstileController } from "@/components/marketing/marketing-turnstile";
-import { HOMEFLOW_RESULTS, HOMEFLOW_RESULT_BRIDGES, HOMEFLOW_CHARACTER_ASSETS } from "@/lib/marketing/homeflow-content";
+import { HOMEFLOW_RESULTS, HOMEFLOW_CHARACTER_ASSETS } from "@/lib/marketing/homeflow-content";
 import { LINEAR_HOMEFLOW_SURVEY } from "@/lib/marketing/round2-survey";
 import { CAMPAIGN_END, Round2Error, LINEAR_HOMEFLOW_SURVEY_VERSION, ROUND2_VERSION, ROUND2_CONSENT_VERSION, ROUND2_PURPOSE, normalizeRound2Email, type Round2Activity, type Round2Request, type Round2SuccessData } from "@/lib/marketing-round2";
 import { prepareRound2Bootstrap, restartRound2Bootstrap, buildRound2BootstrapRequest, confirmRound2Bootstrap, markRound2ParticipationExpired } from "@/lib/marketing/round2-session";
@@ -17,8 +17,8 @@ type Props = { preview: boolean; pageContext: string | null; attribution: Round2
 type LeadRequest = Extract<Round2Request, { action: "lead_submit" }>;
 const common = () => ({ topic: "homeflow" as const, round_version: ROUND2_VERSION, honeypot: "" as const, event_id: crypto.randomUUID() });
 
-function CharacterArtwork({ src, alt, celebrate = false }: { src: string | null; alt: string; celebrate?: boolean }) {
-  return <div className={`${styles.characterScene} ${celebrate ? styles.celebrating : ""}`}>
+function CharacterArtwork({ src, alt, celebrate = false, result = false }: { src: string | null; alt: string; celebrate?: boolean; result?: boolean }) {
+  return <div className={`${styles.characterScene} ${celebrate ? styles.celebrating : ""} ${result ? styles.resultCharacter : ""}`}>
     {src && <Image className={styles.characterImage} src={src} alt={alt} width={720} height={720} sizes="(max-width: 440px) 62vw, 240px" />}
     <div className={styles.sparkles} aria-hidden="true">{[0, 1, 2, 3, 4, 5].map(index => <span key={index}>✦</span>)}</div>
     {celebrate && <div className={styles.confetti} aria-hidden="true">{Array.from({ length: 16 }, (_, index) => <i key={index} style={{ "--x": `${Math.cos(index * .9) * 130}px`, "--y": `${Math.sin(index * .9) * 110 - 40}px`, "--rotation": `${index * 47}deg`, "--delay": `${index % 4 * 55}ms` } as React.CSSProperties} />)}</div>}
@@ -264,10 +264,10 @@ export function HomeflowLanding({ preview, pageContext, attribution, sharedResul
       </>}
       {(shared || ui.screen === "result") && result && resultKey && <>
         <button type="button" className={styles.back} aria-label="처음 화면" onClick={goHome}>{backIcon}</button><p className={styles.resultEyebrow}>{shared ? "공유된 집밥 유형" : "나의 집밥 유형"}</p><h1 className={styles.resultTitle}>{result.title}</h1>
-        <CharacterArtwork key={resultKey} src={result.characterSrc} alt={result.characterAlt} />
+        <CharacterArtwork key={resultKey} src={result.characterSrc} alt={result.characterAlt} result />
         <blockquote>{result.quote}</blockquote><p className={styles.resultBody}>{result.description}</p>
-        {!shared && ui.answers.q4 && ui.answers.q4 !== "none" && <p className={styles.bridge}>{HOMEFLOW_RESULT_BRIDGES[ui.answers.q4]}</p>}
-        <div className={styles.footer}><button className={styles.primary} type="button" onClick={shared ? beginQuiz : beginExample} disabled={busy}>{shared ? "4문항 테스트하기" : "무먹 체험하러 가기"} <ArrowRightIcon aria-hidden="true" /></button><button className={styles.textButton} type="button" onClick={() => { void share(resultKey); }}>내 유형 공유하기</button>{shareNotice && <p className={styles.fine} role="status">{shareNotice}</p>}</div>
+        {!shared && <p className={styles.bridge}>무먹에서 집밥 어떻게 하는지 알아볼까요?</p>}
+        <div className={styles.footer}><button className={styles.primary} type="button" onClick={shared ? beginQuiz : beginExample} disabled={busy}>{shared ? "4문항 테스트하기" : "무먹 체험하기"} <ArrowRightIcon aria-hidden="true" /></button><button className={styles.textButton} type="button" onClick={() => { void share(resultKey); }}>내 유형 공유하기</button>{shareNotice && <p className={styles.fine} role="status">{shareNotice}</p>}</div>
       </>}
       {!shared && ui.screen === "returning" && <>{brand}<h1>이미 의견을 남겨주셨어요.</h1><p className={styles.body}>이 브라우저에는 유형 결과가 남아 있지 않아요. 답변을 다시 제출하지 않고 무먹 체험을 이어갈 수 있어요.</p><div className={styles.footer}><button className={styles.primary} onClick={beginExample} disabled={busy}>무먹 체험하러 가기</button></div></>}
       {!shared && ui.screen === "lead" && <>
