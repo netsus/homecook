@@ -26,8 +26,8 @@ export const HOMEFLOW_RECIPE = {
     channel: "추추의 한끼식사",
     url: "https://www.youtube.com/shorts/IxXeEFTf0ZQ",
     channelUrl: "https://www.youtube.com/@chuchu_cook",
-    thumbnail: "/assets/funnel/homeflow/thumbnail.jpg",
-    profile: "/assets/funnel/homeflow/channel-profile.jpg",
+    thumbnail: "/assets/funnel/homeflow/thumbnail.webp",
+    profile: "/assets/funnel/homeflow/channel-profile.webp",
 } as const;
 export const HOMEFLOW_INGREDIENTS = [
     { id: "pork", name: "삼겹살", amount: "120g", shoppingName: "삼겹살", icon: "🥩", imageSrc: "/assets/ingredients/plush-v2/pork.webp" },
