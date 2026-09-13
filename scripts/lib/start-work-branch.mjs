@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 
 import { clearBranchPromptPending, writeBranchSession } from "./branch-session.mjs";
-import { checkWorkpackDocs, resolveSliceFromBranch } from "./check-workpack-docs.mjs";
 import { isAllowedWorkBranchName } from "./git-policy.mjs";
 
 function ensureNonEmptyString(value, label) {
@@ -168,28 +167,6 @@ export function startWorkBranch({
     args: ["fetch", "origin"],
     spawnSyncFn,
   });
-
-  const workpackSlice = resolveSliceFromBranch(targetBranch);
-  if (workpackSlice) {
-    const spawnSyncInRoot = (command, args, options = {}) =>
-      spawnSyncFn(command, args, {
-        cwd: normalizedRootDir,
-        encoding: "utf8",
-        ...options,
-      });
-    const missing = checkWorkpackDocs({
-      slice: workpackSlice,
-      baseRef: normalizedBaseRef.replace(/^origin\//, ""),
-      spawnSyncFn: spawnSyncInRoot,
-    });
-
-    if (missing.length > 0) {
-      throw new Error(
-        `Stage 1 docs must be merged before starting ${targetBranch}.\n` +
-          missing.map((path) => `- ${path}`).join("\n"),
-      );
-    }
-  }
 
   if (
     branchExists({

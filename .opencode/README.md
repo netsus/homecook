@@ -1,5 +1,7 @@
 # Repo-Local OpenCode / OMO Configuration
 
+> **역사 기록:** 2026-09-14부터 OMO runtime과 provider는 신규 작업에서 사용하지 않는다.
+
 이 디렉터리는 Homecook 저장소의 OpenCode 호환 설정과 legacy OMO runtime 상태 경로를 둔다.
 
 ## Current Policy

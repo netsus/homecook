@@ -1,5 +1,7 @@
 # Workflow V2 Pilot State
 
+> **역사 기록:** 2026-09-14부터 이 디렉터리는 신규 작업에서 읽거나 갱신하지 않는다. OMO/Stage/closeout 운영은 중지됐다.
+
 이 디렉터리는 workflow v2의 machine-readable pilot 상태를 저장한다.
 
 ## Files

@@ -1,10 +1,12 @@
 # Workpack Roadmap v2
 
+> **역사 기록:** 2026-09-14부터 workpack, acceptance, Stage와 OMO 상태는 신규 작업의 선행 조건이나 머지 gate가 아니다. 아래 내용은 이미 내린 제품 결정과 과거 진행 상황을 찾는 참고 자료다. 현재 개발 흐름은 `docs/engineering/agent-workflow-overview.md`를 따른다.
+
 ## Purpose
 
-- 앞으로의 구현은 `작은 세로 슬라이스` 단위로 진행한다.
+- 과거 구현은 `작은 세로 슬라이스` 단위로 관리했다.
 - 각 슬라이스는 공식 문서 기준의 사용자 가치 하나를 닫아야 한다.
-- 같은 슬라이스에서도 개발 브랜치는 `백엔드`와 `프론트엔드`로 분리한다.
+- 신규 작업은 필요하면 백엔드와 프론트엔드를 한 브랜치에서 함께 수정할 수 있다.
 - Wave1 프로토타입을 실제 서비스로 포팅하는 후속 계획은 `docs/workpacks/wave1-service-porting-plan.md`를 기준으로 한다.
 - 2026-05-11 이후 Wave1 모바일 앱 재포팅의 디자인 기준은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`다. 기존 Wave1 porting PR의 screenshot/authority evidence는 historical evidence이며, 모바일 목표는 fixed prototype reference 대비 100% parity다.
 
