@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { HTML_LIMITED_BOT_UA_RE } from "next/dist/shared/lib/router/utils/html-bots";
 
 const isQaFixtureServer = process.env.HOMECOOK_ENABLE_QA_FIXTURES === "1";
 const isProduction = process.env.NODE_ENV === "production";
@@ -186,6 +187,9 @@ const privatePageSources = [
 ];
 
 const nextConfig: NextConfig = {
+  // Kakao previews read head tags without executing streamed metadata scripts.
+  // Preserve Next's existing crawler coverage when extending the matcher.
+  htmlLimitedBots: new RegExp(`${HTML_LIMITED_BOT_UA_RE.source}|kakaotalk|kakaostory`, "i"),
   ...(isQaFixtureServer ? { devIndicators: false } : {}),
   ...(releaseBuildId
     ? { generateBuildId: async () => releaseBuildId }
@@ -218,6 +222,14 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/beta/r2/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          ...noIndexHeaders,
+        ],
       },
       ...privatePageSources.map((source) => ({
         headers: noIndexHeaders,

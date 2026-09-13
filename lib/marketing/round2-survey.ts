@@ -2,7 +2,11 @@ import {
   RETENTION_UNTIL,
   ROUND2_CONSENT_VERSION,
   ROUND2_PURPOSE,
+  LINEAR_HOMEFLOW_SURVEY_VERSION,
+  LINEAR_RECORDING_SURVEY_VERSION,
   type Round2HomeflowAnswers,
+  type Round2LinearHomeflowAnswers,
+  type Round2LinearRecordingAnswers,
   type Round2RecordingAnswers,
 } from "../marketing-round2";
 
@@ -114,6 +118,102 @@ export const ROUND2_SURVEYS = {
     ],
   } satisfies Round2Survey<Round2HomeflowAnswers, "r2.1-homeflow">,
 } as const;
+
+/** The approved linear homeflow survey has different meanings from r2.1. */
+export const LINEAR_HOMEFLOW_SURVEY = {
+  version: LINEAR_HOMEFLOW_SURVEY_VERSION,
+  questions: [
+    {
+      id: "q1",
+      label: "지난 7일 동안, 요리한 날은 며칠인가요?",
+      options: [
+        { value: "none", label: "0일" },
+        { value: "one_two", label: "1~2일" },
+        { value: "three_four", label: "3~4일" },
+        { value: "five_seven", label: "5~7일" },
+      ],
+    },
+    {
+      id: "q2",
+      label: "최근 4주 동안, 유튜브 레시피를 보고 요리한 횟수는?",
+      options: [
+        { value: "none", label: "0회" },
+        { value: "once", label: "1회" },
+        { value: "two_three", label: "2~3회" },
+        { value: "four_plus", label: "4회 이상" },
+      ],
+    },
+    {
+      id: "q3",
+      label: "집밥은 보통 어떻게 계획하나요?",
+      noticeAfter: "가장 가까운 방식 하나 선택",
+      options: [
+        { value: "spontaneous", label: "계획 없이 그때그때 정함" },
+        { value: "mental", label: "미리 정하고 머릿속에 기억" },
+        { value: "memo", label: "메모·캡처로 대략 정리" },
+        { value: "scheduled", label: "날짜별 메뉴까지 정리" },
+      ],
+    },
+    {
+      id: "q4",
+      label: "집밥을 준비할 때 가장 불편한 것은?",
+      options: [
+        { value: "planning", label: "집밥 계획 세우기" },
+        { value: "shopping", label: "집에 있는 재료 빼고 장보기 목록 만들기" },
+        { value: "video", label: "요리하면서 레시피 영상 다시 보기" },
+        { value: "none", label: "별로 불편하지 않음" },
+      ],
+    },
+  ],
+} as const satisfies Round2Survey<Round2LinearHomeflowAnswers, typeof LINEAR_HOMEFLOW_SURVEY_VERSION>;
+
+/** Preserve the approved recording questions independently of the r2.1 survey. */
+export const LINEAR_RECORDING_SURVEY = {
+  version: LINEAR_RECORDING_SURVEY_VERSION,
+  questions: [
+    {
+      id: "q1",
+      label: "평소 칼로리나 탄단지를\n얼마나 자주 기록하나요?",
+      options: [
+        { value: "daily", label: "거의 매일" },
+        { value: "3_5", label: "주 3~5일" },
+        { value: "1_2", label: "주 1~2일" },
+        { value: "none", label: "거의 안 함 / 안 함" },
+      ],
+    },
+    {
+      id: "q2",
+      label: "일주일에 집밥을\n몇 끼 정도 먹나요?",
+      noticeAfter: "직접 만들거나 가족이 만든 음식 모두 포함",
+      options: [
+        { value: "none", label: "거의 안 먹음" },
+        { value: "1_2", label: "1~2끼" },
+        { value: "3_5", label: "3~5끼" },
+        { value: "6_plus", label: "6끼 이상" },
+      ],
+    },
+    {
+      id: "q3",
+      label: "집밥은 주로\n어떻게 기록하나요?",
+      options: [
+        { value: "pass", label: "집밥은 기록하지 않음" },
+        { value: "eyeball", label: "먹은 양을 눈대중으로 기록" },
+        { value: "track", label: "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록" },
+        { value: "measure", label: "재료와 음식 무게까지 재서 기록" },
+      ],
+    },
+    {
+      id: "q4",
+      label: "집밥을 기록할 때\n가장 불편한 것은?",
+      options: [
+        { value: "ingredients", label: "재료와 양을 하나씩 입력하는 것" },
+        { value: "weight", label: "완성된 음식과 먹은 양을 재는 것" },
+        { value: "search", label: "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것" },
+        { value: "none", label: "별로 불편하지 않음" },
+      ],
+    },
+  ],
+} as const satisfies Round2Survey<Round2LinearRecordingAnswers, typeof LINEAR_RECORDING_SURVEY_VERSION>;
 
 /** The existing privacy route/operator facts are supplied by the page; no new operational facts are invented. */
 export const ROUND2_LEAD_COPY = {

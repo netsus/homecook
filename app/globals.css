@@ -14873,8 +14873,7 @@ body:has(.mdv2-root) {
 
 .mdv2-root .primary-button:disabled {
   cursor: default;
-  background: var(--mumeok-blue-dark);
-  opacity: 1;
+  opacity: 0.46;
   box-shadow: none;
 }
 
@@ -16081,6 +16080,15 @@ body:has(.mdv2-root) {
   line-height: 1.16;
   letter-spacing: -0.052em;
   white-space: nowrap;
+}
+
+.mdv2-root .conversion-block-recording h2 {
+  max-width: 350px;
+  margin: 0 auto;
+  font-size: 27px;
+  line-height: 1.28;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .mdv2-root .conversion-block span {
