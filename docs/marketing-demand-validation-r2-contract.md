@@ -558,7 +558,6 @@ migration artifact는 새 세 테이블·index·CHECK·FK·RLS·consistency trig
 - R2C-003: Q1 본인/가족·동거인 조리의 집밥 범위를 안내하고 Q2 재사용/직접 미관리/기타 enum을 label·API 타입·DB CHECK·예시·분모에 동기화했다. 네 문항/단일 선택/부정 응답 보존을 유지한다.
 - R2C-S01: 유효 쿠키 기반 cookie_resume을 수용했다. 쿠키 없는 신규 참여의 메모리 전용 fallback은 동시 탭·최초 응답 유실 후 중복 방지 정책을 유지하기 위해 미수용했다.
 - 위 항목은 작성자의 수정 설명이며 독립 reviewer의 재검토 PASS나 구현 검증 완료를 뜻하지 않는다.
-- 위 항목은 작성자의 수정 설명이며 독립 reviewer의 재검토 PASS나 구현 검증 완료를 뜻하지 않는다.
 
 ## 12. 2026-09-12 후속 승인: 직렬 UI·설문 버전·R2 한정 배포
 
