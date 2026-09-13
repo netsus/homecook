@@ -2,7 +2,7 @@
 
 > 확정일: 2026-03-20
 > 기준 방향: C2 — 명랑한 주방 (Bright Kitchen)
-> 적용 범위: Slice 02 Stage 4부터 모든 슬라이스
+> 적용 범위: 현재 화면과 후속 구현. 작업 절차는 `AGENTS.md`를 우선한다.
 > 2026-05-11 Wave1 mobile update: Wave1 모바일 100% prototype parity surface의 목표값은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`가 우선한다.
 > 2026-05-12 Phase 2 update: app/web 책임 분리는 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`를 따르고, 기본 구현 경로는 mobile-scoped Wave1 token layer다.
 > 2026-05-19 App palette/shape update: 앱 화면은 `app/globals.css`의 `--brand-primary`, `--radius-*`, `--control-height-*` 계열을 단일 조절 지점으로 사용한다. 웹 `--web-*` 토큰은 변경하지 않는다.

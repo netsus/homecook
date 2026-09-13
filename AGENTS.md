@@ -7,6 +7,7 @@
 - workpack, acceptance, Stage 1~6, 별도 task 승인, OMO, closeout, omo-report는 신규 작업의 조건이 아니다.
 - 기존 workpack과 workflow-v2 자료는 과거 결정과 기능 맥락을 찾는 참고 기록으로만 사용한다.
 - 고객 유입 또는 광고 집행을 시작하기 전에 최소 CI와 출시 점검을 다시 도입한다.
+- 저장소의 스킬·에이전트·보조 문서가 작업 절차나 검증 범위를 다르게 요구하면 현재 `AGENTS.md`를 우선한다. 과거 CI·Stage·workpack·Claude review·closeout 지침을 신규 작업 조건으로 되살리지 않는다.
 
 ## 작업 시작
 
