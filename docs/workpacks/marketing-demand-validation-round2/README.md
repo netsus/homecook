@@ -1,5 +1,14 @@
 # Slice: marketing-demand-validation-round2
 
+## 2026-09-13 R2.2 공개본과 master 통합 인수
+
+- 최신 계약: [r2 상세 계약 §12~13](../../marketing-demand-validation-r2-contract.md). `round_version=r2.1`은 유지하고 기본 설문은 `r2.2-recording` / `r2.2-homeflow`다.
+- 실제 광고 공개본: `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`, `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`.
+- 과거 r2.1 Stage 1/2 체크와 evidence는 역사 범위로 보존한다. 현재 공개됐다는 사실만으로 R2.2의 미체크 acceptance나 독립 Stage review를 자동 통과시키지 않는다.
+- master 통합은 docs 계약 → R2.2 DB/parser → recording/homeflow UI → 결과 공유/social metadata의 작은 successor PR 순서다. 각 PR은 live ref에서 필요한 파일·commit만 선별하고 current master에서 다시 검증한다.
+- live 브랜치 전체 snapshot, 로컬 중복 snapshot/evidence, HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션은 이 workpack 범위가 아니다. 공개 recipe 복구, dependency/security, 배포 도구·운영 기록도 별도 change type으로 판정한다.
+- 이 문서 작업은 production mutation 0이며 현재 광고 배포를 변경하지 않는다. 본 docs PR의 독립 internal 1.5 검토·병합 뒤 구현 통합을 시작한다.
+
 ## Goal
 
 두 영상의 주제와 일치하는 랜딩에서 방문자가 베타 오픈 알림, 사용 예시, 네 문항 의견 중 원하는 활동을 자유롭게 선택한다. 하나만 마쳐도 참여를 끝낼 수 있고, 다른 활동으로 이동하거나 돌아와도 서버가 확인한 완료는 유지한다. 기존 `/beta` 수집과 데이터를 보존하면서 R2 참여·주제 관심을 별도로 기록한다.
@@ -10,7 +19,7 @@
 - 승인 계약 merge SHA: `7f00e62c13572b5b2c0d54c997fe628f7a56567e`, [PR #1551](https://github.com/netsus/homecook/pull/1551).
 - 독립 검토 head: `24093c94ebf53676050353088f173ef7f6315445`; reviewer task `01a08c9d-2cf5-75c0-b409-b3a6ab2d265a`; 해당 계약의 unresolved required 0. 이 승인으로 현재 Stage 1을 자가 승인하지 않는다.
 - 계약의 과거 작성 시점 Draft 설명과 현재 병합 이력을 구분한다. 이 재잠금은 병합된 규범 내용을 그대로 소비한다.
-- 현재 작성 task: `01a08c92-ec13-78a2-8071-681afe60527b`; PR #1550은 Draft이며 독립 internal 1.5 검토·merge 대기다. Stage 1 완료 선언과 Stage 2 시작 권한은 조정 작업이 관리한다.
+- r2.1 작성 task는 `01a08c92-ec13-78a2-8071-681afe60527b`; PR #1550은 `fa7848924442df2790592b14875ccb6148e0c6ba`로 병합됐다. 이 기록은 r2.1 완료 이력이며 새 §12~13 R2.2의 독립 docs gate나 구현 통합 승인을 대신하지 않는다.
 - 최초 PR 초안의 v2 제약은 이 문서와 acceptance로 대체한다. R2에 유형 결과, 선형 8단계, 별도 네 번째 의견 활동을 정의하지 않는다. 공식 계약에 없는 API 필드·함수·테이블은 추가하지 않는다.
 
 ## Branches

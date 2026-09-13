@@ -1,7 +1,23 @@
 # Acceptance Checklist
 
+## 2026-09-13 R2.2 master 통합 acceptance
+
+최신 규범은 [r2 상세 계약 §12~13](../../marketing-demand-validation-r2-contract.md)이다. 현재 광고 공개본 `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`와 `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`는 배포 상태 evidence이며, 아래 master 통합 검증을 대신하지 않는다.
+
+- [ ] 기존 두 r2.1과 새 두 r2.2 조합의 parser/SQL/payload/CHECK를 `(topic,survey_version)`으로 검증하고 교차 version/topic, 추가 key, 누락을 422 또는 DB 거부로 고정한다 <!-- omo:id=accept-r22-version-dispatch;stage=2;scope=backend;review=3,6 -->
+- [ ] 기존 r2.1 함수·완료 row·event 불변, 다른 version 재제출 409, 같은 event 변경 409, 동일 replay 보존, R2.2 migration 순서·bytes·isolated replay를 검증한다 <!-- omo:id=accept-r22-history-preservation;stage=2;scope=backend;review=3,6 -->
+- [ ] recording 원문 Q1..Q4와 Q1 즉시 진입, mount/render start 0, 첫 선택 보존→bootstrap/start ACK 뒤 Q2, 실패 시 같은 event retry를 검증한다 <!-- omo:id=accept-r22-recording-start;stage=4;scope=frontend;review=5,6 -->
+- [ ] recording은 submit ACK+원 답변 tuple만으로 Q3 유형을 표시하고 최종 체험 payoff에서만 example 완료한 뒤 lead로 이동한다 <!-- omo:id=accept-r22-recording-ack;stage=4;scope=frontend;review=5,6 -->
+- [ ] homeflow Hero→4문항→Q3 유형→6체험→lead→done과 승인 copy/영양 예시/reduced-motion을 검증한다 <!-- omo:id=accept-r22-homeflow-linear;stage=4;scope=frontend;review=5,6 -->
+- [ ] 두 topic의 결과·동의 details·CTA와 허용 result-only 공유 URL, shared view POST/bootstrap 0, topic별 1200×630 metadata 및 카카오 제한 수집기 head 출력을 검증한다 <!-- omo:id=accept-r22-share-metadata;stage=4;scope=frontend;review=5,6 -->
+- [ ] version별 draft/participation/expiry, 완료 read-only, 유형 추정·재제출 금지, cookie_resume/410/lead 완료·두 탭·두 topic 격리를 검증한다 <!-- omo:id=accept-r22-versioned-recovery;stage=4;scope=frontend;review=5,6 -->
+- [ ] current master 기반 후속 PR마다 live ref에서 선택한 R2 파일/commit 목록과 제외 목록을 기록하고 전체 423파일 또는 로컬 중복 snapshot을 가져오지 않았음을 검증한다 <!-- omo:id=accept-r22-master-diff-scope;stage=4;scope=shared;review=3,6 -->
+- [ ] HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션 및 별도 recipe/dependency/deploy-tool 변경이 R2 PR에 섞이지 않았음을 검증한다 <!-- omo:id=accept-r22-product-boundary;stage=4;scope=shared;review=3,6 -->
+
+운영은 이미 광고 중이므로 integration PR 검증을 이유로 배포·DB·서버·환경을 변경하지 않는다. 후속 구현 PR은 current master에서 별도 CI와 독립 Stage review를 받고, live 상태와 master merge 상태를 서로 대체 evidence로 사용하지 않는다.
+
 공식 계약: [r2.1](../../marketing-demand-validation-r2-contract.md) @ `7f00e62c13572b5b2c0d54c997fe628f7a56567e`, 독립 reviewed head `24093c94ebf53676050353088f173ef7f6315445`.
-현재는 Stage1 문서 재잠금이며 제품 구현/독립 internal1.5/디자인 authority 승인이 아니다. 아래 non-manual은 해당 Stage2/4에서 실제 evidence 후 체크한다. 계약 전문의 exact 필드·타입·message·DB constraint는 README 요약보다 우선한다.
+아래 r2.1 체크는 병합된 Stage1/초기 Stage2의 역사 범위다. 새 §12~13 R2.2의 미완료 체크와 독립 review를 대체하지 않는다. 계약 전문의 exact 필드·타입·message·DB constraint는 README 요약보다 우선한다.
 
 
 Stage 2 체크 근거: [백엔드 인수 기록](stage2-backend-handoff.md). `accept-r2-routes`의 실제 Next 페이지·canonical 이동 연결은 사용자 지정 Stage 4 화면 범위에 남겨 미체크다. 서버 topic/context helper 자체는 단위 검증했다. 나머지 Stage 4/Manual Only 항목은 완료로 올리지 않는다.

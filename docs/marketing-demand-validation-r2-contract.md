@@ -1,8 +1,10 @@
 # 무먹 2차 랜딩 r2 상세 계약
 
-계약 버전: `r2.1` · 작성일: **2026-09-11 KST** · 변경 유형: `contract-evolution`
+계약 버전: `r2.1` + `r2.2` survey/UI addendum · 작성일: **2026-09-11 KST** · 최신 상태일: **2026-09-13 KST** · 변경 유형: `contract-evolution`
 작성 작업: `01a08c9f-89e0-7f11-8567-9a40e80f1d79` · 조정 작업: `01a07316-265c-7f22-b0af-fa22b7fb2b8a`
-상태: 사용자 승인 범위의 공식 계약 작성본, **독립 검토 전 Draft**. 작성자가 승인·병합하지 않는다.
+상태: §1~11 r2.1은 PR #1551로 병합됨. §12~13 r2.2/통합 addendum은 사용자 승인 범위의 **독립 검토 전 Draft**이며 작성자가 승인·병합하지 않는다.
+
+> 2026-09-13 현재 상태와 master 통합 권위는 §13이 가장 최신이다. §12의 `master 머지 없이 배포`, `배포 전`, `배포 보류` 표현은 2026-09-12 당시 계획·제약의 역사 기록이며 현재 광고 공개 상태나 후속 master 통합 금지를 뜻하지 않는다.
 
 ## 1. 권위와 변경 범위
 
@@ -13,11 +15,11 @@
 | 새 페이지 | `/beta/r2/recording`, `/beta/r2/homeflow` |
 | 새 공개 API | `POST /api/v1/marketing/round2` 하나 |
 | 새 public 테이블 | `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests` 세 개 |
-| 버전 | `round_version=r2.1`, `survey_version=r2.1-recording` 또는 `r2.1-homeflow` |
+| 버전 | `round_version=r2.1`; 보존 `r2.1-recording|r2.1-homeflow`, 최신 기본 `r2.2-recording|r2.2-homeflow` (§12) |
 | 보존 | `/beta`, `POST /api/v1/marketing/validation`, `marketing_validation_sessions`, 기존 쿠키·질문·4유형·8단계·retention 의미 |
-| 적용 전제 | 이 계약 PR 독립 검토·병합 → 별도 Stage 1 workpack/acceptance 재잠금·독립 gate·병합 → Stage 2/4 구현 |
+| 적용 전제 | §13 docs PR 독립 검토·병합 → current master 기반 R2.2 DB/parser → UI → 공유 metadata의 작은 후속 PR과 각 독립 review |
 
-PR #1550의 `marketing-demand-validation-round2` Stage 1 초안은 보류 중이며 이 계약의 권위가 아니다. 본 PR에서는 다른 worktree의 README/acceptance를 대신 수정하지 않는다. 이 선행 계약 PR과 후속 재잠금을 분리하라는 조정 지시가 일반적인 같은-PR workpack sync 규칙의 이번 범위 예외다. 기존 v2 workpack에는 r2 제약을 넣지 않는다. 구현, 운영 DB 접속, migration 실행, 배포, 광고, 메일 발송은 이 작성 작업의 산출물이 아니다.
+`marketing-demand-validation-round2` r2.1 Stage 1 PR #1550은 `fa7848924442df2790592b14875ccb6148e0c6ba`로 병합됐고, 초기 backend PR #1552도 master에 병합됐다. §12~13은 그 이후 광고 공개본에서 확정된 R2.2 차이를 같은 workpack에 다시 잠그는 후속 계약이다. 기존 v2 workpack에는 r2 제약을 넣지 않는다. 구현, 운영 DB 접속, migration 실행, 새 배포, 광고 조작, 메일 발송은 이 작성 작업의 산출물이 아니다.
 
 설계 선택: 기존 v2 단일 row에 nullable 필드를 더하는 안은 짧지만 v2의 순서·이메일 보관 의미와 충돌한다. 승인된 별도 3테이블은 참여 상태, 개인정보 없는 관측 이벤트, 제한된 신청정보의 권한·삭제 범위를 분리하고 기존 데이터 재작성 없이 되돌릴 수 있다. 공개 API 여러 개 대신 action별 엄격한 union을 가진 POST 하나를 사용한다.
 
@@ -555,3 +557,141 @@ migration artifact는 새 세 테이블·index·CHECK·FK·RLS·consistency trig
 - R2C-003: Q1 본인/가족·동거인 조리의 집밥 범위를 안내하고 Q2 재사용/직접 미관리/기타 enum을 label·API 타입·DB CHECK·예시·분모에 동기화했다. 네 문항/단일 선택/부정 응답 보존을 유지한다.
 - R2C-S01: 유효 쿠키 기반 cookie_resume을 수용했다. 쿠키 없는 신규 참여의 메모리 전용 fallback은 동시 탭·최초 응답 유실 후 중복 방지 정책을 유지하기 위해 미수용했다.
 - 위 항목은 작성자의 수정 설명이며 독립 reviewer의 재검토 PASS나 구현 검증 완료를 뜻하지 않는다.
+- 위 항목은 작성자의 수정 설명이며 독립 reviewer의 재검토 PASS나 구현 검증 완료를 뜻하지 않는다.
+
+## 12. 2026-09-12 후속 승인: 직렬 UI·설문 버전·R2 한정 배포
+
+### 12.1 승인 범위와 적용 우선순위
+
+사용자는 2026-09-12 이번 광고 집행 전 예외를 재승인하고, **master 머지 없이 두 랜딩을 배포**하며 기존 데이터를 백업·보존하는 R2 전용 DB 적용 절차 준비·검증·두 랜딩 저장 연결 완성 뒤 배포하는 범위에 `진행`을 명시했다. 이 문서는 그 범위의 계약/배포 계획이며 실제 코드·DB·운영·광고를 변경하거나 자기 승인을 기록하지 않는다.
+
+문서 기준은 `8c6573bf594fa15613205ce97e4435d751c7d87c`다. 배포 통합은 현재 운영 `458ce2daab6cdd91a70504657ce5981a4d4acf3c`에서 시작한 `release/mumeok-r2-only-20260912`, 작업 위치 `/Users/cwj/.codex/worktrees/r2-prelaunch-20260912/homecook`에 승인된 R2 변경을 옮긴다. 사용자가 추가 승인한 PR #1557(`d8af99269b0b66f3fd4f5fbbe108bec335df5fd1`)의 공개 레시피 조회 복구 3파일과, 보안 경고에 대응하는 next/eslint-config-next 15.5.24·sharp 0.35.4·postcss 8.5.23 및 필수 lock 변경만 별도 검증하여 포함한다. 원격 master는 변경하지 않고 그 밖의 비R2 동작·무관한 의존성은 보존한다. 8c 전체나 그 밖의 통합 head를 그대로 배포하지 않는다. 이번에 한해서 계약/구현의 master 선행 머지 규칙을 전용 배포 브랜치의 exact commit 검토·검증으로 대체하며, 다른 릴리즈의 규칙이나 정식 production promote kill switch는 유지한다.
+
+두 경로는 `/beta/r2/recording` / `/beta/r2/homeflow`, 공개 API는 `POST /api/v1/marketing/round2`, public 제품 테이블은 기존3개, `round_version`은 `r2.1`이다. §2의 자유 선택 메뉴/공통3장면/유형 없음은 이전 설문 버전의 UI 기준으로 보존하고, **이번 두 r2.2 설문의 기본 표시 흐름**은 아래 직렬 흐름으로 대체한다. 서버에 survey→example→lead 전체 순서를 강제하는 새 선행 조건은 추가하지 않는다. 각각 자기 활동의 start 선행·멱등·완료 보호는 그대로다.
+
+기존 `/beta`의 v2 질문/유형/8단계/API/cookie/table/retention은 변경하지 않는다. 기존 `r2.1-recording` / `r2.1-homeflow` 답변·문구·제약·집계와 승인 근거도 보존한다. 동일한 `none` 같은 값이라도 설문 버전 없이 합치거나 재해석하지 않는다.
+
+### 12.2 recording: 기존 질문 원문과 첫 실제 답변 시작
+
+권위 입력은 보존 커밋 `84e412b4c41fd905d80589bf00c9a38fd3c0f3bf`의 `components/marketing/marketing-demand-validation-quiz.tsx`와 `components/marketing/marketing-demand-validation-screen.tsx` blob이다. SHA256은 각각 `ca21721a6641f42073cdcad794bc85ee84a4b30da9c04f94a3785563cf027ec0`, `a83bf7589800cdb97315311d5afe2356b85398259fc8378de42e5f32016fc87f`다. 현재 작업 폴더의 변경 중인 파일 대신 이 불변 원본을 대조한다.
+
+`topic=recording`, `survey_version=r2.2-recording`. 신규 진입은 별도 소개 Hero/선택 메뉴 없이 Q1을 즉시 표시한다. 작은 브랜드/베타 준비 상태와 4문항 진행 표시는 유지할 수 있지만 설문 시작을 별도 소개 버튼 뒤로 미루지 않는다. 다음 JSON의 줄바꿈·값·표시 문구·순서를 원문 그대로 사용한다.
+
+```json
+{
+  "survey_version": "r2.2-recording",
+  "topic": "recording",
+  "questions": [
+    {"id":"q1","prompt":"평소 칼로리나 탄단지를\n얼마나 자주 기록하나요?","choices":[["daily","거의 매일"],["3_5","주 3~5일"],["1_2","주 1~2일"],["none","거의 안 함 / 안 함"]]},
+    {"id":"q2","prompt":"일주일에 집밥을\n몇 끼 정도 먹나요?","helper":"직접 만들거나 가족이 만든 음식 모두 포함","choices":[["none","거의 안 먹음"],["1_2","1~2끼"],["3_5","3~5끼"],["6_plus","6끼 이상"]]},
+    {"id":"q3","prompt":"집밥은 주로\n어떻게 기록하나요?","choices":[["pass","집밥은 기록하지 않음"],["eyeball","먹은 양을 눈대중으로 기록"],["track","딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록"],["measure","재료와 음식 무게까지 재서 기록"]]},
+    {"id":"q4","prompt":"집밥을 기록할 때\n가장 불편한 것은?","choices":[["ingredients","재료와 양을 하나씩 입력하는 것"],["weight","완성된 음식과 먹은 양을 재는 것"],["search","딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"],["none","별로 불편하지 않음"]]}
+  ]
+}
+```
+
+Q1 mount/render/effect/노출, bootstrap 완료, 포커스만으로 `activity_start(survey)`를 보내지 않는다. bootstrap(view)과 survey 시작은 별개다. 실제 Q1 선택값을 먼저 메모리에 보존하고, 유효 bootstrap/참여 확인 뒤 기존 `activity_start`와 `activity=survey` 요청을 직렬 큐로 한 번 전송한다. **bootstrap과 survey start ACK를 모두 받은 뒤 Q2로 이동**한다. 실패/응답 유실에는 Q1 선택을 유지하고 같은 event_id의 명시적 재시도를 제공하며 클릭 시점으로 시각을 소급하지 않는다. StrictMode/재렌더/중복 클릭/뒤로가기로 최초 시작을 다시 계수하지 않는다. 이미 서버 survey 완료면 새 설문을 재제출하지 않는다.
+
+Q1..Q4 단일 선택 → 성공한 `survey_submit` 확인 → Q3 유형 → 기존 v2 스타일 체험/식단 결과 → 신청 → 접수 완료다. **Q4의 survey_submit ACK와 실제 전송한 원 답변 tuple이 함께 확인된 경우에만** 그 Q3로 유형을 표시한다. 전송 중 바뀐 로컬 답변이나 다른 요청의 completed snapshot을 대신 쓰지 않는다. 유형은 `pass→homecook-passer(집밥 패스형)`, `eyeball→eyeballing-master(눈대중 장인)`, `track→ingredient-tracker(성분 추적러)`, `measure→pro-measurer(프로 계량러)`다. Q1/Q2/Q4로 숨겨진 적합도·탈락을 만들지 않는다.
+
+체험은 원본의 레시피 가져오기 → 재료 확인(600g→520g) → 완성 무게(1,180g) → 먹은 양(320g) → 영양 예시(487kcal·31/39/22g) → 집밥 식단 → 편의점 음식 → 완성 식단의 순서를 재사용한다. 원본5개 experience 뒤3개 식단/완제품 view를 구분하고, 준비된 예시이며 실제 레시피/meal/shopping/pantry를 변경하지 않는다. 체험 값은 기존 설명용 fixture이지 새 영양 계산/정확도 검증 결과가 아니다. 원본 v2 코드를 수정하지 않고 R2의 준비 중·예시·추정 안내와 미검증 시간/정확도 약속 금지를 유지한다.
+
+recording의 `example_complete`는5장면 뒤 planner→편의점→최종 planner payoff까지 끝낸 마지막 동작에만 기록한다. 원본 legacy controller의 중간 step5 완료 기록을 새 R2 흐름에 복제하지 않는다. 이 완료 ACK 뒤에 lead 시작/신청 화면으로 이어간다. 기존 `/beta`의 default HTML/controller 동작은 변경하지 않는다. 이러한 UI 순서는 서버의 독립 action 보호를 바꾸지 않는다.
+
+### 12.3 homeflow: 승인된 export의 직렬6체험
+
+정확한 권위 입력은 export `f692ec738db53569d0e54acd9846700e3a4877f6`(parent8c657)의 [homeflow 구현 계약](https://github.com/netsus/homecook/blob/f692ec738db53569d0e54acd9846700e3a4877f6/docs/marketing/homeflow-linear-implementation-contract.md), [PRD](https://github.com/netsus/homecook/blob/f692ec738db53569d0e54acd9846700e3a4877f6/docs/marketing/homecook-flow-round2-prd.md), `lib/marketing/round2-survey.ts`, `homeflow-content.ts`다. 그 안의 후속 사용자 승인 순서로 정리된 UI/자산/모션/문구 bytes를 재사용한다. 과거 배포 금지는 이번 R2 한정 배포 승인 범위에서만 대체되고 원격 master 금지는 유지한다.
+
+`topic=homeflow`, `survey_version=r2.2-homeflow`. Hero → Q1..Q4 → Q3 유형 → 체험1..6 → lead → done이다. recording의 Q1 즉시 진입 규칙을 homeflow에 적용해 Hero를 없애지 않는다. Hero의 실제 `4문항 테스트하기` 선택은 export의 기존 survey start 트리거이며, 단순 페이지 render로 시작하지 않는다.
+
+| 문항 | 정확한 질문 | value → 표시(순서 고정) |
+| --- | --- | --- |
+| Q1 | 지난 7일 동안, 요리한 날은 며칠인가요? | `none`→0일; `one_two`→1~2일; `three_four`→3~4일; `five_seven`→5~7일 |
+| Q2 | 최근 4주 동안, 유튜브 레시피를 보고 요리한 횟수는? | `none`→0회; `once`→1회; `two_three`→2~3회; `four_plus`→4회 이상 |
+| Q3 | 집밥은 보통 어떻게 계획하나요? | `spontaneous`→계획 없이 그때그때 정함; `mental`→미리 정하고 머릿속에 기억; `memo`→메모·캡처로 대략 정리; `scheduled`→날짜별 메뉴까지 정리 |
+| Q4 | 집밥을 준비할 때 가장 불편한 것은? | `planning`→집밥 계획 세우기; `shopping`→집에 있는 재료 빼고 장보기 목록 만들기; `video`→요리하면서 레시피 영상 다시 보기; `none`→별로 불편하지 않음 |
+
+Q3 보조 설명은 화면에서 숨기는 승인안을 유지한다. 각4개 보기·단일 선택이며 기타/새 질문을 추가하지 않는다. Q3 결과는 `spontaneous=오늘의 감각형`, `mental=머릿속 플래너형`, `memo=알뜰 메모형`, `scheduled=집밥 설계형`이며 export의 최신 인용문/설명을 사용한다. Q4 none으로 사용자를 배제하거나 별도 결과로 만들지 않는다.
+
+체험은 1. 가져온 김치볶음밥·재료, 2. 9/12·9/13 요리 계획, 3. 구매6종/팬트리 제외3종(초기 계란만 미체크) 장보기, 4. 선택된 김치볶음밥 요리 진입, 5. 요리모드, 6. 김치볶음밥300g 주간 식사 기록이다. 첫5장면의 x/5와 최종 결과장면을 구분하며 6/5를 만들지 않는다. 사용자 제공 영양 예시는300g 608kcal·탄수화물56g·단백질25g·지방32g, 합계1,728kcal·202/97/70g이며 `영양정보 · 체험 예시`로 표시한다. 폐기된600g 추정이나 새 계량/영양 계산 단계를 되살리지 않는다.
+
+팬트리 제외→uncheck, 장보기 완료 후 read-only, 남은 요리/식사 결과의 준비된 예시 성격을 유지한다. 투명 캐릭터/동작의 최신 짧은 시작 대기, 이미지 로드 후 재생, reduced-motion 정지는 export를 따른다. 원본 UI나 원본 자산을 이 문서 작업에서 수정하지 않는다.
+
+homeflow 동의는 `[필수] 이메일 수집·이용에 동의해요.`와 `수집 목적과 보유 기간 보기`의 펼침 UI를 사용한다. export의 사용자 승인에 따라 homeflow 화면의 별도 개인정보 링크/14세 안내를 제거한 표시를 보존하되 수집 항목·목적·보관·철회·동의 field는 변경하지 않는다. 다른 R2 화면의 공용 동의 문구는 바꾸지 않는다. 공개 개인정보 반영과 독립 개인정보 검토는 실제 lead readiness의 기존 필수 조건이며, UI 승인만으로 법적/운영 준비 완료를 주장하지 않는다.
+
+2026-09-12 후속 사용자 승인에 따라 recording도 `[필수] 이메일 수집·이용에 동의해요.`만 상시 표시하고 수집 목적·항목·보유기간·철회 안내를 `수집 목적과 보유 기간 보기` 펼침 UI에 둔다. 별도 `동의하지 않아도…`, `만 14세…`, 개인정보처리방침 link 문장은 recording form에서 제거한다. 이는 표시 간결화이며 `consent=true`, exact purpose, 2026-11-30 보관 종료, 철회 삭제와 readiness gate를 완화하지 않는다.
+
+같은 승인으로 recording 결과 CTA 위 문구는 `그런데 무먹에서는 집밥을 어떻게 기록할까요?`만 표시하고 `준비된 예시로 확인해보세요.`와 체험 화면 하단 `베타 준비 중` 안내는 제거한다. homeflow 결과는 모든 유형에 `무먹에서 집밥 어떻게 하는지 알아볼까요?`를 표시하고 CTA를 `무먹 체험하기`로 통일하며 결과 제목·인용문과 반짝이 motion의 시각 위계를 높인다. 두 경로의 Open Graph/Twitter 이미지는 각 랜딩 전용 1200×630 정적 카드로 사용한다.
+
+공유는 기존 결과 화면의 버튼을 보존하면서 R2 경로로 격리한다. homeflow는 `/beta/r2/homeflow?result=<spontaneous|mental|memo|scheduled>`, recording은 `/beta/r2/recording?result=<homecook-passer|eyeballing-master|ingredient-tracker|pro-measurer>`의 허용 key만 사용한다. 공유 URL은 해당 경로와 **유일한 result query**로 새로 구성하여 PII/답변/attribution/참여 key/그 밖의 query를 제거한다. recording을 기존1차 `/beta`로 보내지 않는다.
+
+공유 결과는 읽기 전용이며 **shared view의 POST/bootstrap은0**이다. 서버 참여/설문 완료나 실제 제출 유형을 주장하지 않는다. 사용자가 명시적으로 테스트 시작을 선택한 뒤에만 정상 경로로 전환한다. recording은 정상 Q1으로만 진입하고 실제 첫 답변 전에는 survey start가 없다. homeflow는 export의 정상 Hero/설문 진입 경계를 유지한다. 허용하지 않은 결과 key로 다른 topic의 유형을 표시하지 않는다. 이는 기존 공유 버튼의 canonical 경로 분리이며 새 API field/action·추가 활동·사업 기능이 아니다.
+
+### 12.4 요청·DB: version + topic의 정확한 분리
+
+`survey_submit`의 기존 필드와 응답 envelope는 그대로다. 허용 조합은 `(recording,r2.1-recording)`, `(homeflow,r2.1-homeflow)`, `(recording,r2.2-recording)`, `(homeflow,r2.2-homeflow)`뿐이다. 각 조합의 q1..q4가 자기 버전 enum을 모두 만족해야 한다. topic만 보고 enum을 OR로 넓히거나 다른 버전의 값을 부분적으로 섞지 않는다. 잘못된 조합/추가 key/누락은 기존422 정책이다.
+
+새 두 버전의 정확한 value 집합:
+
+```json
+{
+  "r2.2-recording":{"topic":"recording","q1":["daily","3_5","1_2","none"],"q2":["none","1_2","3_5","6_plus"],"q3":["pass","eyeball","track","measure"],"q4":["ingredients","weight","search","none"]},
+  "r2.2-homeflow":{"topic":"homeflow","q1":["none","one_two","three_four","five_seven"],"q2":["none","once","two_three","four_plus"],"q3":["spontaneous","mental","memo","scheduled"],"q4":["planning","shopping","video","none"]}
+}
+```
+
+TypeScript request parser·SQL event payload·participation CHECK·RPC의 동일 의미 판정을 같은 `(topic,survey_version)`로 맞춘다. 내부 exact 서명은 export가 추가한 `private.marketing_round2_answers(topic text, survey_version text, value jsonb)`를 소비한다. 기존2인자 `private.marketing_round2_answers(topic text, value jsonb)`는 r2.1 전용으로 남기고3인자 함수에서 r2.1 조합만 위임한다. owner postgres와 PUBLIC/anon/authenticated/service_role EXECUTE revoke, 공개 RPC `public.marketing_round2_apply(p_command jsonb)` 서명은 유지한다.
+
+export의 `20260911110000_marketing_round2_linear_homeflow.sql`은3인자 함수/정확한 대상 CHECK를 추가하지만 **r2.2-recording은 아직 지원하지 않는다**. 첫 migration과 export 원본 bytes를 보존하고 별도 recording 증분 SQL을 구현·독립 검토한 뒤 실제 filename/raw/payload SHA를 배포 목록에 추가해야 한다. 없는 파일/해시를 승인된 것으로 기입하지 않는다.
+
+공개 bootstrap/Success에 답변·유형·survey_version 필드를 추가하지 않는다. API에 `quiz_started`, `quiz_completed`, `result_viewed`, `ui_step` 같은 v2 action이나 임의 field를 추가하지 않는다. 기존 `activity_start`, `survey_submit`, `example_complete`, `lead_submit`, `menu_return`만 사용하며 유형/체험 세부 화면은 로컬 UI다.
+
+같은 event_id에 다른 survey_version/답변을 실으면 EVENT_CONFLICT, 완료된 survey의 다른 version/답변 재제출은 ACTIVITY_ALREADY_COMPLETED409다. 같은 성공 version/정규화 의미의 재시도는 기존 no-op/receipt 규칙을 유지한다. SQL의 기존 데이터 UPDATE/재분류/백필 없이 CHECK를 버전별로 확장하며 기존r2.1 행/event payload도 그대로 유효해야 한다.
+
+### 12.5 시작한 draft·완료·복원
+
+기본 신규 질문은 경로별 r2.2 버전이다. 비PII UI cache는 topic+survey_version+participation identity/expiry를 대조하며 homeflow export의 버전별 UI cache를 그대로 소비한다. bootstrap/outbox의 기존 IndexedDB 원자성과 cookie_resume을 UI cache로 대체하지 않는다. 이메일·동의·보안 토큰·bootstrap capability를 UI cache에 영속 저장하지 않는다.
+
+정상 r2.1 draft를 r2.2 질문/값으로 자동 변환하지 않는다. 버전이 확인된 draft는 해당 원문 질문 세트로만 복원한다. 지원하지 못하거나 버전/참여/expiry가 맞지 않으면 오류/재시작 안내를 제공하고, 사용자의 명시적 로컬 설문 재시작 없이 값을 섞지 않는다. 새 설문 시작과 새 서버 참여 생성을 혼동하지 않는다.
+
+이미 완료한 r2.1/r2.2 survey는 그대로 read-only다. 응답에는 Q3가 없으므로 **matching participation/version·완전한 원 답변 tuple·해당 제출의 confirmed 근거** 중 하나라도 없으면 유형을 추측하거나 다시 제출하지 않는다. `이미 완료 / 체험 이어가기` 안내를 제공하며 새 공개 응답 필드를 만들지 않는다. 이미 lead 완료이면 이메일을 다시 요구하지 않는다. 시작/완료 timestamp, survey의 example snapshot, 낮은 revision 거부, 두 topic 격리, 410 명시 재시작은 기존 규칙을 유지한다.
+
+직렬 UI의 뒤로가기·처음으로 돌아가기·공유 진입을 서버 완료 삭제/자동 신규 bootstrap으로 구현하지 않는다. UI는 직렬이어도 다른 활동 완료를 API의 새 선행 조건으로 강제하지 않는다. 동의·Turnstile·현재 gate/rate/control/보관 조건을 건너뛰어 성공 화면을 만들지 않는다.
+
+### 12.6 검증과 배포 인수
+
+운영 인수 문서는 같은 작업의 후속 commit으로 작성할 `docs/engineering/marketing-round2-controlled-prelaunch.md`다. 일반 prelaunch SQL guard/ordered-prefix ledger와 정식 production promotion 규칙은 전역 변경하지 않는다. 이 문서의 사용자 승인 범위에서만 독립 검토된 exact R2 SQL + backup + identity + isolated replay + apply/ledger receipt를 소비하는 전용 절차를 준비한다. 운영 Compose/volume의 이름에 isolated가 있어도 격리 테스트에 사용하지 않는다.
+
+네 survey 조합의 양성/음성 parser·SQL CHECK·RPC replay, 기존 데이터/legacy 불변, recording first-answer-only start, 양 topic 직렬 UI·복원·실제 저장, 실제 readiness/provider·전용 branch exactSHA를 검증해야 한다. 새로운 문서나 기존 mock PASS를 운영 저장/배포 준비 증거로 바꾸지 않는다. 문서 작성자는 코드·DB·운영을 실행하지 않고 change-only 문서 commit을 조정자에게 전달하며 push/merge하지 않는다.
+
+## 13. 2026-09-13 실제 배포 상태와 master 통합 승인
+
+### 13.1 현재 공개 상태
+
+2026-09-13 사용자 확인 기준으로 두 R2 랜딩은 광고 중이다. 저장소 보존 ref는 `origin/release/mumeok-r2-live-20260913`, exact 실행 SHA는 `92fc7bd0963af2e47f560151bec8f3cabd553c6a`, 공개 `BUILD_ID`는 `prelaunch-92fc7bd0963a-xNvOjU`다. 로컬에서 위 ref가 exact SHA를 가리키는 것은 확인했다. 공개 BUILD_ID와 실제 서버 프로세스는 사용자 제공 운영 evidence로 기록하며 이 docs 작업에서 서버에 접속하거나 재시작·재배포·DB·환경을 변경하지 않는다.
+
+§12와 그 이전 문서의 `로컬 후보`, `배포 전`, `배포 보류`, `master 머지 금지`는 당시 단계와 author 권한을 설명한 역사 기록이다. 이미 일어난 현재 배포를 부정하거나 되돌리는 지시로 사용하지 않는다. 이 §13은 상태와 후속 통합 범위만 대체하며, 정식 production promote kill switch와 별도 release-promoter 권한을 완화하지 않는다.
+
+### 13.2 최종 공개 R2.2 계약
+
+§12.2~12.5의 exact 질문·enum·직렬 화면·Q3 유형·체험·복원·동의·공유가 현재 R2.2 공개 계약이다. 2026-09-12 후속 조정에 따라 recording 결과 bridge/간결 동의, homeflow 결과 위계·CTA·motion, topic별 1200×630 Open Graph/Twitter card를 포함한다. 카카오·카카오스토리 제한 수집기에는 Next 기본 제한 bot 목록을 보존하면서 해당 User-Agent를 추가해 각 공유 URL의 첫 `head`에 topic별 title, description, image가 하나씩 있어야 한다. 일반 브라우저 streaming, CSP/보안 header와 R2 저장 계약은 바꾸지 않는다.
+
+공개 API/DB 계약은 §12.4 그대로다. 새 public endpoint/action/field/table을 만들지 않고 `round_version=r2.1`, API active 109개, table 79개를 유지한다. 기존 r2.1/v2 row·질문·결과·cookie·retention을 재분류하거나 재작성하지 않는다. 공유 result view는 읽기 전용 POST/bootstrap 0이며 PII·답변·attribution·participation key를 URL/metadata에 넣지 않는다.
+
+### 13.3 master 통합 순서와 변경 경계
+
+사용자는 실행본의 필요한 변경을 최신 `origin/master@8c6573bf594fa15613205ce97e4435d751c7d87c` 위에 작은 PR로 순차 정리하는 범위를 승인했다. live 브랜치 전체 423파일을 PR로 만들거나 merge하지 않는다. 순서는 다음과 같다.
+
+1. 이 docs-only contract-evolution PR을 독립 `docs-gate-reviewer`가 검토하고 unresolved required finding 0으로 병합한다.
+2. R2.2 backend/data PR에서 `topic+survey_version` parser와 live ref의 세 R2.2 migration을 원본 순서·bytes로 선별하고, 기존 r2.1 row/event 불변·isolated replay·RPC/권한·409/422를 재검증한다.
+3. R2.2 frontend PR에서 recording과 homeflow의 §12 직렬 UI, 실제 저장·복원·read-only·mobile/a11y/reduced-motion을 current master에 재적용한다. 필요하면 recording과 homeflow를 더 작은 의존 순서 PR로 나눌 수 있다.
+4. 결과 공유/social metadata PR에서 topic별 result-only URL, 전용 card, 카카오 제한 수집기 첫-head metadata를 검증한다. 앞 UI PR과 결합하는 편이 더 작고 안전하다는 독립 검토 evidence가 있으면 같은 PR에 둘 수 있다.
+5. 각 후속 PR은 live ref에서 가져온 commit/file 목록과 제외 목록, current-head 로컬 검증·CI·독립 review를 새로 남긴다. 현재 광고 배포 성공이나 live branch의 과거 test를 master PR의 자동 PASS로 대체하지 않는다.
+
+로컬에 같은 결과를 가진 snapshot/evidence가 있어도 별도 merge하지 않는다. 필요한 runtime source가 live ref에 있으면 그 ref를 provenance로 사용하고, 같은 bytes를 중복 커밋하지 않는다.
+
+HOME R2 carousel/banner, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션은 별도 제품 계약·workpack 후보이며 R2.2 PR에 섞지 않는다. 공개 recipe 조회 복구, dependency/security 변경, 배포 runner/binding과 운영 batch·분석 기록도 R2 public contract가 아니므로 각 change type에서 current master 대비 필요성과 독립 검증을 따로 판정한다. 이 분리는 해당 변경을 거부하는 것이 아니라 R2 계약·review·rollback 경계를 보존하기 위한 것이다.
+
+### 13.4 이 docs 작업의 권한과 완료 경계
+
+이 작성 작업은 공식 5종, CSoT, 상세 계약, workpack/acceptance 동기화와 Draft PR까지만 소유한다. 제품·테스트·package/lockfile·migration·서버·DB·배포 설정을 변경하지 않는다. 현재 광고를 멈추거나 새로 배포하지 않으며 production mutation은 0이다. 작성자는 자기 PR을 Ready/최종 승인/merge하지 않고 exact head SHA와 검증 결과를 독립 `docs-gate-reviewer` 새 작업에 넘긴다.
