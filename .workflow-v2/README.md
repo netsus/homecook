@@ -1,21 +1,7 @@
-# Workflow V2 Pilot State
+# Workflow V2 과거 상태 기록
 
-> **역사 기록:** 2026-09-14부터 이 디렉터리는 신규 작업에서 읽거나 갱신하지 않는다. OMO/Stage/closeout 운영은 중지됐다.
+2026-09-14부터 OMO/Stage/closeout 운영은 중지됐다. 현재 작업 절차는 `AGENTS.md`가 우선한다.
 
-이 디렉터리는 workflow v2의 machine-readable pilot 상태를 저장한다.
+이 디렉터리의 work item, status, promotion-evidence와 replay-acceptance JSON은 당시 계획·승인·실행을 설명하는 기록이다. 신규 작업의 조건으로 읽거나 갱신·검증하지 않는다. 과거 실행 조사에서만 관련 파일을 참고한다.
 
-## Files
-
-- `work-items/*.json`: 개별 작업 메타데이터
-- `status.json`: 현재 추적 중인 작업 상태 보드
-- `promotion-evidence.json`: 승격 gate / pilot lane ledger
-- `replay-acceptance.json`: representative replay acceptance ledger
-
-## Rules
-
-- authoritative source는 JSON 파일이다.
-- 문서 요약은 `docs/engineering/workflow-v2/*`에 둔다.
-- status board의 각 item은 대응되는 work item JSON을 가져야 한다.
-- replay acceptance와 promotion gate는 별도 ledger로 기록한다.
-- replay acceptance ledger 갱신은 `pnpm omo:replay:update -- ...`를 사용한다.
-- v2 pilot이 아닌 작업은 이 디렉터리를 수정할 필요가 없다.
+현재 작업은 `docs/engineering/agent-workflow-overview.md`에 따라 같은 Codex task에서 구현, 로컬 확인과 머지까지 진행할 수 있다.

@@ -4,5 +4,5 @@ Homecook은 Claude를 더 이상 사용하지 않는다.
 이 파일은 과거 Claude 도구가 저장소를 열더라도 신규 Stage를 실행하지 못하게 하는 tombstone(폐기 표식)으로만 남긴다.
 
 - Claude CLI, Claude 앱, Claude API로 문서 작성, 구현, 리뷰, final authority를 수행하지 않는다.
-- 모든 신규 Stage는 `AGENTS.md`와 `docs/engineering/slice-workflow.md`를 따르며 같은 Codex task에서 수행할 수 있다.
+- 신규 작업은 `AGENTS.md`를 따르며 같은 Codex task에서 완료할 수 있다. 이 파일이나 과거 Claude 스킬·에이전트 지침과 충돌하면 현재 `AGENTS.md`가 우선한다.
 - 과거 문서, work item, artifact의 Claude 표기는 당시 실행 이력을 보존하는 기록이며 신규 사용 권한이 아니다.

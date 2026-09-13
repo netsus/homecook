@@ -6,6 +6,8 @@ GitHub Actions CI, workpack/acceptance gate, Stage 1~6, 별도 task 승인, OMO,
 
 이 변경은 제품의 인증·권한·소유권·read-only·상태 전이 계약이나 full-local Supabase의 파괴적 변경 금지를 완화하지 않는다.
 
+작업 절차와 검증 범위는 현재 `AGENTS.md`를 우선한다. 아래 날짜별 기록의 CI·Stage·선행 docs PR·별도 승인 조건은 과거 절차이며 신규 작업에 적용하지 않는다. 스킬과 디자인 에이전트도 같은 기준을 따른다.
+
 ## 2026-09-13 사용자 승인 contract-evolution — 광고 중인 R2.2와 master 단일 통합
 
 현재 광고 공개본의 저장소 권위는 `origin/release/mumeok-r2-live-20260913`, exact SHA `92fc7bd0963af2e47f560151bec8f3cabd553c6a`, 공개 `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`다. 이 항목은 제공된 공개 배포 사실과 로컬 ref의 SHA 일치를 기록할 뿐 새 배포·재시작·DB 적용·환경 변경을 승인하지 않는다. 광고 중인 현재 production은 이 문서 작업 동안 그대로 유지한다.
@@ -25,7 +27,7 @@ GitHub Actions CI, workpack/acceptance gate, Stage 1~6, 별도 task 승인, OMO,
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
-- 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+- 사용자 승인으로 공식 계약을 바꾸면 관련 공식 문서와 이 파일의 버전/경로를 구현과 같은 작업 브랜치에서 함께 갱신한다. 별도 선행 docs PR이나 Stage 승인은 필요하지 않다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
 ## 2026-09-11 사용자 승인 contract-evolution — 무먹 r2 독립 활동

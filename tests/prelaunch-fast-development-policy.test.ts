@@ -51,4 +51,20 @@ describe("prelaunch fast development policy", () => {
       scripts.some((name) => name.startsWith("release:github:rulesets:")),
     ).toBe(false);
   });
+
+  it("does not auto-load the retired OMO plugin or workflow instructions", () => {
+    const config = readJson("opencode.json");
+
+    expect(
+      (config.plugin ?? []).filter((name: string) =>
+        /oh-my-(?:opencode|openagent)(?:@|$)/.test(name),
+      ),
+    ).toEqual([]);
+    expect(config.instructions).toContain("AGENTS.md");
+    expect(
+      config.instructions.filter((path: string) =>
+        /workflow-v2|\.opencode|agent-(?:plan|review)-loop/.test(path),
+      ),
+    ).toEqual([]);
+  });
 });

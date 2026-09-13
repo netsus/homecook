@@ -1,5 +1,7 @@
 # CI and Test Performance Baseline
 
+> **과거 기록:** 아래는 당시 CI 구성과 측정 결과다. 2026-09-14부터 현재 작업 절차와 검증 범위는 `AGENTS.md`를 따르며 이 문서로 CI나 전체 검사를 다시 요구하지 않는다.
+
 상태: **canonical baseline / cleanup steps 8–10**
 
 측정일: 2026-09-05
