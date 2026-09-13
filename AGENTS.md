@@ -16,7 +16,7 @@
 12. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
 13. 필요 시 `docs/engineering/security-performance-design.md`
 14. workflow v2 / OMO 운영 기준 확인 시 `docs/engineering/workflow-v2/README.md`부터 읽고, 필요한 문서만 링크를 따라간다
-15. Stage 간 새 Codex 작업 생성·인수인계 시 → `docs/engineering/codex-task-handoff.md`
+15. 작업을 여러 Codex task로 나눌 필요가 있을 때만 → `docs/engineering/codex-task-handoff.md`
 16. 서버 Mac release 승격 규칙 확인 시 → `docs/engineering/local-mac-production-release-promotion.md`
 
 ## Source of Truth
@@ -39,15 +39,15 @@
 - 이런 engineering 작업은 `docs/workpacks/<slice>/README.md`를 새로 만드는 대신 관련 `docs/engineering/*.md`를 설계와 운영 기준 문서로 사용한다.
 - 현재 저장소에 이미 들어온 탐색/상세/로그인 게이트는 `01-discovery-detail-auth` 부트스트랩 슬라이스로 간주한다.
 - Claude는 더 이상 사용하지 않는다. Claude CLI, Claude 앱, Claude API를 신규 작업이나 리뷰에 호출하지 않는다.
-- 새로운 기능 작업 전 **별도 Codex Stage 1 문서 작업**이 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 먼저 만들고 main에 머지한다.
-- 구현 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 반드시 확인한다. 없으면 현재 작업에서 대신 작성하지 말고 `docs/engineering/codex-task-handoff.md`에 따라 Stage 1 전용 새 Codex 작업으로 넘긴다.
-- Stage 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. internal 1.5, Stage 3, Stage 5, final authority, Stage 6은 작성·구현 작업과 다른 Codex task ID를 사용한다.
-- 같은 작업 안의 서브에이전트는 독립 Stage 작업을 대신하지 않는다. 역할 기반 보조 작업에만 사용한다.
+- 새 기능은 관련 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 확인하고, 계약 변경이 필요하면 구현보다 문서를 먼저 갱신한다. 같은 작업·같은 PR에서 문서와 구현을 닫을 수 있으며 별도 Stage 1 task나 선행 docs-only merge를 기본 요구하지 않는다.
+- Codex task 하나가 계획·문서·구현·검토·PR 병합까지 완료할 수 있다. 별도 task ID와 독립 Stage 승인 evidence는 기본 필수 조건이 아니다.
+- 독립 검토는 운영 데이터 삭제/재작성, 인증·권한 완화, production 배포, 광범위한 마이그레이션처럼 실패 영향이 큰 변경에서만 위험도에 따라 사용한다. 일반 제품 변경은 current-head CI와 실제 동작 검증을 기본 merge gate로 삼는다.
+- 서브에이전트와 별도 Codex task는 필요할 때 품질·속도를 높이는 선택 수단이며, 사용하지 않았다는 이유만으로 작업을 차단하지 않는다.
 - engineering 예외 작업에서는 대상 `docs/engineering/*.md`를 우선 확인하고, 필요 시 `AGENTS.md`, `docs/engineering/codex-task-handoff.md`, `docs/engineering/subagents.md` 같은 governing doc을 함께 갱신한다.
 - 문서 간 충돌이 보이면 구현보다 충돌 정리를 우선한다.
 - 메인 Codex는 작업 전 `문서 확인 -> 테스트 전략 -> 구현 -> 리뷰` 순서를 기본 흐름으로 따른다.
 - 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
-- 슬라이스 개발 단계를 요청받으면 `docs/engineering/slice-workflow.md`와 `docs/engineering/codex-task-handoff.md`를 읽고 해당 단계의 Codex 역할을 확인한다. 현재 작업이 해당 역할의 독립성 조건을 만족하지 않으면 직접 수행하지 않고 새 Codex 작업으로 handoff한다.
+- 슬라이스 개발 단계를 요청받으면 `docs/engineering/slice-workflow.md`에서 필요한 산출물과 검증을 확인한다. 별도 작업 handoff는 병렬화나 고위험 독립 검토가 실제로 필요할 때만 선택한다.
 
 ## Rule Layers
 

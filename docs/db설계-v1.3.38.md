@@ -4,6 +4,11 @@
 담당자: 채실장
 날짜: 9월 3일
 
+> **2026-09-13 contract-evolution — R2.2 설문 version별 저장 검증**
+>
+> [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4~12.5의 두 R2.2 설문을 추가한다. public 3테이블·column·`round_version=r2.1`은 유지하고 답변, event payload, participation CHECK를 `(topic,survey_version)`으로 정확히 판별한다. 기존 r2.1 완료 답변/version/event를 재작성하지 않으며 다른 version 재제출 409, 동일 의미 replay 보호를 유지한다.
+> 현재 광고 공개본은 `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`다. 후속 master 통합은 live ref의 검토된 R2.2 migration을 원본 순서·bytes로 옮겨 isolated replay와 기존 데이터 불변을 다시 검증한다. 이 문서 PR은 SQL/DB/운영을 실행하지 않으며 table 총계 79개는 불변이다.
+
 > **2026-09-11 contract-evolution — 무먹 r2 추가형 3테이블 (r2.1)**
 >
 > `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests`를 추가한다. 기존 `public.marketing_validation_sessions`·v2 row/권한/제약/보관 의미는 불변이다. [r2 상세 계약](marketing-demand-validation-r2-contract.md) §7은 모든 column의 SQL type/null/default/PK/FK/unique/check/index/RLS와 deferred consistency trigger의 규범 명세다.

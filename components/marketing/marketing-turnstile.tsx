@@ -43,6 +43,8 @@ export interface MarketingTurnstileController {
 
 interface MarketingTurnstileProps {
   onControllerChange?: (controller: MarketingTurnstileController | null) => void;
+  siteKey?: string;
+  action?: string;
 }
 
 function createTurnstileResult(token: string | null): TurnstileResult {
@@ -79,11 +81,11 @@ async function loadTurnstileScript(): Promise<TurnstileApi> {
   return window.__homecookMarketingTurnstileScriptPromise__;
 }
 
-export function MarketingTurnstile({ onControllerChange }: MarketingTurnstileProps) {
+export function MarketingTurnstile({ onControllerChange, siteKey = SITE_KEY, action = MARKETING_VALIDATION_TURNSTILE_ACTION }: MarketingTurnstileProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<TurnstileWidgetId | null>(null);
   const tokenRef = useRef<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState(SITE_KEY ? "" : DEFAULT_ERROR_MESSAGE);
+  const [errorMessage, setErrorMessage] = useState(siteKey ? "" : DEFAULT_ERROR_MESSAGE);
 
   const reset = useMemo<MarketingTurnstileController["reset"]>(() => () => {
     tokenRef.current = null;
@@ -95,11 +97,11 @@ export function MarketingTurnstile({ onControllerChange }: MarketingTurnstilePro
 
   const controller = useMemo<MarketingTurnstileController>(() => ({
     getToken: async () => {
-      if (!SITE_KEY) return { ok: false, message: DEFAULT_ERROR_MESSAGE };
+      if (!siteKey) return { ok: false, message: DEFAULT_ERROR_MESSAGE };
       return createTurnstileResult(tokenRef.current);
     },
     reset,
-  }), [reset]);
+  }), [reset, siteKey]);
 
   useEffect(() => {
     onControllerChange?.(controller);
@@ -107,15 +109,15 @@ export function MarketingTurnstile({ onControllerChange }: MarketingTurnstilePro
   }, [controller, onControllerChange]);
 
   useEffect(() => {
-    if (!SITE_KEY || !containerRef.current || widgetIdRef.current !== null) return undefined;
+    if (!siteKey || !containerRef.current || widgetIdRef.current !== null) return undefined;
     let cancelled = false;
 
     void loadTurnstileScript()
       .then((turnstile) => {
         if (cancelled || !containerRef.current || widgetIdRef.current !== null) return;
         widgetIdRef.current = turnstile.render(containerRef.current, {
-          sitekey: SITE_KEY,
-          action: MARKETING_VALIDATION_TURNSTILE_ACTION,
+          sitekey: siteKey,
+          action,
           appearance: "interaction-only",
           size: "flexible",
           callback: (token) => {
@@ -149,7 +151,7 @@ export function MarketingTurnstile({ onControllerChange }: MarketingTurnstilePro
       }
       tokenRef.current = null;
     };
-  }, []);
+  }, [siteKey, action]);
 
   return (
     <div className="mdv2-turnstile" data-testid="marketing-turnstile">

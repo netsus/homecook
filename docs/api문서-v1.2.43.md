@@ -4,6 +4,11 @@
 담당자: 킴실장
 날짜: 9월 3일
 
+> **2026-09-13 contract-evolution — R2.2 survey union 공개 기준**
+>
+> `POST /api/v1/marketing/round2`는 `(recording,r2.1-recording)`, `(homeflow,r2.1-homeflow)`, `(recording,r2.2-recording)`, `(homeflow,r2.2-homeflow)` 네 `topic+survey_version` 조합과 각 버전의 exact q1..q4 enum을 허용한다. 자세한 값과 복원·멱등 규칙은 [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4~12.5를 따른다. 잘못된 조합은 422, 기존 완료의 다른 version/답변은 409다.
+> 현재 광고 공개본은 `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`다. public endpoint/action/field/success/failure, `round_version=r2.1`, API active 109개, 권한·동의·보관은 바뀌지 않는다. social metadata와 직렬 화면은 public API field/action이 아니다.
+
 > **2026-09-11 contract-evolution — POST marketing/round2 (r2.1)**
 >
 > `POST /api/v1/marketing/round2` 하나를 추가한다. exact action은 bootstrap/activity_start/example_complete/survey_submit/lead_submit/menu_return이다. 공개 익명 경로지만 bootstrap 외 요청은 r2 전용 서명 쿠키로 참여를 검증한다. 요청/응답 union·enum/길이·JSON 예시·status/code·상태행렬·멱등 영수증·보안 순서는 [r2 상세 계약](marketing-demand-validation-r2-contract.md) §4~6·8~9가 규범이다. 성공 `{success,data,error}`, 오류 `{code,message,fields[]}`를 유지한다.

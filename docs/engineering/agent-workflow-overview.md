@@ -5,13 +5,13 @@ Supabase를 사용하는 모든 변경의 target/gate 기준은 `docs/engineerin
 ## 역할 요약
 
 Claude는 더 이상 사용하지 않는다.
-모든 역할은 GPT 기반 Codex가 수행하되, 작성·구현과 최종 검토는 `docs/engineering/codex-task-handoff.md`에 따라 task ID가 다른 새 작업으로 분리한다.
+모든 역할은 GPT 기반 Codex가 수행한다. 같은 Codex task가 작성·구현·검토·병합을 이어서 완료할 수 있으며, 역할별 새 task ID는 기본 merge 조건이 아니다. 별도 task는 고위험 변경의 독립 검토나 실제 병렬 작업이 필요할 때만 선택한다.
 
 | Codex 작업 역할 | 책임 |
 |----------|------|
-| **조정 작업** | Stage 순서, 새 작업 생성, handoff, evidence 수집, 상태 전이 |
+| **조정 작업** | 작업 순서, 필요 시 handoff, evidence 수집, 상태 전이 |
 | **작성·구현 작업** | Stage 1 workpack 문서, Stage 2 백엔드, Stage 4 프론트엔드 |
-| **독립 검토 작업** | internal 1.5, Stage 3, Stage 5, final authority, Stage 6 |
+| **검토 작업** | 변경 위험도에 맞는 코드·보안·디자인 검토(같은 task 가능) |
 
 ---
 
@@ -96,9 +96,9 @@ Claude는 더 이상 사용하지 않는다.
   - low-risk docs/config, reviewer가 즉시 판단 가능한 작은 변경은 생략 가능하다.
 - product slice의 stage 시작 조건, handoff, closeout 의무는 이 문서가 아니라 `docs/engineering/slice-workflow.md`가 단일 소스다.
 
-## Codex 새 작업 public stage 흐름
+## Codex public stage 흐름
 
-Stage actor 분리, 새 task ID, handoff evidence는 `docs/engineering/codex-task-handoff.md`가,
+필요한 경우의 task handoff는 `docs/engineering/codex-task-handoff.md`가,
 Stage별 사전 조건·산출물·closeout은 `docs/engineering/slice-workflow.md`가 단일 소스다.
 
 ---

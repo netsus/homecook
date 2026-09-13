@@ -1,5 +1,13 @@
 # Current Source of Truth
 
+## 2026-09-13 사용자 승인 contract-evolution — 광고 중인 R2.2와 master 단일 통합
+
+현재 광고 공개본의 저장소 권위는 `origin/release/mumeok-r2-live-20260913`, exact SHA `92fc7bd0963af2e47f560151bec8f3cabd553c6a`, 공개 `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`다. 이 항목은 제공된 공개 배포 사실과 로컬 ref의 SHA 일치를 기록할 뿐 새 배포·재시작·DB 적용·환경 변경을 승인하지 않는다. 광고 중인 현재 production은 이 문서 작업 동안 그대로 유지한다.
+
+[r2 위임 계약](../marketing-demand-validation-r2-contract.md) §12의 `r2.2-recording`/`r2.2-homeflow` 직렬 화면, exact 설문, Q3 결과, 체험, 간결 동의, 읽기 전용 결과 공유, 주제별 social metadata가 최신 공개 R2 계약이다. `round_version=r2.1`, 기존 r2.1/v2 데이터 의미, `POST /api/v1/marketing/round2`, public 3테이블, 독립 활동·권한·멱등·보관 경계는 유지한다. 2026-09-12 이전의 `로컬 후보`, `배포 보류`, `master 머지 금지` 표현은 당시 배포 전 단계의 역사 기록이며 현재 상태를 나타내지 않는다.
+
+사용자는 위 실행본의 필요한 R2 변경을 [§13 통합 기준](../marketing-demand-validation-r2-contract.md#13-2026-09-13-실제-배포-상태와-master-통합-승인)에 따라 하나의 PR로 master에 정리하는 것을 승인했다. 같은 Codex task가 문서·R2.2 DB/parser·recording/homeflow UI·결과 공유 metadata를 통합하고 검토·병합할 수 있다. live 브랜치 전체 또는 423파일 snapshot, 로컬 중복 snapshot/evidence, HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션은 포함하지 않는다. public recipe 복구, 배포 도구·운영 기록도 제외한다. current-head CI와 실제 랜딩 검증은 유지한다.
+
 ## Official Files
 - `docs/요구사항기준선-v1.7.36.md`
 - `docs/화면정의서-v1.5.40.md`

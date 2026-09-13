@@ -82,7 +82,7 @@ Homecook은 **공식 문서가 제품 계약을 잠그고**, **workpack이 구�
 - `docs/workpacks/README.md`: 무엇을 어떤 순서로 구현하는지
 - workpack 문서: 지금 내가 만지는 기능의 scope
 - `agent-workflow-overview.md` / `slice-workflow.md`: 실제 작업 절차
-- `codex-task-handoff.md`: Stage별 새 Codex 작업 생성과 독립 검토 규칙
+- `codex-task-handoff.md`: 병렬화·고위험 검토가 필요할 때 사용하는 선택형 작업 인수인계
 - `workflow-v2/README.md`: OMO 기본 운영 구조
 - `qa-system.md`: 테스트와 QA 증거를 어떻게 남기는지
 - `git-workflow.md`: 브랜치/커밋/PR 규칙
@@ -146,7 +146,7 @@ Homecook은 **공식 문서가 제품 계약을 잠그고**, **workpack이 구�
 | 6 | `frontend-closeout-reviewer` 새 작업 | 프론트 PR 리뷰 / closeout |
 
 Claude는 사용하지 않는다.
-Stage마다 별도 Codex 작업을 사용하고, 작성·구현 작업과 독립 검토 작업의 task ID를 분리한다.
+Stage 역할은 같은 Codex 작업에서 이어서 수행할 수 있다. 별도 task ID는 사용자가 요청했거나 고위험 독립 검토가 필요한 경우에만 사용한다.
 
 ### 3. 변경 유형별 게이트
 

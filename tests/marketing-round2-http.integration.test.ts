@@ -223,6 +223,41 @@ describe.skipIf(!enabled)("r2 actual HTTPS + isolated SDK RPC + file control", (
     expect(providerCalls).toBe(1);
   }, 30000);
 
+  it.each([
+    { topic: "homeflow" as const, answers: { q1: "three_four", q2: "two_three", q3: "mental", q4: "shopping" }, changedQ3: "memo" },
+    { topic: "recording" as const, answers: { q1: "daily", q2: "6_plus", q3: "track", q4: "weight" }, changedQ3: "measure" },
+  ])("persists linear $topic through HTTPS and protects completed answers/version", async ({ topic, answers, changedQ3 }) => {
+    const { cookie } = await bootstrap(topic);
+    expect((await send(action(topic, "activity_start", { activity: "survey" }), cookie)).status).toBe(200);
+    const survey = action(topic, "survey_submit", { survey_version: `r2.2-${topic}`, answers });
+    const invalid = await send({ ...survey, answers: { ...answers, q1: "three_five" } }, cookie);
+    expect(invalid.status).toBe(422);
+    const completed = await send(survey, cookie);
+    expect(completed.status, completed.json.error?.code).toBe(200);
+    expect(completed.json.data.state.survey).toBe("completed");
+    expect((await send(survey, cookie)).json.data).toEqual(completed.json.data);
+    const changedAnswers = { ...answers, q3: changedQ3 };
+    const sameEvent = await send({ ...survey, answers: changedAnswers }, cookie);
+    expect(sameEvent.status).toBe(409);
+    expect(sameEvent.json.error?.code).toBe("EVENT_CONFLICT");
+    const oldVersion = { ...survey, survey_version: `r2.1-${topic}`, answers: { q1: "none", q2: "other", q3: "none", q4: "no" } };
+    const versionConflict = await send(oldVersion, cookie);
+    expect(versionConflict.status).toBe(409);
+    expect(versionConflict.json.error?.code).toBe("EVENT_CONFLICT");
+    const changed = await send({ ...survey, event_id: randomUUID(), answers: changedAnswers }, cookie);
+    expect(changed.status).toBe(409);
+    expect(changed.json.error?.code).toBe("ACTIVITY_ALREADY_COMPLETED");
+    const changedVersion = await send({ ...oldVersion, event_id: randomUUID() }, cookie);
+    expect(changedVersion.status).toBe(409);
+    expect(changedVersion.json.error?.code).toBe("ACTIVITY_ALREADY_COMPLETED");
+    const resumed = await send(action(topic, "bootstrap", { bootstrap_intent: "cookie_resume" }), cookie);
+    expect(resumed.json.data.state.survey).toBe("completed");
+    expect(resumed.json.data.participation_id).toBe(completed.json.data.participation_id);
+    expect(resumed.json.data.revision).toBe(completed.json.data.revision);
+    expect(resumed.text).not.toMatch(/answers|survey_version|digest/);
+    expect(providerCalls).toBe(0);
+  }, 30000);
+
   it("reconciles a genuinely committed apply after its response is lost and releases only with matching event proof", async () => {
     const { cookie } = await bootstrap("recording");
     const body = action("recording", "activity_start", { activity: "example" });

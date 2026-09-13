@@ -2,7 +2,7 @@
 
 ## Goal
 
-작성·구현 작업과 독립 검토 작업을 서로 다른 Codex task ID로 분리하고, 무한 핑퐁 없이 구조화된 수렴 루프로 종료한다.
+필요한 경우 작성·구현·검토 역할을 구조화된 수렴 루프로 운영한다. 서로 다른 Codex task ID는 선택 사항이다.
 Claude는 사용하지 않는다.
 
 ## Fixed Roles
@@ -17,7 +17,7 @@ reviewer는 finding을 반환하고 author의 artifact를 직접 덮어쓰지 �
 
 ## Independent Approval Contract
 
-최종 승인 조건:
+별도 독립 검토를 선택한 고위험 흐름의 승인 조건:
 
 `author_task_id != reviewer_task_id && reviewer_approve && required_changes=[] && verification_status=passed && omitted_targets=[]`
 
