@@ -3,12 +3,12 @@
 ## 2026-09-13 R2.2 공개본과 master 통합 인수
 
 - 최신 계약: [r2 상세 계약 §12~13](../../marketing-demand-validation-r2-contract.md). `round_version=r2.1`은 유지하고 기본 설문은 `r2.2-recording` / `r2.2-homeflow`다.
-- 후속 docs 작성 task: `01a098f7-7f4f-7752-8aa1-e38308db05ab`; source coordinator: `01a098d2-55e2-7602-9d2a-2d50bfd655ce`. 독립 reviewer는 다른 새 task ID를 사용한다.
+- 과거 task ID는 provenance로만 보존한다. 현재 통합은 같은 Codex task에서 구현·검토·병합할 수 있다.
 - 실제 광고 공개본: `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`, `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`.
 - 과거 r2.1 Stage 1/2 체크와 evidence는 역사 범위로 보존한다. 현재 공개됐다는 사실만으로 R2.2의 미체크 acceptance나 독립 Stage review를 자동 통과시키지 않는다.
-- master 통합은 docs 계약 → R2.2 DB/parser → recording/homeflow UI → 결과 공유/social metadata의 작은 successor PR 순서다. 각 PR은 live ref에서 필요한 파일·commit만 선별하고 current master에서 다시 검증한다.
+- master 통합은 R2.2 DB/parser, recording/homeflow UI, 결과 공유/social metadata를 하나의 통합 PR에서 선별하고 current master에서 검증할 수 있다.
 - live 브랜치 전체 snapshot, 로컬 중복 snapshot/evidence, HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션은 이 workpack 범위가 아니다. 공개 recipe 복구, dependency/security, 배포 도구·운영 기록도 별도 change type으로 판정한다.
-- 이 문서 작업은 production mutation 0이며 현재 광고 배포를 변경하지 않는다. 본 docs PR의 독립 internal 1.5 검토·병합 뒤 구현 통합을 시작한다.
+- 통합 작업은 production mutation 0이며 현재 광고 배포를 변경하지 않는다. 별도 task나 Stage 승인을 기다리지 않고 current-head CI와 실제 동작 검증 후 병합할 수 있다.
 
 ## Goal
 

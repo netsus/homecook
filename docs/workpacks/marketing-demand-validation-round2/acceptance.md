@@ -14,7 +14,7 @@
 - [ ] current master 기반 후속 PR마다 live ref에서 선택한 R2 파일/commit 목록과 제외 목록을 기록하고 전체 423파일 또는 로컬 중복 snapshot을 가져오지 않았음을 검증한다 <!-- omo:id=accept-r22-master-diff-scope;stage=4;scope=shared;review=3,6 -->
 - [ ] HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션 및 별도 recipe/dependency/deploy-tool 변경이 R2 PR에 섞이지 않았음을 검증한다 <!-- omo:id=accept-r22-product-boundary;stage=4;scope=shared;review=3,6 -->
 
-운영은 이미 광고 중이므로 integration PR 검증을 이유로 배포·DB·서버·환경을 변경하지 않는다. 후속 구현 PR은 current master에서 별도 CI와 독립 Stage review를 받고, live 상태와 master merge 상태를 서로 대체 evidence로 사용하지 않는다.
+운영은 이미 광고 중이므로 integration PR 검증을 이유로 배포·운영 DB·서버·환경을 변경하지 않는다. 하나의 통합 PR에서 current-head CI와 실제 랜딩 동작을 검증하며, 별도 Stage task나 독립 task ID를 요구하지 않는다.
 
 공식 계약: [r2.1](../../marketing-demand-validation-r2-contract.md) @ `7f00e62c13572b5b2c0d54c997fe628f7a56567e`, 독립 reviewed head `24093c94ebf53676050353088f173ef7f6315445`.
 아래 r2.1 체크는 병합된 Stage1/초기 Stage2의 역사 범위다. 새 §12~13 R2.2의 미완료 체크와 독립 review를 대체하지 않는다. 계약 전문의 exact 필드·타입·message·DB constraint는 README 요약보다 우선한다.

@@ -680,13 +680,9 @@ export의 `20260911110000_marketing_round2_linear_homeflow.sql`은3인자 함수
 
 ### 13.3 master 통합 순서와 변경 경계
 
-사용자는 실행본의 필요한 변경을 최신 `origin/master@8c6573bf594fa15613205ce97e4435d751c7d87c` 위에 작은 PR로 순차 정리하는 범위를 승인했다. live 브랜치 전체 423파일을 PR로 만들거나 merge하지 않는다. 순서는 다음과 같다.
+사용자는 실행본의 필요한 변경을 최신 `origin/master` 위에 정리하는 범위를 승인했다. live 브랜치 전체 423파일을 그대로 merge하지 않고, 현재 공개 R2 랜딩에 필요한 backend/data, recording/homeflow UI, 결과 공유/social metadata를 **하나의 통합 PR**에 선별할 수 있다. Stage별 별도 task·별도 PR·독립 승인 evidence는 요구하지 않는다.
 
-1. 이 docs-only contract-evolution PR을 독립 `docs-gate-reviewer`가 검토하고 unresolved required finding 0으로 병합한다.
-2. R2.2 backend/data PR에서 `topic+survey_version` parser와 live ref의 세 R2.2 migration을 원본 순서·bytes로 선별하고, 기존 r2.1 row/event 불변·isolated replay·RPC/권한·409/422를 재검증한다.
-3. R2.2 frontend PR에서 recording과 homeflow의 §12 직렬 UI, 실제 저장·복원·read-only·mobile/a11y/reduced-motion을 current master에 재적용한다. 필요하면 recording과 homeflow를 더 작은 의존 순서 PR로 나눌 수 있다.
-4. 결과 공유/social metadata PR에서 topic별 result-only URL, 전용 card, 카카오 제한 수집기 첫-head metadata를 검증한다. 앞 UI PR과 결합하는 편이 더 작고 안전하다는 독립 검토 evidence가 있으면 같은 PR에 둘 수 있다.
-5. 각 후속 PR은 live ref에서 가져온 commit/file 목록과 제외 목록, current-head 로컬 검증·CI·독립 review를 새로 남긴다. 현재 광고 배포 성공이나 live branch의 과거 test를 master PR의 자동 PASS로 대체하지 않는다.
+통합 PR은 live ref에서 가져온 파일 목록과 제외 목록을 남기고 current-head CI와 실제 랜딩 동작을 검증한다. 기존 r2.1 row/event 불변, `(topic,survey_version)` parser·세 R2.2 migration, recording/homeflow 저장·복원·read-only·mobile/a11y/reduced-motion, result-only 공유 URL과 topic별 metadata를 함께 확인한다. 현재 광고 배포 성공만으로 master PR 검증을 생략하지 않는다.
 
 로컬에 같은 결과를 가진 snapshot/evidence가 있어도 별도 merge하지 않는다. 필요한 runtime source가 live ref에 있으면 그 ref를 provenance로 사용하고, 같은 bytes를 중복 커밋하지 않는다.
 
@@ -694,4 +690,4 @@ HOME R2 carousel/banner, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이
 
 ### 13.4 이 docs 작업의 권한과 완료 경계
 
-이 작성 작업은 공식 5종, CSoT, 상세 계약, workpack/acceptance 동기화와 Draft PR까지만 소유한다. 제품·테스트·package/lockfile·migration·서버·DB·배포 설정을 변경하지 않는다. 현재 광고를 멈추거나 새로 배포하지 않으며 production mutation은 0이다. 작성자는 자기 PR을 Ready/최종 승인/merge하지 않고 exact head SHA와 검증 결과를 독립 `docs-gate-reviewer` 새 작업에 넘긴다.
+같은 Codex task가 문서·제품·테스트 통합과 PR 검토·병합을 완료할 수 있다. 현재 광고를 멈추거나 새로 배포하지 않으며 production mutation은 0이다. merge 조건은 별도 task ID가 아니라 current-head CI, 실제 랜딩 검증, 운영 DB·서버 무변경 확인이다.

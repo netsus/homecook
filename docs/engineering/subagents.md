@@ -2,8 +2,7 @@
 
 이 문서는 이 저장소에서 메인 Codex가 어떤 역할 기반 서브에이전트 관점으로 작업을 분해하는지 정의한다.
 
-서브에이전트는 `docs/engineering/codex-task-handoff.md`의 별도 Codex Stage 작업과 다르다.
-Stage 작성·구현과 최종 검토의 task ID 분리는 같은 작업 안의 서브에이전트로 대체하지 않는다.
+서브에이전트와 별도 Codex task는 모두 선택형 협업 수단이다. 같은 task가 작성·구현·검토를 완료할 수 있으며, 서브에이전트를 쓰지 않았다는 이유로 merge를 차단하지 않는다.
 
 ## Core Flow
 

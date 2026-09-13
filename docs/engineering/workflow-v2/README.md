@@ -1,5 +1,7 @@
 # Workflow V2
 
+> Workflow V2/OMO Stage 오케스트레이션은 선택형이다. 일반 제품 작업은 같은 Codex task와 하나의 PR에서 끝낼 수 있으며, 새 task ID나 Stage별 독립 승인을 기본 merge gate로 요구하지 않는다.
+
 ## Status
 
 - 현재 기본 운영 경로:
@@ -13,8 +15,8 @@
   - actor를 호출하지 않는 `pnpm omo:reconcile`, `pnpm omo:status`, `pnpm omo:tail`, `pnpm omo:report`
   - `pnpm validate:workflow-v2`, `pnpm validate:omo-bookkeeping`
 - 새로 잠그는 범위:
-  - `docs/engineering/codex-task-handoff.md` 기반 별도 Codex 작업 handoff
-  - task ID / commit SHA / evidence 기반 독립 Stage 검토
+  - 필요할 때 사용하는 Codex 작업 handoff
+  - 선택형 task ID / commit SHA / evidence 기반 독립 검토
   - 기존 OMO 상태·validator·closeout projection의 model-neutral migration 경계
 - 현재 운영 규칙:
   - workflow-v2 entry docs가 OMO 기본 운영 경로를 설명한다.
@@ -22,7 +24,7 @@
 - 현재 전환 방향:
   - Codex는 conductor, OMO는 rail이다.
   - Homecook OMO는 Codex가 orchestration owner이고 OMO가 deterministic rail인 `Codex-orchestrated OMO rail`로 전환한다.
-  - Claude는 사용하지 않는다. 모든 Stage actor는 역할별 별도 Codex 작업이다.
+  - Claude는 사용하지 않는다. Stage 역할은 같은 Codex task에서 수행할 수 있다.
   - Claude provider를 호출하는 `omo:supervise`, `omo:run-stage`, `omo:tick`, live-provider smoke, scheduler execute 경로는 신규 작업에서 사용 중지한다.
 - 현재 readiness 경계:
   - 과거 `.workflow-v2/promotion-evidence.json`의 `ready`는 Claude provider baseline에 대한 역사적 판정이며 GPT-only actor dispatch readiness가 아니다.
@@ -131,7 +133,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 - workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
 - Homecook의 Supabase target과 external/local gate는 `../supabase-local-only-operations.md`를 따른다. Cloud/linked/remote Supabase evidence는 forbidden/N/A이며 promotion·closeout prerequisite가 될 수 없다.
-- 현재 기본 운영 모델은 `Codex task orchestration + OMO deterministic rail`이다. Codex 새 작업들이 Stage를 수행하고, OMO는 actor를 호출하지 않는 state validation / current-head gate / closeout-report projection만 맡는다.
+- 현재 기본 운영 모델은 `single Codex task + current-head CI`다. OMO는 필요할 때 actor를 호출하지 않는 state validation / current-head gate / closeout-report projection만 맡는다.
 - `Codex-orchestrated OMO rail`이 usable하다는 말은 promotion gate가 ready라는 뜻이 아니다. promotion readiness는 `.workflow-v2/promotion-evidence.json`과 `promotion-readiness.md`가 정한 별도 gate로 판단한다.
 - 12b 이후 product slice는 시작 전에 해당 slice의 report/evidence 체크리스트와 escalation 기준을 명시하고, `human_escalation`은 manual decision 또는 repair budget exhaustion으로만 남긴다.
 - 이 README는 operator entry다. product stage actor는 workflow-v2 spec 전체를 기본 읽기 세트로 삼지 않고, `slice-workflow.md`와 `agent-workflow-overview.md`를 우선한다.
@@ -196,11 +198,11 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `pnpm validate:authority-evidence-presence`
   - `pnpm validate:real-smoke-presence`
 - 현재 baseline의 해석:
-  - Stage 실행과 merge 판단은 `codex-task-handoff.md`와 `slice-workflow.md`를 따른다.
-  - authority-required UI는 서로 다른 Codex Stage 4, design-reviewer, product-design-authority 작업을 거친다.
+  - Stage 실행과 merge 판단은 `slice-workflow.md`를 따르며 task handoff는 선택 사항이다.
+  - authority-required UI도 같은 task에서 design-reviewer와 product-design-authority 관점을 순서대로 검토할 수 있다.
   - Stage 6 approve 뒤 supervisor는 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, `validate:authority-evidence-presence`, `validate:real-smoke-presence` bundle을 `internal 6.5`로 실행하고, fixable slice-local drift만 같은 frontend PR branch에서 auto-repair한다.
   - Stage 6/current-head merge 완료 뒤에는 `pnpm omo:report -- --work-item <slice>`로 `docs/workpacks/<slice>/omo-report.md`를 생성한다. dispatch 산출물이 없어 순수 진행시간이 0.0분으로 떨어지는 Codex-orchestrated slice는 `.omx/artifacts`, PR timestamps, git history, GitHub checks, source PR body를 근거로 backfilled estimate를 남긴다.
-  - 새 Codex 작업 handoff는 모든 product Stage의 기본 경로다.
+  - 새 Codex 작업 handoff는 고위험 독립 검토나 병렬화가 필요할 때만 사용한다.
   - task가 완료되지 않으면 조정 작업은 상태를 추적하고, 사용자 입력 또는 외부 조건이 필요할 때만 handoff한다.
   - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff bundle로 종료한다.
   - live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.
@@ -215,8 +217,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Workflow Usage
 
-1. product Stage는 `docs/engineering/codex-task-handoff.md`에 따라 역할별 Codex 새 작업으로 실행한다.
-2. 조정 작업은 task ID, 입력 commit SHA, PR URL, stage-result/evidence를 handoff ledger와 PR `Actual Verification`에 기록한다.
+1. product Stage는 같은 Codex task에서 순서대로 실행할 수 있다.
+2. 별도 handoff를 선택한 경우에만 task ID, 입력 commit SHA, PR URL과 evidence를 기록한다.
 3. 이미 tracked item이 있는 작업은 `.workflow-v2/work-items/<id>.json`과 `.workflow-v2/status.json`을 상태·closeout projection source로 사용한다.
 4. 승격 상태를 관리 중이면 `.workflow-v2/promotion-evidence.json`도 같이 갱신한다. 과거 provider `ready`는 GPT-only actor dispatch readiness로 재사용하지 않는다.
 5. 작업 브랜치와 preset, required checks를 status에 기록한다.

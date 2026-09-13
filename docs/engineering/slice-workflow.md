@@ -6,7 +6,7 @@
 해당 Stage의 **담당 · 사전 조건 · 읽을 것 · 산출물 · 포함 필수 사항 · 자가 점검 · 완료 기준 · 완료 요약**을 그대로 따른다.
 
 change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`를 따르며, 이 문서는 stage actor SOP에 집중한다.
-새 Codex 작업 생성, task ID 분리, handoff prompt와 evidence 규칙은 `docs/engineering/codex-task-handoff.md`를 따른다.
+별도 Codex 작업이 실제로 필요한 경우에만 `docs/engineering/codex-task-handoff.md`를 참고한다. Stage 역할은 같은 task에서 순서대로 수행할 수 있다.
 
 ---
 
@@ -14,22 +14,21 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 | Stage | 이름 | 담당 |
 |-------|------|------|
-| 1 | Workpack README + acceptance.md 작성 | **Codex `stage1-docs-author` 새 작업** |
-| 2 | 백엔드 구현 | **Codex `backend-implementer` 새 작업** |
-| 3 | 백엔드 PR 리뷰 | **Codex `backend-reviewer` 새 작업** |
-| 4 | 프론트엔드 구현 | **Codex `frontend-implementer` 새 작업** |
-| 5 | 디자인 리뷰 | **Codex `design-reviewer` 새 작업** |
-| 6 | 프론트엔드 PR 리뷰 | **Codex `frontend-closeout-reviewer` 새 작업** |
+| 1 | Workpack README + acceptance.md 작성 | **Codex `stage1-docs-author` 역할(같은 task 가능)** |
+| 2 | 백엔드 구현 | **Codex `backend-implementer` 역할(같은 task 가능)** |
+| 3 | 백엔드 PR 리뷰 | **Codex `backend-reviewer` 역할(같은 task 가능)** |
+| 4 | 프론트엔드 구현 | **Codex `frontend-implementer` 역할(같은 task 가능)** |
+| 5 | 디자인 리뷰 | **Codex `design-reviewer` 역할(같은 task 가능)** |
+| 6 | 프론트엔드 PR 리뷰 | **Codex `frontend-closeout-reviewer` 역할(같은 task 가능)** |
 
 Claude는 어떤 Stage에도 사용하지 않는다.
 
-**작업 분리 규칙 (요청받은 즉시 확인)**
+**작업 운영 원칙**
 
-- 현재 Codex 작업이 조정 작업이면 해당 Stage를 직접 수행하지 않고 `codex-task-handoff.md`에 따라 전용 새 작업을 연다.
-- Stage 1/2/4 작성·구현 작업은 자기 변경을 최종 승인하지 않는다.
-- internal 1.5, Stage 3/5/6, final authority는 검토 대상 작성·구현 작업과 다른 task ID를 사용한다.
-- 같은 작업의 서브에이전트는 독립 Stage 작업을 대신하지 않는다.
-- 이전 Stage와 같은 task ID이거나 입력 commit SHA가 불명확하면 Stage를 시작하지 않고 handoff를 다시 잠근다.
+- 현재 Codex 작업이 Stage 역할을 순서대로 직접 수행할 수 있다.
+- 작성·구현·검토에 별도 task ID를 요구하지 않는다. current-head CI와 실제 동작 검증은 유지한다.
+- 별도 task나 서브에이전트는 사용자가 요청했거나 고위험 독립 검토·병렬화가 필요할 때만 선택한다.
+- 입력 commit SHA와 검증 대상이 불명확하면 먼저 범위를 다시 고정한다.
 
 ---
 
@@ -58,7 +57,7 @@ Claude는 어떤 Stage에도 사용하지 않는다.
 - exact closeout ownership / projection / repair semantics는 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다. `docs/engineering/bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface를 기록하는 compatibility note다.
 - Stage 2/4 구현 actor는 자신이 닫은 범위의 checklist / acceptance / PR evidence를 최신화하고, Stage 3/5/6 review actor는 mismatch를 closeout drift로 본다.
 - Stage 2를 여러 작은 backend PR로 나누면 각 PR은 base 대비 이번 PR에서 실제로 닫은 Stage 2 checklist만 `unchecked -> checked`로 바꾼다. 신규 GPT-only 실행은 reviewer waiver를 만들지 않는다. 후속 PR 항목은 unchecked로 유지하며, 기존 계약 metadata/text 변경·완료 항목 재개방·과거 waiver 제거/변경은 별도 선행 docs PR 없이는 허용하지 않는다.
-- authority-required slice는 Stage 4/5와 다른 Codex `product-design-authority` 새 작업의 `final_authority_gate`를 통과하기 전 최종 closeout이나 merge-ready 상태로 넘기지 않는다.
+- authority-required slice는 `product-design-authority` 관점의 검토를 남기되 같은 task에서 수행할 수 있다.
 - Stage 2/4 actor는 Draft PR을 Ready로 전환하기 전에 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode backend|frontend`로 PR body required sections, exploratory QA/eval evidence, authority evidence refs, real smoke evidence, pending Actual Verification placeholder를 한 번에 확인한다.
 - exact validator semantics와 미체크 허용 범위는 `pnpm validate:pr-ready`, `pnpm validate:closeout-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, canonical closeout doc를 따른다.
 
