@@ -10,6 +10,8 @@ user-invocable: false
 
 # Git Workflow
 
+Current repository AGENTS.md controls workflow and verification. The patterns and referenced examples below are optional design guidance, not permission to add CI, approval, Stage or workpack gates. In Homecook's prelaunch mode, use related local verification and same-task review; do not wait for intentionally absent CI.
+
 Covers branching strategies, conventional commits, CI/CD automation, repository hygiene, and git internals. GitHub CLI usage is handled by a separate `github-cli` skill; this skill focuses on git workflow patterns and CI/CD configuration.
 
 ## Quick Reference
@@ -22,7 +24,7 @@ Covers branching strategies, conventional commits, CI/CD automation, repository 
 | PRs         | Small, stacked changes; no mega PRs                       |
 | Main branch | Always deployable; broken main is an emergency            |
 | CI/CD       | Modular GitHub Actions with reusable workflows            |
-| Merging     | Green CI + review required before merge                   |
+| Merging     | Current repository verification + change review          |
 | Versioning  | Semantic Release or Changesets (never manual)             |
 | Branches    | Max 48 hours lifespan; auto-prune stale/merged            |
 | Secrets     | OIDC Connect in pipelines; never hardcode tokens          |
@@ -58,15 +60,15 @@ Append `!` after type/scope for breaking changes (major version bump).
 
 ## Pre-Merge Checks
 
-All PRs require before merge:
+Select checks according to the current repository and the changed behavior:
 
 - Lint
 - Type check
 - Tests
 - Security scan
-- Review approval (human or automated)
+- Review the change; separate approval only when actually required
 
-Auto-merge is acceptable for low-risk PRs when pipeline succeeds.
+Merge when authorized and the applicable checks and review are complete. CI is required only when current repository policy or the user calls for it; respect actual branch protection.
 
 ## Troubleshooting
 
@@ -84,7 +86,7 @@ Auto-merge is acceptable for low-risk PRs when pipeline succeeds.
 | Mistake                                               | Correct Pattern                                               |
 | ----------------------------------------------------- | ------------------------------------------------------------- |
 | Keeping feature branches alive longer than 48 hours   | Merge or rebase daily; break large work into stacked PRs      |
-| Committing directly to main without branch protection | Enable branch protection rules requiring CI and review        |
+| Committing directly to main without branch protection | Use the repository's work branch and existing protection rules |
 | Using merge commits that clutter history              | Rebase and squash to maintain linear history                  |
 | Hardcoding tokens in GitHub Actions workflows         | Use OIDC Connect for authentication in CI/CD pipelines        |
 | Creating monolithic CI workflows in a single file     | Split into reusable workflows and composite actions           |
