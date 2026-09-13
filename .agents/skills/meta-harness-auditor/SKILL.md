@@ -9,4 +9,4 @@ description: Inspect historical Homecook OMO, workflow, and audit records when t
 
 과거 실행 조사를 요청받은 경우에만 관련 `docs/engineering/workflow-v2/`, `.workflow-v2/`, `.opencode/` 기록을 읽고 사실과 추정을 구분해서 보고한다. 현재 개발 방식의 감사라면 현재 규칙과 실제 실행 연결을 기준으로 확인한다.
 
-`pnpm harness:audit`와 `pnpm harness:fix`는 과거 하네스 도구다. 자동 실행하지 않고, 옛 도구가 보고한 폐지된 gate의 누락을 결함으로 간주하거나 복구하지 않는다. 당시 상태나 보고서를 신규 작업에 맞춰 갱신하지 않는다.
+과거 하네스 도구의 package 명령은 제거됐다. 보존된 스크립트를 자동 실행하지 않고, 옛 도구가 보고한 폐지된 gate의 누락을 결함으로 간주하거나 복구하지 않는다. 당시 상태나 보고서를 신규 작업에 맞춰 갱신하지 않는다.
