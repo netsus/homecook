@@ -3,6 +3,9 @@ name: eslint-prettier-husky-config
 description: This skill should be used when setting up code quality tooling with ESLint v9 flat config, Prettier formatting, Husky git hooks, lint-staged pre-commit checks, and GitHub Actions CI lint workflow. Apply when initializing linting, adding code formatting, configuring pre-commit hooks, setting up quality gates, or establishing lint CI checks for Next.js or React projects.
 ---
 
+Current repository AGENTS.md controls workflow and verification scope. Examples in this skill and its references do not make CI, full-suite tests, Stage/workpack artifacts, separate approvals or closeout mandatory. Do not install or restore such gates for ordinary work; follow an explicit user request when designing new tooling. Related local checks and same-task review are sufficient where the repository says so.
+
+
 # ESLint, Prettier, Husky Configuration
 
 ## Overview

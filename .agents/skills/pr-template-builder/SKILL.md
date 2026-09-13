@@ -3,6 +3,9 @@ name: pr-template-builder
 description: Creates GitHub pull request templates, issue templates, and discussion templates with proper YAML configuration. Use when users request "PR template", "issue template", "GitHub templates", "pull request template", or "contribution guidelines".
 ---
 
+Current repository AGENTS.md controls workflow and verification scope. Examples in this skill and its references do not make CI, full-suite tests, Stage/workpack artifacts, separate approvals or closeout mandatory. Do not install or restore such gates for ordinary work; follow an explicit user request when designing new tooling. Related local checks and same-task review are sufficient where the repository says so.
+
+
 # PR Template Builder
 
 Create standardized GitHub templates for pull requests, issues, and discussions to streamline collaboration.

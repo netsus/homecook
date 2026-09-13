@@ -30,6 +30,7 @@ describe("prelaunch fast development policy", () => {
         name === "verify:harness" ||
         [
           "validate:workpack",
+          "validate:pr",
           "validate:workflow-v2",
           "validate:authority-evidence-presence",
           "validate:exploratory-qa-evidence",
@@ -37,6 +38,8 @@ describe("prelaunch fast development policy", () => {
           "validate:pr-ready",
           "validate:omo-bookkeeping",
           "validate:closeout-sync",
+          "harness:audit",
+          "harness:fix",
         ].includes(name),
     );
 
@@ -52,7 +55,7 @@ describe("prelaunch fast development policy", () => {
     ).toBe(false);
   });
 
-  it("does not auto-load the retired OMO plugin or workflow instructions", () => {
+  it("does not register a project OMO plugin or retired workflow instructions", () => {
     const config = readJson("opencode.json");
 
     expect(
@@ -66,5 +69,17 @@ describe("prelaunch fast development policy", () => {
         /workflow-v2|\.opencode|agent-(?:plan|review)-loop/.test(path),
       ),
     ).toEqual([]);
+  });
+
+  it("shadows legacy OpenAgent role settings with a current project config", () => {
+    expect(
+      existsSync(resolve(rootDir, ".opencode/oh-my-openagent.json")),
+    ).toBe(true);
+    const config = readJson(".opencode/oh-my-openagent.json");
+
+    expect(config.agents).toBeUndefined();
+    expect(config.experimental.auto_resume).toBe(false);
+    expect(config.disabled_hooks).toContain("ralph-loop");
+    expect(config.disabled_commands).toContain("ulw-loop");
   });
 });

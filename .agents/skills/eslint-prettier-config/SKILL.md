@@ -3,6 +3,9 @@ name: eslint-prettier-config
 description: Configures ESLint and Prettier for consistent code quality with TypeScript, React, and modern best practices. Use when users request "ESLint setup", "Prettier config", "linting configuration", "code formatting", or "lint rules".
 ---
 
+Current repository AGENTS.md controls workflow and verification scope. Examples in this skill and its references do not make CI, full-suite tests, Stage/workpack artifacts, separate approvals or closeout mandatory. Do not install or restore such gates for ordinary work; follow an explicit user request when designing new tooling. Related local checks and same-task review are sufficient where the repository says so.
+
+
 # ESLint & Prettier Configuration
 
 Setup consistent code quality and formatting with ESLint and Prettier.

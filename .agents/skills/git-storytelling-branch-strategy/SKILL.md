@@ -6,6 +6,9 @@ allowed-tools:
   - Read
 ---
 
+Current repository AGENTS.md controls workflow and verification scope. Examples in this skill and its references do not make CI, full-suite tests, Stage/workpack artifacts, separate approvals or closeout mandatory. Do not install or restore such gates for ordinary work; follow an explicit user request when designing new tooling. Related local checks and same-task review are sufficient where the repository says so.
+
+
 # Git Storytelling - Branch Strategy
 
 This skill helps you implement effective branching strategies that tell the story of your development process through organized, purposeful branch management. Good branching creates a clear narrative of parallel development efforts.
