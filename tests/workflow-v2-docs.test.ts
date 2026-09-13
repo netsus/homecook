@@ -153,7 +153,7 @@ describe("workflow v2 docs", () => {
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
   });
 
-  it("fails the workflow validator when the canonical GPT-only handoff contract drifts", () => {
+  it("fails the workflow validator when the optional handoff contract drifts", () => {
     const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-handoff-"));
 
     try {
@@ -161,8 +161,8 @@ describe("workflow v2 docs", () => {
 
       const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
       const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
-        "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
-        "같은 작업에서 검토할 수 있다.",
+        "같은 task가 작성과 최종 검토를 수행할 수 있다.",
+        "작성과 검토를 항상 분리한다.",
       );
       writeFileSync(handoffPath, driftedHandoff, "utf8");
 
@@ -175,7 +175,7 @@ describe("workflow v2 docs", () => {
     }
   });
 
-  it("fails the workflow validator when the canonical self-approval guard drifts", () => {
+  it("fails the workflow validator when optional task separation is made mandatory", () => {
     const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-self-approval-"));
 
     try {
@@ -183,8 +183,8 @@ describe("workflow v2 docs", () => {
 
       const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
       const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
-        "작성 작업은 자기 변경을 최종 승인하지 않는다.",
-        "작성 작업이 자기 변경을 승인할 수 있다.",
+        "별도 task ID는 사용자가 분리를 요청했거나 고위험 변경에 독립 검토가 필요할 때만 사용한다.",
+        "모든 변경은 반드시 별도 task ID를 사용한다.",
       );
       writeFileSync(handoffPath, driftedHandoff, "utf8");
 
@@ -240,14 +240,14 @@ describe("workflow v2 docs", () => {
 
     expect(agents).toContain("## Language Policy");
     expect(agents).toContain("사용자-facing 응답은 특별한 요청이 없는 한 항상 한국어로 작성한다.");
-    expect(sliceWorkflow).toContain("**Codex `frontend-implementer` 새 작업**");
-    expect(sliceWorkflow).toContain("같은 작업의 서브에이전트는 독립 Stage 작업을 대신하지 않는다.");
-    expect(overview).toContain("## Codex 새 작업 public stage 흐름");
+    expect(sliceWorkflow).toContain("**Codex `frontend-implementer` 역할(같은 task 가능)**");
+    expect(sliceWorkflow).toContain("작성·구현·검토에 별도 task ID를 요구하지 않는다.");
+    expect(overview).toContain("## Codex public stage 흐름");
     expect(overview).toContain("Claude는 더 이상 사용하지 않는다.");
     expect(workflowReadme).toContain("## 현재 사용 가능한 OMO 범위");
     expect(workflowReadme).toContain("`pnpm omo:replay:update`");
     expect(workflowReadme).toContain(
-      "새 Codex 작업 handoff는 모든 product Stage의 기본 경로다.",
+      "새 Codex 작업 handoff는 고위험 독립 검토나 병렬화가 필요할 때만 사용한다.",
     );
     expect(workflowReadme).toContain(
       "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
@@ -255,7 +255,7 @@ describe("workflow v2 docs", () => {
     expect(workflowReadme).toContain("legacy scheduler/tick은 신규 Stage actor 실행에 사용하지 않는다.");
     expect(promotionReadiness).toContain("#### `manual-handoff-policy`");
     expect(promotionReadiness).toContain(
-      "Codex 새 작업 handoff는 모든 product Stage의 기본 경로다.",
+      "같은 Codex task 완료가 기본 경로다.",
     );
     expect(promotionReadiness).toContain("#### `live-smoke-standard`");
     expect(promotionReadiness).toContain("#### `scheduler-standard`");
@@ -279,9 +279,9 @@ describe("workflow v2 docs", () => {
     expect(opencodeReadme).toContain("## Allowed OMO Commands");
     expect(opencodeReadme).toContain("## Suspended Commands");
     expect(opencodeReadme).toContain("`provider=retired`, `bin=disabled`");
-    expect(opencodeReadme).toContain("다른 task ID와 다른 새 세션을 사용한다.");
-    expect(codexTaskHandoff).toContain("별도 ChatGPT/Codex 작업(새 task ID, 새 세션)");
-    expect(codexTaskHandoff).toContain("서로 다른 task ID와 서로 다른 새 세션을 사용한다.");
+    expect(opencodeReadme).toContain("같은 Codex task가 Stage 역할과 작성·구현·검토·병합을 이어서 맡을 수 있다.");
+    expect(codexTaskHandoff).toContain("상태: **선택형**");
+    expect(codexTaskHandoff).toContain("같은 task가 작성과 최종 검토를 수행할 수 있다.");
     expect(sessionOrchestrator).toContain("## Historical Session Model");
     expect(sessionOrchestrator).toContain(
       "현재 Homecook 운영 규칙은 `Stage 1/2/4 작성`과 `internal 1.5 / Stage 3 / Stage 5 / final authority / Stage 6 검토`를 서로 다른 ChatGPT/Codex task ID와 새 세션으로 분리한다.",

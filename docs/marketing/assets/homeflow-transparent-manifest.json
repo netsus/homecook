@@ -1,0 +1,96 @@
+{
+  "tool": "image_gen + sharp WebP conversion",
+  "originalUserFilesModified": false,
+  "assets": [
+    {
+      "key": "hero-ad",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-dc316313-4418-4566-ad0c-e69b89d3289b.png",
+      "output": "public/assets/funnel/homeflow/characters/hero-ad-transparent.webp",
+      "width": 540,
+      "height": 959,
+      "bytes": 75126,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255
+    },
+    {
+      "key": "spontaneous",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-47430662-4245-4255-af31-3c46aba9f889.png",
+      "output": "public/assets/funnel/homeflow/characters/spontaneous-transparent.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 57266,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255
+    },
+    {
+      "key": "mental",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-d4f681fa-05ca-4269-9de3-6b7b55ec9c9b.png",
+      "output": "public/assets/funnel/homeflow/characters/mental-transparent.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 59940,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255
+    },
+    {
+      "key": "memo",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-35b729d6-1d9c-4369-99f7-34471a526d40.png",
+      "output": "public/assets/funnel/homeflow/characters/memo-transparent.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 78792,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255
+    },
+    {
+      "key": "scheduled",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-a6e67658-90fe-489b-bc26-77708e0504f5.png",
+      "output": "public/assets/funnel/homeflow/characters/scheduled-transparent.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 67556,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255
+    },
+    {
+      "key": "invitation",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-b2b3955b-811e-47ba-90d3-ad1fc19ea94f.png",
+      "output": "public/assets/funnel/homeflow/characters/invitation-transparent.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 45018,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255
+    },
+    {
+      "key": "success",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-249c66e0-1475-4273-bfba-630d9ebaf280.png",
+      "output": "public/assets/funnel/homeflow/characters/success-transparent.webp",
+      "width": 720,
+      "height": 720,
+      "bytes": 63806,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255
+    },
+    {
+      "key": "hero-ad-pointing",
+      "source": "/Users/shj/.codex/generated_images/01a08f95-920d-76e2-8f2e-dc8821e9856b/exec-6c96f4f4-0b3d-4fb5-98b6-a074cc981435.png",
+      "reference": "/var/folders/c1/gv7thy6n54d76f_rvnxdwlzm0000gn/T/codex-clipboard-cfc04bea-3a82-4414-8c72-4ee79d92aafd.png",
+      "output": "public/assets/funnel/homeflow/characters/hero-ad-pointing-transparent.webp",
+      "width": 540,
+      "height": 810,
+      "bytes": 96150,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "alphaMax": 255,
+      "originalPreserved": true
+    }
+  ]
+}

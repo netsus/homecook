@@ -1,11 +1,13 @@
-# Codex 새 작업 Stage Handoff SOP
+# Codex 선택형 작업 Handoff 참고서
+
+> 상태: **선택형**. 일반 제품 작업은 같은 Codex task에서 계획·문서·구현·검토·병합까지 완료할 수 있다. 이 문서는 병렬 작업이나 고위험 독립 검토를 위해 사용자가 별도 task를 선택했을 때만 적용한다.
 
 ## 목적
 
-Homecook의 모든 신규 작업은 Claude를 사용하지 않는다.
-기존 Claude 담당 단계는 **역할이 분리된 별도 ChatGPT/Codex 작업(새 task ID, 새 세션)** 이 맡는다.
+Homecook의 신규 작업은 Claude를 사용하지 않는다.
+역할 분리는 책임을 설명하는 도구이며 별도 ChatGPT/Codex task 생성을 뜻하지 않는다.
 
-이 문서는 새 Codex 작업을 언제 만들고, 무엇을 전달하며, 어떤 증거를 받아야 다음 단계로 넘어갈 수 있는지 정의하는 단일 소스다.
+이 문서는 별도 Codex 작업을 선택했을 때 무엇을 전달하고 어떤 결과를 받을지 설명한다.
 Stage별 산출물과 검증 기준은 `docs/engineering/slice-workflow.md`가 계속 담당한다.
 
 ## 용어
@@ -16,12 +18,12 @@ Stage별 산출물과 검증 기준은 `docs/engineering/slice-workflow.md`가 �
 - **작성 작업**: 문서 또는 코드를 직접 바꾸는 Stage 작업.
 - **검토 작업**: 작성 작업과 다른 task ID를 가진 read-only 우선 Stage 작업.
 
-## 절대 규칙
+## 선택형 인수인계 규칙
 
 1. Claude CLI, Claude 앱, Claude API를 신규 Stage 실행이나 신규 검토 세션에 사용하지 않는다.
-2. 작성 작업은 자기 변경을 최종 승인하지 않는다.
-3. Stage 1, 2, 4 작성 작업과 internal 1.5, Stage 3, 5, final authority, Stage 6 검토 작업은 서로 다른 task ID와 서로 다른 새 세션을 사용한다.
-4. 같은 작업 안의 서브에이전트는 탐색·테스트·보조 리뷰에는 쓸 수 있지만, 독립 Stage 승인자 역할을 대신하지 않는다.
+2. 같은 task가 작성과 최종 검토를 수행할 수 있다. current-head CI와 위험도에 맞는 실제 동작 검증을 생략할 수는 없다.
+3. 별도 task ID는 사용자가 분리를 요청했거나 고위험 변경에 독립 검토가 필요할 때만 사용한다.
+4. 서브에이전트는 탐색·테스트·보조 리뷰에 선택적으로 사용할 수 있다.
 5. 새 작업은 이전 대화 내용을 안다고 가정하지 않는다. 공식 문서, workpack, PR URL, commit SHA, evidence 경로를 handoff에 명시한다.
 6. 검토 작업은 finding과 verdict를 남긴다. 수정이 필요하면 작성 작업으로 되돌리고, 수정 후 같은 검토 작업 또는 새 독립 검토 작업이 재확인한다.
 7. task ID, 담당 role, 입력 commit SHA, 결과 artifact/PR URL을 stage-result 또는 PR `Actual Verification`에 남긴다.
