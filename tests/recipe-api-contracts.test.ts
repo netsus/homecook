@@ -1730,6 +1730,89 @@ describe("recipe API contracts", () => {
     });
   });
 
+  it.each(["public", "hidden", "private", "deleted"])(
+    "runs anonymous %s detail through the real SDK and public-read gateway",
+    async (state) => {
+      const { createClient } = await import("@supabase/supabase-js");
+      const { createHybridAuthorityFetch } = await import("@/lib/server/hybrid-auth/gateway");
+      const { beginHybridAuthorityResponseBoundary } = await import("@/lib/server/hybrid-auth/route-error-context");
+      beginHybridAuthorityResponseBoundary();
+      const recipeId = "550e8400-e29b-41d4-a716-446655440022";
+      const recipe = {
+        id: recipeId,
+        title: "집밥 김치찌개",
+        description: null,
+        thumbnail_url: null,
+        base_servings: 2,
+        tags: [],
+        source_type: "manual",
+        created_by: null,
+        visibility: state === "private" ? "private" : "public",
+        deleted_at: state === "deleted" ? "2026-09-12T00:00:00Z" : null,
+        revision: 1,
+        view_count: 0,
+        like_count: 0,
+        save_count: 0,
+        plan_count: 0,
+        cook_count: 0,
+      };
+      const upstreamPaths: string[] = [];
+      const authorityFetch = createHybridAuthorityFetch({
+        getAccessToken: async () => null,
+        anonymousPublicReadScope: "recipe-detail",
+        auth: {
+          issuer: "http://127.0.0.1:54321/auth/v1",
+          url: "http://127.0.0.1:54321",
+          publishableKey: "public-test-key",
+        },
+        attestationSecret: "anonymous-detail-test-only-secret",
+        sessionBindingSecret: "anonymous-detail-test-only-secret",
+        assertSessionAuthority: vi.fn(),
+        localUpstreamFetch: async (input, init) => {
+          const url = new URL(String(input));
+          upstreamPaths.push(url.pathname);
+          expect(new Headers(init?.headers).get("authorization")).toBeNull();
+          const rows = url.pathname === "/rest/v1/recipes" && state !== "hidden"
+            ? [recipe]
+            : [];
+          return new Response(JSON.stringify(rows), {
+            headers: { "content-type": "application/json" },
+          });
+        },
+      });
+      const client = createClient("http://127.0.0.1:54321", "public-test-key", {
+        auth: { persistSession: false },
+        global: { fetch: authorityFetch },
+      });
+      createRouteHandlerClient.mockResolvedValue({
+        from: client.from.bind(client),
+        auth: { getUser: async () => ({ data: { user: null }, error: null }) },
+      });
+
+      const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+      const response = await GET(new Request(`http://localhost/api/v1/recipes/${recipeId}`), {
+        params: Promise.resolve({ id: recipeId }),
+      });
+
+      expect(response.status).toBe(state === "public" ? 200 : 404);
+      const body = await response.json();
+      if (state === "public") {
+        expect(body.data).toMatchObject({ id: recipeId, title: recipe.title, revision: 1, user_status: null });
+        expect(upstreamPaths).toEqual(expect.arrayContaining([
+          "/rest/v1/recipes", "/rest/v1/recipe_sources", "/rest/v1/recipe_ingredients",
+          "/rest/v1/recipe_nutrition_snapshots", "/rest/v1/recipe_steps",
+        ]));
+      } else {
+        expect(body.data).toBeNull();
+        expect(body.error.code).toBe("RESOURCE_NOT_FOUND");
+        expect(upstreamPaths[0]).toBe("/rest/v1/recipes");
+        if (state !== "private") {
+          expect(upstreamPaths).toHaveLength(1);
+        }
+      }
+    },
+  );
+
   it("awaits the recipe detail view-count persistence when service role is available", async () => {
     const recipeReadQuery = createQuery({
       data: {
