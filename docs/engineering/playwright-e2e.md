@@ -1,5 +1,7 @@
 # Playwright E2E
 
+> 2026-09-14부터 Playwright는 로컬 선택 실행 도구다. PR CI나 매 머지의 필수 gate가 아니며 핵심 흐름 변경과 출시 준비 때 사용한다.
+
 이 문서는 브라우저 사용자 흐름을 Playwright로 언제, 어떻게 검증할지 정한다.
 
 ## Role Split

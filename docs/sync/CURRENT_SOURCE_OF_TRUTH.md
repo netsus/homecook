@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-09-14 사용자 승인 — 출시 전 빠른 개발 모드
+
+GitHub Actions CI, workpack/acceptance gate, Stage 1~6, 별도 task 승인, OMO, closeout과 omo-report를 신규 작업의 시작·머지 조건에서 제거한다. 기존 자료는 과거 기록으로 보존한다. 한 작업 브랜치에서 공식 문서, 구현, 로컬 확인과 PR을 함께 닫을 수 있다. 고객 유입 또는 광고 집행 전 최소 CI와 출시 검증을 다시 설계한다.
+
+이 변경은 제품의 인증·권한·소유권·read-only·상태 전이 계약이나 full-local Supabase의 파괴적 변경 금지를 완화하지 않는다.
+
 ## 2026-09-13 사용자 승인 contract-evolution — 광고 중인 R2.2와 master 단일 통합
 
 현재 광고 공개본의 저장소 권위는 `origin/release/mumeok-r2-live-20260913`, exact SHA `92fc7bd0963af2e47f560151bec8f3cabd553c6a`, 공개 `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`다. 이 항목은 제공된 공개 배포 사실과 로컬 ref의 SHA 일치를 기록할 뿐 새 배포·재시작·DB 적용·환경 변경을 승인하지 않는다. 광고 중인 현재 production은 이 문서 작업 동안 그대로 유지한다.

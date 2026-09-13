@@ -17,7 +17,6 @@ function printHelp() {
       "",
       "Notes:",
       "  - New branches are created from origin/master.",
-      "  - feature/be-* and feature/fe-* branches require merged workpack docs on origin/master.",
       "  - The current worktree must be clean before switching branches.",
       "  - The selected work branch is recorded as the active edit intent for general-session hooks.",
       "",
