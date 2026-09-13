@@ -1,5 +1,13 @@
 # Current Source of Truth
 
+## 2026-09-14 사용자 승인 — 출시 전 빠른 개발 모드
+
+GitHub Actions CI, workpack/acceptance gate, Stage 1~6, 별도 task 승인, OMO, closeout과 omo-report를 신규 작업의 시작·머지 조건에서 제거한다. 기존 자료는 과거 기록으로 보존한다. 한 작업 브랜치에서 공식 문서, 구현, 로컬 확인과 PR을 함께 닫을 수 있다. 고객 유입 또는 광고 집행 전 최소 CI와 출시 검증을 다시 설계한다.
+
+이 변경은 제품의 인증·권한·소유권·read-only·상태 전이 계약이나 full-local Supabase의 파괴적 변경 금지를 완화하지 않는다.
+
+작업 절차와 검증 범위는 현재 `AGENTS.md`를 우선한다. 아래 날짜별 기록의 CI·Stage·선행 docs PR·별도 승인 조건은 과거 절차이며 신규 작업에 적용하지 않는다. 스킬과 디자인 에이전트도 같은 기준을 따른다.
+
 ## 2026-09-12 사용자 승인 — 비로그인 PANTRY 예시 체험
 
 비로그인 PANTRY는 전체 화면 gate 대신 `로그인 전 예시`로 명시한 기본 재료 몇 개를 client-only로 표시한다. `재료 추가`는 공개 ingredient 검색을 사용하는 기존 modal까지 열어 선택할 수 있지만 최종 `팬트리에 추가` 전에 로그인 필요 modal을 띄우고 `POST /pantry`를 호출하지 않는다. 삭제·추천·묶음 추가 같은 다른 개인화 action도 비로그인 mutation/API를 만들지 않는다. 로그인 사용자는 기존 본인 pantry CRUD를 그대로 사용하고 API·DB 소유권·401 계약은 변경하지 않으며 배포는 보류한다.
@@ -31,7 +39,7 @@ desktop HOME의 기존 `/beta` promotion banner는 `/beta/r2/recording`과 `/bet
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
-- 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+- 사용자 승인으로 공식 계약을 바꾸면 관련 공식 문서와 이 파일의 버전/경로를 구현과 같은 작업 브랜치에서 함께 갱신한다. 별도 선행 docs PR이나 Stage 승인은 필요하지 않다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
 ## 2026-09-12 사용자 승인 — R2 직렬 UI·두 r2.2 설문·이번 배포 예외

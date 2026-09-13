@@ -1,4 +1,4 @@
 interface:
   display_name: "Ship PR Loop"
-  short_description: "Commit, push, PR, CI, and merge safely"
-  default_prompt: "Use $ship-pr-loop to split my local changes into commits, open a PR, wait for CI, and merge it."
+  short_description: "Verify locally, commit, push, and merge a PR"
+  default_prompt: "Use $ship-pr-loop to verify my local changes, commit them by intent, open a PR, and merge it under the current repository rules."
