@@ -163,6 +163,28 @@ describe("prelaunch web deployment", () => {
       expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow("허용");
     }
   });
+  it("treats local agent configuration and offline nutrition tools as deployment support", () => {
+    const files = [
+      ".claude/agents/design-consultant.md",
+      ".codex/agents/design-consultant.toml",
+      ".opencode/README.md",
+      ".workflow-v2/README.md",
+      "opencode.json",
+      "scripts/lib/ingredient-conversion-domain.mjs",
+      "scripts/reconcile-recipe-nutrition-v2-data.mjs",
+      "scripts/run-recipe-nutrition-postgres-integration.mjs",
+      "scripts/sql/reconcile-recipe-nutrition-v2-data-20260915.sql",
+    ];
+
+    expect(classifyPrelaunchScope(files, basePackage, basePackage).support).toEqual(files);
+    for (const file of [
+      "scripts/start-production.mjs",
+      "scripts/full-local-production-runtime.mjs",
+      "scripts/lib/start-production-runtime.mjs",
+    ]) {
+      expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow("허용");
+    }
+  });
   it.each(["scripts/ci-path-filter-extra.mjs", "scripts/lib/ci-path-filter.mjs", "scripts/arbitrary.mjs"])("does not extend the CI exception to %s", (file) => {
     expect(() => classifyPrelaunchScope([file], basePackage, basePackage)).toThrow("허용");
   });

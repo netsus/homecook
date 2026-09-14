@@ -13,11 +13,15 @@ export function prelaunchChangedFiles(git, from, to) {
 
 export function classifyPrelaunchScope(files, before, after) {
   const scope = { web: [], database: [], support: [], api: [] };
-  const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/)|^(?:AGENTS|CLAUDE|README)\.md$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
+  const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/|\.claude\/|\.codex\/|\.opencode\/|\.workflow-v2\/)|^(?:AGENTS|CLAUDE|README)\.md$|^opencode\.json$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
   const exactSupport = new Set([
     "design-qa.md",
     "scripts/generate-mumeok-icon-edges.mjs",
     "scripts/lib/validate-workflow-v2.mjs",
+    "scripts/lib/ingredient-conversion-domain.mjs",
+    "scripts/reconcile-recipe-nutrition-v2-data.mjs",
+    "scripts/run-recipe-nutrition-postgres-integration.mjs",
+    "scripts/sql/reconcile-recipe-nutrition-v2-data-20260915.sql",
     "scripts/validate-account-session-generation-inventory.mjs",
     "scripts/youtube-real-app-route-smoke.mjs",
   ]);
