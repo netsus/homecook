@@ -17,6 +17,7 @@ interface PantryMobileScreenProps {
   activeCategory: string | null;
   displayItems: PantryDisplayItem[];
   isAllVisibleSelected: boolean;
+  isGuestPreview?: boolean;
   isLoading?: boolean;
   isSelectMode: boolean;
   items: PantryDisplayItem[];
@@ -40,6 +41,7 @@ export function PantryMobileScreen({
   activeCategory,
   displayItems,
   isAllVisibleSelected,
+  isGuestPreview = false,
   isLoading = false,
   isSelectMode,
   items,
@@ -64,7 +66,7 @@ export function PantryMobileScreen({
   const isSearchEmpty = !isLoading && displayItems.length === 0 && (searchQuery || activeCategory);
   const hasSelectableItems = displayItems.some(
     (item) => item.ingredient_id !== null,
-  );
+  ) && !isGuestPreview;
   const sectionGroups = groupPantryItems(displayItems);
   const categoryRail = getCategoryRail();
 
@@ -85,14 +87,14 @@ export function PantryMobileScreen({
           </button>
         ) : (
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <ProfileSummaryButton autoLoad isAuthenticated variant="mobile" />
+            <ProfileSummaryButton autoLoad isAuthenticated={!isGuestPreview} variant="mobile" />
           </div>
         )}
       </div>
 
       <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-4">
         <p className="mb-1 text-[13px] font-medium leading-[1.35] text-[var(--text-3)]">
-          냉장고에 있는 재료
+          {isGuestPreview ? "팬트리 미리보기" : "냉장고에 있는 재료"}
         </p>
         <div className="mb-5 flex items-baseline gap-1.5">
           {isLoading ? (
@@ -115,7 +117,9 @@ export function PantryMobileScreen({
           )}
         </div>
         <p className="-mt-3 mb-4 text-[13px] font-medium leading-[1.45] text-[var(--text-3)]">
-          팬트리에 있는 재료는 장보기에서 자동 제외돼요.
+          {isGuestPreview
+            ? "로그인 전 예시 · 저장되지 않아요"
+            : "팬트리에 있는 재료는 장보기에서 자동 제외돼요."}
         </p>
 
         <div className="grid grid-cols-3 gap-2">
@@ -187,7 +191,7 @@ export function PantryMobileScreen({
             <button
               aria-checked={isAllVisibleSelected}
               className="inline-flex h-[var(--control-height-md)] shrink-0 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--text-2)] disabled:opacity-50"
-              disabled={isLoading || !hasSelectableItems}
+              disabled={isGuestPreview || isLoading || !hasSelectableItems}
               onClick={onSelectAllToggle}
               role="checkbox"
               type="button"
@@ -249,7 +253,7 @@ export function PantryMobileScreen({
 
                     return (
                       <div className="relative overflow-hidden" key={item.id}>
-                        {!isSelectMode && isSelectable ? (
+                        {!isGuestPreview && !isSelectMode && isSelectable ? (
                           <button
                             aria-label={`${item.standard_name} 삭제`}
                             className="absolute inset-y-0 right-0 flex w-[76px] items-center justify-center bg-[var(--danger)] text-[13px] font-extrabold text-[var(--text-inverse)]"
@@ -281,14 +285,14 @@ export function PantryMobileScreen({
                               : undefined
                           }
                           onPointerDown={
-                            isSelectMode || !isSelectable
+                            isGuestPreview || isSelectMode || !isSelectable
                               ? undefined
                               : (event) => {
                                   pointerStartXRef.current = event.clientX;
                                 }
                           }
                           onPointerUp={
-                            isSelectMode || !isSelectable
+                            isGuestPreview || isSelectMode || !isSelectable
                               ? undefined
                               : (event) => {
                                   const startX = pointerStartXRef.current;

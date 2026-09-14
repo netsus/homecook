@@ -1,11 +1,10 @@
 # 무먹 2차 랜딩 r2 상세 계약
 
-계약 버전: `r2.1` + `r2.2` survey/UI addendum · 작성일: **2026-09-11 KST** · 최신 상태일: **2026-09-13 KST** · 변경 유형: `contract-evolution`
+계약 버전: `r2.1` · 작성일: **2026-09-11 KST** · 변경 유형: `contract-evolution`
 작성 작업: `01a08c9f-89e0-7f11-8567-9a40e80f1d79` · 조정 작업: `01a07316-265c-7f22-b0af-fa22b7fb2b8a`
-2026-09-13 후속 작성 작업: `01a098f7-7f4f-7752-8aa1-e38308db05ab` · source coordinator: `01a098d2-55e2-7602-9d2a-2d50bfd655ce`
-상태: §1~11 r2.1은 PR #1551로 병합됨. §12~13 r2.2/통합 addendum은 사용자 승인 범위의 **독립 검토 전 Draft**이며 작성자가 승인·병합하지 않는다.
+상태: 사용자 승인 범위의 공식 계약 작성본, **독립 검토 전 Draft**. 작성자가 승인·병합하지 않는다.
 
-> 2026-09-13 현재 상태와 master 통합 권위는 §13이 가장 최신이다. §12의 `master 머지 없이 배포`, `배포 전`, `배포 보류` 표현은 2026-09-12 당시 계획·제약의 역사 기록이며 현재 광고 공개 상태나 후속 master 통합 금지를 뜻하지 않는다.
+> 2026-09-12 후속 사용자 승인 범위는 아래 §12가 우선한다. `round_version=r2.1`은 유지하고 설문 버전 `r2.2-recording` / `r2.2-homeflow`와 직렬 UI를 추가한다. §1~11과 기존 승인/검토 이력은 보존하며, 기존 설문 값의 의미·서버 독립 활동·권한·원자성·보관 규칙을 소급 변경하지 않는다. 이 후속 문서의 독립 검토와 실제 배포 검증은 별도다.
 
 ## 1. 권위와 변경 범위
 
@@ -16,11 +15,11 @@
 | 새 페이지 | `/beta/r2/recording`, `/beta/r2/homeflow` |
 | 새 공개 API | `POST /api/v1/marketing/round2` 하나 |
 | 새 public 테이블 | `marketing_round2_participations`, `marketing_round2_events`, `marketing_round2_lead_requests` 세 개 |
-| 버전 | `round_version=r2.1`; 보존 `r2.1-recording|r2.1-homeflow`, 최신 기본 `r2.2-recording|r2.2-homeflow` (§12) |
+| 버전 | `round_version=r2.1`, `survey_version=r2.1-recording` 또는 `r2.1-homeflow` |
 | 보존 | `/beta`, `POST /api/v1/marketing/validation`, `marketing_validation_sessions`, 기존 쿠키·질문·4유형·8단계·retention 의미 |
-| 적용 전제 | §13 docs PR 독립 검토·병합 → current master 기반 R2.2 DB/parser → UI → 공유 metadata의 작은 후속 PR과 각 독립 review |
+| 적용 전제 | 이 계약 PR 독립 검토·병합 → 별도 Stage 1 workpack/acceptance 재잠금·독립 gate·병합 → Stage 2/4 구현 |
 
-`marketing-demand-validation-round2` r2.1 Stage 1 PR #1550은 `fa7848924442df2790592b14875ccb6148e0c6ba`로 병합됐고, 초기 backend PR #1552도 master에 병합됐다. §12~13은 그 이후 광고 공개본에서 확정된 R2.2 차이를 같은 workpack에 다시 잠그는 후속 계약이다. 기존 v2 workpack에는 r2 제약을 넣지 않는다. 구현, 운영 DB 접속, migration 실행, 새 배포, 광고 조작, 메일 발송은 이 작성 작업의 산출물이 아니다.
+PR #1550의 `marketing-demand-validation-round2` Stage 1 초안은 보류 중이며 이 계약의 권위가 아니다. 본 PR에서는 다른 worktree의 README/acceptance를 대신 수정하지 않는다. 이 선행 계약 PR과 후속 재잠금을 분리하라는 조정 지시가 일반적인 같은-PR workpack sync 규칙의 이번 범위 예외다. 기존 v2 workpack에는 r2 제약을 넣지 않는다. 구현, 운영 DB 접속, migration 실행, 배포, 광고, 메일 발송은 이 작성 작업의 산출물이 아니다.
 
 설계 선택: 기존 v2 단일 row에 nullable 필드를 더하는 안은 짧지만 v2의 순서·이메일 보관 의미와 충돌한다. 승인된 별도 3테이블은 참여 상태, 개인정보 없는 관측 이벤트, 제한된 신청정보의 권한·삭제 범위를 분리하고 기존 데이터 재작성 없이 되돌릴 수 있다. 공개 API 여러 개 대신 action별 엄격한 union을 가진 POST 하나를 사용한다.
 
@@ -663,31 +662,3 @@ export의 `20260911110000_marketing_round2_linear_homeflow.sql`은3인자 함수
 운영 인수 문서는 같은 작업의 후속 commit으로 작성할 `docs/engineering/marketing-round2-controlled-prelaunch.md`다. 일반 prelaunch SQL guard/ordered-prefix ledger와 정식 production promotion 규칙은 전역 변경하지 않는다. 이 문서의 사용자 승인 범위에서만 독립 검토된 exact R2 SQL + backup + identity + isolated replay + apply/ledger receipt를 소비하는 전용 절차를 준비한다. 운영 Compose/volume의 이름에 isolated가 있어도 격리 테스트에 사용하지 않는다.
 
 네 survey 조합의 양성/음성 parser·SQL CHECK·RPC replay, 기존 데이터/legacy 불변, recording first-answer-only start, 양 topic 직렬 UI·복원·실제 저장, 실제 readiness/provider·전용 branch exactSHA를 검증해야 한다. 새로운 문서나 기존 mock PASS를 운영 저장/배포 준비 증거로 바꾸지 않는다. 문서 작성자는 코드·DB·운영을 실행하지 않고 change-only 문서 commit을 조정자에게 전달하며 push/merge하지 않는다.
-
-## 13. 2026-09-13 실제 배포 상태와 master 통합 승인
-
-### 13.1 현재 공개 상태
-
-2026-09-13 사용자 확인 기준으로 두 R2 랜딩은 광고 중이다. 저장소 보존 ref는 `origin/release/mumeok-r2-live-20260913`, exact 실행 SHA는 `92fc7bd0963af2e47f560151bec8f3cabd553c6a`, 공개 `BUILD_ID`는 `prelaunch-92fc7bd0963a-xNvOjU`다. 로컬에서 위 ref가 exact SHA를 가리키는 것은 확인했다. 공개 BUILD_ID와 실제 서버 프로세스는 사용자 제공 운영 evidence로 기록하며 이 docs 작업에서 서버에 접속하거나 재시작·재배포·DB·환경을 변경하지 않는다.
-
-§12와 그 이전 문서의 `로컬 후보`, `배포 전`, `배포 보류`, `master 머지 금지`는 당시 단계와 author 권한을 설명한 역사 기록이다. 이미 일어난 현재 배포를 부정하거나 되돌리는 지시로 사용하지 않는다. 이 §13은 상태와 후속 통합 범위만 대체하며, 정식 production promote kill switch와 별도 release-promoter 권한을 완화하지 않는다.
-
-### 13.2 최종 공개 R2.2 계약
-
-§12.2~12.5의 exact 질문·enum·직렬 화면·Q3 유형·체험·복원·동의·공유가 현재 R2.2 공개 계약이다. 2026-09-12 후속 조정에 따라 recording 결과 bridge/간결 동의, homeflow 결과 위계·CTA·motion, topic별 1200×630 Open Graph/Twitter card를 포함한다. 카카오·카카오스토리 제한 수집기에는 Next 기본 제한 bot 목록을 보존하면서 해당 User-Agent를 추가해 각 공유 URL의 첫 `head`에 topic별 title, description, image가 하나씩 있어야 한다. 일반 브라우저 streaming, CSP/보안 header와 R2 저장 계약은 바꾸지 않는다.
-
-공개 API/DB 계약은 §12.4 그대로다. 새 public endpoint/action/field/table을 만들지 않고 `round_version=r2.1`, API active 109개, table 79개를 유지한다. 기존 r2.1/v2 row·질문·결과·cookie·retention을 재분류하거나 재작성하지 않는다. 공유 result view는 읽기 전용 POST/bootstrap 0이며 PII·답변·attribution·participation key를 URL/metadata에 넣지 않는다.
-
-### 13.3 master 통합 순서와 변경 경계
-
-사용자는 실행본의 필요한 변경을 최신 `origin/master` 위에 정리하는 범위를 승인했다. live 브랜치 전체 423파일을 그대로 merge하지 않고, 현재 공개 R2 랜딩에 필요한 backend/data, recording/homeflow UI, 결과 공유/social metadata를 **하나의 통합 PR**에 선별할 수 있다. Stage별 별도 task·별도 PR·독립 승인 evidence는 요구하지 않는다.
-
-통합 PR은 live ref에서 가져온 파일 목록과 제외 목록을 남기고 current-head CI와 실제 랜딩 동작을 검증한다. 기존 r2.1 row/event 불변, `(topic,survey_version)` parser·세 R2.2 migration, recording/homeflow 저장·복원·read-only·mobile/a11y/reduced-motion, result-only 공유 URL과 topic별 metadata를 함께 확인한다. 현재 광고 배포 성공만으로 master PR 검증을 생략하지 않는다.
-
-로컬에 같은 결과를 가진 snapshot/evidence가 있어도 별도 merge하지 않는다. 필요한 runtime source가 live ref에 있으면 그 ref를 provenance로 사용하고, 같은 bytes를 중복 커밋하지 않는다.
-
-HOME R2 carousel/banner, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션은 별도 제품 계약·workpack 후보이며 R2.2 PR에 섞지 않는다. 공개 recipe 조회 복구, dependency/security 변경, 배포 runner/binding과 운영 batch·분석 기록도 R2 public contract가 아니므로 각 change type에서 current master 대비 필요성과 독립 검증을 따로 판정한다. 이 분리는 해당 변경을 거부하는 것이 아니라 R2 계약·review·rollback 경계를 보존하기 위한 것이다.
-
-### 13.4 이 docs 작업의 권한과 완료 경계
-
-같은 Codex task가 문서·제품·테스트 통합과 PR 검토·병합을 완료할 수 있다. 현재 광고를 멈추거나 새로 배포하지 않으며 production mutation은 0이다. merge 조건은 별도 task ID가 아니라 current-head CI, 실제 랜딩 검증, 운영 DB·서버 무변경 확인이다.

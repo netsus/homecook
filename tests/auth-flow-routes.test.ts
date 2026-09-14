@@ -44,7 +44,7 @@ describe("auth flow routes", () => {
     cancelAuthFlowAttempt.mockResolvedValue({ ok: true });
   });
 
-  it("starts prelaunch social login without requiring an existing user", async () => {
+  it("blocks prelaunch social login without reading or writing the auth ledger", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     const { POST } = await import("@/app/auth/flow/start/route");
     const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
@@ -52,12 +52,9 @@ describe("auth flow routes", () => {
       headers: { "content-type": "application/json", origin: "https://app.mumeok.kr" },
       body: JSON.stringify({ flow_kind: "login", provider: "google" }),
     }));
-    expect(response.status).toBe(200);
-    expect((await response.json()).data.started).toBe(true);
-    expect(startAuthFlowAttempt).toHaveBeenCalledWith({
-      flowKind: "login",
-      provider: "google",
-    });
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("AUTH_FLOW_UNAVAILABLE");
+    expect(startAuthFlowAttempt).not.toHaveBeenCalled();
     expect(cancelAuthFlowAttempt).not.toHaveBeenCalled();
     expect(getUser).not.toHaveBeenCalled();
   });
@@ -96,71 +93,6 @@ describe("auth flow routes", () => {
     expect(response.headers.get("set-cookie")).toMatch(
       /__Host-homecook-auth-flow=signed-flow-cookie.*Path=\/.*Max-Age=900.*Secure.*HttpOnly.*SameSite=lax/i,
     );
-  });
-
-
-
-
-  it("treats localhost and 127.0.0.1 as the same local app during local checks", async () => {
-    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.mumeok.kr");
-
-    const { POST } = await import("@/app/auth/flow/start/route");
-    const response = await POST(new Request("http://localhost:3000/auth/flow/start", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "cf-connecting-ip": "127.0.0.21",
-        origin: "http://127.0.0.1:3000",
-      },
-      body: JSON.stringify({ flow_kind: "login", provider: "google" }),
-    }));
-
-    expect(response.status).toBe(200);
-    expect(startAuthFlowAttempt).toHaveBeenCalledWith({
-      flowKind: "login",
-      provider: "google",
-    });
-  });
-
-  it("accepts same-origin local browser starts when the origin header is omitted", async () => {
-    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.mumeok.kr");
-
-    const { POST } = await import("@/app/auth/flow/start/route");
-    const response = await POST(new Request("http://127.0.0.1:3000/auth/flow/start", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "cf-connecting-ip": "127.0.0.22",
-      },
-      body: JSON.stringify({ flow_kind: "login", provider: "google" }),
-    }));
-
-    expect(response.status).toBe(200);
-    expect(startAuthFlowAttempt).toHaveBeenCalledWith({
-      flowKind: "login",
-      provider: "google",
-    });
-  });
-
-  it("accepts the local handler origin during local app checks", async () => {
-    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.mumeok.kr");
-
-    const { POST } = await import("@/app/auth/flow/start/route");
-    const response = await POST(new Request("http://127.0.0.1:3000/auth/flow/start", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "cf-connecting-ip": "127.0.0.23",
-        origin: "http://127.0.0.1:3000",
-      },
-      body: JSON.stringify({ flow_kind: "login", provider: "google" }),
-    }));
-
-    expect(response.status).toBe(200);
-    expect(startAuthFlowAttempt).toHaveBeenCalledWith({
-      flowKind: "login",
-      provider: "google",
-    });
   });
 
   it("accepts the public app origin even when the local handler URL stays on localhost", async () => {

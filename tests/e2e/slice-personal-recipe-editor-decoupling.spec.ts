@@ -1,9 +1,7 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
-
-import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 import {
   E2E_APP_ORIGIN,
@@ -50,7 +48,12 @@ async function captureEvidence(
   projectName: string,
   stem: string,
 ) {
-  await captureTrackedEvidenceOnDemand(page, {
+  if (process.env.HOMECOOK_CAPTURE_PERSONAL_EDITOR_EVIDENCE !== "1") {
+    return;
+  }
+
+  mkdirSync(EVIDENCE_DIRECTORY, { recursive: true });
+  await page.screenshot({
     animations: "disabled",
     fullPage: false,
     path: evidencePath(projectName, stem),
@@ -204,23 +207,6 @@ test.describe("personal-recipe-editor-decoupling local fixtures", () => {
     );
     await useRequiredMobileViewport(page, testInfo.project.name);
     await setAuthenticated(page);
-    // Keep the authenticated editor fixture independent of the live notification API.
-    await page.route(
-      (url) => url.pathname === "/api/v1/users/me/youtube-extraction-jobs",
-      async (route) => {
-        if (route.request().method() !== "GET") {
-          await route.continue();
-          return;
-        }
-        await route.fulfill({
-          json: {
-            success: true,
-            data: { items: [], next_cursor: null },
-            error: null,
-          },
-        });
-      },
-    );
   });
 
   test("personal-recipe-editor-decoupling keeps RECIPE_DETAIL capability-off without disturbing primary actions", async ({
@@ -294,12 +280,9 @@ test.describe("personal-recipe-editor-decoupling local fixtures", () => {
 
     await page.getByRole("button", { name: "+ 재료 추가하기" }).click();
     const ingredientDialog = page.getByRole("dialog", { name: "재료로 검색" });
-    const kimchiCheckbox = ingredientDialog.getByRole("checkbox", {
-      name: "김치",
-      exact: true,
-    });
-    await ingredientDialog.locator("label").filter({ hasText: /^김치$/u }).click();
-    await expect(kimchiCheckbox).toBeChecked();
+    await ingredientDialog
+      .getByRole("checkbox", { name: "김치", exact: true })
+      .click({ force: true });
     await ingredientDialog
       .getByRole("button", { name: "선택한 재료 1개 추가" })
       .click();

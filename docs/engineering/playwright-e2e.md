@@ -1,7 +1,5 @@
 # Playwright E2E
 
-> 2026-09-14부터 Playwright는 로컬 선택 실행 도구다. PR CI나 매 머지의 필수 gate가 아니며 핵심 흐름 변경과 출시 준비 때 사용한다.
-
 이 문서는 브라우저 사용자 흐름을 Playwright로 언제, 어떻게 검증할지 정한다.
 
 ## Role Split
@@ -30,7 +28,7 @@
 - `pnpm test:e2e:visual`: 전체 Playwright screenshot baseline 기반 visual regression
 - `pnpm test:e2e:visual:app-core`: `mobile-chrome`, `mobile-ios-small`에서 `@visual-core` baseline만 실행
 - `pnpm test:e2e:visual:web-core`: `desktop-chrome`에서 `@visual-core` baseline만 실행
-- `pnpm test:e2e:visual:core`: web/app core의 3개 project를 한 Playwright 호출로 실행
+- `pnpm test:e2e:visual:core`: app core + web core를 순차 실행
 - `pnpm test:e2e:security`: auth/session/return-to-action security smoke
 - `pnpm test:e2e:ui`: Playwright UI 모드
 - `pnpm test:e2e:oauth`: `@live-oauth` 태그 테스트만 실행 (실제 외부 서비스 포함)
@@ -41,14 +39,6 @@
 - `pnpm verify:frontend:pr`: lint, typecheck, vitest, build, core smoke/a11y/visual
 - `pnpm verify:frontend`: lint, typecheck, vitest, build, 전체 regression/a11y/visual/security, Lighthouse
 - `pnpm verify:backend`: lint, typecheck, vitest, build, auth/session security smoke
-
-구형 Wave1/desktop 및 개인 레시피 편집기 캡처도 같은 `HOMECOOK_UPDATE_EVIDENCE=1`
-경계를 사용한다. 별도 `HOMECOOK_CAPTURE_PERSONAL_EDITOR_EVIDENCE`,
-`BRAND_IMAGE_EVIDENCE_WRITE`, `HOME_LOCKUP_EVIDENCE_WRITE` 대신 위 공통 갱신 명령을 쓴다.
-브랜드의 before/after phase 선택과 immutable before 보호는 유지한다. 일반 실행에서는
-기능 assertion을 계속 실행하며, 기존 `testInfo.outputPath()` 진단 출력과 visual baseline은
-이 경계와 독립적이다. 역사적 화면을 전제로 한 오래된 QA spec의 assertion 실패는 현재 제품
-회귀와 구분해 확인하며, evidence 갱신을 위해 assertion을 생략하지 않는다.
 
 `docs-governance`와 `low-risk docs/config`는 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix에 따라 E2E를 생략할 수 있다.
 
@@ -77,21 +67,12 @@ npx playwright install --with-deps chromium
 - `full-regression` job은 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
 - Ready for Review와 protected branch push의 `full-regression`은 `pnpm test:e2e:regression:ci`를 사용한다.
 - nightly/manual과 `full-ci` label은 기존 complete device matrix인 `pnpm test:e2e:regression`을 사용한다.
-- CI의 `full-regression`은 같은 선택 결과를 `--shard=1/3`, `2/3`, `3/3`으로 나눠 독립 runner에서
-  실행한다. 기기·태그·retry·assertion은 줄이지 않으며 모든 shard check의 성공을 확인한다.
-  한 shard가 실패해도 다른 shard를 취소하지 않고 실패 보고서 이름에 shard 번호를 포함한다.
-- CI/QA/Security의 scope job은 전체 commit graph와 분류 스크립트만 내려받는다. 실제 build/test
-  job의 checkout 범위는 그대로 유지한다.
 - 일회성 `@evidence-capture`는 반복 regression에서 제외하고 명시적인 evidence 명령으로만 실행한다.
 - Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로가 아니면 PR 본문에 `N/A` 근거를 남긴다.
 - `security smoke`는 별도 workflow에서 auth/backend/frontend security 관련 변경에만 자동 실행한다.
 - docs-only 또는 governance-only PR은 전체 Playwright gate 대신 관련 최소 검증만 보일 수 있다.
 - 외부 OAuth가 필요한 시나리오는 `workflow_dispatch`로만 실행한다.
 - 실패 시 trace, screenshot, video를 아티팩트로 남긴다.
-- 일반 회귀에서는 성공 화면의 evidence PNG를 별도로 생성하지 않는다. 기록용 이미지는
-  `HOMECOOK_UPDATE_EVIDENCE=1`일 때 공통 on-demand helper로만 만든다. 실패 screenshot·trace·video와
-  `qa-visual`의 실제 screenshot assertion은 계속 실행한다. 보관 전환한 desktop MVP의 재캡처는
-  `.artifacts/desktop-mvp-porting/`에 쓰며 과거 원본을 덮어쓰지 않는다.
 - 기본 fixture E2E dev server는 개인 `.env.local`과 무관하게
   `NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=kakao,naver,google`과
   `NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER=custom:naver`를 사용한다.
@@ -99,8 +80,7 @@ npx playwright install --with-deps chromium
 ## Device Matrix
 
 - core smoke / core a11y는 `desktop-chrome`, `mobile-chrome`, `mobile-ios-small` 프로젝트에서 실행한다.
-- core visual은 앱(`mobile-chrome`, `mobile-ios-small`)과 웹(`desktop-chrome`)을 한 호출로 실행한다.
-  개별 app/web command는 집중 진단용으로 유지한다.
+- core visual은 앱(`mobile-chrome`, `mobile-ios-small`)과 웹(`desktop-chrome`)을 별도 command로 나눠 실행한다.
 - CI용 slice regression은 `desktop-chrome`, `mobile-chrome` 프로젝트에서 실행한다.
 - complete slice regression / 전체 a11y / 전체 visual은 `playwright.config.ts`의 전체 project matrix를 따른다.
 

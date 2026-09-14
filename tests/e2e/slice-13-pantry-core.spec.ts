@@ -283,12 +283,26 @@ async function expectSharpV2Sticker(
 }
 
 test.describe("PANTRY screen", () => {
-  test("shows login gate for unauthenticated users", async ({ page }) => {
+  test("shows guest examples and gates the final pantry add", async ({ page }) => {
     await setAuthOverride(page, "guest");
+    await installPantryRoutes(page);
+    const privatePantryRequests: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/v1/pantry") {
+        privatePantryRequests.push(request.method());
+      }
+    });
     await page.goto("/pantry");
 
-    await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
-    await expect(page.getByRole("link", { name: "홈으로 돌아가기" })).toBeVisible();
+    await expect(page.getByText(/팬트리 미리보기/).first()).toBeVisible();
+    await expect(page.getByText(/로그인 전 예시/).first()).toBeVisible();
+    await expect(page.getByText("양파", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: /재료 추가/ }).click();
+    await page.getByRole("checkbox", { name: "간장", exact: true }).click();
+    await page.getByRole("button", { name: "팬트리에 추가 (1)" }).click();
+    await expect(page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" })).toBeVisible();
+    await expect(page.getByText("로그인하면 선택한 재료를 내 팬트리에 추가할 수 있어요.")).toBeVisible();
+    expect(privatePantryRequests).toEqual([]);
   });
 
   test("shows pantry items after authentication", async ({ page }) => {

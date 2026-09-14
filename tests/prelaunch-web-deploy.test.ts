@@ -256,6 +256,12 @@ describe("prelaunch web deployment", () => {
     expect(next).toEqual({ ...plist, WorkingDirectory: "/new", ProgramArguments: ["/node", "/new/scripts/start-production.mjs", "-H", "127.0.0.1", "-p", "3100"] });
     expect(plist.WorkingDirectory).toBe("/old");
   });
+  it("moves the R2 source binding with the checkout and refuses a foreign source root", () => {
+    const input = { ...plist, EnvironmentVariables: { MUMEOK_ROUND2_REPOSITORY_ROOT: "/old", MUMEOK_ROUND2_RELEASE_SHA: "reviewed-sha" } };
+    expect(retargetPlist(input, "/new").EnvironmentVariables).toEqual({ ...input.EnvironmentVariables, MUMEOK_ROUND2_REPOSITORY_ROOT: "/new" });
+    expect(input.EnvironmentVariables.MUMEOK_ROUND2_REPOSITORY_ROOT).toBe("/old");
+    expect(() => retargetPlist({ ...input, EnvironmentVariables: { MUMEOK_ROUND2_REPOSITORY_ROOT: "/foreign" } }, "/new")).toThrow();
+  });
   it.each([
     { ...plist, Label: "com.homecook.worker" },
     { ...plist, ProgramArguments: ["/node", "/old/scripts/start-production.mjs", "-H", "0.0.0.0", "-p", "3100"] },

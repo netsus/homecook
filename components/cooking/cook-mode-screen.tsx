@@ -474,6 +474,7 @@ function PlannerCookModeDesktopLoading() {
     <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
       <WebTopNav
         activeId="planner"
+        brandTone="dark"
         rightSlot={<div className="web-profile-button">JY</div>}
       />
       <main

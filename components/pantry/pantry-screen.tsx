@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { PantryAddSheet } from "@/components/pantry/pantry-add-sheet";
@@ -14,7 +12,7 @@ import { PantryIngredientVisual } from "@/components/pantry/pantry-ingredient-vi
 import { PantryMobileScreen } from "@/components/pantry/pantry-mobile-screen";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
-import { AppBottomSheet } from "@/components/shared/app-overlay";
+import { AppBottomSheet, AppModalFooterActions } from "@/components/shared/app-overlay";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
@@ -24,6 +22,7 @@ import {
   WebCard,
   WebDialog,
   WebDialogBody,
+  WebDialogFooter,
   WebDialogHeader,
   WebDialogTitle,
   WebModal,
@@ -61,6 +60,15 @@ import type { PantryMatchRecipeItem } from "@/types/recipe";
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 const TOAST_DURATION_MS = 3000;
+const NO_PRODUCT_ITEMS: PantryProductItem[] = [];
+const GUEST_PANTRY_ITEMS: PantryItem[] = [
+  { id: "guest-onion", ingredient_id: "guest-onion", standard_name: "양파", category: "채소", category_group_code: "vegetable_mushroom", created_at: "2026-09-12T00:00:00Z" },
+  { id: "guest-green-onion", ingredient_id: "guest-green-onion", standard_name: "대파", category: "채소", category_group_code: "vegetable_mushroom", created_at: "2026-09-12T00:00:01Z" },
+  { id: "guest-potato", ingredient_id: "guest-potato", standard_name: "감자", category: "채소", category_group_code: "vegetable_mushroom", created_at: "2026-09-12T00:00:02Z" },
+  { id: "guest-garlic", ingredient_id: "guest-garlic", standard_name: "마늘", category: "조미료", category_group_code: "seasoning_condiment", created_at: "2026-09-12T00:00:03Z" },
+  { id: "guest-egg", ingredient_id: "guest-egg", standard_name: "계란", category: "단백질", category_group_code: "protein", created_at: "2026-09-12T00:00:04Z" },
+  { id: "guest-pork", ingredient_id: "guest-pork", standard_name: "돼지고기", category: "단백질", category_group_code: "protein", created_at: "2026-09-12T00:00:05Z" },
+];
 
 export interface PantryScreenProps {
   initialAuthenticated?: boolean;
@@ -81,6 +89,7 @@ export function PantryScreen({
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [showGuestLoginGate, setShowGuestLoginGate] = useState(false);
   const [showBundlePicker, setShowBundlePicker] = useState(false);
   const [showPantryRecommendations, setShowPantryRecommendations] = useState(false);
   const [plannerAddTarget, setPlannerAddTarget] = useState<PantryMatchRecipeItem | null>(null);
@@ -98,14 +107,17 @@ export function PantryScreen({
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pantryRequestSequenceRef = useRef(0);
   const isMobileViewport = useIsMobileViewport();
+  const isGuestPreview = authState === "unauthorized";
+  const visiblePantryItems = isGuestPreview ? GUEST_PANTRY_ITEMS : items;
+  const visibleProductItems = isGuestPreview ? NO_PRODUCT_ITEMS : productItems;
 
   const allDisplayItems = useMemo(
     () =>
       [
-        ...items.map(toIngredientDisplayItem),
-        ...productItems.map(toProductDisplayItem),
+        ...visiblePantryItems.map(toIngredientDisplayItem),
+        ...visibleProductItems.map(toProductDisplayItem),
       ].sort(comparePantryDisplayItems),
-    [items, productItems],
+    [visiblePantryItems, visibleProductItems],
   );
 
   const searchedItems = useMemo(() => {
@@ -248,6 +260,7 @@ export function PantryScreen({
     setSelectedIds(new Set());
     setShowDeleteConfirm(false);
     setShowAddSheet(false);
+    setShowGuestLoginGate(false);
     setShowBundlePicker(false);
     setShowPantryRecommendations(false);
     setPlannerAddTarget(null);
@@ -563,45 +576,7 @@ export function PantryScreen({
     );
   }
 
-  if (authState === "unauthorized") {
-    const gate = (
-      <ContentState
-        description="보유 재료를 등록하면 장보기 목록에서 자동으로 제외돼요."
-        eyebrow="팬트리 접근"
-        safeBottomPadding
-        title="이 화면은 로그인이 필요해요"
-        tone="gate"
-      >
-        <div className="space-y-3">
-          <SocialLoginButtons nextPath="/pantry" />
-          <Link
-            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href="/"
-          >
-            홈으로 돌아가기
-          </Link>
-        </div>
-      </ContentState>
-    );
-
-    if (!isMobileViewport) {
-      return (
-        <WebShell className="web-pantry-shell web-auth-gate-shell" footer={false}>
-          <WebTopNav activeId="pantry" />
-          <div className="web-screen web-auth-gate-screen">{gate}</div>
-        </WebShell>
-      );
-    }
-
-    return (
-      <>
-        {gate}
-        <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
-      </>
-    );
-  }
-
-  if (viewState === "error") {
+  if (!isGuestPreview && viewState === "error") {
     return (
       <>
         <div className="flex flex-col items-center justify-center px-4 py-16">
@@ -626,7 +601,7 @@ export function PantryScreen({
     );
   }
 
-  const isPantryLoading = viewState === "loading";
+  const isPantryLoading = !isGuestPreview && viewState === "loading";
   const isEmpty =
     !isPantryLoading && allDisplayItems.length === 0 && !searchQuery && !activeCategory;
   const isSearchEmpty =
@@ -695,16 +670,27 @@ export function PantryScreen({
       {/* Add sheet */}
       {showAddSheet && (
         <PantryAddSheet
-          existingIngredientIds={items.map((item) => item.ingredient_id)}
-          existingProductItems={productItems.map((item) => ({
+          existingIngredientIds={visiblePantryItems.map((item) => item.ingredient_id)}
+          existingProductItems={visibleProductItems.map((item) => ({
             food_product_id: item.food_product_id,
             food_product_nutrition_version_id:
               item.food_product_nutrition_version_id,
           }))}
           onAdd={handleAddComplete}
           onClose={() => setShowAddSheet(false)}
+          onRequireAuth={isGuestPreview ? () => {
+            setShowAddSheet(false);
+            setShowGuestLoginGate(true);
+          } : undefined}
         />
       )}
+
+      {showGuestLoginGate ? (
+        <PantryGuestLoginGate
+          isMobileViewport={isMobileViewport}
+          onClose={() => setShowGuestLoginGate(false)}
+        />
+      ) : null}
 
       {/* Bundle picker */}
       {showBundlePicker && (
@@ -808,6 +794,7 @@ export function PantryScreen({
         <PantryMobileScreen
           activeCategory={activeCategory}
           displayItems={mobileDisplayItems}
+          isGuestPreview={isGuestPreview}
           isLoading={isPantryLoading}
           isSelectMode={isSelectMode}
           items={allDisplayItems}
@@ -815,14 +802,16 @@ export function PantryScreen({
           onClearSearch={handleClearSearch}
           onExitSelectMode={handleExitSelectMode}
           onOpenAddSheet={() => setShowAddSheet(true)}
-          onOpenBundlePicker={() => setShowBundlePicker(true)}
-          onOpenRecommendations={() => setShowPantryRecommendations(true)}
+          onOpenBundlePicker={() => isGuestPreview ? setShowGuestLoginGate(true) : setShowBundlePicker(true)}
+          onOpenRecommendations={() => isGuestPreview ? setShowGuestLoginGate(true) : setShowPantryRecommendations(true)}
           onRequestDelete={() => setShowDeleteConfirm(true)}
           onRequestSingleDelete={handleRequestSingleDelete}
           onSearchChange={handleSearch}
           onSelectAllToggle={handleSelectAllVisibleToggle}
           onSelectToggle={handleSelectToggle}
-          onStartSelectMode={() => setIsSelectMode(true)}
+          onStartSelectMode={() => {
+            if (!isGuestPreview) setIsSelectMode(true);
+          }}
           searchQuery={searchQuery}
           selectedIds={selectedIds}
           isAllVisibleSelected={isAllVisibleSelected}
@@ -837,28 +826,30 @@ export function PantryScreen({
       <WebShell className="web-pantry-shell">
         <WebTopNav
           activeId="pantry"
-          rightSlot={<ProfileSummaryButton autoLoad isAuthenticated variant="web" />}
+          rightSlot={<ProfileSummaryButton autoLoad isAuthenticated={!isGuestPreview} variant="web" />}
         />
         <div className="web-screen web-pantry-screen">
           <header className="web-pantry-head">
             <div>
               <p className="web-menu-add-eyebrow">팬트리</p>
-              <h1>{isPantryLoading ? "나의 팬트리" : `나의 팬트리 ${allDisplayItems.length}개`}</h1>
+              <h1>{isGuestPreview ? `팬트리 미리보기 ${allDisplayItems.length}개` : isPantryLoading ? "나의 팬트리" : `나의 팬트리 ${allDisplayItems.length}개`}</h1>
               <p>
-                팬트리에 있는 재료는 장보기에서 자동 제외돼요.
+                {isGuestPreview
+                  ? "로그인 전 예시예요. 로그인하면 내 재료로 바뀌어요."
+                  : "팬트리에 있는 재료는 장보기에서 자동 제외돼요."}
               </p>
             </div>
             <div className="web-pantry-actions">
               <WebButton
                 aria-label="팬트리 추천"
-                onClick={() => setShowPantryRecommendations(true)}
+                onClick={() => isGuestPreview ? setShowGuestLoginGate(true) : setShowPantryRecommendations(true)}
                 variant="secondary"
               >
                 팬트리 추천
               </WebButton>
               <WebButton
                 aria-label="묶음으로 추가"
-                onClick={() => setShowBundlePicker(true)}
+                onClick={() => isGuestPreview ? setShowGuestLoginGate(true) : setShowBundlePicker(true)}
                 variant="secondary"
               >
                 묶음 추가
@@ -959,7 +950,7 @@ export function PantryScreen({
                   <WebButton
                     className="web-pantry-edit-button"
                     disabled={
-                      isPantryLoading || selectableIngredientIds.length === 0
+                      isGuestPreview || isPantryLoading || selectableIngredientIds.length === 0
                     }
                     onClick={() => setIsSelectMode(true)}
                     variant="tertiary"
@@ -1079,6 +1070,70 @@ export function PantryScreen({
       </WebShell>
       {overlayNodes}
     </>
+  );
+}
+
+function PantryGuestLoginGate({
+  isMobileViewport,
+  onClose,
+}: {
+  isMobileViewport: boolean;
+  onClose: () => void;
+}) {
+  const login = () => {
+    window.location.assign("/login?next=%2Fpantry");
+  };
+  const description = "로그인하면 선택한 재료를 내 팬트리에 추가할 수 있어요.";
+
+  if (isMobileViewport) {
+    return (
+      <AppBottomSheet
+        ariaLabelledBy="pantry-guest-login-title-mobile"
+        footer={
+          <AppModalFooterActions
+            confirmLabel="로그인"
+            onCancel={onClose}
+            onConfirm={login}
+          />
+        }
+        onClose={onClose}
+        panelClassName="max-w-md"
+        title="로그인이 필요한 작업이에요"
+      >
+        <p className="text-[14px] font-medium leading-6 text-[var(--wave1-text-2)]">
+          {description}
+        </p>
+      </AppBottomSheet>
+    );
+  }
+
+  return (
+    <WebModal onBackdropClick={onClose}>
+      <WebDialog aria-labelledby="pantry-guest-login-title-desktop" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="pantry-guest-login-title-desktop">
+            로그인이 필요한 작업이에요
+          </WebDialogTitle>
+          <button
+            aria-label="닫기"
+            className="web-modal-close"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <p className="text-[14px] font-medium leading-6 text-[var(--web-text-2)]">
+            {description}
+          </p>
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton onClick={onClose} variant="tertiary">취소</WebButton>
+          <WebButton onClick={login}>로그인</WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 

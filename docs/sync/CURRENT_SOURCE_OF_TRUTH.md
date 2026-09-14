@@ -1,20 +1,24 @@
 # Current Source of Truth
 
-## 2026-09-14 사용자 승인 — 출시 전 빠른 개발 모드
+## 2026-09-12 사용자 승인 — 비로그인 PANTRY 예시 체험
 
-GitHub Actions CI, workpack/acceptance gate, Stage 1~6, 별도 task 승인, OMO, closeout과 omo-report를 신규 작업의 시작·머지 조건에서 제거한다. 기존 자료는 과거 기록으로 보존한다. 한 작업 브랜치에서 공식 문서, 구현, 로컬 확인과 PR을 함께 닫을 수 있다. 고객 유입 또는 광고 집행 전 최소 CI와 출시 검증을 다시 설계한다.
+비로그인 PANTRY는 전체 화면 gate 대신 `로그인 전 예시`로 명시한 기본 재료 몇 개를 client-only로 표시한다. `재료 추가`는 공개 ingredient 검색을 사용하는 기존 modal까지 열어 선택할 수 있지만 최종 `팬트리에 추가` 전에 로그인 필요 modal을 띄우고 `POST /pantry`를 호출하지 않는다. 삭제·추천·묶음 추가 같은 다른 개인화 action도 비로그인 mutation/API를 만들지 않는다. 로그인 사용자는 기존 본인 pantry CRUD를 그대로 사용하고 API·DB 소유권·401 계약은 변경하지 않으며 배포는 보류한다.
 
-이 변경은 제품의 인증·권한·소유권·read-only·상태 전이 계약이나 full-local Supabase의 파괴적 변경 금지를 완화하지 않는다.
+## 2026-09-12 사용자 승인 — 데스크톱 요리모드 내비게이션 대비
 
-작업 절차와 검증 범위는 현재 `AGENTS.md`를 우선한다. 아래 날짜별 기록의 CI·Stage·선행 docs PR·별도 승인 조건은 과거 절차이며 신규 작업에 적용하지 않는다. 스킬과 디자인 에이전트도 같은 기준을 따른다.
+dark COOK_MODE의 `WebTopNav`는 흰 배경이 포함된 light logo 대신 공식 monochrome dark auxiliary logo를 사용해 header 배경과 이어지게 표시한다. 요리모드의 inactive tab hover·keyboard focus는 밝은 글자, 반투명 brand-blue fill, 얇은 blue border로 명확히 구분한다. 다른 밝은 화면의 공통 logo/tab style, navigation 항목·동작, COOK_MODE 내용과 API·DB는 변경하지 않으며 배포는 보류한다.
 
-## 2026-09-13 사용자 승인 contract-evolution — 광고 중인 R2.2와 master 단일 통합
+## 2026-09-12 사용자 승인 — R2 결과·동의·공유 카드 후속 조정
 
-현재 광고 공개본의 저장소 권위는 `origin/release/mumeok-r2-live-20260913`, exact SHA `92fc7bd0963af2e47f560151bec8f3cabd553c6a`, 공개 `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`다. 이 항목은 제공된 공개 배포 사실과 로컬 ref의 SHA 일치를 기록할 뿐 새 배포·재시작·DB 적용·환경 변경을 승인하지 않는다. 광고 중인 현재 production은 이 문서 작업 동안 그대로 유지한다.
+recording 결과 CTA 위 문구는 `그런데 무먹에서는 집밥을 어떻게 기록할까요?` 한 문장으로 바꾸고 보조 문구와 체험 화면 하단 `베타 준비 중` 안내를 제거한다. recording 신청 동의는 `[필수] 이메일 수집·이용에 동의해요.`만 상시 표시하고 수집 목적·항목·보유기간·철회 안내는 펼침 UI로 이동하며 별도 미동의/14세/privacy link 문장은 제거한다. homeflow 결과는 모든 유형에서 `무먹에서 집밥 어떻게 하는지 알아볼까요?` bridge와 `무먹 체험하기` CTA를 사용하고, 제목·인용문 위계와 결과 반짝이 motion을 강화한다. 두 R2 경로의 Open Graph/Twitter 이미지는 각 랜딩 전용 1200×630 카드로 분리한다. API·DB·동의 필수값·수집 목적·보유기간·공유 URL privacy는 변경하지 않으며 배포는 보류한다.
 
-[r2 위임 계약](../marketing-demand-validation-r2-contract.md) §12의 `r2.2-recording`/`r2.2-homeflow` 직렬 화면, exact 설문, Q3 결과, 체험, 간결 동의, 읽기 전용 결과 공유, 주제별 social metadata가 최신 공개 R2 계약이다. `round_version=r2.1`, 기존 r2.1/v2 데이터 의미, `POST /api/v1/marketing/round2`, public 3테이블, 독립 활동·권한·멱등·보관 경계는 유지한다. 2026-09-12 이전의 `로컬 후보`, `배포 보류`, `master 머지 금지` 표현은 당시 배포 전 단계의 역사 기록이며 현재 상태를 나타내지 않는다.
+## 2026-09-12 사용자 승인 — HOME R2 광고 배너 연결
 
-사용자는 위 실행본의 필요한 R2 변경을 [§13 통합 기준](../marketing-demand-validation-r2-contract.md#13-2026-09-13-실제-배포-상태와-master-통합-승인)에 따라 하나의 PR로 master에 정리하는 것을 승인했다. 같은 Codex task가 문서·R2.2 DB/parser·recording/homeflow UI·결과 공유 metadata를 통합하고 검토·병합할 수 있다. live 브랜치 전체 또는 423파일 snapshot, 로컬 중복 snapshot/evidence, HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션은 포함하지 않는다. public recipe 복구, 배포 도구·운영 기록도 제외한다. current-head CI와 실제 랜딩 검증은 유지한다.
+desktop HOME의 기존 `/beta` promotion banner는 `/beta/r2/recording`과 `/beta/r2/homeflow` 두 배너가 5초마다 옆으로 전환되는 carousel로 교체한다. mobile HOME의 `무먹 둘러보기` 첫 가이드 카드는 같은 두 R2 direct link 카드로 교체하고, 각 카드 전체를 누르면 해당 랜딩으로 바로 이동한다. desktop carousel은 hover·keyboard focus 중 자동 전환을 멈추고 `prefers-reduced-motion`에서는 자동 전환하지 않는다. 기존 테마 필터, `/about` direct/web navigation, R2 API·DB·권한·수집 계약은 유지하며 이번 변경은 아직 배포하지 않는다.
+
+## 2026-09-11 로컬 구현 후보 — 집밥흐름 선형 랜딩
+
+사용자가 PRD v0.5와 v4 시안대로 빠른 로컬 구현을 승인하고 배포·master 머지를 금지했다. [로컬 구현 계약](../marketing/homeflow-linear-implementation-contract.md)이 이번 homeflow UI와 `r2.2-homeflow` 설문 추가 범위의 기준이다. 기존 r2.1/recording 자료·API·보안 보호를 보존한다. 아래 병합된 r2.1 독립 활동 설명은 기존 버전 기준이며 새 로컬 homeflow UI의 승인·검증 완료를 뜻하지 않는다.
 
 ## Official Files
 - `docs/요구사항기준선-v1.7.36.md`
@@ -27,8 +31,14 @@ GitHub Actions CI, workpack/acceptance gate, Stage 1~6, 별도 task 승인, OMO,
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
-- 사용자 승인으로 공식 계약을 바꾸면 관련 공식 문서와 이 파일의 버전/경로를 구현과 같은 작업 브랜치에서 함께 갱신한다. 별도 선행 docs PR이나 Stage 승인은 필요하지 않다.
+- 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
+
+## 2026-09-12 사용자 승인 — R2 직렬 UI·두 r2.2 설문·이번 배포 예외
+
+[r2 위임 계약](../marketing-demand-validation-r2-contract.md) §12가 이번 두 랜딩의 최신 표시/설문 기준이다. recording은 기존v2 정확한4문항을 Q1부터 바로 표시하고 실제 첫 답변에서 survey start, homeflow는 승인 export `f692ec738db53569d0e54acd9846700e3a4877f6`의 Hero→4문항/Q3유형→6체험→신청이다. `survey_version=r2.2-recording|r2.2-homeflow`를 추가하되 `round_version=r2.1`, endpoint·public3테이블·기존r2.1/기존v2 의미와 서버 독립 활동 보호는 유지한다. API active109/table79 총계는 그대로다.
+
+사용자는 이번 광고 집행 전 R2 한정 예외와 기존 DB 백업·보존/저장 연결 검증 후 두 랜딩 배포를 재승인했다. 원격 master 변경 없이 live `458ce2daab6cdd91a70504657ce5981a4d4acf3c` 기반 `release/mumeok-r2-only-20260912`에서 R2 change-only를 독립 검토·검증한다. 비R2 기능·의존성 업그레이드0, 일반 SQL guard·정식 promotion kill switch·독립 리뷰는 유지한다. 이 작성은 문서/계획이며 운영 실행·자기 승인이 아니다. runbook은 같은 작업의 후속 문서 commit에서 인수한다. 아래 과거 승인/검토 기록은 삭제하지 않는다.
 
 ## 2026-09-11 사용자 승인 contract-evolution — 무먹 r2 독립 활동
 

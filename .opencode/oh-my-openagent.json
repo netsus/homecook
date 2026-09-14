@@ -1,7 +1,0 @@
-{
-  "disabled_hooks": ["comment-checker", "ralph-loop", "startup-toast"],
-  "disabled_commands": ["ulw-loop"],
-  "experimental": {
-    "auto_resume": false
-  }
-}

@@ -1,7 +1,5 @@
 # Bookkeeping Authority Matrix
 
-> **사용 중지:** 2026-09-14부터 closeout bookkeeping을 갱신하거나 검증하지 않는다. 과거 상태 해석용 문서다.
-
 ## Purpose
 
 이 문서는 canonical closeout ownership / projection semantics를 정의하는 문서가 아니다.

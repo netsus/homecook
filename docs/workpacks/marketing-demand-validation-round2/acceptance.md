@@ -1,23 +1,34 @@
 # Acceptance Checklist
 
-## 2026-09-13 R2.2 master 통합 acceptance
+## 2026-09-11 선형 homeflow 로컬 후보
 
-최신 규범은 [r2 상세 계약 §12~13](../../marketing-demand-validation-r2-contract.md)이다. 현재 광고 공개본 `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`와 `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`는 배포 상태 evidence이며, 아래 master 통합 검증을 대신하지 않는다.
+이번 사용자 승인 변경은 [로컬 구현 계약](../../marketing/homeflow-linear-implementation-contract.md)과 [PRD 인수 조건 C01~C22](../../marketing/homecook-flow-round2-prd.md#14-구현-인수-조건)을 따른다. 아래 기존 r2.1 체크는 보존된 evidence이며 새 버전 통과를 의미하지 않는다.
 
-- [ ] 기존 두 r2.1과 새 두 r2.2 조합의 parser/SQL/payload/CHECK를 `(topic,survey_version)`으로 검증하고 교차 version/topic, 추가 key, 누락을 422 또는 DB 거부로 고정한다 <!-- omo:id=accept-r22-version-dispatch;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 r2.1 함수·완료 row·event 불변, 다른 version 재제출 409, 같은 event 변경 409, 동일 replay 보존, R2.2 migration 순서·bytes·isolated replay를 검증한다 <!-- omo:id=accept-r22-history-preservation;stage=2;scope=backend;review=3,6 -->
-- [ ] recording 원문 Q1..Q4와 Q1 즉시 진입, mount/render start 0, 첫 선택 보존→bootstrap/start ACK 뒤 Q2, 실패 시 같은 event retry를 검증한다 <!-- omo:id=accept-r22-recording-start;stage=4;scope=frontend;review=5,6 -->
-- [ ] recording은 submit ACK+원 답변 tuple만으로 Q3 유형을 표시하고 최종 체험 payoff에서만 example 완료한 뒤 lead로 이동한다 <!-- omo:id=accept-r22-recording-ack;stage=4;scope=frontend;review=5,6 -->
-- [ ] homeflow Hero→4문항→Q3 유형→6체험→lead→done과 승인 copy/영양 예시/reduced-motion을 검증한다 <!-- omo:id=accept-r22-homeflow-linear;stage=4;scope=frontend;review=5,6 -->
-- [ ] 두 topic의 결과·동의 details·CTA와 허용 result-only 공유 URL, shared view POST/bootstrap 0, topic별 1200×630 metadata 및 카카오 제한 수집기 head 출력을 검증한다 <!-- omo:id=accept-r22-share-metadata;stage=4;scope=frontend;review=5,6 -->
-- [ ] version별 draft/participation/expiry, 완료 read-only, 유형 추정·재제출 금지, cookie_resume/410/lead 완료·두 탭·두 topic 격리를 검증한다 <!-- omo:id=accept-r22-versioned-recovery;stage=4;scope=frontend;review=5,6 -->
-- [ ] current master 기반 후속 PR마다 live ref에서 선택한 R2 파일/commit 목록과 제외 목록을 기록하고 전체 423파일 또는 로컬 중복 snapshot을 가져오지 않았음을 검증한다 <!-- omo:id=accept-r22-master-diff-scope;stage=4;scope=shared;review=3,6 -->
-- [ ] HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션 및 별도 recipe/dependency/deploy-tool 변경이 R2 PR에 섞이지 않았음을 검증한다 <!-- omo:id=accept-r22-product-boundary;stage=4;scope=shared;review=3,6 -->
+- [x] 새 `r2.2-homeflow` 요청·SQL 검증은 기존 버전과 분리되고 기존 자료를 재작성하지 않는다.
+- [x] 네 질문·Q3 유형·선형 6개 체험 결과·초대 신청이 승인 시안과 일치한다.
+- [x] 실제 R2 API의 서버 완료·멱등성·동의·실패 복구를 사용하고 preview는 loopback에서만 비저장이다.
+- [x] 클라이언트 캐시 유실·참여 불일치·낮은 revision·재시도가 성공을 위조하거나 이전 답변을 덮어쓰지 않는다.
+- [x] 로컬 테스트·브라우저 결과를 기록하며 배포·master 머지·독립 Stage 승인으로 주장하지 않는다.
 
-운영은 이미 광고 중이므로 integration PR 검증을 이유로 배포·운영 DB·서버·환경을 변경하지 않는다. 하나의 통합 PR에서 current-head CI와 실제 랜딩 동작을 검증하며, 별도 Stage task나 독립 task ID를 요구하지 않는다.
+로컬 근거: [구현 인수와 검증 기록](../../marketing/homeflow-local-implementation.md). 독립 Stage 승인·배포·master 머지는 수행하지 않았다.
+## 2026-09-12 후속 r2.2 계약 테스트 계획
+
+[위임 계약 §12](../../marketing-demand-validation-r2-contract.md)가 이번 두 랜딩의 새 UI/설문 기준이다. 아래 기존 체크와 증거는 과거 범위 그대로 보존한다. 기존UI 메뉴·직접선택/6순서·3장면/유형없음은 이전UI 기준이고 이번 직렬UI에 동시에 강요하지 않는다. 반면 서버3활동 독립·각단독/6순서·권한·멱등·보관 검증은 새UI와 무관하게 계속 필수다. 다음 항목은 실제 새버전 증거 전에는 미완료다.
+
+- [ ] 기존두r2.1+새두r2.2 조합의 parser/SQL/payload/CHECK를 version+topic으로 검증하고 교차버전/교차topic/추가key/누락을422 또는DB거부로 고정한다 <!-- omo:id=accept-r22-version-dispatch;stage=2;scope=backend;review=3,6 -->
+- [ ] 기존2인자r2.1함수/기존완료행/event 불변, 다른version재제출409·같은event변경409·동일재시도보존 및3인자helper권한을 검증한다 <!-- omo:id=accept-r22-history-preservation;stage=2;scope=backend;review=3,6 -->
+- [ ] recording 원문Q1..Q4의순서/줄바꿈/보기/보조문구를지정source bytes와대조하고Q1즉시진입을검증한다 <!-- omo:id=accept-r22-recording-copy;stage=4;scope=frontend;review=5,6 -->
+- [ ] recording mount/render/effect/StrictMode/첫노출에서survey start0,첫선택메모리보존→bootstrap+start ACK후Q2,실패동일event명시retry/Q1선택유지·중복클릭·뒤로가기보호를검증한다 <!-- omo:id=accept-r22-first-answer-start;stage=4;scope=frontend;review=5,6 -->
+- [ ] Q4 submit ACK+원답변tuple만유형근거로쓰고,5체험중간에는완료0·최종planner payoff끝에서만example_complete ACK후lead시작이며기존v2 default HTML/controller가불변임을검증한다 <!-- omo:id=accept-r22-ack-boundaries;stage=4;scope=frontend;review=5,6 -->
+- [ ] 각R2경로의허용result key만공유하고유일resultquery외PII/답변/attribution/key를제거한다. sharedview POST/bootstrap0,명시테스트후recording정상Q1,기존1차/beta역유입0을검증한다 <!-- omo:id=accept-r22-shared-readonly;stage=4;scope=frontend;review=5,6 -->
+- [ ] 두topic의Q3전용유형과승인직렬흐름(recording기존체험·식단/homeflowHero·6체험),동의/오류/receipt를실제R2 API에연결하고새field/action/다른활동완료선행조건이없음을검증한다 <!-- omo:id=accept-r22-linear-storage;stage=4;scope=frontend;review=5,6 -->
+- [ ] version별draft/participation/expiry를대조하고r2.1값을새질문으로재해석하지않으며답변없는완료복원은유형추정·재제출없이진행한다. cookie_resume/410/lead완료·두탭/두topic보존도확인한다 <!-- omo:id=accept-r22-versioned-recovery;stage=4;scope=frontend;review=5,6 -->
+- [ ] 실제 release branch의 live458ce 대비 R2·사용자 승인 PR #1557·명시된 최소 보안 패치와 필수 lock 변경만 포함됐는지 확인한다. 나머지 동작은 보존하며 audit·build·회귀, 새 UI의 모바일·키보드·200%·reduced-motion·일반/preview 격리 증거를 구분한다 <!-- omo:id=accept-r22-release-parity;stage=4;scope=frontend;review=5,6 -->
+
+운영 controlled apply/backup/중단/복구/실제provider 증거는 후속 runbook의 별도 담당 범위다. 위 단위·SQL·브라우저 자동 검증을 운영 Manual Only로 옮겨 생략하지 않는다. 이번 문서 commit은 실행/독립승인 PASS가 아니다.
 
 공식 계약: [r2.1](../../marketing-demand-validation-r2-contract.md) @ `7f00e62c13572b5b2c0d54c997fe628f7a56567e`, 독립 reviewed head `24093c94ebf53676050353088f173ef7f6315445`.
-아래 r2.1 체크는 병합된 Stage1/초기 Stage2의 역사 범위다. 새 §12~13 R2.2의 미완료 체크와 독립 review를 대체하지 않는다. 계약 전문의 exact 필드·타입·message·DB constraint는 README 요약보다 우선한다.
+현재는 Stage1 문서 재잠금이며 제품 구현/독립 internal1.5/디자인 authority 승인이 아니다. 아래 non-manual은 해당 Stage2/4에서 실제 evidence 후 체크한다. 계약 전문의 exact 필드·타입·message·DB constraint는 README 요약보다 우선한다.
 
 
 Stage 2 체크 근거: [백엔드 인수 기록](stage2-backend-handoff.md). `accept-r2-routes`의 실제 Next 페이지·canonical 이동 연결은 사용자 지정 Stage 4 화면 범위에 남겨 미체크다. 서버 topic/context helper 자체는 단위 검증했다. 나머지 Stage 4/Manual Only 항목은 완료로 올리지 않는다.

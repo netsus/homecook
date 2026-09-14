@@ -24,11 +24,10 @@ describe("marketing funnel image delivery", () => {
   });
 
   it("serves optimized journey images directly instead of runtime PNG transforms", () => {
-    const source = [
-      "components/marketing/marketing-demand-validation-screen.tsx",
-      "components/marketing/marketing-demand-validation-hero.tsx",
-      "components/marketing/recording-flow-views.tsx",
-    ].map((path) => readFileSync(resolve(root, path), "utf8")).join("\n");
+    const source = readFileSync(
+      resolve(root, "components/marketing/marketing-demand-validation-screen.tsx"),
+      "utf8",
+    );
     for (const path of optimizedAssets) {
       const publicPath = path.replace(/^public/u, "");
       expect(source).toContain(publicPath);

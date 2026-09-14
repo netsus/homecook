@@ -1,13 +1,19 @@
 # 유저 Flow맵 v1.3.38
 
 상태: 공식문서
+
+> 2026-09-11 사용자 승인 로컬 후보: [집밥흐름 선형 구현 계약](marketing/homeflow-linear-implementation-contract.md)의 `/beta/r2/homeflow` 선형 UI와 `r2.2-homeflow` 설문을 추가한다. 기존 r2.1/recording·API envelope·권한·동의·보관·중복 보호는 보존한다. 배포·master 머지·독립 Stage 완료는 이 로컬 작성 범위에 포함하지 않는다.
 담당자: 채실장
 날짜: 9월 3일
 
-> **2026-09-13 contract-evolution — 공개 R2.2 흐름과 통합 경계**
+> **2026-09-12 후속 사용자 승인 — R2 직렬 UI와 독립 서버 처리 분리**
 >
-> recording 기본 경로는 Q1→Q2→Q3→Q4→Q3유형→체험/식단→신청→접수, homeflow는 Hero→4문항→Q3유형→6체험→신청→접수다. recording의 최초 실제 Q1 답변만 `activity_start(activity=survey)`를 일으키고, shared result view는 읽기 전용 POST/bootstrap 0이다. 결과 이후 CTA·동의 details·공유 경로와 metadata는 [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12를 따른다.
-> UI가 직렬이어도 서버의 example/survey/lead는 각자 start 선행만 유지하며 다른 활동 완료를 새 선행 조건으로 강제하지 않는다. 기존 r2.1/v2 완료·draft·답변 의미를 재해석하지 않는다. 현재 공개본에서 master로 옮길 때도 §13 순서를 따르며 R2 밖 HOME/PANTRY/COOK_MODE 변경을 같은 흐름으로 묶지 않는다.
+> 새 recording 기본 경로는 Q1→Q2→Q3→Q4→Q3유형→기존v2스타일 체험/식단→신청→접수, homeflow는 Hero→4문항→Q3유형→6체험→신청→접수다. recording의 최초 실제 Q1 답변만 `activity_start(activity=survey)`를 일으킨다. homeflow의 기존 Hero 테스트 버튼 의미는 보존한다.
+> [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12의 버전·완료·draft 복원을 적용한다. 서버3활동은 계속 자기 start만 선행 조건으로 갖고 다른 활동 완료를 강제하지 않는다. 처음/뒤로/공유 이동으로 완료를 삭제하거나 새 참여를 자동 생성하지 않는다. r2.1/v2 과거 흐름과 데이터 의미는 보존한다.
+
+> 결과 이후 이동 문구는 recording `그런데 무먹에서는 집밥을 어떻게 기록할까요?` → `무먹 체험하기`, homeflow `무먹에서 집밥 어떻게 하는지 알아볼까요?` → `무먹 체험하기`다. recording 체험 하단의 반복 준비 문장은 제거한다. 신청 화면의 간결화는 표시만 바꾸며 동의 true·Turnstile·목적·보관·철회와 서버 전이 조건을 그대로 유지한다. 공유 deep link는 결과 key만 보존하고 각 경로의 전용 social image를 사용한다.
+
+> 비로그인 PANTRY 흐름은 `예시 재료 확인 → 재료 추가 modal → 공개 재료 선택 → 팬트리에 추가 → 로그인 필요 modal`이다. 로그인 전에는 pantry 조회·추가·삭제 API와 개인 추천을 호출하지 않으며 로그인 뒤 `/pantry`로 돌아와 기존 본인 데이터 흐름을 사용한다.
 
 > **2026-09-11 contract-evolution — 무먹 r2 자유 순서 flow (r2.1)**
 >
@@ -1061,14 +1067,13 @@ HOME (홈)
 ### 진입 경로
 
 - desktop web: 공통 상단 `무먹 가이드`
-- mobile HOME initial state: `빠른 이동` → `무먹 둘러보기` 첫 가이드 카드
 - direct URL: `/about`, `/about#how-to`, `/about#faq`
 - legacy: `/mypage?tab=help` → `/about#faq`
 
 ### 플로우
 
 ```text
-공통 웹 내비게이션 / HOME 가이드 카드 / direct URL
+공통 웹 내비게이션 / direct URL
   │
   ▼
 ABOUT_SERVICE_GUIDE (/about)
@@ -1078,6 +1083,14 @@ ABOUT_SERVICE_GUIDE (/about)
   ├─ 기능별 가이드 / FAQ accordion 확인
   ├─ [레시피 둘러보기] → HOME
   └─ [플래너 시작하기] → 기존 PLANNER_WEEK 인증 flow
+```
+
+### HOME R2 광고 진입
+
+```text
+desktop HOME 자동 전환 banner / mobile HOME 무먹 둘러보기 R2 카드
+  ├─ [집밥 기록 유형] → /beta/r2/recording
+  └─ [집밥 흐름 유형] → /beta/r2/homeflow
 ```
 
 ### 상태 / 회복
