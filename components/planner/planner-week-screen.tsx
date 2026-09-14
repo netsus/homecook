@@ -12,6 +12,7 @@ import React, {
 } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
+import { PlannerLoginDialog } from "@/components/planner/planner-login-dialog";
 import { createGuestPlannerData, createGuestPlannerNutrition } from "@/lib/planner/guest-planner-preview";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
@@ -165,6 +166,7 @@ export function PlannerWeekScreen({
   );
   const guest = authState !== "authenticated";
   const [guestRange, setGuestRange] = useState(() => buildWeekRangeForDate(initialLocation.date));
+  const [loginNextPath, setLoginNextPath] = useState<string | null>(null);
   const rangeStartDate = guest ? guestRange.startDate : storedRangeStartDate;
   const rangeEndDate = guest ? guestRange.endDate : storedRangeEndDate;
   const guestExampleDate = initialLocation.date >= rangeStartDate && initialLocation.date <= rangeEndDate
@@ -207,6 +209,8 @@ export function PlannerWeekScreen({
   const requestedRangeRef = useRef<string | null>(null);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
   const positionedSegmentsRef = useRef<Record<PlannerShellSegment, boolean>>({ plan: false, log: false });
+  const currentLogLocationRef = useRef({ date: selectedDateKey, query: searchParams.toString() });
+  currentLogLocationRef.current = { date: selectedDateKey, query: searchParams.toString() };
   useEffect(() => {
     if (!guest) return;
     hasLoadedPlannerRef.current = false;
@@ -216,6 +220,11 @@ export function PlannerWeekScreen({
 
   const handleMealLogUnauthorized = useCallback(() => {
     setAuthState("unauthorized");
+    const location = currentLogLocationRef.current;
+    setLoginNextPath(buildPlannerShellHref(new URLSearchParams(location.query), {
+      date: location.date,
+      segment: "log",
+    }));
   }, []);
 
   const dateKeys = useMemo(
@@ -443,7 +452,7 @@ export function PlannerWeekScreen({
   function openMealAdd(dateKey: string, column: PlannerColumnData) {
     if (guest) {
       const next = new URLSearchParams({ date: dateKey, slot: column.name, restore: "meal-add-modal" });
-      router.push(`/login?next=${encodeURIComponent(`/planner?${next.toString()}`)}`);
+      setLoginNextPath(`/planner?${next.toString()}`);
       return;
     }
     if (!canAddMeal) return;
@@ -745,8 +754,7 @@ export function PlannerWeekScreen({
     setMealAddMode(null);
   }, [activeSegment, authState, canAddMeal, columns, dateKeys, searchParams]);
 
-  const loginHref = `/login?next=${encodeURIComponent(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date: selectedDate, segment: activeSegment }))}`;
-  const loginControl = <Link className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-bold text-[var(--brand-contrast)]" href={loginHref}>로그인</Link>;
+  const loginControl = <button className="min-h-11 rounded-xl px-3 text-sm font-bold text-[var(--brand-contrast)]" onClick={() => setLoginNextPath(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date: selectedDate, segment: activeSegment }))} type="button">로그인</button>;
 
   return (
     <div
@@ -793,7 +801,7 @@ export function PlannerWeekScreen({
           onDayRef={(date, node) => { logDayRefs.current[date] = node; }}
           onDaysReady={onLogDaysReady}
           onFoodLoginRequired={(date = selectedDateKey) => { allowScrollDateSyncRef.current = false; router.push(`/login?next=${encodeURIComponent(buildPlannerShellHref(new URLSearchParams(), { date, segment: "log" }))}`); }}
-          onLoginRequired={(date = selectedDateKey) => { allowScrollDateSyncRef.current = false; router.push(`/login?next=${encodeURIComponent(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date, segment: "log" }))}`); }}
+          onLoginRequired={(date = selectedDateKey) => { allowScrollDateSyncRef.current = false; setLoginNextPath(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date, segment: "log" })); }}
           date={selectedDate}
           onDateChange={handleDateSelect}
           onUnauthorized={handleMealLogUnauthorized}
@@ -878,7 +886,7 @@ export function PlannerWeekScreen({
                   columns={columns}
                   meals={meals}
                   nutritionByMeal={displayedNutrition}
-                  onMealOpen={guest ? () => router.push(`/login?next=${encodeURIComponent(buildPlannerShellHref(new URLSearchParams(), { date: selectedDate, segment: "plan" }))}`) : undefined}
+                  onMealOpen={guest ? () => setLoginNextPath(buildPlannerShellHref(new URLSearchParams(), { date: selectedDate, segment: "plan" })) : undefined}
                   selectedDate={selectedDate}
                   today={todayKey}
                   disabled={!canAddMeal}
@@ -911,6 +919,7 @@ export function PlannerWeekScreen({
           </div>
         </div>
       )}
+      {loginNextPath ? <PlannerLoginDialog nextPath={loginNextPath} onClose={() => setLoginNextPath(null)} /> : null}
       {mealAddTarget && !guest && activeSegment === "plan" && canAddMeal ? (
         <div ref={mealAddBoundaryRef}>
           {mealAddMode ? (

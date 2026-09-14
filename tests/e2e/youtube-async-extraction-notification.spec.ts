@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
@@ -7,7 +8,7 @@ import {
   installDiscoveryRoutes,
   setE2EAuthOverride as setBaseE2EAuthOverride,
 } from "./helpers/mock-routes";
-import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
+import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
 
 const EVIDENCE_ROOT = path.resolve(
   process.cwd(),
@@ -483,7 +484,7 @@ async function openImport(
 
 async function captureEvidence(page: Page, testInfo: TestInfo, filePath: string, fullPage = false) {
   if (testInfo.project.name !== "desktop-chrome") return;
-  await captureTrackedEvidenceOnDemand(page, { path: filePath, fullPage });
+  await captureEvidenceScreenshot(page, testInfo, filePath, { fullPage });
 }
 
 function rectanglesAreDisjoint(
@@ -496,6 +497,12 @@ function rectanglesAreDisjoint(
     || first.y >= second.y + second.height
     || first.y + first.height <= second.y;
 }
+
+test.beforeAll(async () => {
+  await mkdir(IMPORT_EVIDENCE, { recursive: true });
+  await mkdir(SHELL_EVIDENCE, { recursive: true });
+  await mkdir(TRUTHFUL_PROGRESS_EVIDENCE, { recursive: true });
+});
 
 test("import initial and submitting states are visually explicit", async ({ page }, testInfo) => {
   const controls = await openImport(page, "submitting", 390, 844);

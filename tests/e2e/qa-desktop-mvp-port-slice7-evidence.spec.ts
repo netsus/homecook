@@ -1,8 +1,8 @@
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 import {
   COOK_MODE_VISUAL_PATH,
   installCookingVisualRoutes,
@@ -13,7 +13,7 @@ import {
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const EVIDENCE_DIR = path.resolve(
   process.cwd(),
-  ".artifacts/desktop-mvp-porting/slice7/screenshots",
+  "ui/designs/evidence/desktop-mvp-porting/slice7/screenshots",
 );
 
 const viewports = {
@@ -76,7 +76,7 @@ async function capture(
   await page.goto(`${BASE_URL}${routePath}`);
   await assertReady(page);
   await stabilize(page);
-  await captureTrackedEvidenceOnDemand(page, {
+  await page.screenshot({
     fullPage,
     path: path.join(EVIDENCE_DIR, filename),
   });
@@ -84,6 +84,8 @@ async function capture(
 }
 
 test("capture Slice 7 desktop cooking prototype-port evidence", async ({ browser }) => {
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+
   for (const viewportName of Object.keys(viewports) as Array<keyof typeof viewports>) {
     const width = viewports[viewportName].width;
 

@@ -1,7 +1,5 @@
 # Product Design Authority SOP
 
-> 2026-09-14부터 이 리뷰는 선택 사항이다. 신규 화면과 큰 UI 변경에서 품질을 높이는 참고 절차이며 Stage/merge gate가 아니다.
-
 > 대상: 독립 Codex `product-design-authority` final authority / Codex `design-reviewer` authority precheck
 > 실행 규칙: `docs/engineering/codex-task-handoff.md`
 

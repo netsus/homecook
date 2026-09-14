@@ -33,11 +33,10 @@
 
 ## 기본 규칙
 
-- 작업 절차는 현재 `AGENTS.md`를 우선한다. 검토는 같은 작업에서 수행하며 Stage 승인이나 workpack 작성은 요구하지 않는다.
 - anchor extension은 low-risk UI change로 분류하지 않는다.
-- 변경할 화면의 구조와 기존 사용자 흐름을 먼저 확인한다.
-- 구현 화면을 모바일과 데스크톱에서 직접 확인하고, 필요하면 screenshot/Figma를 함께 검토한다.
-- 사용을 막는 문제가 있으면 같은 작업에서 수정하고 다시 확인한다.
+- Stage 1에서 design artifact와 authority review 계획을 남긴다.
+- Stage 4에서 screenshot/Figma evidence 기반 authority review를 거친다.
+- unresolved blocker가 있으면 Stage 5 `confirmed` 금지다.
 
 ## 현재 제품에서 특히 조심할 화면
 
@@ -68,4 +67,4 @@
 
 - 단순 연결 슬라이스가 아니다
 - anchor extension이다
-- 연결 전후의 두 화면을 직접 확인하고 사용을 막는 문제를 수정한다
+- authority review 없이 바로 Stage 4 구현으로 들어가면 안 된다

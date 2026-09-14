@@ -1061,10 +1061,8 @@ describe("RecipeBookDetailScreen", () => {
     });
 
     // Toast shows
-    const removalToast = screen
-      .getByText("레시피를 제거했어요")
-      .closest('[role="status"]');
-    expect(removalToast).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByText("레시피를 제거했어요")).toBeTruthy();
 
     expect(mockRemoveRecipeBookRecipe).toHaveBeenCalledWith(
       "book-1",

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -122,8 +122,35 @@ describe("startWorkBranch", () => {
     ).toThrow("Worktree is dirty.");
   });
 
-  it("allows feature slice branches without workpack docs", () => {
+  it("blocks feature slice branches until workpack docs exist on origin/master", () => {
     const rootDir = setupRepoFixture();
+
+    expect(() =>
+      startWorkBranch({
+        rootDir,
+        slice: "06-recipe-to-planner",
+        role: "be",
+      }),
+    ).toThrow("Stage 1 docs must be merged before starting feature/be-06-recipe-to-planner.");
+  });
+
+  it("allows feature slice branches after workpack docs are merged on origin/master", () => {
+    const rootDir = setupRepoFixture();
+
+    mkdirSync(join(rootDir, "docs", "workpacks", "06-recipe-to-planner"), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "README.md"),
+      "# workpack\n",
+    );
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "acceptance.md"),
+      "# acceptance\n",
+    );
+    execFileSync("git", ["add", "docs"], { cwd: rootDir });
+    execFileSync("git", ["commit", "-m", "docs: add workpack fixture"], { cwd: rootDir });
+    execFileSync("git", ["push"], { cwd: rootDir });
 
     const result = startWorkBranch({
       rootDir,

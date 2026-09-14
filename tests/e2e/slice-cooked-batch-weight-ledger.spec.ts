@@ -4,7 +4,7 @@ import { expect, test, type Locator, type Page, type Route } from "@playwright/t
 
 import { installAccountLibraryVisualRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
 import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
-import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
+import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
 
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 const RECIPE_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -538,8 +538,7 @@ test.describe("cooked-batch-weight-ledger", () => {
           .evaluate((button) => button.matches(":hover")),
       ).toBe(false);
       const path = resolve(evidenceDirectory, filename);
-      await captureTrackedEvidenceOnDemand(page, {
-        path,
+      await captureEvidenceScreenshot(page, testInfo, path, {
         animations: "disabled",
         fullPage: false,
       });

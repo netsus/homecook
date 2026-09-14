@@ -1,8 +1,7 @@
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
-
-import { captureTrackedEvidenceOnDemand } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -244,6 +243,8 @@ async function expectCompactCookMode(page: Page) {
 }
 
 test("capture design polish slice6 authority evidence", async ({ browser }) => {
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+
   {
     const { context, page } = await preparePage(browser, viewports.mobile);
     await setAuthOverride(page);
@@ -253,7 +254,7 @@ test("capture design polish slice6 authority evidence", async ({ browser }) => {
       page.getByRole("button", { name: "김치찌개 요리하기" }).first(),
     ).toBeVisible();
     await stabilize(page);
-    await captureTrackedEvidenceOnDemand(page, {
+    await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "MEAL_SCREEN-cook-shortcut-mobile.png"),
     });
@@ -269,7 +270,7 @@ test("capture design polish slice6 authority evidence", async ({ browser }) => {
       page.getByRole("button", { name: "김치찌개 요리하기" }).first(),
     ).toBeVisible();
     await stabilize(page);
-    await captureTrackedEvidenceOnDemand(page, {
+    await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "MEAL_SCREEN-cook-shortcut-narrow.png"),
     });
@@ -283,7 +284,7 @@ test("capture design polish slice6 authority evidence", async ({ browser }) => {
     await page.goto(`${BASE_URL}/cooking/sessions/session-slice6/cook-mode`);
     await expectCompactCookMode(page);
     await stabilize(page);
-    await captureTrackedEvidenceOnDemand(page, {
+    await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "COOK_MODE-ingredients-steps-mobile.png"),
     });
@@ -297,7 +298,7 @@ test("capture design polish slice6 authority evidence", async ({ browser }) => {
     await page.goto(`${BASE_URL}/cooking/sessions/session-slice6/cook-mode`);
     await expectCompactCookMode(page);
     await stabilize(page);
-    await captureTrackedEvidenceOnDemand(page, {
+    await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "COOK_MODE-ingredients-steps-narrow.png"),
     });

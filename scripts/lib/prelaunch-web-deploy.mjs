@@ -128,7 +128,17 @@ export function retargetPlist(plist, checkout) {
     || !["-p", "--port"].includes(args[4]) || args[5] !== "3100") {
     throw new DeploymentError("기존 웹 설정은 com.homecook.production / 127.0.0.1:3100이어야 합니다.");
   }
-  return { ...plist, WorkingDirectory: checkout, ProgramArguments: [args[0], join(checkout, "scripts/start-production.mjs"), ...args.slice(2)] };
+  const environment = plist.EnvironmentVariables;
+  const r2Root = environment?.MUMEOK_ROUND2_REPOSITORY_ROOT;
+  if (r2Root && r2Root !== plist.WorkingDirectory) {
+    throw new DeploymentError("R2 승인 소스 경로가 현재 웹 checkout과 다릅니다.");
+  }
+  return {
+    ...plist,
+    ...(r2Root ? { EnvironmentVariables: { ...environment, MUMEOK_ROUND2_REPOSITORY_ROOT: checkout } } : {}),
+    WorkingDirectory: checkout,
+    ProgramArguments: [args[0], join(checkout, "scripts/start-production.mjs"), ...args.slice(2)],
+  };
 }
 
 // Preparation includes build + isolated GET checks. No service mutation may happen there.

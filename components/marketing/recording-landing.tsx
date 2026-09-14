@@ -66,7 +66,7 @@ export function RecordingLanding(props: RecordingLandingProps) {
   }
 
   const recoveryScroll = !!error && state.screen !== "lead";
-  const footerStyle: React.CSSProperties = { flex: "0 0 auto", width: "min(100%, 390px)", margin: "0 auto", padding: "8px 24px", fontSize: 12, lineHeight: 1.5, background: "var(--surface)" };
+  const footerStyle: React.CSSProperties = { flex: "0 0 auto", width: "min(100%, 390px)", margin: "0 auto", padding: "8px 24px", fontSize: 12, lineHeight: 1.5, background: "#fff" };
   return <div className="mdv2-root" style={{ display: "flex", flexDirection: "column" }}>
     <div className="mdv2-shell" style={{ flex: "1 1 0", height: "auto", overflowY: recoveryScroll ? "auto" : undefined }} inert={state.core.busy || undefined}>{recoveryScroll ? <div style={{ height: "100dvh" }}>{content}</div> : content}</div>
     {props.preview && <p role="status" style={{ ...footerStyle, textAlign: "center" }}>미리보기 · 실제 저장과 신청은 하지 않아요.</p>}

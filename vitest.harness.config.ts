@@ -1,7 +1,6 @@
 import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
-import { HARNESS_TEST_FILES } from "./tests/helpers/vitest-suite-patterns";
 import { establishOwnedVitestSuiteTemp } from "./tests/helpers/vitest-owned-suite-temp";
 
 establishOwnedVitestSuiteTemp();
@@ -14,7 +13,30 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: HARNESS_TEST_FILES,
+    include: [
+      "tests/agent-*.test.ts",
+      "tests/authority-evidence-presence.test.ts",
+      "tests/bookkeeping-authority.test.ts",
+      "tests/check-workpack-docs.test.ts",
+      "tests/closeout-sync-validator.test.ts",
+      "tests/dev-local-supabase-runtime.test.ts",
+      "tests/edit-branch-guard.test.ts",
+      "tests/exploratory-qa-evidence.test.ts",
+      "tests/frontend-design-skill.test.ts",
+      "tests/git-policy.test.ts",
+      "tests/meta-harness-auditor.test.ts",
+      "tests/next-routes-manifest.test.ts",
+      "tests/omo-*.test.ts",
+      "tests/playwright-workflow.test.ts",
+      "tests/policy-workflow.test.ts",
+      "tests/project-hooks-config.test.ts",
+      "tests/production-data-quality.test.ts",
+      "tests/qa-system.test.ts",
+      "tests/real-smoke-presence.test.ts",
+      "tests/source-of-truth-sync.test.ts",
+      "tests/start-work-branch.test.ts",
+      "tests/workflow-v2-docs.test.ts",
+    ],
     setupFiles: ["./tests/helpers/vitest-worker-temp.ts"],
   },
 });

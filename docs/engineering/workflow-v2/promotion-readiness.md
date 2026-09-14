@@ -40,7 +40,7 @@
 
 `pass` 기준:
 
-- 같은 Codex task 완료가 기본 경로다. 별도 Codex task나 사람 handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서 필요할 때만 사용한다.
+- Codex 새 작업 handoff는 모든 product Stage의 기본 경로다. 별도의 사람 handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.
 - Codex task 진행 중, 외부 provider wait, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 task wait 또는 scheduled recheck를 사용한다.
 - handoff가 발생하면 latest `stage-result.json`, authority/final gate artifact 경로(해당 시), 남은 blocker, 다음 권장 명령을 handoff bundle 또는 notes에 남긴다.
 

@@ -1,13 +1,15 @@
 # API\_설계\_v1.2.43
 
 상태: 공식문서
+
+> 2026-09-11 사용자 승인 로컬 후보: [집밥흐름 선형 구현 계약](marketing/homeflow-linear-implementation-contract.md)의 `/beta/r2/homeflow` 선형 UI와 `r2.2-homeflow` 설문을 추가한다. 기존 r2.1/recording·API envelope·권한·동의·보관·중복 보호는 보존한다. 배포·master 머지·독립 Stage 완료는 이 로컬 작성 범위에 포함하지 않는다.
 담당자: 킴실장
 날짜: 9월 3일
 
-> **2026-09-13 contract-evolution — R2.2 survey union 공개 기준**
+> **2026-09-12 후속 사용자 승인 — R2 두 r2.2 survey union 추가**
 >
-> `POST /api/v1/marketing/round2`는 `(recording,r2.1-recording)`, `(homeflow,r2.1-homeflow)`, `(recording,r2.2-recording)`, `(homeflow,r2.2-homeflow)` 네 `topic+survey_version` 조합과 각 버전의 exact q1..q4 enum을 허용한다. 자세한 값과 복원·멱등 규칙은 [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4~12.5를 따른다. 잘못된 조합은 422, 기존 완료의 다른 version/답변은 409다.
-> 현재 광고 공개본은 `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`다. public endpoint/action/field/success/failure, `round_version=r2.1`, API active 109개, 권한·동의·보관은 바뀌지 않는다. social metadata와 직렬 화면은 public API field/action이 아니다.
+> `POST /api/v1/marketing/round2`의 action/field/Success/Failure와 round_version=r2.1은 그대로다. [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4의 recording/r2.2-recording, homeflow/r2.2-homeflow 조합을 survey_submit에 추가하고 기존r2.1 조합은 보존한다. version+topic별4답변 exact enum을 parser/SQL/RPC에서 일치시킨다. 잘못된 조합422, 기존 완료의 다른version/답변409다.
+> 유형은 확정 로컬 Q3로 계산하며 public result/step/answers 응답 필드를 새로 추가하지 않는다. recording 첫 답변은 기존activity_start를 재사용하고 UI직렬 순서를 새 서버 선행조건으로 만들지 않는다. API active109개와 기존권한·멱등·동의·보관경계는 불변이다.
 
 > **2026-09-11 contract-evolution — POST marketing/round2 (r2.1)**
 >

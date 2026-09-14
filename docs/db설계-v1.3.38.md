@@ -1,13 +1,15 @@
 # DB 설계 v1.3.38
 
 상태: 공식문서
+
+> 2026-09-11 사용자 승인 로컬 후보: [집밥흐름 선형 구현 계약](marketing/homeflow-linear-implementation-contract.md)의 `/beta/r2/homeflow` 선형 UI와 `r2.2-homeflow` 설문을 추가한다. 기존 r2.1/recording·API envelope·권한·동의·보관·중복 보호는 보존한다. 배포·master 머지·독립 Stage 완료는 이 로컬 작성 범위에 포함하지 않는다.
 담당자: 채실장
 날짜: 9월 3일
 
-> **2026-09-13 contract-evolution — R2.2 설문 version별 저장 검증**
+> **2026-09-12 후속 사용자 승인 — R2 설문 버전별 검증**
 >
-> [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4~12.5의 두 R2.2 설문을 추가한다. public 3테이블·column·`round_version=r2.1`은 유지하고 답변, event payload, participation CHECK를 `(topic,survey_version)`으로 정확히 판별한다. 기존 r2.1 완료 답변/version/event를 재작성하지 않으며 다른 version 재제출 409, 동일 의미 replay 보호를 유지한다.
-> 현재 광고 공개본은 `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`다. 후속 master 통합은 live ref의 검토된 R2.2 migration을 원본 순서·bytes로 옮겨 isolated replay와 기존 데이터 불변을 다시 검증한다. 이 문서 PR은 SQL/DB/운영을 실행하지 않으며 table 총계 79개는 불변이다.
+> [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4~12.5의 두 r2.2 설문을 추가한다. public3테이블/column/round_version=r2.1은 유지하고 답변·event payload·participation CHECK를 `(topic,survey_version)`로 정확히 판별한다. 기존2인자 r2.1 답변 함수는 보존하고 export의3인자 내부 함수 경로를 확장한다. topic만 보고 enum을 OR로 넓히지 않는다.
+> 기존 완료 답변/version/event는 재작성하지 않고 다른 version 재제출409를 유지한다. 새 recording 증분 SQL은 실제 파일/해시·독립 검토가 필요하다. 이번 운영 적용은 별도 R2 controlled 절차의 백업/identity/isolated replay/transaction+ledger를 전제로 하며, 이 문서 작업은 SQL/DB를 실행하지 않는다. 운영 내부 ledger는 public 제품 테이블 총계에 포함하지 않는다.
 
 > **2026-09-11 contract-evolution — 무먹 r2 추가형 3테이블 (r2.1)**
 >

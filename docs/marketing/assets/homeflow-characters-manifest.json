@@ -1,0 +1,116 @@
+{
+  "conversion": {
+    "tool": "sharp",
+    "version": "0.35.4",
+    "format": "webp",
+    "quality": 82,
+    "maxWidth": 720,
+    "maxHeight": 720,
+    "backgroundPreserved": true,
+    "sourceModified": false
+  },
+  "assets": [
+    {
+      "key": "spontaneous",
+      "source": {
+        "path": "/Users/shj/Desktop/무먹-클레이-캐릭터-5종/00_오늘의감각형.png",
+        "filename": "00_오늘의감각형.png",
+        "bytes": 1755653,
+        "width": 1254,
+        "height": 1254,
+        "sha256": "4fc522eb3a5ff251be139a83ea296ea3c7e2d385ed3ca60713c29cb8efcac87b"
+      },
+      "output": {
+        "path": "public/assets/funnel/homeflow/characters/spontaneous.webp",
+        "bytes": 32904,
+        "width": 720,
+        "height": 720
+      }
+    },
+    {
+      "key": "mental",
+      "source": {
+        "path": "/Users/shj/Desktop/무먹-클레이-캐릭터-5종/01-머릿속-플래너형.png",
+        "filename": "01-머릿속-플래너형.png",
+        "bytes": 1696634,
+        "width": 1254,
+        "height": 1254,
+        "sha256": "0df1e5f1e19a20efce01f53458a823fa247fc4342f006ad89186f5b13365c525"
+      },
+      "output": {
+        "path": "public/assets/funnel/homeflow/characters/mental.webp",
+        "bytes": 32984,
+        "width": 720,
+        "height": 720
+      }
+    },
+    {
+      "key": "memo",
+      "source": {
+        "path": "/Users/shj/Desktop/무먹-클레이-캐릭터-5종/02-알뜰-메모형.png",
+        "filename": "02-알뜰-메모형.png",
+        "bytes": 1767217,
+        "width": 1254,
+        "height": 1254,
+        "sha256": "084270cdcb6ebd52d5eff9160570ed9934a550b066276249a82263926712a726"
+      },
+      "output": {
+        "path": "public/assets/funnel/homeflow/characters/memo.webp",
+        "bytes": 38482,
+        "width": 720,
+        "height": 720
+      }
+    },
+    {
+      "key": "scheduled",
+      "source": {
+        "path": "/Users/shj/Desktop/무먹-클레이-캐릭터-5종/03-집밥-설계형.png",
+        "filename": "03-집밥-설계형.png",
+        "bytes": 1816700,
+        "width": 1254,
+        "height": 1254,
+        "sha256": "98e6d02559b55a3daaeabac1a62e2fbc835c02ecd9c22ef7224bf404fe095b67"
+      },
+      "output": {
+        "path": "public/assets/funnel/homeflow/characters/scheduled.webp",
+        "bytes": 38680,
+        "width": 720,
+        "height": 720
+      }
+    },
+    {
+      "key": "invitation",
+      "source": {
+        "path": "/Users/shj/Desktop/무먹-클레이-캐릭터-5종/04-베타테스트-초대.png",
+        "filename": "04-베타테스트-초대.png",
+        "bytes": 1633129,
+        "width": 1254,
+        "height": 1254,
+        "sha256": "e24d65c4cdaf122db34b955906b7a96657b599f77b616174ad4677e314dac024"
+      },
+      "output": {
+        "path": "public/assets/funnel/homeflow/characters/invitation.webp",
+        "bytes": 22820,
+        "width": 720,
+        "height": 720
+      }
+    },
+    {
+      "key": "success",
+      "source": {
+        "path": "/Users/shj/Desktop/무먹-클레이-캐릭터-5종/05-신청완료-축하.png",
+        "filename": "05-신청완료-축하.png",
+        "bytes": 1636260,
+        "width": 1254,
+        "height": 1254,
+        "sha256": "3ea79781e4e30f7ee706a5314c20c5c006b006040e6c21ce3b233b3f5a850978"
+      },
+      "output": {
+        "path": "public/assets/funnel/homeflow/characters/success.webp",
+        "bytes": 27450,
+        "width": 720,
+        "height": 720
+      }
+    }
+  ]
+}

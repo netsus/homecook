@@ -45,18 +45,17 @@ for (const width of [375, 320, 1280]) {
   });
 }
 
-test("home YouTube preparation returns to home and social login stays open", async ({ page }) => {
+test("home YouTube preparation returns to home and social registration stays closed", async ({ page, request, baseURL }) => {
   await page.goto("/");
   await page.getByRole("link", { name: /유튜브 가져오기/ }).click();
   await expect(page).toHaveURL(/\/recipes\/new\/youtube$/, { timeout: 15000 });
-  const preparationNotice = page.getByRole("heading", { name: "준비 중인 기능이에요" });
-  if (await preparationNotice.isVisible()) {
-    await page.getByRole("link", { name: "돌아가기" }).click();
-    await expect(page).toHaveURL(url => url.pathname === "/");
-  } else {
-    await page.goto("/");
-  }
+  await expect(page.getByRole("heading", { name: "준비 중인 기능이에요" })).toBeVisible();
+  await page.getByRole("link", { name: "돌아가기" }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/");
   await page.goto("/login");
-  await expect(page.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Google|구글|카카오|네이버|Apple/ }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "정식 출시를 준비하고 있어요" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Google|구글|카카오|네이버|Apple/ })).toHaveCount(0);
+  const response = await request.post("/auth/flow/start", { headers: { origin: baseURL! }, data: { flow_kind: "login", provider: "google" } });
+  expect(response.status()).toBe(503);
+  expect((await response.json()).error.code).toBe("AUTH_FLOW_UNAVAILABLE");
 });

@@ -1,50 +1,126 @@
-# 출시 전 개발 흐름
+# 에이전트 협업 워크플로우 개요
 
-## 상태
+Supabase를 사용하는 모든 변경의 target/gate 기준은 `docs/engineering/supabase-local-only-operations.md`다. remote/linked Supabase check는 required 또는 optional review로 지정하지 않으며 `N/A / forbidden`이다. 대응 required evidence는 pinned isolated local Supabase 또는 실제 full-local read-only/controlled local target에서 수집한다.
 
-현재 Homecook은 출시 전 빠른 개발 모드다. GitHub Actions CI, Stage gate, workpack gate, OMO와 closeout 보고서를 사용하지 않는다.
+## 역할 요약
 
-## 기본 흐름
+Claude는 더 이상 사용하지 않는다.
+모든 역할은 GPT 기반 Codex가 수행하되, 작성·구현과 최종 검토는 `docs/engineering/codex-task-handoff.md`에 따라 task ID가 다른 새 작업으로 분리한다.
 
-1. 현재 공식 문서와 관련 코드를 확인한다.
-2. 작은 작업 브랜치에서 기능을 구현한다.
-3. 로컬 앱을 직접 사용해 변경 흐름을 확인하고 계속 수정한다.
-4. 관련 테스트가 가치 있을 때 선택 실행한다.
-5. 변경 내용과 실제 확인 결과를 짧은 PR 또는 커밋에 남기고 머지한다.
-6. `pnpm deploy:dev`의 빌드와 preview smoke를 통과한 결과를 출시 전 개발 서버에 배포한다.
+| Codex 작업 역할 | 책임 |
+|----------|------|
+| **조정 작업** | Stage 순서, 새 작업 생성, handoff, evidence 수집, 상태 전이 |
+| **작성·구현 작업** | Stage 1 workpack 문서, Stage 2 백엔드, Stage 4 프론트엔드 |
+| **독립 검토 작업** | internal 1.5, Stage 3, Stage 5, final authority, Stage 6 |
 
-별도 Stage, task ID 분리, 독립 승인, workpack/acceptance 갱신, OMO 상태 동기화는 요구하지 않는다.
+---
 
-## 변경 위험에 따른 확인
+> 이 문서는 `change_type`별 gate, `required_checks`, optional review, loop 진입 조건만 다룬다.
+> product slice의 stage owner / 읽을 것 / 산출물 / handoff / 완료 요약은 `docs/engineering/slice-workflow.md`,
+> 공통 원칙과 문서 계층은 `AGENTS.md`,
+> workflow-v2 operator entry는 `docs/engineering/workflow-v2/README.md`를 따른다.
 
-| 변경 | 기본 확인 |
-| --- | --- |
-| 문구·간격·색상 | 해당 화면 모바일/데스크톱 직접 확인 |
-| 일반 UI·상태 처리 | 관련 화면 흐름 + 필요한 관련 테스트 |
-| API·서버 로직 | 요청/응답/오류 흐름 + 관련 테스트 |
-| 인증·권한·소유권 | 다른 사용자 접근 차단과 실패 경로 테스트 |
-| DB migration | 격리 로컬 replay, 백업, 이전 앱 호환성 확인 |
-| 배포 도구·운영 설정 | 전용 테스트와 dry-run/plan 확인 |
+---
 
-`pnpm typecheck`와 `pnpm build`는 배포 전 최소 권장 검사다. 전체 `pnpm test`, 전체 Playwright, Lighthouse, visual regression은 큰 변경이나 출시 준비 때 실행한다.
+출시 전 랜딩 웹 앱 배포 도구와 운영 예외는 `docs-governance` engineering 작업으로 관리하고, 적용 범위·최소 검증·복원 기준은 [prelaunch-web-deployment.md](./prelaunch-web-deployment.md)를 따른다.
 
-## PR
+## Change Type Matrix
 
-PR 본문에는 세 가지만 있으면 된다.
+| `change_type` | 대상 예시 | `required_checks` | `optional_reviews` | `N/A allowed fields` | 기본 PR 경로 |
+|---------------|-----------|-------------------|--------------------|----------------------|-------------|
+| `product-backend` | Route Handler, 상태 전이, 권한, schema | `pnpm install --frozen-lockfile && pnpm verify:backend`, 브랜치/커밋 규칙, 실제 동작 확인 | security reviewer 추가 점검 | Design / Accessibility (UI 변경 없음 근거 필요) | Draft → required checks green → Ready for Review → 전체 PR checks green 후 merge |
+| `product-frontend` | 화면 구현, 상태 UI, 로그인 게이트, UX 흐름 | PR 빠른 게이트: `pnpm install --frozen-lockfile && pnpm verify:frontend:pr`, Ready/merge 전 전체 게이트: `pnpm verify:frontend`, 실제 동작 확인 | Stage 5 디자인 리뷰, `product-design-authority`(new-screen / high-risk / anchor extension), performance reviewer, high-risk UI의 exploratory QA | Security / Performance / Design 항목 중 무영향 영역은 근거와 함께 `N/A` 가능 | Draft → 빠른 required checks green → Ready for Review → 전체 PR checks green 후 merge |
+| `docs-governance` | `AGENTS.md`, `docs/engineering/*.md`, release promotion governance runbook, PR 템플릿 | 문서 정합성 검토, 관련 unit test 또는 validation script, 필요한 경우만 targeted test | 독립 Codex plan/review 작업, human governance review | Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 필요 시 Draft 생략 가능, 단 merge 전 리뷰 기록 필요 |
+| `contract-evolution` | 사용자 승인 기반 공식 요구사항/화면/API/DB/Flow 계약 변경, `CURRENT_SOURCE_OF_TRUTH` 갱신, 관련 workpack 재잠금 | 명시적 사용자 승인 기록, 공식 문서·버전 경로 동기화, `CURRENT_SOURCE_OF_TRUTH` sync, 영향 범위 정리, 관련 workpack/acceptance sync, 필요한 최소 validation | `agent-plan-loop`, `agent-review-loop`, human governance review | docs-only PR이면 Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 별도 docs PR merge → 이후 product slice 재개 |
+| `low-risk docs/config` | 오탈자 수정, 주석/설명 보강, 위험도 낮은 config 정리 | 변경 파일 확인, 필요한 최소 validation | 추가 리뷰 선택 | 영향 없는 항목은 `N/A` + 근거 허용 | 작은 PR 허용, 단 PR 본문 근거 기록 |
 
-- 무엇을 바꿨는지
-- 로컬에서 무엇을 확인했는지
-- 남은 위험이나 확인할 항목
+### Change Type Rules
 
-CI check, approval count, Ready 상태, closeout projection은 머지 조건이 아니다.
+- `product-backend`와 `product-frontend`는 product slice 절차를 따른다.
+- `product-backend` Stage 2를 작은 PR 여러 개로 분할할 수 있다. 각 Ready PR은 base 대비 checked로 새로 닫은 Stage 2 checklist 항목을 최소 1개 포함하고, 남은 항목은 후속 PR을 위해 미체크로 유지한다. 신규 GPT-only 실행은 reviewer waiver를 만들지 않으며, 전체 non-manual checklist 완료는 최종 merged closeout에서만 강제한다.
+- `product-frontend`에서 신규 화면, high-risk UI change, anchor extension은 `docs/engineering/product-design-authority.md` 기준 authority review를 optional이 아니라 사실상 required review로 취급한다.
+- Baemin prototype 적용 product-frontend는 `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 classification vocabulary를 따른다. slice 13-19 화면은 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`의 screen/surface-level matrix를 먼저 확인한다.
+- `frontend.design_authority.generator_artifact`와 `critic_artifact`는 generic nullable fields다. string path는 required/reused artifact, `null`은 intentionally not applicable을 뜻한다.
+- `docs-governance`는 product slice와 같은 `verify:*`를 자동으로 요구하지 않는다. 필요한 최소 검증은 변경 범위에 맞춰 선택한다.
+- `contract-evolution`은 사용자 승인으로 공식 source-of-truth 문서를 바꾸는 경로다. 같은 PR에서 공식 문서, `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`, 관련 workpack/acceptance를 함께 동기화한다.
+- `contract-evolution`이 필요한 슬라이스는 해당 docs PR이 main에 merge되기 전까지 Stage 2/4 product 구현을 시작하지 않는다.
+- `low-risk docs/config`는 리스크가 낮고 제품 계약을 바꾸지 않는 변경만 해당한다.
+- 서버 Mac release promotion governance는 `docs-governance`로 분류한다. `AGENTS.md`, `docs/engineering/current-mac-production-plan.md`, `docs/engineering/local-mac-production-release-promotion.md`, handoff template, release-policy tests가 그 범위에 포함된다.
+- `required_checks`는 이 문서가 단일 소스다. 다른 문서는 change type을 가정하지 않고 이 문서를 참조한다.
+- `required_checks`는 로컬/PR 준비 단계의 최소 검증 세트다. merge gate는 별도로 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 확인한다.
+- GitHub Actions workflow는 required-check deadlock을 막기 위해 PR/protected-branch event에서 항상 시작한다. lightweight scope job이 `scripts/ci-path-filter.mjs`로 변경 범위를 판정하고, 무거운 `quality`, `build`, `security-function-authorization`, `security-smoke`, `dependency-audit` job은 job-level `if`로 실행 또는 intended skip을 보고한다. 내부 job ID와 `needs.scope` 참조는 `scope`를 유지하되 표시 context는 workflow 간 고유해야 하며, CI는 `ci-scope`, Security Review는 `security-review-scope`, Security Smoke는 `security-smoke-scope`를 사용한다. 이 required context workflow에 workflow-level `paths`/`paths-ignore`를 두지 않는다. policy/PR governance는 항상 실행하고, frontend QA·qa eval은 각 문서의 관련 범위 규칙을 따른다.
+- Frontend QA는 `scripts/ci-path-filter.mjs`의 job-level path filter를 따른다. 일반 디자인 PR은 core smoke/a11y/visual만 blocker로 두고, 전체 slice regression과 전체 visual/a11y는 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
+- Slice regression의 device matrix 강도는 `docs/engineering/playwright-e2e.md`가 정한다. Ready for Review/protected branch push는 CI matrix, `full-ci`/nightly/manual은 complete matrix를 사용한다.
+- Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로 변경이 없으면 PR 본문 Performance 섹션에 `N/A: 성능 관련 경로 변경 없음`처럼 근거를 남긴다.
 
-## 출시 전환
+### PR Template Guidance
 
-고객 유입 또는 광고 집행 전에는 별도 작업으로 다음을 다시 정한다.
+- PR 템플릿의 모든 섹션은 무조건 채우기 대상이 아니다.
+- `N/A`를 쓸 때는 `영향 없음` 또는 `해당 없음`의 근거를 한 줄로 남긴다.
+- `docs-governance`, `contract-evolution`, `low-risk docs/config`는 E2E, Lighthouse, Design 항목을 무조건 체크하지 않는다.
+- `Actual Verification`은 “누가 / 어디서 / 무엇을 / 어떤 결과로” 확인했는지 남기는 섹션이다.
+- `Closeout Sync`, `Merge Gate`의 exact ownership / projection semantics는 `docs/engineering/slice-workflow.md`와 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다.
+- `docs/engineering/bookkeeping-authority-matrix.md`는 ownership 정의 문서가 아니라 transition-period writable closeout surface compatibility note다.
+- product slice는 `Ready for Review` 전에 `Actual Verification`, `Closeout Sync`, `Merge Gate` 세 섹션을 비워두지 않는다.
 
-- 빠른 lint/typecheck/build/관련 테스트 CI
-- 인증·권한·DB 변경 전용 검사
-- 배포 전 핵심 Playwright smoke
-- 필요한 branch protection과 필수 check
+### QA Execution Rules
 
-기존 workflow와 OMO 구현은 Git 이력에서 복구할 수 있으나, 당시 구성을 그대로 되살리지 말고 현재 제품 위험에 맞춰 최소 구성부터 만든다.
+- deterministic QA 실행 기준은 `docs/engineering/qa-system.md`가 단일 소스다.
+- Layer 1 deterministic QA는 PR/CI에서 자동 실행되며, 로컬에서는 change type에 맞는 `verify:*` 스크립트로 재현한다.
+- Layer 2 exploratory QA는 기본적으로 자동 실행되지 않는다. `product-frontend` Stage 4 구현 후, `Ready for Review` 전에 명시적으로 `pnpm qa:explore -- --slice <slice>`를 실행한다.
+- Layer 2 exploratory QA를 실행했다면 같은 Stage 4 안에서 `pnpm qa:eval -- --checklist <...> --report <...>`로 report 품질도 남긴다.
+- exploratory QA는 `new-screen`과 `high-risk-ui-change`에서 기본 수행이다. low-risk UI change는 생략 가능하지만 PR 본문에 근거를 남긴다.
+- non-draft frontend PR과 `docs/omo-closeout-<slice>` closeout PR은 `pnpm validate:exploratory-qa-evidence`로 exploratory QA evidence presence 또는 low-risk skip rationale을 재검증할 수 있다.
+- authority-required frontend PR과 `docs/omo-closeout-<slice>` closeout PR은 `pnpm validate:authority-evidence-presence`로 authority report의 visual evidence presence를 재검증할 수 있다.
+- authority review는 exploratory QA를 대체하지 않는다. exploratory QA가 "실사용 흐름과 회복 UX"를 본다면, authority review는 "모바일 앱 품질과 시각/구조 적합성"을 본다.
+- Layer 3 qa eval은 QA 시스템 자체를 변경할 때 명시적으로 `pnpm qa:eval:suite`를 실행하며, 같은 변경 범위에서는 `.github/workflows/qa-eval.yml`이 자동으로 재실행된다.
+
+---
+
+## Loop Usage Rules
+
+- 계획 합의가 중요한 작업은 `docs/engineering/agent-plan-loop.md`의 독립 Codex 작업 plan loop를 권장한다.
+  - 새 슬라이스 시작 전 계획 합의, 여러 governing doc이 얽힌 engineering 변경, open question이 남은 docs-governance에 특히 유효하다.
+  - low-risk docs/config 정리나 단순 기록 보강은 생략 가능하다.
+- 공식 문서에 없는 더 나은 계약이 보여도 plan에 기정사실로 넣지 않는다.
+  - `user approval required` unresolved question으로 남기고 `contract-evolution` 경로로 에스컬레이션한다.
+- `docs/engineering/agent-review-loop.md`의 generic 독립 Codex 작업 review loop는 product slice 기본 public stage 엔진이 아니다.
+  - Stage 1은 예외가 아니라 supervisor 기본 경로 안의 `internal 1.5 docs gate`를 mandatory로 사용한다.
+  - generic review loop는 docs-governance, infra-governance, workflow/tooling 변경, exceptional recovery에서 권장한다.
+  - low-risk docs/config, reviewer가 즉시 판단 가능한 작은 변경은 생략 가능하다.
+- product slice의 stage 시작 조건, handoff, closeout 의무는 이 문서가 아니라 `docs/engineering/slice-workflow.md`가 단일 소스다.
+
+## Codex 새 작업 public stage 흐름
+
+Stage actor 분리, 새 task ID, handoff evidence는 `docs/engineering/codex-task-handoff.md`가,
+Stage별 사전 조건·산출물·closeout은 `docs/engineering/slice-workflow.md`가 단일 소스다.
+
+---
+
+## Design Review Intensity
+
+- `new-screen` 또는 `high-risk-ui-change`
+  - Stage 1 `design-generator` / `design-critic` 권장
+  - Stage 5 디자인 리뷰 기본 수행
+  - `Design Status: temporary -> pending-review -> confirmed`
+- `prototype parity` candidate
+  - `BAEMIN_STYLE_DIRECTION.md` definition + h7/h8 gate scope 확인
+  - prototype-only exclusions는 결손점으로 채점하지 않음
+  - parity promotion은 screen/surface 단위이며 slice 전체나 bottom-tab adjacency로 전파되지 않음
+- `low-risk-ui-change`
+  - 기존 화면의 문구, spacing, token swap, 경미한 polish는 Stage 1 설계 산출물을 생략할 수 있다
+  - Stage 5는 선택 실행 가능하며, Stage 6에서 lightweight design check로 흡수할 수 있다
+  - 생략 시 README 또는 PR 본문에 이유를 남긴다
+
+`high-risk-ui-change` 예시:
+
+- 새 화면 또는 새 핵심 플로우
+- navigation, 정보 구조, interaction model 변경
+- 새 공용 UI 컴포넌트 도입
+- 접근성 또는 상태 UI 동작에 영향이 큰 변경
+
+---
+
+## 서브에이전트 판단 형식
+
+→ `docs/engineering/subagents.md` Shared Contract 참조

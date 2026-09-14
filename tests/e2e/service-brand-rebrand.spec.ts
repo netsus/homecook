@@ -63,28 +63,30 @@ test("checks canonical brand surfaces without changing HOME geometry", async ({ 
       }),
     ).toBeVisible();
     await expect(page.getByRole("region", { name: "무먹 둘러보기" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "무먹 가이드 보기" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" })).toBeVisible();
     await expect(page.getByText("무먹 추천").first()).toBeVisible();
     await assertNoPageOverflow(page);
     await stabilize(page);
     await context.close();
   }
 
-  const guideOnly = await openPage(browser, { height: 568, width: 320 });
-  await installDiscoveryRoutes(guideOnly.page);
-  await guideOnly.page.unroute("**/api/v1/recipes/themes");
-  await guideOnly.page.route("**/api/v1/recipes/themes", async (route) => {
+  const r2Only = await openPage(browser, { height: 568, width: 320 });
+  await installDiscoveryRoutes(r2Only.page);
+  await r2Only.page.unroute("**/api/v1/recipes/themes");
+  await r2Only.page.route("**/api/v1/recipes/themes", async (route) => {
     await route.fulfill({
       json: { success: true, data: { themes: [] }, error: null },
     });
   });
-  await guideOnly.page.goto("/");
-  const guideRail = guideOnly.page.getByRole("region", { name: "무먹 둘러보기" });
-  await expect(guideRail.getByRole("link", { name: "무먹 가이드 보기" })).toBeVisible();
-  await expect(guideRail.getByRole("button")).toHaveCount(0);
-  await assertNoPageOverflow(guideOnly.page);
-  await stabilize(guideOnly.page);
-  await guideOnly.context.close();
+  await r2Only.page.goto("/");
+  const r2Rail = r2Only.page.getByRole("region", { name: "무먹 둘러보기" });
+  await expect(r2Rail.getByRole("link", { name: "집밥 기록 유형 테스트 바로가기" })).toBeVisible();
+  await expect(r2Rail.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" })).toBeVisible();
+  await expect(r2Rail.getByRole("button")).toHaveCount(0);
+  await assertNoPageOverflow(r2Only.page);
+  await stabilize(r2Only.page);
+  await r2Only.context.close();
 
   const about = await openPage(browser, { height: 900, width: 1280 });
   await about.page.goto("/about");

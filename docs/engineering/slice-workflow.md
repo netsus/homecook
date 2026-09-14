@@ -1,29 +1,714 @@
-# 기능 작업 흐름
+# Slice Development SOP
 
-## 상태
+## 이 문서의 역할
 
-과거 Stage 1~6 절차는 2026-09-14부터 사용하지 않는다. workpack README, acceptance, 별도 Codex task, 독립 Stage 승인, closeout과 OMO report는 신규 기능의 시작·머지 조건이 아니다.
+에이전트가 `"<slice> N단계 진행해"` 요청을 받으면 이 문서를 읽고
+해당 Stage의 **담당 · 사전 조건 · 읽을 것 · 산출물 · 포함 필수 사항 · 자가 점검 · 완료 기준 · 완료 요약**을 그대로 따른다.
 
-기존 `docs/workpacks/` 자료는 기능의 역사와 과거 결정을 확인하는 참고 자료다. 내용이 현재 공식 문서와 충돌하면 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`에 연결된 공식 문서를 따른다.
+change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`를 따르며, 이 문서는 stage actor SOP에 집중한다.
+새 Codex 작업 생성, task ID 분리, handoff prompt와 evidence 규칙은 `docs/engineering/codex-task-handoff.md`를 따른다.
 
-## 현재 흐름
+---
 
-1. 사용자 요청과 관련 공식 문서를 확인한다.
-2. 화면, API, DB 영향을 한 번에 파악한다.
-3. 작은 브랜치에서 구현하고 관련 테스트를 선택해 작성하거나 실행한다.
-4. 로컬 앱에서 실제 흐름을 직접 확인하며 수정한다.
-5. 변경 내용과 확인 결과를 짧게 남기고 머지한다.
+## 담당 원칙 및 거부 규칙
 
-백엔드와 프론트엔드는 필요하면 한 브랜치와 한 PR에서 함께 닫을 수 있다. 별도 docs PR을 먼저 병합할 필요도 없다.
+| Stage | 이름 | 담당 |
+|-------|------|------|
+| 1 | Workpack README + acceptance.md 작성 | **Codex `stage1-docs-author` 새 작업** |
+| 2 | 백엔드 구현 | **Codex `backend-implementer` 새 작업** |
+| 3 | 백엔드 PR 리뷰 | **Codex `backend-reviewer` 새 작업** |
+| 4 | 프론트엔드 구현 | **Codex `frontend-implementer` 새 작업** |
+| 5 | 디자인 리뷰 | **Codex `design-reviewer` 새 작업** |
+| 6 | 프론트엔드 PR 리뷰 | **Codex `frontend-closeout-reviewer` 새 작업** |
 
-## 추가 검토가 필요한 경우
+Claude는 어떤 Stage에도 사용하지 않는다.
 
-다음 변경은 속도보다 실패 영향이 크므로 관련 테스트와 별도 검토를 선택한다.
+**작업 분리 규칙 (요청받은 즉시 확인)**
 
-- 인증 또는 다른 사용자 데이터 접근
-- 권한·소유권·read-only 완화
-- 파괴적이거나 되돌리기 어려운 DB 변경
-- 운영 데이터 변경과 복원
-- 배포·네트워크·비밀정보 경계
+- 현재 Codex 작업이 조정 작업이면 해당 Stage를 직접 수행하지 않고 `codex-task-handoff.md`에 따라 전용 새 작업을 연다.
+- Stage 1/2/4 작성·구현 작업은 자기 변경을 최종 승인하지 않는다.
+- internal 1.5, Stage 3/5/6, final authority는 검토 대상 작성·구현 작업과 다른 task ID를 사용한다.
+- 같은 작업의 서브에이전트는 독립 Stage 작업을 대신하지 않는다.
+- 이전 Stage와 같은 task ID이거나 입력 commit SHA가 불명확하면 Stage를 시작하지 않고 handoff를 다시 잠근다.
 
-일반 UI 수정과 기능 추가에는 Stage 이름이나 별도 task ID를 만들지 않는다.
+---
+
+## 공통 브랜치·PR 규칙
+
+- 1단계(docs) 브랜치: `docs/<slice>`
+- 백엔드 브랜치: `feature/be-<slice>`
+- 프론트엔드 브랜치: `feature/fe-<slice>`
+- 보존된 original PR의 base..head commit range가 policy 위반이고 force/rebase 없이 additive repair할 수 없는 예외에만 `feature/<be|fe>-<slice>-superseding-draft` clean successor를 허용한다.
+  - exact suffix 외 변형, `fix/*`, PR body/label override, skip env는 금지한다.
+  - original exact base/head/tree와 successor exact base/parent/head/tree, 동일-tree, clean Conventional range evidence를 PR에 남긴다.
+  - original history를 보존하고 force-push/amend/rebase/reset하지 않으며 successor는 Draft와 같은 product checks, 독립 review를 그대로 거친다.
+  - 상세 recovery 판정과 evidence 계약은 `docs/engineering/git-workflow.md`가 단일 소스다.
+- 파일 수정 전에는 먼저 해당 단계 브랜치로 전환한다. 표준 명령:
+  - `pnpm branch:start -- --slice <slice> --role docs`
+  - `pnpm branch:start -- --slice <slice> --role be`
+  - `pnpm branch:start -- --slice <slice> --role fe`
+- 일반 세션에서는 위 명령이 해당 단계 브랜치를 active intent로 기록한다.
+- 새 user prompt 뒤에 다시 수정하려면 같은 명령으로 branch intent를 재확인해야 하며, project hook가 그 턴의 첫 `Write/Edit` 전에 recorded intent와 current checkout을 맞춘다.
+- product slice 구현 PR은 기본적으로 **Draft**로 시작하고, 실제 동작 확인과 current head 기준 전체 PR checks green 이후에만 merge한다.
+- backend/frontend `required_checks`, Draft 생략 가능 조건, `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
+
+## Closeout Sync Contract
+
+- product slice는 `Ready for Review` 전에 PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 비워두지 않는다.
+- exact closeout ownership / projection / repair semantics는 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다. `docs/engineering/bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface를 기록하는 compatibility note다.
+- Stage 2/4 구현 actor는 자신이 닫은 범위의 checklist / acceptance / PR evidence를 최신화하고, Stage 3/5/6 review actor는 mismatch를 closeout drift로 본다.
+- Stage 2를 여러 작은 backend PR로 나누면 각 PR은 base 대비 이번 PR에서 실제로 닫은 Stage 2 checklist만 `unchecked -> checked`로 바꾼다. 신규 GPT-only 실행은 reviewer waiver를 만들지 않는다. 후속 PR 항목은 unchecked로 유지하며, 기존 계약 metadata/text 변경·완료 항목 재개방·과거 waiver 제거/변경은 별도 선행 docs PR 없이는 허용하지 않는다.
+- authority-required slice는 Stage 4/5와 다른 Codex `product-design-authority` 새 작업의 `final_authority_gate`를 통과하기 전 최종 closeout이나 merge-ready 상태로 넘기지 않는다.
+- Stage 2/4 actor는 Draft PR을 Ready로 전환하기 전에 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode backend|frontend`로 PR body required sections, exploratory QA/eval evidence, authority evidence refs, real smoke evidence, pending Actual Verification placeholder를 한 번에 확인한다.
+- exact validator semantics와 미체크 허용 범위는 `pnpm validate:pr-ready`, `pnpm validate:closeout-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, canonical closeout doc를 따른다.
+
+## Slice Readiness Safeguards
+
+- fixture/mock green만으로 슬라이스가 닫혔다고 간주하지 않는다. 해당 슬라이스가 기존 DB 테이블, 시스템 row, 회원 bootstrap에 의존하면 최소 1회는 real DB smoke 또는 동등한 검증 경로를 가져야 한다.
+- workpack의 `Schema Change`가 `없음`이어도 referenced table 부재 위험이 사라지지 않는다. 기존 테이블을 읽기만 하는 슬라이스도 로컬 또는 합의된 smoke 환경에 스키마가 실제로 준비되어 있는지 확인해야 한다.
+- 로그인/회원가입 직후 자동 생성되는 시스템 데이터(`meal_plan_columns`, `recipe_books` 등)에 의존하는 슬라이스는 Stage 1에서 owning flow를 명시하고, Stage 2 또는 4에서 해당 bootstrap이 실제로 완료되는지 검증해야 한다.
+- real DB, seed, bootstrap readiness가 blocker면 product 구현을 계속 밀지 말고 먼저 스키마/seed/bootstrap 경로를 복구한다.
+
+---
+
+## Stage 1: Workpack README + acceptance.md 작성
+
+**담당: Codex `stage1-docs-author` 새 작업**
+
+### 사전 조건
+
+- 슬라이스 ID와 목표가 전달됨
+- `docs/workpacks/README.md` Slice Order 표의 **Status 열**에서 현재 슬라이스보다 먼저 완료돼야 하는 선행 슬라이스가 전부 `merged` 상태임을 확인 (슬라이스 번호 순서가 기본 의존 순서이며, 예외는 Slice Notes 참조). **`bootstrap`은 `merged`와 동등하게 취급한다.**
+
+### 읽을 것 (이 순서로)
+
+1. `docs/workpacks/_template/README.md` — 모든 섹션 확인
+2. `docs/workpacks/_template/acceptance.md` — 모든 섹션 확인
+3. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` — 공식 문서 버전 확인
+4. `docs/요구사항기준선-v1.7.36.md` — 해당 슬라이스 요구사항 범위
+5. `docs/화면정의서-v1.5.40.md` — 해당 화면 정의
+6. `docs/api문서-v1.2.43.md` — 해당 API 섹션
+7. `docs/db설계-v1.3.38.md` — 영향받는 테이블
+8. `docs/engineering/qa-system.md` — QA 3-Layer와 real DB / fixture 운영 기준
+9. `docs/workpacks/README.md` — Slice Order의 Status 열로 선행 슬라이스 `merged` 여부 확인
+10. `docs/design/design-tokens.md` — 확정 디자인 토큰 (와이어프레임 작성 전 확인)
+11. `docs/design/mobile-ux-rules.md` — 모바일 UX blocker 규칙
+12. `docs/design/anchor-screens.md` — anchor screen / anchor extension 판정
+13. `docs/engineering/product-design-authority.md` — screenshot/Figma authority review 트리거와 evidence 규칙
+
+### 산출물
+
+- `docs/workpacks/<slice>/README.md` — 모든 섹션 채움
+- `docs/workpacks/<slice>/acceptance.md` — Happy Path·State·Error·DataIntegrity·ManualQA·AutomationSplit 채움
+- `docs/workpacks/<slice>/automation-spec.json` — autonomous/closeout validator가 읽는 machine-checkable stage contract
+- `.workflow-v2/work-items/<slice>.json` — Stage 1부터 사용하는 tracked work item
+- `.workflow-v2/status.json` matching item — Stage 1 docs gate가 읽는 tracked status entry
+- (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만) In Scope의 **각 FE 화면마다**:
+  - `ui/designs/<SCREEN_ID>.md` — design-generator 실행
+  - `ui/designs/critiques/<SCREEN_ID>-critique.md` — design-critic 실행 (🟢/🟡 통과 필수)
+- (신규 화면, high-risk UI change, anchor extension이 있는 FE 슬라이스만) In Scope의 **각 FE 화면마다**:
+  - Figma frame URL 또는 screenshot evidence 경로
+  - workpack README `Design Authority` 섹션 기입
+
+### 포함 필수 사항
+
+**README.md**
+- **Goal**: 사용자 가치 2~4문장 (모호한 목표 금지)
+- **In Scope**: 화면·API·상태 전이·DB 영향·Schema Change 체크박스
+- **Out of Scope**: 의도적으로 제외하는 항목 (빈칸 금지)
+- **Dependencies 테이블**: 선행 슬라이스 ID + 현재 상태
+- **Backend First Contract**: request/response/error 계약 + 권한 조건 + 멱등성 정책
+- **Frontend Delivery Mode**: 5개 필수 상태(`loading / empty / error / read-only / unauthorized`) 명시
+- **Design Status**: FE 화면 있으면 `temporary`, BE-only 슬라이스(FE 화면 없음)면 `N/A`
+- **Key Rules**: 이 슬라이스 전용 정책 (도메인 규칙 + 예외 처리)
+- **QA / Test Data Plan**: fixture baseline, real DB smoke 경로, seed/reset 명령, bootstrap이 만들어야 하는 시스템 row, blocker 조건
+- **Contract Evolution Candidates (optional)**: 공식 문서엔 없지만 사용자 승인 시 더 나은 계약이 될 수 있는 후보가 있다면 현재 계약 / 제안 계약 / 기대 사용자 가치 / 영향 문서 / 승인 상태를 기록
+- **Primary User Path**: 3단계 이상의 구체적 사용자 흐름
+
+**acceptance.md**
+- Happy Path: 대표 흐름, API 응답 형식, 타입 일치
+- State/Policy: 상태 전이 일치, read-only, 멱등성
+- Error/Permission: 5개 상태, return-to-action
+- Data Setup / Preconditions: fixture, real DB smoke, seed, bootstrap 완료 기준
+- Manual Only: 자동화 불가 시나리오 명시
+
+**README Delivery Checklist + acceptance metadata**
+- `Manual Only`를 제외한 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 붙인다
+- `stage`: 해당 항목을 실제로 닫는 code stage (`2 | 4`)
+- `scope`: `backend | frontend | shared`
+- `review`: 이 항목을 구조적으로 다시 확인해야 하는 review stage (`3`, `5`, `6`)
+- 신규 실행에서는 과거 `waived_by=claude` metadata를 만들지 않는다. rebuttal이 수용되면 독립 검토 작업이 finding을 재검토하고 evidence와 verdict를 남긴 뒤 closeout coordinator가 체크리스트를 갱신한다
+- 과거 `waived_by=claude` metadata는 merged 실행 이력 호환용으로 보존하며 신규 actor 지시로 해석하지 않는다
+- Stage 5는 `scope=frontend`이면서 `review`에 `5`가 포함된 acceptance / README 항목만 리뷰한다
+- Stage 6는 `Manual Only`를 제외한 non-manual checklist 전체를 최종 closeout 기준으로 리뷰한다
+
+**디자인 산출물 (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만)**
+- In Scope의 각 FE 화면마다 design-generator → design-critic 순서로 실행
+- design-critic 등급이 🔴(재작업)이면 재작업 완료 후 Stage 2로 넘어간다
+- 기존 confirmed 화면의 low-risk UI change는 design-generator·design-critic을 생략할 수 있다. 이 경우 README 또는 PR에 생략 근거를 남긴다.
+- BE-only 슬라이스(In Scope에 FE 화면 없음)는 design-generator·design-critic 불필요
+
+**Design Authority (신규 화면, high-risk UI change, anchor extension이 있는 FE 슬라이스만)**
+- 텍스트 와이어프레임만으로 FE 품질을 잠갔다고 보지 않는다
+- workpack README `Design Authority`에 아래를 남긴다
+  - UI risk
+  - anchor screen dependency
+  - visual artifact(Figma frame URL 또는 screenshot evidence 경로)
+  - authority status
+- `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`를 직접 수정하거나 핵심 행동을 확장하는 슬라이스는 `anchor-extension`으로 본다
+- Baemin prototype 적용 화면은 classification vocabulary를 `ui/designs/BAEMIN_STYLE_DIRECTION.md`에서만 가져온다
+- slice 13-19 화면은 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`의 screen/surface-level matrix를 따른다. `PANTRY` parity가 `PANTRY_BUNDLE_PICKER`까지 자동 승격시키지 않는다
+- `docs/workpacks/<slice>/automation-spec.json`의 `frontend.design_authority`는 generic field set을 쓴다:
+  - `ui_risk`, `anchor_screens`, `required_screens`
+  - `generator_required`, `generator_artifact`
+  - `critic_required`, `critic_artifact`
+  - `authority_required`, `stage4_evidence_requirements`, `authority_report_paths`
+  - `generator_artifact` / `critic_artifact`는 `string | null`이며, 누락 시 parser가 `null`로 정규화한다
+
+### 자가 점검 체크리스트
+
+- [ ] Goal이 사용자 가치 하나만 기술하는가 (복수 가치 혼합 금지)
+- [ ] In Scope의 API 목록이 api문서와 정확히 일치하는가
+- [ ] Backend First Contract에 error 케이스(401/403/404/409/422)가 명시되었는가
+- [ ] Dependencies 선행 슬라이스 상태가 실제 저장소 상태와 일치하는가
+- [ ] Schema Change 체크박스가 올바르게 표시되었는가
+- [ ] Out of Scope에 의도적 제외 항목이 명시되었는가 (빈칸이면 재확인)
+- [ ] Design Status가 올바르게 설정됐는가 (FE 화면 있으면 `temporary`, BE-only면 `N/A`)
+- [ ] acceptance.md에 자동화 불가 시나리오가 Manual Only로 분리되었는가
+- [ ] README에 `QA / Test Data Plan`이 있고 fixture 경로와 real DB smoke 경로가 모두 적혀 있는가
+- [ ] bootstrap/system row 의존 슬라이스라면 Stage 1 문서에 owning flow와 기대 row(`recipe_books ×3`, `meal_plan_columns ×3` 등)가 명시됐는가
+- [ ] 공식 문서에 없는 더 나은 계약 후보가 있다면 workpack에 `Contract Evolution Candidates`로만 기록했고, 승인 전 In Scope 계약에 섞지 않았는가
+- [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 `ui/designs/<SCREEN_ID>.md`가 생성됐는가
+- [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 design-critic 등급이 🟢 또는 🟡인가 (🔴이면 재작업)
+- [ ] low-risk UI change라면 design-generator / design-critic 생략 근거가 README 또는 PR에 기록됐는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이라면 README `Design Authority` 섹션이 채워졌는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이라면 각 화면의 Figma frame URL 또는 screenshot evidence 계획이 남았는가
+- [ ] anchor screen(`HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`)을 직접 수정하거나 확장한다면 low-risk로 잘못 분류하지 않았는가
+- [ ] slice 13-19 화면이라면 h8 matrix의 initial class와 non-screen exclusions를 README / automation-spec 근거에 반영했는가
+
+### 완료 기준
+
+브랜치 `docs/<slice>`에서 PR을 열고, 다음을 먼저 작성한다:
+- `docs/workpacks/<slice>/README.md` + `acceptance.md`
+- `docs/workpacks/<slice>/automation-spec.json`
+- `.workflow-v2/work-items/<slice>.json`
+- `.workflow-v2/status.json` matching item
+- (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
+- (신규 화면, high-risk UI change, anchor extension이 있는 FE 슬라이스) workpack README `Design Authority` 섹션 + Figma frame URL 또는 screenshot evidence 계획
+
+**이 PR에 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `planned` → `docs`로 변경하는 커밋을 포함한다.**
+
+그 다음 Stage 1 완료 게이트로 supervisor 기본 경로의 `internal 1.5 docs gate`를 통과해야 한다.
+
+- `doc_gate_check`: supervisor deterministic validation
+- `doc_gate_review`: Stage 1과 다른 Codex `docs-gate-reviewer` 새 작업의 structured review
+- `doc_gate_repair`: Stage 1 작성 작업의 fix / rebuttal
+- 최대 3회(`independent Codex review -> Stage 1 author repair`) 안에 approve + unresolved required finding 0이어야 한다
+- approve 후 docs PR merge와 pending_recheck가 끝나야 Stage 1 완료로 본다
+- 3회 초과 unresolved required finding은 `human_escalation`이다
+
+공식 source-of-truth 문서 변경이 필요한 사용자 승인 계약 후보가 있다면:
+- Stage 1 결과를 바로 Stage 2 시작 신호로 쓰지 않는다.
+- 먼저 별도 `contract-evolution` docs PR에서 공식 문서와 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`를 갱신한다.
+- 그 후 Stage 1 workpack/acceptance를 새 공식 문서 기준으로 다시 잠그고 main에 merge한다.
+
+### 완료 요약 (Stage 1 Codex 작업이 출력)
+
+```
+## 1단계 완료: <slice-name>
+
+### 작성 내용
+- 화면: <목록>
+- API: <목록>
+- 상태 전이: <목록>
+- DB 영향: <테이블 목록>
+- Backend First Contract 핵심: <request/response/error 요약>
+- QA / Test Data Plan: <fixture, real DB smoke, seed, bootstrap 요약>
+
+### 결정 사항
+- Out of Scope 이유: <내용>
+- Schema 변경 여부: 있음 / 없음
+- Contract Evolution: 없음 / 후보 N건 / 사용자 승인 후 별도 docs PR 필요
+
+### Design 산출물 (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만)
+- <SCREEN_ID>: critique 등급 🟢/🟡
+
+### 다음 단계
+→ 2단계(Codex): feature/be-<slice> 백엔드 구현
+→ 사전 조건: Stage 1 docs PR merge + `internal 1.5 docs gate` pass
+→ 단, 사용자 승인된 Contract Evolution 후보가 있으면 해당 docs PR merge 후 시작
+```
+
+---
+
+## Stage 2: 백엔드 구현
+
+**담당: Codex `backend-implementer` 새 작업**
+
+### 사전 조건
+
+- 1단계 README.md + acceptance.md가 main에 merge됨
+- `docs/workpacks/<slice>/automation-spec.json`이 main에 merge됨
+- `.workflow-v2/work-items/<slice>.json`과 `.workflow-v2/status.json` matching item이 Stage 1에서 잠김
+- supervisor `internal 1.5 docs gate`가 `pass` 상태임
+- `docs/workpacks/<slice>/README.md`의 Dependencies 선행 슬라이스 전부 merged
+- 이 슬라이스에 영향 있는 `Contract Evolution Candidates`가 있다면, 승인된 항목은 별도 `contract-evolution` PR로 official docs와 `CURRENT_SOURCE_OF_TRUTH`가 먼저 merge됨
+- **`docs/workpacks/README.md` Slice Order에서 해당 슬라이스 Status를 `docs` → `in-progress`로 변경한다** (2단계 첫 커밋에 포함)
+
+### 읽을 것 (이 순서로)
+
+1. `AGENTS.md` — 공통 규칙 전체
+2. `docs/engineering/slice-workflow.md` — 2단계 항목
+3. `docs/workpacks/<slice>/README.md` — Backend First Contract, Key Rules, In Scope
+4. `docs/workpacks/<slice>/acceptance.md` — 상태 전이·에러·권한 시나리오 확인
+5. `docs/workpacks/<slice>/automation-spec.json` — autonomous/evaluator/closeout contract 확인
+6. `docs/api문서-v1.2.43.md` — 해당 섹션 전체
+7. `docs/db설계-v1.3.38.md` — 해당 테이블
+8. `docs/engineering/tdd-vitest.md` — 테스트 전략
+9. `docs/engineering/qa-system.md` — Layer 1 deterministic gate + real DB smoke 운영 기준
+10. `docs/engineering/supabase-migrations.md` — Schema 변경 있는 경우만
+11. `docs/engineering/git-workflow.md` — 브랜치·커밋 규칙
+
+### 산출물
+
+브랜치 `feature/be-<slice>`:
+
+- Next.js Route Handlers (`app/api/v1/...`)
+- TypeScript 타입 정의 (request/response/error)
+- 상태 전이 로직
+- Vitest 단위 테스트
+- Schema 변경 있으면 `supabase/migrations/<timestamp>_<slice>_<desc>.sql`
+- Draft PR (본문에 아래 완료 요약 포함)
+
+### 포함 필수 사항
+
+- `{ success, data, error }` 래퍼 유지
+- `error: { code, message, fields[] }` 구조
+- 권한 검증: 소유자 일치, 다른 유저 리소스 수정 불가 (403)
+- 상태 전이: 문서 기준 상태만 허용, 불일치 시 409
+- 멱등성: complete·cancel 성 API는 이미 완료/취소 시 200 + 동일 결과
+- 테스트 최소 시나리오: happy path + 상태 전이 오류 + 권한 거부 + read-only 409
+- `Schema Change: 없음`이어도 이 슬라이스가 읽는 기존 테이블이 real DB/local Supabase에 존재하는지 확인
+- 시스템 row/bootstrap 의존 슬라이스면 fixture만이 아니라 real DB smoke 또는 seed 검증 경로를 최소 1회 실행
+- README `Delivery Checklist`와 acceptance의 백엔드 범위를 PR 준비 전에 갱신
+- 작은 Stage 2 PR은 자신이 새로 만족한 항목만 체크하고 후속 구현 항목은 미체크로 유지한다. Ready gate는 base 대비 Stage 2 항목이 최소 1개 `unchecked -> checked`로 새로 닫혔는지, 기존 계약/완료/과거 waiver 상태가 약화되지 않았는지 검증한다.
+- stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
+- Stage 3 독립 검토의 `required_fix_ids`가 잘못 짚은 항목이라고 판단되면 Stage 2 구현 작업은 `contested_fix_ids[]`와 `rebuttals[]`로 반박 근거를 제출할 수 있다
+- PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 Stage 2 범위 기준으로 최신화
+
+### 자가 점검 체크리스트
+
+- [ ] README Backend First Contract와 실제 구현(request/response/error)이 일치하는가
+- [ ] 완료·취소성 API가 멱등한가
+- [ ] 다른 사용자 리소스를 수정할 수 없는가 (403)
+- [ ] read-only 정책이 우회되지 않는가 (완료 후 수정 시 409)
+- [ ] 문서에 없는 필드·상태·엔드포인트를 임의 추가하지 않았는가
+- [ ] 승인되지 않았거나 문서화되지 않은 `Contract Evolution Candidates`를 구현 scope에 섞지 않았는가
+- [ ] 테스트가 상태 전이·에러·권한·read-only를 고정하는가 (happy path만이 아닌가)
+- [ ] 로컬 또는 합의된 smoke DB에서 referenced table 부재가 없는지 확인했는가 (`Schema Change: 없음`이어도 적용)
+- [ ] bootstrap/system row 의존 슬라이스라면 real DB smoke 또는 seed 경로로 `recipe_books`, `meal_plan_columns` 같은 선행 데이터가 실제 생성되는지 확인했는가
+- [ ] README `Delivery Checklist`와 acceptance의 백엔드 항목을 최신 구현/evidence 기준으로 갱신했는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최신 상태와 일치하는가
+- [ ] `pnpm install --frozen-lockfile && pnpm verify:backend` 통과
+- [ ] 브랜치명이 `feature/be-<slice>`인가
+- [ ] 커밋이 Conventional Commits를 따르는가
+
+### 완료 기준
+
+`pnpm verify:backend` 통과 + 필요한 real DB/schema/bootstrap smoke 확인 → push → required CI green → Draft 해제 → Ready for Review
+
+### PR 본문 완료 요약 (PR ## Summary, ## Workpack/Slice 섹션에 작성)
+
+```
+## Workpack / Slice
+- 관련 workpack: `docs/workpacks/<slice>/README.md`
+- 변경 범위: 백엔드 구현
+
+## Summary
+- 구현한 API: <목록>
+- 상태 전이: <목록>
+- DB 영향: <테이블>
+- 권한 검증: <설명>
+- 멱등성 처리: <설명>
+- 주요 결정 사항: <계약 변경 또는 Out of Scope 처리 이유>
+```
+
+---
+
+## Stage 3: 백엔드 PR 리뷰
+
+**담당: Codex `backend-reviewer` 새 작업**
+
+### 사전 조건 (3가지 모두 충족 시에만 시작)
+
+- PR이 Draft 상태가 아님
+- required CI 워크플로가 모두 green
+- `docs/workpacks/<slice>/README.md`와 `acceptance.md`가 존재함
+
+### 읽을 것 (이 순서로)
+
+1. `docs/workpacks/<slice>/README.md` — Backend First Contract, Key Rules
+2. `AGENTS.md` Review Checks 섹션 전체
+3. `docs/workpacks/<slice>/acceptance.md`
+4. PR diff 코드
+
+### 리뷰 항목 (전부 확인)
+
+- [ ] 완료·취소성 API가 멱등한가
+- [ ] read-only 정책이 우회되지 않는가
+- [ ] `exclude → uncheck` 규칙이 지켜지는가 (장보기 슬라이스)
+- [ ] `add_to_pantry_item_ids`의 `null / [] / 선택값`이 구분되는가 (해당 슬라이스)
+- [ ] 다른 사용자 리소스를 수정할 수 없는가
+- [ ] 독립 요리·플래너 요리 상태 전이가 섞이지 않는가 (요리 슬라이스)
+- [ ] 브랜치·커밋·PR 본문이 Git/PR 규칙을 만족하는가
+- [ ] 테스트가 상태 전이·에러·read-only를 고정하는가
+- [ ] PR 템플릿 Security·Performance·Design 섹션이 기록되었는가
+- [ ] README Backend First Contract와 실제 구현이 일치하는가
+- [ ] referenced table / bootstrap readiness를 real DB smoke나 seed evidence로 확인했는가 (해당 슬라이스)
+- [ ] README `Delivery Checklist`와 acceptance의 백엔드 범위가 실제 머지 상태와 일치하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 비어 있지 않고 실제 evidence를 반영하는가
+- [ ] README + acceptance의 backend/shared checklist 중 review 대상(`review=3`)이 모두 검토되었는가
+
+### 완료 기준
+
+수정 요청 없이 승인 → merge
+
+### 완료 요약 (Stage 3 Codex 검토 작업이 출력)
+
+```
+## 3단계 완료: <slice-name> 백엔드 PR 리뷰
+
+### 리뷰 결과: 승인 / 수정 요청 N건
+
+### 항목별 결과
+- 멱등성: ✅/❌
+- read-only 정책: ✅/❌
+- 권한 검증: ✅/❌
+- 테스트 커버리지(상태전이·에러·read-only): ✅/❌
+- Backend First Contract 일치: ✅/❌
+
+### 수정 요청 사항 (있는 경우)
+- <항목>
+
+### 다음 단계
+→ 4단계(Codex 새 작업): feature/fe-<slice> 프론트엔드 구현
+→ 사전 조건: 이 PR merged
+
+※ **BE-only 슬라이스** (workpack README에 FE 화면 없음 명시):
+  이 PR merge 시 `docs/workpacks/README.md` Slice Status를 `in-progress → merged`로 직접 변경, 슬라이스 종료.
+  아래 최종 완료 요약도 함께 출력한다.
+
+---
+
+## 슬라이스 완료 요약 (BE-only): <slice-name>
+
+| 항목 | 내용 |
+|------|------|
+| 백엔드 브랜치 | `feature/be-<slice>` |
+| 구현 API | <목록> |
+| 상태 전이 | <목록> |
+| 테스트 커버리지 | Vitest: <범위> |
+| Design Status | N/A (FE 화면 없음) |
+| 주요 결정 사항 | <내용> |
+
+### 다음 슬라이스
+→ <next-slice> 1단계 시작 가능 (사전 조건: 이 PR merged)
+```
+
+---
+
+## Stage 4: 프론트엔드 구현
+
+**담당: Codex `frontend-implementer` 새 작업**
+
+### 사전 조건
+
+- 3단계 백엔드 PR이 main에 merged됨
+- 프론트에 영향 있는 공식 계약 변경이 있다면 관련 `contract-evolution` docs PR도 main에 merged됨
+
+> **BE-only 슬라이스** (workpack README에 `Design Status: N/A` 또는 FE 화면 없음 명시):
+> Stage 4~6 스킵. Stage 3 완료 요약에 슬라이스 종료 처리 포함.
+
+### 읽을 것 (이 순서로)
+
+1. `AGENTS.md` — 공통 규칙 전체
+2. `docs/engineering/slice-workflow.md` — 4단계 항목
+3. `docs/workpacks/<slice>/README.md` — Frontend Delivery Mode, Design Status, Key Rules
+4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
+5. `docs/workpacks/<slice>/automation-spec.json` — stage ownership / required states / artifact contract 확인
+6. `docs/화면정의서-v1.5.40.md` — 해당 화면 정의
+7. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
+8. `docs/design/mobile-ux-rules.md`
+9. `docs/design/anchor-screens.md`
+10. `docs/engineering/product-design-authority.md`
+11. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+12. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
+13. `docs/engineering/tdd-vitest.md`
+14. `docs/engineering/playwright-e2e.md`
+15. `docs/engineering/qa-system.md`
+16. `docs/engineering/git-workflow.md`
+
+### 산출물
+
+브랜치 `feature/fe-<slice>`:
+
+- Next.js 페이지·컴포넌트
+- Zustand 상태·API 호출 레이어
+- 5개 필수 UI 상태: `loading / empty / error / read-only / unauthorized`
+- 로그인 게이트 + return-to-action (보호 액션 있는 경우)
+- Vitest 단위 테스트 (상태 전이, 유틸)
+- Playwright E2E (핵심 사용자 흐름)
+- exploratory QA bundle + report + eval result (필수인 변경 강도에서)
+- Draft PR (본문에 아래 완료 요약 포함)
+
+### 포함 필수 사항
+
+- 백엔드 `{ success, data, error }` 계약을 그대로 소비 (임의 변경 금지)
+- API 타입·상태 enum·권한 상태·read-only 여부를 컴포넌트보다 먼저 분리
+- 상태 전이 로직은 테스트로 고정
+- Design Status `temporary`: 기능 가능한 임시 UI, Tailwind 클래스 나중에 교체 가능한 구조 유지
+- 비로그인 보호 액션: 로그인 안내 모달 → return-to-action URL 보존
+- 신규 화면 또는 high-risk UI change인 경우 In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` 와이어프레임을 참조하여 구현
+- 신규 화면, high-risk UI change, anchor extension인 경우 Codex `authority_precheck` internal subphase와 screenshot/Figma evidence 기반 authority 검토를 거친다
+- 신규 화면 또는 high-risk UI change인 경우 구현 완료 시 workpack README의 Design Status를 `temporary → pending-review`로 변경
+- 기존 confirmed 화면의 low-risk UI change는 Design Status를 유지할 수 있다. 이 경우 PR 본문에 low-risk 판단 근거를 남긴다.
+- Layer 1 deterministic gate(`pnpm verify:frontend`)를 먼저 green으로 만들고, exploratory QA는 그 다음에 실행
+- 시스템 row/bootstrap 의존 슬라이스면 fixture mode만이 아니라 real DB/local Supabase smoke 경로도 최소 1회 검증
+- Layer 2 exploratory QA를 실행했다면 Layer 3 단건 `pnpm qa:eval -- --checklist ... --report ...` 결과까지 PR에 남긴다
+- unresolved authority blocker가 있으면 `Ready for Review`로 넘기지 않는다
+- authority-required slice는 public Stage 4 완료 뒤 Codex `authority_precheck`를 먼저 통과해야 Stage 5로 넘어간다
+- README `Delivery Checklist`, acceptance, Design Status를 PR 준비 전에 최신화
+- stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
+- PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 Stage 4 범위 기준으로 최신화
+
+### 자가 점검 체크리스트
+
+- [ ] 5개 UI 상태 모두 존재하는가 (`loading / empty / error / read-only / unauthorized`)
+- [ ] 백엔드 계약 타입을 임의 변경하지 않았는가
+- [ ] 문서에 없는 UI 상태·기능을 추가하지 않았는가
+- [ ] 승인되지 않았거나 문서화되지 않은 `Contract Evolution Candidates`를 UI 구현 scope에 섞지 않았는가
+- [ ] 보호 액션이 있다면 로그인 게이트·return-to-action이 동작하는가
+- [ ] 상태 전이 로직이 테스트로 고정되었는가
+- [ ] Design Status `temporary`이면 스타일이 나중에 교체 가능한 구조인가
+- [ ] 신규 화면 또는 high-risk UI change라면 각 FE 화면의 `ui/designs/<SCREEN_ID>.md`를 참조하여 구현했는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이라면 screenshot 또는 Figma evidence 기반 authority review를 남겼는가
+- [ ] authority review 결과 unresolved blocker가 0개인가
+- [ ] 신규 화면 또는 high-risk UI change라면 구현 완료 후 workpack README의 Design Status를 `pending-review`로 변경했는가
+- [ ] low-risk UI change라면 Design Status 유지 근거를 PR 본문에 남겼는가
+- [ ] 디자인 토큰(`--brand`, `--olive`, `--surface`, `--muted` 등)을 올바르게 사용했는가 (구버전 `#d56a3a`, `#6e7c4a` 사용 금지)
+- [ ] 카드 border-radius 16px, 터치 타겟 44px 기준을 준수했는가
+- [ ] `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과
+- [ ] bootstrap/system row 의존 슬라이스라면 `pnpm dev:local-supabase`, `pnpm dev:demo`, seed script 등 real DB smoke 경로로 실제 생성/조회가 되는지 확인했는가
+- [ ] 최신 QA tooling이나 fixture/auth 시스템이 다른 브랜치에서 먼저 merge되었다면, 최신 base를 반영한 뒤 Layer 1 deterministic gate를 다시 실행했는가
+- [ ] 신규 화면 또는 high-risk UI change라면 `pnpm qa:explore -- --slice <slice>` 번들을 만들고 exploratory QA 보고서를 남겼는가
+- [ ] Layer 2 exploratory QA를 실행했다면 `pnpm qa:eval -- --checklist <.../exploratory-checklist.json> --report <.../exploratory-report.json>` 결과를 남겼는가
+- [ ] README `Delivery Checklist`, acceptance, Design Status가 최신 구현/evidence 기준으로 갱신됐는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최신 상태와 일치하는가
+- [ ] 브랜치명이 `feature/fe-<slice>`인가
+- [ ] 커밋이 Conventional Commits를 따르는가
+
+### 완료 기준
+
+`pnpm verify:frontend` 통과 + 필요한 real DB/bootstrap smoke 완료 + required exploratory QA/eval evidence 확보 + authority blocker 0개 확인(해당 시) → push → required CI green → Draft 해제 → Ready for Review
+
+### PR 본문 완료 요약 (PR ## Summary, ## Workpack/Slice 섹션에 작성)
+
+```
+## Workpack / Slice
+- 관련 workpack: `docs/workpacks/<slice>/README.md`
+- 변경 범위: 프론트엔드 구현
+
+## Summary
+- 구현 화면: <목록>
+- UI 상태: loading ✅ / empty ✅ / error ✅ / read-only ✅ / unauthorized ✅
+- 로그인 게이트: 있음 / 없음
+- Design Status: pending-review / confirmed 유지
+- Design Authority: reviewed / not-required / blocker 잔여 없음
+- QA: Layer 1 결과 + exploratory 보고서 경로 + qa eval 결과
+- 주요 결정 사항: <임시 UI 구조 선택 이유 등>
+```
+
+---
+
+## Stage 5: 디자인 리뷰
+
+**담당: Codex `design-reviewer` 새 작업**
+
+### 트리거 조건
+
+- **기본**: 신규 화면 또는 high-risk UI change에서 workpack README의 Design Status가 `pending-review` 상태
+- **기본 추가**: 신규 화면, high-risk UI change, anchor extension은 authority report가 있어야 Stage 5 public review를 시작할 수 있다
+- authority-required slice는 authority report의 `> evidence:` block에 mobile default + narrow screenshot/Figma evidence를 남기고, `automation-spec.json`의 `stage4_evidence_requirements`와 맞춰야 한다
+- Baemin prototype parity candidate는 `BAEMIN_STYLE_DIRECTION.md` definition과 h8/h7 scope boundary를 확인한 뒤, absence of out-of-scope prototype-only elements를 deficit으로 채점하지 않는다
+- **authority-required**: public Stage 5 approve 뒤에는 Stage 4/5와 다른 Codex `product-design-authority` 새 작업의 `final_authority_gate`를 추가로 통과해야 `confirmed`를 줄 수 있다
+- **예외 1**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
+- **예외 2**: 기존 confirmed 화면의 low-risk UI change는 Stage 5를 생략하고 Stage 6에서 lightweight design check로 흡수할 수 있다
+- Figma URL은 트리거가 아닌 **추가 컨텍스트** — 제공되면 리뷰 시 참조
+
+> Stage 5는 **구현된 코드** 리뷰다. design-critic(Stage 1 설계 문서 리뷰)과 다르며,
+> Tailwind 클래스·토큰 사용·컴포넌트 구조의 코드 수준 검토를 담당한다.
+
+### 리뷰 범위 (Design Status와 변경 강도에 따라)
+
+- `pending-review` (기본): In Scope의 각 FE 화면마다 spacing·typography·color hierarchy·공용 컴포넌트 일관성·Tailwind 클래스·접근성 기본 요소(aria, focus, contrast) + 5개 UI 상태·화면정의서 일치
+- `temporary` (예외·명시적 요청): 기능 동작·5개 UI 상태 존재·화면정의서 기준 필수 요소 누락 여부만 검토
+- `confirmed` 유지 대상의 low-risk UI change: token 사용, spacing drift, loading/empty/error/read-only 회귀 여부만 점검
+- authority report가 있는 화면: 위 항목 + blocker/major issue 해결 여부 + screenshot/Figma evidence 적정성 확인
+
+### 읽을 것 (이 순서로)
+
+1. `docs/workpacks/<slice>/README.md` — Design Status 확인
+2. `docs/workpacks/<slice>/acceptance.md` — FE 관련 checklist와 `review=5` 대상 확인
+3. `docs/화면정의서-v1.5.40.md` — 해당 화면 정의
+4. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
+5. `docs/design/mobile-ux-rules.md`
+6. `docs/design/anchor-screens.md`
+7. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+8. 현재 컴포넌트 코드
+9. `ui/designs/authority/<SCREEN_ID>-authority.md` — 신규 화면, high-risk UI change, anchor extension인 경우 필수
+10. exploratory QA report / eval result (있는 경우)
+11. Figma 디자인 컨텍스트 (URL 있는 경우, 추가 컨텍스트)
+
+### 산출물
+
+- 디자인 피드백 (구체적 수정 위치·파일명·라인 포함)
+- Tailwind 클래스 교체 제안 (컴포넌트 구조 변경은 Codex와 협의)
+- workpack README Design Status 업데이트 준비 (`confirmed` 가능 여부는 authority-required slice에서 독립 Codex final authority gate가 결정)
+- authority blocker가 남으면 `confirmed` 보류와 재검토 조건 명시
+- stage-result에 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`를 남긴다
+- authority-required slice면 `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `blocker_count`, `major_count`, `minor_count`도 남긴다
+- final authority 검토 작업이 rebuttal을 받아들이면 evidence와 `accepted_rebuttal_ids[]`를 남기고, closeout coordinator가 README/acceptance 상태를 반영한다
+
+### 완료 요약 (리뷰 종료 시 Codex가 출력)
+
+```
+## 5단계 완료: <slice-name> 디자인 리뷰
+
+### Design Status: pending-review → confirmed / confirmed 유지 / confirmed 보류
+※ temporary 상태에서 명시적 요청 시: 기능 검토만 수행, 스타일 리뷰 제외
+※ low-risk UI change는 confirmed 유지 + lightweight design check 가능
+
+### 확인 항목
+- 필수 UI 상태 5개: ✅/❌
+- 화면정의서 일치: ✅/❌
+- 공용 컴포넌트 일관성: ✅/❌ (confirmed 시만)
+- 접근성 기본 요소: ✅/❌ (confirmed 시만)
+- authority blocker 해소: ✅/❌ (해당 시)
+- final authority gate 필요 여부: 예 / 아니오
+
+### 피드백 요약
+- <수정 제안 항목 (파일명·위치 포함)>
+
+### 다음 단계
+→ authority-required slice: 별도 Codex `product-design-authority` 작업의 `final_authority_gate`
+→ 그 외: 6단계(Codex): 프론트엔드 PR 리뷰
+→ 사전 조건: required CI green + Draft 해제
+```
+
+---
+
+## Stage 6: 프론트엔드 PR 리뷰
+
+**담당: Codex `frontend-closeout-reviewer` 새 작업**
+
+### 사전 조건 (3가지 모두 충족 시에만 시작)
+
+- PR이 Draft 상태가 아님
+- required CI 워크플로가 모두 green
+- `docs/workpacks/<slice>/README.md`와 `acceptance.md`가 존재함
+
+### 읽을 것 (이 순서로)
+
+1. `docs/workpacks/<slice>/README.md` — Design Status, Frontend Delivery Mode, Key Rules
+2. `docs/workpacks/<slice>/acceptance.md` — 체크리스트 전체
+3. `ui/designs/authority/<SCREEN_ID>-authority.md` — 해당 시
+4. exploratory QA report / eval result (해당 시)
+5. `AGENTS.md` Review Checks 섹션
+6. PR diff 코드
+
+### 리뷰 깊이 (Design Status에 따라)
+
+- `temporary`: 기능 동작·5개 UI 상태·상태 전이·권한 게이트
+- `confirmed`: 위 + spacing·hierarchy·공용 컴포넌트·Tailwind 일관성
+- `confirmed` 유지의 low-risk UI change: 기능 동작 + token/spacing drift + 핵심 상태 UI 회귀
+
+### 리뷰 항목 (전부 확인)
+
+- [ ] 5개 UI 상태(`loading / empty / error / read-only / unauthorized`)가 모두 존재하는가
+- [ ] 백엔드 계약 타입이 그대로 소비되었는가 (임의 변경 없음)
+- [ ] 상태 전이 로직이 테스트로 고정되었는가
+- [ ] 로그인 게이트·return-to-action이 올바른가 (해당 시)
+- [ ] acceptance에서 `Manual Only`를 제외한 In Scope 미체크 항목이 없는가
+- [ ] Layer 1 deterministic gate와 real DB/bootstrap smoke evidence가 PR에 남아 있는가
+- [ ] exploratory QA가 required인 변경이면 report와 qa eval 결과가 있고, 주요 finding이 처리되었거나 근거와 함께 남아 있는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이면 authority report가 있고 final authority verdict가 `pass`인가
+- [ ] 브랜치·커밋·PR 본문이 규칙을 만족하는가
+- [ ] 보안/성능/디자인 영향이 PR 템플릿에 기록되었는가
+- [ ] README `Delivery Checklist`, roadmap status, Design Status, acceptance가 서로 일치하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최종 merge 상태를 반영하는가
+- [ ] `Manual Only`를 제외한 non-manual checklist 전체가 review 범위에 포함되었는가
+
+### 완료 기준
+
+수정 요청 없이 승인 + current head 기준 started PR checks 전체 green 확인 → merge.
+**merge 시 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `in-progress` → `merged`로 변경한다** (이 PR에 포함).
+
+### Post-Merge OMO Report
+
+merge 완료 후 Codex는 `master`를 최신화한 뒤 OMO efficiency report를 남긴다.
+
+1. `git checkout master && git pull --ff-only origin master`
+2. `pnpm omo:report -- --work-item <slice>`
+3. 생성 파일: `docs/workpacks/<slice>/omo-report.md`
+4. report의 `순수 진행 누적시간`이 `0.0분`으로 떨어지고 실제 작업이 OMO dispatch runner가 아니라 여러 Codex 작업의 handoff로 진행된 경우, **slice 14 `docs/workpacks/14-cook-session-start/omo-report.md` 방식**의 backfilled estimate로 보정한다:
+   - Codex task handoff artifact와 stage-result mtime
+   - Stage PR timestamp / merge timestamp
+   - git commit history
+   - GitHub current-head check 결과
+   - source PR body closeout projection
+   - CI 대기와 단순 watch 시간은 제외, Codex Stage 작업이 직접 수행한 구현/리뷰/수리/검증 시간은 포함
+5. backfilled report는 최소한 다음 section을 포함한다:
+   - `report_mode | backfilled`
+   - `Measurement Basis`
+   - `Evidence Sources`
+   - `Stage Time`
+   - `Timeline Reconstruction`
+   - `Merge Gate Evidence`
+   - `Verification Snapshot`
+   - `Efficiency Notes`
+6. 산정값은 초 단위 타임트래킹이 아니라 OMO 운영 효율 비교용 estimate임을 명시한다. Stage overlap은 허용하되, 총 시간 차이는 `CI/check 대기`, `PR watch`, `stage overlap` 같은 제외/보정 사유로 설명한다.
+7. `pnpm validate:workpack`, `pnpm validate:workflow-v2`, `git diff --check`를 실행한다.
+8. report가 Stage 6 PR에 이미 포함되어 있지 않으면 `docs/omo-report-<slice>` 같은 docs-only branch/PR로 merge한다.
+
+### 완료 요약 (슬라이스 최종 완료 요약 포함, Codex가 출력)
+
+```
+## 6단계 완료: <slice-name> 프론트엔드 PR 리뷰
+
+### 리뷰 결과: 승인 / 수정 요청 N건
+### Design Status 기준: temporary / confirmed
+
+### 항목별 결과
+- 5개 UI 상태: ✅/❌
+- 상태 전이 테스트: ✅/❌
+- 로그인 게이트: ✅/❌ / 해당 없음
+- acceptance.md 전체 pass: ✅/❌
+
+---
+
+## 슬라이스 완료 요약: <slice-name>
+
+| 항목 | 내용 |
+|------|------|
+| 백엔드 브랜치 | `feature/be-<slice>` |
+| 프론트엔드 브랜치 | `feature/fe-<slice>` |
+| 구현 API | <목록> |
+| 구현 화면 | <목록> |
+| 상태 전이 | <목록> |
+| 테스트 커버리지 | Vitest: <범위> / Playwright: <범위> |
+| Design Status | <최종 상태> |
+| 주요 결정 사항 | <내용> |
+
+### 다음 슬라이스
+→ <next-slice> 1단계 시작 가능 (사전 조건: 이 PR merged + OMO report generated/merged)
+```

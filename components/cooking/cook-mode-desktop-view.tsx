@@ -50,6 +50,7 @@ export function CookModeDesktopView({
     <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
       <WebTopNav
         activeId={variant === "planner" ? "planner" : undefined}
+        brandTone="dark"
         rightSlot={
           <div className="web-profile-button">
             {variant === "planner" ? "JY" : "◎"}

@@ -1,7 +1,5 @@
 # Desktop MVP Porting Slice 2 Closeout Draft
 
-> 역사적 PNG 캡처는 [파일별 복구 기록](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)으로 이관했다. 아래 판정과 ledger는 당시 결과를 유지한다.
-
 Status: Claude post-implementation authority signed off
 Plan: `.omx/plans/desktop-mvp-prototype-porting-ralplan-20260518.md`
 Branch: `feature/desktop-mvp-port-slice2-home-recipe`
@@ -32,14 +30,14 @@ Slice 2 ports the desktop visual layer for:
 
 Reference screenshots:
 
-- [archive: slice2/screenshots/prototype-home-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
-- [archive: slice2/screenshots/prototype-recipe-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- `ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/prototype-home-1280.png`
+- `ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/prototype-recipe-1280.png`
 
 MVP screenshots:
 
-- [archive: slice2/screenshots/mvp-home-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
-- [archive: slice2/screenshots/mvp-recipe-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
-- [archive: slice2/screenshots/mvp-ingredient-modal-1280.png](../../historical-manifests/retired-assets-20260910.md#desktop-mvp-porting)
+- `ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/mvp-home-1280.png`
+- `ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/mvp-recipe-1280.png`
+- `ui/designs/evidence/desktop-mvp-porting/slice2/screenshots/mvp-ingredient-modal-1280.png`
 
 Ledger:
 

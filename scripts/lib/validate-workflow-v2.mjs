@@ -383,23 +383,24 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const codexTaskHandoffErrors = [
     ...containsAll(codexTaskHandoff, [
-      "Homecook의 신규 작업은 Claude를 사용하지 않는다.",
-      "상태: **선택형**",
-      "같은 task가 작성과 최종 검토를 수행할 수 있다.",
-      "별도 task ID는 사용자가 분리를 요청했거나 고위험 변경에 독립 검토가 필요할 때만 사용한다.",
+      "Homecook의 모든 신규 작업은 Claude를 사용하지 않는다.",
+      "별도 ChatGPT/Codex 작업(새 task ID, 새 세션)",
+      "작성 작업은 자기 변경을 최종 승인하지 않는다.",
+      "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
+      "같은 작업 안의 서브에이전트는 탐색·테스트·보조 리뷰에는 쓸 수 있지만, 독립 Stage 승인자 역할을 대신하지 않는다.",
     ]),
   ];
 
   const sliceWorkflowErrors = [
     ...containsAll(sliceWorkflow, [
-      "| 1 | Workpack README + acceptance.md 작성 | **Codex `stage1-docs-author` 역할(같은 task 가능)** |",
-      "| 2 | 백엔드 구현 | **Codex `backend-implementer` 역할(같은 task 가능)** |",
-      "| 3 | 백엔드 PR 리뷰 | **Codex `backend-reviewer` 역할(같은 task 가능)** |",
-      "| 4 | 프론트엔드 구현 | **Codex `frontend-implementer` 역할(같은 task 가능)** |",
-      "| 5 | 디자인 리뷰 | **Codex `design-reviewer` 역할(같은 task 가능)** |",
-      "| 6 | 프론트엔드 PR 리뷰 | **Codex `frontend-closeout-reviewer` 역할(같은 task 가능)** |",
+      "| 1 | Workpack README + acceptance.md 작성 | **Codex `stage1-docs-author` 새 작업** |",
+      "| 2 | 백엔드 구현 | **Codex `backend-implementer` 새 작업** |",
+      "| 3 | 백엔드 PR 리뷰 | **Codex `backend-reviewer` 새 작업** |",
+      "| 4 | 프론트엔드 구현 | **Codex `frontend-implementer` 새 작업** |",
+      "| 5 | 디자인 리뷰 | **Codex `design-reviewer` 새 작업** |",
+      "| 6 | 프론트엔드 PR 리뷰 | **Codex `frontend-closeout-reviewer` 새 작업** |",
       "Claude는 어떤 Stage에도 사용하지 않는다.",
-      "작성·구현·검토에 별도 task ID를 요구하지 않는다.",
+      "같은 작업의 서브에이전트는 독립 Stage 작업을 대신하지 않는다.",
     ]),
     ...containsNone(sliceWorkflow, [
       "| 4 | 프론트엔드 구현 | **Claude** |",
@@ -410,8 +411,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const agentWorkflowOverviewErrors = [
     ...containsAll(agentWorkflowOverview, [
       "Claude는 더 이상 사용하지 않는다.",
-      "## Codex public stage 흐름",
-      "필요한 경우의 task handoff는 `docs/engineering/codex-task-handoff.md`가,",
+      "## Codex 새 작업 public stage 흐름",
+      "Stage actor 분리, 새 task ID, handoff evidence는 `docs/engineering/codex-task-handoff.md`가,",
       "Stage별 사전 조건·산출물·closeout은 `docs/engineering/slice-workflow.md`가 단일 소스다.",
     ]),
     ...containsNone(agentWorkflowOverview, [
@@ -430,10 +431,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:status`",
       "`pnpm omo:tail`",
       "`pnpm validate:omo-bookkeeping`",
-      "Claude는 사용하지 않는다. Stage 역할은 같은 Codex task에서 수행할 수 있다.",
-      "authority-required UI도 같은 task에서 design-reviewer와 product-design-authority 관점을 순서대로 검토할 수 있다.",
+      "Claude는 사용하지 않는다. 모든 Stage actor는 역할별 별도 Codex 작업이다.",
+      "authority-required UI는 서로 다른 Codex Stage 4, design-reviewer, product-design-authority 작업을 거친다.",
       "manual merge handoff",
-      "새 Codex 작업 handoff는 고위험 독립 검토나 병렬화가 필요할 때만 사용한다.",
+      "새 Codex 작업 handoff는 모든 product Stage의 기본 경로다.",
       "live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
       "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
       "legacy scheduler/tick은 신규 Stage actor 실행에 사용하지 않는다.",
@@ -553,7 +554,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(opencodeReadme, [
       "Claude는 사용하지 않는다.",
       "모든 primary agent model은 OpenAI GPT 계열을 사용한다.",
-      "같은 Codex task가 Stage 역할과 작성·구현·검토·병합을 이어서 맡을 수 있다.",
+      "Stage 실행은 `docs/engineering/codex-task-handoff.md`에 따라 역할별 ChatGPT/Codex 새 작업이 맡는다.",
       "`provider=retired`, `bin=disabled`",
       "## Allowed OMO Commands",
       "## Suspended Commands",
@@ -581,7 +582,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "slice06",
       "pnpm omo:promotion:update",
       "#### `manual-handoff-policy`",
-      "같은 Codex task 완료가 기본 경로다.",
+      "Codex 새 작업 handoff는 모든 product Stage의 기본 경로다.",
       "#### `live-smoke-standard`",
       "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox rehearsal 중 더 이른 쪽을 따른다.",
       "#### `scheduler-standard`",
@@ -643,7 +644,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(claudeEntry, [
       "# Claude 진입점 폐기 안내",
       "Homecook은 Claude를 더 이상 사용하지 않는다.",
-      "모든 신규 Stage는 `AGENTS.md`와 `docs/engineering/slice-workflow.md`를 따르며 같은 Codex task에서 수행할 수 있다.",
+      "모든 신규 Stage는 `AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/codex-task-handoff.md`에 따라 역할이 분리된 별도 Codex 작업이 수행한다.",
     ]),
     ...containsNone(claudeEntry, [
       "Claude 역할",

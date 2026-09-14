@@ -526,12 +526,9 @@ test.describe("QA visual regression", () => {
       }),
     ).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    const acceptedScreen = page.locator(".web-menu-add-shell");
-    await expect(acceptedScreen).toBeVisible();
-    const acceptedScreenshot = await acceptedScreen.screenshot({
+    await expect(page).toHaveScreenshot("qa-youtube-import-accepted.png", {
       animations: "disabled",
-    });
-    expect(acceptedScreenshot).toMatchSnapshot("qa-youtube-import-accepted.png", {
+      fullPage: true,
       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
   });

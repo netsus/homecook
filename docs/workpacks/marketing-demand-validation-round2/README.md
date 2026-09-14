@@ -1,14 +1,19 @@
 # Slice: marketing-demand-validation-round2
 
-## 2026-09-13 R2.2 공개본과 master 통합 인수
+## 사용자 승인 로컬 후보 — 선형 homeflow
 
-- 최신 계약: [r2 상세 계약 §12~13](../../marketing-demand-validation-r2-contract.md). `round_version=r2.1`은 유지하고 기본 설문은 `r2.2-recording` / `r2.2-homeflow`다.
-- 과거 task ID는 provenance로만 보존한다. 현재 통합은 같은 Codex task에서 구현·검토·병합할 수 있다.
-- 실제 광고 공개본: `origin/release/mumeok-r2-live-20260913@92fc7bd0963af2e47f560151bec8f3cabd553c6a`, `BUILD_ID=prelaunch-92fc7bd0963a-xNvOjU`.
-- 과거 r2.1 Stage 1/2 체크와 evidence는 역사 범위로 보존한다. 현재 공개됐다는 사실만으로 R2.2의 미체크 acceptance나 독립 Stage review를 자동 통과시키지 않는다.
-- master 통합은 R2.2 DB/parser, recording/homeflow UI, 결과 공유/social metadata를 하나의 통합 PR에서 선별하고 current master에서 검증할 수 있다.
-- live 브랜치 전체 snapshot, 로컬 중복 snapshot/evidence, HOME R2 배너, 비로그인 PANTRY 예시, dark COOK_MODE 내비게이션은 이 workpack 범위가 아니다. 공개 recipe 복구, dependency/security, 배포 도구·운영 기록도 별도 change type으로 판정한다.
-- 통합 작업은 production mutation 0이며 현재 광고 배포를 변경하지 않는다. 별도 task나 Stage 승인을 기다리지 않고 current-head CI와 실제 동작 검증 후 병합할 수 있다.
+로컬 작성·검증 결과는 [집밥흐름 로컬 구현 인수](../../marketing/homeflow-local-implementation.md)에 남긴다. 기존 Stage 완료 상태는 변경하지 않는다.
+
+2026-09-11 최신 요청으로 [현재 PRD](../../marketing/homecook-flow-round2-prd.md)와 [로컬 구현 계약](../../marketing/homeflow-linear-implementation-contract.md)의 선형 homeflow 화면·새 설문 버전을 작성/검증한다. 기존 아래 r2.1 문항·독립 활동은 이전 버전의 보존 기준이다. 이번 변경은 배포·master 머지 없이 작업 브랜치에 남기며, 기존 checked 항목을 새 버전의 통과나 독립 Stage 승인으로 재사용하지 않는다.
+## 2026-09-12 후속 계약 인수: 두 r2.2 직렬 UI
+
+최신 사용자 승인과 정확한 질문·유형·버전·복원은 [위임 계약 §12](../../marketing-demand-validation-r2-contract.md)를 따른다. 아래 Stage1/r2.1/Stage2 기록과 이미 얻은 승인·테스트 증거는 보존하며 새 r2.2 UI의 완료 증거로 재사용하지 않는다. recording 기본 진입의 메뉴/소개 대신 Q1, homeflow 승인 export의 Hero/직렬6체험이 이번 UI 기준이다. 기존 메뉴·UI 자유6순서·유형없음·3장면 요구는 이전 UI의 역사 범위로 남고, 서버 독립3활동·단독/6순서 API 및 권한 검증은 계속 유지한다.
+
+새 survey_version은 `r2.2-recording`/`r2.2-homeflow`, round_version은 `r2.1`이다. 원문4문항, version+topic exact parser/SQL, recording의 render-start금지·첫 실제 답변 start, 완료 readonly·버전별draft·유형없는복원을 검증한다. 결과/체험 view 때문에 v2 API/action이나 임의 공개field를 추가하지 않는다. 현재 stage4 machine evidence/그림/테스트의 이전 UI 기준을 새 직렬 UI에 맞춰 적용하는 일은 통합 구현자의 인수 항목이며, 과거 PASS를 새 UI PASS로 복사하지 않는다.
+
+이번 배포 통합은 `release/mumeok-r2-only-20260912`에서 live `458ce2daab6cdd91a70504657ce5981a4d4acf3c` 기반 R2 변경과 사용자가 추가 승인한 PR #1557의 정확한 3파일 수정만 포함한다. 원격 master0이며 그 밖의 비R2 동작은 보존한다. 확인된 보안 경고 해소에 필요한 next/eslint-config-next 15.5.24, sharp 0.35.4, postcss 8.5.23 및 이에 필수인 lock 변경만 audit·build·회귀 검증 후 허용하고 무관한 업데이트는 제외한다. 일반 SQL guard를 넓히지 않는 전용 controlled runbook은 `docs/engineering/marketing-round2-controlled-prelaunch.md`로 인수한다. 이 문구는 실제 배포 성공을 의미하지 않는다.
+
+순서: 이 후속 계약의 독립 검토 → 두 버전/저장 연결 및 R2-only 통합 검증 → exact3SQL/백업/identity/실제readiness를 갖춘 controlled DB·웹 절차 검토 → 해당 승인 범위 실행이다. 같은 사용자 승인을 재질문하거나 새로운 전역 workflow를 만들지 않는다.
 
 ## Goal
 
@@ -20,7 +25,7 @@
 - 승인 계약 merge SHA: `7f00e62c13572b5b2c0d54c997fe628f7a56567e`, [PR #1551](https://github.com/netsus/homecook/pull/1551).
 - 독립 검토 head: `24093c94ebf53676050353088f173ef7f6315445`; reviewer task `01a08c9d-2cf5-75c0-b409-b3a6ab2d265a`; 해당 계약의 unresolved required 0. 이 승인으로 현재 Stage 1을 자가 승인하지 않는다.
 - 계약의 과거 작성 시점 Draft 설명과 현재 병합 이력을 구분한다. 이 재잠금은 병합된 규범 내용을 그대로 소비한다.
-- r2.1 작성 task는 `01a08c92-ec13-78a2-8071-681afe60527b`; PR #1550은 `fa7848924442df2790592b14875ccb6148e0c6ba`로 병합됐다. 이 기록은 r2.1 완료 이력이며 새 §12~13 R2.2의 독립 docs gate나 구현 통합 승인을 대신하지 않는다.
+- 현재 작성 task: `01a08c92-ec13-78a2-8071-681afe60527b`; PR #1550은 Draft이며 독립 internal 1.5 검토·merge 대기다. Stage 1 완료 선언과 Stage 2 시작 권한은 조정 작업이 관리한다.
 - 최초 PR 초안의 v2 제약은 이 문서와 acceptance로 대체한다. R2에 유형 결과, 선형 8단계, 별도 네 번째 의견 활동을 정의하지 않는다. 공식 계약에 없는 API 필드·함수·테이블은 추가하지 않는다.
 
 ## Branches

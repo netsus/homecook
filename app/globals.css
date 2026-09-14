@@ -1630,32 +1630,80 @@
   text-align: left;
 }
 
-.home-mobile-theme-rail-guide-only {
-  overflow-x: hidden;
-}
-
-.home-mobile-guide-card {
-  display: block;
-  border-color: var(--brand-primary-border);
-  background: var(--brand-primary-soft);
-  color: var(--brand-primary-hover);
+.home-mobile-r2-card {
+  display: flex;
+  isolation: isolate;
+  align-items: stretch;
+  border-color: color-mix(in srgb, var(--brand-primary) 24%, white);
+  color: #0d3b66;
   box-shadow: 0 5px 14px color-mix(in srgb, var(--brand-primary-shadow-color) 72%, transparent);
 }
 
-.home-mobile-guide-card:focus-visible,
+.home-mobile-r2-card-recording {
+  background: linear-gradient(135deg, #f4fbff 0%, #dff3ff 100%);
+}
+
+.home-mobile-r2-card-homeflow {
+  background: linear-gradient(135deg, #fff8e8 0%, #e8f7ff 100%);
+}
+
+.home-mobile-r2-card:focus-visible,
 .home-mobile-theme-card:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--brand-primary) 32%, transparent);
   outline-offset: 2px;
 }
 
-.home-mobile-guide-graphic {
-  position: absolute;
-  inset: 0;
-  display: block;
-  background: #f3faff;
+.home-mobile-r2-copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: 68%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  padding: 14px 0 14px 14px;
 }
 
-.home-mobile-guide-card-placeholder {
+.home-mobile-r2-copy small {
+  color: var(--brand-primary-text);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.home-mobile-r2-copy strong {
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.25;
+  word-break: keep-all;
+}
+
+.home-mobile-r2-copy > span {
+  color: var(--brand-primary-text);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.home-mobile-r2-graphic {
+  position: absolute;
+  right: -5px;
+  bottom: -8px;
+  z-index: 1;
+  display: grid;
+  width: 42%;
+  height: 92%;
+  place-items: end center;
+}
+
+.home-mobile-r2-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.home-mobile-r2-card-placeholder {
   border-color: transparent;
   background: var(--surface-subtle);
   box-shadow: none;
@@ -2135,10 +2183,6 @@
   font-weight: 900;
 }
 
-body:has(> .service-prelaunch-notice-mobile) {
-  --mobile-prelaunch-notice-offset: 33px;
-}
-
 @media (max-width: 640px) {
   .not-found-screen {
     justify-content: flex-start;
@@ -2563,25 +2607,18 @@ body:has(> .service-prelaunch-notice-mobile) {
 
 .cook-whole-board-mobile {
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 
 .cook-whole-board-mobile .cook-whole-panel {
-  padding: 8px;
-}
-
-.cook-whole-board-mobile .cook-whole-panel h2 {
-  margin-bottom: 6px;
-  font-size: 12px;
+  padding: 10px;
 }
 
 .cook-whole-board-mobile .cook-whole-ingredients {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  gap: 7px;
 }
 
 .cook-whole-board-mobile .cook-whole-ingredients > li:not(.cook-whole-section-label) {
@@ -2590,32 +2627,29 @@ body:has(> .service-prelaunch-notice-mobile) {
 }
 
 .cook-whole-board-mobile .cook-whole-section-label {
-  flex: 0 0 auto;
-  align-self: center;
-  margin: 0;
-  white-space: nowrap;
+  flex: 0 0 100%;
 }
 
 .cook-whole-board-mobile .cook-whole-ingredient {
   display: inline-flex;
   width: fit-content;
   max-width: 100%;
-  min-height: 34px;
-  gap: 7px;
+  min-height: 44px;
+  gap: 8px;
   border-radius: 999px;
-  padding: 6px 9px;
+  padding: 8px 11px;
 }
 
 .cook-whole-board-mobile .cook-whole-ingredient-name {
   flex: 0 1 auto;
   max-width: min(54vw, 230px);
-  font-size: 15px;
+  font-size: 20px;
   line-height: 1.1;
 }
 
 .cook-whole-board-mobile .cook-whole-ingredient-amount {
   flex: 0 0 auto;
-  font-size: 15px;
+  font-size: 20px;
   line-height: 1.1;
 }
 
@@ -2638,7 +2672,7 @@ body:has(> .service-prelaunch-notice-mobile) {
 .cook-whole-ingredients,
 .cook-whole-steps {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2687,11 +2721,11 @@ body:has(> .service-prelaunch-notice-mobile) {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-items: stretch;
-  gap: 6px;
+  gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.07);
-  padding: 8px;
+  padding: 9px;
 }
 
 .cook-whole-step-marker {
@@ -2755,10 +2789,10 @@ body:has(> .service-prelaunch-notice-mobile) {
   margin: 0;
   overflow-wrap: break-word;
   color: rgba(255, 255, 255, 0.86);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
   letter-spacing: 0;
-  line-height: 1.34;
+  line-height: 1.42;
   word-break: keep-all;
 }
 
@@ -3364,7 +3398,7 @@ button {
     --web-content-max: 1200px;
     --web-content-wide: 1440px;
     --web-nav-h: 72px;
-    --web-prelaunch-notice-h: 0px;
+    --web-prelaunch-notice-h: 32px;
     --web-font: var(--font-body);
   }
 
@@ -4132,12 +4166,9 @@ button {
   }
 
   .web-planner-screen,
-  .web-meal-screen {
-    padding-top: 40px;
-  }
-
+  .web-meal-screen,
   .web-menu-add-screen {
-    padding-top: 8px;
+    padding-top: 40px;
   }
 
   .web-planner-page-head {
@@ -5324,8 +5355,23 @@ button {
     text-align: left;
   }
 
+  .web-home-landing-carousel {
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    border-radius: 18px;
+  }
+
+  .web-home-landing-track {
+    display: flex;
+    transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
   .web-home-landing-banner {
     display: grid;
+    width: 100%;
+    flex: 0 0 100%;
     grid-template-columns: 132px minmax(0, 520px) 130px;
     min-height: 128px;
     align-items: center;
@@ -5335,7 +5381,6 @@ button {
     border: 1px solid color-mix(in srgb, var(--brand-accent) 24%, white);
     border-radius: 18px;
     background: #eef8ff;
-    margin-top: 20px;
     padding: 0 28px;
     color: var(--web-text-1);
     transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
@@ -5345,6 +5390,11 @@ button {
     border-color: color-mix(in srgb, var(--brand-accent) 50%, white);
     box-shadow: 0 10px 26px rgba(var(--brand-primary-rgb), 0.12);
     transform: translateY(-1px);
+  }
+
+  .web-home-landing-banner-homeflow {
+    border-color: color-mix(in srgb, #f2b94b 28%, white);
+    background: linear-gradient(110deg, #fff9eb 0%, #eef9ff 72%);
   }
 
   .web-home-landing-banner-image {
@@ -5396,6 +5446,46 @@ button {
     color: white;
     font-size: 14px;
     font-weight: 800;
+  }
+
+  .web-home-landing-dots {
+    position: absolute;
+    right: 16px;
+    bottom: 8px;
+    z-index: 3;
+    display: flex;
+    gap: 2px;
+  }
+
+  .web-home-landing-dots button {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    background: transparent;
+  }
+
+  .web-home-landing-dots button::after {
+    position: absolute;
+    inset: 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--brand-primary) 30%, white);
+    content: "";
+  }
+
+  .web-home-landing-dots button[aria-pressed="true"]::after {
+    background: var(--brand-primary);
+  }
+
+  .web-home-landing-dots button:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: -2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .web-home-landing-track {
+      transition: none;
+    }
   }
 
   .web-discovery-kicker {
@@ -6957,10 +7047,6 @@ button {
     margin-bottom: 24px;
   }
 
-  .web-menu-add-hero {
-    margin-bottom: 16px;
-  }
-
   .web-menu-add-hero h1,
   .web-manual-head h1,
   .web-yt-head h1 {
@@ -7917,6 +8003,32 @@ button {
   .web-cooking-shell-dark .web-topnav {
     border-bottom-color: var(--web-line);
     background: rgba(8, 12, 16, 0.96);
+  }
+
+  .web-cooking-shell-dark .web-topnav-brand {
+    overflow: hidden;
+    border: 1px solid rgba(139, 210, 255, 0.18);
+    border-radius: 13px;
+    background: #102d45;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  }
+
+  .web-cooking-shell-dark .mumeok-horizontal-logo-dark {
+    width: 184px;
+  }
+
+  .web-cooking-shell-dark .web-topnav-tab:hover,
+  .web-cooking-shell-dark .web-topnav-tab:focus-visible {
+    background: rgba(0, 161, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(83, 190, 255, 0.48);
+    color: #f4fbff;
+  }
+
+  .web-cooking-shell-dark .web-topnav-tab-active:hover,
+  .web-cooking-shell-dark .web-topnav-tab-active:focus-visible {
+    background: var(--brand-primary-hover);
+    box-shadow: none;
+    color: #ffffff;
   }
 
   .web-pantry-screen,
@@ -8900,17 +9012,17 @@ button {
 
   .web-cook-whole-screen {
     min-height: calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h));
-    padding: 10px 0 16px;
+    padding: 16px 0 24px;
   }
 
   .web-cook-whole-board {
     display: grid;
-    height: max(560px, calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h) - 26px));
+    height: max(560px, calc(100dvh - var(--web-nav-h) - var(--web-prelaunch-notice-h) - 40px));
     min-height: 0;
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
     border: 1px solid rgba(139, 210, 255, 0.16);
-    border-radius: 18px;
+    border-radius: 22px;
     background: #111923;
     box-shadow: var(--web-shadow-card);
   }
@@ -8923,12 +9035,12 @@ button {
 
   .web-cook-whole-top {
     display: grid;
-    min-height: 58px;
+    min-height: 70px;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 16px;
     border-bottom: 1px solid rgba(139, 210, 255, 0.14);
-    padding: 0 18px;
+    padding: 0 24px;
   }
 
   .web-cook-whole-title {
@@ -8941,7 +9053,7 @@ button {
     max-width: min(100%, 720px);
     overflow: hidden;
     color: var(--text-inverse);
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 900;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -8949,9 +9061,9 @@ button {
 
   .web-cook-whole-title > span {
     display: block;
-    margin-top: 3px;
+    margin-top: 5px;
     color: rgba(255, 255, 255, 0.66);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
   }
 
@@ -8970,12 +9082,12 @@ button {
   .web-cook-whole-cancel,
   .web-cook-whole-complete {
     display: inline-flex;
-    min-height: 34px;
+    min-height: 38px;
     align-items: center;
     border-radius: var(--web-r-pill);
     border: 0;
-    padding: 0 12px;
-    font-size: 12px;
+    padding: 0 14px;
+    font-size: 13px;
     font-weight: 900;
     line-height: 1;
     white-space: nowrap;
@@ -9009,10 +9121,10 @@ button {
   }
 
   .web-cook-whole-grid {
-    grid-template-columns: minmax(220px, 0.28fr) minmax(0, 1fr);
+    grid-template-columns: minmax(300px, 0.4fr) minmax(0, 1fr);
     min-height: 0;
-    gap: 10px;
-    padding: 10px;
+    gap: 14px;
+    padding: 16px;
   }
 
   .web-cook-whole-grid .cook-whole-panel {
@@ -9021,14 +9133,9 @@ button {
     flex-direction: column;
     overflow: hidden;
     border-color: rgba(139, 210, 255, 0.16);
-    border-radius: 14px;
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.055);
-    padding: 10px;
-  }
-
-  .web-cook-whole-grid .cook-whole-panel h2 {
-    margin-bottom: 8px;
-    font-size: 13px;
+    padding: 14px;
   }
 
   .web-cook-whole-grid .cook-whole-ingredients,
@@ -9039,47 +9146,47 @@ button {
   }
 
   .web-cook-whole-grid .cook-whole-ingredient {
-    min-height: 38px;
-    border-radius: 10px;
-    padding: 7px 9px;
+    min-height: 56px;
+    border-radius: 13px;
+    padding: 10px 12px;
   }
 
   .web-cook-whole-grid .cook-whole-ingredient-name {
-    font-size: 14px;
+    font-size: 20px;
   }
 
   .web-cook-whole-grid .cook-whole-ingredient-amount {
-    font-size: 14px;
+    font-size: 20px;
     font-weight: 700;
   }
 
   .web-cook-whole-grid .cook-whole-step {
-    grid-template-columns: 104px minmax(0, 1fr);
-    grid-template-rows: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
     gap: 10px;
-    border-radius: 12px;
-    padding: 9px 10px;
+    border-radius: 15px;
+    padding: 11px;
   }
 
   .web-cook-whole-grid .cook-whole-step-main {
-    gap: 8px;
+    gap: 10px;
   }
 
   .web-cook-whole-grid .cook-whole-step-number {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-    font-size: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 16px;
   }
 
   .web-cook-whole-grid .cook-whole-method-tag {
-    min-height: 22px;
-    font-size: 11px;
+    min-height: 23px;
+    font-size: 12px;
   }
 
   .web-cook-whole-grid .cook-whole-step-copy p {
-    font-size: 18px;
-    line-height: 1.34;
+    font-size: 20px;
+    line-height: 1.4;
   }
 
   @media (max-width: 1180px) {

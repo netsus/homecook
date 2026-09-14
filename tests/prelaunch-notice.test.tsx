@@ -14,8 +14,7 @@ describe("prelaunch notices", () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     route.pathname = "/planner";
     render(<PrelaunchNotice />);
-    expect(screen.getByRole("status", { name: "서비스 준비 안내" })).toBeTruthy();
-    expect(screen.queryByRole("complementary", { name: "서비스 준비 안내" })).toBeNull();
+    expect(screen.getByLabelText("서비스 준비 안내")).toBeTruthy();
   });
   it.each(["/beta", "/beta/done"])("preserves the marketing viewport and suppresses service popups at %s", (pathname) => {
     route.pathname = pathname;

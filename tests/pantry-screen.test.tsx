@@ -198,34 +198,49 @@ describe("PantryScreen", () => {
     });
   });
 
-  it("shows the unauthorized gate when not authenticated", () => {
+  it("shows a client-only pantry preview instead of fetching private data when not authenticated", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<PantryScreen initialAuthenticated={false} />);
 
-    expect(
-      screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
-    ).toBeTruthy();
-    expect(screen.getByText(/보유 재료를 등록하면 장보기 목록에서 자동으로 제외/)).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "팬트리 미리보기 6개" })).toBeTruthy();
+    expect(screen.getByText("로그인 전 예시예요. 로그인하면 내 재료로 바뀌어요.")).toBeTruthy();
+    expect(screen.getByText("양파", { exact: false })).toBeTruthy();
+    expect(screen.getByText("돼지고기", { exact: false })).toBeTruthy();
+    expect(mockFetchPantryList).not.toHaveBeenCalled();
     expect(screen.getByRole("link", { name: "무먹, 무엇을 먹든" })).toBeTruthy();
     expect(screen.getByLabelText("서비스 준비 안내")).toBeTruthy();
-    const gate = screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
-      .closest("[data-state-tone='gate']");
-    expect(gate?.closest(".web-auth-gate-shell")).toBeTruthy();
-    expect(gate?.parentElement?.className).toContain("web-auth-gate-screen");
+    expect(screen.queryByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeNull();
   });
 
-  it("keeps the mobile bottom tab visible on the unauthorized gate", async () => {
+  it("keeps the mobile bottom tab visible on the guest pantry preview", async () => {
     installMatchMedia(true);
 
     render(<PantryScreen initialAuthenticated={false} />);
 
-    expect(
-      await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
-    ).toBeTruthy();
+    expect(await screen.findByText("로그인 전 예시 · 저장되지 않아요")).toBeTruthy();
+    expect(screen.getByText("양파", { exact: false })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "팬트리 하단 탭" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("aria-current")).toBe(
       "page",
     );
+  });
+
+  it("lets a guest explore ingredient selection but gates the final pantry add", async () => {
+    installMatchMedia(true);
+    mockFetchIngredients.mockResolvedValue({
+      items: [{ id: "ingredient-tofu", standard_name: "두부", category: "단백질" }],
+    });
+    const user = userEvent.setup();
+
+    render(<PantryScreen initialAuthenticated={false} />);
+    await screen.findByText("로그인 전 예시 · 저장되지 않아요");
+    await user.click(screen.getByRole("button", { name: "재료 추가" }));
+    await user.click(await screen.findByRole("checkbox", { name: "두부" }));
+    await user.click(screen.getByRole("button", { name: "팬트리에 추가 (1)" }));
+
+    expect(await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" })).toBeTruthy();
+    expect(screen.getByText("로그인하면 선택한 재료를 내 팬트리에 추가할 수 있어요.")).toBeTruthy();
+    expect(mockAddPantryItems).not.toHaveBeenCalled();
   });
 
   it("shows the pantry item list when authenticated", async () => {

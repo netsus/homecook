@@ -608,7 +608,7 @@ async function captureViewportEvidence(
   await expect(plannerProductRow).toBeVisible();
   expect(plannerNutritionRequests).toBe(0);
   await expectNoHorizontalOverflow(page);
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.keyboard.press("Home");
   expect(await page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(1);
   await captureTrackedEvidenceOnDemand(page, {
     path: path.join(EVIDENCE_DIR, `planner-week-after-${viewport.suffix}.png`),
@@ -737,9 +737,7 @@ test.describe("community prepared food catalog Stage 4", () => {
     await dialog.getByRole("button", { name: "신고 보내기" }).click();
     await expect(dialog.getByRole("alert")).toContainText("신고를 보내지 못했어요.");
     await dialog.getByRole("button", { name: "신고 보내기" }).click();
-    await expect(
-      page.locator('[role="status"]').filter({ hasText: "신고했어요." }),
-    ).toHaveText("신고했어요.");
+    await expect(page.getByRole("status")).toHaveText("신고했어요.");
   });
 
   test("PATCH 401 keeps edit return context with product id/action and restores the same edit draft after login", async ({ page }, testInfo) => {
