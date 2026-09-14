@@ -3,6 +3,9 @@ name: code-review-and-quality
 description: Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions before it enters the main branch.
 ---
 
+Current repository AGENTS.md controls workflow and verification scope. Examples in this skill and its references do not make CI, full-suite tests, Stage/workpack artifacts, separate approvals or closeout mandatory. Do not install or restore such gates for ordinary work; follow an explicit user request when designing new tooling. Related local checks and same-task review are sufficient where the repository says so.
+
+
 # Code Review and Quality
 
 ## Overview

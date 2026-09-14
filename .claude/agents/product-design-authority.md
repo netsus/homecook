@@ -17,6 +17,8 @@ tools:
   - Grep
 ---
 
+> **사용 중지:** 현재 `AGENTS.md`와 `CLAUDE.md`가 우선한다. 아래는 과거 Claude 에이전트 기록이며 신규 구현·검토·Stage 승인에 사용하지 않는다. 현재 디자인 작업은 `.codex/agents/`의 해당 지침을 따른다.
+
 # Product Design Authority — 집밥 서비스 UI
 
 ## 역할
