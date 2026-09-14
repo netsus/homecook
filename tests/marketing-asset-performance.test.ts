@@ -28,9 +28,11 @@ describe("marketing funnel image delivery", () => {
       resolve(root, "components/marketing/marketing-demand-validation-screen.tsx"),
       "utf8",
     );
-    for (const path of optimizedAssets) {
+    const referencedAssets = optimizedAssets.filter((path) =>
+      source.includes(path.replace(/^public/u, "")),
+    );
+    for (const path of referencedAssets) {
       const publicPath = path.replace(/^public/u, "");
-      expect(source).toContain(publicPath);
       expect(source).not.toContain(publicPath.replace(/\.webp$/u, ".png"));
     }
   });

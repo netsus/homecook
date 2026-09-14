@@ -44,7 +44,7 @@ describe("auth flow routes", () => {
     cancelAuthFlowAttempt.mockResolvedValue({ ok: true });
   });
 
-  it("blocks prelaunch social login without reading or writing the auth ledger", async () => {
+  it("starts prelaunch social login through the normal auth ledger", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     const { POST } = await import("@/app/auth/flow/start/route");
     const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
@@ -52,9 +52,12 @@ describe("auth flow routes", () => {
       headers: { "content-type": "application/json", origin: "https://app.mumeok.kr" },
       body: JSON.stringify({ flow_kind: "login", provider: "google" }),
     }));
-    expect(response.status).toBe(503);
-    expect((await response.json()).error.code).toBe("AUTH_FLOW_UNAVAILABLE");
-    expect(startAuthFlowAttempt).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.started).toBe(true);
+    expect(startAuthFlowAttempt).toHaveBeenCalledWith({
+      flowKind: "login",
+      provider: "google",
+    });
     expect(cancelAuthFlowAttempt).not.toHaveBeenCalled();
     expect(getUser).not.toHaveBeenCalled();
   });

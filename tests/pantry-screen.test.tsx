@@ -208,7 +208,7 @@ describe("PantryScreen", () => {
     expect(screen.getByText("돼지고기", { exact: false })).toBeTruthy();
     expect(mockFetchPantryList).not.toHaveBeenCalled();
     expect(screen.getByRole("link", { name: "무먹, 무엇을 먹든" })).toBeTruthy();
-    expect(screen.getByLabelText("서비스 준비 안내")).toBeTruthy();
+    expect(screen.queryByLabelText("서비스 준비 안내")).toBeNull();
     expect(screen.queryByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeNull();
   });
 

@@ -10,11 +10,11 @@ vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
 afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 
 describe("prelaunch notices", () => {
-  it("shows an inline preparation notice in the service by default", () => {
+  it("does not show an inline preparation notice in the service by default", () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     route.pathname = "/planner";
     render(<PrelaunchNotice />);
-    expect(screen.getByLabelText("서비스 준비 안내")).toBeTruthy();
+    expect(screen.queryByLabelText("서비스 준비 안내")).toBeNull();
   });
   it.each(["/beta", "/beta/done"])("preserves the marketing viewport and suppresses service popups at %s", (pathname) => {
     route.pathname = pathname;
@@ -34,7 +34,7 @@ describe("prelaunch notices", () => {
     vi.stubEnv("NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES", "1");
     route.pathname = "/planner";
     render(<PrelaunchNotice />);
-    expect(screen.getByLabelText("서비스 준비 안내")).toBeTruthy();
+    expect(screen.queryByLabelText("서비스 준비 안내")).toBeNull();
     expect(isPrelaunchFeatureLocked()).toBe(false);
   });
 });
