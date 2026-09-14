@@ -20,6 +20,11 @@
 
 ## Calculator / Unit Conversion
 
+- [x] `TO_TASTE` active approved profile의 observed zero nutrient는 exact zero로 반영하고 같은 profile의 비영/결측 nutrient는 미확정으로 유지한다 <!-- omo:id=accept-to-taste-observed-zero;stage=2;scope=backend;review=3,6 -->
+- [x] TO_TASTE zero 반영은 ingredient amount를 0으로 만들거나 원 profile/value를 수정하지 않으며 `recipe-nutrition-v2` 새 snapshot identity를 사용한다 <!-- omo:id=accept-to-taste-zero-no-coercion;stage=2;scope=backend;review=3,6 -->
+- [x] 나트륨만 incomplete인 Recipe Detail은 나트륨 값을 최소값/미확정으로 보존하되 전체 부분 계산 문구를 표시하지 않고, Planner 완성도도 탄수화물·단백질·지방으로 판정한다 <!-- omo:id=accept-macro-only-completeness-copy;stage=2;scope=backend,frontend;review=3,6 -->
+- [x] 크기 없는 piece는 exact approved medium 표준만 사용하며 실제 g 입력을 우선한다 <!-- omo:id=accept-medium-piece-default;stage=2;scope=backend;review=3,6 -->
+
 - [x] `g/kg` 질량 경로가 승인 profile 기준으로 정확 계산된다 <!-- omo:id=accept-unit-mass-direct;stage=2;scope=backend;review=3,6 -->
 - [x] recipe `amount + unit`은 조리에 실제 투입한 가식부 사용량으로 계산하고 구매 총중량으로 재해석하거나 가식부율을 다시 곱하지 않는다 <!-- omo:id=accept-actual-edible-recipe-amount;stage=2;scope=backend;review=3,6 -->
 - [x] 상태 미지정 direct 질량/호환 부피는 current approved source/profile + active approved primary ingredient link의 완전한 chain이 전체 상태에서 정확히 1개일 때만 선택하고 0개/복수면 fail-closed한다 <!-- omo:id=accept-unique-default-nutrition-chain;stage=2;scope=backend;review=3,6 -->

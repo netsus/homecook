@@ -26,6 +26,7 @@ const SOURCE_KEYS = [
 ] as const;
 const FORBIDDEN_SOURCE_TEXT = /(?:raw[_-]?(?:payload|row|provider|response)|api[_-]?key|servicekey|secret|cookie|authorization|access[_-]?token|manifest[_-]?(?:sha|path)|(?:^|\/)private(?:\/|$)|(?:^|\/)internal(?:\/|$))/i;
 const AUTH_QUERY_KEY_TEXT = /(?:password|passwd|passphrase|secret|token|credential|apikey|accesskey|subscriptionkey|servicekey|signature|cookie)/;
+const PLANNER_COMPLETENESS_CODES = ["carbohydrate_g", "protein_g", "fat_g"] as const;
 
 export interface PlannerNutritionEntryProjection {
   storage_key: string;
@@ -254,10 +255,12 @@ export function aggregatePlannerNutritionEntries(
   const values = Object.fromEntries(
     PLANNER_NUTRITION_CORE_CODES.map((code) => [code, aggregateValue(entries, code)]),
   ) as PlannerNutritionAggregate["values"];
-  const statuses = Object.values(values).map((value) => value.status);
-  const calculationStatus = statuses.every((status) => status === "complete")
+  const completenessStatuses = PLANNER_COMPLETENESS_CODES.map(
+    (code) => values[code].status,
+  );
+  const calculationStatus = completenessStatuses.every((status) => status === "complete")
     ? "complete"
-    : statuses.some((status) => status !== "unavailable")
+    : Object.values(values).some((value) => value.status !== "unavailable")
       ? "partial"
       : "unavailable";
 
@@ -282,7 +285,9 @@ export function aggregatePlannerNutritionEntries(
     .map((source) => [JSON.stringify(sourceTuple(source)), source] as const)).values()]
     .sort(compareSources);
   const incompleteEntryCount = entries.filter((entry) =>
-    PLANNER_NUTRITION_CORE_CODES.some((code) => normalizeValue(entry.values[code]).status !== "complete")
+    PLANNER_COMPLETENESS_CODES.some(
+      (code) => normalizeValue(entry.values[code]).status !== "complete",
+    )
   ).length;
 
   return {

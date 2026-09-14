@@ -116,6 +116,7 @@ type CalculatorResult = {
   target_ingredient_count: number;
   missing_reasons: string[];
   warnings: string[];
+  calculation_version: string;
 };
 
 const CORE_VALUES: Record<NutrientCode, NutrientValue> = {
@@ -491,7 +492,88 @@ describe("recipe nutrition calculator", () => {
     expect(unavailable.scalable_values).not.toHaveProperty("energy_kcal");
   });
 
-  it("fails closed for 장 without exact piece metadata while direct grams still need no size", async () => {
+  it("reflects only observed zero nutrients for TO_TASTE without inventing its non-zero contribution", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const measured = directIngredient({ id: "measured", amount: 100, unit: "g" });
+    const waterToTaste = directIngredient({
+      id: "water-to-taste",
+      amount: null,
+      unit: null,
+      ingredient_type: "TO_TASTE",
+      scalable: false,
+    }, {
+      energy_kcal: { amount: 0, value_status: "observed" },
+      carbohydrate_g: { amount: 0, value_status: "observed" },
+      protein_g: { amount: 0, value_status: "observed" },
+      fat_g: { amount: 0, value_status: "observed" },
+      sodium_mg: { amount: 3, value_status: "observed" },
+      sugars_g: { amount: 0, value_status: "observed" },
+    });
+
+    const input = recipeInput([measured, waterToTaste]);
+    delete input.calculation_version;
+    const result = calculate(input);
+
+    expect(result.values.energy_kcal).toEqual({
+      amount: 100,
+      known_amount: null,
+      status: "complete",
+      display_mode: "total",
+    });
+    expect(result.values.sodium_mg).toEqual({
+      amount: null,
+      known_amount: 50,
+      status: "partial",
+      display_mode: "minimum",
+    });
+    expect(result.fixed_values.energy_kcal).toBe(0);
+    expect(result.missing_reasons).toContain("TO_TASTE_EXCLUDED:water-to-taste");
+    expect(result.warnings).toContain("TO_TASTE_EXCLUDED");
+    expect(result.calculation_version).toBe("recipe-nutrition-v2");
+  });
+
+  it("does not trust observed zero nutrients from an unapproved TO_TASTE profile", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const unapprovedWater = directIngredient({
+      id: "unapproved-water-to-taste",
+      amount: null,
+      unit: null,
+      ingredient_type: "TO_TASTE",
+      scalable: false,
+    }, {
+      energy_kcal: { amount: 0, value_status: "observed" },
+      carbohydrate_g: { amount: 0, value_status: "observed" },
+      protein_g: { amount: 0, value_status: "observed" },
+      fat_g: { amount: 0, value_status: "observed" },
+      sodium_mg: { amount: 0, value_status: "observed" },
+    });
+    unapprovedWater.nutrition!.source.review_status = "pending";
+
+    const result = calculate(recipeInput([
+      directIngredient({ id: "measured", amount: 100, unit: "g" }),
+      unapprovedWater,
+    ]));
+
+    expect(result.values.energy_kcal).toEqual({
+      amount: null,
+      known_amount: 100,
+      status: "partial",
+      display_mode: "minimum",
+    });
+    expect(result.missing_reasons).toContain(
+      "TO_TASTE_EXCLUDED:unapproved-water-to-taste",
+    );
+  });
+
+  it("defaults a missing piece size to the approved medium standard", async () => {
     const calculator = await calculatorModule();
     const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
@@ -504,8 +586,21 @@ describe("recipe nutrition calculator", () => {
       size_code: null,
       preparation_state: "raw-edible",
       edible_state: null,
-      piece_weight: null,
     });
+    sheet.piece_weight = {
+      id: "piece-weight-medium-sheet",
+      ingredient_id: sheet.ingredient_id,
+      size_code: "medium",
+      preparation_state: "raw-edible",
+      weight_g: 40,
+      review_status: "approved",
+      is_active: true,
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("HOMECOOK-medium-sheet"),
+      },
+    };
     const grams = directIngredient({
       id: "grams-without-size",
       amount: 60,
@@ -517,13 +612,51 @@ describe("recipe nutrition calculator", () => {
     const result = calculate(recipeInput([sheet, grams]));
 
     expect(result.values.energy_kcal).toEqual({
-      amount: null,
-      known_amount: 60,
-      status: "partial",
-      display_mode: "minimum",
+      amount: 140,
+      known_amount: null,
+      status: "complete",
+      display_mode: "total",
     });
-    expect(result.warnings).toContain("PIECE_WEIGHT_REQUIRED");
-    expect(result.missing_reasons).toContain("PIECE_WEIGHT_REQUIRED:sheet-without-size");
+    expect(result.calculation_quality).toBe("mixed");
+    expect(result.warnings).toContain("PIECE_WEIGHT_CONVERSION_USED");
+    expect(result.missing_reasons).not.toContain("PIECE_WEIGHT_REQUIRED:sheet-without-size");
+  });
+
+  it.each([
+    ["대", 100],
+    ["모", 300],
+  ])("uses the approved medium piece standard for the %s unit", async (unit, weight) => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const ingredient = directIngredient({
+      id: `piece-${unit}`,
+      amount: 0.5,
+      unit,
+      size_code: null,
+      preparation_state: "as_published",
+    });
+    ingredient.piece_weight = {
+      id: `piece-weight-${unit}`,
+      ingredient_id: ingredient.ingredient_id,
+      size_code: "medium",
+      preparation_state: "as_published",
+      weight_g: weight,
+      review_status: "approved",
+      is_active: true,
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource(`HOMECOOK-${unit}`),
+      },
+    };
+
+    const result = calculate(recipeInput([ingredient]));
+
+    expect(result.values.energy_kcal.amount).toBe(weight / 2);
+    expect(result.warnings).toContain("PIECE_WEIGHT_CONVERSION_USED");
   });
 
   it("does not invent or require an edible_state field for an exact piece path", async () => {

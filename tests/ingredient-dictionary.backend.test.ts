@@ -239,6 +239,25 @@ describe("21 ingredient dictionary backend", () => {
     });
   });
 
+  it("excludes user-removed nutrition variants from direct and synonym resolution", async () => {
+    const inactiveId = "b530cbdf-7d78-4dca-b43e-7b43a9114084";
+    const { dbClient } = createIngredientDb({
+      ingredients: [{ id: inactiveId, standard_name: "돼지고기 · 갈비 (구운것(팬))" }],
+      synonyms: [{
+        synonym: "구운 돼지갈비",
+        ingredients: { id: inactiveId, standard_name: "돼지고기 · 갈비 (구운것(팬))" },
+      }],
+    });
+
+    const lookup = await findIngredientIds(dbClient, [
+      "돼지고기 · 갈비 (구운것(팬))",
+      "구운 돼지갈비",
+    ]);
+
+    expect(lookup.error).toBeNull();
+    expect(lookup.matchesByName.size).toBe(0);
+  });
+
   it("propagates synonym lookup errors instead of treating matches as unresolved", async () => {
     const { dbClient } = createIngredientDb({
       ingredients: [{ id: "00000000-0000-4000-8000-000000000007", standard_name: "김치" }],

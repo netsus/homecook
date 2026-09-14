@@ -231,6 +231,10 @@ async function runIsolatedTestFile(postgresBin, testFile) {
       ...connectionArgs,
       "-f", "supabase/migrations/20260721213000_use_exact_measurement_bidirectionally.sql",
     ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-f", "supabase/migrations/20260914230000_recipe_nutrition_v2_piece_and_zero_sources.sql",
+    ]);
 
     return commandResult(
       "pnpm",

@@ -7,6 +7,15 @@
 날짜: 9월 3일
 
 > **2026-09-12 후속 사용자 승인 — R2 직렬 UI와 독립 서버 처리 분리**
+> **2026-09-14 contract-evolution — medium piece 기본 흐름**
+>
+> 개수/장수 입력에 크기가 없으면 `medium` 승인값을 조회한다. 양파 160g/개, 청양고추 10g/개, 식빵 계열 40g/장, 레몬 가식부 60g/개, 양배추 가식부 900g/통을 `estimated`로 계산하고, 실제 g 입력 또는 향후 사용자 무게 수정값이 있으면 그것을 우선한다. 영양소별 partial은 보존하되 사용자-facing 전체 부분 계산 여부는 탄수화물·단백질·지방으로 결정한다.
+
+> **2026-09-14 contract-evolution — TO_TASTE 영양소별 계산 분기**
+>
+> `TO_TASTE` 입력은 `approved profile 없음 → 전체 기존 제외`, `approved profile 있음 → observed 0 영양소만 0 기여`, `나머지 비영/결측 영양소 → 미확정` 순서로 계산한다. profile 원본, recipe amount/unit, 과거 snapshot은 수정하지 않고 새 `recipe-nutrition-v2` snapshot을 생성한다. 자체 적당량·piece 표준은 근거와 사람 승인이 완료되기 전에는 이 흐름에 진입하지 않는다.
+
+> **2026-09-13 contract-evolution — 공개 R2.2 흐름과 통합 경계**
 >
 > 새 recording 기본 경로는 Q1→Q2→Q3→Q4→Q3유형→기존v2스타일 체험/식단→신청→접수, homeflow는 Hero→4문항→Q3유형→6체험→신청→접수다. recording의 최초 실제 Q1 답변만 `activity_start(activity=survey)`를 일으킨다. homeflow의 기존 Hero 테스트 버튼 의미는 보존한다.
 > [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12의 버전·완료·draft 복원을 적용한다. 서버3활동은 계속 자기 start만 선행 조건으로 갖고 다른 활동 완료를 강제하지 않는다. 처음/뒤로/공유 이동으로 완료를 삭제하거나 새 참여를 자동 생성하지 않는다. r2.1/v2 과거 흐름과 데이터 의미는 보존한다.

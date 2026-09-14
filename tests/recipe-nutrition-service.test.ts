@@ -194,11 +194,13 @@ function serviceClient({
   }],
   nutritionLinks = [approvedNutritionLink()],
   conversionAssignments = [],
+  pieceWeights = [],
 }: {
   recipeId?: string;
   ingredients?: unknown[];
   nutritionLinks?: unknown[];
   conversionAssignments?: unknown[];
+  pieceWeights?: unknown[];
 } = {}) {
   const recipeQuery = maybeSingleResult({
     id: recipeId,
@@ -208,6 +210,7 @@ function serviceClient({
   const ingredientsQuery = ingredientResult(ingredients);
   const linksQuery = listResult(nutritionLinks);
   const assignmentsQuery = listResult(conversionAssignments);
+  const pieceWeightsQuery = listResult(pieceWeights);
   const rpc = vi.fn(async (_name: string, args: {
     p_snapshot: Record<string, unknown>;
     p_input_guard: Record<string, unknown>;
@@ -225,10 +228,19 @@ function serviceClient({
     if (table === "recipe_ingredients") return ingredientsQuery;
     if (table === "ingredient_nutrition_profiles") return linksQuery;
     if (table === "ingredient_conversion_assignments") return assignmentsQuery;
+    if (table === "piece_unit_weights") return pieceWeightsQuery;
     throw new Error(`unexpected table: ${table}`);
   });
 
-  return { from, rpc, recipeQuery, ingredientsQuery, linksQuery, assignmentsQuery };
+  return {
+    from,
+    rpc,
+    recipeQuery,
+    ingredientsQuery,
+    linksQuery,
+    assignmentsQuery,
+    pieceWeightsQuery,
+  };
 }
 
 describe("recipe nutrition snapshot service", () => {
@@ -267,6 +279,7 @@ describe("recipe nutrition snapshot service", () => {
       "recipe_ingredients",
       "ingredient_nutrition_profiles",
       "ingredient_conversion_assignments",
+      "piece_unit_weights",
     ]);
   });
 
@@ -488,8 +501,8 @@ describe("recipe nutrition snapshot service", () => {
     });
   });
 
-  it("hydrates all canonical ingredients with one link query and one conversion query", async () => {
-    const { from, rpc, linksQuery, assignmentsQuery } = serviceClient({
+  it("hydrates all canonical ingredients with one bounded predecessor query per table", async () => {
+    const { from, rpc, linksQuery, assignmentsQuery, pieceWeightsQuery } = serviceClient({
       ingredients: [
         {
           id: "recipe-ingredient-1",
@@ -529,6 +542,8 @@ describe("recipe nutrition snapshot service", () => {
     expect(assignmentsQuery.in).toHaveBeenCalledOnce();
     expect(assignmentsQuery.select.mock.calls[0][0]).toContain("id, ingredient_id");
     expect(assignmentsQuery.select.mock.calls[0][0]).toContain("measurement_source_evidence(");
+    expect(pieceWeightsQuery.in).toHaveBeenCalledOnce();
+    expect(pieceWeightsQuery.select.mock.calls[0][0]).toContain("measurement_source_evidence(");
     expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       reflected_ingredient_count: 2,

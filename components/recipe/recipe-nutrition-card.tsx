@@ -61,6 +61,11 @@ export function RecipeNutritionCard({
 
   const display = buildRecipeNutritionDisplay(nutrition, selectedServings);
   const warningMessages = buildWarningMessages(nutrition.warnings);
+  const hasIncompleteMacronutrient = [
+    "carbohydrate_g",
+    "protein_g",
+    "fat_g",
+  ].some((code) => nutrition.values[code]?.status !== "complete");
 
   return (
     <section
@@ -120,7 +125,7 @@ export function RecipeNutritionCard({
       ) : null}
 
       <div className="mt-3 space-y-1 text-[12px] leading-5 text-[var(--text-2)]">
-        {nutrition.calculation_status === "partial" ? (
+        {nutrition.calculation_status === "partial" && hasIncompleteMacronutrient ? (
           <p>일부 값은 확인된 재료만 합친 최소값이에요.</p>
         ) : null}
         {nutrition.calculation_status === "unavailable" ? (
@@ -315,7 +320,7 @@ const WARNING_COPY: Record<string, string> = {
   UNIT_CONVERSION_MISSING:
     "재료 단위를 무게로 정확히 바꾸지 못해 일부 값이 빠질 수 있어요.",
   TO_TASTE_EXCLUDED:
-    "‘약간’, ‘적당량’처럼 양이 정해지지 않은 재료는 계산에서 제외했어요.",
+    "‘약간’, ‘적당량’ 재료는 원본이 0인 영양소만 반영하고 나머지는 계산에서 제외했어요.",
   REPRESENTATIVE_VOLUME_CONVERSION_USED:
     "부피 단위는 승인된 계량값으로 무게를 환산해 계산했어요.",
   PIECE_WEIGHT_CONVERSION_USED:
