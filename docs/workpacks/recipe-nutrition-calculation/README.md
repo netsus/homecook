@@ -1,5 +1,15 @@
 # Slice: recipe-nutrition-calculation
 
+## 2026-09-14 TO_TASTE Observed-Zero Follow-up
+
+- calculation version은 `recipe-nutrition-v2`다.
+- `TO_TASTE`의 양을 0으로 만들지 않고, approved profile의 observed zero nutrient만 양과 무관한 exact zero contribution으로 반영한다.
+- 비영 값과 결측은 기존 `TO_TASTE_EXCLUDED` warning/missing reason을 유지한다.
+- UI copy는 전체 제외가 아니라 observed zero만 반영했음을 설명한다.
+- 자체 적당량/개당 중량 표준은 별도 evidence·review artifact가 승인되기 전에는 계산에 사용하지 않는다.
+- 사용자-facing 전체 부분 계산 문구와 Planner aggregate 완성도는 탄수화물·단백질·지방으로 판단한다. 나트륨 등 나머지 nutrient의 개별 partial/unavailable 값은 그대로 보존한다.
+- 크기 미지정 `개/장`은 approved `medium` piece만 사용한다. 승인값은 양파 160g/개, 청양고추 10g/개, 식빵 계열 40g/장, 레몬 가식부 60g/개, 양배추 가식부 900g/통이고 실제 g 입력이 우선한다.
+
 ## 2026-07-21 Exact Measurement Correction
 
 - 부피 입력은 exactly-one active approved assignment/evidence/source 경로의 `normalized_g_per_15ml`을 사용해 `mL × 실측 g/15mL ÷ 15`로 계산한다.

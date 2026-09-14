@@ -7,6 +7,27 @@
 날짜: 9월 3일
 
 > **2026-09-12 후속 사용자 승인 — R2 두 r2.2 survey union 추가**
+> **2026-09-15 사용자 승인 — raw name normalization**
+>
+> YouTube ingredient registration의 `(생것)` suffix는 별도 상태 prefix 없이 canonical 기본 이름으로 변환한다. 공개 field/status는 변경하지 않는다.
+
+> **2026-09-15 사용자 승인 — 신규 ingredient 이름 정규화**
+>
+> YouTube ingredient registration은 요청 standard name의 괄호 조리상태·가운데 점·색상을 canonical 자연어 이름으로 정규화한 뒤 기존 validation/RPC를 수행한다. 공개 request/response field와 HTTP status는 변경하지 않는다.
+
+> **2026-09-15 사용자 승인 — 비활성 ingredient 후보 제외**
+>
+> 공개 endpoint/field/enum은 유지한다. `GET /api/v1/ingredients` direct/synonym 결과, YouTube ingredient resolution, 수동 recipe ingredient id 검증은 사용자 제거 대상 26개 stable id를 후보에서 제외한다. 과거 immutable provenance row는 삭제하지 않으며 기존 일반 재료는 계속 반환한다.
+
+> **2026-09-14 contract-evolution — 영양 상태 표시 기준**
+>
+> 공개 field·enum은 유지한다. 각 영양소 status는 기존 의미를 보존한다. Recipe Detail은 탄수화물·단백질·지방 중 incomplete가 있을 때만 전체 부분 계산 문구를 표시하고, Planner aggregate의 `calculation_status`와 `incomplete_entry_count`도 이 세 영양소를 완성도 기준으로 사용한다. 나트륨 partial 값은 `known_amount` 최소값으로 계속 응답한다.
+
+> **2026-09-14 contract-evolution — recipe nutrition v2 TO_TASTE zero projection**
+>
+> public field·endpoint·HTTP status는 변경하지 않는다. 새 snapshot의 `calculation_version=recipe-nutrition-v2`이며, `TO_TASTE` active approved profile의 `observed amount=0` nutrient만 `values`와 fixed vector에 정확한 0으로 반영한다. 같은 재료의 비영/결측 nutrient는 partial/unavailable을 유지하고 기존 warning code `TO_TASTE_EXCLUDED`를 사용한다. client copy는 부분 반영 사실을 설명하며 과거 v1 snapshot을 재작성하지 않는다.
+
+> **2026-09-13 contract-evolution — R2.2 survey union 공개 기준**
 >
 > `POST /api/v1/marketing/round2`의 action/field/Success/Failure와 round_version=r2.1은 그대로다. [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4의 recording/r2.2-recording, homeflow/r2.2-homeflow 조합을 survey_submit에 추가하고 기존r2.1 조합은 보존한다. version+topic별4답변 exact enum을 parser/SQL/RPC에서 일치시킨다. 잘못된 조합422, 기존 완료의 다른version/답변409다.
 > 유형은 확정 로컬 Q3로 계산하며 public result/step/answers 응답 필드를 새로 추가하지 않는다. recording 첫 답변은 기존activity_start를 재사용하고 UI직렬 순서를 새 서버 선행조건으로 만들지 않는다. API active109개와 기존권한·멱등·동의·보관경계는 불변이다.

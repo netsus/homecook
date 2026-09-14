@@ -20,6 +20,8 @@ const alternateLinkId = "64000000-0000-4000-8000-000000000002";
 const measurementSourceId = "65000000-0000-4000-8000-000000000001";
 const measurementEvidenceId = "66000000-0000-4000-8000-000000000001";
 const pendingAssignmentId = "67000000-0000-4000-8000-000000000001";
+const pieceEvidenceId = "66000000-0000-4000-8000-000000000002";
+const pieceWeightId = "67000000-0000-4000-8000-000000000002";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -462,6 +464,25 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
         '71000000-0000-4000-8000-000000000015', '${measurementEvidenceId}',
         'raw-edible', 0, 1, 1, null, 'pending', 1, false
       );
+      insert into public.measurement_source_evidence (
+        id, source_id, evidence_kind, source_subject, preparation_state, size_code,
+        source_observed_unit, source_observed_amount, observed_weight_g,
+        source_url, source_accessed_at, evidence_fingerprint, review_status,
+        decision_reason, reviewed_by, reviewed_at, version, is_active
+      ) values (
+        '${pieceEvidenceId}', '${measurementSourceId}', 'piece_weight',
+        'writer guard fixture ingredient', 'raw-edible', 'medium', '1개', 1, 40,
+        'https://example.test/measurement', '2026-07-02', repeat('8', 64),
+        'approved', 'isolated integration fixture', '${actorId}', now(), 1, true
+      );
+      insert into public.piece_unit_weights (
+        id, ingredient_id, evidence_id, size_code, preparation_state, weight_g,
+        review_status, decision_reason, reviewed_by, reviewed_at, version, is_active
+      ) values (
+        '${pieceWeightId}', '${guardIngredientId}', '${pieceEvidenceId}', 'medium',
+        'raw-edible', 40, 'approved', 'isolated integration fixture',
+        '${actorId}', now(), 1, true
+      );
       insert into public.nutrition_source_items (
         id, source_id, external_item_key, external_name, preparation_state,
         source_basis_text, source_basis_amount, source_basis_unit, edible_portion_percent,
@@ -702,11 +723,15 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
       unit: string | null,
       basisUnit: "g" | "ml",
       values: Array<{ nutrient_code: string; amount: number | null; value_status: string }>,
-      options: { ingredientType?: "QUANT" | "TO_TASTE"; conversion?: boolean } = {},
+      options: {
+        ingredientId?: string;
+        ingredientType?: "QUANT" | "TO_TASTE";
+        conversion?: boolean;
+      } = {},
     ) => ({
       recipe_ingredients: [{
         id: "source-matrix-recipe-ingredient",
-        ingredient_id: "source-matrix-ingredient",
+        ingredient_id: options.ingredientId ?? "source-matrix-ingredient",
         amount: options.ingredientType === "TO_TASTE" ? null : 1,
         unit: options.ingredientType === "TO_TASTE" ? null : unit,
         ingredient_type: options.ingredientType ?? "QUANT",
@@ -766,8 +791,14 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     expect(contributingSources(inputGuard("g", "g", optionalOnly))).toEqual([nutritionSource]);
     expect(contributingSources(inputGuard("g", "g", missingOnly))).toEqual([]);
     expect(contributingSources(inputGuard("개", "g", observed))).toEqual([]);
+    expect(contributingSources(inputGuard("개", "g", observed, {
+      ingredientId: guardIngredientId,
+    }))).toEqual([measurementSource, nutritionSource]);
+    expect(contributingSources(inputGuard("모", "g", observed, {
+      ingredientId: guardIngredientId,
+    }))).toEqual([measurementSource, nutritionSource]);
     expect(contributingSources(inputGuard(null, "g", observed, { ingredientType: "TO_TASTE" })))
-      .toEqual([]);
+      .toEqual([nutritionSource]);
   });
 
   it("rejects an approved source that did not contribute to this snapshot", () => {

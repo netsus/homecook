@@ -76,6 +76,22 @@ describe("planner nutrition aggregate", () => {
     expect(result.incomplete_entry_count).toBe(0);
   });
 
+  it("does not mark the planner partial when only sodium is incomplete", () => {
+    const values = completeValues();
+    values.sodium_mg = {
+      amount: null,
+      known_amount: 5,
+      status: "partial",
+      display_mode: "minimum",
+    };
+
+    const result = aggregatePlannerNutritionEntries([entry("sodium-partial", { values })]);
+
+    expect(result.values.sodium_mg.status).toBe("partial");
+    expect(result.calculation_status).toBe("complete");
+    expect(result.incomplete_entry_count).toBe(0);
+  });
+
   it("returns a known minimum when complete, partial, and unavailable inputs mix", () => {
     const partialValues = completeValues(5);
     partialValues.energy_kcal = {
@@ -116,7 +132,7 @@ describe("planner nutrition aggregate", () => {
       status: "partial",
       display_mode: "minimum",
     });
-    expect(result.incomplete_entry_count).toBe(2);
+    expect(result.incomplete_entry_count).toBe(1);
     expect(result.calculation_status).toBe("partial");
   });
 
