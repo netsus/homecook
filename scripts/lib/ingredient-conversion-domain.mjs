@@ -94,16 +94,18 @@ export function generateVolumeCandidates(evidence) {
 export function convertPieceToGrams(request, rows) {
   if (
     typeof request?.ingredient_id !== "string" ||
-    typeof request.size_code !== "string" ||
+    !(request.size_code === null || request.size_code === undefined ||
+      typeof request.size_code === "string") ||
     typeof request.preparation_state !== "string" ||
     !Number.isFinite(request.piece_count) ||
     request.piece_count <= 0
   ) {
     throw new IngredientConversionError("PIECE_WEIGHT_REQUIRED");
   }
+  const effectiveSizeCode = request.size_code ?? "medium";
   const matches = rows.filter((row) =>
     row.ingredient_id === request.ingredient_id &&
-    row.size_code === request.size_code &&
+    row.size_code === effectiveSizeCode &&
     row.preparation_state === request.preparation_state &&
     row.review_status === "approved" &&
     row.is_active === true &&

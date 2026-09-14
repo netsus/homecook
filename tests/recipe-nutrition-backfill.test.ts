@@ -15,6 +15,10 @@ import {
   runFoodSafetyRecipeNutritionBackfill,
 } from "@/scripts/lib/recipe-nutrition-backfill.mjs";
 import {
+  hydrateRecipeNutritionIngredients,
+  loadRecipeNutritionPredecessors,
+} from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
+import {
   ensureMealPinBackfillCheckpoint,
   initializeAllRecipeNutritionCheckpoint,
   readAllRecipeNutritionCheckpoint,
@@ -141,6 +145,73 @@ function repository() {
 }
 
 describe("FoodSafety-30 recipe nutrition backfill", () => {
+  it("loads an approved medium piece standard for a recipe without a size label", async () => {
+    const rowsByTable: Record<string, unknown[]> = {
+      ingredient_nutrition_profiles: [],
+      ingredient_conversion_assignments: [],
+      piece_unit_weights: [{
+        id: "piece-weight-a",
+        ingredient_id: "ingredient-a",
+        evidence_id: "piece-evidence-a",
+        size_code: "medium",
+        preparation_state: "raw-edible",
+        weight_g: 40,
+        review_status: "approved",
+        is_active: true,
+        measurement_source_evidence: {
+          id: "piece-evidence-a",
+          source_id: "piece-source",
+          evidence_kind: "piece_weight",
+          preparation_state: "raw-edible",
+          size_code: "medium",
+          review_status: "approved",
+          is_active: true,
+          nutrition_sources: {
+            id: "piece-source",
+            provider_code: "HOMECOOK_USER_STANDARD",
+            dataset_name: "Homecook 기본 개당 중량",
+            source_version: "2026-09-14",
+            data_basis_date: "2026-09-14",
+            license_name: "Homecook internal",
+            source_url: "https://github.com/netsus/homecook",
+            review_status: "approved",
+            freshness_status: "current",
+            is_active: true,
+          },
+        },
+      }],
+    };
+    const client = {
+      from(table: string) {
+        const query = {
+          select: () => query,
+          in: () => query,
+          eq: () => query,
+          order: () => query,
+          range: async () => ({ data: rowsByTable[table] ?? [], error: null }),
+        };
+        return query;
+      },
+    };
+
+    const loaded = await loadRecipeNutritionPredecessors(client, ["ingredient-a"]);
+    expect(loaded.get("ingredient-a").piece_weight_candidates).toHaveLength(1);
+
+    const hydratedPredecessors = predecessors() as Map<string, Record<string, unknown>>;
+    hydratedPredecessors.get("ingredient-a")!.piece_weight_candidates =
+      loaded.get("ingredient-a").piece_weight_candidates;
+    const hydrated = hydrateRecipeNutritionIngredients([{
+      ...ingredients[0],
+      amount: 2,
+      unit: "장",
+    }], hydratedPredecessors);
+
+    expect(hydrated[0]).toMatchObject({
+      size_code: "medium",
+      piece_weight: { id: "piece-weight-a", weight_g: 40 },
+    });
+  });
+
   it("keeps the standalone operator calculation exactly equal to the hydrated server calculator", () => {
     const recipe = recipes[0];
     const recipeIngredients = ingredients.filter((row) => row.recipe_id === recipe.id);

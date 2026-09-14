@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-export const RECIPE_NUTRITION_CALCULATION_VERSION = "recipe-nutrition-v1";
+export const RECIPE_NUTRITION_CALCULATION_VERSION = "recipe-nutrition-v2";
 export const RECIPE_NUTRITION_ROUNDING_POLICY_VERSION = "display-v1";
 
 export const CORE_NUTRIENT_CODES = [
@@ -279,7 +279,9 @@ function volumeInMilliliters(amount: number, unit: string | null) {
 }
 
 function isPieceUnit(unit: string | null) {
-  return ["개", "장", "piece", "pieces"].includes(normalizedUnit(unit) ?? "");
+  return ["개", "장", "대", "모", "piece", "pieces"].includes(
+    normalizedUnit(unit) ?? "",
+  );
 }
 
 function isApprovedNutrition(ingredient: RecipeNutritionIngredientInput) {
@@ -399,10 +401,11 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
 
   if (profile.basis_unit === "g" && isPieceUnit(ingredient.unit)) {
     const piece = ingredient.piece_weight;
+    const effectiveSizeCode = ingredient.size_code ?? "medium";
     if (
       piece &&
       piece.ingredient_id === ingredient.ingredient_id &&
-      piece.size_code === ingredient.size_code &&
+      piece.size_code === effectiveSizeCode &&
       piece.preparation_state === ingredient.preparation_state &&
       piece.review_status === "approved" &&
       piece.is_active &&
@@ -477,8 +480,12 @@ function compareSourceAttribution(
 function outputNutrientCodes(input: RecipeNutritionCalculatorInput) {
   const optional = OPTIONAL_NUTRIENT_CODES.filter((code) =>
     input.ingredients.some((ingredient) => {
-      if (!isApprovedNutrition(ingredient) || !resolveUnit(ingredient)) return false;
+      if (!isApprovedNutrition(ingredient)) return false;
       const value = ingredient.nutrition?.profile.values[code];
+      if (ingredient.ingredient_type === "TO_TASTE") {
+        return value?.value_status === "observed" && value.amount === 0;
+      }
+      if (!resolveUnit(ingredient)) return false;
       return value?.value_status === "observed" && value.amount !== null;
     })
   );
@@ -513,13 +520,44 @@ export function calculateRecipeNutrition(
   );
   let reflectedIngredientCount = 0;
   let targetIngredientCount = 0;
-  let hasToTaste = false;
 
   for (const ingredient of sortedIngredients) {
     if (ingredient.ingredient_type === "TO_TASTE") {
-      hasToTaste = true;
-      warnings.push("TO_TASTE_EXCLUDED");
-      missingReasons.push(`TO_TASTE_EXCLUDED:${ingredient.id}`);
+      const approved = isApprovedNutrition(ingredient);
+      let hasObservedZero = false;
+      let hasUnknownContribution = false;
+      for (const code of nutrientCodes) {
+        const accumulator = accumulators.get(code)!;
+        const value = ingredient.nutrition?.profile.values[code];
+        if (
+          approved &&
+          value?.value_status === "observed" &&
+          value.amount === 0
+        ) {
+          accumulator.observedCount += 1;
+          accumulator.fixed += 0;
+          hasObservedZero = true;
+          continue;
+        }
+        accumulator.missingCount += 1;
+        hasUnknownContribution = true;
+      }
+      if (hasUnknownContribution) {
+        warnings.push("TO_TASTE_EXCLUDED");
+        missingReasons.push(`TO_TASTE_EXCLUDED:${ingredient.id}`);
+      }
+      if (hasObservedZero && ingredient.nutrition) {
+        qualities.add("direct");
+        const attribution: RecipeNutritionSourceAttribution = {
+          provider: ingredient.nutrition.source.provider,
+          dataset: ingredient.nutrition.source.dataset,
+          source_version: ingredient.nutrition.source.source_version,
+          data_basis_date: ingredient.nutrition.source.data_basis_date,
+          license: ingredient.nutrition.source.license,
+          source_url: ingredient.nutrition.source.source_url,
+        };
+        sources.set(canonicalStringify(sourceTuple(attribution)), attribution);
+      }
       continue;
     }
 
@@ -592,10 +630,6 @@ export function calculateRecipeNutrition(
         );
       }
     }
-  }
-
-  if (hasToTaste) {
-    for (const accumulator of accumulators.values()) accumulator.missingCount += 1;
   }
 
   const values = {} as RecipeNutritionCalculation["values"];

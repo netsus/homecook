@@ -9,6 +9,7 @@ import {
   isValidIngredientCategoryGroupCode,
   isValidIngredientSubcategoryCode,
 } from "@/lib/ingredient-categories";
+import { isSelectableIngredientId } from "@/lib/ingredient-catalog-policy";
 import {
   getMockIngredientList,
   isDiscoveryFilterManualMockEnabled,
@@ -34,7 +35,7 @@ interface IngredientSynonymRow {
 }
 
 function normalizeIngredientRow(row: IngredientRow | null | undefined): IngredientItem | null {
-  if (!row) {
+  if (!row || !isSelectableIngredientId(row.id)) {
     return null;
   }
 

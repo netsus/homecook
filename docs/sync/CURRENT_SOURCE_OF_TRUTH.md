@@ -1,6 +1,51 @@
 # Current Source of Truth
 
 ## 2026-09-12 사용자 승인 — 비로그인 PANTRY 예시 체험
+## 2026-09-15 사용자 승인 — 생것은 기본 재료명
+
+생것은 기본 상태이므로 사용자-facing standard name과 신규 등록 canonical name에 `생 `을 붙이지 않는다. `(생것)`은 상태 접두사 없이 재료명으로 정규화한다. 기존 선택 가능 이름 251개에서 `생 `을 제거하고 이전 이름은 synonym으로 보존한다. 기존 일반 돼지고기 부위와 이름이 충돌하는 비활성 provenance 4행만 내부 이름을 유지하며 앱 후보에는 노출하지 않는다.
+
+## 2026-09-15 사용자 승인 — 갯기름나물 수식어 순서
+
+노지/하우스/어린잎은 갯기름나물의 별도 선택 재료가 아니며 기존 8개 세부 id는 계속 후보에서 제외한다. provenance 이름은 `노지 어린잎 갯기름나물`, 데친 경우 `데친 노지 어린잎 갯기름나물`처럼 상태→재배 방식→성장 상태→재료 순서를 사용한다. 선택 가능한 대표는 `갯기름나물`이며 조리법이 다른 `데친 갯기름나물`은 별도 유지한다.
+
+## 2026-09-15 사용자 승인 — 전역 재료명 자연어화
+
+재료명 끝의 괄호 조리·가공 상태는 자연스러운 앞말로 옮기되 생것은 기본 상태라 생략한다. 예: `(삶은것)→삶은`, `(구운것(팬))→팬에 구운`, `(말린것)→말린`. 가운데 점 색상은 `빨간/노란/초록/주황/검은/흰/붉은` 관형어로 앞에 배치하고 나머지 가운데 점은 의미 순서를 유지한 공백으로 바꾼다. 기존 이름은 synonym으로 보존하며 신규 YouTube ingredient 등록에도 같은 정규화를 적용한다.
+
+## 2026-09-15 사용자 승인 — 재료 카탈로그 정리·데친 이름
+
+사용자가 지정한 돼지고기 세부 상태 18종과 갯기름나물 재배/어린잎 세부 8종은 선택·검색·신규 recipe 등록 후보에서 제외한다. immutable RDA provenance 때문에 hard delete하지 않고 id 기반 비활성 정책을 사용한다. 기존 일반 돼지고기·부위 및 갯기름나물은 유지한다. suffix `(데친것)`인 활성 재료명은 `데친 {재료명}`으로 바꾸고 이전 이름을 synonym으로 보존한다. 올리브유 적당량은 20g, `집밥 김치찌개`는 soft delete한다.
+
+## 2026-09-15 사용자 승인 — 적당량 17행 정량화·럼 프로필
+
+대파 적당량 50g/약간 25g, 럼 8g, 무염버터 10g, 스트로베리 샐러드 소금 1.23g·양조식초 2.55g, 참기름 2.5g, 참깨 3g, 치커리 10g, 튀김가루 25g, 후추 약간/3바퀴 0.3g을 recipe base servings의 scalable QUANT로 저장한다. 럼은 USDA FDC 174817 80 proof의 100g당 231kcal profile을 사용한다. 남은 TO_TASTE는 김치찌개 소금과 구운채소 간장레몬 소스 올리브 오일 2행이다.
+
+## 2026-09-15 사용자 승인 — 다시다·청오이 기본 환산
+
+다시다 0.5스푼은 5g으로 해석해 10g/15mL active approved assignment를 사용한다. 크기 없는 청오이는 medium 200g/개 active approved piece 표준을 사용한다. 실제 g 입력은 항상 우선한다.
+
+## 2026-09-15 사용자 승인 — 공공·사용자 부피 중량 환산
+
+15mL 기준 active approved 환산값은 양조간장 17.7g, 양조식초 15.3g, 물엿 20g, 고운 고춧가루 대표 7.4g, 마늘·다진마늘 11.3g, 후추 8.6g, 레몬즙 15g, 올리브 오일 15g, 맛술 13.5g, 올리고당 15g이다. 물 15g, 굴소스 20g, 오렌지즙 15g, 탄산수 15g은 사용자 승인값으로 별도 provenance를 사용한다. 실제 g 입력은 환산보다 우선한다.
+
+## 2026-09-15 사용자 승인 — 테스트 recipe 삭제·대파/두부 기본 중량
+
+테스트 recipe `토블론`, `ㄴㅇㄹㅇ`는 soft delete한다. 크기 미지정 대파는 medium 100g/대, 두부는 medium 300g/모를 approved estimated 기본값으로 사용하며 실제 g 입력이 우선한다. 액체·소스류 15mL당 중량은 공공자료의 exact/대표/recipe 병기 근거를 구분해 승인 후 등록한다.
+
+## 2026-09-15 사용자 승인 — 대표재료 재연결
+
+레시피의 대표 간장·식초·버터·밀가루·식용유 참조는 각각 양조간장·양조식초·무염버터·중력분·카놀라유로 재연결한다. 대표 파프리카는 색상별 생것 core 영양 차이가 작으므로 빨간색 생것 RDA profile을 사용하고 색상 표현은 대표 파프리카 synonym으로 취급한다. 데친것·찐것의 조리 상태는 합치지 않는다. 선택한 source profile의 8개 nutrient value/status는 변경하지 않는다.
+
+## 2026-09-14 사용자 승인 contract-evolution — 탄단지 완성도·medium piece
+
+사용자-facing 부분 계산은 탄수화물·단백질·지방만으로 판정하고 나트륨 등 다른 영양소의 개별 partial/unavailable 진실성은 유지한다. 크기 없는 개수는 medium으로 해석하며 승인 기본값은 양파 160g/개, 청양고추 10g/개, 식빵·통밀 식빵·호밀빵 40g/장, 레몬 가식부 60g/개, 양배추 가식부 900g/통이다. 실제 g 입력은 기본값보다 우선한다. 기존 provenance/review 체인과 `estimated` 표시를 유지하고 공개 endpoint/field/enum은 추가하지 않는다.
+
+## 2026-09-14 사용자 승인 contract-evolution — TO_TASTE observed-zero
+
+`recipe-nutrition-v2`는 `TO_TASTE` amount를 0으로 만들지 않고 active/current/approved profile의 `observed amount=0` nutrient만 양과 무관한 exact zero contribution으로 반영한다. 같은 재료의 비영/결측 nutrient, 승인되지 않은 profile, 자체 기본 적당량·개당 중량은 계속 fail-closed한다. 공개 API shape와 warning code는 유지하고 Recipe Detail/Planner copy는 부분 반영 사실을 설명한다. 자체 중량 표준은 exact ingredient/phrase/state, 근거 우선순위, 10개 이상 직접 측정 표본·median/min/max·장비·review/version이 승인된 뒤에만 `estimated` 경로로 별도 활성화한다.
+
+## 2026-09-14 사용자 승인 — 출시 전 빠른 개발 모드
 
 비로그인 PANTRY는 전체 화면 gate 대신 `로그인 전 예시`로 명시한 기본 재료 몇 개를 client-only로 표시한다. `재료 추가`는 공개 ingredient 검색을 사용하는 기존 modal까지 열어 선택할 수 있지만 최종 `팬트리에 추가` 전에 로그인 필요 modal을 띄우고 `POST /pantry`를 호출하지 않는다. 삭제·추천·묶음 추가 같은 다른 개인화 action도 비로그인 mutation/API를 만들지 않는다. 로그인 사용자는 기존 본인 pantry CRUD를 그대로 사용하고 API·DB 소유권·401 계약은 변경하지 않으며 배포는 보류한다.
 

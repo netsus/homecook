@@ -209,8 +209,14 @@ describe("ingredient measurement conversion profiles", () => {
       piece_count: 0.25,
     } as never, rows as never)).toEqual({ grams: 20, source: "piece_unit_weight" });
 
+    expect(convertPieceToGrams({
+      ingredient_id: "ingredient-lemon",
+      size_code: null,
+      preparation_state: "edible",
+      piece_count: 1,
+    } as never, rows as never)).toEqual({ grams: 80, source: "piece_unit_weight" });
+
     for (const request of [
-      { ingredient_id: "ingredient-lemon", size_code: null, preparation_state: "edible", piece_count: 1 },
       { ingredient_id: "ingredient-lemon", size_code: "large", preparation_state: "edible", piece_count: 1 },
       { ingredient_id: "ingredient-lemon", size_code: "medium", preparation_state: "whole", piece_count: 1 },
     ]) {

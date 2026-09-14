@@ -7,6 +7,47 @@
 날짜: 9월 3일
 
 > **2026-09-12 후속 사용자 승인 — R2 설문 버전별 검증**
+> **2026-09-15 사용자 승인 — default raw name migration**
+>
+> `생 `으로 시작하는 기본 생재료 251개 standard name에서 prefix를 제거하고 이전 이름을 synonym으로 보존한다. 기존 base ingredient와 충돌하는 비활성 돼지고기 provenance 4행은 내부 이름을 유지한다. ingredient id/FK/profile/value는 변경하지 않는다.
+
+> **2026-09-15 사용자 승인 — standard name 자연어화**
+>
+> existing ingredient id/FK/profile은 유지한 채 standard name 후보 1,006개 중 960개를 자연어로 변경한다. trailing 괄호와 가운데 점은 최종 0개이며 변경 전 이름은 `ingredient_synonyms`에 보존한다. 변환 전 중복·외부 충돌·미지원 suffix를 모두 0으로 검증하고 한 transaction에서 적용한다.
+
+> **2026-09-15 사용자 승인 — immutable ingredient 비활성 정책**
+>
+> RDA profile FK가 있는 삭제 요청 ingredient 26개는 hard delete하지 않고 stable id exclusion 정책으로 신규 소비를 막는다. 돼지고기 살코기 생것 recipe 2행은 기존 돼지고기로 이동하고 RDA 8개 value/status를 변경 없이 복제한 대표 profile을 연결한다. suffix `(데친것)` standard name 87개는 `데친` prefix로 변경하고 이전 standard name을 synonym으로 보존한다. 신규 table/column은 없다.
+
+> **2026-09-15 사용자 승인 — 적당량 QUANT 전환·USDA 럼**
+>
+> 지정된 recipe ingredient 17행은 `ingredient_type=QUANT`, `unit=g`, `scalable=true`로 전환한다. 럼은 `USDA_FDC / FoodData Central SR Legacy / FDC-174817-2019-04-01` source/item/profile/link와 core+optional 8개 observed 값을 추가한다. 공개 table/column은 추가하지 않는다.
+
+> **2026-09-15 사용자 승인 — 다시다 assignment·청오이 piece**
+>
+> `HOMECOOK_USER_STANDARD` provenance 아래 다시다 `normalized_g_per_15ml=10` conversion assignment와 청오이 `size_code=medium`, `weight_g=200` piece row를 active approved로 추가한다. volume assignment는 16개, Homecook medium piece 표준은 10개가 된다.
+
+> **2026-09-15 사용자 승인 — volume conversion assignment 15건**
+>
+> 기존 `nutrition_sources` → `measurement_source_evidence` → `ingredient_conversion_assignments` chain에 15개 exact ingredient의 `normalized_g_per_15ml`을 active approved로 등록한다. RDA_NICS, MFDS_SAMSAM I/II, HOMECOOK_USER_STANDARD 출처를 분리하고 계산기는 profile bucket의 대표 g이 아니라 evidence의 exact normalized 값을 사용한다. 기존 부피 환산 blocker 28행 중 27행을 해소하며 다시다 1행은 fail-closed로 유지한다.
+
+> **2026-09-15 사용자 승인 — 대파·두부 piece 표준**
+>
+> `HOMECOOK_USER_STANDARD / Homecook 기본 개당 중량 / 2026-09-14` source 아래 `size_code=medium`, `preparation_state=as_published`로 대파 100g/대와 두부 300g/모를 추가해 active approved piece 표준을 9건으로 확장한다. recipe hard delete는 하지 않고 테스트 recipe 2건의 `deleted_at`을 기록한다.
+
+> **2026-09-15 사용자 승인 — 대표재료 profile provenance**
+>
+> `HOMECOOK_USER_STANDARD / Homecook 대표재료 영양 프로필 / 2026-09-15` source 아래 target 이름의 source item/profile/value를 만들고 선택한 RDA source profile의 8개 value/status를 그대로 복제한다. 간장→양조간장, 식초→양조식초, 버터→무염버터, 밀가루→중력분, 식용유→카놀라유이며 파프리카는 빨간색 생것을 대표한다. recipe ingredient 32행과 파프리카 synonym 10행을 controlled full-local transaction으로 갱신한다.
+
+> **2026-09-14 contract-evolution — Homecook medium piece 표준**
+>
+> 기존 `nutrition_sources` → `measurement_source_evidence` → `piece_unit_weights` 승인 체인에 `HOMECOOK_USER_STANDARD / Homecook 기본 개당 중량 / 2026-09-14`를 사용한다. `size_code=medium`, `preparation_state=as_published`로 양파 160g, 청양고추 10g, 식빵·통밀 식빵·호밀빵 40g, 레몬 가식부 60g, 양배추 가식부 900g을 저장한다. 신규 table/column은 없다. `recipe-nutrition-v2` source projection은 TO_TASTE observed zero와 piece 영양 source·중량 source를 함께 귀속한다.
+
+> **2026-09-14 contract-evolution — recipe-nutrition-v2 snapshot 의미**
+>
+> 신규 table/column 없이 기존 snapshot 구조를 유지한다. `recipe-nutrition-v2`에서 `TO_TASTE` profile의 `observed 0` nutrient는 fixed vector의 정확한 0으로 기록할 수 있고, 비영/결측 nutrient는 vector에 넣지 않는다. source/profile/value의 원문과 과거 v1 snapshot은 불변이다. 자체 기본 중량은 기존 `measurement_source_evidence`/`piece_unit_weights`의 provenance·review 경계를 충족한 승인값만 소비한다.
+
+> **2026-09-13 contract-evolution — R2.2 설문 version별 저장 검증**
 >
 > [r2 위임 계약](marketing-demand-validation-r2-contract.md) §12.4~12.5의 두 r2.2 설문을 추가한다. public3테이블/column/round_version=r2.1은 유지하고 답변·event payload·participation CHECK를 `(topic,survey_version)`로 정확히 판별한다. 기존2인자 r2.1 답변 함수는 보존하고 export의3인자 내부 함수 경로를 확장한다. topic만 보고 enum을 OR로 넓히지 않는다.
 > 기존 완료 답변/version/event는 재작성하지 않고 다른 version 재제출409를 유지한다. 새 recording 증분 SQL은 실제 파일/해시·독립 검토가 필요하다. 이번 운영 적용은 별도 R2 controlled 절차의 백업/identity/isolated replay/transaction+ledger를 전제로 하며, 이 문서 작업은 SQL/DB를 실행하지 않는다. 운영 내부 ledger는 public 제품 테이블 총계에 포함하지 않는다.
