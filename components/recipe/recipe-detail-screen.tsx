@@ -581,6 +581,7 @@ export function RecipeDetailScreen({
       });
 
       setIsPlannerAddSheetOpen(false);
+      setPlannerAddSheetState("ready");
       setRecipe((current) => {
         if (!current) {
           return current;

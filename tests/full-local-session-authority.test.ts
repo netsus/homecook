@@ -21,6 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({
 const OWNER_UUID = "11111111-1111-4111-8111-111111111111";
 const SESSION_UUID = "22222222-2222-4222-8222-222222222222";
 const ISSUER = "https://auth.mumeok.kr/auth/v1";
+const LOOPBACK_ISSUER = "http://127.0.0.1:54321/auth/v1";
 const SECRET_V2 = "session-generation-secret-v2-at-least-32-bytes";
 
 function jwt(claims: Record<string, unknown>) {
@@ -80,6 +81,42 @@ describe("full-local session authority", () => {
     expect(prepared.record.p_session_key_hash).toBe(createHmac("sha256", SECRET_V2)
       .update(["v2", ISSUER, OWNER_UUID, "2026-08-01T00:00:00.000Z", SESSION_UUID].join("\n"))
       .digest("hex"));
+  });
+
+  it("accepts the local Supabase loopback HTTP issuer in local dev authority", async () => {
+    process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2 = SECRET_V2;
+    const now = 1_785_580_000;
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: {
+          authority: "local",
+          cutover_epoch: 7,
+          flows_open: true,
+          hmac_key_version: 2,
+          local_issuer: LOOPBACK_ISSUER,
+        },
+        error: null,
+      }),
+    };
+
+    const prepared = await prepareFullLocalSessionAuthority({
+      accessToken: jwt({
+        aud: "authenticated",
+        exp: now + 3_600,
+        iat: now - 10,
+        iss: LOOPBACK_ISSUER,
+        role: "authenticated",
+        session_id: SESSION_UUID,
+        sub: OWNER_UUID,
+      }),
+      client,
+      nowSeconds: () => now,
+      user: { id: OWNER_UUID, created_at: "2026-08-01T00:00:00.000Z" },
+    });
+
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+    expect(prepared.record.p_issuer).toBe(LOOPBACK_ISSUER);
   });
 
   it("preserves the exact Auth identity epoch while hashing its canonical instant", async () => {

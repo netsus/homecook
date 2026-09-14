@@ -41,6 +41,27 @@ function isPositiveInteger(value: unknown) {
   return Number.isSafeInteger(value) && Number(value) > 0;
 }
 
+function isAllowedLocalIssuer(value: unknown) {
+  if (typeof value !== "string") {
+    return false;
+  }
+  try {
+    const parsed = new URL(value);
+    return parsed.pathname === "/auth/v1"
+      && !parsed.search
+      && !parsed.hash
+      && (
+        parsed.protocol === "https:"
+        || (
+          parsed.protocol === "http:"
+          && ["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)
+        )
+      );
+  } catch {
+    return false;
+  }
+}
+
 function isLocalControl(value: unknown): value is LocalControl {
   if (!value || typeof value !== "object") {
     return false;
@@ -50,8 +71,7 @@ function isLocalControl(value: unknown): value is LocalControl {
     && control.flows_open === true
     && isPositiveInteger(control.cutover_epoch)
     && isPositiveInteger(control.hmac_key_version)
-    && typeof control.local_issuer === "string"
-    && /^https:\/\/[^/?#]+\/auth\/v1$/u.test(control.local_issuer);
+    && isAllowedLocalIssuer(control.local_issuer);
 }
 
 export async function readFullLocalSessionControl(client: RpcClient) {

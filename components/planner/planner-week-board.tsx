@@ -94,7 +94,7 @@ function WeekMeal({
           </span>
         )}
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-extrabold leading-snug text-[var(--foreground)] [overflow-wrap:anywhere]">
+          <span className="block truncate text-[15px] font-extrabold leading-snug text-[var(--foreground)]">
             {meal.recipe_title}
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs leading-snug text-[var(--text-2)]">
