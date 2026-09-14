@@ -286,6 +286,29 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDelete
   );
 }
 
+function activeSectionsForDisplay(day: MealLogDayData) {
+  const sectionsByColumn = new Map(
+    day.active_sections.map((section) => [section.meal_plan_column_id, section]),
+  );
+  const emptySubtotal = {
+    calculation_status: "complete" as const,
+    calories_kcal: 0,
+    carbohydrate_g: 0,
+    protein_g: 0,
+    fat_g: 0,
+    sodium_mg: 0,
+  };
+
+  return day.active_columns.map((column) => sectionsByColumn.get(column.id) ?? {
+    meal_plan_column_id: column.id,
+    slot_name_snapshot: column.name,
+    sort_order: column.sort_order,
+    entries: [],
+    subtotal: emptySubtotal,
+    incomplete_count: 0,
+  });
+}
+
 function DeletedSection({ date, disabled, section, onDelete, onDetail }: {
   date: string;
   disabled: boolean;
@@ -736,12 +759,13 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       <div className="space-y-4 pt-3">
         {dates.map((dayKey) => {
           const cardDay = displayDays[dayKey];
+          const cardSections = cardDay ? activeSectionsForDisplay(cardDay) : [];
           const cardDisabled = !guest && (!cardDay || loading || failedDates.has(dayKey));
           const titleId = `meal-log-title-${dayKey}`;
           return <section aria-labelledby={titleId} className="scroll-mt-[calc(var(--planner-sticky-height,80px)+12px)] overflow-hidden rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)]" data-planner-date={dayKey} key={dayKey} ref={(node) => onDayRef?.(dayKey, node)}>
             <div className="flex items-center justify-between gap-2 border-b border-[var(--ui-slate-100)] px-4 py-3">
               <h2 aria-label={`${longDate(dayKey)} 식사 기록`} className="text-base font-extrabold text-[var(--ui-slate-800)]" id={titleId}>{dayKey === todayKey ? "오늘 · " : ""}{Number(dayKey.slice(5, 7))}/{Number(dayKey.slice(8, 10))} ({WEEKDAYS[new Date(`${dayKey}T00:00:00.000Z`).getUTCDay()]})</h2>
-              {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardDay.active_sections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardDay.active_sections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardDay.active_sections.filter((section) => section.entries.length > 0).length} / {cardDay.active_sections.length}</span> : null}
+              {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardSections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardSections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardSections.filter((section) => section.entries.length > 0).length} / {cardSections.length}</span> : null}
             </div>
             {isLoading ? <p aria-busy="true" className="p-4 text-sm text-[var(--ui-slate-500)]">기록을 불러오는 중이에요.</p> : cardDay ? <div className="p-3 lg:p-4">
               <section aria-label="하루 영양" className="mb-3 max-w-xl">
@@ -761,7 +785,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
               </section>
               {cardDay.entries.length === 0 ? <p className="sr-only">이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.</p> : null}
               <div className="grid max-w-5xl items-start gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {cardDay.active_sections.map((section) => <ActiveSection date={dayKey} disabled={cardDisabled} guest={guest} key={section.meal_plan_column_id} onAdd={() => openDialog({ type: "add", columnId: section.meal_plan_column_id }, dayKey)} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}
+                {cardSections.map((section) => <ActiveSection date={dayKey} disabled={cardDisabled} guest={guest} key={section.meal_plan_column_id} onAdd={() => openDialog({ type: "add", columnId: section.meal_plan_column_id }, dayKey)} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}
               </div>
               {cardDay.deleted_column_sections.length > 0 ? <div className="mt-3 space-y-3">{cardDay.deleted_column_sections.map((section) => <DeletedSection date={dayKey} disabled={cardDisabled} key={section.slot_name_snapshot} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}</div> : null}
             </div> : <p className="p-4 text-sm text-[var(--ui-slate-600)]">이 날짜의 기록을 확인하지 못했어요. 위의 다시 시도로 불러와 주세요.</p>}

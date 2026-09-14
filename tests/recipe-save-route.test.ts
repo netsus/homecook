@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createRecipeSaveInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -13,8 +14,10 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
+const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeSaveInternalClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -31,6 +34,9 @@ vi.mock("@/lib/server/user-progress", () => ({
 
 vi.mock("@/lib/server/user-growth-activity", () => ({
   recordUserGrowthActivityEvent,
+}));
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 interface QueryError {
@@ -203,11 +209,23 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createRecipeSaveInternalClient.mockReset();
+    createRecipeSaveInternalClient.mockImplementation(() => createServiceRoleClient());
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     awardUserProgressEvent.mockReset();
     recordUserGrowthActivityEvent.mockReset();
+    readVerifiedAccountGenerationSession.mockReset().mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: "user-1",
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        sessionIssuedAt: "2026-08-02T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+    });
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -987,13 +1005,16 @@ describe("POST /api/v1/recipes/[id]/save", () => {
   it("saves the recipe and returns the updated save_count", async () => {
     const bookId = "550e8400-e29b-41d4-a716-446655440010";
     const recipeId = "550e8400-e29b-41d4-a716-446655440025";
-    const recipesTable = createRecipesTable({
+    const routeRecipesTable = createRecipesTable({
       selectResults: [
         {
           data: { id: "recipe-1", save_count: 3 },
           error: null,
         },
       ],
+    });
+    const serviceRecipesTable = createRecipesTable({
+      selectResults: [],
       updateResults: [
         {
           data: { id: "recipe-1", save_count: 4 },
@@ -1047,20 +1068,26 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       ],
     });
 
+    const routeFrom = vi.fn((table: string) => {
+      if (table === "recipes") return routeRecipesTable;
+      throw new Error(`unexpected route table: ${table}`);
+    });
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "recipes") return serviceRecipesTable;
+      if (table === "recipe_books") return recipeBooksTable;
+      if (table === "recipe_book_items") return recipeBookItemsTable;
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({
           data: { user: { id: "user-1" } },
         })),
       },
-      from: vi.fn((table: string) => {
-        if (table === "recipes") return recipesTable;
-        if (table === "recipe_books") return recipeBooksTable;
-        if (table === "recipe_book_items") return recipeBookItemsTable;
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
+      from: routeFrom,
     });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 
     const { POST } = await importRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/recipe-1/save", {
@@ -1092,7 +1119,9 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       book_id: bookId,
       recipe_id: recipeId,
     });
-    expect(recipesTable.update).toHaveBeenCalledWith({
+    expect(routeFrom).toHaveBeenCalledWith("recipes");
+    expect(serviceFrom).toHaveBeenCalledWith("recipe_book_items");
+    expect(serviceRecipesTable.update).toHaveBeenCalledWith({
       save_count: 4,
     });
     expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
@@ -1115,6 +1144,64 @@ describe("POST /api/v1/recipes/[id]/save", () => {
         distinct_book_recipe_key: `${bookId}:${recipeId}`,
       },
     });
+  });
+
+  it("uses the authenticated atomic save RPC when full-local direct writes are read-only", async () => {
+    const recipeId = "550e8400-e29b-41d4-a716-446655440025";
+    const bookId = "550e8400-e29b-41d4-a716-446655440010";
+    const recipesTable = createRecipesTable({
+      selectResults: [{ data: { id: recipeId, save_count: 3 }, error: null }],
+    });
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          saved: true,
+          save_count: 4,
+          book_ids: [bookId],
+          created_book_ids: [bookId],
+          already_saved_book_ids: [],
+          created_item_ids: ["550e8400-e29b-41d4-a716-446655440099"],
+        },
+        error: null,
+      },
+      error: null,
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        throw new Error(`unexpected route table: ${table}`);
+      }),
+      rpc,
+    });
+    createRecipeSaveInternalClient.mockReturnValue({ rpc });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request(`http://localhost:3000/api/v1/recipes/${recipeId}/save`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ book_ids: [bookId] }),
+    }), { params: Promise.resolve({ id: recipeId }) });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({
+      saved: true,
+      save_count: 4,
+      book_ids: [bookId],
+      created_book_ids: [bookId],
+      already_saved_book_ids: [],
+    });
+    expect(rpc).toHaveBeenCalledWith("save_recipe_to_books", {
+      p_owner_uuid: "user-1",
+      p_auth_identity_created_at_snapshot: "2026-08-01T00:00:00.000Z",
+      p_session_key_hash: "a".repeat(64),
+      p_hmac_key_version: 1,
+      p_session_issued_at: "2026-08-02T00:00:00.000Z",
+      p_recipe_id: recipeId,
+      p_book_ids: [bookId],
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
   });
 
   it("keeps recipe save successful when progress writer fails", async () => {

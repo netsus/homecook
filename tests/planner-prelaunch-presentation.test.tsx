@@ -96,7 +96,7 @@ describe("planner prelaunch meal presentation", () => {
     expect(screen.queryByText(/NaN|Infinity/)).toBeNull();
   });
 
-  it("shows a partial prepared value as a minimum", () => {
+  it("shows partial prepared values without minimum wording", () => {
     const boardProps = {
       ...props(),
       nutritionByMeal: {
@@ -110,8 +110,9 @@ describe("planner prelaunch meal presentation", () => {
       },
     };
     render(<PlannerWeekBoard {...boardProps} />);
-    expect(screen.getByRole("link", { name: meal.recipe_title }).getAttribute("title")).toContain("최소 210 kcal · 탄수화물 46 g · 단백질 22 g · 지방 14 g");
-    expect(screen.getByText("최소 210 kcal")).toBeTruthy();
+    expect(screen.getByRole("link", { name: meal.recipe_title }).getAttribute("title")).toContain("210 kcal · 탄수화물 46 g · 단백질 22 g · 지방 14 g");
+    expect(screen.getByText("210 kcal")).toBeTruthy();
+    expect(screen.queryByText(/최소/)).toBeNull();
   });
 
   it.each([undefined, { "meal-1": { ...nutritionByMeal["meal-1"], plannedServings: 1 } }])(
@@ -134,14 +135,16 @@ describe("planner prelaunch meal presentation", () => {
     ["carbohydrate_g", "탄"],
     ["protein_g", "단"],
     ["fat_g", "지"],
-  ] as const)("keeps minimum, unavailable and missing %s distinct from zero", (code, label) => {
+  ] as const)("keeps a macro bar for partial, unavailable and missing %s", (code, label) => {
     const values = nutritionByMeal["meal-1"].values;
     const { rerender } = render(<PlannerWeekBoard {...props()} nutritionByMeal={{ "meal-1": { plannedServings: 2, values: { ...values, [code]: { amount: null, known_amount: 9, status: "partial", display_mode: "minimum" } } } }} />);
-    expect(screen.getByText(`${label} 최소 9 g`)).toBeTruthy();
-    expect(screen.queryByRole("img", { name: /탄단지 열량 비율/ })).toBeNull();
+    expect(screen.getByText(`${label} 9 g`)).toBeTruthy();
+    expect(screen.getByRole("img", { name: /탄단지 열량 비율/ })).toBeTruthy();
+    expect(screen.queryByText(/최소/)).toBeNull();
     rerender(<PlannerWeekBoard {...props()} nutritionByMeal={{ "meal-1": { plannedServings: 2, values: { ...values, [code]: { amount: null, known_amount: null, status: "unavailable", display_mode: null } } } }} />);
     expect(screen.getByText(`${label} 정보 준비 중`)).toBeTruthy();
     expect(screen.queryByText(`${label} 0 g`)).toBeNull();
+    expect(screen.getByRole("img", { name: /탄단지 열량 비율/ })).toBeTruthy();
     const missingValues = { ...values };
     delete missingValues[code];
     rerender(<PlannerWeekBoard {...props()} nutritionByMeal={{ "meal-1": { plannedServings: 2, values: missingValues } }} />);

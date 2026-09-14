@@ -1,17 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  createRecipeMealWeightReadInternalClient: vi.fn(),
   createServerComponentClient: vi.fn(),
   hasSupabasePublicEnv: vi.fn(),
+  hydrateRecipeNutritionIngredients: vi.fn(),
+  loadRecipeNutritionPredecessors: vi.fn(),
   readPlannerRecipeNutritionEntries: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeMealWeightReadInternalClient: mocks.createRecipeMealWeightReadInternalClient,
   createServerComponentClient: mocks.createServerComponentClient,
 }));
 vi.mock("@/lib/supabase/env", () => ({ hasSupabasePublicEnv: mocks.hasSupabasePublicEnv }));
 vi.mock("@/lib/server/planner-nutrition-summary", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/server/planner-nutrition-summary")>(),
   readPlannerRecipeNutritionEntries: mocks.readPlannerRecipeNutritionEntries,
+}));
+vi.mock("@/scripts/lib/recipe-nutrition-predecessor.mjs", () => ({
+  hydrateRecipeNutritionIngredients: mocks.hydrateRecipeNutritionIngredients,
+  loadRecipeNutritionPredecessors: mocks.loadRecipeNutritionPredecessors,
 }));
 
 import { loadPlannerMealNutritionForServer } from "@/lib/server/planner-meal-nutrition-view";
@@ -22,8 +30,19 @@ describe("planner RSC meal nutrition authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.hasSupabasePublicEnv.mockReturnValue(true);
+    mocks.createRecipeMealWeightReadInternalClient.mockReturnValue({ from: vi.fn() });
+    mocks.loadRecipeNutritionPredecessors.mockResolvedValue(new Map());
+    mocks.hydrateRecipeNutritionIngredients.mockImplementation((ingredients) => ingredients);
     mocks.readPlannerRecipeNutritionEntries.mockResolvedValue([{
       mealId: "meal-1", plannedServings: 2,
+      baseServings: 1,
+      ingredients: [{
+        ingredient_id: "ingredient-1",
+        amount: 250,
+        unit: "g",
+        ingredient_type: "QUANT",
+        scalable: true,
+      }],
       entry: { values: { energy_kcal: { amount: 450, known_amount: null,
         status: "complete", display_mode: "total" } }, sources: ["private metadata"] },
     }]);
@@ -37,9 +56,13 @@ describe("planner RSC meal nutrition authentication", () => {
     const result = await loadPlannerMealNutritionForServer(range);
     expect(db.auth.getUser).toHaveBeenCalledOnce();
     expect(mocks.readPlannerRecipeNutritionEntries).toHaveBeenCalledWith(db, "verified-owner", range);
-    expect(result).toEqual({ "meal-1": { plannedServings: 2, totalWeightGrams: null, values: {
+    expect(result).toEqual({ "meal-1": { plannedServings: 2, totalWeightGrams: 500, values: {
       energy_kcal: { amount: 450, known_amount: null, status: "complete", display_mode: "total" },
     } } });
+    expect(mocks.loadRecipeNutritionPredecessors).toHaveBeenCalledWith(
+      expect.anything(),
+      ["ingredient-1"],
+    );
   });
 
   it.each([

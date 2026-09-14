@@ -51,7 +51,7 @@ describe("recipe snapshot consumer regression", () => {
     );
 
     expect(consumerSources.plannerNutrition).toContain(
-      "recipe_content_snapshots(recipe_nutrition_snapshot_id)",
+      "recipe_content_snapshots(recipe_nutrition_snapshot_id,base_servings,ingredients_json)",
     );
     expect(consumerSources.plannerNutrition).toMatch(
       /const snapshotId = meal\.recipe_content_snapshot_id\s*\?\s*contentSnapshot\?\.recipe_nutrition_snapshot_id\s*\?\?\s*null\s*:\s*meal\.recipe_nutrition_snapshot_id/u,

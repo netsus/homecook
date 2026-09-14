@@ -44,6 +44,7 @@ interface QueryError {
 
 interface RecipeMealRow {
   id: string;
+  recipe_id: string;
   plan_date: string;
   column_id: string;
   planned_servings: number;
@@ -51,9 +52,13 @@ interface RecipeMealRow {
   recipe_nutrition_snapshot_id: string | null;
   recipe_content_snapshots:
     | {
+      base_servings: number;
+      ingredients_json: unknown;
       recipe_nutrition_snapshot_id: string | null;
     }
     | Array<{
+      base_servings: number;
+      ingredients_json: unknown;
       recipe_nutrition_snapshot_id: string | null;
     }>
     | null;
@@ -424,7 +429,7 @@ export async function readPlannerRecipeNutritionEntries(
   const mealsResult = await dbClient
     .from("meals")
     .select(
-      "id, plan_date, column_id, planned_servings, recipe_content_snapshot_id, recipe_nutrition_snapshot_id, recipe_content_snapshots(recipe_nutrition_snapshot_id)",
+      "id, recipe_id, plan_date, column_id, planned_servings, recipe_content_snapshot_id, recipe_nutrition_snapshot_id, recipe_content_snapshots(recipe_nutrition_snapshot_id,base_servings,ingredients_json)",
     )
     .eq("user_id", userId)
     .gte("plan_date", range.startDate)
@@ -459,6 +464,20 @@ export async function readPlannerRecipeNutritionEntries(
   return dedupedMeals.map((meal) => ({
     mealId: meal.id,
     plannedServings: meal.planned_servings,
+    baseServings: (() => {
+      const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+        ? meal.recipe_content_snapshots[0] ?? null
+        : meal.recipe_content_snapshots;
+      return contentSnapshot?.base_servings ?? null;
+    })(),
+    ingredients: (() => {
+      const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+        ? meal.recipe_content_snapshots[0] ?? null
+        : meal.recipe_content_snapshots;
+      return Array.isArray(contentSnapshot?.ingredients_json)
+        ? contentSnapshot.ingredients_json
+        : [];
+    })(),
     entry: projectRecipeMeal(meal, snapshotMap),
   }));
 }
