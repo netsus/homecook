@@ -25,8 +25,8 @@ describe("WebTopNav service name", () => {
     );
     expect(logo?.getAttribute("alt")).toBe("");
     expect(logo?.getAttribute("aria-hidden")).toBe("true");
-    expect(within(screen.getByRole("banner")).getByLabelText("서비스 준비 안내"))
-      .toBeTruthy();
+    expect(within(screen.getByRole("banner")).queryByLabelText("서비스 준비 안내"))
+      .toBeNull();
   });
 
   it("uses the same canonical horizontal logo on HOME navigation", () => {

@@ -107,12 +107,14 @@ describe("login screen", () => {
     Reflect.deleteProperty(window, "matchMedia");
   });
 
-  it("explains preparation mode with a public planner exit", () => {
+  it("keeps the normal login flow available in prelaunch mode", () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<LoginScreen nextPath="/planner" />);
-    expect(screen.getByRole("heading", { name: "정식 출시를 준비하고 있어요" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "플래너 둘러보기" }).getAttribute("href")).toBe("/planner");
-    expect(screen.queryByText(/로그인 전에/)).toBeNull();
+    expect(screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeTruthy();
+    expect(screen.getByText("social-buttons:/planner:none:none")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "개인정보처리방침" }).getAttribute("href"))
+      .toBe("/privacy");
+    expect(screen.queryByRole("link", { name: "플래너 둘러보기" })).toBeNull();
   });
 
   it("shows safe OAuth failure copy", () => {

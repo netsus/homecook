@@ -92,18 +92,17 @@ describe("auth callback", () => {
     vi.unstubAllEnvs();
   });
 
-  it("returns prelaunch callbacks to login without code exchange or bootstrap", async () => {
+  it("processes prelaunch callbacks through the normal OAuth exchange", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
+    exchangeCodeForSession.mockResolvedValue({ error: null });
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(new Request("https://app.mumeok.kr/auth/callback?code=unused&next=%2Fplanner"));
     const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/login");
-    expect(location.searchParams.get("next")).toBe("/planner");
-    expect(exchangeCodeForSession).not.toHaveBeenCalled();
-    expect(readCallbackAuthFlow).not.toHaveBeenCalled();
-    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(location.pathname).toBe("/planner");
+    expect(exchangeCodeForSession).toHaveBeenCalledWith("unused");
+    expect(readCallbackAuthFlow).toHaveBeenCalled();
+    expect(createServiceRoleClient).toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
-    expect(response.headers.get("set-cookie")).not.toContain("sb-");
   });
 
   beforeEach(() => {

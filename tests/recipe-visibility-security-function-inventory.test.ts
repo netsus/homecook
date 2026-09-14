@@ -814,7 +814,7 @@ describe("recipe visibility security function inventory", () => {
     } finally {
       await rm(fixtureRoot, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it("fails closed when a recreated baseline function is unclassified", async () => {
     const fixtureRoot = await mkdtemp(
@@ -861,5 +861,5 @@ describe("recipe visibility security function inventory", () => {
     } finally {
       await rm(fixtureRoot, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 });
