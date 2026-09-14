@@ -120,6 +120,17 @@ function downstreamAuthorityPath(pathname: string) {
   return pathname;
 }
 
+function shouldPassVerifiedAttestationInLocalDev(requestUrl: string) {
+  try {
+    const hostname = new URL(requestUrl).hostname;
+    return hostname === "127.0.0.1"
+      || hostname === "localhost"
+      || hostname === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
 function boundedSignal(signal: AbortSignal | null | undefined, timeoutMs: number) {
   const timeout = AbortSignal.timeout(timeoutMs);
   return signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -463,6 +474,12 @@ export function createHybridAuthorityFetch({
         "x-homecook-session-attestation-signature",
         verified.attestation.signature,
       );
+      if (shouldPassVerifiedAttestationInLocalDev(request.url)) {
+        headers.set(
+          "x-homecook-attestation-verified",
+          verified.attestation.payload,
+        );
+      }
 
       try {
         return await recordHybridAuthorityFailureResponse(

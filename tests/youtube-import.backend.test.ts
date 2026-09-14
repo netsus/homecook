@@ -1330,10 +1330,9 @@ describe("20 youtube real import backend", () => {
     ensureUserBootstrapState.mockResolvedValue(undefined);
   });
 
-  it("keeps YouTube import API closed in production unless explicitly enabled", async () => {
+  it("keeps YouTube import API closed when the kill switch is set", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    delete process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
-    delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+    vi.stubEnv("HOMECOOK_DISABLE_YOUTUBE_IMPORT", "1");
     mockAuth();
 
     const routes = [

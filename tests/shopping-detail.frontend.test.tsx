@@ -529,7 +529,6 @@ describe("ShoppingDetailScreen", () => {
 
     expect(screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" })
       .querySelector('a[aria-current="page"]')).toBeNull();
-    await userEvent.setup().click(screen.getByRole("button", { name: /프로필 요약 열기/ }));
     expect(screen.getByRole("link", { name: "마이페이지" }).getAttribute("href")).toBe("/mypage");
   });
 

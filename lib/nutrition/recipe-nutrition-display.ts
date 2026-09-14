@@ -10,10 +10,10 @@ export const RECIPE_NUTRIENT_DISPLAY_ORDER = [
   "carbohydrate_g",
   "protein_g",
   "fat_g",
-  "sodium_mg",
 ] as const;
 
 export const OPTIONAL_RECIPE_NUTRIENT_DISPLAY_ORDER = [
+  "sodium_mg",
   "sugars_g",
   "saturated_fat_g",
   "fiber_g",

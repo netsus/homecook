@@ -30,21 +30,22 @@ async function importCheckRoute() {
 function enableYoutubeImport() {
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+  vi.stubEnv("HOMECOOK_DISABLE_YOUTUBE_IMPORT", "");
 }
 
 describe("Recipio-style YouTube duplicate lookup", () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
     createServiceRoleClient.mockReturnValue(null);
   });
 
-  it("keeps duplicate lookup behind the YouTube feature flag", async () => {
+  it("keeps duplicate lookup closed when the YouTube kill switch is set", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    delete process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
-    delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+    vi.stubEnv("HOMECOOK_DISABLE_YOUTUBE_IMPORT", "1");
 
     const { GET } = await importCheckRoute();
     const response = await GET(
