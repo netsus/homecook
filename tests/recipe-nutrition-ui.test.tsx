@@ -141,6 +141,12 @@ describe("recipe nutrition display", () => {
             status: "partial",
             display_mode: "minimum",
           },
+          carbohydrate_g: {
+            amount: null,
+            known_amount: 100,
+            status: "partial",
+            display_mode: "minimum",
+          },
         },
         scalable_values: {
           energy_kcal: 400,
@@ -202,6 +208,9 @@ describe("recipe nutrition display", () => {
     const sodium = screen.getByRole("row", { name: /나트륨/ });
     expect(within(sodium).getByText("최소 365 mg")).toBeTruthy();
     expect(within(sodium).getByText("최소 1,410 mg")).toBeTruthy();
+    expect(
+      screen.queryByText("일부 값은 확인된 재료만 합친 최소값이에요."),
+    ).toBeNull();
   });
 
   it("treats a missing snapshot as a normal preparing state without retry", () => {
@@ -457,7 +466,7 @@ describe("recipe nutrition display", () => {
     ["NUTRITION_PROFILE_MISSING", "영양 정보가 연결되지 않은 재료가 있어 일부 값이 빠질 수 있어요."],
     ["NUTRIENT_VALUE_MISSING", "연결된 재료에 일부 영양성분 값이 없어 해당 값은 최소치일 수 있어요."],
     ["UNIT_CONVERSION_MISSING", "재료 단위를 무게로 정확히 바꾸지 못해 일부 값이 빠질 수 있어요."],
-    ["TO_TASTE_EXCLUDED", "‘약간’, ‘적당량’처럼 양이 정해지지 않은 재료는 계산에서 제외했어요."],
+    ["TO_TASTE_EXCLUDED", "‘약간’, ‘적당량’ 재료는 원본이 0인 영양소만 반영하고 나머지는 계산에서 제외했어요."],
     ["REPRESENTATIVE_VOLUME_CONVERSION_USED", "부피 단위는 승인된 계량값으로 무게를 환산해 계산했어요."],
     ["PIECE_WEIGHT_CONVERSION_USED", "개수 단위는 승인된 재료 무게 기준으로 바꿔 계산했어요."],
     ["UNKNOWN_WARNING", "일부 영양값에는 추가 확인이 필요한 계산 조건이 있어요."],
