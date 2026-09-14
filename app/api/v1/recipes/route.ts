@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/response";
+import { isSelectableIngredientId } from "@/lib/ingredient-catalog-policy";
 import {
   getMockRecipeList,
   isDiscoveryFilterManualMockEnabled,
@@ -1718,7 +1719,11 @@ async function findMissingIds(
     };
   }
 
-  const existingIds = new Set(result.data.map((row) => row.id));
+  const existingIds = new Set(
+    result.data
+      .map((row) => row.id)
+      .filter((id) => isSelectableIngredientId(id)),
+  );
 
   return {
     error: null,

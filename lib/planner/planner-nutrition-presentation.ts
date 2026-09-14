@@ -28,7 +28,7 @@ const WARNING_MESSAGES: Record<string, string> = {
   NUTRITION_PROFILE_MISSING: "일부 재료의 영양 정보가 아직 준비되지 않았어요.",
   PRODUCT_NUTRITION_MISSING: "일부 완제품의 영양 정보가 아직 준비되지 않았어요.",
   RECIPE_NUTRITION_SNAPSHOT_MISSING: "일부 레시피의 영양 정보가 아직 준비되지 않았어요.",
-  TO_TASTE_EXCLUDED: "기호에 따라 넣는 재료는 계산에서 제외했어요.",
+  TO_TASTE_EXCLUDED: "기호에 따라 넣는 재료는 원본이 0인 영양소만 반영했어요.",
   UNIT_CONVERSION_MISSING: "일부 재료나 단위의 영양값을 계산하지 못했어요.",
 };
 

@@ -15,6 +15,11 @@ import {
   isValidIngredientSubcategoryCode,
 } from "@/lib/ingredient-categories";
 import {
+  isSelectableIngredientId,
+  isSelectableIngredientName,
+  normalizeIngredientCatalogName,
+} from "@/lib/ingredient-catalog-policy";
+import {
   adaptCandidateToFlatDraft,
   parseYoutubeRecipeDescription,
   selectPrimaryRecipeCandidate,
@@ -8160,6 +8165,9 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
     standardName: string,
     source: MatchSource,
   ) => {
+    if (!isSelectableIngredientId(ingredientId)) {
+      return;
+    }
     for (const originalName of lookupKeyToOriginalNames.get(lookupKey) ?? []) {
       let bucket = matchesByName.get(originalName);
       if (!bucket) {
@@ -10005,9 +10013,13 @@ function parseYoutubeIngredientRegistrationBody(rawBody: unknown) {
   }
 
   const rawStandardName = typeof rawBody.standard_name === "string" ? rawBody.standard_name : "";
-  const standardName = collapseWhitespace(rawStandardName);
+  const standardName = normalizeIngredientCatalogName(
+    collapseWhitespace(rawStandardName),
+  );
   if (!standardName) {
     fields.push({ field: "standard_name", reason: "required" });
+  } else if (!isSelectableIngredientName(standardName)) {
+    fields.push({ field: "standard_name", reason: "not_found" });
   } else if (standardName.length > 100) {
     fields.push({ field: "standard_name", reason: "max_length" });
   } else if (hasControlCharacters(rawStandardName)) {
