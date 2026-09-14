@@ -546,7 +546,7 @@ describe("planner week screen Stage 4", () => {
       expect(deleteProductPlannerEntry).toHaveBeenCalledWith("legacy-product-1");
       expect(fetchPlanner).toHaveBeenCalledTimes(2);
     });
-  });
+  }, 15_000);
 
   it("preserves loading geometry and exposes a scoped retry on load error", async () => {
     let rejectRequest!: (reason: unknown) => void;

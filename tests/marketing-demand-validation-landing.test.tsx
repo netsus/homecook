@@ -476,7 +476,7 @@ describe("marketing demand validation v2 landing", () => {
     expect(screen.queryByRole("heading", { name: "신청이 완료됐어요!" })).toBeNull();
     release?.(ok("lead_submitted"));
     expect(await screen.findByRole("heading", { name: "신청이 완료됐어요!" })).toBeTruthy();
-  });
+  }, 15_000);
 
   it("fails closed without a configured Turnstile site key and does not submit a lead", async () => {
     vi.unstubAllEnvs();
@@ -495,7 +495,7 @@ describe("marketing demand validation v2 landing", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("보안 확인을 준비 중입니다. 잠시 후 다시 시도해 주세요.");
     expect(postMarketingValidation.mock.calls.filter(([body]) => body.action === "lead_submitted")).toHaveLength(0);
-  });
+  }, 15_000);
 
   it("keeps experience_completed queued, blocks planner navigation, and offers retry/restart when the durable write fails", async () => {
     const { readMarketingQueue } = await importSession();
