@@ -4,9 +4,26 @@ const WINDOW_MS = 60_000;
 const MAX_STARTS_PER_WINDOW = 10;
 const startsByClient = new Map<string, { count: number; windowStartedAt: number }>();
 
+function isLocalAppOrigin(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+  } catch {
+    return false;
+  }
+}
+
 export function isSameOriginPost(request: Request) {
+  const requestUrl = new URL(request.url);
   const origin = request.headers.get("origin");
-  return Boolean(origin) && origin === resolveAuthRedirectOrigin(new URL(request.url));
+  if (!origin) {
+    return isLocalAppOrigin(requestUrl.origin);
+  }
+  return (
+    origin === requestUrl.origin ||
+    origin === resolveAuthRedirectOrigin(requestUrl) ||
+    (isLocalAppOrigin(origin) && isLocalAppOrigin(requestUrl.origin))
+  );
 }
 
 export function consumeAuthFlowStartLimit(request: Request, now = Date.now()) {

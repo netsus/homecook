@@ -195,6 +195,11 @@ function number(value: number | null, unit: string) {
   return value === null ? "정보 준비 중" : `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value)}${unit}`;
 }
 
+function isMealLogAuthExpired(error: unknown) {
+  return isMealLogApiError(error)
+    && (error.status === 401 || error.code === "ACCOUNT_SESSION_STALE");
+}
+
 function foodNutritionValue(value: number | null, unit: string, minimum = false) {
   if (value === null) return "정보 준비 중";
   return <>{minimum ? "최소 " : null}<strong className="font-[800] tabular-nums text-[var(--nutrition-number)]">{number(value, "")}</strong> <span>{unit}</span></>;
@@ -398,7 +403,7 @@ function EntryDialog({
         ?? fallbackFocusRef.current);
       onClose();
     } catch (reason) {
-      if (isMealLogApiError(reason) && reason.status === 401) {
+      if (isMealLogAuthExpired(reason)) {
         onUnauthorized(state.type === "delete" ? {
           version: 1, action: "delete", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-delete",
         } : {
@@ -507,6 +512,8 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
   const displayDays = guest ? guestDays : days;
   const day = displayDays[date];
   const isLoading = !guest && loading;
+  const selectedDayAddColumn = day?.active_columns[0] ?? null;
+  const selectedDayAddDisabled = !guest && (!selectedDayAddColumn || isLoading || failedDates.has(date));
   useEffect(() => {
     if (guest || (!loading && weekLoadRef.current?.key === weekKey && dates.every((key) => Boolean(days[key]) || failedDates.has(key)))) onDaysReady?.(weekKey);
   }, [days, dates, failedDates, guest, loading, onDaysReady, weekKey]);
@@ -564,7 +571,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       }
       const results = await weekLoadRef.current.promise;
       if (request !== requestRef.current || guestRef.current) return;
-      const unauthorized = results.some((result) => result.status === "rejected" && isMealLogApiError(result.reason) && result.reason.status === 401);
+      const unauthorized = results.some((result) => result.status === "rejected" && isMealLogAuthExpired(result.reason));
       if (unauthorized) {
         loseAuthorization();
         return;
@@ -627,7 +634,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       return next;
     } catch (reason) {
       if (guestRef.current || request !== requestRef.current) throw reason;
-      if (isMealLogApiError(reason) && reason.status === 401) {
+      if (isMealLogAuthExpired(reason)) {
         loseAuthorization();
       } else {
         setDialog(null);
@@ -660,6 +667,15 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     mutationKeys.current.delete(fingerprint);
     await reloadSelected();
     setDialog(null);
+  }
+
+  function openSelectedDateAdd() {
+    if (guest) {
+      (onLoginRequired ?? onUnauthorized)(date);
+      return;
+    }
+    if (!selectedDayAddColumn || selectedDayAddDisabled) return;
+    openDialog({ type: "add", columnId: selectedDayAddColumn.id }, date);
   }
 
   useEffect(() => {
@@ -718,6 +734,20 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     <main aria-labelledby="planner-log-tab meal-log-title" className="mx-auto max-w-7xl px-4 pb-3 pt-1 lg:px-6 lg:pb-8 lg:pt-2" id="planner-log-panel" role="tabpanel" tabIndex={0}>
       {!guest && error ? <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--surface)] p-5" role="alert"><h2 className="font-extrabold">식사 기록을 불러오지 못했어요</h2><p className="mt-2 text-sm">{error}</p><button className="mt-3 min-h-11 font-bold text-[var(--brand-primary-text)]" onClick={() => void loadWeek(true)} type="button">다시 시도</button></div> : null}
       <h1 className="sr-only" id="meal-log-title" ref={headingRef} tabIndex={-1}>일주일 식사 기록</h1>
+      <div className="sticky top-[calc(var(--planner-sticky-height,80px)+6px)] z-20 flex items-center justify-between gap-3 rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--surface-fill)] px-1 py-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)] lg:top-2 lg:border-0 lg:bg-transparent lg:px-0 lg:shadow-none">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-[var(--ui-slate-500)]">선택한 날짜</p>
+          <p className="truncate text-base font-extrabold text-[var(--ui-slate-800)]">{longDate(date)}</p>
+        </div>
+        <button
+          className="inline-flex min-h-11 shrink-0 items-center rounded-xl bg-[var(--brand-primary-text)] px-4 text-sm font-extrabold text-[var(--text-inverse)] shadow-sm outline-none hover:bg-[var(--brand-primary-accessible-hover)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)] disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={selectedDayAddDisabled}
+          onClick={openSelectedDateAdd}
+          type="button"
+        >
+          식사 추가
+        </button>
+      </div>
       <div className="space-y-4 pt-3">
         {dates.map((dayKey) => {
           const cardDay = displayDays[dayKey];

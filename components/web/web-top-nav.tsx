@@ -4,7 +4,6 @@ import Link from "next/link";
 import * as React from "react";
 
 import { MumeokHorizontalLogo } from "@/components/brand/mumeok-horizontal-logo";
-import { DesktopPrelaunchNotice } from "@/components/shared/prelaunch-notice";
 import { YoutubeExtractionNotificationTrigger } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import { cn } from "@/components/web/utils";
 import {
@@ -102,7 +101,6 @@ export function WebTopNav({
           )}
         </div>
       </div>
-      <DesktopPrelaunchNotice />
     </header>
   );
 }

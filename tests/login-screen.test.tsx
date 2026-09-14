@@ -107,12 +107,13 @@ describe("login screen", () => {
     Reflect.deleteProperty(window, "matchMedia");
   });
 
-  it("explains preparation mode with a public planner exit", () => {
+  it("keeps the social login gate open in preparation mode", () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<LoginScreen nextPath="/planner" />);
-    expect(screen.getByRole("heading", { name: "정식 출시를 준비하고 있어요" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "플래너 둘러보기" }).getAttribute("href")).toBe("/planner");
-    expect(screen.queryByText(/로그인 전에/)).toBeNull();
+    expect(screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeTruthy();
+    expect(screen.getByText("social-buttons:/planner:none:none")).toBeTruthy();
+    expect(screen.getByText(/로그인 전에/)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "플래너 둘러보기" })).toBeNull();
   });
 
   it("shows safe OAuth failure copy", () => {
@@ -208,7 +209,7 @@ describe("login screen", () => {
     ).toBeNull();
   });
 
-  it("redirects authenticated users away from the login screen", async () => {
+  it("keeps the login screen visible instead of trusting a possibly stale existing session", async () => {
     getSession.mockResolvedValue({
       data: {
         session: {
@@ -221,18 +222,13 @@ describe("login screen", () => {
 
     render(<LoginScreen nextPath="/planner" />);
 
-    await vi.waitFor(() => {
-      expect(replace).toHaveBeenCalledWith("/planner");
-    });
+    expect(screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeTruthy();
+    expect(replace).not.toHaveBeenCalled();
+    expect(getSession).not.toHaveBeenCalled();
   });
 
-  it("blocks session redirects while local password bootstrap is pending and recovers after failure", async () => {
+  it("redirects only after a new sign-in event and respects local password bootstrap", async () => {
     const user = userEvent.setup();
-    let resolveSession: (value: {
-      data: { session: { user: { id: string } } | null };
-    }) => void = () => {
-      throw new Error("local bootstrap test session resolver was not installed");
-    };
     let authStateHandler: (
       event: string,
       session: { user: { id: string } } | null,
@@ -240,12 +236,6 @@ describe("login screen", () => {
       throw new Error("local bootstrap test auth handler was not installed");
     };
 
-    getSession.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveSession = resolve;
-        }),
-    );
     onAuthStateChange.mockImplementation((handler) => {
       authStateHandler = handler;
       return {
@@ -259,21 +249,17 @@ describe("login screen", () => {
 
     render(<LoginScreen nextPath="/planner" />);
 
+    authStateHandler("INITIAL_SESSION", {
+      user: {
+        id: "user-1",
+      },
+    });
+
+    expect(replace).not.toHaveBeenCalled();
+
     await user.click(
       screen.getByRole("button", { name: "local-bootstrap-pending" }),
     );
-
-    resolveSession({
-      data: {
-        session: {
-          user: {
-            id: "user-1",
-          },
-        },
-      },
-    });
-    await Promise.resolve();
-    await Promise.resolve();
 
     authStateHandler("SIGNED_IN", {
       user: {

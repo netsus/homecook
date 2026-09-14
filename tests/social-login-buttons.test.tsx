@@ -73,11 +73,13 @@ describe("social login buttons", () => {
     cancelServerAuthFlow.mockResolvedValue(undefined);
   });
 
-  it("hides social options in preparation mode while retaining local password testing", () => {
+  it("keeps social options available in preparation mode", () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<SocialLoginButtons nextPath="/planner" />);
-    expect(screen.queryAllByRole("button", { name: /Google|카카오|네이버/ })).toHaveLength(0);
-    expect(screen.getByText("로그인과 회원가입은 정식 출시 후 열립니다.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Google로 시작하기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "카카오로 시작하기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "네이버로 시작하기" })).toBeTruthy();
+    expect(screen.queryByText("로그인과 회원가입은 정식 출시 후 열립니다.")).toBeNull();
     expect(screen.getByText("local-dev-panel")).toBeTruthy();
     expect(startServerAuthFlow).not.toHaveBeenCalled();
     expect(signInWithOAuth).not.toHaveBeenCalled();
