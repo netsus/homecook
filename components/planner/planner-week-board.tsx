@@ -5,9 +5,6 @@ import Link from "next/link";
 import React, { type CSSProperties } from "react";
 
 import { formatKoreaCompactDate, formatKoreaWeekday } from "@/lib/korean-date";
-import {
-  formatPlannerNutritionValue,
-} from "@/lib/planner/planner-nutrition-presentation";
 import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
 import type { PlannerNutritionCoreCode } from "@/types/planner-nutrition";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
@@ -47,9 +44,18 @@ function WeekMeal({
   const values = Number.isFinite(meal.planned_servings) && meal.planned_servings > 0 && nutrition?.plannedServings === meal.planned_servings
     ? nutrition.values
     : undefined;
-  const totalValue = (code: PlannerNutritionCoreCode) => {
+  const displayedAmount = (code: PlannerNutritionCoreCode) => {
     const value = values?.[code];
-    return value ? formatPlannerNutritionValue(code, value) : "정보 준비 중";
+    const amount = value?.amount ?? value?.known_amount;
+    return typeof amount === "number" && Number.isFinite(amount) && amount >= 0
+      ? amount
+      : null;
+  };
+  const totalValue = (code: PlannerNutritionCoreCode) => {
+    const amount = displayedAmount(code);
+    if (amount === null) return "정보 준비 중";
+    const unit = code === "energy_kcal" ? "kcal" : code === "sodium_mg" ? "mg" : "g";
+    return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(amount)} ${unit}`;
   };
   const energy = totalValue("energy_kcal");
   const totalEnergy = energy === "정보 준비 중" ? "열량 정보 준비 중" : energy;
@@ -62,15 +68,10 @@ function WeekMeal({
     { code: "protein_g", short: "단", label: "단백질", factor: 4, color: "var(--planner-macro-protein)" },
     { code: "fat_g", short: "지", label: "지방", factor: 9, color: "var(--planner-macro-fat)" },
   ] as const;
-  // A partial amount is a minimum, not a proportional share of the whole dish.
-  const completeMacros = macros.every(({ code }) => {
-    const value = values?.[code];
-    return value?.status === "complete" && typeof value.amount === "number"
-      && Number.isFinite(value.amount) && value.amount >= 0;
-  });
-  const macroEnergy = completeMacros
-    ? macros.reduce((sum, { code, factor }) => sum + values![code].amount! * factor, 0)
-    : 0;
+  const macroEnergy = macros.reduce(
+    (sum, { code, factor }) => sum + (displayedAmount(code) ?? 0) * factor,
+    0,
+  );
   const nutritionLabel = values
     ? `${totalWeight} · ${totalEnergy} · ${macros.map(({ code, label }) => `${label} ${totalValue(code)}`).join(" · ")}`
     : "영양 정보 준비 중";
@@ -111,11 +112,12 @@ function WeekMeal({
         </span>
       </span>
       <span aria-label="전체 탄수화물·단백질·지방" className="block rounded-lg bg-[var(--ui-slate-50)] px-2 py-2">
-        {macroEnergy > 0 ? (
-          <span aria-label={`탄단지 열량 비율 · ${macros.map(({ code, label }) => `${label} ${totalValue(code)}`).join(" · ")}`} className="mb-1.5 flex h-1.5 overflow-hidden rounded-full bg-[var(--ui-slate-200)]" role="img">
-            {macros.map(({ code, factor, color }) => <span key={code} style={{ backgroundColor: color, width: `${values![code].amount! * factor / macroEnergy * 100}%` }} />)}
-          </span>
-        ) : null}
+        <span aria-label={`탄단지 열량 비율 · ${macros.map(({ code, label }) => `${label} ${totalValue(code)}`).join(" · ")}`} className="mb-1.5 flex h-1.5 overflow-hidden rounded-full bg-[var(--ui-slate-200)]" role="img">
+          {macros.map(({ code, factor, color }) => {
+            const amount = displayedAmount(code) ?? 0;
+            return <span key={code} style={{ backgroundColor: color, width: `${macroEnergy > 0 ? amount * factor / macroEnergy * 100 : 0}%` }} />;
+          })}
+        </span>
         <span className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] leading-relaxed text-[var(--ui-slate-700)]">
           {macros.map(({ code, short, label, color }) => (
             <span aria-label={`${label} ${totalValue(code)}`} className="whitespace-nowrap" key={code}>

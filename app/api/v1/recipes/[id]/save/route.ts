@@ -17,7 +17,14 @@ import {
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { readVerifiedAccountGenerationSession } from "@/lib/server/account-generation/session-authority";
+import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
+import { buildSessionAuthorityRpcArgs } from "@/lib/server/recipe-content-snapshot-future-propagation";
+import {
+  createRecipeSaveInternalClient,
+  createRouteHandlerClient,
+  createServiceRoleClient,
+} from "@/lib/supabase/server";
 import type { RecipeBookType, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
 
 interface RouteContext {
@@ -113,6 +120,21 @@ interface RecipeSaveDbClient {
   from(table: "recipe_book_items"): RecipeBookItemsTable;
 }
 
+interface RecipeSaveRpcClient {
+  rpc(
+    functionName: "save_recipe_to_books",
+    args: {
+      p_owner_uuid: string;
+      p_auth_identity_created_at_snapshot: string;
+      p_session_key_hash: string;
+      p_hmac_key_version: number;
+      p_session_issued_at: string;
+      p_recipe_id: string;
+      p_book_ids: string[];
+    },
+  ): PromiseLike<{ data: unknown; error: QueryError | null }>;
+}
+
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -138,6 +160,46 @@ function clampSaveCount(value: number) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isMissingSaveRpc(error: QueryError | null | undefined) {
+  return error?.code === "PGRST202"
+    || error?.message.toLowerCase().includes("save_recipe_to_books") === true;
+}
+
+function projectSaveRpcResult(value: unknown) {
+  if (!isRecord(value) || typeof value.success !== "boolean") return null;
+  if (value.success === false) {
+    const error = isRecord(value.error) ? value.error : null;
+    const code = error && typeof error.code === "string" ? error.code : "INTERNAL_ERROR";
+    const message = error && typeof error.message === "string"
+      ? error.message
+      : "레시피를 저장하지 못했어요.";
+    return { ok: false as const, code, message };
+  }
+  const data = isRecord(value.data) ? value.data : null;
+  if (
+    !data
+    || data.saved !== true
+    || typeof data.save_count !== "number"
+    || !Array.isArray(data.book_ids)
+    || !Array.isArray(data.created_book_ids)
+    || !Array.isArray(data.already_saved_book_ids)
+    || !Array.isArray(data.created_item_ids)
+    || [data.book_ids, data.created_book_ids, data.already_saved_book_ids, data.created_item_ids]
+      .some((items) => items.some((item) => typeof item !== "string"))
+  ) return null;
+  return {
+    ok: true as const,
+    createdItemIds: data.created_item_ids as string[],
+    data: {
+      saved: true,
+      save_count: clampSaveCount(data.save_count),
+      book_ids: data.book_ids as string[],
+      created_book_ids: data.created_book_ids as string[],
+      already_saved_book_ids: data.already_saved_book_ids as string[],
+    } satisfies RecipeSaveData,
+  };
 }
 
 function normalizeBookIds(value: unknown) {
@@ -289,12 +351,12 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
+  const userDbClient = routeClient as unknown as
     RecipeSaveDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(userDbClient, user);
+    await ensureUserBootstrapState(userDbClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -312,6 +374,45 @@ export async function POST(request: Request, context: RouteContext) {
   if (recipeResult.error || !recipeResult.data) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
+
+  const rpcClient = createRecipeSaveInternalClient() as RecipeSaveRpcClient | null;
+  if (rpcClient && typeof rpcClient.rpc === "function") {
+    const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+    if (!verifiedSession.ok || verifiedSession.sessionAuthority.ownerUuid !== user.id) {
+      return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
+    }
+    const rpcResult = await rpcClient.rpc("save_recipe_to_books", {
+      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
+      p_recipe_id: id,
+      p_book_ids: bookIds,
+    });
+    if (!isMissingSaveRpc(rpcResult.error)) {
+      if (rpcResult.error) {
+        if (rpcResult.error.message.includes("ACCOUNT_SESSION_STALE")) {
+          return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
+        }
+        const authorityError = createHybridAuthorityRouteError(rpcResult.error);
+        if (authorityError) return authorityError;
+        return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
+      }
+      const projected = projectSaveRpcResult(rpcResult.data);
+      if (!projected) {
+        return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
+      }
+      if (!projected.ok) {
+        const status = projected.code === "UNAUTHORIZED" ? 401
+          : projected.code === "FORBIDDEN" ? 403
+            : projected.code === "CONFLICT" ? 409
+              : projected.code === "RESOURCE_NOT_FOUND" ? 404
+                : 500;
+        return fail(projected.code, projected.message, status);
+      }
+      return ok(projected.data);
+    }
+  }
+
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    RecipeSaveDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   const recipeBooksResult = await dbClient
     .from("recipe_books")

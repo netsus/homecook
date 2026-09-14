@@ -32,6 +32,24 @@ describe("prelaunch meal log presentation", () => {
     expect(within(summary.querySelector("dl")!).getByText("25")).toBeTruthy();
     expect(within(summary.querySelector("dl")!).getByText("10")).toBeTruthy();
   });
+  it("shows an add button for every active meal column when the day has no entries", async () => {
+    api.fetch.mockImplementation(async (date: string) => ({
+      ...day(date),
+      active_columns: [
+        { id: "20000000-0000-4000-8000-000000000001", name: "아침", sort_order: 0 },
+        { id: "20000000-0000-4000-8000-000000000002", name: "점심", sort_order: 1 },
+        { id: "20000000-0000-4000-8000-000000000003", name: "저녁", sort_order: 2 },
+      ],
+      active_sections: [],
+      entries: [],
+    }));
+
+    render(<MealLogScreen {...props} />);
+
+    expect(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "점심에 먹은 음식 추가" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "저녁에 먹은 음식 추가" })).toBeTruthy();
+  });
   it("shows daily nutrition as four always-visible tiles and consumed grams per food", async () => {
     render(<MealLogScreen {...props} />);
     const summary = await findSelectedSummary();

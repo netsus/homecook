@@ -334,6 +334,77 @@ function approvedEvidence(
   );
 }
 
+function ingredientWeightInGrams(
+  ingredient: RecipeNutritionIngredientInput,
+) {
+  const amount = ingredient.amount;
+  if (amount === null || !Number.isFinite(amount) || amount <= 0) return null;
+
+  const directMass = massInGrams(amount, ingredient.unit);
+  if (directMass !== null) return directMass;
+
+  const milliliters = volumeInMilliliters(amount, ingredient.unit);
+  const assignment = ingredient.conversion_assignment;
+  const normalizedWeight = assignment?.evidence?.normalized_g_per_15ml;
+  if (
+    milliliters !== null
+    && assignment
+    && assignment.ingredient_id === ingredient.ingredient_id
+    && assignment.preparation_state === ingredient.preparation_state
+    && assignment.review_status === "approved"
+    && assignment.is_active
+    && assignment.profile.is_active
+    && assignment.profile.basis_volume_ml === 15
+    && assignment.evidence
+    && approvedEvidence(assignment.evidence)
+    && typeof normalizedWeight === "number"
+    && Number.isFinite(normalizedWeight)
+    && normalizedWeight > 0
+  ) {
+    return milliliters * normalizedWeight / 15;
+  }
+
+  if (isPieceUnit(ingredient.unit)) {
+    const piece = ingredient.piece_weight;
+    const effectiveSizeCode = ingredient.size_code ?? "medium";
+    if (
+      piece
+      && piece.ingredient_id === ingredient.ingredient_id
+      && piece.size_code === effectiveSizeCode
+      && piece.preparation_state === ingredient.preparation_state
+      && piece.review_status === "approved"
+      && piece.is_active
+      && piece.evidence
+      && approvedEvidence(piece.evidence)
+      && Number.isFinite(piece.weight_g)
+      && piece.weight_g > 0
+    ) {
+      return amount * piece.weight_g;
+    }
+  }
+
+  return null;
+}
+
+export function calculateRecipeIngredientWeightGrams(
+  ingredients: RecipeNutritionIngredientInput[],
+) {
+  let totalWeightGrams = 0;
+  let convertedIngredientCount = 0;
+
+  for (const ingredient of ingredients) {
+    if (ingredient.ingredient_type === "TO_TASTE") continue;
+    const weight = ingredientWeightInGrams(ingredient);
+    if (weight === null) continue;
+    convertedIngredientCount += 1;
+    totalWeightGrams += weight;
+  }
+
+  return convertedIngredientCount > 0 && totalWeightGrams > 0
+    ? totalWeightGrams
+    : null;
+}
+
 function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution | null {
   const nutrition = ingredient.nutrition;
   const amount = ingredient.amount;
