@@ -217,17 +217,21 @@ function EntryRow({ disabled, entry, guest = false, onDelete, onDetail }: {
 }) {
   const thumbnail = guest ? createGuestPlannerData(entry.consumed_local_date).meals.find((meal) => meal.recipe_title === entry.display_name)?.recipe_thumbnail_url : null;
   const macros = [
-    { label: "탄수화물", value: entry.nutrition.carbohydrate_g },
-    { label: "단백질", value: entry.nutrition.protein_g },
-    { label: "지방", value: entry.nutrition.fat_g },
+    { label: "탄수화물", short: "탄", value: entry.nutrition.carbohydrate_g, factor: 4, color: "var(--nutrition-carbohydrate)" },
+    { label: "단백질", short: "단", value: entry.nutrition.protein_g, factor: 4, color: "var(--nutrition-protein)" },
+    { label: "지방", short: "지", value: entry.nutrition.fat_g, factor: 9, color: "var(--nutrition-fat)" },
   ];
+  const hasCompleteMacros = macros.every((macro) => macro.value !== null);
+  const macroEnergy = hasCompleteMacros
+    ? macros.reduce((sum, macro) => sum + macro.value! * macro.factor, 0)
+    : 0;
   return (
     <li className="py-3">
       <div className="flex items-start gap-2">
         <button aria-describedby={`meal-log-entry-${entry.id}-quantity`} aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 식사 기록 상세`} className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={entryActionId(entry.id, "edit")} onClick={onDetail} type="button">
           {thumbnail ? <Image alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" height={48} src={thumbnail} width={48} /> : null}
           <span className="min-w-0 flex-1">
-            <span className="block text-base font-extrabold leading-6 text-[var(--ui-slate-800)] [overflow-wrap:anywhere]">{entry.display_name}</span>
+            <span className="block truncate text-base font-extrabold leading-6 text-[var(--ui-slate-800)]">{entry.display_name}</span>
             {entry.display_brand ? <span className="mt-0.5 block text-xs text-[var(--ui-slate-500)]">{entry.display_brand}</span> : null}
             <span id={`meal-log-entry-${entry.id}-quantity`} className="mt-1 flex flex-wrap gap-x-2 text-xs leading-5 text-[var(--ui-slate-600)]"><span aria-label={`먹은 양 ${number(entry.quantity.amount, entry.quantity.unit)}`}>{number(entry.quantity.amount, entry.quantity.unit)}</span><span aria-hidden="true">·</span><span>{foodNutritionValue(entry.nutrition.calories_kcal, "kcal", entry.nutrition.calculation_status === "partial")}</span></span>
           </span>
@@ -236,8 +240,19 @@ function EntryRow({ disabled, entry, guest = false, onDelete, onDetail }: {
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6" /></svg>
         </button>
       </div>
-      <div aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 영양정보`} className="mt-1 space-y-1 text-xs leading-5 text-[var(--ui-slate-600)]">
-        <p className="flex flex-wrap gap-x-2">{macros.map((macro) => <span key={macro.label}>{macro.label} {foodNutritionValue(macro.value, "g")}</span>)}</p>
+      <div aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 영양정보`} className="ml-[60px] mt-1 rounded-xl bg-[var(--ui-slate-50)] px-3 py-2 text-xs leading-5 text-[var(--ui-slate-600)]">
+        {macroEnergy > 0 ? (
+          <div aria-label="탄수화물 단백질 지방 비율" className="mb-1.5 flex h-2 overflow-hidden rounded-full bg-[var(--ui-slate-200)]" role="img">
+            {macros.map((macro) => (
+              <span
+                aria-hidden="true"
+                key={macro.label}
+                style={{ backgroundColor: macro.color, width: `${macro.value! * macro.factor / macroEnergy * 100}%` }}
+              />
+            ))}
+          </div>
+        ) : null}
+        <p className="flex flex-wrap gap-x-2">{macros.map((macro) => <span className="whitespace-nowrap" key={macro.label}><span aria-hidden="true" className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: macro.color }} />{macro.short} {foodNutritionValue(macro.value, "g")}</span>)}</p>
         {entry.nutrition.calculation_status === "partial" ? <p className="text-[11px] text-[var(--ui-slate-500)]">확인된 영양만 표시해요.</p> : null}
       </div>
     </li>

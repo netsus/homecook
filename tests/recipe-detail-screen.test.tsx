@@ -1392,10 +1392,9 @@ describe("recipe detail screen", () => {
     expect(closeButton.textContent).toBe("");
   });
 
-  it("opens the web profile summary from the top avatar without linking to mypage", async () => {
+  it("links the web profile summary button to mypage from the top avatar", async () => {
     installMatchMedia(true);
 
-    const user = userEvent.setup();
     const { container } = render(
       <RecipeDetailScreen
         initialAuthenticated
@@ -1409,13 +1408,10 @@ describe("recipe detail screen", () => {
     });
     const profileTrigger = screen.getByTestId("web-profile-summary-button");
 
-    expect(profileTrigger.tagName).toBe("BUTTON");
-    expect(container.querySelector('a.web-profile-button[href="/mypage"]')).toBeNull();
-
-    await user.click(profileTrigger);
-
-    expect(await screen.findByRole("dialog", { name: "마이페이지 요약" })).toBeTruthy();
-    expect(mockRouterPush).not.toHaveBeenCalledWith("/mypage");
+    expect(profileTrigger.tagName).toBe("A");
+    expect(profileTrigger.getAttribute("href")).toBe("/mypage");
+    expect(container.querySelector('a.web-profile-button[href="/mypage"]')).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
   });
 
   it("keeps recipe detail loading inside the desktop shell", () => {

@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { YoutubePreparationNotice } from "@/components/shared/prelaunch-notice";
-import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import React, { useState } from "react";
 
 import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
@@ -39,7 +37,7 @@ export function YoutubeImportEntrySheet({
       ariaLabelledBy="youtube-import-entry-title"
       badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
       bodyClassName="pb-5"
-      description={isPrelaunchFeatureLocked() ? undefined : "링크를 붙여넣고 기존 유튜브 가져오기 화면에서 추출을 이어가요"}
+      description="링크를 붙여넣고 기존 유튜브 가져오기 화면에서 추출을 이어가요"
       leadingAction={
         <AppBackButton onClick={onBack} testId="youtube-import-entry-back" />
       }
@@ -48,7 +46,7 @@ export function YoutubeImportEntrySheet({
       testId="youtube-import-entry-sheet"
       title="유튜브 가져오기"
     >
-      {isPrelaunchFeatureLocked() ? <YoutubePreparationNotice onBack={onBack} /> : <>
+      <>
       <label
         className="block text-[13px] font-semibold text-[var(--text-2)]"
         htmlFor="youtube-import-entry-url"
@@ -76,7 +74,7 @@ export function YoutubeImportEntrySheet({
           가져오기 화면 열기
         </Link>
       </div>
-      </>}
+      </>
     </AppBottomSheet>
   );
 }

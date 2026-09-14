@@ -60,13 +60,6 @@ export function RecipeNutritionCard({
   }
 
   const display = buildRecipeNutritionDisplay(nutrition, selectedServings);
-  const warningMessages = buildWarningMessages(nutrition.warnings);
-  const hasIncompleteMacronutrient = [
-    "carbohydrate_g",
-    "protein_g",
-    "fat_g",
-  ].some((code) => nutrition.values[code]?.status !== "complete");
-
   return (
     <section
       aria-labelledby={`recipe-nutrition-title-${variant}`}
@@ -98,9 +91,9 @@ export function RecipeNutritionCard({
         </p>
       ) : null}
 
-      <NutritionTable
-        label="예상 영양성분"
-        nutrients={display.nutrients}
+      <NutritionGraph
+        coreNutrients={display.nutrients}
+        nutrition={nutrition}
         selectedServings={selectedServings}
       />
 
@@ -124,75 +117,109 @@ export function RecipeNutritionCard({
         </details>
       ) : null}
 
-      <div className="mt-3 space-y-1 text-[12px] leading-5 text-[var(--text-2)]">
-        {nutrition.calculation_status === "partial" && hasIncompleteMacronutrient ? (
-          <p>일부 값은 확인된 재료만 합친 최소값이에요.</p>
-        ) : null}
-        {nutrition.calculation_status === "unavailable" ? (
-          <p>정확히 계산할 수 있는 재료 정보가 아직 부족해요.</p>
-        ) : null}
-        {nutrition.calculation_quality === "estimated" ||
-        nutrition.calculation_quality === "mixed" ? (
-          <p>재료 투입량과 일반 계량값을 기준으로 계산한 예상치예요.</p>
-        ) : null}
-        {display.reflectedText ? <p>{display.reflectedText}</p> : null}
-        <p>재료 양은 손질 후 실제 요리에 넣는 먹을 수 있는 부분 기준이에요.</p>
-        <p>조리 과정에서 달라지는 영양 손실은 반영하지 않았어요.</p>
-      </div>
-
-      {warningMessages.length > 0 ? (
-        <ul className="mt-3 space-y-1 rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 py-2.5 text-[12px] leading-5 text-[var(--text-2)]">
-          {warningMessages.map((message) => (
-            <li key={message}>{message}</li>
-          ))}
-        </ul>
-      ) : null}
-
-      {nutrition.sources.length > 0 ? (
-        <details className="mt-2 text-[12px] text-[var(--text-2)]">
-          <summary className="flex min-h-11 cursor-pointer items-center font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]">
-            계산 출처와 기준 보기
-          </summary>
-          <ul className="space-y-2 pb-1">
-            {nutrition.sources.map((source) => {
-              const sourceKey = [
-                source.provider,
-                source.dataset,
-                source.source_version,
-                source.data_basis_date ?? "",
-                source.license,
-                source.source_url,
-              ].join("|");
-              const safeUrl = getSafePublicUrl(source.source_url);
-
-              return (
-                <li className="leading-5" key={sourceKey}>
-                  <span className="font-semibold text-[var(--foreground)]">
-                    {source.provider} · {source.dataset}
-                  </span>
-                  <span> ({source.source_version})</span>
-                  {source.data_basis_date ? (
-                    <span> · 기준일 {source.data_basis_date}</span>
-                  ) : null}
-                  <span> · {source.license}</span>
-                  {safeUrl ? (
-                    <a
-                      className="ml-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
-                      href={safeUrl}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      원문
-                    </a>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </details>
-      ) : null}
     </section>
   );
+}
+
+function NutritionGraph({
+  coreNutrients,
+  nutrition,
+  selectedServings,
+}: {
+  coreNutrients: RecipeNutrientDisplayItem[];
+  nutrition: RecipeNutrition;
+  selectedServings: number;
+}) {
+  const baseServings = nutrition.base_servings;
+  const coreByCode = new Map(coreNutrients.map((item) => [item.code, item]));
+  const energyDisplay = coreByCode.get("energy_kcal");
+  const energy = selectedNutritionAmount(nutrition, "energy_kcal", selectedServings, baseServings);
+  const macros = [
+    { code: "carbohydrate_g", label: "탄수화물", short: "탄", factor: 4, color: "var(--nutrition-carbohydrate)" },
+    { code: "protein_g", label: "단백질", short: "단", factor: 4, color: "var(--nutrition-protein)" },
+    { code: "fat_g", label: "지방", short: "지", factor: 9, color: "var(--nutrition-fat)" },
+  ] as const;
+  const macroValues = macros.map((macro) => ({
+    ...macro,
+    amount: selectedNutritionAmount(nutrition, macro.code, selectedServings, baseServings),
+  }));
+  const macroEnergy = macroValues.every((macro) => macro.amount !== null)
+    ? macroValues.reduce((sum, macro) => sum + macro.amount! * macro.factor, 0)
+    : 0;
+
+  return (
+    <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[12px] font-bold text-[var(--text-2)]">열량</p>
+          <p className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--brand-primary-text)]">
+            {energyDisplay?.selectedTotalText ?? (energy === null ? "정보 준비 중" : `${formatNutritionNumber(energy, "kcal")} kcal`)}
+          </p>
+          {energyDisplay ? (
+            <p className="mt-1 text-[12px] font-semibold text-[var(--text-2)]">
+              <span>1인분</span>{" "}
+              <span>{energyDisplay.perServingText}</span>
+            </p>
+          ) : null}
+        </div>
+        <p className="shrink-0 text-right text-[12px] font-semibold text-[var(--text-3)]">
+          선택 {selectedServings}인분
+        </p>
+      </div>
+      <div aria-label="탄수화물 단백질 지방 비율" className="mt-3 h-3 overflow-hidden rounded-full bg-[var(--surface-fill)]" role="img">
+        {macroEnergy > 0 ? macroValues.map((macro) => (
+          <span
+            aria-hidden="true"
+            className="inline-block h-full"
+            key={macro.code}
+            style={{ backgroundColor: macro.color, width: `${(macro.amount! * macro.factor / macroEnergy) * 100}%` }}
+          />
+        )) : null}
+      </div>
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
+        {macroValues.map((macro) => (
+          <div key={macro.code}>
+            <dt className="flex items-center gap-1 font-semibold text-[var(--text-2)]">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />
+              {macro.short}
+            </dt>
+            <dd className="mt-1 font-extrabold tabular-nums text-[var(--foreground)]">
+              {coreByCode.get(macro.code)?.selectedTotalText ?? (macro.amount === null ? "정보 준비 중" : `${formatNutritionNumber(macro.amount, "g")} g`)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function selectedNutritionAmount(
+  nutrition: RecipeNutrition,
+  code: string,
+  selectedServings: number,
+  baseServings: number | undefined,
+) {
+  const value = nutrition.values[code];
+  const scalableValue = nutrition.scalable_values?.[code];
+  const fixedValue = nutrition.fixed_values?.[code];
+  if (
+    !baseServings ||
+    baseServings <= 0 ||
+    selectedServings <= 0 ||
+    (value?.status !== "complete" && value?.status !== "partial") ||
+    typeof scalableValue !== "number" ||
+    typeof fixedValue !== "number"
+  ) {
+    return null;
+  }
+  const amount = scalableValue * selectedServings / baseServings + fixedValue;
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function formatNutritionNumber(amount: number, unit: "kcal" | "g" | "mg") {
+  return new Intl.NumberFormat("ko-KR", {
+    maximumFractionDigits: unit === "g" ? 1 : 0,
+  }).format(amount);
 }
 
 function NutritionTable({
@@ -299,39 +326,4 @@ function cardClassName(variant: "app" | "web") {
     "min-w-0 rounded-[16px] border border-[var(--line-strong)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]",
     variant === "web" ? "web-recipe-nutrition-card" : "mb-5",
   ].join(" ");
-}
-
-function getSafePublicUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:"
-      ? url.toString()
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-const WARNING_COPY: Record<string, string> = {
-  NUTRITION_PROFILE_MISSING:
-    "영양 정보가 연결되지 않은 재료가 있어 일부 값이 빠질 수 있어요.",
-  NUTRIENT_VALUE_MISSING:
-    "연결된 재료에 일부 영양성분 값이 없어 해당 값은 최소치일 수 있어요.",
-  UNIT_CONVERSION_MISSING:
-    "재료 단위를 무게로 정확히 바꾸지 못해 일부 값이 빠질 수 있어요.",
-  TO_TASTE_EXCLUDED:
-    "‘약간’, ‘적당량’ 재료는 원본이 0인 영양소만 반영하고 나머지는 계산에서 제외했어요.",
-  REPRESENTATIVE_VOLUME_CONVERSION_USED:
-    "부피 단위는 승인된 계량값으로 무게를 환산해 계산했어요.",
-  PIECE_WEIGHT_CONVERSION_USED:
-    "개수 단위는 승인된 재료 무게 기준으로 바꿔 계산했어요.",
-};
-
-const UNKNOWN_WARNING_COPY =
-  "일부 영양값에는 추가 확인이 필요한 계산 조건이 있어요.";
-
-function buildWarningMessages(warnings: string[]) {
-  return [...new Set(warnings.map((warning) => (
-    WARNING_COPY[warning] ?? UNKNOWN_WARNING_COPY
-  )))];
 }
