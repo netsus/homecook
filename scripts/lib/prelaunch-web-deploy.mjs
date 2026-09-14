@@ -21,7 +21,7 @@ export function classifyPrelaunchScope(files, before, after) {
     "scripts/validate-account-session-generation-inventory.mjs",
     "scripts/youtube-real-app-route-smoke.mjs",
   ]);
-  const web = /^(?:app|components|lib|stores|types|hooks|public)\/|^(?:middleware\.[cm]?[jt]s|next\.config\.[cm]?[jt]s|tsconfig\.json|postcss\.config\.[cm]?js|package\.json|pnpm-lock\.yaml|\.env\.example)$/u;
+  const web = /^(?:app|components|lib|stores|types|hooks|public)\/|^scripts\/lib\/recipe-nutrition-predecessor\.mjs$|^(?:middleware\.[cm]?[jt]s|next\.config\.[cm]?[jt]s|tsconfig\.json|postcss\.config\.[cm]?js|package\.json|pnpm-lock\.yaml|\.env\.example)$/u;
   const denied = [];
   for (const file of files) {
     if (/^supabase\/migrations\/\d+_[^/]+\.sql$/u.test(file)) scope.database.push(file);
@@ -38,7 +38,7 @@ export function classifyPrelaunchScope(files, before, after) {
   if (after.scripts?.build !== "next build" || (after.scripts?.start !== undefined && after.scripts.start !== "node scripts/start-production.mjs")) {
     throw new DeploymentError("빠른 배포는 기본 Next.js build/start 실행 계약을 유지해야 합니다.");
   }
-  scope.api = scope.web.filter((file) => /^app\/api\/|^lib\/(?:server|api|auth|supabase)(?:\/|[.-])|^middleware\.|\/route\.[cm]?[jt]sx?$/u.test(file));
+  scope.api = scope.web.filter((file) => /^app\/api\/|^lib\/(?:server|api|auth|supabase)(?:\/|[.-])|^scripts\/lib\/recipe-nutrition-predecessor\.mjs$|^middleware\.|\/route\.[cm]?[jt]sx?$/u.test(file));
   return scope;
 }
 

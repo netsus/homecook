@@ -127,6 +127,16 @@ describe("prelaunch web deployment", () => {
   it("classifies web/API, immutable migrations, and operational docs independently", () => {
     expect(classifyPrelaunchScope(["app/api/signup/route.ts", "lib/auth.ts", "next.config.ts", ".env.example", "supabase/migrations/20260905120000_add.sql", ".github/workflows/ci.yml", "docs/a.md"], basePackage, basePackage)).toEqual({ web: ["app/api/signup/route.ts", "lib/auth.ts", "next.config.ts", ".env.example"], database: ["supabase/migrations/20260905120000_add.sql"], support: [".github/workflows/ci.yml", "docs/a.md"], api: ["app/api/signup/route.ts", "lib/auth.ts"] });
   });
+  it("allows the recipe nutrition predecessor used by the web runtime without broadening script access", () => {
+    const file = "scripts/lib/recipe-nutrition-predecessor.mjs";
+    expect(classifyPrelaunchScope([file], basePackage, basePackage)).toEqual({
+      web: [file],
+      database: [],
+      support: [],
+      api: [file],
+    });
+    expect(() => classifyPrelaunchScope(["scripts/lib/recipe-nutrition-predecessor-extra.mjs"], basePackage, basePackage)).toThrow("허용");
+  });
   it("permits marketing validation operational tools without allowing service runtime scripts", () => {
     const files = ["scripts/marketing-validation-production-readiness.mjs", "scripts/marketing-validation-preview-preflight.mjs", "scripts/marketing-validation-preview-smoke.mjs", "scripts/lib/marketing-validation-operations.mjs", "scripts/lib/marketing-validation-preview-contract.mjs"];
     expect(classifyPrelaunchScope(files, basePackage, basePackage).support).toEqual(files);
