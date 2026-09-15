@@ -24,7 +24,7 @@ const DEFAULT_PROGRESS_FLUSH_TIMEOUT_MS = 2_000;
 export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = workerTiming.lease_seconds;
 export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS =
   workerTiming.heartbeat_interval_seconds * 1000;
-const I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
+const I031_CODEX_CLI_VERSION = "0.154.0-alpha.6.2";
 const CHILD_ENV_ALLOWLIST = new Set([
   "APIFY_TOKEN",
   "HOME",
@@ -1173,7 +1173,7 @@ export function createStandaloneYoutubeI031Extractor({
               if (result.workerDataPersisted !== true) {
                 await workerRpcClient.recordEvent("visual", {
                   provider: "codex-vision-keyframes",
-                  model: "gpt-5.4",
+                  model: "gpt-6-astra",
                   cache_hit: false,
                   event_type: "recipe_extraction",
                   status: "success",

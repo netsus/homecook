@@ -435,6 +435,7 @@ function makeArtifactWritableForCleanup(directory) {
  *   schemaIdentity?: string,
  *   allowedSnapshotDigest: string,
  *   policyVersion?: number,
+ *   pipelineIdentity?: string,
  * }} options
  */
 export function materializeYoutubeExtractionWorkerArtifact({
@@ -447,6 +448,7 @@ export function materializeYoutubeExtractionWorkerArtifact({
   schemaIdentity = YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
   allowedSnapshotDigest,
   policyVersion = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION,
+  pipelineIdentity = DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY,
 } = {}) {
   const normalizedRoot = ensureAbsolutePath(rootDir, "rootDir");
   const normalizedOutput = ensureAbsolutePath(outputDir, "outputDir");
@@ -468,6 +470,7 @@ export function materializeYoutubeExtractionWorkerArtifact({
       schemaIdentity,
       allowedSnapshotDigest,
       policyVersion,
+      pipelineIdentity,
     });
     for (const file of manifest.files) {
       const destination = resolve(stagingRoot, file.path);
