@@ -458,7 +458,7 @@ const RECIPE_MEAL_WEIGHT_READ_TABLES = new Set([
 
 export function createRecipeFuturePropagationInternalClient() {
   const client = createScopedDataServiceRoleClient(
-    "recipe-meal-weight",
+    "recipe-future-propagation",
   );
   if (!client) {
     return null;
@@ -471,7 +471,7 @@ export function createRecipeFuturePropagationInternalClient() {
 
 export function createRecipeMealWeightReadInternalClient() {
   const client = createScopedDataServiceRoleClient(
-    "recipe-future-propagation",
+    "recipe-meal-weight",
   );
   if (!client) return null;
   return {
