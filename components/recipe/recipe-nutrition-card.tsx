@@ -62,31 +62,12 @@ export function RecipeNutritionCard({
   const display = buildRecipeNutritionDisplay(nutrition, selectedServings);
   return (
     <section
-      aria-labelledby={`recipe-nutrition-title-${variant}`}
+      aria-label="레시피 영양성분"
       className={cardClassName(variant)}
       data-testid={`recipe-nutrition-card-${variant}`}
     >
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--brand-primary-text)]">
-            예상값
-          </p>
-          <h2
-            className="mt-1 text-[18px] font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
-            id={`recipe-nutrition-title-${variant}`}
-          >
-            1인분 기준 예상 영양
-          </h2>
-        </div>
-        {display.qualityText ? (
-          <span className="max-w-full rounded-[var(--radius-full)] bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-bold leading-4 text-[var(--brand-primary-text)]">
-            {display.qualityText}
-          </span>
-        ) : null}
-      </div>
-
       {!display.hasValidBaseServings ? (
-        <p className="mt-3 rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 py-2.5 text-[12px] leading-5 text-[var(--text-2)]">
+        <p className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 py-2.5 text-[12px] leading-5 text-[var(--text-2)]">
           기준 인분 정보가 올바르지 않아 계산값을 표시하지 않았어요.
         </p>
       ) : null}
@@ -148,42 +129,40 @@ function NutritionGraph({
     : 0;
 
   return (
-    <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-bold text-[var(--text-2)]">열량</p>
-          <p className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--brand-primary-text)]">
+    <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3">
+      <div className="flex items-end justify-between gap-2">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span className="shrink-0 rounded-[var(--radius-full)] bg-[var(--brand-primary-soft)] px-2 py-1 text-[11px] font-extrabold leading-none text-[var(--brand-primary-text)]">
+            {selectedServings}인분
+          </span>
+          <strong className="min-w-0 truncate text-[22px] font-extrabold leading-none tabular-nums text-[var(--brand-primary-text)]">
             {energyDisplay?.selectedTotalText ?? (energy === null ? "정보 준비 중" : `${formatNutritionNumber(energy, "kcal")} kcal`)}
-          </p>
-          {energyDisplay ? (
-            <p className="mt-1 text-[12px] font-semibold text-[var(--text-2)]">
-              <span>1인분</span>{" "}
-              <span>{energyDisplay.perServingText}</span>
-            </p>
-          ) : null}
+          </strong>
         </div>
-        <p className="shrink-0 text-right text-[12px] font-semibold text-[var(--text-3)]">
-          선택 {selectedServings}인분
-        </p>
+        {energyDisplay ? (
+          <span className="shrink-0 text-right text-[12px] font-bold text-[var(--text-2)]">
+            1인분 {energyDisplay.perServingText}
+          </span>
+        ) : null}
       </div>
-      <div aria-label="탄수화물 단백질 지방 비율" className="mt-3 h-3 overflow-hidden rounded-full bg-[var(--surface-fill)]" role="img">
+      <div aria-label="탄수화물 단백질 지방 비율" className="mt-2.5 flex h-3 overflow-hidden rounded-full bg-[var(--surface-fill)]" role="img">
         {macroEnergy > 0 ? macroValues.map((macro) => (
           <span
             aria-hidden="true"
-            className="inline-block h-full"
+            className="block h-full"
             key={macro.code}
             style={{ backgroundColor: macro.color, width: `${(macro.amount! * macro.factor / macroEnergy) * 100}%` }}
           />
         )) : null}
       </div>
-      <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
+      <dl className="mt-2 flex flex-wrap items-center justify-start gap-x-3 gap-y-1 text-[12px]">
         {macroValues.map((macro) => (
-          <div key={macro.code}>
-            <dt className="flex items-center gap-1 font-semibold text-[var(--text-2)]">
+          <div className="inline-flex items-center gap-1.5" key={macro.code}>
+            <dt className="flex items-center gap-1 font-bold text-[var(--text-2)]">
               <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />
               {macro.short}
             </dt>
-            <dd className="mt-1 font-extrabold tabular-nums text-[var(--foreground)]">
+            <dd className="font-extrabold tabular-nums text-[var(--foreground)]">
               {coreByCode.get(macro.code)?.selectedTotalText ?? (macro.amount === null ? "정보 준비 중" : `${formatNutritionNumber(macro.amount, "g")} g`)}
             </dd>
           </div>

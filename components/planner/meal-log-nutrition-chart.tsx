@@ -39,8 +39,7 @@ export function MealLogNutritionChart({ nutrition }: { nutrition: MealLogNutriti
           {macros.map((macro) => <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 lg:flex-col lg:justify-center lg:gap-2 lg:px-2" key={macro.label}><dt className="flex items-center gap-2 text-[var(--ui-slate-600)]"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />{macro.label}</dt><dd className="font-extrabold tabular-nums text-[var(--brand-primary-text)] lg:text-2xl">{macro.value === null ? <span className="text-xs font-medium">정보 준비 중</span> : `${format(macro.value)}g`}</dd></div>)}
         </dl>
       </div>
-      {available && energy > 0 ? <p className="mt-2 text-[11px] text-[var(--ui-slate-500)]">그래프는 탄수화물·단백질·지방의 열량 비율이에요.</p> : <p className="mt-3 text-xs text-[var(--ui-slate-500)]">{available ? "먹은 음식이 기록되면 탄단지 비율을 보여드릴게요." : "영양 정보가 준비되면 그래프를 보여드릴게요."}</p>}
-      {nutrition.calculation_status === "partial" ? <p className="mt-2 text-xs text-[var(--ui-slate-600)]">최소 · 확인된 영양 정보만 표시해요. 실제 섭취량은 더 많을 수 있어요.</p> : null}
+      {!available || energy <= 0 ? <p className="mt-3 text-xs text-[var(--ui-slate-500)]">영양 정보가 준비되면 그래프를 보여드릴게요.</p> : null}
     </div>
   );
 }

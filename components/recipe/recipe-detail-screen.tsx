@@ -15,6 +15,7 @@ import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-p
 import { RecipeDetailPersonalEditor } from "@/components/recipe/recipe-detail-personal-editor";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
 import { SaveModal } from "@/components/recipe/save-modal";
+import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { ContentState } from "@/components/shared/content-state";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
@@ -598,6 +599,10 @@ export function RecipeDetailScreen({
         message: `${dateLabel} ${columnName}에 추가됐어요`,
         tone: "status",
       });
+      emitAppActionNotification({
+        message: `${dateLabel} ${columnName}에 추가됐어요`,
+        title: "요리계획",
+      });
     } catch (error) {
       const message =
         isMealApiError(error) && error.status === 403
@@ -822,6 +827,13 @@ export function RecipeDetailScreen({
             ? "레시피북 저장을 변경했어요."
             : "레시피를 저장했어요.",
         tone: "status",
+      });
+      emitAppActionNotification({
+        message:
+          removedBookIds.length > 0
+            ? "레시피북 저장을 변경했어요."
+            : "레시피를 저장했어요.",
+        title: "레시피 저장",
       });
       if (newBookIds.length > 0) {
         notifyGamificationSourceAction();

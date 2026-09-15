@@ -1083,11 +1083,72 @@ export async function POST(request: Request) {
       p_pantry_item_count: allShoppingItemPayloadRows.length,
     },
   );
+
+  let rpcData: ShoppingCreateRpcData | null = null;
   if (!createResult.ok) {
-    return createResult.response;
+    if (createResult.response.status < 500 || !dbClient.rpc) {
+      return createResult.response;
+    }
+
+    const legacyRecipeRowsByRecipeId = new Map<
+      string,
+      {
+        recipe_id: string;
+        shopping_servings: number;
+        planned_servings_total: number;
+      }
+    >();
+    shoppingRecipePayloadRows.forEach((row) => {
+      const existing = legacyRecipeRowsByRecipeId.get(row.recipe_id) ?? {
+        recipe_id: row.recipe_id,
+        shopping_servings: 0,
+        planned_servings_total: 0,
+      };
+      existing.shopping_servings += row.shopping_servings;
+      existing.planned_servings_total += row.planned_servings_total;
+      legacyRecipeRowsByRecipeId.set(row.recipe_id, existing);
+    });
+
+    const legacyResult = await dbClient.rpc(
+      "create_shopping_list_from_payload",
+      {
+        p_user_id: user.id,
+        p_title: title,
+        p_date_range_start: dateRangeStart,
+        p_date_range_end: dateRangeEnd,
+        p_complete_without_list: shouldCompleteWithoutList,
+        p_shopping_meal_ids: shoppingMealIds,
+        p_split_remainders: splitMeals.map(({ meal, remainingServings }) => ({
+          user_id: meal.user_id,
+          recipe_id: meal.recipe_id,
+          recipe_content_snapshot_id: meal.recipe_content_snapshot_id,
+          plan_date: meal.plan_date,
+          column_id: meal.column_id,
+          planned_servings: remainingServings,
+          status: "registered",
+          is_leftover: meal.is_leftover,
+          leftover_dish_id: meal.leftover_dish_id,
+          shopping_list_id: null,
+          cooked_at: null,
+        })),
+        p_split_originals: splitMeals.map((splitMeal) => ({
+          meal_id: splitMeal.meal.id,
+          planned_servings: splitMeal.shoppingServings,
+        })),
+        p_recipe_rows: [...legacyRecipeRowsByRecipeId.values()],
+        p_item_rows: allShoppingItemPayloadRows,
+        p_pantry_item_count: allShoppingItemPayloadRows.length,
+      },
+    );
+
+    if (legacyResult.error) {
+      return createResult.response;
+    }
+    rpcData = legacyResult.data;
+  } else {
+    rpcData = createResult.data as ShoppingCreateRpcData | null;
   }
 
-  const rpcData = createResult.data as ShoppingCreateRpcData | null;
   if (!rpcData) {
     return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
   }
