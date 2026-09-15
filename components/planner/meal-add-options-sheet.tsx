@@ -31,7 +31,6 @@ const PICKER_OPTIONS: Array<{
 }> = [
   { id: "recipebook", icon: "📖", label: "레시피북" },
   { id: "pantry", icon: "🧊", label: "팬트리에서 찾기" },
-  { id: "leftover", icon: "🍱", label: "남은 요리" },
 ];
 
 const OPTION_TILE_CLASS =

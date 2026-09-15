@@ -60,7 +60,6 @@ const MENU_ADD_OPTIONS = [
   { id: "search", emoji: "🔍", label: "레시피 검색" },
   { id: "recipebook", emoji: "📖", label: "레시피북" },
   { id: "pantry", emoji: "🧊", label: "팬트리에서 찾기" },
-  { id: "leftover", emoji: "🍱", label: "남은 요리" },
   { id: "product", emoji: "", label: "완제품" },
   { id: "youtube", emoji: "🎬", label: "유튜브" },
   { id: "manual", emoji: "✏️", label: "직접 등록" },
@@ -464,7 +463,6 @@ export function MenuAddScreen({
       search: handleSearchOptionClick,
       recipebook: handleRecipeBookClick,
       pantry: handlePantryClick,
-      leftover: handleLeftoverClick,
       product: handleProductClick,
       manual: handleManualRecipeClick,
       youtube: handleYoutubeRecipeClick,
@@ -480,7 +478,6 @@ export function MenuAddScreen({
         (pickerMode === "recipebook-selector" ||
           pickerMode === "recipebook-detail")) ||
       (id === "pantry" && pickerMode === "pantry") ||
-      (id === "leftover" && pickerMode === "leftover") ||
       (id === "product" && pickerMode === "product") ||
       (id === "manual" && pickerMode === "manual") ||
       (id === "youtube" && pickerMode === "youtube"),

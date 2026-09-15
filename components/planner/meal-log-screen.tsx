@@ -679,16 +679,16 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     return () => { requestRef.current += 1; };
   }, [guest, loadWeek]);
 
-  async function reloadSelected() {
-    if (guestRef.current) return createGuestMealLogDay(dialogDate);
+  async function reloadSelected(targetDate = dialogDate) {
+    if (guestRef.current) return createGuestMealLogDay(targetDate);
     const request = requestRef.current;
     try {
-      const next = await fetchMealLogDay(dialogDate);
+      const next = await fetchMealLogDay(targetDate);
       if (guestRef.current || request !== requestRef.current) return next;
-      setDays((current) => ({ ...current, [dialogDate]: next }));
+      setDays((current) => ({ ...current, [targetDate]: next }));
       setFailedDates((current) => {
         const updated = new Set(current);
-        updated.delete(dialogDate);
+        updated.delete(targetDate);
         return updated;
       });
       setError(null);
@@ -701,21 +701,21 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
         setDialog(null);
         setDays((current) => {
           const next = { ...current };
-          delete next[dialogDate];
+          delete next[targetDate];
           return next;
         });
-        setFailedDates((current) => new Set(current).add(dialogDate));
+        setFailedDates((current) => new Set(current).add(targetDate));
         setError(reason instanceof Error ? reason.message : "최신 식사 기록을 확인하지 못했어요.");
       }
       throw reason;
     }
   }
 
-  async function add(selection: MealLogSourceSelection, columnId: string) {
+  async function add(selection: MealLogSourceSelection, columnId: string, targetDate: string) {
     if (guestRef.current) return;
     const input = {
       consumedAt: null,
-      consumedLocalDate: dialogDate,
+      consumedLocalDate: targetDate,
       mealPlanColumnId: columnId,
       quantity: { amount: selection.amount, unit: selection.unit },
       source: { id: selection.id, type: selection.type },
@@ -728,7 +728,8 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     mutationKeys.current.delete(fingerprint);
     setDialog(null);
     showSuccess("식사기록에 추가했어요.");
-    await reloadSelected();
+    await reloadSelected(targetDate);
+    if (!dates.includes(targetDate)) onDateChange(targetDate);
   }
 
   useEffect(() => {
