@@ -359,6 +359,9 @@ describe("supabase server helpers", () => {
     const imageClient = server.createRecipeImageInternalClient();
     const recipeFutureClient =
       server.createRecipeFuturePropagationInternalClient();
+    const recipeMealWeightClient =
+      server.createRecipeMealWeightReadInternalClient();
+    const recipeSaveClient = server.createRecipeSaveInternalClient();
     const snapshotV2SessionClient =
       server.createSnapshotV2SessionInternalClient();
     const futureMealClient = server.createFutureMealWriteInternalClient();
@@ -382,6 +385,8 @@ describe("supabase server helpers", () => {
       "session-observability",
       "recipe-image",
       "recipe-future-propagation",
+      "recipe-meal-weight",
+      "recipe-save",
       "snapshot-v2-session",
       "future-meal-write",
       "shopping-create",
@@ -402,6 +407,12 @@ describe("supabase server helpers", () => {
     );
     expect(() => recipeFutureClient?.from("ingredient_nutrition_profiles"))
       .not.toThrow();
+    expect(() => recipeMealWeightClient?.from("piece_unit_weights"))
+      .not.toThrow();
+    expect(() => recipeMealWeightClient?.from("recipes")).toThrow(
+      "Internal Data scope denied table: recipes",
+    );
+    expect(recipeSaveClient).toEqual({ rpc: expect.any(Function) });
     expect(snapshotV2SessionClient).toEqual({ rpc: expect.any(Function) });
     expect(futureMealClient).toEqual({ rpc: expect.any(Function) });
     expect(shoppingCreateClient).toEqual({ rpc: expect.any(Function) });
