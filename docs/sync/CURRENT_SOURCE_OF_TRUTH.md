@@ -1,5 +1,13 @@
 # Current Source of Truth
 
+## 2026-09-15 사용자 승인 — YouTube 영상 분석 모델 교체
+
+기존 모델 지원 종료로 영상 분석 추출기를 `i031-astra-sol-v1`로 전환한다. 최종 분석은 `gpt-6-astra`, 프레임 선택은 `gpt-5.6-sol`, CLI는 `0.154.0-alpha.6.2`를 사용하며 영상·텍스트·OCR·프롬프트 흐름은 유지한다. 정책 버전 2와 새 pipeline identity로 이전 추출 결과와 구분한다. 계약과 운영 순서는 `docs/engineering/youtube-astra-sol-model-upgrade.md`를 따른다. 큐 오류를 동기 추출로 우회하지 않으며 만료된 worker credential과 app/worker 버전 불일치는 운영 절차로 복구한다.
+
+## 2026-09-15 장보기 생성 — 삭제된 snapshot 재료 보존
+
+장보기 생성 시 삭제된 카탈로그 ID를 고정 snapshot과 대조한 뒤 DB 내부 `unavailable_ingredient_id`에 보존하고 텍스트·수량 항목으로 생성한다. 공개 API의 기존 nullable identity를 재사용하며 자동 팬트리 매칭·반영은 제외한다. 세션·소유권·snapshot pin 검증과 항목 누락 방지는 유지하고 일반 500의 legacy 재시도를 제거한다. 상세는 현재 공식 DB §0-PIL-B와 API shopping provenance addendum을 따른다. 이 작업은 로컬 수정·격리 검증만 하며 운영 DB 적용·커밋·배포는 하지 않는다.
+
 ## 2026-09-15 사용자 승인 — 플래너 저장·무게·식사추가 복구
 
 레시피 저장은 로그인 사용자의 레시피 접근과 레시피북 소유권을 확인한 뒤 서버 전용 쓰기 경로로 처리한다. 요리계획 카드의 무게는 등록 시 고정된 재료의 승인된 g·부피·개당 환산 무게 합계를 계획 인분에 맞춰 표시한다. 탄단지 바는 부분값에도 항상 표시하고 사용자 화면의 `최소` 접두사는 제거한다. 식사기록은 기록이 없어도 모든 활성 끼니에 음식 추가 버튼을 표시한다. 공개 API shape와 DB schema는 변경하지 않는다.

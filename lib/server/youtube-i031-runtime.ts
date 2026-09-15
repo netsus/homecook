@@ -7,18 +7,19 @@ import path from "node:path";
 export type YoutubeRecipeExtractorMode = "legacy" | "i031_codex_vision";
 type RuntimeEnv = Readonly<Record<string, string | undefined>>;
 
-export const I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
+export const I031_CODEX_CLI_VERSION = "0.154.0-alpha.6.2";
 export const I031_TOTAL_TIMEOUT_MS = 20 * 60 * 1000;
 
 export const I031_EXACT_IDENTITY = Object.freeze({
+  pipelineVersion: "i031-astra-sol-v1",
   provider: "codex-vision-keyframes",
-  model: "gpt-5.4",
-  selectorModel: "gpt-5.4-mini",
+  model: "gpt-6-astra",
+  selectorModel: "gpt-5.6-sol",
   sourcePromptVersion: "single-recipe-four-source-v2",
   selectorPromptVersion: "keyframe-selector-v6-single-compact-json",
   finalPromptVersion: "keyframe-final-v44-explicit-action-clause",
-  clientVersion: "codex-vision-keyframes-client-v19-onscreen-amount-recovery",
-  executionConfigSignature: "704359dfb34df5ac1d070078",
+  clientVersion: "codex-vision-keyframes-client-v20-structured-final",
+  executionConfigSignature: "4f0d0b8a61d667397afa6ba8",
   frameExtractorVersion: "extract-video-frames-v7-adaptive-screen-ocr",
   frameMode: "hybrid",
   interval: 4,

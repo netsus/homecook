@@ -74,7 +74,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
     const calls: Array<[string, string[]]> = [];
     const runCommand = vi.fn(async (command: string, args: string[]) => {
       calls.push([command, args]);
-      if (args[0] === "--version") return { stdout: "codex-cli 0.144.0-alpha.4\n" };
+      if (args[0] === "--version") return { stdout: "codex-cli 0.154.0-alpha.6.2\n" };
       if (args[0] === "login") return { stdout: "Logged in using ChatGPT\n" };
       return { stdout: "ok\n" };
     });
@@ -91,7 +91,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       platform: "darwin",
     })).resolves.toMatchObject({
       codexBin: "/opt/homebrew/bin/codex",
-      codexCliVersion: "0.144.0-alpha.4",
+      codexCliVersion: "0.154.0-alpha.6.2",
     });
     expect(calls).toEqual([
       ["/opt/homebrew/bin/codex", ["--version"]],
@@ -190,7 +190,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       },
       verifyPreflight: vi.fn(async () => ({
         codexBin: "/opt/homebrew/bin/codex",
-        codexCliVersion: "0.144.0-alpha.4",
+        codexCliVersion: "0.154.0-alpha.6.2",
       })),
     });
 
@@ -244,7 +244,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
     ) => {
       commandEnvironments.push(options?.env);
       return args[0] === "--version"
-        ? { stdout: "codex-cli 0.144.0-alpha.4\n" }
+        ? { stdout: "codex-cli 0.154.0-alpha.6.2\n" }
         : args[0] === "login"
           ? { stdout: "Logged in using ChatGPT\n" }
           : { stdout: "ok\n" };
@@ -586,7 +586,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       workerEnv: { NODE_ENV: "test" },
       verifyPreflight: vi.fn(async () => ({
         codexBin: "/opt/homebrew/bin/codex",
-        codexCliVersion: "0.144.0-alpha.4",
+        codexCliVersion: "0.154.0-alpha.6.2",
       })),
     });
 
@@ -751,7 +751,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       workerEnv: { NODE_ENV: "test" },
       verifyPreflight: vi.fn(async () => ({
         codexBin: "/opt/homebrew/bin/codex",
-        codexCliVersion: "0.144.0-alpha.4",
+        codexCliVersion: "0.154.0-alpha.6.2",
       })),
     });
     const runtime = createYoutubeExtractionWorkerRuntime({
@@ -869,7 +869,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       workerEnv: { NODE_ENV: "test" },
       verifyPreflight: vi.fn(async () => ({
         codexBin: "/opt/homebrew/bin/codex",
-        codexCliVersion: "0.144.0-alpha.4",
+        codexCliVersion: "0.154.0-alpha.6.2",
       })),
     });
 
@@ -937,7 +937,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       workerEnv: { NODE_ENV: "test", PROVIDER_MARKER: providerMarker },
       verifyPreflight: vi.fn(async () => ({
         codexBin: "/opt/homebrew/bin/codex",
-        codexCliVersion: "0.144.0-alpha.4",
+        codexCliVersion: "0.154.0-alpha.6.2",
       })),
     });
 
@@ -1007,7 +1007,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       workerEnv: { NODE_ENV: "test" },
       verifyPreflight: vi.fn(async () => ({
         codexBin: "/opt/homebrew/bin/codex",
-        codexCliVersion: "0.144.0-alpha.4",
+        codexCliVersion: "0.154.0-alpha.6.2",
       })),
     });
     const runtime = createYoutubeExtractionWorkerRuntime({
@@ -1086,7 +1086,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
         workerEnv: { NODE_ENV: "test" },
         verifyPreflight: vi.fn(async () => ({
           codexBin: "/opt/homebrew/bin/codex",
-          codexCliVersion: "0.144.0-alpha.4",
+          codexCliVersion: "0.154.0-alpha.6.2",
         })),
       }),
     });

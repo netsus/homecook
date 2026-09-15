@@ -57,12 +57,12 @@ describe("YTASYNC-CONTRACT/API", () => {
       .toEqual({ code: "INVALID_URL", field: "youtube_url" });
   });
 
-  it("materializes the exact initial policy and purpose-bound fingerprint", () => {
+  it("materializes the upgraded policy and purpose-bound fingerprint", () => {
     expect(YOUTUBE_ASYNC_POLICY).toMatchObject({
       policyKey: "primary",
-      policyVersion: 1,
+      policyVersion: 2,
       extractorMode: "i031_codex_vision",
-      pipelineIdentity: "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908",
+      pipelineIdentity: "53336c769f5ccab9814fa4de688c35a6300693cf801267ac0f9311736782959f",
       fingerprintKeyVersion: "1",
       enabled: false,
     });
@@ -345,7 +345,7 @@ describe("YTASYNC-API route handlers", () => {
     });
     expect(rpc).toHaveBeenCalledWith("enqueue_youtube_extraction_job", {
       video_id: "abc123DEF45",
-      expected_policy_version: 1,
+      expected_policy_version: 2,
       expected_policy_snapshot_digest: YOUTUBE_ASYNC_POLICY.snapshotDigest,
       current_key_version: "1",
       current_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),

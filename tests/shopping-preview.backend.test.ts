@@ -213,6 +213,84 @@ describe("shopping stage2 backend", () => {
     recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
   });
 
+  it.each([
+    { rpcError: null, displayText: "플레인요거트 100g", toTaste: false, expectedDisplay: "플레인요거트 400g" },
+    { rpcError: "database unavailable", displayText: "플레인요거트 100g", toTaste: false, expectedDisplay: "플레인요거트 400g" },
+    { rpcError: "ACCOUNT_SESSION_STALE", displayText: "플레인요거트 100g", toTaste: false, expectedDisplay: "플레인요거트 400g" },
+    { rpcError: "ACCOUNT_LIFECYCLE_MAINTENANCE", displayText: "플레인요거트 100g", toTaste: false, expectedDisplay: "플레인요거트 400g" },
+    { rpcError: null, displayText: "소금 적당량", toTaste: true, expectedDisplay: "소금" },
+    { rpcError: null, displayText: "요거트", toTaste: false, expectedDisplay: "요거트 400g" },
+  ])(
+    "normalizes missing snapshot $displayText and uses only authority RPC ($rpcError)",
+    async ({ rpcError, displayText, toTaste, expectedDisplay }) => {
+      const expectedAmounts = toTaste ? [{ amount: 1, unit: "적당량" }] : [{ amount: 400, unit: "g" }];
+      const mealIds = [
+        "550e8400-e29b-41d4-a716-446655440001",
+        "550e8400-e29b-41d4-a716-446655440002",
+      ];
+      const missingId = "d21108a0-e45c-4c04-bab2-99cbb640111e";
+      const from = vi.fn((table: string) => ({
+        select: () => createArraySelectQuery([{ data: table === "meals"
+          ? mealIds.map((id, index) => ({
+              id, user_id: "user-1", recipe_id: "recipe-1",
+              recipe_content_snapshot_id: `snapshot-${index}`,
+              recipe_content_snapshots: {
+                base_servings: 1,
+                ingredients_json: [{
+                  ingredient_id: missingId, amount: toTaste ? null : 100, unit: toTaste ? null : "g",
+                  ingredient_type: toTaste ? "TO_TASTE" : "QUANT", display_text: displayText,
+                }],
+              },
+              plan_date: "2026-09-15", column_id: "column-1", planned_servings: 2,
+              status: "registered", is_leftover: false, leftover_dish_id: null,
+              shopping_list_id: null,
+            }))
+          : [], error: null }]),
+      }));
+      const rpc = vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+        data: rpcError ? null : {
+          id: "list-1", created_at: "2026-09-15T00:00:00Z",
+          items: (args.p_item_rows as Array<Record<string, unknown>>).map((item) => ({
+            ...item, id: "item-1", ingredient_id: null, is_checked: false,
+            added_to_pantry: false,
+          })),
+        },
+        error: rpcError ? { message: rpcError } : null,
+      }));
+      createRouteHandlerClient.mockResolvedValue({
+        auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
+        from,
+      });
+      createServiceRoleClient.mockReturnValue({ rpc });
+      const { POST } = await importListsRoute();
+      const response = await POST(new Request("http://localhost/api/v1/shopping/lists", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ meal_configs: mealIds.map((meal_id) => ({ meal_id, shopping_servings: 2 })) }),
+      }));
+      expect(response.status).toBe(rpcError === "ACCOUNT_SESSION_STALE" ? 409
+        : rpcError === "ACCOUNT_LIFECYCLE_MAINTENANCE" ? 503 : rpcError ? 500 : 201);
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(rpc).toHaveBeenCalledWith("create_shopping_list_with_snapshot_authority", expect.objectContaining({
+        p_owner_uuid: "user-1", p_user_id: "user-1", p_session_key_hash: "a".repeat(64),
+        p_complete_without_list: false,
+        p_recipe_rows: [0, 1].map((index) => ({
+          recipe_id: "recipe-1", recipe_content_snapshot_id: `snapshot-${index}`,
+          shopping_servings: 2, planned_servings_total: 2,
+        })),
+        p_item_rows: [expect.objectContaining({
+          ingredient_id: missingId,
+          display_text: expectedDisplay,
+          amounts_json: expectedAmounts, is_pantry_excluded: false,
+        })],
+      }));
+      if (!rpcError) {
+        expect(await response.json()).toMatchObject({ data: { items: [expect.objectContaining({
+          source_type: null, ingredient_id: null, display_text: expectedDisplay, amounts_json: expectedAmounts,
+        })] } });
+      }
+    },
+  );
+
   it("marks only registered meals without shopping list as eligible", () => {
     expect(isMealEligibleForShopping({ id: "m1", status: "registered", shopping_list_id: null })).toBe(true);
     expect(

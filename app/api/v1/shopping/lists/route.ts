@@ -304,25 +304,6 @@ interface ShoppingListItemsTable {
 }
 
 interface ShoppingCreateDbClient {
-  rpc?: (
-    functionName: "create_shopping_list_from_payload",
-    args: {
-      p_user_id: string;
-      p_title: string;
-      p_date_range_start: string;
-      p_date_range_end: string;
-      p_complete_without_list: boolean;
-      p_shopping_meal_ids: string[];
-      p_split_remainders: Array<Record<string, unknown>>;
-      p_split_originals: Array<Record<string, unknown>>;
-      p_recipe_rows: Array<Record<string, unknown>>;
-      p_item_rows: Array<Record<string, unknown>>;
-      p_pantry_item_count: number;
-    },
-  ) => PromiseLike<{
-    data: ShoppingCreateRpcData | null;
-    error: QueryError | null;
-  }>;
   from(table: "meals"): MealsTable;
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
@@ -946,10 +927,24 @@ export async function POST(request: Request) {
     });
   }
 
+  // Recover a display label only, never a replacement catalog identity.
+  const unavailableIngredients = new Map<string, { name: string; hasQuant: boolean }>();
+  for (const row of ingredientAggregationRows) {
+    if (ingredientNameMap.has(row.ingredient_id)) continue;
+    const previous = unavailableIngredients.get(row.ingredient_id);
+    unavailableIngredients.set(row.ingredient_id, {
+      name: previous?.name ?? (row.display_text?.trim()
+        .replace(/\s+(?:\d.*|적당량|약간|조금|취향껏)$/, "").trim() || "재료"),
+      hasQuant: previous?.hasQuant === true || row.ingredient_type === "QUANT",
+    });
+  }
+
   const aggregatedIngredients = aggregateShoppingIngredients(
     ingredientAggregationRows.map((ingredientRow) => ({
       ingredient_id: ingredientRow.ingredient_id,
-      standard_name: ingredientNameMap.get(ingredientRow.ingredient_id) ?? "",
+      standard_name: ingredientNameMap.get(ingredientRow.ingredient_id)
+        ?? unavailableIngredients.get(ingredientRow.ingredient_id)?.name
+        ?? "재료",
       ingredient_type: ingredientRow.ingredient_type,
       amount: ingredientRow.amount,
       unit: ingredientRow.unit,
@@ -977,7 +972,9 @@ export async function POST(request: Request) {
     ingredient_id: ingredient.ingredient_id,
     food_product_id: null,
     food_product_nutrition_version_id: null,
-    display_text: ingredient.display_text,
+    display_text: unavailableIngredients.get(ingredient.ingredient_id)?.hasQuant === false
+      ? ingredient.standard_name
+      : ingredient.display_text,
     amounts_json: ingredient.amounts_json,
     is_pantry_excluded: pantryIngredientIds.has(ingredient.ingredient_id),
     sort_order: index,
@@ -1084,70 +1081,10 @@ export async function POST(request: Request) {
     },
   );
 
-  let rpcData: ShoppingCreateRpcData | null = null;
   if (!createResult.ok) {
-    if (createResult.response.status < 500 || !dbClient.rpc) {
-      return createResult.response;
-    }
-
-    const legacyRecipeRowsByRecipeId = new Map<
-      string,
-      {
-        recipe_id: string;
-        shopping_servings: number;
-        planned_servings_total: number;
-      }
-    >();
-    shoppingRecipePayloadRows.forEach((row) => {
-      const existing = legacyRecipeRowsByRecipeId.get(row.recipe_id) ?? {
-        recipe_id: row.recipe_id,
-        shopping_servings: 0,
-        planned_servings_total: 0,
-      };
-      existing.shopping_servings += row.shopping_servings;
-      existing.planned_servings_total += row.planned_servings_total;
-      legacyRecipeRowsByRecipeId.set(row.recipe_id, existing);
-    });
-
-    const legacyResult = await dbClient.rpc(
-      "create_shopping_list_from_payload",
-      {
-        p_user_id: user.id,
-        p_title: title,
-        p_date_range_start: dateRangeStart,
-        p_date_range_end: dateRangeEnd,
-        p_complete_without_list: shouldCompleteWithoutList,
-        p_shopping_meal_ids: shoppingMealIds,
-        p_split_remainders: splitMeals.map(({ meal, remainingServings }) => ({
-          user_id: meal.user_id,
-          recipe_id: meal.recipe_id,
-          recipe_content_snapshot_id: meal.recipe_content_snapshot_id,
-          plan_date: meal.plan_date,
-          column_id: meal.column_id,
-          planned_servings: remainingServings,
-          status: "registered",
-          is_leftover: meal.is_leftover,
-          leftover_dish_id: meal.leftover_dish_id,
-          shopping_list_id: null,
-          cooked_at: null,
-        })),
-        p_split_originals: splitMeals.map((splitMeal) => ({
-          meal_id: splitMeal.meal.id,
-          planned_servings: splitMeal.shoppingServings,
-        })),
-        p_recipe_rows: [...legacyRecipeRowsByRecipeId.values()],
-        p_item_rows: allShoppingItemPayloadRows,
-        p_pantry_item_count: allShoppingItemPayloadRows.length,
-      },
-    );
-
-    if (legacyResult.error) {
-      return createResult.response;
-    }
-    rpcData = legacyResult.data;
-  } else {
-    rpcData = createResult.data as ShoppingCreateRpcData | null;
+    return createResult.response;
   }
+  const rpcData = createResult.data as ShoppingCreateRpcData | null;
 
   if (!rpcData) {
     return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
