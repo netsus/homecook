@@ -7,7 +7,6 @@ import { AppCenterDialog } from "@/components/shared/app-overlay";
 import {
   buildPlannerNutritionWarningMessages,
   formatPlannerNutritionEnergy,
-  formatPlannerNutritionQuality,
 } from "@/lib/planner/planner-nutrition-presentation";
 import {
   type PlannerNutritionAggregate,
@@ -234,34 +233,21 @@ export function MealNutritionSummary({
     <>
       <section
         aria-busy={isRefreshing}
-        className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 shadow-[0_1px_3px_var(--shadow-color-subtle)]"
+        className="relative rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 shadow-[0_1px_3px_var(--shadow-color-subtle)]"
         data-testid="meal-nutrition-summary"
       >
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <p className="text-[13px] font-extrabold text-[var(--text-3)]">계획 영양</p>
-            <p className="mt-1 text-[13px] font-bold text-[var(--text-2)]">
-              {formatPlannerNutritionQuality(nutrition.calculation_quality)}
-            </p>
-          </div>
-          {nutrition.incomplete_entry_count > 0 ? (
-            <span className="rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-extrabold text-[var(--brand-primary-text)]">
-              {nutrition.incomplete_entry_count}개 확인 필요
-            </span>
-          ) : null}
-        </div>
-
         <PlannerNutritionChart values={nutrition.values} />
 
         {messages.length > 0 ? (
           <button
             aria-label={`확인 필요 안내 ${messages.length}개 보기`}
-            className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 text-[13px] font-bold text-[var(--brand-primary-text)]"
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-sm font-extrabold text-[var(--brand-primary-text)]"
             onClick={() => setWarningOpen(true)}
             ref={warningButtonRef}
+            title="영양 정보 안내"
             type="button"
           >
-            확인 필요 안내 보기
+            i
           </button>
         ) : null}
 

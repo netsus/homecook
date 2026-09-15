@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogNutritionChart } from "@/components/planner/meal-log-nutrition-chart";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { createGuestMealLogDay, createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
@@ -484,11 +485,11 @@ function EntryDialog({
     return <div aria-label="식사 기록 상세" aria-modal="true" className="fixed inset-0 z-[60] flex flex-col bg-[var(--surface-fill)] outline-none" ref={panelRef} role="dialog" tabIndex={-1}>
       <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <button aria-label="식사 기록으로 돌아가기" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl hover:bg-[var(--surface-fill)]" onClick={onClose} ref={cancelRef} type="button">←</button>
+          <button aria-label="식사 기록으로 돌아가기" className="flex min-h-11 shrink-0 items-center gap-1 rounded-full px-2 font-bold hover:bg-[var(--surface-fill)]" onClick={onClose} ref={cancelRef} type="button"><span aria-hidden="true" className="text-2xl">←</span><span className="text-sm lg:hidden">뒤로</span></button>
           <h2 className="text-lg font-extrabold">{longDate(entry.consumed_local_date)} · {entry.slot_name_snapshot}</h2>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(80px+env(safe-area-inset-bottom))] lg:pb-0">
         <div className="mx-auto grid w-full max-w-6xl items-start gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <article className="overflow-hidden rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)]">
             <div className="flex items-center gap-4 p-5"><span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-soft)] text-3xl">🍽️</span><div className="min-w-0"><h3 className="break-words text-xl font-extrabold">{entry.display_name}</h3><p className="mt-1 text-sm text-[var(--text-2)]">먹은 양 {number(entry.quantity.amount, entry.quantity.unit)}</p></div></div>
@@ -508,6 +509,7 @@ function EntryDialog({
           </aside>
         </div>
       </div>
+      <Wave1MobileBottomTab ariaLabel="식사 상세 하단 탭" currentTab="meal-log" plannerDate={entry.consumed_local_date} />
     </div>;
   }
 
@@ -794,10 +796,10 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
               {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardSections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardSections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardSections.filter((section) => section.entries.length > 0).length} / {cardSections.length}</span> : null}
             </div>
             {isLoading ? <p aria-busy="true" className="p-4 text-sm text-[var(--ui-slate-500)]">기록을 불러오는 중이에요.</p> : cardDay ? <div className="p-3 lg:p-4">
-              <section aria-label="하루 영양" className="mb-3 max-w-2xl rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] p-3">
+              {cardDay.entries.length > 0 ? <section aria-label="하루 영양" className="mb-3 max-w-2xl rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] p-3">
                 <MealLogNutritionChart nutrition={cardDay.day_total} />
               {cardDay.day_total.incomplete_count > 0 ? <p className="mt-2 text-xs text-[var(--ui-slate-500)]">일부 정보 없음 {cardDay.day_total.incomplete_count}건</p> : null}
-              </section>
+              </section> : null}
               {cardDay.entries.length === 0 ? <p className="sr-only">이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.</p> : null}
               <div className="-mx-3 grid items-start gap-3 md:mx-0 md:grid-cols-2 lg:grid-cols-3">
                 {cardSections.map((section) => <ActiveSection date={dayKey} disabled={cardDisabled} guest={guest} key={section.meal_plan_column_id} onAdd={() => openDialog({ type: "add", columnId: section.meal_plan_column_id }, dayKey)} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}

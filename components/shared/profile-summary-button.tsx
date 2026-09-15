@@ -22,7 +22,12 @@ interface ProfileSummaryButtonProps {
 let cachedProfile: UserProfileData | null = null;
 let profileRequest: Promise<UserProfileData | null> | null = null;
 
-export function ProfileSummaryButton({
+export function ProfileSummaryButton(props: ProfileSummaryButtonProps) {
+  if (props.variant === "mobile") return null;
+  return <ProfileSummaryButtonContent {...props} />;
+}
+
+function ProfileSummaryButtonContent({
   autoLoad = false,
   className,
   isAuthenticated = true,

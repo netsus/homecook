@@ -5705,3 +5705,6 @@ POST /api/v1/admin/page-view
 # 2026-09-15 YouTube 썸네일·영양 등록 후속 계약
 
 `POST /api/v1/recipes/youtube/register`의 공개 request/response는 유지한다. 비동기 추출 세션의 빈 썸네일은 `youtube_video_id` 기반 `https://i.ytimg.com/vi/{id}/hqdefault.jpg`로 채운다. 등록 직후 영양 snapshot은 인증된 사용자와 `recipes.created_by`가 일치하는 YouTube 레시피에 한해 내부 owner wrapper를 통해 기록한다. 재료 영양 profile·단위 환산이 일부 없으면 계산 가능한 값은 partial로 보존하고 공개 등록 성공을 되돌리지 않는다.
+# 2026-09-15 legacy 조리 음식 영양·수정 후속 계약
+
+식사기록의 기존 공개 PATCH request/response와 revision/idempotency 계약은 유지한다. `recipe_content_snapshot_id`, `weight_status`, `batch_status`가 모두 없는 legacy cooked batch는 현재 recipe 영양 snapshot이 존재하고 모든 정량 재료 단위가 `g/kg`일 때 재료 합산 중량을 기준으로 실제 섭취 g 영양을 계산한다. PATCH는 내부 `update_legacy_leftover_meal_log_entry`로 먼저 처리하고 대상이 modern batch이면 기존 `mutate_meal_log_entry`로 위임한다.

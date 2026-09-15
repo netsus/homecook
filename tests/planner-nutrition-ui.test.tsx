@@ -167,13 +167,16 @@ describe("planner nutrition presentation", () => {
     );
 
     const summary = screen.getByTestId("meal-nutrition-summary");
-    expect(within(summary).getByText("탄수화물")).toBeTruthy();
-    expect(within(summary).getByText("단백질")).toBeTruthy();
-    expect(within(summary).getByText("지방")).toBeTruthy();
+    expect(within(summary).getByText("탄")).toBeTruthy();
+    expect(within(summary).getByText("단")).toBeTruthy();
+    expect(within(summary).getByText("지")).toBeTruthy();
     expect(within(summary).getByText("510 kcal")).toBeTruthy();
-    expect(within(summary).getByText("직접값과 환산값 혼합 · 예상치")).toBeTruthy();
+    expect(within(summary).queryByText("계획 영양")).toBeNull();
+    expect(within(summary).queryByText(/직접 계산|직접값과 환산값/)).toBeNull();
+    expect(within(summary).queryByText("확인된 탄단지 열량 비율")).toBeNull();
 
     const warningButton = within(summary).getByRole("button", { name: "확인 필요 안내 2개 보기" });
+    expect(warningButton.textContent).toBe("i");
     await user.click(warningButton);
     const dialog = screen.getByRole("dialog", { name: "계획 영양 확인 안내" });
     expect(within(dialog).getByText("일부 재료나 단위의 영양값을 계산하지 못했어요.")).toBeTruthy();

@@ -142,26 +142,31 @@ describe("ProfileSummaryButton", () => {
     apiMocks.fetchUserProgress.mockReset();
   });
 
-  it.each(["web", "mobile"] as const)(
-    "renders the %s profile control as a mypage link",
-    (variant) => {
+  it(
+    "renders the web profile control as a mypage link",
+    () => {
       render(
         <ProfileSummaryButton
           gamification={GAMIFICATION}
           isAuthenticated
           profile={PROFILE}
           progress={PROGRESS}
-          variant={variant}
+          variant="web"
         />,
       );
 
-      const link = screen.getByTestId(`${variant}-profile-summary-button`);
+      const link = screen.getByTestId("web-profile-summary-button");
       expect(link.tagName).toBe("A");
       expect(link.getAttribute("href")).toBe("/mypage");
       expect(link.getAttribute("aria-label")).toBe("마이페이지");
       expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
     },
   );
+
+  it("omits the redundant mobile profile control", () => {
+    render(<ProfileSummaryButton isAuthenticated profile={PROFILE} variant="mobile" />);
+    expect(screen.queryByTestId("mobile-profile-summary-button")).toBeNull();
+  });
 
   it("leaves unread state to the notification control", () => {
     render(

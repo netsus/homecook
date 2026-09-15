@@ -3343,3 +3343,6 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 # 2026-09-15 YouTube 썸네일·영양 등록 후속 계약
 
 `youtube_extraction_sessions.thumbnail_url`이 비어 있고 `youtube_video_id`가 있으면 insert/update trigger가 YouTube `hqdefault` URL을 저장한다. 기존 빈 YouTube 세션과 `recipes.thumbnail_url`도 같은 video id로 보정한다. `public.write_owned_youtube_recipe_nutrition_snapshot`은 `auth.uid() = p_user_id`, 해당 recipe의 `created_by`, `source_type='youtube'`, 미삭제 상태를 확인한 뒤 기존 `write_recipe_nutrition_snapshot` 검증·잠금·멱등 쓰기를 호출한다. `anon`과 타 사용자는 실행할 수 없다.
+# 2026-09-15 legacy 조리 음식 영양·수정 후속 계약
+
+`private.estimate_legacy_meal_log_nutrition`은 current recipe nutrition snapshot과 모든 QUANT `g/kg` 재료의 합산 중량이 있을 때만 섭취 g 비율을 계산한다. 그 외에는 기존 unavailable을 유지한다. `fill_legacy_meal_log_nutrition` trigger는 legacy create/update evidence를 보완하고 기존 unavailable entry를 같은 규칙으로 backfill한다. `update_legacy_leftover_meal_log_entry`는 snapshot-v2-session 내부 scope, owner/session/account-generation, revision, idempotency와 column 소유권을 검증하며 legacy batch 재고는 추정해 변경하지 않는다.

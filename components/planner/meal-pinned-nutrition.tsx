@@ -32,13 +32,12 @@ export function PlannerNutritionChart({ values }: { values: Record<string, Plann
         return <span key={code} style={{ backgroundColor: color, width: `${energy > 0 ? amount * factor / energy * 100 : 0}%` }} />;
       })}
     </div>
-    <dl className="mt-3 grid grid-cols-3 gap-2">
-      {macros.map(({ code, label, color }) => <div className="min-w-0" key={code}>
-        <dt className="flex items-center gap-1 text-[11px] text-[var(--text-2)]"><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />{label}</dt>
-        <dd className="mt-1 text-xs font-bold tabular-nums text-[var(--foreground)]">{values[code] ? formatPlannerNutritionValue(code, values[code]) : "정보 준비 중"}</dd>
+    <dl className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      {macros.map(({ code, color }, index) => <div className="flex min-w-0 items-center gap-1 text-xs" key={code}>
+        <dt className="flex items-center gap-1 font-bold text-[var(--text-2)]"><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />{["탄", "단", "지"][index]}</dt>
+        <dd className="font-bold tabular-nums text-[var(--foreground)]">{values[code] ? formatPlannerNutritionValue(code, values[code]) : "정보 준비 중"}</dd>
       </div>)}
     </dl>
-    <p className="mt-2 text-[10px] text-[var(--text-3)]">{energy > 0 ? "확인된 탄단지 열량 비율" : "영양 정보 준비 중"}</p>
   </div>;
 }
 
