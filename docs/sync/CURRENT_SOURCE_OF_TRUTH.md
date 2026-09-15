@@ -2,7 +2,7 @@
 
 ## 2026-09-15 사용자 요청 — 로그인 화면 응답 최적화
 
-브라우저 Auth와 쿠키 기준은 기존 공개 HTTPS origin을 유지한다. Next 서버의 Auth 사용자 확인·토큰 갱신·JWKS 조회와 사용자 데이터 gateway 검증은 검증된 `LOCAL_SUPABASE_INTERNAL_URL` loopback transport를 사용해 Cloudflare 왕복을 제거한다. 세션 liveness, JWT 서명·issuer, app-owned session binding, account generation과 RLS 검증은 생략하거나 캐시하지 않는다. 공통 상·하단 탐색과 홈의 빠른 이동·배너·레시피 카드는 자동 route prefetch를 하지 않으며, 사용자가 실제로 선택한 화면만 요청한다.
+브라우저 Auth와 쿠키 기준은 기존 공개 HTTPS origin을 유지한다. Next 서버의 Auth 사용자 확인·토큰 갱신·JWKS 조회와 사용자 데이터 gateway 검증은 검증된 `LOCAL_SUPABASE_INTERNAL_URL` loopback transport를 사용해 Cloudflare 왕복을 제거한다. 세션 liveness, JWT 서명·issuer, app-owned session binding, account generation과 RLS 검증은 생략하거나 캐시하지 않는다. 공통 상·하단 탐색과 홈의 빠른 이동·배너·레시피 카드는 자동 route prefetch를 하지 않으며, 사용자가 실제로 선택한 화면만 요청한다. 프로필 버튼은 프로필 이미지와 마이페이지 이동만 담당하고 성장·알림 정보는 전역 알림 기능이 소유한다.
 
 ## 2026-09-15 사용자 요청 — YouTube 추출 알림 진행 표시
 
