@@ -33,7 +33,7 @@ describe("prelaunch meal log presentation", () => {
     expect(within(summary.querySelector("dl")!).getByText("10")).toBeTruthy();
   });
   it("shows an add button for every active meal column when the day has no entries", async () => {
-    api.fetch.mockImplementation(async (date: string) => ({
+    api.fetch.mockImplementation(async (date: string) => date === "2026-09-07" ? {
       ...day(date),
       active_columns: [
         { id: "20000000-0000-4000-8000-000000000001", name: "아침", sort_order: 0 },
@@ -42,7 +42,7 @@ describe("prelaunch meal log presentation", () => {
       ],
       active_sections: [],
       entries: [],
-    }));
+    } : day(date));
 
     render(<MealLogScreen {...props} />);
 
@@ -66,9 +66,9 @@ describe("prelaunch meal log presentation", () => {
     expect(quantity.textContent).toBe("125g");
     expect(row.textContent).not.toContain("요리한 음식");
     expect(row.querySelector("details")).toBeNull();
-    expect(row.textContent).toContain("탄수화물 40 g");
-    expect(row.textContent).toContain("단백질 25 g");
-    expect(row.textContent).toContain("지방 10 g");
+    expect(row.textContent).toContain("탄 40 g");
+    expect(row.textContent).toContain("단 25 g");
+    expect(row.textContent).toContain("지 10 g");
     expect(within(row).queryByText(/나트륨/)).toBeNull();
     expect(within(row).queryByRole("button", { name: /식사 기록 수정/ })).toBeNull();
     expect(within(row).queryByRole("img", { name: /탄단지 열량 비율/ })).toBeNull();
@@ -89,7 +89,7 @@ describe("prelaunch meal log presentation", () => {
   it.each([
     ["complete", 0, 0, 0, 0, false],
     ["partial", 80, 10, null, 2, false],
-    ["partial", 80, 10, 3, 2, false],
+    ["partial", 80, 10, 3, 2, true],
     ["unavailable", null, null, null, null, false],
   ] as const)("preserves %s entry nutrition including zero and unknown (%s kcal)", async (status, kcal, carbs, protein, fat, hasChart) => {
     api.fetch.mockImplementation(async (date: string) => {
@@ -101,7 +101,7 @@ describe("prelaunch meal log presentation", () => {
     const row = (await screen.findByLabelText("먹은 양 125g")).closest("li")!;
     expect(Boolean(within(row).queryByRole("img"))).toBe(hasChart);
     expect(row.textContent).toContain(kcal === null ? "정보 준비 중" : `${status === "partial" ? "최소 " : ""}${kcal} kcal`);
-    expect(row.textContent).toContain(protein === null ? "단백질 정보 준비 중" : `단백질 ${protein} g`);
+    expect(row.textContent).toContain(protein === null ? "단 정보 준비 중" : `단 ${protein} g`);
     expect(row.textContent).not.toContain("나트륨");
   });
   it("shows sodium only in food detail and restores focus when closed", async () => {
