@@ -374,7 +374,7 @@ function MealCard({
   return (
     <article
       aria-label={`${meal.recipe_title} 식사 카드`}
-      className={`relative overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_1px_3px_var(--shadow-color-subtle)] transition-opacity ${isPending ? "opacity-60" : ""}`}
+      className={`relative min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_1px_3px_var(--shadow-color-subtle)] transition-opacity ${isPending ? "opacity-60" : ""}`}
     >
       {/* Delete trash icon — top-right */}
       <button
@@ -408,7 +408,7 @@ function MealCard({
         </div>
         <div className="min-w-0 flex-1 pr-7">
           <button
-            className="block w-full truncate text-left text-[16px] font-extrabold leading-[1.3] text-[var(--foreground)] hover:text-[var(--brand)]"
+            className="block w-full break-words text-left text-[16px] font-extrabold leading-[1.3] text-[var(--foreground)] hover:text-[var(--brand)]"
             data-testid={`meal-recipe-link-${meal.id}`}
             onClick={onRecipeClick}
             style={{ fontWeight: 800 }}
@@ -546,192 +546,13 @@ function MealWebProfileButton({
   );
 }
 
-function MealWebListCard({
-  conflictError,
-  isPending,
-  meal,
-  nutrition,
-  onCreateShopping,
-  onDelete,
-  onRecipeClick,
-  onStartCook,
-  onStepDown,
-  onStepUp,
-}: {
-  conflictError: string | null;
-  isPending: boolean;
-  meal: MealListItemData;
-  nutrition?: PlannerMealNutritionViewMap[string];
-  onCreateShopping: () => void;
-  onDelete: () => void;
-  onRecipeClick: () => void;
-  onStartCook: () => void;
-  onStepDown: () => void;
-  onStepUp: () => void;
-}) {
-  const isMin = meal.planned_servings <= 1;
-  const canCreateShopping = meal.status === "registered";
-  const canStartCook = meal.status === "shopping_done";
-  const hasMealAction = canCreateShopping || canStartCook;
-  const visual = getMealVisualMeta(meal);
-  return (
-    <article
-      className="web-meal-list-card web-meal-row-card"
-      aria-label={`${meal.recipe_title} 끼니 음식`}
-    >
-      <div className="web-meal-list-body">
-        <div
-          className="web-meal-list-thumb"
-          style={{ backgroundColor: visual.bg }}
-          aria-hidden="true"
-        >
-          {meal.recipe_thumbnail_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt="" src={meal.recipe_thumbnail_url} />
-          ) : (
-            <span>{visual.emoji}</span>
-          )}
-        </div>
-
-        <div className="web-meal-list-copy">
-          <div className="web-meal-title-meta">
-            {meal.is_leftover ? (
-              <span className="web-meal-leftover">남은 요리</span>
-            ) : null}
-          </div>
-          <button
-            className="web-meal-title-button"
-            data-testid={`meal-recipe-link-${meal.id}`}
-            onClick={onRecipeClick}
-            type="button"
-          >
-            {meal.recipe_title}
-          </button>
-          <div className="web-meal-meta-row">
-            <span>{meal.planned_servings}인분</span>
-            <span>{visual.minutes}분</span>
-          </div>
-        </div>
-
-        <div className="web-meal-list-actions-panel">
-          <div className="web-meal-list-delete">
-            <button
-              aria-label={`${meal.recipe_title} 삭제`}
-              className="web-meal-delete-button"
-              data-testid={`meal-delete-${meal.id}`}
-              disabled={isPending}
-              onClick={onDelete}
-              type="button"
-            >
-              <TrashIcon />
-            </button>
-          </div>
-
-          <div
-            className="web-meal-inline-stepper"
-            aria-label="인분 조절"
-            role="group"
-          >
-            <button
-              aria-label="인분 감소"
-              className="web-meal-stepper-button web-meal-stepper-decrease"
-              disabled={isMin || isPending}
-              onClick={onStepDown}
-              type="button"
-            >
-              <span aria-hidden="true" className="web-meal-stepper-symbol">−</span>
-            </button>
-            <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
-              {meal.planned_servings}인분
-            </span>
-            <button
-              aria-label="인분 증가"
-              className="web-meal-stepper-button web-meal-stepper-increase"
-              disabled={isPending}
-              onClick={onStepUp}
-              type="button"
-            >
-              <span aria-hidden="true" className="web-meal-stepper-symbol">+</span>
-            </button>
-          </div>
-
-          {hasMealAction ? (
-            <div className="web-meal-list-actions">
-              {canStartCook ? (
-                <button
-                  aria-label={`${meal.recipe_title} 요리하기`}
-                  className="web-meal-action-primary"
-                  disabled={isPending}
-                  onClick={onStartCook}
-                  type="button"
-                >
-                  <CookIcon />
-                  요리하기
-                </button>
-              ) : null}
-              {canCreateShopping ? (
-                <button
-                  className="web-meal-action-secondary"
-                  onClick={onCreateShopping}
-                  type="button"
-                >
-                  <ShoppingIcon />
-                  장보기
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <MealPinnedNutrition nutrition={nutrition} servings={meal.planned_servings} title={meal.recipe_title} />
-
-      {conflictError ? (
-        <p className="web-meal-conflict" role="alert">
-          {conflictError}
-        </p>
-      ) : null}
-    </article>
-  );
-}
-
 function MealWebLoadingCardSkeleton() {
-  return (
-    <article
-      aria-hidden="true"
-      className="web-meal-list-card web-meal-row-card"
-      data-testid="web-meal-loading-card"
-    >
-      <div className="web-meal-list-body">
-        <WebSkeleton
-          className="web-meal-list-thumb"
-          data-testid="web-meal-loading-thumb"
-        />
-
-        <div className="web-meal-list-copy">
-          <div className="web-meal-title-meta">
-            <WebSkeleton height={30} width={62} />
-            <WebSkeleton height={30} width={72} />
-          </div>
-          <WebSkeleton className="mt-3" height={22} width="80%" />
-          <div className="web-meal-meta-row">
-            <WebSkeleton height={16} width={48} />
-            <WebSkeleton height={16} width={36} />
-          </div>
-        </div>
-
-        <div className="web-meal-list-actions-panel">
-          <div className="web-meal-list-delete">
-            <WebSkeleton height={36} width={36} />
-          </div>
-          <WebSkeleton height={46} width="100%" />
-          <div className="web-meal-list-actions">
-            <WebSkeleton height={36} width="100%" />
-          </div>
-        </div>
-      </div>
-    </article>
-  );
+  return <article aria-hidden="true" className="min-w-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
+    <div className="flex items-center gap-3"><WebSkeleton height={76} width={76} /><div className="min-w-0 flex-1"><WebSkeleton height={22} width="85%" /><WebSkeleton className="mt-2" height={14} width="50%" /></div></div>
+    <WebSkeleton className="mt-4" height={48} width="100%" />
+    <WebSkeleton className="mt-3" height={44} width="100%" />
+    <WebSkeleton className="mt-4" height={100} width="100%" />
+  </article>;
 }
 
 function MealWebLoadingSkeleton({
@@ -753,7 +574,7 @@ function MealWebLoadingSkeleton({
           끼니 음식 불러오는 중
         </h1>
 
-        <div className="web-meal-list web-meal-row-list">
+        <div className="grid grid-cols-2 items-start gap-4">
           {Array.from({ length: 2 }).map((_, index) => (
             <MealWebLoadingCardSkeleton key={index} />
           ))}
@@ -917,9 +738,9 @@ function MealWebView({
         {screenState === "ready" && (meals.length > 0 || productEntries.length > 0) ? (
           <div className="web-meal-layout web-meal-list-layout">
             <section aria-label="끼니 음식 목록" className="web-meal-main">
-              <div className="web-meal-list web-meal-row-list" data-testid="web-meal-list">
+              <div className="grid grid-cols-2 items-start gap-4" data-testid="web-meal-list">
                 {meals.map((meal) => (
-                  <MealWebListCard
+                  <MealCard
                     conflictError={conflictErrors[meal.id] ?? null}
                     isPending={pendingMealIds.has(meal.id)}
                     key={meal.id}
@@ -1047,14 +868,6 @@ function CloseIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
       <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
-    </svg>
-  );
-}
-
-function CookIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
-      <path d="M5 14h8M6 7.5h6.2a2.8 2.8 0 010 5.6H6A3.8 3.8 0 116 5.5h1.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
     </svg>
   );
 }

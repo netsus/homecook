@@ -264,7 +264,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   const sessionMealsResult = await dbClient
     .from("cooking_session_meals")
-    .select("meal_id, recipe_id, cooking_servings, recipe_content_snapshot_id")
+    .select("meal_id, recipe_id, cooking_servings")
     .eq("session_id", sessionId);
 
   if (sessionMealsResult.error || !sessionMealsResult.data || sessionMealsResult.data.length === 0) {

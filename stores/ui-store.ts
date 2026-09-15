@@ -2,6 +2,18 @@
 
 import { create } from "zustand";
 
+export const useActionConfirmationStore = create<{
+  message: string | null;
+  dismiss: () => void;
+}>((set) => ({
+  message: null,
+  dismiss: () => set({ message: null }),
+}));
+
+export function showActionConfirmation(message: string) {
+  useActionConfirmationStore.setState({ message });
+}
+
 import type {
   PendingRecipeAction,
   PendingRecipeActionType,

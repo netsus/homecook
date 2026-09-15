@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -478,7 +480,7 @@ export function PantryScreen({
     setPlannerAddTarget(null);
     setShowPantryRecommendations(false);
     setPlannerAddSheetState("ready");
-    showToast(`${dateLabel} ${columnName}에 추가됐어요`, "success");
+    showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`);
   }, [
     plannerAddSheetState,
     plannerAddTarget,

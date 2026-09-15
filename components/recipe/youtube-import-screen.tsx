@@ -39,6 +39,7 @@ import type {
   BulkRegistrationRowResult,
 } from "@/lib/api/youtube-import";
 import { createMealSafe } from "@/lib/api/meal";
+import { showActionConfirmation } from "@/stores/ui-store";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
 import {
@@ -3475,6 +3476,7 @@ function ActiveYoutubeImportScreen({
       return;
     }
 
+    showActionConfirmation("요리계획에 추가했어요.");
     const slotSuffix = slotName ? `?slot=${encodeURIComponent(slotName)}` : "";
     router.replace(`/planner/${planDate}/${columnId}${slotSuffix}`);
   }, [registeredRecipeId, planDate, columnId, slotName, router]);
