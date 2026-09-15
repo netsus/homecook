@@ -182,11 +182,11 @@ afterEach(() => {
 describe("YTASYNC-OPS deterministic artifact", () => {
   it("materializes an explicit model pipeline without changing historical defaults", () => {
     const outputDir = join(createTempDir("yta-model-pipeline-"), "artifact");
-    const pipelineIdentity = "53336c769f5ccab9814fa4de688c35a6300693cf801267ac0f9311736782959f";
+    const pipelineIdentity = "5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c";
     const result = materializeYoutubeExtractionWorkerArtifact({
       outputDir,
       releaseSha: "0123456789abcdef0123456789abcdef01234567",
-      allowedSnapshotDigest: "f25c71ad4192cf61931355054cf3dd1d73d8726846442c2f3dfb2a11b5548390",
+      allowedSnapshotDigest: "5418cbb09d1ae090becd4e33a7c5c449ca2769e85443b9e8dca82f103a82fa17",
       policyVersion: 2,
       pipelineIdentity,
     });

@@ -16,7 +16,7 @@ begin
   where policy_key = 'primary';
 
   if v_policy.policy_version = 2
-    and v_policy.pipeline_identity = '53336c769f5ccab9814fa4de688c35a6300693cf801267ac0f9311736782959f'
+    and v_policy.pipeline_identity = '5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c'
     and v_policy.extractor_mode = 'i031_codex_vision' then
     return;
   end if;
@@ -34,7 +34,7 @@ begin
 
   update private.youtube_extraction_current_policy
   set policy_version = 2,
-      pipeline_identity = '53336c769f5ccab9814fa4de688c35a6300693cf801267ac0f9311736782959f',
+      pipeline_identity = '5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c',
       enabled = false,
       updated_at = clock_timestamp()
   where policy_key = 'primary';

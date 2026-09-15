@@ -2,7 +2,7 @@
 
 작성일: 2026-07-26
 
-2026-09-15 후속: 현재 모델 교체 계약은 [i031-astra-sol-v1](youtube-astra-sol-model-upgrade.md)이다.
+2026-09-15 후속: 현재 모델 교체 계약은 [i031-sol-v1](youtube-astra-sol-model-upgrade.md)이다.
 아래 모델·평가·exact parity 값은 당시 i031의 기록으로 보존한다.
 
 상태: exact localhost 구현 완료, 최종 검증·PR merge 진행 중

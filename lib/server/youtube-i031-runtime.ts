@@ -11,15 +11,15 @@ export const I031_CODEX_CLI_VERSION = "0.154.0-alpha.6.2";
 export const I031_TOTAL_TIMEOUT_MS = 20 * 60 * 1000;
 
 export const I031_EXACT_IDENTITY = Object.freeze({
-  pipelineVersion: "i031-astra-sol-v1",
+  pipelineVersion: "i031-sol-v1",
   provider: "codex-vision-keyframes",
-  model: "gpt-6-astra",
+  model: "gpt-5.6-sol",
   selectorModel: "gpt-5.6-sol",
   sourcePromptVersion: "single-recipe-four-source-v2",
   selectorPromptVersion: "keyframe-selector-v6-single-compact-json",
   finalPromptVersion: "keyframe-final-v44-explicit-action-clause",
   clientVersion: "codex-vision-keyframes-client-v20-structured-final",
-  executionConfigSignature: "4f0d0b8a61d667397afa6ba8",
+  executionConfigSignature: "143d3570f6a3c1cbf7680851",
   frameExtractorVersion: "extract-video-frames-v7-adaptive-screen-ocr",
   frameMode: "hybrid",
   interval: 4,

@@ -145,8 +145,8 @@ describe("YouTube i031 exact runtime", () => {
   });
 
   it("rejects historical model output under the upgraded pipeline", () => {
-    expect(I031_EXACT_IDENTITY.pipelineVersion).toBe("i031-astra-sol-v1");
-    expect(I031_EXACT_IDENTITY.model).toBe("gpt-6-astra");
+    expect(I031_EXACT_IDENTITY.pipelineVersion).toBe("i031-sol-v1");
+    expect(I031_EXACT_IDENTITY.model).toBe("gpt-5.6-sol");
     expect(I031_EXACT_IDENTITY.selectorModel).toBe("gpt-5.6-sol");
     for (const change of [
       { model: "gpt-5.4" },

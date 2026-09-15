@@ -12,6 +12,6 @@
     "scripts/recipe-loop/lib/screen-ocr-scout.mjs": "d57f3a610dcd9958a9c96759e011f98722cd60b16e6eb2461bf858593a17608c",
     "scripts/recipe-loop/macos-vision-ocr.swift": "b9a99806eea9866a630fecba851e29b847f9b4f1e4212bede634396bd0d20892",
     "scripts/recipe-loop/snapshot-video.mjs": "f8fb30b727f9b12f697e23ae1cf71803bf838cea7692ebe9e5d83f0b079dbd4a",
-    "worker.mjs": "3b84b7d0880a205745d43a3500610b94d7cfb95a2109c4f3f15818de62d8defa"
+    "worker.mjs": "bb33dbda311934e5664a7615153c5ab5d1cfe29cfe6e22a642cc26ac46bc404e"
   }
 }

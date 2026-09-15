@@ -16,7 +16,7 @@ describe("upgraded video final output", () => {
     try {
       const raw = await runCodexExec({
         prompt: "source-only recipe fixture",
-        model: "gpt-6-astra",
+        model: "gpt-5.6-sol",
         outputSchema: SINGLE_RECIPE_OUTPUT_SCHEMA,
         outputPath: path.join(root, "result.json"),
         logPath: path.join(root, "model.log"),
