@@ -725,20 +725,14 @@ describe("planner week screen Stage 4", () => {
     expect(navigationMocks.push).not.toHaveBeenCalled();
     expect(navigationMocks.replace).not.toHaveBeenCalled();
   });
-  it("takes guest food-name clicks directly to login with the clicked food date", async () => {
+  it("opens guest food detail in place without forcing login", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     readE2EAuthOverride.mockReturnValue(false);
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams("segment=log&date=2026-03-25"));
     render(<PlannerWeekScreen />);
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(await screen.findByRole("button", { name: /그릭요거트 볼 식사 기록 상세/ }));
-    const href = navigationMocks.push.mock.calls.at(-1)?.[0];
-    const location = new URL(href, "http://localhost");
-    expect(location.pathname).toBe("/login");
-    const next = new URL(location.searchParams.get("next")!, "http://localhost");
-    expect(next.pathname).toBe("/planner");
-    expect(next.searchParams.get("date")).toBe("2026-03-24");
-    expect(next.searchParams.get("segment")).toBe("log");
-    expect(screen.queryByRole("dialog",{name:"식사 기록 상세"})).toBeNull();
+    expect(navigationMocks.push).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "식사 기록 상세" })).toBeTruthy();
   });
 
   it("keeps a distant selected date during a fast log-plan-log switch while the plan is loading", async () => {
