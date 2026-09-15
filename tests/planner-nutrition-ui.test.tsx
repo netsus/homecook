@@ -99,7 +99,7 @@ describe("planner nutrition presentation", () => {
 
   it.each([
     [value(0), "0 kcal"],
-    [value(null, "partial", 832), "최소 832 kcal"],
+    [value(null, "partial", 832), "832 kcal"],
     [value(null, "unavailable"), "정보 준비 중"],
   ] as const)("keeps observed zero, minimum, and missing energy distinct", (input, expected) => {
     expect(formatPlannerNutritionEnergy(input)).toBe(expected);
@@ -107,7 +107,7 @@ describe("planner nutrition presentation", () => {
 
   it.each([
     ["carbohydrate_g", value(0), "0 g"],
-    ["protein_g", value(null, "partial", 23.4), "최소 23.4 g"],
+    ["protein_g", value(null, "partial", 23.4), "23.4 g"],
     ["sodium_mg", value(null, "unavailable"), "정보 준비 중"],
   ] as const)("formats core nutrients without turning missing into zero", (code, input, expected) => {
     expect(formatPlannerNutritionValue(code, input)).toBe(expected);
@@ -136,13 +136,13 @@ describe("planner nutrition presentation", () => {
     );
 
     expect(screen.getByText("계획 영양")).toBeTruthy();
-    expect(screen.getAllByText("최소 832 kcal").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("832 kcal").length).toBeGreaterThan(0);
     expect(screen.getAllByText("2개 확인 필요").length).toBeGreaterThan(0);
     expect(screen.queryByText("탄수화물")).toBeNull();
     expect(screen.queryByText("나트륨")).toBeNull();
   });
 
-  it("renders the meal core five, quality, safe warning guidance, and restores focus after ESC", async () => {
+  it("renders the compact meal macros, quality, safe warning guidance, and restores focus after ESC", async () => {
     const user = userEvent.setup();
     const partial = aggregate({
       calculation_status: "partial",
@@ -167,13 +167,10 @@ describe("planner nutrition presentation", () => {
     );
 
     const summary = screen.getByTestId("meal-nutrition-summary");
-    expect(within(summary).getByText("열량")).toBeTruthy();
     expect(within(summary).getByText("탄수화물")).toBeTruthy();
     expect(within(summary).getByText("단백질")).toBeTruthy();
     expect(within(summary).getByText("지방")).toBeTruthy();
-    expect(within(summary).getByText("나트륨")).toBeTruthy();
-    expect(within(summary).getByText("최소 510 kcal")).toBeTruthy();
-    expect(within(summary).getByText("정보 준비 중")).toBeTruthy();
+    expect(within(summary).getByText("510 kcal")).toBeTruthy();
     expect(within(summary).getByText("직접값과 환산값 혼합 · 예상치")).toBeTruthy();
 
     const warningButton = within(summary).getByRole("button", { name: "확인 필요 안내 2개 보기" });

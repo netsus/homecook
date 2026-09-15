@@ -255,6 +255,20 @@ describe("36b YouTube recipe register tag write path", () => {
       }),
       recipeId,
     );
+    const nutritionClient = recalculateRecipeNutritionSnapshot.mock.calls[0]![0];
+    await nutritionClient.rpc("write_recipe_nutrition_snapshot", {
+      p_recipe_id: recipeId,
+      p_snapshot: {},
+      p_expected_recipe_updated_at: "2026-09-15T00:00:00.000Z",
+      p_input_guard: {},
+    });
+    expect(dbClient.rpc).toHaveBeenCalledWith(
+      "write_owned_youtube_recipe_nutrition_snapshot",
+      expect.objectContaining({
+        p_user_id: userId,
+        p_recipe_id: recipeId,
+      }),
+    );
     expect(dbClient.rpc).toHaveBeenCalledWith("register_youtube_recipe_from_session", expect.objectContaining({
       p_tags: null,
       p_tag_source: "system_suggested",

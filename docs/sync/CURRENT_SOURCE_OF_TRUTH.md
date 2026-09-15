@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-15 사용자 요청 — 섭취량·부분 영양 그래프·YouTube 썸네일
+
+식사기록은 제품·재료의 완전한 기준 영양값을 실제 입력한 먹은 양과 단위에 비례해 계산한 기존 evidence를 카드·상세·하루 합계에 표시한다. 요리계획의 레시피별·끼니 전체 영양은 완전값과 부분 `known_amount`를 함께 사용해 항상 그래프 트랙을 표시하며 사용자 화면에서 `최소` 표현을 제거한다. 비동기 YouTube 추출 세션은 video id 기반 YouTube 썸네일을 저장하고 기존 빈 YouTube 레시피도 보정한다. YouTube 등록 직후 영양 snapshot은 로그인한 해당 레시피 소유자만 호출 가능한 wrapper로 기록하며, 재료 영양 profile이나 단위 환산이 없는 값은 숨기지 않고 부분값으로 유지한다.
+
 ## 2026-09-15 사용자 요청 — 로그인 화면 응답 최적화
 
 브라우저 Auth와 쿠키 기준은 기존 공개 HTTPS origin을 유지한다. Next 서버의 Auth 사용자 확인·토큰 갱신·JWKS 조회와 사용자 데이터 gateway 검증은 검증된 `LOCAL_SUPABASE_INTERNAL_URL` loopback transport를 사용해 Cloudflare 왕복을 제거한다. 세션 liveness, JWT 서명·issuer, app-owned session binding, account generation과 RLS 검증은 생략하거나 캐시하지 않는다. 공통 상·하단 탐색과 홈의 빠른 이동·배너·레시피 카드는 자동 route prefetch를 하지 않으며, 사용자가 실제로 선택한 화면만 요청한다. 프로필 버튼은 프로필 이미지와 마이페이지 이동만 담당하고 성장·알림 정보는 전역 알림 기능이 소유한다.

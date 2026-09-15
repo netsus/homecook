@@ -3340,3 +3340,6 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 - `color_key`는 `'unassigned'` 기본값 허용
 - users는 soft delete 전제에 맞게 partial unique index 사용
 - recipe_books id는 시스템/커스텀 모두 uuid, 구분은 book_type만 사용
+# 2026-09-15 YouTube 썸네일·영양 등록 후속 계약
+
+`youtube_extraction_sessions.thumbnail_url`이 비어 있고 `youtube_video_id`가 있으면 insert/update trigger가 YouTube `hqdefault` URL을 저장한다. 기존 빈 YouTube 세션과 `recipes.thumbnail_url`도 같은 video id로 보정한다. `public.write_owned_youtube_recipe_nutrition_snapshot`은 `auth.uid() = p_user_id`, 해당 recipe의 `created_by`, `source_type='youtube'`, 미삭제 상태를 확인한 뒤 기존 `write_recipe_nutrition_snapshot` 검증·잠금·멱등 쓰기를 호출한다. `anon`과 타 사용자는 실행할 수 없다.
