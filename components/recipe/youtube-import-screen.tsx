@@ -2950,10 +2950,10 @@ function ActiveYoutubeImportScreen({
     let cancelled = false;
 
     (async () => {
-      if (submissionMode === "sync") {
+      const runSyncExtraction = async () => {
         const result = await extractYoutubeRecipe({ youtube_url: youtubeUrl.trim() });
 
-        if (cancelled) return;
+        if (cancelled) return false;
 
         if (!result.success || !result.data) {
           if (result.error?.code === "NOT_RECIPE_VIDEO") {
@@ -2961,13 +2961,13 @@ function ActiveYoutubeImportScreen({
             setClassificationReasons([result.error.message]);
             setExtractionError(null);
             pushStep("non-recipe-warning");
-            return;
+            return true;
           }
 
           setExtractionError(
             getApiErrorMessage("레시피를 추출하지 못했어요.", result.error?.message),
           );
-          return;
+          return true;
         }
 
         const data = result.data;
@@ -2978,6 +2978,11 @@ function ActiveYoutubeImportScreen({
         setCandidatePromotionError(null);
         applyExtractDataToReview(data);
         pushStep("review");
+        return true;
+      };
+
+      if (submissionMode === "sync") {
+        await runSyncExtraction();
         return;
       }
 
@@ -2986,6 +2991,13 @@ function ActiveYoutubeImportScreen({
       if (cancelled) return;
 
       if (!result.success || !result.data) {
+        if (
+          result.error?.code === "QUEUE_UNAVAILABLE"
+          || result.error?.code === "QUEUE_BUSY"
+        ) {
+          await runSyncExtraction();
+          return;
+        }
         setExtractionError(null);
         setUrlError(getApiErrorMessage("추출 작업을 접수하지 못했어요.", result.error?.message));
         setCurrentStep("url-input");

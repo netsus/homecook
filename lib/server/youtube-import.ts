@@ -9240,7 +9240,22 @@ export async function handleYoutubeExtract(request: Request) {
   }
 
   if (isYoutubeAsyncExtractionEnabled()) {
-    return youtubeAsyncExtractionHandlers.syncWait(request);
+    const asyncResponse = await youtubeAsyncExtractionHandlers.syncWait(request.clone());
+    if (asyncResponse.status !== 503) {
+      return asyncResponse;
+    }
+
+    try {
+      const asyncPayload = await asyncResponse.clone().json() as {
+        error?: { code?: unknown } | null;
+      };
+      const asyncCode = asyncPayload.error?.code;
+      if (asyncCode !== "QUEUE_UNAVAILABLE" && asyncCode !== "QUEUE_BUSY") {
+        return asyncResponse;
+      }
+    } catch {
+      return asyncResponse;
+    }
   }
 
   const { routeClient, user } = await requireUser();

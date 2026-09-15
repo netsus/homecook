@@ -62,6 +62,43 @@ const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SHOPPING_FLOW_CHROME = getSurfaceChromeRule("shopping.flow");
 
 function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
+  const mealById = new Map(data.eligible_meals.map((meal) => [meal.id, meal]));
+  const recipeConfigs: MealConfig[] = [];
+  data.recipes?.forEach((recipe) => {
+      const meals = recipe.meal_ids
+        .map((mealId) => mealById.get(mealId))
+        .filter((meal): meal is NonNullable<typeof meal> => Boolean(meal))
+        .map((meal) => ({
+          column_id: meal.column_id,
+          column_name: meal.column_name ?? null,
+          id: meal.id,
+          plan_date: meal.plan_date,
+          planned_servings: meal.planned_servings,
+          created_at: meal.created_at,
+        }));
+      const primaryMeal = meals[0];
+      if (!primaryMeal) return;
+
+      recipeConfigs.push({
+        selection_id: recipe.recipe_id,
+        recipe_id: recipe.recipe_id,
+        meal_ids: recipe.meal_ids,
+        meals,
+        shopping_servings: recipe.shopping_servings,
+        isSelected: recipe.is_selected,
+        recipe_name: recipe.recipe_name,
+        recipe_thumbnail: recipe.recipe_thumbnail,
+        planned_servings_total: recipe.planned_servings_total,
+        meal_count: meals.length,
+        plan_date: primaryMeal.plan_date,
+        created_at: primaryMeal.created_at,
+      });
+    });
+
+  if (recipeConfigs.length) {
+    return recipeConfigs.sort(compareMealConfigs);
+  }
+
   return data.eligible_meals
     .map((meal) => ({
       selection_id: meal.id,
