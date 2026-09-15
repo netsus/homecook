@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-15 사용자 요청 — 로그인 화면 응답 최적화
+
+브라우저 Auth와 쿠키 기준은 기존 공개 HTTPS origin을 유지한다. Next 서버의 Auth 사용자 확인·토큰 갱신·JWKS 조회와 사용자 데이터 gateway 검증은 검증된 `LOCAL_SUPABASE_INTERNAL_URL` loopback transport를 사용해 Cloudflare 왕복을 제거한다. 세션 liveness, JWT 서명·issuer, app-owned session binding, account generation과 RLS 검증은 생략하거나 캐시하지 않는다.
+
 ## 2026-09-15 사용자 요청 — YouTube 추출 알림 진행 표시
 
 진행 중인 YouTube 레시피 추출 알림은 추출 화면과 같은 서버 기준 6단계 진행 표시, 현재 단계 문구, 경과 시간과 검증된 남은 시간 범위를 보여준다. 기존 5초 작업 조회를 재사용하며 시간만으로 단계를 올리거나 새 API·DB·실시간 연결을 추가하지 않는다.
