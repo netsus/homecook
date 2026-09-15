@@ -68,7 +68,7 @@ import {
 const tempDirs: string[] = [];
 const GREEN_I031_PREFLIGHT = Object.freeze({
   ready: true,
-  codexCliVersion: "0.144.0-alpha.4",
+  codexCliVersion: "0.154.0-alpha.6.2",
   chatGptLogin: true,
   toolsReady: true,
 });
@@ -180,6 +180,22 @@ afterEach(() => {
 });
 
 describe("YTASYNC-OPS deterministic artifact", () => {
+  it("materializes an explicit model pipeline without changing historical defaults", () => {
+    const outputDir = join(createTempDir("yta-model-pipeline-"), "artifact");
+    const pipelineIdentity = "5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c";
+    const result = materializeYoutubeExtractionWorkerArtifact({
+      outputDir,
+      releaseSha: "0123456789abcdef0123456789abcdef01234567",
+      allowedSnapshotDigest: "5418cbb09d1ae090becd4e33a7c5c449ca2769e85443b9e8dca82f103a82fa17",
+      policyVersion: 2,
+      pipelineIdentity,
+    });
+    expect(verifyYoutubeExtractionWorkerArtifact(result.manifest_path)).toMatchObject({
+      pipeline_identity: pipelineIdentity,
+      policy_version: 2,
+    });
+  });
+
   it("issues an exact ES256 local-only worker credential with a bounded lifetime", () => {
     const { privateKey, publicKey } = generateKeyPairSync("ec", {
       namedCurve: "P-256",
@@ -933,7 +949,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       writeModeFile(codexBin, [
         "#!/bin/sh",
         `touch ${JSON.stringify(commandMarker)}`,
-        "if [ \"$1\" = \"--version\" ]; then echo 'codex 0.144.0-alpha.4'; else echo 'Logged in using ChatGPT'; fi",
+        "if [ \"$1\" = \"--version\" ]; then echo 'codex 0.154.0-alpha.6.2'; else echo 'Logged in using ChatGPT'; fi",
         "",
       ].join("\n"), 0o700);
       writeModeFile(providerTarget, [
@@ -1638,7 +1654,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     const codexBin = join(fakeBin, "codex");
     writeModeFile(codexBin, [
       "#!/bin/sh",
-      "if [ \"$1\" = \"--version\" ]; then echo 'codex-cli 0.144.0-alpha.4'; exit 0; fi",
+      "if [ \"$1\" = \"--version\" ]; then echo 'codex-cli 0.154.0-alpha.6.2'; exit 0; fi",
       "if [ \"$1\" = \"login\" ]; then echo 'Logged in using ChatGPT'; exit 0; fi",
       "exit 1",
       "",

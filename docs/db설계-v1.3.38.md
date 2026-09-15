@@ -435,6 +435,14 @@ UNIQUE (user_id, food_product_id, food_product_nutrition_version_id)
 
 ## 0-PIL-B. `shopping_list_items` source provenance
 
+### 2026-09-15 장보기 생성 오류 수정
+
+삭제된 카탈로그 재료가 선택한 immutable snapshot에 남아 있는 경우, 생성 RPC는 원래 ID로 소유권·snapshot membership·누락 검증을 마친 뒤 해당 ID를 nullable `unavailable_ingredient_id uuid`에 보존한다. 이 경우에만 기존 세 identity 필드를 모두 null로 저장할 수 있으며 비어 있지 않은 `display_text`와 `added_to_pantry=false`를 요구한다. 기존 일반 재료와 product/version XOR 및 FK는 유지한다. 이름으로 대체 ID를 추측하거나 원본 snapshot을 변경하지 않는다. 원본 표시와 인분 배율, 계산된 `amounts_json`을 보존하며 자동 팬트리 매칭·반영은 하지 않는다. 사용자의 구매 체크·이미있음 표시·목록 완료는 지원한다. 출처 ID도 없는 all-null 신규 row는 계속 금지한다.
+
+아래 SQL은 기존 두 source branch이며 위 예외가 추가된다. 운영 적용은 별도이며 이 수정 작업에서는 수행하지 않는다.
+
+여러 snapshot의 원본 표시와 인분 배율을 함께 보존할 수 있도록 `shopping_list_items.display_text`는 `varchar(200)`에서 `text`로 확장한다. 기존 표시를 자르거나 음식 항목을 버리지 않는다.
+
 `ingredient_id`를 nullable로 바꾸고 nullable `food_product_id`, `food_product_nutrition_version_id`를 추가한다.
 
 ```sql

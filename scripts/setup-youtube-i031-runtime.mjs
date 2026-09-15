@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 
-const CODEX_VERSION = "0.144.0-alpha.4";
+const CODEX_VERSION = "0.154.0-alpha.6.2";
 const projectRoot = process.cwd();
 const toolRoot = path.join(projectRoot, ".youtube-i031-tools");
 const packageJsonPath = path.join(toolRoot, "package.json");

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -366,6 +367,7 @@ function createShoppingMealFixture(
 function shoppingCreateCall(options: {
   userId: string;
   title: string;
+  completeWithoutList?: boolean;
   mealIds?: string[];
   splitRemainders?: unknown[];
   splitOriginals?: unknown[];
@@ -378,7 +380,7 @@ function shoppingCreateCall(options: {
       '${options.title}',
       current_date,
       current_date,
-      false,
+      ${options.completeWithoutList ?? false},
       array[${(options.mealIds ?? []).map((id) => `'${id}'::uuid`).join(",")}],
       ${jsonSql(options.splitRemainders ?? [])},
       ${jsonSql(options.splitOriginals ?? [])},
@@ -410,6 +412,11 @@ describe.runIf(enabled)(
       expect(port).not.toBe("5432");
       expect(database).toMatch(/^homecook_product_link_(fresh|replay)$/);
       expect(["fresh", "replay"]).toContain(databaseMode);
+
+      psql(readFileSync(
+        "supabase/migrations/20260915120000_shopping_unavailable_snapshot_ingredients.sql",
+        "utf8",
+      ));
 
       psql(`
         insert into public.users (id, nickname, social_provider, social_id)
@@ -1218,6 +1225,106 @@ describe.runIf(enabled)(
             )
           );
       `))).toBe("0");
+    });
+
+    it("preserves deleted snapshot ingredients as non-pantry text rows without accepting forged IDs", () => {
+      const fixture = createShoppingMealFixture(ownerA, `missing-${randomUUID()}`);
+      const missingId = randomUUID();
+      const snapshotId = randomUUID();
+      const item = {
+        ingredient_id: missingId,
+        food_product_id: null,
+        food_product_nutrition_version_id: null,
+        display_text: "plain yogurt 100g x 2 + ".repeat(12),
+        amounts_json: [{ amount: 200, unit: "g" }],
+        is_pantry_excluded: true,
+        sort_order: 0,
+      };
+      psql(`
+        begin;
+        insert into public.recipe_content_snapshots (
+          id, owner_user_id, recipe_id, title, base_servings,
+          ingredients_json, steps_json, content_hash
+        ) values (
+          '${snapshotId}', '${ownerA}', '${fixture.recipeId}', 'missing catalog', 1,
+          ${jsonSql([{ ...item, amount: 100, unit: "g", ingredient_type: "QUANT" }])},
+          '[]', '${randomUUID()}'
+        );
+        set local session_replication_role = replica;
+        update public.meals set recipe_content_snapshot_id = '${snapshotId}',
+          recipe_content_snapshot_origin = 'legacy_backfill'
+        where id = '${fixture.mealId}';
+        commit;
+      `);
+      const options = {
+        userId: ownerA,
+        title: `missing-catalog:${randomUUID()}`,
+        mealIds: [fixture.mealId],
+        completeWithoutList: true,
+        recipeRows: [{ recipe_id: fixture.recipeId, shopping_servings: 2, planned_servings_total: 2 }],
+        itemRows: [item],
+      };
+      for (const itemRows of [[], [{ ...item, ingredient_id: randomUUID() }], [{ ...item, ingredient_id: null }]]) {
+        expect(JSON.parse(psql(authenticatedSql(ownerA, shoppingCreateCall({ ...options, itemRows })))))
+          .toMatchObject({ error_code: "FORBIDDEN" });
+      }
+      expect(JSON.parse(psql(authenticatedSql(ownerB, shoppingCreateCall(options)))))
+        .toMatchObject({ error_code: "FORBIDDEN" });
+      const result = JSON.parse(psql(authenticatedSql(ownerA, shoppingCreateCall(options))));
+      expect(result).toMatchObject({
+        id: expect.any(String),
+        items: [expect.objectContaining({
+          ingredient_id: null, food_product_id: null,
+          food_product_nutrition_version_id: null,
+          display_text: item.display_text, amounts_json: item.amounts_json,
+          is_pantry_excluded: false, added_to_pantry: false,
+        })],
+      });
+      expect(psql(`select unavailable_ingredient_id from public.shopping_list_items where shopping_list_id = '${result.id}';`))
+        .toBe(missingId);
+      expect(psql(`select recipe_content_snapshot_id from public.meals where id = '${fixture.mealId}';`))
+        .toBe(snapshotId);
+      expectSqlFailure(`update public.shopping_list_items set added_to_pantry = true, is_checked = true where shopping_list_id = '${result.id}';`, /shopping_list_items_identity_xor_check/);
+      psql(`update public.shopping_list_items set is_pantry_excluded = true where shopping_list_id = '${result.id}';`);
+      const completed = JSON.parse(psql(authenticatedSql(ownerA, `
+        select public.complete_shopping_list('${result.id}', '${ownerA}', null)::text;
+      `)));
+      expect(completed).toMatchObject({ completed: true, meals_updated: 1, pantry_added: 0 });
+      expect(psql(`select status from public.meals where id = '${fixture.mealId}';`)).toBe("shopping_done");
+      expect(psql(`select count(*) from public.pantry_items where ingredient_id = '${missingId}';`)).toBe("0");
+    });
+
+    it("retains the snapshot food when catalog deletion commits during creation", async () => {
+      const ingredientId = createIngredient("deleted-during-create");
+      const fixture = createShoppingMealFixture(ownerA, `deletion-race-${randomUUID()}`, ingredientId);
+      expect(psql(`select (recipe_content_snapshot_id is not null)::text from public.meals where id = '${fixture.mealId}';`))
+        .toBe("true");
+      psql(`delete from public.recipe_ingredients where recipe_id = '${fixture.recipeId}';`);
+      const deletion = psqlAsync(`
+        begin;
+        set application_name = 'shopping-catalog-delete-race';
+        delete from public.ingredients where id = '${ingredientId}';
+        select pg_sleep(1);
+        commit;
+      `);
+      waitForPgSleep("shopping-catalog-delete-race");
+      const result = JSON.parse(psql(authenticatedSql(ownerA, shoppingCreateCall({
+        userId: ownerA, title: `deletion-race:${randomUUID()}`,
+        mealIds: [fixture.mealId],
+        recipeRows: [{ recipe_id: fixture.recipeId, shopping_servings: 2, planned_servings_total: 2 }],
+        itemRows: [{
+          ingredient_id: ingredientId, food_product_id: null,
+          food_product_nutrition_version_id: null, display_text: "snapshot food 1g",
+          amounts_json: [{ amount: 1, unit: "g" }], sort_order: 0,
+        }],
+      }))));
+      const deleted = await deletion;
+      expect(deleted.status, deleted.stderr).toBe(0);
+      expect(result).toMatchObject({ id: expect.any(String), items: [expect.objectContaining({
+        ingredient_id: null, display_text: "snapshot food 1g", amounts_json: [{ amount: 1, unit: "g" }],
+      })] });
+      expect(psql(`select unavailable_ingredient_id from public.shopping_list_items where shopping_list_id = '${result.id}';`))
+        .toBe(ingredientId);
     });
 
     it("serializes concurrent shopping creation without an orphan list", async () => {

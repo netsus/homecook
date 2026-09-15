@@ -112,7 +112,7 @@ describe("YouTube i031 exact runtime", () => {
       APIFY_TOKEN: "apify-secret",
       YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID: "actor-id",
       YOUTUBE_TRANSCRIPT_PAID_TIMEOUT_MS: "60000",
-      HOMECOOK_I031_CODEX_CLI_VERSION: "0.144.0-alpha.4",
+      HOMECOOK_I031_CODEX_CLI_VERSION: "0.154.0-alpha.6.2",
       NODE_ENV: "production",
     });
     expect(env).not.toHaveProperty("GEMINI_API_KEY");
@@ -144,10 +144,27 @@ describe("YouTube i031 exact runtime", () => {
     })).toThrowError(/I031_IDENTITY_MISMATCH/u);
   });
 
+  it("rejects historical model output under the upgraded pipeline", () => {
+    expect(I031_EXACT_IDENTITY.pipelineVersion).toBe("i031-sol-v1");
+    expect(I031_EXACT_IDENTITY.model).toBe("gpt-5.6-sol");
+    expect(I031_EXACT_IDENTITY.selectorModel).toBe("gpt-5.6-sol");
+    for (const change of [
+      { model: "gpt-5.4" },
+      { selectorModel: "gpt-5.4-mini" },
+      { executionConfigSignature: "704359dfb34df5ac1d070078" },
+      { pipelineVersion: undefined },
+    ]) {
+      expect(() => parseYoutubeI031WorkerOutput({
+        ...exactWorkerOutput,
+        identity: { ...exactWorkerOutput.identity, ...change },
+      })).toThrowError(/I031_IDENTITY_MISMATCH/u);
+    }
+  });
+
   it("fails preflight when the YouTube key or exact Codex CLI is unavailable", async () => {
     const runCommand = vi.fn(async (_command: string, args: string[]) => ({
       stdout: args[0] === "--version"
-        ? "codex-cli 0.144.0-alpha.4\n"
+        ? "codex-cli 0.154.0-alpha.6.2\n"
         : args[0] === "login"
           ? "Logged in using ChatGPT\n"
           : "",
@@ -193,7 +210,7 @@ describe("YouTube i031 exact runtime", () => {
       platform: "darwin",
       runCommand: vi.fn(async (_command, args) => ({
         stdout: args[0] === "--version"
-          ? "codex-cli 0.144.0-alpha.4\n"
+          ? "codex-cli 0.154.0-alpha.6.2\n"
           : "Not logged in\n",
       })),
     })).rejects.toMatchObject({

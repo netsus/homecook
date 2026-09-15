@@ -57,6 +57,9 @@ function parseArgs(argv) {
       case "--policy-version":
         options.policyVersion = Number(value);
         break;
+      case "--pipeline-identity":
+        options.pipelineIdentity = ensureSnapshotDigest(value);
+        break;
       case "--output":
         options.output = ensureAbsolutePath(value, "output");
         break;
@@ -101,6 +104,7 @@ function main() {
       schemaIdentity: options.schemaIdentity,
       allowedSnapshotDigest: options.allowedSnapshotDigest,
       policyVersion: options.policyVersion,
+      pipelineIdentity: options.pipelineIdentity,
     })
     : null;
   const manifest = materialized?.manifest
@@ -113,6 +117,7 @@ function main() {
       schemaIdentity: options.schemaIdentity,
       allowedSnapshotDigest: options.allowedSnapshotDigest,
       policyVersion: options.policyVersion,
+      pipelineIdentity: options.pipelineIdentity,
     });
   const appDescriptor = buildYoutubeExtractionAppDescriptor({
     releaseSha: manifest.release_sha,

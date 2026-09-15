@@ -7,11 +7,11 @@
     "lib/server/recipe-extraction-lab/public-source-packets.mjs": "d5bd5b6aee3cdc6f870651c1e7bd8815a11a26455c1faceacfd62d67e2e1c1bc",
     "lib/server/recipe-extraction-lab/source-evidence.mjs": "106c4d861722229d16ea8ad176f09c7aaa11e95c701425d15042ffb1522cd367",
     "scripts/recipe-loop/extract-video-frames.py": "11801cfad505705921ec6f1319caac28c71891708b098782be485990de1f54ca",
-    "scripts/recipe-loop/lib/codex-vision-client.mjs": "e01897ae9d7dfbf8f2c5401268b51a40ffc3e2d9c40b0616d7c0513c52e57614",
-    "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs": "6577318b59fa480b77bbb72128f8160522a9d0e17139ebc7256a779199652901",
+    "scripts/recipe-loop/lib/codex-vision-client.mjs": "afef25d8204435ba57a9774e507041df5b49727b1f2778a18408f851d0622d9a",
+    "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs": "b5d2d2d15042289fa8ae7022fc7e2a1802b58ac154ec1722c2f17566820a672b",
     "scripts/recipe-loop/lib/screen-ocr-scout.mjs": "d57f3a610dcd9958a9c96759e011f98722cd60b16e6eb2461bf858593a17608c",
     "scripts/recipe-loop/macos-vision-ocr.swift": "b9a99806eea9866a630fecba851e29b847f9b4f1e4212bede634396bd0d20892",
     "scripts/recipe-loop/snapshot-video.mjs": "f8fb30b727f9b12f697e23ae1cf71803bf838cea7692ebe9e5d83f0b079dbd4a",
-    "worker.mjs": "8edad1ce209c842cbd80a44fa033f489c518636cf213d2a3c124c5935c9accec"
+    "worker.mjs": "bb33dbda311934e5664a7615153c5ab5d1cfe29cfe6e22a642cc26ac46bc404e"
   }
 }

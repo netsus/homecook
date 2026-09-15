@@ -145,6 +145,20 @@ describe("YT_IMPORT async extraction", () => {
 
   afterEach(() => cleanup());
 
+  it.each(["QUEUE_UNAVAILABLE", "QUEUE_BUSY"])("does not start a second extraction after %s", async (code) => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: false,
+      data: null,
+      error: { code, message: "추출 작업을 접수하지 못했어요.", fields: [] },
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText("추출 작업을 접수하지 못했어요.")).toBeTruthy();
+    expect(asyncApi.enqueueYoutubeExtraction).toHaveBeenCalledTimes(1);
+    expect(syncApi.extractYoutubeRecipe).not.toHaveBeenCalled();
+  });
+
   it("enqueues in the background and lets the user leave immediately", async () => {
     vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
       success: true,

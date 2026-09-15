@@ -695,6 +695,7 @@ Request body의 두 collection은 각각 optional이지만 적어도 하나는 n
 ```
 
 - existing non-null `ingredient_id` legacy row는 `source_type="ingredient"`다. all-null malformed legacy row는 기존 표시 snapshot을 보존하기 위해 `source_type=null`과 null identity로만 반환한다. product/display text에서 identity를 추측하지 않고 effective matching, completion pantry reflection, `added_to_pantry=true` 전환에서 제외한다.
+- 2026-09-15 장보기 생성 수정: 카탈로그에서 삭제된 snapshot 재료도 누락하지 않는다. 원래 ID를 서버에서 snapshot과 대조한 뒤 DB 내부 `unavailable_ingredient_id`로 보존하고, 공개 응답은 기존 `source_type=null`과 null identity를 사용한다. 원본 표시·인분 배율과 `amounts_json`은 유지하며 이름 기반 재매칭·자동 팬트리 반영은 금지한다. 소유권·세션 authority RPC 실패는 그대로 반환하고 legacy RPC로 재시도하지 않는다.
 
 ## 0-PIL-D. shopping complete와 shared reader
 

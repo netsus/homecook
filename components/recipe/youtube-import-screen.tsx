@@ -2992,13 +2992,6 @@ function ActiveYoutubeImportScreen({
       if (cancelled) return;
 
       if (!result.success || !result.data) {
-        if (
-          result.error?.code === "QUEUE_UNAVAILABLE"
-          || result.error?.code === "QUEUE_BUSY"
-        ) {
-          await runSyncExtraction();
-          return;
-        }
         setExtractionError(null);
         setUrlError(getApiErrorMessage("추출 작업을 접수하지 못했어요.", result.error?.message));
         setCurrentStep("url-input");
