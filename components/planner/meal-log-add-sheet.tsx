@@ -21,6 +21,12 @@ export interface MealLogSourceSelection {
   amount: number;
   maxAmount?: number;
   unit: string;
+  unitOptions?: string[];
+  basisUnit?: string;
+  basisRelations?: Array<{
+    from: { amount: number; unit: string };
+    to: { amount: number; unit: string };
+  }>;
 }
 
 interface MealLogAddSheetProps {
@@ -76,7 +82,41 @@ function sourceBrand(item: FoodCatalogSearchItem) {
 }
 
 function sourceUnit(item: FoodCatalogSearchItem) {
-  return item.type === "ingredient" ? item.default_unit : item.nutrition.basis.unit;
+  if (item.type === "ingredient") {
+    return item.default_unit?.trim() || "g";
+  }
+  return item.nutrition.basis.unit;
+}
+
+function sourceUnitOptions(item: FoodCatalogSearchItem) {
+  if (item.type === "ingredient") return ["g", "kg"];
+  return [...new Set([
+    item.nutrition.basis.unit,
+    ...item.basis_relations.flatMap((relation) => [relation.from.unit, relation.to.unit]),
+  ])];
+}
+
+function convertSelectionAmount(selection: MealLogSourceSelection, nextUnit: string) {
+  if (selection.unit === nextUnit) return selection.amount;
+  if (selection.unit === "g" && nextUnit === "kg") return selection.amount / 1_000;
+  if (selection.unit === "kg" && nextUnit === "g") return selection.amount * 1_000;
+  const basisUnit = selection.basisUnit;
+  if (!basisUnit) return selection.amount;
+  const factorToBasis = (unit: string) => {
+    if (unit === basisUnit) return 1;
+    const relation = selection.basisRelations?.find((candidate) =>
+      (candidate.from.unit === unit && candidate.to.unit === basisUnit)
+      || (candidate.to.unit === unit && candidate.from.unit === basisUnit));
+    if (!relation) return null;
+    return relation.from.unit === unit
+      ? relation.to.amount / relation.from.amount
+      : relation.from.amount / relation.to.amount;
+  };
+  const currentFactor = factorToBasis(selection.unit);
+  const nextFactor = factorToBasis(nextUnit);
+  return currentFactor === null || nextFactor === null
+    ? selection.amount
+    : selection.amount * currentFactor / nextFactor;
 }
 
 function recentSourceLabel(type: MealLogSourceType) {
@@ -152,6 +192,7 @@ export function MealLogAddSheet({
   const [catalog, setCatalog] = useState<FoodCatalogSearchItem[]>([]);
   const [catalogCursor, setCatalogCursor] = useState<string | null>(null);
   const [catalogHasNext, setCatalogHasNext] = useState(false);
+  const [catalogSearching, setCatalogSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<MealLogSourceSelection | null>(initialSelection ?? null);
   const [restoredCookedBatchPending, setRestoredCookedBatchPending] = useState(
@@ -235,28 +276,47 @@ export function MealLogAddSheet({
     [columnId, columns],
   );
 
-  async function searchCatalog(event: React.FormEvent) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchFoodCatalogSearch({
-        q: query,
-        types: ["food_product", "ingredient"],
-      });
-      setCatalog(result.items);
-      setCatalogCursor(result.next_cursor);
-      setCatalogHasNext(result.has_next);
-    } catch (reason) {
-      if (isUnauthorized(reason)) {
-        onUnauthorized(selection, columnId);
-        return;
-      }
-      setError(reason instanceof Error ? reason.message : "제품·재료를 검색하지 못했어요.");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (tab !== "catalog") return;
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+      setCatalog([]);
+      setCatalogCursor(null);
+      setCatalogHasNext(false);
+      setCatalogSearching(false);
+      return;
     }
-  }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setCatalogSearching(true);
+      setError(null);
+      void fetchFoodCatalogSearch({
+        q: normalizedQuery,
+        signal: controller.signal,
+        types: ["food_product", "ingredient"],
+      })
+        .then((result) => {
+          setCatalog(result.items);
+          setCatalogCursor(result.next_cursor);
+          setCatalogHasNext(result.has_next);
+        })
+        .catch((reason: unknown) => {
+          if (controller.signal.aborted) return;
+          if (isUnauthorized(reason)) {
+            onUnauthorized(null, columnId);
+            return;
+          }
+          setError(reason instanceof Error ? reason.message : "제품·재료를 검색하지 못했어요.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setCatalogSearching(false);
+        });
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [columnId, onUnauthorized, query, tab]);
 
   async function loadMoreRecent() {
     if (!recentHasNext || !recentCursor || loadingMore) return;
@@ -340,6 +400,7 @@ export function MealLogAddSheet({
       name: item.display_name,
       type: item.source.type,
       unit: item.last_quantity.unit,
+      unitOptions: [item.last_quantity.unit],
     });
     setSuggestionConfirmed(false);
   }
@@ -352,6 +413,9 @@ export function MealLogAddSheet({
       name: sourceName(item),
       type: item.type,
       unit: sourceUnit(item),
+      unitOptions: sourceUnitOptions(item),
+      basisRelations: item.type === "food_product" ? item.basis_relations : undefined,
+      basisUnit: item.type === "food_product" ? item.nutrition.basis.unit : undefined,
     });
     setSuggestionConfirmed(true);
   }
@@ -478,6 +542,7 @@ export function MealLogAddSheet({
                               name: batch.recipe_title,
                               type: "cooked_batch",
                               unit: "g",
+                              unitOptions: ["g"],
                             });
                             setSuggestionConfirmed(true);
                           }}
@@ -519,17 +584,19 @@ export function MealLogAddSheet({
             </section>
           ) : (
             <section aria-labelledby="meal-log-source-catalog-tab" id="meal-log-source-catalog" role="tabpanel">
-              <form className="flex gap-2" onSubmit={searchCatalog}>
+              <div>
                 <label className="min-w-0 flex-1 text-sm font-bold">
                   제품·재료 검색
                   <input
                     className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal"
                     onChange={(event) => setQuery(event.target.value)}
+                    placeholder="입력하면 바로 검색돼요"
+                    type="search"
                     value={query}
                   />
                 </label>
-                <button className="mt-6 min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)]" type="submit">검색</button>
-              </form>
+                {catalogSearching ? <p aria-live="polite" className="mt-2 text-xs text-[var(--text-2)]">검색 중…</p> : null}
+              </div>
               {query.trim() === "" && catalog.length === 0 ? (
                 <div className="mt-5">
                   <h3 className="text-sm font-extrabold">최근·자주 먹은 음식</h3>
@@ -564,7 +631,7 @@ export function MealLogAddSheet({
                       <li key={`${item.type}-${item.id}`}>
                         <button className="min-h-11 w-full px-3 py-3 text-left" onClick={() => chooseCatalog(item)} type="button">
                           <span className="block font-bold">{sourceName(item)}</span>
-                          <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{catalogSourceLabel(item)}{item.type === "ingredient" ? ` · 기본 단위 제안 ${item.default_unit}` : ""}</span>
+                          <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{catalogSourceLabel(item)}{item.type === "ingredient" ? ` · 기본 단위 ${sourceUnit(item)}` : ""}</span>
                         </button>
                       </li>
                     ))}
@@ -589,7 +656,13 @@ export function MealLogAddSheet({
                 <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onChange={(event) => { setSelection({ ...selection, amount: Number(event.target.value) }); setSuggestionConfirmed(true); }} step="any" type="number" value={selection.amount} />
               </label>
               <label className="text-sm font-bold">단위
-                <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onBlur={() => setSuggestionConfirmed(true)} onChange={(event) => { setSelection({ ...selection, unit: event.target.value }); setSuggestionConfirmed(true); }} readOnly={selection.type === "cooked_batch"} value={selection.unit} />
+                {(selection.unitOptions?.length ?? 0) > 1 ? (
+                  <select className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => { const unit = event.target.value; setSelection({ ...selection, amount: convertSelectionAmount(selection, unit), unit }); setSuggestionConfirmed(true); }} value={selection.unit}>
+                    {selection.unitOptions?.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                  </select>
+                ) : (
+                  <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-muted)] px-3 font-normal" readOnly value={selection.unit} />
+                )}
               </label>
             </div>
             {!suggestionConfirmed ? <p className="mt-2 text-sm font-bold">제안된 양을 확인해 주세요.</p> : null}

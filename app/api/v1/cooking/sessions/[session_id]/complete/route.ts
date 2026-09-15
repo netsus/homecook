@@ -56,6 +56,15 @@ function isCompleteData(value: unknown): value is CookingSessionCompleteData {
     && Number.isSafeInteger(data.cook_count);
 }
 
+function isMissingSessionAuthorityCompletionRpc(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const value = error as Record<string, unknown>;
+  const text = [value.code, value.message, value.details, value.hint]
+    .filter((part): part is string => typeof part === "string")
+    .join(" ");
+  return /PGRST202|complete_cooking_session.*schema cache/iu.test(text);
+}
+
 export async function POST(request: Request, context: RouteContext) {
   const { session_id: sessionId } = await context.params;
 
@@ -112,15 +121,36 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("INTERNAL_ERROR", "요리 세션을 완료하지 못했어요.", 500);
   }
 
+  const authorityArgs = {
+    ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
+    p_session_id: sessionId,
+    p_consumed_ingredient_ids: parsed.data.consumed_ingredient_ids,
+    p_idempotency_key: idempotency.key,
+  };
+  let rpcResult: { data: unknown; error: unknown };
+  try {
+    rpcResult = await (serviceClient as FuturePropagationRpcClient).rpc(
+      "complete_cooking_session",
+      authorityArgs,
+    );
+    if (rpcResult.error && isMissingSessionAuthorityCompletionRpc(rpcResult.error)) {
+      rpcResult = await (routeClient as unknown as FuturePropagationRpcClient).rpc(
+        "complete_cooking_session",
+        {
+          p_session_id: sessionId,
+          p_user_id: user.id,
+          p_consumed_ingredient_ids: parsed.data.consumed_ingredient_ids,
+        },
+      );
+    }
+  } catch {
+    return fail("INTERNAL_ERROR", "요리 세션을 완료하지 못했어요.", 500);
+  }
+
   const result = await callFuturePropagationRpc(
-    serviceClient as FuturePropagationRpcClient,
+    { rpc: async () => rpcResult },
     "complete_cooking_session",
-    {
-      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
-      p_session_id: sessionId,
-      p_consumed_ingredient_ids: parsed.data.consumed_ingredient_ids,
-      p_idempotency_key: idempotency.key,
-    },
+    authorityArgs,
   );
   if (!result.ok) {
     return result.response;
