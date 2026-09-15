@@ -142,20 +142,20 @@ describe("ProfileSummaryButton", () => {
     apiMocks.fetchUserProgress.mockReset();
   });
 
-  it.each(["web", "mobile"] as const)(
-    "renders the %s profile control as a mypage link",
-    (variant) => {
+  it(
+    "renders the web profile control as a mypage link",
+    () => {
       render(
         <ProfileSummaryButton
           gamification={GAMIFICATION}
           isAuthenticated
           profile={PROFILE}
           progress={PROGRESS}
-          variant={variant}
+          variant="web"
         />,
       );
 
-      const link = screen.getByTestId(`${variant}-profile-summary-button`);
+      const link = screen.getByTestId("web-profile-summary-button");
       expect(link.tagName).toBe("A");
       expect(link.getAttribute("href")).toBe("/mypage");
       expect(link.getAttribute("aria-label")).toBe("마이페이지");
@@ -163,7 +163,12 @@ describe("ProfileSummaryButton", () => {
     },
   );
 
-  it("keeps the unread badge on the profile control when growth notifications exist", () => {
+  it("omits the redundant mobile profile control", () => {
+    render(<ProfileSummaryButton isAuthenticated profile={PROFILE} variant="mobile" />);
+    expect(screen.queryByTestId("mobile-profile-summary-button")).toBeNull();
+  });
+
+  it("leaves unread state to the notification control", () => {
     render(
       <ProfileSummaryButton
         gamification={GAMIFICATION}
@@ -175,28 +180,26 @@ describe("ProfileSummaryButton", () => {
     );
 
     const link = screen.getByTestId("web-profile-summary-button");
-    expect(within(link).getByTestId("profile-summary-unread-badge")).toBeTruthy();
+    expect(within(link).queryByTestId("profile-summary-unread-badge")).toBeNull();
   });
 
-  it("autoloads cached profile data without opening a summary panel", async () => {
+  it("reuses cached profile data without duplicate summary requests", () => {
     apiMocks.fetchUserProfile.mockResolvedValue(PROFILE);
     apiMocks.fetchUserProgress.mockResolvedValue(PROGRESS);
     apiMocks.fetchUserGamification.mockResolvedValue(GAMIFICATION);
 
     render(<ProfileSummaryButton autoLoad isAuthenticated variant="web" />);
 
-    await waitFor(() => {
-      expect(apiMocks.fetchUserProfile).toHaveBeenCalled();
-      expect(apiMocks.fetchUserProgress).toHaveBeenCalled();
-      expect(apiMocks.fetchUserGamification).toHaveBeenCalled();
-    });
+    expect(apiMocks.fetchUserProfile).not.toHaveBeenCalled();
+    expect(apiMocks.fetchUserProgress).not.toHaveBeenCalled();
+    expect(apiMocks.fetchUserGamification).not.toHaveBeenCalled();
 
     const link = screen.getByTestId("web-profile-summary-button");
     expect(link.getAttribute("href")).toBe("/mypage");
     expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
   });
 
-  it("refreshes unread state from the shared gamification event", async () => {
+  it("does not duplicate growth refreshes owned by the notification control", async () => {
     apiMocks.fetchUserProgress.mockResolvedValue(PROGRESS);
     apiMocks.fetchUserGamification.mockResolvedValue({
       ...GAMIFICATION,
@@ -221,15 +224,11 @@ describe("ProfileSummaryButton", () => {
       />,
     );
 
-    expect(screen.getByTestId("profile-summary-unread-badge")).toBeTruthy();
+    expect(screen.queryByTestId("profile-summary-unread-badge")).toBeNull();
 
     window.dispatchEvent(new CustomEvent(HOMECOOK_GAMIFICATION_REFRESH_EVENT));
 
-    await waitFor(() => {
-      expect(apiMocks.fetchUserGamification).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(screen.queryByTestId("profile-summary-unread-badge")).toBeNull();
-    });
+    expect(apiMocks.fetchUserProgress).not.toHaveBeenCalled();
+    expect(apiMocks.fetchUserGamification).not.toHaveBeenCalled();
   });
 });

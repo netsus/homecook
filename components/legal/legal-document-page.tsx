@@ -1,6 +1,7 @@
 import Link from "next/link";
 import React from "react";
 
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { WebShell, WebTopNav } from "@/components/web";
 
 const LEGAL_DOCUMENT_NAV_ITEMS = [
@@ -33,14 +34,11 @@ export function LegalDocumentPage({
   );
 
   return (
-    <WebShell className="legal-shell" wide>
+    <WebShell className="legal-shell pb-[calc(80px+env(safe-area-inset-bottom))] lg:pb-0" wide>
       <WebTopNav className="legal-desktop-nav" />
       <header className="legal-mobile-header">
-        <Link className="legal-mobile-brand" href="/">
-          무먹
-        </Link>
-        <Link className="legal-mobile-home" href="/">
-          홈
+        <Link aria-label="마이페이지로 돌아가기" className="legal-mobile-brand" href="/mypage" prefetch={false}>
+          ← 마이페이지
         </Link>
       </header>
       <main className="legal-page">
@@ -73,6 +71,7 @@ export function LegalDocumentPage({
           <article className="legal-document">{children}</article>
         </div>
       </main>
+      <Wave1MobileBottomTab ariaLabel="법적 정보 하단 탭" currentTab="mypage" />
     </WebShell>
   );
 }

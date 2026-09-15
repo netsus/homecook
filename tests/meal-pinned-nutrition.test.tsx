@@ -17,8 +17,8 @@ describe("planned recipe pinned nutrition presentation", () => {
   it("shows the pinned selected-servings values without current-recipe substitution", () => {
     render(<MealPinnedNutrition nutrition={nutrition} servings={2} title="제육볶음" />);
     expect(screen.getByText("487 kcal")).toBeTruthy();
-    expect(screen.getByText("최소 39 g")).toBeTruthy();
-    expect(screen.getByText(/등록한 계획 기준/)).toBeTruthy();
+    expect(screen.getByText("39 g")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /확인된 단백질 열량 비율/ })).toBeTruthy();
   });
   it("does not show values from an earlier serving quantity", () => {
     render(<MealPinnedNutrition nutrition={nutrition} servings={3} title="제육볶음" />);

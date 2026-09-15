@@ -49,7 +49,7 @@ export function formatPlannerNutritionValue(
   }
 
   if (value.status === "partial" && value.known_amount !== null) {
-    return `최소 ${formatAmount(value.known_amount)} ${unit}`;
+    return `${formatAmount(value.known_amount)} ${unit}`;
   }
 
   return "정보 준비 중";

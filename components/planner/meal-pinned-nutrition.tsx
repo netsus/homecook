@@ -10,21 +10,34 @@ const macros = [
 ] as const;
 
 export function PlannerNutritionChart({ values }: { values: Record<string, PlannerNutritionValue> }) {
-  // Only complete values can describe the proportions of the whole meal.
-  const complete = macros.every(({ code }) => values[code]?.status === "complete" && typeof values[code].amount === "number" && Number.isFinite(values[code].amount) && values[code].amount! >= 0);
-  const energy = complete ? macros.reduce((sum, { code, factor }) => sum + values[code].amount! * factor, 0) : 0;
+  const displayedAmount = (code: (typeof macros)[number]["code"]) => {
+    const value = values[code];
+    const amount = value?.amount ?? value?.known_amount;
+    return typeof amount === "number" && Number.isFinite(amount) && amount >= 0
+      ? amount
+      : null;
+  };
+  const energy = macros.reduce(
+    (sum, { code, factor }) => sum + (displayedAmount(code) ?? 0) * factor,
+    0,
+  );
+  const availableLabels = macros
+    .filter(({ code }) => displayedAmount(code) !== null)
+    .map(({ label }) => label);
   return <div className="mt-3">
     <p className="text-xl font-extrabold tabular-nums text-[var(--brand-primary-text)]">{values.energy_kcal ? formatPlannerNutritionValue("energy_kcal", values.energy_kcal) : "열량 정보 준비 중"}</p>
-    {energy > 0 ? <div aria-label="탄수화물·단백질·지방의 열량 비율" className="mt-3 flex h-3 overflow-hidden rounded-full bg-[var(--surface-fill)]" role="img">
-      {macros.map(({ code, factor, color }) => <span key={code} style={{ backgroundColor: color, width: `${values[code].amount! * factor / energy * 100}%` }} />)}
-    </div> : null}
-    <dl className="mt-3 grid grid-cols-3 gap-2">
-      {macros.map(({ code, label, color }) => <div className="min-w-0" key={code}>
-        <dt className="flex items-center gap-1 text-[11px] text-[var(--text-2)]"><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />{label}</dt>
-        <dd className="mt-1 text-xs font-bold tabular-nums text-[var(--foreground)]">{values[code] ? formatPlannerNutritionValue(code, values[code]) : "정보 준비 중"}</dd>
+    <div aria-label={availableLabels.length > 0 ? `확인된 ${availableLabels.join("·")} 열량 비율` : "영양 정보 준비 중인 그래프"} className="mt-3 flex h-3 overflow-hidden rounded-full bg-[var(--line-strong)]" role="img">
+      {macros.map(({ code, factor, color }) => {
+        const amount = displayedAmount(code) ?? 0;
+        return <span key={code} style={{ backgroundColor: color, width: `${energy > 0 ? amount * factor / energy * 100 : 0}%` }} />;
+      })}
+    </div>
+    <dl className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      {macros.map(({ code, color }, index) => <div className="flex min-w-0 items-center gap-1 text-xs" key={code}>
+        <dt className="flex items-center gap-1 font-bold text-[var(--text-2)]"><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />{["탄", "단", "지"][index]}</dt>
+        <dd className="font-bold tabular-nums text-[var(--foreground)]">{values[code] ? formatPlannerNutritionValue(code, values[code]) : "정보 준비 중"}</dd>
       </div>)}
     </dl>
-    <p className="mt-2 text-[10px] text-[var(--text-3)]">{energy > 0 ? "탄단지 열량 비율" : "영양 정보가 모두 준비되면 비율을 보여드려요."}</p>
   </div>;
 }
 
