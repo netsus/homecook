@@ -359,7 +359,7 @@ describe("recipe detail screen", () => {
     retry.resolve(completeDetail);
 
     await waitFor(() => {
-      expect(screen.getByText("400 kcal")).toBeTruthy();
+      expect(screen.getByText(/400 kcal/)).toBeTruthy();
     });
     expect(fetchJson).toHaveBeenLastCalledWith(
       `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`,
@@ -1278,7 +1278,7 @@ describe("recipe detail screen", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "다음 레시피" }),
     ).toBeTruthy();
-    expect(await screen.findByText("100 kcal")).toBeTruthy();
+    expect(await screen.findByText(/100 kcal/)).toBeTruthy();
 
     lateRetry.resolve(buildRecipeDetail({
       id: firstRecipeId,
@@ -1288,9 +1288,9 @@ describe("recipe detail screen", () => {
 
     await waitFor(() => {
       expect(screen.queryByTestId("recipe-nutrition-loading-skeleton")).toBeNull();
-      expect(screen.getByText("100 kcal")).toBeTruthy();
+      expect(screen.getByText(/100 kcal/)).toBeTruthy();
     });
-    expect(screen.queryByText("400 kcal")).toBeNull();
+    expect(screen.queryByText(/^400 kcal$/)).toBeNull();
   }, 10_000);
 
   it("ignores a late initial detail response from the previous recipe", async () => {

@@ -467,9 +467,9 @@ describe("MealScreen", () => {
     });
     expect(screen.getByText("미역국")).toBeTruthy();
     expect(screen.getByText("시금치볶음")).toBeTruthy();
-    expect(screen.getByText("등록")).toBeTruthy();
-    expect(screen.getByText("장보기 완료")).toBeTruthy();
-    expect(screen.getByText("요리 완료")).toBeTruthy();
+    expect(screen.queryByText("등록")).toBeNull();
+    expect(screen.queryByText("장보기 완료")).toBeNull();
+    expect(screen.queryByText("요리 완료")).toBeNull();
 
     const firstCard = screen.getByLabelText("김치찌개 식사 카드");
     const titleButton = within(firstCard).getByText("김치찌개");

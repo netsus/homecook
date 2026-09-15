@@ -90,13 +90,13 @@ describe("recipe nutrition display", () => {
   it("renders calories and macros as a graph while keeping per-serving calories visible", () => {
     renderCard(buildNutrition());
 
-    expect(
-      screen.getByRole("heading", { name: "1인분 기준 예상 영양" }),
-    ).toBeTruthy();
-    expect(screen.getByText("직접 계산")).toBeTruthy();
+    expect(screen.getByLabelText("레시피 영양성분")).toBeTruthy();
+    expect(screen.queryByText("직접 계산")).toBeNull();
+    expect(screen.queryByText("예상값")).toBeNull();
+    expect(screen.queryByText("1인분 기준 예상 영양")).toBeNull();
+    expect(screen.getByText("4인분")).toBeTruthy();
     expect(screen.getByText("1,400 kcal")).toBeTruthy();
-    expect(screen.getAllByText("1인분").length).toBeGreaterThan(0);
-    expect(screen.getByText("400 kcal")).toBeTruthy();
+    expect(screen.getByText(/1인분 400 kcal/)).toBeTruthy();
     expect(screen.getByRole("img", { name: "탄수화물 단백질 지방 비율" })).toBeTruthy();
     expect(screen.getByText("탄")).toBeTruthy();
     expect(screen.getByText("단")).toBeTruthy();
@@ -182,9 +182,9 @@ describe("recipe nutrition display", () => {
       }),
     );
 
-    expect(screen.getByText("환산값 포함 · 예상치")).toBeTruthy();
+    expect(screen.queryByText("환산값 포함 · 예상치")).toBeNull();
     expect(screen.getByText("최소 900 kcal")).toBeTruthy();
-    expect(screen.getByText("최소 250 kcal")).toBeTruthy();
+    expect(screen.getByText(/1인분 최소 250 kcal/)).toBeTruthy();
 
     await userEvent.click(screen.getByText("영양성분 더 보기"));
     const sodium = screen.getByRole("row", { name: /나트륨/ });
