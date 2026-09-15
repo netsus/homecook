@@ -77,6 +77,8 @@ Turnstile의 공개 site key와 서버 secret 등 일반 웹 설정을 지원한
 HOME/PATH/NODE_OPTIONS, QA 우회, 공개 이름의 secret/password, local authority를 remote로 바꾸는 설정은 거부한다.
 DB/session의 외부 secret store가 권한을 가진 키는 이 dotenv patch로 회전하지 않는다.
 이 도구를 병합·설치해도 실제 키가 생성되거나 이메일 접수가 켜지지 않는다. 현재 접수 비활성 선택을 유지한다.
+R2 광고 설문처럼 별도 운영 증거에 묶인 기능의 `MUMEOK_ROUND2_REPOSITORY_ROOT`는 일반 웹 checkout과 다를 수 있으며,
+빠른 웹 배포는 이 승인 소스 루트를 새 checkout으로 retarget하지 않는다.
 
 ## DB 변경
 
