@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
 import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
 import { fetchUserGamification } from "@/lib/api/user-gamification";
 import { fetchUserProgress } from "@/lib/api/user-progress";
@@ -51,8 +50,6 @@ export function ProfileSummaryButton({
       : null;
   const rootRef = useRef<HTMLDivElement | null>(null);
   const summaryRefreshRequestRef = useRef<Promise<void> | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [loadedProfile, setLoadedProfile] = useState<UserProfileData | null>(
     profile ?? cachedSummary?.profile ?? null,
   );
@@ -218,32 +215,6 @@ export function ProfileSummaryButton({
     };
   }, [isAuthenticated, loadedGamification, loadedProfile, loadedProgress]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const closeOnOutsidePress = (event: MouseEvent | PointerEvent | TouchEvent) => {
-      const target = event.target;
-
-      if (!(target instanceof Node) || rootRef.current?.contains(target)) {
-        return;
-      }
-
-      setIsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", closeOnOutsidePress);
-    document.addEventListener("mousedown", closeOnOutsidePress);
-    document.addEventListener("touchstart", closeOnOutsidePress);
-
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsidePress);
-      document.removeEventListener("mousedown", closeOnOutsidePress);
-      document.removeEventListener("touchstart", closeOnOutsidePress);
-    };
-  }, [isOpen]);
-
   const summary = useMemo(
     () =>
       buildProfileSummary({
@@ -261,17 +232,11 @@ export function ProfileSummaryButton({
       className={["profile-summary", `profile-summary-${variant}`, className ?? ""].join(" ")}
       ref={rootRef}
     >
-      <button
-        aria-expanded={isOpen}
-        aria-label={
-          summary.profileName
-            ? `${summary.profileName} 프로필 요약 ${isOpen ? "닫기" : "열기"}`
-            : `내 프로필 요약 ${isOpen ? "닫기" : "열기"}`
-        }
+      <Link
+        aria-label="마이페이지"
         className="web-profile-button"
         data-testid={`${variant}-profile-summary-button`}
-        onClick={() => setIsOpen((current) => !current)}
-        type="button"
+        href="/mypage"
       >
         {summary.profileImageUrl ? (
           <Image
@@ -296,37 +261,7 @@ export function ProfileSummaryButton({
             data-testid="profile-summary-unread-badge"
           />
         ) : null}
-      </button>
-
-      {isOpen ? (
-        <section
-          aria-label="마이페이지 요약"
-          className={[
-            "profile-summary-popover",
-            variant === "mobile"
-              ? "profile-summary-popover-mobile"
-              : "profile-summary-popover-web",
-          ].join(" ")}
-          data-testid={`${variant}-profile-summary-popover`}
-          role="dialog"
-        >
-          <ProfileSummaryPanel
-            onOpenNotifications={() => {
-              setIsOpen(false);
-              setIsNotificationDialogOpen(true);
-            }}
-            summary={summary}
-          />
-          <Link className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-[var(--ui-sky-50)] text-sm font-bold text-[var(--ui-sky-700)]" href="/mypage">마이페이지</Link>
-        </section>
-      ) : null}
-      {isNotificationDialogOpen ? (
-        <MypageGrowthDetailDialog
-          data={loadedGamification}
-          onClose={() => setIsNotificationDialogOpen(false)}
-          panel="notifications"
-        />
-      ) : null}
+      </Link>
     </div>
   );
 }
@@ -341,107 +276,6 @@ function rememberProfileSummary(summary: ProfileSummaryCache) {
   }
 
   cachedProfileSummary = summary;
-}
-
-function ProfileSummaryPanel({
-  onOpenNotifications,
-  summary,
-}: {
-  onOpenNotifications: () => void;
-  summary: ProfileSummaryViewModel;
-}) {
-  if (summary.state === "guest") {
-    return (
-      <div className="profile-summary-head">
-        <div>
-          <strong>로그인이 필요해요</strong>
-          <span>로그인하면 기록과 알림을 볼 수 있어요.</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (summary.state === "loading") {
-    return (
-      <div className="profile-summary-head">
-        <div>
-          <strong>요약을 불러오는 중이에요</strong>
-          <span>잠시만 기다려 주세요.</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (summary.state === "error") {
-    return (
-        <div className="profile-summary-head">
-          <div>
-            <strong>요약을 불러오지 못했어요</strong>
-            <span>잠시 후 다시 열어 주세요.</span>
-          </div>
-        </div>
-    );
-  }
-
-  if (summary.state !== "ready") {
-    return null;
-  }
-
-  return (
-    <>
-      <div className="profile-summary-head">
-        <div>
-          <strong>{summary.displayName}</strong>
-          <span>{summary.gradeLabel}</span>
-        </div>
-        <b>Lv.{summary.level}</b>
-      </div>
-      <div className="profile-summary-stats" aria-label="기록 요약">
-        <span>
-          <b>{summary.cookingCount}</b>
-          요리기록
-        </span>
-        <span>
-          <b>{summary.plannerCount}</b>
-          플래너기록
-        </span>
-        <span>
-          <b>{summary.shoppingCount}</b>
-          장보기기록
-        </span>
-      </div>
-      <div className="profile-summary-notice" role="status">
-        <strong className="profile-summary-notice-label" data-testid="profile-summary-notice-label">
-          {summary.notificationTitle}
-        </strong>
-        {summary.questTitle ? (
-          <span className="profile-summary-notice-title" data-testid="profile-summary-notice-title">
-            {summary.questTitle}
-          </span>
-        ) : null}
-        <span className="profile-summary-notice-body" data-testid="profile-summary-notice-body">
-          {summary.notificationMessage}
-        </span>
-      </div>
-      {summary.archivePreview.length > 0 ? (
-        <div className="profile-summary-archive-preview">
-          <strong>최근 알림</strong>
-          {summary.archivePreview.map((item) => (
-            <span key={item.id}>{item.title}</span>
-          ))}
-        </div>
-      ) : null}
-      <div className="profile-summary-actions">
-        <button
-          className="profile-summary-link profile-summary-link-secondary"
-          onClick={onOpenNotifications}
-          type="button"
-        >
-          알림 기록 보기
-        </button>
-      </div>
-    </>
-  );
 }
 
 type ProfileSummaryViewModel =

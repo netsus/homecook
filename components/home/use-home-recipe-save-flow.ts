@@ -10,6 +10,7 @@ import {
   removeRecipeFromBook,
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
+import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type {
   RecipeBookSummary,
@@ -321,6 +322,13 @@ export function useHomeRecipeSaveFlow({
       if (newBookIds.length > 0) {
         notifyGamificationSourceAction();
       }
+      emitAppActionNotification({
+        message:
+          removedBookIds.length > 0
+            ? "레시피북 저장을 변경했어요."
+            : "레시피를 저장했어요.",
+        title: "레시피 저장",
+      });
       setIsSaveModalOpen(false);
       setSaveTargetRecipe(null);
       setSaveModalState("idle");

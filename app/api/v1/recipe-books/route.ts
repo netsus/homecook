@@ -226,14 +226,19 @@ async function resolveRecipeBookCoverUrls({
     chunks.push(books.slice(index, index + 100));
   }
 
-  const projectionChunks = await Promise.all(
-    chunks.map((chunk) =>
-      readRecipeBookImageProjections({
-        client,
-        bookIds: chunk.map((book) => book.id),
-      })
-    ),
-  );
+  let projectionChunks;
+  try {
+    projectionChunks = await Promise.all(
+      chunks.map((chunk) =>
+        readRecipeBookImageProjections({
+          client,
+          bookIds: chunk.map((book) => book.id),
+        })
+      ),
+    );
+  } catch {
+    return books;
+  }
   if (projectionChunks.some((chunk) => chunk === null)) {
     return books;
   }
@@ -243,17 +248,22 @@ async function resolveRecipeBookCoverUrls({
     return books;
   }
   const expectedStorageOrigin = readExpectedStorageOrigin();
-  const resolvedCoverUrls = await Promise.all(
-    projections.map((projection) =>
-      resolveRecipeBookImageReadUrl({
-        client,
-        expectedOwnerUuid,
-        expectedStorageOrigin,
-        projection,
-        signedUrlTtlSeconds: RECIPE_BOOK_IMAGE_READ_URL_TTL_SECONDS,
-      })
-    ),
-  );
+  let resolvedCoverUrls;
+  try {
+    resolvedCoverUrls = await Promise.all(
+      projections.map((projection) =>
+        resolveRecipeBookImageReadUrl({
+          client,
+          expectedOwnerUuid,
+          expectedStorageOrigin,
+          projection,
+          signedUrlTtlSeconds: RECIPE_BOOK_IMAGE_READ_URL_TTL_SECONDS,
+        })
+      ),
+    );
+  } catch {
+    return books;
+  }
 
   return books.map((book, index) => ({
     ...book,

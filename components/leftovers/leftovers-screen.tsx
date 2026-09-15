@@ -25,6 +25,7 @@ import {
   type CookedBatchOperation,
 } from "@/components/leftovers/cooked-batch-state";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { ContentState } from "@/components/shared/content-state";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
@@ -873,6 +874,13 @@ export function LeftoversScreen({
     <WebShell className="web-leftovers-shell" wide>
       <WebTopNav
         activeId="mypage"
+        rightSlot={
+          <ProfileSummaryButton
+            autoLoad
+            isAuthenticated={authState === "authenticated"}
+            variant="web"
+          />
+        }
       />
       <div className="web-leftovers-screen" data-testid="leftovers-screen">
         <nav aria-label="남은 요리 경로" className="web-breadcrumb">

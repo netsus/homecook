@@ -25,6 +25,7 @@ import { ProfileSummaryButton } from "@/components/shared/profile-summary-button
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { AllPantryCompletionModal } from "@/components/shopping/all-pantry-completion-modal";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
@@ -50,6 +51,7 @@ import {
   updateMealServings,
 } from "@/lib/api/meal";
 import { createShoppingList, isShoppingApiError } from "@/lib/api/shopping";
+import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import {
   deleteProductPlannerEntry,
   isProductPlannerEntryApiError,
@@ -973,6 +975,7 @@ export function MealScreen({
   const [deletingProduct, setDeletingProduct] = useState<MealProductPlannerEntryData | null>(null);
   const [deleteProductError, setDeleteProductError] = useState<string | null>(null);
   const [authReturnPath, setAuthReturnPath] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const restoredProductContextRef = useRef(false);
   const pendingProductEditIdsRef = useRef<Set<string>>(new Set());
   const pendingProductDeleteIdsRef = useRef<Set<string>>(new Set());
@@ -1169,6 +1172,17 @@ export function MealScreen({
     }));
   }
 
+  function showSuccess(message: string, title = "완료") {
+    setFeedback({ message, tone: "success" });
+    emitAppActionNotification({ message, title });
+  }
+
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = window.setTimeout(() => setFeedback(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
   function addPending(mealId: string) {
     setPendingMealIds((prev) => new Set([...prev, mealId]));
   }
@@ -1238,21 +1252,46 @@ export function MealScreen({
     clearConflictError(meal.id);
 
     try {
-      const session = recipeSnapshotUiMode === "snapshot_v2"
-        ? await createSnapshotV2CookingSession({
+      let session:
+        | Awaited<ReturnType<typeof createSnapshotV2CookingSession>>
+        | Awaited<ReturnType<typeof createCookingSession>>;
+      let sessionContractVersion: RecipeSnapshotUiMode = recipeSnapshotUiMode;
+      if (recipeSnapshotUiMode === "snapshot_v2") {
+        try {
+          session = await createSnapshotV2CookingSession({
             mode: "planner",
             meal_ids: [meal.id],
             expected_meal_revisions: {
               [meal.id]: meal.revision,
             },
-          })
-        : await createCookingSession({
+          });
+        } catch (snapshotError) {
+          if (
+            !isCookingApiError(snapshotError)
+            || snapshotError.status === 401
+            || (
+              snapshotError.status === 409
+              && snapshotError.code !== "SNAPSHOT_V2_CREATION_DISABLED"
+            )
+          ) {
+            throw snapshotError;
+          }
+          session = await createCookingSession({
             recipe_id: meal.recipe_id,
             meal_ids: [meal.id],
             cooking_servings: meal.planned_servings,
           });
+          sessionContractVersion = "legacy_v1";
+        }
+      } else {
+        session = await createCookingSession({
+          recipe_id: meal.recipe_id,
+          meal_ids: [meal.id],
+          cooking_servings: meal.planned_servings,
+        });
+      }
       router.push(
-        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: recipeSnapshotUiMode }), {
+        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: sessionContractVersion }), {
           returnTo: buildNextPath(planDate, columnId, slotName),
         }),
       );
@@ -1266,7 +1305,9 @@ export function MealScreen({
         meal.id,
         isCookingApiError(error) && error.status === 409
           ? "이미 다른 상태로 변경된 식사가 있어요. 새로고침 후 다시 시도해 주세요."
-          : "요리 세션을 만들지 못했어요. 다시 시도해 주세요.",
+          : isCookingApiError(error)
+            ? error.message
+            : "요리 세션을 만들지 못했어요. 다시 시도해 주세요.",
       );
     } finally {
       pendingCookingMealIdsRef.current.delete(meal.id);
@@ -1299,10 +1340,12 @@ export function MealScreen({
 
       if (isAllPantryShoppingList(list) || isAllPantryCompletion(list)) {
         setAllPantryCompletion(list);
+        showSuccess("장보기 준비가 완료됐어요.", "장보기");
         await loadMeals();
         return;
       }
 
+      showSuccess("장보기 목록을 만들었어요.", "장보기");
       router.push(
         buildReturnHref(`/shopping/lists/${list.id}`, {
           returnTo: buildNextPath(planDate, columnId, slotName),
@@ -1318,7 +1361,9 @@ export function MealScreen({
         meal.id,
         isShoppingApiError(error) && error.status === 409
           ? "이미 다른 장보기 리스트에 포함된 식사예요."
-          : "장보기 목록을 만들지 못했어요. 다시 시도해 주세요.",
+          : isShoppingApiError(error)
+            ? error.message
+            : "장보기 목록을 만들지 못했어요. 다시 시도해 주세요.",
       );
     } finally {
       removePending(meal.id);
@@ -1535,6 +1580,7 @@ export function MealScreen({
     setMealAddSheetOpen(false);
     await loadMeals();
     void nutritionRequest.retry();
+    showSuccess("요리계획에 추가됐어요.", "요리계획");
   }
 
   function handleAllPantryCompletionClose() {
@@ -2035,6 +2081,13 @@ export function MealScreen({
             </div>
           </CenterModal>
         )
+      ) : null}
+      {feedback ? (
+        <AppFeedbackToast
+          message={feedback.message}
+          position="mobileTop"
+          tone={feedback.tone}
+        />
       ) : null}
     </>
   );

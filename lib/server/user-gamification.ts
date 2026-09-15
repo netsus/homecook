@@ -1556,6 +1556,9 @@ async function reconcileUserGamification(
       dismissed_at: dismissedAt,
       updated_at: now,
     };
+    if (existing && isQuestProgressUnchanged(existing, payload)) {
+      continue;
+    }
     const upsertResult = input.projectionWriter
       ? await input.projectionWriter.write<UserQuestProgressRow>("quest", payload)
       : await dbClient
@@ -1573,6 +1576,20 @@ async function reconcileUserGamification(
   }
 
   return { error: null };
+}
+
+function isQuestProgressUnchanged(
+  existing: UserQuestProgressRow,
+  next: UserQuestProgressUpsert,
+) {
+  return existing.quest_key === next.quest_key
+    && existing.quest_type === next.quest_type
+    && existing.status === next.status
+    && existing.progress_current === next.progress_current
+    && existing.progress_target === next.progress_target
+    && (existing.source_event_id ?? null) === next.source_event_id
+    && (existing.completed_at ?? null) === next.completed_at
+    && (existing.dismissed_at ?? null) === next.dismissed_at;
 }
 
 async function readBadgeAwardRows(

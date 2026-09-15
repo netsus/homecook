@@ -32,7 +32,7 @@ function installHappyApi() {
 async function answerQuiz(user: ReturnType<typeof userEvent.setup>, { waitForResult = true } = {}) {
   await user.click(await screen.findByRole("button", { name: "내 집밥기록 유형 알아보기" }));
   for (const answer of ["거의 매일", "3~5끼", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"]) {
-    await user.click(screen.getByRole("button", { name: answer }));
+    await user.click(await screen.findByRole("button", { name: answer }));
   }
   if (waitForResult) await screen.findByRole("heading", { name: "성분 추적러" });
 }
@@ -358,7 +358,7 @@ describe("marketing demand validation v2 landing", () => {
     await user.click(screen.getByRole("button", { name: "이전 질문" }));
     expect(screen.getByRole("button", { name: "거의 매일" }).getAttribute("aria-pressed")).toBe("true");
     await user.click(screen.getByRole("button", { name: "거의 매일" }));
-    for (const answer of ["3~5끼", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"]) await user.click(screen.getByRole("button", { name: answer }));
+    for (const answer of ["3~5끼", "딱 맞는 음식이 없어 비슷한 음식이나 1인분으로 기록", "딱 맞는 음식이 없어 비슷한 걸 찾아야 하는 것"]) await user.click(await screen.findByRole("button", { name: answer }));
     expect(await screen.findByRole("heading", { name: "성분 추적러" })).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "이메일" })).toBeNull();
   });

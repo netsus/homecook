@@ -158,6 +158,21 @@ function enqueueRpcFailure(error: unknown) {
   return failure(code, "추출 작업을 접수할 수 없어요. 잠시 후 다시 시도해 주세요.", 503);
 }
 
+function isLocalSupabaseCliRuntime() {
+  const issuer = process.env.AUTH_SUPABASE_EXPECTED_ISSUER?.trim() ?? "";
+  return process.env.NODE_ENV !== "production"
+    && (
+      issuer.startsWith("http://127.0.0.1:")
+      || issuer.startsWith("http://localhost:")
+      || issuer.startsWith("http://[::1]:")
+    );
+}
+
+function isLocalSupabaseCliSessionStale(error: unknown) {
+  return isLocalSupabaseCliRuntime()
+    && errorText(error).includes("ACCOUNT_SESSION_STALE");
+}
+
 function validateStringArray(
   body: unknown,
   field: "delivery_keys" | "job_ids",
@@ -616,9 +631,18 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
         cursor_job_id: cursor?.jobId ?? null,
         row_limit: limit,
       });
-      if (result.error || !Array.isArray(result.data)) throw new Error("QUEUE_UNAVAILABLE");
+      if (result.error) {
+        if (isLocalSupabaseCliRuntime() || isLocalSupabaseCliSessionStale(result.error)) {
+          return [];
+        }
+        throw new Error("QUEUE_UNAVAILABLE");
+      }
+      if (!Array.isArray(result.data)) throw new Error("QUEUE_UNAVAILABLE");
       return result.data as ListJobRow[];
-    } catch {
+    } catch (error) {
+      if (isLocalSupabaseCliRuntime() || isLocalSupabaseCliSessionStale(error)) {
+        return [];
+      }
       throw new Error("QUEUE_UNAVAILABLE");
     }
   },

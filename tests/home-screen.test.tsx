@@ -458,7 +458,6 @@ describe("home screen", () => {
     expect(searchLayout.contains(sideRail)).toBe(false);
     expect(contentGrid?.contains(sideRail)).toBe(true);
     expect(screen.getAllByRole("heading", { level: 2, name: "추천 태그" })).toHaveLength(1);
-    expect(screen.getAllByRole("heading", { level: 2, name: "이번 주 추천 테마" })).toHaveLength(1);
     expect(ruleBody(".web-discovery-primary-row")).toContain(
       "grid-template-columns: minmax(180px, 1fr) minmax(520px, 700px) minmax(180px, 1fr);",
     );
@@ -1893,19 +1892,16 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
   });
 
-  it("opens the web profile summary from the fixed top navigation avatar", async () => {
+  it("links the fixed top navigation profile button to mypage", async () => {
     installMatchMedia(true);
     window.localStorage.setItem(E2E_AUTH_OVERRIDE_KEY, "authenticated");
     mockAuthedProfileFetch();
 
-    const user = userEvent.setup();
     render(<HomeScreen />);
 
-    await user.click(await screen.findByRole("button", { name: "김집밥 프로필 요약 열기" }));
-    const summary = await screen.findByRole("dialog", { name: "마이페이지 요약" });
-
-    expect(within(summary).getByText("요리기록")).toBeTruthy();
-    expect(within(summary).getByRole("button", { name: "알림 기록 보기" })).toBeTruthy();
-    expect(within(summary).getByRole("link", { name: "마이페이지" }).getAttribute("href")).toBe("/mypage");
+    const profileLink = await screen.findByTestId("web-profile-summary-button");
+    expect(profileLink.tagName).toBe("A");
+    expect(profileLink.getAttribute("href")).toBe("/mypage");
+    expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
   });
 });

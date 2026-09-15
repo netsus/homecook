@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import React, { useRef } from "react";
 import { createPortal } from "react-dom";
 import { useActionConfirmationStore } from "@/stores/ui-store";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";

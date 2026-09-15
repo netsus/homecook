@@ -386,6 +386,8 @@ type LocalInternalScope =
   | "operational-event"
   | "recipe-future-propagation"
   | "recipe-image"
+  | "recipe-meal-weight"
+  | "recipe-save"
   | "request-authority"
   | "session-observability"
   | "session-logout"
@@ -448,6 +450,12 @@ const RECIPE_FUTURE_PROPAGATION_READ_TABLES = new Set([
   "ingredient_nutrition_profiles",
 ]);
 
+const RECIPE_MEAL_WEIGHT_READ_TABLES = new Set([
+  "ingredient_conversion_assignments",
+  "ingredient_nutrition_profiles",
+  "piece_unit_weights",
+]);
+
 export function createRecipeFuturePropagationInternalClient() {
   const client = createScopedDataServiceRoleClient(
     "recipe-future-propagation",
@@ -459,6 +467,20 @@ export function createRecipeFuturePropagationInternalClient() {
     from: exactInternalFrom(client, RECIPE_FUTURE_PROPAGATION_READ_TABLES),
     rpc: client.rpc.bind(client),
   };
+}
+
+export function createRecipeMealWeightReadInternalClient() {
+  const client = createScopedDataServiceRoleClient(
+    "recipe-meal-weight",
+  );
+  if (!client) return null;
+  return {
+    from: exactInternalFrom(client, RECIPE_MEAL_WEIGHT_READ_TABLES),
+  };
+}
+
+export function createRecipeSaveInternalClient() {
+  return createScopedInternalRpcClient("recipe-save");
 }
 
 function createScopedInternalRpcClient(scope: LocalInternalScope) {

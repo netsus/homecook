@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { MOCK_RECIPE_DETAIL } from "@/lib/mock/recipes";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
-import { useAuthGateStore } from "@/stores/ui-store";
+import { ActionConfirmation } from "@/components/shared/action-confirmation";
+import { useActionConfirmationStore, useAuthGateStore } from "@/stores/ui-store";
 import type {
   RecipeBookListData,
   RecipeDetail,
@@ -256,6 +257,7 @@ async function findSaveActionButton() {
 describe("recipe detail screen", () => {
   afterEach(() => {
     cleanup();
+    useActionConfirmationStore.getState().dismiss();
     Reflect.deleteProperty(window, "matchMedia");
   });
 
@@ -359,7 +361,7 @@ describe("recipe detail screen", () => {
     retry.resolve(completeDetail);
 
     await waitFor(() => {
-      expect(screen.getByText("400 kcal")).toBeTruthy();
+      expect(screen.getByText(/400 kcal/)).toBeTruthy();
     });
     expect(fetchJson).toHaveBeenLastCalledWith(
       `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`,
@@ -1278,7 +1280,7 @@ describe("recipe detail screen", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "다음 레시피" }),
     ).toBeTruthy();
-    expect(await screen.findByText("100 kcal")).toBeTruthy();
+    expect(await screen.findByText(/100 kcal/)).toBeTruthy();
 
     lateRetry.resolve(buildRecipeDetail({
       id: firstRecipeId,
@@ -1288,9 +1290,9 @@ describe("recipe detail screen", () => {
 
     await waitFor(() => {
       expect(screen.queryByTestId("recipe-nutrition-loading-skeleton")).toBeNull();
-      expect(screen.getByText("100 kcal")).toBeTruthy();
+      expect(screen.getByText(/100 kcal/)).toBeTruthy();
     });
-    expect(screen.queryByText("400 kcal")).toBeNull();
+    expect(screen.queryByText(/^400 kcal$/)).toBeNull();
   }, 10_000);
 
   it("ignores a late initial detail response from the previous recipe", async () => {
@@ -1392,10 +1394,9 @@ describe("recipe detail screen", () => {
     expect(closeButton.textContent).toBe("");
   });
 
-  it("opens the web profile summary from the top avatar without linking to mypage", async () => {
+  it("links the web profile summary button to mypage from the top avatar", async () => {
     installMatchMedia(true);
 
-    const user = userEvent.setup();
     const { container } = render(
       <RecipeDetailScreen
         initialAuthenticated
@@ -1409,13 +1410,10 @@ describe("recipe detail screen", () => {
     });
     const profileTrigger = screen.getByTestId("web-profile-summary-button");
 
-    expect(profileTrigger.tagName).toBe("BUTTON");
-    expect(container.querySelector('a.web-profile-button[href="/mypage"]')).toBeNull();
-
-    await user.click(profileTrigger);
-
-    expect(await screen.findByRole("dialog", { name: "마이페이지 요약" })).toBeTruthy();
-    expect(mockRouterPush).not.toHaveBeenCalledWith("/mypage");
+    expect(profileTrigger.tagName).toBe("A");
+    expect(profileTrigger.getAttribute("href")).toBe("/mypage");
+    expect(container.querySelector('a.web-profile-button[href="/mypage"]')).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
   });
 
   it("keeps recipe detail loading inside the desktop shell", () => {
@@ -1973,6 +1971,7 @@ describe("recipe detail screen", () => {
   });
 
   it("lets already-saved books be unchecked and applies removal on final save", async () => {
+    render(<ActionConfirmation />);
     const detail = buildRecipeDetail({
       user_status: {
         is_liked: false,
@@ -2026,13 +2025,14 @@ describe("recipe detail screen", () => {
     await userEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(modal.isConnected).toBe(false);
     });
 
     expect(deleteRequests).toEqual([
       `/api/v1/recipe-books/book-saved/recipes/${MOCK_RECIPE_DETAIL.id}`,
     ]);
-    expect(await screen.findByText("레시피북 저장을 변경했어요.")).toBeTruthy();
+    const confirmation = await screen.findByRole("dialog", { name: "레시피북 저장을 변경했어요." });
+    await userEvent.click(within(confirmation).getByRole("button", { name: "확인" }));
     expect((await findSaveActionButton()).getAttribute("aria-pressed")).toBe("false");
   });
 
@@ -2051,6 +2051,7 @@ describe("recipe detail screen", () => {
   });
 
   it("creates a custom recipe book and saves the recipe", async () => {
+    render(<ActionConfirmation />);
     const detail = buildRecipeDetail();
     const createdBookId = "book-fresh";
     let saveRequestBody: unknown = null;
@@ -2113,10 +2114,11 @@ describe("recipe detail screen", () => {
     await userEvent.click(modalScope.getByRole("button", { name: "저장" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(modal.isConnected).toBe(false);
     });
 
-    expect(await screen.findByText("레시피를 저장했어요.")).toBeTruthy();
+    const confirmation = await screen.findByRole("dialog", { name: "레시피를 저장했어요." });
+    await userEvent.click(within(confirmation).getByRole("button", { name: "확인" }));
     expect((await findSaveActionButton()).getAttribute("aria-pressed")).toBe("true");
     expect(saveRequestBody).toEqual({
       book_ids: ["book-saved", createdBookId],
@@ -2252,7 +2254,8 @@ describe("recipe detail screen", () => {
     });
   });
 
-  it("shows a toast with target date and meal slot name after a successful planner add", async () => {
+  it("shows a confirmation with target date and meal slot name after a successful planner add", async () => {
+    render(<ActionConfirmation />);
     const COLUMN_ID = "col-breakfast";
     const COLUMN_NAME = "아침";
 
@@ -2286,14 +2289,9 @@ describe("recipe detail screen", () => {
     });
     await userEvent.click(submitButton);
 
-    // Toast: exact contract format "N월 D일 끼니에 추가됐어요" (D3, no trailing period)
-    await waitFor(() => {
-      const statusElements = screen.getAllByRole("status");
-      const toast = statusElements.find(
-        (el) => el.textContent === expectedToast,
-      );
-      expect(toast).toBeTruthy();
-    });
+    const confirmation = await screen.findByRole("dialog", { name: expectedToast });
+    await userEvent.click(within(confirmation).getByRole("button", { name: "확인" }));
+    expect(screen.queryByRole("dialog", { name: expectedToast })).toBeNull();
   });
 
   it("displays larger hero like and save actions without the cook count", async () => {

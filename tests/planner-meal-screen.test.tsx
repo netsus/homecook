@@ -391,8 +391,9 @@ describe("MealScreen", () => {
 
     const skeleton = await screen.findByTestId("web-meal-loading-skeleton");
     expect(skeleton.className).toContain("web-meal-list-layout");
-    expect(within(skeleton).getAllByTestId("web-meal-loading-card")).toHaveLength(2);
-    expect(within(skeleton).getAllByTestId("web-meal-loading-thumb")).toHaveLength(2);
+    const cards = within(skeleton).getAllByRole("article", { hidden: true });
+    expect(cards).toHaveLength(2);
+    expect(cards[0].parentElement?.className).toContain("grid-cols-2");
     expect(screen.getByTestId("web-meal-loading-summary")).toBeTruthy();
     expect(screen.queryByTestId("web-meal-list")).toBeNull();
   });
@@ -467,9 +468,9 @@ describe("MealScreen", () => {
     });
     expect(screen.getByText("미역국")).toBeTruthy();
     expect(screen.getByText("시금치볶음")).toBeTruthy();
-    expect(screen.getByText("등록")).toBeTruthy();
-    expect(screen.getByText("장보기 완료")).toBeTruthy();
-    expect(screen.getByText("요리 완료")).toBeTruthy();
+    expect(screen.queryByText("등록")).toBeNull();
+    expect(screen.queryByText("장보기 완료")).toBeNull();
+    expect(screen.queryByText("요리 완료")).toBeNull();
 
     const firstCard = screen.getByLabelText("김치찌개 식사 카드");
     const titleButton = within(firstCard).getByText("김치찌개");
@@ -686,9 +687,9 @@ describe("MealScreen", () => {
 
     render(<MealScreen {...DEFAULT_PROPS} />);
 
-    const registeredCard = await screen.findByLabelText("등록식사 끼니 음식");
-    const shoppingDoneCard = screen.getByLabelText("장보기식사 끼니 음식");
-    const cookedCard = screen.getByLabelText("완료식사 끼니 음식");
+    const registeredCard = await screen.findByLabelText("등록식사 식사 카드");
+    const shoppingDoneCard = screen.getByLabelText("장보기식사 식사 카드");
+    const cookedCard = screen.getByLabelText("완료식사 식사 카드");
 
     expect(within(registeredCard).getByRole("button", { name: "장보기" })).toBeTruthy();
     expect(within(registeredCard).queryByRole("button", { name: "등록식사 요리하기" })).toBeNull();
@@ -698,7 +699,7 @@ describe("MealScreen", () => {
     expect(within(cookedCard).queryByRole("button", { name: "완료식사 요리하기" })).toBeNull();
   });
 
-  it("renders the desktop meal screen as a meal list with per-food actions", async () => {
+  it("renders the desktop meal screen as a two-column card grid with per-food actions", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
     const longRecipeTitle = "봄나물 된장 크림 리조또와 바삭한 두부 스테이크";
@@ -725,7 +726,7 @@ describe("MealScreen", () => {
 
     const list = await screen.findByTestId("web-meal-list");
     const summary = screen.getByTestId("web-meal-summary");
-    const firstCard = screen.getByLabelText(`${longRecipeTitle} 끼니 음식`);
+    const firstCard = screen.getByLabelText(`${longRecipeTitle} 식사 카드`);
 
     expect(screen.getByRole("heading", { name: "4월 18일 아침 식사" })).toBeTruthy();
     expect(within(summary).getByRole("heading", { name: "4월 18일 아침" })).toBeTruthy();
@@ -733,11 +734,9 @@ describe("MealScreen", () => {
     expect(within(summary).getByText("2개")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "4월 18일 · 아침" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "끼니 음식 2개" })).toBeNull();
-    expect(list.className).toContain("web-meal-row-list");
-    expect(firstCard.className).toContain("web-meal-row-card");
-    expect(firstCard.querySelector(".web-meal-list-body")).toBeTruthy();
-    expect(firstCard.querySelector(".web-meal-list-actions-panel")).toBeTruthy();
-    expect(firstCard.querySelector(".web-meal-list-footer")).toBeNull();
+    expect(list.className).toContain("grid-cols-2");
+    expect(within(list).getAllByRole("article")).toHaveLength(2);
+    expect(within(firstCard).getByRole("button", { name: `${longRecipeTitle} 삭제` })).toBeTruthy();
     expect(within(list).getByText(longRecipeTitle)).toBeTruthy();
     expect(within(list).getByText("파스타")).toBeTruthy();
     expect(screen.queryByLabelText(`${longRecipeTitle} 레시피 보기`)).toBeNull();
@@ -747,20 +746,14 @@ describe("MealScreen", () => {
     expect(within(list).getByRole("button", { name: `${longRecipeTitle} 요리하기` })).toBeTruthy();
     expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(1);
     expect(within(list).getAllByRole("button", { name: "인분 증가" })).toHaveLength(2);
-    expect(within(list).getAllByRole("button", { name: "인분 감소" })[0]?.className).toContain(
-      "web-meal-stepper-decrease",
-    );
-    expect(within(list).getAllByRole("button", { name: "인분 증가" })[0]?.className).toContain(
-      "web-meal-stepper-increase",
-    );
-    expect(list.querySelectorAll(".web-meal-list-footer")).toHaveLength(0);
-    expect(list.querySelectorAll(".web-meal-list-actions-panel")).toHaveLength(2);
-    expect(list.querySelectorAll(".web-meal-list-delete .web-meal-delete-button")).toHaveLength(2);
+    expect(within(list).getAllByRole("button", { name: "인분 감소" })).toHaveLength(2);
+    expect(within(firstCard).getByRole("group", { name: "인분 조절" })).toBeTruthy();
+    expect(within(list).getAllByRole("button", { name: / 삭제$/ })).toHaveLength(2);
     const addCta = screen.getByTestId("meal-screen-add-cta");
     expect(addCta.className).toContain("web-meal-add-link");
   });
 
-  it("lets a single desktop meal card use the main column width", async () => {
+  it("keeps a single desktop meal card in one column of the two-column grid", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
@@ -776,12 +769,12 @@ describe("MealScreen", () => {
     render(<MealScreen {...DEFAULT_PROPS} />);
 
     const list = await screen.findByTestId("web-meal-list");
-    const card = screen.getByLabelText("긴 이름의 단일 식사 카드가 화면 가운데에서 작게 떠 보이지 않는 메뉴 끼니 음식");
+    const card = screen.getByLabelText("긴 이름의 단일 식사 카드가 화면 가운데에서 작게 떠 보이지 않는 메뉴 식사 카드");
 
-    expect(list.className).toContain("web-meal-row-list");
-    expect(card.className).toContain("web-meal-row-card");
-    expect(list.querySelectorAll(".web-meal-row-card")).toHaveLength(1);
-    expect(card.querySelector(".web-meal-list-actions-panel")).toBeTruthy();
+    expect(list.className).toContain("grid-cols-2");
+    expect(within(list).getAllByRole("article")).toEqual([card]);
+    expect(card.className).not.toMatch(/col-span/);
+    expect(within(card).getByRole("group", { name: "인분 조절" })).toBeTruthy();
   });
 
   it.each([false, true])("shows each pinned meal's nutrition and hides stale servings until RSC refresh (desktop=%s)", async (desktop) => {
@@ -808,9 +801,7 @@ describe("MealScreen", () => {
     expect(within(secondNutrition).getByText("90 kcal")).toBeTruthy();
     expect(within(secondNutrition).queryByText("450 kcal")).toBeNull();
 
-    const card = desktop
-      ? screen.getByLabelText("김치찌개 끼니 음식")
-      : screen.getByLabelText("김치찌개 식사 카드");
+    const card = screen.getByLabelText("김치찌개 식사 카드");
     await user.click(within(card).getByRole("button", { name: "인분 증가" }));
     await waitFor(() => expect(updateMealServings).toHaveBeenCalledWith("meal-1", 3));
     await waitFor(() => expect(mockRouterRefresh).toHaveBeenCalledOnce());

@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogNutritionChart } from "@/components/planner/meal-log-nutrition-chart";
+import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { createGuestMealLogDay, createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import {
@@ -194,9 +195,9 @@ function number(value: number | null, unit: string) {
   return value === null ? "정보 준비 중" : `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value)}${unit}`;
 }
 
-function foodNutritionValue(value: number | null, unit: string, minimum = false) {
+function foodNutritionValue(value: number | null, unit: string) {
   if (value === null) return "정보 준비 중";
-  return <>{minimum ? "최소 " : null}<strong className="font-[800] tabular-nums text-[var(--nutrition-number)]">{number(value, "")}</strong> <span>{unit}</span></>;
+  return <><strong className="font-[800] tabular-nums text-[var(--nutrition-number)]">{number(value, "")}</strong> <span>{unit}</span></>;
 }
 
 function EntryRow({ disabled, entry, guest = false, onDelete, onDetail }: {
@@ -208,28 +209,42 @@ function EntryRow({ disabled, entry, guest = false, onDelete, onDetail }: {
 }) {
   const thumbnail = guest ? createGuestPlannerData(entry.consumed_local_date).meals.find((meal) => meal.recipe_title === entry.display_name)?.recipe_thumbnail_url : null;
   const macros = [
-    { label: "탄수화물", value: entry.nutrition.carbohydrate_g },
-    { label: "단백질", value: entry.nutrition.protein_g },
-    { label: "지방", value: entry.nutrition.fat_g },
+    { label: "탄수화물", short: "탄", value: entry.nutrition.carbohydrate_g, factor: 4, color: "var(--nutrition-carbohydrate)" },
+    { label: "단백질", short: "단", value: entry.nutrition.protein_g, factor: 4, color: "var(--nutrition-protein)" },
+    { label: "지방", short: "지", value: entry.nutrition.fat_g, factor: 9, color: "var(--nutrition-fat)" },
   ];
+  const hasCompleteMacros = macros.every((macro) => macro.value !== null);
+  const macroEnergy = hasCompleteMacros
+    ? macros.reduce((sum, macro) => sum + macro.value! * macro.factor, 0)
+    : 0;
   return (
     <li className="py-3">
       <div className="flex items-start gap-2">
         <button aria-describedby={`meal-log-entry-${entry.id}-quantity`} aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 식사 기록 상세`} className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={entryActionId(entry.id, "edit")} onClick={onDetail} type="button">
           {thumbnail ? <Image alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" height={48} src={thumbnail} width={48} /> : null}
           <span className="min-w-0 flex-1">
-            <span className="block text-base font-extrabold leading-6 text-[var(--ui-slate-800)] [overflow-wrap:anywhere]">{entry.display_name}</span>
+            <span className="block truncate text-base font-extrabold leading-6 text-[var(--ui-slate-800)]">{entry.display_name}</span>
             {entry.display_brand ? <span className="mt-0.5 block text-xs text-[var(--ui-slate-500)]">{entry.display_brand}</span> : null}
-            <span id={`meal-log-entry-${entry.id}-quantity`} className="mt-1 flex flex-wrap gap-x-2 text-xs leading-5 text-[var(--ui-slate-600)]"><span aria-label={`먹은 양 ${number(entry.quantity.amount, entry.quantity.unit)}`}>{number(entry.quantity.amount, entry.quantity.unit)}</span><span aria-hidden="true">·</span><span>{foodNutritionValue(entry.nutrition.calories_kcal, "kcal", entry.nutrition.calculation_status === "partial")}</span></span>
+            <span id={`meal-log-entry-${entry.id}-quantity`} className="mt-1 flex flex-wrap gap-x-2 text-xs leading-5 text-[var(--ui-slate-600)]"><span aria-label={`먹은 양 ${number(entry.quantity.amount, entry.quantity.unit)}`}>{number(entry.quantity.amount, entry.quantity.unit)}</span><span aria-hidden="true">·</span><span>{foodNutritionValue(entry.nutrition.calories_kcal, "kcal")}</span></span>
           </span>
         </button>
         <button aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 식사 기록 삭제`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--ui-slate-400)] outline-none hover:bg-[var(--ui-red-50)] hover:text-[var(--ui-red-700)] focus-visible:ring-2 focus-visible:ring-[var(--ui-red-400)]" disabled={disabled} id={entryActionId(entry.id, "delete")} onClick={onDelete} type="button">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6" /></svg>
         </button>
       </div>
-      <div aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 영양정보`} className="mt-1 space-y-1 text-xs leading-5 text-[var(--ui-slate-600)]">
-        <p className="flex flex-wrap gap-x-2">{macros.map((macro) => <span key={macro.label}>{macro.label} {foodNutritionValue(macro.value, "g")}</span>)}</p>
-        {entry.nutrition.calculation_status === "partial" ? <p className="text-[11px] text-[var(--ui-slate-500)]">확인된 영양만 표시해요.</p> : null}
+      <div aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 영양정보`} className="ml-[60px] mt-1 rounded-xl bg-[var(--ui-slate-50)] px-3 py-2 text-xs leading-5 text-[var(--ui-slate-600)]">
+        {macroEnergy > 0 ? (
+          <div aria-label="탄수화물 단백질 지방 비율" className="mb-1.5 flex h-2 overflow-hidden rounded-full bg-[var(--ui-slate-200)]" role="img">
+            {macros.map((macro) => (
+              <span
+                aria-hidden="true"
+                key={macro.label}
+                style={{ backgroundColor: macro.color, width: `${macro.value! * macro.factor / macroEnergy * 100}%` }}
+              />
+            ))}
+          </div>
+        ) : null}
+        <p className="flex flex-wrap gap-x-2">{macros.map((macro) => <span className="whitespace-nowrap" key={macro.label}><span aria-hidden="true" className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: macro.color }} />{macro.short} {foodNutritionValue(macro.value, "g")}</span>)}</p>
       </div>
     </li>
   );
@@ -249,9 +264,9 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDelete
       <div className="flex items-center justify-between gap-2 border-b border-[var(--ui-slate-100)] pb-1">
         <div className="min-w-0">
           <h2 className="font-extrabold text-[var(--ui-slate-800)] [overflow-wrap:anywhere]" id={`meal-log-section-${date}-${section.meal_plan_column_id}`} tabIndex={-1}>{section.slot_name_snapshot}</h2>
-          {section.entries.length > 0 ? <p className="mt-0.5 text-xs text-[var(--ui-slate-500)]">{foodNutritionValue(section.subtotal.calories_kcal, "kcal", section.subtotal.calculation_status === "partial")}</p> : null}
+          {section.entries.length > 0 ? <p className="mt-0.5 text-xs text-[var(--ui-slate-500)]">{foodNutritionValue(section.subtotal.calories_kcal, "kcal")}</p> : null}
         </div>
-        <button aria-label={`${section.slot_name_snapshot}에 먹은 음식 추가`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm outline-none hover:border-[var(--brand)] hover:bg-[var(--ui-slate-50)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={sectionAddActionId(section.meal_plan_column_id, date)} onClick={onAdd} type="button">+</button>
+        <button aria-label={`${section.slot_name_snapshot}에 먹은 음식 추가`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--ui-slate-300)] bg-[var(--ui-white)] text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm outline-none hover:border-[var(--brand)] hover:bg-[var(--ui-slate-50)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={sectionAddActionId(section.meal_plan_column_id, date)} onClick={onAdd} type="button">+</button>
       </div>
       {section.incomplete_count > 0 ? <p className="mt-2 text-xs font-medium text-[var(--ui-slate-500)]">일부 정보 없음 {section.incomplete_count}건</p> : null}
       <ul className="divide-y divide-[var(--ui-slate-100)]">
@@ -260,6 +275,29 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDelete
       {section.entries.length === 0 ? <p className="sr-only">먹은 음식을 기록해 보세요.</p> : null}
     </section>
   );
+}
+
+function activeSectionsForDisplay(day: MealLogDayData) {
+  const sectionsByColumn = new Map(
+    day.active_sections.map((section) => [section.meal_plan_column_id, section]),
+  );
+  const emptySubtotal = {
+    calculation_status: "complete" as const,
+    calories_kcal: 0,
+    carbohydrate_g: 0,
+    protein_g: 0,
+    fat_g: 0,
+    sodium_mg: 0,
+  };
+
+  return day.active_columns.map((column) => sectionsByColumn.get(column.id) ?? {
+    meal_plan_column_id: column.id,
+    slot_name_snapshot: column.name,
+    sort_order: column.sort_order,
+    entries: [],
+    subtotal: emptySubtotal,
+    incomplete_count: 0,
+  });
 }
 
 function DeletedSection({ date, disabled, section, onDelete, onDetail }: {
@@ -292,6 +330,7 @@ function EntryDialog({
   onClose,
   onComplete,
   onEdit,
+  onFeedback,
   mutationEnabled,
   onUnauthorized,
   returnFocusTarget,
@@ -302,6 +341,7 @@ function EntryDialog({
   onClose: () => void;
   onComplete: () => Promise<MealLogDayData>;
   onEdit: () => void;
+  onFeedback: (message: string) => void;
   mutationEnabled: boolean;
   onUnauthorized: (context: MealLogReturnContext) => void;
   returnFocusTarget: () => HTMLElement | null;
@@ -373,6 +413,7 @@ function EntryDialog({
         await updateMealLogEntry(entry.id, input, operation.current.key);
       }
       await onComplete();
+      onFeedback(state.type === "delete" ? "식사 기록을 삭제했어요." : "식사 기록을 수정했어요.");
       clearReturnContext();
       const logicalSuccessTargetId = state.type === "edit"
         ? `meal-log-section-${entry.consumed_local_date}-${columnId}`
@@ -533,6 +574,11 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     setDialog(next.type === "detail" ? { ...next, guestPreview: guest } : next);
   }
 
+  function showSuccess(message: string) {
+    showActionConfirmation(message);
+    emitAppActionNotification({ message, title: "식사 기록" });
+  }
+
   function editDetail() {
     if (dialog?.type !== "detail" || Boolean(dialog.guestPreview) !== guest) {
       setDialog(null);
@@ -667,7 +713,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     await createMealLogEntry(input, key);
     mutationKeys.current.delete(fingerprint);
     setDialog(null);
-    showActionConfirmation("식사기록에 추가했어요.");
+    showSuccess("식사기록에 추가했어요.");
     await reloadSelected();
   }
 
@@ -724,32 +770,22 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       <div className="space-y-4 pt-3">
         {dates.map((dayKey) => {
           const cardDay = displayDays[dayKey];
+          const cardSections = cardDay ? activeSectionsForDisplay(cardDay) : [];
           const cardDisabled = !guest && (!cardDay || loading || failedDates.has(dayKey));
           const titleId = `meal-log-title-${dayKey}`;
           return <section aria-labelledby={titleId} className="scroll-mt-[calc(var(--planner-sticky-height,80px)+12px)] overflow-hidden rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)]" data-planner-date={dayKey} key={dayKey} ref={(node) => onDayRef?.(dayKey, node)}>
             <div className="flex items-center justify-between gap-2 border-b border-[var(--ui-slate-100)] px-4 py-3">
               <h2 aria-label={`${longDate(dayKey)} 식사 기록`} className="text-base font-extrabold text-[var(--ui-slate-800)]" id={titleId}>{dayKey === todayKey ? "오늘 · " : ""}{Number(dayKey.slice(5, 7))}/{Number(dayKey.slice(8, 10))} ({WEEKDAYS[new Date(`${dayKey}T00:00:00.000Z`).getUTCDay()]})</h2>
-              {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardDay.active_sections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardDay.active_sections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardDay.active_sections.filter((section) => section.entries.length > 0).length} / {cardDay.active_sections.length}</span> : null}
+              {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardSections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardSections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardSections.filter((section) => section.entries.length > 0).length} / {cardSections.length}</span> : null}
             </div>
             {isLoading ? <p aria-busy="true" className="p-4 text-sm text-[var(--ui-slate-500)]">기록을 불러오는 중이에요.</p> : cardDay ? <div className="p-3 lg:p-4">
-              <section aria-label="하루 영양" className="mb-3 max-w-xl">
-                <dl className="grid grid-cols-[1.3fr_1fr_1fr_1fr] gap-1">
-                  {[
-                    { label: "칼로리", value: cardDay.day_total.calories_kcal, unit: "kcal" },
-                    { label: "탄수화물", value: cardDay.day_total.carbohydrate_g, unit: "g" },
-                    { label: "단백질", value: cardDay.day_total.protein_g, unit: "g" },
-                    { label: "지방", value: cardDay.day_total.fat_g, unit: "g" },
-                  ].map((metric) => <div className="min-w-0 rounded-lg border border-[var(--ui-slate-200)] px-1 py-2 text-center" key={metric.label}>
-                    <dt className="text-[11px] font-bold text-[var(--ui-slate-700)]">{metric.label}</dt>
-                    <dd className="mt-1 text-xs font-bold tabular-nums text-[var(--ui-slate-700)]">{metric.value === null ? <span className="text-[10px]">정보 없음</span> : <><strong className="text-sm font-[900] text-[var(--brand-primary-text)]">{number(metric.value, "")}</strong> {metric.unit}</>}</dd>
-                  </div>)}
-                </dl>
-                {cardDay.day_total.incomplete_count > 0 ? <p className="mt-2 text-xs text-[var(--ui-slate-500)]">일부 정보 없음 {cardDay.day_total.incomplete_count}건 · 확인된 영양만 표시해요.</p> : null}
-                {cardDay.day_total.calculation_status === "partial" ? <p className="mt-1 text-xs text-[var(--ui-slate-500)]">최소 확인된 영양 기준이에요.</p> : null}
+              <section aria-label="하루 영양" className="mb-3 max-w-2xl rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] p-3">
+                <MealLogNutritionChart nutrition={cardDay.day_total} />
+              {cardDay.day_total.incomplete_count > 0 ? <p className="mt-2 text-xs text-[var(--ui-slate-500)]">일부 정보 없음 {cardDay.day_total.incomplete_count}건</p> : null}
               </section>
               {cardDay.entries.length === 0 ? <p className="sr-only">이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.</p> : null}
               <div className="-mx-3 grid items-start gap-3 md:mx-0 md:grid-cols-2 lg:grid-cols-3">
-                {cardDay.active_sections.map((section) => <ActiveSection date={dayKey} disabled={cardDisabled} guest={guest} key={section.meal_plan_column_id} onAdd={() => openDialog({ type: "add", columnId: section.meal_plan_column_id }, dayKey)} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}
+                {cardSections.map((section) => <ActiveSection date={dayKey} disabled={cardDisabled} guest={guest} key={section.meal_plan_column_id} onAdd={() => openDialog({ type: "add", columnId: section.meal_plan_column_id }, dayKey)} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}
               </div>
               {cardDay.deleted_column_sections.length > 0 ? <div className="mt-3 space-y-3">{cardDay.deleted_column_sections.map((section) => <DeletedSection date={dayKey} disabled={cardDisabled} key={section.slot_name_snapshot} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}</div> : null}
             </div> : <p className="p-4 text-sm text-[var(--ui-slate-600)]">이 날짜의 기록을 확인하지 못했어요. 위의 다시 시도로 불러와 주세요.</p>}
@@ -758,7 +794,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       </div>
 
       {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
-      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onEdit={editDetail} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
+      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onEdit={editDetail} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
     </main>
     </>
   );
