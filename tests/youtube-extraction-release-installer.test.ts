@@ -182,17 +182,17 @@ afterEach(() => {
 describe("YTASYNC-OPS deterministic artifact", () => {
   it("materializes an explicit model pipeline without changing historical defaults", () => {
     const outputDir = join(createTempDir("yta-model-pipeline-"), "artifact");
-    const pipelineIdentity = "5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c";
+    const pipelineIdentity = "1cc9db22bff1be9fd3d7f8f829e661d5e53905013781e7179b9490a6cc247d5a";
     const result = materializeYoutubeExtractionWorkerArtifact({
       outputDir,
       releaseSha: "0123456789abcdef0123456789abcdef01234567",
-      allowedSnapshotDigest: "5418cbb09d1ae090becd4e33a7c5c449ca2769e85443b9e8dca82f103a82fa17",
-      policyVersion: 2,
+      allowedSnapshotDigest: "2ecd8f2bfa21f4817c63e87a687b03aaf4be129a21ceb4c4e14d3557af4753b9",
+      policyVersion: 3,
       pipelineIdentity,
     });
     expect(verifyYoutubeExtractionWorkerArtifact(result.manifest_path)).toMatchObject({
       pipeline_identity: pipelineIdentity,
-      policy_version: 2,
+      policy_version: 3,
     });
   });
 

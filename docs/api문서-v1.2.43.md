@@ -743,8 +743,8 @@ Request body의 두 collection은 각각 optional이지만 적어도 하나는 n
 ## 0-YT-I031. `POST /recipes/youtube/extract` 모드 계약
 
 - `YOUTUBE_RECIPE_EXTRACTOR_MODE=legacy` 또는 미설정이면 기존 설명란→댓글→caption→조건부 Gemini/visual 흐름을 유지한다.
-- `YOUTUBE_RECIPE_EXTRACTOR_MODE=i031_codex_vision`이면 exact i031 source collector, adaptive frame extractor, `gpt-5.4-mini` selector, `gpt-5.4` final extractor만 실행한다.
-- i031 모드의 server preflight는 exact Codex CLI `0.144.0-alpha.4`, ChatGPT login, `YOUTUBE_API_KEY`, media/Python 도구와 조건부 `APIFY_TOKEN`을 검사한다. Gemini API key는 읽거나 요구하지 않는다.
+- `YOUTUBE_RECIPE_EXTRACTOR_MODE=i031_codex_vision`이면 exact i031 source collector, adaptive frame extractor, `gpt-5.6-luna` effort `medium` selector/segment, `gpt-5.6-sol` effort `medium` final extractor만 실행한다.
+- i031 모드의 server preflight는 exact Codex CLI `0.154.0-alpha.6.2`, ChatGPT login, `YOUTUBE_API_KEY`, media/Python 도구와 조건부 `APIFY_TOKEN`을 검사한다. Gemini API key는 읽거나 요구하지 않는다.
 - i031 모드는 strict fail-closed다. preflight/provider/subprocess/timeout/JSON schema 실패는 기존 502 `PROVIDER_ERROR` 또는 500 `EXTRACTION_FAILED` wrapper로 반환하며 legacy/Gemini 성공 응답으로 바꾸지 않는다.
 - 성공 response shape는 §6-2와 같다. 추출 ingredient는 기존 dictionary matcher로 `resolved | needs_review | unresolved`를 결정하고, step은 기존 cooking method resolver를 통과한다.
 - i031 전체 실행 timeout은 20분 상한이며 selector/final subprocess timeout과 request abort를 적용한다. timeout/abort 후 child process 종료와 임시 파일 정리를 시도한다.

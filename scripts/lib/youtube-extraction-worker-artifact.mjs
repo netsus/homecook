@@ -54,7 +54,7 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY =
   "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908";
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_FINGERPRINT_KEY_VERSION = "1";
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS = Object.freeze({
-  codexEffort: "low",
+  codexEffort: "medium",
   frameMode: "hybrid",
   hybridAnchorBudget: 36,
   interval: 4,
@@ -65,7 +65,7 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS = Object.freeze({
   recipeMode: "single",
   screenOcrMode: "auto",
   selectorCandidateLimit: 12,
-  selectorEffort: "low",
+  selectorEffort: "medium",
   singleRecipeOnly: true,
   sourceMode: "source-text",
   useApifyFallback: true,

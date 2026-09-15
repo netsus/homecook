@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-15 사용자 승인 — YouTube 선택·추출 품질 조정
+
+기존 `i031-sol-v1`의 추출 품질 저하 체감에 따라 영상 분석 추출기를 `i031-luna-sol-v1`로 전환한다. 프레임 선택과 segment 선택은 `gpt-5.6-luna` reasoning effort `medium`, 최종 레시피 추출은 `gpt-5.6-sol` reasoning effort `medium`을 사용한다. 영상·텍스트·OCR·프롬프트·구조화 출력 흐름과 CLI `0.154.0-alpha.6.2`는 유지한다. 정책 버전 3과 새 pipeline identity로 이전 low-effort 결과와 구분하며 운영 순서는 `docs/engineering/youtube-astra-sol-model-upgrade.md`를 따른다.
+
 ## 2026-09-15 사용자 승인 — YouTube 영상 분석 모델 교체
 
 기존 모델 지원 종료로 영상 분석 추출기를 `i031-sol-v1`로 전환한다. 최종 분석과 프레임 선택은 `gpt-5.6-sol`, CLI는 `0.154.0-alpha.6.2`를 사용하며 영상·텍스트·OCR·프롬프트 흐름은 유지한다. 최종 레시피는 구조화된 JSON 출력을 사용한다. 정책 버전 2와 새 pipeline identity로 이전 추출 결과와 구분한다. 계약과 운영 순서는 `docs/engineering/youtube-astra-sol-model-upgrade.md`를 따른다. 큐 오류를 동기 추출로 우회하지 않으며 만료된 worker credential과 app/worker 버전 불일치는 운영 절차로 복구한다.
