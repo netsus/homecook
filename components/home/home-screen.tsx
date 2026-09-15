@@ -37,8 +37,6 @@ import {
   readE2EAuthOverride,
 } from "@/lib/auth/e2e-auth-override";
 import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
-import { fetchUserGamification } from "@/lib/api/user-gamification";
-import { fetchUserProgress } from "@/lib/api/user-progress";
 import { fetchRecipeTags } from "@/lib/api/recipe";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
@@ -61,8 +59,6 @@ import type {
   RecipeTheme,
   RecipeThemesData,
 } from "@/types/recipe";
-import type { UserGamificationData } from "@/types/user-gamification";
-import type { UserProgressData } from "@/types/user-progress";
 
 const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
   { label: "조회수순", value: "view_count" },
@@ -288,8 +284,6 @@ export function HomeScreen() {
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<UserProfileData | null>(null);
-  const [progress, setProgress] = useState<UserProgressData | null>(null);
-  const [gamification, setGamification] = useState<UserGamificationData | null>(null);
   const recipeRequestIdRef = useRef(0);
   const appliedIngredientIds = useDiscoveryFilterStore(
     (state) => state.appliedIngredientIds,
@@ -357,27 +351,18 @@ export function HomeScreen() {
   useEffect(() => {
     if (!isAuthenticated) {
       setProfile(null);
-      setProgress(null);
-      setGamification(null);
       return;
     }
 
     let isCurrent = true;
 
-    void Promise.allSettled([
-      fetchUserProfile(),
-      fetchUserProgress(),
-      fetchUserGamification(),
-    ]).then(([profileResult, progressResult, gamificationResult]) => {
+    void fetchUserProfile().then((nextProfile) => {
       if (!isCurrent) {
         return;
       }
-
-      setProfile(profileResult.status === "fulfilled" ? profileResult.value : null);
-      setProgress(progressResult.status === "fulfilled" ? progressResult.value : null);
-      setGamification(
-        gamificationResult.status === "fulfilled" ? gamificationResult.value : null,
-      );
+      setProfile(nextProfile);
+    }).catch(() => {
+      if (isCurrent) setProfile(null);
     });
 
     return () => {
@@ -841,13 +826,11 @@ export function HomeScreen() {
           onSelectSort={selectSort}
           onSelectTag={selectTag}
           onSelectTheme={selectTheme}
-          gamification={gamification}
           hasMoreRecipes={hasMoreDisplayedRecipes}
           isAuthenticated={isAuthenticated}
           isLoadingMoreRecipes={isLoadingMoreRecipes}
           loadMoreRecipeError={loadMoreRecipeError}
           profile={profile}
-          progress={progress}
           query={query}
           resultStatusText={resultStatusText}
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
@@ -1139,13 +1122,11 @@ function HomeWebScreen({
   onSelectSort,
   onSelectTag,
   onSelectTheme,
-  gamification,
   hasMoreRecipes,
   isAuthenticated,
   isLoadingMoreRecipes,
   loadMoreRecipeError,
   profile,
-  progress,
   query,
   resultStatusText,
   savedRecipeIds,
@@ -1178,13 +1159,11 @@ function HomeWebScreen({
   onSelectSort: (nextSort: string) => void;
   onSelectTag: (tag: RecipeTagItem) => void;
   onSelectTheme: (themeId: string) => void;
-  gamification: UserGamificationData | null;
   hasMoreRecipes: boolean;
   isAuthenticated: boolean;
   isLoadingMoreRecipes: boolean;
   loadMoreRecipeError: boolean;
   profile: UserProfileData | null;
-  progress: UserProgressData | null;
   query: string;
   resultStatusText: string;
   savedRecipeIds: Set<string>;
@@ -1208,10 +1187,8 @@ function HomeWebScreen({
         activeId="home"
         rightSlot={
           <ProfileSummaryButton
-            gamification={gamification}
             isAuthenticated={isAuthenticated}
             profile={profile}
-            progress={progress}
             variant="web"
           />
         }
@@ -1562,7 +1539,7 @@ function HomeWebRecipeCard({
 
   return (
     <article className="web-home-recipe-card">
-      <Link href={`/recipe/${recipe.id}`} onClick={() => onOpen(recipe.id)}>
+      <Link href={`/recipe/${recipe.id}`} onClick={() => onOpen(recipe.id)} prefetch={false}>
         <WebRecipeCard
           alt={recipe.title}
           badge={sourceBadge}
@@ -1624,6 +1601,7 @@ function HomeQuickLinks({ variant }: { variant: "mobile" | "web" }) {
           className={variant === "mobile" ? "home-mobile-shortcut" : "web-home-shortcut"}
           href={item.href}
           key={item.href}
+          prefetch={false}
         >
           <span
             aria-hidden="true"
@@ -1879,6 +1857,7 @@ function HomeMobileR2Banner({
       aria-label={banner.ariaLabel}
       className={`home-mobile-theme-card home-mobile-r2-card home-mobile-r2-card-${banner.key}`}
       href={banner.href}
+      prefetch={false}
     >
       <span className="home-mobile-r2-copy">
         <small>{banner.eyebrow}</small>
@@ -1940,6 +1919,7 @@ function HomeDesktopLandingBanner() {
             className={`web-home-landing-banner web-home-landing-banner-${banner.key}`}
             href={banner.href}
             key={banner.key}
+            prefetch={false}
             tabIndex={index === activeIndex ? 0 : -1}
           >
             <span className="web-home-landing-banner-image" aria-hidden="true">

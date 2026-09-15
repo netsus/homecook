@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogNutritionChart } from "@/components/planner/meal-log-nutrition-chart";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { createGuestMealLogDay, createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
@@ -329,7 +330,6 @@ function EntryDialog({
   state,
   onClose,
   onComplete,
-  onEdit,
   onFeedback,
   mutationEnabled,
   onUnauthorized,
@@ -340,7 +340,6 @@ function EntryDialog({
   state: Exclude<DialogState, { type: "add" } | null>;
   onClose: () => void;
   onComplete: () => Promise<MealLogDayData>;
-  onEdit: () => void;
   onFeedback: (message: string) => void;
   mutationEnabled: boolean;
   onUnauthorized: (context: MealLogReturnContext) => void;
@@ -386,7 +385,7 @@ function EntryDialog({
   }, [state.type, requiresColumnSelection]);
 
   async function mutate() {
-    if (state.type === "detail" || !mutationEnabled || (state.type === "edit" && (!columnValid || amount <= 0 || !unit.trim()))) return;
+    if (!mutationEnabled || (state.type !== "delete" && (!columnValid || amount <= 0 || !unit.trim()))) return;
     setPending(true);
     setError(null);
     try {
@@ -412,9 +411,21 @@ function EntryDialog({
         }
         await updateMealLogEntry(entry.id, input, operation.current.key);
       }
-      await onComplete();
+      const refreshedDay = await onComplete();
       onFeedback(state.type === "delete" ? "식사 기록을 삭제했어요." : "식사 기록을 수정했어요.");
       clearReturnContext();
+      if (state.type === "detail") {
+        const updatedEntry = refreshedDay.entries.find((item) => item.id === entry.id);
+        if (updatedEntry) {
+          setAuthorityEntry(updatedEntry);
+          setRevision(updatedEntry.revision);
+          setAmount(updatedEntry.quantity.amount);
+          setUnit(updatedEntry.quantity.unit);
+        }
+        operation.current = null;
+        setPending(false);
+        return;
+      }
       const logicalSuccessTargetId = state.type === "edit"
         ? `meal-log-section-${entry.consumed_local_date}-${columnId}`
         : entry.meal_plan_column_id
@@ -453,6 +464,10 @@ function EntryDialog({
                 && latestDay.active_columns.some((column) => column.id === latestEntry.meal_plan_column_id);
               setColumnId(latestColumnActive ? latestEntry.meal_plan_column_id ?? "" : "");
             }
+            if (state.type === "detail") {
+              setAmount(latestEntry.quantity.amount);
+              setUnit(latestEntry.quantity.unit);
+            }
             operation.current = null;
             setError("다른 변경의 최신 기록을 반영했어요. 입력을 확인한 뒤 다시 시도해 주세요.");
           }
@@ -470,19 +485,31 @@ function EntryDialog({
     return <div aria-label="식사 기록 상세" aria-modal="true" className="fixed inset-0 z-[60] flex flex-col bg-[var(--surface-fill)] outline-none" ref={panelRef} role="dialog" tabIndex={-1}>
       <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <button aria-label="식사 기록으로 돌아가기" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl hover:bg-[var(--surface-fill)]" onClick={onClose} ref={cancelRef} type="button">←</button>
+          <button aria-label="식사 기록으로 돌아가기" className="flex min-h-11 shrink-0 items-center gap-1 rounded-full px-2 font-bold hover:bg-[var(--surface-fill)]" onClick={onClose} ref={cancelRef} type="button"><span aria-hidden="true" className="text-2xl">←</span><span className="text-sm lg:hidden">뒤로</span></button>
           <h2 className="text-lg font-extrabold">{longDate(entry.consumed_local_date)} · {entry.slot_name_snapshot}</h2>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(80px+env(safe-area-inset-bottom))] lg:pb-0">
         <div className="mx-auto grid w-full max-w-6xl items-start gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <article className="overflow-hidden rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)]">
             <div className="flex items-center gap-4 p-5"><span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-soft)] text-3xl">🍽️</span><div className="min-w-0"><h3 className="break-words text-xl font-extrabold">{entry.display_name}</h3><p className="mt-1 text-sm text-[var(--text-2)]">먹은 양 {number(entry.quantity.amount, entry.quantity.unit)}</p></div></div>
             <section aria-label="기록한 음식 영양정보" className="border-t border-[var(--line-strong)] p-4 sm:p-5"><h3 className="mb-4 text-sm font-bold text-[var(--text-2)]">이 식사의 영양</h3><MealLogNutritionChart nutrition={entry.nutrition} /></section>
           </article>
-          <aside className="rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-5"><h3 className="font-extrabold">식사 기록</h3><p className="mt-2 text-sm leading-6 text-[var(--text-2)]">실제로 먹은 양에 맞춰 기록을 수정할 수 있어요.</p><button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)]" onClick={onEdit} type="button">식사 기록 수정</button></aside>
+          <aside className="rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-5">
+            <h3 className="font-extrabold">먹은 양</h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-2)]">처음 기록한 양을 바로 수정할 수 있어요.</p>
+            <label className="mt-4 block text-sm font-bold">실제 양
+              <span className="mt-1 flex min-h-11 items-center overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] focus-within:ring-2 focus-within:ring-[var(--brand)]">
+                <input aria-label="먹은 양" className="min-h-11 min-w-0 flex-1 px-3 font-normal outline-none" min="0.01" onChange={(event) => setAmount(Number(event.target.value))} step="any" type="number" value={amount} />
+                <span className="shrink-0 border-l border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[var(--text-2)]">{unit}</span>
+              </span>
+            </label>
+            {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
+            <button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending || !columnValid || amount <= 0 || !unit.trim()} onClick={() => void mutate()} type="button">{pending ? "수정 중…" : "먹은 양 수정"}</button>
+          </aside>
         </div>
       </div>
+      <Wave1MobileBottomTab ariaLabel="식사 상세 하단 탭" currentTab="meal-log" plannerDate={entry.consumed_local_date} />
     </div>;
   }
 
@@ -579,17 +606,6 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     emitAppActionNotification({ message, title: "식사 기록" });
   }
 
-  function editDetail() {
-    if (dialog?.type !== "detail" || Boolean(dialog.guestPreview) !== guest) {
-      setDialog(null);
-      return;
-    }
-    if (guest) { setDialog(null); (onLoginRequired ?? onUnauthorized)(dialogDate); return; }
-    const entry = dialogDay?.entries.find((item) => item.id === dialog.entry.id);
-    if (!entry || !dialogMutationEnabled) { setDialog(null); return; }
-    setDialog({ type: "edit", entry });
-  }
-
   const loseAuthorization = useCallback((context?: MealLogReturnContext) => {
     if (guestRef.current) return;
     if (context) saveReturnContext(context);
@@ -665,16 +681,16 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     return () => { requestRef.current += 1; };
   }, [guest, loadWeek]);
 
-  async function reloadSelected() {
-    if (guestRef.current) return createGuestMealLogDay(dialogDate);
+  async function reloadSelected(targetDate = dialogDate) {
+    if (guestRef.current) return createGuestMealLogDay(targetDate);
     const request = requestRef.current;
     try {
-      const next = await fetchMealLogDay(dialogDate);
+      const next = await fetchMealLogDay(targetDate);
       if (guestRef.current || request !== requestRef.current) return next;
-      setDays((current) => ({ ...current, [dialogDate]: next }));
+      setDays((current) => ({ ...current, [targetDate]: next }));
       setFailedDates((current) => {
         const updated = new Set(current);
-        updated.delete(dialogDate);
+        updated.delete(targetDate);
         return updated;
       });
       setError(null);
@@ -687,21 +703,21 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
         setDialog(null);
         setDays((current) => {
           const next = { ...current };
-          delete next[dialogDate];
+          delete next[targetDate];
           return next;
         });
-        setFailedDates((current) => new Set(current).add(dialogDate));
+        setFailedDates((current) => new Set(current).add(targetDate));
         setError(reason instanceof Error ? reason.message : "최신 식사 기록을 확인하지 못했어요.");
       }
       throw reason;
     }
   }
 
-  async function add(selection: MealLogSourceSelection, columnId: string) {
+  async function add(selection: MealLogSourceSelection, columnId: string, targetDate: string) {
     if (guestRef.current) return;
     const input = {
       consumedAt: null,
-      consumedLocalDate: dialogDate,
+      consumedLocalDate: targetDate,
       mealPlanColumnId: columnId,
       quantity: { amount: selection.amount, unit: selection.unit },
       source: { id: selection.id, type: selection.type },
@@ -714,7 +730,8 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     mutationKeys.current.delete(fingerprint);
     setDialog(null);
     showSuccess("식사기록에 추가했어요.");
-    await reloadSelected();
+    await reloadSelected(targetDate);
+    if (!dates.includes(targetDate)) onDateChange(targetDate);
   }
 
   useEffect(() => {
@@ -779,10 +796,10 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
               {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardSections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardSections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardSections.filter((section) => section.entries.length > 0).length} / {cardSections.length}</span> : null}
             </div>
             {isLoading ? <p aria-busy="true" className="p-4 text-sm text-[var(--ui-slate-500)]">기록을 불러오는 중이에요.</p> : cardDay ? <div className="p-3 lg:p-4">
-              <section aria-label="하루 영양" className="mb-3 max-w-2xl rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] p-3">
+              {cardDay.entries.length > 0 ? <section aria-label="하루 영양" className="mb-3 max-w-2xl rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] p-3">
                 <MealLogNutritionChart nutrition={cardDay.day_total} />
               {cardDay.day_total.incomplete_count > 0 ? <p className="mt-2 text-xs text-[var(--ui-slate-500)]">일부 정보 없음 {cardDay.day_total.incomplete_count}건</p> : null}
-              </section>
+              </section> : null}
               {cardDay.entries.length === 0 ? <p className="sr-only">이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.</p> : null}
               <div className="-mx-3 grid items-start gap-3 md:mx-0 md:grid-cols-2 lg:grid-cols-3">
                 {cardSections.map((section) => <ActiveSection date={dayKey} disabled={cardDisabled} guest={guest} key={section.meal_plan_column_id} onAdd={() => openDialog({ type: "add", columnId: section.meal_plan_column_id }, dayKey)} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}
@@ -794,7 +811,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       </div>
 
       {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
-      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onEdit={editDetail} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
+      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
     </main>
     </>
   );

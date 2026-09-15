@@ -553,6 +553,24 @@ interface YoutubeRecipeRegisterRpcClient {
   }>;
 }
 
+function createOwnedYoutubeNutritionClient(
+  dbClient: DbClient & { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }> },
+  userId: string,
+) {
+  return {
+    from: dbClient.from.bind(dbClient),
+    rpc: (_name: "write_recipe_nutrition_snapshot", args: {
+      p_recipe_id: string;
+      p_snapshot: Record<string, unknown>;
+      p_expected_recipe_updated_at: string;
+      p_input_guard: Record<string, unknown>;
+    }) => dbClient.rpc("write_owned_youtube_recipe_nutrition_snapshot", {
+      p_user_id: userId,
+      ...args,
+    }),
+  } as unknown as RecipeNutritionServiceClient;
+}
+
 interface YoutubeIngredientRegistrationRpcData {
   ingredient_id: string;
   standard_name: string;
@@ -10917,7 +10935,15 @@ export async function handleYoutubeRegister(request: Request) {
 
   try {
     await recalculateRecipeNutritionSnapshot(
-      dbClient as unknown as RecipeNutritionServiceClient,
+      createOwnedYoutubeNutritionClient(
+        dbClient as unknown as DbClient & {
+          rpc(name: string, args: Record<string, unknown>): PromiseLike<{
+            data: unknown;
+            error: unknown;
+          }>;
+        },
+        user.id,
+      ),
       data.recipe_id,
     );
   } catch {

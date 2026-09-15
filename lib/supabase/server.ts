@@ -53,6 +53,27 @@ function requireHmacSecret(name: string) {
   return value;
 }
 
+function createLoopbackAuthTransport({
+  internalOrigin,
+  publicOrigin,
+}: {
+  internalOrigin: string;
+  publicOrigin: string;
+}): typeof globalThis.fetch {
+  return async (input, init) => {
+    const request = new Request(input, init);
+    const requestUrl = new URL(request.url);
+    if (requestUrl.origin !== publicOrigin) {
+      throw new Error("Server Auth transport는 configured public Auth origin만 허용해요.");
+    }
+    const internalUrl = new URL(
+      `${requestUrl.pathname}${requestUrl.search}`,
+      `${internalOrigin}/`,
+    );
+    return globalThis.fetch(new Request(internalUrl, request));
+  };
+}
+
 async function createAuthServerClient({
   allowCookieWrites,
 }: {
@@ -61,25 +82,30 @@ async function createAuthServerClient({
   const cookieStore = await cookies();
   getAuthAuthority();
   const { url, anonKey } = getAuthSupabaseEnv();
+  const { url: internalAuthUrl } = getAuthSupabaseServerEnv();
   getDataSupabaseEnv();
   const authFetch = createRemoteRefreshAuthorityFetch({
-        auth: {
-          publishableKey: anonKey,
-          url,
-        },
-        bootstrap: async ({ accessToken, user }) => {
-          const client = createAuthRefreshInternalDataClient();
-          if (!client) {
-            return { ok: false as const, reason: "maintenance" as const };
-          }
+    auth: {
+      publishableKey: anonKey,
+      url,
+    },
+    bootstrap: async ({ accessToken, user }) => {
+      const client = createAuthRefreshInternalDataClient();
+      if (!client) {
+        return { ok: false as const, reason: "maintenance" as const };
+      }
 
-          return bootstrapAuthRefreshSessionAuthority({
-            accessToken,
-            client,
-            user,
-          });
-        },
+      return bootstrapAuthRefreshSessionAuthority({
+        accessToken,
+        client,
+        user,
       });
+    },
+    remoteFetch: createLoopbackAuthTransport({
+      internalOrigin: internalAuthUrl,
+      publicOrigin: url,
+    }),
+  });
 
   return createServerClient(url, anonKey, {
     cookies: {
@@ -199,7 +225,7 @@ function createGuardedLocalFetch({
   getAccessToken: () => Promise<string | null>;
   anonymousPublicReadScope?: HybridPublicReadScope;
 }) {
-  const authEnv = getAuthSupabaseEnv();
+  const authEnv = getAuthSupabaseServerEnv();
   const localAuthority = getAuthAuthority() === "local";
   const observabilityClient = localAuthority
     ? createSessionObservabilityInternalRpcClient()
@@ -208,7 +234,7 @@ function createGuardedLocalFetch({
     getAccessToken,
     auth: {
       issuer: authEnv.issuer,
-      jwksUrl: authEnv.jwksUrl,
+      jwksUrl: `${authEnv.url}/auth/v1/.well-known/jwks.json`,
       url: authEnv.url,
       publishableKey: authEnv.anonKey,
     },

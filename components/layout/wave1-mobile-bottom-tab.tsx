@@ -67,6 +67,7 @@ export function Wave1MobileBottomTab({
               }
               key={item.id}
               onClick={(event) => onTabClick?.(item.id, event)}
+              prefetch={false}
             >
               {item.icon(active)}
               <span className="whitespace-nowrap">{item.label}</span>

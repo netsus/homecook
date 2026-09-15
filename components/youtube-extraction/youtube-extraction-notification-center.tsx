@@ -10,6 +10,7 @@ import {
   GlobalToastPortal,
   useGlobalToastPresentationGrant,
 } from "@/components/shared/global-toast-presentation-slot";
+import { YoutubeExtractionProgressCard } from "@/components/youtube-extraction/youtube-extraction-progress-card";
 import {
   HOMECOOK_APP_ACTION_NOTIFICATION_EVENT,
   type AppActionNotificationEventDetail,
@@ -214,6 +215,17 @@ function NotificationRow({
 
 function ActiveJobRow({ job }: { job: YoutubeExtractionJobData }) {
   const processing = job.status === "processing";
+  const [now, setNow] = useState(() => Date.now());
+  const submittedAt = Date.parse(job.submitted_at);
+  const elapsedMs = Number.isFinite(submittedAt) && submittedAt <= now
+    ? now - submittedAt
+    : 0;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <article className="border-b border-[var(--wave1-border)] py-4" data-youtube-active-job-id={job.job_id}>
       <div className="flex items-start gap-3">
@@ -225,6 +237,13 @@ function ActiveJobRow({ job }: { job: YoutubeExtractionJobData }) {
           <p className="mt-1 break-keep text-sm leading-5 text-[var(--muted)] [overflow-wrap:anywhere]">
             이 화면을 닫아도 작업은 계속돼요.
           </p>
+          <YoutubeExtractionProgressCard
+            ariaLabel="알림의 유튜브 레시피 추출 진행 상태"
+            className="mt-3"
+            compact
+            elapsedMs={elapsedMs}
+            job={job}
+          />
         </div>
       </div>
     </article>
