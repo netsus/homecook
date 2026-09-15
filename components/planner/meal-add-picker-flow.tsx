@@ -11,6 +11,7 @@ import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sh
 import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
+import { showActionConfirmation } from "@/stores/ui-store";
 import { createMealSafe } from "@/lib/api/meal";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type {
@@ -124,6 +125,7 @@ export function MealAddPickerFlow({
         return;
       }
 
+      showActionConfirmation("요리계획에 추가했어요.");
       await finishCreation();
     },
     [columnId, finishCreation, planDate],

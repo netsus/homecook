@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
@@ -209,6 +211,7 @@ export function MenuAddScreen({
       }
 
       // Success: keep /menu-add out of browser back history.
+      showActionConfirmation("요리계획에 추가했어요.");
       navigateToMealScreen("replace");
     },
     [selectedRecipe, planDate, columnId, navigateToMealScreen],
@@ -254,6 +257,7 @@ export function MenuAddScreen({
       }
 
       // Success: keep /menu-add out of browser back history.
+      showActionConfirmation("요리계획에 추가했어요.");
       navigateToMealScreen("replace");
     },
     [selectedBookRecipe, planDate, columnId, navigateToMealScreen],
@@ -315,6 +319,7 @@ export function MenuAddScreen({
       }
 
       // Success: keep /menu-add out of browser back history.
+      showActionConfirmation("요리계획에 추가했어요.");
       navigateToMealScreen("replace");
     },
     [selectedPantryRecipe, planDate, columnId, navigateToMealScreen],
@@ -364,6 +369,7 @@ export function MenuAddScreen({
         return;
       }
 
+      showActionConfirmation("요리계획에 추가했어요.");
       navigateToMealScreen("replace");
     },
     [selectedLeftover, planDate, columnId, navigateToMealScreen],
@@ -389,6 +395,7 @@ export function MenuAddScreen({
   }, []);
 
   const handleProductComplete = useCallback(async () => {
+    showActionConfirmation("요리계획에 추가했어요.");
     navigateToMealScreen("replace");
   }, [navigateToMealScreen]);
 

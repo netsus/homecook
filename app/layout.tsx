@@ -17,6 +17,7 @@ import {
   socialImageSize,
 } from "@/lib/seo/default-social-image";
 import "./globals.css";
+import { ActionConfirmation } from "@/components/shared/action-confirmation";
 
 const siteUrl = getPublicSiteOrigin();
 const siteDescription = "레시피 찾기, 식단 계획, 장보기, 요리 기록까지 이어지는 무엇을 먹든 서비스";
@@ -81,6 +82,7 @@ export default function RootLayout({
         {children}
         <ProviderMemorySync />
         <ServiceNotificationBoundary>
+        <ActionConfirmation />
         <GlobalToastPresentationProvider>
           <GlobalToastPresentationSlot />
           <GrowthToastStack

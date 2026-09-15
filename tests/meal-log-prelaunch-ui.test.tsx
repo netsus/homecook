@@ -27,10 +27,10 @@ describe("prelaunch meal log presentation", () => {
     const chip = await screen.findByRole("radio", { name: /9\/7 월요일 선택, 기록 있음/ });
     expect(within(chip).queryByText("700 kcal")).toBeNull();
     const summary = selectedSummary();
-    expect(within(summary).getByText("700").className).toContain("text-[var(--brand-primary-text)]");
-    expect(within(summary.querySelector("dl")!).getByText("40")).toBeTruthy();
-    expect(within(summary.querySelector("dl")!).getByText("25")).toBeTruthy();
-    expect(within(summary.querySelector("dl")!).getByText("10")).toBeTruthy();
+    expect(within(summary).getByRole("img", { name: /총 칼로리 700 kcal/ })).toBeTruthy();
+    expect(within(summary.querySelector("dl")!).getByText("40g")).toBeTruthy();
+    expect(within(summary.querySelector("dl")!).getByText("25g")).toBeTruthy();
+    expect(within(summary.querySelector("dl")!).getByText("10g")).toBeTruthy();
   });
   it("shows an add button for every active meal column when the day has no entries", async () => {
     api.fetch.mockImplementation(async (date: string) => date === "2026-09-07" ? {
@@ -50,14 +50,14 @@ describe("prelaunch meal log presentation", () => {
     expect(screen.getByRole("button", { name: "점심에 먹은 음식 추가" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "저녁에 먹은 음식 추가" })).toBeTruthy();
   });
-  it("shows daily nutrition as four always-visible tiles and consumed grams per food", async () => {
+  it("shows daily nutrition as an always-visible macro chart and consumed grams per food", async () => {
     render(<MealLogScreen {...props} />);
     const summary = await findSelectedSummary();
     expect(summary.closest("details")).toBeNull();
-    expect(summary.querySelectorAll("dd")).toHaveLength(4);
-    expect(within(summary).queryByRole("img")).toBeNull();
+    expect(summary.querySelectorAll("dd")).toHaveLength(3);
+    expect(within(summary).getByRole("img", { name: /탄단지 열량 비율/ })).toBeTruthy();
     expect(screen.getByLabelText("먹은 양 125g")).toBeTruthy();
-    expect(within(summary).getByText("700")).toBeTruthy();
+    expect(within(summary).getByText("700 kcal")).toBeTruthy();
   });
   it("shows textual food macros with quantity and an icon delete action, without sodium or edit", async () => {
     render(<MealLogScreen {...props} />);
@@ -100,17 +100,20 @@ describe("prelaunch meal log presentation", () => {
     render(<MealLogScreen {...props} />);
     const row = (await screen.findByLabelText("먹은 양 125g")).closest("li")!;
     expect(Boolean(within(row).queryByRole("img"))).toBe(hasChart);
-    expect(row.textContent).toContain(kcal === null ? "정보 준비 중" : `${status === "partial" ? "최소 " : ""}${kcal} kcal`);
+    expect(row.textContent).toContain(kcal === null ? "정보 준비 중" : `${kcal} kcal`);
     expect(row.textContent).toContain(protein === null ? "단 정보 준비 중" : `단 ${protein} g`);
     expect(row.textContent).not.toContain("나트륨");
   });
-  it("shows sodium only in food detail and restores focus when closed", async () => {
+  it("shows fullscreen food detail without sodium and restores focus when closed", async () => {
     const user = userEvent.setup();
     render(<MealLogScreen {...props} />);
     const invoker = await screen.findByRole("button", { name: /식사 기록 상세/ });
     expect(screen.queryByText(/나트륨/)).toBeNull();
     await user.click(invoker);
-    expect(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByText("나트륨 200mg")).toBeTruthy();
+    const detail = screen.getByRole("dialog", { name: "식사 기록 상세" });
+    expect(detail.className).toContain("fixed inset-0");
+    expect(within(detail).queryByText(/나트륨/)).toBeNull();
+    expect(within(detail).getByRole("img", { name: /총 칼로리 350 kcal/ })).toBeTruthy();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(invoker));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -120,7 +123,7 @@ describe("prelaunch meal log presentation", () => {
     render(<MealLogScreen {...props} />);
     const summary = await findSelectedSummary();
     expect(within(summary).queryByRole("img")).toBeNull();
-    expect(within(summary).getAllByText("정보 없음")).toHaveLength(4);
+    expect(within(summary).getAllByText("정보 준비 중")).toHaveLength(4);
     expect(within(summary).queryByText("0 kcal")).toBeNull();
   });
   it("opens detail before editing and returns focus to the food after cancel", async () => {
@@ -157,9 +160,8 @@ describe("prelaunch meal log presentation", () => {
     await user.click(addButtons[0]);
     expect(login).toHaveBeenCalledTimes(1);
     await user.click(screen.getAllByRole("button", { name: /식사 기록 상세/ })[0]);
-    expect(login).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/나트륨/)).toBeTruthy();
-    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
+    expect(login).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("dialog")).toBeNull();
     await user.click(screen.getAllByRole("button", { name: /식사 기록 삭제/ })[0]);
     expect(login).toHaveBeenCalledTimes(3);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -169,7 +171,8 @@ describe("prelaunch meal log presentation", () => {
     const user = userEvent.setup();
     const view = render(<MealLogScreen {...props} guest={initialGuest} onLoginRequired={vi.fn()} />);
     await user.click((await screen.findAllByRole("button", { name: /식사 기록 상세/ }))[0]);
-    expect(screen.getByRole("dialog", { name: "식사 기록 상세" })).toBeTruthy();
+    if (initialGuest) expect(screen.queryByRole("dialog")).toBeNull();
+    else expect(screen.getByRole("dialog", { name: "식사 기록 상세" })).toBeTruthy();
     view.rerender(<MealLogScreen {...props} guest={!initialGuest} onLoginRequired={vi.fn()} />);
     await screen.findAllByRole("button", { name: /식사 기록 상세/ });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -197,24 +200,25 @@ describe("prelaunch meal log presentation", () => {
     expect(screen.queryByRole("dialog",{name:"식사 기록 상세"})).toBeNull();
     expect(api.fetch).not.toHaveBeenCalled();
   });
-  it("shows only a preparation notice to signed-in visitors instead of unfinished detail", async () => {
+  it("opens fullscreen detail for signed-in visitors in prelaunch mode", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     render(<MealLogScreen {...props} />);
     await userEvent.setup().click(await screen.findByRole("button",{name:/식사 기록 상세/}));
-    expect(screen.getByRole("heading",{name:"식사 상세는 준비 중이에요"})).toBeTruthy();
-    expect(screen.queryByRole("button",{name:"식사 기록 수정"})).toBeNull();
+    const detail = screen.getByRole("dialog", { name: "식사 기록 상세" });
+    expect(detail.className).toContain("fixed inset-0");
+    expect(within(detail).getByRole("button", { name: "식사 기록 수정" })).toBeTruthy();
     expect(screen.queryByText(/나트륨/)).toBeNull();
     expect(api.update).not.toHaveBeenCalled();
   });
 
-  it("defers an old edit-return draft during preparation without dropping the draft or opening editing", async () => {
+  it("restores an edit-return draft in prelaunch mode without submitting it", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     const draft = { version: 1, action: "edit", date: "2026-09-07", entryId: "10000000-0000-4000-8000-000000000001", invoker: "entry-edit", draft: { amount: 80, unit: "g", columnId: "20000000-0000-4000-8000-000000000001" } };
     sessionStorage.setItem("homecook.meal-log-return-context.v1", JSON.stringify(draft));
     render(<MealLogScreen {...props} />);
-    expect(await screen.findByRole("heading", { name: "식사 상세는 준비 중이에요" })).toBeTruthy();
-    expect(screen.queryByRole("spinbutton", { name: "실제 양" })).toBeNull();
-    expect(JSON.parse(sessionStorage.getItem("homecook.meal-log-return-context.v1")!)).toEqual(draft);
+    expect((await screen.findByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("80");
+    expect((screen.getByRole("textbox", { name: "단위" }) as HTMLInputElement).value).toBe("g");
+    expect(sessionStorage.getItem("homecook.meal-log-return-context.v1")).toBeNull();
     expect(api.update).not.toHaveBeenCalled();
   });
 

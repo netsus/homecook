@@ -2,16 +2,14 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { PlannerNutritionChart } from "@/components/planner/meal-pinned-nutrition";
 import { AppCenterDialog } from "@/components/shared/app-overlay";
 import {
   buildPlannerNutritionWarningMessages,
   formatPlannerNutritionEnergy,
   formatPlannerNutritionQuality,
-  formatPlannerNutritionValue,
-  PLANNER_NUTRITION_LABELS,
 } from "@/lib/planner/planner-nutrition-presentation";
 import {
-  PLANNER_NUTRITION_CORE_CODES,
   type PlannerNutritionAggregate,
   type PlannerNutritionDaySummary,
 } from "@/types/planner-nutrition";
@@ -253,18 +251,7 @@ export function MealNutritionSummary({
           ) : null}
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
-          {PLANNER_NUTRITION_CORE_CODES.map((code) => (
-            <div className={code === "energy_kcal" ? "col-span-2 sm:col-span-1" : ""} key={code}>
-              <dt className="text-[11px] font-bold text-[var(--text-3)]">
-                {PLANNER_NUTRITION_LABELS[code]}
-              </dt>
-              <dd className="mt-0.5 text-[14px] font-extrabold text-[var(--foreground)]">
-                {formatPlannerNutritionValue(code, nutrition.values[code])}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <PlannerNutritionChart values={nutrition.values} />
 
         {messages.length > 0 ? (
           <button

@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
@@ -316,6 +318,7 @@ export function useHomeRecipeSaveFlow({
         };
       });
       onRecipeSaved(recipeId, nextSaveCount, nextSavedBookIds);
+      showActionConfirmation(newBookIds.length > 0 ? "레시피를 저장했어요." : "레시피북 저장을 변경했어요.");
       if (newBookIds.length > 0) {
         notifyGamificationSourceAction();
       }
