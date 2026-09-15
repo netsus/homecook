@@ -25,12 +25,6 @@ interface PlannerWeekBoardProps {
   onDayRef: (dateKey: string, element: HTMLElement | null) => void;
 }
 
-const mealStatus = {
-  registered: { label: "등록", color: "var(--planner-status-registered)" },
-  shopping_done: { label: "장보기 완료", color: "var(--planner-status-shopping)" },
-  cook_done: { label: "요리 완료", color: "var(--planner-status-cooked)" },
-};
-
 function WeekMeal({
   meal,
   column,
@@ -43,7 +37,6 @@ function WeekMeal({
   onMealOpen?: (meal: PlannerMealData) => void;
 }) {
   const detailHref = `/planner/${meal.plan_date}/${meal.column_id}?slot=${encodeURIComponent(column.name)}`;
-  const status = mealStatus[meal.status];
   const values = Number.isFinite(meal.planned_servings) && meal.planned_servings > 0 && nutrition?.plannedServings === meal.planned_servings
     ? nutrition.values
     : undefined;
@@ -74,7 +67,6 @@ function WeekMeal({
   const nutritionLabel = values
     ? `${totalWeight} · ${totalEnergy} · ${macros.map(({ code, label }) => `${label} ${totalValue(code)}`).join(" · ")}`
     : "영양 정보 준비 중";
-  const statusId = `planner-meal-status-${meal.id}`;
   const cardClass = "flex min-h-11 w-full min-w-0 flex-col items-stretch gap-2 rounded-lg py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]";
   const content = (
     <>
@@ -99,9 +91,6 @@ function WeekMeal({
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs leading-snug text-[var(--text-2)]">
             <span className="whitespace-nowrap">{meal.planned_servings}인분</span>
-            <span aria-hidden="true">·</span>
-            <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: status.color }} />
-            <span className="whitespace-nowrap" id={statusId}>{status.label}</span>
             <span aria-hidden="true">·</span>
             <span className="whitespace-nowrap">{totalWeight}</span>
             <span aria-hidden="true">·</span>
@@ -133,7 +122,7 @@ function WeekMeal({
       {onMealOpen ? (
         <button
           title={`${meal.recipe_title} · ${nutritionLabel}`}
-          aria-describedby={statusId} aria-label={meal.recipe_title}
+          aria-label={meal.recipe_title}
           className={cardClass}
           onClick={() => onMealOpen(meal)}
           type="button"
@@ -141,7 +130,7 @@ function WeekMeal({
           {content}
         </button>
       ) : (
-        <Link aria-describedby={statusId} aria-label={meal.recipe_title} className={cardClass} href={detailHref} title={`${meal.recipe_title} · ${nutritionLabel}`}>
+        <Link aria-label={meal.recipe_title} className={cardClass} href={detailHref} title={`${meal.recipe_title} · ${nutritionLabel}`}>
           {content}
         </Link>
       )}

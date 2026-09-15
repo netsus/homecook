@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { showActionConfirmation } from "@/stores/ui-store";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { AppBottomSheet } from "@/components/shared/app-overlay";
-import { isPrelaunchFeatureLocked } from "@/lib/prelaunch";
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogNutritionChart } from "@/components/planner/meal-log-nutrition-chart";
@@ -200,14 +199,6 @@ function foodNutritionValue(value: number | null, unit: string, minimum = false)
   return <>{minimum ? "최소 " : null}<strong className="font-[800] tabular-nums text-[var(--nutrition-number)]">{number(value, "")}</strong> <span>{unit}</span></>;
 }
 
-function DetailPreparationNotice({ onClose }: { onClose: () => void }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  useDialogBoundary({ dialogRef: panelRef, onClose });
-  return <AppBottomSheet ariaLabelledBy="meal-detail-preparation-title" title="식사 상세는 준비 중이에요" panelRef={panelRef} onClose={onClose}>
-    <p className="pb-4 text-sm leading-6 text-[var(--ui-slate-600)]">기록한 음식의 상세 조회와 수정 기능을 준비하고 있어요. 지금은 식사 목록에서 영양정보를 확인할 수 있어요.</p>
-  </AppBottomSheet>;
-}
-
 function EntryRow({ disabled, entry, guest = false, onDelete, onDetail }: {
   guest?: boolean;
   entry: MealLogEntry;
@@ -254,7 +245,7 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDelete
   onDetail: (entry: MealLogEntry) => void;
 }) {
   return (
-    <section aria-labelledby={`meal-log-section-${date}-${section.meal_plan_column_id}`} className="min-w-0 rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] px-4 pb-1 pt-2">
+    <section aria-labelledby={`meal-log-section-${date}-${section.meal_plan_column_id}`} className="w-full min-w-0 border-y border-[var(--ui-slate-200)] bg-[var(--ui-white)] px-4 pb-1 pt-2 md:rounded-2xl md:border">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--ui-slate-100)] pb-1">
         <div className="min-w-0">
           <h2 className="font-extrabold text-[var(--ui-slate-800)] [overflow-wrap:anywhere]" id={`meal-log-section-${date}-${section.meal_plan_column_id}`} tabIndex={-1}>{section.slot_name_snapshot}</h2>
@@ -434,19 +425,39 @@ function EntryDialog({
     }
   }
 
+  if (state.type === "detail") {
+    return <div aria-label="식사 기록 상세" aria-modal="true" className="fixed inset-0 z-[60] flex flex-col bg-[var(--surface-fill)] outline-none" ref={panelRef} role="dialog" tabIndex={-1}>
+      <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)] pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+          <button aria-label="식사 기록으로 돌아가기" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl hover:bg-[var(--surface-fill)]" onClick={onClose} ref={cancelRef} type="button">←</button>
+          <h2 className="text-lg font-extrabold">{longDate(entry.consumed_local_date)} · {entry.slot_name_snapshot}</h2>
+        </div>
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto grid w-full max-w-6xl items-start gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <article className="overflow-hidden rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)]">
+            <div className="flex items-center gap-4 p-5"><span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-soft)] text-3xl">🍽️</span><div className="min-w-0"><h3 className="break-words text-xl font-extrabold">{entry.display_name}</h3><p className="mt-1 text-sm text-[var(--text-2)]">먹은 양 {number(entry.quantity.amount, entry.quantity.unit)}</p></div></div>
+            <section aria-label="기록한 음식 영양정보" className="border-t border-[var(--line-strong)] p-4 sm:p-5"><h3 className="mb-4 text-sm font-bold text-[var(--text-2)]">이 식사의 영양</h3><MealLogNutritionChart nutrition={entry.nutrition} /></section>
+          </article>
+          <aside className="rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-5"><h3 className="font-extrabold">식사 기록</h3><p className="mt-2 text-sm leading-6 text-[var(--text-2)]">실제로 먹은 양에 맞춰 기록을 수정할 수 있어요.</p><button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)]" onClick={onEdit} type="button">식사 기록 수정</button></aside>
+        </div>
+      </div>
+    </div>;
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--foreground-alpha-40)] lg:items-center lg:p-6">
       <div
-        aria-label={state.type === "detail" ? "식사 기록 상세" : state.type === "delete" ? "식사 기록 삭제 확인" : "식사 기록 수정"}
+        aria-label={state.type === "delete" ? "식사 기록 삭제 확인" : "식사 기록 수정"}
         aria-modal="true"
         className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-[var(--radius-card)] bg-[var(--surface)] p-4 outline-none lg:rounded-[var(--radius-card)]"
         ref={panelRef}
         role={state.type === "delete" ? "alertdialog" : "dialog"}
         tabIndex={-1}
       >
-        <h2 className="text-lg font-extrabold">{state.type === "detail" ? "식사 기록 상세" : state.type === "delete" ? "식사 기록을 삭제할까요?" : "기록 수정"}</h2>
+        <h2 className="text-lg font-extrabold">{state.type === "delete" ? "식사 기록을 삭제할까요?" : "기록 수정"}</h2>
         <p className="mt-2 text-sm text-[var(--text-2)]">{entry.display_name} · {entry.quantity.amount}{entry.quantity.unit} · {entry.slot_name_snapshot}</p>
-        {state.type === "detail" ? <div className="mt-4"><MealLogNutritionChart nutrition={entry.nutrition} /><p className="mt-4 text-sm text-[var(--ui-slate-600)]">나트륨 {number(entry.nutrition.sodium_mg, "mg")}</p></div> : state.type === "edit" ? (
+        {state.type === "edit" ? (
           <div className="mt-4 space-y-3">
             {requiresColumnSelection ? <p className="text-sm font-bold">기존 위치: 삭제된 끼니 {entry.slot_name_snapshot}</p> : null}
             <label className="block text-sm font-bold">옮길 끼니{requiresColumnSelection ? " (필수)" : ""}
@@ -465,8 +476,8 @@ function EntryDialog({
         ) : <p className="mt-3 text-sm leading-6">요리한 음식이면 이 기록의 섭취 event만 되돌리고 기록은 목록에서 사라져요.</p>}
         {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
         <div className="mt-5 grid gap-2 min-[360px]:grid-cols-2">
-          <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={pending} onClick={onClose} ref={cancelRef} type="button">{state.type === "detail" ? "닫기" : "취소"}</button>
-          {state.type === "detail" ? <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)] hover:bg-[var(--brand-primary-accessible-hover)]" onClick={onEdit} type="button">식사 기록 수정</button> : <button className={`min-h-11 rounded-[var(--radius-control)] px-4 font-bold disabled:opacity-50 ${state.type === "delete" ? "text-[var(--danger-strong)]" : "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]"}`} disabled={!mutationEnabled || pending || (state.type === "edit" && (!columnValid || amount <= 0 || !unit.trim()))} onClick={() => void mutate()} type="button">{pending ? "처리 중…" : state.type === "delete" ? "삭제" : "수정 저장"}</button>}
+          <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={pending} onClick={onClose} ref={cancelRef} type="button">취소</button>
+          <button className={`min-h-11 rounded-[var(--radius-control)] px-4 font-bold disabled:opacity-50 ${state.type === "delete" ? "text-[var(--danger-strong)]" : "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]"}`} disabled={!mutationEnabled || pending || (state.type === "edit" && (!columnValid || amount <= 0 || !unit.trim()))} onClick={() => void mutate()} type="button">{pending ? "처리 중…" : state.type === "delete" ? "삭제" : "수정 저장"}</button>
         </div>
       </div>
     </div>
@@ -482,7 +493,6 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
   const [failedDates, setFailedDates] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<DialogState>(null);
   const [dialogDate, setDialogDate] = useState(date);
-  const [detailPreparationOpen, setDetailPreparationOpen] = useState(false);
   const todayKey = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(new Date());
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const requestRef = useRef(0);
@@ -515,9 +525,8 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
   const dialogMutationEnabled = !guest && Boolean(dialogDay) && !loading && !failedDates.has(dialogDate);
   function openDialog(next: Exclude<DialogState, null>, targetDate: string) {
     setDialogDate(targetDate);
-    if (next.type === "detail" && isPrelaunchFeatureLocked()) {
-      if (guest) (onFoodLoginRequired ?? onLoginRequired ?? onUnauthorized)(targetDate);
-      else setDetailPreparationOpen(true);
+    if (next.type === "detail" && guest) {
+      (onFoodLoginRequired ?? onLoginRequired ?? onUnauthorized)(targetDate);
       return;
     }
     if (guest && next.type !== "detail") { setDialog(null); (onLoginRequired ?? onUnauthorized)(targetDate); return; }
@@ -599,7 +608,6 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
 
   useEffect(() => {
     setDialog(null);
-    setDetailPreparationOpen(false);
     if (guest) {
       setDays({});
       setFailedDates(new Set());
@@ -658,8 +666,9 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
     mutationKeys.current.set(fingerprint, key);
     await createMealLogEntry(input, key);
     mutationKeys.current.delete(fingerprint);
-    await reloadSelected();
     setDialog(null);
+    showActionConfirmation("식사기록에 추가했어요.");
+    await reloadSelected();
   }
 
   useEffect(() => {
@@ -688,12 +697,6 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       return;
     }
     restoredContextRef.current = true;
-    if (context.action === "edit" && isPrelaunchFeatureLocked()) {
-      // Keep the unsaved draft for later; preparation mode never opens the editor.
-      document.getElementById(returnInvokerId(context))?.focus();
-      setDetailPreparationOpen(true);
-      return;
-    }
     clearReturnContext();
     const restoredInvoker = document.getElementById(returnInvokerId(context));
     restoredInvoker?.focus();
@@ -715,7 +718,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
   return (
     <>
       {showDateNavigation ? <PlannerWeekNavigation mode="log" startDate={dates[0]} endDate={dates[6]} selectedDate={date} today={todayKey} isCurrentWeek={dates.includes(todayKey)} onDateSelect={onDateChange} onShiftWeek={delta => onDateChange(shiftDate(date, delta))} onCurrentWeek={() => onDateChange(todayKey)} recordedDates={dates.filter(key => displayDays[key]?.entries.length)} /> : null}
-    <main aria-labelledby="planner-log-tab meal-log-title" className="mx-auto max-w-7xl px-4 pb-3 pt-1 lg:px-6 lg:pb-8 lg:pt-2" id="planner-log-panel" role="tabpanel" tabIndex={0}>
+    <main aria-labelledby="planner-log-tab meal-log-title" className="mx-auto w-full max-w-7xl px-4 pb-3 pt-1 lg:px-6 lg:pb-8 lg:pt-2" id="planner-log-panel" role="tabpanel" tabIndex={0}>
       {!guest && error ? <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--surface)] p-5" role="alert"><h2 className="font-extrabold">식사 기록을 불러오지 못했어요</h2><p className="mt-2 text-sm">{error}</p><button className="mt-3 min-h-11 font-bold text-[var(--brand-primary-text)]" onClick={() => void loadWeek(true)} type="button">다시 시도</button></div> : null}
       <h1 className="sr-only" id="meal-log-title" ref={headingRef} tabIndex={-1}>일주일 식사 기록</h1>
       <div className="space-y-4 pt-3">
@@ -745,7 +748,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
                 {cardDay.day_total.calculation_status === "partial" ? <p className="mt-1 text-xs text-[var(--ui-slate-500)]">최소 확인된 영양 기준이에요.</p> : null}
               </section>
               {cardDay.entries.length === 0 ? <p className="sr-only">이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.</p> : null}
-              <div className="grid max-w-5xl items-start gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="-mx-3 grid items-start gap-3 md:mx-0 md:grid-cols-2 lg:grid-cols-3">
                 {cardDay.active_sections.map((section) => <ActiveSection date={dayKey} disabled={cardDisabled} guest={guest} key={section.meal_plan_column_id} onAdd={() => openDialog({ type: "add", columnId: section.meal_plan_column_id }, dayKey)} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}
               </div>
               {cardDay.deleted_column_sections.length > 0 ? <div className="mt-3 space-y-3">{cardDay.deleted_column_sections.map((section) => <DeletedSection date={dayKey} disabled={cardDisabled} key={section.slot_name_snapshot} onDelete={(entry) => openDialog({ type: "delete", entry }, dayKey)} onDetail={(entry) => openDialog({ type: "detail", entry }, dayKey)} section={section} />)}</div> : null}
@@ -756,7 +759,6 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
 
       {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
       {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onEdit={editDetail} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
-      {detailPreparationOpen && !guest ? <DetailPreparationNotice onClose={() => setDetailPreparationOpen(false)} /> : null}
     </main>
     </>
   );

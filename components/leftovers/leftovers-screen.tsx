@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import Link from "next/link";
 import Image from "next/image";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -712,10 +714,7 @@ export function LeftoversScreen({
       const columnName =
         plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ??
         "선택한 끼니";
-      setFeedback({
-        message: `${dateLabel} ${columnName}에 추가됐어요`,
-        tone: "status",
-      });
+      showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`);
     } catch (error) {
       const message =
         isMealApiError(error) && error.status === 403
@@ -874,7 +873,6 @@ export function LeftoversScreen({
     <WebShell className="web-leftovers-shell" wide>
       <WebTopNav
         activeId="mypage"
-        rightSlot={<div className="web-profile-button">JY</div>}
       />
       <div className="web-leftovers-screen" data-testid="leftovers-screen">
         <nav aria-label="남은 요리 경로" className="web-breadcrumb">

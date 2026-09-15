@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import Link from "next/link";
 import Image from "next/image";
 import React from "react";
@@ -1226,7 +1228,7 @@ export function MypageScreen({
 
       setIsPlannerAddSheetOpen(false);
       setPlannerAddTarget(null);
-      showToast("플래너에 추가했어요", "success");
+      showActionConfirmation("요리계획에 추가했어요.");
     } catch (error) {
       const message =
         isMealApiError(error) && error.status === 403

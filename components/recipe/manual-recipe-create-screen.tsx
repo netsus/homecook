@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -1412,6 +1414,7 @@ export function ManualRecipeCreateScreen({
       }
 
       const slotSuffix = slotName ? `?slot=${encodeURIComponent(slotName)}` : "";
+      showActionConfirmation("요리계획에 추가했어요.");
       router.replace(`/planner/${planDate}/${columnId}${slotSuffix}`);
     },
     [createdRecipeId, planDate, columnId, slotName, router]

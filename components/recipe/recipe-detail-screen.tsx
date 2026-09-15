@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -593,10 +595,7 @@ export function RecipeDetailScreen({
       const dateLabel = `${planM}월 ${planD}일`;
       const columnName =
         plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ?? "선택한 끼니";
-      setFeedback({
-        message: `${dateLabel} ${columnName}에 추가됐어요`,
-        tone: "status",
-      });
+      showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`);
     } catch (error) {
       const message =
         isMealApiError(error) && error.status === 403
@@ -815,13 +814,11 @@ export function RecipeDetailScreen({
       });
       setIsSaveModalOpen(false);
       setSaveModalState("idle");
-      setFeedback({
-        message:
-          removedBookIds.length > 0
-            ? "레시피북 저장을 변경했어요."
-            : "레시피를 저장했어요.",
-        tone: "status",
-      });
+      showActionConfirmation(
+        removedBookIds.length > 0
+          ? "레시피북 저장을 변경했어요."
+          : "레시피를 저장했어요.",
+      );
       if (newBookIds.length > 0) {
         notifyGamificationSourceAction();
       }

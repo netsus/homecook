@@ -1,5 +1,7 @@
 "use client";
 
+import { showActionConfirmation } from "@/stores/ui-store";
+
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -526,7 +528,7 @@ export function RecipeBookDetailScreen({
       const columnName =
         plannerColumns.find((column) => column.id === selectedPlanColumnId)?.name
         ?? "선택한 끼니";
-      showToast(`${month}월 ${day}일 ${columnName}에 추가됐어요`, "success");
+      showActionConfirmation(`${month}월 ${day}일 ${columnName}에 추가됐어요`);
       setPlannerTarget(null);
     } catch (error) {
       const message =
