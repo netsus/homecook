@@ -1173,7 +1173,7 @@ export function createStandaloneYoutubeI031Extractor({
               if (result.workerDataPersisted !== true) {
                 await workerRpcClient.recordEvent("visual", {
                   provider: "codex-vision-keyframes",
-                  model: "gpt-6-astra",
+                  model: "gpt-5.6-sol",
                   cache_hit: false,
                   event_type: "recipe_extraction",
                   status: "success",
