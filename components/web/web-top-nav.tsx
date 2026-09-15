@@ -46,6 +46,7 @@ export function WebTopNav({
           className="web-topnav-brand"
           href={brandHref}
           onClick={(event) => onNavigate?.(brandHref, event)}
+          prefetch={false}
         >
           <MumeokHorizontalLogo variant={brandTone} />
         </Link>
@@ -81,6 +82,7 @@ export function WebTopNav({
                   }
                   onNavigate?.(href, event);
                 }}
+                prefetch={false}
               >
                 {item.label}
               </Link>
@@ -95,6 +97,7 @@ export function WebTopNav({
               aria-label="내 프로필"
               className="web-profile-button"
               href="/mypage"
+              prefetch={false}
             >
               <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 20 20" width="20">
                 <circle cx="10" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.6" />

@@ -1562,7 +1562,7 @@ function HomeWebRecipeCard({
 
   return (
     <article className="web-home-recipe-card">
-      <Link href={`/recipe/${recipe.id}`} onClick={() => onOpen(recipe.id)}>
+      <Link href={`/recipe/${recipe.id}`} onClick={() => onOpen(recipe.id)} prefetch={false}>
         <WebRecipeCard
           alt={recipe.title}
           badge={sourceBadge}
@@ -1624,6 +1624,7 @@ function HomeQuickLinks({ variant }: { variant: "mobile" | "web" }) {
           className={variant === "mobile" ? "home-mobile-shortcut" : "web-home-shortcut"}
           href={item.href}
           key={item.href}
+          prefetch={false}
         >
           <span
             aria-hidden="true"
@@ -1879,6 +1880,7 @@ function HomeMobileR2Banner({
       aria-label={banner.ariaLabel}
       className={`home-mobile-theme-card home-mobile-r2-card home-mobile-r2-card-${banner.key}`}
       href={banner.href}
+      prefetch={false}
     >
       <span className="home-mobile-r2-copy">
         <small>{banner.eyebrow}</small>
@@ -1940,6 +1942,7 @@ function HomeDesktopLandingBanner() {
             className={`web-home-landing-banner web-home-landing-banner-${banner.key}`}
             href={banner.href}
             key={banner.key}
+            prefetch={false}
             tabIndex={index === activeIndex ? 0 : -1}
           >
             <span className="web-home-landing-banner-image" aria-hidden="true">
