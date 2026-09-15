@@ -1213,6 +1213,8 @@ function ReviewIngredientRow({
               const value = event.target.value;
               onUpdateIngredient(ingredient.tempId, {
                 amount: value === "" ? 0 : Number(value),
+                ingredient_type: "QUANT",
+                scalable: true,
                 unit: ingredient.unit ?? "g",
                 ...getQuantityEditPatch(ingredient),
               });
@@ -1248,6 +1250,8 @@ function ReviewIngredientRow({
               onClick={() =>
                 onUpdateIngredient(ingredient.tempId, {
                   amount: ingredient.amount ?? 0,
+                  ingredient_type: "QUANT",
+                  scalable: true,
                   unit: option,
                   ...getQuantityEditPatch(ingredient),
                 })

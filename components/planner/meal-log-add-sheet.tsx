@@ -11,7 +11,13 @@ import { fetchMealLogRecent, isMealLogApiError } from "@/lib/api/meal-log";
 import type { CookedBatchProjection } from "@/types/cooking";
 import type { MealLogColumn, MealLogRecentItem, MealLogSourceType } from "@/types/meal-log";
 
-type SourceTab = "cooked" | "catalog";
+type SourceTab = "cooked" | "leftover" | "catalog";
+
+const SOURCE_TABS: Array<{ id: SourceTab; label: string }> = [
+  { id: "cooked", label: "요리한 음식" },
+  { id: "leftover", label: "남은 요리" },
+  { id: "catalog", label: "제품·재료" },
+];
 
 export interface MealLogSourceSelection {
   type: MealLogSourceType;
@@ -471,11 +477,8 @@ export function MealLogAddSheet({
           </button>
         </header>
 
-        <div aria-label="음식 출처 선택" className="grid grid-cols-2 gap-1 border-b border-[var(--line-strong)] p-2" role="tablist">
-          {([
-            ["cooked", "요리한 음식"],
-            ["catalog", "제품·재료"],
-          ] as const).map(([id, label]) => (
+        <div aria-label="음식 출처 선택" className="grid grid-cols-3 gap-1 border-b border-[var(--line-strong)] p-2" role="tablist">
+          {SOURCE_TABS.map(({ id, label }, index) => (
             <button
               aria-controls={`meal-log-source-${id}`}
               aria-selected={tab === id}
@@ -490,7 +493,12 @@ export function MealLogAddSheet({
               onKeyDown={(event) => {
                 if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
                 event.preventDefault();
-                const next = event.key === "ArrowLeft" || event.key === "Home" ? "cooked" : "catalog";
+                const nextIndex = event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? SOURCE_TABS.length - 1
+                    : (index + (event.key === "ArrowLeft" ? -1 : 1) + SOURCE_TABS.length) % SOURCE_TABS.length;
+                const next = SOURCE_TABS[nextIndex]!.id;
                 setTab(next);
                 setSelection(null);
                 setSuggestionConfirmed(true);
@@ -509,10 +517,11 @@ export function MealLogAddSheet({
           {error ? <p className="mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] p-3 text-sm" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
           {loading ? <p aria-busy="true" className="py-8 text-center text-sm text-[var(--text-2)]">불러오는 중…</p> : null}
 
-          {tab === "cooked" ? (
-            <section aria-labelledby="meal-log-source-cooked-tab" id="meal-log-source-cooked" role="tabpanel">
+          {tab !== "catalog" ? (
+            <section aria-labelledby={`meal-log-source-${tab}-tab`} id={`meal-log-source-${tab}`} role="tabpanel">
+              {tab === "leftover" ? <p className="mb-3 text-sm text-[var(--text-2)]">남은 요리를 선택하고 실제로 먹은 양을 g으로 입력해 주세요.</p> : null}
               <ul className="divide-y divide-[var(--line-strong)]">
-                {batches.map((batch) => {
+                {(tab === "leftover" ? batches.filter(isAvailableCookedBatch) : batches).map((batch) => {
                   const selectable = batch.weight_status === "known"
                     && batch.batch_status === "available"
                     && (batch.remaining_weight_g ?? 0) > 0;
@@ -580,7 +589,7 @@ export function MealLogAddSheet({
                   {loadingMore === "batch" ? "불러오는 중…" : "요리한 음식 더 불러오기"}
                 </button>
               ) : null}
-              {!loading && batches.length === 0 ? <p className="py-8 text-center text-sm text-[var(--text-2)]">표시할 요리한 음식이 없어요.</p> : null}
+              {!loading && (tab === "leftover" ? batches.filter(isAvailableCookedBatch).length === 0 : batches.length === 0) ? <p className="py-8 text-center text-sm text-[var(--text-2)]">{tab === "leftover" ? "추가할 남은 요리가 없어요." : "표시할 요리한 음식이 없어요."}</p> : null}
             </section>
           ) : (
             <section aria-labelledby="meal-log-source-catalog-tab" id="meal-log-source-catalog" role="tabpanel">

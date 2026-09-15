@@ -329,7 +329,6 @@ function EntryDialog({
   state,
   onClose,
   onComplete,
-  onEdit,
   onFeedback,
   mutationEnabled,
   onUnauthorized,
@@ -340,7 +339,6 @@ function EntryDialog({
   state: Exclude<DialogState, { type: "add" } | null>;
   onClose: () => void;
   onComplete: () => Promise<MealLogDayData>;
-  onEdit: () => void;
   onFeedback: (message: string) => void;
   mutationEnabled: boolean;
   onUnauthorized: (context: MealLogReturnContext) => void;
@@ -386,7 +384,7 @@ function EntryDialog({
   }, [state.type, requiresColumnSelection]);
 
   async function mutate() {
-    if (state.type === "detail" || !mutationEnabled || (state.type === "edit" && (!columnValid || amount <= 0 || !unit.trim()))) return;
+    if (!mutationEnabled || (state.type !== "delete" && (!columnValid || amount <= 0 || !unit.trim()))) return;
     setPending(true);
     setError(null);
     try {
@@ -412,9 +410,21 @@ function EntryDialog({
         }
         await updateMealLogEntry(entry.id, input, operation.current.key);
       }
-      await onComplete();
+      const refreshedDay = await onComplete();
       onFeedback(state.type === "delete" ? "식사 기록을 삭제했어요." : "식사 기록을 수정했어요.");
       clearReturnContext();
+      if (state.type === "detail") {
+        const updatedEntry = refreshedDay.entries.find((item) => item.id === entry.id);
+        if (updatedEntry) {
+          setAuthorityEntry(updatedEntry);
+          setRevision(updatedEntry.revision);
+          setAmount(updatedEntry.quantity.amount);
+          setUnit(updatedEntry.quantity.unit);
+        }
+        operation.current = null;
+        setPending(false);
+        return;
+      }
       const logicalSuccessTargetId = state.type === "edit"
         ? `meal-log-section-${entry.consumed_local_date}-${columnId}`
         : entry.meal_plan_column_id
@@ -453,6 +463,10 @@ function EntryDialog({
                 && latestDay.active_columns.some((column) => column.id === latestEntry.meal_plan_column_id);
               setColumnId(latestColumnActive ? latestEntry.meal_plan_column_id ?? "" : "");
             }
+            if (state.type === "detail") {
+              setAmount(latestEntry.quantity.amount);
+              setUnit(latestEntry.quantity.unit);
+            }
             operation.current = null;
             setError("다른 변경의 최신 기록을 반영했어요. 입력을 확인한 뒤 다시 시도해 주세요.");
           }
@@ -480,7 +494,18 @@ function EntryDialog({
             <div className="flex items-center gap-4 p-5"><span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-soft)] text-3xl">🍽️</span><div className="min-w-0"><h3 className="break-words text-xl font-extrabold">{entry.display_name}</h3><p className="mt-1 text-sm text-[var(--text-2)]">먹은 양 {number(entry.quantity.amount, entry.quantity.unit)}</p></div></div>
             <section aria-label="기록한 음식 영양정보" className="border-t border-[var(--line-strong)] p-4 sm:p-5"><h3 className="mb-4 text-sm font-bold text-[var(--text-2)]">이 식사의 영양</h3><MealLogNutritionChart nutrition={entry.nutrition} /></section>
           </article>
-          <aside className="rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-5"><h3 className="font-extrabold">식사 기록</h3><p className="mt-2 text-sm leading-6 text-[var(--text-2)]">실제로 먹은 양에 맞춰 기록을 수정할 수 있어요.</p><button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)]" onClick={onEdit} type="button">식사 기록 수정</button></aside>
+          <aside className="rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-5">
+            <h3 className="font-extrabold">먹은 양</h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-2)]">처음 기록한 양을 바로 수정할 수 있어요.</p>
+            <label className="mt-4 block text-sm font-bold">실제 양
+              <span className="mt-1 flex min-h-11 items-center overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] focus-within:ring-2 focus-within:ring-[var(--brand)]">
+                <input aria-label="먹은 양" className="min-h-11 min-w-0 flex-1 px-3 font-normal outline-none" min="0.01" onChange={(event) => setAmount(Number(event.target.value))} step="any" type="number" value={amount} />
+                <span className="shrink-0 border-l border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[var(--text-2)]">{unit}</span>
+              </span>
+            </label>
+            {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
+            <button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending || !columnValid || amount <= 0 || !unit.trim()} onClick={() => void mutate()} type="button">{pending ? "수정 중…" : "먹은 양 수정"}</button>
+          </aside>
         </div>
       </div>
     </div>;
@@ -577,17 +602,6 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
   function showSuccess(message: string) {
     showActionConfirmation(message);
     emitAppActionNotification({ message, title: "식사 기록" });
-  }
-
-  function editDetail() {
-    if (dialog?.type !== "detail" || Boolean(dialog.guestPreview) !== guest) {
-      setDialog(null);
-      return;
-    }
-    if (guest) { setDialog(null); (onLoginRequired ?? onUnauthorized)(dialogDate); return; }
-    const entry = dialogDay?.entries.find((item) => item.id === dialog.entry.id);
-    if (!entry || !dialogMutationEnabled) { setDialog(null); return; }
-    setDialog({ type: "edit", entry });
   }
 
   const loseAuthorization = useCallback((context?: MealLogReturnContext) => {
@@ -794,7 +808,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       </div>
 
       {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
-      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onEdit={editDetail} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
+      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
     </main>
     </>
   );
