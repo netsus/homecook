@@ -814,41 +814,43 @@ export function PlannerWeekScreen({
           role="tabpanel"
           tabIndex={0}
         >
-          <div aria-label="이번 주 요약" className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-2)]">
-            <span className="hidden font-bold text-[var(--foreground)] sm:inline">이번 주 요약</span>
-            {[
-              ["등록", mealStats.registered, "var(--planner-status-registered)"],
-              ["장보기 완료", mealStats.shoppingDone, "var(--planner-status-shopping)"],
-              ["요리 완료", mealStats.cookDone, "var(--planner-status-cooked)"],
-            ].map(([label, count, color]) => <span className="inline-flex items-center gap-1.5" key={label}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: String(color) }} />{label} <strong className="text-[var(--foreground)]">{count}</strong></span>)}
+          <div aria-label="이번 주 요약" className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-[var(--text-2)]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="hidden font-bold text-[var(--foreground)] sm:inline">이번 주 요약</span>
+              {[
+                ["등록", mealStats.registered, "var(--planner-status-registered)"],
+                ["장보기 완료", mealStats.shoppingDone, "var(--planner-status-shopping)"],
+                ["요리 완료", mealStats.cookDone, "var(--planner-status-cooked)"],
+              ].map(([label, count, color]) => <span className="inline-flex items-center gap-1.5" key={label}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: String(color) }} />{label} <strong className="text-[var(--foreground)]">{count}</strong></span>)}
+            </div>
+            {shoppingLists.length ? (
+              <Link
+                className="ml-auto inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-xs font-extrabold text-[var(--foreground)] shadow-sm hover:bg-[var(--surface-fill)]"
+                href={buildReturnHref("/mypage", {
+                  returnTo: buildPlannerShellHref(new URLSearchParams(), {
+                    date: selectedDate,
+                    segment: "plan",
+                  }),
+                  returnSurface: "planner.week",
+                  restore: "shopping-history-tab",
+                })}
+                onClick={() =>
+                  savePlannerWeekReturnContext({
+                    version: 1,
+                    startDate: rangeStartDate,
+                    endDate: rangeEndDate,
+                    selectedDate,
+                    columnId: null,
+                    slotName: null,
+                  })
+                }
+              >
+                <span>이번 주 장보기 기록 {shoppingLists.length}개</span>
+                <span aria-hidden="true" className="h-3 w-px bg-[var(--line-strong)]" />
+                <span className="text-[var(--ui-sky-700)]">캘린더 보기</span>
+              </Link>
+            ) : null}
           </div>
-          {shoppingLists.length ? (
-            <Link
-              className="mb-4 flex min-h-11 items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm font-bold"
-              href={buildReturnHref("/mypage", {
-                returnTo: buildPlannerShellHref(new URLSearchParams(), {
-                  date: selectedDate,
-                  segment: "plan",
-                }),
-                returnSurface: "planner.week",
-                restore: "shopping-history-tab",
-              })}
-              onClick={() =>
-                savePlannerWeekReturnContext({
-                  version: 1,
-                  startDate: rangeStartDate,
-                  endDate: rangeEndDate,
-                  selectedDate,
-                  columnId: null,
-                  slotName: null,
-                })
-              }
-            >
-              <span>이번 주 장보기 기록 {shoppingLists.length}개</span>
-              <span>캘린더 보기</span>
-            </Link>
-          ) : null}
-          {shoppingLists.length ? <ul aria-label="장보기 기록" className="mb-3 flex flex-wrap gap-x-4 gap-y-1">{shoppingLists.map((list) => <li key={list.id}><Link className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--ui-sky-700)]" href={`/shopping/lists/${list.id}`}>{list.title}</Link></li>)}</ul> : null}
           <div className="min-w-0">
             <section
               aria-busy={isRefreshing}

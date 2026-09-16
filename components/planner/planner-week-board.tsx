@@ -68,7 +68,13 @@ function WeekMeal({
   const nutritionLabel = values
     ? `${totalWeight} · ${totalEnergy} · ${macros.map(({ code, label }) => `${label} ${totalValue(code)}`).join(" · ")}`
     : "영양 정보 준비 중";
-  const cardClass = "flex min-h-11 w-full min-w-0 flex-col items-stretch gap-2 rounded-lg py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]";
+  const statusColor = meal.status === "cook_done"
+    ? "var(--planner-status-cooked)"
+    : meal.status === "shopping_done"
+      ? "var(--planner-status-shopping)"
+      : "var(--planner-status-registered)";
+  const cardStyle = { borderLeftColor: statusColor } as CSSProperties;
+  const cardClass = "flex min-h-11 w-full min-w-0 flex-col items-stretch gap-2 rounded-lg border border-l-4 border-[var(--line-strong)] bg-[var(--surface)] px-2 py-2 text-left outline-none transition-colors hover:bg-[var(--surface-fill)] focus-visible:ring-2 focus-visible:ring-[var(--brand)]";
   const content = (
     <>
       <span className="flex min-w-0 items-center gap-2">
@@ -127,12 +133,13 @@ function WeekMeal({
           aria-label={meal.recipe_title}
           className={cardClass}
           onClick={() => onMealOpen(meal)}
+          style={cardStyle}
           type="button"
         >
           {content}
         </button>
       ) : (
-        <Link aria-label={meal.recipe_title} className={cardClass} href={detailHref} title={`${meal.recipe_title} · ${nutritionLabel}`}>
+        <Link aria-label={meal.recipe_title} className={cardClass} href={detailHref} style={cardStyle} title={`${meal.recipe_title} · ${nutritionLabel}`}>
           {content}
         </Link>
       )}
