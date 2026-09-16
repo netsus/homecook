@@ -14,6 +14,7 @@ import {
   prepareDatabaseDeployment,
   shouldRequireDatabaseRecovery,
   retargetPlist,
+  retargetRound2Release,
   deployTransaction,
   productionEnvironment,
   assertRollbackTarget,
@@ -288,10 +289,23 @@ describe("prelaunch web deployment", () => {
     expect(next).toEqual({ ...plist, WorkingDirectory: "/new", ProgramArguments: ["/node", "/new/scripts/start-production.mjs", "-H", "127.0.0.1", "-p", "3100"] });
     expect(plist.WorkingDirectory).toBe("/old");
   });
-  it("preserves the R2 source binding across ordinary web checkouts", () => {
-    const input = { ...plist, EnvironmentVariables: { MUMEOK_ROUND2_REPOSITORY_ROOT: "/approved-r2", MUMEOK_ROUND2_RELEASE_SHA: "reviewed-sha" } };
-    expect(retargetPlist(input, "/new").EnvironmentVariables).toEqual(input.EnvironmentVariables);
-    expect(input.EnvironmentVariables.MUMEOK_ROUND2_REPOSITORY_ROOT).toBe("/approved-r2");
+  it("retargets the R2 release identity to the staged readiness copy", () => {
+    const input = {
+      ...plist,
+      EnvironmentVariables: {
+        MUMEOK_ROUND2_REPOSITORY_ROOT: "/old",
+        MUMEOK_ROUND2_RELEASE_SHA: "a".repeat(40),
+        MUMEOK_ROUND2_READINESS_PATH: "/private/old-readiness.json",
+      },
+    };
+    const checkout = retargetPlist(input, "/new");
+    const staged = retargetRound2Release(checkout, "/private/new-readiness.json", "b".repeat(40));
+    expect(staged.EnvironmentVariables).toMatchObject({
+      MUMEOK_ROUND2_REPOSITORY_ROOT: "/new",
+      MUMEOK_ROUND2_RELEASE_SHA: "b".repeat(40),
+      MUMEOK_ROUND2_READINESS_PATH: "/private/new-readiness.json",
+    });
+    expect(input.EnvironmentVariables.MUMEOK_ROUND2_RELEASE_SHA).toBe("a".repeat(40));
   });
   it.each([
     { ...plist, Label: "com.homecook.worker" },

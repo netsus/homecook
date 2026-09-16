@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, renameSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
-import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist, fetchPrelaunchLanding, prelaunchChangedFiles } from "./lib/prelaunch-web-deploy.mjs";
+import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist, retargetRound2Release, fetchPrelaunchLanding, prelaunchChangedFiles } from "./lib/prelaunch-web-deploy.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
@@ -86,6 +86,23 @@ async function logged(bin, args, options) {
     cancellation.check();
     if (code !== 0) throw new DeploymentError("배포 하위 명령 실패");
   } finally { await owned.stop(); owned.forget(); }
+}
+
+function stageRound2Readiness(plist, release, releaseSha) {
+  const source = plist.EnvironmentVariables?.MUMEOK_ROUND2_READINESS_PATH;
+  if (!source) return plist;
+  const original = JSON.parse(readFileSync(source, "utf8"));
+  if (!original || typeof original !== "object" || Array.isArray(original) || original.version !== 1) {
+    throw new DeploymentError("R2 readiness 파일 형식을 확인할 수 없습니다.");
+  }
+  const staged = join(release, "round2-readiness.json");
+  writeFileSync(staged, JSON.stringify({ ...original, release_sha: releaseSha }, null, 2), { mode: 0o600 });
+  chmodSync(staged, 0o600);
+  const directory = statSync(dirname(staged));
+  if (!directory.isDirectory() || (directory.mode & 0o777) !== 0o700) {
+    throw new DeploymentError("R2 readiness 사본은 비공개 release 디렉터리에 있어야 합니다.");
+  }
+  return retargetRound2Release(plist, staged, releaseSha);
 }
 function copyEnvironment(source, checkout) {
   for (const relative of [".env.production.local", ".env.local", ".env.production", ".env", "infra/full-local-supabase/.env.production.local"]) {
@@ -167,6 +184,7 @@ async function deploy(options) {
       await logged("git", ["-C", repository, "worktree", "add", "--detach", checkout, selection.target], {});
       copyEnvironment(live.cwd, checkout);
       nextPlist = retargetPlist(applyEnvironmentPatch(checkout, live.plist, patch), checkout);
+      nextPlist = stageRound2Readiness(nextPlist, release, selection.target);
       nextBytes = plistBytes(nextPlist);
       const buildOptions = { cwd: checkout, env: prelaunchBuildEnvironment(nextPlist, basename(release)) };
       say("의존성 설치 및 웹 빌드 중 (비공개 로그에 기록)");

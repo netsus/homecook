@@ -139,6 +139,27 @@ export function retargetPlist(plist, checkout) {
   };
 }
 
+export function retargetRound2Release(plist, readinessPath, releaseSha) {
+  const environment = plist.EnvironmentVariables;
+  const hasRound2Release = Boolean(environment?.MUMEOK_ROUND2_RELEASE_SHA || environment?.MUMEOK_ROUND2_READINESS_PATH);
+  if (!hasRound2Release) return plist;
+  if (!environment?.MUMEOK_ROUND2_RELEASE_SHA || !environment?.MUMEOK_ROUND2_READINESS_PATH || !environment?.MUMEOK_ROUND2_REPOSITORY_ROOT) {
+    throw new DeploymentError("R2 운영 repository/release/readiness 환경값은 함께 있어야 합니다.");
+  }
+  if (!/^[a-f0-9]{40}$/u.test(releaseSha) || typeof readinessPath !== "string" || !readinessPath.startsWith("/") || typeof plist.WorkingDirectory !== "string" || !plist.WorkingDirectory.startsWith("/")) {
+    throw new DeploymentError("R2 운영 repository/release/readiness 대상이 올바르지 않습니다.");
+  }
+  return {
+    ...plist,
+    EnvironmentVariables: {
+      ...environment,
+      MUMEOK_ROUND2_REPOSITORY_ROOT: plist.WorkingDirectory,
+      MUMEOK_ROUND2_RELEASE_SHA: releaseSha,
+      MUMEOK_ROUND2_READINESS_PATH: readinessPath,
+    },
+  };
+}
+
 // Preparation includes build + isolated GET checks. No service mutation may happen there.
 export async function deployTransaction({ prepare, activate, verify, restore, verifyRestored }) {
   try { await prepare(); } catch (error) {
