@@ -320,7 +320,7 @@ describe("planner week screen Stage 4", () => {
     const sheet = screen.getByRole("dialog", { name: "식사 추가" });
     expect(within(sheet).getByText("3/25 저녁")).toBeTruthy();
     expect(within(sheet).getByRole("button", { name: "레시피 검색" })).toBeTruthy();
-    expect(within(sheet).getByRole("button", { name: "남은 요리" })).toBeTruthy();
+    expect(within(sheet).queryByRole("button", { name: "남은 요리" })).toBeNull();
     expect(within(sheet).queryByRole("link", { name: "완제품" })).toBeNull();
     for (const name of ["유튜브", "직접 등록"]) {
       const href = within(sheet).getByRole("link", { name }).getAttribute("href");
@@ -458,7 +458,7 @@ describe("planner week screen Stage 4", () => {
     expect(within(nextDay).getByRole("button", { name: "3/25 점심 식사 추가" })).toBeTruthy();
   });
 
-  it("opens desktop shopping history in the list detail route and keeps mobile history return context", async () => {
+  it("opens the consolidated shopping history calendar and keeps planner return context", async () => {
     fetchPlanner.mockResolvedValue(createPlannerData({
       meals: [{
         ...createPlannerData().meals[0]!,
@@ -467,11 +467,8 @@ describe("planner week screen Stage 4", () => {
       }],
     }));
     render(<PlannerWeekScreen />);
-    const summary = await screen.findByRole("list", { name: "장보기 기록" });
-
-    expect(within(summary).getByRole("link", { name: "이번 주 장보기" }).getAttribute("href"))
-      .toBe("/shopping/lists/shopping-list-1");
-    const mobileHistory = screen.getByRole("link", { name: /이번 주 장보기 기록 1개/ });
+    const mobileHistory = await screen.findByRole("link", { name: /이번 주 장보기 기록 1개/ });
+    expect(screen.queryByRole("list", { name: "장보기 기록" })).toBeNull();
     const destination = new URL(mobileHistory.getAttribute("href")!, "http://homecook.local");
     expect(destination.pathname).toBe("/mypage");
     expect(destination.searchParams.get("returnTo")).toBe("/planner?date=2026-03-24");
@@ -725,14 +722,14 @@ describe("planner week screen Stage 4", () => {
     expect(navigationMocks.push).not.toHaveBeenCalled();
     expect(navigationMocks.replace).not.toHaveBeenCalled();
   });
-  it("opens guest food detail in place without forcing login", async () => {
+  it("guides guests to login before food detail and preserves the meal-log return route", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     readE2EAuthOverride.mockReturnValue(false);
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams("segment=log&date=2026-03-25"));
     render(<PlannerWeekScreen />);
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(await screen.findByRole("button", { name: /그릭요거트 볼 식사 기록 상세/ }));
-    expect(navigationMocks.push).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog", { name: "식사 기록 상세" })).toBeTruthy();
+    expect(navigationMocks.push).toHaveBeenCalledWith("/login?next=%2Fplanner%3Fsegment%3Dlog%26date%3D2026-03-24");
+    expect(screen.queryByRole("dialog", { name: "식사 기록 상세" })).toBeNull();
   });
 
   it("keeps a distant selected date during a fast log-plan-log switch while the plan is loading", async () => {

@@ -83,7 +83,9 @@ describe("planner prelaunch meal presentation", () => {
     expect(screen.getByText("500 g")).toBeTruthy();
     expect(screen.getByText("420 kcal")).toBeTruthy();
     expect(screen.getByText("2인분")).toBeTruthy();
-    expect(screen.getByText("등록").className).not.toContain("sr-only");
+    expect(screen.queryByText("등록")).toBeNull();
+    expect(screen.getByRole("link", { name: meal.recipe_title }).style.borderLeftColor)
+      .toBe("var(--planner-status-registered)");
     const bar = screen.getByRole("img", { name: /탄단지 열량 비율/ });
     const portions = Array.from(bar.children).map((child) => Number.parseFloat((child as HTMLElement).style.width));
     expect(portions[0]).toBeCloseTo(46 * 4 / (46 * 4 + 22 * 4 + 14 * 9) * 100);

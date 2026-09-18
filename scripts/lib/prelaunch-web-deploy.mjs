@@ -139,6 +139,58 @@ export function retargetPlist(plist, checkout) {
   };
 }
 
+export function retargetRound2Release(plist, readinessPath, releaseSha) {
+  const environment = plist.EnvironmentVariables;
+  const hasRound2Release = Boolean(environment?.MUMEOK_ROUND2_RELEASE_SHA || environment?.MUMEOK_ROUND2_READINESS_PATH);
+  if (!hasRound2Release) return plist;
+  if (!environment?.MUMEOK_ROUND2_RELEASE_SHA || !environment?.MUMEOK_ROUND2_READINESS_PATH || !environment?.MUMEOK_ROUND2_REPOSITORY_ROOT) {
+    throw new DeploymentError("R2 운영 repository/release/readiness 환경값은 함께 있어야 합니다.");
+  }
+  if (!/^[a-f0-9]{40}$/u.test(releaseSha) || typeof readinessPath !== "string" || !readinessPath.startsWith("/") || typeof plist.WorkingDirectory !== "string" || !plist.WorkingDirectory.startsWith("/")) {
+    throw new DeploymentError("R2 운영 repository/release/readiness 대상이 올바르지 않습니다.");
+  }
+  return {
+    ...plist,
+    EnvironmentVariables: {
+      ...environment,
+      MUMEOK_ROUND2_REPOSITORY_ROOT: plist.WorkingDirectory,
+      MUMEOK_ROUND2_RELEASE_SHA: releaseSha,
+      MUMEOK_ROUND2_READINESS_PATH: readinessPath,
+    },
+  };
+}
+
+export function inheritRound2Readiness({ readiness, previous, next, liveSha, releaseSha, files, databaseDeployment = false }) {
+  const before = previous.EnvironmentVariables ?? {};
+  const after = next.EnvironmentVariables ?? {};
+  if (!readiness || typeof readiness !== "object" || Array.isArray(readiness) || readiness.version !== 1
+    || readiness.profile !== "production" || readiness.origin !== "https://app.mumeok.kr" || readiness.hostname !== "app.mumeok.kr"
+    || typeof readiness.verified_at !== "string" || !Number.isFinite(Date.parse(readiness.verified_at))
+    || !/^[a-f0-9]{40}$/u.test(liveSha) || !/^[a-f0-9]{40}$/u.test(releaseSha)
+    || readiness.release_sha !== liveSha || before.MUMEOK_ROUND2_RELEASE_SHA !== liveSha
+    || before.MUMEOK_ROUND2_REPOSITORY_ROOT !== previous.WorkingDirectory
+    || !before.MUMEOK_ROUND2_READINESS_PATH?.startsWith("/")) {
+    throw new DeploymentError("R2 readiness가 현재 실행 중인 checkout과 release SHA에 연결되어 있지 않습니다.");
+  }
+  // Proofs cover these code, SQL, consent and ingress boundaries. Changed boundaries need fresh evidence.
+  const protectedSources = [
+    /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|app\/(?:layout\.|globals\.css$)|components\/marketing\/|lib\/(?:marketing[./-]|supabase\/|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u,
+    /^(?:supabase\/|infra\/|scripts\/sql\/|scripts\/(?:start-production\.mjs|lib\/(?:start-production-runtime|production-data-quality|full-local-|marketing-round2)))/u,
+    /^(?:middleware\.|proxy\.|next\.config\.|tsconfig\.json$|package\.json$|pnpm-lock\.yaml$|\.env(?:\.|$))/u,
+  ];
+  if (databaseDeployment || !Array.isArray(files) || files.some(file => protectedSources.some(pattern => pattern.test(file)))) {
+    throw new DeploymentError("R2 보호 코드·SQL·동의·라우팅 변경은 기존 readiness를 승계할 수 없습니다.");
+  }
+  const protectedEnvironment = /^(?:(?:NEXT_PUBLIC_)?(?:MUMEOK_|MARKETING_|SUPABASE_|TURNSTILE_)|(?:DATA|LOCAL)_SUPABASE_|HOMECOOK_(?:AUTH|DATA|FULL_LOCAL|SESSION)|NEXT_PUBLIC_SITE_URL$|NODE_ENV$)/u;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  if ([...keys].some(key => protectedEnvironment.test(key) && before[key] !== after[key])
+    || !isDeepStrictEqual({ ...retargetPlist(previous, next.WorkingDirectory), EnvironmentVariables: undefined }, { ...next, EnvironmentVariables: undefined })) {
+    throw new DeploymentError("R2 키·대상·실행 설정 변경은 기존 readiness를 승계할 수 없습니다.");
+  }
+  // Only the new checkout binding changes; original proof files, hashes and verification times survive unchanged.
+  return { ...readiness, release_sha: releaseSha };
+}
+
 // Preparation includes build + isolated GET checks. No service mutation may happen there.
 export async function deployTransaction({ prepare, activate, verify, restore, verifyRestored }) {
   try { await prepare(); } catch (error) {

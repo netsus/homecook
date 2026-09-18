@@ -72,7 +72,7 @@ describe("YTASYNC-API exact job contract", () => {
     expect(response.status).toBe(202);
     expect(deps.rpc).toHaveBeenCalledWith("enqueue_youtube_extraction_job", {
       video_id: "abc123DEF45",
-      expected_policy_version: 3,
+      expected_policy_version: 2,
       expected_policy_snapshot_digest: YOUTUBE_ASYNC_POLICY.snapshotDigest,
       current_key_version: "1",
       current_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),

@@ -703,8 +703,8 @@ describe("YouTube background extraction contract evolution", () => {
       "service safe-subset manifest | `9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908`",
     );
     for (const runtimeMarker of [
-      'codexEffort: "medium"',
-      'selectorEffort: "medium"',
+      'codexEffort: "low"',
+      'selectorEffort: "low"',
       "singleRecipeOnly: true",
       "frameMode: EXACT.frameMode",
       "interval: EXACT.interval",

@@ -11,7 +11,7 @@ import {
 type RuntimeEnv = Readonly<Record<string, string | undefined>>;
 
 export const YOUTUBE_ASYNC_POLICY_OPTIONS = Object.freeze({
-  codexEffort: "medium",
+  codexEffort: "low",
   frameMode: "hybrid",
   hybridAnchorBudget: 36,
   interval: 4,
@@ -22,7 +22,7 @@ export const YOUTUBE_ASYNC_POLICY_OPTIONS = Object.freeze({
   recipeMode: "single",
   screenOcrMode: "auto",
   selectorCandidateLimit: 12,
-  selectorEffort: "medium",
+  selectorEffort: "low",
   singleRecipeOnly: true,
   sourceMode: "source-text",
   useApifyFallback: true,
@@ -31,7 +31,7 @@ export const YOUTUBE_ASYNC_POLICY_OPTIONS = Object.freeze({
 } as const);
 
 const POLICY_PIPELINE_IDENTITY =
-  "1cc9db22bff1be9fd3d7f8f829e661d5e53905013781e7179b9490a6cc247d5a";
+  "5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -60,7 +60,7 @@ function buildPolicySnapshotDigest() {
   const preimage = canonicalJson({
     extractor_mode: "i031_codex_vision",
     pipeline_identity: POLICY_PIPELINE_IDENTITY,
-    policy_version: 3,
+    policy_version: 2,
     result_affecting_options: YOUTUBE_ASYNC_POLICY_OPTIONS,
     schema_identity: "youtube-extraction-policy-snapshot-v1",
   });
@@ -69,7 +69,7 @@ function buildPolicySnapshotDigest() {
 
 export const YOUTUBE_ASYNC_POLICY = Object.freeze({
   policyKey: "primary",
-  policyVersion: 3,
+  policyVersion: 2,
   extractorMode: "i031_codex_vision",
   pipelineIdentity: POLICY_PIPELINE_IDENTITY,
   resultAffectingOptions: YOUTUBE_ASYNC_POLICY_OPTIONS,
