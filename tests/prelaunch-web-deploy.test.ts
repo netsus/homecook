@@ -14,6 +14,8 @@ import {
   prepareDatabaseDeployment,
   shouldRequireDatabaseRecovery,
   retargetPlist,
+  retargetRound2Release,
+  inheritRound2Readiness,
   deployTransaction,
   productionEnvironment,
   assertRollbackTarget,
@@ -288,10 +290,101 @@ describe("prelaunch web deployment", () => {
     expect(next).toEqual({ ...plist, WorkingDirectory: "/new", ProgramArguments: ["/node", "/new/scripts/start-production.mjs", "-H", "127.0.0.1", "-p", "3100"] });
     expect(plist.WorkingDirectory).toBe("/old");
   });
-  it("preserves the R2 source binding across ordinary web checkouts", () => {
-    const input = { ...plist, EnvironmentVariables: { MUMEOK_ROUND2_REPOSITORY_ROOT: "/approved-r2", MUMEOK_ROUND2_RELEASE_SHA: "reviewed-sha" } };
-    expect(retargetPlist(input, "/new").EnvironmentVariables).toEqual(input.EnvironmentVariables);
-    expect(input.EnvironmentVariables.MUMEOK_ROUND2_REPOSITORY_ROOT).toBe("/approved-r2");
+  it("retargets the R2 release identity to the staged readiness copy", () => {
+    const input = {
+      ...plist,
+      EnvironmentVariables: {
+        MUMEOK_ROUND2_REPOSITORY_ROOT: "/old",
+        MUMEOK_ROUND2_RELEASE_SHA: "a".repeat(40),
+        MUMEOK_ROUND2_READINESS_PATH: "/private/old-readiness.json",
+      },
+    };
+    const checkout = retargetPlist(input, "/new");
+    const staged = retargetRound2Release(checkout, "/private/new-readiness.json", "b".repeat(40));
+    expect(staged.EnvironmentVariables).toMatchObject({
+      MUMEOK_ROUND2_REPOSITORY_ROOT: "/new",
+      MUMEOK_ROUND2_RELEASE_SHA: "b".repeat(40),
+      MUMEOK_ROUND2_READINESS_PATH: "/private/new-readiness.json",
+    });
+    expect(input.EnvironmentVariables.MUMEOK_ROUND2_RELEASE_SHA).toBe("a".repeat(40));
+  });
+  function round2Inheritance() {
+    const previous = {
+      ...plist,
+      EnvironmentVariables: {
+        MUMEOK_ROUND2_REPOSITORY_ROOT: "/old",
+        MUMEOK_ROUND2_RELEASE_SHA: "a".repeat(40),
+        MUMEOK_ROUND2_READINESS_PATH: "/private/old-readiness.json",
+        MUMEOK_ROUND2_CONTROL_PATH: "/private/control.json",
+        MUMEOK_ROUND2_TURNSTILE_SECRET_KEY: "fixture-secret",
+        NEXT_PUBLIC_MUMEOK_ROUND2_TURNSTILE_SITE_KEY: "fixture-site-key",
+        DATA_SUPABASE_URL: "http://127.0.0.1:8000",
+      },
+    };
+    const readiness = {
+      version: 1, profile: "production", release_sha: "a".repeat(40),
+      origin: "https://app.mumeok.kr", hostname: "app.mumeok.kr", verified_at: "2026-09-11T03:00:00Z",
+      proofs: { turnstile_live: { path: "/private/provider.json", sha256: "c".repeat(64) } },
+      proxy: { binding: "loopback-only", ingress: "cloudflare-tunnel" },
+    };
+    return { readiness, previous, next: retargetPlist(previous, "/new"), liveSha: "a".repeat(40), releaseSha: "b".repeat(40), files: ["components/planner/planner-week-screen.tsx"] };
+  }
+  it("inherits unchanged R2 evidence for unrelated UI without rewriting proof provenance", () => {
+    const input = round2Inheritance();
+    const result = inheritRound2Readiness(input);
+    expect(result).toEqual({ ...input.readiness, release_sha: input.releaseSha });
+    expect(input.readiness.release_sha).toBe(input.liveSha);
+    expect(result.verified_at).toBe(input.readiness.verified_at);
+    expect(result.proofs).toBe(input.readiness.proofs);
+    expect(result.proxy).toBe(input.readiness.proxy);
+  });
+  it.each([
+    "lib/server/marketing-round2-runtime.ts", "lib/marketing-round2.ts", "lib/marketing/round2-survey.ts",
+    "components/marketing/round2/round2-view.tsx", "components/marketing/recording-flow-views.tsx", "components/marketing/homeflow-landing.tsx",
+    "lib/server/recording-page.ts", "lib/server/homeflow-page.ts", "app/beta/r2/recording/page.tsx", "app/privacy/page.tsx",
+    "app/api/v1/marketing/round2/route.ts", "app/%5F_ops/r2-preflight/route.ts", "lib/supabase/server.ts",
+    "supabase/migrations/20260911100000_marketing_round2.sql", "supabase/migrations/20260919000000_change_scope.sql",
+    "scripts/sql/change-rpc.sql", "middleware.ts", "next.config.ts", "tsconfig.json", "app/layout.tsx", "pnpm-lock.yaml",
+  ])("rejects inherited R2 evidence after protected source changes: %s", (file) => {
+    expect(() => inheritRound2Readiness({ ...round2Inheritance(), files: [file] })).toThrow("R2");
+  });
+  it.each([
+    "MUMEOK_ROUND2_TURNSTILE_SECRET_KEY", "MUMEOK_ROUND2_CONTROL_PATH", "MUMEOK_ROUND2_RELEASE_SHA",
+    "MUMEOK_ROUND2_READINESS_PATH", "MUMEOK_ROUND2_REPOSITORY_ROOT", "NEXT_PUBLIC_MUMEOK_ROUND2_TURNSTILE_SITE_KEY",
+    "DATA_SUPABASE_URL", "NEXT_PUBLIC_SITE_URL", "HOMECOOK_DATA_AUTHORITY",
+  ])("rejects R2 or target environment changes without exposing values: %s", (key) => {
+    const input = round2Inheritance();
+    const next = { ...input.next, EnvironmentVariables: { ...input.next.EnvironmentVariables, [key]: "private-changed-value" } };
+    expect(() => inheritRound2Readiness({ ...input, next })).toThrow("R2");
+    try { inheritRound2Readiness({ ...input, next }); } catch (error) { expect(String(error)).not.toContain("private-changed-value"); }
+  });
+  it("rejects a stale readiness SHA and a readiness root outside the running checkout", () => {
+    const input = round2Inheritance();
+    expect(() => inheritRound2Readiness({ ...input, readiness: { ...input.readiness, release_sha: "c".repeat(40) } })).toThrow("R2");
+    expect(() => inheritRound2Readiness({ ...input, liveSha: "c".repeat(40) })).toThrow("R2");
+    const previous = { ...input.previous, EnvironmentVariables: { ...input.previous.EnvironmentVariables, MUMEOK_ROUND2_REPOSITORY_ROOT: "/other" } };
+    expect(() => inheritRound2Readiness({ ...input, previous })).toThrow("R2");
+  });
+  it("rejects missing or non-production readiness identity and invalid target SHA", () => {
+    const input = round2Inheritance();
+    for (const readiness of [{ version: 1 }, { ...input.readiness, profile: "isolated" }, { ...input.readiness, verified_at: "invalid" }]) {
+      expect(() => inheritRound2Readiness({ ...input, readiness })).toThrow("R2");
+    }
+    expect(() => inheritRound2Readiness({ ...input, releaseSha: "not-a-sha" })).toThrow("R2");
+  });
+  it("rejects a concurrent database deployment or changed launch binding", () => {
+    const input = round2Inheritance();
+    expect(() => inheritRound2Readiness({ ...input, databaseDeployment: true })).toThrow("R2");
+    const next = { ...input.next, ProgramArguments: ["/other/node", ...input.next.ProgramArguments.slice(1)] };
+    expect(() => inheritRound2Readiness({ ...input, next })).toThrow("R2");
+  });
+  it("keeps the running web unchanged when R2 inheritance is rejected during preparation", async () => {
+    const input = round2Inheritance();
+    const ops = adapter();
+    await expect(deployTransaction({ ...ops, prepare: async () => {
+      inheritRound2Readiness({ ...input, files: ["lib/server/marketing-round2-runtime.ts"] });
+    } })).rejects.toThrow("준비 실패");
+    expect(ops.actions).toEqual([]);
   });
   it.each([
     { ...plist, Label: "com.homecook.worker" },

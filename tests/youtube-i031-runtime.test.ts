@@ -145,13 +145,13 @@ describe("YouTube i031 exact runtime", () => {
   });
 
   it("rejects historical model output under the upgraded pipeline", () => {
-    expect(I031_EXACT_IDENTITY.pipelineVersion).toBe("i031-luna-sol-v1");
+    expect(I031_EXACT_IDENTITY.pipelineVersion).toBe("i031-sol-v1");
     expect(I031_EXACT_IDENTITY.model).toBe("gpt-5.6-sol");
-    expect(I031_EXACT_IDENTITY.selectorModel).toBe("gpt-5.6-luna");
+    expect(I031_EXACT_IDENTITY.selectorModel).toBe("gpt-5.6-sol");
     for (const change of [
       { model: "gpt-5.4" },
       { selectorModel: "gpt-5.4-mini" },
-      { executionConfigSignature: "143d3570f6a3c1cbf7680851" },
+      { executionConfigSignature: "704359dfb34df5ac1d070078" },
       { pipelineVersion: undefined },
     ]) {
       expect(() => parseYoutubeI031WorkerOutput({

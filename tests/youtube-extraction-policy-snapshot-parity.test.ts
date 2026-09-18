@@ -19,7 +19,7 @@ describe("worker policy snapshot authority", () => {
     expect(DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY)
       .not.toBe(YOUTUBE_ASYNC_POLICY.pipelineIdentity);
     expect(DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION).toBe(1);
-    expect(YOUTUBE_ASYNC_POLICY.policyVersion).toBe(3);
+    expect(YOUTUBE_ASYNC_POLICY.policyVersion).toBe(2);
     expect(DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS)
       .toEqual(YOUTUBE_ASYNC_POLICY.resultAffectingOptions);
     expect(buildYoutubeExtractionWorkerPolicySnapshotDigest({
