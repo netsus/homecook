@@ -1,5 +1,13 @@
 # DB 설계 v1.3.38
 
+## 2026-09-18 출시 전 복구 migration
+
+- `20260919000000_prelaunch_recipe_meal_log_repairs.sql`: 최신 내부 권한 wrapper를 보존하고 snapshot UI/context 읽기 두 경로만 추가한다. 이전 요리 기록의 수정·삭제·동일 요청 재생과 다먹은 뒤 과거 수정은 별도 분기, 실측 배치 원장은 기존 함수를 유지한다. 영양 추정 trigger는 snapshot/weight_status/batch_status가 모두 NULL인 이전 배치에만 적용한다.
+- `20260919001000_ingredient_search_normalization.sql`: ingredients·ingredient_synonyms에 stored generated `search_name` 및 일반/부분 검색 색인을 추가한다. 표준명·동의어 정규화는 검색과 YouTube 매칭, 신규 등록 중복 방지, 식사기록 검색에서 일치시킨다. 비활성 26개는 새 매칭 후보에서도 제외한다. 승인된 앞다리살 한 행의 분류와 충돌 없는 별칭만 내부 writer authority로 수정하며 영양값·역사 참조는 보존한다.
+- `20260919002000_manual_recipe_create_recovery.sql`: private `manual_recipe_create_receipts`에 owner/account_generation/idempotency_key 복합 PK, 원 요청·응답 JSON, created_at을 보관한다. RLS 활성화, 공개/인증 사용자 직접 접근 금지, 서버 전용 생성·결과 RPC만 허용한다. 레시피와 이미지 연결, receipt가 같은 transaction으로 commit된다. 계정 삭제는 cascade하며 과거 요청으로 삭제된 레시피를 재생성하지 않는다.
+- 적용 순서는 00000 → 01000 → 02000 → 새 웹이다. 기존 migration은 수정하지 않는다. 운영 적용 전 전체 백업과 격리된 현재 구조에 대한 적용 확인을 수행하며, 보호 trigger를 끄고 운영 변경을 진행하지 않는다.
+
+
 상태: 공식문서
 
 > 2026-09-11 사용자 승인 로컬 후보: [집밥흐름 선형 구현 계약](marketing/homeflow-linear-implementation-contract.md)의 `/beta/r2/homeflow` 선형 UI와 `r2.2-homeflow` 설문을 추가한다. 기존 r2.1/recording·API envelope·권한·동의·보관·중복 보호는 보존한다. 배포·master 머지·독립 Stage 완료는 이 로컬 작성 범위에 포함하지 않는다.

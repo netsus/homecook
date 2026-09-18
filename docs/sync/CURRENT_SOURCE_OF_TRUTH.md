@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-18 사용자 요청 — 출시 전 22개 수정과 재료 검색 개선
+
+직전 배포 기준 정렬 후 별도 작업 브랜치에서 R01~R22를 복구한다. 이번 요청은 자동 테스트를 생략하며 CI를 복원하지 않는다. 실제 변경 범위는 위 현재 공식 5종의 같은 날짜 addendum과 `docs/engineering/prelaunch-repair-20260918.md`를 따른다. 재료 정규화·승인 별칭·모호성 유지와 영양 품질 조사 기준은 `docs/engineering/ingredient-search-catalog-quality-20260918.md`에 기록한다. 운영 DB 변경은 백업 후 새 migration을 적용하고 이력을 남기며, 서로 다른 부위/조리 상태의 무분별한 합치기와 영양값 추정은 하지 않는다.
+
 ## 2026-09-18 사용자 요청 — 실제 배포본으로 master 정렬
 
 실행 웹 `5c140caea3ce1d0ad7a22fae29bf19e1b3a18f08`, worker artifact와 읽기 전용 DB 조회가 모두 `i031-sol-v1`, Sol selector/final, effort `low`, policy version 2임을 확인했다. 앱 코드와 관련 테스트를 이 배포 기준으로 정렬하고 최신 README와 로컬 영양 검증 기록은 보존한다. 아래 9월 15일 Luna/Sol 전환 기록은 제안 이력이며 현재 실행 계약이 아니다. 운영 ledger에 없는 Luna version 3 SQL은 `docs/engineering/archive/`로 보존하여 다음 migration에서 실행되지 않게 한다. 운영 DB·worker·웹 재시작은 하지 않는다. 현재 모델 계약은 `docs/engineering/youtube-astra-sol-model-upgrade.md`를 따른다.

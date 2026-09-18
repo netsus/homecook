@@ -9,6 +9,7 @@ import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-butto
 import { ContentState } from "@/components/shared/content-state";
 import { useViewMode } from "@/components/shared/use-view-mode";
 import type { AuthProviderId } from "@/lib/auth/providers";
+import { clearPendingAction } from "@/lib/auth/pending-action";
 import { sanitizeInternalPath } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -19,6 +20,7 @@ interface LoginScreenProps {
   expectedProvider?: AuthProviderId | null;
   lastProvider?: AuthProviderId | null;
   nextPath?: string;
+  requiresReauthentication?: boolean;
 }
 
 /** Contextual pill + copy so the gate screen matches the surface it guards. */
@@ -57,6 +59,7 @@ export function LoginScreen({
   authError,
   lastProvider = null,
   nextPath = "/",
+  requiresReauthentication = false,
 }: LoginScreenProps) {
   const localPasswordBootstrapPendingRef = useRef(false);
   const safeErrorCopy: Record<string, string> = {
@@ -76,7 +79,7 @@ export function LoginScreen({
   };
 
   useEffect(() => {
-    if (!hasSupabasePublicEnv()) {
+    if (requiresReauthentication || !hasSupabasePublicEnv()) {
       return;
     }
 
@@ -111,7 +114,7 @@ export function LoginScreen({
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [safeNextPath]);
+  }, [requiresReauthentication, safeNextPath]);
 
   const gateBody = (
     <ContentState
@@ -156,6 +159,7 @@ export function LoginScreen({
         <Link
           className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
           href="/"
+          onClick={clearPendingAction}
         >
           홈으로 돌아가기
         </Link>

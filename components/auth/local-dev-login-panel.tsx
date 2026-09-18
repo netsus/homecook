@@ -58,7 +58,7 @@ export function LocalDevLoginPanel({
         }
 
         if (pendingAction) {
-          savePendingAction(pendingAction);
+          if (!savePendingAction(pendingAction)) throw new Error("작업을 임시 보관하지 못했어요.");
         }
 
         const credentials = getLocalDevAuthCredentials(accountId);

@@ -987,6 +987,7 @@
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
     gap: 8px;
+    overflow-wrap: anywhere;
   }
 
   .mobile-recipebook-note-dot,
@@ -13427,9 +13428,9 @@ button {
     gap: 0;
   }
 
-  .app-shell.wave1-planner-shell header,
-  .app-shell.wave1-pantry-shell header,
-  .app-shell.wave1-mypage-shell header,
+  .app-shell.wave1-planner-shell > div > header,
+  .app-shell.wave1-pantry-shell > div > header,
+  .app-shell.wave1-mypage-shell > div > header,
   .app-shell.wave1-recipe-shell > div > header {
     display: none;
   }

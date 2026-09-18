@@ -11,6 +11,7 @@ import {
 import {
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
+import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
 import {
   readYoutubeExtractionAppDescriptor,
   readYoutubeExtractionExpectedSchema,
@@ -136,7 +137,9 @@ async function readJson(request: Request) {
 function errorText(error: unknown) {
   if (error && typeof error === "object") {
     const record = error as Record<string, unknown>;
-    return String(record.message ?? record.details ?? record.hint ?? "");
+    return [record.code, record.message, record.details, record.hint]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ");
   }
   return String(error ?? "");
 }
@@ -158,19 +161,12 @@ function enqueueRpcFailure(error: unknown) {
   return failure(code, "추출 작업을 접수할 수 없어요. 잠시 후 다시 시도해 주세요.", 503);
 }
 
-function isLocalSupabaseCliRuntime() {
-  const issuer = process.env.AUTH_SUPABASE_EXPECTED_ISSUER?.trim() ?? "";
-  return process.env.NODE_ENV !== "production"
-    && (
-      issuer.startsWith("http://127.0.0.1:")
-      || issuer.startsWith("http://localhost:")
-      || issuer.startsWith("http://[::1]:")
-    );
-}
-
-function isLocalSupabaseCliSessionStale(error: unknown) {
-  return isLocalSupabaseCliRuntime()
-    && errorText(error).includes("ACCOUNT_SESSION_STALE");
+function readRpcFailure(error: unknown) {
+  const authorityError = errorText(error).includes("ACCOUNT_SESSION_STALE")
+    ? { publicCode: "ACCOUNT_SESSION_STALE", publicStatus: 409 }
+    : error;
+  return createHybridAuthorityRouteError(authorityError)
+    ?? failure("QUEUE_UNAVAILABLE", "추출 작업을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.", 503);
 }
 
 function validateStringArray(
@@ -226,7 +222,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       }
       let videoId = parsed.kind === "url" ? parsed.videoId : null;
       if (parsed.kind === "retry") {
-        const source = await deps.readJob(parsed.jobId, auth.rpc);
+        let source;
+        try {
+          source = await deps.readJob(parsed.jobId, auth.rpc);
+        } catch (error) {
+          return readRpcFailure(error);
+        }
         if (!source) {
           return failure("JOB_NOT_FOUND", "추출 작업을 찾을 수 없어요.", 404);
         }
@@ -315,7 +316,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       const processingDeadline = () => Date.now() + (deps.syncWaitProcessingBudgetMs ?? 20 * 60 * 1000 + 30_000);
       let terminalDeadline = Number.POSITIVE_INFINITY;
       while (Date.now() <= (observedStarted ? terminalDeadline : startDeadline)) {
-        const row = await deps.readJob(jobId, auth.rpc);
+        let row;
+        try {
+          row = await deps.readJob(jobId, auth.rpc);
+        } catch (error) {
+          return readRpcFailure(error);
+        }
         if (!row) {
           return failure("QUEUE_UNAVAILABLE", "추출 작업을 확인하지 못했어요.", 503);
         }
@@ -325,7 +331,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
         }
         const projection = projectYoutubeExtractionJob(row, deps.now());
         if (projection.status === "succeeded" && projection.result) {
-          const session = await deps.readSession(projection.result.extraction_id, auth.rpc);
+          let session;
+          try {
+            session = await deps.readSession(projection.result.extraction_id, auth.rpc);
+          } catch (error) {
+            return readRpcFailure(error);
+          }
           if (session?.status === "draft") {
             return success(session.draft_json);
           }
@@ -348,18 +359,27 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
     },
 
     async status(_request: Request, jobId: string) {
-      const auth = requireAuth(await deps.authenticate());
-      if (isResponse(auth)) return auth;
-      const row = await deps.readJob(jobId, auth.rpc);
-      return row
-        ? success(projectYoutubeExtractionJob(row, deps.now()))
-        : failure("JOB_NOT_FOUND", "추출 작업을 찾을 수 없어요.", 404);
+      try {
+        const auth = requireAuth(await deps.authenticate());
+        if (isResponse(auth)) return auth;
+        const row = await deps.readJob(jobId, auth.rpc);
+        return row
+          ? success(projectYoutubeExtractionJob(row, deps.now()))
+          : failure("JOB_NOT_FOUND", "추출 작업을 찾을 수 없어요.", 404);
+      } catch (error) {
+        return readRpcFailure(error);
+      }
     },
 
     async session(_request: Request, extractionId: string) {
       const auth = requireAuth(await deps.authenticate());
       if (isResponse(auth)) return auth;
-      const row = await deps.readSession(extractionId, auth.rpc);
+      let row;
+      try {
+        row = await deps.readSession(extractionId, auth.rpc);
+      } catch (error) {
+        return readRpcFailure(error);
+      }
       if (!row) {
         return failure("EXTRACTION_NOT_FOUND", "추출 결과를 찾을 수 없어요.", 404);
       }
@@ -415,8 +435,8 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       let rows: ListJobRow[];
       try {
         rows = await deps.listJobs(view, cursor, limit + 1, auth.rpc, deps.now());
-      } catch {
-        return failure("QUEUE_UNAVAILABLE", "알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.", 503);
+      } catch (error) {
+        return readRpcFailure(error);
       }
       if (cursor) {
         rows = rows.filter((row) =>
@@ -599,52 +619,40 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
       : null;
   },
   async readJob(jobId, rpc) {
-    try {
-      const result = await rpc("read_youtube_extraction_job_projection", {
-        job_id: jobId,
-      });
-      return result.error ? null : result.data as (YoutubeExtractionJobProjectionRow & {
-        youtube_video_id?: string;
-      }) | null;
-    } catch {
-      return null;
-    }
-  },
-  async readSession(extractionId, rpc) {
-    try {
-      const result = await rpc("read_youtube_extraction_session_projection", {
-        extraction_id: extractionId,
-      });
-      return result.error ? null : result.data as SessionRow | null;
-    } catch {
-      return null;
-    }
-  },
-  async listJobs(view, cursor, limit, rpc, now) {
-    try {
-      const result = await rpc("list_youtube_extraction_job_projections", {
-        list_view: view,
-        retention_floor: new Date(
-          now.getTime() - 30 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
-        cursor_completed_at: cursor?.completedAt ?? null,
-        cursor_job_id: cursor?.jobId ?? null,
-        row_limit: limit,
-      });
-      if (result.error) {
-        if (isLocalSupabaseCliRuntime() || isLocalSupabaseCliSessionStale(result.error)) {
-          return [];
-        }
-        throw new Error("QUEUE_UNAVAILABLE");
-      }
-      if (!Array.isArray(result.data)) throw new Error("QUEUE_UNAVAILABLE");
-      return result.data as ListJobRow[];
-    } catch (error) {
-      if (isLocalSupabaseCliRuntime() || isLocalSupabaseCliSessionStale(error)) {
-        return [];
-      }
+    const result = await rpc("read_youtube_extraction_job_projection", {
+      job_id: jobId,
+    });
+    if (result.error) throw result.error;
+    if (result.data !== null && (typeof result.data !== "object" || Array.isArray(result.data))) {
       throw new Error("QUEUE_UNAVAILABLE");
     }
+    return result.data as (YoutubeExtractionJobProjectionRow & {
+      youtube_video_id?: string;
+    }) | null;
+  },
+  async readSession(extractionId, rpc) {
+    const result = await rpc("read_youtube_extraction_session_projection", {
+      extraction_id: extractionId,
+    });
+    if (result.error) throw result.error;
+    if (result.data !== null && (typeof result.data !== "object" || Array.isArray(result.data))) {
+      throw new Error("QUEUE_UNAVAILABLE");
+    }
+    return result.data as SessionRow | null;
+  },
+  async listJobs(view, cursor, limit, rpc, now) {
+    const result = await rpc("list_youtube_extraction_job_projections", {
+      list_view: view,
+      retention_floor: new Date(
+        now.getTime() - 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      cursor_completed_at: cursor?.completedAt ?? null,
+      cursor_job_id: cursor?.jobId ?? null,
+      row_limit: limit,
+    });
+    if (result.error) throw result.error;
+    if (!Array.isArray(result.data)) throw new Error("QUEUE_UNAVAILABLE");
+    return result.data as ListJobRow[];
   },
   async markDelivered(userId, deliveryKeys, rpc) {
     const result = await rpc("mark_youtube_extraction_jobs_delivered", {

@@ -1,5 +1,15 @@
 # API\_설계\_v1.2.43
 
+## 2026-09-18 출시 전 복구·재료 검색 보완
+
+- `POST /recipes`의 수동 등록은 선택 `Idempotency-Key`를 지원한다. 키를 사용하는 새 클라이언트는 `X-Homecook-Draft-Owner` UUID도 보내며 인증 사용자와 다르면 `409 DRAFT_OWNER_CHANGED`다. 같은 사용자·계정 세대·키·본문은 기존 생성 결과를 반환하고 다른 본문은 `409 IDEMPOTENCY_KEY_REUSED`다. 기존 키 없는 요청은 호환한다.
+- `GET /recipes?manual_create_key=<uuid>`는 로그인·앱 세션·초안 소유자를 확인한 뒤 `{ success, data: { recipe: ManualRecipeCreateData | null }, error }`를 반환한다. `X-Homecook-Draft-Owner`는 필수이고 `private, no-store`로 응답한다. 결과 없음만 `recipe:null`이며 조회 오류를 미저장으로 간주하지 않는다.
+- `DELETE /pantry`는 기존 `ingredient_ids`와 새 선택 필드 `pantry_item_ids`를 지원한다. 두 UUID 배열은 각각 최대 500개, 중복 제거하며 합쳐서 하나 이상 필요하다. `pantry_item_ids`로 제품도 삭제할 수 있다. OR 대상 전체에 본인 `user_id` 조건이 적용되고 응답 `{ removed }`와 반복 삭제 의미는 유지한다.
+- `GET /meals` 항목에 nullable `shopping_list_id`를 제공해 기존 목록을 이어 볼 수 있다. 이미 연결된 끼니는 새 목록으로 다시 만들지 않는다.
+- 재료 검색은 Unicode NFKC·소문자·공백 제거 기준으로 표준명과 명시적 동의어를 찾는다. 부위·조리 상태·구두점은 무조건 제거하지 않는다. 정확한 표준명 우선, 그다음 동의어를 사용하며 여러 ID가 남으면 사용자가 선택한다. 검색 서버 오류는 빈 성공 결과 대신 오류 응답이다.
+- YouTube 상태/목록 조회는 실제 없는 행만 404/빈 목록이다. 세션 오류는 기존 409, 일시 조회 오류는 503으로 구분한다. 기존 작업 ID를 재조회하며 복귀만으로 새 추출을 만들지 않는다.
+
+
 상태: 공식문서
 
 > 2026-09-11 사용자 승인 로컬 후보: [집밥흐름 선형 구현 계약](marketing/homeflow-linear-implementation-contract.md)의 `/beta/r2/homeflow` 선형 UI와 `r2.2-homeflow` 설문을 추가한다. 기존 r2.1/recording·API envelope·권한·동의·보관·중복 보호는 보존한다. 배포·master 머지·독립 Stage 완료는 이 로컬 작성 범위에 포함하지 않는다.

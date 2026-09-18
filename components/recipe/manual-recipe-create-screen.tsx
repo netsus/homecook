@@ -33,9 +33,11 @@ import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import {
   cancelRecipeImage,
   createManualRecipe,
+  readManualRecipeCreateResult,
   type RecipeImageUploadData,
   uploadRecipeImage,
 } from "@/lib/api/manual-recipe";
+import { fetchUserProfile } from "@/lib/api/mypage";
 import { createMealSafe } from "@/lib/api/meal";
 import { suggestRecipeTags } from "@/lib/api/recipe";
 import {
@@ -54,6 +56,7 @@ import {
 } from "@/components/web";
 import type {
   CookingMethodItem,
+  ManualRecipeCreateBody,
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
 } from "@/types/recipe";
@@ -147,6 +150,59 @@ interface TempStep extends Omit<ManualRecipeStepInput, "cooking_method_id"> {
   cooking_method: CookingMethodItem | null;
 }
 
+interface PendingManualCreate {
+  ownerId: string;
+  key: string;
+  body: ManualRecipeCreateBody;
+}
+
+interface ManualRecipeDraftStorage {
+  version: 1;
+  ownerId: string;
+  savedAt: number;
+  title: string;
+  baseServings: number;
+  ingredients: TempIngredient[];
+  steps: TempStep[];
+  reviewedTags: string[];
+  areTagsDirty: boolean;
+  uploadedImage: RecipeImageUploadData | null;
+  pending: PendingManualCreate | null;
+}
+
+const MANUAL_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+
+function readManualDraft(key: string, ownerId: string): ManualRecipeDraftStorage | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as ManualRecipeDraftStorage;
+    if (value.version !== 1 || !Number.isFinite(value.savedAt)
+      || typeof value.title !== "string" || !Number.isFinite(value.baseServings)
+      || !Array.isArray(value.ingredients) || !Array.isArray(value.steps)
+      || !Array.isArray(value.reviewedTags)
+      || value.ingredients.some((item) => !item || typeof item.tempId !== "string" || typeof item.standard_name !== "string")
+      || value.steps.some((item) => !item || typeof item.tempId !== "string" || typeof item.instruction !== "string")
+      || (value.pending && (typeof value.pending.key !== "string" || !value.pending.body))) {
+      return null;
+    }
+    if ((value.ownerId && value.ownerId !== ownerId)
+      || (value.pending?.ownerId && value.pending.ownerId !== ownerId)) return null;
+    // Older drafts were already stored under an owner-specific key.
+    value.ownerId = ownerId;
+    if (value.pending) value.pending.ownerId = ownerId;
+    // An unresolved save is retained until its receipt is recovered; expiring its
+    // key would allow the same recipe to be created again after a lost response.
+    if (!value.pending && Date.now() - value.savedAt > MANUAL_DRAFT_TTL_MS) {
+      sessionStorage.removeItem(key);
+      return null;
+    }
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 function getManualSaveRequirements({
   title,
   baseServings,
@@ -175,9 +231,10 @@ interface AppBarProps {
   onSave: () => void;
   isSaving: boolean;
   isUploading?: boolean;
+  isRecovering?: boolean;
 }
 
-function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) {
+function AppBar({ onBack, onSave, isSaving, isUploading = false, isRecovering = false }: AppBarProps) {
   const isDisabled = isSaving || isUploading;
 
   return (
@@ -198,7 +255,7 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
           disabled={isDisabled}
           type="button"
         >
-          {isSaving ? "저장 중..." : "저장"}
+          {isSaving ? "저장 중..." : isRecovering ? "저장 결과 확인" : "저장"}
         </button>
       </div>
     </div>
@@ -336,6 +393,13 @@ export function ManualRecipeCreateScreen({
   const [modalMode, setModalMode] = useState<ModalMode>("none");
   const [isSaving, setIsSaving] = useState(false);
   const [isCreateOutcomeUnknown, setIsCreateOutcomeUnknown] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
+  const draftStorageKeyRef = useRef<string | null>(null);
+  const draftOwnerIdRef = useRef<string | null>(null);
+  const draftCompleteRef = useRef(false);
+  const pendingCreateRef = useRef<PendingManualCreate | null>(null);
+  const saveInFlightRef = useRef(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
   const [createdRecipeTitle, setCreatedRecipeTitle] = useState<string>("");
@@ -390,6 +454,73 @@ export function ManualRecipeCreateScreen({
   // Meal add flow
   const [isCreatingMeal, setIsCreatingMeal] = useState(false);
   const [mealAddError, setMealAddError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchUserProfile().then((profile) => {
+      if (cancelled) return;
+      const key = `homecook:manual-recipe-draft:${profile.id}:${planDate}:${columnId}`;
+      draftStorageKeyRef.current = key;
+      draftOwnerIdRef.current = profile.id;
+      const draft = readManualDraft(key, profile.id);
+      if (draft) {
+        setTitle(draft.title);
+        setBaseServings(draft.baseServings);
+        setIngredients(draft.ingredients);
+        setSteps(draft.steps);
+        setReviewedTags(draft.reviewedTags);
+        setAreTagsDirty(draft.areTagsDirty);
+        areTagsDirtyRef.current = draft.areTagsDirty;
+        setUploadedImage(draft.uploadedImage);
+        uploadedImageRef.current = draft.uploadedImage;
+        if (draft.uploadedImage) {
+          setImageStatus("uploaded");
+          setImagePreviewUrl(isManagedRecipeImage(draft.uploadedImage)
+            ? draft.uploadedImage.read_url : draft.uploadedImage.thumbnail_url);
+        }
+        pendingCreateRef.current = draft.pending;
+        createOutcomeUnknownRef.current = Boolean(draft.pending);
+        setIsCreateOutcomeUnknown(Boolean(draft.pending));
+        if (draft.pending && isManagedRecipeImage(draft.uploadedImage)) {
+          createOwnedImageObjectIdRef.current = draft.uploadedImage.image_object_id;
+        }
+        setDraftNotice(draft.pending
+          ? "이전에 보낸 저장 요청이 있어요. 저장 결과를 확인해 주세요."
+          : "이 탭에서 작성하던 내용을 복원했어요. 업로드 전 사진은 다시 선택해 주세요.");
+      }
+      setDraftReady(true);
+    }).catch(() => {
+      if (!cancelled) setDraftNotice("로그인 상태를 확인하지 못했어요. 연결을 확인한 뒤 다시 불러와 주세요.");
+    });
+    return () => { cancelled = true; };
+  }, [columnId, planDate]);
+
+  const persistDraft = useCallback((pending = pendingCreateRef.current) => {
+    if (!draftStorageKeyRef.current || !draftOwnerIdRef.current || draftCompleteRef.current) return false;
+    try {
+      const draft: ManualRecipeDraftStorage = {
+        version: 1, ownerId: draftOwnerIdRef.current,
+        savedAt: Date.now(), title, baseServings, ingredients, steps,
+        reviewedTags, areTagsDirty, uploadedImage: uploadedImageRef.current, pending,
+      };
+      sessionStorage.setItem(draftStorageKeyRef.current, JSON.stringify(draft));
+      return true;
+    } catch {
+      setDraftNotice("이 브라우저에서 초안을 보관하지 못했어요. 저장 결과를 확인할 때까지 탭을 열어 두세요.");
+      return false;
+    }
+  }, [areTagsDirty, baseServings, ingredients, reviewedTags, steps, title]);
+
+  const clearStoredDraft = useCallback(() => {
+    draftCompleteRef.current = true;
+    try {
+      if (draftStorageKeyRef.current) sessionStorage.removeItem(draftStorageKeyRef.current);
+    } catch { /* Storage can be disabled by the browser. */ }
+  }, []);
+
+  useEffect(() => {
+    if (draftReady) persistDraft();
+  }, [draftReady, persistDraft, uploadedImage]);
 
   useEffect(() => {
     if (isDesktopViewport) {
@@ -546,13 +677,16 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleBack = useCallback(() => {
-    if (imageStatus === "uploading" || createOutcomeUnknownRef.current) {
+    if (imageStatus === "uploading" || saveInFlightRef.current) return;
+    if (createOutcomeUnknownRef.current) {
+      if (!persistDraft()) return;
+      completeExit();
       return;
     }
 
     pendingNavigationRef.current = null;
     requestCancel();
-  }, [imageStatus, requestCancel]);
+  }, [completeExit, imageStatus, persistDraft, requestCancel]);
 
   const requestAppNavigation = useCallback((
     href: string,
@@ -632,7 +766,11 @@ export function ManualRecipeCreateScreen({
         "",
         window.location.href,
       );
-      openDiscardDialogRef.current();
+      if (createOutcomeUnknownRef.current) {
+        completeExit();
+      } else {
+        openDiscardDialogRef.current();
+      }
     };
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -661,7 +799,7 @@ export function ManualRecipeCreateScreen({
         }
       }
     };
-  }, [hasDraftChanges]);
+  }, [completeExit, hasDraftChanges]);
 
   const handleAddIngredient = useCallback(
     (newIngredients: ManualRecipeIngredientInput[]) => {
@@ -758,9 +896,10 @@ export function ManualRecipeCreateScreen({
       isMountedRef.current = false;
       const currentImage = uploadedImageRef.current;
       if (
-        !currentImage
+        (!draftStorageKeyRef.current || draftCompleteRef.current)
+        && (!currentImage
         || !isManagedRecipeImage(currentImage)
-        || currentImage.image_object_id !== createOwnedImageObjectIdRef.current
+        || currentImage.image_object_id !== createOwnedImageObjectIdRef.current)
       ) {
         cancelManagedUploadBestEffort(currentImage);
       }
@@ -1118,6 +1257,11 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleDiscardDraft = useCallback(async () => {
+    if (createOutcomeUnknownRef.current) {
+      if (!persistDraft()) return false;
+      completeExit();
+      return true;
+    }
     if (cleanupInFlightImageObjectIdRef.current) {
       return false;
     }
@@ -1133,6 +1277,7 @@ export function ManualRecipeCreateScreen({
       clearImageSelection();
     }
 
+    clearStoredDraft();
     const pendingNavigation = pendingNavigationRef.current;
     pendingNavigationRef.current = null;
     if (pendingNavigation) {
@@ -1144,7 +1289,9 @@ export function ManualRecipeCreateScreen({
   }, [
     cleanupManagedImageForAction,
     clearImageSelection,
+    clearStoredDraft,
     completeExit,
+    persistDraft,
     releaseHistoryGuard,
   ]);
 
@@ -1210,7 +1357,7 @@ export function ManualRecipeCreateScreen({
     setSuggestedTags(nextTags);
     setTagSuggestionState("ready");
     setTagSuggestionError(null);
-    if (!areTagsDirtyRef.current) {
+    if (!areTagsDirtyRef.current && !pendingCreateRef.current) {
       setReviewedTags(nextTags);
     }
   }, [canSuggestTags, tagSuggestionInput]);
@@ -1241,145 +1388,139 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (isUploading || createOutcomeUnknownRef.current) {
-      return;
-    }
-
-    if (!canSave) {
+    if (isUploading || !draftReady || saveInFlightRef.current) return;
+    if (!pendingCreateRef.current && !canSave) {
       setShowValidationErrors(true);
       return;
     }
 
+    saveInFlightRef.current = true;
     setShowValidationErrors(false);
     setIsSaving(true);
     setImageError(null);
     setImageErrorCode(null);
+    const wasUnknown = createOutcomeUnknownRef.current;
+    let activeImage = uploadedImageRef.current;
     try {
-      const activeImage = await refreshManagedReadUrlIfExpired();
-      if (uploadedImageRef.current && !activeImage) {
-        return;
+      const ownerId = draftOwnerIdRef.current;
+      const verifyDraftOwner = async () => {
+        const profile = await fetchUserProfile();
+        if (!ownerId || profile.id !== ownerId
+          || (pendingCreateRef.current && pendingCreateRef.current.ownerId !== ownerId)) {
+          const stored = persistDraft();
+          throw new Error(stored
+            ? "로그인 계정이 바뀌었어요. 초안은 원래 계정에 보관했어요. 작성한 계정으로 다시 로그인해 주세요."
+            : "로그인 계정이 바뀌었고 초안을 보관하지 못했어요. 이 탭을 열어 둔 채 작성한 계정으로 다시 로그인해 주세요.");
+        }
+        return ownerId;
+      };
+      const verifiedOwnerId = await verifyDraftOwner();
+      let response: Awaited<ReturnType<typeof createManualRecipe>> | null = null;
+      let pending = pendingCreateRef.current;
+      if (pending) {
+        const recovered = await readManualRecipeCreateResult(pending.key, pending.ownerId);
+        if (!recovered.success || !recovered.data) {
+          throw new Error(recovered.error?.message ?? "저장 결과를 확인하지 못했어요. 연결 후 다시 확인해 주세요.");
+        }
+        if (recovered.data.recipe) {
+          response = { success: true, data: recovered.data.recipe, error: null };
+        }
+      } else {
+        activeImage = await refreshManagedReadUrlIfExpired();
+        if (uploadedImageRef.current && !activeImage) return;
+        const reviewedTagPayload = buildReviewedRecipeTagsPayload({
+          isDirty: areTagsDirty, tags: reviewedTags,
+        });
+        const imagePayload = activeImage
+          ? (isManagedRecipeImage(activeImage)
+            ? { image_object_id: activeImage.image_object_id }
+            : { thumbnail_url: activeImage.thumbnail_url })
+          : {};
+        pending = {
+          ownerId: verifiedOwnerId,
+          key: crypto.randomUUID(),
+          body: {
+            title: title.trim(), base_servings: baseServings, ...imagePayload,
+            ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
+            ingredients: ingredients.map((ing, idx) => ({
+              ingredient_id: ing.ingredient_id, standard_name: ing.standard_name,
+              amount: ing.amount, unit: ing.unit, ingredient_type: ing.ingredient_type,
+              display_text: ing.display_text, scalable: ing.scalable, sort_order: idx + 1,
+            })),
+            steps: steps.map((step) => ({
+              step_number: step.step_number, instruction: step.instruction,
+              cooking_method_id: step.cooking_method?.id ?? "",
+              ingredients_used: step.ingredients_used, heat_level: step.heat_level,
+              duration_seconds: step.duration_seconds, duration_text: step.duration_text,
+            })),
+          },
+        };
+        pendingCreateRef.current = pending;
+        persistDraft(pending);
       }
-
-      const reviewedTagPayload = buildReviewedRecipeTagsPayload({
-        isDirty: areTagsDirty,
-        tags: reviewedTags,
-      });
-      const imagePayload = activeImage
-        ? (
-            isManagedRecipeImage(activeImage)
-              ? { image_object_id: activeImage.image_object_id }
-              : { thumbnail_url: activeImage.thumbnail_url }
-          )
-        : {};
       if (activeImage && isManagedRecipeImage(activeImage)) {
         createOwnedImageObjectIdRef.current = activeImage.image_object_id;
       }
-      const response = await createManualRecipe({
-        title: title.trim(),
-        base_servings: baseServings,
-        ...imagePayload,
-        ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
-        ingredients: ingredients.map((ing, idx) => ({
-          ingredient_id: ing.ingredient_id,
-          standard_name: ing.standard_name,
-          amount: ing.amount,
-          unit: ing.unit,
-          ingredient_type: ing.ingredient_type,
-          display_text: ing.display_text,
-          scalable: ing.scalable,
-          sort_order: idx + 1,
-        })),
-        steps: steps.map((step) => ({
-          step_number: step.step_number,
-          instruction: step.instruction,
-          cooking_method_id: step.cooking_method?.id ?? "",
-          ingredients_used: step.ingredients_used,
-          heat_level: step.heat_level,
-          duration_seconds: step.duration_seconds,
-          duration_text: step.duration_text,
-        })),
-      });
-
-      const createSucceeded = Boolean(response?.success && response.data);
-      const createOutcomeUnknown = Boolean(
-        !response
-        || (
-          !response.success
-          && (
-            response.error?.code === "NETWORK_ERROR"
-            || response.error?.code === "INVALID_RESPONSE"
-          )
-        )
-      );
-      const createFailedDefinitively = Boolean(
-        response
-        && !response.success
-        && !createOutcomeUnknown
-      );
-
-      if (createSucceeded || createFailedDefinitively) {
+      if (!response) {
+        await verifyDraftOwner();
+        response = await createManualRecipe(pending.body, {
+          idempotencyKey: pending.key, expectedOwnerId: pending.ownerId,
+        });
+      }
+      const succeeded = Boolean(response.success && response.data);
+      const unknown = !succeeded && (wasUnknown || response.error?.code === "NETWORK_ERROR"
+        || response.error?.code === "INVALID_RESPONSE");
+      createOutcomeUnknownRef.current = unknown;
+      if (!unknown) {
+        pendingCreateRef.current = null;
         createOwnedImageObjectIdRef.current = null;
       }
-      createOutcomeUnknownRef.current = createOutcomeUnknown;
-      if (isMountedRef.current) {
-        setIsCreateOutcomeUnknown(createOutcomeUnknown);
-      }
-
-      if (!isMountedRef.current) {
-        if (createFailedDefinitively && activeImage) {
-          cancelManagedUploadBestEffort(activeImage);
-        }
-        return;
-      }
-
-      if (!response) {
-        throw new Error("저장하지 못했어요. 내용을 유지했으니 다시 시도해 주세요.");
-      }
-
+      if (succeeded) clearStoredDraft();
+      else persistDraft();
+      if (!isMountedRef.current) return;
+      setIsCreateOutcomeUnknown(unknown);
       if (!response.success || !response.data) {
         if (response.error?.fields?.some((field) => field.field === "tags")) {
           setTagSubmitError(response.error.message);
         }
-        if (isCreateImageError(response.error?.code ?? null)) {
+        if (!unknown && isCreateImageError(response.error?.code ?? null)) {
           setImageStatus("failed");
           setImageErrorCode(response.error?.code ?? null);
           setImageError(response.error?.message ?? "이미지를 다시 확인해 주세요.");
           return;
         }
-        throw new Error(
-          response.error?.message
-            ?? "저장하지 못했어요. 내용을 유지했으니 다시 시도해 주세요.",
-        );
+        throw new Error(unknown
+          ? "저장 결과가 아직 확인되지 않았어요. 작성 내용은 보관했어요. ‘저장 결과 확인’을 누르면 같은 요청으로 안전하게 확인하고 재시도해요."
+          : response.error?.message ?? "저장하지 못했어요. 내용을 유지했으니 다시 시도해 주세요.");
       }
-
       const createdRecipe = response.data;
       isManagedReadUrlRefreshRetryRef.current = false;
       uploadedImageRef.current = null;
       pendingUploadIdempotencyKeyRef.current = null;
       processedUploadFileRef.current = null;
       setUploadedImage(null);
+      setDraftNotice(null);
       releaseHistoryGuard(() => {
         initialEditorDraftRef.current = editorDraft;
         setCreatedRecipeId(createdRecipe.id);
         setCreatedRecipeTitle(createdRecipe.title);
         setModalMode("success");
       });
+    } catch (error) {
+      if (pendingCreateRef.current) {
+        createOutcomeUnknownRef.current = true;
+        persistDraft();
+        if (isMountedRef.current) setIsCreateOutcomeUnknown(true);
+      }
+      throw error;
     } finally {
-      setIsSaving(false);
+      saveInFlightRef.current = false;
+      if (isMountedRef.current) setIsSaving(false);
     }
   }, [
-    isUploading,
-    canSave,
-    title,
-    baseServings,
-    areTagsDirty,
-    reviewedTags,
-    ingredients,
-    steps,
-    refreshManagedReadUrlIfExpired,
-    cancelManagedUploadBestEffort,
-    editorDraft,
-    releaseHistoryGuard,
+    isUploading, draftReady, canSave, title, baseServings, areTagsDirty,
+    reviewedTags, ingredients, steps, refreshManagedReadUrlIfExpired,
+    clearStoredDraft, persistDraft, editorDraft, releaseHistoryGuard,
   ]);
 
   const handleMealAdd = useCallback(() => {
@@ -1533,16 +1674,29 @@ export function ManualRecipeCreateScreen({
 
     </>
   );
+  const draftRecoveryNotice = draftNotice || isCreateOutcomeUnknown || !draftReady ? (
+    <div className="shrink-0 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm" role="status">
+      {isCreateOutcomeUnknown
+        ? "저장 결과를 확인하는 동안 내용은 그대로 보관해요. ‘저장 결과 확인’으로 이어서 저장하거나 나중에 이 탭에서 다시 열 수 있어요."
+        : draftNotice ?? "작성 중인 초안을 확인하는 중이에요."}
+      {!draftReady && draftNotice ? (
+        <button type="button" className="ml-2 font-bold underline" onClick={() => window.location.reload()}>다시 불러오기</button>
+      ) : null}
+      {isCreateOutcomeUnknown ? (
+        <button type="button" className="ml-2 font-bold underline" disabled={isSaving} onClick={handleBack}>초안을 보관하고 나가기</button>
+      ) : null}
+    </div>
+  ) : null;
   const desktopManualFooter = (
     <div className="web-manual-footer">
       <WebButton
         className="web-manual-save-button"
-        disabled={isImageLifecycleLocked || isUploading}
+        disabled={isSaving || editorShell.isSubmitting || isUploading || !draftReady}
         fullWidth
         onClick={() => void editorShell.submit("save-private")}
         size="lg"
       >
-        {isSaving ? "저장 중..." : "저장"}
+        {isSaving ? "저장 중..." : isCreateOutcomeUnknown ? "저장 결과 확인" : "저장"}
       </WebButton>
     </div>
   );
@@ -1595,7 +1749,10 @@ export function ManualRecipeCreateScreen({
             data-testid="manual-recipe-embedded"
           >
             <div className="web-menu-add-embedded-form">
-              {desktopManualBody}
+              {draftRecoveryNotice}
+              <fieldset disabled={isImageLifecycleLocked || !draftReady} className="min-w-0">
+                {desktopManualBody}
+              </fieldset>
               {desktopManualFooter}
             </div>
 
@@ -1644,7 +1801,10 @@ export function ManualRecipeCreateScreen({
             </div>
 
             <WebCard className="web-manual-card">
-              {desktopManualBody}
+              {draftRecoveryNotice}
+              <fieldset disabled={isImageLifecycleLocked || !draftReady} className="min-w-0">
+                {desktopManualBody}
+              </fieldset>
               {desktopManualFooter}
             </WebCard>
           </WebShell>
@@ -1667,8 +1827,10 @@ export function ManualRecipeCreateScreen({
           onBack={handleBack}
           onSave={() => void editorShell.submit("save-private")}
           isSaving={isSaving}
-          isUploading={isUploading || isCreateOutcomeUnknown}
+          isUploading={isUploading || !draftReady}
+          isRecovering={isCreateOutcomeUnknown}
         />
+        {draftRecoveryNotice}
         {editorShell.submitError || editorShell.hasCleanupFailure ? (
           <div
             className="shrink-0 bg-[var(--surface-fill)] md:bg-[var(--background)]"
@@ -1683,7 +1845,7 @@ export function ManualRecipeCreateScreen({
           className="min-h-0 flex-1 scroll-pb-[96px] overflow-y-auto pb-[88px] md:px-4 md:pb-6 md:scroll-pb-6"
           data-testid="manual-editor-scroll-region"
         >
-          <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
+          <fieldset disabled={isImageLifecycleLocked || !draftReady} className="mx-auto min-w-0 max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {planDate || slotName ? (
             <div className="bg-[var(--surface)] px-4 pt-4 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
               <MealAddTargetBadge
@@ -1811,7 +1973,7 @@ export function ManualRecipeCreateScreen({
             )}
           </section>
 
-        </div>
+        </fieldset>
         </div>
         <Wave1MobileBottomTab
           ariaLabel="직접 등록 화면 하단 내비게이션"

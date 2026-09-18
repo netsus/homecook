@@ -20,6 +20,7 @@ interface YoutubeImportPageProps {
     columnId?: string;
     date?: string;
     extractionId?: string;
+    jobId?: string;
     restore?: string;
     returnSurface?: string;
     returnTo?: string;
@@ -29,7 +30,7 @@ interface YoutubeImportPageProps {
 }
 
 export default async function YoutubeImportPage({ searchParams }: YoutubeImportPageProps) {
-  const { date, columnId, extractionId, restore, returnSurface, returnTo, slot, youtubeUrl } =
+  const { date, columnId, extractionId, jobId, restore, returnSurface, returnTo, slot, youtubeUrl } =
     await searchParams;
 
   if (!isYoutubeImportEnabled()) {
@@ -60,6 +61,9 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
     if (slot) queryParts.push(`slot=${encodeURIComponent(slot)}`);
     if (youtubeUrl) queryParts.push(`youtubeUrl=${encodeURIComponent(youtubeUrl)}`);
     if (extractionId) queryParts.push(`extractionId=${encodeURIComponent(extractionId)}`);
+    if (jobId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) {
+      queryParts.push(`jobId=${encodeURIComponent(jobId)}`);
+    }
     if (returnTo) queryParts.push(`returnTo=${encodeURIComponent(returnTo)}`);
     if (returnSurface) {
       queryParts.push(`returnSurface=${encodeURIComponent(returnSurface)}`);

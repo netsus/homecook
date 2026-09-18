@@ -17,6 +17,7 @@ import {
 } from "@/lib/app-action-notifications";
 import {
   enqueueYoutubeExtraction,
+  classifyYoutubeExtractionPollError,
   fetchYoutubeExtractionJob,
   fetchYoutubeExtractionNotifications,
   markYoutubeExtractionDelivered,
@@ -356,6 +357,7 @@ function YoutubeExtractionNotificationRuntime({
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [hasHeaderTrigger, setHasHeaderTrigger] = useState(false);
   const [activeJobs, setActiveJobs] = useState<YoutubeExtractionJobData[]>([]);
+  const [activeJobsError, setActiveJobsError] = useState<string | null>(null);
   const [unseenNextCursor, setUnseenNextCursor] = useState<string | null>(null);
   const [archiveItems, setArchiveItems] = useState<YoutubeExtractionNotificationItem[]>([]);
   const [archiveNextCursor, setArchiveNextCursor] = useState<string | null>(null);
@@ -428,7 +430,7 @@ function YoutubeExtractionNotificationRuntime({
       .then((result) => {
         if (!current) return;
         if (!result.success || !result.data) {
-          if (result.error?.code === "UNAUTHORIZED") {
+          if (classifyYoutubeExtractionPollError(result.error?.code) === "auth") {
             setAuthenticatedLocal(false);
             return;
           }
@@ -493,7 +495,7 @@ function YoutubeExtractionNotificationRuntime({
     const result = await fetchYoutubeExtractionNotifications(nextView);
     if (!options.background) setLoading(false);
     if (!result.success || !result.data) {
-      if (result.error?.code === "UNAUTHORIZED") {
+      if (classifyYoutubeExtractionPollError(result.error?.code) === "auth") {
         handoffPanelFocusToAuthNoticeRef.current = Boolean(
           dialogRef.current?.contains(document.activeElement),
         );
@@ -524,6 +526,8 @@ function YoutubeExtractionNotificationRuntime({
     if (!authenticated) return;
     let current = true;
     let timer: number | null = null;
+    let polling = false;
+    let failures = 0;
 
     const readPendingIds = () => {
       try {
@@ -537,40 +541,74 @@ function YoutubeExtractionNotificationRuntime({
     };
 
     const pollPending = async () => {
+      if (polling || !current) return;
+      if (timer) window.clearTimeout(timer);
       const ids = readPendingIds();
-      if (ids.length === 0 || !current) return;
+      if (ids.length === 0) return;
+      polling = true;
       const results = await Promise.all(ids.map(async (jobId) => ({
         jobId,
         result: await fetchYoutubeExtractionJob(jobId),
       })));
+      polling = false;
       if (!current) return;
+      if (results.some(({ result }) => !result.success
+        && classifyYoutubeExtractionPollError(result.error?.code) === "auth")) {
+        handoffPanelFocusToAuthNoticeRef.current = Boolean(dialogRef.current?.contains(document.activeElement));
+        setAuthExpired(true);
+        setAuthenticatedLocal(false);
+        setActiveJobs([]);
+        setItems([]);
+        return;
+      }
       const activeIds = results
         .filter(({ result }) => result.success && result.data
-          && (result.data.status === "queued" || result.data.status === "processing"))
+          ? result.data.status === "queued" || result.data.status === "processing"
+          : classifyYoutubeExtractionPollError(result.error?.code) === "transient")
         .map(({ jobId }) => jobId);
-      setActiveJobs(results
-        .flatMap(({ result }) => result.success && result.data ? [result.data] : [])
-        .filter((job) => job.status === "queued" || job.status === "processing"));
+      const failed = results.find(({ result }) => !result.success);
+      setActiveJobsError(failed
+        ? failed.result.error?.message ?? "진행 상황을 확인하지 못했어요. 잠시 후 다시 확인할게요."
+        : null);
+      failures = failed ? failures + 1 : 0;
+      setActiveJobs((previous) => {
+        const jobs = new Map(previous.map((job) => [job.job_id, job]));
+        results.forEach(({ jobId, result }) => {
+          if (!activeIds.includes(jobId)) jobs.delete(jobId);
+          else if (result.success && result.data) jobs.set(jobId, result.data);
+        });
+        return [...jobs.values()];
+      });
       const hasTerminal = results.some(({ result }) => result.success && result.data
         && !activeIds.includes(result.data.job_id));
-      window.sessionStorage.setItem(
-        YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
-        JSON.stringify(activeIds),
-      );
-      if (hasTerminal) await refresh("unseen-completed", { background: view === "archive" });
-      if (activeIds.length > 0 && current) {
-        timer = window.setTimeout(pollPending, 5000);
+      const remainingIds = [...new Set([...activeIds, ...readPendingIds().filter((id) => !ids.includes(id))])];
+      try {
+        window.sessionStorage.setItem(YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY, JSON.stringify(remainingIds));
+      } catch {
+        setActiveJobsError("이 브라우저에 작업을 보관하지 못했어요. 추출 화면에서 결과를 확인해 주세요.");
       }
+      if (hasTerminal) await refresh("unseen-completed", { background: view === "archive" });
+      if (remainingIds.length > 0 && current) {
+        timer = window.setTimeout(pollPending, Math.min(30_000, 5000 * (failures + 1)));
+      }
+    };
+
+    const resumePolling = () => {
+      if (document.visibilityState === "visible") void pollPending();
     };
 
     void pollPending();
     window.addEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, pollPending);
+    window.addEventListener("online", resumePolling);
+    window.addEventListener("focus", resumePolling);
     return () => {
       current = false;
       if (timer) window.clearTimeout(timer);
       window.removeEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, pollPending);
+      window.removeEventListener("online", resumePolling);
+      window.removeEventListener("focus", resumePolling);
     };
-  }, [authenticated, refresh, view]);
+  }, [authenticated, refresh, setItems, view]);
 
   useEffect(() => {
     const keys = visibleToastItems
@@ -919,7 +957,7 @@ function YoutubeExtractionNotificationRuntime({
           </div>
           <button aria-label="로그인 안내 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setAuthExpired(false)} type="button">×</button>
         </div>
-        <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-[var(--text-inverse)]" href={`/login?next=${encodeURIComponent(returnPath)}`}>
+        <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-[var(--text-inverse)]" href={`/login?reauthenticate=1&next=${encodeURIComponent(returnPath)}`} prefetch={false}>
           로그인하고 돌아오기
         </Link>
       </aside>
@@ -1033,9 +1071,10 @@ function YoutubeExtractionNotificationRuntime({
                 </section>
               ) : null}
               {loading ? <p aria-live="polite" className="py-8 text-center text-sm text-[var(--muted)]">알림을 불러오는 중이에요…</p> : null}
+              {activeJobsError ? <p className="py-3 text-sm text-[var(--danger)]" role="status">{activeJobsError}</p> : null}
               {loadError ? <div className="py-8 text-center"><p role="status">{loadError}</p><button className="mt-3 min-h-11 rounded-full border px-4 font-bold" onClick={() => refresh(view)} type="button">다시 불러오기</button></div> : null}
               {!loading && !loadError && view === "unseen-completed" ? activeJobs.map((job) => <ActiveJobRow job={job} key={job.job_id} />) : null}
-              {!growthLoading && !loading && !loadError && displayedGrowthItems.length === 0 && displayedAppActionItems.length === 0 && displayedItems.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
+              {!growthLoading && !loading && !loadError && !activeJobsError && displayedGrowthItems.length === 0 && displayedAppActionItems.length === 0 && displayedItems.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
                 <p className="py-12 text-center text-sm text-[var(--muted)]">
                   {view === "archive" ? "완료된 추출 작업이 없어요." : "표시할 알림이 없어요."}
                 </p>

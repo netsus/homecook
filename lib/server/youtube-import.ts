@@ -19,6 +19,7 @@ import {
   isSelectableIngredientName,
   normalizeIngredientCatalogName,
 } from "@/lib/ingredient-catalog-policy";
+import { normalizeIngredientSearchName } from "@/lib/ingredient-search";
 import {
   adaptCandidateToFlatDraft,
   parseYoutubeRecipeDescription,
@@ -701,7 +702,6 @@ const PREFERRED_TRANSCRIPT_LANGUAGES = ["ko", "en"] as const;
 const YOUTUBE_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const OEMBED_PREVIEW_CLASSIFICATION_REASONS = [YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON];
-const AMBIGUOUS_DIRECT_MATCH_NAMES = new Set(["파"]);
 const NEW_COOKING_METHOD = {
   code: "auto_salt",
   label: "절이기",
@@ -8134,18 +8134,16 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
   const lookupKeyToOriginalNames = new Map<string, Set<string>>();
 
   for (const name of ingredientNames) {
-    const trimmed = name.trim();
-    if (!trimmed) {
+    const key = normalizeIngredientSearchName(name);
+    if (!key) {
       continue;
     }
 
-    for (const key of new Set([trimmed, trimmed.toLowerCase()])) {
-      const originals = lookupKeyToOriginalNames.get(key);
-      if (originals) {
-        originals.add(name);
-      } else {
-        lookupKeyToOriginalNames.set(key, new Set([name]));
-      }
+    const originals = lookupKeyToOriginalNames.get(key);
+    if (originals) {
+      originals.add(name);
+    } else {
+      lookupKeyToOriginalNames.set(key, new Set([name]));
     }
   }
 
@@ -8161,10 +8159,10 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
   const [directResult, synonymResult] = await Promise.all([
     table<ArrayLookupTable<IngredientLookupRow>>(dbClient, "ingredients")
       .select("id, standard_name")
-      .in("standard_name", lookupKeys),
+      .in("search_name", lookupKeys),
     table<ArrayLookupTable<IngredientSynonymLookupRow>>(dbClient, "ingredient_synonyms")
       .select("synonym, ingredients!inner(id, standard_name)")
-      .in("synonym", lookupKeys),
+      .in("search_name", lookupKeys),
   ]);
 
   if (directResult.error || !directResult.data || synonymResult.error || !synonymResult.data) {
@@ -8186,13 +8184,18 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
     if (!isSelectableIngredientId(ingredientId)) {
       return;
     }
-    for (const originalName of lookupKeyToOriginalNames.get(lookupKey) ?? []) {
+    for (const originalName of lookupKeyToOriginalNames.get(normalizeIngredientSearchName(lookupKey)) ?? []) {
       let bucket = matchesByName.get(originalName);
       if (!bucket) {
         bucket = new Map<string, IngredientMatch>();
         matchesByName.set(originalName, bucket);
       }
 
+      // Canonical names take precedence over noisy aliases. Keep multiple
+      // canonical identities ambiguous rather than choosing the first one.
+      if (source === "synonym" && [...bucket.values()].some((match) => match.source === "direct")) {
+        continue;
+      }
       const existing = bucket.get(ingredientId);
       if (!existing || (existing.source === "synonym" && source === "direct")) {
         bucket.set(ingredientId, { standardName, source });
@@ -8539,10 +8542,6 @@ function sortIngredientMatches(
   });
 }
 
-function shouldPreferExactDirectIngredientMatch(name: string) {
-  return !AMBIGUOUS_DIRECT_MATCH_NAMES.has(name.trim());
-}
-
 function hasToTasteQuantityText(value: string) {
   return /(?:약간|조금|적당량|취향껏|한\s*꼬집|한꼬집|넉넉히|살짝)/u.test(value);
 }
@@ -8626,7 +8625,7 @@ export function buildExtractedIngredient({
   quantityEvidenceRefsOverride?: YoutubeQuantityEvidenceRef[];
   quantityReviewRequiredOverride?: boolean;
 }): YoutubeExtractedIngredient {
-  const matches = sortIngredientMatches(
+  const sortedMatches = sortIngredientMatches(
     Array.from(matchesByName.get(name)?.entries() ?? [])
       .map(([ingredientId, match]) => ({
         ingredientId,
@@ -8634,12 +8633,9 @@ export function buildExtractedIngredient({
         source: match.source,
       })),
   );
-  const directMatches = matches.filter((match) => match.source === "direct");
-  const resolvedMatch = shouldPreferExactDirectIngredientMatch(name) && directMatches.length === 1
-    ? directMatches[0]
-    : matches.length === 1
-      ? matches[0]
-      : null;
+  const canonicalMatches = sortedMatches.filter((match) => match.source === "direct");
+  const matches = canonicalMatches.length > 0 ? canonicalMatches : sortedMatches;
+  const resolvedMatch = matches.length === 1 ? matches[0] : null;
   const hasMatch = matches.length > 0;
   const resolutionStatus: YoutubeIngredientResolutionStatus = resolvedMatch
       ? "resolved"
@@ -10778,6 +10774,11 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
   });
 
   if (registrationResult.error || !registrationResult.data) {
+    if (registrationResult.error?.message.includes("INGREDIENT_NAME_AMBIGUOUS")) {
+      return fail("VALIDATION_ERROR", "같은 이름의 재료가 여러 개예요. 검색 결과에서 사용할 재료를 선택해 주세요.", 422, [
+        { field: "standard_name", reason: "ambiguous_ingredient" },
+      ]);
+    }
     return fail("INTERNAL_ERROR", "재료를 등록하지 못했어요.", 500);
   }
 

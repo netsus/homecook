@@ -6,6 +6,7 @@ import {
   ALL_INGREDIENT_CATEGORY,
   isValidIngredientCategory,
 } from "@/lib/ingredient-categories";
+import { ingredientSearchPattern, normalizeIngredientSearchName } from "@/lib/ingredient-search";
 import {
   normalizeIngredientIds,
   toPantryItems,
@@ -46,7 +47,6 @@ type ArrayResult<T> = PromiseLike<{
 
 interface PantryItemsSelectQuery {
   eq(column: string, value: string): PantryItemsSelectQuery;
-  ilike(column: string, value: string): PantryItemsSelectQuery;
   in(column: string, values: string[]): PantryItemsSelectQuery;
   order(column: string, options: QueryOrderOption): PantryItemsSelectQuery;
   then: ArrayResult<PantryItemJoinedRow>["then"];
@@ -54,7 +54,17 @@ interface PantryItemsSelectQuery {
 
 interface PantryIngredientsSelectQuery {
   in(column: string, values: string[]): PantryIngredientsSelectQuery;
+  like(column: string, value: string): PantryIngredientsSelectQuery;
+  order(column: string, options: QueryOrderOption): PantryIngredientsSelectQuery;
+  range(from: number, to: number): PantryIngredientsSelectQuery;
   then: ArrayResult<IngredientRow>["then"];
+}
+
+interface PantrySynonymSelectQuery {
+  like(column: string, value: string): PantrySynonymSelectQuery;
+  order(column: string, options: QueryOrderOption): PantrySynonymSelectQuery;
+  range(from: number, to: number): PantrySynonymSelectQuery;
+  then: ArrayResult<{ ingredient_id: string; synonym: string }>["then"];
 }
 
 interface PantryExistingSelectQuery {
@@ -102,6 +112,7 @@ interface PantryProductInsertQuery {
 interface PantryDeleteQuery {
   eq(column: string, value: string): PantryDeleteQuery;
   in(column: string, values: string[]): PantryDeleteQuery;
+  or(filters: string): PantryDeleteQuery;
   select(columns: string): ArrayResult<PantryIngredientRow>;
 }
 
@@ -150,6 +161,7 @@ interface ProductLookupTable<T> {
 interface PantryDbClient {
   from(table: "pantry_items"): PantryItemsTable;
   from(table: "ingredients"): IngredientsTable;
+  from(table: "ingredient_synonyms"): { select(columns: string): PantrySynonymSelectQuery };
   from(table: "food_products"): ProductLookupTable<FoodProductRow>;
   from(
     table: "food_product_nutrition_versions",
@@ -353,12 +365,12 @@ function buildPantryItemsQuery({
   auth,
   category,
   includeTaxonomyColumn,
-  q,
+  ingredientIds,
 }: {
   auth: PantryAuthSuccess;
   category?: string;
   includeTaxonomyColumn: boolean;
-  q?: string;
+  ingredientIds?: string[];
 }) {
   let query = auth.dbClient
     .from("pantry_items")
@@ -366,8 +378,8 @@ function buildPantryItemsQuery({
 
   query = query.eq("user_id", auth.user.id);
 
-  if (q) {
-    query = query.ilike("ingredients.standard_name", `%${q}%`);
+  if (ingredientIds) {
+    query = query.in("ingredient_id", ingredientIds);
   }
 
   if (category) {
@@ -377,6 +389,46 @@ function buildPantryItemsQuery({
   return query
     .order("created_at", { ascending: false })
     .order("id", { ascending: true });
+}
+
+async function findPantryIngredientIds(dbClient: PantryDbClient, q: string) {
+  const ids = new Set<string>();
+  const pattern = ingredientSearchPattern(q);
+  const normalizedQuery = normalizeIngredientSearchName(q);
+  const pageSize = 1000;
+  let ingredientsFinished = false;
+  let synonymsFinished = false;
+  for (let offset = 0; ; offset += pageSize) {
+    const [ingredients, synonyms]: [
+      Awaited<ArrayResult<IngredientRow>>,
+      Awaited<ArrayResult<{ ingredient_id: string; synonym: string }>>,
+    ] = await Promise.all([
+      ingredientsFinished ? Promise.resolve({ data: [], error: null }) : dbClient
+        .from("ingredients")
+        .select("id, standard_name")
+        .like("search_name", pattern)
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1),
+      synonymsFinished ? Promise.resolve({ data: [], error: null }) : dbClient
+        .from("ingredient_synonyms")
+        .select("ingredient_id, synonym")
+        .like("search_name", pattern)
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1),
+    ]);
+    if (ingredients.error || synonyms.error || !ingredients.data || !synonyms.data) {
+      return null;
+    }
+    for (const ingredient of ingredients.data) {
+      if (normalizeIngredientSearchName(ingredient.standard_name).includes(normalizedQuery)) ids.add(ingredient.id);
+    }
+    for (const synonym of synonyms.data) {
+      if (normalizeIngredientSearchName(synonym.synonym).includes(normalizedQuery)) ids.add(synonym.ingredient_id);
+    }
+    ingredientsFinished = ingredients.data.length < pageSize;
+    synonymsFinished = synonyms.data.length < pageSize;
+    if (ingredientsFinished && synonymsFinished) return [...ids];
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -413,11 +465,20 @@ export async function GET(request: NextRequest) {
     return ok({ items: [], product_items: [] });
   }
 
+  if (q && q.length > 100) {
+    return fail("VALIDATION_ERROR", "검색어는 100자 이하로 입력해 주세요.", 422, [
+      { field: "q", reason: "too_long" },
+    ]);
+  }
+  const ingredientIds = q ? await findPantryIngredientIds(auth.dbClient, q) : undefined;
+  if (ingredientIds === null) {
+    return fail("INTERNAL_ERROR", "팬트리 검색을 불러오지 못했어요. 다시 시도해 주세요.", 500);
+  }
   let result = await buildPantryItemsQuery({
     auth,
     category,
     includeTaxonomyColumn: true,
-    q,
+    ingredientIds,
   });
 
   if (isSchemaCacheMiss(result.error)) {
@@ -425,7 +486,7 @@ export async function GET(request: NextRequest) {
       auth,
       category,
       includeTaxonomyColumn: false,
-      q,
+      ingredientIds,
     });
   }
 
@@ -450,11 +511,11 @@ export async function GET(request: NextRequest) {
     productItems = toPantryProductItems(productResult.data);
 
     if (q) {
-      const normalizedQuery = q.toLocaleLowerCase();
+      const normalizedQuery = normalizeIngredientSearchName(q);
       productItems = productItems.filter(
         (item) =>
-          item.name.toLocaleLowerCase().includes(normalizedQuery) ||
-          item.brand?.toLocaleLowerCase().includes(normalizedQuery),
+          normalizeIngredientSearchName(item.name).includes(normalizedQuery) ||
+          normalizeIngredientSearchName(item.brand ?? "").includes(normalizedQuery),
       );
     }
   }
@@ -660,24 +721,46 @@ export async function DELETE(request: Request) {
   }
 
   const body = await readMutationBody(request);
-  const ingredientIds = normalizeIngredientIds(body?.ingredient_ids);
+  const ingredientIds = normalizeDeleteIds(body?.ingredient_ids);
+  const pantryItemIds = normalizeDeleteIds(body?.pantry_item_ids);
 
-  if (!ingredientIds || ingredientIds.length === 0) {
-    return fail("VALIDATION_ERROR", "삭제할 재료를 선택해 주세요.", 422, [
-      { field: "ingredient_ids", reason: "required_non_empty" },
+  if (!ingredientIds || !pantryItemIds || ingredientIds.length + pantryItemIds.length === 0) {
+    return fail("VALIDATION_ERROR", "삭제할 항목을 선택해 주세요.", 422, [
+      { field: !pantryItemIds ? "pantry_item_ids" : "ingredient_ids", reason: "invalid_or_empty_ids" },
     ]);
   }
 
-  const deleteResult = await auth.dbClient
+  let query = auth.dbClient
     .from("pantry_items")
     .delete()
-    .eq("user_id", auth.user.id)
-    .in("ingredient_id", ingredientIds)
-    .select("ingredient_id");
+    .eq("user_id", auth.user.id);
+  if (ingredientIds.length > 0 && pantryItemIds.length > 0) {
+    // Both lists contain validated UUIDs. Keep ownership outside the OR group.
+    query = query.or(`ingredient_id.in.(${ingredientIds.join(",")}),id.in.(${pantryItemIds.join(",")})`);
+  } else if (pantryItemIds.length > 0) {
+    query = query.in("id", pantryItemIds);
+  } else {
+    query = query.in("ingredient_id", ingredientIds);
+  }
+  const deleteResult = await query.select("id");
 
   if (deleteResult.error || !deleteResult.data) {
     return fail("INTERNAL_ERROR", "팬트리 재료를 삭제하지 못했어요.", 500);
   }
 
   return ok({ removed: deleteResult.data.length });
+}
+
+function normalizeDeleteIds(value: unknown): string[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 500) return null;
+  const ids: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(entry.trim())) {
+      return null;
+    }
+    ids.push(entry.trim().toLowerCase());
+  }
+  return [...new Set(ids)];
 }

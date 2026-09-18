@@ -484,10 +484,11 @@ function MealCard({
               <button
                 className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--foreground)]"
                 onClick={onCreateShopping}
+                disabled={isPending}
                 type="button"
               >
                 <ShoppingIcon />
-                장보기
+                {meal.shopping_list_id ? "장보기 이어가기" : "장보기"}
               </button>
             ) : null}
             {canStartCook ? (
@@ -980,6 +981,7 @@ export function MealScreen({
   const pendingProductEditIdsRef = useRef<Set<string>>(new Set());
   const pendingProductDeleteIdsRef = useRef<Set<string>>(new Set());
   const pendingCookingMealIdsRef = useRef<Set<string>>(new Set());
+  const pendingShoppingMealIdsRef = useRef<Set<string>>(new Set());
   const productEditInputRef = useRef<HTMLInputElement>(null);
   const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
   const [mealAddPickerMode, setMealAddPickerMode] =
@@ -1316,6 +1318,16 @@ export function MealScreen({
   }
 
   async function createShoppingForMeal(meal: MealListItemData) {
+    const openShoppingList = (listId: string) => router.push(
+      buildReturnHref(`/shopping/lists/${listId}`, {
+        returnTo: buildNextPath(planDate, columnId, slotName),
+      }),
+    );
+    if (meal.shopping_list_id) {
+      openShoppingList(meal.shopping_list_id);
+      return;
+    }
+    if (pendingShoppingMealIdsRef.current.has(meal.id)) return;
     if (meal.status !== "registered") {
       setMealActionError(
         meal.id,
@@ -1324,6 +1336,7 @@ export function MealScreen({
       return;
     }
 
+    pendingShoppingMealIdsRef.current.add(meal.id);
     addPending(meal.id);
     clearConflictError(meal.id);
 
@@ -1357,6 +1370,19 @@ export function MealScreen({
         return;
       }
 
+      if (isShoppingApiError(error) && error.status === 409) {
+        try {
+          const latest = await fetchMeals(planDate, columnId);
+          const existing = latest.items.find((item) => item.id === meal.id)?.shopping_list_id;
+          if (existing) {
+            openShoppingList(existing);
+            return;
+          }
+        } catch {
+          // Keep the original conflict visible if the current list cannot be read.
+        }
+      }
+
       setMealActionError(
         meal.id,
         isShoppingApiError(error) && error.status === 409
@@ -1366,6 +1392,7 @@ export function MealScreen({
             : "장보기 목록을 만들지 못했어요. 다시 시도해 주세요.",
       );
     } finally {
+      pendingShoppingMealIdsRef.current.delete(meal.id);
       removePending(meal.id);
     }
   }

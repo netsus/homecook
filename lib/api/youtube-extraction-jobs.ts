@@ -31,6 +31,14 @@ const INVALID_RESPONSE: ApiResponse<never> = {
   },
 };
 
+export function classifyYoutubeExtractionPollError(code: string | undefined) {
+  if (code === "UNAUTHORIZED" || code === "ACCOUNT_SESSION_STALE") return "auth";
+  if (["JOB_NOT_FOUND", "NOT_FOUND", "FORBIDDEN", "FEATURE_DISABLED", "VALIDATION_ERROR"].includes(code ?? "")) {
+    return "terminal";
+  }
+  return "transient";
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
   try {
     const response = await fetch(path, withE2EAuthOverrideHeaders(init));
@@ -38,11 +46,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResponse
     try {
       payload = await response.json() as ApiResponse<T>;
     } catch {
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        return {
+          success: false,
+          data: null,
+          error: {
+            code: response.status === 401 ? "UNAUTHORIZED" : response.status === 403 ? "FORBIDDEN" : "NOT_FOUND",
+            message: response.status === 401 ? "다시 로그인해 주세요." : "작업을 확인할 수 없어요.",
+            fields: [],
+          },
+        };
+      }
       return INVALID_RESPONSE;
     }
     if (!response.ok || !payload.success) {
       return payload.error
-        ? { success: false, data: null, error: payload.error }
+        ? {
+            success: false,
+            data: null,
+            error: {
+              ...payload.error,
+              code: response.status === 401 ? "UNAUTHORIZED"
+                : response.status === 403 ? "FORBIDDEN" : payload.error.code,
+            },
+          }
         : INVALID_RESPONSE;
     }
     return { success: true, data: payload.data, error: null };
@@ -66,11 +93,17 @@ export function enqueueYoutubeExtraction(body: YoutubeExtractionEnqueueBody) {
   );
 }
 
-export function fetchYoutubeExtractionJob(jobId: string) {
-  return request<YoutubeExtractionJobData>(
-    `/api/v1/recipes/youtube/extraction-jobs/${encodeURIComponent(jobId)}`,
-    { cache: "no-store" },
-  );
+export async function fetchYoutubeExtractionJob(jobId: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  try {
+    return await request<YoutubeExtractionJobData>(
+      `/api/v1/recipes/youtube/extraction-jobs/${encodeURIComponent(jobId)}`,
+      { cache: "no-store", signal: controller.signal },
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function fetchYoutubeExtractionSession(extractionId: string) {

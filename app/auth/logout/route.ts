@@ -12,7 +12,7 @@ import { executeHybridLogout } from "@/lib/server/hybrid-auth/logout";
 import { getAuthSupabaseEnv } from "@/lib/supabase/auth-env";
 import { createAuthRouteHandlerClient } from "@/lib/supabase/server";
 
-function buildLogoutFailureRedirectUrl(requestUrl: URL, nextPath: string) {
+function buildReauthenticationRedirectUrl(requestUrl: URL, nextPath: string) {
   const redirectUrl = buildSameAppRedirectUrl("/login", requestUrl);
   redirectUrl.searchParams.set("authError", "ACCOUNT_SESSION_STALE");
   if (nextPath !== "/") {
@@ -29,10 +29,10 @@ export async function GET(request: Request) {
   const supabase = await createAuthRouteHandlerClient();
 
   const logoutResult = await executeHybridLogout(supabase);
-  if (!logoutResult.ok) {
+  if (!logoutResult.ok || requestUrl.searchParams.get("reauthenticate") === "1") {
     return expireAuthFlowCookie(
       expireSupabaseAuthCookies(
-        NextResponse.redirect(buildLogoutFailureRedirectUrl(requestUrl, nextPath)),
+        NextResponse.redirect(buildReauthenticationRedirectUrl(requestUrl, nextPath)),
         request,
         cookieStore,
         { storageKey: authStorageKey },

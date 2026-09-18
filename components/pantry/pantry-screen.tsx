@@ -12,6 +12,7 @@ import { PantryAddSheet } from "@/components/pantry/pantry-add-sheet";
 import { PantryBundlePicker } from "@/components/pantry/pantry-bundle-picker";
 import { PantryIngredientVisual } from "@/components/pantry/pantry-ingredient-visual";
 import { PantryMobileScreen } from "@/components/pantry/pantry-mobile-screen";
+import { normalizeIngredientSearchName } from "@/lib/ingredient-search";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { AppBottomSheet, AppModalFooterActions } from "@/components/shared/app-overlay";
@@ -87,6 +88,10 @@ export function PantryScreen({
   const [items, setItems] = useState<PantryItem[]>([]);
   const [productItems, setProductItems] = useState<PantryProductItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [serverSearchMatch, setServerSearchMatch] = useState<{
+    query: string;
+    ids: Set<string>;
+  } | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -123,7 +128,7 @@ export function PantryScreen({
   );
 
   const searchedItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim();
+    const normalizedQuery = normalizeIngredientSearchName(searchQuery);
 
     if (!normalizedQuery) {
       return allDisplayItems;
@@ -131,10 +136,11 @@ export function PantryScreen({
 
     return allDisplayItems.filter(
       (item) =>
-        item.standard_name.includes(normalizedQuery) ||
-        item.detail_text?.includes(normalizedQuery),
+        normalizeIngredientSearchName(item.standard_name).includes(normalizedQuery) ||
+        normalizeIngredientSearchName(item.detail_text ?? "").includes(normalizedQuery) ||
+        (serverSearchMatch?.query === normalizedQuery && serverSearchMatch.ids.has(item.id)),
     );
-  }, [allDisplayItems, searchQuery]);
+  }, [allDisplayItems, searchQuery, serverSearchMatch]);
 
   const categories = useMemo(() => {
     return INGREDIENT_CATEGORY_GROUP_OPTIONS.filter(
@@ -199,16 +205,13 @@ export function PantryScreen({
     return [...ingredientGroups, ...productGroup];
   }, [activeCategory, categories, displayItems]);
 
-  const selectableIngredientIds = useMemo(
-    () =>
-      displayItems.flatMap((item) =>
-        item.ingredient_id ? [item.ingredient_id] : [],
-      ),
+  const selectableItemIds = useMemo(
+    () => displayItems.map((item) => item.id),
     [displayItems],
   );
   const isAllVisibleSelected =
-    selectableIngredientIds.length > 0 &&
-    selectableIngredientIds.every((ingredientId) => selectedIds.has(ingredientId));
+    selectableItemIds.length > 0 &&
+    selectableItemIds.every((pantryItemId) => selectedIds.has(pantryItemId));
 
   const buildSelectableDates = useCallback((): string[] => {
     const dates: string[] = [];
@@ -244,6 +247,30 @@ export function PantryScreen({
       toastTimerRef.current = null;
     }, TOAST_DURATION_MS);
   }, []);
+
+  useEffect(() => {
+    const normalizedQuery = normalizeIngredientSearchName(searchQuery);
+    if (authState !== "authenticated" || !normalizedQuery) {
+      setServerSearchMatch(null);
+      return;
+    }
+    let active = true;
+    const timer = setTimeout(() => {
+      void fetchPantryList({ q: searchQuery }).then((result) => {
+        if (!active) return;
+        setServerSearchMatch({
+          query: normalizedQuery,
+          ids: new Set([...result.items, ...(result.product_items ?? [])].map((item) => item.id)),
+        });
+      }).catch(() => {
+        if (active) showToast("팬트리 검색을 불러오지 못했어요. 다시 시도해 주세요.", "error");
+      });
+    }, 300);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [authGeneration, authState, searchQuery, showToast]);
 
   useEffect(() => {
     return () => {
@@ -319,13 +346,13 @@ export function PantryScreen({
     [],
   );
 
-  const handleSelectToggle = useCallback((ingredientId: string) => {
+  const handleSelectToggle = useCallback((pantryItemId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(ingredientId)) {
-        next.delete(ingredientId);
+      if (next.has(pantryItemId)) {
+        next.delete(pantryItemId);
       } else {
-        next.add(ingredientId);
+        next.add(pantryItemId);
       }
       return next;
     });
@@ -336,20 +363,20 @@ export function PantryScreen({
       const next = new Set(prev);
 
       if (
-        selectableIngredientIds.length > 0 &&
-        selectableIngredientIds.every((ingredientId) => next.has(ingredientId))
+        selectableItemIds.length > 0 &&
+        selectableItemIds.every((pantryItemId) => next.has(pantryItemId))
       ) {
-        selectableIngredientIds.forEach((ingredientId) => next.delete(ingredientId));
+        selectableItemIds.forEach((pantryItemId) => next.delete(pantryItemId));
         return next;
       }
 
-      selectableIngredientIds.forEach((ingredientId) => next.add(ingredientId));
+      selectableItemIds.forEach((pantryItemId) => next.add(pantryItemId));
       return next;
     });
-  }, [selectableIngredientIds]);
+  }, [selectableItemIds]);
 
-  const handleRequestSingleDelete = useCallback((ingredientId: string) => {
-    setSelectedIds(new Set([ingredientId]));
+  const handleRequestSingleDelete = useCallback((pantryItemId: string) => {
+    setSelectedIds(new Set([pantryItemId]));
     setShowDeleteConfirm(true);
   }, []);
 
@@ -364,9 +391,10 @@ export function PantryScreen({
 
     setIsDeleting(true);
     try {
-      const result = await deletePantryItems(Array.from(selectedIds));
-      showToast(`${result.removed}개 재료가 삭제됐어요`, "success");
-      setItems((prev) => prev.filter((item) => !selectedIds.has(item.ingredient_id)));
+      const result = await deletePantryItems([], Array.from(selectedIds));
+      showToast(`${result.removed}개 항목이 삭제됐어요`, "success");
+      setItems((prev) => prev.filter((item) => !selectedIds.has(item.id)));
+      setProductItems((prev) => prev.filter((item) => !selectedIds.has(item.id)));
       handleExitSelectMode();
     } catch {
       showToast("삭제에 실패했어요. 다시 시도해 주세요", "error");
@@ -625,7 +653,7 @@ export function PantryScreen({
             </div>
             <div className="flex items-start justify-between gap-3 pt-3">
               <h3 className="text-lg font-bold text-[var(--foreground)]">
-                재료를 삭제할까요?
+                선택한 항목을 삭제할까요?
               </h3>
               <button
                 aria-label="닫기"
@@ -924,7 +952,7 @@ export function PantryScreen({
                     <button
                       aria-checked={isAllVisibleSelected}
                       className="web-pantry-select-all"
-                      disabled={selectableIngredientIds.length === 0}
+                      disabled={selectableItemIds.length === 0}
                       onClick={handleSelectAllVisibleToggle}
                       role="checkbox"
                       type="button"
@@ -952,7 +980,7 @@ export function PantryScreen({
                   <WebButton
                     className="web-pantry-edit-button"
                     disabled={
-                      isGuestPreview || isPantryLoading || selectableIngredientIds.length === 0
+                      isGuestPreview || isPantryLoading || selectableItemIds.length === 0
                     }
                     onClick={() => setIsSelectMode(true)}
                     variant="tertiary"
@@ -1006,9 +1034,8 @@ export function PantryScreen({
                     <div className="web-pantry-grid">
                       {group.items.map((item) => {
                         const ingredientId = item.ingredient_id;
-                        const isSelectable = ingredientId !== null;
-                        const isSelected =
-                          ingredientId !== null && selectedIds.has(ingredientId);
+                        const isSelectable = !isGuestPreview;
+                        const isSelected = selectedIds.has(item.id);
                         const testId = ingredientId ?? item.id;
                         const cardContent = (
                           <>
@@ -1045,7 +1072,7 @@ export function PantryScreen({
                             ].join(" ")}
                             data-testid={`web-pantry-card-${testId}`}
                             key={item.id}
-                            onClick={() => handleSelectToggle(ingredientId)}
+                            onClick={() => handleSelectToggle(item.id)}
                             role="checkbox"
                             type="button"
                           >
@@ -1168,7 +1195,7 @@ function toProductDisplayItem(item: PantryProductItem): PantryDisplayItem {
     category_code: null,
     category_label: "제품",
     created_at: item.created_at,
-    detail_text: `${item.brand ?? "브랜드 없음"} · 영양 버전 ${item.food_product_nutrition_version_id}`,
+    detail_text: item.brand,
     food_product_id: item.food_product_id,
     food_product_nutrition_version_id:
       item.food_product_nutrition_version_id,
@@ -1184,7 +1211,7 @@ function displayItemAccessibleLabel(item: PantryDisplayItem) {
     return `${item.standard_name} · ${item.detail_text}`;
   }
 
-  return `${item.standard_name} 재료`;
+  return `${item.standard_name} ${item.item_type === "food_product" ? "제품" : "재료"}`;
 }
 
 function comparePantryDisplayItems(

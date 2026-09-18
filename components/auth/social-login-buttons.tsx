@@ -23,6 +23,8 @@ import { isQaFixtureClientModeEnabled } from "@/lib/mock/qa-fixture-client";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import {
   type PendingRecipeAction,
+  clearPendingAction,
+  readPendingAction,
   savePendingAction,
 } from "@/lib/auth/pending-action";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -110,7 +112,10 @@ export function SocialLoginButtons({
         }
 
         if (pendingAction) {
-          savePendingAction(pendingAction);
+          if (!savePendingAction(pendingAction)) throw new Error("Pending action storage unavailable");
+        } else {
+          const savedAction = readPendingAction();
+          if (savedAction && savedAction.redirectTo !== nextPath) clearPendingAction();
         }
 
         document.cookie = createPostAuthNextCookie(nextPath);

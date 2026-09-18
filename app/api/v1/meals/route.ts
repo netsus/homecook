@@ -79,6 +79,7 @@ interface MealListRow {
   recipe_id: string;
   planned_servings: number;
   status: string;
+  shopping_list_id: string | null;
   is_leftover: boolean;
   created_at: string;
   recipe_content_snapshot_id: string | null;
@@ -380,6 +381,7 @@ function toMealListItem(row: MealListRow, recipeMap: Map<string, RecipeSummaryRo
     recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     planned_servings: row.planned_servings,
     status: normalizeMealStatus(row.status),
+    shopping_list_id: row.shopping_list_id ?? null,
     is_leftover: row.is_leftover,
     revision: row.revision,
   };
@@ -448,7 +450,7 @@ async function getMeals(request: NextRequest) {
   const mealsResult = await dbClient
     .from("meals")
     .select(
-      "id, recipe_id, planned_servings, status, is_leftover, created_at, revision, recipe_content_snapshot_id, recipe_content_snapshots(title)",
+      "id, recipe_id, planned_servings, status, shopping_list_id, is_leftover, created_at, revision, recipe_content_snapshot_id, recipe_content_snapshots(title)",
     )
     .eq("user_id", user.id)
     .eq("plan_date", parsed.planDate)
