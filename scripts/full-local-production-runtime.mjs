@@ -4,10 +4,12 @@ import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
   existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -81,12 +83,11 @@ import {
   buildBootstrapAwareDatabaseResetSql,
   buildComposeLabeledStorageVolumeCreateArgs,
   buildCutoverPreflight,
-  buildPlatformRestoreSql,
   buildSanitizedPlatformData,
   executeBootstrapAwarePlatformRestore,
-  verifyRestoredPlatformDataSnapshot,
   compareRestoreReplayManifests,
 } from "./lib/full-local-restore-cutover.mjs";
+import { hashPlatformFile, sanitizePlatformDataFile, writePlatformRestoreFile } from "./lib/full-local-platform-data-file.mjs";
 import {
   FULL_LOCAL_OAUTH_KEYCHAIN_ACCOUNTS,
   assertLocalOAuthProvisionApproved,
@@ -697,6 +698,30 @@ function composeWithInput(runtime, args, input) {
   });
 }
 
+function replayPlatformDatabaseFiles(runtime, { dataPath, rolesPath, schemaPath }) {
+  const staging = mkdtempSync(join(tmpdir(), "homecook-platform-replay-"));
+  chmodSync(staging, 0o700);
+  try {
+    const input = join(staging, "restore.sql");
+    writePlatformRestoreFile({ dataPath, rolesPath, schemaPath, output: input });
+    const fd = openSync(input, "r");
+    try {
+      const result = spawnSync("docker", composeArgs(runtime,
+        "exec", "-T", "postgres", "psql", "--single-transaction",
+        "--variable", "ON_ERROR_STOP=1", "--username", "supabase_admin", "--dbname", "postgres",
+      ), {
+        cwd: runtime.rootDir ?? ROOT, env: runtime.env,
+        stdio: [fd, "ignore", "pipe"], maxBuffer: 32 * 1024 * 1024,
+      });
+      if (result.status !== 0 || result.error) fail("Full-local Docker Compose database replay failed.");
+    } finally {
+      closeSync(fd);
+    }
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
+}
+
 function composeContainerIds(runtime) {
   return compose(runtime, ["ps", "--all", "--quiet"])
     .trim()
@@ -1197,7 +1222,7 @@ function configuredFullLocalProductionResources(runtime) {
   };
 }
 
-async function loadFullLocalBackupReadiness(runtime, resources) {
+export async function loadFullLocalBackupReadiness(runtime, resources) {
   const path = runtime.config.FULL_LOCAL_BACKUP_READINESS_PATH;
   if (!path || !isAbsolute(path) || !existsSync(path)) {
     fail("FULL_LOCAL_BACKUP_READINESS_PATH must reference existing readiness evidence.");
@@ -1594,24 +1619,34 @@ function writeRestoreManifest({
 }
 
 function restoredPlatformDataSnapshot(runtime, metadata) {
-  const restoredDataSql = compose(runtime, [
-    "exec",
-    "-T",
-    "postgres",
-    "pg_dump",
-    "--data-only",
-    "--username",
-    "supabase_admin",
-    "--dbname",
-    "postgres",
-  ]);
-  return verifyRestoredPlatformDataSnapshot({
-    restoredDataSql,
-    sourceDataSha256: metadata.components.data_sha256,
-    sourceDataSemanticSha256: metadata.manifest.data_semantic_sha256,
-    sourceRelationClassificationDigest:
-      metadata.manifest.relation_classification_digest,
-  });
+  const staging = mkdtempSync(join(tmpdir(), "homecook-restored-data-"));
+  chmodSync(staging, 0o700);
+  try {
+    const source = join(staging, "data.sql");
+    const sanitized = join(staging, "data.sanitized.sql");
+    const fd = openSync(source, "wx", 0o600);
+    try {
+      const result = spawnSync("docker", composeArgs(runtime,
+        "exec", "-T", "postgres", "pg_dump", "--data-only", "--username", "supabase_admin", "--dbname", "postgres",
+      ), { cwd: runtime.rootDir ?? ROOT, env: runtime.env, stdio: ["ignore", fd, "pipe"], maxBuffer: 32 * 1024 * 1024 });
+      if (result.status !== 0 || result.error) fail("Restored platform database capture failed.");
+    } finally {
+      closeSync(fd);
+    }
+    const manifest = sanitizePlatformDataFile(source, sanitized, metadata.manifest.data_semantic_format);
+    if (
+      !/^[0-9a-f]{64}$/u.test(metadata.components.data_sha256)
+      || manifest.data_semantic_sha256 !== metadata.manifest.data_semantic_sha256
+      || manifest.relation_classification_digest !== metadata.manifest.relation_classification_digest
+    ) fail("Restored DB/Auth data does not match the authenticated archive");
+    return Object.freeze({
+      restored_data_sha256: hashPlatformFile(sanitized),
+      restored_data_semantic_sha256: manifest.data_semantic_sha256,
+      restored_relation_classification_digest: manifest.relation_classification_digest,
+    });
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
 }
 
 function restoredServiceRestoreAttestation(runtime, metadata, serviceImages) {
@@ -2020,23 +2055,7 @@ async function restorePlatformBackup(args) {
                 expectedImages: metadata.service_restore_attestation?.service_images,
               });
             },
-            replayDatabase: () => composeWithInput(restoreRuntime, [
-              "exec",
-              "-T",
-              "postgres",
-              "psql",
-              "--single-transaction",
-              "--variable",
-              "ON_ERROR_STOP=1",
-              "--username",
-              "supabase_admin",
-              "--dbname",
-              "postgres",
-            ], buildPlatformRestoreSql({
-              dataSql: readFileSync(dataPath, "utf8"),
-              rolesSql: readFileSync(rolesPath, "utf8"),
-              schemaSql: readFileSync(schemaPath, "utf8"),
-            })),
+            replayDatabase: () => replayPlatformDatabaseFiles(restoreRuntime, { dataPath, rolesPath, schemaPath }),
             resetDatabase: () => composeWithInput(restoreRuntime, [
               "exec",
               "-T",

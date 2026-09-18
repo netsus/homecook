@@ -750,6 +750,7 @@ async function main() {
         consume: ({ metadata }) => ({
           created_at: metadata.created_at,
           format: metadata.format,
+          data_semantic_format: metadata.manifest.data_semantic_format,
           relation_classification_digest: metadata.manifest.relation_classification_digest,
           storage_payload_included: metadata.storage_payload_included,
           transient_promote_count: metadata.manifest.transient_promote_count,

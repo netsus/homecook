@@ -20,6 +20,7 @@ import {
   buildSanitizedPlatformData,
   digestSemanticPlatformDataSql,
 } from "./full-local-restore-cutover.mjs";
+import { digestSemanticPlatformDataFile, hashPlatformFile, PLATFORM_DATA_SEMANTIC_FORMAT, sanitizePlatformDataFile } from "./full-local-platform-data-file.mjs";
 
 export const PLATFORM_BACKUP_FORMAT = "homecook-full-local-platform-v5";
 export const PLATFORM_BACKUP_AUTH_FORMAT = "homecook-full-local-platform-auth-v1";
@@ -65,7 +66,7 @@ function defaultRun(command, args, options = {}) {
 }
 
 function defaultHashFile(path) {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
+  return hashPlatformFile(path);
 }
 
 export function buildPlatformServiceSchemaCatalogSql() {
@@ -693,11 +694,15 @@ export function createEncryptedPlatformBackup({
       if (cutAttempted) storage.endConsistentCut();
     }
 
-    const sanitized = buildSanitizedPlatformData(
-      dependencies.read(join(staging, "data.sql")),
-    );
     const sanitizedPath = join(staging, "data.sanitized.sql");
-    dependencies.write(sanitizedPath, sanitized.sql);
+    let manifest;
+    if (suppliedDependencies?.read) {
+      const sanitized = buildSanitizedPlatformData(dependencies.read(join(staging, "data.sql")));
+      dependencies.write(sanitizedPath, sanitized.sql);
+      manifest = sanitized.manifest;
+    } else {
+      manifest = sanitizePlatformDataFile(join(staging, "data.sql"), sanitizedPath, PLATFORM_DATA_SEMANTIC_FORMAT);
+    }
     dependencies.remove(join(staging, "data.sql"), { force: true });
 
     const components = {
@@ -735,7 +740,7 @@ export function createEncryptedPlatformBackup({
             provenance: { adapter: "isolated-supabase-cli-local" },
             source_identity: "isolated-supabase-cli-local",
           },
-      manifest: sanitized.manifest,
+      manifest,
       service_restore_attestation: database && database.provenance?.adapter === undefined
         ? buildPlatformServiceRestoreAttestation({
             components,
@@ -744,7 +749,7 @@ export function createEncryptedPlatformBackup({
               auth: database.provenance.auth_image,
               storage: database.provenance.storage_image,
             },
-            serviceLedgers: sanitized.manifest.service_ledgers,
+            serviceLedgers: manifest.service_ledgers,
           })
         : undefined,
       storage_payload: storagePayload,
@@ -790,7 +795,8 @@ export function createEncryptedPlatformBackup({
       archive_authentication: authenticationPath,
       archive_sha256: authentication.archive_sha256,
       created_at: metadata.created_at,
-      relation_classification_digest: sanitized.manifest.relation_classification_digest,
+      data_semantic_format: manifest.data_semantic_format,
+      relation_classification_digest: manifest.relation_classification_digest,
       transient_promote_count: 0,
       unclassified_count: 0,
       storage_object_count: storagePayload.object_count,
@@ -870,11 +876,13 @@ export async function withVerifiedPlatformBackup({
     assertSafeBackupEntries(dependencies.run("tar", ["-tzf", bundle]));
     dependencies.run("tar", ["-C", staging, "-xzf", bundle]);
     const metadata = JSON.parse(dependencies.read(join(staging, "manifest.json")));
+    const semanticFormat = metadata.manifest?.data_semantic_format;
+    if (semanticFormat !== undefined && semanticFormat !== PLATFORM_DATA_SEMANTIC_FORMAT) throw new Error("Unsupported platform data semantic format");
     const observed = {
       data_sha256: dependencies.hashFile(join(staging, "data.sanitized.sql")),
-      data_semantic_sha256: digestSemanticPlatformDataSql(
-        dependencies.read(join(staging, "data.sanitized.sql")),
-      ),
+      data_semantic_sha256: suppliedDependencies?.read
+        ? digestSemanticPlatformDataSql(dependencies.read(join(staging, "data.sanitized.sql")))
+        : digestSemanticPlatformDataFile(join(staging, "data.sanitized.sql"), semanticFormat),
       roles_sha256: dependencies.hashFile(join(staging, "roles.sql")),
       schema_sha256: dependencies.hashFile(join(staging, "schema.sql")),
       storage_payload_sha256: dependencies.hashFile(join(staging, "storage.payload.tar")),

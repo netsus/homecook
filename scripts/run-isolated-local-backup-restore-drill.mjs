@@ -4,14 +4,20 @@ import { spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, randomBytes } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants,
+  copyFileSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -49,10 +55,9 @@ import {
 } from "./lib/full-local-production-resources.mjs";
 import {
   buildBootstrapAwareDatabaseResetSql,
-  buildPlatformRestoreSql,
   executeBootstrapAwarePlatformRestore,
-  verifyRestoredPlatformDataSnapshot,
 } from "./lib/full-local-restore-cutover.mjs";
+import { hashPlatformFile, inspectSemanticPlatformDataFile, sanitizePlatformDataFile, writePlatformRestoreFile } from "./lib/full-local-platform-data-file.mjs";
 import {
   assertIsolatedDrillTarget,
   buildIsolatedDrillPlan,
@@ -120,6 +125,8 @@ function startPostgresFixture({ container, composeProject, postgresVolume }) {
   run("docker", [
     "run",
     "--detach",
+    "--network",
+    "none",
     "--platform",
     PLATFORM,
     "--name",
@@ -348,11 +355,24 @@ function resetDatabase(container) {
 }
 
 function replayDatabase({ container, dataPath, rolesPath, schemaPath }) {
-  database(container, buildPlatformRestoreSql({
-    dataSql: readFileSync(dataPath, "utf8"),
-    rolesSql: readFileSync(rolesPath, "utf8"),
-    schemaSql: readFileSync(schemaPath, "utf8"),
-  }), "Isolated database restore failed");
+  const staging = mkdtempSync(join(tmpdir(), "homecook-isolated-replay-"));
+  chmodSync(staging, 0o700);
+  try {
+    const input = join(staging, "restore.sql");
+    writePlatformRestoreFile({ dataPath, rolesPath, schemaPath, output: input });
+    const fd = openSync(input, "r");
+    try {
+      const result = spawnSync("docker", [
+        "exec", "-i", container, "psql", "--variable", "ON_ERROR_STOP=1",
+        "--username", "supabase_admin", "--dbname", "postgres",
+      ], { cwd: ROOT, env: process.env, stdio: [fd, "ignore", "pipe"], maxBuffer: 32 * 1024 * 1024 });
+      if (result.status !== 0 || result.error) throw new Error("Isolated database restore failed");
+    } finally {
+      closeSync(fd);
+    }
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
 }
 
 function seedBootstrapSchemaCollision(container) {
@@ -410,24 +430,63 @@ function verifyGenericRestoredDatabaseMetadata(container, metadata) {
   return observed;
 }
 
-function restoredDataSnapshot(container, metadata) {
-  const restoredDataSql = run("docker", [
-    "exec",
-    container,
-    "pg_dump",
-    "--data-only",
-    "--username",
-    "supabase_admin",
-    "--dbname",
-    "postgres",
-  ], { failure: "Isolated restored data snapshot verification failed" });
-  return verifyRestoredPlatformDataSnapshot({
-    restoredDataSql,
-    sourceDataSha256: metadata.components.data_sha256,
-    sourceDataSemanticSha256: metadata.manifest.data_semantic_sha256,
-    sourceRelationClassificationDigest:
-      metadata.manifest.relation_classification_digest,
-  });
+function restoredDataSnapshot(container, metadata, expectedDataPath) {
+  const staging = mkdtempSync(join(tmpdir(), "homecook-isolated-restored-data-"));
+  chmodSync(staging, 0o700);
+  try {
+    const source = join(staging, "data.sql");
+    const sanitized = join(staging, "data.sanitized.sql");
+    const fd = openSync(source, "wx", 0o600);
+    try {
+      const result = spawnSync("docker", [
+        "exec", container, "pg_dump", "--data-only", "--username", "supabase_admin", "--dbname", "postgres",
+      ], { cwd: ROOT, env: process.env, stdio: ["ignore", fd, "pipe"], maxBuffer: 32 * 1024 * 1024 });
+      if (result.status !== 0 || result.error) throw new Error("Isolated restored data snapshot capture failed");
+    } finally {
+      closeSync(fd);
+    }
+    const manifest = sanitizePlatformDataFile(source, sanitized, metadata.manifest.data_semantic_format);
+    if (
+      !/^[0-9a-f]{64}$/u.test(metadata.components.data_sha256)
+      || manifest.data_semantic_sha256 !== metadata.manifest.data_semantic_sha256
+      || manifest.relation_classification_digest !== metadata.manifest.relation_classification_digest
+    ) {
+      const comparisonDirectory = process.env.HOMECOOK_RESTORE_COMPARISON_DIRECTORY;
+      if (comparisonDirectory) {
+        const directory = lstatSync(comparisonDirectory);
+        const outside = relative(ROOT, comparisonDirectory);
+        if (!isAbsolute(comparisonDirectory) || realpathSync(comparisonDirectory) !== comparisonDirectory
+          || !directory.isDirectory() || directory.uid !== process.getuid?.() || (directory.mode & 0o777) !== 0o700
+          || (!outside.startsWith("../") && !isAbsolute(outside))) throw new Error("Restore diagnostics require a private external directory");
+        copyFileSync(expectedDataPath, join(comparisonDirectory, "expected.sanitized.sql"), constants.COPYFILE_EXCL);
+        copyFileSync(sanitized, join(comparisonDirectory, "restored.sanitized.sql"), constants.COPYFILE_EXCL);
+        chmodSync(join(comparisonDirectory, "expected.sanitized.sql"), 0o600);
+        chmodSync(join(comparisonDirectory, "restored.sanitized.sql"), 0o600);
+      }
+      const expected = new Map(metadata.manifest.relations.map((row) => [row.relation, row]));
+      const changed = manifest.relations.filter((row) => row.action === "include"
+        && (expected.get(row.relation)?.row_count !== row.row_count || expected.get(row.relation)?.action !== row.action))
+        .map((row) => ({ relation: row.relation, expected_rows: expected.get(row.relation)?.row_count, restored_rows: row.row_count }));
+      const expectedSemantics = inspectSemanticPlatformDataFile(expectedDataPath, metadata.manifest.data_semantic_format);
+      const restoredSemantics = inspectSemanticPlatformDataFile(sanitized, metadata.manifest.data_semantic_format);
+      const expectedHashes = new Map(expectedSemantics.relations.map((row) => [row.relation, row.sha256]));
+      const changedRelations = restoredSemantics.relations.filter((row) => expectedHashes.get(row.relation) !== row.sha256).map((row) => row.relation);
+      throw new Error(`Restored DB/Auth data does not match the authenticated archive: ${JSON.stringify({
+        semantic_matches: manifest.data_semantic_sha256 === metadata.manifest.data_semantic_sha256,
+        classification_matches: manifest.relation_classification_digest === metadata.manifest.relation_classification_digest,
+        row_count_differences: changed,
+        non_copy_matches: expectedSemantics.non_copy_sha256 === restoredSemantics.non_copy_sha256,
+        changed_copy_relations: changedRelations,
+      })}`);
+    }
+    return Object.freeze({
+      restored_data_sha256: hashPlatformFile(sanitized),
+      restored_data_semantic_sha256: manifest.data_semantic_sha256,
+      restored_relation_classification_digest: manifest.relation_classification_digest,
+    });
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
 }
 
 function restoredSemanticManifest(container) {
@@ -899,6 +958,7 @@ async function executeDrill() {
             const dataSnapshot = restoredDataSnapshot(
               restored.postgresContainerId,
               metadata,
+              dataPath,
             );
             if (fixturePayload) {
               const restoredPayload = readFileSync(
