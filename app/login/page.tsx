@@ -17,6 +17,7 @@ interface LoginPageProps {
   searchParams: Promise<{
     authError?: string;
     next?: string;
+    reauthenticate?: string;
   }>;
 }
 
@@ -24,12 +25,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams;
   const cookieStore = await cookies();
   const nextPath = resolveNextPath(resolvedSearchParams.next ?? "/");
+  const requiresReauthentication = resolvedSearchParams.reauthenticate === "1"
+    || resolvedSearchParams.authError === "ACCOUNT_SESSION_STALE";
   const initialAuthenticated = await getInitialAuthenticatedFromServer();
   const lastProvider = parseAuthProviderCookie(
     cookieStore.get(LAST_AUTH_PROVIDER_COOKIE)?.value,
   );
 
-  if (initialAuthenticated) {
+  if (initialAuthenticated && resolvedSearchParams.reauthenticate === "1") {
+    redirect(`/auth/logout?reauthenticate=1&next=${encodeURIComponent(nextPath)}`);
+  }
+
+  if (initialAuthenticated && !requiresReauthentication) {
     redirect(nextPath);
   }
 
@@ -38,6 +45,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       authError={resolvedSearchParams.authError ?? null}
       lastProvider={lastProvider}
       nextPath={nextPath}
+      requiresReauthentication={requiresReauthentication}
     />
   );
 }

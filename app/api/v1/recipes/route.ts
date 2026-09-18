@@ -1551,6 +1551,28 @@ function mapRecipeCard(recipe: {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    if (searchParams.has("manual_create_key")) {
+      const key = searchParams.get("manual_create_key") ?? "";
+      if (!isUuid(key)) return fail("VALIDATION_ERROR", "저장 요청을 확인해 주세요.", 422);
+      const routeClient = await createRouteHandlerClient();
+      const user = await requireUser(routeClient);
+      if (!user) return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+      const ownerError = validateManualDraftOwner(request, user.id);
+      if (ownerError) return ownerError;
+      const authority = await readRecipeMutationAuthority(routeClient, user);
+      if (!authority.ok) return authority.response;
+      const serviceClient = createRecipeFuturePropagationInternalClient();
+      if (!serviceClient) return fail("INTERNAL_ERROR", "저장 결과를 확인하지 못했어요.", 500);
+      const result = await callFuturePropagationRpc(serviceClient, "read_manual_recipe_create_result", {
+        ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
+        p_idempotency_key: key,
+      });
+      if (!result.ok) return result.response;
+      if (!isRecord(result.data) || !("recipe" in result.data)) {
+        return fail("INTERNAL_ERROR", "저장 결과를 확인하지 못했어요.", 500);
+      }
+      return ok(result.data, { headers: { "Cache-Control": "private, no-store" } });
+    }
     const listQuery: RecipeListQuery = {
       q: searchParams.get("q")?.trim() || undefined,
       tag: searchParams.get("tag")?.trim() || undefined,
@@ -1762,6 +1784,19 @@ function buildMissingCookingMethodFields(
     .filter((field): field is ValidationField => field !== null);
 }
 
+function validateManualDraftOwner(request: Request, userId: string) {
+  const expectedOwnerId = request.headers.get("X-Homecook-Draft-Owner")?.trim();
+  if (!expectedOwnerId || !isUuid(expectedOwnerId)) {
+    return fail("VALIDATION_ERROR", "초안을 작성한 계정을 확인해 주세요.", 422, [
+      { field: "X-Homecook-Draft-Owner", reason: "required_uuid" },
+    ]);
+  }
+  if (expectedOwnerId.toLowerCase() !== userId.toLowerCase()) {
+    return fail("DRAFT_OWNER_CHANGED", "로그인 계정이 바뀌었어요. 초안을 작성한 계정으로 다시 로그인해 주세요.", 409);
+  }
+  return null;
+}
+
 async function postRecipe(request: Request) {
   const routeClient = await createRouteHandlerClient();
   const user = await requireUser(routeClient);
@@ -1890,6 +1925,15 @@ async function postRecipe(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
+  const manualIdempotency = request.headers.has("Idempotency-Key")
+    ? readRequiredIdempotencyKey(request, "Idempotency-Key")
+    : null;
+  if (manualIdempotency && !manualIdempotency.ok) return manualIdempotency.response;
+  if (manualIdempotency) {
+    const ownerError = validateManualDraftOwner(request, user.id);
+    if (ownerError) return ownerError;
+  }
+
   const legacyImageReference = parsed.thumbnailUrl
     ? parseRecipeImagePublicUrl({
         thumbnailUrl: parsed.thumbnailUrl,
@@ -1933,6 +1977,10 @@ async function postRecipe(request: Request) {
     }
     managedSession = verifiedSession.sessionAuthority;
   } else if (parsed.imageObjectId) {
+    return failManagedRecipeCreate("ACCOUNT_GENERATION_STALE");
+  }
+
+  if (manualIdempotency && !managedSession) {
     return failManagedRecipeCreate("ACCOUNT_GENERATION_STALE");
   }
 
@@ -2013,6 +2061,43 @@ async function postRecipe(request: Request) {
     tags,
     tagSource,
   );
+
+  if (manualIdempotency?.ok && managedSession) {
+    const serviceClient = createRecipeFuturePropagationInternalClient();
+    if (!serviceClient) return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
+    const result = await serviceClient.rpc("create_manual_recipe_recoverable", {
+      ...buildSessionAuthorityRpcArgs(managedSession),
+      p_idempotency_key: manualIdempotency.key,
+      p_request_body: body,
+      p_create_payload: recipePayload,
+    });
+    if (result.error) {
+      const managedError = readManagedRecipeCreateErrorCode(result.error);
+      if (managedError) return failManagedRecipeCreate(managedError);
+      if (result.error.message.includes("IDEMPOTENCY_KEY_REUSED")) {
+        return fail("IDEMPOTENCY_KEY_REUSED", "이 저장 요청은 이미 다른 내용에 사용됐어요.", 409);
+      }
+      const authorityError = createHybridAuthorityRouteError(result.error);
+      if (authorityError) return authorityError;
+      return fail("INTERNAL_ERROR", "레시피 저장 결과를 확인하지 못했어요.", 500);
+    }
+    const row = result.data as ManualRecipeCreateRpcData | null;
+    if (!row?.id || !row.title || row.source_type !== "manual"
+      || row.created_by !== user.id || typeof row.base_servings !== "number") {
+      return fail("INTERNAL_ERROR", "레시피 저장 결과를 확인하지 못했어요.", 500);
+    }
+    await writeManualRecipeNutritionSnapshot(dbClient as unknown as RecipeNutritionServiceClient, row.id);
+    try {
+      await recordUserGrowthActivityEvent(dbClient, {
+        userId: user.id, activityType: "recipe_registered", category: "recipe",
+        sourceKey: `recipe_registered:${row.id}`, sourceTable: "recipes", sourceId: row.id,
+        sourceMeta: { source_type: "manual" },
+      });
+    } catch {
+      // The creation receipt is authoritative even when activity logging fails.
+    }
+    return ok(toManualRecipeCreateData(row as ManualRecipeRow), { status: 201 });
+  }
 
   if (typeof dbClient.rpc === "function") {
     const recipeResult = managedSession

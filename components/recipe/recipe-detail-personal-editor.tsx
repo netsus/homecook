@@ -10,6 +10,7 @@ import {
 } from "@/components/recipe/personal-recipe-editor-shell";
 import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
+import { fetchUserProfile } from "@/lib/api/mypage";
 import {
   createPersonalRecipeFromSource,
   isPersonalRecipeApiError,
@@ -106,6 +107,17 @@ export function RecipeDetailPersonalEditor({
   const [createDerivedRecipeError, setCreateDerivedRecipeError] = useState<string | null>(null);
   const openAuthGate = useAuthGateStore((state) => state.open);
   const authGateOpen = useAuthGateStore((state) => state.isOpen);
+  const draftOwnerUuidRef = useRef<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    draftOwnerUuidRef.current = null;
+    void fetchUserProfile().then((profile) => {
+      if (current) draftOwnerUuidRef.current = profile.id;
+    }).catch(() => {
+      // An unverified draft owner must never be resumed after reauthentication.
+    });
+    return () => { current = false; };
+  }, [recipeId]);
   const saveContext = resumeContext ?? editContext;
   const resumeSaveAsNew = mode === "edit" && resumeAction === "save-as-new";
   const initialShellDraft = useMemo(
@@ -188,7 +200,16 @@ export function RecipeDetailPersonalEditor({
         && (error.status === 401 || (error.status === 409 && error.code === "ACCOUNT_SESSION_STALE"))
       ) {
         if (mode === "fork") {
-          openAuthGate({ recipeId, type: "recipe-fork" });
+          openAuthGate({
+            recipeId,
+            type: "recipe-fork",
+            sourceOwnerUuid: draftOwnerUuidRef.current,
+            editContext: {
+              base_recipe_revision: saveContext.base_recipe_revision,
+              draft,
+              image_object_id: saveContext.image_object_id,
+            },
+          });
           return;
         }
 
@@ -200,6 +221,7 @@ export function RecipeDetailPersonalEditor({
           },
           recipeId,
           type: "recipe-save-as-new",
+          sourceOwnerUuid: draftOwnerUuidRef.current,
         });
         return;
       }
@@ -367,6 +389,7 @@ export function RecipeDetailPersonalEditor({
                       editContext: pendingEditContext,
                       recipeId,
                       type: "recipe-edit-save",
+                      sourceOwnerUuid: draftOwnerUuidRef.current,
                     })}
                     recipeId={recipeId}
                     resumePreview={resumeAction === "same-id-save" && Boolean(resumeContext)}

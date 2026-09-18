@@ -144,12 +144,13 @@ function isUnauthorized(error: unknown) {
 }
 
 function isAvailableCookedBatch(batch: CookedBatchProjection) {
-  return batch.weight_status === "known"
-    && batch.batch_status === "available"
-    && (batch.remaining_weight_g ?? 0) > 0;
+  return (batch.weight_status === null && batch.batch_status === null)
+    || (batch.weight_status === "known"
+      && batch.batch_status === "available"
+      && (batch.remaining_weight_g ?? 0) > 0);
 }
 
-async function findRestoredCookedBatch(
+async function findCookedBatch(
   firstPage: CookedBatchListData,
   batchId: string,
   isActive: () => boolean,
@@ -159,7 +160,7 @@ async function findRestoredCookedBatch(
 
   while (isActive()) {
     const batch = page.items.find((item) => item.id === batchId);
-    if (batch) return isAvailableCookedBatch(batch) ? batch : null;
+    if (batch) return batch;
     if (!page.has_next || !page.next_cursor || visitedCursors.has(page.next_cursor)) return null;
 
     const cursor = page.next_cursor;
@@ -212,6 +213,9 @@ export function MealLogAddSheet({
   const [loadingMore, setLoadingMore] = useState<"batch" | "catalog" | "recent" | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingRecentId, setCheckingRecentId] = useState<string | null>(null);
+  const [unavailableRecentBatchIds, setUnavailableRecentBatchIds] = useState<Set<string>>(new Set());
+  const selectionRequestRef = useRef(0);
   const restoredCookedBatchSelectionPending = restoredCookedBatchPending
     && selection?.type === "cooked_batch"
     && selection.id === initialSelection?.id;
@@ -226,6 +230,7 @@ export function MealLogAddSheet({
     if (!error) return;
     requestAnimationFrame(() => errorRef.current?.focus());
   }, [error]);
+  useEffect(() => () => { selectionRequestRef.current += 1; }, []);
 
   useEffect(() => {
     let active = true;
@@ -243,11 +248,11 @@ export function MealLogAddSheet({
         setBatchCursor(batchData.next_cursor);
         setBatchHasNext(batchData.has_next);
         if (restoredCookedBatchId) {
-          const batch = await findRestoredCookedBatch(batchData, restoredCookedBatchId, () => active);
+          const batch = await findCookedBatch(batchData, restoredCookedBatchId, () => active);
           if (!active) return;
           setSelection((current) => {
             if (current?.type !== "cooked_batch" || current.id !== restoredCookedBatchId) return current;
-            if (!batch) return null;
+            if (!batch || !isAvailableCookedBatch(batch)) return null;
             return {
               ...current,
               brand: null,
@@ -353,7 +358,7 @@ export function MealLogAddSheet({
     setError(null);
     try {
       const result = await fetchCookedBatches({ availability: "all", cursor: batchCursor, limit: 20 });
-      setBatches((current) => [...current, ...result.items]);
+      setBatches((current) => [...new Map([...current, ...result.items].map((batch) => [batch.id, batch])).values()]);
       setBatchCursor(result.next_cursor);
       setBatchHasNext(result.has_next);
     } catch (reason) {
@@ -391,16 +396,51 @@ export function MealLogAddSheet({
     }
   }
 
-  function chooseRecent(item: MealLogRecentItem) {
-    const matchingBatch = item.source.type === "cooked_batch"
+  function cancelPendingSelection() {
+    selectionRequestRef.current += 1;
+    setCheckingRecentId(null);
+  }
+
+  async function chooseRecent(item: MealLogRecentItem) {
+    cancelPendingSelection();
+    const requestId = selectionRequestRef.current;
+    let matchingBatch = item.source.type === "cooked_batch"
       ? batches.find((batch) => batch.id === item.source.id)
       : null;
-    if (item.source.type === "cooked_batch"
-      && (!matchingBatch
-        || matchingBatch.weight_status !== "known"
-        || matchingBatch.batch_status !== "available"
-        || (matchingBatch.remaining_weight_g ?? 0) <= 0
-        || item.last_quantity.unit !== "g")) return;
+    if (item.source.type === "cooked_batch") {
+      if (item.last_quantity.unit !== "g") return;
+      if (!matchingBatch) {
+        setSelection(null);
+        setCheckingRecentId(item.source.id);
+        setError(null);
+        try {
+          matchingBatch = await findCookedBatch(
+            { items: batches, has_next: batchHasNext, next_cursor: batchCursor },
+            item.source.id,
+            () => requestId === selectionRequestRef.current,
+          );
+          if (requestId !== selectionRequestRef.current) return;
+          if (matchingBatch) {
+            const foundBatch = matchingBatch;
+            setBatches((current) => current.some((batch) => batch.id === foundBatch.id) ? current : [...current, foundBatch]);
+          }
+        } catch (reason) {
+          if (requestId !== selectionRequestRef.current) return;
+          if (isUnauthorized(reason)) onUnauthorized(null, columnId);
+          else setError(reason instanceof Error ? reason.message : "요리한 음식의 현재 상태를 확인하지 못했어요. 다시 선택해 주세요.");
+          return;
+        } finally {
+          if (requestId === selectionRequestRef.current) setCheckingRecentId(null);
+        }
+      }
+      if (!matchingBatch || !isAvailableCookedBatch(matchingBatch)) {
+        setUnavailableRecentBatchIds((current) => new Set(current).add(item.source.id));
+        setError("이 음식은 현재 추가할 수 없어요. 요리한 음식 탭에서 상태를 확인해 주세요.");
+        return;
+      }
+      setTargetDate(date);
+      setTargetColumnId(initialColumnId);
+    }
     setSelection({
       amount: item.last_quantity.amount,
       brand: item.display_brand,
@@ -415,6 +455,7 @@ export function MealLogAddSheet({
   }
 
   function chooseCatalog(item: FoodCatalogSearchItem) {
+    cancelPendingSelection();
     setSelection({
       amount: item.type === "food_product" ? item.nutrition.basis.amount : 1,
       brand: sourceBrand(item),
@@ -493,6 +534,7 @@ export function MealLogAddSheet({
               id={`meal-log-source-${id}-tab`}
               key={id}
               onClick={() => {
+                cancelPendingSelection();
                 setTab(id);
                 setSelection(null);
                 setSuggestionConfirmed(true);
@@ -506,6 +548,7 @@ export function MealLogAddSheet({
                     ? SOURCE_TABS.length - 1
                     : (index + (event.key === "ArrowLeft" ? -1 : 1) + SOURCE_TABS.length) % SOURCE_TABS.length;
                 const next = SOURCE_TABS[nextIndex]!.id;
+                cancelPendingSelection();
                 setTab(next);
                 setSelection(null);
                 setSuggestionConfirmed(true);
@@ -550,6 +593,7 @@ export function MealLogAddSheet({
                         <button
                           className="flex min-h-11 w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
                           onClick={() => {
+                            cancelPendingSelection();
                             setSelection({
                               amount: Math.min(100, batch.remaining_weight_g ?? 100),
                               brand: null,
@@ -608,7 +652,7 @@ export function MealLogAddSheet({
                   제품·재료 검색
                   <input
                     className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal"
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => { cancelPendingSelection(); setQuery(event.target.value); }}
                     placeholder="입력하면 바로 검색돼요"
                     type="search"
                     value={query}
@@ -620,22 +664,30 @@ export function MealLogAddSheet({
                 <div className="mt-5">
                   <h3 className="text-sm font-extrabold">최근·자주 먹은 음식</h3>
                   <ul className="mt-2 divide-y divide-[var(--line-strong)]">
-                    {recent.map((item) => (
-                      <li key={`${item.source.type}-${item.source.id}`}>
-                        <button
-                          className="min-h-11 w-full px-3 py-3 text-left disabled:text-[var(--text-3)]"
-                          disabled={item.source.type === "cooked_batch" && !batches.some((batch) => batch.id === item.source.id && batch.weight_status === "known" && batch.batch_status === "available" && (batch.remaining_weight_g ?? 0) > 0 && item.last_quantity.unit === "g")}
-                          onClick={() => chooseRecent(item)}
-                          type="button"
-                        >
-                          <span className="block font-bold">{item.display_name}</span>
-                          <span className="block text-xs text-[var(--text-2)]">{item.display_brand ? `${item.display_brand} · ` : ""}{recentSourceLabel(item.source.type)} · 최근 {item.last_quantity.amount}{item.last_quantity.unit} · {item.frequency}회 기록</span>
-                        </button>
-                        {item.source.type === "cooked_batch" && !batches.some((batch) => batch.id === item.source.id && batch.weight_status === "known" && batch.batch_status === "available" && (batch.remaining_weight_g ?? 0) > 0 && item.last_quantity.unit === "g") ? (
-                          <p className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 중량·잔량 상태를 확인할 수 없어 저장할 수 없어요.</p>
-                        ) : null}
-                      </li>
-                    ))}
+                    {recent.map((item) => {
+                      const batch = item.source.type === "cooked_batch" ? batches.find((row) => row.id === item.source.id) : null;
+                      const unavailable = item.source.type === "cooked_batch" && (
+                        item.last_quantity.unit !== "g"
+                        || unavailableRecentBatchIds.has(item.source.id)
+                        || Boolean(batch && !isAvailableCookedBatch(batch))
+                      );
+                      return (
+                        <li key={`${item.source.type}-${item.source.id}`}>
+                          <button
+                            className="min-h-11 w-full px-3 py-3 text-left disabled:text-[var(--text-3)]"
+                            disabled={unavailable || checkingRecentId !== null}
+                            onClick={() => void chooseRecent(item)}
+                            type="button"
+                          >
+                            <span className="block font-bold">{item.display_name}</span>
+                            <span className="block text-xs text-[var(--text-2)]">{item.display_brand ? `${item.display_brand} · ` : ""}{recentSourceLabel(item.source.type)} · 최근 {item.last_quantity.amount}{item.last_quantity.unit} · {item.frequency}회 기록</span>
+                          </button>
+                          {unavailable ? <p className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 추가할 수 없는 음식이에요. 요리한 음식 탭에서 상태를 확인해 주세요.</p>
+                            : checkingRecentId === item.source.id ? <p aria-live="polite" className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 남은 양을 확인하고 있어요…</p>
+                              : item.source.type === "cooked_batch" && !batch ? <p className="px-3 pb-3 text-xs text-[var(--text-2)]">선택하면 현재 남은 양을 확인해요.</p> : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                   {recentHasNext ? (
                     <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" disabled={loadingMore !== null} onClick={() => void loadMoreRecent()} type="button">

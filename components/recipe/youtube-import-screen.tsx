@@ -33,6 +33,7 @@ import {
 } from "@/lib/api/youtube-import";
 import {
   enqueueYoutubeExtraction,
+  classifyYoutubeExtractionPollError,
   fetchYoutubeExtractionJob,
   fetchYoutubeExtractionSession,
 } from "@/lib/api/youtube-extraction-jobs";
@@ -797,6 +798,10 @@ interface BackgroundAcceptedStepProps {
   onExit: () => void;
   onOpenJobs: () => void;
   onRetry: () => void;
+  onRefresh: () => void;
+  onLogin: () => void;
+  onReenter: () => void;
+  pollError: { kind: "auth" | "terminal" | "transient"; message: string } | null;
   retryError: string | null;
   videoTitle: string;
 }
@@ -822,15 +827,19 @@ function BackgroundAcceptedStep({
   onExit,
   onOpenJobs,
   onRetry,
+  onRefresh,
+  onLogin,
+  onReenter,
+  pollError,
   retryError,
   videoTitle,
 }: BackgroundAcceptedStepProps) {
   const failed = job?.status === "failed" || job?.status === "expired";
   return (
-    <div aria-live={failed ? "assertive" : undefined} className="px-4 py-8" data-youtube-extraction-accepted>
+    <div aria-live={failed || pollError ? "polite" : undefined} className="px-4 py-8" data-youtube-extraction-accepted>
       <div className="mx-auto flex max-w-lg flex-col items-center text-center">
         <div aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-soft)] text-3xl text-[var(--brand-deep)]">
-          {failed ? "!" : (
+          {failed || pollError ? "!" : (
             <svg className="h-7 w-7 motion-safe:animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-80" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" />
@@ -838,18 +847,22 @@ function BackgroundAcceptedStep({
           )}
         </div>
         <h2 className="mt-5 break-keep text-xl font-bold text-[var(--foreground)]">
-          {failed
-            ? "추출을 완료하지 못했어요"
-            : deduplicated
-              ? "이미 추출 중이에요"
-              : "추출을 시작했어요. 완료되면 알려드릴게요."}
+          {pollError
+            ? pollError.kind === "auth" ? "다시 로그인이 필요해요" : "추출 진행 상황을 확인하지 못했어요"
+            : failed
+              ? "추출을 완료하지 못했어요"
+              : deduplicated
+                ? "이미 추출 중이에요"
+                : "추출을 시작했어요. 완료되면 알려드릴게요."}
         </h2>
         <p className="mt-3 break-keep text-base text-[var(--text-2)]">
-          {failed
-            ? job.error?.message ?? "레시피를 추출하지 못했어요."
-            : deduplicated
-              ? "같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요."
-              : "이 화면을 나가도 추출은 계속돼요."}
+          {pollError
+            ? pollError.message
+            : failed
+              ? job.error?.message ?? "레시피를 추출하지 못했어요."
+              : deduplicated
+                ? "같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요."
+                : "이 화면을 나가도 추출은 계속돼요."}
         </p>
         {retryError ? (
           <p className="mt-3 w-full rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-left text-sm text-[var(--danger)]" role="alert">
@@ -857,10 +870,15 @@ function BackgroundAcceptedStep({
           </p>
         ) : null}
         {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
-        {!failed ? (
+        {!failed && !pollError ? (
           <YoutubeExtractionProgressCard className="mt-6" elapsedMs={elapsedMs} job={job} />
         ) : null}
-        <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-7 grid w-full gap-3 sm:grid-cols-2">
+          {pollError ? (
+            <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={pollError.kind === "auth" ? onLogin : pollError.kind === "terminal" ? onReenter : onRefresh}>
+              {pollError.kind === "auth" ? "로그인하고 돌아오기" : pollError.kind === "terminal" ? "다른 영상 입력" : "진행 상황 다시 확인"}
+            </Button>
+          ) : null}
           {failed && job.can_retry ? (
             <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={onRetry}>
               {getAcceptedRetryLabel(job)}
@@ -2547,6 +2565,8 @@ function ActiveYoutubeImportScreen({
   const [acceptedDeduplicated, setAcceptedDeduplicated] = useState(false);
   const [acceptedJob, setAcceptedJob] = useState<YoutubeExtractionJobData | null>(null);
   const [acceptedRetryError, setAcceptedRetryError] = useState<string | null>(null);
+  const [acceptedPollError, setAcceptedPollError] = useState<BackgroundAcceptedStepProps["pollError"]>(null);
+  const [acceptedPollRevision, setAcceptedPollRevision] = useState(0);
   const [sessionRecipePath, setSessionRecipePath] = useState<string | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const reviewHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -2584,6 +2604,16 @@ function ActiveYoutubeImportScreen({
   // Meal add flow
   const [isCreatingMeal, setIsCreatingMeal] = useState(false);
   const [mealAddError, setMealAddError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialExtractionId) return;
+    const jobId = new URLSearchParams(window.location.search).get("jobId");
+    if (!jobId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) return;
+    setAcceptedJobId(jobId);
+    setExtractionStartTime(Date.now());
+    setCurrentStep("accepted");
+    trackYoutubeExtractionJob(jobId);
+  }, [initialExtractionId]);
 
   // Load cooking methods on mount
   useEffect(() => {
@@ -2714,6 +2744,7 @@ function ActiveYoutubeImportScreen({
   useEffect(() => {
     if (autoValidatedRef.current) return;
     if (initialExtractionId) return;
+    if (new URLSearchParams(window.location.search).has("jobId")) return;
     if (!initialYoutubeUrl.trim()) return;
     autoValidatedRef.current = true;
     handleValidate();
@@ -2852,13 +2883,27 @@ function ActiveYoutubeImportScreen({
     if (currentStep !== "accepted" || !acceptedJobId) return;
     let current = true;
     let timer: number | null = null;
+    let polling = false;
+    let failures = 0;
+    let stopped = false;
+    setAcceptedPollError(null);
 
     const poll = async () => {
+      if (polling || !current || stopped) return;
+      if (timer) window.clearTimeout(timer);
+      polling = true;
       const result = await fetchYoutubeExtractionJob(acceptedJobId);
+      polling = false;
       if (!current) return;
       if (result.success && result.data) {
+        setAcceptedPollError(null);
+        failures = 0;
         setAcceptedJob(result.data);
+        const submittedAt = getAcceptedStartTime(result.data.submitted_at);
+        setExtractionStartTime(submittedAt);
+        setExtractionElapsedMs(Math.max(0, Date.now() - submittedAt));
         if (result.data.status === "succeeded" && result.data.result?.review_path) {
+          stopped = true;
           router.replace(preservePlannerContext(result.data.result.review_path, {
             planDate,
             columnId,
@@ -2867,22 +2912,49 @@ function ActiveYoutubeImportScreen({
           return;
         }
         if (result.data.status === "succeeded") {
+          stopped = true;
           if (result.data.result?.recipe_path) {
             router.replace(result.data.result.recipe_path);
           }
           return;
         }
-        if (result.data.status === "failed" || result.data.status === "expired") return;
+        if (result.data.status === "failed" || result.data.status === "expired") {
+          stopped = true;
+          return;
+        }
+      } else {
+        const kind = classifyYoutubeExtractionPollError(result.error?.code);
+        setAcceptedPollError({
+          kind,
+          message: kind === "auth"
+            ? "로그인 상태를 다시 확인해야 해요. 로그인 후 알림에서 추출 작업을 이어서 확인할 수 있어요."
+            : kind === "terminal"
+              ? result.error?.message ?? "이 추출 작업을 더 이상 확인할 수 없어요."
+              : "인터넷 연결이나 서버 응답을 확인하지 못했어요. 잠시 후 진행 상황을 다시 확인할게요.",
+        });
+        if (kind !== "transient") {
+          stopped = true;
+          return;
+        }
+        failures += 1;
       }
-      timer = window.setTimeout(poll, 5000);
+      timer = window.setTimeout(poll, Math.min(30_000, 5000 * (failures + 1)));
+    };
+
+    const resumePolling = () => {
+      if (document.visibilityState === "visible") void poll();
     };
 
     void poll();
+    window.addEventListener("online", resumePolling);
+    window.addEventListener("focus", resumePolling);
     return () => {
       current = false;
       if (timer) window.clearTimeout(timer);
+      window.removeEventListener("online", resumePolling);
+      window.removeEventListener("focus", resumePolling);
     };
-  }, [acceptedJobId, columnId, currentStep, planDate, router, slotName]);
+  }, [acceptedJobId, acceptedPollRevision, columnId, currentStep, planDate, router, slotName]);
 
   // Helper to initiate extraction from non-recipe warning proceed button
   const triggerExtraction = useCallback(() => {
@@ -3346,6 +3418,13 @@ function ActiveYoutubeImportScreen({
   // ─── Reenter / retry ──────────────────────────────────────────────
 
   const handleReenter = useCallback(() => {
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.has("jobId")) {
+      currentUrl.searchParams.delete("jobId");
+      window.history.replaceState(window.history.state, "", `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+    }
+    setAcceptedPollError(null);
+    setAcceptedJobId("");
     setYoutubeUrl("");
     setUrlError(null);
     setVideoInfo(null);
@@ -3390,6 +3469,15 @@ function ActiveYoutubeImportScreen({
     setExtractionElapsedMs(Math.max(0, Date.now() - acceptedAt));
     trackYoutubeExtractionJob(result.data.job_id);
   }, [acceptedJob]);
+
+  const handleAcceptedLogin = useCallback(() => {
+    const returnUrl = new URL("/menu/add/youtube", window.location.origin);
+    returnUrl.searchParams.set("jobId", acceptedJobId);
+    if (planDate) returnUrl.searchParams.set("date", planDate);
+    if (columnId) returnUrl.searchParams.set("columnId", columnId);
+    if (slotName) returnUrl.searchParams.set("slot", slotName);
+    window.location.assign(`/login?reauthenticate=1&next=${encodeURIComponent(`${returnUrl.pathname}${returnUrl.search}`)}`);
+  }, [acceptedJobId, columnId, planDate, slotName]);
 
   // ─── Render ────────────────────────────────────────────────────────
 
@@ -3558,6 +3646,10 @@ function ActiveYoutubeImportScreen({
             onExit={exitImportFlow}
             onOpenJobs={() => openNotificationCenter(true)}
             onRetry={handleAcceptedRetry}
+            onRefresh={() => setAcceptedPollRevision((revision) => revision + 1)}
+            onLogin={handleAcceptedLogin}
+            onReenter={handleReenter}
+            pollError={acceptedPollError}
             retryError={acceptedRetryError}
             videoTitle={videoInfo?.title ?? ""}
           />
@@ -3900,6 +3992,10 @@ function ActiveYoutubeImportScreen({
             onExit={exitImportFlow}
             onOpenJobs={() => openNotificationCenter(true)}
             onRetry={handleAcceptedRetry}
+            onRefresh={() => setAcceptedPollRevision((revision) => revision + 1)}
+            onLogin={handleAcceptedLogin}
+            onReenter={handleReenter}
+            pollError={acceptedPollError}
             retryError={acceptedRetryError}
             videoTitle={videoInfo?.title ?? ""}
           />

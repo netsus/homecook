@@ -47,6 +47,7 @@ export interface PantryListData {
 
 export interface PantryMutationBody {
   ingredient_ids?: unknown;
+  pantry_item_ids?: unknown;
   product_items?: unknown;
 }
 

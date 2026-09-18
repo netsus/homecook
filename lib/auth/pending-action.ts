@@ -13,14 +13,18 @@ interface PendingRecipeActionBase {
   recipeId: string;
   redirectTo: string;
   createdAt: number;
+  sourceOwnerUuid?: string | null;
 }
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
-  | { type: "like" | "save" | "planner" | "recipe-fork" | "recipe-delete" }
+  | { type: "like" | "save" | "planner" | "recipe-delete" }
+  | { type: "recipe-fork"; editContext?: RecipeEditContext }
   | { type: "recipe-edit-save" | "recipe-save-as-new"; editContext: RecipeEditContext }
 );
 
 export const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
+const PENDING_ACTION_TTL_MS = 15 * 60 * 1000;
+const MAX_PENDING_ACTION_LENGTH = 256 * 1024;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -143,19 +147,38 @@ function isEditContext(value: unknown): value is RecipeEditContext {
     && value.draft.steps.every(isStep);
 }
 
-export function parsePendingAction(raw: string) {
+export function parsePendingAction(raw: string, now = Date.now()) {
+  if (raw.length > MAX_PENDING_ACTION_LENGTH) return null;
   try {
     const value = JSON.parse(raw) as Partial<PendingRecipeAction>;
+    if (
+      !value
+      || typeof value.createdAt !== "number"
+      || !Number.isFinite(value.createdAt)
+      || value.createdAt > now
+      || now - value.createdAt >= PENDING_ACTION_TTL_MS
+      || (value.sourceOwnerUuid !== undefined && !isNullableUuid(value.sourceOwnerUuid))
+    ) {
+      return null;
+    }
 
     if (
       (value.type === "like"
         || value.type === "save"
         || value.type === "planner"
-        || value.type === "recipe-fork"
         || value.type === "recipe-delete") &&
       typeof value.recipeId === "string" &&
       typeof value.redirectTo === "string" &&
       Number.isFinite(value.createdAt)
+    ) {
+      return value as PendingRecipeAction;
+    }
+
+    if (
+      value.type === "recipe-fork"
+      && typeof value.recipeId === "string"
+      && typeof value.redirectTo === "string"
+      && (value.editContext === undefined || isEditContext(value.editContext))
     ) {
       return value as PendingRecipeAction;
     }
@@ -178,10 +201,21 @@ export function parsePendingAction(raw: string) {
 
 export function savePendingAction(action: PendingRecipeAction) {
   if (typeof window === "undefined") {
-    return;
+    return false;
   }
 
-  window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify(action));
+  try {
+    const raw = JSON.stringify({
+      ...action,
+      createdAt: Date.now(),
+    });
+    if (raw.length > MAX_PENDING_ACTION_LENGTH) return false;
+    clearPendingAction();
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, raw);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function readPendingAction() {
@@ -189,19 +223,21 @@ export function readPendingAction() {
     return null;
   }
 
-  const raw = window.localStorage.getItem(PENDING_ACTION_KEY);
-
-  if (!raw) {
+  try {
+    // Old actions were shared across tabs/accounts and must not be resumed.
+    window.localStorage.removeItem(PENDING_ACTION_KEY);
+  } catch {
+    // The current tab may still support sessionStorage.
+  }
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_ACTION_KEY);
+    if (!raw) return null;
+    const action = parsePendingAction(raw);
+    if (!action) clearPendingAction();
+    return action;
+  } catch {
     return null;
   }
-
-  const action = parsePendingAction(raw);
-
-  if (!action) {
-    window.localStorage.removeItem(PENDING_ACTION_KEY);
-  }
-
-  return action;
 }
 
 export function clearPendingAction() {
@@ -209,5 +245,11 @@ export function clearPendingAction() {
     return;
   }
 
-  window.localStorage.removeItem(PENDING_ACTION_KEY);
+  for (const storageName of ["localStorage", "sessionStorage"] as const) {
+    try {
+      window[storageName].removeItem(PENDING_ACTION_KEY);
+    } catch {
+      // A disabled storage backend must not prevent cancellation or logout.
+    }
+  }
 }

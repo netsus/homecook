@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { ok } from "@/lib/api/response";
+import { fail, ok } from "@/lib/api/response";
 import {
   ALL_INGREDIENT_CATEGORY,
   getFallbackIngredientSubcategoryCode,
@@ -10,6 +10,7 @@ import {
   isValidIngredientSubcategoryCode,
 } from "@/lib/ingredient-categories";
 import { isSelectableIngredientId } from "@/lib/ingredient-catalog-policy";
+import { ingredientSearchPattern, normalizeIngredientSearchName } from "@/lib/ingredient-search";
 import {
   getMockIngredientList,
   isDiscoveryFilterManualMockEnabled,
@@ -28,6 +29,7 @@ interface IngredientRow {
 
 interface IngredientSynonymRow {
   ingredient_id: string;
+  synonym: string;
   ingredients:
     | IngredientRow
     | IngredientRow[]
@@ -86,7 +88,8 @@ function isSchemaCacheMiss(error: { message?: string } | null | undefined) {
     return false;
   }
 
-  return /category_code|schema cache|column .* does not exist/i.test(error.message);
+  return /category_code/i.test(error.message) &&
+    /schema cache|column .* does not exist/i.test(error.message);
 }
 
 function ingredientMatchesV2Filter(
@@ -127,6 +130,12 @@ export async function GET(request: NextRequest) {
       category_group_code: categoryGroupCode,
     };
 
+    if (query.q && query.q.length > 100) {
+      return fail("VALIDATION_ERROR", "검색어는 100자 이하로 입력해 주세요.", 422, [
+        { field: "q", reason: "too_long" },
+      ]);
+    }
+
     if (
       query.category &&
       !query.category_code &&
@@ -149,13 +158,15 @@ export async function GET(request: NextRequest) {
 
     if (isDiscoveryFilterManualMockEnabled()) {
       const mockData = getMockIngredientList(
-        query.q,
+        undefined,
         query.category_code || query.category_group_code ? undefined : query.category,
       );
       return ok({
         items: mockData.items
           .map((item) => normalizeIngredientRow(item))
           .filter((item): item is IngredientItem => item !== null)
+          .filter((item) => !query.q || normalizeIngredientSearchName(item.standard_name)
+            .includes(normalizeIngredientSearchName(query.q)))
           .filter((item) => ingredientMatchesV2Filter(item, {
             categoryCode: query.category_code,
             categoryGroupCode: query.category_group_code,
@@ -170,23 +181,26 @@ export async function GET(request: NextRequest) {
     const shouldApplyLegacyCategory = query.category &&
       !query.category_code &&
       !query.category_group_code;
-    const buildQueries = (includeTaxonomyColumn: boolean) => {
+    const pageSize = 1000;
+    const buildQueries = (includeTaxonomyColumn: boolean, offset: number) => {
       const ingredientColumns = includeTaxonomyColumn
         ? "id, standard_name, category, category_code"
         : "id, standard_name, category";
       const synonymColumns = includeTaxonomyColumn
-        ? "ingredient_id, ingredients!inner(id, standard_name, category, category_code)"
-        : "ingredient_id, ingredients!inner(id, standard_name, category)";
+        ? "ingredient_id, synonym, ingredients!inner(id, standard_name, category, category_code)"
+        : "ingredient_id, synonym, ingredients!inner(id, standard_name, category)";
 
       let ingredientsQuery = supabase
         .from("ingredients")
         .select(ingredientColumns)
-        .order("standard_name", { ascending: true });
+        .order("standard_name", { ascending: true })
+        .order("id", { ascending: true });
 
       let synonymsQuery = supabase
         .from("ingredient_synonyms")
         .select(synonymColumns)
-        .order("ingredient_id", { ascending: true });
+        .order("ingredient_id", { ascending: true })
+        .order("id", { ascending: true });
 
       if (shouldApplyLegacyCategory) {
         ingredientsQuery = ingredientsQuery.eq("category", query.category);
@@ -194,35 +208,56 @@ export async function GET(request: NextRequest) {
       }
 
       if (query.q) {
-        ingredientsQuery = ingredientsQuery.ilike("standard_name", `%${query.q}%`);
-        synonymsQuery = synonymsQuery.ilike("synonym", `%${query.q}%`);
+        const pattern = ingredientSearchPattern(query.q);
+        ingredientsQuery = ingredientsQuery.like("search_name", pattern);
+        synonymsQuery = synonymsQuery.like("search_name", pattern);
       }
 
-      return [ingredientsQuery, synonymsQuery] as const;
+      return [
+        ingredientsQuery.range(offset, offset + pageSize - 1),
+        synonymsQuery.range(offset, offset + pageSize - 1),
+      ] as const;
     };
 
-    let [ingredientsQuery, synonymsQuery] = buildQueries(true);
-    let [{ data: ingredientRows, error: ingredientsError }, { data: synonymRows, error: synonymsError }] =
-      await Promise.all([ingredientsQuery, synonymsQuery]);
-
-    if (isSchemaCacheMiss(ingredientsError) || isSchemaCacheMiss(synonymsError)) {
-      [ingredientsQuery, synonymsQuery] = buildQueries(false);
-      const retryResult = await Promise.all([ingredientsQuery, synonymsQuery]);
-      ingredientRows = retryResult[0].data;
-      ingredientsError = retryResult[0].error;
-      synonymRows = retryResult[1].data;
-      synonymsError = retryResult[1].error;
+    const ingredientRows: IngredientRow[] = [];
+    const synonymRows: IngredientSynonymRow[] = [];
+    let includeTaxonomyColumn = true;
+    let ingredientsFinished = false;
+    let synonymsFinished = !query.q;
+    const readPage = (includeTaxonomy: boolean, offset: number) => {
+      const [ingredientsQuery, synonymsQuery] = buildQueries(includeTaxonomy, offset);
+      const emptyPage = { data: [], error: null };
+      return Promise.all([
+        ingredientsFinished ? Promise.resolve(emptyPage) : ingredientsQuery,
+        synonymsFinished ? Promise.resolve(emptyPage) : synonymsQuery,
+      ]);
+    };
+    for (let offset = 0; ; offset += pageSize) {
+      let [ingredientResult, synonymResult] = await readPage(includeTaxonomyColumn, offset);
+      if (includeTaxonomyColumn &&
+        (isSchemaCacheMiss(ingredientResult.error) || isSchemaCacheMiss(synonymResult.error))) {
+        includeTaxonomyColumn = false;
+        [ingredientResult, synonymResult] = await readPage(false, offset);
+      }
+      if (ingredientResult.error || synonymResult.error ||
+        !ingredientResult.data || !synonymResult.data) {
+        return fail("INTERNAL_ERROR", "재료 검색을 불러오지 못했어요. 다시 시도해 주세요.", 500);
+      }
+      ingredientRows.push(...ingredientResult.data as unknown as IngredientRow[]);
+      synonymRows.push(...synonymResult.data as unknown as IngredientSynonymRow[]);
+      ingredientsFinished = ingredientResult.data.length < pageSize;
+      synonymsFinished = synonymResult.data.length < pageSize;
+      if (ingredientsFinished && synonymsFinished) break;
     }
 
-    if (ingredientsError && synonymsError) {
-      return ok(createEmptyIngredientList());
-    }
-
+    const searchName = normalizeIngredientSearchName(query.q ?? "");
     const items = mergeIngredientItems(
-      (ingredientsError ? [] : ((ingredientRows ?? []) as unknown as IngredientRow[]))
+      ingredientRows
+        .filter((row) => normalizeIngredientSearchName(row.standard_name).includes(searchName))
         .map((row) => normalizeIngredientRow(row))
         .filter((row): row is IngredientItem => row !== null),
-      (synonymsError ? [] : ((synonymRows ?? []) as unknown as IngredientSynonymRow[]))
+      synonymRows
+        .filter((row) => normalizeIngredientSearchName(row.synonym).includes(searchName))
         .map((row) => normalizeSynonymIngredient(row))
         .filter((row): row is IngredientItem => row !== null),
     ).filter((item) => ingredientMatchesV2Filter(item, {
@@ -230,8 +265,20 @@ export async function GET(request: NextRequest) {
       categoryGroupCode: query.category_group_code,
     }));
 
+    const exactSynonymIds = new Set(synonymRows
+      .filter((row) => normalizeIngredientSearchName(row.synonym) === searchName)
+      .map((row) => row.ingredient_id));
+    const rank = (item: IngredientItem) => {
+      if (!searchName) return 0;
+      if (normalizeIngredientSearchName(item.standard_name) === searchName) return 0;
+      if (exactSynonymIds.has(item.id)) return 1;
+      if (normalizeIngredientSearchName(item.standard_name).startsWith(searchName)) return 2;
+      return 3;
+    };
+    items.sort((left, right) => rank(left) - rank(right) ||
+      left.standard_name.localeCompare(right.standard_name, "ko") || left.id.localeCompare(right.id));
     return ok({ items });
   } catch {
-    return ok(createEmptyIngredientList());
+    return fail("INTERNAL_ERROR", "재료 검색을 불러오지 못했어요. 다시 시도해 주세요.", 500);
   }
 }

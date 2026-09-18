@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   AppBottomSheet,
@@ -20,14 +20,21 @@ import {
   WebModal,
 } from "@/components/web";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
-import { savePendingAction } from "@/lib/auth/pending-action";
+import { clearPendingAction, savePendingAction } from "@/lib/auth/pending-action";
 import { useAuthGateStore } from "@/stores/ui-store";
 
 export function LoginGateModal() {
-  const { action, close, isOpen } = useAuthGateStore();
+  const { action, close: closeGate, isOpen } = useAuthGateStore();
+  const close = useCallback(() => {
+    clearPendingAction();
+    closeGate();
+  }, [closeGate]);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const isDesktopViewport = useDesktopViewport();
+  const [storageError, setStorageError] = useState<string | null>(null);
+
+  useEffect(() => setStorageError(null), [action, isOpen]);
 
   const description = useMemo(() => {
     if (!action) {
@@ -61,10 +68,13 @@ export function LoginGateModal() {
   }
 
   const handleLogin = () => {
-    savePendingAction(action);
+    if (!savePendingAction(action)) {
+      setStorageError("작업을 임시 보관하지 못했어요. 내용을 복사해 둔 뒤 다시 시도해 주세요.");
+      return;
+    }
     document.cookie = createPostAuthNextCookie(action.redirectTo);
-    window.location.assign(`/login?next=${encodeURIComponent(action.redirectTo)}`);
-    close();
+    window.location.assign(`/login?reauthenticate=1&next=${encodeURIComponent(action.redirectTo)}`);
+    closeGate();
   };
 
   if (isDesktopViewport) {
@@ -83,6 +93,7 @@ export function LoginGateModal() {
             <p className="text-[14px] font-medium leading-6 text-[var(--web-text-2)]">
               {description}
             </p>
+            {storageError ? <p className="mt-3 text-sm text-[var(--danger-strong)]" role="alert">{storageError}</p> : null}
           </WebDialogBody>
           <WebDialogFooter>
             <WebButton onClick={close} variant="tertiary">
@@ -116,6 +127,7 @@ export function LoginGateModal() {
       <p className="text-[14px] font-medium leading-6 text-[var(--wave1-text-2)]">
         {description}
       </p>
+      {storageError ? <p className="mt-3 text-sm text-[var(--danger-strong)]" role="alert">{storageError}</p> : null}
     </AppBottomSheet>
   );
 }

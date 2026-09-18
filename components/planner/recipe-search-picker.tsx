@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { MealAddServingsModal } from "@/components/planner/meal-add-servings-modal";
@@ -291,17 +291,37 @@ export function RecipeSearchPicker({
   const [searchState, setSearchState] = useState<SearchState>("idle");
   const [results, setResults] = useState<RecipeCardItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasNext, setHasNext] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const [loadedQuery, setLoadedQuery] = useState("");
+  const requestIdRef = useRef(0);
+  const moreRequestRef = useRef<number | null>(null);
+  const consumedCursorsRef = useRef(new Set<string>());
+
+  useEffect(() => () => { requestIdRef.current += 1; }, []);
 
   const runSearch = useCallback(async (query: string) => {
     const trimmedQuery = query.trim();
+    const requestId = ++requestIdRef.current;
+    moreRequestRef.current = null;
+    consumedCursorsRef.current.clear();
 
     setSearchState("loading");
+    setResults([]);
     setErrorMessage(null);
+    setMoreError(null);
+    setLoadingMore(false);
+    setHasNext(false);
+    setNextCursor(null);
+    setLoadedQuery(trimmedQuery);
 
     const response = await fetchRecipes({
       ...(trimmedQuery ? { q: trimmedQuery } : {}),
       limit: 10,
     });
+    if (requestId !== requestIdRef.current) return;
 
     if (!response.success || !response.data) {
       setSearchState("error");
@@ -310,14 +330,58 @@ export function RecipeSearchPicker({
       return;
     }
 
+    setNextCursor(response.data.next_cursor);
+    setHasNext(response.data.has_next && Boolean(response.data.next_cursor));
+
     if (response.data.items.length === 0) {
       setSearchState("empty");
       setResults([]);
     } else {
       setSearchState("ready");
-      setResults(response.data.items);
+      setResults([...new Map(response.data.items.map((item) => [item.id, item])).values()]);
     }
   }, []);
+
+  async function loadMore() {
+    if (!hasNext || !nextCursor || moreRequestRef.current !== null || searchState !== "ready" || searchQuery.trim() !== loadedQuery) return;
+    const requestId = requestIdRef.current;
+    const cursor = nextCursor;
+    if (consumedCursorsRef.current.has(cursor)) return;
+    moreRequestRef.current = requestId;
+    setLoadingMore(true);
+    setMoreError(null);
+    const response = await fetchRecipes({ ...(loadedQuery ? { q: loadedQuery } : {}), cursor, limit: 10 });
+    if (requestId !== requestIdRef.current) return;
+    moreRequestRef.current = null;
+    setLoadingMore(false);
+    if (!response.success || !response.data) {
+      setMoreError(response.error?.message ?? "레시피를 더 불러오지 못했어요.");
+      return;
+    }
+    consumedCursorsRef.current.add(cursor);
+    const page = response.data;
+    setResults((current) => [...new Map([...current, ...page.items].map((item) => [item.id, item])).values()]);
+    setNextCursor(page.next_cursor);
+    setHasNext(page.has_next && page.next_cursor !== null && !consumedCursorsRef.current.has(page.next_cursor));
+  }
+
+  const changeSearchQuery = (query: string) => {
+    requestIdRef.current += 1;
+    moreRequestRef.current = null;
+    setLoadingMore(false);
+    setMoreError(null);
+    setSearchQuery(query);
+    if (searchState === "loading") setSearchState(results.length > 0 ? "ready" : "idle");
+  };
+
+  const pagination = searchState === "ready" && hasNext && searchQuery.trim() === loadedQuery ? (
+    <div className="mt-4">
+      {moreError ? <p className="mb-2 text-sm text-[var(--danger)]" role="alert">{moreError}</p> : null}
+      <WebButton className="w-full" disabled={loadingMore} onClick={() => void loadMore()} type="button" variant="secondary">
+        {loadingMore ? "불러오는 중…" : moreError ? "다시 불러오기" : "레시피 더 보기"}
+      </WebButton>
+    </div>
+  ) : null;
 
   const handleSearch = useCallback(async () => {
     await runSearch(searchQuery);
@@ -363,8 +427,7 @@ export function RecipeSearchPicker({
               aria-label="레시피 검색"
               autoFocus
               className="min-w-0 flex-1 bg-transparent text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
-              disabled={searchState === "loading"}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => changeSearchQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") void handleSearch();
               }}
@@ -377,7 +440,7 @@ export function RecipeSearchPicker({
               <button
                 aria-label="검색어 지우기"
                 className="shrink-0 text-[16px] font-bold text-[var(--text-3)]"
-                onClick={() => setSearchQuery("")}
+                onClick={() => changeSearchQuery("")}
                 type="button"
               >
                 ×
@@ -425,6 +488,7 @@ export function RecipeSearchPicker({
               ))}
             </div>
           ) : null}
+          {pagination}
         </div>
 
         {selectedRecipe ? (
@@ -447,9 +511,9 @@ export function RecipeSearchPicker({
     <>
       <div className="space-y-4">
         <SearchInput
-          disabled={searchState === "loading"}
+          disabled={false}
           inputRef={searchInputRef}
-          onChange={setSearchQuery}
+          onChange={changeSearchQuery}
           onSearch={handleSearch}
           value={searchQuery}
           variant={isSheet ? "app" : "web"}
@@ -508,6 +572,7 @@ export function RecipeSearchPicker({
             ))}
           </div>
         )}
+        {pagination}
       </div>
 
       {selectedRecipe && (

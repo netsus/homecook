@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { clearPendingAction } from "@/lib/auth/pending-action";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   RecipeBookCoverColorKey,
@@ -83,7 +84,7 @@ export function isMypageApiError(error: unknown): error is MypageApiError {
 }
 
 export async function fetchUserProfile() {
-  return requestMypage<UserProfileData>("/api/v1/users/me");
+  return requestMypage<UserProfileData>("/api/v1/users/me", { cache: "no-store" });
 }
 
 export async function fetchRecipeBooks() {
@@ -168,6 +169,7 @@ export async function deleteAccount() {
 }
 
 export async function logout() {
+  clearPendingAction();
   return requestMypage<UserLogoutData>("/api/v1/auth/logout", {
     method: "POST",
   });

@@ -4,6 +4,7 @@ import React from "react";
 
 import { isLocalDevAuthEnabled } from "@/lib/auth/local-dev-auth";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { clearPendingAction } from "@/lib/auth/pending-action";
 
 export function buildLocalLogoutHref(locationLike: Pick<Location, "pathname" | "search">) {
   const nextPath = `${locationLike.pathname}${locationLike.search || ""}`;
@@ -19,6 +20,7 @@ export function LocalDevSessionControls() {
   }
 
   const handleLogout = () => {
+    clearPendingAction();
     window.location.assign(buildLocalLogoutHref(window.location));
   };
 

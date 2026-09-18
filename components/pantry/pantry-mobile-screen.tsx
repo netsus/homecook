@@ -30,10 +30,10 @@ interface PantryMobileScreenProps {
   onOpenBundlePicker: () => void;
   onOpenRecommendations: () => void;
   onRequestDelete: () => void;
-  onRequestSingleDelete: (ingredientId: string) => void;
+  onRequestSingleDelete: (pantryItemId: string) => void;
   onSearchChange: (value: string) => void;
   onSelectAllToggle: () => void;
-  onSelectToggle: (ingredientId: string) => void;
+  onSelectToggle: (pantryItemId: string) => void;
   onStartSelectMode: () => void;
 }
 
@@ -60,13 +60,11 @@ export function PantryMobileScreen({
   onSelectToggle,
   onStartSelectMode,
 }: PantryMobileScreenProps) {
-  const [swipedIngredientId, setSwipedIngredientId] = useState<string | null>(null);
+  const [swipedPantryItemId, setSwipedPantryItemId] = useState<string | null>(null);
   const pointerStartXRef = useRef<number | null>(null);
   const isEmpty = !isLoading && items.length === 0 && !searchQuery && !activeCategory;
   const isSearchEmpty = !isLoading && displayItems.length === 0 && (searchQuery || activeCategory);
-  const hasSelectableItems = displayItems.some(
-    (item) => item.ingredient_id !== null,
-  ) && !isGuestPreview;
+  const hasSelectableItems = displayItems.length > 0 && !isGuestPreview;
   const sectionGroups = groupPantryItems(displayItems);
   const categoryRail = getCategoryRail();
 
@@ -246,10 +244,9 @@ export function PantryMobileScreen({
                 </h2>
                 <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
                   {group.items.map((item, index) => {
-                    const ingredientId = item.ingredient_id;
-                    const isSelectable = ingredientId !== null;
-                    const selected =
-                      ingredientId !== null && selectedIds.has(ingredientId);
+                    const pantryItemId = item.id;
+                    const isSelectable = !isGuestPreview;
+                    const selected = selectedIds.has(pantryItemId);
 
                     return (
                       <div className="relative overflow-hidden" key={item.id}>
@@ -257,7 +254,7 @@ export function PantryMobileScreen({
                           <button
                             aria-label={`${item.standard_name} 삭제`}
                             className="absolute inset-y-0 right-0 flex w-[76px] items-center justify-center bg-[var(--danger)] text-[13px] font-extrabold text-[var(--text-inverse)]"
-                            onClick={() => onRequestSingleDelete(ingredientId)}
+                            onClick={() => onRequestSingleDelete(pantryItemId)}
                             type="button"
                           >
                             삭제
@@ -281,7 +278,7 @@ export function PantryMobileScreen({
                           ].join(" ")}
                           onClick={
                             isSelectMode && isSelectable
-                              ? () => onSelectToggle(ingredientId)
+                              ? () => onSelectToggle(pantryItemId)
                               : undefined
                           }
                           onPointerDown={
@@ -305,12 +302,12 @@ export function PantryMobileScreen({
                                   const deltaX = event.clientX - startX;
 
                                   if (deltaX < -44) {
-                                    setSwipedIngredientId(ingredientId);
+                                    setSwipedPantryItemId(pantryItemId);
                                     return;
                                   }
 
-                                  if (deltaX > 20 || swipedIngredientId !== ingredientId) {
-                                    setSwipedIngredientId(null);
+                                  if (deltaX > 20 || swipedPantryItemId !== pantryItemId) {
+                                    setSwipedPantryItemId(null);
                                   }
                                 }
                           }
@@ -320,7 +317,7 @@ export function PantryMobileScreen({
                           style={
                             !isSelectMode &&
                             isSelectable &&
-                            swipedIngredientId === ingredientId
+                            swipedPantryItemId === pantryItemId
                               ? { transform: "translateX(-76px)" }
                               : undefined
                           }

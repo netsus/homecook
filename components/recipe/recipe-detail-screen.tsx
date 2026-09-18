@@ -48,6 +48,7 @@ import {
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { fetchUserProfile } from "@/lib/api/mypage";
 import { createSnapshotV2CookingSession } from "@/lib/api/cooking";
 import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
@@ -213,6 +214,8 @@ export function RecipeDetailScreen({
   const [personalEditorMode, setPersonalEditorMode] = useState<"edit" | "fork">("edit");
   const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
   const [personalEditResumeAction, setPersonalEditResumeAction] = useState<"same-id-save" | "save-as-new" | null>(null);
+  const [pendingDraftVerification, setPendingDraftVerification] = useState<"idle" | "checking" | "retry" | "unverifiable">("idle");
+  const [pendingDraftVerificationAttempt, setPendingDraftVerificationAttempt] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false);
   const [deletePersonalRecipeError, setDeletePersonalRecipeError] = useState<string | null>(null);
@@ -1097,76 +1100,142 @@ export function RecipeDetailScreen({
 
   useEffect(() => {
     if (!isAuthenticated) {
+      setPendingDraftVerification("idle");
       return;
     }
 
     const pendingAction = readPendingAction();
 
     if (!pendingAction || pendingAction.recipeId !== recipeId || !recipe) {
+      setPendingDraftVerification("idle");
       return;
     }
 
-    clearPendingAction();
+    let current = true;
+    const resume = () => {
+      setPendingDraftVerification("idle");
+      clearPendingAction();
 
-    if (pendingAction.type === "recipe-edit-save") {
-      if (serverProjectedPersonalEditContext) {
-        personalEditorOpenerRef.current = null;
-        setPersonalEditorMode("edit");
-        setPersonalEditResumeContext(pendingAction.editContext);
-        setPersonalEditResumeAction("same-id-save");
-        setIsPersonalEditorOpen(true);
+      if (pendingAction.type === "recipe-edit-save") {
+        if (serverProjectedPersonalEditContext) {
+          personalEditorOpenerRef.current = null;
+          setPersonalEditorMode("edit");
+          setPersonalEditResumeContext({
+            ...pendingAction.editContext,
+            image_object_id: serverProjectedPersonalEditContext.imageObjectId,
+          });
+          setPersonalEditResumeAction("same-id-save");
+          setIsPersonalEditorOpen(true);
+        }
+        return;
       }
-      return;
-    }
 
-    if (pendingAction.type === "recipe-save-as-new") {
-      if (activePersonalEditContext) {
-        personalEditorOpenerRef.current = null;
-        setPersonalEditorMode("edit");
-        setPersonalEditResumeContext(pendingAction.editContext);
-        setPersonalEditResumeAction("save-as-new");
-        setIsPersonalEditorOpen(true);
+      if (pendingAction.type === "recipe-save-as-new") {
+        if (activePersonalEditContext) {
+          personalEditorOpenerRef.current = null;
+          setPersonalEditorMode("edit");
+          setPersonalEditResumeContext({
+            ...pendingAction.editContext,
+            image_object_id: activePersonalEditContext.imageObjectId,
+          });
+          setPersonalEditResumeAction("save-as-new");
+          setIsPersonalEditorOpen(true);
+        }
+        return;
       }
-      return;
-    }
 
-    if (pendingAction.type === "recipe-fork") {
-      if ((recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact) && (initialForkContext ?? qaForkContext)) {
-        personalEditorOpenerRef.current = null;
-        setPersonalEditorMode("fork");
-        setPersonalEditResumeContext(null);
-        setPersonalEditResumeAction(null);
-        setIsPersonalEditorOpen(true);
+      if (pendingAction.type === "recipe-fork") {
+        const forkContext = initialForkContext ?? qaForkContext;
+        if ((recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact) && forkContext) {
+          personalEditorOpenerRef.current = null;
+          setPersonalEditorMode("fork");
+          setPersonalEditResumeContext(pendingAction.editContext ? {
+            ...pendingAction.editContext,
+            image_object_id: forkContext.image_object_id,
+          } : null);
+          setPersonalEditResumeAction(null);
+          setIsPersonalEditorOpen(true);
+        }
+        return;
       }
-      return;
-    }
 
-    if (pendingAction.type === "like") {
-      void handleLikeToggle({ source: "return-to-action" });
-      return;
-    }
+      if (pendingAction.type === "like") {
+        void handleLikeToggle({ source: "return-to-action" });
+        return;
+      }
 
-    if (pendingAction.type === "save") {
-      setFeedback({
-        message: "로그인 완료. 저장할 레시피북을 선택해 주세요.",
-        tone: "status",
-      });
-      void openSaveModal({ source: "return-to-action" });
-      return;
-    }
+      if (pendingAction.type === "save") {
+        setFeedback({
+          message: "로그인 완료. 저장할 레시피북을 선택해 주세요.",
+          tone: "status",
+        });
+        void openSaveModal({ source: "return-to-action" });
+        return;
+      }
 
-    if (pendingAction.type === "planner") {
-      setFeedback({
-        message: "로그인 완료. 플래너에 추가할 날짜와 끼니를 선택해 주세요.",
-        tone: "status",
-      });
-      void openPlannerAddSheet({ source: "return-to-action" });
-      return;
-    }
+      if (pendingAction.type === "planner") {
+        setFeedback({
+          message: "로그인 완료. 플래너에 추가할 날짜와 끼니를 선택해 주세요.",
+          tone: "status",
+        });
+        void openPlannerAddSheet({ source: "return-to-action" });
+        return;
+      }
 
-    if (pendingAction.type === "recipe-delete") {
-      openDeletePersonalRecipeDialog();
+      if (pendingAction.type === "recipe-delete") {
+        openDeletePersonalRecipeDialog();
+      }
+    };
+
+    if ("editContext" in pendingAction && pendingAction.editContext) {
+      const discardDraft = () => {
+        const saved = readPendingAction();
+        if (!saved || saved.recipeId !== pendingAction.recipeId
+          || saved.createdAt !== pendingAction.createdAt || saved.type !== pendingAction.type) return;
+        setPendingDraftVerification("idle");
+        clearPendingAction();
+        setFeedback({
+          message: "다른 계정으로 로그인해 이전 계정의 임시 초안을 정리했어요. 현재 계정에서 다시 작성해 주세요.",
+          tone: "error",
+        });
+      };
+      if (!pendingAction.sourceOwnerUuid) {
+        setPendingDraftVerification("unverifiable");
+      } else {
+        setPendingDraftVerification("checking");
+        void fetchUserProfile().then((profile) => {
+          if (!current) return;
+          const saved = readPendingAction();
+          if (!saved || saved.recipeId !== pendingAction.recipeId
+            || saved.createdAt !== pendingAction.createdAt || saved.type !== pendingAction.type) {
+            setPendingDraftVerification("idle");
+            return;
+          }
+          if (typeof profile.id !== "string"
+            || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(profile.id)) {
+            setPendingDraftVerification("retry");
+            return;
+          }
+          if (profile.id !== pendingAction.sourceOwnerUuid) {
+            discardDraft();
+            return;
+          }
+          resume();
+        }).catch(() => {
+          if (!current) return;
+          const saved = readPendingAction();
+          if (!saved || saved.recipeId !== pendingAction.recipeId
+            || saved.createdAt !== pendingAction.createdAt || saved.type !== pendingAction.type) {
+            setPendingDraftVerification("idle");
+            return;
+          }
+          setPendingDraftVerification("retry");
+        });
+      }
+    } else {
+      resume();
     }
+    return () => { current = false; };
   }, [
     handleLikeToggle,
     isAuthenticated,
@@ -1181,7 +1250,25 @@ export function RecipeDetailScreen({
     activePersonalEditContext,
     serverProjectedPersonalEditContext,
     showQaFutureImpact,
+    pendingDraftVerificationAttempt,
   ]);
+
+  useEffect(() => {
+    if (pendingDraftVerification !== "retry") return;
+    const retry = () => {
+      if (document.visibilityState === "visible") {
+        setPendingDraftVerificationAttempt((attempt) => attempt + 1);
+      }
+    };
+    window.addEventListener("online", retry);
+    window.addEventListener("focus", retry);
+    document.addEventListener("visibilitychange", retry);
+    return () => {
+      window.removeEventListener("online", retry);
+      window.removeEventListener("focus", retry);
+      document.removeEventListener("visibilitychange", retry);
+    };
+  }, [pendingDraftVerification]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -2149,7 +2236,23 @@ export function RecipeDetailScreen({
         photos={photoSet}
         title={recipe.title}
       />
-      {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
+      {pendingDraftVerification !== "idle" ? (
+        <aside aria-live="polite" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+92px)] z-[150] mx-auto max-w-md rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-4 shadow-lg lg:bottom-6 lg:left-auto lg:right-6" role="status">
+          <p className="text-sm font-bold">임시 초안을 보관하고 있어요</p>
+          <p className="mt-1 text-sm text-[var(--text-2)]">
+            {pendingDraftVerification === "checking"
+              ? "작성한 계정과 현재 계정이 같은지 확인하고 있어요."
+              : pendingDraftVerification === "unverifiable"
+                ? "초안을 작성한 계정 정보가 없어 자동으로 열 수 없어요. 보관 기간이 끝나기 전까지 내용을 잠근 상태로 유지해요."
+                : "계정을 잠시 확인하지 못했어요. 초안은 보관 기간 동안 유지되며, 같은 계정으로 확인한 뒤에만 열어요."}
+          </p>
+          {pendingDraftVerification !== "unverifiable" ? (
+            <button className="mt-3 min-h-11 rounded-full border border-[var(--line-strong)] px-4 text-sm font-bold disabled:opacity-50" disabled={pendingDraftVerification === "checking"} onClick={() => setPendingDraftVerificationAttempt((attempt) => attempt + 1)} type="button">
+              {pendingDraftVerification === "checking" ? "계정 확인 중…" : "계정 확인 다시 시도"}
+            </button>
+          ) : null}
+        </aside>
+      ) : feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
       <PersonalRecipeDeleteDialog
         errorMessage={deletePersonalRecipeError}

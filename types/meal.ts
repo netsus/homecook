@@ -9,6 +9,7 @@ export interface MealListItemData {
   recipe_thumbnail_url: string | null;
   planned_servings: number;
   status: MealStatus;
+  shopping_list_id?: string | null;
   is_leftover: boolean;
   revision: number;
 }

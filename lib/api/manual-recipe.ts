@@ -252,13 +252,20 @@ export async function cancelRecipeImage(
 
 export async function createManualRecipe(
   body: ManualRecipeCreateBody,
+  options?: { idempotencyKey: string; expectedOwnerId: string },
 ): Promise<ApiResponse<ManualRecipeCreateData>> {
   try {
     const response = await fetch(
       "/api/v1/recipes",
       withE2EAuthOverrideHeaders({
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(options ? {
+            "Idempotency-Key": options.idempotencyKey,
+            "X-Homecook-Draft-Owner": options.expectedOwnerId,
+          } : {}),
+        },
         body: JSON.stringify(body),
       }),
     );
@@ -266,6 +273,10 @@ export async function createManualRecipe(
     const payload = await readJson<ApiResponse<ManualRecipeCreateData>>(response);
     if (!payload) {
       return invalidResponse();
+    }
+
+    if (response.status >= 500) {
+      return networkError("저장 결과를 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요.");
     }
 
     if (!response.ok || !payload.success) {
@@ -280,6 +291,8 @@ export async function createManualRecipe(
       };
     }
 
+    if (!hasManualRecipeShape(payload.data)) return invalidResponse();
+
     return {
       success: true,
       data: payload.data,
@@ -287,5 +300,39 @@ export async function createManualRecipe(
     };
   } catch {
     return networkError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+  }
+}
+
+function hasManualRecipeShape(value: unknown): value is ManualRecipeCreateData {
+  return isRecord(value) && isString(value.id) && isString(value.title)
+    && value.source_type === "manual" && isString(value.created_by)
+    && typeof value.base_servings === "number" && value.base_servings > 0;
+}
+
+export async function readManualRecipeCreateResult(
+  idempotencyKey: string,
+  expectedOwnerId: string,
+): Promise<ApiResponse<{ recipe: ManualRecipeCreateData | null }>> {
+  try {
+    const response = await fetch(
+      `/api/v1/recipes?manual_create_key=${encodeURIComponent(idempotencyKey)}`,
+      withE2EAuthOverrideHeaders({
+        cache: "no-store",
+        headers: { "X-Homecook-Draft-Owner": expectedOwnerId },
+      }),
+    );
+    const payload = await readJson<ApiResponse<{ recipe: unknown }>>(response);
+    if (!payload) return invalidResponse();
+    if (!response.ok || !payload.success) {
+      return { success: false, data: null, error: payload.error ?? {
+        code: "INVALID_RESPONSE", message: "저장 결과를 확인하지 못했어요.", fields: [],
+      } };
+    }
+    if (!isRecord(payload.data) || (payload.data.recipe !== null && !hasManualRecipeShape(payload.data.recipe))) {
+      return invalidResponse();
+    }
+    return { success: true, data: { recipe: payload.data.recipe }, error: null };
+  } catch {
+    return networkError("저장 결과를 확인하지 못했어요. 연결 후 다시 확인해 주세요.");
   }
 }

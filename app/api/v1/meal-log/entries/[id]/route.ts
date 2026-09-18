@@ -5,10 +5,6 @@ import type { MealLogMutationInput } from "@/types/meal-log";
 
 interface Context { params: Promise<{ id: string }> }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function keyResponse(request: Request) {
   const parsed = parseIdempotencyKey(request.headers.get("Idempotency-Key"));
   if (parsed.ok) return parsed;
@@ -30,22 +26,14 @@ async function mutate(request: Request, context: Context, action: "patch" | "del
   const payload = action === "patch"
     ? toMealLogRpcPayload(parsed.value as MealLogMutationInput)
     : {};
-  let rpcResult: { data: unknown; error: unknown } | null = null;
-  if (action === "patch"
-    && (parsed.value as MealLogMutationInput).source.type === "cooked_batch") {
-    rpcResult = await authorized.client.rpc("update_legacy_leftover_meal_log_entry", {
-      ...authorized.authorityArgs,
-      p_entry_id: id,
-      p_idempotency_key: key.value,
-      p_expected_revision: expectedRevision,
-      p_payload: payload,
-    });
-    if (!rpcResult.error && isRecord(rpcResult.data) && rpcResult.data.handled === false) {
-      rpcResult = null;
-    }
-  }
-  rpcResult ??= await authorized.client.rpc("mutate_meal_log_entry", { ...authorized.authorityArgs, p_action: action, p_entry_id: id, p_idempotency_key: key.value, p_expected_revision: expectedRevision, p_payload: payload });
-  const result = await callMealLogRpc({ rpc: async () => rpcResult }, "mutate_meal_log_entry", {});
+  const result = await callMealLogRpc(authorized.client, "mutate_meal_log_entry", {
+    ...authorized.authorityArgs,
+    p_action: action,
+    p_entry_id: id,
+    p_idempotency_key: key.value,
+    p_expected_revision: expectedRevision,
+    p_payload: payload,
+  });
   if (!result.ok) return result.response;
   const data = projectMealLogData(result.data);
   return data ? ok(data) : fail("INTERNAL_ERROR", "식사 기록 결과를 확인하지 못했어요.", 500);

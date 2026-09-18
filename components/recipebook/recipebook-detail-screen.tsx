@@ -50,6 +50,7 @@ import {
 import { getSurfaceChromeRule } from "@/lib/navigation/app-nav";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getRecipeBookCoverViewModel } from "@/lib/recipebook-cover";
+import { formatScaledIngredient } from "@/lib/recipe";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -59,7 +60,6 @@ import type {
   RecipeBookRecipeItem,
   RecipeBookSummary,
   RecipeBookType,
-  RecipeIngredient,
 } from "@/types/recipe";
 import type { PlannerColumnData } from "@/types/planner";
 
@@ -2449,6 +2449,7 @@ function MobileRecipeBookRecipeCard({
               재료
             </h3>
             <ReaderIngredientsContent
+              key={item.recipe_id}
               detailState={readerDetailState}
               mobile
             />
@@ -2458,6 +2459,7 @@ function MobileRecipeBookRecipeCard({
               만들기
             </h3>
             <ReaderStepsContent
+              key={item.recipe_id}
               detailState={readerDetailState}
               mobile
             />
@@ -3074,11 +3076,11 @@ function DesktopRecipeBookRecipePage({
         <div className="web-recipebook-recipe-columns">
           <section className="web-recipebook-note-section">
             <h3>재료</h3>
-            <ReaderIngredientsContent detailState={readerDetailState} />
+            <ReaderIngredientsContent key={item.recipe_id} detailState={readerDetailState} />
           </section>
           <section className="web-recipebook-note-section">
             <h3>만들기</h3>
-            <ReaderStepsContent detailState={readerDetailState} />
+            <ReaderStepsContent key={item.recipe_id} detailState={readerDetailState} />
           </section>
         </div>
         <div className="web-recipebook-reader-card-actions">
@@ -3112,6 +3114,7 @@ function ReaderIngredientsContent({
   detailState?: ReaderDetailState;
   mobile?: boolean;
 }) {
+  const [showAll, setShowAll] = useState(false);
   if (!detailState || detailState.status === "loading") {
     return <ReaderSectionSkeleton mobile={mobile} />;
   }
@@ -3136,23 +3139,32 @@ function ReaderIngredientsContent({
     );
   }
 
+  const previewCount = mobile ? 4 : 8;
+  const servings = normalizeServings(detailState.data.base_servings);
   return (
-    <ul className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
-      {ingredients.slice(0, mobile ? 4 : 8).map((ingredient) => (
-        <li
-          className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
-          data-testid={`reader-ingredient-${ingredient.id}`}
-          key={ingredient.id}
-        >
-          <span
-            aria-hidden="true"
-            className={mobile ? "mobile-recipebook-note-dot" : "web-recipebook-note-dot"}
-            data-testid={`reader-ingredient-marker-${ingredient.id}`}
-          />
-          <span>{formatIngredientLine(ingredient)}</span>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
+        {(showAll ? ingredients : ingredients.slice(0, previewCount)).map((ingredient) => (
+          <li
+            className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
+            data-testid={`reader-ingredient-${ingredient.id}`}
+            key={ingredient.id}
+          >
+            <span
+              aria-hidden="true"
+              className={mobile ? "mobile-recipebook-note-dot" : "web-recipebook-note-dot"}
+              data-testid={`reader-ingredient-marker-${ingredient.id}`}
+            />
+            <span>{formatScaledIngredient(ingredient, servings, servings)}</span>
+          </li>
+        ))}
+      </ul>
+      {ingredients.length > previewCount ? (
+        <button aria-expanded={showAll} className="mt-2 min-h-11 text-left text-sm font-bold text-[var(--brand-primary-text)]" onClick={() => setShowAll(!showAll)} type="button">
+          {showAll ? "재료 간단히 보기" : `재료 ${ingredients.length}개 전체 보기`}
+        </button>
+      ) : null}
+    </>
   );
 }
 
@@ -3163,6 +3175,7 @@ function ReaderStepsContent({
   detailState?: ReaderDetailState;
   mobile?: boolean;
 }) {
+  const [showAll, setShowAll] = useState(false);
   if (!detailState || detailState.status === "loading") {
     return <ReaderSectionSkeleton mobile={mobile} />;
   }
@@ -3187,25 +3200,33 @@ function ReaderStepsContent({
     );
   }
 
+  const previewCount = mobile ? 3 : 6;
   return (
-    <ol className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
-      {steps.slice(0, mobile ? 3 : 6).map((step, index) => (
-        <li
-          className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
-          data-testid={`reader-step-${step.id}`}
-          key={step.id}
-        >
-          <span
-            className={
-              mobile ? "mobile-recipebook-step-number" : "web-recipebook-step-number"
-            }
+    <>
+      <ol className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
+        {(showAll ? steps : steps.slice(0, previewCount)).map((step, index) => (
+          <li
+            className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
+            data-testid={`reader-step-${step.id}`}
+            key={step.id}
           >
-            {step.step_number ?? index + 1}
-          </span>
-          <span>{step.instruction}</span>
-        </li>
-      ))}
-    </ol>
+            <span
+              className={
+                mobile ? "mobile-recipebook-step-number" : "web-recipebook-step-number"
+              }
+            >
+              {step.step_number ?? index + 1}
+            </span>
+            <span>{step.instruction}</span>
+          </li>
+        ))}
+      </ol>
+      {steps.length > previewCount ? (
+        <button aria-expanded={showAll} className="mt-2 min-h-11 text-left text-sm font-bold text-[var(--brand-primary-text)]" onClick={() => setShowAll(!showAll)} type="button">
+          {showAll ? "만들기 간단히 보기" : `만들기 ${steps.length}단계 전체 보기`}
+        </button>
+      ) : null}
+    </>
   );
 }
 
@@ -3227,21 +3248,6 @@ function ReaderSectionSkeleton({ mobile }: { mobile: boolean }) {
       <Skeleton className="h-4 w-8/12" />
     </div>
   );
-}
-
-function formatIngredientLine(ingredient: RecipeIngredient) {
-  if (ingredient.display_text) {
-    return ingredient.display_text;
-  }
-
-  if (ingredient.ingredient_type === "TO_TASTE") {
-    return `${ingredient.standard_name} 적당량`;
-  }
-
-  const amount = typeof ingredient.amount === "number" ? ingredient.amount : null;
-  const quantity = amount === null ? "" : `${amount}${ingredient.unit ?? ""}`;
-
-  return [ingredient.standard_name, quantity].filter(Boolean).join(" ");
 }
 
 function BookmarkIcon() {
