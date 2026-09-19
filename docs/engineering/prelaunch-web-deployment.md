@@ -152,3 +152,13 @@ pnpm test:dev-deploy:db
 
 기준: AGENTS.md, agent-workflow-overview.md, supabase-local-only-operations.md,
 local-mac-production-release-promotion.md. 기존 정식 promotion kill switch는 변경하지 않는다.
+
+## 2026-09-19 — 이미 반영된 복구 DB와 웹 분리 배포
+
+사용자가 자동 테스트 생략과 새 웹 배포를 요청했다. `--skip-automated-tests`는 자동 `test:product`를 생략한 사실을 배포 상태에 기록한다. 추가 검증 명령과 함께 쓰지 못하며 고정 의존성 설치·production 빌드·별도 포트와 실제 운영 포트의 build/정적 파일 확인은 유지한다.
+
+`--already-applied-db --db-config <비공개 설정>`은 대상 checkout의 모든 SQL checksum을 실제 로컬 DB ledger와 대조한다. 미적용 SQL·새 baseline·변조가 있으면 중단하며 SQL 적용이나 격리 테스트를 실행하지 않는다. 빌드 후 웹 교체 직전에도 이력을 다시 대조한다. 원래의 추가형 DB 적용 경로와 서버 구성 변경 거부는 유지한다.
+
+`--reviewed-repair-readiness`는 2026-09-18 복구 웹의 정확한 출발/도착 commit과 검토한 CSS·SQL에만 사용하는 한정된 재검증이다. 기존 readiness 승계 규칙을 일반적으로 완화하지 않는다. 실제 DB의 보존된 R2 권한 함수·마케팅 구조/함수와 기존 증거 해시를 대조하고, 기존 provider·ingress 검증 시각과 파일 해시를 보존한다. 새 소스 검토 기록은 release의 별도 `round2-source-review.json`에 남긴다. 적용 DB 확인 옵션이 필수다.
+
+운영 도구 변경은 이미 별도 고정 snapshot에 설치되어 있다. 웹은 `5d9c5b09624dff83b43d91983704cec3171087da`를 `--reviewed-ref`로 선택한다. 앱 코드가 master와 동일한지 대조하며 운영 도구를 웹 배포 과정에서 재실행하지 않는다.
