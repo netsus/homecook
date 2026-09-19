@@ -1,0 +1,1072 @@
+{
+  "schema_version": "homecook-ingredient-curation-20260919",
+  "patch": {
+    "schema_version": "homecook-nutrition-review-apply-v1",
+    "reviewed_by": "1ae7bee7-57fe-41ce-8ff5-315724600476",
+    "reviewed_at": "2026-09-19T08:11:35.142949+00:00",
+    "decision_reason": "사용자가 승인한 30개 우선 영양/중복 정리: 확정된 RDA 가식부100g 연결9개 및 쌀밥 오연결1개만 반영, 모호한21개 보류; 기존 기록 보존",
+    "entries": [
+      {
+        "ingredient_id": "17c42094-d0da-4d2e-a26a-fe553ed1070c",
+        "ingredient_name": "양송이버섯",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 공식 한글 식품명 양송이버섯과 원재료 상태가 일치. 전복리조또 원본 조리단계에서 다진 뒤 볶음. RDA 영문명에는 White가 표시되며 갈색양송이는 별도 행1339이므로 갈색 명시 재료에는 재사용하지 않음.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "1334",
+          "external_name": "양송이버섯, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "e48f10c9da9d278609e6a092017fc9b87061d9719466b22dea59cd76d7217c40",
+          "content_hash": "c8bf495454f7aefa4f1de5d067b95d3064ce5e2bce2c1ef15df0bd30cd920c5a",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "양송이버섯, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 15,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "15",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 3.89,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.89",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 3.12,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.12",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.23,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.23",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 5,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "5",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0.1,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.1",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.05,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.05",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 2.1,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "2.1",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "1ea5d6ec-5228-5022-ace8-90c648df5c03",
+        "ingredient_name": "돼지고기 앞다리",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 공식 generic 부위 앞다리 생것과 정확 일치. 앞다리(앞다리살)1724 또는 수육용3318로 좁히지 않음.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "1721",
+          "external_name": "돼지고기, 앞다리, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "005da9c689a156369763acfcb242809d2b2ad846e312495cc40027779d1276c3",
+          "content_hash": "ddf485bbc1de9dfb63f3b785b03b517c20fe105b4af82618888ed8c6922e652d",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "돼지고기, 앞다리, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 159,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "159",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 20.21,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "20.21",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 7.87,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "7.87",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 51,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "51",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 2.66,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "2.66",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "29be65f9-fdbe-5c69-a4b3-861ac1661099",
+        "ingredient_name": "돼지고기 목심",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 공식 목심 생것과 정확 일치. 기존 생 돼지고기 목심의 승인 profile을 재사용할 수 있음.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "1704",
+          "external_name": "돼지고기, 목심, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "0ef74ca91834c53d73c8a9a6b9b58fa754cbb227468fdb618f5af2f92f8e8017",
+          "content_hash": "bd0c2c3a30d9aef5618fc47ef1f14a93127881b12ae90a9d98fecbf52babbd69",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "돼지고기, 목심, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 227,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "227",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 17.21,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "17.21",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 16.36,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "16.36",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 51,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "51",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 5.91,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "5.91",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "4a0de505-d8e2-4f9f-ac58-3513c3de9025",
+        "ingredient_name": "배",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 품종 미지정 공식 배 생것 일반행. 신고/원황/돌배 등 품종을 임의로 선택하지 않음.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "1464",
+          "external_name": "배, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "616588aa4137dfa790c5093522412fdd7051da4df596a63b5655ced9739cf198",
+          "content_hash": "9e18a046da2477b94c4a6e0d1e661bb8e5892ca2b2771f5cd0cd740dccd896b5",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "배, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 45,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "45",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 12.24,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "12.24",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 0.29,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.28999999999999998",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.04,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.04",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 0,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 8.3,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "8.3000000000000007",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.01,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.01",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 1.1,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "1.1000000000000001",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "78deadf1-4645-5854-9abc-39cffe996567",
+        "ingredient_name": "깻잎",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 깻잎=들깻잎은 동일 식용 잎의 관용명. 공식 생 들깻잎 일반행을 원재료 상태로 연결. 장아찌/데친것과 구별.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "853",
+          "external_name": "들깻잎, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "ba8be8c3003398e826df975c0f0e8deb8b363e61ef90e201214bc79d275bf182",
+          "content_hash": "a8d341b37f458de6b534b3128000371d9967cc74c837783be1475fa169c3590a",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "들깻잎, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 38,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "38",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 6.94,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "6.94",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 3.69,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.69",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.56,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.56000000000000005",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 1,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "1",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.12,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.12",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 5,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "5",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "bac7eff8-a8ca-45dd-abae-a6cb066b96e7",
+        "ingredient_name": "달걀노른자",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 공식 난황은 노른자의 동의어이며 국립축산과학원 설명과 RDA 영문명 Yolk로 확인. 삶은것2064/설탕첨가3414와 구별.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "2063",
+          "external_name": "달걀, 난황, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "6610b889fe0b6e453ce20244d839c1851d8adf319fc72046b5e98fc013d1a1bc",
+          "content_hash": "cad6c66f1359d69c8c4d10fc175381e1296c8fd5a0eb19f9166d64996e9500da",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "달걀, 난황, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 326,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "326",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 5.77,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "5.77",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 15.66,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "15.66",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 25.18,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "25.18",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 57,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "57",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0.04,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.04",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 8.34,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "8.34",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "f7de032d-62b6-527c-b220-eaa61f554c63",
+        "ingredient_name": "밤",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 품종 미지정 공식 밤 생것 일반행. 연근초무침 원본 단계는 밤을 얇게 썰어 물에 담근 뒤 버무리므로 삶음/건조/통조림 원료가 아님.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "638",
+          "external_name": "밤, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "3ade0138c0bb8ee67e593be19cf2ca00ca886cfc7e2fbd73386d75bc576a4f7d",
+          "content_hash": "94311d6c79a5143236fd67561fb25e67ea6fdcff6b37a00d3a4835ed92d3cbbc",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "밤, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 153,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "153",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 33.46,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "33.46",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 3.16,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.16",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.74,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.74",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 1,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "1",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 6.3,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "6.3",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.12,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.12",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 6,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "6",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "83a74ff7-329d-577b-94f7-2275f2afc8eb",
+        "ingredient_name": "쌀밥",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 기존 쌀밥의 말린 멥쌀밥136 연결(373kcal)을 조리한 백미밥62(152kcal)로 정정할 후보. 보존된 과거 스냅샷/프로필 자체는 변경하지 않음.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "62",
+          "external_name": "멥쌀, 백미, 밥",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "488705fa8ffb09028be3c261aa4226cbd7e4a6a743be433ea2f36eda6a010f9b",
+          "content_hash": "653b3b3ece905be819a130c1149cfd22aa2a189be161c995f0b4d726be007694",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "멥쌀, 백미, 밥",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 152,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "152",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 32.86,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "32.86",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 2.61,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "2.61",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.38,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.38",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 1,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "1",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0.01,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.01",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.13,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.13",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 0.2,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.2",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "94575712-454c-446a-a5f8-f1370eeb3576",
+        "ingredient_name": "크림치즈",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 브랜드·맛·저지방 조건 없는 일반 크림치즈는 RDA 10.4 치즈, 크림과 식품종 일치. 생크림/휘핑크림/치즈스프레드/특정 브랜드로 바꾸지 않는다. 기존 profile 미등록이므로 공식 원본 근거로 신규 profile을 만들 수 있다.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "2863",
+          "external_name": "치즈, 크림",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "8a23c753d1f2bbc6c7d182baac8ffaf859e2d9d46472c32843c2c62cd0c61fda",
+          "content_hash": "8a23c753d1f2bbc6c7d182baac8ffaf859e2d9d46472c32843c2c62cd0c61fda",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "치즈, 크림",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 350,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "350",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 5.52,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "5.52",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 6.15,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "6.15",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 34.44,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "34.44",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 314,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "314",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 3.76,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.76",
+            "source_nutrient_code": "sugars"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "fiber"
+          },
+          "saturated_fat_g": {
+            "amount": 20.213,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "20.213000000000001",
+            "source_nutrient_code": "saturated_fat"
+          }
+        }
+      },
+      {
+        "ingredient_id": "64bb7d51-a537-4f87-a533-fc7001eb169c",
+        "ingredient_name": "실곤약",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-09-19 사용자 요청에 따라 Codex가 원자료/상태/100g을 대조: 일반 실곤약의 식품형은 국수형 곤약이며 recipe 재료는 조리 전 실곤약200g이다. RDA 국수형 생것을 기본으로 연결 가능. 상품특정·소스포함·건조분말·판형으로 바꾸지 않는다. 데친 뒤 실중량 기록에는 별도 데친 profile을 써야 한다.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "463",
+          "external_name": "곤약(구약나물), 국수형, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "474273e710a8e28844b6a9bca13490daaceb7caf8df1a220363d0a4d3458226e",
+          "content_hash": "474273e710a8e28844b6a9bca13490daaceb7caf8df1a220363d0a4d3458226e",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "곤약(구약나물), 국수형, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "source_observation": "pinned official workbook independently reviewed; not a new measurement",
+            "review_operation": "ingredient-curation-20260919"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 7,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "7",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 3.18,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.18",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 0.08,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.08",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.01,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.01",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 2,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "2",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "sugars"
+          },
+          "fiber_g": {
+            "amount": 2.4,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "2.4",
+            "source_nutrient_code": "fiber"
+          },
+          "saturated_fat_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "saturated_fat"
+          }
+        }
+      }
+    ],
+    "summary": {
+      "used_missing_connected": 9,
+      "existing_wrong_link_corrected": 1,
+      "ambiguous_held": 21
+    },
+    "source_report_checksum": "3f28456ce2c325c739b72e000bd88ec2341bbd5c80e78bf79e6c204300462f85",
+    "payload_checksum": "6c2ca9ab3b5688b48dd291d083ce02519337f92e3f0a16cea618e94155077dac"
+  },
+  "expected_links": [
+    {
+      "ingredient_id": "17c42094-d0da-4d2e-a26a-fe553ed1070c",
+      "standard_name": "양송이버섯",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "1ea5d6ec-5228-5022-ace8-90c648df5c03",
+      "standard_name": "돼지고기 앞다리",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "29be65f9-fdbe-5c69-a4b3-861ac1661099",
+      "standard_name": "돼지고기 목심",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "4a0de505-d8e2-4f9f-ac58-3513c3de9025",
+      "standard_name": "배",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "78deadf1-4645-5854-9abc-39cffe996567",
+      "standard_name": "깻잎",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "bac7eff8-a8ca-45dd-abae-a6cb066b96e7",
+      "standard_name": "달걀노른자",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "f7de032d-62b6-527c-b220-eaa61f554c63",
+      "standard_name": "밤",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "83a74ff7-329d-577b-94f7-2275f2afc8eb",
+      "standard_name": "쌀밥",
+      "active_links": [
+        "49bc0aae-04b8-4f25-a13c-9b328456385c"
+      ]
+    },
+    {
+      "ingredient_id": "94575712-454c-446a-a5f8-f1370eeb3576",
+      "standard_name": "크림치즈",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "64bb7d51-a537-4f87-a533-fc7001eb169c",
+      "standard_name": "실곤약",
+      "active_links": []
+    }
+  ],
+  "representative": {
+    "source_ingredient_id": "ecf31d7f-dcf9-4e02-87aa-3d41cc54f582",
+    "representative_ingredient_id": "29be65f9-fdbe-5c69-a4b3-861ac1661099",
+    "nutrition_profile_id": "3d32b1a3-ef17-457d-a52d-d21369f69693",
+    "source_external_item_key": "1704",
+    "reason": "둘 다 돼지고기 목심의 조리 전 생것. RDA10.4 1704 승인 source profile을 공유하며 기존 비활성 ID와 과거 참조는 보존한다."
+  },
+  "source_quality_hold": {
+    "source_item_id": "204da540-136a-46f2-baca-445360225114",
+    "source_external_item_key": "2769",
+    "reason": "RDA10.4 고정 원본 XML도 에너지307kcal, 지방49.23g, 단백질37.69g으로 열량 정합성 확인이 필요하다. 값을 추정 수정하지 않고 새 연결에서 제외한다. 실제 recipe 참조0.",
+    "action": "Revoke linked profile and link only; preserve published source item and immutable values."
+  },
+  "alias_corrections": [
+    {
+      "id": "5f0fcd3f-84ff-4760-ac0a-fc4d695ce73c",
+      "action": "remove",
+      "synonym": "멥쌀밥, 쪄서 말린것",
+      "reason": "쌀밥은 조리밥62. 건조밥136 검색을 조리밥으로 잘못 연결하지 않음. 원본별칭 행은 감사 event에 보존."
+    },
+    {
+      "id": "6f30ac8c-7546-4337-8e3b-ad629e12bdd2",
+      "action": "retarget",
+      "synonym": "돼지 앞다리",
+      "from": "d60f539f-d3ad-4f15-ab44-27c2d7e9cf20",
+      "to": "1ea5d6ec-5228-5022-ace8-90c648df5c03",
+      "reason": "일반 앞다리1721와 앞다리살1724를 병합하지 않음. 일반 표현은 일반 앞다리로, 앞다리살 표현은 기존 앞다리살로 연결. 모든 recipe/history IDs 유지."
+    }
+  ],
+  "operation_checksum": "d7971ea5fdfe82843432f97c890d98997276e4b4da2bbe0fbc075997bd604eb6"
+}

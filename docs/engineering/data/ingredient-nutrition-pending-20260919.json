@@ -1,0 +1,1628 @@
+{
+  "source_version": "RDA10.4 / MFDS20260828",
+  "selection_policy": "candidates only; not approved defaults",
+  "items": [
+    {
+      "ingredient_id": "2746f8a1-9dcd-4b81-8983-980bbdee5946",
+      "ingredient_name": "미니새송이버섯",
+      "reason": "미니 수확 단계/크기와 일반 큰느타리버섯(새송이버섯) 값의 동등성 근거 미확인. 조리단계에서 새송이버섯으로 부르지만 자동 영양 동등성/대표 병합 근거로 충분하지 않음.",
+      "needed_choice": "미니 전용 출처 또는 일반 새송이버섯 대표값 사용 여부",
+      "candidates": [
+        {
+          "external_item_key": "1345",
+          "external_name": "큰느타리버섯(새송이버섯), 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "G0230000000a",
+            "english_name": "King oyster mushroom(Keunneutari-beoseot), Raw",
+            "scientific_name": "Pleurotus eryngii",
+            "worksheet_row": 1424,
+            "food_group": "버섯류",
+            "original_measurement_source": "농진청('23)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "55b950fc-a88b-4855-a169-3cfbff446815",
+      "ingredient_name": "버섯",
+      "reason": "버섯 종류 없음. 현재 참조 레시피는 삭제 상태.",
+      "needed_choice": "양송이/새송이/표고 등 실제 버섯 종류",
+      "candidates": [
+        {
+          "external_item_key": "1334",
+          "external_name": "양송이버섯, 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "G0180000000a",
+            "english_name": "Button mushroom(Yangsongi-beoseot), White, Raw",
+            "scientific_name": "Agaricus bisporus (Lge.) Sing.",
+            "worksheet_row": 1412,
+            "food_group": "버섯류",
+            "original_measurement_source": "농진청('19)"
+          }
+        },
+        {
+          "external_item_key": "1345",
+          "external_name": "큰느타리버섯(새송이버섯), 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "G0230000000a",
+            "english_name": "King oyster mushroom(Keunneutari-beoseot), Raw",
+            "scientific_name": "Pleurotus eryngii",
+            "worksheet_row": 1424,
+            "food_group": "버섯류",
+            "original_measurement_source": "농진청('23)"
+          }
+        },
+        {
+          "external_item_key": "1358",
+          "external_name": "표고버섯, 배지재배, 생것",
+          "existing_source_item_id": "c68b49ab-8451-407d-bc8b-4c5f6c69ed69",
+          "existing_profile_id": "f108778c-369d-4691-a21d-d0e62d1b68f9",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "G027000B010a",
+            "english_name": "Oak mushroom(Pyogo-beoseot), On the growing medium, Raw",
+            "scientific_name": "Lentinus edodes (Berk.) Sing.",
+            "worksheet_row": 1436,
+            "food_group": "버섯류",
+            "original_measurement_source": "농진청('23)"
+          }
+        }
+      ],
+      "active_recipe_references": 0
+    },
+    {
+      "ingredient_id": "6c0cf014-ad55-5b11-9c08-6caa01f3e01b",
+      "ingredient_name": "미나리",
+      "reason": "공식은 돌미나리/물미나리별 일반행이며 하나를 임의 선택하면 품종/재배형을 좁힘. 잎만/줄기만도 별도.",
+      "needed_choice": "돌미나리 또는 물미나리, 잎/줄기 혼합 여부",
+      "candidates": [
+        {
+          "external_item_key": "909",
+          "external_name": "미나리, 돌미나리, 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F0770020000a",
+            "english_name": "Water dropwort(Minari), Wild, Raw",
+            "scientific_name": "Oenanthe javanica (Blume) DC.",
+            "worksheet_row": 967,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('22)"
+          }
+        },
+        {
+          "external_item_key": "911",
+          "external_name": "미나리, 물미나리, 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F0770030000a",
+            "english_name": "Water dropwort(Minari), Whole, Raw",
+            "scientific_name": "Oenanthe javanica (Blume) DC.",
+            "worksheet_row": 969,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('23)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "71d647ff-fd8c-427a-a14f-757b4cca1403",
+      "ingredient_name": "밥",
+      "reason": "백미/현미/분도미 및 혼합곡 미지정. 기존 쌀밥 연결도 건조밥이라 그대로 대표 연결 금지. 현재 참조 레시피는 삭제 상태.",
+      "needed_choice": "백미밥/현미밥/잡곡밥",
+      "candidates": [
+        {
+          "external_item_key": "62",
+          "external_name": "멥쌀, 백미, 밥",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A013000A039a",
+            "english_name": "Rice(Ssal), White, Cooked",
+            "scientific_name": "Oryza sativa L.",
+            "worksheet_row": 68,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "농진청('25)"
+          }
+        },
+        {
+          "external_item_key": "126",
+          "external_name": "멥쌀, 현미, 밥",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A013000A069a",
+            "english_name": "Rice(Ssal), Brown, Cooked",
+            "scientific_name": "Oryza sativa L.",
+            "worksheet_row": 129,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "농진청('20)"
+          }
+        },
+        {
+          "external_item_key": "83",
+          "external_name": "멥쌀, 칠분도미, 밥",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A013000A059a",
+            "english_name": "Rice(Ssal), Brown, 94.4% Milling yield, Cooked",
+            "scientific_name": "Oryza sativa L.",
+            "worksheet_row": 91,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "JAPAN('20)"
+          }
+        }
+      ],
+      "active_recipe_references": 0
+    },
+    {
+      "ingredient_id": "74937465-5b56-44d9-990b-3b08a38064d1",
+      "ingredient_name": "새우젓",
+      "reason": "canonical 새우젓은 공식 generic 새우 젓갈2721 후보지만 유일한 사용 행 display_text가 새우젓국 15g(1큰술). 고형물을 포함한 젓갈 영양을 국물에 그대로 적용하면 오연결.",
+      "needed_choice": "레시피는 새우젓 국물만인지 전체 새우젓인지; 제품/염도",
+      "candidates": [
+        {
+          "external_item_key": "2721",
+          "external_name": "새우, 젓갈",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "K617004000Ia",
+            "english_name": "Shrimp, Salt-fermented",
+            "scientific_name": null,
+            "worksheet_row": 2831,
+            "food_group": "어패류 및 그 제품",
+            "original_measurement_source": "농진청('19)"
+          }
+        },
+        {
+          "external_item_key": "2722",
+          "external_name": "새우, 젓갈, 추젓",
+          "existing_source_item_id": "e5337ef1-a6eb-453c-a775-73ee5ab51310",
+          "existing_profile_id": "7d2f73c3-bfb3-40df-9bae-3e332a3be533",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "K617007000Ia",
+            "english_name": "Shrimp, Chujeot, Salt fermented in fall",
+            "scientific_name": null,
+            "worksheet_row": 2832,
+            "food_group": "어패류 및 그 제품",
+            "original_measurement_source": "농진청('05)"
+          }
+        },
+        {
+          "external_item_key": "2726",
+          "external_name": "새우, 젓갈, 토굴육젓",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "K617005136Ia",
+            "english_name": "Shrimp, Togulyukjeot, Salt-fermented in summer",
+            "scientific_name": null,
+            "worksheet_row": 2836,
+            "food_group": "어패류 및 그 제품",
+            "original_measurement_source": "농진청('05)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+      "ingredient_name": "통후추",
+      "reason": "공식 원본에는 검은색/흰색 가루만 존재. 통알과 가루 및 색이 미확정. 육수용 우린 후 건져내는 비가식 처리 여부도 미확정.",
+      "needed_choice": "검정/흰색 통후추와 가식/우림 후 제거 여부",
+      "candidates": [
+        {
+          "external_item_key": "3108",
+          "external_name": "후추, 검은색, 가루",
+          "existing_source_item_id": "caa7eadc-8fee-49fd-91d1-8efb00eb1193",
+          "existing_profile_id": "d31c2fc6-0a89-494e-85d3-9c4a0399340d",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "R0410010005a",
+            "english_name": "Pepper, Black, Powder",
+            "scientific_name": "Piper nigrum L.",
+            "worksheet_row": 3280,
+            "food_group": "조미료류",
+            "original_measurement_source": "농진청('19)"
+          }
+        },
+        {
+          "external_item_key": "3109",
+          "external_name": "후추, 흰색, 가루",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "R0410020005a",
+            "english_name": "Pepper, White, Powder",
+            "scientific_name": "Piper nigrum L.",
+            "worksheet_row": 3281,
+            "food_group": "조미료류",
+            "original_measurement_source": "JAPAN('20)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "81dd8c7e-319a-5f81-bf3e-4bd21b06d1d5",
+      "ingredient_name": "월계수잎",
+      "reason": "공식은 말린 잎만 있고 레시피에는 건조 여부가 없으며 우림 후 제거 여부 미확정.",
+      "needed_choice": "말린 잎인지 생잎인지, 실제 섭취/우림 후 제거 여부",
+      "candidates": [
+        {
+          "external_item_key": "3080",
+          "external_name": "월계수, 잎, 말린것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "R048000B141a",
+            "english_name": "Bay leaf, Dried",
+            "scientific_name": "Laurus nobilis L.",
+            "worksheet_row": 3241,
+            "food_group": "조미료류",
+            "original_measurement_source": "USDA('18)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "84b5c0e9-ebb1-510b-afe6-8080cdd69ad4",
+      "ingredient_name": "옥수수",
+      "reason": "단옥수수/메옥수수/찰옥수수 및 생것/조리/가당통조림 미지정.",
+      "needed_choice": "옥수수 종류와 생것/삶은것/통조림 상태",
+      "candidates": [
+        {
+          "external_item_key": "321",
+          "external_name": "옥수수, 단옥수수, 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A0300020000a",
+            "english_name": "Corn(Oksusu), Sweet, Raw",
+            "scientific_name": "Zea mays L.",
+            "worksheet_row": 343,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "농진청('20)"
+          }
+        },
+        {
+          "external_item_key": "325",
+          "external_name": "옥수수, 단옥수수, 삶은것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A0300020009b",
+            "english_name": "Corn(Oksusu), Sweet, Boiled",
+            "scientific_name": "Zea mays L.",
+            "worksheet_row": 347,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "농진청('20)"
+          }
+        },
+        {
+          "external_item_key": "330",
+          "external_name": "옥수수, 메옥수수, 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A0300030000a",
+            "english_name": "Corn(Oksusu), Raw",
+            "scientific_name": "Zea mays L.",
+            "worksheet_row": 352,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "농진청('16)"
+          }
+        },
+        {
+          "external_item_key": "348",
+          "external_name": "옥수수, 찰옥수수, 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A0300070000a",
+            "english_name": "Corn(Oksusu), Glutinous, Raw",
+            "scientific_name": "Zea mays L.",
+            "worksheet_row": 370,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "농진청('20)"
+          }
+        },
+        {
+          "external_item_key": "364",
+          "external_name": "옥수수, 통조림, 가당",
+          "existing_source_item_id": "48088022-75ef-4574-a473-67d085dd7153",
+          "existing_profile_id": "3f3df0ad-286a-4878-80bf-45dda2d77576",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "A030000E01Ra",
+            "english_name": "Corn, Canned, Sweetened",
+            "scientific_name": null,
+            "worksheet_row": 386,
+            "food_group": "곡류 및 그 제품",
+            "original_measurement_source": "농진청('17)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "a12cd429-b500-42d2-ac17-e53123f7356a",
+      "ingredient_name": "고추",
+      "reason": "풋고추/홍고추/청양고추가 별도 source이며 generic 고추로는 결정 불가.",
+      "needed_choice": "풋고추/홍고추/청양고추",
+      "candidates": [
+        {
+          "external_item_key": "763",
+          "external_name": "고추, 풋고추, 생것",
+          "existing_source_item_id": "9b576eb2-9ff6-4656-b1f7-a7713c1b6b5f",
+          "existing_profile_id": "ef0137c5-a46e-4108-8cdd-cb98dea3295a",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F0180000620a",
+            "english_name": "Hot pepper(Gochu), Green, Raw",
+            "scientific_name": "Capsicum annuum L.",
+            "worksheet_row": 813,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('14)"
+          }
+        },
+        {
+          "external_item_key": "756",
+          "external_name": "고추, 빨간색, 생것",
+          "existing_source_item_id": "ddcb9a3e-58ba-4bcb-b497-d85139046e74",
+          "existing_profile_id": "f486e800-87d7-4b33-90aa-5dcf275e1727",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F018000C020a",
+            "english_name": "Hot pepper(Gochu), Red, Raw",
+            "scientific_name": "Capsicum annuum L.",
+            "worksheet_row": 806,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('15)"
+          }
+        },
+        {
+          "external_item_key": "767",
+          "external_name": "고추, 청양고추, 생것",
+          "existing_source_item_id": "75a0d071-451f-4af7-a142-4bdad6890f9a",
+          "existing_profile_id": "168e4ab3-3210-4488-b3c8-99c94c70ef7a",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F0180080000a",
+            "english_name": "Hot pepper(Gochu), Cheongyang, Green, Raw",
+            "scientific_name": "Capsicum annuum L.",
+            "worksheet_row": 817,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('14)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "cc485c80-23fe-4c5a-ae9f-244b99cdfe7a",
+      "ingredient_name": "들깨가루",
+      "reason": "공식에는 말린 들깨/볶은 들깨만 존재. 껍질 제거와 볶음 여부 미지정. 다수 MFDS 가공제품 후보를 임의 브랜드로 대표화할 수 없음.",
+      "needed_choice": "탈피 여부, 볶음 여부, 혼합물/제품 영양표",
+      "candidates": [
+        {
+          "external_item_key": "622",
+          "external_name": "들깨, 말린것",
+          "existing_source_item_id": "9cf52938-90cc-46d8-9592-7b1df74a2cfd",
+          "existing_profile_id": "61e07b72-afa7-4c87-b002-a2e38ed0b665",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "E0050000001a",
+            "english_name": "Perilla seed(Deulkkae), Dried",
+            "scientific_name": "Perilla frutescens var. japonica (Hassk.) H. Hara",
+            "worksheet_row": 679,
+            "food_group": "견과류 및 종실류",
+            "original_measurement_source": "농진청('13)"
+          }
+        },
+        {
+          "external_item_key": "623",
+          "external_name": "들깨, 볶은것",
+          "existing_source_item_id": "a3d5170b-cedf-449b-a3d1-5ed78a5daf1d",
+          "existing_profile_id": "4f2105fe-2e2c-47fd-aadd-7242eb53059d",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "E0050000009n",
+            "english_name": "Perilla seed(Deulkkae), Roasted",
+            "scientific_name": "Perilla frutescens var. japonica (Hassk.) H. Hara",
+            "worksheet_row": 680,
+            "food_group": "견과류 및 종실류",
+            "original_measurement_source": "농진청('17)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "e50c094c-8ad8-5e62-9b6a-f0df5f36642b",
+      "ingredient_name": "미니파프리카",
+      "reason": "공식은 노랑/빨강/주황 각각 분리. 실제 색 없음. 일반 파프리카 대표 profile을 미니에 자동 적용하지 않음.",
+      "needed_choice": "노란색/빨간색/주황색 또는 혼합 비율",
+      "candidates": [
+        {
+          "external_item_key": "1250",
+          "external_name": "미니파프리카, 노란색, 생것",
+          "existing_source_item_id": "c8a4a66a-c2e0-4394-925c-069416253d50",
+          "existing_profile_id": "344f4391-f430-4255-8c1f-d44bf4b338ae",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F194002C010a",
+            "english_name": "Paprika, Small sized, Raon yellow, Raw",
+            "scientific_name": "Capsicum annuum L.",
+            "worksheet_row": 1328,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('21)"
+          }
+        },
+        {
+          "external_item_key": "1251",
+          "external_name": "미니파프리카, 빨간색, 생것",
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F194003C020a",
+            "english_name": "Paprika, Small sized, Raon red, Raw",
+            "scientific_name": "Capsicum annuum L.",
+            "worksheet_row": 1329,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('21)"
+          }
+        },
+        {
+          "external_item_key": "1252",
+          "external_name": "미니파프리카, 주황색, 생것",
+          "existing_source_item_id": "d102a1dd-344a-4d3a-93d0-99766c4374f2",
+          "existing_profile_id": "e92788e8-6d78-4c08-aee9-67c2df6056ed",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F194004C040a",
+            "english_name": "Paprika, Small sized, Raon orange, Raw",
+            "scientific_name": "Capsicum annuum L.",
+            "worksheet_row": 1330,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('21)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "e667dd3f-95fc-4bf6-a4fe-d3d2ea79280a",
+      "ingredient_name": "민들레 잎",
+      "reason": "공식 민들레 생것은 품종 Taraxacum platycarpum이나 영문명도 Dandelion Raw로 잎만이라는 부위 확인 불가. 원본 식약처 레시피는 분명 잎만. 민들레 전체 프로필을 잎에 자동 동등 연결하지 않음.",
+      "needed_choice": "잎에 대한 직접 영양 출처 또는 공식916 분석 부위 확인",
+      "candidates": [
+        {
+          "external_item_key": "916",
+          "external_name": "민들레, 생것",
+          "existing_source_item_id": "ec974e77-24b2-428f-b8b6-638521075ca7",
+          "existing_profile_id": "6869946d-5677-4cc6-b976-1a921b53cbfb",
+          "basis_text": "100 g",
+          "official_row_metadata": {
+            "food_code": "F0780000000a",
+            "english_name": "Dandelion(Mindeulle), Raw",
+            "scientific_name": "Taraxacum platycarpum H. Dahlstedt",
+            "worksheet_row": 975,
+            "food_group": "채소류",
+            "original_measurement_source": "농진청('15)"
+          }
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "861871e2-cce1-43ff-969b-802a5cce0412",
+      "ingredient_name": "알룰로스",
+      "reason": "동일 일반명으로 액상·결정분말·다른 당과 혼합 제품이 존재하며 실제 공식 가공품 영양값도 서로 다르다. 알룰로스라는 명칭만으로 0kcal 또는 탄수0g을 입력할 수 없다.",
+      "needed_choice": "액상/결정분말/혼합 중 실제 형태와 정확한 제품 라벨",
+      "candidates": [
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P104-701070000-1743",
+          "item_report_key": "item-report:25CN6FH00D5",
+          "raw": {
+            "itemMnftrRptNo": "25CN6FH00D5",
+            "foodCd": "P104-701070000-1743",
+            "foodNm": "알룰로스분말",
+            "makerNm": "SHANDONG SANYUAN BIOTECHNOLOGY CO.,LTD",
+            "saleCorpNm": "해당없음",
+            "importerNm": "노슈라이프",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "25000g",
+            "enerc": "0",
+            "chocdf": "0.40",
+            "prot": "0.00",
+            "fatce": "0.00",
+            "nat": "0",
+            "sugars": "0.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P104-701070000-0133",
+          "item_report_key": "item-report:202300625671",
+          "raw": {
+            "itemMnftrRptNo": "202300625671",
+            "foodCd": "P104-701070000-0133",
+            "foodNm": "알룰로스",
+            "makerNm": "(주)우리꽃연구소 제2공장",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "500g",
+            "enerc": "40",
+            "chocdf": "10.00",
+            "prot": "0.00",
+            "fatce": "0.00",
+            "nat": "0",
+            "sugars": "0.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P104-701070000-0134",
+          "item_report_key": "item-report:1988024709770",
+          "raw": {
+            "itemMnftrRptNo": "1988024709770",
+            "foodCd": "P104-701070000-0134",
+            "foodNm": "알룰로스",
+            "makerNm": "(주)삼양사울산2공장",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "700g",
+            "enerc": "25",
+            "chocdf": "73.00",
+            "prot": "0.00",
+            "fatce": "0.00",
+            "nat": "0",
+            "sugars": "2.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "2df3aed0-9424-4142-a4f1-60ba3d32a88d",
+      "ingredient_name": "스팸",
+      "reason": "스팸은 제품군 브랜드이다. 클래식·25%라이트·닭가슴살이 별개이며 동일 클래식도 MFDS 코드와 포장정보에 따라 값이 다르므로 실제 제품 식별이 먼저다.",
+      "needed_choice": "클래식/25%라이트/닭가슴살 및 포장 라벨 또는 품목코드",
+      "candidates": [
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P117-100010300-0138",
+          "item_report_key": "item-report:2008040501561",
+          "raw": {
+            "itemMnftrRptNo": "2008040501561",
+            "foodCd": "P117-100010300-0138",
+            "foodNm": "스팸클래식",
+            "makerNm": "씨제이제일제당(주)",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "30g",
+            "foodSize": "340g",
+            "enerc": "305",
+            "chocdf": "2.00",
+            "prot": "14.00",
+            "fatce": "27.00",
+            "nat": "1100",
+            "sugars": "2.00",
+            "fasat": "16.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P117-100010300-0732",
+          "item_report_key": "item-report:2024_RD_10548",
+          "raw": {
+            "itemMnftrRptNo": "2024_RD_10548",
+            "foodCd": "P117-100010300-0732",
+            "foodNm": "스팸클래식",
+            "makerNm": "씨제이제일제당(주)",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "30g",
+            "foodSize": "960g",
+            "enerc": "340",
+            "chocdf": "2.00",
+            "prot": "13.00",
+            "fatce": "31.00",
+            "nat": "1080",
+            "sugars": "2.00",
+            "fasat": "11.00",
+            "fibtg": "0.9"
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P117-100010300-0273",
+          "item_report_key": "item-report:20080405015214",
+          "raw": {
+            "itemMnftrRptNo": "20080405015214",
+            "foodCd": "P117-100010300-0273",
+            "foodNm": "스팸닭가슴살",
+            "makerNm": "씨제이제일제당(주)",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "30g",
+            "foodSize": "200g",
+            "enerc": "170",
+            "chocdf": "1.00",
+            "prot": "17.00",
+            "fatce": "11.00",
+            "nat": "480",
+            "sugars": "1.00",
+            "fasat": "3.20",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        }
+      ],
+      "active_recipe_references": 0
+    },
+    {
+      "ingredient_id": "a51d3677-ac5d-433f-a2b4-574b3a733662",
+      "ingredient_name": "석류즙",
+      "reason": "착즙원액/NFC/농축환원/당첨가 여부와 제품이 특정되지 않았다. 원물 석류나 석류식초음료는 대체 근거가 아니다. 제품의100ml 영양을 밀도 근거 없이100g으로 옮기지 않는다.",
+      "needed_choice": "원액/농축환원/가당 여부, 실제 제품, 라벨 기준량; ml이면100g 환산용 검증 밀도",
+      "candidates": [
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P109-302030200-1570",
+          "item_report_key": "item-report:20090624059286",
+          "raw": {
+            "itemMnftrRptNo": "20090624059286",
+            "foodCd": "P109-302030200-1570",
+            "foodNm": "유기농NFC석류즙100착즙원액",
+            "makerNm": "농업회사법인(주)힐링팜",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100ml",
+            "servSize": "200ml",
+            "foodSize": "80ml",
+            "enerc": "53",
+            "chocdf": "12.50",
+            "prot": "0.00",
+            "fatce": "0.00",
+            "nat": "0",
+            "sugars": "11.25",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P109-302030200-6283",
+          "item_report_key": "item-report:20140464261166",
+          "raw": {
+            "itemMnftrRptNo": "20140464261166",
+            "foodCd": "P109-302030200-6283",
+            "foodNm": "석류즙",
+            "makerNm": "황지네이처농업회사법인(주)",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "200ml",
+            "foodSize": "3000g",
+            "enerc": "52",
+            "chocdf": "13.00",
+            "prot": "0.00",
+            "fatce": "0.00",
+            "nat": "6",
+            "sugars": "11.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P109-302030200-1055",
+          "item_report_key": "item-report:2020046750318",
+          "raw": {
+            "itemMnftrRptNo": "2020046750318",
+            "foodCd": "P109-302030200-1055",
+            "foodNm": "석류즙",
+            "makerNm": "자보바이오텍",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100ml",
+            "servSize": "200ml",
+            "foodSize": "2100ml",
+            "enerc": "50",
+            "chocdf": "11.43",
+            "prot": "0.30",
+            "fatce": "0.00",
+            "nat": "0",
+            "sugars": "7.14",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+      "ingredient_name": "해물육수코인",
+      "reason": "여러 제조사의 코인육수와 한알육수는 배합·나트륨·1개중량이 다르다. 액상 육수/육수팩 또는 완성 국물과도 구분해야 한다.",
+      "needed_choice": "실제 제조사/제품명,1개중량,농축상태와 희석완료 중 어느 기준인지",
+      "candidates": [
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P113-206020400-2728",
+          "item_report_key": "item-report:20070141814113",
+          "raw": {
+            "itemMnftrRptNo": "20070141814113",
+            "foodCd": "P113-206020400-2728",
+            "foodNm": "홍게한알해물육수",
+            "makerNm": "삼성디톡스(구산해진미)",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "드레싱 15g, 덮밥소스 165g",
+            "foodSize": "140g",
+            "enerc": "243",
+            "chocdf": "43.00",
+            "prot": "12.00",
+            "fatce": "2.60",
+            "nat": "13940",
+            "sugars": "37.00",
+            "fasat": "2.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P113-201020100-1303",
+          "item_report_key": "item-report:20210352084100",
+          "raw": {
+            "itemMnftrRptNo": "20210352084100",
+            "foodCd": "P113-201020100-1303",
+            "foodNm": "제주용암해수미네랄 코인육수 해물",
+            "makerNm": "(주)놀이터컴퍼니",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "80g",
+            "enerc": "234",
+            "chocdf": "48.75",
+            "prot": "8.75",
+            "fatce": "0.63",
+            "nat": "13018",
+            "sugars": "10.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P113-201020100-0781",
+          "item_report_key": "item-report:2025056537721",
+          "raw": {
+            "itemMnftrRptNo": "2025056537721",
+            "foodCd": "P113-201020100-0781",
+            "foodNm": "바로육수 한알 퐁당 매콤해물",
+            "makerNm": "(주)놀이터컴퍼니",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "100g",
+            "enerc": "220",
+            "chocdf": "38.79",
+            "prot": "13.63",
+            "fatce": "1.14",
+            "nat": "15268",
+            "sugars": "6.74",
+            "fasat": "0.68",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "290ff750-add0-455f-a407-325b71e2d51f",
+      "ingredient_name": "화이트크림",
+      "reason": "화이트크림은 생크림인지 동물성/식물성 휘핑크림인지 베샤멜/크림소스인지 이름만으로 식품이 특정되지 않는다. 유제품 category나 연어요리 사용 맥락만으로 결정하지 않는다.",
+      "needed_choice": "생크림/동물성휘핑/식물성휘핑/완성크림소스 중 실제 의미",
+      "candidates": [
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "2868",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "2868",
+            "external_name": "크림, 생크림",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "368",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "4.9800000000000004",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "2.0299999999999998",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "37.81",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "25",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "0",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "0",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "25.23",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": "4045b9c5-bf91-410c-957b-091791967fce",
+          "existing_profile_id": "865fe767-8412-407a-a484-89780ea0a6f9",
+          "status": "candidate_only"
+        },
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "2869",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "2869",
+            "external_name": "크림, 휘핑, 동물성",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "354",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "6.43",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "2.0099999999999998",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "35.549999999999997",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "41",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "0",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "0",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "24",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "status": "candidate_only"
+        },
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "2870",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "2870",
+            "external_name": "크림, 휘핑, 식물성",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "268",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "17.96",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "0.11",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "21.76",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "47",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "0",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "0",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "20.25",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "status": "candidate_only"
+        },
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "3366",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "3366",
+            "external_name": "스파게티 소스, 크림, 병조림",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "188",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "5.95",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "2.41",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "17.23",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "545",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "1.8",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "0.6",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "9.68",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "status": "candidate_only"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P123-227020300-0104",
+          "item_report_key": "item-report:20180491181196",
+          "raw": {
+            "itemMnftrRptNo": "20180491181196",
+            "foodCd": "P123-227020300-0104",
+            "foodNm": "화이트크림소스",
+            "makerNm": "순수본주식회사",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "130g",
+            "enerc": "54",
+            "chocdf": "6.15",
+            "prot": "2.31",
+            "fatce": "2.08",
+            "nat": "108",
+            "sugars": "2.31",
+            "fasat": "1.15",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "410ac75f-fab5-4db7-a98e-08d1ceefc126",
+      "ingredient_name": "김가루",
+      "reason": "김을 부순 형태만 뜻하여 무조미·기름/소금 조미·김자반을 구분하지 못한다. 원본 제품에서 지방과나트륨 차이가 크므로 일반명에 임의 제품 영양을 연결하지 않는다.",
+      "needed_choice": "무조미 구운김을 부순 것/조미김가루/김자반 중 실제 종류",
+      "candidates": [
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "2771",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "2771",
+            "external_name": "김, 참김, 구운것",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "174",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "41.7",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "43.3",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "0.9",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "491",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "-",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "-",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "-",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": "5b65dfcd-dc61-4d89-853d-9b5abc49e95b",
+          "existing_profile_id": "e15ea2c8-e559-402a-a68b-d4424be8b9a1",
+          "status": "candidate_only"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P120-402040000-0327",
+          "item_report_key": "item-report:2012036473233",
+          "raw": {
+            "itemMnftrRptNo": "2012036473233",
+            "foodCd": "P120-402040000-0327",
+            "foodNm": "무조미 김가루",
+            "makerNm": "고젠코리아주식회사",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "5g",
+            "foodSize": "100g",
+            "enerc": "296",
+            "chocdf": "47.00",
+            "prot": "38.00",
+            "fatce": "5.00",
+            "nat": "952",
+            "sugars": "0.00",
+            "fasat": "1.00",
+            "fibtg": "45.0"
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P120-402040000-0272",
+          "item_report_key": "item-report:2009052507337",
+          "raw": {
+            "itemMnftrRptNo": "2009052507337",
+            "foodCd": "P120-402040000-0272",
+            "foodNm": "무가미 구운김가루",
+            "makerNm": "(주)대명건해",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "5g",
+            "foodSize": "40g",
+            "enerc": "380",
+            "chocdf": "50.00",
+            "prot": "37.50",
+            "fatce": "3.25",
+            "nat": "850",
+            "sugars": "2.50",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P120-401040000-0444",
+          "item_report_key": "item-report:20080473078113",
+          "raw": {
+            "itemMnftrRptNo": "20080473078113",
+            "foodCd": "P120-401040000-0444",
+            "foodNm": "소지헌 조미 김가루",
+            "makerNm": "영어조합법인 광천삼원식품",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "4g",
+            "foodSize": "100g",
+            "enerc": "492",
+            "chocdf": "18.30",
+            "prot": "22.00",
+            "fatce": "32.80",
+            "nat": "2107",
+            "sugars": "1.00",
+            "fasat": "5.30",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "e1dad3e1-0630-4e6c-a39f-6d355f802148",
+      "ingredient_name": "신김치",
+      "reason": "신김치는 숙성상태 표현이며 배추·열무 등 원식품과 숙성단계가 미확정. RDA 일반 배추김치795는 대표 후보지만 신김치 숙성 상태를 직접 특정하는 자료가 아니어서 자동 연결하지 않는다.",
+      "needed_choice": "김치 종류와 숙성 상태; 일반 배추김치 대표값 적용을 원하면 근사값임을 명시한 별도 결정 필요",
+      "candidates": [
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "795",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "795",
+            "external_name": "김치, 배추 김치",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "38",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "6.49",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "1.98",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "0.43",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "551",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "2.4",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "2.5",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "7.0000000000000007E-2",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": null,
+          "existing_profile_id": null,
+          "status": "candidate_only"
+        },
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "800",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "800",
+            "external_name": "김치, 열무 김치",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "36",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "5.87",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "2.39",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "0.38",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "583",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "0.68",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "2.7",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "0.06",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": "640e3c6f-48bf-4834-bb9c-5c1ed1d436f8",
+          "existing_profile_id": "b9c271ed-73bd-41b7-a45e-89b5dafb9833",
+          "status": "candidate_only"
+        }
+      ],
+      "active_recipe_references": 2
+    },
+    {
+      "ingredient_id": "179cb586-34b3-4d7c-aa2b-7b2e79503357",
+      "ingredient_name": "김치국물",
+      "reason": "RDA 김치 전체의 가식부100g과 국물만100g은 다른 대상이다. MFDS 김치국물 exact명은 특정 제조사(모산F/S)10kg제품이므로 집김치에서 나온 국물을 대신할 수 없다.",
+      "needed_choice": "김치에서 걸러낸 국물/특정 제조 국물제품 중 실제 의미; 건더기 포함 비율과 동일 대상 영양 근거",
+      "candidates": [
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P114-104010100-0075",
+          "item_report_key": "item-report:20090607280322",
+          "raw": {
+            "itemMnftrRptNo": "20090607280322",
+            "foodCd": "P114-104010100-0075",
+            "foodNm": "김치국물",
+            "makerNm": "주식회사모산F/S",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "10000g",
+            "enerc": "20",
+            "chocdf": "3.00",
+            "prot": "1.00",
+            "fatce": "0.25",
+            "nat": "500",
+            "sugars": "2.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P114-104010100-0076",
+          "item_report_key": "item-report:20090607280323",
+          "raw": {
+            "itemMnftrRptNo": "20090607280323",
+            "foodCd": "P114-104010100-0076",
+            "foodNm": "김치국물엔엠",
+            "makerNm": "주식회사모산F/S",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "10000g",
+            "enerc": "20",
+            "chocdf": "3.00",
+            "prot": "1.00",
+            "fatce": "0.25",
+            "nat": "500",
+            "sugars": "2.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        },
+        {
+          "kind": "MFDS_processed_20260828",
+          "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+          "food_code": "P114-104010100-0077",
+          "item_report_key": "item-report:20090607280324",
+          "raw": {
+            "itemMnftrRptNo": "20090607280324",
+            "foodCd": "P114-104010100-0077",
+            "foodNm": "김치국물엔엠B",
+            "makerNm": "주식회사모산F/S",
+            "saleCorpNm": "해당없음",
+            "importerNm": "해당없음",
+            "nutConSrtrQua": "100g",
+            "servSize": "",
+            "foodSize": "10000g",
+            "enerc": "18",
+            "chocdf": "3.00",
+            "prot": "1.00",
+            "fatce": "0.00",
+            "nat": "500",
+            "sugars": "2.00",
+            "fasat": "0.00",
+            "fibtg": ""
+          },
+          "status": "product_identity_required_not_generic_default"
+        }
+      ],
+      "active_recipe_references": 1
+    },
+    {
+      "ingredient_id": "6de713c8-44d8-44f4-a437-8b05c54f13c2",
+      "ingredient_name": "열무김치 국물",
+      "reason": "열무김치와 열무물김치 전체 가식부의 영양은 국물만의 조성이 아니다. exact 국물 source는 확보되지 않았으며 두 whole-food profile을 국물로 복사하지 않는다.",
+      "needed_choice": "열무김치/열무물김치 여부 및 국물만의 실측 또는 동일 제품 국물 기준 영양자료",
+      "candidates": [
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "800",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "800",
+            "external_name": "김치, 열무 김치",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "36",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "5.87",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "2.39",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "0.38",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "583",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "0.68",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "2.7",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "0.06",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": "640e3c6f-48bf-4834-bb9c-5c1ed1d436f8",
+          "existing_profile_id": "b9c271ed-73bd-41b7-a45e-89b5dafb9833",
+          "status": "candidate_only"
+        },
+        {
+          "kind": "RDA_10_4",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "source_key": "801",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "basis_amount": 100,
+          "basis_unit": "g",
+          "edible_portion": true,
+          "raw": {
+            "external_item_key": "801",
+            "external_name": "김치, 열무 물김치",
+            "basis_text": "100 g",
+            "edible_portion": {
+              "text": "가식부 100g 당 (per 100g Edible Portion)"
+            },
+            "preparation_state": "as_published",
+            "nutrients": {
+              "energy": {
+                "value": "18",
+                "unit": "kcal"
+              },
+              "carbohydrate": {
+                "value": "2.91",
+                "unit": "g"
+              },
+              "protein": {
+                "value": "1.41",
+                "unit": "g"
+              },
+              "fat": {
+                "value": "7.0000000000000007E-2",
+                "unit": "g"
+              },
+              "sodium": {
+                "value": "493",
+                "unit": "mg"
+              },
+              "sugars": {
+                "value": "1.68",
+                "unit": "g"
+              },
+              "fiber": {
+                "value": "0.5",
+                "unit": "g"
+              },
+              "saturated_fat": {
+                "value": "0.02",
+                "unit": "g"
+              }
+            }
+          },
+          "existing_source_item_id": "6758e4a0-b746-462f-9a62-16f091b45c70",
+          "existing_profile_id": "77abaf4c-6378-4ff1-a2be-81eba776f0ff",
+          "status": "candidate_only"
+        }
+      ],
+      "active_recipe_references": 1
+    }
+  ]
+}
