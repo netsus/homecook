@@ -3440,3 +3440,10 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 - `color_key`는 `'unassigned'` 기본값 허용
 - users는 soft delete 전제에 맞게 partial unique index 사용
 - recipe_books id는 시스템/커스텀 모두 uuid, 구분은 book_type만 사용
+
+
+## 2026-09-19 사용 재료 대표 연결과 영양 검토
+
+`public.ingredient_representative_links`는 운영자가 근거를 검토한 source ingredient ID→representative ingredient ID 관계를 기록한다. source가 PK이며 두 ingredient FK, 영양 source_item FK, reviewer FK는 삭제 제한이다. 근거 JSON/사유/검토일을 저장한다. 자기 연결·체인·순환은 공통 transaction advisory lock과 READ COMMITTED 검증으로 거부한다. RLS를 켜고 service_role SELECT만 허용하며 공개/인증 사용자와 service_role의 쓰기 권한은 없다. 기존 recipe/meal/leftover의 ID를 자동 치환하거나 영양값을 자체 생성하지 않는다.
+
+2026-09-19 승인 범위는 기존30개의 확정 영양9개 및 쌀밥 오연결1개 정정, 목심 대표 관계1개, 별칭 정리, 조미김 원본 이상값 승인 철회다. 원본값을 덮어쓰지 않으며 recipe 현재 영양은 기존 writer로 새 snapshot을 추가하고 과거 식사/요리의 고정 참조는 유지한다. 운영 근거·보류21개는 `engineering/ingredient-nutrition-curation-20260919.md`를 참조한다.

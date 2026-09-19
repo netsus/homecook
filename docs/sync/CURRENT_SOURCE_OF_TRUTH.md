@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-19 사용자 요청 — 사용 재료 영양·중복 정리
+
+영양 미연결360개 중 기존 레시피 참조30개를 우선 검토했다. 원자료 식품·상태·가식부100g이 확정된9개만 연결하고21개는 후보로 보류한다. 쌀밥의 건조밥 오연결을 정정하고, 같은 RDA1704에 해당하는 목심 두 ID는 신규 `ingredient_representative_links`에 대표 관계만 기록한다. 기존 재료·식사·요리 기록 ID와 과거 영양값은 보존하고 현재 레시피10개의 새 영양 snapshot만 추가한다. 자세한 source/후보/검증 범위는 `docs/engineering/ingredient-nutrition-curation-20260919.md`와 `data/ingredient-nutrition-*-20260919.json`을 따른다. 자동 테스트는 사용자 요청으로 생략하며 값 추정이나 모호한 재료 자동 병합을 하지 않는다.
+
 ## 2026-09-18 사용자 요청 — 출시 전 22개 수정과 재료 검색 개선
 
 직전 배포 기준 정렬 후 별도 작업 브랜치에서 R01~R22를 복구한다. 이번 요청은 자동 테스트를 생략하며 CI를 복원하지 않는다. 실제 변경 범위는 위 현재 공식 5종의 같은 날짜 addendum과 `docs/engineering/prelaunch-repair-20260918.md`를 따른다. 재료 정규화·승인 별칭·모호성 유지와 영양 품질 조사 기준은 `docs/engineering/ingredient-search-catalog-quality-20260918.md`에 기록한다. 운영 DB 변경은 백업 후 새 migration을 적용하고 이력을 남기며, 서로 다른 부위/조리 상태의 무분별한 합치기와 영양값 추정은 하지 않는다.
