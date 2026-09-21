@@ -29,9 +29,11 @@ const truthfulProgressCatalogFingerprint =
   "06e3d277cbf5ae9199c21866567b141698385fa25c0429289c3b53002ca51e13";
 const ingredientSearchCatalogFingerprint =
   "750a0236e57ebcfaa19dd720de9b29c686064ca608948453dbed805740e4e9ef";
+const fractionalQuantityCatalogFingerprint =
+  "2b4f7b7e645f8609df30399224da979cb399b7c955cc2c215d28e7f5482bc402";
 
 describe("YTASYNC-DB/SEC migration contract", () => {
-  it("binds the current release manifest to the reviewed ingredient-search catalog", () => {
+  it("binds the current release manifest to the reviewed resolver changes", () => {
     const sql = readFileSync(ingredientSearchCatalogRepairPath, "utf8");
     expect(sql.trimStart().startsWith("begin;")).toBe(true);
     expect(sql.trimEnd().endsWith("commit;")).toBe(true);
@@ -45,7 +47,12 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "scripts/manifests/youtube-extraction-expected-schema.json",
       "utf8",
     )) as { catalog_fingerprint?: unknown };
-    expect(expectedSchema.catalog_fingerprint).toBe(ingredientSearchCatalogFingerprint);
+    const fractionSql = readFileSync(
+      "supabase/migrations/20260922010000_youtube_fractional_quantity.sql", "utf8",
+    );
+    expect(fractionSql).toContain(ingredientSearchCatalogFingerprint);
+    expect(fractionSql).toContain(fractionalQuantityCatalogFingerprint);
+    expect(expectedSchema.catalog_fingerprint).toBe(fractionalQuantityCatalogFingerprint);
     // Actual full replay parity and drift rejection are checked by
     // youtube-extraction-current-catalog.integration.test.ts.
   });

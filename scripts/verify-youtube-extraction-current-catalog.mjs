@@ -24,6 +24,7 @@ const repositoryRoot = process.cwd();
 const adminMigrations = new Set([
   "20260919001000_ingredient_search_normalization.sql",
   "20260922000000_youtube_catalog_after_ingredient_search.sql",
+  "20260922010000_youtube_fractional_quantity.sql",
 ]);
 const dockerTarget = readPinnedLocalDockerTarget({ ambient: process.env });
 const pinnedEnv = { ...process.env, DOCKER_HOST: dockerTarget.docker_host };

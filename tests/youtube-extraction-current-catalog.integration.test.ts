@@ -56,6 +56,46 @@ describe.skipIf(!enabled)("YouTube catalog after all current migrations", () => 
     expect(fingerprint).toBe(expectedSchema.catalog_fingerprint);
   });
 
+  it("preserves fractional quantities in the installed resolver amount block", () => {
+    const definition = psql(`
+      select pg_catalog.pg_get_functiondef(
+        'public.resolve_youtube_extraction_job_draft(uuid,text,bigint,bigint,text,jsonb)'::regprocedure
+      );
+    `);
+    const start = definition.indexOf("v_amount_text :=");
+    const end = definition.indexOf("v_unit :=", start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const amountBlock = definition.slice(start, end);
+    // Execute the installed SQL itself, without maintaining a second parser.
+    // This isolates amount parsing only; full worker/RPC authority and draft
+    // persistence remain covered by the separate policy and worker suites.
+    const cases: Array<[string, number | null]> = [
+      ["1/2", 0.5], ["1/4", 0.25], ["1 / 2", 0.5], ["1 1/2", 1.5],
+      ["0.5", 0.5], ["2", 2], ["1/0", null], ["1/2/3", null],
+    ];
+    const probes = cases.map(([amount, expected]) => {
+      const ingredient = JSON.stringify({ amount }).replaceAll("'", "''");
+      return `
+        do $quantity$
+        declare
+          v_ingredient jsonb := '${ingredient}'::jsonb;
+          v_amount_text text;
+          v_amount_match text;
+          v_amount_fraction text[];
+          v_amount numeric;
+        begin
+          ${amountBlock}
+          if v_amount is distinct from ${expected ?? "null"}::numeric then
+            raise exception 'Unexpected amount for %: expected %, received %',
+              v_ingredient->>'amount', ${expected ?? "null"}::numeric, v_amount;
+          end if;
+        end $quantity$;
+      `;
+    });
+    psql(`begin read only;\n${probes.join("\n")}\nrollback;`);
+  });
+
   it("rejects unreviewed RPC body drift and rolls it back", () => {
     psql(`
       begin;
