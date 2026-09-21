@@ -1057,6 +1057,7 @@ function ReviewIngredientRow({
             className="h-9 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
             inputMode="decimal"
             min={0}
+            step="any"
             onChange={(event) => {
               const value = event.target.value;
               onUpdateIngredient(ingredient.tempId, {
